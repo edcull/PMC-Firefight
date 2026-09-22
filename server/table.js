@@ -44,7 +44,7 @@ class Table {
         e: 'strafe', id: u.id, from: from, to: to, deaths: table.deathsOf(deaths)
       }),
       arrive: (u, how, from, veh) => table.rec({ e: 'arrive', id: u.id, how: how, from: from || null, veh: veh ? veh.id : null }),
-      sound: (what) => table.rec({ e: 'sound', what: what }),
+      sound: (what, args) => table.rec({ e: 'sound', what: what, args: args && args.length ? args : undefined }),
       focus: (u) => table.rec({ e: 'focus', id: u && u.id }),
       hint: (text) => table.rec({ e: 'hint', text: text }),
       colour: (side, key) => table.rec({ e: 'colour', side: side, key: key }),

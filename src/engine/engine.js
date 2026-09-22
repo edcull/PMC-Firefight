@@ -100,8 +100,28 @@
     function playAssault(a, t, deaths, done) { V.assault(a, t, deaths); if (done) done(); }
     function playStrafe(u, from, to, deaths, done) { V.strafe(u, from, to, deaths); if (done) done(); }
     function repaintTerrain(wrecks) { V.terrain(wrecks); }
-    function showArrival(u) { V.arrive(u, 'walk'); }
-    function landUnit(u) { V.arrive(u, 'drop'); greet(u); }
+    /* How a scenario reinforcement comes on. The Invasion attacker is coming
+       down from orbit, so it lands the way a Battlefield Insertion does — out of
+       the sky; a solitaire scenario may say a drop, or a walk from a particular
+       spot; everyone else walks on from its own table edge. Either way it can
+       draw the free shot an arrival within 12" invites (p. 30), which landUnit
+       and walkOn both fire. (A stand-in here used to say "walk" for everyone
+       and skip that shot; this is the decision game.js always made.) */
+    function showArrival(u) {
+      if (state.scen.id === 'invasion' && state.sc && u.side === state.sc.attacker) { landUnit(u); return; }
+      var how = state.scen.arriveHow ? state.scen.arriveHow(state, u) : null;
+      if (how === 'drop') { landUnit(u); return; }
+      walkOn(u, how && how.x != null ? how : null);
+    }
+    /* A unit coming down on its landing point. The Invasion attacker is coming
+       down from orbit, so everything it lands — squads included, which would
+       otherwise be shown getting up off the ground — falls out of the sky the
+       way a hull does. */
+    function landUnit(u) {
+      var orbit = state.scen.id === 'invasion' && state.sc && u.side === state.sc.attacker;
+      V.arrive(u, orbit ? 'orbital' : 'drop');
+      greet(u);
+    }
     function walkOn(u, start) { V.arrive(u, 'walk', start); greet(u); }
     /* Coming off a hull, or climbing aboard one: which hull matters to the
        view, because a squad drops out of an aircraft and walks out of a truck. */
@@ -118,17 +138,26 @@
        searched location has its stake and beacon). Both are the view's. */
     function fitView() { V.fit(); }
     function paintStructures() { V.structures(); }
-    function glowRGB() { return null; }
+    // xenotech glows the blue game.js draws it in: teleports, repairs, the tribe's waves
+    var XENO_GLOW = '110,190,255';
+    function glowRGB() { return XENO_GLOW; }
     function soundFor(entries) {
       (entries || []).forEach(function (l) {
-        if (l.t === 'suppressed' || l.t === 'broken') V.sound(l.t);
+        if (l.t === 'suppressed') V.sound('suppress');
+        else if (l.t === 'broken') V.sound('broken');
       });
     }
-    var SFX = {
-      click: nil, step: nil, impact: nil, shell: nil, shot: nil, wave: nil,
-      suppress: nil, broken: nil, chitter: nil, casualty: nil, shimmer: nil, chime: nil
-    };
-    function nil() { }
+    /* The sounds the rules ask for as they happen — a teleport's shimmer, the
+       swarm's chitter as the Endless Tide digs bugs back out, a squad's boots
+       going into a building. Nothing plays here; each is passed to the view by
+       name, with whatever it was given, and the view makes the noise. The
+       animations make their own sounds besides: these are only the ones the
+       rules themselves called for. */
+    var SFX = {};
+    ['click', 'step', 'impact', 'shell', 'shot', 'wave', 'suppress', 'broken',
+      'chitter', 'casualty', 'shimmer', 'chime'].forEach(function (name) {
+      SFX[name] = function () { V.sound(name, Array.prototype.slice.call(arguments)); };
+    });
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
     function render() { returnToPool(); V.changed(); }
     /* Protecting the VIP, Evacuation: "when an OpFor unit is destroyed, it
@@ -232,8 +261,10 @@
   }
 
   function newGame(cfg) {
-    var planets = Object.keys(GEN.GENERATORS);
-    if (!cfg.planet || cfg.planet === 'random') cfg.planet = planets[Math.floor(Math.random() * planets.length)];
+    /* The world is settled here, once: a random one picked, and a barren one
+       made desert or arctic. Everything after — the table, the look of it on
+       every screen — reads the one name this leaves in the config. */
+    cfg.planet = GEN.resolvePlanet(cfg.planet, Math.random);
     var scenId = cfg.scenario && SC.SCENARIOS[cfg.scenario] ? cfg.scenario : 'secure';
     // a solitaire / cooperative game only runs the solitaire scenarios, and they only run in one
     if (cfg.solo && !(SC.SCENARIOS[scenId] || {}).solo) scenId = 's_crush';
@@ -243,7 +274,7 @@
        down themselves. A demo is always generated. */
     var manual = wantsManualTerrain(cfg);
     var built = manual
-      ? { terrain: [], rolls: [], generator: GEN.GENERATORS[cfg.planet].name }
+      ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
         width: W, height: H, planet: cfg.planet,
         objectives: OBJECTIVES              // keeps the generator's clearings roughly central
@@ -478,7 +509,7 @@
   }
 
   function startTerrainSetup(built) {
-    var gen = GEN.GENERATORS[state.cfg.planet] || GEN.GENERATORS.sparse;
+    var gen = GEN.tableFor(state.cfg.planet);
     var starter = state.solo ? 'A' : (Math.random() < 0.5 ? 'A' : 'B');
     state.phase = 'terrain';
     state.tset = {
@@ -563,19 +594,55 @@
 
   /* Roll the footprint of the next piece to go down, and give it its outline,
      so the player sees exactly what they are putting on the table. */
+  /* Every piece the area's result can put down is rolled as soon as the result
+     is known — its size and its shape — so the player sees the whole set, and
+     lays exactly the pieces shown, in order. Only the next one is "in hand": it
+     is the one outlined under the pointer, and the one a quarter turn turns. */
+  function makePiece(a, spec, shrink, turns) {
+    var sz = GEN.sizeFor(spec, Math.random, shrink || 1);
+    var g = { kind: spec.kind, x: 0, y: 0, w: Math.min(sz.w, a.w - 1), h: Math.min(sz.h, a.h - 1) };
+    if (spec.big) g.big = true;
+    if (R.shapePiece) R.shapePiece(g, Math.random);
+    for (var t = 0; t < (turns || 0); t++) quarterTurn(g);
+    return g;
+  }
+  function rollPieces(a) {
+    a.pieces = a.row.alts[a.alt].map(function (spec) {
+      var out = [];
+      for (var i = 0; i < spec.max; i++) out.push(makePiece(a, spec, 1, 0));
+      return out;
+    });
+    a.piecesFor = a.alt;
+  }
+  /* A quarter turn, about the piece's own corner: the table-turning the rules
+     already do, then the piece set back where it was. The table is square, so
+     a turn of it is a turn of anything on it. */
+  function quarterTurn(p) {
+    R.turnPiece(p, 1);
+    R.placePiece(p, 0, 0, p.w, p.h);
+    p.turns = ((p.turns || 0) + 1) % 4;
+    return p;
+  }
+  function inHand(a) {
+    return a.pieces && a.pieces[a.spec] ? a.pieces[a.spec][a.count[a.spec] || 0] || null : null;
+  }
   function prepSpec(a) {
     var ts = state.tset;
     ts.ghost = null;
     if (a.alt === null) return;                   // waiting on the player's choice
+    if (!a.pieces || a.piecesFor !== a.alt) rollPieces(a);
     var alt = a.row.alts[a.alt];
     while (a.spec < alt.length && (a.count[a.spec] || 0) >= alt[a.spec].max) a.spec++;
     if (a.spec >= alt.length) { completeArea(a); nextArea(); return; }
-    var spec = alt[a.spec];
-    var sz = GEN.sizeFor(spec, Math.random, a.shrink || 1);
-    var g = { kind: spec.kind, x: 0, y: 0, w: Math.min(sz.w, a.w - 1), h: Math.min(sz.h, a.h - 1) };
-    if (spec.big) g.big = true;
-    if (R.shapePiece) R.shapePiece(g, Math.random);
-    ts.ghost = g;
+    var spec = alt[a.spec], n = a.count[a.spec] || 0;
+    /* A crowded area gets a smaller piece rather than none, as the generator
+       does: the one in hand is rolled again at the smaller size, turned the
+       way the player had it. */
+    if (a.shrink && a.shrink < 1) {
+      var was = a.pieces[a.spec][n];
+      a.pieces[a.spec][n] = makePiece(a, spec, a.shrink, was ? was.turns : 0);
+    }
+    ts.ghost = clonePiece(a.pieces[a.spec][n]);
   }
 
   function clonePiece(t) { return JSON.parse(JSON.stringify(t)); }
@@ -639,6 +706,13 @@
       var spec = a.row.alts[a.alt][a.spec];
       if ((a.count[a.spec] || 0) < spec.min) return;
       a.spec++; a.shrink = 1; prepSpec(a);
+    }
+    else if (act === 'trotate') {
+      // a quarter turn of the piece in hand
+      var hand = inHand(a);
+      if (!hand) return;
+      quarterTurn(hand);
+      state.tset.ghost = clonePiece(hand);
     }
     else if (act === 'tauto') { autoArea(a); nextArea(); return; }
     else if (act === 'tautoall') { state.tset.autoAll = true; autoArea(a); nextArea(); return; }
@@ -3659,7 +3733,8 @@
       }
     }
     state.units.forEach(function (t) {
-      if (!t.alive || t.side === u.side) return;
+      // an enemy in reserve or riding in a hull is not on the table to be shot at
+      if (!t.alive || t.side === u.side || !onTable(t)) return;
       var e = expectedHits(u, t, mode || 'fire', opts);
       if (e > best.score) best = { t: t, score: e };
     });
@@ -3669,7 +3744,8 @@
   function nearestEnemy(u) {
     var best = null, bd = Infinity;
     state.units.forEach(function (t) {
-      if (!t.alive || t.side === u.side) return;
+      // only enemies on the table: one waiting in reserve sits off its corner, and chasing it walks nowhere
+      if (!t.alive || t.side === u.side || !onTable(t)) return;
       var d = R.unitDist(u, t);
       if (d < bd) { bd = d; best = t; }
     });
@@ -4043,7 +4119,7 @@
        needs to draw the table is in what is left. */
     function snapshot() {
       if (!state) return null;
-      var skip = { scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1 };
+      var skip = { scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1 };
       var out = {};
       Object.keys(state).forEach(function (k) {
         if (skip[k]) return;
@@ -4143,8 +4219,7 @@
         if (typeof u.bld === 'number') u.bld = state.terrain[u.bld] || null;
       });
       if (state.tset) {
-        var gens = GEN.GENERATORS;
-        state.tset.gen = gens[state.cfg.planet] || gens.sparse;
+        state.tset.gen = GEN.tableFor(state.cfg.planet);
         state.tset.areas.forEach(function (a) {
           a.placed = (a.placed || []).map(function (i) { return state.terrain[i]; }).filter(Boolean);
         });
@@ -4335,7 +4410,7 @@
         }
         case 'terrain': {
           if (!mayLay(side)) return no('this area is not yours to lay');
-          if (['talt', 'tnext', 'tauto', 'tautoall'].indexOf(it.act) < 0) return no('unknown terrain step');
+          if (['talt', 'tnext', 'tauto', 'tautoall', 'trotate'].indexOf(it.act) < 0) return no('unknown terrain step');
           terrainAct(it.act, it.arg);
           return yes;
         }

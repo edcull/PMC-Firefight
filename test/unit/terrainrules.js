@@ -69,6 +69,43 @@ ok('...but not over the enemy', R.lineClear(world([up, foe, b1], [hill]), up, b1
 var mods = R.shotMods(world([up, b1], [hill]), up, b1, 'fire', {});
 ok('+2 Firepower shooting down from it', mods.parts.some(function (p) { return /hill/.test(p.label) && p.v === 2; }), true);
 
+head('A hill on a hill');
+/* A big hill may rise in two steps: the crown is a hill standing on the hill.
+   It blocks sight across it as a hill does, for everyone but a unit up on it,
+   and standing on it is standing higher than the slope below. */
+var big = { kind: 'hill', x: 10, y: 10, w: 20, h: 14,
+  poly: [[10, 10], [30, 10], [30, 24], [10, 24]],
+  top: [[17, 14], [23, 14], [23, 20], [17, 20]] };
+var slopeW = mk('regular', 'A', 12, 17), slopeE = mk('regular', 'B', 28, 17);
+var crown = mk('regular', 'A', 20, 17), below = mk('regular', 'B', 4, 17);
+ok('the crown blocks sight between two units on the slope either side of it',
+  R.lineClear(world([slopeW, slopeE], [big]), slopeW, slopeE), false);
+ok('...and between the slope and the ground beyond it', R.lineClear(world([slopeE, below], [big]), slopeE, below), false);
+ok('a unit up on the crown sees the slope', R.lineClear(world([crown, slopeE], [big]), crown, slopeE), true);
+ok('...and the ground beyond', R.lineClear(world([crown, below], [big]), crown, below), true);
+var aside = mk('regular', 'A', 26, 12);
+ok('on the slope with the crown not in the way, sight is as it was', R.lineClear(world([aside, slopeE], [big]), aside, slopeE), true);
+ok('the crown stands higher than the slope, and the slope than the ground',
+  [R.levelOf(world([], [big]), crown), R.levelOf(world([], [big]), slopeE), R.levelOf(world([], [big]), below)].join(), '2,1,0');
+var down = R.shotMods(world([crown, slopeE], [big]), crown, slopeE, 'fire', {});
+ok('+2 Firepower firing down from the crown on to the slope',
+  down.parts.some(function (p) { return /crown/.test(p.label) && p.v === 2; }), true);
+var level = R.shotMods(world([slopeW, aside], [big]), slopeW, mk('regular', 'B', 26, 12), 'fire', {});
+ok('...but none between two units on the same slope', level.parts.some(function (p) { return /hill|crown/.test(p.label); }), false);
+var toGround = R.shotMods(world([crown, below], [big]), crown, below, 'fire', {});
+ok('from the crown to the ground it is still +2, not +4',
+  toGround.parts.filter(function (p) { return /hill|crown/.test(p.label); }).reduce(function (s, p) { return s + p.v; }, 0), 2);
+var up2 = R.shotMods(world([slopeE, crown], [big]), slopeE, crown, 'fire', {});
+ok('nothing for firing up at the crown', up2.parts.some(function (p) { return /hill|crown/.test(p.label); }), false);
+var mate = mk('regular', 'A', 25, 17);
+ok('from the crown a unit shoots over its own side on the slope below',
+  R.lineClear(world([crown, mate, slopeE], [big]), crown, slopeE), true);
+// a line along the south slope, clear of the crown, with a friend on the same slope between
+var onSlope = mk('regular', 'A', 24, 22), mate2 = mk('regular', 'A', 27, 22), past = mk('regular', 'B', 36, 22);
+ok('...but on the slope it cannot shoot over a friend on the same slope',
+  R.lineClear(world([onSlope, mate2, past], [big]), onSlope, past), false);
+ok('(with that friend out of the way it can)', R.lineClear(world([onSlope, past], [big]), onSlope, past), true);
+
 head('Low walls and rubble (p. 42)');
 var wall = { kind: 'barricade', x: 23, y: 18, w: 1, h: 12 };
 var shooter = mk('regular', 'A', 10, 24);

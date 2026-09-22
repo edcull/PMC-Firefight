@@ -961,7 +961,7 @@
           (can ? '' : ' (neither force can fill it)') + '</option>';
       }).join('') + '</select></div>' +
       '<div><label for="camp-planet">Planet</label><select id="camp-planet">' +
-      ['random', 'barren', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'].map(function (k) {
+      ['random', 'desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'].map(function (k) {
         return '<option value="' + k + '"' + (contract.planet === k ? ' selected' : '') + '>' +
           (k === 'random' ? 'Randomise' : k.charAt(0).toUpperCase() + k.slice(1)) + '</option>';
       }).join('') + '</select></div></div>';

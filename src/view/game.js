@@ -210,12 +210,13 @@
       case 'log': logLine(ev.t, ev.text, ev.math); return;
       case 'card': pushRes(ev.card); return;
       case 'fx': addFx(reLift(ev.f)); return;
-      case 'sound':
+      case 'sound': {
+        // a sound the rules asked for, by name; 'suppressed' is an older word for it
         if (!SFX) return;
-        if (ev.what === 'suppressed') SFX.suppress();
-        else if (ev.what === 'broken') SFX.broken();
-        else if (ev.what === 'wave' && SFX.wave) SFX.wave();
+        var sn = ev.what === 'suppressed' ? 'suppress' : ev.what;
+        if (typeof SFX[sn] === 'function') SFX[sn].apply(SFX, ev.args || []);
         return;
+      }
       case 'move': {
         var mu = evUnit(ev.id);
         if (mu) animateMove(mu, ev.path, ev.follow);
@@ -240,6 +241,7 @@
         var au = evUnit(ev.id);
         if (!au) return;
         if (ev.how === 'drop') landUnit(au);
+        else if (ev.how === 'orbital') landUnit(au, true);
         else if (ev.how === 'stepoff') stepOff(au, evUnit(ev.veh));
         else if (ev.how === 'board') boardAnim(au, evUnit(ev.veh) || au, ev.from);
         else walkOn(au, ev.from);
@@ -495,7 +497,15 @@
       (state.solo ? 'you roll a D6 for each' : 'the players take turns to roll a D6 for each') +
       ' and place up to what it gives, anywhere in that area (pp. 46–47).' +
       (state.scen && state.scen.edges ? ' Table edges are rolled once the table is set.' : '') + '</p>';
-    if (a && !isAI(a.side)) {
+    /* The area being laid belongs to one side. Its player gets the choices and
+       the buttons; anyone else — the opponent across a network — sees the same
+       pieces and whose turn it is, and waits. */
+    var mine = a && !isAI(a.side) && seats.indexOf(a.side) >= 0;
+    if (a && !isAI(a.side) && !mine) {
+      h += '<p class="hint"><b>' + a.name + ' — ' + esc(sideName(a.side)) + '’s roll: ' + a.roll + '.</b> ' + esc(a.row.text) + '.</p>' +
+        (a.alt === null ? '<p class="sub">Waiting for them to choose.</p>' : terrainPreview(a) + '<p class="sub">Waiting for them to lay it.</p>');
+    }
+    if (mine) {
       h += '<p class="hint"><b>' + a.name + ' — ' + (state.solo ? 'your' : esc(sideName(a.side)) + '’s') + ' roll: ' +
         (a.first ? a.first + ', re-rolled ' : '') + a.roll + '.</b> ' + esc(a.row.text) + '.</p>';
       if (a.alt === null) {
@@ -510,7 +520,10 @@
         h += '<p class="sub">Tap inside the lit area to put down <b>' + pieceNoun(spec, 1) + ' ' + (cnt + 1) + '</b> of up to ' + spec.max +
           (cnt < spec.min ? ' — at least ' + spec.min + ' must go down' : '') + '. The piece lands as close to the tap as it fits.</p>';
         if (ui.tsetHint) h += '<p class="cpwarn">' + esc(ui.tsetHint) + '</p>';
+        // everything this result still has to put down, drawn; the next one outlined
+        h += terrainPreview(a);
         h += '<div class="acts">';
+        h += '<button class="act" data-act="trotate"><span>Turn it</span><small>A quarter turn · R or right click</small></button>';
         if (cnt >= spec.min) h += '<button class="act primary" data-act="tnext"><span>' +
           (more ? 'On to the ' + pieceNoun(more, 2) : 'Done with the ' + a.name + ' area') + '</span><small>' +
           cnt + ' ' + pieceNoun(spec, cnt) + ' placed</small></button>';
@@ -526,6 +539,139 @@
         esc(sideName(ar.side)) + (ar.roll ? ' · D6 ' + ar.roll : '') + ' — ' + st + '</li>';
     }).join('') + '</ul>';
     return h + '</div>';
+  }
+
+  /* ---------- the pieces still to come, drawn ----------
+     Every piece this area's result will put down, in the order they go, drawn
+     with the table's own art — the ground painted under the hills and pools,
+     the buildings, walls, rocks and trees stood on it — so a player sees what
+     they are about to lay rather than a list of names. The one in hand is
+     outlined. The board still shows only an outline under the pointer; this is
+     the picture of the set.
+
+     Painting ground is slow, so it is done a moment after the card is shown,
+     over just the patch the pieces stand on, and kept until the pieces or the
+     way one is turned change. The last picture stays up while the next one is
+     drawn. */
+  var tprev = { key: '', url: '', wanting: '' };
+
+  function stillToCome(a) {
+    var list = [];
+    if (!a || a.alt === null || !a.pieces) return list;
+    a.pieces.forEach(function (row, si) {
+      if (si < a.spec) return;
+      var from = si === a.spec ? (a.count[si] || 0) : 0;
+      row.slice(from).forEach(function (p, k) { list.push({ p: p, next: si === a.spec && k === 0 }); });
+    });
+    return list;
+  }
+
+  function terrainPreview(a) {
+    var list = stillToCome(a);
+    if (!list.length) return '';
+    var key = state.cfg.planet + '|' + JSON.stringify(list.map(function (q) {
+      return [q.p.kind, q.p.big, q.p.w, q.p.h, q.p.poly, q.p.parts, q.p.top, q.next];
+    }));
+    if (key !== tprev.key && key !== tprev.wanting) {
+      tprev.wanting = key;
+      setTimeout(function () { drawPreview(key, list); }, 40);
+    }
+    var label = list.length + ' piece' + (list.length === 1 ? '' : 's') + ' to lay, the next one outlined';
+    return tprev.url
+      ? '<img class="tprev" src="' + tprev.url + '" alt="' + label + '" title="' + label + '" style="display:block;width:100%;' +
+        'max-width:360px;margin:8px 0 6px;border-radius:6px;background:#0b0f15">'
+      : '<div class="tprev" style="margin:8px 0 6px;padding:18px 0;text-align:center;border-radius:6px;background:#0b0f15;' +
+        'font-size:12px;opacity:.7">Drawing the pieces…</div>';
+  }
+
+  function drawPreview(key, list) {
+    if (key !== tprev.wanting) return;             // a newer set has been asked for since
+    try {
+      /* Lay them out in rows that run straight across the screen. On this
+         projection that is along x, back along y: a step of d in x and -d in
+         y moves a piece sideways on screen and not up or down. */
+      var laid = [], GAP = 1.2, ROW = 26;
+      var rows = [[]], rowLen = 0;
+      list.forEach(function (q) {
+        var span = (q.p.w + q.p.h) / 2 + GAP;
+        if (rows[rows.length - 1].length && rowLen + span > ROW) { rows.push([]); rowLen = 0; }
+        rows[rows.length - 1].push(q); rowLen += span;
+      });
+      // the rows stacked back from the middle of the table, the whole block centred on it
+      var deeps = rows.map(function (row) { return row.reduce(function (m, q) { return Math.max(m, Math.max(q.p.w, q.p.h)); }, 0); });
+      var stack = deeps.reduce(function (s3, d3) { return s3 + d3 / 2 + GAP * 2; }, 0);
+      var depth = -stack / 2;
+      rows.forEach(function (row) {
+        var total = row.reduce(function (s2, q) { return s2 + (q.p.w + q.p.h) / 2 + GAP; }, -GAP);
+        var t = -total / 2, deep = 0;
+        row.forEach(function (q) {
+          var p = JSON.parse(JSON.stringify(q.p));
+          var half = (p.w + p.h) / 4;
+          var cx = W / 2 + depth + (t + half), cy = H / 2 + depth - (t + half);
+          R.placePiece(p, cx - p.w / 2, cy - p.h / 2, p.w, p.h);
+          laid.push({ p: p, next: q.next });
+          t += half * 2 + GAP;
+          deep = Math.max(deep, Math.max(p.w, p.h));
+        });
+        depth += deep / 2 + GAP * 2;
+      });
+      var terrain = laid.map(function (q) { return q.p; });
+
+      // the patch of plate they stand on, with room above for roofs and treetops
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      terrain.forEach(function (p) {
+        [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h]].forEach(function (c) {
+          var sp = ISO.toScreen(c[0], c[1]);
+          x0 = Math.min(x0, sp.x); x1 = Math.max(x1, sp.x); y0 = Math.min(y0, sp.y); y1 = Math.max(y1, sp.y);
+        });
+      });
+      var clip = { x0: x0 - K * 1.2, x1: x1 + K * 1.2, y0: y0 - K * 4.5, y1: y1 + K * 1.2 };
+      var seed = 7919;
+      var ground = ISO.bakeGround(terrain, seed, state.cfg.planet, clip);
+      var props = ISO.buildProps(terrain, [], seed, state.cfg.planet);
+
+      var cw = Math.round(clip.x1 - clip.x0), chh = Math.round(clip.y1 - clip.y0);
+      var cv = document.createElement('canvas');
+      cv.width = cw; cv.height = chh;
+      var g = cv.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.fillStyle = '#0b0f15'; g.fillRect(0, 0, cw, chh);
+      g.drawImage(ground, clip.x0, clip.y0, cw, chh, 0, 0, cw, chh);
+      g.save();
+      g.translate(-clip.x0, -clip.y0);
+      // the piece in hand: its footprint outlined on the ground, under anything standing on it
+      laid.forEach(function (q) {
+        if (!q.next) return;
+        var p = q.p;
+        var shapes = p.parts ? p.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
+          : [p.poly || [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h]]];
+        shapes.forEach(function (pts) {
+          g.beginPath();
+          pts.forEach(function (c, n) { var sp = ISO.toScreen(c[0], c[1]); if (n) g.lineTo(sp.x, sp.y); else g.moveTo(sp.x, sp.y); });
+          g.closePath();
+          g.lineWidth = 5; g.strokeStyle = 'rgba(8,10,14,.55)'; g.stroke();
+          g.lineWidth = 2.5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.stroke();
+        });
+      });
+      props.forEach(function (pr) { ISO.drawProp(g, pr, 0); });
+      g.restore();
+
+      // down to the card's size, smoothed: this is a reduction, not a zoom
+      var MAXW = 720, k2 = Math.min(1, MAXW / cw);
+      var out = document.createElement('canvas');
+      out.width = Math.round(cw * k2); out.height = Math.round(chh * k2);
+      var og = out.getContext('2d');
+      og.imageSmoothingEnabled = true;
+      if ('imageSmoothingQuality' in og) og.imageSmoothingQuality = 'high';
+      og.drawImage(cv, 0, 0, out.width, out.height);
+      if (!out.toDataURL) return;                   // no real canvas (the headless test page)
+      if (key !== tprev.wanting) return;
+      tprev.key = key; tprev.url = out.toDataURL('image/png');
+      render();
+    } catch (e) {
+      // a picture that cannot be drawn is not worth stopping the set-up for
+      if (window.console) console.error('terrain preview', e);
+    }
   }
 
   function lookAtDeployment(forSide) {
@@ -647,10 +793,13 @@
     render();
   }
 
-  function landUnit(u) {
+  function landUnit(u, fromOrbit) {
     focusUnit(u, false, true);
-    // a hull comes down on its landing point, and so do jump troops on their jets
-    var craft = R.isMachine(u) || !!u.jets;
+    /* A hull comes down on its landing point, and so do jump troops on their
+       jets. A squad landing by Battlefield Insertion is shown getting up off
+       the ground it came down on — except out of orbit in an Invasion, where
+       it falls out of the sky like everything else that side lands. */
+    var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
     u.arriveAt = nowMs();
     u.arriveKind = craft ? 'drop' : 'stand';
     if (craft) {
@@ -1682,6 +1831,17 @@
       dy: Math.round((VIEW_H - sh * z) / 2 + (cam.oy || 0))
     };
   }
+  /* A line on the ground in a side's colour gets a dark edge under it. On
+     soil the colour carries it; on sand or snow — desert ochre on desert sand —
+     it is the edge that shows. The dash pattern is kept for both strokes. */
+  function edgedStroke(dark) {
+    var col = ctx.strokeStyle, lw = ctx.lineWidth;
+    ctx.strokeStyle = 'rgba(8,10,14,' + (dark == null ? 0.45 : dark) + ')';
+    ctx.lineWidth = lw + 2;
+    ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = lw;
+    ctx.stroke();
+  }
   function hud(x, y, lift) {
     var p = ISO.toScreen(x, y), v = viewRect();
     return { x: (p.x - v.sx) * v.z + v.dx, y: (p.y - (lift || 0) - v.sy) * v.z + v.dy };
@@ -2082,11 +2242,109 @@
       state.remains = rem.filter(function (r) { return drop.indexOf(r) < 0; });
     }
   }
-  // wrecks burn on between moves: a slow redraw while one is on screen and nothing else is moving
+  /* Between moves the board is still: it is only redrawn while something on
+     screen is alive by itself. A burning wreck flickers well enough at about
+     eight frames a second; heat haze is a slow ripple, and at that rate it
+     steps rather than flows, so lava in view gets about sixteen. */
+  var ambientTick = 0;
   setInterval(function () {
-    if (!state || !state.scene || loop || !state.fireOnView || document.hidden) return;
-    drawBoard();
-  }, 120);
+    if (!state || !state.scene || loop || document.hidden) return;
+    ambientTick++;
+    if (state.hazeOnView || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
+  }, 60);
+
+  /* ================= heat haze =================
+     The air over a lava field shimmers. The ground under and just above the
+     melt is taken back off the frame and laid down again in bands a pixel
+     tall, each pushed sideways by a ripple that drifts upward, the way hot air
+     rises — strongest at the melt, fading to nothing a couple of inches up.
+
+     It is done to the terrain only, before any unit or prop is drawn, so the
+     ground wavers while the troops standing by it stay sharp enough to read.
+     The offsets are whole pixels, so the pixel art is never smeared, and it is
+     left out entirely for a player whose system asks for less motion. */
+  var hazeBuf = null, hazeCtx = null;
+  var calmMotion = false;
+  try { calmMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { }
+
+  // the outline round a set of points, for clipping the shimmer to the air over the melt
+  function hull(pts) {
+    pts = pts.slice().sort(function (a, b) { return a.x - b.x || a.y - b.y; });
+    if (pts.length < 3) return pts;
+    function cross(o, a, b) { return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x); }
+    var lo = [], up = [];
+    pts.forEach(function (p) {
+      while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+      lo.push(p);
+    });
+    for (var i = pts.length - 1; i >= 0; i--) {
+      var p = pts[i];
+      while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop();
+      up.push(p);
+    }
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+
+  function heatHaze(v) {
+    state.hazeOnView = false;
+    if (calmMotion || !state.terrain) return;
+    var lavas = state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; });
+    if (!lavas.length) return;
+    var t = nowMs() / 1000;
+    var rise = K * 2.2;                 // how high over the melt the air still wavers, in plate pixels
+    var AMP = 1.3;                      // the widest sway, in plate pixels: heat haze, not an earthquake
+
+    lavas.forEach(function (r, li) {
+      var foot = (r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]])
+        .map(function (q) { return ISO.toScreen(q[0], q[1]); });
+      // the melt, and the same outline lifted: the column of hot air standing over it
+      var shape = hull(foot.concat(foot.map(function (p) { return { x: p.x, y: p.y - rise }; })));
+      var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      shape.forEach(function (p) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); });
+      var meltTop = Math.min.apply(null, foot.map(function (p) { return p.y; }));
+      // only what is in the window, with room either side for the sway
+      var bx0 = Math.max(v.sx, Math.floor(x0 - AMP - 1)), bx1 = Math.min(v.sx + v.sw, Math.ceil(x1 + AMP + 1));
+      var by0 = Math.max(v.sy, Math.floor(y0)), by1 = Math.min(v.sy + v.sh, Math.ceil(y1));
+      if (bx1 <= bx0 || by1 <= by0) return;
+      state.hazeOnView = true;
+
+      // the patch as it stands, in the window's own pixels
+      var px0 = Math.round((bx0 - v.sx) * SS), py0 = Math.round((by0 - v.sy) * SS);
+      var pwid = Math.round((bx1 - bx0) * SS), phei = Math.round((by1 - by0) * SS);
+      if (pwid < 1 || phei < 1) return;
+      if (!hazeBuf) { hazeBuf = document.createElement('canvas'); hazeCtx = hazeBuf.getContext('2d'); }
+      if (hazeBuf.width < pwid || hazeBuf.height < phei) {
+        hazeBuf.width = Math.max(hazeBuf.width, pwid); hazeBuf.height = Math.max(hazeBuf.height, phei);
+      }
+      hazeCtx.setTransform(1, 0, 0, 1, 0, 0);
+      hazeCtx.clearRect(0, 0, pwid, phei);
+      hazeCtx.drawImage(pix, px0, py0, pwid, phei, 0, 0, pwid, phei);
+
+      pctx.save();
+      // clip to the column of air, in plate coordinates, then work in the window's pixels
+      pctx.beginPath();
+      shape.forEach(function (p, n) { if (n) pctx.lineTo(p.x, p.y); else pctx.moveTo(p.x, p.y); });
+      pctx.closePath();
+      pctx.clip();
+      pctx.setTransform(1, 0, 0, 1, 0, 0);
+      pctx.imageSmoothingEnabled = false;
+      var band = Math.max(1, Math.round(SS));           // a plate pixel tall
+      var seed = li * 1.7;                              // no two fields ripple in step
+      for (var yy = 0; yy < phei; yy += band) {
+        var plateY = by0 + yy / SS;
+        // full strength over the melt and just above it, dying away to the top of the column
+        var k = plateY >= meltTop ? 0.75 : Math.max(0, 1 - (meltTop - plateY) / rise);
+        if (k <= 0.02) continue;
+        // two ripples of different lengths, both drifting up, so it never looks like a pattern
+        var sway = Math.sin(plateY * 0.9 + t * 5.2 + seed) + 0.45 * Math.sin(plateY * 0.37 - t * 2.3 + seed * 2);
+        var dx = Math.round(AMP * k * sway * SS / 1.45);
+        if (!dx) continue;
+        var hgt = Math.min(band, phei - yy);
+        pctx.drawImage(hazeBuf, 0, yy, pwid, hgt, px0 + dx, py0 + yy, pwid, hgt);
+      }
+      pctx.restore();
+    });
+  }
 
   function drawBoard() {
     // everything drawn on the board itself is in CSS pixels, scaled to its density
@@ -2132,6 +2390,7 @@
     pctx.fillRect(v.sx, v.sy, v.sw, v.sh);
     pctx.drawImage(state.ground, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
     pctx.drawImage(state.structs, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
+    heatHaze(v);
 
     var pad = K * 3;
     function onView(x, y) {
@@ -2460,11 +2719,15 @@
         else {
           var col = sideRGB(ar.side);
           ctx.fillStyle = 'rgba(' + col + ',.1)'; ctx.fill();
-          ctx.strokeStyle = 'rgba(' + col + ',.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([9, 7]); ctx.stroke(); ctx.setLineDash([]);
+          ctx.strokeStyle = 'rgba(' + col + ',.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([9, 7]); edgedStroke(); ctx.setLineDash([]);
         }
         var c0 = hud(ar.x + ar.w / 2, ar.y + ar.h / 2);
         ctx.font = '700 ' + Math.round(13 + 6 * Math.min(1, cam.z)) + 'px Oxanium, system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        // outlined dark, so the name reads over snow and sand as well as over soil
+        ctx.lineJoin = 'round'; ctx.lineWidth = 4;
+        ctx.strokeStyle = now ? 'rgba(8,10,14,.6)' : 'rgba(8,10,14,.35)';
+        ctx.strokeText(ar.name, c0.x, c0.y);
         ctx.fillStyle = now ? 'rgba(255,255,255,.85)' : 'rgba(220,228,240,.45)';
         ctx.fillText(ar.name, c0.x, c0.y);
       });
@@ -2516,7 +2779,7 @@
         var boxes = boxesFor(side);
         if (circ) {
           isoRing(circ.x, circ.y, circ.r, liftOf(circ.x, circ.y));
-          ctx.fill(); ctx.stroke();
+          ctx.fill(); edgedStroke(own ? 0.45 : 0.2);
         } else if (boxes) {
           // Demolish: the stretches of table edge this side owns
           ctx.beginPath();
@@ -2526,7 +2789,7 @@
             for (var n = 1; n < 4; n++) ctx.lineTo(q[n].x, q[n].y);
             ctx.closePath();
           });
-          ctx.fill(); ctx.stroke();
+          ctx.fill(); edgedStroke(own ? 0.45 : 0.2);
         } else {
           var z = zoneFor(side);
           if (!z) { ctx.setLineDash([]); return; }
@@ -2539,7 +2802,7 @@
           ctx.beginPath();
           ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y);
           ctx.closePath();
-          ctx.fill(); ctx.stroke();
+          ctx.fill(); edgedStroke(own ? 0.45 : 0.2);
         }
         ctx.setLineDash([]);
       });
@@ -2788,7 +3051,11 @@
       var a2 = hud(u.x, u.y, liftOf(u.x, u.y));
       var b2 = hud(ui.hover.x, ui.hover.y, 0);
       var dist = Math.max(0, R.inches(u.x, u.y, ui.hover.x, ui.hover.y) - UR);
-      ctx.strokeStyle = 'rgba(231,236,244,.55)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+      // a dark edge under the light dash, so the tape reads on snow as well as on soil
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = 'rgba(8,10,14,.45)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(a2.x, a2.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
+      ctx.strokeStyle = 'rgba(231,236,244,.55)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(a2.x, a2.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
       ctx.setLineDash([]);
       var label = dist.toFixed(1) + '"';
@@ -3405,7 +3672,7 @@
         else if (a === 'holdinsert') { holdInsertion(); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
-        else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall') terrainAct(a, b.getAttribute('data-alt'));
+        else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
         else if (a === 'start') startBattle();
         else if (a === 'restart') el('setup').hidden = false;
@@ -3912,6 +4179,11 @@
       panBy(e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0,
         e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0);
       e.preventDefault(); return;
+    }
+    // R turns the piece in hand while the terrain is being laid
+    if ((e.key === 'r' || e.key === 'R') && state && state.phase === 'terrain') {
+      var ta = curArea();
+      if (ta && seats.indexOf(ta.side) >= 0 && !isAI(ta.side) && state.tset.ghost) { terrainAct('trotate'); return; }
     }
     var n = parseInt(e.key, 10);
     if (n >= 1 && n <= STANDARD.length) chooseAction(STANDARD[n - 1].id);
@@ -4519,7 +4791,11 @@
 
     canvas.addEventListener('pointerdown', function (e) {
       if (!state) return;
-      pointers[e.pointerId] = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: nowMs(), moved: false };
+      /* Only the primary button taps. A right or middle button still drags the
+         camera, but a right click is a turn of the piece in hand (see the
+         contextmenu handler), and must never also put the piece down. */
+      pointers[e.pointerId] = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: nowMs(), moved: false,
+        tapless: e.pointerType === 'mouse' && e.button > 0 };
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { }
       var list = pointerList();
       if (list.length === 2) {
@@ -4563,7 +4839,7 @@
       var uy = (typeof e.clientY === 'number' && (e.clientX || e.clientY)) ? e.clientY : p.y;
       if (Math.hypot(ux - p.x0, uy - p.y0) > TAP_SLOP) p.moved = true;
       // act where the finger landed, not where the up event reports
-      if (!p.moved && nowMs() - p.t0 < TAP_TIME) {
+      if (!p.moved && !p.tapless && nowMs() - p.t0 < TAP_TIME) {
         onBoardTap({ clientX: p.x0, clientY: p.y0, pointerType: e.pointerType });
       }
     }
@@ -4592,6 +4868,17 @@
       zoomAt(e.deltaY < 0 ? 1 : -1, canvasPoint(e));
     }, { passive: false });
     canvas.addEventListener('mouseleave', function () { ui.hover = null; if (state) drawBoard(); });
+    /* Laying terrain by hand, a right click turns the piece in hand a quarter —
+       the same as R or the Turn it button, without taking the pointer off the
+       spot it is about to go down on. Any other time the board is left alone. */
+    canvas.addEventListener('contextmenu', function (e) {
+      if (!state || state.phase !== 'terrain' || !state.tset || !state.tset.ghost) return;
+      var ta = curArea();
+      if (!ta || isAI(ta.side) || seats.indexOf(ta.side) < 0) return;
+      e.preventDefault();
+      terrainAct('trotate');
+      if (SFX) SFX.click();
+    });
     document.addEventListener('keydown', onKey);
 
     el('viewctl').addEventListener('click', function (e) {

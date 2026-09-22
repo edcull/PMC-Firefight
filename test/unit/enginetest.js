@@ -155,7 +155,14 @@ function act(e, side, u) {
     const r = e.intent(side, { k: 'action', id: id });
     if (!r.ok) continue;
     if (mark(e) !== start) return true;              // it resolved on the spot
-    if (commit(e, side)) return true;
+    /* Follow it through for as long as it keeps asking. Most actions ask
+       once; a Teleport asks twice — which unit goes, and then, on a 3-6,
+       which pad it comes out at — and stopping after the first answer used
+       to leave the turret standing there mid-teleport. */
+    for (let step = 0; step < 4; step++) {
+      if (!commit(e, side)) break;
+      if (mark(e) !== start) return true;
+    }
     e.intent(side, { k: 'cancel' });
   }
   return false;
@@ -281,6 +288,40 @@ function terrainByHand() {
   ok('a mirror knows whose area it is', mirror.query.terrainSide() === first);
   ok('and has the generator back', !!mirror.state().tset.gen);
 
+  /* ---- the pieces in hand: rolled up front, turned before they go down ---- */
+  let a = e.state().tset.areas[e.state().tset.i];
+  if (a.alt === null) e.intent(first, { k: 'terrain', act: 'talt', arg: 0 });
+  a = e.state().tset.areas[e.state().tset.i];
+  const sameShape = (p, q) => JSON.stringify([p.w, p.h, p.poly, p.parts]) === JSON.stringify([q.w, q.h, q.poly, q.parts]);
+  ok('every piece of the result is rolled before the first goes down',
+    Array.isArray(a.pieces) && a.pieces.length === a.row.alts[a.alt].length &&
+    a.pieces.every((list, i) => list.length === a.row.alts[a.alt][i].max));
+  const hand = () => e.state().tset.ghost;
+  const before = JSON.parse(JSON.stringify(hand()));
+  ok('the piece in hand is the first one shown', sameShape(hand(), a.pieces[a.spec][0]));
+  ok('the other side may not turn it', !e.intent(second, { k: 'terrain', act: 'trotate' }).ok);
+  ok('a quarter turn is allowed', e.intent(first, { k: 'terrain', act: 'trotate' }).ok);
+  ok('...and swaps its width and depth', Math.abs(hand().w - before.h) < 1e-9 && Math.abs(hand().h - before.w) < 1e-9,
+    before.w.toFixed(2) + 'x' + before.h.toFixed(2) + ' -> ' + hand().w.toFixed(2) + 'x' + hand().h.toFixed(2));
+  ok('...and the piece shown turns with it', sameShape(hand(), a.pieces[a.spec][a.count[a.spec] || 0]));
+  for (let t = 0; t < 3; t++) e.intent(first, { k: 'terrain', act: 'trotate' });
+  const back = hand();
+  ok('four turns bring it back exactly', Math.abs(back.w - before.w) < 1e-9 && Math.abs(back.h - before.h) < 1e-9 &&
+    JSON.stringify((back.poly || []).map((q) => q.map((v) => v.toFixed(6)))) === JSON.stringify((before.poly || []).map((q) => q.map((v) => v.toFixed(6)))));
+  // turn it once more and put it down: it goes down turned
+  e.intent(first, { k: 'terrain', act: 'trotate' });
+  const turned = JSON.parse(JSON.stringify(hand()));
+  const nextUp = a.pieces[a.spec][1] ? JSON.parse(JSON.stringify(a.pieces[a.spec][1])) : null;
+  const laidBefore = e.state().terrain.length;
+  e.intent(first, { k: 'terraintap', x: a.x + a.w / 2, y: a.y + a.h / 2 });
+  const laid = e.state().terrain[e.state().terrain.length - 1];
+  if (e.state().terrain.length > laidBefore) {
+    ok('a piece goes down the way it was turned', Math.abs(laid.w - turned.w) < 1e-9 && Math.abs(laid.h - turned.h) < 1e-9);
+    if (nextUp && hand() && hand().kind === nextUp.kind) {
+      ok('...and the next piece shown is the next in hand', Math.abs(hand().w - nextUp.w) < 1e-9 && Math.abs(hand().h - nextUp.h) < 1e-9);
+    }
+  }
+
   // lay every area by the book's turn order, each by its own side
   let guard = 0;
   while (e.state().phase === 'terrain' && guard++ < 20) {
@@ -339,7 +380,107 @@ function garrisons() {
   ok('found a table with a building to garrison', false, 'no building in thirty tries');
 }
 
+/* ---- how reinforcements come on ----
+   The Invasion attacker has no deployment zone: the whole force comes down
+   out of orbit into the landing zones, and is shown dropping from the sky the
+   way a Battlefield Insertion does. Everyone else walks on from its own table
+   edge. Either way an arrival within 12" of the enemy can draw a free shot. */
+function arrivals() {
+  console.log('arrivals');
+  let drops = 0, walks = 0, attackerWalked = 0, defenderDropped = 0, greeted = 0, battles = 0;
+  let squadsFromOrbit = 0, invaderNotOrbital = 0, orbitalDefender = 0;
+  for (let n = 0; n < 12 && (drops === 0 || greeted === 0); n++) {
+    const seen = [];
+    const e = Engine.create({
+      arrive: (u, how) => seen.push({ id: u.id, side: u.side, how: how, inserts: R.has(u, 'Battlefield Insertion'), squad: u.cls === 'infantry' }),
+      card: (c) => { if (c.kind === 'Hot landing zone') greeted++; }
+    });
+    e.start({
+      tier: 3, pl: 1, scenario: 'invasion',
+      armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse'
+    });
+    battles++;
+    const attacker = e.state().sc.attacker;
+    e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' });
+    const began = e.intent(e.query.placingSide() || 'A', { k: 'start' });
+    if (!began.ok) e.intent(attacker === 'A' ? 'B' : 'A', { k: 'start' });
+    // bring every arrival down: the attacker chooses where in its zone each one lands
+    for (let g = 0; g < 200 && !e.over(); g++) {
+      const sel = e.sel();
+      if (sel.insertion) {
+        const side = sel.insertion.unit ? sel.insertion.unit.side : 'A';
+        const spot = (sel.insertion.spots || [])[0];
+        e.intent(side, spot ? { k: 'insert', x: spot.x, y: spot.y } : { k: 'holdinsert' });
+        continue;
+      }
+      if (e.state().turn >= 3) break;
+      const st = e.state(), side = st.activeSide;
+      const u = e.query.eligible(side)[0];
+      if (!u) break;
+      e.intent(side, { k: 'select', id: u.id });
+      e.intent(side, { k: 'action', id: 'regroup' });
+    }
+    seen.forEach((a) => {
+      if (a.how === 'drop' || a.how === 'orbital') drops++; else if (a.how === 'walk') walks++;
+      /* Out of orbit: everything the invader lands falls out of the sky,
+         squads as well as hulls. Nobody else comes down that way. */
+      if (a.side === attacker && (a.how === 'drop' || a.how === 'walk')) invaderNotOrbital++;
+      if (a.side === attacker && a.how === 'orbital' && a.squad) squadsFromOrbit++;
+      if (a.side !== attacker && a.how === 'orbital') orbitalDefender++;
+      /* Only the arrival itself: troops stepping off a transport that has just
+         landed are a different thing. And a defender's own Battlefield
+         Insertion comes down from the sky as well, as it should. */
+      if (a.side === attacker && a.how === 'walk') attackerWalked++;
+      if (a.side !== attacker && a.how === 'drop' && !a.inserts) defenderDropped++;
+    });
+  }
+  // this file's ok() takes a condition, not a pair to compare
+  ok('the invading force comes down from the sky', drops > 0, drops + ' drops in ' + battles + ' battles');
+  ok('...every unit of it, none walking on', attackerWalked === 0, attackerWalked + ' walked on');
+  ok('the defender’s reinforcements still walk on', defenderDropped === 0, defenderDropped + ' dropped');
+  ok('an arrival can draw the free shot again', greeted > 0, 'no hot landing zone in ' + battles + ' battles');
+  ok('every invader lands out of orbit', invaderNotOrbital === 0, invaderNotOrbital + ' did not');
+  ok('...infantry included, falling from the sky rather than getting up off the ground', squadsFromOrbit > 0, 'no squad came down');
+  ok('nobody else comes down out of orbit', orbitalDefender === 0, orbitalDefender + ' defenders did');
+  console.log('  ' + drops + ' came down from the sky (' + squadsFromOrbit + ' invading squads among them), ' + walks + ' walked on, ' + greeted + ' hot landing zones');
+}
+
+/* ---- nothing off the table is ever shot at ----
+   A unit waiting in reserve is parked just off the table's corner, at (-1, -1).
+   The OpFor used to weigh every living enemy as a target, on the table or not,
+   and a unit of its own standing near that corner would open fire on the
+   empty corner and hit whoever was waiting to come on there. Whole battles,
+   OpFor against OpFor, in the scenario with the most units held back. */
+function offTableTargets() {
+  console.log('off-table targets');
+  let shots = 0, offTable = 0, battles = 0, example = '';
+  for (let n = 0; n < 16; n++) {
+    const e = Engine.create({
+      shoot: (a, t) => {
+        shots++;
+        if (t.reserve || t.aboard || t.x < 0 || t.y < 0) {
+          offTable++;
+          if (!example) example = a.label + ' fired on ' + t.label + ' at (' + t.x + ', ' + t.y + ')' + (t.reserve ? ', in reserve' : '');
+        }
+      }
+    });
+    // demo: both sides are the OpFor, and the whole battle resolves as it starts
+    e.start({
+      tier: 3, pl: 1, scenario: n % 2 ? 'invasion' : 'meeting',
+      armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, n % 4 < 2 ? 'rebel' : 'pmc'),
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse'
+    });
+    battles++;
+  }
+  ok('the OpFor never fires at a unit that is not on the table', offTable === 0,
+    offTable + ' of ' + shots + ' shots — e.g. ' + example);
+  console.log('  ' + shots + ' shots in ' + battles + ' OpFor battles, ' + offTable + ' at anything off the table');
+}
+
 /* ---- run ---- */
+offTableTargets();
+arrivals();
 terrainByHand();
 garrisons();
 console.log('engine — whole battles, driven by intent');

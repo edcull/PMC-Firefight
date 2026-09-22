@@ -40,7 +40,12 @@
 
   var TIERS = [1, 2, 3, 4, 5];
   var PLS = [1, 2];
-  var PLANETS = ['random', 'barren', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
+  /* The worlds on offer. Desert and arctic are the book's one barren table in
+     two looks; 'barren' is still accepted, from an older client or an old
+     campaign, and is settled into one of the two when the battle is set up. */
+  var PLANETS = ['random', 'desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable', 'barren'];
+  // what a player is shown to choose from: everything but the old name
+  var PLANET_CHOICES = PLANETS.filter(function (p) { return p !== 'barren'; });
   var SCENARIOS = ['roll', 'rolld3', 'meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover'];
   var FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
   var TACTICS = ['', 'laststand', 'wave', 'guerillas'];
@@ -148,7 +153,7 @@
   }
 
   root.PMCProto = {
-    TIERS: TIERS, PLS: PLS, PLANETS: PLANETS, SCENARIOS: SCENARIOS,
+    TIERS: TIERS, PLS: PLS, PLANETS: PLANETS, PLANET_CHOICES: PLANET_CHOICES, SCENARIOS: SCENARIOS,
     FACTIONS: FACTIONS, TACTICS: TACTICS, COLOURS: COLOURS, SEATS: SEATS,
     LIMITS: LIMITS, PHASE: PHASE,
     clampText: clampText, oneOf: oneOf,

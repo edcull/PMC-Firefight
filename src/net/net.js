@@ -253,7 +253,7 @@
       assault: function (a, t, deaths) { rec({ e: 'assault', from: a.id, to: t.id, deaths: ids(deaths) }); },
       strafe: function (u, from, to, deaths) { rec({ e: 'strafe', id: u.id, from: from, to: to, deaths: ids(deaths) }); },
       arrive: function (u, how, from, veh) { rec({ e: 'arrive', id: u.id, how: how, from: from || null, veh: veh ? veh.id : null }); },
-      sound: function (what) { rec({ e: 'sound', what: what }); },
+      sound: function (what, args) { rec({ e: 'sound', what: what, args: args && args.length ? args : undefined }); },
       focus: function (u) { rec({ e: 'focus', id: u && u.id }); },
       hint: function (text) { rec({ e: 'hint', text: text }); },
       colour: function (side, key) { rec({ e: 'colour', side: side, key: key }); },

@@ -1290,22 +1290,56 @@
   function lineClear(state, a, b) {
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
-      // a hill blocks sight across it, but not for a unit standing on it (p. 42)
       if (!t.blocks && !t.hill) continue;
-      if (inRect(a.x, a.y, r) || inRect(b.x, b.y, r)) continue;
+      var aIn = inRect(a.x, a.y, r), bIn = inRect(b.x, b.y, r);
+      /* A hill that rises in two steps: the upper step is a hill standing on a
+         hill, and it blocks sight across it the same way — for everyone but a
+         unit up on it. Two squads on the lower slope, with the crown between
+         them, do not see each other; nor does one on the slope see past the
+         crown to the ground beyond. */
+      if (t.hill && r.top) {
+        var aTop = aIn && inPoly(a.x, a.y, r.top), bTop = bIn && inPoly(b.x, b.y, r.top);
+        if (!aTop && !bTop && segRect(a.x, a.y, b.x, b.y, upperStep(r))) return false;
+      }
+      // a hill blocks sight across it, but not for a unit standing on it (p. 42)
+      if (aIn || bIn) continue;
       if (segRect(a.x, a.y, b.x, b.y, r)) return false;
     }
     /* "Units on hills can shoot/be shot at over friendly units below them (but
-       not over enemy ones)" — the friends of whichever end is up on the hill. */
-    var aHigh = a.side && onHill(state, a), bHigh = b.side && onHill(state, b);
+       not over enemy ones)" — the friends of whichever end is up on the hill,
+       taken a step at a time: from the crown, over friends on the slope below
+       it as well as on the level ground. */
+    var aLv = a.side ? levelOf(state, a) : 0, bLv = b.side ? levelOf(state, b) : 0;
     for (var j = 0; j < state.units.length; j++) {
       var u = state.units[j];
       if (!u.alive || u === a || u === b || u.aboard || u.x < 0) continue;
       if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
-      if ((aHigh && u.side === a.side || bHigh && u.side === b.side) && !onHill(state, u)) continue;
+      if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
+        var uLv = levelOf(state, u);
+        if ((u.side === a.side && aLv > uLv) || (u.side === b.side && bLv > uLv)) continue;
+      }
       return false;
     }
     return true;
+  }
+
+  /* How high a point stands: level ground (0), a hill (1), or the upper step
+     of a hill that rises in two (2). */
+  function groundLevel(state, x, y) {
+    var lv = 0;
+    for (var i = 0; i < state.terrain.length; i++) {
+      var r = state.terrain[i];
+      if (r.kind !== 'hill' || !inRect(x, y, r)) continue;
+      lv = Math.max(lv, r.top && inPoly(x, y, r.top) ? 2 : 1);
+    }
+    return lv;
+  }
+  function levelOf(state, u) { return u && u.x >= 0 ? groundLevel(state, u.x, u.y) : 0; }
+  // the upper step of a stepped hill, as a piece of its own for sight lines
+  function upperStep(r) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    r.top.forEach(function (q) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, poly: r.top };
   }
   function onHill(state, p) { return !!p && p.x >= 0 && terrainAt(state, p.x, p.y) === 'hill'; }
 
@@ -2634,6 +2668,10 @@
   function canShoot(state, a, t, mode, opts) {
     opts = opts || {};
     if (!a.alive || !t.alive || a.side === t.side || a.fp === null) return false;
+    /* Only what is on the table can be shot at. A unit held in reserve is parked
+       just off the table's corner at (-1, -1), and a unit riding inside a hull is
+       not there at all; neither is a target, however close the numbers say. */
+    if (t.reserve || t.aboard || t.x < 0 || t.y < 0) return false;
     if (!opts.aux) {
       // a main weapon set up for one kind of target cannot engage the other
       if (has(a, 'Specialisation (air)') && !isFlying(t)) return false;
@@ -2757,8 +2795,13 @@
       else if (markCall(state, a, t, opts) === 'mark') {
         total += 2; parts.push({ label: 'Markerlight', v: 2 });
       }
-      if (terrainOf(state, a) === 'hill' && terrainOf(state, t) !== 'hill') {
-        total += 2; parts.push({ label: 'firing from a hill', v: 2 });
+      /* Height: +2 for firing down on a target standing lower — from a hill on
+         to the level ground, and from the crown of a stepped hill on to its
+         lower slope as well. Once, however many steps down it is. */
+      var la = levelOf(state, a), lt = levelOf(state, t);
+      if (la > lt) {
+        total += 2;
+        parts.push({ label: la === 2 && lt === 1 ? 'firing down from the crown of the hill' : 'firing from a hill', v: 2 });
       }
       // a good shooting position: a high building or a reinforced one (pp. 41, 43)
       if (a.bld && sectionHigh(a.bld, sectionRect(a))) {
@@ -3548,6 +3591,7 @@
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, inRect: inRect, segRect: segRect,
+    groundLevel: groundLevel, levelOf: levelOf,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
     canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding, exitSpots: exitSpots,

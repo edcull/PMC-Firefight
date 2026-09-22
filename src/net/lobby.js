@@ -218,7 +218,7 @@
         return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
       }), s.tier) +
       sel('term-pl', 'Priority Level', [{ v: 1, t: '1 — skirmish' }, { v: 2, t: '2 — full battle' }], s.pl) +
-      sel('term-planet', 'Planet', P.PLANETS.map(function (p) {
+      sel('term-planet', 'Planet', P.PLANET_CHOICES.map(function (p) {
         return { v: p, t: p === 'random' ? 'Randomise the planet' : p.charAt(0).toUpperCase() + p.slice(1) };
       }), s.planet) +
       sel('term-scenario', 'Scenario', P.SCENARIOS.map(function (x) {

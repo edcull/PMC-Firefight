@@ -1295,7 +1295,8 @@
       <label for="sel-planet">Planet — terrain generator (rulebook pp. 46–48)</label>
       <select id="sel-planet">
         <option value="random">Randomise the planet</option>
-        <option value="barren">Barren / arctic world</option>
+        <option value="desert">Desert world (barren)</option>
+        <option value="arctic">Arctic world (barren)</option>
         <option value="sparse">Temperate world (sparsely colonised)</option>
         <option value="dense">Temperate world (densely colonised)</option>
         <option value="industrial">Industrial world</option>
@@ -1369,9 +1370,9 @@
 
     <h3>The battlefield</h3>
     <ul>
-      <li><b>Terrain (pp. 41–43).</b> Movement penalty: area terrain costs 1″ (2″ for a vehicle) <i>once</i> in a move, however much of it is crossed, and a unit starting in it pays to move through it; each low wall crossed costs it again. Barbed wire costs a D6″ rolled before the move. Hills block sight across them; a unit on one gets +2 Firepower shooting down and sees over its own side below. A low wall shelters only a unit with every model within 2″ of it, the wall between it and the shooter; rubble shelters the men in it and no one behind it. Trenches give cover and immunity to Crossfire. <i>House rule:</i> Protectors in hi-mobility armour jump over terrain — no penalties, and over walls, water and buildings — but must land on ground they could stand on.</li>
+      <li><b>Terrain (pp. 41–43).</b> Movement penalty: area terrain costs 1″ (2″ for a vehicle) <i>once</i> in a move, however much of it is crossed, and a unit starting in it pays to move through it; each low wall crossed costs it again. Barbed wire costs a D6″ rolled before the move. Hills block sight across them; a unit on one gets +2 Firepower shooting down and sees over its own side below. A big hill may rise in two steps: its crown is a hill on the hill, blocking sight across it for everyone but a unit up on it, and a unit on the crown gets the +2 shooting down on the slope below as well as on the ground &mdash; +2 once, however many steps down. A low wall shelters only a unit with every model within 2″ of it, the wall between it and the shooter; rubble shelters the men in it and no one behind it. Trenches give cover and immunity to Crossfire. <i>House rule:</i> Protectors in hi-mobility armour jump over terrain — no penalties, and over walls, water and buildings — but must land on ground they could stand on.</li>
       <li><b>Buildings (p. 41).</b> <i>Enter building</i> and <i>Exit building</i> are special actions, within 4″; one unit to a building (to a section, in a building of several wings, and <i>Next section</i> moves through to an empty one in contact). Inside: no Move, Advance or Assault; +2 Defence; no Crossfire; range measured from the wall both ways. A high building or a reinforced one gives +2 Firepower, a low one none — high buildings are drawn a storey taller. Charge a garrison and win, and you take the building while the defenders come out and fall back 2″. A building can also be garrisoned by tapping it during deployment.</li>
-      <li><b>Terrain set-up by hand (pp. 46–47).</b> Choose <i>Set it up by hand</i> and the game walks the table one 2′ × 2′ area at a time, starting from a random player and alternating: it rolls the area's D6, you pick between the options a result offers (hills <i>or</i> rocks), then tap each piece down — anywhere in that area, up to the number rolled. The OpFor lays its own areas. Either area, or everything left, can be auto-placed. In Meeting engagement, Secure and control and Find and secure the table edges are rolled only after the terrain is down, as the book has it, and the table is turned to match. Campaign battles use whichever set-up you last picked here.</li>
+      <li><b>Terrain set-up by hand (pp. 46–47).</b> Choose <i>Set it up by hand</i> and the game walks the table one 2′ × 2′ area at a time, starting from a random player and alternating: it rolls the area's D6, you pick between the options a result offers (hills <i>or</i> rocks), and every piece the result gives is shown drawn, together, the next one outlined; turn the next one a quarter at a time (<b>Turn it</b>, <kbd>R</kbd>, or a right click on the table), then tap each piece down — anywhere in that area, up to the number rolled. The OpFor lays its own areas. Either area, or everything left, can be auto-placed. In Meeting engagement, Secure and control and Find and secure the table edges are rolled only after the terrain is down, as the book has it, and the table is turned to match. Campaign battles use whichever set-up you last picked here.</li>
       <li><b>Terrain generators (pp. 46–48).</b> Pick a planet — or randomise it — and the table is built the book's way: divided into 2′ × 2′ areas, with a D6 rolled for each and the rolled result placed in it. Every roll and what it produced is listed in the log and on the opening card.</li>
       <li>Where a result offers a choice ("1-4 hills or rocks") one branch is taken at random, and counts like "1-6 rocks" are rolled within their range. Small rocky areas count as rubble, as the book says; high rocks, deep canyons and volcanoes are rocks, and swamps are shallow water.</li>
       <li><b>Terrain effects</b> follow the summary table: woods and ruins give +2 Defence and block sight; rubble and low walls give +2; buildings give +2 Defence and +2 Firepower; reinforced buildings +4 Defence; hills give +2 Firepower shooting down; rocks, high walls, deep water and lava are impassable; shallow water costs movement and silences Cumbersome Weapons.</li>
@@ -2784,22 +2785,56 @@
   function lineClear(state, a, b) {
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
-      // a hill blocks sight across it, but not for a unit standing on it (p. 42)
       if (!t.blocks && !t.hill) continue;
-      if (inRect(a.x, a.y, r) || inRect(b.x, b.y, r)) continue;
+      var aIn = inRect(a.x, a.y, r), bIn = inRect(b.x, b.y, r);
+      /* A hill that rises in two steps: the upper step is a hill standing on a
+         hill, and it blocks sight across it the same way — for everyone but a
+         unit up on it. Two squads on the lower slope, with the crown between
+         them, do not see each other; nor does one on the slope see past the
+         crown to the ground beyond. */
+      if (t.hill && r.top) {
+        var aTop = aIn && inPoly(a.x, a.y, r.top), bTop = bIn && inPoly(b.x, b.y, r.top);
+        if (!aTop && !bTop && segRect(a.x, a.y, b.x, b.y, upperStep(r))) return false;
+      }
+      // a hill blocks sight across it, but not for a unit standing on it (p. 42)
+      if (aIn || bIn) continue;
       if (segRect(a.x, a.y, b.x, b.y, r)) return false;
     }
     /* "Units on hills can shoot/be shot at over friendly units below them (but
-       not over enemy ones)" — the friends of whichever end is up on the hill. */
-    var aHigh = a.side && onHill(state, a), bHigh = b.side && onHill(state, b);
+       not over enemy ones)" — the friends of whichever end is up on the hill,
+       taken a step at a time: from the crown, over friends on the slope below
+       it as well as on the level ground. */
+    var aLv = a.side ? levelOf(state, a) : 0, bLv = b.side ? levelOf(state, b) : 0;
     for (var j = 0; j < state.units.length; j++) {
       var u = state.units[j];
       if (!u.alive || u === a || u === b || u.aboard || u.x < 0) continue;
       if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
-      if ((aHigh && u.side === a.side || bHigh && u.side === b.side) && !onHill(state, u)) continue;
+      if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
+        var uLv = levelOf(state, u);
+        if ((u.side === a.side && aLv > uLv) || (u.side === b.side && bLv > uLv)) continue;
+      }
       return false;
     }
     return true;
+  }
+
+  /* How high a point stands: level ground (0), a hill (1), or the upper step
+     of a hill that rises in two (2). */
+  function groundLevel(state, x, y) {
+    var lv = 0;
+    for (var i = 0; i < state.terrain.length; i++) {
+      var r = state.terrain[i];
+      if (r.kind !== 'hill' || !inRect(x, y, r)) continue;
+      lv = Math.max(lv, r.top && inPoly(x, y, r.top) ? 2 : 1);
+    }
+    return lv;
+  }
+  function levelOf(state, u) { return u && u.x >= 0 ? groundLevel(state, u.x, u.y) : 0; }
+  // the upper step of a stepped hill, as a piece of its own for sight lines
+  function upperStep(r) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    r.top.forEach(function (q) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, poly: r.top };
   }
   function onHill(state, p) { return !!p && p.x >= 0 && terrainAt(state, p.x, p.y) === 'hill'; }
 
@@ -4128,6 +4163,10 @@
   function canShoot(state, a, t, mode, opts) {
     opts = opts || {};
     if (!a.alive || !t.alive || a.side === t.side || a.fp === null) return false;
+    /* Only what is on the table can be shot at. A unit held in reserve is parked
+       just off the table's corner at (-1, -1), and a unit riding inside a hull is
+       not there at all; neither is a target, however close the numbers say. */
+    if (t.reserve || t.aboard || t.x < 0 || t.y < 0) return false;
     if (!opts.aux) {
       // a main weapon set up for one kind of target cannot engage the other
       if (has(a, 'Specialisation (air)') && !isFlying(t)) return false;
@@ -4251,8 +4290,13 @@
       else if (markCall(state, a, t, opts) === 'mark') {
         total += 2; parts.push({ label: 'Markerlight', v: 2 });
       }
-      if (terrainOf(state, a) === 'hill' && terrainOf(state, t) !== 'hill') {
-        total += 2; parts.push({ label: 'firing from a hill', v: 2 });
+      /* Height: +2 for firing down on a target standing lower — from a hill on
+         to the level ground, and from the crown of a stepped hill on to its
+         lower slope as well. Once, however many steps down it is. */
+      var la = levelOf(state, a), lt = levelOf(state, t);
+      if (la > lt) {
+        total += 2;
+        parts.push({ label: la === 2 && lt === 1 ? 'firing down from the crown of the hill' : 'firing from a hill', v: 2 });
       }
       // a good shooting position: a high building or a reinforced one (pp. 41, 43)
       if (a.bld && sectionHigh(a.bld, sectionRect(a))) {
@@ -5042,6 +5086,7 @@
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, inRect: inRect, segRect: segRect,
+    groundLevel: groundLevel, levelOf: levelOf,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
     canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding, exitSpots: exitSpots,
@@ -9704,6 +9749,15 @@
     return lo + Math.floor(Math.pow(rand(), 0.72) * (hi - lo + 1));
   }
   function rf(rand, lo, hi) { return lo + rand() * (hi - lo); }
+  /* How many of a rolled feature go down. A "1-X" result that comes out at 1
+     is made 2: a quarter given "1-6 rocks" and then a single rock reads as the
+     roll having gone missing, not as terrain. A result of exactly one — "a
+     single crater" — is still one, and an "up to" count may still be none. */
+  function countFor(spec, rand) {
+    var n = riHigh(rand, spec.min, spec.max);
+    if (spec.min === 1 && spec.max >= 2 && n < 2) n = 2;
+    return n;
+  }
 
   function overlap(a, b) {
     var ix = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
@@ -9741,7 +9795,8 @@
   }
 
   /* Put one rolled result into an area the generator's way: counts leaning
-     high, dropped at random, shaped as they land. */
+     high, dropped at random, shaped as they land — except the walls, which are
+     built rather than dropped. */
   function fillArea(alt, area, existing, objectives, rand, W, H) {
     var placed = [];
     /* How much this area is getting, before any of it is put down. A
@@ -9749,25 +9804,245 @@
        fought over, not pressed against the table edge where a unit can only
        ever be on one side of them — so a sparse area is given an inset and
        its terrain comes inland. */
-    var wants = alt.map(function (spec) { return riHigh(rand, spec.min, spec.max); });
+    var wants = alt.map(function (spec) { return countFor(spec, rand); });
     var total = wants.reduce(function (a2, b2) { return a2 + b2; }, 0);
     var inset = total < 3 ? Math.min(6, Math.min(area.w, area.h) * 0.3) : 0;
+    // what stands goes down first, so the walls have something to be built round
+    var walls = [];
     alt.forEach(function (spec, si) {
+      if (LINEAR[spec.kind]) { walls.push({ spec: spec, n: wants[si] }); return; }
       for (var c = 0; c < wants[si]; c++) {
         var piece = place(spec, area, existing.concat(placed), objectives, rand, W, H, inset);
         if (piece) placed.push(piece);
       }
+    });
+    /* The buildings these walls belong to: the ones this roll has just put
+       down, or — when a player laid the buildings by hand and left the rest to
+       be placed for them — the ones already standing in this area. */
+    var built = placed.filter(function (p) { return BUILT[p.kind]; });
+    if (!built.length) {
+      built = existing.filter(function (p) {
+        return BUILT[p.kind] && p.x + p.w / 2 >= area.x && p.x + p.w / 2 < area.x + area.w &&
+          p.y + p.h / 2 >= area.y && p.y + p.h / 2 < area.y + area.h;
+      });
+    }
+    walls.forEach(function (wl) {
+      var left = wl.n;
+      if (built.length) left -= enclose(wl.spec, left, built, area, existing, placed, objectives, rand, W, H);
+      if (left > 0) runOfWall(wl.spec, left, area, existing, placed, objectives, rand, W, H, inset);
     });
     var RR = root.PMC;
     if (RR && RR.shapePiece) placed.forEach(function (p) { RR.shapePiece(p, rand); });
     return placed;
   }
 
+  /* ---------- walls are built, not scattered ----------
+     A wall in the book's tables comes with the buildings rolled beside it —
+     "an outpost: buildings and walls", "a farmhouse: buildings and low walls" —
+     and on a real table it goes round them: a yard, a compound, a perimeter.
+     Dropped one at a time they came out as loose slabs strewn across the area,
+     each on its own and none of them walling anything in.
+
+     So the buildings of a roll are grouped, and the walls are run round the
+     group: a yard wide enough to stand in between wall and building, the side
+     facing the middle of the table built first — that is the side the fight
+     comes from — then the flanks, then the back. A gateway is left in the
+     front: high walls are impassable, and a compound with no way in is not a
+     compound, it is a sealed box. A roll that gives fewer walls than the ring
+     needs builds as much of it as it has, which reads as a walled yard open
+     at the back rather than a scatter.
+
+     Sections are the book's: a high wall is destroyed in sections of up to 6",
+     so none is longer. Neighbouring sections keep half an inch apart, which is
+     the gap every two pieces of terrain keep (the scenario's clean-up would
+     push them apart otherwise) and far too narrow for a 2" base to pass. */
+  var LINEAR = { wall: 1, barricade: 1 };
+  var BUILT = { building: 1, bunker: 1 };
+  var THICK = 1;            // a wall's depth, in inches
+  var JOINT = 0.55;         // between neighbouring sections: just over the half inch every piece keeps
+  var GATE = 4;             // a gateway: a 2" base with room either side
+  var SECTION = 6;          // the longest section the book allows
+
+  function bbox(list) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    list.forEach(function (p) {
+      x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y);
+      x1 = Math.max(x1, p.x + p.w); y1 = Math.max(y1, p.y + p.h);
+    });
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+  function gapBetween(a, b) {
+    var dx = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w));
+    var dy = Math.max(0, Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h));
+    return Math.hypot(dx, dy);
+  }
+  /* Buildings close enough to share a yard are walled in together; one
+     standing apart gets a compound of its own. Biggest group first. */
+  function groupsOf(built) {
+    var groups = [];
+    built.forEach(function (b) {
+      var home = groups.filter(function (g) { return g.some(function (o) { return gapBetween(o, b) < 6; }); });
+      if (!home.length) { groups.push([b]); return; }
+      var merged = [b];
+      home.forEach(function (g) { merged = merged.concat(g); groups.splice(groups.indexOf(g), 1); });
+      groups.push(merged);
+    });
+    return groups.sort(function (a, b) {
+      var A = bbox(a), B = bbox(b);
+      return B.w * B.h - A.w * A.h;
+    });
+  }
+
+  // a piece may go here: on the table, off everyone else's ground, clear of the objectives
+  function fits(piece, others, objectives, W, H) {
+    if (piece.x < 0.5 || piece.y < 0.5 || piece.x + piece.w > W - 0.5 || piece.y + piece.h > H - 0.5) return false;
+    if (clashes(piece, others)) return false;
+    for (var o = 0; o < objectives.length; o++) {
+      var ob = objectives[o];
+      if (ob.x >= piece.x - 3 && ob.x <= piece.x + piece.w + 3 && ob.y >= piece.y - 3 && ob.y <= piece.y + piece.h + 3) return false;
+    }
+    return true;
+  }
+
+  /* A side of the ring, cut into sections no longer than the book allows,
+     with a gateway taken out of its middle if it is the front. */
+  function cutSide(from, to, gate) {
+    var spans = [[from, to]];
+    if (gate) {
+      var len = to - from;
+      if (len >= GATE + 2 * 1.5) {
+        var mid = from + len / 2;
+        spans = [[from, mid - GATE / 2], [mid + GATE / 2, to]];
+      } else {
+        spans = [[from + GATE, to]];            // too short to have wall both sides: open at one end
+      }
+    }
+    var out = [];
+    spans.forEach(function (s) {
+      var len = s[1] - s[0];
+      if (len < 1.5) return;
+      var k = Math.ceil((len + JOINT) / (SECTION + JOINT));
+      var each = (len - (k - 1) * JOINT) / k;
+      for (var i = 0; i < k; i++) out.push([s[0] + i * (each + JOINT), s[0] + i * (each + JOINT) + each]);
+    });
+    return out;
+  }
+
+  /* Wall in the buildings of one roll. Returns how many sections went down. */
+  function enclose(spec, budget, built, area, existing, placed, objectives, rand, W, H) {
+    var laid = 0;
+    groupsOf(built).forEach(function (group) {
+      if (laid >= budget) return;
+      laid += compound(spec, budget - laid, group, existing, placed, objectives, rand, W, H);
+    });
+    return laid;
+  }
+
+  function compound(spec, budget, group, existing, placed, objectives, rand, W, H) {
+    var box = bbox(group);
+    // room to stand in the yard: a high wall keeps a little further off than a garden one
+    var yard = spec.kind === 'wall' ? rf(rand, 3, 4) : rf(rand, 2.5, 3.5);
+    var x0 = box.x - yard - THICK, y0 = box.y - yard - THICK;
+    var x1 = box.x + box.w + yard + THICK, y1 = box.y + box.h + yard + THICK;
+    /* A side that would run off the table is not built: the table edge closes
+       it well enough, and a wall laid along the very edge walls nothing in. */
+    var open = { N: y0 < 0.5, S: y1 > H - 0.5, W: x0 < 0.5, E: x1 > W - 0.5 };
+    x0 = Math.max(0.5, x0); y0 = Math.max(0.5, y0);
+    x1 = Math.min(W - 0.5, x1); y1 = Math.min(H - 0.5, y1);
+
+    // the side that faces the middle of the table is where the fight comes from
+    var cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+    var tx = W / 2 - cx, ty = H / 2 - cy;
+    var facing = { N: -ty, S: ty, W: -tx, E: tx };
+    var order = ['N', 'S', 'W', 'E'].filter(function (s) { return !open[s]; })
+      .sort(function (a, b) { return facing[b] - facing[a]; });
+    if (!order.length) return 0;
+    var front = order[0];
+    var back = { N: 'S', S: 'N', W: 'E', E: 'W' }[front];
+    // front, then the two flanks, then the back
+    order = [front].concat(order.filter(function (s) { return s !== front && s !== back; }))
+      .concat(order.indexOf(back) >= 0 && back !== front ? [back] : []);
+
+    /* The long sides own the corners; the short sides run between them, a
+       joint's width short at each end so no two sections touch. */
+    function sectionsOf(side) {
+      var horiz = side === 'N' || side === 'S';
+      var spans = horiz
+        ? cutSide(x0, x1, side === front)
+        : cutSide(y0 + (open.N ? 0 : THICK + JOINT), y1 - (open.S ? 0 : THICK + JOINT), side === front);
+      return spans.map(function (s) {
+        return horiz
+          ? { kind: spec.kind, x: s[0], y: side === 'N' ? y0 : y1 - THICK, w: s[1] - s[0], h: THICK }
+          : { kind: spec.kind, x: side === 'W' ? x0 : x1 - THICK, y: s[0], w: THICK, h: s[1] - s[0] };
+      });
+    }
+
+    var laid = 0;
+    for (var i = 0; i < order.length && laid < budget; i++) {
+      var secs = sectionsOf(order[i]);
+      /* A flank is built from the front corner backwards, so a short roll
+         leaves the back of the yard open rather than the front. */
+      if ((order[i] === 'W' || order[i] === 'E') && front === 'S') secs.reverse();
+      if ((order[i] === 'N' || order[i] === 'S') && front === 'E') secs.reverse();
+      for (var k = 0; k < secs.length && laid < budget; k++) {
+        var p = secs[k];
+        // a section with something already on its ground is simply left out: a breach in the wall
+        if (!fits(p, existing.concat(placed), objectives, W, H)) continue;
+        placed.push(p);
+        laid++;
+      }
+    }
+    return laid;
+  }
+
+  /* Walls with no building to go round — "1-3 low walls", or more walls than
+     the compound needed — are laid as lengths of wall, section after section,
+     sometimes turning a corner, rather than as slabs on their own. */
+  function runOfWall(spec, budget, area, existing, placed, objectives, rand, W, H, inset) {
+    var last = null, dir = null;
+    for (var n = 0; n < budget; n++) {
+      var next = null;
+      if (last) {
+        for (var t = 0; t < 6 && !next; t++) {
+          // carry straight on, or now and then turn the corner
+          var turn = t > 0 || rand() < 0.3;
+          var d = turn ? (dir === 'x' ? 'y' : 'x') : dir;
+          var len = rf(rand, 4, SECTION);
+          var ahead = rand() < 0.5;             // which way the new section runs
+          var atFar = rand() < 0.5;             // turning: off which end of the last one
+          var q;
+          if (d === 'x') {
+            // horizontal: on from either end, or round the corner at the top or bottom of an upright
+            var yy = turn ? (atFar ? last.y + last.h - THICK : last.y) : last.y;
+            q = ahead
+              ? { x: last.x + last.w + JOINT, y: yy, w: len, h: THICK }
+              : { x: last.x - JOINT - len, y: yy, w: len, h: THICK };
+          } else {
+            var xx = turn ? (atFar ? last.x + last.w - THICK : last.x) : last.x;
+            q = ahead
+              ? { x: xx, y: last.y + last.h + JOINT, w: THICK, h: len }
+              : { x: xx, y: last.y - JOINT - len, w: THICK, h: len };
+          }
+          q.kind = spec.kind;
+          if (fits(q, existing.concat(placed), objectives, W, H)) { next = q; dir = d; }
+        }
+      }
+      if (!next) {
+        // the first length of a new run goes down where the book would drop it
+        next = place(spec, area, existing.concat(placed), objectives, rand, W, H, inset);
+        if (!next) return;
+        dir = next.w >= next.h ? 'x' : 'y';
+      }
+      placed.push(next);
+      last = next;
+    }
+  }
+
   /* Divide the table into 2' x 2' areas, roll a D6 for each, place what it gives. */
   function generate(opts) {
     var W = opts.width, H = opts.height;
     var rand = opts.rand || Math.random;
-    var gen = GENERATORS[opts.planet] || GENERATORS.sparse;
+    var gen = tableFor(opts.planet);
     var objectives = opts.objectives || [];
     var out = [], rolls = [], memo = {};
     areasOf(W, H).forEach(function (area) {
@@ -9836,9 +10111,47 @@
     return null;
   }
 
+  /* ---------- one table, two worlds ----------
+     The book gives one table for a "barren / arctic world", and on the table
+     the two are the same fight: the same rolls, the same pieces. They do not
+     look it — a desert is not a snowfield — so the planet a battle is fought on
+     can be either, and each is laid from the book's one table.
+
+     `barren` stays a table and stays a name the game understands, because old
+     campaign contracts carry it; when a battle is set up it is settled into
+     one world or the other, once, so every screen paints the same one. */
+  var VARIANTS = { barren: ['desert', 'arctic'] };
+  var BASE = { desert: 'barren', arctic: 'barren' };
+  var WORLD_NAME = { desert: 'Desert world (barren)', arctic: 'Arctic world (barren)' };
+
+  // the book's table for a world, under the world's own name
+  function tableFor(planet) {
+    if (GENERATORS[planet]) return GENERATORS[planet];
+    if (BASE[planet]) {
+      var t = GENERATORS[BASE[planet]];
+      return { name: WORLD_NAME[planet], rows: t.rows };
+    }
+    return GENERATORS.sparse;
+  }
+
+  /* The world a battle is actually fought on. "Random" is a pick among the
+     book's seven kinds of world, each as likely as the next — a barren world
+     is not made twice as common by coming in two looks — and a barren one is
+     then settled into desert or arctic, half and half. */
+  function resolvePlanet(planet, rand) {
+    rand = rand || Math.random;
+    if (!planet || planet === 'random') {
+      var kinds = Object.keys(GENERATORS);
+      planet = kinds[Math.floor(rand() * kinds.length)];
+    }
+    var v = VARIANTS[planet];
+    return v ? v[Math.floor(rand() * v.length)] : planet;
+  }
+
   root.PMCGen = {
     GENERATORS: GENERATORS, SIZES: SIZES, generate: generate, areasOf: areasOf, rollArea: rollArea,
-    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place
+    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place,
+    tableFor: tableFor, resolvePlanet: resolvePlanet, VARIANTS: VARIANTS, BASE: BASE
   };
 })(window);
 
@@ -9885,6 +10198,31 @@
       sand: ['#524f4a', '#605c55', '#6f6a62', '#7e7970', '#8e897f'],
       mud: ['#1f2125', '#282a2f', '#31343a', '#3a3e45'],
       tufts: 0.08, track: ['#26282c', '#6a6f77']
+    },
+    /* The book's barren / arctic table, fought on either of two worlds that
+       look nothing alike. Each still has a base ground, a second ground in
+       patches, a dry or bare patch and a low ground, as every world does —
+       they are simply different things on each. */
+    desert: {                                     // desert: warm sand, paler drift, red hardpan, dark gravel in the hollows
+      soil: ['#6a5232', '#7b6139', '#8c7043', '#9d804e', '#ae905b', '#bea06a'],
+      scrub: ['#a8966e', '#b7a57c', '#c5b38a', '#d2c099', '#ddcba7'],
+      sand: ['#6b3f25', '#7c4a2c', '#8d5634', '#9e623d', '#ae6f47'],
+      mud: ['#3a2c1c', '#463523', '#533f2a', '#604932'],
+      tufts: 0.12, hillTufts: 0.2, track: ['#4f3c24', '#c2a877'],
+      // what little grows is dry: straw, not grass
+      blade: ['#3e301a', '#6a5630', '#8c7644', '#aa925a', '#c4ab70']
+    },
+    arctic: {                                     // arctic: snow with blue shadow, bare rock showing through
+      /* Overcast snow rather than glare: light enough to read as snow, dark
+         enough at its brightest that a white marker can still be picked out
+         against it (and every marker on the table has a dark edge besides). */
+      soil: ['#8e98a4', '#9fa9b5', '#b0bac5', '#c0c9d3', '#cfd7df', '#dce3ea'],
+      scrub: ['#7d8fa3', '#8b9db1', '#99abbe', '#a8b9ca', '#b7c7d6'],
+      sand: ['#3f4247', '#4b4f55', '#585c63', '#666a71', '#747880'],
+      mud: ['#5a6678', '#667385', '#728092', '#7e8c9e'],
+      tufts: 0.04, hillTufts: 0.06, track: ['#6f7c8c', '#e6ecf1'],
+      // the odd dead stem through the snow, frosted grey
+      blade: ['#454c56', '#666e7a', '#87909b', '#a3abb4', '#bec5cd']
     },
     sparse: { soil: SOIL, scrub: SCRUB, sand: SAND, mud: MUD, tufts: 1, track: ['#2f2619', '#6b5c43'] },
     dense: {                                      // temperate dense: dark loam under a lot of green
@@ -10163,6 +10501,9 @@
      are all drawn from the planet's soil, so a hill on a frost world is grey and
      one in a jungle is dark loam, not the same brown everywhere. */
   var HILLC = null;
+  /* What grows on this world, set with its ground as the table is baked: the
+     colour of a tuft of grass, and how much of a hilltop carries one. */
+  var BLADES = null, HILLTUFT = 0.65;
   function hillColours(GP) {
     var soil = GP.soil.map(hex3), mud = GP.mud.map(hex3), scrub = GP.scrub.map(hex3), sand = GP.sand.map(hex3);
     function hx(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
@@ -10178,9 +10519,20 @@
     };
   }
 
-  function bakeGround(terrain, seed, planet) {
+  /* `clip`, when given, is the only part of the plate that is wanted — a few
+     hundred pixels round a handful of pieces, for a picture of them — and the
+     two costly passes, the noise lattice and the soil pixel by pixel, are run
+     over that patch alone. Everything else is as it always is. */
+  function bakeGround(terrain, seed, planet, clip) {
     var GP = GROUNDS[planet] || GROUNDS.sparse;
+    var cx0 = 0, cy0 = 0, cx1 = PIXW, cy1 = PIXH;
+    if (clip) {
+      cx0 = Math.max(0, Math.floor(clip.x0)); cy0 = Math.max(0, Math.floor(clip.y0));
+      cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
+    }
     HILLC = hillColours(GP);
+    BLADES = GP.blade || BLADE;
+    HILLTUFT = GP.hillTufts != null ? GP.hillTufts : 0.65;
     var cv = document.createElement('canvas');
     cv.width = PIXW; cv.height = PIXH;
     var g = cv.getContext('2d');
@@ -10192,8 +10544,10 @@
     var soilFit = groundFit(terrain, seed);
     var fN = new Float32Array(gw * gh), fP = new Float32Array(gw * gh), fD = new Float32Array(gw * gh);
     var fTW = new Float32Array(gw * gh), fTR = new Float32Array(gw * gh), fTG = new Float32Array(gw * gh), fTB = new Float32Array(gw * gh);
-    for (var gy = 0; gy < gh; gy++) {
-      for (var gx = 0; gx < gw; gx++) {
+    var gx0 = Math.max(0, Math.floor(cx0 / LAT) - 1), gx1 = Math.min(gw, Math.ceil(cx1 / LAT) + 2);
+    var gy0 = Math.max(0, Math.floor(cy0 / LAT) - 1), gy1 = Math.min(gh, Math.ceil(cy1 / LAT) + 2);
+    for (var gy = gy0; gy < gy1; gy++) {
+      for (var gx = gx0; gx < gx1; gx++) {
         var wq = toWorld(gx * LAT, gy * LAT), o = gy * gw + gx;
         fN[o] = fbm(wq.x / 5.5, wq.y / 5.5, seed, 4) * 0.6 + fbm(wq.x / 1.4, wq.y / 1.4, seed + 300, 2) * 0.4;
         fP[o] = fbm(wq.x / 9, wq.y / 9, seed + 900, 2);
@@ -10216,12 +10570,12 @@
     var INV_K = 1 / K, INV_HK = 2 / K;
 
     /* --- soil, one pixel at a time --- */
-    for (var by = 0; by < PIXH; by++) {
+    for (var by = cy0; by < cy1; by++) {
       var v0 = (by - OY) * INV_HK;
-      var wx = ((0 - OX) * INV_K + v0) / 2, wy = (v0 - (0 - OX) * INV_K) / 2;
+      var wx = ((cx0 - OX) * INV_K + v0) / 2, wy = (v0 - (cx0 - OX) * INV_K) / 2;
       var dx = INV_K / 2, dy = -INV_K / 2;
       var row = by * PIXW * 4, br = (by & 3);
-      for (var bx = 0; bx < PIXW; bx++, wx += dx, wy += dy) {
+      for (var bx = cx0; bx < cx1; bx++, wx += dx, wy += dy) {
         if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
         var n = lat(fN, bx, by), patch = lat(fP, bx, by), dry = lat(fD, bx, by);
         // feather the boundaries between materials so they break up rather than
@@ -10405,6 +10759,7 @@
   // a clump of grass: a few blades, lit on the left, darker at the root
   var BLADE = ['#3d4526', '#4d5730', '#5f6a3c', '#71804a', '#86955a'];
   function tuft(g, x, y, rnd) {
+    var BL = BLADES || BLADE;              // the world's own grass: green, straw or frosted
     x = Math.round(x); y = Math.round(y);
     var n = 3 + (rnd() * 4 | 0);
     g.fillStyle = 'rgba(20,15,9,.35)';
@@ -10412,8 +10767,8 @@
     for (var i = 0; i < n; i++) {
       var bx = x - 2 + (rnd() * 5 | 0), h = 2 + (rnd() * 5 | 0), lean = rnd() > 0.5 ? 1 : -1;
       for (var k = 0; k < h; k++) {
-        var c = BLADE[Math.min(4, 1 + ((k / h) * 3.2 | 0) + (bx < x ? 1 : 0))];
-        g.fillStyle = k === 0 ? BLADE[0] : c;
+        var c = BL[Math.min(4, 1 + ((k / h) * 3.2 | 0) + (bx < x ? 1 : 0))];
+        g.fillStyle = k === 0 ? BL[0] : c;
         g.fillRect(bx + (k > h * 0.6 ? lean : 0), y - k, 1, 1);
       }
     }
@@ -10787,7 +11142,7 @@
         var f = i / len, x = Math.round(AT[0] + (BT[0] - AT[0]) * f), y = Math.round(AT[1] + (BT[1] - AT[1]) * f);
         var hang = 1 + (hr() * 4 | 0);
         for (var k = 0; k < hang; k++) {
-          g.fillStyle = BLADE[Math.max(0, (lit ? 3 : 1) - k)];
+          g.fillStyle = (BLADES || BLADE)[Math.max(0, (lit ? 3 : 1) - k)];
           g.fillRect(x, y + k, 1, 1);
         }
       }
@@ -10797,7 +11152,7 @@
     for (var k = 0; k < area * 11; k++) {
       var at = spotIn(r, 0.2, hr), sp = toScreen(at.x, at.y);
       if (r.top && !z0 && R0() && root.PMC.inPoly(at.x, at.y, r.top)) continue;   // the upper step covers it
-      if (hr() > 0.35) tuft(g, sp.x, sp.y - z0 - ELEV, hr);
+      if (hr() > 1 - HILLTUFT) tuft(g, sp.x, sp.y - z0 - ELEV, hr);
       else pebble(g, sp.x, sp.y - z0 - ELEV, 1 + (hr() * 2 | 0), hr);
     }
     for (var oc = 0; oc < Math.round(area / 25); oc++) {
@@ -10812,6 +11167,8 @@
   var FLORA = {
     sparse: { pine: 0.28, tall: 1 }, dense: { pine: 0.2, tall: 1 }, jungle: { pine: 0.04, tall: 1.25 },
     mountain: { pine: 0.7, tall: 1.05 }, industrial: { pine: 0.35, tall: 0.9 }, barren: { pine: 0.8, tall: 0.8 },
+    // a desert grows little and low; the arctic grows conifers, stunted
+    desert: { pine: 0.1, tall: 0.7 }, arctic: { pine: 0.95, tall: 0.8 },
     unstable: { pine: 0.5, tall: 0.85 }
   };
   function buildProps(terrain, objectives, seed, planet) {
@@ -19889,7 +20246,12 @@
 
   var TIERS = [1, 2, 3, 4, 5];
   var PLS = [1, 2];
-  var PLANETS = ['random', 'barren', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
+  /* The worlds on offer. Desert and arctic are the book's one barren table in
+     two looks; 'barren' is still accepted, from an older client or an old
+     campaign, and is settled into one of the two when the battle is set up. */
+  var PLANETS = ['random', 'desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable', 'barren'];
+  // what a player is shown to choose from: everything but the old name
+  var PLANET_CHOICES = PLANETS.filter(function (p) { return p !== 'barren'; });
   var SCENARIOS = ['roll', 'rolld3', 'meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover'];
   var FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
   var TACTICS = ['', 'laststand', 'wave', 'guerillas'];
@@ -19997,7 +20359,7 @@
   }
 
   root.PMCProto = {
-    TIERS: TIERS, PLS: PLS, PLANETS: PLANETS, SCENARIOS: SCENARIOS,
+    TIERS: TIERS, PLS: PLS, PLANETS: PLANETS, PLANET_CHOICES: PLANET_CHOICES, SCENARIOS: SCENARIOS,
     FACTIONS: FACTIONS, TACTICS: TACTICS, COLOURS: COLOURS, SEATS: SEATS,
     LIMITS: LIMITS, PHASE: PHASE,
     clampText: clampText, oneOf: oneOf,
@@ -20113,8 +20475,28 @@
     function playAssault(a, t, deaths, done) { V.assault(a, t, deaths); if (done) done(); }
     function playStrafe(u, from, to, deaths, done) { V.strafe(u, from, to, deaths); if (done) done(); }
     function repaintTerrain(wrecks) { V.terrain(wrecks); }
-    function showArrival(u) { V.arrive(u, 'walk'); }
-    function landUnit(u) { V.arrive(u, 'drop'); greet(u); }
+    /* How a scenario reinforcement comes on. The Invasion attacker is coming
+       down from orbit, so it lands the way a Battlefield Insertion does — out of
+       the sky; a solitaire scenario may say a drop, or a walk from a particular
+       spot; everyone else walks on from its own table edge. Either way it can
+       draw the free shot an arrival within 12" invites (p. 30), which landUnit
+       and walkOn both fire. (A stand-in here used to say "walk" for everyone
+       and skip that shot; this is the decision game.js always made.) */
+    function showArrival(u) {
+      if (state.scen.id === 'invasion' && state.sc && u.side === state.sc.attacker) { landUnit(u); return; }
+      var how = state.scen.arriveHow ? state.scen.arriveHow(state, u) : null;
+      if (how === 'drop') { landUnit(u); return; }
+      walkOn(u, how && how.x != null ? how : null);
+    }
+    /* A unit coming down on its landing point. The Invasion attacker is coming
+       down from orbit, so everything it lands — squads included, which would
+       otherwise be shown getting up off the ground — falls out of the sky the
+       way a hull does. */
+    function landUnit(u) {
+      var orbit = state.scen.id === 'invasion' && state.sc && u.side === state.sc.attacker;
+      V.arrive(u, orbit ? 'orbital' : 'drop');
+      greet(u);
+    }
     function walkOn(u, start) { V.arrive(u, 'walk', start); greet(u); }
     /* Coming off a hull, or climbing aboard one: which hull matters to the
        view, because a squad drops out of an aircraft and walks out of a truck. */
@@ -20131,17 +20513,26 @@
        searched location has its stake and beacon). Both are the view's. */
     function fitView() { V.fit(); }
     function paintStructures() { V.structures(); }
-    function glowRGB() { return null; }
+    // xenotech glows the blue game.js draws it in: teleports, repairs, the tribe's waves
+    var XENO_GLOW = '110,190,255';
+    function glowRGB() { return XENO_GLOW; }
     function soundFor(entries) {
       (entries || []).forEach(function (l) {
-        if (l.t === 'suppressed' || l.t === 'broken') V.sound(l.t);
+        if (l.t === 'suppressed') V.sound('suppress');
+        else if (l.t === 'broken') V.sound('broken');
       });
     }
-    var SFX = {
-      click: nil, step: nil, impact: nil, shell: nil, shot: nil, wave: nil,
-      suppress: nil, broken: nil, chitter: nil, casualty: nil, shimmer: nil, chime: nil
-    };
-    function nil() { }
+    /* The sounds the rules ask for as they happen — a teleport's shimmer, the
+       swarm's chitter as the Endless Tide digs bugs back out, a squad's boots
+       going into a building. Nothing plays here; each is passed to the view by
+       name, with whatever it was given, and the view makes the noise. The
+       animations make their own sounds besides: these are only the ones the
+       rules themselves called for. */
+    var SFX = {};
+    ['click', 'step', 'impact', 'shell', 'shot', 'wave', 'suppress', 'broken',
+      'chitter', 'casualty', 'shimmer', 'chime'].forEach(function (name) {
+      SFX[name] = function () { V.sound(name, Array.prototype.slice.call(arguments)); };
+    });
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
     function render() { returnToPool(); V.changed(); }
     /* Protecting the VIP, Evacuation: "when an OpFor unit is destroyed, it
@@ -20245,8 +20636,10 @@
   }
 
   function newGame(cfg) {
-    var planets = Object.keys(GEN.GENERATORS);
-    if (!cfg.planet || cfg.planet === 'random') cfg.planet = planets[Math.floor(Math.random() * planets.length)];
+    /* The world is settled here, once: a random one picked, and a barren one
+       made desert or arctic. Everything after — the table, the look of it on
+       every screen — reads the one name this leaves in the config. */
+    cfg.planet = GEN.resolvePlanet(cfg.planet, Math.random);
     var scenId = cfg.scenario && SC.SCENARIOS[cfg.scenario] ? cfg.scenario : 'secure';
     // a solitaire / cooperative game only runs the solitaire scenarios, and they only run in one
     if (cfg.solo && !(SC.SCENARIOS[scenId] || {}).solo) scenId = 's_crush';
@@ -20256,7 +20649,7 @@
        down themselves. A demo is always generated. */
     var manual = wantsManualTerrain(cfg);
     var built = manual
-      ? { terrain: [], rolls: [], generator: GEN.GENERATORS[cfg.planet].name }
+      ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
         width: W, height: H, planet: cfg.planet,
         objectives: OBJECTIVES              // keeps the generator's clearings roughly central
@@ -20491,7 +20884,7 @@
   }
 
   function startTerrainSetup(built) {
-    var gen = GEN.GENERATORS[state.cfg.planet] || GEN.GENERATORS.sparse;
+    var gen = GEN.tableFor(state.cfg.planet);
     var starter = state.solo ? 'A' : (Math.random() < 0.5 ? 'A' : 'B');
     state.phase = 'terrain';
     state.tset = {
@@ -20576,19 +20969,55 @@
 
   /* Roll the footprint of the next piece to go down, and give it its outline,
      so the player sees exactly what they are putting on the table. */
+  /* Every piece the area's result can put down is rolled as soon as the result
+     is known — its size and its shape — so the player sees the whole set, and
+     lays exactly the pieces shown, in order. Only the next one is "in hand": it
+     is the one outlined under the pointer, and the one a quarter turn turns. */
+  function makePiece(a, spec, shrink, turns) {
+    var sz = GEN.sizeFor(spec, Math.random, shrink || 1);
+    var g = { kind: spec.kind, x: 0, y: 0, w: Math.min(sz.w, a.w - 1), h: Math.min(sz.h, a.h - 1) };
+    if (spec.big) g.big = true;
+    if (R.shapePiece) R.shapePiece(g, Math.random);
+    for (var t = 0; t < (turns || 0); t++) quarterTurn(g);
+    return g;
+  }
+  function rollPieces(a) {
+    a.pieces = a.row.alts[a.alt].map(function (spec) {
+      var out = [];
+      for (var i = 0; i < spec.max; i++) out.push(makePiece(a, spec, 1, 0));
+      return out;
+    });
+    a.piecesFor = a.alt;
+  }
+  /* A quarter turn, about the piece's own corner: the table-turning the rules
+     already do, then the piece set back where it was. The table is square, so
+     a turn of it is a turn of anything on it. */
+  function quarterTurn(p) {
+    R.turnPiece(p, 1);
+    R.placePiece(p, 0, 0, p.w, p.h);
+    p.turns = ((p.turns || 0) + 1) % 4;
+    return p;
+  }
+  function inHand(a) {
+    return a.pieces && a.pieces[a.spec] ? a.pieces[a.spec][a.count[a.spec] || 0] || null : null;
+  }
   function prepSpec(a) {
     var ts = state.tset;
     ts.ghost = null;
     if (a.alt === null) return;                   // waiting on the player's choice
+    if (!a.pieces || a.piecesFor !== a.alt) rollPieces(a);
     var alt = a.row.alts[a.alt];
     while (a.spec < alt.length && (a.count[a.spec] || 0) >= alt[a.spec].max) a.spec++;
     if (a.spec >= alt.length) { completeArea(a); nextArea(); return; }
-    var spec = alt[a.spec];
-    var sz = GEN.sizeFor(spec, Math.random, a.shrink || 1);
-    var g = { kind: spec.kind, x: 0, y: 0, w: Math.min(sz.w, a.w - 1), h: Math.min(sz.h, a.h - 1) };
-    if (spec.big) g.big = true;
-    if (R.shapePiece) R.shapePiece(g, Math.random);
-    ts.ghost = g;
+    var spec = alt[a.spec], n = a.count[a.spec] || 0;
+    /* A crowded area gets a smaller piece rather than none, as the generator
+       does: the one in hand is rolled again at the smaller size, turned the
+       way the player had it. */
+    if (a.shrink && a.shrink < 1) {
+      var was = a.pieces[a.spec][n];
+      a.pieces[a.spec][n] = makePiece(a, spec, a.shrink, was ? was.turns : 0);
+    }
+    ts.ghost = clonePiece(a.pieces[a.spec][n]);
   }
 
   function clonePiece(t) { return JSON.parse(JSON.stringify(t)); }
@@ -20652,6 +21081,13 @@
       var spec = a.row.alts[a.alt][a.spec];
       if ((a.count[a.spec] || 0) < spec.min) return;
       a.spec++; a.shrink = 1; prepSpec(a);
+    }
+    else if (act === 'trotate') {
+      // a quarter turn of the piece in hand
+      var hand = inHand(a);
+      if (!hand) return;
+      quarterTurn(hand);
+      state.tset.ghost = clonePiece(hand);
     }
     else if (act === 'tauto') { autoArea(a); nextArea(); return; }
     else if (act === 'tautoall') { state.tset.autoAll = true; autoArea(a); nextArea(); return; }
@@ -23672,7 +24108,8 @@
       }
     }
     state.units.forEach(function (t) {
-      if (!t.alive || t.side === u.side) return;
+      // an enemy in reserve or riding in a hull is not on the table to be shot at
+      if (!t.alive || t.side === u.side || !onTable(t)) return;
       var e = expectedHits(u, t, mode || 'fire', opts);
       if (e > best.score) best = { t: t, score: e };
     });
@@ -23682,7 +24119,8 @@
   function nearestEnemy(u) {
     var best = null, bd = Infinity;
     state.units.forEach(function (t) {
-      if (!t.alive || t.side === u.side) return;
+      // only enemies on the table: one waiting in reserve sits off its corner, and chasing it walks nowhere
+      if (!t.alive || t.side === u.side || !onTable(t)) return;
       var d = R.unitDist(u, t);
       if (d < bd) { bd = d; best = t; }
     });
@@ -24056,7 +24494,7 @@
        needs to draw the table is in what is left. */
     function snapshot() {
       if (!state) return null;
-      var skip = { scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1 };
+      var skip = { scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1 };
       var out = {};
       Object.keys(state).forEach(function (k) {
         if (skip[k]) return;
@@ -24156,8 +24594,7 @@
         if (typeof u.bld === 'number') u.bld = state.terrain[u.bld] || null;
       });
       if (state.tset) {
-        var gens = GEN.GENERATORS;
-        state.tset.gen = gens[state.cfg.planet] || gens.sparse;
+        state.tset.gen = GEN.tableFor(state.cfg.planet);
         state.tset.areas.forEach(function (a) {
           a.placed = (a.placed || []).map(function (i) { return state.terrain[i]; }).filter(Boolean);
         });
@@ -24348,7 +24785,7 @@
         }
         case 'terrain': {
           if (!mayLay(side)) return no('this area is not yours to lay');
-          if (['talt', 'tnext', 'tauto', 'tautoall'].indexOf(it.act) < 0) return no('unknown terrain step');
+          if (['talt', 'tnext', 'tauto', 'tautoall', 'trotate'].indexOf(it.act) < 0) return no('unknown terrain step');
           terrainAct(it.act, it.arg);
           return yes;
         }
@@ -24823,7 +25260,7 @@
       assault: function (a, t, deaths) { rec({ e: 'assault', from: a.id, to: t.id, deaths: ids(deaths) }); },
       strafe: function (u, from, to, deaths) { rec({ e: 'strafe', id: u.id, from: from, to: to, deaths: ids(deaths) }); },
       arrive: function (u, how, from, veh) { rec({ e: 'arrive', id: u.id, how: how, from: from || null, veh: veh ? veh.id : null }); },
-      sound: function (what) { rec({ e: 'sound', what: what }); },
+      sound: function (what, args) { rec({ e: 'sound', what: what, args: args && args.length ? args : undefined }); },
       focus: function (u) { rec({ e: 'focus', id: u && u.id }); },
       hint: function (text) { rec({ e: 'hint', text: text }); },
       colour: function (side, key) { rec({ e: 'colour', side: side, key: key }); },
@@ -25077,7 +25514,7 @@
         return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
       }), s.tier) +
       sel('term-pl', 'Priority Level', [{ v: 1, t: '1 — skirmish' }, { v: 2, t: '2 — full battle' }], s.pl) +
-      sel('term-planet', 'Planet', P.PLANETS.map(function (p) {
+      sel('term-planet', 'Planet', P.PLANET_CHOICES.map(function (p) {
         return { v: p, t: p === 'random' ? 'Randomise the planet' : p.charAt(0).toUpperCase() + p.slice(1) };
       }), s.planet) +
       sel('term-scenario', 'Scenario', P.SCENARIOS.map(function (x) {
@@ -25497,12 +25934,13 @@
       case 'log': logLine(ev.t, ev.text, ev.math); return;
       case 'card': pushRes(ev.card); return;
       case 'fx': addFx(reLift(ev.f)); return;
-      case 'sound':
+      case 'sound': {
+        // a sound the rules asked for, by name; 'suppressed' is an older word for it
         if (!SFX) return;
-        if (ev.what === 'suppressed') SFX.suppress();
-        else if (ev.what === 'broken') SFX.broken();
-        else if (ev.what === 'wave' && SFX.wave) SFX.wave();
+        var sn = ev.what === 'suppressed' ? 'suppress' : ev.what;
+        if (typeof SFX[sn] === 'function') SFX[sn].apply(SFX, ev.args || []);
         return;
+      }
       case 'move': {
         var mu = evUnit(ev.id);
         if (mu) animateMove(mu, ev.path, ev.follow);
@@ -25527,6 +25965,7 @@
         var au = evUnit(ev.id);
         if (!au) return;
         if (ev.how === 'drop') landUnit(au);
+        else if (ev.how === 'orbital') landUnit(au, true);
         else if (ev.how === 'stepoff') stepOff(au, evUnit(ev.veh));
         else if (ev.how === 'board') boardAnim(au, evUnit(ev.veh) || au, ev.from);
         else walkOn(au, ev.from);
@@ -25782,7 +26221,15 @@
       (state.solo ? 'you roll a D6 for each' : 'the players take turns to roll a D6 for each') +
       ' and place up to what it gives, anywhere in that area (pp. 46–47).' +
       (state.scen && state.scen.edges ? ' Table edges are rolled once the table is set.' : '') + '</p>';
-    if (a && !isAI(a.side)) {
+    /* The area being laid belongs to one side. Its player gets the choices and
+       the buttons; anyone else — the opponent across a network — sees the same
+       pieces and whose turn it is, and waits. */
+    var mine = a && !isAI(a.side) && seats.indexOf(a.side) >= 0;
+    if (a && !isAI(a.side) && !mine) {
+      h += '<p class="hint"><b>' + a.name + ' — ' + esc(sideName(a.side)) + '’s roll: ' + a.roll + '.</b> ' + esc(a.row.text) + '.</p>' +
+        (a.alt === null ? '<p class="sub">Waiting for them to choose.</p>' : terrainPreview(a) + '<p class="sub">Waiting for them to lay it.</p>');
+    }
+    if (mine) {
       h += '<p class="hint"><b>' + a.name + ' — ' + (state.solo ? 'your' : esc(sideName(a.side)) + '’s') + ' roll: ' +
         (a.first ? a.first + ', re-rolled ' : '') + a.roll + '.</b> ' + esc(a.row.text) + '.</p>';
       if (a.alt === null) {
@@ -25797,7 +26244,10 @@
         h += '<p class="sub">Tap inside the lit area to put down <b>' + pieceNoun(spec, 1) + ' ' + (cnt + 1) + '</b> of up to ' + spec.max +
           (cnt < spec.min ? ' — at least ' + spec.min + ' must go down' : '') + '. The piece lands as close to the tap as it fits.</p>';
         if (ui.tsetHint) h += '<p class="cpwarn">' + esc(ui.tsetHint) + '</p>';
+        // everything this result still has to put down, drawn; the next one outlined
+        h += terrainPreview(a);
         h += '<div class="acts">';
+        h += '<button class="act" data-act="trotate"><span>Turn it</span><small>A quarter turn · R or right click</small></button>';
         if (cnt >= spec.min) h += '<button class="act primary" data-act="tnext"><span>' +
           (more ? 'On to the ' + pieceNoun(more, 2) : 'Done with the ' + a.name + ' area') + '</span><small>' +
           cnt + ' ' + pieceNoun(spec, cnt) + ' placed</small></button>';
@@ -25813,6 +26263,139 @@
         esc(sideName(ar.side)) + (ar.roll ? ' · D6 ' + ar.roll : '') + ' — ' + st + '</li>';
     }).join('') + '</ul>';
     return h + '</div>';
+  }
+
+  /* ---------- the pieces still to come, drawn ----------
+     Every piece this area's result will put down, in the order they go, drawn
+     with the table's own art — the ground painted under the hills and pools,
+     the buildings, walls, rocks and trees stood on it — so a player sees what
+     they are about to lay rather than a list of names. The one in hand is
+     outlined. The board still shows only an outline under the pointer; this is
+     the picture of the set.
+
+     Painting ground is slow, so it is done a moment after the card is shown,
+     over just the patch the pieces stand on, and kept until the pieces or the
+     way one is turned change. The last picture stays up while the next one is
+     drawn. */
+  var tprev = { key: '', url: '', wanting: '' };
+
+  function stillToCome(a) {
+    var list = [];
+    if (!a || a.alt === null || !a.pieces) return list;
+    a.pieces.forEach(function (row, si) {
+      if (si < a.spec) return;
+      var from = si === a.spec ? (a.count[si] || 0) : 0;
+      row.slice(from).forEach(function (p, k) { list.push({ p: p, next: si === a.spec && k === 0 }); });
+    });
+    return list;
+  }
+
+  function terrainPreview(a) {
+    var list = stillToCome(a);
+    if (!list.length) return '';
+    var key = state.cfg.planet + '|' + JSON.stringify(list.map(function (q) {
+      return [q.p.kind, q.p.big, q.p.w, q.p.h, q.p.poly, q.p.parts, q.p.top, q.next];
+    }));
+    if (key !== tprev.key && key !== tprev.wanting) {
+      tprev.wanting = key;
+      setTimeout(function () { drawPreview(key, list); }, 40);
+    }
+    var label = list.length + ' piece' + (list.length === 1 ? '' : 's') + ' to lay, the next one outlined';
+    return tprev.url
+      ? '<img class="tprev" src="' + tprev.url + '" alt="' + label + '" title="' + label + '" style="display:block;width:100%;' +
+        'max-width:360px;margin:8px 0 6px;border-radius:6px;background:#0b0f15">'
+      : '<div class="tprev" style="margin:8px 0 6px;padding:18px 0;text-align:center;border-radius:6px;background:#0b0f15;' +
+        'font-size:12px;opacity:.7">Drawing the pieces…</div>';
+  }
+
+  function drawPreview(key, list) {
+    if (key !== tprev.wanting) return;             // a newer set has been asked for since
+    try {
+      /* Lay them out in rows that run straight across the screen. On this
+         projection that is along x, back along y: a step of d in x and -d in
+         y moves a piece sideways on screen and not up or down. */
+      var laid = [], GAP = 1.2, ROW = 26;
+      var rows = [[]], rowLen = 0;
+      list.forEach(function (q) {
+        var span = (q.p.w + q.p.h) / 2 + GAP;
+        if (rows[rows.length - 1].length && rowLen + span > ROW) { rows.push([]); rowLen = 0; }
+        rows[rows.length - 1].push(q); rowLen += span;
+      });
+      // the rows stacked back from the middle of the table, the whole block centred on it
+      var deeps = rows.map(function (row) { return row.reduce(function (m, q) { return Math.max(m, Math.max(q.p.w, q.p.h)); }, 0); });
+      var stack = deeps.reduce(function (s3, d3) { return s3 + d3 / 2 + GAP * 2; }, 0);
+      var depth = -stack / 2;
+      rows.forEach(function (row) {
+        var total = row.reduce(function (s2, q) { return s2 + (q.p.w + q.p.h) / 2 + GAP; }, -GAP);
+        var t = -total / 2, deep = 0;
+        row.forEach(function (q) {
+          var p = JSON.parse(JSON.stringify(q.p));
+          var half = (p.w + p.h) / 4;
+          var cx = W / 2 + depth + (t + half), cy = H / 2 + depth - (t + half);
+          R.placePiece(p, cx - p.w / 2, cy - p.h / 2, p.w, p.h);
+          laid.push({ p: p, next: q.next });
+          t += half * 2 + GAP;
+          deep = Math.max(deep, Math.max(p.w, p.h));
+        });
+        depth += deep / 2 + GAP * 2;
+      });
+      var terrain = laid.map(function (q) { return q.p; });
+
+      // the patch of plate they stand on, with room above for roofs and treetops
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      terrain.forEach(function (p) {
+        [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h]].forEach(function (c) {
+          var sp = ISO.toScreen(c[0], c[1]);
+          x0 = Math.min(x0, sp.x); x1 = Math.max(x1, sp.x); y0 = Math.min(y0, sp.y); y1 = Math.max(y1, sp.y);
+        });
+      });
+      var clip = { x0: x0 - K * 1.2, x1: x1 + K * 1.2, y0: y0 - K * 4.5, y1: y1 + K * 1.2 };
+      var seed = 7919;
+      var ground = ISO.bakeGround(terrain, seed, state.cfg.planet, clip);
+      var props = ISO.buildProps(terrain, [], seed, state.cfg.planet);
+
+      var cw = Math.round(clip.x1 - clip.x0), chh = Math.round(clip.y1 - clip.y0);
+      var cv = document.createElement('canvas');
+      cv.width = cw; cv.height = chh;
+      var g = cv.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.fillStyle = '#0b0f15'; g.fillRect(0, 0, cw, chh);
+      g.drawImage(ground, clip.x0, clip.y0, cw, chh, 0, 0, cw, chh);
+      g.save();
+      g.translate(-clip.x0, -clip.y0);
+      // the piece in hand: its footprint outlined on the ground, under anything standing on it
+      laid.forEach(function (q) {
+        if (!q.next) return;
+        var p = q.p;
+        var shapes = p.parts ? p.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
+          : [p.poly || [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h]]];
+        shapes.forEach(function (pts) {
+          g.beginPath();
+          pts.forEach(function (c, n) { var sp = ISO.toScreen(c[0], c[1]); if (n) g.lineTo(sp.x, sp.y); else g.moveTo(sp.x, sp.y); });
+          g.closePath();
+          g.lineWidth = 5; g.strokeStyle = 'rgba(8,10,14,.55)'; g.stroke();
+          g.lineWidth = 2.5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.stroke();
+        });
+      });
+      props.forEach(function (pr) { ISO.drawProp(g, pr, 0); });
+      g.restore();
+
+      // down to the card's size, smoothed: this is a reduction, not a zoom
+      var MAXW = 720, k2 = Math.min(1, MAXW / cw);
+      var out = document.createElement('canvas');
+      out.width = Math.round(cw * k2); out.height = Math.round(chh * k2);
+      var og = out.getContext('2d');
+      og.imageSmoothingEnabled = true;
+      if ('imageSmoothingQuality' in og) og.imageSmoothingQuality = 'high';
+      og.drawImage(cv, 0, 0, out.width, out.height);
+      if (!out.toDataURL) return;                   // no real canvas (the headless test page)
+      if (key !== tprev.wanting) return;
+      tprev.key = key; tprev.url = out.toDataURL('image/png');
+      render();
+    } catch (e) {
+      // a picture that cannot be drawn is not worth stopping the set-up for
+      if (window.console) console.error('terrain preview', e);
+    }
   }
 
   function lookAtDeployment(forSide) {
@@ -25934,10 +26517,13 @@
     render();
   }
 
-  function landUnit(u) {
+  function landUnit(u, fromOrbit) {
     focusUnit(u, false, true);
-    // a hull comes down on its landing point, and so do jump troops on their jets
-    var craft = R.isMachine(u) || !!u.jets;
+    /* A hull comes down on its landing point, and so do jump troops on their
+       jets. A squad landing by Battlefield Insertion is shown getting up off
+       the ground it came down on — except out of orbit in an Invasion, where
+       it falls out of the sky like everything else that side lands. */
+    var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
     u.arriveAt = nowMs();
     u.arriveKind = craft ? 'drop' : 'stand';
     if (craft) {
@@ -26969,6 +27555,17 @@
       dy: Math.round((VIEW_H - sh * z) / 2 + (cam.oy || 0))
     };
   }
+  /* A line on the ground in a side's colour gets a dark edge under it. On
+     soil the colour carries it; on sand or snow — desert ochre on desert sand —
+     it is the edge that shows. The dash pattern is kept for both strokes. */
+  function edgedStroke(dark) {
+    var col = ctx.strokeStyle, lw = ctx.lineWidth;
+    ctx.strokeStyle = 'rgba(8,10,14,' + (dark == null ? 0.45 : dark) + ')';
+    ctx.lineWidth = lw + 2;
+    ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = lw;
+    ctx.stroke();
+  }
   function hud(x, y, lift) {
     var p = ISO.toScreen(x, y), v = viewRect();
     return { x: (p.x - v.sx) * v.z + v.dx, y: (p.y - (lift || 0) - v.sy) * v.z + v.dy };
@@ -27369,11 +27966,109 @@
       state.remains = rem.filter(function (r) { return drop.indexOf(r) < 0; });
     }
   }
-  // wrecks burn on between moves: a slow redraw while one is on screen and nothing else is moving
+  /* Between moves the board is still: it is only redrawn while something on
+     screen is alive by itself. A burning wreck flickers well enough at about
+     eight frames a second; heat haze is a slow ripple, and at that rate it
+     steps rather than flows, so lava in view gets about sixteen. */
+  var ambientTick = 0;
   setInterval(function () {
-    if (!state || !state.scene || loop || !state.fireOnView || document.hidden) return;
-    drawBoard();
-  }, 120);
+    if (!state || !state.scene || loop || document.hidden) return;
+    ambientTick++;
+    if (state.hazeOnView || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
+  }, 60);
+
+  /* ================= heat haze =================
+     The air over a lava field shimmers. The ground under and just above the
+     melt is taken back off the frame and laid down again in bands a pixel
+     tall, each pushed sideways by a ripple that drifts upward, the way hot air
+     rises — strongest at the melt, fading to nothing a couple of inches up.
+
+     It is done to the terrain only, before any unit or prop is drawn, so the
+     ground wavers while the troops standing by it stay sharp enough to read.
+     The offsets are whole pixels, so the pixel art is never smeared, and it is
+     left out entirely for a player whose system asks for less motion. */
+  var hazeBuf = null, hazeCtx = null;
+  var calmMotion = false;
+  try { calmMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { }
+
+  // the outline round a set of points, for clipping the shimmer to the air over the melt
+  function hull(pts) {
+    pts = pts.slice().sort(function (a, b) { return a.x - b.x || a.y - b.y; });
+    if (pts.length < 3) return pts;
+    function cross(o, a, b) { return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x); }
+    var lo = [], up = [];
+    pts.forEach(function (p) {
+      while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+      lo.push(p);
+    });
+    for (var i = pts.length - 1; i >= 0; i--) {
+      var p = pts[i];
+      while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop();
+      up.push(p);
+    }
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+
+  function heatHaze(v) {
+    state.hazeOnView = false;
+    if (calmMotion || !state.terrain) return;
+    var lavas = state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; });
+    if (!lavas.length) return;
+    var t = nowMs() / 1000;
+    var rise = K * 2.2;                 // how high over the melt the air still wavers, in plate pixels
+    var AMP = 1.3;                      // the widest sway, in plate pixels: heat haze, not an earthquake
+
+    lavas.forEach(function (r, li) {
+      var foot = (r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]])
+        .map(function (q) { return ISO.toScreen(q[0], q[1]); });
+      // the melt, and the same outline lifted: the column of hot air standing over it
+      var shape = hull(foot.concat(foot.map(function (p) { return { x: p.x, y: p.y - rise }; })));
+      var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      shape.forEach(function (p) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); });
+      var meltTop = Math.min.apply(null, foot.map(function (p) { return p.y; }));
+      // only what is in the window, with room either side for the sway
+      var bx0 = Math.max(v.sx, Math.floor(x0 - AMP - 1)), bx1 = Math.min(v.sx + v.sw, Math.ceil(x1 + AMP + 1));
+      var by0 = Math.max(v.sy, Math.floor(y0)), by1 = Math.min(v.sy + v.sh, Math.ceil(y1));
+      if (bx1 <= bx0 || by1 <= by0) return;
+      state.hazeOnView = true;
+
+      // the patch as it stands, in the window's own pixels
+      var px0 = Math.round((bx0 - v.sx) * SS), py0 = Math.round((by0 - v.sy) * SS);
+      var pwid = Math.round((bx1 - bx0) * SS), phei = Math.round((by1 - by0) * SS);
+      if (pwid < 1 || phei < 1) return;
+      if (!hazeBuf) { hazeBuf = document.createElement('canvas'); hazeCtx = hazeBuf.getContext('2d'); }
+      if (hazeBuf.width < pwid || hazeBuf.height < phei) {
+        hazeBuf.width = Math.max(hazeBuf.width, pwid); hazeBuf.height = Math.max(hazeBuf.height, phei);
+      }
+      hazeCtx.setTransform(1, 0, 0, 1, 0, 0);
+      hazeCtx.clearRect(0, 0, pwid, phei);
+      hazeCtx.drawImage(pix, px0, py0, pwid, phei, 0, 0, pwid, phei);
+
+      pctx.save();
+      // clip to the column of air, in plate coordinates, then work in the window's pixels
+      pctx.beginPath();
+      shape.forEach(function (p, n) { if (n) pctx.lineTo(p.x, p.y); else pctx.moveTo(p.x, p.y); });
+      pctx.closePath();
+      pctx.clip();
+      pctx.setTransform(1, 0, 0, 1, 0, 0);
+      pctx.imageSmoothingEnabled = false;
+      var band = Math.max(1, Math.round(SS));           // a plate pixel tall
+      var seed = li * 1.7;                              // no two fields ripple in step
+      for (var yy = 0; yy < phei; yy += band) {
+        var plateY = by0 + yy / SS;
+        // full strength over the melt and just above it, dying away to the top of the column
+        var k = plateY >= meltTop ? 0.75 : Math.max(0, 1 - (meltTop - plateY) / rise);
+        if (k <= 0.02) continue;
+        // two ripples of different lengths, both drifting up, so it never looks like a pattern
+        var sway = Math.sin(plateY * 0.9 + t * 5.2 + seed) + 0.45 * Math.sin(plateY * 0.37 - t * 2.3 + seed * 2);
+        var dx = Math.round(AMP * k * sway * SS / 1.45);
+        if (!dx) continue;
+        var hgt = Math.min(band, phei - yy);
+        pctx.drawImage(hazeBuf, 0, yy, pwid, hgt, px0 + dx, py0 + yy, pwid, hgt);
+      }
+      pctx.restore();
+    });
+  }
 
   function drawBoard() {
     // everything drawn on the board itself is in CSS pixels, scaled to its density
@@ -27419,6 +28114,7 @@
     pctx.fillRect(v.sx, v.sy, v.sw, v.sh);
     pctx.drawImage(state.ground, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
     pctx.drawImage(state.structs, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
+    heatHaze(v);
 
     var pad = K * 3;
     function onView(x, y) {
@@ -27747,11 +28443,15 @@
         else {
           var col = sideRGB(ar.side);
           ctx.fillStyle = 'rgba(' + col + ',.1)'; ctx.fill();
-          ctx.strokeStyle = 'rgba(' + col + ',.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([9, 7]); ctx.stroke(); ctx.setLineDash([]);
+          ctx.strokeStyle = 'rgba(' + col + ',.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([9, 7]); edgedStroke(); ctx.setLineDash([]);
         }
         var c0 = hud(ar.x + ar.w / 2, ar.y + ar.h / 2);
         ctx.font = '700 ' + Math.round(13 + 6 * Math.min(1, cam.z)) + 'px Oxanium, system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        // outlined dark, so the name reads over snow and sand as well as over soil
+        ctx.lineJoin = 'round'; ctx.lineWidth = 4;
+        ctx.strokeStyle = now ? 'rgba(8,10,14,.6)' : 'rgba(8,10,14,.35)';
+        ctx.strokeText(ar.name, c0.x, c0.y);
         ctx.fillStyle = now ? 'rgba(255,255,255,.85)' : 'rgba(220,228,240,.45)';
         ctx.fillText(ar.name, c0.x, c0.y);
       });
@@ -27803,7 +28503,7 @@
         var boxes = boxesFor(side);
         if (circ) {
           isoRing(circ.x, circ.y, circ.r, liftOf(circ.x, circ.y));
-          ctx.fill(); ctx.stroke();
+          ctx.fill(); edgedStroke(own ? 0.45 : 0.2);
         } else if (boxes) {
           // Demolish: the stretches of table edge this side owns
           ctx.beginPath();
@@ -27813,7 +28513,7 @@
             for (var n = 1; n < 4; n++) ctx.lineTo(q[n].x, q[n].y);
             ctx.closePath();
           });
-          ctx.fill(); ctx.stroke();
+          ctx.fill(); edgedStroke(own ? 0.45 : 0.2);
         } else {
           var z = zoneFor(side);
           if (!z) { ctx.setLineDash([]); return; }
@@ -27826,7 +28526,7 @@
           ctx.beginPath();
           ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y);
           ctx.closePath();
-          ctx.fill(); ctx.stroke();
+          ctx.fill(); edgedStroke(own ? 0.45 : 0.2);
         }
         ctx.setLineDash([]);
       });
@@ -28075,7 +28775,11 @@
       var a2 = hud(u.x, u.y, liftOf(u.x, u.y));
       var b2 = hud(ui.hover.x, ui.hover.y, 0);
       var dist = Math.max(0, R.inches(u.x, u.y, ui.hover.x, ui.hover.y) - UR);
-      ctx.strokeStyle = 'rgba(231,236,244,.55)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+      // a dark edge under the light dash, so the tape reads on snow as well as on soil
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = 'rgba(8,10,14,.45)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(a2.x, a2.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
+      ctx.strokeStyle = 'rgba(231,236,244,.55)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(a2.x, a2.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
       ctx.setLineDash([]);
       var label = dist.toFixed(1) + '"';
@@ -28692,7 +29396,7 @@
         else if (a === 'holdinsert') { holdInsertion(); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
-        else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall') terrainAct(a, b.getAttribute('data-alt'));
+        else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
         else if (a === 'start') startBattle();
         else if (a === 'restart') el('setup').hidden = false;
@@ -29199,6 +29903,11 @@
       panBy(e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0,
         e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0);
       e.preventDefault(); return;
+    }
+    // R turns the piece in hand while the terrain is being laid
+    if ((e.key === 'r' || e.key === 'R') && state && state.phase === 'terrain') {
+      var ta = curArea();
+      if (ta && seats.indexOf(ta.side) >= 0 && !isAI(ta.side) && state.tset.ghost) { terrainAct('trotate'); return; }
     }
     var n = parseInt(e.key, 10);
     if (n >= 1 && n <= STANDARD.length) chooseAction(STANDARD[n - 1].id);
@@ -29806,7 +30515,11 @@
 
     canvas.addEventListener('pointerdown', function (e) {
       if (!state) return;
-      pointers[e.pointerId] = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: nowMs(), moved: false };
+      /* Only the primary button taps. A right or middle button still drags the
+         camera, but a right click is a turn of the piece in hand (see the
+         contextmenu handler), and must never also put the piece down. */
+      pointers[e.pointerId] = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: nowMs(), moved: false,
+        tapless: e.pointerType === 'mouse' && e.button > 0 };
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { }
       var list = pointerList();
       if (list.length === 2) {
@@ -29850,7 +30563,7 @@
       var uy = (typeof e.clientY === 'number' && (e.clientX || e.clientY)) ? e.clientY : p.y;
       if (Math.hypot(ux - p.x0, uy - p.y0) > TAP_SLOP) p.moved = true;
       // act where the finger landed, not where the up event reports
-      if (!p.moved && nowMs() - p.t0 < TAP_TIME) {
+      if (!p.moved && !p.tapless && nowMs() - p.t0 < TAP_TIME) {
         onBoardTap({ clientX: p.x0, clientY: p.y0, pointerType: e.pointerType });
       }
     }
@@ -29879,6 +30592,17 @@
       zoomAt(e.deltaY < 0 ? 1 : -1, canvasPoint(e));
     }, { passive: false });
     canvas.addEventListener('mouseleave', function () { ui.hover = null; if (state) drawBoard(); });
+    /* Laying terrain by hand, a right click turns the piece in hand a quarter —
+       the same as R or the Turn it button, without taking the pointer off the
+       spot it is about to go down on. Any other time the board is left alone. */
+    canvas.addEventListener('contextmenu', function (e) {
+      if (!state || state.phase !== 'terrain' || !state.tset || !state.tset.ghost) return;
+      var ta = curArea();
+      if (!ta || isAI(ta.side) || seats.indexOf(ta.side) < 0) return;
+      e.preventDefault();
+      terrainAct('trotate');
+      if (SFX) SFX.click();
+    });
     document.addEventListener('keydown', onKey);
 
     el('viewctl').addEventListener('click', function (e) {
@@ -31306,7 +32030,7 @@
           (can ? '' : ' (neither force can fill it)') + '</option>';
       }).join('') + '</select></div>' +
       '<div><label for="camp-planet">Planet</label><select id="camp-planet">' +
-      ['random', 'barren', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'].map(function (k) {
+      ['random', 'desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'].map(function (k) {
         return '<option value="' + k + '"' + (contract.planet === k ? ' selected' : '') + '>' +
           (k === 'random' ? 'Randomise' : k.charAt(0).toUpperCase() + k.slice(1)) + '</option>';
       }).join('') + '</select></div></div>';

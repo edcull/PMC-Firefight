@@ -39,6 +39,31 @@
       mud: ['#1f2125', '#282a2f', '#31343a', '#3a3e45'],
       tufts: 0.08, track: ['#26282c', '#6a6f77']
     },
+    /* The book's barren / arctic table, fought on either of two worlds that
+       look nothing alike. Each still has a base ground, a second ground in
+       patches, a dry or bare patch and a low ground, as every world does —
+       they are simply different things on each. */
+    desert: {                                     // desert: warm sand, paler drift, red hardpan, dark gravel in the hollows
+      soil: ['#6a5232', '#7b6139', '#8c7043', '#9d804e', '#ae905b', '#bea06a'],
+      scrub: ['#a8966e', '#b7a57c', '#c5b38a', '#d2c099', '#ddcba7'],
+      sand: ['#6b3f25', '#7c4a2c', '#8d5634', '#9e623d', '#ae6f47'],
+      mud: ['#3a2c1c', '#463523', '#533f2a', '#604932'],
+      tufts: 0.12, hillTufts: 0.2, track: ['#4f3c24', '#c2a877'],
+      // what little grows is dry: straw, not grass
+      blade: ['#3e301a', '#6a5630', '#8c7644', '#aa925a', '#c4ab70']
+    },
+    arctic: {                                     // arctic: snow with blue shadow, bare rock showing through
+      /* Overcast snow rather than glare: light enough to read as snow, dark
+         enough at its brightest that a white marker can still be picked out
+         against it (and every marker on the table has a dark edge besides). */
+      soil: ['#8e98a4', '#9fa9b5', '#b0bac5', '#c0c9d3', '#cfd7df', '#dce3ea'],
+      scrub: ['#7d8fa3', '#8b9db1', '#99abbe', '#a8b9ca', '#b7c7d6'],
+      sand: ['#3f4247', '#4b4f55', '#585c63', '#666a71', '#747880'],
+      mud: ['#5a6678', '#667385', '#728092', '#7e8c9e'],
+      tufts: 0.04, hillTufts: 0.06, track: ['#6f7c8c', '#e6ecf1'],
+      // the odd dead stem through the snow, frosted grey
+      blade: ['#454c56', '#666e7a', '#87909b', '#a3abb4', '#bec5cd']
+    },
     sparse: { soil: SOIL, scrub: SCRUB, sand: SAND, mud: MUD, tufts: 1, track: ['#2f2619', '#6b5c43'] },
     dense: {                                      // temperate dense: dark loam under a lot of green
       soil: ['#2e2a1c', '#3a3524', '#46412c', '#524d34', '#5f5a3d', '#6d6847'],
@@ -316,6 +341,9 @@
      are all drawn from the planet's soil, so a hill on a frost world is grey and
      one in a jungle is dark loam, not the same brown everywhere. */
   var HILLC = null;
+  /* What grows on this world, set with its ground as the table is baked: the
+     colour of a tuft of grass, and how much of a hilltop carries one. */
+  var BLADES = null, HILLTUFT = 0.65;
   function hillColours(GP) {
     var soil = GP.soil.map(hex3), mud = GP.mud.map(hex3), scrub = GP.scrub.map(hex3), sand = GP.sand.map(hex3);
     function hx(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
@@ -331,9 +359,20 @@
     };
   }
 
-  function bakeGround(terrain, seed, planet) {
+  /* `clip`, when given, is the only part of the plate that is wanted — a few
+     hundred pixels round a handful of pieces, for a picture of them — and the
+     two costly passes, the noise lattice and the soil pixel by pixel, are run
+     over that patch alone. Everything else is as it always is. */
+  function bakeGround(terrain, seed, planet, clip) {
     var GP = GROUNDS[planet] || GROUNDS.sparse;
+    var cx0 = 0, cy0 = 0, cx1 = PIXW, cy1 = PIXH;
+    if (clip) {
+      cx0 = Math.max(0, Math.floor(clip.x0)); cy0 = Math.max(0, Math.floor(clip.y0));
+      cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
+    }
     HILLC = hillColours(GP);
+    BLADES = GP.blade || BLADE;
+    HILLTUFT = GP.hillTufts != null ? GP.hillTufts : 0.65;
     var cv = document.createElement('canvas');
     cv.width = PIXW; cv.height = PIXH;
     var g = cv.getContext('2d');
@@ -345,8 +384,10 @@
     var soilFit = groundFit(terrain, seed);
     var fN = new Float32Array(gw * gh), fP = new Float32Array(gw * gh), fD = new Float32Array(gw * gh);
     var fTW = new Float32Array(gw * gh), fTR = new Float32Array(gw * gh), fTG = new Float32Array(gw * gh), fTB = new Float32Array(gw * gh);
-    for (var gy = 0; gy < gh; gy++) {
-      for (var gx = 0; gx < gw; gx++) {
+    var gx0 = Math.max(0, Math.floor(cx0 / LAT) - 1), gx1 = Math.min(gw, Math.ceil(cx1 / LAT) + 2);
+    var gy0 = Math.max(0, Math.floor(cy0 / LAT) - 1), gy1 = Math.min(gh, Math.ceil(cy1 / LAT) + 2);
+    for (var gy = gy0; gy < gy1; gy++) {
+      for (var gx = gx0; gx < gx1; gx++) {
         var wq = toWorld(gx * LAT, gy * LAT), o = gy * gw + gx;
         fN[o] = fbm(wq.x / 5.5, wq.y / 5.5, seed, 4) * 0.6 + fbm(wq.x / 1.4, wq.y / 1.4, seed + 300, 2) * 0.4;
         fP[o] = fbm(wq.x / 9, wq.y / 9, seed + 900, 2);
@@ -369,12 +410,12 @@
     var INV_K = 1 / K, INV_HK = 2 / K;
 
     /* --- soil, one pixel at a time --- */
-    for (var by = 0; by < PIXH; by++) {
+    for (var by = cy0; by < cy1; by++) {
       var v0 = (by - OY) * INV_HK;
-      var wx = ((0 - OX) * INV_K + v0) / 2, wy = (v0 - (0 - OX) * INV_K) / 2;
+      var wx = ((cx0 - OX) * INV_K + v0) / 2, wy = (v0 - (cx0 - OX) * INV_K) / 2;
       var dx = INV_K / 2, dy = -INV_K / 2;
       var row = by * PIXW * 4, br = (by & 3);
-      for (var bx = 0; bx < PIXW; bx++, wx += dx, wy += dy) {
+      for (var bx = cx0; bx < cx1; bx++, wx += dx, wy += dy) {
         if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
         var n = lat(fN, bx, by), patch = lat(fP, bx, by), dry = lat(fD, bx, by);
         // feather the boundaries between materials so they break up rather than
@@ -558,6 +599,7 @@
   // a clump of grass: a few blades, lit on the left, darker at the root
   var BLADE = ['#3d4526', '#4d5730', '#5f6a3c', '#71804a', '#86955a'];
   function tuft(g, x, y, rnd) {
+    var BL = BLADES || BLADE;              // the world's own grass: green, straw or frosted
     x = Math.round(x); y = Math.round(y);
     var n = 3 + (rnd() * 4 | 0);
     g.fillStyle = 'rgba(20,15,9,.35)';
@@ -565,8 +607,8 @@
     for (var i = 0; i < n; i++) {
       var bx = x - 2 + (rnd() * 5 | 0), h = 2 + (rnd() * 5 | 0), lean = rnd() > 0.5 ? 1 : -1;
       for (var k = 0; k < h; k++) {
-        var c = BLADE[Math.min(4, 1 + ((k / h) * 3.2 | 0) + (bx < x ? 1 : 0))];
-        g.fillStyle = k === 0 ? BLADE[0] : c;
+        var c = BL[Math.min(4, 1 + ((k / h) * 3.2 | 0) + (bx < x ? 1 : 0))];
+        g.fillStyle = k === 0 ? BL[0] : c;
         g.fillRect(bx + (k > h * 0.6 ? lean : 0), y - k, 1, 1);
       }
     }
@@ -940,7 +982,7 @@
         var f = i / len, x = Math.round(AT[0] + (BT[0] - AT[0]) * f), y = Math.round(AT[1] + (BT[1] - AT[1]) * f);
         var hang = 1 + (hr() * 4 | 0);
         for (var k = 0; k < hang; k++) {
-          g.fillStyle = BLADE[Math.max(0, (lit ? 3 : 1) - k)];
+          g.fillStyle = (BLADES || BLADE)[Math.max(0, (lit ? 3 : 1) - k)];
           g.fillRect(x, y + k, 1, 1);
         }
       }
@@ -950,7 +992,7 @@
     for (var k = 0; k < area * 11; k++) {
       var at = spotIn(r, 0.2, hr), sp = toScreen(at.x, at.y);
       if (r.top && !z0 && R0() && root.PMC.inPoly(at.x, at.y, r.top)) continue;   // the upper step covers it
-      if (hr() > 0.35) tuft(g, sp.x, sp.y - z0 - ELEV, hr);
+      if (hr() > 1 - HILLTUFT) tuft(g, sp.x, sp.y - z0 - ELEV, hr);
       else pebble(g, sp.x, sp.y - z0 - ELEV, 1 + (hr() * 2 | 0), hr);
     }
     for (var oc = 0; oc < Math.round(area / 25); oc++) {
@@ -965,6 +1007,8 @@
   var FLORA = {
     sparse: { pine: 0.28, tall: 1 }, dense: { pine: 0.2, tall: 1 }, jungle: { pine: 0.04, tall: 1.25 },
     mountain: { pine: 0.7, tall: 1.05 }, industrial: { pine: 0.35, tall: 0.9 }, barren: { pine: 0.8, tall: 0.8 },
+    // a desert grows little and low; the arctic grows conifers, stunted
+    desert: { pine: 0.1, tall: 0.7 }, arctic: { pine: 0.95, tall: 0.8 },
     unstable: { pine: 0.5, tall: 0.85 }
   };
   function buildProps(terrain, objectives, seed, planet) {
