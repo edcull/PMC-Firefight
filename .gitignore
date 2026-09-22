@@ -1,0 +1,5 @@
+node_modules/
+# campaigns saved by a running server: players' data, not source
+campaigns/
+# screenshots the browser harnesses take
+build/shots/

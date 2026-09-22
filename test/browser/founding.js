@@ -1,0 +1,87 @@
+const { chromium } = require('playwright');
+const path = require('path');
+let pass=0, fail=0;
+const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(note?'  — '+note:''));};
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const p = await b.newPage({ viewport: { width: 1500, height: 1100 } });
+  const errs=[]; p.on('pageerror', e => errs.push(e.message));
+  await p.goto('file://' + path.join('/home/claude/pmc','index.html'));
+  await p.waitForTimeout(700);
+  await p.evaluate(() => { try{localStorage.clear();}catch(e){} });
+  await p.evaluate(() => document.getElementById('btn-setup-campaign').click());
+  await p.waitForTimeout(500);
+
+  const first = await p.evaluate(() => ({
+    hasName: !!document.getElementById('camp-name'),
+    fields: [...document.querySelectorAll('#camp-body .field label')].map(l=>l.textContent.trim())
+  }));
+  ok('the first screen no longer asks for the name', !first.hasName, first.fields.join(' | '));
+
+  await p.evaluate(() => document.querySelector('[data-go="newcamp"]').click());
+  await p.waitForTimeout(400);
+  const found = await p.evaluate(() => ({
+    name: !!document.getElementById('found-name'),
+    nameVal: (document.getElementById('found-name')||{}).value,
+    swatches: document.querySelectorAll('#camp-body [data-campcolour]').length,
+    on: (document.querySelector('#camp-body .sw.on')||{}).getAttribute ? document.querySelector('#camp-body .sw.on').getAttribute('data-campcolour') : null,
+    heading: document.querySelector('#camp-body h2').textContent
+  }));
+  ok('the founding screen asks for the name', found.name, '"'+found.nameVal+'"');
+  ok('...and offers the colours', found.swatches === 10, found.swatches + ' swatches');
+  ok('...with one already picked', !!found.on, found.on);
+  ok('the heading no longer repeats a name you have not given', !/Ironhold/.test(found.heading), found.heading);
+
+  // type a name, pick a colour, then add units — the name must survive the redraws
+  await p.evaluate(() => { const n=document.getElementById('found-name'); n.value='Cullen Free Company'; });
+  await p.evaluate(() => document.querySelector('[data-campcolour="crimson"]').click());
+  await p.waitForTimeout(250);
+  const kept = await p.evaluate(() => ({
+    val: document.getElementById('found-name').value,
+    on: document.querySelector('#camp-body .sw.on').getAttribute('data-campcolour')
+  }));
+  ok('picking a colour keeps the typed name', kept.val === 'Cullen Free Company', kept.val);
+  ok('...and the colour sticks', kept.on === 'crimson', kept.on);
+
+  // fill a legal founding force
+  const built = await p.evaluate(() => {
+    const add = (sel) => { const b=[...document.querySelectorAll('#found-cat [data-add]')].find(x=>x.getAttribute('data-add')===sel); if(b) b.click(); };
+    for (let i=0;i<6;i++) add('recruits');
+    for (let i=0;i<2;i++) add('rookie');
+    const doc = document.querySelector('#camp-body [data-doc]');
+    if (doc) doc.click();
+    return { name: document.getElementById('found-name').value,
+             picks: document.querySelectorAll('#found-chosen [data-drop]').length };
+  });
+  ok('the name survives adding eight units and a doctrine',
+    built.name === 'Cullen Free Company', built.name + ' / ' + built.picks + ' units');
+
+  const signed = await p.evaluate(() => {
+    const btn = document.querySelector('[data-go="dofound"]');
+    const wasOff = btn.disabled;
+    btn.click();
+    const c = window.PMC_CAMPAIGN.get();
+    return { wasOff: wasOff, name: c.companies.A.name, colour: c.companies.A.colour,
+             rivals: (c.rivals||[]).map(r=>r.colour) };
+  });
+  await p.waitForTimeout(300);
+  ok('the charter signs', !signed.wasOff);
+  ok('...under the name you typed', signed.name === 'Cullen Free Company', signed.name);
+  ok('...in the colours you picked', signed.colour === 'crimson', signed.colour);
+  ok('...and every rival wears something else',
+    signed.rivals.length > 0 && signed.rivals.every(c => c && c !== 'crimson') &&
+    new Set(signed.rivals).size === signed.rivals.length,
+    signed.rivals.join(', '));
+
+  const hub = await p.evaluate(() => ({
+    flashes: document.querySelectorAll('#camp-body .cflash').length,
+    text: document.querySelector('#camp-body').textContent.indexOf('Cullen Free Company') >= 0
+  }));
+  ok('the hub shows the company by name', hub.text);
+  ok('...with its colours beside it', hub.flashes > 0, hub.flashes + ' flashes');
+
+  console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
+  console.log('page errors: ' + (errs.join(' | ')||'none'));
+  await b.close();
+  process.exit(fail||errs.length?1:0);
+})();

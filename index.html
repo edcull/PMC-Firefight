@@ -1,0 +1,1507 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PMC 2670 Firefight</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #0d1117;
+    --panel: #141a24;
+    --panel-2: #1a2230;
+    --panel-3: #212b3b;
+    --line: #26303f;
+    --ink: #e7ecf4;
+    --ink-dim: #93a1b5;
+    --ink-faint: #64728a;
+    --alpha: #d8a13a;
+    --bravo: #5aa9c8;
+    --warn: #e08a3a;
+    --bad: #e0557a;
+    --good: #7ed6a0;
+    --display: 'Oxanium', system-ui, sans-serif;
+    --body: 'IBM Plex Sans', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { padding-inline: 16px; padding-block: 0 28px; max-width: 2560px; margin: 0 auto; }
+
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    background: linear-gradient(180deg, var(--ground) 72%, rgba(13,17,23,.86));
+    border-bottom: 1px solid var(--line);
+    padding-block: 12px 10px;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px;
+  }
+  header h1 {
+    font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: .06em;
+    text-transform: uppercase; margin: 0; white-space: nowrap;
+  }
+  header h1 span { color: var(--alpha); }
+  .hdr-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-left: auto; }
+  .meta { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .meta b { color: var(--ink); }
+  /* attacker / defender, in the header and on the deployment card */
+  .role { border-radius: 999px; padding: 2px 8px; font-size: 11px; letter-spacing: .04em;
+    text-transform: uppercase; border: 1px solid transparent; white-space: nowrap; }
+  .role-attacker { color: #f0b64a; border-color: rgba(240,182,74,.45); background: rgba(240,182,74,.10); }
+  .role-defender { color: #6fc4e2; border-color: rgba(111,196,226,.45); background: rgba(111,196,226,.10); }
+  .card h2 .role { margin-left: 8px; vertical-align: 2px; font-family: var(--mono); }
+  .pill {
+    font-family: var(--display); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-dim);
+  }
+  .pill-A { color: var(--alpha); border-color: color-mix(in srgb, var(--alpha) 45%, transparent); background: color-mix(in srgb, var(--alpha) 10%, transparent); }
+  .pill-B { color: var(--bravo); border-color: color-mix(in srgb, var(--bravo) 45%, transparent); background: color-mix(in srgb, var(--bravo) 10%, transparent); }
+  .pill-none { color: var(--ink-dim); }
+  /* The game is waiting for something from the player and will not move on
+     until it gets it — it pulses so it cannot be read as ordinary status. */
+  .pill-wait {
+    color: #ffd98a; border-color: rgba(255, 200, 110, .6);
+    background: rgba(255, 200, 110, .14);
+    animation: pill-wait 1.5s ease-in-out infinite;
+  }
+  @keyframes pill-wait {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 200, 110, .38); }
+    50% { box-shadow: 0 0 0 5px rgba(255, 200, 110, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .pill-wait { animation: none; } }
+  .hdr-btns { display: flex; gap: 8px; }
+  #btn-more { display: none; }
+  .lnk {
+    font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
+    background: none; border: 1px solid var(--line); color: var(--ink-dim);
+    padding: 5px 11px; border-radius: 4px; cursor: pointer;
+  }
+  .lnk:hover { color: var(--ink); border-color: var(--ink-faint); }
+
+  /* ---------- layout ----------
+     Desktop puts your own force and the unit you have selected down the left,
+     the enemy and every roll as it happens down the right, the table in the
+     middle, and the full log along the bottom where it stays out of the way
+     until it is asked for. A narrow screen collapses all of that back into the
+     board plus the slide-out drawer. */
+  main {
+    display: grid;
+    grid-template-columns: 290px minmax(0, 1fr) 320px;
+    grid-template-areas: "own stage foe" "log log log";
+    gap: 12px; padding-top: 14px; align-items: start;
+  }
+  .stage { grid-area: stage; }
+  .flank-own { grid-area: own; }
+  .flank-foe { grid-area: foe; }
+  .logdock { grid-area: log; }
+
+  .flank {
+    display: flex; flex-direction: column; gap: 10px; min-width: 0;
+    position: sticky; top: 8px;
+    max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin;
+  }
+  .flank .statstrip, .flank .resfeed { flex: none; }
+
+  /* the running feed of rolls, in place of a card to dismiss */
+  .resfeed {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    padding: 9px 10px 10px; min-height: 120px;
+  }
+  .resfeed h4 {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--display); font-size: 10.5px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-faint); margin: 0 0 8px;
+  }
+  .feedclear {
+    margin-left: auto; background: none; border: 1px solid var(--line); color: var(--ink-faint);
+    font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
+    padding: 2px 7px; border-radius: 4px; cursor: pointer;
+  }
+  .feedclear:hover { color: var(--ink); border-color: var(--alpha); }
+  #resfeed-list { display: flex; flex-direction: column-reverse; gap: 8px; }
+  .feedcard {
+    border: 1px solid var(--line); border-left-width: 3px; border-radius: 5px;
+    background: var(--panel-2); padding: 8px 9px; font-size: 11.5px;
+  }
+  .feedcard.side-A { border-left-color: var(--alpha); }
+  .feedcard.side-B { border-left-color: var(--bravo); }
+  .feedcard.fresh { animation: feedin .28s ease; }
+  @keyframes feedin { from { opacity: 0; transform: translateY(-6px); } }
+  .feedcard .res-top { display: flex; gap: 7px; align-items: baseline; margin-bottom: 5px; }
+  .feedcard .res-kind {
+    font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); border: 1px solid var(--line); border-radius: 3px; padding: 1px 4px;
+  }
+  .feedcard h3 { font-family: var(--display); font-size: 12px; margin: 0; font-weight: 600; }
+  .feedcard .res-body { display: flex; flex-direction: column; gap: 5px; }
+  .feedcard .dice { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+  .feedcard .die {
+    min-width: 26px; padding: 2px 4px; border-radius: 4px; text-align: center;
+    background: var(--panel-3); border: 1px solid var(--line);
+    font-family: var(--display); font-size: 13px; font-weight: 700; line-height: 1.1;
+  }
+  .feedcard .die small { display: block; font-family: var(--mono); font-size: 7px; color: var(--ink-faint); font-weight: 400; }
+  .feedcard .die.crit { border-color: var(--good); color: var(--good); }
+  .feedcard .die.fail { border-color: var(--bad); color: var(--bad); }
+  .feedcard .calc { font-family: var(--mono); font-size: 9.5px; color: var(--ink-dim); white-space: pre-wrap; line-height: 1.5; }
+  .feedcard .res-note { font-size: 11px; color: var(--ink-dim); }
+  .feedcard .hitrow { display: flex; flex-wrap: wrap; gap: 3px; }
+  .feedcard .hitchip { font-family: var(--mono); font-size: 8.5px; padding: 1px 4px; border-radius: 3px; border: 1px solid var(--line); color: var(--ink-dim); }
+  .feedcard .hitchip.sp { border-color: color-mix(in srgb, var(--warn) 45%, transparent); color: var(--warn); }
+  .feedcard .hitchip.kill { border-color: color-mix(in srgb, var(--bad) 55%, transparent); color: var(--bad); }
+  .feedcard .outcome { font-size: 11px; padding: 4px 6px; border-radius: 4px; background: var(--panel-3); }
+  .feedcard .outcome.good { color: var(--good); }
+  .feedcard .outcome.bad { color: var(--bad); }
+  .feedempty { font-size: 11px; color: var(--ink-faint); }
+
+  /* the log, docked along the bottom and shut by default */
+  .logdock { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .logdock-head {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    background: none; border: 0; color: var(--ink-dim); cursor: pointer;
+    font-family: var(--display); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    padding: 9px 12px; text-align: left;
+  }
+  .logdock-head:hover { color: var(--ink); }
+  .logdock-caret { display: inline-block; transition: transform .16s ease; font-size: 9px; }
+  .logdock.open .logdock-caret { transform: rotate(90deg); }
+  .logdock-n { margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint); letter-spacing: 0; }
+  .logdock-body { display: none; max-height: 42vh; overflow-y: auto; padding: 0 12px 10px; }
+  .logdock.open .logdock-body { display: block; }
+
+  @media (max-width: 1240px) {
+    main { grid-template-columns: 250px minmax(0, 1fr) 280px; }
+  }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage"; }
+    .flank, .logdock { display: none; }
+  }
+
+
+  .stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+  .board-wrap {
+    position: relative;
+    background: #080b10; border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 6px 4px; overflow: hidden;
+  }
+  canvas#board {
+    display: block; width: 100%; height: auto; margin: 0 auto;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    cursor: grab; touch-action: none;
+  }
+  canvas#board:active { cursor: grabbing; }
+  .viewctl {
+    position: absolute; top: 12px; right: 12px; z-index: 3;
+    display: flex; gap: 4px; align-items: center;
+    background: rgba(13,17,23,.78); border: 1px solid var(--line);
+    border-radius: 5px; padding: 3px 5px;
+  }
+  .viewctl span {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-dim);
+    min-width: 22px; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .vbtn {
+    width: 22px; height: 22px; display: grid; place-items: center;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 3px; cursor: pointer; font-family: var(--display); font-size: 13px; line-height: 1;
+  }
+  .vbtn.wide { width: auto; padding: 0 8px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+  .vbtn:hover { border-color: var(--alpha); }
+  .viewhint {
+    margin: 4px 0 0; text-align: center;
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
+  }
+  .returnhint {
+    position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%);
+    margin: 0; z-index: 3; pointer-events: none; white-space: nowrap;
+    background: rgba(13, 17, 23, .86); border: 1px solid color-mix(in srgb, var(--bravo) 45%, transparent);
+    color: var(--ink-dim); border-radius: 999px; padding: 4px 12px;
+    font-family: var(--mono); font-size: 10.5px;
+  }
+  @media (max-width: 760px) { .returnhint { font-size: 9px; padding: 3px 9px; bottom: 44px; } }
+
+  .terraintip {
+    position: absolute; z-index: 4; pointer-events: none; max-width: 230px;
+    background: rgba(13, 17, 23, .94); border: 1px solid var(--line);
+    border-left: 3px solid var(--alpha); border-radius: 5px;
+    padding: 7px 10px; box-shadow: 0 10px 26px rgba(0, 0, 0, .5);
+  }
+  .terraintip b {
+    display: block; font-family: var(--display); font-size: 12px;
+    letter-spacing: .03em; color: var(--ink);
+  }
+  .terraintip span {
+    display: block; font-size: 11px; color: var(--ink-dim); margin-top: 2px; line-height: 1.45;
+  }
+  .terraintip em {
+    display: block; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
+    font-style: normal; margin-top: 4px;
+  }
+
+
+  /* ---------- action bar ---------- */
+  .console { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .bar {
+    display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px;
+    padding: 10px 10px 8px;
+  }
+  @media (max-width: 760px) {
+    /* a sticky header would sit on top of the table on a phone */
+    header { position: static; padding-block: 8px 8px; gap: 6px 10px; }
+    header h1 { font-size: 14px; }
+    .hdr-meta { gap: 5px 8px; width: 100%; margin-left: 0; }
+    .meta { font-size: 10.5px; }
+    .pill { font-size: 9.5px; padding: 2px 8px; }
+    .lnk { font-size: 9.5px; padding: 4px 8px; }
+    .wrap { padding-inline: 10px; }
+    .viewhint { font-size: 9.5px; }
+  }
+  @media (max-width: 720px) {
+    .bar { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; padding: 8px 8px 6px; }
+    .slot { min-height: 50px; padding: 5px 2px 4px; font-size: 8.5px; }
+    .slot svg { width: 19px; height: 19px; }
+    .slot kbd { display: none; }
+    /* keep the controls directly under the table; the key is further down */
+    .stage { display: flex; flex-direction: column; }
+    .board-wrap { order: 1; }
+    .console { order: 2; }
+  }
+
+  .slot {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
+    padding: 7px 3px 5px; cursor: pointer; color: var(--ink);
+    font-family: var(--display); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
+    min-height: 58px;
+  }
+  .slot svg { width: 22px; height: 22px; display: block; }
+  .slot span { line-height: 1.1; text-align: center; }
+  .slot:hover:not(:disabled) { border-color: var(--alpha); background: var(--panel-3); }
+  .slot:disabled { opacity: .3; cursor: not-allowed; }
+  .slot.special { border-style: dashed; }
+  .slot.active { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 16%, transparent); }
+  .slot.empty { opacity: .18; cursor: default; }
+  .slot kbd {
+    position: absolute; top: 2px; right: 4px; font-family: var(--mono); font-size: 8px;
+    color: var(--ink-faint); background: none;
+  }
+
+  .hintbar {
+    border-top: 1px solid var(--line); padding: 6px 12px; min-height: 30px;
+    font-size: 12px; color: var(--ink-dim);
+  }
+  .hintbar b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- stat strip ---------- */
+  .statstrip { border-top: 1px solid var(--line); padding: 10px 12px 12px; }
+  .stat-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .code {
+    font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: .05em;
+    width: 38px; height: 38px; flex: none; display: grid; place-items: center;
+    border-radius: 5px; border: 1.5px solid var(--line);
+  }
+  .code-A { color: var(--alpha); border-color: color-mix(in srgb, var(--alpha) 50%, transparent); background: color-mix(in srgb, var(--alpha) 9%, transparent); }
+  .code-B { color: var(--bravo); border-color: color-mix(in srgb, var(--bravo) 50%, transparent); background: color-mix(in srgb, var(--bravo) 9%, transparent); }
+  .stat-head h2 { font-family: var(--display); font-size: 15px; margin: 0; }
+  .stat-head .sub { margin: 0; font-size: 12px; color: var(--ink-dim); }
+  .status-tag {
+    margin-left: auto; font-family: var(--display); font-size: 10px; letter-spacing: .08em;
+    text-transform: uppercase; padding: 3px 9px; border-radius: 3px; border: 1px solid var(--line);
+  }
+  .status-ready { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+  .status-suppressed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+  .status-broken { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+
+  .stats { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; margin: 10px 0 0; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+  .st { background: var(--panel-2); padding: 6px 7px; }
+  .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  .spbar { position: relative; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); }
+  .spbar-fill { height: 100%; background: linear-gradient(90deg, var(--warn), var(--bad)); }
+  .spmark { position: absolute; top: 0; width: 1px; height: 100%; background: rgba(255,255,255,.35); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .chip {
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 3px; padding: 2px 6px; background: var(--panel-2);
+  }
+  .hint { color: var(--ink-dim); font-size: 12.5px; margin: 8px 0 0; }
+  .hint.small { font-size: 11.5px; color: var(--ink-faint); }
+
+  /* ---------- side panels ---------- */
+  aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .forces, .logbox, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .card { padding: 14px; }
+  .card h2 { font-family: var(--display); font-size: 15px; margin: 0 0 4px; }
+  .card .sub { color: var(--ink-dim); font-size: 12.5px; margin: 0; }
+
+  .forces { padding: 10px 12px 12px; }
+  .force + .force { margin-top: 12px; }
+  .force h3 {
+    font-family: var(--display); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase;
+    margin: 0 0 6px; color: var(--ink-dim); display: flex; align-items: center; gap: 6px;
+  }
+  .force-A h3 { color: var(--alpha); }
+  .force-B h3 { color: var(--bravo); }
+  .tag { font-family: var(--mono); font-size: 10px; border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; color: var(--ink-faint); }
+  .force ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ru {
+    display: grid; grid-template-columns: 34px 1fr auto auto; gap: 8px; align-items: center;
+    padding: 4px 6px; border-radius: 4px; cursor: pointer; border: 1px solid transparent;
+  }
+  .ru:hover { background: var(--panel-2); border-color: var(--line); }
+  .ru.sel { background: var(--panel-3); border-color: var(--line); }
+  .ru-code { font-family: var(--display); font-size: 11px; font-weight: 600; color: var(--ink-dim); }
+  .ru-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ru-num, .ru-sp { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .ru.done { opacity: .5; }
+  .ru.suppressed .ru-sp { color: var(--warn); }
+  .ru.broken, .ru.broken .ru-sp { color: var(--bad); }
+  .ru.dead { opacity: .35; text-decoration: line-through; }
+
+  .logbox { padding: 10px 12px; height: 300px; overflow-y: auto; }
+  .logbox h4 { font-family: var(--display); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 8px; position: sticky; top: -10px; background: var(--panel); padding-block: 4px; }
+  .le { border-left: 2px solid var(--line); padding: 3px 0 3px 9px; margin-bottom: 5px; }
+  .le p { margin: 0; font-size: 12.5px; }
+  .le code { display: block; font-family: var(--mono); font-size: 11px; color: var(--ink-dim); margin-top: 2px; white-space: pre-wrap; }
+  .le-turn { border-color: var(--ink); }
+  .le-turn p { font-family: var(--display); letter-spacing: .05em; text-transform: uppercase; font-size: 11.5px; }
+  .le-shoot { border-color: var(--alpha); }
+  .le-assault { border-color: var(--bad); }
+  .le-hits code, .le-hits p { color: var(--ink-dim); }
+  .le-suppressed { border-color: var(--warn); }
+  .le-suppressed p { color: var(--warn); }
+  .le-broken, .le-kill { border-color: var(--bad); }
+  .le-broken p { color: var(--bad); }
+  .le-kill p { color: var(--bad); font-weight: 600; }
+  .le-rally { border-color: var(--good); }
+  .le-terrain { border-color: #7a6a4e; }
+  .le-terrain p { color: var(--ink-dim); }
+  .le-ai p, .le-note p, .le-move p, .le-phase p { color: var(--ink-faint); }
+
+  .acts { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .act {
+    text-align: left; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 5px; padding: 8px 10px; cursor: pointer; font-family: var(--body); font-size: 13px; width: 100%;
+  }
+  .act span { font-family: var(--display); font-weight: 600; display: block; }
+  .act small { display: block; color: var(--ink-faint); font-size: 11px; margin-top: 1px; }
+  .act:hover { border-color: var(--alpha); }
+  .act.primary { border-color: color-mix(in srgb, var(--alpha) 60%, transparent); background: color-mix(in srgb, var(--alpha) 12%, transparent); }
+
+  .targets { padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .targets h4 { font-family: var(--display); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 8px; }
+  .tgt {
+    display: block; width: 100%; text-align: left; margin-bottom: 6px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
+    padding: 7px 9px; color: var(--ink); cursor: pointer; font-family: var(--body);
+  }
+  .tgt b { font-size: 13px; display: block; }
+  .tgt span { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .tgt:hover { border-color: var(--warn); }
+
+  /* ---------- overlays ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 50; background: rgba(8, 11, 16, .84);
+    display: grid; place-items: center; padding: 20px; overflow-y: auto;
+  }
+  .sheet {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 22px; width: min(560px, 100%); max-height: 90vh; overflow-y: auto;
+  }
+  .sheet h2 { font-family: var(--display); letter-spacing: .04em; margin: 0 0 4px; font-size: 20px; }
+  .sheet .lede { color: var(--ink-dim); margin: 0 0 18px; font-size: 13px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 5px; }
+  .field select {
+    width: 100%; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 5px; padding: 9px 10px; font-family: var(--body); font-size: 13px;
+  }
+  .field.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .muster {
+    border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2);
+    padding: 10px; margin-bottom: 14px;
+  }
+  .muster-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .muster-head b { font-family: var(--display); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .pts { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .pts.over { color: var(--bad); }
+  .limits { margin: 0 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+  .limits b { color: var(--ink-dim); font-weight: 500; }
+  .limits b.short { color: var(--warn); }
+  .chosen { display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; }
+  .chosen:empty::before { content: 'No units yet — pick from the list below.'; color: var(--ink-faint); font-size: 12px; }
+  .pick {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    background: var(--panel-3); border: 1px solid var(--line); border-radius: 4px;
+    padding: 3px 7px; color: var(--ink); font-family: var(--body); font-size: 11.5px;
+  }
+  .pick b { font-family: var(--mono); font-size: 10px; color: var(--ink-dim); font-weight: 500; }
+  .pickwrap { display: inline-flex; align-items: stretch; gap: 0; }
+  .pickwrap .pick { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 0; }
+  .drive {
+    background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--line);
+    border-top-left-radius: 0; border-bottom-left-radius: 0; border-radius: 0 4px 4px 0;
+    font-family: var(--mono); font-size: 10.5px; padding: 0 2px; cursor: pointer;
+  }
+  .drive:hover { color: var(--ink); border-color: var(--alpha); }
+  .drone {
+    background: var(--panel-2); color: var(--ink-faint); border: 1px solid var(--line);
+    border-left: 0; border-radius: 0 4px 4px 0; cursor: pointer;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; padding: 0 5px;
+  }
+  .pickwrap .drive { border-radius: 0; }
+  .drone.on { color: var(--bravo); border-color: color-mix(in srgb, var(--bravo) 55%, transparent); background: color-mix(in srgb, var(--bravo) 14%, transparent); }
+  .drone:hover { color: var(--ink); }
+  .pick:hover { border-color: var(--bad); }
+  .pick::after { content: '×'; color: var(--ink-faint); }
+  .faults { margin: 7px 0 0; font-size: 11.5px; color: var(--warn); min-height: 15px; }
+  .tactic-note { margin: 6px 0 0; font-size: 11px; line-height: 1.5; color: var(--ink-dim); }
+  .faults.ok { color: var(--good); }
+  .muster-btns { display: flex; gap: 6px; align-items: center; margin: 9px 0 8px; }
+  .muster-btns select { flex: 1; background: var(--panel-3); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 5px 6px; font-size: 11.5px; font-family: var(--body); }
+  .cat { max-height: 240px; overflow-y: auto; border-top: 1px solid var(--line); padding-top: 8px; }
+  .cat h4 {
+    font-family: var(--display); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 8px 0 4px; position: sticky; top: 0; background: var(--panel-2); padding: 2px 0;
+  }
+  .cat h4:first-child { margin-top: 0; }
+  .cu {
+    display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; width: 100%;
+    background: none; border: 1px solid transparent; border-radius: 4px; padding: 4px 6px;
+    color: var(--ink); text-align: left; cursor: pointer; font-family: var(--body); font-size: 12px;
+  }
+  .cu:hover:not(:disabled) { background: var(--panel-3); border-color: var(--line); }
+  .cu:disabled { opacity: .35; cursor: not-allowed; }
+  .cu .t { font-family: var(--display); font-size: 10.5px; color: var(--alpha); }
+  .cu .st { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+  .cu small { display: block; font-size: 10.5px; color: var(--ink-faint); }
+
+  .start {
+    width: 100%; margin-top: 6px; background: color-mix(in srgb, var(--alpha) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--alpha) 60%, transparent); color: var(--ink);
+    font-family: var(--display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    padding: 11px; border-radius: 5px; cursor: pointer; font-size: 13px;
+  }
+  .start:hover:not(:disabled) { background: color-mix(in srgb, var(--alpha) 26%, transparent); }
+  /* a disabled primary button used to look identical to a live one, so pressing it
+     and having nothing happen read as a broken button rather than an illegal list */
+  .start:disabled {
+    opacity: .4; cursor: not-allowed;
+    background: none; border-color: var(--line); color: var(--ink-faint);
+  }
+  .blockwhy {
+    margin: 8px 0 0; font-size: 12px; color: var(--warn);
+    border-left: 2px solid var(--warn); padding-left: 9px;
+  }
+  .sheet h3 { font-family: var(--display); font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--alpha); margin: 18px 0 6px; }
+  .sheet ul { margin: 0; padding-left: 18px; color: var(--ink-dim); font-size: 12.5px; }
+  .sheet li { margin-bottom: 4px; }
+  .sheet li b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- the campaign ---------- */
+  .camp-sheet { width: min(680px, 100%); }
+  .tin {
+    width: 100%; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 5px; padding: 9px 10px; font-family: var(--body); font-size: 13px;
+  }
+  .camp-foot { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+  .solo-box { margin: 0 0 6px; }
+  .playertabs { display: flex; gap: 6px; margin: 10px 0 2px; flex-wrap: wrap; }
+  .playertabs button { font: 600 12px var(--display, system-ui); letter-spacing: .06em; text-transform: uppercase; padding: 7px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: inherit; cursor: pointer; }
+  .playertabs button[aria-pressed="true"] { background: rgba(216,161,58,.16); border-color: rgba(216,161,58,.7); color: #f0c566; }
+  .own { font: 600 10px var(--mono, monospace); padding: 0 4px; border-radius: 3px; margin-left: 4px; }
+  .own1 { color: #d8a13a; border: 1px solid rgba(216,161,58,.5); }
+  .own2 { color: #7ecfc0; border: 1px solid rgba(126,207,192,.5); }
+  .pill-C { color: #7ecfc0; border-color: rgba(126,207,192,.45); background: rgba(126,207,192,.1); }
+  #setup.solo-mode .std-only { display: none !important; }
+  .lnk.warn { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+  .lnk.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .lnk.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 12%, transparent); }
+  .lnk:disabled { opacity: .35; cursor: not-allowed; }
+
+  .cpan { border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); padding: 11px; margin-bottom: 12px; }
+  .cpan-A { border-left: 3px solid var(--alpha); }
+  .cpan-B { border-left: 3px solid var(--bravo); }
+  .cpan-next { border-left-color: var(--good); background: color-mix(in srgb, var(--good) 6%, var(--panel-2)); }
+  /* a contract on offer: who they are above, the job itself below */
+  .cpan-offer { padding-bottom: 12px; }
+  .cpan-offer .start { margin-top: 10px; }
+  .offer-job { border-top: 1px solid var(--line); margin-top: 9px; padding-top: 9px; }
+  .offer-scen { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-bottom: 2px; }
+  .offer-scen b { font-family: var(--display); font-size: 13.5px; letter-spacing: .02em; }
+  .offer-size { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline;
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); margin: 4px 0 7px; }
+  .offer-size b { color: var(--ink); }
+  .offer-cap { opacity: .75; font-size: 11px; }
+  .offer-role { display: inline-block; margin: 2px 0 6px; padding: 3px 10px; border-radius: 999px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    border: 1px solid transparent; }
+  .offer-role.role-attacker { color: #f0b64a; border-color: rgba(240,182,74,.5); background: rgba(240,182,74,.12); }
+  .offer-role.role-defender { color: #6fc4e2; border-color: rgba(111,196,226,.5); background: rgba(111,196,226,.12); }
+  .cphead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .cphead b { font-family: var(--display); font-size: 15px; letter-spacing: .03em; }
+  .ctier { font-family: var(--display); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); }
+  .cmoney { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--good); font-variant-numeric: tabular-nums; }
+  .cpstat { font-size: 11.5px; color: var(--ink-dim); margin: 5px 0 7px; }
+  .cpdoc { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 8px; font-size: 11.5px; color: var(--ink-dim); }
+  .cpwarn { margin-top: 8px; font-size: 11.5px; color: var(--warn); border-left: 2px solid var(--warn); padding-left: 8px; }
+
+  /* how far a force is from its next Company Tier */
+  .cprom { margin-top: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; background: rgba(255,255,255,.015); }
+  .cprom.ready { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); background: color-mix(in srgb, var(--good) 7%, transparent); }
+  .cprom.done { opacity: .75; }
+  .cprom-head { display: flex; align-items: baseline; gap: 10px; }
+  .cprom-head b { font-family: var(--display); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
+  .cprom-count { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); }
+  .cprom-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.08); margin: 7px 0 9px; overflow: hidden; }
+  .cprom-bar i { display: block; height: 100%; background: var(--good); transition: width .3s ease; }
+  .cprom.ready .cprom-bar i { background: var(--good); }
+  .cprom-list { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .cprom-list li { display: grid; grid-template-columns: 16px 1fr; gap: 2px 6px; align-items: start; font-size: 11.5px; }
+  .cprom-list .tick { font-family: var(--mono); color: var(--ink-dim); line-height: 1.35; }
+  .cprom-list li.met .tick { color: var(--good); }
+  .cprom-list .what b { color: var(--ink); font-weight: 600; }
+  .cprom-list li.unmet .what b { color: var(--ink-dim); }
+  .cprom-list .what em { display: block; font-style: normal; color: var(--ink-dim); opacity: .8; margin-top: 1px; }
+  .cprom-num { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+  .cprom-sub { grid-column: 2; height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden; }
+  .cprom-sub i { display: block; height: 100%; background: var(--alpha); opacity: .7; }
+  .cprom-go { margin-top: 2px; }
+
+  /* what a unit is carrying, on the button that puts it in the list */
+  .wear { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
+  .wear span { font-family: var(--mono); font-size: 9.5px; letter-spacing: .03em; padding: 1px 5px;
+    border-radius: 3px; border: 1px solid var(--line); color: var(--ink-dim); white-space: nowrap; }
+  .w-exp { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, var(--line)); }
+  .w-tp.hot { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, var(--line));
+    background: color-mix(in srgb, var(--warn) 10%, transparent); }
+  .w-tr { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+
+  /* the day's experience and trauma, itemised */
+  .dled { margin-top: 7px; border-left: 2px solid var(--line); padding: 5px 0 5px 9px; }
+  .dled.exp { border-left-color: color-mix(in srgb, var(--good) 60%, var(--line)); }
+  .dled.tp { border-left-color: color-mix(in srgb, var(--bad) 55%, var(--line)); }
+  .dled.tp.good { border-left-color: color-mix(in srgb, var(--good) 60%, var(--line)); }
+  .dled-head { display: flex; align-items: baseline; gap: 10px; }
+  .dled-head b { font-family: var(--mono); font-size: 12.5px; }
+  .dled.exp .dled-head b { color: var(--good); }
+  .dled.tp .dled-head b { color: var(--bad); }
+  .dled.tp.good .dled-head b { color: var(--good); }
+  .dled-now { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); }
+  .dled-list { list-style: none; margin: 4px 0 0; padding: 0; }
+  .dled-list li { display: flex; gap: 10px; font-size: 11.5px; color: var(--ink-dim); line-height: 1.5; }
+  .dled-list em { margin-left: auto; font-style: normal; font-family: var(--mono); color: var(--ink); }
+  .dled-bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); margin-top: 6px; overflow: hidden; }
+  .dled-bar i { display: block; height: 100%; background: var(--bad); opacity: .7; }
+  .dcard.rested { opacity: .85; }
+
+  /* honours and traumas a campaign unit carries onto the table */
+  .marks { margin-left: 8px; display: inline-flex; gap: 6px; vertical-align: 1px; }
+  .marks span { font-size: 12px; letter-spacing: 1px; line-height: 1; }
+  .mark-hon { color: #f0b64a; }
+  .mark-tra { color: var(--bad); }
+  .mark-up { color: #6fc4e2; }
+  .chip-hon { color: #f0b64a; border-color: color-mix(in srgb, #f0b64a 45%, var(--line)); }
+  .chip-tra { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+  .chip-up { color: #6fc4e2; border-color: color-mix(in srgb, #6fc4e2 45%, var(--line)); }
+
+  /* the move preview: what the ground would be worth */
+  .card.preview { border-color: color-mix(in srgb, var(--alpha) 40%, var(--line)); }
+  .pv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 9px 0; }
+  .pv-cell { border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; }
+  .pv-cell span { display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--ink-dim); }
+  .pv-cell b { font-family: var(--display); font-size: 19px; line-height: 1.1; }
+  .pv-cell em { display: block; font-style: normal; font-family: var(--mono); font-size: 10px;
+    color: var(--ink-dim); margin-top: 1px; word-break: break-word; }
+  .pv-cell.good { border-color: color-mix(in srgb, var(--good) 50%, var(--line)); }
+  .pv-cell.good b { color: var(--good); }
+  .pv-cell.bad { border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+  .pv-cell.bad b { color: var(--bad); }
+
+  /* loading a hull before the battle */
+  /* the card that says what each action would do, when none is chosen yet */
+  .card.idle h2 { margin-bottom: 6px; }
+  .idlelist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  .idlelist li {
+    display: grid; grid-template-columns: 80px 1fr; gap: 8px; align-items: baseline;
+    font-size: 11.5px; padding: 3px 0; border-top: 1px solid var(--line);
+  }
+  .idlelist li b { font-family: var(--display); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+  .idlelist li span { color: var(--ink-dim); }
+  .idlelist.out { opacity: .55; margin-top: 4px; }
+  .idlelist.out li b { color: var(--ink-faint); }
+
+  /* a force's colours, beside its name */
+  .cflash {
+    width: 22px; height: 11px; border-radius: 3px; flex: none;
+    border: 1px solid rgba(0,0,0,.45); box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+  }
+  .cphead .cflash { align-self: center; }
+  /* who you are, at the top of the founding screen */
+  .foundid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .foundid .field { margin-bottom: 0; }
+  @media (min-width: 620px) { .foundid { grid-template-columns: 1fr 1.4fr; align-items: start; } }
+
+  /* company colours */
+  .swatches { display: flex; flex-wrap: wrap; gap: 7px; }
+  .sw {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
+    padding: 6px 7px 5px; cursor: pointer; width: 74px;
+  }
+  .sw:hover { border-color: var(--ink-faint); }
+  .sw.on { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 12%, transparent); }
+  .sw-chip { width: 100%; height: 16px; border-radius: 3px; border: 1px solid rgba(0,0,0,.4); }
+  .sw-name { font-family: var(--mono); font-size: 8px; letter-spacing: .02em; color: var(--ink-dim); text-align: center; line-height: 1.2; }
+  .sw.on .sw-name { color: var(--ink); }
+
+  /* the order of battle during deployment: pick who goes down next */
+  .dplist { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .dphead {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px;
+  }
+  .dpr {
+    display: grid; grid-template-columns: 16px 1fr auto; gap: 8px; align-items: center;
+    width: 100%; text-align: left; padding: 5px 8px; margin-bottom: 3px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
+    color: var(--ink); font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .dpr:hover { border-color: var(--alpha); }
+  .dpr-mark { font-family: var(--mono); color: var(--ink-faint); text-align: center; }
+  .dpr-note { font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint); }
+  .dpr-set .dpr-mark { color: var(--good); }
+  .dpr-set .dpr-name { color: var(--ink-dim); }
+  .dpr-now { border-color: var(--alpha); background: rgba(216,161,58,.12); }
+  .dpr-now .dpr-name { color: var(--alpha); font-weight: 600; }
+
+  .loadbox { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .loadbox h3 { font-family: var(--display); font-size: 11.5px; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 3px; }
+  .loadrow { border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; margin-top: 7px; }
+  .loadrow.needs { border-color: color-mix(in srgb, var(--warn) 55%, var(--line));
+    background: color-mix(in srgb, var(--warn) 7%, transparent); }
+  .loadhead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .loadhead b { font-size: 12.5px; }
+  .loadhead .mk.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+  .loadlist { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+  .mk {
+    display: inline-block; font-family: var(--mono); font-size: 10px; padding: 2px 6px;
+    border: 1px solid var(--line); border-radius: 3px; color: var(--ink-dim); background: var(--panel-3);
+  }
+  .mk.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .mk.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+
+  .clog { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+  .crow { display: flex; gap: 10px; align-items: baseline; padding: 6px 10px; font-size: 11.5px; border-bottom: 1px solid var(--line); }
+  .crow:last-child { border-bottom: 0; }
+  .crow b { font-family: var(--mono); color: var(--ink-faint); min-width: 20px; }
+  .crow span { color: var(--ink-dim); }
+  .crow em { font-style: normal; font-family: var(--display); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); }
+
+  .dtabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .dlist { display: flex; flex-direction: column; gap: 8px; }
+  .dcard { border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); padding: 9px 11px; }
+  .dcard.resting { opacity: .62; }
+  .dcard.gone { border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+  .dtop { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .ct { font-family: var(--display); font-size: 10.5px; color: var(--alpha); min-width: 18px; }
+  .dname { font-size: 13.5px; }
+  .dprof { font-size: 11px; color: var(--ink-faint); }
+  .dtag { margin-left: auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; color: var(--ink-faint); }
+  .dtag.warn { color: var(--warn); }
+  .dtag.bad { color: var(--bad); }
+  .dbars { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+  .dexp { font-family: var(--mono); font-size: 11px; color: var(--good); }
+  .dtp { flex: 1; max-width: 140px; height: 4px; background: var(--panel-3); border-radius: 2px; overflow: hidden; }
+  .dtp i { display: block; height: 100%; background: var(--bad); }
+  .dtpn { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+  .dnote { font-size: 11px; color: var(--ink-faint); }
+  .dmarks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .dacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .dhist { font-size: 10.5px; color: var(--ink-faint); padding: 0 11px 2px; font-style: italic; }
+  .dledger { font-size: 11px; color: var(--ink-dim); margin-top: 5px; }
+  .dledger b { color: var(--good); font-family: var(--mono); }
+  .dledger.bad b { color: var(--bad); }
+  .dcx { font-family: var(--mono); color: var(--ink); letter-spacing: .12em; }
+
+  /* In-page questions. The published page runs in a sandboxed frame, where
+     confirm() answers false and prompt() answers null without ever being shown,
+     so anything that asks the player something has to be drawn here. */
+  .askwrap {
+    position: fixed; inset: 0; z-index: 70; background: rgba(8, 11, 16, .78);
+    display: grid; place-items: center; padding: 20px;
+  }
+  .askbox {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 18px; width: min(380px, 100%);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  }
+  .askbox h3 { font-family: var(--display); font-size: 15px; margin: 0 0 6px; color: var(--ink); letter-spacing: .02em; }
+  .askbox p { margin: 0 0 12px; font-size: 13px; color: var(--ink-dim); line-height: 1.5; }
+  .askbox p.warn { color: var(--warn); }
+  .askrow { display: flex; gap: 8px; margin-top: 12px; }
+  .askrow .start { margin: 0; flex: 1; padding: 10px; }
+  .askrow .start.danger {
+    background: color-mix(in srgb, var(--bad) 16%, transparent);
+    border-color: color-mix(in srgb, var(--bad) 60%, transparent);
+  }
+  .askrow .start.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--bad) 28%, transparent); }
+  .askrow .lnk { padding: 10px 14px; }
+
+  .srvrow { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+  .srvrow .tin { flex: 1; font-family: var(--mono); font-size: 11.5px; padding: 6px 8px; }
+  .cpstat code { font-family: var(--mono); font-size: 10.5px; color: var(--ink); background: var(--panel-3); padding: 0 3px; border-radius: 3px; }
+
+  .docpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 7px; margin-bottom: 14px; }
+  .doc {
+    text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
+    padding: 8px 9px; color: var(--ink); cursor: pointer; font-family: var(--body);
+  }
+  .doc b { display: block; font-size: 12px; font-family: var(--display); letter-spacing: .02em; }
+  .doc i { display: block; font-style: normal; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin: 2px 0 4px; }
+  .doc span { display: block; font-size: 11px; color: var(--ink-dim); line-height: 1.35; }
+  .doc:hover:not(:disabled) { border-color: var(--alpha); }
+  .doc.on { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 12%, transparent); }
+  .doc.picked { border-color: color-mix(in srgb, var(--good) 60%, var(--line)); background: color-mix(in srgb, var(--good) 8%, transparent); }
+  .doc:disabled { opacity: .4; cursor: not-allowed; }
+  .cat.tall { max-height: 320px; }
+
+  /* ---------- resolution modal ---------- */
+  #resolution { align-items: start; background: rgba(8,11,16,.55); }
+  .res {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    width: min(420px, 100%); margin-top: 6vh; overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+  }
+  .res-top { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+  .res-top h3 { font-family: var(--display); font-size: 13px; letter-spacing: .04em; margin: 0; flex: 1; }
+  .res-kind {
+    font-family: var(--display); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 3px; border: 1px solid var(--line); color: var(--ink-dim);
+  }
+  .res-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; max-height: 58vh; overflow-y: auto; }
+  .dice { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .die {
+    width: 42px; height: 42px; display: grid; place-items: center; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--panel-2);
+    font-family: var(--display); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums;
+  }
+  .die small { display: block; font-size: 8px; letter-spacing: .1em; color: var(--ink-faint); font-weight: 500; }
+  .die.d10 { color: var(--alpha); border-color: color-mix(in srgb, var(--alpha) 45%, transparent); }
+  .die.crit { color: var(--good); border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+  .die.fail { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
+  .calc {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
+    padding: 8px 10px; white-space: pre-wrap; line-height: 1.6;
+  }
+  .calc b { color: var(--ink); }
+  .hitrow { display: flex; flex-wrap: wrap; gap: 5px; }
+  .hitchip {
+    font-family: var(--mono); font-size: 10.5px; padding: 3px 7px; border-radius: 3px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-dim);
+  }
+  .hitchip.kill { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+  .hitchip.sp { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .outcome {
+    font-family: var(--display); font-size: 12.5px; letter-spacing: .02em;
+    padding: 8px 10px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel-2);
+  }
+  .outcome.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+  .outcome.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .outcome.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+  .res-foot { padding: 10px 16px 14px; display: flex; gap: 8px; align-items: center; }
+  .res-foot .start { margin: 0; flex: 1; padding: 9px; }
+  .res-count { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  .autochk {
+    display: flex; align-items: center; gap: 7px; cursor: pointer;
+    padding: 0 16px 14px; margin-top: -4px;
+    font-size: 11.5px; color: var(--ink-faint);
+  }
+  .autochk input { accent-color: var(--alpha); width: 14px; height: 14px; }
+  .autochk:hover { color: var(--ink-dim); }
+  .res-note { font-size: 12px; color: var(--ink-dim); }
+
+  /* ---------- contextual cards inside the console ---------- */
+  #context:empty { display: none; }
+  #context .targets, #context .card { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
+  .statbtn {
+    display: none; margin-left: auto; background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--ink-dim); border-radius: 4px; padding: 4px 9px; cursor: pointer;
+    font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  }
+  .stat-sum { display: none; font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+
+  @media (max-width: 760px) {
+    .statbtn { display: inline-block; }
+    .stat-sum { display: inline; }
+    .status-tag { margin-left: 0; }
+    .statstrip.compact .stats,
+    .statstrip.compact .spbar,
+    .statstrip.compact .chips,
+    .statstrip.compact .hint { display: none; }
+    .statstrip { padding: 8px 10px 10px; }
+  }
+
+  /* ---------- drawer (narrow screens) ---------- */
+  .only-narrow { display: none; }
+  .drawer-head { display: none; }
+  .scrim { position: fixed; inset: 0; background: rgba(6, 9, 13, .62); z-index: 55; }
+
+  @media (max-width: 1000px) {
+    .only-narrow { display: inline-block; }
+    aside {
+      position: fixed; top: 0; right: 0; z-index: 60;
+      width: min(88vw, 400px); height: 100%;
+      background: var(--ground); border-left: 1px solid var(--line);
+      padding: 10px 10px calc(14px + env(safe-area-inset-bottom, 0px));
+      padding-top: calc(10px + env(safe-area-inset-top, 0px));
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      transform: translateX(102%); transition: transform .24s ease;
+      box-shadow: -18px 0 40px rgba(0, 0, 0, .5);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    aside.open { transform: none; }
+    .drawer-head {
+      display: flex; gap: 6px; align-items: center;
+      position: sticky; top: 0; z-index: 2;
+      background: var(--ground); padding-bottom: 8px;
+    }
+    .dtab {
+      flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
+      font-family: var(--display); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+      padding: 8px 6px; border-radius: 5px; cursor: pointer;
+    }
+    .dtab.on { color: var(--ink); border-color: color-mix(in srgb, var(--alpha) 55%, transparent); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+    .dclose {
+      width: 34px; height: 34px; flex: none; border-radius: 5px;
+      background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
+      font-size: 14px; cursor: pointer;
+    }
+    /* nothing to act with until the forces are on the table */
+    .console.deploying .bar { display: none; }
+    .tset { list-style: none; margin: 6px 0 8px; padding: 0; font-size: 12.5px; line-height: 1.5; }
+    .tset li { opacity: .62; }
+    .tset li.now { opacity: 1; font-weight: 600; }
+    .tset li.done { opacity: .85; }
+    aside.tab-forces .logbox { display: none; }
+    aside.tab-log #panel { display: none; }
+    .logbox { height: auto; flex: 1; min-height: 220px; }
+  }
+  @media (min-width: 1001px) {
+    .scrim { display: none !important; }
+    .console > #statstrip { display: none; }   /* the left rail has it */
+    #drawer { display: none; }
+  }
+
+  /* ---------- phone: table above, one panel of controls below ----------
+     The table takes everything down to the panel, and the panel is a fixed
+     slice of the screen you can switch between the actions, the rolls as they
+     land, the selected unit and the two orders of battle. Nothing scrolls the
+     page: the panel scrolls inside itself. */
+  .mtabs { display: none; }
+  .mpane { display: block; }
+
+  @media (max-width: 1000px) {
+    html, body { height: 100%; overflow: hidden; }
+    .wrap { padding: 0; height: 100%; }
+    /* the header earns its height back: one tight row, the rest folded away */
+    header {
+      position: relative; z-index: 4;
+      padding: calc(5px + env(safe-area-inset-top, 0px)) 9px 5px;
+      gap: 4px 8px; align-items: center; flex-wrap: nowrap; overflow: hidden;
+    }
+    header h1 { font-size: 12px; letter-spacing: .04em; }
+    .hdr-meta { width: auto; margin-left: auto; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
+    .hdr-meta .meta { font-size: 9px; white-space: nowrap; }
+    .hdr-meta .meta#hdr-obj, .hdr-meta .meta#hdr-init { display: none; }
+    /* the drawer is gone on a phone now — the panel has the forces — and the
+       rest folds into the menu behind ⋯ so the row stays one line */
+    .only-narrow { display: none !important; }
+    .hdr-btns { gap: 3px; position: relative; }
+    .hdr-btns .lnk { font-size: 8.5px; padding: 3px 6px; }
+    .hdr-btns #btn-sound, .hdr-btns #btn-notes, .hdr-btns #btn-campaign { display: none; }
+    .hdr-btns.open #btn-sound, .hdr-btns.open #btn-notes, .hdr-btns.open #btn-campaign {
+      display: block; position: absolute; right: 0; z-index: 30;
+      background: var(--panel-2); box-shadow: 0 6px 18px rgba(0,0,0,.5);
+    }
+    .hdr-btns.open #btn-sound { top: 26px; }
+    .hdr-btns.open #btn-notes { top: 54px; }
+    .hdr-btns.open #btn-campaign { top: 82px; }
+    #btn-more { display: block; }
+    .pill { font-size: 8.5px; padding: 1px 6px; }
+    main { display: block; padding-top: 0; height: calc(100% - var(--hdr, 52px)); }
+    .stage { display: block; height: 100%; gap: 0; }
+
+    .board-wrap {
+      position: fixed; left: 0; right: 0;
+      top: var(--hdr, 52px); bottom: var(--sheet, 34vh);
+      border-radius: 0; border-left: 0; border-right: 0; padding: 0;
+      overflow: hidden;
+    }
+    canvas#board { width: 100%; height: 100%; max-width: none; display: block; }
+    .viewhint { display: none; }
+
+    .console {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+      height: var(--sheet, 34vh);
+      border-radius: 10px 10px 0 0; border-bottom: 0;
+      display: flex; flex-direction: column;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      box-shadow: 0 -12px 28px rgba(0, 0, 0, .45);
+    }
+    .console .bar {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 4px; padding: 6px 6px 4px; flex: none;
+    }
+    .console .bar .act, .console .bar button {
+      padding: 5px 2px; min-height: 0;
+    }
+    .console .bar svg { width: 15px; height: 15px; }
+    .console .bar span, .console .bar small { font-size: 8px; letter-spacing: .02em; }
+
+    .mtabs {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+      padding: 0 6px 5px; flex: none;
+    }
+    .mtab {
+      background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-faint);
+      font-family: var(--display); font-size: 9px; letter-spacing: .06em; text-transform: uppercase;
+      padding: 5px 2px; border-radius: 4px; cursor: pointer; white-space: nowrap;
+    }
+    .mtab.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+    .mtab-n {
+      display: inline-block; min-width: 13px; margin-left: 2px; padding: 0 3px;
+      border-radius: 7px; background: var(--alpha); color: #14110a;
+      font-family: var(--mono); font-size: 8px; line-height: 13px;
+    }
+    .mtab-n:empty { display: none; }
+
+    .hintbar { flex: none; font-size: 10.5px; padding: 5px 9px; }
+    .console > .mpane { display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; padding-bottom: 8px; }
+    .console[data-mtab="act"]   > .mpane-act,
+    .console[data-mtab="unit"]  > .mpane-unit,
+    .console[data-mtab="force"] > .mpane-force { display: block; }
+    .console[data-mtab="res"]   > .mpane-res { display: flex; flex-direction: column-reverse; gap: 7px; }
+    .console > #resfeed-m, .console > #panel-m { padding: 0 8px; }
+    .mpane-unit { padding: 0 2px 8px; }
+
+    /* the deploy card wants the room, so the action row goes away for it */
+    .console.deploying .bar { display: none; }
+  }
+  @media (min-width: 1001px) {
+    #resfeed-m, #panel-m { display: none; }
+  }
+
+  :focus-visible { outline: 2px solid var(--alpha); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ---- saved skirmish forces ----
+     A force takes a while to build, so it can be named, kept in this browser
+     and written to a file. The controls sit under the muster buttons and are
+     sized for a thumb on a phone, where most of this is done. */
+  .forcebar {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .forcerow { display: flex; gap: 6px; align-items: stretch; }
+  .forcerow > input[type=text], .forcerow > select {
+    flex: 1; min-width: 0; min-height: 34px;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px; padding: 6px 9px;
+    font-family: var(--body); font-size: 12.5px;
+  }
+  .forcerow > .lnk { flex: none; min-height: 34px; white-space: nowrap; }
+  /* the last row is two buttons of equal weight, not a field and a button */
+  .forcerow:last-of-type > .lnk { flex: 1; }
+  .forcerow > .lnk[disabled] { opacity: .4; cursor: default; }
+  .forcerow > .lnk[disabled]:hover { border-color: var(--line); color: var(--ink-dim); }
+  .forcenote { margin: 2px 0 0; font-size: 11.5px; color: var(--ink-faint); min-height: 1em; }
+  .forcenote.ok { color: #7ed6a0; }
+  .forcenote.bad { color: #e0557a; }
+  /* a thumb needs more than a mouse pointer does */
+  @media (max-width: 700px) {
+    .forcerow > input[type=text], .forcerow > select, .forcerow > .lnk { min-height: 42px; }
+    .forcerow > .lnk { padding-left: 14px; padding-right: 14px; }
+  }
+
+  /* ---- tooltips (tips.js) ----
+     One panel, shared by the battle and the campaign screens. It explains what
+     a Battle Honour or a Battle Trauma actually does, which the name alone
+     never does — and unlike the browser's own tooltip it works on a phone. */
+  .tip {
+    position: fixed; z-index: 400; max-width: min(280px, calc(100vw - 16px));
+    background: var(--panel-3, #212b3b); color: var(--ink, #e7ecf4);
+    border: 1px solid var(--line, #26303f); border-radius: 7px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+    padding: 8px 11px 9px; pointer-events: none;
+    font-size: 12.5px; line-height: 1.45;
+    opacity: 0; transform: translateY(3px); transition: opacity .12s, transform .12s;
+  }
+  .tip.on { opacity: 1; transform: none; }
+  .tip.tip-below { transform: translateY(-3px); }
+  .tip.tip-below.on { transform: none; }
+  .tip b {
+    display: block; font-family: var(--display, system-ui); font-size: 11px;
+    letter-spacing: .07em; text-transform: uppercase;
+    color: var(--alpha, #d8a13a); margin-bottom: 3px;
+  }
+  .tip span { display: block; color: var(--ink-dim, #93a1b5); }
+  .tip span + span { margin-top: 6px; }
+  .tip i { display: block; font-style: normal; font-weight: 600; color: var(--ink, #e7ecf4); }
+  /* anything with a tip says so: a dotted underline and the right cursor */
+  [data-tip] { cursor: help; }
+  [data-tip]:focus-visible { outline: 2px solid var(--alpha, #d8a13a); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>PMC <span>2670</span> · Firefight</h1>
+    <div class="hdr-meta">
+      <span class="meta" id="hdr-phase">Deployment</span>
+      <span class="meta" id="hdr-init">—</span>
+      <span class="meta" id="hdr-obj">Objectives 0–0</span>
+      <span class="meta role" id="hdr-role" hidden></span>
+      <span class="pill pill-A" id="hdr-active">Deploy your force</span>
+      <span class="hdr-btns">
+        <button class="lnk only-narrow" id="btn-drawer">Forces</button>
+        <button class="lnk" id="btn-more" hidden aria-label="More">⋯</button>
+        <button class="lnk" id="btn-sound" aria-pressed="true">Sound on</button>
+        <button class="lnk" id="btn-notes">Rules</button>
+        <button class="lnk" id="btn-campaign">Campaign</button>
+        <!-- only offered when the page came from a game server: a game opened
+             from a file has nobody to play against -->
+        <button class="lnk" id="btn-multi" hidden>Multiplayer</button>
+        <button class="lnk" id="btn-new">New battle</button>
+      </span>
+    </div>
+  </header>
+
+  <main>
+    <!-- desktop: your own force and the unit you have selected -->
+    <aside class="flank flank-own">
+      <div id="panel-own"></div>
+      <div class="statstrip" id="statstrip-side"></div>
+    </aside>
+
+    <div class="stage">
+      <div class="board-wrap">
+        <div class="viewctl" id="viewctl">
+          <button class="vbtn" data-zoom="out" title="Zoom out (−)">−</button>
+          <span id="zoomlabel">×1</span>
+          <button class="vbtn" data-zoom="in" title="Zoom in (+)">+</button>
+          <button class="vbtn wide" data-zoom="fit" title="Whole table (F)">Fit</button>
+        </div>
+        <canvas id="board" width="900" height="540" aria-label="Isometric battlefield"></canvas>
+        <p class="returnhint" id="returnhint" hidden>Camera is following the action — tap the table to return to your view</p>
+        <div class="terraintip" id="terraintip" hidden></div>
+        <p class="viewhint">Tap a unit to select · drag or scroll to move the camera · pinch or + / − to zoom · F for the whole table</p>
+      </div>
+
+      <div class="console">
+        <div class="bar" id="bar"></div>
+        <!-- phone only: the three things worth a thumb, under the action row -->
+        <div class="mtabs" id="mtabs">
+          <button class="mtab on" data-mtab="act">Actions</button>
+          <button class="mtab" data-mtab="res">Results <span class="mtab-n" id="mtab-n"></span></button>
+          <button class="mtab" data-mtab="unit">Unit</button>
+          <button class="mtab" data-mtab="force">Forces</button>
+        </div>
+        <div class="hintbar" id="hintbar">Select one of your units on the table.</div>
+        <div class="mpane mpane-act" id="context"></div>
+        <div class="mpane mpane-res" id="resfeed-m"></div>
+        <div class="mpane mpane-unit statstrip" id="statstrip"></div>
+        <div class="mpane mpane-force" id="panel-m"></div>
+      </div>
+
+    </div>
+
+    <!-- desktop: the enemy order of battle, and every roll as it happens -->
+    <aside class="flank flank-foe">
+      <div id="panel-foe"></div>
+      <div class="resfeed">
+        <h4>Combat results <button class="feedclear" id="btn-feedclear" title="Clear">clear</button></h4>
+        <div id="resfeed-list"></div>
+      </div>
+    </aside>
+
+    <!-- desktop: the full log, tucked away until it is wanted -->
+    <div class="logdock" id="logdock">
+      <button class="logdock-head" id="btn-logdock" aria-expanded="false">
+        <span class="logdock-caret">▸</span> Combat log
+        <span class="logdock-n" id="logdock-n"></span>
+      </button>
+      <div class="logdock-body"><div id="log-dock"></div></div>
+    </div>
+
+    <aside id="drawer" class="tab-forces">
+      <div class="drawer-head">
+        <button class="dtab" data-tab="forces">Forces</button>
+        <button class="dtab" data-tab="log">Combat log</button>
+        <button class="dclose" id="btn-drawer-close" aria-label="Close">✕</button>
+      </div>
+      <div id="panel"></div>
+      <div class="logbox"><h4>Combat log</h4><div id="log"></div></div>
+    </aside>
+  </main>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+
+<div class="overlay" id="resolution" hidden>
+  <div class="res" id="res-card"></div>
+</div>
+
+<div class="overlay" id="setup">
+  <div class="sheet">
+    <h2 id="setup-title">Muster your force</h2>
+    <div class="solo-box" id="solo-box" hidden>
+      <p class="lede">Solitaire and co-operative play (rulebook pp. 146–156): your commando — or two of them, one each — against an OpFor that acts in a phase of its own, driven by the behaviour table. Commandos are small: build yours from the commando composition table (p. 147). The OpFor pool is rolled for you from its own table (p. 148), and in a co-op game it is rolled a Priority Level higher for the second player.</p>
+      <div class="field two">
+        <div>
+          <label for="sel-solo-mode">Players</label>
+          <select id="sel-solo-mode">
+            <option value="solo" selected>Solitaire — one player</option>
+            <option value="coop">Co-operative — two players, one screen</option>
+          </select>
+        </div>
+        <div>
+          <label for="sel-solo-op">The OpFor</label>
+          <select id="sel-solo-op">
+            <option value="rebel" selected>An insurgent group</option>
+            <option value="pmc">A mercenary company</option>
+            <option value="bugs">A bug swarm</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="sel-solo-scen">Solitaire scenario (pp. 150–156)</label>
+        <select id="sel-solo-scen">
+          <option value="roll" selected>Roll for it — any of the six</option>
+          <option value="s_crush">Crushing the Resistance — drop in and wipe them out</option>
+          <option value="s_vip">Protecting the VIP — hold the evacuation point</option>
+          <option value="s_decap">Decapitation — kill the enemy leaders</option>
+          <option value="s_evac">Evacuation — get the civilians to safety</option>
+          <option value="s_sabotage">Sabotage — destroy every objective</option>
+          <option value="s_ambush">Ambush! — hit the column on the road</option>
+        </select>
+      </div>
+      <div class="playertabs" id="solo-players" hidden>
+        <button type="button" data-player="0" aria-pressed="true">Player 1’s commando</button>
+        <button type="button" data-player="1" aria-pressed="false">Player 2’s commando</button>
+      </div>
+    </div>
+    <p class="lede std-only">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table (p. 60; p. 92 for the rebels, p. 114 for the swarm, p. 128 for the tribe).</p>
+    <div class="field">
+      <label for="sel-faction">Your force</label>
+      <select id="sel-faction">
+        <option value="pmc" selected>PMC — a private military company under contract (pp. 60–82)</option>
+        <option value="rebel">Rebels — an insurgent group in revolt (pp. 92–109)</option>
+        <option value="bugs">Space Bugs — a swarm (pp. 113–127)</option>
+        <option value="xeno">Xenotripods — an alien tribe (pp. 128–143)</option>
+      </select>
+    </div>
+    <div class="field" id="tactic-field" hidden>
+      <label for="sel-tactic">Rebel Tactic (p. 95) — chosen before the terrain goes down</label>
+      <select id="sel-tactic">
+        <option value="" selected>No tactic</option>
+        <option value="laststand">Last Stand — dig in, +4 Defence in cover, three free casualties</option>
+        <option value="wave">Human Wave Attacks — two extra units a Level, infantry move +4″</option>
+        <option value="guerillas">Guerillas — every unit on foot gains Stealth and Battlefield Insertion</option>
+      </select>
+      <p class="tactic-note" id="tactic-note"></p>
+    </div>
+    <div class="field two">
+      <div>
+        <label for="sel-tier">Battle Tier</label>
+        <select id="sel-tier">
+          <option value="1">I — 6 points</option>
+          <option value="2">II — 12 points</option>
+          <option value="3" selected>III — 18 points</option>
+          <option value="4">IV — 24 points</option>
+          <option value="5">V — 30 points</option>
+        </select>
+      </div>
+      <div>
+        <label for="sel-pl">Priority Level</label>
+        <select id="sel-pl">
+          <option value="1" selected>1 — skirmish</option>
+          <option value="2">2 — full battle</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="muster">
+      <div class="muster-head">
+        <b>Your company</b>
+        <span class="pts" id="pts">0 / 18</span>
+      </div>
+      <p class="limits" id="limits"></p>
+      <div class="chosen" id="chosen"></div>
+      <p class="faults" id="faults"></p>
+      <div class="muster-btns">
+        <button type="button" class="lnk" data-army="roll">Roll a force</button>
+        <button type="button" class="lnk" data-army="clear">Clear</button>
+        <select id="sel-preset"><option value="">Ready-made…</option></select>
+      </div>
+      <!-- a force worth building is worth keeping: named, saved in this browser,
+           and exportable to a file so it survives a new device -->
+      <div class="forcebar">
+        <div class="forcerow">
+          <input id="force-name" type="text" maxlength="40" autocomplete="off"
+            placeholder="Name this force…">
+          <button type="button" class="lnk" data-force="save">Save</button>
+        </div>
+        <div class="forcerow">
+          <select id="sel-force"><option value="">Saved forces…</option></select>
+          <button type="button" class="lnk" data-force="del" disabled>Delete</button>
+        </div>
+        <div class="forcerow">
+          <button type="button" class="lnk" data-force="export">Save to a file</button>
+          <button type="button" class="lnk" data-force="import">Load from a file</button>
+          <input type="file" id="force-file" accept="application/json" hidden>
+        </div>
+        <p class="forcenote" id="force-note"></p>
+      </div>
+      <div class="cat" id="cat"></div>
+    </div>
+
+    <div class="field std-only">
+      <label for="sel-op">Opposition force</label>
+      <select id="sel-op">
+        <option value="roll:pmc">Rolled — a mercenary company for this Tier</option>
+        <option value="roll:rebel" selected>Rolled — an insurgent group for this Tier</option>
+        <option value="roll:bugs">Rolled — a bug swarm for this Tier</option>
+        <option value="roll:xeno">Rolled — a Xenotripod tribe for this Tier</option>
+        <option value="mirror">Mirror — the same force as yours</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sel-planet">Planet — terrain generator (rulebook pp. 46–48)</label>
+      <select id="sel-planet">
+        <option value="random">Randomise the planet</option>
+        <option value="barren">Barren / arctic world</option>
+        <option value="sparse">Temperate world (sparsely colonised)</option>
+        <option value="dense">Temperate world (densely colonised)</option>
+        <option value="industrial">Industrial world</option>
+        <option value="jungle">Jungle world</option>
+        <option value="mountain">Mountain world</option>
+        <option value="unstable">Unstable / tectonic world</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sel-terrain">Terrain set-up</label>
+      <select id="sel-terrain">
+        <option value="auto">Generate the table — the D6 for each area rolled and placed for you</option>
+        <option value="manual">Set it up by hand — roll for each area and tap the pieces down</option>
+      </select>
+    </div>
+    <div class="field std-only">
+      <label for="sel-scen">Scenario (rulebook pp. 48–55)</label>
+      <select id="sel-scen">
+        <option value="roll" selected>Roll a D6 — any of the six</option>
+        <option value="rolld3">Roll a D3 — the first three only (p. 46)</option>
+        <option value="meeting">Meeting engagement — break the enemy</option>
+        <option value="secure">Secure and control — three objectives</option>
+        <option value="find">Find and secure — search for the prize</option>
+        <option value="invasion">Invasion — three landing zones</option>
+        <option value="demolish">Demolish — bring the objective down</option>
+        <option value="takeover">Hostile takeover — a prepared position</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Company colours — what your troops are painted in</label>
+      <div class="swatches" id="colourpick"></div>
+      <p class="hint small">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
+    </div>
+    <div class="field std-only">
+      <label for="sel-mode">Play against</label>
+      <select id="sel-mode">
+        <option value="ai">OpFor AI — behaviour table drives every activation</option>
+        <option value="hotseat">Hotseat — two players, one screen</option>
+        <option value="demo">Demo — watch two AI forces fight it out</option>
+      </select>
+    </div>
+    <button class="start" id="btn-start">Take the field</button>
+    <p class="camp-foot">
+      <button class="lnk" id="btn-setup-campaign">Play a campaign instead</button>
+      <button class="lnk" id="btn-setup-solo">Solitaire or co-op against the OpFor</button>
+      <button class="lnk" id="btn-setup-multi" hidden>Play somebody else over the network</button>
+    </p>
+  </div>
+</div>
+
+<div class="overlay" id="camp" hidden>
+  <div class="sheet camp-sheet" id="camp-body"></div>
+  <div class="askwrap" id="camp-ask" hidden><div class="askbox" id="camp-askbox"></div></div>
+</div>
+
+<div class="overlay" id="notes" hidden>
+  <div class="sheet">
+    <h2>How this plays</h2>
+    <p class="lede">A faithful digital skirmish built on the PMC 2670 rulebook by Marcin Gerkowicz (Assault Publishing). The view is isometric, but the rules run on a flat 4′ × 4′ table: movement, range and line of sight are all measured in inches, edge to edge between the two closest models, as you would with a tape.</p>
+
+    <h3>Mustering a company</h3>
+    <ul>
+      <li><b>All 40 PMC infantry profiles</b> are in, exactly as printed (pp. 62–71 and 79) — Basic troops, Rifle infantry, Assault troops, Heavy infantry, Light infantry, Light and Heavy support, Remote mortars, Command units, EW and Medic teams, and the Unclassified Nomads and Chem-warriors.</li>
+      <li><b>All 36 PMC vehicles and aircraft</b> too (pp. 73–82) — Combat vehicles, Hunters and Destroyers, Transports, Engineering, Support, Anti-aircraft, EW and Medical vehicles, Transport aircraft and Strike aircraft.</li>
+      <li><b>Battle Tier I–V and Priority Level 1–2.</b> Composition points are the sum of your units' Tiers — 6, 12, 18, 24 or 30, multiplied by the Priority Level — and the per-Tier minimums and maximums come straight from the table on p. 60. Tier III is the book's recommended starting point.</li>
+      <li><b>The limits are enforced as you build:</b> at least three units of the Battle Tier, at most four a Tier below, two a Tier above, one Command Unit per Priority Level, Penal troops four to an army, High command one, EW and Medic teams one per Priority Level, Chem-warriors two.</li>
+      <li><b>Machines have their own ceiling:</b> at most three ground vehicles and aircraft per Priority Level, aircraft only from Battle Tier II, and at PL1 no machine above the Battle Tier and only one aircraft. A Gunboat, a Light engineering vehicle and an EW vehicle are one to an army each, and an Anti-aircraft vehicle one per Priority Level.</li>
+      <li><b>Every ground vehicle picks a propulsion</b> from the optional rules (Appendix 3, pp. 166–167) — wheeled, tracked, anti-grav, hover or walker. None of them change a Unit Tier, because each trades an advantage for a cost; pick one from the dropdown beside the unit in your list. Every ready-made company fields at least one machine.</li>
+      <li>Roll a legal company at a button, or start from a ready-made one — two per Battle Tier.</li>
+    </ul>
+
+    <h3>The battlefield</h3>
+    <ul>
+      <li><b>Terrain (pp. 41–43).</b> Movement penalty: area terrain costs 1″ (2″ for a vehicle) <i>once</i> in a move, however much of it is crossed, and a unit starting in it pays to move through it; each low wall crossed costs it again. Barbed wire costs a D6″ rolled before the move. Hills block sight across them; a unit on one gets +2 Firepower shooting down and sees over its own side below. A low wall shelters only a unit with every model within 2″ of it, the wall between it and the shooter; rubble shelters the men in it and no one behind it. Trenches give cover and immunity to Crossfire. <i>House rule:</i> Protectors in hi-mobility armour jump over terrain — no penalties, and over walls, water and buildings — but must land on ground they could stand on.</li>
+      <li><b>Buildings (p. 41).</b> <i>Enter building</i> and <i>Exit building</i> are special actions, within 4″; one unit to a building (to a section, in a building of several wings, and <i>Next section</i> moves through to an empty one in contact). Inside: no Move, Advance or Assault; +2 Defence; no Crossfire; range measured from the wall both ways. A high building or a reinforced one gives +2 Firepower, a low one none — high buildings are drawn a storey taller. Charge a garrison and win, and you take the building while the defenders come out and fall back 2″. A building can also be garrisoned by tapping it during deployment.</li>
+      <li><b>Terrain set-up by hand (pp. 46–47).</b> Choose <i>Set it up by hand</i> and the game walks the table one 2′ × 2′ area at a time, starting from a random player and alternating: it rolls the area's D6, you pick between the options a result offers (hills <i>or</i> rocks), then tap each piece down — anywhere in that area, up to the number rolled. The OpFor lays its own areas. Either area, or everything left, can be auto-placed. In Meeting engagement, Secure and control and Find and secure the table edges are rolled only after the terrain is down, as the book has it, and the table is turned to match. Campaign battles use whichever set-up you last picked here.</li>
+      <li><b>Terrain generators (pp. 46–48).</b> Pick a planet — or randomise it — and the table is built the book's way: divided into 2′ × 2′ areas, with a D6 rolled for each and the rolled result placed in it. Every roll and what it produced is listed in the log and on the opening card.</li>
+      <li>Where a result offers a choice ("1-4 hills or rocks") one branch is taken at random, and counts like "1-6 rocks" are rolled within their range. Small rocky areas count as rubble, as the book says; high rocks, deep canyons and volcanoes are rocks, and swamps are shallow water.</li>
+      <li><b>Terrain effects</b> follow the summary table: woods and ruins give +2 Defence and block sight; rubble and low walls give +2; buildings give +2 Defence and +2 Firepower; reinforced buildings +4 Defence; hills give +2 Firepower shooting down; rocks, high walls, deep water and lava are impassable; shallow water costs movement and silences Cumbersome Weapons.</li>
+      <li><b>Natural shapes.</b> Woods, rubble, rocks, water, lava and hills are laid down as irregular outlines &mdash; round patches, lobed clusters, kidney shapes and long diagonal bands &mdash; rather than rectangles, and every effect stops at the drawn edge: a unit standing where the ground is open is in the open, a sight line that only grazes the empty corner of a wood's footprint is clear, impassable ground is only as big as it looks, and a hill's +2 Firepower is only on its top. Buildings, walls and ruins stay square. The open ground is coloured to suit what stands on it &mdash; greener by woods and water, dry by rock and buildings, baked round lava &mdash; but that is only paint: open ground is open ground.</li>
+    </ul>
+
+    <h3>The six scenarios (pp. 48&ndash;55)</h3>
+    <ul>
+      <li><b>Every scenario is in</b>, and the D6 that picks one is the book's. At Tier I&ndash;II or Priority Level 1 the roll may be a D3 instead, taking one of the first three, exactly as p. 46 allows. In a campaign the roll is made on the contract screen; in a one-off you can also choose.</li>
+      <li><b>Meeting engagement (p. 50)</b> &mdash; no objectives at all. The only way to win is to rout the other company: destroy or drive off half its units. Twenty turns.</li>
+      <li><b>Secure and control (p. 51)</b> &mdash; three objectives, at least 12&Prime; apart and 8&Prime; in from the edges. Hold more of them at the end of turn 20, hold all three at any End phase, or hold <b>the same two for three End phases running</b>.</li>
+      <li><b>Find and secure (p. 52)</b> &mdash; three possible locations within 12&Prime; of the centre, and nobody knows which. A unit within 4&Prime; uses the <b>Check the area!</b> action: the first location gives the prize up on a 5+, the second on a 4+, and the third is where it was all along. Hold it for three turns running to win outright &mdash; and a company holding it cannot be routed while it holds it. Half each force starts in reserve, and from turn 3 a number equal to the Priority Level comes on every second turn. After turn 12 a D6 is rolled each turn: a 6 ends it, and one point easier every turn after that.</li>
+      <li><b>Invasion (pp. 52&ndash;53)</b> &mdash; three landing zones. The attacker's whole force comes down from orbit rather than deploying: the first wave lands in the Reserve phase of turn 1, and infantry take <b>D3 Suppression</b> on the way down &mdash; vehicles are unaffected. The second wave rolls in from turn 4 on a 5+, easier every turn. The defender puts no more than a third on the table and rolls the rest on from turn 2 on a 5+. Battlefield Insertion is switched off for both sides. The attacker wins by holding two of the three zones at the end, or by routing the defender.</li>
+      <li><b>Demolish (p. 54)</b> &mdash; the defender's objective sits within 4&Prime; of the table centre, impassable, and the ground around it is cleared. It comes down only to the <b>Demolish</b> action, and this is the one piece <b>any attacking infantry</b> may go for &mdash; Sappers charge it at +4, everybody else at +2. Half the defenders deploy within 18&Prime; of it and the rest roll on from turn 2. The objective's <b>SAM system</b> opens up automatically on any aircraft that finishes its move within 12&Prime;, at Basic Firepower 12. Twelve turns.</li>
+      <li><b>Hostile takeover (p. 55)</b> &mdash; one objective at the centre of a prepared position. The defender digs in first: up to ten sections of wall, none longer than 6&Prime;, and a single bunker, all within 12&Prime;. The defender deploys within 12&Prime; of the objective; the attacker splits in two, the first part entering on turn 1 and the second from turn 3. The attacker has to hold the objective at the End phase of turn 20.</li>
+      <li><b>Attacker and defender</b> are rolled for in the three scenarios that have them, and <b>The Best Defence is Good Offence</b> (a Strategic doctrine) lets a company that is made the defender roll a D6 and take the attack instead on a 2&ndash;6 &mdash; unless the other company has the same doctrine, in which case it does nothing.</li>
+      <li><b>An interpretation:</b> the book has most scenarios entering the whole force &ldquo;from your table edge in the Reserve phase of turn 1&rdquo;, which is the same thing as deploying in a strip on that edge, so that is how it is presented. The scenarios with a genuine deployment area &mdash; the defender in Demolish and Hostile takeover, and the defender in Invasion &mdash; get one.</li>
+    </ul>
+
+    <h3>The campaign (pp. 83&ndash;91)</h3>
+    <ul>
+      <li><b>Press Campaign</b> in the header, or &ldquo;Play a campaign instead&rdquo; at the bottom of the muster sheet. Found a company &mdash; six Tier I units, two Tier II, a free Tier I Field command, at most two vehicles, and one of the eighteen doctrines &mdash; then take contracts.</li>
+      <li><b>Solo or hotseat.</b> Solo puts you against a rival PMC with a character of its own: Armoured, Elite, Swarm, Marksmen or Shock. It founds in its own style, reaches for its own doctrines, recruits into its own unit groups and spends experience its own way, so it grows into something recognisable over a dozen battles. You can read its dossier between contracts.</li>
+      <li><b>Each contract</b> rolls the Battle Tier on a D6 capped at the weaker company's Company Tier, rolls the scenario, and has you pick your force from the roster rather than the catalogue.</li>
+      <li><b>Units have a history.</b> They keep a name you give them, earn experience for turning up, for winning, for fighting a bigger company and for breaking an enemy &mdash; and they collect Trauma Points for being broken, for losses, for defeats and for fighting battle after battle. At ten points (fifteen with Mental Training) comes a Battle Trauma; at ten Traumas the unit is disbanded.</li>
+      <li><b>Spending</b> &mdash; promotion keeps the unit's identity, honours and traumas and only changes the profile; a Battle Honour draws three and takes one of the three at random; vehicles and aircraft take Upgrades instead. Then recruitment, and the Company Tier itself.</li>
+      <li><b>Everything is saved</b> in the browser, and mirrored to your account when the page can reach it, so a campaign follows you between devices. You can also export it to a file and load it back.</li>
+      <li><b>On the table</b>: <b>Rapid Relocation</b> gives you a step after deployment to pick up to half your units and set them down again; <b>NOT ONE STEP BACKWARDS!</b> adds a special action to a Command Unit and anyone within 12" of one &mdash; shoot at a suppressed friend: the shot is resolved as normal, so a Man down! still kills, but every Suppression point it would give comes off instead of going on; <b>Semper Fidelis</b> lets a unit held in a scenario reserve come on any turn after the first, no roll &mdash; you are offered it each Reserve phase and may keep it back, and its transport comes with it if it is the only unit aboard; <b>Bloodlust</b> leaves a unit only one choice when an enemy is in charge reach: charge the closest, Cumbersome Weapon or not; <b>Nanobots</b> repair on dice for the whole Structure.</li>
+    </ul>
+
+    <h3>Space Bugs</h3>
+    <ul>
+      <li><b>The swarm</b> is the third army on the muster sheet. Lesser, Underground, Spore, Flying and Overgrown bugs, led by a Leader Bug: Watcher larvae at Tier I up to the Queen at Tier V. Bugs have no vehicles to buy, no Drones and no Upgrades &mdash; the Overgrown bugs fight with vehicle profiles and facings instead.</li>
+      <li><b>Overmind</b> &mdash; a Leader Bug controls every friendly bug of its own Tier or lower within 18" (24" with Increased Control). Selecting one draws that reach as a violet dashed ring. Bugs under control lose every Suppression point in the Rally phase, take cover from terrain and ignore Aggressive.</li>
+      <li><b>Animal Behaviour</b> &mdash; a bug out of the Overmind's reach takes no Defence from cover. <b>Aggressive</b> bugs out of reach must charge the closest enemy they can.</li>
+      <li><b>Endless Tide</b> &mdash; in the End phase, an unbroken swarm within reach of an unsuppressed Overmind gets D3 lost bugs back, up to its starting size.</li>
+      <li><b>Pheromone Markers</b> give Animal Behaviour bugs +1 to hit (up to +3) for each marker unit within 18" of the target. <b>Psychic Wave</b> puts D6&minus;1 Suppression on every enemy within 12", no line of sight needed; Drones are immune.</li>
+      <li><b>Flying bugs</b> ignore the ground but take no cover and may not stop on impassable terrain. The <b>Carrier bug</b> is an aircraft with Transport (4). The Huge underground bugs arrive by Battlefield Insertion.</li>
+      <li><b>The swarm campaign</b> spends Resource Points rather than money. The free Leader Bug grows with the Swarm Tier; any extra Leader Bugs must sit below it. Leader Bugs earn no experience and take no trauma. Tiny bug swarms spawn free while you hold four or fewer.</li>
+      <li><b>Pathways</b> replace doctrines &mdash; eighteen in three branches (Biochemical, Behavioural and Phenotypic), from Effective Toxin Glands and Chitin Exoskeletons to Metal-covered Talons and Increased Control. <b>Adaptations</b> and <b>Flaws</b> replace Battle Honours and Traumas; Atavism strips a unit's Adaptations again.</li>
+      <li><b>Feeding</b> &mdash; with Alternate Carbon-based Metabolism every model killed in an assault pays RP, and with Fungi Symbiosis every human unit destroyed seeds a free unit of Infected. A bug that dies stays dead: there is no salvage.</li>
+      <li><b>Rivals</b> &mdash; a solo campaign may throw a swarm at you instead of another PMC, in one of four characters: Ivenbea, Evatus, Terarson or Hydra.</li>
+    </ul>
+
+    <h3>Xenotripods</h3>
+    <ul>
+      <li><b>The tribe</b> is the fourth army on the muster sheet. Crocks lead and specialise — Alpha commanders, Beta recon in deflector armour, Gamma heavy weapons, Delta blades — and the Esh-Aven are the Epsilon line troops, nine to a squad. There are no ground vehicles: the tribe flies triangular craft and teleports turrets in. At most three turrets or turret sets and aircraft a Priority Level, and one Alpha squad a Priority Level.</li>
+      <li><b>Limited Senses</b> — a Xenotripod sees only 12". <b>Mental Projection</b> — but whatever one unbroken Xenotripod sees, the whole tribe sees: a unit may fire at anything in range that the tribe can see, as long as nothing blocks its own line, and units with Indirect Fire shoot over the terrain without needing a Markerlight. Selecting a Xenotripod draws every other member's 12" of sight and rings each enemy the tribe can see. Turrets are drones: normal sight, and no part of either rule.</li>
+      <li><b>Psychic Bond</b> — a unit rallies on the Morale of any friend within 6". Each model the tribe loses puts a Suppression point on every friend within 6".</li>
+      <li><b>Cloaking System</b> — shot at or charged only from 12" or less. <b>Shield Generator</b> — friends wholly within 12" get +2 Defence (+1 from a craft) against shots from outside it; the best one counts. <b>Psychic Support</b> counts as Field Medics.</li>
+      <li><b>Special actions</b> — <b>Regain Control</b> (Dominant Species): an Alpha stands still and every Epsilon squad of its Tier or lower within 12" sheds all its Suppression. <b>Self-repair</b> (Molecular Reconstruction): a turret or craft stands still and clears all its Damage. <b>Teleport</b>: a pad takes in an infantry unit within 4"; on a D6 of 1–2 it comes out at a random Teleport unit, on 3–6 at the one you choose, and it can still act that turn.</li>
+      <li><b>Turrets</b> — stationary, with no sides or rear. They are Drone Controlled, but a hacker's 5–6 only counts as 3–4. All of a side's turrets act together as one activation, and they don't count towards Overwhelming Numbers. A turret set is one pick, but every turret in it is a unit on the table, counted as Tier I.</li>
+      <li><b>The tribe campaign</b> (pp. 140&ndash;145) is paid in <b>Territorial Points</b>. In Invasion, Demolish and Hostile takeover the payment is recalculated: a winning tribe counts dice of 1&ndash;2 as 3 (1&ndash;3 as 4 with Effective Resource Utilisation), and a losing one counts 5&ndash;6 as 4. The aftermath shows the dice before and after.</li>
+      <li><b>Who costs what.</b> The free Alpha squad grows with the Tribe Tier; any extra Alphas sit below it. Alphas and turrets never earn experience or trauma. Primitive Epsilons are free to raise while you hold four or fewer, and free to promote. Turrets are never bought &mdash; they only take composition points.</li>
+      <li><b>Tribe Advancements</b> replace doctrines &mdash; eighteen in three groups (Social, Organisational and Technological), no more than two from a group. Some act before the battle: <b>Foresighted Command</b> rolls a second scenario to choose from, <b>Detailed Terrain Knowledge</b> moves two terrain pieces, <b>Fortify and Strike!</b> throws up four low walls, <b>Complex Teleport Network</b> brings a free set of Teleport turrets. <b>Enhanced Genetic Memory</b> regrows a lost infantry unit, and on 2&ndash;6 it remembers everything it had.</li>
+      <li><b>Rites and Infamies</b> replace Battle Honours and Traumas (a D20 and a D10 table). Aircraft are never promoted and take no Rites: at 10 EXP they take one of ten <b>aircraft upgrades</b> instead, from Emergency Batteries to the Vortex Generator.</li>
+      <li><b>Rivals</b> &mdash; a solo campaign may send a tribe against you: Mithdu-2 (slow, turrets and tunnels), Amt (Gammas and craft), Ghadon II 3rd (aggressive), or Hashamer I, an Esh-Aven tribe heavy on Epsilons and Deltas.</li>
+    </ul>
+
+    <h3>The maths is the real thing</h3>
+    <ul>
+      <li><b>Shooting</b> — D10 + Firepower + model-count bonus (+1 at 3–4, +2 at 5–6, +3 at 7+), +1 for a stationary Fire!, +2 inside half range, +2 for Crossfire, +2 firing from a hill. Every point over the target's modified Defence is one hit. Unmodified 0 always fails; unmodified 9 always succeeds for at least one hit.</li>
+      <li><b>Hit table</b> — D6 per hit: 1 Steady boys, 2–5 Get down (1 SP), 6+ Man down (1 model, 2 SP). +1 against a Broken unit, +1 more when the attack is a Crossfire.</li>
+      <li><b>Assault</b> — defensive fire at Basic Firepower first; a charge that leaves the attacker Suppressed or Broken fails on the spot. Then three rounds by the attacker, three by the defender, with 2–3 Ouch and 4–6 Man down. A break at any point ends it with a 2" fall-back; if nobody breaks, the attacker falls back.</li>
+      <li><b>Suppression</b> — over Morale is Suppressed, over twice Morale is Broken, over three times after a rally attempt the unit is removed. Morale drops by one per model lost, minimum 1, unless the unit is Determined.</li>
+      <li><b>Rally</b> — D6 equal to current Morale, each 4+ clears 1 SP. Inspiring Presence re-rolls failures within 12". The phase is walked unit by unit: the camera goes to each one and its card shows every die before you continue.</li>
+      <li><b>Every special rule in the book's General list (pp. 56–59) is in.</b> Advanced Protection, Anti-aircraft, Anti-tank, Anti-tank (limited) — which only reaches 6" — Battle Armour with the second Defence value that Anti-tank and Gauss weapons strip away, Battlefield Insertion, Command Unit (X), Command Vehicle, Counter-jamming, Cumbersome Weapon, Determined, Expendable, Field Medics, Gauss Weapon, Hackers, Incendiary Ammunition, Indirect Fire, Inspiring Presence, Jammers, Keen-Eyed, Limited Fire Arc, Markerlights, Minimum Range, Sappers, Specialisation (air) and (ground), Stealth, Supporting Fire and Suppressive Fire — plus Drone Control, Transport (X), Auxiliary Weapons, Crossfire and Overwhelming Numbers.</li>
+      <li><b>Jammers</b> put every enemy within 24" onto 5+ to rally, and their vehicles onto 5+ to repair; <b>Counter-jamming</b> within 6" of the victim cancels it. <b>Field Medics</b> within 6" turn the hit table into 1–2 steady, 3–5 a suppression point and 6 a MEDIC! — which costs a single point, and a further D6 of 6 saves the casualty outright.</li>
+      <li><b>Terrain comes down.</b> Low walls, high walls and ordinary buildings are destructible; reinforced walls, bunkers, woods, ruins and rocks are not. A unit with a <b>Destructive Weapon</b> can shell a piece down with the <b>Demolish</b> action, and <b>Sappers</b> can charge one with <b>Breach</b> — either way a final 15+, or an unmodified 9, brings it down, and a failed charge falls the sappers back 2". <b>Incendiary Ammunition</b> counts as a Destructive Weapon against buildings, and a Tier III–V hull simply drives through a low or high wall and flattens it.</li>
+      <li><b>Firing through cover</b> — when a Destructive Weapon shoots at an enemy sheltering in or behind a destructible piece and rolls a final 15+ or an unmodified 9, the piece comes apart in the same attack: the target loses its Defence bonus and the hits land one step harder. <b>Sappers</b> do the same in the first round of an assault, with a +4 for the charges.</li>
+      <li><b>What is left</b> — a flattened wall becomes rubble that shelters nobody and can be walked over; a wrecked building burns, blocking line of sight and barring the ground, and its garrison scrambles into the open at once. <b>Supporting Fire</b> lets a carrier shoot — without the stationary +1 — and still load or unload afterwards.</li>
+      <li><b>Drone Control (p. 37)</b> is a build option on any ground vehicle without Transport: one more Structure for having no crew, at the price of being reachable by <b>Hackers</b>. A hacker within 24" rolls a D6 — 1–2 nothing, 3–4 the drone is locked out for the turn and takes D3+1 hits, 5–6 it is first turned on its own side.</li>
+      <li><b>Battlefield Insertion</b> — LRRP teams, sniper teams and Nomads are held in reserve rather than deployed, up to half the company, and come in during the <b>Reserve phase</b> of any turn but the first. Nominate a point at least 12" from an objective and 4" in from the table edge; on a D6 of 1–3 it holds, on 4–6 the opponent shoves it up to 2D6" — towards their own guns. Coming down inside 12" of the enemy draws an immediate Basic Firepower shot from the nearest gun that can see them, which costs that unit nothing.</li>
+      <li><b>Vehicles (pp. 34–37)</b> — Structure instead of Morale, and Damage points instead of Suppression. Every hit is rolled on the armour table: 1 bounces, 2–5 is one Damage, 6+ is D3 — D6 if the shot came from an Anti-tank or Anti-aircraft weapon. Vehicles add +4" on a Move, pay a turn cost in inches off that distance, pay 2" for difficult ground, never take cover from terrain and are never caught in a Crossfire. They are hit harder from the flanks: +1 to the firing roll from the side, +2 from the rear. A Limited Fire Arc bears only on the front quarter. Vehicles never charge, and infantry assaulting one get +4 and roll on the breach table.</li>
+      <li><b>Knocked out</b> — when Damage passes Structure, D6: 1–3 Abandoned, 4–5 on fire (the passengers take a Basic Firepower 6 attack), 6+ a catastrophic explosion that kills everyone aboard and hits every ground unit within 4" at Firepower 3 + the vehicle's Tier. More than 2 Damage past the kill adds +1 to that roll, more than 4 adds +2. In the Rally phase a machine repairs itself: a D6 for every remaining point of Structure, each 4+ clearing 1 Damage — 5+ while an enemy's Jammers are within 24".</li>
+      <li><b>Propulsions (pp. 166–167)</b> — <b>wheeled</b> is the standard. <b>Tracked</b> cuts Movement to three quarters but takes 1" off the turn cost, which on most hulls means turning for free. <b>Anti-grav</b> adds a quarter to Movement at the price of one Structure point, and still pays for difficult ground. <b>Hover</b> crosses water and other liquids — never lava — but pays 1" more to turn. A <b>walker</b> pays the infantry 1" for difficult ground instead of 2", takes Defence bonuses from terrain like a footed unit, and its armoured flanks deny the +1 side shot, but its height costs it 1 Defence.</li>
+      <li><b>Turning</b> — a vehicle's turn cost comes off its move, so the ground inside its front quarter is cheaper to reach than the ground behind it. The shaded move area shows the difference.</li>
+      <li><b>Transport (X)</b> — a carrier loads infantry within 4" and may then move half its distance. Passengers come off the table, lose all their Suppression and cannot be shot at; a Broken or Suppressed unit cannot board, and nothing unloaded may re-board the same turn.</li>
+      <li><b>Aircraft (pp. 37–39)</b> — they fly above the table, always shoot and are always shot at with Basic Firepower, never take cover, are never caught in a Crossfire, and are destroyed outright the moment Damage passes Structure. They cannot assault, cannot be assaulted and cannot hold objectives. A Strafing Run flies the full move and fires at every enemy ground unit passed over; the survivors shoot back, and a friendly unit under the flight path is caught on a D6 of 1–3.</li>
+      <li><b>Specialisation</b> — a SAM team's or an Anti-aircraft vehicle's Specialisation (air) means its main weapon cannot engage ground troops at all, exactly as written, and Specialisation (ground) is the mirror of that.</li>
+    </ul>
+
+    <h3>Reading the table</h3>
+    <ul>
+      <li><b>Move</b> shades every point the unit can actually reach — a true distance field that bends around rocks and costs an extra 1" to enter difficult ground.</li>
+      <li><b>Auras</b> — selecting a unit draws its weapon range, its half-range bonus band, and the ground it can actually see, traced against the terrain.</li>
+      <li><b>The camera</b> — the table is bigger than the window, so drag or scroll to move it, + and − to zoom, F for the whole table. It follows whichever unit is acting.</li>
+      <li><b>On a touch screen</b> — tap a unit to select it, tap an action, then tap the target or the shaded ground. Drag to pan, pinch to zoom. A unit off the edge of the screen can be tapped in the force list instead, which brings the camera to it.</li>
+      <li><b>Watching it happen</b> — units walk their actual route, bending around terrain; shots throw tracers and kick up dust where they land; assaults strike sparks; a wiped-out unit fades from the table. The resolution card waits until the shooting stops.</li>
+      <li><b>Sound</b> is synthesised in the browser — rifle cracks, rounds striking home, boots, dice. Toggle it from the header.</li>
+      <li><b>Measuring</b> — hovering with a unit selected drops a tape to the cursor. Ranges are edge to edge between tokens.</li>
+      <li><b>Checking ground</b> — tap any open ground and a note says what the terrain does there, how far it is from the selected unit, whether it is in range, and what the move would cost.</li>
+      <li><b>Cover</b> — +2 Defence for standing in cover, and +2 for low cover sitting on the line between the two units.</li>
+      <li><b>Odds before you commit</b> — pick Fire!, Auxiliary or Assault and every ringed target carries the exact chance of the attack telling, with the average number of hits beside it. It is worked out by walking all ten faces of the die against the modified Defence, honouring the unmodified 0 that always fails and the 9 that always scores — the same sum the roll itself uses, so the number never flatters the shot.</li>
+      <li>Every roll opens a resolution card with the full arithmetic, and lands in the combat log afterwards. Cards stay up until you press Continue (or Enter, or Escape) — tick "Advance OpFor cards automatically" on the card if you would rather the enemy's results flick past on their own.</li>
+    </ul>
+
+    <h3>Interpretations</h3>
+    <ul>
+      <li>A unit is a single token rather than a spread of models, so coherency, base-to-base contact and per-model casualty placement are abstracted.</li>
+      <li>Markerlights mark a target for the turn instead of chaining an immediate friendly activation.</li>
+      <li>Broken units fall back 4" toward their own edge in the End phase — the rulebook says a broken unit tries to flee without giving a distance.</li>
+      <li>Both forces deploy inside a 6" strip; the Reserve phase is used only by Battlefield Insertion, not for scenario reserves.</li>
+      <li>Terrain is placed at random inside each rolled area rather than positioned by the players, and the objectives are kept clear of it.</li>
+      <li>Buildings are entered by standing in them; one-unit-per-building, the entry action and crossfire immunity are not modelled.</li>
+      <li>Objectives are held by an unsuppressed unit within 4" with no enemy within 4", per Secure and Control.</li>
+      <li>The 4" blast from a wrecked vehicle is read as following the catastrophic explosion result only, not every destruction result.</li>
+      <li>A vehicle's turn cost is charged once, against any move that leaves its front quarter, rather than per 90° turn along the route; vehicles do not reverse at half speed.</li>
+      <li>Tracked Movement is kept exact — three quarters of 10" is 7.5", not 7" or 8" — because the table is measured in real inches.</li>
+      <li>A Rider's mount &mdash; bike, grav bike or horse &mdash; is chosen on the muster sheet and changes the model only; the profile is the unit's own.</li>
+      <li>A high wall comes down as a whole piece rather than in 6" sections; the generator is capped so that it never lays one longer than 6" in the first place.</li>
+      <li>A Command Unit riding in a Command Vehicle lends the hull all its rules, and coordinates the moment the hull finishes its activation — the book lets the player choose whether to, which here happens automatically.</li>
+      <li>Rapid insertion platforms, turrets, barb wire, and trenches are not in this version.</li>
+    </ul>
+    <button class="start" id="btn-notes-close">Back to the battle</button>
+  </div>
+</div>
+
+<script src="src/rules/rules.js"></script>
+<script src="src/rules/campaign.js"></script>
+<script src="src/rules/scenarios.js"></script>
+<script src="src/rules/solitaire.js"></script>
+<script src="src/view/sfx.js"></script>
+<script src="src/rules/gen.js"></script>
+<script src="src/view/iso.js"></script>
+<script src="src/view/fx.js"></script>
+<script src="src/view/tips.js"></script>
+<script src="src/engine/protocol.js"></script>
+<script src="src/engine/engine.js"></script>
+<script src="src/net/net.js"></script>
+<script src="src/net/lobby.js"></script>
+<script src="src/view/game.js"></script>
+<script src="src/view/dossier.js"></script>

@@ -1,0 +1,231 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PMC 2670 — Unit viewer</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #0d1117;
+    --panel: #141a24;
+    --panel-2: #1a2230;
+    --panel-3: #212b3b;
+    --line: #26303f;
+    --ink: #e7ecf4;
+    --ink-dim: #93a1b5;
+    --ink-faint: #64728a;
+    --alpha: #d8a13a;
+    --good: #7ed6a0;
+    --display: 'Oxanium', system-ui, sans-serif;
+    --body: 'IBM Plex Sans', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: var(--body); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column;
+  }
+
+  header {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 700; font-size: 15px;
+    letter-spacing: .07em; text-transform: uppercase; margin: 0; white-space: nowrap;
+  }
+  h1 span { color: var(--alpha); }
+  header p { margin: 0; font-size: 12px; color: var(--ink-faint); }
+  header .keys { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  header kbd {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px;
+    padding: 1px 5px; font-family: var(--mono); font-size: 10px;
+  }
+
+  main {
+    flex: 1; min-height: 0;
+    display: grid; grid-template-columns: 280px minmax(0, 1fr) 300px; gap: 12px; padding: 12px;
+  }
+  @media (max-width: 1000px) and (min-width: 701px) {
+    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
+    .vpanel { max-height: 40vh; }
+  }
+
+  .vpanel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  .vpanel h3 {
+    font-family: var(--display); font-size: 10.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint);
+    margin: 0; padding: 9px 11px 7px; border-bottom: 1px solid var(--line); flex: none;
+  }
+  .vscroll { overflow-y: auto; padding: 7px; min-height: 0; scrollbar-width: thin; }
+
+  #vsearch {
+    width: 100%; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 6px 9px; font-family: var(--body); font-size: 12.5px; margin-bottom: 7px;
+  }
+  #vlist h4 {
+    font-family: var(--display); font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 10px 0 4px 3px;
+  }
+  #vlist h4:first-child { margin-top: 0; }
+  .vu {
+    display: grid; grid-template-columns: 34px 1fr; gap: 2px 8px; align-items: baseline;
+    width: 100%; text-align: left; background: none; border: 1px solid transparent;
+    border-radius: 4px; padding: 4px 7px; color: var(--ink); cursor: pointer;
+    font-family: var(--body); font-size: 12px;
+  }
+  .vu:hover { background: var(--panel-2); border-color: var(--line); }
+  .vu.on { background: color-mix(in srgb, var(--alpha) 14%, transparent); border-color: var(--alpha); }
+  .vu-code { font-family: var(--display); font-size: 10px; font-weight: 600; color: var(--ink-dim); }
+  .vu.on .vu-code { color: var(--alpha); }
+  .vu-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vu-w {
+    grid-column: 2; font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint);
+  }
+
+  .vstage {
+    background: #0c1014; border: 1px solid var(--line); border-radius: 6px;
+    display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  #vboard {
+    display: block; flex: 1; min-height: 0;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+  }
+  .vfoot {
+    flex: none; border-top: 1px solid var(--line); padding: 7px 11px;
+    display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap;
+  }
+  #vstate { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+  #vnote { font-size: 12px; color: var(--ink-faint); flex: 1; min-width: 0; }
+
+  .vrow { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-bottom: 3px; }
+  .vrow b { font-family: var(--display); font-size: 14px; }
+  .vtier { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+  .vstat { font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); margin: 0 0 7px; line-height: 1.6; }
+  .vweap {
+    font-size: 12px; color: var(--ink-dim); margin: 0 0 12px;
+    border-left: 2px solid var(--alpha); padding-left: 9px;
+  }
+  .vgrp { margin-bottom: 11px; }
+  .vgrp label {
+    display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 4px;
+  }
+  .vseg { display: flex; flex-wrap: wrap; gap: 4px; }
+  .vsg {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
+    border-radius: 4px; padding: 4px 9px; cursor: pointer;
+    font-family: var(--mono); font-size: 10.5px;
+  }
+  .vsg:hover { color: var(--ink); }
+  .vsg.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+  input[type=range] { width: 100%; accent-color: var(--alpha); }
+  .vacts { display: flex; gap: 6px; margin-top: 10px; }
+  .vbtn {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 5px; padding: 8px 6px; cursor: pointer;
+    font-family: var(--display); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  }
+  .vbtn:hover { border-color: var(--alpha); }
+  .vbtn.primary { border-color: color-mix(in srgb, var(--alpha) 60%, transparent); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+
+  /* the weapon editor */
+  .vedit {
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+  }
+  .vedit > label {
+    display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
+  }
+  .vedit > label em { color: var(--alpha); font-style: normal; }
+  .veline {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
+  }
+  .veline span { flex: none; width: 26px; }
+  .veline span:last-child { width: auto; }
+  .vsel {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 4px; padding: 4px 6px; font-family: var(--mono); font-size: 11px;
+  }
+  .vsel:first-of-type { flex: 1; min-width: 0; }
+  .vesrc {
+    display: block; margin: 9px 0 2px; padding: 7px 9px; border-radius: 4px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    font-family: var(--mono); font-size: 10px; color: var(--ink-dim);
+    word-break: break-all; line-height: 1.5;
+  }
+  .vbtn[disabled] { opacity: .4; cursor: default; }
+  .vbtn[disabled]:hover { border-color: var(--line); }
+  .vu.edited .vu-w { color: var(--alpha); }
+  .vu.edited .vu-w::after { content: ' ·'; }
+
+  :focus-visible { outline: 2px solid var(--alpha); outline-offset: 2px; }
+  #vboard { width: 100%; }
+
+  /* A phone: one column that scrolls as a page. The stage comes first, then
+     the unit's controls, then the list to pick from; picking scrolls back up. */
+  @media (max-width: 700px) {
+    html, body { height: auto; }
+    body { display: block; }
+    header { padding: 9px 16px; }
+    header p, header .keys { display: none; }
+    main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
+    .vstage { order: 1; height: 40vh; min-height: 230px; max-height: 360px; }
+    .vpanel { max-height: none; }
+    .vpanel:last-of-type { order: 2; }
+    .vpanel:first-of-type { order: 3; max-height: 60vh; }
+    .vpanel:last-of-type .vscroll { overflow: visible; }
+    .vbtn { padding: 11px 6px; font-size: 12px; }
+    .vsg { padding: 7px 11px; font-size: 11.5px; }
+    .vu { padding: 8px 7px; font-size: 13px; }
+    #vsearch { font-size: 16px; padding: 9px 10px; }         /* no zoom-on-focus on iOS */
+    .vsel { font-size: 13px; padding: 7px 6px; }
+    .vfoot { padding: 6px 10px; }
+    #vnote { display: none; }
+    #vboard { cursor: pointer; }
+  }
+</style>
+
+<header>
+  <h1>PMC <span>2670</span> · Unit viewer</h1>
+  <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code. Change what a unit carries and hear it at once.</p>
+  <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert</span>
+</header>
+
+<main>
+  <div class="vpanel">
+    <h3>Units</h3>
+    <div class="vscroll">
+      <input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off">
+      <div id="vlist"></div>
+    </div>
+  </div>
+
+  <div class="vstage">
+    <canvas id="vboard"></canvas>
+    <div class="vfoot">
+      <span id="vstate"></span>
+      <span id="vnote"></span>
+    </div>
+  </div>
+
+  <div class="vpanel">
+    <h3>The unit</h3>
+    <div class="vscroll"><div id="vctl"></div></div>
+  </div>
+</main>
+
+<script src="src/rules/rules.js"></script>
+<script src="src/view/sfx.js"></script>
+<script src="src/view/iso.js"></script>
+<script src="src/view/fx.js"></script>
+<script src="src/view/viewer.js"></script>
