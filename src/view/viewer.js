@@ -347,9 +347,24 @@
     from.second = mountFrom(spec.s);
     var hits = 3;
     syncSound();
+    /* The same volley twice over, a beat apart, as the battle plays it: one
+       burst of fire rather than a single round going out. */
     play(spec, from, to, hits, u);
+    setTimeout(function () { play(spec, from, to, hits, u); start(); }, againAfter(spec));
     start();
     note(describe(spec, u));
+  }
+  /* Roughly how long one pass of each style takes, so the second follows the
+     first rather than landing on top of it. */
+  var VOLLEY_MS = {
+    small: 1250, pistol: 1150, smg: 850, burst: 600, chain: 1000, spine: 650,
+    shell: 800, shellbig: 900, arc: 1000, arcbig: 1200, rail: 700, flame: 1200,
+    missile: 1500, rocket: 1000, spit: 900, spitbig: 1050, energy: 900,
+    orb: 1400, orbbig: 1500, none: 200
+  };
+  function againAfter(spec) {
+    var base = VOLLEY_MS[spec.p] || 1000;
+    return base + ((spec.n || 1) - 1) * 180 + (spec.s ? 260 : 0);
   }
 
   var FIRE = {
@@ -408,8 +423,8 @@
       })(q);
     }
   }
-  function orbs(from, to, n, tele) {
-    var rgb = glowRGB(), fl = tele ? 1000 : 760;
+  function orbs(from, to, n, tele, big) {
+    var rgb = glowRGB(), fl = tele ? 1000 : big ? 960 : 760;
     var exit = null;
     if (tele) {                                  // one exit portal for the whole salvo
       var ex = from.x - to.x, ey = from.y - to.y, ed = Math.hypot(ex, ey) || 1, eb = Math.min(ed * 0.45, 2.4);
@@ -421,10 +436,20 @@
         setTimeout(function () {
           if (tele && SFX && SFX.shimmer) SFX.shimmer(); else if (SFX && SFX.launch) SFX.launch();
           var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.1, y: to.y + (j % 2 ? 0.7 : -0.7), up: to.up } : to;
-          FX.add({ kind: 'orb', from: from, to: aim, rgb: rgb, tele: !!tele, exit: exit, dur: fl });
+          FX.add({ kind: 'orb', from: from, to: aim, rgb: rgb, tele: !!tele, exit: exit, big: !!big, dur: fl });
           setTimeout(function () {
-            FX.add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, dur: 600 });
-            if (SFX) SFX.impact();
+            FX.add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, big: !!big, dur: big ? 800 : 600 });
+            // a heavy round throws the ground up with it, in blue fire
+            if (big) {
+              FX.add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, dur: 1000 });
+              for (var sp = 0; sp < 5; sp++) {
+                FX.add({
+                  kind: 'orbburst', rgb: rgb, dur: 520 + Math.random() * 260,
+                  x: aim.x + (Math.random() - 0.5) * 3.2, y: aim.y + (Math.random() - 0.5) * 3.2, up: aim.up
+                });
+              }
+            }
+            if (SFX) { SFX.impact(); if (big) SFX.impact(0.08); }
             start();
           }, fl);
           start();
@@ -519,6 +544,7 @@
     if (style === 'spit' || style === 'spitbig') { spit(from, to, count || 1, style === 'spitbig'); return; }
     if (style === 'energy') { energy(from, to, count || 1, false); return; }
     if (style === 'orb') { orbs(from, to, count || 1, !R.isMachine(unit())); return; }
+    if (style === 'orbbig') { orbs(from, to, count || 1, false, true); return; }
     if (style === 'rail') {
       for (var r1 = 0; r1 < (count || 1); r1++) {
         (function (j) {
@@ -580,6 +606,7 @@
       case 'none': note('This one has no weapon at all.'); return;
       case 'energy': energy(from, to, spec.n || 1, true); return;
       case 'orb': orbs(from, to, spec.n || 1, !R.isMachine(u || unit())); return;
+      case 'orbbig': orbs(from, to, spec.n || 1, false, true); return;
       case 'spit': case 'spitbig':
         spit(from, to, spec.n || 1, spec.p === 'spitbig');
         setTimeout(function () { landing(to, spec.p === 'spitbig' ? 5 : 3); start(); }, spec.p === 'spitbig' ? 760 : 560);
@@ -690,6 +717,7 @@
     spine: 'a volley of chitin spines, dry and fast',
     energy: 'pulses of light in the army\'s colour',
     orb: 'a plasma orb — lobbed from a craft or turret, teleported onto the mark from a Gamma launcher',
+    orbbig: 'an energy howitzer — heavy orbs lobbed over, bursting in blue fire on the ground',
     none: 'no weapon'
   };
   function describe(spec, u) {
@@ -815,7 +843,7 @@
   /* Walk every style in turn, so the whole set can be compared in one go. */
   function allStyles() {
     var order = ['pistol', 'small', 'smg', 'burst', 'chain', 'shell', 'shellbig',
-      'arc', 'arcbig', 'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb'];
+      'arc', 'arcbig', 'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig'];
     var i = 0;
     (function next() {
       if (i >= order.length) { note('That is all of them.'); return; }

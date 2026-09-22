@@ -76,7 +76,7 @@ is('impsupport', 'rocket');
 is('lsupport', 'arcbig x3');
 is('msupport', 'arcbig+arcbig x5');
 // the advanced support hull's heavy plasma cannon: four bolts, each bursting
-is('asupport', 'shellbig+rail x4');
+is('asupport', 'orbbig x3');
 is('mortarsection', 'arc');
 is('mortarteam', 'arc x2');
 is('mortarbattery', 'arc x3');
@@ -192,7 +192,7 @@ all(['insertplat', 'rlifter'], 'none');
 head('Nothing falls through');
 var kinds = {};
 var bad = [];
-var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','none'];
+var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','none'];
 R.CATALOGUE.forEach(function (p) {
   var w = R.weaponSpec(p);
   if (KNOWN.indexOf(w.p) < 0) bad.push(p.name + ' \u2192 ' + w.p);

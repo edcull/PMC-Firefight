@@ -1368,9 +1368,9 @@
     }
     return n * (gap || 120) + 300;
   }
-  function playOrbs(shooter, from, to, count, land, tele) {
+  function playOrbs(shooter, from, to, count, land, tele, big) {
     var rgb = glowRGB(shooter), n = count || 1;
-    var fl = tele ? 1000 : Math.round(560 + Math.min(600, R.unitDist(shooter, { x: to.x, y: to.y }) * 12));
+    var fl = tele ? 1000 : Math.round((big ? 760 : 560) + Math.min(600, R.unitDist(shooter, { x: to.x, y: to.y }) * 12));
     /* a Gamma's salvo all comes out of one exit portal, hanging short of the
        target on the shooter's side, and spreads from it */
     var exit = null;
@@ -1385,11 +1385,22 @@
           if (!state) return;
           if (tele && SFX && SFX.shimmer) SFX.shimmer(); else if (SFX && SFX.launch) SFX.launch();
           var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.1, y: to.y + (j % 2 ? 0.7 : -0.7), up: to.up } : to;
-          addFx({ kind: 'orb', from: pick(from, j), to: aim, rgb: rgb, tele: !!tele, exit: exit, dur: fl, blocking: true });
+          addFx({ kind: 'orb', from: pick(from, j), to: aim, rgb: rgb, tele: !!tele, exit: exit, big: !!big, dur: fl, blocking: true });
           setTimeout(function () {
             if (!state) return;
-            addFx({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, dur: 600, blocking: true });
-            if (SFX) SFX.impact();
+            addFx({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, big: !!big, dur: big ? 800 : 600, blocking: true });
+            /* A heavy round throws the ground up with it: a wider ring of blue
+               fire and a scatter of it around the crater. */
+            if (big) {
+              addFx({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, dur: 1000, blocking: true });
+              for (var sp = 0; sp < 5; sp++) {
+                addFx({
+                  kind: 'orbburst', rgb: rgb, dur: 520 + Math.random() * 260, blocking: true,
+                  x: aim.x + (Math.random() - 0.5) * 3.2, y: aim.y + (Math.random() - 0.5) * 3.2, up: aim.up
+                });
+              }
+            }
+            if (SFX) { SFX.impact(); if (big) SFX.impact(0.08); }
             if (land && j === n - 1) land(2);
           }, fl);
           render();
@@ -1399,7 +1410,22 @@
     return fl + (n - 1) * 200 + 600;
   }
 
+  /* A unit fires its sequence twice over: the same volley, a beat apart. The
+     first pass is the animation alone — nobody falls and no card comes up — and
+     the second carries the casualties and the result, so a shot reads as a
+     burst of fire rather than one round going out. */
+  var TWICE_GAP = 280;
   function playShooting(shooter, target, res, deaths, done) {
+    playOneVolley(shooter, target, res, [], function () {
+      beat(TWICE_GAP);
+      setTimeout(function () {
+        if (!state) { if (done) done(); return; }
+        playOneVolley(shooter, target, res, deaths, done);
+      }, TWICE_GAP);
+    });
+  }
+
+  function playOneVolley(shooter, target, res, deaths, done) {
     var spec = R.weaponSpec(shooter);
     /* A gunship fires from its airframe and is hit on its airframe, not on the
        ground it happens to be over. Every point a shot is drawn between carries
@@ -1472,6 +1498,10 @@
       // plasma orbs: lobbed from craft and turrets, teleported from a Gamma's launcher
       case 'orb': {
         finish(playOrbs(shooter, from, to, spec.n, land, !R.isMachine(shooter)) + tail); return;
+      }
+      // an energy howitzer: heavier orbs, lobbed, bursting blue on the ground
+      case 'orbbig': {
+        finish(playOrbs(shooter, from, to, spec.n, land, false, true) + tail); return;
       }
 
       /* Bug acid: a glob (or `n` of them from the squad) lobbed low, landing in
@@ -1645,6 +1675,7 @@
     switch (style) {
       case 'energy': playEnergy(shooter, from, to, count, null, 120); return;
       case 'orb': playOrbs(shooter, from, to, count, null, !R.isMachine(shooter)); return;
+      case 'orbbig': playOrbs(shooter, from, to, count, null, false, true); return;
       case 'spit': case 'spitbig': {
         var sn = count || 1, sfl = 480;
         for (var q0 = 0; q0 < sn; q0++) {

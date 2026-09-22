@@ -1477,6 +1477,8 @@
        energy  pulses of light in the army's colour (Xenotripod small arms)
        orb     a glowing plasma orb, lobbed or teleported onto the target,
                bursting in a ring (Gamma squads, turrets, strike craft)
+       orbbig  the same, heavier and slower, landing in a splash of blue fire
+               (the advanced support vehicle's energy howitzer)
        none    it has no gun at all */
   var WEAPONS = {
     /* ---- PMC infantry ---- */
@@ -1541,7 +1543,8 @@
     impsupport: { p: 'rocket' }, lsupport: { p: 'arcbig', n: 3 },
     msupport: { p: 'arcbig', n: 5, s: 'arcbig', sn: 5 },
     // the advanced support hull's heavy plasma cannon: four bolts, each one bursting
-    asupport: { p: 'shellbig', n: 4, s: 'rail', sn: 4 },
+    // an energy howitzer: three heavy orbs lobbed over, bursting blue
+    asupport: { p: 'orbbig', n: 3 },
     // air defence: the gun first, then the missiles off the rails
     aaveh: { p: 'missile', n: 2, s: 'chain' },
     // signals and ambulance hulls: a pintle gun and the crew, nothing more

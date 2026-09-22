@@ -5995,7 +5995,9 @@
     techmrl: { axles: 2, len: 2.00, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 1.0, elev: 10, style: { body: 'pickup', mrl: true } },
     calliope: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.6, elev: 16, style: { body: 'ltank', turret: 'arty', tSize: 0.9, tAt: -0.1, skirts: true } },
     mlrs: { axles: 3, len: 2.45, wid: 1.30, hgt: 17, gun: 1.2, elev: 14, style: { body: 'mlrs', mlrs: true } },
-    plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.9, fat: true, style: { body: 'mbt', turret: 'plasma', tSize: 1.05, gunLen: 1.9, skirts: 'panels' } },
+    /* The advanced support vehicle: an energy howitzer — a short, fat Gauss
+       barrel laid well up out of a boxy turret, the charge burning blue in it. */
+    plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.0, stubGun: true, energyGun: true, skirts: 'panels' } },
     aatank: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.3, twin: true, elev: 16, dish: true, style: { body: 'ltank', turret: 'aa', tSize: 0.85, skirts: true } },
     ewtank: { axles: 3, len: 2.25, wid: 1.25, hgt: 16, gun: 0.9, dish: true, style: { body: 'ltank', turret: 'dish', tSize: 0.72, skirts: true } },
     medbox: { axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
@@ -6246,7 +6248,8 @@
     rail: ['rail', 'gun', 'auto'],
     missile: ['missile', 'rocket', 'gun'], rocket: ['rocket', 'missile', 'gun'],
     arc: ['rocket', 'gun'], arcbig: ['rocket', 'gun'], flame: ['flame', 'gun'],
-    energy: ['mg', 'gun', 'auto'], orb: ['rocket', 'gun', 'missile']
+    energy: ['mg', 'gun', 'auto'], orb: ['rocket', 'gun', 'missile'],
+    orbbig: ['gun', 'rocket', 'missile']
   };
   /* What a walker's arm carries for each weapon style: the barrel a shot comes
      out of is the barrel that looks like it fires it. Each of these registers
@@ -6257,9 +6260,11 @@
     pistol: 'mg', small: 'mg', smg: 'mg', burst: 'mg', chain: 'auto',
     shell: 'cannon', shellbig: 'howitzer', rail: 'rail', flame: 'flame',
     arc: 'rocket', arcbig: 'rocket', rocket: 'rocket', missile: 'missile',
-    spit: 'auto', spitbig: 'auto', spine: 'auto', energy: 'plasma', orb: 'plasma',
+    spit: 'auto', spitbig: 'auto', spine: 'auto', energy: 'plasma', orb: 'plasma', orbbig: 'howitzer',
     none: 'none'
   };
+  // one cell of a machine's digital camouflage, in inches
+  var CELL = 0.2;
   /* How far a styled craft's wings or fans reach, as a multiple of the hull
      width — what it lays on the ground when it flies over. */
   var CRAFT_SPAN = {
@@ -6474,7 +6479,6 @@
         var shd = [S(Lc, 0, 0), S(0.2 * Lc, rad, 0), S(tt, sw, 0), S(tail * 0.7, rad, 0), S(tail, 0, 0), S(tail * 0.7, -rad, 0), S(tt, -sw, 0), S(0.2 * Lc, -rad, 0)];
         path(shd, 'rgba(12,10,8,.26)');
         rect(g, gp.x - 1, gp.y - fly, 2, fly, 'rgba(120,130,145,.14)');
-        halo(S(-0.1, 0, z0 - 2), m(10), GLO.h);                     // the drive core underneath
       }
       if (spec.ring) {
         var rp = [];
@@ -7387,14 +7391,18 @@
        digital pattern breaks up. The cells sit in the hull's own frame and are
        seeded by the kind of machine, so a machine keeps its pattern as it
        turns and every one of a kind is painted alike. */
-    var CELL = 0.2;                  // a cell of the pattern, in inches
     function camoFor() {
       if (dead || (u.cls !== 'vehicle' && u.cls !== 'aircraft')) return null;
       if (u.faction && u.faction !== 'pmc') return null;
       var len = spec.len || 2, wid = spec.wid || 1.2, out = [], seen = {};
+      /* A craft is painted to its wingtips, not to the width of its fuselage,
+         and a rotorcraft out to its stub wings: the pattern is laid over
+         everything the machine actually spreads across. */
+      var reach = spec.craft ? (CRAFT_SPAN[spec.craft] || 1.4) : spec.heli ? 2.2 : 1.2;
       var seed = 0; String(u.art || '').split('').forEach(function (ch) { seed = (seed * 31 + ch.charCodeAt(0)) | 0; });
       var rnd = rng(seed ^ 0x5bd1e995);
-      var cols = Math.max(6, Math.round(len * 1.6 / CELL)), rows = Math.max(5, Math.round(wid * 1.8 / CELL));
+      var cols = Math.max(8, Math.round(len * 2.2 / CELL));
+      var rows = Math.max(7, Math.round(wid * reach * 2.2 / CELL));
       function put(cx, cy) {
         if (cx < -cols / 2 || cx > cols / 2 || cy < -rows / 2 || cy > rows / 2) return;
         var key = cx + ':' + cy;
@@ -7403,7 +7411,7 @@
         out.push({ p: cx * CELL, q: cy * CELL, zk: rnd() });
       }
       // clusters of two or three cells, each with a few singles stepping away
-      var clumps = 6 + Math.round(len * 3);
+      var clumps = Math.round(cols * rows * 0.14);  // enough to cover it, not to fill it in
       for (var i = 0; i < clumps; i++) {
         var cx0 = Math.round((rnd() - 0.5) * cols), cy0 = Math.round((rnd() - 0.5) * rows);
         var w2 = 1 + Math.floor(rnd() * 2), h2 = 1 + Math.floor(rnd() * 2);
@@ -8134,6 +8142,27 @@
               sEllipse(mt[0], mt[1], 4.2, 3.6, mixc(hull, dark, 0.3));
             };
             gun = function () {
+              if (st.stubGun) {
+                /* A stubby howitzer, laid up at the sky: a short fat barrel,
+                   and where it fires energy the charge burns along it in blue. */
+                /* Half the reach of an artillery piece's barrel and much
+                   thicker, but laid at the same angle: the rise is cut with the
+                   run, so it points where the light support vehicle's points. */
+                var a0b = TR * 0.05, bz = tz + 9, reach = TR * (st.energyGun ? 0.55 : 0.9);
+                var rake = Math.round(42 * (reach - a0b) / (TR * 1.25));
+                var bt = barrel(TF, a0b, reach, 0, bz, st.energyGun ? 7.5 : 5.4, 'gun',
+                  st.energyGun ? { up: rake, col: '#141b22', lit: '#7fd8e8' } : { up: rake, brake: true, fume: 0.4 });
+                if (st.energyGun) {
+                  // the coils down the barrel, and the mouth of it lit
+                  // the charge burning in it, the size the Gauss arms show it
+                  for (var ci = 1; ci <= 2 && !dead; ci++) {
+                    var cp = S3(TF(a0b + (reach - a0b) * ci / 3, 0), bz + rake * (ci / 3));
+                    sEllipse(cp[0], cp[1], 1.5, 1.3, 'rgba(127,216,232,.75)');
+                  }
+                  if (!dead) sEllipse(bt[0], bt[1], 1.8, 1.6, 'rgba(190,245,255,.95)');
+                }
+                return;
+              }
               barrel(TF, TR * 0.35, TR * 1.6, 0, tz + 7, 3.2, 'gun', { up: 42, fume: 0.45, brake: true });
             };
             break;
