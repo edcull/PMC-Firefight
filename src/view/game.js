@@ -1166,8 +1166,13 @@
           borrowCamera();
         }
       }
+      if (an.kind === 'strafe') {
+        an.unit.ax = an.from.x + (an.to.x - an.from.x) * k;
+        an.unit.ay = an.from.y + (an.to.y - an.from.y) * k;
+      }
       if (k >= 1) {
         if (an.kind === 'move') { an.unit.ax = an.unit.ay = null; an.unit.walk = 0; an.unit.hop = 0; an.unit.arc = 0; }
+        if (an.kind === 'strafe') { an.unit.ax = an.unit.ay = null; }
         if (an.done) an.done();
       } else alive.push(an);
     });
@@ -1801,22 +1806,44 @@
   }
 
   // the aircraft runs the line, throwing fire out to either side
+  /* A strafing run: the craft flies the length of it, guns going, and the
+     ground walks up under it. It used to stand still while the fire appeared
+     along the line, which read as somebody else shooting. */
   function playStrafe(u, from, to, deaths, done) {
-    var steps = 7;
+    var span = Math.hypot(to.x - from.x, to.y - from.y);
+    var dur = Math.max(1200, Math.min(2600, 700 + span * 90));
+    var steps = Math.max(5, Math.round(span * 1.2) + 4);
+    if (u) {
+      u.facing = Math.atan2(to.y - from.y, to.x - from.x);
+      u.aim = null;
+      u.ax = from.x; u.ay = from.y;
+      anims.push({ kind: 'strafe', unit: u, from: from, to: to, dur: dur, t0: nowMs() });
+      startLoop();
+    }
+    /* The bursts go down where the craft is as it passes, over the middle of
+       the run — it opens up after the approach and stops before it pulls off. */
     for (var i = 0; i < steps; i++) {
       (function (n) {
         setTimeout(function () {
           if (!state) return;
-          var f = n / (steps - 1);
+          var f = 0.18 + (n / (steps - 1)) * 0.64;
           var x = from.x + (to.x - from.x) * f, y = from.y + (to.y - from.y) * f;
           addFx({ kind: 'muzzle', x: x, y: y, dur: 180, blocking: true });
-          addFx({ kind: 'dust', x: x + (Math.random() - 0.5) * 2, y: y + (Math.random() - 0.5) * 2, dur: 260, blocking: true });
+          /* The ground going up under it: rounds walking along the line, each
+             throwing its own dirt, spread either side of the run. */
+          addFx({ kind: 'impact', x: x, y: y, n: 3, dur: 320, blocking: true });
+          for (var d2 = 0; d2 < 3; d2++) {
+            addFx({
+              kind: 'miss', x: x + (Math.random() - 0.5) * 2.4, y: y + (Math.random() - 0.5) * 2.4,
+              dur: 380 + Math.random() * 220, blocking: true
+            });
+          }
           if (SFX) SFX.burst(2, true);
-        }, n * 90);
+        }, dur * 0.18 + n * (dur * 0.64 / Math.max(1, steps - 1)));
       })(i);
     }
-    setTimeout(function () { spawnDeaths(deaths); }, 500);
-    setTimeout(function () { if (done) done(); }, 900);
+    setTimeout(function () { spawnDeaths(deaths); }, dur * 0.6);
+    setTimeout(function () { if (done) done(); }, dur + 220);
   }
 
   function playAssault(attacker, target, deaths, done) {

@@ -266,9 +266,13 @@
       burstOfNoise(t, 0.34, 0.3, 'bandpass', 420, 0.7, 1500);        // the whoosh out of the tube
       tone(t, 0.18, 0.13, 'sine', 108, 40);                          // the thump of it
       var run = Math.max(0.2, d - tp);                               // what is left of the flight
-      burstOfNoise(t + tp, 0.07, 0.5, 'highpass', 1700, 0.85);       // the igniter catching
-      burstOfNoise(t + tp, 0.32, 0.58, 'lowpass', 900, 0.6, 170);    // the motor lighting
-      tone(t + tp, 0.28, 0.28, 'sine', 132, 42);
+      /* The motor catching is a roar that builds, not a crack: layered bursts
+         coming in half a beat apart, each louder and lower, so it swells into
+         the run rather than snapping. */
+      burstOfNoise(t + tp, 0.3, 0.22, 'bandpass', 300, 0.7, 520);    // it catches
+      burstOfNoise(t + tp + 0.05, 0.42, 0.4, 'lowpass', 480, 0.5, 240);  // and takes hold
+      burstOfNoise(t + tp + 0.1, 0.5, 0.52, 'lowpass', 360, 0.45, 150);  // the weight of it
+      tone(t + tp + 0.04, 0.42, 0.2, 'sine', 84, 38);                // the rumble coming up
       burstOfNoise(t + tp + 0.03, run, 0.4, 'bandpass', 520, 0.45, 240);   // the motor, running
       burstOfNoise(t + tp + 0.03, run, 0.22, 'highpass', 1300, 0.4, 2800); // the hiss over it
       tone(t + tp + 0.02, run * 0.95, 0.12, 'sawtooth', 64, 36);           // the rumble under it

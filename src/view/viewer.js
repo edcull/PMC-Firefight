@@ -150,6 +150,7 @@
     last = t;
     var busy = FX.prune();
     if (view.walking) { stepWalk(dt); busy = true; }
+    if (view.strafeAt) { strafing(); busy = true; }
     frame();
     if (busy) start(); else { last = 0; drawState(); }
   }
@@ -206,6 +207,51 @@
       if (gait.sound && view.sound && SFX) SFX.step();
     }
   }
+  /* ---------- a strafing run ----------
+     What an aircraft does instead of standing still and shooting (engine.js
+     offers Strafe to anything of class aircraft): it comes across the bench at
+     speed with its guns going, and the ground walks up under it. */
+  var STRAFE_MS = 2200;
+  function canStrafe() { return unit().cls === 'aircraft'; }
+  function strafe() {
+    if (!canStrafe()) { note('Only aircraft make strafing runs.'); return; }
+    view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
+    view.strafeAt = Date.now();
+    view.facing = 0;
+    note('A strafing run: it fires the length of the pass.');
+    var fired = 0, guns = 7;
+    (function burst() {
+      if (fired >= guns || !view.strafeAt) return;
+      var f = 0.2 + (fired / (guns - 1)) * 0.6;
+      var x = FROM.x - 6 + (TO.x + 6 - (FROM.x - 6)) * f;
+      FX.add({ kind: 'muzzle', x: x, y: FROM.y, dur: 180 });
+      FX.add({ kind: 'impact', x: x, y: FROM.y, n: 3, dur: 320 });
+      for (var d3 = 0; d3 < 3; d3++) {
+        FX.add({
+          kind: 'miss', x: x + (Math.random() - 0.5) * 2.4, y: FROM.y + (Math.random() - 0.5) * 2.4,
+          dur: 380 + Math.random() * 220
+        });
+      }
+      if (view.sound && SFX) SFX.burst(2, true);
+      fired++;
+      setTimeout(burst, STRAFE_MS * 0.6 / guns);
+      start();
+    })();
+    setTimeout(function () { drawControls(); }, STRAFE_MS);
+    start();
+    drawControls();
+  }
+  // where it is along the run, or nothing once it has gone by
+  function strafing() {
+    if (!view.strafeAt) return null;
+    var k = (Date.now() - view.strafeAt) / STRAFE_MS;
+    if (k >= 1) { view.strafeAt = 0; view.at = null; view.facing = 0; return null; }
+    var a = FROM.x - 6, b = TO.x + 6;
+    view.at = { x: a + (b - a) * k, y: FROM.y };
+    view.facing = 0;
+    return k;
+  }
+
   function toggleWalk() {
     view.walking = !view.walking;
     if (!view.walking) { view.at = null; view.facing = 0; view.walkFrame = 0; view.hop = 0; view.arc = 0; frame(); }
@@ -332,6 +378,17 @@
         }, j * (big ? 260 : 150));
       })(q);
     }
+  }
+
+  /* A missile off an aircraft flies level and leaves on the line the craft is
+     flying, curving onto the mark from there — the same path the battle draws.
+     This is the point out ahead of the nose that it bends through. */
+  function flightCurve(from, to) {
+    var u = unit();
+    if (!u || u.cls !== 'aircraft') return null;
+    var a = u.facing == null ? 0 : u.facing;
+    var reach = Math.max(4, Math.hypot(to.x - from.x, to.y - from.y) * 0.55);
+    return { x: from.x + Math.cos(a) * reach, y: from.y + Math.sin(a) * reach, up: I.flyLift(u) };
   }
 
   // a Xenotripod's weapons, burning in its army's colour
@@ -480,7 +537,7 @@
           setTimeout(function () {
             if (SFX) SFX.missile(0, 0.9, 0.47);
             // no flash at the tube: a missile is ejected cold and lights at the top
-            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900 });
+            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to) });
             start();
           }, j * 260);
         })(m1);
@@ -568,7 +625,7 @@
           (function (j) {
             setTimeout(function () {
               if (SFX) SFX.missile(0, 0.9, 0.47);
-              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900 });
+              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to) });
               setTimeout(function () { landing(to, 6, true); start(); }, 900);
               start();
             }, j * 260);
@@ -695,6 +752,7 @@
       '<button class="vbtn primary" data-do="fire">Fire</button>' +
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
+      (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
     h += '<div class="vacts"><button class="vbtn" data-do="allstyles">Play every weapon style</button></div>';
@@ -826,6 +884,7 @@
       if (act === 'fire') fire();
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
+      else if (act === 'strafe') strafe();
       else if (act === 'allstyles') allStyles();
       else if (act === 'sound') {
         view.sound = !view.sound;
@@ -859,6 +918,7 @@
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
+      if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
     });
   }
 
@@ -887,6 +947,8 @@
     walk: toggleWalk,
     gait: function () { return gaitOf(unit()); },
     insert: insert,
+    strafe: strafe,
+    strafing: function () { return !!view.strafeAt; },
     arriving: arriving,
     fx: function () { return FX.kinds(); },
     state: function () { return Object.assign({}, view); },

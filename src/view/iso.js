@@ -2235,7 +2235,8 @@
     sand:     { name: 'Bone white',    ink: '#d8cfb4', light: '#e4ddc6', mid: '#b3aa8c', dark: '#585244', helm: '#948c72', cloth: '#8a8268' },
     rust:     { name: 'Rust orange',   ink: '#d87a3a', light: '#dfa070', mid: '#a85f2c', dark: '#4e2a12', helm: '#8a4e24', cloth: '#6e4a2c' },
     jade:     { name: 'Jade',          ink: '#5cbfa0', light: '#8fd4bd', mid: '#3f8f78', dark: '#1c4238', helm: '#2f6e5c', cloth: '#35584e' },
-    midnight: { name: 'Midnight',      ink: '#7b8bc4', light: '#93a1d0', mid: '#4c5a90', dark: '#1e2442', helm: '#3a4570', cloth: '#343c5e' }
+    midnight: { name: 'Midnight',      ink: '#7b8bc4', light: '#93a1d0', mid: '#4c5a90', dark: '#1e2442', helm: '#3a4570', cloth: '#343c5e' },
+    charcoal: { name: 'Charcoal black', ink: '#aab0b8', light: '#767c84', mid: '#484d54', dark: '#15181c', helm: '#2d3238', cloth: '#292d33' }
   };
   var COLOUR_KEYS = Object.keys(COLOURS);
   function colour(key) { return COLOURS[key] || COLOURS.ochre; }
@@ -7380,37 +7381,74 @@
       TS = tone(STEEL_LIT, mixc(STEEL, STEEL_LIT, 0.5), STEEL, mixc(STEEL, STEEL_LIT, 0.7));
       TC = tone(dead ? '#3a352d' : '#8a8062', dead ? '#2e2822' : '#6d654e', dead ? '#1d1a15' : '#4a4434', dead ? '#3a352d' : '#7b7359');
     }
-    /* Two-tone camouflage on a company's ground machines: a few soft blotches
-       of the army colour, darkened a little, laid across the hull. They are
-       placed in the hull's own frame and seeded by the kind of machine, so a
-       machine keeps its pattern as it turns and every one of a kind matches. */
+    /* Digital camouflage on a company's machines and aircraft: small square
+       cells of the army colour, darkened, laid on a grid over the hull —
+       clusters of them, with singles stepping off the edges, the way a printed
+       digital pattern breaks up. The cells sit in the hull's own frame and are
+       seeded by the kind of machine, so a machine keeps its pattern as it
+       turns and every one of a kind is painted alike. */
+    var CELL = 0.2;                  // a cell of the pattern, in inches
     function camoFor() {
-      if (dead || u.cls !== 'vehicle' || (u.faction && u.faction !== 'pmc')) return null;
-      var len = spec.len || 2, wid = spec.wid || 1.2, out = [];
+      if (dead || (u.cls !== 'vehicle' && u.cls !== 'aircraft')) return null;
+      if (u.faction && u.faction !== 'pmc') return null;
+      var len = spec.len || 2, wid = spec.wid || 1.2, out = [], seen = {};
       var seed = 0; String(u.art || '').split('').forEach(function (ch) { seed = (seed * 31 + ch.charCodeAt(0)) | 0; });
       var rnd = rng(seed ^ 0x5bd1e995);
-      var n = 5 + Math.floor(len * 2);
-      for (var i = 0; i < n; i++) {
-        out.push({
-          p: (rnd() - 0.5) * len * 1.1, q: (rnd() - 0.5) * wid * 1.2,
-          r: (0.16 + rnd() * 0.16) * Math.min(len, 2.4), sq: 0.45 + rnd() * 0.35
-        });
+      var cols = Math.max(6, Math.round(len * 1.6 / CELL)), rows = Math.max(5, Math.round(wid * 1.8 / CELL));
+      function put(cx, cy) {
+        if (cx < -cols / 2 || cx > cols / 2 || cy < -rows / 2 || cy > rows / 2) return;
+        var key = cx + ':' + cy;
+        if (seen[key]) return;
+        seen[key] = 1;
+        out.push({ p: cx * CELL, q: cy * CELL, zk: rnd() });
+      }
+      // clusters of two or three cells, each with a few singles stepping away
+      var clumps = 6 + Math.round(len * 3);
+      for (var i = 0; i < clumps; i++) {
+        var cx0 = Math.round((rnd() - 0.5) * cols), cy0 = Math.round((rnd() - 0.5) * rows);
+        var w2 = 1 + Math.floor(rnd() * 2), h2 = 1 + Math.floor(rnd() * 2);
+        for (var a = 0; a < w2; a++) for (var b = 0; b < h2; b++) put(cx0 + a, cy0 + b);
+        var strays = 1 + Math.floor(rnd() * 3);
+        for (var q2 = 0; q2 < strays; q2++) {
+          put(cx0 + (rnd() < 0.5 ? -1 : w2) + Math.floor(rnd() * 2) - 1,
+            cy0 + (rnd() < 0.5 ? -1 : h2) + Math.floor(rnd() * 2) - 1);
+        }
       }
       return out;
     }
-    // the blotches over one face, clipped to it, in a shade of the face's own colour
-    function camoOn(pts, col, z, top) {
+    /* The pattern over one face, clipped to it, in a shade of the face's own
+       colour. On the top of a hull a cell lies flat, so it is projected as the
+       square it is; on a side it is a block on the plate, drawn square to the
+       screen — which is what a printed pattern looks like on a wall. */
+    function camoOn(pts, col, z, top, h) {
       if (!CAMO || !pts || pts.length < 3) return;
+      var x0 = pts[0][0], x1 = x0, y0 = pts[0][1], y1 = y0;
+      for (var i = 1; i < pts.length; i++) {
+        if (pts[i][0] < x0) x0 = pts[i][0]; else if (pts[i][0] > x1) x1 = pts[i][0];
+        if (pts[i][1] < y0) y0 = pts[i][1]; else if (pts[i][1] > y1) y1 = pts[i][1];
+      }
+      var half = CELL * K * 0.5, pad = half * 2.2;
       g.save();
       g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
-      for (var i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      for (var j = 1; j < pts.length; j++) g.lineTo(pts[j][0], pts[j][1]);
       g.closePath(); g.clip();
-      g.fillStyle = mixc(col, '#16180f', 0.3);
-      CAMO.forEach(function (b) {
-        var c = S3(HF(b.p, b.q), z), rx = b.r * K;
-        g.beginPath();
-        g.ellipse(c[0], c[1], rx, rx * (top ? 0.5 : 0.9) * b.sq * 1.6, 0, 0, Math.PI * 2);
-        g.fill();
+      g.fillStyle = mixc(col, '#16180f', 0.34);
+      CAMO.forEach(function (b2) {
+        // up the plate as well as along it, so a tall face is covered
+        var c = S3(HF(b2.p, b2.q), z + (top ? 0 : (b2.zk - 0.5) * (h || 0)));
+        // nowhere near this face: nothing to draw
+        if (c[0] < x0 - pad || c[0] > x1 + pad || c[1] < y0 - pad || c[1] > y1 + pad) return;
+        if (top) {
+          var q1 = S3(HF(b2.p - CELL / 2, b2.q - CELL / 2), z);
+          var q2 = S3(HF(b2.p + CELL / 2, b2.q - CELL / 2), z);
+          var q3 = S3(HF(b2.p + CELL / 2, b2.q + CELL / 2), z);
+          var q4 = S3(HF(b2.p - CELL / 2, b2.q + CELL / 2), z);
+          g.beginPath();
+          g.moveTo(q1[0], q1[1]); g.lineTo(q2[0], q2[1]); g.lineTo(q3[0], q3[1]); g.lineTo(q4[0], q4[1]);
+          g.closePath(); g.fill();
+        } else {
+          g.fillRect(c[0] - half, c[1] - half, half * 2, half * 2);
+        }
       });
       g.restore();
     }
@@ -7479,7 +7517,7 @@
         var colr = k > 0.5 ? mixc(ft.mid, ft.lit, (k - 0.5) * 2) : mixc(ft.dark, ft.mid, k * 2);
         var face = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]];
         poly(g, face, colr);
-        if (CAMO && tn0 === TB) camoOn(face, colr, z0 + h * 0.5);
+        if (CAMO && tn0 === TB) camoOn(face, colr, z0 + h * 0.5, false, h);
         if (h > 2) {
           var yT = Math.min(face[2][1], face[3][1]), yB = Math.max(face[0][1], face[1][1]);
           if (yB - yT > 1) {
