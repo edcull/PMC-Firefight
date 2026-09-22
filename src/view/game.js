@@ -3762,7 +3762,30 @@
 
   function overCard() {
     return '<div class="card"><h2>' + (state.over.winner ? sideName(state.over.winner) + ' wins' : 'Draw') + '</h2>' +
-      '<p class="sub">' + state.over.text + '</p><div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
+      '<p class="sub">' + state.over.text + '</p>' + casualtyRoll() +
+      '<div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
+  }
+
+  /* The roll of the fallen, side by side: every soldier lost, by rank, name and
+     the kind of unit they served in, with the turn they fell. */
+  function casualtyRoll() {
+    var list = (state.report && state.report.casualties) || null;
+    if (!list) return '';
+    return '<div class="kia">' + ['A', 'B'].map(function (side) {
+      var mine = list.filter(function (c) { return c.side === side; });
+      var kia = mine.filter(function (c) { return c.fate !== 'WIA'; }).length, wia = mine.length - kia;
+      var h = '<div class="kia-side kia-' + side + '"><div class="kia-head">' + esc(sideName(side)) +
+        '<span class="mk">' + (mine.length ? kia + ' killed' + (wia ? ', ' + wia + ' wounded' : '') : 'no losses') + '</span></div>';
+      if (mine.length) {
+        h += '<ol class="kia-list">' + mine.map(function (c) {
+          return '<li><span class="kia-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
+            (c.fate === 'WIA' ? ' <i class="kia-wia">wounded</i>' : '') +
+            '<span class="kia-type">' + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
+            ' \u00b7 turn ' + (c.turn || 1) + '</span></li>';
+        }).join('') + '</ol>';
+      }
+      return h + '</div>';
+    }).join('') + '</div>';
   }
 
   function wirePanel() {

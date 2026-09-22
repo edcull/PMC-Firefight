@@ -621,6 +621,7 @@
       rid: entry.rid, name: entry.name, flags: e.flags,
       honours: (entry.honours || []).slice(), traumas: (entry.traumas || []).slice(),
       upgrades: (entry.upgrades || []).slice(),
+      men: (entry.men || []).slice(),           // the survivors of its last battle, by name
       once: {}                                  // once-per-battle honours, spent here
     };
     if (entry.name) { u.name = entry.name; u.label = entry.name + ' [' + u.side + ']'; }
@@ -1431,6 +1432,18 @@
         entry.lastBattle = out.turn;
 
         var u = { rid: entry.rid, name: entry.name, key: entry.key, exp: exp, tp: tp, wiped: false, salvage: null, trauma: null };
+
+        /* The men who fell go on the unit's record by name, and the survivors
+           march on with it: the gaps are filled with fresh recruits when it is
+           next mustered. */
+        var fallen = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
+        if (fallen.length) {
+          u.fallen = fallen;
+          entry.history.push('Lost ' + fallen.map(function (c) {
+            return c.rank + ' ' + c.name + (c.fate === 'WIA' ? ' (wounded)' : '');
+          }).join(', ') + '.');
+        }
+        if (line.men) entry.men = line.men.slice();
 
         /* Losses (p. 85): survivors are replaced free, and only a unit wiped out
            — every soldier killed — comes off the dossier. A unit that scattered

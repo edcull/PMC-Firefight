@@ -347,6 +347,17 @@
   .card { padding: 14px; }
   .card h2 { font-family: var(--display); font-size: 15px; margin: 0 0 4px; }
   .card .sub { color: var(--ink-dim); font-size: 12.5px; margin: 0; }
+  /* the roll of the fallen, on the card that ends the battle */
+  .kia { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .kia-head { font-family: var(--display); font-size: 13px; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+  .kia-A .kia-head { color: var(--alpha); }
+  .kia-B .kia-head { color: var(--bravo); }
+  .kia-head .mk { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+  .kia-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 220px; overflow-y: auto; font-size: 12px; }
+  .kia-list li { padding: 3px 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
+  .kia-rank { color: var(--ink-dim); }
+  .kia-wia { color: var(--ink-faint); }
+  .kia-type { display: block; color: var(--ink-faint); font-size: 11px; }
 
   .forces { padding: 10px 12px 12px; }
   .force + .force { margin-top: 12px; }
@@ -5141,6 +5152,131 @@
     };
   }
 
+  /* ---------- the men themselves: names, ranks, and who fell ----------
+     The rules only ever count a unit's models. Each of them is also somebody:
+     every soldier gets a name and a rank when the unit is mustered, and when the
+     count drops the ones who fell are picked out of the living at random. None
+     of this touches a die the rules roll — it rides beside `models` and is
+     brought into line with it whenever the engine has finished a step, so no
+     rule that adds or takes away a model has to know about it. A machine counts
+     its crew instead: one commander or pilot, lost when the hull is destroyed.
+     Drones, turrets and the swarm's living hulls have nobody aboard. */
+  var FIRST = ['Adam', 'Aiko', 'Alexei', 'Amara', 'Anders', 'Ana', 'Arjun', 'Bea', 'Bogdan', 'Carlos',
+    'Chen', 'Dara', 'Dmitri', 'Elena', 'Emeka', 'Erik', 'Farah', 'Felix', 'Grace', 'Hana', 'Hector',
+    'Ibrahim', 'Ines', 'Ivan', 'Jae', 'Jamal', 'Jonas', 'Kai', 'Kasia', 'Kofi', 'Lars', 'Leila', 'Liam',
+    'Lucia', 'Malik', 'Marek', 'Maya', 'Mei', 'Mikhail', 'Nadia', 'Nikos', 'Noor', 'Olek', 'Omar', 'Pavel',
+    'Priya', 'Rafael', 'Rhys', 'Rosa', 'Ruth', 'Sami', 'Sanjay', 'Sofia', 'Sven', 'Tariq', 'Tomas', 'Una',
+    'Viktor', 'Wen', 'Yara', 'Yusuf', 'Zofia', 'Zoran'];
+  var LAST = ['Abara', 'Adeyemi', 'Almeida', 'Bauer', 'Becker', 'Brennan', 'Castillo', 'Chowdhury', 'Costa',
+    'Dvorak', 'Eriksen', 'Ferreira', 'Fischer', 'Gallagher', 'Garcia', 'Haddad', 'Hansen', 'Horvat', 'Ito',
+    'Jaworski', 'Kaplan', 'Kim', 'Kowalski', 'Kruger', 'Laine', 'Lindqvist', 'Mahmoud', 'Marsh', 'Mendes',
+    'Moreau', 'Nakamura', 'Novak', 'Nwosu', 'Okafor', 'Oliveira', 'Orlov', 'Park', 'Petrov', 'Quinn',
+    'Rahman', 'Reyes', 'Rossi', 'Sato', 'Schmidt', 'Silva', 'Sokolov', 'Tanaka', 'Toure', 'Vance', 'Varga',
+    'Volkov', 'Walsh', 'Weber', 'Wojcik', 'Yilmaz', 'Zhang', 'Zielinski'];
+  var NICK = ['Ghost', 'Spider', 'Doc', 'Sparks', 'Lucky', 'Hammer', 'Wolf', 'Crow', 'Moth', 'Saint',
+    'Brick', 'Fox', 'Deacon', 'Rook', 'Tinker', 'Viper', 'Blue', 'Ash'];
+  var XENO_SYL = ['ka', 'tha', 'ir', 'zha', 'ul', 'vek', 'sa', 'ren', 'oth', 'qua', 'li', 'mar', 'es', 'dro', 'ya', 'kel', 'un', 'ssi'];
+  var BUG_SYL = ['skr', 'xik', 'tch', 'zz', 'kra', 'vix', 'ch', 'ekk', 'rr', 'ix', 'kt', 'shh'];
+  var OFFICER = ['Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel', 'Colonel'];
+  var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
+
+  function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
+  function syllables(list, a, b) {
+    var n = a + Math.floor(Math.random() * (b - a + 1)), s = '';
+    for (var i = 0; i < n; i++) s += pickOf(list);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function humanName(rebel) {
+    var n = pickOf(FIRST) + ' ' + pickOf(LAST);
+    // about one rebel fighter in three goes by a nom de guerre
+    if (rebel && Math.random() < 0.35) n = pickOf(FIRST) + ' ‘' + pickOf(NICK) + '’ ' + pickOf(LAST);
+    return n;
+  }
+  function isInfectedHuman(u) { return u.group === 'Infected Humans'; }
+  // one name, of the kind the unit's side would give
+  function soldierName(u) {
+    var f = u.faction || 'pmc';
+    if (f === 'xeno') return syllables(XENO_SYL, 2, 3) + ' ' + syllables(XENO_SYL, 2, 3);
+    if (f === 'bugs' && !isInfectedHuman(u)) return syllables(BUG_SYL, 2, 3) + '-' + (10 + Math.floor(Math.random() * 90));
+    return humanName(f === 'rebel');
+  }
+  // does this machine carry anyone who could be named?
+  function crewed(u) {
+    if (!isMachine(u)) return true;
+    return !u.drone && u.faction !== 'bugs' && !has(u, 'Turret') && !/Turret/.test(u.group || '');
+  }
+  /* The rank of the i-th man in the unit. The first leads it, the second is
+     second-in-command, the rest are the rank and file — so a squad that has
+     lost its sergeant closes up behind the corporal when it is mustered again. */
+  function rankFor(u, i) {
+    var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
+    if (isMachine(u)) return isFlying(u) ? 'Pilot' : (f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : 'Commander');
+    if (u.vip) return i === 0 ? 'VIP' : 'Bodyguard';
+    if (f === 'bugs') {
+      if (isInfectedHuman(u)) return 'Infected';
+      if (has(u, 'Overmind')) return 'Overmind';
+      return i === 0 && (u.size || 1) > 1 ? 'Brood-alpha' : 'Drone';
+    }
+    if (f === 'xeno') {
+      if (u.command) return i === 0 ? 'Warleader' : 'Chosen';
+      if (g === 'Chosen Warriors') return 'Chosen';
+      return i === 0 ? 'Hunt-leader' : 'Warrior';
+    }
+    if (f === 'rebel') {
+      if (u.key === 'rciv' || u.soloCiv) return 'Civilian';
+      if (u.command) return i === 0 ? REBEL_CHIEF[tier - 1] : 'Lieutenant';
+      if (g === 'Holy Warriors') return i === 0 ? 'Preacher' : 'Zealot';
+      if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
+      if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
+      return i === 0 ? 'Cell Leader' : 'Fighter';
+    }
+    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? 'Sergeant Major' : 'Staff Sergeant';
+    if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
+    if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
+    if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';
+    return tier >= 4 ? 'Specialist' : 'Private';
+  }
+  function standing(u) { return isMachine(u) ? (u.alive || u.fled ? 1 : 0) : Math.max(0, u.models || 0); }
+  function freshMan(u, taken) {
+    var name, tries = 0;
+    do { name = soldierName(u); } while (taken && taken[name] && ++tries < 20);
+    if (taken) taken[name] = 1;
+    return { name: name, rank: rankFor(u, (u.men || []).length) };
+  }
+  /* Muster the unit before the battle: the survivors it brought with it (a
+     campaign unit's own men, in the order they stand), trimmed or filled up to
+     the strength it takes the field at, then ranked by where each man stands. */
+  function musterMen(u, carried, taken) {
+    var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
+    u.men = (carried || []).filter(function (m) { return m && m.name && m.fell == null; })
+      .slice(0, want).map(function (m) { return { name: m.name }; });
+    u.men.forEach(function (m) { if (taken) taken[m.name] = 1; });
+    while (u.men.length < want) u.men.push(freshMan(u, taken));
+    u.men.forEach(function (m, i) { m.rank = rankFor(u, i); });
+    return u.men;
+  }
+  /* Bring the named men into line with the model count: one picked at random
+     from the living for every model lost, and a fresh one for every model the
+     rules gave back (the Endless Tide, a unit returned to the pool). */
+  function syncMen(u, turn, taken) {
+    if (!u.men) return [];
+    var live = u.men.filter(function (m) { return m.fell == null; });
+    var want = crewed(u) ? standing(u) : 0, fell = [];
+    if (isMachine(u)) want = Math.min(want, u.men.length);
+    while (live.length > want) {
+      var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
+      m.fell = turn || 0;
+      m.fate = isMachine(u) && !u.catastrophic && !isFlying(u) ? 'WIA' : 'KIA';
+      fell.push(m);
+    }
+    if (!isMachine(u)) while (live.length < want) { var n = freshMan(u, taken); u.men.push(n); live.push(n); }
+    return fell;
+  }
+  // who comes back for the next battle: the living, and a hull's wounded crew
+  function survivors(u) {
+    return (u.men || []).filter(function (m) { return m.fell == null || m.fate === 'WIA'; }).map(function (m) { return { name: m.name, rank: m.rank }; });
+  }
+
   root.PMC = {
     BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP,
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
@@ -5183,7 +5319,8 @@
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion,
-    defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE
+    defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
+    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, survivors: survivors
   };
 })(window);
 
@@ -5813,6 +5950,7 @@
       rid: entry.rid, name: entry.name, flags: e.flags,
       honours: (entry.honours || []).slice(), traumas: (entry.traumas || []).slice(),
       upgrades: (entry.upgrades || []).slice(),
+      men: (entry.men || []).slice(),           // the survivors of its last battle, by name
       once: {}                                  // once-per-battle honours, spent here
     };
     if (entry.name) { u.name = entry.name; u.label = entry.name + ' [' + u.side + ']'; }
@@ -6623,6 +6761,18 @@
         entry.lastBattle = out.turn;
 
         var u = { rid: entry.rid, name: entry.name, key: entry.key, exp: exp, tp: tp, wiped: false, salvage: null, trauma: null };
+
+        /* The men who fell go on the unit's record by name, and the survivors
+           march on with it: the gaps are filled with fresh recruits when it is
+           next mustered. */
+        var fallen = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
+        if (fallen.length) {
+          u.fallen = fallen;
+          entry.history.push('Lost ' + fallen.map(function (c) {
+            return c.rank + ' ' + c.name + (c.fate === 'WIA' ? ' (wounded)' : '');
+          }).join(', ') + '.');
+        }
+        if (line.men) entry.men = line.men.slice();
 
         /* Losses (p. 85): survivors are replaced free, and only a unit wiped out
            — every soldier killed — comes off the dossier. A unit that scattered
@@ -21070,7 +21220,16 @@
       SFX[name] = function () { V.sound(name, Array.prototype.slice.call(arguments)); };
     });
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
-    function render() { returnToPool(); V.changed(); }
+    function render() { syncMen(); returnToPool(); syncMen(); V.changed(); }
+    /* The named men caught up with the model counts, after every step: whoever
+       the rules just killed is picked out of the living and marked with the
+       turn they fell in. Done before a unit goes back to the OpFor pool, so the
+       men it lost are counted before it comes on again at full strength. */
+    function syncMen() {
+      if (!state || !state.units) return;
+      state.namesTaken = state.namesTaken || {};
+      state.units.forEach(function (u) { R.syncMen(u, state.turn, state.namesTaken); });
+    }
     /* Protecting the VIP, Evacuation: "when an OpFor unit is destroyed, it
        returns to the pool" (pp. 151, 154) — at full strength, to come on again.
        This used to be done while the board was being redrawn, which is why it
@@ -21302,6 +21461,11 @@
       });
     }
     dedupeCodes();
+    /* Every soldier gets a name and a rank. A campaign unit brings its own
+       survivors from the dossier; the gaps, and every other unit, are filled
+       with fresh names, none repeated on the table. */
+    state.namesTaken = {};
+    state.units.forEach(function (u) { R.musterMen(u, u.camp && u.camp.men, state.namesTaken); });
     /* Paint the two companies. A colour the caller did not name is rolled from
        whatever the other side is not already wearing. */
     var ca = cfg.colourA && COLOURS.indexOf(cfg.colourA) >= 0 ? cfg.colourA : 'ochre';
@@ -23139,6 +23303,7 @@
   /* What the campaign needs back from a battle: one line per unit that took the
      field, with who it broke and what it cost. Built once, when the game ends. */
   function battleReport(winner) {
+    state.units.forEach(function (u) { R.syncMen(u, state.turn, state.namesTaken); });
     var byId = {};
     state.units.forEach(function (u) { byId[u.rid || u.id] = u; });
     var lines = {};
@@ -23164,6 +23329,8 @@
         // the swarm's own bookkeeping (p. 124): its low point, and what it ate
         minSize: R.isMachine(u) ? null : (u.minModels != null ? Math.min(u.minModels, u.models) : u.models),
         assaultKills: u.assaultKills || 0, assaultKillsHuman: u.assaultKillsHuman || 0,
+        // the men who carry on, by name, for the dossier to keep
+        men: R.survivors(u),
         kills: []
       };
     });
@@ -23183,8 +23350,27 @@
       attackDefend: !!(state.sc && state.sc.attacker),
       routed: { A: state.routed.A, B: state.routed.B },
       turns: state.turn,
-      units: Object.keys(lines).map(function (k) { return lines[k]; })
+      units: Object.keys(lines).map(function (k) { return lines[k]; }),
+      casualties: casualtyRoll()
     };
+  }
+
+  /* The roll of the fallen: every named man lost, by name, rank and the kind of
+     unit they served in, side by side, in the order they fell. */
+  function casualtyRoll() {
+    var out = [];
+    state.units.forEach(function (u) {
+      var p = R.profile(u.key);
+      (u.men || []).forEach(function (m) {
+        if (m.fell == null) return;
+        out.push({
+          side: u.side, name: m.name, rank: m.rank, fate: m.fate || 'KIA', turn: m.fell,
+          type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id
+        });
+      });
+    });
+    out.sort(function (a, b) { return a.side < b.side ? -1 : a.side > b.side ? 1 : a.turn - b.turn; });
+    return out;
   }
 
   function finish(winner, text) {
@@ -25074,7 +25260,7 @@
        needs to draw the table is in what is left. */
     function snapshot() {
       if (!state) return null;
-      var skip = { scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1 };
+      var skip = { namesTaken: 1, scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1 };
       var out = {};
       Object.keys(state).forEach(function (k) {
         if (skip[k]) return;
@@ -30087,7 +30273,30 @@
 
   function overCard() {
     return '<div class="card"><h2>' + (state.over.winner ? sideName(state.over.winner) + ' wins' : 'Draw') + '</h2>' +
-      '<p class="sub">' + state.over.text + '</p><div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
+      '<p class="sub">' + state.over.text + '</p>' + casualtyRoll() +
+      '<div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
+  }
+
+  /* The roll of the fallen, side by side: every soldier lost, by rank, name and
+     the kind of unit they served in, with the turn they fell. */
+  function casualtyRoll() {
+    var list = (state.report && state.report.casualties) || null;
+    if (!list) return '';
+    return '<div class="kia">' + ['A', 'B'].map(function (side) {
+      var mine = list.filter(function (c) { return c.side === side; });
+      var kia = mine.filter(function (c) { return c.fate !== 'WIA'; }).length, wia = mine.length - kia;
+      var h = '<div class="kia-side kia-' + side + '"><div class="kia-head">' + esc(sideName(side)) +
+        '<span class="mk">' + (mine.length ? kia + ' killed' + (wia ? ', ' + wia + ' wounded' : '') : 'no losses') + '</span></div>';
+      if (mine.length) {
+        h += '<ol class="kia-list">' + mine.map(function (c) {
+          return '<li><span class="kia-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
+            (c.fate === 'WIA' ? ' <i class="kia-wia">wounded</i>' : '') +
+            '<span class="kia-type">' + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
+            ' \u00b7 turn ' + (c.turn || 1) + '</span></li>';
+        }).join('') + '</ol>';
+      }
+      return h + '</div>';
+    }).join('') + '</div>';
   }
 
   function wirePanel() {
