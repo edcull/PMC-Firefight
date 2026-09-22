@@ -98,6 +98,7 @@
 
   function open(which) {
     ensure();
+    if (root.PMCMenu) root.PMCMenu.close();          // the menu would sit on top
     view = which || view;
     host.hidden = false;
     draw();
@@ -138,7 +139,7 @@
       '</div>' +
       chatHTML('lobby') +
       '</div>' +
-      '<div class="lob-foot"><button class="lnk" data-lob="leave-lobby">Back to the game</button></div>';
+      '<div class="lob-foot"><button class="lnk" data-lob="leave-lobby">← Back</button></div>';
   }
 
   function gameRow(g) {
@@ -277,7 +278,11 @@
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
       case 'sit': net.send('game.seat', { seat: b.getAttribute('data-seat') }); return;
       case 'leave': net.send('game.leave'); view = 'lobby'; draw(); return;
-      case 'leave-lobby': close(); return;
+      case 'leave-lobby':
+        close();
+        // back to the battle if one is on, otherwise to the menu
+        if (root.PMCMenu && !(root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE())) root.PMCMenu.open();
+        return;
       case 'ready': {
         var mine = mySeat();
         if (!mine) return;

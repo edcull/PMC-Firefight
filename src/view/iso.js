@@ -5971,7 +5971,8 @@
        carries the main weapon on its arm. */
     patrol: { axles: 2, len: 1.95, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 1.0, style: { body: 'pickup', pintle: [-0.28, 0], shield: true } },
     acar: { axles: 2, len: 2.05, wid: 1.15, hgt: 20, wheelR: 0.78, gun: 1.0, style: { body: 'car', turret: 'mg', tSize: 0.6, tAt: -0.02 } },
-    ltank: { axles: 3, len: 2.25, wid: 1.30, hgt: 16, gun: 1.3, style: { body: 'ltank', turret: 'light', tSize: 0.8, gunLen: 1.35, skirts: true, tMissiles: true } },
+    // the light tank carries its gun and a sidearm, and no missiles to model
+    ltank: { axles: 3, len: 2.25, wid: 1.30, hgt: 16, gun: 1.3, style: { body: 'ltank', turret: 'light', tSize: 0.8, gunLen: 1.35, skirts: true } },
     recontank: { axles: 3, len: 2.20, wid: 1.25, hgt: 16, gun: 1.1, style: { body: 'ltank', turret: 'recon', tSize: 0.75, gunLen: 1.2, skirts: true } },
     mbt: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.9, style: { body: 'mbt', turret: 'mbt', tSize: 1.0, gunLen: 2.1, skirts: 'panels' } },
     ftank: { axles: 4, len: 2.60, wid: 1.50, hgt: 18, gun: 2.0, style: { body: 'future', turret: 'future', tSize: 1.05, gunLen: 2.2, skirts: 'panels', plasma: true } },
@@ -5979,7 +5980,7 @@
     /* Hunters and destroyers are turreted: the rules give them no fixed arc,
        so the long gun has to be able to bear all the way round. */
     thunter: { axles: 3, len: 2.25, wid: 1.30, hgt: 15, gun: 1.2, style: { body: 'ltank', skirts: true, turret: 'missile', tSize: 0.72 } },
-    ldest: { axles: 3, len: 2.30, wid: 1.30, hgt: 15, gun: 2.0, style: { body: 'ltank', skirts: true, turret: 'light', tSize: 0.86, gunLen: 2.1, gunW: 2.4, tMissiles: true } },
+    ldest: { axles: 3, len: 2.30, wid: 1.30, hgt: 15, gun: 2.0, style: { body: 'ltank', skirts: true, turret: 'light', tSize: 0.86, gunLen: 2.1, gunW: 2.4 } },
     mdest: { axles: 4, len: 2.55, wid: 1.45, hgt: 17, gun: 2.1, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'mbt', tSize: 1.0, gunLen: 2.5, gunW: 3.2, tMissiles: true, plasma: true } },
     lorry: { axles: 2, len: 2.10, wid: 1.00, hgt: 15, wheelR: 0.72, gun: 0.8, style: { body: 'truck', noGuard: true } },
     hlorry: { axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
@@ -6238,32 +6239,74 @@
   var MOUNT_PREF = {
     small: ['mg', 'auto', 'gun'], pistol: ['mg', 'auto', 'gun'], smg: ['mg', 'auto', 'gun'],
     burst: ['mg', 'auto', 'gun'], chain: ['auto', 'gun', 'mg'],
-    shell: ['gun', 'auto', 'rail', 'mg'], shellbig: ['gun', 'rail', 'auto'], rail: ['rail', 'gun', 'auto'],
+    /* A heavy round falls back to a wing pod last of all: a strike craft with
+       no gun but a pod under each wing puts one round out of each. */
+    shell: ['gun', 'auto', 'rail', 'mg', 'missile'], shellbig: ['gun', 'rail', 'auto', 'missile'],
+    rail: ['rail', 'gun', 'auto'],
     missile: ['missile', 'rocket', 'gun'], rocket: ['rocket', 'missile', 'gun'],
     arc: ['rocket', 'gun'], arcbig: ['rocket', 'gun'], flame: ['flame', 'gun'],
     energy: ['mg', 'gun', 'auto'], orb: ['rocket', 'gun', 'missile']
   };
+  /* What a walker's arm carries for each weapon style: the barrel a shot comes
+     out of is the barrel that looks like it fires it. Each of these registers
+     the muzzle mount its style asks for above. */
+  // a salvo weapon rides on the shoulder instead of being held in an arm
+  var SHOULDER_STYLE = { arc: 'rocket', arcbig: 'rocket' };
+  var ARM_FOR = {
+    pistol: 'mg', small: 'mg', smg: 'mg', burst: 'mg', chain: 'auto',
+    shell: 'cannon', shellbig: 'howitzer', rail: 'rail', flame: 'flame',
+    arc: 'rocket', arcbig: 'rocket', rocket: 'rocket', missile: 'missile',
+    spit: 'auto', spitbig: 'auto', spine: 'auto', energy: 'plasma', orb: 'plasma',
+    none: 'none'
+  };
+  /* How far a styled craft's wings or fans reach, as a multiple of the hull
+     width — what it lays on the ground when it flies over. */
+  var CRAFT_SPAN = {
+    jet: 2.9, hybrid: 3.4, apache: 2.6, apacherk: 2.6, hind: 2.6, hindrk: 2.6,
+    civ: 1.9, hawk: 1.2, chinook: 1.2, chinookcp: 2.1
+  };
+  /* A volley takes the muzzles in turn, so they are handed over left, right,
+     left — a craft with a pod under each wing fires one round from each rather
+     than emptying the near one. */
+  function sideByside(list) {
+    var left = [], right = [];
+    list.forEach(function (m) { (m.dx < 0 ? left : right).push(m); });
+    if (!left.length || !right.length) return list;
+    var out = [];
+    for (var i = 0; i < Math.max(left.length, right.length); i++) {
+      if (left[i]) out.push(left[i]);
+      if (right[i]) out.push(right[i]);
+    }
+    return out;
+  }
   function mountFor(M, style, u, base) {
     var kinds = MOUNT_PREF[style] || ['gun', 'mg'];
     for (var i = 0; i < kinds.length; i++) {
       var list = M && M[kinds[i]];
-      if (list && list.length) return { x: u.x, y: u.y, up: 0, mz: list[0], pool: list };
+      if (list && list.length) {
+        var pool = list.length > 1 ? sideByside(list) : list;
+        return { x: u.x, y: u.y, up: 0, mz: pool[0], pool: pool };
+      }
     }
     return base;
   }
 
   /* ---------- Xenotripod craft and turrets ----------
      Built in the world like the Overgrown bugs, so they turn to every facing:
-     the craft are flat triangular wings of ivory ceramic with the army's colour
-     burning along the leading edges and in a core underneath; the turrets are
+     the craft are tri-wings, a slim ivory fuselage with three swept blades set
+     about it, the army's colour burning along the leading edges and in a core
+     underneath; the turrets are
      pylons on tripod feet — a crystal emitter, a ring gate, a shield dish. */
   var XENO3D = {
-    xstrike: { kind: 'craft', L: 0.95, W: 0.82, h: 5 },
-    xstrikehg: { kind: 'craft', L: 1.05, W: 0.95, h: 6, prongs: 1 },
-    xstrikeadv: { kind: 'craft', L: 1.15, W: 1.05, h: 7, prongs: 2 },
-    xrecon: { kind: 'craft', L: 0.72, W: 0.6, h: 5, eye: true },
-    xtelecraft: { kind: 'craft', L: 0.95, W: 0.88, h: 6, ring: true },
-    xshieldcraft: { kind: 'craft', L: 0.92, W: 0.88, h: 6, dome: true },
+    // tri-wing craft: L the fuselage's half length, span the lower wings' reach and
+    // fin the dorsal wing's against it, le and tip where the root and the tip sit
+    // along the fuselage (a larger le is a broader wing), rad its girth, droop the anhedral
+    xstrike: { kind: 'craft', L: 0.95, span: 0.72, fin: 1.1, le: 0.12, tip: -0.86, rad: 0.09 },
+    xstrikehg: { kind: 'craft', L: 1.05, span: 0.78, fin: 1.1, le: 0.18, tip: -0.84, rad: 0.1, prongs: 1 },
+    xstrikeadv: { kind: 'craft', L: 1.15, span: 0.86, fin: 1.05, le: 0.34, tip: -0.78, rad: 0.11, droop: 36, prongs: 2 },
+    xrecon: { kind: 'craft', L: 0.72, span: 0.6, fin: 1.3, le: 0.05, tip: -0.92, rad: 0.07, droop: 46, eye: true },
+    xtelecraft: { kind: 'craft', L: 0.95, span: 0.74, fin: 1.1, le: 0.14, tip: -0.84, rad: 0.1, ring: true },
+    xshieldcraft: { kind: 'craft', L: 0.92, span: 0.7, fin: 1.0, le: 0.24, tip: -0.78, rad: 0.12, droop: 44, dome: true },
     xturret: { kind: 'turret' },
     xteleturret: { kind: 'portal' },
     xshieldturret: { kind: 'shield' }
@@ -6340,39 +6383,94 @@
     }
 
     if (spec.kind === 'craft') {
-      /* Built from parts, not one slab: a long faceted fuselage with a split
-         mandible nose, swept wings standing off it on pylons, a pair of drive
-         nacelles burning blue at the back, canards, tail fins and a spine of
-         ridges — every edge lit in the tribe's colour. */
-      var Lc = spec.L, Wc = spec.W, z0 = fly + (dead ? 1 : 0), h = m(spec.h * 0.5);
+      /* A tri-wing: a slender ivory fuselage with three tall, thin, swept wings
+         set about it like an inverted Y — one standing straight up off the spine,
+         two thrown down and out beneath, a shuttle's folded wings with a third.
+         The wings are flat plates turned about the fuselage axis, so they cross
+         and hide one another properly at every facing; the army's colour burns
+         along their leading edges, and the intakes and the drive glow blue. */
+      var Lc = spec.L, z0 = fly + (dead ? 1 : 0);
       var BLU = dead ? { m: '#3e3c38', l: '#4a4843', h: 'rgba(0,0,0,0)' } : { m: '#6ebeff', l: '#e4f4ff', h: 'rgba(110,190,255,.3)' };
-      var litL = (cos + sin) > 0;
-      // a flat plate of outline pts [t, s] at height zb, thickness th
-      function slab(pts, zb, th, top) {
-        var lay = function (z) { return pts.map(function (q) { return S(q[0], q[1], z); }); };
-        for (var zz = 0; zz < th; zz += 1) path(lay(zb + zz), zz < th * 0.5 ? WH.sh : WH.dk);
-        var tp = lay(zb + th);
-        path(tp, top || WH.md); stroke(tp, 1, WH.seam, true);
-        return tp;
+      var ZK = K * 0.9;                                          // pixels to an inch of height
+      var rad = spec.rad || 0.09, span = spec.span, dr = (spec.droop || 40) * Math.PI / 180;
+      // the axis rides high enough that the lower wingtips just clear the stand
+      var zc = z0 + (span * Math.sin(dr) + 0.04) * ZK;
+      var T3 = [cos, sin, 0], EYE = [0.612, 0.612, 0.5];       // along the fuselage; towards the eye
+      function dot3(p, q) { return p[0] * q[0] + p[1] * q[1] + p[2] * q[2]; }
+      // out from the axis at roll ph (0 is to starboard, up is PI / 2), in world inches
+      function roll(ph) { return [-sin * Math.cos(ph), cos * Math.cos(ph), Math.sin(ph)]; }
+      // a point t along the axis and r out from it at roll ph, on the screen
+      function P3(t, r, ph) { return S(t, r * Math.cos(ph), zc + r * Math.sin(ph) * ZK); }
+      // a face's colour: its normal turned to the eye, lit from the upper left
+      function shade(n) {
+        var l = Math.sqrt(dot3(n, n)) || 1;
+        if (dot3(n, EYE) < 0) l = -l;
+        var v = (-0.55 * n[0] + 0.2 * n[1] + 0.8 * n[2]) / l;
+        return v > 0.5 ? WH.lt : v > 0.1 ? WH.md : v > -0.3 ? WH.dk : WH.sh;
       }
-      // a ridge-backed body: two halves along the centre line, lit differently
-      function hull(pts, zb, th, ridge) {
-        var tp = slab(pts, zb, th);
-        var n = pts.length, half = [], other = [];
-        var ri = pts.map(function (q) { return S(q[0], q[1] * 0.25, zb + th + ridge * (q[1] === 0 ? 0.6 : 1)); });
-        for (var i = 0; i < n; i++) {
-          var q0 = pts[i], q1 = pts[(i + 1) % n];
-          var face = [tp[i], tp[(i + 1) % n], ri[(i + 1) % n], ri[i]];
-          var side = (q0[1] + q1[1]) >= 0 ? 1 : -1;
-          path(face, (side > 0) === litL ? WH.md : WH.lt);
-          stroke(face, 1, WH.seam, true);
+      var tail = -0.8 * Lc, rf = rad * 0.8;
+      // the three wings: [roll, span, root leading edge, tip, trailing crank] in inches
+      var WINGS = [[Math.PI / 2, span * (spec.fin || 1.15)], [-dr, span], [Math.PI + dr, span]].map(function (w) {
+        return { ph: w[0], sp: w[1], dorsal: w[0] === Math.PI / 2, d: dot3(roll(w[0]), EYE) };
+      }).sort(function (p1, p2) { return p1.d - p2.d; });    // far to near
+      function wing(w) {
+        var le = (spec.le || 0.3) * Lc, tp = (spec.tip || -0.72) * Lc;
+        var pts = [P3(le, rf, w.ph), P3(tp, w.sp, w.ph), P3(tail * 0.62, w.sp * 0.3, w.ph), P3(tail * 0.8, rf, w.ph)];
+        var n = [T3[1] * roll(w.ph)[2], -T3[0] * roll(w.ph)[2], T3[0] * roll(w.ph)[1] - T3[1] * roll(w.ph)[0]];
+        path(pts, shade(n)); stroke(pts, 1, WH.seam, true);
+        // a panel line inboard of the leading edge
+        stroke([P3(le * 0.3, rf, w.ph), P3(tp * 0.92, w.sp * 0.82, w.ph)], 1, WH.dk);
+        // the blade at the tip, reaching forward: the strike craft's weapon pylons
+        if (spec.prongs && (!w.dorsal || spec.prongs > 1)) {
+          var bl = [P3(tp, w.sp, w.ph), P3(tp + 0.42 * Lc, w.sp * 0.94, w.ph), P3(tp * 0.7, w.sp * 0.7, w.ph)];
+          path(bl, WH.lt); stroke(bl, 1, WH.seam, true);
+          stroke([bl[0], bl[1]], m(0.7), GLO.m);
+          if (!dead) ellipse(g, bl[1][0], bl[1][1], m(0.8), m(0.7), GLO.l);
+          if (!dead && !w.dorsal) mountAt('rocket', bl[1]);
         }
-        return ri;
+        stroke([pts[0], pts[1]], m(0.8), GLO.m);                 // the leading edge
+        if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
       }
-      var sd2 = [1, -1].sort(function (p1, p2) { return S(0, Wc * p1, 0)[1] - S(0, Wc * p2, 0)[1]; });   // far side first
+      // the fuselage: rings of stations [t, r] turned into an eight-sided body
+      var ST = [[1.0 * Lc, 0], [0.72 * Lc, rad * 0.62], [0.3 * Lc, rad], [-0.45 * Lc, rad], [-0.7 * Lc, rad * 0.8], [tail, rad * 0.62]];
+      function body() {
+        var faces = [], NS = 8;
+        for (var i = 0; i < ST.length - 1; i++) {
+          var dt = ST[i + 1][0] - ST[i][0], dR = ST[i + 1][1] - ST[i][1];
+          for (var k = 0; k < NS; k++) {
+            var a0 = (k + 0.5) / NS * Math.PI * 2, a1 = (k + 1.5) / NS * Math.PI * 2, rn = roll(a0 + Math.PI / NS);
+            var n = [T3[0] * dR - rn[0] * dt, T3[1] * dR - rn[1] * dt, -rn[2] * dt];
+            if (dot3(n, EYE) <= 0) continue;                          // turned away from the eye
+            faces.push({ pts: [P3(ST[i][0], ST[i][1], a0), P3(ST[i][0], ST[i][1], a1), P3(ST[i + 1][0], ST[i + 1][1], a1), P3(ST[i + 1][0], ST[i + 1][1], a0)], col: shade(n) });
+          }
+        }
+        var cap = [];
+        for (var c = 0; c < NS; c++) cap.push(P3(tail, ST[ST.length - 1][1], (c + 0.5) / NS * Math.PI * 2));
+        var capUp = dot3(T3, EYE) < 0;
+        if (capUp) faces.push({ pts: cap, col: WH.dk });
+        faces.forEach(function (fc) { stroke(fc.pts, 2, WH.seam, true); });   // the silhouette first
+        faces.forEach(function (fc) { path(fc.pts, fc.col); stroke(fc.pts, 0.6, fc.col, true); });
+        stroke([P3(0.95 * Lc, rad * 0.2, Math.PI / 2), P3(-0.7 * Lc, rad * 0.95, Math.PI / 2)], 1, WH.lt);   // the lit spine
+        // the drive, burning blue out of the tail
+        var ex = P3(tail, 0, 0);
+        if (!dead) {
+          var fl2 = 0.8 + 0.2 * Math.sin(tnow / 70);
+          halo(ex, m(capUp ? 4.4 : 3) * fl2, BLU.h);
+          if (capUp) { ellipse(g, ex[0], ex[1], m(1.6), m(1.4), BLU.m); ellipse(g, ex[0], ex[1], m(0.7), m(0.6), BLU.l); }
+        }
+        // the intakes, a pair of blue slots either side of the spine
+        [Math.PI * 0.2, Math.PI * 0.8].forEach(function (ph) {
+          if (dot3(roll(ph), EYE) < -0.1) return;
+          var i0 = P3(0.36 * Lc, rad * 1.02, ph), i1 = P3(0.18 * Lc, rad * 1.02, ph);
+          stroke([i0, i1], m(1.3), dead ? WH.sh : '#123a6e');
+          stroke([i0, i1], m(0.7), BLU.m);
+          if (!dead) ellipse(g, i0[0], i0[1], m(0.6), m(0.5), BLU.l);
+        });
+      }
       // its shadow on the ground
       if (!dead) {
-        var shd = [S(Lc * 1.1, 0, 0), S(-0.1 * Lc, Wc, 0), S(-0.7 * Lc, Wc * 0.9, 0), S(-0.75 * Lc, 0, 0), S(-0.7 * Lc, -Wc * 0.9, 0), S(-0.1 * Lc, -Wc, 0)];
+        var sw = span * Math.cos(dr), tt = (spec.tip || -0.72) * Lc;
+        var shd = [S(Lc, 0, 0), S(0.2 * Lc, rad, 0), S(tt, sw, 0), S(tail * 0.7, rad, 0), S(tail, 0, 0), S(tail * 0.7, -rad, 0), S(tt, -sw, 0), S(0.2 * Lc, -rad, 0)];
         path(shd, 'rgba(12,10,8,.26)');
         rect(g, gp.x - 1, gp.y - fly, 2, fly, 'rgba(120,130,145,.14)');
         halo(S(-0.1, 0, z0 - 2), m(10), GLO.h);                     // the drive core underneath
@@ -6383,87 +6481,45 @@
         stroke(rp, m(1.8), WH.dk);
         stroke(rp, m(1), BLU.m);
       }
-      var zw = z0 + h * 0.3, tw = Math.max(2, h * 0.45);
-      sd2.forEach(function (sd) {
-        // the wing: swept back, notched at the trailing edge, a forward prong at the tip
-        var wing = [[0.25 * Lc, 0.14 * Wc * sd], [-0.35 * Lc, Wc * sd], [-0.6 * Lc, Wc * 0.95 * sd],
-          [-0.45 * Lc, 0.62 * Wc * sd], [-0.58 * Lc, 0.4 * Wc * sd], [-0.35 * Lc, 0.16 * Wc * sd]];
-        var wt = slab(wing, zw, tw, (sd > 0) === litL ? WH.md : WH.lt);
-        stroke([wt[0], wt[1]], m(0.9), GLO.m);                   // the leading edge
-        if (!dead) ellipse(g, wt[2][0], wt[2][1], m(1), m(0.9), GLO.l);
-        if (spec.prongs) {
-          for (var pr = 0; pr < spec.prongs; pr++) {
-            var o = pr * 0.14;
-            var tip = [S(-0.38 * Lc - o * Lc, (Wc - 0.03 - o * 0.4) * sd, zw + tw), S((0.15 - o) * Lc, (Wc * 0.92 - o * 0.4) * sd, zw + tw * 0.6), S(-0.2 * Lc - o * Lc, (Wc * 0.78 - o * 0.4) * sd, zw + tw)];
-            path(tip, WH.lt); stroke(tip, 1, WH.seam, true);
-            if (!dead && !pr) mountAt('rocket', tip[1]);
-          }
-        }
-        // the canard up front
-        var can = [[0.62 * Lc, 0.1 * Wc * sd], [0.32 * Lc, 0.42 * Wc * sd], [0.26 * Lc, 0.4 * Wc * sd], [0.36 * Lc, 0.1 * Wc * sd]];
-        slab(can, z0 + h * 0.5, Math.max(1, h * 0.25), WH.lt);
-        // the drive nacelle at the wing root, burning blue out of the back
-        var ns = 0.3 * Wc * sd;
-        var nac = [[0.2 * Lc, ns], [0.05 * Lc, ns + 0.07 * sd], [-0.55 * Lc, ns + 0.07 * sd], [-0.62 * Lc, ns], [-0.55 * Lc, ns - 0.07 * sd], [0.05 * Lc, ns - 0.07 * sd]];
-        hull(nac, zw + tw, h * 0.5, m(1.5));
-        var ex = S(-0.64 * Lc, ns, zw + tw + h * 0.35);
-        if (!dead) {
-          var fl2 = 0.8 + 0.2 * Math.sin(tnow / 70 + sd);
-          halo(ex, m(4.2) * fl2, BLU.h);
-          ellipse(g, ex[0], ex[1], m(1.8), m(1.6), BLU.m);
-          ellipse(g, ex[0], ex[1], m(0.8), m(0.7), BLU.l);
-        }
-      });
-      // the fuselage: long, ridged, and a split mandible nose
-      var fus = [[0.95 * Lc, 0.05], [0.4 * Lc, 0.13 * Wc], [-0.45 * Lc, 0.12 * Wc], [-0.72 * Lc, 0.05 * Wc], [-0.72 * Lc, -0.05 * Wc], [-0.45 * Lc, -0.12 * Wc], [0.4 * Lc, -0.13 * Wc], [0.95 * Lc, -0.05]];
-      var gb1 = S(1.28 * Lc, 0, z0 + h * 0.35);
+      var zb = zc - rad * ZK * 0.9, gb1 = S(1.25 * Lc, 0, zb);
       var barrel = function () {
-      // the gun: a blue energy barrel slung under the nose, reaching past the mandibles
-      var gb0 = S(0.45 * Lc, 0, z0 + h * 0.35);
-      stroke([gb0, gb1], m(2.2), dead ? WH.seam : '#123a6e');
-      stroke([gb0, gb1], m(1.4), dead ? WH.dk : '#3f9be8');
-      stroke([gb0, S(1.2 * Lc, 0, z0 + h * 0.35 + m(0.4))], m(0.5), dead ? WH.md : '#bfe6ff');
-      [0.7, 0.9, 1.08].forEach(function (t3) {                // coils along it
-        var c3 = S(t3 * Lc, 0, z0 + h * 0.35);
-        ellipse(g, c3[0], c3[1], m(1.1), m(1.4), dead ? WH.dk : '#6ebeff');
-      });
-      if (!dead) { halo(gb1, m(2.6), 'rgba(110,190,255,.35)'); ellipse(g, gb1[0], gb1[1], m(0.9), m(0.8), '#e4f4ff'); }
+        // the gun: a blue energy barrel slung under the nose, reaching past it
+        var gb0 = S(0.4 * Lc, 0, zb);
+        stroke([gb0, gb1], m(2), dead ? WH.seam : '#123a6e');
+        stroke([gb0, gb1], m(1.2), dead ? WH.dk : '#3f9be8');
+        stroke([gb0, S(1.18 * Lc, 0, zb + m(0.4))], m(0.5), dead ? WH.md : '#bfe6ff');
+        [0.75, 0.95, 1.12].forEach(function (t3) {              // coils along it
+          var c3 = S(t3 * Lc, 0, zb);
+          ellipse(g, c3[0], c3[1], m(1), m(1.2), dead ? WH.dk : '#6ebeff');
+        });
+        if (!dead) { halo(gb1, m(2.4), 'rgba(110,190,255,.35)'); ellipse(g, gb1[0], gb1[1], m(0.8), m(0.7), '#e4f4ff'); }
       };
-      // nose turned away from the eye: the body hides the barrel, so it goes down first
-      var away = gb1[1] < S(-0.5 * Lc, 0, 0)[1];
-      if (away) barrel();
-      var ridge = hull(fus, z0 + h * 0.2, h, m(2.4));
-      if (!away) barrel();
-      [1, -1].forEach(function (sd) {
-        var md = [S(0.9 * Lc, 0.05 * sd, z0 + h * 0.7), S(1.18 * Lc, 0.07 * sd, z0 + h * 0.55), S(0.95 * Lc, 0.02 * sd, z0 + h * 0.4)];
-        path(md, WH.lt); stroke(md, 1, WH.seam, true);
-      });
-      if (!dead) ellipse(g, S(1.02 * Lc, 0, z0 + h * 0.55)[0], S(1.02 * Lc, 0, z0 + h * 0.55)[1], m(1.3), m(1.1), GLO.m);   // the gap between the mandibles
-      // the canopy, a blue crystal set in the spine
-      var cp = [S(0.55 * Lc, 0, z0 + h * 1.2 + m(2.6)), S(0.25 * Lc, 0.06 * Wc, z0 + h * 1.2 + m(2)), S(0.05 * Lc, 0, z0 + h * 1.2 + m(3.2)), S(0.25 * Lc, -0.06 * Wc, z0 + h * 1.2 + m(2))];
-      path(cp, dead ? '#2a2826' : '#3f9be8'); stroke(cp, 1, WH.seam, true);
-      if (!dead) path([cp[0], cp[1], cp[2]], '#9fd6ff');
-      // ridges along the spine, lit
-      for (var rg = 0; rg < 3; rg++) {
-        var rt = -0.15 - rg * 0.17;
-        var rgp = [S(rt * Lc, 0, z0 + h * 1.2 + m(2.4)), S((rt - 0.12) * Lc, 0, z0 + h * 1.2 + m(4.5 - rg * 0.6)), S((rt - 0.1) * Lc, 0, z0 + h * 1.2 + m(2))];
-        path(rgp, WH.lt); stroke(rgp, 1, WH.seam, true);
-      }
-      // twin tail fins, canted out
-      sd2.forEach(function (sd) {
-        var fin = [S(-0.3 * Lc, 0.1 * Wc * sd, z0 + h * 1.2), S(-0.7 * Lc, 0.24 * Wc * sd, z0 + h * 1.2 + m(5)), S(-0.8 * Lc, 0.26 * Wc * sd, z0 + h * 1.2 + m(5)), S(-0.7 * Lc, 0.08 * Wc * sd, z0 + h * 1.2)];
-        path(fin, (sd > 0) === litL ? WH.md : WH.lt); stroke(fin, 1, WH.seam, true);
-        stroke([fin[1], fin[2]], m(0.9), GLO.m);
-      });
-      if (spec.eye) { var ey = S(Lc * 1.05, 0, z0 + h * 0.9); halo(ey, m(5), GLO.h); ellipse(g, ey[0], ey[1], m(2.4), m(2), GLO.m); ellipse(g, ey[0] - 1, ey[1] - 1, m(0.9), m(0.8), GLO.l); }
-      if (spec.dome) {
-        var dm = S(-0.12, 0, z0 + h * 1.2 + m(3));
-        ellipse(g, dm[0], dm[1], m(6), m(4.6), dead ? '#4a4843' : hexA(gc1, 0.35));
-        ellipse(g, dm[0] - m(1.4), dm[1] - m(1.4), m(1.8), m(1.2), dead ? '#55524c' : 'rgba(255,255,255,.55)');
-        if (!dead) ellipseRing(g, dm[0], dm[1], m(6), m(4.6), GLO.m);
-      }
+      // fittings on the spine, ahead of the dorsal wing
+      var fittings = function () {
+        // the canopy, a blue crystal set in the spine
+        var cp = [P3(0.8 * Lc, rad * 0.7, Math.PI / 2), P3(0.56 * Lc, rad * 1.35, Math.PI / 2), P3(0.4 * Lc, rad * 1.05, Math.PI / 2),
+          P3(0.56 * Lc, rad * 1.1, Math.PI * 0.35), P3(0.56 * Lc, rad * 1.1, Math.PI * 0.65)];
+        cp = [cp[0], cp[dot3(roll(Math.PI * 0.35), EYE) > dot3(roll(Math.PI * 0.65), EYE) ? 3 : 4], cp[2], cp[1]];
+        path(cp, dead ? '#2a2826' : '#3f9be8'); stroke(cp, 1, dead ? WH.seam : '#123a6e', true);
+        if (!dead) path([cp[0], cp[3], cp[2]], '#9fd6ff');
+        if (spec.dome) {
+          var dm = P3(0.52 * Lc, rad * 2.2, Math.PI / 2);
+          ellipse(g, dm[0], dm[1], m(4.6), m(3.6), dead ? '#4a4843' : hexA(gc1, 0.35));
+          ellipse(g, dm[0] - m(1.1), dm[1] - m(1.1), m(1.4), m(1), dead ? '#55524c' : 'rgba(255,255,255,.55)');
+          if (!dead) ellipseRing(g, dm[0], dm[1], m(4.6), m(3.6), GLO.m);
+        }
+        if (spec.eye) { var ey = P3(Lc * 1.02, 0, 0); halo(ey, m(4.4), GLO.h); ellipse(g, ey[0], ey[1], m(2), m(1.7), GLO.m); ellipse(g, ey[0] - 1, ey[1] - 1, m(0.8), m(0.7), GLO.l); }
+      };
+      // far wings, the body, then the near wings; the nose's fittings go in front when it points at the eye
+      var away = dot3(T3, EYE) < 0;
+      WINGS.forEach(function (w) { if (w.d < 0) wing(w); });
+      barrel();                                   // slung under the body, so only its muzzle shows past the nose
+      body();
+      if (away) fittings();
+      WINGS.forEach(function (w) { if (w.d >= 0) wing(w); });
+      if (!away) fittings();
       if (!dead) { mountAt('gun', gb1); mountAt('mg', gb1); }
-      return { lift: lift, hgt: h * 1.2 + m(9) };
+      return { lift: lift, hgt: zc - z0 + span * (spec.fin || 1.15) * ZK + m(2) };
     }
 
     // ---- turrets ----
@@ -6574,8 +6630,34 @@
     var top = deck + spec.hgt;                         // the hull roof
 
     /* ---- shadow, and the mast a flier hangs from ---- */
-    var sc = project(box(0.25 / MACHINE, 0.25 / MACHINE, spec.len * 0.95, spec.wid * 0.95), 0);
-    poly(g, sc, spec.fly ? 'rgba(12,10,8,.34)' : 'rgba(14,11,8,.42)');
+    /* A mech stands on two feet: it casts the shadow of its feet, which
+       drawMech lays down itself, not the slab of the hull it stands in for. */
+    var onLegs = drive === 'walker' && !(u.transport && spec.style);
+    if (!onLegs) {
+      var shCol = spec.fly ? 'rgba(12,10,8,.34)' : 'rgba(14,11,8,.42)';
+      /* What a flier throws on the ground is its own outline, not the box of a
+         hull: a rotorcraft the disc it hangs under, a winged craft its wings. */
+      var sf2 = frameAt(0, 0, f);
+      if (spec.heli && spec.rotor) {
+        var hub = S3(sf2(0, 0), 0), rr = spec.rotor * K;
+        sEllipse(hub[0], hub[1], rr, rr * 0.5, shCol);
+        poly(g, [[-spec.len * 0.55, -spec.wid * 0.3], [spec.len * 0.2, -spec.wid * 0.45],
+          [spec.len * 0.2, spec.wid * 0.45], [-spec.len * 0.55, spec.wid * 0.3]]
+          .map(function (q) { return S3(sf2(q[0], q[1]), 0); }), shCol);
+      } else if (spec.craft) {
+        // nose, the wings at their widest, then the tail
+        var span = CRAFT_SPAN[spec.craft] || 1.1;
+        if (spec.winglets && span < 2) span = 2.1;
+        var L2 = spec.len, hw = spec.wid * 0.5, sp2 = spec.wid * 0.5 * span;
+        poly(g, [[L2 * 0.5, 0], [L2 * 0.14, hw], [-L2 * 0.12, sp2], [-L2 * 0.32, sp2],
+          [-L2 * 0.44, hw * 0.9], [-L2 * 0.5, hw * 0.3], [-L2 * 0.5, -hw * 0.3],
+          [-L2 * 0.44, -hw * 0.9], [-L2 * 0.32, -sp2], [-L2 * 0.12, -sp2], [L2 * 0.14, -hw]]
+          .map(function (q) { return S3(sf2(q[0], q[1]), 0); }), shCol);
+      } else {
+        var sc = project(box(0.25 / MACHINE, 0.25 / MACHINE, spec.len * 0.95, spec.wid * 0.95), 0);
+        poly(g, sc, shCol);
+      }
+    }
     if (spec.fly && !downed) {
       var cg = toScreen(at.x, at.y);
       rect(g, cg.x - 1, cg.y - lift, 2, lift, 'rgba(120,130,145,.18)');
@@ -7283,8 +7365,10 @@
     // set up before any styled drawing (these sit below the early returns)
     var P0, HF, AIM, TB, TT, TS, TC;
     var REBELP = false;
+    var CAMO = null;                 // a PMC hull's blotches, in the hull's own frame
     function styleInit() {
       REBELP = u.faction === 'rebel' && !dead;
+      CAMO = camoFor();
       PATCH_FACE = !!(spec.craft || spec.heli);
       PATCH_GREY = tone('#8a8f96', '#62676e', '#3a3e44', '#747980');
       PATCH_RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36');
@@ -7295,6 +7379,40 @@
       TT = tone(mixc(trim, lit, 0.35), trim, mixc(trim, dark, 0.6), mixc(trim, lit, 0.25));
       TS = tone(STEEL_LIT, mixc(STEEL, STEEL_LIT, 0.5), STEEL, mixc(STEEL, STEEL_LIT, 0.7));
       TC = tone(dead ? '#3a352d' : '#8a8062', dead ? '#2e2822' : '#6d654e', dead ? '#1d1a15' : '#4a4434', dead ? '#3a352d' : '#7b7359');
+    }
+    /* Two-tone camouflage on a company's ground machines: a few soft blotches
+       of the army colour, darkened a little, laid across the hull. They are
+       placed in the hull's own frame and seeded by the kind of machine, so a
+       machine keeps its pattern as it turns and every one of a kind matches. */
+    function camoFor() {
+      if (dead || u.cls !== 'vehicle' || (u.faction && u.faction !== 'pmc')) return null;
+      var len = spec.len || 2, wid = spec.wid || 1.2, out = [];
+      var seed = 0; String(u.art || '').split('').forEach(function (ch) { seed = (seed * 31 + ch.charCodeAt(0)) | 0; });
+      var rnd = rng(seed ^ 0x5bd1e995);
+      var n = 5 + Math.floor(len * 2);
+      for (var i = 0; i < n; i++) {
+        out.push({
+          p: (rnd() - 0.5) * len * 1.1, q: (rnd() - 0.5) * wid * 1.2,
+          r: (0.16 + rnd() * 0.16) * Math.min(len, 2.4), sq: 0.45 + rnd() * 0.35
+        });
+      }
+      return out;
+    }
+    // the blotches over one face, clipped to it, in a shade of the face's own colour
+    function camoOn(pts, col, z, top) {
+      if (!CAMO || !pts || pts.length < 3) return;
+      g.save();
+      g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+      for (var i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      g.closePath(); g.clip();
+      g.fillStyle = mixc(col, '#16180f', 0.3);
+      CAMO.forEach(function (b) {
+        var c = S3(HF(b.p, b.q), z), rx = b.r * K;
+        g.beginPath();
+        g.ellipse(c[0], c[1], rx, rx * (top ? 0.5 : 0.9) * b.sq * 1.6, 0, 0, Math.PI * 2);
+        g.fill();
+      });
+      g.restore();
     }
     function mount(kind, pt, dir) {
       if (!MOUNTS) return;
@@ -7361,6 +7479,7 @@
         var colr = k > 0.5 ? mixc(ft.mid, ft.lit, (k - 0.5) * 2) : mixc(ft.dark, ft.mid, k * 2);
         var face = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]];
         poly(g, face, colr);
+        if (CAMO && tn0 === TB) camoOn(face, colr, z0 + h * 0.5);
         if (h > 2) {
           var yT = Math.min(face[2][1], face[3][1]), yB = Math.max(face[0][1], face[1][1]);
           if (yB - yT > 1) {
@@ -7376,7 +7495,9 @@
       });
       if (!noTop && tn.top) {
         var cxT = 0, cyT = 0; base.forEach(function (q) { cxT += q.x; cyT += q.y; });
-        poly(g, Ts, patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11).top);
+        var topCol = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11).top;
+        poly(g, Ts, topCol);
+        if (CAMO && tn0 === TB) camoOn(Ts, topCol, z0 + h, true);
         var ys = Ts.map(function (q) { return q[1]; });
         var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
         if (y1 - y0 > 1) {
@@ -7548,6 +7669,8 @@
     }
 
     function nearSide() { return (cos - sin) > 0 ? 1 : -1; }   // which flank faces the eye
+    // the same, for something turned to its own angle (a traversed mount)
+    function nearSideAt(ang) { return (Math.cos(ang) - Math.sin(ang)) > 0 ? 1 : -1; }
 
     function styledHull() {
       var L = spec.len, Wd = spec.wid, H = spec.hgt, z0 = deck, st = spec.style;
@@ -8168,8 +8291,12 @@
         var LF = frameAt(-L * 0.18, 0, AIM);
         part(depthOf(HF, -L * 0.18, 0), function () {
           slabF(LF, -0.26, 0.26, -w * 0.5, w * 0.5, roof, 4, TS);
-          // the far pod first, so the near one covers it
-          [-nearSide(), nearSide()].forEach(function (sd) {
+          /* The far pod first, so the near one covers it. The pods traverse with
+             the launcher, so which is near goes by where it is aimed, not by the
+             hull: facing west with a target in the east, the launcher is turned
+             right round and the hull's near flank is the pods' far one. */
+          var nsL = nearSideAt(AIM);
+          [-nsL, nsL].forEach(function (sd) {
             launcher(LF, -L * 0.3, L * 0.26, Math.min(sd * w * 0.04, sd * w * 0.9), Math.max(sd * w * 0.04, sd * w * 0.9), roof + 4, 10, 2, 3, 'rocket', { up: 10, tone: TB, warheads: '#15181e' });
           });
         });
@@ -8261,11 +8388,19 @@
         var t = shape(AF, pts, zz, hh, tone(GLINT, GLASS, '#0e141b', mixc(GLASS, GLINT, 0.35)), 0.7);
         edge(g, t[0], t[1], 'rgba(220,240,255,.7)', 0.8);
       }
-      function noseGun(p, q, zz, len, kind) {
+      /* The gun in the nose. `o.rail` gives it the Gauss weapon's blue-lit
+         barrel, and `o.also` records the same muzzle under other names, so a
+         craft whose only weapon is this one fires out of it whatever it is
+         carrying rather than out of the middle of the hull. */
+      function noseGun(p, q, zz, len, kind, o) {
+        o = o || {};
         var tf = frameAt(p, q, AIM);
         var cg = S3(AF(p, q), zz);
         sEllipse(cg[0], cg[1], 2.6, 2, STEEL);
-        barrel(tf, 0, len, 0, zz - 1, 1.3, kind || 'mg', { col: '#15181e' });
+        var mz = barrel(tf, 0, len, 0, zz - 1, o.rail ? 1.6 : 1.3, kind || 'mg',
+          o.rail ? { col: '#15181e', lit: '#7fd8e8' } : { col: '#15181e' });
+        if (!dead && o.rail) sEllipse(mz[0], mz[1], 1.6, 1.4, 'rgba(127,216,232,.9)');
+        (o.also || []).forEach(function (k2) { mount(k2, mz, mz[0] >= cg[0] ? 1 : -1); });
       }
       function pod(p, q, zz, kind, big) {
         // a rocket or missile pod under the wing, its tubes toward the nose
@@ -8273,9 +8408,11 @@
         line(S3(AF(p, q), zz + 3), S3(AF(p, q), zz), 1, STEEL);
         launcher(AF, p - ln / 2, p + ln / 2, q - r2, q + r2, zz - 4, 4, kind === 'missile' ? 1 : 2, 2, kind, { tone: TS, warheads: kind === 'missile' ? '#b8b0a0' : '#8a3a24' });
       }
-      function doorGun(sd, p, zz) {
+      function doorGun(sd, p, zz, quiet) {
         var DF = frameAt(p, sd * w * 0.98, AIM);
-        barrel(DF, 0, 0.32, 0, zz, 1.2, 'mg', { col: '#15181e' });
+        // `quiet`: a craft with a gun in the nose fires from the nose, and the
+        // door gunner is a passenger with a weapon rather than the craft's own
+        barrel(DF, 0, 0.32, 0, zz, 1.2, quiet ? null : 'mg', { col: '#15181e' });
       }
       /* The fin, and when it carries one, the tail fan set into it: a ring in
          the plane of the fin itself, drawn with the fin so it layers with it
@@ -8388,7 +8525,8 @@
               var wp = S3(AF(wa, ns * w * 1.0), z + H * 0.62);
               sEllipse(wp[0], wp[1], 1.7, 1.3, GLASS); sEllipse(wp[0] - 0.4, wp[1] - 0.4, 0.6, 0.5, GLINT);
             }
-            doorGun(ns, off - cabL * 0.05, z + H * 0.45);
+            doorGun(ns, off - cabL * 0.05, z + H * 0.45, true);
+            noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
             if (st === 'chinookcp') {
               // the command post: a sensor dome on the nose, a dome on the roof and aerials
               var nd = S3(AF(L * 0.5, 0), z + H * 0.32);
@@ -8527,7 +8665,8 @@
             var gp = S3(AF(L * 0.26, -fw2 * 0.7), z + H * 0.7);
             mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);
             sEllipse(gp[0], gp[1], 1.2, 1, '#0c0f13');
-            if (hyb || spec.noseGun) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
+            if (spec.noseGun) noseGun(L * 0.46, 0, z + 1, 0.12, 'gun', { rail: true, also: ['rail', 'auto'] });
+            else if (hyb) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
           });
           break;
         }
@@ -8540,11 +8679,12 @@
     /* A walker is not a tank on legs: it is an upright machine that stands on two
        of them, with the crew in a cockpit head and the guns on its shoulders. */
     /* Walkers come in three weights, read off the size of the hull they
-       replace: a light one is a cockpit on two long reverse-jointed legs (a
-       scout walker, all legs and a head); a medium one stands upright with two
-       arms, a gun on one forearm and a launcher on the other; a heavy one is a
-       broad-shouldered battle mech with missile boxes on both shoulders and a
-       cannon on each arm. */
+       replace: a light one is a slim humanoid, a wedge of chest over long thin
+       legs with a finned head and a small gun on each forearm; a medium one is
+       a rounded egg of a body with the cockpit glazed into its chest, heat
+       sinks on its back and gun pods on its forearms; a heavy one is a hunched
+       battle mech, a huge chest with its head sunk into it, missile boxes on
+       its shoulders and blocky arms hanging low. */
     /* A walker is drawn a size down from the hull it stands in for: on legs
        the same footprint towered over everything near it. */
     var MS = null;
@@ -8554,28 +8694,58 @@
     }
     function mechClass() {
       var base = HULL[u.art] || HULL.wheeled;
-      return base.len < 2.1 ? 'light' : base.len >= 2.45 ? 'heavy' : 'medium';
+      // light tanks and cars under 2.3", the big future hulls from 2.55"
+      return base.len < 2.3 ? 'light' : base.len >= 2.55 ? 'heavy' : 'medium';
     }
+    /* legH: ground to hip; torsoH: hip to the top of the body; headH: what
+       stands on top of that (a light mech's head and fin, a medium's crest
+       and heat sinks, a heavy's missile boxes). headroom() repeats these. */
     function mechHeights() {
       if (!MS) msInit();
       var sf = MS.len / 2.0, cls = mechClass();
       if (cls === 'light') {
-        return { legH: Math.round(38 * sf + MS.hgt * 0.4), torsoH: 0, headH: Math.round(MS.hgt * 0.95 + 4), neck: 0, sf: sf, cls: cls };
+        return { legH: Math.round(30 * sf + MS.hgt * 0.4), torsoH: Math.round(13 * sf + MS.hgt * 0.3), headH: Math.round(12 * sf), sf: sf, cls: cls };
       }
       if (cls === 'heavy') {
-        return { legH: Math.round(26 * sf + MS.hgt * 0.5), torsoH: Math.round(MS.hgt * 1.15 + 8), headH: Math.round(6 * sf), neck: 2, sf: sf, cls: cls };
+        return { legH: Math.round(28 * sf + MS.hgt * 0.45), torsoH: Math.round(30 * sf + MS.hgt * 0.55), headH: Math.round(9 * sf), sf: sf, cls: cls };
       }
-      var legH = Math.round(30 * sf + MS.hgt * 0.55);   // long legs, as a mech should have
-      var torsoH = Math.round(MS.hgt * 0.95 + 5);
-      return { legH: legH, torsoH: torsoH, headH: Math.round(9 * sf), neck: 5, sf: sf, cls: 'medium' };
+      return { legH: Math.round(26 * sf + MS.hgt * 0.45), torsoH: Math.round(26 * sf + MS.hgt * 0.5), headH: Math.round(7 * sf), sf: sf, cls: 'medium' };
     }
 
     /* What a walker carries is what the hull it stands in for carries: a tank's
        gun on the arm, an AA hull's twin cannon, a support hull's rockets on
        the shoulders, a plasma cannon, a flame projector; an ambulance carries
        nothing but its cross. */
+    /* An arm carries what the unit's weapon table says it fires, so the barrel
+       a shot comes out of is the barrel that looks like it fires it: the rail
+       gun's thin blue line off the rail barrel, shells off the cannon. Each of
+       these registers the muzzle mount that its style asks for. */
     function mechKit() {
       var st = spec.style, k = { main: 'cannon', off: 'mg', shoulder: null };
+      /* What it actually carries comes first; the hull's own style only decides
+         what hangs off the shoulders. */
+      var spec2 = root.PMC && root.PMC.weaponSpec ? root.PMC.weaponSpec(u) : null;
+      if (spec2 && ARM_FOR[spec2.p]) {
+        /* Rockets lobbed in salvoes are a battery, not something a machine
+           holds: they ride on the shoulder, where the hull carries its rack,
+           and the arm takes whatever else it has. */
+        var shoulderGun = SHOULDER_STYLE[spec2.p] || null;
+        k.main = shoulderGun
+          ? (spec2.s && ARM_FOR[spec2.s] !== 'rocket' ? ARM_FOR[spec2.s] : 'cannon')
+          : ARM_FOR[spec2.p];
+        k.off = spec2.s ? (ARM_FOR[spec2.s] || 'mg') : (k.main === 'mg' ? 'none' : 'mg');
+        if (shoulderGun) { k.shoulder = shoulderGun; return k; }
+        if (st) {
+          k.shoulder = st.tMissiles || st.turret === 'mbt' || st.turret === 'future' ? 'missile'
+            : st.mrl || st.mlrs || st.turret === 'calliope' ? 'rocket'
+              : st.dish || st.turret === 'dish' ? 'dish'
+                : st.turret === 'flamer' ? 'tanks'
+                  : st.turret === 'recon' || st.cross ? 'aerials' : null;
+        } else if (spec.dish) k.shoulder = 'dish';
+        // a launcher on both an arm and the shoulder is one launcher too many
+        if (k.shoulder === k.off || k.shoulder === k.main) k.shoulder = null;
+        return k;
+      }
       if (!st) {
         k.main = spec.twin ? 'twinauto' : spec.fat ? 'howitzer' : spec.elev ? 'rocket' : 'cannon';
         k.off = spec.drum ? 'flame' : 'missile';
@@ -8635,7 +8805,13 @@
           barrel(fr, a0, reach * 0.9, b - wd * 0.5, z, 1.3 * sc, 'auto', { brake: true });
           return barrel(fr, a0, reach * 0.9, b + wd * 0.5, z, 1.3 * sc, 'auto', { brake: true });
         case 'rail': {
-          var rt = barrel(fr, a0, reach, b, z, 1.5 * sc, 'rail', { col: '#15181e', lit: '#7fd8e8' });
+          // a Gauss weapon: a heavy barrel with the charge burning blue along it
+          var rt = barrel(fr, a0, reach, b, z, 2.4 * sc, 'rail', { col: '#141b22', lit: '#7fd8e8' });
+          for (var ri2 = 1; ri2 <= 3 && !dead; ri2++) {
+            var rp2 = S3(fr(a0 + (reach - a0) * ri2 / 4, b), z);
+            sEllipse(rp2[0], rp2[1], 1.5 * sc, 1.3 * sc, 'rgba(127,216,232,.75)');
+          }
+          if (!dead) sEllipse(rt[0], rt[1], 1.8 * sc, 1.6 * sc, 'rgba(190,245,255,.95)');
           return rt;
         }
         case 'mg': return barrel(fr, a0, a0 + (reach - a0) * 0.55, b, z, 1.3 * sc, 'mg', { col: '#15181e', brake: true });
@@ -8652,14 +8828,22 @@
     }
 
     function drawMech() {
-      var hm = mechHeights(), cls = hm.cls, KITM = mechKit();
+      var hm = mechHeights(), cls = hm.cls, KITM = mechKit(), sf = hm.sf;
+      var heavy = cls === 'heavy', light = cls === 'light';
       var hipY = lift + hm.legH;                       // where the legs meet the body
       var shoulder = hipY + hm.torsoH;                 // the top of the torso
-      var sf = hm.sf;
-      var tLen = MS.len * 0.38, tWid = MS.wid * (cls === 'heavy' ? 0.58 : 0.46);
+      var waistY = hipY + Math.round(3 * sf);          // where the chest starts
+      // the torso's half-depth and half-width
+      var tL = MS.len * (heavy ? 0.22 : light ? 0.13 : 0.2);
+      var tW = MS.wid * (heavy ? 0.42 : light ? 0.26 : 0.42);
+      var TF = frameAt(0, 0, AIM);                     // the body turns to its target
+      var ca = Math.cos(AIM), sa = Math.sin(AIM);
+      var fwd = ca + sa;                               // > 0: the chest is toward the viewer
+      function nearOf(s) { return s * (ca - sa); }     // > 0: that side is toward the viewer
+      var RED = dead ? '#3a2e22' : '#c8322a';          // missile tips
 
       // the shadow the machine casts is its feet, not a hull-sized slab
-      var fpr = project(box(0, 0, MS.len * 0.62, MS.wid * 0.78), 0);
+      var fpr = project(box(0, 0, MS.len * (heavy ? 0.66 : light ? 0.42 : 0.56), MS.wid * (heavy ? 0.9 : light ? 0.5 : 0.75)), 0);
       poly(g, fpr, 'rgba(14,11,8,.34)');
 
       /* Legs stride: one forward, one back, so the pair reads in three quarters.
@@ -8667,238 +8851,357 @@
          walker walk rather than slide. */
       var swing = opts.walk ? (opts.walk % 2 ? 1 : -1) : 1;
       var legs2 = [{ fore: swing, s: 1 }, { fore: -swing, s: -1 }];
-      var legSpread = cls === 'light' ? MS.wid * 0.34 : tWid * 0.52;
+      var legSpread = tW * (heavy ? 0.6 : light ? 0.7 : 0.58);
       legs2.forEach(function (L) {
-        L.d = L.fore * MS.len * 0.18 * (cos + sin) + L.s * legSpread * (cos - sin);
+        L.d = L.fore * MS.len * 0.1 * (cos + sin) + L.s * legSpread * (cos - sin);
       });
       legs2.sort(function (p, q) { return p.d - q.d; });
+      /* The arms hang outside the body, so the side an arm is on says whether
+         the torso hides it; square to the viewer, the forearms held out in
+         front (or behind) decide. The far arm goes down before the legs, as it
+         is further out than they are. */
+      var armsBack = [], armsFront = [];
+      [-1, 1].forEach(function (s) { (nearOf(s) + 0.3 * fwd > 0 ? armsFront : armsBack).push(s); });
+      var byNear = function (p, q) { return nearOf(p) - nearOf(q); };
+      armsBack.sort(byNear); armsFront.sort(byNear);
 
-      if (cls === 'light') {
-        drawBirdLeg(legs2[0]);
-        drawCockpit();
-        drawBirdLeg(legs2[1]);
-      } else {
-        drawLeg(legs2[0]);
-        drawTorso();
-        drawLeg(legs2[1]);
-        drawArms();
-        drawHead();
-      }
+      armsBack.forEach(drawArm);
+      drawLeg(legs2[0]);
+      drawLeg(legs2[1]);
+      drawTorso();
+      armsFront.forEach(drawArm);
+      drawTop();
       drawDamage();
 
-      /* ---- light: a scout walker ---- */
-      /* A digitigrade leg, as a scout walker stands: the thigh forward and
-         down to the knee, the shin back and down to a raised hock (the
-         backward-pointing joint), then a long metatarsal forward and down to
-         an armoured foot under the hip. */
-      function drawBirdLeg(L) {
-        var s = L.s * legSpread, fore = L.fore * 0.12;
-        var hipT = 0;
-        var kneeT = MS.len * (0.16 + fore), hockT = -MS.len * (0.12 - fore), footT = MS.len * (0.04 + fore * 1.5);
-        var hp = scr(hipT, s), kp = scr(kneeT, s), hk = scr(hockT, s), fp = scr(footT, s);
-        var kneeY = lift + Math.round(hm.legH * 0.66), hockY = lift + Math.round(hm.legH * 0.3);
-        var ankleY = lift + Math.round(5 * sf);
-        var th = Math.max(2.5, 4 * sf);
-        function seg(a1, a2, w, lit2) {
-          line(a1, a2, w, STEEL);
-          line([a1[0] - 0.7, a1[1] - 0.7], [a2[0] - 0.7, a2[1] - 0.7], 0.9, lit2 || STEEL_LIT);
-        }
-        var H = [hp.x, hp.y - hipY], Kp = [kp.x, kp.y - kneeY], Hk = [hk.x, hk.y - hockY], A = [fp.x, fp.y - ankleY];
-        // hip joint and thigh, armoured in the force colour
-        sEllipse(H[0], H[1], th * 1.1, th * 0.9, STEEL);
-        seg(H, Kp, th * 1.3);
-        slabF(frameAt((hipT + kneeT) / 2, s, f), -MS.len * 0.07, MS.len * 0.07, -MS.wid * 0.06, MS.wid * 0.06,
-          kneeY + (hipY - kneeY) * 0.2, Math.round((hipY - kneeY) * 0.55), TB);
-        sEllipse(Kp[0], Kp[1], th * 1.05, th * 0.95, hull);
-        sEllipse(Kp[0] - 0.5, Kp[1] - 0.5, th * 0.5, th * 0.45, STEEL_LIT);
-        // the shin back to the hock, a piston along it
-        seg(Kp, Hk, th * 1.05);
-        line([Kp[0], Kp[1] + th * 0.8], [Hk[0] + th * 0.4, Hk[1] - th * 0.6], 1.2, '#3a424c');
-        var shF = frameAt((kneeT + hockT) / 2, s, f);
-        slabF(shF, -MS.len * 0.05, MS.len * 0.05, -MS.wid * 0.05, MS.wid * 0.05, hockY + (kneeY - hockY) * 0.3, Math.round((kneeY - hockY) * 0.4), TB);
-        // the hock, then the long metatarsal forward to the foot
-        sEllipse(Hk[0], Hk[1], th * 0.9, th * 0.8, hull);
-        sEllipse(Hk[0] - 0.4, Hk[1] - 0.4, th * 0.4, th * 0.35, STEEL_LIT);
-        seg(Hk, A, th * 0.85);
-        sEllipse(A[0], A[1], th * 0.7, th * 0.6, STEEL);
-        // the armoured foot
-        var ftF = frameAt(footT + MS.len * 0.03, s, f);
-        var fl = MS.len * 0.14, fw = MS.wid * 0.13;
-        slabF(ftF, -fl, fl, -fw, fw, lift, Math.round(5 * sf), TB, fl * 0.45, fl * 0.2, fw * 0.12);
-        slabF(ftF, -fl * 0.9, fl * 0.95, -fw * 1.08, fw * 1.08, lift, Math.round(2 * sf), TS, fl * 0.1, 0, 0);
+      // a sensor light or a hot muzzle: a small orange dot, out when dead
+      function glow(p, r) {
+        if (dead || !p || typeof p[0] !== 'number') return;
+        sEllipse(p[0], p[1], r * 2, r * 1.7, 'rgba(255,138,42,.28)');
+        sEllipse(p[0], p[1], r, r * 0.85, '#ff8a2a');
+        sEllipse(p[0] - r * 0.2, p[1] - r * 0.2, r * 0.45, r * 0.4, '#ffd68a');
       }
-      function drawCockpit() {
-        var z0 = hipY - 2, H = hm.headH;
-        var CF = frameAt(0, 0, AIM);
-        var L = MS.len * 0.62, Wd = MS.wid * 0.62;
-        var fwdA = Math.cos(AIM) + Math.sin(AIM);
-        var guns = function () {
-          // the main weapon slung under the chin
-          armWeapon(KITM.main, CF, L * 0.3, 0, z0 + 1, L * 0.95, 0.75, Wd * 0.22);
-        };
-        var pods = function () {
-          // the second weapon on one cheek, whatever the shoulders carry on the other
-          armWeapon(KITM.off, CF, L * 0.05, -Wd * 0.66, z0 + H * 0.5, L * 0.7, 0.65, Wd * 0.14);
-          var sh = KITM.shoulder;
-          if (sh === 'missile' || sh === 'rocket') armWeapon(sh, CF, L * 0.05, Wd * 0.66, z0 + H * 0.55, L * 0.7, 0.65, Wd * 0.14);
-          else if (sh === 'tanks') { var tp = S3(CF(-L * 0.4, 0), z0 + H * 0.6); line([tp[0] - 3, tp[1]], [tp[0] + 3, tp[1]], 5, '#3a3f38'); }
-        };
-        if (fwdA < 0) guns();
-        // the head: a boxy cockpit with its front raked back and a slit of glass
-        slabF(CF, -L * 0.45, L * 0.45, -Wd * 0.5, Wd * 0.5, z0, H, TB, L * 0.22, L * 0.1, Wd * 0.06);
-        slabF(CF, -L * 0.3, L * 0.12, -Wd * 0.32, Wd * 0.32, z0 + H, 3, TT, L * 0.05, 0, Wd * 0.05);
-        var v1 = S3(CF(L * 0.42, -Wd * 0.34), z0 + H * 0.55), v2 = S3(CF(L * 0.42, Wd * 0.34), z0 + H * 0.55);
-        var v3 = S3(CF(L * 0.33, Wd * 0.3), z0 + H * 0.8), v4 = S3(CF(L * 0.33, -Wd * 0.3), z0 + H * 0.8);
-        poly(g, [v1, v2, v3, v4], GLASS); edge(g, v4, v3, GLINT, 0.8);
-        hatch(CF, -L * 0.1, 0, z0 + H + 3, 0.1);
-        aerial(CF, -L * 0.4, Wd * 0.3, z0 + H, 16);
-        if (KITM.shoulder === 'aerials') { aerial(CF, -L * 0.42, -Wd * 0.3, z0 + H, 20); aerial(CF, -L * 0.3, Wd * 0.4, z0 + H, 13); }
-        if (spec.dish || KITM.shoulder === 'dish') {
-          var dp = S3(CF(-L * 0.3, -Wd * 0.2), z0 + H + 8);
-          line(S3(CF(-L * 0.3, -Wd * 0.2), z0 + H), dp, 1, STEEL);
-          sEllipse(dp[0], dp[1], 4.5, 3.2, '#b9c2cc'); sEllipse(dp[0] + 0.5, dp[1] + 0.3, 2.6, 1.8, '#5d6775');
-        }
-        if (spec.cross) crossOn(CF, -L * 0.05, 0, z0 + H + 0.3, Wd * 0.3);
-        pods();
-        if (fwdA >= 0) guns();
+      // an outline with its corners cut: a plate that reads as rounded
+      function oct(a0, a1, b0, b1, k) {
+        var da = (a1 - a0) * (k || 0.3), db = (b1 - b0) * (k || 0.3);
+        return [[a1, b0 + db], [a1, b1 - db], [a1 - da, b1], [a0 + da, b1], [a0, b1 - db], [a0, b0 + db], [a0 + da, b0], [a1 - da, b0]];
       }
+      // a point on a front face raked back from a1 (at z0) to a1 - rake (at z0 + h)
+      function onFront(a1, rake, z0, h, k, b) { return S3(TF(a1 - rake * k + 0.006, b), z0 + h * k); }
 
-      /* ---- medium and heavy: an upright machine ---- */
+      /* ---- legs ---- */
+      /* Hip, a knee bent a little forward, an ankle, a foot. A heavy leg is
+         all armour, with a knee plate like a shield; a medium one is rounded
+         plates over a clawed foot; a light one is thin, on a narrow foot. */
       function drawLeg(L) {
-        var s = L.s * tWid * 0.52, fore = L.fore;
-        var heavy = cls === 'heavy';
-        var hipT = fore * MS.len * 0.06;
-        var kneeT = hipT + fore * MS.len * (heavy ? 0.12 : 0.2);
-        var ankT = hipT + fore * MS.len * (heavy ? 0.06 : 0.1);
-        var hp = scr(hipT, s), kp = scr(kneeT, s), ap2 = scr(ankT, s);
-        var kneeY = lift + Math.round(hm.legH * 0.5);
-        var ankleY = lift + Math.round(6 * sf);
-        var tw2 = Math.round((heavy ? 11 : 8) * sf);
-        sEllipse(hp.x, hp.y - hipY + 2, tw2 * 0.6, tw2 * 0.5, STEEL);
-        line([hp.x, hp.y - hipY + 2], [kp.x, kp.y - kneeY], tw2, STEEL);
-        line([hp.x - 1, hp.y - hipY + 1], [kp.x - 1, kp.y - kneeY - 1], 1.4, STEEL_LIT);
-        // armour over the thigh, in the force colour
-        var thF = frameAt((hipT + kneeT) / 2, s, f);
-        slabF(thF, -MS.len * (heavy ? 0.1 : 0.08), MS.len * (heavy ? 0.1 : 0.08), -MS.wid * (heavy ? 0.13 : 0.09), MS.wid * (heavy ? 0.13 : 0.09),
-          kneeY + Math.round(hm.legH * 0.1), Math.round(hm.legH * 0.34), TB, MS.len * 0.02, 0, 0);
-        sEllipse(kp.x, kp.y - kneeY, tw2 * 0.7, tw2 * 0.6, hull);
-        sEllipse(kp.x - 0.8, kp.y - kneeY - 0.8, tw2 * 0.35, tw2 * 0.3, lit);
-        line([kp.x, kp.y - kneeY], [ap2.x, ap2.y - ankleY], tw2 * 0.9, STEEL);
-        var shF = frameAt((kneeT + ankT) / 2, s, f);
-        slabF(shF, -MS.len * (heavy ? 0.09 : 0.065), MS.len * (heavy ? 0.09 : 0.065), -MS.wid * (heavy ? 0.12 : 0.08), MS.wid * (heavy ? 0.12 : 0.08),
-          ankleY + 2, Math.round(hm.legH * 0.28), TB, MS.len * 0.03, 0, 0);
-        sEllipse(ap2.x, ap2.y - ankleY, tw2 * 0.5, tw2 * 0.4, STEEL);
-        var ftF = frameAt(ankT + fore * MS.len * 0.04, s, f);
-        var fl = MS.len * (heavy ? 0.17 : 0.13), fw = MS.wid * (heavy ? 0.17 : 0.13);
-        slabF(ftF, -fl, fl, -fw, fw, lift, Math.round((heavy ? 8 : 6) * sf), TS, fl * 0.35, fl * 0.2, fw * 0.1);
-      }
-
-      function drawTorso() {
-        var heavy = cls === 'heavy';
-        var hipH = Math.round(7 * sf), waistY = hipY + hipH;
-        var TF2 = frameAt(0, 0, AIM);
-        slabF(TF2, -tLen * 0.5, tLen * 0.5, -tWid * 0.58, tWid * 0.58, hipY - 3, hipH, TB, tLen * 0.08, tLen * 0.08, tWid * 0.1);
-        var wp2 = scr(0, 0);
-        sEllipse(wp2.x, wp2.y - waistY, a(2.4), a(1.3), STEEL);
-        // the chest: deeper at the top than the waist, a raked front plate
-        var chestH = hm.torsoH - hipH - 3;
-        var cw = heavy ? 0.95 : 0.78;
-        shape(TF2, rectPts(-tLen * 0.42, tLen * 0.4, -tWid * cw * 0.9, tWid * cw * 0.9), waistY + 2, chestH, TB, null,
-          rectPts(-tLen * 0.5, tLen * (heavy ? 0.3 : 0.26), -tWid * cw * 1.1, tWid * cw * 1.1));
-        // the plastron and, on a heavy mech, the cockpit canopy set into the chest
-        var cp1 = S3(TF2(tLen * 0.38, -tWid * 0.4), waistY + chestH * 0.35), cp2 = S3(TF2(tLen * 0.38, tWid * 0.4), waistY + chestH * 0.35);
-        var cp3 = S3(TF2(tLen * 0.27, tWid * 0.5), waistY + chestH * 0.95), cp4 = S3(TF2(tLen * 0.27, -tWid * 0.5), waistY + chestH * 0.95);
-        if (Math.cos(AIM) + Math.sin(AIM) > -0.2) poly(g, [cp1, cp2, cp3, cp4], trim);
-        if (heavy && Math.cos(AIM) + Math.sin(AIM) > -0.2) {
-          var gl1 = S3(TF2(tLen * 0.33, -tWid * 0.3), waistY + chestH * 0.7), gl2 = S3(TF2(tLen * 0.33, tWid * 0.3), waistY + chestH * 0.7);
-          var gl3 = S3(TF2(tLen * 0.28, tWid * 0.26), waistY + chestH * 0.92), gl4 = S3(TF2(tLen * 0.28, -tWid * 0.26), waistY + chestH * 0.92);
-          poly(g, [gl1, gl2, gl3, gl4], GLASS); edge(g, gl4, gl3, GLINT, 0.8);
+        var s = L.s * legSpread, fo = L.fore;
+        var LF = frameAt(0, 0, f);                     // legs step the way the hull faces
+        var front = cos + sin > 0;
+        var hipT = fo * MS.len * 0.05;
+        var kneeT = fo * MS.len * 0.1 + MS.len * 0.04;
+        var ankT = fo * MS.len * 0.09;
+        var kneeY = lift + Math.round(hm.legH * 0.5), ankY = lift + Math.round((heavy ? 5 : 4) * sf);
+        var P = heavy ? { th: 0.1, tw: 0.13, sh: 0.1, sw: 0.13, fl: 0.15, fw: 0.15 }
+          : light ? { th: 0.04, tw: 0.05, sh: 0.038, sw: 0.045, fl: 0.09, fw: 0.05 }
+            : { th: 0.085, tw: 0.11, sh: 0.075, sw: 0.1, fl: 0.13, fw: 0.12 };
+        var th = MS.len * P.th, tw = MS.wid * P.tw, sh = MS.len * P.sh, sw = MS.wid * P.sw;
+        var fl = MS.len * P.fl, fw = MS.wid * P.fw;
+        function J(t, z) { return S3(LF(t, s), z); }
+        function outline(t, l, w) { return heavy || light ? rectPts(t - l, t + l, s - w, s + w) : oct(t - l, t + l, s - w, s + w, 0.3); }
+        function foot() {
+          if (light) {
+            // a narrow foot, pointed at the toe
+            shape(LF, [[ankT + fl, s], [ankT + fl * 0.45, s + fw], [ankT - fl * 0.6, s + fw], [ankT - fl * 0.6, s - fw], [ankT + fl * 0.45, s - fw]],
+              lift, Math.round(3 * sf), TS, 0.75);
+            return;
+          }
+          var toes = function () {
+            if (heavy) {
+              // two blocky toe plates
+              [-0.5, 0.5].forEach(function (k) {
+                slabF(LF, ankT + fl * 0.3, ankT + fl * 1.05, s + k * fw - fw * 0.47, s + k * fw + fw * 0.47, lift, Math.round(4 * sf), TB, fl * 0.3, 0, fw * 0.05);
+              });
+            } else {
+              // three claws forward, splayed a little
+              [-0.7, 0, 0.7].forEach(function (k) {
+                var c0 = s + k * fw, c1 = s + k * fw * 1.35;
+                shape(LF, [[ankT + fl * 1.2, c1 - fw * 0.1], [ankT + fl * 1.2, c1 + fw * 0.1], [ankT + fl * 0.3, c0 + fw * 0.22], [ankT + fl * 0.3, c0 - fw * 0.22]],
+                  lift, Math.round(3 * sf), TS, null, [[ankT + fl * 0.6, c1 - fw * 0.08], [ankT + fl * 0.6, c1 + fw * 0.08], [ankT + fl * 0.3, c0 + fw * 0.16], [ankT + fl * 0.3, c0 - fw * 0.16]]);
+              });
+            }
+          };
+          var heel = function () {
+            if (!heavy) shape(LF, rectPts(ankT - fl * 1.0, ankT - fl * 0.4, s - fw * 0.18, s + fw * 0.18), lift, Math.round(3 * sf), TS, null,
+              rectPts(ankT - fl * 0.6, ankT - fl * 0.4, s - fw * 0.14, s + fw * 0.14));
+          };
+          if (front) heel(); else toes();
+          slabF(LF, ankT - fl * 0.6, ankT + fl * 0.55, s - fw, s + fw, lift, Math.round((heavy ? 6 : 4) * sf), heavy ? TS : TB, fl * 0.2, fl * 0.15, fw * 0.08);
+          if (front) toes(); else heel();
         }
-        // exhaust stacks behind the shoulders
-        [-1, 1].forEach(function (s) {
-          var ep = S3(TF2(-tLen * 0.45, s * tWid * 0.8), 0);
-          line([ep[0], ep[1] - shoulder + 2], [ep[0], ep[1] - shoulder - 7], 3.4, STEEL);
-          sEllipse(ep[0], ep[1] - shoulder - 7, 1.8, 1, '#0c0f13');
-        });
+        function shin() {
+          // a calf thicker below the knee than at the ankle
+          shape(LF, outline(ankT, sh * 0.8, sw * 0.8), ankY, kneeY - ankY - 1, TB, null, outline(kneeT, sh, sw));
+        }
+        function thigh() {
+          var hp = J(hipT, hipY - 1);
+          sEllipse(hp[0], hp[1], tw * K * 0.9, tw * K * 0.7, STEEL);
+          shape(LF, outline(kneeT, th * 0.85, tw * 0.85), kneeY + 1, hipY - kneeY - 3, heavy || light ? TS : TB, null, outline(hipT, th, tw));
+        }
+        function knee() {
+          var kp = J(kneeT, kneeY);
+          sEllipse(kp[0], kp[1], sw * K * 0.8, sw * K * 0.6, STEEL);
+          if (light) { sEllipse(kp[0] - 0.4, kp[1] - 0.4, sw * K * 0.45, sw * K * 0.35, STEEL_LIT); return; }
+          // an armour plate over the knee, raked back at the top
+          var k0 = kneeT + sh * 0.6, kl = heavy ? sh * 1.1 : sh * 0.7;
+          slabF(LF, k0, k0 + kl, s - sw * (heavy ? 1.08 : 0.8), s + sw * (heavy ? 1.08 : 0.8), kneeY - Math.round((heavy ? 5 : 4) * sf),
+            Math.round((heavy ? 11 : 8) * sf), heavy ? TB : TT, kl * 0.5, 0, sw * 0.12);
+        }
+        foot();
+        if (!front) knee();
+        shin();
+        if (front) { var kj = J(kneeT, kneeY); sEllipse(kj[0], kj[1], sw * K * 0.8, sw * K * 0.6, STEEL); }
+        thigh();
+        if (front) knee();
       }
 
-      function drawArms() {
-        var heavy = cls === 'heavy';
-        var armY = shoulder - Math.round(4 * sf);
-        var armOff = tWid * (heavy ? 1.3 : 1.08);
-        var ca = Math.cos(AIM), sa = Math.sin(AIM);
-        var order = (ca - sa) > 0 ? [-1, 1] : [1, -1];
-        var reach = MS.gun * (heavy ? 0.72 : 0.7);
-        order.forEach(function (s) {
-          var AF2 = frameAt(0, 0, AIM);
-          var off = s * armOff;
-          // the shoulder: a launcher where the hull carries one, else a pauldron
-          var sh = KITM.shoulder;
-          var onShoulder = (sh === 'missile' || sh === 'rocket') && (heavy || s < 0);
-          if (onShoulder) {
-            launcher(AF2, -tLen * 0.45, tLen * 0.3, off - tWid * 0.42, off + tWid * 0.42, shoulder - 2, Math.round(10 * sf), 3, 3, sh,
-              { tone: sh === 'rocket' ? TT : TB, warheads: sh === 'rocket' ? '#8a3a24' : '#b8b0a0', up: 2 });
-          } else {
-            slabF(AF2, -tLen * 0.3, tLen * 0.28, off - tWid * 0.32, off + tWid * 0.32, armY - 2, Math.round(10 * sf), TB, tLen * 0.08, tLen * 0.06, tWid * 0.06);
-          }
-          if (s < 0 && sh === 'dish') {
-            var dm = S3(AF2(-tLen * 0.2, off), shoulder + 6), db = S3(AF2(-tLen * 0.2, off), shoulder);
-            line(db, dm, 1.2, STEEL);
-            sEllipse(dm[0], dm[1] - 2, 5.5, 4, '#9aa4b0'); sEllipse(dm[0] + 0.5, dm[1] - 1.7, 4.4, 3, '#c3ccd6');
-          }
-          // the upper arm hanging, the forearm levelled at the target
-          var shp = S3(AF2(0, off), armY - 2), el = S3(AF2(tLen * 0.05, off), armY - Math.round(12 * sf));
-          line(shp, el, Math.round((heavy ? 7 : 5) * sf), STEEL);
-          line([shp[0] - 0.8, shp[1]], [el[0] - 0.8, el[1]], 1, STEEL_LIT);
-          var fz = armY - Math.round(15 * sf);
-          var fore = function () {
-            slabF(AF2, -tLen * 0.08, tLen * (heavy ? 0.55 : 0.45), off - tWid * (heavy ? 0.3 : 0.24), off + tWid * (heavy ? 0.3 : 0.24),
-              fz, Math.round((heavy ? 9 : 7) * sf), TB, tLen * 0.05, 0, tWid * 0.03);
-          };
-          var weapon = function () {
-            var type = s > 0 ? KITM.main : (heavy && KITM.off === 'mg' ? KITM.main : KITM.off);
-            armWeapon(type, AF2, tLen * 0.4, off, fz + Math.round(3.5 * sf), reach, sf * (heavy ? 1.25 : 1), tWid * 0.22);
-          };
-          if (ca + sa >= 0) { fore(); weapon(); } else { weapon(); fore(); }
+      /* ---- the body ---- */
+      function drawTorso() {
+        if (heavy) heavyTorso(); else if (light) lightTorso(); else mediumTorso();
+      }
+      /* A heavy mech's chest is a huge armoured box, its front raked back,
+         over a waist that tapers into a skirt of plates about the hips. The
+         head is sunk in it: all that shows is a visor slot high on the front. */
+      function heavyTorso() {
+        slabF(TF, -tL * 0.45, tL * 0.45, -tW * 0.45, tW * 0.45, hipY - 4, Math.round(7 * sf), TS);
+        var skZ = hipY - Math.round(6 * sf), skH = waistY - skZ;
+        var skB = [-tL * 0.62, tL * 0.68, tW * 0.66], skT = [-tL * 0.5, tL * 0.52, tW * 0.52];
+        shape(TF, rectPts(skB[0], skB[1], -skB[2], skB[2]), skZ, skH, TB, null, rectPts(skT[0], skT[1], -skT[2], skT[2]));
+        // the seams between the skirt plates, on the faces the viewer sees
+        var seam = function (p0, p1) { line(p0, p1, 0.8, 'rgba(8,10,14,.55)'); };
+        [-0.34, 0.34].forEach(function (k) {
+          if (fwd > 0) seam(S3(TF(skB[1], k * skB[2]), skZ), S3(TF(skT[1], k * skT[2]), skZ + skH));
+          if (fwd < 0) seam(S3(TF(skB[0], k * skB[2]), skZ), S3(TF(skT[0], k * skT[2]), skZ + skH));
+          [-1, 1].forEach(function (s) {
+            if (nearOf(s) <= 0) return;
+            var ka = (k + 1) / 2;
+            seam(S3(TF(skB[0] + (skB[1] - skB[0]) * ka, s * skB[2]), skZ), S3(TF(skT[0] + (skT[1] - skT[0]) * ka, s * skT[2]), skZ + skH));
+          });
         });
-        // on the back: aerials, or the flame fuel
-        if (KITM.shoulder === 'aerials') {
-          var BF = frameAt(0, 0, AIM);
-          aerial(BF, -tLen * 0.5, tWid * 0.5, shoulder, 22); aerial(BF, -tLen * 0.5, -tWid * 0.5, shoulder, 17);
+        var chestH = shoulder - waistY, lowH = Math.round(chestH * 0.34), zU = waistY + lowH, upH = chestH - lowH;
+        // exhaust stacks up the back of the chest, behind it when it faces the viewer
+        var stacks = function () {
+          [-1, 1].forEach(function (s) {
+            var e0 = S3(TF(-tL * 1.02, s * tW * 0.62), zU + upH * 0.65), e1 = S3(TF(-tL * 1.02, s * tW * 0.62), shoulder + 4);
+            line(e0, e1, Math.max(2.2, 3.2 * sf), STEEL);
+            line([e0[0] - sf, e0[1]], [e1[0] - sf, e1[1]], 1.2, STEEL_LIT);
+            sEllipse(e1[0], e1[1], 2 * sf, 1.2 * sf, '#0c0f13');
+          });
+        };
+        if (fwd > 0) stacks();
+        // the waist flaring out into the chest
+        shape(TF, rectPts(-tL * 0.5, tL * 0.5, -tW * 0.5, tW * 0.5), waistY, lowH, TT, null, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), true);
+        // the chest itself, hunched forward, its front plate raked back
+        shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
+          rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
+        // the visor slot, with its sensors lit
+        if (fwd > -0.1) {
+          var vk0 = 0.62, vk1 = 0.8, rk = tL * 0.34, vf = function (k, b) { return onFront(tL * 0.9, rk, zU, upH, k, b); };
+          poly(g, [vf(vk0, -tW * 0.46), vf(vk0, tW * 0.46), vf(vk1, tW * 0.43), vf(vk1, -tW * 0.43)], '#0b0e12');
+          [-0.26, 0, 0.26].forEach(function (b) { glow(vf((vk0 + vk1) / 2, b * tW), 0.9); });
+        }
+        if (fwd <= 0) stacks();
+      }
+      /* A medium mech is one rounded body, narrow at the waist, widest at the
+         chest, domed over the top, with its cockpit glazed into the front and
+         heat sinks standing up behind. */
+      function mediumTorso() {
+        shape(TF, oct(-tL * 0.5, tL * 0.5, -tW * 0.45, tW * 0.45, 0.25), hipY - 4, Math.round(6 * sf), TS);
+        var H = shoulder - waistY, h1 = Math.round(H * 0.32), h2 = Math.round(H * 0.36), h3 = H - h1 - h2;
+        var R0 = oct(-tL * 0.7, tL * 0.7, -tW * 0.66, tW * 0.66), R1 = oct(-tL, tL, -tW, tW), R2 = oct(-tL * 0.62, tL * 0.58, -tW * 0.62, tW * 0.62);
+        if (fwd > 0) vents();
+        shape(TF, R0, waistY, h1, TB, null, R1, true);
+        shape(TF, R1, waistY + h1, h2, TB, null, null, true);
+        shape(TF, R1, waistY + h1 + h2, h3, TB, null, R2);
+        // the canopy, over the front plate and up onto the dome
+        if (fwd > 0.05) {
+          var z1 = waistY + h1 + h2, z0 = waistY + h1 + Math.round(h2 * 0.45), kT = 0.6;
+          var aT = tL - tL * 0.42 * kT, bT = tW * (0.32 - 0.12 * kT);
+          var cp = [S3(TF(tL + 0.006, -tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.32), z1),
+            S3(TF(aT + 0.006, bT), z1 + h3 * kT), S3(TF(aT + 0.006, -bT), z1 + h3 * kT), S3(TF(tL + 0.006, -tW * 0.32), z1)];
+          var gy0 = Math.min(cp[3][1], cp[4][1]), gy1 = Math.max(cp[0][1], cp[1][1]);
+          var gl;
+          if (dead) gl = GLASS;
+          else {
+            gl = g.createLinearGradient(0, gy0, 0, gy1 + 0.01);
+            gl.addColorStop(0, '#ffc060'); gl.addColorStop(0.45, '#e8842a'); gl.addColorStop(1, '#9a4216');
+          }
+          poly(g, cp, gl);
+          edge(g, cp[4], cp[3], dead ? GLINT : '#ffe2b0', 0.8);
+          edge(g, cp[0], cp[1], 'rgba(8,10,14,.6)', 0.8);
+        }
+        if (fwd <= 0) vents();
+      }
+      // box heat sinks standing up off the back and the tops of the shoulders
+      function vents() {
+        var H = shoulder - waistY, zV = shoulder - Math.round(H * 0.35), hV = Math.round(H * 0.35 + 6 * sf);
+        var V = [[-tL * 0.8, -tW * 0.5], [-tL * 0.8, tW * 0.5], [-tL * 1.02, 0]];
+        V.sort(function (p, q) { var P1 = TF(p[0], p[1]), Q1 = TF(q[0], q[1]); return (P1.x + P1.y) - (Q1.x + Q1.y); });
+        V.forEach(function (v, i) {
+          var hh = v[1] === 0 ? hV - 2 : hV;
+          slabF(TF, v[0] - tL * 0.13, v[0] + tL * 0.13, v[1] - tW * 0.12, v[1] + tW * 0.12, zV, hh, TT);
+          var vt = S3(TF(v[0], v[1]), zV + hh);
+          line([vt[0] - 2 * sf, vt[1]], [vt[0] + 2 * sf, vt[1]], 1, 'rgba(8,10,14,.6)');
+        });
+      }
+      /* A light mech is a compact wedge of chest, broad at the shoulders,
+         with an accent plate across its front, over a thin waist. */
+      function lightTorso() {
+        slabF(TF, -tL * 0.55, tL * 0.55, -tW * 0.55, tW * 0.55, hipY - 3, Math.round(5 * sf), TS, tL * 0.1, tL * 0.1, tW * 0.05);
+        var wp = S3(TF(0, 0), hipY + 1), wq = S3(TF(0, 0), waistY + 2);
+        line(wp, wq, Math.max(2.5, 4 * sf), STEEL);
+        var cH = shoulder - waistY;
+        shape(TF, rectPts(-tL * 0.7, tL * 0.5, -tW * 0.55, tW * 0.55), waistY, cH, TB, null, rectPts(-tL, tL * 1.05, -tW, tW));
+        if (fwd > -0.1) {
+          var k0 = 0.3, k1 = 0.95, fa = function (k) { return tL * 0.5 + tL * 0.55 * k + 0.01; }, fb = function (k) { return tW * (0.55 + 0.45 * k); };
+          poly(g, [S3(TF(fa(k0), -fb(k0) * 0.6), waistY + cH * k0), S3(TF(fa(k0), fb(k0) * 0.6), waistY + cH * k0),
+            S3(TF(fa(k1), fb(k1) * 0.72), waistY + cH * k1), S3(TF(fa(k1), -fb(k1) * 0.72), waistY + cH * k1)], TT.mid);
+          edge(g, S3(TF(fa(k1), fb(k1) * 0.72), waistY + cH * k1), S3(TF(fa(k1), -fb(k1) * 0.72), waistY + cH * k1), TT.lit, 0.8);
+        }
+      }
+
+      /* ---- arms ---- */
+      /* The upper arm hangs from the shoulder, the forearm is held level at
+         the target. A heavy arm is a big square pauldron over a blocky
+         forearm ending in a cannon or a claw; a medium one a rounded shoulder
+         over a banded gun pod, twin barrels on one side; a light one a thin
+         arm with a small gun box. Main weapon right, second weapon left. */
+      function drawArm(s) {
+        var off = s * tW * (heavy ? 1.42 : light ? 1.45 : 1.14);
+        var fz = shoulder - Math.round((heavy ? 25 : light ? 15 : 22) * sf);
+        var fh = Math.round((heavy ? 10 : light ? 6 : 7) * sf);
+        var fwid = tW * (heavy ? 0.32 : light ? 0.26 : 0.24);
+        var fa0 = tL * (heavy ? 0.1 : light ? 0.2 : 0), fa1 = tL * (heavy ? 1.2 : light ? 1.6 : 1.05);
+        var shZ = shoulder - Math.round((heavy ? 8 : light ? 4 : 7) * sf);
+        var elb = [tL * (heavy ? 0.3 : 0.25), fz + fh - 1];
+        var type = s > 0 ? KITM.main : KITM.off;
+        var wz = fz + Math.round(fh * 0.5);
+        var sh = KITM.shoulder, rack = (sh === 'missile' || sh === 'rocket') && !heavy && s < 0;
+        function pauldron() {
+          if (heavy) {
+            // an accent rim, then the square pauldron over it
+            var pz = shoulder - Math.round(14 * sf);
+            slabF(TF, -tL * 0.66, tL * 0.62, off - tW * 0.42, off + tW * 0.42, pz - 2, 3, TS);
+            slabF(TF, -tL * 0.64, tL * 0.6, off - tW * 0.4, off + tW * 0.4, pz, shoulder + 3 - pz, TT, tL * 0.18, tL * 0.18, tW * 0.12);
+          } else if (light) {
+            slabF(TF, -tL * 0.5, tL * 0.5, off - tW * 0.26, off + tW * 0.26, shoulder - Math.round(6 * sf), Math.round(5 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
+          } else {
+            var mz = shoulder - Math.round(11 * sf);
+            shape(TF, oct(-tL * 0.5, tL * 0.5, off - tW * 0.32, off + tW * 0.32, 0.3), mz, Math.round(9 * sf), TB, 0.6);
+            if (rack) launcher(TF, -tL * 0.35, tL * 0.4, off - tW * 0.2, off + tW * 0.2, mz + Math.round(9 * sf) - 1, Math.round(6 * sf), 2, 2, sh,
+              { tone: TT, warheads: RED, up: 1 });
+          }
+        }
+        function upper() {
+          if (heavy) {
+            // a heavy arm's upper section is armoured too, from pauldron to elbow
+            var uz = fz + fh - 2;
+            slabF(TF, -tL * 0.28, tL * 0.24, off - tW * 0.26, off + tW * 0.26, uz, shoulder - Math.round(12 * sf) - uz + 3, TS, tL * 0.05, tL * 0.05, tW * 0.04);
+            var ep = S3(TF(tL * 0.24, off), uz + 2);
+            sEllipse(ep[0], ep[1], 3 * sf, 2.6 * sf, STEEL);
+            return;
+          }
+          var p0 = S3(TF(0, off), shZ), p1 = S3(TF(elb[0], off), elb[1]);
+          var w = Math.max(2, (light ? 2.5 : 5) * sf);
+          line(p0, p1, w, STEEL);
+          line([p0[0] - w * 0.2, p0[1]], [p1[0] - w * 0.2, p1[1]], Math.max(0.8, w * 0.2), STEEL_LIT);
+          sEllipse(p1[0], p1[1], w * 0.62, w * 0.5, STEEL);
+        }
+        function forearm() {
+          slabF(TF, fa0, fa1, off - fwid, off + fwid, fz, fh, TB, tL * 0.08, tL * 0.06, tW * 0.03);
+          // accent bands round the forearm
+          var bands = heavy ? [[0.78, 0.94]] : light ? [] : [[0.42, 0.56], [0.82, 0.96]];
+          bands.forEach(function (bd) {
+            slabF(TF, fa0 + (fa1 - fa0) * bd[0], fa0 + (fa1 - fa0) * bd[1], off - fwid * 1.08, off + fwid * 1.08, fz - 0.5, fh + 1, TT);
+          });
+        }
+        function weapon() {
+          var a0 = fa1 - tL * 0.05, reach = fa1 + MS.gun * (heavy ? 0.3 : light ? 0.2 : 0.28);
+          var sc = sf * (heavy ? 1.6 : light ? 0.75 : 1.3);
+          if (heavy && type === 'none') {
+            // no gun on this arm: a clawed hand
+            [-0.55, 0, 0.55].forEach(function (k) {
+              var b = off + k * fwid;
+              var c0 = S3(TF(fa1, b), fz + fh * 0.6), c1 = S3(TF(fa1 + tL * 0.3, b + k * fwid * 0.3), fz + fh * 0.3), c2 = S3(TF(fa1 + tL * 0.38, b), fz - 3 * sf);
+              line(c0, c1, 2.2 * sf, STEEL); line(c1, c2, 1.8 * sf, STEEL);
+              line([c0[0] - 0.5, c0[1] - 0.5], [c1[0] - 0.5, c1[1] - 0.5], 0.7, STEEL_LIT);
+            });
+            return;
+          }
+          if (!heavy && !light && s < 0 && (type === 'mg' || type === 'auto' || type === 'twinauto')) {
+            // twin barrels, each with its muzzle glowing
+            var kd = type === 'mg' ? 'mg' : 'auto';
+            [-1, 1].forEach(function (k) {
+              glow(barrel(TF, a0, reach * 0.92, off + k * fwid * 0.5, wz, 1.7 * sc, kd, { brake: true }), 0.9);
+            });
+            return;
+          }
+          var tip = armWeapon(type, TF, a0, off, wz, reach, sc, fwid * 0.9);
+          if (!heavy && type !== 'plasma' && type !== 'flame') glow(tip, light ? 0.9 : 1);
+        }
+        if (fwd >= 0) { upper(); pauldron(); forearm(); weapon(); } else { weapon(); forearm(); upper(); pauldron(); }
+      }
+
+      /* ---- on top: a heavy's missile boxes, a medium's crest, a light's head ---- */
+      function drawTop() {
+        extras();
+        if (heavy) {
+          // a low cowl where the head is sunk into the chest
+          slabF(TF, -tL * 0.1, tL * 0.46, -tW * 0.3, tW * 0.3, shoulder - 1, Math.round(3 * sf), TB, tL * 0.2, tL * 0.05, tW * 0.06);
+          // a squat box on each front shoulder corner, its tubes facing forward
+          var sh = KITM.shoulder, armed = sh === 'missile' || sh === 'rocket';
+          var boxes = [-1, 1].sort(byNear);
+          boxes.forEach(function (s) {
+            var b0 = s * tW * 0.36, b1 = s * tW * 0.96, a0 = -tL * 0.3, a1 = tL * 0.58, bz = shoulder - 1, bh = Math.round(9 * sf);
+            if (armed) launcher(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, 2, 3, sh, { tone: TB, warheads: RED });
+            else slabF(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, TB, tL * 0.05, tL * 0.05, tW * 0.04);
+          });
+        } else if (light) {
+          var hz = shoulder + Math.round(4 * sf), hh = Math.round(7 * sf);
+          var nk = S3(TF(tL * 0.05, 0), shoulder - 2), nk2 = S3(TF(tL * 0.05, 0), hz + 1);
+          line(nk, nk2, Math.max(2, 3.5 * sf), STEEL);
+          slabF(TF, -tL * 0.35, tL * 0.5, -tW * 0.24, tW * 0.24, hz, hh, TB, tL * 0.3, tL * 0.05, tW * 0.05);
+          if (fwd > -0.1) {
+            var hf = function (k, b) { return onFront(tL * 0.5, tL * 0.3, hz, hh, k, b); };
+            poly(g, [hf(0.32, -tW * 0.18), hf(0.32, tW * 0.18), hf(0.66, tW * 0.16), hf(0.66, -tW * 0.16)], '#0b0e12');
+            glow(hf(0.49, 0), 0.9);
+          }
+          // the fin, a blade raked up and back to a point
+          shape(TF, rectPts(-tL * 0.3, tL * 0.28, -tW * 0.07, tW * 0.07), hz + hh - 1, Math.round(7 * sf), TT, null,
+            rectPts(-tL * 1.0, -tL * 0.72, -tW * 0.03, tW * 0.03));
+        } else {
+          // the dorsal crest over the dome, a sensor light at its brow
+          slabF(TF, -tL * 0.62, tL * 0.52, -tW * 0.08, tW * 0.08, shoulder - 2, Math.round(6 * sf), TT, tL * 0.3, tL * 0.18, 0);
+          glow(S3(TF(tL * 0.44, 0), shoulder + Math.round(2 * sf)), 1);
+        }
+      }
+      // what the hull's role puts on its back: aerials, a dish, fuel, a cross
+      function extras() {
+        var bz = shoulder - 1;
+        if (KITM.shoulder === 'aerials') { aerial(TF, -tL * 0.7, tW * 0.5, bz, 20); aerial(TF, -tL * 0.7, -tW * 0.5, bz, 14); }
+        if (spec.dish || KITM.shoulder === 'dish') {
+          var dr = light ? 3.2 : heavy ? 5 : 4.2;
+          var db = S3(TF(-tL * 0.7, -tW * 0.35), bz), dm = S3(TF(-tL * 0.7, -tW * 0.35), bz + (light ? 5 : 8));
+          line(db, dm, 1.2, STEEL);
+          sEllipse(dm[0], dm[1] - 1.2, dr, dr * 0.72, '#9aa4b0'); sEllipse(dm[0] + 0.5, dm[1] - 1, dr * 0.78, dr * 0.52, '#c3ccd6');
         }
         if (KITM.shoulder === 'tanks') {
-          var TF3 = frameAt(0, 0, AIM);
           [-0.4, 0.4].forEach(function (b) {
-            var t1 = S3(TF3(-tLen * 0.6, tWid * b), shoulder - 12), t2 = S3(TF3(-tLen * 0.6, tWid * b), shoulder - 2);
+            var t1 = S3(TF(-tL * 1.1, tW * b), shoulder - 12), t2 = S3(TF(-tL * 1.1, tW * b), shoulder - 2);
             line(t1, t2, 5, '#3a3f38'); line([t1[0] - 1.2, t1[1]], [t2[0] - 1.2, t2[1]], 1.2, '#6a7064');
           });
         }
+        if (spec.cross) crossOn(TF, light ? -tL * 0.6 : -tL * 0.35, 0, shoulder + (heavy ? 0.3 : -0.7), tW * 0.3);
       }
 
-      function drawHead() {
-        var heavy = cls === 'heavy';
-        var HF2 = frameAt(0, 0, AIM);
-        var ho = tLen * (heavy ? 0.05 : 0.2);
-        var headY = shoulder + hm.neck;
-        var nk = S3(HF2(ho, 0), 0);
-        line([nk[0], nk[1] - shoulder + 1], [nk[0], nk[1] - headY], 4, STEEL);
-        var hl = tLen * (heavy ? 0.36 : 0.46), hw = tWid * (heavy ? 0.5 : 0.7);
-        slabF(HF2, ho - hl * 0.5, ho + hl * 0.5, -hw * 0.5, hw * 0.5, headY, hm.headH, TT, hl * 0.25, hl * 0.05, hw * 0.1);
-        if (Math.cos(AIM) + Math.sin(AIM) > -0.2) {
-          var v1 = S3(HF2(ho + hl * 0.46, -hw * 0.34), headY + hm.headH * 0.3), v2 = S3(HF2(ho + hl * 0.46, hw * 0.34), headY + hm.headH * 0.3);
-          var v3 = S3(HF2(ho + hl * 0.3, hw * 0.3), headY + hm.headH * 0.85), v4 = S3(HF2(ho + hl * 0.3, -hw * 0.3), headY + hm.headH * 0.85);
-          poly(g, [v1, v2, v3, v4], GLASS); edge(g, v4, v3, GLINT, 0.8);
-        }
-        aerial(HF2, ho - hl * 0.4, hw * 0.35, headY + hm.headH, 12);
-        // a radar dish on a short mast behind the head, turning with it
-        // (unless the shoulder already carries the dish)
-        if (spec.dish && KITM.shoulder !== 'dish') {
-          var db2 = S3(HF2(ho - hl * 0.55, 0), headY + hm.headH * 0.6), dt2 = S3(HF2(ho - hl * 0.55, 0), headY + hm.headH + 5);
-          line(db2, dt2, 1.2, STEEL);
-          sEllipse(dt2[0], dt2[1] - 1.5, 4.2, 3, '#9aa4b0'); sEllipse(dt2[0] + 0.4, dt2[1] - 1.2, 3.3, 2.2, '#c3ccd6');
-        }
-        if (spec.cross) crossOn(frameAt(-tLen * 0.1, 0, f), 0, 0, shoulder + 0.3, tWid * 0.35);
-      }
     }
 
     /* ================= rotorcraft ================= */
@@ -9352,10 +9655,10 @@
         if (unit.prop === 'walker') {                 // a mech stands well clear of its hull
           var mL = sp.len * 0.8, mH = sp.hgt * 0.8;
           var sf2 = mL / 2.0, bl = (HULL[unit.art] || HULL.wheeled).len;
-          if (bl < 2.1) return Math.round(38 * sf2 + mH * 0.4) + Math.round(mH * 0.95 + 4) + 10;
-          if (bl >= 2.45) return Math.round(26 * sf2 + mH * 0.5) + Math.round(mH * 1.15 + 8) + Math.round(6 * sf2) + 14;
-          return Math.round(30 * sf2 + mH * 0.55) + Math.round(mH * 0.95 + 5) +
-            Math.round(9 * sf2) + 10;
+          if (bl < 2.3) return Math.round(24 * sf2 + mH * 0.4) + Math.round(10 * sf2 + mH * 0.3) + Math.round(11 * sf2) + 10;
+          if (bl >= 2.55) return Math.round(20 * sf2 + mH * 0.35) + Math.round(24 * sf2 + mH * 0.5) + Math.round(9 * sf2) + 12;
+          return Math.round(22 * sf2 + mH * 0.4) + Math.round(20 * sf2 + mH * 0.5) +
+            Math.round(6 * sf2) + 12;
         }
         return (DRIVE[unit.prop] ? DRIVE[unit.prop].ride : 7) + sp.hgt +
           (sp.tHgt || 0) + 6;

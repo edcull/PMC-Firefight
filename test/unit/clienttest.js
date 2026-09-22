@@ -204,6 +204,8 @@ function boot(root, opts) {
     matchMedia: () => ({ matches: false, addListener() { }, removeListener() { }, addEventListener() { } }),
     WebSocket: opts.WebSocket || function () { throw new Error('no sockets in this test'); },
     AudioContext: undefined, webkitAudioContext: undefined,
+    // the menu's backdrop bakes whole tables in a loop: nothing to see here
+    PMC_NO_BACKDROP: true,
     alert() { }, confirm: () => true, prompt: () => null,
     Image: function () { return makeElement('img', doc); },
     FileReader: function () { },
@@ -260,6 +262,34 @@ ok('the board is there', typeof app.win.PMC_STATE === 'function');
 /* Boot the app the way the page does. */
 const bootFn = app.win.PMC_BOOT || null;
 app.drain(4);
+
+/* ---- the main menu, and the ways out of it ----
+   Buttons are not clickable in this DOM, so the menu is driven through the
+   same hooks its buttons call. */
+{
+  const W = app.win, byId = (id) => app.doc.getElementById(id);
+  ok('the menu is there', !!W.PMCMenu && typeof W.PMC_SKIRMISH === 'function');
+  W.PMCMenu.open();
+  ok('the menu opens', W.PMCMenu.isOpen() && byId('setup').hidden === true);
+  ok('with no battle on, there is no battle to go back to', byId('btn-resume').hidden === true);
+  W.PMCMenu.show('skirmish');
+  ok('Skirmish opens its own list', byId('menu-skirmish').hidden === false && byId('menu-main').hidden === true);
+  W.PMCMenu.close(); W.PMC_SKIRMISH('hotseat');
+  ok('Hotseat opens the muster sheet, set for hotseat',
+    byId('setup').hidden === false && byId('sel-mode').value === 'hotseat');
+  ok('...and it is not in commando mode', byId('solo-box').hidden === true);
+  W.PMCMenu.open();
+  ok('going back to the menu puts the muster sheet away', byId('setup').hidden === true);
+  W.PMCMenu.close(); W.PMC_SKIRMISH('coop');
+  ok('Co-operative opens the sheet in commando mode', byId('solo-box').hidden === false &&
+    byId('sel-solo-mode').value === 'coop');
+  W.PMCMenu.close(); W.PMC_SKIRMISH('ai');
+  ok('...and a standard battle turns commando mode off again', byId('solo-box').hidden === true &&
+    byId('sel-mode').value === 'ai');
+  W.PMC_CAMPAIGN.open('hub');
+  ok('the campaign screen puts the menu away', !W.PMCMenu.isOpen() && byId('camp').hidden === false);
+  byId('camp').hidden = true; byId('setup').hidden = true;
+}
 
 /* ---- a battle, started the way the setup screen starts one ---- */
 const R = app.win.PMC;

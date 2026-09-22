@@ -247,22 +247,31 @@
       burstOfNoise(t, 0.5, 0.06, 'bandpass', 3200, 2, 5200);
     },
 
-    /* A guided missile: the motor lights, then howls away and gets quieter as it
-       goes. `flight` is how long it is in the air. */
-    missile: function (delay, flight) {
+    /* A guided missile: thrown clear of the tube with a whoosh, climbing away
+       cold, and then the motor catching at the top of the arc and roaring down
+       after the target. `flight` is how long it is in the air, `top` how far
+       into that the motor lights. */
+    missile: function (delay, flight, top) {
       if (!ensure()) return;
       var t = now() + (delay || 0);
       var d = Math.max(0.3, Math.min(1.8, flight || 0.7));
+      var tp = Math.max(0.05, Math.min(d - 0.1, top == null ? d * 0.5 : top));
       /* No tone sweeping up: that is a ray gun, not a rocket motor. What a
          missile is, is a hard crack of pressure as the booster lights, a thump
          as it leaves the rail, and then a rough roar that holds for as long as
          it is flying and thins as it goes away from you. */
-      burstOfNoise(t, 0.05, 0.42, 'highpass', 1700, 0.8);            // the igniter
-      burstOfNoise(t, 0.26, 0.55, 'lowpass', 900, 0.6, 170);         // the blast off the rail
-      tone(t, 0.24, 0.26, 'sine', 132, 42);                          // and the thump of it
-      burstOfNoise(t + 0.03, d, 0.38, 'bandpass', 520, 0.45, 240);   // the motor, running
-      burstOfNoise(t + 0.03, d, 0.2, 'highpass', 1300, 0.4, 2800);   // the hiss over it
-      tone(t + 0.02, d * 0.95, 0.11, 'sawtooth', 64, 36);            // the rumble under it
+      /* The launch is air, not fire: it is thrown clear and goes up quiet, so
+         there is a whoosh and the thump of the tube and nothing else until the
+         motor catches at the top and the roar comes down with it. */
+      burstOfNoise(t, 0.34, 0.3, 'bandpass', 420, 0.7, 1500);        // the whoosh out of the tube
+      tone(t, 0.18, 0.13, 'sine', 108, 40);                          // the thump of it
+      var run = Math.max(0.2, d - tp);                               // what is left of the flight
+      burstOfNoise(t + tp, 0.07, 0.5, 'highpass', 1700, 0.85);       // the igniter catching
+      burstOfNoise(t + tp, 0.32, 0.58, 'lowpass', 900, 0.6, 170);    // the motor lighting
+      tone(t + tp, 0.28, 0.28, 'sine', 132, 42);
+      burstOfNoise(t + tp + 0.03, run, 0.4, 'bandpass', 520, 0.45, 240);   // the motor, running
+      burstOfNoise(t + tp + 0.03, run, 0.22, 'highpass', 1300, 0.4, 2800); // the hiss over it
+      tone(t + tp + 0.02, run * 0.95, 0.12, 'sawtooth', 64, 36);           // the rumble under it
     },
 
     /* Unguided rockets off the rails: a ripple, not a single launch. */

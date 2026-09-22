@@ -180,11 +180,19 @@
       return x ? x.name + ' — ' + x.text : '?';
     }).join('\n');
   }
-  function open(v) { view = v || view; el('camp').hidden = false; render(); }
+  function open(v) {
+    if (root.PMCMenu) root.PMCMenu.close();          // the menu would sit on top
+    view = v || view; el('camp').hidden = false; render();
+  }
   function close() {
     el('camp').hidden = true;
     // with no battle on the table there would be nothing left to look at
-    if (!root.PMC_STATE || !root.PMC_STATE()) { var s = el('setup'); if (s) s.hidden = false; }
+    if (!root.PMC_STATE || !root.PMC_STATE()) toMenu();
+  }
+  function toMenu() {
+    el('camp').hidden = true;
+    if (root.PMCMenu) root.PMCMenu.open();
+    else { var s = el('setup'); if (s) s.hidden = false; }
   }
 
   /* ================= asking the player something =================
@@ -304,7 +312,8 @@
             esc(a.name) + ' — ' + esc(a.blurb) + '</option>';
         }).join('') + '</select></div>';
       h += '<button class="start" data-go="newcamp">Raise the force</button>';
-      h += '<p class="camp-foot"><button class="lnk" data-go="import">Load a save file</button>' +
+      h += '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button>' +
+        '<button class="lnk" data-go="import">Load a save file</button>' +
         '<input type="file" id="camp-file" accept="application/json" hidden></p>';
       return h;
     }
@@ -338,6 +347,7 @@
       '">Take a contract</button>';
     h += storagePanel();
     h += '<p class="camp-foot">' +
+      '<button class="lnk" data-go="menu">← Main menu</button>' +
       '<button class="lnk" data-go="roster">The dossier</button>' +
       '<button class="lnk" data-go="export">Save to a file</button>' +
       '<button class="lnk" data-go="import">Load a file</button>' +
@@ -1630,6 +1640,7 @@
         drawState.won = won; save(); render(); return;
       }
       case 'hub': view = 'hub'; render(); return;
+      case 'menu': toMenu(); return;
       case 'setserver': {
         var url = (el('camp-server').value || '').trim();
         Store.server(url || null);

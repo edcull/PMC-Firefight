@@ -1515,18 +1515,18 @@
 
     /* ---- PMC machines ---- */
     // a patrol jeep has the crew's rifles; the heavy one mounts a machine gun
-    lpv: { p: 'small' }, hpv: { p: 'burst' }, recon: { p: 'chain' },
-    // the light tank: its autocannon, then a pair of missiles off the turret box
-    lcv: { p: 'missile', n: 2, s: 'chain' },
+    lpv: { p: 'small' }, hpv: { p: 'chain' }, recon: { p: 'shell', s: 'pistol' },
+    // the light tank: its main gun twice over, and the commander's sidearm
+    lcv: { p: 'shell', n: 2, s: 'pistol' },
     /* A medium hull fires its main gun twice in quick succession over the
        coaxial; an advanced one puts three rounds of main gun down and follows
        them with two lines from its rail driver. */
     mcv: { p: 'shellbig', n: 2, s: 'pistol' },
     acv: { p: 'shellbig', n: 3, s: 'rail', sn: 2 },
-    lhunter: { p: 'missile', n: 2 }, hunter: { p: 'rocket' },
-    ldestroyer: { p: 'shellbig' },
+    lhunter: { p: 'missile', n: 2 }, hunter: { p: 'missile', n: 3 },
+    ldestroyer: { p: 'shellbig', n: 2 },
     // the medium destroyer's gun is a rail driver: the line, then the round bursting
-    mdestroyer: { p: 'shellbig', s: 'rail' },
+    mdestroyer: { p: 'shellbig', n: 2, s: 'rail', sn: 2 },
     // a soft-skinned lorry has no gun of its own: what shoots is the crew, at 12"
     unarmoured: { p: 'pistol' }, ltransport: { p: 'smg' },
     lapc: { p: 'small' },
@@ -1538,12 +1538,12 @@
     lengveh: { p: 'flame', s: 'chain' },
     hengveh: { p: 'shell', n: 3, s: 'rail', sn: 3 },
     // support hulls fire in batteries: two tubes, then three
-    impsupport: { p: 'rocket' }, lsupport: { p: 'shellbig', n: 3 },
+    impsupport: { p: 'rocket' }, lsupport: { p: 'arcbig', n: 3 },
     msupport: { p: 'arcbig', n: 5, s: 'arcbig', sn: 5 },
     // the advanced support hull's heavy plasma cannon: four bolts, each one bursting
     asupport: { p: 'shellbig', n: 4, s: 'rail', sn: 4 },
     // air defence: the gun first, then the missiles off the rails
-    aaveh: { p: 'missile', n: 2, s: 'burst' },
+    aaveh: { p: 'missile', n: 2, s: 'chain' },
     // signals and ambulance hulls: a pintle gun and the crew, nothing more
     ewveh: { p: 'small' }, medveh: { p: 'small' },
     /* Transport aircraft: a door gun and whoever is leaning out of it, inside a
@@ -1595,9 +1595,9 @@
        gun-truck throwing charges over its machine gun, then a proper autocannon,
        and at the top a rocket rack over one. */
     rtechnical: { p: 'small' },
-    ricv: { p: 'burst', s: 'rocket' },
+    ricv: { p: 'chain', s: 'rocket' },
     rlicv: { p: 'chain' },
-    rhicv: { p: 'chain', s: 'rocket' },
+    rhicv: { p: 'shellbig', n: 2, s: 'rocket' },
     rltv: { p: 'small' }, ritv: { p: 'chain' },
     // the super-heavy carries a gun in the back as well as its autocannon
     rshtv: { p: 'chain', s: 'shell', sn: 2 },

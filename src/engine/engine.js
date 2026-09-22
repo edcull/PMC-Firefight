@@ -203,7 +203,11 @@
        at whatever pace it likes. endActivation calls back into maybeAI, so the
        drain is guarded: the inner call returns and the loop below carries on,
        which keeps a long OpFor turn off the stack. */
-    var draining = false;
+    /* A demo has an AI on both sides, so a drain would play the whole battle
+       out before the screen saw any of it. There it goes one activation at a
+       time and waits to be asked for the next, which is what paces a game
+       nobody is playing. */
+    var draining = false, paced = false;
     function canAI() {
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
         isAI(state.activeSide);
@@ -212,6 +216,7 @@
       if (draining || !canAI()) return;
       draining = true;
       try {
+        if (paced) { aiStep(); return; }
         for (var guard = 0; canAI() && guard < 4000; guard++) if (!aiStep()) break;
       } finally { draining = false; }
     }
@@ -301,6 +306,7 @@
       } : null
     };
     state.cfg.aiSides = cfg.mode === 'demo' ? ['A', 'B'] : cfg.mode === 'ai' ? ['B'] : [];
+    paced = state.cfg.aiSides.length === 2;
     state.cfg.scenario = scenId;
     // results wait for Continue unless the player has asked for auto-advance;
     // a hands-off demo starts with it on
@@ -450,8 +456,10 @@
       kind: 'Scenario', title: scen.name, note: scen.blurb,
       list: (state.sc.attacker ? [{ text: roleSentence() }] : [])
         .concat([{ text: scen.win }, { text: scen.hint }])
-        .concat(state.sc.attacker && playerSide()
-          ? [{ text: deployWhere(playerSide()) }] : [])
+        .concat(!state.sc.attacker ? []
+          : playerSide() ? [{ text: deployWhere(playerSide()) }]
+            : [{ text: sideName('A') + ' — ' + deployWhere('A') },
+              { text: sideName('B') + ' — ' + deployWhere('B') }])
     });
     logLine('note', cfg.nameA + ' [A] against ' + cfg.nameB + ' [B].');
     logLine('note', 'Terrain generator: ' + built.generator + '. ' +
@@ -1730,7 +1738,7 @@
     state.turn += 1;
     state.units.forEach(function (u) {
       u.activated = false; u.marked = false; u.markMoved = false; u.shotFrom = []; u.coordUsed = false;
-      u.hackUsed = false; u.hacked = false; u.supportUsed = false;
+      u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
       u.disembarked = false;
     });
     state.chain = null; state.mark = null;
@@ -1796,7 +1804,7 @@
     state.turn += 1;
     state.units.forEach(function (u) {
       u.activated = false; u.marked = false; u.markMoved = false; u.shotFrom = []; u.coordUsed = false;
-      u.hackUsed = false; u.hacked = false; u.supportUsed = false;
+      u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
       u.disembarked = false;
     });
     state.chain = null;
@@ -1873,7 +1881,14 @@
      Three of the six scenarios (pp. 53-55) hand one company the attack and the
      other the ground, and the two play nothing alike — so the player is told
      which they are, in the header, on the deployment card and in the log. */
-  function playerSide() { return isAI('A') ? (isAI('B') ? null : 'B') : 'A'; }
+  /* "You" only means anything where one side is the player's and the other is
+     the machine's. With a person on each side — hotseat, or two browsers — the
+     engine writes for both of them at once, so it names the sides instead and
+     each screen says which one it is sitting in. */
+  function playerSide() {
+    if (isAI('A')) return isAI('B') ? null : 'B';
+    return isAI('B') ? 'A' : null;
+  }
 
   function roleOf(side) {
     if (!state.sc || !state.sc.attacker || !side) return null;
@@ -1969,6 +1984,7 @@
 
   function endActivation(actor) {
     ui.lastActed = actor || ui.selected || null;
+    if (ui.lastActed) ui.lastActed.advancing = false;   // an Advance ends with its activation
     // Infamy of Melancholy (p. 143): its activation weighs on every friend within 6"
     var mel = ui.lastActed;
     if (mel && mel.alive && R.campFlag(mel, 'melancholy')) {
@@ -2360,6 +2376,14 @@
     if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
     if (u.side !== state.activeSide) return { on: false, hint: state.solo ? 'The OpFor is acting.' : 'It is ' + sideName(state.activeSide) + '’s activation.' };
     if (u.activated) return { on: false, hint: u.name + ' has already acted this turn.' };
+    /* An Advance is one action: the move, then the shot (p. 27). Half-way
+       through it, Fire!, Assault, another move — none of them is on; the unit
+       shoots without the Fire! bonus, or holds its fire. */
+    if (u.advancing) {
+      return id === 'advance'
+        ? { on: true, hint: 'Advancing: it has moved. Pick a target to shoot, without the Fire! bonus — or press Advance again to hold its fire.' }
+        : { on: false, hint: 'Advancing: it has already moved, so all that is left of this activation is the Advance shot, or holding its fire.' };
+    }
     if (state.solo && state.solo.coop && (u.owner || 1) !== state.activeOwner) {
       return { on: false, hint: 'That is ' + soloOwnerName(u.owner || 1) + '’s unit — it is ' + soloOwnerName(state.activeOwner) + '’s turn to activate.' };
     }
@@ -2614,6 +2638,14 @@
 
   function chooseAction(id) {
     var u = ui.selected; if (!u) return;
+    if (u.advancing) {
+      if (id !== 'advance') return;
+      if (ui.mode === 'advance-fire') { holdFire(u); return; }     // pressed again: it holds its fire
+      ui.mode = 'advance-fire'; ui.moves = []; ui.terrain = [];
+      ui.targets = targetsFor(u, {});
+      render();
+      return;
+    }
     if (ui.mode === id || (ui.mode === 'advance-move' && id === 'advance')) {   // toggle off
       ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.preview = null; render(); return;
     }
@@ -2955,6 +2987,15 @@
     u.activated = true; endActivation(u);
   }
 
+  // an Advance that moves and then does not shoot: the activation ends there
+  function holdFire(u) {
+    u.advancing = false;
+    u.activated = true;
+    logLine('note', u.label + ' holds its fire.');
+    ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
+    endActivation(u);
+  }
+
   function doMove(pt) {
     var u = ui.selected;
     var d = R.inches(u.x, u.y, pt.x, pt.y);
@@ -2968,6 +3009,9 @@
     crushAlong(u, path);
     animateMove(u, path);
     if (ui.mode === 'advance-move') {
+      /* Moved, and not yet shot: the unit is half-way through its Advance. It
+         has used its move, so all that is left to it is the Advance's shot. */
+      u.advancing = true;
       ui.mode = 'advance-fire'; ui.moves = [];
       ui.targets = targetsFor(u, {});
       logLine('move', u.label + ' advances ' + d.toFixed(1) + '".');
@@ -4315,6 +4359,12 @@
           var u = unitOf(it.id);
           if (!u) return no('no such unit');
           if (!mayAct(side) && state.phase === 'battle') return no('not your activation');
+          /* A unit half-way through an Advance has to finish it first; left
+             behind, it could come back later in the turn for a whole action. */
+          var mid = ui.selected;
+          if (mid && mid !== u && mid.advancing && !mid.activated) {
+            return no(mid.name + ' is half-way through its Advance — let it shoot, or hold its fire, first');
+          }
           ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
           ui.preview = null; ui.hint = null;
           focusUnit(u);
@@ -4379,6 +4429,13 @@
           ui.deployPick = null;
           setHint(null, gu.name + ' sets up inside the building.');
           render();
+          return yes;
+        }
+        /* One more activation, please: how a watched battle is walked forward,
+           the client asking again once it has finished drawing the last one. */
+        case 'step': {
+          if (state.phase !== 'battle' || !canAI()) return no('nothing to step');
+          maybeAI();
           return yes;
         }
         case 'start': {
@@ -4492,6 +4549,9 @@
         }
         case 'cancel': {
           if (!mayAct(side)) return no('not your activation');
+          // half-way through an Advance there is nothing to go back to: it holds its fire
+          var adv = ui.selected;
+          if (adv && adv.advancing && !adv.activated && adv.side === side) { holdFire(adv); return yes; }
           ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; ui.preview = null;
           render();
           return yes;

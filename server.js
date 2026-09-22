@@ -99,6 +99,21 @@ const server = http.createServer(function (req, res) {
 
 ws.attach(server, '/ws', function (sock) { lobby.connect(sock); });
 
+/* A browser that goes away mid-request — a tab closed, a laptop shut, a network
+   dropped — turns up here as a socket error. It is one player's connection, not
+   the server's business, so it is noted and the game carries on. */
+server.on('clientError', function (err, sock) {
+  log('a connection failed: ' + (err && err.code ? err.code : err));
+  try { sock.destroy(); } catch (e) { }
+});
+server.on('error', function (err) {
+  if (err && err.code === 'EADDRINUSE') {
+    log('port ' + PORT + ' is already in use — run it on another with PORT=9000 node server.js');
+    process.exit(1);
+  }
+  log('the server hit a problem: ' + (err && err.message || err));
+});
+
 server.listen(PORT, HOST, function () {
   const shown = HOST === '0.0.0.0' ? 'localhost' : HOST;
   log('PMC 2670 on http://' + shown + ':' + PORT);

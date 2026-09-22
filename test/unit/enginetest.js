@@ -478,7 +478,110 @@ function offTableTargets() {
   console.log('  ' + shots + ' shots in ' + battles + ' OpFor battles, ' + offTable + ' at anything off the table');
 }
 
+/* ---- an Advance is one action ----
+   Move, then shoot without the Fire! bonus (p. 27). Half-way through — moved,
+   not yet shot — the unit used to be offered Fire!, Assault and another Move
+   as if it had done nothing: a free second action. */
+function advanceIsOneAction() {
+  console.log('advance');
+  let found = 0, battles = 0;
+  const checks = { fireOff: 0, assaultOff: 0, moveOff: 0, advanceOn: 0, refusedFire: 0, noSwitch: 0, holdEnds: 0, shotEnds: 0 };
+  /* Battles are rolled unseeded, and whether a unit is ever caught half-way
+     through an Advance depends on what the armies rolled and where the OpFor
+     put them. Thirty battles was enough most of the time, which is not the same
+     as enough: the search goes on until it has its four. */
+  for (let n = 0; n < 200 && found < 4; n++) {
+    battles++;
+    const e = Engine.create();
+    e.start({
+      tier: 3, pl: 1, scenario: 'meeting',
+      armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'rebel'),
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'barren'
+    });
+    e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' });
+    if (!e.intent(e.query.placingSide() || 'A', { k: 'start' }).ok) e.intent('B', { k: 'start' });
+    for (let g = 0; g < 160 && !e.over() && found < 4; g++) {
+      const sel = e.sel(), st = e.state();
+      if (sel.insertion) {
+        const sd = sel.insertion.unit ? sel.insertion.unit.side : 'A', sp = (sel.insertion.spots || [])[0];
+        e.intent(sd, sp ? { k: 'insert', x: sp.x, y: sp.y } : { k: 'holdinsert' }); continue;
+      }
+      if (st.phase !== 'battle') break;
+      const side = st.activeSide, list = e.query.eligible(side);
+      if (!list.length) break;
+      const u = list[0];
+      e.intent(side, { k: 'select', id: u.id });
+      if (e.query.actionState(u, 'advance').on && e.intent(side, { k: 'action', id: 'advance' }).ok && e.sel().moves.length) {
+        // move towards the enemy, the shortest step there is, so a target stays in reach
+        const c = e.sel().moves[0];
+        e.intent(side, { k: 'move', x: c.x, y: c.y });
+        if (!u.activated && u.advancing && e.sel().mode === 'advance-fire') {
+          found++;
+          if (!e.query.actionState(u, 'fire').on) checks.fireOff++;
+          if (!e.query.actionState(u, 'assault').on) checks.assaultOff++;
+          if (!e.query.actionState(u, 'move').on) checks.moveOff++;
+          if (e.query.actionState(u, 'advance').on) checks.advanceOn++;
+          if (!e.intent(side, { k: 'action', id: 'fire' }).ok) checks.refusedFire++;
+          const other = list.filter((x) => x !== u)[0];
+          if (!other || !e.intent(side, { k: 'select', id: other.id }).ok) checks.noSwitch++;
+          /* Done with: no longer mid-Advance, and either marked as having acted
+             or the turn has moved on — the last activation of a turn rolls
+             straight into the next, which clears every unit's flag. */
+          const turnWas = e.state().turn;
+          const done = () => !u.advancing && (u.activated || e.state().turn !== turnWas || !!e.over());
+          if (found % 2) {
+            e.intent(side, { k: 'cancel' });                         // hold its fire
+            if (done()) checks.holdEnds++;;
+          } else {
+            const t = e.sel().targets[0];
+            e.intent(side, { k: 'target', id: t.id });               // the Advance's shot
+            if (done()) checks.shotEnds++;;
+          }
+          continue;
+        }
+        if (!u.activated) e.intent(side, { k: 'cancel' });
+      }
+      if (!u.activated) { e.intent(side, { k: 'action', id: 'regroup' }); }
+    }
+  }
+  ok('a unit was caught half-way through an Advance', found > 0, 'none in ' + battles + ' battles');
+  ok('...and Fire! is not on offer', checks.fireOff === found, checks.fireOff + ' of ' + found);
+  ok('...nor Assault', checks.assaultOff === found);
+  ok('...nor another Move', checks.moveOff === found);
+  ok('...only the Advance itself', checks.advanceOn === found);
+  ok('...and asking for Fire! anyway is refused', checks.refusedFire === found);
+  ok('...and it cannot be left half-done for another unit', checks.noSwitch === found);
+  ok('holding its fire ends the activation', checks.holdEnds === Math.ceil(found / 2), checks.holdEnds + '');
+  ok('taking the shot ends it', checks.shotEnds === Math.floor(found / 2), checks.shotEnds + '');
+  console.log('  ' + found + ' Advances caught half-way in ' + battles + ' battles');
+}
+
+/* A demo is watched, not played: the engine gives one activation at a time and
+   waits to be asked for the next, so the screen can draw each one. It used to
+   resolve the whole battle inside start(), before anything could be seen. */
+function watchedBattle() {
+  console.log('watching a demo');
+  const e = Engine.create();
+  e.start({
+    tier: 3, pl: 1, scenario: 'meeting',
+    armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'rebel'),
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse'
+  });
+  ok('the battle is under way', e.state().phase === 'battle');
+  ok('...and not already over', !e.over(), 'turn ' + e.state().turn);
+  let steps = 0;
+  while (!e.over() && steps < 4000) {
+    const r = e.intent('A', { k: 'step' });
+    if (!r.ok) break;
+    steps++;
+  }
+  ok('it plays out a step at a time', e.over() && steps > 10, steps + ' steps');
+  console.log('  ' + steps + ' activations, ' + e.state().turn + ' turns');
+}
+
 /* ---- run ---- */
+watchedBattle();
+advanceIsOneAction();
 offTableTargets();
 arrivals();
 terrainByHand();

@@ -96,7 +96,7 @@
     display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   }
   #vboard {
-    display: block; flex: 1; min-height: 0;
+    display: block; flex: none; min-height: 0;   /* sized by fit(), never stretched */
     image-rendering: pixelated; image-rendering: crisp-edges;
   }
   .vfoot {
@@ -137,36 +137,55 @@
   .vbtn:hover { border-color: var(--alpha); }
   .vbtn.primary { border-color: color-mix(in srgb, var(--alpha) 60%, transparent); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
 
-  /* the weapon editor */
-  .vedit {
-    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+  .vbtn[disabled] { opacity: .4; cursor: default; }
+  .vbtn[disabled]:hover { border-color: var(--line); }
+
+  /* the army's colours, one swatch each */
+  .vsw { display: flex; flex-wrap: wrap; gap: 5px; }
+  .vsw button {
+    width: 26px; height: 26px; padding: 2px; border-radius: 5px; cursor: pointer;
+    background: none; border: 1px solid var(--line);
   }
-  .vedit > label {
+  .vsw button span { display: block; width: 100%; height: 100%; border-radius: 3px; }
+  .vsw button.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+  .vsw button:hover { border-color: var(--ink-faint); }
+
+  /* the unit's rules: what it carries, and every special rule with its text */
+  .vrules { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+  .vrules > label {
     display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
     text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
   }
-  .vedit > label em { color: var(--alpha); font-style: normal; }
-  .veline {
-    display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
-    font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
+  .vrule { margin: 0 0 8px; font-size: 12px; line-height: 1.45; color: var(--ink-dim); }
+  .vrule b {
+    display: inline-block; color: var(--ink); font-weight: 600;
+    border-bottom: 1px dotted var(--ink-faint);
   }
-  .veline span { flex: none; width: 26px; }
-  .veline span:last-child { width: auto; }
-  .vsel {
-    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
-    border-radius: 4px; padding: 4px 6px; font-family: var(--mono); font-size: 11px;
+  .vrule p { margin: 2px 0 0; }
+  .vtable { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; margin-bottom: 10px; }
+  .vtable th, .vtable td { padding: 3px 4px; text-align: center; border: 1px solid var(--line); }
+  .vtable th { color: var(--ink-faint); font-weight: 500; font-size: 9.5px; letter-spacing: .05em; }
+  .vtable td { color: var(--ink); }
+
+  /* the tooltip layer (tips.js), as the game styles it */
+  .tip {
+    position: fixed; z-index: 400; max-width: min(280px, calc(100vw - 16px));
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+    padding: 8px 11px 9px; pointer-events: none;
+    font-size: 12.5px; line-height: 1.45;
+    opacity: 0; transform: translateY(3px); transition: opacity .12s, transform .12s;
   }
-  .vsel:first-of-type { flex: 1; min-width: 0; }
-  .vesrc {
-    display: block; margin: 9px 0 2px; padding: 7px 9px; border-radius: 4px;
-    background: var(--panel-2); border: 1px solid var(--line);
-    font-family: var(--mono); font-size: 10px; color: var(--ink-dim);
-    word-break: break-all; line-height: 1.5;
+  .tip.on { opacity: 1; transform: none; }
+  .tip.tip-below { transform: translateY(-3px); }
+  .tip.tip-below.on { transform: none; }
+  .tip b {
+    display: block; font-family: var(--display); font-size: 11px;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--alpha); margin-bottom: 3px;
   }
-  .vbtn[disabled] { opacity: .4; cursor: default; }
-  .vbtn[disabled]:hover { border-color: var(--line); }
-  .vu.edited .vu-w { color: var(--alpha); }
-  .vu.edited .vu-w::after { content: ' ·'; }
+  .tip span { display: block; color: var(--ink-dim); }
+  [data-tip] { cursor: help; }
 
   :focus-visible { outline: 2px solid var(--alpha); outline-offset: 2px; }
   #vboard { width: 100%; }
@@ -197,7 +216,7 @@
 
 <header>
   <h1>PMC <span>2670</span> · Unit viewer</h1>
-  <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code. Change what a unit carries and hear it at once.</p>
+  <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert</span>
 </header>
 
@@ -225,7 +244,9 @@
 </main>
 
 <script src="src/rules/rules.js"></script>
+<script src="src/rules/ruletext.js"></script>
 <script src="src/view/sfx.js"></script>
 <script src="src/view/iso.js"></script>
 <script src="src/view/fx.js"></script>
+<script src="src/view/tips.js"></script>
 <script src="src/view/viewer.js"></script>

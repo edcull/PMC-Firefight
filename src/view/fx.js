@@ -173,19 +173,94 @@
           }
         }
       } else if (f.kind === 'missile') {
-        /* A missile does not fly the straight line a shell does: it comes off
-           the rail, climbs, then noses over onto the target — and it leaves the
-           smoke behind it that says which it was. */
+        /* A missile does not fly the straight line a shell does. It is pushed
+           out of the tube cold and level, the motor lights, it bends up into a
+           gentle climb, flares over the top — and then drops almost straight
+           down onto the target. No two fly quite the same path. */
         var ma = start(f, I.K * 0.8), mb = I.toScreen(f.to.x, f.to.y);
         mb.y -= liftB(f) + I.K * 0.5;
         var mseed = (f.seed || 0);
         var climb = f.rocket ? I.K * 0.9 : I.K * 2.2;
         var sway = f.rocket ? (((mseed % 3) - 1) * I.K * 0.7) : 0;
-        function mAt(t2) {
-          // a shallow climb and a turn onto the mark, rather than a straight run
+        /* An unguided rocket is none of this: it leaves the rail lit and flies
+           the shallow arc it always did. Only a guided missile runs out level,
+           creeps off the ejection charge and lights its motor on the way. */
+        var guided = !f.rocket;
+        var RUN = guided ? 0.22 : 0;   // how much of the flight is the level run out
+        /* A craft in the air throws its missiles the way it is flying and they
+           turn onto the mark from there: the path bends through a point out
+           ahead of the nose instead of climbing over the target. */
+        var mc = null;
+        if (f.curve && guided) {
+          mc = I.toScreen(f.curve.x, f.curve.y);
+          mc.y -= (f.curve.up || 0) + I.K * 0.5;
+        }
+        /* Out of the tube on the ejection charge, barely moving, then the
+           motor lights and it goes: the first fifth of the flight covers a
+           tenth of the ground, and the rest accelerates away. */
+        var CREEP = 0.2;           // how much ground the level run out covers
+        /* A little variance, from this missile's own number, so a salvo does
+           not fly as one shape: where the top of the arc sits, how high it
+           goes, and a touch of wander across the line. */
+        var vr = (mseed * 2654435761) >>> 0;
+        var v1 = ((vr >>> 8) & 255) / 255, v2 = ((vr >>> 16) & 255) / 255, v3 = ((vr >>> 24) & 255) / 255;
+        var TOP = guided ? 0.52 + (v1 - 0.5) * 0.1 : 1;    // when it tips over the top
+        var SPLIT = 0.46 + (v1 - 0.5) * 0.1;               // how far along it is by then
+        var apex = climb * (guided ? 0.9 + v2 * 0.4 : 1);
+        var wander = guided ? (v3 - 0.5) * I.K * 0.8 : 0;
+        // and the same variance bends an aircraft's curve a little each time
+        if (mc) { mc.x += (v3 - 0.5) * I.K * 0.7; mc.y += (v2 - 0.5) * I.K * 0.5; }
+
+        /* Two halves. Up to the top it climbs away on a gentle curve, covering
+           less than half the ground; from the top it runs straight down at the
+           target, both along and down together, gathering speed all the way in. */
+        function dive(t2) { var d2 = (t2 - TOP) / (1 - TOP); return d2 * d2; }
+        // how far along the ground it has come
+        function burn(t2) {
+          if (!guided) return Math.max(0, Math.min(1, t2));
+          if (t2 <= 0) return 0;
+          if (t2 >= 1) return 1;
+          if (t2 < RUN) return (t2 / RUN) * CREEP;          // out of the tube, flat and level
+          if (t2 <= TOP) return CREEP + Math.pow((t2 - RUN) / (TOP - RUN), 1.15) * (SPLIT - CREEP);
+          return SPLIT + (1 - SPLIT) * dive(t2);
+        }
+        // and how high it is: level, then the climb, then down the line of the dive
+        function height(t2) {
+          if (!guided) {
+            return t2 <= 0 ? 0 : Math.sin(Math.PI * Math.pow(t2, 0.8)) * climb;
+          }
+          if (t2 <= RUN) return 0;
+          /* The climb leaves the level run with no kink in it and rounds off at
+             the top: it starts and ends flat, and bends between the two. */
+          if (t2 <= TOP) return apex * (1 - Math.cos(Math.PI * ((t2 - RUN) / (TOP - RUN)))) / 2;
+          return apex * (1 - dive(t2));
+        }
+        /* A missile off an aircraft flies level the whole way — it is already
+           above everything — and leaves on the line the craft is flying: out
+           ahead of the nose, curving slowly onto the target, and then, from the
+           flare, straight in and gathering speed. */
+        var BEND = 0.55;           // how far round the curve it comes before the flare
+        function bez(sq) {
+          var v = 1 - sq;
           return {
-            x: ma.x + (mb.x - ma.x) * t2 + sway * Math.sin(Math.PI * t2),
-            y: ma.y + (mb.y - ma.y) * t2 - Math.sin(Math.PI * Math.pow(t2, 0.8)) * climb
+            x: v * v * ma.x + 2 * v * sq * mc.x + sq * sq * mb.x,
+            y: v * v * ma.y + 2 * v * sq * mc.y + sq * sq * mb.y
+          };
+        }
+        function mAt(t2) {
+          if (mc) {
+            if (t2 <= TOP) {
+              // out along the nose, and round onto the target, unhurried
+              var u2 = Math.max(0, t2) / TOP;
+              return bez(Math.pow(u2, 1.2) * BEND);
+            }
+            var turn = bez(BEND), e2 = dive(t2);
+            return { x: turn.x + (mb.x - turn.x) * e2, y: turn.y + (mb.y - turn.y) * e2 };
+          }
+          var h = burn(t2);
+          return {
+            x: ma.x + (mb.x - ma.x) * h + (sway + wander) * Math.sin(Math.PI * h),
+            y: ma.y + (mb.y - ma.y) * h - height(t2)
           };
         }
         var mp = mAt(k);
@@ -199,9 +274,18 @@
             I.PIXEL * (1.1 + age * 2.6),
             'rgba(206,200,190,' + Math.max(0, 0.42 - age * 0.4) + ')');
         }
-        // the motor
-        I.ellipse(g, mp.x, mp.y, I.PIXEL * 3.4, I.PIXEL * 2.6, 'rgba(255,170,80,.75)');
-        I.ellipse(g, mp.x, mp.y, I.PIXEL * 1.8, I.PIXEL * 1.5, 'rgba(255,246,214,1)');
+        /* It climbs cold: the motor lights at the top of the arc, in a flare,
+           and burns from there down onto the target. */
+        var flare = guided ? Math.max(0, 1 - Math.abs(k - TOP) / 0.12) : 0;
+        if (!guided || k >= TOP) {
+          I.ellipse(g, mp.x, mp.y, I.PIXEL * (3.4 + flare * 5), I.PIXEL * (2.6 + flare * 4),
+            'rgba(255,170,80,' + (0.75 + flare * 0.25) + ')');
+          I.ellipse(g, mp.x, mp.y, I.PIXEL * (1.8 + flare * 2.6), I.PIXEL * (1.5 + flare * 2.2),
+            'rgba(255,246,214,1)');
+        } else {
+          // on the way up, unlit: a cold round with a wisp behind it
+          I.ellipse(g, mp.x, mp.y, I.PIXEL * 1.6, I.PIXEL * 1.3, 'rgba(206,200,190,.85)');
+        }
       } else if (f.kind === 'bolt') {
         /* One heavy round, flat and fast: a short thick streak with a bright
            head and a little smoke left along the line it took. */

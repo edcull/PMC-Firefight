@@ -66,7 +66,14 @@ class Socket extends EventEmitter {
     sock.setNoDelay(true);
     sock.on('data', (c) => this._feed(c));
     sock.on('close', () => this._shut());
-    sock.on('error', (e) => { this.emit('error', e); this._shut(); });
+    /* A socket that fails is one player gone, not a reason to stop the game:
+       a tab closed mid-frame arrives as ECONNRESET, and an 'error' nobody is
+       listening for is thrown by EventEmitter and would take the server with
+       it. Tell whoever is listening, if anyone is, and close the socket. */
+    sock.on('error', (e) => {
+      if (this.listenerCount('error')) this.emit('error', e);
+      this._shut();
+    });
   }
 
   send(text) {

@@ -503,6 +503,48 @@
     opacity: .4; cursor: not-allowed;
     background: none; border-color: var(--line); color: var(--ink-faint);
   }
+  /* ---- the main menu ---- */
+  .overlay.menu { z-index: 60; background: var(--ground); overflow: hidden; }
+  #menu-table { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; }
+  .menu-box {
+    position: relative; width: min(420px, 100%); max-height: 100%; overflow-y: auto;
+    background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line);
+    border-radius: 8px; padding: 24px 22px 14px; backdrop-filter: blur(3px);
+  }
+  .menu-title {
+    font-family: var(--display); font-weight: 700; letter-spacing: .08em; margin: 0 0 18px;
+    font-size: 34px; line-height: 1; text-align: center;
+  }
+  .menu-title span { color: var(--alpha); }
+  .menu-title small {
+    display: block; margin-top: 6px; font-size: 13px; letter-spacing: .42em;
+    text-transform: uppercase; color: var(--ink-dim); font-weight: 600;
+  }
+  .menu-head { font-family: var(--display); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 8px; }
+  .menu-pane { display: flex; flex-direction: column; gap: 8px; }
+  .menu-pane[hidden] { display: none; }
+  .mcard {
+    text-align: left; cursor: pointer; color: var(--ink); padding: 12px 14px; border-radius: 6px;
+    background: color-mix(in srgb, var(--ground) 70%, transparent); border: 1px solid var(--line);
+    font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: .06em; text-transform: uppercase;
+    transition: border-color .12s, background .12s;
+  }
+  .mcard small {
+    display: block; margin-top: 3px; font-family: var(--body); font-weight: 400; font-size: 12px;
+    letter-spacing: 0; text-transform: none; color: var(--ink-dim);
+  }
+  .mcard:hover, .mcard:focus-visible {
+    border-color: color-mix(in srgb, var(--alpha) 60%, transparent);
+    background: color-mix(in srgb, var(--alpha) 12%, transparent); outline: none;
+  }
+  #btn-resume { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+  .menu-back { align-self: flex-start; margin-top: 4px; }
+  .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
+  .menu-foot a.lnk { text-decoration: none; }
+  @media (max-width: 760px) {
+    .menu-title { font-size: 28px; }
+    .mcard { padding: 10px 12px; font-size: 14px; }
+  }
   .blockwhy {
     margin: 8px 0 0; font-size: 12px; color: var(--warn);
     border-left: 2px solid var(--warn); padding-left: 9px;
@@ -1084,11 +1126,7 @@
         <button class="lnk" id="btn-more" hidden aria-label="More">⋯</button>
         <button class="lnk" id="btn-sound" aria-pressed="true">Sound on</button>
         <button class="lnk" id="btn-notes">Rules</button>
-        <button class="lnk" id="btn-campaign">Campaign</button>
-        <!-- only offered when the page came from a game server: a game opened
-             from a file has nobody to play against -->
-        <button class="lnk" id="btn-multi" hidden>Multiplayer</button>
-        <button class="lnk" id="btn-new">New battle</button>
+        <button class="lnk" id="btn-menu">Menu</button>
       </span>
     </div>
   </header>
@@ -1167,7 +1205,36 @@
   <div class="res" id="res-card"></div>
 </div>
 
-<div class="overlay" id="setup">
+<!-- the way in: every kind of game starts from here -->
+<div class="overlay menu" id="menu">
+  <canvas id="menu-table" aria-hidden="true"></canvas>
+  <div class="menu-box">
+    <h1 class="menu-title">PMC <span>2670</span><small>Firefight</small></h1>
+    <div class="menu-pane" id="menu-main">
+      <button class="mcard" id="btn-resume" hidden>Back to the battle<small id="menu-resume-sub">The battle is still on</small></button>
+      <button class="mcard" id="btn-skirmish">Skirmish<small>One battle: against the AI, a friend on this screen, or the OpFor</small></button>
+      <button class="mcard" id="btn-campaign">Campaign<small id="menu-camp-sub">Raise a force and see it through a war</small></button>
+      <!-- only offered when the page came from a game server: a game opened
+           from a file has nobody to play against -->
+      <button class="mcard" id="btn-multi" hidden>Multiplayer<small>Play somebody else over the network</small></button>
+    </div>
+    <div class="menu-pane" id="menu-skirmish" hidden>
+      <h2 class="menu-head">Skirmish</h2>
+      <button class="mcard" data-skirmish="ai">Against the AI<small>The OpFor behaviour table drives every enemy activation</small></button>
+      <button class="mcard" data-skirmish="hotseat">Hotseat<small>Two players, one screen</small></button>
+      <button class="mcard" data-skirmish="solo">Solitaire<small>Your commando against the OpFor (pp. 146–156)</small></button>
+      <button class="mcard" data-skirmish="coop">Co-operative<small>Two commandos, one each, against the OpFor</small></button>
+      <button class="mcard" data-skirmish="demo">Demo<small>Watch two AI forces fight it out</small></button>
+      <button class="lnk menu-back" data-menu="main">← Back</button>
+    </div>
+    <p class="menu-foot">
+      <button class="lnk" id="btn-menu-rules">Rules</button>
+      <button class="lnk" id="btn-menu-sound">Sound on</button>
+      <a class="lnk" href="viewer.html" id="lnk-viewer">Unit viewer</a>
+    </p>
+  </div>
+</div>
+<div class="overlay" id="setup" hidden>
   <div class="sheet">
     <h2 id="setup-title">Muster your force</h2>
     <div class="solo-box" id="solo-box" hidden>
@@ -1330,7 +1397,8 @@
       <div class="swatches" id="colourpick"></div>
       <p class="hint small">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
     </div>
-    <div class="field std-only">
+    <!-- chosen on the menu now; kept because the start reads it -->
+    <div class="field std-only" id="mode-field" hidden>
       <label for="sel-mode">Play against</label>
       <select id="sel-mode">
         <option value="ai">OpFor AI — behaviour table drives every activation</option>
@@ -1340,9 +1408,7 @@
     </div>
     <button class="start" id="btn-start">Take the field</button>
     <p class="camp-foot">
-      <button class="lnk" id="btn-setup-campaign">Play a campaign instead</button>
-      <button class="lnk" id="btn-setup-solo">Solitaire or co-op against the OpFor</button>
-      <button class="lnk" id="btn-setup-multi" hidden>Play somebody else over the network</button>
+      <button class="lnk" id="btn-setup-menu">← Main menu</button>
     </p>
   </div>
 </div>
@@ -1506,3 +1572,4 @@
 <script src="src/net/lobby.js"></script>
 <script src="src/view/game.js"></script>
 <script src="src/view/dossier.js"></script>
+<script src="src/view/menu.js"></script>

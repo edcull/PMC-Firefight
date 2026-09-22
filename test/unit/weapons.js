@@ -46,7 +46,7 @@ is('raa', 'missile x2');
 // the launcher teams put a pair in the air
 all(['sam', 'missile'], 'missile x2');
 // air defence hulls put the gun up first and the missiles off the rails after
-is('aaveh', 'missile+burst x2');
+is('aaveh', 'missile+chain x2');
 is('interceptor', 'burst+shellbig');
 
 
@@ -58,12 +58,12 @@ is('asc', 'shellbig+rail x3');
 head('Direct projectiles');
 all(['lightat', 'atteam', 'rat'], 'shell');
 is('lhunter', 'missile x2');
-is('hunter', 'rocket');
+is('hunter', 'missile x3');
 
 // a sniper commando's rifle hits like an anti-tank round, and is drawn like one
 is('rsnipercdo', 'shell+pistol');
-is('ldestroyer', 'shellbig');
-is('mdestroyer', 'shellbig+rail');
+is('ldestroyer', 'shellbig x2');
+is('mdestroyer', 'shellbig+rail x2');
 /* The combat hulls fire the main gun in quick succession, over whatever the
    crew has in the hatch. */
 is('mcv', 'shellbig+pistol x2');
@@ -73,7 +73,7 @@ is('hengveh', 'shell+rail x3');
 head('Arcing projectiles, and how many tubes fire at once');
 // support hulls fire in batteries: two tubes, then three
 is('impsupport', 'rocket');
-is('lsupport', 'shellbig x3');
+is('lsupport', 'arcbig x3');
 is('msupport', 'arcbig+arcbig x5');
 // the advanced support hull's heavy plasma cannon: four bolts, each bursting
 is('asupport', 'shellbig+rail x4');
@@ -85,7 +85,7 @@ is('rmedart', 'arcbig x2');
 is('rheavyart', 'arcbig x3');
 
 head('Autocannon');
-all(['recon', 'hmgteam', 'rautocannon'], 'chain');
+all(['hpv', 'hmgteam', 'rautocannon'], 'chain');
 is('lifv', 'chain+missile');
 is('hifv', 'missile+chain x2');
 // the heavy autocannon squad puts three heavy rounds through its own fire
@@ -100,7 +100,7 @@ is('rmflak', 'burst+burst');
 // every heavy infantry unit, whatever its Tier
 all(['ecobats', 'bats'], 'smg');
 
-is('lcv', 'missile+chain x2');
+is('lcv', 'shell+pistol x2');
 
 head('And a soft-skinned lorry has only its crew');
 // a soft-skinned lorry has no gun: what shoots is whoever is in the cab
@@ -124,10 +124,10 @@ head('The rebels weld what they have onto what they can drive');
 // a pickup with the crew's own rifles
 is('rtechnical', 'small');
 // a gun-truck with a rocket rack bolted over its machine gun
-is('ricv', 'burst+rocket');
+is('ricv', 'chain+rocket');
 // a proper autocannon, and at the top a rocket rack over one
 is('rlicv', 'chain');
-is('rhicv', 'chain+rocket');
+is('rhicv', 'shellbig+rocket x2');
 is('rltv', 'small');
 is('ritv', 'chain');
 // the super-heavy and the heavy flak carry a gun behind the autocannon
@@ -144,7 +144,8 @@ is('tsc', 'burst+rocket');
 is('fsc', 'small+rocket');
 // a patrol jeep has the crew's rifles; the heavy one mounts a machine gun
 is('lpv', 'small');
-is('hpv', 'burst');
+is('hpv', 'chain');
+is('recon', 'shell+pistol');
 
 head('Close-quarters automatics');
 is('enforcers', 'smg');
@@ -222,7 +223,7 @@ ok('a rifle team that earns a Battle Honour still fires a rifle',
 ok('a support vehicle still lobs with a propulsion under it',
   R.weaponStyle(R.applyPropulsion(build('msupport'), 'tracked')) === 'arcbig');
 ok('an autocannon hull keeps hammering whatever drives it',
-  R.weaponStyle(R.applyPropulsion(build('recon'), 'hover')) === 'chain');
+  R.weaponStyle(R.applyPropulsion(build('hpv'), 'hover')) === 'chain');
 ok('a suppressed MG team fires the same way',
   R.weaponStyle(Object.assign(build('lmgteam'), { sp: 9 })) === 'smg');
 /* A vehicle built as a drone (p. 37) has no crew, but it is the same hull with
@@ -230,7 +231,7 @@ ok('a suppressed MG team fires the same way',
 ok('a support vehicle flown as a drone still lobs',
   R.weaponStyle(R.applyDrone(build('msupport'), true)) === 'arcbig');
 ok('a combat vehicle flown as a drone still hammers',
-  R.weaponStyle(R.applyDrone(build('recon'), true)) === 'chain');
+  R.weaponStyle(R.applyDrone(build('hpv'), true)) === 'chain');
 
 /* A profile the table has never heard of still has to fire like something. */
 head('An unlisted profile is read from the rules it carries');

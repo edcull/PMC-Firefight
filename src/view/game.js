@@ -75,6 +75,7 @@
      campaign contract, a room in the lobby — comes through here. */
   function begin(cfg, opts) {
     opts = opts || {};
+    if (window.PMCMenu) window.PMCMenu.close();       // however the battle was reached
     seats = opts.seats || (cfg.mode === 'hotseat' || cfg.mode === 'demo' ? ['A', 'B'] : ['A']);
     watching = false;
     /* Whether the terrain is laid by hand is remembered in this browser. The
@@ -116,6 +117,7 @@
   }
 
   function resetShow() {
+    if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
     anims.length = 0;
     FX.clear && FX.clear();
@@ -196,12 +198,39 @@
       show.running = false;
       syncUI();
       render();
+      stepWatched();
     }
   };
   // which events start something that takes time, and which land at once
   var SHOWN = {
-    move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', arrive: 'wait'
+    move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', arrive: 'wait',
+    // the camera settling on the other side's unit is itself worth a moment
+    focus: 'wait'
   };
+  /* A beat before the other side acts. Their whole turn arrives at once and
+     would otherwise start drawing the instant the player's own shot finished,
+     which reads as the opponent interrupting rather than answering. */
+  var OPPONENT_BEAT = 700;
+  function beat(ms) {
+    anims.push({ kind: 'beat', dur: ms, t0: nowMs() });
+    startLoop();
+  }
+
+  /* A battle nobody is playing — a demo, both sides on the behaviour table —
+     is walked forward one activation at a time: the engine resolves one, this
+     draws it, and only then is the next asked for. Otherwise the whole battle
+     would resolve before a single shot was drawn. */
+  var stepTimer = null;
+  function stepWatched() {
+    if (stepTimer || !net || !state || state.over) return;
+    if (!state.cfg || state.cfg.aiSides.length !== 2) return;
+    if (state.phase !== 'battle' || ui.resOpen) return;
+    stepTimer = setTimeout(function () {
+      stepTimer = null;
+      if (!state || state.over || ui.resOpen) return;
+      send({ k: 'step' });
+    }, 260);
+  }
 
   function evUnit(id) { return id ? Q.byId(id) : null; }
 
@@ -247,7 +276,13 @@
         else walkOn(au, ev.from);
         return;
       }
-      case 'focus': { var fu = evUnit(ev.id); if (fu) focusUnit(fu, false, !myTurn()); return; }
+      case 'focus': {
+        var fu = evUnit(ev.id);
+        if (!fu) return;
+        focusUnit(fu, false, !myTurn());
+        if (seats.indexOf(fu.side) < 0) beat(OPPONENT_BEAT);
+        return;
+      }
       case 'hint': setHint(null, ev.text || undefined); return;
       case 'colour': ISO.setSideColour(ev.side, ev.key); return;
       case 'terrain': {
@@ -319,7 +354,10 @@
   function unitById(id) { return Q.unitById(id); }
   function sideName(s) { return Q.sideName(s); }
   function other(s) { return Q.other(s); }
-  function playerSide() { return Q.playerSide(); }
+  /* Which side this screen is sitting in. With a seat of its own that is the
+     seat, whoever else is playing; sharing a screen, or watching, there is no
+     "you" and the engine's answer stands. */
+  function playerSide() { return seats.length === 1 ? seats[0] : Q.playerSide(); }
   function roleOf(side) { return Q.roleOf(side); }
   function roleSentence() { return Q.roleSentence(); }
   function deployWhere(side) { return Q.deployWhere(side); }
@@ -1380,6 +1418,20 @@
       mountFrom = function (style) { return ISO.mountFor(M, style, shooter, from); };
       from = mountFrom(spec.p);
     }
+    /* An aircraft's missiles leave on the line the craft is flying and turn
+       onto the mark from there, rather than climbing over it: it is already
+       above everything, so the climb read as the missile going the wrong way.
+       The control point is a spot out ahead of the nose, and the missile is
+       drawn along the curve through it. */
+    var curve = null;
+    if (shooter.cls === 'aircraft' && shooter.facing != null) {
+      var reach = Math.max(4, R.unitDist(shooter, target) * 0.55);
+      curve = {
+        x: shooter.x + Math.cos(shooter.facing) * reach,
+        y: shooter.y + Math.sin(shooter.facing) * reach,
+        up: ISO.flyLift(shooter)
+      };
+    }
     var hits = res.hits || 1;
     var fired = false;
     function land(extra, at) {
@@ -1504,7 +1556,8 @@
       /* A guided missile: off the rail, then it turns onto the target. */
       case 'missile': {
         var mr = R.unitDist(shooter, target);
-        var mflight = Math.round(420 + Math.min(700, mr * 14));
+        // longer than the distance alone asks for: it leaves the tube slowly
+        var mflight = Math.round(700 + Math.min(700, mr * 14));
         // `n` birds off the rail one after another, not all at once
         var birdsP = spec.n || 1, birdGap = 260;
         for (var mi2 = 0; mi2 < birdsP; mi2++) {
@@ -1512,9 +1565,9 @@
             setTimeout(function () {
               if (!state) return;
               var F = pick(from, j);
-              if (SFX) SFX.missile(0, mflight / 1000);
-              addFx({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 240, big: true, blocking: true });
-              addFx({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, blocking: true });
+              if (SFX) SFX.missile(0, mflight / 1000, mflight / 1000 * 0.52);
+              // no flash at the tube: it is ejected cold and lights further out
+              addFx({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true });
               setTimeout(function () { land(3); }, mflight);
               render();
             }, j * birdGap);
@@ -1669,9 +1722,8 @@
           (function (j) {
             setTimeout(function () {
               if (!state) return;
-              if (SFX) SFX.missile(0, 0.7);
-              addFx({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 220, big: true, blocking: true });
-              addFx({ kind: 'missile', from: pick(from, j), to: to, seed: j, dur: 700, blocking: true });
+              if (SFX) SFX.missile(0, 0.9, 0.47);
+              addFx({ kind: 'missile', from: pick(from, j), to: to, seed: j, dur: 900, blocking: true });
               render();
             }, j * 260);
           })(q4);
@@ -3126,7 +3178,12 @@
       return;
     }
     if (state.phase === 'deploy') {
-      var next = deployNext();
+      var next = deployNext(), dside = placingSide();
+      // somebody else's deployment is watched, not played
+      if (next && dside && !mySide()) {
+        box.innerHTML = '<b>' + esc(sideName(dside)) + '</b> is putting its force down.';
+        return;
+      }
       box.innerHTML = next
         ? 'Placing <b>' + esc(next.name) + '</b> — click inside your shaded strip, or pick a different unit from the order of battle. ' +
         'Tapping a model already down picks it up to shift.'
@@ -3461,7 +3518,7 @@
     var heads = {
       assault: 'Charge which unit?', designate: 'Designate which unit?',
       hack: 'Hack which drone?', support: 'Supporting Fire on which unit?',
-      embark: 'Load which unit?'
+      embark: 'Load which unit?', 'advance-fire': 'Advance — fire on which unit?'
     };
     var h = '<div class="targets"><h4>' + (heads[ui.mode] || 'Fire on which unit?') + '</h4>';
     ui.targets.forEach(function (t) {
@@ -3472,12 +3529,18 @@
           Math.round(ao.chance * 100) + '% a round';
       } else if (ui.mode !== 'designate') {
         var aux = ui.mode === 'aux';
-        var o = R.shotOdds(state, u, t, ui.mode === 'aux' ? 'fire' : ui.mode, { aux: aux });
+        // the Advance's shot is odds for an Advance: no bonus for standing still
+        var oddsMode = ui.mode === 'aux' ? 'fire' : ui.mode === 'advance-fire' ? 'advance' : ui.mode;
+        var o = R.shotOdds(state, u, t, oddsMode, { aux: aux });
         extra = '+' + o.mods + ' vs Def ' + o.def + ' · hits on ' + o.need + '+ · ' +
           Math.round(o.chance * 100) + '% · ' + o.avgHits.toFixed(1) + ' hits';
       }
       h += '<button class="tgt" data-target="' + t.id + '"><b>' + t.name + '</b><span>' + d + '" · ' + t.models + ' models · ' + extra + '</span></button>';
     });
+    // having moved, an Advance may still decline its shot — and that ends the activation
+    if (ui.mode === 'advance-fire') {
+      h += '<div class="acts"><button class="act" data-act="holdfire"><span>Hold its fire</span><small>Ends the activation</small></button></div>';
+    }
     return h + '</div>';
   }
 
@@ -3641,7 +3704,7 @@
 
   function overCard() {
     return '<div class="card"><h2>' + (state.over.winner ? sideName(state.over.winner) + ' wins' : 'Draw') + '</h2>' +
-      '<p class="sub">' + state.over.text + '</p><div class="acts"><button class="act primary" data-act="restart"><span>New battle</span></button></div></div>';
+      '<p class="sub">' + state.over.text + '</p><div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
   }
 
   function wirePanel() {
@@ -3670,12 +3733,13 @@
         if (a === 'movego') { commitMove(); return; }
         else if (a === 'movecancel') { cancelPreview(); return; }
         else if (a === 'holdinsert') { holdInsertion(); return; }
+        else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
         else if (a === 'start') startBattle();
-        else if (a === 'restart') el('setup').hidden = false;
+        else if (a === 'restart') openMenu();
         else if (a === 'statdetails') { ui.statsOpen = !ui.statsOpen; drawStats(); }
       });
     });
@@ -4996,20 +5060,19 @@
       if (host) host.innerHTML = '';
       if (SFX) SFX.click();
     });
-    el('btn-new').addEventListener('click', function () { el('setup').hidden = false; });
+    el('btn-menu').addEventListener('click', openMenu);
+    el('btn-setup-menu').addEventListener('click', openMenu);
     /* Multiplayer is only offered when this page came from a game server. A
        game opened from a file, or the published single file, has nowhere to
        send an intent and nobody to send it to, so the button stays hidden
        rather than leading to a screen that cannot work. */
     if (window.PMCLobby && window.PMCLobby.available()) {
-      ['btn-multi', 'btn-setup-multi'].forEach(function (id) {
-        var b = el(id);
-        if (!b) return;
-        b.hidden = false;
-        b.addEventListener('click', function () {
-          el('setup').hidden = true;
-          window.PMCLobby.open();
-        });
+      var mb = el('btn-multi');
+      mb.hidden = false;
+      mb.addEventListener('click', function () {
+        el('setup').hidden = true;
+        if (window.PMCMenu) window.PMCMenu.close();
+        window.PMCLobby.open();
       });
     }
     el('btn-drawer').addEventListener('click', toggleDrawer);
@@ -5021,19 +5084,25 @@
     setDrawerTab('forces');
     ui.statsOpen = window.innerWidth > 760;
     el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
+    if (el('btn-menu-rules')) el('btn-menu-rules').addEventListener('click', function () { el('notes').hidden = false; });
 
-    var sndBtn = el('btn-sound');
+    // the same switch on the top bar and on the menu
+    var sndBtns = [el('btn-sound'), el('btn-menu-sound')].filter(Boolean);
     function paintSound() {
       var live = SFX && SFX.enabled();
-      sndBtn.textContent = live ? 'Sound on' : 'Sound off';
-      sndBtn.setAttribute('aria-pressed', live ? 'true' : 'false');
-      sndBtn.style.opacity = live ? '' : '.55';
+      sndBtns.forEach(function (b) {
+        b.textContent = live ? 'Sound on' : 'Sound off';
+        b.setAttribute('aria-pressed', live ? 'true' : 'false');
+        b.style.opacity = live ? '' : '.55';
+      });
     }
-    sndBtn.addEventListener('click', function () {
-      if (!SFX) return;
-      SFX.setEnabled(!SFX.enabled());
-      paintSound();
-      if (SFX.enabled()) SFX.chime();
+    sndBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!SFX) return;
+        SFX.setEnabled(!SFX.enabled());
+        paintSound();
+        if (SFX.enabled()) SFX.chime();
+      });
     });
     paintSound();
     document.addEventListener('pointerdown', function unlock() {
@@ -5046,6 +5115,31 @@
 
   window.PMC_STATE = function () { return state; };
 
+  function openMenu() {
+    if (window.PMCMenu) window.PMCMenu.open();
+    else el('setup').hidden = false;
+  }
+  /* The menu's Skirmish choices all land on the muster sheet, set up for the
+     kind of battle picked: the four standard ways to play read the "Play
+     against" choice, and solitaire and co-op switch the sheet into commando
+     mode. */
+  window.PMC_SKIRMISH = function (kind) {
+    var solo = kind === 'solo' || kind === 'coop';
+    if (solo !== !!muster.solo) setSoloMode(solo);
+    el('solo-box').hidden = !solo;
+    el('setup').classList.toggle('solo-mode', solo);
+    if (solo) { el('sel-solo-mode').value = kind; soloPlayersUI(); }
+    else el('sel-mode').value = kind;
+    el('setup-title').textContent = {
+      ai: 'Muster your force', hotseat: 'Muster your force — hotseat', demo: 'Muster a force to watch',
+      solo: 'Muster your commando', coop: 'Muster your commandos'
+    }[kind] || 'Muster your force';
+    el('setup').hidden = false;
+  };
+  window.PMC_BATTLE_LIVE = function () {
+    return !!(state && state.phase && !state.over);
+  };
+
   /* ---- the ways in ----
      Four screens start a battle — the muster screen, solitaire, a campaign
      contract and a room in the lobby — and all four arrive here. The first
@@ -5054,6 +5148,7 @@
   window.PMC_JOIN_BATTLE = function (transport, seat, cfg) {
     var setup = el('setup');
     if (setup) setup.hidden = true;
+    if (window.PMCMenu) window.PMCMenu.close();
     if (cfg && cfg.colourA) ISO.setSideColour('A', cfg.colourA);
     if (cfg && cfg.colourB) ISO.setSideColour('B', cfg.colourB);
     wireNet(transport);

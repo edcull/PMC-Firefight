@@ -15,6 +15,17 @@ Open **`build/firefight.html`** in any modern browser. That is the whole game in
 one self-contained file — no server, no network, nothing to install. Double-click
 it, or drag it onto a browser window.
 
+The game opens on a main menu — Skirmish, Campaign and, when a server served
+the page, Multiplayer — over a battlefield rolled fresh every few seconds.
+Skirmish covers a battle against the AI, a hotseat game on one screen,
+solitaire or co-op against the OpFor, and a demo between two AI forces.
+
+Every game, even a solitaire one, is played through the same engine. The screen
+draws the table and sends what you asked for ("shoot that", "go there"), and
+the engine decides what happens and rolls the dice. With no server it runs in
+the tab. With a server it runs on the server, so neither player's browser can
+decide anything.
+
 ### Against somebody else
 
 ```
@@ -27,8 +38,31 @@ player's screen only draws what it is told. Press **Multiplayer**, start a game,
 and read the five-letter code out to your opponent. How that is put together is
 in [SERVER.md](SERVER.md).
 
-Everything is saved in the browser's local storage, so a campaign survives a
-reload. The campaign screen can also export a save to a file and read it back.
+Played without a server, everything is saved in the browser's local storage, so
+a campaign survives a reload. The campaign screen can also export a save to a
+file and read it back. A campaign played through the server is shared by both
+players and stored on the server, in `campaigns/`. `PORT=9000 node server.js`
+runs the server on another port.
+
+### The table
+
+The terrain is rolled from the book's generators, one 2′ × 2′ area at a time,
+for any of the book's worlds. The barren or arctic world comes in two looks,
+**desert** and **arctic**. Walls go up round the buildings as walled compounds
+with a way in, and are not scattered loose. A "1–X" roll always gives at least
+two pieces. Lava shimmers with heat haze. Hills can stand on hills: the upper step
+blocks line of sight, and firing down from it earns the height bonus.
+
+You can lay the terrain by hand instead. The set-up panel shows every piece still
+to come for the area, drawn together. Turn a piece with **Turn it**, the
+<kbd>R</kbd> key, or a right-click, then tap where it goes.
+
+On an Invasion the attacker arrives from orbit, infantry included: every unit
+drops from the sky to its landing zone.
+
+An **Advance** is a single action. Once the unit has moved, the only choice left
+is the Advance's own shot, or holding its fire. Fire! and Assault are not on offer,
+and you can't leave the unit half-done to move another one.
 
 ### Keeping a skirmish force
 
@@ -58,6 +92,7 @@ browser.
 | `campaign.js` | The campaign layer (pp. 83–91): companies, experience, trauma, Battle Honours, promotions, doctrines, contracts, and the rival AI's growth. |
 | `scenarios.js` | The six scenarios (pp. 48–55) — objectives, deployment zones, reserves and victory conditions. |
 | `solitaire.js` | Solitaire and co-op against the OpFor (pp. 146–156). |
+| `ruletext.js` | What each special rule does, in a sentence, for the tooltips. |
 | `gen.js` | The rulebook's terrain generators (pp. 46–48): the table is divided into 2′ × 2′ areas and a D6 rolled for each. |
 | **`src/engine/`** | **The game** |
 | `engine.js` | The turn structure, every action, the terrain set-up, deployment, the OpFor AI. Every decision and every die roll. It answers intents — "shoot that", "go there" — with the events that followed and the table they left. |
@@ -68,6 +103,7 @@ browser.
 | `fx.js` | Every battlefield effect: tracers, bolts, lobbed rounds, rail lines, flame, missiles and rockets, muzzle flashes, impacts, drop marks. The game and the unit viewer both draw out of this one file. |
 | `sfx.js` | Synthesised sound. Everything is generated with the Web Audio API; there are no audio files. |
 | `tips.js` | The tooltip layer: one floating panel, shared by every screen. |
+| `menu.js` | The main menu, and the table rolling behind it. |
 | `dossier.js` | The campaign screens. |
 | `viewer.js` | The unit viewer. |
 | **`src/net/`** | **Playing somebody else** |
@@ -92,11 +128,14 @@ takes no arguments and needs nothing but a Node runtime.
 ### The unit viewer
 
 Open **`viewer.html`** for a bench that shows one unit at a time: every profile
-in both lists, in each of its states, at any strength, walking at its own
+in all four lists, in each of its states, at any strength, walking at its own
 Movement, coming in off a Battlefield Insertion, and firing whatever the weapon
-table says it carries. It loads `rules.js`, `sfx.js`, `iso.js` and `fx.js` and
-nothing else — no game — so what it draws and sounds is the real code rather than
-a mock-up of it. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts.
+table says it carries. It loads `rules.js`, `ruletext.js`, `sfx.js`, `iso.js`,
+`fx.js` and `tips.js` and nothing else — no game — so what it draws and sounds is
+the real code rather than a mock-up of it. The panel gives the whole profile:
+the statistics as the book prints them, and every special rule the unit carries
+with what that rule does, on the page and on a tooltip. Any of the army colours
+can be painted on. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts.
 
 ---
 
@@ -116,7 +155,10 @@ vehicles.js      # armour, damage, destruction, repairs, transport
 propulsion.js    # the five ground propulsions, over 600 rolled armies
 specialrules.js  # the General special rules list (pp. 56–59)
 terrain.js       # terrain effects, cover, and bringing pieces down
-terrainrules.js  # movement penalties, hills, low walls, buildings, jump troops
+terrainrules.js  # movement penalties, hills and stepped hills, low walls, buildings, jump troops
+walls.js         # walled compounds round buildings, and lengths of wall
+terraincount.js  # how many pieces a rolled result puts down
+worlds.js        # the desert and arctic looks of the barren world
 shapes.js        # terrain piece shapes
 weapons.js       # how each unit's weapon sounds and looks
 scenrules.js     # objectives, deployment and victory conditions
@@ -126,7 +168,11 @@ campextras.js    # the campaign extras
 solo.js          # the solitaire rival archetypes
 rebels.js        # the Rebel army list and its army rules
 rebelcamp.js     # the Rebel campaign
-enginetest.js    # whole battles driven by intent; the terrain set-up turn order; garrisons
+solitairetest.js # solitaire and co-op against the OpFor
+bugs.js          # the Bug army list; bugcamp.js its campaign
+xeno.js          # the Xeno army list; xenocamp.js its campaign
+enginetest.js    # whole battles driven by intent; terrain set-up and turning pieces;
+                 # garrisons; arrivals; no shots at units off the table; Advance as one action
 clienttest.js    # the page booted without a browser, and the lobby against a real one
 servertest.js    # two players on two sockets against the real server
 ```
@@ -184,8 +230,8 @@ non-zero on a failure, so they drop straight into CI.
 
 ## What is implemented
 
-Everything in the core rulebook that a skirmish needs: both army lists (PMC and
-Rebel) with every printed profile, the composition table and its limits, the six
+Everything in the core rulebook that a skirmish needs: the army lists (PMC,
+Rebel, Bug and Xeno) with every printed profile, the composition table and its limits, the six
 scenarios, the terrain generators, the General special rules, vehicles and
 aircraft with facing and arcs, the optional ground propulsions (Appendix 3), and
 the campaign.

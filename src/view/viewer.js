@@ -28,7 +28,9 @@
   var view = {
     key: 'regular', prop: 'tracked', side: 'A', status: 'ready',
     models: null, walking: false, walkT: 0, at: null, facing: 0, face: 'SE',
-    sound: true
+    sound: true,
+    // each side's paint, from every colour an army can take
+    colour: { A: 'ochre', B: 'steel' }
   };
   var loop = null, last = 0;
 
@@ -476,9 +478,9 @@
       for (var m1 = 0; m1 < (count || 1); m1++) {
         (function (j) {
           setTimeout(function () {
-            if (SFX) SFX.missile(0, 0.7);
-            FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: 220, big: true });
-            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 700 });
+            if (SFX) SFX.missile(0, 0.9, 0.47);
+            // no flash at the tube: a missile is ejected cold and lights at the top
+            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900 });
             start();
           }, j * 260);
         })(m1);
@@ -565,10 +567,9 @@
         for (var mi2 = 0; mi2 < (spec.n || 1); mi2++) {
           (function (j) {
             setTimeout(function () {
-              if (SFX) SFX.missile(0, 0.8);
-              FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: 240, big: true });
-              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 800 });
-              setTimeout(function () { landing(to, 6, true); start(); }, 800);
+              if (SFX) SFX.missile(0, 0.9, 0.47);
+              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900 });
+              setTimeout(function () { landing(to, 6, true); start(); }, 900);
               start();
             }, j * 260);
           })(mi2);
@@ -623,7 +624,7 @@
     shellbig: 'a large direct projectile',
     arc: 'a lobbed projectile, up and over',
     arcbig: 'a large lobbed projectile',
-    missile: 'a guided missile — it climbs, then turns onto the mark',
+    missile: 'a guided missile — out of the tube cold and level, then it lights at the top of its climb and comes down on the mark',
     rocket: 'unguided rockets, off the rails in a ripple',
     flame: 'a cone of fire; nothing flies, the ground burns',
     rail: 'a Gauss weapon: an instant white line that fades',
@@ -642,150 +643,6 @@
   }
 
 
-  /* ---------- the weapon editor ----------
-     The weapon table in rules.js is the one place that decides what a unit looks
-     and sounds like when it fires, and it is a plain object — so the bench can
-     edit it in place and you can hear the change straight away. Nothing here
-     touches the rules: Firepower, Range and the dice are untouched, and an edit
-     lives in this browser until you export it back into rules.js. */
-  var STYLES = ['pistol', 'small', 'smg', 'burst', 'chain', 'shell', 'shellbig',
-    'arc', 'arcbig', 'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'none'];
-  var STORE = 'pmc-weapon-edits';
-  var edits = {};
-  // the table as rules.js wrote it, so any change can always be put back
-  var BASE = {};
-  Object.keys(R.WEAPONS).forEach(function (k) { BASE[k] = R.WEAPONS[k]; });
-
-  function loadEdits() {
-    try {
-      var raw = localStorage.getItem(STORE);
-      if (!raw) return;
-      edits = JSON.parse(raw) || {};
-      // an edit the table has since caught up with is no longer an edit
-      Object.keys(edits).forEach(function (k) {
-        var b = R.WEAPONS[k] || {}, e = edits[k] || {};
-        if (b.p === e.p && (b.n || 1) === (e.n || 1) && (b.s || null) === (e.s || null) && (b.sn || 1) === (e.sn || 1)) delete edits[k];
-      });
-      saveEdits();
-      Object.keys(edits).forEach(function (k) { R.WEAPONS[k] = edits[k]; });
-    } catch (e) { edits = {}; }
-  }
-  function saveEdits() {
-    try { localStorage.setItem(STORE, JSON.stringify(edits)); } catch (e) { }
-  }
-
-  // what the table holds for this unit right now, in full
-  function entry(key) {
-    var w = R.WEAPONS[key] || {};
-    return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1 };
-  }
-  function setEntry(key, w) {
-    var out = { p: w.p };
-    if (w.n > 1) out.n = w.n;
-    if (w.s) { out.s = w.s; if (w.sn > 1) out.sn = w.sn; }
-    R.WEAPONS[key] = out;
-    edits[key] = out;
-    saveEdits();
-    FX.clear();
-    drawPicker(); drawControls(); frame();
-  }
-  function revert(key) {
-    if (!BASE[key]) return;
-    R.WEAPONS[key] = BASE[key];
-    delete edits[key];
-    saveEdits();
-    FX.clear();
-    drawPicker(); drawControls(); frame();
-  }
-  function revertAll() {
-    Object.keys(edits).forEach(function (k) { if (BASE[k]) R.WEAPONS[k] = BASE[k]; });
-    edits = {};
-    saveEdits();
-    FX.clear();
-    drawPicker(); drawControls(); frame();
-  }
-
-  // one line of the table, written the way rules.js writes it
-  function asSource(key) {
-    var w = entry(key);
-    var bits = ["p: '" + w.p + "'"];
-    if (w.n > 1) bits.push('n: ' + w.n);
-    if (w.s) { bits.push("s: '" + w.s + "'"); if (w.sn > 1) bits.push('sn: ' + w.sn); }
-    return key + ': { ' + bits.join(', ') + ' }';
-  }
-  // every unit that has been changed, ready to paste back into rules.js
-  function exportEdits() {
-    var keys = Object.keys(edits).sort();
-    if (!keys.length) return '// nothing changed yet';
-    return keys.map(function (k) {
-      var pr = R.profile(k);
-      return '    ' + asSource(k) + ',' + (pr ? '   // ' + pr.name : '');
-    }).join('\n');
-  }
-  // the whole table, in table order, so the file can be replaced wholesale
-  function exportAll() {
-    return R.CATALOGUE.map(function (pr) {
-      return '    ' + asSource(pr.key) + ',';
-    }).join('\n');
-  }
-
-  function pick(name, opts, now, blank) {
-    var h = '<select class="vsel" data-w="' + name + '">';
-    if (blank) h += '<option value=""' + (now ? '' : ' selected') + '>— none —</option>';
-    opts.forEach(function (o) {
-      h += '<option value="' + o + '"' + (o === now ? ' selected' : '') + '>' + o + '</option>';
-    });
-    return h + '</select>';
-  }
-
-  function editorHtml() {
-    var key = view.key, w = entry(key);
-    var changed = hasOwn(edits, key);
-    var h = '<div class="vedit">';
-    h += '<label>Weapon' + (changed ? ' <em>· changed</em>' : '') + '</label>';
-    h += '<div class="veline"><span>fires</span>' + pick('p', STYLES, w.p) +
-      pick('n', ['1', '2', '3', '4', '5'], String(w.n)) + '<span>×</span></div>';
-    h += '<div class="veline"><span>with</span>' + pick('s', STYLES, w.s || '', true) +
-      pick('sn', ['1', '2', '3', '4', '5'], String(w.sn)) + '<span>×</span></div>';
-    h += '<code class="vesrc">' + esc(asSource(key)) + '</code>';
-    h += '<div class="vacts">' +
-      '<button class="vbtn" data-do="revert"' + (changed ? '' : ' disabled') + '>Revert</button>' +
-      '<button class="vbtn" data-do="export">Copy changes</button>' +
-      '<button class="vbtn" data-do="exportall">Copy table</button>' +
-      '</div>';
-    var n = Object.keys(edits).length;
-    if (n) {
-      h += '<div class="vacts"><button class="vbtn" data-do="revertall">Revert all ' +
-        n + ' change' + (n === 1 ? '' : 's') + '</button></div>';
-    }
-    h += '</div>';
-    return h;
-  }
-  function hasOwn(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
-
-  // put text on the clipboard, and show it in the footer either way
-  function copyOut(text, what) {
-    var done = function () { note('Copied ' + what + ' to the clipboard.'); };
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, function () { fallback(); });
-        return;
-      }
-    } catch (e) { }
-    fallback();
-    function fallback() {
-      var ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); done(); }
-      catch (e2) { note('Could not reach the clipboard — the table is in the console.'); }
-      document.body.removeChild(ta);
-      console.log(text);
-    }
-  }
-
   /* ---------- the panels ---------- */
   function drawPicker() {
     var groups = {};
@@ -799,7 +656,7 @@
       groups[k].forEach(function (p) {
         var w = R.weaponSpec(p);
         h += '<button class="vu' + (p.key === view.key ? ' on' : '') +
-          (hasOwn(edits, p.key) ? ' edited' : '') + '" data-unit="' + p.key + '">' +
+          '" data-unit="' + p.key + '">' +
           '<span class="vu-code">' + esc(p.code) + '</span>' +
           '<span class="vu-name">' + esc(p.name) + '</span>' +
           '<span class="vu-w">' + esc(w.p + (w.s ? '+' + w.s : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
@@ -815,13 +672,10 @@
     var maxModels = p.cls === 'infantry' ? p.size : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
-    h += '<p class="vstat">Move ' + p.move + '" · FP ' + (p.fp === null ? '—' : p.fp) +
-      ' · Range ' + p.range + '" · Def ' + p.def + ' · Assault ' + p.assault +
-      ' · ' + (R.isMachine(p) ? 'Structure ' + p.str : 'Morale ' + p.morale) + '</p>';
     h += '<p class="vweap">' + esc(describe(w, p)) + '</p>';
 
-    h += '<div class="vgrp"><label>Side</label><div class="vseg">' +
-      seg('side', ['A', 'B'], view.side) + '</div></div>';
+    h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
+      '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', ['ready', 'suppressed', 'broken'], view.status) + '</div></div>';
     if (isVeh) {
@@ -844,9 +698,44 @@
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
     h += '<div class="vacts"><button class="vbtn" data-do="allstyles">Play every weapon style</button></div>';
-    h += editorHtml();
+    h += rulesHtml(p);
     el('vctl').innerHTML = h;
   }
+  function swatches(now) {
+    return I.COLOUR_KEYS.map(function (k) {
+      var c = I.COLOURS[k];
+      return '<button class="' + (k === now ? 'on' : '') + '" data-colour="' + k + '" title="' + esc(c.name) + '">' +
+        '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' +
+        c.dark + ' 74%)"></span></button>';
+    }).join('');
+  }
+
+  /* The whole profile as the book prints it — the statistics, then every
+     special rule with what it does. The rule's text is written out in full and
+     also sits on its name as a tooltip, the way the game shows it on a card. */
+  var FACTION_NAME = { pmc: 'PMC', rebel: 'Rebels', bugs: 'Space Bugs', xeno: 'Xenotripods' };
+  function rulesHtml(p) {
+    var mach = R.isMachine(p);
+    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', p.size], ['Move', p.move + '"'],
+      ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
+      ['Def', p.def + (p.defPierced ? '/' + p.defPierced : '')], ['Asslt', p.assault],
+      mach ? ['Str', p.str] : ['Mor', p.morale]];
+    if (p.turn != null) cols.push(['Turn', p.turn]);
+    var h = '<div class="vrules"><label>' + esc(FACTION_NAME[p.faction || 'pmc'] || '') + ' · ' +
+      esc(p.group) + ' · ' + esc(p.code) + '</label>';
+    h += '<table class="vtable"><tr>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') +
+      '</tr><tr>' + cols.map(function (c) { return '<td>' + esc(c[1]) + '</td>'; }).join('') + '</tr></table>';
+    var TXT = root.PMCRuleText;
+    if (!p.rules.length) h += '<p class="vrule">No special rules.</p>';
+    p.rules.forEach(function (r) {
+      var d = TXT ? TXT.describe(r) : { name: r, text: '' };
+      var tip = d.text && root.PMCTips ? ' ' + root.PMCTips.attr(d.name, d.text) : '';
+      h += '<div class="vrule"><b' + tip + '>' + esc(d.name) + '</b>' +
+        (d.text ? '<p>' + esc(d.text) + '</p>' : '') + '</div>';
+    });
+    return h + '</div>';
+  }
+
   function seg(name, opts, now) {
     return opts.map(function (o) {
       return '<button class="vsg' + (o === now ? ' on' : '') + '" data-set="' + name +
@@ -887,7 +776,8 @@
     if (!cv) return;
     g = cv.getContext('2d');
     FX = root.PMCFx.create({ lift: function () { return 0; } });
-    loadEdits();
+    I.setSideColour('A', view.colour.A);
+    I.setSideColour('B', view.colour.B);
     fit();
     drawPicker();
     drawControls();
@@ -913,6 +803,18 @@
     });
 
     el('vctl').addEventListener('click', function (e) {
+      var sw = e.target.closest('[data-colour]');
+      if (sw) {
+        view.colour[view.side] = sw.getAttribute('data-colour');
+        I.setSideColour(view.side, view.colour[view.side]);
+        // the target keeps a colour of its own, so the two never look alike
+        var foe = view.side === 'A' ? 'B' : 'A';
+        if (view.colour[foe] === view.colour[view.side]) {
+          view.colour[foe] = I.COLOUR_KEYS.filter(function (k) { return k !== view.colour[view.side]; })[0];
+          I.setSideColour(foe, view.colour[foe]);
+        }
+        drawControls(); frame(); return;
+      }
       var s = e.target.closest('[data-set]');
       if (s) {
         view[s.getAttribute('data-set')] = s.getAttribute('data-val');
@@ -925,10 +827,6 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'allstyles') allStyles();
-      else if (act === 'revert') revert(view.key);
-      else if (act === 'revertall') revertAll();
-      else if (act === 'export') copyOut(exportEdits(), 'your changes');
-      else if (act === 'exportall') copyOut(exportAll(), 'the whole table');
       else if (act === 'sound') {
         view.sound = !view.sound;
         if (SFX) SFX.setEnabled(view.sound);
@@ -939,15 +837,7 @@
       if (e.target.id === 'vmodels') {
         view.models = +e.target.value;
         drawControls(); drawState(); frame();
-        return;
       }
-      var f = e.target.closest ? e.target.closest('[data-w]') : null;
-      if (!f) return;
-      var w = entry(view.key);
-      var field = f.getAttribute('data-w');
-      w[field] = (field === 'n' || field === 'sn') ? +f.value : (f.value || null);
-      setEntry(view.key, w);
-      note(describe(R.weaponSpec(unit()), profile()));
     });
 
     el('vsearch').addEventListener('input', function () {
@@ -978,12 +868,14 @@
        stretched back to the box by CSS, so the pixel art stays sharp. */
     var narrow = box.width < 700;
     var dpr = narrow ? Math.min(3, window.devicePixelRatio || 1) : 1;
+    /* The canvas is drawn at the size it is shown at, all the stage bar the
+       footer. Left to CSS, flex stretched a canvas drawn half as tall as it
+       was wide to the stage's whole height, and every figure came out tall. */
+    var foot = el('vstate') ? el('vstate').parentElement.offsetHeight : 30;
     var cw = Math.max(260, Math.round(box.width));
-    var ch = narrow
-      ? Math.max(200, Math.round(box.height - (el('vstate') ? el('vstate').parentElement.offsetHeight : 30)))
-      : Math.max(280, Math.round(Math.min(box.height, box.width * 0.52)));
+    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot));
     cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
-    cv.style.width = cw + 'px'; cv.style.height = narrow ? ch + 'px' : '';
+    cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
     view.dpr = dpr;
   }
 
@@ -999,14 +891,7 @@
     fx: function () { return FX.kinds(); },
     state: function () { return Object.assign({}, view); },
     spec: function () { return R.weaponSpec(unit()); },
-    unit: unit,
-    edit: function (w) { setEntry(view.key, Object.assign(entry(view.key), w)); },
-    revert: function () { revert(view.key); },
-    revertAll: revertAll,
-    edits: function () { return JSON.parse(JSON.stringify(edits)); },
-    source: function () { return asSource(view.key); },
-    exportEdits: exportEdits,
-    exportAll: exportAll
+    unit: unit
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
