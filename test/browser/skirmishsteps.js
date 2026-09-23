@@ -1,7 +1,7 @@
-/* Hotseat, co-op, demo and against-the-AI skirmishes build both forces before the battle: each
+/* Hotseat, co-op and against-the-AI skirmishes build both forces before the battle (a demo rolls both and starts at once): each
    side in turn (kind, name, colours, units), then the battlefield (scenario,
-   world, terrain). A demo starts each side as a random kind of force with a
-   rolled build, as does the opposition against the AI. And on a page with no
+   world, terrain). The opposition against the AI starts as a random kind of
+   force with a rolled build. And on a page with no
    server behind it, the Multiplayer card is there but greyed out. */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -90,24 +90,14 @@ const { ROOT, SHOTS } = require('../where.js');
     JSON.stringify(cs));
 
   console.log('\nDemo');
+  // a demo asks nothing: two random forces, straight onto the table
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('demo'); });
-  await p.waitForTimeout(200);
-  h = await hot();
-  const d1 = await p.evaluate(() => ({ faction: document.getElementById('sel-faction').value, name: document.getElementById('hot-name').value,
-    legal: /legal/i.test(document.getElementById('faults').textContent), units: document.querySelectorAll('#chosen .pick').length }));
-  check('force 1 starts rolled: a kind of force, a build and a name', d1.units > 0 && d1.legal && !!d1.name && /^Force 1/.test(await title()), JSON.stringify(d1));
-  await setVal('sel-faction', d1.faction === 'xeno' ? 'pmc' : 'xeno');
-  const d1b = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, legal: /legal/i.test(document.getElementById('faults').textContent) }));
-  check('...and changing its kind rolls a fresh build', d1b.units > 0 && d1b.legal);
-  await next();
-  const d2 = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, name: document.getElementById('hot-name').value }));
-  h = await hot();
-  check('force 2 starts rolled too, in another colour', d2.units > 0 && !!d2.name && d2.name !== h.sides[0].name && h.step === 2, JSON.stringify(d2));
-  await next();
-  await next();
   await p.waitForTimeout(600);
-  const ds = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, ca: s.cfg.colourA, cb: s.cfg.colourB }; });
-  check('the demo runs with the two forces', ds.mode === 'demo' && !!ds.a && !!ds.b && ds.ca !== ds.cb, JSON.stringify(ds));
+  const ds = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, ca: s.cfg.colourA, cb: s.cfg.colourB,
+    setup: !document.getElementById('setup').hidden, menu: !document.getElementById('menu').hidden,
+    na: s.units.filter(u => u.side === 'A').length, nb: s.units.filter(u => u.side === 'B').length }; });
+  check('the demo starts at once, with no muster screen', !ds.setup && !ds.menu, JSON.stringify(ds));
+  check('...two named forces in colours of their own', ds.mode === 'demo' && !!ds.a && !!ds.b && ds.a !== ds.b && ds.ca !== ds.cb && ds.na > 0 && ds.nb > 0, JSON.stringify(ds));
 
   console.log('\nAgainst the AI');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('ai'); });
