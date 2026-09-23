@@ -693,6 +693,7 @@
   /* Every soldier the force has lost in the campaign, most recent battle
      first: who they were, what they served in, and where they fell. */
   function memorialList(co) {
+    if (co.faction === 'bugs') return biomassList(co);
     var list = co.memorial || [];
     if (!list.length) return '<p class="dnote">No one has been lost yet.</p>';
     var SCx = root.PMCScen, battles = {}, order = [];
@@ -716,6 +717,20 @@
         }).join('') + '</ol></div>';
     });
     return h;
+  }
+  /* The swarm mourns no one: its memorial is the biomass it has spent over
+     the campaign, totalled for each kind of bug. */
+  function biomassList(co) {
+    var bio = co.biomass || {}, types = Object.keys(bio).filter(function (t) { return bio[t] > 0; });
+    if (!types.length) return '<p class="dnote">No biomass lost yet.</p>';
+    types.sort(function (a, b) { return bio[b] - bio[a] || (a < b ? -1 : 1); });
+    var total = types.reduce(function (n, t) { return n + bio[t]; }, 0);
+    return '<p class="dnote">' + total + ' biomass lost over ' + co.record.battles +
+      (co.record.battles === 1 ? ' battle' : ' battles') + '.</p>' +
+      '<div class="dmem"><div class="dmem-head">Biomass lost<span class="mk">' + total + '</span></div>' +
+      '<ol class="dmem-list">' + types.map(function (t) {
+        return '<li class="dmem-bio"><b>' + esc(t) + '</b><span class="dmen-rank">\u00d7 ' + bio[t] + '</span></li>';
+      }).join('') + '</ol></div>';
   }
   var menOpen = {};               // which units have their soldiers shown, by rid
 

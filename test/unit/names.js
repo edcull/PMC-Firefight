@@ -33,7 +33,14 @@ R.musterMen(lcv, null, taken);
 ok('a crewed vehicle has one named commander', lcv.men.length === 1 && lcv.men[0].rank === 'Commander');
 const bug = unit('bsmall');
 R.musterMen(bug, null, taken);
-ok('a bug gets a brood designation', /-\d+$/.test(bug.men[1].name) && bug.men[1].rank === 'Drone');
+ok('a bug unit has no named individuals', bug.men.length === 0);
+bug.models = 5;
+R.syncMen(bug, 2, taken);
+bug.models = 7;                        // the Endless Tide digs two back out
+R.syncMen(bug, 3, taken);
+bug.models = 4;
+R.syncMen(bug, 4, taken);
+ok('...it counts the biomass it loses, regrowth or not', bug.lostModels === 6, bug.lostModels + ' lost');
 const rebels = unit('rinsurgents');
 R.musterMen(rebels, null, taken);
 ok('rebels are fighters under a cell leader', rebels.men[0].rank === 'Cell Leader' && rebels.men[1].rank === 'Fighter');
@@ -75,11 +82,20 @@ for (const [fa, fb] of [['pmc', 'rebel'], ['xeno', 'bugs']]) {
   let steps = 0;
   while (!e.over() && steps < 4000) { if (!e.intent('A', { k: 'step' }).ok) break; steps++; }
   const rep = e.report(), st = e.state();
-  ok('...the living match the models', st.units.every((u) => R.isMachine(u) || live(u).length === u.models));
-  const infantryLost = rep.casualties.filter((c) => !R.isMachine(R.profile(st.units.find((u) => (u.rid || u.id) === c.rid).key))).length;
-  const byCount = st.units.filter((u) => !R.isMachine(u)).reduce((a, u) => a + u.men.length - live(u).length, 0);
+  ok('...the living match the models', st.units.every((u) => R.isMachine(u) || u.faction === 'bugs' || live(u).length === u.models));
+  const infantryLost = rep.casualties.filter((c) => !c.swarm && !R.isMachine(R.profile(st.units.find((u) => (u.rid || u.id) === c.rid).key))).length;
+  const byCount = st.units.filter((u) => !R.isMachine(u) && u.faction !== 'bugs').reduce((a, u) => a + u.men.length - live(u).length, 0);
   ok('...the report names every man lost', rep.casualties.length > 0 && infantryLost === byCount, rep.casualties.length + ' casualties');
-  ok('...each by name, rank and type', rep.casualties.every((c) => c.name && c.rank && c.type && c.turn >= 0));
+  ok('...each by name, rank and type', rep.casualties.every((c) => c.swarm || (c.name && c.rank && c.type && c.turn >= 0)));
+  if (fb === 'bugs') {
+    const bugs = st.units.filter((u) => u.faction === 'bugs');
+    const swarm = rep.casualties.filter((c) => c.swarm);
+    ok('...the swarm is never named', bugs.every((u) => u.men.length === 0) && swarm.every((c) => !c.name && !c.rank));
+    ok('...its losses are counted, a line for each unit that lost any', swarm.length > 0 &&
+      swarm.every((c) => c.count > 0 && c.count === bugs.find((u) => (u.rid || u.id) === c.rid).lostModels),
+      swarm.reduce((n, c) => n + c.count, 0) + ' biomass');
+    ok('...at least what the model counts show', bugs.every((u) => (u.lostModels || 0) >= (R.isMachine(u) ? (u.alive || u.fled ? 0 : 1) : (u.startSize || u.size) - u.models)));
+  }
   ok('...and the survivors are on each line', rep.units.every((l) => Array.isArray(l.men)));
 }
 
@@ -122,6 +138,23 @@ const u3 = unit('recruits');
 C.applyEntry(u3, fresh, []);
 R.musterMen(u3, u3.camp.men, {});
 ok('the new name takes the field', u3.men[2].name === 'Jan "Tank" Novak');
+
+console.log('the swarm in a campaign');
+const hive = C.newCampaign({ mode: 'solo', factionA: 'bugs' });
+hive.companies.A.faction = 'bugs';
+const brood = C.newEntry('bsmall');
+hive.companies.A.roster.push(brood);
+ok('a bug entry has no soldiers to show', C.menOf(brood, hive.companies.A) === true && brood.men.length === 0);
+const bugReport = (n) => ({
+  winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+  units: [{ rid: brood.rid, side: 'A', key: 'bsmall', startSize: 8, endSize: 8 - n, destroyed: false, brokenEver: false, wiped: false, men: [], minSize: 8 - n, kills: [] }],
+  casualties: [{ side: 'A', swarm: true, count: n, type: 'Small bugs', unit: 'Small bugs', rid: brood.rid, turn: 0 }]
+});
+C.aftermath(hive, bugReport(3));
+C.aftermath(hive, bugReport(4));
+ok('the memorial keeps biomass by kind, not names', hive.companies.A.biomass && hive.companies.A.biomass['Small bugs'] === 7 &&
+  hive.companies.A.memorial.length === 0, JSON.stringify(hive.companies.A.biomass));
+ok('...and the unit history says how much', brood.history.some((h) => /Biomass lost: 3/.test(h)));
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

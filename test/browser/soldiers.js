@@ -112,6 +112,27 @@ async function clickText(p, re) {
   check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
   await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
 
+  // the swarm's memorial is biomass by kind of bug, not names
+  await p.evaluate(() => {
+    const co = window.PMC_CAMPAIGN.get().companies.A;
+    co._was = { faction: co.faction, memorial: co.memorial };
+    co.faction = 'bugs'; co.memorial = []; co.biomass = { 'Small bugs': 14, 'Attack forms': 9, 'Spitter larva swarms': 3 };
+  });
+  await clickText(p, '^Units$');
+  await clickText(p, '^Memorial$');
+  const bio = await p.evaluate(() => ({
+    text: document.getElementById('camp-body').innerText,
+    rows: [...document.querySelectorAll('#camp-body .dmem-list li')].map(li => li.innerText.replace(/\s+/g, ' '))
+  }));
+  check('a swarm\'s memorial totals its biomass', /26 biomass lost/.test(bio.text));
+  check('...by kind of bug, most first', bio.rows.length === 3 && /Small bugs × 14/.test(bio.rows[0]), bio.rows.join(' | '));
+  await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-biomass.png') });
+  await p.evaluate(() => {
+    const co = window.PMC_CAMPAIGN.get().companies.A;
+    co.faction = co._was.faction; co.memorial = co._was.memorial; delete co.biomass; delete co._was;
+  });
+  await clickText(p, '^Units$');
+
   console.log('\nReloading the page');
   await p.reload();
   await p.waitForTimeout(900);

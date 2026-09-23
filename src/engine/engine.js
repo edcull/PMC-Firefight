@@ -2295,11 +2295,19 @@
   }
 
   /* The casualty list: every named soldier lost, by name, rank and the kind of
-     unit they served in, side by side, in the order they were lost. */
+     unit they served in, side by side, in the order they were lost. A bug unit
+     has one line instead, with the count of what it lost. */
   function casualtyList() {
     var out = [];
     state.units.forEach(function (u) {
       var p = R.profile(u.key);
+      // the swarm has no names: a bug unit reports how much of it was lost
+      if (u.faction === 'bugs') {
+        if (u.lostModels) {
+          out.push({ side: u.side, swarm: true, count: u.lostModels, type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id, turn: 0 });
+        }
+        return;
+      }
       (u.men || []).forEach(function (m) {
         if (m.lost == null) return;
         out.push({

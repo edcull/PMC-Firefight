@@ -1472,7 +1472,8 @@
         var cas = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
         if (cas.length) {
           u.casualties = cas;
-          entry.history.push('Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
+          entry.history.push(cas[0].swarm ? 'Biomass lost: ' + cas.reduce(function (n, c) { return n + c.count; }, 0) + '.'
+            : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
         }
         if (line.men) entry.men = line.men.slice();
 
@@ -1605,6 +1606,12 @@
          for the whole campaign — including those of units that are gone. */
       co.memorial = co.memorial || [];
       (report.casualties || []).filter(function (c) { return c.side === side; }).forEach(function (c) {
+        // the swarm keeps a tally of biomass by kind of bug instead of names
+        if (c.swarm) {
+          co.biomass = co.biomass || {};
+          co.biomass[c.type] = (co.biomass[c.type] || 0) + c.count;
+          return;
+        }
         co.memorial.push({
           name: c.name, rank: c.rank, type: c.type, unit: c.unit, turn: c.turn,
           battle: out.turn, against: foe.name, scenario: report.scenario

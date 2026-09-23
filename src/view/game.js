@@ -3759,9 +3759,25 @@
     var list = (state.report && state.report.casualties) || null;
     if (!list) return '';
     return '<div class="cas">' + ['A', 'B'].map(function (side) {
-      var mine = list.filter(function (c) { return c.side === side; });
+      var all = list.filter(function (c) { return c.side === side; });
+      var mine = all.filter(function (c) { return !c.swarm; });
+      // the swarm has no names: its losses are biomass, totalled by kind of bug
+      var bio = {}, bioOrder = [], bioTotal = 0;
+      all.forEach(function (c) {
+        if (!c.swarm) return;
+        if (!bio[c.type]) { bio[c.type] = 0; bioOrder.push(c.type); }
+        bio[c.type] += c.count; bioTotal += c.count;
+      });
+      var head = bioOrder.length ? bioTotal + ' biomass lost'
+        : mine.length ? mine.length + (mine.length === 1 ? ' casualty' : ' casualties') : 'no casualties';
       var h = '<div class="cas-side cas-' + side + '"><div class="cas-head">' + esc(sideName(side)) +
-        '<span class="mk">' + (mine.length ? mine.length + (mine.length === 1 ? ' casualty' : ' casualties') : 'no casualties') + '</span></div>';
+        '<span class="mk">' + head + '</span></div>';
+      if (bioOrder.length) {
+        bioOrder.sort(function (a, b) { return bio[b] - bio[a]; });
+        h += '<ol class="cas-list">' + bioOrder.map(function (t) {
+          return '<li><b>' + esc(t) + '</b> <span class="cas-rank">\u00d7 ' + bio[t] + '</span></li>';
+        }).join('') + '</ol>';
+      }
       if (mine.length) {
         h += '<ol class="cas-list">' + mine.map(function (c) {
           return '<li><span class="cas-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
