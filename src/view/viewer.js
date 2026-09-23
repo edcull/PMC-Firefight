@@ -116,6 +116,7 @@
     var order = [u, t].sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
+      if (m === u && arr.hidden) return;                 // not on the field yet
       I.drawUnit(g, m, {
         at: { x: m.x, y: m.y }, lift: m === u ? arr.lift : 0,
         hop: m === u ? (view.hop || 0) : 0,
@@ -325,6 +326,8 @@
   function arriving() {
     if (!view.arriveAt) return { lift: 0, status: null };
     var age = Date.now() - view.arriveAt;
+    // before it arrives the field is empty: the unit is not on the table yet
+    if (age < 0) return { lift: 0, status: null, hidden: true };
     if (view.arriveKind === 'drop') {
       if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
       // gathering speed the whole way down, so it arrives hard rather than drifting in
@@ -339,28 +342,40 @@
     };
   }
 
+  /* An arrival starts from an empty field: the unit is taken off the stage
+     for a moment first, so it is seen coming in from nowhere rather than
+     dropping to the ground from where it stood and getting back up. */
+  var CLEAR_MS = 450;
   function insert() {
     var u = unit(), craft = R.isMachine(u) || !!u.jets;
     if (view.walking) toggleWalk();
     FX.clear();
     syncSound();
-    view.arriveAt = Date.now();
-    view.arriveKind = craft ? 'drop' : 'stand';
     var at = { x: u.x, y: u.y };
-    if (craft) {
-      FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
-      setTimeout(function () {
-        FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 2.4, dur: 700, blocking: true });
-        if (SFX) { SFX.impact(); SFX.impact(0.09); }
-        start();
-      }, DROP_MS - 60);
-    } else {
-      FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 1.6, dur: 600, blocking: true });
-      // boots, then the squad on its feet
-      if (SFX) { SFX.step(); SFX.step(0.24); SFX.step(0.5); }
-    }
-    // keep the frame loop turning while the arrival plays out
-    FX.add({ kind: 'hold', x: at.x, y: at.y, dur: craft ? DROP_MS + 300 : STAND_MS, blocking: true });
+    view.arriveAt = Date.now() + CLEAR_MS;
+    view.arriveKind = craft ? 'drop' : 'stand';
+    // the empty moment: nothing on the field, and the frame loop kept turning through it
+    FX.add({ kind: 'hold', x: at.x, y: at.y, dur: CLEAR_MS + 50, blocking: true });
+    var landing = view.arriveAt;
+    setTimeout(function () {
+      if (view.arriveAt !== landing) return;          // another arrival or a new unit since
+      if (craft) {
+        FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
+        setTimeout(function () {
+          if (view.arriveAt !== landing && view.arriveAt !== 0) return;
+          FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 2.4, dur: 700, blocking: true });
+          if (SFX) { SFX.impact(); SFX.impact(0.09); }
+          start();
+        }, DROP_MS - 60);
+      } else {
+        FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 1.6, dur: 600, blocking: true });
+        // boots, then the squad on its feet
+        if (SFX) { SFX.step(); SFX.step(0.24); SFX.step(0.5); }
+      }
+      // keep the frame loop turning while the arrival plays out
+      FX.add({ kind: 'hold', x: at.x, y: at.y, dur: craft ? DROP_MS + 300 : STAND_MS, blocking: true });
+      start();
+    }, CLEAR_MS);
     start();
     note(craft
       ? u.name + ' comes down on its landing point — the dust goes up with it.'

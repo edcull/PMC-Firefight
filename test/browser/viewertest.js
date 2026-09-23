@@ -152,17 +152,20 @@ async function pickAndFire(p, key, ms) {
   const stand = await p.evaluate(async () => {
     window.__viewer.pick('shock');
     window.__viewer.set('status', 'ready');
-    const out = { fx: [], shown: [] };
+    const out = { fx: [], shown: [], hidden: [] };
     window.__viewer.insert();
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 40; i++) {
       const a = window.__viewer.arriving();
-      out.shown.push(a.status);
+      out.hidden.push(!!a.hidden);
+      if (!a.hidden) out.shown.push(a.status);
       out.fx = out.fx.concat(window.__viewer.fx());
       await new Promise(r => setTimeout(r, 50));
     }
     out.after = window.__viewer.arriving();
     return out;
   });
+  ok('an insertion starts from an empty field', stand.hidden[0] === true && stand.hidden.indexOf(false) > 0,
+    stand.hidden.filter(Boolean).length * 50 + 'ms with nothing on the table');
   ok('a squad throws up dust as it breaks cover', stand.fx.indexOf('collapse') >= 0,
     Array.from(new Set(stand.fx)).join(' '));
   ok('...is drawn flat on its face first', stand.shown[0] === 'broken');
@@ -174,17 +177,19 @@ async function pickAndFire(p, key, ms) {
   // a craft falls out of the sky onto its landing point
   const drop = await p.evaluate(async () => {
     window.__viewer.pick('insertplat');
-    const out = { fx: [], lift: [] };
+    const out = { fx: [], lift: [], hidden: [] };
     window.__viewer.insert();
-    for (let i = 0; i < 26; i++) {
-      out.lift.push(window.__viewer.arriving().lift);
+    for (let i = 0; i < 40; i++) {
+      const a = window.__viewer.arriving();
+      out.hidden.push(!!a.hidden);
+      if (!a.hidden) out.lift.push(a.lift);
       out.fx = out.fx.concat(window.__viewer.fx());
       await new Promise(r => setTimeout(r, 50));
     }
     out.after = window.__viewer.arriving();
     return out;
   });
-  ok('a rapid insertion platform drops from the sky', drop.lift[0] > 0,
+  ok('a rapid insertion platform drops from the sky, onto an empty field', drop.hidden[0] === true && drop.lift[0] > 0,
     'starts ' + drop.lift[0] + 'px up');
   ok('...marking the ground it is coming down on', drop.fx.indexOf('dropmark') >= 0,
     Array.from(new Set(drop.fx)).join(' '));
