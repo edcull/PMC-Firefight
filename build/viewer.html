@@ -13829,9 +13829,13 @@
             var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
             sEllipse(nz[0], nz[1], 3.4, 3, STEEL); sEllipse(nz[0], nz[1], 2, 1.8, dead ? '#15181e' : '#c96a2a');
             canopy(L * 0.12, L * 0.36, fw2 * 0.5, z + H, 4);
-            tailFin(-L * 0.3, z + H * 0.7, hyb ? 14 : 16, true);
             if (hyb) { var sp = S3(AF(L * 0.1, 0), z + H + 1); sEllipse(sp[0], sp[1] - 1, 2.4, 1.6, STEEL); }
           });
+          /* The twin fins stand above the wings and the tailplane, so they go
+             on after them whichever way the jet faces: from ahead they were
+             drawn with the body, and from behind the wings, drawn after the
+             body, covered them. */
+          part(-L * 0.36, 0, function () { tailFin(-L * 0.3, z + H * 0.7, hyb ? 14 : 16, true); }, true);
           part(L * 0.4, 0, function () {
             var gp = S3(AF(L * 0.26, -fw2 * 0.7), z + H * 0.7);
             mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);        // the gun port fires from here, without a dot to mark it
