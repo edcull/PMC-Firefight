@@ -8315,6 +8315,8 @@
                   // the charge burning in it, the size the Gauss arms show it
                   // a short barrel: its vents drawn to a slimmer gauge, so they sit apart inside it
                   vents(TF, a0b, reach, 0, bz, 4.5, 2, rake);
+                  // and one more close in to the hull, where the barrel leaves the turret
+                  vents(TF, a0b, a0b + (reach - a0b) * 0.3, 0, bz, 4.5, 1, rake * 0.3);
                   // the muzzle: a wide mouth across the end of the barrel, the charge glowing in it
                   sEllipse(bt[0], bt[1], 3.9, 3.4, '#0c1016');
                   if (!dead) {
