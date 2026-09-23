@@ -7520,6 +7520,8 @@
   var LEG = 1.32;                 // how much longer the legs are drawn
   var HEAD_W = 0.86;              // and how much narrower the head
   var HIP = -20;                  // where the legs meet the body, in art units
+  var KNEEL_DROP = 11;            // how far a man down on one knee sinks, in art units
+  var XENO_LOW = 13;              // how far a hunkered Xenotripod lets its body down
   var COLLAR = -43;               // above this, a shape is part of the head
   // the company's own colour on a tinted figure (the tint keeps it as `force`)
   function PALETTE_FORCE(pal) { return pal.force || pal.light; }
@@ -7567,7 +7569,7 @@
     var b = kit.bulk || 0;
     var tw = 17 + b * 3, tx = -Math.round(tw / 2);     // torso width and left edge
     var sw = tw + 2;                                   // across the shoulders
-    var drop = pose === 'kneel' ? 8 : 0;               // how far the body sinks
+    var drop = pose === 'kneel' ? KNEEL_DROP : 0;      // how far the body sinks
 
     /* ---- gone to ground ----
        Flat on the belly, seen from above and to the side as the camera sees
@@ -7755,13 +7757,25 @@
       P(-2, -22 + kb, 6, 9, pal.dark);                 // shin dropped to the peg
       P(-3, -14 + kb, 8, 4, BOOT);
     } else if (pose === 'kneel') {
-      P(-9, -12, 8, 8, pal.dark);                      // folded rear leg
-      P(-9, -12, 3, 8, pal.mid);
-      P(-11, -4, 10, 4, BOOT);
-      P(2, -16, 6, 12, pal.dark);                      // forward knee
-      P(2, -16, 3, 12, pal.mid);
-      P(2, -16, 6, 3, pal.helm);                       // knee pad
-      P(1, -4, 8, 4, BOOT);
+      /* Down on one knee: the rear knee on the ground with the shin laid out
+         behind and the toes tucked, the front thigh level out to a raised knee
+         and the shin straight down to a planted boot. */
+      P(-8, -10, 7, 8, pal.dark);                      // rear thigh, down to the ground
+      P(-8, -10, 3, 8, pal.mid);
+      P(-9, -4, 6, 4, pal.helm);                       // its knee pad, on the ground
+      P(-17, -4, 9, 4, pal.dark);                      // the shin laid out behind
+      P(-17, -4, 9, 1.2, pal.mid);
+      P(-21, -6, 5, 6, BOOT);                          // toes tucked under
+      P(-21, -1, 5, 1, '#08090c');
+      P(-1, -11, 12, 6, pal.dark);                     // front thigh, level out to the knee
+      P(-1, -11, 12, 2, pal.mid);
+      P(7, -12, 5, 4, pal.helm);                       // knee pad, up at the front
+      P(7.5, -12, 3.5, 1, kit.blackPads ? '#4a4e4a' : pal.light);
+      P(6, -7, 6, 4, pal.dark);                        // the shin, straight down
+      P(6, -7, 2, 4, pal.mid);
+      P(5, -4, 9, 4, BOOT);                            // the planted boot
+      P(5, -4, 3, 1, '#3a3f47');
+      P(5, -1, 9, 1, '#08090c');
     } else if (kit.armoured) {
       // powered armour is heavy: it lifts a foot, but not far
       var aL = step ? [3, 0] : [0, 2];
@@ -9151,7 +9165,7 @@
   var MUZZLE_PRONE = { long: [41, -9], mg: [35, -8.5], saw: [35, -8.5], optics: [27, -15], case: [24, -7], slate: [24, -7], console: [24, -7] };
   function muzzleArt(kit, pose) {
     if (pose === 'prone') return MUZZLE_PRONE[kit.gun] || [31, -8];
-    var drop = pose === 'kneel' ? 8 : 0, wy = -32 + drop;
+    var drop = pose === 'kneel' ? KNEEL_DROP : 0, wy = -32 + drop;
     var m = MUZZLE[kit.gun] || (kit.gun === 'slate' || kit.gun === 'optics' || kit.gun === 'case' ||
       kit.gun === 'console' || kit.gun === 'shell' || kit.gun === 'none' ? [10, 4] : MUZZLE.rifle);
     var y = wy + m[1];
@@ -9567,7 +9581,7 @@
     if (pose === 'prone') {
       spots = [[-2, -12, 3.2], [4, -13, 2.4], [10, -11, 2.8], [-8, -9, 2]];
     } else {
-      var d = pose === 'kneel' ? 8 : 0;
+      var d = pose === 'kneel' ? KNEEL_DROP : 0;
       spots = v === 1 ? [[-3, -66 + d, 3.4], [3, -64 + d, 2.4], [-9, -50 + d, 2.6], [8, -48 + d, 2]]
         : v === 2 ? [[4, -67 + d, 2.8], [-8, -52 + d, 3.2], [-10, -44 + d, 2.2], [9, -50 + d, 2.4]]
         : v === 3 ? [[-5, -64 + d, 2.6], [-10, -40 + d, 3], [-9, -32 + d, 2.2], [7, -49 + d, 2.6]]
@@ -9662,10 +9676,11 @@
       /* ---- an Esh-Aven: digitigrade lizard legs, a gargoyle hunch, arms that
          split at the elbow into two forearms each, five compound eyes ---- */
       var SK = dead ? { lt: '#6a6a66', md: '#565653', dk: '#3c3c3a', sh: '#2a2a2a' } : XASH;
-      var lo = kneel ? 7 : 0;
+      var lo = kneel ? XENO_LOW : 0;                   // hunkered down, belly to the ground
       var st = step ? 1 : 0;
       // the far leg
       var fl = st ? [[-2, -22 + lo], [-8, -13 + lo * 0.6], [-4, -5], [-7, 0]] : [[-2, -22 + lo], [4, -13 + lo * 0.6], [-1, -5], [2, 0]];
+      if (kneel) fl = [[-2, -22 + lo], [-8, -7], [-5, -2], [-9, 0]];
       L(fl, 3.6, SK.sh); L([[fl[3][0] - 2, 0], [fl[3][0] + 4, 0]], 1.8, SK.sh);
       // the tail
       Q([[-6, -22 + lo], [-15, -16 + lo], [-20, -7], [-26, -4]], 3.2, SK.dk);
@@ -9696,7 +9711,7 @@
       });
       // the near leg
       var nl = st ? [[0, -21 + lo], [7, -13 + lo * 0.6], [2, -5], [6, 0]] : [[0, -21 + lo], [-5, -13 + lo * 0.6], [-1, -5], [-3, 0]];
-      if (kneel) nl = [[0, -14], [8, -9], [2, -3], [6, 0]];
+      if (kneel) nl = [[0, -21 + lo], [9, -6], [5, -2], [9, 0]];
       L(nl, 4, SK.dk); L(nl, 2.6, SK.md);
       L([[nl[3][0] - 2, 0], [nl[3][0] + 4.5, 0]], 2, SK.dk);                       // the clawed foot
       E(nl[1][0], nl[1][1], 2.4, 2.2, SK.dk);
@@ -9759,7 +9774,7 @@
       /* ---- a Crock: three legs on high spiked knees, a faceted ceramic
          carapace like a cut crystal, a wedge of a helmet with a slit of eyes,
          and three armoured arms. Every plane is lit by which way it faces. ---- */
-      var lo2 = kneel ? 6 : 0, rank = kit.rank || 'beta';
+      var lo2 = kneel ? XENO_LOW : 0, rank = kit.rank || 'beta';   // hunkered: the body let down to the ground
       var bx = rank === 'beta' ? 0.92 : rank === 'gamma' ? 0.84 : 0.78;   // squat, but still cut in long planes
       var hipY = -16 + lo2, by = -28 + lo2 + bob, hy = by - 14;
       // hunched forward to strike: the upper body leans over the front leg
@@ -9848,10 +9863,10 @@
       }
       var sw2 = step ? 2 : 0;
       // the far leg and the third arm, raised behind like a sting
-      leg(0, hipY, kneel ? -2 : -1, hipY - 7, kneel ? 3 : 1 - sw2, true);
+      leg(0, hipY, kneel ? -3 : -1, hipY - 7, kneel ? 6 : 1 - sw2, true);
       arm([[-4, by - 7], [-11, by - 9], [-14, by - 15], [-11, by - 21]], 1.9, 0.8, FAR, true);
       if (!dead) E(-12, by - 12, 0.8, 0.8, GL.d || GL.m);
-      leg(-4, hipY, kneel ? -12 : -10 - sw2 * 0.5, hipY - 6, kneel ? -15 : -13 - sw2, false);
+      leg(-4, hipY, kneel ? -14 : -10 - sw2 * 0.5, hipY - 6, kneel ? -20 : -13 - sw2, false);
       // the far arm
       arm([[3, by - 8], [5, by - 2], [9, by + 1], [12, by - 1]], 1.7, 0.8, FAR, true);
       // the carapace: broad at the shoulders, cut to a point below
@@ -9883,7 +9898,7 @@
         L([body[1], body[2], body[3]], 0.8, XGOLD.md);
         L([body[6], body[5], body[4]], 0.8, XGOLD.md);
       }
-      leg(3, hipY, kneel ? 11 : 9 + sw2 * 0.5, hipY - 6, kneel ? 15 : 13 + sw2, false);
+      leg(3, hipY, kneel ? 13 : 9 + sw2 * 0.5, hipY - 6, kneel ? 20 : 13 + sw2, false);
       // the helmet: a wedge, swept back to a spike, a slit of little eyes
       /* The head: a long wedge thrust forward, a jaw spike under it, and a
          crown of long cranial spikes swept back off the skull — tipped with
@@ -10088,6 +10103,7 @@
   }
   function bugMuzzle(kit, pose) {
     var m = kit.mz || [12, -10];
+    if (kit.xeno && pose === 'kneel') return [m[0], m[1] + XENO_LOW];
     return [m[0], m[1] + (pose === 'kneel' ? 4 : pose === 'prone' ? 9 : 0)];
   }
   /* ---------- the Overgrown: bugs the size of a tank ----------
