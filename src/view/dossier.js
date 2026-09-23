@@ -288,6 +288,40 @@
   }
 
   /* ================= the hub ================= */
+  /* The rivals a new solo campaign has asked to meet. None is a random world;
+     they are ticked in a list of their own, behind one line on the hub. */
+  var archPick = [];
+  var ARCH_GROUPS = [['Mercenary companies', C.ARCHETYPES], ['Revolts', C.REBEL_ARCHETYPES],
+    ['Bug swarms', C.BUG_ARCHETYPES], ['Xenotripod tribes', C.XENO_ARCHETYPES]];
+  function archName(id) {
+    for (var i = 0; i < ARCH_GROUPS.length; i++) {
+      for (var j = 0; j < ARCH_GROUPS[i][1].length; j++) if (ARCH_GROUPS[i][1][j].id === id) return ARCH_GROUPS[i][1][j].name;
+    }
+    return id;
+  }
+  function archLine() {
+    return '<span>' + (archPick.length ? esc(archPick.map(archName).join(', ')) : 'Random world') + '</span>' +
+      '<em>' + (archPick.length ? 'change' : 'tap to select') + '</em>';
+  }
+  function openArchs() {
+    var h = '<h3>Who you are up against</h3><p>Tick any number, or none for a world that is all chance.</p>' +
+      '<div class="archpick">' + ARCH_GROUPS.map(function (g) {
+        return '<div class="archgrp"><h4>' + esc(g[0]) + '</h4>' + g[1].map(function (a) {
+          return '<label class="archopt"><input type="checkbox" class="camp-arch" value="' + a.id + '"' +
+            (archPick.indexOf(a.id) >= 0 ? ' checked' : '') + '>' +
+            '<span><b>' + esc(a.name) + '</b><small>' + esc(a.blurb) + '</small></span></label>';
+        }).join('') + '</div>';
+      }).join('') + '</div>' +
+      '<div class="askrow"><button type="button" class="lnk" data-go="archrandom">Random</button>' +
+      '<button type="button" class="start" data-go="archdone">Done</button></div>';
+    el('camp-archbox').innerHTML = h;
+    el('camp-archmodal').hidden = false;
+  }
+  function closeArchs() {
+    el('camp-archmodal').hidden = true;
+    var line = el('camp-archline');
+    if (line) line.innerHTML = archLine();
+  }
   function hubView() {
     var h = '<h2>Campaign</h2>';
     if (!camp) {
@@ -310,15 +344,8 @@
          of them they want to meet — tick as many as you like, or none for a
          world that is all chance. Hotseat: there are no rolled rivals, only the
          second player's force, so this asks what kind that is instead. */
-      var ARCH_GROUPS = [['Mercenary companies', C.ARCHETYPES], ['Revolts', C.REBEL_ARCHETYPES],
-        ['Bug swarms', C.BUG_ARCHETYPES], ['Xenotripod tribes', C.XENO_ARCHETYPES]];
-      h += '<div class="field" id="camp-archwrap"><label>Who you are up against <span class="hint small">— tick any number, or none for a random world</span></label>' +
-        '<div class="archpick">' + ARCH_GROUPS.map(function (g) {
-          return '<div class="archgrp"><h4>' + esc(g[0]) + '</h4>' + g[1].map(function (a) {
-            return '<label class="archopt"><input type="checkbox" class="camp-arch" value="' + a.id + '">' +
-              '<span><b>' + esc(a.name) + '</b><small>' + esc(a.blurb) + '</small></span></label>';
-          }).join('') + '</div>';
-        }).join('') + '</div></div>';
+      h += '<div class="field" id="camp-archwrap"><label for="camp-archline">Who you are up against</label>' +
+        '<button type="button" class="archline" id="camp-archline" data-go="archopen">' + archLine() + '</button></div>';
       h += '<div class="field" id="camp-bwrap" hidden><label for="camp-bfaction">What Player 2 is running</label>' +
         '<select id="camp-bfaction">' +
         '<option value="pmc">A private military company</option>' +
@@ -1675,8 +1702,17 @@
     else if (view === 'upgrade') h = upgradeView();
     else if (view === 'intel') h = intelView();
     else h = hubView();
+    /* The screen's heading goes up in the top bar, and the bar's Back does
+       what the screen's own way back does (to the hub, or the main menu); a
+       screen with no way back, part way through something, has none. */
+    var hd = /^<h2>([\s\S]*?)<\/h2>/.exec(h);
+    if (hd) h = h.slice(hd[0].length);
+    el('camp-title').innerHTML = hd ? hd[1] : 'Campaign';
     body.innerHTML = h;
     body.scrollTop = 0;
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
+    bk.hidden = !way;
+    if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
   }
 
   function findEntry(co, rid) { return C.byRid(co, rid); }
@@ -1819,8 +1855,15 @@
     if (t.hasAttribute('data-rival')) intelIdx = +t.getAttribute('data-rival') || 0;
 
     switch (go) {
+      case 'archopen': openArchs(); return;
+      case 'archdone': closeArchs(); return;
+      case 'archrandom':
+        archPick = [];
+        Array.prototype.forEach.call(document.querySelectorAll('#camp-archbox .camp-arch'), function (x) { x.checked = false; });
+        return;
       case 'newcamp': {
-        var archs = Array.prototype.map.call(document.querySelectorAll('#camp-body .camp-arch:checked'), function (x) { return x.value; });
+        var archs = archPick.slice();
+        archPick = [];
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
         // a name to start from; the player settles it on the founding screen
@@ -1981,17 +2024,24 @@
         return;
       }
       if (ev.target === el('camp-ask')) { closeAsk(); return; }   // tapping the backdrop
+      if (ev.target === el('camp-archmodal')) { closeArchs(); return; }
       if (asking) return;                                         // nothing behind it is live
       if (ev.target === host) { close(); return; }
       onClick(ev);
     });
     host.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !el('camp-archmodal').hidden) { ev.preventDefault(); closeArchs(); return; }
       if (!asking) return;
       if (ev.key === 'Enter') { ev.preventDefault(); answerAsk(); }
       else if (ev.key === 'Escape') { ev.preventDefault(); closeAsk(); }
     });
     host.addEventListener('change', function (ev) {
       if (ev.target.id === 'camp-file') onFile(ev);
+      else if (ev.target.classList.contains('camp-arch')) {
+        var id = ev.target.value, at = archPick.indexOf(id);
+        if (ev.target.checked && at < 0) archPick.push(id);
+        else if (!ev.target.checked && at >= 0) archPick.splice(at, 1);
+      }
       // a hotseat campaign has no rival to choose: the second player founds their own
       else if (ev.target.id === 'camp-mode') {
         var hs = ev.target.value === 'hotseat', aw = el('camp-archwrap'), bw = el('camp-bwrap');

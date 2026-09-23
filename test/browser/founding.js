@@ -27,7 +27,7 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
     swatches: document.querySelectorAll('#camp-body [data-campcolour]').length,
     colours: window.PMCIso.COLOUR_KEYS.length,
     on: (document.querySelector('#camp-body .sw.on')||{}).getAttribute ? document.querySelector('#camp-body .sw.on').getAttribute('data-campcolour') : null,
-    heading: document.querySelector('#camp-body h2').textContent
+    heading: document.getElementById('camp-title').textContent
   }));
   ok('the founding screen asks for the name', found.name, '"'+found.nameVal+'"');
   ok('...and offers the colours', found.swatches === found.colours, found.swatches + ' swatches of ' + found.colours + ' army colours');

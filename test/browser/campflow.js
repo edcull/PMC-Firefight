@@ -11,7 +11,7 @@ async function shot(p, name) {
   await p.screenshot({ path: path.join(SHOTS, name) });
   shots.push(name);
 }
-async function body(p) { return p.evaluate(() => document.getElementById('camp-body').innerText); }
+async function body(p) { return p.evaluate(() => document.getElementById('camp-title').textContent + '\n' + document.getElementById('camp-body').innerText); }
 async function click(p, sel) {
   const hit = await p.evaluate((s) => {
     const b = document.querySelector(s);
