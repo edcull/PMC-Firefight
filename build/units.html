@@ -11448,25 +11448,21 @@ html { scroll-behavior: smooth; }
       var reach = spec.craft ? (CRAFT_SPAN[spec.craft] || 1.4) : spec.heli ? 2.2 : 1.2;
       var seed = 0; String(u.art || '').split('').forEach(function (ch) { seed = (seed * 31 + ch.charCodeAt(0)) | 0; });
       var rnd = rng(seed ^ 0x5bd1e995);
-      var cols = Math.max(8, Math.round(len * 2.2 / CELL));
-      var rows = Math.max(7, Math.round(wid * reach * 2.2 / CELL));
-      function put(cx, cy) {
-        if (cx < -cols / 2 || cx > cols / 2 || cy < -rows / 2 || cy > rows / 2) return;
-        var key = cx + ':' + cy;
-        if (seen[key]) return;
-        seen[key] = 1;
-        out.push({ p: cx * CELL, q: cy * CELL, zk: rnd() });
-      }
-      // clusters of two or three cells, each with a few singles stepping away
-      var clumps = Math.round(cols * rows * 0.17);  // enough to cover it, not to fill it in
-      for (var i = 0; i < clumps; i++) {
-        var cx0 = Math.round((rnd() - 0.5) * cols), cy0 = Math.round((rnd() - 0.5) * rows);
-        var w2 = 1 + Math.floor(rnd() * 2), h2 = 1 + Math.floor(rnd() * 2);
-        for (var a = 0; a < w2; a++) for (var b = 0; b < h2; b++) put(cx0 + a, cy0 + b);
-        var strays = 1 + Math.floor(rnd() * 3);
-        for (var q2 = 0; q2 < strays; q2++) {
-          put(cx0 + (rnd() < 0.5 ? -1 : w2) + Math.floor(rnd() * 2) - 1,
-            cy0 + (rnd() < 0.5 ? -1 : h2) + Math.floor(rnd() * 2) - 1);
+      // a little past the machine's reach all round, so no edge of a deck or wing runs off the pattern
+      var cols = Math.max(8, Math.round(len * 1.4 / CELL));
+      var rows = Math.max(7, Math.round(wid * reach * 1.4 / CELL));
+      /* Every block of three by three cells has exactly four filled, picked
+         at random for the kind of machine: the cells still clump and scatter
+         the way a printed digital pattern does, but no stretch of deck three
+         cells across is ever left bare. */
+      var salt = seed & 0xffff;
+      for (var cx = -Math.ceil(cols / 2); cx <= Math.ceil(cols / 2); cx++) {
+        for (var cy = -Math.ceil(rows / 2); cy <= Math.ceil(rows / 2); cy++) {
+          var bx = Math.floor(cx / 3), by = Math.floor(cy / 3), me = hash(cx, cy, salt + bx * 7 + by * 13), below = 0;
+          for (var ci = 0; ci < 3; ci++) for (var cj = 0; cj < 3; cj++) {
+            if (hash(bx * 3 + ci, by * 3 + cj, salt + bx * 7 + by * 13) < me) below++;
+          }
+          if (below < 4) out.push({ p: cx * CELL, q: cy * CELL, zk: rnd() });
         }
       }
       return out;
@@ -12608,7 +12604,9 @@ html { scroll-behavior: smooth; }
           var q = sd * w * 0.5, lean = sd * 0.12;
           var b0 = S3(AF(p + 0.04, q), zz - hh * 0.2), b1 = S3(AF(p - 0.4, q), zz - hh * 0.2);
           var t0 = S3(AF(p - 0.22, q + lean), zz + hh), t1 = S3(AF(p - 0.42, q + lean), zz + hh);
-          poly(g, [b0, b1, t1, t0], sd <= 0 ? mixc(hull, lit, 0.5) : hull);
+          var finCol = sd <= 0 ? mixc(hull, lit, 0.5) : hull;
+          poly(g, [b0, b1, t1, t0], finCol);
+          if (CAMO) camoOn([b0, b1, t1, t0], finCol, zz + hh * 0.4, false, hh);   // the fin carries the pattern too
           edge(g, t0, t1, trim, 1.2);
           edge(g, b0, t0, 'rgba(255,240,214,.35)', 0.7);
           if (fanR && !twin) {
