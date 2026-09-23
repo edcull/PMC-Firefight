@@ -19,6 +19,12 @@ async function drain(p) {
   }
   await p.waitForTimeout(120);
 }
+/* The table plays what has happened before it takes the next order: a tap made
+   while it is still animating the last one waits its turn behind it. So wait
+   for the table to be still before driving it. */
+async function settle(p) {
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
+}
 async function newGame(p, cfg) {
   await p.evaluate((c) => window.PMC_NEWGAME(c), Object.assign({
     tier: 3, pl: 1, mode: 'ai', planet: 'barren', scenario: 'meeting',
@@ -35,6 +41,7 @@ async function start(p) {
   await p.evaluate(() => { const b = document.querySelector('button[data-act="start"]'); if (b) b.click(); });
   await p.waitForTimeout(500);
   await drain(p);
+  await settle(p);
 }
 
 (async () => {

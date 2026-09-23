@@ -24,9 +24,31 @@ async function drain(p) {
   await p.waitForTimeout(120);
 }
 
+/* Play the rest of the turn out. There is no hook to run the reserve phase on
+   its own any more: it opens the next turn, inside the engine, so the turn is
+   brought to an end the way a player would end it. Everyone but one of ours
+   has already acted, and that one regroups; the rally and end phases follow,
+   the next turn begins, and its reserve phase runs. */
+async function endTurn(p) {
+  return await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const last = s.units.find(u => u.side === 'A' && u.alive && u.x >= 0 && !u.reserve && !u.aboard &&
+      window.PMC.status(u) !== 'broken');
+    if (!last) return { none: true };
+    s.units.forEach(u => { u.activated = u !== last; });
+    s.activeSide = 'A'; s.streak = 1; s.chain = null;
+    const from = s.turn;
+    const acted = window.__select(last) && window.__pressAction('regroup');
+    return { from: from, to: s.turn, acted: acted };
+  });
+}
+
+/* A game against the OpFor is mode 'ai' now; 'solo' is the solitaire game,
+   where nobody sits in the other chair and its deployment waits for a player
+   who never comes. */
 async function newGame(p, cfg) {
   await p.evaluate((c) => window.PMC_NEWGAME(c), Object.assign({
-    tier: 3, pl: 1, mode: 'solo', planet: 'barren', scenario: 'meeting',
+    tier: 3, pl: 1, mode: 'ai', planet: 'barren', scenario: 'meeting',
     nameA: 'Ours', nameB: 'Theirs',
     armyA: ['cmd3', 'regular', 'veterans', 'hmgteam', 'engineers', 'lcv'],
     armyB: ['cmd3', 'regular', 'veterans', 'hmgteam', 'engineers', 'lcv']
@@ -114,38 +136,46 @@ async function newGame(p, cfg) {
     for (let x = 6; x <= 42; x += 8) for (let y = 6; y <= 42; y += 8) s.objectives.push({ x: x, y: y, owner: null });
     const held = s.units.find(u => u.side === 'A' && window.PMC.has(u, 'Battlefield Insertion'));
     if (held) { held.reserve = true; held.x = -1; held.y = -1; held.alive = true; }
-    return { spots: window.__insertionSpots(held).length, who: held ? held.name : null };
+    return { spots: window.__insertionSpots(held).length, who: held ? held.name : null, code: held ? held.code : null };
   });
   ok('there is genuinely nowhere legal to drop', stuck.spots === 0, stuck.who + ': 0 spots');
-  const carried = await p.evaluate(async () => {
-    return await new Promise(res => {
-      let done = false;
-      window.__reservePhase(() => { done = true; res({ done: done, asking: window.__insertionAsking() }); });
-      setTimeout(() => { if (!done) res({ done: false, asking: window.__insertionAsking() }); }, 2500);
-    });
-  });
-  ok('...so the reserve phase finishes instead of waiting for ever', carried.done,
-    carried.done ? 'it carried on' : 'still asking for ' + carried.asking);
+  const turned = await endTurn(p);
+  await p.waitForTimeout(600);
+  await drain(p);
+  const carried = await p.evaluate((code) => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => x.code === code);
+    return {
+      asking: window.__insertionAsking(),
+      turn: s.turn, phase: s.phase, over: !!s.over,
+      // the turn goes on: somebody may act in it
+      acting: window.__eligibleUnits().length,
+      reserve: !!(u && u.reserve)
+    };
+  }, stuck.code);
+  ok('...so the reserve phase finishes instead of waiting for ever',
+    turned.acted && carried.turn > turned.from && carried.asking === null && carried.phase === 'battle' &&
+      !carried.over && carried.acting > 0,
+    carried.asking === null ? 'turn ' + turned.from + ' → ' + carried.turn + ', ' + carried.acting + ' units may act'
+      : 'still asking for ' + carried.asking);
+  ok('...and the unit stays in reserve', carried.reserve);
 
   /* ------------------------------------------------- and the way out when there is one */
   head('"Keep it in reserve" is always offered');
-  const offered = await p.evaluate(async () => {
+  await p.evaluate(() => {
     const s = window.PMC_STATE();
     s.objectives = [{ x: 24, y: 24, owner: null }];           // one objective: plenty of room
-    s.turn = 3;
     const held = s.units.find(u => u.side === 'A' && window.PMC.has(u, 'Battlefield Insertion'));
     held.reserve = true; held.x = -1; held.y = -1; held.wave = undefined;
-    return await new Promise(res => {
-      let fired = false;
-      window.__reservePhase(() => { fired = true; });
-      setTimeout(() => res({
-        asking: window.__insertionAsking(),
-        spots: (window.__insertionState() || {}).spots,
-        card: document.getElementById('context').innerHTML,
-        fired: fired
-      }), 500);
-    });
   });
+  await endTurn(p);
+  await p.waitForTimeout(500);
+  await drain(p);
+  const offered = await p.evaluate(() => ({
+    asking: window.__insertionAsking(),
+    spots: (window.__insertionState() || {}).spots,
+    card: document.getElementById('context').innerHTML
+  }));
   ok('the card names the unit and counts the legal ground',
     /Battlefield Insertion/.test(offered.card) && offered.spots > 0,
     offered.spots + ' drop points offered');

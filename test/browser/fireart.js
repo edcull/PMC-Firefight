@@ -139,9 +139,12 @@ async function fireAndWatch(p, code, ms) {
 
   /* ------------------------------------------------------------------- burst */
   head('A machine gun keeps firing');
-  await stage(p, ['hpv:wheeled', 'regular', 'veterans']);
-  const mg = await fireAndWatch(p, 'HPV', 2000);
-  ok('the heavy patrol vehicle\'s machine gun fires in bursts', mg.style === 'burst', mg.why || mg.name);
+  /* The heavy patrol vehicle used to be the machine gun here; the weapon table
+     now gives it an autocannon, so the gun that fires in bursts is an LMG
+     squad's. */
+  await stage(p, ['rlmg', 'regular', 'veterans']);
+  const mg = await fireAndWatch(p, 'RMG', 2000);
+  ok('the LMG squad\'s machine gun fires in bursts', mg.style === 'burst', mg.why || mg.name);
   ok('...as tracers, not a single bolt', !!mg.seen.tracer && !mg.seen.bolt,
     Object.keys(mg.seen).join(' '));
   // the heavy MG is a heavier weapon than its name suggests, and fires like one
@@ -150,9 +153,10 @@ async function fireAndWatch(p, code, ms) {
 
   /* ------------------------------------------------------------------ chain */
   head('An autocannon hull hammers away');
-  await stage(p, ['recon:wheeled', 'regular', 'veterans']);
-  const cannon = await fireAndWatch(p, 'RCV', 2000);
-  ok('the recon vehicle is heavy rapid fire', cannon.style === 'chain', cannon.why || cannon.name);
+  // the heavy patrol vehicle mounts the autocannon (the recon hull has a gun)
+  await stage(p, ['hpv:wheeled', 'regular', 'veterans']);
+  const cannon = await fireAndWatch(p, 'HPV', 2000);
+  ok('the heavy patrol vehicle is heavy rapid fire', cannon.style === 'chain', cannon.why || cannon.name);
   ok('...as fat tracers, not a single bolt', !!cannon.seen.tracer && !cannon.seen.bolt,
     Object.keys(cannon.seen).join(' '));
   ok('...with a muzzle flash for every round', !!cannon.seen.muzzle);
@@ -215,8 +219,8 @@ async function fireAndWatch(p, code, ms) {
     'impacts at ground level');
 
   head('And a rifle line keeps firing for a good second');
-  await stage(p, ['hpv:wheeled', 'regular', 'veterans']);
-  const mg2 = await fireAndWatch(p, 'HPV', 2000);
+  await stage(p, ['rlmg', 'regular', 'veterans']);
+  const mg2 = await fireAndWatch(p, 'RMG', 2000);
   ok('the MG is still a burst weapon', mg2.style === 'burst', mg2.name);
   // the MG's activation has moved the turn on; hand it back before comparing
   await p.evaluate(() => {
@@ -285,6 +289,9 @@ async function fireAndWatch(p, code, ms) {
     function fire(code) {
       const u = s.units.find(x => x.side === 'A' && x.code === code);
       if (!u) return null;
+      /* every shot moves the turn on to the other side, as the rifle line's
+         did above, so hand it back before each one */
+      s.activeSide = 'A';
       u.activated = false;
       window.__select(u);
       window.__pressAction('fire');
@@ -294,7 +301,7 @@ async function fireAndWatch(p, code, ms) {
       window.__shootAt(e.id);
       return calls.slice(from);
     }
-    const mgCalls = fire('HPV');
+    const mgCalls = fire('RMG');
     const rifleCalls = fire('RIF');
     return { mg: mgCalls, rifle: rifleCalls };
   });
