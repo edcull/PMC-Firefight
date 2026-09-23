@@ -666,14 +666,12 @@
         return profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
-        var men = e.men || [], open = !!menOpen[e.rid];
-        if (men.length) {
-          acts += '<button class="lnk" data-men="' + e.rid + '" aria-expanded="' + open + '">' +
-            (open ? '\u25be ' : '\u25b8 ') + (profile(e.key).cls === 'infantry' ? 'Soldiers' : 'Crew') + ' (' + men.length + ')</button>';
-        }
+        var open = !!menOpen[e.rid];
+        acts += '<button class="lnk" data-men="' + e.rid + '" aria-expanded="' + open + '">' +
+          (open ? '\u25be ' : '\u25b8 ') + 'Details</button>';
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
-        h += entryCard(e, co, { actions: acts, men: open ? menPanel(e) : '' });
+        h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '' });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
         }
@@ -734,8 +732,12 @@
       var sc = SCx && SCx.SCENARIOS && SCx.SCENARIOS[first.scenario];
       h += '<div class="dmem"><div class="dmem-head">Campaign turn ' + n +
         (first.against ? ' · against ' + esc(first.against) : '') + (sc ? ' · ' + esc(sc.name) : '') +
-        '<span class="mk">' + ms.length + '</span></div><ol class="dmem-list">' +
+        '<span class="mk">' + ms.reduce(function (k, m) { return k + (m.count || 1); }, 0) + '</span></div><ol class="dmem-list">' +
         ms.map(function (m) {
+          if (m.anon) {
+            return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' Esh-Aven</span>' +
+              (m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
+          }
           return '<li><span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
             '<span class="dmem-type">' + esc(m.type) + (m.unit && m.unit !== m.type ? ' \u00b7 ' + esc(m.unit) : '') +
             ' \u00b7 turn ' + (m.turn || 1) + ' of the battle</span></li>';
@@ -757,7 +759,67 @@
           (bio[t].mass ? ' \u00b7 ' + bio[t].mass + ' biomass' : ' \u00b7 not biomass') + '</span></li>';
       }).join('') + '</ol></div>';
   }
-  var menOpen = {};               // which units have their soldiers shown, by rid
+  var menOpen = {};               // which units have their details open, by rid
+
+  /* Everything about one unit, opened from its card: the profile as it takes
+     the field — honours, traumas, upgrades and doctrines already worked in, with
+     what they changed marked — its special rules spelled out, what it has
+     earned and suffered, and its soldiers by name. The unit is built the way
+     the battle builds it, so these are the numbers it will fight with. */
+  function detailPanel(e, co) {
+    var p = profile(e.key);
+    if (!p) return '';
+    var base = Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size, side: 'A', cargo: [] });
+    base = R.applyDrone(R.applyPropulsion(base, e.prop || R.defaultDrive(p)), !!e.drone);
+    var was = Object.assign({}, base, { rules: base.rules.slice() });
+    var u = C.applyEntry(Object.assign({}, base, { rules: base.rules.slice() }), e, co.doctrines || []);
+    var mach = p.cls !== 'infantry';
+    function cell(label, now, then, fmt) {
+      var v = now == null ? '\u2014' : fmt ? fmt(now) : now, d = now != null && then != null ? now - then : 0;
+      return { label: label, v: v, d: d };
+    }
+    var inch = function (n) { return n + '"'; };
+    var cols = [cell('Tier', u.tier, u.tier), cell(mach ? 'Size' : 'Men', mach ? 1 : u.size, mach ? 1 : was.size),
+      cell('Move', u.move, was.move, inch), cell('FP', u.fp, was.fp), cell('Range', u.range || null, was.range || null, inch),
+      cell('Def', u.def, was.def), cell('Asslt', u.assault, was.assault),
+      mach ? cell('Str', u.str, was.str) : cell('Mor', u.morale, was.morale)];
+    if (u.turn != null) cols.push(cell('Turn', u.turn, was.turn));
+    var h = '<div class="ddet">';
+    h += '<table class="ddet-stats"><tr>' + cols.map(function (c) { return '<th>' + c.label + '</th>'; }).join('') +
+      '</tr><tr>' + cols.map(function (c) {
+        return '<td' + (c.d ? ' class="' + (c.d > 0 ? 'up' : 'down') + '"' : '') + '>' + esc(c.v) +
+          (c.d ? '<sup>' + (c.d > 0 ? '+' : '') + c.d + '</sup>' : '') + '</td>';
+      }).join('') + '</tr></table>';
+    if (u.defPierced != null) h += '<p class="ddet-note">Defence ' + u.defPierced + ' against Anti-tank and Gauss weapons.</p>';
+
+    var TXT = root.PMCRuleText;
+    h += '<h5>Special rules</h5>';
+    if (!u.rules.length) h += '<p class="ddet-note">None.</p>';
+    else {
+      h += '<ul class="ddet-rules">' + u.rules.map(function (r) {
+        var d = TXT ? TXT.describe(r) : { name: r, text: '' };
+        var gained = was.rules.indexOf(r) < 0;
+        return '<li><b>' + esc(d.name) + '</b>' + (gained ? ' <span class="mk good">earned</span>' : '') +
+          (d.text ? '<span>' + esc(d.text) + '</span>' : '') + '</li>';
+      }).join('') + '</ul>';
+    }
+    function marks(title, list, table, cls) {
+      if (!list || !list.length) return '';
+      return '<h5>' + esc(title) + '</h5><ul class="ddet-rules">' + list.map(function (n) {
+        var x = table[n - 1] || { name: '#' + n, text: '' };
+        return '<li class="' + cls + '"><b>' + esc(x.name) + '</b><span>' + esc(x.text || '') + '</span></li>';
+      }).join('') + '</ul>';
+    }
+    var W = C.words(co);
+    h += marks(W.honours, e.honours, C.honourTable(e.key), 'good');
+    h += marks('Upgrades', e.upgrades, C.upgradeTable(e.key), 'good');
+    h += marks(W.traumas, e.traumas, C.traumaTable(e.key), 'bad');
+    if (!(e.honours || []).length && !(e.traumas || []).length && !(e.upgrades || []).length) {
+      h += '<p class="ddet-note">No ' + esc(W.honours) + ' or ' + esc(W.traumas) + ' yet.</p>';
+    }
+    if ((e.men || []).length) h += '<h5>' + (mach ? 'Crew' : 'Soldiers') + ' (' + e.men.length + ')</h5>' + menPanel(e);
+    return h + '</div>';
+  }
 
   // the soldiers of one unit, by rank and name, each of them renameable
   function menPanel(e) {

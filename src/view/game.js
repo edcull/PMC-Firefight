@@ -3769,8 +3769,9 @@
         var m = c.mass != null ? c.mass : c.count;
         bio[c.type].n += c.count; bio[c.type].mass += m; bioTotal += m;
       });
+      var lostN = mine.reduce(function (n, c) { return n + (c.count || 1); }, 0);
       var head = bioOrder.length ? bioTotal + ' biomass lost'
-        : mine.length ? mine.length + (mine.length === 1 ? ' casualty' : ' casualties') : 'no casualties';
+        : lostN ? lostN + (lostN === 1 ? ' casualty' : ' casualties') : 'no casualties';
       var h = '<div class="cas-side cas-' + side + '"><div class="cas-head">' + esc(sideName(side)) +
         '<span class="mk">' + head + '</span></div>';
       if (bioOrder.length) {
@@ -3782,6 +3783,11 @@
       }
       if (mine.length) {
         h += '<ol class="cas-list">' + mine.map(function (c) {
+          // the Esh-Aven go unnamed: how many of them, from which unit
+          if (c.anon) {
+            return '<li><b>' + esc(c.type) + '</b> <span class="cas-rank">\u00d7 ' + c.count + ' Esh-Aven</span>' +
+              (c.unit && c.unit !== c.type ? '<span class="cas-type">' + esc(c.unit) + '</span>' : '') + '</li>';
+          }
           return '<li><span class="cas-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
             '<span class="cas-type">' + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
             ' \u00b7 turn ' + (c.turn || 1) + '</span></li>';

@@ -2301,13 +2301,14 @@
     var out = [];
     state.units.forEach(function (u) {
       var p = R.profile(u.key);
-      // the swarm has no names: a bug unit reports how much of it was lost
-      if (u.faction === 'bugs') {
+      /* The swarm and the Esh-Aven have no names: such a unit reports how many
+         it lost, and a bug unit what that was worth in biomass. */
+      if (R.counted(u)) {
         if (u.lostModels) {
-          out.push({
-            side: u.side, swarm: true, count: u.lostModels, mass: u.lostModels * R.biomassOf(p),
-            type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id, turn: 0
-          });
+          var line = { side: u.side, count: u.lostModels, type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id, turn: 0 };
+          if (u.faction === 'bugs') { line.swarm = true; line.mass = u.lostModels * R.biomassOf(p); }
+          else line.anon = true;
+          out.push(line);
         }
         return;
       }

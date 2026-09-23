@@ -56,16 +56,47 @@ async function clickText(p, re) {
   await clickText(p, 'The dossier');
   await p.waitForTimeout(250);
   const cards = await p.evaluate(() => [...document.querySelectorAll('#camp-body button[data-men]')].map(b => b.textContent));
-  check('every crewed unit offers its soldiers or crew', cards.length >= 9, cards.join(' | '));
+  check('every unit card opens to its details', cards.length === 9 && cards.every(c => /Details/.test(c)), cards.join(' | '));
   const rid = await p.evaluate(() => {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.key === 'recruits');
     return e.rid;
   });
-  check('...a squad lists its soldiers', cards.some(c => /Soldiers \(8\)/.test(c)));
-  check('...a vehicle its crew', cards.some(c => /Crew \(1\)/.test(c)));
-  check('...and nothing is shown until asked', await p.evaluate(() => !document.querySelector('#camp-body .dmen')));
+  check('...and nothing is shown until asked', await p.evaluate(() => !document.querySelector('#camp-body .ddet')));
+  const lpv = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.key === 'lpv').rid);
+  await click(p, `#camp-body button[data-men="${lpv}"]`);
+  const hullDet = await p.evaluate(() => document.querySelector('#camp-body .ddet').innerText);
+  check('a vehicle shows its Structure and its crew', /Str/.test(hullDet) && /Crew \(1\)/i.test(hullDet), hullDet.split('\n').slice(0, 3).join(' '));
+  await click(p, `#camp-body button[data-men="${lpv}"]`);
 
+  // an honour and a trauma, to see them spelled out and worked into the numbers
+  await p.evaluate((rid) => {
+    const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
+    e.honours = [4]; e.traumas = [5];
+  }, rid);
   await click(p, `#camp-body button[data-men="${rid}"]`);
+  const det = await p.evaluate((rid) => {
+    const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid), C = window.PMCCamp;
+    const box = document.querySelector('#camp-body .ddet');
+    return {
+      text: box.innerText, heads: [...box.querySelectorAll('h5')].map(h => h.textContent),
+      honour: C.honourTable(e.key)[3], trauma: C.traumaTable(e.key)[4],
+      marked: [...box.querySelectorAll('.ddet-stats td.up, .ddet-stats td.down')].length,
+      stats: [...box.querySelectorAll('.ddet-stats th')].map(t => t.textContent).join(' '),
+      statRow: [...box.querySelectorAll('.ddet-stats th')].map((t, i) => t.textContent + ' ' + box.querySelectorAll('.ddet-stats td')[i].textContent).join(' ')
+    };
+  }, rid);
+  check('the details show the full stat line', /Tier Men Move FP Range Def Asslt Mor/.test(det.stats), det.stats);
+  check('...special rules, honours, traumas and soldiers', det.heads.join('|') === 'Special rules|Battle Honours|Battle Traumas|Soldiers (8)', det.heads.join(' | '));
+  check('...each honour and trauma spelled out', det.text.indexOf(det.honour.name) >= 0 && det.text.indexOf(det.honour.text) >= 0 &&
+    det.text.indexOf(det.trauma.name) >= 0, det.honour.name + ' / ' + det.trauma.name);
+  check('...with what they changed marked on the stats', det.marked === 2 && /Move\s*5"\s*\+1/.test(det.statRow), det.statRow);
+  await p.locator('#camp-body .dcard:has(.ddet)').screenshot({ path: path.join(SHOTS, 'camp-details.png') });
+  await p.evaluate((rid) => {
+    const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
+    e.honours = []; e.traumas = [];
+  }, rid);
+  await clickText(p, '^Spend EXP$');
+  await clickText(p, '^Units$');
   const listed = await p.evaluate((rid) => {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
     const rows = [...document.querySelectorAll('#camp-body .dmen li')].map(li => li.innerText.replace(/\s+/g, ' '));
@@ -87,7 +118,7 @@ async function clickText(p, re) {
     return e.men[1].name === 'Jan "Tank" Novak' && !!list && /Jan "Tank" Novak/.test(list.innerText);
   }, rid));
   await click(p, `#camp-body button[data-men="${rid}"]`);
-  check('...and the list closes again', await p.evaluate(() => !document.querySelector('#camp-body .dmen')));
+  check('...and the details close again', await p.evaluate(() => !document.querySelector('#camp-body .ddet')));
 
   console.log('\nExperience');
   const expText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dexpr:not(.dtrau):not(.dwin)'); return d ? d.textContent : ''; });

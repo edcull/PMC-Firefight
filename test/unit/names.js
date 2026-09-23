@@ -82,11 +82,19 @@ for (const [fa, fb] of [['pmc', 'rebel'], ['xeno', 'bugs']]) {
   let steps = 0;
   while (!e.over() && steps < 4000) { if (!e.intent('A', { k: 'step' }).ok) break; steps++; }
   const rep = e.report(), st = e.state();
-  ok('...the living match the models', st.units.every((u) => R.isMachine(u) || u.faction === 'bugs' || live(u).length === u.models));
-  const infantryLost = rep.casualties.filter((c) => !c.swarm && !R.isMachine(R.profile(st.units.find((u) => (u.rid || u.id) === c.rid).key))).length;
-  const byCount = st.units.filter((u) => !R.isMachine(u) && u.faction !== 'bugs').reduce((a, u) => a + u.men.length - live(u).length, 0);
+  ok('...the living match the models', st.units.every((u) => R.isMachine(u) || R.counted(u) || live(u).length === u.models));
+  const infantryLost = rep.casualties.filter((c) => !c.swarm && !c.anon && !R.isMachine(R.profile(st.units.find((u) => (u.rid || u.id) === c.rid).key))).length;
+  const byCount = st.units.filter((u) => !R.isMachine(u) && !R.counted(u)).reduce((a, u) => a + u.men.length - live(u).length, 0);
   ok('...the report names every man lost', rep.casualties.length > 0 && infantryLost === byCount, rep.casualties.length + ' casualties');
-  ok('...each by name, rank and type', rep.casualties.every((c) => c.swarm || (c.name && c.rank && c.type && c.turn >= 0)));
+  ok('...each by name, rank and type', rep.casualties.every((c) => c.swarm || c.anon || (c.name && c.rank && c.type && c.turn >= 0)));
+  if (fa === 'xeno') {
+    const esh = st.units.filter((u) => R.profile(u.key).eshAven);
+    const crocks = st.units.filter((u) => u.side === 'A' && !R.profile(u.key).eshAven && !R.isMachine(u));
+    ok('...the Esh-Aven go unnamed', esh.every((u) => u.men.length === 0), esh.length + ' Esh-Aven units');
+    ok('...while the Crocks are named', crocks.every((u) => u.men.length > 0));
+    ok('...and an Esh-Aven loss is a count for its unit', rep.casualties.filter((c) => c.anon).every((c) =>
+      !c.name && c.count === esh.find((u) => (u.rid || u.id) === c.rid).lostModels));
+  }
   if (fb === 'bugs') {
     const bugs = st.units.filter((u) => u.faction === 'bugs');
     const swarm = rep.casualties.filter((c) => c.swarm);
@@ -228,11 +236,15 @@ C.aftermath(xc, {
     { rid: esh.rid, side: 'A', key: 'xeps3', startSize: R.profile('xeps3').size, endSize: 1, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }
   ],
   casualties: [{ side: 'A', rid: crocks.rid, name: 'Kavek', rank: 'Hunt-leader', turn: 1, type: 'Core Alpha troopers' }]
-    .concat([0, 1, 2].map((i) => ({ side: 'A', rid: esh.rid, name: 'Esh ' + i, rank: 'Warrior', turn: 2, type: 'Core Epsilon troopers' })))
+    .concat([{ side: 'A', rid: esh.rid, anon: true, count: 3, turn: 0, type: 'Core Epsilon troopers', unit: 'Core Epsilon troopers' }])
 });
 const xs = C.lossStats(XA);
 ok('...a Crock lost goes on the Crocks', xs[0].lost === 1 && xs[0].served === 4, xs[0].lost + ' of ' + xs[0].served);
 ok('...and the Esh-Aven on their own', xs[1].lost === 3 && xs[1].served === R.profile('xeps3').size + 3, xs[1].lost + ' of ' + xs[1].served);
+ok('...the Esh-Aven on the memorial as a count, not names', XA.memorial.some((m) => m.anon && m.count === 3 && !m.name));
+ok('...and in the unit history', esh.history.some((h) => /Lost 3 Esh-Aven/.test(h)));
+C.menOf(esh, XA);
+ok('...an Esh-Aven entry has no soldiers to show', esh.men.length === 0);
 
 ok('Infected humans are not biomass', R.biomassOf(R.profile('binfected')) === 0);
 const ih = C.newCampaign({ mode: 'solo', factionA: 'bugs' });

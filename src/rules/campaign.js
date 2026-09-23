@@ -1508,7 +1508,7 @@
       (report.units || []).forEach(function (l) { if (l.side === side) keyOf[l.rid] = l.key; });
       (report.casualties || []).forEach(function (c) {
         if (c.side !== side) return;
-        var n = c.swarm ? c.count : 1, p = profile(keyOf[c.rid]);
+        var n = c.count || 1, p = profile(keyOf[c.rid]);
         lostBy[c.rid] = (lostBy[c.rid] || 0) + n;
         if (!c.swarm) addLoss(co, p ? poolOf(p) : poolsFor(co)[0], 'lost', n * (p ? weightOf(p) : 1));   // the swarm's is its biomass tally
       });
@@ -1614,6 +1614,7 @@
           var mass = cas.reduce(function (n, c) { return n + (c.mass != null ? c.mass : c.count); }, 0);
           var bodies = cas.reduce(function (n, c) { return n + (c.count || 0); }, 0);
           entry.history.push(cas[0].swarm ? (mass ? 'Biomass lost: ' + mass + '.' : 'Lost ' + bodies + '.')
+            : cas[0].anon ? 'Lost ' + bodies + ' Esh-Aven.'
             : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
         }
         if (line.men) entry.men = line.men.slice();
@@ -1753,6 +1754,11 @@
           var tally = co.biomass = biomassTally(co);
           var t = tally[c.type] || (tally[c.type] = { models: 0, mass: 0 });
           t.models += c.count;
+          return;
+        }
+        // the Esh-Aven go on it unnamed, as a count for the unit
+        if (c.anon) {
+          co.memorial.push({ anon: true, count: c.count, type: c.type, unit: c.unit, battle: out.turn, against: foe.name, scenario: report.scenario });
           return;
         }
         co.memorial.push({

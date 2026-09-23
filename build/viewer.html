@@ -3834,8 +3834,8 @@
      brought into line with it whenever the engine has finished a step, so no
      rule that adds or takes away a model has to know about it. A machine counts
      its crew instead: one commander or pilot, a casualty when the hull is destroyed.
-     Drones and turrets have nobody aboard. The swarm has no individuals at all:
-     a bug unit only counts the biomass it loses. */
+     Drones and turrets have nobody aboard. The swarm has no individuals at all,
+     and neither do the tribe's Esh-Aven: those units only count what they lose. */
   var FIRST = ['Adam', 'Aiko', 'Alexei', 'Amara', 'Anders', 'Ana', 'Arjun', 'Bea', 'Bogdan', 'Carlos',
     'Chen', 'Dara', 'Dmitri', 'Elena', 'Emeka', 'Erik', 'Farah', 'Felix', 'Grace', 'Hana', 'Hector',
     'Ibrahim', 'Ines', 'Ivan', 'Jae', 'Jamal', 'Jonas', 'Kai', 'Kasia', 'Kofi', 'Lars', 'Leila', 'Liam',
@@ -3872,9 +3872,15 @@
     if (f === 'xeno') return syllables(XENO_SYL, 2, 3) + ' ' + syllables(XENO_SYL, 2, 3);
     return humanName(f === 'rebel');
   }
+  // a unit whose losses are counted rather than named: the swarm, and the Esh-Aven
+  function counted(u) {
+    if (!u) return false;
+    var p = BY_KEY[u.key];
+    return u.faction === 'bugs' || !!u.eshAven || !!(p && p.eshAven);
+  }
   // does this unit have anyone in it who could be named?
   function crewed(u) {
-    if (u.faction === 'bugs') return false;
+    if (counted(u)) return false;
     if (!isMachine(u)) return true;
     return !u.drone && !has(u, 'Turret') && !/Turret/.test(u.group || '');
   }
@@ -3915,7 +3921,7 @@
      campaign unit's own men, in the order they stand), trimmed or filled up to
      the strength it takes the field at, then ranked by where each man stands. */
   function musterMen(u, carried, taken) {
-    if (u.faction === 'bugs') { u.men = []; u.seenModels = standing(u); u.lostModels = 0; return u.men; }
+    if (counted(u)) { u.men = []; u.seenModels = standing(u); u.lostModels = 0; return u.men; }
     var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
     u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
       .slice(0, want).map(function (m) { return { name: m.name }; });
@@ -3928,7 +3934,7 @@
      as a casualty for every model lost, and a fresh one for every model the
      rules gave back (the Endless Tide, a unit returned to the pool). */
   function syncMen(u, turn, taken) {
-    if (u.faction === 'bugs') { countBiomass(u); return []; }
+    if (counted(u)) { countLosses(u); return []; }
     if (!u.men) return [];
     var live = u.men.filter(function (m) { return m.lost == null; });
     var want = crewed(u) ? standing(u) : 0, out = [];
@@ -3941,9 +3947,9 @@
     if (!isMachine(u)) while (live.length < want) { var n = freshMan(u, taken); u.men.push(n); live.push(n); }
     return out;
   }
-  /* The swarm's losses, as a running count: every model that goes down adds
-     to it, and the ones the Endless Tide digs back out do not take it away. */
-  function countBiomass(u) {
+  /* A counted unit's losses, as a running total: every model that goes down
+     adds to it, and the ones the Endless Tide digs back out do not take it away. */
+  function countLosses(u) {
     var now = standing(u);
     if (u.seenModels == null) u.seenModels = now;
     if (now < u.seenModels) u.lostModels = (u.lostModels || 0) + u.seenModels - now;
@@ -4006,7 +4012,7 @@
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion,
     defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
-    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, survivors: survivors, biomassOf: biomassOf
+    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);
 

@@ -786,7 +786,24 @@
   .dnote { font-size: 11px; color: var(--ink-faint); }
   .dmarks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
   .dacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-  /* a unit's soldiers, opened from its card on the dossier */
+  /* everything about a unit, opened from its card on the dossier */
+  .ddet { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 12px; }
+  .ddet h5 { font-family: var(--display); font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); margin: 10px 0 4px; }
+  .ddet-stats { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 11.5px; }
+  .ddet-stats th, .ddet-stats td { border: 1px solid var(--line); padding: 3px 4px; text-align: center; }
+  .ddet-stats th { color: var(--ink-faint); font-weight: 400; }
+  .ddet-stats td.up { color: var(--good); }
+  .ddet-stats td.down { color: var(--bad); }
+  .ddet-stats sup { font-size: 9px; margin-left: 1px; }
+  .ddet-note { margin: 4px 0; color: var(--ink-faint); font-size: 11.5px; }
+  .ddet .ddet-rules { list-style: none; margin: 0; padding: 0; color: var(--ink); font-size: 12px; }
+  .ddet-rules li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
+  .ddet-rules li:last-child { border-bottom: 0; }
+  .ddet-rules li > span:not(.mk) { display: block; color: var(--ink-dim); font-size: 11.5px; }
+  .ddet-rules li.good > b { color: var(--good); }
+  .ddet-rules li.bad > b { color: var(--bad); }
+  .ddet .dmen { border-top: 0; margin-top: 0; padding-top: 0; }
+  /* a unit's soldiers, inside its details */
   .dmen { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px dashed var(--line); font-size: 12px; }
   .dmen li { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; min-width: 0; }
   .dmen-rank { color: var(--ink-dim); flex: 0 0 auto; min-width: 7.5em; }
@@ -1590,6 +1607,7 @@
 </div>
 
 <script src="src/rules/rules.js"></script>
+<script src="src/rules/ruletext.js"></script>
 <script src="src/rules/campaign.js"></script>
 <script src="src/rules/scenarios.js"></script>
 <script src="src/rules/solitaire.js"></script>
