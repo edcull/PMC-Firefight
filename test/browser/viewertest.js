@@ -106,7 +106,7 @@ async function pickAndFire(p, key, ms) {
     rail.seen.rail > marksman.seen.rail,
     rail.seen.rail + ' samples against ' + marksman.seen.rail);
 
-  const mg = await pickAndFire(p, 'hpv', 1400);
+  const mg = await pickAndFire(p, 'rlmg', 1400);   // a machine-gun team (the HPV mounts an autocannon)
   ok('a machine gun streams tracers', mg.spec.p === 'burst' && !!mg.seen.tracer, mg.kinds.join(' '));
 
   const auto = await pickAndFire(p, 'hmgteam', 1600);

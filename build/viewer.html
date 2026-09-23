@@ -122,7 +122,7 @@
     font-family: var(--display); font-size: 12px; min-width: 28px; height: 26px; padding: 0 7px; cursor: pointer;
   }
   .vzoom button:hover { border-color: var(--alpha); }
-  .vzoom button.on { border-color: var(--alpha); color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, var(--panel-2)); }
+  .vzoom button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
   #vboard { touch-action: pan-y; }
   #vboard {
     display: block; flex: none; min-height: 0;   /* sized by fit(), never stretched */
@@ -312,8 +312,8 @@
 
   <div class="vstage">
     <div class="vzoom" id="vzoom" aria-label="Zoom">
-      <button type="button" data-vzoom="wide" title="The whole firing line (−)">Wide</button>
-      <button type="button" data-vzoom="close" title="Close up on the unit (+)">Close</button>
+      <button type="button" data-vzoom="wide" title="Zoom out, to the whole firing line (−)">Wide</button>
+      <button type="button" data-vzoom="close" title="Zoom in, close on the unit (+)">Close</button>
     </div>
     <canvas id="vboard"></canvas>
   </div>
@@ -15316,7 +15316,8 @@
 
   var cv, g, FX;
   // the stage opens close on the unit; it pulls out to the whole firing line to show a shot
-  var ZOOM_CLOSE = 3;
+  // the stage's zooms: the whole firing line, a big or flying unit whole, and a close look
+  var ZOOMS = [1, 2, 4.5], ZOOM_CLOSE = 2;
   var view = {
     zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
     key: 'regular', prop: 'tracked', side: 'A', status: 'ready',
@@ -15386,7 +15387,6 @@
     // centre the patch of ground in the canvas
     /* On a narrow screen the whole firing line — shooter, gap and mark — is
        scaled down to fit, rather than cut off at the sides. */
-    var c = toScreen(W / 2, H / 2);
     var a0 = toScreen(FROM.x - 1.2, FROM.y + 1.2), a1 = toScreen(TO.x + 1.2, TO.y - 1.2);
     var span = Math.abs(a1.x - a0.x) + I.K;
     var zWide = Math.min(view.dpr || 1, w / span, h / (I.K * 6.5));
@@ -15394,9 +15394,11 @@
        included) so the figures can be seen up close; at 1 it is the whole
        firing line. In between it slides from one framing to the other. */
     var zc = view.zCur || 1, z = zWide * zc;
-    var at = view.at || FROM, f = toScreen(at.x, at.y);
+    // wide, the middle of the line between the two units; any closer, the unit itself (a flier up where it flies)
+    var mid = toScreen((FROM.x + TO.x) / 2, (FROM.y + TO.y) / 2);
+    var at = view.at || FROM, f = toScreen(at.x, at.y), up = I.flyLift(unit()) * 0.6;
     var k = Math.max(0, Math.min(1, zc - 1));
-    var px = c.x + (f.x - c.x) * k, py = (c.y - I.K * 1.2) + ((f.y - I.K * 0.8) - (c.y - I.K * 1.2)) * k;
+    var px = mid.x + (f.x - mid.x) * k, py = (mid.y - I.K * 1.2) + ((f.y - I.K * 0.8 - up) - (mid.y - I.K * 1.2)) * k;
     g.setTransform(z, 0, 0, z, Math.round(w / 2 - px * z), Math.round(h / 2 - py * z));
 
     drawGround();
@@ -15672,18 +15674,21 @@
      The same effects the battle plays, driven from the same weapon table. Hits
      are made up here — the bench is about what it looks and sounds like, not
      about the dice. */
-  // the stage has two zooms: 1 is the whole firing line, ZOOM_CLOSE the unit filling it
+  // the stage snaps to one of ZOOMS; Wide and Close step out and in through them
   function setZoom(zz) {
-    view.zoom = zz > 1 ? ZOOM_CLOSE : 1;
+    view.zoom = ZOOMS.reduce(function (a, b) { return Math.abs(b - zz) < Math.abs(a - zz) ? b : a; });
     view.wide = false;
     zoomLabel();
     start();
   }
+  function stepZoom(d) {
+    var i = Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(view.zoom) + d));
+    if (ZOOMS[i] !== view.zoom) setZoom(ZOOMS[i]);
+  }
   function zoomLabel() {
     el('vzoom').querySelectorAll('[data-vzoom]').forEach(function (b) {
-      var on = (b.getAttribute('data-vzoom') === 'close') === (view.zoom > 1);
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var i = ZOOMS.indexOf(view.zoom);
+      b.disabled = b.getAttribute('data-vzoom') === 'close' ? i === ZOOMS.length - 1 : i === 0;
     });
   }
   // pull out to the whole line for the length of a shot
@@ -16205,13 +16210,12 @@
     frame();
 
     // tap the stage to fire: on a phone the buttons are further down the page
-    /* Tap the stage to fire; a pinch or the wheel goes between Wide and
-       Close, and a pinch is never taken for a tap. */
-    var pts = {}, pinch = null, pinched = 0;
+    /* Tap the stage to fire; a pinch or the wheel steps through the zooms, and a pinch is never taken for a tap. */
+    var pts = {}, pinch = null, pinched = 0, wheeled = 0;
     cv.addEventListener('click', function () { if (Date.now() - pinched < 400) return; fire(); });
     cv.addEventListener('wheel', function (e) {
       e.preventDefault();
-      setZoom(e.deltaY < 0 ? ZOOM_CLOSE : 1);
+      if (Date.now() - wheeled > 250) { wheeled = Date.now(); stepZoom(e.deltaY < 0 ? 1 : -1); }   // one step a flick
     }, { passive: false });
     cv.addEventListener('pointerdown', function (e) {
       pts[e.pointerId] = { x: e.clientX, y: e.clientY };
@@ -16228,7 +16232,7 @@
       if (pinch && ids.length === 2) {
         var a = pts[ids[0]], b2 = pts[ids[1]];
         var r = Math.hypot(a.x - b2.x, a.y - b2.y) / pinch.d;
-        if (r > 1.15 || r < 0.87) { setZoom(r > 1 ? ZOOM_CLOSE : 1); pinched = Date.now(); }
+        if (r > 1.25 || r < 0.8) { stepZoom(r > 1 ? 1 : -1); pinch.d *= r; pinched = Date.now(); }
       }
     });
     function lift(e) { delete pts[e.pointerId]; if (Object.keys(pts).length < 2) pinch = null; }
@@ -16238,7 +16242,7 @@
       var zb = e.target.closest('[data-vzoom]');
       if (!zb) return;
       var how = zb.getAttribute('data-vzoom');
-      setZoom(how === 'wide' ? 1 : ZOOM_CLOSE);
+      stepZoom(how === 'wide' ? -1 : 1);
     });
     zoomLabel();
     el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
@@ -16334,8 +16338,8 @@
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
       if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
-      if (e.key === '+' || e.key === '=') { setZoom(ZOOM_CLOSE); e.preventDefault(); }
-      if (e.key === '-' || e.key === '_') { setZoom(1); e.preventDefault(); }
+      if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
+      if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
   }
 
