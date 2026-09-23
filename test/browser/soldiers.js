@@ -214,6 +214,22 @@ async function clickText(p, re) {
   });
   await clickText(p, '^Units$');
 
+  console.log('\nOn the field');
+  const icons = await p.evaluate(() => {
+    const C = window.PMCCamp;
+    const mk = (k, h, t) => { const e = C.newEntry(k); e.honours = h; e.traumas = t; return e; };
+    const A = [mk('cmd2', [], []), mk('regular', [4], []), mk('veterans', [4, 8], [5]), mk('rookie', [], [5])];
+    const B = [mk('cmd2', [], []), mk('regular', [], [])];
+    document.getElementById('camp').hidden = true;
+    window.PMC_NEWGAME({ tier: 4, pl: 1, mode: 'demo', planet: 'sparse', scenario: 'meeting', nameA: 'Ironhold', nameB: 'Orlov',
+      armyA: A.map(e => e.key), armyB: B.map(e => e.key), dossier: { A, B } });
+    return window.__labelIcons().filter(i => i.side === 'A').map(i => i.code + (i.star ? '*' : '') + (i.heart ? '+' : '')).join(' ');
+  });
+  check('a unit with an honour wears a star, with a trauma a heart', /RIF\*(\s|$)/.test(icons) && /VET\*\+/.test(icons) &&
+    /RKI\+/.test(icons) && /CMD(\s|$)/.test(icons), icons);
+  await p.reload();
+  await p.waitForTimeout(900);
+
   console.log('\nReloading the page');
   await p.reload();
   await p.waitForTimeout(900);

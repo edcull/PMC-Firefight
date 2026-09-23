@@ -28950,6 +28950,11 @@
     ctx.strokeStyle = col; ctx.lineWidth = lw;
     ctx.stroke();
   }
+  // what a unit's label carries beside its code: a star for honours held, a heart for traumas carried
+  function labelIcons(u) {
+    var c = u && u.camp;
+    return { star: !!(c && (c.honours || []).length), heart: !!(c && (c.traumas || []).length) };
+  }
   function hud(x, y, lift) {
     var p = ISO.toScreen(x, y), v = viewRect();
     return { x: (p.x - v.sx) * v.z + v.dx, y: (p.y - (lift || 0) - v.sy) * v.z + v.dy };
@@ -30135,17 +30140,42 @@
     /* Unit labels. A unit standing in terrain carries a mark for it, because the
        ground it is on is the single biggest modifier on the table and it is not
        always obvious from above which piece a base is actually inside. */
+    /* A campaign unit wears its record beside its code: a gold star once it
+       holds a Battle Honour, a red heart once it carries a Battle Trauma. They
+       are drawn rather than typed, so they look the same on every machine. */
+    function star(cx, cy, r) {
+      ctx.beginPath();
+      for (var k = 0; k < 10; k++) {
+        var rr = k % 2 ? r * 0.45 : r, an = -Math.PI / 2 + k * Math.PI / 5;
+        ctx[k ? 'lineTo' : 'moveTo'](cx + Math.cos(an) * rr, cy + Math.sin(an) * rr);
+      }
+      ctx.closePath(); ctx.fillStyle = '#f2c14e'; ctx.fill();
+    }
+    function heart(cx, cy, r) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + r * 0.9);
+      ctx.bezierCurveTo(cx - r * 1.3, cy - r * 0.1, cx - r * 0.6, cy - r * 1.2, cx, cy - r * 0.4);
+      ctx.bezierCurveTo(cx + r * 0.6, cy - r * 1.2, cx + r * 1.3, cy - r * 0.1, cx, cy + r * 0.9);
+      ctx.closePath(); ctx.fillStyle = '#e0557a'; ctx.fill();
+    }
     ctx.font = '600 10px Oxanium, system-ui, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     state.units.forEach(function (u2) {
       if (!u2.alive || u2.x < 0) return;
       var p = hud(u2.x, u2.y, liftOf(u2.x, u2.y) + ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5);
       var mark = terrainMark(u2);
-      var w = ctx.measureText(u2.code).width + 8 + (mark ? 12 : 0);
+      var rec = labelIcons(u2), honoured = rec.star, scarred = rec.heart;
+      var icons = (honoured ? 1 : 0) + (scarred ? 1 : 0);
+      var tw = ctx.measureText(u2.code).width;
+      var w = tw + 8 + icons * 11 + (mark ? 12 : 0);
       ctx.fillStyle = 'rgba(8,11,16,.72)';
       ctx.fillRect(p.x - w / 2, p.y - 10, w, 13);
       ctx.fillStyle = sideInk(u2.side);
-      ctx.fillText(u2.code, p.x - (mark ? 6 : 0), p.y);
+      var tx = p.x - w / 2 + 4 + tw / 2;
+      ctx.fillText(u2.code, tx, p.y);
+      var ix = tx + tw / 2 + 6.5;
+      if (honoured) { star(ix, p.y - 3.5, 4.6); ix += 11; }
+      if (scarred) heart(ix, p.y - 3.5, 4.2);
       if (mark) {
         ctx.fillStyle = mark.col;
         ctx.fillRect(p.x + w / 2 - 11, p.y - 8, 8, 9);
@@ -32334,6 +32364,11 @@
     begin(cfg);
   };
   window.__report = function () { return state && state.report; };
+  window.__labelIcons = function () {
+    return state ? state.units.filter(function (u) { return u.alive && u.x >= 0; }).map(function (u) {
+      var r = labelIcons(u); return { code: u.code, side: u.side, star: r.star, heart: r.heart };
+    }) : [];
+  };
   Object.defineProperty(window, '__moves', { get: function () { return ui.moves; } });
   window.__clearSel = function () { ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; render(); };
   window.__fxdebug = function () { return { anims: anims.length, fx: fx.length, tracers: fx.filter(function (f) { return f.kind === 'tracer'; }).length }; };
