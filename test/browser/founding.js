@@ -27,7 +27,7 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
     swatches: document.querySelectorAll('#camp-body [data-campcolour]').length,
     colours: window.PMCIso.COLOUR_KEYS.length,
     on: (document.querySelector('#camp-body .sw.on')||{}).getAttribute ? document.querySelector('#camp-body .sw.on').getAttribute('data-campcolour') : null,
-    heading: document.querySelector('#camp-body h2').textContent
+    heading: document.getElementById('camp-title').textContent
   }));
   ok('the founding screen asks for the name', found.name, '"'+found.nameVal+'"');
   ok('...and offers the colours', found.swatches === found.colours, found.swatches + ' swatches of ' + found.colours + ' army colours');
@@ -44,6 +44,13 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
   }));
   ok('picking a colour keeps the typed name', kept.val === 'Cullen Free Company', kept.val);
   ok('...and the colour sticks', kept.on === 'crimson', kept.on);
+
+  // a new force fights at Tier I, where a Tier II machine cannot be fielded
+  const offered = await p.evaluate(() => [...document.querySelectorAll('#found-cat [data-add]')].map(b => {
+    const pr = window.PMC.profile(window.PMC.splitPick(b.getAttribute('data-add')).key); return { tier: pr.tier, cls: pr.cls };
+  }));
+  ok('no Tier II vehicle is offered to a new force', offered.length > 10 && !offered.some(o => o.tier === 2 && o.cls !== 'infantry') &&
+    offered.some(o => o.tier === 2) && offered.some(o => o.tier === 1 && o.cls !== 'infantry'), offered.length + ' offered');
 
   // fill a legal founding force
   const built = await p.evaluate(() => {

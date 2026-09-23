@@ -569,7 +569,75 @@
   .sheet li b { color: var(--ink); font-weight: 600; }
 
   /* ---------- the campaign ---------- */
-  .camp-sheet { width: min(680px, 100%); }
+  /* The campaign is a page of its own, like the unit viewer: a bar across the
+     top with the way back and the screen's title, and under it the one thing
+     that scrolls. (Not a <header>: the game's own header rules would reach it.) */
+  #camp.overlay { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--ground); place-items: stretch; }
+  .camp-top {
+    display: flex; align-items: center; gap: 14px; flex: none;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .camp-top h1 {
+    font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .07em; text-transform: uppercase;
+    margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink);
+  }
+  .camp-back {
+    flex: none; cursor: pointer; white-space: nowrap;
+    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
+  }
+  .camp-back:hover, .camp-back:focus-visible { color: var(--ink); border-color: var(--alpha); }
+  @media (pointer: coarse) { .camp-back { padding: 9px 12px; font-size: 12px; } }
+  #camp.overlay > #camp-body.sheet {
+    flex: 1; min-height: 0; width: 100%; max-width: none; max-height: none; overflow-y: auto; overscroll-behavior: contain;
+    border: 0; border-radius: 0; background: transparent; -webkit-overflow-scrolling: touch;
+    padding: 18px max(16px, calc((100% - 720px) / 2)) calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+  /* the top bar is the way back: the footer's own Back and Main menu are not needed twice */
+  #camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"] { display: none; }
+  /* who a solo campaign is up against: one line, and a list behind it */
+  .archline {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px;
+    color: var(--ink); font-family: var(--body); font-size: 13.5px;
+  }
+  .archline:hover, .archline:focus-visible { border-color: var(--alpha); }
+  .archline span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .archline em { flex: none; font-style: normal; color: var(--ink-faint); font-size: 11.5px; }
+  .askbox.archbox { width: min(560px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; padding: 16px; }
+  .archbox .archpick { flex: 1; min-height: 0; max-height: none; }
+  .archbox .askrow { flex: none; }
+  .archline .line-chip { flex: none; width: 34px; height: 18px; }
+  /* Founding: the page fits the screen, and only the list of units picked
+     takes up the slack (and scrolls, if it has to); the pickers are modals. */
+  #camp.overlay > #camp-body.sheet.fit { display: flex; flex-direction: column; }
+  #camp-body.fit > * { flex: none; }
+  #camp-body.fit > .found-units { flex: 1 1 auto; min-height: 96px; display: flex; flex-direction: column; margin-bottom: 12px; }
+  .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
+  .found-units .chosen:empty::before { content: 'No units yet.'; }
+  .found-add { align-self: flex-start; margin-top: 8px; }
+  .cmodal {
+    position: fixed; inset: 0; z-index: 70; background: rgba(8, 11, 16, .78);
+    display: grid; place-items: center; padding: 20px;
+  }
+  .cmodal[hidden] { display: none; }
+  .cmodal-box {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+    width: min(620px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px);
+    display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  }
+  .cmodal-box h3 { font-family: var(--display); font-size: 15px; margin: 0 0 8px; color: var(--ink); letter-spacing: .02em; }
+  .cmodal-box > * { flex: none; }
+  .cmodal-box > .cmodal-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .cmodal-box > .cat { max-height: none; }
+  .cmodal-box > .chosen { margin-bottom: 8px; max-height: 84px; overflow-y: auto; }
+  .cmodal-box .docpick { margin-bottom: 0; }
+  .cmodal-box .askrow { flex: none; }
+  /* the hub: the dossier and the save file, one row under the campaign turn */
+  .hubbar { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 12px; }
+  .hubbar .lnk { flex: 1 1 auto; text-align: center; }
+  #camp-body .hubbar + .start { margin: 0 0 14px; }
+  .cmodal-box .cpan:last-child { margin-bottom: 0; }
   .tin {
     width: 100%; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
     border-radius: 5px; padding: 9px 10px; font-family: var(--body); font-size: 13px;
@@ -1177,8 +1245,8 @@
      screen and is the one thing that scrolls, rather than a card floating in
      an overlay that scrolls as well. */
   @media (max-width: 700px) {
-    .overlay:not(.menu):not(#resolution) { padding: 0; place-items: stretch; overflow: hidden; }
-    .overlay:not(.menu):not(#resolution) > .sheet {
+    .overlay:not(.menu):not(#resolution):not(#camp) { padding: 0; place-items: stretch; overflow: hidden; }
+    .overlay:not(.menu):not(#resolution):not(#camp) > .sheet {
       width: 100%; max-width: none; height: 100%; max-height: none; border: 0; border-radius: 0;
       overflow-y: auto; -webkit-overflow-scrolling: touch;
       padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
@@ -1559,7 +1627,12 @@
 </div>
 
 <div class="overlay" id="camp" hidden>
+  <div class="camp-top">
+    <button type="button" class="camp-back" id="camp-back" data-go="menu">← Back</button>
+    <h1 id="camp-title">Campaign</h1>
+  </div>
   <div class="sheet camp-sheet" id="camp-body"></div>
+  <div class="askwrap" id="camp-archmodal" hidden><div class="askbox archbox" id="camp-archbox" role="dialog" aria-modal="true" aria-label="Who you are up against"></div></div>
   <div class="askwrap" id="camp-ask" hidden><div class="askbox" id="camp-askbox"></div></div>
 </div>
 

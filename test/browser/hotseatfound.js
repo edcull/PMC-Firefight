@@ -25,7 +25,7 @@ async function clickText(p, re) {
   await p.waitForTimeout(200);
   return hit;
 }
-const body = (p) => p.evaluate(() => document.getElementById('camp-body').innerText);
+const body = (p) => p.evaluate(() => document.getElementById('camp-title').textContent + '\n' + document.getElementById('camp-body').innerText);
 
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -44,11 +44,18 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-body').innerT
 
   console.log('\nA solo world, with the rivals the player asked for');
   await click(p, '#btn-campaign');
-  const offered = await p.evaluate(() => [...document.querySelectorAll('#camp-body .camp-arch')].map(x => x.value));
-  check('any number of rivals can be ticked', offered.length > 8 && await p.evaluate(() => document.querySelectorAll('#camp-body .camp-arch[type="checkbox"]').length) === offered.length,
+  check('the rivals are one line, a random world until some are picked', await p.evaluate(() =>
+    /random/i.test(document.getElementById('camp-archline').textContent) && !document.querySelector('#camp-body .camp-arch')));
+  await click(p, '#camp-archline');
+  check('...which opens a list of them', await p.evaluate(() => !document.getElementById('camp-archmodal').hidden));
+  const offered = await p.evaluate(() => [...document.querySelectorAll('#camp-archbox .camp-arch')].map(x => x.value));
+  check('any number of rivals can be ticked', offered.length > 8 && await p.evaluate(() => document.querySelectorAll('#camp-archbox .camp-arch[type="checkbox"]').length) === offered.length,
     offered.length + ' to choose from');
   const want = [offered[0], offered[offered.length - 1]];
-  await p.evaluate((w) => w.forEach(id => { document.querySelector(`#camp-body .camp-arch[value="${id}"]`).checked = true; }), want);
+  for (const id of want) await click(p, `#camp-archbox .camp-arch[value="${id}"]`);
+  await click(p, '#camp-archbox [data-go="archdone"]');
+  const line = await p.evaluate(() => ({ shut: document.getElementById('camp-archmodal').hidden, txt: document.getElementById('camp-archline').textContent }));
+  check('...and the line names the ones picked', line.shut && !/random/i.test(line.txt) && line.txt.indexOf(',') > 0, line.txt);
   await clickText(p, 'Raise the force');
   await p.evaluate(() => { document.getElementById('found-name').value = 'Solo Company'; });
   for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) {
