@@ -15539,8 +15539,10 @@
         /* A shield: a bubble of light raised over the ground around a unit,
            rim bright, a band of light running up it. */
         var dm = I.toScreen(f.x, f.y); dm.y -= liftAt(f);
-        var drgb = f.rgb || '140,210,255', dr = (f.r || 3) * I.K * 0.72 * Math.min(1, k / 0.25);
-        var da = k < 0.8 ? 1 : (1 - k) / 0.2, dh = dr * 0.85;
+        // `steady`: a shield that is simply up — full size, faint, its band of light turning slowly
+        var dk = f.steady ? 1 : k;
+        var drgb = f.rgb || '140,210,255', dr = (f.r || 3) * I.K * 0.72 * Math.min(1, dk / 0.25);
+        var da = f.steady ? (f.a || 0.3) : k < 0.8 ? 1 : (1 - k) / 0.2, dh = dr * 0.85;
         g.save();
         g.beginPath();
         g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2);        // the bubble's top
@@ -15552,11 +15554,67 @@
         g.strokeStyle = 'rgba(' + drgb + ',' + (0.8 * da) + ')'; g.lineWidth = I.PIXEL;
         g.beginPath(); g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2); g.stroke();
         g.beginPath(); g.ellipse(dm.x, dm.y, dr, dr * 0.5, 0, 0, Math.PI * 2); g.stroke();
-        var band = (k * 2.2) % 1, by2 = dm.y - dh * band;
+        var band = f.steady ? (t / 3200) % 1 : (k * 2.2) % 1, by2 = dm.y - dh * band;
         var bw = dr * Math.sqrt(Math.max(0, 1 - band * band));
         g.strokeStyle = 'rgba(255,255,255,' + (0.35 * da * (1 - band)) + ')';
         g.beginPath(); g.ellipse(dm.x, by2, bw, bw * 0.5, 0, 0, Math.PI * 2); g.stroke();
         g.restore();
+      } else if (f.kind === 'puff') {
+        /* Smoke Markers: a smoke round bursting on the mark — grey clouds
+           billowing up and out, lit from inside by the flare (`rgb`). */
+        var sp = I.toScreen(f.x, f.y); sp.y -= liftAt(f);
+        var srgb = f.rgb || '255,200,80', sn = f.n || 7;
+        if (k < 0.35) I.ellipse(g, sp.x, sp.y - I.K * 0.4, I.K * 0.9 * (1 - k / 0.35), I.K * 0.6 * (1 - k / 0.35), 'rgba(' + srgb + ',' + (0.9 * (1 - k / 0.35)) + ')');
+        for (var si = 0; si < sn; si++) {
+          var sa = si / sn * Math.PI * 2 + 0.6, sgr = Math.min(1, k / 0.4);
+          var sd = I.K * (0.5 + 1.1 * sgr) * (0.7 + (si % 3) * 0.15);
+          var sx = sp.x + Math.cos(sa) * sd, sy = sp.y + Math.sin(sa) * sd * 0.5 - I.K * (0.4 + k * 1.6 + (si % 2) * 0.5);
+          var srd = I.K * (0.55 + 0.6 * sgr), sal = k < 0.7 ? 0.55 : 0.55 * (1 - k) / 0.3;
+          I.ellipse(g, sx, sy, srd, srd * 0.8, 'rgba(' + (si % 2 ? '190,188,180' : '160,158,152') + ',' + sal + ')');
+        }
+        // the flare, burning on inside the smoke
+        var fl = 0.6 + 0.4 * Math.sin(k * 60);
+        I.ellipse(g, sp.x, sp.y - I.K * 0.6, I.PIXEL * 2.2, I.PIXEL * 2.2, 'rgba(' + srgb + ',' + (fl * (1 - k)) + ')');
+      } else if (f.kind === 'glint') {
+        /* Keen-Eyed: a four-pointed glint off the spotter's optics, and one on
+           the Stealthy unit it has picked out. */
+        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
+        var grgb = f.rgb || '150,240,255', gk = Math.sin(Math.min(1, k) * Math.PI);
+        var gl = I.K * (0.5 + 0.9 * gk), gw = I.PIXEL * 1.2;
+        g.save();
+        g.fillStyle = 'rgba(' + grgb + ',' + (0.25 * gk) + ')';
+        g.beginPath(); g.arc(gp.x, gp.y, gl * 0.6, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,' + gk + ')';
+        g.beginPath();
+        g.moveTo(gp.x - gl, gp.y); g.lineTo(gp.x, gp.y - gw); g.lineTo(gp.x + gl, gp.y); g.lineTo(gp.x, gp.y + gw); g.closePath();
+        g.moveTo(gp.x, gp.y - gl); g.lineTo(gp.x + gw, gp.y); g.lineTo(gp.x, gp.y + gl); g.lineTo(gp.x - gw, gp.y); g.closePath();
+        g.fill();
+        g.fillStyle = 'rgba(' + grgb + ',' + gk + ')';
+        g.fillRect(gp.x - I.PIXEL, gp.y - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2);
+        g.restore();
+      } else if (f.kind === 'charges') {
+        /* Sappers: demolition charges set around a point, blinking red — then
+           all going off together in a flash and a spray of rubble. */
+        var cp = I.toScreen(f.x, f.y); cp.y -= liftAt(f);
+        var cn = f.n || 4, cr = (f.r || 1.5) * I.K * 0.72, boom = 0.6;
+        for (var ci = 0; ci < cn; ci++) {
+          var ca = ci / cn * Math.PI * 2 + 0.4;
+          var cx = cp.x + Math.cos(ca) * cr, cy = cp.y + Math.sin(ca) * cr * 0.5 - I.K * 0.3;
+          if (k < boom) {
+            var set = k > ci * 0.08;                       // placed one after another
+            if (!set) continue;
+            I.rect(g, cx - I.PIXEL, cy - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2, 'rgba(70,60,50,1)');
+            if (Math.sin(k * 55 + ci) > 0) I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, 'rgba(255,60,40,0.95)');
+          } else {
+            var bk = (k - boom) / (1 - boom);
+            I.ellipse(g, cx, cy, I.K * (0.4 + bk * 0.9), I.K * (0.3 + bk * 0.6), 'rgba(255,' + Math.round(220 - bk * 120) + ',120,' + (0.9 * (1 - bk)) + ')');
+            for (var cd = 0; cd < 5; cd++) {
+              var cda = cd * 1.26 + ci, cdd = bk * I.K * 1.6;
+              I.rect(g, cx + Math.cos(cda) * cdd, cy + Math.sin(cda) * cdd * 0.5 - bk * I.K * 1.2 + bk * bk * I.K,
+                I.PIXEL, I.PIXEL, 'rgba(150,130,105,' + (1 - bk) + ')');
+            }
+          }
+        }
       } else if (f.kind === 'hold') {
         /* Nothing to draw: it exists so the frame loop keeps turning while a
            unit is coming down, and so the game waits for it. */
@@ -16415,7 +16473,9 @@
     { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
     { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
     { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
-    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }]; }, sfx: 'zap' },
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
+    { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
+    { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
     { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
     { rule: 'Teleport', name: 'Teleport', play: function () { return [{ kind: 'teleportin', x: TO.x, y: TO.y, r: 1.4, dur: 1500 }]; }, sfx: 'shimmer' },
     { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },

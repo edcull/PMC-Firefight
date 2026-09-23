@@ -3152,6 +3152,7 @@
   function abShoot(st, a, t, mode, opts) {
     var sh = !(opts && opts.assault) && a && t ? R.shieldFor(st, a, t) : null;
     var trails = pheromoneMarkers(a, t);
+    if (!(opts && opts.assault)) keenFx(a, t, 6);
     var res = R.shoot(st, a, t, mode, opts);
     abilityFx(res, t, sh, trails);
     return res;
@@ -3164,6 +3165,9 @@
       addFx({ kind: 'beam', x: shout.x, y: shout.y, tx: a.x, ty: a.y, rgb: '235,85,70', dur: 900 });
       addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 900 });
     }
+    // Sappers: charges set against the wall or building the enemy is sheltering behind
+    var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
+    if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
     var res = R.assault(st, a, t);
     abilityFx(res, t, null, trails);
     return res;
@@ -3204,6 +3208,14 @@
     if (sh && sh.from) addFx({ kind: 'dome', x: sh.from.x, y: sh.from.y, r: 12, delay: 250, dur: 1500 });
     var txt = ((res && res.log) || []).map(function (l) { return l.text || ''; }).join('\n');
     if (/MEDIC!/.test(txt)) addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: 500, dur: 1900 });
+  }
+  /* Keen-Eyed: a spotter seeing straight through a Stealth unit's
+     concealment — a glint off its optics, and one on the unit it picks out.
+     Stealth only counts from `from` inches on, so nearer than that nothing shows. */
+  function keenFx(a, t, from) {
+    if (!a || !t || !R.has(a, 'Keen-Eyed') || !R.has(t, 'Stealth') || R.unitDist(a, t) < from) return;
+    addFx({ kind: 'glint', x: a.x, y: a.y, dur: 700 });
+    addFx({ kind: 'glint', x: t.x, y: t.y, up: 0.8, delay: 250, dur: 700 });
   }
   // a rally or repair made harder by an enemy's Jammers: the static rolling out from the jammer
   function jamFx(u) {
@@ -3498,7 +3510,9 @@
     var res = R.assaultTerrain(state, u, piece);
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     var mid = { x: piece.x + piece.w / 2, y: piece.y + piece.h / 2 };
-    addFx({ kind: 'clash', x: mid.x, y: mid.y, dur: 420 });
+    // Sappers set their charges round the piece first; anyone else just goes at it
+    if (R.has(u, 'Sappers')) addFx({ kind: 'charges', x: mid.x, y: mid.y, r: Math.min(piece.w, piece.h) / 2 + 0.5, n: 5, dur: 1400, blocking: true });
+    addFx({ kind: 'clash', x: mid.x, y: mid.y, delay: R.has(u, 'Sappers') ? 850 : 0, dur: R.has(u, 'Sappers') ? 1270 : 420 });
     if (res.result) whenIdle(function () { repaintTerrain([res.result]); });
     pushRes(fromLog('Demolition charges', u.name + ' → ' + piece.kind, u.side, res.log));
     endActivation(u);
@@ -3617,6 +3631,9 @@
       t.marked = true;
       // the marker's laser (or smoke round's trace) onto each mark
       addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200, blocking: true });
+      // Smoke Markers: the grenade bursting on the mark, the flare burning in it
+      if (smoke) addFx({ kind: 'puff', x: t.x, y: t.y, delay: 300, dur: 1800 });
+      keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
     });
     u.activated = true;
 

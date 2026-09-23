@@ -39,6 +39,8 @@
      when a new one starts, and it needs the terrain to answer `lift`. */
   var FX = window.PMCFx.create({ lift: function (x, y) { return liftOf(x, y); } });
   var fx = FX.list;
+  // what is always up on the table: every Xenotripod shield generator's dome, faint, redrawn each frame
+  var STANDING = window.PMCFx.create({ lift: function (x, y) { return liftOf(x, y); } });
   var el = function (id) { return document.getElementById(id); };
 
   var OBJECTIVES = [{ x: 12, y: 36 }, { x: 24, y: 24 }, { x: 36, y: 12 }];
@@ -1976,7 +1978,15 @@
 
   /* The effects themselves live in fx.js, so the game and the unit viewer draw
      the same ones from the same code. This is only the game's window onto it. */
-  function drawFx() { FX.draw(pctx); }
+  function drawFx() {
+    STANDING.clear();
+    if (state) state.units.forEach(function (u) {
+      if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
+      STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
+    });
+    STANDING.draw(pctx);
+    FX.draw(pctx);
+  }
 
   /* ================= logging ================= */
   /* The engine has already written the line into state.log (the page's state
@@ -3601,7 +3611,6 @@
   function drawMachineStats(u, box) {
     var left = Math.max(0, u.str - u.damage);
     var pr = R.propOf(u);
-    if (u.drone) kind += ' · drone';
     var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
       '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
       '</div>';
