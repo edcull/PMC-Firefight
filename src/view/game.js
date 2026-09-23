@@ -5422,7 +5422,6 @@
     setDrawerTab('forces');
     ui.statsOpen = window.innerWidth > 760;
     el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
-    if (el('btn-menu-rules')) el('btn-menu-rules').addEventListener('click', function () { el('notes').hidden = false; });
 
     // the same switch on the top bar and on the menu
     var sndBtns = [el('btn-sound'), el('btn-menu-sound')].filter(Boolean);

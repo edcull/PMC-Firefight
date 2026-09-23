@@ -382,17 +382,19 @@
      The same effects the battle plays, driven from the same weapon table. Hits
      are made up here — the bench is about what it looks and sounds like, not
      about the dice. */
-  // what the stage zooms between: 1 is the whole firing line, ZMAX a squad filling it
-  var ZMIN = 1, ZMAX = 4.5;
+  // the stage has two zooms: 1 is the whole firing line, ZOOM_CLOSE the unit filling it
   function setZoom(zz) {
-    view.zoom = Math.max(ZMIN, Math.min(ZMAX, zz));
+    view.zoom = zz > 1 ? ZOOM_CLOSE : 1;
     view.wide = false;
     zoomLabel();
     start();
   }
   function zoomLabel() {
-    var zl = el('vzoomlabel');
-    if (zl) zl.textContent = '\u00d7' + (Math.round(view.zoom * 10) / 10);
+    el('vzoom').querySelectorAll('[data-vzoom]').forEach(function (b) {
+      var on = (b.getAttribute('data-vzoom') === 'close') === (view.zoom > 1);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
   }
   // pull out to the whole line for the length of a shot
   function showWide() { view.wide = true; view.wideUntil = performance.now() + 900; start(); }
@@ -799,7 +801,19 @@
     var maxModels = p.cls === 'infantry' ? p.size : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
-
+    // two tabs under the name: what to do with the unit, and what the book says of it
+    var tab = view.tab === 'stats' ? 'stats' : 'opts';
+    h += '<div class="vtabs" role="tablist">' +
+      '<button type="button" role="tab" data-tab="opts" aria-selected="' + (tab === 'opts') + '"' + (tab === 'opts' ? ' class="on"' : '') + '>Options</button>' +
+      '<button type="button" role="tab" data-tab="stats" aria-selected="' + (tab === 'stats') + '"' + (tab === 'stats' ? ' class="on"' : '') + '>Stats &amp; rules</button></div>';
+    h += '<div class="vtabbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
+    h += '<div class="vacts">' +
+      '<button class="vbtn primary" data-do="fire">Fire</button>' +
+      '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
+      '<button class="vbtn" data-do="insert">Insert</button>' +
+      (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
+      '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
+      '</div>';
     h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
@@ -817,15 +831,11 @@
       h += '<div class="vgrp"><label>Models — ' + n + ' of ' + p.size + '</label>' +
         '<input type="range" id="vmodels" min="1" max="' + p.size + '" value="' + n + '"></div>';
     }
-    h += '<div class="vacts">' +
-      '<button class="vbtn primary" data-do="fire">Fire</button>' +
-      '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
-      '<button class="vbtn" data-do="insert">Insert</button>' +
-      (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
-      '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
-      '</div>';
-    h += rulesHtml(p);
+    h += '</div><div class="vtabbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
+    var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0;
     el('vctl').innerHTML = h;
+    var now = el('vctl').querySelector('.vtabbody:not([hidden])');
+    if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
@@ -905,13 +915,13 @@
     frame();
 
     // tap the stage to fire: on a phone the buttons are further down the page
-    /* Tap the stage to fire; a pinch (or the wheel, or − / +) zooms, and a
-       pinch is never taken for a tap. */
+    /* Tap the stage to fire; a pinch or the wheel goes between Wide and
+       Close, and a pinch is never taken for a tap. */
     var pts = {}, pinch = null, pinched = 0;
     cv.addEventListener('click', function () { if (Date.now() - pinched < 400) return; fire(); });
     cv.addEventListener('wheel', function (e) {
       e.preventDefault();
-      setZoom(view.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+      setZoom(e.deltaY < 0 ? ZOOM_CLOSE : 1);
     }, { passive: false });
     cv.addEventListener('pointerdown', function (e) {
       pts[e.pointerId] = { x: e.clientX, y: e.clientY };
@@ -927,8 +937,8 @@
       var ids = Object.keys(pts);
       if (pinch && ids.length === 2) {
         var a = pts[ids[0]], b2 = pts[ids[1]];
-        setZoom(pinch.z * Math.hypot(a.x - b2.x, a.y - b2.y) / pinch.d);
-        pinched = Date.now();
+        var r = Math.hypot(a.x - b2.x, a.y - b2.y) / pinch.d;
+        if (r > 1.15 || r < 0.87) { setZoom(r > 1 ? ZOOM_CLOSE : 1); pinched = Date.now(); }
       }
     });
     function lift(e) { delete pts[e.pointerId]; if (Object.keys(pts).length < 2) pinch = null; }
@@ -938,7 +948,7 @@
       var zb = e.target.closest('[data-vzoom]');
       if (!zb) return;
       var how = zb.getAttribute('data-vzoom');
-      setZoom(how === 'in' ? view.zoom * 1.35 : how === 'out' ? view.zoom / 1.35 : how === 'wide' ? 1 : ZOOM_CLOSE);
+      setZoom(how === 'wide' ? 1 : ZOOM_CLOSE);
     });
     zoomLabel();
     el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
@@ -978,6 +988,15 @@
           I.setSideColour(foe, view.colour[foe]);
         }
         drawControls(); frame(); return;
+      }
+      var tb = e.target.closest('[data-tab]');
+      if (tb) {
+        if (view.tab !== tb.getAttribute('data-tab')) {
+          view.tab = tb.getAttribute('data-tab');
+          drawControls();
+          el('vctl').querySelector('.vtabbody:not([hidden])').scrollTop = 0;
+        }
+        return;
       }
       var s = e.target.closest('[data-set]');
       if (s) {
@@ -1025,8 +1044,8 @@
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
       if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
-      if (e.key === '+' || e.key === '=') { setZoom(view.zoom * 1.35); e.preventDefault(); }
-      if (e.key === '-' || e.key === '_') { setZoom(view.zoom / 1.35); e.preventDefault(); }
+      if (e.key === '+' || e.key === '=') { setZoom(ZOOM_CLOSE); e.preventDefault(); }
+      if (e.key === '-' || e.key === '_') { setZoom(1); e.preventDefault(); }
     });
   }
 
