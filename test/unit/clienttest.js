@@ -156,6 +156,18 @@ function scriptsOf(html) {
   return out;
 }
 
+/* A promise that has already settled and hands on at once: this test runs
+   straight through, with no turn of the event loop to settle a real one in. */
+function answered(v) {
+  return {
+    then(fn) { try { const r = fn(v); return r && r.then ? r : answered(r); } catch (e) { return failed(e); } },
+    catch() { return this; }
+  };
+}
+function failed(e) {
+  return { then() { return this; }, catch(fn) { fn(e); return this; } };
+}
+
 function boot(root, opts) {
   opts = opts || {};
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -211,7 +223,7 @@ function boot(root, opts) {
     FileReader: function () { },
     Blob: function () { },
     URL: { createObjectURL: () => 'blob:', revokeObjectURL: () => { } },
-    fetch: () => Promise.reject(new Error('no network in this test'))
+    fetch: opts.fetch || (() => Promise.reject(new Error('no network in this test')))
   };
   win.window = win;
   win.self = win;
@@ -431,7 +443,9 @@ function openScreen(name) {
   const link = pair();
   const app2 = boot(root, {
     location: { protocol: 'http:', host: 'localhost:8787', href: 'http://localhost:8787/' },
-    WebSocket: function () { return link.client; }
+    WebSocket: function () { return link.client; },
+    // the server answers /health, which is what lights the Multiplayer card
+    fetch: (url) => answered(url === '/health' ? { ok: true, json: () => ({ ok: true, rooms: 0, players: 0 }) } : { ok: false })
   });
   served.connect(link.server);
   app2.win.localStorage.setItem('pmc-player-name', name);

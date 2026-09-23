@@ -5806,9 +5806,9 @@
     P(-10, -21, 9, 1, '#5fd0f0');
     P(1, -22, 28, 4, '#232830');                     // the barrel
     P(1, -22, 28, 1, '#4a535f');
-    for (var i = 0; i < 5; i++) {                    // coils
-      P(4 + i * 5, -23, 2, 6, '#1a1e25');
-      P(4.5 + i * 5, -22, 1, 4, '#7fe0f0');
+    for (var i = 0; i < 5; i++) {                    // cooling vents, inside the barrel
+      P(4 + i * 5, -21, 2, 2, '#1a1e25');
+      P(4.5 + i * 5, -20.5, 1, 1, '#7fe0f0');
     }
     P(28, -23, 3, 6, '#39424d');                     // muzzle
     P(-16, -17, 5, 4, pal.dark);                     // power cable to the crew's pack
@@ -6073,7 +6073,7 @@
     aaheavy: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.4, twin: true, elev: 16, dish: true, style: { body: 'mbt', turret: 'aa', tSize: 0.95, skirts: 'panels', noMissiles: true } },
     // fliers: every one of them on shrouded fans
     civcraft: { len: 1.75, wid: 0.95, hgt: 16, fly: 2.3, craft: 'civ', gun: 1.0 },
-    hawk: { len: 2.25, wid: 0.80, hgt: 16, fly: 2.4, craft: 'hawk', gun: 1.0 },
+    hawk: { len: 2.25, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hawk', gun: 1.0 },
     chinook: { len: 2.65, wid: 0.90, hgt: 18, fly: 2.3, craft: 'chinook', gun: 1.0 },
     // the rebels' armed heavy shuttle: the same lifter with winglets on its flanks
     chinookwl: { len: 2.65, wid: 0.90, hgt: 18, fly: 2.3, craft: 'chinook', gun: 1.0, winglets: true },
@@ -6318,7 +6318,7 @@
     none: 'none'
   };
   // one cell of a machine's digital camouflage, in inches
-  var CELL = 0.2;
+  var CELL = 0.14;
   /* How far a styled craft's wings or fans reach, as a multiple of the hull
      width — what it lays on the ground when it flies over. */
   var CRAFT_SPAN = {
@@ -6364,9 +6364,10 @@
     xstrike: { kind: 'craft', L: 0.95, span: 0.72, fin: 1.1, le: 0.12, tip: -0.86, rad: 0.09 },
     xstrikehg: { kind: 'craft', L: 1.05, span: 0.78, fin: 1.1, le: 0.18, tip: -0.84, rad: 0.1, prongs: 1 },
     xstrikeadv: { kind: 'craft', L: 1.15, span: 0.86, fin: 1.05, le: 0.34, tip: -0.78, rad: 0.11, droop: 36, prongs: 2 },
-    xrecon: { kind: 'craft', L: 0.72, span: 0.6, fin: 1.3, le: 0.05, tip: -0.92, rad: 0.07, droop: 46, eye: true },
-    xtelecraft: { kind: 'craft', L: 0.95, span: 0.74, fin: 1.1, le: 0.14, tip: -0.84, rad: 0.1, ring: true },
-    xshieldcraft: { kind: 'craft', L: 0.92, span: 0.7, fin: 1.0, le: 0.24, tip: -0.78, rad: 0.12, droop: 44, dome: true },
+    // the support craft carry only a token gun: what they are for is what shows
+    xrecon: { kind: 'craft', L: 0.72, span: 0.6, fin: 1.3, le: 0.05, tip: -0.92, rad: 0.07, droop: 46, scan: true, support: true },
+    xtelecraft: { kind: 'craft', L: 0.95, span: 0.74, fin: 1.1, le: 0.14, tip: -0.84, rad: 0.1, ring: true, support: true },
+    xshieldcraft: { kind: 'craft', L: 0.92, span: 0.7, fin: 1.0, le: 0.24, tip: -0.78, rad: 0.12, droop: 44, shield: true, support: true },
     xturret: { kind: 'turret' },
     xteleturret: { kind: 'portal' },
     xshieldturret: { kind: 'shield' }
@@ -6534,24 +6535,42 @@
         path(shd, 'rgba(12,10,8,.26)');
         rect(g, gp.x - 1, gp.y - fly, 2, fly, 'rgba(120,130,145,.14)');
       }
-      if (spec.ring) {
-        var rp = [];
-        for (var ri2 = 0; ri2 <= 24; ri2++) { var ra = ri2 / 24 * Math.PI * 2; rp.push(S(-0.1 + Math.cos(ra) * 0.55, Math.sin(ra) * 0.55, z0 - m(4))); }
-        stroke(rp, m(1.8), WH.dk);
-        stroke(rp, m(1), BLU.m);
+      /* The teleport craft's gate: a ring wing, a short band round the
+         fuselage, square to it, set back where the three wings are broadest
+         so they run through it and hold it. Its far half goes in behind the
+         wings and body, its near half over them; the gate burns blue inside. */
+      function hoop(near) {
+        if (!spec.ring) return;
+        var ht = (spec.tip || -0.72) * Lc * 0.62, hr = span * 0.56, bw = 0.07, N = 40, fr2 = [], bk = [];
+        function flush() {
+          if (fr2.length > 1) {
+            var band = fr2.concat(bk.slice().reverse());
+            path(band, near ? WH.lt : WH.dk); stroke(band, 1, WH.seam, true);
+            stroke(near ? fr2 : bk, m(0.8), BLU.m);
+            if (!dead) stroke(near ? fr2 : bk, m(0.3), BLU.l);
+          }
+          fr2 = []; bk = [];
+        }
+        for (var hi = 0; hi <= N; hi++) {
+          var hph = hi / N * Math.PI * 2;
+          if ((dot3(roll(hph), EYE) >= 0) === near) { fr2.push(P3(ht + bw, hr, hph)); bk.push(P3(ht - bw, hr, hph)); } else flush();
+        }
+        flush();
       }
-      var zb = zc - rad * ZK * 0.9, gb1 = S(1.25 * Lc, 0, zb);
+      // a support craft's gun is a token: short, thin, one coil
+      var gk = spec.support ? 0.5 : 1, gEnd = spec.support ? 1.06 : 1.25;
+      var zb = zc - rad * ZK * 0.9, gb1 = S(gEnd * Lc, 0, zb);
       var barrel = function () {
         // the gun: a blue energy barrel slung under the nose, reaching past it
         var gb0 = S(0.4 * Lc, 0, zb);
-        stroke([gb0, gb1], m(2), dead ? WH.seam : '#123a6e');
-        stroke([gb0, gb1], m(1.2), dead ? WH.dk : '#3f9be8');
-        stroke([gb0, S(1.18 * Lc, 0, zb + m(0.4))], m(0.5), dead ? WH.md : '#bfe6ff');
-        [0.75, 0.95, 1.12].forEach(function (t3) {              // coils along it
+        stroke([gb0, gb1], m(2 * gk), dead ? WH.seam : '#123a6e');
+        stroke([gb0, gb1], m(1.2 * gk), dead ? WH.dk : '#3f9be8');
+        if (!spec.support) stroke([gb0, S(1.18 * Lc, 0, zb + m(0.4))], m(0.5), dead ? WH.md : '#bfe6ff');
+        (spec.support ? [0.95] : [0.75, 0.95, 1.12]).forEach(function (t3) {              // coils along it
           var c3 = S(t3 * Lc, 0, zb);
-          ellipse(g, c3[0], c3[1], m(1), m(1.2), dead ? WH.dk : '#6ebeff');
+          ellipse(g, c3[0], c3[1], m(gk), m(1.2 * gk), dead ? WH.dk : '#6ebeff');
         });
-        if (!dead) { halo(gb1, m(2.4), 'rgba(110,190,255,.35)'); ellipse(g, gb1[0], gb1[1], m(0.8), m(0.7), '#e4f4ff'); }
+        if (!dead) { halo(gb1, m(2.4 * gk), 'rgba(110,190,255,.35)'); ellipse(g, gb1[0], gb1[1], m(0.8 * gk), m(0.7 * gk), '#e4f4ff'); }
       };
       // fittings on the spine, ahead of the dorsal wing
       var fittings = function () {
@@ -6561,22 +6580,96 @@
         cp = [cp[0], cp[dot3(roll(Math.PI * 0.35), EYE) > dot3(roll(Math.PI * 0.65), EYE) ? 3 : 4], cp[2], cp[1]];
         path(cp, dead ? '#2a2826' : '#3f9be8'); stroke(cp, 1, dead ? WH.seam : '#123a6e', true);
         if (!dead) path([cp[0], cp[3], cp[2]], '#9fd6ff');
-        if (spec.dome) {
-          var dm = P3(0.52 * Lc, rad * 2.2, Math.PI / 2);
-          ellipse(g, dm[0], dm[1], m(4.6), m(3.6), dead ? '#4a4843' : hexA(gc1, 0.35));
-          ellipse(g, dm[0] - m(1.1), dm[1] - m(1.1), m(1.4), m(1), dead ? '#55524c' : 'rgba(255,255,255,.55)');
-          if (!dead) ellipseRing(g, dm[0], dm[1], m(4.6), m(3.6), GLO.m);
-        }
-        if (spec.eye) { var ey = P3(Lc * 1.02, 0, 0); halo(ey, m(4.4), GLO.h); ellipse(g, ey[0], ey[1], m(2), m(1.7), GLO.m); ellipse(g, ey[0] - 1, ey[1] - 1, m(0.8), m(0.7), GLO.l); }
       };
       // far wings, the body, then the near wings; the nose's fittings go in front when it points at the eye
+      /* What the support craft are for, drawn in the tribe's blue.
+         Recon: a sensor array along the spine and a scanning fan swept across
+         the ground ahead. Teleport: the gate in its ring wing, a swirl of
+         light filling it. Shield generator: emitters at the wingtips and the
+         bubble they throw about the craft, rippling. */
+      function scanFan() {
+        if (!spec.scan || dead) return;
+        var sw = Math.sin(tnow / 700) * 0.6, reachT = 1.5;
+        var n0 = P3(1.0 * Lc, 0, -Math.PI / 2);
+        var g0 = S(reachT + Lc, sw - 0.6, 0), g1 = S(reachT + Lc, sw + 0.6, 0);
+        path([n0, g0, g1], 'rgba(110,190,255,.12)');
+        stroke([n0, g0], 1, 'rgba(160,215,255,.45)'); stroke([n0, g1], 1, 'rgba(160,215,255,.45)');
+        stroke([g0, g1], m(0.8), 'rgba(190,235,255,.7)');
+        // the sweep's leading line, brighter
+        var gm = S(reachT + Lc, sw + 0.6 * Math.sin(tnow / 180), 0);
+        stroke([n0, gm], 1, 'rgba(210,240,255,.55)');
+      }
+      function sensorArray() {
+        if (!spec.scan) return;
+        // three lenses down the spine, and a small dish ahead of the dorsal wing
+        [0.62, 0.4, 0.18].forEach(function (t4, i) {
+          var lp = P3(t4 * Lc, rad * 1.05, Math.PI / 2);
+          ellipse(g, lp[0], lp[1], m(1.2), m(1), dead ? WH.seam : '#123a6e');
+          ellipse(g, lp[0], lp[1], m(0.8), m(0.65), dead ? WH.dk : (Math.floor(tnow / 240) % 3 === i ? '#e4f4ff' : '#6ebeff'));
+        });
+        var ds = P3(-0.05 * Lc, rad * 1.6, Math.PI / 2), db2 = P3(-0.05 * Lc, rad * 0.9, Math.PI / 2);
+        stroke([db2, ds], m(0.8), WH.dk);
+        ellipse(g, ds[0], ds[1], m(2.6), m(1.3), dead ? WH.dk : WH.lt);
+        ellipse(g, ds[0] + m(0.3), ds[1] + m(0.2), m(1.8), m(0.8), dead ? WH.sh : WH.md);
+        if (!dead) ellipse(g, ds[0], ds[1] - m(0.1), m(0.6), m(0.5), '#6ebeff');
+      }
+      function gate() {
+        if (!spec.ring || dead) return;
+        var ht = (spec.tip || -0.72) * Lc * 0.62, hr = span * 0.56 * 0.92, N = 28, disc = [];
+        for (var gi = 0; gi < N; gi++) disc.push(P3(ht, hr, gi / N * Math.PI * 2));
+        path(disc, 'rgba(110,190,255,.2)');
+        // two arms of light turning in it
+        for (var arm = 0; arm < 2; arm++) {
+          var sp2 = [];
+          for (var q = 0; q <= 12; q++) {
+            var rr = hr * (1 - q / 13), aa = tnow / 400 + arm * Math.PI + q * 0.42;
+            sp2.push(P3(ht, rr, aa));
+          }
+          stroke(sp2, m(0.7), 'rgba(200,238,255,.65)');
+        }
+        var gc = P3(ht, 0, 0);
+        halo(gc, m(2.2), 'rgba(160,220,255,.45)');
+        ellipse(g, gc[0], gc[1], m(0.9), m(0.8), '#e4f4ff');
+      }
+      function shieldBubble(back) {
+        if (!spec.shield || dead) return;
+        var c0 = P3(-0.1 * Lc, 0, 0), R0 = (Lc * 1.25) * K, pulse = 1 + Math.sin(tnow / 260) * 0.025;
+        var rx = R0 * pulse, ry = rx * 0.7;
+        if (back) { ellipse(g, c0[0], c0[1], rx, ry, 'rgba(110,190,255,.1)'); return; }
+        g.save(); g.globalAlpha = 0.55; ellipseRing(g, c0[0], c0[1], rx, ry, '#8fd0ff'); g.restore();
+        // a ripple crossing it, and the facets of the field catching the light
+        var ph3 = (tnow / 900) % 1;
+        g.save(); g.globalAlpha = 0.35 * (1 - ph3); ellipseRing(g, c0[0], c0[1], rx * (0.45 + ph3 * 0.55), ry * (0.45 + ph3 * 0.55), '#cfeeff'); g.restore();
+        for (var hx = 0; hx < 7; hx++) {
+          var ha = hx / 7 * Math.PI * 2 + tnow / 3000;
+          ellipse(g, c0[0] + Math.cos(ha) * rx * 0.86, c0[1] + Math.sin(ha) * ry * 0.86, m(0.6), m(0.5), 'rgba(220,245,255,.6)');
+        }
+      }
+      function emitters() {
+        if (!spec.shield) return;
+        WINGS.forEach(function (w) {
+          var tp2 = P3((spec.tip || -0.72) * Lc, w.sp, w.ph);
+          ellipse(g, tp2[0], tp2[1], m(1.5), m(1.3), dead ? WH.seam : '#123a6e');
+          ellipse(g, tp2[0], tp2[1], m(1), m(0.85), dead ? WH.dk : '#6ebeff');
+          if (!dead) ellipse(g, tp2[0] - m(0.3), tp2[1] - m(0.3), m(0.4), m(0.35), '#e4f4ff');
+        });
+      }
+
       var away = dot3(T3, EYE) < 0;
+      scanFan();
+      shieldBubble(true);
+      hoop(false);
       WINGS.forEach(function (w) { if (w.d < 0) wing(w); });
       barrel();                                   // slung under the body, so only its muzzle shows past the nose
       body();
       if (away) fittings();
       WINGS.forEach(function (w) { if (w.d >= 0) wing(w); });
+      gate();
+      hoop(true);
       if (!away) fittings();
+      sensorArray();
+      emitters();
+      shieldBubble(false);
       if (!dead) { mountAt('gun', gb1); mountAt('mg', gb1); }
       return { lift: lift, hgt: zc - z0 + span * (spec.fin || 1.15) * ZK + m(2) };
     }
@@ -7455,25 +7548,21 @@
       var reach = spec.craft ? (CRAFT_SPAN[spec.craft] || 1.4) : spec.heli ? 2.2 : 1.2;
       var seed = 0; String(u.art || '').split('').forEach(function (ch) { seed = (seed * 31 + ch.charCodeAt(0)) | 0; });
       var rnd = rng(seed ^ 0x5bd1e995);
-      var cols = Math.max(8, Math.round(len * 2.2 / CELL));
-      var rows = Math.max(7, Math.round(wid * reach * 2.2 / CELL));
-      function put(cx, cy) {
-        if (cx < -cols / 2 || cx > cols / 2 || cy < -rows / 2 || cy > rows / 2) return;
-        var key = cx + ':' + cy;
-        if (seen[key]) return;
-        seen[key] = 1;
-        out.push({ p: cx * CELL, q: cy * CELL, zk: rnd() });
-      }
-      // clusters of two or three cells, each with a few singles stepping away
-      var clumps = Math.round(cols * rows * 0.14);  // enough to cover it, not to fill it in
-      for (var i = 0; i < clumps; i++) {
-        var cx0 = Math.round((rnd() - 0.5) * cols), cy0 = Math.round((rnd() - 0.5) * rows);
-        var w2 = 1 + Math.floor(rnd() * 2), h2 = 1 + Math.floor(rnd() * 2);
-        for (var a = 0; a < w2; a++) for (var b = 0; b < h2; b++) put(cx0 + a, cy0 + b);
-        var strays = 1 + Math.floor(rnd() * 3);
-        for (var q2 = 0; q2 < strays; q2++) {
-          put(cx0 + (rnd() < 0.5 ? -1 : w2) + Math.floor(rnd() * 2) - 1,
-            cy0 + (rnd() < 0.5 ? -1 : h2) + Math.floor(rnd() * 2) - 1);
+      // a little past the machine's reach all round, so no edge of a deck or wing runs off the pattern
+      var cols = Math.max(8, Math.round(len * 1.4 / CELL));
+      var rows = Math.max(7, Math.round(wid * reach * 1.4 / CELL));
+      /* Every block of three by three cells has exactly four filled, picked
+         at random for the kind of machine: the cells still clump and scatter
+         the way a printed digital pattern does, but no stretch of deck three
+         cells across is ever left bare. */
+      var salt = seed & 0xffff;
+      for (var cx = -Math.ceil(cols / 2); cx <= Math.ceil(cols / 2); cx++) {
+        for (var cy = -Math.ceil(rows / 2); cy <= Math.ceil(rows / 2); cy++) {
+          var bx = Math.floor(cx / 3), by = Math.floor(cy / 3), me = hash(cx, cy, salt + bx * 7 + by * 13), below = 0;
+          for (var ci = 0; ci < 3; ci++) for (var cj = 0; cj < 3; cj++) {
+            if (hash(bx * 3 + ci, by * 3 + cj, salt + bx * 7 + by * 13) < me) below++;
+          }
+          if (below < 4) out.push({ p: cx * CELL, q: cy * CELL, zk: rnd() });
         }
       }
       return out;
@@ -7495,6 +7584,53 @@
       for (var j = 1; j < pts.length; j++) g.lineTo(pts[j][0], pts[j][1]);
       g.closePath(); g.clip();
       g.fillStyle = mixc(col, '#16180f', 0.34);
+      /* A plate standing up (a side, a front, a turret's cheek) takes the
+         pattern on a grid of its own, square to the screen and pinned to the
+         machine, so it is covered edge to edge as densely as the deck is:
+         clumps of cells on a coarse grid, and singles scattered between. */
+      if (!top) {
+        var cs = half * 2;
+        var gi0 = Math.floor((x0 - P0.x) / cs), gi1 = Math.ceil((x1 - P0.x) / cs);
+        var gj0 = Math.floor((y0 - P0.y) / cs), gj1 = Math.ceil((y1 - P0.y) / cs);
+        /* every block of three by three cells has exactly four of them
+           filled, picked at random, so no stretch of plate three cells across
+           is ever left bare, yet the cells still clump and scatter */
+        var inBlock = function (gi2, gj2) {
+          var bx = Math.floor(gi2 / 3), by = Math.floor(gj2 / 3);
+          var me = hash(gi2, gj2, 772 + bx * 7 + by * 13), below = 0;
+          for (var ci2 = 0; ci2 < 3; ci2++) for (var cj2 = 0; cj2 < 3; cj2++) {
+            if (hash(bx * 3 + ci2, by * 3 + cj2, 772 + bx * 7 + by * 13) < me) below++;
+          }
+          return below < 4;
+        };
+        // a small plate may fall between the blocks' picks: it is topped up to
+        // a third of the cells whose middles lie on it, the likeliest first
+        var inside = function (px, py) {
+          var hit = false;
+          for (var pi = 0, pj = pts.length - 1; pi < pts.length; pj = pi++) {
+            var xi = pts[pi][0], yi = pts[pi][1], xj = pts[pj][0], yj = pts[pj][1];
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) hit = !hit;
+          }
+          return hit;
+        };
+        var onFace = [], lit = 0;
+        for (var gi = gi0; gi <= gi1; gi++) {
+          for (var gj = gj0; gj <= gj1; gj++) {
+            var on = inBlock(gi, gj);
+            if (on) g.fillRect(P0.x + gi * cs, P0.y + gj * cs, cs, cs);
+            if (inside(P0.x + (gi + 0.5) * cs, P0.y + (gj + 0.5) * cs)) {
+              if (on) lit++; else onFace.push({ gi: gi, gj: gj, r: hash(gi, gj, 919) });
+            }
+          }
+        }
+        var want = Math.ceil((lit + onFace.length) * 0.34) - lit;
+        if (want > 0) {
+          onFace.sort(function (p1, p2) { return p1.r - p2.r; });
+          for (var wk = 0; wk < want && wk < onFace.length; wk++) g.fillRect(P0.x + onFace[wk].gi * cs, P0.y + onFace[wk].gj * cs, cs, cs);
+        }
+        g.restore();
+        return;
+      }
       CAMO.forEach(function (b2) {
         // up the plate as well as along it, so a tall face is covered
         var c = S3(HF(b2.p, b2.q), z + (top ? 0 : (b2.zk - 0.5) * (h || 0)));
@@ -7579,7 +7715,7 @@
         var colr = k > 0.5 ? mixc(ft.mid, ft.lit, (k - 0.5) * 2) : mixc(ft.dark, ft.mid, k * 2);
         var face = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]];
         poly(g, face, colr);
-        if (CAMO && tn0 === TB) camoOn(face, colr, z0 + h * 0.5, false, h);
+        if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(face, colr, z0 + h * 0.5, false, h);
         if (h > 2) {
           var yT = Math.min(face[2][1], face[3][1]), yB = Math.max(face[0][1], face[1][1]);
           if (yB - yT > 1) {
@@ -7597,7 +7733,7 @@
         var cxT = 0, cyT = 0; base.forEach(function (q) { cxT += q.x; cyT += q.y; });
         var topCol = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11).top;
         poly(g, Ts, topCol);
-        if (CAMO && tn0 === TB) camoOn(Ts, topCol, z0 + h, true);
+        if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(Ts, topCol, z0 + h, true);
         var ys = Ts.map(function (q) { return q[1]; });
         var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
         if (y1 - y0 > 1) {
@@ -7639,6 +7775,17 @@
     /* A gun barrel from a0 to a1 along a frame, at height z, rising `up` px to
        the muzzle. Drawn smooth, with a lit top line, an optional fume
        extractor and muzzle brake; the muzzle is recorded as a mount. */
+    /* Cooling vents down an energy barrel: n small blue slots set into it,
+       each well inside the barrel's width and clear of the next, the way the
+       advanced combat vehicle's plasma cannon shows them. */
+    function vents(fr, a0, a1, b, z, w, n, up) {
+      if (dead) return;
+      for (var vi = 1; vi <= n; vi++) {
+        var k = vi / (n + 1), vp = S3(fr(a0 + (a1 - a0) * k, b), z + (up || 0) * k);
+        sEllipse(vp[0], vp[1], w * 0.4, w * 0.34, '#0c1016');
+        sEllipse(vp[0], vp[1], w * 0.28, w * 0.22, 'rgba(120,230,255,.85)');
+      }
+    }
     function barrel(fr, a0, a1, b, z, w, kind, o) {
       o = o || {};
       var up = o.up || 0;
@@ -7691,12 +7838,14 @@
         for (var qi = 0; qi < 4; qi++) { var qa = fq[qi], qb = fq[(qi + 1) % 4]; ar += qa[0] * qb[1] - qb[0] * qa[1]; }
         if (ar * ringSign <= 0.5) return;
         var k = clamp01(0.5 - fc.sx * 0.42);
-        poly(g, [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]],
-          k > 0.5 ? mixc(tn.mid, tn.lit, (k - 0.5) * 2) : mixc(tn.dark, tn.mid, k * 2));
+        var lcol = k > 0.5 ? mixc(tn.mid, tn.lit, (k - 0.5) * 2) : mixc(tn.dark, tn.mid, k * 2);
+        poly(g, fq, lcol);
+        if (CAMO && (tn === TB || tn === TT)) camoOn(fq, lcol, z + h * 0.5, false, h);
         edge(g, Ts[fc.i], Ts[fc.j], 'rgba(255,240,214,.3)', 0.6);
         if (fc.front) frontVisible = true;
       });
       poly(g, Ts, tn.top);
+      if (CAMO && (tn === TB || tn === TT)) camoOn(Ts, tn.top, z + h, true);
       edge(g, Ts[0], Ts[1], 'rgba(255,240,214,.45)', 0.6);
       // the tube mouths on the front face (corners 0,1 at the front)
       for (var r = 0; r < rows; r++) {
@@ -8130,8 +8279,8 @@
         barrel(TF, a0, len, 0, z, wd, 'gun', { col: '#1c2129' });
         for (var i = 1; i <= 4; i++) {
           var rp = S3(TF(a0 + (len - a0) * i / 5, 0), z);
-          sEllipse(rp[0], rp[1], wd * 0.7, wd * 0.65, '#2a313b');
-          if (!dead) sEllipse(rp[0], rp[1], wd * 0.35, wd * 0.3, 'rgba(120,230,255,.8)');
+          sEllipse(rp[0], rp[1], wd * 0.46, wd * 0.4, '#2a313b');
+          if (!dead) sEllipse(rp[0], rp[1], wd * 0.3, wd * 0.26, 'rgba(120,230,255,.8)');
         }
         var mz = S3(TF(len, 0), z);
         if (!dead) sEllipse(mz[0], mz[1], wd * 0.48, wd * 0.43, 'rgba(180,245,255,.95)');
@@ -8205,15 +8354,27 @@
                 var a0b = TR * 0.05, bz = tz + 9, reach = TR * (st.energyGun ? 0.55 : 0.9);
                 var rake = Math.round(42 * (reach - a0b) / (TR * 1.25));
                 var bt = barrel(TF, a0b, reach, 0, bz, st.energyGun ? 7.5 : 5.4, 'gun',
-                  st.energyGun ? { up: rake, col: '#141b22', lit: '#7fd8e8' } : { up: rake, brake: true, fume: 0.4 });
+                  st.energyGun ? { up: rake, col: '#141b22', lit: '#2a313b' } : { up: rake, brake: true, fume: 0.4 });
                 if (st.energyGun) {
                   // the coils down the barrel, and the mouth of it lit
                   // the charge burning in it, the size the Gauss arms show it
-                  for (var ci = 1; ci <= 2 && !dead; ci++) {
-                    var cp = S3(TF(a0b + (reach - a0b) * ci / 3, 0), bz + rake * (ci / 3));
-                    sEllipse(cp[0], cp[1], 1.5, 1.3, 'rgba(127,216,232,.75)');
+                  // a short barrel: its vents drawn to a slimmer gauge, so they sit apart inside it
+                  /* three vents evenly spaced down the barrel as it is drawn, from its
+                     hull end to just clear of the muzzle ring */
+                  var vb0 = S3(TF(a0b, 0), bz), vdx = bt[0] - vb0[0], vdy = bt[1] - vb0[1];
+                  // (the barrel's rounded end reaches back half its gauge past vb0; the muzzle ring is 3.9 out)
+                  var vlen = Math.hypot(vdx, vdy) || 1, vs0 = -3.4 / vlen, vs1 = 1 - 3.9 / vlen;
+                  for (var vv = 0; vv < 3 && !dead; vv++) {
+                    var vt = vs0 + (vs1 - vs0) * (vv + 0.5) / 3, vx = vb0[0] + vdx * vt, vy = vb0[1] + vdy * vt;
+                    sEllipse(vx, vy, 1.8, 1.53, '#0c1016');
+                    sEllipse(vx, vy, 1.26, 0.99, 'rgba(120,230,255,.85)');
                   }
-                  if (!dead) sEllipse(bt[0], bt[1], 1.8, 1.6, 'rgba(190,245,255,.95)');
+                  // the muzzle: a wide mouth across the end of the barrel, the charge glowing in it
+                  sEllipse(bt[0], bt[1], 3.9, 3.4, '#0c1016');
+                  if (!dead) {
+                    sEllipse(bt[0], bt[1], 3.1, 2.7, 'rgba(120,230,255,.9)');
+                    sEllipse(bt[0] - 0.6, bt[1] - 0.6, 1.3, 1.1, 'rgba(225,250,255,.95)');
+                  }
                 }
                 return;
               }
@@ -8523,8 +8684,15 @@
         if (!dead && o.rail) sEllipse(mz[0], mz[1], 1.6, 1.4, 'rgba(127,216,232,.9)');
         (o.also || []).forEach(function (k2) { mount(k2, mz, mz[0] >= cg[0] ? 1 : -1); });
       }
+      /* A rocket or missile pod slung under a wing, its tubes toward the nose.
+         Drawn before the wing, so the wing covers it; `lead` is where the
+         wing's leading edge crosses it, and it pokes out a little ahead of
+         that so it shows. */
+      function podUnder(lead, q, zz, kind, big) {
+        var ln = big ? 0.42 : 0.34;
+        pod(lead + 0.12 - ln / 2, q, zz, kind, big);
+      }
       function pod(p, q, zz, kind, big) {
-        // a rocket or missile pod under the wing, its tubes toward the nose
         var ln = big ? 0.42 : 0.34, r2 = big ? 0.11 : 0.09;
         line(S3(AF(p, q), zz + 3), S3(AF(p, q), zz), 1, STEEL);
         launcher(AF, p - ln / 2, p + ln / 2, q - r2, q + r2, zz - 4, 4, kind === 'missile' ? 1 : 2, 2, kind, { tone: TS, warheads: kind === 'missile' ? '#b8b0a0' : '#8a3a24' });
@@ -8636,24 +8804,26 @@
             }, true);
           }
           part(off, 0, function () {
+            /* the command post's radar: a big dark grey radome slung low under
+               the nose and bulging out ahead of it, laid down before the hull
+               so that from the side and behind the hull hides all but its
+               belly and its snout */
+            if (st === 'chinookcp') {
+              var nd = S3(AF(L * 0.44, 0), z - H * 0.06), nd2 = S3(AF(L * 0.56, 0), z - H * 0.1);
+              sEllipse((nd[0] + nd2[0]) / 2, (nd[1] + nd2[1]) / 2 + 0.8, 9, 6.2, '#23272d');
+              sEllipse(nd[0], nd[1], 7.2, 5.2, '#3c424a');
+              sEllipse(nd2[0], nd2[1], 6.4, 4.8, '#3c424a');
+              sEllipse(nd2[0] - 1.6, nd2[1] - 1.7, 3, 1.9, '#5b626c');
+              sEllipse(nd2[0] - 2.2, nd2[1] - 2.3, 1.2, 0.8, '#7d858f');
+            }
             fuselage(pts2o, topo, z, H, TB);
             bandOnSides(g, box(off, 0, cabL, Wd), z + 2, 2, 2, 'rgba(10,9,7,.4)');
             canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
-            // a row of cabin windows along the flank that faces us
-            var ns = nearSide(), nwin = chin ? 6 : 2;
-            for (var i = 0; i < nwin; i++) {
-              var wa = off + cabL * (0.12 - i * (chin ? 0.12 : 0.16));
-              var wp = S3(AF(wa, ns * w * 1.0), z + H * 0.62);
-              sEllipse(wp[0], wp[1], 1.7, 1.3, GLASS); sEllipse(wp[0] - 0.4, wp[1] - 0.4, 0.6, 0.5, GLINT);
-            }
+            var ns = nearSide();
             doorGun(ns, off - cabL * 0.05, z + H * 0.45, true);
             noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
             if (st === 'chinookcp') {
-              // the command post: a sensor dome on the nose, a dome on the roof and aerials
-              var nd = S3(AF(L * 0.5, 0), z + H * 0.32);
-              sEllipse(nd[0], nd[1], 5.2, 4.4, '#8f96a0');
-              sEllipse(nd[0], nd[1] - 0.6, 4.6, 3.8, '#c9ced6');
-              sEllipse(nd[0] - 1.4, nd[1] - 1.8, 2, 1.3, '#eef2f6');
+              // the command post: a dome on the roof and aerials (its radar went on under the nose)
               var dm = S3(AF(-L * 0.05, 0), z + H + 1);
               sEllipse(dm[0], dm[1] - 1.6, 4.2, 3, '#c9ced6'); sEllipse(dm[0] - 1, dm[1] - 2.6, 2, 1.2, '#eef2f6');
               aerial(AF, L * 0.1, w * 0.5, z + H, 18); aerial(AF, L * 0.05, -w * 0.5, z + H, 14); aerial(AF, -L * 0.1, w * 0.5, z + H, 12);
@@ -8667,20 +8837,22 @@
           var body2 = [[L * 0.5, -fw * 0.3], [L * 0.5, fw * 0.3], [L * 0.3, fw], [-L * 0.2, fw], [-L * 0.3, fw * 0.6], [-L * 0.3, -fw * 0.6], [-L * 0.2, -fw], [L * 0.3, -fw]];
           var top2 = body2.map(function (q2) { return [q2[0] * 0.9 - (q2[0] > 0 ? L * 0.04 : 0), q2[1] * 0.75]; });
           // the boom and tail, with a fan in the fin
+          // the tail boom rides level with the top of the hull, its fin and tailplane with it
           part(-L * 0.5, 0, function () {
-            shape(AF, [[-L * 0.25, -fw * 0.4], [-L * 0.25, fw * 0.4], [-L * 0.85, fw * 0.16], [-L * 0.85, -fw * 0.16]], z + H * 0.3, H * 0.34, TB, 0.85);
-            tailFin(-L * 0.72, z + H * 0.55, 15, false, 0.17);
-            plate(AF, [[-L * 0.66, -w * 0.9], [-L * 0.66, w * 0.9], [-L * 0.78, w * 0.9], [-L * 0.78, -w * 0.9]], z + H * 0.45, 1.5);
+            shape(AF, [[-L * 0.25, -fw * 0.4], [-L * 0.25, fw * 0.4], [-L * 0.85, fw * 0.16], [-L * 0.85, -fw * 0.16]], z + H * 0.66, H * 0.34, TB, 0.85);
+            tailFin(-L * 0.72, z + H * 0.91, 15, false, 0.17);
+            plate(AF, [[-L * 0.66, -w * 0.9], [-L * 0.66, w * 0.9], [-L * 0.78, w * 0.9], [-L * 0.78, -w * 0.9]], z + H * 0.81, 1.5);
           });
           // stub wings with pods, and a fan at each tip
           [-1, 1].forEach(function (sd) {
             part(-L * 0.02, sd * w * 2.6, function () {
               var wz = z + H * 0.45;
-              plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
               var npods = spec.noPods ? 0 : st === 'apacherk' || st === 'hindrk' ? 2 : 1;
               for (var pi = 0; pi < npods; pi++) {
-                pod(-L * 0.04, sd * (fw + (w * 2.6 - fw) * (0.3 + pi * 0.4)), wz, npods > 1 && pi === 1 ? 'missile' : 'rocket', st === 'hindrk');
+                var pq = fw + (w * 2.6 - fw) * (0.3 + pi * 0.4), lead = L * 0.05 - (L * 0.03) * (pq - fw * 0.9) / (w * 2.6 - fw * 0.9);
+                podUnder(lead, sd * pq, wz, npods > 1 && pi === 1 ? 'missile' : 'rocket', st === 'hindrk');
               }
+              plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
               fan(AF, -L * 0.05, sd * w * 3.1, wz + 1, 0.4);
             });
           });
@@ -8700,11 +8872,6 @@
               var dp = S3(AF(-L * 0.05, ns * fw), z + H * 0.35);
               poly(g, [[dp[0] - 4, dp[1]], [dp[0] + 4, dp[1] - 2], [dp[0] + 4, dp[1] - 9], [dp[0] - 4, dp[1] - 7]], mixc(hull, dark, 0.45));
             }
-            // the engine intakes each side of the rotor-less spine
-            [-1, 1].forEach(function (sd) {
-              var ip = S3(AF(-L * 0.08, sd * fw * 0.5), z + H);
-              sEllipse(ip[0], ip[1] - 1.5, 2.6, 1.8, STEEL); sEllipse(ip[0] + 0.4, ip[1] - 1.5, 1.4, 1, '#0c0f13');
-            });
           });
           part(L * 0.45, 0, function () { noseGun(L * 0.42, 0, z + 1, hind ? 0.5 : 0.42, 'mg'); });
           break;
@@ -8718,6 +8885,17 @@
           var span = hyb ? w * 3.4 : w * 2.9;
           // the wing: a broad trapezoid, the fuselage over it
           part(-L * 0.1, 0, function () {
+            // the pods go under the wing first, so it covers all but their noses
+            var jlead = function (bb) { return L * 0.14 + (Math.abs(bb) - fw2) / (span - fw2) * (-L * 0.34); };
+            [-1, 1].forEach(function (sd) {
+              if (spec.noPods) return;                   // a clean wing: its guns are in the body
+              var q1 = sd * span * (hyb ? 0.92 : 0.6);
+              podUnder(jlead(q1), q1, z + H * 0.3, hyb ? 'rocket' : 'missile', false);
+              if (spec.extraPods) {                      // a rocket pod inboard, a missile rail outboard
+                podUnder(jlead(span * 0.36), sd * span * 0.36, z + H * 0.3, 'rocket', true);
+                podUnder(jlead(span * 0.84), sd * span * 0.84, z + H * 0.3, 'missile', false);
+              }
+            });
             plate(AF, [[L * 0.14, -fw2], [L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, -span], [-L * 0.2, -span]], z + H * 0.3, 2);
             plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             if (hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36); });
@@ -8760,22 +8938,10 @@
               }
               g.restore();
             }
-            [-1, 1].forEach(function (sd) {
-              if (spec.noPods) return;                   // a clean wing: its guns are in the body
-              pod(-L * 0.22, sd * span * (hyb ? 0.92 : 0.6), z + H * 0.3, hyb ? 'rocket' : 'missile', false);
-              if (spec.extraPods) {                      // a rocket pod inboard, a missile rail outboard
-                pod(-L * 0.18, sd * span * 0.36, z + H * 0.3, 'rocket', true);
-                pod(-L * 0.24, sd * span * 0.84, z + H * 0.3, 'missile', false);
-              }
-            });
           });
           part(0, 0, function () {
             fuselage(fus, fusTop, z, H, TB);
-            // intakes either side behind the cockpit, the engine nozzle at the back
-            [-1, 1].forEach(function (sd) {
-              var ip = S3(AF(L * 0.1, sd * fw2 * 0.95), z + H * 0.55);
-              sEllipse(ip[0], ip[1], 2.2, 2.4, '#0c0f13');
-            });
+            // the engine nozzle at the back
             var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
             sEllipse(nz[0], nz[1], 3.4, 3, STEEL); sEllipse(nz[0], nz[1], 2, 1.8, dead ? '#15181e' : '#c96a2a');
             canopy(L * 0.12, L * 0.36, fw2 * 0.5, z + H, 4);
@@ -8784,8 +8950,7 @@
           });
           part(L * 0.4, 0, function () {
             var gp = S3(AF(L * 0.26, -fw2 * 0.7), z + H * 0.7);
-            mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);
-            sEllipse(gp[0], gp[1], 1.2, 1, '#0c0f13');
+            mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);        // the gun port fires from here, without a dot to mark it
             if (spec.noseGun) noseGun(L * 0.46, 0, z + 1, 0.12, 'gun', { rail: true, also: ['rail', 'auto'] });
             else if (hyb) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
           });
@@ -8907,13 +9072,9 @@
         case 'long': return barrel(fr, a0, reach * 1.2, b, z, 2.3 * sc, 'gun', { brake: true, fume: 0.45 });
         case 'howitzer': return barrel(fr, a0, reach * 0.8, b, z, 4.6 * sc, 'gun', { brake: true, up: 3 });
         case 'plasma': {
-          var tip = barrel(fr, a0, reach * 0.95, b, z, 4 * sc, 'gun', { col: '#1c2129' });
-          for (var i = 1; i <= 3; i++) {
-            var rp = S3(fr(a0 + (reach * 0.95 - a0) * i / 4, b), z);
-            sEllipse(rp[0], rp[1], 2.8 * sc, 2.6 * sc, '#2a313b');
-            if (!dead) sEllipse(rp[0], rp[1], 1.4 * sc, 1.2 * sc, 'rgba(120,230,255,.8)');
-          }
-          if (!dead) sEllipse(tip[0], tip[1], 2 * sc, 1.8 * sc, 'rgba(180,245,255,.95)');
+          var pw = 4 * sc, tip = barrel(fr, a0, reach * 0.95, b, z, pw, 'gun', { col: '#1c2129' });
+          vents(fr, a0, reach * 0.95, b, z, pw, 3);
+          if (!dead) sEllipse(tip[0], tip[1], pw * 0.4, pw * 0.36, 'rgba(180,245,255,.95)');
           return tip;
         }
         case 'flame': {
@@ -8927,12 +9088,9 @@
           return barrel(fr, a0, reach * 0.9, b + wd * 0.5, z, 1.3 * sc, 'auto', { brake: true });
         case 'rail': {
           // a Gauss weapon: a heavy barrel with the charge burning blue along it
-          var rt = barrel(fr, a0, reach, b, z, 2.4 * sc, 'rail', { col: '#141b22', lit: '#7fd8e8' });
-          for (var ri2 = 1; ri2 <= 3 && !dead; ri2++) {
-            var rp2 = S3(fr(a0 + (reach - a0) * ri2 / 4, b), z);
-            sEllipse(rp2[0], rp2[1], 1.5 * sc, 1.3 * sc, 'rgba(127,216,232,.75)');
-          }
-          if (!dead) sEllipse(rt[0], rt[1], 1.8 * sc, 1.6 * sc, 'rgba(190,245,255,.95)');
+          var rw = 2.4 * sc, rt = barrel(fr, a0, reach, b, z, rw, 'rail', { col: '#141b22', lit: '#2a313b' });
+          vents(fr, a0, reach, b, z, rw, 3);
+          if (!dead) sEllipse(rt[0], rt[1], rw * 0.42, rw * 0.38, 'rgba(190,245,255,.95)');
           return rt;
         }
         case 'mg': return barrel(fr, a0, a0 + (reach - a0) * 0.55, b, z, 1.3 * sc, 'mg', { col: '#15181e', brake: true });
@@ -9001,6 +9159,30 @@
         sEllipse(p[0], p[1], r, r * 0.85, '#ff8a2a');
         sEllipse(p[0] - r * 0.2, p[1] - r * 0.2, r * 0.45, r * 0.4, '#ffd68a');
       }
+      /* Cockpit glass and sensor lenses: a glassy blue, bright at the top where
+         it catches the sky and deep below, with a glint along its upper edge. */
+      function glass(pts, glint) {
+        var ys = pts.map(function (q) { return q[1]; });
+        var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+        var gl;
+        if (dead) gl = GLASS;
+        else {
+          gl = g.createLinearGradient(0, y0, 0, y1 + 0.01);
+          gl.addColorStop(0, '#c8f2ff'); gl.addColorStop(0.35, '#5cc0ec'); gl.addColorStop(0.75, '#1f6ea8'); gl.addColorStop(1, '#0f3456');
+        }
+        poly(g, pts, gl);
+        if (glint) edge(g, glint[0], glint[1], dead ? GLINT : 'rgba(235,250,255,.9)', 0.8);
+      }
+      // a round lens of the same glass, with a highlight
+      function lens(p, r) {
+        if (!p || typeof p[0] !== 'number') return;
+        sEllipse(p[0], p[1], r * 1.25, r * 1.1, '#0b0e12');
+        if (dead) { sEllipse(p[0], p[1], r, r * 0.85, GLASS); return; }
+        sEllipse(p[0], p[1], r * 2, r * 1.7, 'rgba(92,192,236,.22)');
+        sEllipse(p[0], p[1], r, r * 0.85, '#2b86c4');
+        sEllipse(p[0] + r * 0.1, p[1] + r * 0.15, r * 0.6, r * 0.5, '#1a5a8c');
+        sEllipse(p[0] - r * 0.3, p[1] - r * 0.3, r * 0.4, r * 0.34, '#d6f6ff');
+      }
       // an outline with its corners cut: a plate that reads as rounded
       function oct(a0, a1, b0, b1, k) {
         var da = (a1 - a0) * (k || 0.3), db = (b1 - b0) * (k || 0.3);
@@ -9022,7 +9204,7 @@
         var ankT = fo * MS.len * 0.09;
         var kneeY = lift + Math.round(hm.legH * 0.5), ankY = lift + Math.round((heavy ? 5 : 4) * sf);
         var P = heavy ? { th: 0.1, tw: 0.13, sh: 0.1, sw: 0.13, fl: 0.15, fw: 0.15 }
-          : light ? { th: 0.04, tw: 0.05, sh: 0.038, sw: 0.045, fl: 0.09, fw: 0.05 }
+          : light ? { th: 0.045, tw: 0.055, sh: 0.058, sw: 0.068, fl: 0.14, fw: 0.08 }
             : { th: 0.085, tw: 0.11, sh: 0.075, sw: 0.1, fl: 0.13, fw: 0.12 };
         var th = MS.len * P.th, tw = MS.wid * P.tw, sh = MS.len * P.sh, sw = MS.wid * P.sw;
         var fl = MS.len * P.fl, fw = MS.wid * P.fw;
@@ -9032,7 +9214,7 @@
           if (light) {
             // a narrow foot, pointed at the toe
             shape(LF, [[ankT + fl, s], [ankT + fl * 0.45, s + fw], [ankT - fl * 0.6, s + fw], [ankT - fl * 0.6, s - fw], [ankT + fl * 0.45, s - fw]],
-              lift, Math.round(3 * sf), TS, 0.75);
+              lift, Math.round(4 * sf), TS, 0.75);
             return;
           }
           var toes = function () {
@@ -9123,11 +9305,35 @@
         // the chest itself, hunched forward, its front plate raked back
         shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
           rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
-        // the visor slot, with its sensors lit
+        /* the cockpit: an angular armoured wedge standing out of the chest —
+           a raked front facet, its corners cut back into angled cheeks, the
+           top drawn in narrower — glazed in a T: a wide pane across the front
+           facet with a narrow one under its middle, and a pane on each cheek */
         if (fwd > -0.1) {
-          var vk0 = 0.62, vk1 = 0.8, rk = tL * 0.34, vf = function (k, b) { return onFront(tL * 0.9, rk, zU, upH, k, b); };
-          poly(g, [vf(vk0, -tW * 0.46), vf(vk0, tW * 0.46), vf(vk1, tW * 0.43), vf(vk1, -tW * 0.43)], '#0b0e12');
-          [-0.26, 0, 0.26].forEach(function (b) { glow(vf((vk0 + vk1) / 2, b * tW), 0.9); });
+          var ca0 = tL * 0.45, ca1 = tL * 1.1, cb = tW * 0.46, cz = zU + Math.round(upH * 0.32), ch = Math.round(upH * 0.52);
+          var rk = tL * 0.22, ck = tL * 0.16;                 // the rake of the front, the depth of the cheeks
+          var lo = [[ca0, -cb], [ca1 - ck, -cb], [ca1, -cb * 0.38], [ca1, cb * 0.38], [ca1 - ck, cb], [ca0, cb]];
+          var hi = [[ca0, -cb * 0.8], [ca1 - rk - ck * 0.8, -cb * 0.8], [ca1 - rk, -cb * 0.32], [ca1 - rk, cb * 0.32], [ca1 - rk - ck * 0.8, cb * 0.8], [ca0, cb * 0.8]];
+          shape(TF, lo, cz, ch, TB, null, hi);
+          // a point on the front facet: k up it, u across it (-1 to 1)
+          var ff = function (k, u) { return S3(TF(ca1 - rk * k + 0.006, u * cb * (0.38 - 0.06 * k)), cz + ch * k); };
+          var pane = function (P, k0, k1, u0, u1, fr) {
+            var q = [P(k0, u0), P(k0, u1), P(k1, u1), P(k1, u0)];
+            poly(g, [P(k0 - fr, u0 - fr * 1.6), P(k0 - fr, u1 + fr * 1.6), P(k1 + fr, u1 + fr * 1.6), P(k1 + fr, u0 - fr * 1.6)], '#0b0e12');
+            glass(q, [q[3], q[2]]);
+          };
+          pane(ff, 0.48, 0.9, -0.84, 0.84, 0.05);
+          pane(ff, 0.1, 0.4, -0.34, 0.34, 0.05);
+          // a cheek on side s: v from its outer edge (0) to where it meets the front (1)
+          [-1, 1].forEach(function (s) {
+            if (fwd * 0.8 + nearOf(s) * 0.6 <= 0.05) return;
+            var cf2 = function (k, v) {
+              var a = (ca1 - ck) + ck * v - (rk + ck * 0.8 * (1 - v)) * k * (1 - v) - rk * k * v;
+              var b = s * cb * ((1 - v) + 0.38 * v) * (1 - k * 0.2);
+              return S3(TF(a + 0.006, b), cz + ch * k);
+            };
+            pane(cf2, 0.48, 0.88, 0.16, 0.84, 0.05);
+          });
         }
         if (fwd <= 0) stacks();
       }
@@ -9148,15 +9354,7 @@
           var aT = tL - tL * 0.42 * kT, bT = tW * (0.32 - 0.12 * kT);
           var cp = [S3(TF(tL + 0.006, -tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.32), z1),
             S3(TF(aT + 0.006, bT), z1 + h3 * kT), S3(TF(aT + 0.006, -bT), z1 + h3 * kT), S3(TF(tL + 0.006, -tW * 0.32), z1)];
-          var gy0 = Math.min(cp[3][1], cp[4][1]), gy1 = Math.max(cp[0][1], cp[1][1]);
-          var gl;
-          if (dead) gl = GLASS;
-          else {
-            gl = g.createLinearGradient(0, gy0, 0, gy1 + 0.01);
-            gl.addColorStop(0, '#ffc060'); gl.addColorStop(0.45, '#e8842a'); gl.addColorStop(1, '#9a4216');
-          }
-          poly(g, cp, gl);
-          edge(g, cp[4], cp[3], dead ? GLINT : '#ffe2b0', 0.8);
+          glass(cp, [cp[4], cp[3]]);
           edge(g, cp[0], cp[1], 'rgba(8,10,14,.6)', 0.8);
         }
         if (fwd <= 0) vents();
@@ -9196,7 +9394,7 @@
          over a banded gun pod, twin barrels on one side; a light one a thin
          arm with a small gun box. Main weapon right, second weapon left. */
       function drawArm(s) {
-        var off = s * tW * (heavy ? 1.42 : light ? 1.45 : 1.14);
+        var off = s * tW * (heavy ? 1.42 : light ? 1.2 : 1.14);   // a light arm hangs right off the shoulder
         var fz = shoulder - Math.round((heavy ? 25 : light ? 15 : 22) * sf);
         var fh = Math.round((heavy ? 10 : light ? 6 : 7) * sf);
         var fwid = tW * (heavy ? 0.32 : light ? 0.26 : 0.24);
@@ -9213,7 +9411,8 @@
             slabF(TF, -tL * 0.66, tL * 0.62, off - tW * 0.42, off + tW * 0.42, pz - 2, 3, TS);
             slabF(TF, -tL * 0.64, tL * 0.6, off - tW * 0.4, off + tW * 0.4, pz, shoulder + 3 - pz, TT, tL * 0.18, tL * 0.18, tW * 0.12);
           } else if (light) {
-            slabF(TF, -tL * 0.5, tL * 0.5, off - tW * 0.26, off + tW * 0.26, shoulder - Math.round(6 * sf), Math.round(5 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
+            // a shoulder cap reaching in over the top of the chest, so the arm is plainly joined on
+            slabF(TF, -tL * 0.55, tL * 0.55, off - tW * 0.34, off + tW * 0.3, shoulder - Math.round(6 * sf), Math.round(6 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
           } else {
             var mz = shoulder - Math.round(11 * sf);
             shape(TF, oct(-tL * 0.5, tL * 0.5, off - tW * 0.32, off + tW * 0.32, 0.3), mz, Math.round(9 * sf), TB, 0.6);
@@ -9231,7 +9430,7 @@
             return;
           }
           var p0 = S3(TF(0, off), shZ), p1 = S3(TF(elb[0], off), elb[1]);
-          var w = Math.max(2, (light ? 2.5 : 5) * sf);
+          var w = Math.max(2, (light ? 3.6 : 5) * sf);
           line(p0, p1, w, STEEL);
           line([p0[0] - w * 0.2, p0[1]], [p1[0] - w * 0.2, p1[1]], Math.max(0.8, w * 0.2), STEEL_LIT);
           sEllipse(p1[0], p1[1], w * 0.62, w * 0.5, STEEL);
@@ -9286,17 +9485,17 @@
             else slabF(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, TB, tL * 0.05, tL * 0.05, tW * 0.04);
           });
         } else if (light) {
-          var hz = shoulder + Math.round(4 * sf), hh = Math.round(7 * sf);
-          var nk = S3(TF(tL * 0.05, 0), shoulder - 2), nk2 = S3(TF(tL * 0.05, 0), hz + 1);
-          line(nk, nk2, Math.max(2, 3.5 * sf), STEEL);
-          slabF(TF, -tL * 0.35, tL * 0.5, -tW * 0.24, tW * 0.24, hz, hh, TB, tL * 0.3, tL * 0.05, tW * 0.05);
+          // the head sits straight on the chest, a size bigger, with a glassy blue eye
+          var hz = shoulder - 1, hh = Math.round(9 * sf);
+          slabF(TF, -tL * 0.45, tL * 0.62, -tW * 0.32, tW * 0.32, hz, hh, TB, tL * 0.34, tL * 0.05, tW * 0.06);
           if (fwd > -0.1) {
-            var hf = function (k, b) { return onFront(tL * 0.5, tL * 0.3, hz, hh, k, b); };
-            poly(g, [hf(0.32, -tW * 0.18), hf(0.32, tW * 0.18), hf(0.66, tW * 0.16), hf(0.66, -tW * 0.16)], '#0b0e12');
-            glow(hf(0.49, 0), 0.9);
+            var hf = function (k, b) { return onFront(tL * 0.62, tL * 0.34, hz, hh, k, b); };
+            var vz = [hf(0.3, -tW * 0.26), hf(0.3, tW * 0.26), hf(0.7, tW * 0.23), hf(0.7, -tW * 0.23)];
+            poly(g, vz, '#0b0e12');
+            lens(hf(0.5, 0), 1.5 * Math.max(1, sf));
           }
           // the fin, a blade raked up and back to a point
-          shape(TF, rectPts(-tL * 0.3, tL * 0.28, -tW * 0.07, tW * 0.07), hz + hh - 1, Math.round(7 * sf), TT, null,
+          shape(TF, rectPts(-tL * 0.36, tL * 0.3, -tW * 0.08, tW * 0.08), hz + hh - 1, Math.round(7 * sf), TT, null,
             rectPts(-tL * 1.0, -tL * 0.72, -tW * 0.03, tW * 0.03));
         } else {
           // the dorsal crest over the dome, a sensor light at its brow

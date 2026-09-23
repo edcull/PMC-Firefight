@@ -20,8 +20,12 @@ async function drain(p) {
 async function run(p, label, cfg, checks) {
   console.log('\n  ' + label);
   await p.evaluate((c) => {
+    /* Laid out as a game against the AI rather than a demo: a demo is walked
+       forward one activation per animation, a minute and a half a battle. Both
+       sides go to the AI below, once the table is set, and the engine then
+       plays the battle through at once while the board replays it. */
     window.PMC_NEWGAME({
-      tier: c.tier, pl: c.pl, mode: 'demo', planet: 'sparse', scenario: c.scenario,
+      tier: c.tier, pl: c.pl, mode: 'ai', planet: 'sparse', scenario: c.scenario,
       nameA: 'The revolt', nameB: 'Kessler',
       tactics: { A: c.tactic, B: null },
       armyA: window.PMC.rollArmy(c.tier, c.pl, null, c.factionA),
@@ -58,14 +62,20 @@ async function run(p, label, cfg, checks) {
   });
   await p.waitForTimeout(300);
   for (let i = 0; i < 8; i++) { await drain(p); await p.waitForTimeout(100); }
-  await p.evaluate(() => {
+  const started = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    s.cfg.aiSides = ['A', 'B'];                  // AI against AI, unpaced
     const b = document.querySelector('button[data-act="start"]');
     if (b) b.click();
+    return s.phase;
   });
+  ok('the battle starts once both forces are down', started === 'battle', started);
   await p.waitForTimeout(400);
 
+  // bounded: a battle that never ends fails the check below rather than hanging
   let over = null;
-  for (let i = 0; i < 2400; i++) {
+  const until = Date.now() + 90000;
+  for (let i = 0; Date.now() < until; i++) {
     over = await p.evaluate(() => {
       const s = window.PMC_STATE();
       const r = document.getElementById('resolution');

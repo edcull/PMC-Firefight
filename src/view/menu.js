@@ -13,7 +13,7 @@
 
   var R = root.PMC, ISO = root.PMCIso, GEN = root.PMCGen;
   var WORLDS = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
-  var EVERY = 5000;             // a new table this often, in ms
+  var EVERY = 10000;            // a new table this often, in ms: long enough to take one in
   var FADE = 1600;              // and this long to fade it in
   var SCALE = 0.5;              // a table is kept at half size: it is a backdrop
   var PASS = 3800;              // how long a pair of interceptors takes to cross, in ms

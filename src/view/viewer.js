@@ -30,7 +30,7 @@
   var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
   var view = {
     zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
-    key: 'regular', prop: 'tracked', side: 'A', status: 'ready',
+    key: 'regular', prop: 'wheeled', side: 'A', status: 'ready',
     models: null, walking: false, walkT: 0, at: null, facing: 0, face: 'SE',
     sound: true,
     // each side's paint, from every colour an army can take
@@ -39,6 +39,16 @@
   var loop = null, last = 0;
 
   function profile() { return R.profile(view.key) || R.profile('regular'); }
+
+  /* Put a unit on the stage: every model, a state it can be in (a tank cannot
+     be suppressed), and a ground vehicle on the running gear it usually has. */
+  function choose(k) {
+    view.key = k; view.models = null;
+    var p = profile();
+    view.pickFac = p.faction || 'pmc';
+    if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
+    if (p.cls === 'vehicle' && !R.alienHull(p)) view.prop = R.defaultDrive(p);
+  }
 
   /* The unit as the battle would build it: a profile plus the state the bench
      is asking to see. Everything that draws a unit takes one of these. */
@@ -766,6 +776,53 @@
 
 
   /* ---------- the panels ---------- */
+  /* ---------- Atlas mode ----------
+     Every unit of the open army side by side, drawn by the game's renderer,
+     in place of the stage and the controls (src/view/atlas.js, shared with the
+     stand-alone atlas page). The list's tabs and search drive it; picking a
+     unit in the list goes to its sheet, and clicking a sheet opens the unit
+     on the stage. */
+  var atlas = null;
+  function atlasOn() { return document.body.classList.contains('atlas-mode'); }
+  function setMode(on) {
+    document.body.classList.toggle('atlas-mode', !!on);
+    el('vatlas').hidden = !on;
+    el('vmode').setAttribute('aria-pressed', on ? 'true' : 'false');
+    el('vmode').textContent = on ? 'Viewer' : 'Atlas';
+    el('vmode').title = on ? 'Back to the unit on the stage' : 'Every unit side by side, in the Unit Atlas';
+    try { history.replaceState(null, '', on ? '#atlas' : location.pathname + location.search); } catch (e) { }
+    if (on) {
+      if (view.walking) toggleWalk();
+      if (!atlas) {
+        atlas = root.PMCAtlas.mount({
+          main: el('vatlasmain'), scroller: el('vatlasmain'),
+          colours: el('vatlascol'), toggles: el('vatlastog'), search: el('vsearch'),
+          faction: function () { return view.pickFac || 'pmc'; },
+          colour: view.colour.A,
+          onColour: function (k) { paint('A', k); },
+          onPick: function (k) { choose(k); setMode(false); drawPicker(); }
+        });
+      } else {
+        atlas.setColour(view.colour.A);
+        atlas.render();
+      }
+      atlas.scrollTo(view.key);
+    } else {
+      FX.clear();
+      fit(); drawControls(); frame();
+    }
+  }
+  // a side's colour; the other side keeps one of its own, so the two never look alike
+  function paint(side, k) {
+    view.colour[side] = k;
+    I.setSideColour(side, k);
+    var foe = side === 'A' ? 'B' : 'A';
+    if (view.colour[foe] === k) {
+      view.colour[foe] = I.COLOUR_KEYS.filter(function (c) { return c !== k; })[0];
+      I.setSideColour(foe, view.colour[foe]);
+    }
+  }
+
   function phone() { return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches); }
   // the phone's unit sidebar, opened from the header and closed by a pick, the ×, the scrim or Escape
   function showSide(open) {
@@ -980,6 +1037,7 @@
       stepZoom(how === 'wide' ? -1 : 1);
     });
     zoomLabel();
+    el('vmode').addEventListener('click', function () { setMode(!atlasOn()); });
     el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
     el('vclose').addEventListener('click', function () { showSide(false); });
     el('vscrim').addEventListener('click', function () { showSide(false); });
@@ -989,12 +1047,12 @@
     el('vlist').addEventListener('click', function (e) {
       var b = e.target.closest('[data-unit]');
       if (!b) return;
-      view.key = b.getAttribute('data-unit'); view.pickFac = b.getAttribute('data-fac');
-      view.models = null;
-      // a state the new unit cannot be in (a tank cannot be suppressed) goes back to ready
-      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
-      var p = profile();
-      if (p.cls !== 'vehicle') view.prop = 'tracked';
+      choose(b.getAttribute('data-unit'));
+      if (atlasOn()) {                              // in the atlas, the list goes to the unit's sheet
+        if (phone()) showSide(false);
+        atlas.scrollTo(view.key);
+        return;
+      }
       FX.clear();
       drawPicker(); drawControls(); frame();
       // on a phone the list is a sidebar over the stage: put it away and go back up to see the unit
@@ -1008,14 +1066,7 @@
     el('vctl').addEventListener('click', function (e) {
       var sw = e.target.closest('[data-colour]');
       if (sw) {
-        view.colour[view.side] = sw.getAttribute('data-colour');
-        I.setSideColour(view.side, view.colour[view.side]);
-        // the target keeps a colour of its own, so the two never look alike
-        var foe = view.side === 'A' ? 'B' : 'A';
-        if (view.colour[foe] === view.colour[view.side]) {
-          view.colour[foe] = I.COLOUR_KEYS.filter(function (k) { return k !== view.colour[view.side]; })[0];
-          I.setSideColour(foe, view.colour[foe]);
-        }
+        paint(view.side, sw.getAttribute('data-colour'));
         drawControls(); frame(); return;
       }
       var tb = e.target.closest('[data-tab]');
@@ -1061,11 +1112,12 @@
       el('vsearch').value = '';
       drawPicker();
       el('vside').querySelector('.vlistscroll').scrollTop = 0;
+      if (atlasOn()) { atlas.render(); el('vatlasmain').scrollTop = 0; }
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });
     document.addEventListener('keydown', function (e) {
-      if (e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'INPUT' || atlasOn()) return;
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
@@ -1073,6 +1125,7 @@
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
+    if (location.hash === '#atlas') setMode(true);   // viewer.html#atlas opens on the atlas
   }
 
   function fit() {
@@ -1094,8 +1147,7 @@
   /* test hooks: the harness drives the bench the way a player would */
   root.__viewer = {
     pick: function (k) {
-      view.key = k; view.models = null; view.pickFac = profile().faction || 'pmc';
-      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
+      choose(k);
       drawPicker(); drawControls(); frame();
     },
     zoom: function (z) { if (z != null) setZoom(z); return { zoom: view.zoom, cur: view.zCur, wide: view.wide }; },

@@ -217,13 +217,21 @@ async function aim(p, x, y) {
       window.PMC.canShoot(st, ghost, o, 'fire', {})).map(o => o.code);
     return real.join(' ') === pv.shots.join(' ');
   }), shots.shots.join(' '));
-  const advDone = await p.evaluate(() => {
+  const advId = await p.evaluate(() => {
     const id = window.__sel().id;
     window.__previewConfirm();
+    return id;
+  });
+  /* The move goes to the engine and comes back as a turn for the table to play:
+     the walk is animated first, and the table only takes up what the engine
+     says the unit may do next — the Advance's shot — once it has been shown. */
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 10000 }).catch(() => {});
+  await p.waitForTimeout(150);
+  const advDone = await p.evaluate((id) => {
     const s = window.PMC_STATE();
     const u = s.units.find(x => x.id === id);
     return { mode: window.__markState().mode, targets: window.__targetCodes(), moved: u.x, activated: u.activated };
-  });
+  }, advId);
   ok('confirming an Advance moves, then offers the shot',
     advDone.mode === 'advance-fire' || /advance-fire/.test(advDone.targets),
     advDone.targets);

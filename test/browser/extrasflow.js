@@ -19,6 +19,40 @@ async function drain(p) {
   }
   await p.waitForTimeout(120);
 }
+/* The table plays what has happened before it takes the next order: a tap made
+   while it is still animating the last one waits its turn behind it. So wait
+   for the table to be still before driving it. */
+async function settle(p) {
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
+}
+/* Play the rest of the turn out. There is no hook to run the reserve phase on
+   its own any more: it opens the next turn, inside the engine, so the turn is
+   brought to an end the way a player would end it. Everyone but one of ours
+   has already acted, and that one regroups; the rally and end phases follow,
+   the next turn begins, and its reserve phase runs. `from` puts the turn
+   counter back first, so the turn that begins is the one the check is about. */
+async function endTurn(p, from) {
+  await settle(p);
+  return await p.evaluate((from) => {
+    const s = window.PMC_STATE();
+    const last = s.units.find(u => u.side === 'A' && u.alive && u.x >= 0 && !u.reserve && !u.aboard &&
+      window.PMC.status(u) !== 'broken');
+    if (!last) return { none: true };
+    if (from) s.turn = from;
+    s.units.forEach(u => { u.activated = u !== last; });
+    s.activeSide = 'A'; s.streak = 1; s.chain = null;
+    const was = s.turn;
+    const acted = window.__select(last) && window.__pressAction('regroup');
+    return { from: was, acted: acted };
+  }, from || 0);
+}
+// the new turn's cards read, and the table still, before looking at what it asks
+async function afterTurn(p) {
+  await p.waitForTimeout(600);
+  await drain(p);
+  await settle(p);
+  await p.waitForTimeout(300);
+}
 async function newGame(p, cfg) {
   await p.evaluate((c) => window.PMC_NEWGAME(c), Object.assign({
     tier: 3, pl: 1, mode: 'ai', planet: 'barren', scenario: 'meeting',
@@ -35,6 +69,7 @@ async function start(p) {
   await p.evaluate(() => { const b = document.querySelector('button[data-act="start"]'); if (b) b.click(); });
   await p.waitForTimeout(500);
   await drain(p);
+  await settle(p);
 }
 
 (async () => {
@@ -121,7 +156,7 @@ async function start(p) {
   head('Bloodlust');
   await newGame(p, {});
   await start(p);
-  const bl = await p.evaluate(() => {
+  await p.evaluate(() => {
     const s = window.PMC_STATE();
     s.activeSide = 'A';
     const u = s.units.find(x => x.side === 'A' && x.code === 'HMG');
@@ -129,13 +164,25 @@ async function start(p) {
     u.camp = { flags: { bloodlust: true }, once: {} };
     u.sp = 0; u.activated = false;
     e.x = u.x + 4; e.y = u.y;
+  });
+  await settle(p);
+  const bl = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => x.side === 'A' && x.code === 'HMG');
+    const e = s.units.find(x => x.side === 'B' && x.key === 'regular');
     window.__select(u);
     const near = { fire: window.__actionState('fire').on, assault: window.__actionState('assault').on,
       forced: window.__forcedCharge(u) === e.id };
     s.units.forEach(x => { if (x.side === 'B') { x.x = 58; x.y = 40; } });
+    return { near };
+  });
+  // a selection made while the table is still animating the last one waits its turn
+  await settle(p);
+  bl.far = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => x.side === 'A' && x.code === 'HMG');
     window.__select(u);
-    const far = { fire: window.__actionState('fire').on || window.__actionState('move').on, forced: window.__forcedCharge(u) };
-    return { near, far };
+    return { fire: window.__actionState('fire').on || window.__actionState('move').on, forced: window.__forcedCharge(u) };
   });
   ok('with an enemy in reach, the only thing it may do is charge', !bl.near.fire && bl.near.assault);
   ok('...the closest enemy, Cumbersome Weapon or not', bl.near.forced);
@@ -146,41 +193,50 @@ async function start(p) {
   await newGame(p, { scenario: 'takeover', roles: { attacker: 'A', defender: 'B' },
     armyA: ['cmd3', 'regular', 'veterans', 'hmgteam', 'engineers', 'regular', 'regular', 'veterans'] });
   await start(p);
-  const sf = await p.evaluate(() => new Promise((res) => {
+  const sfCode = await p.evaluate(() => {
     const s = window.PMC_STATE();
     const u = s.units.find(x => x.side === 'A' && x.reserve && x.wave === 2);
-    if (!u) { res({ none: true }); return; }
+    if (!u) return null;
     u.camp = { flags: { semperFidelis: true }, once: {} };
     s.terrain = s.terrain.filter(t => t.kind === 'objective' || t.kind === 'searchsite');
-    s.turn = 2;
-    window.__reservePhase(() => {});
-    setTimeout(() => {
-      const ask = window.__insertionState();
-      const card = document.getElementById('context').innerText;
-      const btn = document.querySelector('[data-act="holdarrive"]');
-      if (btn) btn.click();
-      setTimeout(() => {
-        const held = u.reserve;
-        window.__reservePhase(() => {});
-        setTimeout(() => {
-          const spots = window.__arrivalSpots(u);
-          if (spots.length) window.__boardTapAt(spots[0].x, spots[0].y);
-          setTimeout(() => res({ ask, sfCard: /Semper Fidelis/.test(card), held, arrived: !u.reserve && u.x >= 0 }), 600);
-        }, 600);
-      }, 600);
-    }, 600);
-  }));
+    return u.id;
+  });
+  let sf = { none: true };
+  if (sfCode) {
+    // play turn 1 out: turn 2's reserve phase is where the honour is offered
+    await endTurn(p, 1);
+    await afterTurn(p);
+    const ask = await p.evaluate(() => window.__insertionState());
+    const card = await p.evaluate(() => document.getElementById('context').innerText);
+    await p.evaluate(() => { const btn = document.querySelector('[data-act="holdarrive"]'); if (btn) btn.click(); });
+    await p.waitForTimeout(600);
+    await settle(p);
+    const held = await p.evaluate((id) => window.PMC_STATE().units.find(x => x.id === id).reserve, sfCode);
+    // turn 2 over again: the scenario's wave is still a turn off, so only the honour offers it
+    await endTurn(p, 1);
+    await afterTurn(p);
+    const again = await p.evaluate(() => window.__insertionState());
+    await p.evaluate((id) => {
+      const u = window.PMC_STATE().units.find(x => x.id === id);
+      const spots = window.__arrivalSpots(u);
+      if (spots.length) window.__boardTapAt(spots[0].x, spots[0].y);
+    }, sfCode);
+    await p.waitForTimeout(600);
+    const arrived = await p.evaluate((id) => { const u = window.PMC_STATE().units.find(x => x.id === id); return !u.reserve && u.x >= 0; }, sfCode);
+    sf = { ask, sfCard: /Semper Fidelis/.test(card), held, again, arrived: !!again && arrived };
+  }
   ok('a Semper Fidelis unit in the second wave is offered on turn 2', !sf.none && sf.ask && sf.ask.kind === 'arrive', JSON.stringify(sf.ask));
   ok('...on a card that names the honour', sf.sfCard);
   ok('...and it may be kept back', sf.held);
-  ok('...and brought on the next time it is offered', sf.arrived);
+  ok('...and brought on the next time it is offered', sf.arrived,
+    sf.again ? (sf.arrived ? 'called in' : 'offered again, but the tap on the shaded ground did not put it down') : 'not offered again');
   await drain(p);
 
   // the transport clause: the hull comes too, but only with the honoured unit alone aboard
   await newGame(p, { scenario: 'takeover', roles: { attacker: 'A', defender: 'B' },
     armyA: ['cmd3', 'regular', 'veterans', 'hmgteam', 'engineers', 'regular', 'lapc', 'regular'] });
   await start(p);
-  const sft = await p.evaluate(() => new Promise((res) => {
+  const vehCode = await p.evaluate(() => {
     const s = window.PMC_STATE();
     const veh = s.units.find(x => x.side === 'A' && x.key === 'lapc');
     const pax = s.units.filter(x => x.side === 'A' && x.key === 'regular' && x !== veh);
@@ -188,23 +244,26 @@ async function start(p) {
     veh.reserve = true; veh.wave = 2; veh.x = -1; veh.y = -1; veh.cargo = [pax[0]];
     pax[0].aboard = veh.id; pax[0].reserve = false; pax[0].x = -1; pax[0].y = -1;
     pax[0].camp = { flags: { semperFidelis: true }, once: {} };
-    s.turn = 2;
-    window.__reservePhase(() => {});
-    setTimeout(() => {
-      const one = window.__insertionState();
-      const card = document.getElementById('context').innerText;
-      const btn = document.querySelector('[data-act="holdarrive"]'); if (btn) btn.click();
-      setTimeout(() => {
-        // a second passenger: now the hull no longer comes on the honour
-        veh.cargo.push(pax[1]); pax[1].aboard = veh.id; pax[1].x = -1; pax[1].y = -1;
-        window.__reservePhase(() => {});
-        setTimeout(() => {
-          const two = window.__insertionState();
-          res({ one, named: /aboard/.test(card), two, vehCode: veh.code });
-        }, 600);
-      }, 600);
-    }, 600);
-  }));
+    return veh.code;
+  });
+  await endTurn(p, 1);
+  await afterTurn(p);
+  const one = await p.evaluate(() => window.__insertionState());
+  const tcard = await p.evaluate(() => document.getElementById('context').innerText);
+  await p.evaluate(() => { const btn = document.querySelector('[data-act="holdarrive"]'); if (btn) btn.click(); });
+  await p.waitForTimeout(600);
+  await settle(p);
+  // a second passenger: now the hull no longer comes on the honour
+  await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const veh = s.units.find(x => x.side === 'A' && x.key === 'lapc');
+    const pax = s.units.filter(x => x.side === 'A' && x.key === 'regular' && x !== veh);
+    veh.cargo.push(pax[1]); pax[1].aboard = veh.id; pax[1].x = -1; pax[1].y = -1;
+  });
+  await endTurn(p, 1);
+  await afterTurn(p);
+  const two = await p.evaluate(() => window.__insertionState());
+  const sft = { one, named: /aboard/.test(tcard), two, vehCode };
   ok('a transport carrying only a Semper Fidelis unit is offered with it', sft.one && sft.one.unit === sft.vehCode, JSON.stringify(sft.one));
   ok('...and the card names who is aboard', sft.named);
   ok('...but not once anyone else is riding in it', !sft.two, JSON.stringify(sft.two));

@@ -15,13 +15,22 @@ const { page: PAGE } = require('../where.js');
       const S = window.PMCSolo;
       const coop = !!window.__coop;
       const a1 = S.rollCommando(3, 1, 'pmc'), a2 = coop ? S.rollCommando(3, 1, 'rebel') : [];
-      window.PMC_NEWGAME({ tier: 3, pl: coop ? 2 : 1, mode: 'demo', planet: 'sparse', scenario: sc, nameA: 'Commando', nameB: 'OpFor',
+      // against the AI rather than a demo, which would walk it one activation per
+      // animation; the commando goes down and then both sides go to the AI, unpaced
+      window.PMC_NEWGAME({ tier: 3, pl: coop ? 2 : 1, mode: 'ai', planet: 'sparse', scenario: sc, nameA: 'Commando', nameB: 'OpFor',
         armyA: a1.concat(a2), ownersA: a1.map(() => 1).concat(a2.map(() => 2)),
         armyB: S.rollOpFor(3, coop ? 2 : 1, 'rebel', false),
         solo: { coop: coop, faction: 'pmc', opFaction: 'rebel' } });
     }, sc);
+    await p.waitForTimeout(300);
+    await p.evaluate(() => { const b = document.querySelector('button[data-act="autodeploy"]'); if (b) b.click(); });
+    await p.waitForTimeout(200);
+    await p.evaluate(() => {
+      window.PMC_STATE().cfg.aiSides = ['A', 'B'];
+      const b = document.querySelector('button[data-act="start"]'); if (b) b.click();
+    });
     let last = null;
-    for (let i = 0; i < (+process.env.STEPS || 400); i++) {
+    for (let i = 0; i < (+process.env.STEPS || 150); i++) {
       await p.waitForTimeout(200);
       const r = await p.evaluate(() => {
         const s = window.PMC_STATE(); const c = document.getElementById('res-continue');

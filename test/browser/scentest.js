@@ -52,6 +52,7 @@ async function playOne(p, id) {
       reserved: s.units.filter(u => u.reserve).length,
       // held back by the SCENARIO, as against by Battlefield Insertion
       waved: s.units.filter(u => u.reserve && u.wave).length,
+      wavedIds: s.units.filter(u => u.reserve && u.wave).map(u => u.id),
       onTable: s.units.filter(u => u.x >= 0 && !u.reserve).length,
       total: s.units.length
     };
@@ -105,11 +106,15 @@ async function playOne(p, id) {
     over ? 'turn ' + over.turn + ': ' + over.text : 'still running after ' +
       ((Date.now() - t0) / 1000).toFixed(0) + 's');
 
-  const after = await p.evaluate(() => {
+  const after = await p.evaluate((waved) => {
     const s = window.PMC_STATE();
     return {
       turn: s.turn,
       arrivals: s.log.filter(l => /arrives/.test(l.text)).length,
+      /* The log is a rolling window of the last 400 lines, so in a long battle
+         a turn-3 arrival has scrolled off it by the end. Whether the units the
+         scenario held back reached the table is on the units themselves. */
+      cameOn: s.units.filter(u => waved.indexOf(u.id) >= 0 && !u.reserve).length,
       searched: s.log.filter(l => /checks the area/.test(l.text)).length,
       found: !!(s.sc && s.sc.found),
       sam: s.log.filter(l => /SAM/.test(l.text)).length,
@@ -117,13 +122,14 @@ async function playOne(p, id) {
       standing: s.terrain.filter(t => t.kind === 'objective').length,
       report: s.report ? s.report.scenario : null
     };
-  });
+  }, setup.wavedIds);
   if (id !== 'meeting' && id !== 'secure') {
     /* A scenario reserve must reach the table; a force the scenario held nobody
        back from has nothing to bring on, which is not a fault. */
     ok('the scenario reserves came on during the battle',
-      after.arrivals > 0 || setup.waved === 0,
-      after.arrivals + ' arrivals from ' + setup.waved + ' held back by the scenario');
+      after.cameOn > 0 || setup.waved === 0,
+      after.cameOn + ' of ' + setup.waved + ' held back by the scenario came on (' +
+        after.arrivals + ' arrivals still in the log)');
   }
   if (id === 'find') {
     // a rout can settle Find and secure before anyone reaches a location, which is

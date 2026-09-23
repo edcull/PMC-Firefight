@@ -197,17 +197,24 @@ async function drain(p) {
   });
   await p.waitForTimeout(300);
   for (let i = 0; i < 8; i++) { await drain(p); await p.waitForTimeout(110); }
-  await p.evaluate(() => {
+  /* Rather than play it by hand, both sides go to the AI — before Start, not
+     after it. Handed over once the battle is under way, a revolt that wins the
+     initiative is left waiting on a player who is no longer there: nothing
+     asks the AI to act and the battle sits at turn 1 for good. */
+  const started = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    s.cfg.aiSides = ['A', 'B'];
     const b = document.querySelector('button[data-act="start"]');
     if (b) b.click();
+    return s.phase;
   });
+  check('the battle starts', started === 'battle', started);
   await p.waitForTimeout(600);
-  // rather than play it by hand, hand both sides to the AI and let it run
-  await p.evaluate(() => { const s = window.PMC_STATE(); s.cfg.aiSides = ['A', 'B']; });
 
+  // bounded: a battle that never ends fails the check below rather than hanging
   let over = null;
-  // a battle fought over buildings can run to turn 20; give it the time
-  for (let i = 0; i < 7000; i++) {
+  const until = Date.now() + 120000;
+  for (let i = 0; Date.now() < until; i++) {
     over = await p.evaluate(() => {
       const s = window.PMC_STATE();
       const r = document.getElementById('resolution');

@@ -295,7 +295,15 @@
       case 'scenery': queueBake(); return;
       case 'fit': fitView(); return;
       case 'structures': if (state.structs) paintStructures(); return;
-      case 'clearcards': resetShow(); return;
+      case 'clearcards': {
+        /* Clear the table's cards and effects, but not the rest of the batch
+           this came in: the new game's table, its zoom and its first look are
+           queued right behind it. */
+        var rest = show.queue.slice();
+        resetShow();
+        Array.prototype.push.apply(show.queue, rest);
+        return;
+      }
       case 'look': lookAtDeployment(ev.side); return;
       default: return;
     }
@@ -329,7 +337,10 @@
     ui.markKind = s.markKind;
     ui.markPicks = s.markPicks;
     ui.deployPick = s.deployPick;
+    var wasAsked = !!ui.insertion;
     ui.insertion = s.insertion;
+    // a drop point being asked for: on a phone the Actions pane, where the ask is, comes to the front
+    if (ui.insertion && !wasAsked && window.innerWidth <= 1000) setMTab('act');
     ui.sections = s.sections || [];
     ui.tsetHint = s.tsetHint || '';
     ui.vis = null; ui.visKey = '';
@@ -942,6 +953,8 @@
     stance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h18"/><path d="M6 19l3-5M18 19l-3-5"/><path d="M8 14l9-7"/><path d="M16 5l3 1-1 3"/></svg>',
     empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 12h10"/></svg>'
   };
+  // marking a target for the fire-support team is designating it by another name
+  ICONS.marktarget = ICONS.designate;
 
   /* The six standard actions, and how many special slots sit beside them. The
      engine owns the list, because the engine is what decides whether any of
@@ -1893,9 +1906,12 @@
   function drawFx() { FX.draw(pctx); }
 
   /* ================= logging ================= */
-  function logLine(t, text, math) {
-    state.log.push({ t: t, text: text, math: math || null });
-    if (state.log.length > 400) state.log.shift();
+  /* The engine has already written the line into state.log (the page's state
+     is the engine's, or a snapshot of it): the event is only word that it
+     happened. Adding it again kept every line twice. What is left for the page
+     is to keep the log to its last 400 lines. */
+  function logLine() {
+    if (state && state.log && state.log.length > 400) state.log.splice(0, state.log.length - 400);
   }
 
   /* ================= rendering ================= */
@@ -3221,7 +3237,7 @@
         var st2 = actionState(u, sp.id);
         html += '<button class="slot special' + (ui.mode === sp.id ? ' active' : '') + '" data-action="' + sp.id + '"' +
           (st2.on ? '' : ' disabled') + ' title="' + sp.label + ' — ' + st2.hint.replace(/"/g, '&quot;') + '">' +
-          ICONS[sp.id] + '<span>' + sp.label + '</span></button>';
+          (ICONS[sp.id] || '') + '<span>' + sp.label + '</span></button>';
       }
     }
     bar.innerHTML = html;
@@ -4257,9 +4273,9 @@
     }
 
     // a unit is coming in: the tap is the drop point, nothing else
+    // (p is the tap on the table, zoom and pan taken out; the raw canvas point is not)
     if (ui.insertion) {
-      var v0 = viewRect();
-      placeInsertion(ISO.toWorld(c.x + v0.sx, c.y + v0.sy));
+      placeInsertion(p);
       return;
     }
 
@@ -4273,8 +4289,7 @@
 
     // a demolition pick takes priority: the piece is the target, not a unit
     if (ui.terrain.length) {
-      var w = ISO.toWorld(c.x + viewRect().sx, c.y + viewRect().sy);
-      var piece = ui.terrain.filter(function (r) { return R.inRect(w.x, w.y, r); })[0];
+      var piece = ui.terrain.filter(function (r) { return R.inRect(p.x, p.y, r); })[0];
       if (piece) {
         if (ui.mode === 'breach') doBreach(piece); else doDemolish(piece);
         return;
@@ -5403,15 +5418,25 @@
        intent and nobody to send it to, so there the card is shown greyed out
        and disabled, saying what it needs, rather than leading to a screen that
        cannot work. */
+    /* Being on http is not enough: a static host (GitHub Pages, say) serves the
+       page with no game server behind it. So the card stays greyed out until
+       the server's own /health answers. */
     var mb = el('btn-multi'), online = !!(window.PMCLobby && window.PMCLobby.available());
-    if (mb) mb.disabled = !online;
-    if (mb && online) {
+    if (mb) mb.disabled = true;
+    function serverUp() {
+      mb.disabled = false;
       if (el('menu-multi-sub')) el('menu-multi-sub').textContent = 'Play somebody else over the network';
       mb.addEventListener('click', function () {
         el('setup').hidden = true;
         if (window.PMCMenu) window.PMCMenu.close();
         window.PMCLobby.open();
       });
+    }
+    if (mb && online && window.fetch) {
+      window.fetch('/health', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (h) { if (h && h.ok === true && h.rooms != null) serverUp(); })
+        .catch(function () { });
     }
     el('btn-drawer').addEventListener('click', toggleDrawer);
     el('btn-drawer-close').addEventListener('click', closeDrawer);
