@@ -5403,15 +5403,25 @@
        intent and nobody to send it to, so there the card is shown greyed out
        and disabled, saying what it needs, rather than leading to a screen that
        cannot work. */
+    /* Being on http is not enough: a static host (GitHub Pages, say) serves the
+       page with no game server behind it. So the card stays greyed out until
+       the server's own /health answers. */
     var mb = el('btn-multi'), online = !!(window.PMCLobby && window.PMCLobby.available());
-    if (mb) mb.disabled = !online;
-    if (mb && online) {
+    if (mb) mb.disabled = true;
+    function serverUp() {
+      mb.disabled = false;
       if (el('menu-multi-sub')) el('menu-multi-sub').textContent = 'Play somebody else over the network';
       mb.addEventListener('click', function () {
         el('setup').hidden = true;
         if (window.PMCMenu) window.PMCMenu.close();
         window.PMCLobby.open();
       });
+    }
+    if (mb && online && window.fetch) {
+      window.fetch('/health', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (h) { if (h && h.ok === true && h.rooms != null) serverUp(); })
+        .catch(function () { });
     }
     el('btn-drawer').addEventListener('click', toggleDrawer);
     el('btn-drawer-close').addEventListener('click', closeDrawer);
