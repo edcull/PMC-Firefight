@@ -1306,7 +1306,7 @@
     faceToward(u, path[path.length - 1].x, path[path.length - 1].y, path[0]);
     if (R.isMachine(u)) u.aim = null;
     anims.push({
-      kind: 'move', unit: u, segs: segs, total: total, follow: !!follow,
+      kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
       dur: Math.min(1400, 240 + total * 42), t0: nowMs(), lastStep: 0, lastPace: -1
     });
     u.ax = path[0].x; u.ay = path[0].y;
@@ -2066,8 +2066,11 @@
     drawBoard();
     cam.anim = requestAnimationFrame(stepCam);
   }
+  /* In a demo the camera is the watcher's: nothing the AI does moves it, not
+     a unit activating, landing or on the move — only the watcher pans and zooms. */
+  function handsOff() { return !!(state && state.cfg && state.cfg.mode === 'demo'); }
   function focusUnit(u, instant, borrowed) {
-    if (!u || u.x < 0) return;
+    if (!u || u.x < 0 || handsOff()) return;
     var p = ISO.toScreen(u.x, u.y);
     centreOn(p.x, p.y - ISO.ELEV, instant);
     if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
