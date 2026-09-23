@@ -552,7 +552,7 @@
     background: color-mix(in srgb, var(--alpha) 12%, transparent); outline: none;
   }
   #btn-resume { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
-  .menu-back { align-self: flex-start; margin-top: 4px; }
+  .mcard.menu-back { text-align: center; }
   .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
   .menu-foot a.lnk { text-decoration: none; }
   @media (max-width: 760px) {
@@ -1429,12 +1429,13 @@
       <button class="mcard" data-skirmish="hotseat">Hotseat<small>Two players, one screen</small></button>
       <button class="mcard" data-skirmish="solo">Solitaire<small>Your commando against the OpFor (pp. 146–156)</small></button>
       <button class="mcard" data-skirmish="coop">Co-operative<small>Two commandos, one each, against the OpFor</small></button>
-      <button class="mcard" data-skirmish="demo">Demo<small>Watch two AI forces fight it out</small></button>
-      <button class="lnk menu-back" data-menu="main">← Back</button>
+      <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
+    <!-- the small things: the unit viewer from the main menu, the demo from the skirmish list -->
     <p class="menu-foot">
       <button class="lnk" id="btn-menu-sound">Sound on</button>
       <a class="lnk" href="viewer.html" id="lnk-viewer">Unit viewer</a>
+      <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
     </p>
   </div>
 </div>
@@ -35535,6 +35536,10 @@
   function show(pane) {
     el('menu-main').hidden = pane !== 'main';
     el('menu-skirmish').hidden = pane !== 'skirmish';
+    // the foot: the unit viewer under the main menu, the demo under the skirmish list
+    var v = el('lnk-viewer'), d = el('btn-menu-demo');
+    if (v) v.hidden = pane === 'skirmish';
+    if (d) d.hidden = pane !== 'skirmish';
   }
 
   function open(pane) {

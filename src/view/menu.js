@@ -25,6 +25,10 @@
   function show(pane) {
     el('menu-main').hidden = pane !== 'main';
     el('menu-skirmish').hidden = pane !== 'skirmish';
+    // the foot: the unit viewer under the main menu, the demo under the skirmish list
+    var v = el('lnk-viewer'), d = el('btn-menu-demo');
+    if (v) v.hidden = pane === 'skirmish';
+    if (d) d.hidden = pane !== 'skirmish';
   }
 
   function open(pane) {
