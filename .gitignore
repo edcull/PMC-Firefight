@@ -3,3 +3,5 @@ node_modules/
 campaigns/
 # screenshots the browser harnesses take
 build/shots/
+# screenshots a few older harnesses drop in the project root
+/shot-*.png

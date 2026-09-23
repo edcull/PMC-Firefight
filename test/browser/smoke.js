@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT } = require('../where.js');
+const { ROOT, openMuster } = require('../where.js');
 
 async function dismissEarly(page) {
   for (let i = 0; i < 10; i++) {
@@ -16,10 +16,19 @@ async function dismissEarly(page) {
   const page = await browser.newPage({ viewport: { width: 1340, height: 1000 } });
   const errors = [];
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-  page.on('console', m => { if (m.type() === 'error' && !/ERR_TUNNEL/.test(m.text())) errors.push(m.text()); });
+  /* A resource the network would not fetch (the web fonts, behind a proxy or
+     offline) is the network's failing, not the game's: the page falls back to
+     its system fonts. Anything else logged as an error still counts. */
+  page.on('console', m => {
+    if (m.type() !== 'error') return;
+    if (/ERR_TUNNEL|Failed to load resource: net::ERR_/.test(m.text())) return;
+    errors.push(m.text());
+  });
 
   await page.goto('file://' + path.join(ROOT, 'index.html'));
   await page.waitForTimeout(500);
+  // the muster screen sits behind the main menu now
+  await openMuster(page);
   await page.click('#btn-start');
   await page.waitForTimeout(600);
   await page.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });

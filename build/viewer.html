@@ -97,8 +97,20 @@
 
   .vstage {
     background: #0c1014; border: 1px solid var(--line); border-radius: 6px;
-    display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative;
   }
+  /* the stage's zoom: close on the unit by default, out to the whole line to watch it fire */
+  .vzoom {
+    position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; gap: 4px; align-items: center;
+    background: rgba(12, 16, 20, .72); border: 1px solid var(--line); border-radius: 6px; padding: 3px;
+  }
+  .vzoom button {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
+    font-family: var(--display); font-size: 12px; min-width: 28px; height: 26px; padding: 0 7px; cursor: pointer;
+  }
+  .vzoom button:hover { border-color: var(--alpha); }
+  #vzoomlabel { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); min-width: 34px; text-align: center; }
+  #vboard { touch-action: pan-y; }
   #vboard {
     display: block; flex: none; min-height: 0;   /* sized by fit(), never stretched */
     image-rendering: pixelated; image-rendering: crisp-edges;
@@ -202,8 +214,16 @@
      more than 1000px; the old two-row layout between 700 and 1000 let the
      canvas grow past its stage, and the unit was drawn out of sight.) */
   @media (max-width: 1000px) {
-    html, body { height: auto; }
-    body { display: block; }
+    /* an app, not a page: the document never scrolls; the column under the
+       header does, with the stage pinned at its top */
+    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+    body { display: flex; flex-direction: column; }
+    main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    /* in a column of fixed height the panels would shrink to fit; they keep their size and the column scrolls */
+    main > * { flex-shrink: 0; }
+    /* no padding above the pinned stage, or what scrolls under it shows through the gap */
+    main { padding-top: 0 !important; }
+    .vstage { margin-top: 10px; }
     header { padding: 9px 16px; }
     header p, header .keys { display: none; }
     main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
@@ -260,6 +280,13 @@
   </div>
 
   <div class="vstage">
+    <div class="vzoom" id="vzoom" aria-label="Zoom">
+      <button type="button" data-vzoom="out" title="Zoom out (−)">−</button>
+      <span id="vzoomlabel">×3</span>
+      <button type="button" data-vzoom="in" title="Zoom in (+)">+</button>
+      <button type="button" data-vzoom="wide" title="The whole firing line">Wide</button>
+      <button type="button" data-vzoom="close" title="Close up on the unit">Close</button>
+    </div>
     <canvas id="vboard"></canvas>
     <div class="vfoot">
       <span id="vstate"></span>
@@ -15265,7 +15292,10 @@
   var FROM = { x: 6, y: 8 }, TO = { x: 19, y: 8 };
 
   var cv, g, FX;
+  // the stage opens close on the unit; it pulls out to the whole firing line to show a shot
+  var ZOOM_CLOSE = 3;
   var view = {
+    zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
     key: 'regular', prop: 'tracked', side: 'A', status: 'ready',
     models: null, walking: false, walkT: 0, at: null, facing: 0, face: 'SE',
     sound: true,
@@ -15336,8 +15366,15 @@
     var c = toScreen(W / 2, H / 2);
     var a0 = toScreen(FROM.x - 1.2, FROM.y + 1.2), a1 = toScreen(TO.x + 1.2, TO.y - 1.2);
     var span = Math.abs(a1.x - a0.x) + I.K;
-    var z = Math.min(view.dpr || 1, w / span, h / (I.K * 6.5));
-    g.setTransform(z, 0, 0, z, Math.round(w / 2 - c.x * z), Math.round(h / 2 - (c.y - I.K * 1.2) * z));
+    var zWide = Math.min(view.dpr || 1, w / span, h / (I.K * 6.5));
+    /* Zoomed in, the camera closes on the unit wherever it stands (walking
+       included) so the figures can be seen up close; at 1 it is the whole
+       firing line. In between it slides from one framing to the other. */
+    var zc = view.zCur || 1, z = zWide * zc;
+    var at = view.at || FROM, f = toScreen(at.x, at.y);
+    var k = Math.max(0, Math.min(1, zc - 1));
+    var px = c.x + (f.x - c.x) * k, py = (c.y - I.K * 1.2) + ((f.y - I.K * 0.8) - (c.y - I.K * 1.2)) * k;
+    g.setTransform(z, 0, 0, z, Math.round(w / 2 - px * z), Math.round(h / 2 - py * z));
 
     drawGround();
     var u = unit(), t = mark();
@@ -15410,8 +15447,21 @@
     var dt = last ? Math.min(64, t - last) : 16;
     last = t;
     var busy = FX.prune();
+    var acting = busy;
     if (view.walking) { stepWalk(dt); busy = true; }
-    if (view.strafeAt) { strafing(); busy = true; }
+    if (view.strafeAt) { strafing(); busy = true; acting = true; }
+    /* Firing pulls the camera out to the whole line; once the shots have
+       finished playing it goes back in to the zoom the viewer chose. */
+    if (view.wide) {
+      if (acting) view.wideUntil = t + 700;
+      else if (t > (view.wideUntil || 0)) view.wide = false;
+      busy = true;
+    }
+    var want = view.wide ? 1 : view.zoom;
+    if (Math.abs((view.zCur || 1) - want) > 0.005) {
+      view.zCur = (view.zCur || 1) + (want - (view.zCur || 1)) * Math.min(1, dt / 140);
+      busy = true;
+    } else view.zCur = want;
     // the wreck keeps burning, and a damaged hull keeps smoking
     if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
     frame();
@@ -15477,6 +15527,7 @@
   var STRAFE_MS = 2200;
   function canStrafe() { return unit().cls === 'aircraft'; }
   function strafe() {
+    showWide();
     if (!canStrafe()) { note('Only aircraft make strafing runs.'); return; }
     view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
     view.strafeAt = Date.now();
@@ -15587,8 +15638,23 @@
      The same effects the battle plays, driven from the same weapon table. Hits
      are made up here — the bench is about what it looks and sounds like, not
      about the dice. */
+  // what the stage zooms between: 1 is the whole firing line, ZMAX a squad filling it
+  var ZMIN = 1, ZMAX = 4.5;
+  function setZoom(zz) {
+    view.zoom = Math.max(ZMIN, Math.min(ZMAX, zz));
+    view.wide = false;
+    zoomLabel();
+    start();
+  }
+  function zoomLabel() {
+    var zl = el('vzoomlabel');
+    if (zl) zl.textContent = '\u00d7' + (Math.round(view.zoom * 10) / 10);
+  }
+  // pull out to the whole line for the length of a shot
+  function showWide() { view.wide = true; view.wideUntil = performance.now() + 900; start(); }
   function fire() {
     if (view.status === 'destroyed') { note('It is destroyed — it is not firing anything.'); return; }
+    showWide();
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
@@ -16117,6 +16183,7 @@
 
   /* Walk every style in turn, so the whole set can be compared in one go. */
   function allStyles() {
+    showWide();
     var order = ['pistol', 'small', 'smg', 'burst', 'chain', 'shell', 'shellbig',
       'arc', 'arcbig', 'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig'];
     var i = 0;
@@ -16147,7 +16214,42 @@
     frame();
 
     // tap the stage to fire: on a phone the buttons are further down the page
-    cv.addEventListener('click', function () { fire(); });
+    /* Tap the stage to fire; a pinch (or the wheel, or − / +) zooms, and a
+       pinch is never taken for a tap. */
+    var pts = {}, pinch = null, pinched = 0;
+    cv.addEventListener('click', function () { if (Date.now() - pinched < 400) return; fire(); });
+    cv.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      setZoom(view.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+    }, { passive: false });
+    cv.addEventListener('pointerdown', function (e) {
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var ids = Object.keys(pts);
+      if (ids.length === 2) {
+        var a = pts[ids[0]], b2 = pts[ids[1]];
+        pinch = { d: Math.hypot(a.x - b2.x, a.y - b2.y) || 1, z: view.zoom };
+      }
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!pts[e.pointerId]) return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var ids = Object.keys(pts);
+      if (pinch && ids.length === 2) {
+        var a = pts[ids[0]], b2 = pts[ids[1]];
+        setZoom(pinch.z * Math.hypot(a.x - b2.x, a.y - b2.y) / pinch.d);
+        pinched = Date.now();
+      }
+    });
+    function lift(e) { delete pts[e.pointerId]; if (Object.keys(pts).length < 2) pinch = null; }
+    cv.addEventListener('pointerup', lift);
+    cv.addEventListener('pointercancel', lift);
+    el('vzoom').addEventListener('click', function (e) {
+      var zb = e.target.closest('[data-vzoom]');
+      if (!zb) return;
+      var how = zb.getAttribute('data-vzoom');
+      setZoom(how === 'in' ? view.zoom * 1.35 : how === 'out' ? view.zoom / 1.35 : how === 'wide' ? 1 : ZOOM_CLOSE);
+    });
+    zoomLabel();
     el('vlist').addEventListener('click', function (e) {
       var b = e.target.closest('[data-unit]');
       if (!b) return;
@@ -16162,7 +16264,9 @@
       note('');
       // on a phone the list is below the stage: go back up to see the unit
       if (window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // the page itself does not scroll on a phone: the panel under the stage does
+        var sc = document.querySelector('main');
+        if (sc && sc.scrollTo) sc.scrollTo({ top: 0, behavior: 'smooth' });
       } else b.scrollIntoView({ block: 'nearest' });
     });
 
@@ -16226,6 +16330,8 @@
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
       if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
+      if (e.key === '+' || e.key === '=') { setZoom(view.zoom * 1.35); e.preventDefault(); }
+      if (e.key === '-' || e.key === '_') { setZoom(view.zoom / 1.35); e.preventDefault(); }
     });
   }
 
@@ -16256,6 +16362,7 @@
       if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
       drawPicker(); drawControls(); drawState(); frame();
     },
+    zoom: function (z) { if (z != null) setZoom(z); return { zoom: view.zoom, cur: view.zCur, wide: view.wide }; },
     set: function (k, v) {
       if (k === 'status') { setStatus(v); return; }
       view[k] = v; drawControls(); drawState(); frame();

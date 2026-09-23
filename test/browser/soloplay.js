@@ -2,11 +2,13 @@
    and co-op: the turn loop has to keep turning (Beginning, Reserve, Action,
    OpFor, End) without stalling or throwing. COOP=1 runs the co-op version. */
 const { chromium } = require('playwright');
+const { page: PAGE } = require('../where.js');
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1300, height: 850 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
-  await p.goto('file://' + require('path').join(__dirname, 'index.html') + ''); await p.waitForTimeout(600); if (process.env.COOP) await p.evaluate(() => { window.__coop = true; });
+  // the page is two levels up (test/browser/ has no index.html of its own)
+  await p.goto('file://' + PAGE); await p.waitForTimeout(600); if (process.env.COOP) await p.evaluate(() => { window.__coop = true; });
   const scens = (process.env.SCENS || 's_crush,s_vip,s_decap,s_evac,s_sabotage,s_ambush').split(',');
   for (const sc of scens) {
     await p.evaluate((sc) => {

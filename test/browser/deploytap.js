@@ -114,7 +114,8 @@ async function run(p, label, scen, shotName) {
           n++;
           if (window.__deployOK(w.x, w.y, 'A')) ok++;
         }
-        return Math.round(100 * ok / n);
+        // to a tenth of a percent: a zone that is a sliver of a fitted table still counts as on screen
+        return Math.round(1000 * ok / n) / 10;
       };
     });
     for (const scen of ['meeting', 'secure', 'find', 'demolish', 'takeover', 'invasion']) {
