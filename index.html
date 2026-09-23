@@ -1,3 +1,4 @@
+<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PMC 2670 Firefight</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1108,6 +1109,8 @@
     .mtab-n:empty { display: none; }
 
     .hintbar { flex: none; font-size: 10.5px; padding: 5px 9px; }
+    /* "select one of your units" says nothing a phone's player does not know; anything else the bar says stays */
+    .hintbar.idle { display: none; }
     .console > .mpane { display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; padding-bottom: 8px; }
     .console[data-mtab="act"]   > .mpane-act,
     .console[data-mtab="unit"]  > .mpane-unit,
@@ -1294,7 +1297,7 @@
           <button class="mtab" data-mtab="unit">Unit</button>
           <button class="mtab" data-mtab="force">Forces</button>
         </div>
-        <div class="hintbar" id="hintbar">Select one of your units on the table.</div>
+        <div class="hintbar idle" id="hintbar">Select one of your units on the table.</div>
         <div class="mpane mpane-act" id="context"></div>
         <div class="mpane mpane-res" id="resfeed-m"></div>
         <div class="mpane mpane-unit statstrip" id="statstrip"></div>

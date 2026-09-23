@@ -1,3 +1,4 @@
+<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PMC 2670 Firefight</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1108,6 +1109,8 @@
     .mtab-n:empty { display: none; }
 
     .hintbar { flex: none; font-size: 10.5px; padding: 5px 9px; }
+    /* "select one of your units" says nothing a phone's player does not know; anything else the bar says stays */
+    .hintbar.idle { display: none; }
     .console > .mpane { display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; padding-bottom: 8px; }
     .console[data-mtab="act"]   > .mpane-act,
     .console[data-mtab="unit"]  > .mpane-unit,
@@ -1294,7 +1297,7 @@
           <button class="mtab" data-mtab="unit">Unit</button>
           <button class="mtab" data-mtab="force">Forces</button>
         </div>
-        <div class="hintbar" id="hintbar">Select one of your units on the table.</div>
+        <div class="hintbar idle" id="hintbar">Select one of your units on the table.</div>
         <div class="mpane mpane-act" id="context"></div>
         <div class="mpane mpane-res" id="resfeed-m"></div>
         <div class="mpane mpane-unit statstrip" id="statstrip"></div>
@@ -30346,6 +30349,8 @@
   function setHint(id, override) {
     ui.hint = id;
     var u = ui.selected, box = el('hintbar');
+    // the standing prompt, and only that, is marked idle: a phone hides it to give the room to the panes
+    box.classList.remove('idle');
     if (override) { box.textContent = override; return; }
     if (id) {
       var all = STANDARD.concat(specialsFor(u));
@@ -30381,7 +30386,11 @@
       box.innerHTML = '<b>' + esc(soloOwnerName(state.activeOwner)) + '</b>: select one of your units — the players take turns, one activation each.';
       return;
     }
-    if (!u) { box.textContent = 'Select one of your units on the table — those not shaded darker have still to act.'; return; }
+    if (!u) {
+      box.textContent = 'Select one of your units on the table — those not shaded darker have still to act.';
+      box.classList.add('idle');
+      return;
+    }
     if (ui.mode === 'move' || ui.mode === 'advance-move') {
       box.innerHTML = 'Click anywhere in the shaded ground to move <b>' + u.name + '</b> there.';
     } else if (ui.mode === 'fire' || ui.mode === 'aux' || ui.mode === 'advance-fire') {
