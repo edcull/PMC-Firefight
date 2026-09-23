@@ -76,9 +76,12 @@ function metrics() {
       Math.abs(m.board.bottom - m.console.top) <= 2, m.board.bottom + ' vs ' + m.console.top);
     ok('the panel sits on the bottom of the screen',
       Math.abs(m.console.bottom - m.vh) <= 2, m.console.bottom + ' of ' + m.vh);
-    ok('...and takes about a third of it',
-      m.console.h / m.vh > 0.26 && m.console.h / m.vh < 0.42,
-      Math.round(m.console.h / m.vh * 100) + '%');
+    /* The table is square — as tall as it is wide — unless the screen is too
+       short for that, and the panel has the rest, never less than ~170px. */
+    const squareH = Math.min(m.vw, m.vh - m.header.bottom - 170);
+    ok('...and the table is square, the panel taking the rest',
+      Math.abs(m.board.h - squareH) <= 2 && m.console.h >= 168,
+      'table ' + m.board.w + '×' + m.board.h + ', panel ' + m.console.h + 'px');
     ok('the table fills the width', m.board.w === m.vw, m.board.w + ' of ' + m.vw);
     /* The buffer is drawn at the screen's pixel density (capped at 2), so it is
        a whole multiple of its box rather than the same size — what matters is

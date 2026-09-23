@@ -1,3 +1,4 @@
+<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PMC 2670 Firefight</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1108,6 +1109,8 @@
     .mtab-n:empty { display: none; }
 
     .hintbar { flex: none; font-size: 10.5px; padding: 5px 9px; }
+    /* "select one of your units" says nothing a phone's player does not know; anything else the bar says stays */
+    .hintbar.idle { display: none; }
     .console > .mpane { display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; padding-bottom: 8px; }
     .console[data-mtab="act"]   > .mpane-act,
     .console[data-mtab="unit"]  > .mpane-unit,
@@ -1294,7 +1297,7 @@
           <button class="mtab" data-mtab="unit">Unit</button>
           <button class="mtab" data-mtab="force">Forces</button>
         </div>
-        <div class="hintbar" id="hintbar">Select one of your units on the table.</div>
+        <div class="hintbar idle" id="hintbar">Select one of your units on the table.</div>
         <div class="mpane mpane-act" id="context"></div>
         <div class="mpane mpane-res" id="resfeed-m"></div>
         <div class="mpane mpane-unit statstrip" id="statstrip"></div>
@@ -1361,7 +1364,6 @@
       <button class="lnk menu-back" data-menu="main">← Back</button>
     </div>
     <p class="menu-foot">
-      <button class="lnk" id="btn-menu-rules">Rules</button>
       <button class="lnk" id="btn-menu-sound">Sound on</button>
       <a class="lnk" href="viewer.html" id="lnk-viewer">Unit viewer</a>
     </p>
@@ -14214,7 +14216,7 @@
     if (kit.armband === 'force') {
       // penal troops: a band in the company's own colour round the upper arm, over the coveralls
       var abc = pal.forceDark ? PALETTE_FORCE(pal) : pal.light;
-      if (pal.isRebel) abc = vividHex(pal.forceMid || abc, 3, 1.3);   // a rebel's armband is the brightest thing on him
+      abc = vividHex(pal.forceMid || abc, 3, 1.3);    // the armband is the brightest thing on him, convict or rebel
       P(-14 - b, -37.5 + drop, aw + 2, 4.2, abc);
       P(-14 - b, -37.5 + drop, aw + 2, 0.9, 'rgba(255,255,255,.35)');
       P(-14 - b, -34.1 + drop, aw + 2, 0.8, 'rgba(0,0,0,.35)');
@@ -30346,6 +30348,8 @@
   function setHint(id, override) {
     ui.hint = id;
     var u = ui.selected, box = el('hintbar');
+    // the standing prompt, and only that, is marked idle: a phone hides it to give the room to the panes
+    box.classList.remove('idle');
     if (override) { box.textContent = override; return; }
     if (id) {
       var all = STANDARD.concat(specialsFor(u));
@@ -30381,7 +30385,11 @@
       box.innerHTML = '<b>' + esc(soloOwnerName(state.activeOwner)) + '</b>: select one of your units — the players take turns, one activation each.';
       return;
     }
-    if (!u) { box.textContent = 'Select one of your units on the table — those not shaded darker have still to act.'; return; }
+    if (!u) {
+      box.textContent = 'Select one of your units on the table — those not shaded darker have still to act.';
+      box.classList.add('idle');
+      return;
+    }
     if (ui.mode === 'move' || ui.mode === 'advance-move') {
       box.innerHTML = 'Click anywhere in the shaded ground to move <b>' + u.name + '</b> there.';
     } else if (ui.mode === 'fire' || ui.mode === 'aux' || ui.mode === 'advance-fire') {
@@ -32523,7 +32531,6 @@
     setDrawerTab('forces');
     ui.statsOpen = window.innerWidth > 760;
     el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
-    if (el('btn-menu-rules')) el('btn-menu-rules').addEventListener('click', function () { el('notes').hidden = false; });
 
     // the same switch on the top bar and on the menu
     var sndBtns = [el('btn-sound'), el('btn-menu-sound')].filter(Boolean);

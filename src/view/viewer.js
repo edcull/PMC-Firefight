@@ -26,7 +26,8 @@
 
   var cv, g, FX;
   // the stage opens close on the unit; it pulls out to the whole firing line to show a shot
-  var ZOOM_CLOSE = 3;
+  // the stage's zooms: the whole firing line, the unit, and a close look at it
+  var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
   var view = {
     zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
     key: 'regular', prop: 'tracked', side: 'A', status: 'ready',
@@ -96,7 +97,6 @@
     // centre the patch of ground in the canvas
     /* On a narrow screen the whole firing line — shooter, gap and mark — is
        scaled down to fit, rather than cut off at the sides. */
-    var c = toScreen(W / 2, H / 2);
     var a0 = toScreen(FROM.x - 1.2, FROM.y + 1.2), a1 = toScreen(TO.x + 1.2, TO.y - 1.2);
     var span = Math.abs(a1.x - a0.x) + I.K;
     var zWide = Math.min(view.dpr || 1, w / span, h / (I.K * 6.5));
@@ -104,9 +104,11 @@
        included) so the figures can be seen up close; at 1 it is the whole
        firing line. In between it slides from one framing to the other. */
     var zc = view.zCur || 1, z = zWide * zc;
-    var at = view.at || FROM, f = toScreen(at.x, at.y);
+    // wide, the middle of the line between the two units; any closer, the unit itself (a flier up where it flies)
+    var mid = toScreen((FROM.x + TO.x) / 2, (FROM.y + TO.y) / 2);
+    var at = view.at || FROM, f = toScreen(at.x, at.y), up = I.flyLift(unit()) * 0.6;
     var k = Math.max(0, Math.min(1, zc - 1));
-    var px = c.x + (f.x - c.x) * k, py = (c.y - I.K * 1.2) + ((f.y - I.K * 0.8) - (c.y - I.K * 1.2)) * k;
+    var px = mid.x + (f.x - mid.x) * k, py = (mid.y - I.K * 1.2) + ((f.y - I.K * 0.8 - up) - (mid.y - I.K * 1.2)) * k;
     g.setTransform(z, 0, 0, z, Math.round(w / 2 - px * z), Math.round(h / 2 - py * z));
 
     drawGround();
@@ -116,6 +118,7 @@
     var order = [u, t].sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
+      if (m === u && arr.hidden) return;                 // not on the field yet
       I.drawUnit(g, m, {
         at: { x: m.x, y: m.y }, lift: m === u ? arr.lift : 0,
         hop: m === u ? (view.hop || 0) : 0,
@@ -198,7 +201,7 @@
     // the wreck keeps burning, and a damaged hull keeps smoking
     if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
     frame();
-    if (busy) start(); else { last = 0; drawState(); }
+    if (busy) start(); else last = 0;
   }
   function start() { if (!loop) loop = requestAnimationFrame(tick); }
 
@@ -261,11 +264,10 @@
   function canStrafe() { return unit().cls === 'aircraft'; }
   function strafe() {
     showWide();
-    if (!canStrafe()) { note('Only aircraft make strafing runs.'); return; }
+    if (!canStrafe()) { return; }
     view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
     view.strafeAt = Date.now();
     view.facing = 0;
-    note('A strafing run: it fires the length of the pass.');
     var fired = 0, guns = 7;
     (function burst() {
       if (fired >= guns || !view.strafeAt) return;
@@ -325,6 +327,8 @@
   function arriving() {
     if (!view.arriveAt) return { lift: 0, status: null };
     var age = Date.now() - view.arriveAt;
+    // before it arrives the field is empty: the unit is not on the table yet
+    if (age < 0) return { lift: 0, status: null, hidden: true };
     if (view.arriveKind === 'drop') {
       if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
       // gathering speed the whole way down, so it arrives hard rather than drifting in
@@ -339,54 +343,68 @@
     };
   }
 
+  /* An arrival starts from an empty field: the unit is taken off the stage
+     for a moment first, so it is seen coming in from nowhere rather than
+     dropping to the ground from where it stood and getting back up. */
+  var CLEAR_MS = 450;
   function insert() {
     var u = unit(), craft = R.isMachine(u) || !!u.jets;
     if (view.walking) toggleWalk();
     FX.clear();
     syncSound();
-    view.arriveAt = Date.now();
-    view.arriveKind = craft ? 'drop' : 'stand';
     var at = { x: u.x, y: u.y };
-    if (craft) {
-      FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
-      setTimeout(function () {
-        FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 2.4, dur: 700, blocking: true });
-        if (SFX) { SFX.impact(); SFX.impact(0.09); }
-        start();
-      }, DROP_MS - 60);
-    } else {
-      FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 1.6, dur: 600, blocking: true });
-      // boots, then the squad on its feet
-      if (SFX) { SFX.step(); SFX.step(0.24); SFX.step(0.5); }
-    }
-    // keep the frame loop turning while the arrival plays out
-    FX.add({ kind: 'hold', x: at.x, y: at.y, dur: craft ? DROP_MS + 300 : STAND_MS, blocking: true });
+    view.arriveAt = Date.now() + CLEAR_MS;
+    view.arriveKind = craft ? 'drop' : 'stand';
+    // the empty moment: nothing on the field, and the frame loop kept turning through it
+    FX.add({ kind: 'hold', x: at.x, y: at.y, dur: CLEAR_MS + 50, blocking: true });
+    var landing = view.arriveAt;
+    setTimeout(function () {
+      if (view.arriveAt !== landing) return;          // another arrival or a new unit since
+      if (craft) {
+        FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
+        setTimeout(function () {
+          if (view.arriveAt !== landing && view.arriveAt !== 0) return;
+          FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 2.4, dur: 700, blocking: true });
+          if (SFX) { SFX.impact(); SFX.impact(0.09); }
+          start();
+        }, DROP_MS - 60);
+      } else {
+        FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 1.6, dur: 600, blocking: true });
+        // boots, then the squad on its feet
+        if (SFX) { SFX.step(); SFX.step(0.24); SFX.step(0.5); }
+      }
+      // keep the frame loop turning while the arrival plays out
+      FX.add({ kind: 'hold', x: at.x, y: at.y, dur: craft ? DROP_MS + 300 : STAND_MS, blocking: true });
+      start();
+    }, CLEAR_MS);
     start();
-    note(craft
-      ? u.name + ' comes down on its landing point — the dust goes up with it.'
-      : u.name + ' is on the ground before you see it, and comes up out of cover.');
   }
 
   /* ---------- firing ----------
      The same effects the battle plays, driven from the same weapon table. Hits
      are made up here — the bench is about what it looks and sounds like, not
      about the dice. */
-  // what the stage zooms between: 1 is the whole firing line, ZMAX a squad filling it
-  var ZMIN = 1, ZMAX = 4.5;
+  // the stage snaps to one of ZOOMS; Wide and Close step out and in through them
   function setZoom(zz) {
-    view.zoom = Math.max(ZMIN, Math.min(ZMAX, zz));
+    view.zoom = ZOOMS.reduce(function (a, b) { return Math.abs(b - zz) < Math.abs(a - zz) ? b : a; });
     view.wide = false;
     zoomLabel();
     start();
   }
+  function stepZoom(d) {
+    var i = Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(view.zoom) + d));
+    if (ZOOMS[i] !== view.zoom) setZoom(ZOOMS[i]);
+  }
   function zoomLabel() {
-    var zl = el('vzoomlabel');
-    if (zl) zl.textContent = '\u00d7' + (Math.round(view.zoom * 10) / 10);
+    el('vzoom').querySelectorAll('[data-vzoom]').forEach(function (b) {
+      var i = ZOOMS.indexOf(view.zoom);
+      b.disabled = b.getAttribute('data-vzoom') === 'close' ? i === ZOOMS.length - 1 : i === 0;
+    });
   }
   // pull out to the whole line for the length of a shot
   function showWide() { view.wide = true; view.wideUntil = performance.now() + 900; start(); }
   function fire() {
-    if (view.status === 'destroyed') { note('It is destroyed — it is not firing anything.'); return; }
+    if (view.status === 'destroyed') return;
     showWide();
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
@@ -412,7 +430,6 @@
     syncSound();
     play(spec, from, to, hits, u);
     start();
-    note(describe(spec, u));
   }
 
   var FIRE = {
@@ -651,7 +668,7 @@
   function play(spec, from, to, hits, u) {
     if (spec.s) setTimeout(function () { secondary(spec.s, from.second || from, to, spec.sn); start(); }, 150);
     switch (spec.p) {
-      case 'none': note('This one has no weapon at all.'); return;
+      case 'none': return;
       case 'energy': energy(from, to, spec.n || 1, true); return;
       case 'orb': orbs(from, to, spec.n || 1, !R.isMachine(u || unit())); return;
       case 'orbbig': orbs(from, to, spec.n || 1, false, true); return;
@@ -746,37 +763,21 @@
     }
   }
 
-  var STYLE_NOTE = {
-    small: 'a rifle line: aimed shots, ragged, a second of them',
-    pistol: 'a sidearm: a few deliberate single shots',
-    smg: 'a carbine, close in — quicker and lighter than a rifle',
-    burst: 'a machine gun, rattling',
-    chain: 'an autocannon: heavier, slower, countable',
-    shell: 'a direct projectile, flat and fast',
-    shellbig: 'a large direct projectile',
-    arc: 'a lobbed projectile, up and over',
-    arcbig: 'a large lobbed projectile',
-    missile: 'a guided missile — out of the tube cold and level, then it lights at the top of its climb and comes down on the mark',
-    rocket: 'unguided rockets, off the rails in a ripple',
-    flame: 'a cone of fire; nothing flies, the ground burns',
-    rail: 'a Gauss weapon: an instant white line that fades',
-    spit: 'a bug\'s acid: a wet glob lobbed low, splashing green',
-    spitbig: 'a sac of bio-plasma, glowing, bigger and slower',
-    spine: 'a volley of chitin spines, dry and fast',
-    energy: 'pulses of light in the army\'s colour',
-    orb: 'a plasma orb — lobbed from a craft or turret, teleported onto the mark from a Gamma launcher',
-    orbbig: 'an energy howitzer — heavy orbs lobbed over, bursting in blue fire on the ground',
-    none: 'no weapon'
-  };
-  function describe(spec, u) {
-    var s = STYLE_NOTE[spec.p] || spec.p;
-    if (spec.n > 1) s += ' — ' + spec.n + ' tubes at once';
-    if (spec.s) s += ', with ' + (STYLE_NOTE[spec.s] || spec.s) + ' alongside';
-    return u.name + ': ' + s + '.';
-  }
 
 
   /* ---------- the panels ---------- */
+  function phone() { return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches); }
+  // the phone's unit sidebar, opened from the header and closed by a pick, the ×, the scrim or Escape
+  function showSide(open) {
+    document.body.classList.toggle('vside-open', !!open);
+    el('vunits').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      var on = el('vlist').querySelector('.vu.on');
+      if (on) on.scrollIntoView({ block: 'center' });
+    }
+  }
+  function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
+
   function drawPicker() {
     var groups = {};
     R.CATALOGUE.forEach(function (p) {
@@ -792,7 +793,7 @@
           '" data-unit="' + p.key + '">' +
           '<span class="vu-code">' + esc(p.code) + '</span>' +
           '<span class="vu-name">' + esc(p.name) + '</span>' +
-          '<span class="vu-w">' + esc(w.p + (w.s ? '+' + w.s : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
+          '<span class="vu-w">' + esc(styleName(w.p) + (w.s ? '+' + styleName(w.s) : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
           '</button>';
       });
     });
@@ -805,8 +806,19 @@
     var maxModels = p.cls === 'infantry' ? p.size : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
-    h += '<p class="vweap">' + esc(describe(w, p)) + '</p>';
-
+    // two tabs under the name: what to do with the unit, and what the book says of it
+    var tab = view.tab === 'stats' ? 'stats' : 'opts';
+    h += '<div class="vtabs" role="tablist">' +
+      '<button type="button" role="tab" data-tab="opts" aria-selected="' + (tab === 'opts') + '"' + (tab === 'opts' ? ' class="on"' : '') + '>Options</button>' +
+      '<button type="button" role="tab" data-tab="stats" aria-selected="' + (tab === 'stats') + '"' + (tab === 'stats' ? ' class="on"' : '') + '>Stats &amp; rules</button></div>';
+    h += '<div class="vtabbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
+    h += '<div class="vacts">' +
+      '<button class="vbtn primary" data-do="fire">Fire</button>' +
+      '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
+      '<button class="vbtn" data-do="insert">Insert</button>' +
+      (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
+      '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
+      '</div>';
     h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
@@ -824,16 +836,11 @@
       h += '<div class="vgrp"><label>Models — ' + n + ' of ' + p.size + '</label>' +
         '<input type="range" id="vmodels" min="1" max="' + p.size + '" value="' + n + '"></div>';
     }
-    h += '<div class="vacts">' +
-      '<button class="vbtn primary" data-do="fire">Fire</button>' +
-      '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
-      '<button class="vbtn" data-do="insert">Insert</button>' +
-      (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
-      '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
-      '</div>';
-    h += '<div class="vacts"><button class="vbtn" data-do="allstyles">Play every weapon style</button></div>';
-    h += rulesHtml(p);
+    h += '</div><div class="vtabbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
+    var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0;
     el('vctl').innerHTML = h;
+    var now = el('vctl').querySelector('.vtabbody:not([hidden])');
+    if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
@@ -885,11 +892,8 @@
       view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
       view.strafeAt = 0; view.at = null; view.arriveAt = 0;
       FX.clear();
-      note(R.isMachine(unit()) ? 'Destroyed: the hull burns where it stopped.'
-        : 'Destroyed: every model in the squad is down.');
-    } else if (s === 'damaged') note('Damaged: half its Structure gone, and trailing smoke.');
-    else if (was === 'destroyed' || was === 'damaged') note('');
-    drawControls(); drawState(); start(); frame();
+    }
+    drawControls(); start(); frame();
   }
   function seg(name, opts, now) {
     return opts.map(function (o) {
@@ -898,38 +902,7 @@
     }).join('');
   }
 
-  function drawState() {
-    var u = unit();
-    if (view.status === 'destroyed') {
-      el('vstate').textContent = R.isMachine(u) ? 'destroyed — the hull is burning'
-        : u.size + ' of ' + u.size + ' models down';
-      return;
-    }
-    el('vstate').textContent = R.isMachine(u)
-      ? u.damage + ' of ' + u.str + ' Structure gone'
-      : u.models + '/' + u.size + ' models · ' + u.sp + ' SP · ' + R.status(u);
-    if (view.dpr && window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
-      el('vstate').textContent += ' · tap to fire';
-    }
-  }
-  function note(t) { el('vnote').textContent = t; }
 
-  /* Walk every style in turn, so the whole set can be compared in one go. */
-  function allStyles() {
-    showWide();
-    var order = ['pistol', 'small', 'smg', 'burst', 'chain', 'shell', 'shellbig',
-      'arc', 'arcbig', 'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig'];
-    var i = 0;
-    (function next() {
-      if (i >= order.length) { note('That is all of them.'); return; }
-      var st = order[i++];
-      FX.clear();
-      note(st + ' — ' + (STYLE_NOTE[st] || ''));
-      play({ p: st, n: st === 'arc' ? 2 : 1 }, FROM, TO, 3, { name: st });
-      start();
-      setTimeout(next, 1500);
-    })();
-  }
 
   /* ---------- wiring ---------- */
   function mount() {
@@ -942,18 +915,17 @@
     fit();
     drawPicker();
     drawControls();
-    drawState();
+   
     fit();                 // again, now the footer has its text and the panels their size
     frame();
 
     // tap the stage to fire: on a phone the buttons are further down the page
-    /* Tap the stage to fire; a pinch (or the wheel, or − / +) zooms, and a
-       pinch is never taken for a tap. */
-    var pts = {}, pinch = null, pinched = 0;
+    /* Tap the stage to fire; a pinch or the wheel steps through the zooms, and a pinch is never taken for a tap. */
+    var pts = {}, pinch = null, pinched = 0, wheeled = 0;
     cv.addEventListener('click', function () { if (Date.now() - pinched < 400) return; fire(); });
     cv.addEventListener('wheel', function (e) {
       e.preventDefault();
-      setZoom(view.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+      if (Date.now() - wheeled > 250) { wheeled = Date.now(); stepZoom(e.deltaY < 0 ? 1 : -1); }   // one step a flick
     }, { passive: false });
     cv.addEventListener('pointerdown', function (e) {
       pts[e.pointerId] = { x: e.clientX, y: e.clientY };
@@ -969,8 +941,8 @@
       var ids = Object.keys(pts);
       if (pinch && ids.length === 2) {
         var a = pts[ids[0]], b2 = pts[ids[1]];
-        setZoom(pinch.z * Math.hypot(a.x - b2.x, a.y - b2.y) / pinch.d);
-        pinched = Date.now();
+        var r = Math.hypot(a.x - b2.x, a.y - b2.y) / pinch.d;
+        if (r > 1.25 || r < 0.8) { stepZoom(r > 1 ? 1 : -1); pinch.d *= r; pinched = Date.now(); }
       }
     });
     function lift(e) { delete pts[e.pointerId]; if (Object.keys(pts).length < 2) pinch = null; }
@@ -980,9 +952,15 @@
       var zb = e.target.closest('[data-vzoom]');
       if (!zb) return;
       var how = zb.getAttribute('data-vzoom');
-      setZoom(how === 'in' ? view.zoom * 1.35 : how === 'out' ? view.zoom / 1.35 : how === 'wide' ? 1 : ZOOM_CLOSE);
+      stepZoom(how === 'wide' ? -1 : 1);
     });
     zoomLabel();
+    el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
+    el('vclose').addEventListener('click', function () { showSide(false); });
+    el('vscrim').addEventListener('click', function () { showSide(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.body.classList.contains('vside-open')) showSide(false);
+    });
     el('vlist').addEventListener('click', function (e) {
       var b = e.target.closest('[data-unit]');
       if (!b) return;
@@ -993,11 +971,10 @@
       var p = profile();
       if (p.cls !== 'vehicle') view.prop = 'tracked';
       FX.clear();
-      drawPicker(); drawControls(); drawState(); frame();
-      note('');
-      // on a phone the list is below the stage: go back up to see the unit
-      if (window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
-        // the page itself does not scroll on a phone: the panel under the stage does
+      drawPicker(); drawControls(); frame();
+      // on a phone the list is a sidebar over the stage: put it away and go back up to see the unit
+      if (phone()) {
+        showSide(false);
         var sc = document.querySelector('main');
         if (sc && sc.scrollTo) sc.scrollTo({ top: 0, behavior: 'smooth' });
       } else b.scrollIntoView({ block: 'nearest' });
@@ -1016,11 +993,20 @@
         }
         drawControls(); frame(); return;
       }
+      var tb = e.target.closest('[data-tab]');
+      if (tb) {
+        if (view.tab !== tb.getAttribute('data-tab')) {
+          view.tab = tb.getAttribute('data-tab');
+          drawControls();
+          el('vctl').querySelector('.vtabbody:not([hidden])').scrollTop = 0;
+        }
+        return;
+      }
       var s = e.target.closest('[data-set]');
       if (s) {
         if (s.getAttribute('data-set') === 'status') { setStatus(s.getAttribute('data-val')); return; }
         view[s.getAttribute('data-set')] = s.getAttribute('data-val');
-        drawControls(); drawState(); frame(); return;
+        drawControls(); frame(); return;
       }
       var d = e.target.closest('[data-do]');
       if (!d) return;
@@ -1029,7 +1015,6 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
-      else if (act === 'allstyles') allStyles();
       else if (act === 'sound') {
         view.sound = !view.sound;
         if (SFX) SFX.setEnabled(view.sound);
@@ -1039,7 +1024,7 @@
     el('vctl').addEventListener('input', function (e) {
       if (e.target.id === 'vmodels') {
         view.models = +e.target.value;
-        drawControls(); drawState(); frame();
+        drawControls(); frame();
       }
     });
 
@@ -1063,8 +1048,8 @@
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
       if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
-      if (e.key === '+' || e.key === '=') { setZoom(view.zoom * 1.35); e.preventDefault(); }
-      if (e.key === '-' || e.key === '_') { setZoom(view.zoom / 1.35); e.preventDefault(); }
+      if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
+      if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
   }
 
@@ -1077,12 +1062,8 @@
     /* The canvas is drawn at the size it is shown at, all the stage bar the
        footer. Left to CSS, flex stretched a canvas drawn half as tall as it
        was wide to the stage's whole height, and every figure came out tall. */
-    /* The footer is measured with its line of text in it: fit() first runs
-       before the state is written, when an empty footer is only its padding,
-       and a canvas sized to that pushed the footer out of a fixed-height stage. */
-    var foot = Math.max(28, el('vstate') ? el('vstate').parentElement.offsetHeight : 30);
     var cw = Math.max(260, Math.round(box.width - 2));
-    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot - 2));
+    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - 2));
     cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
     cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
     view.dpr = dpr;
@@ -1093,12 +1074,12 @@
     pick: function (k) {
       view.key = k; view.models = null;
       if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
-      drawPicker(); drawControls(); drawState(); frame();
+      drawPicker(); drawControls(); frame();
     },
     zoom: function (z) { if (z != null) setZoom(z); return { zoom: view.zoom, cur: view.zCur, wide: view.wide }; },
     set: function (k, v) {
       if (k === 'status') { setStatus(v); return; }
-      view[k] = v; drawControls(); drawState(); frame();
+      view[k] = v; drawControls(); frame();
     },
     states: function () { return statesFor(profile()); },
     fire: fire,

@@ -106,7 +106,7 @@ async function pickAndFire(p, key, ms) {
     rail.seen.rail > marksman.seen.rail,
     rail.seen.rail + ' samples against ' + marksman.seen.rail);
 
-  const mg = await pickAndFire(p, 'hpv', 1400);
+  const mg = await pickAndFire(p, 'rlmg', 1400);   // a machine-gun team (the HPV mounts an autocannon)
   ok('a machine gun streams tracers', mg.spec.p === 'burst' && !!mg.seen.tracer, mg.kinds.join(' '));
 
   const auto = await pickAndFire(p, 'hmgteam', 1600);
@@ -152,17 +152,20 @@ async function pickAndFire(p, key, ms) {
   const stand = await p.evaluate(async () => {
     window.__viewer.pick('shock');
     window.__viewer.set('status', 'ready');
-    const out = { fx: [], shown: [] };
+    const out = { fx: [], shown: [], hidden: [] };
     window.__viewer.insert();
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 40; i++) {
       const a = window.__viewer.arriving();
-      out.shown.push(a.status);
+      out.hidden.push(!!a.hidden);
+      if (!a.hidden) out.shown.push(a.status);
       out.fx = out.fx.concat(window.__viewer.fx());
       await new Promise(r => setTimeout(r, 50));
     }
     out.after = window.__viewer.arriving();
     return out;
   });
+  ok('an insertion starts from an empty field', stand.hidden[0] === true && stand.hidden.indexOf(false) > 0,
+    stand.hidden.filter(Boolean).length * 50 + 'ms with nothing on the table');
   ok('a squad throws up dust as it breaks cover', stand.fx.indexOf('collapse') >= 0,
     Array.from(new Set(stand.fx)).join(' '));
   ok('...is drawn flat on its face first', stand.shown[0] === 'broken');
@@ -174,17 +177,19 @@ async function pickAndFire(p, key, ms) {
   // a craft falls out of the sky onto its landing point
   const drop = await p.evaluate(async () => {
     window.__viewer.pick('insertplat');
-    const out = { fx: [], lift: [] };
+    const out = { fx: [], lift: [], hidden: [] };
     window.__viewer.insert();
-    for (let i = 0; i < 26; i++) {
-      out.lift.push(window.__viewer.arriving().lift);
+    for (let i = 0; i < 40; i++) {
+      const a = window.__viewer.arriving();
+      out.hidden.push(!!a.hidden);
+      if (!a.hidden) out.lift.push(a.lift);
       out.fx = out.fx.concat(window.__viewer.fx());
       await new Promise(r => setTimeout(r, 50));
     }
     out.after = window.__viewer.arriving();
     return out;
   });
-  ok('a rapid insertion platform drops from the sky', drop.lift[0] > 0,
+  ok('a rapid insertion platform drops from the sky, onto an empty field', drop.hidden[0] === true && drop.lift[0] > 0,
     'starts ' + drop.lift[0] + 'px up');
   ok('...marking the ground it is coming down on', drop.fx.indexOf('dropmark') >= 0,
     Array.from(new Set(drop.fx)).join(' '));
@@ -201,7 +206,7 @@ async function pickAndFire(p, key, ms) {
   /* -------------------------------------------------------------- unit state */
   head('It has a way back to the game');
   const home = await p.evaluate(() => { const a = document.getElementById('vhome'); return a ? { href: a.getAttribute('href'), text: a.textContent, shown: a.offsetParent !== null } : null; });
-  ok('a Main menu link back to the game', !!home && home.shown && /Main menu/.test(home.text) && /^(index|firefight)\.html$/.test(home.href), home && home.href);
+  ok('a Back link to the game\'s main menu', !!home && home.shown && /Back/.test(home.text) && /^(index|firefight)\.html$/.test(home.href), home && home.href);
 
   head('It shows a unit in each of its states');
   const states = await p.evaluate(async () => {
@@ -235,7 +240,7 @@ async function pickAndFire(p, key, ms) {
     window.__viewer.set('status', 'suppressed');
     out.refused = window.__viewer.unit().damage + '|' + document.querySelector('[data-set="status"].on').textContent;
     window.__viewer.set('status', 'destroyed');
-    out.destroyedNote = document.getElementById('vstate').textContent;
+    out.destroyedOn = document.querySelector('[data-set="status"].on').textContent;
     window.__viewer.set('status', 'ready');
     return out;
   });
@@ -245,7 +250,7 @@ async function pickAndFire(p, key, ms) {
     'ready ' + hull.ready + ', damaged ' + hull.damaged);
   ok('...and it smokes only when damaged', !hull.readySmoke && hull.damagedSmoke);
   ok('...a state it cannot be in is not taken', hull.refused === '0|ready', hull.refused);
-  ok('...destroyed is on the same row', /destroyed/.test(hull.destroyedNote), hull.destroyedNote);
+  ok('...destroyed is on the same row', hull.destroyedOn === 'destroyed', hull.destroyedOn);
   ok('the Destroyed toggle is gone from the actions', await p.evaluate(() => !document.querySelector('[data-do="destroyed"]')));
 
   const shrunk = await p.evaluate(() => {

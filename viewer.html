@@ -49,6 +49,19 @@
   }
   .vhome:hover, .vhome:focus-visible { color: var(--ink); border-color: var(--alpha); }
   @media (pointer: coarse) { .vhome { padding: 9px 12px; font-size: 12px; } }
+  /* a phone's way into the unit list, which there is a sidebar */
+  .vunits, .vclose, .vscrim { display: none; }
+  .vunits {
+    align-self: center; flex: none; align-items: center; cursor: pointer; white-space: nowrap;
+    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink); border: 1px solid var(--alpha); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
+  }
+  .vclose {
+    align-items: center; justify-content: center; cursor: pointer;
+    width: 36px; height: 36px; margin: -8px -6px -6px 0; font-size: 20px; line-height: 1;
+    background: none; border: none; color: var(--ink-dim);
+  }
+  @media (pointer: coarse) { .vunits { padding: 9px 12px; font-size: 12px; } }
   header kbd {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px;
     padding: 1px 5px; font-family: var(--mono); font-size: 10px;
@@ -109,18 +122,12 @@
     font-family: var(--display); font-size: 12px; min-width: 28px; height: 26px; padding: 0 7px; cursor: pointer;
   }
   .vzoom button:hover { border-color: var(--alpha); }
-  #vzoomlabel { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); min-width: 34px; text-align: center; }
+  .vzoom button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
   #vboard { touch-action: pan-y; }
   #vboard {
     display: block; flex: none; min-height: 0;   /* sized by fit(), never stretched */
     image-rendering: pixelated; image-rendering: crisp-edges;
   }
-  .vfoot {
-    flex: none; border-top: 1px solid var(--line); padding: 7px 11px;
-    display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap;
-  }
-  #vstate { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
-  #vnote { font-size: 12px; color: var(--ink-faint); flex: 1; min-width: 0; }
 
   .vrow { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-bottom: 3px; }
   .vrow b { font-family: var(--display); font-size: 14px; }
@@ -130,6 +137,21 @@
     font-size: 12px; color: var(--ink-dim); margin: 0 0 12px;
     border-left: 2px solid var(--alpha); padding-left: 9px;
   }
+  /* the unit's panel: its name, two tabs, and whichever tab is open scrolling on its own */
+  #vctl { display: flex; flex-direction: column; min-height: 0; flex: 1; padding: 9px 9px 0; }
+  #vctl > .vrow { flex: none; padding: 0 2px; }
+  .vtabs { display: flex; gap: 4px; flex: none; margin-top: 7px; border-bottom: 1px solid var(--line); }
+  .vtabs button {
+    flex: 1; background: none; border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0;
+    color: var(--ink-dim); cursor: pointer; padding: 8px 6px 7px; margin-bottom: -1px;
+    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .vtabs button:hover { color: var(--ink); }
+  .vtabs button.on { color: var(--alpha); background: var(--panel-2); border-color: var(--line); border-bottom: 1px solid var(--panel-2); }
+  .vtabbody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px 2px 12px; scrollbar-width: thin; }
+  .vtabbody[hidden] { display: none; }
+  .vtabbody > .vacts:first-child { margin-top: 0; margin-bottom: 12px; }
+  .vtabbody > .vrules { margin-top: 0; padding-top: 0; border-top: none; }
   .vgrp { margin-bottom: 11px; }
   .vgrp label {
     display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
@@ -214,34 +236,41 @@
      more than 1000px; the old two-row layout between 700 and 1000 let the
      canvas grow past its stage, and the unit was drawn out of sight.) */
   @media (max-width: 1000px) {
-    /* an app, not a page: the document never scrolls; the column under the
-       header does, with the stage pinned at its top */
+    /* an app, not a page: nothing under the header scrolls but the open tab
+       (and the unit sidebar), with the stage fixed at the top */
     html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
     body { display: flex; flex-direction: column; }
-    main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-    /* in a column of fixed height the panels would shrink to fit; they keep their size and the column scrolls */
-    main > * { flex-shrink: 0; }
-    /* no padding above the pinned stage, or what scrolls under it shows through the gap */
-    main { padding-top: 0 !important; }
-    .vstage { margin-top: 10px; }
+    main { flex: 1; min-height: 0; overflow: hidden; }
     header { padding: 9px 16px; }
     header p, header .keys { display: none; }
+    /* one line: the way back, then the title, cut short rather than wrapped */
+    header { flex-wrap: nowrap; align-items: center; }
+    h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
-    .vstage {
-      order: 1; height: 40vh; min-height: 230px; max-height: 360px;
-      position: sticky; top: 0; z-index: 5; box-shadow: 0 8px 16px rgba(0, 0, 0, .45);
+    .vstage { order: 1; flex: none; height: 40vh; min-height: 230px; max-height: 360px; }
+    .vctlpanel { order: 2; flex: 1; min-height: 0; }
+    /* the unit list: a sidebar that slides in from the left over the stage, and away again once a unit is picked */
+    .vside {
+      position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
+      width: min(340px, 86vw); border-radius: 0 6px 6px 0; border-left: none;
+      transform: translateX(-102%); transition: transform .22s ease-out; visibility: hidden;
+      box-shadow: 10px 0 28px rgba(0, 0, 0, .5);
+      padding-bottom: env(safe-area-inset-bottom);
     }
-    .vpanel { max-height: none; }
-    .vpanel:last-of-type { order: 2; }
-    .vpanel:first-of-type { order: 3; max-height: 60vh; }
-    .vpanel:last-of-type .vscroll { overflow: visible; }
+    body.vside-open .vside { transform: none; visibility: visible; }
+    .vside h3 { display: flex; align-items: center; justify-content: space-between; padding-top: max(9px, env(safe-area-inset-top)); }
+    .vscrim {
+      position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .5);
+      opacity: 0; pointer-events: none; transition: opacity .22s;
+    }
+    body.vside-open .vscrim { opacity: 1; pointer-events: auto; }
+    .vunits, .vclose { display: inline-flex; }
+    .vscrim { display: block; }
     .vbtn { padding: 11px 6px; font-size: 12px; }
     .vsg { padding: 7px 11px; font-size: 11.5px; }
     .vu { padding: 8px 7px; font-size: 13px; }
     #vsearch { font-size: 16px; padding: 9px 10px; }         /* no zoom-on-focus on iOS */
     .vsel { font-size: 13px; padding: 7px 6px; }
-    .vfoot { padding: 6px 10px; }
-    #vnote { display: none; }
     #vboard { cursor: pointer; }
     .vtable { font-size: 12px; }
     .vtable th { font-size: 10.5px; }
@@ -264,15 +293,17 @@
 </style>
 
 <header>
-  <a class="vhome" id="vhome" href="index.html" title="Back to the game's main menu">← Main menu</a>
+  <a class="vhome" id="vhome" href="index.html" title="Back to the game's main menu" aria-label="Back to the game's main menu">← Back</a>
+  <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
   <h1>PMC <span>2670</span> · Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
 </header>
 
+<div class="vscrim" id="vscrim"></div>
 <main>
-  <div class="vpanel">
-    <h3>Units</h3>
+  <div class="vpanel vside" id="vside">
+    <h3>Units <button type="button" class="vclose" id="vclose" aria-label="Close the unit list">×</button></h3>
     <div class="vscroll">
       <input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off">
       <div id="vlist"></div>
@@ -281,22 +312,14 @@
 
   <div class="vstage">
     <div class="vzoom" id="vzoom" aria-label="Zoom">
-      <button type="button" data-vzoom="out" title="Zoom out (−)">−</button>
-      <span id="vzoomlabel">×3</span>
-      <button type="button" data-vzoom="in" title="Zoom in (+)">+</button>
-      <button type="button" data-vzoom="wide" title="The whole firing line">Wide</button>
-      <button type="button" data-vzoom="close" title="Close up on the unit">Close</button>
+      <button type="button" data-vzoom="wide" title="Zoom out, to the whole firing line (−)">Wide</button>
+      <button type="button" data-vzoom="close" title="Zoom in, close on the unit (+)">Close</button>
     </div>
     <canvas id="vboard"></canvas>
-    <div class="vfoot">
-      <span id="vstate"></span>
-      <span id="vnote"></span>
-    </div>
   </div>
 
-  <div class="vpanel">
-    <h3>The unit</h3>
-    <div class="vscroll"><div id="vctl"></div></div>
+  <div class="vpanel vctlpanel">
+    <div id="vctl"></div>
   </div>
 </main>
 

@@ -3239,6 +3239,8 @@
   function setHint(id, override) {
     ui.hint = id;
     var u = ui.selected, box = el('hintbar');
+    // the standing prompt, and only that, is marked idle: a phone hides it to give the room to the panes
+    box.classList.remove('idle');
     if (override) { box.textContent = override; return; }
     if (id) {
       var all = STANDARD.concat(specialsFor(u));
@@ -3274,7 +3276,11 @@
       box.innerHTML = '<b>' + esc(soloOwnerName(state.activeOwner)) + '</b>: select one of your units — the players take turns, one activation each.';
       return;
     }
-    if (!u) { box.textContent = 'Select one of your units on the table — those not shaded darker have still to act.'; return; }
+    if (!u) {
+      box.textContent = 'Select one of your units on the table — those not shaded darker have still to act.';
+      box.classList.add('idle');
+      return;
+    }
     if (ui.mode === 'move' || ui.mode === 'advance-move') {
       box.innerHTML = 'Click anywhere in the shaded ground to move <b>' + u.name + '</b> there.';
     } else if (ui.mode === 'fire' || ui.mode === 'aux' || ui.mode === 'advance-fire') {
@@ -5416,7 +5422,6 @@
     setDrawerTab('forces');
     ui.statsOpen = window.innerWidth > 760;
     el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
-    if (el('btn-menu-rules')) el('btn-menu-rules').addEventListener('click', function () { el('notes').hidden = false; });
 
     // the same switch on the top bar and on the menu
     var sndBtns = [el('btn-sound'), el('btn-menu-sound')].filter(Boolean);
