@@ -654,6 +654,7 @@
       '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
       '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
       '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
+      '<button class="lnk' + (rosterTab === 'memorial' ? ' on' : '') + '" data-rtab="memorial">Memorial</button>' +
       '</div>';
     if (rosterTab === 'units') {
       // every unit on the books has its soldiers named; an old save gets them now
@@ -678,6 +679,8 @@
         }
       });
       h += '</div>';
+    } else if (rosterTab === 'memorial') {
+      h += memorialList(co);
     } else if (rosterTab === 'spend') {
       h += spendList(co);
     } else {
@@ -687,6 +690,33 @@
     return h;
   }
   var rosterTab = 'units';
+  /* Every soldier the force has lost in the campaign, most recent battle
+     first: who they were, what they served in, and where they fell. */
+  function memorialList(co) {
+    var list = co.memorial || [];
+    if (!list.length) return '<p class="dnote">No one has been lost yet.</p>';
+    var SCx = root.PMCScen, battles = {}, order = [];
+    list.forEach(function (m) {
+      if (!battles[m.battle]) { battles[m.battle] = []; order.push(m.battle); }
+      battles[m.battle].push(m);
+    });
+    order.sort(function (a, b) { return b - a; });
+    var h = '<p class="dnote">' + list.length + (list.length === 1 ? ' casualty' : ' casualties') + ' in ' +
+      order.length + (order.length === 1 ? ' battle' : ' battles') + '.</p>';
+    order.forEach(function (n) {
+      var ms = battles[n], first = ms[0];
+      var sc = SCx && SCx.SCENARIOS && SCx.SCENARIOS[first.scenario];
+      h += '<div class="dmem"><div class="dmem-head">Campaign turn ' + n +
+        (first.against ? ' · against ' + esc(first.against) : '') + (sc ? ' · ' + esc(sc.name) : '') +
+        '<span class="mk">' + ms.length + '</span></div><ol class="dmem-list">' +
+        ms.map(function (m) {
+          return '<li><span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
+            '<span class="dmem-type">' + esc(m.type) + (m.unit && m.unit !== m.type ? ' \u00b7 ' + esc(m.unit) : '') +
+            ' \u00b7 turn ' + (m.turn || 1) + ' of the battle</span></li>';
+        }).join('') + '</ol></div>';
+    });
+    return h;
+  }
   var menOpen = {};               // which units have their soldiers shown, by rid
 
   // the soldiers of one unit, by rank and name, each of them renameable

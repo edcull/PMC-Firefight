@@ -752,7 +752,8 @@
       tier: 1, aspiring: false, kUC: 0,
       doctrines: [], doctrineSwapAt: null,
       roster: [], cmdRid: null,
-      record: { battles: 0, wins: 0, draws: 0, losses: 0 }
+      record: { battles: 0, wins: 0, draws: 0, losses: 0 },
+      memorial: []
     };
   }
 
@@ -1599,6 +1600,16 @@
           }
         }
       }
+
+      /* The memorial: every soldier the force has lost, battle by battle, kept
+         for the whole campaign — including those of units that are gone. */
+      co.memorial = co.memorial || [];
+      (report.casualties || []).filter(function (c) { return c.side === side; }).forEach(function (c) {
+        co.memorial.push({
+          name: c.name, rank: c.rank, type: c.type, unit: c.unit, turn: c.turn,
+          battle: out.turn, against: foe.name, scenario: report.scenario
+        });
+      });
 
       co.record.battles++;
       if (report.winner === side) co.record.wins++;

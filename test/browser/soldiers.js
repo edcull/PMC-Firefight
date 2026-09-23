@@ -89,6 +89,29 @@ async function clickText(p, re) {
   await click(p, `#camp-body button[data-men="${rid}"]`);
   check('...and the list closes again', await p.evaluate(() => !document.querySelector('#camp-body .dmen')));
 
+  console.log('\nThe memorial');
+  await clickText(p, '^Memorial$');
+  check('an empty memorial says so', /No one has been lost yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
+  await p.evaluate(() => {
+    const co = window.PMC_CAMPAIGN.get().companies.A;
+    co.memorial = [
+      { name: 'Rhys Walsh', rank: 'Sergeant', type: 'Rookie rifle team', unit: 'Second Section', turn: 3, battle: 1, against: 'Red Dawn', scenario: 'meeting' },
+      { name: 'Ana Silva', rank: 'Private', type: 'Recruits', unit: 'Recruits', turn: 2, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
+      { name: 'Kofi Park', rank: 'Commander', type: 'Light patrol vehicle', unit: 'Light patrol vehicle', turn: 5, battle: 2, against: 'Salvage Rights', scenario: 'secure' }
+    ];
+  });
+  await clickText(p, '^Units$');
+  await clickText(p, '^Memorial$');
+  const mem = await p.evaluate(() => ({
+    text: document.getElementById('camp-body').innerText,
+    heads: [...document.querySelectorAll('#camp-body .dmem-head')].map(h => h.innerText.replace(/\s+/g, ' '))
+  }));
+  check('the memorial counts every casualty', /3 casualties in 2 battles/.test(mem.text));
+  check('...most recent battle first, with the enemy and the scenario',
+    mem.heads.length === 2 && /Campaign turn 2 · against Salvage Rights · Secure and control/.test(mem.heads[0]), mem.heads[0]);
+  check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
+  await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
+
   console.log('\nReloading the page');
   await p.reload();
   await p.waitForTimeout(900);

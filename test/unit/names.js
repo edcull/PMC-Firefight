@@ -101,6 +101,10 @@ ok('...and on the aftermath', after.sides.A.units.some((u) => (u.casualties || [
 const u2 = unit('rookie');
 C.applyEntry(u2, entry, []);
 R.musterMen(u2, u2.camp.men, {});
+ok('the company memorial records the casualty', (camp.companies.A.memorial || []).length === 1 &&
+  camp.companies.A.memorial[0].name === 'Rhys Walsh' && camp.companies.A.memorial[0].battle === 1 &&
+  camp.companies.A.memorial[0].type === 'Rookie rifle team' && !!camp.companies.A.memorial[0].against);
+ok('...and only that side\'s', (camp.companies.B.memorial || []).length === 0);
 ok('next battle they lead the squad', u2.men[0].name === 'Ana Silva' && u2.men[0].rank === 'Corporal' && u2.men.length === 8);
 
 console.log('the roster');
