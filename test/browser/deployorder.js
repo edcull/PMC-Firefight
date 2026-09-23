@@ -30,17 +30,29 @@ async function drain(p) {
    has already acted, and that one regroups; the rally and end phases follow,
    the next turn begins, and its reserve phase runs. */
 async function endTurn(p) {
-  return await p.evaluate(() => {
+  await settle(p);
+  const set = await p.evaluate(() => {
     const s = window.PMC_STATE();
     const last = s.units.find(u => u.side === 'A' && u.alive && u.x >= 0 && !u.reserve && !u.aboard &&
       window.PMC.status(u) !== 'broken');
     if (!last) return { none: true };
     s.units.forEach(u => { u.activated = u !== last; });
     s.activeSide = 'A'; s.streak = 1; s.chain = null;
-    const from = s.turn;
-    const acted = window.__select(last) && window.__pressAction('regroup');
-    return { from: from, to: s.turn, acted: acted };
+    window.__select(last);
+    return { from: s.turn };
   });
+  // the board takes the selection up once it has finished drawing what came before
+  await settle(p);
+  const acted = await p.evaluate(() => window.__pressAction('regroup'));
+  return { from: set.from, acted: !set.none && acted };
+}
+
+// wait for the board to finish playing out whatever the engine last sent
+async function settle(p) {
+  for (let i = 0; i < 50; i++) {
+    if (await p.evaluate(() => !window.__busy() && window.__showQueue() === 0)) break;
+    await p.waitForTimeout(100);
+  }
 }
 
 /* A game against the OpFor is mode 'ai' now; 'solo' is the solitaire game,
@@ -128,12 +140,15 @@ async function newGame(p, cfg) {
   ok('the battle begins', wedged);
   await p.waitForTimeout(600);
   await drain(p);
-  // now paper the whole table with objectives, so no drop point is 12" clear of one
+  /* Now paper the table with objectives, so no drop point is 12" clear of one.
+     The turn is going to be played out and scored this time, so they stand
+     out of reach of both deployment strips: a side that found itself holding
+     three of them would simply win, and the question would never be asked. */
   const stuck = await p.evaluate(async () => {
     const s = window.PMC_STATE();
     s.turn = 3;
     s.objectives = [];
-    for (let x = 6; x <= 42; x += 8) for (let y = 6; y <= 42; y += 8) s.objectives.push({ x: x, y: y, owner: null });
+    for (let x = 12; x <= 36; x += 12) for (let y = 6; y <= 42; y += 12) s.objectives.push({ x: x, y: y, owner: null });
     const held = s.units.find(u => u.side === 'A' && window.PMC.has(u, 'Battlefield Insertion'));
     if (held) { held.reserve = true; held.x = -1; held.y = -1; held.alive = true; }
     return { spots: window.__insertionSpots(held).length, who: held ? held.name : null, code: held ? held.code : null };

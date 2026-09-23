@@ -286,14 +286,18 @@ async function fireAndWatch(p, code, ms) {
       S[n] = function () { calls.push(n); return was.apply(S, arguments); };
     });
     const s = window.PMC_STATE();
-    function fire(code) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    async function fire(code) {
       const u = s.units.find(x => x.side === 'A' && x.code === code);
       if (!u) return null;
       /* every shot moves the turn on to the other side, as the rifle line's
-         did above, so hand it back before each one */
+         did above, so hand it back before each one, and let the table catch
+         up with the selection the way a player's next tap would */
       s.activeSide = 'A';
-      u.activated = false;
+      s.units.forEach(x => { x.activated = false; });
+      window.__clearSel();
       window.__select(u);
+      await wait(60);
       window.__pressAction('fire');
       const e = s.units.find(x => x.side === 'B' && x.alive && window.PMC.canShoot(s, u, x, 'fire', {}));
       if (!e) return null;
@@ -301,8 +305,10 @@ async function fireAndWatch(p, code, ms) {
       window.__shootAt(e.id);
       return calls.slice(from);
     }
-    const mgCalls = fire('RMG');
-    const rifleCalls = fire('RIF');
+    const mgCalls = await fire('RMG');
+    // the burst plays out before the rifle team takes its turn
+    await wait(2200);
+    const rifleCalls = await fire('RIF');
     return { mg: mgCalls, rifle: rifleCalls };
   });
   ok('a machine gun rattles', (heard.mg || []).indexOf('rattle') >= 0, (heard.mg || []).join(' '));
