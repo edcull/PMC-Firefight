@@ -3708,14 +3708,14 @@ html { scroll-behavior: smooth; }
     };
   }
 
-  /* ---------- the men themselves: names, ranks, and who fell ----------
+  /* ---------- the men themselves: names, ranks, and casualties ----------
      The rules only ever count a unit's models. Each of them is also somebody:
      every soldier gets a name and a rank when the unit is mustered, and when the
-     count drops the ones who fell are picked out of the living at random. None
+     count drops the casualties are picked out of those still standing at random. None
      of this touches a die the rules roll — it rides beside `models` and is
      brought into line with it whenever the engine has finished a step, so no
      rule that adds or takes away a model has to know about it. A machine counts
-     its crew instead: one commander or pilot, lost when the hull is destroyed.
+     its crew instead: one commander or pilot, a casualty when the hull is destroyed.
      Drones, turrets and the swarm's living hulls have nobody aboard. */
   var FIRST = ['Adam', 'Aiko', 'Alexei', 'Amara', 'Anders', 'Ana', 'Arjun', 'Bea', 'Bogdan', 'Carlos',
     'Chen', 'Dara', 'Dmitri', 'Elena', 'Emeka', 'Erik', 'Farah', 'Felix', 'Grace', 'Hana', 'Hector',
@@ -3804,7 +3804,7 @@ html { scroll-behavior: smooth; }
      the strength it takes the field at, then ranked by where each man stands. */
   function musterMen(u, carried, taken) {
     var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
-    u.men = (carried || []).filter(function (m) { return m && m.name && m.fell == null; })
+    u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
       .slice(0, want).map(function (m) { return { name: m.name }; });
     u.men.forEach(function (m) { if (taken) taken[m.name] = 1; });
     while (u.men.length < want) u.men.push(freshMan(u, taken));
@@ -3812,25 +3812,24 @@ html { scroll-behavior: smooth; }
     return u.men;
   }
   /* Bring the named men into line with the model count: one picked at random
-     from the living for every model lost, and a fresh one for every model the
+     as a casualty for every model lost, and a fresh one for every model the
      rules gave back (the Endless Tide, a unit returned to the pool). */
   function syncMen(u, turn, taken) {
     if (!u.men) return [];
-    var live = u.men.filter(function (m) { return m.fell == null; });
-    var want = crewed(u) ? standing(u) : 0, fell = [];
+    var live = u.men.filter(function (m) { return m.lost == null; });
+    var want = crewed(u) ? standing(u) : 0, out = [];
     if (isMachine(u)) want = Math.min(want, u.men.length);
     while (live.length > want) {
       var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
-      m.fell = turn || 0;
-      m.fate = isMachine(u) && !u.catastrophic && !isFlying(u) ? 'WIA' : 'KIA';
-      fell.push(m);
+      m.lost = turn || 0;
+      out.push(m);
     }
     if (!isMachine(u)) while (live.length < want) { var n = freshMan(u, taken); u.men.push(n); live.push(n); }
-    return fell;
+    return out;
   }
-  // who comes back for the next battle: the living, and a hull's wounded crew
+  // who comes back for the next battle: everyone who was not a casualty
   function survivors(u) {
-    return (u.men || []).filter(function (m) { return m.fell == null || m.fate === 'WIA'; }).map(function (m) { return { name: m.name, rank: m.rank }; });
+    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });
   }
 
   root.PMC = {

@@ -161,8 +161,8 @@
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
     function render() { syncMen(); returnToPool(); syncMen(); V.changed(); }
     /* The named men caught up with the model counts, after every step: whoever
-       the rules just killed is picked out of the living and marked with the
-       turn they fell in. Done before a unit goes back to the OpFor pool, so the
+       the rules just took off the table is picked out as a casualty and marked
+       with the turn it happened. Done before a unit goes back to the OpFor pool, so the
        men it lost are counted before it comes on again at full strength. */
     function syncMen() {
       if (!state || !state.units) return;
@@ -2290,20 +2290,20 @@
       routed: { A: state.routed.A, B: state.routed.B },
       turns: state.turn,
       units: Object.keys(lines).map(function (k) { return lines[k]; }),
-      casualties: casualtyRoll()
+      casualties: casualtyList()
     };
   }
 
-  /* The roll of the fallen: every named man lost, by name, rank and the kind of
-     unit they served in, side by side, in the order they fell. */
-  function casualtyRoll() {
+  /* The casualty list: every named soldier lost, by name, rank and the kind of
+     unit they served in, side by side, in the order they were lost. */
+  function casualtyList() {
     var out = [];
     state.units.forEach(function (u) {
       var p = R.profile(u.key);
       (u.men || []).forEach(function (m) {
-        if (m.fell == null) return;
+        if (m.lost == null) return;
         out.push({
-          side: u.side, name: m.name, rank: m.rank, fate: m.fate || 'KIA', turn: m.fell,
+          side: u.side, name: m.name, rank: m.rank, turn: m.lost,
           type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id
         });
       });

@@ -1,5 +1,6 @@
 /* Every soldier a name and a rank: mustered with the unit, picked out of the
-   living as the model count drops, and listed by name on the battle report.
+   living as casualties when the model count drops, and listed by name on the
+   battle report.
    A campaign unit carries its survivors on to the next battle. */
 'use strict';
 const { R, C, Engine } = require('../../server/rules.js');
@@ -14,7 +15,7 @@ function unit(key, extra) {
   return Object.assign({ key: key, name: p.name, faction: p.faction || 'pmc', group: p.group, tier: p.tier,
     size: p.size, models: p.size, cls: p.cls || 'infantry', command: !!p.command, rules: p.rules.slice(), alive: true }, extra || {});
 }
-const live = (u) => u.men.filter((m) => m.fell == null);
+const live = (u) => u.men.filter((m) => m.lost == null);
 
 console.log('names and ranks');
 const taken = {};
@@ -37,11 +38,11 @@ const rebels = unit('rinsurgents');
 R.musterMen(rebels, null, taken);
 ok('rebels are fighters under a cell leader', rebels.men[0].rank === 'Cell Leader' && rebels.men[1].rank === 'Fighter');
 
-console.log('who fell');
+console.log('casualties');
 rifles.models = 5;
-let fell = R.syncMen(rifles, 2, taken);
-ok('three models lost, three men fall', fell.length === 3 && live(rifles).length === 5);
-ok('...marked with the turn and KIA', fell.every((m) => m.fell === 2 && m.fate === 'KIA'));
+let cas = R.syncMen(rifles, 2, taken);
+ok('three models lost, three casualties', cas.length === 3 && live(rifles).length === 5);
+ok('...marked with the turn', cas.every((m) => m.lost === 2));
 rifles.models = 5;
 ok('nothing changes when the count holds', R.syncMen(rifles, 3, taken).length === 0);
 rifles.models = 7;
@@ -49,7 +50,7 @@ R.syncMen(rifles, 3, taken);
 ok('models given back are fresh men', live(rifles).length === 7 && rifles.men.length === 10);
 lcv.alive = false; lcv.catastrophic = true;
 R.syncMen(lcv, 4, taken);
-ok('a destroyed hull loses its commander', lcv.men[0].fell === 4 && lcv.men[0].fate === 'KIA');
+ok('the commander of a destroyed hull is a casualty', lcv.men[0].lost === 4);
 const fled = unit('rookie');
 R.musterMen(fled, null, taken);
 fled.alive = false; fled.fled = true;
@@ -77,7 +78,7 @@ for (const [fa, fb] of [['pmc', 'rebel'], ['xeno', 'bugs']]) {
   ok('...the living match the models', st.units.every((u) => R.isMachine(u) || live(u).length === u.models));
   const infantryLost = rep.casualties.filter((c) => !R.isMachine(R.profile(st.units.find((u) => (u.rid || u.id) === c.rid).key))).length;
   const byCount = st.units.filter((u) => !R.isMachine(u)).reduce((a, u) => a + u.men.length - live(u).length, 0);
-  ok('...the report names every man lost', rep.casualties.length > 0 && infantryLost === byCount, rep.casualties.length + ' fallen');
+  ok('...the report names every man lost', rep.casualties.length > 0 && infantryLost === byCount, rep.casualties.length + ' casualties');
   ok('...each by name, rank and type', rep.casualties.every((c) => c.name && c.rank && c.type && c.turn >= 0));
   ok('...and the survivors are on each line', rep.units.every((l) => Array.isArray(l.men)));
 }
@@ -91,12 +92,12 @@ const men = [{ name: 'Ana Silva', rank: 'Corporal' }, { name: 'Kofi Park', rank:
 const report = {
   winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
   units: [{ rid: entry.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 2, destroyed: false, brokenEver: false, wiped: false, men: men, kills: [] }],
-  casualties: [{ side: 'A', rid: entry.rid, name: 'Rhys Walsh', rank: 'Sergeant', fate: 'KIA', turn: 3, type: 'Rookie rifle team' }]
+  casualties: [{ side: 'A', rid: entry.rid, name: 'Rhys Walsh', rank: 'Sergeant', turn: 3, type: 'Rookie rifle team' }]
 };
 const after = C.aftermath(camp, report);
 ok('the survivors are written on the entry', entry.men && entry.men.length === 2 && entry.men[0].name === 'Ana Silva');
-ok('...the fallen go on its history', entry.history.some((h) => /Sergeant Rhys Walsh/.test(h)));
-ok('...and on the aftermath', after.sides.A.units.some((u) => (u.fallen || []).length === 1));
+ok('...the casualties go on its history', entry.history.some((h) => /Sergeant Rhys Walsh/.test(h)));
+ok('...and on the aftermath', after.sides.A.units.some((u) => (u.casualties || []).length === 1));
 const u2 = unit('rookie');
 C.applyEntry(u2, entry, []);
 R.musterMen(u2, u2.camp.men, {});

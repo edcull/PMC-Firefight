@@ -1433,15 +1433,13 @@
 
         var u = { rid: entry.rid, name: entry.name, key: entry.key, exp: exp, tp: tp, wiped: false, salvage: null, trauma: null };
 
-        /* The men who fell go on the unit's record by name, and the survivors
+        /* The unit's casualties go on its record by name, and the survivors
            march on with it: the gaps are filled with fresh recruits when it is
            next mustered. */
-        var fallen = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
-        if (fallen.length) {
-          u.fallen = fallen;
-          entry.history.push('Lost ' + fallen.map(function (c) {
-            return c.rank + ' ' + c.name + (c.fate === 'WIA' ? ' (wounded)' : '');
-          }).join(', ') + '.');
+        var cas = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
+        if (cas.length) {
+          u.casualties = cas;
+          entry.history.push('Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
         }
         if (line.men) entry.men = line.men.slice();
 

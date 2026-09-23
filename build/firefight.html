@@ -347,17 +347,16 @@
   .card { padding: 14px; }
   .card h2 { font-family: var(--display); font-size: 15px; margin: 0 0 4px; }
   .card .sub { color: var(--ink-dim); font-size: 12.5px; margin: 0; }
-  /* the roll of the fallen, on the card that ends the battle */
-  .kia { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
-  .kia-head { font-family: var(--display); font-size: 13px; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
-  .kia-A .kia-head { color: var(--alpha); }
-  .kia-B .kia-head { color: var(--bravo); }
-  .kia-head .mk { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
-  .kia-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 220px; overflow-y: auto; font-size: 12px; }
-  .kia-list li { padding: 3px 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
-  .kia-rank { color: var(--ink-dim); }
-  .kia-wia { color: var(--ink-faint); }
-  .kia-type { display: block; color: var(--ink-faint); font-size: 11px; }
+  /* the casualty list, on the card that ends the battle */
+  .cas { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .cas-head { font-family: var(--display); font-size: 13px; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+  .cas-A .cas-head { color: var(--alpha); }
+  .cas-B .cas-head { color: var(--bravo); }
+  .cas-head .mk { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+  .cas-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 220px; overflow-y: auto; font-size: 12px; }
+  .cas-list li { padding: 3px 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
+  .cas-rank { color: var(--ink-dim); }
+  .cas-type { display: block; color: var(--ink-faint); font-size: 11px; }
 
   .forces { padding: 10px 12px 12px; }
   .force + .force { margin-top: 12px; }
@@ -5152,14 +5151,14 @@
     };
   }
 
-  /* ---------- the men themselves: names, ranks, and who fell ----------
+  /* ---------- the men themselves: names, ranks, and casualties ----------
      The rules only ever count a unit's models. Each of them is also somebody:
      every soldier gets a name and a rank when the unit is mustered, and when the
-     count drops the ones who fell are picked out of the living at random. None
+     count drops the casualties are picked out of those still standing at random. None
      of this touches a die the rules roll — it rides beside `models` and is
      brought into line with it whenever the engine has finished a step, so no
      rule that adds or takes away a model has to know about it. A machine counts
-     its crew instead: one commander or pilot, lost when the hull is destroyed.
+     its crew instead: one commander or pilot, a casualty when the hull is destroyed.
      Drones, turrets and the swarm's living hulls have nobody aboard. */
   var FIRST = ['Adam', 'Aiko', 'Alexei', 'Amara', 'Anders', 'Ana', 'Arjun', 'Bea', 'Bogdan', 'Carlos',
     'Chen', 'Dara', 'Dmitri', 'Elena', 'Emeka', 'Erik', 'Farah', 'Felix', 'Grace', 'Hana', 'Hector',
@@ -5248,7 +5247,7 @@
      the strength it takes the field at, then ranked by where each man stands. */
   function musterMen(u, carried, taken) {
     var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
-    u.men = (carried || []).filter(function (m) { return m && m.name && m.fell == null; })
+    u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
       .slice(0, want).map(function (m) { return { name: m.name }; });
     u.men.forEach(function (m) { if (taken) taken[m.name] = 1; });
     while (u.men.length < want) u.men.push(freshMan(u, taken));
@@ -5256,25 +5255,24 @@
     return u.men;
   }
   /* Bring the named men into line with the model count: one picked at random
-     from the living for every model lost, and a fresh one for every model the
+     as a casualty for every model lost, and a fresh one for every model the
      rules gave back (the Endless Tide, a unit returned to the pool). */
   function syncMen(u, turn, taken) {
     if (!u.men) return [];
-    var live = u.men.filter(function (m) { return m.fell == null; });
-    var want = crewed(u) ? standing(u) : 0, fell = [];
+    var live = u.men.filter(function (m) { return m.lost == null; });
+    var want = crewed(u) ? standing(u) : 0, out = [];
     if (isMachine(u)) want = Math.min(want, u.men.length);
     while (live.length > want) {
       var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
-      m.fell = turn || 0;
-      m.fate = isMachine(u) && !u.catastrophic && !isFlying(u) ? 'WIA' : 'KIA';
-      fell.push(m);
+      m.lost = turn || 0;
+      out.push(m);
     }
     if (!isMachine(u)) while (live.length < want) { var n = freshMan(u, taken); u.men.push(n); live.push(n); }
-    return fell;
+    return out;
   }
-  // who comes back for the next battle: the living, and a hull's wounded crew
+  // who comes back for the next battle: everyone who was not a casualty
   function survivors(u) {
-    return (u.men || []).filter(function (m) { return m.fell == null || m.fate === 'WIA'; }).map(function (m) { return { name: m.name, rank: m.rank }; });
+    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });
   }
 
   root.PMC = {
@@ -6762,15 +6760,13 @@
 
         var u = { rid: entry.rid, name: entry.name, key: entry.key, exp: exp, tp: tp, wiped: false, salvage: null, trauma: null };
 
-        /* The men who fell go on the unit's record by name, and the survivors
+        /* The unit's casualties go on its record by name, and the survivors
            march on with it: the gaps are filled with fresh recruits when it is
            next mustered. */
-        var fallen = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
-        if (fallen.length) {
-          u.fallen = fallen;
-          entry.history.push('Lost ' + fallen.map(function (c) {
-            return c.rank + ' ' + c.name + (c.fate === 'WIA' ? ' (wounded)' : '');
-          }).join(', ') + '.');
+        var cas = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
+        if (cas.length) {
+          u.casualties = cas;
+          entry.history.push('Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
         }
         if (line.men) entry.men = line.men.slice();
 
@@ -21222,8 +21218,8 @@
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
     function render() { syncMen(); returnToPool(); syncMen(); V.changed(); }
     /* The named men caught up with the model counts, after every step: whoever
-       the rules just killed is picked out of the living and marked with the
-       turn they fell in. Done before a unit goes back to the OpFor pool, so the
+       the rules just took off the table is picked out as a casualty and marked
+       with the turn it happened. Done before a unit goes back to the OpFor pool, so the
        men it lost are counted before it comes on again at full strength. */
     function syncMen() {
       if (!state || !state.units) return;
@@ -23351,20 +23347,20 @@
       routed: { A: state.routed.A, B: state.routed.B },
       turns: state.turn,
       units: Object.keys(lines).map(function (k) { return lines[k]; }),
-      casualties: casualtyRoll()
+      casualties: casualtyList()
     };
   }
 
-  /* The roll of the fallen: every named man lost, by name, rank and the kind of
-     unit they served in, side by side, in the order they fell. */
-  function casualtyRoll() {
+  /* The casualty list: every named soldier lost, by name, rank and the kind of
+     unit they served in, side by side, in the order they were lost. */
+  function casualtyList() {
     var out = [];
     state.units.forEach(function (u) {
       var p = R.profile(u.key);
       (u.men || []).forEach(function (m) {
-        if (m.fell == null) return;
+        if (m.lost == null) return;
         out.push({
-          side: u.side, name: m.name, rank: m.rank, fate: m.fate || 'KIA', turn: m.fell,
+          side: u.side, name: m.name, rank: m.rank, turn: m.lost,
           type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id
         });
       });
@@ -30273,25 +30269,23 @@
 
   function overCard() {
     return '<div class="card"><h2>' + (state.over.winner ? sideName(state.over.winner) + ' wins' : 'Draw') + '</h2>' +
-      '<p class="sub">' + state.over.text + '</p>' + casualtyRoll() +
+      '<p class="sub">' + state.over.text + '</p>' + casualtyList() +
       '<div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
   }
 
-  /* The roll of the fallen, side by side: every soldier lost, by rank, name and
-     the kind of unit they served in, with the turn they fell. */
-  function casualtyRoll() {
+  /* The casualty list, side by side: every soldier lost, by rank, name and
+     the kind of unit they served in, with the turn it happened. */
+  function casualtyList() {
     var list = (state.report && state.report.casualties) || null;
     if (!list) return '';
-    return '<div class="kia">' + ['A', 'B'].map(function (side) {
+    return '<div class="cas">' + ['A', 'B'].map(function (side) {
       var mine = list.filter(function (c) { return c.side === side; });
-      var kia = mine.filter(function (c) { return c.fate !== 'WIA'; }).length, wia = mine.length - kia;
-      var h = '<div class="kia-side kia-' + side + '"><div class="kia-head">' + esc(sideName(side)) +
-        '<span class="mk">' + (mine.length ? kia + ' killed' + (wia ? ', ' + wia + ' wounded' : '') : 'no losses') + '</span></div>';
+      var h = '<div class="cas-side cas-' + side + '"><div class="cas-head">' + esc(sideName(side)) +
+        '<span class="mk">' + (mine.length ? mine.length + (mine.length === 1 ? ' casualty' : ' casualties') : 'no casualties') + '</span></div>';
       if (mine.length) {
-        h += '<ol class="kia-list">' + mine.map(function (c) {
-          return '<li><span class="kia-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
-            (c.fate === 'WIA' ? ' <i class="kia-wia">wounded</i>' : '') +
-            '<span class="kia-type">' + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
+        h += '<ol class="cas-list">' + mine.map(function (c) {
+          return '<li><span class="cas-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
+            '<span class="cas-type">' + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
             ' \u00b7 turn ' + (c.turn || 1) + '</span></li>';
         }).join('') + '</ol>';
       }
