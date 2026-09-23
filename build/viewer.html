@@ -380,7 +380,7 @@
   <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
-  <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
+  <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe · <kbd>A</kbd> ability</span>
 </header>
 
 <div class="vscrim" id="vscrim"></div>
@@ -15478,9 +15478,84 @@
           var wrad = wk * (f.r || 12) * I.K * 0.72;
           g.strokeStyle = f.rgb ? 'rgba(' + f.rgb + ',' + (0.75 * (1 - wk)) + ')' : 'rgba(196,140,255,' + (0.75 * (1 - wk)) + ')';
           g.lineWidth = I.PIXEL * (3 - wr);
+          // a jamming wave is broken up, as static is
+          if (f.dash) g.setLineDash([I.PIXEL * 4, I.PIXEL * 3 + wr * I.PIXEL * 2]);
           g.beginPath(); g.ellipse(wp.x, wp.y, wrad, wrad * 0.5, 0, 0, Math.PI * 2); g.stroke();
+          g.setLineDash([]);
         }
         I.ellipse(g, wp.x, wp.y, I.K * 0.7 * (1 - k), I.K * 0.4 * (1 - k), f.rgb ? 'rgba(' + f.rgb + ',' + (0.8 - k * 0.8) + ')' : 'rgba(230,200,255,' + (0.8 - k * 0.8) + ')');
+        g.restore();
+      } else if (f.kind === 'beam') {
+        /* A beam from a unit to its mark: a marker's laser, a pheromone trail,
+           or a hacker's data stream (`data`: packets running along it). It
+           reaches out, holds with a flicker, and puts a pulsing ring on the mark. */
+        var ba = I.toScreen(f.x, f.y), bb = I.toScreen(f.tx, f.ty);
+        ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up); bb.y -= I.K * 0.5;
+        var brgb = f.rgb || '255,70,60', bon = k < 0.85 ? 1 : (1 - k) / 0.15, reach = Math.min(1, k / 0.15);
+        var bex = ba.x + (bb.x - ba.x) * reach, bey = ba.y + (bb.y - ba.y) * reach;
+        var flick = 0.72 + 0.28 * Math.sin(k * 70);
+        g.save();
+        g.lineCap = 'round';
+        g.strokeStyle = 'rgba(' + brgb + ',' + (0.22 * bon) + ')'; g.lineWidth = I.PIXEL * 3.5;
+        g.beginPath(); g.moveTo(ba.x, ba.y); g.lineTo(bex, bey); g.stroke();
+        g.strokeStyle = 'rgba(' + brgb + ',' + (0.95 * bon * flick) + ')'; g.lineWidth = Math.max(1, I.PIXEL * 0.8);
+        g.beginPath(); g.moveTo(ba.x, ba.y); g.lineTo(bex, bey); g.stroke();
+        if (f.data && reach >= 1) {
+          g.fillStyle = 'rgba(' + brgb + ',' + bon + ')';
+          for (var pk = 0; pk < 6; pk++) {
+            var pt = (k * 2.4 + pk / 6) % 1, ps = I.PIXEL * (pk % 2 ? 2 : 3);
+            g.fillRect(ba.x + (bb.x - ba.x) * pt - ps / 2, ba.y + (bb.y - ba.y) * pt - ps / 2, ps, ps);
+          }
+        }
+        if (reach >= 1) {
+          var mr = I.K * (0.55 + 0.2 * Math.sin(k * 22));
+          g.strokeStyle = 'rgba(' + brgb + ',' + (0.8 * bon) + ')'; g.lineWidth = I.PIXEL;
+          g.beginPath(); g.ellipse(bb.x, bb.y + I.K * 0.5, mr, mr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+          I.ellipse(g, bb.x, bb.y, I.PIXEL * 1.6, I.PIXEL * 1.6, 'rgba(255,255,255,' + (0.9 * bon) + ')');
+        }
+        g.restore();
+      } else if (f.kind === 'rise') {
+        /* Signs rising off a unit: green crosses for field medics, sparks for a
+           machine rebuilding itself — over a glow on the ground at its feet. */
+        var rp = I.toScreen(f.x, f.y); rp.y -= liftAt(f);
+        var rrgb = f.rgb || '120,230,150', rn = f.n || 8;
+        I.ellipse(g, rp.x, rp.y, I.K * 1.3, I.K * 0.65, 'rgba(' + rrgb + ',' + (0.2 * (1 - k)) + ')');
+        g.save();
+        for (var ri = 0; ri < rn; ri++) {
+          var rsd = ((ri * 37) % 11) / 11, rph = (k * 1.5 + ri / rn) % 1;
+          var rx = rp.x + (rsd - 0.5) * I.K * 2.4, ry = rp.y - rph * I.K * 3.4;
+          var ra = Math.sin(rph * Math.PI) * (1 - k * 0.5);
+          g.fillStyle = 'rgba(' + rrgb + ',' + ra + ')';
+          if (f.glyph === 'cross') {
+            var cs = I.PIXEL * 4, cw = I.PIXEL * 1.4;
+            g.fillRect(rx - cw / 2, ry - cs / 2, cw, cs); g.fillRect(rx - cs / 2, ry - cw / 2, cs, cw);
+          } else {
+            var ss = I.PIXEL * (ri % 3 ? 1.5 : 2.5);
+            g.fillRect(rx - ss / 2, ry - ss / 2, ss, ss);
+          }
+        }
+        g.restore();
+      } else if (f.kind === 'dome') {
+        /* A shield: a bubble of light raised over the ground around a unit,
+           rim bright, a band of light running up it. */
+        var dm = I.toScreen(f.x, f.y); dm.y -= liftAt(f);
+        var drgb = f.rgb || '140,210,255', dr = (f.r || 3) * I.K * 0.72 * Math.min(1, k / 0.25);
+        var da = k < 0.8 ? 1 : (1 - k) / 0.2, dh = dr * 0.85;
+        g.save();
+        g.beginPath();
+        g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2);        // the bubble's top
+        g.ellipse(dm.x, dm.y, dr, dr * 0.5, 0, 0, Math.PI);            // and the ground under it
+        var dgr = g.createRadialGradient(dm.x, dm.y - dh * 0.35, dr * 0.1, dm.x, dm.y - dh * 0.35, dr);
+        dgr.addColorStop(0, 'rgba(' + drgb + ',' + (0.04 * da) + ')');
+        dgr.addColorStop(1, 'rgba(' + drgb + ',' + (0.3 * da) + ')');
+        g.fillStyle = dgr; g.fill();
+        g.strokeStyle = 'rgba(' + drgb + ',' + (0.8 * da) + ')'; g.lineWidth = I.PIXEL;
+        g.beginPath(); g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2); g.stroke();
+        g.beginPath(); g.ellipse(dm.x, dm.y, dr, dr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        var band = (k * 2.2) % 1, by2 = dm.y - dh * band;
+        var bw = dr * Math.sqrt(Math.max(0, 1 - band * band));
+        g.strokeStyle = 'rgba(255,255,255,' + (0.35 * da * (1 - band)) + ')';
+        g.beginPath(); g.ellipse(dm.x, by2, bw, bw * 0.5, 0, 0, Math.PI * 2); g.stroke();
         g.restore();
       } else if (f.kind === 'hold') {
         /* Nothing to draw: it exists so the frame loop keeps turning while a
@@ -16326,6 +16401,50 @@
      speed with its guns going, and the ground walks up under it. */
   var STRAFE_MS = 2200;
   function canStrafe() { return unit().cls === 'aircraft'; }
+
+  /* A unit's special ability, played on the stage: the first rule it has that
+     shows as something — a Psychic Wave rolling out, a hacker's data stream
+     into the mark, medics' crosses rising, a Xenotripod shield going up.
+     Each is the rule, in the size the rule gives it, in inches. */
+  var ABILITIES = [
+    { rule: 'Psychic Wave', name: 'Psychic Wave', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, dur: 1500 }]; }, sfx: 'wave' },
+    { rule: 'Dominant Species', name: 'Regain Control', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '110,190,255', dur: 1500 }]; }, sfx: 'shimmer' },
+    { rule: 'Overmind', name: 'Overmind', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 18, rgb: '150,215,90', dur: 1700 }]; }, sfx: 'chitter' },
+    { rule: 'Shield Generator', name: 'Shield', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 12, dur: 2200 }]; }, sfx: 'shimmer' },
+    { rule: 'Hackers', name: 'Hack', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '90,255,140', data: true, dur: 1800 }]; }, sfx: 'zap' },
+    { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
+    { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
+    { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }]; }, sfx: 'zap' },
+    { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
+    { rule: 'Teleport', name: 'Teleport', play: function () { return [{ kind: 'teleportin', x: TO.x, y: TO.y, r: 1.4, dur: 1500 }]; }, sfx: 'shimmer' },
+    { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
+    { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
+    { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
+    { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
+    { rule: 'Inspiring Presence', name: 'Inspire', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, rgb: '232,193,90', dur: 1300 }]; }, sfx: 'chime' },
+    { rule: 'Counter-jamming', name: 'Counter-jam', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 6, rgb: '120,200,255', dur: 1800 }]; }, sfx: 'shimmer' }
+  ];
+  // every ability a unit has, in that order — an EW team hacks and jams — to a button each, three at most
+  function abilitiesOf(u) {
+    var rules = (u && u.rules) || [], out = [];
+    ABILITIES.forEach(function (a) {
+      if (out.length >= 3 || out.some(function (o) { return o.name === a.name; })) return;
+      if (rules.some(function (r) { return r === a.rule || r.indexOf(a.rule + ' (') === 0; })) out.push(a);
+    });
+    return out;
+  }
+  function abilityOf(u) { return abilitiesOf(u)[0] || null; }
+  function ability(i) {
+    var u = unit(), a = abilitiesOf(u)[i || 0];
+    if (!a || view.status === 'destroyed') return;
+    showWide();
+    if (view.walking) toggleWalk();
+    syncSound();
+    a.play(u).forEach(function (f) { FX.add(f); });
+    if (SFX && view.sound && SFX[a.sfx]) SFX[a.sfx]();
+    start();
+  }
   function strafe() {
     showWide();
     if (!canStrafe()) { return; }
@@ -16930,6 +17049,7 @@
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
+      abilitiesOf(unit()).map(function (a, i) { return '<button class="vbtn" data-do="ability" data-ab="' + i + '">' + esc(a.name) + '</button>'; }).join('') +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
     h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
@@ -17116,6 +17236,7 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
+      else if (act === 'ability') ability(+d.getAttribute('data-ab') || 0);
       else if (act === 'sound') {
         view.sound = !view.sound;
         if (SFX) SFX.setEnabled(view.sound);
@@ -17147,6 +17268,7 @@
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
       if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
+      if (e.key === 'a' || e.key === 'A') { ability(); e.preventDefault(); }
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
@@ -17185,6 +17307,8 @@
     gait: function () { return gaitOf(unit()); },
     insert: insert,
     strafe: strafe,
+    ability: function (i) { var a = abilitiesOf(unit())[i || 0]; ability(i); return a ? a.name : null; },
+    abilities: function () { return abilitiesOf(unit()).map(function (a) { return a.name; }); },
     destroy: function (on) { setStatus(on === false ? 'ready' : 'destroyed'); },
     strafing: function () { return !!view.strafeAt; },
     arriving: arriving,
