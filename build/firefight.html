@@ -31071,7 +31071,7 @@
     if (R.isMachine(u)) { drawMachineStats(u, box); return; }
     var st = R.status(u), m = R.currentMorale(u);
     var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-      '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + '</span></div>' +
+      '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
       '</div>';
     /* Suppression against Morale in three equal bands — steady, suppressed,
        broken — each as wide as the Morale, with the unit's SP laid over them
@@ -31099,6 +31099,11 @@
     box._html = h;
     box.innerHTML = h;
     wireHost(box);
+  }
+  // what the army list calls the unit's kind — Combat vehicles, Assault troops
+  function groupOf(u) {
+    var g = u.group || (R.profile(u.key) || {}).group;
+    return g ? ' · ' + esc(g) : '';
   }
   // the army's own colours on the unit tab's code badge, as its ring is painted on the table
   function armyStyle(side) {
@@ -31179,10 +31184,9 @@
   function drawMachineStats(u, box) {
     var left = Math.max(0, u.str - u.damage);
     var pr = R.propOf(u);
-    var kind = u.cls === 'aircraft' ? 'Aircraft' : pr ? pr.name : 'Vehicle';
     if (u.drone) kind += ' · drone';
     var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-      '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + ' · ' + kind + '</span></div>' +
+      '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
       '</div>';
     // its health: the Structure it has left — green untouched, amber down to half, red below
     var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
