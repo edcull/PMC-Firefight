@@ -115,6 +115,8 @@
     display: block; flex: none; min-height: 0;   /* sized by fit(), never stretched */
     image-rendering: pixelated; image-rendering: crisp-edges;
   }
+  /* the state line under the stage is kept for the script and the tests, but not shown */
+  .vfoot { display: none !important; }
   .vfoot {
     flex: none; border-top: 1px solid var(--line); padding: 7px 11px;
     display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap;
@@ -298,7 +300,6 @@
   </div>
 
   <div class="vpanel">
-    <h3>The unit</h3>
     <div class="vscroll"><div id="vctl"></div></div>
   </div>
 </main>

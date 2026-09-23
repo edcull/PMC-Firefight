@@ -820,7 +820,6 @@
     var maxModels = p.cls === 'infantry' ? p.size : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
-    h += '<p class="vweap">' + esc(describe(w, p)) + '</p>';
 
     h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
@@ -1095,7 +1094,9 @@
     /* The footer is measured with its line of text in it: fit() first runs
        before the state is written, when an empty footer is only its padding,
        and a canvas sized to that pushed the footer out of a fixed-height stage. */
-    var foot = Math.max(28, el('vstate') ? el('vstate').parentElement.offsetHeight : 30);
+    // the footer under the stage is hidden now; if it is ever shown again the canvas makes room for it
+    var fe = el('vstate') ? el('vstate').parentElement : null;
+    var foot = fe && fe.offsetParent !== null ? Math.max(28, fe.offsetHeight) : 0;
     var cw = Math.max(260, Math.round(box.width - 2));
     var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot - 2));
     cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
