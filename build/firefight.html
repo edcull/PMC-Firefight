@@ -342,6 +342,7 @@
   .mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
   .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
   .mb-labels span { flex: 1; text-align: center; }
+  .healthbar .mb-labels span { text-align: left; }
   .hintbar:empty { display: none; }
   /* the ground a unit stands on, with the letter the map marks it by */
   .chip.tpill { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
@@ -31156,8 +31157,6 @@
   // a machine has Structure and Damage where a squad has Morale and suppression
   function drawMachineStats(u, box) {
     var left = Math.max(0, u.str - u.damage);
-    var tag = u.damage === 0 ? 'ready' : u.damage >= u.str ? 'broken' : 'suppressed';
-    var word = u.damage === 0 ? 'undamaged' : u.damage >= u.str ? 'crippled' : 'damaged';
     var pr = R.propOf(u);
     var kind = u.cls === 'aircraft' ? 'Aircraft'
       : pr ? pr.name + ' ground vehicle' : 'Ground vehicle';
@@ -31166,21 +31165,18 @@
       '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + kind + ' · ' + sideName(u.side) +
       '</p><span class="stat-sum">' + u.damage + '/' + u.str + ' damage · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + '</span></div>' +
-      '<span class="status-tag status-' + tag + '">' + word + '</span>' +
       '</div>';
+    // its health: the Structure it has left — green untouched, amber down to half, red below
+    var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
+    h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
+      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div>' +
+      '<div class="mb-labels"><span>Structure ' + left + ' / ' + u.str + '</span></div></div>';
     h += '<div class="stats">' +
       stat('Structure', left + '/' + u.str) + stat('Move', u.move + '"' + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def) + stat('Assault', u.assault) +
       stat('Damage', u.damage) +
       stat('Carrying', u.transport ? (u.cargo || []).length + '/' + u.transport : '—') + '</div>';
-    h += '<div class="spbar"><div class="spbar-fill" style="width:' +
-      Math.min(100, (u.damage / Math.max(1, u.str)) * 100) + '%"></div></div>' +
-      '<p class="hint small">Knocked out above ' + u.str + ' damage · repairs ' + Math.max(1, left) +
-      'D6 on 4+ · ' + (u.cls === 'aircraft'
-        ? 'flies over everything, always fires and is fired at with Basic Firepower, and cannot hold ground'
-        : (pr && pr.cover ? 'takes cover like infantry, and its flanks deny the +1 side shot, but it is hit +2 in the rear'
-          : 'takes no cover from terrain, and is hit +1 in the side, +2 in the rear')) + '</p>';
     if (pr && pr.key !== 'wheeled') h += '<p class="hint small">' + pr.name + ' — ' + pr.note + '</p>';
     if ((u.cargo || []).length) {
       h += '<div class="chips">' + u.cargo.map(function (c) {
