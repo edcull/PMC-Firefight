@@ -226,6 +226,9 @@
     .vstage { margin-top: 10px; }
     header { padding: 9px 16px; }
     header p, header .keys { display: none; }
+    /* one line: the way back, then the title, cut short rather than wrapped */
+    header { flex-wrap: nowrap; align-items: center; }
+    h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
     .vstage {
       order: 1; height: 40vh; min-height: 230px; max-height: 360px;
@@ -264,7 +267,7 @@
 </style>
 
 <header>
-  <a class="vhome" id="vhome" href="index.html" title="Back to the game's main menu">← Main menu</a>
+  <a class="vhome" id="vhome" href="index.html" title="Back to the game's main menu" aria-label="Back to the game's main menu">← Back</a>
   <h1>PMC <span>2670</span> · Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
