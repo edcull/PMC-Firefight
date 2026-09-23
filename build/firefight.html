@@ -1117,6 +1117,35 @@
 
     /* the deploy card wants the room, so the action row goes away for it */
     .console.deploying .bar { display: none; }
+
+    /* The header is one short row: the turn, whose move it is, and the menu.
+       The activation pill is kept to a line (it used to wrap into a tall
+       block that pushed the Menu button off the edge), and on a small phone
+       the game's name gives its room to them. */
+    header { padding-top: calc(3px + env(safe-area-inset-top, 0px)); padding-bottom: 3px; min-height: 0; }
+    .hdr-meta { min-width: 0; flex: 1 1 auto; justify-content: flex-end; }
+    .hdr-meta .meta#hdr-phase { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+    #hdr-active { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; flex: 0 1 auto; line-height: 1.5; }
+    .hdr-btns { flex: none; }
+
+    /* The actions are one row that scrolls sideways when it will not fit, and
+       only the ones this unit can take are shown: an unavailable action is
+       nothing to tap. With nothing selected, or nothing it can do, the row
+       goes altogether and its room goes to the tabs below. */
+    .console .bar {
+      display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain;
+      gap: 5px; padding: 6px 6px 4px;
+    }
+    .console .bar::-webkit-scrollbar { display: none; }
+    .console .bar .slot:disabled, .console .bar .slot.empty { display: none; }
+    .console .bar .slot {
+      flex: 0 0 auto; min-width: 62px; min-height: 44px; padding: 4px 9px 3px;
+    }
+    .console .bar:not(:has(.slot:not(:disabled))) { display: none; }
+  }
+  @media (max-width: 480px) {
+    header h1 { display: none; }
   }
   @media (min-width: 1001px) {
     #resfeed-m, #panel-m { display: none; }
