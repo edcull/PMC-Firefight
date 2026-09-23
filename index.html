@@ -555,6 +555,11 @@
   .mcard.menu-back { text-align: center; }
   .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
   .menu-foot a.lnk { text-decoration: none; }
+  /* the foot's second button: the unit viewer under the main menu, the demo
+     under the skirmish list (set by the stylesheet too, so a stale script
+     cannot leave the wrong one showing) */
+  .menu-box:has(#menu-skirmish:not([hidden])) #lnk-viewer { display: none !important; }
+  .menu-box:has(#menu-skirmish:not([hidden])) #btn-menu-demo { display: inline-block !important; }
   @media (max-width: 760px) {
     .menu-title { font-size: 28px; }
     .mcard { padding: 10px 12px; font-size: 14px; }

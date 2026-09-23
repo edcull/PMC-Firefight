@@ -5523,7 +5523,28 @@
      kind of battle picked: the four standard ways to play read the "Play
      against" choice, and solitaire and co-op switch the sheet into commando
      mode. */
+  /* A demo asks nothing: two random kinds of force, rolled at a random Battle
+     Tier and Priority Level, in colours of their own, on a rolled scenario and
+     a random world — and straight onto the table for the AI to fight out. */
+  function quickDemo() {
+    if (muster.solo) setSoloMode(false);
+    hotEnd();
+    var pick = function (a) { return a[Math.floor(Math.random() * a.length)]; };
+    var tier = 1 + Math.floor(Math.random() * 5), pl = 1 + Math.floor(Math.random() * 2);
+    var fa = pick(HOT_FACTIONS), fb = pick(HOT_FACTIONS);
+    var ca = foeColour([]), cb = foeColour([ca]);
+    var named = function (c, f) { return (ISO.COLOURS[c] ? ISO.COLOURS[c].name + ' ' : '') + FORCE_NOUN[f]; };
+    el('setup').hidden = true;
+    begin({
+      tier: tier, pl: pl, scenario: SC.ORDER[R.d6() - 1],
+      armyA: R.rollArmy(tier, pl, null, fa), armyB: R.rollArmy(tier, pl, null, fb),
+      nameA: named(ca, fa), nameB: named(cb, fb) === named(ca, fa) ? named(cb, fb) + ' II' : named(cb, fb),
+      colourA: ca, colourB: cb, tactics: { A: null, B: null },
+      mode: 'demo', planet: 'random', terrainSetup: 'auto'
+    });
+  }
   window.PMC_SKIRMISH = function (kind) {
+    if (kind === 'demo') { quickDemo(); return; }
     var solo = kind === 'solo' || kind === 'coop';
     if (solo !== !!muster.solo) setSoloMode(solo);
     el('solo-box').hidden = !solo;
