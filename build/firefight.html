@@ -6102,7 +6102,16 @@
      at strength. So a squad of eight that loses two is 2 of 10: 20%.
      The swarm counts the same way in biomass rather than bodies: each bug is
      worth its Tier, an Overgrown one 25. */
-  function massOf(entry, co) { return strengthOf(entry, co) * R.biomassOf(profile(entry.key)); }
+  /* Drones and turrets are machines with nobody in them: they are neither
+     lost nor counted as having served. */
+  function unmanned(entry) {
+    var p = profile(entry.key);
+    return !p || !!entry.drone || /Turret/.test(p.group || '') ||
+      (p.rules || []).some(function (r) { return r === 'Turret' || r === 'Drone Control'; });
+  }
+  // the models the loss rate counts for this unit
+  function manned(entry, co) { return unmanned(entry) ? 0 : strengthOf(entry, co); }
+  function massOf(entry, co) { return manned(entry, co) * R.biomassOf(profile(entry.key)); }
   function lossStats(co) {
     if (co.faction === 'bugs') {
       var tally = biomassTally(co);
@@ -6112,7 +6121,7 @@
       return { lost: gone, served: all, pct: all ? gone / all : 0, unit: 'biomass' };
     }
     var lost = co.lostModels || 0;
-    var now = (co.roster || []).reduce(function (n, e) { return n + strengthOf(e, co); }, 0);
+    var now = (co.roster || []).reduce(function (n, e) { return n + manned(e, co); }, 0);
     var served = now + lost + (co.departed || 0);
     return { lost: lost, served: served, pct: served ? lost / served : 0, unit: co.faction === 'xeno' ? 'warriors' : 'soldiers' };
   }
@@ -6486,7 +6495,7 @@
     var chk = canDisband(co, entry);
     if (!chk.ok) return chk;
     co.roster = co.roster.filter(function (e) { return e !== entry; });
-    co.departed = (co.departed || 0) + strengthOf(entry, co);
+    co.departed = (co.departed || 0) + manned(entry, co);
     co.departedMass = (co.departedMass || 0) + massOf(entry, co);
     return { ok: true };
   }
@@ -6501,10 +6510,10 @@
     entry.exp -= cost.exp; co.kUC -= cost.kUC;
     // the rid, honours, traumas and history all stay; only the profile changes
     var renamed = entry.name === was;
-    var had = strengthOf(entry, co), hadMass = massOf(entry, co);
+    var had = manned(entry, co), hadMass = massOf(entry, co);
     entry.key = newKey;
     // a promotion to a smaller unit leaves the extra men behind
-    co.departed = (co.departed || 0) + Math.max(0, had - strengthOf(entry, co));
+    co.departed = (co.departed || 0) + Math.max(0, had - manned(entry, co));
     co.departedMass = (co.departedMass || 0) + Math.max(0, hadMass - massOf(entry, co));
     if (renamed) entry.name = profile(newKey).name;
     entry.history.push('Promoted from ' + was + ' to ' + profile(newKey).name + '.');
@@ -6782,22 +6791,19 @@
       var rec = { side: side, kUC: out.payment[side], units: [], gone: [], salvaged: [],
         traumas: [], executed: null };
 
-      /* The models this side lost, unit by unit: a named soldier is one, a
-         swarm's count is what it says, and a machine with nobody aboard to name
-         (a drone, a turret) is one when it is destroyed. */
+      /* The models this side lost, unit by unit: a named soldier is one and a
+         swarm's count is what it says. A drone or a turret has nobody in it,
+         and is not a loss. */
       var lostBy = {}, lostNow = 0;
       (report.casualties || []).forEach(function (c) {
         if (c.side !== side) return;
         var n = c.swarm ? c.count : 1;
         lostBy[c.rid] = (lostBy[c.rid] || 0) + n; lostNow += n;
       });
-      (report.units || []).forEach(function (l) {
-        if (l.side === side && l.destroyed && !lostBy[l.rid]) { lostBy[l.rid] = 1; lostNow += 1; }
-      });
       co.lostModels = (co.lostModels || 0) + lostNow;
       // a unit that leaves the books takes its survivors with it
       function leaves(e) {
-        var left = Math.max(0, strengthOf(e, co) - (lostBy[e.rid] || 0));
+        var left = Math.max(0, manned(e, co) - (lostBy[e.rid] || 0));
         co.departed = (co.departed || 0) + left;
         co.departedMass = (co.departedMass || 0) + left * R.biomassOf(profile(e.key));
       }

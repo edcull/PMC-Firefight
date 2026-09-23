@@ -187,6 +187,17 @@ lc.companies.A.roster.push(more);
 C.disband(lc.companies.A, more);
 const ld = C.lossStats(lc.companies.A);
 ok('a unit disbanded still counts as having served', ld.served === 18 && ld.lost === 2, ld.lost + ' of ' + ld.served);
+const drone = C.newEntry('lcv', { drone: true });
+lc.companies.A.roster.push(drone);
+C.aftermath(lc, {
+  winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+  units: [{ rid: drone.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
+  casualties: []
+});
+const lz = C.lossStats(lc.companies.A);
+ok('a drone is not counted, served or lost', lz.served === 18 && lz.lost === 2, lz.lost + ' of ' + lz.served);
+const tr = C.newEntry('xsturret3');
+ok('...nor a turret', C.lossStats({ faction: 'xeno', roster: [tr], doctrines: [] }).served === 0);
 const tribe = C.newCompany('Tribe', { faction: 'xeno' });
 ok('the tribe counts warriors', C.lossStats(tribe).unit === 'warriors');
 
