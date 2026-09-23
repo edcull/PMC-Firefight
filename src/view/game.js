@@ -1906,9 +1906,12 @@
   function drawFx() { FX.draw(pctx); }
 
   /* ================= logging ================= */
-  function logLine(t, text, math) {
-    state.log.push({ t: t, text: text, math: math || null });
-    if (state.log.length > 400) state.log.shift();
+  /* The engine has already written the line into state.log (the page's state
+     is the engine's, or a snapshot of it): the event is only word that it
+     happened. Adding it again kept every line twice. What is left for the page
+     is to keep the log to its last 400 lines. */
+  function logLine() {
+    if (state && state.log && state.log.length > 400) state.log.splice(0, state.log.length - 400);
   }
 
   /* ================= rendering ================= */
