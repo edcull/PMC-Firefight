@@ -802,6 +802,9 @@
   .dloss { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; font-size: 12.5px; }
   .dloss b { font-family: var(--display); font-size: 18px; color: var(--bad); }
   .dloss span { color: var(--ink-dim); }
+  .dloss.dexpr b { color: var(--good); }
+  .dloss.dtrau { margin-bottom: 10px; }
+  .dloss.dtrau b { color: var(--bad); }
   .dmem-bio { display: flex; justify-content: space-between; gap: 8px; }
   .dmem-type { display: block; color: var(--ink-faint); font-size: 11px; }
   .dhist { font-size: 10.5px; color: var(--ink-faint); padding: 0 11px 2px; font-style: italic; }
@@ -6165,6 +6168,33 @@
       return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0 };
     });
   }
+  /* How seasoned the force is: every honour held on the books against the
+     number of units on them — so ten units, one with two honours and one with
+     one, is 3 / 10: 30%. A company calls it veterancy, the swarm evolution
+     (its honours are Adaptations) and the tribe enlightenment (its Rites). */
+  function experienceStats(co) {
+    var f = co.faction || 'pmc';
+    var honours = (co.roster || []).reduce(function (n, e) { return n + (e.honours || []).length; }, 0);
+    var units = (co.roster || []).length;
+    return {
+      word: f === 'bugs' ? 'evolution' : f === 'xeno' ? 'enlightenment' : 'veterancy',
+      honours: honours, units: units, pct: units ? honours / units : 0,
+      noun: honours === 1 ? words(co).honour : words(co).honours
+    };
+  }
+  /* The other side of it: every trauma carried on the books against the
+     number of units. Trauma for a company or a revolt, genetic degradation
+     for the swarm (its Genetic Flaws), infamy for the tribe (its Infamies). */
+  function traumaStats(co) {
+    var f = co.faction || 'pmc';
+    var traumas = (co.roster || []).reduce(function (n, e) { return n + (e.traumas || []).length; }, 0);
+    var units = (co.roster || []).length;
+    return {
+      word: f === 'bugs' ? 'genetic degradation' : f === 'xeno' ? 'infamy' : 'trauma',
+      traumas: traumas, units: units, pct: units ? traumas / units : 0,
+      noun: traumas === 1 ? words(co).trauma : words(co).traumas
+    };
+  }
   /* The swarm's tally of what it has lost, by kind of bug: the models, and
      the biomass they were worth, which is always worked out from the models. */
   function biomassTally(co) {
@@ -7795,7 +7825,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,
@@ -32654,7 +32684,7 @@
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
     h += '<div class="cpstat">' + co.roster.length + ' units · ' +
       co.record.battles + ' battles · ' + co.record.wins + ' won, ' +
-      co.record.draws + ' drawn, ' + co.record.losses + ' lost</div>';
+      co.record.draws + ' drawn, ' + co.record.losses + ' lost</div>' + expLine(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
         var dd = C.doctrine(d);
@@ -32910,7 +32940,7 @@
     var h = '<h2>' + esc(co.name) + '</h2>';
     h += '<p class="lede">' + C.words(co).tier + ' Tier ' +
       ROMAN[co.tier] + ' · ' + co.kUC + ' ' + C.money(co) + ' · ' +
-      co.roster.length + ' units on the books.</p>';
+      co.roster.length + ' units on the books.</p>' + expLine(co);
     h += '<div class="dtabs">' +
       '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
       '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
@@ -32958,6 +32988,17 @@
   /* The loss rate: everything lost against everything that has ever served,
      replacements included — soldiers, the tribe's warriors, or the swarm's
      biomass. */
+  // the experience rate: honours held against units on the books
+  // ...and the trauma rate beside it: traumas carried against units on the books
+  function expLine(co) {
+    var st = C.experienceStats(co), tr = C.traumaStats(co);
+    if (!st.units) return '';
+    function line(cls, pct, word, n, noun) {
+      return '<div class="dloss ' + cls + '"><b>' + Math.round(pct * 1000) / 10 + '%</b> ' + word + ' <span>' + n + ' ' +
+        esc(noun) + ' across ' + st.units + (st.units === 1 ? ' unit' : ' units') + '</span></div>';
+    }
+    return line('dexpr', st.pct, st.word, st.honours, st.noun) + line('dexpr dtrau', tr.pct, tr.word, tr.traumas, tr.noun);
+  }
   function lossLine(co) {
     return C.lossStats(co).map(function (st) {
       if (!st.served) return '';

@@ -89,6 +89,26 @@ async function clickText(p, re) {
   await click(p, `#camp-body button[data-men="${rid}"]`);
   check('...and the list closes again', await p.evaluate(() => !document.querySelector('#camp-body .dmen')));
 
+  console.log('\nExperience');
+  const expText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dexpr:not(.dtrau)'); return d ? d.textContent : ''; });
+  const trauText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dtrau'); return d ? d.textContent : ''; });
+  check('the dossier shows veterancy', /^0% veterancy 0 Battle Honours across 9 units$/.test(await expText()), await expText());
+  await p.evaluate(() => {
+    const r = window.PMC_CAMPAIGN.get().companies.A.roster;
+    r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];
+  });
+  await clickText(p, '^Spend EXP$');
+  await clickText(p, '^Units$');
+  check('...as honours held over units on the books', /^33\.3% veterancy 3 Battle Honours across 9 units$/.test(await expText()), await expText());
+  check('...and trauma beside it', /^11\.1% trauma 1 Battle Trauma across 9 units$/.test(await trauText()), await trauText());
+  // the head of the dossier, down to its tabs
+  const top = await p.evaluate(() => {
+    const a = document.getElementById('camp-body').getBoundingClientRect(), t = document.querySelector('#camp-body .dtabs').getBoundingClientRect();
+    return { x: a.x, y: a.y, width: a.width, height: t.bottom - a.y + 12 };
+  });
+  await p.screenshot({ path: path.join(SHOTS, 'camp-veterancy.png'), clip: top });
+  await p.evaluate(() => { window.PMC_CAMPAIGN.get().companies.A.roster.forEach(e => { e.honours = []; e.traumas = []; }); });
+
   console.log('\nThe memorial');
   await clickText(p, '^Memorial$');
   check('an empty memorial says so', /No one has been lost yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
@@ -108,7 +128,7 @@ async function clickText(p, re) {
     heads: [...document.querySelectorAll('#camp-body .dmem-head')].map(h => h.innerText.replace(/\s+/g, ' '))
   }));
   check('the memorial has no separate casualty count line', !/casualties in \d+ battle/.test(mem.text));
-  const lossText = await p.evaluate(() => { const d = document.querySelector('#camp-body .dloss'); return d ? d.textContent : ''; });
+  const lossText = await p.evaluate(() => { const d = document.querySelector('#camp-body .dloss:not(.dexpr)'); return d ? d.textContent : ''; });
   check('...and shows the loss rate against everyone who has served', /^[\d.]+% lost 3 of \d+ soldiers$/.test(lossText), lossText);
   check('...most recent battle first, with the enemy and the scenario',
     mem.heads.length === 2 && /Campaign turn 2 · against Salvage Rights · Secure and control/.test(mem.heads[0]), mem.heads[0]);
@@ -127,7 +147,7 @@ async function clickText(p, re) {
     text: document.getElementById('camp-body').innerText,
     rows: [...document.querySelectorAll('#camp-body .dmem-list li')].map(li => li.innerText.replace(/\s+/g, ' '))
   }));
-  const bioLoss = await p.evaluate(() => document.querySelector('#camp-body .dloss').textContent);
+  const bioLoss = await p.evaluate(() => document.querySelector('#camp-body .dloss:not(.dexpr)').textContent);
   check('a swarm\'s loss rate is in biomass', /^[\d.]+% lost 80 of \d+ biomass$/.test(bioLoss), bioLoss);
   check('...and the memorial totals it', /Biomass lost\s*80/.test(bio.text));
   check('...by kind of bug, most biomass first', bio.rows.length === 3 && /Small bugs × 14 · 28 biomass/.test(bio.rows[0]) &&
@@ -148,7 +168,7 @@ async function clickText(p, re) {
     co.losses = { crocks: { lost: 1, departed: 0 }, eshaven: { lost: 6, departed: 0 } };
   });
   await clickText(p, '^Memorial$');
-  const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss')].map(d => d.textContent));
+  const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss:not(.dexpr)')].map(d => d.textContent));
   check('the tribe shows a loss rate for its Crocks and one for its Esh-Aven',
     tribe.length === 2 && /lost 1 of 4 Crocks$/.test(tribe[0]) && /lost 6 of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
   await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-tribe.png') });

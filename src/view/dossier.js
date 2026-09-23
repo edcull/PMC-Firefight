@@ -393,7 +393,7 @@
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
     h += '<div class="cpstat">' + co.roster.length + ' units · ' +
       co.record.battles + ' battles · ' + co.record.wins + ' won, ' +
-      co.record.draws + ' drawn, ' + co.record.losses + ' lost</div>';
+      co.record.draws + ' drawn, ' + co.record.losses + ' lost</div>' + expLine(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
         var dd = C.doctrine(d);
@@ -649,7 +649,7 @@
     var h = '<h2>' + esc(co.name) + '</h2>';
     h += '<p class="lede">' + C.words(co).tier + ' Tier ' +
       ROMAN[co.tier] + ' · ' + co.kUC + ' ' + C.money(co) + ' · ' +
-      co.roster.length + ' units on the books.</p>';
+      co.roster.length + ' units on the books.</p>' + expLine(co);
     h += '<div class="dtabs">' +
       '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
       '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
@@ -697,6 +697,17 @@
   /* The loss rate: everything lost against everything that has ever served,
      replacements included — soldiers, the tribe's warriors, or the swarm's
      biomass. */
+  // the experience rate: honours held against units on the books
+  // ...and the trauma rate beside it: traumas carried against units on the books
+  function expLine(co) {
+    var st = C.experienceStats(co), tr = C.traumaStats(co);
+    if (!st.units) return '';
+    function line(cls, pct, word, n, noun) {
+      return '<div class="dloss ' + cls + '"><b>' + Math.round(pct * 1000) / 10 + '%</b> ' + word + ' <span>' + n + ' ' +
+        esc(noun) + ' across ' + st.units + (st.units === 1 ? ' unit' : ' units') + '</span></div>';
+    }
+    return line('dexpr', st.pct, st.word, st.honours, st.noun) + line('dexpr dtrau', tr.pct, tr.word, tr.traumas, tr.noun);
+  }
   function lossLine(co) {
     return C.lossStats(co).map(function (st) {
       if (!st.served) return '';

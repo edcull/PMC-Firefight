@@ -807,6 +807,33 @@
       return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0 };
     });
   }
+  /* How seasoned the force is: every honour held on the books against the
+     number of units on them — so ten units, one with two honours and one with
+     one, is 3 / 10: 30%. A company calls it veterancy, the swarm evolution
+     (its honours are Adaptations) and the tribe enlightenment (its Rites). */
+  function experienceStats(co) {
+    var f = co.faction || 'pmc';
+    var honours = (co.roster || []).reduce(function (n, e) { return n + (e.honours || []).length; }, 0);
+    var units = (co.roster || []).length;
+    return {
+      word: f === 'bugs' ? 'evolution' : f === 'xeno' ? 'enlightenment' : 'veterancy',
+      honours: honours, units: units, pct: units ? honours / units : 0,
+      noun: honours === 1 ? words(co).honour : words(co).honours
+    };
+  }
+  /* The other side of it: every trauma carried on the books against the
+     number of units. Trauma for a company or a revolt, genetic degradation
+     for the swarm (its Genetic Flaws), infamy for the tribe (its Infamies). */
+  function traumaStats(co) {
+    var f = co.faction || 'pmc';
+    var traumas = (co.roster || []).reduce(function (n, e) { return n + (e.traumas || []).length; }, 0);
+    var units = (co.roster || []).length;
+    return {
+      word: f === 'bugs' ? 'genetic degradation' : f === 'xeno' ? 'infamy' : 'trauma',
+      traumas: traumas, units: units, pct: units ? traumas / units : 0,
+      noun: traumas === 1 ? words(co).trauma : words(co).traumas
+    };
+  }
   /* The swarm's tally of what it has lost, by kind of bug: the models, and
      the biomass they were worth, which is always worked out from the models. */
   function biomassTally(co) {
@@ -2437,7 +2464,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,
