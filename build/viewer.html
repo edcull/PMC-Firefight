@@ -138,6 +138,8 @@
   .vzoom button:hover { border-color: var(--alpha); }
   .vzoom button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
   #vboard { touch-action: pan-y; }
+  /* a tap on the stage fires; it does not flash the browser's tap highlight or select anything */
+  #vboard, .vstage { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; outline: none; }
   #vboard {
     display: block; flex: none; min-height: 0;   /* sized by fit(), never stretched */
     image-rendering: pixelated; image-rendering: crisp-edges;
@@ -265,6 +267,14 @@
     main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
     .vstage { order: 1; flex: none; height: 40vh; min-height: 230px; max-height: 360px; }
     .vctlpanel { order: 2; flex: 1; min-height: 0; }
+    .vatlas { order: 1; flex: 1; }
+    .vmode { margin-left: auto; }
+    .vatlas .toggles button { flex: 1 1 auto; }
+    /* on a phone the tiles come down a size, two infantry cards to a row */
+    .vatlas canvas.tile { width: 116px; height: 99px; }
+    .vatlas canvas.tile.tall { height: 132px; }
+    .vatlas canvas.tile.inf { width: 128px; height: 101px; }
+    .vatlas .row { grid-template-columns: 60px repeat(8, 116px); }
     /* the unit list: a sidebar that slides in from the left over the stage, and away again once a unit is picked */
     .vside {
       position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
@@ -306,6 +316,82 @@
     .vu-w { font-size: 10.5px; }
     input[type=range] { height: 28px; }
   }
+  /* ---------- Atlas mode ---------- */
+  .vmode {
+    align-self: center; flex: none; cursor: pointer; white-space: nowrap;
+    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
+  }
+  .vmode:hover { color: var(--ink); border-color: var(--alpha); }
+  .vmode[aria-pressed="true"] { color: var(--alpha); border-color: var(--alpha); }
+  body.atlas-mode .vmode { margin-left: auto; }
+  body.atlas-mode .vstage, body.atlas-mode .vctlpanel { display: none; }
+  body.atlas-mode header .keys { display: none; }
+  .vatlas {
+    grid-column: 2 / 4; display: flex; flex-direction: column; min-height: 0; min-width: 0;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+    --field: #5e5039; --field-edge: #2e271c; --muted: var(--ink-faint); --chip: var(--panel-2); --accent: var(--alpha); --accent-ink: #1a1408;
+  }
+  .vatlas[hidden] { display: none; }
+  .vatbar { flex: none; display: flex; flex-direction: column; gap: 7px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .vatlasmain { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 20px; scrollbar-width: thin; }
+  .vatlas .swatches, .vatlas .toggles { display: flex; flex-wrap: wrap; gap: 5px; }
+  .vatlas .swatches button {
+    display: inline-flex; align-items: center; gap: 5px; cursor: pointer; padding: 4px 8px 4px 5px;
+    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--ink-dim);
+  }
+  .vatlas .swatches button i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
+  .vatlas .swatches button[aria-pressed="true"] { border-color: var(--alpha); color: var(--ink); box-shadow: 0 0 0 1px var(--alpha); }
+  .vatlas .toggles button {
+    cursor: pointer; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--ink-dim);
+    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .vatlas .toggles button::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border: 1.5px solid currentColor; border-radius: 2px; vertical-align: -1px; }
+  .vatlas .toggles button[aria-pressed="true"] { color: var(--ink); border-color: var(--alpha); }
+  .vatlas .toggles button[aria-pressed="true"]::before { background: var(--alpha); border-color: var(--alpha); }
+  .vatlas h3.group {
+    font-family: var(--display); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);
+    margin: 16px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line);
+  }
+  .vatlas .cards { display: flex; flex-wrap: wrap; gap: 8px; }
+  .vatlas .unit { cursor: pointer; scroll-margin-top: 8px; }
+  .vatlas .unit:hover { border-color: var(--alpha); }
+  .vatlas .card.unit {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 7px 8px;
+    width: min-content; display: flex; flex-direction: column;
+  }
+  .vatlas .card.unit h4 { margin: 0 0 3px; display: flex; gap: 6px; align-items: baseline; contain: inline-size; }
+  .vatlas .card.unit h4 .tier { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-left: auto; flex-shrink: 0; }
+  .vatlas .card.unit .nm { font-family: var(--display); font-size: 13px; font-weight: 600; line-height: 1.15; min-height: 2.35em; margin-bottom: 5px; contain: inline-size; text-wrap: balance; }
+  .vatlas .card .tiles { display: flex; gap: 5px; margin-top: auto; align-items: flex-end; }
+  .vatlas .code { font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--alpha); color: #1a1408; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
+  .vatlas article.unit { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px 12px; margin-bottom: 10px; }
+  .vatlas article.unit header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; margin-bottom: 8px; padding: 0; border: 0; }
+  .vatlas .uname { font-family: var(--display); font-size: 16px; font-weight: 600; }
+  .vatlas .meta { color: var(--ink-faint); font-size: 11.5px; }
+  .vatlas .meta code { font-family: var(--mono); font-size: 11px; }
+  .vatlas .sheet { overflow-x: auto; }
+  .vatlas .grid { display: grid; gap: 5px; }
+  .vatlas .row { display: grid; grid-template-columns: 70px repeat(8, 132px); gap: 5px; align-items: center; min-width: max-content; }
+  .vatlas .row.head div, .vatlas .row .lab, .vatlas figure.cell figcaption {
+    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  .vatlas .row.head div { text-align: center; }
+  .vatlas .strip { display: flex; flex-wrap: wrap; gap: 5px; }
+  .vatlas figure.cell { margin: 0; }
+  .vatlas figure.cell figcaption { text-align: center; padding-top: 3px; }
+  .vatlas canvas.tile { display: block; width: 132px; height: 112px; background: radial-gradient(ellipse at 50% 60%, #6b5c43 0%, var(--field) 55%, var(--field-edge) 100%); border-radius: 4px; }
+  .vatlas canvas.tile.tall { height: 150px; }
+  .vatlas canvas.tile.inf { width: 150px; height: 118px; }
+  .vatlas .empty { color: var(--ink-faint); padding: 24px 0; }
+  /* on a phone the colours are dots in one row, named by their tooltips */
+  @media (max-width: 1000px) {
+    .vatlas .swatches { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; }
+    .vatlas .swatches button { font-size: 0; gap: 0; padding: 5px; flex: none; }
+    .vatlas .swatches button i { width: 20px; height: 20px; }
+    .vatlas .toggles button { padding: 7px 6px; font-size: 10.5px; }
+  }
 </style>
 
 <header>
@@ -314,6 +400,7 @@
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
+  <button type="button" class="vmode" id="vmode" aria-pressed="false" title="Every unit side by side, in the Unit Atlas">Atlas</button>
 </header>
 
 <div class="vscrim" id="vscrim"></div>
@@ -334,6 +421,20 @@
     </div>
     <canvas id="vboard"></canvas>
   </div>
+
+  <!-- the Unit Atlas: the open army's units side by side, in place of the stage and the controls -->
+  <section class="vatlas" id="vatlas" hidden aria-label="Unit Atlas">
+    <div class="vatbar">
+      <div class="swatches" id="vatlascol" role="group" aria-label="Company colours"></div>
+      <div class="toggles" id="vatlastog" role="group" aria-label="What to show">
+        <button type="button" data-t="states" aria-pressed="false">Suppressed &amp; broken</button>
+        <button type="button" data-t="facings" aria-pressed="false">All facings</button>
+        <button type="button" data-t="props" aria-pressed="false">Movement types</button>
+        <button type="button" data-t="wrecks" aria-pressed="false">Destroyed</button>
+      </div>
+    </div>
+    <div class="vatlasmain" id="vatlasmain"></div>
+  </section>
 
   <div class="vpanel vctlpanel">
     <div id="vctl"></div>
@@ -15359,6 +15460,309 @@
 
 </script>
 <script>
+/* PMC 2670 — the Unit Atlas.
+
+   Every profile in the four army lists, drawn by the game's own renderer:
+   squads in each state, machines at every facing on every propulsion, wrecks.
+   Pick a company colour and turn on the states, facings, movement types and
+   wrecks to compare. The same code draws the stand-alone atlas page
+   (scripts/gallery.js builds build/units.html) and the unit viewer's Atlas
+   mode, so it is handed the elements to fill rather than finding them:
+
+     PMCAtlas.mount({
+       main,         // where the sheets go
+       colours,      // a row for the colour swatches (optional)
+       toggles,      // the Show buttons, each with data-t="states|facings|props|wrecks"
+       search,       // an input to filter by (optional)
+       indexes,      // navs to fill with an index of the units (optional)
+       faction,      // () -> 'pmc' | 'rebel' | 'bugs' | 'xeno' to show one army, or null for all
+       colour,       // the company colour to start in (default ochre)
+       onColour,     // (key) -> a colour was picked
+       onPick        // (key) -> a unit's sheet was clicked
+     })
+   returns { render, filter, setColour, scrollTo }. */
+(function (root) {
+  'use strict';
+
+  function mount(o) {
+    var R = root.PMC, I = root.PMCIso;
+    var FACES = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+    // a direction on the screen, turned into a heading on the table
+    function faceAngle(i) { var th = i * Math.PI / 4, u = Math.cos(th), v = 2 * Math.sin(th); return Math.atan2(v - u, u + v); }
+    var PROPS = R.PROP_ORDER;
+    var PROP_NAME = { wheeled: 'Wheeled', tracked: 'Tracked', grav: 'Anti-grav', hover: 'Hover', walker: 'Walker' };
+    var byKey = {};
+    R.CATALOGUE.forEach(function (p) { byKey[p.key] = p; });
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function kind(p) { return p.cls === 'aircraft' ? 'Aircraft' : p.cls === 'vehicle' ? 'Vehicle' : 'Infantry'; }
+
+    // group the catalogue: faction, then the book's own groups, in book order
+    var factions = [['pmc', 'PMC'], ['rebel', 'Rebels'], ['bugs', 'Space Bugs'], ['xeno', 'Xenotripods']];
+    var tree = factions.map(function (f) {
+      var groups = [], seen = {};
+      R.CATALOGUE.filter(function (p) { return (p.faction || 'pmc') === f[0]; }).forEach(function (p) {
+        if (!seen[p.group]) { seen[p.group] = { name: p.group, units: [] }; groups.push(seen[p.group]); }
+        seen[p.group].units.push(p);
+      });
+      return { id: f[0], name: f[1], groups: groups };
+    });
+    function shown() {
+      var f = o.faction ? o.faction() : null;
+      return f ? tree.filter(function (t) { return t.id === f; }) : tree;
+    }
+
+    // ---- index ----
+    function indexHtml() {
+      return shown().map(function (f) {
+        return '<h2>' + f.name + '</h2>' + f.groups.map(function (g) {
+          return '<h3>' + esc(g.name) + '</h3><ul>' + g.units.map(function (p) {
+            return '<li data-k="' + p.key + '"><a href="#u-' + p.key + '"><b>' + esc(p.code) + '</b><span>' + esc(p.name) + '</span></a></li>';
+          }).join('') + '</ul>';
+        }).join('');
+      }).join('');
+    }
+
+    // ---- what to show: all off to begin with ----
+    var show = { states: false, facings: false, props: false, wrecks: false };
+    var colour = o.colour || 'ochre';
+    function defaultProp(p) {
+      if (p.faction === 'bugs' || p.faction === 'xeno') return null;   // a bug walks on its own legs; a turret stands
+      return (R.defaultDrive && R.defaultDrive(p)) || 'wheeled';
+    }
+    // what a tile without a running gear is called: a flier, or an Overgrown bug
+    function noProp(p) { return p.faction === 'bugs' ? (p.cls === 'aircraft' ? 'Overgrown, flying' : 'Overgrown') : p.faction === 'xeno' ? (p.cls === 'aircraft' ? 'Flight' : 'Turret') : 'Flight'; }
+
+    function tile(p, t, cls) {
+      return '<canvas class="tile ' + (cls || '') + '" data-key="' + p.key + '"' +
+        (t.prop ? ' data-prop="' + t.prop + '"' : '') + (t.face != null ? ' data-face="' + t.face + '"' : '') +
+        (t.status ? ' data-status="' + t.status + '"' : '') + (t.riders ? ' data-riders="1"' : '') +
+        (t.mount ? ' data-mount="' + t.mount + '"' : '') +
+        ' role="img" aria-label="' + esc(p.name + (t.label ? ' — ' + t.label : '')) + '"></canvas>';
+    }
+    function machine(p) { return p.cls === 'vehicle' || p.cls === 'aircraft'; }
+    function stats(p) {
+      return kind(p) + ' · Tier ' + (R.ROMAN ? R.ROMAN[p.tier] : p.tier) + ' · Move ' + p.move + '" · FP ' + (p.fp == null ? '—' : p.fp) +
+        ' · Range ' + p.range + '" · Def ' + p.def + (p.str ? ' · Structure ' + p.str : ' · Models ' + p.size);
+    }
+    function findKey(p) { return esc((p.name + ' ' + p.code + ' ' + p.key).toLowerCase()); }
+    function cell(p, t, cls, cap) {
+      return '<figure class="cell">' + tile(p, t, cls) + '<figcaption>' + cap + '</figcaption></figure>';
+    }
+    function wreckCell(p) {
+      return cell(p, { face: 1, status: 'wrecked', prop: p.cls === 'vehicle' ? defaultProp(p) : null, label: 'destroyed, facing SE' }, 'tall', 'Destroyed');
+    }
+
+    /* A unit shown as one small card, side by side with the rest of its group:
+       infantry ready, a machine on its usual running gear facing SE. */
+    function compact(p) {
+      var t;
+      if (machine(p)) {
+        var pr = p.cls === 'vehicle' ? defaultProp(p) : null;
+        t = cell(p, { face: 1, prop: pr, label: (pr ? PROP_NAME[pr] + ', ' : '') + 'facing SE' }, p.cls === 'aircraft' || pr === 'walker' || p.faction === 'bugs' || p.faction === 'xeno' ? 'tall' : '',
+          pr ? PROP_NAME[pr] : noProp(p));
+        if (show.wrecks) t += wreckCell(p);
+      } else {
+        if (p.group === 'Mounted Warriors') {
+          // bikes, grav bikes and horses: the same riders on each (p. 93)
+          t = R.MOUNT_ORDER.map(function (m) { return cell(p, { status: 'ready', mount: m, label: R.MOUNTS[m].name }, 'inf', R.MOUNTS[m].name); }).join('');
+        } else {
+          t = cell(p, { status: 'ready', label: 'Ready' }, 'inf', 'Ready');
+          if (p.ridersUpgrade && show.states) t += R.MOUNT_ORDER.map(function (m) { return cell(p, { status: 'ready', riders: true, mount: m, label: 'Riders, ' + R.MOUNTS[m].name }, 'inf', R.MOUNTS[m].name); }).join('');
+        }
+      }
+      return '<div class="card unit" id="u-' + p.key + '" data-k="' + p.key + '" data-find="' + findKey(p) + '" title="' + esc(stats(p)) + '">' +
+        '<h4><span class="code">' + esc(p.code) + '</span><span class="tier">Tier ' + R.ROMAN[p.tier] + '</span></h4>' +
+        '<div class="nm">' + esc(p.name) + '</div>' +
+        '<div class="tiles">' + t + '</div></div>';
+    }
+
+    // the full sheet for one unit, as wide as the toggles ask for
+    function sheet(p) {
+      if (!machine(p)) {
+        var cells = [['ready', 'Ready'], ['suppressed', 'Suppressed'], ['broken', 'Broken']].map(function (st) {
+          return cell(p, { status: st[0], label: st[1] }, 'inf', st[1]);
+        });
+        if (p.group === 'Mounted Warriors') R.MOUNT_ORDER.slice(1).forEach(function (m) { cells.push(cell(p, { status: 'ready', mount: m, label: R.MOUNTS[m].name }, 'inf', R.MOUNTS[m].name)); });
+        if (p.ridersUpgrade) R.MOUNT_ORDER.forEach(function (m) { cells.push(cell(p, { status: 'ready', riders: true, mount: m, label: 'Riders, ' + R.MOUNTS[m].name }, 'inf', 'Riders · ' + R.MOUNTS[m].name)); });
+        return '<div class="strip">' + cells.join('') + '</div>';
+      }
+      var props = p.cls === 'vehicle' && p.key !== 'insertplat' && p.faction !== 'bugs' && p.faction !== 'xeno' ? (show.props ? PROPS : [defaultProp(p)]) : [null];
+      if (!show.facings) {
+        // one SE tile per movement type, side by side
+        var strip = props.map(function (pr) {
+          return cell(p, { face: 1, prop: pr, label: (pr ? PROP_NAME[pr] + ', ' : '') + 'facing SE' }, pr === 'walker' || !pr ? 'tall' : '', pr ? PROP_NAME[pr] : noProp(p));
+        });
+        if (show.wrecks) strip.push(wreckCell(p));
+        return '<div class="strip">' + strip.join('') + '</div>';
+      }
+      var head = '<div class="row head"><div></div>' + FACES.map(function (f) { return '<div>' + f + '</div>'; }).join('') + '</div>';
+      var rows = props.map(function (pr) {
+        return '<div class="row"><div class="lab">' + (pr ? PROP_NAME[pr] : p.key === 'insertplat' ? 'Landed' : noProp(p)) + '</div>' + FACES.map(function (f, i) {
+          return tile(p, { prop: pr, face: i, label: (pr ? PROP_NAME[pr] + ', ' : '') + 'facing ' + f }, pr === 'walker' || (!pr && p.cls === 'aircraft') ? 'tall' : '');
+        }).join('') + '</div>';
+      });
+      if (show.wrecks) {
+        rows.push('<div class="row"><div class="lab">Destroyed</div>' + FACES.map(function (f, i) {
+          return i === 1 ? tile(p, { face: i, status: 'wrecked', prop: p.cls === 'vehicle' ? defaultProp(p) : null, label: 'destroyed, facing SE' }, 'tall') : '<div></div>';
+        }).join('') + '</div>');
+      }
+      return '<div class="sheet"><div class="grid">' + head + rows.join('') + '</div></div>';
+    }
+    function article(p) {
+      return '<article class="unit" id="u-' + p.key + '" data-k="' + p.key + '" data-find="' + findKey(p) + '">' +
+        '<header><span class="code">' + esc(p.code) + '</span><span class="uname">' + esc(p.name) + '</span>' +
+        '<span class="meta">' + stats(p) + ' · model <code>' + esc(p.art) + '</code> · key <code>' + esc(p.key) + '</code></span></header>' +
+        sheet(p) + '</article>';
+    }
+    /* Infantry without its states, and machines with neither facings nor
+       movement types, collapse to cards laid side by side through the group,
+       lowest Tier first. */
+    function isCompact(p) { return machine(p) ? (!show.facings && !show.props) : !show.states; }
+
+    var main = o.main;
+    var io = null;
+    function render() {
+      var many = shown().length > 1;
+      main.innerHTML = shown().map(function (f) {
+        return (many ? '<h2 class="faction" id="f-' + f.id + '">' + f.name + '</h2>' : '') + f.groups.map(function (g) {
+          var cards = g.units.filter(isCompact).slice().sort(function (a, b) { return a.tier - b.tier; });
+          var full = g.units.filter(function (p) { return !isCompact(p); });
+          return '<section data-group><h3 class="group">' + esc(g.name) + '</h3>' +
+            (cards.length ? '<div class="cards">' + cards.map(compact).join('') + '</div>' : '') +
+            full.map(article).join('') + '</section>';
+        }).join('');
+      }).join('') + '<p class="empty" data-none hidden>No unit matches that search.</p>';
+      (o.indexes || []).forEach(function (n) { n.innerHTML = indexHtml(); });
+      if (io) io.disconnect();
+      var tiles = Array.prototype.slice.call(main.querySelectorAll('canvas.tile'));
+      io = 'IntersectionObserver' in root ? new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting && e.target.dataset.drawn !== colour) draw(e.target); });
+      }, { root: o.scroller || null, rootMargin: '400px 0px' }) : null;
+      if (io) tiles.forEach(function (c) { io.observe(c); }); else tiles.forEach(draw);
+      filter();
+    }
+
+    // ---- drawing, only as tiles come into view ----
+    function draw(cv) {
+      var p = byKey[cv.dataset.key];
+      var dpr = Math.min(2, root.devicePixelRatio || 1);
+      var W = cv.clientWidth || 132, H = cv.clientHeight || 112;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      var g = cv.getContext('2d');
+      g.clearRect(0, 0, cv.width, cv.height);
+      var face = cv.dataset.face != null ? faceAngle(+cv.dataset.face) : faceAngle(1);
+      var u = Object.assign({}, p, {
+        id: 'G' + p.key, side: 'A', facing: face, alive: true, damage: 0, sp: 0, cargo: [],
+        rules: (p.rules || []).slice(), models: p.size, x: 10, y: 10
+      });
+      if (p.cls === 'vehicle' && p.faction !== 'bugs' && p.faction !== 'xeno') R.applyPropulsion(u, cv.dataset.prop || defaultProp(p));
+      if (cv.dataset.riders) R.applyRiders(u, true);
+      if (cv.dataset.mount) u.mount = cv.dataset.mount;
+      var mach = machine(p);
+      var walker = cv.dataset.prop === 'walker';
+      var mag = mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55;
+      var ground = mach ? H - (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : H - 16;
+      var s0 = I.toScreen(10, 10);
+      // the atlas draws as the first side, in its colour (repainting a side throws its baked figures away, so only on a change)
+      if (I.PALETTE.A !== I.COLOURS[colour]) I.setSideColour('A', colour);
+      try {
+        if (cv.dataset.status === 'wrecked') {
+          // a wreck sits on the ground, so it is framed like a ground vehicle and has headroom for its smoke
+          u.alive = false;
+          var gw = H - 30;
+          g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (gw - s0.y * mag) * dpr);
+          I.drawWreck(g, u, { x: 10, y: 10 }, 0, 1700);
+        } else {
+          g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (ground - s0.y * mag) * dpr);
+          I.drawUnit(g, u, { at: { x: 10, y: 10 }, lift: 0, status: cv.dataset.status || 'ready', morale: 0 });
+        }
+      } catch (e) { if (root.console) console.error(p.key, e); }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      cv.dataset.drawn = colour;
+    }
+
+    // ---- colours: every company colour the game offers ----
+    var sw = o.colours;
+    function drawSwatches() {
+      if (!sw) return;
+      sw.innerHTML = I.COLOUR_KEYS.map(function (k) {
+        var c = I.COLOURS[k];
+        return '<button type="button" data-c="' + k + '" title="' + esc(c.name) + '" aria-pressed="' + (k === colour) + '"><i style="background:' + c.mid + '"></i>' + esc(c.name) + '</button>';
+      }).join('');
+    }
+    function setColour(k) {
+      if (!I.COLOURS[k]) return;
+      colour = k;
+      drawSwatches();
+      Array.prototype.forEach.call(main.querySelectorAll('canvas.tile'), function (c) {
+        var r = c.getBoundingClientRect();
+        if (r.bottom > -400 && r.top < innerHeight + 400) draw(c); else c.dataset.drawn = '';
+      });
+    }
+    if (sw) {
+      drawSwatches();
+      sw.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-c]'); if (!b) return;
+        setColour(b.dataset.c);
+        if (o.onColour) o.onColour(colour);
+      });
+    }
+
+    // ---- the toggles ----
+    if (o.toggles) {
+      o.toggles.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-t]'); if (!b) return;
+        var k = b.dataset.t;
+        show[k] = !show[k];
+        b.setAttribute('aria-pressed', String(show[k]));
+        render();
+      });
+    }
+
+    // ---- a unit's sheet, clicked ----
+    if (o.onPick) {
+      main.addEventListener('click', function (e) {
+        var u = e.target.closest('.unit[data-k]');
+        if (u) o.onPick(u.dataset.k);
+      });
+    }
+
+    // ---- search ----
+    function filter() {
+      var q = o.search ? o.search.value.trim().toLowerCase() : '', any = false;
+      Array.prototype.forEach.call(main.querySelectorAll('.unit[data-find]'), function (a) {
+        var hit = !q || a.dataset.find.indexOf(q) >= 0;
+        a.hidden = !hit; if (hit) any = true;
+      });
+      Array.prototype.forEach.call(main.querySelectorAll('section[data-group]'), function (s) {
+        s.hidden = !s.querySelector('.unit:not([hidden])');
+      });
+      (o.indexes || []).forEach(function (n) {
+        Array.prototype.forEach.call(n.querySelectorAll('li'), function (li) {
+          var a = main.querySelector('#u-' + li.dataset.k);
+          li.hidden = a ? a.hidden : false;
+        });
+      });
+      var none = main.querySelector('[data-none]');
+      if (none) none.hidden = any;
+    }
+    if (o.search) o.search.addEventListener('input', filter);
+
+    function scrollTo(key) {
+      var a = main.querySelector('#u-' + key);
+      if (a) a.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+
+    render();
+    return { render: render, filter: filter, setColour: setColour, scrollTo: scrollTo };
+  }
+
+  root.PMCAtlas = { mount: mount };
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
 /* PMC 2670 — Firefight : the unit viewer.
 
    A bench for looking at one unit at a time: every profile in both lists, in
@@ -15391,7 +15795,7 @@
   var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
   var view = {
     zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
-    key: 'regular', prop: 'tracked', side: 'A', status: 'ready',
+    key: 'regular', prop: 'wheeled', side: 'A', status: 'ready',
     models: null, walking: false, walkT: 0, at: null, facing: 0, face: 'SE',
     sound: true,
     // each side's paint, from every colour an army can take
@@ -15400,6 +15804,16 @@
   var loop = null, last = 0;
 
   function profile() { return R.profile(view.key) || R.profile('regular'); }
+
+  /* Put a unit on the stage: every model, a state it can be in (a tank cannot
+     be suppressed), and a ground vehicle on the running gear it usually has. */
+  function choose(k) {
+    view.key = k; view.models = null;
+    var p = profile();
+    view.pickFac = p.faction || 'pmc';
+    if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
+    if (p.cls === 'vehicle' && !R.alienHull(p)) view.prop = R.defaultDrive(p);
+  }
 
   /* The unit as the battle would build it: a profile plus the state the bench
      is asking to see. Everything that draws a unit takes one of these. */
@@ -16127,6 +16541,53 @@
 
 
   /* ---------- the panels ---------- */
+  /* ---------- Atlas mode ----------
+     Every unit of the open army side by side, drawn by the game's renderer,
+     in place of the stage and the controls (src/view/atlas.js, shared with the
+     stand-alone atlas page). The list's tabs and search drive it; picking a
+     unit in the list goes to its sheet, and clicking a sheet opens the unit
+     on the stage. */
+  var atlas = null;
+  function atlasOn() { return document.body.classList.contains('atlas-mode'); }
+  function setMode(on) {
+    document.body.classList.toggle('atlas-mode', !!on);
+    el('vatlas').hidden = !on;
+    el('vmode').setAttribute('aria-pressed', on ? 'true' : 'false');
+    el('vmode').textContent = on ? 'Viewer' : 'Atlas';
+    el('vmode').title = on ? 'Back to the unit on the stage' : 'Every unit side by side, in the Unit Atlas';
+    try { history.replaceState(null, '', on ? '#atlas' : location.pathname + location.search); } catch (e) { }
+    if (on) {
+      if (view.walking) toggleWalk();
+      if (!atlas) {
+        atlas = root.PMCAtlas.mount({
+          main: el('vatlasmain'), scroller: el('vatlasmain'),
+          colours: el('vatlascol'), toggles: el('vatlastog'), search: el('vsearch'),
+          faction: function () { return view.pickFac || 'pmc'; },
+          colour: view.colour.A,
+          onColour: function (k) { paint('A', k); },
+          onPick: function (k) { choose(k); setMode(false); drawPicker(); }
+        });
+      } else {
+        atlas.setColour(view.colour.A);
+        atlas.render();
+      }
+      atlas.scrollTo(view.key);
+    } else {
+      FX.clear();
+      fit(); drawControls(); frame();
+    }
+  }
+  // a side's colour; the other side keeps one of its own, so the two never look alike
+  function paint(side, k) {
+    view.colour[side] = k;
+    I.setSideColour(side, k);
+    var foe = side === 'A' ? 'B' : 'A';
+    if (view.colour[foe] === k) {
+      view.colour[foe] = I.COLOUR_KEYS.filter(function (c) { return c !== k; })[0];
+      I.setSideColour(foe, view.colour[foe]);
+    }
+  }
+
   function phone() { return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches); }
   // the phone's unit sidebar, opened from the header and closed by a pick, the ×, the scrim or Escape
   function showSide(open) {
@@ -16341,6 +16802,7 @@
       stepZoom(how === 'wide' ? -1 : 1);
     });
     zoomLabel();
+    el('vmode').addEventListener('click', function () { setMode(!atlasOn()); });
     el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
     el('vclose').addEventListener('click', function () { showSide(false); });
     el('vscrim').addEventListener('click', function () { showSide(false); });
@@ -16350,12 +16812,12 @@
     el('vlist').addEventListener('click', function (e) {
       var b = e.target.closest('[data-unit]');
       if (!b) return;
-      view.key = b.getAttribute('data-unit'); view.pickFac = b.getAttribute('data-fac');
-      view.models = null;
-      // a state the new unit cannot be in (a tank cannot be suppressed) goes back to ready
-      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
-      var p = profile();
-      if (p.cls !== 'vehicle') view.prop = 'tracked';
+      choose(b.getAttribute('data-unit'));
+      if (atlasOn()) {                              // in the atlas, the list goes to the unit's sheet
+        if (phone()) showSide(false);
+        atlas.scrollTo(view.key);
+        return;
+      }
       FX.clear();
       drawPicker(); drawControls(); frame();
       // on a phone the list is a sidebar over the stage: put it away and go back up to see the unit
@@ -16369,14 +16831,7 @@
     el('vctl').addEventListener('click', function (e) {
       var sw = e.target.closest('[data-colour]');
       if (sw) {
-        view.colour[view.side] = sw.getAttribute('data-colour');
-        I.setSideColour(view.side, view.colour[view.side]);
-        // the target keeps a colour of its own, so the two never look alike
-        var foe = view.side === 'A' ? 'B' : 'A';
-        if (view.colour[foe] === view.colour[view.side]) {
-          view.colour[foe] = I.COLOUR_KEYS.filter(function (k) { return k !== view.colour[view.side]; })[0];
-          I.setSideColour(foe, view.colour[foe]);
-        }
+        paint(view.side, sw.getAttribute('data-colour'));
         drawControls(); frame(); return;
       }
       var tb = e.target.closest('[data-tab]');
@@ -16422,11 +16877,12 @@
       el('vsearch').value = '';
       drawPicker();
       el('vside').querySelector('.vlistscroll').scrollTop = 0;
+      if (atlasOn()) { atlas.render(); el('vatlasmain').scrollTop = 0; }
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });
     document.addEventListener('keydown', function (e) {
-      if (e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'INPUT' || atlasOn()) return;
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
@@ -16434,6 +16890,7 @@
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
+    if (location.hash === '#atlas') setMode(true);   // viewer.html#atlas opens on the atlas
   }
 
   function fit() {
@@ -16455,8 +16912,7 @@
   /* test hooks: the harness drives the bench the way a player would */
   root.__viewer = {
     pick: function (k) {
-      view.key = k; view.models = null; view.pickFac = profile().faction || 'pmc';
-      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
+      choose(k);
       drawPicker(); drawControls(); frame();
     },
     zoom: function (z) { if (z != null) setZoom(z); return { zoom: view.zoom, cur: view.zCur, wide: view.wide }; },
