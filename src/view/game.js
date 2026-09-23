@@ -3563,26 +3563,45 @@
     h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
       '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div>' +
       '<div class="mb-labels"><span>Structure ' + left + ' / ' + u.str + '</span></div></div>';
+    /* What its drive (and a drone's missing crew) did to the printed profile:
+       each changed stat carries the difference, and a tip saying why. */
+    var base = R.profile(u.key) || {};
+    function why(stat) {
+      var out = [];
+      if (pr && pr[stat]) out.push(pr.name + ' — ' + pr.note);
+      if (stat === 'str' && u.drone) out.push('Drone Control — +1 Structure, no crew');
+      return out.join('\n');
+    }
+    function delta(now, was, stat) {
+      if (was == null || now === was) return '';
+      var d = Math.round((now - was) * 100) / 100;
+      return ' <small class="sdelta ' + (d > 0 ? 'up' : 'dn') + '"' + (why(stat) ? ' ' + tip('Changed from ' + was, why(stat)) : '') + '>' +
+        (d > 0 ? '+' : '\u2212') + Math.abs(d) + '</small>';
+    }
     h += '<div class="stats">' +
-      stat('Structure', left + '/' + u.str) + stat('Move', u.move + '"' + (u.turn ? ' (' + u.turn + ')' : '')) +
+      stat('Structure', left + '/' + u.str + delta(u.str, base.str, 'str')) +
+      stat('Move', u.move + '"' + (u.turn ? ' (' + u.turn + ')' : '') + delta(u.move, base.move, 'move')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
-      stat('Def', u.def) + stat('Assault', u.assault) +
+      stat('Def', u.def + delta(u.def, base.def, 'def')) + stat('Assault', u.assault) +
       stat('Damage', u.damage) +
       stat('Carrying', u.transport ? (u.cargo || []).length + '/' + u.transport : '—') + '</div>';
-    if (pr && pr.key !== 'wheeled') h += '<p class="hint small">' + pr.name + ' — ' + pr.note + '</p>';
     if ((u.cargo || []).length) {
       h += '<div class="chips">' + u.cargo.map(function (c) {
         return '<span class="chip">aboard: ' + c.name + '</span>';
       }).join('') + '</div>';
     }
-    h += ruleChips(u, !!terrainMark(u));
+    h += honourChips(u);                                // a campaign machine's honours, traumas and upgrades
+    h += ruleChips(u, !!terrainMark(u), pr ? [{ name: pr.name, text: pr.note }] : null);
     fillStats(box, h);
   }
   /* The special rules, each with its rule text to tap or hover for, and first
      among them the ground the unit stands on — marked as the map marks it, and
      left out in the open, where there is nothing to say. */
-  function ruleChips(u, showGround) {
+  function ruleChips(u, showGround, extra) {
     var out = [];
+    (extra || []).forEach(function (x) {                // a vehicle's drive, before its rules
+      out.push('<span class="chip chip-drive" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>');
+    });
     if (showGround) {
       var tk = R.terrainOf(state, u), mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
       out.push('<span class="chip tpill" ' + tip(R.TERRAIN[tk].name, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +

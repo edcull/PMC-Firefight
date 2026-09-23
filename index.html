@@ -345,6 +345,11 @@
   .healthbar .mb-labels span { text-align: left; }
   .hintbar:empty { display: none; }
   /* the ground a unit stands on, with the letter the map marks it by */
+  /* a stat its drive changed: the difference, and a tip saying why */
+  .sdelta { font-size: 10px; font-weight: 600; margin-left: 3px; cursor: help; }
+  .sdelta.up { color: var(--good); }
+  .sdelta.dn { color: var(--bad); }
+  .chip.chip-drive { color: var(--ink); border-color: color-mix(in srgb, var(--alpha) 45%, var(--line)); }
   .chip.tpill { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
   .chip.tpill i { font-style: normal; font-family: var(--mono); font-weight: 700; font-size: 9px; color: rgba(8,11,16,.85);
     width: 12px; height: 13px; display: inline-grid; place-items: center; border-radius: 2px; }
