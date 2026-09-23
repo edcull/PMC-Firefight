@@ -9802,32 +9802,12 @@ html { scroll-behavior: smooth; }
     P(-26, -6, 22, 1.2, '#6a7a52');
     P(-26, -6, 2, 5, pal.dark);
   };
-  /* The SAM team's launcher: a twin rack of missile tubes laid up at the
-     sky on a pedestal tripod, with an IFF dish and a sight between them. */
-  EMPLACEMENT.samlauncher = function (g, cx, cy, s, pal, dir) {
-    var P = pieceP(g, cx, cy, s, dir);
-    ellipse(g, cx + 2 * s * (dir || 1), cy, 17 * s, 6 * s, 'rgba(12,10,8,.34)');
-    tripodBase(P, 13, true);
-    P(-3, -22, 6, 9, '#39413a');                     // the pedestal
-    P(-7, -24, 14, 4, '#2e3530');                    // the cradle
-    for (var t = 0; t < 2; t++) {                    // two tubes laid up at the sky, far one first
-      var ox = t ? -1 : 2, oy = t ? 0 : -5, col = t ? '#5a6a48' : '#4a5a3a';
-      for (var i = 0; i < 16; i++) {
-        P(-12 + ox + i * 1.7, -20 + oy - i * 1.25, 4, 5, col);
-        P(-12 + ox + i * 1.7, -20 + oy - i * 1.25, 4, 1.2, '#7a8a62');
-      }
-      P(-13 + ox + 16 * 1.7, -21 + oy - 16 * 1.25, 3, 5, '#2e3a24');    // the front cap
-    }
-    P(-4, -32, 5, 5, '#39413a');                     // sight
-    P(0, -31, 1.5, 2, '#8fb8cc');
-    P(-14, -30, 1.5, 7, '#39413a');                  // the IFF dish on its mast
-    P(-18, -33, 8, 2, '#8a9088'); P(-17, -34, 6, 1, '#b0b6ae');
-    P(-26, -8, 8, 7, pal.dark); P(-26, -8, 8, 2, pal.mid);          // the battery box in unit colours
-  };
+  // the SAM team fires from the same launcher as the guided-missile team
+  EMPLACEMENT.samlauncher = EMPLACEMENT.atgm;
   // where each piece's barrel ends, in its own units
   var PIECE_MUZZLE = { mortar: [13, -42], rebelmortar: [13, -42], rebelgun: [27, -38],
     hmg: [27, -16.5], gauss: [31, -20], rebac: [31, -18.5], rebhac: [36, -21],
-    atgm: [22, -24], samlauncher: [17, -41] };
+    atgm: [22, -24], samlauncher: [22, -24] };
   // how many pieces a unit works, and how large they stand beside the crew
   var PIECE_COUNT = { mortarsection: 1, mortarteam: 2, mortarbattery: 3 };
   var PIECE_SCALE = { mortar: 0.72, rebelmortar: 0.8, atgm: 1.15, samlauncher: 1.15 };
