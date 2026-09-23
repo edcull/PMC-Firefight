@@ -33,9 +33,9 @@ is('chem', 'flame');
 is('lengveh', 'flame+chain');
 
 head('Gauss weapons draw a line');
-// the marksmen keep a sidearm for anything that gets close
 is('lrrp', 'rail x2');
-is('snipers', 'rail+pistol');
+// the sniper team puts two heavy rounds down, then two Gauss lines
+is('snipers', 'shell+rail x2');
 // a crew-served cannon puts three down where a marksman's rifle fires one
 is('gausscannon', 'rail x3');
 // the miners' las-cutters are a Gauss Weapon too (p. 102), fired in pairs

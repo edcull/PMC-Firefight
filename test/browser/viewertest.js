@@ -116,18 +116,24 @@ async function pickAndFire(p, key, ms) {
     flamer.spec.p === 'flame' && !!flamer.seen.flame, flamer.kinds.join(' '));
   ok('...and nothing flies while they do', !flamer.seen.tracer && !flamer.seen.bolt);
 
-  const marksman = await pickAndFire(p, 'snipers', 1200);
+  const marksman = await pickAndFire(p, 'lrrp', 1200);
   ok('a Gauss rifle draws a line', marksman.spec.p === 'rail' && !!marksman.seen.rail,
     marksman.kinds.join(' '));
-  ok('...that is gone almost at once', marksman.seen.rail < 14,
-    marksman.seen.rail + ' samples of it');
+  // each line is gone almost at once (the LRRP fire a pair)
+  ok('...that is gone almost at once', marksman.seen.rail / marksman.spec.n < 14,
+    marksman.seen.rail + ' samples of ' + marksman.spec.n);
+  // the sniper team: two heavy rounds, then two Gauss lines
+  const sniper = await pickAndFire(p, 'snipers', 2000);
+  ok('a sniper team fires two shells and two Gauss lines',
+    sniper.spec.p === 'shell' && sniper.spec.n === 2 && sniper.spec.s === 'rail' && sniper.spec.sn === 2 &&
+    !!sniper.seen.bolt && !!sniper.seen.rail, JSON.stringify(sniper.spec) + ' ' + sniper.kinds.join(' '));
 
-  // a crew-served cannon puts three down where a marksman's rifle fires one
+  // a crew-served cannon puts three down where the marksmen's rifles fire two
   const rail = await pickAndFire(p, 'gausscannon', 1600);
   ok('a Gauss cannon fires three in quick succession',
     rail.spec.p === 'rail' && rail.spec.n === 3 && !!rail.seen.rail,
     rail.spec.n + ' shots, ' + rail.kinds.join(' '));
-  ok('...and is on screen longer than the single line is',
+  ok('...and is on screen longer than the pair is',
     rail.seen.rail > marksman.seen.rail,
     rail.seen.rail + ' samples against ' + marksman.seen.rail);
 
