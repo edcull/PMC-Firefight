@@ -5806,9 +5806,9 @@
     P(-10, -21, 9, 1, '#5fd0f0');
     P(1, -22, 28, 4, '#232830');                     // the barrel
     P(1, -22, 28, 1, '#4a535f');
-    for (var i = 0; i < 5; i++) {                    // coils
-      P(4 + i * 5, -23, 2, 6, '#1a1e25');
-      P(4.5 + i * 5, -22, 1, 4, '#7fe0f0');
+    for (var i = 0; i < 5; i++) {                    // cooling vents, inside the barrel
+      P(4 + i * 5, -21, 2, 2, '#1a1e25');
+      P(4.5 + i * 5, -20.5, 1, 1, '#7fe0f0');
     }
     P(28, -23, 3, 6, '#39424d');                     // muzzle
     P(-16, -17, 5, 4, pal.dark);                     // power cable to the crew's pack
