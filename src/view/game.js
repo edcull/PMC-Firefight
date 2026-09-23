@@ -1937,6 +1937,11 @@
     ctx.strokeStyle = col; ctx.lineWidth = lw;
     ctx.stroke();
   }
+  // what a unit's label carries beside its code: a star for honours held, a heart for traumas carried
+  function labelIcons(u) {
+    var c = u && u.camp;
+    return { star: !!(c && (c.honours || []).length), heart: !!(c && (c.traumas || []).length) };
+  }
   function hud(x, y, lift) {
     var p = ISO.toScreen(x, y), v = viewRect();
     return { x: (p.x - v.sx) * v.z + v.dx, y: (p.y - (lift || 0) - v.sy) * v.z + v.dy };
@@ -2144,10 +2149,13 @@
       try { muster.colour = localStorage.getItem('pmc-colour') || 'ochre'; } catch (e) { muster.colour = 'ochre'; }
       if (!ISO.COLOURS[muster.colour]) muster.colour = 'ochre';
     }
+    // in a hotseat muster the second player cannot wear the first player's colour
+    var taken = muster.hot && muster.hot.step === 2 && muster.hot.sides[0] ? muster.hot.sides[0].colour : null;
     host.innerHTML = ISO.COLOUR_KEYS.map(function (k) {
       var c = ISO.COLOURS[k];
       return '<button type="button" class="sw' + (k === muster.colour ? ' on' : '') +
-        '" data-colour="' + k + '" title="' + c.name + '">' +
+        '" data-colour="' + k + '" title="' + c.name + (k === taken ? ' \u2014 Player 1\u2019s colour' : '') + '"' +
+        (k === taken ? ' disabled' : '') + '>' +
         '<span class="sw-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
         c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' +
         '<span class="sw-name">' + c.name + '</span></button>';
@@ -2155,7 +2163,8 @@
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
         muster.colour = b.getAttribute('data-colour');
-        try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { }
+        // only the first player's choice is remembered as "your" colour
+        if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
         drawColourPick();
       });
@@ -3122,17 +3131,42 @@
     /* Unit labels. A unit standing in terrain carries a mark for it, because the
        ground it is on is the single biggest modifier on the table and it is not
        always obvious from above which piece a base is actually inside. */
+    /* A campaign unit wears its record beside its code: a gold star once it
+       holds a Battle Honour, a red heart once it carries a Battle Trauma. They
+       are drawn rather than typed, so they look the same on every machine. */
+    function star(cx, cy, r) {
+      ctx.beginPath();
+      for (var k = 0; k < 10; k++) {
+        var rr = k % 2 ? r * 0.45 : r, an = -Math.PI / 2 + k * Math.PI / 5;
+        ctx[k ? 'lineTo' : 'moveTo'](cx + Math.cos(an) * rr, cy + Math.sin(an) * rr);
+      }
+      ctx.closePath(); ctx.fillStyle = '#f2c14e'; ctx.fill();
+    }
+    function heart(cx, cy, r) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + r * 0.9);
+      ctx.bezierCurveTo(cx - r * 1.3, cy - r * 0.1, cx - r * 0.6, cy - r * 1.2, cx, cy - r * 0.4);
+      ctx.bezierCurveTo(cx + r * 0.6, cy - r * 1.2, cx + r * 1.3, cy - r * 0.1, cx, cy + r * 0.9);
+      ctx.closePath(); ctx.fillStyle = '#e0557a'; ctx.fill();
+    }
     ctx.font = '600 10px Oxanium, system-ui, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     state.units.forEach(function (u2) {
       if (!u2.alive || u2.x < 0) return;
       var p = hud(u2.x, u2.y, liftOf(u2.x, u2.y) + ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5);
       var mark = terrainMark(u2);
-      var w = ctx.measureText(u2.code).width + 8 + (mark ? 12 : 0);
+      var rec = labelIcons(u2), honoured = rec.star, scarred = rec.heart;
+      var icons = (honoured ? 1 : 0) + (scarred ? 1 : 0);
+      var tw = ctx.measureText(u2.code).width;
+      var w = tw + 8 + icons * 11 + (mark ? 12 : 0);
       ctx.fillStyle = 'rgba(8,11,16,.72)';
       ctx.fillRect(p.x - w / 2, p.y - 10, w, 13);
       ctx.fillStyle = sideInk(u2.side);
-      ctx.fillText(u2.code, p.x - (mark ? 6 : 0), p.y);
+      var tx = p.x - w / 2 + 4 + tw / 2;
+      ctx.fillText(u2.code, tx, p.y);
+      var ix = tx + tw / 2 + 6.5;
+      if (honoured) { star(ix, p.y - 3.5, 4.6); ix += 11; }
+      if (scarred) heart(ix, p.y - 3.5, 4.2);
       if (mark) {
         ctx.fillStyle = mark.col;
         ctx.fillRect(p.x + w / 2 - 11, p.y - 8, 8, 9);
@@ -4436,7 +4470,9 @@
     // Rebels cannot use Tactics in a solitaire game; they get the extra points instead (p. 147)
     if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
     var mh = document.querySelector('.muster-head b');
-    if (mh) mh.textContent = muster.solo
+    if (mh) mh.textContent = muster.hot && muster.hot.step < 3
+      ? hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force')
+      : muster.solo
       ? (el('sel-solo-mode').value === 'coop' ? 'Player ' + (muster.cur + 1) + '\u2019s commando' : 'Your commando')
       : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';
     var tn = el('tactic-note');
@@ -4704,6 +4740,8 @@
       if (!el(id)) return;
       el(id).addEventListener('change', function () {
         muster.keys = []; muster.name = '';
+        // a force that starts rolled keeps a rolled build, whatever it is changed to
+        if (muster.hot && muster.hot.step < 3 && hotRolled(muster.hot.step)) hotRandomise(muster.hot.step - 1, true);
         if (el('sel-force')) el('sel-force').value = '';
         var db = document.querySelector('[data-force="del"]');
         if (db) db.disabled = true;
@@ -4772,7 +4810,17 @@
     document.querySelector('.muster-btns').addEventListener('click', function (e) {
       var b = e.target.closest('[data-army]');
       if (!b) return;
-      if (b.getAttribute('data-army') === 'roll' && muster.solo) {
+      if (b.getAttribute('data-army') === 'random') {
+        // a random kind of force, rolled: in a stepped muster it keeps its colour and takes a name to match
+        if (muster.hot && muster.hot.step < 3) hotRandomise(muster.hot.step - 1, false, true);
+        else {
+          var rf = HOT_FACTIONS[Math.floor(Math.random() * HOT_FACTIONS.length)];
+          el('sel-faction').value = rf;
+          if (el('sel-tactic')) el('sel-tactic').value = '';
+          muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), rf) : R.rollArmy(musterTier(), musterPL(), null, rf);
+          muster.name = '';
+        }
+      } else if (b.getAttribute('data-army') === 'roll' && muster.solo) {
         muster.keys = SOLO.rollCommando(musterTier(), musterPL(), musterFaction());
         muster.name = 'Commando';
       } else if (b.getAttribute('data-army') === 'roll') {
@@ -4828,6 +4876,196 @@
     // open empty, with the whole list live to pick from
     drawMuster();
   }
+
+  /* ---- a two-force skirmish, mustered in three steps ----
+     Hotseat, co-op and demo all build two forces on this screen in turn, and
+     then settle the battlefield. In a hotseat each player builds a force of
+     their own — kind, name, colours and units — at the Battle Tier and Priority
+     Level the first player set. In co-op each builds a commando from the
+     commando table (p. 147); the two share a side and a colour on the table,
+     and the battlefield step picks the OpFor and the solitaire scenario. A demo
+     has two AI forces, each starting as a random kind of force with a rolled
+     build, to change or keep; against the AI, the player builds their own and
+     the opposition starts that way. Each step keeps what was built, so Back
+     loses nothing. */
+  var HOT_FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
+  var FORCE_NOUN = { pmc: 'company', rebel: 'insurgents', bugs: 'swarm', xeno: 'tribe' };
+  var FORCE_KIND = { pmc: 'Mercenary company', rebel: 'Insurgent group', bugs: 'Bug swarm', xeno: 'Xenotripod tribe' };
+  function hotWho(step) {
+    var k = muster.hot.kind;
+    if (k === 'ai') return step === 1 ? 'Your force' : 'The opposition';
+    return k === 'demo' ? 'Force ' + step : 'Player ' + step;
+  }
+  // does this step's force start rolled, and roll again when its kind changes?
+  function hotRolled(step) {
+    var k = muster.hot && muster.hot.kind;
+    return k === 'demo' || (k === 'ai' && step === 2);
+  }
+  function hotBegin(kind) {
+    muster.hot = { kind: kind, step: 1, sides: [null, null] };
+    muster.keys = []; muster.name = '';
+    if (el('hot-name')) el('hot-name').value = '';
+    if (kind === 'demo') hotRandomise(0);
+    hotPaint();
+    drawMuster();
+  }
+  function hotEnd() {
+    if (!muster.hot) return;
+    muster.hot = null;
+    var s = el('setup');
+    if (s) { delete s.dataset.hot; delete s.dataset.kind; }
+    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = false; });
+    el('btn-start').textContent = 'Take the field';
+    if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
+    drawColourPick();
+  }
+  // a demo force: a random kind of force, a rolled build, a colour nobody else wears and a name to go with it
+  function hotRandomise(i, keepFaction, keepColour) {
+    var f = keepFaction ? musterFaction() : HOT_FACTIONS[Math.floor(Math.random() * HOT_FACTIONS.length)];
+    el('sel-faction').value = f;
+    if (el('sel-tactic')) el('sel-tactic').value = '';
+    muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
+    var other = muster.hot.sides[1 - i];
+    if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
+    muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[f];
+    if (el('hot-name')) el('hot-name').value = muster.name;
+  }
+  function hotSaveSide() {
+    var i = muster.hot.step - 1;
+    muster.hot.sides[i] = {
+      keys: muster.keys.slice(), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(),
+      name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
+      colour: muster.colour || 'ochre'
+    };
+  }
+  function hotLoadSide(i) {
+    var sd = muster.hot.sides[i];
+    if (sd) {
+      muster.keys = sd.keys.slice(); muster.name = sd.name; muster.colour = sd.colour;
+      el('sel-faction').value = sd.faction;
+      if (el('sel-tactic')) el('sel-tactic').value = sd.tactic || '';
+      if (el('hot-name')) el('hot-name').value = sd.name;
+    } else if (hotRolled(i + 1)) {
+      hotRandomise(i);
+    } else {
+      // a fresh force for the second player; in a hotseat, in a colour the first is not wearing
+      muster.keys = []; muster.name = '';
+      if (i === 1 && muster.hot.kind === 'hotseat') muster.colour = foeColour([muster.hot.sides[0].colour]);
+      if (el('hot-name')) el('hot-name').value = '';
+    }
+  }
+  function hotPaint() {
+    var h = muster.hot, step = h.step, s = el('setup'), kind = h.kind;
+    var force = kind === 'coop' ? 'commando' : 'force';
+    s.dataset.hot = String(step);
+    s.dataset.kind = kind;
+    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = step > 1; });
+    el('setup-title').textContent = step === 3 ? 'The battlefield'
+      : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
+      : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
+    var intro = {
+      hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
+        ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
+        'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
+      coop: ['A co-operative game: two commandos, one each, against the OpFor (pp. 146–156). Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
+        ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
+        'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
+      ai: ['A battle against the AI. Build your force and set the Battle Tier and Priority Level; then choose what you are up against, and where.',
+        ' is ready. Now the force the AI will command: it starts as a random kind of force with a rolled build \u2014 keep it, pick another kind to roll one of those, roll again, or build it by hand.',
+        'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
+      demo: ['A demo: two AI forces fight it out while you watch. Each starts as a random kind of force with a rolled build — keep it, change the kind, roll again or pick units by hand.',
+        ' is ready. Now the force it will face.',
+        'Both forces are ready. Choose the scenario, the world and how the table is laid, then watch.']
+    }[kind];
+    el('hot-intro').textContent = step === 2 ? (h.sides[0].name + intro[1]).replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL()) : intro[step - 1];
+    el('btn-start').textContent = step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
+      : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
+    if (el('colour-hint')) el('colour-hint').textContent = kind === 'coop'
+      ? 'What both commandos are painted in: the two of you are one side on the table.'
+      : step === 1 ? 'What ' + hotWho(1) + '’s troops are painted in.'
+        : 'What ' + hotWho(2) + '’s troops are painted in — anything but ' + hotWho(1) + '’s colour.';
+    if (step === 3) {
+      el('hot-sum').innerHTML = h.sides.map(function (sd, i) {
+        var c = ISO.COLOURS[sd.colour] || {};
+        return '<div class="hot-side"><b style="color:' + (c.light || 'inherit') + '">' + escHtml(sd.name) + '</b>' +
+          '<small>' + hotWho(i + 1) + ' · ' + (FORCE_KIND[sd.faction] || sd.faction) + ' · ' + sd.keys.length + ' units' +
+          (sd.tactic ? ' · ' + escHtml(R.tacticById(sd.tactic).name) : '') + '</small></div>';
+      }).join('');
+    }
+    drawColourPick();
+  }
+  function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function hotRefuse(why) {
+    var f = el('faults');
+    if (f) { f.textContent = why; f.className = 'faults'; if (f.scrollIntoView) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    return false;
+  }
+  function hotNext() {
+    var h = muster.hot, who = hotWho(h.step);
+    if (h.step < 3) {
+      var name = ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name;
+      if (!name) {
+        if (el('hot-name')) el('hot-name').focus();
+        return hotRefuse(h.kind === 'ai' ? 'Give ' + who.toLowerCase() + ' a name.' : 'Give ' + who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force') + ' a name.');
+      }
+      var chk = musterCheck(muster.keys);
+      if (!chk.ok) return hotRefuse((h.kind === 'ai' ? who : who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force')) + ' is not legal yet: ' + (chk.faults.join(' ') || 'pick some units.'));
+      if (h.step === 2 && name === h.sides[0].name) return hotRefuse('The two need different names.');
+      if (h.step === 2 && h.kind !== 'coop' && muster.colour === h.sides[0].colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
+      if (el('hot-name')) el('hot-name').value = name;
+      hotSaveSide();
+      h.step++;
+      if (h.step === 2) hotLoadSide(1);
+      hotPaint(); drawMuster();
+      el('setup').querySelector('.sheet').scrollTop = 0;
+      return;
+    }
+    var a = h.sides[0], b = h.sides[1], tier = musterTier(), pl = musterPL();
+    var planet = el('sel-planet').value, terrainSetup = el('sel-terrain') ? el('sel-terrain').value : 'auto';
+    if (h.kind === 'coop') {
+      // the two commandos take the field as one side, each player's units their own
+      var armyA = [], ownersA = [];
+      [a, b].forEach(function (sd, i) { sd.keys.forEach(function (k) { armyA.push(k); ownersA.push(i + 1); }); });
+      var gamePL = pl + 1, opFaction = el('sel-solo-op').value;
+      var machines = armyA.some(function (k) { var p = R.profile(R.splitPick(k).key); return p && p.cls !== 'infantry'; });
+      var scen = el('sel-solo-scen').value;
+      if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
+      el('setup').hidden = true;
+      hotEnd();
+      begin({
+        tier: tier, pl: gamePL, scenario: scen,
+        armyA: armyA, armyB: SOLO.rollOpFor(tier, gamePL, opFaction, machines), ownersA: ownersA,
+        nameA: a.name + ' & ' + b.name, nameB: 'OpFor',
+        colourA: a.colour, colourB: foeColour([a.colour]),
+        tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup,
+        solo: { coop: true, faction: a.faction || 'pmc', opFaction: opFaction, names: [a.name, b.name] }
+      });
+      return;
+    }
+    var pickScen = el('sel-scen') ? el('sel-scen').value : 'secure';
+    if (pickScen === 'roll') pickScen = SC.ORDER[R.d6() - 1];
+    else if (pickScen === 'rolld3') pickScen = SC.ORDER[R.d3() - 1];
+    var mode = h.kind === 'demo' ? 'demo' : h.kind === 'ai' ? 'ai' : 'hotseat';
+    el('setup').hidden = true;
+    hotEnd();
+    begin({
+      tier: tier, pl: pl, scenario: pickScen,
+      armyA: a.keys, armyB: b.keys, nameA: a.name, nameB: b.name,
+      colourA: a.colour, colourB: b.colour,
+      tactics: { A: a.tactic, B: b.tactic },
+      mode: mode, planet: planet, terrainSetup: terrainSetup
+    });
+  }
+  function hotBack() {
+    var h = muster.hot;
+    if (!h || h.step < 2) return;
+    if (h.step === 2) hotSaveSide();          // keep what the second force had, for when they come back
+    h.step--;
+    hotLoadSide(h.step - 1);
+    hotPaint(); drawMuster();
+    el('setup').querySelector('.sheet').scrollTop = 0;
+  }
+  window.__hot = function () { return muster.hot ? JSON.parse(JSON.stringify(muster.hot)) : null; };
 
   /* Start a solitaire or co-op game from the muster screen. Each player's
      commando is checked against the commando table and rolled if it is not
@@ -5044,6 +5282,7 @@
     });
 
     wireMuster();
+    if (el('btn-hot-back')) el('btn-hot-back').addEventListener('click', hotBack);
     el('btn-start').addEventListener('click', function () {
       /* The lobby borrowed this screen to have a force built. Hand the force
          back rather than starting a battle: the one that matters is being
@@ -5055,6 +5294,7 @@
         want.done(window.PMC_MUSTER_NOW());
         return;
       }
+      if (muster.hot) { hotNext(); return; }
       if (muster.solo) { startSolo(); return; }
       var tier = parseInt(el('sel-tier').value, 10), pl = parseInt(el('sel-pl').value, 10);
       var faction = musterFaction(), tactic = musterTactic();
@@ -5152,13 +5392,15 @@
     });
     el('btn-menu').addEventListener('click', openMenu);
     el('btn-setup-menu').addEventListener('click', openMenu);
-    /* Multiplayer is only offered when this page came from a game server. A
-       game opened from a file, or the published single file, has nowhere to
-       send an intent and nobody to send it to, so the button stays hidden
-       rather than leading to a screen that cannot work. */
-    if (window.PMCLobby && window.PMCLobby.available()) {
-      var mb = el('btn-multi');
-      mb.hidden = false;
+    /* Multiplayer only works when this page came from a game server. A game
+       opened from a file, or the published single file, has nowhere to send an
+       intent and nobody to send it to, so there the card is shown greyed out
+       and disabled, saying what it needs, rather than leading to a screen that
+       cannot work. */
+    var mb = el('btn-multi'), online = !!(window.PMCLobby && window.PMCLobby.available());
+    if (mb) mb.disabled = !online;
+    if (mb && online) {
+      if (el('menu-multi-sub')) el('menu-multi-sub').textContent = 'Play somebody else over the network';
       mb.addEventListener('click', function () {
         el('setup').hidden = true;
         if (window.PMCMenu) window.PMCMenu.close();
@@ -5224,6 +5466,8 @@
       ai: 'Muster your force', hotseat: 'Muster your force — hotseat', demo: 'Muster a force to watch',
       solo: 'Muster your commando', coop: 'Muster your commandos'
     }[kind] || 'Muster your force';
+    // hotseat, co-op and demo build both forces, one step each, before the battlefield
+    if (kind === 'hotseat' || kind === 'coop' || kind === 'demo' || kind === 'ai') hotBegin(kind); else hotEnd();
     el('setup').hidden = false;
   };
   window.PMC_BATTLE_LIVE = function () {
@@ -5248,6 +5492,7 @@
   /* The lobby borrows the muster screen to build a force: it is the one place
      that knows the composition table and the unit cards. */
   window.PMC_MUSTER_FOR = function (terms, done) {
+    hotEnd();
     el('setup').hidden = false;
     muster.forLobby = { terms: terms, done: done };
     if (terms) {
@@ -5321,6 +5566,11 @@
     begin(cfg);
   };
   window.__report = function () { return state && state.report; };
+  window.__labelIcons = function () {
+    return state ? state.units.filter(function (u) { return u.alive && u.x >= 0; }).map(function (u) {
+      var r = labelIcons(u); return { code: u.code, side: u.side, star: r.star, heart: r.heart };
+    }) : [];
+  };
   Object.defineProperty(window, '__moves', { get: function () { return ui.moves; } });
   window.__clearSel = function () { ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; render(); };
   window.__fxdebug = function () { return { anims: anims.length, fx: fx.length, tracers: fx.filter(function (f) { return f.kind === 'tracer'; }).length }; };

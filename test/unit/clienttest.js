@@ -444,7 +444,10 @@ function openScreen(name) {
 
 const ash = openScreen('Ash');
 ok('multiplayer is offered when the page came from a server', ash.win.PMCLobby.available());
-ok('the multiplayer button is wired up', ash.doc.getElementById('btn-multi').hidden === false);
+ok('the multiplayer button is wired up', ash.doc.getElementById('btn-multi').hidden === false &&
+  ash.doc.getElementById('btn-multi').disabled === false);
+ok('...and greyed out on a page with no server behind it', app.doc.getElementById('btn-multi').disabled === true &&
+  app.doc.getElementById('btn-multi').hidden === false);
 const ashBody = () => ash.doc.getElementById('lobby-body').innerHTML;
 ok('the lobby screen draws', /Multiplayer/.test(ashBody()));
 ok('it says there are no games yet', /No games open/.test(ashBody()));

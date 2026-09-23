@@ -32,7 +32,7 @@
      so moving between them never quietly loses progress. */
   var KEY = 'pmc-campaign';
   var SRV = 'pmc-campaign-server';
-  var db = null, dbReady = false, note = '';
+  var db = null, dbReady = false, storeNote = '';   // not `note`: that is the in-page message helper below
 
   function raw(get, value) {
     try {
@@ -110,10 +110,10 @@
       await Store.init();
       var found = (await each(function (b) { return b.load(); }))
         .filter(function (r) { return r && r.value && r.value.companies; });
-      if (!found.length) { note = ''; return null; }
+      if (!found.length) { storeNote = ''; return null; }
       found.sort(function (x, y) { return (y.value.turn || 0) - (x.value.turn || 0); });
       var win = found[0];
-      note = win.id === 'local' ? ''
+      storeNote = win.id === 'local' ? ''
         : 'Loaded from ' + BACKENDS[win.id].name +
           (found.length > 1 ? ' — it was further along than this browser’s copy.' : '.');
       return C.rehydrate(win.value);
@@ -146,7 +146,7 @@
         };
       });
     },
-    note: function () { return note; }
+    note: function () { return storeNote; }
   };
 
   /* ================= view state ================= */
@@ -306,12 +306,26 @@
         '<option value="solo">Solo — against a rival force that grows battle by battle</option>' +
         '<option value="hotseat">Hotseat — two dossiers, two players, one screen</option>' +
         '</select></div>';
-      h += '<div class="field" id="camp-archwrap"><label for="camp-arch">Who you are up against</label>' +
-        '<select id="camp-arch"><option value="">Pick one for me</option>' +
-        C.ARCHETYPES.concat(C.REBEL_ARCHETYPES).concat(C.BUG_ARCHETYPES).concat(C.XENO_ARCHETYPES).map(function (a) {
-          return '<option value="' + a.id + '" data-faction="' + (a.faction || 'pmc') + '">' +
-            esc(a.name) + ' — ' + esc(a.blurb) + '</option>';
-        }).join('') + '</select></div>';
+      /* Solo: the forces on the world are rolled, but the player may name any
+         of them they want to meet — tick as many as you like, or none for a
+         world that is all chance. Hotseat: there are no rolled rivals, only the
+         second player's force, so this asks what kind that is instead. */
+      var ARCH_GROUPS = [['Mercenary companies', C.ARCHETYPES], ['Revolts', C.REBEL_ARCHETYPES],
+        ['Bug swarms', C.BUG_ARCHETYPES], ['Xenotripod tribes', C.XENO_ARCHETYPES]];
+      h += '<div class="field" id="camp-archwrap"><label>Who you are up against <span class="hint small">— tick any number, or none for a random world</span></label>' +
+        '<div class="archpick">' + ARCH_GROUPS.map(function (g) {
+          return '<div class="archgrp"><h4>' + esc(g[0]) + '</h4>' + g[1].map(function (a) {
+            return '<label class="archopt"><input type="checkbox" class="camp-arch" value="' + a.id + '">' +
+              '<span><b>' + esc(a.name) + '</b><small>' + esc(a.blurb) + '</small></span></label>';
+          }).join('') + '</div>';
+        }).join('') + '</div></div>';
+      h += '<div class="field" id="camp-bwrap" hidden><label for="camp-bfaction">What Player 2 is running</label>' +
+        '<select id="camp-bfaction">' +
+        '<option value="pmc">A private military company</option>' +
+        '<option value="rebel">An insurgent revolt</option>' +
+        '<option value="bugs">A Space Bug swarm</option>' +
+        '<option value="xeno">A Xenotripod tribe</option>' +
+        '</select></div>';
       h += '<button class="start" data-go="newcamp">Raise the force</button>';
       h += '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button>' +
         '<button class="lnk" data-go="import">Load a save file</button>' +
@@ -490,9 +504,27 @@
     /* The name and the colours are settled on the founding screen, alongside the
        units — they are the three things that make a company yours, and asking
        for them in one place is how a player thinks about it. */
-    draft = { keys: [], doctrine: null, name: name, colour: startingColour() };
+    draft = { side: 'A', keys: [], doctrine: null, name: name, colour: startingColour() };
     view = 'found';
   }
+  /* Hotseat: the second player founds a force of their own on the same screen,
+     once the first has signed — their own army, name, colours, units and
+     doctrine. Until they have, the campaign waits for them, even across a
+     reload. */
+  function needsSecond() {
+    return !!(camp && camp.mode === 'hotseat' && camp.companies.A.roster.length &&
+      !(camp.companies.B && camp.companies.B.roster.length));
+  }
+  function beginSecond(faction) {
+    var A = camp.companies.A;
+    var B = C.newCompany('', { faction: faction || (camp.companies.B && camp.companies.B.faction) || A.faction });
+    camp.companies.B = B; camp.rivals = [B]; camp.facing = 0;
+    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: freeColour([A.colour]) };
+    view = 'found';
+  }
+  var secondFaction = null;       // what the hub said the second player runs, until they found it
+  var FACTION_CHOICES = [['pmc', 'A private military company'], ['rebel', 'An insurgent revolt'],
+    ['bugs', 'A Space Bug swarm'], ['xeno', 'A Xenotripod tribe']];
   // the colour the player last painted a force in, or the house ochre
   function startingColour() {
     var c = null;
@@ -539,7 +571,8 @@
   function isRebel() { return !!(camp && camp.companies && camp.companies.A.faction === 'rebel'); }
 
   function foundView() {
-    var co = camp.companies.A;
+    var side = draft.side || 'A', co = camp.companies[side];
+    var hot = camp.mode === 'hotseat';
     var t1 = 0, t2 = 0, machines = 0;
     draft.keys.forEach(function (k) {
       var p = profile(R.splitPick(k).key);
@@ -548,7 +581,17 @@
     });
     var reb = co.faction === 'rebel', bug = co.faction === 'bugs', xen = co.faction === 'xeno';
     function say(pmc, rebel, bugs, xeno) { return xen ? (xeno || bugs) : bug ? bugs : reb ? rebel : pmc; }
-    var h = '<h2>' + say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory') + '</h2>';
+    var h = '<h2>' + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
+      say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory') + '</h2>';
+    if (hot && side === 'B') {
+      /* The second player picks their own kind of force: the first player's
+         choice on the hub only ever named the first force. */
+      h += '<p class="lede">' + esc(camp.companies.A.name) + ' has signed. Now the other force on this world \u2014 yours.</p>' +
+        '<div class="field"><label>What you are running</label><div class="docpick facpick">' +
+        FACTION_CHOICES.map(function (f) {
+          return '<button class="doc' + (co.faction === f[0] ? ' on' : '') + '" data-bfaction="' + f[0] + '"><b>' + esc(f[1]) + '</b></button>';
+        }).join('') + '</div></div>';
+    }
     /* Who you are, before what you field: the name it will be known by and the
        colours it paints its kit in. The opposition takes a colour of its own
        from whatever is left, so no two forces on a table ever match. */
@@ -580,7 +623,7 @@
         (p.cls === 'vehicle' ? '<button class="drive" data-cycle="' + i + '">' +
           R.PROPULSION[s.prop || 'wheeled'].short + '</button>' : '') + '</span>';
     }).join('') + '</div>';
-    h += '<div class="cat" id="found-cat">' + catalogueFor(1, 2, function (p) { return !p.leaderBug && !p.alpha; }) + '</div></div>';
+    h += '<div class="cat" id="found-cat">' + catalogueFor(1, 2, function (p) { return !p.leaderBug && !p.alpha; }, co) + '</div></div>';
 
     var cr = C.creedOf(co);
     h += '<h3>Starting ' + C.creedOf(co).one + '</h3><div class="docpick">';
@@ -602,20 +645,21 @@
         : 'Six Tier I units, two Tier II, at most two vehicles, one ' + C.creedOf(co).one + '.') + '</p>';
     h += '<button class="start" data-go="dofound"' + (chk.ok ? '' : ' disabled') + '>' +
       say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
-    h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+    // the second player cannot step back out: the campaign needs their force
+    if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
   }
 
-  // which list this campaign recruits from — a company only ever hires its own kind
-  function ourList() {
-    var a = camp && camp.companies ? camp.companies.A : null;
+  // which list a force recruits from — a company only ever hires its own kind
+  function ourList(co) {
+    var a = co || (camp && camp.companies ? camp.companies.A : null);
     return R.listFor((a && a.faction) || 'pmc');
   }
 
   /* the catalogue, limited to the Tiers a screen allows */
-  function catalogueFor(minTier, maxTier, filter) {
+  function catalogueFor(minTier, maxTier, filter, co) {
     var groups = {}, order = [];
-    ourList().forEach(function (p) {
+    ourList(co).forEach(function (p) {
       if (p.tier < minTier || p.tier > maxTier) return;
       if (p.command) return;                       // the field command is free and fixed
       if (filter && !filter(p)) return;
@@ -1620,6 +1664,7 @@
     var body = el('camp-body');
     if (!body) return;
     var h = '';
+    if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (view === 'found') h = foundView();
     else if (view === 'roster') h = rosterView();
     else if (view === 'offers') h = offersView();
@@ -1758,6 +1803,13 @@
       if (contract.levels.indexOf(contract.pl) < 0) contract.pl = contract.levels[0] || 1;
       contract.adjusted = true; contract.picks = []; render(); return;
     }
+    if (t.hasAttribute('data-bfaction')) {
+      keepFoundName();
+      var keepName = draft.name, keepColour = draft.colour;
+      beginSecond(t.getAttribute('data-bfaction'));
+      draft.name = keepName; draft.colour = keepColour;
+      render(); return;
+    }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour');
       keepFoundName();
@@ -1768,24 +1820,35 @@
 
     switch (go) {
       case 'newcamp': {
-        var arch = el('camp-arch') ? el('camp-arch').value : '';
+        var archs = Array.prototype.map.call(document.querySelectorAll('#camp-body .camp-arch:checked'), function (x) { return x.value; });
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
+        secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
         // a name to start from; the player settles it on the founding screen
         beginFounding(fac === 'rebel' ? 'The Free Colonies' : fac === 'bugs' ? 'The Hive' : fac === 'xeno' ? 'The Ghadon Third' : 'Task Force Ironhold',
           el('camp-mode').value, fac);
-        draft.arch = arch || null;
+        draft.archs = archs;
         render(); return;
       }
       case 'dofound': {
         var nm = (el('found-name') ? el('found-name').value : draft.name || '').trim();
         if (!nm) { note('It needs a name', 'Give the force something to be known by.'); return; }
         draft.name = nm;
-        var res = C.found(camp.companies.A, draft.keys, draft.doctrine);
+        var fs = draft.side || 'A', fco = camp.companies[fs];
+        if (fs === 'B' && draft.colour === camp.companies.A.colour) {
+          note('That colour is taken', camp.companies.A.name + ' already wears it. Pick another, so the two sides can be told apart.');
+          return;
+        }
+        if (fs === 'B' && nm === camp.companies.A.name) { note('That name is taken', 'The two forces need different names.'); return; }
+        var res = C.found(fco, draft.keys, draft.doctrine);
         if (!res.ok) { note('Not a legal starting company', res.faults.join(' ')); return; }
-        camp.companies.A.name = nm;
-        camp.companies.A.colour = draft.colour || 'ochre';
-        try { localStorage.setItem('pmc-colour', camp.companies.A.colour); } catch (e6) { }
-        foundRival(draft.arch);
+        fco.name = nm;
+        fco.colour = draft.colour || 'ochre';
+        if (fs === 'A') {
+          try { localStorage.setItem('pmc-colour', fco.colour); } catch (e6) { }
+          // hotseat: the second player founds their own force next; solo: the rivals are raised
+          if (camp.mode === 'hotseat') { save(); beginSecond(secondFaction); render(); return; }
+          foundRival(draft.archs);
+        } else ensureColours();
         save(); view = 'hub'; render(); return;
       }
       case 'doctrine': view = 'doctrine'; render(); return;
@@ -1839,15 +1902,20 @@
   /* The opposition: three forces, a mix of mercenary companies and revolts. If
      the player named one they want to meet, it is raised first and the other two
      fill in around it. */
-  function foundRival(archId) {
+  /* The world's forces: rolled as usual, then every one the player asked to
+     meet put in place of a rolled one (and added, if they asked for more than
+     the world had). The first of theirs is the one they face first. */
+  function foundRival(archIds) {
     C.foundRivals(camp);
-    if (archId) {
+    (archIds || []).forEach(function (archId, i) {
       var a = C.archetype(archId);
+      if (!a) return;
       var co = C.newCompany('Rival', { faction: a.faction || 'pmc' });
-      C.foundRival(co, archId, camp.rivals.map(function (r) { return r.name; }));
-      camp.rivals[0] = co;
-      C.faceRival(camp, 0);
-    }
+      var used = camp.rivals.filter(function (r, k) { return k !== i; }).map(function (r) { return r.name; });
+      C.foundRival(co, archId, used);
+      camp.rivals[i] = co;
+    });
+    if (archIds && archIds.length) C.faceRival(camp, 0);
     ensureColours();
   }
 
@@ -1924,6 +1992,12 @@
     });
     host.addEventListener('change', function (ev) {
       if (ev.target.id === 'camp-file') onFile(ev);
+      // a hotseat campaign has no rival to choose: the second player founds their own
+      else if (ev.target.id === 'camp-mode') {
+        var hs = ev.target.value === 'hotseat', aw = el('camp-archwrap'), bw = el('camp-bwrap');
+        if (aw) aw.hidden = hs;
+        if (bw) bw.hidden = !hs;
+      }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
         if ((contract.levels || [1, 2]).indexOf(want) >= 0) contract.pl = want;
@@ -1945,6 +2019,7 @@
       camp = got;
       if (camp && camp.pending) camp.pending = null;    // a battle abandoned mid-flight
       ensureColours();
+      if (needsSecond()) beginSecond();                // the second player had not founded yet
       render();
     });
   }

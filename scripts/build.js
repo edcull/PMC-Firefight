@@ -20,6 +20,8 @@ console.log((fs.statSync(out).size / 1024).toFixed(0) + ' KB → ' + out);
     return '<script>\n' + fs2.readFileSync(p2.join(ROOT, src), 'utf8').replace(/<\/script/g, '<\\/script') + '\n</script>';
   });
   v = v.replace(/<title>[^<]*<\/title>/, '<title>PMC 2670 Attack Viewer</title>');
+  // beside the single-file build, the game it goes back to is firefight.html
+  v = v.replace('href="index.html"', 'href="firefight.html"');
   fs2.writeFileSync(p2.join(ROOT, 'build', 'viewer.html'), v);
   console.log(Math.round(v.length / 1024) + ' KB → build/viewer.html');
 })();
