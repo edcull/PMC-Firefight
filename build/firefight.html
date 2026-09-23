@@ -31066,8 +31066,8 @@
     }
     if (R.isMachine(u)) { drawMachineStats(u, box); return; }
     var st = R.status(u), m = R.currentMorale(u);
-    var h = '<div class="stat-head"><span class="code code-' + u.side + '">' + u.code + '</span>' +
-      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + sideName(u.side) +
+    var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
+      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · <span class="army"' + armyStyle(u.side, true) + '>' + sideName(u.side) + '</span>' +
       '</p><span class="stat-sum">' + u.models + '/' + u.size + ' · ' + u.sp + ' SP · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + ' · Rng ' + u.range + '"</span></div>' +
       '</div>';
@@ -31097,6 +31097,14 @@
     box._html = h;
     box.innerHTML = h;
     wireHost(box);
+  }
+  /* The army's own colours on the unit tab: the code badge painted as the
+     unit's ring is on the table, and the force's name in its light. */
+  function armyStyle(side, textOnly) {
+    var pal = ISO.PALETTE && ISO.PALETTE[side];
+    if (!pal) return '';
+    return textOnly ? ' style="color:' + pal.light + '"'
+      : ' style="color:' + pal.light + ';border-color:' + pal.mid + ';background:color-mix(in srgb, ' + pal.dark + ' 45%, transparent)"';
   }
   function stat(k, v) { return '<div class="st"><span>' + k + '</span><b>' + v + '</b></div>'; }
 
@@ -31174,8 +31182,8 @@
     var kind = u.cls === 'aircraft' ? 'Aircraft'
       : pr ? pr.name + ' ground vehicle' : 'Ground vehicle';
     if (u.drone) kind += ' · drone';
-    var h = '<div class="stat-head"><span class="code code-' + u.side + '">' + u.code + '</span>' +
-      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + kind + ' · ' + sideName(u.side) +
+    var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
+      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + kind + ' · <span class="army"' + armyStyle(u.side, true) + '>' + sideName(u.side) + '</span>' +
       '</p><span class="stat-sum">' + u.damage + '/' + u.str + ' damage · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + '</span></div>' +
       '</div>';
