@@ -672,6 +672,11 @@
   #setup[data-hot] .hot-intro { display: block; }
   /* a demo names its own forces, from their colour and kind, always lays the table itself, and needs no explaining */
   #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field, #setup[data-kind="demo"] .hot-intro { display: none !important; }
+  /* nor does it pick colours or hand-build: its forces are rolled, each in a colour of its own, and the
+     Battle Tier and Priority Level are set once, for both, on the battlefield step */
+  #setup[data-kind="demo"] .hot-colour, #setup[data-kind="demo"] .muster-btns { display: none !important; }
+  #setup[data-kind="demo"]:not([data-hot="3"]) #tierpl-field { display: none !important; }
+  #setup[data-kind="demo"][data-hot="3"] #tierpl-field { display: grid !important; }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
   .hot-sum .hot-side {
@@ -1443,7 +1448,7 @@
       <h2 class="menu-head">Skirmish</h2>
       <button class="mcard" data-skirmish="ai">Against the AI<small>The OpFor behaviour table drives every enemy activation</small></button>
       <button class="mcard" data-skirmish="hotseat">Hotseat<small>Two players, one screen</small></button>
-      <button class="mcard" data-skirmish="solo">Solitaire<small>Your commando against the OpFor (pp. 146–156)</small></button>
+      <button class="mcard" data-skirmish="solo">Solitaire<small>Your commando against the OpFor</small></button>
       <button class="mcard" data-skirmish="coop">Co-operative<small>Two commandos, one each, against the OpFor</small></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
@@ -1462,7 +1467,7 @@
   </div>
   <div class="sheet">
     <div class="solo-box" id="solo-box" hidden>
-      <p class="lede hot-hide">Solitaire and co-operative play (rulebook pp. 146–156): your commando — or two of them, one each — against an OpFor that acts in a phase of its own, driven by the behaviour table. Commandos are small: build yours from the commando composition table (p. 147). The OpFor pool is rolled for you from its own table (p. 148), and in a co-op game it is rolled a Priority Level higher for the second player.</p>
+      <p class="lede hot-hide">Solitaire and co-operative play: your commando — or two of them, one each — against an OpFor that acts in a phase of its own, driven by the behaviour table. Commandos are small: build yours from the commando composition table. The OpFor pool is rolled for you from its own table, and in a co-op game it is rolled a Priority Level higher for the second player.</p>
       <div class="field two hot-field">
         <div class="hot-hide">
           <label for="sel-solo-mode">Players</label>
@@ -1482,7 +1487,7 @@
         </div>
       </div>
       <div class="field hot-field">
-        <label for="sel-solo-scen">Solitaire scenario (pp. 150–156)</label>
+        <label for="sel-solo-scen">Solitaire scenario</label>
         <select id="sel-solo-scen">
           <option value="roll" selected>Roll for it — any of the six</option>
           <option value="s_crush">Crushing the Resistance — drop in and wipe them out</option>
@@ -1500,7 +1505,7 @@
     </div>
     <p class="lede hot-only hot-intro" id="hot-intro"></p>
     <div class="hot-only hot-sum" id="hot-sum"></div>
-    <p class="lede std-only hot-hide">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table (p. 60; p. 92 for the rebels, p. 114 for the swarm, p. 128 for the tribe).</p>
+    <p class="lede std-only hot-hide">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table.</p>
     <div class="field hot-only hot-name">
       <label for="hot-name">Force name</label>
       <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
@@ -1508,14 +1513,14 @@
     <div class="field hot-force">
       <label for="sel-faction">Your force</label>
       <select id="sel-faction">
-        <option value="pmc" selected>PMC — a private military company under contract (pp. 60–82)</option>
-        <option value="rebel">Rebels — an insurgent group in revolt (pp. 92–109)</option>
-        <option value="bugs">Space Bugs — a swarm (pp. 113–127)</option>
-        <option value="xeno">Xenotripods — an alien tribe (pp. 128–143)</option>
+        <option value="pmc" selected>PMC — a private military company under contract</option>
+        <option value="rebel">Rebels — an insurgent group in revolt</option>
+        <option value="bugs">Space Bugs — a swarm</option>
+        <option value="xeno">Xenotripods — an alien tribe</option>
       </select>
     </div>
     <div class="field hot-force" id="tactic-field" hidden>
-      <label for="sel-tactic">Rebel Tactic (p. 95) — chosen before the terrain goes down</label>
+      <label for="sel-tactic">Rebel Tactic — chosen before the terrain goes down</label>
       <select id="sel-tactic">
         <option value="" selected>No tactic</option>
         <option value="laststand">Last Stand — dig in, +4 Defence in cover, three free casualties</option>
@@ -1524,7 +1529,7 @@
       </select>
       <p class="tactic-note" id="tactic-note"></p>
     </div>
-    <div class="field two hot-force">
+    <div class="field two hot-force" id="tierpl-field">
       <div>
         <label for="sel-tier">Battle Tier</label>
         <select id="sel-tier">
@@ -1591,7 +1596,7 @@
       </select>
     </div>
     <div class="field hot-field">
-      <label for="sel-planet">Planet — terrain generator (rulebook pp. 46–48)</label>
+      <label for="sel-planet">Planet — terrain generator</label>
       <select id="sel-planet">
         <option value="random">Randomise the planet</option>
         <option value="desert">Desert world (barren)</option>
@@ -1612,10 +1617,10 @@
       </select>
     </div>
     <div class="field std-only hot-field">
-      <label for="sel-scen">Scenario (rulebook pp. 48–55)</label>
+      <label for="sel-scen">Scenario</label>
       <select id="sel-scen">
         <option value="roll" selected>Roll a D6 — any of the six</option>
-        <option value="rolld3">Roll a D3 — the first three only (p. 46)</option>
+        <option value="rolld3">Roll a D3 — the first three only</option>
         <option value="meeting">Meeting engagement — break the enemy</option>
         <option value="secure">Secure and control — three objectives</option>
         <option value="find">Find and secure — search for the prize</option>
@@ -1659,40 +1664,40 @@
 
     <h3>Mustering a company</h3>
     <ul>
-      <li><b>All 40 PMC infantry profiles</b> are in, exactly as printed (pp. 62–71 and 79) — Basic troops, Rifle infantry, Assault troops, Heavy infantry, Light infantry, Light and Heavy support, Remote mortars, Command units, EW and Medic teams, and the Unclassified Nomads and Chem-warriors.</li>
-      <li><b>All 36 PMC vehicles and aircraft</b> too (pp. 73–82) — Combat vehicles, Hunters and Destroyers, Transports, Engineering, Support, Anti-aircraft, EW and Medical vehicles, Transport aircraft and Strike aircraft.</li>
-      <li><b>Battle Tier I–V and Priority Level 1–2.</b> Composition points are the sum of your units' Tiers — 6, 12, 18, 24 or 30, multiplied by the Priority Level — and the per-Tier minimums and maximums come straight from the table on p. 60. Tier III is the book's recommended starting point.</li>
+      <li><b>All 40 PMC infantry profiles</b> are in, exactly as printed — Basic troops, Rifle infantry, Assault troops, Heavy infantry, Light infantry, Light and Heavy support, Remote mortars, Command units, EW and Medic teams, and the Unclassified Nomads and Chem-warriors.</li>
+      <li><b>All 36 PMC vehicles and aircraft</b> too — Combat vehicles, Hunters and Destroyers, Transports, Engineering, Support, Anti-aircraft, EW and Medical vehicles, Transport aircraft and Strike aircraft.</li>
+      <li><b>Battle Tier I–V and Priority Level 1–2.</b> Composition points are the sum of your units' Tiers — 6, 12, 18, 24 or 30, multiplied by the Priority Level — and the per-Tier minimums and maximums come straight from the book's composition table. Tier III is the book's recommended starting point.</li>
       <li><b>The limits are enforced as you build:</b> at least three units of the Battle Tier, at most four a Tier below, two a Tier above, one Command Unit per Priority Level, Penal troops four to an army, High command one, EW and Medic teams one per Priority Level, Chem-warriors two.</li>
       <li><b>Machines have their own ceiling:</b> at most three ground vehicles and aircraft per Priority Level, aircraft only from Battle Tier II, and at PL1 no machine above the Battle Tier and only one aircraft. A Gunboat, a Light engineering vehicle and an EW vehicle are one to an army each, and an Anti-aircraft vehicle one per Priority Level.</li>
-      <li><b>Every ground vehicle picks a propulsion</b> from the optional rules (Appendix 3, pp. 166–167) — wheeled, tracked, anti-grav, hover or walker. None of them change a Unit Tier, because each trades an advantage for a cost; pick one from the dropdown beside the unit in your list. Every ready-made company fields at least one machine.</li>
+      <li><b>Every ground vehicle picks a propulsion</b> from the optional rules — wheeled, tracked, anti-grav, hover or walker. None of them change a Unit Tier, because each trades an advantage for a cost; pick one from the dropdown beside the unit in your list. Every ready-made company fields at least one machine.</li>
       <li>Roll a legal company at a button, or start from a ready-made one — two per Battle Tier.</li>
     </ul>
 
     <h3>The battlefield</h3>
     <ul>
-      <li><b>Terrain (pp. 41–43).</b> Movement penalty: area terrain costs 1″ (2″ for a vehicle) <i>once</i> in a move, however much of it is crossed, and a unit starting in it pays to move through it; each low wall crossed costs it again. Barbed wire costs a D6″ rolled before the move. Hills block sight across them; a unit on one gets +2 Firepower shooting down and sees over its own side below. A big hill may rise in two steps: its crown is a hill on the hill, blocking sight across it for everyone but a unit up on it, and a unit on the crown gets the +2 shooting down on the slope below as well as on the ground &mdash; +2 once, however many steps down. A low wall shelters only a unit with every model within 2″ of it, the wall between it and the shooter; rubble shelters the men in it and no one behind it. Trenches give cover and immunity to Crossfire. <i>House rule:</i> Protectors in hi-mobility armour jump over terrain — no penalties, and over walls, water and buildings — but must land on ground they could stand on.</li>
-      <li><b>Buildings (p. 41).</b> <i>Enter building</i> and <i>Exit building</i> are special actions, within 4″; one unit to a building (to a section, in a building of several wings, and <i>Next section</i> moves through to an empty one in contact). Inside: no Move, Advance or Assault; +2 Defence; no Crossfire; range measured from the wall both ways. A high building or a reinforced one gives +2 Firepower, a low one none — high buildings are drawn a storey taller. Charge a garrison and win, and you take the building while the defenders come out and fall back 2″. A building can also be garrisoned by tapping it during deployment.</li>
-      <li><b>Terrain set-up by hand (pp. 46–47).</b> Choose <i>Set it up by hand</i> and the game walks the table one 2′ × 2′ area at a time, starting from a random player and alternating: it rolls the area's D6, you pick between the options a result offers (hills <i>or</i> rocks), and every piece the result gives is shown drawn, together, the next one outlined; turn the next one a quarter at a time (<b>Turn it</b>, <kbd>R</kbd>, or a right click on the table), then tap each piece down — anywhere in that area, up to the number rolled. The OpFor lays its own areas. Either area, or everything left, can be auto-placed. In Meeting engagement, Secure and control and Find and secure the table edges are rolled only after the terrain is down, as the book has it, and the table is turned to match. Campaign battles use whichever set-up you last picked here.</li>
-      <li><b>Terrain generators (pp. 46–48).</b> Pick a planet — or randomise it — and the table is built the book's way: divided into 2′ × 2′ areas, with a D6 rolled for each and the rolled result placed in it. Every roll and what it produced is listed in the log and on the opening card.</li>
+      <li><b>Terrain.</b> Movement penalty: area terrain costs 1″ (2″ for a vehicle) <i>once</i> in a move, however much of it is crossed, and a unit starting in it pays to move through it; each low wall crossed costs it again. Barbed wire costs a D6″ rolled before the move. Hills block sight across them; a unit on one gets +2 Firepower shooting down and sees over its own side below. A big hill may rise in two steps: its crown is a hill on the hill, blocking sight across it for everyone but a unit up on it, and a unit on the crown gets the +2 shooting down on the slope below as well as on the ground &mdash; +2 once, however many steps down. A low wall shelters only a unit with every model within 2″ of it, the wall between it and the shooter; rubble shelters the men in it and no one behind it. Trenches give cover and immunity to Crossfire. <i>House rule:</i> Protectors in hi-mobility armour jump over terrain — no penalties, and over walls, water and buildings — but must land on ground they could stand on.</li>
+      <li><b>Buildings.</b> <i>Enter building</i> and <i>Exit building</i> are special actions, within 4″; one unit to a building (to a section, in a building of several wings, and <i>Next section</i> moves through to an empty one in contact). Inside: no Move, Advance or Assault; +2 Defence; no Crossfire; range measured from the wall both ways. A high building or a reinforced one gives +2 Firepower, a low one none — high buildings are drawn a storey taller. Charge a garrison and win, and you take the building while the defenders come out and fall back 2″. A building can also be garrisoned by tapping it during deployment.</li>
+      <li><b>Terrain set-up by hand.</b> Choose <i>Set it up by hand</i> and the game walks the table one 2′ × 2′ area at a time, starting from a random player and alternating: it rolls the area's D6, you pick between the options a result offers (hills <i>or</i> rocks), and every piece the result gives is shown drawn, together, the next one outlined; turn the next one a quarter at a time (<b>Turn it</b>, <kbd>R</kbd>, or a right click on the table), then tap each piece down — anywhere in that area, up to the number rolled. The OpFor lays its own areas. Either area, or everything left, can be auto-placed. In Meeting engagement, Secure and control and Find and secure the table edges are rolled only after the terrain is down, as the book has it, and the table is turned to match. Campaign battles use whichever set-up you last picked here.</li>
+      <li><b>Terrain generators.</b> Pick a planet — or randomise it — and the table is built the book's way: divided into 2′ × 2′ areas, with a D6 rolled for each and the rolled result placed in it. Every roll and what it produced is listed in the log and on the opening card.</li>
       <li>Where a result offers a choice ("1-4 hills or rocks") one branch is taken at random, and counts like "1-6 rocks" are rolled within their range. Small rocky areas count as rubble, as the book says; high rocks, deep canyons and volcanoes are rocks, and swamps are shallow water.</li>
       <li><b>Terrain effects</b> follow the summary table: woods and ruins give +2 Defence and block sight; rubble and low walls give +2; buildings give +2 Defence and +2 Firepower; reinforced buildings +4 Defence; hills give +2 Firepower shooting down; rocks, high walls, deep water and lava are impassable; shallow water costs movement and silences Cumbersome Weapons.</li>
       <li><b>Natural shapes.</b> Woods, rubble, rocks, water, lava and hills are laid down as irregular outlines &mdash; round patches, lobed clusters, kidney shapes and long diagonal bands &mdash; rather than rectangles, and every effect stops at the drawn edge: a unit standing where the ground is open is in the open, a sight line that only grazes the empty corner of a wood's footprint is clear, impassable ground is only as big as it looks, and a hill's +2 Firepower is only on its top. Buildings, walls and ruins stay square. The open ground is coloured to suit what stands on it &mdash; greener by woods and water, dry by rock and buildings, baked round lava &mdash; but that is only paint: open ground is open ground.</li>
     </ul>
 
-    <h3>The six scenarios (pp. 48&ndash;55)</h3>
+    <h3>The six scenarios</h3>
     <ul>
-      <li><b>Every scenario is in</b>, and the D6 that picks one is the book's. At Tier I&ndash;II or Priority Level 1 the roll may be a D3 instead, taking one of the first three, exactly as p. 46 allows. In a campaign the roll is made on the contract screen; in a one-off you can also choose.</li>
-      <li><b>Meeting engagement (p. 50)</b> &mdash; no objectives at all. The only way to win is to rout the other company: destroy or drive off half its units. Twenty turns.</li>
-      <li><b>Secure and control (p. 51)</b> &mdash; three objectives, at least 12&Prime; apart and 8&Prime; in from the edges. Hold more of them at the end of turn 20, hold all three at any End phase, or hold <b>the same two for three End phases running</b>.</li>
-      <li><b>Find and secure (p. 52)</b> &mdash; three possible locations within 12&Prime; of the centre, and nobody knows which. A unit within 4&Prime; uses the <b>Check the area!</b> action: the first location gives the prize up on a 5+, the second on a 4+, and the third is where it was all along. Hold it for three turns running to win outright &mdash; and a company holding it cannot be routed while it holds it. Half each force starts in reserve, and from turn 3 a number equal to the Priority Level comes on every second turn. After turn 12 a D6 is rolled each turn: a 6 ends it, and one point easier every turn after that.</li>
-      <li><b>Invasion (pp. 52&ndash;53)</b> &mdash; three landing zones. The attacker's whole force comes down from orbit rather than deploying: the first wave lands in the Reserve phase of turn 1, and infantry take <b>D3 Suppression</b> on the way down &mdash; vehicles are unaffected. The second wave rolls in from turn 4 on a 5+, easier every turn. The defender puts no more than a third on the table and rolls the rest on from turn 2 on a 5+. Battlefield Insertion is switched off for both sides. The attacker wins by holding two of the three zones at the end, or by routing the defender.</li>
-      <li><b>Demolish (p. 54)</b> &mdash; the defender's objective sits within 4&Prime; of the table centre, impassable, and the ground around it is cleared. It comes down only to the <b>Demolish</b> action, and this is the one piece <b>any attacking infantry</b> may go for &mdash; Sappers charge it at +4, everybody else at +2. Half the defenders deploy within 18&Prime; of it and the rest roll on from turn 2. The objective's <b>SAM system</b> opens up automatically on any aircraft that finishes its move within 12&Prime;, at Basic Firepower 12. Twelve turns.</li>
-      <li><b>Hostile takeover (p. 55)</b> &mdash; one objective at the centre of a prepared position. The defender digs in first: up to ten sections of wall, none longer than 6&Prime;, and a single bunker, all within 12&Prime;. The defender deploys within 12&Prime; of the objective; the attacker splits in two, the first part entering on turn 1 and the second from turn 3. The attacker has to hold the objective at the End phase of turn 20.</li>
+      <li><b>Every scenario is in</b>, and the D6 that picks one is the book's. At Tier I&ndash;II or Priority Level 1 the roll may be a D3 instead, taking one of the first three, exactly as the book allows. In a campaign the roll is made on the contract screen; in a one-off you can also choose.</li>
+      <li><b>Meeting engagement</b> &mdash; no objectives at all. The only way to win is to rout the other company: destroy or drive off half its units. Twenty turns.</li>
+      <li><b>Secure and control</b> &mdash; three objectives, at least 12&Prime; apart and 8&Prime; in from the edges. Hold more of them at the end of turn 20, hold all three at any End phase, or hold <b>the same two for three End phases running</b>.</li>
+      <li><b>Find and secure</b> &mdash; three possible locations within 12&Prime; of the centre, and nobody knows which. A unit within 4&Prime; uses the <b>Check the area!</b> action: the first location gives the prize up on a 5+, the second on a 4+, and the third is where it was all along. Hold it for three turns running to win outright &mdash; and a company holding it cannot be routed while it holds it. Half each force starts in reserve, and from turn 3 a number equal to the Priority Level comes on every second turn. After turn 12 a D6 is rolled each turn: a 6 ends it, and one point easier every turn after that.</li>
+      <li><b>Invasion</b> &mdash; three landing zones. The attacker's whole force comes down from orbit rather than deploying: the first wave lands in the Reserve phase of turn 1, and infantry take <b>D3 Suppression</b> on the way down &mdash; vehicles are unaffected. The second wave rolls in from turn 4 on a 5+, easier every turn. The defender puts no more than a third on the table and rolls the rest on from turn 2 on a 5+. Battlefield Insertion is switched off for both sides. The attacker wins by holding two of the three zones at the end, or by routing the defender.</li>
+      <li><b>Demolish</b> &mdash; the defender's objective sits within 4&Prime; of the table centre, impassable, and the ground around it is cleared. It comes down only to the <b>Demolish</b> action, and this is the one piece <b>any attacking infantry</b> may go for &mdash; Sappers charge it at +4, everybody else at +2. Half the defenders deploy within 18&Prime; of it and the rest roll on from turn 2. The objective's <b>SAM system</b> opens up automatically on any aircraft that finishes its move within 12&Prime;, at Basic Firepower 12. Twelve turns.</li>
+      <li><b>Hostile takeover</b> &mdash; one objective at the centre of a prepared position. The defender digs in first: up to ten sections of wall, none longer than 6&Prime;, and a single bunker, all within 12&Prime;. The defender deploys within 12&Prime; of the objective; the attacker splits in two, the first part entering on turn 1 and the second from turn 3. The attacker has to hold the objective at the End phase of turn 20.</li>
       <li><b>Attacker and defender</b> are rolled for in the three scenarios that have them, and <b>The Best Defence is Good Offence</b> (a Strategic doctrine) lets a company that is made the defender roll a D6 and take the attack instead on a 2&ndash;6 &mdash; unless the other company has the same doctrine, in which case it does nothing.</li>
       <li><b>An interpretation:</b> the book has most scenarios entering the whole force &ldquo;from your table edge in the Reserve phase of turn 1&rdquo;, which is the same thing as deploying in a strip on that edge, so that is how it is presented. The scenarios with a genuine deployment area &mdash; the defender in Demolish and Hostile takeover, and the defender in Invasion &mdash; get one.</li>
     </ul>
 
-    <h3>The campaign (pp. 83&ndash;91)</h3>
+    <h3>The campaign</h3>
     <ul>
       <li><b>Press Campaign</b> in the header, or &ldquo;Play a campaign instead&rdquo; at the bottom of the muster sheet. Found a company &mdash; six Tier I units, two Tier II, a free Tier I Field command, at most two vehicles, and one of the eighteen doctrines &mdash; then take contracts.</li>
       <li><b>Solo or hotseat.</b> Solo puts you against a rival PMC with a character of its own: Armoured, Elite, Swarm, Marksmen or Shock. It founds in its own style, reaches for its own doctrines, recruits into its own unit groups and spends experience its own way, so it grows into something recognisable over a dozen battles. You can read its dossier between contracts.</li>
@@ -1725,7 +1730,7 @@
       <li><b>Cloaking System</b> — shot at or charged only from 12" or less. <b>Shield Generator</b> — friends wholly within 12" get +2 Defence (+1 from a craft) against shots from outside it; the best one counts. <b>Psychic Support</b> counts as Field Medics.</li>
       <li><b>Special actions</b> — <b>Regain Control</b> (Dominant Species): an Alpha stands still and every Epsilon squad of its Tier or lower within 12" sheds all its Suppression. <b>Self-repair</b> (Molecular Reconstruction): a turret or craft stands still and clears all its Damage. <b>Teleport</b>: a pad takes in an infantry unit within 4"; on a D6 of 1–2 it comes out at a random Teleport unit, on 3–6 at the one you choose, and it can still act that turn.</li>
       <li><b>Turrets</b> — stationary, with no sides or rear. They are Drone Controlled, but a hacker's 5–6 only counts as 3–4. All of a side's turrets act together as one activation, and they don't count towards Overwhelming Numbers. A turret set is one pick, but every turret in it is a unit on the table, counted as Tier I.</li>
-      <li><b>The tribe campaign</b> (pp. 140&ndash;145) is paid in <b>Territorial Points</b>. In Invasion, Demolish and Hostile takeover the payment is recalculated: a winning tribe counts dice of 1&ndash;2 as 3 (1&ndash;3 as 4 with Effective Resource Utilisation), and a losing one counts 5&ndash;6 as 4. The aftermath shows the dice before and after.</li>
+      <li><b>The tribe campaign</b> is paid in <b>Territorial Points</b>. In Invasion, Demolish and Hostile takeover the payment is recalculated: a winning tribe counts dice of 1&ndash;2 as 3 (1&ndash;3 as 4 with Effective Resource Utilisation), and a losing one counts 5&ndash;6 as 4. The aftermath shows the dice before and after.</li>
       <li><b>Who costs what.</b> The free Alpha squad grows with the Tribe Tier; any extra Alphas sit below it. Alphas and turrets never earn experience or trauma. Primitive Epsilons are free to raise while you hold four or fewer, and free to promote. Turrets are never bought &mdash; they only take composition points.</li>
       <li><b>Tribe Advancements</b> replace doctrines &mdash; eighteen in three groups (Social, Organisational and Technological), no more than two from a group. Some act before the battle: <b>Foresighted Command</b> rolls a second scenario to choose from, <b>Detailed Terrain Knowledge</b> moves two terrain pieces, <b>Fortify and Strike!</b> throws up four low walls, <b>Complex Teleport Network</b> brings a free set of Teleport turrets. <b>Enhanced Genetic Memory</b> regrows a lost infantry unit, and on 2&ndash;6 it remembers everything it had.</li>
       <li><b>Rites and Infamies</b> replace Battle Honours and Traumas (a D20 and a D10 table). Aircraft are never promoted and take no Rites: at 10 EXP they take one of ten <b>aircraft upgrades</b> instead, from Emergency Batteries to the Vortex Generator.</li>
@@ -1739,19 +1744,19 @@
       <li><b>Assault</b> — defensive fire at Basic Firepower first; a charge that leaves the attacker Suppressed or Broken fails on the spot. Then three rounds by the attacker, three by the defender, with 2–3 Ouch and 4–6 Man down. A break at any point ends it with a 2" fall-back; if nobody breaks, the attacker falls back.</li>
       <li><b>Suppression</b> — over Morale is Suppressed, over twice Morale is Broken, over three times after a rally attempt the unit is removed. Morale drops by one per model lost, minimum 1, unless the unit is Determined.</li>
       <li><b>Rally</b> — D6 equal to current Morale, each 4+ clears 1 SP. Inspiring Presence re-rolls failures within 12". The phase is walked unit by unit: the camera goes to each one and its card shows every die before you continue.</li>
-      <li><b>Every special rule in the book's General list (pp. 56–59) is in.</b> Advanced Protection, Anti-aircraft, Anti-tank, Anti-tank (limited) — which only reaches 6" — Battle Armour with the second Defence value that Anti-tank and Gauss weapons strip away, Battlefield Insertion, Command Unit (X), Command Vehicle, Counter-jamming, Cumbersome Weapon, Determined, Expendable, Field Medics, Gauss Weapon, Hackers, Incendiary Ammunition, Indirect Fire, Inspiring Presence, Jammers, Keen-Eyed, Limited Fire Arc, Markerlights, Minimum Range, Sappers, Specialisation (air) and (ground), Stealth, Supporting Fire and Suppressive Fire — plus Drone Control, Transport (X), Auxiliary Weapons, Crossfire and Overwhelming Numbers.</li>
+      <li><b>Every special rule in the book's General list is in.</b> Advanced Protection, Anti-aircraft, Anti-tank, Anti-tank (limited) — which only reaches 6" — Battle Armour with the second Defence value that Anti-tank and Gauss weapons strip away, Battlefield Insertion, Command Unit (X), Command Vehicle, Counter-jamming, Cumbersome Weapon, Determined, Expendable, Field Medics, Gauss Weapon, Hackers, Incendiary Ammunition, Indirect Fire, Inspiring Presence, Jammers, Keen-Eyed, Limited Fire Arc, Markerlights, Minimum Range, Sappers, Specialisation (air) and (ground), Stealth, Supporting Fire and Suppressive Fire — plus Drone Control, Transport (X), Auxiliary Weapons, Crossfire and Overwhelming Numbers.</li>
       <li><b>Jammers</b> put every enemy within 24" onto 5+ to rally, and their vehicles onto 5+ to repair; <b>Counter-jamming</b> within 6" of the victim cancels it. <b>Field Medics</b> within 6" turn the hit table into 1–2 steady, 3–5 a suppression point and 6 a MEDIC! — which costs a single point, and a further D6 of 6 saves the casualty outright.</li>
       <li><b>Terrain comes down.</b> Low walls, high walls and ordinary buildings are destructible; reinforced walls, bunkers, woods, ruins and rocks are not. A unit with a <b>Destructive Weapon</b> can shell a piece down with the <b>Demolish</b> action, and <b>Sappers</b> can charge one with <b>Breach</b> — either way a final 15+, or an unmodified 9, brings it down, and a failed charge falls the sappers back 2". <b>Incendiary Ammunition</b> counts as a Destructive Weapon against buildings, and a Tier III–V hull simply drives through a low or high wall and flattens it.</li>
       <li><b>Firing through cover</b> — when a Destructive Weapon shoots at an enemy sheltering in or behind a destructible piece and rolls a final 15+ or an unmodified 9, the piece comes apart in the same attack: the target loses its Defence bonus and the hits land one step harder. <b>Sappers</b> do the same in the first round of an assault, with a +4 for the charges.</li>
       <li><b>What is left</b> — a flattened wall becomes rubble that shelters nobody and can be walked over; a wrecked building burns, blocking line of sight and barring the ground, and its garrison scrambles into the open at once. <b>Supporting Fire</b> lets a carrier shoot — without the stationary +1 — and still load or unload afterwards.</li>
-      <li><b>Drone Control (p. 37)</b> is a build option on any ground vehicle without Transport: one more Structure for having no crew, at the price of being reachable by <b>Hackers</b>. A hacker within 24" rolls a D6 — 1–2 nothing, 3–4 the drone is locked out for the turn and takes D3+1 hits, 5–6 it is first turned on its own side.</li>
+      <li><b>Drone Control</b> is a build option on any ground vehicle without Transport: one more Structure for having no crew, at the price of being reachable by <b>Hackers</b>. A hacker within 24" rolls a D6 — 1–2 nothing, 3–4 the drone is locked out for the turn and takes D3+1 hits, 5–6 it is first turned on its own side.</li>
       <li><b>Battlefield Insertion</b> — LRRP teams, sniper teams and Nomads are held in reserve rather than deployed, up to half the company, and come in during the <b>Reserve phase</b> of any turn but the first. Nominate a point at least 12" from an objective and 4" in from the table edge; on a D6 of 1–3 it holds, on 4–6 the opponent shoves it up to 2D6" — towards their own guns. Coming down inside 12" of the enemy draws an immediate Basic Firepower shot from the nearest gun that can see them, which costs that unit nothing.</li>
-      <li><b>Vehicles (pp. 34–37)</b> — Structure instead of Morale, and Damage points instead of Suppression. Every hit is rolled on the armour table: 1 bounces, 2–5 is one Damage, 6+ is D3 — D6 if the shot came from an Anti-tank or Anti-aircraft weapon. Vehicles add +4" on a Move, pay a turn cost in inches off that distance, pay 2" for difficult ground, never take cover from terrain and are never caught in a Crossfire. They are hit harder from the flanks: +1 to the firing roll from the side, +2 from the rear. A Limited Fire Arc bears only on the front quarter. Vehicles never charge, and infantry assaulting one get +4 and roll on the breach table.</li>
+      <li><b>Vehicles</b> — Structure instead of Morale, and Damage points instead of Suppression. Every hit is rolled on the armour table: 1 bounces, 2–5 is one Damage, 6+ is D3 — D6 if the shot came from an Anti-tank or Anti-aircraft weapon. Vehicles add +4" on a Move, pay a turn cost in inches off that distance, pay 2" for difficult ground, never take cover from terrain and are never caught in a Crossfire. They are hit harder from the flanks: +1 to the firing roll from the side, +2 from the rear. A Limited Fire Arc bears only on the front quarter. Vehicles never charge, and infantry assaulting one get +4 and roll on the breach table.</li>
       <li><b>Knocked out</b> — when Damage passes Structure, D6: 1–3 Abandoned, 4–5 on fire (the passengers take a Basic Firepower 6 attack), 6+ a catastrophic explosion that kills everyone aboard and hits every ground unit within 4" at Firepower 3 + the vehicle's Tier. More than 2 Damage past the kill adds +1 to that roll, more than 4 adds +2. In the Rally phase a machine repairs itself: a D6 for every remaining point of Structure, each 4+ clearing 1 Damage — 5+ while an enemy's Jammers are within 24".</li>
-      <li><b>Propulsions (pp. 166–167)</b> — <b>wheeled</b> is the standard. <b>Tracked</b> cuts Movement to three quarters but takes 1" off the turn cost, which on most hulls means turning for free. <b>Anti-grav</b> adds a quarter to Movement at the price of one Structure point, and still pays for difficult ground. <b>Hover</b> crosses water and other liquids — never lava — but pays 1" more to turn. A <b>walker</b> pays the infantry 1" for difficult ground instead of 2", takes Defence bonuses from terrain like a footed unit, and its armoured flanks deny the +1 side shot, but its height costs it 1 Defence.</li>
+      <li><b>Propulsions</b> — <b>wheeled</b> is the standard. <b>Tracked</b> cuts Movement to three quarters but takes 1" off the turn cost, which on most hulls means turning for free. <b>Anti-grav</b> adds a quarter to Movement at the price of one Structure point, and still pays for difficult ground. <b>Hover</b> crosses water and other liquids — never lava — but pays 1" more to turn. A <b>walker</b> pays the infantry 1" for difficult ground instead of 2", takes Defence bonuses from terrain like a footed unit, and its armoured flanks deny the +1 side shot, but its height costs it 1 Defence.</li>
       <li><b>Turning</b> — a vehicle's turn cost comes off its move, so the ground inside its front quarter is cheaper to reach than the ground behind it. The shaded move area shows the difference.</li>
       <li><b>Transport (X)</b> — a carrier loads infantry within 4" and may then move half its distance. Passengers come off the table, lose all their Suppression and cannot be shot at; a Broken or Suppressed unit cannot board, and nothing unloaded may re-board the same turn.</li>
-      <li><b>Aircraft (pp. 37–39)</b> — they fly above the table, always shoot and are always shot at with Basic Firepower, never take cover, are never caught in a Crossfire, and are destroyed outright the moment Damage passes Structure. They cannot assault, cannot be assaulted and cannot hold objectives. A Strafing Run flies the full move and fires at every enemy ground unit passed over; the survivors shoot back, and a friendly unit under the flight path is caught on a D6 of 1–3.</li>
+      <li><b>Aircraft</b> — they fly above the table, always shoot and are always shot at with Basic Firepower, never take cover, are never caught in a Crossfire, and are destroyed outright the moment Damage passes Structure. They cannot assault, cannot be assaulted and cannot hold objectives. A Strafing Run flies the full move and fires at every enemy ground unit passed over; the survivors shoot back, and a friendly unit under the flight path is caught on a D6 of 1–3.</li>
       <li><b>Specialisation</b> — a SAM team's or an Anti-aircraft vehicle's Specialisation (air) means its main weapon cannot engage ground troops at all, exactly as written, and Specialisation (ground) is the mirror of that.</li>
     </ul>
 
@@ -5589,13 +5594,13 @@
       'and infantry assaulting it do not get the usual +4 against a vehicle.',
     'Aggressive':
       'Must charge the closest enemy it can reach whenever it activates, unless a friendly Overmind ' +
-      'within 18" is holding it back (p. 116).',
+      'within 18" is holding it back.',
     'Always Basic Firepower':
       'Its main weapon always fires at Basic Firepower: no +1 for a stationary Fire!, no half-range, ' +
       'Crossfire, height or Markerlight bonuses.',
     'Animal Behaviour':
       'Bugs shrug off hits: on the hit table 1-3 is ignored and 4+ kills one bug (2 SP). They re-roll failed ' +
-      'rally dice, but take no cover from terrain unless an Overmind is in reach (p. 116).',
+      'rally dice, but take no cover from terrain unless an Overmind is in reach.',
     'Anti-aircraft':
       '+4 to hit aircraft, and a critical hit on an aircraft does D6 Damage instead of D3. ' +
       'Works even when firing at Basic Firepower.',
@@ -5613,13 +5618,13 @@
       'at least 12" from an objective and 4" in from the edge. On a D6 of 4-6 the opponent shifts the landing ' +
       'point up to 2D6"; landing within 12" of the enemy draws a free Basic Firepower shot.',
     'Cloaking System':
-      'Cannot be shot at or charged from more than 12" away (p. 129).',
+      'Cannot be shot at or charged from more than 12" away.',
     'Command Unit (X)':
       'Coordinate: once a turn, stay put and let up to {X} friendly units within 12" activate one after another. ' +
       'Other Command Units, turrets and units two or more Tiers higher cannot be called on. Not used in solitaire games.',
     'Command Vehicle':
       'A Command Unit riding inside lends the vehicle all of its special rules, and coordinates as soon as the ' +
-      'vehicle finishes its activation (p. 56).',
+      'vehicle finishes its activation.',
     'Counter-jamming':
       'Friendly units within 6" ignore enemy Jammers and rally and repair on 4+ as normal. Only works while this ' +
       'unit is steady and on the table.',
@@ -5628,7 +5633,7 @@
       'off a vehicle.',
     'Death or Glory, Comrades!':
       'A friendly unit within 12" (not Broken, not two Tiers higher) sheds all its Suppression as it launches ' +
-      'an Assault, which also lets a Suppressed unit charge at all (p. 94).',
+      'an Assault, which also lets a Suppressed unit charge at all.',
     'Destructive Weapon':
       'Can Demolish walls and buildings: a final 15+ or an unmodified 9 brings the piece down. Shooting at a ' +
       'unit in or behind such a piece, the same roll blows the cover away — no cover bonus, and +1 on the hit table.',
@@ -5636,7 +5641,7 @@
       'Its Morale never drops as the unit loses models.',
     'Dominant Species':
       'Regain Control: stay put, and every Epsilon squad of this Tier or lower within 12" loses all its ' +
-      'Suppression. Not while Suppressed (p. 129).',
+      'Suppression. Not while Suppressed.',
     'Drone Control':
       'Crewless: +1 Structure, but enemy Hackers can take it over. It is also immune to Psychic Waves.',
     'Endless Tide':
@@ -5649,7 +5654,7 @@
       '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Only while steady.',
     'Flying Infantry':
       'Flies over terrain (but cannot land on impassable ground), takes no cover, and always shoots and is ' +
-      'shot at with Basic Firepower. Only Flying Infantry can assault it, and it may assault aircraft (p. 116).',
+      'shot at with Basic Firepower. Only Flying Infantry can assault it, and it may assault aircraft.',
     'Flying unit':
       'An aircraft: flies over everything, never takes cover, shoots and is shot at with Basic Firepower, and is ' +
       'destroyed outright once Damage passes Structure. Cannot assault, be assaulted or hold objectives; may Strafe.',
@@ -5657,7 +5662,7 @@
       'Ignores the target\'s cover from terrain, strips the +2 from Battle Armour, and gets +1 to hit vehicles.',
     'Gauss Weapon (las-cutters)':
       'Mining las-cutters that count as a Gauss Weapon: they ignore cover, strip Battle Armour\'s +2 and get ' +
-      '+1 against vehicles (p. 102).',
+      '+1 against vehicles.',
     'Ground vehicle':
       'A vehicle: Structure instead of Morale, takes Damage rather than Suppression, moves Movement +4" but pays ' +
       'to turn and 2" for rough ground, never takes cover or suffers Crossfire, and is easier to hit from the side and rear.',
@@ -5665,7 +5670,7 @@
       'Hack: once a turn, reach into an enemy drone within 24". D6 — 1-2 nothing, 3-4 it is locked out for the ' +
       'turn and takes D3+1 hits, 5-6 it is first made to fire on its own side, then takes the same hits.',
     'Immobile':
-      'Never moves. It comes down with a squad already aboard, can only put it out, and never takes anyone back on (p. 79).',
+      'Never moves. It comes down with a squad already aboard, can only put it out, and never takes anyone back on.',
     'Incendiary Ammunition':
       'Doubles the Suppression it causes on a target standing in terrain (not open ground or shallow water), ' +
       'unless the target has Battle Armour. Counts as a Destructive Weapon against buildings.',
@@ -5683,7 +5688,7 @@
       'at full range.',
     'Lifter':
       'A flying crane: it picks up a single vehicle within 4" — along with anyone riding in it — and never ' +
-      'carries infantry (p. 94).',
+      'carries infantry.',
     'Limited Fire Arc':
       'Its main weapon can only fire at targets in its front quarter.',
     'Markerlights':
@@ -5693,16 +5698,16 @@
     'Minimum Range (X)':
       'Its main weapon cannot fire at targets closer than {X}".',
     'Molecular Reconstruction':
-      'Self-repair: stay where it is and remove every Damage point (p. 129).',
+      'Self-repair: stay where it is and remove every Damage point.',
     'No Army Rules':
-      'Outside the Rebel army rules: its Morale drops from the very first casualty, and it is not Undisciplined (p. 103).',
+      'Outside the Rebel army rules: its Morale drops from the very first casualty, and it is not Undisciplined.',
     'No Objectives':
-      'Cannot take or contest objectives, and does not count towards anyone\'s victory conditions (p. 79).',
+      'Cannot take or contest objectives, and does not count towards anyone\'s victory conditions.',
     'Overgrown Bug':
       'A bug the size of a tank: it follows the vehicle rules, but can still assault, with +4 against vehicles ' +
-      'like infantry (p. 116).',
+      'like infantry.',
     'Overgrown Flying Bug':
-      'A bug the size of an aircraft: it follows the aircraft rules, but can still assault (p. 116).',
+      'A bug the size of an aircraft: it follows the aircraft rules, but can still assault.',
     'Overmind':
       'Controls Animal Behaviour bugs of its Tier or lower within 18": they take cover, are not forced to charge ' +
       'by Aggressive, and lose all Suppression in the Rally phase. Endless Tide needs an unsuppressed Overmind.',
@@ -5710,23 +5715,23 @@
       'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',
     'Psychic Support':
-      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table (p. 130).',
+      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table.',
     'Psychic Wave':
       'Psychic Wave: move up to its Movement (or stay), then every enemy within 12" — no line of sight needed, ' +
-      'drones excepted — takes D6-1 Suppression. Not while Suppressed (p. 116).',
+      'drones excepted — takes D6-1 Suppression. Not while Suppressed.',
     'Riders':
       'Mounted: always moves Movement +4", but loses 2" for rough ground, cannot cross walls or enter buildings, ' +
-      'and never rides in a transport (p. 94).',
+      'and never rides in a transport.',
     'Sappers':
       'Breach: carry charges against any wall or building, +4, bringing it down on a final 15+ or an unmodified 9 ' +
       '(a failed attempt falls back 2"). In the first round of an assault on a unit in cover they get +4, and the ' +
       'same roll blows the cover in.',
     'Shield Generator (X)':
       'Friendly units wholly within 12" get +{X} Defence against shots fired from more than 12" away from the ' +
-      'generator. Only the best shield counts (p. 130).',
+      'generator. Only the best shield counts.',
     'Smoke Markers':
       'A smoke grenade and a flare on an enemy within 12" in sight: two friendly Indirect Fire units shoot it at ' +
-      'once without needing sight, and this unit may move first (p. 94).',
+      'once without needing sight, and this unit may move first.',
     'Specialisation (air)':
       'Its main weapon can only engage aircraft, never ground targets.',
     'Specialisation (ground)':
@@ -5743,18 +5748,18 @@
       'A normal Fire! attack that hits adds +2 Suppression on top of the hit table. Does not apply at Basic Firepower.',
     'Teleport':
       'Takes in a steady infantry unit within 4" that has not acted; on a D6 of 1-2 it comes out beside a random ' +
-      'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn (p. 130).',
+      'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',
     'Transport (X)':
       'Capacity {X}: carries that many infantry units, loaded within 4". Passengers are safe from fire and lose all Suppression; ' +
       'Suppressed or Broken units cannot board, and nobody gets back on the turn they got off.',
     'Turret':
       'A stationary drone gun: never moves or assaults, has no side or rear, and all turrets activate together. ' +
-      'Command Units cannot call on it, and Hackers cannot turn it against its own side (p. 130).',
+      'Command Units cannot call on it, and Hackers cannot turn it against its own side.',
     'Unarmed':
       'Carries no weapons and cannot shoot.',
     '…but they\'ll never take our freedom!':
       'Friendly units within 12" (not Broken, not two Tiers higher, not other units with this rule) roll three ' +
-      'extra dice when they rally. Only while this unit is steady (p. 94).'
+      'extra dice when they rally. Only while this unit is steady.'
   };
 
   /* 'Command Unit (2)' -> the 'Command Unit (X)' text with 2 in place of {X}.
@@ -22861,7 +22866,7 @@
       pushRes({
         kind: 'Table edges', title: 'The ' + ea + ' edge for ' + state.cfg.nameA,
         dice: [{ label: 'D4', value: d }],
-        note: 'Before the battle, players randomize opposite table edges (p. 50) — after the terrain is down, so nobody knew which end was theirs while placing it.',
+        note: 'Before the battle, players randomize opposite table edges — after the terrain is down, so nobody knew which end was theirs while placing it.',
         list: [{ text: line }].concat(k ? [{ text: 'The table is turned ' + turn + ': ' + sideName('A') + '’s edge now runs along the upper left of the view, ' + sideName('B') + '’s along the lower right.' }] : [])
       });
     }
@@ -24567,7 +24572,7 @@
       }
       case 'move':
         if (R.has(u, 'Immobile')) {
-          return { on: false, hint: 'A Rapid insertion platform came down where it came down. It may only put its troops out (p. 79).' };
+          return { on: false, hint: 'A Rapid insertion platform came down where it came down. It may only put its troops out.' };
         }
         if (R.has(u, 'Stationary Artillery')) {
           return { on: false, hint: 'Stationary Artillery: the piece is emplaced and does not move. A transport may tow it.' };
@@ -24628,7 +24633,7 @@
       case 'embark': {
         if (!u.transport) return { on: false, hint: 'This unit carries no troops.' };
         if (R.has(u, 'Immobile')) {
-          return { on: false, hint: 'A Rapid insertion platform is a one-way ride: it only puts troops out (p. 79).' };
+          return { on: false, hint: 'A Rapid insertion platform is a one-way ride: it only puts troops out.' };
         }
         var room = u.transport - (u.cargo || []).length;
         if (room <= 0) return { on: false, hint: 'Full — carrying ' + u.cargo.length + ' of ' + u.transport + '.' };
@@ -24659,7 +24664,7 @@
         }
         if (smoke) {
           return { on: true, hint: 'Smoke Markers: a grenade and a flare on an enemy within 12". ' +
-            'Two Indirect Fire units shoot at it there and then, without needing sight — and this unit may move first (p. 94).' };
+            'Two Indirect Fire units shoot at it there and then, without needing sight — and this unit may move first.' };
         }
         return { on: true, hint: mkKind === 'designate'
           ? 'Designate target: an enemy within 24" and in sight. Indirect Fire units shoot it at once, no sight needed. ' +
@@ -24711,7 +24716,7 @@
       case 'sabotage': {
         var tg = state.scen.sabotageSpots ? state.scen.sabotageSpots(state, u) : [];
         if (!tg.length) return { on: false, hint: 'No objective within 1".' };
-        return { on: true, hint: 'Destroy the objective: a special action, and the unit does nothing else this activation (p. 155).' };
+        return { on: true, hint: 'Destroy the objective: a special action, and the unit does nothing else this activation.' };
       }
       case 'checkarea': {
         if (sup) return { on: false, hint: 'Suppressed units cannot search.' };
@@ -28105,7 +28110,7 @@
     var h = '<div class="card"><h2>Terrain set-up</h2>' +
       '<p class="sub">' + esc(ts.gen.name) + '. The table is four 2′ × 2′ areas; ' +
       (state.solo ? 'you roll a D6 for each' : 'the players take turns to roll a D6 for each') +
-      ' and place up to what it gives, anywhere in that area (pp. 46–47).' +
+      ' and place up to what it gives, anywhere in that area.' +
       (state.scen && state.scen.edges ? ' Table edges are rolled once the table is set.' : '') + '</p>';
     /* The area being laid belongs to one side. Its player gets the choices and
        the buttons; anyone else — the opponent across a network — sees the same
@@ -28498,7 +28503,7 @@
     return '<div class="card"><h2>Battlefield Insertion</h2>' +
       '<p class="sub"><b>' + esc(u.name) + '</b> is coming in. Tap anywhere in the shaded ground: ' +
       'at least 12" from every objective and 4" in from the table edge. On a D6 of 4+ your opponent ' +
-      'will shove the arrival point up to 2D6" (p. 56).</p>' +
+      'will shove the arrival point up to 2D6".</p>' +
       '<p class="hint">' + ins.spots.length + ' legal drop point' + (ins.spots.length === 1 ? '' : 's') + ' on the table.</p>' +
       '<div class="acts"><button class="act" data-act="holdinsert">' +
       '<span>Keep it in reserve</span><small>Try again next turn</small></button></div></div>';
@@ -31338,7 +31343,7 @@
         '<span class="dpr-note">' + (moved ? 'relocated' : 'tap to move') + '</span></button>';
     }).join('');
     return '<div class="card"><h2>Rapid Relocation</h2>' +
-      '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows (p. 87). No unit moves twice.</p>' +
+      '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows. No unit moves twice.</p>' +
       '<p class="hint">' + rl.moved.length + ' of ' + rl.cap + ' moved' + (pick ? ' — tap the table where <b>' + esc(pick.name) + '</b> should go' : '') + '.</p>' +
       '<div class="dplist"><div class="dphead">Your units</div>' + rows + '</div>' +
       '<div class="acts"><button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button></div></div>';
@@ -31365,7 +31370,7 @@
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
-      h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard (p. 79). Put one in, or the battle cannot begin.</p><div class="acts">';
+      h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p><div class="acts">';
     }
     return h + '</div></div>';
   }
@@ -31374,8 +31379,8 @@
     var hulls = carriersFor(side).filter(function (u) { return !isAI(u.side); });
     if (!hulls.length) return '';
     var h = '<div class="loadbox"><h3>Aboard before the battle</h3>' +
-      '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired ' +
-      '(p. 36). A Rapid insertion platform has to.</p>';
+      '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired. ' +
+      'A Rapid insertion platform has to.</p>';
     hulls.forEach(function (v) {
       var cargo = v.cargo || [], room = v.transport - cargo.length;
       var must = R.has(v, 'Immobile');
@@ -32129,7 +32134,7 @@
       if (!p) return '';
       var props = R.propsFor(p);
       var drive = props.length
-        ? '<select class="drive" data-drive="' + i + '" title="Propulsion — Appendix 3, p. 166">' +
+        ? '<select class="drive" data-drive="' + i + '" title="Propulsion">' +
         props.map(function (pr) {
           var d = R.PROPULSION[pr];
           return '<option value="' + pr + '"' + ((pick.prop || R.defaultDrive(p) || 'wheeled') === pr ? ' selected' : '') +
@@ -32138,7 +32143,7 @@
         : '';
       var drone = R.canBeDrone(p)
         ? '<button type="button" class="drone' + (pick.drone ? ' on' : '') + '" data-drone="' + i +
-        '" title="Drone Control (p. 37): +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
+        '" title="Drone Control: +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
         : '';
       var mnt = R.canMount(p, pick.riders)
         ? '<select class="drive" data-mount="' + i + '" title="What they ride — the models only; the rules are the same">' +
@@ -32148,7 +32153,7 @@
         : '';
       var ride = R.canRide(p)
         ? '<button type="button" class="drone' + (pick.riders ? ' on' : '') + '" data-riders="' + i +
-        '" title="Riders upgrade (p. 93): half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
+        '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
       return '<span class="pickwrap">' +
         '<button type="button" class="pick" data-drop="' + i + '" title="Remove">' +
@@ -32360,6 +32365,11 @@
     ['sel-tier', 'sel-pl', 'sel-faction'].forEach(function (id) {
       if (!el(id)) return;
       el(id).addEventListener('change', function () {
+        // a demo sets its Tier and Priority Level on the battlefield: both forces are rolled again to match
+        if (id !== 'sel-faction' && muster.hot && muster.hot.kind === 'demo' && muster.hot.step === 3) {
+          muster.hot.sides.forEach(function (sd) { if (sd) sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction); });
+          hotPaint(); return;
+        }
         muster.keys = []; muster.name = '';
         // a force that starts rolled keeps a rolled build, whatever it is changed to
         if (muster.hot && muster.hot.step < 3 && hotRolled(muster.hot.step)) hotRandomise(muster.hot.step - 1, true);
@@ -32599,7 +32609,7 @@
     s.dataset.hot = String(step);
     s.dataset.kind = kind;
     // set on the first force only: changing one force from the battlefield must not leave the other illegal
-    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = step > 1 || !!h.edit; });
+    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(kind === 'demo' && step === 3)) || !!h.edit; });
     el('setup-title').textContent = step === 3 ? 'The battlefield'
       : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
       : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
@@ -32607,7 +32617,7 @@
       hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
         ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
         'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
-      coop: ['A co-operative game: two commandos, one each, against the OpFor (pp. 146–156). Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
+      coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
         'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
       ai: ['A battle against the AI. Build your force and set the Battle Tier and Priority Level; then choose what you are up against, and where.',
@@ -33797,7 +33807,7 @@
     var h = '<h2>Campaign</h2>';
     if (!camp) {
       h += '<p class="lede">A never-ending series of battles between two forces that grow, ' +
-        'scar over and occasionally fall apart (rulebook pp. 83–91, and pp. 110–113 for a revolt). ' +
+        'scar over and occasionally fall apart. ' +
         'Units earn experience, take promotions and Battle Honours, collect trauma, and are ' +
         'sometimes struck off the dossier for good.</p>';
       h += '<div class="field"><label for="camp-faction">What you are running</label>' +
@@ -34097,12 +34107,12 @@
       '<button type="button" class="archline" data-go="fmodal" data-kind="colour">' + colourChip(draft.colour) +
       '<span>' + esc(colourName(draft.colour)) + '</span><em>change</em></button></div></div>';
     h += '<p class="lede">' + (xen
-      ? 'A tribe claims its ground with six Tier I units, two Tier II units and one free Tier I Alpha squad — its field commanders, who grow with the Tribe Tier (pp. 83, 140). Primitive Epsilon troopers cost nothing to raise, and turrets are never bought — they only take up composition points. Then choose the Tribe Advancement it begins with.'
+      ? 'A tribe claims its ground with six Tier I units, two Tier II units and one free Tier I Alpha squad — its field commanders, who grow with the Tribe Tier. Primitive Epsilon troopers cost nothing to raise, and turrets are never bought — they only take up composition points. Then choose the Tribe Advancement it begins with.'
       : bug
-      ? 'A swarm awakens with six Tier I units, two Tier II units and one free Tier I Leader Bug — the Overmind organism the whole swarm answers to (pp. 83, 124). Tiny bug swarms cost nothing to spawn. Then choose the Evolutionary Pathway the swarm begins down.'
+      ? 'A swarm awakens with six Tier I units, two Tier II units and one free Tier I Leader Bug — the Overmind organism the whole swarm answers to. Tiny bug swarms cost nothing to spawn. Then choose the Evolutionary Pathway the swarm begins down.'
       : reb
-      ? 'A revolt begins with six Tier I units, two Tier II units and one free Tier I First Among Equals — the leader who started it — with no more than two vehicles between them (pp. 83, 110). Armed civilians cost nothing to call out. Then choose the Path the revolt sets off down.'
-      : 'A starting company is six Tier I units, two Tier II units and one free Tier I Field command, with no more than two vehicles between them (p. 83). Then choose the doctrine the company is built around.') + '</p>';
+      ? 'A revolt begins with six Tier I units, two Tier II units and one free Tier I First Among Equals — the leader who started it — with no more than two vehicles between them. Armed civilians cost nothing to call out. Then choose the Path the revolt sets off down.'
+      : 'A starting company is six Tier I units, two Tier II units and one free Tier I Field command, with no more than two vehicles between them. Then choose the doctrine the company is built around.') + '</p>';
     var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
       t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
@@ -34983,16 +34993,16 @@
          of why it was struck off in the first place. Say that instead. */
       if (u.wiped && !u.disbanded) {
         h += '<div class="dledger bad">' + (u.aboardDowned
-          ? 'They were aboard when it came down, and it was not recovered — so neither were they (p. 86).'
-          : 'Every soldier was killed. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier (p. 85).') +
+          ? 'They were aboard when it came down, and it was not recovered — so neither were they.'
+          : 'Every soldier was killed. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
           '</div>';
       } else {
         if (u.fled) {
           h += '<div class="dledger">Scattered and ran rather than died: the survivors are back, ' +
-            'and their losses are replaced free (pp. 34, 85).</div>';
+            'and their losses are replaced free.</div>';
         }
         if (u.aboardDowned) {
-          h += '<div class="dledger">Rode the aircraft down and walked away from the landing (p. 86).</div>';
+          h += '<div class="dledger">Rode the aircraft down and walked away from the landing.</div>';
         }
         if (u.exp) h += ledger('exp', u.exp, u.expNow, 0);
         if (u.tp) h += ledger('tp', u.tp, u.tpNow, u.tpCap);
@@ -35122,7 +35132,7 @@
   function upgradeView() {
     var h = '<h2>' + esc(upState.name) + '</h2>';
     h += '<p class="lede">An Upgrade is chosen, not drawn — 10 EXP, and no more than ' +
-      C.upgradeCap(upState) + ' on a Tier ' + ROMAN[profile(upState.key).tier] + ' machine (p. 89).</p>';
+      C.upgradeCap(upState) + ' on a Tier ' + ROMAN[profile(upState.key).tier] + ' machine.</p>';
     h += '<div class="docpick">';
     C.availableUpgrades(upState).forEach(function (g) {
       h += '<button class="doc" data-fit="' + g.n + '"><b>' + esc(g.name) + '</b>' +

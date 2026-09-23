@@ -98,6 +98,12 @@ const { ROOT, SHOTS } = require('../where.js');
     h.sides[0].colour !== h.sides[1].colour && /battlefield/i.test(await title()), JSON.stringify(h.sides.map(sd => sd && sd.name)));
   const cards = await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length);
   check('...each force a button', cards === 2);
+  // the Battle Tier and Priority Level are set once, on the battlefield, for both forces
+  const tierShown = await p.evaluate(() => { const f = document.getElementById('tierpl-field'); return f.offsetParent !== null && !document.getElementById('sel-tier').disabled; });
+  await setVal('sel-tier', '1'); await setVal('sel-pl', '1');
+  h = await hot();
+  const t1 = await p.evaluate((sides) => sides.map(sd => sd.keys.reduce((n, k) => n + window.PMC.profile(window.PMC.splitPick(k).key).tier, 0)), h.sides);
+  check('...where the Tier is set, and both forces are rolled again to match', tierShown && t1.every(n => n > 0 && n <= 6), t1.join(' / ') + ' points at Tier I');
   // tap force 1 to change it: its kind, and back to the battlefield
   await p.evaluate(() => document.querySelector('#hot-sum [data-hotside="0"]').click()); await p.waitForTimeout(200);
   h = await hot();

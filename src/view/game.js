@@ -544,7 +544,7 @@
     var h = '<div class="card"><h2>Terrain set-up</h2>' +
       '<p class="sub">' + esc(ts.gen.name) + '. The table is four 2′ × 2′ areas; ' +
       (state.solo ? 'you roll a D6 for each' : 'the players take turns to roll a D6 for each') +
-      ' and place up to what it gives, anywhere in that area (pp. 46–47).' +
+      ' and place up to what it gives, anywhere in that area.' +
       (state.scen && state.scen.edges ? ' Table edges are rolled once the table is set.' : '') + '</p>';
     /* The area being laid belongs to one side. Its player gets the choices and
        the buttons; anyone else — the opponent across a network — sees the same
@@ -937,7 +937,7 @@
     return '<div class="card"><h2>Battlefield Insertion</h2>' +
       '<p class="sub"><b>' + esc(u.name) + '</b> is coming in. Tap anywhere in the shaded ground: ' +
       'at least 12" from every objective and 4" in from the table edge. On a D6 of 4+ your opponent ' +
-      'will shove the arrival point up to 2D6" (p. 56).</p>' +
+      'will shove the arrival point up to 2D6".</p>' +
       '<p class="hint">' + ins.spots.length + ' legal drop point' + (ins.spots.length === 1 ? '' : 's') + ' on the table.</p>' +
       '<div class="acts"><button class="act" data-act="holdinsert">' +
       '<span>Keep it in reserve</span><small>Try again next turn</small></button></div></div>';
@@ -3777,7 +3777,7 @@
         '<span class="dpr-note">' + (moved ? 'relocated' : 'tap to move') + '</span></button>';
     }).join('');
     return '<div class="card"><h2>Rapid Relocation</h2>' +
-      '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows (p. 87). No unit moves twice.</p>' +
+      '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows. No unit moves twice.</p>' +
       '<p class="hint">' + rl.moved.length + ' of ' + rl.cap + ' moved' + (pick ? ' — tap the table where <b>' + esc(pick.name) + '</b> should go' : '') + '.</p>' +
       '<div class="dplist"><div class="dphead">Your units</div>' + rows + '</div>' +
       '<div class="acts"><button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button></div></div>';
@@ -3804,7 +3804,7 @@
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
-      h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard (p. 79). Put one in, or the battle cannot begin.</p><div class="acts">';
+      h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p><div class="acts">';
     }
     return h + '</div></div>';
   }
@@ -3813,8 +3813,8 @@
     var hulls = carriersFor(side).filter(function (u) { return !isAI(u.side); });
     if (!hulls.length) return '';
     var h = '<div class="loadbox"><h3>Aboard before the battle</h3>' +
-      '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired ' +
-      '(p. 36). A Rapid insertion platform has to.</p>';
+      '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired. ' +
+      'A Rapid insertion platform has to.</p>';
     hulls.forEach(function (v) {
       var cargo = v.cargo || [], room = v.transport - cargo.length;
       var must = R.has(v, 'Immobile');
@@ -4568,7 +4568,7 @@
       if (!p) return '';
       var props = R.propsFor(p);
       var drive = props.length
-        ? '<select class="drive" data-drive="' + i + '" title="Propulsion — Appendix 3, p. 166">' +
+        ? '<select class="drive" data-drive="' + i + '" title="Propulsion">' +
         props.map(function (pr) {
           var d = R.PROPULSION[pr];
           return '<option value="' + pr + '"' + ((pick.prop || R.defaultDrive(p) || 'wheeled') === pr ? ' selected' : '') +
@@ -4577,7 +4577,7 @@
         : '';
       var drone = R.canBeDrone(p)
         ? '<button type="button" class="drone' + (pick.drone ? ' on' : '') + '" data-drone="' + i +
-        '" title="Drone Control (p. 37): +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
+        '" title="Drone Control: +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
         : '';
       var mnt = R.canMount(p, pick.riders)
         ? '<select class="drive" data-mount="' + i + '" title="What they ride — the models only; the rules are the same">' +
@@ -4587,7 +4587,7 @@
         : '';
       var ride = R.canRide(p)
         ? '<button type="button" class="drone' + (pick.riders ? ' on' : '') + '" data-riders="' + i +
-        '" title="Riders upgrade (p. 93): half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
+        '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
       return '<span class="pickwrap">' +
         '<button type="button" class="pick" data-drop="' + i + '" title="Remove">' +
@@ -4799,6 +4799,11 @@
     ['sel-tier', 'sel-pl', 'sel-faction'].forEach(function (id) {
       if (!el(id)) return;
       el(id).addEventListener('change', function () {
+        // a demo sets its Tier and Priority Level on the battlefield: both forces are rolled again to match
+        if (id !== 'sel-faction' && muster.hot && muster.hot.kind === 'demo' && muster.hot.step === 3) {
+          muster.hot.sides.forEach(function (sd) { if (sd) sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction); });
+          hotPaint(); return;
+        }
         muster.keys = []; muster.name = '';
         // a force that starts rolled keeps a rolled build, whatever it is changed to
         if (muster.hot && muster.hot.step < 3 && hotRolled(muster.hot.step)) hotRandomise(muster.hot.step - 1, true);
@@ -5038,7 +5043,7 @@
     s.dataset.hot = String(step);
     s.dataset.kind = kind;
     // set on the first force only: changing one force from the battlefield must not leave the other illegal
-    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = step > 1 || !!h.edit; });
+    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(kind === 'demo' && step === 3)) || !!h.edit; });
     el('setup-title').textContent = step === 3 ? 'The battlefield'
       : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
       : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
@@ -5046,7 +5051,7 @@
       hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
         ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
         'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
-      coop: ['A co-operative game: two commandos, one each, against the OpFor (pp. 146–156). Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
+      coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
         'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
       ai: ['A battle against the AI. Build your force and set the Battle Tier and Priority Level; then choose what you are up against, and where.',

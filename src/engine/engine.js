@@ -762,7 +762,7 @@
       pushRes({
         kind: 'Table edges', title: 'The ' + ea + ' edge for ' + state.cfg.nameA,
         dice: [{ label: 'D4', value: d }],
-        note: 'Before the battle, players randomize opposite table edges (p. 50) — after the terrain is down, so nobody knew which end was theirs while placing it.',
+        note: 'Before the battle, players randomize opposite table edges — after the terrain is down, so nobody knew which end was theirs while placing it.',
         list: [{ text: line }].concat(k ? [{ text: 'The table is turned ' + turn + ': ' + sideName('A') + '’s edge now runs along the upper left of the view, ' + sideName('B') + '’s along the lower right.' }] : [])
       });
     }
@@ -2468,7 +2468,7 @@
       }
       case 'move':
         if (R.has(u, 'Immobile')) {
-          return { on: false, hint: 'A Rapid insertion platform came down where it came down. It may only put its troops out (p. 79).' };
+          return { on: false, hint: 'A Rapid insertion platform came down where it came down. It may only put its troops out.' };
         }
         if (R.has(u, 'Stationary Artillery')) {
           return { on: false, hint: 'Stationary Artillery: the piece is emplaced and does not move. A transport may tow it.' };
@@ -2529,7 +2529,7 @@
       case 'embark': {
         if (!u.transport) return { on: false, hint: 'This unit carries no troops.' };
         if (R.has(u, 'Immobile')) {
-          return { on: false, hint: 'A Rapid insertion platform is a one-way ride: it only puts troops out (p. 79).' };
+          return { on: false, hint: 'A Rapid insertion platform is a one-way ride: it only puts troops out.' };
         }
         var room = u.transport - (u.cargo || []).length;
         if (room <= 0) return { on: false, hint: 'Full — carrying ' + u.cargo.length + ' of ' + u.transport + '.' };
@@ -2560,7 +2560,7 @@
         }
         if (smoke) {
           return { on: true, hint: 'Smoke Markers: a grenade and a flare on an enemy within 12". ' +
-            'Two Indirect Fire units shoot at it there and then, without needing sight — and this unit may move first (p. 94).' };
+            'Two Indirect Fire units shoot at it there and then, without needing sight — and this unit may move first.' };
         }
         return { on: true, hint: mkKind === 'designate'
           ? 'Designate target: an enemy within 24" and in sight. Indirect Fire units shoot it at once, no sight needed. ' +
@@ -2612,7 +2612,7 @@
       case 'sabotage': {
         var tg = state.scen.sabotageSpots ? state.scen.sabotageSpots(state, u) : [];
         if (!tg.length) return { on: false, hint: 'No objective within 1".' };
-        return { on: true, hint: 'Destroy the objective: a special action, and the unit does nothing else this activation (p. 155).' };
+        return { on: true, hint: 'Destroy the objective: a special action, and the unit does nothing else this activation.' };
       }
       case 'checkarea': {
         if (sup) return { on: false, hint: 'Suppressed units cannot search.' };

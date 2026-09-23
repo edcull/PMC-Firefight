@@ -326,7 +326,7 @@
     var h = '<h2>Campaign</h2>';
     if (!camp) {
       h += '<p class="lede">A never-ending series of battles between two forces that grow, ' +
-        'scar over and occasionally fall apart (rulebook pp. 83–91, and pp. 110–113 for a revolt). ' +
+        'scar over and occasionally fall apart. ' +
         'Units earn experience, take promotions and Battle Honours, collect trauma, and are ' +
         'sometimes struck off the dossier for good.</p>';
       h += '<div class="field"><label for="camp-faction">What you are running</label>' +
@@ -626,12 +626,12 @@
       '<button type="button" class="archline" data-go="fmodal" data-kind="colour">' + colourChip(draft.colour) +
       '<span>' + esc(colourName(draft.colour)) + '</span><em>change</em></button></div></div>';
     h += '<p class="lede">' + (xen
-      ? 'A tribe claims its ground with six Tier I units, two Tier II units and one free Tier I Alpha squad — its field commanders, who grow with the Tribe Tier (pp. 83, 140). Primitive Epsilon troopers cost nothing to raise, and turrets are never bought — they only take up composition points. Then choose the Tribe Advancement it begins with.'
+      ? 'A tribe claims its ground with six Tier I units, two Tier II units and one free Tier I Alpha squad — its field commanders, who grow with the Tribe Tier. Primitive Epsilon troopers cost nothing to raise, and turrets are never bought — they only take up composition points. Then choose the Tribe Advancement it begins with.'
       : bug
-      ? 'A swarm awakens with six Tier I units, two Tier II units and one free Tier I Leader Bug — the Overmind organism the whole swarm answers to (pp. 83, 124). Tiny bug swarms cost nothing to spawn. Then choose the Evolutionary Pathway the swarm begins down.'
+      ? 'A swarm awakens with six Tier I units, two Tier II units and one free Tier I Leader Bug — the Overmind organism the whole swarm answers to. Tiny bug swarms cost nothing to spawn. Then choose the Evolutionary Pathway the swarm begins down.'
       : reb
-      ? 'A revolt begins with six Tier I units, two Tier II units and one free Tier I First Among Equals — the leader who started it — with no more than two vehicles between them (pp. 83, 110). Armed civilians cost nothing to call out. Then choose the Path the revolt sets off down.'
-      : 'A starting company is six Tier I units, two Tier II units and one free Tier I Field command, with no more than two vehicles between them (p. 83). Then choose the doctrine the company is built around.') + '</p>';
+      ? 'A revolt begins with six Tier I units, two Tier II units and one free Tier I First Among Equals — the leader who started it — with no more than two vehicles between them. Armed civilians cost nothing to call out. Then choose the Path the revolt sets off down.'
+      : 'A starting company is six Tier I units, two Tier II units and one free Tier I Field command, with no more than two vehicles between them. Then choose the doctrine the company is built around.') + '</p>';
     var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
       t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
@@ -1512,16 +1512,16 @@
          of why it was struck off in the first place. Say that instead. */
       if (u.wiped && !u.disbanded) {
         h += '<div class="dledger bad">' + (u.aboardDowned
-          ? 'They were aboard when it came down, and it was not recovered — so neither were they (p. 86).'
-          : 'Every soldier was killed. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier (p. 85).') +
+          ? 'They were aboard when it came down, and it was not recovered — so neither were they.'
+          : 'Every soldier was killed. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
           '</div>';
       } else {
         if (u.fled) {
           h += '<div class="dledger">Scattered and ran rather than died: the survivors are back, ' +
-            'and their losses are replaced free (pp. 34, 85).</div>';
+            'and their losses are replaced free.</div>';
         }
         if (u.aboardDowned) {
-          h += '<div class="dledger">Rode the aircraft down and walked away from the landing (p. 86).</div>';
+          h += '<div class="dledger">Rode the aircraft down and walked away from the landing.</div>';
         }
         if (u.exp) h += ledger('exp', u.exp, u.expNow, 0);
         if (u.tp) h += ledger('tp', u.tp, u.tpNow, u.tpCap);
@@ -1651,7 +1651,7 @@
   function upgradeView() {
     var h = '<h2>' + esc(upState.name) + '</h2>';
     h += '<p class="lede">An Upgrade is chosen, not drawn — 10 EXP, and no more than ' +
-      C.upgradeCap(upState) + ' on a Tier ' + ROMAN[profile(upState.key).tier] + ' machine (p. 89).</p>';
+      C.upgradeCap(upState) + ' on a Tier ' + ROMAN[profile(upState.key).tier] + ' machine.</p>';
     h += '<div class="docpick">';
     C.availableUpgrades(upState).forEach(function (g) {
       h += '<button class="doc" data-fit="' + g.n + '"><b>' + esc(g.name) + '</b>' +
