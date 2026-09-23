@@ -1,7 +1,7 @@
 /* Battlefield Insertion: held in reserve, arriving from the second turn on. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT } = require('../where.js');
+const { ROOT, openMuster } = require('../where.js');
 async function drain(p) {
   for (let i = 0; i < 16; i++) {
     const open = await p.evaluate(() => !document.getElementById('resolution').hidden);
@@ -18,6 +18,8 @@ async function drain(p) {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
+  // the muster screen sits behind the main menu now
+  await openMuster(p);
   await p.evaluate(() => {
     document.getElementById('sel-tier').value = '4';
     document.getElementById('sel-mode').value = 'ai';
