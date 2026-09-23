@@ -21932,9 +21932,10 @@
     var el = target(e);
     if (el === open && !(e.relatedTarget && el.contains(e.relatedTarget))) hide();
   });
+  var focusedAt = 0;
   doc.addEventListener('focusin', function (e) {
     var el = target(e);
-    if (el) show(el);
+    if (el) { show(el); focusedAt = Date.now(); }
   });
   doc.addEventListener('focusout', function () { if (open) hide(); });
 
@@ -21954,6 +21955,9 @@
     if (canHover || !standalone(el)) return;
     e.preventDefault();
     e.stopPropagation();
+    /* A tap focuses the chip first, which has already opened its tip: the tap
+       that follows at once is that same tap, not a second one to close it. */
+    if (el === open && Date.now() - focusedAt < 500) return;
     if (el === open) hide(); else show(el);
   }, true);
 
@@ -31051,6 +31055,7 @@
     }
     box.className = (keep ? keep + ' ' : '') + 'statstrip';   // always in full: no Details to tap for it
     if (!u) {
+      box._html = null;
       box.innerHTML = '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
       return;
     }
@@ -31075,13 +31080,16 @@
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
       stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
       stat('SP', u.sp) + '</div>';
-    // the ground it stands on, marked as the map marks it
-    var tk = R.terrainOf(state, u), tmk = TERRAIN_MARK[tk];
-    h += '<div class="chips"><span class="chip tpill">' +
-      (tmk ? '<i style="background:' + tmk.col + '">' + tmk.ch + '</i>' : '') +
-      R.TERRAIN[tk].name + '</span></div>';
     h += honourChips(u);
-    if (u.rules.length) h += '<div class="chips">' + u.rules.map(function (r) { return '<span class="chip">' + r + '</span>'; }).join('') + '</div>';
+    h += ruleChips(u, R.terrainOf(state, u) !== 'open');
+    fillStats(box, h);
+  }
+  /* The stats are redrawn with every render, and in a demo that is every
+     action: rewriting them unchanged would pull a tapped chip out from under
+     its open tip (it loses focus, and the tip goes). So only a change is written. */
+  function fillStats(box, h) {
+    if (box._html === h) return;
+    box._html = h;
     box.innerHTML = h;
     wireHost(box);
   }
@@ -31183,9 +31191,25 @@
         return '<span class="chip">aboard: ' + c.name + '</span>';
       }).join('') + '</div>';
     }
-    if (u.rules.length) h += '<div class="chips">' + u.rules.map(function (r) { return '<span class="chip">' + r + '</span>'; }).join('') + '</div>';
-    box.innerHTML = h;
-    wireHost(box);
+    h += ruleChips(u, !!terrainMark(u));
+    fillStats(box, h);
+  }
+  /* The special rules, each with its rule text to tap or hover for, and first
+     among them the ground the unit stands on — marked as the map marks it, and
+     left out in the open, where there is nothing to say. */
+  function ruleChips(u, showGround) {
+    var out = [];
+    if (showGround) {
+      var tk = R.terrainOf(state, u), mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
+      out.push('<span class="chip tpill" ' + tip(R.TERRAIN[tk].name, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +
+        (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(R.TERRAIN[tk].name) + '</span>');
+    }
+    var TXT = window.PMCRuleText;
+    (u.rules || []).forEach(function (r) {
+      var d = TXT ? TXT.describe(r) : { text: '' };
+      out.push('<span class="chip"' + (d.text ? ' ' + tip(r, d.text) : '') + '>' + esc(r) + '</span>');
+    });
+    return out.length ? '<div class="chips">' + out.join('') + '</div>' : '';
   }
 
   /* ---------- side panel ---------- */
@@ -31831,6 +31855,22 @@
     if (tip) tip.hidden = true;
   }
 
+  // what a kind of ground does, in short — for the map's tip and the unit tab's pill
+  function terrainBits(tk, inside) {
+    var t = R.TERRAIN[tk], bits = [];
+    if (inside) bits.push('+2 Defence, and no Crossfire inside');
+    if (t.cover && !inside) bits.push('+' + t.cover + ' Defence ' + (tk === 'barricade' ? 'within 2" behind it' : 'in it'));
+    if (t.fp && t.hill) bits.push('+' + t.fp + ' Firepower shooting down');
+    if (t.hill) bits.push('blocks sight across it');
+    if (t.wire) bits.push('an extra D6" to cross');
+    if (t.noCrossfire && !inside) bits.push('no Crossfire');
+    if (t.blocks && !inside) bits.push('blocks line of sight');
+    if (t.movePenalty) bits.push(t.movePenalty + '" off a move ' + (t.linear ? 'for each crossing' : 'into or through it — once a move'));
+    if (t.shallow) bits.push('no Cumbersome Weapons');
+    if (t.destructible && !inside) bits.push('can be brought down');
+    if (t.wreck) bits.push('what is left of it');
+    return bits;
+  }
   function showTerrainTip(e, p) {
     var tip = el('terraintip'), wrap = document.querySelector('.board-wrap');
     if (!tip || !wrap) return;
@@ -31846,16 +31886,7 @@
       bits.push('+2 Defence' + (hi ? ', +2 Firepower' : '') + ', no Crossfire inside');
     }
     else if (t.impassable) bits.push('impassable');
-    if (t.cover && !bp) bits.push('+' + t.cover + ' Defence ' + (tk === 'barricade' ? 'within 2" behind it' : 'in it'));
-    if (t.fp && t.hill) bits.push('+' + t.fp + ' Firepower shooting down');
-    if (t.hill) bits.push('blocks sight across it');
-    if (t.wire) bits.push('an extra D6" to cross');
-    if (t.noCrossfire) bits.push('no Crossfire');
-    if (t.blocks) bits.push('blocks line of sight');
-    if (t.movePenalty) bits.push(t.movePenalty + '" off a move ' + (t.linear ? 'for each crossing' : 'into or through it — once a move'));
-    if (t.shallow) bits.push('no Cumbersome Weapons');
-    if (t.destructible) bits.push('can be brought down');
-    if (t.wreck) bits.push('what is left of it');
+    bits = bits.concat(terrainBits(tk, !!bp));
     if (!bits.length) bits.push('no cover, no penalty');
 
     var extra = '';
