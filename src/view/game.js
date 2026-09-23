@@ -752,6 +752,18 @@
      status, and everything the rules ask of it, is untouched. */
   var DROP_MS = 900;          // how long a craft is falling
   var STAND_MS = 1150;        // how long a squad takes to get up
+  var TELE_MS = 1300;         // how long a Xenotripod squad takes to teleport in
+  /* A Xenotripod squad does not land: it teleports in. A pillar of light forms
+     on the landing point, the squad flickers into being inside it, and the
+     light thins away. Before it forms the squad is not drawn at all. */
+  function teleporting(age) {
+    var k = age / TELE_MS;
+    if (k < 0.3) return { lift: 0, status: null, hidden: true };
+    var a = Math.min(1, (k - 0.3) / 0.35);
+    // flickering in: every other few frames it drops out, less often as it firms up
+    var flick = a < 1 && Math.floor(age / 55) % (a < 0.5 ? 2 : 4) === 0;
+    return { lift: 0, status: null, alpha: flick ? a * 0.3 : a };
+  }
 
   function arriving(u) {
     if (!u || !u.arriveAt) return { lift: 0, status: null };
@@ -764,6 +776,10 @@
       var fromUp = u.dropFrom != null ? u.dropFrom : ISO.ELEV * 5.5;
       return { lift: Math.round(fromUp * (1 - eased)), status: null };
     }
+    if (u.arriveKind === 'teleport') {
+      if (age >= TELE_MS) { u.arriveAt = 0; return { lift: 0, status: null }; }
+      return teleporting(age);
+    }
     if (age >= STAND_MS) { u.arriveAt = 0; return { lift: 0, status: null }; }
     // flat on its face, then up on one knee, then standing
     return { lift: 0, status: age < STAND_MS * 0.38 ? 'broken' : age < STAND_MS * 0.74 ? 'suppressed' : null };
@@ -773,7 +789,7 @@
        used to hold the whole game waiting for a frame that never drew it. */
     return state && state.units.some(function (u) {
       if (!u.arriveAt) return false;
-      var span = u.arriveKind === 'drop' ? DROP_MS : STAND_MS;
+      var span = u.arriveKind === 'drop' ? DROP_MS : u.arriveKind === 'teleport' ? TELE_MS : STAND_MS;
       if (nowMs() - u.arriveAt >= span) { u.arriveAt = 0; u.dropFrom = null; return false; }
       return true;
     });
@@ -850,6 +866,14 @@
        it falls out of the sky like everything else that side lands. */
     var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
     u.arriveAt = nowMs();
+    // Xenotripod infantry teleport in rather than land
+    if (!craft && u.faction === 'xeno') {
+      u.arriveKind = 'teleport';
+      addFx({ kind: 'teleportin', x: u.x, y: u.y, r: 1.4, dur: TELE_MS + 200, blocking: true });
+      if (SFX && SFX.shimmer) SFX.shimmer();
+      render();
+      return;
+    }
     u.arriveKind = craft ? 'drop' : 'stand';
     if (craft) {
       // the dust it throws up as it touches down, and the shockwave after it
@@ -2633,6 +2657,8 @@
         }
         var u = it.unit, ax = dispX(u), ay = dispY(u);
         var arr = arriving(u);
+        if (arr.hidden) return;                       // teleporting in: not here yet
+        if (arr.alpha != null) { pctx.save(); pctx.globalAlpha = arr.alpha; }
         ISO.drawUnit(pctx, u, {
           at: { x: ax, y: ay },
           around: u.bld ? R.sectionRect(u) : null,
@@ -2641,10 +2667,13 @@
           walk: u.walk || 0,
           arc: u.arc || 0,
           status: arr.status || R.status(u),
+          // getting up as it arrives is a pose, not a state: the ring shows the state it really has
+          ringStatus: arr.status ? R.status(u) : undefined,
           activated: u.activated,
           selected: ui.selected === u,
           morale: R.currentMorale(u)
         });
+        if (arr.alpha != null) pctx.restore();
       });
 
     /* The ghost: where the unit would stand if the move went ahead. Drawn over

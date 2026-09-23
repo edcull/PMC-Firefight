@@ -427,6 +427,60 @@
           I.ellipse(g, op2.x, op2.y, I.PIXEL * 2.6 * osz, I.PIXEL * 2.3 * osz, 'rgba(' + orgb + ',1)');
           I.ellipse(g, op2.x - I.PIXEL * 0.6, op2.y - I.PIXEL * 0.6, I.PIXEL * 1.1 * osz, I.PIXEL * 0.9 * osz, 'rgba(255,255,255,.95)');
         }
+      } else if (f.kind === 'teleportin') {
+        /* A Xenotripod squad teleporting onto the table: a ring of blue light
+           opens on the ground, a pillar of it climbs out of the ring and
+           brightens, the squad forms inside it (the page draws that), and the
+           light thins away upward, leaving sparks rising off the ground. */
+        var tp0 = I.toScreen(f.x, f.y); tp0.y -= liftAt(f);
+        var trgb = '110,190,255', tR = (f.r || 1.3) * I.K;
+        var grow = Math.min(1, k / 0.3), fade = k < 0.55 ? 1 : Math.max(0, 1 - (k - 0.55) / 0.45);
+        var ph = I.K * (1.6 + 1.8 * grow);
+        g.save();
+        // the ring on the ground, with a second one pulsing out of it
+        g.strokeStyle = 'rgba(' + trgb + ',' + (0.85 * fade) + ')';
+        g.lineWidth = I.PIXEL * 2;
+        g.beginPath(); g.ellipse(tp0.x, tp0.y, tR * grow, tR * 0.5 * grow, 0, 0, Math.PI * 2); g.stroke();
+        var pr = (k * 3) % 1;
+        g.strokeStyle = 'rgba(200,238,255,' + (0.6 * (1 - pr) * fade) + ')';
+        g.beginPath(); g.ellipse(tp0.x, tp0.y, tR * (0.3 + pr * 0.8), tR * 0.5 * (0.3 + pr * 0.8), 0, 0, Math.PI * 2); g.stroke();
+        /* the pillar: a cylinder of light standing on the ring — a glowing
+           body brightest down its middle, a bright edge down each side, a
+           ring for a lid, and rings of light climbing it */
+        var colA = 0.34 * grow * fade, cw = tR * grow, cry = tR * 0.5 * grow, topY = tp0.y - ph;
+        var gr = g.createLinearGradient(tp0.x - cw, 0, tp0.x + cw, 0);
+        gr.addColorStop(0, 'rgba(' + trgb + ',' + (colA * 0.55) + ')');
+        gr.addColorStop(0.5, 'rgba(120,200,255,' + (colA * 1.3) + ')');
+        gr.addColorStop(1, 'rgba(' + trgb + ',' + (colA * 0.55) + ')');
+        g.fillStyle = gr;
+        g.beginPath();
+        g.moveTo(tp0.x - cw, tp0.y);
+        g.lineTo(tp0.x - cw, topY);
+        g.ellipse(tp0.x, topY, cw, cry, 0, Math.PI, 0, false);
+        g.lineTo(tp0.x + cw, tp0.y);
+        g.ellipse(tp0.x, tp0.y, cw, cry, 0, 0, Math.PI, false);
+        g.closePath(); g.fill();
+        I.ellipse(g, tp0.x, tp0.y, cw * 0.9, cry * 0.9, 'rgba(' + trgb + ',' + (0.22 * fade) + ')');
+        // its edges, and its lid
+        g.strokeStyle = 'rgba(170,225,255,' + (0.7 * grow * fade) + ')';
+        g.lineWidth = I.PIXEL;
+        g.beginPath(); g.moveTo(tp0.x - cw, tp0.y); g.lineTo(tp0.x - cw, topY); g.moveTo(tp0.x + cw, tp0.y); g.lineTo(tp0.x + cw, topY); g.stroke();
+        g.strokeStyle = 'rgba(200,238,255,' + (0.75 * grow * fade) + ')';
+        g.beginPath(); g.ellipse(tp0.x, topY, cw, cry, 0, 0, Math.PI * 2); g.stroke();
+        // rings of light climbing the cylinder
+        for (var sl = 0; sl < 3; sl++) {
+          var sy = tp0.y - ((k * 2.2 + sl / 3) % 1) * ph;
+          g.strokeStyle = 'rgba(190,232,255,' + (0.55 * fade) + ')';
+          g.beginPath(); g.ellipse(tp0.x, sy, cw, cry, 0, 0, Math.PI * 2); g.stroke();
+        }
+        // sparks rising off the ground
+        for (var spk = 0; spk < 10; spk++) {
+          var sa = spk * 2.4, sk = (k * 1.6 + spk * 0.13) % 1;
+          var sx = tp0.x + Math.cos(sa) * tR * 0.8 * (0.4 + (spk % 3) * 0.25), sy2 = tp0.y + Math.sin(sa) * tR * 0.3 - sk * ph;
+          g.fillStyle = 'rgba(200,240,255,' + (0.8 * (1 - sk) * fade) + ')';
+          g.fillRect(sx, sy2, I.PIXEL, I.PIXEL);
+        }
+        g.restore();
       } else if (f.kind === 'exitportal') {
         /* the salvo's one exit: opens as the first bomb goes into the gun,
            stays open while every bomb comes through, closes after the last */

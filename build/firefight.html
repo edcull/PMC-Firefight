@@ -20642,6 +20642,11 @@
     if (opts.hop) p.y -= opts.hop;
     var pal = PALETTE[u.paint || u.side] || PALETTE.A;
     var st = opts.status || 'ready';
+    /* The ring (and the morale bar) show the unit's state; the figures take
+       their pose from `status`. They part only while a squad gets up off the
+       ground as it arrives: posed flat, then kneeling, but it is not broken or
+       suppressed, so its ring stays in the army's colour. */
+    var rst = opts.ringStatus || st;
     var art = u.art || 'rifle';
     // mounted infantry (the Riders upgrade, p. 93) ride whatever they can find
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
@@ -20703,7 +20708,7 @@
        state runs round the building's footprint. */
     var around = opts.around || null;
     if (around) {
-      var ringCol0 = st === 'broken' ? '#e0557a' : st === 'suppressed' ? '#e08a3a' : pal.light;
+      var ringCol0 = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
       var gap = 0.3, lf0 = opts.lift || 0;
       var corners = [[around.x - gap, around.y - gap], [around.x + around.w + gap, around.y - gap],
         [around.x + around.w + gap, around.y + around.h + gap], [around.x - gap, around.y + around.h + gap]]
@@ -20727,7 +20732,7 @@
     /* The ring is the only thing carrying the unit's state now, so it is given a
        dark edge a pixel outside it — enough to read on pale ground without
        putting a disc back under the models. */
-    var ringCol = st === 'broken' ? '#e0557a' : st === 'suppressed' ? '#e08a3a' : pal.light;
+    var ringCol = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
     ellipseRing(g, p.x, p.y, br + PIXEL, brY + PIXEL, 'rgba(12,10,8,.45)');
     ellipseRing(g, p.x, p.y, br, brY, ringCol);
     if (opts.selected) ellipseRing(g, p.x, p.y, br + a(2), brY + a(1), '#ffffff');
@@ -20798,7 +20803,7 @@
       var filled = Math.max(PIXEL, Math.round(Math.min(1, u.sp / (2 * opts.morale)) * w));
       rect(g, p.x - w / 2 - 1, head - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
       rect(g, p.x - w / 2, head, w, bh, '#15181d');
-      rect(g, p.x - w / 2, head, filled, bh, st === 'broken' ? '#d1476b' : '#c9762f');
+      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : '#c9762f');
     }
     if (u.marked) {
       dot(g, p.x + a(5), head - a(2), '#e8c15a');
@@ -21407,6 +21412,60 @@
           I.ellipse(g, op2.x, op2.y, I.PIXEL * 2.6 * osz, I.PIXEL * 2.3 * osz, 'rgba(' + orgb + ',1)');
           I.ellipse(g, op2.x - I.PIXEL * 0.6, op2.y - I.PIXEL * 0.6, I.PIXEL * 1.1 * osz, I.PIXEL * 0.9 * osz, 'rgba(255,255,255,.95)');
         }
+      } else if (f.kind === 'teleportin') {
+        /* A Xenotripod squad teleporting onto the table: a ring of blue light
+           opens on the ground, a pillar of it climbs out of the ring and
+           brightens, the squad forms inside it (the page draws that), and the
+           light thins away upward, leaving sparks rising off the ground. */
+        var tp0 = I.toScreen(f.x, f.y); tp0.y -= liftAt(f);
+        var trgb = '110,190,255', tR = (f.r || 1.3) * I.K;
+        var grow = Math.min(1, k / 0.3), fade = k < 0.55 ? 1 : Math.max(0, 1 - (k - 0.55) / 0.45);
+        var ph = I.K * (1.6 + 1.8 * grow);
+        g.save();
+        // the ring on the ground, with a second one pulsing out of it
+        g.strokeStyle = 'rgba(' + trgb + ',' + (0.85 * fade) + ')';
+        g.lineWidth = I.PIXEL * 2;
+        g.beginPath(); g.ellipse(tp0.x, tp0.y, tR * grow, tR * 0.5 * grow, 0, 0, Math.PI * 2); g.stroke();
+        var pr = (k * 3) % 1;
+        g.strokeStyle = 'rgba(200,238,255,' + (0.6 * (1 - pr) * fade) + ')';
+        g.beginPath(); g.ellipse(tp0.x, tp0.y, tR * (0.3 + pr * 0.8), tR * 0.5 * (0.3 + pr * 0.8), 0, 0, Math.PI * 2); g.stroke();
+        /* the pillar: a cylinder of light standing on the ring — a glowing
+           body brightest down its middle, a bright edge down each side, a
+           ring for a lid, and rings of light climbing it */
+        var colA = 0.34 * grow * fade, cw = tR * grow, cry = tR * 0.5 * grow, topY = tp0.y - ph;
+        var gr = g.createLinearGradient(tp0.x - cw, 0, tp0.x + cw, 0);
+        gr.addColorStop(0, 'rgba(' + trgb + ',' + (colA * 0.55) + ')');
+        gr.addColorStop(0.5, 'rgba(120,200,255,' + (colA * 1.3) + ')');
+        gr.addColorStop(1, 'rgba(' + trgb + ',' + (colA * 0.55) + ')');
+        g.fillStyle = gr;
+        g.beginPath();
+        g.moveTo(tp0.x - cw, tp0.y);
+        g.lineTo(tp0.x - cw, topY);
+        g.ellipse(tp0.x, topY, cw, cry, 0, Math.PI, 0, false);
+        g.lineTo(tp0.x + cw, tp0.y);
+        g.ellipse(tp0.x, tp0.y, cw, cry, 0, 0, Math.PI, false);
+        g.closePath(); g.fill();
+        I.ellipse(g, tp0.x, tp0.y, cw * 0.9, cry * 0.9, 'rgba(' + trgb + ',' + (0.22 * fade) + ')');
+        // its edges, and its lid
+        g.strokeStyle = 'rgba(170,225,255,' + (0.7 * grow * fade) + ')';
+        g.lineWidth = I.PIXEL;
+        g.beginPath(); g.moveTo(tp0.x - cw, tp0.y); g.lineTo(tp0.x - cw, topY); g.moveTo(tp0.x + cw, tp0.y); g.lineTo(tp0.x + cw, topY); g.stroke();
+        g.strokeStyle = 'rgba(200,238,255,' + (0.75 * grow * fade) + ')';
+        g.beginPath(); g.ellipse(tp0.x, topY, cw, cry, 0, 0, Math.PI * 2); g.stroke();
+        // rings of light climbing the cylinder
+        for (var sl = 0; sl < 3; sl++) {
+          var sy = tp0.y - ((k * 2.2 + sl / 3) % 1) * ph;
+          g.strokeStyle = 'rgba(190,232,255,' + (0.55 * fade) + ')';
+          g.beginPath(); g.ellipse(tp0.x, sy, cw, cry, 0, 0, Math.PI * 2); g.stroke();
+        }
+        // sparks rising off the ground
+        for (var spk = 0; spk < 10; spk++) {
+          var sa = spk * 2.4, sk = (k * 1.6 + spk * 0.13) % 1;
+          var sx = tp0.x + Math.cos(sa) * tR * 0.8 * (0.4 + (spk % 3) * 0.25), sy2 = tp0.y + Math.sin(sa) * tR * 0.3 - sk * ph;
+          g.fillStyle = 'rgba(200,240,255,' + (0.8 * (1 - sk) * fade) + ')';
+          g.fillRect(sx, sy2, I.PIXEL, I.PIXEL);
+        }
+        g.restore();
       } else if (f.kind === 'exitportal') {
         /* the salvo's one exit: opens as the first bomb goes into the gun,
            stays open while every bomb comes through, closes after the last */
@@ -28119,6 +28178,18 @@
      status, and everything the rules ask of it, is untouched. */
   var DROP_MS = 900;          // how long a craft is falling
   var STAND_MS = 1150;        // how long a squad takes to get up
+  var TELE_MS = 1300;         // how long a Xenotripod squad takes to teleport in
+  /* A Xenotripod squad does not land: it teleports in. A pillar of light forms
+     on the landing point, the squad flickers into being inside it, and the
+     light thins away. Before it forms the squad is not drawn at all. */
+  function teleporting(age) {
+    var k = age / TELE_MS;
+    if (k < 0.3) return { lift: 0, status: null, hidden: true };
+    var a = Math.min(1, (k - 0.3) / 0.35);
+    // flickering in: every other few frames it drops out, less often as it firms up
+    var flick = a < 1 && Math.floor(age / 55) % (a < 0.5 ? 2 : 4) === 0;
+    return { lift: 0, status: null, alpha: flick ? a * 0.3 : a };
+  }
 
   function arriving(u) {
     if (!u || !u.arriveAt) return { lift: 0, status: null };
@@ -28131,6 +28202,10 @@
       var fromUp = u.dropFrom != null ? u.dropFrom : ISO.ELEV * 5.5;
       return { lift: Math.round(fromUp * (1 - eased)), status: null };
     }
+    if (u.arriveKind === 'teleport') {
+      if (age >= TELE_MS) { u.arriveAt = 0; return { lift: 0, status: null }; }
+      return teleporting(age);
+    }
     if (age >= STAND_MS) { u.arriveAt = 0; return { lift: 0, status: null }; }
     // flat on its face, then up on one knee, then standing
     return { lift: 0, status: age < STAND_MS * 0.38 ? 'broken' : age < STAND_MS * 0.74 ? 'suppressed' : null };
@@ -28140,7 +28215,7 @@
        used to hold the whole game waiting for a frame that never drew it. */
     return state && state.units.some(function (u) {
       if (!u.arriveAt) return false;
-      var span = u.arriveKind === 'drop' ? DROP_MS : STAND_MS;
+      var span = u.arriveKind === 'drop' ? DROP_MS : u.arriveKind === 'teleport' ? TELE_MS : STAND_MS;
       if (nowMs() - u.arriveAt >= span) { u.arriveAt = 0; u.dropFrom = null; return false; }
       return true;
     });
@@ -28217,6 +28292,14 @@
        it falls out of the sky like everything else that side lands. */
     var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
     u.arriveAt = nowMs();
+    // Xenotripod infantry teleport in rather than land
+    if (!craft && u.faction === 'xeno') {
+      u.arriveKind = 'teleport';
+      addFx({ kind: 'teleportin', x: u.x, y: u.y, r: 1.4, dur: TELE_MS + 200, blocking: true });
+      if (SFX && SFX.shimmer) SFX.shimmer();
+      render();
+      return;
+    }
     u.arriveKind = craft ? 'drop' : 'stand';
     if (craft) {
       // the dust it throws up as it touches down, and the shockwave after it
@@ -30000,6 +30083,8 @@
         }
         var u = it.unit, ax = dispX(u), ay = dispY(u);
         var arr = arriving(u);
+        if (arr.hidden) return;                       // teleporting in: not here yet
+        if (arr.alpha != null) { pctx.save(); pctx.globalAlpha = arr.alpha; }
         ISO.drawUnit(pctx, u, {
           at: { x: ax, y: ay },
           around: u.bld ? R.sectionRect(u) : null,
@@ -30008,10 +30093,13 @@
           walk: u.walk || 0,
           arc: u.arc || 0,
           status: arr.status || R.status(u),
+          // getting up as it arrives is a pose, not a state: the ring shows the state it really has
+          ringStatus: arr.status ? R.status(u) : undefined,
           activated: u.activated,
           selected: ui.selected === u,
           morale: R.currentMorale(u)
         });
+        if (arr.alpha != null) pctx.restore();
       });
 
     /* The ghost: where the unit would stand if the move went ahead. Drawn over
