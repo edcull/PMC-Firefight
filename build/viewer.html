@@ -3826,6 +3826,149 @@
     };
   }
 
+  /* ---------- the men themselves: names, ranks, and casualties ----------
+     The rules only ever count a unit's models. Each of them is also somebody:
+     every soldier gets a name and a rank when the unit is mustered, and when the
+     count drops the casualties are picked out of those still standing at random. None
+     of this touches a die the rules roll — it rides beside `models` and is
+     brought into line with it whenever the engine has finished a step, so no
+     rule that adds or takes away a model has to know about it. A machine counts
+     its crew instead: one commander or pilot, a casualty when the hull is destroyed.
+     Drones and turrets have nobody aboard. The swarm has no individuals at all,
+     and neither do the tribe's Esh-Aven: those units only count what they lose. */
+  var FIRST = ['Adam', 'Aiko', 'Alexei', 'Amara', 'Anders', 'Ana', 'Arjun', 'Bea', 'Bogdan', 'Carlos',
+    'Chen', 'Dara', 'Dmitri', 'Elena', 'Emeka', 'Erik', 'Farah', 'Felix', 'Grace', 'Hana', 'Hector',
+    'Ibrahim', 'Ines', 'Ivan', 'Jae', 'Jamal', 'Jonas', 'Kai', 'Kasia', 'Kofi', 'Lars', 'Leila', 'Liam',
+    'Lucia', 'Malik', 'Marek', 'Maya', 'Mei', 'Mikhail', 'Nadia', 'Nikos', 'Noor', 'Olek', 'Omar', 'Pavel',
+    'Priya', 'Rafael', 'Rhys', 'Rosa', 'Ruth', 'Sami', 'Sanjay', 'Sofia', 'Sven', 'Tariq', 'Tomas', 'Una',
+    'Viktor', 'Wen', 'Yara', 'Yusuf', 'Zofia', 'Zoran'];
+  var LAST = ['Abara', 'Adeyemi', 'Almeida', 'Bauer', 'Becker', 'Brennan', 'Castillo', 'Chowdhury', 'Costa',
+    'Dvorak', 'Eriksen', 'Ferreira', 'Fischer', 'Gallagher', 'Garcia', 'Haddad', 'Hansen', 'Horvat', 'Ito',
+    'Jaworski', 'Kaplan', 'Kim', 'Kowalski', 'Kruger', 'Laine', 'Lindqvist', 'Mahmoud', 'Marsh', 'Mendes',
+    'Moreau', 'Nakamura', 'Novak', 'Nwosu', 'Okafor', 'Oliveira', 'Orlov', 'Park', 'Petrov', 'Quinn',
+    'Rahman', 'Reyes', 'Rossi', 'Sato', 'Schmidt', 'Silva', 'Sokolov', 'Tanaka', 'Toure', 'Vance', 'Varga',
+    'Volkov', 'Walsh', 'Weber', 'Wojcik', 'Yilmaz', 'Zhang', 'Zielinski'];
+  var NICK = ['Ghost', 'Spider', 'Doc', 'Sparks', 'Lucky', 'Hammer', 'Wolf', 'Crow', 'Moth', 'Saint',
+    'Brick', 'Fox', 'Deacon', 'Rook', 'Tinker', 'Viper', 'Blue', 'Ash'];
+  var XENO_SYL = ['ka', 'tha', 'ir', 'zha', 'ul', 'vek', 'sa', 'ren', 'oth', 'qua', 'li', 'mar', 'es', 'dro', 'ya', 'kel', 'un', 'ssi'];
+  var OFFICER = ['Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel', 'Colonel'];
+  var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
+
+  function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
+  function syllables(list, a, b) {
+    var n = a + Math.floor(Math.random() * (b - a + 1)), s = '';
+    for (var i = 0; i < n; i++) s += pickOf(list);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function humanName(rebel) {
+    var n = pickOf(FIRST) + ' ' + pickOf(LAST);
+    // about one rebel fighter in three goes by a nom de guerre
+    if (rebel && Math.random() < 0.35) n = pickOf(FIRST) + ' ‘' + pickOf(NICK) + '’ ' + pickOf(LAST);
+    return n;
+  }
+  // one name, of the kind the unit's side would give
+  function soldierName(u) {
+    var f = u.faction || 'pmc';
+    if (f === 'xeno') return syllables(XENO_SYL, 2, 3) + ' ' + syllables(XENO_SYL, 2, 3);
+    return humanName(f === 'rebel');
+  }
+  // a unit whose losses are counted rather than named: the swarm, and the Esh-Aven
+  function counted(u) {
+    if (!u) return false;
+    var p = BY_KEY[u.key];
+    return u.faction === 'bugs' || !!u.eshAven || !!(p && p.eshAven);
+  }
+  // does this unit have anyone in it who could be named?
+  function crewed(u) {
+    if (counted(u)) return false;
+    if (!isMachine(u)) return true;
+    return !u.drone && !has(u, 'Turret') && !/Turret/.test(u.group || '');
+  }
+  /* The rank of the i-th man in the unit. The first leads it, the second is
+     second-in-command, the rest are the rank and file — so a squad that has
+     lost its sergeant closes up behind the corporal when it is mustered again. */
+  function rankFor(u, i) {
+    var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
+    if (isMachine(u)) return isFlying(u) ? 'Pilot' : (f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : 'Commander');
+    if (u.vip) return i === 0 ? 'VIP' : 'Bodyguard';
+    if (f === 'xeno') {
+      if (u.command) return i === 0 ? 'Warleader' : 'Chosen';
+      if (g === 'Chosen Warriors') return 'Chosen';
+      return i === 0 ? 'Hunt-leader' : 'Warrior';
+    }
+    if (f === 'rebel') {
+      if (u.key === 'rciv' || u.soloCiv) return 'Civilian';
+      if (u.command) return i === 0 ? REBEL_CHIEF[tier - 1] : 'Lieutenant';
+      if (g === 'Holy Warriors') return i === 0 ? 'Preacher' : 'Zealot';
+      if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
+      if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
+      return i === 0 ? 'Cell Leader' : 'Fighter';
+    }
+    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? 'Sergeant Major' : 'Staff Sergeant';
+    if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
+    if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
+    if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';
+    return tier >= 4 ? 'Specialist' : 'Private';
+  }
+  function standing(u) { return isMachine(u) ? (u.alive || u.fled ? 1 : 0) : Math.max(0, u.models || 0); }
+  function freshMan(u, taken) {
+    var name, tries = 0;
+    do { name = soldierName(u); } while (taken && taken[name] && ++tries < 20);
+    if (taken) taken[name] = 1;
+    return { name: name, rank: rankFor(u, (u.men || []).length) };
+  }
+  /* Muster the unit before the battle: the survivors it brought with it (a
+     campaign unit's own men, in the order they stand), trimmed or filled up to
+     the strength it takes the field at, then ranked by where each man stands. */
+  function musterMen(u, carried, taken) {
+    if (counted(u)) { u.men = []; u.seenModels = standing(u); u.lostModels = 0; return u.men; }
+    var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
+    u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
+      .slice(0, want).map(function (m) { return { name: m.name }; });
+    u.men.forEach(function (m) { if (taken) taken[m.name] = 1; });
+    while (u.men.length < want) u.men.push(freshMan(u, taken));
+    u.men.forEach(function (m, i) { m.rank = rankFor(u, i); });
+    return u.men;
+  }
+  /* Bring the named men into line with the model count: one picked at random
+     as a casualty for every model lost, and a fresh one for every model the
+     rules gave back (the Endless Tide, a unit returned to the pool). */
+  function syncMen(u, turn, taken) {
+    if (counted(u)) { countLosses(u); return []; }
+    if (!u.men) return [];
+    var live = u.men.filter(function (m) { return m.lost == null; });
+    var want = crewed(u) ? standing(u) : 0, out = [];
+    if (isMachine(u)) want = Math.min(want, u.men.length);
+    while (live.length > want) {
+      var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
+      m.lost = turn || 0;
+      out.push(m);
+    }
+    if (!isMachine(u)) while (live.length < want) { var n = freshMan(u, taken); u.men.push(n); live.push(n); }
+    return out;
+  }
+  /* A counted unit's losses, as a running total: every model that goes down
+     adds to it, and the ones the Endless Tide digs back out do not take it away. */
+  function countLosses(u) {
+    var now = standing(u);
+    if (u.seenModels == null) u.seenModels = now;
+    if (now < u.seenModels) u.lostModels = (u.lostModels || 0) + u.seenModels - now;
+    u.seenModels = now;
+  }
+  /* What a lost bug is worth in biomass: its Tier for every model, and 25 for
+     one of the Overgrown giants — so a Tier II brood of eight is 16, and one
+     Queen is a little more than a whole Tier IV brood. The Infected humans the
+     fungus raises are not the swarm's own flesh, and are worth nothing. */
+  function biomassOf(p) {
+    if (!p) return 1;
+    if (p.group === 'Infected Humans') return 0;
+    return isOvergrown(p) ? 25 : Math.max(1, p.tier || 1);
+  }
+  // who comes back for the next battle: everyone who was not a casualty
+  function survivors(u) {
+    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });
+  }
+
   root.PMC = {
     BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP,
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
@@ -3868,7 +4011,8 @@
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion,
-    defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE
+    defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
+    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);
 
@@ -14009,6 +14153,12 @@
         ellipseRing(g, ring.x, ring.y, a(9), a(4.5), '#ffffff');
       }
 
+      if (smoking(u)) {
+        var sseed = 0, ssid = String(u.id || u.code || '');
+        for (var sq = 0; sq < ssid.length; sq++) sseed = (sseed * 31 + ssid.charCodeAt(sq)) | 0;
+        damageSmoke(g, p.x + a(0.5), p.y - m.lift - m.hgt * 0.7,
+          opts.t != null ? opts.t : (root.performance ? performance.now() : 0), Math.abs(sseed));
+      }
       var top = p.y - m.lift - m.hgt - a(4);
       if (u.damage && u.str) {                       // damage bar, in place of suppression
         var dw = a(6.5), dh = a(0.8);
@@ -14227,6 +14377,27 @@
     g.fillStyle = 'rgba(255,150,60,.16)';             // the glow on the hull round it
     g.beginPath(); g.ellipse(sx, sy - 0.5 * A1, 3.2 * A1, 1.6 * A1, 0, 0, Math.PI * 2); g.fill();
   }
+  /* A machine that has lost half its Structure or more is still fighting, but
+     it trails smoke: grey puffs from somewhere in the hull, climbing and
+     drifting, with no fire under them — that is kept for the wreck. A living
+     hull (the swarm's big bugs) does not smoke. */
+  function smoking(u) {
+    return !!u && (u.cls === 'vehicle' || u.cls === 'aircraft') && !!u.str &&
+      u.alive !== false && (u.damage || 0) * 2 >= u.str && !BIGBUG[u.art];
+  }
+  function damageSmoke(g, sx, sy, t, seed) {
+    var A1 = A, sd = (seed || 0) % 89;
+    for (var i = 0; i < 7; i++) {
+      var life = ((t / 3000) + i / 7 + sd * 0.017) % 1;
+      var px = sx + life * 6 * A1 + Math.sin(life * 4 + i * 1.7) * 1.2 * A1;
+      var py = sy - life * 18 * A1;
+      var r = (1.1 + life * 3.6) * A1;
+      var al = 0.42 * (1 - life) * Math.min(1, life * 5);
+      var c = 88 + (i % 3) * 14;
+      g.fillStyle = 'rgba(' + c + ',' + (c - 2) + ',' + (c - 4) + ',' + al.toFixed(3) + ')';
+      g.beginPath(); g.ellipse(px, py, r, r * 0.8, 0, 0, Math.PI * 2); g.fill();
+    }
+  }
   function drawWreck(g, u, at, lift, t) {
     var m = drawMachine(g, u, { at: at, lift: lift || 0, status: 'wrecked' });
     var p = toScreen(at.x, at.y);
@@ -14277,7 +14448,7 @@
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
-    casualtySpot: casualtySpot, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire
+    casualtySpot: casualtySpot, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
   };
 })(window);
 
@@ -15090,9 +15261,11 @@
       faceL: view.faceL
     });
     if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
-    // a machine shows wear as Damage; a squad shows it as Suppression
+    /* A machine shows wear as Damage — half its Structure gone is enough to set
+       it smoking — and a squad shows it as Suppression. Destroyed is drawn by
+       drawDestroyed rather than by any number here. */
     if (R.isMachine(u)) {
-      u.damage = view.status === 'broken' ? u.str : view.status === 'suppressed' ? Math.ceil(u.str / 2) : 0;
+      u.damage = view.status === 'damaged' ? Math.ceil(u.str / 2) : 0;
     } else {
       var m = R.currentMorale(u);
       u.sp = view.status === 'broken' ? 2 * m + 1 : view.status === 'suppressed' ? m + 1 : 0;
@@ -15142,13 +15315,13 @@
     // far to near, so the nearer of the two covers the other
     var order = [u, t].sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
-      if (m === u && view.destroyed) { drawDestroyed(u); return; }
+      if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
       I.drawUnit(g, m, {
         at: { x: m.x, y: m.y }, lift: m === u ? arr.lift : 0,
         hop: m === u ? (view.hop || 0) : 0,
         walk: m === u ? view.walkFrame : 0,
         arc: m === u && view.walking ? (view.arc || 0) : 0,
-        status: m === u ? (arr.status || view.status) : 'ready',
+        status: m === u && !R.isMachine(m) ? (arr.status || view.status) : 'ready',
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
       });
     });
@@ -15209,7 +15382,8 @@
     var busy = FX.prune();
     if (view.walking) { stepWalk(dt); busy = true; }
     if (view.strafeAt) { strafing(); busy = true; }
-    if (view.destroyed && R.isMachine(unit())) busy = true;   // the wreck keeps burning
+    // the wreck keeps burning, and a damaged hull keeps smoking
+    if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
     frame();
     if (busy) start(); else { last = 0; drawState(); }
   }
@@ -15384,7 +15558,7 @@
      are made up here — the bench is about what it looks and sounds like, not
      about the dice. */
   function fire() {
-    if (view.destroyed) { note('It is destroyed — it is not firing anything.'); return; }
+    if (view.status === 'destroyed') { note('It is destroyed — it is not firing anything.'); return; }
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
@@ -15807,7 +15981,7 @@
     h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
-      seg('status', ['ready', 'suppressed', 'broken'], view.status) + '</div></div>';
+      seg('status', statesFor(p), view.status) + '</div></div>';
     if (isVeh) {
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
@@ -15826,8 +16000,6 @@
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
-      '<button class="vbtn' + (view.destroyed ? ' primary' : '') + '" data-do="destroyed">' +
-      (view.destroyed ? 'Back from the dead' : 'Destroyed') + '</button>' +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
     h += '<div class="vacts"><button class="vbtn" data-do="allstyles">Play every weapon style</button></div>';
@@ -15869,6 +16041,27 @@
     return h + '</div>';
   }
 
+  /* The states a unit can be shown in. A machine is never suppressed or
+     broken: it is whole, damaged (half its Structure gone, and smoking) or a
+     wreck. A squad is steady, suppressed, broken or every model down. */
+  function statesFor(p) {
+    return R.isMachine(p) ? ['ready', 'damaged', 'destroyed'] : ['ready', 'suppressed', 'broken', 'destroyed'];
+  }
+  function setStatus(s) {
+    if (statesFor(profile()).indexOf(s) < 0) s = 'ready';
+    var was = view.status;
+    view.status = s;
+    if (s === 'destroyed' && was !== 'destroyed') {
+      // the dead stand still: whatever it was doing stops
+      view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
+      view.strafeAt = 0; view.at = null; view.arriveAt = 0;
+      FX.clear();
+      note(R.isMachine(unit()) ? 'Destroyed: the hull burns where it stopped.'
+        : 'Destroyed: every model in the squad is down.');
+    } else if (s === 'damaged') note('Damaged: half its Structure gone, and trailing smoke.');
+    else if (was === 'destroyed' || was === 'damaged') note('');
+    drawControls(); drawState(); start(); frame();
+  }
   function seg(name, opts, now) {
     return opts.map(function (o) {
       return '<button class="vsg' + (o === now ? ' on' : '') + '" data-set="' + name +
@@ -15878,7 +16071,7 @@
 
   function drawState() {
     var u = unit();
-    if (view.destroyed) {
+    if (view.status === 'destroyed') {
       el('vstate').textContent = R.isMachine(u) ? 'destroyed — the hull is burning'
         : u.size + ' of ' + u.size + ' models down';
       return;
@@ -15929,7 +16122,8 @@
       if (!b) return;
       view.key = b.getAttribute('data-unit');
       view.models = null;
-      view.destroyed = false;
+      // a state the new unit cannot be in (a tank cannot be suppressed) goes back to ready
+      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
       var p = profile();
       if (p.cls !== 'vehicle') view.prop = 'tracked';
       FX.clear();
@@ -15956,6 +16150,7 @@
       }
       var s = e.target.closest('[data-set]');
       if (s) {
+        if (s.getAttribute('data-set') === 'status') { setStatus(s.getAttribute('data-val')); return; }
         view[s.getAttribute('data-set')] = s.getAttribute('data-val');
         drawControls(); drawState(); frame(); return;
       }
@@ -15966,17 +16161,6 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
-      else if (act === 'destroyed') {
-        view.destroyed = !view.destroyed;
-        if (view.destroyed) {
-          view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
-          view.strafeAt = 0; view.at = null; view.arriveAt = 0;
-          FX.clear();
-          note(R.isMachine(unit()) ? 'Destroyed: the hull burns where it stopped.'
-            : 'Destroyed: every model in the squad is down.');
-        } else note('');
-        drawControls(); drawState(); start(); frame();
-      }
       else if (act === 'allstyles') allStyles();
       else if (act === 'sound') {
         view.sound = !view.sound;
@@ -16033,14 +16217,22 @@
 
   /* test hooks: the harness drives the bench the way a player would */
   root.__viewer = {
-    pick: function (k) { view.key = k; view.models = null; drawPicker(); drawControls(); drawState(); frame(); },
-    set: function (k, v) { view[k] = v; drawControls(); drawState(); frame(); },
+    pick: function (k) {
+      view.key = k; view.models = null;
+      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
+      drawPicker(); drawControls(); drawState(); frame();
+    },
+    set: function (k, v) {
+      if (k === 'status') { setStatus(v); return; }
+      view[k] = v; drawControls(); drawState(); frame();
+    },
+    states: function () { return statesFor(profile()); },
     fire: fire,
     walk: toggleWalk,
     gait: function () { return gaitOf(unit()); },
     insert: insert,
     strafe: strafe,
-    destroy: function (on) { view.destroyed = on !== false; drawControls(); drawState(); frame(); },
+    destroy: function (on) { setStatus(on === false ? 'ready' : 'destroyed'); },
     strafing: function () { return !!view.strafeAt; },
     arriving: arriving,
     fx: function () { return FX.kinds(); },

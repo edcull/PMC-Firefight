@@ -215,19 +215,34 @@ async function pickAndFire(p, key, ms) {
     states.suppressed.sp + ' SP');
   ok('broken really is broken', states.broken.status === 'broken', states.broken.sp + ' SP');
 
+  const squadStates = await p.evaluate(() => { window.__viewer.pick('regular'); return window.__viewer.states(); });
+  ok('a squad is ready, suppressed, broken or destroyed', squadStates.join() === 'ready,suppressed,broken,destroyed',
+    squadStates.join(' '));
+
   const hull = await p.evaluate(() => {
     window.__viewer.pick('mcv');
-    const out = {};
-    ['ready', 'suppressed', 'broken'].forEach(s => {
+    const out = { states: window.__viewer.states(), buttons: [...document.querySelectorAll('[data-set="status"]')].map(b => b.textContent) };
+    ['ready', 'damaged'].forEach(s => {
       window.__viewer.set('status', s);
       const u = window.__viewer.unit();
       out[s] = u.damage + '/' + u.str;
+      out[s + 'Smoke'] = window.PMCIso.smoking(u);
     });
+    window.__viewer.set('status', 'suppressed');
+    out.refused = window.__viewer.unit().damage + '|' + document.querySelector('[data-set="status"].on').textContent;
+    window.__viewer.set('status', 'destroyed');
+    out.destroyedNote = document.getElementById('vstate').textContent;
+    window.__viewer.set('status', 'ready');
     return out;
   });
-  ok('a machine shows Structure gone rather than suppression',
-    hull.ready === '0/7' && hull.broken === '7/7',
-    'ready ' + hull.ready + ', broken ' + hull.broken);
+  ok('a machine is ready, damaged or destroyed — never suppressed or broken',
+    hull.states.join() === 'ready,damaged,destroyed' && hull.buttons.join() === 'ready,damaged,destroyed', hull.buttons.join(' '));
+  ok('...damaged is half its Structure gone', hull.ready === '0/7' && hull.damaged === '4/7',
+    'ready ' + hull.ready + ', damaged ' + hull.damaged);
+  ok('...and it smokes only when damaged', !hull.readySmoke && hull.damagedSmoke);
+  ok('...a state it cannot be in is not taken', hull.refused === '0|ready', hull.refused);
+  ok('...destroyed is on the same row', /destroyed/.test(hull.destroyedNote), hull.destroyedNote);
+  ok('the Destroyed toggle is gone from the actions', await p.evaluate(() => !document.querySelector('[data-do="destroyed"]')));
 
   const shrunk = await p.evaluate(() => {
     window.__viewer.pick('regular');

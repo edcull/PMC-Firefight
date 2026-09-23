@@ -2579,6 +2579,8 @@
         order.push({ depth: r.x + r.y, draw: 'wreck', r: r, u: wu });
       } else order.push({ depth: r.x + r.y - 0.4, draw: 'body', r: r });
     });
+    // a machine at half Structure trails smoke, which has to keep moving too
+    if (!anyFire) anyFire = order.some(function (it) { return it.draw === 'unit' && ISO.smoking(it.unit); });
     state.fireOnView = anyFire;
 
     order.concat(blockers)
@@ -3747,7 +3749,52 @@
 
   function overCard() {
     return '<div class="card"><h2>' + (state.over.winner ? sideName(state.over.winner) + ' wins' : 'Draw') + '</h2>' +
-      '<p class="sub">' + state.over.text + '</p><div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
+      '<p class="sub">' + state.over.text + '</p>' + casualtyList() +
+      '<div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
+  }
+
+  /* The casualty list, side by side: every soldier lost, by rank, name and
+     the kind of unit they served in, with the turn it happened. */
+  function casualtyList() {
+    var list = (state.report && state.report.casualties) || null;
+    if (!list) return '';
+    return '<div class="cas">' + ['A', 'B'].map(function (side) {
+      var all = list.filter(function (c) { return c.side === side; });
+      var mine = all.filter(function (c) { return !c.swarm; });
+      // the swarm has no names: its losses are biomass, totalled by kind of bug
+      var bio = {}, bioOrder = [], bioTotal = 0;
+      all.forEach(function (c) {
+        if (!c.swarm) return;
+        if (!bio[c.type]) { bio[c.type] = { n: 0, mass: 0 }; bioOrder.push(c.type); }
+        var m = c.mass != null ? c.mass : c.count;
+        bio[c.type].n += c.count; bio[c.type].mass += m; bioTotal += m;
+      });
+      var lostN = mine.reduce(function (n, c) { return n + (c.count || 1); }, 0);
+      var head = bioOrder.length ? bioTotal + ' biomass lost'
+        : lostN ? lostN + (lostN === 1 ? ' casualty' : ' casualties') : 'no casualties';
+      var h = '<div class="cas-side cas-' + side + '"><div class="cas-head">' + esc(sideName(side)) +
+        '<span class="mk">' + head + '</span></div>';
+      if (bioOrder.length) {
+        bioOrder.sort(function (a, b) { return bio[b].mass - bio[a].mass || bio[b].n - bio[a].n; });
+        h += '<ol class="cas-list">' + bioOrder.map(function (t) {
+          return '<li><b>' + esc(t) + '</b> <span class="cas-rank">\u00d7 ' + bio[t].n +
+            (bio[t].mass ? ' \u00b7 ' + bio[t].mass + ' biomass' : ' \u00b7 not biomass') + '</span></li>';
+        }).join('') + '</ol>';
+      }
+      if (mine.length) {
+        h += '<ol class="cas-list">' + mine.map(function (c) {
+          // the Esh-Aven go unnamed: how many of them, from which unit
+          if (c.anon) {
+            return '<li><b>' + esc(c.type) + '</b> <span class="cas-rank">\u00d7 ' + c.count + ' Esh-Aven</span>' +
+              (c.unit && c.unit !== c.type ? '<span class="cas-type">' + esc(c.unit) + '</span>' : '') + '</li>';
+          }
+          return '<li><span class="cas-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
+            '<span class="cas-type">' + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
+            ' \u00b7 turn ' + (c.turn || 1) + '</span></li>';
+        }).join('') + '</ol>';
+      }
+      return h + '</div>';
+    }).join('') + '</div>';
   }
 
   function wirePanel() {

@@ -621,6 +621,7 @@
       rid: entry.rid, name: entry.name, flags: e.flags,
       honours: (entry.honours || []).slice(), traumas: (entry.traumas || []).slice(),
       upgrades: (entry.upgrades || []).slice(),
+      men: (entry.men || []).slice(),           // the survivors of its last battle, by name
       once: {}                                  // once-per-battle honours, spent here
     };
     if (entry.name) { u.name = entry.name; u.label = entry.name + ' [' + u.side + ']'; }
@@ -711,6 +712,154 @@
     };
   }
 
+  /* The soldiers on a dossier entry, by name and rank, filled up to the
+     strength the unit takes the field at and ranked by where each stands. The
+     survivors of its last battle keep their places; a new unit, or the gaps
+     casualties left, get fresh names none of the rest of the force is using.
+     Returns true when anything had to be added or changed, so the caller
+     knows to save. */
+  // how many models the unit takes the field with, a machine being one
+  function strengthOf(entry, co) {
+    var p = profile(entry.key);
+    if (!p) return 0;
+    var size = p.cls === 'infantry' ? p.size : 1;
+    if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
+    return size;
+  }
+  function menOf(entry, co) {
+    var p = profile(entry.key);
+    if (!p) return false;
+    var size = strengthOf(entry, co);
+    var u = {
+      key: p.key, faction: p.faction || 'pmc', group: p.group, tier: p.tier, size: size, models: size,
+      cls: p.cls || 'infantry', command: !!p.command, rules: (p.rules || []).slice(), drone: !!entry.drone
+    };
+    var taken = {};
+    ((co && co.roster) || []).forEach(function (x) {
+      if (x !== entry) (x.men || []).forEach(function (m) { taken[m.name] = 1; });
+    });
+    var before = JSON.stringify(entry.men || null);
+    entry.men = R.musterMen(u, entry.men, taken).map(function (m) { return { name: m.name, rank: m.rank }; });
+    return JSON.stringify(entry.men) !== before;
+  }
+  /* The force's losses against everyone who has ever served in it. Everyone
+     who served is on the books now, was lost, or left some other way
+     (disbanded, executed, cut by a promotion); a casualty that is replaced
+     after the battle counts once lost and once again in the unit that is back
+     at strength. So a squad of eight that loses two is 2 of 10: 20%.
+     The swarm counts the same way in biomass rather than bodies: each bug is
+     worth its Tier, an Overgrown one 25, and the Infected humans it raises
+     are not biomass at all. The tribe keeps two counts, one for the Crocks
+     (the Alpha to Delta castes, and the crews of its craft) and one for the
+     Esh-Aven who make up its Epsilon squads. */
+  /* Drones and turrets are machines with nobody in them: they are neither
+     lost nor counted as having served. */
+  function unmanned(entry) {
+    var p = profile(entry.key);
+    return !p || !!entry.drone || /Turret/.test(p.group || '') ||
+      (p.rules || []).some(function (r) { return r === 'Turret' || r === 'Drone Control'; });
+  }
+  // the models the loss rate counts for this unit
+  function manned(entry, co) { return unmanned(entry) ? 0 : strengthOf(entry, co); }
+  // which count a profile's losses go in, and what each model lost is worth there
+  var POOL_NAMES = { soldiers: 'soldiers', crocks: 'Crocks', eshaven: 'Esh-Aven', biomass: 'biomass' };
+  function poolOf(p) {
+    if (!p) return 'soldiers';
+    if (p.faction === 'bugs') return 'biomass';
+    if (p.faction === 'xeno') return p.eshAven || p.group === 'Epsilon Squads' ? 'eshaven' : 'crocks';
+    return 'soldiers';
+  }
+  function poolsFor(co) {
+    return co.faction === 'bugs' ? ['biomass'] : co.faction === 'xeno' ? ['crocks', 'eshaven'] : ['soldiers'];
+  }
+  function weightOf(p) { return poolOf(p) === 'biomass' ? R.biomassOf(p) : 1; }
+  function massOf(entry, co) { return manned(entry, co) * weightOf(profile(entry.key)); }
+  /* The running counts behind the loss rate, one per pool: what has been lost
+     and what has left the books some other way. */
+  function losses(co) {
+    if (!co.losses) {
+      co.losses = {};
+      // a save from before the counts were split keeps what it had in its main pool
+      var main = poolsFor(co)[0];
+      co.losses[main] = { lost: co.faction === 'bugs' ? 0 : (co.lostModels || 0),
+        departed: co.faction === 'bugs' ? (co.departedMass || 0) : (co.departed || 0) };
+      delete co.lostModels; delete co.departed; delete co.departedMass;
+    }
+    return co.losses;
+  }
+  function addLoss(co, pool, key, n) {
+    var L = losses(co), b = L[pool] || (L[pool] = { lost: 0, departed: 0 });
+    b[key] += n;
+  }
+  function lossStats(co) {
+    var L = losses(co);
+    return poolsFor(co).map(function (pool) {
+      var b = L[pool] || { lost: 0, departed: 0 };
+      var lost = b.lost;
+      if (pool === 'biomass') {
+        var tally = biomassTally(co);
+        lost = Object.keys(tally).reduce(function (n, t) { return n + tally[t].mass; }, 0);
+      }
+      var now = (co.roster || []).reduce(function (n, e) {
+        return n + (poolOf(profile(e.key)) === pool ? massOf(e, co) : 0);
+      }, 0);
+      var served = now + lost + b.departed;
+      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0 };
+    });
+  }
+  /* How seasoned the force is: every honour held on the books against the
+     number of units on them — so ten units, one with two honours and one with
+     one, is 3 / 10: 30%. A company calls it veterancy, the swarm evolution
+     (its honours are Adaptations) and the tribe enlightenment (its Rites). */
+  function experienceStats(co) {
+    var f = co.faction || 'pmc';
+    var honours = (co.roster || []).reduce(function (n, e) { return n + (e.honours || []).length; }, 0);
+    var units = (co.roster || []).length;
+    return {
+      word: f === 'bugs' ? 'evolution' : f === 'xeno' ? 'enlightenment' : 'veterancy',
+      honours: honours, units: units, pct: units ? honours / units : 0,
+      noun: honours === 1 ? words(co).honour : words(co).honours
+    };
+  }
+  // battles won out of battles fought; a draw is fought but not won
+  function winStats(co) {
+    var r = co.record || {}, n = r.battles || 0;
+    return { wins: r.wins || 0, battles: n, pct: n ? (r.wins || 0) / n : 0 };
+  }
+  /* The other side of it: every trauma carried on the books against the
+     number of units. Trauma for a company or a revolt, genetic degradation
+     for the swarm (its Genetic Flaws), infamy for the tribe (its Infamies). */
+  function traumaStats(co) {
+    var f = co.faction || 'pmc';
+    var traumas = (co.roster || []).reduce(function (n, e) { return n + (e.traumas || []).length; }, 0);
+    var units = (co.roster || []).length;
+    return {
+      word: f === 'bugs' ? 'genetic degradation' : f === 'xeno' ? 'infamy' : 'trauma',
+      traumas: traumas, units: units, pct: units ? traumas / units : 0,
+      noun: traumas === 1 ? words(co).trauma : words(co).traumas
+    };
+  }
+  /* The swarm's tally of what it has lost, by kind of bug: the models, and
+     the biomass they were worth, which is always worked out from the models. */
+  function biomassTally(co) {
+    var out = {};
+    Object.keys(co.biomass || {}).forEach(function (t) {
+      var v = co.biomass[t], n = typeof v === 'number' ? v : (v && v.models) || 0;
+      if (n <= 0) return;
+      var p = R.CATALOGUE.filter(function (q) { return q.name === t; })[0];
+      out[t] = { models: n, mass: n * R.biomassOf(p) };
+    });
+    return out;
+  }
+  // a soldier renamed by the player keeps the name through every battle they survive
+  function renameSoldier(entry, i, name) {
+    var m = entry && entry.men && entry.men[i];
+    name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+    if (!m || !name) return false;
+    m.name = name;
+    return true;
+  }
+
   function newCompany(name, opts) {
     opts = opts || {};
     return {
@@ -719,7 +868,9 @@
       tier: 1, aspiring: false, kUC: 0,
       doctrines: [], doctrineSwapAt: null,
       roster: [], cmdRid: null,
-      record: { battles: 0, wins: 0, draws: 0, losses: 0 }
+      record: { battles: 0, wins: 0, draws: 0, losses: 0 },
+      memorial: [],
+      losses: {}                                // what the loss rate on the memorial is worked from
     };
   }
 
@@ -1056,6 +1207,7 @@
     var chk = canDisband(co, entry);
     if (!chk.ok) return chk;
     co.roster = co.roster.filter(function (e) { return e !== entry; });
+    addLoss(co, poolOf(profile(entry.key)), 'departed', massOf(entry, co));
     return { ok: true };
   }
 
@@ -1069,7 +1221,10 @@
     entry.exp -= cost.exp; co.kUC -= cost.kUC;
     // the rid, honours, traumas and history all stay; only the profile changes
     var renamed = entry.name === was;
+    var had = massOf(entry, co), hadPool = poolOf(profile(entry.key));
     entry.key = newKey;
+    // a promotion to a smaller unit leaves the extra men behind
+    addLoss(co, hadPool, 'departed', hadPool === poolOf(profile(newKey)) ? Math.max(0, had - massOf(entry, co)) : had);
     if (renamed) entry.name = profile(newKey).name;
     entry.history.push('Promoted from ' + was + ' to ' + profile(newKey).name + '.');
     return { ok: true, cost: cost };
@@ -1346,6 +1501,23 @@
       var rec = { side: side, kUC: out.payment[side], units: [], gone: [], salvaged: [],
         traumas: [], executed: null };
 
+      /* The models this side lost, unit by unit: a named soldier is one and a
+         swarm's count is what it says. A drone or a turret has nobody in it,
+         and is not a loss. */
+      var keyOf = {}, lostBy = {};
+      (report.units || []).forEach(function (l) { if (l.side === side) keyOf[l.rid] = l.key; });
+      (report.casualties || []).forEach(function (c) {
+        if (c.side !== side) return;
+        var n = c.count || 1, p = profile(keyOf[c.rid]);
+        lostBy[c.rid] = (lostBy[c.rid] || 0) + n;
+        if (!c.swarm) addLoss(co, p ? poolOf(p) : poolsFor(co)[0], 'lost', n * (p ? weightOf(p) : 1));   // the swarm's is its biomass tally
+      });
+      // a unit that leaves the books takes its survivors with it
+      function leaves(e) {
+        var p = profile(e.key), left = Math.max(0, manned(e, co) - (lostBy[e.rid] || 0));
+        addLoss(co, poolOf(p), 'departed', left * weightOf(p));
+      }
+
       /* No Place for the Weak! (p. 112). The example is made of whichever unit
          came back carrying the most Trauma Points from this battle, so the day's
          points are rolled first, once, and kept — the main pass reuses them
@@ -1389,6 +1561,7 @@
           rec.executed = { rid: worst.rid, name: worst.name, key: worst.key, tp: worstN };
           worst.history.push('Executed for coming back in the worst state of the force.');
           co.roster = co.roster.filter(function (x) { return x !== worst; });
+          leaves(worst);
         }
       }
 
@@ -1431,6 +1604,20 @@
         entry.lastBattle = out.turn;
 
         var u = { rid: entry.rid, name: entry.name, key: entry.key, exp: exp, tp: tp, wiped: false, salvage: null, trauma: null };
+
+        /* The unit's casualties go on its record by name, and the survivors
+           march on with it: the gaps are filled with fresh recruits when it is
+           next mustered. */
+        var cas = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
+        if (cas.length) {
+          u.casualties = cas;
+          var mass = cas.reduce(function (n, c) { return n + (c.mass != null ? c.mass : c.count); }, 0);
+          var bodies = cas.reduce(function (n, c) { return n + (c.count || 0); }, 0);
+          entry.history.push(cas[0].swarm ? (mass ? 'Biomass lost: ' + mass + '.' : 'Lost ' + bodies + '.')
+            : cas[0].anon ? 'Lost ' + bodies + ' Esh-Aven.'
+            : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
+        }
+        if (line.men) entry.men = line.men.slice();
 
         /* Losses (p. 85): survivors are replaced free, and only a unit wiped out
            — every soldier killed — comes off the dossier. A unit that scattered
@@ -1508,6 +1695,7 @@
 
       rec.gone.forEach(function (e) {
         co.roster = co.roster.filter(function (x) { return x !== e; });
+        leaves(e);
       });
 
       /* Enhanced Genetic Memory (p. 141): a destroyed infantry unit comes back as
@@ -1556,6 +1744,28 @@
           }
         }
       }
+
+      /* The memorial: every soldier the force has lost, battle by battle, kept
+         for the whole campaign — including those of units that are gone. */
+      co.memorial = co.memorial || [];
+      (report.casualties || []).filter(function (c) { return c.side === side; }).forEach(function (c) {
+        // the swarm keeps a tally of biomass by kind of bug instead of names
+        if (c.swarm) {
+          var tally = co.biomass = biomassTally(co);
+          var t = tally[c.type] || (tally[c.type] = { models: 0, mass: 0 });
+          t.models += c.count;
+          return;
+        }
+        // the Esh-Aven go on it unnamed, as a count for the unit
+        if (c.anon) {
+          co.memorial.push({ anon: true, count: c.count, type: c.type, unit: c.unit, battle: out.turn, against: foe.name, scenario: report.scenario });
+          return;
+        }
+        co.memorial.push({
+          name: c.name, rank: c.rank, type: c.type, unit: c.unit, turn: c.turn,
+          battle: out.turn, against: foe.name, scenario: report.scenario
+        });
+      });
 
       co.record.battles++;
       if (report.winner === side) co.record.wins++;
@@ -2265,7 +2475,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,

@@ -159,7 +159,16 @@
       SFX[name] = function () { V.sound(name, Array.prototype.slice.call(arguments)); };
     });
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
-    function render() { returnToPool(); V.changed(); }
+    function render() { syncMen(); returnToPool(); syncMen(); V.changed(); }
+    /* The named men caught up with the model counts, after every step: whoever
+       the rules just took off the table is picked out as a casualty and marked
+       with the turn it happened. Done before a unit goes back to the OpFor pool, so the
+       men it lost are counted before it comes on again at full strength. */
+    function syncMen() {
+      if (!state || !state.units) return;
+      state.namesTaken = state.namesTaken || {};
+      state.units.forEach(function (u) { R.syncMen(u, state.turn, state.namesTaken); });
+    }
     /* Protecting the VIP, Evacuation: "when an OpFor unit is destroyed, it
        returns to the pool" (pp. 151, 154) — at full strength, to come on again.
        This used to be done while the board was being redrawn, which is why it
@@ -391,6 +400,11 @@
       });
     }
     dedupeCodes();
+    /* Every soldier gets a name and a rank. A campaign unit brings its own
+       survivors from the dossier; the gaps, and every other unit, are filled
+       with fresh names, none repeated on the table. */
+    state.namesTaken = {};
+    state.units.forEach(function (u) { R.musterMen(u, u.camp && u.camp.men, state.namesTaken); });
     /* Paint the two companies. A colour the caller did not name is rolled from
        whatever the other side is not already wearing. */
     var ca = cfg.colourA && COLOURS.indexOf(cfg.colourA) >= 0 ? cfg.colourA : 'ochre';
@@ -2228,6 +2242,7 @@
   /* What the campaign needs back from a battle: one line per unit that took the
      field, with who it broke and what it cost. Built once, when the game ends. */
   function battleReport(winner) {
+    state.units.forEach(function (u) { R.syncMen(u, state.turn, state.namesTaken); });
     var byId = {};
     state.units.forEach(function (u) { byId[u.rid || u.id] = u; });
     var lines = {};
@@ -2253,6 +2268,8 @@
         // the swarm's own bookkeeping (p. 124): its low point, and what it ate
         minSize: R.isMachine(u) ? null : (u.minModels != null ? Math.min(u.minModels, u.models) : u.models),
         assaultKills: u.assaultKills || 0, assaultKillsHuman: u.assaultKillsHuman || 0,
+        // the men who carry on, by name, for the dossier to keep
+        men: R.survivors(u),
         kills: []
       };
     });
@@ -2272,8 +2289,39 @@
       attackDefend: !!(state.sc && state.sc.attacker),
       routed: { A: state.routed.A, B: state.routed.B },
       turns: state.turn,
-      units: Object.keys(lines).map(function (k) { return lines[k]; })
+      units: Object.keys(lines).map(function (k) { return lines[k]; }),
+      casualties: casualtyList()
     };
+  }
+
+  /* The casualty list: every named soldier lost, by name, rank and the kind of
+     unit they served in, side by side, in the order they were lost. A bug unit
+     has one line instead, with the count of what it lost. */
+  function casualtyList() {
+    var out = [];
+    state.units.forEach(function (u) {
+      var p = R.profile(u.key);
+      /* The swarm and the Esh-Aven have no names: such a unit reports how many
+         it lost, and a bug unit what that was worth in biomass. */
+      if (R.counted(u)) {
+        if (u.lostModels) {
+          var line = { side: u.side, count: u.lostModels, type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id, turn: 0 };
+          if (u.faction === 'bugs') { line.swarm = true; line.mass = u.lostModels * R.biomassOf(p); }
+          else line.anon = true;
+          out.push(line);
+        }
+        return;
+      }
+      (u.men || []).forEach(function (m) {
+        if (m.lost == null) return;
+        out.push({
+          side: u.side, name: m.name, rank: m.rank, turn: m.lost,
+          type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id
+        });
+      });
+    });
+    out.sort(function (a, b) { return a.side < b.side ? -1 : a.side > b.side ? 1 : a.turn - b.turn; });
+    return out;
   }
 
   function finish(winner, text) {
@@ -4163,7 +4211,7 @@
        needs to draw the table is in what is left. */
     function snapshot() {
       if (!state) return null;
-      var skip = { scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1 };
+      var skip = { namesTaken: 1, scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1 };
       var out = {};
       Object.keys(state).forEach(function (k) {
         if (skip[k]) return;

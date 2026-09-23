@@ -51,9 +51,11 @@
       faceL: view.faceL
     });
     if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
-    // a machine shows wear as Damage; a squad shows it as Suppression
+    /* A machine shows wear as Damage — half its Structure gone is enough to set
+       it smoking — and a squad shows it as Suppression. Destroyed is drawn by
+       drawDestroyed rather than by any number here. */
     if (R.isMachine(u)) {
-      u.damage = view.status === 'broken' ? u.str : view.status === 'suppressed' ? Math.ceil(u.str / 2) : 0;
+      u.damage = view.status === 'damaged' ? Math.ceil(u.str / 2) : 0;
     } else {
       var m = R.currentMorale(u);
       u.sp = view.status === 'broken' ? 2 * m + 1 : view.status === 'suppressed' ? m + 1 : 0;
@@ -103,13 +105,13 @@
     // far to near, so the nearer of the two covers the other
     var order = [u, t].sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
-      if (m === u && view.destroyed) { drawDestroyed(u); return; }
+      if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
       I.drawUnit(g, m, {
         at: { x: m.x, y: m.y }, lift: m === u ? arr.lift : 0,
         hop: m === u ? (view.hop || 0) : 0,
         walk: m === u ? view.walkFrame : 0,
         arc: m === u && view.walking ? (view.arc || 0) : 0,
-        status: m === u ? (arr.status || view.status) : 'ready',
+        status: m === u && !R.isMachine(m) ? (arr.status || view.status) : 'ready',
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
       });
     });
@@ -170,7 +172,8 @@
     var busy = FX.prune();
     if (view.walking) { stepWalk(dt); busy = true; }
     if (view.strafeAt) { strafing(); busy = true; }
-    if (view.destroyed && R.isMachine(unit())) busy = true;   // the wreck keeps burning
+    // the wreck keeps burning, and a damaged hull keeps smoking
+    if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
     frame();
     if (busy) start(); else { last = 0; drawState(); }
   }
@@ -345,7 +348,7 @@
      are made up here — the bench is about what it looks and sounds like, not
      about the dice. */
   function fire() {
-    if (view.destroyed) { note('It is destroyed — it is not firing anything.'); return; }
+    if (view.status === 'destroyed') { note('It is destroyed — it is not firing anything.'); return; }
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
@@ -768,7 +771,7 @@
     h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
-      seg('status', ['ready', 'suppressed', 'broken'], view.status) + '</div></div>';
+      seg('status', statesFor(p), view.status) + '</div></div>';
     if (isVeh) {
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
@@ -787,8 +790,6 @@
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
-      '<button class="vbtn' + (view.destroyed ? ' primary' : '') + '" data-do="destroyed">' +
-      (view.destroyed ? 'Back from the dead' : 'Destroyed') + '</button>' +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
     h += '<div class="vacts"><button class="vbtn" data-do="allstyles">Play every weapon style</button></div>';
@@ -830,6 +831,27 @@
     return h + '</div>';
   }
 
+  /* The states a unit can be shown in. A machine is never suppressed or
+     broken: it is whole, damaged (half its Structure gone, and smoking) or a
+     wreck. A squad is steady, suppressed, broken or every model down. */
+  function statesFor(p) {
+    return R.isMachine(p) ? ['ready', 'damaged', 'destroyed'] : ['ready', 'suppressed', 'broken', 'destroyed'];
+  }
+  function setStatus(s) {
+    if (statesFor(profile()).indexOf(s) < 0) s = 'ready';
+    var was = view.status;
+    view.status = s;
+    if (s === 'destroyed' && was !== 'destroyed') {
+      // the dead stand still: whatever it was doing stops
+      view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
+      view.strafeAt = 0; view.at = null; view.arriveAt = 0;
+      FX.clear();
+      note(R.isMachine(unit()) ? 'Destroyed: the hull burns where it stopped.'
+        : 'Destroyed: every model in the squad is down.');
+    } else if (s === 'damaged') note('Damaged: half its Structure gone, and trailing smoke.');
+    else if (was === 'destroyed' || was === 'damaged') note('');
+    drawControls(); drawState(); start(); frame();
+  }
   function seg(name, opts, now) {
     return opts.map(function (o) {
       return '<button class="vsg' + (o === now ? ' on' : '') + '" data-set="' + name +
@@ -839,7 +861,7 @@
 
   function drawState() {
     var u = unit();
-    if (view.destroyed) {
+    if (view.status === 'destroyed') {
       el('vstate').textContent = R.isMachine(u) ? 'destroyed — the hull is burning'
         : u.size + ' of ' + u.size + ' models down';
       return;
@@ -890,7 +912,8 @@
       if (!b) return;
       view.key = b.getAttribute('data-unit');
       view.models = null;
-      view.destroyed = false;
+      // a state the new unit cannot be in (a tank cannot be suppressed) goes back to ready
+      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
       var p = profile();
       if (p.cls !== 'vehicle') view.prop = 'tracked';
       FX.clear();
@@ -917,6 +940,7 @@
       }
       var s = e.target.closest('[data-set]');
       if (s) {
+        if (s.getAttribute('data-set') === 'status') { setStatus(s.getAttribute('data-val')); return; }
         view[s.getAttribute('data-set')] = s.getAttribute('data-val');
         drawControls(); drawState(); frame(); return;
       }
@@ -927,17 +951,6 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
-      else if (act === 'destroyed') {
-        view.destroyed = !view.destroyed;
-        if (view.destroyed) {
-          view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
-          view.strafeAt = 0; view.at = null; view.arriveAt = 0;
-          FX.clear();
-          note(R.isMachine(unit()) ? 'Destroyed: the hull burns where it stopped.'
-            : 'Destroyed: every model in the squad is down.');
-        } else note('');
-        drawControls(); drawState(); start(); frame();
-      }
       else if (act === 'allstyles') allStyles();
       else if (act === 'sound') {
         view.sound = !view.sound;
@@ -994,14 +1007,22 @@
 
   /* test hooks: the harness drives the bench the way a player would */
   root.__viewer = {
-    pick: function (k) { view.key = k; view.models = null; drawPicker(); drawControls(); drawState(); frame(); },
-    set: function (k, v) { view[k] = v; drawControls(); drawState(); frame(); },
+    pick: function (k) {
+      view.key = k; view.models = null;
+      if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
+      drawPicker(); drawControls(); drawState(); frame();
+    },
+    set: function (k, v) {
+      if (k === 'status') { setStatus(v); return; }
+      view[k] = v; drawControls(); drawState(); frame();
+    },
+    states: function () { return statesFor(profile()); },
     fire: fire,
     walk: toggleWalk,
     gait: function () { return gaitOf(unit()); },
     insert: insert,
     strafe: strafe,
-    destroy: function (on) { view.destroyed = on !== false; drawControls(); drawState(); frame(); },
+    destroy: function (on) { setStatus(on === false ? 'ready' : 'destroyed'); },
     strafing: function () { return !!view.strafeAt; },
     arriving: arriving,
     fx: function () { return FX.kinds(); },
