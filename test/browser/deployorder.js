@@ -159,7 +159,7 @@ async function newGame(p, cfg) {
   await drain(p);
   const carried = await p.evaluate((code) => {
     const s = window.PMC_STATE();
-    const u = s.units.find(x => x.code === code);
+    const u = s.units.find(x => x.side === 'A' && x.code === code);
     return {
       asking: window.__insertionAsking(),
       turn: s.turn, phase: s.phase, over: !!s.over,

@@ -295,7 +295,15 @@
       case 'scenery': queueBake(); return;
       case 'fit': fitView(); return;
       case 'structures': if (state.structs) paintStructures(); return;
-      case 'clearcards': resetShow(); return;
+      case 'clearcards': {
+        /* Clear the table's cards and effects, but not the rest of the batch
+           this came in: the new game's table, its zoom and its first look are
+           queued right behind it. */
+        var rest = show.queue.slice();
+        resetShow();
+        Array.prototype.push.apply(show.queue, rest);
+        return;
+      }
       case 'look': lookAtDeployment(ev.side); return;
       default: return;
     }
@@ -329,7 +337,10 @@
     ui.markKind = s.markKind;
     ui.markPicks = s.markPicks;
     ui.deployPick = s.deployPick;
+    var wasAsked = !!ui.insertion;
     ui.insertion = s.insertion;
+    // a drop point being asked for: on a phone the Actions pane, where the ask is, comes to the front
+    if (ui.insertion && !wasAsked && window.innerWidth <= 1000) setMTab('act');
     ui.sections = s.sections || [];
     ui.tsetHint = s.tsetHint || '';
     ui.vis = null; ui.visKey = '';
@@ -942,6 +953,8 @@
     stance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h18"/><path d="M6 19l3-5M18 19l-3-5"/><path d="M8 14l9-7"/><path d="M16 5l3 1-1 3"/></svg>',
     empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 12h10"/></svg>'
   };
+  // marking a target for the fire-support team is designating it by another name
+  ICONS.marktarget = ICONS.designate;
 
   /* The six standard actions, and how many special slots sit beside them. The
      engine owns the list, because the engine is what decides whether any of
@@ -3221,7 +3234,7 @@
         var st2 = actionState(u, sp.id);
         html += '<button class="slot special' + (ui.mode === sp.id ? ' active' : '') + '" data-action="' + sp.id + '"' +
           (st2.on ? '' : ' disabled') + ' title="' + sp.label + ' — ' + st2.hint.replace(/"/g, '&quot;') + '">' +
-          ICONS[sp.id] + '<span>' + sp.label + '</span></button>';
+          (ICONS[sp.id] || '') + '<span>' + sp.label + '</span></button>';
       }
     }
     bar.innerHTML = html;
