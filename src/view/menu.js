@@ -140,14 +140,13 @@
     function lay(p, alpha) {
       if (!p || alpha <= 0) return;
       var W = cv.width, H = cv.height;
-      /* In close, so the table mostly fills the screen — by the screen's area
-         rather than its longer side, so a tall phone sees about as much of the
-         table as a wide desktop does rather than being zoomed in twice as far.
-         At least far enough in that the table spans the screen's long side;
-         the dark past its corners shows at the edges, as it does on a desktop. */
+      /* In close, so the table fills the screen. On a wide screen that is its
+         longer side and then some; a tall phone, zoomed that way, came out
+         twice as close as a desktop, so it takes instead the furthest out that
+         still has the screen inside the table's diamond, corners and all. */
       var fw = W / p.width, fh = H / p.height;
-      var dh = (ISO.W + ISO.H) * ISO.K * SCALE / 2, top = ISO.TOP * SCALE;   // the table's diamond, in the picture
-      z = Math.max(Math.sqrt(fw * fh) * 1.7, Math.max(fw, fh) * 1.05);
+      var dw = (ISO.W + ISO.H) * ISO.K * SCALE, dh = dw / 2, top = ISO.TOP * SCALE;   // the table's diamond, in the picture
+      z = Math.min(Math.max(fw, fh) * 1.7, (W / dw + H / dh) * 1.02);
       ox = (W - p.width * z) / 2; oy = H / 2 - (top + dh / 2) * z;   // the diamond centred, not the picture
       g.globalAlpha = alpha;
       g.drawImage(p, ox, oy, p.width * z, p.height * z);
