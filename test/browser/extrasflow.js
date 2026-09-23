@@ -156,7 +156,7 @@ async function start(p) {
   head('Bloodlust');
   await newGame(p, {});
   await start(p);
-  const bl = await p.evaluate(() => {
+  await p.evaluate(() => {
     const s = window.PMC_STATE();
     s.activeSide = 'A';
     const u = s.units.find(x => x.side === 'A' && x.code === 'HMG');
@@ -164,13 +164,25 @@ async function start(p) {
     u.camp = { flags: { bloodlust: true }, once: {} };
     u.sp = 0; u.activated = false;
     e.x = u.x + 4; e.y = u.y;
+  });
+  await settle(p);
+  const bl = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => x.side === 'A' && x.code === 'HMG');
+    const e = s.units.find(x => x.side === 'B' && x.key === 'regular');
     window.__select(u);
     const near = { fire: window.__actionState('fire').on, assault: window.__actionState('assault').on,
       forced: window.__forcedCharge(u) === e.id };
     s.units.forEach(x => { if (x.side === 'B') { x.x = 58; x.y = 40; } });
+    return { near };
+  });
+  // a selection made while the table is still animating the last one waits its turn
+  await settle(p);
+  bl.far = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => x.side === 'A' && x.code === 'HMG');
     window.__select(u);
-    const far = { fire: window.__actionState('fire').on || window.__actionState('move').on, forced: window.__forcedCharge(u) };
-    return { near, far };
+    return { fire: window.__actionState('fire').on || window.__actionState('move').on, forced: window.__forcedCharge(u) };
   });
   ok('with an enemy in reach, the only thing it may do is charge', !bl.near.fire && bl.near.assault);
   ok('...the closest enemy, Cumbersome Weapon or not', bl.near.forced);
@@ -216,7 +228,8 @@ async function start(p) {
   ok('a Semper Fidelis unit in the second wave is offered on turn 2', !sf.none && sf.ask && sf.ask.kind === 'arrive', JSON.stringify(sf.ask));
   ok('...on a card that names the honour', sf.sfCard);
   ok('...and it may be kept back', sf.held);
-  ok('...and brought on the next time it is offered', sf.arrived, JSON.stringify(sf.again));
+  ok('...and brought on the next time it is offered', sf.arrived,
+    sf.again ? (sf.arrived ? 'called in' : 'offered again, but the tap on the shaded ground did not put it down') : 'not offered again');
   await drain(p);
 
   // the transport clause: the hull comes too, but only with the honoured unit alone aboard

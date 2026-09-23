@@ -80,6 +80,8 @@ function head(t) { console.log('\n  ' + t); }
     s.units.filter(u => u.side === 'A').forEach((u, i) => { u.x = 10; u.y = 14 + i * 3; });
     s.units.filter(u => u.side === 'B').forEach((u, i) => { u.x = 34; u.y = 14 + i * 3; });
     window.__rebuildScene();
+    window.__clearSel();                 // and redraw, so the Begin button appears
+    await new Promise(r => setTimeout(r, 250));
     s.activeSide = 'A'; s.initiative = 'A';
     const b2 = document.querySelector('button[data-act="start"]');
     if (b2) b2.click();
@@ -89,6 +91,8 @@ function head(t) { console.log('\n  ' + t); }
       if (res && !res.hidden) { const c = document.getElementById('res-continue'); if (c) c.click(); }
       await new Promise(r => setTimeout(r, 120));
     }
+    // the table plays out the start of the battle before it takes an order
+    for (let i = 0; i < 100 && (window.__busy() || window.__showQueue()); i++) await new Promise(r => setTimeout(r, 50));
     s.activeSide = 'A';
     s.units.forEach(x => { x.activated = false; });
     const u = s.units.find(x => x.side === 'A' && x.code === 'RIF');

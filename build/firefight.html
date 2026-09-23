@@ -31548,9 +31548,9 @@
     }
 
     // a unit is coming in: the tap is the drop point, nothing else
+    // (p is the tap on the table, zoom and pan taken out; the raw canvas point is not)
     if (ui.insertion) {
-      var v0 = viewRect();
-      placeInsertion(ISO.toWorld(c.x + v0.sx, c.y + v0.sy));
+      placeInsertion(p);
       return;
     }
 
@@ -31564,8 +31564,7 @@
 
     // a demolition pick takes priority: the piece is the target, not a unit
     if (ui.terrain.length) {
-      var w = ISO.toWorld(c.x + viewRect().sx, c.y + viewRect().sy);
-      var piece = ui.terrain.filter(function (r) { return R.inRect(w.x, w.y, r); })[0];
+      var piece = ui.terrain.filter(function (r) { return R.inRect(p.x, p.y, r); })[0];
       if (piece) {
         if (ui.mode === 'breach') doBreach(piece); else doDemolish(piece);
         return;

@@ -1,15 +1,16 @@
 const { chromium } = require('playwright');
-const path = require('path');
+const { page } = require('../where.js');
 let pass=0, fail=0;
 const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(note?'  — '+note:''));};
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1500, height: 1100 } });
   const errs=[]; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join('/home/claude/pmc','index.html'));
+  await p.goto('file://' + page);
   await p.waitForTimeout(700);
   await p.evaluate(() => { try{localStorage.clear();}catch(e){} });
-  await p.evaluate(() => document.getElementById('btn-setup-campaign').click());
+  // the campaign is a card on the main menu the page opens on
+  await p.evaluate(() => document.getElementById('btn-campaign').click());
   await p.waitForTimeout(500);
 
   const first = await p.evaluate(() => ({
@@ -24,11 +25,12 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
     name: !!document.getElementById('found-name'),
     nameVal: (document.getElementById('found-name')||{}).value,
     swatches: document.querySelectorAll('#camp-body [data-campcolour]').length,
+    colours: window.PMCIso.COLOUR_KEYS.length,
     on: (document.querySelector('#camp-body .sw.on')||{}).getAttribute ? document.querySelector('#camp-body .sw.on').getAttribute('data-campcolour') : null,
     heading: document.querySelector('#camp-body h2').textContent
   }));
   ok('the founding screen asks for the name', found.name, '"'+found.nameVal+'"');
-  ok('...and offers the colours', found.swatches === 10, found.swatches + ' swatches');
+  ok('...and offers the colours', found.swatches === found.colours, found.swatches + ' swatches of ' + found.colours + ' army colours');
   ok('...with one already picked', !!found.on, found.on);
   ok('the heading no longer repeats a name you have not given', !/Ironhold/.test(found.heading), found.heading);
 
