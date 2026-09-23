@@ -122,25 +122,16 @@ const { ROOT, SHOTS } = require('../where.js');
   console.log('\nAgainst the AI');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('ai'); });
   await p.waitForTimeout(200);
-  check('you muster your own force first, from nothing', /^Muster your force$/.test(await title()) &&
-    await p.evaluate(() => document.querySelectorAll('#chosen .pick').length) === 0 && !(await shown('sel-op')));
+  const start = await p.evaluate(() => window.__hot());
+  check('it opens on the battlefield, both forces already rolled, as a demo does',
+    /^The battlefield$/.test(await title()) && start.step === 3 && start.sides.every(sd => sd.keys.length > 0) &&
+    start.sides[0].colour !== start.sides[1].colour && await shown('sel-terrain'), JSON.stringify(start).slice(0, 200));
+  await p.click('[data-hotside="0"]');
+  check('tap your force to change it: a name and colours of your own', /^Muster your force$/.test(await title()) &&
+    await shown('hot-name') && await shown('btn-quick-colour') && !(await shown('sel-op')));
+  await p.click('#btn-quick-clear');
+  check('...Clear to build it by hand', await p.evaluate(() => document.querySelectorAll('#chosen .pick').length) === 0);
   await roll(); await name('Kowalski\u2019s Lads');
-  await next();
-  const op = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, faction: document.getElementById('sel-faction').value,
-    legal: /legal/i.test(document.getElementById('faults').textContent), name: document.getElementById('hot-name').value }));
-  check('then the opposition: a random kind of force, already rolled', /^The opposition/.test(await title()) && op.units > 0 && op.legal && !!op.name, JSON.stringify(op));
-  await setVal('sel-faction', 'xeno');
-  const opx = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, legal: /legal/i.test(document.getElementById('faults').textContent) }));
-  check('...pick an army type and it is rolled for you', opx.units > 0 && opx.legal);
-  const was = await p.evaluate(() => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join());
-  let changed = false;
-  for (let i = 0; i < 5 && !changed; i++) {
-    await p.evaluate(() => document.querySelector('[data-army="random"]').click());
-    changed = await p.evaluate((w) => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join() !== w &&
-      /legal/i.test(document.getElementById('faults').textContent), was);
-  }
-  check('...or Random army for a random type, rolled', changed);
-  await setVal('sel-faction', 'xeno');
   await next();
   check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'));
   await next();

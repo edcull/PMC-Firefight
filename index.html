@@ -702,36 +702,57 @@
   #setup[data-hot="3"] .hot-sum { display: block; }
   #setup[data-hot] .hot-intro { display: block; }
   /* a demo names its own forces, from their colour and kind, always lays the table itself, and needs no explaining */
-  #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field, #setup[data-kind="demo"] .hot-intro { display: none !important; }
+  #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field, #setup[data-quick] .hot-intro { display: none !important; }
   /* nor does it pick colours or hand-build: its forces are rolled, each in a colour of its own, and the
      Battle Tier and Priority Level are set once, for both, on the battlefield step */
-  #setup[data-kind="demo"] .hot-colour, #setup[data-kind="demo"] .muster-btns { display: none !important; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) #tierpl-field { display: none !important; }
-  #setup[data-kind="demo"][data-hot="3"] #tierpl-field { display: grid !important; }
+  #setup[data-kind="demo"] .hot-colour, #setup[data-quick] .muster-btns { display: none !important; }
+  /* a battle against the AI is set up the same way, the player naming and colouring their own force */
+  #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
+  #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
+  #btn-quick-clear { display: none; }
+  /* ...and its colours come up in a modal from a chip beside its name */
+  .name-row { display: flex; gap: 6px; }
+  .name-row .tin { flex: 1; min-width: 0; }
+  .colour-btn { display: none; flex: none; width: 46px; padding: 6px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
+  .colour-btn .sw-chip { display: block; height: 100%; min-height: 20px; }
+  .colour-btn:hover, .colour-btn:focus-visible { border-color: var(--alpha); }
+  .colour-box { display: contents; }
+  #setup .quick-only { display: none; }
+  #setup[data-kind="ai"] .colour-btn { display: block; }
+  #setup[data-kind="ai"] .hot-colour { display: none !important; }
+  #setup[data-kind="ai"] .hot-colour.open {
+    display: grid !important; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; margin: 0; background: rgba(8, 11, 16, .78);
+  }
+  #setup[data-kind="ai"] .hot-colour.open .colour-box {
+    display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+    width: min(400px, 100%); max-height: 100%; overflow-y: auto; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  }
+  #setup[data-kind="ai"] .hot-colour.open .askrow.quick-only { display: flex; margin-top: 12px; }
+  #setup[data-kind="ai"] #btn-quick-clear { display: inline-block; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
   .forcebar-wrap, .forcebar-box { display: contents; }
-  #setup[data-kind="demo"] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
-  #setup[data-kind="demo"] .demo-btns .lnk { flex: 1; }
-  #setup[data-kind="demo"] .forcebar-wrap { display: none; }
-  #setup[data-kind="demo"] .forcebar-wrap.open {
+  #setup[data-quick] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
+  #setup[data-quick] .demo-btns .lnk { flex: 1; }
+  #setup[data-quick] .forcebar-wrap { display: none; }
+  #setup[data-quick] .forcebar-wrap.open {
     display: grid; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; background: rgba(8, 11, 16, .78);
   }
-  #setup[data-kind="demo"] .forcebar-wrap.open .forcebar-box {
+  #setup[data-quick] .forcebar-wrap.open .forcebar-box {
     display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
     width: min(460px, 100%); box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
   }
-  #setup[data-kind="demo"] .forcebar-wrap.open .demo-only { display: flex; }
-  #setup[data-kind="demo"] .forcebar-wrap.open h3.demo-only { display: block; font-family: var(--display); font-size: 15px; margin: 0 0 8px; }
-  #setup[data-kind="demo"] .forcebar-wrap.open .forcebar { margin-top: 0; padding-top: 0; border-top: 0; }
+  #setup[data-quick] .forcebar-wrap.open .demo-only { display: flex; }
+  #setup[data-quick] .forcebar-wrap.open h3.demo-only { display: block; font-family: var(--display); font-size: 15px; margin: 0 0 8px; }
+  #setup[data-quick] .forcebar-wrap.open .forcebar { margin-top: 0; padding-top: 0; border-top: 0; }
   /* a demo force's screen fits the page: only the list of units scrolls */
-  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet { display: flex; flex-direction: column; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet > * { flex: none; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet > .muster.hot-force { flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; margin-bottom: 10px; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > * { flex: none; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > .cat { flex: 1 1 0; min-height: 60px; max-height: none; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet { display: flex; flex-direction: column; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > * { flex: none; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > .muster.hot-force { flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; margin-bottom: 10px; }
+  #setup[data-quick]:not([data-hot="3"]) .muster.hot-force > * { flex: none; }
+  #setup[data-quick]:not([data-hot="3"]) .muster.hot-force > .cat { flex: 1 1 0; min-height: 60px; max-height: none; }
   /* the units picked scroll too, and take at most about a fifth of the box: the list to pick from keeps the rest */
-  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > #chosen {
+  #setup[data-quick]:not([data-hot="3"]) .muster.hot-force > #chosen {
     flex: none; min-height: 40px; max-height: 22%; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start;
   }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
@@ -1571,7 +1592,11 @@
     <p class="lede std-only hot-hide">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table.</p>
     <div class="field hot-only hot-name">
       <label for="hot-name">Force name</label>
-      <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+      <div class="name-row">
+        <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+        <!-- against the AI, the colours are a button here that opens them in a modal -->
+        <button type="button" class="colour-btn" id="btn-quick-colour" title="Colours"><span class="sw-chip" id="colour-btn-chip"></span></button>
+      </div>
     </div>
     <div class="field hot-force">
       <label for="sel-faction">Your force</label>
@@ -1629,6 +1654,7 @@
       <!-- a demo force: rolled again, or loaded and saved from a list of its own -->
       <div class="demo-btns">
         <button type="button" class="lnk" id="btn-demo-roll">Random force</button>
+        <button type="button" class="lnk" id="btn-quick-clear">Clear</button>
         <button type="button" class="lnk" id="btn-demo-saves">Load / save…</button>
       </div>
       <!-- a force worth building is worth keeping: named, saved in this browser,
@@ -1701,10 +1727,13 @@
         <option value="takeover">Hostile takeover — a prepared position</option>
       </select>
     </div>
-    <div class="field hot-force hot-colour">
+    <div class="field hot-force hot-colour" id="colour-wrap">
+      <div class="colour-box" role="dialog" aria-label="Colours">
       <label>Company colours — what your troops are painted in</label>
       <div class="swatches" id="colourpick"></div>
       <p class="hint small" id="colour-hint">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
+      <div class="askrow quick-only"><button type="button" class="start" id="btn-colour-done">Done</button></div>
+      </div>
     </div>
     <!-- chosen on the menu now; kept because the start reads it -->
     <div class="field std-only" id="mode-field" hidden>
