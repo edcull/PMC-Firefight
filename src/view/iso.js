@@ -224,6 +224,29 @@
       g.fillRect(Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry), 1, 1);
     }
   }
+  /* A unit's state, laid over its ring as short dashes, so the army's dots
+     still show between them whatever its colour: amber when suppressed, red
+     when broken. */
+  var STATUS_DASH = {
+    suppressed: { c: '#e08a3a', on: 0.16, off: 0.36 },
+    broken: { c: '#e0557a', on: 0.16, off: 0.36 }
+  };
+  function statusDashes(g, cx, cy, rx, ry, st, w) {
+    var d = STATUS_DASH[st];
+    if (!d) return;
+    var n = Math.round(Math.PI * 2 / (d.on + d.off)), per = Math.PI * 2 / n;
+    var on = per * d.on / (d.on + d.off);
+    w = Math.max(1, Math.round(w || 2));
+    [['rgba(12,10,8,.55)', w + 1], [d.c, w]].forEach(function (pass) {
+      g.fillStyle = pass[0];
+      for (var k = 0; k < n; k++) {
+        var a0 = k * per + per * 0.25;
+        for (var a = a0; a <= a0 + on; a += 0.02) {
+          g.fillRect(Math.round(cx + Math.cos(a) * rx - pass[1] / 2), Math.round(cy + Math.sin(a) * ry - pass[1] / 2), pass[1], pass[1]);
+        }
+      }
+    });
+  }
 
   // world-space iso diamond (a rectangle on the table)
   function tile(g, x, y, w, h, c, lift) {
@@ -9782,7 +9805,7 @@
        state runs round the building's footprint. */
     var around = opts.around || null;
     if (around) {
-      var ringCol0 = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
+      var ringCol0 = pal.light;
       var gap = 0.3, lf0 = opts.lift || 0;
       var corners = [[around.x - gap, around.y - gap], [around.x + around.w + gap, around.y - gap],
         [around.x + around.w + gap, around.y + around.h + gap], [around.x - gap, around.y + around.h + gap]]
@@ -9795,6 +9818,18 @@
         g.closePath(); g.stroke();
         g.setLineDash([]);
       });
+      var sd = STATUS_DASH[rst];                       // the state, dashed over the army's line
+      if (sd) {
+        var len0 = a(6);
+        [['rgba(12,10,8,.55)', PIXEL * 1.5], [sd.c, PIXEL]].forEach(function (st3) {
+          g.strokeStyle = st3[0]; g.lineWidth = Math.max(1, st3[1]);
+          g.setLineDash([len0 * sd.on, len0 * sd.off]);
+          g.beginPath();
+          corners.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); });
+          g.closePath(); g.stroke();
+          g.setLineDash([]);
+        });
+      }
     } else {
     /* No base disc. A token on a table has one; a squad standing on ground does
        not, and the dark ellipse under every unit read as a hole in the terrain.
@@ -9805,10 +9840,11 @@
 
     /* The ring is the only thing carrying the unit's state now, so it is given a
        dark edge a pixel outside it — enough to read on pale ground without
-       putting a disc back under the models. */
-    var ringCol = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
+       putting a disc back under the models. Its dots are always the army's;
+       a state is dashed over them. */
     ellipseRing(g, p.x, p.y, br + PIXEL, brY + PIXEL, 'rgba(12,10,8,.45)');
-    ellipseRing(g, p.x, p.y, br, brY, ringCol);
+    ellipseRing(g, p.x, p.y, br, brY, pal.light);
+    statusDashes(g, p.x, p.y, br, brY, rst, PIXEL);
     if (opts.selected) ellipseRing(g, p.x, p.y, br + a(2), brY + a(1), '#ffffff');
     }
 
