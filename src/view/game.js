@@ -3446,9 +3446,7 @@
     if (R.isMachine(u)) { drawMachineStats(u, box); return; }
     var st = R.status(u), m = R.currentMorale(u);
     var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · <span class="army"' + armyStyle(u.side, true) + '>' + sideName(u.side) + '</span>' +
-      '</p><span class="stat-sum">' + u.models + '/' + u.size + ' · ' + u.sp + ' SP · Move ' + u.move +
-      '" · FP ' + (u.fp === null ? '—' : u.fp) + ' · Rng ' + u.range + '"</span></div>' +
+      '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
       '</div>';
     /* Suppression against Morale in three equal bands — steady, suppressed,
        broken — each as wide as the Morale, with the unit's SP laid over them
@@ -3477,13 +3475,16 @@
     box.innerHTML = h;
     wireHost(box);
   }
-  /* The army's own colours on the unit tab: the code badge painted as the
-     unit's ring is on the table, and the force's name in its light. */
-  function armyStyle(side, textOnly) {
+  // what the army list calls the unit's kind — Combat vehicles, Assault troops
+  function groupOf(u) {
+    var g = u.group || (R.profile(u.key) || {}).group;
+    return g ? ' · ' + esc(g) : '';
+  }
+  // the army's own colours on the unit tab's code badge, as its ring is painted on the table
+  function armyStyle(side) {
     var pal = ISO.PALETTE && ISO.PALETTE[side];
     if (!pal) return '';
-    return textOnly ? ' style="color:' + pal.light + '"'
-      : ' style="color:' + pal.light + ';border-color:' + pal.mid + ';background:color-mix(in srgb, ' + pal.dark + ' 45%, transparent)"';
+    return ' style="color:' + pal.light + ';border-color:' + pal.mid + ';background:color-mix(in srgb, ' + pal.dark + ' 45%, transparent)"';
   }
   function stat(k, v) { return '<div class="st"><span>' + k + '</span><b>' + v + '</b></div>'; }
 
@@ -3558,13 +3559,9 @@
   function drawMachineStats(u, box) {
     var left = Math.max(0, u.str - u.damage);
     var pr = R.propOf(u);
-    var kind = u.cls === 'aircraft' ? 'Aircraft'
-      : pr ? pr.name + ' ground vehicle' : 'Ground vehicle';
     if (u.drone) kind += ' · drone';
     var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + kind + ' · <span class="army"' + armyStyle(u.side, true) + '>' + sideName(u.side) + '</span>' +
-      '</p><span class="stat-sum">' + u.damage + '/' + u.str + ' damage · Move ' + u.move +
-      '" · FP ' + (u.fp === null ? '—' : u.fp) + '</span></div>' +
+      '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
       '</div>';
     // its health: the Structure it has left — green untouched, amber down to half, red below
     var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
