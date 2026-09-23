@@ -199,7 +199,7 @@
     // the wreck keeps burning, and a damaged hull keeps smoking
     if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
     frame();
-    if (busy) start(); else { last = 0; drawState(); }
+    if (busy) start(); else last = 0;
   }
   function start() { if (!loop) loop = requestAnimationFrame(tick); }
 
@@ -262,11 +262,10 @@
   function canStrafe() { return unit().cls === 'aircraft'; }
   function strafe() {
     showWide();
-    if (!canStrafe()) { note('Only aircraft make strafing runs.'); return; }
+    if (!canStrafe()) { return; }
     view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
     view.strafeAt = Date.now();
     view.facing = 0;
-    note('A strafing run: it fires the length of the pass.');
     var fired = 0, guns = 7;
     (function burst() {
       if (fired >= guns || !view.strafeAt) return;
@@ -377,9 +376,6 @@
       start();
     }, CLEAR_MS);
     start();
-    note(craft
-      ? u.name + ' comes down on its landing point — the dust goes up with it.'
-      : u.name + ' is on the ground before you see it, and comes up out of cover.');
   }
 
   /* ---------- firing ----------
@@ -401,7 +397,7 @@
   // pull out to the whole line for the length of a shot
   function showWide() { view.wide = true; view.wideUntil = performance.now() + 900; start(); }
   function fire() {
-    if (view.status === 'destroyed') { note('It is destroyed — it is not firing anything.'); return; }
+    if (view.status === 'destroyed') return;
     showWide();
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
@@ -427,7 +423,6 @@
     syncSound();
     play(spec, from, to, hits, u);
     start();
-    note(describe(spec, u));
   }
 
   var FIRE = {
@@ -666,7 +661,7 @@
   function play(spec, from, to, hits, u) {
     if (spec.s) setTimeout(function () { secondary(spec.s, from.second || from, to, spec.sn); start(); }, 150);
     switch (spec.p) {
-      case 'none': note('This one has no weapon at all.'); return;
+      case 'none': return;
       case 'energy': energy(from, to, spec.n || 1, true); return;
       case 'orb': orbs(from, to, spec.n || 1, !R.isMachine(u || unit())); return;
       case 'orbbig': orbs(from, to, spec.n || 1, false, true); return;
@@ -761,37 +756,21 @@
     }
   }
 
-  var STYLE_NOTE = {
-    small: 'a rifle line: aimed shots, ragged, a second of them',
-    pistol: 'a sidearm: a few deliberate single shots',
-    smg: 'a carbine, close in — quicker and lighter than a rifle',
-    burst: 'a machine gun, rattling',
-    chain: 'an autocannon: heavier, slower, countable',
-    shell: 'a direct projectile, flat and fast',
-    shellbig: 'a large direct projectile',
-    arc: 'a lobbed projectile, up and over',
-    arcbig: 'a large lobbed projectile',
-    missile: 'a guided missile — out of the tube cold and level, then it lights at the top of its climb and comes down on the mark',
-    rocket: 'unguided rockets, off the rails in a ripple',
-    flame: 'a cone of fire; nothing flies, the ground burns',
-    rail: 'a Gauss weapon: an instant white line that fades',
-    spit: 'a bug\'s acid: a wet glob lobbed low, splashing green',
-    spitbig: 'a sac of bio-plasma, glowing, bigger and slower',
-    spine: 'a volley of chitin spines, dry and fast',
-    energy: 'pulses of light in the army\'s colour',
-    orb: 'a plasma orb — lobbed from a craft or turret, teleported onto the mark from a Gamma launcher',
-    orbbig: 'an energy howitzer — heavy orbs lobbed over, bursting in blue fire on the ground',
-    none: 'no weapon'
-  };
-  function describe(spec, u) {
-    var s = STYLE_NOTE[spec.p] || spec.p;
-    if (spec.n > 1) s += ' — ' + spec.n + ' tubes at once';
-    if (spec.s) s += ', with ' + (STYLE_NOTE[spec.s] || spec.s) + ' alongside';
-    return u.name + ': ' + s + '.';
-  }
 
 
   /* ---------- the panels ---------- */
+  function phone() { return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches); }
+  // the phone's unit sidebar, opened from the header and closed by a pick, the ×, the scrim or Escape
+  function showSide(open) {
+    document.body.classList.toggle('vside-open', !!open);
+    el('vunits').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      var on = el('vlist').querySelector('.vu.on');
+      if (on) on.scrollIntoView({ block: 'center' });
+    }
+  }
+  function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
+
   function drawPicker() {
     var groups = {};
     R.CATALOGUE.forEach(function (p) {
@@ -807,7 +786,7 @@
           '" data-unit="' + p.key + '">' +
           '<span class="vu-code">' + esc(p.code) + '</span>' +
           '<span class="vu-name">' + esc(p.name) + '</span>' +
-          '<span class="vu-w">' + esc(w.p + (w.s ? '+' + w.s : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
+          '<span class="vu-w">' + esc(styleName(w.p) + (w.s ? '+' + styleName(w.s) : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
           '</button>';
       });
     });
@@ -845,7 +824,6 @@
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
-    h += '<div class="vacts"><button class="vbtn" data-do="allstyles">Play every weapon style</button></div>';
     h += rulesHtml(p);
     el('vctl').innerHTML = h;
   }
@@ -899,11 +877,8 @@
       view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
       view.strafeAt = 0; view.at = null; view.arriveAt = 0;
       FX.clear();
-      note(R.isMachine(unit()) ? 'Destroyed: the hull burns where it stopped.'
-        : 'Destroyed: every model in the squad is down.');
-    } else if (s === 'damaged') note('Damaged: half its Structure gone, and trailing smoke.');
-    else if (was === 'destroyed' || was === 'damaged') note('');
-    drawControls(); drawState(); start(); frame();
+    }
+    drawControls(); start(); frame();
   }
   function seg(name, opts, now) {
     return opts.map(function (o) {
@@ -912,38 +887,7 @@
     }).join('');
   }
 
-  function drawState() {
-    var u = unit();
-    if (view.status === 'destroyed') {
-      el('vstate').textContent = R.isMachine(u) ? 'destroyed — the hull is burning'
-        : u.size + ' of ' + u.size + ' models down';
-      return;
-    }
-    el('vstate').textContent = R.isMachine(u)
-      ? u.damage + ' of ' + u.str + ' Structure gone'
-      : u.models + '/' + u.size + ' models · ' + u.sp + ' SP · ' + R.status(u);
-    if (view.dpr && window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
-      el('vstate').textContent += ' · tap to fire';
-    }
-  }
-  function note(t) { el('vnote').textContent = t; }
 
-  /* Walk every style in turn, so the whole set can be compared in one go. */
-  function allStyles() {
-    showWide();
-    var order = ['pistol', 'small', 'smg', 'burst', 'chain', 'shell', 'shellbig',
-      'arc', 'arcbig', 'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig'];
-    var i = 0;
-    (function next() {
-      if (i >= order.length) { note('That is all of them.'); return; }
-      var st = order[i++];
-      FX.clear();
-      note(st + ' — ' + (STYLE_NOTE[st] || ''));
-      play({ p: st, n: st === 'arc' ? 2 : 1 }, FROM, TO, 3, { name: st });
-      start();
-      setTimeout(next, 1500);
-    })();
-  }
 
   /* ---------- wiring ---------- */
   function mount() {
@@ -956,7 +900,7 @@
     fit();
     drawPicker();
     drawControls();
-    drawState();
+   
     fit();                 // again, now the footer has its text and the panels their size
     frame();
 
@@ -997,6 +941,12 @@
       setZoom(how === 'in' ? view.zoom * 1.35 : how === 'out' ? view.zoom / 1.35 : how === 'wide' ? 1 : ZOOM_CLOSE);
     });
     zoomLabel();
+    el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
+    el('vclose').addEventListener('click', function () { showSide(false); });
+    el('vscrim').addEventListener('click', function () { showSide(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.body.classList.contains('vside-open')) showSide(false);
+    });
     el('vlist').addEventListener('click', function (e) {
       var b = e.target.closest('[data-unit]');
       if (!b) return;
@@ -1007,11 +957,10 @@
       var p = profile();
       if (p.cls !== 'vehicle') view.prop = 'tracked';
       FX.clear();
-      drawPicker(); drawControls(); drawState(); frame();
-      note('');
-      // on a phone the list is below the stage: go back up to see the unit
-      if (window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
-        // the page itself does not scroll on a phone: the panel under the stage does
+      drawPicker(); drawControls(); frame();
+      // on a phone the list is a sidebar over the stage: put it away and go back up to see the unit
+      if (phone()) {
+        showSide(false);
         var sc = document.querySelector('main');
         if (sc && sc.scrollTo) sc.scrollTo({ top: 0, behavior: 'smooth' });
       } else b.scrollIntoView({ block: 'nearest' });
@@ -1034,7 +983,7 @@
       if (s) {
         if (s.getAttribute('data-set') === 'status') { setStatus(s.getAttribute('data-val')); return; }
         view[s.getAttribute('data-set')] = s.getAttribute('data-val');
-        drawControls(); drawState(); frame(); return;
+        drawControls(); frame(); return;
       }
       var d = e.target.closest('[data-do]');
       if (!d) return;
@@ -1043,7 +992,6 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
-      else if (act === 'allstyles') allStyles();
       else if (act === 'sound') {
         view.sound = !view.sound;
         if (SFX) SFX.setEnabled(view.sound);
@@ -1053,7 +1001,7 @@
     el('vctl').addEventListener('input', function (e) {
       if (e.target.id === 'vmodels') {
         view.models = +e.target.value;
-        drawControls(); drawState(); frame();
+        drawControls(); frame();
       }
     });
 
@@ -1091,14 +1039,8 @@
     /* The canvas is drawn at the size it is shown at, all the stage bar the
        footer. Left to CSS, flex stretched a canvas drawn half as tall as it
        was wide to the stage's whole height, and every figure came out tall. */
-    /* The footer is measured with its line of text in it: fit() first runs
-       before the state is written, when an empty footer is only its padding,
-       and a canvas sized to that pushed the footer out of a fixed-height stage. */
-    // the footer under the stage is hidden now; if it is ever shown again the canvas makes room for it
-    var fe = el('vstate') ? el('vstate').parentElement : null;
-    var foot = fe && fe.offsetParent !== null ? Math.max(28, fe.offsetHeight) : 0;
     var cw = Math.max(260, Math.round(box.width - 2));
-    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot - 2));
+    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - 2));
     cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
     cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
     view.dpr = dpr;
@@ -1109,12 +1051,12 @@
     pick: function (k) {
       view.key = k; view.models = null;
       if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
-      drawPicker(); drawControls(); drawState(); frame();
+      drawPicker(); drawControls(); frame();
     },
     zoom: function (z) { if (z != null) setZoom(z); return { zoom: view.zoom, cur: view.zCur, wide: view.wide }; },
     set: function (k, v) {
       if (k === 'status') { setStatus(v); return; }
-      view[k] = v; drawControls(); drawState(); frame();
+      view[k] = v; drawControls(); frame();
     },
     states: function () { return statesFor(profile()); },
     fire: fire,

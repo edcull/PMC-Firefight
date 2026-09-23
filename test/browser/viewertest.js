@@ -240,7 +240,7 @@ async function pickAndFire(p, key, ms) {
     window.__viewer.set('status', 'suppressed');
     out.refused = window.__viewer.unit().damage + '|' + document.querySelector('[data-set="status"].on').textContent;
     window.__viewer.set('status', 'destroyed');
-    out.destroyedNote = document.getElementById('vstate').textContent;
+    out.destroyedOn = document.querySelector('[data-set="status"].on').textContent;
     window.__viewer.set('status', 'ready');
     return out;
   });
@@ -250,7 +250,7 @@ async function pickAndFire(p, key, ms) {
     'ready ' + hull.ready + ', damaged ' + hull.damaged);
   ok('...and it smokes only when damaged', !hull.readySmoke && hull.damagedSmoke);
   ok('...a state it cannot be in is not taken', hull.refused === '0|ready', hull.refused);
-  ok('...destroyed is on the same row', /destroyed/.test(hull.destroyedNote), hull.destroyedNote);
+  ok('...destroyed is on the same row', hull.destroyedOn === 'destroyed', hull.destroyedOn);
   ok('the Destroyed toggle is gone from the actions', await p.evaluate(() => !document.querySelector('[data-do="destroyed"]')));
 
   const shrunk = await p.evaluate(() => {

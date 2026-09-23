@@ -14217,7 +14217,7 @@
     if (kit.armband === 'force') {
       // penal troops: a band in the company's own colour round the upper arm, over the coveralls
       var abc = pal.forceDark ? PALETTE_FORCE(pal) : pal.light;
-      if (pal.isRebel) abc = vividHex(pal.forceMid || abc, 3, 1.3);   // a rebel's armband is the brightest thing on him
+      abc = vividHex(pal.forceMid || abc, 3, 1.3);    // the armband is the brightest thing on him, convict or rebel
       P(-14 - b, -37.5 + drop, aw + 2, 4.2, abc);
       P(-14 - b, -37.5 + drop, aw + 2, 0.9, 'rgba(255,255,255,.35)');
       P(-14 - b, -34.1 + drop, aw + 2, 0.8, 'rgba(0,0,0,.35)');
