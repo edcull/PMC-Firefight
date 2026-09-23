@@ -683,7 +683,10 @@
       ' will take a colour of their own.</p><div class="cmodal-scroll">' + swatches(draft.colour) + '</div>');
     h += modal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
       head + '<div class="chosen">' + chosen + '</div>' +
-      '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) { return !p.leaderBug && !p.alpha; }, co) + '</div>');
+      '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) {
+        // a Tier II machine cannot be fielded in the Tier I battles a new force starts in
+        return !p.leaderBug && !p.alpha && !(p.tier === 2 && p.cls !== 'infantry');
+      }, co) + '</div>');
     h += modal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll"><div class="docpick">' + cr.list.map(function (d) {
       return '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
         '<b>' + esc(d.name) + '</b><i>' + say(d.cat, 'Path of the ' + d.cat, d.cat + ' Pathway', d.cat + ' Advancement') + '</i>' +
