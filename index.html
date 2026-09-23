@@ -699,9 +699,9 @@
   #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet > .muster.hot-force { flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; margin-bottom: 10px; }
   #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > * { flex: none; }
   #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > .cat { flex: 1 1 0; min-height: 60px; max-height: none; }
-  /* the units picked scroll too, and take at most half the box: the list to pick from keeps the rest */
+  /* the units picked scroll too, and take at most about a third of the box: the list to pick from keeps the rest */
   #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > #chosen {
-    flex: none; min-height: 40px; max-height: 50%; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start;
+    flex: none; min-height: 40px; max-height: 35%; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start;
   }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
