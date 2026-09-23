@@ -1201,7 +1201,8 @@
        rest of the header is folded away on a phone. */
     header h1 { display: none; }
     .hdr-meta, .hdr-btns { display: contents; }
-    #hdr-phase, #hdr-init, #hdr-obj, #hdr-role, #hdr-active, #btn-more, #btn-sound, #btn-notes, #btn-drawer, #btn-campaign { display: none !important; }
+    /* scoped to the header: #btn-campaign is also the main menu's Campaign card */
+    header #hdr-phase, header #hdr-init, header #hdr-obj, header #hdr-role, header #hdr-active, header #btn-more, header #btn-sound, header #btn-notes, header #btn-drawer { display: none !important; }
     #btn-menu { order: 0; }
     #btn-obj { order: 1; margin-left: auto; }
     #hdr-turn { display: inline-block; order: 2; width: 58px; text-align: center; font-size: 10px; }
