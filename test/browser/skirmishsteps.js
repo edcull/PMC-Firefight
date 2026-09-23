@@ -1,4 +1,4 @@
-/* Hotseat, co-op and against-the-AI skirmishes build both forces before the battle (a demo rolls both and starts at once): each
+/* Hotseat, co-op and against-the-AI skirmishes build both forces before the battle (a demo rolls both and opens on the battlefield): each
    side in turn (kind, name, colours, units), then the battlefield (scenario,
    world, terrain). The opposition against the AI starts as a random kind of
    force with a rolled build. And on a page with no
@@ -48,7 +48,7 @@ const { ROOT, SHOTS } = require('../where.js');
   await setVal('sel-faction', 'bugs');
   await roll(); await name('The Hive');
   // back and forward again keeps both forces
-  await p.evaluate(() => document.getElementById('btn-hot-back').click()); await p.waitForTimeout(200);
+  await p.evaluate(() => document.getElementById('btn-setup-back').click()); await p.waitForTimeout(200);
   h = await hot();
   check('Back returns to player 1 with their force intact', h.step === 1 && await p.evaluate(() => document.getElementById('hot-name').value) === 'Task Force Ironhold' &&
     await p.evaluate(() => document.getElementById('sel-faction').value) === h.sides[0].faction);
@@ -90,14 +90,28 @@ const { ROOT, SHOTS } = require('../where.js');
     JSON.stringify(cs));
 
   console.log('\nDemo');
-  // a demo asks nothing: two random forces, straight onto the table
+  // a demo opens on the battlefield with both forces already rolled
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('demo'); });
+  await p.waitForTimeout(200);
+  h = await hot();
+  check('a demo opens on the battlefield, both forces rolled', h.step === 3 && h.sides.every(sd => sd && sd.keys.length > 0 && sd.name) &&
+    h.sides[0].colour !== h.sides[1].colour && /battlefield/i.test(await title()), JSON.stringify(h.sides.map(sd => sd && sd.name)));
+  const cards = await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length);
+  check('...each force a button', cards === 2);
+  // tap force 1 to change it: its kind, and back to the battlefield
+  await p.evaluate(() => document.querySelector('#hot-sum [data-hotside="0"]').click()); await p.waitForTimeout(200);
+  h = await hot();
+  const d1 = await p.evaluate(() => ({ faction: document.getElementById('sel-faction').value, btn: document.getElementById('btn-start').textContent }));
+  check('...tapping one opens it to change', h.step === 1 && h.edit && /battlefield/i.test(d1.btn), JSON.stringify(d1));
+  await setVal('sel-faction', d1.faction === 'xeno' ? 'pmc' : 'xeno');
+  await next();
+  h = await hot();
+  check('...and its button goes straight back to the battlefield, changed', h.step === 3 && !h.edit && h.sides[0].faction === (d1.faction === 'xeno' ? 'pmc' : 'xeno'),
+    JSON.stringify({ step: h.step, f: h.sides[0].faction }));
+  await next();
   await p.waitForTimeout(600);
-  const ds = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, ca: s.cfg.colourA, cb: s.cfg.colourB,
-    setup: !document.getElementById('setup').hidden, menu: !document.getElementById('menu').hidden,
-    na: s.units.filter(u => u.side === 'A').length, nb: s.units.filter(u => u.side === 'B').length }; });
-  check('the demo starts at once, with no muster screen', !ds.setup && !ds.menu, JSON.stringify(ds));
-  check('...two named forces in colours of their own', ds.mode === 'demo' && !!ds.a && !!ds.b && ds.a !== ds.b && ds.ca !== ds.cb && ds.na > 0 && ds.nb > 0, JSON.stringify(ds));
+  const ds = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, ca: s.cfg.colourA, cb: s.cfg.colourB }; });
+  check('the demo runs with the two forces', ds.mode === 'demo' && !!ds.a && !!ds.b && ds.ca !== ds.cb, JSON.stringify(ds));
 
   console.log('\nAgainst the AI');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('ai'); });

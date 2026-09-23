@@ -577,7 +577,12 @@
   /* The campaign is a page of its own, like the unit viewer: a bar across the
      top with the way back and the screen's title, and under it the one thing
      that scrolls. (Not a <header>: the game's own header rules would reach it.) */
-  #camp.overlay { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--ground); place-items: stretch; }
+  #camp.overlay, #setup.overlay { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--ground); place-items: stretch; }
+  #setup.overlay > .sheet {
+    flex: 1; min-height: 0; width: 100%; max-width: none; max-height: none; overflow-y: auto; overscroll-behavior: contain;
+    border: 0; border-radius: 0; background: transparent; -webkit-overflow-scrolling: touch;
+    padding: 18px max(16px, calc((100% - 720px) / 2)) calc(22px + env(safe-area-inset-bottom, 0px));
+  }
   .camp-top {
     display: flex; align-items: center; gap: 14px; flex: none;
     padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; border-bottom: 1px solid var(--line); background: var(--panel);
@@ -665,10 +670,14 @@
   #setup[data-hot="1"] .hot-name, #setup[data-hot="2"] .hot-name { display: block; }
   #setup[data-hot="3"] .hot-sum { display: block; }
   #setup[data-hot] .hot-intro { display: block; }
-  #setup[data-hot="2"] .hot-back, #setup[data-hot="3"] .hot-back { display: inline-block; }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
-  .hot-sum .hot-side { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel-2); }
+  .hot-sum .hot-side {
+    display: block; width: 100%; text-align: left; cursor: pointer; color: var(--ink); font: inherit;
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel-2);
+  }
+  .hot-sum .hot-side:hover, .hot-sum .hot-side:focus-visible { border-color: var(--alpha); }
+  .hot-sum .hot-side em { float: right; font-style: normal; font-size: 11.5px; color: var(--ink-faint); }
   .hot-sum .hot-side b { font-family: var(--display); }
   .hot-sum .hot-side small { display: block; color: var(--ink-dim); margin-top: 2px; }
   .lnk.warn { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
@@ -1250,8 +1259,8 @@
      screen and is the one thing that scrolls, rather than a card floating in
      an overlay that scrolls as well. */
   @media (max-width: 700px) {
-    .overlay:not(.menu):not(#resolution):not(#camp) { padding: 0; place-items: stretch; overflow: hidden; }
-    .overlay:not(.menu):not(#resolution):not(#camp) > .sheet {
+    .overlay:not(.menu):not(#resolution):not(#camp):not(#setup) { padding: 0; place-items: stretch; overflow: hidden; }
+    .overlay:not(.menu):not(#resolution):not(#camp):not(#setup) > .sheet {
       width: 100%; max-width: none; height: 100%; max-height: none; border: 0; border-radius: 0;
       overflow-y: auto; -webkit-overflow-scrolling: touch;
       padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
@@ -1445,8 +1454,11 @@
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
+  <div class="camp-top">
+    <button type="button" class="camp-back" id="btn-setup-back">← Back</button>
+    <h1 id="setup-title">Muster your force</h1>
+  </div>
   <div class="sheet">
-    <h2 id="setup-title">Muster your force</h2>
     <div class="solo-box" id="solo-box" hidden>
       <p class="lede hot-hide">Solitaire and co-operative play (rulebook pp. 146–156): your commando — or two of them, one each — against an OpFor that acts in a phase of its own, driven by the behaviour table. Commandos are small: build yours from the commando composition table (p. 147). The OpFor pool is rolled for you from its own table (p. 148), and in a co-op game it is rolled a Priority Level higher for the second player.</p>
       <div class="field two hot-field">
@@ -1625,10 +1637,6 @@
       </select>
     </div>
     <button class="start" id="btn-start">Take the field</button>
-    <button class="lnk hot-only hot-back" id="btn-hot-back" type="button">← Back</button>
-    <p class="camp-foot">
-      <button class="lnk" id="btn-setup-menu">← Main menu</button>
-    </p>
   </div>
 </div>
 
