@@ -607,6 +607,32 @@
   .askbox.archbox { width: min(560px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; padding: 16px; }
   .archbox .archpick { flex: 1; min-height: 0; max-height: none; }
   .archbox .askrow { flex: none; }
+  .archline .line-chip { flex: none; width: 34px; height: 18px; }
+  /* Founding: the page fits the screen, and only the list of units picked
+     takes up the slack (and scrolls, if it has to); the pickers are modals. */
+  #camp.overlay > #camp-body.sheet.fit { display: flex; flex-direction: column; }
+  #camp-body.fit > * { flex: none; }
+  #camp-body.fit > .found-units { flex: 1 1 auto; min-height: 96px; display: flex; flex-direction: column; margin-bottom: 12px; }
+  .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
+  .found-units .chosen:empty::before { content: 'No units yet.'; }
+  .found-add { align-self: flex-start; margin-top: 8px; }
+  .cmodal {
+    position: fixed; inset: 0; z-index: 70; background: rgba(8, 11, 16, .78);
+    display: grid; place-items: center; padding: 20px;
+  }
+  .cmodal[hidden] { display: none; }
+  .cmodal-box {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+    width: min(620px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px);
+    display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  }
+  .cmodal-box h3 { font-family: var(--display); font-size: 15px; margin: 0 0 8px; color: var(--ink); letter-spacing: .02em; }
+  .cmodal-box > * { flex: none; }
+  .cmodal-box > .cmodal-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .cmodal-box > .cat { max-height: none; }
+  .cmodal-box > .chosen { margin-bottom: 8px; max-height: 84px; overflow-y: auto; }
+  .cmodal-box .docpick { margin-bottom: 0; }
+  .cmodal-box .askrow { flex: none; }
   .tin {
     width: 100%; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
     border-radius: 5px; padding: 9px 10px; font-family: var(--body); font-size: 13px;

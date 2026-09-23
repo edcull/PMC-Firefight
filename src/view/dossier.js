@@ -591,6 +591,17 @@
         '<span class="sw-name">' + esc(c.name) + '</span></button>';
     }).join('') + '</div>';
   }
+  function colourName(k) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
+    return CO[k] ? CO[k].name : 'Choose a colour';
+  }
+  function colourChip(k) {
+    var c = ((root.PMCIso && root.PMCIso.COLOURS) || {})[k];
+    return c ? '<span class="sw-chip line-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
+      c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '';
+  }
+  // which of the founding screen's pickers is open over it, if any
+  var foundModal = null;
   function rivalName() { return 'Rival company'; }
   // what this campaign calls its money, and what its creed is called
   function coin() { return C.money(camp && camp.companies ? camp.companies.A : null); }
@@ -629,10 +640,8 @@
       ' placeholder="' + say('e.g. Task Force Ironhold', 'e.g. The Free Colonies', 'e.g. The Hive', 'e.g. The Ghadon Third') + '"' +
       ' value="' + esc(draft.name || '') + '"></div>' +
       '<div class="field"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') + '</label>' +
-      swatches(draft.colour) +
-      '<p class="hint small">What your troops are painted in. ' +
-      say('The opposition', 'The forces sent against you', 'Whatever the swarm feeds on', 'Whoever trespasses') +
-      ' will take a colour of their own.</p></div></div>';
+      '<button type="button" class="archline" data-go="fmodal" data-kind="colour">' + colourChip(draft.colour) +
+      '<span>' + esc(colourName(draft.colour)) + '</span><em>change</em></button></div></div>';
     h += '<p class="lede">' + (xen
       ? 'A tribe claims its ground with six Tier I units, two Tier II units and one free Tier I Alpha squad — its field commanders, who grow with the Tribe Tier (pp. 83, 140). Primitive Epsilon troopers cost nothing to raise, and turrets are never bought — they only take up composition points. Then choose the Tribe Advancement it begins with.'
       : bug
@@ -640,26 +649,46 @@
       : reb
       ? 'A revolt begins with six Tier I units, two Tier II units and one free Tier I First Among Equals — the leader who started it — with no more than two vehicles between them (pp. 83, 110). Armed civilians cost nothing to call out. Then choose the Path the revolt sets off down.'
       : 'A starting company is six Tier I units, two Tier II units and one free Tier I Field command, with no more than two vehicles between them (p. 83). Then choose the doctrine the company is built around.') + '</p>';
-    h += '<div class="muster"><div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
+    var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
       t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
-    h += '<div class="chosen" id="found-chosen">' + draft.keys.map(function (k, i) {
+    var chosen = draft.keys.map(function (k, i) {
       var s = R.splitPick(k), p = profile(s.key);
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
         esc(p.name) + ' <b>' + ROMAN[p.tier] + '</b></button>' +
         (p.cls === 'vehicle' ? '<button class="drive" data-cycle="' + i + '">' +
           R.PROPULSION[s.prop || 'wheeled'].short + '</button>' : '') + '</span>';
-    }).join('') + '</div>';
-    h += '<div class="cat" id="found-cat">' + catalogueFor(1, 2, function (p) { return !p.leaderBug && !p.alpha; }, co) + '</div></div>';
+    }).join('');
+    h += '<div class="muster found-units">' + head +
+      '<div class="chosen" id="found-chosen">' + chosen + '</div>' +
+      '<button type="button" class="lnk found-add" data-go="fmodal" data-kind="units">+ Add units</button></div>';
 
-    var cr = C.creedOf(co);
-    h += '<h3>Starting ' + C.creedOf(co).one + '</h3><div class="docpick">';
-    cr.list.forEach(function (d) {
-      h += '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
+    var cr = C.creedOf(co), doc = draft.doctrine && C.doctrine(draft.doctrine);
+    h += '<div class="field"><label>Starting ' + cr.one + '</label>' +
+      '<button type="button" class="archline" data-go="fmodal" data-kind="doctrine">' +
+      '<span>' + (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</span>' +
+      '<em>' + (doc ? 'change' : 'tap to select') + '</em></button></div>';
+
+    /* The three pickers, each a modal over the page: drawn with it (hidden
+       unless open), so a pick redraws the list it was made in. */
+    function modal(kind, title, inner, foot) {
+      return '<div class="cmodal" data-modal="' + kind + '"' + (foundModal === kind ? '' : ' hidden') + '>' +
+        '<div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+        '<h3>' + esc(title) + '</h3>' + inner +
+        '<div class="askrow">' + (foot || '') + '<button type="button" class="start" data-go="fmodalclose">Done</button></div></div></div>';
+    }
+    h += modal('colour', say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour'),
+      '<p class="hint small">What your troops are painted in. ' +
+      say('The opposition', 'The forces sent against you', 'Whatever the swarm feeds on', 'Whoever trespasses') +
+      ' will take a colour of their own.</p><div class="cmodal-scroll">' + swatches(draft.colour) + '</div>');
+    h += modal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
+      head + '<div class="chosen">' + chosen + '</div>' +
+      '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) { return !p.leaderBug && !p.alpha; }, co) + '</div>');
+    h += modal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll"><div class="docpick">' + cr.list.map(function (d) {
+      return '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
         '<b>' + esc(d.name) + '</b><i>' + say(d.cat, 'Path of the ' + d.cat, d.cat + ' Pathway', d.cat + ' Advancement') + '</i>' +
         '<span>' + esc(d.text) + '</span></button>';
-    });
-    h += '</div>';
+    }).join('') + '</div></div>');
 
     var named = !!(draft.name || '').trim();
     var chk = { ok: t1 === 6 && t2 === 2 && machines <= 2 && draft.doctrine && named };
@@ -1708,8 +1737,14 @@
     var hd = /^<h2>([\s\S]*?)<\/h2>/.exec(h);
     if (hd) h = h.slice(hd[0].length);
     el('camp-title').innerHTML = hd ? hd[1] : 'Campaign';
+    if (view !== 'found') foundModal = null;
+    // a pick in an open list redraws it: keep it where it was scrolled to
+    var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = foundModal;
+    body.classList.toggle('fit', view === 'found');
     body.innerHTML = h;
     body.scrollTop = 0;
+    var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
+    if (ms2 && mKind === foundModal) ms2.scrollTop = mTop;
     var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
@@ -1742,7 +1777,11 @@
       var nx = order[(order.indexOf(s.prop || 'wheeled') + 1) % order.length];
       draft.keys[i] = R.joinPick(s.key, nx, s.drone); render(); return;
     }
-    if (t.hasAttribute('data-doc')) { draft.doctrine = t.getAttribute('data-doc'); render(); return; }
+    if (t.hasAttribute('data-doc')) {
+      draft.doctrine = t.getAttribute('data-doc');
+      if (foundModal === 'doctrine') foundModal = null;   // one to choose: the pick closes it
+      render(); return;
+    }
     if (t.hasAttribute('data-take')) {
       var side = docSide, cc = camp.companies[side];
       if (C.canTakeDoctrine(cc, t.getAttribute('data-take')).ok) cc.doctrines.push(t.getAttribute('data-take'));
@@ -1848,6 +1887,7 @@
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour');
+      if (foundModal === 'colour') foundModal = null;
       keepFoundName();
       render(); return;
     }
@@ -1856,6 +1896,8 @@
 
     switch (go) {
       case 'archopen': openArchs(); return;
+      case 'fmodal': foundModal = t.getAttribute('data-kind'); render(); return;
+      case 'fmodalclose': foundModal = null; render(); return;
       case 'archdone': closeArchs(); return;
       case 'archrandom':
         archPick = [];
@@ -2025,12 +2067,14 @@
       }
       if (ev.target === el('camp-ask')) { closeAsk(); return; }   // tapping the backdrop
       if (ev.target === el('camp-archmodal')) { closeArchs(); return; }
+      if (ev.target.classList && ev.target.classList.contains('cmodal')) { foundModal = null; render(); return; }
       if (asking) return;                                         // nothing behind it is live
       if (ev.target === host) { close(); return; }
       onClick(ev);
     });
     host.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && !el('camp-archmodal').hidden) { ev.preventDefault(); closeArchs(); return; }
+      if (ev.key === 'Escape' && foundModal) { ev.preventDefault(); foundModal = null; render(); return; }
       if (!asking) return;
       if (ev.key === 'Enter') { ev.preventDefault(); answerAsk(); }
       else if (ev.key === 'Escape') { ev.preventDefault(); closeAsk(); }
