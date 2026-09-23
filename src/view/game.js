@@ -2579,6 +2579,8 @@
         order.push({ depth: r.x + r.y, draw: 'wreck', r: r, u: wu });
       } else order.push({ depth: r.x + r.y - 0.4, draw: 'body', r: r });
     });
+    // a machine at half Structure trails smoke, which has to keep moving too
+    if (!anyFire) anyFire = order.some(function (it) { return it.draw === 'unit' && ISO.smoking(it.unit); });
     state.fireOnView = anyFire;
 
     order.concat(blockers)

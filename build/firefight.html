@@ -19893,6 +19893,12 @@
         ellipseRing(g, ring.x, ring.y, a(9), a(4.5), '#ffffff');
       }
 
+      if (smoking(u)) {
+        var sseed = 0, ssid = String(u.id || u.code || '');
+        for (var sq = 0; sq < ssid.length; sq++) sseed = (sseed * 31 + ssid.charCodeAt(sq)) | 0;
+        damageSmoke(g, p.x + a(0.5), p.y - m.lift - m.hgt * 0.7,
+          opts.t != null ? opts.t : (root.performance ? performance.now() : 0), Math.abs(sseed));
+      }
       var top = p.y - m.lift - m.hgt - a(4);
       if (u.damage && u.str) {                       // damage bar, in place of suppression
         var dw = a(6.5), dh = a(0.8);
@@ -20111,6 +20117,27 @@
     g.fillStyle = 'rgba(255,150,60,.16)';             // the glow on the hull round it
     g.beginPath(); g.ellipse(sx, sy - 0.5 * A1, 3.2 * A1, 1.6 * A1, 0, 0, Math.PI * 2); g.fill();
   }
+  /* A machine that has lost half its Structure or more is still fighting, but
+     it trails smoke: grey puffs from somewhere in the hull, climbing and
+     drifting, with no fire under them — that is kept for the wreck. A living
+     hull (the swarm's big bugs) does not smoke. */
+  function smoking(u) {
+    return !!u && (u.cls === 'vehicle' || u.cls === 'aircraft') && !!u.str &&
+      u.alive !== false && (u.damage || 0) * 2 >= u.str && !BIGBUG[u.art];
+  }
+  function damageSmoke(g, sx, sy, t, seed) {
+    var A1 = A, sd = (seed || 0) % 89;
+    for (var i = 0; i < 7; i++) {
+      var life = ((t / 3000) + i / 7 + sd * 0.017) % 1;
+      var px = sx + life * 6 * A1 + Math.sin(life * 4 + i * 1.7) * 1.2 * A1;
+      var py = sy - life * 18 * A1;
+      var r = (1.1 + life * 3.6) * A1;
+      var al = 0.42 * (1 - life) * Math.min(1, life * 5);
+      var c = 88 + (i % 3) * 14;
+      g.fillStyle = 'rgba(' + c + ',' + (c - 2) + ',' + (c - 4) + ',' + al.toFixed(3) + ')';
+      g.beginPath(); g.ellipse(px, py, r, r * 0.8, 0, 0, Math.PI * 2); g.fill();
+    }
+  }
   function drawWreck(g, u, at, lift, t) {
     var m = drawMachine(g, u, { at: at, lift: lift || 0, status: 'wrecked' });
     var p = toScreen(at.x, at.y);
@@ -20161,7 +20188,7 @@
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
-    casualtySpot: casualtySpot, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire
+    casualtySpot: casualtySpot, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
   };
 })(window);
 
@@ -29124,6 +29151,8 @@
         order.push({ depth: r.x + r.y, draw: 'wreck', r: r, u: wu });
       } else order.push({ depth: r.x + r.y - 0.4, draw: 'body', r: r });
     });
+    // a machine at half Structure trails smoke, which has to keep moving too
+    if (!anyFire) anyFire = order.some(function (it) { return it.draw === 'unit' && ISO.smoking(it.unit); });
     state.fireOnView = anyFire;
 
     order.concat(blockers)
