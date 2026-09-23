@@ -135,6 +135,8 @@
         walk: m === u ? view.walkFrame : 0,
         arc: m === u && view.walking ? (view.arc || 0) : 0,
         status: m === u && !R.isMachine(m) ? (arr.status || view.status) : 'ready',
+        // getting up as it arrives is a pose, not a state: the ring keeps the army's colour
+        ringStatus: m === u && arr.status ? 'ready' : undefined,
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
       });
     });

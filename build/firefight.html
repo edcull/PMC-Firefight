@@ -20642,6 +20642,11 @@
     if (opts.hop) p.y -= opts.hop;
     var pal = PALETTE[u.paint || u.side] || PALETTE.A;
     var st = opts.status || 'ready';
+    /* The ring (and the morale bar) show the unit's state; the figures take
+       their pose from `status`. They part only while a squad gets up off the
+       ground as it arrives: posed flat, then kneeling, but it is not broken or
+       suppressed, so its ring stays in the army's colour. */
+    var rst = opts.ringStatus || st;
     var art = u.art || 'rifle';
     // mounted infantry (the Riders upgrade, p. 93) ride whatever they can find
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
@@ -20703,7 +20708,7 @@
        state runs round the building's footprint. */
     var around = opts.around || null;
     if (around) {
-      var ringCol0 = st === 'broken' ? '#e0557a' : st === 'suppressed' ? '#e08a3a' : pal.light;
+      var ringCol0 = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
       var gap = 0.3, lf0 = opts.lift || 0;
       var corners = [[around.x - gap, around.y - gap], [around.x + around.w + gap, around.y - gap],
         [around.x + around.w + gap, around.y + around.h + gap], [around.x - gap, around.y + around.h + gap]]
@@ -20727,7 +20732,7 @@
     /* The ring is the only thing carrying the unit's state now, so it is given a
        dark edge a pixel outside it — enough to read on pale ground without
        putting a disc back under the models. */
-    var ringCol = st === 'broken' ? '#e0557a' : st === 'suppressed' ? '#e08a3a' : pal.light;
+    var ringCol = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
     ellipseRing(g, p.x, p.y, br + PIXEL, brY + PIXEL, 'rgba(12,10,8,.45)');
     ellipseRing(g, p.x, p.y, br, brY, ringCol);
     if (opts.selected) ellipseRing(g, p.x, p.y, br + a(2), brY + a(1), '#ffffff');
@@ -20798,7 +20803,7 @@
       var filled = Math.max(PIXEL, Math.round(Math.min(1, u.sp / (2 * opts.morale)) * w));
       rect(g, p.x - w / 2 - 1, head - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
       rect(g, p.x - w / 2, head, w, bh, '#15181d');
-      rect(g, p.x - w / 2, head, filled, bh, st === 'broken' ? '#d1476b' : '#c9762f');
+      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : '#c9762f');
     }
     if (u.marked) {
       dot(g, p.x + a(5), head - a(2), '#e8c15a');
@@ -30008,6 +30013,8 @@
           walk: u.walk || 0,
           arc: u.arc || 0,
           status: arr.status || R.status(u),
+          // getting up as it arrives is a pose, not a state: the ring shows the state it really has
+          ringStatus: arr.status ? R.status(u) : undefined,
           activated: u.activated,
           selected: ui.selected === u,
           morale: R.currentMorale(u)

@@ -2641,6 +2641,8 @@
           walk: u.walk || 0,
           arc: u.arc || 0,
           status: arr.status || R.status(u),
+          // getting up as it arrives is a pose, not a state: the ring shows the state it really has
+          ringStatus: arr.status ? R.status(u) : undefined,
           activated: u.activated,
           selected: ui.selected === u,
           morale: R.currentMorale(u)
