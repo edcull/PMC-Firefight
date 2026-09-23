@@ -10415,28 +10415,23 @@ html { scroll-behavior: smooth; }
       frustum(PU, PB, zb - m(1.5), zb + m(1.5), WH.dk);
       // the side a fin is on: toward the eye or away
       function finSide(sd) { var wx = -sin * sd, wy = cos * sd; return wx + wy; }
-      function fin(sd) {
-        var fh = m(sk.small ? 5 : 7);
-        var pts = [S(-0.45 * L, sd * 0.26 * Wd2, zd - m(0.5)), S(-0.9 * L, sd * 0.26 * Wd2, zd - m(0.5)), S(-1.12 * L, sd * 0.4 * Wd2, zd + fh), S(-0.86 * L, sd * 0.38 * Wd2, zd + fh * 0.92)];
-        path(pts, finSide(sd) > 0 ? WH.md : WH.dk); stroke(pts, 1, WH.seam, true);
-        stroke([pts[0], pts[3]], m(0.7), GLO.m);                     // its leading edge in the army's colour
-        if (!dead) ellipse(g, pts[3][0], pts[3][1], m(0.7), m(0.6), GLO.l);
-      }
       // a wing: a thin plate swept back from the hull's flank, its leading edge in the army's colour
       var wz = zb + H * 0.3;
       function wingPlate(sd) {
-        var top = [S(0.35 * L, sd * 0.3 * Wd2, wz), S(-0.52 * L, sd * Wd2, wz - m(0.8)), S(-0.86 * L, sd * 0.96 * Wd2, wz - m(0.8)), S(-0.72 * L, sd * 0.34 * Wd2, wz)];
+        // thrown down and out like a tri-wing's lower pair: the tip well below the root
+        var dz = m(sk.small ? 3 : 4.5);
+        var top = [S(0.35 * L, sd * 0.3 * Wd2, wz), S(-0.52 * L, sd * Wd2, wz - dz), S(-0.86 * L, sd * 0.96 * Wd2, wz - dz), S(-0.72 * L, sd * 0.34 * Wd2, wz)];
         var under = top.map(function (q) { return [q[0], q[1] + m(1.2)]; });
         path([top[0], top[1], under[1], under[0]], WH.dk);                // the leading edge's thickness
         path([top[1], top[2], under[2], under[1]], WH.sh);
         path(top, finSide(sd) > 0 ? WH.lt : WH.md); stroke(top, 1, WH.seam, true);
-        stroke([S(0.1 * L, sd * 0.36 * Wd2, wz), S(-0.6 * L, sd * 0.82 * Wd2, wz - m(0.6))], 1, WH.dk);   // a panel line
+        stroke([S(0.1 * L, sd * 0.36 * Wd2, wz - dz * 0.1), S(-0.6 * L, sd * 0.82 * Wd2, wz - dz * 0.8)], 1, WH.dk);   // a panel line
         stroke([top[0], top[1]], m(0.8), GLO.m);
         if (!dead) { stroke([top[0], top[1]], m(0.3), GLO.l); ellipse(g, top[1][0], top[1][1], m(0.9), m(0.8), GLO.l); }
         return top;
       }
       var wingTips = {};
-      [-1, 1].forEach(function (sd) { if (finSide(sd) < 0) { wingTips[sd] = wingPlate(sd)[1]; fin(sd); } });
+      [-1, 1].forEach(function (sd) { if (finSide(sd) < 0) wingTips[sd] = wingPlate(sd)[1]; });
       var deck = frustum(PB, PT, zb + m(1.5), zd);
       [-1, 1].forEach(function (sd) { if (finSide(sd) >= 0) wingTips[sd] = wingPlate(sd)[1]; });
       // the army's colour down the nose
@@ -10468,6 +10463,20 @@ html { scroll-behavior: smooth; }
         }
       }
       var away = cos + sin < 0;
+      /* the third wing: a tall swept blade standing straight up off the spine,
+         the tri-wing's dorsal wing, its leading edge burning in the army's colour */
+      function dorsal() {
+        var fh = m(sk.small ? 9 : 13), bw = 0.05 * Wd2;
+        var bl = [S(0.05 * L, 0, zd), S(-0.95 * L, 0, zd + fh), S(-1.1 * L, 0, zd + fh * 0.9), S(-0.95 * L, 0, zd)];
+        var side = finSide(1) > 0 ? 1 : -1;
+        var edge2 = bl.map(function (q, i) { return i === 1 || i === 2 ? q : S(i ? -0.95 * L : 0.05 * L, side * bw, zd); });
+        path(edge2, WH.dk);
+        path(bl, WH.md); stroke(bl, 1, WH.seam, true);
+        stroke([S(-0.25 * L, 0, zd + fh * 0.25), S(-0.9 * L, 0, zd + fh * 0.8)], 1, WH.lt);      // a panel line
+        stroke([bl[0], bl[1]], m(0.8), GLO.m);
+        if (!dead) { stroke([bl[0], bl[1]], m(0.3), GLO.l); ellipse(g, bl[1][0], bl[1][1], m(0.9), m(0.8), GLO.l); }
+      }
+      if (!away) dorsal();
       if (away) barrels();
       frustum(PP, PPt, tz, tz + th, WH.lt);
       // the cockpit: a blue crystal set in the front of the pod
@@ -10496,7 +10505,7 @@ html { scroll-behavior: smooth; }
         stroke(rp, m(1.8), WH.dk);
         stroke(rp, m(1), BL.m);
       }
-      [-1, 1].forEach(function (sd) { if (finSide(sd) >= 0) fin(sd); });
+      if (away) dorsal();
       if (!dead) muz.forEach(function (mp) { mountAt('gun', mp); mountAt('mg', mp); });
       return { lift: lift, hgt: zd - zb + th + m(sk.dome ? 8 : sk.ring ? 6 : 8) };
     }
@@ -13206,14 +13215,13 @@ html { scroll-behavior: smooth; }
         // the chest itself, hunched forward, its front plate raked back
         shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
           rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
-        /* the cockpit: a wide glazed canopy set into the top of the chest,
-           framed in dark metal, with a bar down its middle */
+        /* the cockpit: one wide pane of glass set into the top of the chest,
+           framed in dark metal */
         if (fwd > -0.1) {
           var vk0 = 0.5, vk1 = 0.86, rk = tL * 0.34, vf = function (k, b) { return onFront(tL * 0.9, rk, zU, upH, k, b); };
           poly(g, [vf(vk0 - 0.05, -tW * 0.56), vf(vk0 - 0.05, tW * 0.56), vf(vk1 + 0.05, tW * 0.5), vf(vk1 + 0.05, -tW * 0.5)], '#0b0e12');
           var cq = [vf(vk0, -tW * 0.5), vf(vk0, tW * 0.5), vf(vk1, tW * 0.44), vf(vk1, -tW * 0.44)];
           glass(cq, [cq[3], cq[2]]);
-          line(vf(vk0, 0), vf(vk1, 0), Math.max(1, 1.6 * sf), '#0b0e12');
         }
         if (fwd <= 0) stacks();
       }
