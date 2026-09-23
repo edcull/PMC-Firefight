@@ -129,6 +129,8 @@
     order.forEach(function (m) {
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
       if (m === u && arr.hidden) return;                 // not on the field yet
+      var fading = m === u && arr.alpha != null;          // teleporting in
+      if (fading) { g.save(); g.globalAlpha = arr.alpha; }
       I.drawUnit(g, m, {
         at: { x: m.x, y: m.y }, lift: m === u ? arr.lift : 0,
         hop: m === u ? (view.hop || 0) : 0,
@@ -139,6 +141,7 @@
         ringStatus: m === u && arr.status ? 'ready' : undefined,
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
       });
+      if (fading) g.restore();
     });
     FX.draw(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -328,7 +331,7 @@
      already on the ground when you see it and comes up out of cover: drawn broken,
      then suppressed, then standing. It is only how it is drawn; the state the
      bench is set to is untouched. */
-  var DROP_MS = 900, STAND_MS = 1150;
+  var DROP_MS = 900, STAND_MS = 1150, TELE_MS = 1300;
 
   function syncSound() {
     if (!SFX) return;
@@ -347,6 +350,16 @@
       var eased = 1 - Math.pow(1 - age / DROP_MS, 0.45);
       return { lift: Math.round(I.ELEV * 5.5 * (1 - eased)), status: null };
     }
+    if (view.arriveKind === 'teleport') {
+      /* a Xenotripod squad teleports in (as the battle shows it, game.js):
+         not there while the pillar of light forms, then flickering into it */
+      if (age >= TELE_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
+      var tk = age / TELE_MS;
+      if (tk < 0.3) return { lift: 0, status: null, hidden: true };
+      var ta = Math.min(1, (tk - 0.3) / 0.35);
+      var flick = ta < 1 && Math.floor(age / 55) % (ta < 0.5 ? 2 : 4) === 0;
+      return { lift: 0, status: null, alpha: flick ? ta * 0.3 : ta };
+    }
     if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
     // flat on its face, then up on one knee, then standing
     return {
@@ -360,19 +373,22 @@
      dropping to the ground from where it stood and getting back up. */
   var CLEAR_MS = 450;
   function insert() {
-    var u = unit(), craft = R.isMachine(u) || !!u.jets;
+    var u = unit(), craft = R.isMachine(u) || !!u.jets, tele = !craft && u.faction === 'xeno';
     if (view.walking) toggleWalk();
     FX.clear();
     syncSound();
     var at = { x: u.x, y: u.y };
     view.arriveAt = Date.now() + CLEAR_MS;
-    view.arriveKind = craft ? 'drop' : 'stand';
+    view.arriveKind = craft ? 'drop' : tele ? 'teleport' : 'stand';
     // the empty moment: nothing on the field, and the frame loop kept turning through it
     FX.add({ kind: 'hold', x: at.x, y: at.y, dur: CLEAR_MS + 50, blocking: true });
     var landing = view.arriveAt;
     setTimeout(function () {
       if (view.arriveAt !== landing) return;          // another arrival or a new unit since
-      if (craft) {
+      if (tele) {
+        FX.add({ kind: 'teleportin', x: at.x, y: at.y, r: 1.4, dur: TELE_MS + 200, blocking: true });
+        if (SFX && SFX.shimmer) SFX.shimmer();
+      } else if (craft) {
         FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
         setTimeout(function () {
           if (view.arriveAt !== landing && view.arriveAt !== 0) return;
@@ -386,7 +402,7 @@
         if (SFX) { SFX.step(); SFX.step(0.24); SFX.step(0.5); }
       }
       // keep the frame loop turning while the arrival plays out
-      FX.add({ kind: 'hold', x: at.x, y: at.y, dur: craft ? DROP_MS + 300 : STAND_MS, blocking: true });
+      FX.add({ kind: 'hold', x: at.x, y: at.y, dur: craft ? DROP_MS + 300 : tele ? TELE_MS : STAND_MS, blocking: true });
       start();
     }, CLEAR_MS);
     start();
