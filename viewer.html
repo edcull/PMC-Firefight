@@ -88,6 +88,17 @@
     border: 1px solid var(--line); border-radius: 5px;
     padding: 6px 9px; font-family: var(--body); font-size: 12.5px; margin-bottom: 7px;
   }
+  /* a tab for each army above the list; a search spans all four, so the tabs dim while it runs */
+  .vfacs { display: flex; gap: 3px; flex: none; padding: 7px 7px 0; border-bottom: 1px solid var(--line); }
+  .vfacs button {
+    flex: 1; min-width: 0; background: none; border: 1px solid transparent; border-bottom: none;
+    border-radius: 5px 5px 0 0; margin-bottom: -1px; padding: 7px 2px 6px; cursor: pointer; color: var(--ink-dim);
+    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  }
+  .vfacs button:hover { color: var(--ink); }
+  .vfacs button.on { color: var(--alpha); background: var(--panel-2); border-color: var(--line); border-bottom: 1px solid var(--panel-2); }
+  .vfacs.searching button.on { color: var(--ink-dim); background: none; border-color: transparent; }
+  @media (pointer: coarse) { .vfacs button { min-height: 40px; font-size: 11.5px; } }
   #vlist h4 {
     font-family: var(--display); font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--ink-faint); margin: 10px 0 4px 3px;
@@ -304,6 +315,7 @@
 <main>
   <div class="vpanel vside" id="vside">
     <h3>Units <button type="button" class="vclose" id="vclose" aria-label="Close the unit list">×</button></h3>
+    <div class="vfacs" id="vfacs" role="tablist" aria-label="Army"></div>
     <div class="vscroll">
       <input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off">
       <div id="vlist"></div>
