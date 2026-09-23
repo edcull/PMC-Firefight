@@ -86,6 +86,8 @@
     }
     loadAutoAdvance(cfg.mode);
     resetShow();
+    // a demo is for watching: on a phone it opens on the results as they come in
+    if (window.innerWidth <= 1000) setMTab(cfg.mode === 'demo' ? 'res' : 'act');
     /* A battle started from this screen runs in this tab, whatever was here
        before — somebody who has just come out of a networked game and pressed
        New battle is starting a local one, not sending anything to a server. */
@@ -1034,9 +1036,18 @@
       setTimeout(function () { card.classList.remove('fresh'); }, 300);
       // a rail is not a log: keep the last thirty and let the dock hold the rest
       while (host.children.length > 30) host.removeChild(host.firstChild);
+      if (state && state.cfg.mode === 'demo') feedToNewest(host);   // a demo is watched as it happens
     });
     ui.feedUnread = (ui.feedUnread || 0) + 1;
     markFeedTab();
+  }
+  /* The feed stacks newest first, at the top, but a scrolled list stays where
+     it is as cards land: this brings the newest back into view. (A reversed
+     column scrolls with negative offsets; a plain one clamps to its top.) */
+  function feedToNewest(host) {
+    [host, host && host.parentElement].forEach(function (s) {
+      if (s && s.scrollHeight > s.clientHeight) s.scrollTop = -s.scrollHeight;
+    });
   }
   /* On a phone the results share the panel with everything else, so the tab
      carries a count of what has landed since it was last looked at. */
@@ -1055,7 +1066,7 @@
     document.querySelectorAll('#mtabs .mtab').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-mtab') === which);
     });
-    if (which === 'res') { ui.feedUnread = 0; }
+    if (which === 'res') { ui.feedUnread = 0; if (state && state.cfg.mode === 'demo' && el('resfeed-m')) feedToNewest(el('resfeed-m')); }
     markFeedTab();
   }
 
