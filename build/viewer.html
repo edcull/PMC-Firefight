@@ -16410,6 +16410,11 @@
       return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
     }
     if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
+    // a giant bug has no poses to get up through: it heaves itself up out of the ground (as game.js)
+    if (R.isMachine(unit())) {
+      var hk = Math.min(1, age / (STAND_MS * 0.8)), he = 1 - Math.pow(1 - hk, 2);
+      return { lift: -Math.round(I.ELEV * 3 * (1 - he)), pose: null, alpha: Math.min(1, 0.25 + he) };
+    }
     // flat on its face, then up on one knee, then standing
     return {
       lift: 0,
@@ -16423,6 +16428,8 @@
   var CLEAR_MS = 450;
   function insert() {
     var u = unit(), craft = R.isMachine(u) || !!u.jets;
+    // a swarm comes up out of the ground, giants and all; only what flies drops from the sky
+    if (u.faction === 'bugs') craft = R.isFlying(u) || R.flyInf(u);
     // the Xenotripods teleport in, hulls and craft too; the Esh-Aven come up out of the ground
     var pr = R.profile(u.key), tele = u.faction === 'xeno' && !u.eshAven && !(pr && pr.eshAven);
     if (view.walking) toggleWalk();

@@ -776,6 +776,11 @@
   /* A Xenotripod squad does not land: it teleports in. A pillar of light forms
      on the landing point, the squad flickers into being inside it, and the
      light thins away. Before it forms the squad is not drawn at all. */
+  // coming up out of the ground: sunk and faint at first, rising to its full height
+  function heaving(age) {
+    var k = Math.min(1, age / (STAND_MS * 0.8)), e = 1 - Math.pow(1 - k, 2);
+    return { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), pose: null, alpha: Math.min(1, 0.25 + e) };
+  }
   function teleporting(age) {
     var k = age / TELE_MS;
     if (k < 0.3) return { lift: 0, pose: null, hidden: true };
@@ -801,6 +806,8 @@
       return teleporting(age);
     }
     if (age >= STAND_MS) { u.arriveAt = 0; return { lift: 0, pose: null }; }
+    // a giant bug has no poses to get up through: it heaves itself up out of the ground
+    if (R.isMachine(u)) return heaving(age);
     // flat on its face, then up on one knee, then standing
     return { lift: 0, pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null };
   }
@@ -893,6 +900,9 @@
        the ground it came down on — except out of orbit in an Invasion, where
        it falls out of the sky like everything else that side lands. */
     var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
+    /* A swarm comes up out of the ground, whatever the scenario, giants and
+       all — only what flies drops out of the sky. */
+    if (u.faction === 'bugs') craft = R.isFlying(u) || R.flyInf(u);
     u.arriveAt = nowMs();
     /* The Xenotripods teleport in rather than land, hulls and craft as well as
        squads — all but the Esh-Aven, who come up out of the ground as men do. */
