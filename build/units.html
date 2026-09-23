@@ -9973,7 +9973,7 @@ html { scroll-behavior: smooth; }
     aaheavy: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.4, twin: true, elev: 16, dish: true, style: { body: 'mbt', turret: 'aa', tSize: 0.95, skirts: 'panels', noMissiles: true } },
     // fliers: every one of them on shrouded fans
     civcraft: { len: 1.75, wid: 0.95, hgt: 16, fly: 2.3, craft: 'civ', gun: 1.0 },
-    hawk: { len: 2.25, wid: 0.80, hgt: 16, fly: 2.4, craft: 'hawk', gun: 1.0 },
+    hawk: { len: 2.25, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hawk', gun: 1.0 },
     chinook: { len: 2.65, wid: 0.90, hgt: 18, fly: 2.3, craft: 'chinook', gun: 1.0 },
     // the rebels' armed heavy shuttle: the same lifter with winglets on its flanks
     chinookwl: { len: 2.65, wid: 0.90, hgt: 18, fly: 2.3, craft: 'chinook', gun: 1.0, winglets: true },
@@ -10218,7 +10218,7 @@ html { scroll-behavior: smooth; }
     none: 'none'
   };
   // one cell of a machine's digital camouflage, in inches
-  var CELL = 0.14;
+  var CELL = 0.1;
   /* How far a styled craft's wings or fans reach, as a multiple of the hull
      width — what it lays on the ground when it flies over. */
   var CRAFT_SPAN = {
@@ -12584,8 +12584,15 @@ html { scroll-behavior: smooth; }
         if (!dead && o.rail) sEllipse(mz[0], mz[1], 1.6, 1.4, 'rgba(127,216,232,.9)');
         (o.also || []).forEach(function (k2) { mount(k2, mz, mz[0] >= cg[0] ? 1 : -1); });
       }
+      /* A rocket or missile pod slung under a wing, its tubes toward the nose.
+         Drawn before the wing, so the wing covers it; `lead` is where the
+         wing's leading edge crosses it, and it pokes out a little ahead of
+         that so it shows. */
+      function podUnder(lead, q, zz, kind, big) {
+        var ln = big ? 0.42 : 0.34;
+        pod(lead + 0.12 - ln / 2, q, zz, kind, big);
+      }
       function pod(p, q, zz, kind, big) {
-        // a rocket or missile pod under the wing, its tubes toward the nose
         var ln = big ? 0.42 : 0.34, r2 = big ? 0.11 : 0.09;
         line(S3(AF(p, q), zz + 3), S3(AF(p, q), zz), 1, STEEL);
         launcher(AF, p - ln / 2, p + ln / 2, q - r2, q + r2, zz - 4, 4, kind === 'missile' ? 1 : 2, 2, kind, { tone: TS, warheads: kind === 'missile' ? '#b8b0a0' : '#8a3a24' });
@@ -12604,9 +12611,7 @@ html { scroll-behavior: smooth; }
           var q = sd * w * 0.5, lean = sd * 0.12;
           var b0 = S3(AF(p + 0.04, q), zz - hh * 0.2), b1 = S3(AF(p - 0.4, q), zz - hh * 0.2);
           var t0 = S3(AF(p - 0.22, q + lean), zz + hh), t1 = S3(AF(p - 0.42, q + lean), zz + hh);
-          var finCol = sd <= 0 ? mixc(hull, lit, 0.5) : hull;
-          poly(g, [b0, b1, t1, t0], finCol);
-          if (CAMO) camoOn([b0, b1, t1, t0], finCol, zz + hh * 0.4, false, hh);   // the fin carries the pattern too
+          poly(g, [b0, b1, t1, t0], sd <= 0 ? mixc(hull, lit, 0.5) : hull);
           edge(g, t0, t1, trim, 1.2);
           edge(g, b0, t0, 'rgba(255,240,214,.35)', 0.7);
           if (fanR && !twin) {
@@ -12713,10 +12718,14 @@ html { scroll-behavior: smooth; }
             noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
             if (st === 'chinookcp') {
               // the command post: a sensor dome on the nose, a dome on the roof and aerials
-              var nd = S3(AF(L * 0.5, 0), z + H * 0.32);
-              sEllipse(nd[0], nd[1], 5.2, 4.4, '#8f96a0');
-              sEllipse(nd[0], nd[1] - 0.6, 4.6, 3.8, '#c9ced6');
-              sEllipse(nd[0] - 1.4, nd[1] - 1.8, 2, 1.3, '#eef2f6');
+              // a big radar radome slung under the nose and pushing out ahead of it, in dark grey
+              // the radome joins the underside of the nose and bulges out ahead of it
+              var nd = S3(AF(L * 0.46, 0), z + H * 0.14), nd2 = S3(AF(L * 0.56, 0), z + H * 0.1);
+              sEllipse((nd[0] + nd2[0]) / 2, (nd[1] + nd2[1]) / 2 + 0.8, 9, 6.2, '#23272d');
+              sEllipse(nd[0], nd[1], 7.2, 5.2, '#3c424a');
+              sEllipse(nd2[0], nd2[1], 6.4, 4.8, '#3c424a');
+              sEllipse(nd2[0] - 1.6, nd2[1] - 1.7, 3, 1.9, '#5b626c');
+              sEllipse(nd2[0] - 2.2, nd2[1] - 2.3, 1.2, 0.8, '#7d858f');
               var dm = S3(AF(-L * 0.05, 0), z + H + 1);
               sEllipse(dm[0], dm[1] - 1.6, 4.2, 3, '#c9ced6'); sEllipse(dm[0] - 1, dm[1] - 2.6, 2, 1.2, '#eef2f6');
               aerial(AF, L * 0.1, w * 0.5, z + H, 18); aerial(AF, L * 0.05, -w * 0.5, z + H, 14); aerial(AF, -L * 0.1, w * 0.5, z + H, 12);
@@ -12730,21 +12739,22 @@ html { scroll-behavior: smooth; }
           var body2 = [[L * 0.5, -fw * 0.3], [L * 0.5, fw * 0.3], [L * 0.3, fw], [-L * 0.2, fw], [-L * 0.3, fw * 0.6], [-L * 0.3, -fw * 0.6], [-L * 0.2, -fw], [L * 0.3, -fw]];
           var top2 = body2.map(function (q2) { return [q2[0] * 0.9 - (q2[0] > 0 ? L * 0.04 : 0), q2[1] * 0.75]; });
           // the boom and tail, with a fan in the fin
+          // the tail boom rides level with the top of the hull, its fin and tailplane with it
           part(-L * 0.5, 0, function () {
-            shape(AF, [[-L * 0.25, -fw * 0.4], [-L * 0.25, fw * 0.4], [-L * 0.85, fw * 0.16], [-L * 0.85, -fw * 0.16]], z + H * 0.3, H * 0.34, TB, 0.85);
-            tailFin(-L * 0.72, z + H * 0.55, 15, false, 0.17);
-            plate(AF, [[-L * 0.66, -w * 0.9], [-L * 0.66, w * 0.9], [-L * 0.78, w * 0.9], [-L * 0.78, -w * 0.9]], z + H * 0.45, 1.5);
+            shape(AF, [[-L * 0.25, -fw * 0.4], [-L * 0.25, fw * 0.4], [-L * 0.85, fw * 0.16], [-L * 0.85, -fw * 0.16]], z + H * 0.66, H * 0.34, TB, 0.85);
+            tailFin(-L * 0.72, z + H * 0.91, 15, false, 0.17);
+            plate(AF, [[-L * 0.66, -w * 0.9], [-L * 0.66, w * 0.9], [-L * 0.78, w * 0.9], [-L * 0.78, -w * 0.9]], z + H * 0.81, 1.5);
           });
           // stub wings with pods, and a fan at each tip
           [-1, 1].forEach(function (sd) {
             part(-L * 0.02, sd * w * 2.6, function () {
-              // the stub wings carrying the rear fans ride level with the top of the hull
-              var wz = z + H - 2;
-              plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
+              var wz = z + H * 0.45;
               var npods = spec.noPods ? 0 : st === 'apacherk' || st === 'hindrk' ? 2 : 1;
               for (var pi = 0; pi < npods; pi++) {
-                pod(-L * 0.04, sd * (fw + (w * 2.6 - fw) * (0.3 + pi * 0.4)), wz, npods > 1 && pi === 1 ? 'missile' : 'rocket', st === 'hindrk');
+                var pq = fw + (w * 2.6 - fw) * (0.3 + pi * 0.4), lead = L * 0.05 - (L * 0.03) * (pq - fw * 0.9) / (w * 2.6 - fw * 0.9);
+                podUnder(lead, sd * pq, wz, npods > 1 && pi === 1 ? 'missile' : 'rocket', st === 'hindrk');
               }
+              plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
               fan(AF, -L * 0.05, sd * w * 3.1, wz + 1, 0.4);
             });
           });
@@ -12782,6 +12792,17 @@ html { scroll-behavior: smooth; }
           var span = hyb ? w * 3.4 : w * 2.9;
           // the wing: a broad trapezoid, the fuselage over it
           part(-L * 0.1, 0, function () {
+            // the pods go under the wing first, so it covers all but their noses
+            var jlead = function (bb) { return L * 0.14 + (Math.abs(bb) - fw2) / (span - fw2) * (-L * 0.34); };
+            [-1, 1].forEach(function (sd) {
+              if (spec.noPods) return;                   // a clean wing: its guns are in the body
+              var q1 = sd * span * (hyb ? 0.92 : 0.6);
+              podUnder(jlead(q1), q1, z + H * 0.3, hyb ? 'rocket' : 'missile', false);
+              if (spec.extraPods) {                      // a rocket pod inboard, a missile rail outboard
+                podUnder(jlead(span * 0.36), sd * span * 0.36, z + H * 0.3, 'rocket', true);
+                podUnder(jlead(span * 0.84), sd * span * 0.84, z + H * 0.3, 'missile', false);
+              }
+            });
             plate(AF, [[L * 0.14, -fw2], [L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, -span], [-L * 0.2, -span]], z + H * 0.3, 2);
             plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             if (hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36); });
@@ -12824,14 +12845,6 @@ html { scroll-behavior: smooth; }
               }
               g.restore();
             }
-            [-1, 1].forEach(function (sd) {
-              if (spec.noPods) return;                   // a clean wing: its guns are in the body
-              pod(-L * 0.22, sd * span * (hyb ? 0.92 : 0.6), z + H * 0.3, hyb ? 'rocket' : 'missile', false);
-              if (spec.extraPods) {                      // a rocket pod inboard, a missile rail outboard
-                pod(-L * 0.18, sd * span * 0.36, z + H * 0.3, 'rocket', true);
-                pod(-L * 0.24, sd * span * 0.84, z + H * 0.3, 'missile', false);
-              }
-            });
           });
           part(0, 0, function () {
             fuselage(fus, fusTop, z, H, TB);
