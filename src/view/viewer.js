@@ -776,42 +776,6 @@
 
 
   /* ---------- the panels ---------- */
-  /* ---------- Atlas mode ----------
-     Every unit of the open army side by side, drawn by the game's renderer,
-     in place of the stage and the controls (src/view/atlas.js, shared with the
-     stand-alone atlas page). The list's tabs and search drive it; picking a
-     unit in the list goes to its sheet, and clicking a sheet opens the unit
-     on the stage. */
-  var atlas = null;
-  function atlasOn() { return document.body.classList.contains('atlas-mode'); }
-  function setMode(on) {
-    document.body.classList.toggle('atlas-mode', !!on);
-    el('vatlas').hidden = !on;
-    el('vmode').setAttribute('aria-pressed', on ? 'true' : 'false');
-    el('vmode').textContent = on ? 'Viewer' : 'Atlas';
-    el('vmode').title = on ? 'Back to the unit on the stage' : 'Every unit side by side, in the Unit Atlas';
-    try { history.replaceState(null, '', on ? '#atlas' : location.pathname + location.search); } catch (e) { }
-    if (on) {
-      if (view.walking) toggleWalk();
-      if (!atlas) {
-        atlas = root.PMCAtlas.mount({
-          main: el('vatlasmain'), scroller: el('vatlasmain'),
-          colours: el('vatlascol'), toggles: el('vatlastog'), search: el('vsearch'),
-          faction: function () { return view.pickFac || 'pmc'; },
-          colour: view.colour.A,
-          onColour: function (k) { paint('A', k); },
-          onPick: function (k) { choose(k); setMode(false); drawPicker(); }
-        });
-      } else {
-        atlas.setColour(view.colour.A);
-        atlas.render();
-      }
-      atlas.scrollTo(view.key);
-    } else {
-      FX.clear();
-      fit(); drawControls(); frame();
-    }
-  }
   // a side's colour; the other side keeps one of its own, so the two never look alike
   function paint(side, k) {
     view.colour[side] = k;
@@ -821,8 +785,8 @@
       view.colour[foe] = I.COLOUR_KEYS.filter(function (c) { return c !== k; })[0];
       I.setSideColour(foe, view.colour[foe]);
     }
-    // the unit list's cards, and the Atlas, are drawn in the first side's colour
-    if (side === 'A') { if (picker) picker.setColour(k); if (atlas) atlas.setColour(k); }
+    // the unit list's cards are drawn in the first side's colour
+    if (side === 'A' && picker) picker.setColour(k);
   }
 
   function phone() { return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches); }
@@ -1027,7 +991,6 @@
       stepZoom(how === 'wide' ? -1 : 1);
     });
     zoomLabel();
-    el('vmode').addEventListener('click', function () { setMode(!atlasOn()); });
     el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
     el('vclose').addEventListener('click', function () { showSide(false); });
     el('vscrim').addEventListener('click', function () { showSide(false); });
@@ -1038,11 +1001,6 @@
       var b = e.target.closest('.unit[data-k]');
       if (!b) return;
       choose(b.getAttribute('data-k'));
-      if (atlasOn()) {                              // in the atlas, the list goes to the unit's sheet
-        if (phone()) showSide(false);
-        atlas.scrollTo(view.key);
-        return;
-      }
       FX.clear();
       drawPicker(); drawControls(); frame();
       // on a phone the list is a sidebar over the stage: put it away and go back up to see the unit
@@ -1103,12 +1061,11 @@
       el('vsearch').value = '';
       drawPicker();
       el('vside').querySelector('.vlistscroll').scrollTop = 0;
-      if (atlasOn()) { atlas.render(); el('vatlasmain').scrollTop = 0; }
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });
     document.addEventListener('keydown', function (e) {
-      if (e.target.tagName === 'INPUT' || atlasOn()) return;
+      if (e.target.tagName === 'INPUT') return;
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
@@ -1116,7 +1073,6 @@
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
-    if (location.hash === '#atlas') setMode(true);   // viewer.html#atlas opens on the atlas
   }
 
   function fit() {

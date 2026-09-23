@@ -267,9 +267,6 @@
     main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
     .vstage { order: 1; flex: none; height: 40vh; min-height: 230px; max-height: 360px; }
     .vctlpanel { order: 2; flex: 1; min-height: 0; }
-    .vatlas { order: 1; flex: 1; }
-    .vmode { margin-left: auto; }
-    .vatlas .toggles button { flex: 1 1 auto; }
     /* on a phone the tiles come down a size, two infantry cards to a row */
     .atl canvas.tile { width: 116px; height: 99px; }
     .atl canvas.tile.tall { height: 132px; }
@@ -316,22 +313,10 @@
     .vu-w { font-size: 10.5px; }
     input[type=range] { height: 28px; }
   }
-  /* ---------- Atlas mode ---------- */
-  .vmode {
-    align-self: center; flex: none; cursor: pointer; white-space: nowrap;
-    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
-  }
-  .vmode:hover { color: var(--ink); border-color: var(--alpha); }
-  .vmode[aria-pressed="true"] { color: var(--alpha); border-color: var(--alpha); }
-  body.atlas-mode .vmode { margin-left: auto; }
-  body.atlas-mode .vstage, body.atlas-mode .vctlpanel { display: none; }
-  body.atlas-mode header .keys { display: none; }
   .atl {
     grid-column: 2 / 4; display: flex; flex-direction: column; min-height: 0; min-width: 0;
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
   }
-  .vatlas[hidden] { display: none; }
   /* the cards and sheets, in the Atlas and in the unit list alike */
   .atl { --field: #5e5039; --field-edge: #2e271c; }
   /* the unit list: the same cards, a size down, two to a row, the one on the stage picked out */
@@ -349,22 +334,6 @@
   #vlist figure.cell figcaption { display: none; }
   #vlist .card .tiles .cell ~ .cell { display: none; }     /* one picture a card: a mounted unit on its first mount */
   .vatbar { flex: none; display: flex; flex-direction: column; gap: 7px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
-  .vatlasmain { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 20px; scrollbar-width: thin; }
-  .vatlas .swatches, .vatlas .toggles { display: flex; flex-wrap: wrap; gap: 5px; }
-  .vatlas .swatches button {
-    display: inline-flex; align-items: center; gap: 5px; cursor: pointer; padding: 4px 8px 4px 5px;
-    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
-    border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--ink-dim);
-  }
-  .vatlas .swatches button i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
-  .vatlas .swatches button[aria-pressed="true"] { border-color: var(--alpha); color: var(--ink); box-shadow: 0 0 0 1px var(--alpha); }
-  .vatlas .toggles button {
-    cursor: pointer; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--ink-dim);
-    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
-  }
-  .vatlas .toggles button::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border: 1.5px solid currentColor; border-radius: 2px; vertical-align: -1px; }
-  .vatlas .toggles button[aria-pressed="true"] { color: var(--ink); border-color: var(--alpha); }
-  .vatlas .toggles button[aria-pressed="true"]::before { background: var(--alpha); border-color: var(--alpha); }
   .atl h3.group {
     font-family: var(--display); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);
     margin: 16px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line);
@@ -400,13 +369,6 @@
   .atl canvas.tile.tall { height: 150px; }
   .atl canvas.tile.inf { width: 150px; height: 118px; }
   .atl .empty { color: var(--ink-faint); padding: 24px 0; }
-  /* on a phone the colours are dots in one row, named by their tooltips */
-  @media (max-width: 1000px) {
-    .vatlas .swatches { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; }
-    .vatlas .swatches button { font-size: 0; gap: 0; padding: 5px; flex: none; }
-    .vatlas .swatches button i { width: 20px; height: 20px; }
-    .vatlas .toggles button { padding: 7px 6px; font-size: 10.5px; }
-  }
 </style>
 
 <header>
@@ -415,7 +377,6 @@
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
-  <button type="button" class="vmode" id="vmode" aria-pressed="false" title="Every unit side by side, in the Unit Atlas">Atlas</button>
 </header>
 
 <div class="vscrim" id="vscrim"></div>
@@ -436,20 +397,6 @@
     </div>
     <canvas id="vboard"></canvas>
   </div>
-
-  <!-- the Unit Atlas: the open army's units side by side, in place of the stage and the controls -->
-  <section class="vatlas" id="vatlas" hidden aria-label="Unit Atlas">
-    <div class="vatbar">
-      <div class="swatches" id="vatlascol" role="group" aria-label="Company colours"></div>
-      <div class="toggles" id="vatlastog" role="group" aria-label="What to show">
-        <button type="button" data-t="states" aria-pressed="false">Suppressed &amp; broken</button>
-        <button type="button" data-t="facings" aria-pressed="false">All facings</button>
-        <button type="button" data-t="props" aria-pressed="false">Movement types</button>
-        <button type="button" data-t="wrecks" aria-pressed="false">Destroyed</button>
-      </div>
-    </div>
-    <div class="vatlasmain atl" id="vatlasmain"></div>
-  </section>
 
   <div class="vpanel vctlpanel">
     <div id="vctl"></div>
@@ -15684,8 +15631,8 @@
    squads in each state, machines at every facing on every propulsion, wrecks.
    Pick a company colour and turn on the states, facings, movement types and
    wrecks to compare. The same code draws the stand-alone atlas page
-   (scripts/gallery.js builds build/units.html) and the unit viewer's Atlas
-   mode, so it is handed the elements to fill rather than finding them:
+   (scripts/gallery.js builds build/units.html) and the unit viewer's unit
+   list, so it is handed the elements to fill rather than finding them:
 
      PMCAtlas.mount({
        main,         // where the sheets go
@@ -16763,42 +16710,6 @@
 
 
   /* ---------- the panels ---------- */
-  /* ---------- Atlas mode ----------
-     Every unit of the open army side by side, drawn by the game's renderer,
-     in place of the stage and the controls (src/view/atlas.js, shared with the
-     stand-alone atlas page). The list's tabs and search drive it; picking a
-     unit in the list goes to its sheet, and clicking a sheet opens the unit
-     on the stage. */
-  var atlas = null;
-  function atlasOn() { return document.body.classList.contains('atlas-mode'); }
-  function setMode(on) {
-    document.body.classList.toggle('atlas-mode', !!on);
-    el('vatlas').hidden = !on;
-    el('vmode').setAttribute('aria-pressed', on ? 'true' : 'false');
-    el('vmode').textContent = on ? 'Viewer' : 'Atlas';
-    el('vmode').title = on ? 'Back to the unit on the stage' : 'Every unit side by side, in the Unit Atlas';
-    try { history.replaceState(null, '', on ? '#atlas' : location.pathname + location.search); } catch (e) { }
-    if (on) {
-      if (view.walking) toggleWalk();
-      if (!atlas) {
-        atlas = root.PMCAtlas.mount({
-          main: el('vatlasmain'), scroller: el('vatlasmain'),
-          colours: el('vatlascol'), toggles: el('vatlastog'), search: el('vsearch'),
-          faction: function () { return view.pickFac || 'pmc'; },
-          colour: view.colour.A,
-          onColour: function (k) { paint('A', k); },
-          onPick: function (k) { choose(k); setMode(false); drawPicker(); }
-        });
-      } else {
-        atlas.setColour(view.colour.A);
-        atlas.render();
-      }
-      atlas.scrollTo(view.key);
-    } else {
-      FX.clear();
-      fit(); drawControls(); frame();
-    }
-  }
   // a side's colour; the other side keeps one of its own, so the two never look alike
   function paint(side, k) {
     view.colour[side] = k;
@@ -16808,8 +16719,8 @@
       view.colour[foe] = I.COLOUR_KEYS.filter(function (c) { return c !== k; })[0];
       I.setSideColour(foe, view.colour[foe]);
     }
-    // the unit list's cards, and the Atlas, are drawn in the first side's colour
-    if (side === 'A') { if (picker) picker.setColour(k); if (atlas) atlas.setColour(k); }
+    // the unit list's cards are drawn in the first side's colour
+    if (side === 'A' && picker) picker.setColour(k);
   }
 
   function phone() { return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches); }
@@ -17014,7 +16925,6 @@
       stepZoom(how === 'wide' ? -1 : 1);
     });
     zoomLabel();
-    el('vmode').addEventListener('click', function () { setMode(!atlasOn()); });
     el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
     el('vclose').addEventListener('click', function () { showSide(false); });
     el('vscrim').addEventListener('click', function () { showSide(false); });
@@ -17025,11 +16935,6 @@
       var b = e.target.closest('.unit[data-k]');
       if (!b) return;
       choose(b.getAttribute('data-k'));
-      if (atlasOn()) {                              // in the atlas, the list goes to the unit's sheet
-        if (phone()) showSide(false);
-        atlas.scrollTo(view.key);
-        return;
-      }
       FX.clear();
       drawPicker(); drawControls(); frame();
       // on a phone the list is a sidebar over the stage: put it away and go back up to see the unit
@@ -17090,12 +16995,11 @@
       el('vsearch').value = '';
       drawPicker();
       el('vside').querySelector('.vlistscroll').scrollTop = 0;
-      if (atlasOn()) { atlas.render(); el('vatlasmain').scrollTop = 0; }
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });
     document.addEventListener('keydown', function (e) {
-      if (e.target.tagName === 'INPUT' || atlasOn()) return;
+      if (e.target.tagName === 'INPUT') return;
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
@@ -17103,7 +17007,6 @@
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
-    if (location.hash === '#atlas') setMode(true);   // viewer.html#atlas opens on the atlas
   }
 
   function fit() {

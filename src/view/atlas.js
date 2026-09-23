@@ -4,8 +4,8 @@
    squads in each state, machines at every facing on every propulsion, wrecks.
    Pick a company colour and turn on the states, facings, movement types and
    wrecks to compare. The same code draws the stand-alone atlas page
-   (scripts/gallery.js builds build/units.html) and the unit viewer's Atlas
-   mode, so it is handed the elements to fill rather than finding them:
+   (scripts/gallery.js builds build/units.html) and the unit viewer's unit
+   list, so it is handed the elements to fill rather than finding them:
 
      PMCAtlas.mount({
        main,         // where the sheets go

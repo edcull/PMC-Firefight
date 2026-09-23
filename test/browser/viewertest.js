@@ -290,8 +290,8 @@ async function pickAndFire(p, key, ms) {
   ok('losing models drops the unit\'s Morale', shrunk.models === 3 && shrunk.morale < 5,
     shrunk.models + ' models, Morale ' + shrunk.morale);
 
-  /* ---------------------------------------------------------------- running gear and the atlas */
-  head('Vehicles open on their usual running gear, and the atlas lays them all out');
+  /* ---------------------------------------------------------------- running gear */
+  head('Vehicles open on their usual running gear');
   const drives = await p.evaluate(() => ['hpv', 'lcv', 'acv'].map(k => {
     window.__viewer.pick(k);
     return k + ':' + document.querySelector('[data-set="prop"].on').textContent;
@@ -299,30 +299,6 @@ async function pickAndFire(p, key, ms) {
   ok('a patrol vehicle is wheeled, a combat vehicle tracked, an advanced one anti-grav',
     drives.join(' ') === 'hpv:wheeled lcv:tracked acv:grav', drives.join(' '));
   ok('the stage has no tap highlight', await p.evaluate(() => getComputedStyle(document.getElementById('vboard')).webkitTapHighlightColor === 'rgba(0, 0, 0, 0)'));
-  await p.click('#vmode');
-  await p.waitForTimeout(600);
-  const atl = await p.evaluate(() => ({
-    on: document.body.classList.contains('atlas-mode'),
-    stage: getComputedStyle(document.querySelector('.vstage')).display,
-    cards: document.querySelectorAll('#vatlasmain .unit').length,
-    pmc: [...document.querySelectorAll('#vatlasmain .unit')].every(u => window.PMC.profile(u.dataset.k).faction === undefined || window.PMC.profile(u.dataset.k).faction === 'pmc'),
-    drawn: document.querySelectorAll('#vatlasmain canvas.tile[data-drawn]').length,
-    swatches: document.querySelectorAll('#vatlascol [data-c]').length,
-    hash: location.hash
-  }));
-  ok('Atlas mode puts the open army\'s units in place of the stage', atl.on && atl.stage === 'none' && atl.cards > 20 && atl.pmc,
-    atl.cards + ' units, stage ' + atl.stage);
-  ok('...drawn as they come into view, in every colour on offer', atl.drawn > 0 && atl.swatches === await p.evaluate(() => window.PMCIso.COLOUR_KEYS.length),
-    atl.drawn + ' tiles drawn, ' + atl.swatches + ' swatches');
-  await p.click('#vfacs [data-fac="bugs"]');
-  await p.waitForTimeout(300);
-  const bugsAtl = await p.evaluate(() => [...document.querySelectorAll('#vatlasmain .unit')].every(u => window.PMC.profile(u.dataset.k).faction === 'bugs'));
-  ok('...and the army tabs switch it to another army', bugsAtl);
-  await p.click('#vatlasmain .unit[data-k="bsmall"]');
-  await p.waitForTimeout(300);
-  const back = await p.evaluate(() => ({ on: document.body.classList.contains('atlas-mode'), key: window.__viewer.spec && document.querySelector('.vctlpanel .vrow b').textContent }));
-  ok('clicking a unit in the atlas opens it on the stage', !back.on && back.key === 'Small bugs', JSON.stringify(back));
-  await p.click('#vfacs [data-fac="pmc"]');
   await p.evaluate(() => window.__viewer.pick('regular'));
 
   /* ---------------------------------------------------------------- movement */
