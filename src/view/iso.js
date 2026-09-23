@@ -9001,6 +9001,30 @@
         sEllipse(p[0], p[1], r, r * 0.85, '#ff8a2a');
         sEllipse(p[0] - r * 0.2, p[1] - r * 0.2, r * 0.45, r * 0.4, '#ffd68a');
       }
+      /* Cockpit glass and sensor lenses: a glassy blue, bright at the top where
+         it catches the sky and deep below, with a glint along its upper edge. */
+      function glass(pts, glint) {
+        var ys = pts.map(function (q) { return q[1]; });
+        var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+        var gl;
+        if (dead) gl = GLASS;
+        else {
+          gl = g.createLinearGradient(0, y0, 0, y1 + 0.01);
+          gl.addColorStop(0, '#c8f2ff'); gl.addColorStop(0.35, '#5cc0ec'); gl.addColorStop(0.75, '#1f6ea8'); gl.addColorStop(1, '#0f3456');
+        }
+        poly(g, pts, gl);
+        if (glint) edge(g, glint[0], glint[1], dead ? GLINT : 'rgba(235,250,255,.9)', 0.8);
+      }
+      // a round lens of the same glass, with a highlight
+      function lens(p, r) {
+        if (!p || typeof p[0] !== 'number') return;
+        sEllipse(p[0], p[1], r * 1.25, r * 1.1, '#0b0e12');
+        if (dead) { sEllipse(p[0], p[1], r, r * 0.85, GLASS); return; }
+        sEllipse(p[0], p[1], r * 2, r * 1.7, 'rgba(92,192,236,.22)');
+        sEllipse(p[0], p[1], r, r * 0.85, '#2b86c4');
+        sEllipse(p[0] + r * 0.1, p[1] + r * 0.15, r * 0.6, r * 0.5, '#1a5a8c');
+        sEllipse(p[0] - r * 0.3, p[1] - r * 0.3, r * 0.4, r * 0.34, '#d6f6ff');
+      }
       // an outline with its corners cut: a plate that reads as rounded
       function oct(a0, a1, b0, b1, k) {
         var da = (a1 - a0) * (k || 0.3), db = (b1 - b0) * (k || 0.3);
@@ -9022,7 +9046,7 @@
         var ankT = fo * MS.len * 0.09;
         var kneeY = lift + Math.round(hm.legH * 0.5), ankY = lift + Math.round((heavy ? 5 : 4) * sf);
         var P = heavy ? { th: 0.1, tw: 0.13, sh: 0.1, sw: 0.13, fl: 0.15, fw: 0.15 }
-          : light ? { th: 0.04, tw: 0.05, sh: 0.038, sw: 0.045, fl: 0.09, fw: 0.05 }
+          : light ? { th: 0.045, tw: 0.055, sh: 0.058, sw: 0.068, fl: 0.14, fw: 0.08 }
             : { th: 0.085, tw: 0.11, sh: 0.075, sw: 0.1, fl: 0.13, fw: 0.12 };
         var th = MS.len * P.th, tw = MS.wid * P.tw, sh = MS.len * P.sh, sw = MS.wid * P.sw;
         var fl = MS.len * P.fl, fw = MS.wid * P.fw;
@@ -9032,7 +9056,7 @@
           if (light) {
             // a narrow foot, pointed at the toe
             shape(LF, [[ankT + fl, s], [ankT + fl * 0.45, s + fw], [ankT - fl * 0.6, s + fw], [ankT - fl * 0.6, s - fw], [ankT + fl * 0.45, s - fw]],
-              lift, Math.round(3 * sf), TS, 0.75);
+              lift, Math.round(4 * sf), TS, 0.75);
             return;
           }
           var toes = function () {
@@ -9123,11 +9147,14 @@
         // the chest itself, hunched forward, its front plate raked back
         shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
           rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
-        // the visor slot, with its sensors lit
+        /* the cockpit: a wide glazed canopy set into the top of the chest,
+           framed in dark metal, with a bar down its middle */
         if (fwd > -0.1) {
-          var vk0 = 0.62, vk1 = 0.8, rk = tL * 0.34, vf = function (k, b) { return onFront(tL * 0.9, rk, zU, upH, k, b); };
-          poly(g, [vf(vk0, -tW * 0.46), vf(vk0, tW * 0.46), vf(vk1, tW * 0.43), vf(vk1, -tW * 0.43)], '#0b0e12');
-          [-0.26, 0, 0.26].forEach(function (b) { glow(vf((vk0 + vk1) / 2, b * tW), 0.9); });
+          var vk0 = 0.5, vk1 = 0.86, rk = tL * 0.34, vf = function (k, b) { return onFront(tL * 0.9, rk, zU, upH, k, b); };
+          poly(g, [vf(vk0 - 0.05, -tW * 0.56), vf(vk0 - 0.05, tW * 0.56), vf(vk1 + 0.05, tW * 0.5), vf(vk1 + 0.05, -tW * 0.5)], '#0b0e12');
+          var cq = [vf(vk0, -tW * 0.5), vf(vk0, tW * 0.5), vf(vk1, tW * 0.44), vf(vk1, -tW * 0.44)];
+          glass(cq, [cq[3], cq[2]]);
+          line(vf(vk0, 0), vf(vk1, 0), Math.max(1, 1.6 * sf), '#0b0e12');
         }
         if (fwd <= 0) stacks();
       }
@@ -9148,15 +9175,7 @@
           var aT = tL - tL * 0.42 * kT, bT = tW * (0.32 - 0.12 * kT);
           var cp = [S3(TF(tL + 0.006, -tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.32), z1),
             S3(TF(aT + 0.006, bT), z1 + h3 * kT), S3(TF(aT + 0.006, -bT), z1 + h3 * kT), S3(TF(tL + 0.006, -tW * 0.32), z1)];
-          var gy0 = Math.min(cp[3][1], cp[4][1]), gy1 = Math.max(cp[0][1], cp[1][1]);
-          var gl;
-          if (dead) gl = GLASS;
-          else {
-            gl = g.createLinearGradient(0, gy0, 0, gy1 + 0.01);
-            gl.addColorStop(0, '#ffc060'); gl.addColorStop(0.45, '#e8842a'); gl.addColorStop(1, '#9a4216');
-          }
-          poly(g, cp, gl);
-          edge(g, cp[4], cp[3], dead ? GLINT : '#ffe2b0', 0.8);
+          glass(cp, [cp[4], cp[3]]);
           edge(g, cp[0], cp[1], 'rgba(8,10,14,.6)', 0.8);
         }
         if (fwd <= 0) vents();
@@ -9196,7 +9215,7 @@
          over a banded gun pod, twin barrels on one side; a light one a thin
          arm with a small gun box. Main weapon right, second weapon left. */
       function drawArm(s) {
-        var off = s * tW * (heavy ? 1.42 : light ? 1.45 : 1.14);
+        var off = s * tW * (heavy ? 1.42 : light ? 1.2 : 1.14);   // a light arm hangs right off the shoulder
         var fz = shoulder - Math.round((heavy ? 25 : light ? 15 : 22) * sf);
         var fh = Math.round((heavy ? 10 : light ? 6 : 7) * sf);
         var fwid = tW * (heavy ? 0.32 : light ? 0.26 : 0.24);
@@ -9213,7 +9232,8 @@
             slabF(TF, -tL * 0.66, tL * 0.62, off - tW * 0.42, off + tW * 0.42, pz - 2, 3, TS);
             slabF(TF, -tL * 0.64, tL * 0.6, off - tW * 0.4, off + tW * 0.4, pz, shoulder + 3 - pz, TT, tL * 0.18, tL * 0.18, tW * 0.12);
           } else if (light) {
-            slabF(TF, -tL * 0.5, tL * 0.5, off - tW * 0.26, off + tW * 0.26, shoulder - Math.round(6 * sf), Math.round(5 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
+            // a shoulder cap reaching in over the top of the chest, so the arm is plainly joined on
+            slabF(TF, -tL * 0.55, tL * 0.55, off - tW * 0.34, off + tW * 0.3, shoulder - Math.round(6 * sf), Math.round(6 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
           } else {
             var mz = shoulder - Math.round(11 * sf);
             shape(TF, oct(-tL * 0.5, tL * 0.5, off - tW * 0.32, off + tW * 0.32, 0.3), mz, Math.round(9 * sf), TB, 0.6);
@@ -9231,7 +9251,7 @@
             return;
           }
           var p0 = S3(TF(0, off), shZ), p1 = S3(TF(elb[0], off), elb[1]);
-          var w = Math.max(2, (light ? 2.5 : 5) * sf);
+          var w = Math.max(2, (light ? 3.6 : 5) * sf);
           line(p0, p1, w, STEEL);
           line([p0[0] - w * 0.2, p0[1]], [p1[0] - w * 0.2, p1[1]], Math.max(0.8, w * 0.2), STEEL_LIT);
           sEllipse(p1[0], p1[1], w * 0.62, w * 0.5, STEEL);
@@ -9286,17 +9306,17 @@
             else slabF(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, TB, tL * 0.05, tL * 0.05, tW * 0.04);
           });
         } else if (light) {
-          var hz = shoulder + Math.round(4 * sf), hh = Math.round(7 * sf);
-          var nk = S3(TF(tL * 0.05, 0), shoulder - 2), nk2 = S3(TF(tL * 0.05, 0), hz + 1);
-          line(nk, nk2, Math.max(2, 3.5 * sf), STEEL);
-          slabF(TF, -tL * 0.35, tL * 0.5, -tW * 0.24, tW * 0.24, hz, hh, TB, tL * 0.3, tL * 0.05, tW * 0.05);
+          // the head sits straight on the chest, a size bigger, with a glassy blue eye
+          var hz = shoulder - 1, hh = Math.round(9 * sf);
+          slabF(TF, -tL * 0.45, tL * 0.62, -tW * 0.32, tW * 0.32, hz, hh, TB, tL * 0.34, tL * 0.05, tW * 0.06);
           if (fwd > -0.1) {
-            var hf = function (k, b) { return onFront(tL * 0.5, tL * 0.3, hz, hh, k, b); };
-            poly(g, [hf(0.32, -tW * 0.18), hf(0.32, tW * 0.18), hf(0.66, tW * 0.16), hf(0.66, -tW * 0.16)], '#0b0e12');
-            glow(hf(0.49, 0), 0.9);
+            var hf = function (k, b) { return onFront(tL * 0.62, tL * 0.34, hz, hh, k, b); };
+            var vz = [hf(0.3, -tW * 0.26), hf(0.3, tW * 0.26), hf(0.7, tW * 0.23), hf(0.7, -tW * 0.23)];
+            poly(g, vz, '#0b0e12');
+            lens(hf(0.5, 0), 1.5 * Math.max(1, sf));
           }
           // the fin, a blade raked up and back to a point
-          shape(TF, rectPts(-tL * 0.3, tL * 0.28, -tW * 0.07, tW * 0.07), hz + hh - 1, Math.round(7 * sf), TT, null,
+          shape(TF, rectPts(-tL * 0.36, tL * 0.3, -tW * 0.08, tW * 0.08), hz + hh - 1, Math.round(7 * sf), TT, null,
             rectPts(-tL * 1.0, -tL * 0.72, -tW * 0.03, tW * 0.03));
         } else {
           // the dorsal crest over the dome, a sensor light at its brow
