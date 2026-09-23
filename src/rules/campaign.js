@@ -746,12 +746,22 @@
      who served is on the books now, was lost, or left some other way
      (disbanded, executed, cut by a promotion); a casualty that is replaced
      after the battle counts once lost and once again in the unit that is back
-     at strength. So a squad of eight that loses two is 2 of 10: 20%. */
+     at strength. So a squad of eight that loses two is 2 of 10: 20%.
+     The swarm counts the same way in biomass rather than bodies: each bug is
+     worth its Tier, an Overgrown one 25. */
+  function massOf(entry, co) { return strengthOf(entry, co) * R.biomassOf(profile(entry.key)); }
   function lossStats(co) {
+    if (co.faction === 'bugs') {
+      var tally = biomassTally(co);
+      var gone = Object.keys(tally).reduce(function (n, t) { return n + tally[t].mass; }, 0);
+      var alive = (co.roster || []).reduce(function (n, e) { return n + massOf(e, co); }, 0);
+      var all = alive + gone + (co.departedMass || 0);
+      return { lost: gone, served: all, pct: all ? gone / all : 0, unit: 'biomass' };
+    }
     var lost = co.lostModels || 0;
     var now = (co.roster || []).reduce(function (n, e) { return n + strengthOf(e, co); }, 0);
     var served = now + lost + (co.departed || 0);
-    return { lost: lost, served: served, pct: served ? lost / served : 0 };
+    return { lost: lost, served: served, pct: served ? lost / served : 0, unit: co.faction === 'xeno' ? 'warriors' : 'soldiers' };
   }
   /* The swarm's tally of what it has lost, by kind of bug: models and biomass.
      (An early save kept only the models; their biomass is worked out again.) */
@@ -786,7 +796,7 @@
       roster: [], cmdRid: null,
       record: { battles: 0, wins: 0, draws: 0, losses: 0 },
       memorial: [],
-      lostModels: 0, departed: 0              // what the loss rate on the memorial is worked from
+      lostModels: 0, departed: 0, departedMass: 0   // what the loss rate on the memorial is worked from
     };
   }
 
@@ -1124,6 +1134,7 @@
     if (!chk.ok) return chk;
     co.roster = co.roster.filter(function (e) { return e !== entry; });
     co.departed = (co.departed || 0) + strengthOf(entry, co);
+    co.departedMass = (co.departedMass || 0) + massOf(entry, co);
     return { ok: true };
   }
 
@@ -1137,10 +1148,11 @@
     entry.exp -= cost.exp; co.kUC -= cost.kUC;
     // the rid, honours, traumas and history all stay; only the profile changes
     var renamed = entry.name === was;
-    var had = strengthOf(entry, co);
+    var had = strengthOf(entry, co), hadMass = massOf(entry, co);
     entry.key = newKey;
     // a promotion to a smaller unit leaves the extra men behind
     co.departed = (co.departed || 0) + Math.max(0, had - strengthOf(entry, co));
+    co.departedMass = (co.departedMass || 0) + Math.max(0, hadMass - massOf(entry, co));
     if (renamed) entry.name = profile(newKey).name;
     entry.history.push('Promoted from ' + was + ' to ' + profile(newKey).name + '.');
     return { ok: true, cost: cost };
@@ -1431,7 +1443,11 @@
       });
       co.lostModels = (co.lostModels || 0) + lostNow;
       // a unit that leaves the books takes its survivors with it
-      function leaves(e) { co.departed = (co.departed || 0) + Math.max(0, strengthOf(e, co) - (lostBy[e.rid] || 0)); }
+      function leaves(e) {
+        var left = Math.max(0, strengthOf(e, co) - (lostBy[e.rid] || 0));
+        co.departed = (co.departed || 0) + left;
+        co.departedMass = (co.departedMass || 0) + left * R.biomassOf(profile(e.key));
+      }
 
       /* No Place for the Weak! (p. 112). The example is made of whichever unit
          came back carrying the most Trauma Points from this battle, so the day's

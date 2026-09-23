@@ -107,9 +107,9 @@ async function clickText(p, re) {
     text: document.getElementById('camp-body').innerText,
     heads: [...document.querySelectorAll('#camp-body .dmem-head')].map(h => h.innerText.replace(/\s+/g, ' '))
   }));
-  check('the memorial counts every casualty', /3 casualties in 2 battles/.test(mem.text));
+  check('the memorial has no separate casualty count line', !/casualties in \d+ battle/.test(mem.text));
   const lossText = await p.evaluate(() => { const d = document.querySelector('#camp-body .dloss'); return d ? d.textContent : ''; });
-  check('...and shows the loss rate against everyone who has served', /^[\d.]+% lost 3 of the \d+ soldiers who have served/.test(lossText), lossText);
+  check('...and shows the loss rate against everyone who has served', /^[\d.]+% lost 3 of \d+ soldiers$/.test(lossText), lossText);
   check('...most recent battle first, with the enemy and the scenario',
     mem.heads.length === 2 && /Campaign turn 2 · against Salvage Rights · Secure and control/.test(mem.heads[0]), mem.heads[0]);
   check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
@@ -127,7 +127,9 @@ async function clickText(p, re) {
     text: document.getElementById('camp-body').innerText,
     rows: [...document.querySelectorAll('#camp-body .dmem-list li')].map(li => li.innerText.replace(/\s+/g, ' '))
   }));
-  check('a swarm\'s memorial totals its biomass', /80 biomass lost/.test(bio.text));
+  const bioLoss = await p.evaluate(() => document.querySelector('#camp-body .dloss').textContent);
+  check('a swarm\'s loss rate is in biomass', /^[\d.]+% lost 80 of \d+ biomass$/.test(bioLoss), bioLoss);
+  check('...and the memorial totals it', /Biomass lost\s*80/.test(bio.text));
   check('...by kind of bug, most biomass first', bio.rows.length === 3 && /Small bugs × 14 · 28 biomass/.test(bio.rows[0]) &&
     /Queen × 1 · 25 biomass/.test(bio.rows[2]), bio.rows.join(' | '));
   await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-biomass.png') });

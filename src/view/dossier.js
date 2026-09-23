@@ -694,25 +694,26 @@
      first: who they were, what they served in, and where they fell. */
   /* The loss rate: every model lost against every model that has ever served,
      replacements included. */
-  function lossLine(co, noun) {
+  /* The loss rate: everything lost against everything that has ever served,
+     replacements included — soldiers, the tribe's warriors, or the swarm's
+     biomass. */
+  function lossLine(co) {
     var st = C.lossStats(co);
     if (!st.served) return '';
     var pct = Math.round(st.pct * 1000) / 10;
-    return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of the ' + st.served + ' ' + noun +
-      ' who have served, replacements included</span></div>';
+    return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
   }
   function memorialList(co) {
     if (co.faction === 'bugs') return biomassList(co);
     var list = co.memorial || [];
-    if (!list.length) return lossLine(co, 'soldiers') + '<p class="dnote">No one has been lost yet.</p>';
+    if (!list.length) return lossLine(co) + '<p class="dnote">No one has been lost yet.</p>';
     var SCx = root.PMCScen, battles = {}, order = [];
     list.forEach(function (m) {
       if (!battles[m.battle]) { battles[m.battle] = []; order.push(m.battle); }
       battles[m.battle].push(m);
     });
     order.sort(function (a, b) { return b - a; });
-    var h = lossLine(co, 'soldiers') + '<p class="dnote">' + list.length + (list.length === 1 ? ' casualty' : ' casualties') + ' in ' +
-      order.length + (order.length === 1 ? ' battle' : ' battles') + '.</p>';
+    var h = lossLine(co);
     order.forEach(function (n) {
       var ms = battles[n], first = ms[0];
       var sc = SCx && SCx.SCENARIOS && SCx.SCENARIOS[first.scenario];
@@ -731,11 +732,10 @@
      the campaign, totalled for each kind of bug. */
   function biomassList(co) {
     var bio = C.biomassTally(co), types = Object.keys(bio);
-    if (!types.length) return lossLine(co, 'bugs') + '<p class="dnote">No biomass lost yet.</p>';
+    if (!types.length) return lossLine(co) + '<p class="dnote">No biomass lost yet.</p>';
     types.sort(function (a, b) { return bio[b].mass - bio[a].mass || (a < b ? -1 : 1); });
     var total = types.reduce(function (n, t) { return n + bio[t].mass; }, 0);
-    return lossLine(co, 'bugs') + '<p class="dnote">' + total + ' biomass lost over ' + co.record.battles +
-      (co.record.battles === 1 ? ' battle' : ' battles') + ' — each bug is worth its Tier, an Overgrown bug 25.</p>' +
+    return lossLine(co) +
       '<div class="dmem"><div class="dmem-head">Biomass lost<span class="mk">' + total + '</span></div>' +
       '<ol class="dmem-list">' + types.map(function (t) {
         return '<li class="dmem-bio"><b>' + esc(t) + '</b><span class="dmen-rank">\u00d7 ' + bio[t].models +

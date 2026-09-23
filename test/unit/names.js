@@ -157,8 +157,8 @@ ok('the memorial keeps biomass by kind, not names', tally && tally.models === 7 
   hive.companies.A.memorial.length === 0, JSON.stringify(tally));
 ok('...and the unit history says how much', brood.history.some((h) => /Biomass lost: 6/.test(h)));
 const hs = C.lossStats(hive.companies.A);
-ok('...and the swarm has a loss rate too', hs.lost === 7 && hs.served === 15 && Math.round(hs.pct * 100) === 47,
-  hs.lost + ' of ' + hs.served);
+ok('...and the swarm\'s loss rate is in biomass', hs.unit === 'biomass' && hs.lost === 14 && hs.served === 30 &&
+  Math.round(hs.pct * 100) === 47, hs.lost + ' of ' + hs.served + ' ' + hs.unit);
 hive.companies.A.biomass = { 'Attack forms': 5 };      // an early save kept the models alone
 ok('...an early tally is worked out again at Tier value', C.biomassTally(hive.companies.A)['Attack forms'].mass === 15);
 
@@ -180,13 +180,15 @@ C.aftermath(lc, {
   casualties: [0, 1].map((i) => ({ side: 'A', rid: squad.rid, name: 'Man ' + i, rank: 'Private', turn: 2, type: 'Rookie rifle team' }))
 });
 const ls = C.lossStats(lc.companies.A);
-ok('a squad of 8 that loses 2 is 2 of 10 — 20%, not 25%', ls.lost === 2 && ls.served === 10 && ls.pct === 0.2,
+ok('a squad of 8 that loses 2 is 2 of 10 soldiers — 20%, not 25%', ls.lost === 2 && ls.served === 10 && ls.pct === 0.2 && ls.unit === 'soldiers',
   ls.lost + ' of ' + ls.served);
 const more = C.newEntry('recruits');
 lc.companies.A.roster.push(more);
 C.disband(lc.companies.A, more);
 const ld = C.lossStats(lc.companies.A);
 ok('a unit disbanded still counts as having served', ld.served === 18 && ld.lost === 2, ld.lost + ' of ' + ld.served);
+const tribe = C.newCompany('Tribe', { faction: 'xeno' });
+ok('the tribe counts warriors', C.lossStats(tribe).unit === 'warriors');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
