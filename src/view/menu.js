@@ -25,6 +25,10 @@
   function show(pane) {
     el('menu-main').hidden = pane !== 'main';
     el('menu-skirmish').hidden = pane !== 'skirmish';
+    // the foot: the unit viewer under the main menu, the demo under the skirmish list
+    var v = el('lnk-viewer'), d = el('btn-menu-demo');
+    if (v) v.hidden = pane === 'skirmish';
+    if (d) d.hidden = pane !== 'skirmish';
   }
 
   function open(pane) {
@@ -136,9 +140,15 @@
     function lay(p, alpha) {
       if (!p || alpha <= 0) return;
       var W = cv.width, H = cv.height;
-      // in close, so the table fills the screen rather than sitting in it as a diamond
-      z = Math.max(W / p.width, H / p.height) * 1.7;
-      ox = (W - p.width * z) / 2; oy = (H - p.height * z) / 2;
+      /* In close, so the table mostly fills the screen — by the screen's area
+         rather than its longer side, so a tall phone sees about as much of the
+         table as a wide desktop does rather than being zoomed in twice as far.
+         At least far enough in that the table spans the screen's long side;
+         the dark past its corners shows at the edges, as it does on a desktop. */
+      var fw = W / p.width, fh = H / p.height;
+      var dh = (ISO.W + ISO.H) * ISO.K * SCALE / 2, top = ISO.TOP * SCALE;   // the table's diamond, in the picture
+      z = Math.max(Math.sqrt(fw * fh) * 1.7, Math.max(fw, fh) * 1.05);
+      ox = (W - p.width * z) / 2; oy = H / 2 - (top + dh / 2) * z;   // the diamond centred, not the picture
       g.globalAlpha = alpha;
       g.drawImage(p, ox, oy, p.width * z, p.height * z);
       g.globalAlpha = 1;
