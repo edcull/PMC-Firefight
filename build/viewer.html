@@ -14500,12 +14500,23 @@
     if (!kt || !kt.fly || pose === 'prone') return 0;
     return a(4.4) - (pose === 'kneel' ? a(1.8) : 0) + (mi % 2 ? a(0.9) : 0) + (step ? a(0.6) : 0);
   }
+  /* A squad under fire hunkers down on one knee, and a broken one no lower:
+     it is still up, ready to run. Lying flat is for firing positions and for
+     troops getting up as they arrive, never a state. The one exception is a
+     bug that goes about on its legs: broken, it digs in (see burrowBug). */
+  function statusPose(status, art) {
+    if (status === 'broken') {
+      var kt = KIT[roleAt(art || 'rifle', 0)];
+      if (kt && kt.bug && !kt.fly && kt.bug !== 'under' && kt.bug !== 'hugeunder') return 'prone';
+    }
+    return status === 'broken' || status === 'suppressed' ? 'kneel' : 'stand';
+  }
   function muzzles(u, status) {
     if (!u || u.cls === 'vehicle' || u.cls === 'aircraft') return [];
     var art = u.art || 'rifle';
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
     var n = Math.max(1, Math.min(8, u.models || 1));
-    var pose = status === 'broken' ? 'prone' : status === 'suppressed' ? 'kneel' : 'stand';
+    var pose = statusPose(status, art);
     var spots = formation(n), out = [];
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
@@ -14537,10 +14548,9 @@
     var pal = PALETTE[u.paint || u.side] || PALETTE.A;
     var st = opts.status || 'ready';
     /* The ring (and the morale bar) show the unit's state; the figures take
-       their pose from `status`. They part only while a squad gets up off the
-       ground as it arrives: posed flat, then kneeling, but it is not broken or
-       suppressed, so its ring stays in the army's colour. */
-    var rst = opts.ringStatus || st;
+       their pose from it too, unless told otherwise: a squad getting up off
+       the ground as it arrives is posed flat, then kneeling, whatever its state. */
+    var rst = st;
     var art = u.art || 'rifle';
     // mounted infantry (the Riders upgrade, p. 93) ride whatever they can find
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
@@ -14636,7 +14646,7 @@
     var n = Math.max(1, Math.min(8, u.models || 1));
     // one height for a man, whatever squad he is in — see fitScale
     var scale = MODEL;
-    var pose = st === 'broken' ? 'prone' : st === 'suppressed' ? 'kneel' : 'stand';
+    var pose = opts.pose || statusPose(st, art);
     var spots = around ? garrisonSpots(around, n, at) : formation(n);
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
@@ -14866,7 +14876,7 @@
           (sp.tHgt || 0) + 6;
       }
       var n = Math.max(1, Math.min(8, models || 1));
-      return headroom(n, status === 'broken' ? 'prone' : status === 'suppressed' ? 'kneel' : 'stand',
+      return headroom(n, statusPose(status, unit && unit.art),
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
@@ -16129,9 +16139,9 @@
         hop: m === u ? (view.hop || 0) : 0,
         walk: m === u ? view.walkFrame : 0,
         arc: m === u && view.walking ? (view.arc || 0) : 0,
-        status: m === u && !R.isMachine(m) ? (arr.status || view.status) : 'ready',
-        // getting up as it arrives is a pose, not a state: the ring keeps the army's colour
-        ringStatus: m === u && arr.status ? 'ready' : undefined,
+        status: m === u && !R.isMachine(m) ? view.status : 'ready',
+        // getting up as it arrives is a pose, not a state
+        pose: m === u && !R.isMachine(m) && arr.pose || undefined,
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
       });
       if (fading) g.restore();
@@ -16333,31 +16343,31 @@
   }
 
   function arriving() {
-    if (!view.arriveAt) return { lift: 0, status: null };
+    if (!view.arriveAt) return { lift: 0, pose: null };
     var age = Date.now() - view.arriveAt;
     // before it arrives the field is empty: the unit is not on the table yet
-    if (age < 0) return { lift: 0, status: null, hidden: true };
+    if (age < 0) return { lift: 0, pose: null, hidden: true };
     if (view.arriveKind === 'drop') {
-      if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
+      if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
       // gathering speed the whole way down, so it arrives hard rather than drifting in
       var eased = 1 - Math.pow(1 - age / DROP_MS, 0.45);
-      return { lift: Math.round(I.ELEV * 5.5 * (1 - eased)), status: null };
+      return { lift: Math.round(I.ELEV * 5.5 * (1 - eased)), pose: null };
     }
     if (view.arriveKind === 'teleport') {
       /* a Xenotripod squad teleports in (as the battle shows it, game.js):
          not there while the pillar of light forms, then flickering into it */
-      if (age >= TELE_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
+      if (age >= TELE_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
       var tk = age / TELE_MS;
-      if (tk < 0.3) return { lift: 0, status: null, hidden: true };
+      if (tk < 0.3) return { lift: 0, pose: null, hidden: true };
       var ta = Math.min(1, (tk - 0.3) / 0.35);
       var flick = ta < 1 && Math.floor(age / 55) % (ta < 0.5 ? 2 : 4) === 0;
-      return { lift: 0, status: null, alpha: flick ? ta * 0.3 : ta };
+      return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
     }
-    if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
+    if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
     // flat on its face, then up on one knee, then standing
     return {
       lift: 0,
-      status: age < STAND_MS * 0.38 ? 'broken' : age < STAND_MS * 0.74 ? 'suppressed' : null
+      pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null
     };
   }
 

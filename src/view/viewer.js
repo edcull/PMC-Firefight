@@ -136,9 +136,9 @@
         hop: m === u ? (view.hop || 0) : 0,
         walk: m === u ? view.walkFrame : 0,
         arc: m === u && view.walking ? (view.arc || 0) : 0,
-        status: m === u && !R.isMachine(m) ? (arr.status || view.status) : 'ready',
-        // getting up as it arrives is a pose, not a state: the ring keeps the army's colour
-        ringStatus: m === u && arr.status ? 'ready' : undefined,
+        status: m === u && !R.isMachine(m) ? view.status : 'ready',
+        // getting up as it arrives is a pose, not a state
+        pose: m === u && !R.isMachine(m) && arr.pose || undefined,
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
       });
       if (fading) g.restore();
@@ -340,31 +340,31 @@
   }
 
   function arriving() {
-    if (!view.arriveAt) return { lift: 0, status: null };
+    if (!view.arriveAt) return { lift: 0, pose: null };
     var age = Date.now() - view.arriveAt;
     // before it arrives the field is empty: the unit is not on the table yet
-    if (age < 0) return { lift: 0, status: null, hidden: true };
+    if (age < 0) return { lift: 0, pose: null, hidden: true };
     if (view.arriveKind === 'drop') {
-      if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
+      if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
       // gathering speed the whole way down, so it arrives hard rather than drifting in
       var eased = 1 - Math.pow(1 - age / DROP_MS, 0.45);
-      return { lift: Math.round(I.ELEV * 5.5 * (1 - eased)), status: null };
+      return { lift: Math.round(I.ELEV * 5.5 * (1 - eased)), pose: null };
     }
     if (view.arriveKind === 'teleport') {
       /* a Xenotripod squad teleports in (as the battle shows it, game.js):
          not there while the pillar of light forms, then flickering into it */
-      if (age >= TELE_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
+      if (age >= TELE_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
       var tk = age / TELE_MS;
-      if (tk < 0.3) return { lift: 0, status: null, hidden: true };
+      if (tk < 0.3) return { lift: 0, pose: null, hidden: true };
       var ta = Math.min(1, (tk - 0.3) / 0.35);
       var flick = ta < 1 && Math.floor(age / 55) % (ta < 0.5 ? 2 : 4) === 0;
-      return { lift: 0, status: null, alpha: flick ? ta * 0.3 : ta };
+      return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
     }
-    if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, status: null }; }
+    if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
     // flat on its face, then up on one knee, then standing
     return {
       lift: 0,
-      status: age < STAND_MS * 0.38 ? 'broken' : age < STAND_MS * 0.74 ? 'suppressed' : null
+      pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null
     };
   }
 

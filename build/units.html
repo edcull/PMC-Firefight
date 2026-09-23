@@ -13554,12 +13554,23 @@ html { scroll-behavior: smooth; }
     if (!kt || !kt.fly || pose === 'prone') return 0;
     return a(4.4) - (pose === 'kneel' ? a(1.8) : 0) + (mi % 2 ? a(0.9) : 0) + (step ? a(0.6) : 0);
   }
+  /* A squad under fire hunkers down on one knee, and a broken one no lower:
+     it is still up, ready to run. Lying flat is for firing positions and for
+     troops getting up as they arrive, never a state. The one exception is a
+     bug that goes about on its legs: broken, it digs in (see burrowBug). */
+  function statusPose(status, art) {
+    if (status === 'broken') {
+      var kt = KIT[roleAt(art || 'rifle', 0)];
+      if (kt && kt.bug && !kt.fly && kt.bug !== 'under' && kt.bug !== 'hugeunder') return 'prone';
+    }
+    return status === 'broken' || status === 'suppressed' ? 'kneel' : 'stand';
+  }
   function muzzles(u, status) {
     if (!u || u.cls === 'vehicle' || u.cls === 'aircraft') return [];
     var art = u.art || 'rifle';
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
     var n = Math.max(1, Math.min(8, u.models || 1));
-    var pose = status === 'broken' ? 'prone' : status === 'suppressed' ? 'kneel' : 'stand';
+    var pose = statusPose(status, art);
     var spots = formation(n), out = [];
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
@@ -13591,10 +13602,9 @@ html { scroll-behavior: smooth; }
     var pal = PALETTE[u.paint || u.side] || PALETTE.A;
     var st = opts.status || 'ready';
     /* The ring (and the morale bar) show the unit's state; the figures take
-       their pose from `status`. They part only while a squad gets up off the
-       ground as it arrives: posed flat, then kneeling, but it is not broken or
-       suppressed, so its ring stays in the army's colour. */
-    var rst = opts.ringStatus || st;
+       their pose from it too, unless told otherwise: a squad getting up off
+       the ground as it arrives is posed flat, then kneeling, whatever its state. */
+    var rst = st;
     var art = u.art || 'rifle';
     // mounted infantry (the Riders upgrade, p. 93) ride whatever they can find
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
@@ -13690,7 +13700,7 @@ html { scroll-behavior: smooth; }
     var n = Math.max(1, Math.min(8, u.models || 1));
     // one height for a man, whatever squad he is in — see fitScale
     var scale = MODEL;
-    var pose = st === 'broken' ? 'prone' : st === 'suppressed' ? 'kneel' : 'stand';
+    var pose = opts.pose || statusPose(st, art);
     var spots = around ? garrisonSpots(around, n, at) : formation(n);
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
@@ -13920,7 +13930,7 @@ html { scroll-behavior: smooth; }
           (sp.tHgt || 0) + 6;
       }
       var n = Math.max(1, Math.min(8, models || 1));
-      return headroom(n, status === 'broken' ? 'prone' : status === 'suppressed' ? 'kneel' : 'stand',
+      return headroom(n, statusPose(status, unit && unit.art),
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
