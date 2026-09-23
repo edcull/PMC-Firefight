@@ -821,6 +821,11 @@
       noun: honours === 1 ? words(co).honour : words(co).honours
     };
   }
+  // battles won out of battles fought; a draw is fought but not won
+  function winStats(co) {
+    var r = co.record || {}, n = r.battles || 0;
+    return { wins: r.wins || 0, battles: n, pct: n ? (r.wins || 0) / n : 0 };
+  }
   /* The other side of it: every trauma carried on the books against the
      number of units. Trauma for a company or a revolt, genetic degradation
      for the swarm (its Genetic Flaws), infamy for the tribe (its Infamies). */
@@ -2464,7 +2469,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,

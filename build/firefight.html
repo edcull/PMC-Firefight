@@ -804,6 +804,7 @@
   .dloss span { color: var(--ink-dim); }
   .dloss.dexpr b { color: var(--good); }
   .dloss.dtrau { margin-bottom: 10px; }
+  .dloss.dwin b { color: var(--ink); }
   .dloss.dtrau b { color: var(--bad); }
   .dmem-bio { display: flex; justify-content: space-between; gap: 8px; }
   .dmem-type { display: block; color: var(--ink-faint); font-size: 11px; }
@@ -6182,6 +6183,11 @@
       noun: honours === 1 ? words(co).honour : words(co).honours
     };
   }
+  // battles won out of battles fought; a draw is fought but not won
+  function winStats(co) {
+    var r = co.record || {}, n = r.battles || 0;
+    return { wins: r.wins || 0, battles: n, pct: n ? (r.wins || 0) / n : 0 };
+  }
   /* The other side of it: every trauma carried on the books against the
      number of units. Trauma for a company or a revolt, genetic degradation
      for the swarm (its Genetic Flaws), infamy for the tribe (its Infamies). */
@@ -7825,7 +7831,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,
@@ -32991,13 +32997,16 @@
   // the experience rate: honours held against units on the books
   // ...and the trauma rate beside it: traumas carried against units on the books
   function expLine(co) {
-    var st = C.experienceStats(co), tr = C.traumaStats(co);
-    if (!st.units) return '';
+    var st = C.experienceStats(co), tr = C.traumaStats(co), wn = C.winStats(co);
+    // the win rate leads, once there has been a battle to win
+    var won = wn.battles ? '<div class="dloss dexpr dwin"><b>' + Math.round(wn.pct * 1000) / 10 + '%</b> won <span>' +
+      wn.wins + ' of ' + wn.battles + (wn.battles === 1 ? ' battle' : ' battles') + '</span></div>' : '';
+    if (!st.units) return won;
     function line(cls, pct, word, n, noun) {
       return '<div class="dloss ' + cls + '"><b>' + Math.round(pct * 1000) / 10 + '%</b> ' + word + ' <span>' + n + ' ' +
         esc(noun) + ' across ' + st.units + (st.units === 1 ? ' unit' : ' units') + '</span></div>';
     }
-    return line('dexpr', st.pct, st.word, st.honours, st.noun) + line('dexpr dtrau', tr.pct, tr.word, tr.traumas, tr.noun);
+    return won + line('dexpr', st.pct, st.word, st.honours, st.noun) + line('dexpr dtrau', tr.pct, tr.word, tr.traumas, tr.noun);
   }
   function lossLine(co) {
     return C.lossStats(co).map(function (st) {

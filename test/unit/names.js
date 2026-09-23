@@ -278,5 +278,11 @@ ok('the swarm calls it genetic degradation, of Genetic Flaws', (() => {
 })());
 ok('the tribe calls it infamy, of Infamies', C.traumaStats(C.newCompany('T', { faction: 'xeno' })).word === 'infamy');
 
+console.log('win rate');
+vc.record = { battles: 5, wins: 3, draws: 1, losses: 1 };
+const wr = C.winStats(vc);
+ok('3 won of 5 fought is 60% — a draw is fought, not won', wr.pct === 0.6 && wr.wins === 3 && wr.battles === 5);
+ok('no battles yet is 0%', C.winStats(C.newCompany('New')).pct === 0);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

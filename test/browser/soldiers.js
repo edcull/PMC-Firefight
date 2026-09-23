@@ -90,16 +90,20 @@ async function clickText(p, re) {
   check('...and the list closes again', await p.evaluate(() => !document.querySelector('#camp-body .dmen')));
 
   console.log('\nExperience');
-  const expText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dexpr:not(.dtrau)'); return d ? d.textContent : ''; });
+  const expText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dexpr:not(.dtrau):not(.dwin)'); return d ? d.textContent : ''; });
+  const winText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dwin'); return d ? d.textContent : ''; });
+  check('no win rate before the first battle', (await winText()) === '');
   const trauText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dtrau'); return d ? d.textContent : ''; });
   check('the dossier shows veterancy', /^0% veterancy 0 Battle Honours across 9 units$/.test(await expText()), await expText());
   await p.evaluate(() => {
     const r = window.PMC_CAMPAIGN.get().companies.A.roster;
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];
+    window.PMC_CAMPAIGN.get().companies.A.record = { battles: 4, wins: 3, draws: 0, losses: 1 };
   });
   await clickText(p, '^Spend EXP$');
   await clickText(p, '^Units$');
   check('...as honours held over units on the books', /^33\.3% veterancy 3 Battle Honours across 9 units$/.test(await expText()), await expText());
+  check('...with the win rate first', /^75% won 3 of 4 battles$/.test(await winText()), await winText());
   check('...and trauma beside it', /^11\.1% trauma 1 Battle Trauma across 9 units$/.test(await trauText()), await trauText());
   // the head of the dossier, down to its tabs
   const top = await p.evaluate(() => {
@@ -107,7 +111,8 @@ async function clickText(p, re) {
     return { x: a.x, y: a.y, width: a.width, height: t.bottom - a.y + 12 };
   });
   await p.screenshot({ path: path.join(SHOTS, 'camp-veterancy.png'), clip: top });
-  await p.evaluate(() => { window.PMC_CAMPAIGN.get().companies.A.roster.forEach(e => { e.honours = []; e.traumas = []; }); });
+  await p.evaluate(() => { window.PMC_CAMPAIGN.get().companies.A.roster.forEach(e => { e.honours = []; e.traumas = []; });
+    window.PMC_CAMPAIGN.get().companies.A.record = { battles: 0, wins: 0, draws: 0, losses: 0 }; });
 
   console.log('\nThe memorial');
   await clickText(p, '^Memorial$');
