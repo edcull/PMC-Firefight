@@ -42,12 +42,36 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-body').innerT
     if (!cond) problems.push(name);
   }
 
+  console.log('\nA solo world, with the rivals the player asked for');
+  await click(p, '#btn-campaign');
+  const offered = await p.evaluate(() => [...document.querySelectorAll('#camp-body .camp-arch')].map(x => x.value));
+  check('any number of rivals can be ticked', offered.length > 8 && await p.evaluate(() => document.querySelectorAll('#camp-body .camp-arch[type="checkbox"]').length) === offered.length,
+    offered.length + ' to choose from');
+  const want = [offered[0], offered[offered.length - 1]];
+  await p.evaluate((w) => w.forEach(id => { document.querySelector(`#camp-body .camp-arch[value="${id}"]`).checked = true; }), want);
+  await clickText(p, 'Raise the force');
+  await p.evaluate(() => { document.getElementById('found-name').value = 'Solo Company'; });
+  for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) {
+    await click(p, `#camp-body button[data-add="${k}"]`);
+  }
+  await click(p, '#camp-body button[data-doc="S2"]');
+  await clickText(p, 'Sign the charter');
+  const world = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return { archs: c.rivals.map(r => r.archetype), facing: c.companies.B.archetype }; });
+  check('...and both are on the world, the first of them faced first', want.every(w => world.archs.indexOf(w) >= 0) && world.facing === want[0],
+    world.archs.join(', ') + ' — facing ' + world.facing);
+  await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });
+  await p.reload();
+  await p.waitForTimeout(900);
+
   console.log('\nPlayer 1');
   await click(p, '#btn-campaign');
   await p.evaluate(() => {
     const m = document.getElementById('camp-mode'); m.value = 'hotseat'; m.dispatchEvent(new Event('change', { bubbles: true }));
   });
   check('a hotseat campaign has no rival to pick', await p.evaluate(() => document.getElementById('camp-archwrap').hidden));
+  check('...it asks what player 2 is running instead', await p.evaluate(() => !document.getElementById('camp-bwrap').hidden &&
+    [...document.getElementById('camp-bfaction').options].map(o => o.value).join() === 'pmc,rebel,bugs,xeno'));
+  await p.evaluate(() => { document.getElementById('camp-bfaction').value = 'xeno'; });
   await clickText(p, 'Raise the force');
   check('player 1 founds first', /Player 1 — Found a company/.test(await body(p)));
   await p.evaluate(() => { document.getElementById('found-name').value = 'Task Force Ironhold'; });
@@ -59,7 +83,8 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-body').innerT
 
   console.log('\nPlayer 2');
   let txt = await body(p);
-  check('then player 2 founds their own force', /Player 2 — Found a company/.test(txt) && /Task Force Ironhold has signed/.test(txt));
+  check('then player 2 founds their own force, of the kind chosen on the hub', /Player 2 — Claim a territory/.test(txt) && /Task Force Ironhold has signed/.test(txt) &&
+    await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.B.faction === 'xeno'));
   check('...with no way back out until they have', !/^Back$/m.test(txt));
   check('...and a colour of their own to start from', await p.evaluate(() => {
     const on = document.querySelector('#camp-body .sw.on'); return !!on && on.getAttribute('data-campcolour') !== window.PMC_CAMPAIGN.get().companies.A.colour;
@@ -69,7 +94,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-body').innerT
   await p.reload();
   await p.waitForTimeout(900);
   await click(p, '#btn-campaign');
-  check('a reload comes back to player 2\'s founding', /Player 2 — Found a company/.test(await body(p)));
+  check('a reload comes back to player 2\'s founding', /Player 2 — /.test(await body(p)));
 
   // player 2 runs a swarm
   await click(p, '#camp-body button[data-bfaction="bugs"]');

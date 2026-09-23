@@ -543,7 +543,9 @@
     display: block; margin-top: 3px; font-family: var(--body); font-weight: 400; font-size: 12px;
     letter-spacing: 0; text-transform: none; color: var(--ink-dim);
   }
-  .mcard:hover, .mcard:focus-visible {
+  /* a card that cannot be used here: shown, so it is known to exist, but greyed out */
+  .mcard:disabled { opacity: .42; cursor: not-allowed; filter: grayscale(.6); }
+  .mcard:not(:disabled):hover, .mcard:focus-visible {
     border-color: color-mix(in srgb, var(--alpha) 60%, transparent);
     background: color-mix(in srgb, var(--alpha) 12%, transparent); outline: none;
   }
@@ -580,6 +582,19 @@
   .own2 { color: #7ecfc0; border: 1px solid rgba(126,207,192,.5); }
   .pill-C { color: #7ecfc0; border-color: rgba(126,207,192,.45); background: rgba(126,207,192,.1); }
   #setup.solo-mode .std-only { display: none !important; }
+  /* a hotseat skirmish is mustered in three steps: each player's force, then the battlefield */
+  #setup .hot-only { display: none; }
+  #setup[data-hot] .hot-hide { display: none !important; }
+  #setup[data-hot="1"] .hot-field, #setup[data-hot="2"] .hot-field { display: none !important; }
+  #setup[data-hot="3"] .hot-force { display: none !important; }
+  #setup[data-hot="1"] .hot-name, #setup[data-hot="2"] .hot-name { display: block; }
+  #setup[data-hot="3"] .hot-sum { display: block; }
+  #setup[data-hot="2"] .hot-back, #setup[data-hot="3"] .hot-back { display: inline-block; }
+  /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
+  #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
+  .hot-sum .hot-side { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel-2); }
+  .hot-sum .hot-side b { font-family: var(--display); }
+  .hot-sum .hot-side small { display: block; color: var(--ink-dim); margin-top: 2px; }
   .lnk.warn { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
   .lnk.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
   .lnk.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 12%, transparent); }
@@ -859,6 +874,13 @@
   .srvrow .tin { flex: 1; font-family: var(--mono); font-size: 11.5px; padding: 6px 8px; }
   .cpstat code { font-family: var(--mono); font-size: 10.5px; color: var(--ink); background: var(--panel-3); padding: 0 3px; border-radius: 3px; }
 
+  /* the rivals a solo campaign may be asked to meet: any number, by kind */
+  .archpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 14px; max-height: 320px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+  .archgrp h4 { margin: 4px 0; font-family: var(--display); font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-dim); }
+  .archopt { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; cursor: pointer; font-size: 12.5px; }
+  .archopt input { margin-top: 3px; accent-color: var(--alpha); }
+  .archopt small { display: block; color: var(--ink-faint); font-size: 11px; }
   .docpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 7px; margin-bottom: 14px; }
   .doc {
     text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
@@ -1265,7 +1287,7 @@
       <button class="mcard" id="btn-campaign">Campaign<small id="menu-camp-sub">Raise a force and see it through a war</small></button>
       <!-- only offered when the page came from a game server: a game opened
            from a file has nobody to play against -->
-      <button class="mcard" id="btn-multi" hidden>Multiplayer<small>Play somebody else over the network</small></button>
+      <button class="mcard" id="btn-multi" disabled>Multiplayer<small id="menu-multi-sub">Needs the game server — run node server.js and open the page from it</small></button>
     </div>
     <div class="menu-pane" id="menu-skirmish" hidden>
       <h2 class="menu-head">Skirmish</h2>
@@ -1287,9 +1309,9 @@
   <div class="sheet">
     <h2 id="setup-title">Muster your force</h2>
     <div class="solo-box" id="solo-box" hidden>
-      <p class="lede">Solitaire and co-operative play (rulebook pp. 146–156): your commando — or two of them, one each — against an OpFor that acts in a phase of its own, driven by the behaviour table. Commandos are small: build yours from the commando composition table (p. 147). The OpFor pool is rolled for you from its own table (p. 148), and in a co-op game it is rolled a Priority Level higher for the second player.</p>
-      <div class="field two">
-        <div>
+      <p class="lede hot-hide">Solitaire and co-operative play (rulebook pp. 146–156): your commando — or two of them, one each — against an OpFor that acts in a phase of its own, driven by the behaviour table. Commandos are small: build yours from the commando composition table (p. 147). The OpFor pool is rolled for you from its own table (p. 148), and in a co-op game it is rolled a Priority Level higher for the second player.</p>
+      <div class="field two hot-field">
+        <div class="hot-hide">
           <label for="sel-solo-mode">Players</label>
           <select id="sel-solo-mode">
             <option value="solo" selected>Solitaire — one player</option>
@@ -1305,7 +1327,7 @@
           </select>
         </div>
       </div>
-      <div class="field">
+      <div class="field hot-field">
         <label for="sel-solo-scen">Solitaire scenario (pp. 150–156)</label>
         <select id="sel-solo-scen">
           <option value="roll" selected>Roll for it — any of the six</option>
@@ -1317,13 +1339,19 @@
           <option value="s_ambush">Ambush! — hit the column on the road</option>
         </select>
       </div>
-      <div class="playertabs" id="solo-players" hidden>
+      <div class="playertabs hot-hide" id="solo-players" hidden>
         <button type="button" data-player="0" aria-pressed="true">Player 1’s commando</button>
         <button type="button" data-player="1" aria-pressed="false">Player 2’s commando</button>
       </div>
     </div>
-    <p class="lede std-only">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table (p. 60; p. 92 for the rebels, p. 114 for the swarm, p. 128 for the tribe).</p>
-    <div class="field">
+    <p class="lede hot-only hot-intro" id="hot-intro"></p>
+    <div class="hot-only hot-sum" id="hot-sum"></div>
+    <p class="lede std-only hot-hide">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table (p. 60; p. 92 for the rebels, p. 114 for the swarm, p. 128 for the tribe).</p>
+    <div class="field hot-only hot-name">
+      <label for="hot-name">Force name</label>
+      <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+    </div>
+    <div class="field hot-force">
       <label for="sel-faction">Your force</label>
       <select id="sel-faction">
         <option value="pmc" selected>PMC — a private military company under contract (pp. 60–82)</option>
@@ -1332,7 +1360,7 @@
         <option value="xeno">Xenotripods — an alien tribe (pp. 128–143)</option>
       </select>
     </div>
-    <div class="field" id="tactic-field" hidden>
+    <div class="field hot-force" id="tactic-field" hidden>
       <label for="sel-tactic">Rebel Tactic (p. 95) — chosen before the terrain goes down</label>
       <select id="sel-tactic">
         <option value="" selected>No tactic</option>
@@ -1342,7 +1370,7 @@
       </select>
       <p class="tactic-note" id="tactic-note"></p>
     </div>
-    <div class="field two">
+    <div class="field two hot-force">
       <div>
         <label for="sel-tier">Battle Tier</label>
         <select id="sel-tier">
@@ -1362,7 +1390,7 @@
       </div>
     </div>
 
-    <div class="muster">
+    <div class="muster hot-force">
       <div class="muster-head">
         <b>Your company</b>
         <span class="pts" id="pts">0 / 18</span>
@@ -1397,7 +1425,7 @@
       <div class="cat" id="cat"></div>
     </div>
 
-    <div class="field std-only">
+    <div class="field std-only hot-hide">
       <label for="sel-op">Opposition force</label>
       <select id="sel-op">
         <option value="roll:pmc">Rolled — a mercenary company for this Tier</option>
@@ -1407,7 +1435,7 @@
         <option value="mirror">Mirror — the same force as yours</option>
       </select>
     </div>
-    <div class="field">
+    <div class="field hot-field">
       <label for="sel-planet">Planet — terrain generator (rulebook pp. 46–48)</label>
       <select id="sel-planet">
         <option value="random">Randomise the planet</option>
@@ -1421,14 +1449,14 @@
         <option value="unstable">Unstable / tectonic world</option>
       </select>
     </div>
-    <div class="field">
+    <div class="field hot-field">
       <label for="sel-terrain">Terrain set-up</label>
       <select id="sel-terrain">
         <option value="auto">Generate the table — the D6 for each area rolled and placed for you</option>
         <option value="manual">Set it up by hand — roll for each area and tap the pieces down</option>
       </select>
     </div>
-    <div class="field std-only">
+    <div class="field std-only hot-field">
       <label for="sel-scen">Scenario (rulebook pp. 48–55)</label>
       <select id="sel-scen">
         <option value="roll" selected>Roll a D6 — any of the six</option>
@@ -1441,10 +1469,10 @@
         <option value="takeover">Hostile takeover — a prepared position</option>
       </select>
     </div>
-    <div class="field">
+    <div class="field hot-force hot-colour">
       <label>Company colours — what your troops are painted in</label>
       <div class="swatches" id="colourpick"></div>
-      <p class="hint small">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
+      <p class="hint small" id="colour-hint">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
     </div>
     <!-- chosen on the menu now; kept because the start reads it -->
     <div class="field std-only" id="mode-field" hidden>
@@ -1456,6 +1484,7 @@
       </select>
     </div>
     <button class="start" id="btn-start">Take the field</button>
+    <button class="lnk hot-only hot-back" id="btn-hot-back" type="button">← Back</button>
     <p class="camp-foot">
       <button class="lnk" id="btn-setup-menu">← Main menu</button>
     </p>
