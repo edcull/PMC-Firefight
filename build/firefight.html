@@ -17270,7 +17270,7 @@
     none: 'none'
   };
   // one cell of a machine's digital camouflage, in inches
-  var CELL = 0.1;
+  var CELL = 0.14;
   /* How far a styled craft's wings or fans reach, as a multiple of the hull
      width — what it lays on the ground when it flies over. */
   var CRAFT_SPAN = {
@@ -19756,28 +19756,26 @@
             }, true);
           }
           part(off, 0, function () {
-            fuselage(pts2o, topo, z, H, TB);
-            bandOnSides(g, box(off, 0, cabL, Wd), z + 2, 2, 2, 'rgba(10,9,7,.4)');
-            canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
-            // a row of cabin windows along the flank that faces us
-            var ns = nearSide(), nwin = chin ? 6 : 2;
-            for (var i = 0; i < nwin; i++) {
-              var wa = off + cabL * (0.12 - i * (chin ? 0.12 : 0.16));
-              var wp = S3(AF(wa, ns * w * 1.0), z + H * 0.62);
-              sEllipse(wp[0], wp[1], 1.7, 1.3, GLASS); sEllipse(wp[0] - 0.4, wp[1] - 0.4, 0.6, 0.5, GLINT);
-            }
-            doorGun(ns, off - cabL * 0.05, z + H * 0.45, true);
-            noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
+            /* the command post's radar: a big dark grey radome slung low under
+               the nose and bulging out ahead of it, laid down before the hull
+               so that from the side and behind the hull hides all but its
+               belly and its snout */
             if (st === 'chinookcp') {
-              // the command post: a sensor dome on the nose, a dome on the roof and aerials
-              // a big radar radome slung under the nose and pushing out ahead of it, in dark grey
-              // the radome joins the underside of the nose and bulges out ahead of it
-              var nd = S3(AF(L * 0.46, 0), z + H * 0.14), nd2 = S3(AF(L * 0.56, 0), z + H * 0.1);
+              var nd = S3(AF(L * 0.44, 0), z - H * 0.06), nd2 = S3(AF(L * 0.56, 0), z - H * 0.1);
               sEllipse((nd[0] + nd2[0]) / 2, (nd[1] + nd2[1]) / 2 + 0.8, 9, 6.2, '#23272d');
               sEllipse(nd[0], nd[1], 7.2, 5.2, '#3c424a');
               sEllipse(nd2[0], nd2[1], 6.4, 4.8, '#3c424a');
               sEllipse(nd2[0] - 1.6, nd2[1] - 1.7, 3, 1.9, '#5b626c');
               sEllipse(nd2[0] - 2.2, nd2[1] - 2.3, 1.2, 0.8, '#7d858f');
+            }
+            fuselage(pts2o, topo, z, H, TB);
+            bandOnSides(g, box(off, 0, cabL, Wd), z + 2, 2, 2, 'rgba(10,9,7,.4)');
+            canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
+            var ns = nearSide();
+            doorGun(ns, off - cabL * 0.05, z + H * 0.45, true);
+            noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
+            if (st === 'chinookcp') {
+              // the command post: a dome on the roof and aerials (its radar went on under the nose)
               var dm = S3(AF(-L * 0.05, 0), z + H + 1);
               sEllipse(dm[0], dm[1] - 1.6, 4.2, 3, '#c9ced6'); sEllipse(dm[0] - 1, dm[1] - 2.6, 2, 1.2, '#eef2f6');
               aerial(AF, L * 0.1, w * 0.5, z + H, 18); aerial(AF, L * 0.05, -w * 0.5, z + H, 14); aerial(AF, -L * 0.1, w * 0.5, z + H, 12);
@@ -19826,11 +19824,6 @@
               var dp = S3(AF(-L * 0.05, ns * fw), z + H * 0.35);
               poly(g, [[dp[0] - 4, dp[1]], [dp[0] + 4, dp[1] - 2], [dp[0] + 4, dp[1] - 9], [dp[0] - 4, dp[1] - 7]], mixc(hull, dark, 0.45));
             }
-            // the engine intakes each side of the rotor-less spine
-            [-1, 1].forEach(function (sd) {
-              var ip = S3(AF(-L * 0.08, sd * fw * 0.5), z + H);
-              sEllipse(ip[0], ip[1] - 1.5, 2.6, 1.8, STEEL); sEllipse(ip[0] + 0.4, ip[1] - 1.5, 1.4, 1, '#0c0f13');
-            });
           });
           part(L * 0.45, 0, function () { noseGun(L * 0.42, 0, z + 1, hind ? 0.5 : 0.42, 'mg'); });
           break;
