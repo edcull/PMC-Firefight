@@ -83,6 +83,14 @@
   @media (prefers-reduced-motion: reduce) { .pill-wait { animation: none; } }
   .hdr-btns { display: flex; gap: 8px; }
   #btn-more { display: none; }
+  #hdr-turn { display: none; }
+  .objbox { width: min(420px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; }
+  .objbox .objroles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 10px; }
+  .objbox .objroles div { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: var(--panel-2); }
+  .objbox .objroles b { display: block; font-family: var(--display); font-size: 13px; }
+  .objbox .objroles span { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .objbox ul { margin: 0 0 10px; padding-left: 18px; font-size: 13px; color: var(--ink-dim); }
+  .objbox ul b { color: var(--ink); }
   .lnk {
     font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
     background: none; border: 1px solid var(--line); color: var(--ink-dim);
@@ -335,7 +343,7 @@
   .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* suppression against Morale: three bands, the SP laid over them */
-  .moralebar { margin: 8px 0 6px; }
+  .moralebar { margin: 8px 0; }
   .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
   .mb-band { flex: 1; opacity: .18; }
   .mb-band + .mb-band { border-left: 1px solid rgba(255,255,255,.25); }
@@ -343,9 +351,6 @@
   .mb-band.warn, .mb-fill.warn { background: var(--warn); }
   .mb-band.bad, .mb-fill.bad { background: var(--bad); }
   .mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
-  .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
-  .mb-labels span { flex: 1; text-align: center; }
-  .healthbar .mb-labels span { text-align: left; }
   .hintbar:empty { display: none; }
   /* the ground a unit stands on, with the letter the map marks it by */
   /* a stat its drive changed: its new value in green or red, a tip saying why */
@@ -1191,8 +1196,16 @@
     .hdr-btns.open #btn-sound { top: 26px; }
     .hdr-btns.open #btn-notes { top: 54px; }
     .hdr-btns.open #btn-campaign { top: 82px; }
-    #btn-more { display: block; }
     .pill { font-size: 8.5px; padding: 1px 6px; }
+    /* One row: Menu on the left; the objectives and the turn on the right. The
+       rest of the header is folded away on a phone. */
+    header h1 { display: none; }
+    .hdr-meta, .hdr-btns { display: contents; }
+    #hdr-phase, #hdr-init, #hdr-obj, #hdr-role, #hdr-active, #btn-more, #btn-sound, #btn-notes, #btn-drawer, #btn-campaign { display: none !important; }
+    #btn-menu { order: 0; }
+    #btn-obj { order: 1; margin-left: auto; }
+    #hdr-turn { display: inline-block; order: 2; width: 58px; text-align: center; font-size: 10px; }
+    header .lnk#btn-menu, header .lnk#btn-obj { font-size: 10px; padding: 4px 9px; }
     main { display: block; padding-top: 0; height: calc(100% - var(--hdr, 52px)); }
     .stage { display: block; height: 100%; gap: 0; }
 
@@ -1392,6 +1405,8 @@
       <span class="meta" id="hdr-obj">Objectives 0–0</span>
       <span class="meta role" id="hdr-role" hidden></span>
       <span class="pill pill-A" id="hdr-active">Deploy your force</span>
+      <button class="lnk" id="btn-obj">Objectives</button>
+      <span class="meta" id="hdr-turn"></span>
       <span class="hdr-btns">
         <button class="lnk only-narrow" id="btn-drawer">Forces</button>
         <button class="lnk" id="btn-more" hidden aria-label="More">⋯</button>
@@ -1401,6 +1416,8 @@
       </span>
     </div>
   </header>
+  <!-- the scenario at a glance: who attacks, who defends, and what wins it -->
+  <div class="askwrap" id="obj-modal" hidden><div class="askbox objbox" id="obj-box" role="dialog" aria-label="Objectives"></div></div>
 
   <main>
     <!-- desktop: your own force and the unit you have selected -->

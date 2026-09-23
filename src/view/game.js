@@ -2297,6 +2297,8 @@
 
   function drawHeader() {
     syncHeaderHeight();
+    // the phone's turn counter, a fixed width at the right of its one-row header
+    if (el('hdr-turn')) el('hdr-turn').textContent = state.phase === 'terrain' ? 'Setup' : state.phase === 'deploy' ? 'Deploy' : 'Turn ' + state.turn;
     el('hdr-phase').textContent = state.phase === 'terrain' ? 'Terrain set-up' : state.phase === 'deploy' ? 'Deployment' : 'Turn ' + state.turn + ' · Action phase';
     el('hdr-init').textContent = state.initiative ? 'Initiative ' + state.initiative : '—';
     var act = el('hdr-active');
@@ -2347,6 +2349,37 @@
         rl.className = 'meta role role-attacker';
       } else { rl.hidden = true; }
     }
+  }
+
+  /* The Objectives button: the scenario, which side attacks and which defends
+     (or that both are after the same thing), what wins it, and who holds each
+     objective now. */
+  function objectivesHTML() {
+    var sc = state.scen || {}, h = '<h3>' + esc(sc.name || 'Scenario') + '</h3>';
+    if (sc.blurb) h += '<p>' + esc(sc.blurb) + '</p>';
+    function side(s, role) {
+      var pal = ISO.PALETTE[s] || {};
+      return '<div><b style="color:' + (pal.light || 'inherit') + '">' + esc(sideName(s)) + '</b><span>' + role + '</span></div>';
+    }
+    var att = state.sc && state.sc.attacker;
+    h += '<div class="objroles">' + (att
+      ? side(att, 'Attacker') + side(other(att), 'Defender')
+      : side('A', state.solo ? 'Your side' : 'Side A') + side('B', state.solo ? 'OpFor' : 'Side B')) + '</div>';
+    if (sc.win) h += '<p><b>To win:</b> ' + esc(sc.win) + '</p>';
+    if (state.objectives.length) {
+      h += '<ul>' + state.objectives.map(function (o, i) {
+        return '<li>Objective ' + (i + 1) + ' — ' + (o.owner ? 'held by <b>' + esc(sideName(o.owner)) + '</b>' : 'nobody holds it') + '</li>';
+      }).join('') + '</ul>';
+    }
+    if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';
+    if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
+    return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
+  }
+  function openObjectives() {
+    if (!state) return;
+    el('obj-box').innerHTML = objectivesHTML();
+    el('obj-modal').hidden = false;
+    if (SFX) SFX.click();
   }
 
   /* ---------- board ---------- */
@@ -3452,10 +3485,9 @@
        broken — each as wide as the Morale, with the unit's SP laid over them
        in the colour of the band it has reached. */
     var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
-    h += '<div class="moralebar" title="' + u.sp + ' SP against Morale ' + m + '">' +
+    h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
-      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
-      '<div class="mb-labels"><span>Steady</span><span>Suppressed</span><span>Broken</span></div></div>';
+      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -3566,8 +3598,7 @@
     // its health: the Structure it has left — green untouched, amber down to half, red below
     var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
     h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
-      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div>' +
-      '<div class="mb-labels"><span>Structure ' + left + ' / ' + u.str + '</span></div></div>';
+      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div></div>';
     /* What its drive (and a drone's missing crew) did to the printed profile:
        a changed stat shows its new value, green if it went up and red if it
        went down, with a tip saying what it was and why. */
@@ -5621,6 +5652,10 @@
       if (SFX) SFX.click();
     });
     el('btn-menu').addEventListener('click', openMenu);
+    if (el('btn-obj')) el('btn-obj').addEventListener('click', openObjectives);
+    if (el('obj-modal')) el('obj-modal').addEventListener('click', function (e) {
+      if (e.target === el('obj-modal') || e.target.id === 'obj-done') el('obj-modal').hidden = true;
+    });
 
     /* Multiplayer only works when this page came from a game server. A game
        opened from a file, or the published single file, has nowhere to send an

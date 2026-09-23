@@ -83,6 +83,14 @@
   @media (prefers-reduced-motion: reduce) { .pill-wait { animation: none; } }
   .hdr-btns { display: flex; gap: 8px; }
   #btn-more { display: none; }
+  #hdr-turn { display: none; }
+  .objbox { width: min(420px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; }
+  .objbox .objroles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 10px; }
+  .objbox .objroles div { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: var(--panel-2); }
+  .objbox .objroles b { display: block; font-family: var(--display); font-size: 13px; }
+  .objbox .objroles span { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .objbox ul { margin: 0 0 10px; padding-left: 18px; font-size: 13px; color: var(--ink-dim); }
+  .objbox ul b { color: var(--ink); }
   .lnk {
     font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
     background: none; border: 1px solid var(--line); color: var(--ink-dim);
@@ -335,7 +343,7 @@
   .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* suppression against Morale: three bands, the SP laid over them */
-  .moralebar { margin: 8px 0 6px; }
+  .moralebar { margin: 8px 0; }
   .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
   .mb-band { flex: 1; opacity: .18; }
   .mb-band + .mb-band { border-left: 1px solid rgba(255,255,255,.25); }
@@ -343,9 +351,6 @@
   .mb-band.warn, .mb-fill.warn { background: var(--warn); }
   .mb-band.bad, .mb-fill.bad { background: var(--bad); }
   .mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
-  .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
-  .mb-labels span { flex: 1; text-align: center; }
-  .healthbar .mb-labels span { text-align: left; }
   .hintbar:empty { display: none; }
   /* the ground a unit stands on, with the letter the map marks it by */
   /* a stat its drive changed: its new value in green or red, a tip saying why */
@@ -1191,8 +1196,16 @@
     .hdr-btns.open #btn-sound { top: 26px; }
     .hdr-btns.open #btn-notes { top: 54px; }
     .hdr-btns.open #btn-campaign { top: 82px; }
-    #btn-more { display: block; }
     .pill { font-size: 8.5px; padding: 1px 6px; }
+    /* One row: Menu on the left; the objectives and the turn on the right. The
+       rest of the header is folded away on a phone. */
+    header h1 { display: none; }
+    .hdr-meta, .hdr-btns { display: contents; }
+    #hdr-phase, #hdr-init, #hdr-obj, #hdr-role, #hdr-active, #btn-more, #btn-sound, #btn-notes, #btn-drawer, #btn-campaign { display: none !important; }
+    #btn-menu { order: 0; }
+    #btn-obj { order: 1; margin-left: auto; }
+    #hdr-turn { display: inline-block; order: 2; width: 58px; text-align: center; font-size: 10px; }
+    header .lnk#btn-menu, header .lnk#btn-obj { font-size: 10px; padding: 4px 9px; }
     main { display: block; padding-top: 0; height: calc(100% - var(--hdr, 52px)); }
     .stage { display: block; height: 100%; gap: 0; }
 
@@ -1392,6 +1405,8 @@
       <span class="meta" id="hdr-obj">Objectives 0–0</span>
       <span class="meta role" id="hdr-role" hidden></span>
       <span class="pill pill-A" id="hdr-active">Deploy your force</span>
+      <button class="lnk" id="btn-obj">Objectives</button>
+      <span class="meta" id="hdr-turn"></span>
       <span class="hdr-btns">
         <button class="lnk only-narrow" id="btn-drawer">Forces</button>
         <button class="lnk" id="btn-more" hidden aria-label="More">⋯</button>
@@ -1401,6 +1416,8 @@
       </span>
     </div>
   </header>
+  <!-- the scenario at a glance: who attacks, who defends, and what wins it -->
+  <div class="askwrap" id="obj-modal" hidden><div class="askbox objbox" id="obj-box" role="dialog" aria-label="Objectives"></div></div>
 
   <main>
     <!-- desktop: your own force and the unit you have selected -->
@@ -2313,6 +2330,8 @@
   }
 
   function applyPropulsion(u, prop) {
+    // a giant bug or a Xenotripod hull goes on its own legs and fields: no drive at all
+    if (alienHull(u)) { u.prop = null; return u; }
     var pr = PROPULSION[prop];
     if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'wheeled' : null; return u; }
     u.prop = pr.key;
@@ -29921,6 +29940,8 @@
 
   function drawHeader() {
     syncHeaderHeight();
+    // the phone's turn counter, a fixed width at the right of its one-row header
+    if (el('hdr-turn')) el('hdr-turn').textContent = state.phase === 'terrain' ? 'Setup' : state.phase === 'deploy' ? 'Deploy' : 'Turn ' + state.turn;
     el('hdr-phase').textContent = state.phase === 'terrain' ? 'Terrain set-up' : state.phase === 'deploy' ? 'Deployment' : 'Turn ' + state.turn + ' · Action phase';
     el('hdr-init').textContent = state.initiative ? 'Initiative ' + state.initiative : '—';
     var act = el('hdr-active');
@@ -29971,6 +29992,37 @@
         rl.className = 'meta role role-attacker';
       } else { rl.hidden = true; }
     }
+  }
+
+  /* The Objectives button: the scenario, which side attacks and which defends
+     (or that both are after the same thing), what wins it, and who holds each
+     objective now. */
+  function objectivesHTML() {
+    var sc = state.scen || {}, h = '<h3>' + esc(sc.name || 'Scenario') + '</h3>';
+    if (sc.blurb) h += '<p>' + esc(sc.blurb) + '</p>';
+    function side(s, role) {
+      var pal = ISO.PALETTE[s] || {};
+      return '<div><b style="color:' + (pal.light || 'inherit') + '">' + esc(sideName(s)) + '</b><span>' + role + '</span></div>';
+    }
+    var att = state.sc && state.sc.attacker;
+    h += '<div class="objroles">' + (att
+      ? side(att, 'Attacker') + side(other(att), 'Defender')
+      : side('A', state.solo ? 'Your side' : 'Side A') + side('B', state.solo ? 'OpFor' : 'Side B')) + '</div>';
+    if (sc.win) h += '<p><b>To win:</b> ' + esc(sc.win) + '</p>';
+    if (state.objectives.length) {
+      h += '<ul>' + state.objectives.map(function (o, i) {
+        return '<li>Objective ' + (i + 1) + ' — ' + (o.owner ? 'held by <b>' + esc(sideName(o.owner)) + '</b>' : 'nobody holds it') + '</li>';
+      }).join('') + '</ul>';
+    }
+    if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';
+    if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
+    return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
+  }
+  function openObjectives() {
+    if (!state) return;
+    el('obj-box').innerHTML = objectivesHTML();
+    el('obj-modal').hidden = false;
+    if (SFX) SFX.click();
   }
 
   /* ---------- board ---------- */
@@ -31076,10 +31128,9 @@
        broken — each as wide as the Morale, with the unit's SP laid over them
        in the colour of the band it has reached. */
     var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
-    h += '<div class="moralebar" title="' + u.sp + ' SP against Morale ' + m + '">' +
+    h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
-      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
-      '<div class="mb-labels"><span>Steady</span><span>Suppressed</span><span>Broken</span></div></div>';
+      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -31190,8 +31241,7 @@
     // its health: the Structure it has left — green untouched, amber down to half, red below
     var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
     h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
-      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div>' +
-      '<div class="mb-labels"><span>Structure ' + left + ' / ' + u.str + '</span></div></div>';
+      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div></div>';
     /* What its drive (and a drone's missing crew) did to the printed profile:
        a changed stat shows its new value, green if it went up and red if it
        went down, with a tip saying what it was and why. */
@@ -33245,6 +33295,10 @@
       if (SFX) SFX.click();
     });
     el('btn-menu').addEventListener('click', openMenu);
+    if (el('btn-obj')) el('btn-obj').addEventListener('click', openObjectives);
+    if (el('obj-modal')) el('obj-modal').addEventListener('click', function (e) {
+      if (e.target === el('obj-modal') || e.target.id === 'obj-done') el('obj-modal').hidden = true;
+    });
 
     /* Multiplayer only works when this page came from a game server. A game
        opened from a file, or the published single file, has nowhere to send an
