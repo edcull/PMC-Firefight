@@ -173,6 +173,8 @@
     background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
     border-radius: 4px; padding: 4px 9px; cursor: pointer;
     font-family: var(--mono); font-size: 10.5px;
+    /* each as wide as its word, sharing out what is left, so a row fits on one line */
+    flex: 1 1 auto; min-width: 0; white-space: nowrap; text-align: center;
   }
   .vsg:hover { color: var(--ink); }
   .vsg.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
@@ -278,7 +280,7 @@
     .vunits, .vclose { display: inline-flex; }
     .vscrim { display: block; }
     .vbtn { padding: 11px 6px; font-size: 12px; }
-    .vsg { padding: 7px 11px; font-size: 11.5px; }
+    .vsg { padding: 7px 5px; font-size: 11.5px; }
     .vu { padding: 8px 7px; font-size: 13px; }
     #vsearch { font-size: 16px; padding: 9px 10px; }         /* no zoom-on-focus on iOS */
     .vsel { font-size: 13px; padding: 7px 6px; }
@@ -295,7 +297,7 @@
   @media (pointer: coarse) {
     .vsw { gap: 7px; }
     .vsw button { width: 36px; height: 36px; }
-    .vsg { padding: 9px 12px; font-size: 12px; min-height: 38px; }
+    .vsg { padding: 9px 5px; font-size: 12px; min-height: 38px; }
     .vbtn { min-height: 44px; }
     .vu { min-height: 44px; padding: 8px 8px; }
     .vu-w { font-size: 10.5px; }
@@ -306,7 +308,7 @@
 <header>
   <a class="vhome" id="vhome" href="firefight.html" title="Back to the game's main menu" aria-label="Back to the game's main menu">← Back</a>
   <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
-  <h1>PMC <span>2670</span> · Unit viewer</h1>
+  <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
 </header>
