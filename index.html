@@ -343,6 +343,10 @@
   .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
   .mb-labels span { flex: 1; text-align: center; }
   .hintbar:empty { display: none; }
+  /* the ground a unit stands on, with the letter the map marks it by */
+  .chip.tpill { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
+  .chip.tpill i { font-style: normal; font-family: var(--mono); font-weight: 700; font-size: 9px; color: rgba(8,11,16,.85);
+    width: 12px; height: 13px; display: inline-grid; place-items: center; border-radius: 2px; }
   body[data-battle="demo"] #hintbar { display: none; }
   .spbar { position: relative; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); }
   .spbar-fill { height: 100%; background: linear-gradient(90deg, var(--warn), var(--bad)); }

@@ -3463,8 +3463,11 @@
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
       stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
       stat('SP', u.sp) + '</div>';
-    h += '<p class="hint small">Suppressed above ' + m + ' SP · broken above ' + (2 * m) + ' · removed above ' + (3 * m) +
-      ' · standing in ' + R.TERRAIN[R.terrainOf(state, u)].name.toLowerCase() + '</p>';
+    // the ground it stands on, marked as the map marks it
+    var tk = R.terrainOf(state, u), tmk = TERRAIN_MARK[tk];
+    h += '<div class="chips"><span class="chip tpill">' +
+      (tmk ? '<i style="background:' + tmk.col + '">' + tmk.ch + '</i>' : '') +
+      R.TERRAIN[tk].name + '</span></div>';
     h += honourChips(u);
     if (u.rules.length) h += '<div class="chips">' + u.rules.map(function (r) { return '<span class="chip">' + r + '</span>'; }).join('') + '</div>';
     box.innerHTML = h;

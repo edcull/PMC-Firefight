@@ -343,6 +343,10 @@
   .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
   .mb-labels span { flex: 1; text-align: center; }
   .hintbar:empty { display: none; }
+  /* the ground a unit stands on, with the letter the map marks it by */
+  .chip.tpill { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
+  .chip.tpill i { font-style: normal; font-family: var(--mono); font-weight: 700; font-size: 9px; color: rgba(8,11,16,.85);
+    width: 12px; height: 13px; display: inline-grid; place-items: center; border-radius: 2px; }
   body[data-battle="demo"] #hintbar { display: none; }
   .spbar { position: relative; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); }
   .spbar-fill { height: 100%; background: linear-gradient(90deg, var(--warn), var(--bad)); }
@@ -31070,8 +31074,11 @@
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
       stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
       stat('SP', u.sp) + '</div>';
-    h += '<p class="hint small">Suppressed above ' + m + ' SP · broken above ' + (2 * m) + ' · removed above ' + (3 * m) +
-      ' · standing in ' + R.TERRAIN[R.terrainOf(state, u)].name.toLowerCase() + '</p>';
+    // the ground it stands on, marked as the map marks it
+    var tk = R.terrainOf(state, u), tmk = TERRAIN_MARK[tk];
+    h += '<div class="chips"><span class="chip tpill">' +
+      (tmk ? '<i style="background:' + tmk.col + '">' + tmk.ch + '</i>' : '') +
+      R.TERRAIN[tk].name + '</span></div>';
     h += honourChips(u);
     if (u.rules.length) h += '<div class="chips">' + u.rules.map(function (r) { return '<span class="chip">' + r + '</span>'; }).join('') + '</div>';
     box.innerHTML = h;
