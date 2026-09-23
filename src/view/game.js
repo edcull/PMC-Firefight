@@ -86,6 +86,8 @@
     }
     loadAutoAdvance(cfg.mode);
     resetShow();
+    // a demo is for watching: on a phone it opens on the results as they come in
+    if (window.innerWidth <= 1000) setMTab(cfg.mode === 'demo' ? 'res' : 'act');
     /* A battle started from this screen runs in this tab, whatever was here
        before — somebody who has just come out of a networked game and pressed
        New battle is starting a local one, not sending anything to a server. */
@@ -128,6 +130,7 @@
     ui.feedUnread = 0;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
     ui.insertion = null; ui.preview = null; ui.deployPick = null;
+    ui.watch = null;
   }
 
   /* ---- sending ---- */
@@ -345,6 +348,13 @@
     ui.tsetHint = s.tsetHint || '';
     ui.vis = null; ui.visKey = '';
     ui.preview = null;
+    /* In a demo the watcher's pick is the selection, and it stays picked
+       while the AI activates one unit after another — until it is gone. */
+    if (handsOff() && ui.watch) {
+      var w = byId(ui.watch);
+      if (w && w.alive) { ui.selected = w; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; }
+      else ui.watch = null;
+    }
   }
 
   /* ---- asking the engine ----
@@ -424,8 +434,17 @@
     }
     send({ k: 'action', id: id });
   }
+  // the watcher's own pick in a demo: shown, kept, and never sent to the engine
+  function watchUnit(u) {
+    ui.watch = u.id;
+    ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
+    if (window.innerWidth <= 1000) setMTab('unit');
+    if (SFX) SFX.click();
+    render();
+  }
   function select(u) {
     if (!u) return;
+    if (handsOff()) { watchUnit(u); return; }
     /* On a phone the panel is one slice of screen: picking a unit is a request
        to act with it, so the panel comes back to the actions. */
     if (window.innerWidth <= 1000) setMTab('act');
@@ -1034,9 +1053,18 @@
       setTimeout(function () { card.classList.remove('fresh'); }, 300);
       // a rail is not a log: keep the last thirty and let the dock hold the rest
       while (host.children.length > 30) host.removeChild(host.firstChild);
+      if (state && state.cfg.mode === 'demo') feedToNewest(host);   // a demo is watched as it happens
     });
     ui.feedUnread = (ui.feedUnread || 0) + 1;
     markFeedTab();
+  }
+  /* The feed stacks newest first, at the top, but a scrolled list stays where
+     it is as cards land: this brings the newest back into view. (A reversed
+     column scrolls with negative offsets; a plain one clamps to its top.) */
+  function feedToNewest(host) {
+    [host, host && host.parentElement].forEach(function (s) {
+      if (s && s.scrollHeight > s.clientHeight) s.scrollTop = -s.scrollHeight;
+    });
   }
   /* On a phone the results share the panel with everything else, so the tab
      carries a count of what has landed since it was last looked at. */
@@ -1055,7 +1083,7 @@
     document.querySelectorAll('#mtabs .mtab').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-mtab') === which);
     });
-    if (which === 'res') { ui.feedUnread = 0; }
+    if (which === 'res') { ui.feedUnread = 0; if (state && state.cfg.mode === 'demo' && el('resfeed-m')) feedToNewest(el('resfeed-m')); }
     markFeedTab();
   }
 
@@ -1306,7 +1334,7 @@
     faceToward(u, path[path.length - 1].x, path[path.length - 1].y, path[0]);
     if (R.isMachine(u)) u.aim = null;
     anims.push({
-      kind: 'move', unit: u, segs: segs, total: total, follow: !!follow,
+      kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
       dur: Math.min(1400, 240 + total * 42), t0: nowMs(), lastStep: 0, lastPace: -1
     });
     u.ax = path[0].x; u.ay = path[0].y;
@@ -2066,8 +2094,11 @@
     drawBoard();
     cam.anim = requestAnimationFrame(stepCam);
   }
+  /* In a demo the camera is the watcher's: nothing the AI does moves it, not
+     a unit activating, landing or on the move — only the watcher pans and zooms. */
+  function handsOff() { return !!(state && state.cfg && state.cfg.mode === 'demo'); }
   function focusUnit(u, instant, borrowed) {
-    if (!u || u.x < 0) return;
+    if (!u || u.x < 0 || handsOff()) return;
     var p = ISO.toScreen(u.x, u.y);
     centreOn(p.x, p.y - ISO.ELEV, instant);
     if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
@@ -4319,6 +4350,12 @@
     }
 
     var hit = unitUnder(c);
+
+    // a demo is watched: a tap picks a unit to look at, and never acts for the AI
+    if (handsOff()) {
+      if (hit) watchUnit(hit); else showTerrainTip(e, p);
+      return;
+    }
 
     // the OpFor has been driving the camera: a tap on open ground gives it back
     if (cam.borrowed && !hit) {
