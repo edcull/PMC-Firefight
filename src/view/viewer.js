@@ -103,6 +103,7 @@
     // far to near, so the nearer of the two covers the other
     var order = [u, t].sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
+      if (m === u && view.destroyed) { drawDestroyed(u); return; }
       I.drawUnit(g, m, {
         at: { x: m.x, y: m.y }, lift: m === u ? arr.lift : 0,
         hop: m === u ? (view.hop || 0) : 0,
@@ -114,6 +115,24 @@
     });
     FX.draw(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  /* What is left of it: a machine is a burning wreck, and a squad is its
+     models lying where they fell, laid out the way the battle scatters them. */
+  function drawDestroyed(u) {
+    if (R.isMachine(u)) {
+      var dead = Object.assign({}, u, { alive: false, cargo: [], damage: 0 });
+      I.drawWreck(g, dead, { x: u.x, y: u.y }, 0, Date.now());
+      return;
+    }
+    var p = I.toScreen(u.x, u.y);
+    var n = u.models || u.size || 1;
+    for (var i = n; i > 0; i--) {
+      var cs = I.casualtySpot(u, i, i * 7);
+      I.drawBody(g, p.x + cs.dx, p.y + cs.dy, {
+        side: u.side, paint: u.paint || null, art: u.art, mi: cs.mi, flip: i % 3 === 0
+      });
+    }
   }
 
   // a plain checkered floor, so movement and distance are readable
@@ -151,6 +170,7 @@
     var busy = FX.prune();
     if (view.walking) { stepWalk(dt); busy = true; }
     if (view.strafeAt) { strafing(); busy = true; }
+    if (view.destroyed && R.isMachine(unit())) busy = true;   // the wreck keeps burning
     frame();
     if (busy) start(); else { last = 0; drawState(); }
   }
@@ -325,6 +345,7 @@
      are made up here — the bench is about what it looks and sounds like, not
      about the dice. */
   function fire() {
+    if (view.destroyed) { note('It is destroyed — it is not firing anything.'); return; }
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
@@ -347,24 +368,9 @@
     from.second = mountFrom(spec.s);
     var hits = 3;
     syncSound();
-    /* The same volley twice over, a beat apart, as the battle plays it: one
-       burst of fire rather than a single round going out. */
     play(spec, from, to, hits, u);
-    setTimeout(function () { play(spec, from, to, hits, u); start(); }, againAfter(spec));
     start();
     note(describe(spec, u));
-  }
-  /* Roughly how long one pass of each style takes, so the second follows the
-     first rather than landing on top of it. */
-  var VOLLEY_MS = {
-    small: 1250, pistol: 1150, smg: 850, burst: 600, chain: 1000, spine: 650,
-    shell: 800, shellbig: 900, arc: 1000, arcbig: 1200, rail: 700, flame: 1200,
-    missile: 1500, rocket: 1000, spit: 900, spitbig: 1050, energy: 900,
-    orb: 1400, orbbig: 1500, none: 200
-  };
-  function againAfter(spec) {
-    var base = VOLLEY_MS[spec.p] || 1000;
-    return base + ((spec.n || 1) - 1) * 180 + (spec.s ? 260 : 0);
   }
 
   var FIRE = {
@@ -781,6 +787,8 @@
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
+      '<button class="vbtn' + (view.destroyed ? ' primary' : '') + '" data-do="destroyed">' +
+      (view.destroyed ? 'Back from the dead' : 'Destroyed') + '</button>' +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
     h += '<div class="vacts"><button class="vbtn" data-do="allstyles">Play every weapon style</button></div>';
@@ -831,6 +839,11 @@
 
   function drawState() {
     var u = unit();
+    if (view.destroyed) {
+      el('vstate').textContent = R.isMachine(u) ? 'destroyed — the hull is burning'
+        : u.size + ' of ' + u.size + ' models down';
+      return;
+    }
     el('vstate').textContent = R.isMachine(u)
       ? u.damage + ' of ' + u.str + ' Structure gone'
       : u.models + '/' + u.size + ' models · ' + u.sp + ' SP · ' + R.status(u);
@@ -877,6 +890,7 @@
       if (!b) return;
       view.key = b.getAttribute('data-unit');
       view.models = null;
+      view.destroyed = false;
       var p = profile();
       if (p.cls !== 'vehicle') view.prop = 'tracked';
       FX.clear();
@@ -913,6 +927,17 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
+      else if (act === 'destroyed') {
+        view.destroyed = !view.destroyed;
+        if (view.destroyed) {
+          view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
+          view.strafeAt = 0; view.at = null; view.arriveAt = 0;
+          FX.clear();
+          note(R.isMachine(unit()) ? 'Destroyed: the hull burns where it stopped.'
+            : 'Destroyed: every model in the squad is down.');
+        } else note('');
+        drawControls(); drawState(); start(); frame();
+      }
       else if (act === 'allstyles') allStyles();
       else if (act === 'sound') {
         view.sound = !view.sound;
@@ -976,6 +1001,7 @@
     gait: function () { return gaitOf(unit()); },
     insert: insert,
     strafe: strafe,
+    destroy: function (on) { view.destroyed = on !== false; drawControls(); drawState(); frame(); },
     strafing: function () { return !!view.strafeAt; },
     arriving: arriving,
     fx: function () { return FX.kinds(); },
