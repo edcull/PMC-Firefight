@@ -17,13 +17,13 @@
       'and infantry assaulting it do not get the usual +4 against a vehicle.',
     'Aggressive':
       'Must charge the closest enemy it can reach whenever it activates, unless a friendly Overmind ' +
-      'within 18" is holding it back (p. 116).',
+      'within 18" is holding it back.',
     'Always Basic Firepower':
       'Its main weapon always fires at Basic Firepower: no +1 for a stationary Fire!, no half-range, ' +
       'Crossfire, height or Markerlight bonuses.',
     'Animal Behaviour':
       'Bugs shrug off hits: on the hit table 1-3 is ignored and 4+ kills one bug (2 SP). They re-roll failed ' +
-      'rally dice, but take no cover from terrain unless an Overmind is in reach (p. 116).',
+      'rally dice, but take no cover from terrain unless an Overmind is in reach.',
     'Anti-aircraft':
       '+4 to hit aircraft, and a critical hit on an aircraft does D6 Damage instead of D3. ' +
       'Works even when firing at Basic Firepower.',
@@ -41,13 +41,13 @@
       'at least 12" from an objective and 4" in from the edge. On a D6 of 4-6 the opponent shifts the landing ' +
       'point up to 2D6"; landing within 12" of the enemy draws a free Basic Firepower shot.',
     'Cloaking System':
-      'Cannot be shot at or charged from more than 12" away (p. 129).',
+      'Cannot be shot at or charged from more than 12" away.',
     'Command Unit (X)':
       'Coordinate: once a turn, stay put and let up to {X} friendly units within 12" activate one after another. ' +
       'Other Command Units, turrets and units two or more Tiers higher cannot be called on. Not used in solitaire games.',
     'Command Vehicle':
       'A Command Unit riding inside lends the vehicle all of its special rules, and coordinates as soon as the ' +
-      'vehicle finishes its activation (p. 56).',
+      'vehicle finishes its activation.',
     'Counter-jamming':
       'Friendly units within 6" ignore enemy Jammers and rally and repair on 4+ as normal. Only works while this ' +
       'unit is steady and on the table.',
@@ -56,7 +56,7 @@
       'off a vehicle.',
     'Death or Glory, Comrades!':
       'A friendly unit within 12" (not Broken, not two Tiers higher) sheds all its Suppression as it launches ' +
-      'an Assault, which also lets a Suppressed unit charge at all (p. 94).',
+      'an Assault, which also lets a Suppressed unit charge at all.',
     'Destructive Weapon':
       'Can Demolish walls and buildings: a final 15+ or an unmodified 9 brings the piece down. Shooting at a ' +
       'unit in or behind such a piece, the same roll blows the cover away — no cover bonus, and +1 on the hit table.',
@@ -64,7 +64,7 @@
       'Its Morale never drops as the unit loses models.',
     'Dominant Species':
       'Regain Control: stay put, and every Epsilon squad of this Tier or lower within 12" loses all its ' +
-      'Suppression. Not while Suppressed (p. 129).',
+      'Suppression. Not while Suppressed.',
     'Drone Control':
       'Crewless: +1 Structure, but enemy Hackers can take it over. It is also immune to Psychic Waves.',
     'Endless Tide':
@@ -77,7 +77,7 @@
       '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Only while steady.',
     'Flying Infantry':
       'Flies over terrain (but cannot land on impassable ground), takes no cover, and always shoots and is ' +
-      'shot at with Basic Firepower. Only Flying Infantry can assault it, and it may assault aircraft (p. 116).',
+      'shot at with Basic Firepower. Only Flying Infantry can assault it, and it may assault aircraft.',
     'Flying unit':
       'An aircraft: flies over everything, never takes cover, shoots and is shot at with Basic Firepower, and is ' +
       'destroyed outright once Damage passes Structure. Cannot assault, be assaulted or hold objectives; may Strafe.',
@@ -85,7 +85,7 @@
       'Ignores the target\'s cover from terrain, strips the +2 from Battle Armour, and gets +1 to hit vehicles.',
     'Gauss Weapon (las-cutters)':
       'Mining las-cutters that count as a Gauss Weapon: they ignore cover, strip Battle Armour\'s +2 and get ' +
-      '+1 against vehicles (p. 102).',
+      '+1 against vehicles.',
     'Ground vehicle':
       'A vehicle: Structure instead of Morale, takes Damage rather than Suppression, moves Movement +4" but pays ' +
       'to turn and 2" for rough ground, never takes cover or suffers Crossfire, and is easier to hit from the side and rear.',
@@ -93,7 +93,7 @@
       'Hack: once a turn, reach into an enemy drone within 24". D6 — 1-2 nothing, 3-4 it is locked out for the ' +
       'turn and takes D3+1 hits, 5-6 it is first made to fire on its own side, then takes the same hits.',
     'Immobile':
-      'Never moves. It comes down with a squad already aboard, can only put it out, and never takes anyone back on (p. 79).',
+      'Never moves. It comes down with a squad already aboard, can only put it out, and never takes anyone back on.',
     'Incendiary Ammunition':
       'Doubles the Suppression it causes on a target standing in terrain (not open ground or shallow water), ' +
       'unless the target has Battle Armour. Counts as a Destructive Weapon against buildings.',
@@ -111,7 +111,7 @@
       'at full range.',
     'Lifter':
       'A flying crane: it picks up a single vehicle within 4" — along with anyone riding in it — and never ' +
-      'carries infantry (p. 94).',
+      'carries infantry.',
     'Limited Fire Arc':
       'Its main weapon can only fire at targets in its front quarter.',
     'Markerlights':
@@ -121,16 +121,16 @@
     'Minimum Range (X)':
       'Its main weapon cannot fire at targets closer than {X}".',
     'Molecular Reconstruction':
-      'Self-repair: stay where it is and remove every Damage point (p. 129).',
+      'Self-repair: stay where it is and remove every Damage point.',
     'No Army Rules':
-      'Outside the Rebel army rules: its Morale drops from the very first casualty, and it is not Undisciplined (p. 103).',
+      'Outside the Rebel army rules: its Morale drops from the very first casualty, and it is not Undisciplined.',
     'No Objectives':
-      'Cannot take or contest objectives, and does not count towards anyone\'s victory conditions (p. 79).',
+      'Cannot take or contest objectives, and does not count towards anyone\'s victory conditions.',
     'Overgrown Bug':
       'A bug the size of a tank: it follows the vehicle rules, but can still assault, with +4 against vehicles ' +
-      'like infantry (p. 116).',
+      'like infantry.',
     'Overgrown Flying Bug':
-      'A bug the size of an aircraft: it follows the aircraft rules, but can still assault (p. 116).',
+      'A bug the size of an aircraft: it follows the aircraft rules, but can still assault.',
     'Overmind':
       'Controls Animal Behaviour bugs of its Tier or lower within 18": they take cover, are not forced to charge ' +
       'by Aggressive, and lose all Suppression in the Rally phase. Endless Tide needs an unsuppressed Overmind.',
@@ -138,23 +138,23 @@
       'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',
     'Psychic Support':
-      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table (p. 130).',
+      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table.',
     'Psychic Wave':
       'Psychic Wave: move up to its Movement (or stay), then every enemy within 12" — no line of sight needed, ' +
-      'drones excepted — takes D6-1 Suppression. Not while Suppressed (p. 116).',
+      'drones excepted — takes D6-1 Suppression. Not while Suppressed.',
     'Riders':
       'Mounted: always moves Movement +4", but loses 2" for rough ground, cannot cross walls or enter buildings, ' +
-      'and never rides in a transport (p. 94).',
+      'and never rides in a transport.',
     'Sappers':
       'Breach: carry charges against any wall or building, +4, bringing it down on a final 15+ or an unmodified 9 ' +
       '(a failed attempt falls back 2"). In the first round of an assault on a unit in cover they get +4, and the ' +
       'same roll blows the cover in.',
     'Shield Generator (X)':
       'Friendly units wholly within 12" get +{X} Defence against shots fired from more than 12" away from the ' +
-      'generator. Only the best shield counts (p. 130).',
+      'generator. Only the best shield counts.',
     'Smoke Markers':
       'A smoke grenade and a flare on an enemy within 12" in sight: two friendly Indirect Fire units shoot it at ' +
-      'once without needing sight, and this unit may move first (p. 94).',
+      'once without needing sight, and this unit may move first.',
     'Specialisation (air)':
       'Its main weapon can only engage aircraft, never ground targets.',
     'Specialisation (ground)':
@@ -171,18 +171,18 @@
       'A normal Fire! attack that hits adds +2 Suppression on top of the hit table. Does not apply at Basic Firepower.',
     'Teleport':
       'Takes in a steady infantry unit within 4" that has not acted; on a D6 of 1-2 it comes out beside a random ' +
-      'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn (p. 130).',
+      'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',
     'Transport (X)':
       'Capacity {X}: carries that many infantry units, loaded within 4". Passengers are safe from fire and lose all Suppression; ' +
       'Suppressed or Broken units cannot board, and nobody gets back on the turn they got off.',
     'Turret':
       'A stationary drone gun: never moves or assaults, has no side or rear, and all turrets activate together. ' +
-      'Command Units cannot call on it, and Hackers cannot turn it against its own side (p. 130).',
+      'Command Units cannot call on it, and Hackers cannot turn it against its own side.',
     'Unarmed':
       'Carries no weapons and cannot shoot.',
     '…but they\'ll never take our freedom!':
       'Friendly units within 12" (not Broken, not two Tiers higher, not other units with this rule) roll three ' +
-      'extra dice when they rally. Only while this unit is steady (p. 94).'
+      'extra dice when they rally. Only while this unit is steady.'
   };
 
   /* 'Command Unit (2)' -> the 'Command Unit (X)' text with 2 in place of {X}.

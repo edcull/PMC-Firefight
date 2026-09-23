@@ -544,7 +544,7 @@
     var h = '<div class="card"><h2>Terrain set-up</h2>' +
       '<p class="sub">' + esc(ts.gen.name) + '. The table is four 2′ × 2′ areas; ' +
       (state.solo ? 'you roll a D6 for each' : 'the players take turns to roll a D6 for each') +
-      ' and place up to what it gives, anywhere in that area (pp. 46–47).' +
+      ' and place up to what it gives, anywhere in that area.' +
       (state.scen && state.scen.edges ? ' Table edges are rolled once the table is set.' : '') + '</p>';
     /* The area being laid belongs to one side. Its player gets the choices and
        the buttons; anyone else — the opponent across a network — sees the same
@@ -937,7 +937,7 @@
     return '<div class="card"><h2>Battlefield Insertion</h2>' +
       '<p class="sub"><b>' + esc(u.name) + '</b> is coming in. Tap anywhere in the shaded ground: ' +
       'at least 12" from every objective and 4" in from the table edge. On a D6 of 4+ your opponent ' +
-      'will shove the arrival point up to 2D6" (p. 56).</p>' +
+      'will shove the arrival point up to 2D6".</p>' +
       '<p class="hint">' + ins.spots.length + ' legal drop point' + (ins.spots.length === 1 ? '' : 's') + ' on the table.</p>' +
       '<div class="acts"><button class="act" data-act="holdinsert">' +
       '<span>Keep it in reserve</span><small>Try again next turn</small></button></div></div>';
@@ -2215,6 +2215,7 @@
         // only the first player's choice is remembered as "your" colour
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
+        if (muster.hot && muster.hot.kind === 'demo') demoRename();   // its name is its colour
         drawColourPick();
       });
     });
@@ -3776,7 +3777,7 @@
         '<span class="dpr-note">' + (moved ? 'relocated' : 'tap to move') + '</span></button>';
     }).join('');
     return '<div class="card"><h2>Rapid Relocation</h2>' +
-      '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows (p. 87). No unit moves twice.</p>' +
+      '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows. No unit moves twice.</p>' +
       '<p class="hint">' + rl.moved.length + ' of ' + rl.cap + ' moved' + (pick ? ' — tap the table where <b>' + esc(pick.name) + '</b> should go' : '') + '.</p>' +
       '<div class="dplist"><div class="dphead">Your units</div>' + rows + '</div>' +
       '<div class="acts"><button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button></div></div>';
@@ -3803,7 +3804,7 @@
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
-      h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard (p. 79). Put one in, or the battle cannot begin.</p><div class="acts">';
+      h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p><div class="acts">';
     }
     return h + '</div></div>';
   }
@@ -3812,8 +3813,8 @@
     var hulls = carriersFor(side).filter(function (u) { return !isAI(u.side); });
     if (!hulls.length) return '';
     var h = '<div class="loadbox"><h3>Aboard before the battle</h3>' +
-      '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired ' +
-      '(p. 36). A Rapid insertion platform has to.</p>';
+      '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired. ' +
+      'A Rapid insertion platform has to.</p>';
     hulls.forEach(function (v) {
       var cargo = v.cargo || [], room = v.transport - cargo.length;
       var must = R.has(v, 'Immobile');
@@ -4567,7 +4568,7 @@
       if (!p) return '';
       var props = R.propsFor(p);
       var drive = props.length
-        ? '<select class="drive" data-drive="' + i + '" title="Propulsion — Appendix 3, p. 166">' +
+        ? '<select class="drive" data-drive="' + i + '" title="Propulsion">' +
         props.map(function (pr) {
           var d = R.PROPULSION[pr];
           return '<option value="' + pr + '"' + ((pick.prop || R.defaultDrive(p) || 'wheeled') === pr ? ' selected' : '') +
@@ -4576,7 +4577,7 @@
         : '';
       var drone = R.canBeDrone(p)
         ? '<button type="button" class="drone' + (pick.drone ? ' on' : '') + '" data-drone="' + i +
-        '" title="Drone Control (p. 37): +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
+        '" title="Drone Control: +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
         : '';
       var mnt = R.canMount(p, pick.riders)
         ? '<select class="drive" data-mount="' + i + '" title="What they ride — the models only; the rules are the same">' +
@@ -4586,7 +4587,7 @@
         : '';
       var ride = R.canRide(p)
         ? '<button type="button" class="drone' + (pick.riders ? ' on' : '') + '" data-riders="' + i +
-        '" title="Riders upgrade (p. 93): half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
+        '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
       return '<span class="pickwrap">' +
         '<button type="button" class="pick" data-drop="' + i + '" title="Remove">' +
@@ -4680,16 +4681,19 @@
       lost.push(pick.key);
       return false;
     });
+    // a demo force keeps the battle's Tier and Priority Level, its colour, and a name from its colour and kind
+    var demo = muster.hot && muster.hot.kind === 'demo';
     if (el('sel-faction') && f.faction) el('sel-faction').value = f.faction;
-    if (el('sel-tier') && f.tier) el('sel-tier').value = String(f.tier);
-    if (el('sel-pl') && f.pl) el('sel-pl').value = String(f.pl);
+    if (el('sel-tier') && f.tier && !demo) el('sel-tier').value = String(f.tier);
+    if (el('sel-pl') && f.pl && !demo) el('sel-pl').value = String(f.pl);
     if (el('sel-tactic')) el('sel-tactic').value = f.tactic || '';
-    if (f.colour && ISO.COLOURS[f.colour]) {
+    if (f.colour && ISO.COLOURS[f.colour] && !demo) {
       muster.colour = f.colour;
       try { localStorage.setItem('pmc-colour', f.colour); } catch (e) { }
     }
     muster.keys = keys;
     muster.name = f.name || '';
+    if (demo) { muster.demoNoun = null; demoRename(); }
     muster.opFaction = null;                 // let the opposition follow again
     if (el('force-name')) el('force-name').value = f.name || '';
     drawMuster();
@@ -4798,6 +4802,11 @@
     ['sel-tier', 'sel-pl', 'sel-faction'].forEach(function (id) {
       if (!el(id)) return;
       el(id).addEventListener('change', function () {
+        // a demo sets its Tier and Priority Level on the battlefield: both forces are rolled again to match
+        if (id !== 'sel-faction' && muster.hot && muster.hot.kind === 'demo' && muster.hot.step === 3) {
+          muster.hot.sides.forEach(function (sd) { if (sd) sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction); });
+          hotPaint(); return;
+        }
         muster.keys = []; muster.name = '';
         // a force that starts rolled keeps a rolled build, whatever it is changed to
         if (muster.hot && muster.hot.step < 3 && hotRolled(muster.hot.step)) hotRandomise(muster.hot.step - 1, true);
@@ -4978,14 +4987,37 @@
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
   }
+  /* A demo force is not named by anyone: it goes by its colour and a noun
+     that suits its kind — the Crimson Vultures, the Jade Brood. */
+  var DEMO_NOUNS = {
+    pmc: ['Vultures', 'Lancers', 'Hammers', 'Jackals', 'Contractors', 'Iron Wolves', 'Hellhounds', 'Mercenaries', 'Stormguard', 'Reapers'],
+    rebel: ['Liberation Front', 'Irregulars', 'Commune', 'Partisans', 'Freedom Brigade', 'Rabble', 'Barricade', 'Uprising', 'Militia', 'Resistance'],
+    bugs: ['Brood', 'Hive', 'Mandibles', 'Swarm', 'Chitter', 'Nest', 'Devourers', 'Skitterers', 'Horde', 'Maw'],
+    xeno: ['Tripods', 'Conclave', 'Harvesters', 'Ascendancy', 'Striders', 'Reach', 'Watchers', 'Dominion', 'Choir', 'Tribe']
+  };
+  function demoName(colour, noun) {
+    return 'The ' + colour.charAt(0).toUpperCase() + colour.slice(1) + ' ' + noun;
+  }
+  function demoRename() {
+    var f = musterFaction(), list = DEMO_NOUNS[f] || DEMO_NOUNS.pmc;
+    if (list.indexOf(muster.demoNoun) < 0) muster.demoNoun = list[Math.floor(Math.random() * list.length)];
+    muster.name = demoName(muster.colour || 'ochre', muster.demoNoun);
+    if (el('hot-name')) el('hot-name').value = muster.name;
+  }
   // a demo force: a random kind of force, a rolled build, a colour nobody else wears and a name to go with it
   function hotRandomise(i, keepFaction, keepColour) {
     var f = keepFaction ? musterFaction() : HOT_FACTIONS[Math.floor(Math.random() * HOT_FACTIONS.length)];
     el('sel-faction').value = f;
     if (el('sel-tactic')) el('sel-tactic').value = '';
+    // a demo's rebels fight to a tactic, picked at random
+    if (muster.hot.kind === 'demo' && f === 'rebel' && el('sel-tactic')) {
+      var tacts = Array.prototype.map.call(el('sel-tactic').options, function (o) { return o.value; }).filter(Boolean);
+      el('sel-tactic').value = tacts[Math.floor(Math.random() * tacts.length)] || '';
+    }
     muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
     var other = muster.hot.sides[1 - i];
     if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
+    if (muster.hot.kind === 'demo') { muster.demoNoun = null; demoRename(); return; }
     muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[f];
     if (el('hot-name')) el('hot-name').value = muster.name;
   }
@@ -4994,13 +5026,13 @@
     muster.hot.sides[i] = {
       keys: muster.keys.slice(), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(),
       name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
-      colour: muster.colour || 'ochre'
+      colour: muster.colour || 'ochre', noun: muster.demoNoun || null
     };
   }
   function hotLoadSide(i) {
     var sd = muster.hot.sides[i];
     if (sd) {
-      muster.keys = sd.keys.slice(); muster.name = sd.name; muster.colour = sd.colour;
+      muster.keys = sd.keys.slice(); muster.name = sd.name; muster.colour = sd.colour; muster.demoNoun = sd.noun || null;
       el('sel-faction').value = sd.faction;
       if (el('sel-tactic')) el('sel-tactic').value = sd.tactic || '';
       if (el('hot-name')) el('hot-name').value = sd.name;
@@ -5013,12 +5045,22 @@
       if (el('hot-name')) el('hot-name').value = '';
     }
   }
+  var tierHome = null;                 // where the Tier and Priority Level sit on the sheet, when not moved up for a demo
   function hotPaint() {
     var h = muster.hot, step = h.step, s = el('setup'), kind = h.kind;
     var force = kind === 'coop' ? 'commando' : 'force';
     s.dataset.hot = String(step);
     s.dataset.kind = kind;
-    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = step > 1; });
+    // set on the first force only: changing one force from the battlefield must not leave the other illegal
+    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(kind === 'demo' && step === 3)) || !!h.edit; });
+    // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
+    if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
+    var tp = el('tierpl-field');
+    if (tp) {
+      if (!tierHome) tierHome = { parent: tp.parentNode, next: tp.nextSibling };
+      if (kind === 'demo' && step === 3) el('hot-sum').parentNode.insertBefore(tp, el('hot-sum'));
+      else if (tp.nextSibling !== tierHome.next) tierHome.parent.insertBefore(tp, tierHome.next);
+    }
     el('setup-title').textContent = step === 3 ? 'The battlefield'
       : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
       : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
@@ -5026,7 +5068,7 @@
       hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
         ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
         'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
-      coop: ['A co-operative game: two commandos, one each, against the OpFor (pp. 146–156). Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
+      coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
         'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
       ai: ['A battle against the AI. Build your force and set the Battle Tier and Priority Level; then choose what you are up against, and where.',
@@ -5037,18 +5079,21 @@
         'Both forces are ready. Choose the scenario, the world and how the table is laid, then watch.']
     }[kind];
     el('hot-intro').textContent = step === 2 ? (h.sides[0].name + intro[1]).replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL()) : intro[step - 1];
-    el('btn-start').textContent = step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
+    el('btn-start').textContent = step < 3 && h.edit ? 'Back to the battlefield'
+      : step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
       : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
     if (el('colour-hint')) el('colour-hint').textContent = kind === 'coop'
       ? 'What both commandos are painted in: the two of you are one side on the table.'
       : step === 1 ? 'What ' + hotWho(1) + '’s troops are painted in.'
         : 'What ' + hotWho(2) + '’s troops are painted in — anything but ' + hotWho(1) + '’s colour.';
     if (step === 3) {
+      // each force is a button: tap it to go back and change it
       el('hot-sum').innerHTML = h.sides.map(function (sd, i) {
         var c = ISO.COLOURS[sd.colour] || {};
-        return '<div class="hot-side"><b style="color:' + (c.light || 'inherit') + '">' + escHtml(sd.name) + '</b>' +
+        return '<button type="button" class="hot-side" data-hotside="' + i + '"><b style="color:' + (c.light || 'inherit') + '">' + escHtml(sd.name) + '</b>' +
+          '<em>change</em>' +
           '<small>' + hotWho(i + 1) + ' · ' + (FORCE_KIND[sd.faction] || sd.faction) + ' · ' + sd.keys.length + ' units' +
-          (sd.tactic ? ' · ' + escHtml(R.tacticById(sd.tactic).name) : '') + '</small></div>';
+          (sd.tactic ? ' · ' + escHtml(R.tacticById(sd.tactic).name) : '') + '</small></button>';
       }).join('');
     }
     drawColourPick();
@@ -5069,10 +5114,12 @@
       }
       var chk = musterCheck(muster.keys);
       if (!chk.ok) return hotRefuse((h.kind === 'ai' ? who : who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force')) + ' is not legal yet: ' + (chk.faults.join(' ') || 'pick some units.'));
-      if (h.step === 2 && name === h.sides[0].name) return hotRefuse('The two need different names.');
-      if (h.step === 2 && h.kind !== 'coop' && muster.colour === h.sides[0].colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
+      var other = h.step === 2 ? h.sides[0] : h.edit ? h.sides[1] : null;
+      if (other && name === other.name) return hotRefuse('The two need different names.');
+      if (other && h.kind !== 'coop' && muster.colour === other.colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
       if (el('hot-name')) el('hot-name').value = name;
       hotSaveSide();
+      if (h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); el('setup').querySelector('.sheet').scrollTop = 0; return; }
       h.step++;
       if (h.step === 2) hotLoadSide(1);
       hotPaint(); drawMuster();
@@ -5080,7 +5127,7 @@
       return;
     }
     var a = h.sides[0], b = h.sides[1], tier = musterTier(), pl = musterPL();
-    var planet = el('sel-planet').value, terrainSetup = el('sel-terrain') ? el('sel-terrain').value : 'auto';
+    var planet = el('sel-planet').value, terrainSetup = el('sel-terrain') && h.kind !== 'demo' ? el('sel-terrain').value : 'auto';
     if (h.kind === 'coop') {
       // the two commandos take the field as one side, each player's units their own
       var armyA = [], ownersA = [];
@@ -5123,6 +5170,24 @@
     hotLoadSide(h.step - 1);
     hotPaint(); drawMuster();
     el('setup').querySelector('.sheet').scrollTop = 0;
+  }
+  // a force picked from the battlefield step, to change before the battle
+  function hotEdit(i) {
+    var h = muster.hot;
+    if (!h || h.step !== 3 || !h.sides[i]) return;
+    h.edit = true; h.step = i + 1;
+    hotLoadSide(i);
+    hotPaint(); drawMuster();
+    el('setup').querySelector('.sheet').scrollTop = 0;
+  }
+  /* The top bar's Back: out of a force being changed, back to the battlefield
+     as it was; a step back through the forces; or, from the first step (or a
+     demo's battlefield, where it started), the main menu. */
+  function setupBack() {
+    var h = muster.hot;
+    if (h && h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); return; }
+    if (h && h.step > 1 && !(h.step === 3 && h.from3)) { hotBack(); return; }
+    openMenu();
   }
   window.__hot = function () { return muster.hot ? JSON.parse(JSON.stringify(muster.hot)) : null; };
 
@@ -5341,7 +5406,21 @@
     });
 
     wireMuster();
-    if (el('btn-hot-back')) el('btn-hot-back').addEventListener('click', hotBack);
+    if (el('btn-setup-back')) el('btn-setup-back').addEventListener('click', setupBack);
+    // a demo force: rolled again as the same kind, or loaded and saved from a modal
+    if (el('btn-demo-roll')) el('btn-demo-roll').addEventListener('click', function () {
+      if (!muster.hot || muster.hot.step > 2) return;
+      hotRandomise(muster.hot.step - 1, true, true);
+      drawMuster();
+    });
+    var saves = el('forcebar-wrap');
+    if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
+    if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
+    if (saves) saves.addEventListener('click', function (ev) { if (ev.target === saves) saves.classList.remove('open'); });
+    if (el('hot-sum')) el('hot-sum').addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('[data-hotside]');
+      if (b) hotEdit(+b.getAttribute('data-hotside'));
+    });
     el('btn-start').addEventListener('click', function () {
       /* The lobby borrowed this screen to have a force built. Hand the force
          back rather than starting a battle: the one that matters is being
@@ -5450,7 +5529,7 @@
       if (SFX) SFX.click();
     });
     el('btn-menu').addEventListener('click', openMenu);
-    el('btn-setup-menu').addEventListener('click', openMenu);
+
     /* Multiplayer only works when this page came from a game server. A game
        opened from a file, or the published single file, has nowhere to send an
        intent and nobody to send it to, so there the card is shown greyed out
@@ -5523,6 +5602,20 @@
      kind of battle picked: the four standard ways to play read the "Play
      against" choice, and solitaire and co-op switch the sheet into commando
      mode. */
+  /* A demo starts on the battlefield step with everything already rolled:
+     Battle Tier III at Priority Level 2, and two random kinds of force
+     with rolled builds in colours of their own. Watch the battle at once, or
+     tap either force to change it first. */
+  function demoBegin() {
+    var tierSel = el('sel-tier'), plSel = el('sel-pl');
+    if (tierSel) tierSel.value = '3';
+    if (plSel) plSel.value = '2';
+    hotBegin('demo');                                 // force 1, rolled
+    hotSaveSide();
+    muster.hot.step = 2; hotLoadSide(1); hotSaveSide();   // force 2, rolled, in another colour
+    muster.hot.step = 3; muster.hot.from3 = true;
+    hotPaint(); drawMuster();
+  }
   window.PMC_SKIRMISH = function (kind) {
     var solo = kind === 'solo' || kind === 'coop';
     if (solo !== !!muster.solo) setSoloMode(solo);
@@ -5535,7 +5628,8 @@
       solo: 'Muster your commando', coop: 'Muster your commandos'
     }[kind] || 'Muster your force';
     // hotseat, co-op and demo build both forces, one step each, before the battlefield
-    if (kind === 'hotseat' || kind === 'coop' || kind === 'demo' || kind === 'ai') hotBegin(kind); else hotEnd();
+    if (kind === 'demo') demoBegin();
+    else if (kind === 'hotseat' || kind === 'coop' || kind === 'ai') hotBegin(kind); else hotEnd();
     el('setup').hidden = false;
   };
   window.PMC_BATTLE_LIVE = function () {

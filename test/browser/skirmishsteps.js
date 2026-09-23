@@ -1,7 +1,7 @@
-/* Hotseat, co-op, demo and against-the-AI skirmishes build both forces before the battle: each
+/* Hotseat, co-op and against-the-AI skirmishes build both forces before the battle (a demo rolls both and opens on the battlefield): each
    side in turn (kind, name, colours, units), then the battlefield (scenario,
-   world, terrain). A demo starts each side as a random kind of force with a
-   rolled build, as does the opposition against the AI. And on a page with no
+   world, terrain). The opposition against the AI starts as a random kind of
+   force with a rolled build. And on a page with no
    server behind it, the Multiplayer card is there but greyed out. */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -48,7 +48,7 @@ const { ROOT, SHOTS } = require('../where.js');
   await setVal('sel-faction', 'bugs');
   await roll(); await name('The Hive');
   // back and forward again keeps both forces
-  await p.evaluate(() => document.getElementById('btn-hot-back').click()); await p.waitForTimeout(200);
+  await p.evaluate(() => document.getElementById('btn-setup-back').click()); await p.waitForTimeout(200);
   h = await hot();
   check('Back returns to player 1 with their force intact', h.step === 1 && await p.evaluate(() => document.getElementById('hot-name').value) === 'Task Force Ironhold' &&
     await p.evaluate(() => document.getElementById('sel-faction').value) === h.sides[0].faction);
@@ -90,20 +90,30 @@ const { ROOT, SHOTS } = require('../where.js');
     JSON.stringify(cs));
 
   console.log('\nDemo');
+  // a demo opens on the battlefield with both forces already rolled
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('demo'); });
   await p.waitForTimeout(200);
   h = await hot();
-  const d1 = await p.evaluate(() => ({ faction: document.getElementById('sel-faction').value, name: document.getElementById('hot-name').value,
-    legal: /legal/i.test(document.getElementById('faults').textContent), units: document.querySelectorAll('#chosen .pick').length }));
-  check('force 1 starts rolled: a kind of force, a build and a name', d1.units > 0 && d1.legal && !!d1.name && /^Force 1/.test(await title()), JSON.stringify(d1));
-  await setVal('sel-faction', d1.faction === 'xeno' ? 'pmc' : 'xeno');
-  const d1b = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, legal: /legal/i.test(document.getElementById('faults').textContent) }));
-  check('...and changing its kind rolls a fresh build', d1b.units > 0 && d1b.legal);
-  await next();
-  const d2 = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, name: document.getElementById('hot-name').value }));
+  check('a demo opens on the battlefield, both forces rolled', h.step === 3 && h.sides.every(sd => sd && sd.keys.length > 0 && sd.name) &&
+    h.sides[0].colour !== h.sides[1].colour && /battlefield/i.test(await title()), JSON.stringify(h.sides.map(sd => sd && sd.name)));
+  const cards = await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length);
+  check('...each force a button', cards === 2);
+  // the Battle Tier and Priority Level are set once, on the battlefield, for both forces
+  const tierShown = await p.evaluate(() => { const f = document.getElementById('tierpl-field'); return f.offsetParent !== null && !document.getElementById('sel-tier').disabled; });
+  await setVal('sel-tier', '1'); await setVal('sel-pl', '1');
   h = await hot();
-  check('force 2 starts rolled too, in another colour', d2.units > 0 && !!d2.name && d2.name !== h.sides[0].name && h.step === 2, JSON.stringify(d2));
+  const t1 = await p.evaluate((sides) => sides.map(sd => sd.keys.reduce((n, k) => n + window.PMC.profile(window.PMC.splitPick(k).key).tier, 0)), h.sides);
+  check('...where the Tier is set, and both forces are rolled again to match', tierShown && t1.every(n => n > 0 && n <= 6), t1.join(' / ') + ' points at Tier I');
+  // tap force 1 to change it: its kind, and back to the battlefield
+  await p.evaluate(() => document.querySelector('#hot-sum [data-hotside="0"]').click()); await p.waitForTimeout(200);
+  h = await hot();
+  const d1 = await p.evaluate(() => ({ faction: document.getElementById('sel-faction').value, btn: document.getElementById('btn-start').textContent }));
+  check('...tapping one opens it to change', h.step === 1 && h.edit && /battlefield/i.test(d1.btn), JSON.stringify(d1));
+  await setVal('sel-faction', d1.faction === 'xeno' ? 'pmc' : 'xeno');
   await next();
+  h = await hot();
+  check('...and its button goes straight back to the battlefield, changed', h.step === 3 && !h.edit && h.sides[0].faction === (d1.faction === 'xeno' ? 'pmc' : 'xeno'),
+    JSON.stringify({ step: h.step, f: h.sides[0].faction }));
   await next();
   await p.waitForTimeout(600);
   const ds = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, ca: s.cfg.colourA, cb: s.cfg.colourB }; });
