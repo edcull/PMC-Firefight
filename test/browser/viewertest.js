@@ -43,14 +43,39 @@ async function pickAndFire(p, key, ms) {
 
   /* ------------------------------------------------------------ it is loaded */
   head('The bench opens with every unit in it');
-  const loaded = await p.evaluate(() => ({
-    units: document.querySelectorAll('#vlist .vu').length,
-    groups: document.querySelectorAll('#vlist h4').length,
-    w: document.getElementById('vboard').width,
-    h: document.getElementById('vboard').height
-  }));
+  // the unit list is an atlas, one army to a tab: add the tabs up
+  const loaded = { units: 0, groups: 0, drawn: 0 };
+  for (const f of ['pmc', 'rebel', 'bugs', 'xeno']) {
+    await p.click(`#vfacs [data-fac="${f}"]`);
+    await p.waitForTimeout(250);
+    const c = await p.evaluate(() => ({
+      units: document.querySelectorAll('#vlist .unit').length,
+      groups: document.querySelectorAll('#vlist h3.group').length,
+      drawn: document.querySelectorAll('#vlist canvas.tile[data-drawn]').length
+    }));
+    loaded.units += c.units; loaded.groups += c.groups; loaded.drawn += c.drawn;
+  }
+  await p.click('#vfacs [data-fac="pmc"]');
+  await p.waitForTimeout(250);
+  Object.assign(loaded, await p.evaluate(() => ({ w: document.getElementById('vboard').width, h: document.getElementById('vboard').height })));
   ok('every profile in all four lists is listed', loaded.units === 193, loaded.units + ' units');
   ok('...grouped the way the book groups them', loaded.groups > 20, loaded.groups + ' groups');
+  ok('...each a card drawn by the game\'s renderer', loaded.drawn > 0, loaded.drawn + ' pictures drawn in view');
+  const listPick = await p.evaluate(() => {
+    document.querySelector('#vlist .unit[data-k="veterans"]').click();
+    return { name: document.querySelector('.vctlpanel .vrow b').textContent, on: (document.querySelector('#vlist .unit.on') || {}).id };
+  });
+  ok('picking a card puts that unit on the stage', listPick.name === 'Veterans' && listPick.on === 'vp-veterans', JSON.stringify(listPick));
+  const found = await p.evaluate(async () => {
+    const q = document.getElementById('vsearch');
+    q.value = 'rifle'; q.dispatchEvent(new Event('input'));
+    const n = [...document.querySelectorAll('#vlist .unit')].filter(u => !u.hidden).length;
+    const armies = document.querySelectorAll('#vlist h2.faction').length;
+    q.value = ''; q.dispatchEvent(new Event('input'));
+    return { n, armies };
+  });
+  ok('a search looks through every army, weapons included', found.n > 20 && found.armies > 1, found.n + ' matches across ' + found.armies + ' armies');
+  await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,
     loaded.w + '×' + loaded.h);
 
@@ -131,7 +156,10 @@ async function pickAndFire(p, key, ms) {
 
   /* ------------------------------------------------------ battlefield insertion */
   head('The Xenotripods fire their own way');
-  const groupsX = await p.evaluate(() => [...document.querySelectorAll('#vlist h4')].map(h => h.textContent).filter(t => /Xenotripods/.test(t)).length);
+  await p.click('#vfacs [data-fac="xeno"]');
+  await p.waitForTimeout(250);
+  const groupsX = await p.evaluate(() => document.querySelectorAll('#vlist h3.group').length);
+  await p.click('#vfacs [data-fac="pmc"]');
   ok('their units sit under their own name in the list', groupsX >= 6, groupsX + ' Xenotripod groups');
   const beta = await pickAndFire(p, 'xbeta3', 1200);
   ok('a Beta squad fires pulses of light', beta.spec.p === 'energy' && !!beta.seen.pulse, beta.kinds.join(' '));
@@ -262,8 +290,8 @@ async function pickAndFire(p, key, ms) {
   ok('losing models drops the unit\'s Morale', shrunk.models === 3 && shrunk.morale < 5,
     shrunk.models + ' models, Morale ' + shrunk.morale);
 
-  /* ---------------------------------------------------------------- running gear and the atlas */
-  head('Vehicles open on their usual running gear, and the atlas lays them all out');
+  /* ---------------------------------------------------------------- running gear */
+  head('Vehicles open on their usual running gear');
   const drives = await p.evaluate(() => ['hpv', 'lcv', 'acv'].map(k => {
     window.__viewer.pick(k);
     return k + ':' + document.querySelector('[data-set="prop"].on').textContent;
@@ -271,30 +299,6 @@ async function pickAndFire(p, key, ms) {
   ok('a patrol vehicle is wheeled, a combat vehicle tracked, an advanced one anti-grav',
     drives.join(' ') === 'hpv:wheeled lcv:tracked acv:grav', drives.join(' '));
   ok('the stage has no tap highlight', await p.evaluate(() => getComputedStyle(document.getElementById('vboard')).webkitTapHighlightColor === 'rgba(0, 0, 0, 0)'));
-  await p.click('#vmode');
-  await p.waitForTimeout(600);
-  const atl = await p.evaluate(() => ({
-    on: document.body.classList.contains('atlas-mode'),
-    stage: getComputedStyle(document.querySelector('.vstage')).display,
-    cards: document.querySelectorAll('#vatlasmain .unit').length,
-    pmc: [...document.querySelectorAll('#vatlasmain .unit')].every(u => window.PMC.profile(u.dataset.k).faction === undefined || window.PMC.profile(u.dataset.k).faction === 'pmc'),
-    drawn: document.querySelectorAll('#vatlasmain canvas.tile[data-drawn]').length,
-    swatches: document.querySelectorAll('#vatlascol [data-c]').length,
-    hash: location.hash
-  }));
-  ok('Atlas mode puts the open army\'s units in place of the stage', atl.on && atl.stage === 'none' && atl.cards > 20 && atl.pmc,
-    atl.cards + ' units, stage ' + atl.stage);
-  ok('...drawn as they come into view, in every colour on offer', atl.drawn > 0 && atl.swatches === await p.evaluate(() => window.PMCIso.COLOUR_KEYS.length),
-    atl.drawn + ' tiles drawn, ' + atl.swatches + ' swatches');
-  await p.click('#vfacs [data-fac="bugs"]');
-  await p.waitForTimeout(300);
-  const bugsAtl = await p.evaluate(() => [...document.querySelectorAll('#vatlasmain .unit')].every(u => window.PMC.profile(u.dataset.k).faction === 'bugs'));
-  ok('...and the army tabs switch it to another army', bugsAtl);
-  await p.click('#vatlasmain .unit[data-k="bsmall"]');
-  await p.waitForTimeout(300);
-  const back = await p.evaluate(() => ({ on: document.body.classList.contains('atlas-mode'), key: window.__viewer.spec && document.querySelector('.vctlpanel .vrow b').textContent }));
-  ok('clicking a unit in the atlas opens it on the stage', !back.on && back.key === 'Small bugs', JSON.stringify(back));
-  await p.click('#vfacs [data-fac="pmc"]');
   await p.evaluate(() => window.__viewer.pick('regular'));
 
   /* ---------------------------------------------------------------- movement */

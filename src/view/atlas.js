@@ -4,8 +4,8 @@
    squads in each state, machines at every facing on every propulsion, wrecks.
    Pick a company colour and turn on the states, facings, movement types and
    wrecks to compare. The same code draws the stand-alone atlas page
-   (scripts/gallery.js builds build/units.html) and the unit viewer's Atlas
-   mode, so it is handed the elements to fill rather than finding them:
+   (scripts/gallery.js builds build/units.html) and the unit viewer's unit
+   list, so it is handed the elements to fill rather than finding them:
 
      PMCAtlas.mount({
        main,         // where the sheets go
@@ -16,7 +16,9 @@
        faction,      // () -> 'pmc' | 'rebel' | 'bugs' | 'xeno' to show one army, or null for all
        colour,       // the company colour to start in (default ochre)
        onColour,     // (key) -> a colour was picked
-       onPick        // (key) -> a unit's sheet was clicked
+       onPick,       // (key) -> a unit's sheet was clicked
+       prefix,       // the id each unit's sheet is given, before its key (default 'u-')
+       findMore      // (profile) -> more words a search should match it by (optional)
      })
    returns { render, filter, setColour, scrollTo }. */
 (function (root) {
@@ -24,6 +26,7 @@
 
   function mount(o) {
     var R = root.PMC, I = root.PMCIso;
+    var PFX = o.prefix || 'u-';
     var FACES = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
     // a direction on the screen, turned into a heading on the table
     function faceAngle(i) { var th = i * Math.PI / 4, u = Math.cos(th), v = 2 * Math.sin(th); return Math.atan2(v - u, u + v); }
@@ -55,7 +58,7 @@
       return shown().map(function (f) {
         return '<h2>' + f.name + '</h2>' + f.groups.map(function (g) {
           return '<h3>' + esc(g.name) + '</h3><ul>' + g.units.map(function (p) {
-            return '<li data-k="' + p.key + '"><a href="#u-' + p.key + '"><b>' + esc(p.code) + '</b><span>' + esc(p.name) + '</span></a></li>';
+            return '<li data-k="' + p.key + '"><a href="#' + PFX + p.key + '"><b>' + esc(p.code) + '</b><span>' + esc(p.name) + '</span></a></li>';
           }).join('') + '</ul>';
         }).join('');
       }).join('');
@@ -83,7 +86,8 @@
       return kind(p) + ' · Tier ' + (R.ROMAN ? R.ROMAN[p.tier] : p.tier) + ' · Move ' + p.move + '" · FP ' + (p.fp == null ? '—' : p.fp) +
         ' · Range ' + p.range + '" · Def ' + p.def + (p.str ? ' · Structure ' + p.str : ' · Models ' + p.size);
     }
-    function findKey(p) { return esc((p.name + ' ' + p.code + ' ' + p.key).toLowerCase()); }
+    // what a search matches: the name, code and key, and whatever else the page adds (the viewer adds the weapons)
+    function findKey(p) { return esc((p.name + ' ' + p.code + ' ' + p.key + (o.findMore ? ' ' + o.findMore(p) : '')).toLowerCase()); }
     function cell(p, t, cls, cap) {
       return '<figure class="cell">' + tile(p, t, cls) + '<figcaption>' + cap + '</figcaption></figure>';
     }
@@ -109,7 +113,7 @@
           if (p.ridersUpgrade && show.states) t += R.MOUNT_ORDER.map(function (m) { return cell(p, { status: 'ready', riders: true, mount: m, label: 'Riders, ' + R.MOUNTS[m].name }, 'inf', R.MOUNTS[m].name); }).join('');
         }
       }
-      return '<div class="card unit" id="u-' + p.key + '" data-k="' + p.key + '" data-find="' + findKey(p) + '" title="' + esc(stats(p)) + '">' +
+      return '<div class="card unit" id="' + PFX + p.key + '" data-k="' + p.key + '" data-find="' + findKey(p) + '" title="' + esc(stats(p)) + '">' +
         '<h4><span class="code">' + esc(p.code) + '</span><span class="tier">Tier ' + R.ROMAN[p.tier] + '</span></h4>' +
         '<div class="nm">' + esc(p.name) + '</div>' +
         '<div class="tiles">' + t + '</div></div>';
@@ -148,7 +152,7 @@
       return '<div class="sheet"><div class="grid">' + head + rows.join('') + '</div></div>';
     }
     function article(p) {
-      return '<article class="unit" id="u-' + p.key + '" data-k="' + p.key + '" data-find="' + findKey(p) + '">' +
+      return '<article class="unit" id="' + PFX + p.key + '" data-k="' + p.key + '" data-find="' + findKey(p) + '">' +
         '<header><span class="code">' + esc(p.code) + '</span><span class="uname">' + esc(p.name) + '</span>' +
         '<span class="meta">' + stats(p) + ' · model <code>' + esc(p.art) + '</code> · key <code>' + esc(p.key) + '</code></span></header>' +
         sheet(p) + '</article>';
@@ -278,7 +282,7 @@
       });
       (o.indexes || []).forEach(function (n) {
         Array.prototype.forEach.call(n.querySelectorAll('li'), function (li) {
-          var a = main.querySelector('#u-' + li.dataset.k);
+          var a = main.querySelector('#' + PFX + li.dataset.k);
           li.hidden = a ? a.hidden : false;
         });
       });
@@ -288,7 +292,7 @@
     if (o.search) o.search.addEventListener('input', filter);
 
     function scrollTo(key) {
-      var a = main.querySelector('#u-' + key);
+      var a = main.querySelector('#' + PFX + key);
       if (a) a.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 

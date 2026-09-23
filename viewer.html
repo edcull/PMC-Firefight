@@ -69,7 +69,7 @@
 
   main {
     flex: 1; min-height: 0;
-    display: grid; grid-template-columns: 280px minmax(0, 1fr) 300px; gap: 12px; padding: 12px;
+    display: grid; grid-template-columns: 290px minmax(0, 1fr) 300px; gap: 12px; padding: 12px;
   }
 
   .vpanel {
@@ -267,14 +267,11 @@
     main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
     .vstage { order: 1; flex: none; height: 40vh; min-height: 230px; max-height: 360px; }
     .vctlpanel { order: 2; flex: 1; min-height: 0; }
-    .vatlas { order: 1; flex: 1; }
-    .vmode { margin-left: auto; }
-    .vatlas .toggles button { flex: 1 1 auto; }
     /* on a phone the tiles come down a size, two infantry cards to a row */
-    .vatlas canvas.tile { width: 116px; height: 99px; }
-    .vatlas canvas.tile.tall { height: 132px; }
-    .vatlas canvas.tile.inf { width: 128px; height: 101px; }
-    .vatlas .row { grid-template-columns: 60px repeat(8, 116px); }
+    .atl canvas.tile { width: 116px; height: 99px; }
+    .atl canvas.tile.tall { height: 132px; }
+    .atl canvas.tile.inf { width: 128px; height: 101px; }
+    .atl .row { grid-template-columns: 60px repeat(8, 116px); }
     /* the unit list: a sidebar that slides in from the left over the stage, and away again once a unit is picked */
     .vside {
       position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
@@ -316,82 +313,62 @@
     .vu-w { font-size: 10.5px; }
     input[type=range] { height: 28px; }
   }
-  /* ---------- Atlas mode ---------- */
-  .vmode {
-    align-self: center; flex: none; cursor: pointer; white-space: nowrap;
-    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
-  }
-  .vmode:hover { color: var(--ink); border-color: var(--alpha); }
-  .vmode[aria-pressed="true"] { color: var(--alpha); border-color: var(--alpha); }
-  body.atlas-mode .vmode { margin-left: auto; }
-  body.atlas-mode .vstage, body.atlas-mode .vctlpanel { display: none; }
-  body.atlas-mode header .keys { display: none; }
-  .vatlas {
+  .atl {
     grid-column: 2 / 4; display: flex; flex-direction: column; min-height: 0; min-width: 0;
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
-    --field: #5e5039; --field-edge: #2e271c; --muted: var(--ink-faint); --chip: var(--panel-2); --accent: var(--alpha); --accent-ink: #1a1408;
   }
-  .vatlas[hidden] { display: none; }
+  /* the cards and sheets, in the Atlas and in the unit list alike */
+  .atl { --field: #5e5039; --field-edge: #2e271c; }
+  /* the unit list: the same cards, a size down, two to a row, the one on the stage picked out */
+  #vlist h2.faction { font-family: var(--display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); margin: 12px 0 0 3px; }
+  #vlist h3.group { font-size: 9px; margin: 12px 0 6px; padding: 0 0 4px 3px; }
+  #vlist section[data-group]:first-child h3.group { margin-top: 2px; }
+  #vlist .cards { gap: 6px; }
+  #vlist .card.unit { padding: 5px 5px 6px; }
+  #vlist .card.unit .nm { font-size: 11.5px; margin-bottom: 4px; }
+  #vlist .card.unit h4 .code { font-size: 10px; padding: 0 5px; }
+  #vlist .card.unit.on { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, var(--panel-2)); }
+  #vlist canvas.tile { width: 112px; height: 95px; }
+  #vlist canvas.tile.tall { height: 122px; }
+  #vlist canvas.tile.inf { width: 120px; height: 96px; }
+  #vlist figure.cell figcaption { display: none; }
+  #vlist .card .tiles .cell ~ .cell { display: none; }     /* one picture a card: a mounted unit on its first mount */
   .vatbar { flex: none; display: flex; flex-direction: column; gap: 7px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
-  .vatlasmain { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 20px; scrollbar-width: thin; }
-  .vatlas .swatches, .vatlas .toggles { display: flex; flex-wrap: wrap; gap: 5px; }
-  .vatlas .swatches button {
-    display: inline-flex; align-items: center; gap: 5px; cursor: pointer; padding: 4px 8px 4px 5px;
-    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
-    border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--ink-dim);
-  }
-  .vatlas .swatches button i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
-  .vatlas .swatches button[aria-pressed="true"] { border-color: var(--alpha); color: var(--ink); box-shadow: 0 0 0 1px var(--alpha); }
-  .vatlas .toggles button {
-    cursor: pointer; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--ink-dim);
-    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
-  }
-  .vatlas .toggles button::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border: 1.5px solid currentColor; border-radius: 2px; vertical-align: -1px; }
-  .vatlas .toggles button[aria-pressed="true"] { color: var(--ink); border-color: var(--alpha); }
-  .vatlas .toggles button[aria-pressed="true"]::before { background: var(--alpha); border-color: var(--alpha); }
-  .vatlas h3.group {
+  .atl h3.group {
     font-family: var(--display); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);
     margin: 16px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line);
   }
-  .vatlas .cards { display: flex; flex-wrap: wrap; gap: 8px; }
-  .vatlas .unit { cursor: pointer; scroll-margin-top: 8px; }
-  .vatlas .unit:hover { border-color: var(--alpha); }
-  .vatlas .card.unit {
+  .atl .cards { display: flex; flex-wrap: wrap; gap: 8px; }
+  .atl .unit { cursor: pointer; scroll-margin-top: 8px; }
+  .atl .unit:hover { border-color: var(--alpha); }
+  .atl .card.unit {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 7px 8px;
     width: min-content; display: flex; flex-direction: column;
   }
-  .vatlas .card.unit h4 { margin: 0 0 3px; display: flex; gap: 6px; align-items: baseline; contain: inline-size; }
-  .vatlas .card.unit h4 .tier { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-left: auto; flex-shrink: 0; }
-  .vatlas .card.unit .nm { font-family: var(--display); font-size: 13px; font-weight: 600; line-height: 1.15; min-height: 2.35em; margin-bottom: 5px; contain: inline-size; text-wrap: balance; }
-  .vatlas .card .tiles { display: flex; gap: 5px; margin-top: auto; align-items: flex-end; }
-  .vatlas .code { font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--alpha); color: #1a1408; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
-  .vatlas article.unit { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px 12px; margin-bottom: 10px; }
-  .vatlas article.unit header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; margin-bottom: 8px; padding: 0; border: 0; }
-  .vatlas .uname { font-family: var(--display); font-size: 16px; font-weight: 600; }
-  .vatlas .meta { color: var(--ink-faint); font-size: 11.5px; }
-  .vatlas .meta code { font-family: var(--mono); font-size: 11px; }
-  .vatlas .sheet { overflow-x: auto; }
-  .vatlas .grid { display: grid; gap: 5px; }
-  .vatlas .row { display: grid; grid-template-columns: 70px repeat(8, 132px); gap: 5px; align-items: center; min-width: max-content; }
-  .vatlas .row.head div, .vatlas .row .lab, .vatlas figure.cell figcaption {
+  .atl .card.unit h4 { margin: 0 0 3px; display: flex; gap: 6px; align-items: baseline; contain: inline-size; }
+  .atl .card.unit h4 .tier { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-left: auto; flex-shrink: 0; }
+  .atl .card.unit .nm { font-family: var(--display); font-size: 13px; font-weight: 600; line-height: 1.15; min-height: 2.35em; margin-bottom: 5px; contain: inline-size; text-wrap: balance; }
+  .atl .card .tiles { display: flex; gap: 5px; margin-top: auto; align-items: flex-end; }
+  .atl .code { font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--alpha); color: #1a1408; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
+  .atl article.unit { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px 12px; margin-bottom: 10px; }
+  .atl article.unit header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; margin-bottom: 8px; padding: 0; border: 0; }
+  .atl .uname { font-family: var(--display); font-size: 16px; font-weight: 600; }
+  .atl .meta { color: var(--ink-faint); font-size: 11.5px; }
+  .atl .meta code { font-family: var(--mono); font-size: 11px; }
+  .atl .sheet { overflow-x: auto; }
+  .atl .grid { display: grid; gap: 5px; }
+  .atl .row { display: grid; grid-template-columns: 70px repeat(8, 132px); gap: 5px; align-items: center; min-width: max-content; }
+  .atl .row.head div, .atl .row .lab, .atl figure.cell figcaption {
     font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint);
   }
-  .vatlas .row.head div { text-align: center; }
-  .vatlas .strip { display: flex; flex-wrap: wrap; gap: 5px; }
-  .vatlas figure.cell { margin: 0; }
-  .vatlas figure.cell figcaption { text-align: center; padding-top: 3px; }
-  .vatlas canvas.tile { display: block; width: 132px; height: 112px; background: radial-gradient(ellipse at 50% 60%, #6b5c43 0%, var(--field) 55%, var(--field-edge) 100%); border-radius: 4px; }
-  .vatlas canvas.tile.tall { height: 150px; }
-  .vatlas canvas.tile.inf { width: 150px; height: 118px; }
-  .vatlas .empty { color: var(--ink-faint); padding: 24px 0; }
-  /* on a phone the colours are dots in one row, named by their tooltips */
-  @media (max-width: 1000px) {
-    .vatlas .swatches { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; }
-    .vatlas .swatches button { font-size: 0; gap: 0; padding: 5px; flex: none; }
-    .vatlas .swatches button i { width: 20px; height: 20px; }
-    .vatlas .toggles button { padding: 7px 6px; font-size: 10.5px; }
-  }
+  .atl .row.head div { text-align: center; }
+  .atl .strip { display: flex; flex-wrap: wrap; gap: 5px; }
+  .atl figure.cell { margin: 0; }
+  .atl figure.cell figcaption { text-align: center; padding-top: 3px; }
+  .atl canvas.tile { display: block; width: 132px; height: 112px; background: radial-gradient(ellipse at 50% 60%, #6b5c43 0%, var(--field) 55%, var(--field-edge) 100%); border-radius: 4px; }
+  .atl canvas.tile.tall { height: 150px; }
+  .atl canvas.tile.inf { width: 150px; height: 118px; }
+  .atl .empty { color: var(--ink-faint); padding: 24px 0; }
 </style>
 
 <header>
@@ -400,7 +377,6 @@
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
-  <button type="button" class="vmode" id="vmode" aria-pressed="false" title="Every unit side by side, in the Unit Atlas">Atlas</button>
 </header>
 
 <div class="vscrim" id="vscrim"></div>
@@ -410,7 +386,7 @@
     <div class="vfacs" id="vfacs" role="tablist" aria-label="Army"></div>
     <div class="vsearchbar"><input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off"></div>
     <div class="vscroll vlistscroll">
-      <div id="vlist"></div>
+      <div id="vlist" class="atl"></div>
     </div>
   </div>
 
@@ -421,20 +397,6 @@
     </div>
     <canvas id="vboard"></canvas>
   </div>
-
-  <!-- the Unit Atlas: the open army's units side by side, in place of the stage and the controls -->
-  <section class="vatlas" id="vatlas" hidden aria-label="Unit Atlas">
-    <div class="vatbar">
-      <div class="swatches" id="vatlascol" role="group" aria-label="Company colours"></div>
-      <div class="toggles" id="vatlastog" role="group" aria-label="What to show">
-        <button type="button" data-t="states" aria-pressed="false">Suppressed &amp; broken</button>
-        <button type="button" data-t="facings" aria-pressed="false">All facings</button>
-        <button type="button" data-t="props" aria-pressed="false">Movement types</button>
-        <button type="button" data-t="wrecks" aria-pressed="false">Destroyed</button>
-      </div>
-    </div>
-    <div class="vatlasmain" id="vatlasmain"></div>
-  </section>
 
   <div class="vpanel vctlpanel">
     <div id="vctl"></div>

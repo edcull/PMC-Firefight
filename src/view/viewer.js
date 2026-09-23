@@ -776,42 +776,6 @@
 
 
   /* ---------- the panels ---------- */
-  /* ---------- Atlas mode ----------
-     Every unit of the open army side by side, drawn by the game's renderer,
-     in place of the stage and the controls (src/view/atlas.js, shared with the
-     stand-alone atlas page). The list's tabs and search drive it; picking a
-     unit in the list goes to its sheet, and clicking a sheet opens the unit
-     on the stage. */
-  var atlas = null;
-  function atlasOn() { return document.body.classList.contains('atlas-mode'); }
-  function setMode(on) {
-    document.body.classList.toggle('atlas-mode', !!on);
-    el('vatlas').hidden = !on;
-    el('vmode').setAttribute('aria-pressed', on ? 'true' : 'false');
-    el('vmode').textContent = on ? 'Viewer' : 'Atlas';
-    el('vmode').title = on ? 'Back to the unit on the stage' : 'Every unit side by side, in the Unit Atlas';
-    try { history.replaceState(null, '', on ? '#atlas' : location.pathname + location.search); } catch (e) { }
-    if (on) {
-      if (view.walking) toggleWalk();
-      if (!atlas) {
-        atlas = root.PMCAtlas.mount({
-          main: el('vatlasmain'), scroller: el('vatlasmain'),
-          colours: el('vatlascol'), toggles: el('vatlastog'), search: el('vsearch'),
-          faction: function () { return view.pickFac || 'pmc'; },
-          colour: view.colour.A,
-          onColour: function (k) { paint('A', k); },
-          onPick: function (k) { choose(k); setMode(false); drawPicker(); }
-        });
-      } else {
-        atlas.setColour(view.colour.A);
-        atlas.render();
-      }
-      atlas.scrollTo(view.key);
-    } else {
-      FX.clear();
-      fit(); drawControls(); frame();
-    }
-  }
   // a side's colour; the other side keeps one of its own, so the two never look alike
   function paint(side, k) {
     view.colour[side] = k;
@@ -821,6 +785,8 @@
       view.colour[foe] = I.COLOUR_KEYS.filter(function (c) { return c !== k; })[0];
       I.setSideColour(foe, view.colour[foe]);
     }
+    // the unit list's cards are drawn in the first side's colour
+    if (side === 'A' && picker) picker.setColour(k);
   }
 
   function phone() { return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches); }
@@ -829,7 +795,7 @@
     document.body.classList.toggle('vside-open', !!open);
     el('vunits').setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) {
-      var on = el('vlist').querySelector('.vu.on');
+      var on = el('vlist').querySelector('.unit.on');
       if (on) on.scrollIntoView({ block: 'center' });
     }
   }
@@ -838,6 +804,12 @@
   /* The list has a tab for each army; a search looks through all four. The
      open tab follows the unit on the stage until another is chosen. */
   var FAC_TABS = [['pmc', 'PMC'], ['rebel', 'Rebels'], ['bugs', 'Bugs'], ['xeno', 'Xeno']];
+  /* The unit list is itself an atlas: a card for each unit, drawn by the
+     game's renderer, grouped the way the book groups them, one army to a tab.
+     A search looks through all four armies at once. Picking a card puts the
+     unit on the stage. */
+  var picker = null, pickerShown;
+  function pickerFaction() { return el('vsearch').value.trim() ? null : (view.pickFac || 'pmc'); }
   function drawPicker() {
     if (!view.pickFac) view.pickFac = profile().faction || 'pmc';
     el('vfacs').innerHTML = FAC_TABS.map(function (t) {
@@ -845,41 +817,23 @@
       return '<button type="button" role="tab" data-fac="' + t[0] + '" aria-selected="' + on + '"' +
         (on ? ' class="on"' : '') + '>' + t[1] + '</button>';
     }).join('');
-    var groups = {};
-    R.CATALOGUE.forEach(function (p) {
-      var f = (R.FACTIONS[p.faction] || R.FACTIONS.pmc).name;
-      (groups[f + ' · ' + p.group] = groups[f + ' · ' + p.group] || []).push(p);
-    });
-    var h = '';
-    Object.keys(groups).forEach(function (k) {
-      var fac = groups[k][0].faction || 'pmc';
-      h += '<h4 data-fac="' + fac + '">' + esc(k) + '</h4>';
-      groups[k].forEach(function (p) {
-        var w = R.weaponSpec(p);
-        h += '<button class="vu' + (p.key === view.key ? ' on' : '') +
-          '" data-unit="' + p.key + '" data-fac="' + fac + '">' +
-          '<span class="vu-code">' + esc(p.code) + '</span>' +
-          '<span class="vu-name">' + esc(p.name) + '</span>' +
-          '<span class="vu-w">' + esc(styleName(w.p) + (w.s ? '+' + styleName(w.s) : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
-          '</button>';
+    el('vfacs').classList.toggle('searching', !!el('vsearch').value.trim());
+    var want = pickerFaction();
+    if (!picker) {
+      picker = root.PMCAtlas.mount({
+        main: el('vlist'), scroller: el('vside').querySelector('.vlistscroll'), search: el('vsearch'),
+        faction: pickerFaction, colour: view.colour.A, prefix: 'vp-',
+        findMore: function (p) { var w = R.weaponSpec(p); return styleName(w.p) + (w.s ? ' ' + styleName(w.s) : ''); }
       });
-    });
-    el('vlist').innerHTML = h;
-    filterPicker();
+    } else if (want !== pickerShown) { picker.render(); el('vside').querySelector('.vlistscroll').scrollTop = 0; }
+    pickerShown = want;
+    markPicked();
   }
-  // show the open tab's units, or every army's that match the search
-  function filterPicker() {
-    var q = el('vsearch').value.trim().toLowerCase();
-    el('vlist').querySelectorAll('.vu').forEach(function (b) {
-      var hit = q ? b.textContent.toLowerCase().indexOf(q) >= 0 : b.getAttribute('data-fac') === view.pickFac;
-      b.style.display = hit ? '' : 'none';
-    });
-    el('vlist').querySelectorAll('h4').forEach(function (hd) {
-      var any = false, n = hd.nextElementSibling;
-      while (n && n.tagName !== 'H4') { if (n.style.display !== 'none') any = true; n = n.nextElementSibling; }
-      hd.style.display = any ? '' : 'none';
-    });
-    el('vfacs').classList.toggle('searching', !!q);
+  // the card of the unit on the stage, picked out
+  function markPicked() {
+    el('vlist').querySelectorAll('.unit.on').forEach(function (c) { c.classList.remove('on'); });
+    var c = el('vlist').querySelector('#vp-' + view.key);
+    if (c) c.classList.add('on');
   }
 
   function drawControls() {
@@ -1037,7 +991,6 @@
       stepZoom(how === 'wide' ? -1 : 1);
     });
     zoomLabel();
-    el('vmode').addEventListener('click', function () { setMode(!atlasOn()); });
     el('vunits').addEventListener('click', function () { showSide(!document.body.classList.contains('vside-open')); });
     el('vclose').addEventListener('click', function () { showSide(false); });
     el('vscrim').addEventListener('click', function () { showSide(false); });
@@ -1045,14 +998,9 @@
       if (e.key === 'Escape' && document.body.classList.contains('vside-open')) showSide(false);
     });
     el('vlist').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-unit]');
+      var b = e.target.closest('.unit[data-k]');
       if (!b) return;
-      choose(b.getAttribute('data-unit'));
-      if (atlasOn()) {                              // in the atlas, the list goes to the unit's sheet
-        if (phone()) showSide(false);
-        atlas.scrollTo(view.key);
-        return;
-      }
+      choose(b.getAttribute('data-k'));
       FX.clear();
       drawPicker(); drawControls(); frame();
       // on a phone the list is a sidebar over the stage: put it away and go back up to see the unit
@@ -1104,7 +1052,8 @@
       }
     });
 
-    el('vsearch').addEventListener('input', filterPicker);
+    // a search spans every army: the list is drawn again as it starts and as it is cleared
+    el('vsearch').addEventListener('input', drawPicker);
     el('vfacs').addEventListener('click', function (e) {
       var t = e.target.closest('[data-fac]');
       if (!t) return;
@@ -1112,12 +1061,11 @@
       el('vsearch').value = '';
       drawPicker();
       el('vside').querySelector('.vlistscroll').scrollTop = 0;
-      if (atlasOn()) { atlas.render(); el('vatlasmain').scrollTop = 0; }
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });
     document.addEventListener('keydown', function (e) {
-      if (e.target.tagName === 'INPUT' || atlasOn()) return;
+      if (e.target.tagName === 'INPUT') return;
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
@@ -1125,7 +1073,6 @@
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
-    if (location.hash === '#atlas') setMode(true);   // viewer.html#atlas opens on the atlas
   }
 
   function fit() {
