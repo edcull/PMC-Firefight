@@ -103,9 +103,10 @@
     var el = target(e);
     if (el === open && !(e.relatedTarget && el.contains(e.relatedTarget))) hide();
   });
+  var focusedAt = 0;
   doc.addEventListener('focusin', function (e) {
     var el = target(e);
-    if (el) show(el);
+    if (el) { show(el); focusedAt = Date.now(); }
   });
   doc.addEventListener('focusout', function () { if (open) hide(); });
 
@@ -125,6 +126,9 @@
     if (canHover || !standalone(el)) return;
     e.preventDefault();
     e.stopPropagation();
+    /* A tap focuses the chip first, which has already opened its tip: the tap
+       that follows at once is that same tap, not a second one to close it. */
+    if (el === open && Date.now() - focusedAt < 500) return;
     if (el === open) hide(); else show(el);
   }, true);
 

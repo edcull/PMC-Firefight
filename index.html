@@ -329,8 +329,31 @@
   @media (max-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
   .st { background: var(--panel-2); padding: 6px 7px; }
   .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
-  .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+  /* suppression against Morale: three bands, the SP laid over them */
+  .moralebar { margin: 8px 0 6px; }
+  .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
+  .mb-band { flex: 1; opacity: .18; }
+  .mb-band + .mb-band { border-left: 1px solid rgba(255,255,255,.25); }
+  .mb-band.good, .mb-fill.good { background: var(--good); }
+  .mb-band.warn, .mb-fill.warn { background: var(--warn); }
+  .mb-band.bad, .mb-fill.bad { background: var(--bad); }
+  .mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
+  .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .mb-labels span { flex: 1; text-align: center; }
+  .healthbar .mb-labels span { text-align: left; }
+  .hintbar:empty { display: none; }
+  /* the ground a unit stands on, with the letter the map marks it by */
+  /* a stat its drive changed: its new value in green or red, a tip saying why */
+  .schg { cursor: help; font-style: normal; }
+  .schg.up { color: var(--good); }
+  .schg.dn { color: var(--bad); }
+  .chip.chip-drive { color: var(--ink); border-color: color-mix(in srgb, var(--alpha) 45%, var(--line)); }
+  .chip.tpill { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
+  .chip.tpill i { font-style: normal; font-family: var(--mono); font-weight: 700; font-size: 9px; color: rgba(8,11,16,.85);
+    width: 12px; height: 13px; display: inline-grid; place-items: center; border-radius: 2px; }
+  body[data-battle="demo"] #hintbar { display: none; }
   .spbar { position: relative; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); }
   .spbar-fill { height: 100%; background: linear-gradient(90deg, var(--warn), var(--bad)); }
   .spmark { position: absolute; top: 0; width: 1px; height: 100%; background: rgba(255,255,255,.35); }
@@ -1207,6 +1230,9 @@
       padding: 5px 2px; border-radius: 4px; cursor: pointer; white-space: nowrap;
     }
     .mtab.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+    /* a demo is watched, not played: no Actions tab */
+    body[data-battle="demo"] .mtabs { grid-template-columns: repeat(3, 1fr); }
+    body[data-battle="demo"] .mtab[data-mtab="act"] { display: none; }
     .mtab-n {
       display: inline-block; min-width: 13px; margin-left: 2px; padding: 0 3px;
       border-radius: 7px; background: var(--alpha); color: #14110a;

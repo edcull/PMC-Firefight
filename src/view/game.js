@@ -86,7 +86,8 @@
     }
     loadAutoAdvance(cfg.mode);
     resetShow();
-    // a demo is for watching: on a phone it opens on the results as they come in
+    // a demo is for watching: there is nothing to act with, so no Actions tab, and it opens on the results
+    document.body.setAttribute('data-battle', cfg.mode || '');
     if (window.innerWidth <= 1000) setMTab(cfg.mode === 'demo' ? 'res' : 'act');
     /* A battle started from this screen runs in this tab, whatever was here
        before — somebody who has just come out of a networked game and pressed
@@ -1079,6 +1080,7 @@
   function setMTab(which) {
     var con = document.querySelector('.console');
     if (!con) return;
+    if (which === 'act' && document.body.getAttribute('data-battle') === 'demo') which = 'res';   // a demo has no Actions tab
     con.setAttribute('data-mtab', which);
     document.querySelectorAll('#mtabs .mtab').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-mtab') === which);
@@ -3382,10 +3384,11 @@
       box.innerHTML = 'Pick the enemy to mark for the rest of the turn.';
     } else if (ui.mode === 'wave') {
       box.innerHTML = 'Psychic Wave: tap where <b>' + esc(u.name) + '</b> moves to — or the unit itself to stay — and every enemy within 12" of it takes D6−1 SP.';
+    } else if (isAI(u.side)) {
+      box.innerHTML = '';                              // the OpFor's own: nothing to say about it here
     } else {
-      box.innerHTML = '<b>' + u.name + '</b> — ' + (isAI(u.side) ? 'under OpFor control.' :
-        u.activated ? 'already acted this turn.' :
-          u.side === state.activeSide ? 'choose an action.' : 'waiting for its activation.');
+      box.innerHTML = '<b>' + u.name + '</b> — ' + (u.activated ? 'already acted this turn.' :
+        u.side === state.activeSide ? 'choose an action.' : 'waiting for its activation.');
     }
   }
 
@@ -3436,31 +3439,51 @@
     }
     box.className = (keep ? keep + ' ' : '') + 'statstrip';   // always in full: no Details to tap for it
     if (!u) {
+      box._html = null;
       box.innerHTML = '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
       return;
     }
     if (R.isMachine(u)) { drawMachineStats(u, box); return; }
     var st = R.status(u), m = R.currentMorale(u);
-    var h = '<div class="stat-head"><span class="code code-' + u.side + '">' + u.code + '</span>' +
-      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + sideName(u.side) +
+    var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
+      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · <span class="army"' + armyStyle(u.side, true) + '>' + sideName(u.side) + '</span>' +
       '</p><span class="stat-sum">' + u.models + '/' + u.size + ' · ' + u.sp + ' SP · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + ' · Rng ' + u.range + '"</span></div>' +
-      '<span class="status-tag status-' + st + '">' + st + '</span>' +
       '</div>';
+    /* Suppression against Morale in three equal bands — steady, suppressed,
+       broken — each as wide as the Morale, with the unit's SP laid over them
+       in the colour of the band it has reached. */
+    var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
+    h += '<div class="moralebar" title="' + u.sp + ' SP against Morale ' + m + '">' +
+      '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
+      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
+      '<div class="mb-labels"><span>Steady</span><span>Suppressed</span><span>Broken</span></div></div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
       stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
       stat('SP', u.sp) + '</div>';
-    h += '<div class="spbar"><div class="spbar-fill" style="width:' + Math.min(100, (u.sp / (3 * m)) * 100) + '%"></div>' +
-      '<span class="spmark" style="left:33.3%"></span><span class="spmark" style="left:66.6%"></span></div>' +
-      '<p class="hint small">Suppressed above ' + m + ' SP · broken above ' + (2 * m) + ' · removed above ' + (3 * m) +
-      ' · standing in ' + R.TERRAIN[R.terrainOf(state, u)].name.toLowerCase() + '</p>';
     h += honourChips(u);
-    if (u.rules.length) h += '<div class="chips">' + u.rules.map(function (r) { return '<span class="chip">' + r + '</span>'; }).join('') + '</div>';
+    h += ruleChips(u, R.terrainOf(state, u) !== 'open');
+    fillStats(box, h);
+  }
+  /* The stats are redrawn with every render, and in a demo that is every
+     action: rewriting them unchanged would pull a tapped chip out from under
+     its open tip (it loses focus, and the tip goes). So only a change is written. */
+  function fillStats(box, h) {
+    if (box._html === h) return;
+    box._html = h;
     box.innerHTML = h;
     wireHost(box);
+  }
+  /* The army's own colours on the unit tab: the code badge painted as the
+     unit's ring is on the table, and the force's name in its light. */
+  function armyStyle(side, textOnly) {
+    var pal = ISO.PALETTE && ISO.PALETTE[side];
+    if (!pal) return '';
+    return textOnly ? ' style="color:' + pal.light + '"'
+      : ' style="color:' + pal.light + ';border-color:' + pal.mid + ';background:color-mix(in srgb, ' + pal.dark + ' 45%, transparent)"';
   }
   function stat(k, v) { return '<div class="st"><span>' + k + '</span><b>' + v + '</b></div>'; }
 
@@ -3534,40 +3557,69 @@
   // a machine has Structure and Damage where a squad has Morale and suppression
   function drawMachineStats(u, box) {
     var left = Math.max(0, u.str - u.damage);
-    var tag = u.damage === 0 ? 'ready' : u.damage >= u.str ? 'broken' : 'suppressed';
-    var word = u.damage === 0 ? 'undamaged' : u.damage >= u.str ? 'crippled' : 'damaged';
     var pr = R.propOf(u);
     var kind = u.cls === 'aircraft' ? 'Aircraft'
       : pr ? pr.name + ' ground vehicle' : 'Ground vehicle';
     if (u.drone) kind += ' · drone';
-    var h = '<div class="stat-head"><span class="code code-' + u.side + '">' + u.code + '</span>' +
-      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + kind + ' · ' + sideName(u.side) +
+    var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
+      '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + kind + ' · <span class="army"' + armyStyle(u.side, true) + '>' + sideName(u.side) + '</span>' +
       '</p><span class="stat-sum">' + u.damage + '/' + u.str + ' damage · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + '</span></div>' +
-      '<span class="status-tag status-' + tag + '">' + word + '</span>' +
       '</div>';
+    // its health: the Structure it has left — green untouched, amber down to half, red below
+    var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
+    h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
+      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div>' +
+      '<div class="mb-labels"><span>Structure ' + left + ' / ' + u.str + '</span></div></div>';
+    /* What its drive (and a drone's missing crew) did to the printed profile:
+       a changed stat shows its new value, green if it went up and red if it
+       went down, with a tip saying what it was and why. */
+    var base = R.profile(u.key) || {};
+    function why(stat) {
+      var out = [];
+      if (pr && pr[stat]) out.push(pr.name + ' — ' + pr.note);
+      if (stat === 'str' && u.drone) out.push('Drone Control — +1 Structure, no crew');
+      return out.join('\n');
+    }
+    function changed(text, now, was, stat) {
+      if (was == null || now === was) return text;
+      return '<i class="schg ' + (now > was ? 'up' : 'dn') + '"' + (why(stat) ? ' ' + tip('Printed ' + was, why(stat)) : '') + '>' + text + '</i>';
+    }
     h += '<div class="stats">' +
-      stat('Structure', left + '/' + u.str) + stat('Move', u.move + '"' + (u.turn ? ' (' + u.turn + ')' : '')) +
+      stat('Structure', changed(left + '/' + u.str, u.str, base.str, 'str')) +
+      stat('Move', changed(u.move + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
-      stat('Def', u.def) + stat('Assault', u.assault) +
+      stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.assault) +
       stat('Damage', u.damage) +
       stat('Carrying', u.transport ? (u.cargo || []).length + '/' + u.transport : '—') + '</div>';
-    h += '<div class="spbar"><div class="spbar-fill" style="width:' +
-      Math.min(100, (u.damage / Math.max(1, u.str)) * 100) + '%"></div></div>' +
-      '<p class="hint small">Knocked out above ' + u.str + ' damage · repairs ' + Math.max(1, left) +
-      'D6 on 4+ · ' + (u.cls === 'aircraft'
-        ? 'flies over everything, always fires and is fired at with Basic Firepower, and cannot hold ground'
-        : (pr && pr.cover ? 'takes cover like infantry, and its flanks deny the +1 side shot, but it is hit +2 in the rear'
-          : 'takes no cover from terrain, and is hit +1 in the side, +2 in the rear')) + '</p>';
-    if (pr && pr.key !== 'wheeled') h += '<p class="hint small">' + pr.name + ' — ' + pr.note + '</p>';
     if ((u.cargo || []).length) {
       h += '<div class="chips">' + u.cargo.map(function (c) {
         return '<span class="chip">aboard: ' + c.name + '</span>';
       }).join('') + '</div>';
     }
-    if (u.rules.length) h += '<div class="chips">' + u.rules.map(function (r) { return '<span class="chip">' + r + '</span>'; }).join('') + '</div>';
-    box.innerHTML = h;
-    wireHost(box);
+    h += honourChips(u);                                // a campaign machine's honours, traumas and upgrades
+    h += ruleChips(u, !!terrainMark(u), pr ? [{ name: pr.name, text: pr.note }] : null);
+    fillStats(box, h);
+  }
+  /* The special rules, each with its rule text to tap or hover for, and first
+     among them the ground the unit stands on — marked as the map marks it, and
+     left out in the open, where there is nothing to say. */
+  function ruleChips(u, showGround, extra) {
+    var out = [];
+    (extra || []).forEach(function (x) {                // a vehicle's drive, before its rules
+      out.push('<span class="chip chip-drive" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>');
+    });
+    if (showGround) {
+      var tk = R.terrainOf(state, u), mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
+      out.push('<span class="chip tpill" ' + tip(R.TERRAIN[tk].name, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +
+        (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(R.TERRAIN[tk].name) + '</span>');
+    }
+    var TXT = window.PMCRuleText;
+    (u.rules || []).forEach(function (r) {
+      var d = TXT ? TXT.describe(r) : { text: '' };
+      out.push('<span class="chip"' + (d.text ? ' ' + tip(r, d.text) : '') + '>' + esc(r) + '</span>');
+    });
+    return out.length ? '<div class="chips">' + out.join('') + '</div>' : '';
   }
 
   /* ---------- side panel ---------- */
@@ -4213,6 +4265,22 @@
     if (tip) tip.hidden = true;
   }
 
+  // what a kind of ground does, in short — for the map's tip and the unit tab's pill
+  function terrainBits(tk, inside) {
+    var t = R.TERRAIN[tk], bits = [];
+    if (inside) bits.push('+2 Defence, and no Crossfire inside');
+    if (t.cover && !inside) bits.push('+' + t.cover + ' Defence ' + (tk === 'barricade' ? 'within 2" behind it' : 'in it'));
+    if (t.fp && t.hill) bits.push('+' + t.fp + ' Firepower shooting down');
+    if (t.hill) bits.push('blocks sight across it');
+    if (t.wire) bits.push('an extra D6" to cross');
+    if (t.noCrossfire && !inside) bits.push('no Crossfire');
+    if (t.blocks && !inside) bits.push('blocks line of sight');
+    if (t.movePenalty) bits.push(t.movePenalty + '" off a move ' + (t.linear ? 'for each crossing' : 'into or through it — once a move'));
+    if (t.shallow) bits.push('no Cumbersome Weapons');
+    if (t.destructible && !inside) bits.push('can be brought down');
+    if (t.wreck) bits.push('what is left of it');
+    return bits;
+  }
   function showTerrainTip(e, p) {
     var tip = el('terraintip'), wrap = document.querySelector('.board-wrap');
     if (!tip || !wrap) return;
@@ -4228,16 +4296,7 @@
       bits.push('+2 Defence' + (hi ? ', +2 Firepower' : '') + ', no Crossfire inside');
     }
     else if (t.impassable) bits.push('impassable');
-    if (t.cover && !bp) bits.push('+' + t.cover + ' Defence ' + (tk === 'barricade' ? 'within 2" behind it' : 'in it'));
-    if (t.fp && t.hill) bits.push('+' + t.fp + ' Firepower shooting down');
-    if (t.hill) bits.push('blocks sight across it');
-    if (t.wire) bits.push('an extra D6" to cross');
-    if (t.noCrossfire) bits.push('no Crossfire');
-    if (t.blocks) bits.push('blocks line of sight');
-    if (t.movePenalty) bits.push(t.movePenalty + '" off a move ' + (t.linear ? 'for each crossing' : 'into or through it — once a move'));
-    if (t.shallow) bits.push('no Cumbersome Weapons');
-    if (t.destructible) bits.push('can be brought down');
-    if (t.wreck) bits.push('what is left of it');
+    bits = bits.concat(terrainBits(tk, !!bp));
     if (!bits.length) bits.push('no cover, no penalty');
 
     var extra = '';
