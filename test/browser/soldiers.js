@@ -94,6 +94,7 @@ async function clickText(p, re) {
   check('an empty memorial says so', /No one has been lost yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
+    co.lostModels = 3;
     co.memorial = [
       { name: 'Rhys Walsh', rank: 'Sergeant', type: 'Rookie rifle team', unit: 'Second Section', turn: 3, battle: 1, against: 'Red Dawn', scenario: 'meeting' },
       { name: 'Ana Silva', rank: 'Private', type: 'Recruits', unit: 'Recruits', turn: 2, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
@@ -107,6 +108,8 @@ async function clickText(p, re) {
     heads: [...document.querySelectorAll('#camp-body .dmem-head')].map(h => h.innerText.replace(/\s+/g, ' '))
   }));
   check('the memorial counts every casualty', /3 casualties in 2 battles/.test(mem.text));
+  const lossText = await p.evaluate(() => { const d = document.querySelector('#camp-body .dloss'); return d ? d.textContent : ''; });
+  check('...and shows the loss rate against everyone who has served', /^[\d.]+% lost 3 of the \d+ soldiers who have served/.test(lossText), lossText);
   check('...most recent battle first, with the enemy and the scenario',
     mem.heads.length === 2 && /Campaign turn 2 · against Salvage Rights · Secure and control/.test(mem.heads[0]), mem.heads[0]);
   check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
@@ -116,7 +119,7 @@ async function clickText(p, re) {
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
     co._was = { faction: co.faction, memorial: co.memorial };
-    co.faction = 'bugs'; co.memorial = []; co.biomass = { 'Small bugs': 14, 'Attack forms': 9, 'Spitter larva swarms': 3 };
+    co.faction = 'bugs'; co.memorial = []; co.biomass = { 'Small bugs': { models: 14, mass: 28 }, 'Attack forms': { models: 9, mass: 27 }, 'Queen': { models: 1, mass: 25 } };
   });
   await clickText(p, '^Units$');
   await clickText(p, '^Memorial$');
@@ -124,8 +127,9 @@ async function clickText(p, re) {
     text: document.getElementById('camp-body').innerText,
     rows: [...document.querySelectorAll('#camp-body .dmem-list li')].map(li => li.innerText.replace(/\s+/g, ' '))
   }));
-  check('a swarm\'s memorial totals its biomass', /26 biomass lost/.test(bio.text));
-  check('...by kind of bug, most first', bio.rows.length === 3 && /Small bugs × 14/.test(bio.rows[0]), bio.rows.join(' | '));
+  check('a swarm\'s memorial totals its biomass', /80 biomass lost/.test(bio.text));
+  check('...by kind of bug, most biomass first', bio.rows.length === 3 && /Small bugs × 14 · 28 biomass/.test(bio.rows[0]) &&
+    /Queen × 1 · 25 biomass/.test(bio.rows[2]), bio.rows.join(' | '));
   await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-biomass.png') });
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;

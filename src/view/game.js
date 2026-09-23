@@ -3765,17 +3765,17 @@
       var bio = {}, bioOrder = [], bioTotal = 0;
       all.forEach(function (c) {
         if (!c.swarm) return;
-        if (!bio[c.type]) { bio[c.type] = 0; bioOrder.push(c.type); }
-        bio[c.type] += c.count; bioTotal += c.count;
+        if (!bio[c.type]) { bio[c.type] = { n: 0, mass: 0 }; bioOrder.push(c.type); }
+        bio[c.type].n += c.count; bio[c.type].mass += c.mass || c.count; bioTotal += c.mass || c.count;
       });
       var head = bioOrder.length ? bioTotal + ' biomass lost'
         : mine.length ? mine.length + (mine.length === 1 ? ' casualty' : ' casualties') : 'no casualties';
       var h = '<div class="cas-side cas-' + side + '"><div class="cas-head">' + esc(sideName(side)) +
         '<span class="mk">' + head + '</span></div>';
       if (bioOrder.length) {
-        bioOrder.sort(function (a, b) { return bio[b] - bio[a]; });
+        bioOrder.sort(function (a, b) { return bio[b].mass - bio[a].mass; });
         h += '<ol class="cas-list">' + bioOrder.map(function (t) {
-          return '<li><b>' + esc(t) + '</b> <span class="cas-rank">\u00d7 ' + bio[t] + '</span></li>';
+          return '<li><b>' + esc(t) + '</b> <span class="cas-rank">\u00d7 ' + bio[t].n + ' \u00b7 ' + bio[t].mass + ' biomass</span></li>';
         }).join('') + '</ol>';
       }
       if (mine.length) {

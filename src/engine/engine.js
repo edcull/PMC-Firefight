@@ -2304,7 +2304,10 @@
       // the swarm has no names: a bug unit reports how much of it was lost
       if (u.faction === 'bugs') {
         if (u.lostModels) {
-          out.push({ side: u.side, swarm: true, count: u.lostModels, type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id, turn: 0 });
+          out.push({
+            side: u.side, swarm: true, count: u.lostModels, mass: u.lostModels * R.biomassOf(p),
+            type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id, turn: 0
+          });
         }
         return;
       }

@@ -148,13 +148,45 @@ ok('a bug entry has no soldiers to show', C.menOf(brood, hive.companies.A) === t
 const bugReport = (n) => ({
   winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
   units: [{ rid: brood.rid, side: 'A', key: 'bsmall', startSize: 8, endSize: 8 - n, destroyed: false, brokenEver: false, wiped: false, men: [], minSize: 8 - n, kills: [] }],
-  casualties: [{ side: 'A', swarm: true, count: n, type: 'Small bugs', unit: 'Small bugs', rid: brood.rid, turn: 0 }]
+  casualties: [{ side: 'A', swarm: true, count: n, mass: n * 2, type: 'Small bugs', unit: 'Small bugs', rid: brood.rid, turn: 0 }]
 });
 C.aftermath(hive, bugReport(3));
 C.aftermath(hive, bugReport(4));
-ok('the memorial keeps biomass by kind, not names', hive.companies.A.biomass && hive.companies.A.biomass['Small bugs'] === 7 &&
-  hive.companies.A.memorial.length === 0, JSON.stringify(hive.companies.A.biomass));
-ok('...and the unit history says how much', brood.history.some((h) => /Biomass lost: 3/.test(h)));
+const tally = C.biomassTally(hive.companies.A)['Small bugs'];
+ok('the memorial keeps biomass by kind, not names', tally && tally.models === 7 && tally.mass === 14 &&
+  hive.companies.A.memorial.length === 0, JSON.stringify(tally));
+ok('...and the unit history says how much', brood.history.some((h) => /Biomass lost: 6/.test(h)));
+const hs = C.lossStats(hive.companies.A);
+ok('...and the swarm has a loss rate too', hs.lost === 7 && hs.served === 15 && Math.round(hs.pct * 100) === 47,
+  hs.lost + ' of ' + hs.served);
+hive.companies.A.biomass = { 'Attack forms': 5 };      // an early save kept the models alone
+ok('...an early tally is worked out again at Tier value', C.biomassTally(hive.companies.A)['Attack forms'].mass === 15);
+
+console.log('biomass values');
+const bm = (k, n) => n * R.biomassOf(R.profile(k));
+ok('a Tier I brood of 8 is 8', bm('bspitlarva', 8) === 8);
+ok('a Tier II brood of 8 is 16', bm('bsmall', 8) === 16);
+ok('a Tier IV brood of 6 lost is 24', bm('boversized', 6) === 24);
+ok('an Overgrown bug is 25', ['bfirebeetle', 'bsandworm', 'bbioplasma', 'bcarrier', 'bshadow', 'bqueen'].every((k) => bm(k, 1) === 25));
+
+console.log('the loss rate');
+const lc = C.newCampaign({ mode: 'solo' });
+const squad = C.newEntry('rookie');
+lc.companies.A.roster = [squad];
+ok('nothing lost is 0%', C.lossStats(lc.companies.A).pct === 0 && C.lossStats(lc.companies.A).served === 8);
+C.aftermath(lc, {
+  winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+  units: [{ rid: squad.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 6, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }],
+  casualties: [0, 1].map((i) => ({ side: 'A', rid: squad.rid, name: 'Man ' + i, rank: 'Private', turn: 2, type: 'Rookie rifle team' }))
+});
+const ls = C.lossStats(lc.companies.A);
+ok('a squad of 8 that loses 2 is 2 of 10 — 20%, not 25%', ls.lost === 2 && ls.served === 10 && ls.pct === 0.2,
+  ls.lost + ' of ' + ls.served);
+const more = C.newEntry('recruits');
+lc.companies.A.roster.push(more);
+C.disband(lc.companies.A, more);
+const ld = C.lossStats(lc.companies.A);
+ok('a unit disbanded still counts as having served', ld.served === 18 && ld.lost === 2, ld.lost + ' of ' + ld.served);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

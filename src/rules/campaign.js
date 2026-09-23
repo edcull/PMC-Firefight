@@ -718,11 +718,18 @@
      casualties left, get fresh names none of the rest of the force is using.
      Returns true when anything had to be added or changed, so the caller
      knows to save. */
+  // how many models the unit takes the field with, a machine being one
+  function strengthOf(entry, co) {
+    var p = profile(entry.key);
+    if (!p) return 0;
+    var size = p.cls === 'infantry' ? p.size : 1;
+    if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
+    return size;
+  }
   function menOf(entry, co) {
     var p = profile(entry.key);
     if (!p) return false;
-    var size = p.size;
-    if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
+    var size = strengthOf(entry, co);
     var u = {
       key: p.key, faction: p.faction || 'pmc', group: p.group, tier: p.tier, size: size, models: size,
       cls: p.cls || 'infantry', command: !!p.command, rules: (p.rules || []).slice(), drone: !!entry.drone
@@ -734,6 +741,31 @@
     var before = JSON.stringify(entry.men || null);
     entry.men = R.musterMen(u, entry.men, taken).map(function (m) { return { name: m.name, rank: m.rank }; });
     return JSON.stringify(entry.men) !== before;
+  }
+  /* The force's losses against everyone who has ever served in it. Everyone
+     who served is on the books now, was lost, or left some other way
+     (disbanded, executed, cut by a promotion); a casualty that is replaced
+     after the battle counts once lost and once again in the unit that is back
+     at strength. So a squad of eight that loses two is 2 of 10: 20%. */
+  function lossStats(co) {
+    var lost = co.lostModels || 0;
+    var now = (co.roster || []).reduce(function (n, e) { return n + strengthOf(e, co); }, 0);
+    var served = now + lost + (co.departed || 0);
+    return { lost: lost, served: served, pct: served ? lost / served : 0 };
+  }
+  /* The swarm's tally of what it has lost, by kind of bug: models and biomass.
+     (An early save kept only the models; their biomass is worked out again.) */
+  function biomassTally(co) {
+    var out = {};
+    Object.keys(co.biomass || {}).forEach(function (t) {
+      var v = co.biomass[t];
+      if (typeof v === 'number') {
+        var p = R.CATALOGUE.filter(function (q) { return q.name === t; })[0];
+        v = { models: v, mass: v * R.biomassOf(p) };
+      }
+      if (v && v.models > 0) out[t] = v;
+    });
+    return out;
   }
   // a soldier renamed by the player keeps the name through every battle they survive
   function renameSoldier(entry, i, name) {
@@ -753,7 +785,8 @@
       doctrines: [], doctrineSwapAt: null,
       roster: [], cmdRid: null,
       record: { battles: 0, wins: 0, draws: 0, losses: 0 },
-      memorial: []
+      memorial: [],
+      lostModels: 0, departed: 0              // what the loss rate on the memorial is worked from
     };
   }
 
@@ -1090,6 +1123,7 @@
     var chk = canDisband(co, entry);
     if (!chk.ok) return chk;
     co.roster = co.roster.filter(function (e) { return e !== entry; });
+    co.departed = (co.departed || 0) + strengthOf(entry, co);
     return { ok: true };
   }
 
@@ -1103,7 +1137,10 @@
     entry.exp -= cost.exp; co.kUC -= cost.kUC;
     // the rid, honours, traumas and history all stay; only the profile changes
     var renamed = entry.name === was;
+    var had = strengthOf(entry, co);
     entry.key = newKey;
+    // a promotion to a smaller unit leaves the extra men behind
+    co.departed = (co.departed || 0) + Math.max(0, had - strengthOf(entry, co));
     if (renamed) entry.name = profile(newKey).name;
     entry.history.push('Promoted from ' + was + ' to ' + profile(newKey).name + '.');
     return { ok: true, cost: cost };
@@ -1380,6 +1417,22 @@
       var rec = { side: side, kUC: out.payment[side], units: [], gone: [], salvaged: [],
         traumas: [], executed: null };
 
+      /* The models this side lost, unit by unit: a named soldier is one, a
+         swarm's count is what it says, and a machine with nobody aboard to name
+         (a drone, a turret) is one when it is destroyed. */
+      var lostBy = {}, lostNow = 0;
+      (report.casualties || []).forEach(function (c) {
+        if (c.side !== side) return;
+        var n = c.swarm ? c.count : 1;
+        lostBy[c.rid] = (lostBy[c.rid] || 0) + n; lostNow += n;
+      });
+      (report.units || []).forEach(function (l) {
+        if (l.side === side && l.destroyed && !lostBy[l.rid]) { lostBy[l.rid] = 1; lostNow += 1; }
+      });
+      co.lostModels = (co.lostModels || 0) + lostNow;
+      // a unit that leaves the books takes its survivors with it
+      function leaves(e) { co.departed = (co.departed || 0) + Math.max(0, strengthOf(e, co) - (lostBy[e.rid] || 0)); }
+
       /* No Place for the Weak! (p. 112). The example is made of whichever unit
          came back carrying the most Trauma Points from this battle, so the day's
          points are rolled first, once, and kept — the main pass reuses them
@@ -1423,6 +1476,7 @@
           rec.executed = { rid: worst.rid, name: worst.name, key: worst.key, tp: worstN };
           worst.history.push('Executed for coming back in the worst state of the force.');
           co.roster = co.roster.filter(function (x) { return x !== worst; });
+          leaves(worst);
         }
       }
 
@@ -1472,7 +1526,7 @@
         var cas = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
         if (cas.length) {
           u.casualties = cas;
-          entry.history.push(cas[0].swarm ? 'Biomass lost: ' + cas.reduce(function (n, c) { return n + c.count; }, 0) + '.'
+          entry.history.push(cas[0].swarm ? 'Biomass lost: ' + cas.reduce(function (n, c) { return n + (c.mass || c.count); }, 0) + '.'
             : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
         }
         if (line.men) entry.men = line.men.slice();
@@ -1553,6 +1607,7 @@
 
       rec.gone.forEach(function (e) {
         co.roster = co.roster.filter(function (x) { return x !== e; });
+        leaves(e);
       });
 
       /* Enhanced Genetic Memory (p. 141): a destroyed infantry unit comes back as
@@ -1608,8 +1663,9 @@
       (report.casualties || []).filter(function (c) { return c.side === side; }).forEach(function (c) {
         // the swarm keeps a tally of biomass by kind of bug instead of names
         if (c.swarm) {
-          co.biomass = co.biomass || {};
-          co.biomass[c.type] = (co.biomass[c.type] || 0) + c.count;
+          var tally = co.biomass = biomassTally(co);
+          var t = tally[c.type] || (tally[c.type] = { models: 0, mass: 0 });
+          t.models += c.count; t.mass += c.mass || c.count;
           return;
         }
         co.memorial.push({
@@ -2326,7 +2382,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,

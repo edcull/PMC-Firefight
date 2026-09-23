@@ -3831,6 +3831,10 @@ html { scroll-behavior: smooth; }
     if (now < u.seenModels) u.lostModels = (u.lostModels || 0) + u.seenModels - now;
     u.seenModels = now;
   }
+  /* What a lost bug is worth in biomass: its Tier for every model, and 25 for
+     one of the Overgrown giants — so a Tier II brood of eight is 16, and one
+     Queen is a little more than a whole Tier IV brood. */
+  function biomassOf(p) { return !p ? 1 : isOvergrown(p) ? 25 : Math.max(1, p.tier || 1); }
   // who comes back for the next battle: everyone who was not a casualty
   function survivors(u) {
     return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });
@@ -3879,7 +3883,7 @@ html { scroll-behavior: smooth; }
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion,
     defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
-    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, survivors: survivors
+    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, survivors: survivors, biomassOf: biomassOf
   };
 })(window);
 </script>
