@@ -2297,6 +2297,8 @@
 
   function drawHeader() {
     syncHeaderHeight();
+    // the phone's turn counter, a fixed width at the right of its one-row header
+    if (el('hdr-turn')) el('hdr-turn').textContent = state.phase === 'terrain' ? 'Setup' : state.phase === 'deploy' ? 'Deploy' : 'Turn ' + state.turn;
     el('hdr-phase').textContent = state.phase === 'terrain' ? 'Terrain set-up' : state.phase === 'deploy' ? 'Deployment' : 'Turn ' + state.turn + ' · Action phase';
     el('hdr-init').textContent = state.initiative ? 'Initiative ' + state.initiative : '—';
     var act = el('hdr-active');
@@ -2347,6 +2349,37 @@
         rl.className = 'meta role role-attacker';
       } else { rl.hidden = true; }
     }
+  }
+
+  /* The Objectives button: the scenario, which side attacks and which defends
+     (or that both are after the same thing), what wins it, and who holds each
+     objective now. */
+  function objectivesHTML() {
+    var sc = state.scen || {}, h = '<h3>' + esc(sc.name || 'Scenario') + '</h3>';
+    if (sc.blurb) h += '<p>' + esc(sc.blurb) + '</p>';
+    function side(s, role) {
+      var pal = ISO.PALETTE[s] || {};
+      return '<div><b style="color:' + (pal.light || 'inherit') + '">' + esc(sideName(s)) + '</b><span>' + role + '</span></div>';
+    }
+    var att = state.sc && state.sc.attacker;
+    h += '<div class="objroles">' + (att
+      ? side(att, 'Attacker') + side(other(att), 'Defender')
+      : side('A', state.solo ? 'Your side' : 'Side A') + side('B', state.solo ? 'OpFor' : 'Side B')) + '</div>';
+    if (sc.win) h += '<p><b>To win:</b> ' + esc(sc.win) + '</p>';
+    if (state.objectives.length) {
+      h += '<ul>' + state.objectives.map(function (o, i) {
+        return '<li>Objective ' + (i + 1) + ' — ' + (o.owner ? 'held by <b>' + esc(sideName(o.owner)) + '</b>' : 'nobody holds it') + '</li>';
+      }).join('') + '</ul>';
+    }
+    if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';
+    if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
+    return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
+  }
+  function openObjectives() {
+    if (!state) return;
+    el('obj-box').innerHTML = objectivesHTML();
+    el('obj-modal').hidden = false;
+    if (SFX) SFX.click();
   }
 
   /* ---------- board ---------- */
@@ -5619,6 +5652,10 @@
       if (SFX) SFX.click();
     });
     el('btn-menu').addEventListener('click', openMenu);
+    if (el('btn-obj')) el('btn-obj').addEventListener('click', openObjectives);
+    if (el('obj-modal')) el('obj-modal').addEventListener('click', function (e) {
+      if (e.target === el('obj-modal') || e.target.id === 'obj-done') el('obj-modal').hidden = true;
+    });
 
     /* Multiplayer only works when this page came from a game server. A game
        opened from a file, or the published single file, has nowhere to send an
