@@ -633,6 +633,11 @@
   .cmodal-box > .chosen { margin-bottom: 8px; max-height: 84px; overflow-y: auto; }
   .cmodal-box .docpick { margin-bottom: 0; }
   .cmodal-box .askrow { flex: none; }
+  /* the hub: the dossier and the save file, one row under the campaign turn */
+  .hubbar { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 12px; }
+  .hubbar .lnk { flex: 1 1 auto; text-align: center; }
+  #camp-body .hubbar + .start { margin: 0 0 14px; }
+  .cmodal-box .cpan:last-child { margin-bottom: 0; }
   .tin {
     width: 100%; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
     border-radius: 5px; padding: 9px 10px; font-family: var(--body); font-size: 13px;

@@ -360,21 +360,30 @@
       return h;
     }
     var A = camp.companies.A, B = camp.companies.B;
-    var n = (camp.rivals || []).length;
+    var rivals = camp.mode === 'hotseat' ? [] : (camp.rivals || [B]), n = rivals.length;
     h += '<p class="lede">Campaign turn ' + camp.turn + ' · ' +
       (camp.mode !== 'solo' ? 'hotseat'
         : n > 1
           ? 'solo against ' + n + ' forces on this world — <b>' + esc(B.name) + '</b> next'
           : 'solo against ' + esc(B.name)) + '.' +
       (Store.note() ? ' ' + esc(Store.note()) : '') + '</p>';
+    h += '<div class="hubbar">' +
+      '<button class="lnk" data-go="roster">The dossier</button>' +
+      '<button class="lnk" data-go="export">Save to a file</button>' +
+      '<button class="lnk" data-go="import">Load a file</button></div>';
+    h += '<button class="start" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') +
+      '">Take a contract</button>';
     h += companyPanel(A, 'A');
-    if (camp.mode === 'hotseat') {
-      h += companyPanel(B, 'B');
-    } else {
-      var rivals = camp.rivals || [B];
-      h += '<h3>The other forces on this world <span class="dtag">' + rivals.length + '</span></h3>';
-      rivals.forEach(function (co, i) { h += rivalPanel(co, i, i === camp.facing); });
-    }
+    /* Who else is on the world: one line, and their panels in a modal behind
+       it (in hotseat, the second player's force). */
+    h += '<div class="field"><label>' + (camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world') + '</label>' +
+      '<button type="button" class="archline" data-go="fmodal" data-kind="rivals"><span>' +
+      (camp.mode === 'hotseat' ? esc(B.name)
+        : n > 1 ? n + ' forces — <b>' + esc(B.name) + '</b> next' : esc(B.name)) +
+      '</span><em>details</em></button></div>';
+    h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
+      '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
+        : rivals.map(function (co, i) { return rivalPanel(co, i, i === camp.facing); }).join('')) + '</div>');
     if (camp.log.length) {
       h += '<h3>Recent battles</h3><div class="clog">';
       camp.log.slice(-6).reverse().forEach(function (l) {
@@ -385,44 +394,10 @@
       });
       h += '</div>';
     }
-    h += '<button class="start" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') +
-      '">Take a contract</button>';
-    h += storagePanel();
     h += '<p class="camp-foot">' +
       '<button class="lnk" data-go="menu">← Main menu</button>' +
-      '<button class="lnk" data-go="roster">The dossier</button>' +
-      '<button class="lnk" data-go="export">Save to a file</button>' +
-      '<button class="lnk" data-go="import">Load a file</button>' +
       '<button class="lnk warn" data-go="wipe">Abandon the campaign</button>' +
       '<input type="file" id="camp-file" accept="application/json" hidden></p>';
-    return h;
-  }
-
-  /* Where this campaign is being written, and how to add a server to the list. */
-  function storagePanel() {
-    var st = Store.status();
-    var live = st.filter(function (b) { return b.on && b.ok; });
-    var h = '<h3>Saved</h3><div class="cpan"><div class="cpstat">' +
-      (live.length ? 'Written to ' + live.map(function (b) { return esc(b.name); }).join(' and ') + '.'
-        : 'Nowhere — this browser refused to store it.') +
-      ' Whichever copy has seen the most battles is the one that loads.</div>';
-    st.forEach(function (b) {
-      if (!b.on) return;
-      h += '<div class="dledger' + (b.ok ? '' : ' bad') + '"><b>' + esc(b.name) + '</b> ' +
-        (b.ok ? 'up to date' : 'last write failed — ' + esc(b.why)) +
-        (b.url ? ' · ' + esc(b.url) : '') + '</div>';
-    });
-    if (!Store.status()[2].on) {
-      h += '<div class="cpstat">A node server with a database can be added later: it needs only ' +
-        '<code>GET</code>, <code>PUT</code> and <code>DELETE</code> on <code>&lt;base&gt;/campaign</code>. ' +
-        'Point the game at it here. The published page is sandboxed and will very likely be refused ' +
-        'a request to your own host, so this is for running the game from the files.</div>';
-    }
-    h += '<div class="srvrow"><input class="tin" id="camp-server" placeholder="http://localhost:8787" value="' +
-      esc(Store.status()[2].url || '') + '">' +
-      '<button class="lnk" data-go="setserver">Use it</button>' +
-      (Store.status()[2].on ? '<button class="lnk warn" data-go="clearserver">Forget it</button>' : '') +
-      '</div></div>';
     return h;
   }
 
@@ -600,8 +575,16 @@
     return c ? '<span class="sw-chip line-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
       c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '';
   }
-  // which of the founding screen's pickers is open over it, if any
-  var foundModal = null;
+  /* A list opened over the page (the founding screen's pickers, the hub's
+     rivals): drawn with the page, hidden unless open, so a pick made in it
+     redraws it along with everything else. */
+  var openModal = null, modalView = null;
+  function cmodal(kind, title, inner, foot) {
+    return '<div class="cmodal" data-modal="' + kind + '"' + (openModal === kind ? '' : ' hidden') + '>' +
+      '<div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+      '<h3>' + esc(title) + '</h3>' + inner +
+      '<div class="askrow">' + (foot || '') + '<button type="button" class="start" data-go="fmodalclose">Done</button></div></div></div>';
+  }
   function rivalName() { return 'Rival company'; }
   // what this campaign calls its money, and what its creed is called
   function coin() { return C.money(camp && camp.companies ? camp.companies.A : null); }
@@ -669,25 +652,18 @@
       '<span>' + (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</span>' +
       '<em>' + (doc ? 'change' : 'tap to select') + '</em></button></div>';
 
-    /* The three pickers, each a modal over the page: drawn with it (hidden
-       unless open), so a pick redraws the list it was made in. */
-    function modal(kind, title, inner, foot) {
-      return '<div class="cmodal" data-modal="' + kind + '"' + (foundModal === kind ? '' : ' hidden') + '>' +
-        '<div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
-        '<h3>' + esc(title) + '</h3>' + inner +
-        '<div class="askrow">' + (foot || '') + '<button type="button" class="start" data-go="fmodalclose">Done</button></div></div></div>';
-    }
-    h += modal('colour', say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour'),
+    // the three pickers, each a modal over the page
+    h += cmodal('colour', say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour'),
       '<p class="hint small">What your troops are painted in. ' +
       say('The opposition', 'The forces sent against you', 'Whatever the swarm feeds on', 'Whoever trespasses') +
       ' will take a colour of their own.</p><div class="cmodal-scroll">' + swatches(draft.colour) + '</div>');
-    h += modal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
+    h += cmodal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
       head + '<div class="chosen">' + chosen + '</div>' +
       '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) {
         // a Tier II machine cannot be fielded in the Tier I battles a new force starts in
         return !p.leaderBug && !p.alpha && !(p.tier === 2 && p.cls !== 'infantry');
       }, co) + '</div>');
-    h += modal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll"><div class="docpick">' + cr.list.map(function (d) {
+    h += cmodal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll"><div class="docpick">' + cr.list.map(function (d) {
       return '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
         '<b>' + esc(d.name) + '</b><i>' + say(d.cat, 'Path of the ' + d.cat, d.cat + ' Pathway', d.cat + ' Advancement') + '</i>' +
         '<span>' + esc(d.text) + '</span></button>';
@@ -1740,14 +1716,15 @@
     var hd = /^<h2>([\s\S]*?)<\/h2>/.exec(h);
     if (hd) h = h.slice(hd[0].length);
     el('camp-title').innerHTML = hd ? hd[1] : 'Campaign';
-    if (view !== 'found') foundModal = null;
+    if (view !== modalView) openModal = null;           // a new screen starts with nothing open over it
+    modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
-    var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = foundModal;
+    var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
     body.classList.toggle('fit', view === 'found');
     body.innerHTML = h;
     body.scrollTop = 0;
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
-    if (ms2 && mKind === foundModal) ms2.scrollTop = mTop;
+    if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
     var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
@@ -1782,7 +1759,7 @@
     }
     if (t.hasAttribute('data-doc')) {
       draft.doctrine = t.getAttribute('data-doc');
-      if (foundModal === 'doctrine') foundModal = null;   // one to choose: the pick closes it
+      if (openModal === 'doctrine') openModal = null;   // one to choose: the pick closes it
       render(); return;
     }
     if (t.hasAttribute('data-take')) {
@@ -1890,7 +1867,7 @@
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour');
-      if (foundModal === 'colour') foundModal = null;
+      if (openModal === 'colour') openModal = null;
       keepFoundName();
       render(); return;
     }
@@ -1899,8 +1876,8 @@
 
     switch (go) {
       case 'archopen': openArchs(); return;
-      case 'fmodal': foundModal = t.getAttribute('data-kind'); render(); return;
-      case 'fmodalclose': foundModal = null; render(); return;
+      case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
+      case 'fmodalclose': openModal = null; render(); return;
       case 'archdone': closeArchs(); return;
       case 'archrandom':
         archPick = [];
@@ -1960,13 +1937,6 @@
       }
       case 'hub': view = 'hub'; render(); return;
       case 'menu': toMenu(); return;
-      case 'setserver': {
-        var url = (el('camp-server').value || '').trim();
-        Store.server(url || null);
-        if (url) save();
-        render(); return;
-      }
-      case 'clearserver': Store.server(null); render(); return;
       case 'export': doExport(); return;
       case 'import': el('camp-file').click(); return;
       case 'wipe':
@@ -2070,14 +2040,14 @@
       }
       if (ev.target === el('camp-ask')) { closeAsk(); return; }   // tapping the backdrop
       if (ev.target === el('camp-archmodal')) { closeArchs(); return; }
-      if (ev.target.classList && ev.target.classList.contains('cmodal')) { foundModal = null; render(); return; }
+      if (ev.target.classList && ev.target.classList.contains('cmodal')) { openModal = null; render(); return; }
       if (asking) return;                                         // nothing behind it is live
       if (ev.target === host) { close(); return; }
       onClick(ev);
     });
     host.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && !el('camp-archmodal').hidden) { ev.preventDefault(); closeArchs(); return; }
-      if (ev.key === 'Escape' && foundModal) { ev.preventDefault(); foundModal = null; render(); return; }
+      if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }
       if (!asking) return;
       if (ev.key === 'Enter') { ev.preventDefault(); answerAsk(); }
       else if (ev.key === 'Escape') { ev.preventDefault(); closeAsk(); }
