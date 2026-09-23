@@ -296,6 +296,8 @@
     { rule: 'Teleport', name: 'Teleport', play: function () { return [{ kind: 'teleportin', x: TO.x, y: TO.y, r: 1.4, dur: 1500 }]; }, sfx: 'shimmer' },
     { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
     { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
+    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
+    { rule: '…but they\'ll never take our freedom!', name: 'Rally cry', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '240,120,80', dur: 1400 }, { kind: 'rise', x: u.x, y: u.y, rgb: '240,120,80', n: 8, dur: 1400 }]; }, sfx: 'chime' },
     { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Inspiring Presence', name: 'Inspire', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, rgb: '232,193,90', dur: 1300 }]; }, sfx: 'chime' },
