@@ -23,6 +23,15 @@ async function drain(p) {
   await p.waitForTimeout(120);
 }
 
+// wait for the board to finish drawing whatever the engine last sent: it takes
+// up a selection, or a gun's orders, only once the shot before has landed
+async function settle(p) {
+  for (let i = 0; i < 60; i++) {
+    if (await p.evaluate(() => !window.__busy() && window.__showQueue() === 0)) break;
+    await p.waitForTimeout(100);
+  }
+}
+
 /* A table laid out by hand: a spotter that can see, a mortar that cannot, a rifle
    team that can, and an enemy behind a wood. */
 async function stage(p, opts) {
@@ -57,6 +66,11 @@ async function stage(p, opts) {
       gunRange: blind ? Math.round(window.PMC.unitDist(blind, quarry)) : null
     };
   }, opts);
+  /* The board only redraws its card when the engine says something has
+     changed, and nothing has told it the force was put down by hand — so the
+     card still offers only Auto-deploy. Draw it again, and Begin the battle is
+     there to press. */
+  await p.evaluate(() => window.__clearSel());
   await p.evaluate(() => {
     const b = document.querySelector('button[data-act="start"]');
     if (b) b.click();
@@ -160,6 +174,7 @@ async function press(p, label) {
 
   /* --------------------------------------------------------- the call expires */
   for (let i = 0; i < 3; i++) {
+    await settle(p);
     await p.evaluate(() => {
       const s = window.PMC_STATE();
       if (!s.mark || !s.chain) return;

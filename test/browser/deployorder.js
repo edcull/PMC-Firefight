@@ -195,17 +195,21 @@ async function newGame(p, cfg) {
     /Battlefield Insertion/.test(offered.card) && offered.spots > 0,
     offered.spots + ' drop points offered');
   ok('...and offers a way out', /data-act="holdinsert"/.test(offered.card));
-  const held = await p.evaluate(async () => {
-    return await new Promise(res => {
-      const before = window.__insertionAsking();
-      document.querySelector('button[data-act="holdinsert"]').click();
-      setTimeout(() => {
-        const s = window.PMC_STATE();
-        const u = s.units.find(x => x.code === before);
-        res({ asking: window.__insertionAsking(), reserve: !!(u && u.reserve) });
-      }, 600);
-    });
+  const before = await p.evaluate(() => {
+    const code = window.__insertionAsking();
+    document.querySelector('button[data-act="holdinsert"]').click();
+    return code;
   });
+  /* The turn goes on at once, and the OpFor may already be shooting; the
+     prompt leaves the card once the board has drawn all of that. */
+  await p.waitForTimeout(600);
+  await settle(p);
+  await drain(p);
+  await settle(p);
+  const held = await p.evaluate((code) => {
+    const u = window.PMC_STATE().units.find(x => x.side === 'A' && x.code === code);
+    return { asking: window.__insertionAsking(), reserve: !!(u && u.reserve) };
+  }, before);
   ok('holding it back closes the prompt', held.asking === null);
   ok('...and leaves the unit in reserve for next turn', held.reserve);
 

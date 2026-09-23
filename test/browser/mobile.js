@@ -20,14 +20,18 @@ const PHONES = [
 
 async function boot(p) {
   await p.evaluate(() => window.PMC_NEWGAME({
-    tier: 3, pl: 1, mode: 'solo', planet: 'industrial', scenario: 'meeting',
+    /* 'solo' is not a mode the game knows any more: it left the second side
+       with nobody to deploy it, so the battle never began. Hotseat puts both
+       sides on this screen, which is what deploying both here needs. */
+    tier: 3, pl: 1, mode: 'hotseat', planet: 'industrial', scenario: 'meeting',
     nameA: 'Ours', nameB: 'Theirs',
     armyA: ['cmd3', 'regular', 'veterans', 'hmgteam', 'shock', 'lcv'],
     armyB: ['cmd3', 'regular', 'veterans', 'shock', 'engineers', 'lcv']
   }));
   await p.waitForTimeout(1500);
+  await p.evaluate(() => window.__autoDeployBoth());
+  await p.waitForTimeout(300);
   await p.evaluate(() => {
-    window.__autoDeployBoth();
     const b = document.querySelector('button[data-act="start"]');
     if (b) b.click();
   });

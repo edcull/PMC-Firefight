@@ -31,18 +31,80 @@ async function drain(p) {
   await p.waitForTimeout(120);
 }
 
-// hold a unit back and run the reserve phase, exactly as turn 2 would
-const ASK = async () => {
+/* There is no hook to run the reserve phase on its own any more: it opens
+   each turn, inside the engine. So the turn is brought to an end the way a
+   player would end it. Everyone but one of ours has already acted; that one is
+   picked up, and then regroups. The rally and end phases follow, the next turn
+   begins, and its reserve phase runs. Picking the unit up and the regroup are
+   separate steps, because on a phone picking a unit up brings the Actions pane
+   to the front by itself. */
+async function settle(p) {
+  for (let i = 0; i < 50; i++) {
+    if (await p.evaluate(() => !window.__busy() && window.__showQueue() === 0)) break;
+    await p.waitForTimeout(100);
+  }
+}
+async function lastToAct(p) {
+  await settle(p);
+  const r = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const last = s.units.find(u => u.side === 'A' && u.alive && u.x >= 0 && !u.reserve && !u.aboard &&
+      window.PMC.status(u) !== 'broken');
+    if (!last) return { none: true };
+    s.units.forEach(u => { u.activated = u !== last; });
+    s.activeSide = 'A'; s.streak = 1; s.chain = null;
+    window.__select(last);
+    return { from: s.turn };
+  });
+  await settle(p);
+  return r;
+}
+async function regroupLast(p) {
+  const acted = await p.evaluate(() => window.__pressAction('regroup'));
+  await p.waitForTimeout(500);
+  return acted;
+}
+async function endTurn(p) {
+  const r = await lastToAct(p);
+  return !r.none && await regroupLast(p);
+}
+
+// hold a unit back for the next reserve phase, exactly as turn 2 would have it
+const HOLD = () => {
   const s = window.PMC_STATE();
   s.turn = 3;
   s.objectives = [{ x: 24, y: 24, owner: null }];
   const held = s.units.find(u => u.side === 'A' && window.PMC.has(u, 'Battlefield Insertion'));
   if (!held) return { none: true };
   held.reserve = true; held.x = -1; held.y = -1; held.wave = undefined; held.alive = true;
-  window.__reservePhase(() => { });
-  await new Promise(r => setTimeout(r, 500));
   return { who: held.name, code: held.code };
 };
+
+/* The Invasion's second wave comes down on a die roll, 5+ on turn 4 and
+   easier every turn after. The turn is set well on, where it is 2+, and the
+   turn is played out until the dice bring somebody in — unless the game is
+   already asking for one of the wave, which is the same question. */
+async function askArrival(p) {
+  for (let k = 0; k < 4; k++) {
+    // the board may still be drawing the last arrival; the ask it shows is the one after that
+    await settle(p);
+    await drain(p);
+    await settle(p);
+    const st = await p.evaluate(() => window.__insertionState());
+    if (st && st.kind === 'arrive') return true;
+    const any = await p.evaluate(() => {
+      const s = window.PMC_STATE();
+      const me = s.units.filter(u => u.side === 'A' && u.reserve);
+      me.forEach(x => { x.wave = 2; });
+      if (s.turn < 7) s.turn = 7;
+      return me.length > 0;
+    });
+    if (!any) return false;
+    await endTurn(p);
+    await drain(p);
+  }
+  return !!(await p.evaluate(() => window.__insertionState()));
+}
 
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -78,6 +140,8 @@ const ASK = async () => {
 
   /* The situation as reported: several turns in, reading the combat results. */
   head('The player is on the results tab when the drop comes due');
+  const asked = await p.evaluate(HOLD);
+  await lastToAct(p);
   await p.evaluate(() => window.__setMTab ? window.__setMTab('res') : (() => {
     const b3 = document.querySelector('#mtabs [data-mtab="res"]');
     if (b3) b3.click();
@@ -85,9 +149,9 @@ const ASK = async () => {
   await p.waitForTimeout(200);
   const before = await p.evaluate(() => document.querySelector('.console').getAttribute('data-mtab'));
   ok('...and the results pane is the one in front', before === 'res', 'showing "' + before + '"');
-
-  const asked = await p.evaluate(ASK);
   ok('a unit is held back for a Battlefield Insertion', !asked.none, asked.who);
+  await regroupLast(p);
+  await drain(p);
 
   head('So the ask is brought to where the eye is');
   const shown = await p.evaluate(() => {
@@ -124,22 +188,28 @@ const ASK = async () => {
   ok('there is legal ground to land on', ground.spots > 0, ground.spots + ' drop points');
 
   head('Tapping it brings the unit down');
-  const landed = await p.evaluate(async () => {
+  const dropped = await p.evaluate(() => {
     const s = window.PMC_STATE();
-    const st = window.__insertionState();
-    const code = st.unit;
-    const spots = window.__insertionSpots(s.units.find(u => u.code === code));
-    const spot = spots[Math.floor(spots.length / 2)];
-    window.__dropHere(spot);
-    await new Promise(r => setTimeout(r, 1400));
-    const u = s.units.find(x => x.code === code);
+    const code = window.__insertionState().unit;
+    const spots = window.__insertionSpots(s.units.find(u => u.side === 'A' && u.code === code));
+    window.__dropHere(spots[Math.floor(spots.length / 2)]);
+    return code;
+  });
+  /* The drop is drawn coming down, and the other side may well answer it
+     before the board has caught up; the prompt goes once all that has played. */
+  await p.waitForTimeout(600);
+  await settle(p);
+  await drain(p);
+  await settle(p);
+  const landed = await p.evaluate((code) => {
+    const u = window.PMC_STATE().units.find(x => x.side === 'A' && x.code === code);
     return {
       asking: window.__insertionAsking(),
       down: u.x >= 0 && !u.reserve,
       at: u.x.toFixed(1) + '", ' + u.y.toFixed(1) + '"',
       pill: (document.getElementById('hdr-active') || {}).textContent || ''
     };
-  });
+  }, dropped);
   ok('the unit is on the table', landed.down, 'at ' + landed.at);
   ok('...the prompt is closed', landed.asking === null);
   ok('...and the header goes back to the turn', !/landing zone/i.test(landed.pill),
@@ -173,22 +243,20 @@ const ASK = async () => {
   await drain(p);
   ok('the scenario holds part of the force back', inv.held > 0, inv.held + ' in reserve');
 
+  /* Invasion: the attacker's first wave lands on turn 1 and the second from
+     turn 4. Put the player on the attacking side with a second wave due. */
+  await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    s.sc.attacker = 'A'; s.sc.defender = 'B';
+  });
+  await askArrival(p);
   const wave = await p.evaluate(async () => {
     const s = window.PMC_STATE();
-    /* Invasion: the attacker's first wave lands on turn 1 and the second from
-       turn 4. Put the player on the attacking side with a second wave due. */
-    s.sc.attacker = 'A'; s.sc.defender = 'B';
-    s.turn = 4;
-    const me = s.units.filter(u => u.side === 'A' && u.reserve);
-    if (!me.length) return { none: true };
-    me.forEach(x => { x.wave = 2; });
-    const u = me[0];
-    const before = { x: u.x, y: u.y };
-    window.__reservePhase(() => { });
-    await new Promise(r => setTimeout(r, 600));
     const st = window.__insertionState();
+    const u = st ? s.units.find(x => x.side === 'A' && x.code === st.unit) : null;
+    if (!u) return { none: true };
     return {
-      who: u.name, before,
+      who: u.name,
       asking: window.__insertionAsking(),
       kind: st ? st.kind : null,
       spots: st ? st.spots : 0,
@@ -211,7 +279,7 @@ const ASK = async () => {
   const put = await p.evaluate(async () => {
     const s = window.PMC_STATE();
     const st = window.__insertionState();
-    const u = s.units.find(x => x.code === st.unit);
+    const u = s.units.find(x => x.side === 'A' && x.code === st.unit);
     const spots = window.__arrivalSpots(u);
     const spot = spots[Math.floor(spots.length / 2)];
     window.__dropHere(spot);
@@ -231,17 +299,13 @@ const ASK = async () => {
      down one edge. A fingertip on a zoomed-out phone covers rather more than
      that, so a tap near the band has to count as a tap on it. */
   head('A tap near the legal ground counts as a tap on it');
+  await askArrival(p);
   const aim = await p.evaluate(async () => {
     const s = window.PMC_STATE();
-    const me = s.units.filter(u => u.side === 'A' && u.reserve);
-    me.forEach(x => { x.wave = 2; });
-    s.turn = 4;
-    if (!me.length) return { none: true };
-    window.__reservePhase(() => { });
-    await new Promise(r => setTimeout(r, 500));
+    if (!s.units.some(u => u.side === 'A' && u.reserve)) return { none: true };
     const st = window.__insertionState();
     if (!st) return { noAsk: true };
-    const u = s.units.find(x => x.code === st.unit);
+    const u = s.units.find(x => x.side === 'A' && x.code === st.unit);
     const spots = window.__arrivalSpots(u);
     /* A point just outside the legal ground — a miss by the old exact rule, a
        hit by any real finger. Walk outward from a legal spot until the rule
@@ -297,17 +361,13 @@ const ASK = async () => {
     [4, 1, 0.55, 0.4, 0.25].map(z => '×' + z + ': ' + reach['x' + z] + '"').join(', '));
 
   head('But a tap right across the table is still a miss');
+  await askArrival(p);
   const wild = await p.evaluate(async () => {
     const s = window.PMC_STATE();
-    const me = s.units.filter(u => u.side === 'A' && u.reserve);
-    if (!me.length) return { none: true };
-    me.forEach(x => { x.wave = 2; });
-    s.turn = 4;
-    window.__reservePhase(() => { });
-    await new Promise(r => setTimeout(r, 500));
+    if (!s.units.some(u => u.side === 'A' && u.reserve)) return { none: true };
     const st = window.__insertionState();
     if (!st) return { noAsk: true };
-    const u = s.units.find(x => x.code === st.unit);
+    const u = s.units.find(x => x.side === 'A' && x.code === st.unit);
     const spots = window.__arrivalSpots(u);
     // the furthest corner from anywhere it may legally come on
     let far = { x: 24, y: 24 }, fd = 0;
