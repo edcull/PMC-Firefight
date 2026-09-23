@@ -17270,7 +17270,7 @@
     none: 'none'
   };
   // one cell of a machine's digital camouflage, in inches
-  var CELL = 0.2;
+  var CELL = 0.14;
   /* How far a styled craft's wings or fans reach, as a multiple of the hull
      width — what it lays on the ground when it flies over. */
   var CRAFT_SPAN = {
@@ -18510,7 +18510,7 @@
         out.push({ p: cx * CELL, q: cy * CELL, zk: rnd() });
       }
       // clusters of two or three cells, each with a few singles stepping away
-      var clumps = Math.round(cols * rows * 0.14);  // enough to cover it, not to fill it in
+      var clumps = Math.round(cols * rows * 0.17);  // enough to cover it, not to fill it in
       for (var i = 0; i < clumps; i++) {
         var cx0 = Math.round((rnd() - 0.5) * cols), cy0 = Math.round((rnd() - 0.5) * rows);
         var w2 = 1 + Math.floor(rnd() * 2), h2 = 1 + Math.floor(rnd() * 2);
@@ -18540,6 +18540,53 @@
       for (var j = 1; j < pts.length; j++) g.lineTo(pts[j][0], pts[j][1]);
       g.closePath(); g.clip();
       g.fillStyle = mixc(col, '#16180f', 0.34);
+      /* A plate standing up (a side, a front, a turret's cheek) takes the
+         pattern on a grid of its own, square to the screen and pinned to the
+         machine, so it is covered edge to edge as densely as the deck is:
+         clumps of cells on a coarse grid, and singles scattered between. */
+      if (!top) {
+        var cs = half * 2;
+        var gi0 = Math.floor((x0 - P0.x) / cs), gi1 = Math.ceil((x1 - P0.x) / cs);
+        var gj0 = Math.floor((y0 - P0.y) / cs), gj1 = Math.ceil((y1 - P0.y) / cs);
+        /* every block of three by three cells has exactly four of them
+           filled, picked at random, so no stretch of plate three cells across
+           is ever left bare, yet the cells still clump and scatter */
+        var inBlock = function (gi2, gj2) {
+          var bx = Math.floor(gi2 / 3), by = Math.floor(gj2 / 3);
+          var me = hash(gi2, gj2, 772 + bx * 7 + by * 13), below = 0;
+          for (var ci2 = 0; ci2 < 3; ci2++) for (var cj2 = 0; cj2 < 3; cj2++) {
+            if (hash(bx * 3 + ci2, by * 3 + cj2, 772 + bx * 7 + by * 13) < me) below++;
+          }
+          return below < 4;
+        };
+        // a small plate may fall between the blocks' picks: it is topped up to
+        // a third of the cells whose middles lie on it, the likeliest first
+        var inside = function (px, py) {
+          var hit = false;
+          for (var pi = 0, pj = pts.length - 1; pi < pts.length; pj = pi++) {
+            var xi = pts[pi][0], yi = pts[pi][1], xj = pts[pj][0], yj = pts[pj][1];
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) hit = !hit;
+          }
+          return hit;
+        };
+        var onFace = [], lit = 0;
+        for (var gi = gi0; gi <= gi1; gi++) {
+          for (var gj = gj0; gj <= gj1; gj++) {
+            var on = inBlock(gi, gj);
+            if (on) g.fillRect(P0.x + gi * cs, P0.y + gj * cs, cs, cs);
+            if (inside(P0.x + (gi + 0.5) * cs, P0.y + (gj + 0.5) * cs)) {
+              if (on) lit++; else onFace.push({ gi: gi, gj: gj, r: hash(gi, gj, 919) });
+            }
+          }
+        }
+        var want = Math.ceil((lit + onFace.length) * 0.34) - lit;
+        if (want > 0) {
+          onFace.sort(function (p1, p2) { return p1.r - p2.r; });
+          for (var wk = 0; wk < want && wk < onFace.length; wk++) g.fillRect(P0.x + onFace[wk].gi * cs, P0.y + onFace[wk].gj * cs, cs, cs);
+        }
+        g.restore();
+        return;
+      }
       CAMO.forEach(function (b2) {
         // up the plate as well as along it, so a tall face is covered
         var c = S3(HF(b2.p, b2.q), z + (top ? 0 : (b2.zk - 0.5) * (h || 0)));
@@ -18624,7 +18671,7 @@
         var colr = k > 0.5 ? mixc(ft.mid, ft.lit, (k - 0.5) * 2) : mixc(ft.dark, ft.mid, k * 2);
         var face = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]];
         poly(g, face, colr);
-        if (CAMO && tn0 === TB) camoOn(face, colr, z0 + h * 0.5, false, h);
+        if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(face, colr, z0 + h * 0.5, false, h);
         if (h > 2) {
           var yT = Math.min(face[2][1], face[3][1]), yB = Math.max(face[0][1], face[1][1]);
           if (yB - yT > 1) {
@@ -18642,7 +18689,7 @@
         var cxT = 0, cyT = 0; base.forEach(function (q) { cxT += q.x; cyT += q.y; });
         var topCol = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11).top;
         poly(g, Ts, topCol);
-        if (CAMO && tn0 === TB) camoOn(Ts, topCol, z0 + h, true);
+        if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(Ts, topCol, z0 + h, true);
         var ys = Ts.map(function (q) { return q[1]; });
         var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
         if (y1 - y0 > 1) {
@@ -18747,12 +18794,14 @@
         for (var qi = 0; qi < 4; qi++) { var qa = fq[qi], qb = fq[(qi + 1) % 4]; ar += qa[0] * qb[1] - qb[0] * qa[1]; }
         if (ar * ringSign <= 0.5) return;
         var k = clamp01(0.5 - fc.sx * 0.42);
-        poly(g, [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]],
-          k > 0.5 ? mixc(tn.mid, tn.lit, (k - 0.5) * 2) : mixc(tn.dark, tn.mid, k * 2));
+        var lcol = k > 0.5 ? mixc(tn.mid, tn.lit, (k - 0.5) * 2) : mixc(tn.dark, tn.mid, k * 2);
+        poly(g, fq, lcol);
+        if (CAMO && (tn === TB || tn === TT)) camoOn(fq, lcol, z + h * 0.5, false, h);
         edge(g, Ts[fc.i], Ts[fc.j], 'rgba(255,240,214,.3)', 0.6);
         if (fc.front) frontVisible = true;
       });
       poly(g, Ts, tn.top);
+      if (CAMO && (tn === TB || tn === TT)) camoOn(Ts, tn.top, z + h, true);
       edge(g, Ts[0], Ts[1], 'rgba(255,240,214,.45)', 0.6);
       // the tube mouths on the front face (corners 0,1 at the front)
       for (var r = 0; r < rows; r++) {
