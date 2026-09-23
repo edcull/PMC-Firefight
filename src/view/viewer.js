@@ -1060,7 +1060,7 @@
       view.pickFac = t.getAttribute('data-fac');
       el('vsearch').value = '';
       drawPicker();
-      el('vside').querySelector('.vscroll').scrollTop = 0;
+      el('vside').querySelector('.vlistscroll').scrollTop = 0;
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });

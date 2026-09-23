@@ -2225,17 +2225,22 @@
      the sprites shade with it: `light` catches the sun, `mid` is the coat,
      `dark` is the shadow under it, `helm` the hard kit and `cloth` the webbing.
      `ink` is the colour the interface uses for that side's name and markers. */
+  /* In the order the swatches show them: round the colour wheel from red to
+     pink, then the neutrals. Desert ochre is the default wherever one is needed. */
   var COLOURS = {
-    ochre:    { name: 'Desert ochre',  ink: '#d8a13a', light: '#dcb673', mid: '#b1853a', dark: '#5f4620', helm: '#93702a', cloth: '#6b5c3a' },
-    steel:    { name: 'Steel blue',    ink: '#5aa9c8', light: '#9cc4d8', mid: '#52859c', dark: '#1f3d4b', helm: '#3d6e83', cloth: '#3d5566' },
-    olive:    { name: 'Olive drab',    ink: '#8fa858', light: '#a8b878', mid: '#6d7c43', dark: '#333b1f', helm: '#58663a', cloth: '#5e6742' },
     crimson:  { name: 'Crimson',       ink: '#d45a5a', light: '#d99090', mid: '#a04646', dark: '#4c1e1e', helm: '#843a3a', cloth: '#6b4040' },
-    slate:    { name: 'Gunmetal',      ink: '#9aa7b6', light: '#aab6c4', mid: '#6b7684', dark: '#2c333c', helm: '#535d69', cloth: '#4e5661' },
-    plum:     { name: 'Imperial plum', ink: '#a684c8', light: '#bfa2d6', mid: '#7f5fa0', dark: '#3a2a4c', helm: '#67508a', cloth: '#5a4770' },
-    sand:     { name: 'Bone white',    ink: '#d8cfb4', light: '#e4ddc6', mid: '#b3aa8c', dark: '#585244', helm: '#948c72', cloth: '#8a8268' },
     rust:     { name: 'Rust orange',   ink: '#d87a3a', light: '#dfa070', mid: '#a85f2c', dark: '#4e2a12', helm: '#8a4e24', cloth: '#6e4a2c' },
+    ochre:    { name: 'Desert ochre',  ink: '#d8a13a', light: '#dcb673', mid: '#b1853a', dark: '#5f4620', helm: '#93702a', cloth: '#6b5c3a' },
+    hazard:   { name: 'Hazard yellow', ink: '#f0d830', light: '#f4e66a', mid: '#d6c020', dark: '#5e5208', helm: '#bca812', cloth: '#7c7224' },
+    olive:    { name: 'Olive drab',    ink: '#8fa858', light: '#a8b878', mid: '#6d7c43', dark: '#333b1f', helm: '#58663a', cloth: '#5e6742' },
+    forest:   { name: 'Forest green',  ink: '#5cb85c', light: '#8fcf85', mid: '#3f8a3f', dark: '#1a3d1c', helm: '#2f6a31', cloth: '#355a36' },
     jade:     { name: 'Jade',          ink: '#5cbfa0', light: '#8fd4bd', mid: '#3f8f78', dark: '#1c4238', helm: '#2f6e5c', cloth: '#35584e' },
+    steel:    { name: 'Steel blue',    ink: '#5aa9c8', light: '#9cc4d8', mid: '#52859c', dark: '#1f3d4b', helm: '#3d6e83', cloth: '#3d5566' },
     midnight: { name: 'Midnight',      ink: '#7b8bc4', light: '#93a1d0', mid: '#4c5a90', dark: '#1e2442', helm: '#3a4570', cloth: '#343c5e' },
+    plum:     { name: 'Imperial plum', ink: '#a684c8', light: '#bfa2d6', mid: '#7f5fa0', dark: '#3a2a4c', helm: '#67508a', cloth: '#5a4770' },
+    rose:     { name: 'Rose',          ink: '#e0709e', light: '#e8a0bf', mid: '#b04c78', dark: '#4e1e34', helm: '#8e3c60', cloth: '#6a4456' },
+    sand:     { name: 'Bone white',    ink: '#d8cfb4', light: '#e4ddc6', mid: '#b3aa8c', dark: '#585244', helm: '#948c72', cloth: '#8a8268' },
+    slate:    { name: 'Gunmetal',      ink: '#9aa7b6', light: '#aab6c4', mid: '#6b7684', dark: '#2c333c', helm: '#535d69', cloth: '#4e5661' },
     charcoal: { name: 'Charcoal black', ink: '#aab0b8', light: '#767c84', mid: '#484d54', dark: '#15181c', helm: '#2d3238', cloth: '#292d33' }
   };
   var COLOUR_KEYS = Object.keys(COLOURS);

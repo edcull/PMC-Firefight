@@ -86,8 +86,11 @@
   #vsearch {
     width: 100%; background: var(--panel-2); color: var(--ink);
     border: 1px solid var(--line); border-radius: 5px;
-    padding: 6px 9px; font-family: var(--body); font-size: 12.5px; margin-bottom: 7px;
+    padding: 6px 9px; font-family: var(--body); font-size: 12.5px;
   }
+  /* the tabs and the search stay put at the top; only the list under them scrolls */
+  .vsearchbar { flex: none; padding: 7px 7px 6px; border-bottom: 1px solid var(--line); }
+  .vlistscroll { flex: 1; overscroll-behavior: contain; }
   /* a tab for each army above the list; a search spans all four, so the tabs dim while it runs */
   .vfacs { display: flex; gap: 3px; flex: none; padding: 7px 7px 0; border-bottom: 1px solid var(--line); }
   .vfacs button {
@@ -318,8 +321,8 @@
   <div class="vpanel vside" id="vside">
     <h3>Units <button type="button" class="vclose" id="vclose" aria-label="Close the unit list">×</button></h3>
     <div class="vfacs" id="vfacs" role="tablist" aria-label="Army"></div>
-    <div class="vscroll">
-      <input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off">
+    <div class="vsearchbar"><input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off"></div>
+    <div class="vscroll vlistscroll">
       <div id="vlist"></div>
     </div>
   </div>

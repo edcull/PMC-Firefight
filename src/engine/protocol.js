@@ -49,7 +49,7 @@
   var SCENARIOS = ['roll', 'rolld3', 'meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover'];
   var FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
   var TACTICS = ['', 'laststand', 'wave', 'guerillas'];
-  var COLOURS = ['ochre', 'steel', 'olive', 'crimson', 'slate', 'plum', 'sand', 'rust', 'jade', 'midnight'];
+  var COLOURS = ['ochre', 'steel', 'olive', 'crimson', 'slate', 'plum', 'sand', 'rust', 'jade', 'midnight', 'charcoal', 'hazard', 'rose', 'forest'];
   var SEATS = ['A', 'B'];
 
   var LIMITS = {
