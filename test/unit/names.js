@@ -156,7 +156,7 @@ const tally = C.biomassTally(hive.companies.A)['Small bugs'];
 ok('the memorial keeps biomass by kind, not names', tally && tally.models === 7 && tally.mass === 14 &&
   hive.companies.A.memorial.length === 0, JSON.stringify(tally));
 ok('...and the unit history says how much', brood.history.some((h) => /Biomass lost: 6/.test(h)));
-const hs = C.lossStats(hive.companies.A);
+const hs = C.lossStats(hive.companies.A)[0];
 ok('...and the swarm\'s loss rate is in biomass', hs.unit === 'biomass' && hs.lost === 14 && hs.served === 30 &&
   Math.round(hs.pct * 100) === 47, hs.lost + ' of ' + hs.served + ' ' + hs.unit);
 hive.companies.A.biomass = { 'Attack forms': 5 };      // an early save kept the models alone
@@ -173,19 +173,19 @@ console.log('the loss rate');
 const lc = C.newCampaign({ mode: 'solo' });
 const squad = C.newEntry('rookie');
 lc.companies.A.roster = [squad];
-ok('nothing lost is 0%', C.lossStats(lc.companies.A).pct === 0 && C.lossStats(lc.companies.A).served === 8);
+ok('nothing lost is 0%', C.lossStats(lc.companies.A)[0].pct === 0 && C.lossStats(lc.companies.A)[0].served === 8);
 C.aftermath(lc, {
   winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
   units: [{ rid: squad.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 6, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }],
   casualties: [0, 1].map((i) => ({ side: 'A', rid: squad.rid, name: 'Man ' + i, rank: 'Private', turn: 2, type: 'Rookie rifle team' }))
 });
-const ls = C.lossStats(lc.companies.A);
+const ls = C.lossStats(lc.companies.A)[0];
 ok('a squad of 8 that loses 2 is 2 of 10 soldiers — 20%, not 25%', ls.lost === 2 && ls.served === 10 && ls.pct === 0.2 && ls.unit === 'soldiers',
   ls.lost + ' of ' + ls.served);
 const more = C.newEntry('recruits');
 lc.companies.A.roster.push(more);
 C.disband(lc.companies.A, more);
-const ld = C.lossStats(lc.companies.A);
+const ld = C.lossStats(lc.companies.A)[0];
 ok('a unit disbanded still counts as having served', ld.served === 18 && ld.lost === 2, ld.lost + ' of ' + ld.served);
 const drone = C.newEntry('lcv', { drone: true });
 lc.companies.A.roster.push(drone);
@@ -194,12 +194,62 @@ C.aftermath(lc, {
   units: [{ rid: drone.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
   casualties: []
 });
-const lz = C.lossStats(lc.companies.A);
+const lz = C.lossStats(lc.companies.A)[0];
 ok('a drone is not counted, served or lost', lz.served === 18 && lz.lost === 2, lz.lost + ' of ' + lz.served);
 const tr = C.newEntry('xsturret3');
-ok('...nor a turret', C.lossStats({ faction: 'xeno', roster: [tr], doctrines: [] }).served === 0);
-const tribe = C.newCompany('Tribe', { faction: 'xeno' });
-ok('the tribe counts warriors', C.lossStats(tribe).unit === 'warriors');
+ok('...nor a turret', C.lossStats({ faction: 'xeno', roster: [tr], doctrines: [] }).every((l) => l.served === 0));
+
+console.log('crews, the tribe and the infected');
+// a crewed hull lost is its commander lost: one, and the hull itself is not counted
+const cc = C.newCampaign({ mode: 'solo' });
+const hull = C.newEntry('lcv');
+cc.companies.A.roster = [hull];
+ok('a crewed vehicle counts its one crewman as having served', C.lossStats(cc.companies.A)[0].served === 1);
+C.aftermath(cc, {
+  winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+  units: [{ rid: hull.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
+  casualties: [{ side: 'A', rid: hull.rid, name: 'Ivo Crane', rank: 'Commander', turn: 3, type: 'Light combat vehicle' }]
+});
+const hc = C.lossStats(cc.companies.A)[0];
+ok('...and when the hull is lost, its crewman is the one loss', hc.lost === 1, hc.lost + ' of ' + hc.served);
+
+const xc = C.newCampaign({ mode: 'solo', factionA: 'xeno' });
+const XA = xc.companies.A;
+XA.faction = 'xeno';
+const crocks = C.newEntry('xalpha3'), esh = C.newEntry('xeps3');
+XA.roster = [crocks, esh];
+const xs0 = C.lossStats(XA);
+ok('the tribe keeps two counts, Crocks and Esh-Aven', xs0.map((l) => l.unit).join() === 'Crocks,Esh-Aven',
+  xs0.map((l) => l.served + ' ' + l.unit).join(', '));
+C.aftermath(xc, {
+  winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+  units: [
+    { rid: crocks.rid, side: 'A', key: 'xalpha3', startSize: 3, endSize: 2, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] },
+    { rid: esh.rid, side: 'A', key: 'xeps3', startSize: R.profile('xeps3').size, endSize: 1, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }
+  ],
+  casualties: [{ side: 'A', rid: crocks.rid, name: 'Kavek', rank: 'Hunt-leader', turn: 1, type: 'Core Alpha troopers' }]
+    .concat([0, 1, 2].map((i) => ({ side: 'A', rid: esh.rid, name: 'Esh ' + i, rank: 'Warrior', turn: 2, type: 'Core Epsilon troopers' })))
+});
+const xs = C.lossStats(XA);
+ok('...a Crock lost goes on the Crocks', xs[0].lost === 1 && xs[0].served === 4, xs[0].lost + ' of ' + xs[0].served);
+ok('...and the Esh-Aven on their own', xs[1].lost === 3 && xs[1].served === R.profile('xeps3').size + 3, xs[1].lost + ' of ' + xs[1].served);
+
+ok('Infected humans are not biomass', R.biomassOf(R.profile('binfected')) === 0);
+const ih = C.newCampaign({ mode: 'solo', factionA: 'bugs' });
+ih.companies.A.faction = 'bugs';
+const inf = C.newEntry('binfected'), sb = C.newEntry('bsmall');
+ih.companies.A.roster = [inf, sb];
+ok('...nor counted as having served', C.lossStats(ih.companies.A)[0].served === 16);
+C.aftermath(ih, {
+  winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+  units: [{ rid: inf.rid, side: 'A', key: 'binfected', startSize: 12, endSize: 7, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }],
+  casualties: [{ side: 'A', swarm: true, count: 5, mass: 0, type: 'Infected humans', unit: 'Infected humans', rid: inf.rid, turn: 0 }]
+});
+const ihs = C.lossStats(ih.companies.A)[0];
+ok('...nor as biomass lost', ihs.lost === 0 && ihs.served === 16, ihs.lost + ' of ' + ihs.served);
+ok('...though the memorial still shows the bodies', C.biomassTally(ih.companies.A)['Infected humans'].models === 5 &&
+  C.biomassTally(ih.companies.A)['Infected humans'].mass === 0);
+ok('...and its history says how many, not biomass', inf.history.some((h) => /^Lost 5\./.test(h)));
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

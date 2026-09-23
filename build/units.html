@@ -3833,8 +3833,13 @@ html { scroll-behavior: smooth; }
   }
   /* What a lost bug is worth in biomass: its Tier for every model, and 25 for
      one of the Overgrown giants — so a Tier II brood of eight is 16, and one
-     Queen is a little more than a whole Tier IV brood. */
-  function biomassOf(p) { return !p ? 1 : isOvergrown(p) ? 25 : Math.max(1, p.tier || 1); }
+     Queen is a little more than a whole Tier IV brood. The Infected humans the
+     fungus raises are not the swarm's own flesh, and are worth nothing. */
+  function biomassOf(p) {
+    if (!p) return 1;
+    if (p.group === 'Infected Humans') return 0;
+    return isOvergrown(p) ? 25 : Math.max(1, p.tier || 1);
+  }
   // who comes back for the next battle: everyone who was not a casualty
   function survivors(u) {
     return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });

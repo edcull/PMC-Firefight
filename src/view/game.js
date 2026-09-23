@@ -3766,16 +3766,18 @@
       all.forEach(function (c) {
         if (!c.swarm) return;
         if (!bio[c.type]) { bio[c.type] = { n: 0, mass: 0 }; bioOrder.push(c.type); }
-        bio[c.type].n += c.count; bio[c.type].mass += c.mass || c.count; bioTotal += c.mass || c.count;
+        var m = c.mass != null ? c.mass : c.count;
+        bio[c.type].n += c.count; bio[c.type].mass += m; bioTotal += m;
       });
       var head = bioOrder.length ? bioTotal + ' biomass lost'
         : mine.length ? mine.length + (mine.length === 1 ? ' casualty' : ' casualties') : 'no casualties';
       var h = '<div class="cas-side cas-' + side + '"><div class="cas-head">' + esc(sideName(side)) +
         '<span class="mk">' + head + '</span></div>';
       if (bioOrder.length) {
-        bioOrder.sort(function (a, b) { return bio[b].mass - bio[a].mass; });
+        bioOrder.sort(function (a, b) { return bio[b].mass - bio[a].mass || bio[b].n - bio[a].n; });
         h += '<ol class="cas-list">' + bioOrder.map(function (t) {
-          return '<li><b>' + esc(t) + '</b> <span class="cas-rank">\u00d7 ' + bio[t].n + ' \u00b7 ' + bio[t].mass + ' biomass</span></li>';
+          return '<li><b>' + esc(t) + '</b> <span class="cas-rank">\u00d7 ' + bio[t].n +
+            (bio[t].mass ? ' \u00b7 ' + bio[t].mass + ' biomass' : ' \u00b7 not biomass') + '</span></li>';
         }).join('') + '</ol>';
       }
       if (mine.length) {

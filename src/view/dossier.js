@@ -698,10 +698,11 @@
      replacements included — soldiers, the tribe's warriors, or the swarm's
      biomass. */
   function lossLine(co) {
-    var st = C.lossStats(co);
-    if (!st.served) return '';
-    var pct = Math.round(st.pct * 1000) / 10;
-    return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
+    return C.lossStats(co).map(function (st) {
+      if (!st.served) return '';
+      var pct = Math.round(st.pct * 1000) / 10;
+      return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
+    }).join('');
   }
   function memorialList(co) {
     if (co.faction === 'bugs') return biomassList(co);
@@ -733,13 +734,13 @@
   function biomassList(co) {
     var bio = C.biomassTally(co), types = Object.keys(bio);
     if (!types.length) return lossLine(co) + '<p class="dnote">No biomass lost yet.</p>';
-    types.sort(function (a, b) { return bio[b].mass - bio[a].mass || (a < b ? -1 : 1); });
+    types.sort(function (a, b) { return bio[b].mass - bio[a].mass || bio[b].models - bio[a].models || (a < b ? -1 : 1); });
     var total = types.reduce(function (n, t) { return n + bio[t].mass; }, 0);
     return lossLine(co) +
       '<div class="dmem"><div class="dmem-head">Biomass lost<span class="mk">' + total + '</span></div>' +
       '<ol class="dmem-list">' + types.map(function (t) {
         return '<li class="dmem-bio"><b>' + esc(t) + '</b><span class="dmen-rank">\u00d7 ' + bio[t].models +
-          ' \u00b7 ' + bio[t].mass + ' biomass</span></li>';
+          (bio[t].mass ? ' \u00b7 ' + bio[t].mass + ' biomass' : ' \u00b7 not biomass') + '</span></li>';
       }).join('') + '</ol></div>';
   }
   var menOpen = {};               // which units have their soldiers shown, by rid

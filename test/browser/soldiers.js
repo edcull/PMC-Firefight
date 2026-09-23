@@ -94,7 +94,7 @@ async function clickText(p, re) {
   check('an empty memorial says so', /No one has been lost yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
-    co.lostModels = 3;
+    co.losses = { soldiers: { lost: 3, departed: 0 } };
     co.memorial = [
       { name: 'Rhys Walsh', rank: 'Sergeant', type: 'Rookie rifle team', unit: 'Second Section', turn: 3, battle: 1, against: 'Red Dawn', scenario: 'meeting' },
       { name: 'Ana Silva', rank: 'Private', type: 'Recruits', unit: 'Recruits', turn: 2, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
@@ -136,6 +136,25 @@ async function clickText(p, re) {
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
     co.faction = co._was.faction; co.memorial = co._was.memorial; delete co.biomass; delete co._was;
+  });
+  await clickText(p, '^Units$');
+
+  // the tribe keeps two counts: its Crocks and its Esh-Aven
+  await p.evaluate(() => {
+    const co = window.PMC_CAMPAIGN.get().companies.A, C = window.PMCCamp;
+    co._was = { faction: co.faction, roster: co.roster, losses: co.losses, memorial: co.memorial };
+    co.faction = 'xeno'; co.memorial = [];
+    co.roster = [C.newEntry('xalpha3'), C.newEntry('xeps3'), C.newEntry('xeps2')];
+    co.losses = { crocks: { lost: 1, departed: 0 }, eshaven: { lost: 6, departed: 0 } };
+  });
+  await clickText(p, '^Memorial$');
+  const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss')].map(d => d.textContent));
+  check('the tribe shows a loss rate for its Crocks and one for its Esh-Aven',
+    tribe.length === 2 && /lost 1 of 4 Crocks$/.test(tribe[0]) && /lost 6 of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
+  await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-tribe.png') });
+  await p.evaluate(() => {
+    const co = window.PMC_CAMPAIGN.get().companies.A;
+    Object.assign(co, co._was); delete co._was;
   });
   await clickText(p, '^Units$');
 

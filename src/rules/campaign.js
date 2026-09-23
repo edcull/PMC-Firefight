@@ -748,7 +748,10 @@
      after the battle counts once lost and once again in the unit that is back
      at strength. So a squad of eight that loses two is 2 of 10: 20%.
      The swarm counts the same way in biomass rather than bodies: each bug is
-     worth its Tier, an Overgrown one 25. */
+     worth its Tier, an Overgrown one 25, and the Infected humans it raises
+     are not biomass at all. The tribe keeps two counts, one for the Crocks
+     (the Alpha to Delta castes, and the crews of its craft) and one for the
+     Esh-Aven who make up its Epsilon squads. */
   /* Drones and turrets are machines with nobody in them: they are neither
      lost nor counted as having served. */
   function unmanned(entry) {
@@ -758,31 +761,61 @@
   }
   // the models the loss rate counts for this unit
   function manned(entry, co) { return unmanned(entry) ? 0 : strengthOf(entry, co); }
-  function massOf(entry, co) { return manned(entry, co) * R.biomassOf(profile(entry.key)); }
-  function lossStats(co) {
-    if (co.faction === 'bugs') {
-      var tally = biomassTally(co);
-      var gone = Object.keys(tally).reduce(function (n, t) { return n + tally[t].mass; }, 0);
-      var alive = (co.roster || []).reduce(function (n, e) { return n + massOf(e, co); }, 0);
-      var all = alive + gone + (co.departedMass || 0);
-      return { lost: gone, served: all, pct: all ? gone / all : 0, unit: 'biomass' };
-    }
-    var lost = co.lostModels || 0;
-    var now = (co.roster || []).reduce(function (n, e) { return n + manned(e, co); }, 0);
-    var served = now + lost + (co.departed || 0);
-    return { lost: lost, served: served, pct: served ? lost / served : 0, unit: co.faction === 'xeno' ? 'warriors' : 'soldiers' };
+  // which count a profile's losses go in, and what each model lost is worth there
+  var POOL_NAMES = { soldiers: 'soldiers', crocks: 'Crocks', eshaven: 'Esh-Aven', biomass: 'biomass' };
+  function poolOf(p) {
+    if (!p) return 'soldiers';
+    if (p.faction === 'bugs') return 'biomass';
+    if (p.faction === 'xeno') return p.eshAven || p.group === 'Epsilon Squads' ? 'eshaven' : 'crocks';
+    return 'soldiers';
   }
-  /* The swarm's tally of what it has lost, by kind of bug: models and biomass.
-     (An early save kept only the models; their biomass is worked out again.) */
+  function poolsFor(co) {
+    return co.faction === 'bugs' ? ['biomass'] : co.faction === 'xeno' ? ['crocks', 'eshaven'] : ['soldiers'];
+  }
+  function weightOf(p) { return poolOf(p) === 'biomass' ? R.biomassOf(p) : 1; }
+  function massOf(entry, co) { return manned(entry, co) * weightOf(profile(entry.key)); }
+  /* The running counts behind the loss rate, one per pool: what has been lost
+     and what has left the books some other way. */
+  function losses(co) {
+    if (!co.losses) {
+      co.losses = {};
+      // a save from before the counts were split keeps what it had in its main pool
+      var main = poolsFor(co)[0];
+      co.losses[main] = { lost: co.faction === 'bugs' ? 0 : (co.lostModels || 0),
+        departed: co.faction === 'bugs' ? (co.departedMass || 0) : (co.departed || 0) };
+      delete co.lostModels; delete co.departed; delete co.departedMass;
+    }
+    return co.losses;
+  }
+  function addLoss(co, pool, key, n) {
+    var L = losses(co), b = L[pool] || (L[pool] = { lost: 0, departed: 0 });
+    b[key] += n;
+  }
+  function lossStats(co) {
+    var L = losses(co);
+    return poolsFor(co).map(function (pool) {
+      var b = L[pool] || { lost: 0, departed: 0 };
+      var lost = b.lost;
+      if (pool === 'biomass') {
+        var tally = biomassTally(co);
+        lost = Object.keys(tally).reduce(function (n, t) { return n + tally[t].mass; }, 0);
+      }
+      var now = (co.roster || []).reduce(function (n, e) {
+        return n + (poolOf(profile(e.key)) === pool ? massOf(e, co) : 0);
+      }, 0);
+      var served = now + lost + b.departed;
+      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0 };
+    });
+  }
+  /* The swarm's tally of what it has lost, by kind of bug: the models, and
+     the biomass they were worth, which is always worked out from the models. */
   function biomassTally(co) {
     var out = {};
     Object.keys(co.biomass || {}).forEach(function (t) {
-      var v = co.biomass[t];
-      if (typeof v === 'number') {
-        var p = R.CATALOGUE.filter(function (q) { return q.name === t; })[0];
-        v = { models: v, mass: v * R.biomassOf(p) };
-      }
-      if (v && v.models > 0) out[t] = v;
+      var v = co.biomass[t], n = typeof v === 'number' ? v : (v && v.models) || 0;
+      if (n <= 0) return;
+      var p = R.CATALOGUE.filter(function (q) { return q.name === t; })[0];
+      out[t] = { models: n, mass: n * R.biomassOf(p) };
     });
     return out;
   }
@@ -805,7 +838,7 @@
       roster: [], cmdRid: null,
       record: { battles: 0, wins: 0, draws: 0, losses: 0 },
       memorial: [],
-      lostModels: 0, departed: 0, departedMass: 0   // what the loss rate on the memorial is worked from
+      losses: {}                                // what the loss rate on the memorial is worked from
     };
   }
 
@@ -1142,8 +1175,7 @@
     var chk = canDisband(co, entry);
     if (!chk.ok) return chk;
     co.roster = co.roster.filter(function (e) { return e !== entry; });
-    co.departed = (co.departed || 0) + manned(entry, co);
-    co.departedMass = (co.departedMass || 0) + massOf(entry, co);
+    addLoss(co, poolOf(profile(entry.key)), 'departed', massOf(entry, co));
     return { ok: true };
   }
 
@@ -1157,11 +1189,10 @@
     entry.exp -= cost.exp; co.kUC -= cost.kUC;
     // the rid, honours, traumas and history all stay; only the profile changes
     var renamed = entry.name === was;
-    var had = manned(entry, co), hadMass = massOf(entry, co);
+    var had = massOf(entry, co), hadPool = poolOf(profile(entry.key));
     entry.key = newKey;
     // a promotion to a smaller unit leaves the extra men behind
-    co.departed = (co.departed || 0) + Math.max(0, had - manned(entry, co));
-    co.departedMass = (co.departedMass || 0) + Math.max(0, hadMass - massOf(entry, co));
+    addLoss(co, hadPool, 'departed', hadPool === poolOf(profile(newKey)) ? Math.max(0, had - massOf(entry, co)) : had);
     if (renamed) entry.name = profile(newKey).name;
     entry.history.push('Promoted from ' + was + ' to ' + profile(newKey).name + '.');
     return { ok: true, cost: cost };
@@ -1441,18 +1472,18 @@
       /* The models this side lost, unit by unit: a named soldier is one and a
          swarm's count is what it says. A drone or a turret has nobody in it,
          and is not a loss. */
-      var lostBy = {}, lostNow = 0;
+      var keyOf = {}, lostBy = {};
+      (report.units || []).forEach(function (l) { if (l.side === side) keyOf[l.rid] = l.key; });
       (report.casualties || []).forEach(function (c) {
         if (c.side !== side) return;
-        var n = c.swarm ? c.count : 1;
-        lostBy[c.rid] = (lostBy[c.rid] || 0) + n; lostNow += n;
+        var n = c.swarm ? c.count : 1, p = profile(keyOf[c.rid]);
+        lostBy[c.rid] = (lostBy[c.rid] || 0) + n;
+        if (!c.swarm) addLoss(co, p ? poolOf(p) : poolsFor(co)[0], 'lost', n * (p ? weightOf(p) : 1));   // the swarm's is its biomass tally
       });
-      co.lostModels = (co.lostModels || 0) + lostNow;
       // a unit that leaves the books takes its survivors with it
       function leaves(e) {
-        var left = Math.max(0, manned(e, co) - (lostBy[e.rid] || 0));
-        co.departed = (co.departed || 0) + left;
-        co.departedMass = (co.departedMass || 0) + left * R.biomassOf(profile(e.key));
+        var p = profile(e.key), left = Math.max(0, manned(e, co) - (lostBy[e.rid] || 0));
+        addLoss(co, poolOf(p), 'departed', left * weightOf(p));
       }
 
       /* No Place for the Weak! (p. 112). The example is made of whichever unit
@@ -1548,7 +1579,9 @@
         var cas = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
         if (cas.length) {
           u.casualties = cas;
-          entry.history.push(cas[0].swarm ? 'Biomass lost: ' + cas.reduce(function (n, c) { return n + (c.mass || c.count); }, 0) + '.'
+          var mass = cas.reduce(function (n, c) { return n + (c.mass != null ? c.mass : c.count); }, 0);
+          var bodies = cas.reduce(function (n, c) { return n + (c.count || 0); }, 0);
+          entry.history.push(cas[0].swarm ? (mass ? 'Biomass lost: ' + mass + '.' : 'Lost ' + bodies + '.')
             : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
         }
         if (line.men) entry.men = line.men.slice();
@@ -1687,7 +1720,7 @@
         if (c.swarm) {
           var tally = co.biomass = biomassTally(co);
           var t = tally[c.type] || (tally[c.type] = { models: 0, mass: 0 });
-          t.models += c.count; t.mass += c.mass || c.count;
+          t.models += c.count;
           return;
         }
         co.memorial.push({
@@ -2404,7 +2437,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,
