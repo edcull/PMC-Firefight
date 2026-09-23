@@ -10156,8 +10156,8 @@ html { scroll-behavior: smooth; }
      ground hull sits on its own ground, so it answers nothing. */
   function flyLift(u) {
     if (!u || !u.art) return 0;
-    var spec = hullSpec(u.art), sk = skimOf(u.art);
-    return spec && spec.fly ? ELEV * (sk ? sk.hover : spec.fly) : 0;
+    var spec = hullSpec(u.art);
+    return spec && spec.fly ? ELEV * spec.fly : 0;
   }
 
   /* The burn under a jump trooper: a short bright cone at the pack, a plume of
@@ -10271,25 +10271,6 @@ html { scroll-behavior: smooth; }
     xteleturret: { kind: 'portal' },
     xshieldturret: { kind: 'shield' }
   };
-  /* ---- the skimmers: Xenotripod craft as hover tanks ----
-     A proposal, drawn only while the preview switch is on: the craft as a low,
-     faceted ivory hull riding a hand's breadth over the ground on blue
-     repulsors, a turret pod on its back with the energy barrel, swept tail
-     fins, the army's colour along its edges. Same keys as XENO3D's craft:
-     L and W the hull's half length and half width in inches, H its height in
-     hull pixels, hover how high it rides (in hill heights; the tri-wings fly
-     at 2.2 to 2.8). */
-  var XENO_SKIM = false;
-  var SKIM = {
-    xstrike: { L: 0.8, W: 0.78, H: 5, hover: 0.8, barrels: 1 },
-    xstrikehg: { L: 0.88, W: 0.86, H: 5.5, hover: 0.8, barrels: 2 },
-    xstrikeadv: { L: 0.96, W: 0.94, H: 6, hover: 0.85, barrels: 2, prongs: true },
-    xrecon: { L: 0.62, W: 0.58, H: 4, hover: 1.0, barrels: 1, eye: true, small: true },
-    xtelecraft: { L: 0.8, W: 0.8, H: 5.5, hover: 0.8, barrels: 1, ring: true },
-    xshieldcraft: { L: 0.8, W: 0.8, H: 5.5, hover: 0.8, barrels: 1, dome: true }
-  };
-  function skimOf(art) { return XENO_SKIM && SKIM[art] ? SKIM[art] : null; }
-
   function drawXenoMachine(g, u, opts) {
     var spec = XENO3D[u.art], hs = hullSpec(u.art);
     function m(n) { return Math.max(1, n * 1.6); }   // hull pixels, on the machines' own scale
@@ -10297,8 +10278,7 @@ html { scroll-behavior: smooth; }
     var dead = opts.status === 'wrecked' || u.alive === false;
     var f = u.facing == null ? 0 : u.facing, cos = Math.cos(f), sin = Math.sin(f);
     var base = (opts.lift || 0) - (opts.hop || 0);
-    var sk = spec.kind === 'craft' ? skimOf(u.art) : null;
-    var fly = hs.fly && !dead ? ELEV * (sk ? sk.hover : hs.fly) : 0;
+    var fly = hs.fly && !dead ? ELEV * hs.fly : 0;
     var lift = base + fly;
     var pal = PALETTE[u.paint || u.side] || PALETTE.A;
     var WH = dead ? { lt: '#6e6a62', md: '#5c5952', dk: '#45423d', sh: '#302e2a', seam: '#1e1d1a' } : XW;
@@ -10360,154 +10340,6 @@ html { scroll-behavior: smooth; }
         stroke([[gp.x, gp.y - z], [kn.x, kn.y - base - z * 0.7], [ft.x, ft.y - base]], m(1.5), WH.dk);
         ellipse(g, kn.x, kn.y - base - z * 0.7, m(1), m(0.9), GLO.m);
       }
-    }
-
-    if (sk) return drawSkimmer();
-    /* A skimmer, drawn in hull pixels about its own axis: a faceted lower hull,
-       a turret pod on the deck, the barrel(s) forward, fins at the tail. */
-    function drawSkimmer() {
-      var L = sk.L, Wd2 = sk.W, zb = fly + (dead ? 0 : Math.sin(tnow / 380) * 1.2), H = m(sk.H), zd = zb + H;
-      var BL = dead ? { m: '#3e3c38', l: '#4a4843', h: 'rgba(0,0,0,0)' } : { m: '#6ebeff', l: '#e4f4ff', h: 'rgba(110,190,255,.3)' };
-      /* the hull's planform, nose first, going round to starboard: a slim
-         hull with a pointed nose, and thin swept wings either side of it */
-      var PB = [[1.2 * L, 0], [0.5 * L, 0.32 * Wd2], [-0.88 * L, 0.36 * Wd2], [-L, 0.22 * Wd2], [-L, -0.22 * Wd2], [-0.88 * L, -0.36 * Wd2], [0.5 * L, -0.32 * Wd2]];
-      var PT = PB.map(function (q) { return [q[0] * 0.9 - 0.02 * L, q[1] * 0.78]; });
-      var NP = PB.length;
-      function faceCol(nx, ny) {
-        var lit = -nx * 0.6 + ny * 0.2;
-        return lit > 0.25 ? WH.lt : lit > -0.25 ? WH.md : WH.dk;
-      }
-      // a frustum from planform A at za up to planform B at zb2, sides toward the eye, then its top
-      function frustum(A, B, za, zb2, top, t0) {
-        t0 = t0 || 0;
-        var faces = [];
-        for (var i = 0; i < A.length; i++) {
-          var j = (i + 1) % A.length;
-          var ex = A[j][0] - A[i][0], ey = A[j][1] - A[i][1];
-          // the outward normal in the craft's frame, turned into the world
-          var ln = Math.sqrt(ex * ex + ey * ey) || 1, onx = ey / ln, ony = -ex / ln;
-          var wx = cos * onx - sin * ony, wy = sin * onx + cos * ony;
-          if (wx + wy <= -0.02) continue;
-          faces.push({ d: wx + wy, col: faceCol(wx, wy), pts: [S(A[i][0] + t0, A[i][1], za), S(A[j][0] + t0, A[j][1], za), S(B[j][0] + t0, B[j][1], zb2), S(B[i][0] + t0, B[i][1], zb2)] });
-        }
-        faces.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (fc) { path(fc.pts, fc.col); stroke(fc.pts, 1, WH.seam, true); });
-        var cap = B.map(function (q) { return S(q[0] + t0, q[1], zb2); });
-        path(cap, top || WH.lt); stroke(cap, 1, WH.seam, true);
-        return cap;
-      }
-      // the shadow, and the repulsor wash on the ground under it
-      if (!dead) {
-        path(PB.map(function (q) { return S(q[0] * 1.05, q[1] * 1.05, 0); }), 'rgba(12,10,8,.3)');
-        var gc = S(0, 0, 0);
-        ellipse(g, gc[0], gc[1], m(10) * L, m(4.2) * L, 'rgba(110,190,255,.12)');
-      }
-      // the belly: a darker skirt under the hull, and the repulsor pads glowing under it
-      var PU = PB.map(function (q) { return [q[0] * 0.8, q[1] * 0.7]; });
-      if (!dead) {
-        [[0.4 * L, 0.16 * Wd2], [0.4 * L, -0.16 * Wd2], [-0.6 * L, 0.7 * Wd2], [-0.6 * L, -0.7 * Wd2]].forEach(function (q) {
-          var pp = S(q[0], q[1], zb - m(0.5));
-          var fl3 = 0.8 + 0.2 * Math.sin(tnow / 90 + q[0] * 7 + q[1] * 3);
-          halo(pp, m(3.4) * fl3, BL.h);
-          ellipse(g, pp[0], pp[1], m(1.6), m(0.8), BL.m);
-          ellipse(g, pp[0], pp[1] - m(0.2), m(0.8), m(0.4), BL.l);
-        });
-      }
-      frustum(PU, PB, zb - m(1.5), zb + m(1.5), WH.dk);
-      // the side a fin is on: toward the eye or away
-      function finSide(sd) { var wx = -sin * sd, wy = cos * sd; return wx + wy; }
-      // a wing: a thin plate swept back from the hull's flank, its leading edge in the army's colour
-      var wz = zb + H * 0.3;
-      function wingPlate(sd) {
-        // thrown down and out like a tri-wing's lower pair: the tip well below the root
-        var dz = m(sk.small ? 3 : 4.5);
-        var top = [S(0.35 * L, sd * 0.3 * Wd2, wz), S(-0.52 * L, sd * Wd2, wz - dz), S(-0.86 * L, sd * 0.96 * Wd2, wz - dz), S(-0.72 * L, sd * 0.34 * Wd2, wz)];
-        var under = top.map(function (q) { return [q[0], q[1] + m(1.2)]; });
-        path([top[0], top[1], under[1], under[0]], WH.dk);                // the leading edge's thickness
-        path([top[1], top[2], under[2], under[1]], WH.sh);
-        path(top, finSide(sd) > 0 ? WH.lt : WH.md); stroke(top, 1, WH.seam, true);
-        stroke([S(0.1 * L, sd * 0.36 * Wd2, wz - dz * 0.1), S(-0.6 * L, sd * 0.82 * Wd2, wz - dz * 0.8)], 1, WH.dk);   // a panel line
-        stroke([top[0], top[1]], m(0.8), GLO.m);
-        if (!dead) { stroke([top[0], top[1]], m(0.3), GLO.l); ellipse(g, top[1][0], top[1][1], m(0.9), m(0.8), GLO.l); }
-        return top;
-      }
-      var wingTips = {};
-      [-1, 1].forEach(function (sd) { if (finSide(sd) < 0) wingTips[sd] = wingPlate(sd)[1]; });
-      var deck = frustum(PB, PT, zb + m(1.5), zd);
-      [-1, 1].forEach(function (sd) { if (finSide(sd) >= 0) wingTips[sd] = wingPlate(sd)[1]; });
-      // the army's colour down the nose
-      var LE = [deck[1], deck[0], deck[NP - 1]];
-      stroke(LE, m(0.8), GLO.m);
-      if (!dead) { stroke(LE, m(0.3), GLO.l); halo(deck[0], m(1.6), GLO.h); }
-      // a panel seam down the deck
-      stroke([S(0.6 * L, 0, zd), S(-0.7 * L, 0, zd)], 1, WH.dk);
-      // the turret pod and its barrels; the barrels go behind the pod when the nose points away
-      var tz = zd, th = m(sk.small ? 3.5 : 5), tr = sk.small ? 0.8 : 1;
-      var PP = [[0.4 * L * tr, 0], [0.12 * L, 0.22 * Wd2 * tr], [-0.36 * L, 0.22 * Wd2 * tr], [-0.5 * L, 0], [-0.36 * L, -0.22 * Wd2 * tr], [0.12 * L, -0.22 * Wd2 * tr]];
-      var PPt = PP.map(function (q) { return [q[0] * 0.8, q[1] * 0.74]; });
-      var muz = [];
-      function barrels() {
-        var n = sk.barrels || 1;
-        for (var bi = 0; bi < n; bi++) {
-          var bs = n === 1 ? 0 : (bi ? 1 : -1) * 0.12 * Wd2, bz = tz + th * 0.5;
-          var b0 = S(0.1 * L, bs, bz), b1 = S((sk.small ? 1.05 : 1.3) * L, bs, bz);
-          stroke([b0, b1], m(2.2), dead ? WH.seam : '#123a6e');
-          stroke([b0, b1], m(1.3), dead ? WH.dk : '#3f9be8');
-          stroke([b0, S((sk.small ? 1.0 : 1.24) * L, bs, bz + m(0.4))], m(0.5), dead ? WH.md : '#bfe6ff');
-          [0.55, 0.85, 1.1].forEach(function (t3) {
-            if (sk.small && t3 > 1) return;
-            var c3 = S(t3 * L, bs, bz);
-            ellipse(g, c3[0], c3[1], m(1), m(1.1), dead ? WH.dk : '#6ebeff');
-          });
-          if (!dead) { halo(b1, m(2.2), 'rgba(110,190,255,.35)'); ellipse(g, b1[0], b1[1], m(0.8), m(0.7), '#e4f4ff'); }
-          muz.push(b1);
-        }
-      }
-      var away = cos + sin < 0;
-      /* the third wing: a tall swept blade standing straight up off the spine,
-         the tri-wing's dorsal wing, its leading edge burning in the army's colour */
-      function dorsal() {
-        var fh = m(sk.small ? 9 : 13), bw = 0.05 * Wd2;
-        var bl = [S(0.05 * L, 0, zd), S(-0.95 * L, 0, zd + fh), S(-1.1 * L, 0, zd + fh * 0.9), S(-0.95 * L, 0, zd)];
-        var side = finSide(1) > 0 ? 1 : -1;
-        var edge2 = bl.map(function (q, i) { return i === 1 || i === 2 ? q : S(i ? -0.95 * L : 0.05 * L, side * bw, zd); });
-        path(edge2, WH.dk);
-        path(bl, WH.md); stroke(bl, 1, WH.seam, true);
-        stroke([S(-0.25 * L, 0, zd + fh * 0.25), S(-0.9 * L, 0, zd + fh * 0.8)], 1, WH.lt);      // a panel line
-        stroke([bl[0], bl[1]], m(0.8), GLO.m);
-        if (!dead) { stroke([bl[0], bl[1]], m(0.3), GLO.l); ellipse(g, bl[1][0], bl[1][1], m(0.9), m(0.8), GLO.l); }
-      }
-      if (!away) dorsal();
-      if (away) barrels();
-      frustum(PP, PPt, tz, tz + th, WH.lt);
-      // the cockpit: a blue crystal set in the front of the pod
-      var cq = [S(0.36 * L * tr, 0, tz + th * 0.35), S(0.14 * L, 0.2 * Wd2 * tr, tz + th * 0.7), S(0.0 * L, 0, tz + th + m(0.6)), S(0.14 * L, -0.2 * Wd2 * tr, tz + th * 0.7)];
-      if (!away) { path(cq, dead ? '#2a2826' : '#3f9be8'); stroke(cq, 1, dead ? WH.seam : '#123a6e', true); if (!dead) path([cq[0], cq[1], cq[2]], '#9fd6ff'); }
-      if (!away) barrels();
-      if (sk.prongs) {
-        // blades forward off the shoulders, the rocket pylons
-        [-1, 1].forEach(function (sd) {
-          var pr = [S(-0.52 * L, sd * Wd2, wz - m(0.8)), S(0.3 * L, sd * 0.98 * Wd2, wz), S(-0.66 * L, sd * 0.86 * Wd2, wz - m(0.8))];
-          path(pr, WH.lt); stroke(pr, 1, WH.seam, true);
-          stroke([pr[0], pr[1]], m(0.7), GLO.m);
-          if (!dead) { ellipse(g, pr[1][0], pr[1][1], m(0.8), m(0.7), GLO.l); mountAt('rocket', pr[1]); }
-        });
-      }
-      if (sk.dome) {
-        var dm = S(-0.06 * L, 0, tz + th + m(2.6));
-        ellipse(g, dm[0], dm[1], m(4.4), m(3.4), dead ? '#4a4843' : hexA(gc1, 0.35));
-        ellipse(g, dm[0] - m(1.1), dm[1] - m(1.1), m(1.3), m(0.9), dead ? '#55524c' : 'rgba(255,255,255,.55)');
-        if (!dead) ellipseRing(g, dm[0], dm[1], m(4.4), m(3.4), GLO.m);
-      }
-      if (sk.eye) { var ey = S(1.02 * L, 0, zb + H * 0.5); halo(ey, m(4), GLO.h); ellipse(g, ey[0], ey[1], m(1.8), m(1.5), GLO.m); ellipse(g, ey[0] - 1, ey[1] - 1, m(0.7), m(0.6), GLO.l); }
-      if (sk.ring) {
-        var rp = [];
-        for (var ri3 = 0; ri3 <= 24; ri3++) { var ra3 = ri3 / 24 * Math.PI * 2; rp.push(S(-0.1 * L + Math.cos(ra3) * 0.62 * L, Math.sin(ra3) * 0.62 * L, zd + th + m(3))); }
-        stroke(rp, m(1.8), WH.dk);
-        stroke(rp, m(1), BL.m);
-      }
-      if (away) dorsal();
-      if (!dead) muz.forEach(function (mp) { mountAt('gun', mp); mountAt('mg', mp); });
-      return { lift: lift, hgt: zd - zb + th + m(sk.dome ? 8 : sk.ring ? 6 : 8) };
     }
 
     if (spec.kind === 'craft') {
@@ -10602,11 +10434,27 @@ html { scroll-behavior: smooth; }
         path(shd, 'rgba(12,10,8,.26)');
         rect(g, gp.x - 1, gp.y - fly, 2, fly, 'rgba(120,130,145,.14)');
       }
-      if (spec.ring) {
-        var rp = [];
-        for (var ri2 = 0; ri2 <= 24; ri2++) { var ra = ri2 / 24 * Math.PI * 2; rp.push(S(-0.1 + Math.cos(ra) * 0.55, Math.sin(ra) * 0.55, z0 - m(4))); }
-        stroke(rp, m(1.8), WH.dk);
-        stroke(rp, m(1), BLU.m);
+      /* The teleport craft's gate: a ring wing, a short band round the
+         fuselage, square to it, set back where the three wings are broadest
+         so they run through it and hold it. Its far half goes in behind the
+         wings and body, its near half over them; the gate burns blue inside. */
+      function hoop(near) {
+        if (!spec.ring) return;
+        var ht = (spec.tip || -0.72) * Lc * 0.62, hr = span * 0.56, bw = 0.07, N = 40, fr2 = [], bk = [];
+        function flush() {
+          if (fr2.length > 1) {
+            var band = fr2.concat(bk.slice().reverse());
+            path(band, near ? WH.lt : WH.dk); stroke(band, 1, WH.seam, true);
+            stroke(near ? fr2 : bk, m(0.8), BLU.m);
+            if (!dead) stroke(near ? fr2 : bk, m(0.3), BLU.l);
+          }
+          fr2 = []; bk = [];
+        }
+        for (var hi = 0; hi <= N; hi++) {
+          var hph = hi / N * Math.PI * 2;
+          if ((dot3(roll(hph), EYE) >= 0) === near) { fr2.push(P3(ht + bw, hr, hph)); bk.push(P3(ht - bw, hr, hph)); } else flush();
+        }
+        flush();
       }
       var zb = zc - rad * ZK * 0.9, gb1 = S(1.25 * Lc, 0, zb);
       var barrel = function () {
@@ -10629,21 +10477,16 @@ html { scroll-behavior: smooth; }
         cp = [cp[0], cp[dot3(roll(Math.PI * 0.35), EYE) > dot3(roll(Math.PI * 0.65), EYE) ? 3 : 4], cp[2], cp[1]];
         path(cp, dead ? '#2a2826' : '#3f9be8'); stroke(cp, 1, dead ? WH.seam : '#123a6e', true);
         if (!dead) path([cp[0], cp[3], cp[2]], '#9fd6ff');
-        if (spec.dome) {
-          var dm = P3(0.52 * Lc, rad * 2.2, Math.PI / 2);
-          ellipse(g, dm[0], dm[1], m(4.6), m(3.6), dead ? '#4a4843' : hexA(gc1, 0.35));
-          ellipse(g, dm[0] - m(1.1), dm[1] - m(1.1), m(1.4), m(1), dead ? '#55524c' : 'rgba(255,255,255,.55)');
-          if (!dead) ellipseRing(g, dm[0], dm[1], m(4.6), m(3.6), GLO.m);
-        }
-        if (spec.eye) { var ey = P3(Lc * 1.02, 0, 0); halo(ey, m(4.4), GLO.h); ellipse(g, ey[0], ey[1], m(2), m(1.7), GLO.m); ellipse(g, ey[0] - 1, ey[1] - 1, m(0.8), m(0.7), GLO.l); }
       };
       // far wings, the body, then the near wings; the nose's fittings go in front when it points at the eye
       var away = dot3(T3, EYE) < 0;
+      hoop(false);
       WINGS.forEach(function (w) { if (w.d < 0) wing(w); });
       barrel();                                   // slung under the body, so only its muzzle shows past the nose
       body();
       if (away) fittings();
       WINGS.forEach(function (w) { if (w.d >= 0) wing(w); });
+      hoop(true);
       if (!away) fittings();
       if (!dead) { mountAt('gun', gb1); mountAt('mg', gb1); }
       return { lift: lift, hgt: zc - z0 + span * (spec.fin || 1.15) * ZK + m(2) };
@@ -13869,8 +13712,6 @@ html { scroll-behavior: smooth; }
     toScreen: toScreen, toWorld: toWorld,
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
-    // the Xenotripod skimmer proposal: on only to preview it
-    previewXenoSkimmers: function (on) { XENO_SKIM = !!on; },
     // a baked figure, for inspecting the art: the canvas and its resolution
     figure: function (side, art, i, pose, step, mount) {
       return sprite(side || 'A', art, i || 0, pose || 'stand', step || 0, MODEL * fitScale(art, i || 0), 0, mount);
