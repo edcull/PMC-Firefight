@@ -8314,9 +8314,16 @@
                   // the coils down the barrel, and the mouth of it lit
                   // the charge burning in it, the size the Gauss arms show it
                   // a short barrel: its vents drawn to a slimmer gauge, so they sit apart inside it
-                  vents(TF, a0b, reach, 0, bz, 4.5, 2, rake);
-                  // and one more close in to the hull, where the barrel leaves the turret
-                  vents(TF, a0b, a0b + (reach - a0b) * 0.3, 0, bz, 4.5, 1, rake * 0.3);
+                  /* three vents evenly spaced down the barrel as it is drawn, from its
+                     hull end to just clear of the muzzle ring */
+                  var vb0 = S3(TF(a0b, 0), bz), vdx = bt[0] - vb0[0], vdy = bt[1] - vb0[1];
+                  // (the barrel's rounded end reaches back half its gauge past vb0; the muzzle ring is 3.9 out)
+                  var vlen = Math.hypot(vdx, vdy) || 1, vs0 = -3.4 / vlen, vs1 = 1 - 3.9 / vlen;
+                  for (var vv = 0; vv < 3 && !dead; vv++) {
+                    var vt = vs0 + (vs1 - vs0) * (vv + 0.5) / 3, vx = vb0[0] + vdx * vt, vy = vb0[1] + vdy * vt;
+                    sEllipse(vx, vy, 1.8, 1.53, '#0c1016');
+                    sEllipse(vx, vy, 1.26, 0.99, 'rgba(120,230,255,.85)');
+                  }
                   // the muzzle: a wide mouth across the end of the barrel, the charge glowing in it
                   sEllipse(bt[0], bt[1], 3.9, 3.4, '#0c1016');
                   if (!dead) {
