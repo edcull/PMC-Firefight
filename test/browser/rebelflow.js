@@ -74,7 +74,8 @@ async function drain(p) {
     await p.evaluate(() => document.querySelectorAll('#camp-body [data-campcolour]').length > 1));
   check('...and promises the free First Among Equals', /First Among Equals/.test(txt));
   check('...and offers Paths rather than doctrines',
-    /starting path/i.test(txt) && /path of the hero/i.test(txt));
+    /starting path/i.test(txt) && /path of the hero/i.test(await p.evaluate(() =>
+      document.querySelector('#camp-body .cmodal[data-modal="doctrine"]').textContent)));
   check('...eighteen of them', await p.evaluate(() =>
     document.querySelectorAll('#camp-body [data-doc]').length) === 18);
 
