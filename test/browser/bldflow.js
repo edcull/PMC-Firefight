@@ -18,6 +18,10 @@ async function drain(p) {
     await p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
     await p.waitForTimeout(120);
   }
+  /* and let the table finish playing out: a selection made while it is still
+     animating is queued behind the animation, so on a loaded machine the
+     squad was not yet selected when its actions were read */
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
 }
 async function newGame(p, cfg) {
   await p.evaluate((c) => window.PMC_NEWGAME(c), Object.assign({

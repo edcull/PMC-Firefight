@@ -183,16 +183,21 @@ async function drain(p) {
   });
   await p.waitForTimeout(300);
   for (let i = 0; i < 8; i++) { await drain(p); await p.waitForTimeout(110); }
+  /* Rather than play it by hand, both sides go to the AI — before Start, not
+     after: when the tribe won the initiative the game was already waiting on
+     a player, and once the board went idle nothing asked the AI to act. */
   await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    s.cfg.aiSides = ['A', 'B'];
     const b = document.querySelector('button[data-act="start"]');
     if (b) b.click();
   });
   await p.waitForTimeout(600);
-  // rather than play it by hand, hand both sides to the AI and let it run
-  await p.evaluate(() => { const s = window.PMC_STATE(); s.cfg.aiSides = ['A', 'B']; });
 
+  // bounded: a battle that never ends fails the check below rather than hanging
   let over = null;
-  for (let i = 0; i < 3000; i++) {
+  const until = Date.now() + 120000;
+  for (let i = 0; i < 3000 && Date.now() < until; i++) {
     over = await p.evaluate(() => {
       const s = window.PMC_STATE();
       const r = document.getElementById('resolution');
