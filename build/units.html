@@ -13140,27 +13140,34 @@ html { scroll-behavior: smooth; }
         // the chest itself, hunched forward, its front plate raked back
         shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
           rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
-        /* the cockpit: an armoured box standing out of the chest, glazed in a
-           T — a wide main pane across the front, a narrow pane under its
-           middle, and a pane down each side */
+        /* the cockpit: an angular armoured wedge standing out of the chest —
+           a raked front facet, its corners cut back into angled cheeks, the
+           top drawn in narrower — glazed in a T: a wide pane across the front
+           facet with a narrow one under its middle, and a pane on each cheek */
         if (fwd > -0.1) {
-          var ca0 = tL * 0.45, ca1 = tL * 1.08, cb = tW * 0.44, cz = zU + Math.round(upH * 0.34), ch = Math.round(upH * 0.5);
-          slabF(TF, ca0, ca1, -cb, cb, cz, ch, TB, tL * 0.08, 0, tW * 0.03);
-          var cf = function (k, b) { return S3(TF(ca1 + 0.006, b), cz + ch * k); };
-          // the main pane, then the one under it, each in a dark frame
-          var pm = [cf(0.5, -cb * 0.8), cf(0.5, cb * 0.8), cf(0.9, cb * 0.8), cf(0.9, -cb * 0.8)];
-          poly(g, [cf(0.44, -cb * 0.88), cf(0.44, cb * 0.88), cf(0.95, cb * 0.88), cf(0.95, -cb * 0.88)], '#0b0e12');
-          glass(pm, [pm[3], pm[2]]);
-          var pb = [cf(0.12, -cb * 0.26), cf(0.12, cb * 0.26), cf(0.4, cb * 0.26), cf(0.4, -cb * 0.26)];
-          poly(g, [cf(0.07, -cb * 0.33), cf(0.07, cb * 0.33), cf(0.44, cb * 0.33), cf(0.44, -cb * 0.33)], '#0b0e12');
-          glass(pb, [pb[3], pb[2]]);
-          // a side pane on whichever side of the box faces the viewer
+          var ca0 = tL * 0.45, ca1 = tL * 1.1, cb = tW * 0.46, cz = zU + Math.round(upH * 0.32), ch = Math.round(upH * 0.52);
+          var rk = tL * 0.22, ck = tL * 0.16;                 // the rake of the front, the depth of the cheeks
+          var lo = [[ca0, -cb], [ca1 - ck, -cb], [ca1, -cb * 0.38], [ca1, cb * 0.38], [ca1 - ck, cb], [ca0, cb]];
+          var hi = [[ca0, -cb * 0.8], [ca1 - rk - ck * 0.8, -cb * 0.8], [ca1 - rk, -cb * 0.32], [ca1 - rk, cb * 0.32], [ca1 - rk - ck * 0.8, cb * 0.8], [ca0, cb * 0.8]];
+          shape(TF, lo, cz, ch, TB, null, hi);
+          // a point on the front facet: k up it, u across it (-1 to 1)
+          var ff = function (k, u) { return S3(TF(ca1 - rk * k + 0.006, u * cb * (0.38 - 0.06 * k)), cz + ch * k); };
+          var pane = function (P, k0, k1, u0, u1, fr) {
+            var q = [P(k0, u0), P(k0, u1), P(k1, u1), P(k1, u0)];
+            poly(g, [P(k0 - fr, u0 - fr * 1.6), P(k0 - fr, u1 + fr * 1.6), P(k1 + fr, u1 + fr * 1.6), P(k1 + fr, u0 - fr * 1.6)], '#0b0e12');
+            glass(q, [q[3], q[2]]);
+          };
+          pane(ff, 0.48, 0.9, -0.84, 0.84, 0.05);
+          pane(ff, 0.1, 0.4, -0.34, 0.34, 0.05);
+          // a cheek on side s: v from its outer edge (0) to where it meets the front (1)
           [-1, 1].forEach(function (s) {
-            if (nearOf(s) <= 0.05) return;
-            var sp = function (a, k) { return S3(TF(a, s * (cb + 0.006)), cz + ch * k); };
-            poly(g, [sp(ca0 + (ca1 - ca0) * 0.4, 0.44), sp(ca1 - (ca1 - ca0) * 0.06, 0.44), sp(ca1 - (ca1 - ca0) * 0.06, 0.95), sp(ca0 + (ca1 - ca0) * 0.4, 0.95)], '#0b0e12');
-            var ps = [sp(ca0 + (ca1 - ca0) * 0.46, 0.5), sp(ca1 - (ca1 - ca0) * 0.12, 0.5), sp(ca1 - (ca1 - ca0) * 0.12, 0.9), sp(ca0 + (ca1 - ca0) * 0.46, 0.9)];
-            glass(ps, [ps[3], ps[2]]);
+            if (fwd * 0.8 + nearOf(s) * 0.6 <= 0.05) return;
+            var cf2 = function (k, v) {
+              var a = (ca1 - ck) + ck * v - (rk + ck * 0.8 * (1 - v)) * k * (1 - v) - rk * k * v;
+              var b = s * cb * ((1 - v) + 0.38 * v) * (1 - k * 0.2);
+              return S3(TF(a + 0.006, b), cz + ch * k);
+            };
+            pane(cf2, 0.48, 0.88, 0.16, 0.84, 0.05);
           });
         }
         if (fwd <= 0) stacks();
