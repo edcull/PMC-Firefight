@@ -2215,6 +2215,7 @@
         // only the first player's choice is remembered as "your" colour
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
+        if (muster.hot && muster.hot.kind === 'demo') demoRename();   // its name is its colour
         drawColourPick();
       });
     });
@@ -4978,6 +4979,23 @@
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
   }
+  /* A demo force is not named by anyone: it goes by its colour and a noun
+     that suits its kind — the Crimson Vultures, the Jade Brood. */
+  var DEMO_NOUNS = {
+    pmc: ['Vultures', 'Lancers', 'Hammers', 'Jackals', 'Contractors', 'Iron Wolves', 'Hellhounds', 'Mercenaries', 'Stormguard', 'Reapers'],
+    rebel: ['Liberation Front', 'Irregulars', 'Commune', 'Partisans', 'Freedom Brigade', 'Rabble', 'Barricade', 'Uprising', 'Militia', 'Resistance'],
+    bugs: ['Brood', 'Hive', 'Mandibles', 'Swarm', 'Chitter', 'Nest', 'Devourers', 'Skitterers', 'Horde', 'Maw'],
+    xeno: ['Tripods', 'Conclave', 'Harvesters', 'Ascendancy', 'Striders', 'Reach', 'Watchers', 'Dominion', 'Choir', 'Tribe']
+  };
+  function demoName(colour, noun) {
+    return 'The ' + colour.charAt(0).toUpperCase() + colour.slice(1) + ' ' + noun;
+  }
+  function demoRename() {
+    var f = musterFaction(), list = DEMO_NOUNS[f] || DEMO_NOUNS.pmc;
+    if (list.indexOf(muster.demoNoun) < 0) muster.demoNoun = list[Math.floor(Math.random() * list.length)];
+    muster.name = demoName(muster.colour || 'ochre', muster.demoNoun);
+    if (el('hot-name')) el('hot-name').value = muster.name;
+  }
   // a demo force: a random kind of force, a rolled build, a colour nobody else wears and a name to go with it
   function hotRandomise(i, keepFaction, keepColour) {
     var f = keepFaction ? musterFaction() : HOT_FACTIONS[Math.floor(Math.random() * HOT_FACTIONS.length)];
@@ -4986,6 +5004,7 @@
     muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
     var other = muster.hot.sides[1 - i];
     if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
+    if (muster.hot.kind === 'demo') { muster.demoNoun = null; demoRename(); return; }
     muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[f];
     if (el('hot-name')) el('hot-name').value = muster.name;
   }
@@ -4994,13 +5013,13 @@
     muster.hot.sides[i] = {
       keys: muster.keys.slice(), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(),
       name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
-      colour: muster.colour || 'ochre'
+      colour: muster.colour || 'ochre', noun: muster.demoNoun || null
     };
   }
   function hotLoadSide(i) {
     var sd = muster.hot.sides[i];
     if (sd) {
-      muster.keys = sd.keys.slice(); muster.name = sd.name; muster.colour = sd.colour;
+      muster.keys = sd.keys.slice(); muster.name = sd.name; muster.colour = sd.colour; muster.demoNoun = sd.noun || null;
       el('sel-faction').value = sd.faction;
       if (el('sel-tactic')) el('sel-tactic').value = sd.tactic || '';
       if (el('hot-name')) el('hot-name').value = sd.name;
@@ -5086,7 +5105,7 @@
       return;
     }
     var a = h.sides[0], b = h.sides[1], tier = musterTier(), pl = musterPL();
-    var planet = el('sel-planet').value, terrainSetup = el('sel-terrain') ? el('sel-terrain').value : 'auto';
+    var planet = el('sel-planet').value, terrainSetup = el('sel-terrain') && h.kind !== 'demo' ? el('sel-terrain').value : 'auto';
     if (h.kind === 'coop') {
       // the two commandos take the field as one side, each player's units their own
       var armyA = [], ownersA = [];

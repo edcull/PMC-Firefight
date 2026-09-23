@@ -670,6 +670,8 @@
   #setup[data-hot="1"] .hot-name, #setup[data-hot="2"] .hot-name { display: block; }
   #setup[data-hot="3"] .hot-sum { display: block; }
   #setup[data-hot] .hot-intro { display: block; }
+  /* a demo names its own forces, from their colour and kind, and always lays the table itself */
+  #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field { display: none !important; }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
   .hot-sum .hot-side {
@@ -1602,7 +1604,7 @@
         <option value="unstable">Unstable / tectonic world</option>
       </select>
     </div>
-    <div class="field hot-field">
+    <div class="field hot-field" id="terrain-field">
       <label for="sel-terrain">Terrain set-up</label>
       <select id="sel-terrain">
         <option value="auto">Generate the table — the D6 for each area rolled and placed for you</option>
