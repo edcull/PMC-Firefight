@@ -2546,20 +2546,11 @@
     return false;
   }
 
-  /* How many dice a machine repairs with: one for each point of Structure it
-     has left — so none at all once the last is gone, and it cannot be repaired.
-     Nanobots (p. 89) roll for the whole Structure, not for what is left of it. */
-  function repairDice(u) {
-    return campFlag(u, 'nanobots') ? u.str : Math.max(0, u.str - (u.damage || 0));
-  }
   // Rally phase: a machine patches itself up. Jammers make it harder.
   function repair(state, u) {
     if (!u.damage) return null;
-    var dice = repairDice(u), need = jammedNearby(state, u) ? 5 : 4;
-    if (!dice) {
-      return { dice: 0, need: need, rolls: [], fixed: 0, before: u.damage, after: u.damage, none: true,
-        text: u.label + ' has no Structure left to repair with (' + u.damage + ' of ' + u.str + ').' };
-    }
+    // Nanobots (p. 89): the repair rolls dice for the whole Structure, not for what is left of it
+    var dice = campFlag(u, 'nanobots') ? u.str : Math.max(1, u.str - u.damage), need = jammedNearby(state, u) ? 5 : 4;
     var rolls = [], fixed = 0;
     for (var i = 0; i < dice; i++) {
       var r = d6();
@@ -4166,7 +4157,6 @@
     canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
     rally: rally, fallBack: fallBack, medicNearby: medicNearby,
-    repairDice: repairDice,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, canEmbark: canEmbark, embark: embark, disembark: disembark,
