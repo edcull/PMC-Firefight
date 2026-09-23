@@ -6364,9 +6364,10 @@
     xstrike: { kind: 'craft', L: 0.95, span: 0.72, fin: 1.1, le: 0.12, tip: -0.86, rad: 0.09 },
     xstrikehg: { kind: 'craft', L: 1.05, span: 0.78, fin: 1.1, le: 0.18, tip: -0.84, rad: 0.1, prongs: 1 },
     xstrikeadv: { kind: 'craft', L: 1.15, span: 0.86, fin: 1.05, le: 0.34, tip: -0.78, rad: 0.11, droop: 36, prongs: 2 },
-    xrecon: { kind: 'craft', L: 0.72, span: 0.6, fin: 1.3, le: 0.05, tip: -0.92, rad: 0.07, droop: 46, eye: true },
-    xtelecraft: { kind: 'craft', L: 0.95, span: 0.74, fin: 1.1, le: 0.14, tip: -0.84, rad: 0.1, ring: true },
-    xshieldcraft: { kind: 'craft', L: 0.92, span: 0.7, fin: 1.0, le: 0.24, tip: -0.78, rad: 0.12, droop: 44, dome: true },
+    // the support craft carry only a token gun: what they are for is what shows
+    xrecon: { kind: 'craft', L: 0.72, span: 0.6, fin: 1.3, le: 0.05, tip: -0.92, rad: 0.07, droop: 46, scan: true, support: true },
+    xtelecraft: { kind: 'craft', L: 0.95, span: 0.74, fin: 1.1, le: 0.14, tip: -0.84, rad: 0.1, ring: true, support: true },
+    xshieldcraft: { kind: 'craft', L: 0.92, span: 0.7, fin: 1.0, le: 0.24, tip: -0.78, rad: 0.12, droop: 44, shield: true, support: true },
     xturret: { kind: 'turret' },
     xteleturret: { kind: 'portal' },
     xshieldturret: { kind: 'shield' }
@@ -6556,18 +6557,20 @@
         }
         flush();
       }
-      var zb = zc - rad * ZK * 0.9, gb1 = S(1.25 * Lc, 0, zb);
+      // a support craft's gun is a token: short, thin, one coil
+      var gk = spec.support ? 0.5 : 1, gEnd = spec.support ? 1.06 : 1.25;
+      var zb = zc - rad * ZK * 0.9, gb1 = S(gEnd * Lc, 0, zb);
       var barrel = function () {
         // the gun: a blue energy barrel slung under the nose, reaching past it
         var gb0 = S(0.4 * Lc, 0, zb);
-        stroke([gb0, gb1], m(2), dead ? WH.seam : '#123a6e');
-        stroke([gb0, gb1], m(1.2), dead ? WH.dk : '#3f9be8');
-        stroke([gb0, S(1.18 * Lc, 0, zb + m(0.4))], m(0.5), dead ? WH.md : '#bfe6ff');
-        [0.75, 0.95, 1.12].forEach(function (t3) {              // coils along it
+        stroke([gb0, gb1], m(2 * gk), dead ? WH.seam : '#123a6e');
+        stroke([gb0, gb1], m(1.2 * gk), dead ? WH.dk : '#3f9be8');
+        if (!spec.support) stroke([gb0, S(1.18 * Lc, 0, zb + m(0.4))], m(0.5), dead ? WH.md : '#bfe6ff');
+        (spec.support ? [0.95] : [0.75, 0.95, 1.12]).forEach(function (t3) {              // coils along it
           var c3 = S(t3 * Lc, 0, zb);
-          ellipse(g, c3[0], c3[1], m(1), m(1.2), dead ? WH.dk : '#6ebeff');
+          ellipse(g, c3[0], c3[1], m(gk), m(1.2 * gk), dead ? WH.dk : '#6ebeff');
         });
-        if (!dead) { halo(gb1, m(2.4), 'rgba(110,190,255,.35)'); ellipse(g, gb1[0], gb1[1], m(0.8), m(0.7), '#e4f4ff'); }
+        if (!dead) { halo(gb1, m(2.4 * gk), 'rgba(110,190,255,.35)'); ellipse(g, gb1[0], gb1[1], m(0.8 * gk), m(0.7 * gk), '#e4f4ff'); }
       };
       // fittings on the spine, ahead of the dorsal wing
       var fittings = function () {
@@ -6579,15 +6582,94 @@
         if (!dead) path([cp[0], cp[3], cp[2]], '#9fd6ff');
       };
       // far wings, the body, then the near wings; the nose's fittings go in front when it points at the eye
+      /* What the support craft are for, drawn in the tribe's blue.
+         Recon: a sensor array along the spine and a scanning fan swept across
+         the ground ahead. Teleport: the gate in its ring wing, a swirl of
+         light filling it. Shield generator: emitters at the wingtips and the
+         bubble they throw about the craft, rippling. */
+      function scanFan() {
+        if (!spec.scan || dead) return;
+        var sw = Math.sin(tnow / 700) * 0.6, reachT = 1.5;
+        var n0 = P3(1.0 * Lc, 0, -Math.PI / 2);
+        var g0 = S(reachT + Lc, sw - 0.6, 0), g1 = S(reachT + Lc, sw + 0.6, 0);
+        path([n0, g0, g1], 'rgba(110,190,255,.12)');
+        stroke([n0, g0], 1, 'rgba(160,215,255,.45)'); stroke([n0, g1], 1, 'rgba(160,215,255,.45)');
+        stroke([g0, g1], m(0.8), 'rgba(190,235,255,.7)');
+        // the sweep's leading line, brighter
+        var gm = S(reachT + Lc, sw + 0.6 * Math.sin(tnow / 180), 0);
+        stroke([n0, gm], 1, 'rgba(210,240,255,.55)');
+      }
+      function sensorArray() {
+        if (!spec.scan) return;
+        // three lenses down the spine, and a small dish ahead of the dorsal wing
+        [0.62, 0.4, 0.18].forEach(function (t4, i) {
+          var lp = P3(t4 * Lc, rad * 1.05, Math.PI / 2);
+          ellipse(g, lp[0], lp[1], m(1.2), m(1), dead ? WH.seam : '#123a6e');
+          ellipse(g, lp[0], lp[1], m(0.8), m(0.65), dead ? WH.dk : (Math.floor(tnow / 240) % 3 === i ? '#e4f4ff' : '#6ebeff'));
+        });
+        var ds = P3(-0.05 * Lc, rad * 1.6, Math.PI / 2), db2 = P3(-0.05 * Lc, rad * 0.9, Math.PI / 2);
+        stroke([db2, ds], m(0.8), WH.dk);
+        ellipse(g, ds[0], ds[1], m(2.6), m(1.3), dead ? WH.dk : WH.lt);
+        ellipse(g, ds[0] + m(0.3), ds[1] + m(0.2), m(1.8), m(0.8), dead ? WH.sh : WH.md);
+        if (!dead) ellipse(g, ds[0], ds[1] - m(0.1), m(0.6), m(0.5), '#6ebeff');
+      }
+      function gate() {
+        if (!spec.ring || dead) return;
+        var ht = (spec.tip || -0.72) * Lc * 0.62, hr = span * 0.56 * 0.92, N = 28, disc = [];
+        for (var gi = 0; gi < N; gi++) disc.push(P3(ht, hr, gi / N * Math.PI * 2));
+        path(disc, 'rgba(110,190,255,.2)');
+        // two arms of light turning in it
+        for (var arm = 0; arm < 2; arm++) {
+          var sp2 = [];
+          for (var q = 0; q <= 12; q++) {
+            var rr = hr * (1 - q / 13), aa = tnow / 400 + arm * Math.PI + q * 0.42;
+            sp2.push(P3(ht, rr, aa));
+          }
+          stroke(sp2, m(0.7), 'rgba(200,238,255,.65)');
+        }
+        var gc = P3(ht, 0, 0);
+        halo(gc, m(2.2), 'rgba(160,220,255,.45)');
+        ellipse(g, gc[0], gc[1], m(0.9), m(0.8), '#e4f4ff');
+      }
+      function shieldBubble(back) {
+        if (!spec.shield || dead) return;
+        var c0 = P3(-0.1 * Lc, 0, 0), R0 = (Lc * 1.25) * K, pulse = 1 + Math.sin(tnow / 260) * 0.025;
+        var rx = R0 * pulse, ry = rx * 0.7;
+        if (back) { ellipse(g, c0[0], c0[1], rx, ry, 'rgba(110,190,255,.1)'); return; }
+        g.save(); g.globalAlpha = 0.55; ellipseRing(g, c0[0], c0[1], rx, ry, '#8fd0ff'); g.restore();
+        // a ripple crossing it, and the facets of the field catching the light
+        var ph3 = (tnow / 900) % 1;
+        g.save(); g.globalAlpha = 0.35 * (1 - ph3); ellipseRing(g, c0[0], c0[1], rx * (0.45 + ph3 * 0.55), ry * (0.45 + ph3 * 0.55), '#cfeeff'); g.restore();
+        for (var hx = 0; hx < 7; hx++) {
+          var ha = hx / 7 * Math.PI * 2 + tnow / 3000;
+          ellipse(g, c0[0] + Math.cos(ha) * rx * 0.86, c0[1] + Math.sin(ha) * ry * 0.86, m(0.6), m(0.5), 'rgba(220,245,255,.6)');
+        }
+      }
+      function emitters() {
+        if (!spec.shield) return;
+        WINGS.forEach(function (w) {
+          var tp2 = P3((spec.tip || -0.72) * Lc, w.sp, w.ph);
+          ellipse(g, tp2[0], tp2[1], m(1.5), m(1.3), dead ? WH.seam : '#123a6e');
+          ellipse(g, tp2[0], tp2[1], m(1), m(0.85), dead ? WH.dk : '#6ebeff');
+          if (!dead) ellipse(g, tp2[0] - m(0.3), tp2[1] - m(0.3), m(0.4), m(0.35), '#e4f4ff');
+        });
+      }
+
       var away = dot3(T3, EYE) < 0;
+      scanFan();
+      shieldBubble(true);
       hoop(false);
       WINGS.forEach(function (w) { if (w.d < 0) wing(w); });
       barrel();                                   // slung under the body, so only its muzzle shows past the nose
       body();
       if (away) fittings();
       WINGS.forEach(function (w) { if (w.d >= 0) wing(w); });
+      gate();
       hoop(true);
       if (!away) fittings();
+      sensorArray();
+      emitters();
+      shieldBubble(false);
       if (!dead) { mountAt('gun', gb1); mountAt('mg', gb1); }
       return { lift: lift, hgt: zc - z0 + span * (spec.fin || 1.15) * ZK + m(2) };
     }
@@ -9158,13 +9240,28 @@
         // the chest itself, hunched forward, its front plate raked back
         shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
           rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
-        /* the cockpit: one wide pane of glass set into the top of the chest,
-           framed in dark metal */
+        /* the cockpit: an armoured box standing out of the chest, glazed in a
+           T — a wide main pane across the front, a narrow pane under its
+           middle, and a pane down each side */
         if (fwd > -0.1) {
-          var vk0 = 0.5, vk1 = 0.86, rk = tL * 0.34, vf = function (k, b) { return onFront(tL * 0.9, rk, zU, upH, k, b); };
-          poly(g, [vf(vk0 - 0.05, -tW * 0.56), vf(vk0 - 0.05, tW * 0.56), vf(vk1 + 0.05, tW * 0.5), vf(vk1 + 0.05, -tW * 0.5)], '#0b0e12');
-          var cq = [vf(vk0, -tW * 0.5), vf(vk0, tW * 0.5), vf(vk1, tW * 0.44), vf(vk1, -tW * 0.44)];
-          glass(cq, [cq[3], cq[2]]);
+          var ca0 = tL * 0.45, ca1 = tL * 1.08, cb = tW * 0.44, cz = zU + Math.round(upH * 0.34), ch = Math.round(upH * 0.5);
+          slabF(TF, ca0, ca1, -cb, cb, cz, ch, TB, tL * 0.08, 0, tW * 0.03);
+          var cf = function (k, b) { return S3(TF(ca1 + 0.006, b), cz + ch * k); };
+          // the main pane, then the one under it, each in a dark frame
+          var pm = [cf(0.5, -cb * 0.8), cf(0.5, cb * 0.8), cf(0.9, cb * 0.8), cf(0.9, -cb * 0.8)];
+          poly(g, [cf(0.44, -cb * 0.88), cf(0.44, cb * 0.88), cf(0.95, cb * 0.88), cf(0.95, -cb * 0.88)], '#0b0e12');
+          glass(pm, [pm[3], pm[2]]);
+          var pb = [cf(0.12, -cb * 0.26), cf(0.12, cb * 0.26), cf(0.4, cb * 0.26), cf(0.4, -cb * 0.26)];
+          poly(g, [cf(0.07, -cb * 0.33), cf(0.07, cb * 0.33), cf(0.44, cb * 0.33), cf(0.44, -cb * 0.33)], '#0b0e12');
+          glass(pb, [pb[3], pb[2]]);
+          // a side pane on whichever side of the box faces the viewer
+          [-1, 1].forEach(function (s) {
+            if (nearOf(s) <= 0.05) return;
+            var sp = function (a, k) { return S3(TF(a, s * (cb + 0.006)), cz + ch * k); };
+            poly(g, [sp(ca0 + (ca1 - ca0) * 0.4, 0.44), sp(ca1 - (ca1 - ca0) * 0.06, 0.44), sp(ca1 - (ca1 - ca0) * 0.06, 0.95), sp(ca0 + (ca1 - ca0) * 0.4, 0.95)], '#0b0e12');
+            var ps = [sp(ca0 + (ca1 - ca0) * 0.46, 0.5), sp(ca1 - (ca1 - ca0) * 0.12, 0.5), sp(ca1 - (ca1 - ca0) * 0.12, 0.9), sp(ca0 + (ca1 - ca0) * 0.46, 0.9)];
+            glass(ps, [ps[3], ps[2]]);
+          });
         }
         if (fwd <= 0) stacks();
       }
