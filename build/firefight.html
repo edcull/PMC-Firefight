@@ -19792,7 +19792,8 @@
           // stub wings with pods, and a fan at each tip
           [-1, 1].forEach(function (sd) {
             part(-L * 0.02, sd * w * 2.6, function () {
-              var wz = z + H * 0.45;
+              // the stub wings carrying the rear fans ride level with the top of the hull
+              var wz = z + H - 2;
               plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
               var npods = spec.noPods ? 0 : st === 'apacherk' || st === 'hindrk' ? 2 : 1;
               for (var pi = 0; pi < npods; pi++) {
@@ -19888,11 +19889,7 @@
           });
           part(0, 0, function () {
             fuselage(fus, fusTop, z, H, TB);
-            // intakes either side behind the cockpit, the engine nozzle at the back
-            [-1, 1].forEach(function (sd) {
-              var ip = S3(AF(L * 0.1, sd * fw2 * 0.95), z + H * 0.55);
-              sEllipse(ip[0], ip[1], 2.2, 2.4, '#0c0f13');
-            });
+            // the engine nozzle at the back
             var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
             sEllipse(nz[0], nz[1], 3.4, 3, STEEL); sEllipse(nz[0], nz[1], 2, 1.8, dead ? '#15181e' : '#c96a2a');
             canopy(L * 0.12, L * 0.36, fw2 * 0.5, z + H, 4);
@@ -19901,8 +19898,7 @@
           });
           part(L * 0.4, 0, function () {
             var gp = S3(AF(L * 0.26, -fw2 * 0.7), z + H * 0.7);
-            mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);
-            sEllipse(gp[0], gp[1], 1.2, 1, '#0c0f13');
+            mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);        // the gun port fires from here, without a dot to mark it
             if (spec.noseGun) noseGun(L * 0.46, 0, z + 1, 0.12, 'gun', { rail: true, also: ['rail', 'auto'] });
             else if (hyb) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
           });
