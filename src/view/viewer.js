@@ -26,8 +26,8 @@
 
   var cv, g, FX;
   // the stage opens close on the unit; it pulls out to the whole firing line to show a shot
-  // the stage's zooms: the whole firing line, a big or flying unit whole, and a close look
-  var ZOOMS = [1, 2, 4.5], ZOOM_CLOSE = 2;
+  // the stage's zooms: the whole firing line, the unit, and a close look at it
+  var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
   var view = {
     zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
     key: 'regular', prop: 'tracked', side: 'A', status: 'ready',
