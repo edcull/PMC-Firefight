@@ -313,14 +313,18 @@ async function clickText(p, re) {
     });
     await p.waitForTimeout(200);
   }
+  /* Rather than play twenty turns by hand, hand the battle to the AI on both
+     sides — before Start, not after it. Handed over once the battle is under
+     way, a company that wins the initiative is left waiting on a player who is
+     no longer there: nothing asks the AI to act and the battle sits at turn 1
+     for good (about half the time, whenever side A rolls the higher D10). */
   await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    s.cfg.aiSides = ['A', 'B'];
     const b3 = document.querySelector('button[data-act="start"]');
     if (b3) b3.click();
   });
   await p.waitForTimeout(600);
-
-  // rather than play twenty turns by hand, hand the battle to the AI on both sides
-  await p.evaluate(() => { const s = window.PMC_STATE(); s.cfg.aiSides = ['A', 'B']; });
   console.log('  (both sides to the AI, and let it run)');
   let over = false;
   for (let i = 0; i < 3000; i++) {   // a slow twenty-turn battle needs the room
