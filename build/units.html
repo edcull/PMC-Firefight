@@ -10233,7 +10233,7 @@ html { scroll-behavior: smooth; }
   var SHOULDER_STYLE = { arc: 'rocket', arcbig: 'rocket' };
   var ARM_FOR = {
     pistol: 'mg', small: 'mg', smg: 'mg', burst: 'mg', chain: 'auto',
-    shell: 'cannon', shellbig: 'howitzer', rail: 'rail', flame: 'flame',
+    shell: 'cannon', shellbig: 'bigcannon', rail: 'rail', flame: 'flame',
     arc: 'rocket', arcbig: 'rocket', rocket: 'rocket', missile: 'missile',
     spit: 'auto', spitbig: 'auto', spine: 'auto', energy: 'plasma', orb: 'plasma', orbbig: 'howitzer',
     none: 'none'
@@ -12995,6 +12995,8 @@ html { scroll-behavior: smooth; }
       switch (type) {
         case 'cannon': return barrel(fr, a0, reach, b, z, 2.6 * sc, 'gun', { brake: true, fume: 0.5 });
         case 'long': return barrel(fr, a0, reach * 1.2, b, z, 2.3 * sc, 'gun', { brake: true, fume: 0.45 });
+        // a combat walker's main gun: a heavy cannon held level, long and thick, braked at the muzzle
+        case 'bigcannon': return barrel(fr, a0, reach * 1.15, b, z, 3.4 * sc, 'gun', { brake: true, fume: 0.55 });
         case 'howitzer': return barrel(fr, a0, reach * 0.8, b, z, 4.6 * sc, 'gun', { brake: true, up: 3 });
         case 'plasma': {
           var pw = 4 * sc, tip = barrel(fr, a0, reach * 0.95, b, z, pw, 'gun', { col: '#1c2129' });
