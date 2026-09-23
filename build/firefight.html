@@ -27731,6 +27731,7 @@
     ui.feedUnread = 0;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
     ui.insertion = null; ui.preview = null; ui.deployPick = null;
+    ui.watch = null;
   }
 
   /* ---- sending ---- */
@@ -27948,6 +27949,13 @@
     ui.tsetHint = s.tsetHint || '';
     ui.vis = null; ui.visKey = '';
     ui.preview = null;
+    /* In a demo the watcher's pick is the selection, and it stays picked
+       while the AI activates one unit after another — until it is gone. */
+    if (handsOff() && ui.watch) {
+      var w = byId(ui.watch);
+      if (w && w.alive) { ui.selected = w; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; }
+      else ui.watch = null;
+    }
   }
 
   /* ---- asking the engine ----
@@ -28027,8 +28035,17 @@
     }
     send({ k: 'action', id: id });
   }
+  // the watcher's own pick in a demo: shown, kept, and never sent to the engine
+  function watchUnit(u) {
+    ui.watch = u.id;
+    ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
+    if (window.innerWidth <= 1000) setMTab('unit');
+    if (SFX) SFX.click();
+    render();
+  }
   function select(u) {
     if (!u) return;
+    if (handsOff()) { watchUnit(u); return; }
     /* On a phone the panel is one slice of screen: picking a unit is a request
        to act with it, so the panel comes back to the actions. */
     if (window.innerWidth <= 1000) setMTab('act');
@@ -31934,6 +31951,12 @@
     }
 
     var hit = unitUnder(c);
+
+    // a demo is watched: a tap picks a unit to look at, and never acts for the AI
+    if (handsOff()) {
+      if (hit) watchUnit(hit); else showTerrainTip(e, p);
+      return;
+    }
 
     // the OpFor has been driving the camera: a tap on open ground gives it back
     if (cam.borrowed && !hit) {
