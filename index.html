@@ -329,7 +329,7 @@
   @media (max-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
   .st { background: var(--panel-2); padding: 6px 7px; }
   .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
-  .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* suppression against Morale: three bands, the SP laid over them */
   .moralebar { margin: 8px 0 6px; }
@@ -345,10 +345,10 @@
   .healthbar .mb-labels span { text-align: left; }
   .hintbar:empty { display: none; }
   /* the ground a unit stands on, with the letter the map marks it by */
-  /* a stat its drive changed: the difference, and a tip saying why */
-  .sdelta { font-size: 10px; font-weight: 600; margin-left: 3px; cursor: help; }
-  .sdelta.up { color: var(--good); }
-  .sdelta.dn { color: var(--bad); }
+  /* a stat its drive changed: its new value in green or red, a tip saying why */
+  .schg { cursor: help; font-style: normal; }
+  .schg.up { color: var(--good); }
+  .schg.dn { color: var(--bad); }
   .chip.chip-drive { color: var(--ink); border-color: color-mix(in srgb, var(--alpha) 45%, var(--line)); }
   .chip.tpill { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
   .chip.tpill i { font-style: normal; font-family: var(--mono); font-weight: 700; font-size: 9px; color: rgba(8,11,16,.85);

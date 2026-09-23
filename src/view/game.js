@@ -3572,7 +3572,8 @@
       '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div>' +
       '<div class="mb-labels"><span>Structure ' + left + ' / ' + u.str + '</span></div></div>';
     /* What its drive (and a drone's missing crew) did to the printed profile:
-       each changed stat carries the difference, and a tip saying why. */
+       a changed stat shows its new value, green if it went up and red if it
+       went down, with a tip saying what it was and why. */
     var base = R.profile(u.key) || {};
     function why(stat) {
       var out = [];
@@ -3580,17 +3581,15 @@
       if (stat === 'str' && u.drone) out.push('Drone Control — +1 Structure, no crew');
       return out.join('\n');
     }
-    function delta(now, was, stat) {
-      if (was == null || now === was) return '';
-      var d = Math.round((now - was) * 100) / 100;
-      return ' <small class="sdelta ' + (d > 0 ? 'up' : 'dn') + '"' + (why(stat) ? ' ' + tip('Changed from ' + was, why(stat)) : '') + '>' +
-        (d > 0 ? '+' : '\u2212') + Math.abs(d) + '</small>';
+    function changed(text, now, was, stat) {
+      if (was == null || now === was) return text;
+      return '<i class="schg ' + (now > was ? 'up' : 'dn') + '"' + (why(stat) ? ' ' + tip('Printed ' + was, why(stat)) : '') + '>' + text + '</i>';
     }
     h += '<div class="stats">' +
-      stat('Structure', left + '/' + u.str + delta(u.str, base.str, 'str')) +
-      stat('Move', u.move + '"' + (u.turn ? ' (' + u.turn + ')' : '') + delta(u.move, base.move, 'move')) +
+      stat('Structure', changed(left + '/' + u.str, u.str, base.str, 'str')) +
+      stat('Move', changed(u.move + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
-      stat('Def', u.def + delta(u.def, base.def, 'def')) + stat('Assault', u.assault) +
+      stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.assault) +
       stat('Damage', u.damage) +
       stat('Carrying', u.transport ? (u.cargo || []).length + '/' + u.transport : '—') + '</div>';
     if ((u.cargo || []).length) {
