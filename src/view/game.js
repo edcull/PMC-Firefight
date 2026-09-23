@@ -3554,8 +3554,8 @@
       stat('Carrying', u.transport ? (u.cargo || []).length + '/' + u.transport : '—') + '</div>';
     h += '<div class="spbar"><div class="spbar-fill" style="width:' +
       Math.min(100, (u.damage / Math.max(1, u.str)) * 100) + '%"></div></div>' +
-      '<p class="hint small">Knocked out above ' + u.str + ' damage · repairs ' + Math.max(1, left) +
-      'D6 on 4+ · ' + (u.cls === 'aircraft'
+      '<p class="hint small">Knocked out above ' + u.str + ' damage · ' +
+      (R.repairDice(u) ? 'repairs ' + R.repairDice(u) + 'D6 on 4+' : 'no Structure left: cannot be repaired') + ' · ' + (u.cls === 'aircraft'
         ? 'flies over everything, always fires and is fired at with Basic Firepower, and cannot hold ground'
         : (pr && pr.cover ? 'takes cover like infantry, and its flanks deny the +1 side shot, but it is hit +2 in the rear'
           : 'takes no cover from terrain, and is hit +1 in the side, +2 in the rear')) + '</p>';

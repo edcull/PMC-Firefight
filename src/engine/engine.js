@@ -2107,6 +2107,7 @@
       var rep = R.repair(state, u);
       if (!rep) { rallyNext(list, i + 1); return; }
       logLine('rally', rep.text);
+      if (rep.none) { rallyNext(list, i + 1); return; }   // nothing to roll: no card to show
       var card = repairCard(u, rep);
       card.progress = 'Unit ' + (i + 1) + ' of ' + list.length;
       card.onShow = function () { ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; focusUnit(u, false, true); render(); };
@@ -2167,6 +2168,13 @@
       return {
         kind: 'Repair', title: u.name + ' [' + u.side + ']', side: u.side,
         note: 'Nothing to repair.', outcome: { text: 'The hull is sound.', tone: 'good' }
+      };
+    }
+    if (rep.none) {
+      return {
+        kind: 'Repair', side: u.side, title: u.name + ' [' + u.side + ']',
+        note: 'Structure ' + u.str + ', ' + rep.before + ' damage — no Structure left to roll for.',
+        outcome: { text: 'It cannot be repaired.', tone: 'bad' }
       };
     }
     return {
@@ -3675,8 +3683,8 @@
       if (lane && lane.count) { ui.selected = u; doStrafe(lane.pt); return; }
     }
 
-    // badly damaged and nothing worth shooting: pull back and patch up
-    if (u.damage >= u.str && !shot.t) {
+    // badly damaged and nothing worth shooting: pull back and patch up — while there is Structure left to repair with
+    if (u.damage >= u.str - 1 && R.repairDice(u) > 0 && !shot.t) {
       var rep = R.repair(state, u);
       logLine('rally', rep ? rep.text : u.label + ' stands down.');
       if (rep) pushRes(repairCard(u, rep));
