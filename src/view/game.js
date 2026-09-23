@@ -3434,7 +3434,7 @@
       keep = box.className.split(/\s+/).filter(function (c) { return c !== 'compact' && c !== 'statstrip'; }).join(' ');
       box.setAttribute('data-keep', keep);
     }
-    box.className = (keep ? keep + ' ' : '') + 'statstrip' + (ui.statsOpen ? '' : ' compact');
+    box.className = (keep ? keep + ' ' : '') + 'statstrip';   // always in full: no Details to tap for it
     if (!u) {
       box.innerHTML = '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
       return;
@@ -3446,7 +3446,7 @@
       '</p><span class="stat-sum">' + u.models + '/' + u.size + ' · ' + u.sp + ' SP · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + ' · Rng ' + u.range + '"</span></div>' +
       '<span class="status-tag status-' + st + '">' + st + '</span>' +
-      '<button class="statbtn" data-act="statdetails">' + (ui.statsOpen ? 'Less' : 'Details') + '</button></div>';
+      '</div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -3545,7 +3545,7 @@
       '</p><span class="stat-sum">' + u.damage + '/' + u.str + ' damage · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + '</span></div>' +
       '<span class="status-tag status-' + tag + '">' + word + '</span>' +
-      '<button class="statbtn" data-act="statdetails">' + (ui.statsOpen ? 'Less' : 'Details') + '</button></div>';
+      '</div>';
     h += '<div class="stats">' +
       stat('Structure', left + '/' + u.str) + stat('Move', u.move + '"' + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -3956,7 +3956,6 @@
         else if (a === 'autodeploy') autoDeployMine();
         else if (a === 'start') startBattle();
         else if (a === 'restart') openMenu();
-        else if (a === 'statdetails') { ui.statsOpen = !ui.statsOpen; drawStats(); }
       });
     });
     host.querySelectorAll('[data-piece]').forEach(function (b) {
@@ -5599,7 +5598,6 @@
       b.addEventListener('click', function () { setDrawerTab(b.getAttribute('data-tab')); if (SFX) SFX.click(); });
     });
     setDrawerTab('forces');
-    ui.statsOpen = window.innerWidth > 760;
     el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
 
     // the same switch on the top bar and on the menu
