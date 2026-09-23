@@ -597,9 +597,10 @@
     hint: 'The leaders sit tight in defensive positions and never move. Counters within 18" of your units and in sight are revealed each Beginning phase — and if none is, the closest one is.',
     extraUnits: function (state) {
       var bt = state.cfg.tier, faction = state.solo.opFaction || 'pmc';
-      // a swarm's leaders are its Leader Bugs
-      var cu = R.listFor(faction).filter(function (p) { return (p.command || (p.leaderBug && p.cls === 'infantry')) && p.tier === bt; })[0] ||
-        R.listFor(faction).filter(function (p) { return p.leaderBug && p.cls === 'infantry'; }).slice(-1)[0];
+      // a swarm's leaders are its Leader Bugs, and a tribe's its Alpha squads
+      function leads(p) { return p.command || p.alpha || (p.leaderBug && p.cls === 'infantry'); }
+      var cu = R.listFor(faction).filter(function (p) { return leads(p) && p.tier === bt; })[0] ||
+        R.listFor(faction).filter(function (p) { return (p.leaderBug && p.cls === 'infantry') || p.alpha; }).slice(-1)[0];
       return cu ? [{ profile: cu, side: 'B', leader: true }] : [];
     },
     setupTerrain: function (state) {

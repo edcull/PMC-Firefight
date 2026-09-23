@@ -41,6 +41,14 @@
   h1 span { color: var(--alpha); }
   header p { margin: 0; font-size: 12px; color: var(--ink-faint); }
   header .keys { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  /* the way back to the game, which opens on its main menu */
+  .vhome {
+    align-self: center; flex: none; text-decoration: none; white-space: nowrap;
+    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
+  }
+  .vhome:hover, .vhome:focus-visible { color: var(--ink); border-color: var(--alpha); }
+  @media (pointer: coarse) { .vhome { padding: 9px 12px; font-size: 12px; } }
   header kbd {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px;
     padding: 1px 5px; font-family: var(--mono); font-size: 10px;
@@ -49,10 +57,6 @@
   main {
     flex: 1; min-height: 0;
     display: grid; grid-template-columns: 280px minmax(0, 1fr) 300px; gap: 12px; padding: 12px;
-  }
-  @media (max-width: 1000px) and (min-width: 701px) {
-    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
-    .vpanel { max-height: 40vh; }
   }
 
   .vpanel {
@@ -190,15 +194,23 @@
   :focus-visible { outline: 2px solid var(--alpha); outline-offset: 2px; }
   #vboard { width: 100%; }
 
-  /* A phone: one column that scrolls as a page. The stage comes first, then
-     the unit's controls, then the list to pick from; picking scrolls back up. */
-  @media (max-width: 700px) {
+  /* A phone, a tablet held upright, or a phone asking for the desktop site:
+     one column that scrolls as a page. The stage comes first and stays pinned
+     to the top while the controls scroll under it, so Fire and Walk can be
+     watched as they are pressed; then the unit's controls, then the list to
+     pick from, and picking scrolls back up. (The three-column layout needs
+     more than 1000px; the old two-row layout between 700 and 1000 let the
+     canvas grow past its stage, and the unit was drawn out of sight.) */
+  @media (max-width: 1000px) {
     html, body { height: auto; }
     body { display: block; }
     header { padding: 9px 16px; }
     header p, header .keys { display: none; }
     main { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
-    .vstage { order: 1; height: 40vh; min-height: 230px; max-height: 360px; }
+    .vstage {
+      order: 1; height: 40vh; min-height: 230px; max-height: 360px;
+      position: sticky; top: 0; z-index: 5; box-shadow: 0 8px 16px rgba(0, 0, 0, .45);
+    }
     .vpanel { max-height: none; }
     .vpanel:last-of-type { order: 2; }
     .vpanel:first-of-type { order: 3; max-height: 60vh; }
@@ -211,10 +223,28 @@
     .vfoot { padding: 6px 10px; }
     #vnote { display: none; }
     #vboard { cursor: pointer; }
+    .vtable { font-size: 12px; }
+    .vtable th { font-size: 10.5px; }
+    .vrule { font-size: 13px; }
+    .vweap { font-size: 13px; }
+  }
+  @media (max-width: 1000px) and (min-width: 701px) {
+    .vstage { height: 46vh; max-height: 520px; }
+  }
+  /* a finger, whatever the width: every control big enough to hit */
+  @media (pointer: coarse) {
+    .vsw { gap: 7px; }
+    .vsw button { width: 36px; height: 36px; }
+    .vsg { padding: 9px 12px; font-size: 12px; min-height: 38px; }
+    .vbtn { min-height: 44px; }
+    .vu { min-height: 44px; padding: 8px 8px; }
+    .vu-w { font-size: 10.5px; }
+    input[type=range] { height: 28px; }
   }
 </style>
 
 <header>
+  <a class="vhome" id="vhome" href="firefight.html" title="Back to the game's main menu">← Main menu</a>
   <h1>PMC <span>2670</span> · Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
@@ -16079,7 +16109,7 @@
     el('vstate').textContent = R.isMachine(u)
       ? u.damage + ' of ' + u.str + ' Structure gone'
       : u.models + '/' + u.size + ' models · ' + u.sp + ' SP · ' + R.status(u);
-    if (view.dpr && window.matchMedia && window.matchMedia('(max-width: 700px)').matches) {
+    if (view.dpr && window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
       el('vstate').textContent += ' · tap to fire';
     }
   }
@@ -16113,6 +16143,7 @@
     drawPicker();
     drawControls();
     drawState();
+    fit();                 // again, now the footer has its text and the panels their size
     frame();
 
     // tap the stage to fire: on a phone the buttons are further down the page
@@ -16130,7 +16161,7 @@
       drawPicker(); drawControls(); drawState(); frame();
       note('');
       // on a phone the list is below the stage: go back up to see the unit
-      if (window.matchMedia && window.matchMedia('(max-width: 700px)').matches) {
+      if (window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else b.scrollIntoView({ block: 'nearest' });
     });
@@ -16202,14 +16233,17 @@
     var box = cv.parentElement.getBoundingClientRect();
     /* On a phone the canvas is drawn at the screen's own pixel density, and
        stretched back to the box by CSS, so the pixel art stays sharp. */
-    var narrow = box.width < 700;
+    var narrow = box.width < 1000;
     var dpr = narrow ? Math.min(3, window.devicePixelRatio || 1) : 1;
     /* The canvas is drawn at the size it is shown at, all the stage bar the
        footer. Left to CSS, flex stretched a canvas drawn half as tall as it
        was wide to the stage's whole height, and every figure came out tall. */
-    var foot = el('vstate') ? el('vstate').parentElement.offsetHeight : 30;
-    var cw = Math.max(260, Math.round(box.width));
-    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot));
+    /* The footer is measured with its line of text in it: fit() first runs
+       before the state is written, when an empty footer is only its padding,
+       and a canvas sized to that pushed the footer out of a fixed-height stage. */
+    var foot = Math.max(28, el('vstate') ? el('vstate').parentElement.offsetHeight : 30);
+    var cw = Math.max(260, Math.round(box.width - 2));
+    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot - 2));
     cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
     cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
     view.dpr = dpr;

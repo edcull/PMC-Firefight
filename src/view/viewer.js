@@ -869,7 +869,7 @@
     el('vstate').textContent = R.isMachine(u)
       ? u.damage + ' of ' + u.str + ' Structure gone'
       : u.models + '/' + u.size + ' models · ' + u.sp + ' SP · ' + R.status(u);
-    if (view.dpr && window.matchMedia && window.matchMedia('(max-width: 700px)').matches) {
+    if (view.dpr && window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
       el('vstate').textContent += ' · tap to fire';
     }
   }
@@ -903,6 +903,7 @@
     drawPicker();
     drawControls();
     drawState();
+    fit();                 // again, now the footer has its text and the panels their size
     frame();
 
     // tap the stage to fire: on a phone the buttons are further down the page
@@ -920,7 +921,7 @@
       drawPicker(); drawControls(); drawState(); frame();
       note('');
       // on a phone the list is below the stage: go back up to see the unit
-      if (window.matchMedia && window.matchMedia('(max-width: 700px)').matches) {
+      if (window.matchMedia && window.matchMedia('(max-width: 1000px)').matches) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else b.scrollIntoView({ block: 'nearest' });
     });
@@ -992,14 +993,17 @@
     var box = cv.parentElement.getBoundingClientRect();
     /* On a phone the canvas is drawn at the screen's own pixel density, and
        stretched back to the box by CSS, so the pixel art stays sharp. */
-    var narrow = box.width < 700;
+    var narrow = box.width < 1000;
     var dpr = narrow ? Math.min(3, window.devicePixelRatio || 1) : 1;
     /* The canvas is drawn at the size it is shown at, all the stage bar the
        footer. Left to CSS, flex stretched a canvas drawn half as tall as it
        was wide to the stage's whole height, and every figure came out tall. */
-    var foot = el('vstate') ? el('vstate').parentElement.offsetHeight : 30;
-    var cw = Math.max(260, Math.round(box.width));
-    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot));
+    /* The footer is measured with its line of text in it: fit() first runs
+       before the state is written, when an empty footer is only its padding,
+       and a canvas sized to that pushed the footer out of a fixed-height stage. */
+    var foot = Math.max(28, el('vstate') ? el('vstate').parentElement.offsetHeight : 30);
+    var cw = Math.max(260, Math.round(box.width - 2));
+    var ch = Math.max(narrow ? 200 : 280, Math.round(box.height - foot - 2));
     cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
     cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
     view.dpr = dpr;

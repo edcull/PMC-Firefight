@@ -4740,8 +4740,8 @@
       if (!el(id)) return;
       el(id).addEventListener('change', function () {
         muster.keys = []; muster.name = '';
-        // a demo force keeps a rolled build, whatever it is changed to
-        if (muster.hot && muster.hot.kind === 'demo') hotRandomise(muster.hot.step - 1, true);
+        // a force that starts rolled keeps a rolled build, whatever it is changed to
+        if (muster.hot && muster.hot.step < 3 && hotRolled(muster.hot.step)) hotRandomise(muster.hot.step - 1, true);
         if (el('sel-force')) el('sel-force').value = '';
         var db = document.querySelector('[data-force="del"]');
         if (db) db.disabled = true;
@@ -4810,7 +4810,17 @@
     document.querySelector('.muster-btns').addEventListener('click', function (e) {
       var b = e.target.closest('[data-army]');
       if (!b) return;
-      if (b.getAttribute('data-army') === 'roll' && muster.solo) {
+      if (b.getAttribute('data-army') === 'random') {
+        // a random kind of force, rolled: in a stepped muster it keeps its colour and takes a name to match
+        if (muster.hot && muster.hot.step < 3) hotRandomise(muster.hot.step - 1, false, true);
+        else {
+          var rf = HOT_FACTIONS[Math.floor(Math.random() * HOT_FACTIONS.length)];
+          el('sel-faction').value = rf;
+          if (el('sel-tactic')) el('sel-tactic').value = '';
+          muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), rf) : R.rollArmy(musterTier(), musterPL(), null, rf);
+          muster.name = '';
+        }
+      } else if (b.getAttribute('data-army') === 'roll' && muster.solo) {
         muster.keys = SOLO.rollCommando(musterTier(), musterPL(), musterFaction());
         muster.name = 'Commando';
       } else if (b.getAttribute('data-army') === 'roll') {
@@ -4875,14 +4885,21 @@
      commando table (p. 147); the two share a side and a colour on the table,
      and the battlefield step picks the OpFor and the solitaire scenario. A demo
      has two AI forces, each starting as a random kind of force with a rolled
-     build, to change or keep. Each step keeps what was built, so Back loses
-     nothing. */
+     build, to change or keep; against the AI, the player builds their own and
+     the opposition starts that way. Each step keeps what was built, so Back
+     loses nothing. */
   var HOT_FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
   var FORCE_NOUN = { pmc: 'company', rebel: 'insurgents', bugs: 'swarm', xeno: 'tribe' };
   var FORCE_KIND = { pmc: 'Mercenary company', rebel: 'Insurgent group', bugs: 'Bug swarm', xeno: 'Xenotripod tribe' };
   function hotWho(step) {
     var k = muster.hot.kind;
+    if (k === 'ai') return step === 1 ? 'Your force' : 'The opposition';
     return k === 'demo' ? 'Force ' + step : 'Player ' + step;
+  }
+  // does this step's force start rolled, and roll again when its kind changes?
+  function hotRolled(step) {
+    var k = muster.hot && muster.hot.kind;
+    return k === 'demo' || (k === 'ai' && step === 2);
   }
   function hotBegin(kind) {
     muster.hot = { kind: kind, step: 1, sides: [null, null] };
@@ -4903,13 +4920,13 @@
     drawColourPick();
   }
   // a demo force: a random kind of force, a rolled build, a colour nobody else wears and a name to go with it
-  function hotRandomise(i, keepFaction) {
+  function hotRandomise(i, keepFaction, keepColour) {
     var f = keepFaction ? musterFaction() : HOT_FACTIONS[Math.floor(Math.random() * HOT_FACTIONS.length)];
     el('sel-faction').value = f;
     if (el('sel-tactic')) el('sel-tactic').value = '';
-    muster.keys = R.rollArmy(musterTier(), musterPL(), null, f);
+    muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
     var other = muster.hot.sides[1 - i];
-    if (!keepFaction) muster.colour = foeColour(other ? [other.colour] : []);
+    if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
     muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[f];
     if (el('hot-name')) el('hot-name').value = muster.name;
   }
@@ -4928,7 +4945,7 @@
       el('sel-faction').value = sd.faction;
       if (el('sel-tactic')) el('sel-tactic').value = sd.tactic || '';
       if (el('hot-name')) el('hot-name').value = sd.name;
-    } else if (muster.hot.kind === 'demo') {
+    } else if (hotRolled(i + 1)) {
       hotRandomise(i);
     } else {
       // a fresh force for the second player; in a hotseat, in a colour the first is not wearing
@@ -4944,7 +4961,8 @@
     s.dataset.kind = kind;
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = step > 1; });
     el('setup-title').textContent = step === 3 ? 'The battlefield'
-      : hotWho(step) + ' — ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
+      : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
+      : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
     var intro = {
       hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
         ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
@@ -4952,12 +4970,15 @@
       coop: ['A co-operative game: two commandos, one each, against the OpFor (pp. 146–156). Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
         'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
+      ai: ['A battle against the AI. Build your force and set the Battle Tier and Priority Level; then choose what you are up against, and where.',
+        ' is ready. Now the force the AI will command: it starts as a random kind of force with a rolled build \u2014 keep it, pick another kind to roll one of those, roll again, or build it by hand.',
+        'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
       demo: ['A demo: two AI forces fight it out while you watch. Each starts as a random kind of force with a rolled build — keep it, change the kind, roll again or pick units by hand.',
         ' is ready. Now the force it will face.',
         'Both forces are ready. Choose the scenario, the world and how the table is laid, then watch.']
     }[kind];
     el('hot-intro').textContent = step === 2 ? (h.sides[0].name + intro[1]).replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL()) : intro[step - 1];
-    el('btn-start').textContent = step === 1 ? (kind === 'demo' ? 'Next: the second force' : 'Next: Player 2’s ' + force)
+    el('btn-start').textContent = step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
       : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
     if (el('colour-hint')) el('colour-hint').textContent = kind === 'coop'
       ? 'What both commandos are painted in: the two of you are one side on the table.'
@@ -4985,12 +5006,12 @@
       var name = ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name;
       if (!name) {
         if (el('hot-name')) el('hot-name').focus();
-        return hotRefuse('Give ' + who + '’s ' + (h.kind === 'coop' ? 'commando' : 'force') + ' a name.');
+        return hotRefuse(h.kind === 'ai' ? 'Give ' + who.toLowerCase() + ' a name.' : 'Give ' + who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force') + ' a name.');
       }
       var chk = musterCheck(muster.keys);
-      if (!chk.ok) return hotRefuse(who + '’s ' + (h.kind === 'coop' ? 'commando' : 'force') + ' is not legal yet: ' + (chk.faults.join(' ') || 'pick some units.'));
+      if (!chk.ok) return hotRefuse((h.kind === 'ai' ? who : who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force')) + ' is not legal yet: ' + (chk.faults.join(' ') || 'pick some units.'));
       if (h.step === 2 && name === h.sides[0].name) return hotRefuse('The two need different names.');
-      if (h.step === 2 && h.kind !== 'coop' && muster.colour === h.sides[0].colour) return hotRefuse(who + ' needs a colour of its own.');
+      if (h.step === 2 && h.kind !== 'coop' && muster.colour === h.sides[0].colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
       if (el('hot-name')) el('hot-name').value = name;
       hotSaveSide();
       h.step++;
@@ -5024,7 +5045,7 @@
     var pickScen = el('sel-scen') ? el('sel-scen').value : 'secure';
     if (pickScen === 'roll') pickScen = SC.ORDER[R.d6() - 1];
     else if (pickScen === 'rolld3') pickScen = SC.ORDER[R.d3() - 1];
-    var mode = h.kind === 'demo' ? 'demo' : 'hotseat';
+    var mode = h.kind === 'demo' ? 'demo' : h.kind === 'ai' ? 'ai' : 'hotseat';
     el('setup').hidden = true;
     hotEnd();
     begin({
@@ -5446,7 +5467,7 @@
       solo: 'Muster your commando', coop: 'Muster your commandos'
     }[kind] || 'Muster your force';
     // hotseat, co-op and demo build both forces, one step each, before the battlefield
-    if (kind === 'hotseat' || kind === 'coop' || kind === 'demo') hotBegin(kind); else hotEnd();
+    if (kind === 'hotseat' || kind === 'coop' || kind === 'demo' || kind === 'ai') hotBegin(kind); else hotEnd();
     el('setup').hidden = false;
   };
   window.PMC_BATTLE_LIVE = function () {

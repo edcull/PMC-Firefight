@@ -1,8 +1,8 @@
-/* Hotseat, co-op and demo skirmishes build both forces before the battle: each
+/* Hotseat, co-op, demo and against-the-AI skirmishes build both forces before the battle: each
    side in turn (kind, name, colours, units), then the battlefield (scenario,
    world, terrain). A demo starts each side as a random kind of force with a
-   rolled build. And on a page with no server behind it, the Multiplayer card
-   is there but greyed out. */
+   rolled build, as does the opposition against the AI. And on a page with no
+   server behind it, the Multiplayer card is there but greyed out. */
 const { chromium } = require('playwright');
 const path = require('path');
 const { ROOT, SHOTS } = require('../where.js');
@@ -109,11 +109,48 @@ const { ROOT, SHOTS } = require('../where.js');
   const ds = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, ca: s.cfg.colourA, cb: s.cfg.colourB }; });
   check('the demo runs with the two forces', ds.mode === 'demo' && !!ds.a && !!ds.b && ds.ca !== ds.cb, JSON.stringify(ds));
 
-  console.log('\nBack to an ordinary skirmish');
+  console.log('\nAgainst the AI');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('ai'); });
   await p.waitForTimeout(200);
-  check('against the AI is the single muster screen as before', !(await p.evaluate(() => window.__hot())) && await shown('sel-op') && await shown('sel-scen') &&
+  check('you muster your own force first, from nothing', /^Muster your force$/.test(await title()) &&
+    await p.evaluate(() => document.querySelectorAll('#chosen .pick').length) === 0 && !(await shown('sel-op')));
+  await roll(); await name('Kowalski\u2019s Lads');
+  await next();
+  const op = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, faction: document.getElementById('sel-faction').value,
+    legal: /legal/i.test(document.getElementById('faults').textContent), name: document.getElementById('hot-name').value }));
+  check('then the opposition: a random kind of force, already rolled', /^The opposition/.test(await title()) && op.units > 0 && op.legal && !!op.name, JSON.stringify(op));
+  await setVal('sel-faction', 'xeno');
+  const opx = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, legal: /legal/i.test(document.getElementById('faults').textContent) }));
+  check('...pick an army type and it is rolled for you', opx.units > 0 && opx.legal);
+  const was = await p.evaluate(() => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join());
+  let changed = false;
+  for (let i = 0; i < 5 && !changed; i++) {
+    await p.evaluate(() => document.querySelector('[data-army="random"]').click());
+    changed = await p.evaluate((w) => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join() !== w &&
+      /legal/i.test(document.getElementById('faults').textContent), was);
+  }
+  check('...or Random army for a random type, rolled', changed);
+  await setVal('sel-faction', 'xeno');
+  await next();
+  check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'));
+  await next();
+  await p.waitForTimeout(600);
+  const ai = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, bx: s.units.filter(u => u.side === 'B').every(u => u.faction === 'xeno') }; });
+  check('the AI commands the opposition you chose', ai.mode === 'ai' && ai.a === 'Kowalski\u2019s Lads' && ai.bx, JSON.stringify(ai));
+
+  console.log('\nSolitaire');
+  await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('solo'); });
+  await p.waitForTimeout(200);
+  check('solitaire keeps its single screen', !(await p.evaluate(() => window.__hot())) && await shown('sel-solo-scen') &&
     await p.evaluate(() => document.getElementById('btn-start').textContent) === 'Take the field' && !(await p.evaluate(() => document.getElementById('sel-tier').disabled)));
+  check('...and can be up against a Xenotripod tribe', await p.evaluate(() => [...document.getElementById('sel-solo-op').options].some(o => o.value === 'xeno')));
+  await setVal('sel-solo-op', 'xeno');
+  await setVal('sel-solo-scen', 's_decap');
+  await roll();
+  await next();
+  await p.waitForTimeout(600);
+  const sx = await p.evaluate(() => { const s = window.PMC_STATE(); const b = s.units.filter(u => u.side === 'B'); return { n: b.length, xeno: b.every(u => u.faction === 'xeno'), leader: b.some(u => u.soloLeader) }; });
+  check('...and the tribe takes the field, its Alpha squad to be hunted in a Decapitation', sx.n > 0 && sx.xeno && sx.leader, JSON.stringify(sx));
   check('no page errors', errs.length === 0, errs.join('; '));
 
   await b.close();

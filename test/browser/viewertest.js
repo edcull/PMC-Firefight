@@ -199,6 +199,10 @@ async function pickAndFire(p, key, ms) {
   ok('...without ever being drawn broken', drop.after.status === null && !drop.fx.includes('miss'));
 
   /* -------------------------------------------------------------- unit state */
+  head('It has a way back to the game');
+  const home = await p.evaluate(() => { const a = document.getElementById('vhome'); return a ? { href: a.getAttribute('href'), text: a.textContent, shown: a.offsetParent !== null } : null; });
+  ok('a Main menu link back to the game', !!home && home.shown && /Main menu/.test(home.text) && /^(index|firefight)\.html$/.test(home.href), home && home.href);
+
   head('It shows a unit in each of its states');
   const states = await p.evaluate(async () => {
     const out = {};
