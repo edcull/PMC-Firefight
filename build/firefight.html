@@ -1072,21 +1072,11 @@
   /* ---------- contextual cards inside the console ---------- */
   #context:empty { display: none; }
   #context .targets, #context .card { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
-  .statbtn {
-    display: none; margin-left: auto; background: var(--panel-2); border: 1px solid var(--line);
-    color: var(--ink-dim); border-radius: 4px; padding: 4px 9px; cursor: pointer;
-    font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
-  }
   .stat-sum { display: none; font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
 
   @media (max-width: 760px) {
-    .statbtn { display: inline-block; }
-    .stat-sum { display: inline; }
     .status-tag { margin-left: 0; }
-    .statstrip.compact .stats,
-    .statstrip.compact .spbar,
-    .statstrip.compact .chips,
-    .statstrip.compact .hint { display: none; }
+
     .statstrip { padding: 8px 10px 10px; }
   }
 
@@ -13611,14 +13601,14 @@
     convict: { helm: 'bare', gun: 'carbine', pack: 'none', collar: true, light: true, armband: 'force',
       tint: { light: '#dd8f43', mid: '#bd6c2c', dark: '#6b3a15', helm: '#a05520', cloth: '#8a5a2a' } },
     // the heavy end of the assault troops
-    shocklead: { helm: 'sealed', gun: 'smg', pack: 'charges', bulk: 1, mark: true, vest: true },
-    shockbreacher: { helm: 'sealed', gun: 'shotgun', pack: 'charges', bulk: 1, vest: true },
+    shocklead: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, mark: true, vest: true },
+    shockbreacher: { helm: 'welder', gun: 'shotgun', pack: 'charges', bulk: 1, vest: true },
     shock: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, vest: true },
     ranger: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true },
     rangersaw: { helm: 'heavy', gun: 'saw', pack: 'ammo', bulk: 1, mark: true, nvg: true },
     rangerlead: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true },
-    commandolead: { helm: 'sealed', gun: 'smg', pack: 'charges', bulk: 1, mark: true, vest: true, nvg: true },
-    commandobreacher: { helm: 'sealed', gun: 'shotgun', pack: 'charges', bulk: 1, vest: true, nvg: true },
+    commandolead: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, mark: true, vest: true, nvg: true },
+    commandobreacher: { helm: 'welder', gun: 'shotgun', pack: 'charges', bulk: 1, vest: true, nvg: true },
     commando: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, vest: true, nvg: true },
     // crew-served weapons
     atgunner: { helm: 'std', gun: 'atlauncher', pack: 'none', kneel: true },
@@ -31035,7 +31025,7 @@
       keep = box.className.split(/\s+/).filter(function (c) { return c !== 'compact' && c !== 'statstrip'; }).join(' ');
       box.setAttribute('data-keep', keep);
     }
-    box.className = (keep ? keep + ' ' : '') + 'statstrip' + (ui.statsOpen ? '' : ' compact');
+    box.className = (keep ? keep + ' ' : '') + 'statstrip';   // always in full: no Details to tap for it
     if (!u) {
       box.innerHTML = '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
       return;
@@ -31047,7 +31037,7 @@
       '</p><span class="stat-sum">' + u.models + '/' + u.size + ' · ' + u.sp + ' SP · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + ' · Rng ' + u.range + '"</span></div>' +
       '<span class="status-tag status-' + st + '">' + st + '</span>' +
-      '<button class="statbtn" data-act="statdetails">' + (ui.statsOpen ? 'Less' : 'Details') + '</button></div>';
+      '</div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -31146,7 +31136,7 @@
       '</p><span class="stat-sum">' + u.damage + '/' + u.str + ' damage · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + '</span></div>' +
       '<span class="status-tag status-' + tag + '">' + word + '</span>' +
-      '<button class="statbtn" data-act="statdetails">' + (ui.statsOpen ? 'Less' : 'Details') + '</button></div>';
+      '</div>';
     h += '<div class="stats">' +
       stat('Structure', left + '/' + u.str) + stat('Move', u.move + '"' + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -31557,7 +31547,6 @@
         else if (a === 'autodeploy') autoDeployMine();
         else if (a === 'start') startBattle();
         else if (a === 'restart') openMenu();
-        else if (a === 'statdetails') { ui.statsOpen = !ui.statsOpen; drawStats(); }
       });
     });
     host.querySelectorAll('[data-piece]').forEach(function (b) {
@@ -33200,7 +33189,6 @@
       b.addEventListener('click', function () { setDrawerTab(b.getAttribute('data-tab')); if (SFX) SFX.click(); });
     });
     setDrawerTab('forces');
-    ui.statsOpen = window.innerWidth > 760;
     el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
 
     // the same switch on the top bar and on the menu
