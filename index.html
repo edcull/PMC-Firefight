@@ -677,6 +677,28 @@
   #setup[data-kind="demo"] .hot-colour, #setup[data-kind="demo"] .muster-btns { display: none !important; }
   #setup[data-kind="demo"]:not([data-hot="3"]) #tierpl-field { display: none !important; }
   #setup[data-kind="demo"][data-hot="3"] #tierpl-field { display: grid !important; }
+  /* a demo force's own buttons: roll it again, or load and save it from a modal */
+  .demo-btns, .forcebar-wrap .demo-only { display: none; }
+  .forcebar-wrap, .forcebar-box { display: contents; }
+  #setup[data-kind="demo"] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
+  #setup[data-kind="demo"] .demo-btns .lnk { flex: 1; }
+  #setup[data-kind="demo"] .forcebar-wrap { display: none; }
+  #setup[data-kind="demo"] .forcebar-wrap.open {
+    display: grid; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; background: rgba(8, 11, 16, .78);
+  }
+  #setup[data-kind="demo"] .forcebar-wrap.open .forcebar-box {
+    display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+    width: min(460px, 100%); box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  }
+  #setup[data-kind="demo"] .forcebar-wrap.open .demo-only { display: flex; }
+  #setup[data-kind="demo"] .forcebar-wrap.open h3.demo-only { display: block; font-family: var(--display); font-size: 15px; margin: 0 0 8px; }
+  #setup[data-kind="demo"] .forcebar-wrap.open .forcebar { margin-top: 0; padding-top: 0; border-top: 0; }
+  /* a demo force's screen fits the page: only the list of units scrolls */
+  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet { display: flex; flex-direction: column; }
+  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet > * { flex: none; }
+  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet > .muster.hot-force { flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; margin-bottom: 10px; }
+  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > * { flex: none; }
+  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > .cat { flex: 1 1 auto; min-height: 60px; max-height: none; }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
   .hot-sum .hot-side {
@@ -1563,8 +1585,15 @@
         <button type="button" class="lnk" data-army="clear">Clear</button>
         <select id="sel-preset"><option value="">Ready-made…</option></select>
       </div>
+      <!-- a demo force: rolled again, or loaded and saved from a list of its own -->
+      <div class="demo-btns">
+        <button type="button" class="lnk" id="btn-demo-roll">Random force</button>
+        <button type="button" class="lnk" id="btn-demo-saves">Load / save…</button>
+      </div>
       <!-- a force worth building is worth keeping: named, saved in this browser,
-           and exportable to a file so it survives a new device -->
+           and exportable to a file so it survives a new device (for a demo, in a modal) -->
+      <div class="forcebar-wrap" id="forcebar-wrap"><div class="forcebar-box" role="dialog" aria-label="Load or save this force">
+      <h3 class="demo-only">Load or save this force</h3>
       <div class="forcebar">
         <div class="forcerow">
           <input id="force-name" type="text" maxlength="40" autocomplete="off"
@@ -1582,6 +1611,8 @@
         </div>
         <p class="forcenote" id="force-note"></p>
       </div>
+      <div class="askrow demo-only"><button type="button" class="start" id="btn-demo-saves-done">Done</button></div>
+      </div></div>
       <div class="cat" id="cat"></div>
     </div>
 

@@ -4681,16 +4681,19 @@
       lost.push(pick.key);
       return false;
     });
+    // a demo force keeps the battle's Tier and Priority Level, its colour, and a name from its colour and kind
+    var demo = muster.hot && muster.hot.kind === 'demo';
     if (el('sel-faction') && f.faction) el('sel-faction').value = f.faction;
-    if (el('sel-tier') && f.tier) el('sel-tier').value = String(f.tier);
-    if (el('sel-pl') && f.pl) el('sel-pl').value = String(f.pl);
+    if (el('sel-tier') && f.tier && !demo) el('sel-tier').value = String(f.tier);
+    if (el('sel-pl') && f.pl && !demo) el('sel-pl').value = String(f.pl);
     if (el('sel-tactic')) el('sel-tactic').value = f.tactic || '';
-    if (f.colour && ISO.COLOURS[f.colour]) {
+    if (f.colour && ISO.COLOURS[f.colour] && !demo) {
       muster.colour = f.colour;
       try { localStorage.setItem('pmc-colour', f.colour); } catch (e) { }
     }
     muster.keys = keys;
     muster.name = f.name || '';
+    if (demo) { muster.demoNoun = null; demoRename(); }
     muster.opFaction = null;                 // let the opposition follow again
     if (el('force-name')) el('force-name').value = f.name || '';
     drawMuster();
@@ -5006,6 +5009,11 @@
     var f = keepFaction ? musterFaction() : HOT_FACTIONS[Math.floor(Math.random() * HOT_FACTIONS.length)];
     el('sel-faction').value = f;
     if (el('sel-tactic')) el('sel-tactic').value = '';
+    // a demo's rebels fight to a tactic, picked at random
+    if (muster.hot.kind === 'demo' && f === 'rebel' && el('sel-tactic')) {
+      var tacts = Array.prototype.map.call(el('sel-tactic').options, function (o) { return o.value; }).filter(Boolean);
+      el('sel-tactic').value = tacts[Math.floor(Math.random() * tacts.length)] || '';
+    }
     muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
     var other = muster.hot.sides[1 - i];
     if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
@@ -5037,6 +5045,7 @@
       if (el('hot-name')) el('hot-name').value = '';
     }
   }
+  var tierHome = null;                 // where the Tier and Priority Level sit on the sheet, when not moved up for a demo
   function hotPaint() {
     var h = muster.hot, step = h.step, s = el('setup'), kind = h.kind;
     var force = kind === 'coop' ? 'commando' : 'force';
@@ -5044,6 +5053,14 @@
     s.dataset.kind = kind;
     // set on the first force only: changing one force from the battlefield must not leave the other illegal
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(kind === 'demo' && step === 3)) || !!h.edit; });
+    // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
+    if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
+    var tp = el('tierpl-field');
+    if (tp) {
+      if (!tierHome) tierHome = { parent: tp.parentNode, next: tp.nextSibling };
+      if (kind === 'demo' && step === 3) el('hot-sum').parentNode.insertBefore(tp, el('hot-sum'));
+      else if (tp.nextSibling !== tierHome.next) tierHome.parent.insertBefore(tp, tierHome.next);
+    }
     el('setup-title').textContent = step === 3 ? 'The battlefield'
       : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
       : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
@@ -5390,6 +5407,16 @@
 
     wireMuster();
     if (el('btn-setup-back')) el('btn-setup-back').addEventListener('click', setupBack);
+    // a demo force: rolled again as the same kind, or loaded and saved from a modal
+    if (el('btn-demo-roll')) el('btn-demo-roll').addEventListener('click', function () {
+      if (!muster.hot || muster.hot.step > 2) return;
+      hotRandomise(muster.hot.step - 1, true, true);
+      drawMuster();
+    });
+    var saves = el('forcebar-wrap');
+    if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
+    if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
+    if (saves) saves.addEventListener('click', function (ev) { if (ev.target === saves) saves.classList.remove('open'); });
     if (el('hot-sum')) el('hot-sum').addEventListener('click', function (ev) {
       var b = ev.target.closest && ev.target.closest('[data-hotside]');
       if (b) hotEdit(+b.getAttribute('data-hotside'));
@@ -5576,13 +5603,13 @@
      against" choice, and solitaire and co-op switch the sheet into commando
      mode. */
   /* A demo starts on the battlefield step with everything already rolled:
-     a random Battle Tier and Priority Level, and two random kinds of force
+     Battle Tier III at Priority Level 2, and two random kinds of force
      with rolled builds in colours of their own. Watch the battle at once, or
      tap either force to change it first. */
   function demoBegin() {
     var tierSel = el('sel-tier'), plSel = el('sel-pl');
-    if (tierSel) tierSel.value = String(1 + Math.floor(Math.random() * 5));
-    if (plSel) plSel.value = String(1 + Math.floor(Math.random() * 2));
+    if (tierSel) tierSel.value = '3';
+    if (plSel) plSel.value = '2';
     hotBegin('demo');                                 // force 1, rolled
     hotSaveSide();
     muster.hot.step = 2; hotLoadSide(1); hotSaveSide();   // force 2, rolled, in another colour
