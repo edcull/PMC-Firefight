@@ -185,7 +185,7 @@ async function pickAndFire(p, key, ms) {
     for (let i = 0; i < 40; i++) {
       const a = window.__viewer.arriving();
       out.hidden.push(!!a.hidden);
-      if (!a.hidden) out.shown.push(a.status);
+      if (!a.hidden) out.shown.push(a.pose);
       out.fx = out.fx.concat(window.__viewer.fx());
       await new Promise(r => setTimeout(r, 50));
     }
@@ -196,10 +196,10 @@ async function pickAndFire(p, key, ms) {
     stand.hidden.filter(Boolean).length * 50 + 'ms with nothing on the table');
   ok('a squad throws up dust as it breaks cover', stand.fx.indexOf('collapse') >= 0,
     Array.from(new Set(stand.fx)).join(' '));
-  ok('...is drawn flat on its face first', stand.shown[0] === 'broken');
-  ok('...then up on one knee', stand.shown.indexOf('suppressed') > stand.shown.indexOf('broken'));
+  ok('...is drawn flat on its face first', stand.shown[0] === 'prone');
+  ok('...then up on one knee', stand.shown.indexOf('kneel') > stand.shown.indexOf('prone'));
   ok('...then standing, in about a second',
-    stand.shown.lastIndexOf('suppressed') < stand.shown.length - 1 && stand.after.status === null);
+    stand.shown.lastIndexOf('kneel') < stand.shown.length - 1 && stand.after.pose === null);
   ok('...and it never leaves the ground', stand.after.lift === 0 && !stand.fx.includes('dropmark'));
 
   // a craft falls out of the sky onto its landing point
@@ -229,7 +229,7 @@ async function pickAndFire(p, key, ms) {
     fallen.join(' → '));
   ok('...and throwing up dust where it lands',
     drop.fx.indexOf('collapse') >= 0 && drop.after.lift === 0);
-  ok('...without ever being drawn broken', drop.after.status === null && !drop.fx.includes('miss'));
+  ok('...without ever being drawn lying down', drop.after.pose === null && !drop.fx.includes('miss'));
 
   /* -------------------------------------------------------------- unit state */
   head('It has a way back to the game');

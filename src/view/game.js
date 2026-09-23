@@ -758,31 +758,31 @@
      light thins away. Before it forms the squad is not drawn at all. */
   function teleporting(age) {
     var k = age / TELE_MS;
-    if (k < 0.3) return { lift: 0, status: null, hidden: true };
+    if (k < 0.3) return { lift: 0, pose: null, hidden: true };
     var a = Math.min(1, (k - 0.3) / 0.35);
     // flickering in: every other few frames it drops out, less often as it firms up
     var flick = a < 1 && Math.floor(age / 55) % (a < 0.5 ? 2 : 4) === 0;
-    return { lift: 0, status: null, alpha: flick ? a * 0.3 : a };
+    return { lift: 0, pose: null, alpha: flick ? a * 0.3 : a };
   }
 
   function arriving(u) {
-    if (!u || !u.arriveAt) return { lift: 0, status: null };
+    if (!u || !u.arriveAt) return { lift: 0, pose: null };
     var age = nowMs() - u.arriveAt;
     if (u.arriveKind === 'drop') {
-      if (age >= DROP_MS) { u.arriveAt = 0; u.dropFrom = null; return { lift: 0, status: null }; }
+      if (age >= DROP_MS) { u.arriveAt = 0; u.dropFrom = null; return { lift: 0, pose: null }; }
       var k = age / DROP_MS;
       // gathering speed the whole way down, so it arrives hard rather than drifting in
       var eased = 1 - Math.pow(1 - k, 0.45);
       var fromUp = u.dropFrom != null ? u.dropFrom : ISO.ELEV * 5.5;
-      return { lift: Math.round(fromUp * (1 - eased)), status: null };
+      return { lift: Math.round(fromUp * (1 - eased)), pose: null };
     }
     if (u.arriveKind === 'teleport') {
-      if (age >= TELE_MS) { u.arriveAt = 0; return { lift: 0, status: null }; }
+      if (age >= TELE_MS) { u.arriveAt = 0; return { lift: 0, pose: null }; }
       return teleporting(age);
     }
-    if (age >= STAND_MS) { u.arriveAt = 0; return { lift: 0, status: null }; }
+    if (age >= STAND_MS) { u.arriveAt = 0; return { lift: 0, pose: null }; }
     // flat on its face, then up on one knee, then standing
-    return { lift: 0, status: age < STAND_MS * 0.38 ? 'broken' : age < STAND_MS * 0.74 ? 'suppressed' : null };
+    return { lift: 0, pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null };
   }
   function anyArriving() {
     /* An arrival ends by the clock, drawn or not: a unit that came up off screen
@@ -2666,9 +2666,9 @@
           hop: u.hop || 0,
           walk: u.walk || 0,
           arc: u.arc || 0,
-          status: arr.status || R.status(u),
-          // getting up as it arrives is a pose, not a state: the ring shows the state it really has
-          ringStatus: arr.status ? R.status(u) : undefined,
+          status: R.status(u),
+          // getting up as it arrives is a pose, not a state
+          pose: arr.pose || undefined,
           activated: u.activated,
           selected: ui.selected === u,
           morale: R.currentMorale(u)

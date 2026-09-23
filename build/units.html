@@ -4124,6 +4124,29 @@ html { scroll-behavior: smooth; }
       g.fillRect(Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry), 1, 1);
     }
   }
+  /* A unit's state, laid over its ring as short dashes, so the army's dots
+     still show between them whatever its colour: amber when suppressed, red
+     when broken. */
+  var STATUS_DASH = {
+    suppressed: { c: '#e08a3a', on: 0.16, off: 0.36 },
+    broken: { c: '#e0557a', on: 0.16, off: 0.36 }
+  };
+  function statusDashes(g, cx, cy, rx, ry, st, w) {
+    var d = STATUS_DASH[st];
+    if (!d) return;
+    var n = Math.round(Math.PI * 2 / (d.on + d.off)), per = Math.PI * 2 / n;
+    var on = per * d.on / (d.on + d.off);
+    w = Math.max(1, Math.round(w || 2));
+    [['rgba(12,10,8,.55)', w + 1], [d.c, w]].forEach(function (pass) {
+      g.fillStyle = pass[0];
+      for (var k = 0; k < n; k++) {
+        var a0 = k * per + per * 0.25;
+        for (var a = a0; a <= a0 + on; a += 0.02) {
+          g.fillRect(Math.round(cx + Math.cos(a) * rx - pass[1] / 2), Math.round(cy + Math.sin(a) * ry - pass[1] / 2), pass[1], pass[1]);
+        }
+      }
+    });
+  }
 
   // world-space iso diamond (a rectangle on the table)
   function tile(g, x, y, w, h, c, lift) {
@@ -6574,6 +6597,8 @@ html { scroll-behavior: smooth; }
   var LEG = 1.32;                 // how much longer the legs are drawn
   var HEAD_W = 0.86;              // and how much narrower the head
   var HIP = -20;                  // where the legs meet the body, in art units
+  var KNEEL_DROP = 11;            // how far a man down on one knee sinks, in art units
+  var XENO_LOW = 13;              // how far a hunkered Xenotripod lets its body down
   var COLLAR = -43;               // above this, a shape is part of the head
   // the company's own colour on a tinted figure (the tint keeps it as `force`)
   function PALETTE_FORCE(pal) { return pal.force || pal.light; }
@@ -6621,7 +6646,7 @@ html { scroll-behavior: smooth; }
     var b = kit.bulk || 0;
     var tw = 17 + b * 3, tx = -Math.round(tw / 2);     // torso width and left edge
     var sw = tw + 2;                                   // across the shoulders
-    var drop = pose === 'kneel' ? 8 : 0;               // how far the body sinks
+    var drop = pose === 'kneel' ? KNEEL_DROP : 0;      // how far the body sinks
 
     /* ---- gone to ground ----
        Flat on the belly, seen from above and to the side as the camera sees
@@ -6809,13 +6834,25 @@ html { scroll-behavior: smooth; }
       P(-2, -22 + kb, 6, 9, pal.dark);                 // shin dropped to the peg
       P(-3, -14 + kb, 8, 4, BOOT);
     } else if (pose === 'kneel') {
-      P(-9, -12, 8, 8, pal.dark);                      // folded rear leg
-      P(-9, -12, 3, 8, pal.mid);
-      P(-11, -4, 10, 4, BOOT);
-      P(2, -16, 6, 12, pal.dark);                      // forward knee
-      P(2, -16, 3, 12, pal.mid);
-      P(2, -16, 6, 3, pal.helm);                       // knee pad
-      P(1, -4, 8, 4, BOOT);
+      /* Down on one knee: the rear knee on the ground with the shin laid out
+         behind and the toes tucked, the front thigh level out to a raised knee
+         and the shin straight down to a planted boot. */
+      P(-8, -10, 7, 8, pal.dark);                      // rear thigh, down to the ground
+      P(-8, -10, 3, 8, pal.mid);
+      P(-9, -4, 6, 4, pal.helm);                       // its knee pad, on the ground
+      P(-17, -4, 9, 4, pal.dark);                      // the shin laid out behind
+      P(-17, -4, 9, 1.2, pal.mid);
+      P(-21, -6, 5, 6, BOOT);                          // toes tucked under
+      P(-21, -1, 5, 1, '#08090c');
+      P(-1, -11, 12, 6, pal.dark);                     // front thigh, level out to the knee
+      P(-1, -11, 12, 2, pal.mid);
+      P(7, -12, 5, 4, pal.helm);                       // knee pad, up at the front
+      P(7.5, -12, 3.5, 1, kit.blackPads ? '#4a4e4a' : pal.light);
+      P(6, -7, 6, 4, pal.dark);                        // the shin, straight down
+      P(6, -7, 2, 4, pal.mid);
+      P(5, -4, 9, 4, BOOT);                            // the planted boot
+      P(5, -4, 3, 1, '#3a3f47');
+      P(5, -1, 9, 1, '#08090c');
     } else if (kit.armoured) {
       // powered armour is heavy: it lifts a foot, but not far
       var aL = step ? [3, 0] : [0, 2];
@@ -8205,7 +8242,7 @@ html { scroll-behavior: smooth; }
   var MUZZLE_PRONE = { long: [41, -9], mg: [35, -8.5], saw: [35, -8.5], optics: [27, -15], case: [24, -7], slate: [24, -7], console: [24, -7] };
   function muzzleArt(kit, pose) {
     if (pose === 'prone') return MUZZLE_PRONE[kit.gun] || [31, -8];
-    var drop = pose === 'kneel' ? 8 : 0, wy = -32 + drop;
+    var drop = pose === 'kneel' ? KNEEL_DROP : 0, wy = -32 + drop;
     var m = MUZZLE[kit.gun] || (kit.gun === 'slate' || kit.gun === 'optics' || kit.gun === 'case' ||
       kit.gun === 'console' || kit.gun === 'shell' || kit.gun === 'none' ? [10, 4] : MUZZLE.rifle);
     var y = wy + m[1];
@@ -8621,7 +8658,7 @@ html { scroll-behavior: smooth; }
     if (pose === 'prone') {
       spots = [[-2, -12, 3.2], [4, -13, 2.4], [10, -11, 2.8], [-8, -9, 2]];
     } else {
-      var d = pose === 'kneel' ? 8 : 0;
+      var d = pose === 'kneel' ? KNEEL_DROP : 0;
       spots = v === 1 ? [[-3, -66 + d, 3.4], [3, -64 + d, 2.4], [-9, -50 + d, 2.6], [8, -48 + d, 2]]
         : v === 2 ? [[4, -67 + d, 2.8], [-8, -52 + d, 3.2], [-10, -44 + d, 2.2], [9, -50 + d, 2.4]]
         : v === 3 ? [[-5, -64 + d, 2.6], [-10, -40 + d, 3], [-9, -32 + d, 2.2], [7, -49 + d, 2.6]]
@@ -8716,10 +8753,11 @@ html { scroll-behavior: smooth; }
       /* ---- an Esh-Aven: digitigrade lizard legs, a gargoyle hunch, arms that
          split at the elbow into two forearms each, five compound eyes ---- */
       var SK = dead ? { lt: '#6a6a66', md: '#565653', dk: '#3c3c3a', sh: '#2a2a2a' } : XASH;
-      var lo = kneel ? 7 : 0;
+      var lo = kneel ? XENO_LOW : 0;                   // hunkered down, belly to the ground
       var st = step ? 1 : 0;
       // the far leg
       var fl = st ? [[-2, -22 + lo], [-8, -13 + lo * 0.6], [-4, -5], [-7, 0]] : [[-2, -22 + lo], [4, -13 + lo * 0.6], [-1, -5], [2, 0]];
+      if (kneel) fl = [[-2, -22 + lo], [-8, -7], [-5, -2], [-9, 0]];
       L(fl, 3.6, SK.sh); L([[fl[3][0] - 2, 0], [fl[3][0] + 4, 0]], 1.8, SK.sh);
       // the tail
       Q([[-6, -22 + lo], [-15, -16 + lo], [-20, -7], [-26, -4]], 3.2, SK.dk);
@@ -8750,7 +8788,7 @@ html { scroll-behavior: smooth; }
       });
       // the near leg
       var nl = st ? [[0, -21 + lo], [7, -13 + lo * 0.6], [2, -5], [6, 0]] : [[0, -21 + lo], [-5, -13 + lo * 0.6], [-1, -5], [-3, 0]];
-      if (kneel) nl = [[0, -14], [8, -9], [2, -3], [6, 0]];
+      if (kneel) nl = [[0, -21 + lo], [9, -6], [5, -2], [9, 0]];
       L(nl, 4, SK.dk); L(nl, 2.6, SK.md);
       L([[nl[3][0] - 2, 0], [nl[3][0] + 4.5, 0]], 2, SK.dk);                       // the clawed foot
       E(nl[1][0], nl[1][1], 2.4, 2.2, SK.dk);
@@ -8813,7 +8851,7 @@ html { scroll-behavior: smooth; }
       /* ---- a Crock: three legs on high spiked knees, a faceted ceramic
          carapace like a cut crystal, a wedge of a helmet with a slit of eyes,
          and three armoured arms. Every plane is lit by which way it faces. ---- */
-      var lo2 = kneel ? 6 : 0, rank = kit.rank || 'beta';
+      var lo2 = kneel ? XENO_LOW : 0, rank = kit.rank || 'beta';   // hunkered: the body let down to the ground
       var bx = rank === 'beta' ? 0.92 : rank === 'gamma' ? 0.84 : 0.78;   // squat, but still cut in long planes
       var hipY = -16 + lo2, by = -28 + lo2 + bob, hy = by - 14;
       // hunched forward to strike: the upper body leans over the front leg
@@ -8902,10 +8940,10 @@ html { scroll-behavior: smooth; }
       }
       var sw2 = step ? 2 : 0;
       // the far leg and the third arm, raised behind like a sting
-      leg(0, hipY, kneel ? -2 : -1, hipY - 7, kneel ? 3 : 1 - sw2, true);
+      leg(0, hipY, kneel ? -3 : -1, hipY - 7, kneel ? 6 : 1 - sw2, true);
       arm([[-4, by - 7], [-11, by - 9], [-14, by - 15], [-11, by - 21]], 1.9, 0.8, FAR, true);
       if (!dead) E(-12, by - 12, 0.8, 0.8, GL.d || GL.m);
-      leg(-4, hipY, kneel ? -12 : -10 - sw2 * 0.5, hipY - 6, kneel ? -15 : -13 - sw2, false);
+      leg(-4, hipY, kneel ? -14 : -10 - sw2 * 0.5, hipY - 6, kneel ? -20 : -13 - sw2, false);
       // the far arm
       arm([[3, by - 8], [5, by - 2], [9, by + 1], [12, by - 1]], 1.7, 0.8, FAR, true);
       // the carapace: broad at the shoulders, cut to a point below
@@ -8937,7 +8975,7 @@ html { scroll-behavior: smooth; }
         L([body[1], body[2], body[3]], 0.8, XGOLD.md);
         L([body[6], body[5], body[4]], 0.8, XGOLD.md);
       }
-      leg(3, hipY, kneel ? 11 : 9 + sw2 * 0.5, hipY - 6, kneel ? 15 : 13 + sw2, false);
+      leg(3, hipY, kneel ? 13 : 9 + sw2 * 0.5, hipY - 6, kneel ? 20 : 13 + sw2, false);
       // the helmet: a wedge, swept back to a spike, a slit of little eyes
       /* The head: a long wedge thrust forward, a jaw spike under it, and a
          crown of long cranial spikes swept back off the skull — tipped with
@@ -9142,6 +9180,7 @@ html { scroll-behavior: smooth; }
   }
   function bugMuzzle(kit, pose) {
     var m = kit.mz || [12, -10];
+    if (kit.xeno && pose === 'kneel') return [m[0], m[1] + XENO_LOW];
     return [m[0], m[1] + (pose === 'kneel' ? 4 : pose === 'prone' ? 9 : 0)];
   }
   /* ---------- the Overgrown: bugs the size of a tank ----------
@@ -13554,12 +13593,23 @@ html { scroll-behavior: smooth; }
     if (!kt || !kt.fly || pose === 'prone') return 0;
     return a(4.4) - (pose === 'kneel' ? a(1.8) : 0) + (mi % 2 ? a(0.9) : 0) + (step ? a(0.6) : 0);
   }
+  /* A squad under fire hunkers down on one knee, and a broken one no lower:
+     it is still up, ready to run. Lying flat is for firing positions and for
+     troops getting up as they arrive, never a state. The one exception is a
+     bug that goes about on its legs: broken, it digs in (see burrowBug). */
+  function statusPose(status, art) {
+    if (status === 'broken') {
+      var kt = KIT[roleAt(art || 'rifle', 0)];
+      if (kt && kt.bug && !kt.fly && kt.bug !== 'under' && kt.bug !== 'hugeunder') return 'prone';
+    }
+    return status === 'broken' || status === 'suppressed' ? 'kneel' : 'stand';
+  }
   function muzzles(u, status) {
     if (!u || u.cls === 'vehicle' || u.cls === 'aircraft') return [];
     var art = u.art || 'rifle';
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
     var n = Math.max(1, Math.min(8, u.models || 1));
-    var pose = status === 'broken' ? 'prone' : status === 'suppressed' ? 'kneel' : 'stand';
+    var pose = statusPose(status, art);
     var spots = formation(n), out = [];
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
@@ -13591,10 +13641,9 @@ html { scroll-behavior: smooth; }
     var pal = PALETTE[u.paint || u.side] || PALETTE.A;
     var st = opts.status || 'ready';
     /* The ring (and the morale bar) show the unit's state; the figures take
-       their pose from `status`. They part only while a squad gets up off the
-       ground as it arrives: posed flat, then kneeling, but it is not broken or
-       suppressed, so its ring stays in the army's colour. */
-    var rst = opts.ringStatus || st;
+       their pose from it too, unless told otherwise: a squad getting up off
+       the ground as it arrives is posed flat, then kneeling, whatever its state. */
+    var rst = st;
     var art = u.art || 'rifle';
     // mounted infantry (the Riders upgrade, p. 93) ride whatever they can find
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
@@ -13656,7 +13705,7 @@ html { scroll-behavior: smooth; }
        state runs round the building's footprint. */
     var around = opts.around || null;
     if (around) {
-      var ringCol0 = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
+      var ringCol0 = pal.light;
       var gap = 0.3, lf0 = opts.lift || 0;
       var corners = [[around.x - gap, around.y - gap], [around.x + around.w + gap, around.y - gap],
         [around.x + around.w + gap, around.y + around.h + gap], [around.x - gap, around.y + around.h + gap]]
@@ -13669,6 +13718,18 @@ html { scroll-behavior: smooth; }
         g.closePath(); g.stroke();
         g.setLineDash([]);
       });
+      var sd = STATUS_DASH[rst];                       // the state, dashed over the army's line
+      if (sd) {
+        var len0 = a(6);
+        [['rgba(12,10,8,.55)', PIXEL * 1.5], [sd.c, PIXEL]].forEach(function (st3) {
+          g.strokeStyle = st3[0]; g.lineWidth = Math.max(1, st3[1]);
+          g.setLineDash([len0 * sd.on, len0 * sd.off]);
+          g.beginPath();
+          corners.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); });
+          g.closePath(); g.stroke();
+          g.setLineDash([]);
+        });
+      }
     } else {
     /* No base disc. A token on a table has one; a squad standing on ground does
        not, and the dark ellipse under every unit read as a hole in the terrain.
@@ -13679,10 +13740,11 @@ html { scroll-behavior: smooth; }
 
     /* The ring is the only thing carrying the unit's state now, so it is given a
        dark edge a pixel outside it — enough to read on pale ground without
-       putting a disc back under the models. */
-    var ringCol = rst === 'broken' ? '#e0557a' : rst === 'suppressed' ? '#e08a3a' : pal.light;
+       putting a disc back under the models. Its dots are always the army's;
+       a state is dashed over them. */
     ellipseRing(g, p.x, p.y, br + PIXEL, brY + PIXEL, 'rgba(12,10,8,.45)');
-    ellipseRing(g, p.x, p.y, br, brY, ringCol);
+    ellipseRing(g, p.x, p.y, br, brY, pal.light);
+    statusDashes(g, p.x, p.y, br, brY, rst, PIXEL);
     if (opts.selected) ellipseRing(g, p.x, p.y, br + a(2), brY + a(1), '#ffffff');
     }
 
@@ -13690,7 +13752,7 @@ html { scroll-behavior: smooth; }
     var n = Math.max(1, Math.min(8, u.models || 1));
     // one height for a man, whatever squad he is in — see fitScale
     var scale = MODEL;
-    var pose = st === 'broken' ? 'prone' : st === 'suppressed' ? 'kneel' : 'stand';
+    var pose = opts.pose || statusPose(st, art);
     var spots = around ? garrisonSpots(around, n, at) : formation(n);
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
@@ -13920,7 +13982,7 @@ html { scroll-behavior: smooth; }
           (sp.tHgt || 0) + 6;
       }
       var n = Math.max(1, Math.min(8, models || 1));
-      return headroom(n, status === 'broken' ? 'prone' : status === 'suppressed' ? 'kneel' : 'stand',
+      return headroom(n, statusPose(status, unit && unit.art),
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
