@@ -28346,6 +28346,14 @@
     render();
   }
 
+  function teleportsIn(u) {
+    var p = R.profile(u.key);
+    return u.faction === 'xeno' && !u.eshAven && !(p && p.eshAven);
+  }
+  // the pillar is sized to what comes through it
+  function teleportR(u) {
+    return u.cls === 'aircraft' ? 2.6 : R.isMachine(u) ? 2.2 : 1.4;
+  }
   function landUnit(u, fromOrbit) {
     focusUnit(u, false, true);
     /* A hull comes down on its landing point, and so do jump troops on their
@@ -28354,10 +28362,11 @@
        it falls out of the sky like everything else that side lands. */
     var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
     u.arriveAt = nowMs();
-    // Xenotripod infantry teleport in rather than land
-    if (!craft && u.faction === 'xeno') {
+    /* The Xenotripods teleport in rather than land, hulls and craft as well as
+       squads — all but the Esh-Aven, who come up out of the ground as men do. */
+    if (!fromOrbit && teleportsIn(u)) {
       u.arriveKind = 'teleport';
-      addFx({ kind: 'teleportin', x: u.x, y: u.y, r: 1.4, dur: TELE_MS + 200, blocking: true });
+      addFx({ kind: 'teleportin', x: u.x, y: u.y, r: teleportR(u), dur: TELE_MS + 200, blocking: true });
       if (SFX && SFX.shimmer) SFX.shimmer();
       render();
       return;

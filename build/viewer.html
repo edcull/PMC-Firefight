@@ -16428,20 +16428,22 @@
      dropping to the ground from where it stood and getting back up. */
   var CLEAR_MS = 450;
   function insert() {
-    var u = unit(), craft = R.isMachine(u) || !!u.jets, tele = !craft && u.faction === 'xeno';
+    var u = unit(), craft = R.isMachine(u) || !!u.jets;
+    // the Xenotripods teleport in, hulls and craft too; the Esh-Aven come up out of the ground
+    var pr = R.profile(u.key), tele = u.faction === 'xeno' && !u.eshAven && !(pr && pr.eshAven);
     if (view.walking) toggleWalk();
     FX.clear();
     syncSound();
     var at = { x: u.x, y: u.y };
     view.arriveAt = Date.now() + CLEAR_MS;
-    view.arriveKind = craft ? 'drop' : tele ? 'teleport' : 'stand';
+    view.arriveKind = tele ? 'teleport' : craft ? 'drop' : 'stand';
     // the empty moment: nothing on the field, and the frame loop kept turning through it
     FX.add({ kind: 'hold', x: at.x, y: at.y, dur: CLEAR_MS + 50, blocking: true });
     var landing = view.arriveAt;
     setTimeout(function () {
       if (view.arriveAt !== landing) return;          // another arrival or a new unit since
       if (tele) {
-        FX.add({ kind: 'teleportin', x: at.x, y: at.y, r: 1.4, dur: TELE_MS + 200, blocking: true });
+        FX.add({ kind: 'teleportin', x: at.x, y: at.y, r: u.cls === 'aircraft' ? 2.6 : R.isMachine(u) ? 2.2 : 1.4, dur: TELE_MS + 200, blocking: true });
         if (SFX && SFX.shimmer) SFX.shimmer();
       } else if (craft) {
         FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
@@ -16457,7 +16459,7 @@
         if (SFX) { SFX.step(); SFX.step(0.24); SFX.step(0.5); }
       }
       // keep the frame loop turning while the arrival plays out
-      FX.add({ kind: 'hold', x: at.x, y: at.y, dur: craft ? DROP_MS + 300 : tele ? TELE_MS : STAND_MS, blocking: true });
+      FX.add({ kind: 'hold', x: at.x, y: at.y, dur: tele ? TELE_MS : craft ? DROP_MS + 300 : STAND_MS, blocking: true });
       start();
     }, CLEAR_MS);
     start();
@@ -16916,10 +16918,11 @@
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
     // two tabs under the name: what to do with the unit, and what the book says of it
-    var tab = view.tab === 'stats' ? 'stats' : 'opts';
+    // the profile first: the options are a tab away
+    var tab = view.tab === 'opts' ? 'opts' : 'stats';
     h += '<div class="vtabs" role="tablist">' +
-      '<button type="button" role="tab" data-tab="opts" aria-selected="' + (tab === 'opts') + '"' + (tab === 'opts' ? ' class="on"' : '') + '>Options</button>' +
-      '<button type="button" role="tab" data-tab="stats" aria-selected="' + (tab === 'stats') + '"' + (tab === 'stats' ? ' class="on"' : '') + '>Stats &amp; rules</button></div>';
+      '<button type="button" role="tab" data-tab="stats" aria-selected="' + (tab === 'stats') + '"' + (tab === 'stats' ? ' class="on"' : '') + '>Stats</button>' +
+      '<button type="button" role="tab" data-tab="opts" aria-selected="' + (tab === 'opts') + '"' + (tab === 'opts' ? ' class="on"' : '') + '>Options</button></div>';
     h += '<div class="vtabbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
     h += '<div class="vacts">' +
       '<button class="vbtn primary" data-do="fire">Fire</button>' +
