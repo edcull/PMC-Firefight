@@ -27955,22 +27955,7 @@
     return fl + (n - 1) * 200 + 600;
   }
 
-  /* A unit fires its sequence twice over: the same volley, a beat apart. The
-     first pass is the animation alone — nobody falls and no card comes up — and
-     the second carries the casualties and the result, so a shot reads as a
-     burst of fire rather than one round going out. */
-  var TWICE_GAP = 280;
   function playShooting(shooter, target, res, deaths, done) {
-    playOneVolley(shooter, target, res, [], function () {
-      beat(TWICE_GAP);
-      setTimeout(function () {
-        if (!state) { if (done) done(); return; }
-        playOneVolley(shooter, target, res, deaths, done);
-      }, TWICE_GAP);
-    });
-  }
-
-  function playOneVolley(shooter, target, res, deaths, done) {
     var spec = R.weaponSpec(shooter);
     /* A gunship fires from its airframe and is hit on its airframe, not on the
        ground it happens to be over. Every point a shot is drawn between carries
