@@ -1207,6 +1207,9 @@
       padding: 5px 2px; border-radius: 4px; cursor: pointer; white-space: nowrap;
     }
     .mtab.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+    /* a demo is watched, not played: no Actions tab */
+    body[data-battle="demo"] .mtabs { grid-template-columns: repeat(3, 1fr); }
+    body[data-battle="demo"] .mtab[data-mtab="act"] { display: none; }
     .mtab-n {
       display: inline-block; min-width: 13px; margin-left: 2px; padding: 0 3px;
       border-radius: 7px; background: var(--alpha); color: #14110a;

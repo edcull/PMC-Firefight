@@ -86,7 +86,8 @@
     }
     loadAutoAdvance(cfg.mode);
     resetShow();
-    // a demo is for watching: on a phone it opens on the results as they come in
+    // a demo is for watching: there is nothing to act with, so no Actions tab, and it opens on the results
+    document.body.setAttribute('data-battle', cfg.mode || '');
     if (window.innerWidth <= 1000) setMTab(cfg.mode === 'demo' ? 'res' : 'act');
     /* A battle started from this screen runs in this tab, whatever was here
        before — somebody who has just come out of a networked game and pressed
@@ -1079,6 +1080,7 @@
   function setMTab(which) {
     var con = document.querySelector('.console');
     if (!con) return;
+    if (which === 'act' && document.body.getAttribute('data-battle') === 'demo') which = 'res';   // a demo has no Actions tab
     con.setAttribute('data-mtab', which);
     document.querySelectorAll('#mtabs .mtab').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-mtab') === which);
