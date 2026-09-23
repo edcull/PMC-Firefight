@@ -5189,6 +5189,52 @@
     }
   }
 
+  /* A broken bug digs in: drawn crouched, then sunk half its height into the
+     ground, with the spoil it threw up heaped round it. Returns how far down
+     it went, in art units, so the muzzle can follow. */
+  function burrowBug(g, w, h, ox, oy, pal, kit, step, s) {
+    var tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    paintBug(tmp.getContext('2d'), ox, oy, pal, kit, 'prone', step, s, false);
+    var px = tmp.getContext('2d').getImageData(0, 0, w, h).data;
+    // its height is the body's, not an antenna's or a stray leg's: the rows at least a third as full as the fullest
+    var ground = Math.min(h, Math.round(oy + s)), x0 = w, x1 = 0, rows = [], most = 0;
+    for (var y = 0; y < ground; y++) {
+      var n = 0;
+      for (var x = 0; x < w; x++) {
+        if (px[(y * w + x) * 4 + 3] > 40) {
+          n++;
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+        }
+      }
+      rows.push(n); if (n > most) most = n;
+    }
+    var top = ground;
+    for (var r = 0; r < rows.length; r++) if (rows[r] >= most / 3) { top = r; break; }
+    if (top >= ground) { g.drawImage(tmp, 0, 0); return 0; }
+    var sink = Math.round((ground - top) * 0.5);
+    var cx = (x0 + x1) / 2, rx = Math.max(4 * s, (x1 - x0) / 2 + 2 * s), ry = Math.max(2 * s, rx * 0.22);
+    function E(x, y, a, b, c) { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, a, b, 0, 0, Math.PI * 2); g.fill(); }
+    // the back of the spoil, then the bug in the hole, then the lip of the spoil in front of it
+    E(cx, oy - ry * 0.35, rx, ry, '#4a3d2a');
+    E(cx - rx * 0.1, oy - ry * 0.55, rx * 0.8, ry * 0.6, '#5f4f37');
+    E(cx, oy, rx * 0.9, ry * 0.7, '#1f1911');                  // the hole
+    g.save();
+    g.beginPath(); g.rect(0, 0, w, oy + ry * 0.1); g.clip();
+    g.drawImage(tmp, 0, sink);
+    g.restore();
+    g.save();
+    g.beginPath(); g.rect(0, oy - ry * 0.05, w, h); g.clip();
+    E(cx, oy - ry * 0.05, rx, ry * 0.75, '#5f4f37');
+    g.restore();
+    E(cx, oy + ry * 0.35, rx * 0.96, ry * 0.42, '#4a3d2a');
+    for (var i = 0; i < 7; i++) {                               // clods thrown up
+      var qx = cx - rx + (i + 0.5) * rx * 2 / 7, qy = oy + ry * (0.1 + ((i * 37) % 5) * 0.06);
+      E(qx, qy, 1.3 * s, 1 * s, i % 2 ? '#3a2f20' : '#8a7654');
+    }
+    return sink / s;
+  }
   function bugMuzzle(kit, pose) {
     var m = kit.mz || [12, -10];
     return [m[0], m[1] + (pose === 'kneel' ? 4 : pose === 'prone' ? 9 : 0)];
@@ -5553,7 +5599,8 @@
       else if (kit.kneel) pose = 'kneel';
     }
     if (pose !== 'stand') step = 0;
-    if (pose === 'prone') scale *= 1.25;               // a man flat in the dirt is drawn a size up to read
+    // a man flat in the dirt is drawn a size up to read; a bug that has gone to ground is not
+    if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
     var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '');
     var c = sprites[key];
@@ -5601,7 +5648,9 @@
       hp.hat = pal.helmForce || pal.forceMid || pal.mid; hp.hatLit = pal.helmLit || pal.force || pal.light; hp.hatDark = pal.helmDark || pal.forceDark || pal.dark;
       pal = hp;
     }
-    if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
+    if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
+      ma = [ma[0], ma[1] + burrowBug(body.getContext('2d'), w, h, ox, oy, pal, kit, step, s)];
+    } else if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
     else if (kit.xeno) {
       paintXeno(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
       finishFigure(body, ox, oy, s, pose);

@@ -778,7 +778,16 @@
   }
   function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
 
+  /* The list has a tab for each army; a search looks through all four. The
+     open tab follows the unit on the stage until another is chosen. */
+  var FAC_TABS = [['pmc', 'PMC'], ['rebel', 'Rebels'], ['bugs', 'Bugs'], ['xeno', 'Xeno']];
   function drawPicker() {
+    if (!view.pickFac) view.pickFac = profile().faction || 'pmc';
+    el('vfacs').innerHTML = FAC_TABS.map(function (t) {
+      var on = t[0] === view.pickFac;
+      return '<button type="button" role="tab" data-fac="' + t[0] + '" aria-selected="' + on + '"' +
+        (on ? ' class="on"' : '') + '>' + t[1] + '</button>';
+    }).join('');
     var groups = {};
     R.CATALOGUE.forEach(function (p) {
       var f = (R.FACTIONS[p.faction] || R.FACTIONS.pmc).name;
@@ -786,11 +795,12 @@
     });
     var h = '';
     Object.keys(groups).forEach(function (k) {
-      h += '<h4>' + esc(k) + '</h4>';
+      var fac = groups[k][0].faction || 'pmc';
+      h += '<h4 data-fac="' + fac + '">' + esc(k) + '</h4>';
       groups[k].forEach(function (p) {
         var w = R.weaponSpec(p);
         h += '<button class="vu' + (p.key === view.key ? ' on' : '') +
-          '" data-unit="' + p.key + '">' +
+          '" data-unit="' + p.key + '" data-fac="' + fac + '">' +
           '<span class="vu-code">' + esc(p.code) + '</span>' +
           '<span class="vu-name">' + esc(p.name) + '</span>' +
           '<span class="vu-w">' + esc(styleName(w.p) + (w.s ? '+' + styleName(w.s) : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
@@ -798,6 +808,21 @@
       });
     });
     el('vlist').innerHTML = h;
+    filterPicker();
+  }
+  // show the open tab's units, or every army's that match the search
+  function filterPicker() {
+    var q = el('vsearch').value.trim().toLowerCase();
+    el('vlist').querySelectorAll('.vu').forEach(function (b) {
+      var hit = q ? b.textContent.toLowerCase().indexOf(q) >= 0 : b.getAttribute('data-fac') === view.pickFac;
+      b.style.display = hit ? '' : 'none';
+    });
+    el('vlist').querySelectorAll('h4').forEach(function (hd) {
+      var any = false, n = hd.nextElementSibling;
+      while (n && n.tagName !== 'H4') { if (n.style.display !== 'none') any = true; n = n.nextElementSibling; }
+      hd.style.display = any ? '' : 'none';
+    });
+    el('vfacs').classList.toggle('searching', !!q);
   }
 
   function drawControls() {
@@ -964,7 +989,7 @@
     el('vlist').addEventListener('click', function (e) {
       var b = e.target.closest('[data-unit]');
       if (!b) return;
-      view.key = b.getAttribute('data-unit');
+      view.key = b.getAttribute('data-unit'); view.pickFac = b.getAttribute('data-fac');
       view.models = null;
       // a state the new unit cannot be in (a tank cannot be suppressed) goes back to ready
       if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
@@ -1028,17 +1053,14 @@
       }
     });
 
-    el('vsearch').addEventListener('input', function () {
-      var q = el('vsearch').value.toLowerCase();
-      el('vlist').querySelectorAll('.vu').forEach(function (b) {
-        var hit = b.textContent.toLowerCase().indexOf(q) >= 0;
-        b.style.display = hit ? '' : 'none';
-      });
-      el('vlist').querySelectorAll('h4').forEach(function (hd) {
-        var any = false, n = hd.nextElementSibling;
-        while (n && n.tagName !== 'H4') { if (n.style.display !== 'none') any = true; n = n.nextElementSibling; }
-        hd.style.display = any ? '' : 'none';
-      });
+    el('vsearch').addEventListener('input', filterPicker);
+    el('vfacs').addEventListener('click', function (e) {
+      var t = e.target.closest('[data-fac]');
+      if (!t) return;
+      view.pickFac = t.getAttribute('data-fac');
+      el('vsearch').value = '';
+      drawPicker();
+      el('vside').querySelector('.vscroll').scrollTop = 0;
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });
@@ -1072,7 +1094,7 @@
   /* test hooks: the harness drives the bench the way a player would */
   root.__viewer = {
     pick: function (k) {
-      view.key = k; view.models = null;
+      view.key = k; view.models = null; view.pickFac = profile().faction || 'pmc';
       if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
       drawPicker(); drawControls(); frame();
     },

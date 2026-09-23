@@ -88,6 +88,17 @@
     border: 1px solid var(--line); border-radius: 5px;
     padding: 6px 9px; font-family: var(--body); font-size: 12.5px; margin-bottom: 7px;
   }
+  /* a tab for each army above the list; a search spans all four, so the tabs dim while it runs */
+  .vfacs { display: flex; gap: 3px; flex: none; padding: 7px 7px 0; border-bottom: 1px solid var(--line); }
+  .vfacs button {
+    flex: 1; min-width: 0; background: none; border: 1px solid transparent; border-bottom: none;
+    border-radius: 5px 5px 0 0; margin-bottom: -1px; padding: 7px 2px 6px; cursor: pointer; color: var(--ink-dim);
+    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  }
+  .vfacs button:hover { color: var(--ink); }
+  .vfacs button.on { color: var(--alpha); background: var(--panel-2); border-color: var(--line); border-bottom: 1px solid var(--panel-2); }
+  .vfacs.searching button.on { color: var(--ink-dim); background: none; border-color: transparent; }
+  @media (pointer: coarse) { .vfacs button { min-height: 40px; font-size: 11.5px; } }
   #vlist h4 {
     font-family: var(--display); font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--ink-faint); margin: 10px 0 4px 3px;
@@ -162,6 +173,8 @@
     background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
     border-radius: 4px; padding: 4px 9px; cursor: pointer;
     font-family: var(--mono); font-size: 10.5px;
+    /* each as wide as its word, sharing out what is left, so a row fits on one line */
+    flex: 1 1 auto; min-width: 0; white-space: nowrap; text-align: center;
   }
   .vsg:hover { color: var(--ink); }
   .vsg.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
@@ -267,7 +280,7 @@
     .vunits, .vclose { display: inline-flex; }
     .vscrim { display: block; }
     .vbtn { padding: 11px 6px; font-size: 12px; }
-    .vsg { padding: 7px 11px; font-size: 11.5px; }
+    .vsg { padding: 7px 5px; font-size: 11.5px; }
     .vu { padding: 8px 7px; font-size: 13px; }
     #vsearch { font-size: 16px; padding: 9px 10px; }         /* no zoom-on-focus on iOS */
     .vsel { font-size: 13px; padding: 7px 6px; }
@@ -284,7 +297,7 @@
   @media (pointer: coarse) {
     .vsw { gap: 7px; }
     .vsw button { width: 36px; height: 36px; }
-    .vsg { padding: 9px 12px; font-size: 12px; min-height: 38px; }
+    .vsg { padding: 9px 5px; font-size: 12px; min-height: 38px; }
     .vbtn { min-height: 44px; }
     .vu { min-height: 44px; padding: 8px 8px; }
     .vu-w { font-size: 10.5px; }
@@ -295,7 +308,7 @@
 <header>
   <a class="vhome" id="vhome" href="firefight.html" title="Back to the game's main menu" aria-label="Back to the game's main menu">← Back</a>
   <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
-  <h1>PMC <span>2670</span> · Unit viewer</h1>
+  <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
   <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe</span>
 </header>
@@ -304,6 +317,7 @@
 <main>
   <div class="vpanel vside" id="vside">
     <h3>Units <button type="button" class="vclose" id="vclose" aria-label="Close the unit list">×</button></h3>
+    <div class="vfacs" id="vfacs" role="tablist" aria-label="Army"></div>
     <div class="vscroll">
       <input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off">
       <div id="vlist"></div>
@@ -9955,6 +9969,52 @@
     }
   }
 
+  /* A broken bug digs in: drawn crouched, then sunk half its height into the
+     ground, with the spoil it threw up heaped round it. Returns how far down
+     it went, in art units, so the muzzle can follow. */
+  function burrowBug(g, w, h, ox, oy, pal, kit, step, s) {
+    var tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    paintBug(tmp.getContext('2d'), ox, oy, pal, kit, 'prone', step, s, false);
+    var px = tmp.getContext('2d').getImageData(0, 0, w, h).data;
+    // its height is the body's, not an antenna's or a stray leg's: the rows at least a third as full as the fullest
+    var ground = Math.min(h, Math.round(oy + s)), x0 = w, x1 = 0, rows = [], most = 0;
+    for (var y = 0; y < ground; y++) {
+      var n = 0;
+      for (var x = 0; x < w; x++) {
+        if (px[(y * w + x) * 4 + 3] > 40) {
+          n++;
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+        }
+      }
+      rows.push(n); if (n > most) most = n;
+    }
+    var top = ground;
+    for (var r = 0; r < rows.length; r++) if (rows[r] >= most / 3) { top = r; break; }
+    if (top >= ground) { g.drawImage(tmp, 0, 0); return 0; }
+    var sink = Math.round((ground - top) * 0.5);
+    var cx = (x0 + x1) / 2, rx = Math.max(4 * s, (x1 - x0) / 2 + 2 * s), ry = Math.max(2 * s, rx * 0.22);
+    function E(x, y, a, b, c) { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, a, b, 0, 0, Math.PI * 2); g.fill(); }
+    // the back of the spoil, then the bug in the hole, then the lip of the spoil in front of it
+    E(cx, oy - ry * 0.35, rx, ry, '#4a3d2a');
+    E(cx - rx * 0.1, oy - ry * 0.55, rx * 0.8, ry * 0.6, '#5f4f37');
+    E(cx, oy, rx * 0.9, ry * 0.7, '#1f1911');                  // the hole
+    g.save();
+    g.beginPath(); g.rect(0, 0, w, oy + ry * 0.1); g.clip();
+    g.drawImage(tmp, 0, sink);
+    g.restore();
+    g.save();
+    g.beginPath(); g.rect(0, oy - ry * 0.05, w, h); g.clip();
+    E(cx, oy - ry * 0.05, rx, ry * 0.75, '#5f4f37');
+    g.restore();
+    E(cx, oy + ry * 0.35, rx * 0.96, ry * 0.42, '#4a3d2a');
+    for (var i = 0; i < 7; i++) {                               // clods thrown up
+      var qx = cx - rx + (i + 0.5) * rx * 2 / 7, qy = oy + ry * (0.1 + ((i * 37) % 5) * 0.06);
+      E(qx, qy, 1.3 * s, 1 * s, i % 2 ? '#3a2f20' : '#8a7654');
+    }
+    return sink / s;
+  }
   function bugMuzzle(kit, pose) {
     var m = kit.mz || [12, -10];
     return [m[0], m[1] + (pose === 'kneel' ? 4 : pose === 'prone' ? 9 : 0)];
@@ -10319,7 +10379,8 @@
       else if (kit.kneel) pose = 'kneel';
     }
     if (pose !== 'stand') step = 0;
-    if (pose === 'prone') scale *= 1.25;               // a man flat in the dirt is drawn a size up to read
+    // a man flat in the dirt is drawn a size up to read; a bug that has gone to ground is not
+    if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
     var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '');
     var c = sprites[key];
@@ -10367,7 +10428,9 @@
       hp.hat = pal.helmForce || pal.forceMid || pal.mid; hp.hatLit = pal.helmLit || pal.force || pal.light; hp.hatDark = pal.helmDark || pal.forceDark || pal.dark;
       pal = hp;
     }
-    if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
+    if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
+      ma = [ma[0], ma[1] + burrowBug(body.getContext('2d'), w, h, ox, oy, pal, kit, step, s)];
+    } else if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
     else if (kit.xeno) {
       paintXeno(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
       finishFigure(body, ox, oy, s, pose);
@@ -16068,7 +16131,16 @@
   }
   function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
 
+  /* The list has a tab for each army; a search looks through all four. The
+     open tab follows the unit on the stage until another is chosen. */
+  var FAC_TABS = [['pmc', 'PMC'], ['rebel', 'Rebels'], ['bugs', 'Bugs'], ['xeno', 'Xeno']];
   function drawPicker() {
+    if (!view.pickFac) view.pickFac = profile().faction || 'pmc';
+    el('vfacs').innerHTML = FAC_TABS.map(function (t) {
+      var on = t[0] === view.pickFac;
+      return '<button type="button" role="tab" data-fac="' + t[0] + '" aria-selected="' + on + '"' +
+        (on ? ' class="on"' : '') + '>' + t[1] + '</button>';
+    }).join('');
     var groups = {};
     R.CATALOGUE.forEach(function (p) {
       var f = (R.FACTIONS[p.faction] || R.FACTIONS.pmc).name;
@@ -16076,11 +16148,12 @@
     });
     var h = '';
     Object.keys(groups).forEach(function (k) {
-      h += '<h4>' + esc(k) + '</h4>';
+      var fac = groups[k][0].faction || 'pmc';
+      h += '<h4 data-fac="' + fac + '">' + esc(k) + '</h4>';
       groups[k].forEach(function (p) {
         var w = R.weaponSpec(p);
         h += '<button class="vu' + (p.key === view.key ? ' on' : '') +
-          '" data-unit="' + p.key + '">' +
+          '" data-unit="' + p.key + '" data-fac="' + fac + '">' +
           '<span class="vu-code">' + esc(p.code) + '</span>' +
           '<span class="vu-name">' + esc(p.name) + '</span>' +
           '<span class="vu-w">' + esc(styleName(w.p) + (w.s ? '+' + styleName(w.s) : '') + (w.n > 1 ? ' ×' + w.n : '')) + '</span>' +
@@ -16088,6 +16161,21 @@
       });
     });
     el('vlist').innerHTML = h;
+    filterPicker();
+  }
+  // show the open tab's units, or every army's that match the search
+  function filterPicker() {
+    var q = el('vsearch').value.trim().toLowerCase();
+    el('vlist').querySelectorAll('.vu').forEach(function (b) {
+      var hit = q ? b.textContent.toLowerCase().indexOf(q) >= 0 : b.getAttribute('data-fac') === view.pickFac;
+      b.style.display = hit ? '' : 'none';
+    });
+    el('vlist').querySelectorAll('h4').forEach(function (hd) {
+      var any = false, n = hd.nextElementSibling;
+      while (n && n.tagName !== 'H4') { if (n.style.display !== 'none') any = true; n = n.nextElementSibling; }
+      hd.style.display = any ? '' : 'none';
+    });
+    el('vfacs').classList.toggle('searching', !!q);
   }
 
   function drawControls() {
@@ -16254,7 +16342,7 @@
     el('vlist').addEventListener('click', function (e) {
       var b = e.target.closest('[data-unit]');
       if (!b) return;
-      view.key = b.getAttribute('data-unit');
+      view.key = b.getAttribute('data-unit'); view.pickFac = b.getAttribute('data-fac');
       view.models = null;
       // a state the new unit cannot be in (a tank cannot be suppressed) goes back to ready
       if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
@@ -16318,17 +16406,14 @@
       }
     });
 
-    el('vsearch').addEventListener('input', function () {
-      var q = el('vsearch').value.toLowerCase();
-      el('vlist').querySelectorAll('.vu').forEach(function (b) {
-        var hit = b.textContent.toLowerCase().indexOf(q) >= 0;
-        b.style.display = hit ? '' : 'none';
-      });
-      el('vlist').querySelectorAll('h4').forEach(function (hd) {
-        var any = false, n = hd.nextElementSibling;
-        while (n && n.tagName !== 'H4') { if (n.style.display !== 'none') any = true; n = n.nextElementSibling; }
-        hd.style.display = any ? '' : 'none';
-      });
+    el('vsearch').addEventListener('input', filterPicker);
+    el('vfacs').addEventListener('click', function (e) {
+      var t = e.target.closest('[data-fac]');
+      if (!t) return;
+      view.pickFac = t.getAttribute('data-fac');
+      el('vsearch').value = '';
+      drawPicker();
+      el('vside').querySelector('.vscroll').scrollTop = 0;
     });
 
     window.addEventListener('resize', function () { fit(); frame(); });
@@ -16362,7 +16447,7 @@
   /* test hooks: the harness drives the bench the way a player would */
   root.__viewer = {
     pick: function (k) {
-      view.key = k; view.models = null;
+      view.key = k; view.models = null; view.pickFac = profile().faction || 'pmc';
       if (statesFor(profile()).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
       drawPicker(); drawControls(); frame();
     },
