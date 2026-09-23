@@ -2313,6 +2313,8 @@
   }
 
   function applyPropulsion(u, prop) {
+    // a giant bug or a Xenotripod hull goes on its own legs and fields: no drive at all
+    if (alienHull(u)) { u.prop = null; return u; }
     var pr = PROPULSION[prop];
     if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'wheeled' : null; return u; }
     u.prop = pr.key;
