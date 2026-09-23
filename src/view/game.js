@@ -4471,7 +4471,7 @@
     if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
     var mh = document.querySelector('.muster-head b');
     if (mh) mh.textContent = muster.hot && muster.hot.step < 3
-      ? hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force')
+      ? (muster.hot.kind === 'ai' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
       : muster.solo
       ? (el('sel-solo-mode').value === 'coop' ? 'Player ' + (muster.cur + 1) + '\u2019s commando' : 'Your commando')
       : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';

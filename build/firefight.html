@@ -589,6 +589,7 @@
   #setup[data-hot="3"] .hot-force { display: none !important; }
   #setup[data-hot="1"] .hot-name, #setup[data-hot="2"] .hot-name { display: block; }
   #setup[data-hot="3"] .hot-sum { display: block; }
+  #setup[data-hot] .hot-intro { display: block; }
   #setup[data-hot="2"] .hot-back, #setup[data-hot="3"] .hot-back { display: inline-block; }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
@@ -1146,6 +1147,38 @@
   }
   @media (max-width: 480px) {
     header h1 { display: none; }
+  }
+  @media (max-width: 1000px) {
+    /* The table is square on a phone: as wide as the screen and as tall as it
+       is wide, and everything below it is the console. A tall phone gets far
+       more room for the Actions, Results, Unit and Forces panes; a short one
+       (landscape) keeps at least ~170px of console. */
+    :root { --board: min(100vw, calc(100vh - var(--hdr, 52px) - 170px)); }
+    @supports (height: 100dvh) {
+      :root { --board: min(100vw, calc(100dvh - var(--hdr, 52px) - 170px)); }
+    }
+    .board-wrap { bottom: auto; height: var(--board); }
+    .console { top: calc(var(--hdr, 52px) + var(--board)); height: auto; bottom: 0; }
+
+    /* An app, not a page: nothing scrolls the whole document, pulls to refresh
+       or bounces; each panel scrolls inside itself. */
+    html, body { overscroll-behavior: none; }
+    .mpane, .menu-box, .sheet { overscroll-behavior: contain; }
+  }
+  /* A finger zooms with a pinch; the + / − / Fit buttons are for a mouse. */
+  @media (max-width: 1000px) and (pointer: coarse) {
+    .viewctl { display: none !important; }
+  }
+  /* On a phone every sheet (muster, campaign, rules, lobby) takes the whole
+     screen and is the one thing that scrolls, rather than a card floating in
+     an overlay that scrolls as well. */
+  @media (max-width: 700px) {
+    .overlay:not(.menu):not(#resolution) { padding: 0; place-items: stretch; overflow: hidden; }
+    .overlay:not(.menu):not(#resolution) > .sheet {
+      width: 100%; max-width: none; height: 100%; max-height: none; border: 0; border-radius: 0;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
+    }
   }
   @media (min-width: 1001px) {
     #resfeed-m, #panel-m { display: none; }
@@ -31545,7 +31578,7 @@
     if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
     var mh = document.querySelector('.muster-head b');
     if (mh) mh.textContent = muster.hot && muster.hot.step < 3
-      ? hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force')
+      ? (muster.hot.kind === 'ai' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
       : muster.solo
       ? (el('sel-solo-mode').value === 'coop' ? 'Player ' + (muster.cur + 1) + '\u2019s commando' : 'Your commando')
       : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';
