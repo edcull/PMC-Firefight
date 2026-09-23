@@ -282,6 +282,7 @@
     });
     if (marks.length) h += '<div class="dmarks">' + marks.join('') + '</div>';
     if (opts.actions) h += '<div class="dacts">' + opts.actions + '</div>';
+    if (opts.men) h += opts.men;
     h += '</div>';
     return h;
   }
@@ -655,14 +656,23 @@
       '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
       '</div>';
     if (rosterTab === 'units') {
+      // every unit on the books has its soldiers named; an old save gets them now
+      var named = false;
+      co.roster.forEach(function (e) { if (C.menOf(e, co)) named = true; });
+      if (named) save();
       h += '<div class="dlist">';
       co.roster.slice().sort(function (a, b) {
         return profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
+        var men = e.men || [], open = !!menOpen[e.rid];
+        if (men.length) {
+          acts += '<button class="lnk" data-men="' + e.rid + '" aria-expanded="' + open + '">' +
+            (open ? '\u25be ' : '\u25b8 ') + (profile(e.key).cls === 'infantry' ? 'Soldiers' : 'Crew') + ' (' + men.length + ')</button>';
+        }
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
-        h += entryCard(e, co, { actions: acts });
+        h += entryCard(e, co, { actions: acts, men: open ? menPanel(e) : '' });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
         }
@@ -677,6 +687,16 @@
     return h;
   }
   var rosterTab = 'units';
+  var menOpen = {};               // which units have their soldiers shown, by rid
+
+  // the soldiers of one unit, by rank and name, each of them renameable
+  function menPanel(e) {
+    return '<ol class="dmen">' + (e.men || []).map(function (m, i) {
+      return '<li><span class="dmen-rank">' + esc(m.rank) + '</span>' +
+        '<b class="dmen-name">' + esc(m.name) + '</b>' +
+        '<button class="lnk" data-rsoldier="' + e.rid + '" data-i="' + i + '">Rename</button></li>';
+    }).join('') + '</ol>';
+  }
 
   function spendList(co) {
     var h = '<div class="dlist">';
@@ -1556,6 +1576,22 @@
         text: 'A name of your own travels with them through every promotion.',
         okLabel: 'Rename',
         onOk: function (v) { if (v) { re.name = String(v).slice(0, 28); save(); render(); } }
+      });
+      return;
+    }
+    if (t.hasAttribute('data-men')) {
+      var mr = t.getAttribute('data-men');
+      menOpen[mr] = !menOpen[mr]; render(); return;
+    }
+    if (t.hasAttribute('data-rsoldier')) {
+      var se = findEntry(co, t.getAttribute('data-rsoldier')), si = +t.getAttribute('data-i');
+      var sm = se && se.men && se.men[si];
+      if (!sm) return;
+      ask({
+        kind: 'text', title: 'Rename ' + sm.rank + ' ' + sm.name, value: sm.name, max: 32,
+        text: 'They keep the name for as long as they survive.',
+        okLabel: 'Rename',
+        onOk: function (v) { if (C.renameSoldier(se, si, v)) { save(); render(); } }
       });
       return;
     }

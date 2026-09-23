@@ -1,0 +1,105 @@
+/* A unit's soldiers on the campaign dossier: every card opens to show its
+   men by rank and name, each can be renamed in the page, and the name is
+   still there after a reload. */
+const { chromium } = require('playwright');
+const path = require('path');
+const { ROOT, SHOTS } = require('../where.js');
+
+async function click(p, sel) {
+  const hit = await p.evaluate((s) => {
+    const b = document.querySelector(s);
+    if (!b || b.disabled) return false;
+    b.click(); return true;
+  }, sel);
+  await p.waitForTimeout(220);
+  return hit;
+}
+async function clickText(p, re) {
+  const hit = await p.evaluate((src) => {
+    const rx = new RegExp(src);
+    const b = [...document.querySelectorAll('#camp-body button')].find(x => rx.test(x.textContent) && !x.disabled);
+    if (!b) return false;
+    b.click(); return true;
+  }, re);
+  await p.waitForTimeout(220);
+  return hit;
+}
+
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const p = await b.newPage({ viewport: { width: 1340, height: 940 } });
+  const errs = [];
+  p.on('pageerror', e => errs.push(e.message));
+  let nativeDialogs = 0;
+  p.on('dialog', async d => { nativeDialogs++; await d.dismiss(); });
+  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.waitForTimeout(700);
+  await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });
+
+  const problems = [];
+  function check(name, cond, note) {
+    console.log('  ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
+    if (!cond) problems.push(name);
+  }
+
+  console.log('\nFounding a company');
+  await click(p, '#btn-campaign');
+  await clickText(p, 'Raise the force');
+  await p.evaluate(() => { document.getElementById('found-name').value = 'Task Force Ironhold'; });
+  for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) {
+    await click(p, `#camp-body button[data-add="${k}"]`);
+  }
+  await click(p, '#camp-body button[data-doc="S2"]');
+  check('the charter can be signed', await clickText(p, 'Sign the charter'));
+
+  console.log('\nThe soldiers');
+  await clickText(p, 'The dossier');
+  await p.waitForTimeout(250);
+  const cards = await p.evaluate(() => [...document.querySelectorAll('#camp-body button[data-men]')].map(b => b.textContent));
+  check('every crewed unit offers its soldiers or crew', cards.length >= 9, cards.join(' | '));
+  const rid = await p.evaluate(() => {
+    const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.key === 'recruits');
+    return e.rid;
+  });
+  check('...a squad lists its soldiers', cards.some(c => /Soldiers \(8\)/.test(c)));
+  check('...a vehicle its crew', cards.some(c => /Crew \(1\)/.test(c)));
+  check('...and nothing is shown until asked', await p.evaluate(() => !document.querySelector('#camp-body .dmen')));
+
+  await click(p, `#camp-body button[data-men="${rid}"]`);
+  const listed = await p.evaluate((rid) => {
+    const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
+    const rows = [...document.querySelectorAll('#camp-body .dmen li')].map(li => li.innerText.replace(/\s+/g, ' '));
+    return { rows, men: e.men };
+  }, rid);
+  check('the list opens with every soldier by rank and name',
+    listed.rows.length === 8 && listed.rows.every((r, i) => r.indexOf(listed.men[i].rank) === 0 && r.indexOf(listed.men[i].name) > 0),
+    listed.rows[0]);
+  await p.locator('#camp-body .dcard:has(.dmen)').screenshot({ path: path.join(SHOTS, 'camp-soldiers.png') });
+
+  await click(p, `#camp-body button[data-rsoldier="${rid}"][data-i="1"]`);
+  check('Renaming a soldier asks in the page', await p.evaluate(() => !!document.getElementById('ask-input')));
+  await p.evaluate(() => { document.getElementById('ask-input').value = 'Jan "Tank" Novak'; });
+  await p.evaluate(() => document.querySelector('[data-ask="ok"]').click());
+  await p.waitForTimeout(350);
+  check('...the new name is on the dossier and on the screen', await p.evaluate((rid) => {
+    const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
+    const list = document.querySelector('#camp-body .dmen');
+    return e.men[1].name === 'Jan "Tank" Novak' && !!list && /Jan "Tank" Novak/.test(list.innerText);
+  }, rid));
+  await click(p, `#camp-body button[data-men="${rid}"]`);
+  check('...and the list closes again', await p.evaluate(() => !document.querySelector('#camp-body .dmen')));
+
+  console.log('\nReloading the page');
+  await p.reload();
+  await p.waitForTimeout(900);
+  check('the renamed soldier is still on the books', await p.evaluate((rid) => {
+    const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
+    return e.men[1].name === 'Jan "Tank" Novak';
+  }, rid));
+  check('no native dialog was raised', nativeDialogs === 0);
+  check('no page errors', errs.length === 0, errs.join('; '));
+
+  await b.close();
+  console.log(problems.length ? '\n' + problems.length + ' problem(s)' : '\nall good');
+  process.exit(problems.length ? 1 : 0);
+})();

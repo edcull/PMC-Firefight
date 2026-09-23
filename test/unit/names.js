@@ -103,5 +103,21 @@ C.applyEntry(u2, entry, []);
 R.musterMen(u2, u2.camp.men, {});
 ok('next battle they lead the squad', u2.men[0].name === 'Ana Silva' && u2.men[0].rank === 'Corporal' && u2.men.length === 8);
 
+console.log('the roster');
+const co = camp.companies.A;
+const fresh = co.roster.find((e) => e.key === 'recruits');
+delete fresh.men;
+ok('an entry is named when first shown', C.menOf(fresh, co) === true && fresh.men.length === R.profile('recruits').size);
+ok('...and is left alone after that', C.menOf(fresh, co) === false);
+const all = co.roster.reduce((a, e) => { C.menOf(e, co); return a.concat((e.men || []).map((m) => m.name)); }, []);
+ok('no name is used twice across the force', new Set(all).size === all.length);
+ok('a soldier can be renamed', C.renameSoldier(fresh, 2, '  Jan   "Tank"  Novak ') && fresh.men[2].name === 'Jan "Tank" Novak');
+ok('...but not to nothing', !C.renameSoldier(fresh, 2, '   ') && fresh.men[2].name === 'Jan "Tank" Novak');
+ok('...and not a soldier who is not there', !C.renameSoldier(fresh, 99, 'Nobody'));
+const u3 = unit('recruits');
+C.applyEntry(u3, fresh, []);
+R.musterMen(u3, u3.camp.men, {});
+ok('the new name takes the field', u3.men[2].name === 'Jan "Tank" Novak');
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

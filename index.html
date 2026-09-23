@@ -786,6 +786,12 @@
   .dnote { font-size: 11px; color: var(--ink-faint); }
   .dmarks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
   .dacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  /* a unit's soldiers, opened from its card on the dossier */
+  .dmen { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px dashed var(--line); font-size: 12px; }
+  .dmen li { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; min-width: 0; }
+  .dmen-rank { color: var(--ink-dim); flex: 0 0 auto; min-width: 7.5em; }
+  .dmen-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  .dmen .lnk { flex: 0 0 auto; font-size: 11px; }
   .dhist { font-size: 10.5px; color: var(--ink-faint); padding: 0 11px 2px; font-style: italic; }
   .dledger { font-size: 11px; color: var(--ink-dim); margin-top: 5px; }
   .dledger b { color: var(--good); font-family: var(--mono); }

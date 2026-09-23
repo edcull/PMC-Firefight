@@ -712,6 +712,38 @@
     };
   }
 
+  /* The soldiers on a dossier entry, by name and rank, filled up to the
+     strength the unit takes the field at and ranked by where each stands. The
+     survivors of its last battle keep their places; a new unit, or the gaps
+     casualties left, get fresh names none of the rest of the force is using.
+     Returns true when anything had to be added or changed, so the caller
+     knows to save. */
+  function menOf(entry, co) {
+    var p = profile(entry.key);
+    if (!p) return false;
+    var size = p.size;
+    if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
+    var u = {
+      key: p.key, faction: p.faction || 'pmc', group: p.group, tier: p.tier, size: size, models: size,
+      cls: p.cls || 'infantry', command: !!p.command, rules: (p.rules || []).slice(), drone: !!entry.drone
+    };
+    var taken = {};
+    ((co && co.roster) || []).forEach(function (x) {
+      if (x !== entry) (x.men || []).forEach(function (m) { taken[m.name] = 1; });
+    });
+    var before = JSON.stringify(entry.men || null);
+    entry.men = R.musterMen(u, entry.men, taken).map(function (m) { return { name: m.name, rank: m.rank }; });
+    return JSON.stringify(entry.men) !== before;
+  }
+  // a soldier renamed by the player keeps the name through every battle they survive
+  function renameSoldier(entry, i, name) {
+    var m = entry && entry.men && entry.men[i];
+    name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+    if (!m || !name) return false;
+    m.name = name;
+    return true;
+  }
+
   function newCompany(name, opts) {
     opts = opts || {};
     return {
@@ -2276,7 +2308,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,

@@ -786,6 +786,12 @@
   .dnote { font-size: 11px; color: var(--ink-faint); }
   .dmarks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
   .dacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  /* a unit's soldiers, opened from its card on the dossier */
+  .dmen { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px dashed var(--line); font-size: 12px; }
+  .dmen li { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; min-width: 0; }
+  .dmen-rank { color: var(--ink-dim); flex: 0 0 auto; min-width: 7.5em; }
+  .dmen-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  .dmen .lnk { flex: 0 0 auto; font-size: 11px; }
   .dhist { font-size: 10.5px; color: var(--ink-faint); padding: 0 11px 2px; font-style: italic; }
   .dledger { font-size: 11px; color: var(--ink-dim); margin-top: 5px; }
   .dledger b { color: var(--good); font-family: var(--mono); }
@@ -6039,6 +6045,38 @@
     };
   }
 
+  /* The soldiers on a dossier entry, by name and rank, filled up to the
+     strength the unit takes the field at and ranked by where each stands. The
+     survivors of its last battle keep their places; a new unit, or the gaps
+     casualties left, get fresh names none of the rest of the force is using.
+     Returns true when anything had to be added or changed, so the caller
+     knows to save. */
+  function menOf(entry, co) {
+    var p = profile(entry.key);
+    if (!p) return false;
+    var size = p.size;
+    if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
+    var u = {
+      key: p.key, faction: p.faction || 'pmc', group: p.group, tier: p.tier, size: size, models: size,
+      cls: p.cls || 'infantry', command: !!p.command, rules: (p.rules || []).slice(), drone: !!entry.drone
+    };
+    var taken = {};
+    ((co && co.roster) || []).forEach(function (x) {
+      if (x !== entry) (x.men || []).forEach(function (m) { taken[m.name] = 1; });
+    });
+    var before = JSON.stringify(entry.men || null);
+    entry.men = R.musterMen(u, entry.men, taken).map(function (m) { return { name: m.name, rank: m.rank }; });
+    return JSON.stringify(entry.men) !== before;
+  }
+  // a soldier renamed by the player keeps the name through every battle they survive
+  function renameSoldier(entry, i, name) {
+    var m = entry && entry.men && entry.men[i];
+    name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+    if (!m || !name) return false;
+    m.name = name;
+    return true;
+  }
+
   function newCompany(name, opts) {
     opts = opts || {};
     return {
@@ -7603,7 +7641,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,
@@ -32308,6 +32346,7 @@
     });
     if (marks.length) h += '<div class="dmarks">' + marks.join('') + '</div>';
     if (opts.actions) h += '<div class="dacts">' + opts.actions + '</div>';
+    if (opts.men) h += opts.men;
     h += '</div>';
     return h;
   }
@@ -32681,14 +32720,23 @@
       '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
       '</div>';
     if (rosterTab === 'units') {
+      // every unit on the books has its soldiers named; an old save gets them now
+      var named = false;
+      co.roster.forEach(function (e) { if (C.menOf(e, co)) named = true; });
+      if (named) save();
       h += '<div class="dlist">';
       co.roster.slice().sort(function (a, b) {
         return profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
+        var men = e.men || [], open = !!menOpen[e.rid];
+        if (men.length) {
+          acts += '<button class="lnk" data-men="' + e.rid + '" aria-expanded="' + open + '">' +
+            (open ? '\u25be ' : '\u25b8 ') + (profile(e.key).cls === 'infantry' ? 'Soldiers' : 'Crew') + ' (' + men.length + ')</button>';
+        }
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
-        h += entryCard(e, co, { actions: acts });
+        h += entryCard(e, co, { actions: acts, men: open ? menPanel(e) : '' });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
         }
@@ -32703,6 +32751,16 @@
     return h;
   }
   var rosterTab = 'units';
+  var menOpen = {};               // which units have their soldiers shown, by rid
+
+  // the soldiers of one unit, by rank and name, each of them renameable
+  function menPanel(e) {
+    return '<ol class="dmen">' + (e.men || []).map(function (m, i) {
+      return '<li><span class="dmen-rank">' + esc(m.rank) + '</span>' +
+        '<b class="dmen-name">' + esc(m.name) + '</b>' +
+        '<button class="lnk" data-rsoldier="' + e.rid + '" data-i="' + i + '">Rename</button></li>';
+    }).join('') + '</ol>';
+  }
 
   function spendList(co) {
     var h = '<div class="dlist">';
@@ -33582,6 +33640,22 @@
         text: 'A name of your own travels with them through every promotion.',
         okLabel: 'Rename',
         onOk: function (v) { if (v) { re.name = String(v).slice(0, 28); save(); render(); } }
+      });
+      return;
+    }
+    if (t.hasAttribute('data-men')) {
+      var mr = t.getAttribute('data-men');
+      menOpen[mr] = !menOpen[mr]; render(); return;
+    }
+    if (t.hasAttribute('data-rsoldier')) {
+      var se = findEntry(co, t.getAttribute('data-rsoldier')), si = +t.getAttribute('data-i');
+      var sm = se && se.men && se.men[si];
+      if (!sm) return;
+      ask({
+        kind: 'text', title: 'Rename ' + sm.rank + ' ' + sm.name, value: sm.name, max: 32,
+        text: 'They keep the name for as long as they survive.',
+        okLabel: 'Rename',
+        onOk: function (v) { if (C.renameSoldier(se, si, v)) { save(); render(); } }
       });
       return;
     }
