@@ -335,7 +335,7 @@
   .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* suppression against Morale: three bands, the SP laid over them */
-  .moralebar { margin: 8px 0 6px; }
+  .moralebar { margin: 8px 0; }
   .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
   .mb-band { flex: 1; opacity: .18; }
   .mb-band + .mb-band { border-left: 1px solid rgba(255,255,255,.25); }
@@ -343,9 +343,6 @@
   .mb-band.warn, .mb-fill.warn { background: var(--warn); }
   .mb-band.bad, .mb-fill.bad { background: var(--bad); }
   .mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
-  .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
-  .mb-labels span { flex: 1; text-align: center; }
-  .healthbar .mb-labels span { text-align: left; }
   .hintbar:empty { display: none; }
   /* the ground a unit stands on, with the letter the map marks it by */
   /* a stat its drive changed: its new value in green or red, a tip saying why */
@@ -31078,10 +31075,9 @@
        broken — each as wide as the Morale, with the unit's SP laid over them
        in the colour of the band it has reached. */
     var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
-    h += '<div class="moralebar" title="' + u.sp + ' SP against Morale ' + m + '">' +
+    h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
-      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
-      '<div class="mb-labels"><span>Steady</span><span>Suppressed</span><span>Broken</span></div></div>';
+      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -31192,8 +31188,7 @@
     // its health: the Structure it has left — green untouched, amber down to half, red below
     var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
     h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
-      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div>' +
-      '<div class="mb-labels"><span>Structure ' + left + ' / ' + u.str + '</span></div></div>';
+      '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div></div>';
     /* What its drive (and a drone's missing crew) did to the printed profile:
        a changed stat shows its new value, green if it went up and red if it
        went down, with a tip saying what it was and why. */
