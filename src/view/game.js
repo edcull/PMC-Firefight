@@ -3384,10 +3384,11 @@
       box.innerHTML = 'Pick the enemy to mark for the rest of the turn.';
     } else if (ui.mode === 'wave') {
       box.innerHTML = 'Psychic Wave: tap where <b>' + esc(u.name) + '</b> moves to — or the unit itself to stay — and every enemy within 12" of it takes D6−1 SP.';
+    } else if (isAI(u.side)) {
+      box.innerHTML = '';                              // the OpFor's own: nothing to say about it here
     } else {
-      box.innerHTML = '<b>' + u.name + '</b> — ' + (isAI(u.side) ? 'under OpFor control.' :
-        u.activated ? 'already acted this turn.' :
-          u.side === state.activeSide ? 'choose an action.' : 'waiting for its activation.');
+      box.innerHTML = '<b>' + u.name + '</b> — ' + (u.activated ? 'already acted this turn.' :
+        u.side === state.activeSide ? 'choose an action.' : 'waiting for its activation.');
     }
   }
 
@@ -3447,17 +3448,22 @@
       '<div><h2>' + u.name + honourMarks(u) + '</h2><p class="sub">Tier ' + u.tier + ' · ' + sideName(u.side) +
       '</p><span class="stat-sum">' + u.models + '/' + u.size + ' · ' + u.sp + ' SP · Move ' + u.move +
       '" · FP ' + (u.fp === null ? '—' : u.fp) + ' · Rng ' + u.range + '"</span></div>' +
-      '<span class="status-tag status-' + st + '">' + st + '</span>' +
       '</div>';
+    /* Suppression against Morale in three equal bands — steady, suppressed,
+       broken — each as wide as the Morale, with the unit's SP laid over them
+       in the colour of the band it has reached. */
+    var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
+    h += '<div class="moralebar" title="' + u.sp + ' SP against Morale ' + m + '">' +
+      '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
+      '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
+      '<div class="mb-labels"><span>Steady</span><span>Suppressed</span><span>Broken</span></div></div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
       stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
       stat('SP', u.sp) + '</div>';
-    h += '<div class="spbar"><div class="spbar-fill" style="width:' + Math.min(100, (u.sp / (3 * m)) * 100) + '%"></div>' +
-      '<span class="spmark" style="left:33.3%"></span><span class="spmark" style="left:66.6%"></span></div>' +
-      '<p class="hint small">Suppressed above ' + m + ' SP · broken above ' + (2 * m) + ' · removed above ' + (3 * m) +
+    h += '<p class="hint small">Suppressed above ' + m + ' SP · broken above ' + (2 * m) + ' · removed above ' + (3 * m) +
       ' · standing in ' + R.TERRAIN[R.terrainOf(state, u)].name.toLowerCase() + '</p>';
     h += honourChips(u);
     if (u.rules.length) h += '<div class="chips">' + u.rules.map(function (r) { return '<span class="chip">' + r + '</span>'; }).join('') + '</div>';

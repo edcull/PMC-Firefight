@@ -331,6 +331,19 @@
   .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
   .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
 
+  /* suppression against Morale: three bands, the SP laid over them */
+  .moralebar { margin: 8px 0 6px; }
+  .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
+  .mb-band { flex: 1; opacity: .18; }
+  .mb-band + .mb-band { border-left: 1px solid rgba(255,255,255,.25); }
+  .mb-band.good, .mb-fill.good { background: var(--good); }
+  .mb-band.warn, .mb-fill.warn { background: var(--warn); }
+  .mb-band.bad, .mb-fill.bad { background: var(--bad); }
+  .mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
+  .mb-labels { display: flex; margin-top: 3px; font-family: var(--display); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .mb-labels span { flex: 1; text-align: center; }
+  .hintbar:empty { display: none; }
+  body[data-battle="demo"] #hintbar { display: none; }
   .spbar { position: relative; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); }
   .spbar-fill { height: 100%; background: linear-gradient(90deg, var(--warn), var(--bad)); }
   .spmark { position: absolute; top: 0; width: 1px; height: 100%; background: rgba(255,255,255,.35); }
