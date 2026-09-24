@@ -131,6 +131,17 @@ async function run(p, label, cfg, checks) {
     factionA: 'pmc', factionB: 'bugs', wantFactions: 'bugs+pmc'
   }));
 
+  // Underground Bugs burrow when they move: into the ground, along under it unseen, and up
+  const dig = await p.evaluate(() => {
+    const P = window.PMC.profile, mk = k => Object.assign({}, P(k), { x: 10, y: 10, side: 'A', models: P(k).size, rules: P(k).rules.slice() });
+    return { under: window.__burrowSample(mk('bunderground'), [0.1, 0.5, 0.95]), worm: !!window.__burrowSample(mk('bsandworm'), [0.5]),
+      walker: window.__burrowSample(mk('bsmall'), [0.5]) };
+  });
+  ok('Underground Bugs sink as a move starts', dig.under && dig.under[0].lift < 0 && dig.under[0].alpha < 1, JSON.stringify(dig.under && dig.under[0]));
+  ok('...travel unseen under the ground', dig.under && dig.under[1].hidden === true);
+  ok('...and heave themselves up at the end', dig.under && !dig.under[2].hidden && dig.under[2].lift > -3 * 20);
+  ok('the Sandworm burrows too; a Lesser Bug walks', dig.worm && dig.walker === null);
+
   console.log('\n  What the swarm rules did across the four battles:');
   Object.keys(tally).forEach(k => console.log('    ' + k.padEnd(8) + tally[k]));
   ok('Endless Tide brought bugs back', tally.tide > 0);

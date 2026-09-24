@@ -137,6 +137,8 @@
     drawGround();
     var u = unit(), t = mark();
     var arr = arriving();
+    // a burrowing bug part way into or out of the ground, or under it
+    if (view.walking && view.burrow && !arr.hidden) arr = Object.assign({}, arr, view.burrow);
     // far to near, so the nearer of the two covers the other
     var tv = traveller();
     var order = [u, t].concat(tv ? [tv.u] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
@@ -276,6 +278,7 @@
     view.at = { x: FROM.x + d * span, y: FROM.y };
     view.facing = back ? Math.PI : 0;
 
+    if (burrows(u)) { burrowWalk(u, span); return; }
     if (u.jets) {
       /* Jump troops cross the bench in bounds, one full move at a time: up on
          the jets, over, and down, with the burn flickering all the way. */
@@ -298,6 +301,46 @@
     if (n !== view.lastPace) {
       view.lastPace = n;
       if (gait.sound && view.sound && SFX) SFX.step();
+    }
+  }
+  /* Underground Bugs do not walk the bench: each leg they sink into the ground
+     where they stand, go along it unseen under a line of churned earth, and
+     heave themselves up at the far end — the move the battle plays (game.js:
+     burrowStep). */
+  function burrows(u) { return !!u && u.faction === 'bugs' && u.group === 'Underground Bugs'; }
+  var B_SINK = 0.22, B_RISE = 0.78;
+  function burrowWalk(u, span) {
+    var leg = Math.floor(view.walkT / span), k = (view.walkT % span) / span;
+    var back = leg % 2 === 1, x0 = back ? FROM.x + span : FROM.x, x1 = back ? FROM.x : FROM.x + span;
+    var r = R.isMachine(u) ? 2.4 : 1.6, e;
+    view.facing = back ? Math.PI : 0;
+    view.walkFrame = 0; view.hop = 0; view.arc = 0;
+    var phase = k < B_SINK ? 0 : k < B_RISE ? 1 : 2;
+    if (leg !== view.burrowLeg || phase !== view.burrowPhase) {
+      // the ground falling in as it goes down, and again as it comes up
+      if (phase === 0) { FX.add({ kind: 'collapse', x: x0, y: FROM.y, r: r, dur: 700 }); if (view.sound && SFX) { SFX.step(); SFX.step(0.12); SFX.step(0.3); } }
+      if (phase === 2) { FX.add({ kind: 'collapse', x: x1, y: FROM.y, r: r, dur: 800 }); if (view.sound && SFX) { SFX.impact(0.05); SFX.step(0.15); } }
+      view.burrowLeg = leg; view.burrowPhase = phase;
+    }
+    if (phase === 0) {
+      e = Math.pow(k / B_SINK, 2);
+      view.at = { x: x0, y: FROM.y };
+      view.burrow = { lift: -Math.round(I.ELEV * 3 * e), alpha: Math.max(0, 1 - e * 0.9) };
+    } else if (phase === 1) {
+      var d = (k - B_SINK) / (B_RISE - B_SINK), x = x0 + (x1 - x0) * d;
+      view.at = { x: x, y: FROM.y };
+      view.burrow = { hidden: true };
+      // the ground heaving over it, an inch at a time
+      if (Math.floor(x) !== view.burrowDirt) {
+        view.burrowDirt = Math.floor(x);
+        FX.add({ kind: 'miss', x: x, y: FROM.y, dur: 700 });
+        FX.add({ kind: 'miss', x: x + (Math.random() - 0.5) * 1.2, y: FROM.y + (Math.random() - 0.5) * 1.2, dur: 900 });
+        if (view.sound && SFX && view.burrowDirt % 2 === 0) SFX.step(0.02);
+      }
+    } else {
+      e = 1 - Math.pow(1 - (k - B_RISE) / (1 - B_RISE), 2);
+      view.at = { x: x1, y: FROM.y };
+      view.burrow = { lift: -Math.round(I.ELEV * 3 * (1 - e)), alpha: Math.min(1, 0.25 + e) };
     }
   }
   /* ---------- a strafing run ----------
@@ -452,6 +495,7 @@
 
   function toggleWalk() {
     view.walking = !view.walking;
+    view.burrow = null; view.burrowLeg = view.burrowPhase = view.burrowDirt = null;
     if (!view.walking) { view.at = null; view.facing = 0; view.walkFrame = 0; view.hop = 0; view.arc = 0; frame(); }
     else { view.walkT = 0; view.lastPace = -1; start(); }
     drawControls();
@@ -1330,6 +1374,7 @@
     abilities: function () { return abilitiesOf(unit()).map(function (a) { return a.name; }); },
     destroy: function (on) { setStatus(on === false ? 'ready' : 'destroyed'); },
     strafing: function () { return !!view.strafeAt; },
+    burrow: function () { return view.burrow ? Object.assign({}, view.burrow) : null; },
     arriving: arriving,
     fx: function () { return FX.kinds(); },
     state: function () { return Object.assign({}, view); },
