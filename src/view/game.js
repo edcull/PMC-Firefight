@@ -124,6 +124,7 @@
   function resetShow() {
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
+    anims.forEach(function (an) { if (an.unit) an.unit.burrow = null; });
     anims.length = 0;
     FX.clear && FX.clear();
     resQueue.length = 0; ui.resOpen = false;
@@ -1282,7 +1283,17 @@
     var t = nowMs(), alive = [];
     anims.forEach(function (an) {
       var k = Math.min(1, (t - an.t0) / an.dur);
-      if (an.kind === 'move') {
+      if (an.kind === 'move' && an.burrow) {
+        burrowStep(an, k);
+        if (an.follow) {
+          var bp = ISO.toScreen(an.unit.ax, an.unit.ay);
+          cam.x += (bp.x - cam.x) * 0.16;
+          cam.y += (bp.y - ISO.ELEV - cam.y) * 0.16;
+          clampCam();
+          cam.tx = cam.x; cam.ty = cam.y;
+          borrowCamera();
+        }
+      } else if (an.kind === 'move') {
         var d = k * an.total, seg = 0;
         while (seg < an.segs.length - 1 && d > an.segs[seg].end) seg++;
         var s = an.segs[seg];
@@ -1305,7 +1316,7 @@
         an.unit.ay = an.from.y + (an.to.y - an.from.y) * k;
       }
       if (k >= 1) {
-        if (an.kind === 'move') { an.unit.ax = an.unit.ay = null; an.unit.walk = 0; an.unit.hop = 0; an.unit.arc = 0; }
+        if (an.kind === 'move') { an.unit.ax = an.unit.ay = null; an.unit.walk = 0; an.unit.hop = 0; an.unit.arc = 0; an.unit.burrow = null; }
         if (an.kind === 'strafe') { an.unit.ax = an.unit.ay = null; }
         if (an.done) an.done();
       } else alive.push(an);
@@ -1383,6 +1394,54 @@
 
   /* An aircraft covers a lot of table in one move; at a squad's pace it
      flashes across, so it takes its time and reads as flying. */
+  // Underground Bugs do not walk across the table: they go down and come up
+  function burrows(u) { return !!u && u.faction === 'bugs' && u.group === 'Underground Bugs'; }
+  /* A burrowing move in three parts: the unit sinks into the ground where it
+     stands, travels unseen under a line of churned earth, and heaves itself up
+     at the end. */
+  var SINK = 0.28, RISE = 0.72;
+  function burrowStep(an, k) {
+    var u = an.unit, sub, e;
+    if (k < SINK) {
+      sub = k / SINK; e = sub * sub;
+      u.burrow = { lift: -Math.round(ISO.ELEV * 3 * e), alpha: Math.max(0, 1 - e * 0.9) };
+      var p0 = an.segs[0].a;
+      u.ax = p0.x; u.ay = p0.y;
+      if (an.phase === 0) {
+        an.phase = 1;
+        addFx({ kind: 'collapse', x: p0.x, y: p0.y, r: burrowR(u), dur: 700, blocking: true });
+        if (SFX) { SFX.step(); SFX.step(0.12); SFX.step(0.3); }
+      }
+      return;
+    }
+    if (k < RISE) {
+      u.burrow = { hidden: true };
+      var d = (k - SINK) / (RISE - SINK) * an.total, seg = 0;
+      while (seg < an.segs.length - 1 && d > an.segs[seg].end) seg++;
+      var sg = an.segs[seg];
+      var f = sg.len ? Math.max(0, Math.min(1, (d - sg.start) / sg.len)) : 1;
+      u.ax = sg.a.x + (sg.b.x - sg.a.x) * f;
+      u.ay = sg.a.y + (sg.b.y - sg.a.y) * f;
+      // the ground heaving over it as it goes, an inch at a time
+      if (Math.floor(d) !== an.lastDirt) {
+        an.lastDirt = Math.floor(d);
+        addFx({ kind: 'miss', x: u.ax, y: u.ay, dur: 700, blocking: true });
+        addFx({ kind: 'miss', x: u.ax + (Math.random() - 0.5) * 1.2, y: u.ay + (Math.random() - 0.5) * 1.2, dur: 900, blocking: true });
+        if (SFX && an.lastDirt % 2 === 0) SFX.step(0.02);
+      }
+      return;
+    }
+    var pe = an.segs[an.segs.length - 1].b;
+    u.ax = pe.x; u.ay = pe.y;
+    if (an.phase < 2) {
+      an.phase = 2;
+      addFx({ kind: 'collapse', x: pe.x, y: pe.y, r: burrowR(u), dur: 800, blocking: true });
+      if (SFX) { SFX.impact(0.05); SFX.step(0.15); SFX.step(0.35); }
+    }
+    sub = (k - RISE) / (1 - RISE); e = 1 - Math.pow(1 - sub, 2);
+    u.burrow = { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), alpha: Math.min(1, 0.25 + e) };
+  }
+  function burrowR(u) { return R.isMachine(u) ? 2.4 : 1.6; }
   function moveMs(u, total) {
     if (u.cls === 'aircraft') return Math.min(3200, 700 + total * 85);
     return Math.min(1400, 240 + total * 42);
@@ -1399,9 +1458,11 @@
     // a squad turns to the way it is going; a turret swings back to the front
     faceToward(u, path[path.length - 1].x, path[path.length - 1].y, path[0]);
     if (R.isMachine(u)) u.aim = null;
+    var dig = burrows(u);
     anims.push({
       kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
-      dur: moveMs(u, total), t0: nowMs(), lastStep: 0, lastPace: -1
+      dur: dig ? Math.max(1900, Math.min(3200, 1300 + total * 60)) : moveMs(u, total),
+      t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0
     });
     u.ax = path[0].x; u.ay = path[0].y;
     startLoop();
@@ -2842,7 +2903,8 @@
         }
         var u = it.unit, ax = dispX(u), ay = dispY(u);
         var arr = arriving(u);
-        if (arr.hidden) return;                       // teleporting in: not here yet
+        if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
+        if (arr.hidden) return;                       // teleporting in, or under the ground: not here yet
         if (arr.alpha != null) { pctx.save(); pctx.globalAlpha = arr.alpha; }
         ISO.drawUnit(pctx, u, {
           at: { x: ax, y: ay },
