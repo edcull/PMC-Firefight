@@ -112,6 +112,8 @@
   function toScreen(x, y) { return I.toScreen(x, y); }
 
   function frame() {
+    // a unit that moves by itself (rotors, scanners, a deflector, a cloak, a brain) keeps the bench running
+    if (!loop && I.animates(unit()) && view.status !== 'destroyed') start();
     var w = cv.width, h = cv.height;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#0c1014';

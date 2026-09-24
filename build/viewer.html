@@ -11139,7 +11139,7 @@
   function cloakFade(mi) { return 0.75 + 0.25 * Math.sin(nowT() / 1100 + mi * 1.7); }
   // whether a unit is drawn differently from one moment to the next, so the board keeps redrawing it
   function animates(u) {
-    if (!u || !u.alive) return false;
+    if (!u || u.alive === false) return false;          // (a bench unit need not say it is alive)
     if (u.cls === 'aircraft') return true;
     if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
     return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]); });
@@ -17308,6 +17308,8 @@
   function toScreen(x, y) { return I.toScreen(x, y); }
 
   function frame() {
+    // a unit that moves by itself (rotors, scanners, a deflector, a cloak, a brain) keeps the bench running
+    if (!loop && I.animates(unit()) && view.status !== 'destroyed') start();
     var w = cv.width, h = cv.height;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#0c1014';
