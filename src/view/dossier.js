@@ -387,7 +387,6 @@
     }
     h += '<p class="camp-foot">' +
       '<button class="lnk" data-go="menu">← Main menu</button>' +
-      '<button class="lnk warn" data-go="wipe">Abandon the campaign</button>' +
       '<input type="file" id="camp-file" accept="application/json" hidden></p>';
     return h;
   }
@@ -426,7 +425,7 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '" data-swap="1"' + (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') +
         '>Change a ' + C.creedOf(co).one + (sw.ok ? '' : ' — ' + esc(sw.why)) + '</button> ';
     }
-    h += promotionPanel(co, side);
+    h += promotionPanel(co, side, !!bar);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
     }
@@ -443,12 +442,15 @@
      and a force can sit a long way short of one of them without knowing which.
      This lays them out: money banked, a legal army at every Tier up to the next,
      and — before Tier IV — a Tier III army at twice the size. */
-  function promotionPanel(co, side) {
+  function promotionPanel(co, side, hub) {
     var pp = C.promotionProgress(co);
     var kind = C.words(co).force;
+    // on the hub, giving the whole thing up sits on the same line (and asks first)
+    var quit = hub ? '<button class="lnk warn cprom-quit" data-go="wipe">Abandon</button>' : '';
     if (pp.top) {
       return '<div class="cprom done"><div class="cprom-head"><b>Tier V</b>' +
-        '<span class="mk">as high as a ' + kind + ' goes</span></div></div>';
+        '<span class="mk">as high as a ' + kind + ' goes</span></div>' +
+        (quit ? '<div class="cprom-row">' + quit + '</div>' : '') + '</div>';
     }
     var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + '">';
     h += '<div class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +
@@ -469,10 +471,10 @@
       h += '</li>';
     });
     h += '</ul>';
-    h += '<button class="start cprom-go" data-go="promoteco" data-side="' + side + '"' +
+    h += '<div class="cprom-row"><button class="start cprom-go" data-go="promoteco" data-side="' + side + '"' +
       (pp.ok ? '' : ' disabled') + '>' +
       (pp.ok ? 'Promote to Tier ' + ROMAN[pp.next] + ' — ' + pp.cost + ' ' + C.money(co)
-        : 'Not yet — ' + (pp.total - pp.done) + ' still to do') + '</button>';
+        : 'Not yet — ' + (pp.total - pp.done) + ' still to do') + '</button>' + quit + '</div>';
     if (pp.ok) {
       h += '<div class="dnote">A promotion opens another ' +
         C.creedOf(co).one + ' slot, and the free ' +

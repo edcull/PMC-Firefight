@@ -486,7 +486,7 @@ async function clickText(p, re) {
 
   await clickText(p, 'Back');
   await p.waitForTimeout(250);
-  await clickText(p, 'Abandon the campaign');
+  await clickText(p, '^Abandon$');
   await p.waitForTimeout(300);
   check('Abandon asks in the page',
     await p.evaluate(() => !document.getElementById('camp-ask').hidden));

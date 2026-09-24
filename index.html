@@ -941,6 +941,10 @@
   .cprom-sub { grid-column: 2; height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden; }
   .cprom-sub i { display: block; height: 100%; background: var(--alpha); opacity: .7; }
   .cprom-go { margin-top: 2px; }
+  .cprom-row { display: flex; gap: 6px; align-items: stretch; }
+  .cprom-row .cprom-go { flex: 1 1 auto; width: auto; margin: 0; }
+  .cprom-row .cprom-quit { flex: none; margin: 0; }
+  .cprom.done .cprom-row { margin-top: 8px; justify-content: flex-end; }
 
   /* what a unit is carrying, on the button that puts it in the list */
   .wear { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
@@ -2075,5 +2079,5 @@
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
 <script src="src/view/game.js?v=000f9e6206"></script>
-<script src="src/view/dossier.js?v=748819418b"></script>
+<script src="src/view/dossier.js?v=045116f020"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>
