@@ -2460,15 +2460,17 @@
     /* The leader himself grows grander up the Tiers: an acolyte with a rifle
        (Instigators), a fanatic in tan and then in olive (Secondary and Insurgent
        leaders), one of the enlightened with the side's sash and no weapon at all
-       (Influential leaders), and at the top a man in the side's own turban and
-       sash, a gold-hilted blade at his belt (Rebellion leaders). */
+       (Influential leaders), and at the top a man in a black turban and the
+       side's sash, a gold-hilted blade at his belt, with a second leader beside
+       him (Rebellion leaders). The Insurgent leader's turban is white. */
     leader: ['lead1', 'standard', 'guardrifle'],
     // insurgent leaders fly a small flag in the side's colour; the great leaders a large one
     leadersmall: ['lead2', 'flagsmall', 'guardrifle'],
     // insurgent leaders carry the same big flag as the influential ones
     leadermid: ['lead3', 'flagbig', 'guardrifle'],
     leaderbig: ['lead4', 'flagbig', 'guardrifle', 'guardrifle'],
-    leaderhuge: ['lead5', 'flaghuge', 'guardrifle', 'guardrifle'],
+    // the Rebellion's leader has a second at his side, one of the enlightened in the side's sash
+    leaderhuge: ['lead5', 'flaghuge', 'lead4', 'guardrifle'],
     // the Riders upgrade (p. 93) puts the same troops on bikes and beasts
     holymounted: ['zealotrider'],
     holy1mounted: ['zealotrider'], holy2mounted: ['zealotrider'], holy3mounted: ['zealotrider'], holy4mounted: ['zealotrider'],
@@ -2695,9 +2697,9 @@
     // the rebel leader, Tier by Tier (see the leader roles)
     lead1: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: HOLY_A.mid, mark: true, tint: HOLY_A },
     lead2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_A },
-    lead3: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#26262a', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
+    lead3: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#f6f4ee', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
     lead4: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
-    lead5: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: 'force', vest: '#1c1e18', sash: 'force', blade: true, mark: true, bulk: 1, tint: HOLY_B },
+    lead5: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#1c1c1e', vest: '#1c1e18', sash: 'force', blade: true, mark: true, bulk: 1, tint: HOLY_B },
     // the leader himself: the turban and the sash in the side's own colour
     agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: 'force', vest: '#1c1e18', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
     standard: { helm: 'beret', gun: 'banner', plainFlag: true, pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
