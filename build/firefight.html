@@ -36847,7 +36847,7 @@
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
         var dd = C.doctrine(d);
-        return '<span class="mk" title="' + esc(dd.text) + '">' + esc(dd.name) + '</span>';
+        return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
       }).join('')
       : '<span class="dnote">No ' + C.creedOf(co).one + ' chosen.</span>') + '</div>';
     var open = C.doctrineSlots(co) - co.doctrines.length;
@@ -36951,7 +36951,7 @@
     h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span><span class="dtag">' + esc(a.name) + '</span></div>';
     h += '<div class="cpstat">' + esc(co.blurb || a.blurb) + '</div>';
     h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
-      return '<span class="mk" title="' + esc(C.doctrine(d).text) + '">' + esc(C.doctrine(d).name) + '</span>';
+      return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
     h += '<button class="lnk" data-go="intel" data-rival="' + (idx == null ? 0 : idx) +
       '">Their dossier</button></div>';
@@ -38087,7 +38087,7 @@
       head + ' to you, ' + lost + ' to them, ' +
       mine2.filter(function (l) { return !l.winner; }).length + ' drawn.</div>' +
       '<div class="cpdoc">' + co.doctrines.map(function (d) {
-        return '<span class="mk" title="' + esc(C.doctrine(d).text) + '">' + esc(C.doctrine(d).name) + '</span>';
+        return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
       }).join('') + '</div></div>';
     h += '<div class="dlist">';
     co.roster.slice().sort(function (x, y) {
