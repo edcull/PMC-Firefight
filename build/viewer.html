@@ -16279,6 +16279,7 @@
      be suppressed), and a ground vehicle on the running gear it usually has. */
   function choose(k) {
     view.key = k; view.models = null;
+    view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
@@ -16300,6 +16301,11 @@
       faceL: view.faceL
     });
     if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
+    /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
+       ride — half the models, mounted. Anyone riding is on the mount picked. */
+    var riding = R.canRide(p) && view.ride === 'mounted';
+    if (riding) { R.applyRiders(u, true); if (view.models != null) u.models = Math.min(view.models, u.size); }
+    if (R.canMount(p, riding)) u.mount = view.mount || 'bike';
     /* A machine shows wear as Damage — half its Structure gone is enough to set
        it smoking — and a squad shows it as Suppression. Destroyed is drawn by
        drawDestroyed rather than by any number here. */
@@ -17152,7 +17158,8 @@
   function drawControls() {
     var p = profile(), w = R.weaponSpec(p);
     var isVeh = p.cls === 'vehicle';
-    var maxModels = p.cls === 'infantry' ? p.size : 1;
+    var riding = R.canRide(p) && view.ride === 'mounted';
+    var maxModels = p.cls === 'infantry' ? (riding ? Math.max(1, Math.round(p.size / 2)) : p.size) : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
     // two tabs under the name: what to do with the unit, and what the book says of it
@@ -17174,6 +17181,15 @@
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
+    // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
+    if (R.canRide(p)) {
+      h += '<div class="vgrp"><label>Riders</label><div class="vseg">' +
+        segL('ride', [['foot', 'On foot'], ['mounted', 'Mounted']], view.ride || 'foot') + '</div></div>';
+    }
+    if (R.canMount(p, riding)) {
+      h += '<div class="vgrp"><label>Mount</label><div class="vseg">' +
+        segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'bike') + '</div></div>';
+    }
     if (isVeh) {
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
@@ -17183,9 +17199,9 @@
         seg('face', FACES, view.face || 'SE') + '</div></div>';
     }
     if (maxModels > 1) {
-      var n = view.models == null ? p.size : view.models;
-      h += '<div class="vgrp"><label>Models — ' + n + ' of ' + p.size + '</label>' +
-        '<input type="range" id="vmodels" min="1" max="' + p.size + '" value="' + n + '"></div>';
+      var n = view.models == null ? maxModels : Math.min(view.models, maxModels);
+      h += '<div class="vgrp"><label>Models — ' + n + ' of ' + maxModels + '</label>' +
+        '<input type="range" id="vmodels" min="1" max="' + maxModels + '" value="' + n + '"></div>';
     }
     h += '</div><div class="vtabbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
     var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0;
@@ -17247,6 +17263,13 @@
       FX.clear();
     }
     drawControls(); start(); frame();
+  }
+  // a segmented choice whose buttons read differently from the values they set
+  function segL(name, opts, now) {
+    return opts.map(function (o) {
+      return '<button class="vsg' + (o[0] === now ? ' on' : '') + '" data-set="' + name +
+        '" data-val="' + o[0] + '">' + esc(o[1]) + '</button>';
+    }).join('');
   }
   function seg(name, opts, now) {
     return opts.map(function (o) {
