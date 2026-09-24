@@ -760,6 +760,12 @@
   .cs-win b { color: var(--ink); }
   .cs-exp b { color: var(--good); }
   .cs-tra b { color: var(--bad); }
+  .cpan.orders { margin-top: 12px; }
+  .orow { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
+  .orow:first-of-type { border-top: 0; }
+  .orow em { font-style: normal; color: var(--ink-dim); font-size: 11.5px; }
+  .segs { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 3px; }
+  .segs .lnk.on { border-color: var(--alpha); color: var(--ink); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
   .carch { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0 0 2px; }
   .carch .dtag { margin-left: 0; }
   .cpan-B .tierbadge { border-color: color-mix(in srgb, var(--bravo) 70%, var(--line)); background: color-mix(in srgb, var(--bravo) 14%, transparent); color: var(--bravo); }
@@ -4103,6 +4109,8 @@
         if (r <= 2) tag = 'Steady, boys!';
         else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
         else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
+        // Combat Drugs stack with Field Medics (p. 87): the man the medic lost may still get up
+        else if (drugs && d6() === 6) { tag = 'MEDIC! man down — Combat Drugs: he gets back up (1 SP)'; out.sp += 1; out.medic = medic.id; }
         else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
       } else if (has(target, 'Animal Behaviour')) {
         // bugs: shrug it off or burst (p. 116)
@@ -5302,6 +5310,9 @@
        The unit takes no Suppression for the death. */
     function martyr(u, foe) {
       if (!doctrine(state, u.side, 'P1')) return;
+      // "the Rebel commander may order" it (p. 112): the player's standing order, and never the last two men
+      if (state.orders && state.orders[u.side] && state.orders[u.side].martyr === false) return;
+      if (u.models <= 2) return;
       var p = BY_KEY[u.key];
       if (!p || p.group !== 'Holy Warriors' || u.models <= 1 || !foe.alive) return;
       u.models -= 1;
@@ -7722,8 +7733,8 @@
       if (civs <= 4) return 0;
     }
     var p = profile(key), cost = RECRUIT_COST[p.tier];
-    // a tribe's turrets are never bought, only fielded (p. 140)
-    if (isTurretP(p)) return 0;
+    // a tribe's turrets and a company's drop pods are never bought, only fielded (pp. 86, 140)
+    if (isTurretP(p) || p.noSlot) return 0;
     if (hasDoctrine(co, 'V1')) cost = Math.max(1, cost - 1);
     // Increased Population Growth: infantry below the Tribe Tier at half, rounding up
     if (hasDoctrine(co, 'XS1') && p.cls === 'infantry' && p.tier < co.tier) cost = Math.ceil(cost / 2);
@@ -7833,10 +7844,25 @@
     return Math.max(1, Math.min(5, Math.min(a, b)));
   }
   /* Which Priority Levels this pairing could actually fight at the given Tier. */
+  // "players can choose to play bigger ones as long as they can compose legal armies" (p. 84)
+  /* The standing orders for a doctrine that says "may" (Path of the Villain and
+     of the Prophet, p. 112): whether the force takes the option, set by its
+     player on the contract screen and kept on the company. */
+  var ORDER_DEFAULTS = { plunder: 'low', weak: true, martyr: true };
+  function orderOf(co, k) {
+    var o = co && co.orders;
+    return o && o[k] !== undefined ? o[k] : ORDER_DEFAULTS[k];
+  }
+  function setOrder(co, k, v) { co.orders = co.orders || {}; co.orders[k] = v; }
   function levelsFor(coA, coB, tier) {
-    return [1, 2].filter(function (pl) {
+    return [1, 2, 3, 4].filter(function (pl) {
       return canFieldArmy(coA, tier, pl, true) && canFieldArmy(coB, tier, pl, true);
     });
+  }
+  /* The standard contract (p. 84): Tier III at Priority Level 2, no roll for the
+     Tier, when both forces can put a legal army of it on the table. */
+  function canStandard(coA, coB) {
+    return canFieldArmy(coA, 3, 2, true) && canFieldArmy(coB, 3, 2, true);
   }
   function rollBattleTier(coA, coB, pl) {
     var cap = maxBattleTier(coA, coB, pl), roll = d6();
@@ -7904,6 +7930,11 @@
        wreckage and re-rolls the lot. */
     function loot(co, side, dice, other) {
       if (!hasDoctrine(co, 'V2') || winner !== side) return dice;
+      /* "may reroll all dice" — the revolt's standing order says whether it does:
+         always, never, or only when the first roll came in under the odds. */
+      var od = orderOf(co, 'plunder');
+      if (od === 'never') return dice;
+      if (od === 'low' && sum(dice) >= dice.length * 3.5) { plunder[side] = { was: dice.slice(), kept: true }; return dice; }
       var again = rollPayment(battleTier, pl);
       plunder[side] = { was: dice.slice(), now: again.slice() };
       return again;
@@ -8036,6 +8067,9 @@
     var p = profile(entry.key), need, note;
     // an Overgrown bug is a creature, not a hull: there is nothing to recover
     if (p.faction === 'bugs') return { roll: null, saved: false, need: null, note: 'A dead Overgrown bug is a carcass, not a wreck.' };
+    // drop pods and turrets are never salvaged (pp. 86, 140) — they cost nothing to replace
+    if (p.noSlot) return { roll: null, saved: false, need: null, note: 'A drop pod is not salvaged once used.' };
+    if (isTurretP(p)) return { roll: null, saved: false, need: null, note: 'A turret is not salvaged.' };
     if (p.cls === 'aircraft') {
       need = (entry.upgrades || []).indexOf(1) >= 0 ? 2 : 4;   // Advanced Emergency Systems
       note = 'Aircraft make an emergency landing on a ' + need + '+' +
@@ -8121,7 +8155,7 @@
           consecutive: e.lastBattle === campaign.turn && campaign.turn > 0
         });
       });
-      if (hasDoctrine(co, 'V5')) {
+      if (hasDoctrine(co, 'V5') && orderOf(co, 'weak') !== false) {
         var worst = null, worstN = 0;
         Object.keys(rolled).forEach(function (id) {
           var e = byRid(co, id);
@@ -9049,7 +9083,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
-    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, deepen: deepen,
+    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, orderOf: orderOf, setOrder: setOrder, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
@@ -24057,6 +24091,7 @@
       streak: 0, chain: null, log: [], over: null,
       campaign: cfg.campaign || null,
       doctrines: cfg.doctrines || null,
+      orders: cfg.orders || null,            // a campaign force's standing orders for its "may" doctrines
       tactics: cfg.tactics || { A: null, B: null },
       routed: { A: false, B: false },
       seed: (Math.random() * 100000) | 0,
@@ -24209,6 +24244,16 @@
         return t && t.destructible && t.destructible !== 'target';
       });
       state.mined = pool2.length ? { side: state.mined.side, piece: pool2[Math.floor(Math.random() * pool2.length)] } : null;
+    }
+    /* "the Rebel player may secretly choose" the piece (p. 112): a player picks
+       it — or none — before deploying; only the AI's is drawn for it. */
+    if (state.mined && !isAI(state.mined.side)) {
+      var mpool = state.terrain.map(function (r, i) {
+        var t = R.TERRAIN[r.kind];
+        return t && t.destructible && t.destructible !== 'target' ? i : -1;
+      }).filter(function (i) { return i >= 0; });
+      state.minePick = { side: state.mined.side, pool: mpool };
+      state.mined = null;
     }
     ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO4') >= 0) terrainKnowledge(side); });
     ['A', 'B'].forEach(markReserves);
@@ -28918,8 +28963,20 @@
           maybeAI();
           return yes;
         }
+        case 'mine': {
+          var mp = state.minePick;
+          if (!mp || mp.side !== side) return no('nothing to mine');
+          var mi = +it.i;
+          if (mi >= 0 && mp.pool.indexOf(mi) < 0) return no('that cannot be mined');
+          state.mined = mi >= 0 ? { side: side, piece: state.terrain[mi] } : null;
+          state.minePick = null;
+          logLine('note', sideName(side) + (mi >= 0 ? ' has quietly mined a piece of the table.' : ' leaves the charges in the crates.'));
+          render();
+          return yes;
+        }
         case 'start': {
           if (state.phase !== 'deploy') return no('already under way');
+          if (state.minePick) return no('the mined piece has not been chosen');
           if (!deploymentDone()) return no('there are still units to place');
           // Rapid Relocation is one side's to finish, and it starts the battle when it does
           if (state.relocating && state.relocating.side !== side) return no('the other side is still relocating');
@@ -30916,6 +30973,16 @@
       'up to ' + n + ' friendly units within 12" of the vehicle activate in a row.</p>' +
       '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
       '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
+  }
+  /* Terrorist (p. 112): before deploying, the side on the Path of the Villain
+     picks one destructible piece to mine — or none. */
+  function mineCard() {
+    var mp = state.minePick;
+    return '<div class="card"><h2>Terrorist</h2>' +
+      '<p class="sub">Before anyone deploys, you may secretly mine one destructible piece of terrain other than the objective. ' +
+      'Any First Among Equals unit can set it off during the battle — Firepower 10, Destructive Weapon.</p>' +
+      '<p class="hint">Tap one of the ' + mp.pool.length + ' outlined pieces.</p>' +
+      '<div class="acts"><button class="act" data-act="nomine"><span>No mine</span><small>Leave the charges in the crates</small></button></div></div>';
   }
   function insertionCard() {
     var ins = ui.insertion;
@@ -33334,6 +33401,19 @@
       });
       ctx.restore();
     }
+    // Terrorist: the pieces that may be mined
+    if (state.minePick && !isAI(state.minePick.side)) {
+      ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#e4693f'; ctx.lineWidth = 2;
+      state.minePick.pool.forEach(function (i) {
+        var r = state.terrain[i];
+        var c = (r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]])
+          .map(function (q) { return hud(q[0], q[1], liftOf(q[0], q[1])); });
+        ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y);
+        for (var j = 1; j < c.length; j++) ctx.lineTo(c[j].x, c[j].y);
+        ctx.closePath(); ctx.stroke();
+      });
+      ctx.restore();
+    }
     // destructible pieces offered as targets
     if (ui.terrain.length) {
       ctx.save();
@@ -33797,6 +33877,7 @@
     var ctxBox = el('context'), html = '';
     if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
+    else if (state.minePick && !isAI(state.minePick.side)) html = mineCard();
     else if (state.phase === 'deploy') html = deployCard();
     else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
@@ -34256,6 +34337,7 @@
         else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
+        else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
@@ -34599,6 +34681,12 @@
     var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 
     if (state.phase === 'terrain') { terrainTap(p); return; }
+    // Terrorist: the tap nominates the piece to mine
+    if (state.minePick && !isAI(state.minePick.side)) {
+      var mpk = state.minePick.pool.filter(function (i) { return R.inRect(p.x, p.y, state.terrain[i]); })[0];
+      if (mpk != null) send({ k: 'mine', i: mpk });
+      return;
+    }
     if (state.phase === 'deploy' && state.relocating) { relocTap(p); return; }
     if (state.phase === 'deploy') {
       var pending = deployNext();
@@ -36291,6 +36379,7 @@
   window.__holdInsertion = function () { holdInsertion(); };
   window.__insertionSpotsNow = function () { return ui.insertion ? ui.insertion.spots : null; };
   window.__tapInsertion = function (q) { placeInsertion(q); };
+  window.__sendIntent = function (it) { send(it); };
   window.__seats = function () { return seats.slice(); };
   window.__mySide = function () { return mySide(); };
 
@@ -37716,6 +37805,36 @@
     return co.roster.filter(function (e) { return !(e.restUntil > 0); });
   }
 
+  /* The "may" doctrines, as standing orders the player sets before the battle
+     (pp. 112-113): whether to re-roll the pay, execute the weakest, send a
+     martyr in, and which units get the drugs. */
+  function ordersPanel(co) {
+    var rows = [];
+    function seg(k, opts) {
+      var cur = C.orderOf(co, k);
+      return '<span class="segs">' + opts.map(function (o) {
+        return '<button class="lnk' + (cur === o[0] ? ' on' : '') + '" data-order="' + k + '" data-val="' + JSON.stringify(o[0]).replace(/"/g, '&quot;') + '">' + o[1] + '</button>';
+      }).join('') + '</span>';
+    }
+    if (C.hasDoctrine(co, 'V2')) rows.push('<div class="orow"><b>Plunderer</b><em>Re-roll the pay after a win</em>' +
+      seg('plunder', [['low', 'If it rolled low'], ['always', 'Always'], ['never', 'Never']]) + '</div>');
+    if (C.hasDoctrine(co, 'V5')) rows.push('<div class="orow"><b>No Place for the Weak!</b><em>Execute the unit with the most Trauma Points, halving everyone else’s</em>' +
+      seg('weak', [[true, 'Execute'], [false, 'Spare them']]) + '</div>');
+    if (C.hasDoctrine(co, 'P1')) rows.push('<div class="orow"><b>Martyrdom</b><em>A Holy Warrior goes in alone at the start of an assault (never the last two)</em>' +
+      seg('martyr', [[true, 'Send one'], [false, 'Hold back']]) + '</div>');
+    if (C.hasDoctrine(co, 'V4')) {
+      var able = drugAble(contract.picks), cap = Math.floor(able.length / 3);
+      contract.drugs = (contract.drugs || []).filter(function (id) { return able.some(function (e) { return e.rid === id; }); }).slice(0, cap);
+      rows.push('<div class="orow"><b>Drug Dealer</b><em>Up to ' + cap + ' of the infantry go in Determined, and take D6+1 Trauma Points after (' +
+        contract.drugs.length + ' of ' + cap + ')</em><span class="segs wrap">' +
+        (able.length ? able.map(function (e) {
+          var on = contract.drugs.indexOf(e.rid) >= 0;
+          return '<button class="lnk' + (on ? ' on' : '') + '" data-drug="' + e.rid + '"' +
+            (!on && contract.drugs.length >= cap ? ' disabled' : '') + '>' + esc(e.name) + '</button>';
+        }).join('') : '<span class="dnote">No infantry in the list can take them.</span>') + '</span></div>');
+    }
+    return rows.length ? '<div class="cpan orders"><div class="cprom-head"><b>Standing orders</b></div>' + rows.join('') + '</div>' : '';
+  }
   function contractView() {
     var A = camp.companies.A, B = camp.companies.B;
     var keys = contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
@@ -37725,8 +37844,8 @@
     h += '<p class="lede">Against <b>' + esc(B.name) + '</b> — ' +
       C.words(B).side.toLowerCase() + ', ' +
       C.words(B).tier + ' Tier ' + ROMAN[B.tier] + '.<br>' +
-      'Battle Tier D6 ' + roll.roll +
-      (roll.tier < roll.roll
+      (contract.standard ? 'A standard contract' : 'Battle Tier D6 ' + roll.roll) +
+      (!contract.standard && roll.tier < roll.roll
         ? ', held to Tier ' + ROMAN[roll.cap] + (roll.thin
           ? ' by what the two forces can actually put on the table'
           : ' by the weaker force\u2019s standing')
@@ -37774,13 +37893,23 @@
         '<button class="lnk" data-tier="1"' + (contract.tier >= contract.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, contract.tier + 1)] + '</button></div>';
     }
 
+    /* The standard contract (p. 84): Tier III, Priority Level 2, the Tier not
+       rolled at all — when both forces can field it. */
+    if (!contract.standard && C.canStandard(A, B) && !(contract.tier === 3 && contract.pl === 2)) {
+      h += '<div class="cpdoc"><span class="mk">Both forces can field a Tier III army at Priority Level 2.</span> ' +
+        '<button class="lnk" data-go="standard">Take a standard contract instead</button></div>';
+    } else if (contract.standard) {
+      h += '<div class="cpdoc"><span class="mk">Standard contract — Tier III, Priority Level 2.</span></div>';
+    }
     // only offer a Priority Level both forces could actually fill
     var lv = contract.levels || [1, 2];
+    var PLN = { 1: 'skirmish', 2: 'full battle', 3: 'large battle', 4: 'major battle' };
     h += '<div class="field two"><div><label for="camp-pl">Priority Level</label>' +
-      '<select id="camp-pl">' + [1, 2].map(function (n) {
+      '<select id="camp-pl"' + (contract.standard ? ' disabled' : '') + '>' + [1, 2, 3, 4].map(function (n) {
         var can = lv.indexOf(n) >= 0;
+        if (!can && n > 2) return '';                 // the big ones only when someone can fill them
         return '<option value="' + n + '"' + (contract.pl === n ? ' selected' : '') +
-          (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') +
+          (can ? '' : ' disabled') + '>' + n + ' — ' + PLN[n] +
           (can ? '' : ' (neither force can fill it)') + '</option>';
       }).join('') + '</select></div>' +
       '<div><label for="camp-planet">Planet</label><select id="camp-planet">' +
@@ -37824,6 +37953,7 @@
       });
     }
     h += '</div></div>';
+    h += ordersPanel(A);
     if (!chk.ok) {
       var why;
       if (blocking(chk.faults).length) {
@@ -37916,17 +38046,25 @@
      takes the field, and the marks are cleared again once the aftermath has read
      them. The unit with the most to prove goes first: the ones that have fought
      hardest and carry the least trauma already. */
-  function drugThem(co, picks) {
-    picks.forEach(function (e) { delete e.drugged; });
-    if (!C.hasDoctrine(co, 'V4')) return [];
-    var able = picks.filter(function (e) {
+  // who may be given the drugs: infantry, leaders aside, and up to a third of them
+  function drugAble(picks) {
+    return picks.filter(function (e) {
       var p = profile(e.key);
       return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command;
     });
+  }
+  function drugCap(picks) { return Math.floor(drugAble(picks).length / 3); }
+  /* `chosen`: the player's own pick of rids ("may choose up to 1/3"); without
+     one — the rival — the unit with the most to prove goes first. */
+  function drugThem(co, picks, chosen) {
+    picks.forEach(function (e) { delete e.drugged; });
+    if (!C.hasDoctrine(co, 'V4')) return [];
+    var able = drugAble(picks);
     var n = Math.floor(able.length / 3);
     if (n < 1) return [];
-    able.sort(function (a, b) { return a.tp - b.tp; });
-    var taken = able.slice(0, n);
+    var taken;
+    if (chosen) taken = able.filter(function (e) { return chosen.indexOf(e.rid) >= 0; }).slice(0, n);
+    else { able.sort(function (a, b) { return a.tp - b.tp; }); taken = able.slice(0, n); }
     taken.forEach(function (e) { e.drugged = true; });
     return taken;
   }
@@ -37941,7 +38079,7 @@
       C.developRival(B);
       theirs = autoPick(B, contract.tier, contract.pl);
     }
-    var druggedA = drugThem(A, contract.picks);
+    var druggedA = drugThem(A, contract.picks, contract.drugs || []);
     drugThem(B, theirs);
     camp.pending = {
       tier: contract.tier, pl: contract.pl, scenario: contract.scenario.id,
@@ -37968,6 +38106,7 @@
       colourA: colourOf(A), colourB: colourOf(B),
       dossier: { A: contract.picks, B: theirs },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
+      orders: { A: { martyr: C.orderOf(A, 'martyr') }, B: { martyr: true } },
       campaign: true,
       mode: camp.mode === 'hotseat' ? 'hotseat' : 'ai',
       planet: contract.planet
@@ -38472,6 +38611,15 @@
       if (pk) contract.picks.push(pk); render(); return;
     }
     if (t.hasAttribute('data-unpick')) { contract.picks.splice(+t.getAttribute('data-unpick'), 1); render(); return; }
+    if (t.hasAttribute('data-order')) {
+      C.setOrder(camp.companies.A, t.getAttribute('data-order'), JSON.parse(t.getAttribute('data-val')));
+      save(); render(); return;
+    }
+    if (t.hasAttribute('data-drug') && contract) {
+      var dr = t.getAttribute('data-drug'), dl = contract.drugs = contract.drugs || [], di = dl.indexOf(dr);
+      if (di >= 0) dl.splice(di, 1); else dl.push(dr);
+      render(); return;
+    }
     if (t.hasAttribute('data-tier')) {
       contract.tier = Math.max(1, Math.min(contract.tierRoll.cap, contract.tier + (+t.getAttribute('data-tier'))));
       contract.levels = C.levelsFor(camp.companies.A, camp.companies.B, contract.tier);
@@ -38551,6 +38699,12 @@
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;
       case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl); render(); return;
+      case 'standard':
+        if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;
+        contract.standard = true; contract.tier = 3; contract.pl = 2; contract.levels = [2];
+        contract.tierRoll = { roll: 3, cap: 3, tier: 3, standing: 3, thin: false };
+        contract.adjusted = true; contract.picks = [];
+        render(); return;
       case 'fight': fight(); return;
       case 'drawnow': {
         if ((drawState.picked || []).length !== 3) return;

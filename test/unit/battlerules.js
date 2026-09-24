@@ -352,5 +352,16 @@ for (var vr = 0; vr < 300; vr++) {
 }
 ok('...and an assault on the OpFor never rolls a "Keep fighting!"', keep === 0 && keepPlain > 0, keep + ' against ' + keepPlain + ' without');
 
+/* ------------------------------------------------------ Combat Drugs stack with Field Medics */
+console.log('\nCOMBAT DRUGS AND FIELD MEDICS');
+var upWith = 0;
+for (var cd = 0; cd < 400; cd++) {
+  var md = unit('medics', { x: 10, y: 10 }), sh = unit('regular', { side: 'B', x: 30, y: 10 });
+  var tdr = table([md, sh]); tdr.doctrines = { A: ['T1'], B: [] };
+  var rs = R.resolveShootingHits(tdr, md, 6, 3, sh);
+  upWith += rs.rolls.filter(function (x) { return /Combat Drugs/.test(x); }).length;
+}
+ok('a medic-treated man down can still get up on Combat Drugs', upWith > 0, upWith + ' times');
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

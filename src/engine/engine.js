@@ -303,6 +303,7 @@
       streak: 0, chain: null, log: [], over: null,
       campaign: cfg.campaign || null,
       doctrines: cfg.doctrines || null,
+      orders: cfg.orders || null,            // a campaign force's standing orders for its "may" doctrines
       tactics: cfg.tactics || { A: null, B: null },
       routed: { A: false, B: false },
       seed: (Math.random() * 100000) | 0,
@@ -455,6 +456,16 @@
         return t && t.destructible && t.destructible !== 'target';
       });
       state.mined = pool2.length ? { side: state.mined.side, piece: pool2[Math.floor(Math.random() * pool2.length)] } : null;
+    }
+    /* "the Rebel player may secretly choose" the piece (p. 112): a player picks
+       it — or none — before deploying; only the AI's is drawn for it. */
+    if (state.mined && !isAI(state.mined.side)) {
+      var mpool = state.terrain.map(function (r, i) {
+        var t = R.TERRAIN[r.kind];
+        return t && t.destructible && t.destructible !== 'target' ? i : -1;
+      }).filter(function (i) { return i >= 0; });
+      state.minePick = { side: state.mined.side, pool: mpool };
+      state.mined = null;
     }
     ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO4') >= 0) terrainKnowledge(side); });
     ['A', 'B'].forEach(markReserves);
@@ -5164,8 +5175,20 @@
           maybeAI();
           return yes;
         }
+        case 'mine': {
+          var mp = state.minePick;
+          if (!mp || mp.side !== side) return no('nothing to mine');
+          var mi = +it.i;
+          if (mi >= 0 && mp.pool.indexOf(mi) < 0) return no('that cannot be mined');
+          state.mined = mi >= 0 ? { side: side, piece: state.terrain[mi] } : null;
+          state.minePick = null;
+          logLine('note', sideName(side) + (mi >= 0 ? ' has quietly mined a piece of the table.' : ' leaves the charges in the crates.'));
+          render();
+          return yes;
+        }
         case 'start': {
           if (state.phase !== 'deploy') return no('already under way');
+          if (state.minePick) return no('the mined piece has not been chosen');
           if (!deploymentDone()) return no('there are still units to place');
           // Rapid Relocation is one side's to finish, and it starts the battle when it does
           if (state.relocating && state.relocating.side !== side) return no('the other side is still relocating');

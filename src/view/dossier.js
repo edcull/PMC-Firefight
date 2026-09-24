@@ -1156,6 +1156,36 @@
     return co.roster.filter(function (e) { return !(e.restUntil > 0); });
   }
 
+  /* The "may" doctrines, as standing orders the player sets before the battle
+     (pp. 112-113): whether to re-roll the pay, execute the weakest, send a
+     martyr in, and which units get the drugs. */
+  function ordersPanel(co) {
+    var rows = [];
+    function seg(k, opts) {
+      var cur = C.orderOf(co, k);
+      return '<span class="segs">' + opts.map(function (o) {
+        return '<button class="lnk' + (cur === o[0] ? ' on' : '') + '" data-order="' + k + '" data-val="' + JSON.stringify(o[0]).replace(/"/g, '&quot;') + '">' + o[1] + '</button>';
+      }).join('') + '</span>';
+    }
+    if (C.hasDoctrine(co, 'V2')) rows.push('<div class="orow"><b>Plunderer</b><em>Re-roll the pay after a win</em>' +
+      seg('plunder', [['low', 'If it rolled low'], ['always', 'Always'], ['never', 'Never']]) + '</div>');
+    if (C.hasDoctrine(co, 'V5')) rows.push('<div class="orow"><b>No Place for the Weak!</b><em>Execute the unit with the most Trauma Points, halving everyone else’s</em>' +
+      seg('weak', [[true, 'Execute'], [false, 'Spare them']]) + '</div>');
+    if (C.hasDoctrine(co, 'P1')) rows.push('<div class="orow"><b>Martyrdom</b><em>A Holy Warrior goes in alone at the start of an assault (never the last two)</em>' +
+      seg('martyr', [[true, 'Send one'], [false, 'Hold back']]) + '</div>');
+    if (C.hasDoctrine(co, 'V4')) {
+      var able = drugAble(contract.picks), cap = Math.floor(able.length / 3);
+      contract.drugs = (contract.drugs || []).filter(function (id) { return able.some(function (e) { return e.rid === id; }); }).slice(0, cap);
+      rows.push('<div class="orow"><b>Drug Dealer</b><em>Up to ' + cap + ' of the infantry go in Determined, and take D6+1 Trauma Points after (' +
+        contract.drugs.length + ' of ' + cap + ')</em><span class="segs wrap">' +
+        (able.length ? able.map(function (e) {
+          var on = contract.drugs.indexOf(e.rid) >= 0;
+          return '<button class="lnk' + (on ? ' on' : '') + '" data-drug="' + e.rid + '"' +
+            (!on && contract.drugs.length >= cap ? ' disabled' : '') + '>' + esc(e.name) + '</button>';
+        }).join('') : '<span class="dnote">No infantry in the list can take them.</span>') + '</span></div>');
+    }
+    return rows.length ? '<div class="cpan orders"><div class="cprom-head"><b>Standing orders</b></div>' + rows.join('') + '</div>' : '';
+  }
   function contractView() {
     var A = camp.companies.A, B = camp.companies.B;
     var keys = contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
@@ -1165,8 +1195,8 @@
     h += '<p class="lede">Against <b>' + esc(B.name) + '</b> — ' +
       C.words(B).side.toLowerCase() + ', ' +
       C.words(B).tier + ' Tier ' + ROMAN[B.tier] + '.<br>' +
-      'Battle Tier D6 ' + roll.roll +
-      (roll.tier < roll.roll
+      (contract.standard ? 'A standard contract' : 'Battle Tier D6 ' + roll.roll) +
+      (!contract.standard && roll.tier < roll.roll
         ? ', held to Tier ' + ROMAN[roll.cap] + (roll.thin
           ? ' by what the two forces can actually put on the table'
           : ' by the weaker force\u2019s standing')
@@ -1214,13 +1244,23 @@
         '<button class="lnk" data-tier="1"' + (contract.tier >= contract.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, contract.tier + 1)] + '</button></div>';
     }
 
+    /* The standard contract (p. 84): Tier III, Priority Level 2, the Tier not
+       rolled at all — when both forces can field it. */
+    if (!contract.standard && C.canStandard(A, B) && !(contract.tier === 3 && contract.pl === 2)) {
+      h += '<div class="cpdoc"><span class="mk">Both forces can field a Tier III army at Priority Level 2.</span> ' +
+        '<button class="lnk" data-go="standard">Take a standard contract instead</button></div>';
+    } else if (contract.standard) {
+      h += '<div class="cpdoc"><span class="mk">Standard contract — Tier III, Priority Level 2.</span></div>';
+    }
     // only offer a Priority Level both forces could actually fill
     var lv = contract.levels || [1, 2];
+    var PLN = { 1: 'skirmish', 2: 'full battle', 3: 'large battle', 4: 'major battle' };
     h += '<div class="field two"><div><label for="camp-pl">Priority Level</label>' +
-      '<select id="camp-pl">' + [1, 2].map(function (n) {
+      '<select id="camp-pl"' + (contract.standard ? ' disabled' : '') + '>' + [1, 2, 3, 4].map(function (n) {
         var can = lv.indexOf(n) >= 0;
+        if (!can && n > 2) return '';                 // the big ones only when someone can fill them
         return '<option value="' + n + '"' + (contract.pl === n ? ' selected' : '') +
-          (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') +
+          (can ? '' : ' disabled') + '>' + n + ' — ' + PLN[n] +
           (can ? '' : ' (neither force can fill it)') + '</option>';
       }).join('') + '</select></div>' +
       '<div><label for="camp-planet">Planet</label><select id="camp-planet">' +
@@ -1264,6 +1304,7 @@
       });
     }
     h += '</div></div>';
+    h += ordersPanel(A);
     if (!chk.ok) {
       var why;
       if (blocking(chk.faults).length) {
@@ -1356,17 +1397,25 @@
      takes the field, and the marks are cleared again once the aftermath has read
      them. The unit with the most to prove goes first: the ones that have fought
      hardest and carry the least trauma already. */
-  function drugThem(co, picks) {
-    picks.forEach(function (e) { delete e.drugged; });
-    if (!C.hasDoctrine(co, 'V4')) return [];
-    var able = picks.filter(function (e) {
+  // who may be given the drugs: infantry, leaders aside, and up to a third of them
+  function drugAble(picks) {
+    return picks.filter(function (e) {
       var p = profile(e.key);
       return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command;
     });
+  }
+  function drugCap(picks) { return Math.floor(drugAble(picks).length / 3); }
+  /* `chosen`: the player's own pick of rids ("may choose up to 1/3"); without
+     one — the rival — the unit with the most to prove goes first. */
+  function drugThem(co, picks, chosen) {
+    picks.forEach(function (e) { delete e.drugged; });
+    if (!C.hasDoctrine(co, 'V4')) return [];
+    var able = drugAble(picks);
     var n = Math.floor(able.length / 3);
     if (n < 1) return [];
-    able.sort(function (a, b) { return a.tp - b.tp; });
-    var taken = able.slice(0, n);
+    var taken;
+    if (chosen) taken = able.filter(function (e) { return chosen.indexOf(e.rid) >= 0; }).slice(0, n);
+    else { able.sort(function (a, b) { return a.tp - b.tp; }); taken = able.slice(0, n); }
     taken.forEach(function (e) { e.drugged = true; });
     return taken;
   }
@@ -1381,7 +1430,7 @@
       C.developRival(B);
       theirs = autoPick(B, contract.tier, contract.pl);
     }
-    var druggedA = drugThem(A, contract.picks);
+    var druggedA = drugThem(A, contract.picks, contract.drugs || []);
     drugThem(B, theirs);
     camp.pending = {
       tier: contract.tier, pl: contract.pl, scenario: contract.scenario.id,
@@ -1408,6 +1457,7 @@
       colourA: colourOf(A), colourB: colourOf(B),
       dossier: { A: contract.picks, B: theirs },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
+      orders: { A: { martyr: C.orderOf(A, 'martyr') }, B: { martyr: true } },
       campaign: true,
       mode: camp.mode === 'hotseat' ? 'hotseat' : 'ai',
       planet: contract.planet
@@ -1912,6 +1962,15 @@
       if (pk) contract.picks.push(pk); render(); return;
     }
     if (t.hasAttribute('data-unpick')) { contract.picks.splice(+t.getAttribute('data-unpick'), 1); render(); return; }
+    if (t.hasAttribute('data-order')) {
+      C.setOrder(camp.companies.A, t.getAttribute('data-order'), JSON.parse(t.getAttribute('data-val')));
+      save(); render(); return;
+    }
+    if (t.hasAttribute('data-drug') && contract) {
+      var dr = t.getAttribute('data-drug'), dl = contract.drugs = contract.drugs || [], di = dl.indexOf(dr);
+      if (di >= 0) dl.splice(di, 1); else dl.push(dr);
+      render(); return;
+    }
     if (t.hasAttribute('data-tier')) {
       contract.tier = Math.max(1, Math.min(contract.tierRoll.cap, contract.tier + (+t.getAttribute('data-tier'))));
       contract.levels = C.levelsFor(camp.companies.A, camp.companies.B, contract.tier);
@@ -1991,6 +2050,12 @@
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;
       case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl); render(); return;
+      case 'standard':
+        if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;
+        contract.standard = true; contract.tier = 3; contract.pl = 2; contract.levels = [2];
+        contract.tierRoll = { roll: 3, cap: 3, tier: 3, standing: 3, thin: false };
+        contract.adjusted = true; contract.picks = [];
+        render(); return;
       case 'fight': fight(); return;
       case 'drawnow': {
         if ((drawState.picked || []).length !== 3) return;

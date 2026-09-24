@@ -89,5 +89,23 @@ var four = ['lpv', 'hpv', 'lhunter', 'unarmoured'];
 ok('Air Superiority: a fourth ground vehicle is refused', hullFault(R.checkArmy(four, 3, 1, ['O1'])));
 ok('...a fourth machine that is an aircraft is not', !hullFault(R.checkArmy(veh.concat(air), 3, 1, ['O1'])));
 
+console.log('\nPODS, TURRETS, STANDING ORDERS, BIGGER CONTRACTS');
+var pod = C.newEntry('insertplat');
+ok('a drop pod is never salvaged', C.salvage({ catastrophic: false }, pod, true).saved === false);
+ok('...nor a turret', C.salvage({ catastrophic: false }, C.newEntry('xtturret2'), true).saved === false);
+var pco = C.newCompany('P', { faction: 'pmc' });
+ok('a drop pod costs nothing to recruit', C.recruitCost(pco, 'insertplat') === 0);
+var vco = C.newCompany('V', { faction: 'rebel' }); vco.doctrines = ['V2', 'V5'];
+ok('Plunderer: re-rolls only a low payment by default', C.orderOf(vco, 'plunder') === 'low');
+C.setOrder(vco, 'plunder', 'never');
+var kept = 0;
+for (var q = 0; q < 50; q++) { var pay = C.payment(3, 1, vco, pco, 'A'); if (!pay.plunder.A || !pay.plunder.A.now) kept++; }
+ok('...and never, when told never', kept === 50);
+C.setOrder(vco, 'plunder', 'always');
+var redone = 0;
+for (var q2 = 0; q2 < 50; q2++) { var pay2 = C.payment(3, 1, vco, pco, 'A'); if (pay2.plunder.A && pay2.plunder.A.now) redone++; }
+ok('...and always, when told always', redone === 50);
+ok('No Place for the Weak! can be told to spare them', (C.setOrder(vco, 'weak', false), C.orderOf(vco, 'weak') === false));
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

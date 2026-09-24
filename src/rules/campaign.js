@@ -1193,8 +1193,8 @@
       if (civs <= 4) return 0;
     }
     var p = profile(key), cost = RECRUIT_COST[p.tier];
-    // a tribe's turrets are never bought, only fielded (p. 140)
-    if (isTurretP(p)) return 0;
+    // a tribe's turrets and a company's drop pods are never bought, only fielded (pp. 86, 140)
+    if (isTurretP(p) || p.noSlot) return 0;
     if (hasDoctrine(co, 'V1')) cost = Math.max(1, cost - 1);
     // Increased Population Growth: infantry below the Tribe Tier at half, rounding up
     if (hasDoctrine(co, 'XS1') && p.cls === 'infantry' && p.tier < co.tier) cost = Math.ceil(cost / 2);
@@ -1304,10 +1304,25 @@
     return Math.max(1, Math.min(5, Math.min(a, b)));
   }
   /* Which Priority Levels this pairing could actually fight at the given Tier. */
+  // "players can choose to play bigger ones as long as they can compose legal armies" (p. 84)
+  /* The standing orders for a doctrine that says "may" (Path of the Villain and
+     of the Prophet, p. 112): whether the force takes the option, set by its
+     player on the contract screen and kept on the company. */
+  var ORDER_DEFAULTS = { plunder: 'low', weak: true, martyr: true };
+  function orderOf(co, k) {
+    var o = co && co.orders;
+    return o && o[k] !== undefined ? o[k] : ORDER_DEFAULTS[k];
+  }
+  function setOrder(co, k, v) { co.orders = co.orders || {}; co.orders[k] = v; }
   function levelsFor(coA, coB, tier) {
-    return [1, 2].filter(function (pl) {
+    return [1, 2, 3, 4].filter(function (pl) {
       return canFieldArmy(coA, tier, pl, true) && canFieldArmy(coB, tier, pl, true);
     });
+  }
+  /* The standard contract (p. 84): Tier III at Priority Level 2, no roll for the
+     Tier, when both forces can put a legal army of it on the table. */
+  function canStandard(coA, coB) {
+    return canFieldArmy(coA, 3, 2, true) && canFieldArmy(coB, 3, 2, true);
   }
   function rollBattleTier(coA, coB, pl) {
     var cap = maxBattleTier(coA, coB, pl), roll = d6();
@@ -1375,6 +1390,11 @@
        wreckage and re-rolls the lot. */
     function loot(co, side, dice, other) {
       if (!hasDoctrine(co, 'V2') || winner !== side) return dice;
+      /* "may reroll all dice" — the revolt's standing order says whether it does:
+         always, never, or only when the first roll came in under the odds. */
+      var od = orderOf(co, 'plunder');
+      if (od === 'never') return dice;
+      if (od === 'low' && sum(dice) >= dice.length * 3.5) { plunder[side] = { was: dice.slice(), kept: true }; return dice; }
       var again = rollPayment(battleTier, pl);
       plunder[side] = { was: dice.slice(), now: again.slice() };
       return again;
@@ -1507,6 +1527,9 @@
     var p = profile(entry.key), need, note;
     // an Overgrown bug is a creature, not a hull: there is nothing to recover
     if (p.faction === 'bugs') return { roll: null, saved: false, need: null, note: 'A dead Overgrown bug is a carcass, not a wreck.' };
+    // drop pods and turrets are never salvaged (pp. 86, 140) — they cost nothing to replace
+    if (p.noSlot) return { roll: null, saved: false, need: null, note: 'A drop pod is not salvaged once used.' };
+    if (isTurretP(p)) return { roll: null, saved: false, need: null, note: 'A turret is not salvaged.' };
     if (p.cls === 'aircraft') {
       need = (entry.upgrades || []).indexOf(1) >= 0 ? 2 : 4;   // Advanced Emergency Systems
       note = 'Aircraft make an emergency landing on a ' + need + '+' +
@@ -1592,7 +1615,7 @@
           consecutive: e.lastBattle === campaign.turn && campaign.turn > 0
         });
       });
-      if (hasDoctrine(co, 'V5')) {
+      if (hasDoctrine(co, 'V5') && orderOf(co, 'weak') !== false) {
         var worst = null, worstN = 0;
         Object.keys(rolled).forEach(function (id) {
           var e = byRid(co, id);
@@ -2520,7 +2543,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
-    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, deepen: deepen,
+    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, orderOf: orderOf, setOrder: setOrder, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,

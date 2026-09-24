@@ -1013,6 +1013,16 @@
       '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
       '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
   }
+  /* Terrorist (p. 112): before deploying, the side on the Path of the Villain
+     picks one destructible piece to mine — or none. */
+  function mineCard() {
+    var mp = state.minePick;
+    return '<div class="card"><h2>Terrorist</h2>' +
+      '<p class="sub">Before anyone deploys, you may secretly mine one destructible piece of terrain other than the objective. ' +
+      'Any First Among Equals unit can set it off during the battle — Firepower 10, Destructive Weapon.</p>' +
+      '<p class="hint">Tap one of the ' + mp.pool.length + ' outlined pieces.</p>' +
+      '<div class="acts"><button class="act" data-act="nomine"><span>No mine</span><small>Leave the charges in the crates</small></button></div></div>';
+  }
   function insertionCard() {
     var ins = ui.insertion;
     if (!ins) return '';
@@ -3430,6 +3440,19 @@
       });
       ctx.restore();
     }
+    // Terrorist: the pieces that may be mined
+    if (state.minePick && !isAI(state.minePick.side)) {
+      ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#e4693f'; ctx.lineWidth = 2;
+      state.minePick.pool.forEach(function (i) {
+        var r = state.terrain[i];
+        var c = (r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]])
+          .map(function (q) { return hud(q[0], q[1], liftOf(q[0], q[1])); });
+        ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y);
+        for (var j = 1; j < c.length; j++) ctx.lineTo(c[j].x, c[j].y);
+        ctx.closePath(); ctx.stroke();
+      });
+      ctx.restore();
+    }
     // destructible pieces offered as targets
     if (ui.terrain.length) {
       ctx.save();
@@ -3893,6 +3916,7 @@
     var ctxBox = el('context'), html = '';
     if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
+    else if (state.minePick && !isAI(state.minePick.side)) html = mineCard();
     else if (state.phase === 'deploy') html = deployCard();
     else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
@@ -4352,6 +4376,7 @@
         else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
+        else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
@@ -4695,6 +4720,12 @@
     var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 
     if (state.phase === 'terrain') { terrainTap(p); return; }
+    // Terrorist: the tap nominates the piece to mine
+    if (state.minePick && !isAI(state.minePick.side)) {
+      var mpk = state.minePick.pool.filter(function (i) { return R.inRect(p.x, p.y, state.terrain[i]); })[0];
+      if (mpk != null) send({ k: 'mine', i: mpk });
+      return;
+    }
     if (state.phase === 'deploy' && state.relocating) { relocTap(p); return; }
     if (state.phase === 'deploy') {
       var pending = deployNext();
@@ -6387,6 +6418,7 @@
   window.__holdInsertion = function () { holdInsertion(); };
   window.__insertionSpotsNow = function () { return ui.insertion ? ui.insertion.spots : null; };
   window.__tapInsertion = function (q) { placeInsertion(q); };
+  window.__sendIntent = function (it) { send(it); };
   window.__seats = function () { return seats.slice(); };
   window.__mySide = function () { return mySide(); };
 

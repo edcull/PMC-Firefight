@@ -2479,6 +2479,8 @@
         if (r <= 2) tag = 'Steady, boys!';
         else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
         else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
+        // Combat Drugs stack with Field Medics (p. 87): the man the medic lost may still get up
+        else if (drugs && d6() === 6) { tag = 'MEDIC! man down — Combat Drugs: he gets back up (1 SP)'; out.sp += 1; out.medic = medic.id; }
         else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
       } else if (has(target, 'Animal Behaviour')) {
         // bugs: shrug it off or burst (p. 116)
@@ -3678,6 +3680,9 @@
        The unit takes no Suppression for the death. */
     function martyr(u, foe) {
       if (!doctrine(state, u.side, 'P1')) return;
+      // "the Rebel commander may order" it (p. 112): the player's standing order, and never the last two men
+      if (state.orders && state.orders[u.side] && state.orders[u.side].martyr === false) return;
+      if (u.models <= 2) return;
       var p = BY_KEY[u.key];
       if (!p || p.group !== 'Holy Warriors' || u.models <= 1 || !foe.alive) return;
       u.models -= 1;
