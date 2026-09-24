@@ -898,6 +898,7 @@
       picker = root.PMCAtlas.mount({
         main: el('vlist'), scroller: el('vside').querySelector('.vlistscroll'), search: el('vsearch'),
         faction: pickerFaction, colour: view.colour.A, prefix: 'vp-',
+        fit: { inf: 120, other: 112 },     // the list's own tile sizes; the desktop's three-to-a-row tiles come smaller
         findMore: function (p) { var w = R.weaponSpec(p); return styleName(w.p) + (w.s ? ' ' + styleName(w.s) : ''); }
       });
     } else if (want !== pickerShown) { picker.render(); el('vside').querySelector('.vlistscroll').scrollTop = 0; }
@@ -923,7 +924,8 @@
     h += '<div class="vtabs" role="tablist">' +
       '<button type="button" role="tab" data-tab="stats" aria-selected="' + (tab === 'stats') + '"' + (tab === 'stats' ? ' class="on"' : '') + '>Stats</button>' +
       '<button type="button" role="tab" data-tab="opts" aria-selected="' + (tab === 'opts') + '"' + (tab === 'opts' ? ' class="on"' : '') + '>Options</button></div>';
-    h += '<div class="vtabbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
+    h += '<div class="vtabbody vstatsbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
+    h += '<div class="vtabbody voptsbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
     h += '<div class="vacts">' +
       '<button class="vbtn primary" data-do="fire">Fire</button>' +
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
@@ -949,11 +951,12 @@
       h += '<div class="vgrp"><label>Models — ' + n + ' of ' + p.size + '</label>' +
         '<input type="range" id="vmodels" min="1" max="' + p.size + '" value="' + n + '"></div>';
     }
-    h += '</div><div class="vtabbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
-    var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0;
+    h += '</div>';
+    var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0, all = el('vctl').scrollTop;
     el('vctl').innerHTML = h;
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
+    el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, stats over options
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
