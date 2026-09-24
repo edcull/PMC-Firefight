@@ -67,6 +67,9 @@
       'Suppression. Not while Suppressed.',
     'Drone Control':
       'Crewless: +1 Structure, but enemy Hackers can take it over. It is also immune to Psychic Waves.',
+    'Drone unit':
+      'Robots: Determined, and loses all its Suppression in the Rally phase. Hits on it add 1 to the roll. ' +
+      'No more Drone units than other units in the army, and no Experience or Trauma in a campaign.',
     'Endless Tide':
       'In the End phase, an unbroken unit below its starting size with an unsuppressed Overmind in reach ' +
       'gets D3 lost bugs back.',

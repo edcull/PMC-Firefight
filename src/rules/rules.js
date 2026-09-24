@@ -83,6 +83,14 @@
     /* EW and medic teams (p. 71) */
     { key: 'ew', code: 'EW', name: 'EW team', group: 'Support teams', art: 'ew', tier: 3, size: 2, move: 5, fp: 1, range: 12, def: 9, assault: 1, morale: 4, rules: ['Jammers', 'Counter-jamming', 'Hackers'], capPL: 1 },
     { key: 'medics', code: 'MED', name: 'Medic teams', group: 'Support teams', art: 'medic', tier: 3, size: 4, move: 5, fp: 1, range: 12, def: 9, assault: 1, morale: 4, rules: ['Field Medics'], capPL: 1 },
+    // Drones (p. 72): machines in human shape, counted as infantry with the Drone unit rules (p. 40)
+    { key: 'dcombat', code: 'CDR', name: 'Combat drone unit', group: 'Drones', art: 'dronecombat', tier: 3, size: 6, move: 6, fp: 3, range: 18, def: 11, assault: 2, morale: 4, rules: ['Drone unit'] },
+    { key: 'dassault', code: 'ADR', name: 'Assault drone unit', group: 'Drones', art: 'droneassault', tier: 3, size: 6, move: 6, fp: 4, range: 12, def: 11, assault: 4, morale: 4, rules: ['Drone unit'] },
+    { key: 'drecon', code: 'RDR', name: 'Recon drone unit', group: 'Drones', art: 'dronerecon', tier: 3, size: 3, move: 8, fp: 1, range: 18, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Stealth', 'Markerlights', 'Keen-Eyed'] },
+    { key: 'dengineer', code: 'EDR', name: 'Engineer drone unit', group: 'Drones', art: 'droneengineer', tier: 3, size: 3, move: 6, fp: 1, range: 12, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Sappers'] },
+    { key: 'dsupport', code: 'SDR', name: 'Support drone unit', group: 'Drones', art: 'dronesupport', tier: 3, size: 3, move: 5, fp: 7, range: 24, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Indirect Fire', 'Minimum Range (6)'] },
+    // the book's notes give only Field Medics, but it is a drone unit by name and section
+    { key: 'dmedic', code: 'MDR', name: 'Medical drone unit', group: 'Drones', art: 'dronemedic', tier: 3, size: 3, move: 5, fp: 1, range: 12, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Field Medics'] },
 
     /* Unclassified (p. 79) */
     { key: 'nomads', code: 'NOM', name: 'Nomads', group: 'Unclassified', art: 'nomad', tier: 2, size: 8, move: 5, fp: 2, range: 12, def: 7, assault: 3, morale: 3, rules: ['Stealth', 'Battlefield Insertion'], capPL: 2 },
@@ -143,6 +151,8 @@
     { key: 'hsc', code: 'HSC', name: 'Heavy Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hindrk', tier: 5, size: 1, move: 16, fp: 9, range: 18, def: 13, assault: 1, str: 5, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-tank'] },
     { key: 'interceptor', code: 'INT', name: 'Interceptor', group: 'Strike aircraft', cls: 'aircraft', art: 'jet', tier: 4, size: 1, move: 28, fp: 6, range: 24, def: 11, assault: 1, str: 3, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-aircraft'] },
     { key: 'asc', code: 'ASC', name: 'Advanced Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'jetstrike', tier: 5, size: 1, move: 24, fp: 9, range: 18, def: 13, assault: 1, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
+    // Light VTOL drone (p. 82): always Drone Controlled, the extra Structure point already in its profile
+    { key: 'vtoldrone', code: 'VTD', name: 'Light VTOL drone', group: 'Strike aircraft', cls: 'aircraft', art: 'vtoldrone', tier: 3, size: 1, move: 20, fp: 1, range: 12, def: 11, assault: 0, str: 4, mustDrone: true, rules: ['Flying unit', 'Limited Fire Arc', 'Markerlights', 'Stealth', 'Keen-Eyed', 'Drone Control'] },
 
     /* ================= THE REBEL ARMY (pp. 92-109) =================
        An insurgent force fields its own list against the same composition table.
@@ -450,7 +460,7 @@
      hulls and aircraft alike (p. 39) — "can be fielded by all armies except the
      Bugs". A turret is Drone Controlled already, and a Teleport craft carries troops. */
   function canBeDrone(p) {
-    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' &&
+    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' && !p.mustDrone &&
       !(p.rules || []).some(function (r) { return /^(Transport|Teleport|Turret)/.test(r); }) &&
       !/Turret/.test(p.group || '');
   }
@@ -490,6 +500,9 @@
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
      Hacker can reach into it. */
   function applyDrone(u, on) {
+    // Drone units, and a craft that is only ever Drone Controlled, are drones already:
+    // hackable, and with any extra Structure already in the profile (pp. 40, 82)
+    if (hasOwn(u, 'Drone unit') || (BY_KEY[u.key] && BY_KEY[u.key].mustDrone)) { u.drone = true; return u; }
     if (!on || !canBeDrone(u)) { u.drone = false; return u; }
     u.drone = true;
     u.str += 1;
@@ -564,6 +577,9 @@
       spent -= o5 * freeTier;
     }
     if (spent > budget) faults.push('Over budget: ' + spent + ' of ' + budget + ' composition points.');
+    // "You cannot field more Drone units than other units" (p. 40)
+    var droneN = keys.filter(function (k) { return BY_KEY[k] && (BY_KEY[k].rules || []).indexOf('Drone unit') >= 0; }).length;
+    if (droneN > keys.length - droneN) faults.push('No more Drone units than other units: ' + droneN + ' drone' + (droneN === 1 ? '' : 's') + ' to ' + (keys.length - droneN) + ' others.');
     for (var t = 1; t <= 5; t++) {
       var lim = comp.limits[t - 1], lo = lim[0] * pl, hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (doc('O2') && t === battleTier) lo = Math.ceil(lo / 2);
@@ -1446,6 +1462,8 @@
 
   function has(u, rule) {
     if (hasOwn(u, rule)) return true;
+    // Drone units "are always counted as having the Determined special rule" (p. 40)
+    if (rule === 'Determined' && hasOwn(u, 'Drone unit')) return true;
     // a Command Vehicle carries the rules of the Command Unit riding inside it
     if (!u.cargo || !u.cargo.length || !hasOwn(u, 'Command Vehicle')) return false;
     for (var c = 0; c < u.cargo.length; c++) {
@@ -1559,6 +1577,9 @@
     cmd4: { p: 'pistol' }, cmd3: { p: 'pistol' }, cmd2: { p: 'pistol' },
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
+    // drone units carry what the squads they stand in for carry; the support drones lob shells
+    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'small' },
+    dengineer: { p: 'smg' }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -1602,6 +1623,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
+    // the light VTOL drone's single nose gun
+    vtoldrone: { p: 'small' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
     interceptor: { p: 'missile', n: 2, s: 'burst' },
 
@@ -1988,6 +2011,8 @@
 
   function resolveShootingHits(state, target, hits, mod, atk) {
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
+    // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
+    if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
     var medic = medicFor(state, target), medics = !!medic;
     var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
     var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
@@ -2037,7 +2062,7 @@
   }
 
   function resolveAssaultHits(target, hits, mod, atk) {
-    mod = mod || 0;
+    mod = (mod || 0) + (droneUnit(target) ? 1 : 0);          // drone units, p. 40
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
     var nbk = campFlag(atk, 'nbk');                     // Natural Born Killers
     for (var i = 0; i < hits; i++) {
@@ -3838,8 +3863,16 @@
     return 0;
   }
 
+  function droneUnit(u) { return !!u && hasOwn(u, 'Drone unit'); }
   function rally(state, u) {
     if (u.sp === 0) return null;
+    // Drone units "automatically remove all Suppression points in the Rally phase" (p. 40)
+    if (droneUnit(u)) {
+      var sbD = status(u), wasD = u.sp;
+      u.sp = 0;
+      return { morale: currentMorale(u), dice: [], removed: wasD, before: wasD, after: 0, reroll: false, gone: false,
+        need: 4, jammed: false, extras: ['Drone unit: all SP removed'], statusBefore: sbD, statusAfter: 'ready', overmind: true };
+    }
     // Overmind (p. 116): bugs it controls lose every Suppression point in the Rally phase
     if (has(u, 'Animal Behaviour') && overmindFor(state, u, false)) {
       var sb0 = status(u), was = u.sp, om = overmindFor(state, u, false);

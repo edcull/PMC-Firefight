@@ -211,6 +211,14 @@ html { scroll-behavior: smooth; }
     /* EW and medic teams (p. 71) */
     { key: 'ew', code: 'EW', name: 'EW team', group: 'Support teams', art: 'ew', tier: 3, size: 2, move: 5, fp: 1, range: 12, def: 9, assault: 1, morale: 4, rules: ['Jammers', 'Counter-jamming', 'Hackers'], capPL: 1 },
     { key: 'medics', code: 'MED', name: 'Medic teams', group: 'Support teams', art: 'medic', tier: 3, size: 4, move: 5, fp: 1, range: 12, def: 9, assault: 1, morale: 4, rules: ['Field Medics'], capPL: 1 },
+    // Drones (p. 72): machines in human shape, counted as infantry with the Drone unit rules (p. 40)
+    { key: 'dcombat', code: 'CDR', name: 'Combat drone unit', group: 'Drones', art: 'dronecombat', tier: 3, size: 6, move: 6, fp: 3, range: 18, def: 11, assault: 2, morale: 4, rules: ['Drone unit'] },
+    { key: 'dassault', code: 'ADR', name: 'Assault drone unit', group: 'Drones', art: 'droneassault', tier: 3, size: 6, move: 6, fp: 4, range: 12, def: 11, assault: 4, morale: 4, rules: ['Drone unit'] },
+    { key: 'drecon', code: 'RDR', name: 'Recon drone unit', group: 'Drones', art: 'dronerecon', tier: 3, size: 3, move: 8, fp: 1, range: 18, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Stealth', 'Markerlights', 'Keen-Eyed'] },
+    { key: 'dengineer', code: 'EDR', name: 'Engineer drone unit', group: 'Drones', art: 'droneengineer', tier: 3, size: 3, move: 6, fp: 1, range: 12, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Sappers'] },
+    { key: 'dsupport', code: 'SDR', name: 'Support drone unit', group: 'Drones', art: 'dronesupport', tier: 3, size: 3, move: 5, fp: 7, range: 24, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Indirect Fire', 'Minimum Range (6)'] },
+    // the book's notes give only Field Medics, but it is a drone unit by name and section
+    { key: 'dmedic', code: 'MDR', name: 'Medical drone unit', group: 'Drones', art: 'dronemedic', tier: 3, size: 3, move: 5, fp: 1, range: 12, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Field Medics'] },
 
     /* Unclassified (p. 79) */
     { key: 'nomads', code: 'NOM', name: 'Nomads', group: 'Unclassified', art: 'nomad', tier: 2, size: 8, move: 5, fp: 2, range: 12, def: 7, assault: 3, morale: 3, rules: ['Stealth', 'Battlefield Insertion'], capPL: 2 },
@@ -271,6 +279,8 @@ html { scroll-behavior: smooth; }
     { key: 'hsc', code: 'HSC', name: 'Heavy Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hindrk', tier: 5, size: 1, move: 16, fp: 9, range: 18, def: 13, assault: 1, str: 5, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-tank'] },
     { key: 'interceptor', code: 'INT', name: 'Interceptor', group: 'Strike aircraft', cls: 'aircraft', art: 'jet', tier: 4, size: 1, move: 28, fp: 6, range: 24, def: 11, assault: 1, str: 3, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-aircraft'] },
     { key: 'asc', code: 'ASC', name: 'Advanced Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'jetstrike', tier: 5, size: 1, move: 24, fp: 9, range: 18, def: 13, assault: 1, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
+    // Light VTOL drone (p. 82): always Drone Controlled, the extra Structure point already in its profile
+    { key: 'vtoldrone', code: 'VTD', name: 'Light VTOL drone', group: 'Strike aircraft', cls: 'aircraft', art: 'vtoldrone', tier: 3, size: 1, move: 20, fp: 1, range: 12, def: 11, assault: 0, str: 4, mustDrone: true, rules: ['Flying unit', 'Limited Fire Arc', 'Markerlights', 'Stealth', 'Keen-Eyed', 'Drone Control'] },
 
     /* ================= THE REBEL ARMY (pp. 92-109) =================
        An insurgent force fields its own list against the same composition table.
@@ -578,7 +588,7 @@ html { scroll-behavior: smooth; }
      hulls and aircraft alike (p. 39) — "can be fielded by all armies except the
      Bugs". A turret is Drone Controlled already, and a Teleport craft carries troops. */
   function canBeDrone(p) {
-    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' &&
+    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' && !p.mustDrone &&
       !(p.rules || []).some(function (r) { return /^(Transport|Teleport|Turret)/.test(r); }) &&
       !/Turret/.test(p.group || '');
   }
@@ -618,6 +628,9 @@ html { scroll-behavior: smooth; }
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
      Hacker can reach into it. */
   function applyDrone(u, on) {
+    // Drone units, and a craft that is only ever Drone Controlled, are drones already:
+    // hackable, and with any extra Structure already in the profile (pp. 40, 82)
+    if (hasOwn(u, 'Drone unit') || (BY_KEY[u.key] && BY_KEY[u.key].mustDrone)) { u.drone = true; return u; }
     if (!on || !canBeDrone(u)) { u.drone = false; return u; }
     u.drone = true;
     u.str += 1;
@@ -692,6 +705,9 @@ html { scroll-behavior: smooth; }
       spent -= o5 * freeTier;
     }
     if (spent > budget) faults.push('Over budget: ' + spent + ' of ' + budget + ' composition points.');
+    // "You cannot field more Drone units than other units" (p. 40)
+    var droneN = keys.filter(function (k) { return BY_KEY[k] && (BY_KEY[k].rules || []).indexOf('Drone unit') >= 0; }).length;
+    if (droneN > keys.length - droneN) faults.push('No more Drone units than other units: ' + droneN + ' drone' + (droneN === 1 ? '' : 's') + ' to ' + (keys.length - droneN) + ' others.');
     for (var t = 1; t <= 5; t++) {
       var lim = comp.limits[t - 1], lo = lim[0] * pl, hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (doc('O2') && t === battleTier) lo = Math.ceil(lo / 2);
@@ -1574,6 +1590,8 @@ html { scroll-behavior: smooth; }
 
   function has(u, rule) {
     if (hasOwn(u, rule)) return true;
+    // Drone units "are always counted as having the Determined special rule" (p. 40)
+    if (rule === 'Determined' && hasOwn(u, 'Drone unit')) return true;
     // a Command Vehicle carries the rules of the Command Unit riding inside it
     if (!u.cargo || !u.cargo.length || !hasOwn(u, 'Command Vehicle')) return false;
     for (var c = 0; c < u.cargo.length; c++) {
@@ -1687,6 +1705,9 @@ html { scroll-behavior: smooth; }
     cmd4: { p: 'pistol' }, cmd3: { p: 'pistol' }, cmd2: { p: 'pistol' },
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
+    // drone units carry what the squads they stand in for carry; the support drones lob shells
+    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'small' },
+    dengineer: { p: 'smg' }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -1730,6 +1751,8 @@ html { scroll-behavior: smooth; }
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
+    // the light VTOL drone's single nose gun
+    vtoldrone: { p: 'small' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
     interceptor: { p: 'missile', n: 2, s: 'burst' },
 
@@ -2116,6 +2139,8 @@ html { scroll-behavior: smooth; }
 
   function resolveShootingHits(state, target, hits, mod, atk) {
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
+    // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
+    if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
     var medic = medicFor(state, target), medics = !!medic;
     var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
     var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
@@ -2165,7 +2190,7 @@ html { scroll-behavior: smooth; }
   }
 
   function resolveAssaultHits(target, hits, mod, atk) {
-    mod = mod || 0;
+    mod = (mod || 0) + (droneUnit(target) ? 1 : 0);          // drone units, p. 40
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
     var nbk = campFlag(atk, 'nbk');                     // Natural Born Killers
     for (var i = 0; i < hits; i++) {
@@ -3966,8 +3991,16 @@ html { scroll-behavior: smooth; }
     return 0;
   }
 
+  function droneUnit(u) { return !!u && hasOwn(u, 'Drone unit'); }
   function rally(state, u) {
     if (u.sp === 0) return null;
+    // Drone units "automatically remove all Suppression points in the Rally phase" (p. 40)
+    if (droneUnit(u)) {
+      var sbD = status(u), wasD = u.sp;
+      u.sp = 0;
+      return { morale: currentMorale(u), dice: [], removed: wasD, before: wasD, after: 0, reroll: false, gone: false,
+        need: 4, jammed: false, extras: ['Drone unit: all SP removed'], statusBefore: sbD, statusAfter: 'ready', overmind: true };
+    }
     // Overmind (p. 116): bugs it controls lose every Suppression point in the Rally phase
     if (has(u, 'Animal Behaviour') && overmindFor(state, u, false)) {
       var sb0 = status(u), was = u.sp, om = overmindFor(state, u, false);
@@ -6622,6 +6655,13 @@ html { scroll-behavior: smooth; }
     // the sniper team alone goes in with night-vision goggles
     sniperteam: ['marksmannv', 'spotternv', 'sniperinf'],
     armour: ['armour'],
+    // PMC drone units (p. 72): grey machines in human shape, a stripe of the company's colour across them
+    dronecombat: ['drlead', 'drrifle'],
+    droneassault: ['drsmg', 'drshotgun'],
+    dronerecon: ['drscout', 'drscoutsmg'],
+    droneengineer: ['drbreacher', 'drsapper'],
+    dronesupport: ['drheavy'],
+    dronemedic: ['drmedic', 'drcorpsman'],
     // the Protectors: the heaviest suits in the list, with and without jump packs
     protector: ['protector'],
     protectorhm: ['protectorhm'],
@@ -6739,7 +6779,20 @@ html { scroll-behavior: smooth; }
   }
 
   // kit per role: helmet, weapon, pack, build
+  // the drones' plating: gunmetal grey all over
+  var DRONE_GREY = { light: '#b9c0c8', mid: '#7f8791', dark: '#3b4047', helm: '#6c747e', cloth: '#5b626b', skin: '#8a929c', skinDark: '#5d646d' };
   var KIT = {
+    drrifle: { helm: 'sealed', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drlead: { helm: 'sealed', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsmg: { helm: 'sealed', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drshotgun: { helm: 'sealed', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drscout: { helm: 'sealed', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
+    drscoutsmg: { helm: 'sealed', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drbreacher: { helm: 'sealed', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsapper: { helm: 'sealed', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drheavy: { helm: 'sealed', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
+    drmedic: { helm: 'sealed', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
+    drcorpsman: { helm: 'sealed', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
@@ -10403,6 +10456,8 @@ html { scroll-behavior: smooth; }
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
+    // the Light VTOL drone: a flying disc with two swept winglets and a gun under its lip
+    vtoldrone: { len: 1.45, wid: 1.45, hgt: 9, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
@@ -13157,6 +13212,39 @@ html { scroll-behavior: smooth; }
           });
           break;
         }
+        case 'disc': {
+          /* A saucer: a flat disc with a low hump on top where the sensor dome
+             sits, a ring of lift vents lit underneath, two small swept winglets
+             off the back and a gun slung under the front lip. */
+          var R0 = L * 0.5, ring = function (r) {
+            var out = [];
+            for (var a = 0; a < 16; a++) out.push([Math.cos(a / 16 * Math.PI * 2) * r, Math.sin(a / 16 * Math.PI * 2) * r]);
+            return out;
+          };
+          if (!dead) {
+            var ug = S3(AF(0, 0), z - 1);
+            sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
+          }
+          [-1, 1].forEach(function (sd) {
+            part(-R0 * 0.55, sd * R0 * 1.05, function () {
+              plate(AF, [[-R0 * 0.2, sd * R0 * 0.82], [-R0 * 0.85, sd * R0 * 1.32], [-R0 * 1.05, sd * R0 * 1.32], [-R0 * 0.75, sd * R0 * 0.75]], z + H * 0.28, 2);
+            });
+          });
+          part(0, 0, function () {
+            noseGun(R0 * 0.78, 0, z + H * 0.1, 0.34, 'mg');
+            shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
+            shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
+            shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
+            if (!dead) {
+              // running lights round the rim
+              for (var li = 0; li < 16; li += 2) {
+                var la = li / 16 * Math.PI * 2, lp = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
+                sEllipse(lp[0], lp[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
+              }
+            }
+          }, true);
+          break;
+        }
         case 'hawk': case 'chinook': case 'chinookcp': {
           var chin = st !== 'hawk';
           var cabL = chin ? L : L * 0.62;
@@ -14123,6 +14211,7 @@ html { scroll-behavior: smooth; }
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
       }
+      else if (spec.craft === 'disc') { back = 0; off = 0; y5 = lift + spec.hgt * 0.68; }     // on the disc's hump
       else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
@@ -14137,7 +14226,7 @@ html { scroll-behavior: smooth; }
       if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
-      if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
+      if (spec.fly && (spec.craft === 'jet' || spec.craft === 'disc')) return;      // a jet or a disc carries the dome only
       if (spec.fly) aq = along(-spec.len * 0.06, spec.wid * 0.3);   // a rotorcraft's stands on the back of its body
       else if (legs) aq = along(spec.len * back - 0.2, -spec.wid * 0.3);   // its left shoulder
       else {

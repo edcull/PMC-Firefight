@@ -223,6 +223,32 @@ ok('...that only the Demolish action touches', R.destructibleKind({ kind: 'objec
 ok('...cleared of anything that was standing there', dem.terrain.filter(function (t) {
   return t.kind !== 'objective' && R.inches(t.x + t.w / 2, t.y + t.h / 2, dem.sc.target.cx, dem.sc.target.cy) <= 6;
 }).length, 0);
+/* Demolish, p. 54: at Priority Level 2+ the attacker may hold units back */
+var demPL = function (pl) {
+  var st = world([unit('A', 1, 1), unit('A', 2, 2), unit('A', 3, 3), unit('A', 4, 4),
+    unit('B', 44, 44), unit('B', 43, 43), unit('B', 42, 42), unit('B', 41, 41)]);
+  st.cfg.pl = pl;
+  S.begin(st, 'demolish', { attacker: 'A' });
+  S.deploy(st);
+  return st;
+};
+var d1 = demPL(1), d3 = demPL(3);
+ok('...at Priority Level 1 the attacker holds nothing back', !!(d1.sc.split && d1.sc.split[d1.sc.attacker]), false);
+var sp3 = d3.sc.split && d3.sc.split[d3.sc.attacker];
+ok('...at Priority Level 3 it may hold up to all but one', sp3 ? sp3.min + '-' + sp3.max : 'none', '0-3');
+var held = d3.units.filter(function (u) { return u.side === d3.sc.attacker; }).slice(0, 2);
+held.forEach(function (u) { u.reserve = true; u.wave = 2; });
+d3.turn = 1;
+ok('...nothing to pick on turn 1', S.reservePick(d3, d3.sc.attacker), null);
+d3.turn = 2;
+var pk2 = S.reservePick(d3, d3.sc.attacker);
+ok('...turn 2: pick any of them', pk2 ? pk2.min + '/' + pk2.max : 'none', '0/2');
+d3.turn = 3;
+var pk3 = S.reservePick(d3, d3.sc.attacker);
+ok('...turn 3 (the last): all that are left come on', pk3 ? pk3.min + '/' + pk3.max : 'none', '2/2');
+d3.turn = 2;
+ok('...an AI attacker brings them all on at turn 2', S.reserves(d3, d3.sc.attacker).length, 2);
+ok('...the defender picks nothing', S.reservePick(d3, d3.sc.attacker === 'A' ? 'B' : 'A'), null);
 var tko = setupOf('takeover');
 var works = function (t) { return t.kind === 'barricade' || t.kind === 'trench' || t.kind === 'wire'; };
 ok('Hostile takeover digs the defender in', tko.terrain.filter(works).length >= 6, true,

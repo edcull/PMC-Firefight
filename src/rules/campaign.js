@@ -708,7 +708,9 @@
     opts = opts || {};
     var p = profile(key);
     return {
-      rid: opts.rid || rid(), key: key, prop: opts.prop || null, drone: !!opts.drone,
+      rid: opts.rid || rid(), key: key, prop: opts.prop || null,
+      // a Drone unit, or a craft only ever flown as a drone, is one from the start (pp. 40, 82)
+      drone: !!opts.drone || !!(p && (p.mustDrone || (p.rules || []).indexOf('Drone unit') >= 0)),
       name: opts.name || p.name, exp: 0, tp: 0,
       honours: [], traumas: [], upgrades: [],
       free: !!opts.free, restUntil: 0, lastBattle: 0, history: []
@@ -1449,6 +1451,8 @@
     if (p.command) return { total: 0, lines: [{ text: 'Command Units take no Trauma Points.', n: 0 }] };
     if (p.leaderBug) return { total: 0, lines: [{ text: 'Leader Bugs take no Trauma Points.', n: 0 }] };
     if (p.alpha) return { total: 0, lines: [{ text: 'Alpha squads take no Trauma Points.', n: 0 }] };
+    // "Drone units do not get any Experience and Trauma points during campaigns" (p. 40)
+    if (entry.drone) return { total: 0, lines: [{ text: 'Drones take no Trauma Points.', n: 0 }] };
     // To Hell and Back!: the fighters do not hold being broken against themselves
     if (line.brokenEver && !hasDoctrine(ctx.company, 'H4')) out.push({ text: 'Was broken at least once', n: 2 });
     // Stairs to Heaven: the Holy Warriors' dead are already where they wanted to go
@@ -1670,6 +1674,12 @@
         } else if (line.wiped && entry.rid === co.cmdRid) {
           u.rebuilt = true;
           entry.history.push('The field command was wiped out and reconstituted.');
+        } else if (line.wiped && entry.drone && profile(entry.key).cls === 'infantry') {
+          // a destroyed Drone unit can be salvaged, as a drone hull can (p. 40)
+          var svD = salvageOf[entry.rid] || salvage(line, entry, won || report.winner === null);
+          u.salvage = svD;
+          if (svD.saved) { entry.restUntil = 1; rec.salvaged.push(entry); }
+          else { u.wiped = true; rec.gone.push(entry); }
         } else if (line.wiped && (profile(entry.key).cls === 'infantry' || profile(entry.key).faction === 'bugs')) {
           u.wiped = true;
           rec.gone.push(entry);

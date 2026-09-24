@@ -68,5 +68,12 @@ var SAB = global.PMCSolo.SCENARIOS.s_sabotage;
     st.sc.targets.length === c[1] && (c[0] > 1 || gap >= 12), st.sc.targets.length + ' placed, closest ' + gap.toFixed(1) + '"');
 });
 
+console.log('\nDRONE UNITS IN THE CAMPAIGN (p. 40)');
+var dsq = C.newEntry('dcombat'), vtd = C.newEntry('vtoldrone');
+ok('a Drone unit joins the roster as a drone', dsq.drone === true);
+ok('...and so does the Light VTOL drone', vtd.drone === true);
+var tpd = C.tpFor({ brokenEver: true, startSize: 6, endSize: 2 }, { entry: dsq, company: { doctrines: [] } });
+ok('...and a drone squad takes no Trauma Points', tpd.total === 0, tpd.lines[0].text);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

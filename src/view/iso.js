@@ -2398,6 +2398,13 @@
     // the sniper team alone goes in with night-vision goggles
     sniperteam: ['marksmannv', 'spotternv', 'sniperinf'],
     armour: ['armour'],
+    // PMC drone units (p. 72): grey machines in human shape, a stripe of the company's colour across them
+    dronecombat: ['drlead', 'drrifle'],
+    droneassault: ['drsmg', 'drshotgun'],
+    dronerecon: ['drscout', 'drscoutsmg'],
+    droneengineer: ['drbreacher', 'drsapper'],
+    dronesupport: ['drheavy'],
+    dronemedic: ['drmedic', 'drcorpsman'],
     // the Protectors: the heaviest suits in the list, with and without jump packs
     protector: ['protector'],
     protectorhm: ['protectorhm'],
@@ -2515,7 +2522,20 @@
   }
 
   // kit per role: helmet, weapon, pack, build
+  // the drones' plating: gunmetal grey all over
+  var DRONE_GREY = { light: '#b9c0c8', mid: '#7f8791', dark: '#3b4047', helm: '#6c747e', cloth: '#5b626b', skin: '#8a929c', skinDark: '#5d646d' };
   var KIT = {
+    drrifle: { helm: 'sealed', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drlead: { helm: 'sealed', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsmg: { helm: 'sealed', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drshotgun: { helm: 'sealed', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drscout: { helm: 'sealed', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
+    drscoutsmg: { helm: 'sealed', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drbreacher: { helm: 'sealed', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsapper: { helm: 'sealed', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drheavy: { helm: 'sealed', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
+    drmedic: { helm: 'sealed', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
+    drcorpsman: { helm: 'sealed', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
@@ -6179,6 +6199,8 @@
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
+    // the Light VTOL drone: a flying disc with two swept winglets and a gun under its lip
+    vtoldrone: { len: 1.45, wid: 1.45, hgt: 9, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
@@ -8933,6 +8955,39 @@
           });
           break;
         }
+        case 'disc': {
+          /* A saucer: a flat disc with a low hump on top where the sensor dome
+             sits, a ring of lift vents lit underneath, two small swept winglets
+             off the back and a gun slung under the front lip. */
+          var R0 = L * 0.5, ring = function (r) {
+            var out = [];
+            for (var a = 0; a < 16; a++) out.push([Math.cos(a / 16 * Math.PI * 2) * r, Math.sin(a / 16 * Math.PI * 2) * r]);
+            return out;
+          };
+          if (!dead) {
+            var ug = S3(AF(0, 0), z - 1);
+            sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
+          }
+          [-1, 1].forEach(function (sd) {
+            part(-R0 * 0.55, sd * R0 * 1.05, function () {
+              plate(AF, [[-R0 * 0.2, sd * R0 * 0.82], [-R0 * 0.85, sd * R0 * 1.32], [-R0 * 1.05, sd * R0 * 1.32], [-R0 * 0.75, sd * R0 * 0.75]], z + H * 0.28, 2);
+            });
+          });
+          part(0, 0, function () {
+            noseGun(R0 * 0.78, 0, z + H * 0.1, 0.34, 'mg');
+            shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
+            shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
+            shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
+            if (!dead) {
+              // running lights round the rim
+              for (var li = 0; li < 16; li += 2) {
+                var la = li / 16 * Math.PI * 2, lp = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
+                sEllipse(lp[0], lp[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
+              }
+            }
+          }, true);
+          break;
+        }
         case 'hawk': case 'chinook': case 'chinookcp': {
           var chin = st !== 'hawk';
           var cabL = chin ? L : L * 0.62;
@@ -9899,6 +9954,7 @@
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
       }
+      else if (spec.craft === 'disc') { back = 0; off = 0; y5 = lift + spec.hgt * 0.68; }     // on the disc's hump
       else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
@@ -9913,7 +9969,7 @@
       if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
-      if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
+      if (spec.fly && (spec.craft === 'jet' || spec.craft === 'disc')) return;      // a jet or a disc carries the dome only
       if (spec.fly) aq = along(-spec.len * 0.06, spec.wid * 0.3);   // a rotorcraft's stands on the back of its body
       else if (legs) aq = along(spec.len * back - 0.2, -spec.wid * 0.3);   // its left shoulder
       else {
