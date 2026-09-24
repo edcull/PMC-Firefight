@@ -731,6 +731,16 @@
   #setup[data-quick] .forcebar-wrap.open .demo-only { display: flex; }
   #setup[data-quick] .forcebar-wrap.open h3.demo-only { display: block; font-family: var(--display); font-size: 15px; margin: 0 0 8px; }
   #setup[data-quick] .forcebar-wrap.open .forcebar { margin-top: 0; padding-top: 0; border-top: 0; }
+  /* against the AI (and in a demo) a force's screen fits the page: the units box takes the room left, and only the units picked scroll */
+  #setup[data-quick]:not([data-hot="3"]) > .sheet { display: flex; flex-direction: column; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > * { flex: none; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > .muster.hot-force:not(.picking) {
+    flex: 1 1 auto; min-height: 150px; display: flex; flex-direction: column;
+  }
+  #setup[data-quick] .muster.hot-force:not(.picking) > * { flex: none; }
+  #setup[data-quick] .muster.hot-force:not(.picking) > #chosen {
+    flex: 1 1 0; min-height: 34px; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start;
+  }
   /* the units to pick from, in a modal over the force: what is picked above, the list under it, Done */
   #setup .cat-add, #setup .cat-done, .cat-back { display: none; }
   #setup[data-hot="1"] .cat-add, #setup[data-hot="2"] .cat-add { display: inline-block; margin: 2px 0 4px; }
