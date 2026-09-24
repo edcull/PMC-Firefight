@@ -636,6 +636,10 @@
     var labour = rebel && docs.indexOf('H3') >= 0;
     var airCap = doc('O1') ? 1 : 0;
     var hullCap = (labour ? 4 : 3) * pl + airCap;
+    // Air Superiority's extra machine has to be an aircraft: "one aircraft more" (p. 107)
+    if (airCap && machines <= hullCap && machines - aircraft > hullCap - airCap) {
+      faults.push('Air Superiority adds an aircraft, not a vehicle — max ' + (hullCap - airCap) + ' ground vehicles.');
+    }
     if (machines > hullCap && factions.xeno) faults.push('Max ' + hullCap + ' turrets (or turret sets) and aircraft — three per Priority Level.');
     else if (machines > hullCap) faults.push('Max ' + hullCap + ' vehicles and aircraft — ' + (labour ? 'four' : 'three') + ' per Priority Level' + (airCap ? ', and one more for Air Superiority' : '') + '.');
     if (aircraft && battleTier < 2) faults.push('Aircraft may only be fielded at Battle Tier II or higher.');
@@ -1578,8 +1582,10 @@
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
     // drone units carry what the squads they stand in for carry; the support drones lob shells
-    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'small' },
-    dengineer: { p: 'smg' }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
+    // (the recon and engineer drones fire as light infantry do, a crack of single shots)
+    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
+    // the support drones loose the missiles off their shoulders
+    dengineer: { p: 'pistol' }, dsupport: { p: 'rocket', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -1986,8 +1992,9 @@
   function holdsGround(u) { return !hasOwn(u, 'No Objectives'); }
   function countsForVictory(u) { return !hasOwn(u, 'No Objectives'); }
 
+  // on the table and steady: a unit still in reserve, or riding inside, projects nothing
   function projects(u) {
-    return !!u.alive && !u.aboard && status(u) === 'ready';
+    return !!u.alive && !u.aboard && !u.reserve && u.x >= 0 && status(u) === 'ready';
   }
 
   /* ---------- hit tables ---------- */
@@ -2249,7 +2256,7 @@
     var jammed = false;
     for (var i = 0; i < state.units.length; i++) {
       var e = state.units[i];
-      if (!e.alive || e.aboard) continue;
+      if (!e.alive || e.aboard || e.reserve || e.x < 0) continue;
       if (e.side !== u.side && has(e, 'Jammers') && unitDist(e, u) <= 24) jammed = true;
       if (e.side === u.side && projects(e) && has(e, 'Counter-jamming') && unitDist(e, u) <= 6) return false;
     }
@@ -2664,7 +2671,7 @@
   function infamyPanic(state, u, log) {
     if (!state || !state.units) return;
     state.units.forEach(function (o) {
-      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
+      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
       if (unitDist(o, u) > 18) return;
       var n = d6(), was = status(o);
       addSP(o, n);
@@ -3138,8 +3145,39 @@
     return true;
   }
 
-  function assault(state, a, t) {
+  /* How a charge gets there (p. 33): "the maximum distance between them is the
+     attacker's Movement + 2"... The assaulting unit moves in the shortest and
+     simplest way possible, with its movement reduced by terrain as normal." So
+     reach is walked over the ground, round what cannot be crossed and paying for
+     what slows it, not measured through a wall. The walk stops 1" short of the
+     enemy like any move; the last step into contact is the straight gap left.
+     Flyers, jump troops and anything fighting from inside a building keep the
+     straight line. Returns a function giving, for a target, { cost, path } — or
+     null when the charge cannot reach it. */
+  function chargeReach(state, a, allowance) {
+    var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a) || drives(a);
+    var f = straight ? null : field(state, a, allowance);
+    return function (t) {
+      var gap0 = unitDist(a, t);
+      if (straight) return gap0 <= allowance + 1e-6 ? { cost: gap0, path: [{ x: a.x, y: a.y }] } : null;
+      var q = t.bld ? sectionRect(t) : null, best = null;
+      f.seen.forEach(function (n) {
+        var x = n.i * STEP, y = n.j * STEP;
+        var gap = q ? Math.max(0, rectPointDist(q, x, y) - UNIT_R) : Math.max(0, Math.hypot(t.x - x, t.y - y) - 2 * UNIT_R);
+        if (gap > 1 + STEP * 1.5) return;               // only the last inch goes straight in
+        var tot = n.c + gap;
+        if (tot <= allowance + 1e-6 && (!best || tot < best.cost)) best = { cost: tot, x: x, y: y };
+      });
+      if (!best) return null;
+      var path = best.cost - gap0 < 1e-6 ? [{ x: a.x, y: a.y }] : pathTo(state, a, allowance, best);
+      return { cost: best.cost, path: path };
+    };
+  }
+  function chargeRoute(state, a, t, allowance) { return chargeReach(state, a, allowance)(t); }
+
+  function assault(state, a, t, opts) {
     var log = [], wrecked = null;
+    opts = opts || {};
     log.push({ t: 'assault', text: a.label + ' charges ' + t.label + ' — ' + unitDist(a, t).toFixed(1) + '" to contact.' });
 
     /* Martyrdom (Path of the Prophet, p. 113): before the first round is rolled,
@@ -3173,8 +3211,35 @@
       a.sp = 0;
     }
 
-    if (t.alive && status(t) === 'ready' && t.fp !== null && unitDist(a, t) <= t.range
-      && canShoot(state, t, a, 'defensive', {})) {
+    /* Defensive fire "is resolved immediately or as soon as the charging unit
+       enters the range and LoS" (p. 33): so it is looked for all along the way
+       in, and a charge that is stopped stops where it was shot. */
+    var fireAt = null;
+    if (t.alive && status(t) === 'ready' && t.fp !== null) {
+      var route = (opts.path || [{ x: a.x, y: a.y }]).slice();
+      var x0 = a.x, y0 = a.y, walk = [];
+      for (var wi = 0; wi < route.length; wi++) {
+        var from = wi ? route[wi - 1] : { x: a.x, y: a.y }, to = route[wi];
+        var len = Math.hypot(to.x - from.x, to.y - from.y), nstep = Math.max(1, Math.ceil(len / 0.5));
+        for (var ws = wi ? 1 : 0; ws <= nstep; ws++) walk.push({ x: from.x + (to.x - from.x) * ws / nstep, y: from.y + (to.y - from.y) * ws / nstep });
+      }
+      // and the last straight run into contact
+      var end = walk[walk.length - 1], cd = t.bld ? null : Math.hypot(t.x - end.x, t.y - end.y);
+      if (cd && cd > 2 * UNIT_R) {
+        var nIn = Math.ceil((cd - 2 * UNIT_R) / 0.5);
+        for (var wk = 1; wk <= nIn; wk++) {
+          var r0 = cd - (cd - 2 * UNIT_R) * wk / nIn;
+          walk.push({ x: t.x - (t.x - end.x) / cd * r0, y: t.y - (t.y - end.y) / cd * r0 });
+        }
+      }
+      for (var wp = 0; wp < walk.length && !fireAt; wp++) {
+        if (!a.bld) { a.x = walk[wp].x; a.y = walk[wp].y; }
+        if (unitDist(a, t) <= t.range && canShoot(state, t, a, 'defensive', {})) fireAt = walk[wp];
+      }
+      a.x = x0; a.y = y0;
+    }
+    if (fireAt) {
+      if (!a.bld) { a.x = fireAt.x; a.y = fireAt.y; }
       var df = shoot(state, t, a, 'defensive', {});
       df.log.forEach(function (l) { log.push(l); });
       if (!a.alive) return { log: log, ok: false, wreck: wrecked };
@@ -4108,7 +4173,7 @@
     rally: rally, fallBack: fallBack, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
-    canAssault: canAssault, canEmbark: canEmbark, embark: embark, disembark: disembark,
+    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
     steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,

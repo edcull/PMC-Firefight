@@ -564,6 +564,13 @@
       if (u.side !== 'A') return null;
       return { x: state.sc.evac.x, y: state.sc.evac.y, limit: u.vip ? 6 : 12 };
     },
+    /* "If the VIP unit is destroyed, the game automatically ends and the
+       player is defeated" (p. 151) — then and there, not at the End phase. */
+    sudden: function (state) {
+      var vip = state.units.filter(function (v) { return v.vip; })[0];
+      if (!vip || !vip.alive) return { winner: 'B', text: 'The VIP is dead — the mission has failed.' };
+      return null;
+    },
     check: function (state) {
       var vip = state.units.filter(function (v) { return v.vip; })[0];
       if (!vip || !vip.alive) return { winner: 'B', text: 'The VIP is dead — the mission has failed.' };

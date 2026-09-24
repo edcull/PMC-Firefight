@@ -75,5 +75,19 @@ ok('...and so does the Light VTOL drone', vtd.drone === true);
 var tpd = C.tpFor({ brokenEver: true, startSize: 6, endSize: 2 }, { entry: dsq, company: { doctrines: [] } });
 ok('...and a drone squad takes no Trauma Points', tpd.total === 0, tpd.lines[0].text);
 
+console.log('\nPROMOTION PATHS AND AIR SUPERIORITY (pp. 87, 107, 110)');
+var tco = { tier: 3, doctrines: [] };
+var recT = C.promotionTargets(C.newEntry('recruits'), tco).map(function (q) { return q.key; });
+ok('Recruits may promote within Basic troops', recT.indexOf('irregulars') >= 0 || recT.indexOf('enforcers') >= 0, recT.join(', '));
+ok('...but never into Penal troops', recT.indexOf('penal') < 0);
+var fwKey = R.listFor('rebel').filter(function (q) { return q.group === 'Freedom Warriors'; })[0].key;
+var fwT = C.promotionTargets(C.newEntry(fwKey), tco).map(function (q) { return R.profile(q.key).group; });
+ok('Freedom Warriors may promote into Deserters and POWs', fwT.indexOf('Deserters and POWs') >= 0, fwKey);
+var veh = ['lpv', 'hpv', 'lhunter'], air = ['adaptedcraft'];
+function hullFault(r) { return r.faults.some(function (f) { return /Air Superiority adds an aircraft|Max \d+ vehicles/.test(f); }); }
+var four = ['lpv', 'hpv', 'lhunter', 'unarmoured'];
+ok('Air Superiority: a fourth ground vehicle is refused', hullFault(R.checkArmy(four, 3, 1, ['O1'])));
+ok('...a fourth machine that is an aircraft is not', !hullFault(R.checkArmy(veh.concat(air), 3, 1, ['O1'])));
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

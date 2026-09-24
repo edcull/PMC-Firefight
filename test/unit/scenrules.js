@@ -104,7 +104,8 @@ ok('the first location gives it up on a 5+', Math.abs(firstHit / n - 1 / 3) < 0.
 ok('the second on a 4+', Math.abs(secondHit / n - (2 / 3) * 0.5) < 0.03, true,
   Math.round(100 * secondHit / n) + '% of all searches, which is half of the two thirds left');
 ok('the third is where it was all along', everFound, n, 'found in every one of ' + n + ' searches');
-ok('...after 2.0 locations on average', (tries / n).toFixed(1) > 1.7 && (tries / n).toFixed(1) < 2.1, true,
+// two blanks give the third away with no search (p. 52): 1 x 1/3 + 2 x 2/3 = 5/3 checks
+ok('...after 1.7 checks on average', Math.abs(tries / n - 5 / 3) < 0.05, true,
   (tries / n).toFixed(2) + ' checked');
 var st2 = world([]);
 S.begin(st2, 'find', {});
@@ -448,7 +449,8 @@ ok('...and finding it closes the other two down', (function () {
   var u = st.units.filter(function (x) { return x.side === 'A'; })[0];
   u.reserve = false;
   var found = false, guard = 0;
-  while (!found && guard++ < 3) {
+  // two blanks give the third away without a search (p. 52)
+  while (!st.sc.found && guard++ < 3) {
     var sp = st.sc.search.filter(function (s) { return !s.checked; })[0];
     u.x = sp.x; u.y = sp.y;
     found = S.checkArea(st, u, sp).found;

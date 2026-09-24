@@ -87,15 +87,16 @@ ok('12 EXP and 8 kUC for a Tier IV one',
 var rec = entryFor('recruits');
 var rg = {};
 C.promotionTargets(rec).forEach(function (q) { rg[q.group] = 1; });
-ok('Recruits reach rifle, heavy, light support and mortars',
-  Object.keys(rg).sort().join(','), 'Heavy infantry,Light support,Remote mortars,Rifle infantry');
+// on top of the ordinary step within their own group, Basic troops (p. 87)
+ok('Recruits reach Basic, rifle, heavy, light support and mortars',
+  Object.keys(rg).sort().join(','), 'Basic troops,Heavy infantry,Light support,Remote mortars,Rifle infantry');
 var enf = {};
 C.promotionTargets(entryFor('enforcers')).forEach(function (q) { enf[q.group] = 1; });
-ok('Enforcers only reach Heavy infantry', Object.keys(enf).join(','), 'Heavy infantry');
+ok('Enforcers reach Basic troops and Heavy infantry', Object.keys(enf).sort().join(','), 'Basic troops,Heavy infantry');
 var irr = {};
 C.promotionTargets(entryFor('irregulars')).forEach(function (q) { irr[q.group] = 1; });
-ok('Irregulars reach assault, light support and light infantry',
-  Object.keys(irr).sort().join(','), 'Assault troops,Light infantry,Light support');
+ok('Irregulars reach Basic, assault, light support and light infantry',
+  Object.keys(irr).sort().join(','), 'Assault troops,Basic troops,Light infantry,Light support');
 ok('Unclassified troops never promote', C.promotionTargets(entryFor('chem')).length, 0);
 ok('vehicles never promote', C.promotionTargets(entryFor('lcv')).length, 0);
 ok('Command Units never promote', C.promotionTargets(entryFor('cmd2')).length, 0);

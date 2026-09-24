@@ -144,7 +144,7 @@
   function mySide() {
     if (!state || watching) return null;
     if (ui.insertion) {
-      var s = ui.insertion.unit ? ui.insertion.unit.side : 'A';
+      var s = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
       return seats.indexOf(s) >= 0 ? s : null;
     }
     var want = state.phase === 'deploy' ? Q.placingSide()
@@ -1007,6 +1007,12 @@
        almost anywhere and can be held back, and a scenario reinforcement, which
        is coming on whether you like it or not but still lets you choose where
        along its landing zone or table edge. */
+    if (ins.kind === 'shove') {
+      return '<div class="card"><h2>Enemy insertion</h2>' +
+        '<p class="sub"><b>' + esc(u.name) + '</b> rolled a ' + ins.die + ' coming in: you may move its arrival point up to <b>' +
+        ins.drift + '″</b> in any direction. Tap the shaded ground — or its own point to leave it.</p>' +
+        '<p class="hint">Battlefield Insertion, p. 56.</p></div>';
+    }
     if (ins.kind === 'arrive' && u.sfOffer) {
       return '<div class="card"><h2>Semper Fidelis</h2>' +
         '<p class="sub"><b>' + esc(sfName(u)) + '</b> may come on now without waiting for its roll. Tap the shaded ground ' +
@@ -2496,7 +2502,7 @@
          to be legible from the header, because the prompt itself sits in a panel
          that a phone can have scrolled past or hidden behind another tab. */
       act.textContent = ui.insertion.kind === 'arrive'
-        ? 'Place your reinforcements' : 'Pick a landing zone';
+        ? 'Place your reinforcements' : ui.insertion.kind === 'shove' ? 'Shove the enemy drop' : 'Pick a landing zone';
       act.className = 'pill pill-wait';
     } else if (state.solo) {
       if (state.activeSide === 'B') { act.textContent = 'OpFor phase'; act.className = 'pill pill-B'; }

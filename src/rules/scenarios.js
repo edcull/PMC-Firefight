@@ -361,7 +361,7 @@
         state.sc.hold = { A: 0, B: 0 };
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
-      hint: 'Three staked locations. Bring a unit within 4" and use "Check the area!" — 5+ at the first, 4+ at the second, automatic at the third.',
+      hint: 'Three staked locations. Bring a unit within 4" and use "Check the area!" — 5+ at the first, 4+ at the second; miss both and the third gives itself away.',
       /* From turn 3, every second turn, a number equal to the Priority Level comes
          on (p. 52) — which ones is the player's choice. */
       reservePick: function (state, side) {
@@ -453,6 +453,8 @@
            nominated by the defender)" (p. 53) — not from a side of their own. */
         state.sc.entry = {};
         state.sc.entry[def] = edgeBands(2);
+        state.sc.randomEdge = {};
+        state.sc.randomEdge[def] = true;
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       /* "The defender deploys up to 1/3 of his forces on the table at least 6" from
@@ -809,7 +811,7 @@
   function noInsertion(state) { return !!state.scen.noInsertion; }
 
   /* "Check the area!" (p. 52): a unit within 4" of an unchecked location rolls a
-     D6 — the first needs a 5+, the second a 4+, the third finds it outright. */
+     D6 — the first needs a 5+, the second a 4+; miss both and the third is it. */
   function searchSpots(state, u) {
     if (!state.sc || !state.sc.search || state.sc.found) return [];
     return state.sc.search.filter(function (s) {
@@ -834,7 +836,20 @@
         if (s !== spot && s.piece) { s.piece.checked = true; s.piece.cold = true; }
       });
     }
-    return { roll: roll, need: need, found: found, order: order + 1 };
+    /* "If the objective is not at the first two locations, it is at the third
+       one and no special action is needed to find it" (p. 52). */
+    var revealed = null;
+    if (!found && order + 1 === 2) {
+      revealed = state.sc.search.filter(function (s) { return !s.checked; })[0] || null;
+      if (revealed) {
+        revealed.checked = true;
+        state.sc.found = revealed;
+        if (revealed.piece) { revealed.piece.checked = true; revealed.piece.found = true; }
+        state.objectives = [{ x: revealed.x, y: revealed.y, owner: null }];
+        state.sc.search.forEach(function (s) { if (s !== revealed && s.piece) s.piece.cold = true; });
+      }
+    }
+    return { roll: roll, need: need, found: found, order: order + 1, revealed: revealed };
   }
 
   root.PMCScen = {

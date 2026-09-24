@@ -375,7 +375,7 @@
        but First Among Equals, ground vehicles and flying units — everybody else
        promotes inside their own. */
     'Freedom Warriors': ['Freedom Warriors', 'Holy Warriors', 'Mounted Warriors',
-      'Rebel support troops', 'Rebel artillery', 'Chosen Warriors', 'Miners'],
+      'Rebel support troops', 'Rebel artillery', 'Chosen Warriors', 'Miners', 'Deserters and POWs'],
     'Holy Warriors': ['Holy Warriors'],
     'Mounted Warriors': ['Mounted Warriors'],
     'Rebel support troops': ['Rebel support troops'],
@@ -385,11 +385,15 @@
     'Deserters and POWs': ['Deserters and POWs'],
     'First Among Equals': []   // they never earn EXP, so they never promote
   };
-  // the individual Basic troops each have their own narrower path
+  /* The individual Basic troops each have their own paths out (p. 87), on top
+     of the ordinary one: "to a unit from the same group ... of the same Tier or
+     1 Tier higher" — so any of them may also become other Basic troops. Only
+     penal troops are held to Basic troops alone, and nobody volunteers to
+     become one. */
   var BASIC_PATHS = {
-    recruits: ['Rifle infantry', 'Heavy infantry', 'Light support', 'Remote mortars'],
-    enforcers: ['Heavy infantry'],
-    irregulars: ['Assault troops', 'Light support', 'Light infantry'],
+    recruits: ['Basic troops', 'Rifle infantry', 'Heavy infantry', 'Light support', 'Remote mortars'],
+    enforcers: ['Basic troops', 'Heavy infantry'],
+    irregulars: ['Basic troops', 'Assault troops', 'Light support', 'Light infantry'],
     penal: ['Basic troops']
   };
 
@@ -497,6 +501,7 @@
     return R.listFor(p.faction).filter(function (q) {
       if (q.cls !== 'infantry' || isLeaderP(q)) return false;
       if (q.key === entry.key) return false;
+      if (q.key === 'penal') return false;                      // a sentence, not a promotion
       if (q.tier !== p.tier && q.tier !== p.tier + 1) return false;
       if (co && q.tier > co.tier + 1) return false;
       return groups.indexOf(q.group) >= 0;
@@ -2390,7 +2395,8 @@
         }
         return;
       }
-      var all = promotionTargets(e, co);
+      // a sideways step inside its own group (recruits to irregulars) gains a simulated company nothing
+      var all = promotionTargets(e, co).filter(function (q) { return q.tier > p.tier || q.group !== p.group; });
       var affordable = all.filter(function (q) {
         var c = promotionCost(e, q.key);
         return e.exp >= c.exp && co.kUC >= c.kUC;

@@ -220,5 +220,30 @@ ok('more Drone units than others is a fault', bad.faults.some(function (f) { ret
 var fine = R.checkArmy(['dcombat', 'recruits'], 3, 1);
 ok('...an even split is not', !fine.faults.some(function (f) { return /Drone units/.test(f); }));
 
+/* ------------------------------------------------------ the charge */
+console.log('\nTHE CHARGE (p. 33)');
+var ch = unit('recruits', { x: 10, y: 10 }), foe = unit('recruits', { side: 'B', x: 10, y: 17.5 });
+var open = table([ch, foe]);
+var rt = R.chargeRoute(open, ch, foe, ch.move + 2);
+ok('in the open, a charge reaches a unit Movement +2" away', !!rt, rt && rt.cost.toFixed(1) + '"');
+var walled = table([unit('recruits', { x: 10, y: 10 }), unit('recruits', { side: 'B', x: 10, y: 17.5 })],
+  [{ kind: 'rocks', x: 2, y: 13, w: 16, h: 2 }]);
+ok('...but not round a rock face in the way', !R.chargeRoute(walled, walled.units[0], walled.units[1], walled.units[0].move + 2));
+var wood = table([unit('recruits', { x: 10, y: 10 }), unit('recruits', { side: 'B', x: 10, y: 17.5 })],
+  [{ kind: 'woods', x: 0, y: 12, w: 48, h: 3 }]);
+var rw = R.chargeRoute(wood, wood.units[0], wood.units[1], wood.units[0].move + 2);
+ok('...and terrain it crosses costs it as a move would', !rw || rw.cost > rt.cost + 0.5, rw ? rw.cost.toFixed(1) + '"' : 'out of reach');
+// defensive fire from the first point in range, not from where the charge began
+var far = unit('recruits', { x: 10, y: 10, move: 30 }), gun = unit('recruits', { side: 'B', x: 10, y: 44, range: 12 });
+var dfs = 0;
+for (var dq = 0; dq < 40; dq++) {
+  var fa = unit('recruits', { x: 10, y: 10, move: 30 }), gb = unit('recruits', { side: 'B', x: 10, y: 44, range: 12 });
+  var tb = table([fa, gb]);
+  var route = R.chargeRoute(tb, fa, gb, 32);
+  var res = R.assault(tb, fa, gb, { path: route && route.path });
+  if (res.log.some(function (l) { return l.t === 'shoot' || /defensive/i.test(l.text || ''); })) dfs++;
+}
+ok('...a unit charged from beyond its range still gets its defensive fire in', dfs >= 30, dfs + ' of 40');
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

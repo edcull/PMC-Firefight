@@ -764,6 +764,10 @@ html { scroll-behavior: smooth; }
     var labour = rebel && docs.indexOf('H3') >= 0;
     var airCap = doc('O1') ? 1 : 0;
     var hullCap = (labour ? 4 : 3) * pl + airCap;
+    // Air Superiority's extra machine has to be an aircraft: "one aircraft more" (p. 107)
+    if (airCap && machines <= hullCap && machines - aircraft > hullCap - airCap) {
+      faults.push('Air Superiority adds an aircraft, not a vehicle — max ' + (hullCap - airCap) + ' ground vehicles.');
+    }
     if (machines > hullCap && factions.xeno) faults.push('Max ' + hullCap + ' turrets (or turret sets) and aircraft — three per Priority Level.');
     else if (machines > hullCap) faults.push('Max ' + hullCap + ' vehicles and aircraft — ' + (labour ? 'four' : 'three') + ' per Priority Level' + (airCap ? ', and one more for Air Superiority' : '') + '.');
     if (aircraft && battleTier < 2) faults.push('Aircraft may only be fielded at Battle Tier II or higher.');
@@ -1706,8 +1710,10 @@ html { scroll-behavior: smooth; }
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
     // drone units carry what the squads they stand in for carry; the support drones lob shells
-    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'small' },
-    dengineer: { p: 'smg' }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
+    // (the recon and engineer drones fire as light infantry do, a crack of single shots)
+    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
+    // the support drones loose the missiles off their shoulders
+    dengineer: { p: 'pistol' }, dsupport: { p: 'rocket', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -2114,8 +2120,9 @@ html { scroll-behavior: smooth; }
   function holdsGround(u) { return !hasOwn(u, 'No Objectives'); }
   function countsForVictory(u) { return !hasOwn(u, 'No Objectives'); }
 
+  // on the table and steady: a unit still in reserve, or riding inside, projects nothing
   function projects(u) {
-    return !!u.alive && !u.aboard && status(u) === 'ready';
+    return !!u.alive && !u.aboard && !u.reserve && u.x >= 0 && status(u) === 'ready';
   }
 
   /* ---------- hit tables ---------- */
@@ -2377,7 +2384,7 @@ html { scroll-behavior: smooth; }
     var jammed = false;
     for (var i = 0; i < state.units.length; i++) {
       var e = state.units[i];
-      if (!e.alive || e.aboard) continue;
+      if (!e.alive || e.aboard || e.reserve || e.x < 0) continue;
       if (e.side !== u.side && has(e, 'Jammers') && unitDist(e, u) <= 24) jammed = true;
       if (e.side === u.side && projects(e) && has(e, 'Counter-jamming') && unitDist(e, u) <= 6) return false;
     }
@@ -2792,7 +2799,7 @@ html { scroll-behavior: smooth; }
   function infamyPanic(state, u, log) {
     if (!state || !state.units) return;
     state.units.forEach(function (o) {
-      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
+      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
       if (unitDist(o, u) > 18) return;
       var n = d6(), was = status(o);
       addSP(o, n);
@@ -3266,8 +3273,39 @@ html { scroll-behavior: smooth; }
     return true;
   }
 
-  function assault(state, a, t) {
+  /* How a charge gets there (p. 33): "the maximum distance between them is the
+     attacker's Movement + 2"... The assaulting unit moves in the shortest and
+     simplest way possible, with its movement reduced by terrain as normal." So
+     reach is walked over the ground, round what cannot be crossed and paying for
+     what slows it, not measured through a wall. The walk stops 1" short of the
+     enemy like any move; the last step into contact is the straight gap left.
+     Flyers, jump troops and anything fighting from inside a building keep the
+     straight line. Returns a function giving, for a target, { cost, path } — or
+     null when the charge cannot reach it. */
+  function chargeReach(state, a, allowance) {
+    var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a) || drives(a);
+    var f = straight ? null : field(state, a, allowance);
+    return function (t) {
+      var gap0 = unitDist(a, t);
+      if (straight) return gap0 <= allowance + 1e-6 ? { cost: gap0, path: [{ x: a.x, y: a.y }] } : null;
+      var q = t.bld ? sectionRect(t) : null, best = null;
+      f.seen.forEach(function (n) {
+        var x = n.i * STEP, y = n.j * STEP;
+        var gap = q ? Math.max(0, rectPointDist(q, x, y) - UNIT_R) : Math.max(0, Math.hypot(t.x - x, t.y - y) - 2 * UNIT_R);
+        if (gap > 1 + STEP * 1.5) return;               // only the last inch goes straight in
+        var tot = n.c + gap;
+        if (tot <= allowance + 1e-6 && (!best || tot < best.cost)) best = { cost: tot, x: x, y: y };
+      });
+      if (!best) return null;
+      var path = best.cost - gap0 < 1e-6 ? [{ x: a.x, y: a.y }] : pathTo(state, a, allowance, best);
+      return { cost: best.cost, path: path };
+    };
+  }
+  function chargeRoute(state, a, t, allowance) { return chargeReach(state, a, allowance)(t); }
+
+  function assault(state, a, t, opts) {
     var log = [], wrecked = null;
+    opts = opts || {};
     log.push({ t: 'assault', text: a.label + ' charges ' + t.label + ' — ' + unitDist(a, t).toFixed(1) + '" to contact.' });
 
     /* Martyrdom (Path of the Prophet, p. 113): before the first round is rolled,
@@ -3301,8 +3339,35 @@ html { scroll-behavior: smooth; }
       a.sp = 0;
     }
 
-    if (t.alive && status(t) === 'ready' && t.fp !== null && unitDist(a, t) <= t.range
-      && canShoot(state, t, a, 'defensive', {})) {
+    /* Defensive fire "is resolved immediately or as soon as the charging unit
+       enters the range and LoS" (p. 33): so it is looked for all along the way
+       in, and a charge that is stopped stops where it was shot. */
+    var fireAt = null;
+    if (t.alive && status(t) === 'ready' && t.fp !== null) {
+      var route = (opts.path || [{ x: a.x, y: a.y }]).slice();
+      var x0 = a.x, y0 = a.y, walk = [];
+      for (var wi = 0; wi < route.length; wi++) {
+        var from = wi ? route[wi - 1] : { x: a.x, y: a.y }, to = route[wi];
+        var len = Math.hypot(to.x - from.x, to.y - from.y), nstep = Math.max(1, Math.ceil(len / 0.5));
+        for (var ws = wi ? 1 : 0; ws <= nstep; ws++) walk.push({ x: from.x + (to.x - from.x) * ws / nstep, y: from.y + (to.y - from.y) * ws / nstep });
+      }
+      // and the last straight run into contact
+      var end = walk[walk.length - 1], cd = t.bld ? null : Math.hypot(t.x - end.x, t.y - end.y);
+      if (cd && cd > 2 * UNIT_R) {
+        var nIn = Math.ceil((cd - 2 * UNIT_R) / 0.5);
+        for (var wk = 1; wk <= nIn; wk++) {
+          var r0 = cd - (cd - 2 * UNIT_R) * wk / nIn;
+          walk.push({ x: t.x - (t.x - end.x) / cd * r0, y: t.y - (t.y - end.y) / cd * r0 });
+        }
+      }
+      for (var wp = 0; wp < walk.length && !fireAt; wp++) {
+        if (!a.bld) { a.x = walk[wp].x; a.y = walk[wp].y; }
+        if (unitDist(a, t) <= t.range && canShoot(state, t, a, 'defensive', {})) fireAt = walk[wp];
+      }
+      a.x = x0; a.y = y0;
+    }
+    if (fireAt) {
+      if (!a.bld) { a.x = fireAt.x; a.y = fireAt.y; }
       var df = shoot(state, t, a, 'defensive', {});
       df.log.forEach(function (l) { log.push(l); });
       if (!a.alive) return { log: log, ok: false, wreck: wrecked };
@@ -4236,7 +4301,7 @@ html { scroll-behavior: smooth; }
     rally: rally, fallBack: fallBack, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
-    canAssault: canAssault, canEmbark: canEmbark, embark: embark, disembark: disembark,
+    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
     steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
@@ -6786,13 +6851,13 @@ html { scroll-behavior: smooth; }
   var KIT = {
     drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
     drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
-    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
-    drshotgun: { helm: 'bot', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
-    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true },
-    drscoutsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
-    drbreacher: { helm: 'bot', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
-    drsapper: { helm: 'bot', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
-    drheavy: { helm: 'bot', gun: 'heavy', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
+    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
+    drshotgun: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
+    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, pouches: '#5d6e3a' },
+    drscoutsmg: { helm: 'bot', gun: 'rifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, pouches: '#5d6e3a' },
+    drbreacher: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drheavy: { helm: 'bot', gun: 'heavy', shoulderGL: true, shoulderMsl: true, pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
     drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
     drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
@@ -7466,8 +7531,11 @@ html { scroll-behavior: smooth; }
     } else if (kit.robot) {
       /* A drone's chassis: a chest housing over a narrow spine, panel seams,
          a cooling grille and a single status light. No webbing, no pouches. */
-      P(tx, -40 + drop, tw, 13, pal.mid);              // the chest housing
-      P(tx, -40 + drop, 4, 13, pal.light);
+      // the housing painted to the squad it stands in for: grey plate for the
+      // assault drones, a green shell for the recon drones
+      var hsg = kit.vest ? ['#383c42', '#51575f'] : kit.pouches ? ['#4c5c30', '#6a7a44'] : [pal.mid, pal.light];
+      P(tx, -40 + drop, tw, 13, hsg[0]);               // the chest housing
+      P(tx, -40 + drop, 4, 13, hsg[1]);
       P(tx, -27 + drop, tw, 1, 'rgba(0,0,0,.45)');     // its lower edge
       P(-3, -26 + drop, 6, 7, RB.joint);               // the exposed spine at the waist
       P(-3, -25 + drop, 6, 0.8, pal.light); P(-3, -23 + drop, 6, 0.8, pal.light); P(-3, -21 + drop, 6, 0.8, pal.light);
@@ -7590,7 +7658,7 @@ html { scroll-behavior: smooth; }
         P(tx + 1.8 + bd * (tw - 4) / 6, -40.4 + drop + bd * 2.6, 1.2, 1, '#b8923a');
       }
     }
-    if (kit.pouches && !kit.armoured) {                 // light infantry: a green smock and chest rig
+    if (kit.pouches && !kit.armoured && !kit.robot) {                 // light infantry: a green smock and chest rig
       var GS = '#4c5c30', GSL = '#6a7a44', GSD = '#37431f';
       P(tx + 1, -41 + drop, tw - 2, 17, GS);            // the smock over the torso
       P(tx + 1, -41 + drop, 4, 17, GSL);                // its lit side
@@ -7727,11 +7795,11 @@ html { scroll-behavior: smooth; }
     P(tx + tw - 3, -41 + drop, 6 + b, 3, pal.helm);
     P(tx - 1.5 - b, -41 + drop, 4 + b, 1, kit.blackPads ? '#4a4e4a' : pal.light);  // the pad's rounded top
     if (kit.forcePad) {
-      // drones: the right shoulder plate alone in the company's colour
+      // drones: the left shoulder plate alone in the company's colour
       var fpc = vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.25);
-      P(tx + tw - 4, -42 + drop, 7 + b, 4.5, fpc);
-      P(tx + tw - 4, -42 + drop, 7 + b, 1, 'rgba(255,255,255,.35)');
-      P(tx + tw - 4, -38.3 + drop, 7 + b, 0.8, 'rgba(0,0,0,.35)');
+      P(tx - 3 - b, -42 + drop, 7 + b, 4.5, fpc);
+      P(tx - 3 - b, -42 + drop, 7 + b, 1, 'rgba(255,255,255,.35)');
+      P(tx - 3 - b, -38.3 + drop, 7 + b, 0.8, 'rgba(0,0,0,.35)');
     }
     if (kit.forceShoulders) {
       // miners: the shoulders of the work suit painted in the company's colour
@@ -8170,6 +8238,10 @@ html { scroll-behavior: smooth; }
           P(bx + 17, gy + 2.5, 1.5, 5, '#4a5260');
           P(bx + 2, gy - 2, 4, 2, '#5fd0f0');           // a sensor lens on the lid
           P(bx + 12, gy + 12, 4, 5, GUN.dk);            // its mount on the backplate
+          if (kit.shoulderMsl) {                        // a drone's missile pod: two tubes, warheads showing
+            P(bx + 14, gy + 1.5, 5, 4, GUN.dk); P(bx + 14, gy + 6.5, 5, 4, GUN.dk);
+            P(bx + 17.5, gy + 2.5, 2, 2, '#b8b0a0'); P(bx + 17.5, gy + 7.5, 2, 2, '#b8b0a0');
+          }
         }
         P(-3, wy, 23, 4, GUN.dk);                      // heavy gun
         P(20, wy + 1, 5, 3, GUN.lt);
@@ -10534,8 +10606,8 @@ html { scroll-behavior: smooth; }
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
-    // the Light VTOL drone: a flying disc with two swept winglets and a gun under its lip
-    vtoldrone: { len: 1.45, wid: 1.45, hgt: 9, fly: 2.8, craft: 'disc', gun: 0.6 },
+    // the Light VTOL drone: a small flying disc with side pods and a long gun on top
+    vtoldrone: { len: 0.95, wid: 0.95, hgt: 6, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
@@ -13291,9 +13363,9 @@ html { scroll-behavior: smooth; }
           break;
         }
         case 'disc': {
-          /* A saucer: a flat disc with a low hump on top where the sensor dome
-             sits, a ring of lift vents lit underneath, two small swept winglets
-             off the back and a gun slung under the front lip. */
+          /* A small gun drone: a thin flat disc riding on its stand, a sensor
+             pod hung off each side on a short arm, lights lit in their faces,
+             and one long gun laid along the top. */
           var R0 = L * 0.5, ring = function (r) {
             var out = [];
             for (var a = 0; a < 16; a++) out.push([Math.cos(a / 16 * Math.PI * 2) * r, Math.sin(a / 16 * Math.PI * 2) * r]);
@@ -13301,25 +13373,31 @@ html { scroll-behavior: smooth; }
           };
           if (!dead) {
             var ug = S3(AF(0, 0), z - 1);
-            sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
+            sEllipse(ug[0], ug[1], R0 * K * 0.6, R0 * K * 0.3, 'rgba(110,190,255,.14)');
           }
           [-1, 1].forEach(function (sd) {
-            part(-R0 * 0.55, sd * R0 * 1.05, function () {
-              plate(AF, [[-R0 * 0.2, sd * R0 * 0.82], [-R0 * 0.85, sd * R0 * 1.32], [-R0 * 1.05, sd * R0 * 1.32], [-R0 * 0.75, sd * R0 * 0.75]], z + H * 0.28, 2);
+            part(0, sd * R0 * 1.1, function () {
+              strut(AF, 0, sd * R0 * 0.7, 0, sd * R0 * 1.02, z + H * 0.1, 1.6);
+              var pq0 = sd * R0 * 0.98, pq1 = sd * R0 * 1.32;
+              shape(AF, [[R0 * 0.28, pq0], [R0 * 0.28, pq1], [-R0 * 0.22, pq1], [-R0 * 0.22, pq0]], z - H * 0.3, Math.round(H * 0.55), TB);
+              if (!dead) [0.25, 0.75].forEach(function (f) {
+                var lp = S3(AF(R0 * 0.29, pq0 + (pq1 - pq0) * f), z - H * 0.3 + H * 0.3);
+                sEllipse(lp[0], lp[1], 0.9, 0.9, '#6ff0ff');
+              });
             });
           });
           part(0, 0, function () {
-            noseGun(R0 * 0.78, 0, z + H * 0.1, 0.34, 'mg');
-            shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
-            shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
-            shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
+            shape(AF, ring(R0 * 0.82), z, Math.round(H * 0.2), TB, null, ring(R0));                  // the underside, flaring out
+            shape(AF, ring(R0), z + Math.round(H * 0.2), Math.round(H * 0.12), TB, null, ring(R0 * 0.94)); // the thin top face
             if (!dead) {
-              // running lights round the rim
-              for (var li = 0; li < 16; li += 2) {
-                var la = li / 16 * Math.PI * 2, lp = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
-                sEllipse(lp[0], lp[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
+              for (var li = 0; li < 16; li += 4) {
+                var la = li / 16 * Math.PI * 2 + Math.PI / 8, lp2 = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.22));
+                sEllipse(lp2[0], lp2[1], 0.8, 0.6, 'rgba(150,215,255,.9)');
               }
             }
+            // the gun: a long barrel on a low mount, laid along the top to one side
+            shape(AF, [[R0 * 0.05, -R0 * 0.52], [R0 * 0.05, -R0 * 0.3], [-R0 * 0.35, -R0 * 0.3], [-R0 * 0.35, -R0 * 0.52]], z + Math.round(H * 0.32), 2, TB);
+            noseGun(-R0 * 0.1, -R0 * 0.41, z + Math.round(H * 0.32) + 3, 0.62, 'mg');
           }, true);
           break;
         }
@@ -14259,6 +14337,7 @@ html { scroll-behavior: smooth; }
         var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
       }
+      if (spec.craft === 'disc') return along(-spec.len * 0.22, spec.wid * 0.22);
       if (spec.fly) return along(spec.len * 0.05, 0);
       if (legs) return along(-spec.len * 0.12, spec.wid * 0.3);
       var carS = spec.style && spec.style.body === 'car';
@@ -14289,11 +14368,11 @@ html { scroll-behavior: smooth; }
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
       }
-      else if (spec.craft === 'disc') { back = 0; off = 0; y5 = lift + spec.hgt * 0.68; }     // on the disc's hump
+      else if (spec.craft === 'disc') { back = -0.22; off = spec.wid * 0.22; y5 = lift + spec.hgt * 0.36; }   // on the top face, behind the gun
       else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
-      var r = Math.max(3, K * 0.16), cy = dp.y - y5;
+      var r = Math.max(3, K * 0.16) * (spec.craft === 'disc' ? 0.6 : 1), cy = dp.y - y5;
       if (only !== 'aerial') {
       ellipse(g, dp.x, cy + r * 0.15, r * 1.25, r * 0.6, '#14171c');               // the collar it sits in
       ellipse(g, dp.x, cy - r * 0.2, r, r * 0.85, '#aeb8c2');                      // the dome
