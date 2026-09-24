@@ -751,7 +751,11 @@
   #setup[data-quick] .demo-btns .ico svg { width: 20px; height: 20px; }
   /* the add button sits in the row of icons; the army type needs no label over it */
   #setup[data-quick] .cat-add { display: none !important; }
-  #setup[data-quick] label[for="sel-faction"] { display: none; }
+  #setup .army-line { display: none; }
+  #setup[data-quick]:not([data-hot="3"]) .army-line { display: flex; margin-bottom: 14px; }
+  #setup[data-quick] #faction-field, #setup[data-quick] #tactic-field { display: none !important; }
+  #army-tactics h4 { font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 14px 0 7px; }
+  #army-tactics .docpick { margin-bottom: 0; }
   #setup[data-quick] .forcebar-wrap { display: none; }
   #setup[data-quick] .forcebar-wrap.open {
     display: grid; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; background: rgba(8, 11, 16, .78);
@@ -1647,7 +1651,19 @@
         </div>
       </div>
     </div>
-    <div class="field hot-force">
+    <!-- against the AI (and in a demo) the army, and a rebel force's tactic, are picked in a modal from this line -->
+    <button type="button" class="archline army-line hot-force" id="btn-army"><span id="army-line-text"></span><em>change</em></button>
+    <div class="cmodal" id="army-modal" hidden>
+      <div class="cmodal-box" role="dialog" aria-modal="true" aria-label="Army">
+        <h3>Army</h3>
+        <div class="cmodal-scroll">
+          <div class="docpick" id="army-pick"></div>
+          <div id="army-tactics"></div>
+        </div>
+        <div class="askrow"><button type="button" class="start" id="btn-army-done">Done</button></div>
+      </div>
+    </div>
+    <div class="field hot-force" id="faction-field">
       <label for="sel-faction">Your force</label>
       <select id="sel-faction">
         <option value="pmc" selected>PMC — a private military company under contract</option>

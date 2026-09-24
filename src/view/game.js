@@ -4696,6 +4696,7 @@
       : muster.solo
       ? (el('sel-solo-mode').value === 'coop' ? 'Player ' + (muster.cur + 1) + '\u2019s commando' : 'Your commando')
       : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';
+    armyLine();
     var tn = el('tactic-note');
     if (tn) {
       var td = tactic ? R.tacticById(tactic) : null;
@@ -5275,6 +5276,46 @@
     if (cw) cw.classList.toggle('open', !!on);
     if (b) b.setAttribute('aria-expanded', on ? 'true' : 'false');
   }
+  /* The army, and a rebel force's tactic, picked in a modal: a card for each
+     kind of force, and for rebels a card for each tactic with its rule in full.
+     A pick goes through the selectors, so it rolls and checks as they do. */
+  function armyText(v) {
+    var o = el('sel-faction') && Array.prototype.filter.call(el('sel-faction').options, function (x) { return x.value === v; })[0];
+    var t = o ? o.textContent : v, cut = t.indexOf(' \u2014 ');
+    return cut < 0 ? { name: t, what: '' } : { name: t.slice(0, cut), what: t.slice(cut + 3) };
+  }
+  function armyLine() {
+    var tx = el('army-line-text');
+    if (!tx) return;
+    var f = musterFaction(), a = armyText(f), td = f === 'rebel' && musterTactic() ? R.tacticById(musterTactic()) : null;
+    tx.textContent = a.name + ' \u2014 ' + (td ? td.name : a.what);
+  }
+  function armyModal(on) {
+    var m = el('army-modal');
+    if (!m) return;
+    m.hidden = !on;
+    if (on) drawArmyModal();
+  }
+  function drawArmyModal() {
+    var f = musterFaction(), tac = musterTactic() || '';
+    el('army-pick').innerHTML = HOT_FACTIONS.map(function (v) {
+      var a = armyText(v);
+      return '<button type="button" class="doc' + (v === f ? ' on' : '') + '" data-army-pick="' + v + '"><b>' + escHtml(a.name) + '</b>' +
+        '<span>' + escHtml(a.what) + '</span></button>';
+    }).join('');
+    el('army-tactics').innerHTML = f !== 'rebel' ? '' :
+      '<h4>Rebel tactic \u2014 chosen before the terrain goes down</h4><div class="docpick">' +
+      [{ id: '', name: 'No tactic', text: 'A rebel force may take one tactic, or none.' }].concat(R.TACTICS).map(function (t) {
+        return '<button type="button" class="doc' + (t.id === tac ? ' on' : '') + '" data-tactic-pick="' + t.id + '"><b>' + escHtml(t.name) + '</b>' +
+          (t.short ? '<i>' + escHtml(t.short) + '</i>' : '') + '<span>' + escHtml(t.text) + '</span></button>';
+      }).join('') + '</div>';
+  }
+  function pickInto(id, v) {
+    var sel = el(id);
+    if (!sel || sel.value === v) return;
+    sel.value = v;
+    sel.dispatchEvent(new Event('change'));
+  }
   var colourHomeAt = null;
   function colourHome() {
     var cwp = el('colour-wrap');
@@ -5303,6 +5344,7 @@
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
     catModal(false);
     colourPop(false);
+    armyModal(false);
     backLabel(el('btn-setup-back'), setupGoesHome());
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
@@ -5708,6 +5750,17 @@
       if (cw && cw.classList.contains('open') && !cw.contains(ev.target)) colourPop(false);
     });
     if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
+    if (el('btn-army')) el('btn-army').addEventListener('click', function () { armyModal(true); });
+    if (el('btn-army-done')) el('btn-army-done').addEventListener('click', function () { armyModal(false); });
+    if (el('army-modal')) el('army-modal').addEventListener('click', function (ev) {
+      if (ev.target === el('army-modal')) { armyModal(false); return; }
+      var a = ev.target.closest('[data-army-pick]'), t = ev.target.closest('[data-tactic-pick]');
+      if (a) pickInto('sel-faction', a.getAttribute('data-army-pick'));
+      else if (t) pickInto('sel-tactic', t.getAttribute('data-tactic-pick'));
+      else return;
+      if (SFX) SFX.click();
+      drawArmyModal();
+    });
     if (el('btn-cat-add2')) el('btn-cat-add2').addEventListener('click', function () { catModal(true); });
     if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
     if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
