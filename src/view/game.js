@@ -5264,11 +5264,11 @@
           hotPaint(); return;
         }
         muster.keys = []; muster.name = '';
-        /* A swarm comes in rust orange unless its colour has been chosen: switching
+        /* A swarm comes in olive drab unless its colour has been chosen: switching
            to the Bugs from an untouched ochre (or back) swaps the default over. */
         if (id === 'sel-faction' && !muster.colourChosen) {
-          var fdef = musterFaction() === 'bugs' ? 'rust' : 'ochre';
-          if (muster.colour === 'ochre' || muster.colour === 'rust') { muster.colour = fdef; if (typeof drawColourPick === 'function') drawColourPick(); }
+          var fdef = musterFaction() === 'bugs' ? 'olive' : 'ochre';
+          if (muster.colour === 'ochre' || muster.colour === 'olive') { muster.colour = fdef; if (typeof drawColourPick === 'function') drawColourPick(); }
         }
         if (id === 'sel-faction' && muster.hot) hotLabels();
         // a force the player musters: a made-up name follows the kind of force
