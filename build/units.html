@@ -14087,6 +14087,11 @@ html { scroll-behavior: smooth; }
     // where the dome goes, as a point on the hull (for sorting it among the parts)
     function droneSpot() {
       var body = spec.style && spec.style.body, legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+      if (body === 'pickup') return along(spec.len * (driveOf(u) !== 'wheeled' ? 0.35 : 0.05), -spec.wid * 0.22);
+      if (body === 'guntruck') {
+        var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
+        return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
+      }
       if (spec.fly) return along(spec.len * 0.05, 0);
       if (legs) return along(-spec.len * 0.12, spec.wid * 0.3);
       var carS = spec.style && spec.style.body === 'car';
@@ -14111,7 +14116,13 @@ html { scroll-behavior: smooth; }
           (stb === 'car' ? 2 : 0) + (stb === 'bigbox' ? spec.hgt * 0.3 : 0);
       }
       // a craft's back is measured from where it flies, not from a ground hull's ride height
-      if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
+      // a pickup or gun truck carries it to one side of the flat plate where its cab used to be
+      if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
+      else if (body === 'guntruck') {
+        var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
+        back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
+      }
+      else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
       var r = Math.max(3, K * 0.16), cy = dp.y - y5;
