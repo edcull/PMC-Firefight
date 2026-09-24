@@ -977,6 +977,13 @@
   .dpr-set .dpr-name { color: var(--ink-dim); }
   .dpr-now { border-color: var(--alpha); background: rgba(216,161,58,.12); }
   .dpr-now .dpr-name { color: var(--alpha); font-weight: 600; }
+  /* the scenario's split: held back units in amber, the count against the rule */
+  .dpr-held .dpr-mark { color: var(--warn); }
+  .dpr-held .dpr-name { color: var(--ink); }
+  .dpr:disabled { opacity: .55; cursor: default; }
+  .splitlist .dphead b.ok { color: var(--good); }
+  .splitlist .dphead b.short { color: var(--warn); }
+  .splitlist .hint.small { margin: 0 0 6px; }
 
   .loadbox { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
   .loadbox h3 { font-family: var(--display); font-size: 11.5px; letter-spacing: .07em;

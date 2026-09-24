@@ -44,6 +44,8 @@
     var m = el('menu');
     if (m) m.hidden = true;
     Table.stop();
+    // a demo paused behind the menu picks up again
+    try { root.dispatchEvent(new Event('pmc-menu-closed')); } catch (e) { }
   }
   function isOpen() { var m = el('menu'); return !!m && !m.hidden; }
 
