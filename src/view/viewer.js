@@ -43,7 +43,7 @@
   /* Put a unit on the stage: every model, a state it can be in (a tank cannot
      be suppressed), and a ground vehicle on the running gear it usually has. */
   // each army's own colour, put on when the viewer turns to one of its units
-  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'rust', xeno: 'steel' };
+  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
   function choose(k) {
     var wasFac = view.pickFac;
     view.key = k; view.models = null; view.tele = null;
@@ -1352,6 +1352,8 @@
       if (!t) return;
       view.pickFac = t.getAttribute('data-fac');
       el('vsearch').value = '';
+      // turning to an army's tab puts on that army's own colour, cards and bench alike
+      if (ARMY_COLOUR[view.pickFac]) { paint('A', ARMY_COLOUR[view.pickFac]); drawControls(); frame(); }
       drawPicker();
       el('vside').querySelector('.vlistscroll').scrollTop = 0;
     });
