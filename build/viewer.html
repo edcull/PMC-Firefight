@@ -17343,7 +17343,8 @@
       h += '<div class="vgrp"><label>Mount</label><div class="vseg">' +
         segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'bike') + '</div></div>';
     }
-    if (isVeh) {
+    // an Overgrown Bug walks on its own legs: there is no drive to choose
+    if (isVeh && p.rules.indexOf('Overgrown Bug') < 0) {
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
     }
