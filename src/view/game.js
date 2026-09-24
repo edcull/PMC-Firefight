@@ -5144,6 +5144,7 @@
     muster.hot = null;
     var s = el('setup');
     if (s) { delete s.dataset.hot; delete s.dataset.kind; delete s.dataset.quick; }
+    catModal(false);
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = false; });
     el('btn-start').textContent = 'Take the field';
     var fl = document.querySelector('label[for="sel-faction"]');
@@ -5217,6 +5218,12 @@
       if (el('hot-name')) el('hot-name').value = '';
     }
   }
+  function catModal(on) {
+    var m = document.querySelector('#setup .muster');
+    if (m) m.classList.toggle('picking', !!on);
+    if (el('cat-back')) el('cat-back').classList.toggle('open', !!on);
+    if (on && el('cat')) el('cat').scrollTop = 0;
+  }
   var tierHome = null;                 // where the Tier and Priority Level sit on the sheet, when not moved up for a demo
   function hotPaint() {
     var h = muster.hot, step = h.step, s = el('setup'), kind = h.kind;
@@ -5229,6 +5236,7 @@
     // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
     if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
+    catModal(false);
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
     var tp = el('tierpl-field');
@@ -5594,6 +5602,10 @@
       muster.keys = [];
       drawMuster();
     });
+    // the units to pick from, in a modal
+    if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
+    if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
+    if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
     var cw = el('colour-wrap');
     if (el('btn-quick-colour')) el('btn-quick-colour').addEventListener('click', function () { cw.classList.add('open'); });
     if (el('btn-colour-done')) el('btn-colour-done').addEventListener('click', function () { cw.classList.remove('open'); });
