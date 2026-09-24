@@ -3833,14 +3833,16 @@
   /* The Overmind unit a bug is taking its orders from: friendly, on the table,
      within reach, and of this bug's Tier or higher. `unsup` asks for one that is
      not Suppressed (Endless Tide). */
-  function overmindFor(state, u, unsup) {
+  /* `anyTier`: the Tier limit is on the Overmind's cover and rally only; its
+     hold over Aggressive and its Endless Tide reach bugs of any Tier (p. 116). */
+  function overmindFor(state, u, unsup, anyTier) {
     if (!state || !u) return null;
     if (campFlag(u, 'deafSenses')) return null;             // Sensory Dysfunction
     var reach = overmindReach(state, u.side);
     for (var i = 0; i < state.units.length; i++) {
       var o = state.units[i];
       if (o === u || o.side !== u.side || !onBoard(o) || !has(o, 'Overmind')) continue;
-      if (o.tier < u.tier) continue;
+      if (!anyTier && o.tier < u.tier) continue;
       if (unsup && status(o) !== 'ready') continue;
       if (unitDist(o, u) <= reach) return o;
     }
@@ -3861,7 +3863,7 @@
   // Aggressive: forced to charge the closest enemy — unless an Overmind holds it back
   function aggressiveNow(state, u) {
     if (!has(u, 'Aggressive') || isMachine(u)) return false;
-    return !overmindFor(state, u, false);
+    return !overmindFor(state, u, false, true);
   }
   /* Endless Tide, in the End phase: an unbroken unit near an unsuppressed
      Overmind digs D3 lost bugs back out of the ground. */
@@ -3870,7 +3872,7 @@
     state.units.forEach(function (u) {
       if (!onBoard(u) || !has(u, 'Endless Tide') || status(u) === 'broken') return;
       var full = u.startSize || u.size;
-      if (u.models >= full || !overmindFor(state, u, true)) return;
+      if (u.models >= full || !overmindFor(state, u, true, true)) return;
       var n = Math.min(d3(), full - u.models);
       u.models += n;
       log.push({ t: 'rally', text: 'Endless Tide — ' + n + ' more bug' + (n === 1 ? '' : 's') + ' crawl out to join ' + u.label + ' (' + u.models + '/' + full + ').', unit: u, n: n });
@@ -6260,8 +6262,8 @@
     'Overgrown Flying Bug':
       'A bug the size of an aircraft: it follows the aircraft rules, but can still assault.',
     'Overmind':
-      'Controls Animal Behaviour bugs of its Tier or lower within 18": they take cover, are not forced to charge ' +
-      'by Aggressive, and lose all Suppression in the Rally phase. Endless Tide needs an unsuppressed Overmind.',
+      'Animal Behaviour bugs of its Tier or lower within 18" take cover and lose all Suppression in the Rally phase. ' +
+      'Any bug within 18", whatever its Tier, is not forced to charge by Aggressive, and Endless Tide works within 18" of an unsuppressed Overmind.',
     'Pheromone Markers':
       'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',
@@ -25539,7 +25541,7 @@
       // the Overmind's reach rolling out, and the lost bugs coming back up out of the ground
       var minds = [];
       tide.forEach(function (l) {
-        var om = R.overmindFor(state, l.unit, true);
+        var om = R.overmindFor(state, l.unit, true, true);
         if (om && minds.indexOf(om) < 0) { minds.push(om); addFx({ kind: 'wave', x: om.x, y: om.y, up: 0, r: 18, rgb: '150,215,90', dur: 1400, blocking: true }); }
         addFx({ kind: 'rise', x: l.unit.x, y: l.unit.y, rgb: '205,170,95', n: 10, delay: 300, dur: 1400 });
       });

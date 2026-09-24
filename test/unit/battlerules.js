@@ -184,5 +184,17 @@ if (CC && CC.expFor) {
   ok('a drone earns no experience in a campaign', ex.total === 0, ex.lines[0].text);
 }
 
+/* ------------------------------------------------------ the Overmind */
+console.log('\nOVERMIND (p. 116)');
+var watchers = unit('bimmwatch', { x: 10, y: 10, side: 'A' });
+var forms = unit('battack', { x: 10, y: 18, side: 'A', models: 4 });
+if (R.profile('bimmwatch') && R.profile('battack')) {
+  var hive = table([watchers, forms]);
+  ok('a Tier II Overmind holds back Tier III Aggressive bugs', !R.aggressiveNow(hive, forms));
+  var tide = R.endlessTide(hive);
+  ok('...and brings their losses back', tide.length === 1 && forms.models > 4, forms.models + ' models');
+  ok('...but gives them no terrain bonus above its Tier', !R.overmindFor(hive, forms, false));
+}
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

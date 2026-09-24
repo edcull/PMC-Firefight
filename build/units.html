@@ -1930,14 +1930,16 @@ html { scroll-behavior: smooth; }
   /* The Overmind unit a bug is taking its orders from: friendly, on the table,
      within reach, and of this bug's Tier or higher. `unsup` asks for one that is
      not Suppressed (Endless Tide). */
-  function overmindFor(state, u, unsup) {
+  /* `anyTier`: the Tier limit is on the Overmind's cover and rally only; its
+     hold over Aggressive and its Endless Tide reach bugs of any Tier (p. 116). */
+  function overmindFor(state, u, unsup, anyTier) {
     if (!state || !u) return null;
     if (campFlag(u, 'deafSenses')) return null;             // Sensory Dysfunction
     var reach = overmindReach(state, u.side);
     for (var i = 0; i < state.units.length; i++) {
       var o = state.units[i];
       if (o === u || o.side !== u.side || !onBoard(o) || !has(o, 'Overmind')) continue;
-      if (o.tier < u.tier) continue;
+      if (!anyTier && o.tier < u.tier) continue;
       if (unsup && status(o) !== 'ready') continue;
       if (unitDist(o, u) <= reach) return o;
     }
@@ -1958,7 +1960,7 @@ html { scroll-behavior: smooth; }
   // Aggressive: forced to charge the closest enemy — unless an Overmind holds it back
   function aggressiveNow(state, u) {
     if (!has(u, 'Aggressive') || isMachine(u)) return false;
-    return !overmindFor(state, u, false);
+    return !overmindFor(state, u, false, true);
   }
   /* Endless Tide, in the End phase: an unbroken unit near an unsuppressed
      Overmind digs D3 lost bugs back out of the ground. */
@@ -1967,7 +1969,7 @@ html { scroll-behavior: smooth; }
     state.units.forEach(function (u) {
       if (!onBoard(u) || !has(u, 'Endless Tide') || status(u) === 'broken') return;
       var full = u.startSize || u.size;
-      if (u.models >= full || !overmindFor(state, u, true)) return;
+      if (u.models >= full || !overmindFor(state, u, true, true)) return;
       var n = Math.min(d3(), full - u.models);
       u.models += n;
       log.push({ t: 'rally', text: 'Endless Tide — ' + n + ' more bug' + (n === 1 ? '' : 's') + ' crawl out to join ' + u.label + ' (' + u.models + '/' + full + ').', unit: u, n: n });
