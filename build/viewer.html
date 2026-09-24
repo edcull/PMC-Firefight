@@ -7375,7 +7375,7 @@
     leadermid: ['lead3', 'flagbig', 'guardrifle'],
     leaderbig: ['lead4', 'flagbig', 'guardrifle', 'guardrifle'],
     // the Rebellion's leader has a second at his side: the Insurgent leader's figure
-    leaderhuge: ['lead5', 'flaghuge', 'lead3', 'guardrifle'],
+    leaderhuge: ['lead5', 'flaghuge', 'lead3black', 'guardrifle'],
     // the Riders upgrade (p. 93) puts the same troops on bikes and beasts
     holymounted: ['zealotrider'],
     holy1mounted: ['zealotrider'], holy2mounted: ['zealotrider'], holy3mounted: ['zealotrider'], holy4mounted: ['zealotrider'],
@@ -7542,7 +7542,7 @@
     zealotrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', tint: HOLY_A },
     enlightrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', tint: HOLY_B },
     enlight: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
-    enlightlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#f6f4ee', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, tint: HOLY_B },
+    enlightlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, tint: HOLY_B },
     enlightblack: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
     enlight2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', tint: HOLY_A },
     mujlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
@@ -7560,7 +7560,7 @@
     // hellriders: spiked helmets, spiked shoulders, flames on the tank and a heavy gun
     // hellriders: the enlightened's tan and olive and green sash, turbans tan, the leader's white, one black
     hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
-    hellriderlead: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#f6f4ee', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, armband: 'force', tint: HOLY_B },
+    hellriderlead: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, armband: 'force', tint: HOLY_B },
     hellriderblack: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
     hellridertan: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', armband: 'force', tint: HOLY_A },
     legendlead: { helm: 'turban', mount: true, gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
@@ -7602,8 +7602,10 @@
     // the rebel leader, Tier by Tier (see the leader roles)
     lead1: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: HOLY_A.mid, mark: true, tint: HOLY_A },
     lead2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_A },
-    lead3: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#f6f4ee', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
-    lead4: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#f6f4ee', vest: '#22241e', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
+    lead3: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
+    // the Rebellion leader's second: the Insurgent leader's figure, in a black turban like his chief's
+    lead3black: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
+    lead4: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
     lead5: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#1c1c1e', vest: '#1c1e18', sash: 'force', blade: true, mark: true, bulk: 1, tint: HOLY_B },
     // the leader himself: the turban and the sash in the side's own colour
     agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: 'force', vest: '#1c1e18', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
