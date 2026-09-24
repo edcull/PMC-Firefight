@@ -344,7 +344,7 @@ ok('...but a militia squad will',
 
 var fan = R.applyRiders(unit('rfanatics'), true);
 ok('the Riders upgrade halves the unit', fan.size === 3, '6 models became ' + fan.size);
-ok('...raises Movement to 10', fan.move === 10);
+ok('...adds 4" to Movement', fan.move === unit('rfanatics').move + 4, fan.move + '"');
 ok('...and adds the Riders rule', fan.rules.indexOf('Riders') >= 0);
 var noRide = R.applyRiders(unit('rmilitia'), true);
 ok('a unit the book does not offer it to is unchanged',

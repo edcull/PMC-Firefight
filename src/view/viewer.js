@@ -1075,7 +1075,7 @@
     var pr = p.cls === 'vehicle' && !R.alienHull(p) && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
     var u = Object.assign({}, p, { rules: p.rules.slice(), models: p.size });
     if (pr) R.applyPropulsion(u, pr.key);
-    // the Riders upgrade (p. 93): half the models, mounted, Movement 10" and the Riders rule
+    // the Riders upgrade (p. 93): half the models, mounted, Movement +4" and the Riders rule
     if (R.canRide(p) && view.ride === 'mounted') R.applyRiders(u, true);
     function mod(v, was, txt) {
       return v === was ? { t: txt } : { t: txt, mod: true, was: was };
