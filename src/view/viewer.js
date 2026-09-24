@@ -112,6 +112,8 @@
   function toScreen(x, y) { return I.toScreen(x, y); }
 
   function frame() {
+    // a unit that moves by itself (rotors, scanners, a deflector, a cloak, a brain) keeps the bench running
+    if (!loop && I.animates(unit()) && view.status !== 'destroyed') start();
     var w = cv.width, h = cv.height;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#0c1014';
@@ -477,7 +479,7 @@
       if (fired >= guns || !view.strafeAt) return;
       var f = 0.2 + (fired / (guns - 1)) * 0.6;
       var x = FROM.x - 6 + (TO.x + 6 - (FROM.x - 6)) * f;
-      FX.add({ kind: 'muzzle', x: x, y: FROM.y, dur: 180 });
+      FX.add({ kind: 'muzzle', x: x, y: FROM.y, rgb: hitRGB, dur: 180 });
       FX.add({ kind: 'impact', x: x, y: FROM.y, n: 3, rgb: hitRGB, dur: 320 });
       for (var d3 = 0; d3 < 3; d3++) {
         FX.add({

@@ -9005,7 +9005,9 @@ html { scroll-behavior: smooth; }
         E(cx - len * 0.35, cy, len * 0.55, len * 0.12, 'rgba(200,214,210,.45)', 0.08);
         return;
       }
-      var up = step ? -0.9 : -0.35;                   // two beats of the wing
+      /* The beat: a flier hanging in the air flaps all the time, WING_PHASES
+         baked states turned by the clock; on the move it is the step's two beats. */
+      var up = WING_PHASE >= 0 ? -0.1 - 1.1 * (0.5 + 0.5 * Math.sin(WING_PHASE / WING_PHASES * Math.PI * 2)) : step ? -0.9 : -0.35;
       var a2 = up + (big ? 0 : 0.1);
       function wing(ang, l, alpha) {
         var tx = cx + Math.cos(ang) * l * -0.35, ty = cy + Math.sin(ang) * l;
@@ -9060,7 +9062,7 @@ html { scroll-behavior: smooth; }
         break;
       }
       case 'small': {
-        drop = pose === 'kneel' ? 3 : down ? 4 : 0;
+        drop = pose === 'kneel' ? 4 : down ? 4 : 0;
         walk([4, -1, -6], -8, 8, [7, 3, -5], 1.6, true);
         shell(-9, -12 + drop, 11, 7, -0.08);
         ridges(-9, -12 + drop, 11, 7, 4);
@@ -9074,14 +9076,14 @@ html { scroll-behavior: smooth; }
         // the warrior caste: up on its hind legs, a scythe held over the head
         var big = kind === 'oversized';
         var z = big ? 1.12 : 1;
-        drop = pose === 'kneel' ? 7 : down ? 14 : 0;
+        drop = pose === 'kneel' ? 14 : down ? 14 : 0;
         walk([-4 * z, -11 * z, -18 * z], -16 * z, 15 * z, [9, 3, -6], 2 * z, true);
         shell(-15 * z, -20 * z + drop, 12 * z, 8.5 * z, 0.35);
         ridges(-15 * z, -20 * z + drop, 12 * z, 8.5 * z, 4);
         shell(-1 * z, -27 * z + drop * 0.9, 7 * z, 9 * z, -0.5);
         if (big) spikes([[-20, -28 + drop], [-13, -30 + drop], [-5, -35 + drop]], 6);
         // the far scythe
-        var lift2 = down ? 16 : pose === 'kneel' ? 6 : 0, swing = step ? 3 : 0;
+        var lift2 = down ? 16 : pose === 'kneel' ? 12 : 0, swing = step ? 3 : 0;
         L([[3 * z, -32 * z + drop], [10 * z, -46 * z + lift2 + swing], [20 * z, -30 * z + lift2]], 2.4 * z, '#6f6450');
         head(7 * z, -39 * z + drop * 0.85, 5.2 * z, 4.6 * z, 2);
         walk([-3 * z, -10 * z, -17 * z], -17 * z, 15 * z, [10, 4, -5], 2.2 * z, false);
@@ -9100,7 +9102,7 @@ html { scroll-behavior: smooth; }
       case 'under':
       case 'hugeunder': {
         var hu = kind === 'hugeunder', zz = hu ? 1.3 : 1;
-        var sink = pose === 'kneel' ? 3 : down ? 5 : 0;
+        var sink = pose === 'kneel' ? 5 : down ? 5 : 0;
         mound(-2 * zz, 18 * zz, 5 * zz);
         shell(-4 * zz, -7 * zz + sink, 13 * zz, 8 * zz);
         ridges(-4 * zz, -7 * zz + sink, 13 * zz, 8 * zz, 5);
@@ -9129,7 +9131,7 @@ html { scroll-behavior: smooth; }
       case 'immspit':
       case 'spitter': {
         var sp2 = kind === 'spitter', zs = sp2 ? 1.25 : 1;
-        drop = pose === 'kneel' ? 4 : down ? 6 : 0;
+        drop = pose === 'kneel' ? 6 : down ? 6 : 0;
         walk([4 * zs, -1 * zs, -6 * zs], -9 * zs, 10 * zs, [8, 3, -5], 1.8 * zs, true);
         // the sac is the whole back end, swollen and lit
         sac(-12 * zs, -20 * zs + drop, 12 * zs, 10 * zs, true);
@@ -9144,7 +9146,7 @@ html { scroll-behavior: smooth; }
         break;
       }
       case 'spore': {
-        drop = pose === 'kneel' ? 5 : down ? 8 : 0;
+        drop = pose === 'kneel' ? 8 : down ? 8 : 0;
         walk([6, 0, -7], -12, 12, [9, 3, -6], 2.2, true);
         sac(-12, -22 + drop, 13, 10, true);
         shell(-10, -16 + drop, 13, 6);
@@ -9185,7 +9187,7 @@ html { scroll-behavior: smooth; }
       case 'smallpath':
       case 'path': {
         var pz = kind === 'path' ? 1.15 : 1;
-        drop = pose === 'kneel' ? 5 : down ? 9 : 0;
+        drop = pose === 'kneel' ? 9 : down ? 9 : 0;
         walk([4 * pz, -2 * pz, -8 * pz], -13 * pz, 13 * pz, [11, 4, -8], 1.3 * pz, true);
         shell(-11 * pz, -16 * pz + drop, 8 * pz, 4.4 * pz, 0.1);
         ridges(-11 * pz, -16 * pz + drop, 8 * pz, 4.4 * pz, 3);
@@ -9200,7 +9202,7 @@ html { scroll-behavior: smooth; }
       case 'lurker': {
         /* A pioneer, so it stands up on the same long, jointed legs as the
            others: the long spined body carried high, not dragged along the ground. */
-        drop = pose === 'kneel' ? 5 : down ? 9 : 0;
+        drop = pose === 'kneel' ? 9 : down ? 9 : 0;
         walk([6, -2, -10], -14, 14, [13, 5, -11], 1.8, true);
         shell(-8, -17 + drop, 15, 5.5, 0.02);
         ridges(-8, -17 + drop, 15, 5.5, 6);
@@ -9224,7 +9226,7 @@ html { scroll-behavior: smooth; }
       case 'watcher':
       case 'overmind': {
         var zo = kind === 'overmind' ? 1.35 : kind === 'watcher' ? 1.12 : 0.9;
-        drop = pose === 'kneel' ? 4 : down ? 9 : 0;
+        drop = pose === 'kneel' ? 9 : down ? 9 : 0;
         walk([2 * zo, -4 * zo, -10 * zo], -10 * zo, 11 * zo, [8, 3, -6], 1.7 * zo, true);
         shell(-12 * zo, -14 * zo + drop, 9 * zo, 6 * zo, 0.1);
         ridges(-12 * zo, -14 * zo + drop, 9 * zo, 6 * zo, 3);
@@ -9715,7 +9717,7 @@ html { scroll-behavior: smooth; }
       /* ...and it is alive: `SHIELD_PHASE` (one of SHIELD_PHASES, turned by the
          clock) breathes its light up and down, walks a band of brightness
          round the rim and lights a different few of its hexes each time. */
-      if (rank === 'beta' && !dead) {
+      if (rank === 'beta' && !dead && !CORPSE) {
         var sph = SHIELD_PHASE / SHIELD_PHASES, pulse = 0.75 + 0.25 * Math.sin(sph * Math.PI * 2);
         var dcx = 4, dcy = by - 9, drx = 19, dry = 27;
         E(dcx, dcy, drx, dry, 'rgba(140,210,255,' + (0.1 * pulse).toFixed(3) + ')');
@@ -10134,19 +10136,22 @@ html { scroll-behavior: smooth; }
   }
   var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
   var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  var WING_PHASES = 6, WING_PHASE = -1;
+  var CORPSE = false;                                  // painting a body: its deflector has gone out
+  function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
   function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
   function nowT() { return root.performance ? performance.now() : 0; }
   function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
   function cloakedKit(kit) { return !!kit && !!kit.xeno && !!kit.cloak; }
-  /* A cloaked model fades in and out between whole and half there, each at its
-     own beat so the squad shimmers rather than blinking as one. */
-  function cloakFade(mi) { return 0.75 + 0.25 * Math.sin(nowT() / 1100 + mi * 1.7); }
+  /* A cloaked model fades in and out between whole and a quarter there, each at
+     its own beat so the squad shimmers rather than blinking as one. */
+  function cloakFade(mi) { return 0.625 + 0.375 * Math.sin(nowT() / 700 + mi * 1.7); }
   // whether a unit is drawn differently from one moment to the next, so the board keeps redrawing it
   function animates(u) {
-    if (!u || !u.alive) return false;
+    if (!u || u.alive === false) return false;          // (a bench unit need not say it is alive)
     if (u.cls === 'aircraft') return true;
     if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
-    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]); });
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]) || winged(KIT[r]); });
   }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
@@ -10169,12 +10174,15 @@ html { scroll-behavior: smooth; }
     if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
     // a Beta's deflector is baked in SHIELD_PHASES states, one for each beat of its light
-    var shieldy = shieldAnimated(kit);
+    var shieldy = shieldAnimated(kit) && !CORPSE;
     if (shieldy) SHIELD_PHASE = Math.floor(nowT() / 110) % SHIELD_PHASES;
     // a leader bug's brain beats slowly, about once in two seconds
     var thinking = brainy(kit);
     if (thinking) BRAIN_PHASE = Math.floor(nowT() / 200) % BRAIN_PHASES;
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '');
+    // a winged bug's wings beat, about four times a second, unless it has gone to ground
+    var flapping = winged(kit) && pose !== 'prone';
+    WING_PHASE = flapping ? (Math.floor(nowT() / 40) + i * 2) % WING_PHASES : -1;   // each bug at its own beat
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '') + (CORPSE ? '|corpse' : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -14484,11 +14492,10 @@ html { scroll-behavior: smooth; }
      it is still up, ready to run. Lying flat is for firing positions and for
      troops getting up as they arrive, never a state. The one exception is a
      bug that goes about on its legs: broken, it digs in (see burrowBug). */
+  /* Suppressed and Broken are drawn alike — hunkered low. A bug that has broken
+     goes low the same way (its sunk-in-the-earth pose is kept for a swarm
+     tunnelling up out of the ground on a Battlefield Insertion). */
   function statusPose(status, art) {
-    if (status === 'broken') {
-      var kt = KIT[roleAt(art || 'rifle', 0)];
-      if (kt && kt.bug && !kt.fly && kt.bug !== 'under' && kt.bug !== 'hugeunder') return 'prone';
-    }
     return status === 'broken' || status === 'suppressed' ? 'kneel' : 'stand';
   }
   function muzzles(u, status) {
@@ -14735,7 +14742,8 @@ html { scroll-behavior: smooth; }
   function corpseSprite(side, art, mi) {
     var key = side + '|' + art + '|' + mi;
     if (corpses[key]) return corpses[key];
-    var src = sprite(side, art, mi, 'prone', 0, MODEL * fitScale(art, mi), 0);
+    CORPSE = true;
+    try { var src = sprite(side, art, mi, 'prone', 0, MODEL * fitScale(art, mi), 0); } finally { CORPSE = false; }
     var c = document.createElement('canvas');
     c.width = src.width; c.height = src.height;
     var g = c.getContext('2d');
@@ -14758,7 +14766,10 @@ html { scroll-behavior: smooth; }
   }
   function drawBody(g, sx, sy, b) {
     var c = corpseSprite(b.paint || b.side, b.art || 'rifle', b.mi || 0), rs = c.res || 1;
-    ellipse(g, sx + a(0.5), sy, a(2.6), a(1), 'rgba(58,20,14,.30)');
+    // what it bled: a man red, a bug its green ichor, a Crock the tribe's blue
+    var art0 = b.art || '', kit0 = KIT[(ROLES[art0] || [])[0]] || {};
+    var pool = kit0.bug ? 'rgba(92,150,40,.42)' : kit0.xeno ? 'rgba(60,130,220,.42)' : 'rgba(58,20,14,.30)';
+    ellipse(g, sx + a(0.5), sy, a(2.6), a(1), pool);
     var was = g.imageSmoothingEnabled;
     g.imageSmoothingEnabled = true;
     var bx = Math.round((sx - c.ox / rs) * rs) / rs, by = Math.round((sy - c.oy / rs) * rs) / rs;
