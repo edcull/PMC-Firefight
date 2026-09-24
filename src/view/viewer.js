@@ -270,6 +270,13 @@
   function stepWalk(dt) {
     var u = unit();
     var speed = Math.max(2, (u.move || 5)) * 0.9;          // inches a second
+    /* An aircraft crosses the bench at the pace it flies in a battle: the game
+       times a flight at 0.7s plus 85ms an inch, to 3.2s at most (game.js
+       moveMs), and a full Move is Movement +4" for a machine. */
+    if (u.cls === 'aircraft') {
+      var full = (u.move || 12) + 4;
+      speed = full * 1000 / Math.min(3200, 700 + full * 85);
+    }
     view.walkT += (dt / 1000) * speed;
     var span = TO.x - FROM.x - 3;
     var f = (view.walkT % (span * 2)) / span;
@@ -347,7 +354,10 @@
      What an aircraft does instead of standing still and shooting (engine.js
      offers Strafe to anything of class aircraft): it comes across the bench at
      speed with its guns going, and the ground walks up under it. */
-  var STRAFE_MS = 2200;
+  /* A strafing run takes as long as the game gives the same stretch of table
+     (game.js playStrafe: 1.1s plus 140ms an inch, between 1.9s and 4s). The
+     bench's run is from 6" short of the start mark to 6" past the target. */
+  var STRAFE_MS = Math.max(1900, Math.min(4000, 1100 + ((TO.x + 6) - (FROM.x - 6)) * 140));
   function canStrafe() { return unit().cls === 'aircraft'; }
 
   /* A unit's special ability, played on the stage: the first rule it has that
