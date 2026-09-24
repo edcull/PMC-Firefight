@@ -239,6 +239,21 @@
   }
   /* Gone back to the menu, the demo stops where it is: nothing more is asked
      for until the menu is put away again (Resume carries it on). */
+  /* On a desktop, a new battle's set-up has the menu's table rolling behind it;
+     it stops when the set-up goes away (or the screen is too narrow for it). */
+  function setupBackdrop() {
+    var sp = el('setup'), cv = el('setup-table'), T = window.PMCMenu && window.PMCMenu.table;
+    if (!sp || !cv || !T || !T.on) return;
+    var want = !sp.hidden && window.innerWidth > 1000;
+    if (want) T.start(cv);
+    else if (T.on() === cv) T.stop();
+  }
+  (function () {
+    var sp = el('setup');
+    if (!sp || !window.MutationObserver) return;
+    new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
+    window.addEventListener('resize', function () { setupBackdrop(); if (window.PMCMenu && window.PMCMenu.table.on() === el('setup-table')) window.PMCMenu.table.fit(); });
+  })();
   function menuUp() {
     if (window.PMCMenu && window.PMCMenu.isOpen()) return true;
     // nor while a new battle is being set up, or the campaign is open, over the top of it
