@@ -379,7 +379,7 @@
     { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
     // a smoke grenade thrown onto the mark, bursting where it lands, the flare burning in it
     { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: TO.x, y: TO.y }, dur: 750 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 720, dur: 2500 }]; } },
-    { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
+    { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, mz: glintFrom(u), dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
     { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
     { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
     { rule: 'Teleport', name: 'Teleport', play: function (u) { return teleportThrough(u); }, sfx: 'shimmer' },
@@ -395,6 +395,13 @@
   ];
   /* Where a beam leaves a machine: a craft's nose, else the first barrel it has.
      A trooper's beam leaves from about chest height (fx.js's default). */
+  // a keen eye looks out of a machine's own sensor, and a flier's up where it flies (as in the battle)
+  function glintFrom(u) {
+    if (!R.isMachine(u)) return undefined;
+    var M = I.mounts(u), k = ['scan', 'nose'].filter(function (n) { return M[n] && M[n].length; })[0];
+    if (k) return M[k][0];
+    return I.flyLift(u) ? { dx: 0, dy: -I.flyLift(u) } : undefined;
+  }
   function beamFrom(u) {
     if (!R.isMachine(u)) return undefined;
     var M = I.mounts(u), k = ['nose', 'gun', 'mg', 'auto', 'rocket'].filter(function (n) { return M[n] && M[n].length; })[0];
