@@ -1560,7 +1560,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
-    interceptor: { p: 'burst', s: 'shellbig', sn: 2 },
+    // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
+    interceptor: { p: 'missile', n: 2, s: 'burst' },
 
     /* ---- the Rebel list, read the same way ---- */
     // armed civilians: whatever was in the house, at 12"
