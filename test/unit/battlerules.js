@@ -245,5 +245,16 @@ for (var dq = 0; dq < 40; dq++) {
 }
 ok('...a unit charged from beyond its range still gets its defensive fire in', dfs >= 30, dfs + ' of 40');
 
+/* ------------------------------------------------------ hacking a Drone unit */
+console.log('\nHACKING A DRONE UNIT (p. 57)');
+var wiped = 0, tries = 0;
+for (var hq = 0; hq < 300; hq++) {
+  var hk = unit('ew', { x: 10, y: 10 }), dd = unit('dcombat', { side: 'B', x: 10, y: 20 });
+  R.applyDrone(dd, false);
+  var hr = R.hack(table([hk, dd]), hk, dd, null);
+  if (hr.roll >= 3) { tries++; if (!dd.alive) wiped++; }
+}
+ok('a hacked Drone unit takes D3+1 hits, not vehicle damage', tries > 50 && wiped < tries * 0.2, wiped + ' of ' + tries + ' wiped out');
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

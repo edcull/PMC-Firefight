@@ -2742,9 +2742,18 @@
       text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': ' +
         (turned ? 'turned on its own side, then ' : '') + 'locked out and burned for ' + hits + ' hits.'
     });
-    var dres = resolveDamage(t, hits, false);
-    log.push({ t: 'hits', text: dres.rolls.join(' · ') });
-    applyDamage(state, t, dres.damage, log, a);
+    /* "...suffers D3+1 hits resolved like enemy fire" (p. 57): a hull takes them
+       as damage; a Drone unit, which has no Structure, on the hit table like any
+       squad (its +1 to those rolls included). */
+    if (isMachine(t)) {
+      var dres = resolveDamage(t, hits, false);
+      log.push({ t: 'hits', text: dres.rolls.join(' · ') });
+      applyDamage(state, t, dres.damage, log, a);
+    } else {
+      var hres = resolveShootingHits(state, t, hits, 0, a);
+      log.push({ t: 'hits', text: hres.rolls.join(' · ') });
+      applyResult(state, t, hres, log, a);
+    }
     return { log: log, roll: roll, turned: turned, locked: locked, hits: hits };
   }
 

@@ -1747,6 +1747,7 @@
     if (log) log.push(line);
     logLine('note', u.label + ' arrives' + (p.why ? ' ' + p.why : '') + '.');
     if (note) logLine('note', note.text);
+    samCheck(u);
     return line;
   }
 
@@ -3204,7 +3205,13 @@
 
   function scenarioMoveEnd(u) {
     soloAfterMove(u);
-    if (!state.scen.onMoveEnd) return;
+    samCheck(u);
+  }
+  /* Demolish's SAM system (p. 54) fires on "any aircraft finishing its move"
+     within 12" — a Move, an Advance, a strafing run, the AI's own flying or an
+     arrival from reserve alike. */
+  function samCheck(u) {
+    if (!state || !state.scen.onMoveEnd || !u || !u.alive) return;
     var res = state.scen.onMoveEnd(state, u);
     if (!res) return;
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
@@ -3339,6 +3346,7 @@
       ui.targets = targetsFor(u, {});
       logLine('move', u.label + ' advances ' + d.toFixed(1) + '".');
       soloAfterMove(u);
+      samCheck(u);
       if (!u.alive || u.x < 0) { u.activated = true; endActivation(); return; }
       if (!ui.targets.length) { u.activated = true; endActivation(); } else render();
       return;
@@ -3711,6 +3719,7 @@
     if (!log.length) card = { kind: 'Strafing run', title: u.name, side: u.side, note: 'Nothing under the flight path.' };
     u.activated = true;
     playStrafe(u, from, pt, deathsSince(snap), function () { pushRes(card); });
+    samCheck(u);
     endActivation();
   }
 
@@ -4038,9 +4047,11 @@
       u.activated = true; endActivation(u); return;
     }
 
+    // a solitaire OpFor hull rolls on the behaviour table like everything else (p. 147)
+    var soloB = !!state.solo && u.side === 'B';
     /* An Overgrown bug is a beast, not a hull: the Queen sends out her wave when
        it catches two or more, and anything with more bite than spit charges. */
-    if (R.isOvergrown(u) && R.status(u) !== 'broken') {
+    if (R.isOvergrown(u) && R.status(u) !== 'broken' && !soloB) {
       if (R.has(u, 'Psychic Wave') && R.status(u) === 'ready') {
         var wq = bestWaveSpot(u);
         if (wq && wq.n >= 2) { doWave(u, wq.pt); return; }
@@ -4098,6 +4109,28 @@
       }
     }
 
+    if (soloB) {
+      var bh = rollBehaviour(u, shot);
+      // Run for Your Lives!: a Move as far as it can get from the player's units, no shot
+      if (bh === 'flee') return aiRoll(u, nearestEnemy(u), false, { flee: true, noShoot: true });
+      // Kill Them All!: charge the closest enemy — only an Overgrown bug can — or else Move at it, no shot
+      if (bh === 'assault') {
+        var prey2 = nearestEnemy(u);
+        if (R.isOvergrown(u) && prey2 && R.status(u) === 'ready' && R.canAssault(u, prey2.unit) &&
+          prey2.dist <= chargeAllow(u) && canReachCharge(u, prey2.unit)) { aiCharge(u, prey2.unit); return; }
+        return aiRoll(u, prey2, false, { close: true, noShoot: true });
+      }
+      // Reasonably Defensive or Neutral: engage from where it stands, or keep its distance
+      if (bh === 'defensive' || bh === 'neutral') {
+        if (shot.t) { fire(u, shot.t, 'fire'); return; }
+        if (bh === 'defensive') {
+          logLine('ai', u.label + ' holds back.');
+          u.activated = true; endActivation(u); return;
+        }
+        return aiRoll(u, nearestObjective(u) || nearestEnemy(u), true);
+      }
+      // Reasonably Offensive: on at them, as it always did
+    }
     // an aircraft with a line of targets makes a run
     if (u.cls === 'aircraft') {
       var lane = bestStrafe(u);
@@ -4147,14 +4180,18 @@
   }
 
   // drive toward something, then shoot if anything comes into arc
-  function aiRoll(u, goalUnit, cautious) {
+  /* `o.flee`: as far from the goal (the nearest enemy) as it can get; `o.close`:
+     as close as it can get; `o.noShoot`: a Move, so no shot after it. */
+  function aiRoll(u, goalUnit, cautious, o) {
+    o = o || {};
     var goal = goalUnit && goalUnit.unit ? { x: goalUnit.unit.x, y: goalUnit.unit.y }
       : goalUnit ? { x: goalUnit.x, y: goalUnit.y } : pickGoal(u, 'offensive');
     var allowance = u.move + moveBonus(u);
     var spots = R.reachable(state, u, allowance).filter(function (c) { return canStand(u, c); }), best = null, bestD = Infinity;
     var want = cautious ? 6 : Math.max(4, u.range * 0.45);
     spots.forEach(function (c) {
-      var d = Math.abs(R.inches(c.x, c.y, goal.x, goal.y) - want);
+      var gd = R.inches(c.x, c.y, goal.x, goal.y);
+      var d = o.flee ? -gd : o.close ? gd : Math.abs(gd - want);
       if (d < bestD) { bestD = d; best = c; }
     });
     if (best && R.inches(u.x, u.y, best.x, best.y) > 0.6) {
@@ -4166,8 +4203,10 @@
       logLine('move', u.label + ' drives ' + dist.toFixed(1) + '".');
       crushAlong(u, path);
       animateMove(u, path, true);
+      samCheck(u);
+      if (!u.alive) { u.activated = true; whenIdle(function () { if (state && !state.over) endActivation(u); }); return; }
     }
-    var t2 = bestTarget(u, 'advance');
+    var t2 = o.noShoot ? {} : bestTarget(u, 'advance');
     if (t2.t && t2.score > 0.2) {
       whenIdle(function () { if (state && !state.over && u.alive) fire(u, t2.t, 'advance'); });
       return;
@@ -4273,7 +4312,41 @@
     return best ? { unit: best, dist: bd } : null;
   }
 
+  /* The behaviour table (p. 147), rolled for every unit as it activates —
+     a hull or an aircraft as much as a squad. */
+  function rollBehaviour(u, shot) {
+    var roll = R.d6(), mods = 0, why = [];
+    var fp = u.fp || 0, as = u.assault || 0;
+    if (as >= 2 * fp && as > 0) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }
+    else if (as > fp) { mods += 1; why.push('Assault > Firepower +1'); }
+    if (!shot.t) { mods += 2; why.push('no enemy in range +2'); }
+    // the scenario's own temper: aggressive, defensive, or aggressive near the objectives
+    if (state.solo && u.side === 'B' && state.scen.behaviour) {
+      var bm = state.scen.behaviour(state, u) || {};
+      if (bm.mod) { mods += bm.mod; why.push(bm.why || ((bm.mod > 0 ? '+' : '') + bm.mod)); }
+    }
+    var total = roll + mods;
+    var behaviour = total <= 0 ? 'flee' : total <= 2 ? 'defensive' : total <= 4 ? 'neutral' : total <= 6 ? 'offensive' : 'assault';
+    // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
+    if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
+    logLine('ai', u.label + ' — behaviour D6 ' + roll + (why.length ? ' (' + why.join(', ') + ')' : '') + ' = ' + total + ': ' + behaviour + '.');
+    return behaviour;
+  }
+
   function aiAct(u) {
+    /* Decapitation: the OpFor's leaders "always act according to the Reasonably
+       Defensive result and never Move nor Advance" (p. 152) — whatever state they
+       are in, they shoot from where they are or keep their heads down. */
+    if (state.scen.noMove && state.scen.noMove(state, u)) {
+      var still = R.status(u) === 'ready' ? bestTarget(u, 'fire') : {};
+      logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
+      if (still.t) { fire(u, still.t, 'fire'); return; }
+      if (u.sp) {
+        var rr0 = abRally(state, u);
+        if (rr0) { logLine('rally', rr0.text); pushRes({ kind: 'Regroup', title: u.name + ' regroups', side: u.side, list: [{ text: rr0.text, side: u.side }] }); }
+      }
+      u.activated = true; endActivation(u); return;
+    }
     if (R.isMachine(u)) { aiDrive(u); return; }
     /* "Death or Glory, Comrades!" (p. 94): a shaken unit with a leader shouting
        at it goes in rather than going to ground — that is the whole point of the
@@ -4378,30 +4451,8 @@
       }
     }
 
-    /* Decapitation: the OpFor's leaders always act Reasonably Defensive and never
-       Move nor Advance (p. 152) — they shoot from where they are, or keep their heads down. */
-    if (state.scen.noMove && state.scen.noMove(state, u)) {
-      var still = bestTarget(u, 'fire');
-      logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
-      if (still.t) { fire(u, still.t, 'fire'); return; }
-      u.activated = true; endActivation(u); return;
-    }
-
-    var roll = R.d6(), mods = 0, why = [];
-    if (u.fp && u.assault >= 2 * u.fp) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }
-    else if (u.assault > u.fp) { mods += 1; why.push('Assault > Firepower +1'); }
     var shot = bestTarget(u, 'fire');
-    if (!shot.t) { mods += 2; why.push('no enemy in range +2'); }
-    // the scenario's own temper: aggressive, defensive, or aggressive near the objectives
-    if (state.solo && u.side === 'B' && state.scen.behaviour) {
-      var bm = state.scen.behaviour(state, u) || {};
-      if (bm.mod) { mods += bm.mod; why.push(bm.why || ((bm.mod > 0 ? '+' : '') + bm.mod)); }
-    }
-    var total = roll + mods;
-    var behaviour = total <= 0 ? 'flee' : total <= 2 ? 'defensive' : total <= 4 ? 'neutral' : total <= 6 ? 'offensive' : 'assault';
-    // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
-    if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
-    logLine('ai', u.label + ' — behaviour D6 ' + roll + (why.length ? ' (' + why.join(', ') + ')' : '') + ' = ' + total + ': ' + behaviour + '.');
+    var behaviour = rollBehaviour(u, shot);
     /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
        closest enemy unit. If there are no valid targets, it makes a Move towards
        the closest enemy" — a Move, so it does not shoot as well. */
