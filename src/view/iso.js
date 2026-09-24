@@ -2426,8 +2426,9 @@
     holy1: ['acolyte', 'acolyte2'],
     // fanatics: tan robes and turbans, one of them with an RPG
     holy2: ['zealot', 'zealotrpg', 'zealot2', 'zealot'],
-    // the enlightened: a mix of tan and olive, tan turbans, one RPG among them
-    holy3: ['enlight', 'enlightrpg', 'enlight2', 'enlight', 'enlight2', 'enlight'],
+    // the enlightened: a mix of tan and olive, one RPG among them; turbans as the fanatics
+    // wind them — tan, the leader's white and one black
+    holy3: ['enlightlead', 'enlightrpg', 'enlight2', 'enlightblack', 'enlight2', 'enlight'],
     // the mujahideen: all in olive
     holy4: ['mujlead', 'mujsaw', 'mujrpg', 'muj'],
     guard: ['guardlead', 'guardflag', 'guardrifle', 'guardrifle'],
@@ -2630,6 +2631,8 @@
     zealotrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', tint: HOLY_A },
     enlightrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', tint: HOLY_B },
     enlight: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
+    enlightlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#f6f4ee', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, tint: HOLY_B },
+    enlightblack: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
     enlight2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', tint: HOLY_A },
     mujlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
     mujsaw: { helm: 'turban', gun: 'saw', armband: 'force', pack: 'ammo', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, bulk: 1, tint: HOLY_B },
