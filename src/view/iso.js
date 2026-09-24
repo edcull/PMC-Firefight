@@ -9816,13 +9816,14 @@
     function droneSpot() {
       var body = spec.style && spec.style.body, legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
       if (spec.fly) return along(spec.len * 0.05, 0);
-      if (legs) return along(-spec.len * 0.12, -spec.wid * 0.28);
+      if (legs) return along(-spec.len * 0.12, spec.wid * 0.3);
       if (body === 'pickup') return along(spec.len * (driveOf(u) !== 'wheeled' ? 0.35 : 0.05), -spec.wid * 0.22);
       if (body === 'guntruck') {
         var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
       }
-      return along(-spec.len * 0.4, -spec.wid * 0.3);
+      var carS = spec.style && spec.style.body === 'car';
+      return along(-spec.len * (carS ? 0.34 : 0.42), -spec.wid * (carS ? 0.26 : 0.34));
     }
     // `only`: 'dome' or 'aerial', when a styled hull sorts the two among its parts
     function droneKit(only) {
@@ -9833,10 +9834,18 @@
       /* The dome: on a hull's roof off to one side, clear of a turret; on a
          pickup or gun truck, to one side of the flat plate where its cab used to
          be; on a walker, up on a shoulder; on a craft, the middle of its back. */
-      var back = -0.4, off = -spec.wid * 0.3;             // the back corner, opposite the aerial
+      // the back corner of the roof, opposite the aerial — kept on the roof, which narrows to the top
+      var carB = spec.style && spec.style.body === 'car';
+      var back = carB ? -0.34 : -0.42, off = -spec.wid * (carB ? 0.26 : 0.34);
+      // a styled hull's roof is lower than its full height: sit on the roof itself
+      if (spec.style && !spec.fly) {
+        var stb = spec.style.body;
+        y5 = deck + spec.hgt * ({ mbt: 0.8, tank: 0.88, ltank: 0.88, future: 0.9, ifv: 0.85, bigbox: 1.08, car: 1, pickup: 0.45, truck: 1.45, mlrs: 0.55, guntruck: 0.5 }[stb] || 1) -
+          (stb === 'car' ? 2 : 0) + (stb === 'bigbox' ? spec.hgt * 0.3 : 0);
+      }
       // a craft's back is measured from where it flies, not from a ground hull's ride height
       if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
-      else if (legs) { back = -0.12; off = -spec.wid * 0.28; }
+      else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       else if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
       else if (body === 'guntruck') {
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
@@ -9856,7 +9865,7 @@
       var aq, ya = y5;
       if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
       if (spec.fly) aq = along(-spec.len * 0.06, spec.wid * 0.3);   // a rotorcraft's stands on the back of its body
-      else if (legs) aq = along(spec.len * back - 0.2, off * 0.8);
+      else if (legs) aq = along(spec.len * back - 0.2, -spec.wid * 0.3);   // its left shoulder
       else {
         aq = along(-spec.len * 0.44, spec.wid * 0.32);
         if (body === 'pickup' || body === 'guntruck') ya = deck + spec.hgt * 0.5;

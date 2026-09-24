@@ -24,11 +24,12 @@ function battle() {
   for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });
   const st = e.state();
   st.units.forEach(u => { if (u.reserve) { u.reserve = false; } });
+  st.terrain.length = 0;                               // an open table: the test is about the drive, not the ground
   const apc = st.units.find(u => u.key === 'lapc'), sq = st.units.find(u => u.key === 'regular' && u.side === 'A');
   const foes = st.units.filter(u => u.side === 'B');
   // put everyone somewhere sensible: the carrier and a squad beside it, the enemy far off
   apc.x = 12; apc.y = 24; apc.facing = 0; apc.activated = false; apc.cargo = []; apc.aboard = null;
-  sq.x = 12; sq.y = 27.5; sq.sp = 0; sq.activated = false; sq.aboard = null;
+  sq.x = 12; sq.y = 27.5; sq.sp = 0; sq.activated = false; sq.aboard = null; sq.bld = null; sq.sec = null;
   st.units.filter(u => u.side === 'A' && u !== apc && u !== sq).forEach((u, i) => { u.x = 4 + i * 3; u.y = 44; });
   foes.forEach((u, i) => { u.x = 40; u.y = 6 + i * 8; });
   st.activeSide = 'A';

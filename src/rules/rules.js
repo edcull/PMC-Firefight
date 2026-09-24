@@ -455,7 +455,9 @@
       !/Turret/.test(p.group || '');
   }
   // which propulsions a profile may take: ground vehicles only
-  function propsFor(p) { return p && p.cls === 'vehicle' && !alienHull(p) ? PROP_ORDER : []; }
+  // ...and not a drop pod, which comes down where it is put and never moves again (p. 79)
+  function immobile(p) { return !!p && (p.rules || []).indexOf('Immobile') >= 0; }
+  function propsFor(p) { return p && p.cls === 'vehicle' && !alienHull(p) && !immobile(p) ? PROP_ORDER : []; }
   /* The running gear each hull goes to war on unless someone picks otherwise —
      what the muster screen fills in and what the Unit Atlas shows. */
   var DEFAULT_DRIVE = {
@@ -473,12 +475,12 @@
   };
   // a hull goes out with no optional propulsion unless one is picked
   function defaultDrive(p) {
-    if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
+    if (!p || p.cls !== 'vehicle' || alienHull(p) || immobile(p)) return null;
     return 'none';
   }
   // ...and is drawn on the running gear it usually goes to war on
   function lookDrive(p) {
-    if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
+    if (!p || p.cls !== 'vehicle' || alienHull(p) || immobile(p)) return null;
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
   function propOf(u) { return PROPULSION[u && u.prop] || null; }
@@ -3567,7 +3569,8 @@
   function driveKey(state, u, allowance) {
     var k = [u.id, u.x, u.y, u.facing, u.turn, u.move, allowance, u.wireRoll, state.terrain.length];
     state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side) k.push(o.x, o.y, o.bld ? 1 : 0); });
-    state.terrain.forEach(function (r) { k.push(r.kind); });
+    // where every piece stands, not just what it is: a new table is a new drive
+    state.terrain.forEach(function (r) { k.push(r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0); });
     return k.join(',');
   }
 
