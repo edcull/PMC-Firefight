@@ -1069,18 +1069,39 @@
   var FACTION_NAME = { pmc: 'PMC', rebel: 'Rebels', bugs: 'Space Bugs', xeno: 'Xenotripods' };
   function rulesHtml(p) {
     var mach = R.isMachine(p);
-    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', p.size], ['Move', p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '')],
-      ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
-      ['Def', p.def + (p.defPierced ? '/' + p.defPierced : '')], ['Asslt', p.assault],
-      mach ? ['Str', p.str] : ['Mor', p.morale]];
+    /* The stats as fielded: a ground vehicle's propulsion (Appendix 3) changes
+       its Movement, turn cost, Structure or Defence, and a changed figure is
+       marked, with the printed one on it as a tooltip. */
+    var pr = p.cls === 'vehicle' && !R.alienHull(p) && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
+    var u = Object.assign({}, p, { rules: p.rules.slice(), models: p.size });
+    if (pr) R.applyPropulsion(u, pr.key);
+    // the Riders upgrade (p. 93): half the models, mounted, Movement 10" and the Riders rule
+    if (R.canRide(p) && view.ride === 'mounted') R.applyRiders(u, true);
+    function mod(v, was, txt) {
+      return v === was ? { t: txt } : { t: txt, mod: true, was: was };
+    }
     // the turn cost rides with Movement, as the book prints it: 8 (1)
+    var mv = u.move + '"' + (u.turn != null ? ' (' + u.turn + ')' : '');
+    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', mod(u.size, p.size, u.size)],
+      ['Move', u.move === p.move && u.turn === p.turn ? mv
+        : { t: mv, mod: true, was: p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') }],
+      ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
+      ['Def', mod(u.def, p.def, u.def + (p.defPierced ? '/' + p.defPierced : ''))], ['Asslt', p.assault],
+      mach ? ['Str', mod(u.str, p.str, u.str)] : ['Mor', p.morale]];
     var h = '<div class="vrules"><label>' + esc(FACTION_NAME[p.faction || 'pmc'] || '') + ' · ' +
       esc(p.group) + ' · ' + esc(p.code) + '</label>';
     h += '<table class="vtable"><tr>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') +
-      '</tr><tr>' + cols.map(function (c) { return '<td>' + esc(c[1]) + '</td>'; }).join('') + '</tr></table>';
+      '</tr><tr>' + cols.map(function (c) {
+        var v = c[1];
+        if (v && typeof v === 'object') {
+          return v.mod ? '<td class="vmod" title="' + esc('Printed: ' + v.was) + '">' + esc(v.t) + '</td>' : '<td>' + esc(v.t) + '</td>';
+        }
+        return '<td>' + esc(v) + '</td>';
+      }).join('') + '</tr></table>';
     var TXT = root.PMCRuleText;
-    if (!p.rules.length) h += '<p class="vrule">No special rules.</p>';
-    p.rules.forEach(function (r) {
+    if (!u.rules.length && !pr) h += '<p class="vrule">No special rules.</p>';
+    if (pr) h += '<div class="vrule"><b>Propulsion: ' + esc(pr.name) + '</b><p>' + esc(pr.note) + '</p></div>';
+    u.rules.forEach(function (r) {
       var d = TXT ? TXT.describe(r) : { name: r, text: '' };
       var tip = d.text && root.PMCTips ? ' ' + root.PMCTips.attr(d.name, d.text) : '';
       h += '<div class="vrule"><b' + tip + '>' + esc(d.name) + '</b>' +
