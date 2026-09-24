@@ -1987,7 +1987,7 @@
               dur: 380 + Math.random() * 220, blocking: true
             });
           }
-          if (SFX) SFX.burst(2, true);
+          if (SFX) SFX.strafe(R.isXeno(u) ? 'xeno' : u.faction, R.weaponStyle(u));
         }, dur * 0.18 + n * (dur * 0.64 / Math.max(1, steps - 1)));
       })(i);
     }

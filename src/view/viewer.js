@@ -344,7 +344,7 @@
           dur: 380 + Math.random() * 220
         });
       }
-      if (view.sound && SFX) SFX.burst(2, true);
+      if (view.sound && SFX) SFX.strafe(R.isXeno(unit()) ? 'xeno' : unit().faction, R.weaponStyle(unit()));
       fired++;
       setTimeout(burst, STRAFE_MS * 0.6 / guns);
       start();
