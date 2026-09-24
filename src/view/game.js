@@ -372,6 +372,17 @@
   /* An effect the engine described without knowing how high anything is drawn.
      A flier's height is a matter for the view, so it is filled in here. */
   function reLift(f) {
+    /* A marker's laser and a Keen-Eyed glint come off the machine's own
+       sensor, however high it flies: the nose of a craft, its scanner. */
+    if (f && f.unit && (f.kind === 'beam' || f.kind === 'glint')) {
+      var src = evUnit(f.unit);
+      if (src && (src.cls === 'aircraft' || src.cls === 'vehicle')) {
+        var M = ISO.mounts(src), at = f.kind === 'beam' ? (M.nose || M.scan) : (M.scan || M.nose);
+        if (at && at.length) f.mz = at[0];
+        else if (ISO.flyLift(src)) f.mz = { dx: 0, dy: -ISO.flyLift(src) };
+      }
+      return f;
+    }
     if (!f || f.up !== 0 || !f.unit) return f;
     var u = evUnit(f.unit);
     if (u) f.up = ISO.flyLift(u);
@@ -1692,6 +1703,8 @@
 
     switch (spec.p) {
       case 'none':
+        // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
+        if (spec.s) { setTimeout(function () { land(3); }, 150 + 520 + ((spec.sn || 1) - 1) * 170); finish(120 + tail); return; }
         finish(120); return;
 
       // Xenotripod small arms: pulses of the army's own light
@@ -2116,7 +2129,7 @@
       if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
       STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
     });
-    /* Counter-jamming, while it is doing something: a faint 6" dome over a
+    /* Counter-jamming, while it is doing something: its 6" marked out on the ground round a
        counter-jammer that has a friend (itself included) inside it who stands
        within 24" of an enemy's Jammers — the ground it is winning back. */
     if (state) {
@@ -2128,7 +2141,7 @@
           return onTable(f) && f.side === c.side && R.unitDist(c, f) <= 6 &&
             jammers.some(function (e) { return e.side !== f.side && R.unitDist(e, f) <= 24; });
         });
-        if (covering) STANDING.add({ kind: 'dome', x: c.x, y: c.y, r: 6, rgb: '120,200,255', steady: true, a: 0.3, dur: 1e9 });
+        if (covering) STANDING.add({ kind: 'cjam', x: c.x, y: c.y, r: 6, a: 1, dur: 1e9 });
       });
     }
     STANDING.draw(pctx);
@@ -2415,7 +2428,7 @@
     if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
-        muster.colour = b.getAttribute('data-colour');
+        muster.colour = b.getAttribute('data-colour'); muster.colourChosen = true;
         // only the first player's choice is remembered as "your" colour
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
@@ -2656,7 +2669,9 @@
   setInterval(function () {
     if (!state || !state.scene || loop || document.hidden) return;
     ambientTick++;
-    if (state.hazeOnView || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
+    // an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector breathes, a cloak shimmers
+    var flying = state.units.some(function (u) { return !u.aboard && u.x >= 0 && ISO.animates(u); });
+    if (state.hazeOnView || flying || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
   }, 60);
 
   /* ================= heat haze =================
@@ -5249,6 +5264,12 @@
           hotPaint(); return;
         }
         muster.keys = []; muster.name = '';
+        /* A swarm comes in rust orange unless its colour has been chosen: switching
+           to the Bugs from an untouched ochre (or back) swaps the default over. */
+        if (id === 'sel-faction' && !muster.colourChosen) {
+          var fdef = musterFaction() === 'bugs' ? 'rust' : 'ochre';
+          if (muster.colour === 'ochre' || muster.colour === 'rust') { muster.colour = fdef; if (typeof drawColourPick === 'function') drawColourPick(); }
+        }
         if (id === 'sel-faction' && muster.hot) hotLabels();
         // a force the player musters: a made-up name follows the kind of force
         if (id === 'sel-faction' && muster.hot && muster.hot.kind !== 'demo' && !hotRolled(muster.hot.step)) {

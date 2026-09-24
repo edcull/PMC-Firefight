@@ -3613,10 +3613,10 @@
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
     // drone units carry what the squads they stand in for carry; the support drones lob shells
-    // (the recon and engineer drones fire as light infantry do, a crack of single shots)
+    // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
-    // the support drones loose the missiles off their shoulders
-    dengineer: { p: 'pistol' }, dsupport: { p: 'rocket', n: 2 }, dmedic: { p: 'pistol' },
+    // the engineer drones carry nothing in hand and throw a pair of grenades; the support drones lob two rounds, up and over
+    dengineer: { p: 'none', s: 'arc', sn: 2 }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -14409,8 +14409,8 @@
     drshotgun: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
     drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, pouches: '#5d6e3a' },
     drscoutsmg: { helm: 'bot', gun: 'rifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, pouches: '#5d6e3a' },
-    drbreacher: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
-    drsapper: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drbreacher: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
     drheavy: { helm: 'bot', gun: 'heavy', shoulderGL: true, shoulderMsl: true, pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
     drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
     drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
@@ -14510,7 +14510,7 @@
     blargewing: { bug: 'largewing', big: 0.76, mz: [12, -15], fly: true },
     bsmallpath: { bug: 'smallpath', big: 0.62, mz: [11, -20] },
     bpath: { bug: 'path', big: 0.74, mz: [12, -22] },
-    blurker: { bug: 'lurker', big: 0.6, mz: [15, -10] },
+    blurker: { bug: 'lurker', big: 0.6, mz: [15, -17] },
     bwatchlarva: { bug: 'watchlarva', big: 0.42, mz: [12, -10] },
     bimmwatch: { bug: 'immwatch', big: 0.64, mz: [14, -22] },
     bwatcher: { bug: 'watcher', big: 0.86, mz: [16, -26] },
@@ -16540,7 +16540,11 @@
       L([[cx - rx * 0.5, cy + ry * 0.6], [cx + rx * 0.1, cy + ry * 0.2], [cx + rx * 0.7, cy + ry * 0.4]], 0.6, acid.d);
     }
     function brain(cx, cy, rx, ry) {
-      if (!dead) E(cx, cy, rx * 1.3, ry * 1.3, 'rgba(185,140,242,.2)');
+      /* It pulses, slowly: swelling a little and its glow brightening, one
+         beat in BRAIN_PHASES baked states turned by the clock. */
+      var bp = dead ? 0 : Math.sin(BRAIN_PHASE / BRAIN_PHASES * Math.PI * 2);
+      rx *= 1 + 0.05 * bp; ry *= 1 + 0.05 * bp;
+      if (!dead) E(cx, cy, rx * (1.3 + 0.08 * bp), ry * (1.3 + 0.08 * bp), 'rgba(185,140,242,' + (0.2 + 0.1 * bp).toFixed(3) + ')');
       E(cx, cy, rx, ry, psy.d);
       E(cx - rx * 0.05, cy - ry * 0.08, rx * 0.9, ry * 0.84, psy.m);
       // the folds of it
@@ -16748,14 +16752,16 @@
         break;
       }
       case 'lurker': {
-        drop = pose === 'kneel' ? 3 : down ? 5 : 0;
-        walk([6, -2, -10], -8, 7, [14, 6, -10], 2, true);
-        shell(-8, -10 + drop, 15, 5.5, 0.02);
-        ridges(-8, -10 + drop, 15, 5.5, 6);
-        spikes([[-19, -14 + drop], [-13, -15 + drop], [-7, -15.5 + drop], [-1, -15 + drop], [5, -13 + drop]], 6);
-        head(10, -10 + drop, 5, 4, 4);
-        antennae(12, -12 + drop, 9, 0.6);
-        walk([7, -1, -9], -8, 7, [15, 7, -9], 2.2, false);
+        /* A pioneer, so it stands up on the same long, jointed legs as the
+           others: the long spined body carried high, not dragged along the ground. */
+        drop = pose === 'kneel' ? 5 : down ? 9 : 0;
+        walk([6, -2, -10], -14, 14, [13, 5, -11], 1.8, true);
+        shell(-8, -17 + drop, 15, 5.5, 0.02);
+        ridges(-8, -17 + drop, 15, 5.5, 6);
+        spikes([[-19, -21 + drop], [-13, -22 + drop], [-7, -22.5 + drop], [-1, -22 + drop], [5, -20 + drop]], 6);
+        head(10, -17 + drop, 5, 4, 4);
+        antennae(12, -19 + drop, 9, 0.6);
+        walk([7, -1, -9], -15, 14, [14, 6, -10], 1.9, false);
         break;
       }
       /* ---- the leader caste ---- */
@@ -17260,16 +17266,22 @@
       }
       /* the Beta's Personal Deflector: a bubble of blue light about the whole
          body, brighter at its rim, with a few facets catching the light */
+      /* ...and it is alive: `SHIELD_PHASE` (one of SHIELD_PHASES, turned by the
+         clock) breathes its light up and down, walks a band of brightness
+         round the rim and lights a different few of its hexes each time. */
       if (rank === 'beta' && !dead) {
+        var sph = SHIELD_PHASE / SHIELD_PHASES, pulse = 0.75 + 0.25 * Math.sin(sph * Math.PI * 2);
         var dcx = 4, dcy = by - 9, drx = 19, dry = 27;
-        E(dcx, dcy, drx, dry, 'rgba(140,210,255,.1)');
+        E(dcx, dcy, drx, dry, 'rgba(140,210,255,' + (0.1 * pulse).toFixed(3) + ')');
         E(dcx - 5, dcy - 9, drx * 0.45, dry * 0.35, 'rgba(220,242,255,.12)');        // a sheen high on the bubble
         var rim = [];
         for (var ri = 0; ri <= 28; ri++) { var ra = ri / 28 * Math.PI * 2; rim.push([dcx + Math.cos(ra) * drx, dcy + Math.sin(ra) * dry]); }
-        L(rim, 3.2, 'rgba(110,190,255,.28)');                                 // the glow off the rim
-        L(rim, 1.3, 'rgba(120,200,255,.95)');
-        L(rim.slice(15, 25), 1.8, 'rgba(220,242,255,.95)');                 // the lit shoulder of the bubble
-        [[-8, -14], [12, -18], [-12, 6], [14, 8]].forEach(function (h2) {        // hexes flickering in it
+        L(rim, 3.2, 'rgba(110,190,255,' + (0.28 * pulse).toFixed(3) + ')');   // the glow off the rim
+        L(rim, 1.3, 'rgba(120,200,255,' + (0.95 * pulse).toFixed(3) + ')');
+        var sweep = Math.round(sph * 28);                                   // the band of light running round the rim
+        L(rim.concat(rim.slice(1)).slice(sweep, sweep + 8), 1.8, 'rgba(220,242,255,.95)');
+        [[-8, -14], [12, -18], [-12, 6], [14, 8], [2, -24], [-4, 14], [16, -6], [-15, -4]].forEach(function (h2, hn) {   // hexes flickering in it
+          if ((hn + SHIELD_PHASE) % 3) return;
           var hx2 = dcx + h2[0], hy2 = dcy + h2[1], r2 = 2.2;
           var hp = [];
           for (var hi = 0; hi <= 6; hi++) { var ha = hi / 6 * Math.PI * 2; hp.push([hx2 + Math.cos(ha) * r2, hy2 + Math.sin(ha) * r2]); }
@@ -17278,14 +17290,7 @@
       }
     }
     g.restore();
-    // a cloaked squad is the same model, half there: 50% transparent, nothing added
-    if (kit.cloak && !dead) {
-      g.save();
-      g.globalCompositeOperation = 'destination-out';
-      g.fillStyle = 'rgba(0,0,0,.5)';
-      g.fillRect(0, 0, g.canvas.width, g.canvas.height);
-      g.restore();
-    }
+    // a cloaked squad is the same model, half there: faded as it is drawn (cloakFade), not baked in
   }
 
   /* A broken bug digs in: drawn crouched, then sunk half its height into the
@@ -17584,8 +17589,9 @@
         var bc = S(hd[0] - hd[2] * 1.0, 0, zs(hd[1]) + hr * 1.35), br = 0.52 * K;
         add(Math.max(bc.d, hc.d) + 0.3, function () {
           // drawn as the brain bugs' brains are: glow, lobes, four folds, a shine
-          var rx = br, ry = br * 0.9, cx = bc.x, cy = bc.y;
-          if (!dead) ellipse(g, cx, cy, rx * 1.3, ry * 1.3, 'rgba(185,140,242,.2)');
+          var qb = dead ? 0 : Math.sin(nowT() / 2000 * Math.PI * 2);        // its slow beat
+          var rx = br * (1 + 0.05 * qb), ry = br * 0.9 * (1 + 0.05 * qb), cx = bc.x, cy = bc.y;
+          if (!dead) ellipse(g, cx, cy, rx * (1.3 + 0.08 * qb), ry * (1.3 + 0.08 * qb), 'rgba(185,140,242,' + (0.2 + 0.1 * qb).toFixed(3) + ')');
           ellipse(g, cx, cy, rx, ry, psy.d);
           ellipse(g, cx - rx * 0.05, cy - ry * 0.08, rx * 0.9, ry * 0.84, psy.m);
           g.strokeStyle = psy.d; g.lineWidth = Math.max(1, rx * 0.1); g.lineCap = 'round'; g.lineJoin = 'round';
@@ -17680,6 +17686,22 @@
     }
     g.putImageData(im, 0, 0);
   }
+  var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
+  var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
+  function nowT() { return root.performance ? performance.now() : 0; }
+  function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
+  function cloakedKit(kit) { return !!kit && !!kit.xeno && !!kit.cloak; }
+  /* A cloaked model fades in and out between whole and half there, each at its
+     own beat so the squad shimmers rather than blinking as one. */
+  function cloakFade(mi) { return 0.75 + 0.25 * Math.sin(nowT() / 1100 + mi * 1.7); }
+  // whether a unit is drawn differently from one moment to the next, so the board keeps redrawing it
+  function animates(u) {
+    if (!u || !u.alive) return false;
+    if (u.cls === 'aircraft') return true;
+    if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]); });
+  }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
     var kit = KIT[role] || KIT.rifle;
@@ -17700,7 +17722,13 @@
     // a man flat in the dirt is drawn a size up to read; a bug that has gone to ground is not
     if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '');
+    // a Beta's deflector is baked in SHIELD_PHASES states, one for each beat of its light
+    var shieldy = shieldAnimated(kit);
+    if (shieldy) SHIELD_PHASE = Math.floor(nowT() / 110) % SHIELD_PHASES;
+    // a leader bug's brain beats slowly, about once in two seconds
+    var thinking = brainy(kit);
+    if (thinking) BRAIN_PHASE = Math.floor(nowT() / 200) % BRAIN_PHASES;
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -20456,6 +20484,11 @@
             body = function () {
               roundTurret(TR, 9);
               cupola(-TR * 0.12, -TR * 0.18, tz + 9);
+              if (tw === 'recon') {
+                // the recon turret's cupola is its sight: the marker laser and the keen eye both look out of it
+                var cpm = S3(TF(-TR * 0.12, -TR * 0.18), tz + 11);
+                mount('nose', cpm); mount('scan', cpm);
+              }
               smokeRack(TR, tz + 6);
               if (st.tMissiles) launcher(TF, -TR * 0.35, TR * 0.2, -TR * 0.74, -TR * 0.5, tz + 3, 6, 2, 2, 'missile', { warheads: '#6a5a3a' });
               if (tw === 'recon') {
@@ -20792,8 +20825,10 @@
       sEllipse(c[0], cy + 0.5, rx - lipW * 0.5, ry - lipW * 0.35, '#0e1115'); // the well
       if (!dead) {
         sEllipse(c[0], cy + 0.8, rx - lipW, ry - lipW * 0.6, 'rgba(170,182,198,.22)');
+        // the blades turning: the two sides of a craft counter-rotate
+        var spin = ((root.performance ? performance.now() : 0) * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
         for (var i = 0; i < 5; i++) {
-          var ba = i * Math.PI * 2 / 5 + 0.4;
+          var ba = i * Math.PI * 2 / 5 + 0.4 + spin;
           line([c[0], cy + 0.8], [c[0] + Math.cos(ba) * (rx - lipW), cy + 0.8 + Math.sin(ba) * (ry - lipW * 0.6)], 1.1, 'rgba(206,214,226,.3)');
         }
       }
@@ -20961,6 +20996,9 @@
             line(e0, e1, 2.2, '#15181e');
             line(e0, e1, 1, '#4a5260');
             sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            mount('nose', e1);                                   // where a marker's beam leaves the craft
+            mount('scan', S3(AF(R0 * 1.13, 0), podZ + Math.round(H * 0.2)));   // and where it looks from
+            mount('mg', S3(AF(R0 * 1.14, 0), podZ + Math.round(H * 0.12)));    // its light gun fires from the pod's nose
             if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
             shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
             shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
@@ -21035,10 +21073,14 @@
             }
             fuselage(pts2o, topo, z, H, TB);
             bandOnSides(g, box(off, 0, cabL, Wd), z + 2, 2, 2, 'rgba(10,9,7,.4)');
-            canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
+            /* The glazing is set into the cab below its roof and inside its width,
+               so only the nose's face shows it: with the nose turned away the
+               cab hides it altogether. */
+            if (fwd > 0) canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
             var ns = nearSide();
             doorGun(ns, off - cabL * 0.05, z + H * 0.45, true);
-            noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
+            // ...and so is the gun under the nose
+            if (fwd > 0) noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
             if (st === 'chinookcp') {
               // the command post: a dome on the roof and aerials (its radar went on under the nose)
               var dm = S3(AF(-L * 0.05, 0), z + H + 1);
@@ -22186,8 +22228,9 @@
          sprite pixel lands on a screen pixel. Zoomed out, the halving is a
          downscale, and that is the one place smoothing helps rather than blurs. */
       var rs = c.res || 1;
-      var was = g.imageSmoothingEnabled;
+      var was = g.imageSmoothingEnabled, wasA = g.globalAlpha;
       g.imageSmoothingEnabled = true;
+      if (cloakedKit(KIT[roleAt(art, mi)])) g.globalAlpha = wasA * cloakFade(mi);
       // snapped to the half-pixel, which is one pixel of a window drawn at 2x
       var bx = Math.round((mx - c.ox / rs) * rs) / rs, by = Math.round((my - c.oy / rs) * rs) / rs;
       if (u.faceL) {
@@ -22197,7 +22240,7 @@
         g.drawImage(c, bx - mx, by, c.width / rs, c.height / rs);
         g.restore();
       } else g.drawImage(c, bx, by, c.width / rs, c.height / rs);
-      g.imageSmoothingEnabled = was;
+      g.imageSmoothingEnabled = was; g.globalAlpha = wasA;
     }
 
     // a garrison's markers ride over the middle of the building
@@ -22349,6 +22392,7 @@
   root.PMCIso = {
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
+    animates: animates,
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
@@ -23029,6 +23073,27 @@
           }
         }
         g.restore();
+      } else if (f.kind === 'cjam') {
+        /* Counter-jamming at work: no bubble, but the ground it holds marked
+           out — a slowly turning dashed ring at its reach, clean signal rippling
+           out from the unit to it, and a blink at the emitter. */
+        var cc = I.toScreen(f.x, f.y); cc.y -= liftAt(f);
+        var crgb = f.rgb || '120,235,170', cr = (f.r || 6) * I.K * 0.72, ca = f.a || 0.5;
+        g.save();
+        g.lineWidth = I.PIXEL * 1.5;
+        g.setLineDash([I.PIXEL * 5, I.PIXEL * 4]);
+        g.lineDashOffset = -(t / 60) % (I.PIXEL * 9);
+        g.strokeStyle = 'rgba(' + crgb + ',' + (0.7 * ca) + ')';
+        g.beginPath(); g.ellipse(cc.x, cc.y, cr, cr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        g.setLineDash([]);
+        for (var ci = 0; ci < 3; ci++) {
+          var cph = ((t / 1400) + ci / 3) % 1, crr = cr * cph;
+          g.strokeStyle = 'rgba(' + crgb + ',' + (0.55 * ca * (1 - cph)) + ')';
+          g.beginPath(); g.ellipse(cc.x, cc.y, crr, crr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        }
+        var cb = 0.5 + 0.5 * Math.sin(t / 160);
+        I.ellipse(g, cc.x, cc.y - I.K * 1.2, I.PIXEL * (1.5 + cb), I.PIXEL * (1.5 + cb), 'rgba(' + crgb + ',' + (0.5 + 0.4 * cb) * ca + ')');
+        g.restore();
       } else if (f.kind === 'dome') {
         /* A shield: a bubble of light raised over the ground around a unit,
            rim bright, a band of light running up it. */
@@ -23072,7 +23137,9 @@
       } else if (f.kind === 'glint') {
         /* Keen-Eyed: a four-pointed glint off the spotter's optics, and one on
            the Stealthy unit it has picked out. */
-        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
+        var gp = I.toScreen(f.x, f.y);
+        // off a machine's own sensor (`mz`), else about head height
+        if (f.mz) { gp.x += f.mz.dx; gp.y += f.mz.dy - liftAt(f); } else gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
         var grgb = f.rgb || '150,240,255', gk = Math.sin(Math.min(1, k) * Math.PI);
         var gl = I.K * (0.5 + 0.9 * gk), gw = I.PIXEL * 1.2;
         g.save();
@@ -27052,7 +27119,7 @@
      Stealth only counts from `from` inches on, so nearer than that nothing shows. */
   function keenFx(a, t, from) {
     if (!a || !t || !R.has(a, 'Keen-Eyed') || !R.has(t, 'Stealth') || R.unitDist(a, t) < from) return;
-    addFx({ kind: 'glint', x: a.x, y: a.y, dur: 700 });
+    addFx({ kind: 'glint', unit: a.id, x: a.x, y: a.y, dur: 700 });
     addFx({ kind: 'glint', x: t.x, y: t.y, up: 0.8, delay: 250, dur: 700 });
   }
   // a rally or repair made harder by an enemy's Jammers: the static rolling out from the jammer
@@ -27499,7 +27566,7 @@
         var gt = Math.round(Math.min(1000, 450 + R.unitDist(u, t) * 40));
         addFx({ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: t.x, y: t.y }, dur: gt });
         addFx({ kind: 'puff', x: t.x, y: t.y, delay: gt - 30, dur: gt + 1800 });
-      } else addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
+      } else addFx({ kind: 'beam', unit: u.id, x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
     });
     u.activated = true;
@@ -29844,6 +29911,17 @@
   /* An effect the engine described without knowing how high anything is drawn.
      A flier's height is a matter for the view, so it is filled in here. */
   function reLift(f) {
+    /* A marker's laser and a Keen-Eyed glint come off the machine's own
+       sensor, however high it flies: the nose of a craft, its scanner. */
+    if (f && f.unit && (f.kind === 'beam' || f.kind === 'glint')) {
+      var src = evUnit(f.unit);
+      if (src && (src.cls === 'aircraft' || src.cls === 'vehicle')) {
+        var M = ISO.mounts(src), at = f.kind === 'beam' ? (M.nose || M.scan) : (M.scan || M.nose);
+        if (at && at.length) f.mz = at[0];
+        else if (ISO.flyLift(src)) f.mz = { dx: 0, dy: -ISO.flyLift(src) };
+      }
+      return f;
+    }
     if (!f || f.up !== 0 || !f.unit) return f;
     var u = evUnit(f.unit);
     if (u) f.up = ISO.flyLift(u);
@@ -31164,6 +31242,8 @@
 
     switch (spec.p) {
       case 'none':
+        // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
+        if (spec.s) { setTimeout(function () { land(3); }, 150 + 520 + ((spec.sn || 1) - 1) * 170); finish(120 + tail); return; }
         finish(120); return;
 
       // Xenotripod small arms: pulses of the army's own light
@@ -31588,7 +31668,7 @@
       if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
       STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
     });
-    /* Counter-jamming, while it is doing something: a faint 6" dome over a
+    /* Counter-jamming, while it is doing something: its 6" marked out on the ground round a
        counter-jammer that has a friend (itself included) inside it who stands
        within 24" of an enemy's Jammers — the ground it is winning back. */
     if (state) {
@@ -31600,7 +31680,7 @@
           return onTable(f) && f.side === c.side && R.unitDist(c, f) <= 6 &&
             jammers.some(function (e) { return e.side !== f.side && R.unitDist(e, f) <= 24; });
         });
-        if (covering) STANDING.add({ kind: 'dome', x: c.x, y: c.y, r: 6, rgb: '120,200,255', steady: true, a: 0.3, dur: 1e9 });
+        if (covering) STANDING.add({ kind: 'cjam', x: c.x, y: c.y, r: 6, a: 1, dur: 1e9 });
       });
     }
     STANDING.draw(pctx);
@@ -31887,7 +31967,7 @@
     if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
-        muster.colour = b.getAttribute('data-colour');
+        muster.colour = b.getAttribute('data-colour'); muster.colourChosen = true;
         // only the first player's choice is remembered as "your" colour
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
@@ -32128,7 +32208,9 @@
   setInterval(function () {
     if (!state || !state.scene || loop || document.hidden) return;
     ambientTick++;
-    if (state.hazeOnView || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
+    // an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector breathes, a cloak shimmers
+    var flying = state.units.some(function (u) { return !u.aboard && u.x >= 0 && ISO.animates(u); });
+    if (state.hazeOnView || flying || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
   }, 60);
 
   /* ================= heat haze =================
@@ -34721,6 +34803,12 @@
           hotPaint(); return;
         }
         muster.keys = []; muster.name = '';
+        /* A swarm comes in rust orange unless its colour has been chosen: switching
+           to the Bugs from an untouched ochre (or back) swaps the default over. */
+        if (id === 'sel-faction' && !muster.colourChosen) {
+          var fdef = musterFaction() === 'bugs' ? 'rust' : 'ochre';
+          if (muster.colour === 'ochre' || muster.colour === 'rust') { muster.colour = fdef; if (typeof drawColourPick === 'function') drawColourPick(); }
+        }
         if (id === 'sel-faction' && muster.hot) hotLabels();
         // a force the player musters: a made-up name follows the kind of force
         if (id === 'sel-faction' && muster.hot && muster.hot.kind !== 'demo' && !hotRolled(muster.hot.step)) {
@@ -36561,7 +36649,7 @@
     /* The name and the colours are settled on the founding screen, alongside the
        units — they are the three things that make a company yours, and asking
        for them in one place is how a player thinks about it. */
-    draft = { side: 'A', keys: [], doctrine: null, name: name, colour: startingColour() };
+    draft = { side: 'A', keys: [], doctrine: null, name: name, colour: startingColour(faction) };
     view = 'found';
   }
   /* Hotseat: the second player founds a force of their own on the same screen,
@@ -36576,17 +36664,18 @@
     var A = camp.companies.A;
     var B = C.newCompany('', { faction: faction || (camp.companies.B && camp.companies.B.faction) || A.faction });
     camp.companies.B = B; camp.rivals = [B]; camp.facing = 0;
-    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: freeColour([A.colour]) };
+    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: B.faction === 'bugs' && A.colour !== 'rust' ? 'rust' : freeColour([A.colour]) };
     view = 'found';
   }
   var secondFaction = null;       // what the hub said the second player runs, until they found it
   var FACTION_CHOICES = [['pmc', 'A private military company'], ['rebel', 'An insurgent revolt'],
     ['bugs', 'A Space Bug swarm'], ['xeno', 'A Xenotripod tribe']];
   // the colour the player last painted a force in, or the house ochre
-  function startingColour() {
+  function startingColour(faction) {
     var c = null;
     try { c = localStorage.getItem('pmc-colour'); } catch (e) { }
-    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : 'ochre';
+    // a swarm's shells are rust orange unless a colour has been chosen before
+    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : faction === 'bugs' ? 'rust' : 'ochre';
   }
   function colourKeys() {
     return (root.PMCIso && root.PMCIso.COLOUR_KEYS) || ['ochre'];
@@ -37954,13 +38043,15 @@
     }
     if (t.hasAttribute('data-bfaction')) {
       keepFoundName();
-      var keepName = draft.name, keepColour = draft.colour;
+      var keepName = draft.name, keepColour = draft.colour, chosen = draft.colourChosen;
       beginSecond(t.getAttribute('data-bfaction'));
-      draft.name = keepName; draft.colour = keepColour;
+      // an unchosen colour follows the kind of force (a swarm defaults to rust); a chosen one is kept
+      draft.name = keepName;
+      if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
-      draft.colour = t.getAttribute('data-campcolour');
+      draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
       colourOpen = false;
       keepFoundName();
       render(); return;

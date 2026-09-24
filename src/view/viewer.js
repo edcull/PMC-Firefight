@@ -43,7 +43,7 @@
   /* Put a unit on the stage: every model, a state it can be in (a tank cannot
      be suppressed), and a ground vehicle on the running gear it usually has. */
   // each army's own colour, put on when the viewer turns to one of its units
-  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
+  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'rust', xeno: 'steel' };
   function choose(k) {
     var wasFac = view.pickFac;
     view.key = k; view.models = null; view.tele = null;
@@ -245,6 +245,8 @@
     if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
     // and a shield's band of light keeps turning
     if (shielded(unit())) busy = true;
+    // an aircraft's rotors turn and its scanners sweep, even hanging still
+    if (I.animates(unit()) && view.status !== 'destroyed') busy = true;
     frame();
     if (busy) start(); else last = 0;
   }
@@ -270,6 +272,13 @@
   function stepWalk(dt) {
     var u = unit();
     var speed = Math.max(2, (u.move || 5)) * 0.9;          // inches a second
+    /* An aircraft crosses the bench at the pace it flies in a battle: the game
+       times a flight at 0.7s plus 85ms an inch, to 3.2s at most (game.js
+       moveMs), and a full Move is Movement +4" for a machine. */
+    if (u.cls === 'aircraft') {
+      var full = (u.move || 12) + 4;
+      speed = full * 1000 / Math.min(3200, 700 + full * 85);
+    }
     view.walkT += (dt / 1000) * speed;
     var span = TO.x - FROM.x - 3;
     var f = (view.walkT % (span * 2)) / span;
@@ -347,7 +356,10 @@
      What an aircraft does instead of standing still and shooting (engine.js
      offers Strafe to anything of class aircraft): it comes across the bench at
      speed with its guns going, and the ground walks up under it. */
-  var STRAFE_MS = 2200;
+  /* A strafing run takes as long as the game gives the same stretch of table
+     (game.js playStrafe: 1.1s plus 140ms an inch, between 1.9s and 4s). The
+     bench's run is from 6" short of the start mark to 6" past the target. */
+  var STRAFE_MS = Math.max(1900, Math.min(4000, 1100 + ((TO.x + 6) - (FROM.x - 6)) * 140));
   function canStrafe() { return unit().cls === 'aircraft'; }
 
   /* A unit's special ability, played on the stage: the first rule it has that
@@ -812,7 +824,7 @@
               ? { x: to.x + (j - (thrown - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up }
               : to;
             if (SFX) SFX.launch();
-            FX.add({ kind: 'lob', from: from, to: aim, dur: 520, heavy: style === 'arcbig' });
+            FX.add({ kind: 'lob', from: tubeOf(from, j), to: aim, dur: 520, heavy: style === 'arcbig' });
             setTimeout(function () { landing(aim, 4); start(); }, 520);
             start();
           }, j * 190);
@@ -914,11 +926,13 @@
           (function (i) {
             setTimeout(function () {
               if (SFX) SFX.launch();
-              FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: 220, big: true });
+              // each tube fires its own round: a team's two mortars, a battery's three
+              var F = tubeOf(from, i);
+              FX.add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 220, big: !F.mz });
               var aim = (spec.n || 1) > 1
                 ? { x: to.x + (i - ((spec.n || 1) - 1) / 2) * 1.6, y: to.y + (i % 2 ? 1 : -1) * 0.9 }
                 : to;
-              FX.add({ kind: 'lob', from: from, to: aim, dur: flight, heavy: heavy });
+              FX.add({ kind: 'lob', from: F, to: aim, dur: flight, heavy: heavy });
               if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
               setTimeout(function () { landing(aim, heavy ? 7 : 6, heavy); start(); }, flight);
               start();
@@ -1004,7 +1018,20 @@
       if (on) on.scrollIntoView({ block: 'center' });
     }
   }
+  // the i-th barrel of a unit that works several (a mortar team's two tubes), else the one it has
+  function tubeOf(from, i) {
+    if (!from.pool || from.pool.length < 2) return from;
+    return { x: from.x, y: from.y, up: from.up, mz: from.pool[i % from.pool.length], pool: from.pool };
+  }
   function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
+  // the words a player might search a weapon style by
+  var WEAPON_WORDS = {
+    small: 'rifle rifles', pistol: 'pistol sidearm', smg: 'smg submachinegun carbine', burst: 'machine gun mg',
+    chain: 'autocannon cannon', shell: 'cannon gun shell', shellbig: 'cannon gun shell heavy', arc: 'mortar grenade lobbed indirect',
+    arcbig: 'howitzer artillery lobbed indirect', missile: 'missile guided', rocket: 'rocket rockets', flame: 'flamer flame fire',
+    rail: 'gauss rail laser', spit: 'acid spit', spitbig: 'plasma acid', spine: 'spines darts', energy: 'energy pulse',
+    orb: 'plasma orb', orbbig: 'plasma orb heavy', none: 'unarmed no weapon'
+  };
 
   /* The list has a tab for each army; a search looks through all four. The
      open tab follows the unit on the stage until another is chosen. */
@@ -1029,7 +1056,10 @@
         main: el('vlist'), scroller: el('vside').querySelector('.vlistscroll'), search: el('vsearch'),
         faction: pickerFaction, colour: view.colour.A, prefix: 'vp-',
         fit: { inf: 120, other: 112 },     // the list's own tile sizes; the desktop's three-to-a-row tiles come smaller
-        findMore: function (p) { var w = R.weaponSpec(p); return styleName(w.p) + (w.s ? ' ' + styleName(w.s) : ''); }
+        findMore: function (p) {
+          var w = R.weaponSpec(p);
+          return [w.p, w.s].filter(Boolean).map(function (st) { return styleName(st) + ' ' + (WEAPON_WORDS[st] || ''); }).join(' ');
+        }
       });
     } else if (want !== pickerShown) { picker.render(); el('vside').querySelector('.vlistscroll').scrollTop = 0; }
     pickerShown = want;

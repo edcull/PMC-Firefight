@@ -2533,8 +2533,8 @@
     drshotgun: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
     drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, pouches: '#5d6e3a' },
     drscoutsmg: { helm: 'bot', gun: 'rifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, pouches: '#5d6e3a' },
-    drbreacher: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
-    drsapper: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drbreacher: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
     drheavy: { helm: 'bot', gun: 'heavy', shoulderGL: true, shoulderMsl: true, pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
     drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
     drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
@@ -2634,7 +2634,7 @@
     blargewing: { bug: 'largewing', big: 0.76, mz: [12, -15], fly: true },
     bsmallpath: { bug: 'smallpath', big: 0.62, mz: [11, -20] },
     bpath: { bug: 'path', big: 0.74, mz: [12, -22] },
-    blurker: { bug: 'lurker', big: 0.6, mz: [15, -10] },
+    blurker: { bug: 'lurker', big: 0.6, mz: [15, -17] },
     bwatchlarva: { bug: 'watchlarva', big: 0.42, mz: [12, -10] },
     bimmwatch: { bug: 'immwatch', big: 0.64, mz: [14, -22] },
     bwatcher: { bug: 'watcher', big: 0.86, mz: [16, -26] },
@@ -4664,7 +4664,11 @@
       L([[cx - rx * 0.5, cy + ry * 0.6], [cx + rx * 0.1, cy + ry * 0.2], [cx + rx * 0.7, cy + ry * 0.4]], 0.6, acid.d);
     }
     function brain(cx, cy, rx, ry) {
-      if (!dead) E(cx, cy, rx * 1.3, ry * 1.3, 'rgba(185,140,242,.2)');
+      /* It pulses, slowly: swelling a little and its glow brightening, one
+         beat in BRAIN_PHASES baked states turned by the clock. */
+      var bp = dead ? 0 : Math.sin(BRAIN_PHASE / BRAIN_PHASES * Math.PI * 2);
+      rx *= 1 + 0.05 * bp; ry *= 1 + 0.05 * bp;
+      if (!dead) E(cx, cy, rx * (1.3 + 0.08 * bp), ry * (1.3 + 0.08 * bp), 'rgba(185,140,242,' + (0.2 + 0.1 * bp).toFixed(3) + ')');
       E(cx, cy, rx, ry, psy.d);
       E(cx - rx * 0.05, cy - ry * 0.08, rx * 0.9, ry * 0.84, psy.m);
       // the folds of it
@@ -4872,14 +4876,16 @@
         break;
       }
       case 'lurker': {
-        drop = pose === 'kneel' ? 3 : down ? 5 : 0;
-        walk([6, -2, -10], -8, 7, [14, 6, -10], 2, true);
-        shell(-8, -10 + drop, 15, 5.5, 0.02);
-        ridges(-8, -10 + drop, 15, 5.5, 6);
-        spikes([[-19, -14 + drop], [-13, -15 + drop], [-7, -15.5 + drop], [-1, -15 + drop], [5, -13 + drop]], 6);
-        head(10, -10 + drop, 5, 4, 4);
-        antennae(12, -12 + drop, 9, 0.6);
-        walk([7, -1, -9], -8, 7, [15, 7, -9], 2.2, false);
+        /* A pioneer, so it stands up on the same long, jointed legs as the
+           others: the long spined body carried high, not dragged along the ground. */
+        drop = pose === 'kneel' ? 5 : down ? 9 : 0;
+        walk([6, -2, -10], -14, 14, [13, 5, -11], 1.8, true);
+        shell(-8, -17 + drop, 15, 5.5, 0.02);
+        ridges(-8, -17 + drop, 15, 5.5, 6);
+        spikes([[-19, -21 + drop], [-13, -22 + drop], [-7, -22.5 + drop], [-1, -22 + drop], [5, -20 + drop]], 6);
+        head(10, -17 + drop, 5, 4, 4);
+        antennae(12, -19 + drop, 9, 0.6);
+        walk([7, -1, -9], -15, 14, [14, 6, -10], 1.9, false);
         break;
       }
       /* ---- the leader caste ---- */
@@ -5384,16 +5390,22 @@
       }
       /* the Beta's Personal Deflector: a bubble of blue light about the whole
          body, brighter at its rim, with a few facets catching the light */
+      /* ...and it is alive: `SHIELD_PHASE` (one of SHIELD_PHASES, turned by the
+         clock) breathes its light up and down, walks a band of brightness
+         round the rim and lights a different few of its hexes each time. */
       if (rank === 'beta' && !dead) {
+        var sph = SHIELD_PHASE / SHIELD_PHASES, pulse = 0.75 + 0.25 * Math.sin(sph * Math.PI * 2);
         var dcx = 4, dcy = by - 9, drx = 19, dry = 27;
-        E(dcx, dcy, drx, dry, 'rgba(140,210,255,.1)');
+        E(dcx, dcy, drx, dry, 'rgba(140,210,255,' + (0.1 * pulse).toFixed(3) + ')');
         E(dcx - 5, dcy - 9, drx * 0.45, dry * 0.35, 'rgba(220,242,255,.12)');        // a sheen high on the bubble
         var rim = [];
         for (var ri = 0; ri <= 28; ri++) { var ra = ri / 28 * Math.PI * 2; rim.push([dcx + Math.cos(ra) * drx, dcy + Math.sin(ra) * dry]); }
-        L(rim, 3.2, 'rgba(110,190,255,.28)');                                 // the glow off the rim
-        L(rim, 1.3, 'rgba(120,200,255,.95)');
-        L(rim.slice(15, 25), 1.8, 'rgba(220,242,255,.95)');                 // the lit shoulder of the bubble
-        [[-8, -14], [12, -18], [-12, 6], [14, 8]].forEach(function (h2) {        // hexes flickering in it
+        L(rim, 3.2, 'rgba(110,190,255,' + (0.28 * pulse).toFixed(3) + ')');   // the glow off the rim
+        L(rim, 1.3, 'rgba(120,200,255,' + (0.95 * pulse).toFixed(3) + ')');
+        var sweep = Math.round(sph * 28);                                   // the band of light running round the rim
+        L(rim.concat(rim.slice(1)).slice(sweep, sweep + 8), 1.8, 'rgba(220,242,255,.95)');
+        [[-8, -14], [12, -18], [-12, 6], [14, 8], [2, -24], [-4, 14], [16, -6], [-15, -4]].forEach(function (h2, hn) {   // hexes flickering in it
+          if ((hn + SHIELD_PHASE) % 3) return;
           var hx2 = dcx + h2[0], hy2 = dcy + h2[1], r2 = 2.2;
           var hp = [];
           for (var hi = 0; hi <= 6; hi++) { var ha = hi / 6 * Math.PI * 2; hp.push([hx2 + Math.cos(ha) * r2, hy2 + Math.sin(ha) * r2]); }
@@ -5402,14 +5414,7 @@
       }
     }
     g.restore();
-    // a cloaked squad is the same model, half there: 50% transparent, nothing added
-    if (kit.cloak && !dead) {
-      g.save();
-      g.globalCompositeOperation = 'destination-out';
-      g.fillStyle = 'rgba(0,0,0,.5)';
-      g.fillRect(0, 0, g.canvas.width, g.canvas.height);
-      g.restore();
-    }
+    // a cloaked squad is the same model, half there: faded as it is drawn (cloakFade), not baked in
   }
 
   /* A broken bug digs in: drawn crouched, then sunk half its height into the
@@ -5708,8 +5713,9 @@
         var bc = S(hd[0] - hd[2] * 1.0, 0, zs(hd[1]) + hr * 1.35), br = 0.52 * K;
         add(Math.max(bc.d, hc.d) + 0.3, function () {
           // drawn as the brain bugs' brains are: glow, lobes, four folds, a shine
-          var rx = br, ry = br * 0.9, cx = bc.x, cy = bc.y;
-          if (!dead) ellipse(g, cx, cy, rx * 1.3, ry * 1.3, 'rgba(185,140,242,.2)');
+          var qb = dead ? 0 : Math.sin(nowT() / 2000 * Math.PI * 2);        // its slow beat
+          var rx = br * (1 + 0.05 * qb), ry = br * 0.9 * (1 + 0.05 * qb), cx = bc.x, cy = bc.y;
+          if (!dead) ellipse(g, cx, cy, rx * (1.3 + 0.08 * qb), ry * (1.3 + 0.08 * qb), 'rgba(185,140,242,' + (0.2 + 0.1 * qb).toFixed(3) + ')');
           ellipse(g, cx, cy, rx, ry, psy.d);
           ellipse(g, cx - rx * 0.05, cy - ry * 0.08, rx * 0.9, ry * 0.84, psy.m);
           g.strokeStyle = psy.d; g.lineWidth = Math.max(1, rx * 0.1); g.lineCap = 'round'; g.lineJoin = 'round';
@@ -5804,6 +5810,22 @@
     }
     g.putImageData(im, 0, 0);
   }
+  var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
+  var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
+  function nowT() { return root.performance ? performance.now() : 0; }
+  function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
+  function cloakedKit(kit) { return !!kit && !!kit.xeno && !!kit.cloak; }
+  /* A cloaked model fades in and out between whole and half there, each at its
+     own beat so the squad shimmers rather than blinking as one. */
+  function cloakFade(mi) { return 0.75 + 0.25 * Math.sin(nowT() / 1100 + mi * 1.7); }
+  // whether a unit is drawn differently from one moment to the next, so the board keeps redrawing it
+  function animates(u) {
+    if (!u || !u.alive) return false;
+    if (u.cls === 'aircraft') return true;
+    if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]); });
+  }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
     var kit = KIT[role] || KIT.rifle;
@@ -5824,7 +5846,13 @@
     // a man flat in the dirt is drawn a size up to read; a bug that has gone to ground is not
     if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '');
+    // a Beta's deflector is baked in SHIELD_PHASES states, one for each beat of its light
+    var shieldy = shieldAnimated(kit);
+    if (shieldy) SHIELD_PHASE = Math.floor(nowT() / 110) % SHIELD_PHASES;
+    // a leader bug's brain beats slowly, about once in two seconds
+    var thinking = brainy(kit);
+    if (thinking) BRAIN_PHASE = Math.floor(nowT() / 200) % BRAIN_PHASES;
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -8580,6 +8608,11 @@
             body = function () {
               roundTurret(TR, 9);
               cupola(-TR * 0.12, -TR * 0.18, tz + 9);
+              if (tw === 'recon') {
+                // the recon turret's cupola is its sight: the marker laser and the keen eye both look out of it
+                var cpm = S3(TF(-TR * 0.12, -TR * 0.18), tz + 11);
+                mount('nose', cpm); mount('scan', cpm);
+              }
               smokeRack(TR, tz + 6);
               if (st.tMissiles) launcher(TF, -TR * 0.35, TR * 0.2, -TR * 0.74, -TR * 0.5, tz + 3, 6, 2, 2, 'missile', { warheads: '#6a5a3a' });
               if (tw === 'recon') {
@@ -8916,8 +8949,10 @@
       sEllipse(c[0], cy + 0.5, rx - lipW * 0.5, ry - lipW * 0.35, '#0e1115'); // the well
       if (!dead) {
         sEllipse(c[0], cy + 0.8, rx - lipW, ry - lipW * 0.6, 'rgba(170,182,198,.22)');
+        // the blades turning: the two sides of a craft counter-rotate
+        var spin = ((root.performance ? performance.now() : 0) * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
         for (var i = 0; i < 5; i++) {
-          var ba = i * Math.PI * 2 / 5 + 0.4;
+          var ba = i * Math.PI * 2 / 5 + 0.4 + spin;
           line([c[0], cy + 0.8], [c[0] + Math.cos(ba) * (rx - lipW), cy + 0.8 + Math.sin(ba) * (ry - lipW * 0.6)], 1.1, 'rgba(206,214,226,.3)');
         }
       }
@@ -9085,6 +9120,9 @@
             line(e0, e1, 2.2, '#15181e');
             line(e0, e1, 1, '#4a5260');
             sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            mount('nose', e1);                                   // where a marker's beam leaves the craft
+            mount('scan', S3(AF(R0 * 1.13, 0), podZ + Math.round(H * 0.2)));   // and where it looks from
+            mount('mg', S3(AF(R0 * 1.14, 0), podZ + Math.round(H * 0.12)));    // its light gun fires from the pod's nose
             if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
             shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
             shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
@@ -9159,10 +9197,14 @@
             }
             fuselage(pts2o, topo, z, H, TB);
             bandOnSides(g, box(off, 0, cabL, Wd), z + 2, 2, 2, 'rgba(10,9,7,.4)');
-            canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
+            /* The glazing is set into the cab below its roof and inside its width,
+               so only the nose's face shows it: with the nose turned away the
+               cab hides it altogether. */
+            if (fwd > 0) canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
             var ns = nearSide();
             doorGun(ns, off - cabL * 0.05, z + H * 0.45, true);
-            noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
+            // ...and so is the gun under the nose
+            if (fwd > 0) noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
             if (st === 'chinookcp') {
               // the command post: a dome on the roof and aerials (its radar went on under the nose)
               var dm = S3(AF(-L * 0.05, 0), z + H + 1);
@@ -10310,8 +10352,9 @@
          sprite pixel lands on a screen pixel. Zoomed out, the halving is a
          downscale, and that is the one place smoothing helps rather than blurs. */
       var rs = c.res || 1;
-      var was = g.imageSmoothingEnabled;
+      var was = g.imageSmoothingEnabled, wasA = g.globalAlpha;
       g.imageSmoothingEnabled = true;
+      if (cloakedKit(KIT[roleAt(art, mi)])) g.globalAlpha = wasA * cloakFade(mi);
       // snapped to the half-pixel, which is one pixel of a window drawn at 2x
       var bx = Math.round((mx - c.ox / rs) * rs) / rs, by = Math.round((my - c.oy / rs) * rs) / rs;
       if (u.faceL) {
@@ -10321,7 +10364,7 @@
         g.drawImage(c, bx - mx, by, c.width / rs, c.height / rs);
         g.restore();
       } else g.drawImage(c, bx, by, c.width / rs, c.height / rs);
-      g.imageSmoothingEnabled = was;
+      g.imageSmoothingEnabled = was; g.globalAlpha = wasA;
     }
 
     // a garrison's markers ride over the middle of the building
@@ -10473,6 +10516,7 @@
   root.PMCIso = {
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
+    animates: animates,
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
