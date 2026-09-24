@@ -3703,6 +3703,7 @@
   // (a slide-out drawer on a narrow screen).
   function drawPanel() {
     var ctxBox = el('context'), html = '';
+    if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
     else if (state.phase === 'deploy') html = deployCard();
     else if (ui.reservePick) html = reservePickCard();
@@ -3716,7 +3717,11 @@
       html = targetPanel(ui.selected);
     }
     else if (ui.selected && !isAI(ui.selected.side)) html = idleCard(ui.selected);
+    // a modal open over the card keeps its place when the card is drawn again
+    var ms = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0;
     ctxBox.innerHTML = html;
+    var ms2 = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
+    if (ms2 && ms) ms2.scrollTop = mTop;
     el('panel').innerHTML = forceList();
     /* The desktop rails: your own order of battle on the left, the enemy's on
        the right. They are the same list, split. */
@@ -3961,9 +3966,25 @@
     if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
       (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
     h += deployList(me);
-    // the scenario's split: which units go on the table and which wait, or which wave each comes in
-    ['A', 'B'].forEach(function (sd) { if (sd === me || !deployRoster(sd).length) h += splitCard(sd); });
-    h += loadingCard(me);
+    /* The scenario's split (which units go on the table and which wait, or
+       which wave each comes in) and who starts the battle aboard a hull are
+       set in a modal, opened from a button, whenever there is either. */
+    var splits = ['A', 'B'].filter(function (sd) { return (sd === me || !deployRoster(sd).length) && splitFor(sd); });
+    var hulls = carriersFor(me).filter(function (u) { return !isAI(u.side); });
+    var extra = splits.map(splitCard).join('') + loadingCard(me);
+    if (extra) {
+      var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
+      var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; }), emptyPod = emptyPlatforms(me).length > 0;
+      var aboard = hulls.reduce(function (n, v) { return n + (v.cargo || []).length; }, 0);
+      var held = splits.reduce(function (n, sd) { return n + splitFor(sd).held; }, 0);
+      var sub = [splits.length ? held + (splitFor(splits[0]).kind === 'wave' ? ' in the second wave' : ' held back') : '',
+        hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
+      h += '<div class="acts"><button class="act' + (badSplit || emptyPod ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
+        '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : emptyPod ? 'A drop pod needs a squad \u2014 ' : '') + sub + '</small></button></div>';
+      h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
+        '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
+        '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
+    }
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
@@ -3975,6 +3996,7 @@
   /* The split the scenario made, for the player to change: a row for each unit,
      tapped to move it between the table and the reserve (or between the waves),
      and a count against what the rule allows. */
+  var deployBox = false;           // the reserves-and-transports modal, open over the deployment card
   function splitCard(side) {
     var sp = splitFor(side);
     if (!sp) return '';
@@ -4112,6 +4134,10 @@
 
   function wireHost(host) {
     if (!host) return;
+    // a tap on the shade around the reserves-and-transports modal puts it away
+    host.querySelectorAll('.cmodal[data-deploybox]').forEach(function (m) {
+      m.addEventListener('click', function (ev) { if (ev.target === m) { deployBox = false; render(); } });
+    });
     /* The load and unload buttons carry `data-load`/`data-unload` and no
        `data-act`, so selecting on `[data-act]` alone never bound them and
        nothing happened when they were pressed: troops could not be put aboard
@@ -4140,6 +4166,8 @@
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
         else if (a === 'rpickdone') send({ k: 'rpickdone' });
+        else if (a === 'deploybox') { deployBox = true; render(); }
+        else if (a === 'deployboxdone') { deployBox = false; render(); }
         else if (a === 'start') startBattle();
         else if (a === 'restart') openMenu();
       });
