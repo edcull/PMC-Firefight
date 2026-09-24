@@ -46,8 +46,8 @@
       'Coordinate: once a turn, stay put and let up to {X} friendly units within 12" activate one after another. ' +
       'Other Command Units, turrets and units two or more Tiers higher cannot be called on. Not used in solitaire games.',
     'Command Vehicle':
-      'A Command Unit riding inside lends the vehicle all of its special rules, and coordinates as soon as the ' +
-      'vehicle finishes its activation.',
+      'A Command Unit riding inside lends the vehicle all of its special rules, and when the vehicle finishes its ' +
+      'activation it may Coordinate from inside (if steady).',
     'Counter-jamming':
       'Friendly units within 6" ignore enemy Jammers and rally and repair on 4+ as normal. Only works while this ' +
       'unit is steady and on the table.',
@@ -94,7 +94,8 @@
       'to turn and 2" for rough ground, never takes cover or suffers Crossfire, and is easier to hit from the side and rear.',
     'Hackers':
       'Hack: once a turn, reach into an enemy drone within 24". D6 — 1-2 nothing, 3-4 it is locked out for the ' +
-      'turn and takes D3+1 hits, 5-6 it is first made to fire on its own side, then takes the same hits.',
+      'turn and takes D3+1 hits, 5-6 you take one activation with it, then it takes the same hits (a drone that ' +
+      'has acted, or cannot, counts as 3-4).',
     'Immobile':
       'Never moves. It comes down with a squad already aboard, can only put it out, and never takes anyone back on.',
     'Incendiary Ammunition':

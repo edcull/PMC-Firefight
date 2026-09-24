@@ -182,6 +182,7 @@ ok('and do', !!R.embark(cw, carrier, pax), true);
 ok('they ride off the table', pax.x, -1);
 ok('underground bugs board too', !!R.embark(cw, carrier, under), true);
 carrier.x = 40; carrier.y = 30;
+pax.boarded = under.boarded = false;          // a turn later: not off in the turn they got on
 ok('the carrier drops them on landing', !!R.disembark(cw, carrier, pax, { x: 42, y: 30 }), true);
 ok('within 4" of the carrier', R.unitDist ? R.unitDist(pax, carrier) <= 4.01 : true, true);
 ok('not back aboard the same turn', R.canEmbark(cw, carrier, pax), false);

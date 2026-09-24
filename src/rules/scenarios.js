@@ -208,8 +208,9 @@
     var pods = state.units.filter(function (u) {
       return u.side === side && !R.countsForVictory(u);
     }).length;
-    // Expendable troops whose collars went off "do not count as a casualty for the purposes of victory conditions" (p. 57)
-    var spent = state.units.filter(function (u) { return u.side === side && u.expended; }).length;
+    /* Expendable troops, "when destroyed ... do not count as a casualty for the
+       purposes of victory conditions" (p. 57) — however they went. */
+    var spent = state.units.filter(function (u) { return u.side === side && !u.alive && (u.expended || R.has(u, 'Expendable')); }).length;
     var started = Math.max(0, army.length - pods - spent);
     var left = state.units.filter(function (u) {
       return u.alive && u.side === side && R.countsForVictory(u);

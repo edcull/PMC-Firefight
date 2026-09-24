@@ -265,5 +265,26 @@ ok('...and cannot get off again the same turn', R.disembark(tb2, apc, pax, { x: 
 pax.boarded = false;                                   // a new turn
 ok('...but can the next', !!R.disembark(tb2, apc, pax, { x: 12, y: 12 }));
 
+/* ------------------------------------------------------ a 5-6 hack, an Expendable unit, plunging breach */
+console.log('\nHACK 5-6, EXPENDABLE, PLUNGING FIRE');
+var took = 0, fell = 0, n56 = 0;
+for (var h5 = 0; h5 < 400; h5++) {
+  var hk2 = unit('ew', { x: 10, y: 10 }), vv = unit('lcv', { side: 'B', x: 10, y: 20 });
+  vv.drone = true; vv.rules = vv.rules.concat(['Drone Control']);
+  var r56 = R.hack(table([hk2, vv]), hk2, vv, function () { return true; });
+  if (r56.roll >= 5) { n56++; if (r56.pending && !vv.activated && !vv.damage) took++; }
+  var vb = unit('lcv', { side: 'B', x: 10, y: 20, activated: true }); vb.drone = true;
+  var rb = R.hack(table([unit('ew', { x: 10, y: 10 }), vb]), unit('ew', { x: 10, y: 10 }), vb, function () { return true; });
+  if (rb.roll >= 5 && !rb.pending) fell++;
+}
+ok('5-6: the drone is handed over first, its hits held back', n56 > 30 && took === n56, took + ' of ' + n56);
+ok('...one that has already acted counts as a 3-4', fell > 30, fell + ' times');
+var pen = unit('penal', { side: 'A', x: 10, y: 10, sp: 12 });
+var cl = R.collars(table([pen]));
+ok('a penal unit broken by anything sets its collars off', !pen.alive && pen.expended && cl.length === 1);
+var mort = unit('mortarteam', { x: 10, y: 10 }), hid = unit('recruits', { side: 'B', x: 30, y: 30 });
+var lw = { kind: 'barricade', x: 29, y: 30.8, w: 4, h: 0.5 };
+ok('plunging fire can bring down the low wall a target shelters by', R.shelterOf(table([mort, hid], [lw]), mort, hid) === lw);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

@@ -10397,7 +10397,7 @@
       var filled = Math.max(PIXEL, Math.round(Math.min(1, u.sp / (2 * opts.morale)) * w));
       rect(g, p.x - w / 2 - 1, head - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
       rect(g, p.x - w / 2, head, w, bh, '#15181d');
-      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : '#c9762f');
+      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : rst === 'suppressed' ? '#e0a23a' : '#6fbf5a');
     }
     if (u.marked) {
       dot(g, p.x + a(5), head - a(2), '#e8c15a');
@@ -10539,6 +10539,9 @@
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
     animates: animates,
+    flush: function () {       // the browser threw our canvases away (a phone backgrounding the tab): paint them again
+      sprites = {}; corpses = {}; hullCache = {}; TEX_TILE = {}; DIM_CANVAS = null;
+    },
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution

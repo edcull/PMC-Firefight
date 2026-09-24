@@ -4317,21 +4317,43 @@
       log.push({ t: 'note', text: a.label + ' tries to break into ' + t.label + ' — D6 ' + roll + ': the ice holds.' });
       return { log: log, roll: roll, turned: false, locked: false };
     }
-    if (roll >= 5 && !t.activated && typeof fireBack === 'function') {
-      turned = fireBack(t);                       // the drone is made to shoot its own side
+    var hits = d3() + 1;
+    /* 5-6: "the drone is activated immediately under control of the player who
+       owns the hacking unit ... and afterwards suffers D3+1 hits". One that has
+       already acted, or cannot act, counts as a 3-4 (p. 57). `fireBack` starts
+       that activation and reports whether it could; the hits then wait for it. */
+    var canAct = !t.activated && t.alive && status(t) !== 'broken';
+    if (roll >= 5 && canAct && typeof fireBack === 'function') turned = !!fireBack(t, hits);
+    if (turned) {
+      log.push({ t: 'note', text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': taken over for one activation, then burned for ' + hits + ' hits.' });
+      return { log: log, roll: roll, turned: true, locked: false, hits: hits, pending: true };
     }
     locked = true;
     t.activated = true;
     t.hacked = true;
-    var hits = d3() + 1;
     log.push({
       t: 'note',
-      text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': ' +
-        (turned ? 'turned on its own side, then ' : '') + 'locked out and burned for ' + hits + ' hits.'
+      text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + (roll >= 5 ? ' (it cannot be activated, so as a 3-4)' : '') + ': locked out and burned for ' + hits + ' hits.'
     });
-    /* "...suffers D3+1 hits resolved like enemy fire" (p. 57): a hull takes them
-       as damage; a Drone unit, which has no Structure, on the hit table like any
-       squad (its +1 to those rolls included). */
+    hackBurn(state, a, t, hits, log);
+    return { log: log, roll: roll, turned: false, locked: locked, hits: hits };
+  }
+  /* "...suffers D3+1 hits resolved like enemy fire" (p. 57): a hull takes them
+     as damage; a Drone unit, which has no Structure, on the hit table like any
+     squad (its +1 to those rolls included). */
+  /* Expendable (p. 57): the collars go off the moment a penal unit is Broken,
+     whatever broke it — a hit, a rite, a shout, a friend's melancholy. Returns
+     the lines to log. */
+  function collars(state) {
+    var out = [];
+    state.units.forEach(function (u) {
+      if (!u.alive || u.aboard || !has(u, 'Expendable') || status(u) !== 'broken') return;
+      u.alive = false; u.fled = true; u.expended = true;
+      out.push({ t: 'kill', text: u.label + ' breaks — Expendable: the collars go off, removed from play.' });
+    });
+    return out;
+  }
+  function hackBurn(state, a, t, hits, log) {
     if (isMachine(t)) {
       var dres = resolveDamage(t, hits, false);
       log.push({ t: 'hits', text: dres.rolls.join(' · ') });
@@ -4341,7 +4363,7 @@
       log.push({ t: 'hits', text: hres.rolls.join(' · ') });
       applyResult(state, t, hres, log, a);
     }
-    return { log: log, roll: roll, turned: turned, locked: locked, hits: hits };
+    return log;
   }
 
   /* Command Vehicle (p. 56): a Command Unit riding inside lends the hull all of
@@ -4432,6 +4454,10 @@
       if (!isDestructible(r2) || TERRAIN[r2.kind].blocks) continue;
       if (inRect(attacker.x, attacker.y, r2)) continue;
       if (segRect(attacker.x, attacker.y, target.x, target.y, r2)) return r2;
+      /* plunging fire: the low wall a target shelters by (within 2") is its cover
+         whichever way the shot comes, so it is the wall that can be brought down (p. 58) */
+      if (r2.kind === 'barricade' && has(attacker, 'Indirect Fire') &&
+        rectPointDist(r2, target.x, target.y) + UNIT_R <= 2 + 1e-6) return r2;
     }
     return null;
   }
@@ -6211,7 +6237,7 @@
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
     canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
-    rally: rally, fallBack: fallBack, medicNearby: medicNearby,
+    rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,
@@ -6284,8 +6310,8 @@
       'Coordinate: once a turn, stay put and let up to {X} friendly units within 12" activate one after another. ' +
       'Other Command Units, turrets and units two or more Tiers higher cannot be called on. Not used in solitaire games.',
     'Command Vehicle':
-      'A Command Unit riding inside lends the vehicle all of its special rules, and coordinates as soon as the ' +
-      'vehicle finishes its activation.',
+      'A Command Unit riding inside lends the vehicle all of its special rules, and when the vehicle finishes its ' +
+      'activation it may Coordinate from inside (if steady).',
     'Counter-jamming':
       'Friendly units within 6" ignore enemy Jammers and rally and repair on 4+ as normal. Only works while this ' +
       'unit is steady and on the table.',
@@ -6332,7 +6358,8 @@
       'to turn and 2" for rough ground, never takes cover or suffers Crossfire, and is easier to hit from the side and rear.',
     'Hackers':
       'Hack: once a turn, reach into an enemy drone within 24". D6 — 1-2 nothing, 3-4 it is locked out for the ' +
-      'turn and takes D3+1 hits, 5-6 it is first made to fire on its own side, then takes the same hits.',
+      'turn and takes D3+1 hits, 5-6 you take one activation with it, then it takes the same hits (a drone that ' +
+      'has acted, or cannot, counts as 3-4).',
     'Immobile':
       'Never moves. It comes down with a squad already aboard, can only put it out, and never takes anyone back on.',
     'Incendiary Ammunition':
@@ -9221,8 +9248,9 @@
     var pods = state.units.filter(function (u) {
       return u.side === side && !R.countsForVictory(u);
     }).length;
-    // Expendable troops whose collars went off "do not count as a casualty for the purposes of victory conditions" (p. 57)
-    var spent = state.units.filter(function (u) { return u.side === side && u.expended; }).length;
+    /* Expendable troops, "when destroyed ... do not count as a casualty for the
+       purposes of victory conditions" (p. 57) — however they went. */
+    var spent = state.units.filter(function (u) { return u.side === side && !u.alive && (u.expended || R.has(u, 'Expendable')); }).length;
     var started = Math.max(0, army.length - pods - spent);
     var left = state.units.filter(function (u) {
       return u.alive && u.side === side && R.countsForVictory(u);
@@ -22283,7 +22311,7 @@
       var filled = Math.max(PIXEL, Math.round(Math.min(1, u.sp / (2 * opts.morale)) * w));
       rect(g, p.x - w / 2 - 1, head - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
       rect(g, p.x - w / 2, head, w, bh, '#15181d');
-      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : '#c9762f');
+      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : rst === 'suppressed' ? '#e0a23a' : '#6fbf5a');
     }
     if (u.marked) {
       dot(g, p.x + a(5), head - a(2), '#e8c15a');
@@ -22425,6 +22453,9 @@
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
     animates: animates,
+    flush: function () {       // the browser threw our canvases away (a phone backgrounding the tab): paint them again
+      sprites = {}; corpses = {}; hullCache = {}; TEX_TILE = {}; DIM_CANVAS = null;
+    },
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
@@ -25647,6 +25678,7 @@
     });
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.vis = null; ui.visKey = ''; ui.preview = null;
     beginningRites();
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     render();
     revealBoard();
     whenIdle(function () {
@@ -25814,6 +25846,10 @@
 
   function endActivation(actor) {
     ui.lastActed = actor || ui.selected || null;
+    // a hacked drone's borrowed activation is over: back to its owner, and it burns
+    var hj = hijacked();
+    if (hj && (ui.lastActed === hj || !hj.alive)) endHijack(hj);
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     if (ui.lastActed) ui.lastActed.advancing = false;   // an Advance ends with its activation
     // Infamy of Melancholy (p. 143): its activation weighs on every friend within 6"
     var mel = ui.lastActed;
@@ -25833,21 +25869,48 @@
     }
     if (state.over) { render(); return; }
 
-    // a Command Unit riding in a Command Vehicle may coordinate once the hull has acted
+    /* Command Vehicle (p. 57): "as soon as the Command Vehicle finishes its
+       activation, the Command Unit on board MAY perform one of their special
+       actions" — offered, not forced, and only to a steady Command Unit (a
+       Suppressed one cannot Coordinate any more than on foot). */
     var just = ui.lastActed;
-    if (just && just.alive && R.has(just, 'Command Vehicle') && !state.chain) {
+    if (just && just.alive && R.has(just, 'Command Vehicle') && !state.chain && !state.solo) {
       var cmd = R.commandAboard(just);
-      if (cmd && !cmd.coordUsed && R.status(cmd) !== 'broken') {
-        cmd.coordUsed = true;
-        addFx({ kind: 'wave', x: just.x, y: just.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
-        state.chain = {
-          side: just.side, remaining: R.ruleValue(just, 'Command Unit') + 1,
-          x: just.x, y: just.y, tier: cmd.tier
-        };
-        logLine('note', cmd.label + ', riding in ' + just.name + ', coordinates: up to ' +
-          R.ruleValue(just, 'Command Unit') + ' friendly units within 12" activate in a row.');
+      if (cmd && !cmd.coordUsed && R.status(cmd) === 'ready') {
+        if (isAI(just.side)) cmdCoordinate(just, cmd);
+        else {
+          state.cmdOffer = { veh: just.id, cmd: cmd.id };
+          setHint(null, cmd.name + ' is aboard ' + just.name + ': coordinate now, or let the activation pass.');
+          render();
+          return;
+        }
       }
     }
+    passOn(just);
+  }
+  function cmdCoordinate(veh, cmd) {
+    cmd.coordUsed = true;
+    addFx({ kind: 'wave', x: veh.x, y: veh.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
+    state.chain = {
+      side: veh.side, remaining: R.ruleValue(veh, 'Command Unit') + 1,
+      x: veh.x, y: veh.y, tier: cmd.tier
+    };
+    logLine('note', cmd.label + ', riding in ' + veh.name + ', coordinates: up to ' +
+      R.ruleValue(veh, 'Command Unit') + ' friendly units within 12" activate in a row.');
+  }
+  // the player's answer to the Command Vehicle's offer
+  function answerCmdOffer(take) {
+    var o = state.cmdOffer;
+    if (!o) return;
+    state.cmdOffer = null;
+    var veh = byId(o.veh), cmd = byId(o.cmd);
+    if (take && veh && cmd) cmdCoordinate(veh, cmd);
+    else if (cmd) { cmd.coordUsed = true; logLine('note', (cmd.label || 'The Command Unit') + ' stays quiet aboard ' + (veh ? veh.name : 'its vehicle') + '.'); }
+    ui.hint = null;
+    passOn(veh);
+  }
+  // the rest of an activation's ending: turrets together, chains, whose go it is next
+  function passOn(just) {
     /* All turrets are activated at once (p. 130): the first to act brings every
        other one of its side along before the activation passes. */
     if (just && R.has(just, 'Turret') && !state.chain && !state.solo) {
@@ -25943,6 +26006,7 @@
 
   function rallyPhase() {
     logLine('phase', 'Rally phase.');
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     fleeBroken();
     // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
     state.units.forEach(function (c) {
@@ -27474,21 +27538,51 @@
   function doHack(target) {
     var u = ui.selected;
     if (u && target) addFx({ kind: 'beam', x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
-    var res = R.hack(state, u, target, function (drone) {
-      // the drone is turned on the nearest unit of its own side
-      var own = activeUnits(drone.side).filter(function (o) {
-        return o !== drone && R.canShoot(state, drone, o, 'basic', {});
-      }).sort(function (a, b) { return R.unitDist(drone, a) - R.unitDist(drone, b); })[0];
-      if (!own) return false;
-      var back = abShoot(state, drone, own, 'basic', {});
-      back.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+    var res = R.hack(state, u, target, function (drone, hits) {
+      // taken over: it will act for the hacker's side, then burn
+      drone.hijack = { from: drone.side, paint: drone.paint, hits: hits, by: u.id };
+      if (!drone.paint) drone.paint = drone.side;          // it keeps its own colours
+      drone.side = u.side;
       return true;
     });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     var card = fromLog('Hack', u.name + ' → ' + target.name, u.side, res.log);
     u.activated = true;
     pushRes(card);
+    if (res.pending) { startHijack(target); return; }
     endActivation();
+  }
+  /* The hacked drone's one activation for the hacker's side (p. 57): the player
+     who hacked it picks what it does (the AI, for the AI), and only then does it
+     burn and go back to its owner. */
+  function hijacked() {
+    if (!state || !state.hijackId) return null;
+    return state.units.filter(function (x) { return x.id === state.hijackId; })[0] || null;
+  }
+  function startHijack(drone) {
+    state.hijackId = drone.id;
+    logLine('note', drone.label + ' is under ' + sideName(drone.side) + '’s control for one activation.');
+    ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
+    if (isAI(drone.side)) { whenIdle(function () { if (state && !state.over && drone.alive) aiAct(drone); else endHijack(drone); }); return; }
+    ui.selected = drone;
+    focusUnit(drone);
+    setHint(null, drone.name + ' is hacked: give it one action for your side, then it burns.');
+    render();
+  }
+  function endHijack(drone) {
+    var h = drone && drone.hijack;
+    if (!h) return;
+    drone.side = h.from; drone.paint = h.paint;
+    delete drone.hijack;
+    state.hijackId = null;
+    drone.activated = true; drone.hacked = true;
+    if (drone.alive) {
+      var log = [];
+      var hacker = state.units.filter(function (x) { return x.id === h.by; })[0] || null;
+      R.hackBurn(state, hacker, drone, h.hits, log);
+      log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      pushRes(fromLog('Hack', drone.name + ' burns', h.from, [{ t: 'note', text: drone.label + ' goes back to its own side and burns for ' + h.hits + ' hits.' }].concat(log)));
+    }
   }
 
   function doDemolish(piece) {
@@ -28542,7 +28636,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion) return false;
+      if (ui.insertion || state.cmdOffer) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -28574,6 +28668,8 @@
           var u = unitOf(it.id);
           if (!u) return no('no such unit');
           if (!mayAct(side) && state.phase === 'battle') return no('not your activation');
+          var hjk = hijacked();
+          if (hjk && u !== hjk && u.side === side) return no(hjk.name + ' is hacked: act with it first');
           /* A unit half-way through an Advance has to finish it first; left
              behind, it could come back later in the turn for a whole action. */
           var mid = ui.selected;
@@ -28724,6 +28820,13 @@
           if (!ui.insertion || ui.insertion.kind !== 'insert') return no('nothing to hold back');
           if (insertionSide() !== side) return no('that is not your unit');
           holdInsertion();
+          return yes;
+        }
+        case 'cmdcoord': case 'cmdskip': {
+          if (!state.cmdOffer) return no('nothing is offered');
+          var ov = byId(state.cmdOffer.veh);
+          if (!ov || ov.side !== side) return no('not your vehicle');
+          answerCmdOffer(it.k === 'cmdcoord');
           return yes;
         }
         case 'holdarrive': {
@@ -30660,6 +30763,17 @@
     render();
   }
 
+  // a Command Unit riding in a Command Vehicle, offered its special action (p. 57)
+  function cmdOfferCard() {
+    var o = state.cmdOffer, veh = byId(o.veh), cmd = byId(o.cmd);
+    if (!veh || !cmd) return '';
+    var n = R.ruleValue(veh, 'Command Unit');
+    return '<div class="card"><h2>Command Vehicle</h2>' +
+      '<p class="sub"><b>' + esc(cmd.name) + '</b> is riding in <b>' + esc(veh.name) + '</b>. Now the vehicle has acted, it may Coordinate: ' +
+      'up to ' + n + ' friendly units within 12" of the vehicle activate in a row.</p>' +
+      '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
+      '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
+  }
   function insertionCard() {
     var ins = ui.insertion;
     if (!ins) return '';
@@ -33526,6 +33640,7 @@
     else if (state.phase === 'deploy') html = deployCard();
     else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
+    else if (state.cmdOffer) html = cmdOfferCard();
     else if (state.over) html = overCard();
     else if (ui.terrain.length && ui.selected &&
       (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
@@ -33980,6 +34095,7 @@
         else if (a === 'holdinsert') { holdInsertion(); return; }
         else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
+        else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
@@ -35549,6 +35665,7 @@
   /* ================= boot ================= */
   function boot() {
     canvas = el('board'); ctx = canvas.getContext('2d');
+    canvas.addEventListener('contextrestored', function () { restoreCanvases(true); });
     /* A phone screen is tall and narrow, but the isometric table is 1.7:1 the
        other way. A 560x680 window used to leave the whole-table view sitting in
        360px of black — over half the frame — with nothing to pan into. The window
@@ -36168,6 +36285,32 @@
   };
   window.__previewConfirm = function () { commitMove(); };
   window.__previewCancel = function () { cancelPreview(); };
+  /* A phone that puts the tab in the background may throw away every canvas
+     it holds and hand them back blank — the table, the troops, the lot. Coming
+     back, look at the table: if it has gone clear, paint everything again. */
+  function canvasesLost() {
+    if (!state || !state.ground || !state.ground.getContext) return false;
+    try {
+      var gg = state.ground.getContext('2d');
+      if (gg.isContextLost && gg.isContextLost()) return true;
+      var d = gg.getImageData(state.ground.width >> 1, state.ground.height >> 1, 1, 1).data;
+      return d[3] === 0;                            // the ground is opaque everywhere
+    } catch (e) { return false; }
+  }
+  function restoreCanvases(force) {
+    if (!state || !pix || !(force || canvasesLost())) return;
+    ISO.flush();
+    if (pix.getContext) pctx = pix.getContext('2d');
+    hazeBuf = null; hazeCtx = null;
+    state.scene = null; state.ground = null; state.structs = null; state.structsOpen = null;
+    drawBoard();
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) restoreCanvases(false); });
+    window.addEventListener('pageshow', function () { restoreCanvases(false); });
+    window.addEventListener('focus', function () { restoreCanvases(false); });
+  }
+  window.__restoreCanvases = restoreCanvases;
   window.__rebuildScene = function () { state.scene = null; state.ground = null; state.structs = null; drawBoard(); };
   window.__tapTerrain = function (i) {
     var r = ui.terrain[i];

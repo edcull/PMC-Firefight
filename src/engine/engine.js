@@ -2008,6 +2008,7 @@
     });
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.vis = null; ui.visKey = ''; ui.preview = null;
     beginningRites();
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     render();
     revealBoard();
     whenIdle(function () {
@@ -2175,6 +2176,10 @@
 
   function endActivation(actor) {
     ui.lastActed = actor || ui.selected || null;
+    // a hacked drone's borrowed activation is over: back to its owner, and it burns
+    var hj = hijacked();
+    if (hj && (ui.lastActed === hj || !hj.alive)) endHijack(hj);
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     if (ui.lastActed) ui.lastActed.advancing = false;   // an Advance ends with its activation
     // Infamy of Melancholy (p. 143): its activation weighs on every friend within 6"
     var mel = ui.lastActed;
@@ -2194,21 +2199,48 @@
     }
     if (state.over) { render(); return; }
 
-    // a Command Unit riding in a Command Vehicle may coordinate once the hull has acted
+    /* Command Vehicle (p. 57): "as soon as the Command Vehicle finishes its
+       activation, the Command Unit on board MAY perform one of their special
+       actions" — offered, not forced, and only to a steady Command Unit (a
+       Suppressed one cannot Coordinate any more than on foot). */
     var just = ui.lastActed;
-    if (just && just.alive && R.has(just, 'Command Vehicle') && !state.chain) {
+    if (just && just.alive && R.has(just, 'Command Vehicle') && !state.chain && !state.solo) {
       var cmd = R.commandAboard(just);
-      if (cmd && !cmd.coordUsed && R.status(cmd) !== 'broken') {
-        cmd.coordUsed = true;
-        addFx({ kind: 'wave', x: just.x, y: just.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
-        state.chain = {
-          side: just.side, remaining: R.ruleValue(just, 'Command Unit') + 1,
-          x: just.x, y: just.y, tier: cmd.tier
-        };
-        logLine('note', cmd.label + ', riding in ' + just.name + ', coordinates: up to ' +
-          R.ruleValue(just, 'Command Unit') + ' friendly units within 12" activate in a row.');
+      if (cmd && !cmd.coordUsed && R.status(cmd) === 'ready') {
+        if (isAI(just.side)) cmdCoordinate(just, cmd);
+        else {
+          state.cmdOffer = { veh: just.id, cmd: cmd.id };
+          setHint(null, cmd.name + ' is aboard ' + just.name + ': coordinate now, or let the activation pass.');
+          render();
+          return;
+        }
       }
     }
+    passOn(just);
+  }
+  function cmdCoordinate(veh, cmd) {
+    cmd.coordUsed = true;
+    addFx({ kind: 'wave', x: veh.x, y: veh.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
+    state.chain = {
+      side: veh.side, remaining: R.ruleValue(veh, 'Command Unit') + 1,
+      x: veh.x, y: veh.y, tier: cmd.tier
+    };
+    logLine('note', cmd.label + ', riding in ' + veh.name + ', coordinates: up to ' +
+      R.ruleValue(veh, 'Command Unit') + ' friendly units within 12" activate in a row.');
+  }
+  // the player's answer to the Command Vehicle's offer
+  function answerCmdOffer(take) {
+    var o = state.cmdOffer;
+    if (!o) return;
+    state.cmdOffer = null;
+    var veh = byId(o.veh), cmd = byId(o.cmd);
+    if (take && veh && cmd) cmdCoordinate(veh, cmd);
+    else if (cmd) { cmd.coordUsed = true; logLine('note', (cmd.label || 'The Command Unit') + ' stays quiet aboard ' + (veh ? veh.name : 'its vehicle') + '.'); }
+    ui.hint = null;
+    passOn(veh);
+  }
+  // the rest of an activation's ending: turrets together, chains, whose go it is next
+  function passOn(just) {
     /* All turrets are activated at once (p. 130): the first to act brings every
        other one of its side along before the activation passes. */
     if (just && R.has(just, 'Turret') && !state.chain && !state.solo) {
@@ -2304,6 +2336,7 @@
 
   function rallyPhase() {
     logLine('phase', 'Rally phase.');
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     fleeBroken();
     // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
     state.units.forEach(function (c) {
@@ -3835,21 +3868,51 @@
   function doHack(target) {
     var u = ui.selected;
     if (u && target) addFx({ kind: 'beam', x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
-    var res = R.hack(state, u, target, function (drone) {
-      // the drone is turned on the nearest unit of its own side
-      var own = activeUnits(drone.side).filter(function (o) {
-        return o !== drone && R.canShoot(state, drone, o, 'basic', {});
-      }).sort(function (a, b) { return R.unitDist(drone, a) - R.unitDist(drone, b); })[0];
-      if (!own) return false;
-      var back = abShoot(state, drone, own, 'basic', {});
-      back.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+    var res = R.hack(state, u, target, function (drone, hits) {
+      // taken over: it will act for the hacker's side, then burn
+      drone.hijack = { from: drone.side, paint: drone.paint, hits: hits, by: u.id };
+      if (!drone.paint) drone.paint = drone.side;          // it keeps its own colours
+      drone.side = u.side;
       return true;
     });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     var card = fromLog('Hack', u.name + ' → ' + target.name, u.side, res.log);
     u.activated = true;
     pushRes(card);
+    if (res.pending) { startHijack(target); return; }
     endActivation();
+  }
+  /* The hacked drone's one activation for the hacker's side (p. 57): the player
+     who hacked it picks what it does (the AI, for the AI), and only then does it
+     burn and go back to its owner. */
+  function hijacked() {
+    if (!state || !state.hijackId) return null;
+    return state.units.filter(function (x) { return x.id === state.hijackId; })[0] || null;
+  }
+  function startHijack(drone) {
+    state.hijackId = drone.id;
+    logLine('note', drone.label + ' is under ' + sideName(drone.side) + '’s control for one activation.');
+    ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
+    if (isAI(drone.side)) { whenIdle(function () { if (state && !state.over && drone.alive) aiAct(drone); else endHijack(drone); }); return; }
+    ui.selected = drone;
+    focusUnit(drone);
+    setHint(null, drone.name + ' is hacked: give it one action for your side, then it burns.');
+    render();
+  }
+  function endHijack(drone) {
+    var h = drone && drone.hijack;
+    if (!h) return;
+    drone.side = h.from; drone.paint = h.paint;
+    delete drone.hijack;
+    state.hijackId = null;
+    drone.activated = true; drone.hacked = true;
+    if (drone.alive) {
+      var log = [];
+      var hacker = state.units.filter(function (x) { return x.id === h.by; })[0] || null;
+      R.hackBurn(state, hacker, drone, h.hits, log);
+      log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      pushRes(fromLog('Hack', drone.name + ' burns', h.from, [{ t: 'note', text: drone.label + ' goes back to its own side and burns for ' + h.hits + ' hits.' }].concat(log)));
+    }
   }
 
   function doDemolish(piece) {
@@ -4903,7 +4966,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion) return false;
+      if (ui.insertion || state.cmdOffer) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -4935,6 +4998,8 @@
           var u = unitOf(it.id);
           if (!u) return no('no such unit');
           if (!mayAct(side) && state.phase === 'battle') return no('not your activation');
+          var hjk = hijacked();
+          if (hjk && u !== hjk && u.side === side) return no(hjk.name + ' is hacked: act with it first');
           /* A unit half-way through an Advance has to finish it first; left
              behind, it could come back later in the turn for a whole action. */
           var mid = ui.selected;
@@ -5085,6 +5150,13 @@
           if (!ui.insertion || ui.insertion.kind !== 'insert') return no('nothing to hold back');
           if (insertionSide() !== side) return no('that is not your unit');
           holdInsertion();
+          return yes;
+        }
+        case 'cmdcoord': case 'cmdskip': {
+          if (!state.cmdOffer) return no('nothing is offered');
+          var ov = byId(state.cmdOffer.veh);
+          if (!ov || ov.side !== side) return no('not your vehicle');
+          answerCmdOffer(it.k === 'cmdcoord');
           return yes;
         }
         case 'holdarrive': {

@@ -2286,21 +2286,43 @@
       log.push({ t: 'note', text: a.label + ' tries to break into ' + t.label + ' — D6 ' + roll + ': the ice holds.' });
       return { log: log, roll: roll, turned: false, locked: false };
     }
-    if (roll >= 5 && !t.activated && typeof fireBack === 'function') {
-      turned = fireBack(t);                       // the drone is made to shoot its own side
+    var hits = d3() + 1;
+    /* 5-6: "the drone is activated immediately under control of the player who
+       owns the hacking unit ... and afterwards suffers D3+1 hits". One that has
+       already acted, or cannot act, counts as a 3-4 (p. 57). `fireBack` starts
+       that activation and reports whether it could; the hits then wait for it. */
+    var canAct = !t.activated && t.alive && status(t) !== 'broken';
+    if (roll >= 5 && canAct && typeof fireBack === 'function') turned = !!fireBack(t, hits);
+    if (turned) {
+      log.push({ t: 'note', text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': taken over for one activation, then burned for ' + hits + ' hits.' });
+      return { log: log, roll: roll, turned: true, locked: false, hits: hits, pending: true };
     }
     locked = true;
     t.activated = true;
     t.hacked = true;
-    var hits = d3() + 1;
     log.push({
       t: 'note',
-      text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': ' +
-        (turned ? 'turned on its own side, then ' : '') + 'locked out and burned for ' + hits + ' hits.'
+      text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + (roll >= 5 ? ' (it cannot be activated, so as a 3-4)' : '') + ': locked out and burned for ' + hits + ' hits.'
     });
-    /* "...suffers D3+1 hits resolved like enemy fire" (p. 57): a hull takes them
-       as damage; a Drone unit, which has no Structure, on the hit table like any
-       squad (its +1 to those rolls included). */
+    hackBurn(state, a, t, hits, log);
+    return { log: log, roll: roll, turned: false, locked: locked, hits: hits };
+  }
+  /* "...suffers D3+1 hits resolved like enemy fire" (p. 57): a hull takes them
+     as damage; a Drone unit, which has no Structure, on the hit table like any
+     squad (its +1 to those rolls included). */
+  /* Expendable (p. 57): the collars go off the moment a penal unit is Broken,
+     whatever broke it — a hit, a rite, a shout, a friend's melancholy. Returns
+     the lines to log. */
+  function collars(state) {
+    var out = [];
+    state.units.forEach(function (u) {
+      if (!u.alive || u.aboard || !has(u, 'Expendable') || status(u) !== 'broken') return;
+      u.alive = false; u.fled = true; u.expended = true;
+      out.push({ t: 'kill', text: u.label + ' breaks — Expendable: the collars go off, removed from play.' });
+    });
+    return out;
+  }
+  function hackBurn(state, a, t, hits, log) {
     if (isMachine(t)) {
       var dres = resolveDamage(t, hits, false);
       log.push({ t: 'hits', text: dres.rolls.join(' · ') });
@@ -2310,7 +2332,7 @@
       log.push({ t: 'hits', text: hres.rolls.join(' · ') });
       applyResult(state, t, hres, log, a);
     }
-    return { log: log, roll: roll, turned: turned, locked: locked, hits: hits };
+    return log;
   }
 
   /* Command Vehicle (p. 56): a Command Unit riding inside lends the hull all of
@@ -2401,6 +2423,10 @@
       if (!isDestructible(r2) || TERRAIN[r2.kind].blocks) continue;
       if (inRect(attacker.x, attacker.y, r2)) continue;
       if (segRect(attacker.x, attacker.y, target.x, target.y, r2)) return r2;
+      /* plunging fire: the low wall a target shelters by (within 2") is its cover
+         whichever way the shot comes, so it is the wall that can be brought down (p. 58) */
+      if (r2.kind === 'barricade' && has(attacker, 'Indirect Fire') &&
+        rectPointDist(r2, target.x, target.y) + UNIT_R <= 2 + 1e-6) return r2;
     }
     return null;
   }
@@ -4180,7 +4206,7 @@
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
     canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
-    rally: rally, fallBack: fallBack, medicNearby: medicNearby,
+    rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,

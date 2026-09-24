@@ -1002,6 +1002,17 @@
     render();
   }
 
+  // a Command Unit riding in a Command Vehicle, offered its special action (p. 57)
+  function cmdOfferCard() {
+    var o = state.cmdOffer, veh = byId(o.veh), cmd = byId(o.cmd);
+    if (!veh || !cmd) return '';
+    var n = R.ruleValue(veh, 'Command Unit');
+    return '<div class="card"><h2>Command Vehicle</h2>' +
+      '<p class="sub"><b>' + esc(cmd.name) + '</b> is riding in <b>' + esc(veh.name) + '</b>. Now the vehicle has acted, it may Coordinate: ' +
+      'up to ' + n + ' friendly units within 12" of the vehicle activate in a row.</p>' +
+      '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
+      '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
+  }
   function insertionCard() {
     var ins = ui.insertion;
     if (!ins) return '';
@@ -3868,6 +3879,7 @@
     else if (state.phase === 'deploy') html = deployCard();
     else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
+    else if (state.cmdOffer) html = cmdOfferCard();
     else if (state.over) html = overCard();
     else if (ui.terrain.length && ui.selected &&
       (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
@@ -4322,6 +4334,7 @@
         else if (a === 'holdinsert') { holdInsertion(); return; }
         else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
+        else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
@@ -5891,6 +5904,7 @@
   /* ================= boot ================= */
   function boot() {
     canvas = el('board'); ctx = canvas.getContext('2d');
+    canvas.addEventListener('contextrestored', function () { restoreCanvases(true); });
     /* A phone screen is tall and narrow, but the isometric table is 1.7:1 the
        other way. A 560x680 window used to leave the whole-table view sitting in
        360px of black — over half the frame — with nothing to pan into. The window
@@ -6510,6 +6524,32 @@
   };
   window.__previewConfirm = function () { commitMove(); };
   window.__previewCancel = function () { cancelPreview(); };
+  /* A phone that puts the tab in the background may throw away every canvas
+     it holds and hand them back blank — the table, the troops, the lot. Coming
+     back, look at the table: if it has gone clear, paint everything again. */
+  function canvasesLost() {
+    if (!state || !state.ground || !state.ground.getContext) return false;
+    try {
+      var gg = state.ground.getContext('2d');
+      if (gg.isContextLost && gg.isContextLost()) return true;
+      var d = gg.getImageData(state.ground.width >> 1, state.ground.height >> 1, 1, 1).data;
+      return d[3] === 0;                            // the ground is opaque everywhere
+    } catch (e) { return false; }
+  }
+  function restoreCanvases(force) {
+    if (!state || !pix || !(force || canvasesLost())) return;
+    ISO.flush();
+    if (pix.getContext) pctx = pix.getContext('2d');
+    hazeBuf = null; hazeCtx = null;
+    state.scene = null; state.ground = null; state.structs = null; state.structsOpen = null;
+    drawBoard();
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) restoreCanvases(false); });
+    window.addEventListener('pageshow', function () { restoreCanvases(false); });
+    window.addEventListener('focus', function () { restoreCanvases(false); });
+  }
+  window.__restoreCanvases = restoreCanvases;
   window.__rebuildScene = function () { state.scene = null; state.ground = null; state.structs = null; drawBoard(); };
   window.__tapTerrain = function (i) {
     var r = ui.terrain[i];
