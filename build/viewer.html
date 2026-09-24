@@ -17060,28 +17060,11 @@
       if (io) io.disconnect();
       var tiles = Array.prototype.slice.call(main.querySelectorAll('canvas.tile'));
       io = 'IntersectionObserver' in root ? new IntersectionObserver(function (es) {
-        es.forEach(function (e) {
-          e.target._seen = e.isIntersecting;               // on screen (or about to be): an animated tile keeps moving
-          if (e.isIntersecting && e.target.dataset.drawn !== colour) draw(e.target);
-        });
+        es.forEach(function (e) { if (e.isIntersecting && e.target.dataset.drawn !== colour) draw(e.target); });
       }, { root: o.scroller || null, rootMargin: '400px 0px' }) : null;
-      tiles.forEach(function (c) {
-        var q = byKey[c.dataset.key];
-        if (q && I.animates && I.animates({ alive: true, cls: q.cls || 'infantry', art: q.art }) && c.dataset.status !== 'wrecked') c._anim = true;
-        if (!io) c._seen = true;
-      });
       if (io) tiles.forEach(function (c) { io.observe(c); }); else tiles.forEach(draw);
       filter();
     }
-    /* The tiles that move by themselves — rotors, scanners, a Beta's deflector,
-       a cloak, a leader bug's brain — are drawn again while they are on screen,
-       about twelve times a second; everything else is drawn once. */
-    var animTimer = setInterval(function () {
-      if (root.document && document.hidden) return;
-      Array.prototype.forEach.call(main.querySelectorAll('canvas.tile'), function (c) {
-        if (c._anim && c._seen && !c.closest('[hidden]')) draw(c);
-      });
-    }, 80);
 
     // ---- drawing, only as tiles come into view ----
     function draw(cv) {
