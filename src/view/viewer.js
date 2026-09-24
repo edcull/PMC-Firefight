@@ -951,9 +951,11 @@
     }
     h += '</div><div class="vtabbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
     var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0;
+    var panelTop = el('vctl').scrollTop;     // on a desktop the whole panel is what scrolls
     el('vctl').innerHTML = h;
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
+    el('vctl').scrollTop = panelTop;
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {

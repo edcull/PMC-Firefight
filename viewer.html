@@ -175,6 +175,14 @@
   .vtabbody[hidden] { display: none; }
   .vtabbody > .vacts:first-child { margin-top: 0; margin-bottom: 12px; }
   .vtabbody > .vrules { margin-top: 0; padding-top: 0; border-top: none; }
+  /* On a desktop there is room for both at once: no tabs, the options first and
+     the profile under them, the whole panel scrolling as one. */
+  @media (min-width: 1001px) {
+    #vctl { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-bottom: 12px; }
+    #vctl .vtabs { display: none; }
+    #vctl .vtabbody, #vctl .vtabbody[hidden] { display: block; flex: none; overflow: visible; padding: 10px 2px 0; }
+    #vctl .vtabbody + .vtabbody { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  }
   .vgrp { margin-bottom: 11px; }
   .vgrp label {
     display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
@@ -421,4 +429,4 @@
 <script src="src/view/fx.js?v=a25cec93b4"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
 <script src="src/view/atlas.js?v=7e0c1649fb"></script>
-<script src="src/view/viewer.js?v=29d2aa05d3"></script>
+<script src="src/view/viewer.js?v=4ee7bf72f0"></script>

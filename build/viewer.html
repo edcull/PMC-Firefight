@@ -175,6 +175,14 @@
   .vtabbody[hidden] { display: none; }
   .vtabbody > .vacts:first-child { margin-top: 0; margin-bottom: 12px; }
   .vtabbody > .vrules { margin-top: 0; padding-top: 0; border-top: none; }
+  /* On a desktop there is room for both at once: no tabs, the options first and
+     the profile under them, the whole panel scrolling as one. */
+  @media (min-width: 1001px) {
+    #vctl { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-bottom: 12px; }
+    #vctl .vtabs { display: none; }
+    #vctl .vtabbody, #vctl .vtabbody[hidden] { display: block; flex: none; overflow: visible; padding: 10px 2px 0; }
+    #vctl .vtabbody + .vtabbody { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  }
   .vgrp { margin-bottom: 11px; }
   .vgrp label {
     display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
@@ -17140,9 +17148,11 @@
     }
     h += '</div><div class="vtabbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
     var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0;
+    var panelTop = el('vctl').scrollTop;     // on a desktop the whole panel is what scrolls
     el('vctl').innerHTML = h;
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
+    el('vctl').scrollTop = panelTop;
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
