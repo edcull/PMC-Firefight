@@ -527,7 +527,7 @@
     var A = camp.companies.A;
     var B = C.newCompany('', { faction: faction || (camp.companies.B && camp.companies.B.faction) || A.faction });
     camp.companies.B = B; camp.rivals = [B]; camp.facing = 0;
-    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: B.faction === 'bugs' && A.colour !== 'rust' ? 'rust' : freeColour([A.colour]) };
+    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: B.faction === 'bugs' && A.colour !== 'olive' ? 'olive' : freeColour([A.colour]) };
     view = 'found';
   }
   var secondFaction = null;       // what the hub said the second player runs, until they found it
@@ -537,8 +537,8 @@
   function startingColour(faction) {
     var c = null;
     try { c = localStorage.getItem('pmc-colour'); } catch (e) { }
-    // a swarm's shells are rust orange unless a colour has been chosen before
-    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : faction === 'bugs' ? 'rust' : 'ochre';
+    // a swarm's shells are olive drab unless a colour has been chosen before
+    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : faction === 'bugs' ? 'olive' : 'ochre';
   }
   function colourKeys() {
     return (root.PMCIso && root.PMCIso.COLOUR_KEYS) || ['ochre'];
@@ -1908,7 +1908,7 @@
       keepFoundName();
       var keepName = draft.name, keepColour = draft.colour, chosen = draft.colourChosen;
       beginSecond(t.getAttribute('data-bfaction'));
-      // an unchosen colour follows the kind of force (a swarm defaults to rust); a chosen one is kept
+      // an unchosen colour follows the kind of force (a swarm defaults to olive); a chosen one is kept
       draft.name = keepName;
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;

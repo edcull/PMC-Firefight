@@ -429,12 +429,12 @@ async function pickAndFire(p, key, ms) {
   const seenB = { sink: false, hidden: false };
   for (let i = 0; i < 60; i++) {
     const bw = await p.evaluate(() => window.__viewer.burrow());
-    if (bw && bw.lift < 0 && !bw.hidden) seenB.sink = true;
+    if (bw && !bw.hidden && bw.alpha < 0.9) seenB.sink = true;   // fading out as it goes down
     if (bw && bw.hidden) seenB.hidden = true;
     await p.waitForTimeout(40);
   }
   await p.evaluate(() => window.__viewer.walk());
-  ok('they go down into the ground', seenB.sink);
+  ok('they fade out as they go down', seenB.sink);
   ok('...and along under it, out of sight', seenB.hidden);
   await p.evaluate(() => window.__viewer.pick('regular'));
 
