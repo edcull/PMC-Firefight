@@ -94,7 +94,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.B.faction === 'xeno'));
   check('...with no way back out until they have', !/^Back$/m.test(txt));
   check('...and a colour of their own to start from', await p.evaluate(() => {
-    const on = document.querySelector('#camp-body .sw.on'); return !!on && on.getAttribute('data-campcolour') !== window.PMC_CAMPAIGN.get().companies.A.colour;
+    const on = document.querySelector('#camp-body [data-campcolour].on'); return !!on && on.getAttribute('data-campcolour') !== window.PMC_CAMPAIGN.get().companies.A.colour;
   }));
 
   // a reload between the two brings player 2 back

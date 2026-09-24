@@ -26,7 +26,7 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
     nameVal: (document.getElementById('found-name')||{}).value,
     swatches: document.querySelectorAll('#camp-body [data-campcolour]').length,
     colours: window.PMCIso.COLOUR_KEYS.length,
-    on: (document.querySelector('#camp-body .sw.on')||{}).getAttribute ? document.querySelector('#camp-body .sw.on').getAttribute('data-campcolour') : null,
+    on: (document.querySelector('#camp-body [data-campcolour].on')||{}).getAttribute ? document.querySelector('#camp-body [data-campcolour].on').getAttribute('data-campcolour') : null,
     heading: document.getElementById('camp-title').textContent
   }));
   ok('the founding screen asks for the name', found.name, '"'+found.nameVal+'"');
@@ -40,7 +40,7 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
   await p.waitForTimeout(250);
   const kept = await p.evaluate(() => ({
     val: document.getElementById('found-name').value,
-    on: document.querySelector('#camp-body .sw.on').getAttribute('data-campcolour')
+    on: document.querySelector('#camp-body [data-campcolour].on').getAttribute('data-campcolour')
   }));
   ok('picking a colour keeps the typed name', kept.val === 'Cullen Free Company', kept.val);
   ok('...and the colour sticks', kept.on === 'crimson', kept.on);
