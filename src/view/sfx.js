@@ -238,6 +238,14 @@
         burstOfNoise(t, 0.04, 0.14, 'highpass', 4200, 1.1);
       }
     },
+    /* One burst of a strafing run, in the voice of whoever is flying it: a
+       Xenotripod craft's energy pulses, a flying bug's spit or spines, and
+       anyone else's heavy guns. `kind` is the army, `style` the gun's style. */
+    strafe: function (kind, style) {
+      if (kind === 'xeno') { this.zap(0); this.zap(0.07); }
+      else if (kind === 'bugs') { if (/^spit/.test(style || '')) this.spit(0, style === 'spitbig'); else this.spine(2); }
+      else this.burst(2, true);
+    },
     /* A Teleport pad or a Regain Control: a rising shimmer. */
     shimmer: function (delay) {
       if (!ensure()) return;

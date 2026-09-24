@@ -216,7 +216,7 @@
   /* A beat before the other side acts. Their whole turn arrives at once and
      would otherwise start drawing the instant the player's own shot finished,
      which reads as the opponent interrupting rather than answering. */
-  var OPPONENT_BEAT = 700;
+  var OPPONENT_BEAT = 1400;             // long enough to see which unit is about to act
   function beat(ms) {
     anims.push({ kind: 'beat', dur: ms, t0: nowMs() });
     startLoop();
@@ -329,7 +329,8 @@
         var fu = evUnit(ev.id);
         if (!fu) return;
         focusUnit(fu, false, !myTurn());
-        if (seats.indexOf(fu.side) < 0) beat(OPPONENT_BEAT);
+        // a pause before the other side's unit acts — and before every unit in a demo, where both sides are the AI's
+        if (seats.indexOf(fu.side) < 0 || handsOff()) beat(OPPONENT_BEAT);
         return;
       }
       case 'hint': setHint(null, ev.text || undefined); return;
@@ -1987,7 +1988,7 @@
               dur: 380 + Math.random() * 220, blocking: true
             });
           }
-          if (SFX) SFX.burst(2, true);
+          if (SFX) SFX.strafe(R.isXeno(u) ? 'xeno' : u.faction, R.weaponStyle(u));
         }, dur * 0.18 + n * (dur * 0.64 / Math.max(1, steps - 1)));
       })(i);
     }

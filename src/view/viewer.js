@@ -44,6 +44,7 @@
      be suppressed), and a ground vehicle on the running gear it usually has. */
   function choose(k) {
     view.key = k; view.models = null; view.tele = null;
+    view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
@@ -65,6 +66,11 @@
       faceL: view.faceL
     });
     if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
+    /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
+       ride — half the models, mounted. Anyone riding is on the mount picked. */
+    var riding = R.canRide(p) && view.ride === 'mounted';
+    if (riding) { R.applyRiders(u, true); if (view.models != null) u.models = Math.min(view.models, u.size); }
+    if (R.canMount(p, riding)) u.mount = view.mount || 'bike';
     /* A machine shows wear as Damage — half its Structure gone is enough to set
        it smoking — and a squad shows it as Suppression. Destroyed is drawn by
        drawDestroyed rather than by any number here. */
@@ -307,14 +313,16 @@
     { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
     { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
     { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
-    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
+    // a smoke grenade thrown onto the mark, bursting where it lands, the flare burning in it
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: TO.x, y: TO.y }, dur: 750 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 720, dur: 2500 }]; } },
     { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
     { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
     { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
     { rule: 'Teleport', name: 'Teleport', play: function (u) { return teleportThrough(u); }, sfx: 'shimmer' },
     { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
     { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
-    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
+    /* the leader's shout, and the unit it reaches throwing off its Suppression to charge */
+    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }, { kind: 'wave', x: TO.x, y: TO.y, up: 0, r: 3, rgb: '235,85,70', delay: 350, dur: 1400 }, { kind: 'rise', x: TO.x, y: TO.y, rgb: '235,85,70', n: 10, delay: 350, dur: 1700 }]; }, sfx: 'clash' },
     { rule: '…but they\'ll never take our freedom!', name: 'Rally cry', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '240,120,80', dur: 1400 }, { kind: 'rise', x: u.x, y: u.y, rgb: '240,120,80', n: 8, dur: 1400 }]; }, sfx: 'chime' },
     { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
@@ -378,7 +386,8 @@
   function abilitiesOf(u) {
     var rules = (u && u.rules) || [], out = [];
     ABILITIES.forEach(function (a) {
-      if (out.length >= 3 || out.some(function (o) { return o.name === a.name; })) return;
+      // every ability the unit has gets a button: a leader has a good many (Rebellion leaders six)
+      if (out.some(function (o) { return o.name === a.name; })) return;
       if (rules.some(function (r) { return r === a.rule || r.indexOf(a.rule + ' (') === 0; })) out.push(a);
     });
     return out;
@@ -413,7 +422,7 @@
           dur: 380 + Math.random() * 220
         });
       }
-      if (view.sound && SFX) SFX.burst(2, true);
+      if (view.sound && SFX) SFX.strafe(R.isXeno(unit()) ? 'xeno' : unit().faction, R.weaponStyle(unit()));
       fired++;
       setTimeout(burst, STRAFE_MS * 0.6 / guns);
       start();
@@ -984,7 +993,8 @@
   function drawControls() {
     var p = profile(), w = R.weaponSpec(p);
     var isVeh = p.cls === 'vehicle';
-    var maxModels = p.cls === 'infantry' ? p.size : 1;
+    var riding = R.canRide(p) && view.ride === 'mounted';
+    var maxModels = p.cls === 'infantry' ? (riding ? Math.max(1, Math.round(p.size / 2)) : p.size) : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
     // two tabs under the name: what to do with the unit, and what the book says of it
@@ -1007,6 +1017,15 @@
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
+    // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
+    if (R.canRide(p)) {
+      h += '<div class="vgrp"><label>Riders</label><div class="vseg">' +
+        segL('ride', [['foot', 'On foot'], ['mounted', 'Mounted']], view.ride || 'foot') + '</div></div>';
+    }
+    if (R.canMount(p, riding)) {
+      h += '<div class="vgrp"><label>Mount</label><div class="vseg">' +
+        segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'bike') + '</div></div>';
+    }
     if (isVeh) {
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
@@ -1016,16 +1035,16 @@
         seg('face', FACES, view.face || 'SE') + '</div></div>';
     }
     if (maxModels > 1) {
-      var n = view.models == null ? p.size : view.models;
-      h += '<div class="vgrp"><label>Models — ' + n + ' of ' + p.size + '</label>' +
-        '<input type="range" id="vmodels" min="1" max="' + p.size + '" value="' + n + '"></div>';
+      var n = view.models == null ? maxModels : Math.min(view.models, maxModels);
+      h += '<div class="vgrp"><label>Models — ' + n + ' of ' + maxModels + '</label>' +
+        '<input type="range" id="vmodels" min="1" max="' + maxModels + '" value="' + n + '"></div>';
     }
     h += '</div>';
     var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0, all = el('vctl').scrollTop;
     el('vctl').innerHTML = h;
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
-    el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, stats over options
+    el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, options over stats
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
@@ -1079,6 +1098,13 @@
       FX.clear();
     }
     drawControls(); start(); frame();
+  }
+  // a segmented choice whose buttons read differently from the values they set
+  function segL(name, opts, now) {
+    return opts.map(function (o) {
+      return '<button class="vsg' + (o[0] === now ? ' on' : '') + '" data-set="' + name +
+        '" data-val="' + o[0] + '">' + esc(o[1]) + '</button>';
+    }).join('');
   }
   function seg(name, opts, now) {
     return opts.map(function (o) {

@@ -6578,13 +6578,14 @@ html { scroll-behavior: smooth; }
     pow2: { helm: 'bandana', gun: 'smg', armband: 'force', pack: 'none', ragged: true, band: '#5a5a50', tint: REBEL_WORN },
     // First Among Equals: a pistol, a megaphone and the group's colours on a pole
     // the leader himself: a mujahideen veteran in the fanatics' white turban, the green sash of command
-    agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#1c1e18', sash: '#2e7a3a', mark: true, bulk: 1, tint: HOLY_B },
+    // the leader himself: the turban and the sash in the side's own colour
+    agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: 'force', vest: '#1c1e18', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
     standard: { helm: 'beret', gun: 'banner', plainFlag: true, pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flagsmall: { helm: 'beret', gun: 'flagsmall', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flagbig: { helm: 'beret', gun: 'flagbig', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flaghuge: { helm: 'beret', gun: 'flaghuge', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     zealotrider: { helm: 'turban', gun: 'carbine', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', mount: true, tint: HOLY_A },
-    leaderrider: { helm: 'goggles', gun: 'banner', pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
+    leaderrider: { helm: 'goggles', gun: 'banner', plainFlag: true, pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
     leaderescort: { helm: 'goggles', gun: 'carbine', pack: 'none', mount: true, tint: FIELD_OCHRE, fitAs: 'rider' }
   };
 
@@ -7079,7 +7080,10 @@ html { scroll-behavior: smooth; }
       P(-2.5, -32 + drop, 0.75, 5, 'rgba(0,0,0,.4)'); P(1.5, -32 + drop, 0.75, 5, 'rgba(0,0,0,.4)');
     }
     if (kit.sash) {                                     // a sash, shoulder to hip
-      for (var sh2 = 0; sh2 < 6; sh2++) P(tx + tw - 5 - sh2 * 2.4, -41 + drop + sh2 * 3.2, 4, 3.4, kit.sash);
+      // 'force': in the side's own colour, the brightest thing on him
+      var shc = kit.sash === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.25) : kit.sash;
+      for (var sh2 = 0; sh2 < 6; sh2++) P(tx + tw - 5 - sh2 * 2.4, -41 + drop + sh2 * 3.2, 4, 3.4, shc);
+      if (kit.sash === 'force') for (var sh3 = 0; sh3 < 6; sh3++) P(tx + tw - 5 - sh3 * 2.4, -41 + drop + sh3 * 3.2, 4, 0.8, 'rgba(255,255,255,.3)');
     }
     if (kit.grenades) {                                 // a belt hung with grenades, and a bandolier of them
       for (var gr2 = 0; gr2 < 5; gr2++) {
@@ -7485,14 +7489,15 @@ html { scroll-behavior: smooth; }
         P(1, -48 + drop, 4, 1.5, '#20262d');
         P(-4, -45 + drop, 10, 4, '#2a2118');            // the beard
         P(-2, -42 + drop, 7, 2, '#2a2118');
-        P(-7, -57 + drop, 15, 8, kit.wrap || '#d6ceb8');
+        var wrc = kit.wrap === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.15) : (kit.wrap || '#d6ceb8');
+        P(-7, -57 + drop, 15, 8, wrc);
         P(-7, -57 + drop, 5, 8, 'rgba(255,255,255,.18)');
         P(-6, -54 + drop, 13, 0.75, 'rgba(0,0,0,.2)');  // the turns of the cloth
         P(-6, -52 + drop, 13, 0.75, 'rgba(0,0,0,.18)');
-        P(-9, -52 + drop, 3, 11, kit.wrap || '#d6ceb8'); // the tail down the back
+        P(-9, -52 + drop, 3, 11, wrc);                  // the tail down the back
         P(-9, -52 + drop, 1, 11, 'rgba(0,0,0,.2)');
         if (kit.facewrap) {                              // the end of it wound across the face
-          P(-5, -47 + drop, 11, 5, kit.wrap || '#d6ceb8');
+          P(-5, -47 + drop, 11, 5, kit.wrap === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.15) : (kit.wrap || '#d6ceb8'));
           P(-5, -47 + drop, 11, 0.8, 'rgba(255,255,255,.15)');
         }
         break;
@@ -7805,10 +7810,7 @@ html { scroll-behavior: smooth; }
         P(-8, wy - poleH + 8, fw2, 2, fl2);
         P(-8, wy - poleH + 6 + fh2, fw2, 2, fd);
         P(-8 + fw2 - 3, wy - poleH + 10, 3, fh2 - 2, fd);  // the fly, ragged and in shadow
-        if (big) {
-          P(-8 + fw2 * 0.35, wy - poleH + 12, fw2 * 0.3, fh2 * 0.45, '#e0b43a');  // an emblem sewn on
-          P(-8 + fw2 * 0.45, wy - poleH + 10, fw2 * 0.1, fh2 * 0.8, '#e0b43a');
-        }
+        // plain cloth: the colour alone says whose leader this is
         P(2, wy + 2, 12, 2, GUN.dk);                   // a carbine besides
         break;
       }

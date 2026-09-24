@@ -253,6 +253,30 @@ async function press(p, label) {
   ok('...and having moved, it calls one gun instead of two', moved.chain === 1,
     moved.chain + ' gun');
 
+  /* ------------------------------------------------- two targets, standing still */
+  head('Stand still and put the call on two enemies (p. 58)');
+  await stage(p, {
+    armyA: ['cmd1', 'mortarteam', 'mortarsection', 'regular', 'veterans', 'hmgteam'],
+    place: [[14, 32], [8, 8], [18, 38], [14, 38], [10, 38], [8, 36]]
+  });
+  const two = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => x.code === 'CM1');
+    const b = s.units.filter(x => x.side === 'B');
+    b[1].x = 33; b[1].y = 37;                  // a second enemy in sight, beside the first
+    window.__rebuildScene();
+    window.__select(u);
+    window.__pressAction('designate');
+    window.__tapUnit(b[0]);                    // the first mark: it waits for a second
+    const waiting = !window.PMC_STATE().mark;
+    window.__tapUnit(b[1]);                    // a different enemy: the call goes on both
+    const s2 = window.PMC_STATE();
+    return { waiting: waiting, n: s2.mark ? s2.mark.targets.length : 0, chain: s2.chain ? s2.chain.remaining : 0 };
+  });
+  ok('after the first mark it waits for a second', two.waiting);
+  ok('...and a different enemy puts the call on both', two.n === 2, two.n + ' marked');
+  ok('...one gun for each', two.chain === 2, two.chain + ' guns');
+
   /* ---------------------------------------------------------- Smoke Markers */
   head('Smoke Markers (p. 94)');
   await stage(p, {
@@ -272,9 +296,11 @@ async function press(p, label) {
     const reach = window.__markState().reach;
     u.markMoved = true;                      // Smoke Markers do not care
     window.__tapUnit(t);
+    window.__tapUnit(t);                     // the same enemy again: one target, both guns on it
     const s2 = window.PMC_STATE();
     return {
       slots: slots.join(' '),
+      marked: s2.mark ? s2.mark.targets.length : 0,
       kind: s2.mark ? s2.mark.kind : null,
       reach: reach,
       chain: s2.chain ? s2.chain.remaining : 0
@@ -284,6 +310,30 @@ async function press(p, label) {
     !/\bMark\b/.test(smoke.slots), smoke.why || String(smoke.kind));
   ok('...out to 12", not 24"', smoke.reach === 12, smoke.reach + '"');
   ok('...and calls two guns even on the move', smoke.chain === 2, smoke.chain + ' guns');
+  ok('...on one enemy, tapped twice', smoke.marked === 1, smoke.marked + ' marked');
+
+  // "Smoke Markers work like Markerlights … even if the unit with Smoke Markers has moved" (p. 94)
+  await stage(p, {
+    armyA: ['rhellriders', 'rmedart', 'rlightart', 'rmilitia', 'rinsurgents', 'rlmg'],
+    place: [[26, 32], [8, 8], [18, 38], [14, 38], [10, 38], [8, 36]]
+  });
+  const smoke2 = await p.evaluate(() => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => window.PMC.has(x, 'Smoke Markers') && x.side === 'A');
+    const b = s.units.filter(x => x.side === 'B');
+    b[1].x = 31; b[1].y = 36;                  // a second enemy within 12" and in sight
+    window.__rebuildScene();
+    window.__select(u);
+    window.__pressAction('designate');
+    u.markMoved = true;                        // moved first: still two
+    window.__tapUnit(b[0]);
+    const waiting = !window.PMC_STATE().mark;
+    window.__tapUnit(b[1]);
+    const s2 = window.PMC_STATE();
+    return { waiting: waiting, n: s2.mark ? s2.mark.targets.length : 0, chain: s2.chain ? s2.chain.remaining : 0 };
+  });
+  ok('...or on two enemies, even after moving', smoke2.waiting && smoke2.n === 2 && smoke2.chain === 2,
+    smoke2.n + ' marked, ' + smoke2.chain + ' guns');
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   console.log('page errors: ' + (errs.join(' | ') || 'none'));

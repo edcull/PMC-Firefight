@@ -5968,8 +5968,8 @@
       'Friendly units wholly within 12" get +{X} Defence against shots fired from more than 12" away from the ' +
       'generator. Only the best shield counts.',
     'Smoke Markers':
-      'A smoke grenade and a flare on an enemy within 12" in sight: two friendly Indirect Fire units shoot it at ' +
-      'once without needing sight, and this unit may move first.',
+      'Works like Markerlights, but designates only, out to 12" in sight: a smoke grenade and a flare on one or ' +
+      'two enemies, and two friendly Indirect Fire units shoot at once without needing sight — even if this unit moved first.',
     'Specialisation (air)':
       'Its main weapon can only engage aircraft, never ground targets.',
     'Specialisation (ground)':
@@ -10582,6 +10582,14 @@
         burstOfNoise(t, 0.04, 0.14, 'highpass', 4200, 1.1);
       }
     },
+    /* One burst of a strafing run, in the voice of whoever is flying it: a
+       Xenotripod craft's energy pulses, a flying bug's spit or spines, and
+       anyone else's heavy guns. `kind` is the army, `style` the gun's style. */
+    strafe: function (kind, style) {
+      if (kind === 'xeno') { this.zap(0); this.zap(0.07); }
+      else if (kind === 'bugs') { if (/^spit/.test(style || '')) this.spit(0, style === 'spitbig'); else this.spine(2); }
+      else this.burst(2, true);
+    },
     /* A Teleport pad or a Regain Control: a rising shimmer. */
     shimmer: function (delay) {
       if (!ensure()) return;
@@ -14001,13 +14009,14 @@
     pow2: { helm: 'bandana', gun: 'smg', armband: 'force', pack: 'none', ragged: true, band: '#5a5a50', tint: REBEL_WORN },
     // First Among Equals: a pistol, a megaphone and the group's colours on a pole
     // the leader himself: a mujahideen veteran in the fanatics' white turban, the green sash of command
-    agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#1c1e18', sash: '#2e7a3a', mark: true, bulk: 1, tint: HOLY_B },
+    // the leader himself: the turban and the sash in the side's own colour
+    agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: 'force', vest: '#1c1e18', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
     standard: { helm: 'beret', gun: 'banner', plainFlag: true, pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flagsmall: { helm: 'beret', gun: 'flagsmall', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flagbig: { helm: 'beret', gun: 'flagbig', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flaghuge: { helm: 'beret', gun: 'flaghuge', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     zealotrider: { helm: 'turban', gun: 'carbine', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', mount: true, tint: HOLY_A },
-    leaderrider: { helm: 'goggles', gun: 'banner', pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
+    leaderrider: { helm: 'goggles', gun: 'banner', plainFlag: true, pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
     leaderescort: { helm: 'goggles', gun: 'carbine', pack: 'none', mount: true, tint: FIELD_OCHRE, fitAs: 'rider' }
   };
 
@@ -14502,7 +14511,10 @@
       P(-2.5, -32 + drop, 0.75, 5, 'rgba(0,0,0,.4)'); P(1.5, -32 + drop, 0.75, 5, 'rgba(0,0,0,.4)');
     }
     if (kit.sash) {                                     // a sash, shoulder to hip
-      for (var sh2 = 0; sh2 < 6; sh2++) P(tx + tw - 5 - sh2 * 2.4, -41 + drop + sh2 * 3.2, 4, 3.4, kit.sash);
+      // 'force': in the side's own colour, the brightest thing on him
+      var shc = kit.sash === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.25) : kit.sash;
+      for (var sh2 = 0; sh2 < 6; sh2++) P(tx + tw - 5 - sh2 * 2.4, -41 + drop + sh2 * 3.2, 4, 3.4, shc);
+      if (kit.sash === 'force') for (var sh3 = 0; sh3 < 6; sh3++) P(tx + tw - 5 - sh3 * 2.4, -41 + drop + sh3 * 3.2, 4, 0.8, 'rgba(255,255,255,.3)');
     }
     if (kit.grenades) {                                 // a belt hung with grenades, and a bandolier of them
       for (var gr2 = 0; gr2 < 5; gr2++) {
@@ -14908,14 +14920,15 @@
         P(1, -48 + drop, 4, 1.5, '#20262d');
         P(-4, -45 + drop, 10, 4, '#2a2118');            // the beard
         P(-2, -42 + drop, 7, 2, '#2a2118');
-        P(-7, -57 + drop, 15, 8, kit.wrap || '#d6ceb8');
+        var wrc = kit.wrap === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.15) : (kit.wrap || '#d6ceb8');
+        P(-7, -57 + drop, 15, 8, wrc);
         P(-7, -57 + drop, 5, 8, 'rgba(255,255,255,.18)');
         P(-6, -54 + drop, 13, 0.75, 'rgba(0,0,0,.2)');  // the turns of the cloth
         P(-6, -52 + drop, 13, 0.75, 'rgba(0,0,0,.18)');
-        P(-9, -52 + drop, 3, 11, kit.wrap || '#d6ceb8'); // the tail down the back
+        P(-9, -52 + drop, 3, 11, wrc);                  // the tail down the back
         P(-9, -52 + drop, 1, 11, 'rgba(0,0,0,.2)');
         if (kit.facewrap) {                              // the end of it wound across the face
-          P(-5, -47 + drop, 11, 5, kit.wrap || '#d6ceb8');
+          P(-5, -47 + drop, 11, 5, kit.wrap === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.15) : (kit.wrap || '#d6ceb8'));
           P(-5, -47 + drop, 11, 0.8, 'rgba(255,255,255,.15)');
         }
         break;
@@ -15228,10 +15241,7 @@
         P(-8, wy - poleH + 8, fw2, 2, fl2);
         P(-8, wy - poleH + 6 + fh2, fw2, 2, fd);
         P(-8 + fw2 - 3, wy - poleH + 10, 3, fh2 - 2, fd);  // the fly, ragged and in shadow
-        if (big) {
-          P(-8 + fw2 * 0.35, wy - poleH + 12, fw2 * 0.3, fh2 * 0.45, '#e0b43a');  // an emblem sewn on
-          P(-8 + fw2 * 0.45, wy - poleH + 10, fw2 * 0.1, fh2 * 0.8, '#e0b43a');
-        }
+        // plain cloth: the colour alone says whose leader this is
         P(2, wy + 2, 12, 2, GUN.dk);                   // a carbine besides
         break;
       }
@@ -21732,6 +21742,8 @@
         var span = Math.hypot(lb.x - la.x, lb.y - la.y);
         // high enough to read as a lob, low enough to stay in the frame
         var apex = Math.max(I.K * 1.8, Math.min(I.K * (f.heavy ? 5 : 4), span * (f.heavy ? 0.34 : 0.28)));
+        // a grenade is thrown, not fired: a lower arc
+        if (f.grenade) apex = Math.max(I.K * 1.2, Math.min(I.K * 3, span * 0.24));
         function at(s) {
           return {
             x: la.x + (lb.x - la.x) * s,
@@ -21739,6 +21751,32 @@
           };
         }
         var lp = at(k);
+        if (f.grenade) {
+          /* A smoke grenade (Smoke Markers): a small dark canister tumbling end over
+             end, its flare already fizzing, a thin trail of sparks behind it. */
+          var grgb = f.rgb || '255,200,80';
+          for (var sp2 = 1; sp2 < 8; sp2++) {
+            var ss2 = k - sp2 * 0.035;
+            if (ss2 <= 0) break;
+            var sq = at(ss2);
+            g.fillStyle = 'rgba(' + grgb + ',' + Math.max(0, 0.7 - sp2 * 0.09) + ')';
+            g.fillRect(sq.x - I.PIXEL * 0.9, sq.y - I.PIXEL * 0.9, I.PIXEL * 1.8, I.PIXEL * 1.8);
+          }
+          var spin = k * Math.PI * 6;
+          g.save();
+          g.translate(lp.x, lp.y); g.rotate(spin);
+          g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(-I.PIXEL * 3.3, -I.PIXEL * 2.2, I.PIXEL * 6.6, I.PIXEL * 4.4);
+          g.fillStyle = '#48503a'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 3.8);
+          g.fillStyle = '#8a9470'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 1.1);
+          g.fillStyle = '#c9c2a4'; g.fillRect(-I.PIXEL * 0.6, -I.PIXEL * 1.9, I.PIXEL * 1.2, I.PIXEL * 3.8);   // the band round it
+          g.restore();
+          var fz = 0.6 + 0.4 * Math.sin(k * 90);
+          I.ellipse(g, lp.x + Math.cos(spin) * I.PIXEL * 3.6, lp.y + Math.sin(spin) * I.PIXEL * 3.6,
+            I.PIXEL * 2, I.PIXEL * 2, 'rgba(' + grgb + ',' + fz + ')');
+          var gs = { x: la.x + (lb.x - la.x) * k, y: la.y + (lb.y - la.y) * k + I.K * 0.8 };
+          I.ellipse(g, gs.x, gs.y, I.PIXEL * 2, I.PIXEL * 1, 'rgba(10,9,7,.25)');
+          return;
+        }
         // the smoke trail, hanging most of the way back to the tube
         for (var tr = 1; tr < 22; tr++) {
           var ts = k - tr * 0.045;
@@ -25782,7 +25820,9 @@
     var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
     if (shout) {
       addFx({ kind: 'beam', x: shout.x, y: shout.y, tx: a.x, ty: a.y, rgb: '235,85,70', dur: 900 });
-      addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 900 });
+      addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 1100 });
+      // and on the unit it reaches: the red of the shout rising off it as its Suppression goes
+      addFx({ kind: 'rise', x: a.x, y: a.y, rgb: '235,85,70', n: 10, delay: 250, dur: 1500 });
     }
     // Sappers: charges set against the wall or building the enemy is sheltering behind
     var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
@@ -26239,8 +26279,11 @@
 
     /* Stand still and you may name a second target before the guns answer. The
        same target tapped twice is the book's other stationary option — one target,
-       two units — so either way the second tap sends them. */
-    var canSplit = !u.markMoved && !R.has(u, 'Smoke Markers') &&
+       two units — so either way the second tap sends them. Smoke Markers "work
+       like Markerlights" and always call two, even on the move (p. 94), so a
+       smoke-marking unit may split its call whether or not it has moved. */
+    var smokeOnly = !R.has(u, 'Markerlights') && R.has(u, 'Smoke Markers');
+    var canSplit = (!u.markMoved || smokeOnly) &&
       ui.markPicks.length < 2 && !already &&
       markTargets(u).some(function (t) { return ui.markPicks.indexOf(t) < 0; });
     if (canSplit && u.side === state.activeSide && !isAI(u.side)) {
@@ -26262,9 +26305,13 @@
       t.marked = true;
       // the marker's laser (or smoke round's trace) onto each mark
       // drawn over whatever follows: the guns it calls are the player's to pick, and need not wait for it
-      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200 });
-      // Smoke Markers: the grenade bursting on the mark, the flare burning in it
-      if (smoke) addFx({ kind: 'puff', x: t.x, y: t.y, delay: 300, dur: 1800 });
+      if (smoke) {
+        /* Smoke Markers: a grenade thrown onto the mark, bursting where it lands,
+           the flare burning in the smoke — in flight a little longer the further it goes */
+        var gt = Math.round(Math.min(1000, 450 + R.unitDist(u, t) * 40));
+        addFx({ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: t.x, y: t.y }, dur: gt });
+        addFx({ kind: 'puff', x: t.x, y: t.y, delay: gt - 30, dur: gt + 1800 });
+      } else addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
     });
     u.activated = true;
@@ -28446,7 +28493,7 @@
   /* A beat before the other side acts. Their whole turn arrives at once and
      would otherwise start drawing the instant the player's own shot finished,
      which reads as the opponent interrupting rather than answering. */
-  var OPPONENT_BEAT = 700;
+  var OPPONENT_BEAT = 1400;             // long enough to see which unit is about to act
   function beat(ms) {
     anims.push({ kind: 'beat', dur: ms, t0: nowMs() });
     startLoop();
@@ -28559,7 +28606,8 @@
         var fu = evUnit(ev.id);
         if (!fu) return;
         focusUnit(fu, false, !myTurn());
-        if (seats.indexOf(fu.side) < 0) beat(OPPONENT_BEAT);
+        // a pause before the other side's unit acts — and before every unit in a demo, where both sides are the AI's
+        if (seats.indexOf(fu.side) < 0 || handsOff()) beat(OPPONENT_BEAT);
         return;
       }
       case 'hint': setHint(null, ev.text || undefined); return;
@@ -30217,7 +30265,7 @@
               dur: 380 + Math.random() * 220, blocking: true
             });
           }
-          if (SFX) SFX.burst(2, true);
+          if (SFX) SFX.strafe(R.isXeno(u) ? 'xeno' : u.faction, R.weaponStyle(u));
         }, dur * 0.18 + n * (dur * 0.64 / Math.max(1, steps - 1)));
       })(i);
     }

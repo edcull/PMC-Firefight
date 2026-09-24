@@ -3249,7 +3249,9 @@
     var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
     if (shout) {
       addFx({ kind: 'beam', x: shout.x, y: shout.y, tx: a.x, ty: a.y, rgb: '235,85,70', dur: 900 });
-      addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 900 });
+      addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 1100 });
+      // and on the unit it reaches: the red of the shout rising off it as its Suppression goes
+      addFx({ kind: 'rise', x: a.x, y: a.y, rgb: '235,85,70', n: 10, delay: 250, dur: 1500 });
     }
     // Sappers: charges set against the wall or building the enemy is sheltering behind
     var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
@@ -3706,8 +3708,11 @@
 
     /* Stand still and you may name a second target before the guns answer. The
        same target tapped twice is the book's other stationary option — one target,
-       two units — so either way the second tap sends them. */
-    var canSplit = !u.markMoved && !R.has(u, 'Smoke Markers') &&
+       two units — so either way the second tap sends them. Smoke Markers "work
+       like Markerlights" and always call two, even on the move (p. 94), so a
+       smoke-marking unit may split its call whether or not it has moved. */
+    var smokeOnly = !R.has(u, 'Markerlights') && R.has(u, 'Smoke Markers');
+    var canSplit = (!u.markMoved || smokeOnly) &&
       ui.markPicks.length < 2 && !already &&
       markTargets(u).some(function (t) { return ui.markPicks.indexOf(t) < 0; });
     if (canSplit && u.side === state.activeSide && !isAI(u.side)) {
@@ -3729,9 +3734,13 @@
       t.marked = true;
       // the marker's laser (or smoke round's trace) onto each mark
       // drawn over whatever follows: the guns it calls are the player's to pick, and need not wait for it
-      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200 });
-      // Smoke Markers: the grenade bursting on the mark, the flare burning in it
-      if (smoke) addFx({ kind: 'puff', x: t.x, y: t.y, delay: 300, dur: 1800 });
+      if (smoke) {
+        /* Smoke Markers: a grenade thrown onto the mark, bursting where it lands,
+           the flare burning in the smoke — in flight a little longer the further it goes */
+        var gt = Math.round(Math.min(1000, 450 + R.unitDist(u, t) * 40));
+        addFx({ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: t.x, y: t.y }, dur: gt });
+        addFx({ kind: 'puff', x: t.x, y: t.y, delay: gt - 30, dur: gt + 1800 });
+      } else addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
     });
     u.activated = true;

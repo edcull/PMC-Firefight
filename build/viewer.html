@@ -339,20 +339,21 @@
   #vlist canvas.tile.tall { height: 122px; }
   #vlist canvas.tile.inf { width: 120px; height: 96px; }
   #vlist figure.cell figcaption { display: none; }
-  /* A desktop: the unit's stats with its options under them, the whole panel scrolling as one,
-     and the unit list three cards to a row, each tile shrunk to its column */
+  /* A desktop: the unit's options with its stats under them, the whole panel scrolling as one,
+     and the unit list two cards to a row (four on a wide screen), each tile shrunk to its column */
   @media (min-width: 1001px) {
     main { grid-template-columns: 330px minmax(0, 1fr) 300px; }
     #vctl { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-bottom: 12px; }
     #vctl .vtabs { display: none; }
     #vctl .vtabbody, #vctl .vtabbody[hidden] { display: block; flex: none; overflow: visible; padding: 10px 2px 0; }
-    #vctl .voptsbody { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    #vctl .voptsbody { order: 1; }
+    #vctl .vstatsbody { order: 2; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
     #vctl .voptsbody::before {
       content: 'Options'; display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
       text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
     }
     #vctl .voptsbody > .vacts:first-child { margin-top: 0; }
-    #vlist .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    #vlist .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
     #vlist .card.unit { width: auto; min-width: 0; padding: 4px 4px 5px; }
     #vlist .card.unit h4 { gap: 3px; }
     #vlist .card.unit h4 .code { font-size: 9px; padding: 0 4px; }
@@ -362,6 +363,11 @@
     #vlist canvas.tile { width: 100%; height: auto; aspect-ratio: 112 / 95; }
     #vlist canvas.tile.tall { aspect-ratio: 112 / 122; }
     #vlist canvas.tile.inf { width: 100%; aspect-ratio: 120 / 96; }
+  }
+  /* a wide screen has room for four a row and still a good stage in the middle */
+  @media (min-width: 1700px) {
+    main { grid-template-columns: 540px minmax(0, 1fr) 300px; }
+    #vlist .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
   #vlist .card .tiles .cell ~ .cell { display: none; }     /* one picture a card: a mounted unit on its first mount */
   .vatbar { flex: none; display: flex; flex-direction: column; gap: 7px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
@@ -4378,8 +4384,8 @@
       'Friendly units wholly within 12" get +{X} Defence against shots fired from more than 12" away from the ' +
       'generator. Only the best shield counts.',
     'Smoke Markers':
-      'A smoke grenade and a flare on an enemy within 12" in sight: two friendly Indirect Fire units shoot it at ' +
-      'once without needing sight, and this unit may move first.',
+      'Works like Markerlights, but designates only, out to 12" in sight: a smoke grenade and a flare on one or ' +
+      'two enemies, and two friendly Indirect Fire units shoot at once without needing sight — even if this unit moved first.',
     'Specialisation (air)':
       'Its main weapon can only engage aircraft, never ground targets.',
     'Specialisation (ground)':
@@ -4671,6 +4677,14 @@
         tone(t, 0.16, 0.08, 'sine', 1320 * pf, 1180 * pf);
         burstOfNoise(t, 0.04, 0.14, 'highpass', 4200, 1.1);
       }
+    },
+    /* One burst of a strafing run, in the voice of whoever is flying it: a
+       Xenotripod craft's energy pulses, a flying bug's spit or spines, and
+       anyone else's heavy guns. `kind` is the army, `style` the gun's style. */
+    strafe: function (kind, style) {
+      if (kind === 'xeno') { this.zap(0); this.zap(0.07); }
+      else if (kind === 'bugs') { if (/^spit/.test(style || '')) this.spit(0, style === 'spitbig'); else this.spine(2); }
+      else this.burst(2, true);
     },
     /* A Teleport pad or a Regain Control: a rising shimmer. */
     shimmer: function (delay) {
@@ -7555,13 +7569,14 @@
     pow2: { helm: 'bandana', gun: 'smg', armband: 'force', pack: 'none', ragged: true, band: '#5a5a50', tint: REBEL_WORN },
     // First Among Equals: a pistol, a megaphone and the group's colours on a pole
     // the leader himself: a mujahideen veteran in the fanatics' white turban, the green sash of command
-    agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#1c1e18', sash: '#2e7a3a', mark: true, bulk: 1, tint: HOLY_B },
+    // the leader himself: the turban and the sash in the side's own colour
+    agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: 'force', vest: '#1c1e18', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
     standard: { helm: 'beret', gun: 'banner', plainFlag: true, pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flagsmall: { helm: 'beret', gun: 'flagsmall', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flagbig: { helm: 'beret', gun: 'flagbig', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flaghuge: { helm: 'beret', gun: 'flaghuge', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     zealotrider: { helm: 'turban', gun: 'carbine', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', mount: true, tint: HOLY_A },
-    leaderrider: { helm: 'goggles', gun: 'banner', pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
+    leaderrider: { helm: 'goggles', gun: 'banner', plainFlag: true, pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
     leaderescort: { helm: 'goggles', gun: 'carbine', pack: 'none', mount: true, tint: FIELD_OCHRE, fitAs: 'rider' }
   };
 
@@ -8056,7 +8071,10 @@
       P(-2.5, -32 + drop, 0.75, 5, 'rgba(0,0,0,.4)'); P(1.5, -32 + drop, 0.75, 5, 'rgba(0,0,0,.4)');
     }
     if (kit.sash) {                                     // a sash, shoulder to hip
-      for (var sh2 = 0; sh2 < 6; sh2++) P(tx + tw - 5 - sh2 * 2.4, -41 + drop + sh2 * 3.2, 4, 3.4, kit.sash);
+      // 'force': in the side's own colour, the brightest thing on him
+      var shc = kit.sash === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.25) : kit.sash;
+      for (var sh2 = 0; sh2 < 6; sh2++) P(tx + tw - 5 - sh2 * 2.4, -41 + drop + sh2 * 3.2, 4, 3.4, shc);
+      if (kit.sash === 'force') for (var sh3 = 0; sh3 < 6; sh3++) P(tx + tw - 5 - sh3 * 2.4, -41 + drop + sh3 * 3.2, 4, 0.8, 'rgba(255,255,255,.3)');
     }
     if (kit.grenades) {                                 // a belt hung with grenades, and a bandolier of them
       for (var gr2 = 0; gr2 < 5; gr2++) {
@@ -8462,14 +8480,15 @@
         P(1, -48 + drop, 4, 1.5, '#20262d');
         P(-4, -45 + drop, 10, 4, '#2a2118');            // the beard
         P(-2, -42 + drop, 7, 2, '#2a2118');
-        P(-7, -57 + drop, 15, 8, kit.wrap || '#d6ceb8');
+        var wrc = kit.wrap === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.15) : (kit.wrap || '#d6ceb8');
+        P(-7, -57 + drop, 15, 8, wrc);
         P(-7, -57 + drop, 5, 8, 'rgba(255,255,255,.18)');
         P(-6, -54 + drop, 13, 0.75, 'rgba(0,0,0,.2)');  // the turns of the cloth
         P(-6, -52 + drop, 13, 0.75, 'rgba(0,0,0,.18)');
-        P(-9, -52 + drop, 3, 11, kit.wrap || '#d6ceb8'); // the tail down the back
+        P(-9, -52 + drop, 3, 11, wrc);                  // the tail down the back
         P(-9, -52 + drop, 1, 11, 'rgba(0,0,0,.2)');
         if (kit.facewrap) {                              // the end of it wound across the face
-          P(-5, -47 + drop, 11, 5, kit.wrap || '#d6ceb8');
+          P(-5, -47 + drop, 11, 5, kit.wrap === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.15) : (kit.wrap || '#d6ceb8'));
           P(-5, -47 + drop, 11, 0.8, 'rgba(255,255,255,.15)');
         }
         break;
@@ -8782,10 +8801,7 @@
         P(-8, wy - poleH + 8, fw2, 2, fl2);
         P(-8, wy - poleH + 6 + fh2, fw2, 2, fd);
         P(-8 + fw2 - 3, wy - poleH + 10, 3, fh2 - 2, fd);  // the fly, ragged and in shadow
-        if (big) {
-          P(-8 + fw2 * 0.35, wy - poleH + 12, fw2 * 0.3, fh2 * 0.45, '#e0b43a');  // an emblem sewn on
-          P(-8 + fw2 * 0.45, wy - poleH + 10, fw2 * 0.1, fh2 * 0.8, '#e0b43a');
-        }
+        // plain cloth: the colour alone says whose leader this is
         P(2, wy + 2, 12, 2, GUN.dk);                   // a carbine besides
         break;
       }
@@ -15285,6 +15301,8 @@
         var span = Math.hypot(lb.x - la.x, lb.y - la.y);
         // high enough to read as a lob, low enough to stay in the frame
         var apex = Math.max(I.K * 1.8, Math.min(I.K * (f.heavy ? 5 : 4), span * (f.heavy ? 0.34 : 0.28)));
+        // a grenade is thrown, not fired: a lower arc
+        if (f.grenade) apex = Math.max(I.K * 1.2, Math.min(I.K * 3, span * 0.24));
         function at(s) {
           return {
             x: la.x + (lb.x - la.x) * s,
@@ -15292,6 +15310,32 @@
           };
         }
         var lp = at(k);
+        if (f.grenade) {
+          /* A smoke grenade (Smoke Markers): a small dark canister tumbling end over
+             end, its flare already fizzing, a thin trail of sparks behind it. */
+          var grgb = f.rgb || '255,200,80';
+          for (var sp2 = 1; sp2 < 8; sp2++) {
+            var ss2 = k - sp2 * 0.035;
+            if (ss2 <= 0) break;
+            var sq = at(ss2);
+            g.fillStyle = 'rgba(' + grgb + ',' + Math.max(0, 0.7 - sp2 * 0.09) + ')';
+            g.fillRect(sq.x - I.PIXEL * 0.9, sq.y - I.PIXEL * 0.9, I.PIXEL * 1.8, I.PIXEL * 1.8);
+          }
+          var spin = k * Math.PI * 6;
+          g.save();
+          g.translate(lp.x, lp.y); g.rotate(spin);
+          g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(-I.PIXEL * 3.3, -I.PIXEL * 2.2, I.PIXEL * 6.6, I.PIXEL * 4.4);
+          g.fillStyle = '#48503a'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 3.8);
+          g.fillStyle = '#8a9470'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 1.1);
+          g.fillStyle = '#c9c2a4'; g.fillRect(-I.PIXEL * 0.6, -I.PIXEL * 1.9, I.PIXEL * 1.2, I.PIXEL * 3.8);   // the band round it
+          g.restore();
+          var fz = 0.6 + 0.4 * Math.sin(k * 90);
+          I.ellipse(g, lp.x + Math.cos(spin) * I.PIXEL * 3.6, lp.y + Math.sin(spin) * I.PIXEL * 3.6,
+            I.PIXEL * 2, I.PIXEL * 2, 'rgba(' + grgb + ',' + fz + ')');
+          var gs = { x: la.x + (lb.x - la.x) * k, y: la.y + (lb.y - la.y) * k + I.K * 0.8 };
+          I.ellipse(g, gs.x, gs.y, I.PIXEL * 2, I.PIXEL * 1, 'rgba(10,9,7,.25)');
+          return;
+        }
         // the smoke trail, hanging most of the way back to the tube
         for (var tr = 1; tr < 22; tr++) {
           var ts = k - tr * 0.045;
@@ -16268,6 +16312,7 @@
      be suppressed), and a ground vehicle on the running gear it usually has. */
   function choose(k) {
     view.key = k; view.models = null; view.tele = null;
+    view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
@@ -16289,6 +16334,11 @@
       faceL: view.faceL
     });
     if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
+    /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
+       ride — half the models, mounted. Anyone riding is on the mount picked. */
+    var riding = R.canRide(p) && view.ride === 'mounted';
+    if (riding) { R.applyRiders(u, true); if (view.models != null) u.models = Math.min(view.models, u.size); }
+    if (R.canMount(p, riding)) u.mount = view.mount || 'bike';
     /* A machine shows wear as Damage — half its Structure gone is enough to set
        it smoking — and a squad shows it as Suppression. Destroyed is drawn by
        drawDestroyed rather than by any number here. */
@@ -16531,14 +16581,16 @@
     { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
     { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
     { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
-    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
+    // a smoke grenade thrown onto the mark, bursting where it lands, the flare burning in it
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: TO.x, y: TO.y }, dur: 750 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 720, dur: 2500 }]; } },
     { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
     { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
     { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
     { rule: 'Teleport', name: 'Teleport', play: function (u) { return teleportThrough(u); }, sfx: 'shimmer' },
     { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
     { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
-    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
+    /* the leader's shout, and the unit it reaches throwing off its Suppression to charge */
+    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }, { kind: 'wave', x: TO.x, y: TO.y, up: 0, r: 3, rgb: '235,85,70', delay: 350, dur: 1400 }, { kind: 'rise', x: TO.x, y: TO.y, rgb: '235,85,70', n: 10, delay: 350, dur: 1700 }]; }, sfx: 'clash' },
     { rule: '…but they\'ll never take our freedom!', name: 'Rally cry', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '240,120,80', dur: 1400 }, { kind: 'rise', x: u.x, y: u.y, rgb: '240,120,80', n: 8, dur: 1400 }]; }, sfx: 'chime' },
     { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
@@ -16602,7 +16654,8 @@
   function abilitiesOf(u) {
     var rules = (u && u.rules) || [], out = [];
     ABILITIES.forEach(function (a) {
-      if (out.length >= 3 || out.some(function (o) { return o.name === a.name; })) return;
+      // every ability the unit has gets a button: a leader has a good many (Rebellion leaders six)
+      if (out.some(function (o) { return o.name === a.name; })) return;
       if (rules.some(function (r) { return r === a.rule || r.indexOf(a.rule + ' (') === 0; })) out.push(a);
     });
     return out;
@@ -16637,7 +16690,7 @@
           dur: 380 + Math.random() * 220
         });
       }
-      if (view.sound && SFX) SFX.burst(2, true);
+      if (view.sound && SFX) SFX.strafe(R.isXeno(unit()) ? 'xeno' : unit().faction, R.weaponStyle(unit()));
       fired++;
       setTimeout(burst, STRAFE_MS * 0.6 / guns);
       start();
@@ -17208,7 +17261,8 @@
   function drawControls() {
     var p = profile(), w = R.weaponSpec(p);
     var isVeh = p.cls === 'vehicle';
-    var maxModels = p.cls === 'infantry' ? p.size : 1;
+    var riding = R.canRide(p) && view.ride === 'mounted';
+    var maxModels = p.cls === 'infantry' ? (riding ? Math.max(1, Math.round(p.size / 2)) : p.size) : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
       '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
     // two tabs under the name: what to do with the unit, and what the book says of it
@@ -17231,6 +17285,15 @@
       '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
+    // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
+    if (R.canRide(p)) {
+      h += '<div class="vgrp"><label>Riders</label><div class="vseg">' +
+        segL('ride', [['foot', 'On foot'], ['mounted', 'Mounted']], view.ride || 'foot') + '</div></div>';
+    }
+    if (R.canMount(p, riding)) {
+      h += '<div class="vgrp"><label>Mount</label><div class="vseg">' +
+        segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'bike') + '</div></div>';
+    }
     if (isVeh) {
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
@@ -17240,16 +17303,16 @@
         seg('face', FACES, view.face || 'SE') + '</div></div>';
     }
     if (maxModels > 1) {
-      var n = view.models == null ? p.size : view.models;
-      h += '<div class="vgrp"><label>Models — ' + n + ' of ' + p.size + '</label>' +
-        '<input type="range" id="vmodels" min="1" max="' + p.size + '" value="' + n + '"></div>';
+      var n = view.models == null ? maxModels : Math.min(view.models, maxModels);
+      h += '<div class="vgrp"><label>Models — ' + n + ' of ' + maxModels + '</label>' +
+        '<input type="range" id="vmodels" min="1" max="' + maxModels + '" value="' + n + '"></div>';
     }
     h += '</div>';
     var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0, all = el('vctl').scrollTop;
     el('vctl').innerHTML = h;
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
-    el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, stats over options
+    el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, options over stats
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
@@ -17303,6 +17366,13 @@
       FX.clear();
     }
     drawControls(); start(); frame();
+  }
+  // a segmented choice whose buttons read differently from the values they set
+  function segL(name, opts, now) {
+    return opts.map(function (o) {
+      return '<button class="vsg' + (o[0] === now ? ' on' : '') + '" data-set="' + name +
+        '" data-val="' + o[0] + '">' + esc(o[1]) + '</button>';
+    }).join('');
   }
   function seg(name, opts, now) {
     return opts.map(function (o) {
