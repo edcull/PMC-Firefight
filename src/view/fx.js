@@ -588,7 +588,9 @@
            or a hacker's data stream (`data`: packets running along it). It
            reaches out, holds with a flicker, and puts a pulsing ring on the mark. */
         var ba = I.toScreen(f.x, f.y), bb = I.toScreen(f.tx, f.ty);
-        ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up); bb.y -= I.K * 0.5;
+        // from a machine's own mount (`mz`: a craft's nose, a barrel), else from about chest height
+        if (f.mz) { ba.x += f.mz.dx; ba.y += f.mz.dy - liftAt(f); } else ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up);
+        bb.y -= I.K * 0.5;
         var brgb = f.rgb || '255,70,60', bon = k < 0.85 ? 1 : (1 - k) / 0.15, reach = Math.min(1, k / 0.15);
         var bex = ba.x + (bb.x - ba.x) * reach, bey = ba.y + (bb.y - ba.y) * reach;
         var flick = 0.72 + 0.28 * Math.sin(k * 70);

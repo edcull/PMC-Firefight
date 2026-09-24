@@ -1560,7 +1560,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
-    interceptor: { p: 'burst', s: 'shellbig', sn: 2 },
+    // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
+    interceptor: { p: 'missile', n: 2, s: 'burst' },
 
     /* ---- the Rebel list, read the same way ---- */
     // armed civilians: whatever was in the house, at 12"
@@ -1923,20 +1924,23 @@
      Amplifiers (p. 142). */
   function isMedic(u) { return has(u, 'Field Medics') || has(u, 'Psychic Support'); }
   function medicReach(state, u) { return has(u, 'Psychic Support') && doctrine(state, u.side, 'XT5') ? 12 : 6; }
-  function medicNearby(state, target) {
+  // the unit treating a squad's wounded: itself if it is the medics, else the nearest in reach
+  function medicFor(state, target) {
     // the medic team treats its own wounded whatever state it is in (p. 57)
-    if (isMedic(target)) return true;
+    if (isMedic(target)) return target;
+    var best = null, bd = Infinity;
     for (var i = 0; i < state.units.length; i++) {
-      var u = state.units[i];
+      var u = state.units[i], d;
       if (u.side === target.side && projects(u) && isMedic(u)
-        && unitDist(u, target) <= medicReach(state, u)) return true;
+        && (d = unitDist(u, target)) <= medicReach(state, u) && d < bd) { best = u; bd = d; }
     }
-    return false;
+    return best;
   }
+  function medicNearby(state, target) { return !!medicFor(state, target); }
 
   function resolveShootingHits(state, target, hits, mod, atk) {
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
-    var medics = medicNearby(state, target);
+    var medic = medicFor(state, target), medics = !!medic;
     var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
     var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
     for (var i = 0; i < hits; i++) {
@@ -1949,8 +1953,8 @@
       } else if (medics) {
         if (r <= 2) tag = 'Steady, boys!';
         else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
-        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; }
-        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; }
+        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
+        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
       } else if (has(target, 'Animal Behaviour')) {
         // bugs: shrug it off or burst (p. 116)
         if (r <= 3) tag = 'QUEKKK! (ignored)';
@@ -2419,7 +2423,7 @@
     var caught = state.units.filter(function (u) {
       return u.alive && !u.aboard && !isFlying(u) && inRect(u.x, u.y, r);
     });
-    var res = down ? destroyTerrain(state, r, log, a) : null;
+    var res = down ? destroyTerrain(state, r, log, a) : null, treated = [];
     caught.forEach(function (u) {
       var hits = Math.max(0, total - defenceAgainst(state, a, u, { basic: true }).value);
       if (!hits) {
@@ -2432,13 +2436,15 @@
         applyDamage(state, u, dm.damage, log, a);
       } else {
         var hr = resolveShootingHits(state, u, hits, 0, a);
+        if (hr.medic) treated.push({ id: u.id, medic: hr.medic });
         log.push({ t: 'hits', text: hr.rolls.join(' · ') });
         applyResult(state, u, hr, log, a);
       }
     });
     state.mined = null;
     a.activated = true;
-    return { log: log, down: down, result: res, total: total, roll: roll };
+    // `treated`: each squad caught in it that a MEDIC! answered for, and who answered
+    return { log: log, down: down, result: res, total: total, roll: roll, treated: treated };
   }
 
   /* Sappers going in with charges (p. 58): the same threshold, +4 for the rule,
@@ -2928,6 +2934,7 @@
       applyDamage(state, t, dres2.damage, log, a);
       return { log: log, hits: hits, wreck: wreck };
     }
+    var medicId = null;
     if (hits > 0) {
       var mod = 0;
       /* Undisciplined (p. 94): shooting at a Broken Rebel unit, or catching one in
@@ -2939,6 +2946,7 @@
       // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
       if (state.scen && state.scen.hitMod) mod += state.scen.hitMod(state, a, t) || 0;
       var res = resolveShootingHits(state, t, hits, mod, a);
+      medicId = res.medic || null;
       // Incendiary doubles the suppression of the attack itself, before any
       // extra points that special rules add
       var burn = '';
@@ -2961,7 +2969,8 @@
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       applyResult(state, t, res, log, a);
     }
-    return { log: log, hits: hits };
+    // who answered a MEDIC! on this volley, so the board can show them at work
+    return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
   }
 
   /* ---------- NOT ONE STEP BACKWARDS! (T5, p. 87) ----------
@@ -2993,9 +3002,10 @@
       t: 'shoot', text: a.label + ' fires over the heads of ' + t.label + ' — NOT ONE STEP BACKWARDS!',
       math: parts.map(fmtPart).join(', ') + ' = ' + total + ' vs Defence ' + dres.value + ' → ' + hits + ' hit' + (hits === 1 ? '' : 's')
     }];
-    var removed = 0, before = t.sp || 0, killed = 0;
+    var removed = 0, before = t.sp || 0, killed = 0, medicId = null;
     if (hits > 0) {
       var res = resolveShootingHits(state, t, hits, status(t) === 'broken' ? 1 : 0, null);
+      medicId = res.medic || null;
       log.push({ t: 'hits', text: res.rolls.join(' · ') + ' — the Suppression is taken away, not given.' });
       // the dead are dead: casualties go through as normal, with no credit to anyone
       if (res.casualties) {
@@ -3011,7 +3021,7 @@
       }
     }
     if (t.alive) log.push({ t: 'rally', text: t.label + (removed ? ' sheds ' + removed + ' Suppression point' + (removed === 1 ? '' : 's') + ' (' + before + ' → ' + t.sp + ').' : ' is not moved by it.') });
-    return { log: log, hits: hits, removed: removed, killed: killed };
+    return medicId ? { log: log, hits: hits, removed: removed, killed: killed, medic: medicId } : { log: log, hits: hits, removed: removed, killed: killed };
   }
 
   /* ---------- assault ---------- */

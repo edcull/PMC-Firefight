@@ -3586,7 +3586,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
-    interceptor: { p: 'burst', s: 'shellbig', sn: 2 },
+    // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
+    interceptor: { p: 'missile', n: 2, s: 'burst' },
 
     /* ---- the Rebel list, read the same way ---- */
     // armed civilians: whatever was in the house, at 12"
@@ -3949,20 +3950,23 @@
      Amplifiers (p. 142). */
   function isMedic(u) { return has(u, 'Field Medics') || has(u, 'Psychic Support'); }
   function medicReach(state, u) { return has(u, 'Psychic Support') && doctrine(state, u.side, 'XT5') ? 12 : 6; }
-  function medicNearby(state, target) {
+  // the unit treating a squad's wounded: itself if it is the medics, else the nearest in reach
+  function medicFor(state, target) {
     // the medic team treats its own wounded whatever state it is in (p. 57)
-    if (isMedic(target)) return true;
+    if (isMedic(target)) return target;
+    var best = null, bd = Infinity;
     for (var i = 0; i < state.units.length; i++) {
-      var u = state.units[i];
+      var u = state.units[i], d;
       if (u.side === target.side && projects(u) && isMedic(u)
-        && unitDist(u, target) <= medicReach(state, u)) return true;
+        && (d = unitDist(u, target)) <= medicReach(state, u) && d < bd) { best = u; bd = d; }
     }
-    return false;
+    return best;
   }
+  function medicNearby(state, target) { return !!medicFor(state, target); }
 
   function resolveShootingHits(state, target, hits, mod, atk) {
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
-    var medics = medicNearby(state, target);
+    var medic = medicFor(state, target), medics = !!medic;
     var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
     var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
     for (var i = 0; i < hits; i++) {
@@ -3975,8 +3979,8 @@
       } else if (medics) {
         if (r <= 2) tag = 'Steady, boys!';
         else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
-        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; }
-        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; }
+        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
+        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
       } else if (has(target, 'Animal Behaviour')) {
         // bugs: shrug it off or burst (p. 116)
         if (r <= 3) tag = 'QUEKKK! (ignored)';
@@ -4445,7 +4449,7 @@
     var caught = state.units.filter(function (u) {
       return u.alive && !u.aboard && !isFlying(u) && inRect(u.x, u.y, r);
     });
-    var res = down ? destroyTerrain(state, r, log, a) : null;
+    var res = down ? destroyTerrain(state, r, log, a) : null, treated = [];
     caught.forEach(function (u) {
       var hits = Math.max(0, total - defenceAgainst(state, a, u, { basic: true }).value);
       if (!hits) {
@@ -4458,13 +4462,15 @@
         applyDamage(state, u, dm.damage, log, a);
       } else {
         var hr = resolveShootingHits(state, u, hits, 0, a);
+        if (hr.medic) treated.push({ id: u.id, medic: hr.medic });
         log.push({ t: 'hits', text: hr.rolls.join(' · ') });
         applyResult(state, u, hr, log, a);
       }
     });
     state.mined = null;
     a.activated = true;
-    return { log: log, down: down, result: res, total: total, roll: roll };
+    // `treated`: each squad caught in it that a MEDIC! answered for, and who answered
+    return { log: log, down: down, result: res, total: total, roll: roll, treated: treated };
   }
 
   /* Sappers going in with charges (p. 58): the same threshold, +4 for the rule,
@@ -4954,6 +4960,7 @@
       applyDamage(state, t, dres2.damage, log, a);
       return { log: log, hits: hits, wreck: wreck };
     }
+    var medicId = null;
     if (hits > 0) {
       var mod = 0;
       /* Undisciplined (p. 94): shooting at a Broken Rebel unit, or catching one in
@@ -4965,6 +4972,7 @@
       // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
       if (state.scen && state.scen.hitMod) mod += state.scen.hitMod(state, a, t) || 0;
       var res = resolveShootingHits(state, t, hits, mod, a);
+      medicId = res.medic || null;
       // Incendiary doubles the suppression of the attack itself, before any
       // extra points that special rules add
       var burn = '';
@@ -4987,7 +4995,8 @@
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       applyResult(state, t, res, log, a);
     }
-    return { log: log, hits: hits };
+    // who answered a MEDIC! on this volley, so the board can show them at work
+    return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
   }
 
   /* ---------- NOT ONE STEP BACKWARDS! (T5, p. 87) ----------
@@ -5019,9 +5028,10 @@
       t: 'shoot', text: a.label + ' fires over the heads of ' + t.label + ' — NOT ONE STEP BACKWARDS!',
       math: parts.map(fmtPart).join(', ') + ' = ' + total + ' vs Defence ' + dres.value + ' → ' + hits + ' hit' + (hits === 1 ? '' : 's')
     }];
-    var removed = 0, before = t.sp || 0, killed = 0;
+    var removed = 0, before = t.sp || 0, killed = 0, medicId = null;
     if (hits > 0) {
       var res = resolveShootingHits(state, t, hits, status(t) === 'broken' ? 1 : 0, null);
+      medicId = res.medic || null;
       log.push({ t: 'hits', text: res.rolls.join(' · ') + ' — the Suppression is taken away, not given.' });
       // the dead are dead: casualties go through as normal, with no credit to anyone
       if (res.casualties) {
@@ -5037,7 +5047,7 @@
       }
     }
     if (t.alive) log.push({ t: 'rally', text: t.label + (removed ? ' sheds ' + removed + ' Suppression point' + (removed === 1 ? '' : 's') + ' (' + before + ' → ' + t.sp + ').' : ' is not moved by it.') });
-    return { log: log, hits: hits, removed: removed, killed: killed };
+    return medicId ? { log: log, hits: hits, removed: removed, killed: killed, medic: medicId } : { log: log, hits: hits, removed: removed, killed: killed };
   }
 
   /* ---------- assault ---------- */
@@ -17943,6 +17953,7 @@
          the ground ahead. Teleport: the gate in its ring wing, a swirl of
          light filling it. Shield generator: emitters at the wingtips and the
          bubble they throw about the craft, rippling. */
+      mountAt('nose', P3(1.0 * Lc, 0, -Math.PI / 2));      // where a marker's beam leaves the craft
       function scanFan() {
         if (!spec.scan || dead) return;
         var sw = Math.sin(tnow / 700) * 0.6, reachT = 1.5;
@@ -22002,7 +22013,9 @@
            or a hacker's data stream (`data`: packets running along it). It
            reaches out, holds with a flicker, and puts a pulsing ring on the mark. */
         var ba = I.toScreen(f.x, f.y), bb = I.toScreen(f.tx, f.ty);
-        ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up); bb.y -= I.K * 0.5;
+        // from a machine's own mount (`mz`: a craft's nose, a barrel), else from about chest height
+        if (f.mz) { ba.x += f.mz.dx; ba.y += f.mz.dy - liftAt(f); } else ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up);
+        bb.y -= I.K * 0.5;
         var brgb = f.rgb || '255,70,60', bon = k < 0.85 ? 1 : (1 - k) / 0.15, reach = Math.min(1, k / 0.15);
         var bex = ba.x + (bb.x - ba.x) * reach, bey = ba.y + (bb.y - ba.y) * reach;
         var flick = 0.72 + 0.28 * Math.sin(k * 70);
@@ -25852,8 +25865,16 @@
       addFx({ kind: 'beam', x: o.x, y: o.y, tx: t.x, ty: t.y, up: 0.5, rgb: '170,230,90', dur: 1100 });
     });
     if (sh && sh.from) addFx({ kind: 'dome', x: sh.from.x, y: sh.from.y, r: 12, delay: 250, dur: 1500 });
-    var txt = ((res && res.log) || []).map(function (l) { return l.text || ''; }).join('\n');
-    if (/MEDIC!/.test(txt)) addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: 500, dur: 1900 });
+    if (res && res.medic) medicFx(t, res.medic, 500);
+  }
+  /* A MEDIC! on the injury table, whatever put the squad on it: a line to the
+     squad from the medics treating it (none when the medic team is patching
+     up its own), and green crosses rising off it. */
+  function medicFx(t, medicId, delay) {
+    var med = medicId && state.units.filter(function (o) { return o.id === medicId; })[0];
+    if (!t || !med) return;
+    if (med !== t) addFx({ kind: 'beam', x: med.x, y: med.y, tx: t.x, ty: t.y, rgb: '120,230,150', delay: delay, dur: delay + 1300 });
+    addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: delay + (med !== t ? 250 : 0), dur: delay + 1900 });
   }
   /* Keen-Eyed: a spotter seeing straight through a Stealth unit's
      concealment — a glint off its optics, and one on the unit it picks out.
@@ -26112,6 +26133,7 @@
     addFx({ kind: 'muzzle', x: u.x, y: u.y, dur: 180 });
     addFx({ kind: 'tracer', from: { x: u.x, y: u.y }, to: { x: target.x, y: target.y }, dur: 220 });
     if (SFX && SFX.shot) SFX.shot();
+    medicFx(target, res.medic, 250);
     pushRes(fromLog('NOT ONE STEP BACKWARDS!', u.name + ' → ' + target.name, u.side, res.log));
     u.activated = true;
     endActivation(u);
@@ -26183,6 +26205,9 @@
     soundFor(res.log);
     var mid = { x: m.piece.x + m.piece.w / 2, y: m.piece.y + m.piece.h / 2 };
     addFx({ kind: 'clash', x: mid.x, y: mid.y, dur: 520 });
+    (res.treated || []).forEach(function (tr) {
+      medicFx(state.units.filter(function (o) { return o.id === tr.id; })[0], tr.medic, 600);
+    });
     if (res.result) whenIdle(function () { repaintTerrain([res.result]); });
     deathsSince(snap);
     pushRes(fromLog('Terrorist', u.name + ' → the charge', u.side, res.log));
@@ -30282,6 +30307,21 @@
       if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
       STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
     });
+    /* Counter-jamming, while it is doing something: a faint 6" dome over a
+       counter-jammer that has a friend (itself included) inside it who stands
+       within 24" of an enemy's Jammers — the ground it is winning back. */
+    if (state) {
+      var onTable = function (u) { return u.alive && !u.aboard && !u.reserve && u.x >= 0; };
+      var jammers = state.units.filter(function (e) { return onTable(e) && R.has(e, 'Jammers'); });
+      if (jammers.length) state.units.forEach(function (c) {
+        if (!onTable(c) || !R.projects(c) || !R.has(c, 'Counter-jamming')) return;
+        var covering = state.units.some(function (f) {
+          return onTable(f) && f.side === c.side && R.unitDist(c, f) <= 6 &&
+            jammers.some(function (e) { return e.side !== f.side && R.unitDist(e, f) <= 24; });
+        });
+        if (covering) STANDING.add({ kind: 'dome', x: c.x, y: c.y, r: 6, rgb: '120,200,255', steady: true, a: 0.3, dur: 1e9 });
+      });
+    }
     STANDING.draw(pctx);
     FX.draw(pctx);
   }
@@ -34606,7 +34646,7 @@
     return true;
   };
   window.__targetCodes = function () { return ui.mode + ': ' + ui.targets.map(function (t) { return t.code + '/' + t.side; }).join(', '); };
-  window.__testShoot = function (a, b) { playShooting(a, b, { hits: 2 }, [], null); };
+  window.__testShoot = function (a, b, res) { playShooting(a, b, res || { hits: 2 }, [], null); };
   window.__shootAt = function (id) { doShoot(byId(id)); };
   window.__fxkinds = function () { return fx.map(function (f) { return f.kind; }); };
   /* What the effects layer was told, not just what kind it was: the harness uses

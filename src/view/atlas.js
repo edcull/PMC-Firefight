@@ -203,8 +203,10 @@
       if (cv.dataset.mount) u.mount = cv.dataset.mount;
       var mach = machine(p);
       var walker = cv.dataset.prop === 'walker';
-      var mag = mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55;
-      var ground = mach ? H - (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : H - 16;
+      // a tile drawn narrower than the width it was framed for (o.fit) shrinks its figure to match, rather than cropping it
+      var ref = o.fit && (cv.classList.contains('inf') ? o.fit.inf : o.fit.other), k = ref ? Math.min(1, W / ref) : 1;
+      var mag = k * (mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55);
+      var ground = H - k * (mach ? (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : 16);
       var s0 = I.toScreen(10, 10);
       // the atlas draws as the first side, in its colour (repainting a side throws its baked figures away, so only on a change)
       if (I.PALETTE.A !== I.COLOURS[colour]) I.setSideColour('A', colour);
@@ -212,7 +214,7 @@
         if (cv.dataset.status === 'wrecked') {
           // a wreck sits on the ground, so it is framed like a ground vehicle and has headroom for its smoke
           u.alive = false;
-          var gw = H - 30;
+          var gw = H - 30 * k;
           g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (gw - s0.y * mag) * dpr);
           I.drawWreck(g, u, { x: 10, y: 10 }, 0, 1700);
         } else {

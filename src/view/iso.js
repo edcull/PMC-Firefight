@@ -6608,6 +6608,7 @@
          the ground ahead. Teleport: the gate in its ring wing, a swirl of
          light filling it. Shield generator: emitters at the wingtips and the
          bubble they throw about the craft, rippling. */
+      mountAt('nose', P3(1.0 * Lc, 0, -Math.PI / 2));      // where a marker's beam leaves the craft
       function scanFan() {
         if (!spec.scan || dead) return;
         var sw = Math.sin(tnow / 700) * 0.6, reachT = 1.5;
