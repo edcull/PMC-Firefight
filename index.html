@@ -712,7 +712,22 @@
   #btn-quick-clear { display: none; }
   /* ...and a force's colours sit under its name, with no hint: who takes which is plain on the battlefield step */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
-  #setup[data-hot] .hot-name .hot-colour { margin: 0; }
+  #setup[data-hot] .hot-name { position: relative; }
+  #setup[data-hot] .hot-name .hot-colour { display: none; margin: 0; }
+  #setup[data-hot] .hot-name .hot-colour.open {
+    display: block; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  }
+  .name-row { display: flex; gap: 8px; }
+  .name-row .tin { flex: 1; min-width: 0; }
+  .chip-btn {
+    flex: none; width: 48px; padding: 3px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2);
+  }
+  .chip-btn span { display: block; height: 100%; min-height: 28px; border-radius: 3px; }
+  .chip-btn:hover, .chip-btn:focus-visible, .chip-btn[aria-expanded="true"] { border-color: var(--ink); }
+  #setup[data-hot="2"][data-kind="coop"] #btn-colour-pop { display: none; }
   #setup[data-hot] #colour-hint { display: none; }
   #setup[data-kind="ai"] #btn-quick-clear { display: inline-block; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
@@ -1608,7 +1623,11 @@
     <div class="muster foundid hot-only hot-name">
       <div class="field">
         <label for="hot-name" id="hot-name-label">Company name</label>
-        <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+        <!-- the colour picked, left of the name: tap it for the colours -->
+        <div class="name-row">
+          <button type="button" class="chip-btn" id="btn-colour-pop" aria-expanded="false" title="Colours"><span id="colour-btn-chip"></span></button>
+          <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+        </div>
       </div>
     </div>
     <div class="field hot-force">
