@@ -7776,19 +7776,21 @@
 
   // kit per role: helmet, weapon, pack, build
   // the drones' plating: gunmetal grey all over
+  // the drone squads' mechanical parts
+  var RB = { strut: '#555c65', joint: '#2a2e34', piston: '#a3aab3', foot: '#383d44', eye: '#5fe0ff' };
   var DRONE_GREY = { light: '#b9c0c8', mid: '#7f8791', dark: '#3b4047', helm: '#6c747e', cloth: '#5b626b', skin: '#8a929c', skinDark: '#5d646d' };
   var KIT = {
-    drrifle: { helm: 'sealed', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drlead: { helm: 'sealed', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drsmg: { helm: 'sealed', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drshotgun: { helm: 'sealed', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drscout: { helm: 'sealed', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
-    drscoutsmg: { helm: 'sealed', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drbreacher: { helm: 'sealed', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
-    drsapper: { helm: 'sealed', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
-    drheavy: { helm: 'sealed', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
-    drmedic: { helm: 'sealed', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
-    drcorpsman: { helm: 'sealed', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
+    drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drshotgun: { helm: 'bot', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
+    drscoutsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drbreacher: { helm: 'bot', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsapper: { helm: 'bot', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drheavy: { helm: 'bot', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
+    drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
+    drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
@@ -8273,6 +8275,33 @@
       P(-6, -30 + kb, 3, 12, pal.mid);
       P(-2, -22 + kb, 6, 9, pal.dark);                 // shin dropped to the peg
       P(-3, -14 + kb, 8, 4, BOOT);
+    } else if (kit.robot && pose === 'kneel') {
+      /* A drone braced on one knee: struts and joints rather than cloth, the
+         rear shin a strut laid along the ground, the front one a piston. */
+      P(-7, -11, 3, 8, RB.strut);                      // rear thigh strut
+      P(-9, -5, 5, 5, RB.joint); P(-8.5, -4.5, 1.5, 1.5, pal.light);   // knee joint, down
+      P(-18, -3, 10, 2.4, RB.strut); P(-18, -3, 10, 0.8, pal.light);   // shin along the ground
+      P(-21, -4, 4, 4, RB.foot);
+      P(-1, -12, 10, 3, RB.strut); P(-1, -12, 10, 1, pal.light);       // front thigh, level
+      P(7, -14, 5, 5, RB.joint); P(7.5, -13.5, 1.5, 1.5, pal.light);   // raised knee joint
+      P(8, -9, 2.4, 6, RB.piston); P(9.2, -9, 0.8, 6, 'rgba(0,0,0,.35)');
+      P(5, -3, 9, 3, RB.foot); P(5, -3, 9, 0.8, pal.light);            // the splayed foot
+      P(5, -0.6, 9, 0.6, '#08090c');
+    } else if (kit.robot) {
+      // thin jointed legs: a strut to the knee, a piston below it, a flat splayed foot
+      var rl = step ? [4, 0] : [0, 3];
+      for (var RL = 0; RL < 2; RL++) {
+        var rx = RL ? 2 : -6, rlift = rl[RL];
+        P(rx, -20 + rlift, 3.5, 8, RB.strut);          // thigh strut
+        P(rx, -20 + rlift, 1.2, 8, pal.light);
+        P(rx - 0.5, -13 + rlift, 4.5, 4.5, RB.joint);  // knee joint
+        P(rx, -12.5 + rlift, 1.5, 1.5, pal.light);
+        P(rx + 0.8, -9 + rlift, 2, 6, RB.piston);      // shin piston
+        P(rx + 2.2, -9 + rlift, 0.8, 6, 'rgba(0,0,0,.35)');
+        P(rx - 1.5, -3 + rlift, 7, 3, RB.foot);        // foot
+        P(rx - 1.5, -3 + rlift, 7, 0.8, pal.light);
+        P(rx - 1.5, -0.6 + rlift, 7, 0.6, '#08090c');
+      }
     } else if (pose === 'kneel') {
       /* Down on one knee: the rear knee on the ground with the shin laid out
          behind and the toes tucked, the front thigh level out to a raised knee
@@ -8430,6 +8459,21 @@
       P(tx + 2, -23 + drop, tw - 4, 0.75, 'rgba(0,0,0,.35)');
       P(tx + 2, -36 + drop, 1, 1, pal.dark); P(tx + tw - 3, -36 + drop, 1, 1, pal.dark);   // bolts
       P(-1, -36 + drop, 2, 1, '#5fd0f0');              // a status light
+    } else if (kit.robot) {
+      /* A drone's chassis: a chest housing over a narrow spine, panel seams,
+         a cooling grille and a single status light. No webbing, no pouches. */
+      P(tx, -40 + drop, tw, 13, pal.mid);              // the chest housing
+      P(tx, -40 + drop, 4, 13, pal.light);
+      P(tx, -27 + drop, tw, 1, 'rgba(0,0,0,.45)');     // its lower edge
+      P(-3, -26 + drop, 6, 7, RB.joint);               // the exposed spine at the waist
+      P(-3, -25 + drop, 6, 0.8, pal.light); P(-3, -23 + drop, 6, 0.8, pal.light); P(-3, -21 + drop, 6, 0.8, pal.light);
+      P(tx + 1, -22 + drop, tw - 2, 3, pal.helm);      // hip plate
+      P(tx + 1, -22 + drop, tw - 2, 0.8, pal.light);
+      P(-0.4, -40 + drop, 0.8, 13, 'rgba(0,0,0,.35)'); // centre seam
+      P(tx + 2, -34 + drop, tw - 4, 0.7, 'rgba(0,0,0,.3)');
+      [0, 1, 2].forEach(function (gi) { P(2, -38 + drop + gi * 1.6, 5, 0.8, '#23272c'); });   // cooling grille
+      P(-5, -37 + drop, 3, 3, '#1b1e22'); P(-4.5, -36.5 + drop, 2, 2, RB.eye);   // status light
+      P(-3, -43 + drop, 7, 2, RB.joint);               // neck mount
     } else if (kit.vest) {
       /* Assault troops: a dark grey plate carrier over the fatigues, so they
          read at a glance as something heavier than the rifle line — a front
@@ -8465,11 +8509,13 @@
       P(1.5, -37 + drop, 0.75, 4, 'rgba(0,0,0,.4)');
       P(-3, -43 + drop, 7, 2, pal.dark);               // collar
     }
-    P(-1, -22 + drop, 3, 3, '#8a8f98');                // belt buckle
-    P(-1, -22 + drop, 3, 1, '#c9cdd4');
-    P(tx + 2, -20 + drop, 4, 1, pal.light);            // pouch flaps catching the light
-    P(tx + tw - 6, -20 + drop, 4, 1, pal.light);
-    if (!kit.armoured && !kit.robe && !kit.cloak && !kit.tunic && pose !== 'prone') {
+    if (!kit.robot) {
+      P(-1, -22 + drop, 3, 3, '#8a8f98');              // belt buckle
+      P(-1, -22 + drop, 3, 1, '#c9cdd4');
+      P(tx + 2, -20 + drop, 4, 1, pal.light);          // pouch flaps catching the light
+      P(tx + tw - 6, -20 + drop, 4, 1, pal.light);
+    }
+    if (!kit.armoured && !kit.robot && !kit.robe && !kit.cloak && !kit.tunic && pose !== 'prone') {
       // the torso tapers from the chest to the waist, not a box all the way down
       carve([[tx - 0.5, -32 + drop], [tx + 2.2, -22 + drop], [tx - 0.5, -22 + drop]]);
       carve([[tx + tw + 0.5, -32 + drop], [tx + tw - 2.2, -22 + drop], [tx + tw + 0.5, -22 + drop]]);
@@ -8624,6 +8670,16 @@
 
     /* ---- arms ---- */
     var aw = 5 + b;
+    if (kit.robot) {
+      // strut arms with a ball elbow and a clamp for a hand
+      P(-12 - b, -39 + drop, 3, 6, RB.strut); P(-12 - b, -39 + drop, 1, 6, pal.light);
+      P(-13 - b, -34 + drop, 4.5, 4.5, RB.joint); P(-12.5 - b, -33.5 + drop, 1.4, 1.4, pal.light);
+      P(-12 - b, -30 + drop, 2.6, 3, RB.piston);
+      P(-14 - b, -28 + drop, 6, 3, RB.foot); P(-14 - b, -28 + drop, 1.2, 3, '#5a6068');   // the clamp
+      P(tx + tw - 1, -38 + drop, 3, 5, RB.strut);
+      P(tx + tw - 1.5, -34 + drop, 4, 4, RB.joint);
+      P(tx + tw - 0.5, -30 + drop, 2.4, 3, RB.piston);
+    } else {
     P(-13 - b, -39 + drop, aw, 13, pal.mid);           // forward arm, down to the grip
     P(-13 - b, -39 + drop, 2, 13, pal.light);
     P(-13 - b, -33 + drop, aw, 1, 'rgba(0,0,0,.30)');  // the elbow, bent
@@ -8632,6 +8688,7 @@
     P(-13.5 - b, -28 + drop, 2, 1, '#454b54');         // knuckles catching the light
     P(tx + tw - 2, -38 + drop, aw, 11, pal.mid);       // rear arm
     P(tx + tw + aw - 3, -38 + drop, 1, 11, 'rgba(0,0,0,.30)');  // its far side in shadow
+    }
     if (kit.sleeves === 'rolled') {
       /* shirt sleeves rolled to above the elbow: bare forearms and hands, the
          roll of cloth a lit band at the top of each */
@@ -8762,7 +8819,8 @@
     }
 
     /* ---- head ---- */
-    P(-2, -45 + drop, 5, 4, pal.dark);                 // neck
+    if (kit.robot) P(-1, -46 + drop, 3, 5, RB.piston); // a neck piston, not a neck
+    else P(-2, -45 + drop, 5, 4, pal.dark);            // neck
     var bodyPal = pal;
     if (pal.hat) {                                     // the helmet in the company's colour
       pal = {}; for (var bk2 in bodyPal) pal[bk2] = bodyPal[bk2];
@@ -8793,6 +8851,19 @@
         P(0, -50 + drop, 2, 1, '#4e5c6a');
         P(-8, -47 + drop, 2, 5, pal.dark);              // neck guard
         P(4, -56 + drop, 3, 2, pal.dark);               // crest fitting
+        break;
+      case 'bot':
+        /* a drone's sensor head: a low wedge, wider than it is tall, with one
+           lit optic band across the front and a stub aerial */
+        P(-6, -53 + drop, 14, 7, pal.helm);
+        P(-6, -53 + drop, 5, 7, pal.light);
+        P(-4, -54.5 + drop, 10, 1.5, pal.helm);
+        P(-6, -47 + drop, 14, 1, 'rgba(0,0,0,.4)');     // the jaw line
+        P(0, -51 + drop, 8.5, 2.6, '#101418');          // the optic band
+        P(1, -50.6 + drop, 6.5, 1.4, RB.eye);
+        P(4.5, -50.8 + drop, 2, 1.8, '#e9fbff');        // the lens, brightest
+        P(-5, -58 + drop, 1, 4, RB.joint);              // stub aerial
+        P(-5.3, -59 + drop, 1.6, 1.4, RB.eye);
         break;
       case 'sealed':
         P(-7, -56 + drop, 15, 12, pal.helm);
