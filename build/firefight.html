@@ -16559,7 +16559,9 @@
         E(cx - len * 0.35, cy, len * 0.55, len * 0.12, 'rgba(200,214,210,.45)', 0.08);
         return;
       }
-      var up = step ? -0.9 : -0.35;                   // two beats of the wing
+      /* The beat: a flier hanging in the air flaps all the time, WING_PHASES
+         baked states turned by the clock; on the move it is the step's two beats. */
+      var up = WING_PHASE >= 0 ? -0.1 - 1.1 * (0.5 + 0.5 * Math.sin(WING_PHASE / WING_PHASES * Math.PI * 2)) : step ? -0.9 : -0.35;
       var a2 = up + (big ? 0 : 0.1);
       function wing(ang, l, alpha) {
         var tx = cx + Math.cos(ang) * l * -0.35, ty = cy + Math.sin(ang) * l;
@@ -17688,6 +17690,8 @@
   }
   var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
   var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  var WING_PHASES = 6, WING_PHASE = -1;
+  function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
   function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
   function nowT() { return root.performance ? performance.now() : 0; }
   function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
@@ -17700,7 +17704,7 @@
     if (!u || u.alive === false) return false;          // (a bench unit need not say it is alive)
     if (u.cls === 'aircraft') return true;
     if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
-    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]); });
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]) || winged(KIT[r]); });
   }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
@@ -17728,7 +17732,10 @@
     // a leader bug's brain beats slowly, about once in two seconds
     var thinking = brainy(kit);
     if (thinking) BRAIN_PHASE = Math.floor(nowT() / 200) % BRAIN_PHASES;
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '');
+    // a winged bug's wings beat, about four times a second, unless it has gone to ground
+    var flapping = winged(kit) && pose !== 'prone';
+    WING_PHASE = flapping ? (Math.floor(nowT() / 40) + i * 2) % WING_PHASES : -1;   // each bug at its own beat
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '');
     var c = sprites[key];
     if (c) return c;
 
