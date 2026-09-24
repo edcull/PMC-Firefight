@@ -186,9 +186,10 @@
   .vsg:hover { color: var(--ink); }
   .vsg.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
   input[type=range] { width: 100%; accent-color: var(--alpha); }
-  .vacts { display: flex; gap: 6px; margin-top: 10px; }
+  /* as many buttons as fit to a row, the rest wrapping onto a second, each row sharing out its width */
+  .vacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .vbtn {
-    flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    flex: 1 1 auto; min-width: 58px; white-space: nowrap; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
     border-radius: 5px; padding: 8px 6px; cursor: pointer;
     font-family: var(--display); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
   }
@@ -338,6 +339,30 @@
   #vlist canvas.tile.tall { height: 122px; }
   #vlist canvas.tile.inf { width: 120px; height: 96px; }
   #vlist figure.cell figcaption { display: none; }
+  /* A desktop: the unit's stats with its options under them, the whole panel scrolling as one,
+     and the unit list three cards to a row, each tile shrunk to its column */
+  @media (min-width: 1001px) {
+    main { grid-template-columns: 330px minmax(0, 1fr) 300px; }
+    #vctl { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-bottom: 12px; }
+    #vctl .vtabs { display: none; }
+    #vctl .vtabbody, #vctl .vtabbody[hidden] { display: block; flex: none; overflow: visible; padding: 10px 2px 0; }
+    #vctl .voptsbody { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    #vctl .voptsbody::before {
+      content: 'Options'; display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
+      text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
+    }
+    #vctl .voptsbody > .vacts:first-child { margin-top: 0; }
+    #vlist .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    #vlist .card.unit { width: auto; min-width: 0; padding: 4px 4px 5px; }
+    #vlist .card.unit h4 { gap: 3px; }
+    #vlist .card.unit h4 .code { font-size: 9px; padding: 0 4px; }
+    #vlist .card.unit h4 .tier { font-size: 8.5px; }
+    #vlist .card.unit .nm { font-size: 10.5px; }
+    #vlist .card .tiles, #vlist figure.cell { width: 100%; min-width: 0; }
+    #vlist canvas.tile { width: 100%; height: auto; aspect-ratio: 112 / 95; }
+    #vlist canvas.tile.tall { aspect-ratio: 112 / 122; }
+    #vlist canvas.tile.inf { width: 100%; aspect-ratio: 120 / 96; }
+  }
   #vlist .card .tiles .cell ~ .cell { display: none; }     /* one picture a card: a mounted unit on its first mount */
   .vatbar { flex: none; display: flex; flex-direction: column; gap: 7px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
   .atl h3.group {
@@ -409,11 +434,11 @@
   </div>
 </main>
 
-<script src="src/rules/rules.js?v=bff9271714"></script>
+<script src="src/rules/rules.js?v=e60be168f5"></script>
 <script src="src/rules/ruletext.js?v=63a6cbb4c6"></script>
 <script src="src/view/sfx.js?v=e94463831c"></script>
-<script src="src/view/iso.js?v=6c8a466879"></script>
-<script src="src/view/fx.js?v=a25cec93b4"></script>
+<script src="src/view/iso.js?v=3ba29ed82c"></script>
+<script src="src/view/fx.js?v=44a6d6a6d5"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
-<script src="src/view/atlas.js?v=7e0c1649fb"></script>
-<script src="src/view/viewer.js?v=29d2aa05d3"></script>
+<script src="src/view/atlas.js?v=9998a24cc5"></script>
+<script src="src/view/viewer.js?v=8fe9c208f7"></script>

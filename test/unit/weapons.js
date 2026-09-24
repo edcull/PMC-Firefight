@@ -47,7 +47,7 @@ is('raa', 'missile x2');
 all(['sam', 'missile'], 'missile x2');
 // air defence hulls put the gun up first and the missiles off the rails after
 is('aaveh', 'missile+chain x2');
-is('interceptor', 'burst+shellbig');
+is('interceptor', 'missile+burst x2');
 
 
 head('Rockets, over the guns that fire with them');

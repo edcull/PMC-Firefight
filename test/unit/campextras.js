@@ -50,6 +50,14 @@ ok('...but not one out beyond 12"', R.steadyShooter(w, far), false);
 ok('without the doctrine nobody may', R.steadyShooter(world([cmd, shaken], { A: [], B: [] }), cmd), false);
 ok('only friends carrying Suppression are targets', R.steadyTargets(w, cmd).map(function (t) { return t.id; }).join(),
   shaken.id);
+// a MEDIC! on a NOT ONE STEP BACKWARDS! volley names the medics, so the board can show them at work
+var medNamed = 0;
+for (var mi = 0; mi < 300; mi++) {
+  var mc = mk('veterans', 'A', 10, 10), mt = mk('regular', 'A', 20, 10), mm = mk('medics', 'A', 22, 10);
+  mc.rules.push('Command Unit (1)'); mt.sp = 12;
+  if (R.steadyFire(world([mc, mt, mm], { A: ['T5'] }), mc, mt).medic === mm.id) medNamed++;
+}
+ok('a MEDIC! on a steadying volley names the medics', medNamed > 0, true, medNamed + ' of 300');
 var removedTot = 0, killed = 0, N = 4000, never = true, matches = true;
 for (var i = 0; i < N; i++) {
   var c2 = mk('veterans', 'A', 10, 10), t2 = mk('regular', 'A', 20, 10);

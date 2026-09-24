@@ -3292,8 +3292,16 @@
       addFx({ kind: 'beam', x: o.x, y: o.y, tx: t.x, ty: t.y, up: 0.5, rgb: '170,230,90', dur: 1100 });
     });
     if (sh && sh.from) addFx({ kind: 'dome', x: sh.from.x, y: sh.from.y, r: 12, delay: 250, dur: 1500 });
-    var txt = ((res && res.log) || []).map(function (l) { return l.text || ''; }).join('\n');
-    if (/MEDIC!/.test(txt)) addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: 500, dur: 1900 });
+    if (res && res.medic) medicFx(t, res.medic, 500);
+  }
+  /* A MEDIC! on the injury table, whatever put the squad on it: a line to the
+     squad from the medics treating it (none when the medic team is patching
+     up its own), and green crosses rising off it. */
+  function medicFx(t, medicId, delay) {
+    var med = medicId && state.units.filter(function (o) { return o.id === medicId; })[0];
+    if (!t || !med) return;
+    if (med !== t) addFx({ kind: 'beam', x: med.x, y: med.y, tx: t.x, ty: t.y, rgb: '120,230,150', delay: delay, dur: delay + 1300 });
+    addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: delay + (med !== t ? 250 : 0), dur: delay + 1900 });
   }
   /* Keen-Eyed: a spotter seeing straight through a Stealth unit's
      concealment — a glint off its optics, and one on the unit it picks out.
@@ -3552,6 +3560,7 @@
     addFx({ kind: 'muzzle', x: u.x, y: u.y, dur: 180 });
     addFx({ kind: 'tracer', from: { x: u.x, y: u.y }, to: { x: target.x, y: target.y }, dur: 220 });
     if (SFX && SFX.shot) SFX.shot();
+    medicFx(target, res.medic, 250);
     pushRes(fromLog('NOT ONE STEP BACKWARDS!', u.name + ' → ' + target.name, u.side, res.log));
     u.activated = true;
     endActivation(u);
@@ -3623,6 +3632,9 @@
     soundFor(res.log);
     var mid = { x: m.piece.x + m.piece.w / 2, y: m.piece.y + m.piece.h / 2 };
     addFx({ kind: 'clash', x: mid.x, y: mid.y, dur: 520 });
+    (res.treated || []).forEach(function (tr) {
+      medicFx(state.units.filter(function (o) { return o.id === tr.id; })[0], tr.medic, 600);
+    });
     if (res.result) whenIdle(function () { repaintTerrain([res.result]); });
     deathsSince(snap);
     pushRes(fromLog('Terrorist', u.name + ' → the charge', u.side, res.log));
