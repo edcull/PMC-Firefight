@@ -13777,9 +13777,12 @@
     // the mujahideen: all in olive
     holy4: ['mujlead', 'mujsaw', 'mujrpg', 'muj'],
     guard: ['guardlead', 'guardflag', 'guardrifle', 'guardrifle'],
-    rider: ['rider'],
+    /* The Mounted Warriors dress as the Holy Warriors of their standing: a rider
+       gang as acolytes, rider warriors as fanatics, hellriders as the
+       enlightened, and the legendary hellriders as mujahideen. */
+    rider: ['rider', 'rider', 'riderblack', 'rider'],
     ridergang: ['biker', 'biker2'],
-    hellrider: ['hellrider'],
+    hellrider: ['hellriderlead', 'hellrider', 'hellriderblack', 'hellridertan'],
     legendrider: ['legendrider'],
     rebac: ['rebacgunner', 'rebloader', 'rebrifle'],
     rebhac: ['rebacgunner', 'rebloader', 'gunloader'],
@@ -13984,12 +13987,19 @@
     mujrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, tint: HOLY_B },
     muj: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, bandolier: true, tint: HOLY_B },
     // mounted warriors, over the tank of a stripped-down bike
-    rider: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#c9bfa4', vest: '#4a3f2e', armband: 'force', tint: HOLY_A },
+    // rider warriors: the fanatics' tan robes and pale turbans, one of them black
+    rider: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', armband: 'force', tint: HOLY_A },
+    riderblack: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#26262a', vest: '#4a3a2a', armband: 'force', tint: HOLY_C },
     // the gang: open-face biker helmets and black leathers
-    biker: { helm: 'turban', gun: 'smg', pack: 'none', mount: true, tunic: true, wrap: '#b8ac8a', vest: '#3b3a30', armband: 'force', tint: HOLY_C },
-    biker2: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#8a7a5a', vest: '#4a3a2a', armband: 'force', tint: HOLY_C },
+    // a rider gang: the acolytes' long tan shirts, a round cap or nothing on the head
+    biker: { helm: 'pakol', gun: 'smg', pack: 'none', mount: true, tunic: true, vest: HOLY_A.mid, armband: 'force', young: true, tint: HOLY_A },
+    biker2: { helm: 'bare', gun: 'carbine', pack: 'none', mount: true, tunic: true, vest: HOLY_C.mid, armband: 'force', young: true, tint: HOLY_C },
     // hellriders: spiked helmets, spiked shoulders, flames on the tank and a heavy gun
-    hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#26262a', vest: '#22241e', facewrap: true, bandolier: true, armband: 'force', tint: HOLY_B },
+    // hellriders: the enlightened's tan and olive and green sash, turbans tan, the leader's white, one black
+    hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
+    hellriderlead: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#f6f4ee', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, armband: 'force', tint: HOLY_B },
+    hellriderblack: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
+    hellridertan: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', armband: 'force', tint: HOLY_A },
     legendrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, cape: true, mark: true, nvg: true, armband: 'force', tint: HOLY_B },
     // scavenged heavy weapons, worked without much training
     rebgunner: { helm: 'std', gun: 'mg', forceHelm: true, pack: 'none', kneel: true, bulk: 1, ragged: true, tint: REBEL_DRAB },
