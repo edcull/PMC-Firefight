@@ -74,8 +74,10 @@ async function clickText(p, re) {
 
   txt = await body(p);
   check('the hub shows the new company', /Task Force Ironhold/.test(txt));
-  check('...at Company Tier I', /company tier i\b/i.test(txt));
-  check('...with nine units', /9 units/.test(txt), txt.match(/\d+ units[^\n]*/)?.[0]);
+  check('...at Company Tier I', await p.evaluate(() => (document.querySelector('#camp-body .cpan-A .tierbadge') || {}).textContent === 'I'));
+  check('...with nine units', await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length === 9));
+  check('...win rate, veterancy and trauma in one row', await p.evaluate(() => document.querySelectorAll('#camp-body .cpan-A .cstats .cstat').length === 3));
+  check('...and the page itself does not scroll', await p.evaluate(() => { const b = document.getElementById('camp-body'); return b.scrollHeight <= b.clientHeight + 1; }));
   const rival = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get();
     return { name: c.companies.B.name, arch: c.companies.B.archetype, units: c.companies.B.roster.length };
@@ -155,7 +157,7 @@ async function clickText(p, re) {
 
   /* -------------------------------------------------------- the contract */
   console.log('\nTaking a contract');
-  await clickText(p, 'Take a contract');
+  await clickText(p, '^Contract$');
   txt = await body(p);
 
   /* the three jobs on the table: who, how they fight, what it is for, and which
@@ -193,7 +195,7 @@ async function clickText(p, re) {
   check('every one can be taken', offers.buttons === offers.cards);
   // leaving and coming back must not re-roll the jobs
   await clickText(p, 'Back');
-  await clickText(p, 'Take a contract');
+  await clickText(p, '^Contract$');
   const again = await p.evaluate(() =>
     JSON.stringify(window.PMC_CAMPAIGN.get().offers.map(o => o.scenario.id)));
   check('...and the jobs do not change if you leave and come back', again === offers.stable, again);
@@ -467,7 +469,7 @@ async function clickText(p, re) {
 
   await clickText(p, 'Back');
   await p.waitForTimeout(250);
-  await clickText(p, 'The dossier');
+  await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
   const renamed = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-rename]');
@@ -501,7 +503,7 @@ async function clickText(p, re) {
   await click(p, '#btn-campaign');
   txt = await body(p);
   check('the campaign came back after a reload', /Task Force Ironhold/.test(txt));
-  check('...at the same campaign turn', /Campaign turn 1/.test(txt), txt.split('\n')[1]);
+  check('...at the same campaign turn', await p.evaluate(() => window.PMC_CAMPAIGN.get().turn === 1));
   const back = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
   check('...with the money intact', back === spent, back + ' kUC');
   const rosterBack = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);

@@ -131,7 +131,7 @@ async function drain(p) {
 
   /* --------------------------------------------------------- the contract */
   console.log('\nA contract');
-  await clickText(p, '[Tt][Aa][Kk][Ee] [Aa] [Cc][Oo][Nn][Tt][Rr][Aa][Cc][Tt]');
+  await clickText(p, '^Contract$');
   await p.waitForTimeout(200);
   const offered = await p.evaluate(() => {
     const cards = [...document.querySelectorAll('#camp-body .cpan-offer')];
@@ -250,9 +250,9 @@ async function drain(p) {
       if (!await clickText(p, '[Cc]ontinue|[Bb]ack|[Cc]lose|CONTINUE|BACK|CLOSE')) break;
     }
   }
-  check('the hub came back', /take a contract/i.test(await body(p)),
+  check('the hub came back', /\bcontract\b/i.test(await body(p)),
     (await body(p)).split('\n').slice(0, 2).join(' | '));
-  await clickText(p, '[Tt][Hh][Ee] [Dd][Oo][Ss][Ss][Ii][Ee][Rr]');
+  await clickText(p, '^Dossier$');
   txt = await body(p);
   check('the dossier opened', /units on the books/i.test(txt), txt.split('\n')[1]);
   check('the dossier speaks Territorial Points', /TerP/.test(txt) && !/kUC/.test(txt));

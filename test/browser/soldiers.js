@@ -53,7 +53,7 @@ async function clickText(p, re) {
   check('the charter can be signed', await clickText(p, 'Sign the charter'));
 
   console.log('\nThe soldiers');
-  await clickText(p, 'The dossier');
+  await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
   const cards = await p.evaluate(() => [...document.querySelectorAll('#camp-body button[data-men]')].map(b => b.textContent));
   check('every unit card opens to its details', cards.length === 9 && cards.every(c => /Details/.test(c)), cards.join(' | '));

@@ -85,11 +85,11 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
     signed.rivals.join(', '));
 
   const hub = await p.evaluate(() => ({
-    flashes: document.querySelectorAll('#camp-body .cflash').length,
+    flashes: document.querySelectorAll('#camp-body .tierbadge').length,
     text: document.querySelector('#camp-body').textContent.indexOf('Cullen Free Company') >= 0
   }));
   ok('the hub shows the company by name', hub.text);
-  ok('...with its colours beside it', hub.flashes > 0, hub.flashes + ' flashes');
+  ok('...with its tier badge beside it', hub.flashes > 0, hub.flashes + ' badges');
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   console.log('page errors: ' + (errs.join(' | ')||'none'));

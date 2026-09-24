@@ -156,6 +156,8 @@
   var contract = null;          // the battle being set up
   var after = null;             // the aftermath being worked through
   var ROMAN = R.ROMAN;
+  var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
+  var ICON_LOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>';
 
   function save() {
     // the storage panel only knows how a write went once it has gone, so redraw then
@@ -361,18 +363,14 @@
     }
     var A = camp.companies.A, B = camp.companies.B;
     var rivals = camp.mode === 'hotseat' ? [] : (camp.rivals || [B]), n = rivals.length;
-    h += '<p class="lede">Campaign turn ' + camp.turn + ' · ' +
-      (camp.mode !== 'solo' ? 'hotseat'
-        : n > 1
-          ? 'solo against ' + n + ' forces on this world — <b>' + esc(B.name) + '</b> next'
-          : 'solo against ' + esc(B.name)) + '.' +
-      (Store.note() ? ' ' + esc(Store.note()) : '') + '</p>';
+    if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) + '</p>';
+    /* One row: the dossier, the save file out and in, and the contract, which
+       is what the screen is for. */
     h += '<div class="hubbar">' +
-      '<button class="lnk" data-go="roster">The dossier</button>' +
-      '<button class="lnk" data-go="export">Save to a file</button>' +
-      '<button class="lnk" data-go="import">Load a file</button></div>';
-    h += '<button class="start" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') +
-      '">Take a contract</button>';
+      '<button class="lnk" data-go="roster">Dossier</button>' +
+      '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
+      '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
+      '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
     h += companyPanel(A, 'A');
     /* Who else is on the world: one line, and their panels in a modal behind
        it (in hotseat, the second player's force). */
@@ -403,13 +401,10 @@
 
   function companyPanel(co, side) {
     var h = '<div class="cpan cpan-' + side + '">';
-    h += '<div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
-      '<span class="ctier">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + (co.aspiring ? ' — aspiring' : '') + '</span>' +
+    h += '<div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b>' +
+      (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
-    h += '<div class="cpstat">' + co.roster.length + ' units · ' +
-      co.record.battles + ' battles · ' + co.record.wins + ' won, ' +
-      co.record.draws + ' drawn, ' + co.record.losses + ' lost</div>' + expLine(co);
+    h += statRow(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
         var dd = C.doctrine(d);
@@ -483,18 +478,33 @@
     return h + '</div>';
   }
 
+  /* The Company Tier as a badge, in the force's own word for it on hover. */
+  function tierBadge(co) {
+    return '<span class="tierbadge" title="' + esc(C.words(co).tier + ' Tier ' + ROMAN[co.tier]) + '">' + ROMAN[co.tier] + '</span>';
+  }
+  /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
+  function statRow(co, rival) {
+    var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co), r = co.record || {};
+    function pc(x) { return Math.round(x * 1000) / 10 + '%'; }
+    function cell(cls, pct, word, sub) {
+      return '<div class="cstat ' + cls + '"><b>' + pct + '</b><span>' + esc(word) + '</span><em>' + sub + '</em></div>';
+    }
+    return '<div class="cstats">' +
+      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate',
+        (r.wins || 0) + '-' + (r.draws || 0) + '-' + (r.losses || 0) + ' W-D-L') +
+      cell('cs-exp', pc(ex.pct), ex.word, ex.honours + ' ' + esc(ex.noun)) +
+      cell('cs-tra', pc(tr.pct), tr.word, tr.traumas + ' ' + esc(tr.noun)) +
+      '</div>';
+  }
+
   function rivalPanel(co, idx, next) {
     var a = C.archetype(co.archetype);
-    var h = '<div class="cpan cpan-B' + (next ? ' cpan-next' : '') + '"><div class="cphead">' + colourFlash(co) + '<b>' +
+    var h = '<div class="cpan cpan-B' + (next ? ' cpan-next' : '') + '"><div class="cphead">' + tierBadge(co) + '<b>' +
       esc(co.name) + '</b>' +
-      (next ? '<span class="mk good">next</span>' : '') +
-      '<span class="mk">' + C.words(co).side + '</span>' +
-      '<span class="ctier">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + '</span>' +
-      '<span class="dtag">' + esc(a.name) + '</span></div>';
+      (next ? '<span class="mk good">next</span>' : '') + '</div>';
+    h += statRow(co, true);
+    h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span><span class="dtag">' + esc(a.name) + '</span></div>';
     h += '<div class="cpstat">' + esc(co.blurb || a.blurb) + '</div>';
-    h += '<div class="cpstat">' + co.roster.length + ' units · ' + co.record.battles + ' battles · ' +
-      co.record.wins + ' won against you, ' + co.record.losses + ' lost</div>';
     h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
       return '<span class="mk" title="' + esc(C.doctrine(d).text) + '">' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
@@ -1750,6 +1760,7 @@
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
     body.classList.toggle('fit', view === 'found');
+    body.classList.toggle('hubfit', view === 'hub' && !!camp);
     body.innerHTML = h;
     body.scrollTop = 0;
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
