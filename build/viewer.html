@@ -3205,6 +3205,12 @@
     return has(a, 'Indirect Fire') ? null : 'mark';
   }
 
+  /* The auxiliary weapon as a shooter: the unit where it stands, with none of its
+     special rules — so no Gauss or Anti-tank against the target's armour or cover,
+     no Keen-Eyed against Stealth, no Indirect Fire over a wall. */
+  var AUX_RANGE = 12;
+  function auxGun(a) { return Object.assign({}, a, { rules: [], cargo: [], camp: null, fp: 1, range: AUX_RANGE }); }
+
   /* Every modifier on a shot except the die, in one place, so the odds shown on the
      board and the roll that follows can never drift apart. */
   function shotMods(state, a, t, mode, opts) {
@@ -3238,12 +3244,14 @@
       if (t.cls === 'vehicle' && has(a, 'Gauss Weapon')) {
         total += 1; parts.push({ label: 'Gauss Weapon', v: 1 });
       }
-      if (t.cls === 'vehicle' && !has(t, 'Advanced Protection')) {
-        arc = arcOf(t, a);
-        var tp = propOf(t);
-        if (arc === 'side' && !(tp && tp.noSideArc)) { total += 1; parts.push({ label: 'side armour', v: 1 }); }
-        else if (arc === 'rear') { total += 2; parts.push({ label: 'rear armour', v: 2 }); }
-      }
+    }
+    /* A hull's flanks are softer to anything, the auxiliary weapon included — but
+       Basic Firepower counts nothing beyond Firepower and models (p. 32). */
+    if (t.cls === 'vehicle' && !has(t, 'Advanced Protection') && !basic) {
+      arc = arcOf(t, a);
+      var tp = propOf(t);
+      if (arc === 'side' && !(tp && tp.noSideArc)) { total += 1; parts.push({ label: 'side armour', v: 1 }); }
+      else if (arc === 'rear') { total += 2; parts.push({ label: 'rear armour', v: 2 }); }
     }
     // Spotters (an Adaptation, p. 125): +1 for every friendly unit within 6", up to +3
     if (!aux && campFlag(a, 'spotters') && state && state.units) {
@@ -3252,23 +3260,27 @@
       }).length;
       if (near6) { total += Math.min(3, near6); parts.push({ label: 'Spotters', v: Math.min(3, near6) }); }
     }
-    if (!basic && !aux) {
+    /* The auxiliary weapon (p. 32) fires "without ANY special rules" — its own
+       or the unit's — but the ordinary modifiers of a shot still apply to it:
+       standing still, half range, height, Crossfire, and the target's cover. */
+    if (!basic) {
       // Effective Toxin Glands: Spore and Flying Bugs get +2 for Fire! (p. 124)
-      var toxin = bugRanged(a) && doctrine(state, a.side, 'BC6');
+      var toxin = !aux && bugRanged(a) && doctrine(state, a.side, 'BC6');
       // ...and so does a Xenotripod unit with the Rite of Perfection (p. 142)
-      var perfect = campFlag(a, 'perfection');
+      var perfect = !aux && campFlag(a, 'perfection');
       var fireB = mode === 'fire' && (toxin || perfect) ? 2 : 1;
       if (mode === 'fire') { total += fireB; parts.push({ label: fireB === 2 ? (perfect ? 'Fire! — Rite of Perfection' : 'Fire! — Effective Toxin Glands') : 'Fire! (stationary)', v: fireB }); }
       // Chaotic Ranged Attacks (a Genetic Flaw): no bonus inside half range
-      if (dist <= shotRange(a) / 2 && campFlag(a, 'chaotic')) {
+      var rng = aux ? AUX_RANGE : shotRange(a);
+      if (dist <= rng / 2 && !aux && campFlag(a, 'chaotic')) {
         parts.push({ label: 'Chaotic Ranged Attacks — no half-range bonus', v: 0 });
-      } else if (dist <= shotRange(a) / 2) {
+      } else if (dist <= rng / 2) {
         // Rain of Fire doubles the close-range bonus
-        var close = campFlag(a, 'rainOfFire') ? 4 : 2;
+        var close = !aux && campFlag(a, 'rainOfFire') ? 4 : 2;
         total += close;
         parts.push({ label: close === 4 ? 'Rain of Fire, within half range' : 'within half range', v: close });
       }
-      else if (markCall(state, a, t, opts) === 'mark') {
+      else if (!aux && markCall(state, a, t, opts) === 'mark') {
         total += 2; parts.push({ label: 'Markerlight', v: 2 });
       }
       /* Height: +2 for firing down on a target standing lower — from a hill on
@@ -3302,7 +3314,7 @@
       total += 4; parts.push({ label: 'Demolisher', v: 4 });
     }
     // a unit charging home cannot claim cover from the defensive fire it draws
-    var dres = defenceAgainst(state, aux ? null : a, t,
+    var dres = defenceAgainst(state, aux ? auxGun(a) : a, t,
       { noCover: mode === 'defensive', defensiveFire: mode === 'defensive' });
     return {
       total: total, parts: parts, basic: basic, aux: aux, pierce: pierce,
@@ -3415,14 +3427,16 @@
       var burn = '';
       // Nerves of Steel, and the Rite of Shielding (p. 142), shrug off the extra points
       var steady = campFlag(t, 'nerves') || campFlag(t, 'shielding');
-      if (has(a, 'Incendiary Ammunition') && !has(t, 'Battle Armour') && !steady) {
+      if (has(a, 'Incendiary Ammunition') && !aux && !has(t, 'Battle Armour') && !steady) {
         var tk = terrainOf(state, t);
         if (tk !== 'open' && !TERRAIN[tk].shallow) {
           res.sp *= 2;
           burn = ' · Incendiary Ammunition: suppression doubled in ' + TERRAIN[tk].name.toLowerCase();
         }
       }
-      var supp = has(a, 'Suppressive Fire') && !aux && !basic && !steady;
+      // Suppressive Fire (p. 59): any successful attack, Basic Firepower included —
+      // the auxiliary weapon alone carries no special rules
+      var supp = has(a, 'Suppressive Fire') && !aux && !steady;
       if (supp) res.sp += 2;
       // a horse shies whenever it is shot at: one more Suppression point (Appendix 3)
       var mtS = mountOf(t);
@@ -3581,25 +3595,34 @@
       order.reverse();
       log.push({ t: 'note', text: 'Chitin Exoskeletons — ' + t.label + ' strikes first.' });
     }
+    /* Three rounds each, taken in turn (p. 33): the attacker strikes, then the
+       assaulted unit answers, and again, until one of them breaks or six rounds
+       are done. A unit that is already Broken does not fight back at all — but
+       the attacker's three rounds are still all resolved against it. */
     var ended = false;
-    for (var o = 0; o < order.length && !ended; o++) {
-      var pair = order[o];
-      if (status(pair.atk) === 'broken') {
-        log.push({ t: 'note', text: pair.atk.label + ' is broken and does not fight back.' });
-        continue;
-      }
-      for (var r = 0; r < 3; r++) {
+    var cowed = status(t) === 'broken';
+    if (cowed) log.push({ t: 'note', text: t.label + ' is broken and does not fight back.' });
+    for (var r = 0; r < 3 && !ended; r++) {
+      for (var o = 0; o < order.length && !ended; o++) {
+        var pair = order[o];
+        if (cowed && pair.atk === t) continue;
         if (!pair.atk.alive || !pair.def.alive) { ended = true; break; }
         var rd = assaultRound(state, pair.atk, pair.def, pair.atk === a ? 'attacker' : 'defender', r + 1);
         if (rd.wreck) wrecked = rd.wreck;
         rd.log.forEach(function (l) { log.push(l); });
         if (!pair.def.alive) { ended = true; break; }
+        if (cowed) continue;                                  // it is already running: the blows keep coming
         if (status(pair.def) === 'broken') {
           fallBack(state, pair.def, pair.atk, 2);
           log.push({ t: 'note', text: pair.def.label + ' breaks and falls back 2" — the assault ends.' });
           ended = true; break;
         }
       }
+    }
+    if (cowed && !ended && t.alive) {
+      fallBack(state, t, a, 2);
+      log.push({ t: 'note', text: t.label + ' gives ground and falls back 2".' });
+      ended = true;
     }
     if (!ended && a.alive && t.alive) {
       if (a.bld) log.push({ t: 'note', text: 'Neither side breaks — ' + a.label + ' holds its own section.' });
@@ -3887,11 +3910,10 @@
     return { cols: cols, rows: rows, cost: best, layered: cost, came: came, seen: seenOnce, idx: idx };
   }
 
-  /* "Vehicles move in straight lines, and may make turns by reducing the range of
-     their movement ... the number in brackets next to the Movement parameter of a
-     vehicle is the cost of a single turn of up to 90°" (p. 35). So a hull pays
-     one turn to come round between 45° and 135° off its heading, and two to come
-     round further than that — reversing its front costs it twice.
+  /* A rough measure of how far a hull must come round to face a point: none
+     inside its front quarter, one turn to either side, two to face about. The
+     drive itself is priced turn by turn along its route by `driveField` below;
+     this is only for asking the question from where a unit stands.
 
      The same page lets it go backwards instead: "vehicles may move backwards in
      a straight line, but their movement distance is halved when doing so". That
@@ -3922,7 +3944,206 @@
     return Math.min(forward, ground * 2);
   }
 
+  /* ---------- a ground vehicle's drive (p. 35) ----------
+     "Vehicles move in straight lines, and may make turns by reducing the range of
+     their movement... the cost of a single turn of up to 90°... for every turn
+     made on the way." So a hull is searched for with its heading as part of where
+     it is: it rolls straight on along one of the lattice's sixteen headings, and
+     changing heading costs a turn for every 90° or part of it — each bend on the
+     way round a wood is paid for, not just the angle to the finish.
+
+     "Vehicles may move backwards in a straight line, but their movement distance
+     is halved": straight back along the line it faces, at two inches of
+     allowance for every inch, with no turn and its front still where it was. */
+  var HEAD = NEI.map(function (d) { return Math.atan2(d[1], d[0]); });
+  function turnsBetween(h1, h2) {
+    var d = Math.abs(HEAD[h1] - HEAD[h2]);
+    if (d > Math.PI) d = 2 * Math.PI - d;
+    return d < 1e-6 ? 0 : Math.ceil(d / (Math.PI / 2) - 1e-9);
+  }
+  function nearestHead(a) {
+    var best = 0, bd = Infinity;
+    for (var h = 0; h < HEAD.length; h++) {
+      var d = Math.abs(HEAD[h] - a);
+      if (d > Math.PI) d = 2 * Math.PI - d;
+      if (d < bd) { bd = d; best = h; }
+    }
+    return best;
+  }
+  function drives(u) { return !!u && u.cls === 'vehicle' && u.move > 0 && !hasOwn(u, 'Immobile'); }
+
+  var driveCache = { key: null, f: null };
+  function driveKey(state, u, allowance) {
+    var k = [u.id, u.x, u.y, u.facing, u.turn, u.move, allowance, u.wireRoll, state.terrain.length];
+    state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side) k.push(o.x, o.y, o.bld ? 1 : 0); });
+    state.terrain.forEach(function (r) { k.push(r.kind); });
+    return k.join(',');
+  }
+
+  function driveField(state, u, allowance) {
+    var key = driveKey(state, u, allowance);
+    if (driveCache.key === key) return driveCache.f;
+    var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
+    var N = cols * rows, H = HEAD.length;
+    var idx = function (i, j) { return j * cols + i; };
+    var i0 = Math.round(u.x / STEP), j0 = Math.round(u.y / STEP);
+    var terr = new Uint8Array(N), blk = new Int8Array(N);   // 0 unknown, 1 open, 2 blocked
+    var kinds = Object.keys(TERRAIN), kindIndex = {};
+    kinds.forEach(function (k, n) { kindIndex[k] = n; });
+    if (u.wireRoll == null && state.terrain.some(function (r) { return r.kind === 'wire'; })) u.wireRoll = d6();
+    function kindAt(i, j) {
+      var k = idx(i, j);
+      if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
+      return kinds[terr[k] - 1];
+    }
+    function blockedBy(i, j) {
+      var k = idx(i, j);
+      if (blk[k]) return blk[k] === 2;
+      var x = i * STEP, y = j * STEP, b = false;
+      if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) b = true;
+      else if (terrainBars(u, kindAt(i, j))) b = true;
+      else for (var n = 0; n < state.units.length; n++) {
+        var o = state.units[n];
+        if (!o.alive || o === u || o.side === u.side || o.aboard || o.x < 0) continue;
+        if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) { b = true; break; }
+      }
+      blk[k] = b ? 2 : 1;
+      return b;
+    }
+    var linear = function (k) { return !!TERRAIN[k].linear; };
+    var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
+    // one step straight on along heading h: its cost, and whether it pays the area penalty
+    function stepCost(ci, cj, h, paid) {
+      var di = NEI[h][0], dj = NEI[h][1], ni = ci + di, nj = cj + dj;
+      if (ni < 0 || nj < 0 || ni >= cols || nj >= rows || blockedBy(ni, nj)) return null;
+      var mi = ci + Math.round(di / 2), mj = cj + Math.round(dj / 2);
+      if ((Math.abs(di) > 1 || Math.abs(dj) > 1) && blockedBy(mi, mj)) return null;
+      var run = STEP * Math.hypot(di, dj), pen = 0;
+      var k1 = kindAt(ci, cj), k2 = kindAt(ni, nj), km = kindAt(mi, mj);
+      if (linear(k2) && k2 !== k1) pen += terrainCost(u, k2);
+      else if (linear(km) && km !== k1 && km !== k2) pen += terrainCost(u, km);
+      if (!paid && (area(k2) || area(km))) { pen += terrainCost(u, area(k2) ? k2 : km); paid = 1; }
+      return { i: ni, j: nj, run: run, pen: pen, paid: paid };
+    }
+
+    var S = N * H * 2;
+    var cost = new Float64Array(S).fill(Infinity), came = new Int32Array(S).fill(-1), turnsN = new Uint8Array(S);
+    var sid = function (cell, h, p) { return (cell * H + h) * 2 + p; };
+    // a binary heap of states by cost
+    var hc = [], hs = [];
+    function push(c, st) {
+      var n = hc.length; hc.push(c); hs.push(st);
+      while (n > 0) {
+        var pa = (n - 1) >> 1;
+        if (hc[pa] <= hc[n]) break;
+        var tc = hc[pa]; hc[pa] = hc[n]; hc[n] = tc; var ts = hs[pa]; hs[pa] = hs[n]; hs[n] = ts; n = pa;
+      }
+    }
+    function pop() {
+      var top = hs[0], lc = hc.pop(), ls = hs.pop();
+      if (hc.length) {
+        hc[0] = lc; hs[0] = ls;
+        var n = 0, L = hc.length;
+        for (;;) {
+          var a = 2 * n + 1, b = a + 1, m = n;
+          if (a < L && hc[a] < hc[m]) m = a;
+          if (b < L && hc[b] < hc[m]) m = b;
+          if (m === n) break;
+          var tc = hc[m]; hc[m] = hc[n]; hc[n] = tc; var ts = hs[m]; hs[m] = hs[n]; hs[n] = ts; n = m;
+        }
+      }
+      return top;
+    }
+    var k0 = kindAt(i0, j0), startPaid = area(k0) ? 1 : 0, c0 = startPaid ? terrainCost(u, k0) : 0;
+    var h0 = nearestHead(u.facing == null ? 0 : u.facing), turn = u.turn || 0;
+    var cell0 = idx(i0, j0);
+    cost[sid(cell0, h0, startPaid)] = c0; push(c0, sid(cell0, h0, startPaid));
+    var best = new Float64Array(N).fill(Infinity), bestState = new Int32Array(N).fill(-1);
+    while (hc.length) {
+      var cc = hc[0], st = pop();
+      if (cc > cost[st]) continue;
+      var p = st & 1, h = (st >> 1) % H, cell = Math.floor((st >> 1) / H);
+      var ci = cell % cols, cj = Math.floor(cell / cols);
+      if (cc < best[cell]) { best[cell] = cc; bestState[cell] = st; }
+      // come round to another heading, where it stands
+      for (var h2 = 0; h2 < H; h2++) {
+        if (h2 === h) continue;
+        var tcst = cc + turnsBetween(h, h2) * turn, ts2 = sid(cell, h2, p);
+        if (tcst > allowance + 1e-6 || tcst >= cost[ts2]) continue;
+        cost[ts2] = tcst; came[ts2] = st; turnsN[ts2] = turnsN[st] + turnsBetween(h, h2); push(tcst, ts2);
+      }
+      // ...or roll straight on
+      var sc = stepCost(ci, cj, h, p);
+      if (!sc) continue;
+      var nc = cc + sc.run + sc.pen, ns = sid(idx(sc.i, sc.j), h, sc.paid);
+      if (nc > allowance + 1e-6 || nc >= cost[ns]) continue;
+      cost[ns] = nc; came[ns] = st; turnsN[ns] = turnsN[st]; push(nc, ns);
+    }
+    // backwards, in a straight line, at half distance
+    var rev = new Float64Array(N).fill(Infinity);
+    var hb = nearestHead((u.facing == null ? 0 : u.facing) + Math.PI);
+    var ri = i0, rj = j0, rp = startPaid, rc = c0;
+    for (;;) {
+      var rs = stepCost(ri, rj, hb, rp);
+      if (!rs) break;
+      rc += 2 * rs.run + rs.pen;
+      if (rc > allowance + 1e-6) break;
+      ri = rs.i; rj = rs.j; rp = rs.paid;
+      rev[idx(ri, rj)] = rc;
+    }
+    var seen = [];
+    for (var q = 0; q < N; q++) {
+      var fc = Math.min(best[q], rev[q]);
+      if (isFinite(fc)) seen.push({ i: q % cols, j: Math.floor(q / cols), c: fc });
+    }
+    var f = {
+      cols: cols, rows: rows, idx: idx, seen: seen,
+      cost: (function () { var o = new Float64Array(N); for (var q2 = 0; q2 < N; q2++) o[q2] = Math.min(best[q2], rev[q2]); return o; })(),
+      // what it costs to finish on this point, and how: turns taken, backwards or not
+      at: function (ti, tj) {
+        var k = idx(ti, tj);
+        if (rev[k] < best[k]) return { spent: rev[k], turns: 0, reverse: true, ground: rev[k] / 2 };
+        if (!isFinite(best[k])) return null;
+        var t = turnsN[bestState[k]];
+        return { spent: best[k], turns: t, reverse: false, ground: best[k] - t * turn };
+      },
+      // the route there: its corners, the heading it ends on (none when reversing)
+      route: function (ti, tj) {
+        var k = idx(ti, tj);
+        if (rev[k] < best[k]) {
+          var r0 = [{ x: u.x, y: u.y }, { x: ti * STEP, y: tj * STEP }];
+          r0.facing = null; r0.reverse = true; r0.turns = 0;
+          return r0;
+        }
+        if (bestState[k] < 0) return null;
+        var pts = [], st2 = bestState[k], guard = 0, last = -1;
+        var endH = (st2 >> 1) % H;
+        while (st2 >= 0 && guard++ < 20000) {
+          var c2 = Math.floor((st2 >> 1) / H);
+          if (c2 !== last) { pts.push({ x: (c2 % cols) * STEP, y: Math.floor(c2 / cols) * STEP }); last = c2; }
+          st2 = came[st2];
+        }
+        pts.reverse();
+        pts.facing = HEAD[endH]; pts.reverse = false; pts.turns = turnsN[bestState[k]];
+        return pts;
+      }
+    };
+    driveCache.key = key; driveCache.f = f;
+    return f;
+  }
+
   function reachable(state, u, allowance) {
+    if (drives(u)) {
+      var df = driveField(state, u, allowance), dout = [];
+      df.seen.forEach(function (n) {
+        var x = n.i * STEP, y = n.j * STEP;
+        if (unitNear(state, x, y, u, 1)) return;
+        var at = df.at(n.i, n.j);
+        if (!at || at.spent > allowance + 1e-6) return;
+        dout.push({ x: x, y: y, cost: at.ground, spent: at.spent, turns: at.turns, reverse: at.reverse });
+      });
+      return dout;
+    }
     var f = field(state, u, allowance), out = [];
     f.seen.forEach(function (n) {
       var x = n.i * STEP, y = n.j * STEP;
@@ -3940,6 +4161,21 @@
 
   // the route the unit actually takes, for showing the move
   function pathTo(state, u, allowance, target) {
+    if (drives(u)) {
+      var df = driveField(state, u, allowance);
+      var rt = df.route(Math.round(target.x / STEP), Math.round(target.y / STEP));
+      if (!rt) { var none = [{ x: u.x, y: u.y }, { x: target.x, y: target.y }]; none.facing = undefined; return none; }
+      // thin it to its corners, and finish on the very point asked for
+      var dp = [rt[0]];
+      for (var dn = 1; dn < rt.length - 1; dn++) {
+        var da = dp[dp.length - 1], db = rt[dn], dc = rt[dn + 1];
+        if (Math.abs((db.x - da.x) * (dc.y - da.y) - (db.y - da.y) * (dc.x - da.x)) > 0.01) dp.push(db);
+      }
+      dp.push({ x: target.x, y: target.y });
+      dp[0] = { x: u.x, y: u.y };
+      dp.facing = rt.facing; dp.reverse = rt.reverse; dp.turns = rt.turns;
+      return dp;
+    }
     var f = field(state, u, allowance);
     var ti = Math.round(target.x / STEP), tj = Math.round(target.y / STEP);
     var k0 = f.idx(ti, tj);
@@ -4255,7 +4491,7 @@
     applyDrone: applyDrone, canBeDrone: canBeDrone, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
-    propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion,
+    propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
     defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
     soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
@@ -4434,7 +4670,7 @@
     'Supporting Fire':
       'Support: shoot without the stationary Fire! bonus, then still load or unload troops in the same activation.',
     'Suppressive Fire':
-      'A normal Fire! attack that hits adds +2 Suppression on top of the hit table. Does not apply at Basic Firepower.',
+      'Any shooting attack that scores hits — Basic Firepower and Indirect Fire included — adds +2 Suppression on top of the hit table. Not with the auxiliary weapon.',
     'Teleport':
       'Takes in a steady infantry unit within 4" that has not acted; on a D6 of 1-2 it comes out beside a random ' +
       'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',

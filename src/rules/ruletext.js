@@ -169,7 +169,7 @@
     'Supporting Fire':
       'Support: shoot without the stationary Fire! bonus, then still load or unload troops in the same activation.',
     'Suppressive Fire':
-      'A normal Fire! attack that hits adds +2 Suppression on top of the hit table. Does not apply at Basic Firepower.',
+      'Any shooting attack that scores hits — Basic Firepower and Indirect Fire included — adds +2 Suppression on top of the hit table. Not with the auxiliary weapon.',
     'Teleport':
       'Takes in a steady infantry unit within 4" that has not acted; on a D6 of 1-2 it comes out beside a random ' +
       'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',

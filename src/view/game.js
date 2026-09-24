@@ -4442,15 +4442,16 @@
     /* What the drive actually costs a hull: the ground, plus a turn for every
        90° it has to come round — or, if it would be going backwards, twice the
        distance at no turn cost (p. 35). */
-    var turns = u.cls === 'vehicle' ? R.turnsTo(u, spot.x, spot.y) : 0;
+    var drive = R.drives(u);
+    var turns = drive ? (spot.turns != null ? spot.turns : (path.turns || 0)) : 0;
     var ground = spot.cost !== undefined ? spot.cost : dist;
-    var spent = u.cls === 'vehicle' ? R.driveCost(u, spot.x, spot.y, ground) : ground;
+    var spent = spot.spent !== undefined ? spot.spent : ground;
     return {
       unit: u, spot: spot, advance: advance, dist: dist, path: path,
       kind: kind, terrain: terr, ghost: ghost,
       seen: seen, shots: shots, watchers: watchers,
       allowance: allowance, ground: ground, spent: spent, turns: turns,
-      reverse: u.cls === 'vehicle' && u.turn > 0 && turns === 2 && spent < ground + turns * u.turn,
+      reverse: drive && !!(spot.reverse || path.reverse),
       crushes: R.isMachine(u) && u.tier >= 3
     };
   }
