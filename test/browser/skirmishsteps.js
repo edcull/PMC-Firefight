@@ -123,14 +123,12 @@ const { ROOT, SHOTS } = require('../where.js');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('ai'); });
   await p.waitForTimeout(200);
   const start = await p.evaluate(() => window.__hot());
-  check('it opens on the battlefield, both forces already rolled, as a demo does',
-    /^The battlefield$/.test(await title()) && start.step === 3 && start.sides.every(sd => sd.keys.length > 0) &&
+  check('it opens on the battlefield: your force empty, the opposition already rolled',
+    /^The battlefield$/.test(await title()) && start.step === 3 && start.sides[0].keys.length === 0 && start.sides[1].keys.length > 0 &&
     start.sides[0].colour !== start.sides[1].colour && await shown('sel-terrain'), JSON.stringify(start).slice(0, 200));
   await p.click('[data-hotside="0"]');
   check('tap your force to change it: a name and colours of your own', /^Muster your force$/.test(await title()) &&
     await shown('hot-name') && await shown('btn-quick-colour') && !(await shown('sel-op')));
-  await p.click('#btn-quick-clear');
-  check('...Clear to build it by hand', await p.evaluate(() => document.querySelectorAll('#chosen .pick').length) === 0);
   await roll(); await name('Kowalski\u2019s Lads');
   await next();
   check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'));

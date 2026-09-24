@@ -698,7 +698,7 @@
   #setup[data-hot] .hot-hide { display: none !important; }
   #setup[data-hot="1"] .hot-field, #setup[data-hot="2"] .hot-field { display: none !important; }
   #setup[data-hot="3"] .hot-force { display: none !important; }
-  #setup[data-hot="1"] .hot-name, #setup[data-hot="2"] .hot-name { display: block; }
+  #setup[data-hot="1"] .hot-name, #setup[data-hot="2"] .hot-name { display: grid; }
   #setup[data-hot="3"] .hot-sum { display: block; }
   #setup[data-hot] .hot-intro { display: block; }
   /* a demo names its own forces, from their colour and kind, always lays the table itself, and needs no explaining */
@@ -710,24 +710,19 @@
   #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
   #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
   #btn-quick-clear { display: none; }
-  /* ...and its colours come up in a modal from a chip beside its name */
-  .name-row { display: flex; gap: 6px; }
-  .name-row .tin { flex: 1; min-width: 0; }
-  .colour-btn { display: none; flex: none; width: 46px; padding: 6px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
-  .colour-btn .sw-chip { display: block; height: 100%; min-height: 20px; }
-  .colour-btn:hover, .colour-btn:focus-visible { border-color: var(--alpha); }
+  /* ...and a force's colours come up in a modal from the line under its name */
   .colour-box { display: contents; }
   #setup .quick-only { display: none; }
-  #setup[data-kind="ai"] .colour-btn { display: block; }
-  #setup[data-kind="ai"] .hot-colour { display: none !important; }
-  #setup[data-kind="ai"] .hot-colour.open {
+  #setup[data-hot="2"][data-kind="coop"] .hot-colourline { display: none; }
+  #setup[data-hot] .hot-colour { display: none !important; }
+  #setup[data-hot] .hot-colour.open {
     display: grid !important; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; margin: 0; background: rgba(8, 11, 16, .78);
   }
-  #setup[data-kind="ai"] .hot-colour.open .colour-box {
+  #setup[data-hot] .hot-colour.open .colour-box {
     display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
     width: min(400px, 100%); max-height: 100%; overflow-y: auto; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
   }
-  #setup[data-kind="ai"] .hot-colour.open .askrow.quick-only { display: flex; margin-top: 12px; }
+  #setup[data-hot] .hot-colour.open .askrow.quick-only { display: flex; margin-top: 12px; }
   #setup[data-kind="ai"] #btn-quick-clear { display: inline-block; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
@@ -1599,12 +1594,15 @@
     <p class="lede hot-only hot-intro" id="hot-intro"></p>
     <div class="hot-only hot-sum" id="hot-sum"></div>
     <p class="lede std-only hot-hide">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table.</p>
-    <div class="field hot-only hot-name">
-      <label for="hot-name">Force name</label>
-      <div class="name-row">
+    <!-- who the force is, as founding a company has it: its name, and its colours on a line that opens them in a modal -->
+    <div class="muster foundid hot-only hot-name">
+      <div class="field">
+        <label for="hot-name" id="hot-name-label">Company name</label>
         <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
-        <!-- against the AI, the colours are a button here that opens them in a modal -->
-        <button type="button" class="colour-btn" id="btn-quick-colour" title="Colours"><span class="sw-chip" id="colour-btn-chip"></span></button>
+      </div>
+      <div class="field hot-colourline">
+        <label id="hot-colour-label">Company colours</label>
+        <button type="button" class="archline" id="btn-quick-colour"><span class="sw-chip line-chip" id="colour-btn-chip"></span><span id="colour-btn-name"></span><em>change</em></button>
       </div>
     </div>
     <div class="field hot-force">
@@ -1742,7 +1740,7 @@
     </div>
     <div class="field hot-force hot-colour" id="colour-wrap">
       <div class="colour-box" role="dialog" aria-label="Colours">
-      <label>Company colours — what your troops are painted in</label>
+      <label id="colour-box-label">Company colours — what your troops are painted in</label>
       <div class="swatches" id="colourpick"></div>
       <p class="hint small" id="colour-hint">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
       <div class="askrow quick-only"><button type="button" class="start" id="btn-colour-done">Done</button></div>

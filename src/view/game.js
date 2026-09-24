@@ -2265,7 +2265,7 @@
     var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
     if (chip && cc) {
       chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
-      el('btn-quick-colour').title = 'Colours: ' + cc.name;
+      if (el('colour-btn-name')) el('colour-btn-name').textContent = cc.name;
     }
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -2274,8 +2274,8 @@
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
         if (muster.hot && muster.hot.kind === 'demo') demoRename();   // its name is its colour
-        // against the AI a made-up name follows the colour; the modal shuts on the pick
-        if (muster.hot && muster.hot.kind === 'ai') {
+        // a made-up name follows the colour; the modal shuts on the pick
+        if (muster.hot && muster.hot.kind !== 'demo') {
           var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
           if (!nm || isMadeUpName(nm)) { muster.name = ISO.COLOURS[muster.colour].name + ' ' + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
           if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
@@ -4748,7 +4748,11 @@
     }).join('');
 
     var f = el('faults');
-    if (!muster.keys.length) { f.textContent = 'Pick units from the list below, or roll a force.'; f.className = 'faults'; }
+    if (!muster.keys.length) {
+      f.textContent = muster.hot ? (muster.hot.kind === 'ai' || muster.hot.kind === 'demo' ? 'Add units, or roll a random force.' : 'Add units, or roll a force.')
+        : 'Pick units from the list below, or roll a force.';
+      f.className = 'faults';
+    }
     else if (c.ok) { f.textContent = 'A legal ' + (muster.solo ? 'commando' : 'company') + ' at Battle Tier ' + R.ROMAN[tier] + ', Priority Level ' + pl + '.'; f.className = 'faults ok'; }
     else { f.textContent = c.faults.join(' '); f.className = 'faults'; }
 
@@ -4960,13 +4964,19 @@
         if (id !== 'sel-faction' && muster.hot && hotQuick(muster.hot.kind) && muster.hot.step === 3) {
           muster.hot.sides.forEach(function (sd, i) {
             if (!sd) return;
-            if (muster.hot.kind === 'ai' && i === 0 &&
-              R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction).ok) return;
+            if (muster.hot.kind === 'ai' && i === 0 && (!sd.keys.length ||
+              R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction).ok)) return;
             sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction);
           });
           hotPaint(); return;
         }
         muster.keys = []; muster.name = '';
+        if (id === 'sel-faction' && muster.hot) hotLabels();
+        // a force the player musters: a made-up name follows the kind of force
+        if (id === 'sel-faction' && muster.hot && muster.hot.kind !== 'demo' && !hotRolled(muster.hot.step)) {
+          var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
+          if (!nm || isMadeUpName(nm)) { muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
+        }
         // a force that starts rolled keeps a rolled build, whatever it is changed to
         if (muster.hot && muster.hot.step < 3 && hotRolled(muster.hot.step)) hotRandomise(muster.hot.step - 1, true);
         if (el('sel-force')) el('sel-force').value = '';
@@ -5126,7 +5136,7 @@
   // does this step's force start rolled, and roll again when its kind changes?
   function hotRolled(step) {
     var k = muster.hot && muster.hot.kind;
-    return k === 'demo' || k === 'ai';
+    return k === 'demo' || (k === 'ai' && step === 2);
   }
   // a demo, or a battle against the AI: set up on the battlefield step, with both forces rolled to start
   function hotQuick(kind) { return kind === 'demo' || kind === 'ai'; }
@@ -5135,7 +5145,13 @@
     muster.keys = []; muster.name = '';
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
-    else if (kind === 'ai') { drawColourPick(); hotRandomise(0, false, true); }   // the player's force, in their own colour
+    else if (kind === 'ai') {
+      // the player's force starts empty, in their own colour, with a name to go with it until they give it one
+      drawColourPick();
+      if (el('sel-tactic')) el('sel-tactic').value = '';
+      muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[musterFaction()];
+      if (el('hot-name')) el('hot-name').value = muster.name;
+    }
     hotPaint();
     drawMuster();
   }
@@ -5149,6 +5165,7 @@
     el('btn-start').textContent = 'Take the field';
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = 'Your force';
+    if (el('colour-box-label')) el('colour-box-label').textContent = 'Company colours \u2014 what your troops are painted in';
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
   }
@@ -5218,6 +5235,14 @@
       if (el('hot-name')) el('hot-name').value = '';
     }
   }
+  // the name and colour labels follow the kind of force, as founding one does
+  var ID_NOUN = { pmc: 'Company', rebel: 'Group', bugs: 'Swarm', xeno: 'Tribe' };
+  function hotLabels() {
+    var n = ID_NOUN[musterFaction()] || 'Force';
+    if (el('hot-name-label')) el('hot-name-label').textContent = n + ' name';
+    if (el('hot-colour-label')) el('hot-colour-label').textContent = n + ' colours';
+    if (el('colour-box-label')) el('colour-box-label').textContent = n + ' colours';
+  }
   function catModal(on) {
     var m = document.querySelector('#setup .muster');
     if (m) m.classList.toggle('picking', !!on);
@@ -5237,6 +5262,7 @@
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
     if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
     catModal(false);
+    hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
     var tp = el('tierpl-field');
@@ -5276,7 +5302,8 @@
         var c = ISO.COLOURS[sd.colour] || {};
         return '<button type="button" class="hot-side" data-hotside="' + i + '"><b style="color:' + (c.light || 'inherit') + '">' + escHtml(sd.name) + '</b>' +
           '<em>change</em>' +
-          '<small>' + hotWho(i + 1) + ' · ' + (FORCE_KIND[sd.faction] || sd.faction) + ' · ' + sd.keys.length + ' units' +
+          '<small>' + hotWho(i + 1) + ' · ' + (FORCE_KIND[sd.faction] || sd.faction) + ' · ' +
+          (sd.keys.length ? sd.keys.length + ' units' : 'no units yet \u2014 tap to muster it') +
           (sd.tactic ? ' · ' + escHtml(R.tacticById(sd.tactic).name) : '') + '</small></button>';
       }).join('');
     }
@@ -5311,6 +5338,15 @@
       return;
     }
     var a = h.sides[0], b = h.sides[1], tier = musterTier(), pl = musterPL();
+    // a force still to be mustered (or no longer legal): open it rather than take the field
+    for (var si = 0; si < 2; si++) {
+      var sd = h.sides[si];
+      if (h.kind === 'coop' || !sd) continue;
+      if (!R.checkArmy(sd.keys, tier, pl, null, sd.tactic, sd.faction).ok) {
+        hotEdit(si);
+        return hotRefuse(sd.keys.length ? hotWho(si + 1) + ' is not legal yet.' : 'Muster ' + hotWho(si + 1).replace(/^Your/, 'your') + ' first.');
+      }
+    }
     var planet = el('sel-planet').value, terrainSetup = el('sel-terrain') && h.kind !== 'demo' ? el('sel-terrain').value : 'auto';
     if (h.kind === 'coop') {
       // the two commandos take the field as one side, each player's units their own
