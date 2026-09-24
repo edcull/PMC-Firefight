@@ -3512,7 +3512,7 @@
      Stealth only counts from `from` inches on, so nearer than that nothing shows. */
   function keenFx(a, t, from) {
     if (!a || !t || !R.has(a, 'Keen-Eyed') || !R.has(t, 'Stealth') || R.unitDist(a, t) < from) return;
-    addFx({ kind: 'glint', x: a.x, y: a.y, dur: 700 });
+    addFx({ kind: 'glint', unit: a.id, x: a.x, y: a.y, dur: 700 });
     addFx({ kind: 'glint', x: t.x, y: t.y, up: 0.8, delay: 250, dur: 700 });
   }
   // a rally or repair made harder by an enemy's Jammers: the static rolling out from the jammer
@@ -3959,7 +3959,7 @@
         var gt = Math.round(Math.min(1000, 450 + R.unitDist(u, t) * 40));
         addFx({ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: t.x, y: t.y }, dur: gt });
         addFx({ kind: 'puff', x: t.x, y: t.y, delay: gt - 30, dur: gt + 1800 });
-      } else addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
+      } else addFx({ kind: 'beam', unit: u.id, x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
     });
     u.activated = true;

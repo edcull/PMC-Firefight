@@ -372,6 +372,17 @@
   /* An effect the engine described without knowing how high anything is drawn.
      A flier's height is a matter for the view, so it is filled in here. */
   function reLift(f) {
+    /* A marker's laser and a Keen-Eyed glint come off the machine's own
+       sensor, however high it flies: the nose of a craft, its scanner. */
+    if (f && f.unit && (f.kind === 'beam' || f.kind === 'glint')) {
+      var src = evUnit(f.unit);
+      if (src && (src.cls === 'aircraft' || src.cls === 'vehicle')) {
+        var M = ISO.mounts(src), at = f.kind === 'beam' ? (M.nose || M.scan) : (M.scan || M.nose);
+        if (at && at.length) f.mz = at[0];
+        else if (ISO.flyLift(src)) f.mz = { dx: 0, dy: -ISO.flyLift(src) };
+      }
+      return f;
+    }
     if (!f || f.up !== 0 || !f.unit) return f;
     var u = evUnit(f.unit);
     if (u) f.up = ISO.flyLift(u);
@@ -1692,6 +1703,8 @@
 
     switch (spec.p) {
       case 'none':
+        // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
+        if (spec.s) { setTimeout(function () { land(3); }, 150 + 520 + ((spec.sn || 1) - 1) * 170); finish(120 + tail); return; }
         finish(120); return;
 
       // Xenotripod small arms: pulses of the army's own light

@@ -2026,10 +2026,10 @@
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
     // drone units carry what the squads they stand in for carry; the support drones lob shells
-    // (the recon and engineer drones fire as light infantry do, a crack of single shots)
+    // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
-    // the support drones loose the missiles off their shoulders
-    dengineer: { p: 'pistol' }, dsupport: { p: 'rocket', n: 2 }, dmedic: { p: 'pistol' },
+    // the engineer drones carry nothing in hand and throw a pair of grenades; the support drones lob two rounds, up and over
+    dengineer: { p: 'none', s: 'arc', sn: 2 }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -7851,8 +7851,8 @@
     drshotgun: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
     drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, pouches: '#5d6e3a' },
     drscoutsmg: { helm: 'bot', gun: 'rifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, pouches: '#5d6e3a' },
-    drbreacher: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
-    drsapper: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drbreacher: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
     drheavy: { helm: 'bot', gun: 'heavy', shoulderGL: true, shoulderMsl: true, pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
     drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
     drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
@@ -14403,6 +14403,9 @@
             line(e0, e1, 2.2, '#15181e');
             line(e0, e1, 1, '#4a5260');
             sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            mount('nose', e1);                                   // where a marker's beam leaves the craft
+            mount('scan', S3(AF(R0 * 1.13, 0), podZ + Math.round(H * 0.2)));   // and where it looks from
+            mount('mg', S3(AF(R0 * 1.14, 0), podZ + Math.round(H * 0.12)));    // its light gun fires from the pod's nose
             if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
             shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
             shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
@@ -16513,7 +16516,9 @@
       } else if (f.kind === 'glint') {
         /* Keen-Eyed: a four-pointed glint off the spotter's optics, and one on
            the Stealthy unit it has picked out. */
-        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
+        var gp = I.toScreen(f.x, f.y);
+        // off a machine's own sensor (`mz`), else about head height
+        if (f.mz) { gp.x += f.mz.dx; gp.y += f.mz.dy - liftAt(f); } else gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
         var grgb = f.rgb || '150,240,255', gk = Math.sin(Math.min(1, k) * Math.PI);
         var gl = I.K * (0.5 + 0.9 * gk), gw = I.PIXEL * 1.2;
         g.save();

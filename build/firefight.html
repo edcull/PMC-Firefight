@@ -3613,10 +3613,10 @@
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
     // drone units carry what the squads they stand in for carry; the support drones lob shells
-    // (the recon and engineer drones fire as light infantry do, a crack of single shots)
+    // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
-    // the support drones loose the missiles off their shoulders
-    dengineer: { p: 'pistol' }, dsupport: { p: 'rocket', n: 2 }, dmedic: { p: 'pistol' },
+    // the engineer drones carry nothing in hand and throw a pair of grenades; the support drones lob two rounds, up and over
+    dengineer: { p: 'none', s: 'arc', sn: 2 }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -14409,8 +14409,8 @@
     drshotgun: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
     drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, pouches: '#5d6e3a' },
     drscoutsmg: { helm: 'bot', gun: 'rifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, pouches: '#5d6e3a' },
-    drbreacher: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
-    drsapper: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drbreacher: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
     drheavy: { helm: 'bot', gun: 'heavy', shoulderGL: true, shoulderMsl: true, pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
     drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
     drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
@@ -20961,6 +20961,9 @@
             line(e0, e1, 2.2, '#15181e');
             line(e0, e1, 1, '#4a5260');
             sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            mount('nose', e1);                                   // where a marker's beam leaves the craft
+            mount('scan', S3(AF(R0 * 1.13, 0), podZ + Math.round(H * 0.2)));   // and where it looks from
+            mount('mg', S3(AF(R0 * 1.14, 0), podZ + Math.round(H * 0.12)));    // its light gun fires from the pod's nose
             if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
             shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
             shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
@@ -23072,7 +23075,9 @@
       } else if (f.kind === 'glint') {
         /* Keen-Eyed: a four-pointed glint off the spotter's optics, and one on
            the Stealthy unit it has picked out. */
-        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
+        var gp = I.toScreen(f.x, f.y);
+        // off a machine's own sensor (`mz`), else about head height
+        if (f.mz) { gp.x += f.mz.dx; gp.y += f.mz.dy - liftAt(f); } else gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
         var grgb = f.rgb || '150,240,255', gk = Math.sin(Math.min(1, k) * Math.PI);
         var gl = I.K * (0.5 + 0.9 * gk), gw = I.PIXEL * 1.2;
         g.save();
@@ -27052,7 +27057,7 @@
      Stealth only counts from `from` inches on, so nearer than that nothing shows. */
   function keenFx(a, t, from) {
     if (!a || !t || !R.has(a, 'Keen-Eyed') || !R.has(t, 'Stealth') || R.unitDist(a, t) < from) return;
-    addFx({ kind: 'glint', x: a.x, y: a.y, dur: 700 });
+    addFx({ kind: 'glint', unit: a.id, x: a.x, y: a.y, dur: 700 });
     addFx({ kind: 'glint', x: t.x, y: t.y, up: 0.8, delay: 250, dur: 700 });
   }
   // a rally or repair made harder by an enemy's Jammers: the static rolling out from the jammer
@@ -27499,7 +27504,7 @@
         var gt = Math.round(Math.min(1000, 450 + R.unitDist(u, t) * 40));
         addFx({ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: t.x, y: t.y }, dur: gt });
         addFx({ kind: 'puff', x: t.x, y: t.y, delay: gt - 30, dur: gt + 1800 });
-      } else addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
+      } else addFx({ kind: 'beam', unit: u.id, x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
     });
     u.activated = true;
@@ -29844,6 +29849,17 @@
   /* An effect the engine described without knowing how high anything is drawn.
      A flier's height is a matter for the view, so it is filled in here. */
   function reLift(f) {
+    /* A marker's laser and a Keen-Eyed glint come off the machine's own
+       sensor, however high it flies: the nose of a craft, its scanner. */
+    if (f && f.unit && (f.kind === 'beam' || f.kind === 'glint')) {
+      var src = evUnit(f.unit);
+      if (src && (src.cls === 'aircraft' || src.cls === 'vehicle')) {
+        var M = ISO.mounts(src), at = f.kind === 'beam' ? (M.nose || M.scan) : (M.scan || M.nose);
+        if (at && at.length) f.mz = at[0];
+        else if (ISO.flyLift(src)) f.mz = { dx: 0, dy: -ISO.flyLift(src) };
+      }
+      return f;
+    }
     if (!f || f.up !== 0 || !f.unit) return f;
     var u = evUnit(f.unit);
     if (u) f.up = ISO.flyLift(u);
@@ -31164,6 +31180,8 @@
 
     switch (spec.p) {
       case 'none':
+        // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
+        if (spec.s) { setTimeout(function () { land(3); }, 150 + 520 + ((spec.sn || 1) - 1) * 170); finish(120 + tail); return; }
         finish(120); return;
 
       // Xenotripod small arms: pulses of the army's own light

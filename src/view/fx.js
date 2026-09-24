@@ -678,7 +678,9 @@
       } else if (f.kind === 'glint') {
         /* Keen-Eyed: a four-pointed glint off the spotter's optics, and one on
            the Stealthy unit it has picked out. */
-        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
+        var gp = I.toScreen(f.x, f.y);
+        // off a machine's own sensor (`mz`), else about head height
+        if (f.mz) { gp.x += f.mz.dx; gp.y += f.mz.dy - liftAt(f); } else gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
         var grgb = f.rgb || '150,240,255', gk = Math.sin(Math.min(1, k) * Math.PI);
         var gl = I.K * (0.5 + 0.9 * gk), gw = I.PIXEL * 1.2;
         g.save();
