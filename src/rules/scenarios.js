@@ -77,6 +77,21 @@
   /* Split a side's units into two halves, the bigger models first so both are real.
      An emplaced gun cannot be held in reserve (p. 94): it is dug in where it stands
      before a shot is fired, so it always goes in the first half. */
+  /* How a side's force was split before the battle, so its player can change
+     which units go where: 'hold' is on the table or held back, 'wave' the first
+     wave or the second. `min`-`max` is how many the rule lets them hold back (or
+     put in the second wave); an emplaced gun is never held back (p. 94). */
+  function noteSplit(state, side, kind, units, min, max, rule) {
+    /* The split the scenario made is always allowed — an emplaced gun going on
+       the table first can leave it a unit short of an exact half — and nobody
+       can hold back more than the units that are free to be held. */
+    var held = units.filter(function (u) { return u.wave === 2; }).length;
+    var free = units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); }).length;
+    min = Math.min(min, held);
+    max = Math.max(Math.min(max, free), held);
+    state.sc.split = state.sc.split || {};
+    state.sc.split[side] = { kind: kind, ids: units.map(function (u) { return u.id; }), min: min, max: max, rule: rule };
+  }
   function halve(units) {
     var emplaced = units.filter(function (u) { return R.has(u, 'Stationary Artillery'); });
     var rest = units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); });
@@ -333,13 +348,27 @@
         state.sc.zones = { A: strip('A', 6), B: strip('B', 6) };
         // half the force enters at once; the rest waits in reserve
         ['A', 'B'].forEach(function (side) {
-          var split = halve(mine(state, side).filter(function (u) { return !u.reserve; }));
+          var all = mine(state, side).filter(function (u) { return !u.reserve; });
+          var split = halve(all);
           split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+          noteSplit(state, side, 'hold', all, Math.floor(all.length / 2), Math.ceil(all.length / 2),
+            'Half the force enters at once; the rest waits in reserve.');
         });
         state.sc.hold = { A: 0, B: 0 };
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       hint: 'Three staked locations. Bring a unit within 4" and use "Check the area!" — 5+ at the first, 4+ at the second, automatic at the third.',
+      /* From turn 3, every second turn, a number equal to the Priority Level comes
+         on (p. 52) — which ones is the player's choice. */
+      reservePick: function (state, side) {
+        if (state.turn < 3 || state.turn % 2 === 0) return null;
+        var pool = state.units.filter(function (u) {
+          return u.side === side && u.alive && u.reserve && u.wave === 2;
+        });
+        var n = Math.min(state.cfg.pl, pool.length);
+        return pool.length ? { pool: pool, min: n, max: n,
+          text: 'A number of units equal to the Priority Level comes on from reserve — ' + n + ' this turn. You choose which.' } : null;
+      },
       // from turn 3, every second turn, a number equal to the Priority Level comes on
       reserves: function (state, side) {
         if (state.turn < 3 || state.turn % 2 === 0) return [];
@@ -403,11 +432,15 @@
         });
         var keep = Math.max(1, Math.floor(defs.length / 3));
         defs.slice(keep).forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        noteSplit(state, def, 'hold', defs, defs.length - keep, defs.length - 1,
+          'Up to a third of the force sets up on the table; the rest walks on later, on a 5+ a unit from turn 2.');
         // the attacker comes in two waves; the first lands in the Reserve phase of turn 1
         var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
         var split = halve(atks);
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
         split.first.forEach(function (u) { u.reserve = true; u.wave = 1; u.x = -1; u.y = -1; });
+        noteSplit(state, atk, 'wave', atks, Math.floor(atks.length / 2), Math.ceil(atks.length / 2),
+          'The force comes down in two waves: the first on turn 1, the second from turn 4 on a roll.');
         state.sc.zones = {};
         state.sc.zones[def] = [6, W - 6];         // anywhere 6" in from the edges
         state.sc.zones[atk] = null;               // the attacker never deploys: it lands
@@ -508,6 +541,8 @@
         var defs = mine(state, def).filter(function (u) { return !u.reserve; });
         var split = halve(defs);
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        noteSplit(state, def, 'hold', defs, Math.floor(defs.length / 2), Math.ceil(defs.length / 2),
+          'Half the force sets up within 18" of the objective; the rest arrives on a 5+ a unit from turn 2.');
         state.sc.zones = {};
         state.sc.zones[def] = null;               // a circle, not a strip
         state.sc.zones[atk] = null;               // corner bands, not a strip
@@ -611,6 +646,8 @@
         var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
         var split = halve(atks);
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        noteSplit(state, atk, 'hold', atks, Math.floor(atks.length / 2), Math.ceil(atks.length / 2),
+          'Half the force comes on at once; the other half may come on in any turn from the 3rd.');
         state.sc.zones = {};
         state.sc.zones[def] = null;
         state.sc.zones[atk] = null;
@@ -631,6 +668,16 @@
         return dist(x, y, c.x, c.y) <= c.r;
       },
       hint: 'One objective at the centre, dug in behind walls and a bunker. The attacker has twenty turns to be standing on it — nothing else counts.',
+      /* "The second part may enter in any turn starting from the 3rd" (p. 55): the
+         attacker brings on as many of it as they like each turn, and which. */
+      reservePick: function (state, side) {
+        if (side !== state.sc.attacker || state.turn < 3) return null;
+        var pool = state.units.filter(function (u) {
+          return u.side === side && u.alive && u.reserve && u.wave === 2;
+        });
+        return pool.length ? { pool: pool, min: 0, max: pool.length,
+          text: 'The second part of the force may come on this turn — as many of it as you like, or none yet.' } : null;
+      },
       reserves: function (state, side) {
         if (side !== state.sc.attacker || state.turn < 3) return [];
         return state.units.filter(function (u) {
@@ -708,6 +755,10 @@
   function reserves(state, side) {
     return state.scen.reserves ? (state.scen.reserves(state, side) || []) : [];
   }
+  // the reserves a player picks from this turn, where the scenario leaves the choice to them
+  function reservePick(state, side) {
+    return state.scen.reservePick ? state.scen.reservePick(state, side) : null;
+  }
   /* Every End phase: the automatic victory of p. 49 comes first, because it holds
      in every scenario — including the three that have no rout clause of their own —
      and then the scenario's own conditions. Both sides meeting a condition in the
@@ -753,7 +804,7 @@
   root.PMCScen = {
     SCENARIOS: SCENARIOS, ORDER: ORDER,
     begin: begin, deploy: deploy, zoneFor: zoneFor, deployOK: deployOK,
-    reserves: reserves, check: check, noInsertion: noInsertion,
+    reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     holderOf: holderOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
     rollRoles: rollRoles,
     searchSpots: searchSpots, checkArea: checkArea

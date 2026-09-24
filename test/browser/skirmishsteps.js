@@ -120,7 +120,7 @@ const { ROOT, SHOTS } = require('../where.js');
   check('the demo runs with the two forces', ds.mode === 'demo' && !!ds.a && !!ds.b && ds.ca !== ds.cb, JSON.stringify(ds));
 
   console.log('\nAgainst the AI');
-  await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('ai'); });
+  await p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.close(); window.PMC_SKIRMISH('ai'); });
   await p.waitForTimeout(200);
   const start = await p.evaluate(() => window.__hot());
   check('it opens on the battlefield: your force empty, the opposition already rolled',
@@ -128,13 +128,30 @@ const { ROOT, SHOTS } = require('../where.js');
     start.sides[0].colour !== start.sides[1].colour && await shown('sel-terrain'), JSON.stringify(start).slice(0, 200));
   await p.click('[data-hotside="0"]');
   check('tap your force to change it: a name and colours of your own', /^Muster your force$/.test(await title()) &&
-    await shown('hot-name') && await shown('colourpick') && !(await shown('sel-op')));
+    await shown('hot-name') && await shown('btn-colour-pop') && !(await shown('sel-op')));
   await roll(); await name('Kowalski\u2019s Lads');
+  await next();
+  await p.click('[data-hotside="1"]');
+  const op = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length,
+    legal: /legal/i.test(document.getElementById('faults').textContent), name: document.getElementById('hot-name').value }));
+  check('then the opposition: a random kind of force, already rolled, with a name of its own', /^The opposition/.test(await title()) && op.units > 0 && op.legal && !!op.name && op.name !== 'Kowalski\u2019s Lads', JSON.stringify(op));
+  // the army is picked in a modal now; picking there goes through the same selector
+  await p.click('#btn-army'); await p.click('[data-army-pick="xeno"]'); await p.click('#btn-army-done');
+  const opx = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, legal: /legal/i.test(document.getElementById('faults').textContent), line: document.getElementById('army-line-text').textContent }));
+  check('...pick an army type and it is rolled for you', opx.units > 0 && opx.legal && /Xenotripods/.test(opx.line), JSON.stringify(opx));
+  const was = await p.evaluate(() => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join());
+  let changed = false;
+  for (let i = 0; i < 5 && !changed; i++) {
+    await p.evaluate(() => document.getElementById('btn-demo-roll').click());
+    changed = await p.evaluate((w) => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join() !== w &&
+      /legal/i.test(document.getElementById('faults').textContent), was);
+  }
+  check('...or Random force to roll it again', changed);
   await next();
   check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'));
   await next();
   await p.waitForTimeout(600);
-  const ai = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, bx: s.units.filter(u => u.side === 'B').every(u => u.faction === 'xeno') }; });
+  const ai = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, bx: s.units.filter(u => u.side === 'B').every(u => u.faction === 'xeno'), odd: s.units.filter(u => u.side === 'B' && u.faction !== 'xeno').map(u => u.key + ':' + u.faction) }; });
   check('the AI commands the opposition you chose', ai.mode === 'ai' && ai.a === 'Kowalski\u2019s Lads' && ai.bx, JSON.stringify(ai));
 
   console.log('\nSolitaire');

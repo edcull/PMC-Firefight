@@ -64,7 +64,7 @@ async function drain(p) {
   await clickText(p, '(?:RAISE|Raise) THE FORCE|Raise the force');
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Ghadon Third'; });
   let txt = await body(p);
-  check('the founding screen speaks for a tribe', /A tribe claims its ground/.test(txt));
+  check('the founding screen speaks for a tribe', await p.evaluate(() => /the tribe/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
   check('...offers Tribe Advancements', /starting tribe advancement/i.test(txt), (txt.match(/Starting [^\n]+/i) || [])[0]);
   check('...eighteen of them', await p.evaluate(() =>
     document.querySelectorAll('#camp-body [data-doc]').length) === 18);

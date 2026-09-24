@@ -107,9 +107,12 @@
   main {
     display: grid;
     grid-template-columns: 290px minmax(0, 1fr) 320px;
-    grid-template-areas: "own stage foe" "log log log";
+    grid-template-areas: "own stage foe";
     gap: 12px; padding-top: 14px; align-items: start;
   }
+  /* The full log along the bottom is kept (the game still writes it) but not
+     shown: the combat results panel on the right tells the same story. */
+  .logdock { display: none !important; }
   .stage { grid-area: stage; }
   .flank-own { grid-area: own; }
   .flank-foe { grid-area: foe; }
@@ -121,6 +124,25 @@
     max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin;
   }
   .flank .statstrip, .flank .resfeed { flex: none; }
+  /* the unit's text, in the left rail under its stats on a desktop: the rail is
+     the height of the window and this part of it scrolls */
+  /* the window, less the header and the space around the columns */
+  .flank-own, .flank-foe { overflow: hidden; height: calc(100vh - var(--hdr, 50px) - 42px); max-height: none; }
+  /* the two orders of battle, top left and top right: a fixed height, scrolling inside */
+  .flank > #panel-own, .flank > #panel-foe {
+    flex: none; height: 250px; overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain;
+  }
+  /* and under the enemy's, the rolls as they land take the rest, scrolling too */
+  .flank-foe > .resfeed { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+  /* the hint line and the card's own heading say again what the stats above already
+     say, so on a desktop neither is shown there */
+  .flank-own > #hintbar { display: none; }
+  .flank-own > #context .card.idle > h2 { display: none; }
+  .flank-own > #context {
+    flex: 1 1 auto; min-height: 120px; overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  }
+  .flank-own > #context:empty { display: none; }
 
   /* the running feed of rolls, in place of a card to dismiss */
   .resfeed {
@@ -661,6 +683,27 @@
   .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
   .found-units .chosen:empty::before { content: 'No units yet.'; }
   .found-add { align-self: flex-start; margin-top: 8px; }
+  /* A new battle's set-up on a desktop: a card in the middle of the screen, over
+     a table rolling behind it as the main menu has. Nothing on the card may
+     blur or transform, or the pop-ups inside it would be placed on it rather
+     than on the screen. */
+  #setup .hot-name.foundid { grid-template-columns: 1fr; }   /* one row: the chip and the name */
+  #setup-table { display: none; }
+  @media (min-width: 1001px) {
+    #setup.overlay { padding: 28px 20px; align-items: center; justify-content: center; }
+    #setup-table { display: block; position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; pointer-events: none; }
+    #setup > .camp-top {
+      position: relative; width: min(760px, 100%); border: 1px solid var(--line); border-bottom-color: var(--line);
+      border-radius: 8px 8px 0 0; background: color-mix(in srgb, var(--panel) 95%, transparent);
+    }
+    #setup.overlay > .sheet {
+      position: relative; flex: 0 1 auto; width: min(760px, 100%); max-width: none;
+      padding: 18px 22px 22px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 8px 8px;
+      background: color-mix(in srgb, var(--panel) 95%, transparent);
+    }
+    /* a force's screen keeps its fit: a card of a steady height, the units picked scrolling inside it */
+    #setup[data-quick]:not([data-hot="3"]) > .sheet { flex: 1 1 auto; max-height: 880px; }
+  }
   .cmodal {
     position: fixed; inset: 0; z-index: 70; background: rgba(8, 11, 16, .78);
     display: grid; place-items: center; padding: 20px;
@@ -977,6 +1020,16 @@
   .dpr-set .dpr-name { color: var(--ink-dim); }
   .dpr-now { border-color: var(--alpha); background: rgba(216,161,58,.12); }
   .dpr-now .dpr-name { color: var(--alpha); font-weight: 600; }
+  /* the scenario's split: held back units in amber, the count against the rule */
+  .dpr-held .dpr-mark { color: var(--warn); }
+  .dpr-held .dpr-name { color: var(--ink); }
+  .dpr:disabled { opacity: .55; cursor: default; }
+  .splitlist .dphead b.ok { color: var(--good); }
+  .splitlist .dphead b.short { color: var(--warn); }
+  .splitlist .hint.small { margin: 0 0 6px; }
+  .act.warn { border-color: color-mix(in srgb, var(--warn) 60%, var(--line)); }
+  .act.warn small { color: var(--warn); }
+  .cmodal[data-deploybox] .dplist:first-child { margin-top: 0; border-top: 0; padding-top: 0; }
 
   .loadbox { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
   .loadbox h3 { font-family: var(--display); font-size: 11.5px; letter-spacing: .07em;
@@ -1596,6 +1649,8 @@
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
+  <!-- on a desktop the set-up sits over a table, as the main menu does -->
+  <canvas id="setup-table" aria-hidden="true"></canvas>
   <div class="camp-top">
     <button type="button" class="camp-back" id="btn-setup-back">← Back</button>
     <h1 id="setup-title">Muster your force</h1>

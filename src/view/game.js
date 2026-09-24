@@ -230,13 +230,56 @@
   function stepWatched() {
     if (stepTimer || !net || !state || state.over) return;
     if (!state.cfg || state.cfg.aiSides.length !== 2) return;
-    if (state.phase !== 'battle' || ui.resOpen) return;
+    if (state.phase !== 'battle' || ui.resOpen || menuUp()) return;
     stepTimer = setTimeout(function () {
       stepTimer = null;
-      if (!state || state.over || ui.resOpen) return;
+      if (!state || state.over || ui.resOpen || menuUp()) return;
       send({ k: 'step' });
     }, 260);
   }
+  /* Gone back to the menu, the demo stops where it is: nothing more is asked
+     for until the menu is put away again (Resume carries it on). */
+  /* On a desktop what the unit may do, and what it is being asked, is read in
+     the left rail under its stats (scrolling there); the buttons stay under the
+     table. On a narrower screen the text goes back to the console. */
+  var consoleHome = null;
+  function placeConsole() {
+    var hint = el('hintbar'), ctx = el('context'), side = el('statstrip-side');
+    if (!hint || !ctx || !side || !side.parentNode) return;
+    if (!consoleHome) consoleHome = { parent: ctx.parentNode, hintNext: hint.nextSibling, ctxNext: ctx.nextSibling };
+    if (window.innerWidth > 1000) {
+      if (ctx.parentNode !== side.parentNode) {
+        side.parentNode.insertBefore(hint, side.nextSibling);
+        side.parentNode.insertBefore(ctx, hint.nextSibling);
+      }
+    } else if (ctx.parentNode !== consoleHome.parent) {
+      consoleHome.parent.insertBefore(ctx, consoleHome.ctxNext);
+      consoleHome.parent.insertBefore(hint, ctx);
+    }
+  }
+  placeConsole();
+  window.addEventListener('resize', placeConsole);
+  /* On a desktop, a new battle's set-up has the menu's table rolling behind it;
+     it stops when the set-up goes away (or the screen is too narrow for it). */
+  function setupBackdrop() {
+    var sp = el('setup'), cv = el('setup-table'), T = window.PMCMenu && window.PMCMenu.table;
+    if (!sp || !cv || !T || !T.on) return;
+    var want = !sp.hidden && window.innerWidth > 1000;
+    if (want) T.start(cv);
+    else if (T.on() === cv) T.stop();
+  }
+  (function () {
+    var sp = el('setup');
+    if (!sp || !window.MutationObserver) return;
+    new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
+    window.addEventListener('resize', function () { setupBackdrop(); if (window.PMCMenu && window.PMCMenu.table.on() === el('setup-table')) window.PMCMenu.table.fit(); });
+  })();
+  function menuUp() {
+    if (window.PMCMenu && window.PMCMenu.isOpen()) return true;
+    // nor while a new battle is being set up, or the campaign is open, over the top of it
+    return ['setup', 'camp'].some(function (id) { var x = el(id); return !!x && !x.hidden; });
+  }
+  window.addEventListener('pmc-menu-closed', function () { stepWatched(); });
 
   function evUnit(id) { return id ? Q.byId(id) : null; }
 
@@ -343,10 +386,11 @@
     ui.markKind = s.markKind;
     ui.markPicks = s.markPicks;
     ui.deployPick = s.deployPick;
-    var wasAsked = !!ui.insertion;
+    var wasAsked = !!ui.insertion || !!ui.reservePick;
+    ui.reservePick = s.reservePick || null;
     ui.insertion = s.insertion;
     // a drop point being asked for: on a phone the Actions pane, where the ask is, comes to the front
-    if (ui.insertion && !wasAsked && window.innerWidth <= 1000) setMTab('act');
+    if ((ui.insertion || ui.reservePick) && !wasAsked && window.innerWidth <= 1000) setMTab('act');
     ui.sections = s.sections || [];
     ui.tsetHint = s.tsetHint || '';
     ui.vis = null; ui.visKey = '';
@@ -388,6 +432,7 @@
   function deployNext() { return Q.deployNext(); }
   function deployRoster(side) { return Q.deployRoster(side); }
   function deploymentDone() { return Q.deploymentDone(); }
+  function splitFor(side) { return Q.splitFor ? Q.splitFor(side) : null; }
   function deployOK(side, x, y, u) { return Q.deployOK(side, x, y, u); }
   function placingSide() { return Q.placingSide(); }
   function zoneFor(side) { return Q.zoneFor(side); }
@@ -3708,8 +3753,10 @@
   // (a slide-out drawer on a narrow screen).
   function drawPanel() {
     var ctxBox = el('context'), html = '';
+    if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
     else if (state.phase === 'deploy') html = deployCard();
+    else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
     else if (state.over) html = overCard();
     else if (ui.terrain.length && ui.selected &&
@@ -3720,7 +3767,11 @@
       html = targetPanel(ui.selected);
     }
     else if (ui.selected && !isAI(ui.selected.side)) html = idleCard(ui.selected);
+    // a modal open over the card keeps its place when the card is drawn again
+    var ms = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0;
     ctxBox.innerHTML = html;
+    var ms2 = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
+    if (ms2 && ms) ms2.scrollTop = mTop;
     el('panel').innerHTML = forceList();
     /* The desktop rails: your own order of battle on the left, the enemy's on
        the right. They are the same list, split. */
@@ -3950,7 +4001,8 @@
   function deployCard() {
     if (state.relocating) return relocCard();
     var next = deployNext();
-    var held = inReserve().filter(function (u) { return !isAI(u.side); });
+    // the units coming in by Battlefield Insertion — not the ones the scenario holds back
+    var held = inReserve().filter(function (u) { return !isAI(u.side) && u.wave == null; });
     var me = next ? next.side : (playerSide() || 'A');
     var role = roleOf(me);
     var h = '<div class="card"><h2>' + (state.scen ? state.scen.name : 'Deployment') +
@@ -3964,13 +4016,83 @@
     if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
       (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
     h += deployList(me);
-    h += loadingCard(me);
+    /* The scenario's split (which units go on the table and which wait, or
+       which wave each comes in) and who starts the battle aboard a hull are
+       set in a modal, opened from a button, whenever there is either. */
+    var splits = ['A', 'B'].filter(function (sd) { return (sd === me || !deployRoster(sd).length) && splitFor(sd); });
+    var hulls = carriersFor(me).filter(function (u) { return !isAI(u.side); });
+    var extra = splits.map(splitCard).join('') + loadingCard(me);
+    if (extra) {
+      var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
+      var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; }), emptyPod = emptyPlatforms(me).length > 0;
+      var aboard = hulls.reduce(function (n, v) { return n + (v.cargo || []).length; }, 0);
+      var held = splits.reduce(function (n, sd) { return n + splitFor(sd).held; }, 0);
+      var sub = [splits.length ? held + (splitFor(splits[0]).kind === 'wave' ? ' in the second wave' : ' held back') : '',
+        hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
+      h += '<div class="acts"><button class="act' + (badSplit || emptyPod ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
+        '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : emptyPod ? 'A drop pod needs a squad \u2014 ' : '') + sub + '</small></button></div>';
+      h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
+        '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
+        '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
+    }
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
       h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p><div class="acts">';
     }
     return h + '</div></div>';
+  }
+
+  /* The split the scenario made, for the player to change: a row for each unit,
+     tapped to move it between the table and the reserve (or between the waves),
+     and a count against what the rule allows. */
+  var deployBox = false;           // the reserves-and-transports modal, open over the deployment card
+  function splitCard(side) {
+    var sp = splitFor(side);
+    if (!sp) return '';
+    var wave = sp.kind === 'wave';
+    var both = !isAI('A') && !isAI('B') && !(state.solo);
+    var range = sp.min === sp.max ? String(sp.min) : sp.min + '\u2013' + sp.max;
+    var rows = sp.units.map(function (x) {
+      var note = x.locked ? 'emplaced \u2014 never held back'
+        : wave ? (x.held ? 'second wave' : 'first wave')
+        : x.held ? 'held back' : 'on the table';
+      return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-holdback="' + x.id + '"' + (x.locked ? ' disabled' : '') + '>' +
+        '<span class="dpr-mark">' + (x.held ? (wave ? '2' : '\u21a9') : (wave ? '1' : '\u2713')) + '</span>' +
+        '<span class="dpr-name">' + esc(x.name) + '</span>' +
+        '<span class="dpr-note">' + note + '</span></button>';
+    }).join('');
+    return '<div class="dplist splitlist"><div class="dphead">' + (both ? esc(sideName(side)) + ' \u2014 ' : '') +
+      (wave ? 'The two waves' : 'Held back') + ' \u2014 ' +
+      '<b class="' + (sp.ok ? 'ok' : 'short') + '">' + sp.held + '</b> of ' + range + (wave ? ' in the second wave' : ' to hold back') + '</div>' +
+      '<p class="hint small">' + esc(sp.rule) + ' Tap a unit to ' + (wave ? 'switch its wave' : 'hold it back or bring it onto the table') + '.</p>' +
+      rows +
+      (sp.ok ? '' : '<p class="cpwarn">' + (wave ? 'Put ' : 'Hold back ') + (sp.held < sp.min ? (sp.min === sp.max ? 'exactly ' + sp.min : 'at least ' + sp.min) : (sp.min === sp.max ? 'exactly ' + sp.max : 'no more than ' + sp.max)) +
+        (wave ? ' in the second wave' : '') + ' before the battle can begin.</p>') +
+      '</div>';
+  }
+
+  // which of the reserves come on this turn, where the scenario lets the player choose
+  function reservePickCard() {
+    var rp = ui.reservePick;
+    var mine = !isAI(rp.side);
+    var n = rp.chosen.length, ok = n >= rp.min && n <= rp.max;
+    var rows = rp.ids.map(function (id) {
+      var u = byId(id), on = rp.chosen.indexOf(id) >= 0;
+      if (!u) return '';
+      return '<button class="dpr' + (on ? ' dpr-now' : '') + '" data-rpick="' + id + '">' +
+        '<span class="dpr-mark">' + (on ? '\u2713' : '\u00b7') + '</span>' +
+        '<span class="dpr-name">' + esc(u.name) + '</span>' +
+        '<span class="dpr-note">' + (on ? 'coming on' : 'stays in reserve') + '</span></button>';
+    }).join('');
+    var want = rp.min === rp.max ? rp.min : (rp.min ? rp.min + '\u2013' : 'up to ') + rp.max;
+    return '<div class="card"><h2>Reserves</h2>' +
+      '<p class="sub">' + esc(rp.text) + '</p>' +
+      '<div class="dplist"><div class="dphead">' + n + ' of ' + want + ' chosen</div>' + rows + '</div>' +
+      (mine ? '<div class="acts"><button class="act primary" data-act="rpickdone"' + (ok ? '' : ' disabled') + '>' +
+        '<span>' + (n ? 'Bring them on' : 'Keep them all back') + '</span>' +
+        '<small>' + (n ? 'Then choose where each one comes on' : 'They can come on in a later turn') + '</small></button></div>' : '') +
+      '</div>';
   }
 
   function loadingCard(side) {
@@ -4062,14 +4184,20 @@
 
   function wireHost(host) {
     if (!host) return;
+    // a tap on the shade around the reserves-and-transports modal puts it away
+    host.querySelectorAll('.cmodal[data-deploybox]').forEach(function (m) {
+      m.addEventListener('click', function (ev) { if (ev.target === m) { deployBox = false; render(); } });
+    });
     /* The load and unload buttons carry `data-load`/`data-unload` and no
        `data-act`, so selecting on `[data-act]` alone never bound them and
        nothing happened when they were pressed: troops could not be put aboard
        a hull, or taken off one, during deployment. All three are selected. */
-    host.querySelectorAll('[data-act], [data-load], [data-unload]').forEach(function (b) {
+    host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var a = b.getAttribute('data-act');
         if (SFX) SFX.click();
+        if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
+        if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }
         if (b.hasAttribute('data-load')) {
           var lv = byId(b.getAttribute('data-hull')), lu = byId(b.getAttribute('data-load'));
           loadBefore(lv, lu); render(); return;
@@ -4087,6 +4215,9 @@
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
+        else if (a === 'rpickdone') send({ k: 'rpickdone' });
+        else if (a === 'deploybox') { deployBox = true; render(); }
+        else if (a === 'deployboxdone') { deployBox = false; render(); }
         else if (a === 'start') startBattle();
         else if (a === 'restart') openMenu();
       });
@@ -5296,7 +5427,8 @@
      kind of force, and for rebels a card for each tactic with its rule in full.
      A pick goes through the selectors, so it rolls and checks as they do. */
   function armyText(v) {
-    var o = el('sel-faction') && Array.prototype.filter.call(el('sel-faction').options, function (x) { return x.value === v; })[0];
+    var sel = el('sel-faction');
+    var o = sel && sel.options ? Array.prototype.filter.call(sel.options, function (x) { return x.value === v; })[0] : null;
     var t = o ? o.textContent : v, cut = t.indexOf(' \u2014 ');
     return cut < 0 ? { name: t, what: '' } : { name: t.slice(0, cut), what: t.slice(cut + 3) };
   }
@@ -5364,12 +5496,12 @@
     backLabel(el('btn-setup-back'), setupGoesHome());
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
-    if (cwp && idp) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
+    if (cwp && idp && idp.appendChild && cwp.parentNode) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
     hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
     var tp = el('tierpl-field');
-    if (tp) {
+    if (tp && tp.parentNode && el('hot-sum') && el('hot-sum').parentNode) {
       if (!tierHome) tierHome = { parent: tp.parentNode, next: tp.nextSibling };
       if (hotQuick(kind) && step === 3) el('hot-sum').parentNode.insertBefore(tp, el('hot-sum'));
       else if (tp.nextSibling !== tierHome.next) tierHome.parent.insertBefore(tp, tierHome.next);
@@ -5584,15 +5716,16 @@
       VIEW_H = Math.max(260, Math.min(1400, Math.round(bh)));
     } else {
       var avail = wrap ? wrap.clientWidth - 12 : window.innerWidth - 380;
-      /* What is left of the window once the header, the action bar, the context
-         card and the terrain key have taken their share. */
-      var used = 380;
-      var top = wrap ? wrap.getBoundingClientRect().top : 120;
+      /* The table takes all the height there is: the window, less the header
+         above it and, under it, the hint line and the row of action buttons (the
+         unit's text is in the left rail now, and the log is not shown). */
+      var used = 151;
+      var top = wrap ? wrap.getBoundingClientRect().top + window.scrollY : 120;
       var room = Math.round(window.innerHeight - top - used);
       VIEW_W = Math.max(720, Math.min(2200, Math.round(avail)));
-      VIEW_H = Math.max(460, Math.min(1400, Math.max(room, Math.round(VIEW_W * 0.46))));
-      // never taller than it is wide: the projection is a wide diamond
-      VIEW_H = Math.min(VIEW_H, Math.round(VIEW_W * 0.72));
+      VIEW_H = Math.max(420, Math.min(1400, room));
+      // never much taller than it is wide: the projection is a wide diamond
+      VIEW_H = Math.min(VIEW_H, Math.round(VIEW_W * 0.9));
     }
     DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
     var bw2 = Math.round(VIEW_W * DPR), bh2 = Math.round(VIEW_H * DPR);
