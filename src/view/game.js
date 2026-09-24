@@ -4932,7 +4932,10 @@
     }
 
     var pts = el('pts');
-    pts.textContent = c.spent + ' / ' + c.budget + ' points';
+    // units a tactic or doctrine puts off the bill are named, or the sum looks wrong
+    pts.textContent = c.spent + ' / ' + c.budget + ' points' +
+      (c.free ? ' \u00b7 ' + c.free + ' unit' + (c.free === 1 ? '' : 's') + ' free' +
+        (tactic === 'wave' ? ' (Human Wave Attacks)' : '') : '');
     pts.classList.toggle('over', c.spent > c.budget);
 
     // the count at each Tier against its limits, on one line: I 1/0-8 · II 0/0-8 · …
