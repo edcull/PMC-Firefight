@@ -2077,7 +2077,7 @@
           if (!state) return;
           var f = 0.18 + (n / (steps - 1)) * 0.64;
           var x = from.x + (to.x - from.x) * f, y = from.y + (to.y - from.y) * f;
-          addFx({ kind: 'muzzle', x: x, y: y, dur: 180, blocking: true });
+          addFx({ kind: 'muzzle', x: x, y: y, rgb: hitRGB, dur: 180, blocking: true });
           /* The ground going up under it: rounds walking along the line, each
              throwing its own dirt, spread either side of the run. */
           addFx({ kind: 'impact', x: x, y: y, n: 3, rgb: hitRGB, dur: 320, blocking: true });

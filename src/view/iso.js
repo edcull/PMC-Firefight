@@ -5395,7 +5395,7 @@
       /* ...and it is alive: `SHIELD_PHASE` (one of SHIELD_PHASES, turned by the
          clock) breathes its light up and down, walks a band of brightness
          round the rim and lights a different few of its hexes each time. */
-      if (rank === 'beta' && !dead) {
+      if (rank === 'beta' && !dead && !CORPSE) {
         var sph = SHIELD_PHASE / SHIELD_PHASES, pulse = 0.75 + 0.25 * Math.sin(sph * Math.PI * 2);
         var dcx = 4, dcy = by - 9, drx = 19, dry = 27;
         E(dcx, dcy, drx, dry, 'rgba(140,210,255,' + (0.1 * pulse).toFixed(3) + ')');
@@ -5815,6 +5815,7 @@
   var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
   var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
   var WING_PHASES = 6, WING_PHASE = -1;
+  var CORPSE = false;                                  // painting a body: its deflector has gone out
   function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
   function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
   function nowT() { return root.performance ? performance.now() : 0; }
@@ -5851,7 +5852,7 @@
     if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
     // a Beta's deflector is baked in SHIELD_PHASES states, one for each beat of its light
-    var shieldy = shieldAnimated(kit);
+    var shieldy = shieldAnimated(kit) && !CORPSE;
     if (shieldy) SHIELD_PHASE = Math.floor(nowT() / 110) % SHIELD_PHASES;
     // a leader bug's brain beats slowly, about once in two seconds
     var thinking = brainy(kit);
@@ -5859,7 +5860,7 @@
     // a winged bug's wings beat, about four times a second, unless it has gone to ground
     var flapping = winged(kit) && pose !== 'prone';
     WING_PHASE = flapping ? (Math.floor(nowT() / 40) + i * 2) % WING_PHASES : -1;   // each bug at its own beat
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '');
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '') + (CORPSE ? '|corpse' : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -10420,7 +10421,8 @@
   function corpseSprite(side, art, mi) {
     var key = side + '|' + art + '|' + mi;
     if (corpses[key]) return corpses[key];
-    var src = sprite(side, art, mi, 'prone', 0, MODEL * fitScale(art, mi), 0);
+    CORPSE = true;
+    try { var src = sprite(side, art, mi, 'prone', 0, MODEL * fitScale(art, mi), 0); } finally { CORPSE = false; }
     var c = document.createElement('canvas');
     c.width = src.width; c.height = src.height;
     var g = c.getContext('2d');
@@ -10443,7 +10445,10 @@
   }
   function drawBody(g, sx, sy, b) {
     var c = corpseSprite(b.paint || b.side, b.art || 'rifle', b.mi || 0), rs = c.res || 1;
-    ellipse(g, sx + a(0.5), sy, a(2.6), a(1), 'rgba(58,20,14,.30)');
+    // what it bled: a man red, a bug its green ichor, a Crock the tribe's blue
+    var art0 = b.art || '', kit0 = KIT[(ROLES[art0] || [])[0]] || {};
+    var pool = kit0.bug ? 'rgba(92,150,40,.42)' : kit0.xeno ? 'rgba(60,130,220,.42)' : 'rgba(58,20,14,.30)';
+    ellipse(g, sx + a(0.5), sy, a(2.6), a(1), pool);
     var was = g.imageSmoothingEnabled;
     g.imageSmoothingEnabled = true;
     var bx = Math.round((sx - c.ox / rs) * rs) / rs, by = Math.round((sy - c.oy / rs) * rs) / rs;
