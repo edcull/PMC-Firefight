@@ -8054,36 +8054,45 @@
           /* bonnet, cab, and an open bed with low sides — laid down far to
              near, so whichever end faces the viewer is drawn over the other */
           var fwdP = cos + sin, nsP = nearSide();
+          /* On anything but wheels the bonnet has nowhere to go: the cab sits
+             right at the front of the hull, and the bed runs up behind it. */
+          var cabFwd = drive !== 'wheeled';
+          var cA0 = cabFwd ? L * 0.2 : -L * 0.1, cA1 = cabFwd ? L * 0.5 : L * 0.2, bedA1 = cabFwd ? L * 0.2 : -L * 0.1;
+          var cs = cA1 - L * 0.2;                          // how far the cab has moved forward
           var bonnet = function () {
+            if (cabFwd) {                                   // headlights on the cab's face instead
+              lights(HF, L * 0.5, -w * 0.62, z0 + H * 0.4); lights(HF, L * 0.5, w * 0.62, z0 + H * 0.4);
+              return;
+            }
             slabF(HF, L * 0.16, L * 0.5, -w * 0.92, w * 0.92, z0, H * 0.62, TB, L * 0.05, 0, w * 0.05);
             lights(HF, L * 0.5, -w * 0.62, z0 + H * 0.4); lights(HF, L * 0.5, w * 0.62, z0 + H * 0.4);
             if (fwdP > 0.02) { var grl = S3(HF(L * 0.5, 0), z0 + H * 0.35); sEllipse(grl[0], grl[1], 3, 1.6, STEEL); }
           };
           var cab = function () {
             // a drone has no one to sit in a cab: an armoured block the height of the bonnet instead
-            if (u.drone) { slabF(HF, -L * 0.1, L * 0.2, -w * 0.9, w * 0.9, z0, H * 0.7, TB, L * 0.04, 0, w * 0.06); return; }
-            slabF(HF, -L * 0.1, L * 0.2, -w, w, z0, H * 1.25, TB, L * 0.1, 0.02, w * 0.1);
+            if (u.drone) { slabF(HF, cA0, cA1, -w * 0.9, w * 0.9, z0, H * 0.7, TB, L * 0.04, 0, w * 0.06); return; }
+            slabF(HF, cA0, cA1, -w, w, z0, H * 1.25, TB, L * 0.1, 0.02, w * 0.1);
             if (fwdP > 0.02) {                              // the windscreen, only when the front faces us
-              var wsA = S3(HF(L * 0.19, -w * 0.8), z0 + H * 0.68), wsB = S3(HF(L * 0.19, w * 0.8), z0 + H * 0.68);
-              var wsC = S3(HF(L * 0.105, w * 0.72), z0 + H * 1.2), wsD = S3(HF(L * 0.105, -w * 0.72), z0 + H * 1.2);
+              var wsA = S3(HF(cs + L * 0.19, -w * 0.8), z0 + H * 0.68), wsB = S3(HF(cs + L * 0.19, w * 0.8), z0 + H * 0.68);
+              var wsC = S3(HF(cs + L * 0.105, w * 0.72), z0 + H * 1.2), wsD = S3(HF(cs + L * 0.105, -w * 0.72), z0 + H * 1.2);
               poly(g, [wsA, wsB, wsC, wsD], GLASS);
               edge(g, wsD, wsC, GLINT, 0.8);
             }
-            var sw1 = S3(HF(L * 0.14, nsP * w * 0.99), z0 + H * 0.72), sw2 = S3(HF(-L * 0.06, nsP * w * 0.99), z0 + H * 0.72);
-            var sw3 = S3(HF(-L * 0.06, nsP * w * 0.92), z0 + H * 1.12), sw4 = S3(HF(L * 0.1, nsP * w * 0.92), z0 + H * 1.12);
+            var sw1 = S3(HF(cs + L * 0.14, nsP * w * 0.99), z0 + H * 0.72), sw2 = S3(HF(cs - L * 0.06, nsP * w * 0.99), z0 + H * 0.72);
+            var sw3 = S3(HF(cs - L * 0.06, nsP * w * 0.92), z0 + H * 1.12), sw4 = S3(HF(cs + L * 0.1, nsP * w * 0.92), z0 + H * 1.12);
             poly(g, [sw1, sw2, sw3, sw4], GLASS);
           };
           var bed = function () {
-            slabF(HF, -L * 0.5, -L * 0.1, -w, w, z0, H * 0.45, TB, 0, 0, 0);
+            slabF(HF, -L * 0.5, bedA1, -w, w, z0, H * 0.45, TB, 0, 0, 0);
             var bz = z0 + H * 0.45;
             var walls = [
-              { d: -nsP * 1, fn: function () { slabF(HF, -L * 0.5, -L * 0.1, -nsP * w, -nsP * (w - 0.05), bz, H * 0.35, TB); } },
+              { d: -nsP * 1, fn: function () { slabF(HF, -L * 0.5, bedA1, -nsP * w, -nsP * (w - 0.05), bz, H * 0.35, TB); } },
               { d: -fwdP * L * 0.48, fn: function () { slabF(HF, -L * 0.5, -L * 0.46, -w, w, bz, H * 0.35, TB); } },
-              { d: nsP * 1, fn: function () { slabF(HF, -L * 0.5, -L * 0.1, nsP * (w - 0.05), nsP * w, bz, H * 0.35, TB); } }
+              { d: nsP * 1, fn: function () { slabF(HF, -L * 0.5, bedA1, nsP * (w - 0.05), nsP * w, bz, H * 0.35, TB); } }
             ];
             walls.sort(function (p, q) { return p.d - q.d; }).forEach(function (p) { p.fn(); });
           };
-          [{ t: L * 0.33, fn: bonnet }, { t: L * 0.05, fn: cab }, { t: -L * 0.3, fn: bed }]
+          [{ t: L * 0.33, fn: bonnet }, { t: (cA0 + cA1) / 2, fn: cab }, { t: (bedA1 - L * 0.5) / 2, fn: bed }]
             .sort(function (p, q) { return p.t * fwdP - q.t * fwdP; })
             .forEach(function (p) { p.fn(); });
           return;
@@ -9785,7 +9794,7 @@
       var back = -0.3, off = -spec.wid * 0.26;
       if (spec.fly) { back = 0.05; off = 0; }
       else if (legs) { back = -0.12; off = -spec.wid * 0.28; }
-      else if (body === 'pickup') { back = 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
+      else if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
       else if (body === 'guntruck') {
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
