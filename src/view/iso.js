@@ -5572,7 +5572,7 @@
         });
       } else if (kind === 'queen') {
         // the brain, swollen up out of the back of the head, and eggs on the abdomen
-        var bc = S(hd[0] - hd[2] * 0.6, 0, zs(hd[1]) + hr * 0.95), br = 0.34 * K;
+        var bc = S(hd[0] - hd[2] * 1.0, 0, zs(hd[1]) + hr * 1.35), br = 0.52 * K;
         add(Math.max(bc.d, hc.d) + 0.3, function () {
           // drawn as the brain bugs' brains are: glow, lobes, four folds, a shine
           var rx = br, ry = br * 0.9, cx = bc.x, cy = bc.y;

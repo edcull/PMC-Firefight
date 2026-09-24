@@ -53,7 +53,8 @@
     // a different army wears its own colour; a colour picked for this one stays while browsing it
     if (view.pickFac !== wasFac && ARMY_COLOUR[view.pickFac]) paint('A', ARMY_COLOUR[view.pickFac]);
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
-    if (p.cls === 'vehicle' && !R.alienHull(p)) view.prop = R.defaultDrive(p);
+    // an Overgrown Bug or a Xenotripod hull has no drive: its stats stand as printed
+    view.prop = R.defaultDrive(p);
   }
 
   /* The unit as the battle would build it: a profile plus the state the bench
@@ -1068,11 +1069,11 @@
   var FACTION_NAME = { pmc: 'PMC', rebel: 'Rebels', bugs: 'Space Bugs', xeno: 'Xenotripods' };
   function rulesHtml(p) {
     var mach = R.isMachine(p);
-    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', p.size], ['Move', p.move + '"'],
+    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', p.size], ['Move', p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '')],
       ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
       ['Def', p.def + (p.defPierced ? '/' + p.defPierced : '')], ['Asslt', p.assault],
       mach ? ['Str', p.str] : ['Mor', p.morale]];
-    if (p.turn != null) cols.push(['Turn', p.turn]);
+    // the turn cost rides with Movement, as the book prints it: 8 (1)
     var h = '<div class="vrules"><label>' + esc(FACTION_NAME[p.faction || 'pmc'] || '') + ' · ' +
       esc(p.group) + ' · ' + esc(p.code) + '</label>';
     h += '<table class="vtable"><tr>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') +

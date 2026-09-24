@@ -16917,7 +16917,7 @@
         });
       } else if (kind === 'queen') {
         // the brain, swollen up out of the back of the head, and eggs on the abdomen
-        var bc = S(hd[0] - hd[2] * 0.6, 0, zs(hd[1]) + hr * 0.95), br = 0.34 * K;
+        var bc = S(hd[0] - hd[2] * 1.0, 0, zs(hd[1]) + hr * 1.35), br = 0.52 * K;
         add(Math.max(bc.d, hc.d) + 0.3, function () {
           // drawn as the brain bugs' brains are: glow, lobes, four folds, a shine
           var rx = br, ry = br * 0.9, cx = bc.x, cy = bc.y;
@@ -35471,7 +35471,7 @@
       var s = R.splitPick(k), p = profile(s.key);
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
         esc(p.name) + ' <b>' + ROMAN[p.tier] + '</b></button>' +
-        (p.cls === 'vehicle' ? '<button class="drive" data-cycle="' + i + '">' +
+        (R.propsFor(p).length ? '<button class="drive" data-cycle="' + i + '">' +
           R.PROPULSION[s.prop || 'wheeled'].short + '</button>' : '') + '</span>';
     }).join('');
     h += '<div class="muster found-units">' + head +
@@ -35543,10 +35543,10 @@
   }
   function statLine(p) {
     if (p.cls === 'infantry') {
-      return 'Move ' + p.move + '" · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
+      return 'Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
         ' · Assault ' + p.assault + ' · Morale ' + p.morale;
     }
-    return 'Move ' + p.move + '" · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
+    return 'Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
       ' · Assault ' + p.assault + ' · Structure ' + p.str;
   }
 

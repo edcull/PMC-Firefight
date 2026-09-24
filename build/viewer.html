@@ -10477,7 +10477,7 @@
         });
       } else if (kind === 'queen') {
         // the brain, swollen up out of the back of the head, and eggs on the abdomen
-        var bc = S(hd[0] - hd[2] * 0.6, 0, zs(hd[1]) + hr * 0.95), br = 0.34 * K;
+        var bc = S(hd[0] - hd[2] * 1.0, 0, zs(hd[1]) + hr * 1.35), br = 0.52 * K;
         add(Math.max(bc.d, hc.d) + 0.3, function () {
           // drawn as the brain bugs' brains are: glow, lobes, four folds, a shine
           var rx = br, ry = br * 0.9, cx = bc.x, cy = bc.y;
@@ -16085,7 +16085,7 @@
     }
     function machine(p) { return p.cls === 'vehicle' || p.cls === 'aircraft'; }
     function stats(p) {
-      return kind(p) + ' · Tier ' + (R.ROMAN ? R.ROMAN[p.tier] : p.tier) + ' · Move ' + p.move + '" · FP ' + (p.fp == null ? '—' : p.fp) +
+      return kind(p) + ' · Tier ' + (R.ROMAN ? R.ROMAN[p.tier] : p.tier) + ' · Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · FP ' + (p.fp == null ? '—' : p.fp) +
         ' · Range ' + p.range + '" · Def ' + p.def + (p.str ? ' · Structure ' + p.str : ' · Models ' + p.size);
     }
     // what a search matches: the name, code and key, and whatever else the page adds (the viewer adds the weapons)
@@ -16364,7 +16364,8 @@
     // a different army wears its own colour; a colour picked for this one stays while browsing it
     if (view.pickFac !== wasFac && ARMY_COLOUR[view.pickFac]) paint('A', ARMY_COLOUR[view.pickFac]);
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
-    if (p.cls === 'vehicle' && !R.alienHull(p)) view.prop = R.defaultDrive(p);
+    // an Overgrown Bug or a Xenotripod hull has no drive: its stats stand as printed
+    view.prop = R.defaultDrive(p);
   }
 
   /* The unit as the battle would build it: a profile plus the state the bench
@@ -17379,11 +17380,11 @@
   var FACTION_NAME = { pmc: 'PMC', rebel: 'Rebels', bugs: 'Space Bugs', xeno: 'Xenotripods' };
   function rulesHtml(p) {
     var mach = R.isMachine(p);
-    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', p.size], ['Move', p.move + '"'],
+    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', p.size], ['Move', p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '')],
       ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
       ['Def', p.def + (p.defPierced ? '/' + p.defPierced : '')], ['Asslt', p.assault],
       mach ? ['Str', p.str] : ['Mor', p.morale]];
-    if (p.turn != null) cols.push(['Turn', p.turn]);
+    // the turn cost rides with Movement, as the book prints it: 8 (1)
     var h = '<div class="vrules"><label>' + esc(FACTION_NAME[p.faction || 'pmc'] || '') + ' · ' +
       esc(p.group) + ' · ' + esc(p.code) + '</label>';
     h += '<table class="vtable"><tr>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') +

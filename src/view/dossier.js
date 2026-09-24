@@ -631,7 +631,7 @@
       var s = R.splitPick(k), p = profile(s.key);
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
         esc(p.name) + ' <b>' + ROMAN[p.tier] + '</b></button>' +
-        (p.cls === 'vehicle' ? '<button class="drive" data-cycle="' + i + '">' +
+        (R.propsFor(p).length ? '<button class="drive" data-cycle="' + i + '">' +
           R.PROPULSION[s.prop || 'wheeled'].short + '</button>' : '') + '</span>';
     }).join('');
     h += '<div class="muster found-units">' + head +
@@ -703,10 +703,10 @@
   }
   function statLine(p) {
     if (p.cls === 'infantry') {
-      return 'Move ' + p.move + '" · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
+      return 'Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
         ' · Assault ' + p.assault + ' · Morale ' + p.morale;
     }
-    return 'Move ' + p.move + '" · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
+    return 'Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
       ' · Assault ' + p.assault + ' · Structure ' + p.str;
   }
 
