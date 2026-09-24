@@ -516,7 +516,7 @@ html { scroll-behavior: smooth; }
     gravbike: { name: 'Grav bike', smooth: true, def: -1,
       note: 'No movement penalties from terrain, but \u22121 Defence.' },
     horse: { name: 'Horse', linear: true, shotSP: 1,
-      note: 'Can cross linear terrain, but takes 1 extra Suppression point whenever it is hit by shooting.' }
+      note: 'Can cross linear terrain, but takes 1 extra Suppression point every time it is shot at.' }
   };
   // the mount a unit rides, if it has the Riders rule
   function mountOf(u) { return u && u.mount && hasOwn(u, 'Riders') ? MOUNTS[u.mount] || null : null; }
@@ -3108,7 +3108,7 @@ html { scroll-behavior: smooth; }
       }
       var supp = has(a, 'Suppressive Fire') && !aux && !basic && !steady;
       if (supp) res.sp += 2;
-      // a horse shies under fire: one more Suppression point (Appendix 3)
+      // a horse shies whenever it is shot at: one more Suppression point (Appendix 3)
       var mtS = mountOf(t);
       if (mtS && mtS.shotSP && !steady) { res.sp += mtS.shotSP; res.notes.push('Horse +' + mtS.shotSP + ' SP'); }
       // Highly Irritating Venom: a Spore or Flying Bug's suppression bites one more (p. 124)
@@ -3118,6 +3118,10 @@ html { scroll-behavior: smooth; }
       log.push({ t: 'hits', text: res.rolls.join(' · ') + burn + (supp ? ' · Suppressive Fire +2 SP' : '') +
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       applyResult(state, t, res, log, a);
+    } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
+      // a horse shies at being shot at, hit or not (Appendix 3)
+      applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);
+      log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
     }
     // who answered a MEDIC! on this volley, so the board can show them at work
     return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };

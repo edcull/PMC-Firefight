@@ -361,9 +361,10 @@ for (var hs = 0; hs < 300; hs++) {
   var gun = unit('rheavyac', { x: 10, y: 10 }), nag = mounted('horse', { x: 10, y: 20 });
   nag.side = 'B';
   var r0 = R.shoot(table([gun, nag]), gun, nag, 'fire', {});
-  if (r0.hits > 0) { struck++; if (r0.log.some(function (l) { return /Horse \+1 SP/.test(l.text); })) shied++; }
+  struck++;
+  if (r0.log.some(function (l) { return /Horse \+1 SP|Horses shy/.test(l.text); })) shied++;
 }
-ok('a horse takes 1 more SP whenever it is hit', struck > 0 && shied === struck, shied + ' of ' + struck + ' hit volleys');
+ok('a horse takes 1 more SP every time it is shot at', shied === struck, shied + ' of ' + struck + ' volleys');
 
 var fan = R.applyRiders(unit('rfanatics'), true);
 ok('the Riders upgrade halves the unit', fan.size === 3, '6 models became ' + fan.size);

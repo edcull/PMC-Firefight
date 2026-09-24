@@ -145,7 +145,7 @@
     'Riders':
       'Mounted: always moves Movement +4", but loses 2" for rough ground, cannot cross walls or enter buildings, ' +
       'and never rides in a transport. What it rides changes that: a motorbike may be carried but loses 6" to rough ground, ' +
-      'a grav bike ignores the ground at \u22121 Defence, and a horse jumps walls but takes 1 more SP when hit.',
+      'a grav bike ignores the ground at \u22121 Defence, and a horse jumps walls but takes 1 more SP every time it is shot at.',
     'Sappers':
       'Breach: carry charges against any wall or building, +4, bringing it down on a final 15+ or an unmodified 9 ' +
       '(a failed attempt falls back 2"). In the first round of an assault on a unit in cover they get +4, and the ' +

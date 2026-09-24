@@ -2419,7 +2419,7 @@
     gravbike: { name: 'Grav bike', smooth: true, def: -1,
       note: 'No movement penalties from terrain, but \u22121 Defence.' },
     horse: { name: 'Horse', linear: true, shotSP: 1,
-      note: 'Can cross linear terrain, but takes 1 extra Suppression point whenever it is hit by shooting.' }
+      note: 'Can cross linear terrain, but takes 1 extra Suppression point every time it is shot at.' }
   };
   // the mount a unit rides, if it has the Riders rule
   function mountOf(u) { return u && u.mount && hasOwn(u, 'Riders') ? MOUNTS[u.mount] || null : null; }
@@ -5011,7 +5011,7 @@
       }
       var supp = has(a, 'Suppressive Fire') && !aux && !basic && !steady;
       if (supp) res.sp += 2;
-      // a horse shies under fire: one more Suppression point (Appendix 3)
+      // a horse shies whenever it is shot at: one more Suppression point (Appendix 3)
       var mtS = mountOf(t);
       if (mtS && mtS.shotSP && !steady) { res.sp += mtS.shotSP; res.notes.push('Horse +' + mtS.shotSP + ' SP'); }
       // Highly Irritating Venom: a Spore or Flying Bug's suppression bites one more (p. 124)
@@ -5021,6 +5021,10 @@
       log.push({ t: 'hits', text: res.rolls.join(' · ') + burn + (supp ? ' · Suppressive Fire +2 SP' : '') +
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       applyResult(state, t, res, log, a);
+    } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
+      // a horse shies at being shot at, hit or not (Appendix 3)
+      applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);
+      log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
     }
     // who answered a MEDIC! on this volley, so the board can show them at work
     return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
@@ -5994,7 +5998,7 @@
     'Riders':
       'Mounted: always moves Movement +4", but loses 2" for rough ground, cannot cross walls or enter buildings, ' +
       'and never rides in a transport. What it rides changes that: a motorbike may be carried but loses 6" to rough ground, ' +
-      'a grav bike ignores the ground at \u22121 Defence, and a horse jumps walls but takes 1 more SP when hit.',
+      'a grav bike ignores the ground at \u22121 Defence, and a horse jumps walls but takes 1 more SP every time it is shot at.',
     'Sappers':
       'Breach: carry charges against any wall or building, +4, bringing it down on a final 15+ or an unmodified 9 ' +
       '(a failed attempt falls back 2"). In the first round of an assault on a unit in cover they get +4, and the ' +
@@ -33342,7 +33346,7 @@
         '" title="Drone Control: +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
         : '';
       var mnt = R.canMount(p, pick.riders)
-        ? '<select class="drive" data-mount="' + i + '" title="What they ride: a motorbike can go in a transport but bogs down in rough ground; a grav bike ignores the ground at \u22121 Defence; a horse jumps walls but takes 1 more SP when hit">' +
+        ? '<select class="drive" data-mount="' + i + '" title="What they ride: a motorbike can go in a transport but bogs down in rough ground; a grav bike ignores the ground at \u22121 Defence; a horse jumps walls but takes 1 more SP whenever it is shot at">' +
         R.MOUNT_ORDER.map(function (m) {
           return '<option value="' + m + '"' + ((pick.mount || 'bike') === m ? ' selected' : '') + '>' + R.MOUNTS[m].name + '</option>';
         }).join('') + '</select>'
