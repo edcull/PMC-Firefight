@@ -8580,6 +8580,11 @@
             body = function () {
               roundTurret(TR, 9);
               cupola(-TR * 0.12, -TR * 0.18, tz + 9);
+              if (tw === 'recon') {
+                // the recon turret's cupola is its sight: the marker laser and the keen eye both look out of it
+                var cpm = S3(TF(-TR * 0.12, -TR * 0.18), tz + 11);
+                mount('nose', cpm); mount('scan', cpm);
+              }
               smokeRack(TR, tz + 6);
               if (st.tMissiles) launcher(TF, -TR * 0.35, TR * 0.2, -TR * 0.74, -TR * 0.5, tz + 3, 6, 2, 2, 'missile', { warheads: '#6a5a3a' });
               if (tw === 'recon') {
