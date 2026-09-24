@@ -21298,6 +21298,28 @@
       /* ---- on top: a heavy's missile boxes, a medium's crest, a light's head ---- */
       function drawTop() {
         extras();
+        /* A medium or heavy walker drone carries its sensor dome on its right
+           shoulder pad and the aerial on its left (a light one's dome takes its
+           head, below). */
+        if (u.drone && !dead && !light) {
+          var pad = tW * (heavy ? 1.42 : 1.14), pz = shoulder + (heavy ? 3 : 0);
+          var dc2 = S3(TF(-tL * 0.1, pad), pz), dr6 = Math.max(4, 6 * sf);
+          var kit = function () {
+            sEllipse(dc2[0], dc2[1] + dr6 * 0.15, dr6 * 1.2, dr6 * 0.6, '#14171c');
+            sEllipse(dc2[0], dc2[1] - dr6 * 0.35, dr6, dr6 * 0.85, '#aeb8c2');
+            sEllipse(dc2[0], dc2[1] - dr6 * 0.05, dr6, dr6 * 0.42, '#7d8894');
+            sEllipse(dc2[0] - dr6 * 0.35, dc2[1] - dr6 * 0.7, dr6 * 0.35, dr6 * 0.25, 'rgba(255,255,255,.75)');
+            sEllipse(dc2[0] + dr6 * 0.2, dc2[1] - dr6 * 0.25, dr6 * 0.28, dr6 * 0.2, '#2a6f9a');
+          };
+          var mast = function () {
+            var ab2 = S3(TF(-tL * 0.4, -pad), pz), at6 = S3(TF(-tL * 0.52, -pad), pz + Math.round(20 * sf));
+            sEllipse(ab2[0], ab2[1], 2, 1.2, STEEL);
+            line(ab2, at6, 1.4, STEEL_LIT);
+            sEllipse(at6[0], at6[1], 1.6, 1.6, '#ff5040');
+          };
+          // the far one first, so the near one is drawn over it
+          if (nearOf(1) > 0) { mast(); kit(); } else { kit(); mast(); }
+        }
         if (heavy) {
           // a low cowl where the head is sunk into the chest
           slabF(TF, -tL * 0.1, tL * 0.46, -tW * 0.3, tW * 0.3, shoulder - 1, Math.round(3 * sf), TB, tL * 0.2, tL * 0.05, tW * 0.06);
@@ -21485,11 +21507,6 @@
       var body = spec.style && spec.style.body, legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
       if (spec.fly) return along(spec.len * 0.05, 0);
       if (legs) return along(-spec.len * 0.12, spec.wid * 0.3);
-      if (body === 'pickup') return along(spec.len * (driveOf(u) !== 'wheeled' ? 0.35 : 0.05), -spec.wid * 0.22);
-      if (body === 'guntruck') {
-        var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
-        return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
-      }
       var carS = spec.style && spec.style.body === 'car';
       return along(-spec.len * (carS ? 0.34 : 0.42), -spec.wid * (carS ? 0.26 : 0.34));
     }
@@ -21497,7 +21514,7 @@
     function droneKit(only) {
       var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
       var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
-      if (legs && mechClass() === 'light') return;          // drawn in place of its head, with the mech
+      if (legs) return;                                      // a walker carries its own, on its shoulders
       var body = spec.style && spec.style.body;
       /* The dome: on a hull's roof off to one side, clear of a turret; on a
          pickup or gun truck, to one side of the flat plate where its cab used to
@@ -21514,11 +21531,6 @@
       // a craft's back is measured from where it flies, not from a ground hull's ride height
       if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
-      else if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
-      else if (body === 'guntruck') {
-        var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
-        back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
-      }
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
       var r = Math.max(3, K * 0.16), cy = dp.y - y5;
       if (only !== 'aerial') {
