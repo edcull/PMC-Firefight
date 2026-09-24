@@ -412,7 +412,7 @@
     u.riders = true;
     u.size = Math.max(1, Math.round(u.size / 2));
     u.models = Math.min(u.models, u.size);
-    u.move += 4;                                     // mounted: Movement +4" (p. 94)
+    u.move = 10;
     if (u.rules.indexOf('Riders') < 0) u.rules = u.rules.concat(['Riders']);
     return u;
   }
