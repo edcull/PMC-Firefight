@@ -48,6 +48,8 @@
     color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
   }
   .vhome:hover, .vhome:focus-visible { color: var(--ink); border-color: var(--alpha); }
+  .vhome svg { width: 17px; height: 17px; display: block; }
+  @media (pointer: coarse) { .vhome svg { width: 19px; height: 19px; } }
   @media (pointer: coarse) { .vhome { padding: 9px 12px; font-size: 12px; } }
   /* a phone's way into the unit list, which there is a sidebar */
   .vunits, .vclose, .vscrim { display: none; }
@@ -376,7 +378,7 @@
 </style>
 
 <header>
-  <a class="vhome" id="vhome" href="index.html" title="Back to the game's main menu" aria-label="Back to the game's main menu">← Back</a>
+  <a class="vhome" id="vhome" href="index.html" title="The game's main menu" aria-label="The game's main menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg></a>
   <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>

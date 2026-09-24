@@ -482,7 +482,7 @@
   .muster-head b { font-family: var(--display); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
   .pts { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
   .pts.over { color: var(--bad); }
-  .limits { margin: 0 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+  .limits { margin: 0 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .limits b { color: var(--ink-dim); font-weight: 500; }
   .limits b.short { color: var(--warn); }
   .chosen { display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; }
@@ -629,6 +629,10 @@
   }
   .camp-back:hover, .camp-back:focus-visible { color: var(--ink); border-color: var(--alpha); }
   @media (pointer: coarse) { .camp-back { padding: 9px 12px; font-size: 12px; } }
+  /* where it goes to the main menu, the button is a home icon */
+  .camp-back.home { display: inline-grid; place-items: center; padding: 5px 9px; }
+  .camp-back.home svg { width: 17px; height: 17px; display: block; }
+  @media (pointer: coarse) { .camp-back.home { padding: 8px 12px; } .camp-back.home svg { width: 19px; height: 19px; } }
   #camp.overlay > #camp-body.sheet {
     flex: 1; min-height: 0; width: 100%; max-width: none; max-height: none; overflow-y: auto; overscroll-behavior: contain;
     border: 0; border-radius: 0; background: transparent; -webkit-overflow-scrolling: touch;
@@ -741,13 +745,17 @@
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
   .forcebar-wrap, .forcebar-box { display: contents; }
-  #setup[data-quick] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
+  #setup[data-quick] .demo-btns { display: flex; gap: 6px; margin: 9px 0 0; }
   #setup[data-quick] .demo-btns .lnk { flex: 1; }
   #setup[data-quick] .demo-btns .ico { display: grid; place-items: center; padding: 6px 0; min-height: 36px; }
   #setup[data-quick] .demo-btns .ico svg { width: 20px; height: 20px; }
   /* the add button sits in the row of icons; the army type needs no label over it */
   #setup[data-quick] .cat-add { display: none !important; }
-  #setup[data-quick] label[for="sel-faction"] { display: none; }
+  #setup .army-line { display: none; }
+  #setup[data-quick]:not([data-hot="3"]) .army-line { display: flex; margin-bottom: 14px; }
+  #setup[data-quick] #faction-field, #setup[data-quick] #tactic-field { display: none !important; }
+  #army-tactics h4 { font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 14px 0 7px; }
+  #army-tactics .docpick { margin-bottom: 0; }
   #setup[data-quick] .forcebar-wrap { display: none; }
   #setup[data-quick] .forcebar-wrap.open {
     display: grid; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; background: rgba(8, 11, 16, .78);
@@ -1643,7 +1651,19 @@
         </div>
       </div>
     </div>
-    <div class="field hot-force">
+    <!-- against the AI (and in a demo) the army, and a rebel force's tactic, are picked in a modal from this line -->
+    <button type="button" class="archline army-line hot-force" id="btn-army"><span id="army-line-text"></span><em>change</em></button>
+    <div class="cmodal" id="army-modal" hidden>
+      <div class="cmodal-box" role="dialog" aria-modal="true" aria-label="Army">
+        <h3>Army</h3>
+        <div class="cmodal-scroll">
+          <div class="docpick" id="army-pick"></div>
+          <div id="army-tactics"></div>
+        </div>
+        <div class="askrow"><button type="button" class="start" id="btn-army-done">Done</button></div>
+      </div>
+    </div>
+    <div class="field hot-force" id="faction-field">
       <label for="sel-faction">Your force</label>
       <select id="sel-faction">
         <option value="pmc" selected>PMC — a private military company under contract</option>
