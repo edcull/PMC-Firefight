@@ -923,7 +923,7 @@
   /* how far a force is from its next Company Tier */
   .cprom { margin-top: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; background: rgba(255,255,255,.015); }
   .cprom.ready { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); background: color-mix(in srgb, var(--good) 7%, transparent); }
-  .cprom.done { opacity: .75; }
+  .cprom.done > .cprom-head { opacity: .75; }
   .cprom-head { display: flex; align-items: baseline; gap: 10px; }
   .cprom-head b { font-family: var(--display); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
   .cprom-count { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); }
@@ -944,7 +944,7 @@
   .cprom-row { display: flex; gap: 6px; align-items: stretch; }
   .cprom-row .cprom-go { flex: 1 1 auto; width: auto; margin: 0; }
   .cprom-row .cprom-quit { flex: none; margin: 0; }
-  .cprom.done .cprom-row { margin-top: 8px; justify-content: flex-end; }
+  .cprom.done .cprom-row { margin-top: auto; padding-top: 10px; }
 
   /* what a unit is carrying, on the button that puts it in the list */
   .wear { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
@@ -2079,5 +2079,5 @@
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
 <script src="src/view/game.js?v=000f9e6206"></script>
-<script src="src/view/dossier.js?v=6cccf215c9"></script>
+<script src="src/view/dossier.js?v=944198f2ac"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

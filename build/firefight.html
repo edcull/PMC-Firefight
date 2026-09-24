@@ -923,7 +923,7 @@
   /* how far a force is from its next Company Tier */
   .cprom { margin-top: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; background: rgba(255,255,255,.015); }
   .cprom.ready { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); background: color-mix(in srgb, var(--good) 7%, transparent); }
-  .cprom.done { opacity: .75; }
+  .cprom.done > .cprom-head { opacity: .75; }
   .cprom-head { display: flex; align-items: baseline; gap: 10px; }
   .cprom-head b { font-family: var(--display); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
   .cprom-count { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); }
@@ -944,7 +944,7 @@
   .cprom-row { display: flex; gap: 6px; align-items: stretch; }
   .cprom-row .cprom-go { flex: 1 1 auto; width: auto; margin: 0; }
   .cprom-row .cprom-quit { flex: none; margin: 0; }
-  .cprom.done .cprom-row { margin-top: 8px; justify-content: flex-end; }
+  .cprom.done .cprom-row { margin-top: auto; padding-top: 10px; }
 
   /* what a unit is carrying, on the button that puts it in the list */
   .wear { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
@@ -36855,12 +36855,6 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
-    // Tier V: one change every five battles (p. 87)
-    if (co.tier >= 5) {
-      var sw = C.canSwapDoctrine(co);
-      h += '<button class="lnk" data-go="doctrine" data-side="' + side + '" data-swap="1"' + (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') +
-        '>Change a ' + C.creedOf(co).one + (sw.ok ? '' : ' — ' + esc(sw.why)) + '</button> ';
-    }
     h += promotionPanel(co, side, !!bar);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
@@ -36884,9 +36878,16 @@
     // on the hub, giving the whole thing up sits on the same line (and asks first)
     var quit = hub ? '<button class="lnk warn cprom-quit" data-go="wipe">Abandon</button>' : '';
     if (pp.top) {
+      /* Tier V: in place of a promotion, one change of doctrine every five
+         battles (p. 87) — where the promote button would be */
+      var sw = C.canSwapDoctrine(co);
+      var swap = '<button class="start cprom-go" data-go="doctrine" data-side="' + side + '" data-swap="1"' +
+        (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') + '>' +
+        (sw.due != null ? 'Reselect in ' + (sw.due - co.record.battles) + ' battle' + (sw.due - co.record.battles === 1 ? '' : 's')
+          : 'Reselect a ' + C.creedOf(co).one) + '</button>';
       return '<div class="cprom done"><div class="cprom-head"><b>Tier V</b>' +
         '<span class="mk">as high as a ' + kind + ' goes</span></div>' +
-        (quit ? '<div class="cprom-row">' + quit + '</div>' : '') + '</div>';
+        '<div class="cprom-row">' + swap + quit + '</div></div>';
     }
     var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + '">';
     h += '<div class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +

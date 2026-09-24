@@ -419,12 +419,6 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
-    // Tier V: one change every five battles (p. 87)
-    if (co.tier >= 5) {
-      var sw = C.canSwapDoctrine(co);
-      h += '<button class="lnk" data-go="doctrine" data-side="' + side + '" data-swap="1"' + (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') +
-        '>Change a ' + C.creedOf(co).one + (sw.ok ? '' : ' — ' + esc(sw.why)) + '</button> ';
-    }
     h += promotionPanel(co, side, !!bar);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
@@ -448,9 +442,16 @@
     // on the hub, giving the whole thing up sits on the same line (and asks first)
     var quit = hub ? '<button class="lnk warn cprom-quit" data-go="wipe">Abandon</button>' : '';
     if (pp.top) {
+      /* Tier V: in place of a promotion, one change of doctrine every five
+         battles (p. 87) — where the promote button would be */
+      var sw = C.canSwapDoctrine(co);
+      var swap = '<button class="start cprom-go" data-go="doctrine" data-side="' + side + '" data-swap="1"' +
+        (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') + '>' +
+        (sw.due != null ? 'Reselect in ' + (sw.due - co.record.battles) + ' battle' + (sw.due - co.record.battles === 1 ? '' : 's')
+          : 'Reselect a ' + C.creedOf(co).one) + '</button>';
       return '<div class="cprom done"><div class="cprom-head"><b>Tier V</b>' +
         '<span class="mk">as high as a ' + kind + ' goes</span></div>' +
-        (quit ? '<div class="cprom-row">' + quit + '</div>' : '') + '</div>';
+        '<div class="cprom-row">' + swap + quit + '</div></div>';
     }
     var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + '">';
     h += '<div class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +
