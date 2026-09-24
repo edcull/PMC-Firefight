@@ -3666,7 +3666,9 @@
       stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
       stat('SP', u.sp) + '</div>';
     h += honourChips(u);
-    h += ruleChips(u, R.terrainOf(state, u) !== 'open');
+    // a rider's mount, before its rules, the way a hull's drive is shown
+    var mt = R.mountOf(u);
+    h += ruleChips(u, R.terrainOf(state, u) !== 'open', mt ? [{ name: mt.name, text: mt.note }] : null);
     fillStats(box, h);
   }
   /* The stats are redrawn with every render, and in a demo that is every
@@ -4985,7 +4987,7 @@
         '" title="Drone Control: +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
         : '';
       var mnt = R.canMount(p, pick.riders)
-        ? '<select class="drive" data-mount="' + i + '" title="What they ride — the models only; the rules are the same">' +
+        ? '<select class="drive" data-mount="' + i + '" title="What they ride: a motorbike can go in a transport but bogs down in rough ground; a grav bike ignores the ground at \u22121 Defence; a horse jumps walls but takes 1 more SP when hit">' +
         R.MOUNT_ORDER.map(function (m) {
           return '<option value="' + m + '"' + ((pick.mount || 'bike') === m ? ' selected' : '') + '>' + R.MOUNTS[m].name + '</option>';
         }).join('') + '</select>'

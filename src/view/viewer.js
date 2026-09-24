@@ -1077,6 +1077,9 @@
     if (pr) R.applyPropulsion(u, pr.key);
     // the Riders upgrade (p. 93): half the models, mounted, Movement 10" and the Riders rule
     if (R.canRide(p) && view.ride === 'mounted') R.applyRiders(u, true);
+    // what it rides (Appendix 3): a grav bike costs a point of Defence
+    var mt = R.canMount(p, R.canRide(p) && view.ride === 'mounted') ? R.MOUNTS[view.mount || 'bike'] : null;
+    if (mt) R.applyMount(u, view.mount || 'bike');
     function mod(v, was, txt) {
       return v === was ? { t: txt } : { t: txt, mod: true, was: was };
     }
@@ -1101,6 +1104,7 @@
     var TXT = root.PMCRuleText;
     if (!u.rules.length && !pr) h += '<p class="vrule">No special rules.</p>';
     if (pr) h += '<div class="vrule"><b>Propulsion: ' + esc(pr.name) + '</b><p>' + esc(pr.note) + '</p></div>';
+    if (mt) h += '<div class="vrule"><b>Mount: ' + esc(mt.name) + '</b><p>' + esc(mt.note) + '</p></div>';
     u.rules.forEach(function (r) {
       var d = TXT ? TXT.describe(r) : { name: r, text: '' };
       var tip = d.text && root.PMCTips ? ' ' + root.PMCTips.attr(d.name, d.text) : '';

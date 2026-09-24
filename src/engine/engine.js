@@ -344,7 +344,7 @@
         }
         var u = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, entry, pick.riders);
         if (R.has(u, 'Turret')) u.drone = true;             // a lone shield turret is Drone Controlled too
-        if (R.canMount(prof, pick.riders)) u.mount = pick.mount || 'bike';
+        if (R.canMount(prof, pick.riders)) R.applyMount(u, pick.mount || 'bike');   // what it rides, and what that costs
         u.startSize = u.models;
         // in a cooperative game each player has a commando of their own
         if (state.solo && side === 'A') {
@@ -4387,7 +4387,7 @@
   function boardableFor(veh) {
     return state.units.filter(function (u) {
       return u.side === veh.side && u.alive && u.cls === 'infantry' && !u.aboard &&
-        !R.has(u, 'Riders') && !R.has(u, 'Stationary Artillery') && u !== veh;
+        !(R.has(u, 'Riders') && !(R.mountOf(u) && R.mountOf(u).transport)) && !R.has(u, 'Stationary Artillery') && u !== veh;
     });
   }
 

@@ -508,7 +508,26 @@ html { scroll-behavior: smooth; }
   /* "lcv:tracked", "lcv:tracked:drone" or "rfanatics:riders" -> { key, prop, drone, riders } */
   /* What a mounted unit rides (p. 93 says "bikes and beasts"): it changes the
      models on the table and nothing in the rules. */
-  var MOUNTS = { bike: { name: 'Bike' }, gravbike: { name: 'Grav bike' }, horse: { name: 'Horse' } };
+  /* What a rider sits on (Appendix 3, pp. 166-167): each trades one of the
+     Riders restrictions for a cost of its own. */
+  var MOUNTS = {
+    bike: { name: 'Motorbike', transport: true, rough: 6,
+      note: 'Can be carried in a transport, but loses 6" crossing difficult terrain.' },
+    gravbike: { name: 'Grav bike', smooth: true, def: -1,
+      note: 'No movement penalties from terrain, but \u22121 Defence.' },
+    horse: { name: 'Horse', linear: true, shotSP: 1,
+      note: 'Can cross linear terrain, but takes 1 extra Suppression point whenever it is hit by shooting.' }
+  };
+  // the mount a unit rides, if it has the Riders rule
+  function mountOf(u) { return u && u.mount && hasOwn(u, 'Riders') ? MOUNTS[u.mount] || null : null; }
+  // fold a mount's stat change into a freshly built unit
+  function applyMount(u, mount) {
+    var m = MOUNTS[mount];
+    if (!m || u.rules.indexOf('Riders') < 0) return u;
+    u.mount = mount;
+    if (m.def) { u.def = Math.max(1, u.def + m.def); if (u.defPierced) u.defPierced = Math.max(1, u.defPierced + m.def); }
+    return u;
+  }
   var MOUNT_ORDER = ['bike', 'gravbike', 'horse'];
   // a unit that rides: the Mounted Warriors always, the Riders upgrade when taken
   function canMount(p, riders) { return !!p && (p.group === 'Mounted Warriors' || (!!riders && !!p.ridersUpgrade)); }
@@ -2373,8 +2392,8 @@ html { scroll-behavior: smooth; }
     if (isMachine(u)) return false;
     // a Rapid insertion platform is loaded before the battle and never again (p. 79)
     if (hasOwn(veh, 'Immobile')) return false;
-    // Riders never ride in anything: the mounts do not fit (p. 94)
-    if (hasOwn(u, 'Riders')) return false;
+    // Riders never ride in anything: the mounts do not fit (p. 94) — bar a motorbike (Appendix 3)
+    if (hasOwn(u, 'Riders') && !(mountOf(u) && mountOf(u).transport)) return false;
     /* An emplaced gun is towed rather than carried, and a hull with a gun on the
        hook has no room for troops (p. 94). */
     var towing = (veh.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); });
@@ -3089,6 +3108,9 @@ html { scroll-behavior: smooth; }
       }
       var supp = has(a, 'Suppressive Fire') && !aux && !basic && !steady;
       if (supp) res.sp += 2;
+      // a horse shies under fire: one more Suppression point (Appendix 3)
+      var mtS = mountOf(t);
+      if (mtS && mtS.shotSP && !steady) { res.sp += mtS.shotSP; res.notes.push('Horse +' + mtS.shotSP + ' SP'); }
       // Highly Irritating Venom: a Spore or Flying Bug's suppression bites one more (p. 124)
       if (res.sp > 0 && !aux && bugRanged(a) && doctrine(state, a.side, 'BC4') && !campFlag(t, 'shielding')) {
         res.sp += 1; res.notes.push('Highly Irritating Venom +1 SP');
@@ -3428,7 +3450,12 @@ html { scroll-behavior: smooth; }
     // Riders (p. 94) lose 2" to rough going where a man on foot loses 1"
     // barbed wire: the extra D6" rolled before the move (p. 42), whatever is crossing
     if (t.wire) return u.wireRoll || 6;
-    if (!heavy && hasOwn(u, 'Riders')) return t.movePenalty * 2;
+    if (!heavy && hasOwn(u, 'Riders')) {
+      var mt = mountOf(u);
+      if (mt && mt.smooth) return 0;                         // a grav bike skims it
+      if (mt && mt.rough && t.movePenalty && !t.linear) return mt.rough;   // a motorbike bogs down in rough ground
+      return t.movePenalty * 2;
+    }
     return t.movePenalty * (heavy ? 2 : 1);
   }
   function terrainBars(u, kind) {
@@ -3438,7 +3465,9 @@ html { scroll-behavior: smooth; }
        beasts and grav sleds go around. */
     if (hasOwn(u, 'Riders')) {
       if (kind === 'building' || kind === 'bunker' || kind === 'burning') return true;
-      if (TERRAIN[kind].destructible === 'linear') return true;
+      // ...nor cross a wall, unless it rides a horse, which jumps it (Appendix 3)
+      var mtL = mountOf(u);
+      if (TERRAIN[kind].destructible === 'linear' && !(mtL && mtL.linear)) return true;
     }
     // a vehicle cannot enter a building or cross a high wall either
     if (u.cls === 'vehicle' && (kind === 'building' || kind === 'bunker' || kind === 'burning')) return true;
@@ -3903,7 +3932,7 @@ html { scroll-behavior: smooth; }
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
-    applyDrone: applyDrone, canBeDrone: canBeDrone, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount,
+    applyDrone: applyDrone, canBeDrone: canBeDrone, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion,
