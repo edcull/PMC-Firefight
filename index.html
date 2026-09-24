@@ -709,17 +709,45 @@
   /* a battle against the AI is set up the same way, the player naming and colouring their own force */
   #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
   #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
-  #btn-quick-clear { display: none; }
+  #setup:not([data-kind="ai"]) #btn-quick-clear { display: none !important; }
   /* ...and a force's colours sit under its name, with no hint: who takes which is plain on the battlefield step */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
-  #setup[data-hot] .hot-name .hot-colour { margin: 0; }
+  #setup[data-hot] .hot-name { position: relative; }
+  #setup[data-hot] .hot-name .hot-colour { display: none; margin: 0; }
+  #setup[data-hot] .hot-name .hot-colour.open {
+    display: block; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  }
+  /* the same on founding a campaign's force */
+  .found-id { position: relative; }
+  .found-pop {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  }
+  .found-pop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
+  .name-row { display: flex; gap: 8px; }
+  .name-row .tin { flex: 1; min-width: 0; }
+  .chip-btn {
+    flex: none; width: 48px; padding: 3px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2);
+  }
+  .chip-btn span { display: block; height: 100%; min-height: 28px; border-radius: 3px; }
+  .chip-btn:hover, .chip-btn:focus-visible, .chip-btn[aria-expanded="true"] { border-color: var(--ink); }
+  #setup[data-hot="2"][data-kind="coop"] #btn-colour-pop { display: none; }
   #setup[data-hot] #colour-hint { display: none; }
-  #setup[data-kind="ai"] #btn-quick-clear { display: inline-block; }
+  #setup[data-kind="ai"] #btn-quick-clear { display: grid; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
   .forcebar-wrap, .forcebar-box { display: contents; }
   #setup[data-quick] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
   #setup[data-quick] .demo-btns .lnk { flex: 1; }
+  #setup[data-quick] .demo-btns .ico { display: grid; place-items: center; padding: 6px 0; min-height: 36px; }
+  #setup[data-quick] .demo-btns .ico svg { width: 20px; height: 20px; }
+  /* the add button sits in the row of icons; the army type needs no label over it */
+  #setup[data-quick] .cat-add { display: none !important; }
+  #setup[data-quick] label[for="sel-faction"] { display: none; }
   #setup[data-quick] .forcebar-wrap { display: none; }
   #setup[data-quick] .forcebar-wrap.open {
     display: grid; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; background: rgba(8, 11, 16, .78);
@@ -731,6 +759,16 @@
   #setup[data-quick] .forcebar-wrap.open .demo-only { display: flex; }
   #setup[data-quick] .forcebar-wrap.open h3.demo-only { display: block; font-family: var(--display); font-size: 15px; margin: 0 0 8px; }
   #setup[data-quick] .forcebar-wrap.open .forcebar { margin-top: 0; padding-top: 0; border-top: 0; }
+  /* against the AI (and in a demo) a force's screen fits the page: the units box takes the room left, and only the units picked scroll */
+  #setup[data-quick]:not([data-hot="3"]) > .sheet { display: flex; flex-direction: column; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > * { flex: none; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > .muster.hot-force:not(.picking) {
+    flex: 1 1 auto; min-height: 150px; display: flex; flex-direction: column;
+  }
+  #setup[data-quick] .muster.hot-force:not(.picking) > * { flex: none; }
+  #setup[data-quick] .muster.hot-force:not(.picking) > #chosen {
+    flex: 1 1 0; min-height: 34px; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start;
+  }
   /* the units to pick from, in a modal over the force: what is picked above, the list under it, Done */
   #setup .cat-add, #setup .cat-done, .cat-back { display: none; }
   #setup[data-hot="1"] .cat-add, #setup[data-hot="2"] .cat-add { display: inline-block; margin: 2px 0 4px; }
@@ -1598,7 +1636,11 @@
     <div class="muster foundid hot-only hot-name">
       <div class="field">
         <label for="hot-name" id="hot-name-label">Company name</label>
-        <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+        <!-- the colour picked, left of the name: tap it for the colours -->
+        <div class="name-row">
+          <button type="button" class="chip-btn" id="btn-colour-pop" aria-expanded="false" title="Colours"><span id="colour-btn-chip"></span></button>
+          <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+        </div>
       </div>
     </div>
     <div class="field hot-force">
@@ -1658,9 +1700,11 @@
       </div>
       <!-- a demo force: rolled again, or loaded and saved from a list of its own -->
       <div class="demo-btns">
-        <button type="button" class="lnk" id="btn-demo-roll">Random force</button>
-        <button type="button" class="lnk" id="btn-quick-clear">Clear</button>
-        <button type="button" class="lnk" id="btn-demo-saves">Load / save…</button>
+        <!-- one row of icons: add units, a random force, clear, load or save -->
+        <button type="button" class="lnk ico" id="btn-cat-add2" title="Add units" aria-label="Add units"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="button" class="lnk ico" id="btn-demo-roll" title="Random force" aria-label="Random force"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg></button>
+        <button type="button" class="lnk ico" id="btn-quick-clear" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>
+        <button type="button" class="lnk ico" id="btn-demo-saves" title="Load or save" aria-label="Load or save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3"/><rect x="8" y="13" width="8" height="6" rx="1"/></svg></button>
       </div>
       <!-- a force worth building is worth keeping: named, saved in this browser,
            and exportable to a file so it survives a new device (for a demo, in a modal) -->

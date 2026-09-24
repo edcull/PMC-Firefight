@@ -71,7 +71,7 @@ async function drain(p) {
   check('...and asks what the revolt calls itself',
     await p.evaluate(() => !!document.getElementById('found-name')));
   check('...and for the colours it fights in',
-    await p.evaluate(() => document.querySelectorAll('#camp-body [data-campcolour]').length > 1));
+    await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); return document.querySelectorAll('#camp-body [data-campcolour]').length > 1; }));
   check('...and promises the free First Among Equals', /First Among Equals/.test(txt));
   check('...and offers Paths rather than doctrines',
     /starting path/i.test(txt) && /path of the hero/i.test(await p.evaluate(() =>

@@ -2263,6 +2263,9 @@
         c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>';
     }).join('');
     colourLabel();
+    var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
+    if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
+    if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
         muster.colour = b.getAttribute('data-colour');
@@ -2274,6 +2277,7 @@
         if (muster.hot && muster.hot.kind !== 'demo') {
           var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
           if (!nm || isMadeUpName(nm)) { muster.name = ISO.COLOURS[muster.colour].name + ' ' + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
+          colourPop(false);                // the pick shuts the pop-up
         }
         drawColourPick();
       });
@@ -5148,10 +5152,12 @@
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
     else if (kind === 'ai') {
-      // the player's force starts empty, in their own colour, with a name to go with it until they give it one
+      // the player's force starts empty, in desert ochre, as "Your force" until they name it
+      muster.colour = 'ochre';
+      el('sel-faction').value = 'pmc';             // a mercenary company, until they pick another kind
       drawColourPick();
       if (el('sel-tactic')) el('sel-tactic').value = '';
-      muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[musterFaction()];
+      muster.name = 'Your force';
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
     hotPaint();
@@ -5167,6 +5173,7 @@
     el('btn-start').textContent = 'Take the field';
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = 'Your force';
+    colourPop(false);
     colourHome();
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
@@ -5244,15 +5251,27 @@
     var n = ID_NOUN[musterFaction()] || 'Force';
     if (el('hot-name-label')) el('hot-name-label').textContent = n + ' name';
     colourLabel();
+    var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
+    if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
+    if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
+  }
+  // the colours dropped down under the chip left of the name
+  function colourPop(on) {
+    var cw = el('colour-wrap'), b = el('btn-colour-pop');
+    if (cw) cw.classList.toggle('open', !!on);
+    if (b) b.setAttribute('aria-expanded', on ? 'true' : 'false');
   }
   var colourHomeAt = null;
   function colourHome() {
     var cwp = el('colour-wrap');
     if (cwp && colourHomeAt && cwp.parentNode !== colourHomeAt.parent) colourHomeAt.parent.insertBefore(cwp, colourHomeAt.next);
     colourLabel();
+    var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
+    if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
+    if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
   }
   function catModal(on) {
-    var m = document.querySelector('#setup .muster');
+    var m = document.querySelector('#setup .muster.hot-force');   // the units, not the name panel
     if (m) m.classList.toggle('picking', !!on);
     if (el('cat-back')) el('cat-back').classList.toggle('open', !!on);
     if (on && el('cat')) el('cat').scrollTop = 0;
@@ -5269,6 +5288,7 @@
     // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
     catModal(false);
+    colourPop(false);
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
     if (cwp && idp && kind !== 'demo') { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
@@ -5649,7 +5669,17 @@
       drawMuster();
     });
     // the units to pick from, in a modal
+    if (el('btn-colour-pop')) el('btn-colour-pop').addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      colourPop(!el('colour-wrap').classList.contains('open'));
+    });
+    // a tap anywhere else puts it away
+    document.addEventListener('click', function (ev) {
+      var cw = el('colour-wrap');
+      if (cw && cw.classList.contains('open') && !cw.contains(ev.target)) colourPop(false);
+    });
     if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
+    if (el('btn-cat-add2')) el('btn-cat-add2').addEventListener('click', function () { catModal(true); });
     if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
     if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
     var saves = el('forcebar-wrap');

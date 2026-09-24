@@ -21,6 +21,7 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
 
   await p.evaluate(() => document.querySelector('[data-go="newcamp"]').click());
   await p.waitForTimeout(400);
+  await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); });   // the colours drop down from the chip beside the name
   const found = await p.evaluate(() => ({
     name: !!document.getElementById('found-name'),
     nameVal: (document.getElementById('found-name')||{}).value,
@@ -36,8 +37,9 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
 
   // type a name, pick a colour, then add units — the name must survive the redraws
   await p.evaluate(() => { const n=document.getElementById('found-name'); n.value='Cullen Free Company'; });
-  await p.evaluate(() => document.querySelector('[data-campcolour="crimson"]').click());
+  await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); document.querySelector('[data-campcolour="crimson"]').click(); });
   await p.waitForTimeout(250);
+  await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); });
   const kept = await p.evaluate(() => ({
     val: document.getElementById('found-name').value,
     on: document.querySelector('#camp-body [data-campcolour].on').getAttribute('data-campcolour')
