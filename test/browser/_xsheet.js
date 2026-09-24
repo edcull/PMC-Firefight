@@ -1,9 +1,11 @@
 const { chromium } = require('playwright');
+const path = require('path');
+const { page, SHOTS } = require('../where.js');
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1500, height: 1100 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + __dirname + '/index.html');
+  await p.goto('file://' + page);
   await p.waitForTimeout(800);
   const which = process.env.WHICH || 'inf';
   const zoom = +(process.env.Z || 1);
@@ -41,7 +43,9 @@ const { chromium } = require('playwright');
   }, [which, zoom, only]);
   await p.waitForTimeout(400);
   const c = await p.$('canvas');
-  await c.screenshot({ path: process.argv[2] });
+  // a sheet of the Xenotripod art, to look at: where it goes can be given, else with the other shots
+  await c.screenshot({ path: process.argv[2] || path.join(SHOTS, 'xsheet.png') });
   console.log('errors', errs.join(' | ') || 'none');
   await b.close();
+  if (errs.length) process.exit(1);
 })();

@@ -51,7 +51,7 @@ async function clickText(p, re) {
   console.log('\nFounding a company');
   await click(p, '#btn-campaign');
   await clickText(p, 'Raise the force');
-  check('the founding screen opened', /A starting company is six Tier I units/.test(await body(p)));
+  check('the founding screen opened', await p.evaluate(() => !!document.getElementById('found-name') && /the company/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
   // the name and the colours are settled here now, with the units
   await p.evaluate(() => { document.getElementById('found-name').value = 'Task Force Ironhold'; });
   check('...and asks for the company name there',

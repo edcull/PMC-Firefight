@@ -47,7 +47,8 @@ async function playOne(p, id) {
       attacker: s.sc.attacker || null,
       search: s.sc.search ? s.sc.search.length : 0,
       target: s.terrain.filter(t => t.kind === 'objective').length,
-      barricades: s.terrain.filter(t => t.kind === 'barricade').length,
+      // "trench, wall or barbed wire sections" (p. 55): the defences come in all three kinds
+      barricades: s.terrain.filter(t => t.kind === 'barricade' || t.kind === 'trench' || t.kind === 'wire').length,
       bunkers: s.terrain.filter(t => t.kind === 'bunker').length,
       reserved: s.units.filter(u => u.reserve).length,
       // held back by the SCENARIO, as against by Battlefield Insertion
@@ -65,7 +66,7 @@ async function playOne(p, id) {
   if (id === 'find') ok('three places to search', setup.search === 3, setup.search + ' locations');
   if (id === 'demolish') ok('the objective is on the table', setup.target === 1);
   if (id === 'takeover') ok('the defender dug in', setup.barricades >= 6 && setup.bunkers >= 1,
-    setup.barricades + ' wall sections and ' + setup.bunkers + ' bunker');
+    setup.barricades + ' sections of wall, trench and wire, and ' + setup.bunkers + ' bunker');
   if (id === 'invasion' || id === 'find' || id === 'demolish' || id === 'takeover') {
     ok('some of the force is held back', setup.reserved > 0,
       setup.reserved + ' of ' + setup.total + ' in reserve');

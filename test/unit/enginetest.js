@@ -93,6 +93,19 @@ function play(seed, opts) {
       continue;
     }
 
+    // the scenario lets the player choose which reserves come on: the first that fit, and at least one
+    if (sel.reservePick) {
+      const rp = sel.reservePick;
+      const want = Math.max(rp.min, Math.min(1, rp.max));
+      for (const id of rp.ids) {
+        if (e.sel().reservePick.chosen.length >= want) break;
+        if (e.sel().reservePick.chosen.indexOf(id) < 0) e.intent(rp.side, { k: 'rpick', id: id });
+      }
+      const r = e.intent(rp.side, { k: 'rpickdone' });
+      if (!r.ok) { ok('reserve pick answered', false, r.why); break; }
+      continue;
+    }
+
     if (st.phase !== 'battle') break;
     const side = st.activeSide;
     const list = e.query.eligible(side);

@@ -977,6 +977,16 @@
   .dpr-set .dpr-name { color: var(--ink-dim); }
   .dpr-now { border-color: var(--alpha); background: rgba(216,161,58,.12); }
   .dpr-now .dpr-name { color: var(--alpha); font-weight: 600; }
+  /* the scenario's split: held back units in amber, the count against the rule */
+  .dpr-held .dpr-mark { color: var(--warn); }
+  .dpr-held .dpr-name { color: var(--ink); }
+  .dpr:disabled { opacity: .55; cursor: default; }
+  .splitlist .dphead b.ok { color: var(--good); }
+  .splitlist .dphead b.short { color: var(--warn); }
+  .splitlist .hint.small { margin: 0 0 6px; }
+  .act.warn { border-color: color-mix(in srgb, var(--warn) 60%, var(--line)); }
+  .act.warn small { color: var(--warn); }
+  .cmodal[data-deploybox] .dplist:first-child { margin-top: 0; border-top: 0; padding-top: 0; }
 
   .loadbox { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
   .loadbox h3 { font-family: var(--display); font-size: 11.5px; letter-spacing: .07em;
@@ -8546,6 +8556,21 @@
   /* Split a side's units into two halves, the bigger models first so both are real.
      An emplaced gun cannot be held in reserve (p. 94): it is dug in where it stands
      before a shot is fired, so it always goes in the first half. */
+  /* How a side's force was split before the battle, so its player can change
+     which units go where: 'hold' is on the table or held back, 'wave' the first
+     wave or the second. `min`-`max` is how many the rule lets them hold back (or
+     put in the second wave); an emplaced gun is never held back (p. 94). */
+  function noteSplit(state, side, kind, units, min, max, rule) {
+    /* The split the scenario made is always allowed — an emplaced gun going on
+       the table first can leave it a unit short of an exact half — and nobody
+       can hold back more than the units that are free to be held. */
+    var held = units.filter(function (u) { return u.wave === 2; }).length;
+    var free = units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); }).length;
+    min = Math.min(min, held);
+    max = Math.max(Math.min(max, free), held);
+    state.sc.split = state.sc.split || {};
+    state.sc.split[side] = { kind: kind, ids: units.map(function (u) { return u.id; }), min: min, max: max, rule: rule };
+  }
   function halve(units) {
     var emplaced = units.filter(function (u) { return R.has(u, 'Stationary Artillery'); });
     var rest = units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); });
@@ -8802,13 +8827,27 @@
         state.sc.zones = { A: strip('A', 6), B: strip('B', 6) };
         // half the force enters at once; the rest waits in reserve
         ['A', 'B'].forEach(function (side) {
-          var split = halve(mine(state, side).filter(function (u) { return !u.reserve; }));
+          var all = mine(state, side).filter(function (u) { return !u.reserve; });
+          var split = halve(all);
           split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+          noteSplit(state, side, 'hold', all, Math.floor(all.length / 2), Math.ceil(all.length / 2),
+            'Half the force enters at once; the rest waits in reserve.');
         });
         state.sc.hold = { A: 0, B: 0 };
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       hint: 'Three staked locations. Bring a unit within 4" and use "Check the area!" — 5+ at the first, 4+ at the second, automatic at the third.',
+      /* From turn 3, every second turn, a number equal to the Priority Level comes
+         on (p. 52) — which ones is the player's choice. */
+      reservePick: function (state, side) {
+        if (state.turn < 3 || state.turn % 2 === 0) return null;
+        var pool = state.units.filter(function (u) {
+          return u.side === side && u.alive && u.reserve && u.wave === 2;
+        });
+        var n = Math.min(state.cfg.pl, pool.length);
+        return pool.length ? { pool: pool, min: n, max: n,
+          text: 'A number of units equal to the Priority Level comes on from reserve — ' + n + ' this turn. You choose which.' } : null;
+      },
       // from turn 3, every second turn, a number equal to the Priority Level comes on
       reserves: function (state, side) {
         if (state.turn < 3 || state.turn % 2 === 0) return [];
@@ -8872,11 +8911,15 @@
         });
         var keep = Math.max(1, Math.floor(defs.length / 3));
         defs.slice(keep).forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        noteSplit(state, def, 'hold', defs, defs.length - keep, defs.length - 1,
+          'Up to a third of the force sets up on the table; the rest walks on later, on a 5+ a unit from turn 2.');
         // the attacker comes in two waves; the first lands in the Reserve phase of turn 1
         var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
         var split = halve(atks);
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
         split.first.forEach(function (u) { u.reserve = true; u.wave = 1; u.x = -1; u.y = -1; });
+        noteSplit(state, atk, 'wave', atks, Math.floor(atks.length / 2), Math.ceil(atks.length / 2),
+          'The force comes down in two waves: the first on turn 1, the second from turn 4 on a roll.');
         state.sc.zones = {};
         state.sc.zones[def] = [6, W - 6];         // anywhere 6" in from the edges
         state.sc.zones[atk] = null;               // the attacker never deploys: it lands
@@ -8977,6 +9020,8 @@
         var defs = mine(state, def).filter(function (u) { return !u.reserve; });
         var split = halve(defs);
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        noteSplit(state, def, 'hold', defs, Math.floor(defs.length / 2), Math.ceil(defs.length / 2),
+          'Half the force sets up within 18" of the objective; the rest arrives on a 5+ a unit from turn 2.');
         state.sc.zones = {};
         state.sc.zones[def] = null;               // a circle, not a strip
         state.sc.zones[atk] = null;               // corner bands, not a strip
@@ -9080,6 +9125,8 @@
         var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
         var split = halve(atks);
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        noteSplit(state, atk, 'hold', atks, Math.floor(atks.length / 2), Math.ceil(atks.length / 2),
+          'Half the force comes on at once; the other half may come on in any turn from the 3rd.');
         state.sc.zones = {};
         state.sc.zones[def] = null;
         state.sc.zones[atk] = null;
@@ -9100,6 +9147,16 @@
         return dist(x, y, c.x, c.y) <= c.r;
       },
       hint: 'One objective at the centre, dug in behind walls and a bunker. The attacker has twenty turns to be standing on it — nothing else counts.',
+      /* "The second part may enter in any turn starting from the 3rd" (p. 55): the
+         attacker brings on as many of it as they like each turn, and which. */
+      reservePick: function (state, side) {
+        if (side !== state.sc.attacker || state.turn < 3) return null;
+        var pool = state.units.filter(function (u) {
+          return u.side === side && u.alive && u.reserve && u.wave === 2;
+        });
+        return pool.length ? { pool: pool, min: 0, max: pool.length,
+          text: 'The second part of the force may come on this turn — as many of it as you like, or none yet.' } : null;
+      },
       reserves: function (state, side) {
         if (side !== state.sc.attacker || state.turn < 3) return [];
         return state.units.filter(function (u) {
@@ -9177,6 +9234,10 @@
   function reserves(state, side) {
     return state.scen.reserves ? (state.scen.reserves(state, side) || []) : [];
   }
+  // the reserves a player picks from this turn, where the scenario leaves the choice to them
+  function reservePick(state, side) {
+    return state.scen.reservePick ? state.scen.reservePick(state, side) : null;
+  }
   /* Every End phase: the automatic victory of p. 49 comes first, because it holds
      in every scenario — including the three that have no rout clause of their own —
      and then the scenario's own conditions. Both sides meeting a condition in the
@@ -9222,7 +9283,7 @@
   root.PMCScen = {
     SCENARIOS: SCENARIOS, ORDER: ORDER,
     begin: begin, deploy: deploy, zoneFor: zoneFor, deployOK: deployOK,
-    reserves: reserves, check: check, noInsertion: noInsertion,
+    reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     holderOf: holderOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
     rollRoles: rollRoles,
     searchSpots: searchSpots, checkArea: checkArea
@@ -22874,6 +22935,7 @@
     ['A', 'B'].forEach(markReserves);
     SC.deploy(state);
     seatPlatforms();             // every drop pod comes down with somebody in it
+    baselineSplits();
     var scen = state.scen;
     logLine('note', 'Battle Tier ' + R.ROMAN[cfg.tier] + ', Priority Level ' + cfg.pl +
       ' — ' + (R.COMPOSITION[cfg.tier].points * cfg.pl) + ' composition points a side. ' +
@@ -23564,8 +23626,61 @@
     });
   }
 
+  /* ---- the scenario's split, the player's to change ----
+     A scenario that holds part of a force back (Find and secure, Invasion,
+     Demolish, Hostile takeover) splits it for them; before the battle the
+     player may change which units go on the table and which wait, or which
+     come down in the first wave and which the second, within the rule's
+     numbers. The OpFor keeps the split it was given. */
+  function splitFor(side) {
+    var sp = state && state.sc && state.sc.split && state.sc.split[side];
+    if (!sp || isAI(side) || state.phase !== 'deploy') return null;
+    var units = sp.ids.map(byId).filter(function (u) { return u && u.alive; });
+    function held(u) { return sp.kind === 'wave' ? u.wave === 2 : !!(u.reserve && u.wave === 2); }
+    var n = units.filter(held).length;
+    return {
+      side: side, kind: sp.kind, rule: sp.rule, min: sp.min, max: sp.max, held: n,
+      ok: n >= sp.min && n <= sp.max,
+      units: units.map(function (u) {
+        return { id: u.id, name: u.name, held: held(u), locked: R.has(u, 'Stationary Artillery'), aboard: !!u.aboard };
+      })
+    };
+  }
+  /* Seating the drop pods can take a squad the scenario held back: it rides in
+     the pod now, and is no longer part of the choice. Whatever the split is
+     once the table is ready is always within the rule's numbers. */
+  function baselineSplits() {
+    var all = (state.sc && state.sc.split) || {};
+    Object.keys(all).forEach(function (side) {
+      var sp = all[side];
+      sp.ids = sp.ids.filter(function (id) { var u = byId(id); return u && u.alive && !u.aboard; });
+      var n = sp.ids.map(byId).filter(function (u) { return sp.kind === 'wave' ? u.wave === 2 : (u.reserve && u.wave === 2); }).length;
+      sp.min = Math.min(sp.min, n); sp.max = Math.max(sp.max, n);
+    });
+  }
+  function splitsOK() {
+    return ['A', 'B'].every(function (side) { var f = splitFor(side); return !f || f.ok; });
+  }
+  function toggleHold(side, id) {
+    var sp = splitFor(side), u = byId(id);
+    if (!sp || !u || sp.units.every(function (x) { return x.id !== id; })) return 'that unit is not part of the split';
+    if (R.has(u, 'Stationary Artillery')) return 'an emplaced gun is never held back';
+    if (sp.kind === 'wave') { u.wave = u.wave === 2 ? 1 : 2; return null; }
+    if (u.reserve && u.wave === 2) {
+      u.reserve = false; delete u.wave; u.x = -1; u.y = -1;      // back in hand, to be set down
+      return null;
+    }
+    if (u.aboard) return 'take it out of the hull first';
+    (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
+    if (u.bld) R.exitBuilding(state, u, null);
+    u.reserve = true; u.wave = 2; u.x = -1; u.y = -1;
+    if (ui.deployPick === u.id) ui.deployPick = null;
+    return null;
+  }
+
   function deploymentDone() {
     if (emptyPlatforms().length) return false;
+    if (!splitsOK()) return false;
     return state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
   }
 
@@ -23783,9 +23898,41 @@
     render();
   }
 
+  /* Where the scenario leaves it to the player which reserves come on this turn
+     (Find and secure's Priority Level a turn, Hostile takeover's second part),
+     they pick them before any are placed. */
+  function askReservePick(side, done) {
+    var p = SC.reservePick(state, side);
+    var ids = p.pool.map(function (u) { return u.id; });
+    ui.reservePick = {
+      side: side, ids: ids, min: p.min, max: p.max, text: p.text,
+      chosen: p.min === ids.length ? ids.slice() : [],
+      finish: function () {
+        var ch = ui.reservePick.chosen.slice();
+        state.sc.picked[side] = ch.map(byId).filter(Boolean);
+        logLine('note', sideName(side) + ' brings on ' + (ch.length ? state.sc.picked[side].map(function (u) { return u.label; }).join(', ') : 'nobody from reserve') + '.');
+        ui.reservePick = null;
+        done();
+      }
+    };
+    ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
+    setHint(null, 'Reserves: choose which units come on this turn.');
+    revealConsole();
+    render();
+  }
+
   function scenarioArrivals(after) {
     var lzFor = lzWanted();
     if (lzFor) { askLZ(lzFor, function () { scenarioArrivals(after); }); return; }
+    if (state.sc.pickedTurn !== state.turn) { state.sc.picked = {}; state.sc.pickedTurn = state.turn; }
+    var pickSide = ['A', 'B'].filter(function (sd) {
+      if (isAI(sd) || state.sc.picked[sd] || state.scen.autoArrive) return false;
+      var pk = SC.reservePick(state, sd);
+      if (!pk) return false;
+      if (!pk.pool.length) { state.sc.picked[sd] = []; return false; }
+      return true;
+    })[0];
+    if (pickSide) { askReservePick(pickSide, function () { scenarioArrivals(after); }); return; }
     var log = [];
     /* The OpFor's reinforcements are placed for it; the player's are asked for,
        one at a time, because where along a landing zone or a table edge a unit
@@ -23793,7 +23940,7 @@
        be making. */
     var ask = [];
     ['A', 'B'].forEach(function (side) {
-      var coming = SC.reserves(state, side);
+      var coming = state.sc.picked[side] ? state.sc.picked[side].slice() : SC.reserves(state, side);
       /* Semper Fidelis (Battle Honour, p. 88): a unit held in the scenario's
          reserve may come on automatically on any turn but the first — no roll,
          no waiting for its wave. Where it may come on is still the scenario's. */
@@ -26044,7 +26191,8 @@
     picks.forEach(function (t) {
       t.marked = true;
       // the marker's laser (or smoke round's trace) onto each mark
-      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200, blocking: true });
+      // drawn over whatever follows: the guns it calls are the player's to pick, and need not wait for it
+      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200 });
       // Smoke Markers: the grenade bursting on the mark, the flare burning in it
       if (smoke) addFx({ kind: 'puff', x: t.x, y: t.y, delay: 300, dur: 1800 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
@@ -26796,6 +26944,11 @@
           owner: ui.insertion.owner || null,
           kind: ui.insertion.kind,
           spots: ui.insertion.spots
+        } : null,
+        // which reserves come on this turn, being chosen
+        reservePick: ui.reservePick ? {
+          side: ui.reservePick.side, ids: ui.reservePick.ids.slice(), chosen: ui.reservePick.chosen.slice(),
+          min: ui.reservePick.min, max: ui.reservePick.max, text: ui.reservePick.text
         } : null
       };
       return out;
@@ -26861,6 +27014,7 @@
         var parts = piece.parts && piece.parts.length ? piece.parts : [piece];
         return { piece: piece, sec: s.sec, rect: parts[s.sec] || parts[0], move: s.move };
       }).filter(Boolean);
+      ui.reservePick = us.reservePick || null;
       ui.insertion = us.insertion ? {
         unit: by[us.insertion.unit] || null, owner: us.insertion.owner,
         kind: us.insertion.kind, spots: us.insertion.spots, done: null
@@ -26955,6 +27109,32 @@
         case 'deploy': {
           if (!mayDeploy(side)) return no('not your turn to place');
           return deployAt(side, it);
+        }
+        case 'holdback': {
+          if (state.phase !== 'deploy') return no('not deploying');
+          var why = toggleHold(side, it.id);
+          if (why) return no(why);
+          render();
+          return yes;
+        }
+        case 'rpick': {
+          var rp = ui.reservePick;
+          if (!rp || rp.side !== side) return no('nothing to choose');
+          if (rp.ids.indexOf(it.id) < 0) return no('that unit is not waiting');
+          var at = rp.chosen.indexOf(it.id);
+          if (at >= 0) rp.chosen.splice(at, 1);
+          else if (rp.chosen.length < rp.max) rp.chosen.push(it.id);
+          else if (rp.max === 1) rp.chosen = [it.id];
+          else return no('that is as many as may come on');
+          render();
+          return yes;
+        }
+        case 'rpickdone': {
+          var rq = ui.reservePick;
+          if (!rq || rq.side !== side) return no('nothing to choose');
+          if (rq.chosen.length < rq.min || rq.chosen.length > rq.max) return no('choose ' + rq.min + (rq.max !== rq.min ? '-' + rq.max : '') + ' units');
+          rq.finish();
+          return yes;
         }
         case 'autodeploy': {
           if (state.phase !== 'deploy') return no('not deploying');
@@ -27183,6 +27363,7 @@
         deployNext: deployNext,
         deployRoster: deployRoster,
         deploymentDone: deploymentDone,
+        splitFor: splitFor,
         placingSide: placingSide,
         zoneFor: zoneFor,
         zoneCentre: zoneCentre,
@@ -28209,13 +28390,21 @@
   function stepWatched() {
     if (stepTimer || !net || !state || state.over) return;
     if (!state.cfg || state.cfg.aiSides.length !== 2) return;
-    if (state.phase !== 'battle' || ui.resOpen) return;
+    if (state.phase !== 'battle' || ui.resOpen || menuUp()) return;
     stepTimer = setTimeout(function () {
       stepTimer = null;
-      if (!state || state.over || ui.resOpen) return;
+      if (!state || state.over || ui.resOpen || menuUp()) return;
       send({ k: 'step' });
     }, 260);
   }
+  /* Gone back to the menu, the demo stops where it is: nothing more is asked
+     for until the menu is put away again (Resume carries it on). */
+  function menuUp() {
+    if (window.PMCMenu && window.PMCMenu.isOpen()) return true;
+    // nor while a new battle is being set up, or the campaign is open, over the top of it
+    return ['setup', 'camp'].some(function (id) { var x = el(id); return !!x && !x.hidden; });
+  }
+  window.addEventListener('pmc-menu-closed', function () { stepWatched(); });
 
   function evUnit(id) { return id ? Q.byId(id) : null; }
 
@@ -28322,10 +28511,11 @@
     ui.markKind = s.markKind;
     ui.markPicks = s.markPicks;
     ui.deployPick = s.deployPick;
-    var wasAsked = !!ui.insertion;
+    var wasAsked = !!ui.insertion || !!ui.reservePick;
+    ui.reservePick = s.reservePick || null;
     ui.insertion = s.insertion;
     // a drop point being asked for: on a phone the Actions pane, where the ask is, comes to the front
-    if (ui.insertion && !wasAsked && window.innerWidth <= 1000) setMTab('act');
+    if ((ui.insertion || ui.reservePick) && !wasAsked && window.innerWidth <= 1000) setMTab('act');
     ui.sections = s.sections || [];
     ui.tsetHint = s.tsetHint || '';
     ui.vis = null; ui.visKey = '';
@@ -28367,6 +28557,7 @@
   function deployNext() { return Q.deployNext(); }
   function deployRoster(side) { return Q.deployRoster(side); }
   function deploymentDone() { return Q.deploymentDone(); }
+  function splitFor(side) { return Q.splitFor ? Q.splitFor(side) : null; }
   function deployOK(side, x, y, u) { return Q.deployOK(side, x, y, u); }
   function placingSide() { return Q.placingSide(); }
   function zoneFor(side) { return Q.zoneFor(side); }
@@ -31672,8 +31863,10 @@
   // (a slide-out drawer on a narrow screen).
   function drawPanel() {
     var ctxBox = el('context'), html = '';
+    if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
     else if (state.phase === 'deploy') html = deployCard();
+    else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
     else if (state.over) html = overCard();
     else if (ui.terrain.length && ui.selected &&
@@ -31684,7 +31877,11 @@
       html = targetPanel(ui.selected);
     }
     else if (ui.selected && !isAI(ui.selected.side)) html = idleCard(ui.selected);
+    // a modal open over the card keeps its place when the card is drawn again
+    var ms = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0;
     ctxBox.innerHTML = html;
+    var ms2 = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
+    if (ms2 && ms) ms2.scrollTop = mTop;
     el('panel').innerHTML = forceList();
     /* The desktop rails: your own order of battle on the left, the enemy's on
        the right. They are the same list, split. */
@@ -31914,7 +32111,8 @@
   function deployCard() {
     if (state.relocating) return relocCard();
     var next = deployNext();
-    var held = inReserve().filter(function (u) { return !isAI(u.side); });
+    // the units coming in by Battlefield Insertion — not the ones the scenario holds back
+    var held = inReserve().filter(function (u) { return !isAI(u.side) && u.wave == null; });
     var me = next ? next.side : (playerSide() || 'A');
     var role = roleOf(me);
     var h = '<div class="card"><h2>' + (state.scen ? state.scen.name : 'Deployment') +
@@ -31928,13 +32126,83 @@
     if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
       (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
     h += deployList(me);
-    h += loadingCard(me);
+    /* The scenario's split (which units go on the table and which wait, or
+       which wave each comes in) and who starts the battle aboard a hull are
+       set in a modal, opened from a button, whenever there is either. */
+    var splits = ['A', 'B'].filter(function (sd) { return (sd === me || !deployRoster(sd).length) && splitFor(sd); });
+    var hulls = carriersFor(me).filter(function (u) { return !isAI(u.side); });
+    var extra = splits.map(splitCard).join('') + loadingCard(me);
+    if (extra) {
+      var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
+      var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; }), emptyPod = emptyPlatforms(me).length > 0;
+      var aboard = hulls.reduce(function (n, v) { return n + (v.cargo || []).length; }, 0);
+      var held = splits.reduce(function (n, sd) { return n + splitFor(sd).held; }, 0);
+      var sub = [splits.length ? held + (splitFor(splits[0]).kind === 'wave' ? ' in the second wave' : ' held back') : '',
+        hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
+      h += '<div class="acts"><button class="act' + (badSplit || emptyPod ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
+        '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : emptyPod ? 'A drop pod needs a squad \u2014 ' : '') + sub + '</small></button></div>';
+      h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
+        '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
+        '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
+    }
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
       h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p><div class="acts">';
     }
     return h + '</div></div>';
+  }
+
+  /* The split the scenario made, for the player to change: a row for each unit,
+     tapped to move it between the table and the reserve (or between the waves),
+     and a count against what the rule allows. */
+  var deployBox = false;           // the reserves-and-transports modal, open over the deployment card
+  function splitCard(side) {
+    var sp = splitFor(side);
+    if (!sp) return '';
+    var wave = sp.kind === 'wave';
+    var both = !isAI('A') && !isAI('B') && !(state.solo);
+    var range = sp.min === sp.max ? String(sp.min) : sp.min + '\u2013' + sp.max;
+    var rows = sp.units.map(function (x) {
+      var note = x.locked ? 'emplaced \u2014 never held back'
+        : wave ? (x.held ? 'second wave' : 'first wave')
+        : x.held ? 'held back' : 'on the table';
+      return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-holdback="' + x.id + '"' + (x.locked ? ' disabled' : '') + '>' +
+        '<span class="dpr-mark">' + (x.held ? (wave ? '2' : '\u21a9') : (wave ? '1' : '\u2713')) + '</span>' +
+        '<span class="dpr-name">' + esc(x.name) + '</span>' +
+        '<span class="dpr-note">' + note + '</span></button>';
+    }).join('');
+    return '<div class="dplist splitlist"><div class="dphead">' + (both ? esc(sideName(side)) + ' \u2014 ' : '') +
+      (wave ? 'The two waves' : 'Held back') + ' \u2014 ' +
+      '<b class="' + (sp.ok ? 'ok' : 'short') + '">' + sp.held + '</b> of ' + range + (wave ? ' in the second wave' : ' to hold back') + '</div>' +
+      '<p class="hint small">' + esc(sp.rule) + ' Tap a unit to ' + (wave ? 'switch its wave' : 'hold it back or bring it onto the table') + '.</p>' +
+      rows +
+      (sp.ok ? '' : '<p class="cpwarn">' + (wave ? 'Put ' : 'Hold back ') + (sp.held < sp.min ? (sp.min === sp.max ? 'exactly ' + sp.min : 'at least ' + sp.min) : (sp.min === sp.max ? 'exactly ' + sp.max : 'no more than ' + sp.max)) +
+        (wave ? ' in the second wave' : '') + ' before the battle can begin.</p>') +
+      '</div>';
+  }
+
+  // which of the reserves come on this turn, where the scenario lets the player choose
+  function reservePickCard() {
+    var rp = ui.reservePick;
+    var mine = !isAI(rp.side);
+    var n = rp.chosen.length, ok = n >= rp.min && n <= rp.max;
+    var rows = rp.ids.map(function (id) {
+      var u = byId(id), on = rp.chosen.indexOf(id) >= 0;
+      if (!u) return '';
+      return '<button class="dpr' + (on ? ' dpr-now' : '') + '" data-rpick="' + id + '">' +
+        '<span class="dpr-mark">' + (on ? '\u2713' : '\u00b7') + '</span>' +
+        '<span class="dpr-name">' + esc(u.name) + '</span>' +
+        '<span class="dpr-note">' + (on ? 'coming on' : 'stays in reserve') + '</span></button>';
+    }).join('');
+    var want = rp.min === rp.max ? rp.min : (rp.min ? rp.min + '\u2013' : 'up to ') + rp.max;
+    return '<div class="card"><h2>Reserves</h2>' +
+      '<p class="sub">' + esc(rp.text) + '</p>' +
+      '<div class="dplist"><div class="dphead">' + n + ' of ' + want + ' chosen</div>' + rows + '</div>' +
+      (mine ? '<div class="acts"><button class="act primary" data-act="rpickdone"' + (ok ? '' : ' disabled') + '>' +
+        '<span>' + (n ? 'Bring them on' : 'Keep them all back') + '</span>' +
+        '<small>' + (n ? 'Then choose where each one comes on' : 'They can come on in a later turn') + '</small></button></div>' : '') +
+      '</div>';
   }
 
   function loadingCard(side) {
@@ -32026,14 +32294,20 @@
 
   function wireHost(host) {
     if (!host) return;
+    // a tap on the shade around the reserves-and-transports modal puts it away
+    host.querySelectorAll('.cmodal[data-deploybox]').forEach(function (m) {
+      m.addEventListener('click', function (ev) { if (ev.target === m) { deployBox = false; render(); } });
+    });
     /* The load and unload buttons carry `data-load`/`data-unload` and no
        `data-act`, so selecting on `[data-act]` alone never bound them and
        nothing happened when they were pressed: troops could not be put aboard
        a hull, or taken off one, during deployment. All three are selected. */
-    host.querySelectorAll('[data-act], [data-load], [data-unload]').forEach(function (b) {
+    host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var a = b.getAttribute('data-act');
         if (SFX) SFX.click();
+        if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
+        if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }
         if (b.hasAttribute('data-load')) {
           var lv = byId(b.getAttribute('data-hull')), lu = byId(b.getAttribute('data-load'));
           loadBefore(lv, lu); render(); return;
@@ -32051,6 +32325,9 @@
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
+        else if (a === 'rpickdone') send({ k: 'rpickdone' });
+        else if (a === 'deploybox') { deployBox = true; render(); }
+        else if (a === 'deployboxdone') { deployBox = false; render(); }
         else if (a === 'start') startBattle();
         else if (a === 'restart') openMenu();
       });
@@ -33260,7 +33537,8 @@
      kind of force, and for rebels a card for each tactic with its rule in full.
      A pick goes through the selectors, so it rolls and checks as they do. */
   function armyText(v) {
-    var o = el('sel-faction') && Array.prototype.filter.call(el('sel-faction').options, function (x) { return x.value === v; })[0];
+    var sel = el('sel-faction');
+    var o = sel && sel.options ? Array.prototype.filter.call(sel.options, function (x) { return x.value === v; })[0] : null;
     var t = o ? o.textContent : v, cut = t.indexOf(' \u2014 ');
     return cut < 0 ? { name: t, what: '' } : { name: t.slice(0, cut), what: t.slice(cut + 3) };
   }
@@ -33328,12 +33606,12 @@
     backLabel(el('btn-setup-back'), setupGoesHome());
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
-    if (cwp && idp) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
+    if (cwp && idp && idp.appendChild && cwp.parentNode) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
     hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
     var tp = el('tierpl-field');
-    if (tp) {
+    if (tp && tp.parentNode && el('hot-sum') && el('hot-sum').parentNode) {
       if (!tierHome) tierHome = { parent: tp.parentNode, next: tp.nextSibling };
       if (hotQuick(kind) && step === 3) el('hot-sum').parentNode.insertBefore(tp, el('hot-sum'));
       else if (tp.nextSibling !== tierHome.next) tierHome.parent.insertBefore(tp, tierHome.next);
@@ -36438,6 +36716,8 @@
     var m = el('menu');
     if (m) m.hidden = true;
     Table.stop();
+    // a demo paused behind the menu picks up again
+    try { root.dispatchEvent(new Event('pmc-menu-closed')); } catch (e) { }
   }
   function isOpen() { var m = el('menu'); return !!m && !m.hidden; }
 
