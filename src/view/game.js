@@ -2428,7 +2428,7 @@
     if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
-        muster.colour = b.getAttribute('data-colour');
+        muster.colour = b.getAttribute('data-colour'); muster.colourChosen = true;
         // only the first player's choice is remembered as "your" colour
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
@@ -5264,6 +5264,12 @@
           hotPaint(); return;
         }
         muster.keys = []; muster.name = '';
+        /* A swarm comes in rust orange unless its colour has been chosen: switching
+           to the Bugs from an untouched ochre (or back) swaps the default over. */
+        if (id === 'sel-faction' && !muster.colourChosen) {
+          var fdef = musterFaction() === 'bugs' ? 'rust' : 'ochre';
+          if (muster.colour === 'ochre' || muster.colour === 'rust') { muster.colour = fdef; if (typeof drawColourPick === 'function') drawColourPick(); }
+        }
         if (id === 'sel-faction' && muster.hot) hotLabels();
         // a force the player musters: a made-up name follows the kind of force
         if (id === 'sel-faction' && muster.hot && muster.hot.kind !== 'demo' && !hotRolled(muster.hot.step)) {

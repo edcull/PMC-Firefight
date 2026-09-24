@@ -512,7 +512,7 @@
     /* The name and the colours are settled on the founding screen, alongside the
        units — they are the three things that make a company yours, and asking
        for them in one place is how a player thinks about it. */
-    draft = { side: 'A', keys: [], doctrine: null, name: name, colour: startingColour() };
+    draft = { side: 'A', keys: [], doctrine: null, name: name, colour: startingColour(faction) };
     view = 'found';
   }
   /* Hotseat: the second player founds a force of their own on the same screen,
@@ -527,17 +527,18 @@
     var A = camp.companies.A;
     var B = C.newCompany('', { faction: faction || (camp.companies.B && camp.companies.B.faction) || A.faction });
     camp.companies.B = B; camp.rivals = [B]; camp.facing = 0;
-    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: freeColour([A.colour]) };
+    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: B.faction === 'bugs' && A.colour !== 'rust' ? 'rust' : freeColour([A.colour]) };
     view = 'found';
   }
   var secondFaction = null;       // what the hub said the second player runs, until they found it
   var FACTION_CHOICES = [['pmc', 'A private military company'], ['rebel', 'An insurgent revolt'],
     ['bugs', 'A Space Bug swarm'], ['xeno', 'A Xenotripod tribe']];
   // the colour the player last painted a force in, or the house ochre
-  function startingColour() {
+  function startingColour(faction) {
     var c = null;
     try { c = localStorage.getItem('pmc-colour'); } catch (e) { }
-    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : 'ochre';
+    // a swarm's shells are rust orange unless a colour has been chosen before
+    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : faction === 'bugs' ? 'rust' : 'ochre';
   }
   function colourKeys() {
     return (root.PMCIso && root.PMCIso.COLOUR_KEYS) || ['ochre'];
@@ -1905,13 +1906,15 @@
     }
     if (t.hasAttribute('data-bfaction')) {
       keepFoundName();
-      var keepName = draft.name, keepColour = draft.colour;
+      var keepName = draft.name, keepColour = draft.colour, chosen = draft.colourChosen;
       beginSecond(t.getAttribute('data-bfaction'));
-      draft.name = keepName; draft.colour = keepColour;
+      // an unchosen colour follows the kind of force (a swarm defaults to rust); a chosen one is kept
+      draft.name = keepName;
+      if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
-      draft.colour = t.getAttribute('data-campcolour');
+      draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
       colourOpen = false;
       keepFoundName();
       render(); return;

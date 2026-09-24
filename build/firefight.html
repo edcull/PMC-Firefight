@@ -14510,7 +14510,7 @@
     blargewing: { bug: 'largewing', big: 0.76, mz: [12, -15], fly: true },
     bsmallpath: { bug: 'smallpath', big: 0.62, mz: [11, -20] },
     bpath: { bug: 'path', big: 0.74, mz: [12, -22] },
-    blurker: { bug: 'lurker', big: 0.6, mz: [15, -10] },
+    blurker: { bug: 'lurker', big: 0.6, mz: [15, -17] },
     bwatchlarva: { bug: 'watchlarva', big: 0.42, mz: [12, -10] },
     bimmwatch: { bug: 'immwatch', big: 0.64, mz: [14, -22] },
     bwatcher: { bug: 'watcher', big: 0.86, mz: [16, -26] },
@@ -16540,7 +16540,11 @@
       L([[cx - rx * 0.5, cy + ry * 0.6], [cx + rx * 0.1, cy + ry * 0.2], [cx + rx * 0.7, cy + ry * 0.4]], 0.6, acid.d);
     }
     function brain(cx, cy, rx, ry) {
-      if (!dead) E(cx, cy, rx * 1.3, ry * 1.3, 'rgba(185,140,242,.2)');
+      /* It pulses, slowly: swelling a little and its glow brightening, one
+         beat in BRAIN_PHASES baked states turned by the clock. */
+      var bp = dead ? 0 : Math.sin(BRAIN_PHASE / BRAIN_PHASES * Math.PI * 2);
+      rx *= 1 + 0.05 * bp; ry *= 1 + 0.05 * bp;
+      if (!dead) E(cx, cy, rx * (1.3 + 0.08 * bp), ry * (1.3 + 0.08 * bp), 'rgba(185,140,242,' + (0.2 + 0.1 * bp).toFixed(3) + ')');
       E(cx, cy, rx, ry, psy.d);
       E(cx - rx * 0.05, cy - ry * 0.08, rx * 0.9, ry * 0.84, psy.m);
       // the folds of it
@@ -16748,14 +16752,16 @@
         break;
       }
       case 'lurker': {
-        drop = pose === 'kneel' ? 3 : down ? 5 : 0;
-        walk([6, -2, -10], -8, 7, [14, 6, -10], 2, true);
-        shell(-8, -10 + drop, 15, 5.5, 0.02);
-        ridges(-8, -10 + drop, 15, 5.5, 6);
-        spikes([[-19, -14 + drop], [-13, -15 + drop], [-7, -15.5 + drop], [-1, -15 + drop], [5, -13 + drop]], 6);
-        head(10, -10 + drop, 5, 4, 4);
-        antennae(12, -12 + drop, 9, 0.6);
-        walk([7, -1, -9], -8, 7, [15, 7, -9], 2.2, false);
+        /* A pioneer, so it stands up on the same long, jointed legs as the
+           others: the long spined body carried high, not dragged along the ground. */
+        drop = pose === 'kneel' ? 5 : down ? 9 : 0;
+        walk([6, -2, -10], -14, 14, [13, 5, -11], 1.8, true);
+        shell(-8, -17 + drop, 15, 5.5, 0.02);
+        ridges(-8, -17 + drop, 15, 5.5, 6);
+        spikes([[-19, -21 + drop], [-13, -22 + drop], [-7, -22.5 + drop], [-1, -22 + drop], [5, -20 + drop]], 6);
+        head(10, -17 + drop, 5, 4, 4);
+        antennae(12, -19 + drop, 9, 0.6);
+        walk([7, -1, -9], -15, 14, [14, 6, -10], 1.9, false);
         break;
       }
       /* ---- the leader caste ---- */
@@ -17583,8 +17589,9 @@
         var bc = S(hd[0] - hd[2] * 1.0, 0, zs(hd[1]) + hr * 1.35), br = 0.52 * K;
         add(Math.max(bc.d, hc.d) + 0.3, function () {
           // drawn as the brain bugs' brains are: glow, lobes, four folds, a shine
-          var rx = br, ry = br * 0.9, cx = bc.x, cy = bc.y;
-          if (!dead) ellipse(g, cx, cy, rx * 1.3, ry * 1.3, 'rgba(185,140,242,.2)');
+          var qb = dead ? 0 : Math.sin(nowT() / 2000 * Math.PI * 2);        // its slow beat
+          var rx = br * (1 + 0.05 * qb), ry = br * 0.9 * (1 + 0.05 * qb), cx = bc.x, cy = bc.y;
+          if (!dead) ellipse(g, cx, cy, rx * (1.3 + 0.08 * qb), ry * (1.3 + 0.08 * qb), 'rgba(185,140,242,' + (0.2 + 0.1 * qb).toFixed(3) + ')');
           ellipse(g, cx, cy, rx, ry, psy.d);
           ellipse(g, cx - rx * 0.05, cy - ry * 0.08, rx * 0.9, ry * 0.84, psy.m);
           g.strokeStyle = psy.d; g.lineWidth = Math.max(1, rx * 0.1); g.lineCap = 'round'; g.lineJoin = 'round';
@@ -17680,6 +17687,8 @@
     g.putImageData(im, 0, 0);
   }
   var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
+  var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
   function nowT() { return root.performance ? performance.now() : 0; }
   function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
   function cloakedKit(kit) { return !!kit && !!kit.xeno && !!kit.cloak; }
@@ -17690,7 +17699,8 @@
   function animates(u) {
     if (!u || !u.alive) return false;
     if (u.cls === 'aircraft') return true;
-    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]); });
+    if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]); });
   }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
@@ -17715,7 +17725,10 @@
     // a Beta's deflector is baked in SHIELD_PHASES states, one for each beat of its light
     var shieldy = shieldAnimated(kit);
     if (shieldy) SHIELD_PHASE = Math.floor(nowT() / 110) % SHIELD_PHASES;
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '');
+    // a leader bug's brain beats slowly, about once in two seconds
+    var thinking = brainy(kit);
+    if (thinking) BRAIN_PHASE = Math.floor(nowT() / 200) % BRAIN_PHASES;
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -31954,7 +31967,7 @@
     if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
-        muster.colour = b.getAttribute('data-colour');
+        muster.colour = b.getAttribute('data-colour'); muster.colourChosen = true;
         // only the first player's choice is remembered as "your" colour
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
@@ -34790,6 +34803,12 @@
           hotPaint(); return;
         }
         muster.keys = []; muster.name = '';
+        /* A swarm comes in rust orange unless its colour has been chosen: switching
+           to the Bugs from an untouched ochre (or back) swaps the default over. */
+        if (id === 'sel-faction' && !muster.colourChosen) {
+          var fdef = musterFaction() === 'bugs' ? 'rust' : 'ochre';
+          if (muster.colour === 'ochre' || muster.colour === 'rust') { muster.colour = fdef; if (typeof drawColourPick === 'function') drawColourPick(); }
+        }
         if (id === 'sel-faction' && muster.hot) hotLabels();
         // a force the player musters: a made-up name follows the kind of force
         if (id === 'sel-faction' && muster.hot && muster.hot.kind !== 'demo' && !hotRolled(muster.hot.step)) {
@@ -36630,7 +36649,7 @@
     /* The name and the colours are settled on the founding screen, alongside the
        units — they are the three things that make a company yours, and asking
        for them in one place is how a player thinks about it. */
-    draft = { side: 'A', keys: [], doctrine: null, name: name, colour: startingColour() };
+    draft = { side: 'A', keys: [], doctrine: null, name: name, colour: startingColour(faction) };
     view = 'found';
   }
   /* Hotseat: the second player founds a force of their own on the same screen,
@@ -36645,17 +36664,18 @@
     var A = camp.companies.A;
     var B = C.newCompany('', { faction: faction || (camp.companies.B && camp.companies.B.faction) || A.faction });
     camp.companies.B = B; camp.rivals = [B]; camp.facing = 0;
-    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: freeColour([A.colour]) };
+    draft = { side: 'B', keys: [], doctrine: null, name: '', colour: B.faction === 'bugs' && A.colour !== 'rust' ? 'rust' : freeColour([A.colour]) };
     view = 'found';
   }
   var secondFaction = null;       // what the hub said the second player runs, until they found it
   var FACTION_CHOICES = [['pmc', 'A private military company'], ['rebel', 'An insurgent revolt'],
     ['bugs', 'A Space Bug swarm'], ['xeno', 'A Xenotripod tribe']];
   // the colour the player last painted a force in, or the house ochre
-  function startingColour() {
+  function startingColour(faction) {
     var c = null;
     try { c = localStorage.getItem('pmc-colour'); } catch (e) { }
-    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : 'ochre';
+    // a swarm's shells are rust orange unless a colour has been chosen before
+    return (root.PMCIso && root.PMCIso.COLOURS[c]) ? c : faction === 'bugs' ? 'rust' : 'ochre';
   }
   function colourKeys() {
     return (root.PMCIso && root.PMCIso.COLOUR_KEYS) || ['ochre'];
@@ -38023,13 +38043,15 @@
     }
     if (t.hasAttribute('data-bfaction')) {
       keepFoundName();
-      var keepName = draft.name, keepColour = draft.colour;
+      var keepName = draft.name, keepColour = draft.colour, chosen = draft.colourChosen;
       beginSecond(t.getAttribute('data-bfaction'));
-      draft.name = keepName; draft.colour = keepColour;
+      // an unchosen colour follows the kind of force (a swarm defaults to rust); a chosen one is kept
+      draft.name = keepName;
+      if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
-      draft.colour = t.getAttribute('data-campcolour');
+      draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
       colourOpen = false;
       keepFoundName();
       render(); return;

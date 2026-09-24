@@ -43,7 +43,7 @@
   /* Put a unit on the stage: every model, a state it can be in (a tank cannot
      be suppressed), and a ground vehicle on the running gear it usually has. */
   // each army's own colour, put on when the viewer turns to one of its units
-  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
+  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'rust', xeno: 'steel' };
   function choose(k) {
     var wasFac = view.pickFac;
     view.key = k; view.models = null; view.tele = null;
