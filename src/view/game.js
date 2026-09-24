@@ -5177,6 +5177,7 @@
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = 'Your force';
     colourPop(false);
+    backLabel(el('btn-setup-back'), true);
     colourHome();
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
@@ -5302,6 +5303,7 @@
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
     catModal(false);
     colourPop(false);
+    backLabel(el('btn-setup-back'), setupGoesHome());
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
     if (cwp && idp && kind !== 'demo') { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
@@ -5446,6 +5448,20 @@
   /* The top bar's Back: out of a force being changed, back to the battlefield
      as it was; a step back through the forces; or, from the first step (or a
      demo's battlefield, where it started), the main menu. */
+  // the top bar's button: a home icon when it goes to the main menu, "← Back" when it steps back a screen
+  var HOME_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>';
+  function backLabel(btn, home) {
+    if (!btn) return;
+    btn.classList.toggle('home', !!home);
+    btn.innerHTML = home ? HOME_ICON : '\u2190 Back';
+    btn.setAttribute('aria-label', home ? 'Main menu' : 'Back');
+    btn.title = home ? 'Main menu' : 'Back';
+  }
+  window.PMC_BACK_LABEL = backLabel;
+  function setupGoesHome() {
+    var h = muster.hot;
+    return !(h && h.edit) && !(h && h.step > 1 && !(h.step === 3 && h.from3));
+  }
   function setupBack() {
     var h = muster.hot;
     if (h && h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); return; }
@@ -5917,6 +5933,7 @@
     // a demo, and a battle against the AI, open on the battlefield with both forces rolled
     if (kind === 'demo' || kind === 'ai') demoBegin(kind);
     else if (kind === 'hotseat' || kind === 'coop') hotBegin(kind); else hotEnd();
+    backLabel(el('btn-setup-back'), setupGoesHome());
     el('setup').hidden = false;
   };
   window.PMC_BATTLE_LIVE = function () {

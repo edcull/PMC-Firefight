@@ -629,6 +629,10 @@
   }
   .camp-back:hover, .camp-back:focus-visible { color: var(--ink); border-color: var(--alpha); }
   @media (pointer: coarse) { .camp-back { padding: 9px 12px; font-size: 12px; } }
+  /* where it goes to the main menu, the button is a home icon */
+  .camp-back.home { display: inline-grid; place-items: center; padding: 5px 9px; }
+  .camp-back.home svg { width: 17px; height: 17px; display: block; }
+  @media (pointer: coarse) { .camp-back.home { padding: 8px 12px; } .camp-back.home svg { width: 19px; height: 19px; } }
   #camp.overlay > #camp-body.sheet {
     flex: 1; min-height: 0; width: 100%; max-width: none; max-height: none; overflow-y: auto; overscroll-behavior: contain;
     border: 0; border-radius: 0; background: transparent; -webkit-overflow-scrolling: touch;
