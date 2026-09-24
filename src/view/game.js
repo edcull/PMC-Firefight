@@ -1017,6 +1017,12 @@
     var ins = ui.insertion;
     if (!ins) return '';
     var u = ins.unit;
+    if (ins.kind === 'ilz') {
+      return '<div class="card"><h2>Landing zone ' + ins.n + ' of 3</h2>' +
+        '<p class="sub">The defender is down: nominate where the invasion comes in — an 8″ circle of open ground, ' +
+        '8″ clear of every table edge and 12″ from the other zones. The first wave drops into one, two or all three of them.</p>' +
+        '<p class="hint">Tap the shaded ground. Invasion, p. 53.</p></div>';
+    }
     if (ins.kind === 'lz') {
       return '<div class="card"><h2>Landing zone</h2>' +
         '<p class="sub">' + (state.solo && state.solo.coop ? '<b>' + esc(soloOwnerName(ins.owner)) + '</b>: n' : 'N') +
@@ -2526,7 +2532,8 @@
          to be legible from the header, because the prompt itself sits in a panel
          that a phone can have scrolled past or hidden behind another tab. */
       act.textContent = ui.insertion.kind === 'arrive'
-        ? 'Place your reinforcements' : ui.insertion.kind === 'shove' ? 'Shove the enemy drop' : 'Pick a landing zone';
+        ? 'Place your reinforcements' : ui.insertion.kind === 'shove' ? 'Shove the enemy drop'
+          : ui.insertion.kind === 'ilz' ? 'Nominate landing zone ' + ui.insertion.n + ' of 3' : 'Pick a landing zone';
       act.className = 'pill pill-wait';
     } else if (state.solo) {
       if (state.activeSide === 'B') { act.textContent = 'OpFor phase'; act.className = 'pill pill-B'; }
@@ -2781,6 +2788,11 @@
   function drawBoard() {
     // everything drawn on the board itself is in CSS pixels, scaled to its density
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    /* The objectives' beacons are painted with the structures: when they move
+       or arrive (an Invasion's zones are nominated after deployment), repaint. */
+    var ok0 = state.objectives.map(function (o) { return o.x.toFixed(1) + ',' + o.y.toFixed(1); }).join(';');
+    if (state.structs && state.objKey != null && state.objKey !== ok0) paintStructures();
+    state.objKey = ok0;
     // the plate is large: paint it once, off the first frame, with a word to the player
     if (!state.scene) {
       if (!state.baking) {
@@ -3264,6 +3276,11 @@
         ctx.moveTo(q[0].x, q[0].y);
         for (var n = 1; n < 4; n++) ctx.lineTo(q[n].x, q[n].y);
         ctx.closePath(); ctx.fill();
+      });
+      // an Invasion's zones already nominated, while the next is chosen
+      (ui.insertion.chosen || []).forEach(function (z) {
+        ctx.setLineDash([6, 6]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(235,240,248,.85)';
+        isoRing(z.x, z.y, 4, liftOf(z.x, z.y)); ctx.stroke(); ctx.setLineDash([]);
       });
       // and the 12" exclusion round each objective, so the shape makes sense
       ctx.setLineDash([7, 6]);
@@ -6369,6 +6386,7 @@
   window.__pressCancel = function () { send({ k: 'cancel' }); };
   window.__holdInsertion = function () { holdInsertion(); };
   window.__insertionSpotsNow = function () { return ui.insertion ? ui.insertion.spots : null; };
+  window.__tapInsertion = function (q) { placeInsertion(q); };
   window.__seats = function () { return seats.slice(); };
   window.__mySide = function () { return mySide(); };
 

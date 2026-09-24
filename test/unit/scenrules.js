@@ -200,6 +200,7 @@ function setupOf(id) {
   st.terrain = [{ kind: 'woods', x: 22, y: 22, w: 4, h: 4 }];
   S.begin(st, id, {});
   S.deploy(st);
+  if (st.sc.lzPending) S.setLZs(st, S.autoLZs(st));   // the attacker nominates once the defender is down
   return st;
 }
 ok('Meeting engagement places no objectives', setupOf('meeting').objectives.length, 0);
@@ -215,6 +216,20 @@ ok('...at least 12" apart and 8" in from the edges', (function () {
   return 'ok';
 })(), 'ok');
 ok('Invasion places three landing zones', setupOf('invasion').objectives.length, 3);
+ok('...but none until the defender is down', (function () {
+  var st = world([unit('A', 1, 1), unit('B', 44, 44)]); st.terrain = [];
+  S.begin(st, 'invasion', {}); return st.objectives.length + ' ' + st.sc.lzPending;
+})(), '0 true');
+ok('...12" apart, 8" in from the edges, in the open', (function () {
+  for (var k = 0; k < 20; k++) {
+    var o = setupOf('invasion').objectives;
+    for (var a = 0; a < 3; a++) {
+      if (o[a].x < 8 || o[a].y < 8 || o[a].x > 40 || o[a].y > 40) return 'edge';
+      for (var b = a + 1; b < 3; b++) if (Math.hypot(o[a].x - o[b].x, o[a].y - o[b].y) < 12) return 'close';
+    }
+  }
+  return 'ok';
+})(), 'ok');
 var dem = setupOf('demolish');
 ok('Demolish puts the objective within 4" of the centre',
   R.inches(dem.sc.target.cx, dem.sc.target.cy, 24, 24) <= 4.01, true,
@@ -303,6 +318,7 @@ function board(id, opts) {
   st.terrain = [];
   S.begin(st, id, opts.attacker ? { attacker: opts.attacker } : {});
   S.deploy(st);
+  if (st.sc.lzPending) S.setLZs(st, S.autoLZs(st));
   st.turn = opts.turn || 1;
   if (opts.after) opts.after(st);
   return st;
@@ -525,6 +541,7 @@ ok('landing zones are chosen on open ground', (function () {
     // a table half covered in woods
     st.terrain = [{ kind: 'woods', x: 0, y: 0, w: 48, h: 16 }, { kind: 'rocks', x: 0, y: 36, w: 48, h: 12 }];
     S.begin(st, 'invasion', {});
+    S.deploy(st); S.setLZs(st, S.autoLZs(st));
     st.objectives.forEach(function (o) {
       if (R.terrainAt(st, o.x, o.y) !== 'open') bad++;
     });

@@ -115,23 +115,11 @@
   };
 
   function ri(rand, lo, hi) { return lo + Math.floor(rand() * (hi - lo + 1)); }
-  /* The same draw, leaning towards the top of the range. A table generated on
-     flat draws comes out emptier than the book's pictures of one — the ranges
-     read as "1-6 rocks", not "3 or 4 rocks" — so a count sits around 57% of its
-     range rather than halfway. It is a nudge, not a thumb on the scale. */
-  function riHigh(rand, lo, hi) {
-    if (hi <= lo) return lo;
-    return lo + Math.floor(Math.pow(rand(), 0.72) * (hi - lo + 1));
-  }
   function rf(rand, lo, hi) { return lo + rand() * (hi - lo); }
-  /* How many of a rolled feature go down. A "1-X" result that comes out at 1
-     is made 2: a quarter given "1-6 rocks" and then a single rock reads as the
-     roll having gone missing, not as terrain. A result of exactly one — "a
-     single crater" — is still one, and an "up to" count may still be none. */
+  /* How many of a rolled feature go down: straight off the book's range,
+     every count in it as likely as any other (p. 47). */
   function countFor(spec, rand) {
-    var n = riHigh(rand, spec.min, spec.max);
-    if (spec.min === 1 && spec.max >= 2 && n < 2) n = 2;
-    return n;
+    return ri(rand, spec.min, spec.max);
   }
 
   function overlap(a, b) {
@@ -154,14 +142,11 @@
     return out;
   }
 
-  /* One area's D6. One re-roll of a 1 or a 2: two areas in six coming up "a
-     single crater" left tables with nothing to fight over; this lifts the
-     average area roll from 3.5 to about 4.2 without ever forbidding an open
-     quarter. `memo` carries "no more than 1 - re-roll further 6s" across a table. */
+  /* One area's D6, as the book rolls it (p. 47) — no second chances.
+     `memo` carries "no more than 1 - re-roll further 6s" across a table. */
   function rollArea(gen, rand, memo) {
     memo = memo || {};
     var first = ri(rand, 1, 6), roll = first;
-    if (roll <= 2) roll = ri(rand, 1, 6);
     if (roll === 6 && gen.rows[5].once && memo.sixUsed) {
       while (roll === 6) roll = ri(rand, 1, 6);
     }

@@ -1475,7 +1475,36 @@
     render();
   }
 
+  /* Invasion (p. 53): with the defender down, the attacker nominates the three
+     landing zones before the first wave drops — a tap for each, or the AI's pick. */
+  function askInvasionLZ(done) {
+    var atk = state.sc.attacker;
+    if (isAI(atk)) {
+      SC.setLZs(state, SC.autoLZs(state));
+      logLine('note', sideName(atk) + ' nominates three landing zones.');
+      done(); return;
+    }
+    var chosen = [];
+    function ask() {
+      var spots = SC.lzSpots(state, chosen);
+      if (!spots.length) { SC.setLZs(state, chosen.concat(SC.autoLZs(state)).slice(0, 3)); done(); return; }
+      ui.insertion = { unit: null, by: atk, owner: null, spots: spots, kind: 'ilz', chosen: chosen.slice(), n: chosen.length + 1,
+        done: function (p) {
+          chosen.push(p);
+          logLine('note', sideName(atk) + ' nominates landing zone ' + chosen.length + '.');
+          if (chosen.length >= 3) { SC.setLZs(state, chosen); done(); } else ask();
+        } };
+      ui.selected = null; ui.mode = 'insert'; ui.targets = []; ui.moves = []; ui.terrain = [];
+      setHint(null, 'Tap the shaded ground to nominate landing zone ' + (chosen.length + 1) + ' of 3.');
+      revealConsole();
+      render();
+    }
+    fitView();
+    ask();
+  }
+
   function scenarioArrivals(after) {
+    if (state.sc && state.sc.lzPending) { askInvasionLZ(function () { scenarioArrivals(after); }); return; }
     var lzFor = lzWanted();
     if (lzFor) { askLZ(lzFor, function () { scenarioArrivals(after); }); return; }
     if (state.sc.pickedTurn !== state.turn) { state.sc.picked = {}; state.sc.pickedTurn = state.turn; }
@@ -1493,7 +1522,17 @@
        comes on is a decision the book leaves open and a dice roll should not
        be making. */
     var ask = [];
-    ['A', 'B'].forEach(function (side) {
+    /* Who comes on first. Normally both sides alternate; an Invasion's attacker
+       lands after the defender's reserves are down, and a Demolish defender
+       after the attacker's (pp. 53-54). Every unit is taken in that order, the
+       placed ones and the asked-for ones alike. */
+    var sides = ['A', 'B'];
+    if (state.sc && state.sc.attacker) {
+      var atk0 = state.sc.attacker, def0 = atk0 === 'A' ? 'B' : 'A';
+      if (state.scen.id === 'invasion') sides = [def0, atk0];
+      else if (state.scen.id === 'demolish') sides = [atk0, def0];
+    }
+    sides.forEach(function (side) {
       var coming = state.sc.picked[side] ? state.sc.picked[side].slice() : SC.reserves(state, side);
       /* Semper Fidelis (Battle Honour, p. 88): a unit held in the scenario's
          reserve may come on automatically on any turn but the first — no roll,
@@ -1506,18 +1545,16 @@
           coming.push(u);
         });
       }
-      coming.forEach(function (u) {
-        if (!u.alive || !u.reserve) return;
-        // a solitaire scenario says exactly where its units come on
-        if (!isAI(u.side) && !state.scen.autoArrive) { ask.push(u); return; }
-        u.sfOffer = false;
-        var p = arrivalPoint(u);
-        if (!p) return;
-        landArrival(u, p, log);
-        if (semperFidelis(u)) log.push(u.label + ' — Semper Fidelis: arrives when called for.');
-        showArrival(u);
-      });
+      coming.forEach(function (u) { ask.push(u); });
     });
+    function placeAuto(u) {
+      u.sfOffer = false;
+      var p = arrivalPoint(u);
+      if (!p) return;
+      landArrival(u, p, log);
+      if (semperFidelis(u)) log.push(u.label + ' — Semper Fidelis: arrives when called for.');
+      showArrival(u);
+    }
     // Invasion: the second wave waved off because every zone is in enemy hands (p. 53)
     if (state.sc && state.sc.zonesHot === state.turn) {
       var hot = 'All landing zones are hot! Repeat! All landing zones are hot! — the '
@@ -1537,13 +1574,18 @@
       if (after) after();
     }
 
-    // ask for each of the player's in turn, then report the lot together
+    // in order: the OpFor's placed, the player's asked for, then the lot reported together
     var i = 0;
     (function next() {
-      if (i >= ask.length) { report(); return; }
-      var u = ask[i++];
-      if (!u.alive || !u.reserve) { next(); return; }
-      askArrival(u, log, next);
+      while (i < ask.length) {
+        var u = ask[i++];
+        if (!u.alive || !u.reserve) continue;
+        // a solitaire scenario says exactly where its units come on
+        if (isAI(u.side) || state.scen.autoArrive) { placeAuto(u); continue; }
+        askArrival(u, log, next);
+        return;
+      }
+      report();
     })();
   }
 
@@ -1838,6 +1880,18 @@
     var ins = ui.insertion;
     if (!ins) return;
     var u = ins.unit;
+    if (ins.kind === 'ilz') {
+      if (!SC.lzOK(state, p, ins.chosen)) {
+        var nz2 = snapToSpot(ins, p);
+        if (!nz2) { setHint(null, 'Not there — open ground, 8" clear of every table edge and 12" from the other landing zones.'); return; }
+        p = nz2;
+      }
+      ui.insertion = null; ui.mode = 'idle';
+      var doneI = ins.done;
+      render();
+      whenIdle(function () { doneI({ x: p.x, y: p.y }); });
+      return;
+    }
     if (ins.kind === 'lz') {
       var lzOK = SOLO.lzLegal(state, p, ins.owner);
       if (!lzOK) {
@@ -4862,7 +4916,8 @@
           owner: ui.insertion.owner || null,
           by: ui.insertion.by || null, drift: ui.insertion.drift || null, die: ui.insertion.die || null,
           kind: ui.insertion.kind,
-          spots: ui.insertion.spots
+          spots: ui.insertion.spots,
+          n: ui.insertion.n || null, chosen: ui.insertion.chosen || null
         } : null,
         // which reserves come on this turn, being chosen
         reservePick: ui.reservePick ? {
