@@ -8743,6 +8743,7 @@
         barrel(RF, 0, 0.42, 0, roof + 3, 1.4, 'mg', { col: '#15181e', brake: true });
       });
 
+      if (droneDue()) { var dsp = droneSpot(); part(dsp.x + dsp.y, function () { drawDrone(); }); }
       parts.sort(function (p, q) { return p.d - q.d; }).forEach(function (p) { p.fn(); });
     }
 
@@ -9638,13 +9639,14 @@
         } else if (light && u.drone && !dead) {
           /* A drone has no head to put a pilot in: the sensor dome sits on the
              chest where it was, and the aerial stands off the back shoulder. */
-          var dz = shoulder - 1, dc = S3(TF(tL * 0.05, 0), dz), dr5 = Math.max(4, 6 * sf);
+          // the dome on its right shoulder cap, the aerial on its left
+          var dz = shoulder, dc = S3(TF(0, -tW * 1.12), dz), dr5 = Math.max(4, 5.5 * sf);
           sEllipse(dc[0], dc[1] + dr5 * 0.15, dr5 * 1.2, dr5 * 0.6, '#14171c');
           sEllipse(dc[0], dc[1] - dr5 * 0.35, dr5, dr5 * 0.85, '#aeb8c2');
           sEllipse(dc[0], dc[1] - dr5 * 0.05, dr5, dr5 * 0.42, '#7d8894');
           sEllipse(dc[0] - dr5 * 0.35, dc[1] - dr5 * 0.7, dr5 * 0.35, dr5 * 0.25, 'rgba(255,255,255,.75)');
           sEllipse(dc[0] + dr5 * 0.2, dc[1] - dr5 * 0.25, dr5 * 0.28, dr5 * 0.2, '#2a6f9a');
-          var backS = nearOf(1) > 0 ? -1 : 1, ab = S3(TF(-tL * 0.4, backS * tW * 1.15), shoulder), at5 = S3(TF(-tL * 0.52, backS * tW * 1.15), shoulder + Math.round(18 * sf));
+          var ab = S3(TF(-tL * 0.4, tW * 1.15), shoulder), at5 = S3(TF(-tL * 0.52, tW * 1.15), shoulder + Math.round(18 * sf));
           sEllipse(ab[0], ab[1], 2, 1.2, STEEL);                // its mount on the shoulder
           line(ab, at5, 1.4, STEEL_LIT);
           sEllipse(at5[0], at5[1], 1.6, 1.6, '#ff5040');
@@ -9796,8 +9798,28 @@
     /* Drone Control (p. 37): no crew, so the hull carries what flies it instead —
        a sensor dome on the roof towards the back, and a whip aerial beside it
        with a light on the tip. */
+    /* Drawn as one of a styled hull's parts where it has them, so a turret in
+       front of it hides it; otherwise last, over the hull. */
+    var droneDone = false;
+    function droneDue() { return u.drone && !dead && !/Turret/.test(u.group || ''); }
     function drawDrone() {
-      if (!u.drone || dead || /Turret/.test(u.group || '')) return;
+      if (droneDone || !droneDue()) return;
+      droneDone = true;
+      droneKit();
+    }
+    // where the dome goes, as a point on the hull (for sorting it among the parts)
+    function droneSpot() {
+      var body = spec.style && spec.style.body, legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+      if (spec.fly) return along(spec.len * 0.05, 0);
+      if (legs) return along(-spec.len * 0.12, -spec.wid * 0.28);
+      if (body === 'pickup') return along(spec.len * (driveOf(u) !== 'wheeled' ? 0.35 : 0.05), -spec.wid * 0.22);
+      if (body === 'guntruck') {
+        var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
+        return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
+      }
+      return along(-spec.len * 0.3, -spec.wid * 0.26);
+    }
+    function droneKit() {
       var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
       var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
       if (legs && mechClass() === 'light') return;          // drawn in place of its head, with the mech
