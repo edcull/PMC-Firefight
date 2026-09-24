@@ -6823,8 +6823,10 @@
   function isMachineKey(key) { var p = profile(key); return !!p && p.cls !== 'infantry'; }
   function isCommandKey(key) { var p = profile(key); return !!p && !!p.command; }
 
-  /* Every legal promotion target for a roster entry. */
-  function promotionTargets(entry) {
+  /* Every legal promotion target for a roster entry. With the company given, no
+     higher than one Tier over the Company Tier: "a Tier II Aspiring Company...
+     may promote its units up to Tier III" (p. 84), aspiring or not. */
+  function promotionTargets(entry, co) {
     var p = profile(entry.key);
     if (!p) return [];
     if (p.cls !== 'infantry') return [];                       // machines never promote
@@ -6835,6 +6837,7 @@
       if (q.cls !== 'infantry' || isLeaderP(q)) return false;
       if (q.key === entry.key) return false;
       if (q.tier !== p.tier && q.tier !== p.tier + 1) return false;
+      if (co && q.tier > co.tier + 1) return false;
       return groups.indexOf(q.group) >= 0;
     });
   }
@@ -7305,6 +7308,33 @@
     return { ok: true };
   }
 
+  /* "Tier V companies may change (but not get a new one!) one doctrine every 5
+     battles" (p. 87): the first change comes 5 battles after reaching Tier V, and
+     each change starts the count again. A save from before this was kept reads
+     as due now. */
+  function canSwapDoctrine(co) {
+    if (co.tier < 5) return { ok: false, why: 'Only a Tier V ' + words(co).force.toLowerCase() + ' may change a ' + creedOf(co).one + '.' };
+    if (!co.doctrines.length) return { ok: false, why: 'Nothing held to change.' };
+    var due = co.doctrineSwapAt == null ? 0 : co.doctrineSwapAt;
+    if (co.record.battles < due) {
+      var left = due - co.record.battles;
+      return { ok: false, due: due, why: 'Next change after ' + left + ' more battle' + (left === 1 ? '' : 's') + '.' };
+    }
+    return { ok: true };
+  }
+  function swapDoctrine(co, outId, inId) {
+    var chk = canSwapDoctrine(co);
+    if (!chk.ok) return chk;
+    if (!hasDoctrine(co, outId)) return { ok: false, why: 'Not held.' };
+    var trial = { doctrines: co.doctrines.filter(function (x) { return x !== outId; }), tier: co.tier, faction: co.faction };
+    if (inId === outId) return { ok: false, why: 'The same one.' };
+    var can = canTakeDoctrine(trial, inId);
+    if (!can.ok) return can;
+    co.doctrines = trial.doctrines.concat([inId]);
+    co.doctrineSwapAt = co.record.battles + 5;
+    return { ok: true };
+  }
+
   /* ================= company legality and promotion ================= */
   /* Can this roster field a legal army at the given Battle Tier and Priority Level?
      Greedy: take the cheapest legal spread the composition table asks for. It only
@@ -7551,7 +7581,7 @@
   }
 
   function promoteUnit(co, entry, newKey) {
-    var targets = promotionTargets(entry);
+    var targets = promotionTargets(entry, co);
     if (!targets.some(function (q) { return q.key === newKey; })) return { ok: false, why: 'Not a legal promotion for this unit.' };
     var cost = promotionCost(entry, newKey, co);
     if (entry.exp < cost.exp) return { ok: false, why: 'Needs ' + cost.exp + ' EXP, has ' + entry.exp + '.' };
@@ -7811,11 +7841,13 @@
       need = (entry.upgrades || []).indexOf(1) >= 0 ? 2 : 4;   // Advanced Emergency Systems
       note = 'Aircraft make an emergency landing on a ' + need + '+' +
         (need === 2 ? ' with Advanced Emergency Systems.' : '.');
+    } else if (line.catastrophic) {
+      // a ground vehicle, crewed or a drone, blown apart is gone (p. 86)
+      return { roll: null, saved: false, need: null, note: 'Destroyed in a catastrophic explosion — nothing is left to recover.' };
     } else if (entry.drone) {
       need = won ? 3 : 5;
       note = 'A drone is recovered on a ' + need + '+.';
     } else {
-      if (line.catastrophic) return { roll: null, saved: false, need: null, note: 'Destroyed in a catastrophic explosion — nothing is left to recover.' };
       need = won ? 3 : 5;
       note = 'A ground vehicle is recovered on a ' + need + '+.';
     }
@@ -7983,7 +8015,8 @@
         } else if (line.destroyed && profile(entry.key).cls !== 'infantry') {
           var sv = salvageOf[entry.rid] || salvage(line, entry, won || report.winner === null);
           u.salvage = sv;
-          if (sv.saved) { entry.restUntil = out.turn + 1; rec.salvaged.push(entry); }
+          // it skips the next battle (p. 86): one spell in the workshop, counted down by the next aftermath
+          if (sv.saved) { entry.restUntil = 1; rec.salvaged.push(entry); }
           else { u.wiped = true; rec.gone.push(entry); }
         }
 
@@ -8686,7 +8719,7 @@
         }
         return;
       }
-      var all = promotionTargets(e);
+      var all = promotionTargets(e, co);
       var affordable = all.filter(function (q) {
         var c = promotionCost(e, q.key);
         return e.exp >= c.exp && co.kUC >= c.kUC;
@@ -8829,6 +8862,7 @@
     canTakeUpgrade: canTakeUpgrade, availableUpgrades: availableUpgrades, takeUpgrade: takeUpgrade,
 
     hasDoctrine: hasDoctrine, canTakeDoctrine: canTakeDoctrine, doctrineSlots: doctrineSlots,
+    canSwapDoctrine: canSwapDoctrine, swapDoctrine: swapDoctrine,
     canFieldArmy: canFieldArmy, canPromoteCompany: canPromoteCompany, promoteCompany: promoteCompany,
     canAspire: canAspire, effectiveTier: effectiveTier, rebuildNeeds: rebuildNeeds,
     traumaThreshold: traumaThreshold,
@@ -35968,6 +36002,12 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
+    // Tier V: one change every five battles (p. 87)
+    if (co.tier >= 5) {
+      var sw = C.canSwapDoctrine(co);
+      h += '<button class="lnk" data-go="doctrine" data-side="' + side + '" data-swap="1"' + (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') +
+        '>Change a ' + C.creedOf(co).one + (sw.ok ? '' : ' — ' + esc(sw.why)) + '</button> ';
+    }
     h += promotionPanel(co, side);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
@@ -36455,7 +36495,7 @@
       if (C.isLeaderP(p)) return;
       if ((p.rules || []).indexOf('Turret') >= 0) return;            // turrets never earn EXP
       var acts = '';
-      C.promotionTargets(e).forEach(function (q) {
+      C.promotionTargets(e, co).forEach(function (q) {
         var c = C.promotionCost(e, q.key);
         var can = e.exp >= c.exp && co.kUC >= c.kUC;
         acts += '<button class="lnk" data-promote="' + e.rid + '" data-to="' + q.key + '"' +
@@ -37206,11 +37246,12 @@
   }
 
   /* ================= doctrine picking ================= */
-  var docSide = 'A';
+  var docSide = 'A', docSwap = false, swapOut = null;
   function doctrineView() {
     var co = camp.companies[docSide];
     var cr = C.creedOf(co), reb = co.faction === 'rebel', bug = co.faction === 'bugs' || co.faction === 'xeno';
     var open = C.doctrineSlots(co) - co.doctrines.length;
+    if (docSwap && C.canSwapDoctrine(co).ok) return swapView(co, cr);
     var h = '<h2>Choose ' + (co.faction === 'bugs' ? 'an ' : 'a ') + cr.one + '</h2>';
     h += '<p class="lede">' + esc(co.name) + ' has ' + open + ' ' + cr.one +
       ' slot' + (open === 1 ? '' : 's') + ' free — one per ' + C.words(co).tier +
@@ -37234,6 +37275,31 @@
       h += '</div>';
     });
     h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+    return h;
+  }
+
+  /* A Tier V change: first the one to give up, then the one to take in its place. */
+  function swapView(co, cr) {
+    var h = '<h2>Change a ' + cr.one + '</h2>';
+    h += '<p class="lede">' + esc(co.name) + ' may change one ' + cr.one + ' now, and again five battles later. ' +
+      (swapOut ? 'Giving up <b>' + esc(C.doctrine(swapOut).name) + '</b> — pick what replaces it.' : 'Pick the one to give up.') + '</p>';
+    h += '<div class="docpick">';
+    if (!swapOut) {
+      co.doctrines.forEach(function (id) {
+        var d = C.doctrine(id);
+        h += '<button class="doc on" data-swapout="' + id + '"><b>' + esc(d.name) + '</b><span>' + esc(d.text) + '</span></button>';
+      });
+    } else {
+      var trial = { doctrines: co.doctrines.filter(function (x) { return x !== swapOut; }), tier: co.tier, faction: co.faction };
+      cr.list.forEach(function (d) {
+        if (d.id === swapOut) return;
+        var chk = C.canTakeDoctrine(trial, d.id);
+        if (!chk.ok && C.hasDoctrine(co, d.id)) return;
+        h += '<button class="doc" data-swapin="' + d.id + '"' + (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"') +
+          '><b>' + esc(d.name) + '</b><i>' + esc(d.cat) + '</i><span>' + esc(d.text) + '</span></button>';
+      });
+    }
+    h += '</div><p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
   }
 
@@ -37314,6 +37380,12 @@
     if (t.hasAttribute('data-doc')) {
       draft.doctrine = t.getAttribute('data-doc');
       if (openModal === 'doctrine') openModal = null;   // one to choose: the pick closes it
+      render(); return;
+    }
+    if (t.hasAttribute('data-swapout')) { swapOut = t.getAttribute('data-swapout'); render(); return; }
+    if (t.hasAttribute('data-swapin')) {
+      var sr = C.swapDoctrine(camp.companies[docSide], swapOut, t.getAttribute('data-swapin'));
+      if (sr.ok) { swapOut = null; docSwap = false; save(); view = 'hub'; }
       render(); return;
     }
     if (t.hasAttribute('data-take')) {
@@ -37425,7 +37497,7 @@
       keepFoundName();
       render(); return;
     }
-    if (t.hasAttribute('data-side')) docSide = t.getAttribute('data-side');
+    if (t.hasAttribute('data-side')) { docSide = t.getAttribute('data-side'); docSwap = t.hasAttribute('data-swap'); swapOut = null; }
     if (t.hasAttribute('data-rival')) intelIdx = +t.getAttribute('data-rival') || 0;
 
     switch (go) {

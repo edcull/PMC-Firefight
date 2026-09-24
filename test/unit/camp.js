@@ -115,6 +115,8 @@ ok('Bad Reputation blocks promotion outright', C.promotionTargets(badrep).length
 var pco = start(); pco.kUC = 50;
 var pe = C.byRid(pco, pco.roster[1].rid); pe.key = 'regular'; pe.name = 'Kowalski\'s Lads'; pe.exp = 20;
 pe.honours = [4]; pe.traumas = [5];
+ok('a Tier I company cannot take a unit to Tier IV', C.promoteUnit(pco, pe, 'veterans').ok, false);
+pco.tier = 3;                                     // promotions reach one Tier over the Company Tier (p. 84)
 var pr = C.promoteUnit(pco, pe, 'veterans');
 ok('a promotion goes through', pr.ok, true);
 ok('...spends the EXP', pe.exp, 8);

@@ -421,6 +421,12 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
+    // Tier V: one change every five battles (p. 87)
+    if (co.tier >= 5) {
+      var sw = C.canSwapDoctrine(co);
+      h += '<button class="lnk" data-go="doctrine" data-side="' + side + '" data-swap="1"' + (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') +
+        '>Change a ' + C.creedOf(co).one + (sw.ok ? '' : ' — ' + esc(sw.why)) + '</button> ';
+    }
     h += promotionPanel(co, side);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
@@ -908,7 +914,7 @@
       if (C.isLeaderP(p)) return;
       if ((p.rules || []).indexOf('Turret') >= 0) return;            // turrets never earn EXP
       var acts = '';
-      C.promotionTargets(e).forEach(function (q) {
+      C.promotionTargets(e, co).forEach(function (q) {
         var c = C.promotionCost(e, q.key);
         var can = e.exp >= c.exp && co.kUC >= c.kUC;
         acts += '<button class="lnk" data-promote="' + e.rid + '" data-to="' + q.key + '"' +
@@ -1659,11 +1665,12 @@
   }
 
   /* ================= doctrine picking ================= */
-  var docSide = 'A';
+  var docSide = 'A', docSwap = false, swapOut = null;
   function doctrineView() {
     var co = camp.companies[docSide];
     var cr = C.creedOf(co), reb = co.faction === 'rebel', bug = co.faction === 'bugs' || co.faction === 'xeno';
     var open = C.doctrineSlots(co) - co.doctrines.length;
+    if (docSwap && C.canSwapDoctrine(co).ok) return swapView(co, cr);
     var h = '<h2>Choose ' + (co.faction === 'bugs' ? 'an ' : 'a ') + cr.one + '</h2>';
     h += '<p class="lede">' + esc(co.name) + ' has ' + open + ' ' + cr.one +
       ' slot' + (open === 1 ? '' : 's') + ' free — one per ' + C.words(co).tier +
@@ -1687,6 +1694,31 @@
       h += '</div>';
     });
     h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+    return h;
+  }
+
+  /* A Tier V change: first the one to give up, then the one to take in its place. */
+  function swapView(co, cr) {
+    var h = '<h2>Change a ' + cr.one + '</h2>';
+    h += '<p class="lede">' + esc(co.name) + ' may change one ' + cr.one + ' now, and again five battles later. ' +
+      (swapOut ? 'Giving up <b>' + esc(C.doctrine(swapOut).name) + '</b> — pick what replaces it.' : 'Pick the one to give up.') + '</p>';
+    h += '<div class="docpick">';
+    if (!swapOut) {
+      co.doctrines.forEach(function (id) {
+        var d = C.doctrine(id);
+        h += '<button class="doc on" data-swapout="' + id + '"><b>' + esc(d.name) + '</b><span>' + esc(d.text) + '</span></button>';
+      });
+    } else {
+      var trial = { doctrines: co.doctrines.filter(function (x) { return x !== swapOut; }), tier: co.tier, faction: co.faction };
+      cr.list.forEach(function (d) {
+        if (d.id === swapOut) return;
+        var chk = C.canTakeDoctrine(trial, d.id);
+        if (!chk.ok && C.hasDoctrine(co, d.id)) return;
+        h += '<button class="doc" data-swapin="' + d.id + '"' + (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"') +
+          '><b>' + esc(d.name) + '</b><i>' + esc(d.cat) + '</i><span>' + esc(d.text) + '</span></button>';
+      });
+    }
+    h += '</div><p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
   }
 
@@ -1767,6 +1799,12 @@
     if (t.hasAttribute('data-doc')) {
       draft.doctrine = t.getAttribute('data-doc');
       if (openModal === 'doctrine') openModal = null;   // one to choose: the pick closes it
+      render(); return;
+    }
+    if (t.hasAttribute('data-swapout')) { swapOut = t.getAttribute('data-swapout'); render(); return; }
+    if (t.hasAttribute('data-swapin')) {
+      var sr = C.swapDoctrine(camp.companies[docSide], swapOut, t.getAttribute('data-swapin'));
+      if (sr.ok) { swapOut = null; docSwap = false; save(); view = 'hub'; }
       render(); return;
     }
     if (t.hasAttribute('data-take')) {
@@ -1878,7 +1916,7 @@
       keepFoundName();
       render(); return;
     }
-    if (t.hasAttribute('data-side')) docSide = t.getAttribute('data-side');
+    if (t.hasAttribute('data-side')) { docSide = t.getAttribute('data-side'); docSwap = t.hasAttribute('data-swap'); swapOut = null; }
     if (t.hasAttribute('data-rival')) intelIdx = +t.getAttribute('data-rival') || 0;
 
     switch (go) {
