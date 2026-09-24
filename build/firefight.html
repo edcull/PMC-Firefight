@@ -34889,7 +34889,8 @@
        from whatever is left, so no two forces on a table ever match. */
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, cc = CO[draft.colour];
     h += '<div class="muster foundid found-id">' +
-      '<div class="field"><label for="found-name">' +
+      // no label over it: the chip and the box speak for themselves (it stays for screen readers)
+      '<div class="field"><label for="found-name" class="sr-only">' +
       say('Company name', 'What the revolt calls itself', 'What the swarm is known as', 'What the tribe is known as') + '</label>' +
       // the colour picked, a chip left of the name: tap it for the colours
       '<div class="name-row"><button type="button" class="chip-btn" data-go="fcolour" aria-expanded="' + colourOpen + '"' +
