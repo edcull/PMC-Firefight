@@ -286,5 +286,40 @@ var mort = unit('mortarteam', { x: 10, y: 10 }), hid = unit('recruits', { side: 
 var lw = { kind: 'barricade', x: 29, y: 30.8, w: 4, h: 0.5 };
 ok('plunging fire can bring down the low wall a target shelters by', R.shelterOf(table([mort, hid], [lw]), mort, hid) === lw);
 
+/* ------------------------------------------------------ army rules: auras, Lifter, Aux teleport */
+console.log('\nAURAS FROM STEADY UNITS, LIFTER, AUX TELEPORT');
+var ldr = unit('rsecondary', { x: 10, y: 10 }), civ = unit('rciv', { x: 14, y: 10 });
+var dg = table([ldr, civ]);
+ok('Death or Glory: a steady leader shouts', R.deathOrGlory(dg, civ) === ldr);
+ldr.sp = ldr.morale + 1;
+ok('...a suppressed one does not', R.deathOrGlory(dg, civ) === null);
+var pm = unit('bsmallpath', { x: 10, y: 10 }), bug = unit('btiny', { x: 30, y: 10 }), prey = unit('recruits', { side: 'B', x: 14, y: 10 });
+var pt = table([pm, bug, prey]);
+ok('Pheromone Markers: a steady marker unit counts', R.pheromoneBonus(pt, bug, prey) === 1);
+pm.sp = pm.morale + 1;
+ok('...a suppressed one does not', R.pheromoneBonus(pt, bug, prey) === 0);
+var om = unit('bwatchlarva', { x: 10, y: 10 }), tb = unit('btiny', { x: 14, y: 10 });
+var ot = table([om, tb]);
+ok('Overmind: a steady one gives cover and rally', R.overmindFor(ot, tb, false) === om);
+om.sp = om.morale + 1;
+ok('...a suppressed one does not', R.overmindFor(ot, tb, false) === null);
+ok('...but still holds back Aggressive', R.overmindFor(ot, tb, false, true) === om);
+var lft = unit('rlifter', { x: 10, y: 10 }), trk = unit('rltv', { x: 12, y: 10 }), gun = unit('rmedart', { x: 12, y: 10 });
+var lt = table([lft, trk, gun]);
+ok('a Lifter picks up a transport', R.canEmbark(lt, lft, trk));
+trk.cargo = [gun];
+ok('...but not one towing a gun', !R.canEmbark(lt, lft, trk));
+var got2 = 0, got3 = 0, n2 = 0, n3 = 0;
+for (var tq = 0; tq < 300; tq++) {
+  var pa = unit('xtturret2', { x: 10, y: 10 }), pb = unit('xtturret2', { x: 40, y: 10 }), pc = unit('xtturret2', { x: 40, y: 40 });
+  var ac = unit('xstrike2', { x: 20, y: 30, camp: { flags: { auxTeleport: true } } }), tu = unit('recruits', { x: 12, y: 10 });
+  var tt = table([pa, pb, pc, ac, tu]);
+  var rr = R.teleportRoll(tt, tu, pa);
+  if (rr.value === 2) { n2++; if (!rr.random && rr.pads.length === 2 && rr.pads.indexOf(ac) >= 0 && rr.pads[0] === rr.randomPad) got2++; }
+  if (rr.value === 3) { n3++; if (!rr.random && rr.pads.length === 4 && rr.pads.indexOf(ac) >= 0) got3++; }
+}
+ok('Aux teleport on a 2: the random pad or the aircraft, nothing else', n2 > 10 && got2 === n2, got2 + ' of ' + n2);
+ok('...on a 3: any pad or the aircraft', n3 > 10 && got3 === n3, got3 + ' of ' + n3);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

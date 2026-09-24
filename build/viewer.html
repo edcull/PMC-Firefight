@@ -1349,7 +1349,7 @@
       var o = state.units[i];
       if (!o.alive || o.aboard || o.side !== u.side || o === u) continue;
       if (!hasOwn(o, 'Death or Glory, Comrades!')) continue;
-      if (status(o) === 'broken') continue;
+      if (!projects(o)) continue;                          // a pinned-down leader shouts at nobody (p. 28)
       if (u.tier >= o.tier + 2) continue;
       if (unitDist(o, u) <= reach) return o;
     }
@@ -2285,6 +2285,7 @@
       var o = state.units[i];
       if (o === u || o.side !== u.side || !onBoard(o) || !has(o, 'Overmind')) continue;
       if (!anyTier && o.tier < u.tier) continue;
+      if (!anyTier && !projects(o)) continue;               // cover and rally are bonuses: a steady Overmind only (p. 28)
       if (unsup && status(o) !== 'ready') continue;
       if (unitDist(o, u) <= reach) return o;
     }
@@ -2297,7 +2298,7 @@
     if (!state || !has(a, 'Animal Behaviour') || campFlag(a, 'deafSenses')) return 0;
     var reach = doctrine(state, a.side, 'BC3') ? 24 : 18, n = 0;
     state.units.forEach(function (o) {
-      if (o.side !== a.side || !onBoard(o) || !has(o, 'Pheromone Markers')) return;
+      if (o.side !== a.side || !projects(o) || !has(o, 'Pheromone Markers')) return;   // steady markers only (p. 28)
       if (unitDist(o, t) <= reach) n += campFlag(o, 'intensePheromones') && !inAssault ? 2 : 1;
     });
     return Math.min(3, n);
@@ -2798,6 +2799,8 @@
       if (u.cls !== 'vehicle') return false;
       if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
       if (u.disembarked) return false;
+      // a hull towing an emplaced gun cannot be lifted (p. 94)
+      if ((u.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); })) return false;
       return unitDist(veh, u) <= 4;
     }
     if (isMachine(u)) return false;
@@ -3207,16 +3210,21 @@
     if (r <= 3 && campFlag(u, 'knowledge')) { second = d6(); }
     var v = second != null ? second : r;
     var pads = teleportPads(state, tp.side);
+    var randomPad = pads[Math.floor(Math.random() * pads.length)] || tp;
     /* Auxiliary Teleportation System (p. 143): on a 2-3 the unit may come out
-       beside an aircraft carrying it instead. */
+       beside an aircraft carrying it instead. On a 2 that is the only choice
+       there is — the random pad, or the aircraft; on a 3 the aircraft joins the
+       owner's usual pick of pads. */
     var aux = state.units.filter(function (o) {
       return o.alive && o.side === tp.side && o.cls === 'aircraft' && o.x >= 0 && campFlag(o, 'auxTeleport');
     });
-    if ((v === 2 || v === 3) && aux.length) {
-      return { roll: r, reroll: second, value: v, random: false, pads: pads.concat(aux), aux: aux, randomPad: pads[0] || tp };
+    if (v === 2 && aux.length) {
+      return { roll: r, reroll: second, value: v, random: false, pads: [randomPad].concat(aux), aux: aux, randomPad: randomPad };
     }
-    return { roll: r, reroll: second, value: v, random: v <= 2, pads: pads,
-      randomPad: pads[Math.floor(Math.random() * pads.length)] || tp };
+    if (v === 3 && aux.length) {
+      return { roll: r, reroll: second, value: v, random: false, pads: pads.concat(aux), aux: aux, randomPad: randomPad };
+    }
+    return { roll: r, reroll: second, value: v, random: v <= 2, pads: pads, randomPad: randomPad };
   }
   function teleport(state, u, from, to) {
     // drop the unit onto clear ground within 4" of the exit pad
