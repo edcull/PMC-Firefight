@@ -11800,15 +11800,14 @@
         }
         stroke([pts[0], pts[1]], m(0.8), GLO.m);                 // the leading edge
         if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
-        // a drone's aerials: two whips standing off the top edge of the dorsal wing
+        // a drone's aerial: one whip off the top edge of the dorsal wing, raked at the wing's own sweep, a blue light at its tip
         if (u.drone && w.dorsal && !dead) {
-          [0.62, 0.86].forEach(function (k) {
-            var at0 = le + (tp - le) * k, r0 = rf + (w.sp - rf) * k;
-            var a0 = P3(at0, r0, w.ph), a1 = P3(at0 - 0.12 * Lc, r0 + 0.7, w.ph);
-            stroke([a0, a1], 1.6, WH.dk);
-            stroke([a0, a1], 0.8, WH.lt);
-            ellipse(g, a1[0], a1[1], 1.8, 1.8, '#ff5040');
-          });
+          var k8 = 0.78, at0 = le + (tp - le) * k8, r0 = rf + (w.sp - rf) * k8;
+          var a0 = P3(at0, r0, w.ph), a1 = P3(at0 + (tp - le) * 0.42, r0 + (w.sp - rf) * 0.42, w.ph);
+          stroke([a0, a1], 1.6, WH.dk);
+          stroke([a0, a1], 0.8, WH.lt);
+          ellipse(g, a1[0], a1[1], 1.9, 1.9, '#6ebeff');
+          ellipse(g, a1[0], a1[1], 0.9, 0.9, '#e4f4ff');
         }
       }
       // the fuselage: rings of stations [t, r] turned into an eight-sided body
