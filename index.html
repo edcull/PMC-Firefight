@@ -706,10 +706,10 @@
   #setup[data-hot="3"] .hot-sum { display: block; }
   #setup[data-hot] .hot-intro { display: block; }
   /* a demo names its own forces, from their colour and kind, always lays the table itself, and needs no explaining */
-  #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field, #setup[data-quick] .hot-intro { display: none !important; }
+  #setup[data-kind="demo"] #terrain-field, #setup[data-quick] .hot-intro { display: none !important; }
   /* nor does it pick colours or hand-build: its forces are rolled, each in a colour of its own, and the
      Battle Tier and Priority Level are set once, for both, on the battlefield step */
-  #setup[data-kind="demo"] .hot-colour, #setup[data-quick] .muster-btns { display: none !important; }
+  #setup[data-quick] .muster-btns { display: none !important; }
   /* a battle against the AI is set up the same way, the player naming and colouring their own force */
   #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
   #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
@@ -732,6 +732,7 @@
   }
   .found-pop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
   .name-row { display: flex; gap: 8px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .name-row .tin { flex: 1; min-width: 0; }
   .chip-btn {
     flex: none; width: 48px; padding: 3px; cursor: pointer;
@@ -1643,7 +1644,7 @@
     <!-- who the force is, as founding a company has it: its name, and its colours on a line that opens them in a modal -->
     <div class="muster foundid hot-only hot-name">
       <div class="field">
-        <label for="hot-name" id="hot-name-label">Company name</label>
+        <label for="hot-name" id="hot-name-label" class="sr-only">Company name</label>
         <!-- the colour picked, left of the name: tap it for the colours -->
         <div class="name-row">
           <button type="button" class="chip-btn" id="btn-colour-pop" aria-expanded="false" title="Colours"><span id="colour-btn-chip"></span></button>
