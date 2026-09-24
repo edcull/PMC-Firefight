@@ -311,7 +311,8 @@
   function abilitiesOf(u) {
     var rules = (u && u.rules) || [], out = [];
     ABILITIES.forEach(function (a) {
-      if (out.length >= 3 || out.some(function (o) { return o.name === a.name; })) return;
+      // every ability the unit has gets a button: a leader has a good many (Rebellion leaders six)
+      if (out.some(function (o) { return o.name === a.name; })) return;
       if (rules.some(function (r) { return r === a.rule || r.indexOf(a.rule + ' (') === 0; })) out.push(a);
     });
     return out;

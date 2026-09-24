@@ -199,7 +199,9 @@
   .vsg:hover { color: var(--ink); }
   .vsg.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
   input[type=range] { width: 100%; accent-color: var(--alpha); }
-  .vacts { display: flex; gap: 6px; margin-top: 10px; }
+  /* as many buttons as the unit has abilities: they wrap onto further rows rather than run off the panel */
+  .vacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .vacts .vbtn { flex: 1 1 auto; }
   .vbtn {
     flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
     border-radius: 5px; padding: 8px 6px; cursor: pointer;
@@ -429,4 +431,4 @@
 <script src="src/view/fx.js?v=7322364764"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
 <script src="src/view/atlas.js?v=7e0c1649fb"></script>
-<script src="src/view/viewer.js?v=49695fdeca"></script>
+<script src="src/view/viewer.js?v=a0d1de93ba"></script>
