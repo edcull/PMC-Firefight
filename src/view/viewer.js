@@ -277,6 +277,54 @@
      speed with its guns going, and the ground walks up under it. */
   var STRAFE_MS = 2200;
   function canStrafe() { return unit().cls === 'aircraft'; }
+
+  /* A unit's special ability, played on the stage: the first rule it has that
+     shows as something — a Psychic Wave rolling out, a hacker's data stream
+     into the mark, medics' crosses rising, a Xenotripod shield going up.
+     Each is the rule, in the size the rule gives it, in inches. */
+  var ABILITIES = [
+    { rule: 'Psychic Wave', name: 'Psychic Wave', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, dur: 1500 }]; }, sfx: 'wave' },
+    { rule: 'Dominant Species', name: 'Regain Control', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '110,190,255', dur: 1500 }]; }, sfx: 'shimmer' },
+    { rule: 'Overmind', name: 'Overmind', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 18, rgb: '150,215,90', dur: 1700 }]; }, sfx: 'chitter' },
+    { rule: 'Shield Generator', name: 'Shield', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 12, dur: 2200 }]; }, sfx: 'shimmer' },
+    { rule: 'Hackers', name: 'Hack', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '90,255,140', data: true, dur: 1800 }]; }, sfx: 'zap' },
+    { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
+    { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
+    { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
+    { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
+    { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
+    { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
+    { rule: 'Teleport', name: 'Teleport', play: function () { return [{ kind: 'teleportin', x: TO.x, y: TO.y, r: 1.4, dur: 1500 }]; }, sfx: 'shimmer' },
+    { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
+    { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
+    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
+    { rule: '…but they\'ll never take our freedom!', name: 'Rally cry', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '240,120,80', dur: 1400 }, { kind: 'rise', x: u.x, y: u.y, rgb: '240,120,80', n: 8, dur: 1400 }]; }, sfx: 'chime' },
+    { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
+    { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
+    { rule: 'Inspiring Presence', name: 'Inspire', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, rgb: '232,193,90', dur: 1300 }]; }, sfx: 'chime' },
+    { rule: 'Counter-jamming', name: 'Counter-jam', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 6, rgb: '120,200,255', dur: 1800 }]; }, sfx: 'shimmer' }
+  ];
+  // every ability a unit has, in that order — an EW team hacks and jams — to a button each, three at most
+  function abilitiesOf(u) {
+    var rules = (u && u.rules) || [], out = [];
+    ABILITIES.forEach(function (a) {
+      if (out.length >= 3 || out.some(function (o) { return o.name === a.name; })) return;
+      if (rules.some(function (r) { return r === a.rule || r.indexOf(a.rule + ' (') === 0; })) out.push(a);
+    });
+    return out;
+  }
+  function abilityOf(u) { return abilitiesOf(u)[0] || null; }
+  function ability(i) {
+    var u = unit(), a = abilitiesOf(u)[i || 0];
+    if (!a || view.status === 'destroyed') return;
+    showWide();
+    if (view.walking) toggleWalk();
+    syncSound();
+    a.play(u).forEach(function (f) { FX.add(f); });
+    if (SFX && view.sound && SFX[a.sfx]) SFX[a.sfx]();
+    start();
+  }
   function strafe() {
     showWide();
     if (!canStrafe()) { return; }
@@ -361,6 +409,11 @@
       return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
     }
     if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
+    // a giant bug has no poses to get up through: it heaves itself up out of the ground (as game.js)
+    if (R.isMachine(unit())) {
+      var hk = Math.min(1, age / (STAND_MS * 0.8)), he = 1 - Math.pow(1 - hk, 2);
+      return { lift: -Math.round(I.ELEV * 3 * (1 - he)), pose: null, alpha: Math.min(1, 0.25 + he) };
+    }
     // flat on its face, then up on one knee, then standing
     return {
       lift: 0,
@@ -374,6 +427,8 @@
   var CLEAR_MS = 450;
   function insert() {
     var u = unit(), craft = R.isMachine(u) || !!u.jets;
+    // a swarm comes up out of the ground, giants and all; only what flies drops from the sky
+    if (u.faction === 'bugs') craft = R.isFlying(u) || R.flyInf(u);
     // the Xenotripods teleport in, hulls and craft too; the Esh-Aven come up out of the ground
     var pr = R.profile(u.key), tele = u.faction === 'xeno' && !u.eshAven && !(pr && pr.eshAven);
     if (view.walking) toggleWalk();
@@ -874,6 +929,7 @@
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
+      abilitiesOf(unit()).map(function (a, i) { return '<button class="vbtn" data-do="ability" data-ab="' + i + '">' + esc(a.name) + '</button>'; }).join('') +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
     h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
@@ -1060,6 +1116,7 @@
       else if (act === 'walk') toggleWalk();
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
+      else if (act === 'ability') ability(+d.getAttribute('data-ab') || 0);
       else if (act === 'sound') {
         view.sound = !view.sound;
         if (SFX) SFX.setEnabled(view.sound);
@@ -1091,6 +1148,7 @@
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
       if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
+      if (e.key === 'a' || e.key === 'A') { ability(); e.preventDefault(); }
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });
@@ -1129,6 +1187,8 @@
     gait: function () { return gaitOf(unit()); },
     insert: insert,
     strafe: strafe,
+    ability: function (i) { var a = abilitiesOf(unit())[i || 0]; ability(i); return a ? a.name : null; },
+    abilities: function () { return abilitiesOf(unit()).map(function (a) { return a.name; }); },
     destroy: function (on) { setStatus(on === false ? 'ready' : 'destroyed'); },
     strafing: function () { return !!view.strafeAt; },
     arriving: arriving,

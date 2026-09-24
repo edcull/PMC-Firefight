@@ -548,10 +548,143 @@
           var wrad = wk * (f.r || 12) * I.K * 0.72;
           g.strokeStyle = f.rgb ? 'rgba(' + f.rgb + ',' + (0.75 * (1 - wk)) + ')' : 'rgba(196,140,255,' + (0.75 * (1 - wk)) + ')';
           g.lineWidth = I.PIXEL * (3 - wr);
+          // a jamming wave is broken up, as static is
+          if (f.dash) g.setLineDash([I.PIXEL * 4, I.PIXEL * 3 + wr * I.PIXEL * 2]);
           g.beginPath(); g.ellipse(wp.x, wp.y, wrad, wrad * 0.5, 0, 0, Math.PI * 2); g.stroke();
+          g.setLineDash([]);
         }
         I.ellipse(g, wp.x, wp.y, I.K * 0.7 * (1 - k), I.K * 0.4 * (1 - k), f.rgb ? 'rgba(' + f.rgb + ',' + (0.8 - k * 0.8) + ')' : 'rgba(230,200,255,' + (0.8 - k * 0.8) + ')');
         g.restore();
+      } else if (f.kind === 'beam') {
+        /* A beam from a unit to its mark: a marker's laser, a pheromone trail,
+           or a hacker's data stream (`data`: packets running along it). It
+           reaches out, holds with a flicker, and puts a pulsing ring on the mark. */
+        var ba = I.toScreen(f.x, f.y), bb = I.toScreen(f.tx, f.ty);
+        ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up); bb.y -= I.K * 0.5;
+        var brgb = f.rgb || '255,70,60', bon = k < 0.85 ? 1 : (1 - k) / 0.15, reach = Math.min(1, k / 0.15);
+        var bex = ba.x + (bb.x - ba.x) * reach, bey = ba.y + (bb.y - ba.y) * reach;
+        var flick = 0.72 + 0.28 * Math.sin(k * 70);
+        g.save();
+        g.lineCap = 'round';
+        g.strokeStyle = 'rgba(' + brgb + ',' + (0.22 * bon) + ')'; g.lineWidth = I.PIXEL * 3.5;
+        g.beginPath(); g.moveTo(ba.x, ba.y); g.lineTo(bex, bey); g.stroke();
+        g.strokeStyle = 'rgba(' + brgb + ',' + (0.95 * bon * flick) + ')'; g.lineWidth = Math.max(1, I.PIXEL * 0.8);
+        g.beginPath(); g.moveTo(ba.x, ba.y); g.lineTo(bex, bey); g.stroke();
+        if (f.data && reach >= 1) {
+          g.fillStyle = 'rgba(' + brgb + ',' + bon + ')';
+          for (var pk = 0; pk < 6; pk++) {
+            var pt = (k * 2.4 + pk / 6) % 1, ps = I.PIXEL * (pk % 2 ? 2 : 3);
+            g.fillRect(ba.x + (bb.x - ba.x) * pt - ps / 2, ba.y + (bb.y - ba.y) * pt - ps / 2, ps, ps);
+          }
+        }
+        if (reach >= 1) {
+          var mr = I.K * (0.55 + 0.2 * Math.sin(k * 22));
+          g.strokeStyle = 'rgba(' + brgb + ',' + (0.8 * bon) + ')'; g.lineWidth = I.PIXEL;
+          g.beginPath(); g.ellipse(bb.x, bb.y + I.K * 0.5, mr, mr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+          I.ellipse(g, bb.x, bb.y, I.PIXEL * 1.6, I.PIXEL * 1.6, 'rgba(255,255,255,' + (0.9 * bon) + ')');
+        }
+        g.restore();
+      } else if (f.kind === 'rise') {
+        /* Signs rising off a unit: green crosses for field medics, sparks for a
+           machine rebuilding itself — over a glow on the ground at its feet. */
+        var rp = I.toScreen(f.x, f.y); rp.y -= liftAt(f);
+        var rrgb = f.rgb || '120,230,150', rn = f.n || 8;
+        I.ellipse(g, rp.x, rp.y, I.K * 1.3, I.K * 0.65, 'rgba(' + rrgb + ',' + (0.2 * (1 - k)) + ')');
+        g.save();
+        for (var ri = 0; ri < rn; ri++) {
+          var rsd = ((ri * 37) % 11) / 11, rph = (k * 1.5 + ri / rn) % 1;
+          var rx = rp.x + (rsd - 0.5) * I.K * 2.4, ry = rp.y - rph * I.K * 3.4;
+          var ra = Math.sin(rph * Math.PI) * (1 - k * 0.5);
+          g.fillStyle = 'rgba(' + rrgb + ',' + ra + ')';
+          if (f.glyph === 'cross') {
+            var cs = I.PIXEL * 4, cw = I.PIXEL * 1.4;
+            g.fillRect(rx - cw / 2, ry - cs / 2, cw, cs); g.fillRect(rx - cs / 2, ry - cw / 2, cs, cw);
+          } else {
+            var ss = I.PIXEL * (ri % 3 ? 1.5 : 2.5);
+            g.fillRect(rx - ss / 2, ry - ss / 2, ss, ss);
+          }
+        }
+        g.restore();
+      } else if (f.kind === 'dome') {
+        /* A shield: a bubble of light raised over the ground around a unit,
+           rim bright, a band of light running up it. */
+        var dm = I.toScreen(f.x, f.y); dm.y -= liftAt(f);
+        // `steady`: a shield that is simply up — full size, faint, its band of light turning slowly
+        var dk = f.steady ? 1 : k;
+        var drgb = f.rgb || '140,210,255', dr = (f.r || 3) * I.K * 0.72 * Math.min(1, dk / 0.25);
+        var da = f.steady ? (f.a || 0.3) : k < 0.8 ? 1 : (1 - k) / 0.2, dh = dr * 0.85;
+        g.save();
+        g.beginPath();
+        g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2);        // the bubble's top
+        g.ellipse(dm.x, dm.y, dr, dr * 0.5, 0, 0, Math.PI);            // and the ground under it
+        var dgr = g.createRadialGradient(dm.x, dm.y - dh * 0.35, dr * 0.1, dm.x, dm.y - dh * 0.35, dr);
+        dgr.addColorStop(0, 'rgba(' + drgb + ',' + (0.04 * da) + ')');
+        dgr.addColorStop(1, 'rgba(' + drgb + ',' + (0.3 * da) + ')');
+        g.fillStyle = dgr; g.fill();
+        g.strokeStyle = 'rgba(' + drgb + ',' + (0.8 * da) + ')'; g.lineWidth = I.PIXEL;
+        g.beginPath(); g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2); g.stroke();
+        g.beginPath(); g.ellipse(dm.x, dm.y, dr, dr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        var band = f.steady ? (t / 3200) % 1 : (k * 2.2) % 1, by2 = dm.y - dh * band;
+        var bw = dr * Math.sqrt(Math.max(0, 1 - band * band));
+        g.strokeStyle = 'rgba(255,255,255,' + (0.35 * da * (1 - band)) + ')';
+        g.beginPath(); g.ellipse(dm.x, by2, bw, bw * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        g.restore();
+      } else if (f.kind === 'puff') {
+        /* Smoke Markers: a smoke round bursting on the mark — grey clouds
+           billowing up and out, lit from inside by the flare (`rgb`). */
+        var sp = I.toScreen(f.x, f.y); sp.y -= liftAt(f);
+        var srgb = f.rgb || '255,200,80', sn = f.n || 7;
+        if (k < 0.35) I.ellipse(g, sp.x, sp.y - I.K * 0.4, I.K * 0.9 * (1 - k / 0.35), I.K * 0.6 * (1 - k / 0.35), 'rgba(' + srgb + ',' + (0.9 * (1 - k / 0.35)) + ')');
+        for (var si = 0; si < sn; si++) {
+          var sa = si / sn * Math.PI * 2 + 0.6, sgr = Math.min(1, k / 0.4);
+          var sd = I.K * (0.5 + 1.1 * sgr) * (0.7 + (si % 3) * 0.15);
+          var sx = sp.x + Math.cos(sa) * sd, sy = sp.y + Math.sin(sa) * sd * 0.5 - I.K * (0.4 + k * 1.6 + (si % 2) * 0.5);
+          var srd = I.K * (0.55 + 0.6 * sgr), sal = k < 0.7 ? 0.55 : 0.55 * (1 - k) / 0.3;
+          I.ellipse(g, sx, sy, srd, srd * 0.8, 'rgba(' + (si % 2 ? '190,188,180' : '160,158,152') + ',' + sal + ')');
+        }
+        // the flare, burning on inside the smoke
+        var fl = 0.6 + 0.4 * Math.sin(k * 60);
+        I.ellipse(g, sp.x, sp.y - I.K * 0.6, I.PIXEL * 2.2, I.PIXEL * 2.2, 'rgba(' + srgb + ',' + (fl * (1 - k)) + ')');
+      } else if (f.kind === 'glint') {
+        /* Keen-Eyed: a four-pointed glint off the spotter's optics, and one on
+           the Stealthy unit it has picked out. */
+        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
+        var grgb = f.rgb || '150,240,255', gk = Math.sin(Math.min(1, k) * Math.PI);
+        var gl = I.K * (0.5 + 0.9 * gk), gw = I.PIXEL * 1.2;
+        g.save();
+        g.fillStyle = 'rgba(' + grgb + ',' + (0.25 * gk) + ')';
+        g.beginPath(); g.arc(gp.x, gp.y, gl * 0.6, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,' + gk + ')';
+        g.beginPath();
+        g.moveTo(gp.x - gl, gp.y); g.lineTo(gp.x, gp.y - gw); g.lineTo(gp.x + gl, gp.y); g.lineTo(gp.x, gp.y + gw); g.closePath();
+        g.moveTo(gp.x, gp.y - gl); g.lineTo(gp.x + gw, gp.y); g.lineTo(gp.x, gp.y + gl); g.lineTo(gp.x - gw, gp.y); g.closePath();
+        g.fill();
+        g.fillStyle = 'rgba(' + grgb + ',' + gk + ')';
+        g.fillRect(gp.x - I.PIXEL, gp.y - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2);
+        g.restore();
+      } else if (f.kind === 'charges') {
+        /* Sappers: demolition charges set around a point, blinking red — then
+           all going off together in a flash and a spray of rubble. */
+        var cp = I.toScreen(f.x, f.y); cp.y -= liftAt(f);
+        var cn = f.n || 4, cr = (f.r || 1.5) * I.K * 0.72, boom = 0.6;
+        for (var ci = 0; ci < cn; ci++) {
+          var ca = ci / cn * Math.PI * 2 + 0.4;
+          var cx = cp.x + Math.cos(ca) * cr, cy = cp.y + Math.sin(ca) * cr * 0.5 - I.K * 0.3;
+          if (k < boom) {
+            var set = k > ci * 0.08;                       // placed one after another
+            if (!set) continue;
+            I.rect(g, cx - I.PIXEL, cy - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2, 'rgba(70,60,50,1)');
+            if (Math.sin(k * 55 + ci) > 0) I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, 'rgba(255,60,40,0.95)');
+          } else {
+            var bk = (k - boom) / (1 - boom);
+            I.ellipse(g, cx, cy, I.K * (0.4 + bk * 0.9), I.K * (0.3 + bk * 0.6), 'rgba(255,' + Math.round(220 - bk * 120) + ',120,' + (0.9 * (1 - bk)) + ')');
+            for (var cd = 0; cd < 5; cd++) {
+              var cda = cd * 1.26 + ci, cdd = bk * I.K * 1.6;
+              I.rect(g, cx + Math.cos(cda) * cdd, cy + Math.sin(cda) * cdd * 0.5 - bk * I.K * 1.2 + bk * bk * I.K,
+                I.PIXEL, I.PIXEL, 'rgba(150,130,105,' + (1 - bk) + ')');
+            }
+          }
+        }
       } else if (f.kind === 'hold') {
         /* Nothing to draw: it exists so the frame loop keeps turning while a
            unit is coming down, and so the game waits for it. */

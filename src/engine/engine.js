@@ -933,7 +933,7 @@
       if (d < bd) { bd = d; best = e; }
     });
     if (!best) return null;
-    var res = R.shoot(state, best, u, 'basic', {});
+    var res = abShoot(state, best, u, 'basic', {});
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     logLine('note', best.label + ' was waiting for them — ' + u.label + ' came down inside 12".');
     return { shooter: best, res: res };
@@ -1865,7 +1865,7 @@
       if (!friend) return;
       var roll = R.d6();
       if (roll !== 1) { logLine('note', u.label + ' — Infamy of Madness: D6 ' + roll + ', it holds its fire.'); return; }
-      var res = R.shoot(state, u, friend, 'fire', {});
+      var res = abShoot(state, u, friend, 'fire', {});
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       pushRes(fromLog('Infamy of Madness', u.name + ' → ' + friend.name, u.side, [{ t: 'note', text: 'D6 1: ' + u.label + ' turns its guns on ' + friend.label + '.' }].concat(res.log)));
     });
@@ -2018,6 +2018,7 @@
       var cmd = R.commandAboard(just);
       if (cmd && !cmd.coordUsed && R.status(cmd) !== 'broken') {
         cmd.coordUsed = true;
+        addFx({ kind: 'wave', x: just.x, y: just.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
         state.chain = {
           side: just.side, remaining: R.ruleValue(just, 'Command Unit') + 1,
           x: just.x, y: just.y, tier: cmd.tier
@@ -2104,7 +2105,7 @@
     var u = list[i];
     if (!u.alive) { rallyNext(list, i + 1); return; }
     if (R.isMachine(u)) {
-      var rep = R.repair(state, u);
+      var rep = abRepair(state, u);
       if (!rep) { rallyNext(list, i + 1); return; }
       logLine('rally', rep.text);
       var card = repairCard(u, rep);
@@ -2116,7 +2117,7 @@
       return;
     }
     if (u.sp === 0) { rallyNext(list, i + 1); return; }
-    var r = R.rally(state, u);
+    var r = abRally(state, u);
     if (!r) { rallyNext(list, i + 1); return; }
     logLine('rally', r.text);
     if (SFX && r.gone) SFX.broken();
@@ -2208,6 +2209,13 @@
     var tide = R.endlessTide(state);
     if (tide.length) {
       tide.forEach(function (l) { logLine('rally', l.text); });
+      // the Overmind's reach rolling out, and the lost bugs coming back up out of the ground
+      var minds = [];
+      tide.forEach(function (l) {
+        var om = R.overmindFor(state, l.unit, true);
+        if (om && minds.indexOf(om) < 0) { minds.push(om); addFx({ kind: 'wave', x: om.x, y: om.y, up: 0, r: 18, rgb: '150,215,90', dur: 1400, blocking: true }); }
+        addFx({ kind: 'rise', x: l.unit.x, y: l.unit.y, rgb: '205,170,95', n: 10, delay: 300, dur: 1400 });
+      });
       if (SFX) SFX.chitter();
       pushRes({ kind: 'Endless Tide', title: 'The swarm replenishes', side: tide[0].unit.side,
         list: tide.map(function (l) { return { text: l.text, side: l.unit.side }; }) });
@@ -2806,6 +2814,7 @@
       doStance(u); return;
     } else if (id === 'coordinate') {
       u.coordUsed = true; u.activated = true;
+      addFx({ kind: 'wave', x: u.x, y: u.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300, blocking: true });
       state.chain = { side: u.side, remaining: R.ruleValue(u, 'Command Unit') + 1, x: u.x, y: u.y, tier: u.tier };
       logLine('note', u.label + ' coordinates: up to ' + R.ruleValue(u, 'Command Unit') + ' friendly units within 12" activate in a row.');
       endActivation(); return;
@@ -2813,7 +2822,7 @@
       u.activated = true;
       closeDrawer();
       if (R.isMachine(u)) {
-        var rep = R.repair(state, u);
+        var rep = abRepair(state, u);
         logLine('rally', rep ? rep.text : u.label + ' stands down — no damage to repair.');
         pushRes(repairCard(u, rep));
       } else {
@@ -2822,7 +2831,7 @@
           var med = Math.min(2, u.sp); u.sp -= med;
           logLine('rally', u.label + ' — Meditation: ' + med + ' SP gone before the dice.');
         }
-        var r = R.rally(state, u);
+        var r = abRally(state, u);
         logLine('rally', r ? r.text : u.label + ' regroups — no suppression to shake off.');
         pushRes({
           kind: 'Regroup', title: u.name + ' regroups', side: u.side,
@@ -3026,7 +3035,7 @@
   // an Overgrown bug charging from the AI's hands, when something is in reach
   function aiCharge(u, t) {
     var snap = snapshotAlive();
-    var res = R.assault(state, u, t);
+    var res = abAssault(state, u, t);
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
@@ -3135,6 +3144,88 @@
     endActivation(u);
   }
 
+  /* ---- abilities, seen as they bite ----
+     Every shot, charge, rally and repair goes through these, so a rule that
+     changed the outcome shows on the table as it does: a medic's save, a
+     Xenotripod shield taking the shot, pheromone trails guiding a bug in,
+     an enemy's jamming. */
+  function abShoot(st, a, t, mode, opts) {
+    var sh = !(opts && opts.assault) && a && t ? R.shieldFor(st, a, t) : null;
+    var trails = pheromoneMarkers(a, t);
+    if (!(opts && opts.assault)) keenFx(a, t, 6);
+    var res = R.shoot(st, a, t, mode, opts);
+    abilityFx(res, t, sh, trails);
+    return res;
+  }
+  function abAssault(st, a, t) {
+    var trails = pheromoneMarkers(a, t);
+    // "Death or Glory, Comrades!": the leader's shout, and the charge throwing off its Suppression
+    var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
+    if (shout) {
+      addFx({ kind: 'beam', x: shout.x, y: shout.y, tx: a.x, ty: a.y, rgb: '235,85,70', dur: 900 });
+      addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 900 });
+    }
+    // Sappers: charges set against the wall or building the enemy is sheltering behind
+    var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
+    if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
+    var res = R.assault(st, a, t);
+    abilityFx(res, t, null, trails);
+    return res;
+  }
+  function abRally(st, u) { jamFx(u); leaderFx(u); return R.rally(st, u); }
+  /* A rally helped along by a leader: "…but they'll never take our freedom!"
+     (three more dice) or Inspiring Presence (failures re-rolled) — the call
+     from the leader, and the unit steadying under it. */
+  function leaderFx(u) {
+    if (!u || !u.sp || R.isMachine(u)) return;
+    var free = R.freedomDice(state, u) > 0 ? nearestWith(u, '…but they\'ll never take our freedom!', 18) : null;
+    var insp = !free && R.inspiringNearby && R.inspiringNearby(state, u) ? nearestWith(u, 'Inspiring Presence', 12) : null;
+    var o = free || insp;
+    if (!o) return;
+    var rgb = free ? '240,120,80' : '232,193,90';
+    addFx({ kind: 'beam', x: o.x, y: o.y, tx: u.x, ty: u.y, rgb: rgb, dur: 1000 });
+    addFx({ kind: 'rise', x: u.x, y: u.y, rgb: rgb, n: 8, delay: 250, dur: 1300 });
+  }
+  function nearestWith(u, rule, reach) {
+    return state.units.filter(function (o) {
+      return o !== u && o.alive && !o.aboard && o.x >= 0 && o.side === u.side && R.has(o, rule) && R.unitDist(o, u) <= reach;
+    }).sort(function (a, b) { return R.unitDist(a, u) - R.unitDist(b, u); })[0] || null;
+  }
+  function abRepair(st, u) { if (u && u.damage) jamFx(u); return R.repair(st, u); }
+  // the friendly marker bugs within reach of the target, when their pheromones are guiding this attack in
+  function pheromoneMarkers(a, t) {
+    if (!a || !t || !(R.pheromoneBonus(state, a, t) > 0)) return [];
+    var reach = R.doctrine(state, a.side, 'BC3') ? 24 : 18;
+    return state.units.filter(function (o) {
+      return o.side === a.side && o.alive && !o.aboard && o.x >= 0 && R.has(o, 'Pheromone Markers') && R.unitDist(o, t) <= reach;
+    });
+  }
+  function abilityFx(res, t, sh, trails) {
+    if (!t) return;
+    (trails || []).forEach(function (o) {
+      addFx({ kind: 'beam', x: o.x, y: o.y, tx: t.x, ty: t.y, up: 0.5, rgb: '170,230,90', dur: 1100 });
+    });
+    if (sh && sh.from) addFx({ kind: 'dome', x: sh.from.x, y: sh.from.y, r: 12, delay: 250, dur: 1500 });
+    var txt = ((res && res.log) || []).map(function (l) { return l.text || ''; }).join('\n');
+    if (/MEDIC!/.test(txt)) addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: 500, dur: 1900 });
+  }
+  /* Keen-Eyed: a spotter seeing straight through a Stealth unit's
+     concealment — a glint off its optics, and one on the unit it picks out.
+     Stealth only counts from `from` inches on, so nearer than that nothing shows. */
+  function keenFx(a, t, from) {
+    if (!a || !t || !R.has(a, 'Keen-Eyed') || !R.has(t, 'Stealth') || R.unitDist(a, t) < from) return;
+    addFx({ kind: 'glint', x: a.x, y: a.y, dur: 700 });
+    addFx({ kind: 'glint', x: t.x, y: t.y, up: 0.8, delay: 250, dur: 700 });
+  }
+  // a rally or repair made harder by an enemy's Jammers: the static rolling out from the jammer
+  function jamFx(u) {
+    if (!u || !R.jammedNearby(state, u)) return;
+    var j = state.units.filter(function (e) {
+      return e.alive && !e.aboard && e.x >= 0 && e.side !== u.side && R.has(e, 'Jammers') && R.unitDist(e, u) <= 24;
+    }).sort(function (a, b) { return R.unitDist(a, u) - R.unitDist(b, u); })[0];
+    if (j) addFx({ kind: 'wave', x: j.x, y: j.y, up: 0, r: 24, rgb: '200,215,225', dash: true, dur: 1300 });
+  }
+
   function doSelfRepair(u) {
     ui.mode = 'idle'; ui.targets = []; ui.moves = [];
     var res = R.selfRepair(state, u);
@@ -3153,6 +3244,7 @@
     u.activated = true;
     res.log.forEach(function (l) { logLine(l.t, l.text); });
     addFx({ kind: 'wave', x: u.x, y: u.y, up: V.flyLift(u), r: 2.5, rgb: glowRGB(u), dur: 900, blocking: true });
+    addFx({ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1500 });   // the machine knitting itself back together
     pushRes({ kind: 'Repair', title: u.name + ' — Self-repair', side: u.side,
       note: 'Molecular Reconstruction: the unit stays where it is and removes every Damage point.',
       outcome: { text: res.cleared + ' Damage cleared — Structure ' + u.str + ' intact.', tone: 'good' } });
@@ -3188,6 +3280,7 @@
     if (res.ok) {
       addFx({ kind: 'wave', x: from.x, y: from.y, up: 0, r: 2, rgb: glowRGB(u), dur: 700, blocking: true });
       addFx({ kind: 'wave', x: u.x, y: u.y, up: 0, r: 2, rgb: glowRGB(u), delay: 350, dur: 1050, blocking: true });
+      addFx({ kind: 'teleportin', x: u.x, y: u.y, r: 1.4, delay: 250, dur: 1400, blocking: true });   // the column it comes out of
       ui.vis = null; ui.visKey = '';
     }
     tp.activated = true;
@@ -3287,7 +3380,7 @@
     var log = [];
     logLine('move', u.label + ' makes a strafing run.');
     hitList.forEach(function (t) {
-      var res = R.shoot(state, u, t, 'basic', {});
+      var res = abShoot(state, u, t, 'basic', {});
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     // friendly fire, on a 1-3
@@ -3295,14 +3388,14 @@
       var die = R.d6();
       if (die > 3) return;
       logLine('note', 'Friendly fire! D6 ' + die + ' — ' + t.label + ' is caught in the strafe.');
-      var res2 = R.shoot(state, u, t, 'basic', {});
+      var res2 = abShoot(state, u, t, 'basic', {});
       res2.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     // everything still standing may shoot back, free of charge
     hitList.forEach(function (t) {
       if (!t.alive || R.status(t) !== 'ready' || t.fp === null) return;
       if (!R.canShoot(state, t, u, 'basic', {})) return;
-      var back = R.shoot(state, t, u, 'basic', {});
+      var back = abShoot(state, t, u, 'basic', {});
       back.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     soundFor(log);
@@ -3315,7 +3408,7 @@
 
   function resolveShot(u, target, mode, opts) {
     var snap = snapshotAlive();
-    var res = R.shoot(state, u, target, mode, opts || {});
+    var res = abShoot(state, u, target, mode, opts || {});
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     // Ambush!: the column caught off guard in the first turn (p. 156)
     if (state.scen.afterShot) {
@@ -3338,7 +3431,7 @@
   function doAssault(target) {
     var u = ui.selected;
     var snap = snapshotAlive();
-    var res = R.assault(state, u, target);
+    var res = abAssault(state, u, target);
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
@@ -3352,7 +3445,7 @@
   function doSupport(target) {
     var u = ui.selected;
     var snap = snapshotAlive();
-    var res = R.shoot(state, u, target, 'support', {});
+    var res = abShoot(state, u, target, 'support', {});
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
@@ -3380,13 +3473,14 @@
 
   function doHack(target) {
     var u = ui.selected;
+    if (u && target) addFx({ kind: 'beam', x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
     var res = R.hack(state, u, target, function (drone) {
       // the drone is turned on the nearest unit of its own side
       var own = activeUnits(drone.side).filter(function (o) {
         return o !== drone && R.canShoot(state, drone, o, 'basic', {});
       }).sort(function (a, b) { return R.unitDist(drone, a) - R.unitDist(drone, b); })[0];
       if (!own) return false;
-      var back = R.shoot(state, drone, own, 'basic', {});
+      var back = abShoot(state, drone, own, 'basic', {});
       back.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       return true;
     });
@@ -3416,7 +3510,9 @@
     var res = R.assaultTerrain(state, u, piece);
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     var mid = { x: piece.x + piece.w / 2, y: piece.y + piece.h / 2 };
-    addFx({ kind: 'clash', x: mid.x, y: mid.y, dur: 420 });
+    // Sappers set their charges round the piece first; anyone else just goes at it
+    if (R.has(u, 'Sappers')) addFx({ kind: 'charges', x: mid.x, y: mid.y, r: Math.min(piece.w, piece.h) / 2 + 0.5, n: 5, dur: 1400, blocking: true });
+    addFx({ kind: 'clash', x: mid.x, y: mid.y, delay: R.has(u, 'Sappers') ? 850 : 0, dur: R.has(u, 'Sappers') ? 1270 : 420 });
     if (res.result) whenIdle(function () { repaintTerrain([res.result]); });
     pushRes(fromLog('Demolition charges', u.name + ' → ' + piece.kind, u.side, res.log));
     endActivation(u);
@@ -3531,7 +3627,14 @@
     var smoke = !R.has(u, 'Markerlights') && R.has(u, 'Smoke Markers');
     var shots = smoke ? 2 : (u.markMoved ? 1 : 2);
     state.mark = { side: u.side, kind: kind, targets: picks, smoke: smoke };
-    picks.forEach(function (t) { t.marked = true; });
+    picks.forEach(function (t) {
+      t.marked = true;
+      // the marker's laser (or smoke round's trace) onto each mark
+      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200, blocking: true });
+      // Smoke Markers: the grenade bursting on the mark, the flare burning in it
+      if (smoke) addFx({ kind: 'puff', x: t.x, y: t.y, delay: 300, dur: 1800 });
+      keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
+    });
     u.activated = true;
 
     var ready = state.units.filter(function (o) {
@@ -3677,7 +3780,7 @@
 
     // badly damaged and nothing worth shooting: pull back and patch up
     if (u.damage >= u.str && !shot.t) {
-      var rep = R.repair(state, u);
+      var rep = abRepair(state, u);
       logLine('rally', rep ? rep.text : u.label + ' stands down.');
       if (rep) pushRes(repairCard(u, rep));
       u.activated = true; endActivation(); return;
@@ -3854,7 +3957,7 @@
       var dogT = nearestEnemy(u);
       if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= dogReach) {
         var dsnap = snapshotAlive();
-        var dres = R.assault(state, u, dogT.unit);
+        var dres = abAssault(state, u, dogT.unit);
         dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
         soundFor(dres.log);
         var dcard = fromLog('Assault', u.name + ' → ' + dogT.unit.name, u.side, dres.log);
@@ -3880,7 +3983,7 @@
         animateMove(u, spath, true);
         logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.terrainOf(state, u)].name.toLowerCase() + '.');
       } else {
-        var rr = R.rally(state, u);
+        var rr = abRally(state, u);
         logLine('rally', rr ? rr.text : u.label + ' regroups.');
         if (rr) pushRes({ kind: 'Regroup', title: u.name + ' regroups', side: u.side, list: [{ text: rr.text, side: u.side }] });
       }
@@ -4003,7 +4106,7 @@
     }
     if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= u.move + 2 && !R.has(u, 'Cumbersome Weapon')) {
       var snap = snapshotAlive();
-      var res = R.assault(state, u, ne.unit);
+      var res = abAssault(state, u, ne.unit);
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       soundFor(res.log);
       var card = fromLog('Assault', u.name + ' → ' + ne.unit.name, u.side, res.log);

@@ -702,37 +702,58 @@
   #setup[data-hot="3"] .hot-sum { display: block; }
   #setup[data-hot] .hot-intro { display: block; }
   /* a demo names its own forces, from their colour and kind, always lays the table itself, and needs no explaining */
-  #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field, #setup[data-kind="demo"] .hot-intro { display: none !important; }
+  #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field, #setup[data-quick] .hot-intro { display: none !important; }
   /* nor does it pick colours or hand-build: its forces are rolled, each in a colour of its own, and the
      Battle Tier and Priority Level are set once, for both, on the battlefield step */
-  #setup[data-kind="demo"] .hot-colour, #setup[data-kind="demo"] .muster-btns { display: none !important; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) #tierpl-field { display: none !important; }
-  #setup[data-kind="demo"][data-hot="3"] #tierpl-field { display: grid !important; }
+  #setup[data-kind="demo"] .hot-colour, #setup[data-quick] .muster-btns { display: none !important; }
+  /* a battle against the AI is set up the same way, the player naming and colouring their own force */
+  #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
+  #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
+  #btn-quick-clear { display: none; }
+  /* ...and its colours come up in a modal from a chip beside its name */
+  .name-row { display: flex; gap: 6px; }
+  .name-row .tin { flex: 1; min-width: 0; }
+  .colour-btn { display: none; flex: none; width: 46px; padding: 6px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
+  .colour-btn .sw-chip { display: block; height: 100%; min-height: 20px; }
+  .colour-btn:hover, .colour-btn:focus-visible { border-color: var(--alpha); }
+  .colour-box { display: contents; }
+  #setup .quick-only { display: none; }
+  #setup[data-kind="ai"] .colour-btn { display: block; }
+  #setup[data-kind="ai"] .hot-colour { display: none !important; }
+  #setup[data-kind="ai"] .hot-colour.open {
+    display: grid !important; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; margin: 0; background: rgba(8, 11, 16, .78);
+  }
+  #setup[data-kind="ai"] .hot-colour.open .colour-box {
+    display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+    width: min(400px, 100%); max-height: 100%; overflow-y: auto; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  }
+  #setup[data-kind="ai"] .hot-colour.open .askrow.quick-only { display: flex; margin-top: 12px; }
+  #setup[data-kind="ai"] #btn-quick-clear { display: inline-block; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
   .forcebar-wrap, .forcebar-box { display: contents; }
-  #setup[data-kind="demo"] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
-  #setup[data-kind="demo"] .demo-btns .lnk { flex: 1; }
-  #setup[data-kind="demo"] .forcebar-wrap { display: none; }
-  #setup[data-kind="demo"] .forcebar-wrap.open {
+  #setup[data-quick] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
+  #setup[data-quick] .demo-btns .lnk { flex: 1; }
+  #setup[data-quick] .forcebar-wrap { display: none; }
+  #setup[data-quick] .forcebar-wrap.open {
     display: grid; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; background: rgba(8, 11, 16, .78);
   }
-  #setup[data-kind="demo"] .forcebar-wrap.open .forcebar-box {
+  #setup[data-quick] .forcebar-wrap.open .forcebar-box {
     display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
     width: min(460px, 100%); box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
   }
-  #setup[data-kind="demo"] .forcebar-wrap.open .demo-only { display: flex; }
-  #setup[data-kind="demo"] .forcebar-wrap.open h3.demo-only { display: block; font-family: var(--display); font-size: 15px; margin: 0 0 8px; }
-  #setup[data-kind="demo"] .forcebar-wrap.open .forcebar { margin-top: 0; padding-top: 0; border-top: 0; }
+  #setup[data-quick] .forcebar-wrap.open .demo-only { display: flex; }
+  #setup[data-quick] .forcebar-wrap.open h3.demo-only { display: block; font-family: var(--display); font-size: 15px; margin: 0 0 8px; }
+  #setup[data-quick] .forcebar-wrap.open .forcebar { margin-top: 0; padding-top: 0; border-top: 0; }
   /* a demo force's screen fits the page: only the list of units scrolls */
-  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet { display: flex; flex-direction: column; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet > * { flex: none; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) > .sheet > .muster.hot-force { flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; margin-bottom: 10px; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > * { flex: none; }
-  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > .cat { flex: 1 1 0; min-height: 60px; max-height: none; }
-  /* the units picked scroll too, and take at most about a third of the box: the list to pick from keeps the rest */
-  #setup[data-kind="demo"]:not([data-hot="3"]) .muster.hot-force > #chosen {
-    flex: none; min-height: 40px; max-height: 35%; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start;
+  #setup[data-quick]:not([data-hot="3"]) > .sheet { display: flex; flex-direction: column; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > * { flex: none; }
+  #setup[data-quick]:not([data-hot="3"]) > .sheet > .muster.hot-force { flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; margin-bottom: 10px; }
+  #setup[data-quick]:not([data-hot="3"]) .muster.hot-force > * { flex: none; }
+  #setup[data-quick]:not([data-hot="3"]) .muster.hot-force > .cat { flex: 1 1 0; min-height: 60px; max-height: none; }
+  /* the units picked scroll too, and take at most about a fifth of the box: the list to pick from keeps the rest */
+  #setup[data-quick]:not([data-hot="3"]) .muster.hot-force > #chosen {
+    flex: none; min-height: 40px; max-height: 22%; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start;
   }
   /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
   #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
@@ -1201,7 +1222,8 @@
        rest of the header is folded away on a phone. */
     header h1 { display: none; }
     .hdr-meta, .hdr-btns { display: contents; }
-    #hdr-phase, #hdr-init, #hdr-obj, #hdr-role, #hdr-active, #btn-more, #btn-sound, #btn-notes, #btn-drawer, #btn-campaign { display: none !important; }
+    /* scoped to the header: #btn-campaign is also the main menu's Campaign card */
+    header #hdr-phase, header #hdr-init, header #hdr-obj, header #hdr-role, header #hdr-active, header #btn-more, header #btn-sound, header #btn-notes, header #btn-drawer { display: none !important; }
     #btn-menu { order: 0; }
     #btn-obj { order: 1; margin-left: auto; }
     #hdr-turn { display: inline-block; order: 2; width: 58px; text-align: center; font-size: 10px; }
@@ -1570,7 +1592,11 @@
     <p class="lede std-only hot-hide">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table.</p>
     <div class="field hot-only hot-name">
       <label for="hot-name">Force name</label>
-      <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+      <div class="name-row">
+        <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
+        <!-- against the AI, the colours are a button here that opens them in a modal -->
+        <button type="button" class="colour-btn" id="btn-quick-colour" title="Colours"><span class="sw-chip" id="colour-btn-chip"></span></button>
+      </div>
     </div>
     <div class="field hot-force">
       <label for="sel-faction">Your force</label>
@@ -1628,6 +1654,7 @@
       <!-- a demo force: rolled again, or loaded and saved from a list of its own -->
       <div class="demo-btns">
         <button type="button" class="lnk" id="btn-demo-roll">Random force</button>
+        <button type="button" class="lnk" id="btn-quick-clear">Clear</button>
         <button type="button" class="lnk" id="btn-demo-saves">Load / save…</button>
       </div>
       <!-- a force worth building is worth keeping: named, saved in this browser,
@@ -1700,10 +1727,13 @@
         <option value="takeover">Hostile takeover — a prepared position</option>
       </select>
     </div>
-    <div class="field hot-force hot-colour">
+    <div class="field hot-force hot-colour" id="colour-wrap">
+      <div class="colour-box" role="dialog" aria-label="Colours">
       <label>Company colours — what your troops are painted in</label>
       <div class="swatches" id="colourpick"></div>
       <p class="hint small" id="colour-hint">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
+      <div class="askrow quick-only"><button type="button" class="start" id="btn-colour-done">Done</button></div>
+      </div>
     </div>
     <!-- chosen on the menu now; kept because the start reads it -->
     <div class="field std-only" id="mode-field" hidden>
@@ -5610,7 +5640,7 @@
     checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN,
     d10: d10, d6: d6, d3: d3,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
-    isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
+    isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
@@ -21746,10 +21776,143 @@
           var wrad = wk * (f.r || 12) * I.K * 0.72;
           g.strokeStyle = f.rgb ? 'rgba(' + f.rgb + ',' + (0.75 * (1 - wk)) + ')' : 'rgba(196,140,255,' + (0.75 * (1 - wk)) + ')';
           g.lineWidth = I.PIXEL * (3 - wr);
+          // a jamming wave is broken up, as static is
+          if (f.dash) g.setLineDash([I.PIXEL * 4, I.PIXEL * 3 + wr * I.PIXEL * 2]);
           g.beginPath(); g.ellipse(wp.x, wp.y, wrad, wrad * 0.5, 0, 0, Math.PI * 2); g.stroke();
+          g.setLineDash([]);
         }
         I.ellipse(g, wp.x, wp.y, I.K * 0.7 * (1 - k), I.K * 0.4 * (1 - k), f.rgb ? 'rgba(' + f.rgb + ',' + (0.8 - k * 0.8) + ')' : 'rgba(230,200,255,' + (0.8 - k * 0.8) + ')');
         g.restore();
+      } else if (f.kind === 'beam') {
+        /* A beam from a unit to its mark: a marker's laser, a pheromone trail,
+           or a hacker's data stream (`data`: packets running along it). It
+           reaches out, holds with a flicker, and puts a pulsing ring on the mark. */
+        var ba = I.toScreen(f.x, f.y), bb = I.toScreen(f.tx, f.ty);
+        ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up); bb.y -= I.K * 0.5;
+        var brgb = f.rgb || '255,70,60', bon = k < 0.85 ? 1 : (1 - k) / 0.15, reach = Math.min(1, k / 0.15);
+        var bex = ba.x + (bb.x - ba.x) * reach, bey = ba.y + (bb.y - ba.y) * reach;
+        var flick = 0.72 + 0.28 * Math.sin(k * 70);
+        g.save();
+        g.lineCap = 'round';
+        g.strokeStyle = 'rgba(' + brgb + ',' + (0.22 * bon) + ')'; g.lineWidth = I.PIXEL * 3.5;
+        g.beginPath(); g.moveTo(ba.x, ba.y); g.lineTo(bex, bey); g.stroke();
+        g.strokeStyle = 'rgba(' + brgb + ',' + (0.95 * bon * flick) + ')'; g.lineWidth = Math.max(1, I.PIXEL * 0.8);
+        g.beginPath(); g.moveTo(ba.x, ba.y); g.lineTo(bex, bey); g.stroke();
+        if (f.data && reach >= 1) {
+          g.fillStyle = 'rgba(' + brgb + ',' + bon + ')';
+          for (var pk = 0; pk < 6; pk++) {
+            var pt = (k * 2.4 + pk / 6) % 1, ps = I.PIXEL * (pk % 2 ? 2 : 3);
+            g.fillRect(ba.x + (bb.x - ba.x) * pt - ps / 2, ba.y + (bb.y - ba.y) * pt - ps / 2, ps, ps);
+          }
+        }
+        if (reach >= 1) {
+          var mr = I.K * (0.55 + 0.2 * Math.sin(k * 22));
+          g.strokeStyle = 'rgba(' + brgb + ',' + (0.8 * bon) + ')'; g.lineWidth = I.PIXEL;
+          g.beginPath(); g.ellipse(bb.x, bb.y + I.K * 0.5, mr, mr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+          I.ellipse(g, bb.x, bb.y, I.PIXEL * 1.6, I.PIXEL * 1.6, 'rgba(255,255,255,' + (0.9 * bon) + ')');
+        }
+        g.restore();
+      } else if (f.kind === 'rise') {
+        /* Signs rising off a unit: green crosses for field medics, sparks for a
+           machine rebuilding itself — over a glow on the ground at its feet. */
+        var rp = I.toScreen(f.x, f.y); rp.y -= liftAt(f);
+        var rrgb = f.rgb || '120,230,150', rn = f.n || 8;
+        I.ellipse(g, rp.x, rp.y, I.K * 1.3, I.K * 0.65, 'rgba(' + rrgb + ',' + (0.2 * (1 - k)) + ')');
+        g.save();
+        for (var ri = 0; ri < rn; ri++) {
+          var rsd = ((ri * 37) % 11) / 11, rph = (k * 1.5 + ri / rn) % 1;
+          var rx = rp.x + (rsd - 0.5) * I.K * 2.4, ry = rp.y - rph * I.K * 3.4;
+          var ra = Math.sin(rph * Math.PI) * (1 - k * 0.5);
+          g.fillStyle = 'rgba(' + rrgb + ',' + ra + ')';
+          if (f.glyph === 'cross') {
+            var cs = I.PIXEL * 4, cw = I.PIXEL * 1.4;
+            g.fillRect(rx - cw / 2, ry - cs / 2, cw, cs); g.fillRect(rx - cs / 2, ry - cw / 2, cs, cw);
+          } else {
+            var ss = I.PIXEL * (ri % 3 ? 1.5 : 2.5);
+            g.fillRect(rx - ss / 2, ry - ss / 2, ss, ss);
+          }
+        }
+        g.restore();
+      } else if (f.kind === 'dome') {
+        /* A shield: a bubble of light raised over the ground around a unit,
+           rim bright, a band of light running up it. */
+        var dm = I.toScreen(f.x, f.y); dm.y -= liftAt(f);
+        // `steady`: a shield that is simply up — full size, faint, its band of light turning slowly
+        var dk = f.steady ? 1 : k;
+        var drgb = f.rgb || '140,210,255', dr = (f.r || 3) * I.K * 0.72 * Math.min(1, dk / 0.25);
+        var da = f.steady ? (f.a || 0.3) : k < 0.8 ? 1 : (1 - k) / 0.2, dh = dr * 0.85;
+        g.save();
+        g.beginPath();
+        g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2);        // the bubble's top
+        g.ellipse(dm.x, dm.y, dr, dr * 0.5, 0, 0, Math.PI);            // and the ground under it
+        var dgr = g.createRadialGradient(dm.x, dm.y - dh * 0.35, dr * 0.1, dm.x, dm.y - dh * 0.35, dr);
+        dgr.addColorStop(0, 'rgba(' + drgb + ',' + (0.04 * da) + ')');
+        dgr.addColorStop(1, 'rgba(' + drgb + ',' + (0.3 * da) + ')');
+        g.fillStyle = dgr; g.fill();
+        g.strokeStyle = 'rgba(' + drgb + ',' + (0.8 * da) + ')'; g.lineWidth = I.PIXEL;
+        g.beginPath(); g.ellipse(dm.x, dm.y, dr, dh, 0, Math.PI, Math.PI * 2); g.stroke();
+        g.beginPath(); g.ellipse(dm.x, dm.y, dr, dr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        var band = f.steady ? (t / 3200) % 1 : (k * 2.2) % 1, by2 = dm.y - dh * band;
+        var bw = dr * Math.sqrt(Math.max(0, 1 - band * band));
+        g.strokeStyle = 'rgba(255,255,255,' + (0.35 * da * (1 - band)) + ')';
+        g.beginPath(); g.ellipse(dm.x, by2, bw, bw * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        g.restore();
+      } else if (f.kind === 'puff') {
+        /* Smoke Markers: a smoke round bursting on the mark — grey clouds
+           billowing up and out, lit from inside by the flare (`rgb`). */
+        var sp = I.toScreen(f.x, f.y); sp.y -= liftAt(f);
+        var srgb = f.rgb || '255,200,80', sn = f.n || 7;
+        if (k < 0.35) I.ellipse(g, sp.x, sp.y - I.K * 0.4, I.K * 0.9 * (1 - k / 0.35), I.K * 0.6 * (1 - k / 0.35), 'rgba(' + srgb + ',' + (0.9 * (1 - k / 0.35)) + ')');
+        for (var si = 0; si < sn; si++) {
+          var sa = si / sn * Math.PI * 2 + 0.6, sgr = Math.min(1, k / 0.4);
+          var sd = I.K * (0.5 + 1.1 * sgr) * (0.7 + (si % 3) * 0.15);
+          var sx = sp.x + Math.cos(sa) * sd, sy = sp.y + Math.sin(sa) * sd * 0.5 - I.K * (0.4 + k * 1.6 + (si % 2) * 0.5);
+          var srd = I.K * (0.55 + 0.6 * sgr), sal = k < 0.7 ? 0.55 : 0.55 * (1 - k) / 0.3;
+          I.ellipse(g, sx, sy, srd, srd * 0.8, 'rgba(' + (si % 2 ? '190,188,180' : '160,158,152') + ',' + sal + ')');
+        }
+        // the flare, burning on inside the smoke
+        var fl = 0.6 + 0.4 * Math.sin(k * 60);
+        I.ellipse(g, sp.x, sp.y - I.K * 0.6, I.PIXEL * 2.2, I.PIXEL * 2.2, 'rgba(' + srgb + ',' + (fl * (1 - k)) + ')');
+      } else if (f.kind === 'glint') {
+        /* Keen-Eyed: a four-pointed glint off the spotter's optics, and one on
+           the Stealthy unit it has picked out. */
+        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f) + I.K * (f.up == null ? 1.1 : f.up);
+        var grgb = f.rgb || '150,240,255', gk = Math.sin(Math.min(1, k) * Math.PI);
+        var gl = I.K * (0.5 + 0.9 * gk), gw = I.PIXEL * 1.2;
+        g.save();
+        g.fillStyle = 'rgba(' + grgb + ',' + (0.25 * gk) + ')';
+        g.beginPath(); g.arc(gp.x, gp.y, gl * 0.6, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,' + gk + ')';
+        g.beginPath();
+        g.moveTo(gp.x - gl, gp.y); g.lineTo(gp.x, gp.y - gw); g.lineTo(gp.x + gl, gp.y); g.lineTo(gp.x, gp.y + gw); g.closePath();
+        g.moveTo(gp.x, gp.y - gl); g.lineTo(gp.x + gw, gp.y); g.lineTo(gp.x, gp.y + gl); g.lineTo(gp.x - gw, gp.y); g.closePath();
+        g.fill();
+        g.fillStyle = 'rgba(' + grgb + ',' + gk + ')';
+        g.fillRect(gp.x - I.PIXEL, gp.y - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2);
+        g.restore();
+      } else if (f.kind === 'charges') {
+        /* Sappers: demolition charges set around a point, blinking red — then
+           all going off together in a flash and a spray of rubble. */
+        var cp = I.toScreen(f.x, f.y); cp.y -= liftAt(f);
+        var cn = f.n || 4, cr = (f.r || 1.5) * I.K * 0.72, boom = 0.6;
+        for (var ci = 0; ci < cn; ci++) {
+          var ca = ci / cn * Math.PI * 2 + 0.4;
+          var cx = cp.x + Math.cos(ca) * cr, cy = cp.y + Math.sin(ca) * cr * 0.5 - I.K * 0.3;
+          if (k < boom) {
+            var set = k > ci * 0.08;                       // placed one after another
+            if (!set) continue;
+            I.rect(g, cx - I.PIXEL, cy - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2, 'rgba(70,60,50,1)');
+            if (Math.sin(k * 55 + ci) > 0) I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, 'rgba(255,60,40,0.95)');
+          } else {
+            var bk = (k - boom) / (1 - boom);
+            I.ellipse(g, cx, cy, I.K * (0.4 + bk * 0.9), I.K * (0.3 + bk * 0.6), 'rgba(255,' + Math.round(220 - bk * 120) + ',120,' + (0.9 * (1 - bk)) + ')');
+            for (var cd = 0; cd < 5; cd++) {
+              var cda = cd * 1.26 + ci, cdd = bk * I.K * 1.6;
+              I.rect(g, cx + Math.cos(cda) * cdd, cy + Math.sin(cda) * cdd * 0.5 - bk * I.K * 1.2 + bk * bk * I.K,
+                I.PIXEL, I.PIXEL, 'rgba(150,130,105,' + (1 - bk) + ')');
+            }
+          }
+        }
       } else if (f.kind === 'hold') {
         /* Nothing to draw: it exists so the frame loop keeps turning while a
            unit is coming down, and so the game waits for it. */
@@ -23114,7 +23277,7 @@
       if (d < bd) { bd = d; best = e; }
     });
     if (!best) return null;
-    var res = R.shoot(state, best, u, 'basic', {});
+    var res = abShoot(state, best, u, 'basic', {});
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     logLine('note', best.label + ' was waiting for them — ' + u.label + ' came down inside 12".');
     return { shooter: best, res: res };
@@ -24046,7 +24209,7 @@
       if (!friend) return;
       var roll = R.d6();
       if (roll !== 1) { logLine('note', u.label + ' — Infamy of Madness: D6 ' + roll + ', it holds its fire.'); return; }
-      var res = R.shoot(state, u, friend, 'fire', {});
+      var res = abShoot(state, u, friend, 'fire', {});
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       pushRes(fromLog('Infamy of Madness', u.name + ' → ' + friend.name, u.side, [{ t: 'note', text: 'D6 1: ' + u.label + ' turns its guns on ' + friend.label + '.' }].concat(res.log)));
     });
@@ -24199,6 +24362,7 @@
       var cmd = R.commandAboard(just);
       if (cmd && !cmd.coordUsed && R.status(cmd) !== 'broken') {
         cmd.coordUsed = true;
+        addFx({ kind: 'wave', x: just.x, y: just.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
         state.chain = {
           side: just.side, remaining: R.ruleValue(just, 'Command Unit') + 1,
           x: just.x, y: just.y, tier: cmd.tier
@@ -24285,7 +24449,7 @@
     var u = list[i];
     if (!u.alive) { rallyNext(list, i + 1); return; }
     if (R.isMachine(u)) {
-      var rep = R.repair(state, u);
+      var rep = abRepair(state, u);
       if (!rep) { rallyNext(list, i + 1); return; }
       logLine('rally', rep.text);
       var card = repairCard(u, rep);
@@ -24297,7 +24461,7 @@
       return;
     }
     if (u.sp === 0) { rallyNext(list, i + 1); return; }
-    var r = R.rally(state, u);
+    var r = abRally(state, u);
     if (!r) { rallyNext(list, i + 1); return; }
     logLine('rally', r.text);
     if (SFX && r.gone) SFX.broken();
@@ -24389,6 +24553,13 @@
     var tide = R.endlessTide(state);
     if (tide.length) {
       tide.forEach(function (l) { logLine('rally', l.text); });
+      // the Overmind's reach rolling out, and the lost bugs coming back up out of the ground
+      var minds = [];
+      tide.forEach(function (l) {
+        var om = R.overmindFor(state, l.unit, true);
+        if (om && minds.indexOf(om) < 0) { minds.push(om); addFx({ kind: 'wave', x: om.x, y: om.y, up: 0, r: 18, rgb: '150,215,90', dur: 1400, blocking: true }); }
+        addFx({ kind: 'rise', x: l.unit.x, y: l.unit.y, rgb: '205,170,95', n: 10, delay: 300, dur: 1400 });
+      });
       if (SFX) SFX.chitter();
       pushRes({ kind: 'Endless Tide', title: 'The swarm replenishes', side: tide[0].unit.side,
         list: tide.map(function (l) { return { text: l.text, side: l.unit.side }; }) });
@@ -24987,6 +25158,7 @@
       doStance(u); return;
     } else if (id === 'coordinate') {
       u.coordUsed = true; u.activated = true;
+      addFx({ kind: 'wave', x: u.x, y: u.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300, blocking: true });
       state.chain = { side: u.side, remaining: R.ruleValue(u, 'Command Unit') + 1, x: u.x, y: u.y, tier: u.tier };
       logLine('note', u.label + ' coordinates: up to ' + R.ruleValue(u, 'Command Unit') + ' friendly units within 12" activate in a row.');
       endActivation(); return;
@@ -24994,7 +25166,7 @@
       u.activated = true;
       closeDrawer();
       if (R.isMachine(u)) {
-        var rep = R.repair(state, u);
+        var rep = abRepair(state, u);
         logLine('rally', rep ? rep.text : u.label + ' stands down — no damage to repair.');
         pushRes(repairCard(u, rep));
       } else {
@@ -25003,7 +25175,7 @@
           var med = Math.min(2, u.sp); u.sp -= med;
           logLine('rally', u.label + ' — Meditation: ' + med + ' SP gone before the dice.');
         }
-        var r = R.rally(state, u);
+        var r = abRally(state, u);
         logLine('rally', r ? r.text : u.label + ' regroups — no suppression to shake off.');
         pushRes({
           kind: 'Regroup', title: u.name + ' regroups', side: u.side,
@@ -25207,7 +25379,7 @@
   // an Overgrown bug charging from the AI's hands, when something is in reach
   function aiCharge(u, t) {
     var snap = snapshotAlive();
-    var res = R.assault(state, u, t);
+    var res = abAssault(state, u, t);
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
@@ -25316,6 +25488,88 @@
     endActivation(u);
   }
 
+  /* ---- abilities, seen as they bite ----
+     Every shot, charge, rally and repair goes through these, so a rule that
+     changed the outcome shows on the table as it does: a medic's save, a
+     Xenotripod shield taking the shot, pheromone trails guiding a bug in,
+     an enemy's jamming. */
+  function abShoot(st, a, t, mode, opts) {
+    var sh = !(opts && opts.assault) && a && t ? R.shieldFor(st, a, t) : null;
+    var trails = pheromoneMarkers(a, t);
+    if (!(opts && opts.assault)) keenFx(a, t, 6);
+    var res = R.shoot(st, a, t, mode, opts);
+    abilityFx(res, t, sh, trails);
+    return res;
+  }
+  function abAssault(st, a, t) {
+    var trails = pheromoneMarkers(a, t);
+    // "Death or Glory, Comrades!": the leader's shout, and the charge throwing off its Suppression
+    var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
+    if (shout) {
+      addFx({ kind: 'beam', x: shout.x, y: shout.y, tx: a.x, ty: a.y, rgb: '235,85,70', dur: 900 });
+      addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 900 });
+    }
+    // Sappers: charges set against the wall or building the enemy is sheltering behind
+    var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
+    if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
+    var res = R.assault(st, a, t);
+    abilityFx(res, t, null, trails);
+    return res;
+  }
+  function abRally(st, u) { jamFx(u); leaderFx(u); return R.rally(st, u); }
+  /* A rally helped along by a leader: "…but they'll never take our freedom!"
+     (three more dice) or Inspiring Presence (failures re-rolled) — the call
+     from the leader, and the unit steadying under it. */
+  function leaderFx(u) {
+    if (!u || !u.sp || R.isMachine(u)) return;
+    var free = R.freedomDice(state, u) > 0 ? nearestWith(u, '…but they\'ll never take our freedom!', 18) : null;
+    var insp = !free && R.inspiringNearby && R.inspiringNearby(state, u) ? nearestWith(u, 'Inspiring Presence', 12) : null;
+    var o = free || insp;
+    if (!o) return;
+    var rgb = free ? '240,120,80' : '232,193,90';
+    addFx({ kind: 'beam', x: o.x, y: o.y, tx: u.x, ty: u.y, rgb: rgb, dur: 1000 });
+    addFx({ kind: 'rise', x: u.x, y: u.y, rgb: rgb, n: 8, delay: 250, dur: 1300 });
+  }
+  function nearestWith(u, rule, reach) {
+    return state.units.filter(function (o) {
+      return o !== u && o.alive && !o.aboard && o.x >= 0 && o.side === u.side && R.has(o, rule) && R.unitDist(o, u) <= reach;
+    }).sort(function (a, b) { return R.unitDist(a, u) - R.unitDist(b, u); })[0] || null;
+  }
+  function abRepair(st, u) { if (u && u.damage) jamFx(u); return R.repair(st, u); }
+  // the friendly marker bugs within reach of the target, when their pheromones are guiding this attack in
+  function pheromoneMarkers(a, t) {
+    if (!a || !t || !(R.pheromoneBonus(state, a, t) > 0)) return [];
+    var reach = R.doctrine(state, a.side, 'BC3') ? 24 : 18;
+    return state.units.filter(function (o) {
+      return o.side === a.side && o.alive && !o.aboard && o.x >= 0 && R.has(o, 'Pheromone Markers') && R.unitDist(o, t) <= reach;
+    });
+  }
+  function abilityFx(res, t, sh, trails) {
+    if (!t) return;
+    (trails || []).forEach(function (o) {
+      addFx({ kind: 'beam', x: o.x, y: o.y, tx: t.x, ty: t.y, up: 0.5, rgb: '170,230,90', dur: 1100 });
+    });
+    if (sh && sh.from) addFx({ kind: 'dome', x: sh.from.x, y: sh.from.y, r: 12, delay: 250, dur: 1500 });
+    var txt = ((res && res.log) || []).map(function (l) { return l.text || ''; }).join('\n');
+    if (/MEDIC!/.test(txt)) addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: 500, dur: 1900 });
+  }
+  /* Keen-Eyed: a spotter seeing straight through a Stealth unit's
+     concealment — a glint off its optics, and one on the unit it picks out.
+     Stealth only counts from `from` inches on, so nearer than that nothing shows. */
+  function keenFx(a, t, from) {
+    if (!a || !t || !R.has(a, 'Keen-Eyed') || !R.has(t, 'Stealth') || R.unitDist(a, t) < from) return;
+    addFx({ kind: 'glint', x: a.x, y: a.y, dur: 700 });
+    addFx({ kind: 'glint', x: t.x, y: t.y, up: 0.8, delay: 250, dur: 700 });
+  }
+  // a rally or repair made harder by an enemy's Jammers: the static rolling out from the jammer
+  function jamFx(u) {
+    if (!u || !R.jammedNearby(state, u)) return;
+    var j = state.units.filter(function (e) {
+      return e.alive && !e.aboard && e.x >= 0 && e.side !== u.side && R.has(e, 'Jammers') && R.unitDist(e, u) <= 24;
+    }).sort(function (a, b) { return R.unitDist(a, u) - R.unitDist(b, u); })[0];
+    if (j) addFx({ kind: 'wave', x: j.x, y: j.y, up: 0, r: 24, rgb: '200,215,225', dash: true, dur: 1300 });
+  }
+
   function doSelfRepair(u) {
     ui.mode = 'idle'; ui.targets = []; ui.moves = [];
     var res = R.selfRepair(state, u);
@@ -25334,6 +25588,7 @@
     u.activated = true;
     res.log.forEach(function (l) { logLine(l.t, l.text); });
     addFx({ kind: 'wave', x: u.x, y: u.y, up: V.flyLift(u), r: 2.5, rgb: glowRGB(u), dur: 900, blocking: true });
+    addFx({ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1500 });   // the machine knitting itself back together
     pushRes({ kind: 'Repair', title: u.name + ' — Self-repair', side: u.side,
       note: 'Molecular Reconstruction: the unit stays where it is and removes every Damage point.',
       outcome: { text: res.cleared + ' Damage cleared — Structure ' + u.str + ' intact.', tone: 'good' } });
@@ -25369,6 +25624,7 @@
     if (res.ok) {
       addFx({ kind: 'wave', x: from.x, y: from.y, up: 0, r: 2, rgb: glowRGB(u), dur: 700, blocking: true });
       addFx({ kind: 'wave', x: u.x, y: u.y, up: 0, r: 2, rgb: glowRGB(u), delay: 350, dur: 1050, blocking: true });
+      addFx({ kind: 'teleportin', x: u.x, y: u.y, r: 1.4, delay: 250, dur: 1400, blocking: true });   // the column it comes out of
       ui.vis = null; ui.visKey = '';
     }
     tp.activated = true;
@@ -25468,7 +25724,7 @@
     var log = [];
     logLine('move', u.label + ' makes a strafing run.');
     hitList.forEach(function (t) {
-      var res = R.shoot(state, u, t, 'basic', {});
+      var res = abShoot(state, u, t, 'basic', {});
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     // friendly fire, on a 1-3
@@ -25476,14 +25732,14 @@
       var die = R.d6();
       if (die > 3) return;
       logLine('note', 'Friendly fire! D6 ' + die + ' — ' + t.label + ' is caught in the strafe.');
-      var res2 = R.shoot(state, u, t, 'basic', {});
+      var res2 = abShoot(state, u, t, 'basic', {});
       res2.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     // everything still standing may shoot back, free of charge
     hitList.forEach(function (t) {
       if (!t.alive || R.status(t) !== 'ready' || t.fp === null) return;
       if (!R.canShoot(state, t, u, 'basic', {})) return;
-      var back = R.shoot(state, t, u, 'basic', {});
+      var back = abShoot(state, t, u, 'basic', {});
       back.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     soundFor(log);
@@ -25496,7 +25752,7 @@
 
   function resolveShot(u, target, mode, opts) {
     var snap = snapshotAlive();
-    var res = R.shoot(state, u, target, mode, opts || {});
+    var res = abShoot(state, u, target, mode, opts || {});
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     // Ambush!: the column caught off guard in the first turn (p. 156)
     if (state.scen.afterShot) {
@@ -25519,7 +25775,7 @@
   function doAssault(target) {
     var u = ui.selected;
     var snap = snapshotAlive();
-    var res = R.assault(state, u, target);
+    var res = abAssault(state, u, target);
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
@@ -25533,7 +25789,7 @@
   function doSupport(target) {
     var u = ui.selected;
     var snap = snapshotAlive();
-    var res = R.shoot(state, u, target, 'support', {});
+    var res = abShoot(state, u, target, 'support', {});
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
@@ -25561,13 +25817,14 @@
 
   function doHack(target) {
     var u = ui.selected;
+    if (u && target) addFx({ kind: 'beam', x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
     var res = R.hack(state, u, target, function (drone) {
       // the drone is turned on the nearest unit of its own side
       var own = activeUnits(drone.side).filter(function (o) {
         return o !== drone && R.canShoot(state, drone, o, 'basic', {});
       }).sort(function (a, b) { return R.unitDist(drone, a) - R.unitDist(drone, b); })[0];
       if (!own) return false;
-      var back = R.shoot(state, drone, own, 'basic', {});
+      var back = abShoot(state, drone, own, 'basic', {});
       back.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       return true;
     });
@@ -25597,7 +25854,9 @@
     var res = R.assaultTerrain(state, u, piece);
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     var mid = { x: piece.x + piece.w / 2, y: piece.y + piece.h / 2 };
-    addFx({ kind: 'clash', x: mid.x, y: mid.y, dur: 420 });
+    // Sappers set their charges round the piece first; anyone else just goes at it
+    if (R.has(u, 'Sappers')) addFx({ kind: 'charges', x: mid.x, y: mid.y, r: Math.min(piece.w, piece.h) / 2 + 0.5, n: 5, dur: 1400, blocking: true });
+    addFx({ kind: 'clash', x: mid.x, y: mid.y, delay: R.has(u, 'Sappers') ? 850 : 0, dur: R.has(u, 'Sappers') ? 1270 : 420 });
     if (res.result) whenIdle(function () { repaintTerrain([res.result]); });
     pushRes(fromLog('Demolition charges', u.name + ' → ' + piece.kind, u.side, res.log));
     endActivation(u);
@@ -25712,7 +25971,14 @@
     var smoke = !R.has(u, 'Markerlights') && R.has(u, 'Smoke Markers');
     var shots = smoke ? 2 : (u.markMoved ? 1 : 2);
     state.mark = { side: u.side, kind: kind, targets: picks, smoke: smoke };
-    picks.forEach(function (t) { t.marked = true; });
+    picks.forEach(function (t) {
+      t.marked = true;
+      // the marker's laser (or smoke round's trace) onto each mark
+      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200, blocking: true });
+      // Smoke Markers: the grenade bursting on the mark, the flare burning in it
+      if (smoke) addFx({ kind: 'puff', x: t.x, y: t.y, delay: 300, dur: 1800 });
+      keenFx(u, t, 12);                                    // marking a Stealth unit past 12"
+    });
     u.activated = true;
 
     var ready = state.units.filter(function (o) {
@@ -25858,7 +26124,7 @@
 
     // badly damaged and nothing worth shooting: pull back and patch up
     if (u.damage >= u.str && !shot.t) {
-      var rep = R.repair(state, u);
+      var rep = abRepair(state, u);
       logLine('rally', rep ? rep.text : u.label + ' stands down.');
       if (rep) pushRes(repairCard(u, rep));
       u.activated = true; endActivation(); return;
@@ -26035,7 +26301,7 @@
       var dogT = nearestEnemy(u);
       if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= dogReach) {
         var dsnap = snapshotAlive();
-        var dres = R.assault(state, u, dogT.unit);
+        var dres = abAssault(state, u, dogT.unit);
         dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
         soundFor(dres.log);
         var dcard = fromLog('Assault', u.name + ' → ' + dogT.unit.name, u.side, dres.log);
@@ -26061,7 +26327,7 @@
         animateMove(u, spath, true);
         logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.terrainOf(state, u)].name.toLowerCase() + '.');
       } else {
-        var rr = R.rally(state, u);
+        var rr = abRally(state, u);
         logLine('rally', rr ? rr.text : u.label + ' regroups.');
         if (rr) pushRes({ kind: 'Regroup', title: u.name + ' regroups', side: u.side, list: [{ text: rr.text, side: u.side }] });
       }
@@ -26184,7 +26450,7 @@
     }
     if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= u.move + 2 && !R.has(u, 'Cumbersome Weapon')) {
       var snap = snapshotAlive();
-      var res = R.assault(state, u, ne.unit);
+      var res = abAssault(state, u, ne.unit);
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       soundFor(res.log);
       var card = fromLog('Assault', u.name + ' → ' + ne.unit.name, u.side, res.log);
@@ -27682,6 +27948,8 @@
      when a new one starts, and it needs the terrain to answer `lift`. */
   var FX = window.PMCFx.create({ lift: function (x, y) { return liftOf(x, y); } });
   var fx = FX.list;
+  // what is always up on the table: every Xenotripod shield generator's dome, faint, redrawn each frame
+  var STANDING = window.PMCFx.create({ lift: function (x, y) { return liftOf(x, y); } });
   var el = function (id) { return document.getElementById(id); };
 
   var OBJECTIVES = [{ x: 12, y: 36 }, { x: 24, y: 24 }, { x: 36, y: 12 }];
@@ -28419,6 +28687,11 @@
   /* A Xenotripod squad does not land: it teleports in. A pillar of light forms
      on the landing point, the squad flickers into being inside it, and the
      light thins away. Before it forms the squad is not drawn at all. */
+  // coming up out of the ground: sunk and faint at first, rising to its full height
+  function heaving(age) {
+    var k = Math.min(1, age / (STAND_MS * 0.8)), e = 1 - Math.pow(1 - k, 2);
+    return { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), pose: null, alpha: Math.min(1, 0.25 + e) };
+  }
   function teleporting(age) {
     var k = age / TELE_MS;
     if (k < 0.3) return { lift: 0, pose: null, hidden: true };
@@ -28444,6 +28717,8 @@
       return teleporting(age);
     }
     if (age >= STAND_MS) { u.arriveAt = 0; return { lift: 0, pose: null }; }
+    // a giant bug has no poses to get up through: it heaves itself up out of the ground
+    if (R.isMachine(u)) return heaving(age);
     // flat on its face, then up on one knee, then standing
     return { lift: 0, pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null };
   }
@@ -28536,6 +28811,9 @@
        the ground it came down on — except out of orbit in an Invasion, where
        it falls out of the sky like everything else that side lands. */
     var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
+    /* A swarm comes up out of the ground, whatever the scenario, giants and
+       all — only what flies drops out of the sky. */
+    if (u.faction === 'bugs') craft = R.isFlying(u) || R.flyInf(u);
     u.arriveAt = nowMs();
     /* The Xenotripods teleport in rather than land, hulls and craft as well as
        squads — all but the Esh-Aven, who come up out of the ground as men do. */
@@ -29609,7 +29887,15 @@
 
   /* The effects themselves live in fx.js, so the game and the unit viewer draw
      the same ones from the same code. This is only the game's window onto it. */
-  function drawFx() { FX.draw(pctx); }
+  function drawFx() {
+    STANDING.clear();
+    if (state) state.units.forEach(function (u) {
+      if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
+      STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
+    });
+    STANDING.draw(pctx);
+    FX.draw(pctx);
+  }
 
   /* ================= logging ================= */
   /* The engine has already written the line into state.log (the page's state
@@ -29885,6 +30171,11 @@
         c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' +
         '<span class="sw-name">' + c.name + '</span></button>';
     }).join('');
+    var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
+    if (chip && cc) {
+      chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
+      el('btn-quick-colour').title = 'Colours: ' + cc.name;
+    }
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
         muster.colour = b.getAttribute('data-colour');
@@ -29892,6 +30183,12 @@
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
         if (muster.hot && muster.hot.kind === 'demo') demoRename();   // its name is its colour
+        // against the AI a made-up name follows the colour; the modal shuts on the pick
+        if (muster.hot && muster.hot.kind === 'ai') {
+          var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
+          if (!nm || isMadeUpName(nm)) { muster.name = ISO.COLOURS[muster.colour].name + ' ' + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
+          if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
+        }
         drawColourPick();
       });
     });
@@ -31234,7 +31531,6 @@
   function drawMachineStats(u, box) {
     var left = Math.max(0, u.str - u.damage);
     var pr = R.propOf(u);
-    if (u.drone) kind += ' · drone';
     var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
       '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
       '</div>';
@@ -32569,8 +32865,14 @@
       if (!el(id)) return;
       el(id).addEventListener('change', function () {
         // a demo sets its Tier and Priority Level on the battlefield: both forces are rolled again to match
-        if (id !== 'sel-faction' && muster.hot && muster.hot.kind === 'demo' && muster.hot.step === 3) {
-          muster.hot.sides.forEach(function (sd) { if (sd) sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction); });
+        /* Against the AI the player's own force is kept if it is still legal, and rolled again only if not. */
+        if (id !== 'sel-faction' && muster.hot && hotQuick(muster.hot.kind) && muster.hot.step === 3) {
+          muster.hot.sides.forEach(function (sd, i) {
+            if (!sd) return;
+            if (muster.hot.kind === 'ai' && i === 0 &&
+              R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction).ok) return;
+            sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction);
+          });
           hotPaint(); return;
         }
         muster.keys = []; muster.name = '';
@@ -32733,13 +33035,16 @@
   // does this step's force start rolled, and roll again when its kind changes?
   function hotRolled(step) {
     var k = muster.hot && muster.hot.kind;
-    return k === 'demo' || (k === 'ai' && step === 2);
+    return k === 'demo' || k === 'ai';
   }
+  // a demo, or a battle against the AI: set up on the battlefield step, with both forces rolled to start
+  function hotQuick(kind) { return kind === 'demo' || kind === 'ai'; }
   function hotBegin(kind) {
     muster.hot = { kind: kind, step: 1, sides: [null, null] };
     muster.keys = []; muster.name = '';
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
+    else if (kind === 'ai') { drawColourPick(); hotRandomise(0, false, true); }   // the player's force, in their own colour
     hotPaint();
     drawMuster();
   }
@@ -32747,9 +33052,11 @@
     if (!muster.hot) return;
     muster.hot = null;
     var s = el('setup');
-    if (s) { delete s.dataset.hot; delete s.dataset.kind; }
+    if (s) { delete s.dataset.hot; delete s.dataset.kind; delete s.dataset.quick; }
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = false; });
     el('btn-start').textContent = 'Take the field';
+    var fl = document.querySelector('label[for="sel-faction"]');
+    if (fl) fl.textContent = 'Your force';
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
   }
@@ -32784,8 +33091,16 @@
     var other = muster.hot.sides[1 - i];
     if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
     if (muster.hot.kind === 'demo') { muster.demoNoun = null; demoRename(); return; }
+    // a name the player gave it stays; one made up from its colour and kind follows them
+    var typed = ((el('hot-name') && el('hot-name').value) || '').trim();
+    if (typed && !isMadeUpName(typed)) { muster.name = typed; return; }
     muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[f];
     if (el('hot-name')) el('hot-name').value = muster.name;
+  }
+  function isMadeUpName(n) {
+    return ISO.COLOUR_KEYS.some(function (k) {
+      return HOT_FACTIONS.some(function (f) { return n === ISO.COLOURS[k].name + ' ' + FORCE_NOUN[f]; });
+    });
   }
   function hotSaveSide() {
     var i = muster.hot.step - 1;
@@ -32817,14 +33132,18 @@
     var force = kind === 'coop' ? 'commando' : 'force';
     s.dataset.hot = String(step);
     s.dataset.kind = kind;
+    if (hotQuick(kind)) s.dataset.quick = '1'; else delete s.dataset.quick;
     // set on the first force only: changing one force from the battlefield must not leave the other illegal
-    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(kind === 'demo' && step === 3)) || !!h.edit; });
+    ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(hotQuick(kind) && step === 3)) || !!h.edit; });
     // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
+    if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
+    var fl = document.querySelector('label[for="sel-faction"]');
+    if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
     var tp = el('tierpl-field');
     if (tp) {
       if (!tierHome) tierHome = { parent: tp.parentNode, next: tp.nextSibling };
-      if (kind === 'demo' && step === 3) el('hot-sum').parentNode.insertBefore(tp, el('hot-sum'));
+      if (hotQuick(kind) && step === 3) el('hot-sum').parentNode.insertBefore(tp, el('hot-sum'));
       else if (tp.nextSibling !== tierHome.next) tierHome.parent.insertBefore(tp, tierHome.next);
     }
     el('setup-title').textContent = step === 3 ? 'The battlefield'
@@ -32850,8 +33169,8 @@
       : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
     if (el('colour-hint')) el('colour-hint').textContent = kind === 'coop'
       ? 'What both commandos are painted in: the two of you are one side on the table.'
-      : step === 1 ? 'What ' + hotWho(1) + '’s troops are painted in.'
-        : 'What ' + hotWho(2) + '’s troops are painted in — anything but ' + hotWho(1) + '’s colour.';
+      : step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
+        : 'What ' + hotWho(2).replace(/^The/, 'the') + '’s troops are painted in — anything but ' + hotWho(1).replace(/^Your/, 'your') + '’s colour.';
     if (step === 3) {
       // each force is a button: tap it to go back and change it
       el('hot-sum').innerHTML = h.sides.map(function (sd, i) {
@@ -33179,6 +33498,15 @@
       hotRandomise(muster.hot.step - 1, true, true);
       drawMuster();
     });
+    if (el('btn-quick-clear')) el('btn-quick-clear').addEventListener('click', function () {
+      if (!muster.hot || muster.hot.step > 2) return;
+      muster.keys = [];
+      drawMuster();
+    });
+    var cw = el('colour-wrap');
+    if (el('btn-quick-colour')) el('btn-quick-colour').addEventListener('click', function () { cw.classList.add('open'); });
+    if (el('btn-colour-done')) el('btn-colour-done').addEventListener('click', function () { cw.classList.remove('open'); });
+    if (cw) cw.addEventListener('click', function (ev) { if (ev.target === cw) cw.classList.remove('open'); });
     var saves = el('forcebar-wrap');
     if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
     if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
@@ -33375,11 +33703,12 @@
      Battle Tier III at Priority Level 2, and two random kinds of force
      with rolled builds in colours of their own. Watch the battle at once, or
      tap either force to change it first. */
-  function demoBegin() {
+  function demoBegin(kind) {
+    kind = kind || 'demo';
     var tierSel = el('sel-tier'), plSel = el('sel-pl');
     if (tierSel) tierSel.value = '3';
     if (plSel) plSel.value = '2';
-    hotBegin('demo');                                 // force 1, rolled
+    hotBegin(kind);                                   // force 1, rolled
     hotSaveSide();
     muster.hot.step = 2; hotLoadSide(1); hotSaveSide();   // force 2, rolled, in another colour
     muster.hot.step = 3; muster.hot.from3 = true;
@@ -33397,8 +33726,9 @@
       solo: 'Muster your commando', coop: 'Muster your commandos'
     }[kind] || 'Muster your force';
     // hotseat, co-op and demo build both forces, one step each, before the battlefield
-    if (kind === 'demo') demoBegin();
-    else if (kind === 'hotseat' || kind === 'coop' || kind === 'ai') hotBegin(kind); else hotEnd();
+    // a demo, and a battle against the AI, open on the battlefield with both forces rolled
+    if (kind === 'demo' || kind === 'ai') demoBegin(kind);
+    else if (kind === 'hotseat' || kind === 'coop') hotBegin(kind); else hotEnd();
     el('setup').hidden = false;
   };
   window.PMC_BATTLE_LIVE = function () {
