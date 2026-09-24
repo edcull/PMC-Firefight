@@ -7780,17 +7780,17 @@
   var RB = { strut: '#555c65', joint: '#2a2e34', piston: '#a3aab3', foot: '#383d44', eye: '#5fe0ff' };
   var DRONE_GREY = { light: '#b9c0c8', mid: '#7f8791', dark: '#3b4047', helm: '#6c747e', cloth: '#5b626b', skin: '#8a929c', skinDark: '#5d646d' };
   var KIT = {
-    drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drshotgun: { helm: 'bot', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
-    drscoutsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drbreacher: { helm: 'bot', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
-    drsapper: { helm: 'bot', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
-    drheavy: { helm: 'bot', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
-    drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
-    drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
+    drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
+    drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
+    drshotgun: { helm: 'bot', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
+    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true },
+    drscoutsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
+    drbreacher: { helm: 'bot', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drheavy: { helm: 'bot', gun: 'heavy', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
+    drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
+    drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
@@ -8722,6 +8722,13 @@
     P(tx - 2 - b, -41 + drop, 6 + b, 3, pal.helm);     // shoulder, barely a pad
     P(tx + tw - 3, -41 + drop, 6 + b, 3, pal.helm);
     P(tx - 1.5 - b, -41 + drop, 4 + b, 1, kit.blackPads ? '#4a4e4a' : pal.light);  // the pad's rounded top
+    if (kit.forcePad) {
+      // drones: the right shoulder plate alone in the company's colour
+      var fpc = vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.25);
+      P(tx + tw - 4, -42 + drop, 7 + b, 4.5, fpc);
+      P(tx + tw - 4, -42 + drop, 7 + b, 1, 'rgba(255,255,255,.35)');
+      P(tx + tw - 4, -38.3 + drop, 7 + b, 0.8, 'rgba(0,0,0,.35)');
+    }
     if (kit.forceShoulders) {
       // miners: the shoulders of the work suit painted in the company's colour
       var fsc = PALETTE_FORCE(pal), fsd = pal.forceMid || pal.mid;
