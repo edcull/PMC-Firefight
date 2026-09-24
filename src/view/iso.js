@@ -8921,8 +8921,10 @@
       sEllipse(c[0], cy + 0.5, rx - lipW * 0.5, ry - lipW * 0.35, '#0e1115'); // the well
       if (!dead) {
         sEllipse(c[0], cy + 0.8, rx - lipW, ry - lipW * 0.6, 'rgba(170,182,198,.22)');
+        // the blades turning: the two sides of a craft counter-rotate
+        var spin = ((root.performance ? performance.now() : 0) * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
         for (var i = 0; i < 5; i++) {
-          var ba = i * Math.PI * 2 / 5 + 0.4;
+          var ba = i * Math.PI * 2 / 5 + 0.4 + spin;
           line([c[0], cy + 0.8], [c[0] + Math.cos(ba) * (rx - lipW), cy + 0.8 + Math.sin(ba) * (ry - lipW * 0.6)], 1.1, 'rgba(206,214,226,.3)');
         }
       }

@@ -2669,7 +2669,9 @@
   setInterval(function () {
     if (!state || !state.scene || loop || document.hidden) return;
     ambientTick++;
-    if (state.hazeOnView || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
+    // an aircraft on the table keeps its rotors turning and its scanners sweeping
+    var flying = state.units.some(function (u) { return u.alive && !u.aboard && u.x >= 0 && u.cls === 'aircraft'; });
+    if (state.hazeOnView || flying || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
   }, 60);
 
   /* ================= heat haze =================
