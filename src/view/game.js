@@ -5154,6 +5154,7 @@
     else if (kind === 'ai') {
       // the player's force starts empty, in desert ochre, as "Your force" until they name it
       muster.colour = 'ochre';
+      el('sel-faction').value = 'pmc';             // a mercenary company, until they pick another kind
       drawColourPick();
       if (el('sel-tactic')) el('sel-tactic').value = '';
       muster.name = 'Your force';
@@ -5678,6 +5679,7 @@
       if (cw && cw.classList.contains('open') && !cw.contains(ev.target)) colourPop(false);
     });
     if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
+    if (el('btn-cat-add2')) el('btn-cat-add2').addEventListener('click', function () { catModal(true); });
     if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
     if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
     var saves = el('forcebar-wrap');
