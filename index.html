@@ -107,9 +107,12 @@
   main {
     display: grid;
     grid-template-columns: 290px minmax(0, 1fr) 320px;
-    grid-template-areas: "own stage foe" "log log log";
+    grid-template-areas: "own stage foe";
     gap: 12px; padding-top: 14px; align-items: start;
   }
+  /* The full log along the bottom is kept (the game still writes it) but not
+     shown: the combat results panel on the right tells the same story. */
+  .logdock { display: none !important; }
   .stage { grid-area: stage; }
   .flank-own { grid-area: own; }
   .flank-foe { grid-area: foe; }
@@ -121,6 +124,25 @@
     max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin;
   }
   .flank .statstrip, .flank .resfeed { flex: none; }
+  /* the unit's text, in the left rail under its stats on a desktop: the rail is
+     the height of the window and this part of it scrolls */
+  /* the window, less the header and the space around the columns */
+  .flank-own, .flank-foe { overflow: hidden; height: calc(100vh - var(--hdr, 50px) - 42px); max-height: none; }
+  /* the two orders of battle, top left and top right: a fixed height, scrolling inside */
+  .flank > #panel-own, .flank > #panel-foe {
+    flex: none; height: 250px; overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain;
+  }
+  /* and under the enemy's, the rolls as they land take the rest, scrolling too */
+  .flank-foe > .resfeed { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+  /* the hint line and the card's own heading say again what the stats above already
+     say, so on a desktop neither is shown there */
+  .flank-own > #hintbar { display: none; }
+  .flank-own > #context .card.idle > h2 { display: none; }
+  .flank-own > #context {
+    flex: 1 1 auto; min-height: 120px; overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  }
+  .flank-own > #context:empty { display: none; }
 
   /* the running feed of rolls, in place of a card to dismiss */
   .resfeed {

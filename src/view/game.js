@@ -239,6 +239,26 @@
   }
   /* Gone back to the menu, the demo stops where it is: nothing more is asked
      for until the menu is put away again (Resume carries it on). */
+  /* On a desktop what the unit may do, and what it is being asked, is read in
+     the left rail under its stats (scrolling there); the buttons stay under the
+     table. On a narrower screen the text goes back to the console. */
+  var consoleHome = null;
+  function placeConsole() {
+    var hint = el('hintbar'), ctx = el('context'), side = el('statstrip-side');
+    if (!hint || !ctx || !side || !side.parentNode) return;
+    if (!consoleHome) consoleHome = { parent: ctx.parentNode, hintNext: hint.nextSibling, ctxNext: ctx.nextSibling };
+    if (window.innerWidth > 1000) {
+      if (ctx.parentNode !== side.parentNode) {
+        side.parentNode.insertBefore(hint, side.nextSibling);
+        side.parentNode.insertBefore(ctx, hint.nextSibling);
+      }
+    } else if (ctx.parentNode !== consoleHome.parent) {
+      consoleHome.parent.insertBefore(ctx, consoleHome.ctxNext);
+      consoleHome.parent.insertBefore(hint, ctx);
+    }
+  }
+  placeConsole();
+  window.addEventListener('resize', placeConsole);
   /* On a desktop, a new battle's set-up has the menu's table rolling behind it;
      it stops when the set-up goes away (or the screen is too narrow for it). */
   function setupBackdrop() {
@@ -5681,15 +5701,16 @@
       VIEW_H = Math.max(260, Math.min(1400, Math.round(bh)));
     } else {
       var avail = wrap ? wrap.clientWidth - 12 : window.innerWidth - 380;
-      /* What is left of the window once the header, the action bar, the context
-         card and the terrain key have taken their share. */
-      var used = 380;
-      var top = wrap ? wrap.getBoundingClientRect().top : 120;
+      /* The table takes all the height there is: the window, less the header
+         above it and, under it, the hint line and the row of action buttons (the
+         unit's text is in the left rail now, and the log is not shown). */
+      var used = 151;
+      var top = wrap ? wrap.getBoundingClientRect().top + window.scrollY : 120;
       var room = Math.round(window.innerHeight - top - used);
       VIEW_W = Math.max(720, Math.min(2200, Math.round(avail)));
-      VIEW_H = Math.max(460, Math.min(1400, Math.max(room, Math.round(VIEW_W * 0.46))));
-      // never taller than it is wide: the projection is a wide diamond
-      VIEW_H = Math.min(VIEW_H, Math.round(VIEW_W * 0.72));
+      VIEW_H = Math.max(420, Math.min(1400, room));
+      // never much taller than it is wide: the projection is a wide diamond
+      VIEW_H = Math.min(VIEW_H, Math.round(VIEW_W * 0.9));
     }
     DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
     var bw2 = Math.round(VIEW_W * DPR), bh2 = Math.round(VIEW_H * DPR);
