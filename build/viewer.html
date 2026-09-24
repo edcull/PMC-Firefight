@@ -7942,8 +7942,8 @@
     bsmall: { bug: 'small', big: 0.5, mz: [18, -14] },
     battack: { bug: 'attack', big: 0.95, mz: [20, -40] },
     boversized: { bug: 'oversized', big: 1.12, mz: [22, -44] },
-    bunder: { bug: 'under', big: 0.46, mz: [22, -12] },
-    bhugeunder: { bug: 'hugeunder', big: 0.6, mz: [28, -16] },
+    bunder: { bug: 'under', big: 0.46, mz: [18, -21] },
+    bhugeunder: { bug: 'hugeunder', big: 0.6, mz: [23, -27] },
     bspitlarva: { bug: 'spitlarva', big: 0.36, mz: [14, -6] },
     bimmspit: { bug: 'immspit', big: 0.6, mz: [24, -24] },
     bspitter: { bug: 'spitter', big: 0.8, mz: [30, -30] },
@@ -10097,20 +10097,31 @@
       /* ---- underground ---- */
       case 'under':
       case 'hugeunder': {
+        /* Half out of its hole: the forebody reared up out of the spoil at 45°,
+           the head and jaws at the top, the rest of it still down in the earth.
+           Pinned down it shows less of itself — the same angle, lower. */
         var hu = kind === 'hugeunder', zz = hu ? 1.3 : 1;
-        var sink = pose === 'kneel' ? 5 : down ? 5 : 0;
-        mound(-2 * zz, 18 * zz, 5 * zz);
-        shell(-4 * zz, -7 * zz + sink, 13 * zz, 8 * zz);
-        ridges(-4 * zz, -7 * zz + sink, 13 * zz, 8 * zz, 5);
-        spikes([[-12 * zz, -13 * zz + sink], [-4 * zz, -15 * zz + sink], [4 * zz, -13 * zz + sink]], 4 * zz);
-        head(9 * zz, -8 * zz + sink, 5.5 * zz, 5 * zz, 3, false);
-        // jaws coming up out of the earth
-        var op = pose === 'stand' ? (step ? 1 : 0.7) : 0.2;
-        L([[12 * zz, -10 * zz + sink], [19 * zz, -18 * zz - op * 4 + sink], [23 * zz, -13 * zz + sink]], 2 * zz, BONE);
-        L([[12 * zz, -6 * zz + sink], [20 * zz, -4 * zz + sink], [24 * zz, -8 * zz + sink]], 2 * zz, BONE_D);
-        // the front of the mound, over its belly
-        E(-2 * zz, 0, 19 * zz, 3 * zz, '#4a3d2a');
-        E(-6 * zz, -1 * zz, 10 * zz, 1.6 * zz, '#5f4f37');
+        var reach = (pose === 'stand' ? 24 : 16) * zz;             // how much of it is out of the ground
+        var bx0 = -8 * zz, ux = 0.707, uy = -0.707;                // where it comes out, and the way it points
+        function at(t, off) { return [bx0 + ux * reach * t - uy * (off || 0), uy * reach * t + ux * (off || 0)]; }
+        mound(-4 * zz, 16 * zz, 5 * zz);
+        // the body, segment on segment up the slope (tilted to it), plates and spines along its back
+        [[0.2, 7.5], [0.44, 7], [0.68, 6.2]].forEach(function (sg) {
+          var c = at(sg[0]);
+          shell(c[0], c[1], sg[1] * zz, 5.4 * zz, -0.785);
+        });
+        var rb = at(0.4);
+        ridges(rb[0], rb[1], 7 * zz, 5.4 * zz, 4);
+        spikes([at(0.2, -5 * zz), at(0.45, -5 * zz), at(0.68, -4.5 * zz)], 4 * zz);
+        var hc = at(0.92);
+        head(hc[0], hc[1], 5.5 * zz, 5 * zz, 3, false);
+        // jaws opening at the top
+        var op = pose === 'stand' ? (step ? 1 : 0.7) : 0.25, jw = at(1.02);
+        L([[jw[0], jw[1]], [jw[0] + 7 * zz, jw[1] - 6 * zz - op * 4], [jw[0] + 11 * zz, jw[1] - 1 * zz]], 2 * zz, BONE);
+        L([[jw[0] + 1, jw[1] + 3 * zz], [jw[0] + 9 * zz, jw[1] + 3 * zz], [jw[0] + 12 * zz, jw[1] - 1 * zz]], 2 * zz, BONE_D);
+        // the lip of the hole, over its belly where it comes out of the earth
+        E(-4 * zz, 0, 16 * zz, 3 * zz, '#4a3d2a');
+        E(-8 * zz, -1 * zz, 8 * zz, 1.6 * zz, '#5f4f37');
         break;
       }
       /* ---- spore bugs ---- */
@@ -17543,7 +17554,7 @@
     if (phase === 0) {
       e = Math.pow(k / B_SINK, 2);
       view.at = { x: x0, y: FROM.y };
-      view.burrow = { lift: -Math.round(I.ELEV * 3 * e), alpha: Math.max(0, 1 - e * 0.9) };
+      view.burrow = { lift: 0, alpha: Math.max(0, 1 - e) };            // fading out as it goes down
     } else if (phase === 1) {
       var d = (k - B_SINK) / (B_RISE - B_SINK), x = x0 + (x1 - x0) * d;
       view.at = { x: x, y: FROM.y };
@@ -17558,7 +17569,7 @@
     } else {
       e = 1 - Math.pow(1 - (k - B_RISE) / (1 - B_RISE), 2);
       view.at = { x: x1, y: FROM.y };
-      view.burrow = { lift: -Math.round(I.ELEV * 3 * (1 - e)), alpha: Math.min(1, 0.25 + e) };
+      view.burrow = { lift: 0, alpha: Math.min(1, e) };                 // and back in where it comes up
     }
   }
   /* ---------- a strafing run ----------

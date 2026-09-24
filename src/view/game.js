@@ -1423,15 +1423,15 @@
      flashes across, so it takes its time and reads as flying. */
   // Underground Bugs do not walk across the table: they go down and come up
   function burrows(u) { return !!u && u.faction === 'bugs' && u.group === 'Underground Bugs'; }
-  /* A burrowing move in three parts: the unit sinks into the ground where it
-     stands, travels unseen under a line of churned earth, and heaves itself up
-     at the end. */
+  /* A burrowing move in three parts: the unit fades out where it stands as it
+     goes down, travels unseen under a line of churned earth, and fades back in
+     where it comes up. */
   var SINK = 0.28, RISE = 0.72;
   function burrowStep(an, k) {
     var u = an.unit, sub, e;
     if (k < SINK) {
       sub = k / SINK; e = sub * sub;
-      u.burrow = { lift: -Math.round(ISO.ELEV * 3 * e), alpha: Math.max(0, 1 - e * 0.9) };
+      u.burrow = { lift: 0, alpha: Math.max(0, 1 - e) };
       var p0 = an.segs[0].a;
       u.ax = p0.x; u.ay = p0.y;
       if (an.phase === 0) {
@@ -1466,7 +1466,7 @@
       if (SFX) { SFX.impact(0.05); SFX.step(0.15); SFX.step(0.35); }
     }
     sub = (k - RISE) / (1 - RISE); e = 1 - Math.pow(1 - sub, 2);
-    u.burrow = { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), alpha: Math.min(1, 0.25 + e) };
+    u.burrow = { lift: 0, alpha: Math.min(1, e) };
   }
   function burrowR(u) { return R.isMachine(u) ? 2.4 : 1.6; }
   function moveMs(u, total) {

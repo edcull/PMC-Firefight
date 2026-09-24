@@ -336,7 +336,7 @@
     if (phase === 0) {
       e = Math.pow(k / B_SINK, 2);
       view.at = { x: x0, y: FROM.y };
-      view.burrow = { lift: -Math.round(I.ELEV * 3 * e), alpha: Math.max(0, 1 - e * 0.9) };
+      view.burrow = { lift: 0, alpha: Math.max(0, 1 - e) };            // fading out as it goes down
     } else if (phase === 1) {
       var d = (k - B_SINK) / (B_RISE - B_SINK), x = x0 + (x1 - x0) * d;
       view.at = { x: x, y: FROM.y };
@@ -351,7 +351,7 @@
     } else {
       e = 1 - Math.pow(1 - (k - B_RISE) / (1 - B_RISE), 2);
       view.at = { x: x1, y: FROM.y };
-      view.burrow = { lift: -Math.round(I.ELEV * 3 * (1 - e)), alpha: Math.min(1, 0.25 + e) };
+      view.burrow = { lift: 0, alpha: Math.min(1, e) };                 // and back in where it comes up
     }
   }
   /* ---------- a strafing run ----------
