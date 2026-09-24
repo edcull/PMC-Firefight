@@ -719,6 +719,14 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
     box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
   }
+  /* the same on founding a campaign's force */
+  .found-id { position: relative; }
+  .found-pop {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  }
+  .found-pop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
   .name-row { display: flex; gap: 8px; }
   .name-row .tin { flex: 1; min-width: 0; }
   .chip-btn {
@@ -34727,7 +34735,7 @@
   /* A list opened over the page (the founding screen's pickers, the hub's
      rivals): drawn with the page, hidden unless open, so a pick made in it
      redraws it along with everything else. */
-  var openModal = null, modalView = null;
+  var openModal = null, modalView = null, colourOpen = false;
   function cmodal(kind, title, inner, foot) {
     return '<div class="cmodal" data-modal="' + kind + '"' + (openModal === kind ? '' : ' hidden') + '>' +
       '<div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
@@ -34765,15 +34773,21 @@
     /* Who you are, before what you field: the name it will be known by and the
        colours it paints its kit in. The opposition takes a colour of its own
        from whatever is left, so no two forces on a table ever match. */
-    h += '<div class="muster foundid">' +
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, cc = CO[draft.colour];
+    h += '<div class="muster foundid found-id">' +
       '<div class="field"><label for="found-name">' +
       say('Company name', 'What the revolt calls itself', 'What the swarm is known as', 'What the tribe is known as') + '</label>' +
+      // the colour picked, a chip left of the name: tap it for the colours
+      '<div class="name-row"><button type="button" class="chip-btn" data-go="fcolour" aria-expanded="' + colourOpen + '"' +
+      ' title="' + esc('Colours: ' + colourName(draft.colour)) + '"><span' + (cc ? ' style="background:linear-gradient(135deg,' +
+      cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)"' : '') + '></span></button>' +
       '<input class="tin" id="found-name" maxlength="28" autocomplete="off"' +
       ' placeholder="' + say('e.g. Task Force Ironhold', 'e.g. The Free Colonies', 'e.g. The Hive', 'e.g. The Ghadon Third') + '"' +
-      ' value="' + esc(draft.name || '') + '"></div>' +
-      // the colours a square each, as the unit viewer has them, the one picked named in the label
-      '<div class="field"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
-      ' \u2014 ' + esc(colourName(draft.colour)) + '</label>' + squares(draft.colour) + '</div></div>';
+      ' value="' + esc(draft.name || '') + '"></div></div>' +
+      // the colours a square each, as the unit viewer has them, dropped down under the chip
+      (colourOpen ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
+        ' \u2014 ' + esc(colourName(draft.colour)) + '</label>' + squares(draft.colour) + '</div>' : '') +
+      '</div>';
     var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
       t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
@@ -35854,7 +35868,7 @@
     var hd = /^<h2>([\s\S]*?)<\/h2>/.exec(h);
     if (hd) h = h.slice(hd[0].length);
     el('camp-title').innerHTML = hd ? hd[1] : 'Campaign';
-    if (view !== modalView) openModal = null;           // a new screen starts with nothing open over it
+    if (view !== modalView) { openModal = null; colourOpen = false; }   // a new screen starts with nothing open over it
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
@@ -35878,7 +35892,13 @@
   }
 
   function onClick(ev) {
-    var t = ev.target.closest('button'); if (!t) return;
+    var t = ev.target.closest('button');
+    // the founding colours drop down under the chip: a tap anywhere else puts them away
+    if (colourOpen && !ev.target.closest('.found-pop') && !(t && t.getAttribute('data-go') === 'fcolour')) {
+      keepFoundName(); colourOpen = false; render();
+      if (!t) return;
+    }
+    if (!t) return;
     if (view === 'found') keepFoundName();
     var co = camp ? camp.companies.A : null;
     var go = t.getAttribute('data-go');
@@ -36005,6 +36025,7 @@
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour');
+      colourOpen = false;
       keepFoundName();
       render(); return;
     }
@@ -36013,6 +36034,7 @@
 
     switch (go) {
       case 'archopen': openArchs(); return;
+      case 'fcolour': colourOpen = !colourOpen; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
       case 'fmodalclose': openModal = null; render(); return;
       case 'archdone': closeArchs(); return;

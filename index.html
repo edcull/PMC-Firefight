@@ -719,6 +719,14 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
     box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
   }
+  /* the same on founding a campaign's force */
+  .found-id { position: relative; }
+  .found-pop {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  }
+  .found-pop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
   .name-row { display: flex; gap: 8px; }
   .name-row .tin { flex: 1; min-width: 0; }
   .chip-btn {

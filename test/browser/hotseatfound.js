@@ -94,6 +94,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.B.faction === 'xeno'));
   check('...with no way back out until they have', !/^Back$/m.test(txt));
   check('...and a colour of their own to start from', await p.evaluate(() => {
+    document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click();
     const on = document.querySelector('#camp-body [data-campcolour].on'); return !!on && on.getAttribute('data-campcolour') !== window.PMC_CAMPAIGN.get().companies.A.colour;
   }));
 
@@ -113,6 +114,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Hive'; });
   // the same colour as player 1 is refused
   const aColour = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.colour);
+  await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); });
   await click(p, `#camp-body button[data-campcolour="${aColour}"]`);
   for (const k of ['btiny', 'btiny', 'btiny', 'bspitlarva', 'bspitlarva', 'bspitlarva', 'bsmall', 'bimmspit']) {
     await click(p, `#camp-body button[data-add="${k}"]`);
@@ -125,6 +127,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
     /colour is taken/.test(document.getElementById('camp-askbox').innerText)));
   await p.evaluate(() => document.querySelector('[data-ask="close"]').click());
   await p.waitForTimeout(200);
+  await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); });
   const other = await p.evaluate((a) => [...document.querySelectorAll('#camp-body [data-campcolour]')].map(x => x.getAttribute('data-campcolour')).find(c => c !== a), aColour);
   await click(p, `#camp-body button[data-campcolour="${other}"]`);
   check('player 2 signs', await clickText(p, 'Wake the hive'));

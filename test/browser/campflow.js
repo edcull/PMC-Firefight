@@ -57,7 +57,7 @@ async function clickText(p, re) {
   check('...and asks for the company name there',
     await p.evaluate(() => !!document.getElementById('found-name')));
   check('...and for its colours',
-    await p.evaluate(() => document.querySelectorAll('#camp-body [data-campcolour]').length > 1));
+    await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); return document.querySelectorAll('#camp-body [data-campcolour]').length > 1; }));
 
   // six Tier I, two Tier II, one of them a vehicle
   const picks = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
