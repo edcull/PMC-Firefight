@@ -6536,6 +6536,34 @@
         (p.kind === 'rubble' ? -0.01 : p.kind === 'searchsite' ? 2.4 : 0);
     });
     props.sort(function (a, b) { return a.depth - b.depth; });
+    /* Two blocks side by side are not ordered by their middles: a small wing at
+       the end of a long building can have its middle nearer the viewer and still
+       stand wholly behind it. A block that lies entirely behind another along
+       either axis is drawn first — put right, pass by pass, among the tall ones. */
+    var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1 };
+    function behind(p1, p2) {
+      var e = 1e-3;
+      var sepX = p1.x + p1.w <= p2.x + e, sepY = p1.y + p1.h <= p2.y + e;
+      var backX = p2.x + p2.w <= p1.x + e, backY = p2.y + p2.h <= p1.y + e;
+      return (sepX && !backY) || (sepY && !backX);
+    }
+    for (var pass = 0; pass < 6; pass++) {
+      var moved = false;
+      for (var i1 = 0; i1 < props.length; i1++) {
+        var pa = props[i1];
+        if (!BOX[pa.kind] || !pa.w) continue;
+        for (var j1 = i1 + 1; j1 < props.length; j1++) {
+          var pb = props[j1];
+          if (!BOX[pb.kind] || !pb.w) continue;
+          // pb is drawn after pa, but stands wholly behind it: pb goes first
+          if (behind(pb, pa) && !behind(pa, pb)) {
+            props.splice(j1, 1); props.splice(i1, 0, pb);
+            moved = true; pa = props[i1];
+          }
+        }
+      }
+      if (!moved) break;
+    }
     return props;
   }
 
