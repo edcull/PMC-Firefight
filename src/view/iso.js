@@ -5675,7 +5675,7 @@
     var role = roleAt(art, i);
     var kit = KIT[role] || KIT.rifle;
     // a rider on something other than the bike: the same kit, a different mount
-    if (kit.mount && mountKind && mountKind !== 'bike') {
+    if (kit.mount && mountKind && mountKind !== 'bike' && mountKind !== 'none') {
       var mk = {}; for (var kk in kit) mk[kk] = kit[kk];
       mk.mount = mountKind; kit = mk;
     } else mountKind = null;
@@ -6212,8 +6212,10 @@
     grav: { ride: 13 },
     hover: { ride: 9 }
   };
+  // no optional propulsion ('none'): the hull is drawn on the running gear it usually goes to war on
   function driveOf(u) {
     var d = u && u.prop;
+    if ((!d || d === 'none') && u && u.cls === 'vehicle' && window.PMC && window.PMC.lookDrive) d = window.PMC.lookDrive(u);
     return DRIVE[d] ? d : (u && u.cls === 'vehicle' ? 'wheeled' : null);
   }
 
@@ -6555,6 +6557,16 @@
         }
         stroke([pts[0], pts[1]], m(0.8), GLO.m);                 // the leading edge
         if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
+        // a drone's aerials: two whips standing off the top edge of the dorsal wing
+        if (u.drone && w.dorsal && !dead) {
+          [0.62, 0.86].forEach(function (k) {
+            var at0 = le + (tp - le) * k, r0 = rf + (w.sp - rf) * k;
+            var a0 = P3(at0, r0, w.ph), a1 = P3(at0 - 0.12 * Lc, r0 + 0.7, w.ph);
+            stroke([a0, a1], 1.6, WH.dk);
+            stroke([a0, a1], 0.8, WH.lt);
+            ellipse(g, a1[0], a1[1], 1.8, 1.8, '#ff5040');
+          });
+        }
       }
       // the fuselage: rings of stations [t, r] turned into an eight-sided body
       var ST = [[1.0 * Lc, 0], [0.72 * Lc, rad * 0.62], [0.3 * Lc, rad], [-0.45 * Lc, rad], [-0.7 * Lc, rad * 0.8], [tail, rad * 0.62]];
@@ -6642,6 +6654,7 @@
         var cp = [P3(0.8 * Lc, rad * 0.7, Math.PI / 2), P3(0.56 * Lc, rad * 1.35, Math.PI / 2), P3(0.4 * Lc, rad * 1.05, Math.PI / 2),
           P3(0.56 * Lc, rad * 1.1, Math.PI * 0.35), P3(0.56 * Lc, rad * 1.1, Math.PI * 0.65)];
         cp = [cp[0], cp[dot3(roll(Math.PI * 0.35), EYE) > dot3(roll(Math.PI * 0.65), EYE) ? 3 : 4], cp[2], cp[1]];
+        if (u.drone) return;                     // a drone: no crystal cockpit at all
         path(cp, dead ? '#2a2826' : '#3f9be8'); stroke(cp, 1, dead ? WH.seam : '#123a6e', true);
         if (!dead) path([cp[0], cp[3], cp[2]], '#9fd6ff');
       };
@@ -6800,6 +6813,40 @@
     }
     mountAt('gun', [gp.x, dz - m(3)]);
     return { lift: lift, hgt: m(30) };
+  }
+
+  // the texture tiles themselves, made once: specks and streaks on a clear ground
+  var TEX_TILE = {};
+  function texTile(kind) {
+    if (TEX_TILE[kind] !== undefined) return TEX_TILE[kind];
+    if (typeof document === 'undefined') return (TEX_TILE[kind] = null);
+    var n = 16, c = document.createElement('canvas'); c.width = n; c.height = n;
+    var x = c.getContext('2d'), r = rng(kind === 'rust' ? 7717 : 4441);
+    function px(i, j, col) { x.fillStyle = col; x.fillRect(i, j, 1, 1); }
+    if (kind === 'rust') {
+      for (var a = 0; a < 38; a++) px(Math.floor(r() * n), Math.floor(r() * n), r() < 0.55 ? 'rgba(52,26,12,.42)' : 'rgba(196,120,64,.34)');
+      // streaks running down from where the rain sat
+      for (var b = 0; b < 3; b++) {
+        var sx = Math.floor(r() * n), sy = Math.floor(r() * n), ln = 3 + Math.floor(r() * 5);
+        for (var k = 0; k < ln; k++) px(sx, (sy + k) % n, 'rgba(60,30,14,' + (0.32 - k * 0.03).toFixed(2) + ')');
+      }
+    } else {
+      for (var d = 0; d < 22; d++) px(Math.floor(r() * n), Math.floor(r() * n), r() < 0.5 ? 'rgba(30,33,38,.36)' : 'rgba(200,206,214,.3)');
+      // scuffs, and a rivet or two catching the light
+      for (var e = 0; e < 3; e++) {
+        var ex = Math.floor(r() * n), ey = Math.floor(r() * n), el = 2 + Math.floor(r() * 4);
+        for (var q = 0; q < el; q++) px((ex + q) % n, ey, 'rgba(190,196,204,.22)');
+      }
+      for (var v = 0; v < 2; v++) { var vx = Math.floor(r() * (n - 1)), vy = Math.floor(r() * (n - 1)); px(vx, vy, 'rgba(210,216,224,.5)'); px(vx + 1, vy + 1, 'rgba(20,22,26,.45)'); }
+    }
+    return (TEX_TILE[kind] = c);
+  }
+  function texPattern(g, kind) {
+    var t = texTile(kind);
+    if (!t) return null;
+    g.__tex = g.__tex || {};
+    if (!g.__tex[kind]) g.__tex[kind] = g.createPattern(t, 'repeat');
+    return g.__tex[kind];
   }
 
   function drawMachine(g, u, opts) {
@@ -7587,8 +7634,8 @@
       REBELP = u.faction === 'rebel' && !dead;
       CAMO = camoFor();
       PATCH_FACE = !!(spec.craft || spec.heli);
-      PATCH_GREY = tone('#8a8f96', '#62676e', '#3a3e44', '#747980');
-      PATCH_RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36');
+      PATCH_GREY = tone('#8a8f96', '#62676e', '#3a3e44', '#747980'); PATCH_GREY.tex = 'steel';
+      PATCH_RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36'); PATCH_RUST.tex = 'rust';
       P0 = toScreen(at.x, at.y);
       HF = frameAt(0, 0, f);
       AIM = (u.aim == null || dead) ? f : u.aim;
@@ -7746,6 +7793,17 @@
       var hq = hash(Math.floor(la * 4 + 0.37 + 64), Math.floor(Math.abs(lb) * 4 + 0.37) * (lb < 0 ? 3 : 1), salt | 0);
       return hq < 0.5 ? TB : hq < 0.75 ? PATCH_GREY : PATCH_RUST;
     }
+    /* The scrap a rebel machine is patched from is not clean paint: the rusted
+       brown is pitted and streaked, the bare grey is scuffed and spotted with
+       weld and rivet heads. A fine texture laid over those plates, pinned to
+       the machine so it rides along with it rather than swimming as it moves. */
+    function texOn(pts, kind) {
+      if (dead || !g.createPattern) return;
+      var pat = texPattern(g, kind);
+      if (!pat) return;
+      if (pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix().translateSelf(Math.round(P0.x), Math.round(P0.y)));
+      poly(g, pts, pat);
+    }
     function prism(base, top2, z0, h, tn0, noTop) {
       var tn = tn0;
       var Bs = base.map(function (q) { return S3(q, z0); });
@@ -7780,6 +7838,7 @@
         var colr = k > 0.5 ? mixc(ft.mid, ft.lit, (k - 0.5) * 2) : mixc(ft.dark, ft.mid, k * 2);
         var face = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]];
         poly(g, face, colr);
+        if (ft.tex) texOn(face, ft.tex);
         if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(face, colr, z0 + h * 0.5, false, h);
         if (h > 2) {
           var yT = Math.min(face[2][1], face[3][1]), yB = Math.max(face[0][1], face[1][1]);
@@ -7796,8 +7855,9 @@
       });
       if (!noTop && tn.top) {
         var cxT = 0, cyT = 0; base.forEach(function (q) { cxT += q.x; cyT += q.y; });
-        var topCol = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11).top;
+        var topT = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11), topCol = topT.top;
         poly(g, Ts, topCol);
+        if (topT.tex) texOn(Ts, topT.tex);
         if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(Ts, topCol, z0 + h, true);
         var ys = Ts.map(function (q) { return q[1]; });
         var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
@@ -8000,6 +8060,8 @@
             if (fwdP > 0.02) { var grl = S3(HF(L * 0.5, 0), z0 + H * 0.35); sEllipse(grl[0], grl[1], 3, 1.6, STEEL); }
           };
           var cab = function () {
+            // a drone has no one to sit in a cab: an armoured block the height of the bonnet instead
+            if (u.drone) { slabF(HF, -L * 0.1, L * 0.2, -w * 0.9, w * 0.9, z0, H * 0.7, TB, L * 0.04, 0, w * 0.06); return; }
             slabF(HF, -L * 0.1, L * 0.2, -w, w, z0, H * 1.25, TB, L * 0.1, 0.02, w * 0.1);
             if (fwdP > 0.02) {                              // the windscreen, only when the front faces us
               var wsA = S3(HF(L * 0.19, -w * 0.8), z0 + H * 0.68), wsB = S3(HF(L * 0.19, w * 0.8), z0 + H * 0.68);
@@ -8081,8 +8143,8 @@
         case 'guntruck': {
           var fwdG = cos + sin, nsG = nearSide(), hv = !!st.heavy;
           var cabL = hv ? 0.28 : 0.3, bedA0 = -L * 0.5, bedA1 = L * (0.5 - cabL) - 0.03;
-          var RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36');
-          var PLATE = tone('#8a8f96', '#62676e', '#3a3e44', '#747980');
+          var RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36'); RUST.tex = 'rust';
+          var PLATE = tone('#8a8f96', '#62676e', '#3a3e44', '#747980'); PLATE.tex = 'steel';
           if (st.flatCab) cabL = 0.24;
           if (st.flatCab) bedA1 = L * (0.5 - cabL) - 0.03;
           var gbonnet = function () {
@@ -8098,6 +8160,10 @@
             lights(HF, L * 0.52, -w * 0.62, z0 + H * 0.5); lights(HF, L * 0.52, w * 0.62, z0 + H * 0.5);
           };
           var gcab = function () {
+            if (u.drone) {                                   // no crew, no cab: plated over at bonnet height
+              slabF(HF, L * (0.5 - cabL), L * (0.5 - cabL * 0.42), -w * 0.9, w * 0.9, z0, H * 0.78, TB, L * 0.03, 0, w * 0.06);
+              return;
+            }
             if (st.flatCab) {
               // a straight, square cab right at the front, its face plated with a slit
               slabF(HF, L * (0.5 - cabL), L * 0.5, -w * 0.98, w * 0.98, z0, H * 1.6, TB, 0.005, 0, w * 0.03);
@@ -8732,6 +8798,8 @@
       function fuselage(pts, top, zz, hh, tn) { return shape(AF, pts, zz, hh, tn || TB, null, top); }
       function canopy(p0, p1, q, zz, hh) {
         var pts = [[p1, 0], [p1 - (p1 - p0) * 0.3, q], [p0, q * 0.8], [p0, -q * 0.8], [p1 - (p1 - p0) * 0.3, -q]];
+        // a drone has no pilot, and no cockpit at all
+        if (u.drone) return;
         var t = shape(AF, pts, zz, hh, tone(GLINT, GLASS, '#0e141b', mixc(GLASS, GLINT, 0.35)), 0.7);
         edge(g, t[0], t[1], 'rgba(220,240,255,.7)', 0.8);
       }
@@ -9233,6 +9301,8 @@
       /* Cockpit glass and sensor lenses: a glassy blue, bright at the top where
          it catches the sky and deep below, with a glint along its upper edge. */
       function glass(pts, glint) {
+        // a drone walker has nobody to see out: no cockpit glass at all
+        if (u.drone) return;
         var ys = pts.map(function (q) { return q[1]; });
         var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
         var gl;
@@ -9389,6 +9459,7 @@
           // a point on the front facet: k up it, u across it (-1 to 1)
           var ff = function (k, u) { return S3(TF(ca1 - rk * k + 0.006, u * cb * (0.38 - 0.06 * k)), cz + ch * k); };
           var pane = function (P, k0, k1, u0, u1, fr) {
+            if (u.drone) return;                          // no panes, nor their dark frames
             var q = [P(k0, u0), P(k0, u1), P(k1, u1), P(k1, u0)];
             poly(g, [P(k0 - fr, u0 - fr * 1.6), P(k0 - fr, u1 + fr * 1.6), P(k1 + fr, u1 + fr * 1.6), P(k1 + fr, u0 - fr * 1.6)], '#0b0e12');
             glass(q, [q[3], q[2]]);
@@ -9420,7 +9491,7 @@
         shape(TF, R1, waistY + h1, h2, TB, null, null, true);
         shape(TF, R1, waistY + h1 + h2, h3, TB, null, R2);
         // the canopy, over the front plate and up onto the dome
-        if (fwd > 0.05) {
+        if (fwd > 0.05 && !u.drone) {
           var z1 = waistY + h1 + h2, z0 = waistY + h1 + Math.round(h2 * 0.45), kT = 0.6;
           var aT = tL - tL * 0.42 * kT, bT = tW * (0.32 - 0.12 * kT);
           var cp = [S3(TF(tL + 0.006, -tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.32), z1),
@@ -9700,7 +9771,47 @@
       drawDamage();
     }
 
+    /* Drone Control (p. 37): no crew, so the hull carries what flies it instead —
+       a sensor dome on the roof towards the back, and a whip aerial beside it
+       with a light on the tip. */
+    function drawDrone() {
+      if (!u.drone || dead || /Turret/.test(u.group || '')) return;
+      var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
+      var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+      var body = spec.style && spec.style.body;
+      /* The dome: on a hull's roof off to one side, clear of a turret; on a
+         pickup or gun truck, to one side of the flat plate where its cab used to
+         be; on a walker, up on a shoulder; on a craft, the middle of its back. */
+      var back = -0.3, off = -spec.wid * 0.26;
+      if (spec.fly) { back = 0.05; off = 0; }
+      else if (legs) { back = -0.12; off = -spec.wid * 0.28; }
+      else if (body === 'pickup') { back = 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
+      else if (body === 'guntruck') {
+        var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
+        back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
+      }
+      var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
+      var r = Math.max(3, K * 0.16), cy = dp.y - y5;
+      ellipse(g, dp.x, cy + r * 0.15, r * 1.25, r * 0.6, '#14171c');               // the collar it sits in
+      ellipse(g, dp.x, cy - r * 0.2, r, r * 0.85, '#aeb8c2');                      // the dome
+      ellipse(g, dp.x, cy + r * 0.05, r, r * 0.45, '#7d8894');
+      ellipse(g, dp.x - r * 0.35, cy - r * 0.5, r * 0.35, r * 0.25, 'rgba(255,255,255,.75)');
+      ellipse(g, dp.x + r * 0.2, cy - r * 0.05, r * 0.28, r * 0.2, '#2a6f9a');     // the sensor behind the dome's skin
+      // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
+      var aq, ya = y5;
+      if (spec.fly) aq = along(-spec.len * 0.38, 0);
+      else if (legs) aq = along(spec.len * back - 0.2, off * 0.8);
+      else {
+        aq = along(-spec.len * 0.44, spec.wid * 0.32);
+        if (body === 'pickup' || body === 'guntruck') ya = deck + spec.hgt * 0.5;
+      }
+      var ap = toScreen(aq.x, aq.y), ay = ap.y - ya, ah = Math.max(10, K * 0.55);
+      thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 2, '#1a1d22');
+      ellipse(g, ap.x + 1, ay - ah, 1.6, 1.6, '#ff5040');
+    }
+
     function drawDamage() {
+      drawDrone();
       if (!u.damage || !u.str) return;
       var dr2 = rng((u.id || 'x').length * 977 + u.damage * 31);
       var y4 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);

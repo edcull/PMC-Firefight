@@ -343,9 +343,9 @@ html { scroll-behavior: smooth; }
     { key: 'rshtv', code: 'SHV', name: 'Super heavy transport-combat vehicle', group: 'Rebel transport vehicles', faction: 'rebel', cls: 'vehicle', art: 'ttheavy', tier: 4, size: 1, move: 8, turn: 2, fp: 6, range: 18, def: 10, assault: 4, str: 14, transport: 3, rules: ['Ground vehicle', 'Transport (3)', 'Supporting Fire', 'Advanced Protection'], capPL: 1 },
 
     /* Flak vehicles (p. 107) — one per Priority Level */
-    { key: 'rlflak', code: 'LFV', name: 'Light FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aatech', tier: 2, size: 1, move: 10, turn: 2, fp: 3, range: 18, def: 9, assault: 2, str: 4, rules: ['Ground vehicle', 'Anti-aircraft'], capPL: 1 },
-    { key: 'rmflak', code: 'MFV', name: 'Medium FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aacar', tier: 3, size: 1, move: 8, turn: 2, fp: 4, range: 24, def: 11, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Suppressive Fire'], capPL: 1 },
-    { key: 'rhflak', code: 'HFV', name: 'Heavy FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aaheavy', tier: 4, size: 1, move: 6, turn: 2, fp: 5, range: 30, def: 12, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Anti-tank', 'Cumbersome Weapon'], capPL: 1 },
+    { key: 'rlflak', code: 'LFV', name: 'Light FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aatech', tier: 2, size: 1, move: 10, turn: 2, fp: 3, range: 18, def: 9, assault: 2, str: 4, rules: ['Ground vehicle', 'Anti-aircraft'], groupCapPL: 1 },
+    { key: 'rmflak', code: 'MFV', name: 'Medium FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aacar', tier: 3, size: 1, move: 8, turn: 2, fp: 4, range: 24, def: 11, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Suppressive Fire'], groupCapPL: 1 },
+    { key: 'rhflak', code: 'HFV', name: 'Heavy FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aaheavy', tier: 4, size: 1, move: 6, turn: 2, fp: 5, range: 30, def: 12, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Anti-tank', 'Cumbersome Weapon'], groupCapPL: 1 },
 
     /* Rebel aviation (p. 108) — civilian hulls pressed into service */
     { key: 'rpatrol', code: 'CPC', name: 'Captured patrol craft', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'hawk', tier: 2, size: 1, move: 18, fp: 3, range: 12, def: 9, assault: 1, str: 4, rules: ['Flying unit', 'Keen-Eyed', 'Smoke Markers'] },
@@ -481,6 +481,11 @@ html { scroll-behavior: smooth; }
      None of these change a Unit Tier: every one trades an advantage for a cost.
      An army entry may be written "lcv:tracked"; a bare key means wheeled. */
   var PROPULSION = {
+    // the optional propulsions are just that (p. 166): without one, a hull follows the standard rules
+    none: {
+      key: 'none', name: 'None', short: 'std',
+      note: 'No optional propulsion: the standard vehicle rules.'
+    },
     wheeled: {
       key: 'wheeled', name: 'Wheeled', short: 'whl',
       note: 'Follows all the standard rules.'
@@ -503,7 +508,7 @@ html { scroll-behavior: smooth; }
       note: 'Legs: pays the infantry 1" for difficult ground and takes cover from terrain, and its armoured flanks deny the +1 side shot — but its height costs 1 Defence.'
     }
   };
-  var PROP_ORDER = ['wheeled', 'tracked', 'grav', 'hover', 'walker'];
+  var PROP_ORDER = ['none', 'wheeled', 'tracked', 'grav', 'hover', 'walker'];
 
   /* "lcv:tracked", "lcv:tracked:drone" or "rfanatics:riders" -> { key, prop, drone, riders } */
   /* What a mounted unit rides (p. 93 says "bikes and beasts"): it changes the
@@ -511,6 +516,8 @@ html { scroll-behavior: smooth; }
   /* What a rider sits on (Appendix 3, pp. 166-167): each trades one of the
      Riders restrictions for a cost of its own. */
   var MOUNTS = {
+    // no optional mount (p. 166): the standard Riders rules, drawn on a bike
+    none: { name: 'None', note: 'No optional mount: the standard Riders rules.' },
     bike: { name: 'Motorbike', transport: true, rough: 6,
       note: 'Can be carried in a transport, but loses 6" crossing difficult terrain.' },
     gravbike: { name: 'Grav bike', smooth: true, def: -1,
@@ -528,7 +535,7 @@ html { scroll-behavior: smooth; }
     if (m.def) { u.def = Math.max(1, u.def + m.def); if (u.defPierced) u.defPierced = Math.max(1, u.defPierced + m.def); }
     return u;
   }
-  var MOUNT_ORDER = ['bike', 'gravbike', 'horse'];
+  var MOUNT_ORDER = ['none', 'bike', 'gravbike', 'horse'];
   // a unit that rides: the Mounted Warriors always, the Riders upgrade when taken
   function canMount(p, riders) { return !!p && (p.group === 'Mounted Warriors' || (!!riders && !!p.ridersUpgrade)); }
   function splitPick(entry) {
@@ -544,10 +551,10 @@ html { scroll-behavior: smooth; }
   }
   function joinPick(key, prop, drone, riders, mount) {
     var out = key;
-    if (prop && prop !== 'wheeled') out += ':' + prop;
+    if (prop && prop !== 'none') out += ':' + prop;
     if (drone) out += ':drone';
     if (riders) out += ':riders';
-    if (mount && mount !== 'bike') out += ':' + mount;
+    if (mount && mount !== 'none') out += ':' + mount;
     return out;
   }
   /* Riders upgrade (p. 93): the unit is mounted — half the models, Movement 10,
@@ -567,8 +574,13 @@ html { scroll-behavior: smooth; }
   // a vehicle with no Transport rule may be flown as a drone (p. 37)
   // the alien armies' hulls are what they are: no propulsion to pick, no drone option
   function alienHull(p) { return !!p && (p.faction === 'bugs' || p.faction === 'xeno'); }
+  /* Drone Control (p. 37): "Vehicles without the Transport special rule" — ground
+     hulls and aircraft alike (p. 39) — "can be fielded by all armies except the
+     Bugs". A turret is Drone Controlled already, and a Teleport craft carries troops. */
   function canBeDrone(p) {
-    return !!p && p.cls === 'vehicle' && !p.transport && !alienHull(p);
+    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' &&
+      !(p.rules || []).some(function (r) { return /^(Transport|Teleport|Turret)/.test(r); }) &&
+      !/Turret/.test(p.group || '');
   }
   // which propulsions a profile may take: ground vehicles only
   function propsFor(p) { return p && p.cls === 'vehicle' && !alienHull(p) ? PROP_ORDER : []; }
@@ -587,7 +599,13 @@ html { scroll-behavior: smooth; }
     rltv: 'wheeled', ritv: 'wheeled', rshtv: 'tracked',
     rlflak: 'wheeled', rmflak: 'tracked', rhflak: 'tracked'
   };
+  // a hull goes out with no optional propulsion unless one is picked
   function defaultDrive(p) {
+    if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
+    return 'none';
+  }
+  // ...and is drawn on the running gear it usually goes to war on
+  function lookDrive(p) {
     if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
@@ -598,7 +616,7 @@ html { scroll-behavior: smooth; }
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
      Hacker can reach into it. */
   function applyDrone(u, on) {
-    if (!on || u.cls !== 'vehicle' || u.transport) { u.drone = false; return u; }
+    if (!on || !canBeDrone(u)) { u.drone = false; return u; }
     u.drone = true;
     u.str += 1;
     if (u.rules.indexOf('Drone Control') < 0) u.rules = u.rules.concat(['Drone Control']);
@@ -609,7 +627,7 @@ html { scroll-behavior: smooth; }
     // a giant bug or a Xenotripod hull goes on its own legs and fields: no drive at all
     if (alienHull(u)) { u.prop = null; return u; }
     var pr = PROPULSION[prop];
-    if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'wheeled' : null; return u; }
+    if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'none' : null; return u; }
     u.prop = pr.key;
     if (pr.move) u.move = Math.round(u.move * pr.move * 100) / 100;
     if (pr.turn) u.turn = Math.max(0, (u.turn || 0) + pr.turn);
@@ -986,6 +1004,8 @@ html { scroll-behavior: smooth; }
   function deathOrGlory(state, u) {
     if (!state || !u || status(u) === 'broken') return null;
     if (hasOwn(u, 'Death or Glory, Comrades!')) return null;
+    // Deserters and POWs "do not follow army special rules (including Insurgent leader special rules)" (p. 103)
+    if (hasOwn(u, 'No Army Rules')) return null;
     var reach = u.tactic === 'wave' ? 18 : 12;
     for (var i = 0; i < state.units.length; i++) {
       var o = state.units[i];
@@ -1461,8 +1481,9 @@ html { scroll-behavior: smooth; }
     var aLv = a.side ? levelOf(state, a) : 0, bLv = b.side ? levelOf(state, b) : 0;
     for (var j = 0; j < state.units.length; j++) {
       var u = state.units[j];
-      if (!u.alive || u === a || u === b || u.aboard || u.x < 0) continue;
+      if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
       if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
+      if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
       if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
         var uLv = levelOf(state, u);
         if ((u.side === a.side && aLv > uLv) || (u.side === b.side && bLv > uLv)) continue;
@@ -1922,12 +1943,13 @@ html { scroll-behavior: smooth; }
   }
   /* Pheromone Markers: +1 for each friendly marker unit within 18" of the
      target (24" with Strong Pheromones), up to +3, for Animal Behaviour bugs. */
-  function pheromoneBonus(state, a, t) {
+  // `inAssault`: Intense Pheromone Markers count double for Firepower only (p. 125)
+  function pheromoneBonus(state, a, t, inAssault) {
     if (!state || !has(a, 'Animal Behaviour') || campFlag(a, 'deafSenses')) return 0;
     var reach = doctrine(state, a.side, 'BC3') ? 24 : 18, n = 0;
     state.units.forEach(function (o) {
       if (o.side !== a.side || !onBoard(o) || !has(o, 'Pheromone Markers')) return;
-      if (unitDist(o, t) <= reach) n += campFlag(o, 'intensePheromones') ? 2 : 1;
+      if (unitDist(o, t) <= reach) n += campFlag(o, 'intensePheromones') && !inAssault ? 2 : 1;
     });
     return Math.min(3, n);
   }
@@ -1974,12 +1996,13 @@ html { scroll-behavior: smooth; }
     if (flyInf(target)) return { v: 0, why: '' };
     if (has(target, 'Animal Behaviour') && !overmindFor(state, target, false)) return { v: 0, why: '' };
     var here = TERRAIN[terrainAt(state, target.x, target.y)].cover;
-    /* Last Stand (p. 95): Rebel infantry holding ground that already shelters them
-       dig in for +4 rather than the terrain's usual bonus. */
-    if (here && target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry') {
-      return { v: Math.max(here, 4), why: 'terrain cover — Last Stand' };
-    }
-    if (here) return { v: here, why: 'terrain cover' };
+    /* Last Stand (p. 95): Rebel infantry "get +4 to their Defence parameter when in
+       terrain which grants a Defence bonus" — behind a low wall as much as in ruins. */
+    var stand = target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry';
+    function held(v, why) { return stand ? { v: Math.max(v, 4), why: why + ' — Last Stand' } : { v: v, why: why }; }
+    if (here) return held(here, 'terrain cover');
+    // a dug-in gun sits behind its own sandbags, which count as cover (p. 94)
+    if (dugIn(target)) return { v: 2, why: 'dug in behind sandbags' };
     if (!attacker) return { v: 0, why: '' };
     // Indirect Fire falls from above, so a low wall shelters the target whichever
     // way the shot comes from
@@ -1995,8 +2018,8 @@ html { scroll-behavior: smooth; }
       if (inRect(attacker.x, attacker.y, r)) continue;
       if (rectPointDist(r, target.x, target.y) + UNIT_R > 2 + 1e-6) continue;
       // Indirect Fire falls from above, so the wall shelters them whichever way it comes
-      if (plunging) return { v: t.cover, why: 'low wall against plunging fire' };
-      if (segRect(attacker.x, attacker.y, target.x, target.y, r)) return { v: t.cover, why: 'behind a low wall' };
+      if (plunging) return held(t.cover, 'low wall against plunging fire');
+      if (segRect(attacker.x, attacker.y, target.x, target.y, r)) return held(t.cover, 'behind a low wall');
     }
     return { v: 0, why: '' };
   }
@@ -2020,10 +2043,12 @@ html { scroll-behavior: smooth; }
         var cv = cov.v === 2 && campFlag(target, 'invisibility') ? 3 : cov.v;
         def += cv; parts.push({ label: cov.why + (cv !== cov.v ? ' — Rite of Invisibility' : ''), v: cv });
       }
-      if (has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
-        var st = Math.floor(unitDist(attacker, target) / 6);
-        if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
-      }
+    }
+    /* Stealth (p. 59) is not cover: a hull has it too (the Shadow bug), and it
+       holds against defensive fire, which only strips terrain bonuses. */
+    if (!opts.assault && has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
+      var st = Math.floor(unitDist(attacker, target) / 6);
+      if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
     }
     // Shield Generator (p. 130): a dome against fire from outside it
     if (!opts.assault && attacker) {
@@ -2185,6 +2210,7 @@ html { scroll-behavior: smooth; }
       if (after === 'broken' && has(target, 'Expendable')) {
         target.alive = false;
         target.fled = true;                      // run off, not killed to the last man
+        target.expended = true;                  // ...and not counted as a loss for victory (p. 57)
         log.push({ t: 'kill', text: target.label + ' breaks — Expendable: removed from play.' });
       } else {
         log.push({ t: after, text: target.label + ' is ' + after.toUpperCase() + ' (' + target.sp + ' SP vs Morale ' + currentMorale(target) + ').' });
@@ -2224,6 +2250,8 @@ html { scroll-behavior: smooth; }
     t.alive = false;
     t.wipedOut = true;
     t.catastrophic = total > 5;
+    // whatever became of it, a ground hull's wreck stays where it stood and blocks sight (p. 36)
+    if (!isFlying(t)) t.wreckLoS = true;
     credit(t, from, 'kill');
     var crew = (t.cargo || []).slice();
     t.cargo = [];
@@ -2465,7 +2493,8 @@ html { scroll-behavior: smooth; }
      so a machine needs a Destructive Weapon even for that. */
   function canDemolish(u, r) {
     if (!isDestructible(r)) return false;
-    if (destructibleKind(r) === 'target') return !isMachine(u) || has(u, 'Destructive Weapon');
+    // the Demolish objective "can be destroyed only with the Demolish special action" (p. 54): not by fire
+    if (destructibleKind(r) === 'target') return false;
     if (has(u, 'Destructive Weapon')) return true;
     return destructibleKind(r) === 'building' && has(u, 'Incendiary Ammunition');
   }
@@ -2984,6 +3013,7 @@ html { scroll-behavior: smooth; }
       var noX = !!t.bld || !!TERRAIN[terrainOf(state, t)].noCrossfire;
       for (var i = 0; i < t.shotFrom.length && !isMachine(t) && !noX; i++) {
         var p = t.shotFrom[i];
+        if (p.basic) continue;
         // Crossfire: the target sits between this firer and an earlier one
         if (pointSegDist(t.x, t.y, p.x, p.y, a.x, a.y) < UNIT_R * 1.6) { crossfire = true; break; }
       }
@@ -3057,7 +3087,8 @@ html { scroll-behavior: smooth; }
       total += roll;
       parts.splice(1, 0, { label: 'Rite of Concentration — D10 doubled', v: roll });
     }
-    t.shotFrom.push({ x: a.x, y: a.y });
+    // a Basic Firepower attack is "not counted for Crossfire in any way" (p. 32)
+    t.shotFrom.push({ x: a.x, y: a.y, basic: !!basic });
 
     /* Destructive Weapon (p. 57): a final 15+ or an unmodified 9 against a target
        sheltering in a destructible piece brings it down, strips the cover from
@@ -3361,7 +3392,7 @@ html { scroll-behavior: smooth; }
     if (isMachine(def) && (!isMachine(atk) || isOvergrown(atk)) && !has(def, 'Advanced Protection')) {
       total += 4; parts.push({ label: 'assaulting a vehicle', v: 4 });
     }
-    var pheroA = pheromoneBonus(state, atk, def);
+    var pheroA = pheromoneBonus(state, atk, def, true);
     if (pheroA) { total += pheroA; parts.push({ label: 'Pheromone Markers', v: pheroA }); }
     // Fierce Attacks: Flying Infantry +4 in the first round (p. 124)
     if (n === 1 && flyInf(atk) && doctrine(state, atk.side, 'BB4')) { total += 4; parts.push({ label: 'Fierce Attacks', v: 4 }); }
@@ -3500,6 +3531,8 @@ html { scroll-behavior: smooth; }
     if (u.cls === 'vehicle' && (kind === 'building' || kind === 'bunker' || kind === 'burning')) return true;
     // ...though a Tier III-V hull simply drives through a wall and flattens it (p. 35)
     if (u.cls === 'vehicle' && u.tier >= 3 && TERRAIN[kind].destructible === 'linear') return false;
+    // below that, a hull crosses no linear obstacle but barbed wire (p. 35)
+    if (u.cls === 'vehicle' && TERRAIN[kind].linear && !TERRAIN[kind].wire) return true;
     var pr = propOf(u);
     // a hovercraft skims water and other liquids — but not hot lava
     if (pr && pr.water && kind === 'deep') return false;
@@ -3537,6 +3570,8 @@ html { scroll-behavior: smooth; }
       var x = i * STEP, y = j * STEP;
       if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) return true;
       if (terrainBars(u, kindAt(i, j))) return true;
+      // aircraft "can move over other units" (p. 38); they only may not finish within 1"
+      if (isFlying(u)) return false;
       for (var n = 0; n < state.units.length; n++) {
         var o = state.units[n];
         if (!o.alive || o === u || o.side === u.side || o.aboard || o.x < 0) continue;
@@ -3912,6 +3947,7 @@ html { scroll-behavior: smooth; }
   function freedomDice(state, u) {
     if (u.side == null) return 0;
     if (hasOwn(u, '…but they\'ll never take our freedom!')) return 0;
+    if (hasOwn(u, 'No Army Rules')) return 0;         // Deserters and POWs (p. 103)
     if (status(u) === 'broken') return 0;
     var reach = u.tactic === 'wave' ? 18 : 12;
     for (var i = 0; i < state.units.length; i++) {
@@ -4176,7 +4212,7 @@ html { scroll-behavior: smooth; }
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
-    defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
+    defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
     soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);
@@ -9858,7 +9894,7 @@ html { scroll-behavior: smooth; }
     var role = roleAt(art, i);
     var kit = KIT[role] || KIT.rifle;
     // a rider on something other than the bike: the same kit, a different mount
-    if (kit.mount && mountKind && mountKind !== 'bike') {
+    if (kit.mount && mountKind && mountKind !== 'bike' && mountKind !== 'none') {
       var mk = {}; for (var kk in kit) mk[kk] = kit[kk];
       mk.mount = mountKind; kit = mk;
     } else mountKind = null;
@@ -10395,8 +10431,10 @@ html { scroll-behavior: smooth; }
     grav: { ride: 13 },
     hover: { ride: 9 }
   };
+  // no optional propulsion ('none'): the hull is drawn on the running gear it usually goes to war on
   function driveOf(u) {
     var d = u && u.prop;
+    if ((!d || d === 'none') && u && u.cls === 'vehicle' && window.PMC && window.PMC.lookDrive) d = window.PMC.lookDrive(u);
     return DRIVE[d] ? d : (u && u.cls === 'vehicle' ? 'wheeled' : null);
   }
 
@@ -10738,6 +10776,16 @@ html { scroll-behavior: smooth; }
         }
         stroke([pts[0], pts[1]], m(0.8), GLO.m);                 // the leading edge
         if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
+        // a drone's aerials: two whips standing off the top edge of the dorsal wing
+        if (u.drone && w.dorsal && !dead) {
+          [0.62, 0.86].forEach(function (k) {
+            var at0 = le + (tp - le) * k, r0 = rf + (w.sp - rf) * k;
+            var a0 = P3(at0, r0, w.ph), a1 = P3(at0 - 0.12 * Lc, r0 + 0.7, w.ph);
+            stroke([a0, a1], 1.6, WH.dk);
+            stroke([a0, a1], 0.8, WH.lt);
+            ellipse(g, a1[0], a1[1], 1.8, 1.8, '#ff5040');
+          });
+        }
       }
       // the fuselage: rings of stations [t, r] turned into an eight-sided body
       var ST = [[1.0 * Lc, 0], [0.72 * Lc, rad * 0.62], [0.3 * Lc, rad], [-0.45 * Lc, rad], [-0.7 * Lc, rad * 0.8], [tail, rad * 0.62]];
@@ -10825,6 +10873,7 @@ html { scroll-behavior: smooth; }
         var cp = [P3(0.8 * Lc, rad * 0.7, Math.PI / 2), P3(0.56 * Lc, rad * 1.35, Math.PI / 2), P3(0.4 * Lc, rad * 1.05, Math.PI / 2),
           P3(0.56 * Lc, rad * 1.1, Math.PI * 0.35), P3(0.56 * Lc, rad * 1.1, Math.PI * 0.65)];
         cp = [cp[0], cp[dot3(roll(Math.PI * 0.35), EYE) > dot3(roll(Math.PI * 0.65), EYE) ? 3 : 4], cp[2], cp[1]];
+        if (u.drone) return;                     // a drone: no crystal cockpit at all
         path(cp, dead ? '#2a2826' : '#3f9be8'); stroke(cp, 1, dead ? WH.seam : '#123a6e', true);
         if (!dead) path([cp[0], cp[3], cp[2]], '#9fd6ff');
       };
@@ -10983,6 +11032,40 @@ html { scroll-behavior: smooth; }
     }
     mountAt('gun', [gp.x, dz - m(3)]);
     return { lift: lift, hgt: m(30) };
+  }
+
+  // the texture tiles themselves, made once: specks and streaks on a clear ground
+  var TEX_TILE = {};
+  function texTile(kind) {
+    if (TEX_TILE[kind] !== undefined) return TEX_TILE[kind];
+    if (typeof document === 'undefined') return (TEX_TILE[kind] = null);
+    var n = 16, c = document.createElement('canvas'); c.width = n; c.height = n;
+    var x = c.getContext('2d'), r = rng(kind === 'rust' ? 7717 : 4441);
+    function px(i, j, col) { x.fillStyle = col; x.fillRect(i, j, 1, 1); }
+    if (kind === 'rust') {
+      for (var a = 0; a < 38; a++) px(Math.floor(r() * n), Math.floor(r() * n), r() < 0.55 ? 'rgba(52,26,12,.42)' : 'rgba(196,120,64,.34)');
+      // streaks running down from where the rain sat
+      for (var b = 0; b < 3; b++) {
+        var sx = Math.floor(r() * n), sy = Math.floor(r() * n), ln = 3 + Math.floor(r() * 5);
+        for (var k = 0; k < ln; k++) px(sx, (sy + k) % n, 'rgba(60,30,14,' + (0.32 - k * 0.03).toFixed(2) + ')');
+      }
+    } else {
+      for (var d = 0; d < 22; d++) px(Math.floor(r() * n), Math.floor(r() * n), r() < 0.5 ? 'rgba(30,33,38,.36)' : 'rgba(200,206,214,.3)');
+      // scuffs, and a rivet or two catching the light
+      for (var e = 0; e < 3; e++) {
+        var ex = Math.floor(r() * n), ey = Math.floor(r() * n), el = 2 + Math.floor(r() * 4);
+        for (var q = 0; q < el; q++) px((ex + q) % n, ey, 'rgba(190,196,204,.22)');
+      }
+      for (var v = 0; v < 2; v++) { var vx = Math.floor(r() * (n - 1)), vy = Math.floor(r() * (n - 1)); px(vx, vy, 'rgba(210,216,224,.5)'); px(vx + 1, vy + 1, 'rgba(20,22,26,.45)'); }
+    }
+    return (TEX_TILE[kind] = c);
+  }
+  function texPattern(g, kind) {
+    var t = texTile(kind);
+    if (!t) return null;
+    g.__tex = g.__tex || {};
+    if (!g.__tex[kind]) g.__tex[kind] = g.createPattern(t, 'repeat');
+    return g.__tex[kind];
   }
 
   function drawMachine(g, u, opts) {
@@ -11770,8 +11853,8 @@ html { scroll-behavior: smooth; }
       REBELP = u.faction === 'rebel' && !dead;
       CAMO = camoFor();
       PATCH_FACE = !!(spec.craft || spec.heli);
-      PATCH_GREY = tone('#8a8f96', '#62676e', '#3a3e44', '#747980');
-      PATCH_RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36');
+      PATCH_GREY = tone('#8a8f96', '#62676e', '#3a3e44', '#747980'); PATCH_GREY.tex = 'steel';
+      PATCH_RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36'); PATCH_RUST.tex = 'rust';
       P0 = toScreen(at.x, at.y);
       HF = frameAt(0, 0, f);
       AIM = (u.aim == null || dead) ? f : u.aim;
@@ -11929,6 +12012,17 @@ html { scroll-behavior: smooth; }
       var hq = hash(Math.floor(la * 4 + 0.37 + 64), Math.floor(Math.abs(lb) * 4 + 0.37) * (lb < 0 ? 3 : 1), salt | 0);
       return hq < 0.5 ? TB : hq < 0.75 ? PATCH_GREY : PATCH_RUST;
     }
+    /* The scrap a rebel machine is patched from is not clean paint: the rusted
+       brown is pitted and streaked, the bare grey is scuffed and spotted with
+       weld and rivet heads. A fine texture laid over those plates, pinned to
+       the machine so it rides along with it rather than swimming as it moves. */
+    function texOn(pts, kind) {
+      if (dead || !g.createPattern) return;
+      var pat = texPattern(g, kind);
+      if (!pat) return;
+      if (pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix().translateSelf(Math.round(P0.x), Math.round(P0.y)));
+      poly(g, pts, pat);
+    }
     function prism(base, top2, z0, h, tn0, noTop) {
       var tn = tn0;
       var Bs = base.map(function (q) { return S3(q, z0); });
@@ -11963,6 +12057,7 @@ html { scroll-behavior: smooth; }
         var colr = k > 0.5 ? mixc(ft.mid, ft.lit, (k - 0.5) * 2) : mixc(ft.dark, ft.mid, k * 2);
         var face = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]];
         poly(g, face, colr);
+        if (ft.tex) texOn(face, ft.tex);
         if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(face, colr, z0 + h * 0.5, false, h);
         if (h > 2) {
           var yT = Math.min(face[2][1], face[3][1]), yB = Math.max(face[0][1], face[1][1]);
@@ -11979,8 +12074,9 @@ html { scroll-behavior: smooth; }
       });
       if (!noTop && tn.top) {
         var cxT = 0, cyT = 0; base.forEach(function (q) { cxT += q.x; cyT += q.y; });
-        var topCol = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11).top;
+        var topT = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11), topCol = topT.top;
         poly(g, Ts, topCol);
+        if (topT.tex) texOn(Ts, topT.tex);
         if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(Ts, topCol, z0 + h, true);
         var ys = Ts.map(function (q) { return q[1]; });
         var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
@@ -12183,6 +12279,8 @@ html { scroll-behavior: smooth; }
             if (fwdP > 0.02) { var grl = S3(HF(L * 0.5, 0), z0 + H * 0.35); sEllipse(grl[0], grl[1], 3, 1.6, STEEL); }
           };
           var cab = function () {
+            // a drone has no one to sit in a cab: an armoured block the height of the bonnet instead
+            if (u.drone) { slabF(HF, -L * 0.1, L * 0.2, -w * 0.9, w * 0.9, z0, H * 0.7, TB, L * 0.04, 0, w * 0.06); return; }
             slabF(HF, -L * 0.1, L * 0.2, -w, w, z0, H * 1.25, TB, L * 0.1, 0.02, w * 0.1);
             if (fwdP > 0.02) {                              // the windscreen, only when the front faces us
               var wsA = S3(HF(L * 0.19, -w * 0.8), z0 + H * 0.68), wsB = S3(HF(L * 0.19, w * 0.8), z0 + H * 0.68);
@@ -12264,8 +12362,8 @@ html { scroll-behavior: smooth; }
         case 'guntruck': {
           var fwdG = cos + sin, nsG = nearSide(), hv = !!st.heavy;
           var cabL = hv ? 0.28 : 0.3, bedA0 = -L * 0.5, bedA1 = L * (0.5 - cabL) - 0.03;
-          var RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36');
-          var PLATE = tone('#8a8f96', '#62676e', '#3a3e44', '#747980');
+          var RUST = tone('#9a6a44', '#7a4a2a', '#4a2c18', '#8a5a36'); RUST.tex = 'rust';
+          var PLATE = tone('#8a8f96', '#62676e', '#3a3e44', '#747980'); PLATE.tex = 'steel';
           if (st.flatCab) cabL = 0.24;
           if (st.flatCab) bedA1 = L * (0.5 - cabL) - 0.03;
           var gbonnet = function () {
@@ -12281,6 +12379,10 @@ html { scroll-behavior: smooth; }
             lights(HF, L * 0.52, -w * 0.62, z0 + H * 0.5); lights(HF, L * 0.52, w * 0.62, z0 + H * 0.5);
           };
           var gcab = function () {
+            if (u.drone) {                                   // no crew, no cab: plated over at bonnet height
+              slabF(HF, L * (0.5 - cabL), L * (0.5 - cabL * 0.42), -w * 0.9, w * 0.9, z0, H * 0.78, TB, L * 0.03, 0, w * 0.06);
+              return;
+            }
             if (st.flatCab) {
               // a straight, square cab right at the front, its face plated with a slit
               slabF(HF, L * (0.5 - cabL), L * 0.5, -w * 0.98, w * 0.98, z0, H * 1.6, TB, 0.005, 0, w * 0.03);
@@ -12915,6 +13017,8 @@ html { scroll-behavior: smooth; }
       function fuselage(pts, top, zz, hh, tn) { return shape(AF, pts, zz, hh, tn || TB, null, top); }
       function canopy(p0, p1, q, zz, hh) {
         var pts = [[p1, 0], [p1 - (p1 - p0) * 0.3, q], [p0, q * 0.8], [p0, -q * 0.8], [p1 - (p1 - p0) * 0.3, -q]];
+        // a drone has no pilot, and no cockpit at all
+        if (u.drone) return;
         var t = shape(AF, pts, zz, hh, tone(GLINT, GLASS, '#0e141b', mixc(GLASS, GLINT, 0.35)), 0.7);
         edge(g, t[0], t[1], 'rgba(220,240,255,.7)', 0.8);
       }
@@ -13416,6 +13520,8 @@ html { scroll-behavior: smooth; }
       /* Cockpit glass and sensor lenses: a glassy blue, bright at the top where
          it catches the sky and deep below, with a glint along its upper edge. */
       function glass(pts, glint) {
+        // a drone walker has nobody to see out: no cockpit glass at all
+        if (u.drone) return;
         var ys = pts.map(function (q) { return q[1]; });
         var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
         var gl;
@@ -13572,6 +13678,7 @@ html { scroll-behavior: smooth; }
           // a point on the front facet: k up it, u across it (-1 to 1)
           var ff = function (k, u) { return S3(TF(ca1 - rk * k + 0.006, u * cb * (0.38 - 0.06 * k)), cz + ch * k); };
           var pane = function (P, k0, k1, u0, u1, fr) {
+            if (u.drone) return;                          // no panes, nor their dark frames
             var q = [P(k0, u0), P(k0, u1), P(k1, u1), P(k1, u0)];
             poly(g, [P(k0 - fr, u0 - fr * 1.6), P(k0 - fr, u1 + fr * 1.6), P(k1 + fr, u1 + fr * 1.6), P(k1 + fr, u0 - fr * 1.6)], '#0b0e12');
             glass(q, [q[3], q[2]]);
@@ -13603,7 +13710,7 @@ html { scroll-behavior: smooth; }
         shape(TF, R1, waistY + h1, h2, TB, null, null, true);
         shape(TF, R1, waistY + h1 + h2, h3, TB, null, R2);
         // the canopy, over the front plate and up onto the dome
-        if (fwd > 0.05) {
+        if (fwd > 0.05 && !u.drone) {
           var z1 = waistY + h1 + h2, z0 = waistY + h1 + Math.round(h2 * 0.45), kT = 0.6;
           var aT = tL - tL * 0.42 * kT, bT = tW * (0.32 - 0.12 * kT);
           var cp = [S3(TF(tL + 0.006, -tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.26), z0), S3(TF(tL + 0.006, tW * 0.32), z1),
@@ -13883,7 +13990,47 @@ html { scroll-behavior: smooth; }
       drawDamage();
     }
 
+    /* Drone Control (p. 37): no crew, so the hull carries what flies it instead —
+       a sensor dome on the roof towards the back, and a whip aerial beside it
+       with a light on the tip. */
+    function drawDrone() {
+      if (!u.drone || dead || /Turret/.test(u.group || '')) return;
+      var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
+      var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+      var body = spec.style && spec.style.body;
+      /* The dome: on a hull's roof off to one side, clear of a turret; on a
+         pickup or gun truck, to one side of the flat plate where its cab used to
+         be; on a walker, up on a shoulder; on a craft, the middle of its back. */
+      var back = -0.3, off = -spec.wid * 0.26;
+      if (spec.fly) { back = 0.05; off = 0; }
+      else if (legs) { back = -0.12; off = -spec.wid * 0.28; }
+      else if (body === 'pickup') { back = 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
+      else if (body === 'guntruck') {
+        var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
+        back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
+      }
+      var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
+      var r = Math.max(3, K * 0.16), cy = dp.y - y5;
+      ellipse(g, dp.x, cy + r * 0.15, r * 1.25, r * 0.6, '#14171c');               // the collar it sits in
+      ellipse(g, dp.x, cy - r * 0.2, r, r * 0.85, '#aeb8c2');                      // the dome
+      ellipse(g, dp.x, cy + r * 0.05, r, r * 0.45, '#7d8894');
+      ellipse(g, dp.x - r * 0.35, cy - r * 0.5, r * 0.35, r * 0.25, 'rgba(255,255,255,.75)');
+      ellipse(g, dp.x + r * 0.2, cy - r * 0.05, r * 0.28, r * 0.2, '#2a6f9a');     // the sensor behind the dome's skin
+      // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
+      var aq, ya = y5;
+      if (spec.fly) aq = along(-spec.len * 0.38, 0);
+      else if (legs) aq = along(spec.len * back - 0.2, off * 0.8);
+      else {
+        aq = along(-spec.len * 0.44, spec.wid * 0.32);
+        if (body === 'pickup' || body === 'guntruck') ya = deck + spec.hgt * 0.5;
+      }
+      var ap = toScreen(aq.x, aq.y), ay = ap.y - ya, ah = Math.max(10, K * 0.55);
+      thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 2, '#1a1d22');
+      ellipse(g, ap.x + 1, ay - ah, 1.6, 1.6, '#ff5040');
+    }
+
     function drawDamage() {
+      drawDrone();
       if (!u.damage || !u.str) return;
       var dr2 = rng((u.id || 'x').length * 977 + u.damage * 31);
       var y4 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
@@ -14372,7 +14519,7 @@ html { scroll-behavior: smooth; }
     var colour = o.colour || 'ochre';
     function defaultProp(p) {
       if (p.faction === 'bugs' || p.faction === 'xeno') return null;   // a bug walks on its own legs; a turret stands
-      return (R.defaultDrive && R.defaultDrive(p)) || 'wheeled';
+      return (R.lookDrive && R.lookDrive(p)) || 'wheeled';
     }
     // what a tile without a running gear is called: a flier, or an Overgrown bug
     function noProp(p) { return p.faction === 'bugs' ? (p.cls === 'aircraft' ? 'Overgrown, flying' : 'Overgrown') : p.faction === 'xeno' ? (p.cls === 'aircraft' ? 'Flight' : 'Turret') : 'Flight'; }

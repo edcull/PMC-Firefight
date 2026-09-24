@@ -69,7 +69,7 @@
     var colour = o.colour || 'ochre';
     function defaultProp(p) {
       if (p.faction === 'bugs' || p.faction === 'xeno') return null;   // a bug walks on its own legs; a turret stands
-      return (R.defaultDrive && R.defaultDrive(p)) || 'wheeled';
+      return (R.lookDrive && R.lookDrive(p)) || 'wheeled';
     }
     // what a tile without a running gear is called: a flier, or an Overgrown bug
     function noProp(p) { return p.faction === 'bugs' ? (p.cls === 'aircraft' ? 'Overgrown, flying' : 'Overgrown') : p.faction === 'xeno' ? (p.cls === 'aircraft' ? 'Flight' : 'Turret') : 'Flight'; }

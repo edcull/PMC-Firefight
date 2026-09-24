@@ -632,7 +632,7 @@
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
         esc(p.name) + ' <b>' + ROMAN[p.tier] + '</b></button>' +
         (R.propsFor(p).length ? '<button class="drive" data-cycle="' + i + '">' +
-          R.PROPULSION[s.prop || 'wheeled'].short + '</button>' : '') + '</span>';
+          R.PROPULSION[s.prop || 'none'].short + '</button>' : '') + '</span>';
     }).join('');
     h += '<div class="muster found-units">' + head +
       '<div class="chosen" id="found-chosen">' + chosen + '</div>' +
@@ -1749,7 +1749,7 @@
     if (t.hasAttribute('data-cycle')) {
       var i = +t.getAttribute('data-cycle'), s = R.splitPick(draft.keys[i]);
       var order = R.propsFor(profile(s.key));
-      var nx = order[(order.indexOf(s.prop || 'wheeled') + 1) % order.length];
+      var nx = order[(order.indexOf(s.prop || 'none') + 1) % order.length];
       draft.keys[i] = R.joinPick(s.key, nx, s.drone); render(); return;
     }
     if (t.hasAttribute('data-doc')) {

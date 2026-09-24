@@ -3573,7 +3573,9 @@
       box.classList.add('idle');
       return;
     }
-    if (ui.mode === 'move' || ui.mode === 'advance-move') {
+    if (ui.mode === 'carry-move') {
+      box.innerHTML = '<b>' + u.name + '</b> may now drive up to half its Movement — tap the shaded ground, or press any action to stay put.';
+    } else if (ui.mode === 'move' || ui.mode === 'advance-move') {
       box.innerHTML = 'Click anywhere in the shaded ground to move <b>' + u.name + '</b> there.';
     } else if (ui.mode === 'fire' || ui.mode === 'aux' || ui.mode === 'advance-fire') {
       box.innerHTML = 'Pick a target — ringed units are in range and sight.';
@@ -3668,7 +3670,7 @@
     h += honourChips(u);
     // a rider's mount, before its rules, the way a hull's drive is shown
     var mt = R.mountOf(u);
-    h += ruleChips(u, R.terrainOf(state, u) !== 'open', mt ? [{ name: mt.name, text: mt.note }] : null);
+    h += ruleChips(u, R.terrainOf(state, u) !== 'open', mt && mt !== R.MOUNTS.none ? [{ name: mt.name, text: mt.note }] : null);
     fillStats(box, h);
   }
   /* The stats are redrawn with every render, and in a demo that is every
@@ -3798,7 +3800,7 @@
       }).join('') + '</div>';
     }
     h += honourChips(u);                                // a campaign machine's honours, traumas and upgrades
-    h += ruleChips(u, !!terrainMark(u), pr ? [{ name: pr.name, text: pr.note }] : null);
+    h += ruleChips(u, !!terrainMark(u), pr && pr.key !== 'none' ? [{ name: pr.name, text: pr.note }] : null);
     fillStats(box, h);
   }
   /* The special rules, each with its rule text to tap or hover for, and first
@@ -4422,7 +4424,7 @@
     var u = ui.selected;
     if (!u || !spot) return null;
     var advance = ui.mode === 'advance-move';
-    var allowance = advance ? u.move : u.move + moveBonus(u, 'move');
+    var allowance = advance ? u.move : ui.mode === 'carry-move' ? u.move / 2 : u.move + moveBonus(u, 'move');
     var dist = R.inches(u.x, u.y, spot.x, spot.y);
     var path = R.pathTo(state, u, allowance, spot);
     var kind = R.terrainAt(state, spot.x, spot.y);
@@ -4766,7 +4768,7 @@
       var mspot = moveSpotUnder(c);
       if (mspot) { doMarkMove(mspot); return; }
     }
-    if (ui.moves.length && (ui.mode === 'move' || ui.mode === 'advance-move')) {
+    if (ui.moves.length && (ui.mode === 'move' || ui.mode === 'advance-move' || ui.mode === 'carry-move')) {
       var spot = moveSpotUnder(c);
       if (spot) { previewMove(spot); return; }
       if (!hit) {
@@ -4990,7 +4992,7 @@
       var mnt = R.canMount(p, pick.riders)
         ? '<select class="drive" data-mount="' + i + '" title="What they ride: a motorbike can go in a transport but bogs down in rough ground; a grav bike ignores the ground at \u22121 Defence; a horse jumps walls but takes 1 more SP whenever it is shot at">' +
         R.MOUNT_ORDER.map(function (m) {
-          return '<option value="' + m + '"' + ((pick.mount || 'bike') === m ? ' selected' : '') + '>' + R.MOUNTS[m].name + '</option>';
+          return '<option value="' + m + '"' + ((pick.mount || 'none') === m ? ' selected' : '') + '>' + R.MOUNTS[m].name + '</option>';
         }).join('') + '</select>'
         : '';
       var ride = R.canRide(p)

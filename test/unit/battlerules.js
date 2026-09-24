@@ -130,5 +130,43 @@ ok('...so the far side costs more than the straight run', round && round.spent >
 var t0 = Date.now(); for (var z = 0; z < 5; z++) R.reachable(table([lcv({ x: 10 + z })]), lcv({ x: 10 + z }), 20);
 ok('a drive is worked out quickly', (Date.now() - t0) / 5 < 400, ((Date.now() - t0) / 5).toFixed(0) + ' ms a drive');
 
+/* ------------------------------------------------ the smaller rules */
+console.log('\nSMALLER RULES');
+ok('the Demolish objective cannot be shot down', !R.canDemolish(unit('regular'), { kind: 'objective', x: 20, y: 20, w: 4, h: 4 }));
+var flak = R.checkArmy(['rlflak', 'rmflak', 'rhflak', 'rmilitia', 'rmilitia', 'rmilitia', 'rleaders'], 4, 1);
+ok('one FlaK vehicle a Priority Level, of any kind', flak.faults.some(function (f) { return /flak/i.test(f); }), flak.faults.join(' ').slice(0, 60));
+var boss = unit('rleaders', { x: 10, y: 10 }), pow = unit('rpow', { x: 10, y: 16, sp: 3 }), mil2 = unit('rmilitia', { x: 12, y: 16, sp: 3 });
+var dst = table([boss, pow, mil2]);
+ok('Deserters and POWs get no Death or Glory', !R.deathOrGlory(dst, pow) && !!R.deathOrGlory(dst, mil2));
+ok('...nor the leader\'s rally dice', R.freedomDice(dst, pow) === 0 && R.freedomDice(dst, mil2) > 0);
+var ls = unit('rmilitia', { side: 'B', x: 10, y: 15.5, tactic: 'laststand' });
+var mls = R.shotMods(table([rifle, ls], [wall]), rifle, ls, 'fire', {});
+ok('Last Stand: +4 behind a low wall too', mls.def.value === ls.def + 4, 'Defence ' + mls.def.value);
+var gun = unit('rmedart', { side: 'B', x: 10, y: 30, dugIn: true });
+if (R.profile('rmedart')) {
+  var mg = R.shotMods(table([rifle, gun]), rifle, gun, 'fire', {});
+  ok('a dug-in gun has its sandbags', mg.def.value === gun.def + 2, 'Defence ' + mg.def.value);
+}
+var shadow = unit('bshadow', { side: 'B', x: 10, y: 30 });
+var ms = R.shotMods(table([rifle, shadow]), rifle, shadow, 'fire', {});
+ok('Stealth works on a hull (the Shadow bug)', ms.def.parts.some(function (p) { return p.label === 'Stealth'; }));
+ok('a Tier I-II hull cannot cross a low wall', R.terrainBars(unit('lpv'), 'barricade') === true);
+ok('...a Tier III one drives through it', R.terrainBars(unit('lcv'), 'barricade') === false);
+ok('...and either crosses barbed wire', R.terrainBars(unit('lpv'), 'wire') === false);
+var tA = unit('recruits', { side: 'B', x: 20, y: 20 }), s1 = unit('mortarteam', { x: 20, y: 40 }), s2 = unit('regular', { x: 20, y: 5 });
+var xst = table([tA, s1, s2]);
+R.shoot(xst, s1, tA, 'fire', {});
+var xm = R.shotMods(xst, s2, tA, 'fire', {});
+ok('a Basic Firepower shot sets up no Crossfire', !xm.crossfire);
+var hull = unit('lcv', { side: 'B', x: 20, y: 20, alive: false, wreckLoS: true });
+ok('a wrecked hull blocks sight', !R.lineClear(table([hull]), { x: 20, y: 10 }, { x: 20, y: 30 }));
+var jet = unit('fsc', { x: 10, y: 24, facing: 0 }), wallOfFoes = [];
+for (var yy = 4; yy <= 44; yy += 4) wallOfFoes.push(unit('recruits', { side: 'B', x: 20, y: yy }));
+if (R.profile('fsc')) {
+  var sky = table([jet].concat(wallOfFoes));
+  var over = R.reachable(sky, jet, 30).some(function (c) { return c.x > 26; });
+  ok('aircraft fly over a line of enemies', over);
+}
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

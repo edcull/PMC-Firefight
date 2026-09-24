@@ -177,7 +177,7 @@
       if (!state || !state.scen || !state.scen.returnsToPool || state.over) return;
       state.units.forEach(function (u) {
         if (u.alive || u.side !== 'B') return;
-        u.alive = true; u.fled = false; u.wipedOut = false; u._wrecked = false;
+        u.alive = true; u.fled = false; u.wipedOut = false; u._wrecked = false; u.wreckLoS = false;
         u.models = u.startSize || u.size; u.sp = 0; u.damage = 0; u.cargo = [];
         u.reserve = true; u.wave = 'pool'; u.x = -1; u.y = -1; u.activated = true;
         u.bld = null; u.sec = null;
@@ -344,7 +344,7 @@
         }
         var u = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, entry, pick.riders);
         if (R.has(u, 'Turret')) u.drone = true;             // a lone shield turret is Drone Controlled too
-        if (R.canMount(prof, pick.riders)) R.applyMount(u, pick.mount || 'bike');   // what it rides, and what that costs
+        if (R.canMount(prof, pick.riders)) R.applyMount(u, pick.mount || 'none');   // what it rides, and what that costs
         u.startSize = u.models;
         // in a cooperative game each player has a commando of their own
         if (state.solo && side === 'A') {
@@ -2367,12 +2367,17 @@
 
   function scoreObjectives() {
     state.objectives.forEach(function (o) {
-      var claim = { A: 0, B: 0 };
+      /* Held by an unsuppressed, unbroken unit within 4"; denied by any enemy
+         there that is not Broken — a Suppressed one still stands in the way
+         (p. 49). Aircraft neither hold nor deny. */
+      var claim = { A: 0, B: 0 }, deny = { A: 0, B: 0 };
       state.units.forEach(function (u) {
-        if (!onTable(u) || R.status(u) !== 'ready' || R.isFlying(u)) return;   // aircraft cannot hold ground
-        if (objDist(u, o) <= 4) claim[u.side]++;
+        if (!onTable(u) || R.isFlying(u) || objDist(u, o) > 4) return;
+        var st = R.status(u);
+        if (st === 'ready') claim[u.side]++;
+        if (st !== 'broken') deny[u.side]++;
       });
-      o.owner = claim.A > 0 && claim.B === 0 ? 'A' : (claim.B > 0 && claim.A === 0 ? 'B' : null);
+      o.owner = claim.A > 0 && deny.B === 0 ? 'A' : (claim.B > 0 && deny.A === 0 ? 'B' : null);
     });
   }
 
@@ -2825,6 +2830,7 @@
 
   function chooseAction(id) {
     var u = ui.selected; if (!u) return;
+    if (u.carrying) { stayPut(u); return; }             // loaded or unloaded: any button now means stay
     if (u.advancing) {
       if (id !== 'advance') return;
       if (ui.mode === 'advance-fire') { holdFire(u); return; }     // pressed again: it holds its fire
@@ -3197,7 +3203,8 @@
   function doMove(pt) {
     var u = ui.selected;
     var d = R.inches(u.x, u.y, pt.x, pt.y);
-    var allowance = ui.mode === 'advance-move' ? u.move : u.move + moveBonus(u);
+    var allowance = ui.mode === 'advance-move' ? u.move : ui.mode === 'carry-move' ? u.move / 2 : u.move + moveBonus(u);
+    u.carrying = false;
     if (u.vortexNow) { allowance *= 2; u.vortexNow = false; }
     if (u.repairMove) { allowance = u.move; u.repairMove = false; }
     var path = R.pathTo(state, u, allowance, pt);
@@ -3250,6 +3257,25 @@
     render();
   }
 
+  /* Embark and Disembark (p. 36): the hull loads or unloads and "then may move up
+     to half its Movement". The player's hull is offered that drive as a
+     follow-up — tap the ground, or press the action again to stay put. */
+  function carryMove(u) {
+    ui.targets = []; ui.terrain = [];
+    if (!R.drives(u) || isAI(u.side) || !u.alive) { endActivation(); return; }
+    ui.moves = R.reachable(state, u, u.move / 2).filter(function (c) { return canStand(u, c); });
+    if (!ui.moves.length) { ui.moves = []; endActivation(); return; }
+    u.carrying = true; u.activated = false;         // not done yet: the drive is still to come
+    ui.mode = 'carry-move';
+    render();
+  }
+  function stayPut(u) {
+    u.carrying = false; u.activated = true;
+    ui.mode = 'idle'; ui.moves = []; ui.preview = null;
+    logLine('note', u.label + ' stays where it is.');
+    endActivation();
+  }
+
   function doEmbark(target) {
     var u = ui.selected;
     var was = target ? { x: target.x, y: target.y } : null;
@@ -3266,7 +3292,7 @@
         tone: 'good'
       }
     });
-    endActivation();
+    carryMove(u);
   }
 
   /* ---------- the Xenotripods' special actions ---------- */
@@ -3508,10 +3534,10 @@
     u.activated = true;
     pushRes({
       kind: 'Disembark', title: u.name + ' unloads', side: u.side,
-      note: 'Troops are placed within 4" of the hull and may act from next turn.',
+      note: 'Troops are placed within 4" of the hull and may act this turn if they have not already.',
       list: lines
     });
-    endActivation();
+    carryMove(u);
   }
 
   // Strafing run: fly the line, hit everything under it, and take the return fire.
@@ -4899,6 +4925,7 @@
           // half-way through an Advance there is nothing to go back to: it holds its fire
           var adv = ui.selected;
           if (adv && adv.advancing && !adv.activated && adv.side === side) { holdFire(adv); return yes; }
+          if (adv && adv.carrying && adv.side === side) { stayPut(adv); return yes; }
           ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; ui.preview = null;
           render();
           return yes;
