@@ -29703,6 +29703,12 @@
     }
   }
 
+  /* An aircraft covers a lot of table in one move; at a squad's pace it
+     flashes across, so it takes its time and reads as flying. */
+  function moveMs(u, total) {
+    if (u.cls === 'aircraft') return Math.min(3200, 700 + total * 85);
+    return Math.min(1400, 240 + total * 42);
+  }
   function animateMove(u, path, follow) {
     if (!path || path.length < 2) return;
     var segs = [], total = 0;
@@ -29717,7 +29723,7 @@
     if (R.isMachine(u)) u.aim = null;
     anims.push({
       kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
-      dur: Math.min(1400, 240 + total * 42), t0: nowMs(), lastStep: 0, lastPace: -1
+      dur: moveMs(u, total), t0: nowMs(), lastStep: 0, lastPace: -1
     });
     u.ax = path[0].x; u.ay = path[0].y;
     startLoop();
@@ -30283,7 +30289,7 @@
      along the line, which read as somebody else shooting. */
   function playStrafe(u, from, to, deaths, done) {
     var span = Math.hypot(to.x - from.x, to.y - from.y);
-    var dur = Math.max(1200, Math.min(2600, 700 + span * 90));
+    var dur = Math.max(1900, Math.min(4000, 1100 + span * 140));
     var steps = Math.max(5, Math.round(span * 1.2) + 4);
     if (u) {
       u.facing = Math.atan2(to.y - from.y, to.x - from.x);
