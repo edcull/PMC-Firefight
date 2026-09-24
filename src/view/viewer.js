@@ -30,7 +30,7 @@
   var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
   var view = {
     zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
-    key: 'regular', prop: 'wheeled', side: 'A', status: 'ready',
+    key: 'regular', prop: 'none', side: 'A', status: 'ready',
     models: null, walking: false, walkT: 0, at: null, facing: 0, face: 'SE',
     sound: true,
     // each side's paint, from every colour an army can take
@@ -72,11 +72,12 @@
       faceL: view.faceL
     });
     if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
+    R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
     if (riding) { R.applyRiders(u, true); if (view.models != null) u.models = Math.min(view.models, u.size); }
-    if (R.canMount(p, riding)) u.mount = view.mount || 'bike';
+    if (R.canMount(p, riding)) u.mount = view.mount || 'none';
     /* A machine shows wear as Damage — half its Structure gone is enough to set
        it smoking — and a squad shows it as Suppression. Destroyed is drawn by
        drawDestroyed rather than by any number here. */
@@ -1073,9 +1074,14 @@
       h += '<div class="vgrp"><label>Riders</label><div class="vseg">' +
         segL('ride', [['foot', 'On foot'], ['mounted', 'Mounted']], view.ride || 'foot') + '</div></div>';
     }
+    // Drone Control (p. 37): any hull or craft without Transport, in any army but the Bugs
+    if (R.canBeDrone(p)) {
+      h += '<div class="vgrp"><label>Control</label><div class="vseg">' +
+        segL('drone', [['crew', 'Crewed'], ['drone', 'Drone']], view.drone || 'crew') + '</div></div>';
+    }
     if (R.canMount(p, riding)) {
       h += '<div class="vgrp"><label>Mount</label><div class="vseg">' +
-        segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'bike') + '</div></div>';
+        segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'none') + '</div></div>';
     }
     // an Overgrown Bug walks on its own legs: there is no drive to choose
     if (isVeh && p.rules.indexOf('Overgrown Bug') < 0) {
@@ -1119,11 +1125,12 @@
     var pr = p.cls === 'vehicle' && !R.alienHull(p) && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
     var u = Object.assign({}, p, { rules: p.rules.slice(), models: p.size });
     if (pr) R.applyPropulsion(u, pr.key);
+    R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     // the Riders upgrade (p. 93): half the models, mounted, Movement 10" and the Riders rule
     if (R.canRide(p) && view.ride === 'mounted') R.applyRiders(u, true);
     // what it rides (Appendix 3): a grav bike costs a point of Defence
-    var mt = R.canMount(p, R.canRide(p) && view.ride === 'mounted') ? R.MOUNTS[view.mount || 'bike'] : null;
-    if (mt) R.applyMount(u, view.mount || 'bike');
+    var mt = R.canMount(p, R.canRide(p) && view.ride === 'mounted') ? R.MOUNTS[view.mount || 'none'] : null;
+    if (mt) R.applyMount(u, view.mount || 'none');
     function mod(v, was, txt) {
       return v === was ? { t: txt } : { t: txt, mod: true, was: was };
     }
@@ -1147,8 +1154,8 @@
       }).join('') + '</tr></table>';
     var TXT = root.PMCRuleText;
     if (!u.rules.length && !pr) h += '<p class="vrule">No special rules.</p>';
-    if (pr) h += '<div class="vrule"><b>Propulsion: ' + esc(pr.name) + '</b><p>' + esc(pr.note) + '</p></div>';
-    if (mt) h += '<div class="vrule"><b>Mount: ' + esc(mt.name) + '</b><p>' + esc(mt.note) + '</p></div>';
+    if (pr && pr.key !== 'none') h += '<div class="vrule"><b>Propulsion: ' + esc(pr.name) + '</b><p>' + esc(pr.note) + '</p></div>';
+    if (mt && mt !== R.MOUNTS.none) h += '<div class="vrule"><b>Mount: ' + esc(mt.name) + '</b><p>' + esc(mt.note) + '</p></div>';
     u.rules.forEach(function (r) {
       var d = TXT ? TXT.describe(r) : { name: r, text: '' };
       var tip = d.text && root.PMCTips ? ' ' + root.PMCTips.attr(d.name, d.text) : '';

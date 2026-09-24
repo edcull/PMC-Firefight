@@ -297,13 +297,15 @@ async function pickAndFire(p, key, ms) {
     shrunk.models + ' models, Morale ' + shrunk.morale);
 
   /* ---------------------------------------------------------------- running gear */
-  head('Vehicles open on their usual running gear');
+  head('Vehicles open with no optional propulsion, drawn on their usual running gear');
   const drives = await p.evaluate(() => ['hpv', 'lcv', 'acv'].map(k => {
     window.__viewer.pick(k);
     return k + ':' + document.querySelector('[data-set="prop"].on').textContent;
   }));
-  ok('a patrol vehicle is wheeled, a combat vehicle tracked, an advanced one anti-grav',
-    drives.join(' ') === 'hpv:wheeled lcv:tracked acv:grav', drives.join(' '));
+  ok('every hull opens on "none" — the printed profile',
+    drives.join(' ') === 'hpv:none lcv:none acv:none', drives.join(' '));
+  const looks = await p.evaluate(() => ['hpv', 'lcv', 'acv'].map(k => k + ':' + window.PMC.lookDrive(window.PMC.profile(k))));
+  ok('...drawn wheeled, tracked and anti-grav', looks.join(' ') === 'hpv:wheeled lcv:tracked acv:grav', looks.join(' '));
   ok('the stage has no tap highlight', await p.evaluate(() => getComputedStyle(document.getElementById('vboard')).webkitTapHighlightColor === 'rgba(0, 0, 0, 0)'));
   await p.evaluate(() => window.__viewer.pick('regular'));
 

@@ -23,6 +23,7 @@ var base = R.profile('lcv');
 console.log('--- Light combat vehicle, Move ' + base.move + ' turn ' + base.turn +
   '" Def ' + base.def + ' Str ' + base.str + ' ---');
 var WANT = {
+  none: [10, 1, 13, 6],                     // no optional propulsion: the printed profile
   wheeled: [10, 1, 13, 6], tracked: [7.5, 0, 13, 6], grav: [12.5, 1, 13, 5],
   hover: [10, 2, 13, 6], walker: [10, 1, 12, 6]
 };
