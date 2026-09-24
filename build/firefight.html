@@ -16916,23 +16916,21 @@
           line([s1, s2], 5, sd > 0 ? BONE : BONE_D, s1.d + (sd * (cos - sin) > 0 ? 1.1 : -0.9));
         });
       } else if (kind === 'queen') {
-        // the brain under its crest, the crown of horns, eggs on the abdomen
-        var bc = S(0.55, 0, 70), br = 0.44 * K;
-        add(bc.d + 3, function () {
-          if (!dead) ellipse(g, bc.x, bc.y, br * 1.35, br * 1.2, 'rgba(185,140,242,.18)');
-          ellipse(g, bc.x, bc.y, br + 1.5, br * 0.86 + 1.5, '#0b0908');
-          ellipse(g, bc.x, bc.y, br, br * 0.86, psy.d);
-          ellipse(g, bc.x - 1, bc.y - 2, br * 0.9, br * 0.74, psy.m);
-          for (var fo = 0; fo < 3; fo++) {
-            g.strokeStyle = psy.d; g.lineWidth = 1.2;
-            g.beginPath(); g.moveTo(bc.x - br * 0.7, bc.y - br * 0.4 + fo * br * 0.35);
-            g.quadraticCurveTo(bc.x, bc.y - br * 0.6 + fo * br * 0.35, bc.x + br * 0.7, bc.y - br * 0.35 + fo * br * 0.35); g.stroke();
+        // the brain, swollen up out of the back of the head, and eggs on the abdomen
+        var bc = S(hd[0] - hd[2] * 0.6, 0, zs(hd[1]) + hr * 0.95), br = 0.34 * K;
+        add(Math.max(bc.d, hc.d) + 0.3, function () {
+          // drawn as the brain bugs' brains are: glow, lobes, four folds, a shine
+          var rx = br, ry = br * 0.9, cx = bc.x, cy = bc.y;
+          if (!dead) ellipse(g, cx, cy, rx * 1.3, ry * 1.3, 'rgba(185,140,242,.2)');
+          ellipse(g, cx, cy, rx, ry, psy.d);
+          ellipse(g, cx - rx * 0.05, cy - ry * 0.08, rx * 0.9, ry * 0.84, psy.m);
+          g.strokeStyle = psy.d; g.lineWidth = Math.max(1, rx * 0.1); g.lineCap = 'round'; g.lineJoin = 'round';
+          for (var fo = 0; fo < 4; fo++) {
+            var yy = cy - ry * 0.6 + fo * ry * 0.38;
+            g.beginPath(); g.moveTo(cx - rx * 0.7, yy); g.lineTo(cx - rx * 0.3, yy - ry * 0.18);
+            g.lineTo(cx + rx * 0.1, yy + ry * 0.05); g.lineTo(cx + rx * 0.6, yy - ry * 0.15); g.stroke();
           }
-          ellipse(g, bc.x - br * 0.35, bc.y - br * 0.45, br * 0.3, br * 0.18, psy.l);
-          for (var hn = 0; hn < 5; hn++) {
-            var hx = bc.x + (hn - 2) * br * 0.4, hy = bc.y - br * 0.7 + Math.abs(hn - 2) * 2;
-            poly(g, [[hx - 2.5, hy + 2], [hx + (hn - 2) * 1.5, hy - 12], [hx + 2.5, hy + 2]], SH.dk);
-          }
+          ellipse(g, cx - rx * 0.3, cy - ry * 0.5, rx * 0.3, ry * 0.2, psy.l);
         });
         if (!dead) [[-1.2, 0.3], [-1.0, -0.35], [-0.75, 0.1]].forEach(function (e2) {
           var ep = S(e2[0], e2[1], 26 + 0.5 * K);
