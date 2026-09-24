@@ -321,5 +321,36 @@ for (var tq = 0; tq < 300; tq++) {
 ok('Aux teleport on a 2: the random pad or the aircraft, nothing else', n2 > 10 && got2 === n2, got2 + ' of ' + n2);
 ok('...on a 3: any pad or the aircraft', n3 > 10 && got3 === n3, got3 + ' of ' + n3);
 
+/* ------------------------------------------------------ Protecting the VIP: +2 to every Damage roll */
+console.log('\nVIP: +2 TO DAMAGE ROLLS');
+var vipScen = { hitMod: function (st, a, t) { return a.side === 'A' && t.side === 'B' ? 2 : 0; } };
+var bounced = 0, runs = 0;
+for (var vq = 0; vq < 300; vq++) {
+  var pc = unit('regular', { x: 10, y: 10 }), tk = unit('lcv', { side: 'B', x: 10, y: 20 });
+  var vt = table([pc, tk]); vt.scen = vipScen;
+  var dr = R.resolveDamage(tk, 3, false, 2); runs += 3;
+  bounced += dr.rolls.filter(function (x) { return /Bounced/.test(x); }).length;
+}
+ok('a vehicle hit never bounces with +2 to the roll', bounced === 0 && runs > 0, bounced + ' bounced');
+var keep = 0, keepPlain = 0;
+for (var vr = 0; vr < 300; vr++) {
+  var ch = unit('shock', { x: 10, y: 10 }), op = unit('regular', { side: 'B', x: 10, y: 11 });
+  var at = table([ch, op]); at.scen = vipScen;
+  var ar = R.assault(at, ch, op);
+  var mine = false;
+  (ar.log || []).forEach(function (l) {
+    if (l.t === 'round') mine = (l.text || '').indexOf(ch.label + ' (') >= 0;
+    if (mine && l.t === 'hits' && /Keep fighting/.test(l.text || '')) keep++;
+  });
+  var ch2 = unit('shock', { x: 10, y: 10 }), op2 = unit('regular', { side: 'B', x: 10, y: 11 });
+  var ar2 = R.assault(table([ch2, op2]), ch2, op2);
+  var mine2 = false;
+  (ar2.log || []).forEach(function (l) {
+    if (l.t === 'round') mine2 = (l.text || '').indexOf(ch2.label + ' (') >= 0;
+    if (mine2 && l.t === 'hits' && /Keep fighting/.test(l.text || '')) keepPlain++;
+  });
+}
+ok('...and an assault on the OpFor never rolls a "Keep fighting!"', keep === 0 && keepPlain > 0, keep + ' against ' + keepPlain + ' without');
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

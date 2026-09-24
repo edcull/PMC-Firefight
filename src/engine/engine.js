@@ -1509,7 +1509,7 @@
     if (lzFor) { askLZ(lzFor, function () { scenarioArrivals(after); }); return; }
     if (state.sc.pickedTurn !== state.turn) { state.sc.picked = {}; state.sc.pickedTurn = state.turn; }
     var pickSide = ['A', 'B'].filter(function (sd) {
-      if (isAI(sd) || state.sc.picked[sd] || state.scen.autoArrive) return false;
+      if (isAI(sd) || state.sc.picked[sd] || (state.scen.autoArrive && !state.scen.pickReserves)) return false;
       var pk = SC.reservePick(state, sd);
       if (!pk) return false;
       if (!pk.pool.length) { state.sc.picked[sd] = []; return false; }
@@ -1534,6 +1534,10 @@
     }
     sides.forEach(function (side) {
       var coming = state.sc.picked[side] ? state.sc.picked[side].slice() : SC.reserves(state, side);
+      // Evacuation: the pick is only the player's own reserves; the civilians still roll to come out
+      if (state.sc.picked[side] && state.scen.pickReserves) {
+        SC.reserves(state, side).forEach(function (u) { if (coming.indexOf(u) < 0) coming.push(u); });
+      }
       /* Semper Fidelis (Battle Honour, p. 88): a unit held in the scenario's
          reserve may come on automatically on any turn but the first — no roll,
          no waiting for its wave. Where it may come on is still the scenario's. */

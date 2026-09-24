@@ -2258,10 +2258,15 @@ html { scroll-behavior: smooth; }
   /* ---------- vehicles and aircraft: damage, wrecks and repairs ---------- */
   // A hit on a machine: 1 bounces, 2-5 does a point, 6+ is a critical for D3 —
   // or D6 when the shot came from an Anti-tank or Anti-aircraft weapon.
-  function resolveDamage(target, hits, pierce) {
+  // what a scenario adds to every Damage roll against a side (Protecting the VIP: +2, p. 151)
+  function dmgMod(state, a, t) {
+    return state && state.scen && state.scen.hitMod && a && t ? (state.scen.hitMod(state, a, t) || 0) : 0;
+  }
+  function resolveDamage(target, hits, pierce, mod) {
     var out = { damage: 0, rolls: [] };
+    mod = mod || 0;
     for (var i = 0; i < hits; i++) {
-      var r = d6(), tag;
+      var r0 = d6(), r = Math.min(6, r0 + mod), tag;
       if (r === 1) tag = 'Bounced off the armour!';
       else if (r <= 5) { tag = 'Target damaged! (1 DP)'; out.damage += 1; }
       else {
@@ -2269,7 +2274,7 @@ html { scroll-behavior: smooth; }
         tag = 'Critical hit! (' + (pierce ? 'D6 ' : 'D3 ') + crit + ' DP)';
         out.damage += crit;
       }
-      out.rolls.push('D6 ' + r + ' → ' + tag);
+      out.rolls.push('D6 ' + r0 + (mod ? '+' + mod : '') + ' → ' + tag);
     }
     return out;
   }
@@ -2453,11 +2458,11 @@ html { scroll-behavior: smooth; }
   }
   function hackBurn(state, a, t, hits, log) {
     if (isMachine(t)) {
-      var dres = resolveDamage(t, hits, false);
+      var dres = resolveDamage(t, hits, false, dmgMod(state, a, t));
       log.push({ t: 'hits', text: dres.rolls.join(' · ') });
       applyDamage(state, t, dres.damage, log, a);
     } else {
-      var hres = resolveShootingHits(state, t, hits, 0, a);
+      var hres = resolveShootingHits(state, t, hits, dmgMod(state, a, t), a);
       log.push({ t: 'hits', text: hres.rolls.join(' · ') });
       applyResult(state, t, hres, log, a);
     }
@@ -2682,11 +2687,11 @@ html { scroll-behavior: smooth; }
         return;
       }
       if (isMachine(u)) {
-        var dm = resolveDamage(u, hits, false);
+        var dm = resolveDamage(u, hits, false, dmgMod(state, a, u));
         log.push({ t: 'hits', text: dm.rolls.join(' · ') });
         applyDamage(state, u, dm.damage, log, a);
       } else {
-        var hr = resolveShootingHits(state, u, hits, 0, a);
+        var hr = resolveShootingHits(state, u, hits, dmgMod(state, a, u), a);
         if (hr.medic) treated.push({ id: u.id, medic: hr.medic });
         log.push({ t: 'hits', text: hr.rolls.join(' · ') });
         applyResult(state, u, hr, log, a);
@@ -3199,7 +3204,7 @@ html { scroll-behavior: smooth; }
     var wreck = breach ? destroyTerrain(state, breach, log, a) : null;
 
     if (hits > 0 && isMachine(t)) {
-      var dres2 = resolveDamage(t, hits, pierce);
+      var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
       log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
       applyDamage(state, t, dres2.damage, log, a);
       return { log: log, hits: hits, wreck: wreck };
@@ -3214,7 +3219,7 @@ html { scroll-behavior: smooth; }
       if (crossfire) mod += loose ? 2 : 1;
       if (breach) mod += 1;
       // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
-      if (state.scen && state.scen.hitMod) mod += state.scen.hitMod(state, a, t) || 0;
+      mod += dmgMod(state, a, t);
       var res = resolveShootingHits(state, t, hits, mod, a);
       medicId = res.medic || null;
       // Incendiary doubles the suppression of the attack itself, before any
@@ -3560,18 +3565,18 @@ html { scroll-behavior: smooth; }
     });
     if (hits > 0 && isMachine(def)) {
       // a machine in close combat: 1 bounces, 2-3 a point, 4-6 D3
-      var out = { damage: 0, rolls: [] };
+      var out = { damage: 0, rolls: [] }, vm = dmgMod(state, atk, def);
       for (var h = 0; h < hits; h++) {
-        var r = d6(), tag;
+        var r0 = d6(), r = Math.min(6, r0 + vm), tag;
         if (r === 1) tag = 'Bounced off the armour!';
         else if (r <= 3) { tag = 'Hull breached (1 DP)'; out.damage += 1; }
         else { var c = d3(); tag = 'Charge placed! (D3 ' + c + ' DP)'; out.damage += c; }
-        out.rolls.push('D6 ' + r + ' → ' + tag);
+        out.rolls.push('D6 ' + r0 + (vm ? '+' + vm : '') + ' → ' + tag);
       }
       log.push({ t: 'hits', text: out.rolls.join(' · ') });
       applyDamage(state, def, out.damage, log, atk);
     } else if (hits > 0) {
-      var res = resolveAssaultHits(def, hits, breached ? 1 : 0, atk);
+      var res = resolveAssaultHits(def, hits, (breached ? 1 : 0) + dmgMod(state, atk, def), atk);
       log.push({ t: 'hits', text: res.rolls.join(' · ') +
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       var fell = def.models;
