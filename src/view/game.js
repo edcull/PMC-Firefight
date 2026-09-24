@@ -2274,7 +2274,7 @@
         if (SFX) SFX.click();
         // its name is its colour: a demo force's, and the AI opposition's until someone types one
         var nm0 = ((el('hot-name') && el('hot-name').value) || '').trim();
-        if (muster.hot && (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && muster.hot.step === 2 && (!nm0 || isDemoName(nm0))))) demoRename();
+        if (muster.hot && (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && muster.hot.step === 2)) && (!nm0 || isDemoName(nm0))) demoRename();
         // a made-up name follows the colour
         if (muster.hot && muster.hot.kind !== 'demo' && !(muster.hot.kind === 'ai' && muster.hot.step === 2)) {
           var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
@@ -5217,7 +5217,7 @@
     // a demo force, and the AI's opposition, take a name from their colour and kind: the Jade Brood
     if (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && i === 1)) {
       var own = ((el('hot-name') && el('hot-name').value) || '').trim();
-      if (muster.hot.kind === 'ai' && own && !isDemoName(own) && !isMadeUpName(own)) { muster.name = own; return; }   // one typed stays
+      if (own && !isDemoName(own) && !isMadeUpName(own)) { muster.name = own; return; }   // one typed stays
       muster.demoNoun = null; demoRename(); return;
     }
     // a name the player gave it stays; one made up from its colour and kind follows them
@@ -5265,6 +5265,7 @@
   function hotLabels() {
     var n = ID_NOUN[musterFaction()] || 'Force';
     if (el('hot-name-label')) el('hot-name-label').textContent = n + ' name';
+    if (el('hot-name')) el('hot-name').placeholder = n + ' name';
     colourLabel();
     var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
     if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
@@ -5348,7 +5349,7 @@
     backLabel(el('btn-setup-back'), setupGoesHome());
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
-    if (cwp && idp && kind !== 'demo') { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
+    if (cwp && idp) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
     hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';

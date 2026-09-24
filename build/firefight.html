@@ -706,10 +706,10 @@
   #setup[data-hot="3"] .hot-sum { display: block; }
   #setup[data-hot] .hot-intro { display: block; }
   /* a demo names its own forces, from their colour and kind, always lays the table itself, and needs no explaining */
-  #setup[data-kind="demo"] .hot-name, #setup[data-kind="demo"] #terrain-field, #setup[data-quick] .hot-intro { display: none !important; }
+  #setup[data-kind="demo"] #terrain-field, #setup[data-quick] .hot-intro { display: none !important; }
   /* nor does it pick colours or hand-build: its forces are rolled, each in a colour of its own, and the
      Battle Tier and Priority Level are set once, for both, on the battlefield step */
-  #setup[data-kind="demo"] .hot-colour, #setup[data-quick] .muster-btns { display: none !important; }
+  #setup[data-quick] .muster-btns { display: none !important; }
   /* a battle against the AI is set up the same way, the player naming and colouring their own force */
   #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
   #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
@@ -732,6 +732,7 @@
   }
   .found-pop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
   .name-row { display: flex; gap: 8px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .name-row .tin { flex: 1; min-width: 0; }
   .chip-btn {
     flex: none; width: 48px; padding: 3px; cursor: pointer;
@@ -1643,7 +1644,7 @@
     <!-- who the force is, as founding a company has it: its name, and its colours on a line that opens them in a modal -->
     <div class="muster foundid hot-only hot-name">
       <div class="field">
-        <label for="hot-name" id="hot-name-label">Company name</label>
+        <label for="hot-name" id="hot-name-label" class="sr-only">Company name</label>
         <!-- the colour picked, left of the name: tap it for the colours -->
         <div class="name-row">
           <button type="button" class="chip-btn" id="btn-colour-pop" aria-expanded="false" title="Colours"><span id="colour-btn-chip"></span></button>
@@ -30252,7 +30253,7 @@
         if (SFX) SFX.click();
         // its name is its colour: a demo force's, and the AI opposition's until someone types one
         var nm0 = ((el('hot-name') && el('hot-name').value) || '').trim();
-        if (muster.hot && (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && muster.hot.step === 2 && (!nm0 || isDemoName(nm0))))) demoRename();
+        if (muster.hot && (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && muster.hot.step === 2)) && (!nm0 || isDemoName(nm0))) demoRename();
         // a made-up name follows the colour
         if (muster.hot && muster.hot.kind !== 'demo' && !(muster.hot.kind === 'ai' && muster.hot.step === 2)) {
           var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
@@ -33195,7 +33196,7 @@
     // a demo force, and the AI's opposition, take a name from their colour and kind: the Jade Brood
     if (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && i === 1)) {
       var own = ((el('hot-name') && el('hot-name').value) || '').trim();
-      if (muster.hot.kind === 'ai' && own && !isDemoName(own) && !isMadeUpName(own)) { muster.name = own; return; }   // one typed stays
+      if (own && !isDemoName(own) && !isMadeUpName(own)) { muster.name = own; return; }   // one typed stays
       muster.demoNoun = null; demoRename(); return;
     }
     // a name the player gave it stays; one made up from its colour and kind follows them
@@ -33243,6 +33244,7 @@
   function hotLabels() {
     var n = ID_NOUN[musterFaction()] || 'Force';
     if (el('hot-name-label')) el('hot-name-label').textContent = n + ' name';
+    if (el('hot-name')) el('hot-name').placeholder = n + ' name';
     colourLabel();
     var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
     if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
@@ -33326,7 +33328,7 @@
     backLabel(el('btn-setup-back'), setupGoesHome());
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
-    if (cwp && idp && kind !== 'demo') { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
+    if (cwp && idp) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
     hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
@@ -34887,7 +34889,8 @@
        from whatever is left, so no two forces on a table ever match. */
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, cc = CO[draft.colour];
     h += '<div class="muster foundid found-id">' +
-      '<div class="field"><label for="found-name">' +
+      // no label over it: the chip and the box speak for themselves (it stays for screen readers)
+      '<div class="field"><label for="found-name" class="sr-only">' +
       say('Company name', 'What the revolt calls itself', 'What the swarm is known as', 'What the tribe is known as') + '</label>' +
       // the colour picked, a chip left of the name: tap it for the colours
       '<div class="name-row"><button type="button" class="chip-btn" data-go="fcolour" aria-expanded="' + colourOpen + '"' +
