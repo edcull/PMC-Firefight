@@ -507,6 +507,11 @@
   .limits { margin: 0 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .limits b { color: var(--ink-dim); font-weight: 500; }
   .limits b.short { color: var(--warn); }
+  .ptsnote { margin: -4px 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); }
+  .ptsnote b { color: var(--good); font-weight: 600; }
+  .pick.free { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); }
+  .freetag { font-style: normal; font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: var(--good);
+    border: 1px solid color-mix(in srgb, var(--good) 55%, transparent); border-radius: 3px; padding: 0 3px; }
   .chosen { display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; }
   .chosen:empty::before { content: 'No units yet — pick from the list below.'; color: var(--ink-faint); font-size: 12px; }
   .pick {
@@ -33253,9 +33258,30 @@
 
     var pts = el('pts');
     // units a tactic or doctrine puts off the bill are named, or the sum looks wrong
-    pts.textContent = c.spent + ' / ' + c.budget + ' points' +
-      (c.free ? ' \u00b7 ' + c.free + ' unit' + (c.free === 1 ? '' : 's') + ' free' +
-        (tactic === 'wave' ? ' (Human Wave Attacks)' : '') : '');
+    pts.textContent = c.spent + ' / ' + c.budget + ' points';
+    /* Human Wave Attacks (p. 95): two infantry units of the Battle Tier a Priority
+       Level come off the bill. Which ones are free is marked on their chips, and
+       the sum is written out under the Tier counts, so 7 Tier III units costing
+       9 points reads as the rule rather than a mistake. */
+    var freeIdx = {}, waveN = 0, gross = 0;
+    muster.keys.forEach(function (k, i) {
+      var fp = R.profile(R.splitPick(k).key);
+      if (!fp) return;
+      gross += fp.tier;
+      if (tactic === 'wave' && !muster.solo && waveN < 2 * pl && fp.cls === 'infantry' && fp.tier === tier) { freeIdx[i] = true; waveN++; }
+    });
+    var note = el('pts-note');
+    if (!note) {
+      note = document.createElement('p'); note.id = 'pts-note'; note.className = 'ptsnote';
+      el('limits').parentNode.insertBefore(note, el('limits').nextSibling);
+    }
+    var off = gross - c.spent;
+    note.hidden = !off;
+    note.innerHTML = off
+      ? gross + ' pts of units \u2212 <b>' + off + ' free</b>' +
+        (waveN ? ' (Human Wave Attacks: ' + waveN + ' Tier ' + R.ROMAN[tier] + ' infantry \u2014 up to 2 per Priority Level)' : '') +
+        ' = <b>' + c.spent + '</b> of ' + c.budget
+      : '';
     pts.classList.toggle('over', c.spent > c.budget);
 
     // the count at each Tier against its limits, on one line: I 1/0-8 · II 0/0-8 · …
@@ -33294,8 +33320,10 @@
         '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
       return '<span class="pickwrap">' +
-        '<button type="button" class="pick" data-drop="' + i + '" title="Remove">' +
-        p.name + (pick.riders ? ' (mounted)' : '') + ' <b>' + R.ROMAN[p.tier] + '</b></button>' + drive + drone + ride + mnt + '</span>';
+        '<button type="button" class="pick' + (freeIdx[i] ? ' free' : '') + '" data-drop="' + i + '" title="' +
+        (freeIdx[i] ? 'Free: an extra unit from Human Wave Attacks. ' : '') + 'Remove">' +
+        p.name + (pick.riders ? ' (mounted)' : '') + ' <b>' + R.ROMAN[p.tier] + '</b>' +
+        (freeIdx[i] ? '<i class="freetag">FREE</i>' : '') + '</button>' + drive + drone + ride + mnt + '</span>';
     }).join('');
 
     var f = el('faults');

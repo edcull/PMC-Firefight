@@ -507,6 +507,11 @@
   .limits { margin: 0 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .limits b { color: var(--ink-dim); font-weight: 500; }
   .limits b.short { color: var(--warn); }
+  .ptsnote { margin: -4px 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); }
+  .ptsnote b { color: var(--good); font-weight: 600; }
+  .pick.free { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); }
+  .freetag { font-style: normal; font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: var(--good);
+    border: 1px solid color-mix(in srgb, var(--good) 55%, transparent); border-radius: 3px; padding: 0 3px; }
   .chosen { display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; }
   .chosen:empty::before { content: 'No units yet — pick from the list below.'; color: var(--ink-faint); font-size: 12px; }
   .pick {
@@ -2036,6 +2041,6 @@
 <script src="src/engine/engine.js?v=828edd6146"></script>
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=68c4b0daa8"></script>
+<script src="src/view/game.js?v=7d5a78f114"></script>
 <script src="src/view/dossier.js?v=02d08f6765"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>
