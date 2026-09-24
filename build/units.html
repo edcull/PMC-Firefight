@@ -9253,7 +9253,7 @@ html { scroll-behavior: smooth; }
      way a vehicle does. Shells are the army's colour; legs are dark chitin. */
   var BIGBUG = {
     bugfirebeetle: { kind: 'firebeetle', h: 44 },
-    bugsandworm: { kind: 'sandworm', h: 84 },
+    bugsandworm: { kind: 'sandworm', h: 72 },
     bugbioplasma: { kind: 'bioplasma', h: 66 },
     bugshadow: { kind: 'shadow', h: 96 },
     bugqueen: { kind: 'queen', h: 92 },
@@ -9379,14 +9379,14 @@ html { scroll-behavior: smooth; }
       var pts = [];
       for (var i = 0; i <= 16; i++) {
         var tt = i / 16;
-        var along = -1.15 + tt * 2.1;
-        var z = Math.max(0, Math.sin(Math.min(1, tt * 1.25) * Math.PI * 0.62) * 72 * up) + (i % 4 === 2 ? wob : 0);
+        var along = -0.8 + tt * 1.5;
+        var z = Math.max(0, Math.sin(Math.min(1, tt * 1.25) * Math.PI * 0.62) * 58 * up) + (i % 4 === 2 ? wob : 0);
         pts.push(S(along, Math.sin(tt * 3) * 0.12, z));
       }
-      var mound = S(-1.15, 0, 0);
+      var mound = S(-0.8, 0, 0);
       add(mound.d - 3, function () {
-        ellipse(g, mound.x, mound.y, 0.9 * K, 0.4 * K, '#4a3d2a');
-        ellipse(g, mound.x - 3, mound.y - 2, 0.62 * K, 0.26 * K, '#6a5a40');
+        ellipse(g, mound.x, mound.y, 1.2 * K, 0.55 * K, '#4a3d2a');
+        ellipse(g, mound.x - 3, mound.y - 2, 0.85 * K, 0.36 * K, '#6a5a40');
       });
       var head = pts[pts.length - 1], neck = pts[pts.length - 3];
       add((pts[0].d + head.d) / 2, function () {
@@ -9396,7 +9396,7 @@ html { scroll-behavior: smooth; }
           pts.forEach(function (q, i) { if (i) g.lineTo(q.x, q.y - (off || 0)); else g.moveTo(q.x, q.y - (off || 0)); });
           g.stroke();
         }
-        var Wd = 0.62 * K;
+        var Wd = 0.95 * K;
         stroke(Wd + 3, '#0b0908');
         stroke(Wd, SH.dk);
         stroke(Wd * 0.72, SH.md, Wd * 0.1);
