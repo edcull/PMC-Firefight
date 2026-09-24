@@ -420,6 +420,22 @@ async function pickAndFire(p, key, ms) {
   ok('a walker swaps which leg leads, frame to frame', special.mechStrides);
   ok('...where the same hull on tracks does not', special.hullSame);
 
+  /* ------------------------------------------------ Underground Bugs burrow */
+  head('Underground Bugs burrow along the bench instead of walking');
+  await p.evaluate(() => window.__viewer.pick('bhugeunder'));
+  await p.evaluate(() => window.__viewer.walk());
+  const seenB = { sink: false, hidden: false };
+  for (let i = 0; i < 60; i++) {
+    const bw = await p.evaluate(() => window.__viewer.burrow());
+    if (bw && bw.lift < 0 && !bw.hidden) seenB.sink = true;
+    if (bw && bw.hidden) seenB.hidden = true;
+    await p.waitForTimeout(40);
+  }
+  await p.evaluate(() => window.__viewer.walk());
+  ok('they go down into the ground', seenB.sink);
+  ok('...and along under it, out of sight', seenB.hidden);
+  await p.evaluate(() => window.__viewer.pick('regular'));
+
   /* -------------------------------------------------------- it is the real code */
   head('It is the game\'s own code, not a copy of it');
   const shared = await p.evaluate(() => ({

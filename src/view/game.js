@@ -6395,6 +6395,13 @@
     }
     return { span: g2.span, lift: g2.lift, sound: g2.sound, samples: out };
   };
+  // how a unit's move is drawn part way through (0-1): a burrower sinks, goes unseen and comes up
+  window.__burrowSample = function (u, ks) {
+    if (!burrows(u)) return null;
+    var an = { unit: Object.assign({}, u), total: 6, phase: 0, lastDirt: -1,
+      segs: [{ a: { x: u.x, y: u.y }, b: { x: u.x + 6, y: u.y }, start: 0, end: 6, len: 6 }] };
+    return ks.map(function (k) { burrowStep(an, k); return Object.assign({}, an.unit.burrow); });
+  };
   window.__deployNext = deployNext;
   // a legal spot in the deploying side's own zone, n places along
   window.__deployAim = function (n) {
