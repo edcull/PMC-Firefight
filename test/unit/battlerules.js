@@ -256,5 +256,14 @@ for (var hq = 0; hq < 300; hq++) {
 }
 ok('a hacked Drone unit takes D3+1 hits, not vehicle damage', tries > 50 && wiped < tries * 0.2, wiped + ' of ' + tries + ' wiped out');
 
+/* ------------------------------------------------------ loading and unloading */
+console.log('\nTRANSPORT (p. 36)');
+var apc = unit('lapc', { x: 10, y: 10 }), pax = unit('recruits', { x: 12, y: 10 });
+var tb2 = table([apc, pax]);
+ok('a squad boards', !!R.embark(tb2, apc, pax));
+ok('...and cannot get off again the same turn', R.disembark(tb2, apc, pax, { x: 12, y: 12 }) === null);
+pax.boarded = false;                                   // a new turn
+ok('...but can the next', !!R.disembark(tb2, apc, pax, { x: 12, y: 12 }));
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

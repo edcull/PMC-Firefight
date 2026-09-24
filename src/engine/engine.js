@@ -1572,25 +1572,30 @@
        the table (p. 54). */
     var entry = entryFor(u);
     if (entry && entry.length) {
-      for (var e = 0; e < 600; e++) {
-        // which band — which table edge, which corner — is chosen fresh each time
-        var b = entry[Math.floor(Math.random() * entry.length)];
-        var q = {
-          x: Math.max(UR, Math.min(W - UR, b.x + Math.random() * b.w)),
-          y: Math.max(UR, Math.min(H - UR, b.y + Math.random() * b.h))
-        };
-        if (R.TERRAIN[R.terrainAt(state, q.x, q.y)].impassable) continue;
-        if (R.unitNear(state, q.x, q.y, u, 1)) continue;
-        return { x: q.x, y: q.y, why: 'from its own table edge' };
+      // 12" clear of the enemy if it can be, closer only if it cannot (p. 30)
+      for (var pass = 0; pass < 2; pass++) {
+        for (var e = 0; e < 600; e++) {
+          // which band — which table edge, which corner — is chosen fresh each time
+          var b = entry[Math.floor(Math.random() * entry.length)];
+          var q = {
+            x: Math.max(UR, Math.min(W - UR, b.x + Math.random() * b.w)),
+            y: Math.max(UR, Math.min(H - UR, b.y + Math.random() * b.h))
+          };
+          if (R.TERRAIN[R.terrainAt(state, q.x, q.y)].impassable) continue;
+          if (R.unitNear(state, q.x, q.y, u, 1)) continue;
+          if (!pass && !clearOfEnemy(u, q)) continue;
+          return { x: q.x, y: q.y, why: 'from its own table edge' };
+        }
       }
       return null;
     }
     var edge = u.side === 'A' ? UR + 0.5 : W - UR - 0.5;
-    for (var k = 0; k < 400; k++) {
+    for (var pass2 = 0; pass2 < 2; pass2++) for (var k = 0; k < 400; k++) {
       var y = UR + Math.random() * (H - 2 * UR);
       var x = edge + (Math.random() - 0.5) * 2;
       if (R.TERRAIN[R.terrainAt(state, x, y)].impassable) continue;
       if (R.unitNear(state, x, y, u, 1)) continue;
+      if (!pass2 && !clearOfEnemy(u, { x: x, y: y })) continue;
       return { x: R.clampBoard({ x: x, y: y }).x, y: y, why: 'from its own table edge' };
     }
     return null;
@@ -1641,6 +1646,19 @@
     return Math.abs(p.x - edge) <= 1.5;
   }
 
+  /* "...placed up to 4\" from the table border and at least 12\" from the enemy.
+     If for any reason it is impossible, they should be placed closer" (p. 30). */
+  function clearOfEnemy(u, p) {
+    return !state.units.some(function (e) {
+      return e.alive && e.side !== u.side && !e.aboard && !e.reserve && e.x >= 0 && R.unitDist({ x: p.x, y: p.y }, e) < 12;
+    });
+  }
+  // a walk-on from a table edge keeps its distance; a landing zone or a scenario's own entry points do not
+  function edgeArrival(u) {
+    var sc = state.sc;
+    if (state.scen.arrivalPoint || state.scen.arrivalLegal) return false;
+    return !(state.scen.id === 'invasion' && sc && u.side === sc.attacker);
+  }
   function arrivalSpots(u) {
     var out = [];
     for (var x = 1; x <= W - 1; x += 1) {
@@ -1648,6 +1666,10 @@
         var p = { x: x, y: y };
         if (arrivalLegal(u, p)) out.push(p);
       }
+    }
+    if (edgeArrival(u)) {
+      var far = out.filter(function (p) { return clearOfEnemy(u, p); });
+      if (far.length) return far;
     }
     return out;
   }
@@ -1849,10 +1871,12 @@
       return;
     }
     if (ins.kind === 'arrive') {
-      if (!arrivalLegal(u, p)) {
+      // with ground 12" clear of the enemy on offer, it has to come on there
+      var mustClear = edgeArrival(u) && (ins.spots || []).some(function (q) { return clearOfEnemy(u, q); });
+      if (!arrivalLegal(u, p) || (mustClear && !clearOfEnemy(u, p))) {
         var near = snapToSpot(ins, p);
         if (!near) {
-          setHint(null, 'Not there — ' + arrivalWhere(u) + ', and off impassable ground.');
+          setHint(null, 'Not there — ' + arrivalWhere(u) + (mustClear ? ', 12" clear of the enemy' : '') + ', and off impassable ground.');
           return;
         }
         p = near;
@@ -1900,7 +1924,7 @@
     state.units.forEach(function (u) {
       u.activated = false; u.marked = false; u.markMoved = false; u.shotFrom = []; u.coordUsed = false;
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
-      u.disembarked = false;
+      u.disembarked = false; u.boarded = false;
     });
     state.chain = null; state.mark = null;
     state.initiative = null;
@@ -1966,7 +1990,7 @@
     state.units.forEach(function (u) {
       u.activated = false; u.marked = false; u.markMoved = false; u.shotFrom = []; u.coordUsed = false;
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
-      u.disembarked = false;
+      u.disembarked = false; u.boarded = false;
     });
     state.chain = null;
     state.mark = null;
@@ -2564,7 +2588,7 @@
     if (u && u.transport) {
       out.push({ id: 'embark', label: 'Embark' });
       out.push({ id: 'disembark', label: 'Disembark' });
-      if (R.drives(u)) out.push({ id: 'drivefirst', label: 'Drive first' });
+      if (movesToCarry(u)) out.push({ id: 'drivefirst', label: u.cls === 'aircraft' ? 'Fly first' : 'Drive first' });
     }
     if (u && u.cls === 'aircraft') out.push({ id: 'strafe', label: 'Strafe' });
     if (u && R.has(u, 'Supporting Fire')) out.push({ id: 'support', label: 'Support' });
@@ -2674,6 +2698,7 @@
 
     switch (id) {
       case 'enter': {
+        if (sup && alreadySafe(u)) return { on: false, hint: 'Suppressed, and already in cover or out of sight: it stays where it is (p. 34).' };
         var ents = R.enterTargets(state, u);
         if (!ents.length) return { on: false, hint: u.bld ? 'No empty section in contact with this one.' : 'No empty building within 4".' };
         return { on: true, hint: u.bld
@@ -2682,6 +2707,7 @@
             ' — but no moving until you come out.' };
       }
       case 'exitbld': {
+        if (sup) return { on: false, hint: 'Suppressed: it keeps the cover of the building (p. 34).' };
         var outs = R.exitSpots(state, u);
         return outs.length ? { on: true, hint: 'Come out and be placed within 4" of the building. Counts as the action.' }
           : { on: false, hint: 'There is no clear ground within 4" of the building to come out onto.' };
@@ -2695,6 +2721,7 @@
         }
         if (R.has(u, 'Turret')) return { on: false, hint: 'A turret is a stationary ground vehicle: it stays where it was teleported in.' };
         if (machine) return { on: true, hint: 'Drive up to Movement +4" — ' + (u.move + 4) + '". The hull ends up facing the way it travelled.' };
+        if (sup && alreadySafe(u)) return { on: false, hint: 'Suppressed, and already in cover or out of sight: it cannot move to another such place (p. 34).' };
         return sup
           ? { on: true, hint: 'Suppressed: may only move into cover or out of sight, up to ' + (u.move + 2) + '".' }
           : { on: true, hint: 'Move up to Movement +2" — ' + (u.move + 2) + '". Ends the activation.' };
@@ -2762,10 +2789,11 @@
       }
       case 'disembark': {
         if (!(u.cargo || []).length) return { on: false, hint: 'Nobody aboard.' };
+        if (!(u.cargo || []).some(function (c) { return !c.boarded; })) return { on: false, hint: 'Loaded this turn: they cannot get off again until the next (p. 36).' };
         return { on: true, hint: 'Put the troops down within 4" of the hull, then drive on up to half its Movement if you like.' };
       }
       case 'drivefirst': {
-        if (!R.drives(u)) return { on: false, hint: 'Only a ground vehicle drives before loading.' };
+        if (!movesToCarry(u)) return { on: false, hint: 'This transport cannot move before loading.' };
         if (u.carryMoved) return { on: false, hint: 'Already driven: now load or unload.' };
         var roomF = u.transport - (u.cargo || []).length;
         if (!(u.cargo || []).length && roomF <= 0) return { on: false, hint: 'Nothing to load or unload.' };
@@ -2963,13 +2991,7 @@
       ui.mode = 'move';
       ui.moves = R.reachable(state, u, u.move + moveBonus(u, 'move')).filter(function (c) { return canStand(u, c); });
       wireNote(u);
-      if (st === 'suppressed') {
-        ui.moves = ui.moves.filter(function (c) {
-          if (R.TERRAIN[R.terrainAt(state, c.x, c.y)].cover > 0) return true;
-          var ghost = { x: c.x, y: c.y, alive: true };
-          return !state.units.some(function (e) { return e.alive && e.side !== u.side && R.hasLoS(state, e, ghost); });
-        });
-      }
+      if (st === 'suppressed') ui.moves = ui.moves.filter(function (c) { return safeSpot(u, c.x, c.y); });
     } else if (id === 'fire' || id === 'aux') {
       ui.mode = id === 'aux' ? 'aux' : 'fire';
       ui.targets = targetsFor(u, { aux: id === 'aux' });
@@ -3386,11 +3408,25 @@
   /* Embark and Disembark (p. 36): the hull loads or unloads and "then may move up
      to half its Movement". The player's hull is offered that drive as a
      follow-up — tap the ground, or press the action again to stay put. */
+  /* A transport's half move around loading or unloading (p. 36) — and "aircraft
+     which transport troops follow the same rules as ground transport vehicles"
+     (p. 39), so a transport craft flies its half as well. */
+  function movesToCarry(u) { return R.drives(u) || (!!u && u.cls === 'aircraft' && u.move > 0 && !!u.transport); }
+  /* A Suppressed unit "may only move to terrain which provides a Defence bonus,
+     or out of the enemy's Line of Sight. If the unit already is in such a
+     terrain or place, it cannot move to another one" (p. 34). Only enemies on
+     the table see anything. */
+  function safeSpot(u, x, y) {
+    if (R.TERRAIN[R.terrainAt(state, x, y)].cover > 0) return true;
+    var ghost = { x: x, y: y, alive: true };
+    return !state.units.some(function (e) { return onTable(e) && e.side !== u.side && R.hasLoS(state, e, ghost); });
+  }
+  function alreadySafe(u) { return !!u.bld || safeSpot(u, u.x, u.y); }
   function carryMove(u) {
     ui.targets = []; ui.terrain = [];
     // it drove before it loaded or unloaded: that was its half move
     if (u.carryMoved) { u.carryMoved = false; ui.moves = []; ui.mode = 'idle'; endActivation(); return; }
-    if (!R.drives(u) || isAI(u.side) || !u.alive) { endActivation(); return; }
+    if (!movesToCarry(u) || isAI(u.side) || !u.alive) { endActivation(); return; }
     ui.moves = R.reachable(state, u, u.move / 2).filter(function (c) { return canStand(u, c); });
     if (!ui.moves.length) { ui.moves = []; endActivation(); return; }
     u.carrying = true; u.activated = false;         // not done yet: the drive is still to come
@@ -4364,7 +4400,7 @@
       }
     }
     // a pinned squad beside an empty building gets inside it
-    if (R.status(u) === 'suppressed' && !u.bld && R.TERRAIN[R.terrainOf(state, u)].cover === 0) {
+    if (R.status(u) === 'suppressed' && !alreadySafe(u)) {
       var sin = R.enterTargets(state, u);
       if (sin.length) {
         sin.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
@@ -4374,7 +4410,7 @@
     }
     if (R.status(u) === 'suppressed') {
       var spots = R.reachable(state, u, u.move + 2).filter(function (c) { return R.TERRAIN[R.terrainAt(state, c.x, c.y)].cover > 0 && canStand(u, c); });
-      if (spots.length && R.TERRAIN[R.terrainOf(state, u)].cover === 0) {
+      if (spots.length && !alreadySafe(u)) {
         spots.sort(function (a, b) { return a.cost - b.cost; });
         var spath = R.pathTo(state, u, u.move + 2, spots[0]);
         u.x = spots[0].x; u.y = spots[0].y;

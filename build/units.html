@@ -2483,13 +2483,14 @@ html { scroll-behavior: smooth; }
     veh.cargo = veh.cargo || [];
     veh.cargo.push(u);
     u.aboard = veh.id;
+    u.boarded = true;                                   // "no single unit can be unloaded and loaded in the same turn" (p. 36)
     u.sp = 0;                                           // safe inside, and steadied
     u.x = -1; u.y = -1;
     return { text: u.label + ' embarks aboard ' + veh.name + '.' };
   }
   function disembark(state, veh, u, pos) {
     var i = (veh.cargo || []).indexOf(u);
-    if (i < 0) return null;
+    if (i < 0 || u.boarded) return null;               // loaded this turn: it stays aboard until the next
     veh.cargo.splice(i, 1);
     u.aboard = null;
     u.disembarked = true;
