@@ -1549,7 +1549,7 @@
       } else {
         addFx({ kind: 'miss', x: to.x, y: to.y, up: to.up, dur: 320, blocking: true });
       }
-      if (!fired) { fired = true; spawnDeaths(deaths); }
+      if (!fired) { fired = true; spawnDeaths(deaths); medicAtWork(target, res); }
     }
     function finish(ms) { setTimeout(function () { if (done) done(); }, ms); }
 
@@ -1964,6 +1964,19 @@
     }
     setTimeout(function () { spawnDeaths(deaths); }, 320);
     setTimeout(function () { if (done) done(); }, 900);
+  }
+
+  /* A MEDIC! on the injury table: green crosses rise off the squad being
+     treated, and a line runs to it from the medics treating it (none when
+     the medic team is patching up its own). */
+  function medicAtWork(target, res) {
+    var med = res && res.medic ? Q.byId(res.medic) : null;
+    if (!med || !target) return;
+    if (med !== target && med.id !== target.id) {
+      addFx({ kind: 'beam', x: med.x, y: med.y, tx: target.x, ty: target.y, rgb: '120,230,150', dur: 1300 });
+    }
+    addFx({ kind: 'rise', x: target.x, y: target.y, glyph: 'cross', dur: 1700, delay: med === target ? 0 : 250 });
+    if (SFX && SFX.chime) SFX.chime();
   }
 
   function spawnDeaths(deaths) {
@@ -6235,7 +6248,7 @@
     return true;
   };
   window.__targetCodes = function () { return ui.mode + ': ' + ui.targets.map(function (t) { return t.code + '/' + t.side; }).join(', '); };
-  window.__testShoot = function (a, b) { playShooting(a, b, { hits: 2 }, [], null); };
+  window.__testShoot = function (a, b, res) { playShooting(a, b, res || { hits: 2 }, [], null); };
   window.__shootAt = function (id) { doShoot(byId(id)); };
   window.__fxkinds = function () { return fx.map(function (f) { return f.kind; }); };
   /* What the effects layer was told, not just what kind it was: the harness uses

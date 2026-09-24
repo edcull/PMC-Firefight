@@ -297,6 +297,15 @@ for (var i4 = 0; i4 < 4000; i4++) {
 }
 ok('Field Medics cut the casualties', (withMed / 4000) < (without / 4000), true,
   (without / 4000).toFixed(2) + ' → ' + (withMed / 4000).toFixed(2) + ' models a volley');
+// the board is told who answered a MEDIC!, so it can draw the medics at work
+var named = 0, wrong = 0, near = mk('medics', 'A', 25, 20), far = mk('medics', 'A', 20, 20);
+for (var i5 = 0; i5 < 400; i5++) {
+  var w7 = world(), h3 = mk('regular', 'A', 23, 20);
+  w7.units = [far, near, h3];
+  var m7 = R.resolveShootingHits(w7, h3, 3, 0).medic;
+  if (m7) { named++; if (m7 !== near.id) wrong++; }
+}
+ok('a MEDIC! names the nearest medics treating the squad', named > 0 && wrong === 0, true, named + ' named, ' + wrong + ' wrong');
 
 head('Morale, Determined, Expendable, Inspiring Presence, Jammers');
 var det = mk('rangers', 'A', 20, 20, { models: 4 });

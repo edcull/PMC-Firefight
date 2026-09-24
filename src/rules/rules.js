@@ -1923,20 +1923,23 @@
      Amplifiers (p. 142). */
   function isMedic(u) { return has(u, 'Field Medics') || has(u, 'Psychic Support'); }
   function medicReach(state, u) { return has(u, 'Psychic Support') && doctrine(state, u.side, 'XT5') ? 12 : 6; }
-  function medicNearby(state, target) {
+  // the unit treating a squad's wounded: itself if it is the medics, else the nearest in reach
+  function medicFor(state, target) {
     // the medic team treats its own wounded whatever state it is in (p. 57)
-    if (isMedic(target)) return true;
+    if (isMedic(target)) return target;
+    var best = null, bd = Infinity;
     for (var i = 0; i < state.units.length; i++) {
-      var u = state.units[i];
+      var u = state.units[i], d;
       if (u.side === target.side && projects(u) && isMedic(u)
-        && unitDist(u, target) <= medicReach(state, u)) return true;
+        && (d = unitDist(u, target)) <= medicReach(state, u) && d < bd) { best = u; bd = d; }
     }
-    return false;
+    return best;
   }
+  function medicNearby(state, target) { return !!medicFor(state, target); }
 
   function resolveShootingHits(state, target, hits, mod, atk) {
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
-    var medics = medicNearby(state, target);
+    var medic = medicFor(state, target), medics = !!medic;
     var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
     var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
     for (var i = 0; i < hits; i++) {
@@ -1949,8 +1952,8 @@
       } else if (medics) {
         if (r <= 2) tag = 'Steady, boys!';
         else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
-        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; }
-        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; }
+        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
+        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
       } else if (has(target, 'Animal Behaviour')) {
         // bugs: shrug it off or burst (p. 116)
         if (r <= 3) tag = 'QUEKKK! (ignored)';
@@ -2928,6 +2931,7 @@
       applyDamage(state, t, dres2.damage, log, a);
       return { log: log, hits: hits, wreck: wreck };
     }
+    var medicId = null;
     if (hits > 0) {
       var mod = 0;
       /* Undisciplined (p. 94): shooting at a Broken Rebel unit, or catching one in
@@ -2939,6 +2943,7 @@
       // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
       if (state.scen && state.scen.hitMod) mod += state.scen.hitMod(state, a, t) || 0;
       var res = resolveShootingHits(state, t, hits, mod, a);
+      medicId = res.medic || null;
       // Incendiary doubles the suppression of the attack itself, before any
       // extra points that special rules add
       var burn = '';
@@ -2961,7 +2966,8 @@
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       applyResult(state, t, res, log, a);
     }
-    return { log: log, hits: hits };
+    // who answered a MEDIC! on this volley, so the board can show them at work
+    return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
   }
 
   /* ---------- NOT ONE STEP BACKWARDS! (T5, p. 87) ----------
