@@ -18160,8 +18160,8 @@
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
-    // the Light VTOL drone: a small flying disc with side pods and a sensor head, scanning
-    vtoldrone: { len: 0.95, wid: 0.95, hgt: 6, fly: 2.8, craft: 'disc', gun: 0.6 },
+    // the Light VTOL drone: a small flying disc with swept winglets and a scanner pod under its lip
+    vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
@@ -20917,22 +20917,23 @@
           break;
         }
         case 'disc': {
-          /* A small gun drone: a thin flat disc riding on its stand, a sensor
-             pod hung off each side on a short arm, lights lit in their faces,
-             and one long gun laid along the top. */
+          /* A saucer: a flat disc with a low hump on top where the sensor dome
+             sits, a ring of lift vents lit underneath and two small swept
+             winglets off the back. It is there to find and mark, not to fight:
+             a scanner pod hangs under the front lip — a row of lenses and a
+             marker laser — and sweeps a scanning fan across the ground ahead. */
           var R0 = L * 0.5, ring = function (r) {
             var out = [];
             for (var a = 0; a < 16; a++) out.push([Math.cos(a / 16 * Math.PI * 2) * r, Math.sin(a / 16 * Math.PI * 2) * r]);
             return out;
           };
+          var podZ = z - Math.round(H * 0.45);
           if (!dead) {
             var ug = S3(AF(0, 0), z - 1);
-            sEllipse(ug[0], ug[1], R0 * K * 0.6, R0 * K * 0.3, 'rgba(110,190,255,.14)');
-            /* It is there to find and mark, not to fight: a scanning fan swept
-               across the ground ahead, as the Xenotripod recon craft throws. */
+            sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
             var tn = root.performance ? performance.now() : 0;
             var sw = Math.sin(tn / 700) * 0.3, reach = R0 + 0.55;
-            var n0 = S3(AF(R0 * 0.97, 0), z + Math.round(H * 0.12));
+            var n0 = S3(AF(R0 * 1.14, 0), podZ + 2);
             var f0 = S3(AF(reach, sw - 0.32), 0), f1 = S3(AF(reach, sw + 0.32), 0);
             poly(g, [n0, f0, f1], 'rgba(110,190,255,.12)');
             line(n0, f0, 1, 'rgba(160,215,255,.45)'); line(n0, f1, 1, 'rgba(160,215,255,.45)');
@@ -20941,30 +20942,36 @@
             line(n0, fm, 1, 'rgba(210,240,255,.55)');
           }
           [-1, 1].forEach(function (sd) {
-            part(0, sd * R0 * 1.1, function () {
-              strut(AF, 0, sd * R0 * 0.7, 0, sd * R0 * 1.02, z + H * 0.1, 1.6);
-              var pq0 = sd * R0 * 0.98, pq1 = sd * R0 * 1.32;
-              shape(AF, [[R0 * 0.28, pq0], [R0 * 0.28, pq1], [-R0 * 0.22, pq1], [-R0 * 0.22, pq0]], z - H * 0.3, Math.round(H * 0.55), TB);
-              if (!dead) [0.25, 0.75].forEach(function (f) {
-                var lp = S3(AF(R0 * 0.29, pq0 + (pq1 - pq0) * f), z - H * 0.3 + H * 0.3);
-                sEllipse(lp[0], lp[1], 0.9, 0.9, '#6ff0ff');
-              });
+            part(-R0 * 0.55, sd * R0 * 1.05, function () {
+              plate(AF, [[-R0 * 0.2, sd * R0 * 0.82], [-R0 * 0.85, sd * R0 * 1.32], [-R0 * 1.05, sd * R0 * 1.32], [-R0 * 0.75, sd * R0 * 0.75]], z + H * 0.28, 2);
             });
           });
           part(0, 0, function () {
-            shape(AF, ring(R0 * 0.82), z, Math.round(H * 0.2), TB, null, ring(R0));                  // the underside, flaring out
-            shape(AF, ring(R0), z + Math.round(H * 0.2), Math.round(H * 0.12), TB, null, ring(R0 * 0.94)); // the thin top face
+            // the scanner pod, slung under the front lip
+            strut(AF, R0 * 0.55, 0, R0 * 0.55, 0, podZ + Math.round(H * 0.3), 3);
+            shape(AF, [[R0 * 1.12, -R0 * 0.22], [R0 * 1.12, R0 * 0.22], [R0 * 0.55, R0 * 0.28], [R0 * 0.55, -R0 * 0.28]], podZ, Math.round(H * 0.4), TB);
+            [-0.1, 0, 0.1].forEach(function (q, i) {
+              var lp = S3(AF(R0 * 1.13, q * R0 * 1.4), podZ + Math.round(H * 0.2));
+              sEllipse(lp[0], lp[1], 1.3, 1.1, '#123a6e');
+              var blink = Math.floor((root.performance ? performance.now() : 0) / 240) % 3 === i;
+              sEllipse(lp[0], lp[1], 0.8, 0.7, dead ? '#3a4048' : blink ? '#e4f4ff' : '#6ebeff');
+            });
+            // the marker laser: a short emitter off the pod's flank, a red eye at its tip
+            var e0 = S3(AF(R0 * 0.8, -R0 * 0.3), podZ + 2), e1 = S3(AF(R0 * 1.3, -R0 * 0.3), podZ + 2);
+            line(e0, e1, 2.2, '#15181e');
+            line(e0, e1, 1, '#4a5260');
+            sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
+            shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
+            shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
+            shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
             if (!dead) {
-              for (var li = 0; li < 16; li += 4) {
-                var la = li / 16 * Math.PI * 2 + Math.PI / 8, lp2 = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.22));
-                sEllipse(lp2[0], lp2[1], 0.8, 0.6, 'rgba(150,215,255,.9)');
+              // running lights round the rim
+              for (var li = 0; li < 16; li += 2) {
+                var la = li / 16 * Math.PI * 2, lp2 = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
+                sEllipse(lp2[0], lp2[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
               }
             }
-            // the sensor head on the front of the rim, where its marker beam leaves
-            var sl = S3(AF(R0 * 0.97, 0), z + Math.round(H * 0.12));
-            sEllipse(sl[0], sl[1], 2.4, 1.9, '#123a6e');
-            sEllipse(sl[0], sl[1], 1.5, 1.2, dead ? '#3a4048' : '#6ebeff');
-            if (!dead) sEllipse(sl[0] - 0.4, sl[1] - 0.4, 0.6, 0.5, '#e4f4ff');
           }, true);
           break;
         }
@@ -21904,7 +21911,7 @@
         var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
       }
-      if (spec.craft === 'disc') return along(-spec.len * 0.22, spec.wid * 0.22);
+      if (spec.craft === 'disc') return along(0, 0);
       if (spec.fly) return along(spec.len * 0.05, 0);
       if (legs) return along(-spec.len * 0.12, spec.wid * 0.3);
       var carS = spec.style && spec.style.body === 'car';
@@ -21935,11 +21942,11 @@
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
       }
-      else if (spec.craft === 'disc') { back = -0.22; off = spec.wid * 0.22; y5 = lift + spec.hgt * 0.36; }   // on the top face, behind the gun
+      else if (spec.craft === 'disc') { back = 0; off = 0; y5 = lift + spec.hgt * 0.68; }     // on the disc's hump
       else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
-      var r = Math.max(3, K * 0.16) * (spec.craft === 'disc' ? 0.6 : 1), cy = dp.y - y5;
+      var r = Math.max(3, K * 0.16) * (spec.craft === 'disc' ? 0.75 : 1), cy = dp.y - y5;
       if (only !== 'aerial') {
       ellipse(g, dp.x, cy + r * 0.15, r * 1.25, r * 0.6, '#14171c');               // the collar it sits in
       ellipse(g, dp.x, cy - r * 0.2, r, r * 0.85, '#aeb8c2');                      // the dome
