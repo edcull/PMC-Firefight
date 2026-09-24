@@ -137,9 +137,9 @@ async function run(p, label, cfg, checks) {
     return { under: window.__burrowSample(mk('bunderground'), [0.1, 0.5, 0.95]), worm: !!window.__burrowSample(mk('bsandworm'), [0.5]),
       walker: window.__burrowSample(mk('bsmall'), [0.5]) };
   });
-  ok('Underground Bugs sink as a move starts', dig.under && dig.under[0].lift < 0 && dig.under[0].alpha < 1, JSON.stringify(dig.under && dig.under[0]));
+  ok('Underground Bugs fade out as a move starts', dig.under && !dig.under[0].hidden && dig.under[0].alpha < 1, JSON.stringify(dig.under && dig.under[0]));
   ok('...travel unseen under the ground', dig.under && dig.under[1].hidden === true);
-  ok('...and heave themselves up at the end', dig.under && !dig.under[2].hidden && dig.under[2].lift > -3 * 20);
+  ok('...and fade back in at the end', dig.under && !dig.under[2].hidden && dig.under[2].alpha > 0.5);
   ok('the Sandworm burrows too; a Lesser Bug walks', dig.worm && dig.walker === null);
 
   console.log('\n  What the swarm rules did across the four battles:');
