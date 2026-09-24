@@ -184,5 +184,41 @@ if (CC && CC.expFor) {
   ok('a drone earns no experience in a campaign', ex.total === 0, ex.lines[0].text);
 }
 
+/* ------------------------------------------------------ the Overmind */
+console.log('\nOVERMIND (p. 116)');
+var watchers = unit('bimmwatch', { x: 10, y: 10, side: 'A' });
+var forms = unit('battack', { x: 10, y: 18, side: 'A', models: 4 });
+if (R.profile('bimmwatch') && R.profile('battack')) {
+  var hive = table([watchers, forms]);
+  ok('a Tier II Overmind holds back Tier III Aggressive bugs', !R.aggressiveNow(hive, forms));
+  var tide = R.endlessTide(hive);
+  ok('...and brings their losses back', tide.length === 1 && forms.models > 4, forms.models + ' models');
+  ok('...but gives them no terrain bonus above its Tier', !R.overmindFor(hive, forms, false));
+}
+
+/* ------------------------------------------------------ Drone units */
+console.log('\nDRONE UNITS (p. 40) AND THE LIGHT VTOL DRONE (p. 82)');
+['dcombat', 'dassault', 'drecon', 'dengineer', 'dsupport', 'dmedic'].forEach(function (k) {
+  ok('profile ' + k + ' is a Drone unit', !!R.profile(k) && R.profile(k).rules.indexOf('Drone unit') >= 0);
+});
+var dr = unit('dcombat', { sp: 3 });
+ok('a Drone unit is Determined', R.has(dr, 'Determined'));
+var rr = R.rally(table([dr]), dr);
+ok('...and the Rally phase clears all its SP', dr.sp === 0 && rr && rr.removed === 3, JSON.stringify(rr && rr.removed));
+R.applyDrone(dr, false);
+ok('...and it counts as a drone (hackable)', dr.drone === true);
+var hd = R.resolveShootingHits(table([dr]), dr, 1, 0, null);
+ok('...and hits on it add 1 to the roll', hd.notes.indexOf('Drone unit +1 to hit rolls') >= 0);
+var vt = unit('vtoldrone', { cls: 'aircraft' });
+var s0 = vt.str;
+R.applyDrone(vt, false);
+ok('the Light VTOL drone is always a drone', vt.drone === true);
+ok('...with no extra Structure on top of its profile', vt.str === s0 && s0 === 4);
+ok('...and cannot be offered as a drone option', !R.canBeDrone(R.profile('vtoldrone')));
+var bad = R.checkArmy(['dcombat', 'dassault', 'recruits'], 3, 1);
+ok('more Drone units than others is a fault', bad.faults.some(function (f) { return /Drone units/.test(f); }));
+var fine = R.checkArmy(['dcombat', 'recruits'], 3, 1);
+ok('...an even split is not', !fine.faults.some(function (f) { return /Drone units/.test(f); }));
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

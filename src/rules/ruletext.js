@@ -67,6 +67,9 @@
       'Suppression. Not while Suppressed.',
     'Drone Control':
       'Crewless: +1 Structure, but enemy Hackers can take it over. It is also immune to Psychic Waves.',
+    'Drone unit':
+      'Robots: Determined, and loses all its Suppression in the Rally phase. Hits on it add 1 to the roll. ' +
+      'No more Drone units than other units in the army, and no Experience or Trauma in a campaign.',
     'Endless Tide':
       'In the End phase, an unbroken unit below its starting size with an unsuppressed Overmind in reach ' +
       'gets D3 lost bugs back.',
@@ -132,8 +135,8 @@
     'Overgrown Flying Bug':
       'A bug the size of an aircraft: it follows the aircraft rules, but can still assault.',
     'Overmind':
-      'Controls Animal Behaviour bugs of its Tier or lower within 18": they take cover, are not forced to charge ' +
-      'by Aggressive, and lose all Suppression in the Rally phase. Endless Tide needs an unsuppressed Overmind.',
+      'Animal Behaviour bugs of its Tier or lower within 18" take cover and lose all Suppression in the Rally phase. ' +
+      'Any bug within 18", whatever its Tier, is not forced to charge by Aggressive, and Endless Tide works within 18" of an unsuppressed Overmind.',
     'Pheromone Markers':
       'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',

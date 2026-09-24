@@ -2114,6 +2114,14 @@
     /* EW and medic teams (p. 71) */
     { key: 'ew', code: 'EW', name: 'EW team', group: 'Support teams', art: 'ew', tier: 3, size: 2, move: 5, fp: 1, range: 12, def: 9, assault: 1, morale: 4, rules: ['Jammers', 'Counter-jamming', 'Hackers'], capPL: 1 },
     { key: 'medics', code: 'MED', name: 'Medic teams', group: 'Support teams', art: 'medic', tier: 3, size: 4, move: 5, fp: 1, range: 12, def: 9, assault: 1, morale: 4, rules: ['Field Medics'], capPL: 1 },
+    // Drones (p. 72): machines in human shape, counted as infantry with the Drone unit rules (p. 40)
+    { key: 'dcombat', code: 'CDR', name: 'Combat drone unit', group: 'Drones', art: 'dronecombat', tier: 3, size: 6, move: 6, fp: 3, range: 18, def: 11, assault: 2, morale: 4, rules: ['Drone unit'] },
+    { key: 'dassault', code: 'ADR', name: 'Assault drone unit', group: 'Drones', art: 'droneassault', tier: 3, size: 6, move: 6, fp: 4, range: 12, def: 11, assault: 4, morale: 4, rules: ['Drone unit'] },
+    { key: 'drecon', code: 'RDR', name: 'Recon drone unit', group: 'Drones', art: 'dronerecon', tier: 3, size: 3, move: 8, fp: 1, range: 18, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Stealth', 'Markerlights', 'Keen-Eyed'] },
+    { key: 'dengineer', code: 'EDR', name: 'Engineer drone unit', group: 'Drones', art: 'droneengineer', tier: 3, size: 3, move: 6, fp: 1, range: 12, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Sappers'] },
+    { key: 'dsupport', code: 'SDR', name: 'Support drone unit', group: 'Drones', art: 'dronesupport', tier: 3, size: 3, move: 5, fp: 7, range: 24, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Indirect Fire', 'Minimum Range (6)'] },
+    // the book's notes give only Field Medics, but it is a drone unit by name and section
+    { key: 'dmedic', code: 'MDR', name: 'Medical drone unit', group: 'Drones', art: 'dronemedic', tier: 3, size: 3, move: 5, fp: 1, range: 12, def: 11, assault: 1, morale: 4, rules: ['Drone unit', 'Field Medics'] },
 
     /* Unclassified (p. 79) */
     { key: 'nomads', code: 'NOM', name: 'Nomads', group: 'Unclassified', art: 'nomad', tier: 2, size: 8, move: 5, fp: 2, range: 12, def: 7, assault: 3, morale: 3, rules: ['Stealth', 'Battlefield Insertion'], capPL: 2 },
@@ -2174,6 +2182,8 @@
     { key: 'hsc', code: 'HSC', name: 'Heavy Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hindrk', tier: 5, size: 1, move: 16, fp: 9, range: 18, def: 13, assault: 1, str: 5, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-tank'] },
     { key: 'interceptor', code: 'INT', name: 'Interceptor', group: 'Strike aircraft', cls: 'aircraft', art: 'jet', tier: 4, size: 1, move: 28, fp: 6, range: 24, def: 11, assault: 1, str: 3, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-aircraft'] },
     { key: 'asc', code: 'ASC', name: 'Advanced Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'jetstrike', tier: 5, size: 1, move: 24, fp: 9, range: 18, def: 13, assault: 1, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
+    // Light VTOL drone (p. 82): always Drone Controlled, the extra Structure point already in its profile
+    { key: 'vtoldrone', code: 'VTD', name: 'Light VTOL drone', group: 'Strike aircraft', cls: 'aircraft', art: 'vtoldrone', tier: 3, size: 1, move: 20, fp: 1, range: 12, def: 11, assault: 0, str: 4, mustDrone: true, rules: ['Flying unit', 'Limited Fire Arc', 'Markerlights', 'Stealth', 'Keen-Eyed', 'Drone Control'] },
 
     /* ================= THE REBEL ARMY (pp. 92-109) =================
        An insurgent force fields its own list against the same composition table.
@@ -2481,7 +2491,7 @@
      hulls and aircraft alike (p. 39) — "can be fielded by all armies except the
      Bugs". A turret is Drone Controlled already, and a Teleport craft carries troops. */
   function canBeDrone(p) {
-    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' &&
+    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' && !p.mustDrone &&
       !(p.rules || []).some(function (r) { return /^(Transport|Teleport|Turret)/.test(r); }) &&
       !/Turret/.test(p.group || '');
   }
@@ -2521,6 +2531,9 @@
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
      Hacker can reach into it. */
   function applyDrone(u, on) {
+    // Drone units, and a craft that is only ever Drone Controlled, are drones already:
+    // hackable, and with any extra Structure already in the profile (pp. 40, 82)
+    if (hasOwn(u, 'Drone unit') || (BY_KEY[u.key] && BY_KEY[u.key].mustDrone)) { u.drone = true; return u; }
     if (!on || !canBeDrone(u)) { u.drone = false; return u; }
     u.drone = true;
     u.str += 1;
@@ -2595,6 +2608,9 @@
       spent -= o5 * freeTier;
     }
     if (spent > budget) faults.push('Over budget: ' + spent + ' of ' + budget + ' composition points.');
+    // "You cannot field more Drone units than other units" (p. 40)
+    var droneN = keys.filter(function (k) { return BY_KEY[k] && (BY_KEY[k].rules || []).indexOf('Drone unit') >= 0; }).length;
+    if (droneN > keys.length - droneN) faults.push('No more Drone units than other units: ' + droneN + ' drone' + (droneN === 1 ? '' : 's') + ' to ' + (keys.length - droneN) + ' others.');
     for (var t = 1; t <= 5; t++) {
       var lim = comp.limits[t - 1], lo = lim[0] * pl, hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (doc('O2') && t === battleTier) lo = Math.ceil(lo / 2);
@@ -3477,6 +3493,8 @@
 
   function has(u, rule) {
     if (hasOwn(u, rule)) return true;
+    // Drone units "are always counted as having the Determined special rule" (p. 40)
+    if (rule === 'Determined' && hasOwn(u, 'Drone unit')) return true;
     // a Command Vehicle carries the rules of the Command Unit riding inside it
     if (!u.cargo || !u.cargo.length || !hasOwn(u, 'Command Vehicle')) return false;
     for (var c = 0; c < u.cargo.length; c++) {
@@ -3590,6 +3608,9 @@
     cmd4: { p: 'pistol' }, cmd3: { p: 'pistol' }, cmd2: { p: 'pistol' },
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
+    // drone units carry what the squads they stand in for carry; the support drones lob shells
+    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'small' },
+    dengineer: { p: 'smg' }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -3633,6 +3654,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
+    // the light VTOL drone's single nose gun
+    vtoldrone: { p: 'small' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
     interceptor: { p: 'missile', n: 2, s: 'burst' },
 
@@ -3833,14 +3856,16 @@
   /* The Overmind unit a bug is taking its orders from: friendly, on the table,
      within reach, and of this bug's Tier or higher. `unsup` asks for one that is
      not Suppressed (Endless Tide). */
-  function overmindFor(state, u, unsup) {
+  /* `anyTier`: the Tier limit is on the Overmind's cover and rally only; its
+     hold over Aggressive and its Endless Tide reach bugs of any Tier (p. 116). */
+  function overmindFor(state, u, unsup, anyTier) {
     if (!state || !u) return null;
     if (campFlag(u, 'deafSenses')) return null;             // Sensory Dysfunction
     var reach = overmindReach(state, u.side);
     for (var i = 0; i < state.units.length; i++) {
       var o = state.units[i];
       if (o === u || o.side !== u.side || !onBoard(o) || !has(o, 'Overmind')) continue;
-      if (o.tier < u.tier) continue;
+      if (!anyTier && o.tier < u.tier) continue;
       if (unsup && status(o) !== 'ready') continue;
       if (unitDist(o, u) <= reach) return o;
     }
@@ -3861,7 +3886,7 @@
   // Aggressive: forced to charge the closest enemy — unless an Overmind holds it back
   function aggressiveNow(state, u) {
     if (!has(u, 'Aggressive') || isMachine(u)) return false;
-    return !overmindFor(state, u, false);
+    return !overmindFor(state, u, false, true);
   }
   /* Endless Tide, in the End phase: an unbroken unit near an unsuppressed
      Overmind digs D3 lost bugs back out of the ground. */
@@ -3870,7 +3895,7 @@
     state.units.forEach(function (u) {
       if (!onBoard(u) || !has(u, 'Endless Tide') || status(u) === 'broken') return;
       var full = u.startSize || u.size;
-      if (u.models >= full || !overmindFor(state, u, true)) return;
+      if (u.models >= full || !overmindFor(state, u, true, true)) return;
       var n = Math.min(d3(), full - u.models);
       u.models += n;
       log.push({ t: 'rally', text: 'Endless Tide — ' + n + ' more bug' + (n === 1 ? '' : 's') + ' crawl out to join ' + u.label + ' (' + u.models + '/' + full + ').', unit: u, n: n });
@@ -4017,6 +4042,8 @@
 
   function resolveShootingHits(state, target, hits, mod, atk) {
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
+    // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
+    if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
     var medic = medicFor(state, target), medics = !!medic;
     var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
     var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
@@ -4066,7 +4093,7 @@
   }
 
   function resolveAssaultHits(target, hits, mod, atk) {
-    mod = mod || 0;
+    mod = (mod || 0) + (droneUnit(target) ? 1 : 0);          // drone units, p. 40
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
     var nbk = campFlag(atk, 'nbk');                     // Natural Born Killers
     for (var i = 0; i < hits; i++) {
@@ -5867,8 +5894,16 @@
     return 0;
   }
 
+  function droneUnit(u) { return !!u && hasOwn(u, 'Drone unit'); }
   function rally(state, u) {
     if (u.sp === 0) return null;
+    // Drone units "automatically remove all Suppression points in the Rally phase" (p. 40)
+    if (droneUnit(u)) {
+      var sbD = status(u), wasD = u.sp;
+      u.sp = 0;
+      return { morale: currentMorale(u), dice: [], removed: wasD, before: wasD, after: 0, reroll: false, gone: false,
+        need: 4, jammed: false, extras: ['Drone unit: all SP removed'], statusBefore: sbD, statusAfter: 'ready', overmind: true };
+    }
     // Overmind (p. 116): bugs it controls lose every Suppression point in the Rally phase
     if (has(u, 'Animal Behaviour') && overmindFor(state, u, false)) {
       var sb0 = status(u), was = u.sp, om = overmindFor(state, u, false);
@@ -6195,6 +6230,9 @@
       'Suppression. Not while Suppressed.',
     'Drone Control':
       'Crewless: +1 Structure, but enemy Hackers can take it over. It is also immune to Psychic Waves.',
+    'Drone unit':
+      'Robots: Determined, and loses all its Suppression in the Rally phase. Hits on it add 1 to the roll. ' +
+      'No more Drone units than other units in the army, and no Experience or Trauma in a campaign.',
     'Endless Tide':
       'In the End phase, an unbroken unit below its starting size with an unsuppressed Overmind in reach ' +
       'gets D3 lost bugs back.',
@@ -6260,8 +6298,8 @@
     'Overgrown Flying Bug':
       'A bug the size of an aircraft: it follows the aircraft rules, but can still assault.',
     'Overmind':
-      'Controls Animal Behaviour bugs of its Tier or lower within 18": they take cover, are not forced to charge ' +
-      'by Aggressive, and lose all Suppression in the Rally phase. Endless Tide needs an unsuppressed Overmind.',
+      'Animal Behaviour bugs of its Tier or lower within 18" take cover and lose all Suppression in the Rally phase. ' +
+      'Any bug within 18", whatever its Tier, is not forced to charge by Aggressive, and Endless Tide works within 18" of an unsuppressed Overmind.',
     'Pheromone Markers':
       'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',
@@ -6823,8 +6861,10 @@
   function isMachineKey(key) { var p = profile(key); return !!p && p.cls !== 'infantry'; }
   function isCommandKey(key) { var p = profile(key); return !!p && !!p.command; }
 
-  /* Every legal promotion target for a roster entry. */
-  function promotionTargets(entry) {
+  /* Every legal promotion target for a roster entry. With the company given, no
+     higher than one Tier over the Company Tier: "a Tier II Aspiring Company...
+     may promote its units up to Tier III" (p. 84), aspiring or not. */
+  function promotionTargets(entry, co) {
     var p = profile(entry.key);
     if (!p) return [];
     if (p.cls !== 'infantry') return [];                       // machines never promote
@@ -6835,6 +6875,7 @@
       if (q.cls !== 'infantry' || isLeaderP(q)) return false;
       if (q.key === entry.key) return false;
       if (q.tier !== p.tier && q.tier !== p.tier + 1) return false;
+      if (co && q.tier > co.tier + 1) return false;
       return groups.indexOf(q.group) >= 0;
     });
   }
@@ -7044,7 +7085,9 @@
     opts = opts || {};
     var p = profile(key);
     return {
-      rid: opts.rid || rid(), key: key, prop: opts.prop || null, drone: !!opts.drone,
+      rid: opts.rid || rid(), key: key, prop: opts.prop || null,
+      // a Drone unit, or a craft only ever flown as a drone, is one from the start (pp. 40, 82)
+      drone: !!opts.drone || !!(p && (p.mustDrone || (p.rules || []).indexOf('Drone unit') >= 0)),
       name: opts.name || p.name, exp: 0, tp: 0,
       honours: [], traumas: [], upgrades: [],
       free: !!opts.free, restUntil: 0, lastBattle: 0, history: []
@@ -7305,6 +7348,33 @@
     return { ok: true };
   }
 
+  /* "Tier V companies may change (but not get a new one!) one doctrine every 5
+     battles" (p. 87): the first change comes 5 battles after reaching Tier V, and
+     each change starts the count again. A save from before this was kept reads
+     as due now. */
+  function canSwapDoctrine(co) {
+    if (co.tier < 5) return { ok: false, why: 'Only a Tier V ' + words(co).force.toLowerCase() + ' may change a ' + creedOf(co).one + '.' };
+    if (!co.doctrines.length) return { ok: false, why: 'Nothing held to change.' };
+    var due = co.doctrineSwapAt == null ? 0 : co.doctrineSwapAt;
+    if (co.record.battles < due) {
+      var left = due - co.record.battles;
+      return { ok: false, due: due, why: 'Next change after ' + left + ' more battle' + (left === 1 ? '' : 's') + '.' };
+    }
+    return { ok: true };
+  }
+  function swapDoctrine(co, outId, inId) {
+    var chk = canSwapDoctrine(co);
+    if (!chk.ok) return chk;
+    if (!hasDoctrine(co, outId)) return { ok: false, why: 'Not held.' };
+    var trial = { doctrines: co.doctrines.filter(function (x) { return x !== outId; }), tier: co.tier, faction: co.faction };
+    if (inId === outId) return { ok: false, why: 'The same one.' };
+    var can = canTakeDoctrine(trial, inId);
+    if (!can.ok) return can;
+    co.doctrines = trial.doctrines.concat([inId]);
+    co.doctrineSwapAt = co.record.battles + 5;
+    return { ok: true };
+  }
+
   /* ================= company legality and promotion ================= */
   /* Can this roster field a legal army at the given Battle Tier and Priority Level?
      Greedy: take the cheapest legal spread the composition table asks for. It only
@@ -7551,7 +7621,7 @@
   }
 
   function promoteUnit(co, entry, newKey) {
-    var targets = promotionTargets(entry);
+    var targets = promotionTargets(entry, co);
     if (!targets.some(function (q) { return q.key === newKey; })) return { ok: false, why: 'Not a legal promotion for this unit.' };
     var cost = promotionCost(entry, newKey, co);
     if (entry.exp < cost.exp) return { ok: false, why: 'Needs ' + cost.exp + ' EXP, has ' + entry.exp + '.' };
@@ -7758,6 +7828,8 @@
     if (p.command) return { total: 0, lines: [{ text: 'Command Units take no Trauma Points.', n: 0 }] };
     if (p.leaderBug) return { total: 0, lines: [{ text: 'Leader Bugs take no Trauma Points.', n: 0 }] };
     if (p.alpha) return { total: 0, lines: [{ text: 'Alpha squads take no Trauma Points.', n: 0 }] };
+    // "Drone units do not get any Experience and Trauma points during campaigns" (p. 40)
+    if (entry.drone) return { total: 0, lines: [{ text: 'Drones take no Trauma Points.', n: 0 }] };
     // To Hell and Back!: the fighters do not hold being broken against themselves
     if (line.brokenEver && !hasDoctrine(ctx.company, 'H4')) out.push({ text: 'Was broken at least once', n: 2 });
     // Stairs to Heaven: the Holy Warriors' dead are already where they wanted to go
@@ -7811,11 +7883,13 @@
       need = (entry.upgrades || []).indexOf(1) >= 0 ? 2 : 4;   // Advanced Emergency Systems
       note = 'Aircraft make an emergency landing on a ' + need + '+' +
         (need === 2 ? ' with Advanced Emergency Systems.' : '.');
+    } else if (line.catastrophic) {
+      // a ground vehicle, crewed or a drone, blown apart is gone (p. 86)
+      return { roll: null, saved: false, need: null, note: 'Destroyed in a catastrophic explosion — nothing is left to recover.' };
     } else if (entry.drone) {
       need = won ? 3 : 5;
       note = 'A drone is recovered on a ' + need + '+.';
     } else {
-      if (line.catastrophic) return { roll: null, saved: false, need: null, note: 'Destroyed in a catastrophic explosion — nothing is left to recover.' };
       need = won ? 3 : 5;
       note = 'A ground vehicle is recovered on a ' + need + '+.';
     }
@@ -7977,13 +8051,20 @@
         } else if (line.wiped && entry.rid === co.cmdRid) {
           u.rebuilt = true;
           entry.history.push('The field command was wiped out and reconstituted.');
+        } else if (line.wiped && entry.drone && profile(entry.key).cls === 'infantry') {
+          // a destroyed Drone unit can be salvaged, as a drone hull can (p. 40)
+          var svD = salvageOf[entry.rid] || salvage(line, entry, won || report.winner === null);
+          u.salvage = svD;
+          if (svD.saved) { entry.restUntil = 1; rec.salvaged.push(entry); }
+          else { u.wiped = true; rec.gone.push(entry); }
         } else if (line.wiped && (profile(entry.key).cls === 'infantry' || profile(entry.key).faction === 'bugs')) {
           u.wiped = true;
           rec.gone.push(entry);
         } else if (line.destroyed && profile(entry.key).cls !== 'infantry') {
           var sv = salvageOf[entry.rid] || salvage(line, entry, won || report.winner === null);
           u.salvage = sv;
-          if (sv.saved) { entry.restUntil = out.turn + 1; rec.salvaged.push(entry); }
+          // it skips the next battle (p. 86): one spell in the workshop, counted down by the next aftermath
+          if (sv.saved) { entry.restUntil = 1; rec.salvaged.push(entry); }
           else { u.wiped = true; rec.gone.push(entry); }
         }
 
@@ -8686,7 +8767,7 @@
         }
         return;
       }
-      var all = promotionTargets(e);
+      var all = promotionTargets(e, co);
       var affordable = all.filter(function (q) {
         var c = promotionCost(e, q.key);
         return e.exp >= c.exp && co.kUC >= c.kUC;
@@ -8829,6 +8910,7 @@
     canTakeUpgrade: canTakeUpgrade, availableUpgrades: availableUpgrades, takeUpgrade: takeUpgrade,
 
     hasDoctrine: hasDoctrine, canTakeDoctrine: canTakeDoctrine, doctrineSlots: doctrineSlots,
+    canSwapDoctrine: canSwapDoctrine, swapDoctrine: swapDoctrine,
     canFieldArmy: canFieldArmy, canPromoteCompany: canPromoteCompany, promoteCompany: promoteCompany,
     canAspire: canAspire, effectiveTier: effectiveTier, rebuildNeeds: rebuildNeeds,
     traumaThreshold: traumaThreshold,
@@ -9400,6 +9482,18 @@
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
         noteSplit(state, def, 'hold', defs, Math.floor(defs.length / 2), Math.ceil(defs.length / 2),
           'Half the force sets up within 18" of the objective; the rest arrives on a 5+ a unit from turn 2.');
+        /* "On Priority Level 2 and higher, the attacker may hold some of his/her
+           units in reserve. On Priority Level 2, these reserve units may enter the
+           battlefield in the 2nd turn... on Priority Level 3 in the 2nd and/or 3rd
+           turn, and so on" (p. 54). Nothing is held unless the player chooses it,
+           and at least one unit has to come on at the start. */
+        var pl = state.cfg.pl || 1;
+        if (pl >= 2) {
+          var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
+          noteSplit(state, atk, 'hold', atks, 0, Math.max(0, atks.length - 1),
+            'You may hold units back; they come on from your table edges on turn 2' +
+            (pl > 2 ? ' to ' + pl + ', as you choose' : '') + '.');
+        }
         state.sc.zones = {};
         state.sc.zones[def] = null;               // a circle, not a strip
         state.sc.zones[atk] = null;               // corner bands, not a strip
@@ -9424,8 +9518,25 @@
         return dist(x, y, c.x, c.y) <= c.r;
       },
       hint: 'The objective at the centre has to come down. Any attacking infantry may Demolish it — Sappers at +4, everyone else at +2. The attacker comes in around three corners; the defender owns the fourth. Breaking the enemy wins nothing here.',
+      /* The attacker's held units come on in turns 2 to the Priority Level, as
+         many as the player likes each turn; what is still waiting on the last of
+         those turns comes on then. */
+      reservePick: function (state, side) {
+        var pl = state.cfg.pl || 1;
+        if (side !== state.sc.attacker || state.turn < 2 || state.turn > pl) return null;
+        var pool = state.units.filter(function (u) { return u.side === side && u.alive && u.reserve && u.wave === 2; });
+        if (!pool.length) return null;
+        var last = state.turn >= pl;
+        return { pool: pool, min: last ? pool.length : 0, max: pool.length,
+          text: last ? 'The last of your reserves come on this turn.' : 'Bring on as many of your reserves as you like this turn — the rest by turn ' + pl + '.' };
+      },
       reserves: function (state, side) {
-        if (side === state.sc.attacker || state.turn < 2) return [];
+        if (side === state.sc.attacker) {
+          // an AI attacker that held anything back brings it all on at turn 2
+          if (state.turn < 2) return [];
+          return state.units.filter(function (u) { return u.side === side && u.alive && u.reserve && u.wave === 2; });
+        }
+        if (state.turn < 2) return [];
         return state.units.filter(function (u) {
           return u.side === side && u.alive && u.reserve && d6() >= 5;
         });
@@ -10527,7 +10638,11 @@
     win: 'Destroy all the objectives without being routed.',
     hint: 'A unit within 1" of an objective can destroy it as its action. Counters within 12" and in sight are revealed each Beginning phase, and D3−1 of the closest are revealed anyway. The OpFor turns aggressive near the objectives.',
     objectives: function (state) {
-      var n = 3 + 2 * (state.cfg.pl || 1), out = [];
+      /* "3 objectives are placed... Add 2 objectives per Priority Level" (p. 155):
+         3 at Priority Level 1, the book's base, and 2 more for each level above it
+         — so each extra player in a cooperative game brings two more targets.
+         They go 12" apart; only if the table cannot take that many does the gap close. */
+      var n = 3 + 2 * Math.max(0, (state.cfg.pl || 1) - 1), out = [];
       for (var apart = 12; apart >= 6 && out.length < n; apart -= 2) {
         out = [];
         for (var g = 0; g < 8000 && out.length < n; g++) {
@@ -14066,6 +14181,13 @@
     // the sniper team alone goes in with night-vision goggles
     sniperteam: ['marksmannv', 'spotternv', 'sniperinf'],
     armour: ['armour'],
+    // PMC drone units (p. 72): grey machines in human shape, a stripe of the company's colour across them
+    dronecombat: ['drlead', 'drrifle'],
+    droneassault: ['drsmg', 'drshotgun'],
+    dronerecon: ['drscout', 'drscoutsmg'],
+    droneengineer: ['drbreacher', 'drsapper'],
+    dronesupport: ['drheavy'],
+    dronemedic: ['drmedic', 'drcorpsman'],
     // the Protectors: the heaviest suits in the list, with and without jump packs
     protector: ['protector'],
     protectorhm: ['protectorhm'],
@@ -14183,7 +14305,22 @@
   }
 
   // kit per role: helmet, weapon, pack, build
+  // the drones' plating: gunmetal grey all over
+  // the drone squads' mechanical parts
+  var RB = { strut: '#555c65', joint: '#2a2e34', piston: '#a3aab3', foot: '#383d44', eye: '#5fe0ff' };
+  var DRONE_GREY = { light: '#b9c0c8', mid: '#7f8791', dark: '#3b4047', helm: '#6c747e', cloth: '#5b626b', skin: '#8a929c', skinDark: '#5d646d' };
   var KIT = {
+    drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drshotgun: { helm: 'bot', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
+    drscoutsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drbreacher: { helm: 'bot', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsapper: { helm: 'bot', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drheavy: { helm: 'bot', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
+    drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
+    drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
@@ -14668,6 +14805,33 @@
       P(-6, -30 + kb, 3, 12, pal.mid);
       P(-2, -22 + kb, 6, 9, pal.dark);                 // shin dropped to the peg
       P(-3, -14 + kb, 8, 4, BOOT);
+    } else if (kit.robot && pose === 'kneel') {
+      /* A drone braced on one knee: struts and joints rather than cloth, the
+         rear shin a strut laid along the ground, the front one a piston. */
+      P(-7, -11, 3, 8, RB.strut);                      // rear thigh strut
+      P(-9, -5, 5, 5, RB.joint); P(-8.5, -4.5, 1.5, 1.5, pal.light);   // knee joint, down
+      P(-18, -3, 10, 2.4, RB.strut); P(-18, -3, 10, 0.8, pal.light);   // shin along the ground
+      P(-21, -4, 4, 4, RB.foot);
+      P(-1, -12, 10, 3, RB.strut); P(-1, -12, 10, 1, pal.light);       // front thigh, level
+      P(7, -14, 5, 5, RB.joint); P(7.5, -13.5, 1.5, 1.5, pal.light);   // raised knee joint
+      P(8, -9, 2.4, 6, RB.piston); P(9.2, -9, 0.8, 6, 'rgba(0,0,0,.35)');
+      P(5, -3, 9, 3, RB.foot); P(5, -3, 9, 0.8, pal.light);            // the splayed foot
+      P(5, -0.6, 9, 0.6, '#08090c');
+    } else if (kit.robot) {
+      // thin jointed legs: a strut to the knee, a piston below it, a flat splayed foot
+      var rl = step ? [4, 0] : [0, 3];
+      for (var RL = 0; RL < 2; RL++) {
+        var rx = RL ? 2 : -6, rlift = rl[RL];
+        P(rx, -20 + rlift, 3.5, 8, RB.strut);          // thigh strut
+        P(rx, -20 + rlift, 1.2, 8, pal.light);
+        P(rx - 0.5, -13 + rlift, 4.5, 4.5, RB.joint);  // knee joint
+        P(rx, -12.5 + rlift, 1.5, 1.5, pal.light);
+        P(rx + 0.8, -9 + rlift, 2, 6, RB.piston);      // shin piston
+        P(rx + 2.2, -9 + rlift, 0.8, 6, 'rgba(0,0,0,.35)');
+        P(rx - 1.5, -3 + rlift, 7, 3, RB.foot);        // foot
+        P(rx - 1.5, -3 + rlift, 7, 0.8, pal.light);
+        P(rx - 1.5, -0.6 + rlift, 7, 0.6, '#08090c');
+      }
     } else if (pose === 'kneel') {
       /* Down on one knee: the rear knee on the ground with the shin laid out
          behind and the toes tucked, the front thigh level out to a raised knee
@@ -14825,6 +14989,21 @@
       P(tx + 2, -23 + drop, tw - 4, 0.75, 'rgba(0,0,0,.35)');
       P(tx + 2, -36 + drop, 1, 1, pal.dark); P(tx + tw - 3, -36 + drop, 1, 1, pal.dark);   // bolts
       P(-1, -36 + drop, 2, 1, '#5fd0f0');              // a status light
+    } else if (kit.robot) {
+      /* A drone's chassis: a chest housing over a narrow spine, panel seams,
+         a cooling grille and a single status light. No webbing, no pouches. */
+      P(tx, -40 + drop, tw, 13, pal.mid);              // the chest housing
+      P(tx, -40 + drop, 4, 13, pal.light);
+      P(tx, -27 + drop, tw, 1, 'rgba(0,0,0,.45)');     // its lower edge
+      P(-3, -26 + drop, 6, 7, RB.joint);               // the exposed spine at the waist
+      P(-3, -25 + drop, 6, 0.8, pal.light); P(-3, -23 + drop, 6, 0.8, pal.light); P(-3, -21 + drop, 6, 0.8, pal.light);
+      P(tx + 1, -22 + drop, tw - 2, 3, pal.helm);      // hip plate
+      P(tx + 1, -22 + drop, tw - 2, 0.8, pal.light);
+      P(-0.4, -40 + drop, 0.8, 13, 'rgba(0,0,0,.35)'); // centre seam
+      P(tx + 2, -34 + drop, tw - 4, 0.7, 'rgba(0,0,0,.3)');
+      [0, 1, 2].forEach(function (gi) { P(2, -38 + drop + gi * 1.6, 5, 0.8, '#23272c'); });   // cooling grille
+      P(-5, -37 + drop, 3, 3, '#1b1e22'); P(-4.5, -36.5 + drop, 2, 2, RB.eye);   // status light
+      P(-3, -43 + drop, 7, 2, RB.joint);               // neck mount
     } else if (kit.vest) {
       /* Assault troops: a dark grey plate carrier over the fatigues, so they
          read at a glance as something heavier than the rifle line — a front
@@ -14860,11 +15039,13 @@
       P(1.5, -37 + drop, 0.75, 4, 'rgba(0,0,0,.4)');
       P(-3, -43 + drop, 7, 2, pal.dark);               // collar
     }
-    P(-1, -22 + drop, 3, 3, '#8a8f98');                // belt buckle
-    P(-1, -22 + drop, 3, 1, '#c9cdd4');
-    P(tx + 2, -20 + drop, 4, 1, pal.light);            // pouch flaps catching the light
-    P(tx + tw - 6, -20 + drop, 4, 1, pal.light);
-    if (!kit.armoured && !kit.robe && !kit.cloak && !kit.tunic && pose !== 'prone') {
+    if (!kit.robot) {
+      P(-1, -22 + drop, 3, 3, '#8a8f98');              // belt buckle
+      P(-1, -22 + drop, 3, 1, '#c9cdd4');
+      P(tx + 2, -20 + drop, 4, 1, pal.light);          // pouch flaps catching the light
+      P(tx + tw - 6, -20 + drop, 4, 1, pal.light);
+    }
+    if (!kit.armoured && !kit.robot && !kit.robe && !kit.cloak && !kit.tunic && pose !== 'prone') {
       // the torso tapers from the chest to the waist, not a box all the way down
       carve([[tx - 0.5, -32 + drop], [tx + 2.2, -22 + drop], [tx - 0.5, -22 + drop]]);
       carve([[tx + tw + 0.5, -32 + drop], [tx + tw - 2.2, -22 + drop], [tx + tw + 0.5, -22 + drop]]);
@@ -15019,6 +15200,16 @@
 
     /* ---- arms ---- */
     var aw = 5 + b;
+    if (kit.robot) {
+      // strut arms with a ball elbow and a clamp for a hand
+      P(-12 - b, -39 + drop, 3, 6, RB.strut); P(-12 - b, -39 + drop, 1, 6, pal.light);
+      P(-13 - b, -34 + drop, 4.5, 4.5, RB.joint); P(-12.5 - b, -33.5 + drop, 1.4, 1.4, pal.light);
+      P(-12 - b, -30 + drop, 2.6, 3, RB.piston);
+      P(-14 - b, -28 + drop, 6, 3, RB.foot); P(-14 - b, -28 + drop, 1.2, 3, '#5a6068');   // the clamp
+      P(tx + tw - 1, -38 + drop, 3, 5, RB.strut);
+      P(tx + tw - 1.5, -34 + drop, 4, 4, RB.joint);
+      P(tx + tw - 0.5, -30 + drop, 2.4, 3, RB.piston);
+    } else {
     P(-13 - b, -39 + drop, aw, 13, pal.mid);           // forward arm, down to the grip
     P(-13 - b, -39 + drop, 2, 13, pal.light);
     P(-13 - b, -33 + drop, aw, 1, 'rgba(0,0,0,.30)');  // the elbow, bent
@@ -15027,6 +15218,7 @@
     P(-13.5 - b, -28 + drop, 2, 1, '#454b54');         // knuckles catching the light
     P(tx + tw - 2, -38 + drop, aw, 11, pal.mid);       // rear arm
     P(tx + tw + aw - 3, -38 + drop, 1, 11, 'rgba(0,0,0,.30)');  // its far side in shadow
+    }
     if (kit.sleeves === 'rolled') {
       /* shirt sleeves rolled to above the elbow: bare forearms and hands, the
          roll of cloth a lit band at the top of each */
@@ -15157,7 +15349,8 @@
     }
 
     /* ---- head ---- */
-    P(-2, -45 + drop, 5, 4, pal.dark);                 // neck
+    if (kit.robot) P(-1, -46 + drop, 3, 5, RB.piston); // a neck piston, not a neck
+    else P(-2, -45 + drop, 5, 4, pal.dark);            // neck
     var bodyPal = pal;
     if (pal.hat) {                                     // the helmet in the company's colour
       pal = {}; for (var bk2 in bodyPal) pal[bk2] = bodyPal[bk2];
@@ -15188,6 +15381,19 @@
         P(0, -50 + drop, 2, 1, '#4e5c6a');
         P(-8, -47 + drop, 2, 5, pal.dark);              // neck guard
         P(4, -56 + drop, 3, 2, pal.dark);               // crest fitting
+        break;
+      case 'bot':
+        /* a drone's sensor head: a low wedge, wider than it is tall, with one
+           lit optic band across the front and a stub aerial */
+        P(-6, -53 + drop, 14, 7, pal.helm);
+        P(-6, -53 + drop, 5, 7, pal.light);
+        P(-4, -54.5 + drop, 10, 1.5, pal.helm);
+        P(-6, -47 + drop, 14, 1, 'rgba(0,0,0,.4)');     // the jaw line
+        P(0, -51 + drop, 8.5, 2.6, '#101418');          // the optic band
+        P(1, -50.6 + drop, 6.5, 1.4, RB.eye);
+        P(4.5, -50.8 + drop, 2, 1.8, '#e9fbff');        // the lens, brightest
+        P(-5, -58 + drop, 1, 4, RB.joint);              // stub aerial
+        P(-5.3, -59 + drop, 1.6, 1.4, RB.eye);
         break;
       case 'sealed':
         P(-7, -56 + drop, 15, 12, pal.helm);
@@ -17847,6 +18053,8 @@
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
+    // the Light VTOL drone: a flying disc with two swept winglets and a gun under its lip
+    vtoldrone: { len: 1.45, wid: 1.45, hgt: 9, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
@@ -18253,15 +18461,14 @@
         }
         stroke([pts[0], pts[1]], m(0.8), GLO.m);                 // the leading edge
         if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
-        // a drone's aerials: two whips standing off the top edge of the dorsal wing
+        // a drone's aerial: one whip off the top edge of the dorsal wing, raked at the wing's own sweep, a blue light at its tip
         if (u.drone && w.dorsal && !dead) {
-          [0.62, 0.86].forEach(function (k) {
-            var at0 = le + (tp - le) * k, r0 = rf + (w.sp - rf) * k;
-            var a0 = P3(at0, r0, w.ph), a1 = P3(at0 - 0.12 * Lc, r0 + 0.7, w.ph);
-            stroke([a0, a1], 1.6, WH.dk);
-            stroke([a0, a1], 0.8, WH.lt);
-            ellipse(g, a1[0], a1[1], 1.8, 1.8, '#ff5040');
-          });
+          var k8 = 0.78, at0 = le + (tp - le) * k8, r0 = rf + (w.sp - rf) * k8;
+          var a0 = P3(at0, r0, w.ph), a1 = P3(at0 + (tp - le) * 0.42, r0 + (w.sp - rf) * 0.42, w.ph);
+          stroke([a0, a1], 1.6, WH.dk);
+          stroke([a0, a1], 0.8, WH.lt);
+          ellipse(g, a1[0], a1[1], 1.9, 1.9, '#6ebeff');
+          ellipse(g, a1[0], a1[1], 0.9, 0.9, '#e4f4ff');
         }
       }
       // the fuselage: rings of stations [t, r] turned into an eight-sided body
@@ -20602,6 +20809,39 @@
           });
           break;
         }
+        case 'disc': {
+          /* A saucer: a flat disc with a low hump on top where the sensor dome
+             sits, a ring of lift vents lit underneath, two small swept winglets
+             off the back and a gun slung under the front lip. */
+          var R0 = L * 0.5, ring = function (r) {
+            var out = [];
+            for (var a = 0; a < 16; a++) out.push([Math.cos(a / 16 * Math.PI * 2) * r, Math.sin(a / 16 * Math.PI * 2) * r]);
+            return out;
+          };
+          if (!dead) {
+            var ug = S3(AF(0, 0), z - 1);
+            sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
+          }
+          [-1, 1].forEach(function (sd) {
+            part(-R0 * 0.55, sd * R0 * 1.05, function () {
+              plate(AF, [[-R0 * 0.2, sd * R0 * 0.82], [-R0 * 0.85, sd * R0 * 1.32], [-R0 * 1.05, sd * R0 * 1.32], [-R0 * 0.75, sd * R0 * 0.75]], z + H * 0.28, 2);
+            });
+          });
+          part(0, 0, function () {
+            noseGun(R0 * 0.78, 0, z + H * 0.1, 0.34, 'mg');
+            shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
+            shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
+            shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
+            if (!dead) {
+              // running lights round the rim
+              for (var li = 0; li < 16; li += 2) {
+                var la = li / 16 * Math.PI * 2, lp = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
+                sEllipse(lp[0], lp[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
+              }
+            }
+          }, true);
+          break;
+        }
         case 'hawk': case 'chinook': case 'chinookcp': {
           var chin = st !== 'hawk';
           var cabL = chin ? L : L * 0.62;
@@ -21568,6 +21808,7 @@
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
       }
+      else if (spec.craft === 'disc') { back = 0; off = 0; y5 = lift + spec.hgt * 0.68; }     // on the disc's hump
       else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
@@ -21582,7 +21823,7 @@
       if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
-      if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
+      if (spec.fly && (spec.craft === 'jet' || spec.craft === 'disc')) return;      // a jet or a disc carries the dome only
       if (spec.fly) aq = along(-spec.len * 0.06, spec.wid * 0.3);   // a rotorcraft's stands on the back of its body
       else if (legs) aq = along(spec.len * back - 0.2, -spec.wid * 0.3);   // its left shoulder
       else {
@@ -25506,7 +25747,7 @@
       // the Overmind's reach rolling out, and the lost bugs coming back up out of the ground
       var minds = [];
       tide.forEach(function (l) {
-        var om = R.overmindFor(state, l.unit, true);
+        var om = R.overmindFor(state, l.unit, true, true);
         if (om && minds.indexOf(om) < 0) { minds.push(om); addFx({ kind: 'wave', x: om.x, y: om.y, up: 0, r: 18, rgb: '150,215,90', dur: 1400, blocking: true }); }
         addFx({ kind: 'rise', x: l.unit.x, y: l.unit.y, rgb: '205,170,95', n: 10, delay: 300, dur: 1400 });
       });
@@ -29110,6 +29351,7 @@
   function resetShow() {
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
+    pendingArrive = {};
     anims.forEach(function (an) { if (an.unit) an.unit.burrow = null; });
     anims.length = 0;
     FX.clear && FX.clear();
@@ -29171,10 +29413,17 @@
      One event at a time, waiting for the animation each one starts before the
      next goes in. That is the pacing the game has always had: the shot is
      drawn, and only when it lands does the card come up. */
+  /* A unit whose arrival is still waiting in the queue is already on the
+     table in the state that came with it — but it is not drawn until the
+     arrival plays, so an AI's Battlefield Insertion does not sit there through
+     the beat before its drop. Kept by id: a networked state is rebuilt each turn. */
+  var pendingArrive = {};
+  function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
   var show = {
     queue: [],
     running: false,
     play: function (events) {
+      (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
       this.queue = this.queue.concat(events || []);
       this.pump();
     },
@@ -29303,6 +29552,7 @@
         return;
       }
       case 'arrive': {
+        delete pendingArrive[ev.id];
         var au = evUnit(ev.id);
         if (!au) return;
         if (ev.how === 'drop') landUnit(au);
@@ -31889,6 +32139,7 @@
           return;
         }
         var u = it.unit, ax = dispX(u), ay = dispY(u);
+        if (arrivalQueued(u)) return;                 // its arrival has not played yet
         var arr = arriving(u);
         if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
         if (arr.hidden) return;                       // teleporting in, or under the ground: not here yet
@@ -35968,6 +36219,12 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
+    // Tier V: one change every five battles (p. 87)
+    if (co.tier >= 5) {
+      var sw = C.canSwapDoctrine(co);
+      h += '<button class="lnk" data-go="doctrine" data-side="' + side + '" data-swap="1"' + (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') +
+        '>Change a ' + C.creedOf(co).one + (sw.ok ? '' : ' — ' + esc(sw.why)) + '</button> ';
+    }
     h += promotionPanel(co, side);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
@@ -36455,7 +36712,7 @@
       if (C.isLeaderP(p)) return;
       if ((p.rules || []).indexOf('Turret') >= 0) return;            // turrets never earn EXP
       var acts = '';
-      C.promotionTargets(e).forEach(function (q) {
+      C.promotionTargets(e, co).forEach(function (q) {
         var c = C.promotionCost(e, q.key);
         var can = e.exp >= c.exp && co.kUC >= c.kUC;
         acts += '<button class="lnk" data-promote="' + e.rid + '" data-to="' + q.key + '"' +
@@ -37206,11 +37463,12 @@
   }
 
   /* ================= doctrine picking ================= */
-  var docSide = 'A';
+  var docSide = 'A', docSwap = false, swapOut = null;
   function doctrineView() {
     var co = camp.companies[docSide];
     var cr = C.creedOf(co), reb = co.faction === 'rebel', bug = co.faction === 'bugs' || co.faction === 'xeno';
     var open = C.doctrineSlots(co) - co.doctrines.length;
+    if (docSwap && C.canSwapDoctrine(co).ok) return swapView(co, cr);
     var h = '<h2>Choose ' + (co.faction === 'bugs' ? 'an ' : 'a ') + cr.one + '</h2>';
     h += '<p class="lede">' + esc(co.name) + ' has ' + open + ' ' + cr.one +
       ' slot' + (open === 1 ? '' : 's') + ' free — one per ' + C.words(co).tier +
@@ -37234,6 +37492,31 @@
       h += '</div>';
     });
     h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+    return h;
+  }
+
+  /* A Tier V change: first the one to give up, then the one to take in its place. */
+  function swapView(co, cr) {
+    var h = '<h2>Change a ' + cr.one + '</h2>';
+    h += '<p class="lede">' + esc(co.name) + ' may change one ' + cr.one + ' now, and again five battles later. ' +
+      (swapOut ? 'Giving up <b>' + esc(C.doctrine(swapOut).name) + '</b> — pick what replaces it.' : 'Pick the one to give up.') + '</p>';
+    h += '<div class="docpick">';
+    if (!swapOut) {
+      co.doctrines.forEach(function (id) {
+        var d = C.doctrine(id);
+        h += '<button class="doc on" data-swapout="' + id + '"><b>' + esc(d.name) + '</b><span>' + esc(d.text) + '</span></button>';
+      });
+    } else {
+      var trial = { doctrines: co.doctrines.filter(function (x) { return x !== swapOut; }), tier: co.tier, faction: co.faction };
+      cr.list.forEach(function (d) {
+        if (d.id === swapOut) return;
+        var chk = C.canTakeDoctrine(trial, d.id);
+        if (!chk.ok && C.hasDoctrine(co, d.id)) return;
+        h += '<button class="doc" data-swapin="' + d.id + '"' + (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"') +
+          '><b>' + esc(d.name) + '</b><i>' + esc(d.cat) + '</i><span>' + esc(d.text) + '</span></button>';
+      });
+    }
+    h += '</div><p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
   }
 
@@ -37314,6 +37597,12 @@
     if (t.hasAttribute('data-doc')) {
       draft.doctrine = t.getAttribute('data-doc');
       if (openModal === 'doctrine') openModal = null;   // one to choose: the pick closes it
+      render(); return;
+    }
+    if (t.hasAttribute('data-swapout')) { swapOut = t.getAttribute('data-swapout'); render(); return; }
+    if (t.hasAttribute('data-swapin')) {
+      var sr = C.swapDoctrine(camp.companies[docSide], swapOut, t.getAttribute('data-swapin'));
+      if (sr.ok) { swapOut = null; docSwap = false; save(); view = 'hub'; }
       render(); return;
     }
     if (t.hasAttribute('data-take')) {
@@ -37425,7 +37714,7 @@
       keepFoundName();
       render(); return;
     }
-    if (t.hasAttribute('data-side')) docSide = t.getAttribute('data-side');
+    if (t.hasAttribute('data-side')) { docSide = t.getAttribute('data-side'); docSwap = t.hasAttribute('data-swap'); swapOut = null; }
     if (t.hasAttribute('data-rival')) intelIdx = +t.getAttribute('data-rival') || 0;
 
     switch (go) {

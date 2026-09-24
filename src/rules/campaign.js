@@ -484,8 +484,10 @@
   function isMachineKey(key) { var p = profile(key); return !!p && p.cls !== 'infantry'; }
   function isCommandKey(key) { var p = profile(key); return !!p && !!p.command; }
 
-  /* Every legal promotion target for a roster entry. */
-  function promotionTargets(entry) {
+  /* Every legal promotion target for a roster entry. With the company given, no
+     higher than one Tier over the Company Tier: "a Tier II Aspiring Company...
+     may promote its units up to Tier III" (p. 84), aspiring or not. */
+  function promotionTargets(entry, co) {
     var p = profile(entry.key);
     if (!p) return [];
     if (p.cls !== 'infantry') return [];                       // machines never promote
@@ -496,6 +498,7 @@
       if (q.cls !== 'infantry' || isLeaderP(q)) return false;
       if (q.key === entry.key) return false;
       if (q.tier !== p.tier && q.tier !== p.tier + 1) return false;
+      if (co && q.tier > co.tier + 1) return false;
       return groups.indexOf(q.group) >= 0;
     });
   }
@@ -705,7 +708,9 @@
     opts = opts || {};
     var p = profile(key);
     return {
-      rid: opts.rid || rid(), key: key, prop: opts.prop || null, drone: !!opts.drone,
+      rid: opts.rid || rid(), key: key, prop: opts.prop || null,
+      // a Drone unit, or a craft only ever flown as a drone, is one from the start (pp. 40, 82)
+      drone: !!opts.drone || !!(p && (p.mustDrone || (p.rules || []).indexOf('Drone unit') >= 0)),
       name: opts.name || p.name, exp: 0, tp: 0,
       honours: [], traumas: [], upgrades: [],
       free: !!opts.free, restUntil: 0, lastBattle: 0, history: []
@@ -966,6 +971,33 @@
     return { ok: true };
   }
 
+  /* "Tier V companies may change (but not get a new one!) one doctrine every 5
+     battles" (p. 87): the first change comes 5 battles after reaching Tier V, and
+     each change starts the count again. A save from before this was kept reads
+     as due now. */
+  function canSwapDoctrine(co) {
+    if (co.tier < 5) return { ok: false, why: 'Only a Tier V ' + words(co).force.toLowerCase() + ' may change a ' + creedOf(co).one + '.' };
+    if (!co.doctrines.length) return { ok: false, why: 'Nothing held to change.' };
+    var due = co.doctrineSwapAt == null ? 0 : co.doctrineSwapAt;
+    if (co.record.battles < due) {
+      var left = due - co.record.battles;
+      return { ok: false, due: due, why: 'Next change after ' + left + ' more battle' + (left === 1 ? '' : 's') + '.' };
+    }
+    return { ok: true };
+  }
+  function swapDoctrine(co, outId, inId) {
+    var chk = canSwapDoctrine(co);
+    if (!chk.ok) return chk;
+    if (!hasDoctrine(co, outId)) return { ok: false, why: 'Not held.' };
+    var trial = { doctrines: co.doctrines.filter(function (x) { return x !== outId; }), tier: co.tier, faction: co.faction };
+    if (inId === outId) return { ok: false, why: 'The same one.' };
+    var can = canTakeDoctrine(trial, inId);
+    if (!can.ok) return can;
+    co.doctrines = trial.doctrines.concat([inId]);
+    co.doctrineSwapAt = co.record.battles + 5;
+    return { ok: true };
+  }
+
   /* ================= company legality and promotion ================= */
   /* Can this roster field a legal army at the given Battle Tier and Priority Level?
      Greedy: take the cheapest legal spread the composition table asks for. It only
@@ -1212,7 +1244,7 @@
   }
 
   function promoteUnit(co, entry, newKey) {
-    var targets = promotionTargets(entry);
+    var targets = promotionTargets(entry, co);
     if (!targets.some(function (q) { return q.key === newKey; })) return { ok: false, why: 'Not a legal promotion for this unit.' };
     var cost = promotionCost(entry, newKey, co);
     if (entry.exp < cost.exp) return { ok: false, why: 'Needs ' + cost.exp + ' EXP, has ' + entry.exp + '.' };
@@ -1419,6 +1451,8 @@
     if (p.command) return { total: 0, lines: [{ text: 'Command Units take no Trauma Points.', n: 0 }] };
     if (p.leaderBug) return { total: 0, lines: [{ text: 'Leader Bugs take no Trauma Points.', n: 0 }] };
     if (p.alpha) return { total: 0, lines: [{ text: 'Alpha squads take no Trauma Points.', n: 0 }] };
+    // "Drone units do not get any Experience and Trauma points during campaigns" (p. 40)
+    if (entry.drone) return { total: 0, lines: [{ text: 'Drones take no Trauma Points.', n: 0 }] };
     // To Hell and Back!: the fighters do not hold being broken against themselves
     if (line.brokenEver && !hasDoctrine(ctx.company, 'H4')) out.push({ text: 'Was broken at least once', n: 2 });
     // Stairs to Heaven: the Holy Warriors' dead are already where they wanted to go
@@ -1472,11 +1506,13 @@
       need = (entry.upgrades || []).indexOf(1) >= 0 ? 2 : 4;   // Advanced Emergency Systems
       note = 'Aircraft make an emergency landing on a ' + need + '+' +
         (need === 2 ? ' with Advanced Emergency Systems.' : '.');
+    } else if (line.catastrophic) {
+      // a ground vehicle, crewed or a drone, blown apart is gone (p. 86)
+      return { roll: null, saved: false, need: null, note: 'Destroyed in a catastrophic explosion — nothing is left to recover.' };
     } else if (entry.drone) {
       need = won ? 3 : 5;
       note = 'A drone is recovered on a ' + need + '+.';
     } else {
-      if (line.catastrophic) return { roll: null, saved: false, need: null, note: 'Destroyed in a catastrophic explosion — nothing is left to recover.' };
       need = won ? 3 : 5;
       note = 'A ground vehicle is recovered on a ' + need + '+.';
     }
@@ -1638,13 +1674,20 @@
         } else if (line.wiped && entry.rid === co.cmdRid) {
           u.rebuilt = true;
           entry.history.push('The field command was wiped out and reconstituted.');
+        } else if (line.wiped && entry.drone && profile(entry.key).cls === 'infantry') {
+          // a destroyed Drone unit can be salvaged, as a drone hull can (p. 40)
+          var svD = salvageOf[entry.rid] || salvage(line, entry, won || report.winner === null);
+          u.salvage = svD;
+          if (svD.saved) { entry.restUntil = 1; rec.salvaged.push(entry); }
+          else { u.wiped = true; rec.gone.push(entry); }
         } else if (line.wiped && (profile(entry.key).cls === 'infantry' || profile(entry.key).faction === 'bugs')) {
           u.wiped = true;
           rec.gone.push(entry);
         } else if (line.destroyed && profile(entry.key).cls !== 'infantry') {
           var sv = salvageOf[entry.rid] || salvage(line, entry, won || report.winner === null);
           u.salvage = sv;
-          if (sv.saved) { entry.restUntil = out.turn + 1; rec.salvaged.push(entry); }
+          // it skips the next battle (p. 86): one spell in the workshop, counted down by the next aftermath
+          if (sv.saved) { entry.restUntil = 1; rec.salvaged.push(entry); }
           else { u.wiped = true; rec.gone.push(entry); }
         }
 
@@ -2347,7 +2390,7 @@
         }
         return;
       }
-      var all = promotionTargets(e);
+      var all = promotionTargets(e, co);
       var affordable = all.filter(function (q) {
         var c = promotionCost(e, q.key);
         return e.exp >= c.exp && co.kUC >= c.kUC;
@@ -2490,6 +2533,7 @@
     canTakeUpgrade: canTakeUpgrade, availableUpgrades: availableUpgrades, takeUpgrade: takeUpgrade,
 
     hasDoctrine: hasDoctrine, canTakeDoctrine: canTakeDoctrine, doctrineSlots: doctrineSlots,
+    canSwapDoctrine: canSwapDoctrine, swapDoctrine: swapDoctrine,
     canFieldArmy: canFieldArmy, canPromoteCompany: canPromoteCompany, promoteCompany: promoteCompany,
     canAspire: canAspire, effectiveTier: effectiveTier, rebuildNeeds: rebuildNeeds,
     traumaThreshold: traumaThreshold,

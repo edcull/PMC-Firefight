@@ -550,6 +550,18 @@
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
         noteSplit(state, def, 'hold', defs, Math.floor(defs.length / 2), Math.ceil(defs.length / 2),
           'Half the force sets up within 18" of the objective; the rest arrives on a 5+ a unit from turn 2.');
+        /* "On Priority Level 2 and higher, the attacker may hold some of his/her
+           units in reserve. On Priority Level 2, these reserve units may enter the
+           battlefield in the 2nd turn... on Priority Level 3 in the 2nd and/or 3rd
+           turn, and so on" (p. 54). Nothing is held unless the player chooses it,
+           and at least one unit has to come on at the start. */
+        var pl = state.cfg.pl || 1;
+        if (pl >= 2) {
+          var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
+          noteSplit(state, atk, 'hold', atks, 0, Math.max(0, atks.length - 1),
+            'You may hold units back; they come on from your table edges on turn 2' +
+            (pl > 2 ? ' to ' + pl + ', as you choose' : '') + '.');
+        }
         state.sc.zones = {};
         state.sc.zones[def] = null;               // a circle, not a strip
         state.sc.zones[atk] = null;               // corner bands, not a strip
@@ -574,8 +586,25 @@
         return dist(x, y, c.x, c.y) <= c.r;
       },
       hint: 'The objective at the centre has to come down. Any attacking infantry may Demolish it — Sappers at +4, everyone else at +2. The attacker comes in around three corners; the defender owns the fourth. Breaking the enemy wins nothing here.',
+      /* The attacker's held units come on in turns 2 to the Priority Level, as
+         many as the player likes each turn; what is still waiting on the last of
+         those turns comes on then. */
+      reservePick: function (state, side) {
+        var pl = state.cfg.pl || 1;
+        if (side !== state.sc.attacker || state.turn < 2 || state.turn > pl) return null;
+        var pool = state.units.filter(function (u) { return u.side === side && u.alive && u.reserve && u.wave === 2; });
+        if (!pool.length) return null;
+        var last = state.turn >= pl;
+        return { pool: pool, min: last ? pool.length : 0, max: pool.length,
+          text: last ? 'The last of your reserves come on this turn.' : 'Bring on as many of your reserves as you like this turn — the rest by turn ' + pl + '.' };
+      },
       reserves: function (state, side) {
-        if (side === state.sc.attacker || state.turn < 2) return [];
+        if (side === state.sc.attacker) {
+          // an AI attacker that held anything back brings it all on at turn 2
+          if (state.turn < 2) return [];
+          return state.units.filter(function (u) { return u.side === side && u.alive && u.reserve && u.wave === 2; });
+        }
+        if (state.turn < 2) return [];
         return state.units.filter(function (u) {
           return u.side === side && u.alive && u.reserve && d6() >= 5;
         });

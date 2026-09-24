@@ -2398,6 +2398,13 @@
     // the sniper team alone goes in with night-vision goggles
     sniperteam: ['marksmannv', 'spotternv', 'sniperinf'],
     armour: ['armour'],
+    // PMC drone units (p. 72): grey machines in human shape, a stripe of the company's colour across them
+    dronecombat: ['drlead', 'drrifle'],
+    droneassault: ['drsmg', 'drshotgun'],
+    dronerecon: ['drscout', 'drscoutsmg'],
+    droneengineer: ['drbreacher', 'drsapper'],
+    dronesupport: ['drheavy'],
+    dronemedic: ['drmedic', 'drcorpsman'],
     // the Protectors: the heaviest suits in the list, with and without jump packs
     protector: ['protector'],
     protectorhm: ['protectorhm'],
@@ -2515,7 +2522,22 @@
   }
 
   // kit per role: helmet, weapon, pack, build
+  // the drones' plating: gunmetal grey all over
+  // the drone squads' mechanical parts
+  var RB = { strut: '#555c65', joint: '#2a2e34', piston: '#a3aab3', foot: '#383d44', eye: '#5fe0ff' };
+  var DRONE_GREY = { light: '#b9c0c8', mid: '#7f8791', dark: '#3b4047', helm: '#6c747e', cloth: '#5b626b', skin: '#8a929c', skinDark: '#5d646d' };
   var KIT = {
+    drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drshotgun: { helm: 'bot', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
+    drscoutsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
+    drbreacher: { helm: 'bot', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drsapper: { helm: 'bot', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
+    drheavy: { helm: 'bot', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
+    drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
+    drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
@@ -3000,6 +3022,33 @@
       P(-6, -30 + kb, 3, 12, pal.mid);
       P(-2, -22 + kb, 6, 9, pal.dark);                 // shin dropped to the peg
       P(-3, -14 + kb, 8, 4, BOOT);
+    } else if (kit.robot && pose === 'kneel') {
+      /* A drone braced on one knee: struts and joints rather than cloth, the
+         rear shin a strut laid along the ground, the front one a piston. */
+      P(-7, -11, 3, 8, RB.strut);                      // rear thigh strut
+      P(-9, -5, 5, 5, RB.joint); P(-8.5, -4.5, 1.5, 1.5, pal.light);   // knee joint, down
+      P(-18, -3, 10, 2.4, RB.strut); P(-18, -3, 10, 0.8, pal.light);   // shin along the ground
+      P(-21, -4, 4, 4, RB.foot);
+      P(-1, -12, 10, 3, RB.strut); P(-1, -12, 10, 1, pal.light);       // front thigh, level
+      P(7, -14, 5, 5, RB.joint); P(7.5, -13.5, 1.5, 1.5, pal.light);   // raised knee joint
+      P(8, -9, 2.4, 6, RB.piston); P(9.2, -9, 0.8, 6, 'rgba(0,0,0,.35)');
+      P(5, -3, 9, 3, RB.foot); P(5, -3, 9, 0.8, pal.light);            // the splayed foot
+      P(5, -0.6, 9, 0.6, '#08090c');
+    } else if (kit.robot) {
+      // thin jointed legs: a strut to the knee, a piston below it, a flat splayed foot
+      var rl = step ? [4, 0] : [0, 3];
+      for (var RL = 0; RL < 2; RL++) {
+        var rx = RL ? 2 : -6, rlift = rl[RL];
+        P(rx, -20 + rlift, 3.5, 8, RB.strut);          // thigh strut
+        P(rx, -20 + rlift, 1.2, 8, pal.light);
+        P(rx - 0.5, -13 + rlift, 4.5, 4.5, RB.joint);  // knee joint
+        P(rx, -12.5 + rlift, 1.5, 1.5, pal.light);
+        P(rx + 0.8, -9 + rlift, 2, 6, RB.piston);      // shin piston
+        P(rx + 2.2, -9 + rlift, 0.8, 6, 'rgba(0,0,0,.35)');
+        P(rx - 1.5, -3 + rlift, 7, 3, RB.foot);        // foot
+        P(rx - 1.5, -3 + rlift, 7, 0.8, pal.light);
+        P(rx - 1.5, -0.6 + rlift, 7, 0.6, '#08090c');
+      }
     } else if (pose === 'kneel') {
       /* Down on one knee: the rear knee on the ground with the shin laid out
          behind and the toes tucked, the front thigh level out to a raised knee
@@ -3157,6 +3206,21 @@
       P(tx + 2, -23 + drop, tw - 4, 0.75, 'rgba(0,0,0,.35)');
       P(tx + 2, -36 + drop, 1, 1, pal.dark); P(tx + tw - 3, -36 + drop, 1, 1, pal.dark);   // bolts
       P(-1, -36 + drop, 2, 1, '#5fd0f0');              // a status light
+    } else if (kit.robot) {
+      /* A drone's chassis: a chest housing over a narrow spine, panel seams,
+         a cooling grille and a single status light. No webbing, no pouches. */
+      P(tx, -40 + drop, tw, 13, pal.mid);              // the chest housing
+      P(tx, -40 + drop, 4, 13, pal.light);
+      P(tx, -27 + drop, tw, 1, 'rgba(0,0,0,.45)');     // its lower edge
+      P(-3, -26 + drop, 6, 7, RB.joint);               // the exposed spine at the waist
+      P(-3, -25 + drop, 6, 0.8, pal.light); P(-3, -23 + drop, 6, 0.8, pal.light); P(-3, -21 + drop, 6, 0.8, pal.light);
+      P(tx + 1, -22 + drop, tw - 2, 3, pal.helm);      // hip plate
+      P(tx + 1, -22 + drop, tw - 2, 0.8, pal.light);
+      P(-0.4, -40 + drop, 0.8, 13, 'rgba(0,0,0,.35)'); // centre seam
+      P(tx + 2, -34 + drop, tw - 4, 0.7, 'rgba(0,0,0,.3)');
+      [0, 1, 2].forEach(function (gi) { P(2, -38 + drop + gi * 1.6, 5, 0.8, '#23272c'); });   // cooling grille
+      P(-5, -37 + drop, 3, 3, '#1b1e22'); P(-4.5, -36.5 + drop, 2, 2, RB.eye);   // status light
+      P(-3, -43 + drop, 7, 2, RB.joint);               // neck mount
     } else if (kit.vest) {
       /* Assault troops: a dark grey plate carrier over the fatigues, so they
          read at a glance as something heavier than the rifle line — a front
@@ -3192,11 +3256,13 @@
       P(1.5, -37 + drop, 0.75, 4, 'rgba(0,0,0,.4)');
       P(-3, -43 + drop, 7, 2, pal.dark);               // collar
     }
-    P(-1, -22 + drop, 3, 3, '#8a8f98');                // belt buckle
-    P(-1, -22 + drop, 3, 1, '#c9cdd4');
-    P(tx + 2, -20 + drop, 4, 1, pal.light);            // pouch flaps catching the light
-    P(tx + tw - 6, -20 + drop, 4, 1, pal.light);
-    if (!kit.armoured && !kit.robe && !kit.cloak && !kit.tunic && pose !== 'prone') {
+    if (!kit.robot) {
+      P(-1, -22 + drop, 3, 3, '#8a8f98');              // belt buckle
+      P(-1, -22 + drop, 3, 1, '#c9cdd4');
+      P(tx + 2, -20 + drop, 4, 1, pal.light);          // pouch flaps catching the light
+      P(tx + tw - 6, -20 + drop, 4, 1, pal.light);
+    }
+    if (!kit.armoured && !kit.robot && !kit.robe && !kit.cloak && !kit.tunic && pose !== 'prone') {
       // the torso tapers from the chest to the waist, not a box all the way down
       carve([[tx - 0.5, -32 + drop], [tx + 2.2, -22 + drop], [tx - 0.5, -22 + drop]]);
       carve([[tx + tw + 0.5, -32 + drop], [tx + tw - 2.2, -22 + drop], [tx + tw + 0.5, -22 + drop]]);
@@ -3351,6 +3417,16 @@
 
     /* ---- arms ---- */
     var aw = 5 + b;
+    if (kit.robot) {
+      // strut arms with a ball elbow and a clamp for a hand
+      P(-12 - b, -39 + drop, 3, 6, RB.strut); P(-12 - b, -39 + drop, 1, 6, pal.light);
+      P(-13 - b, -34 + drop, 4.5, 4.5, RB.joint); P(-12.5 - b, -33.5 + drop, 1.4, 1.4, pal.light);
+      P(-12 - b, -30 + drop, 2.6, 3, RB.piston);
+      P(-14 - b, -28 + drop, 6, 3, RB.foot); P(-14 - b, -28 + drop, 1.2, 3, '#5a6068');   // the clamp
+      P(tx + tw - 1, -38 + drop, 3, 5, RB.strut);
+      P(tx + tw - 1.5, -34 + drop, 4, 4, RB.joint);
+      P(tx + tw - 0.5, -30 + drop, 2.4, 3, RB.piston);
+    } else {
     P(-13 - b, -39 + drop, aw, 13, pal.mid);           // forward arm, down to the grip
     P(-13 - b, -39 + drop, 2, 13, pal.light);
     P(-13 - b, -33 + drop, aw, 1, 'rgba(0,0,0,.30)');  // the elbow, bent
@@ -3359,6 +3435,7 @@
     P(-13.5 - b, -28 + drop, 2, 1, '#454b54');         // knuckles catching the light
     P(tx + tw - 2, -38 + drop, aw, 11, pal.mid);       // rear arm
     P(tx + tw + aw - 3, -38 + drop, 1, 11, 'rgba(0,0,0,.30)');  // its far side in shadow
+    }
     if (kit.sleeves === 'rolled') {
       /* shirt sleeves rolled to above the elbow: bare forearms and hands, the
          roll of cloth a lit band at the top of each */
@@ -3489,7 +3566,8 @@
     }
 
     /* ---- head ---- */
-    P(-2, -45 + drop, 5, 4, pal.dark);                 // neck
+    if (kit.robot) P(-1, -46 + drop, 3, 5, RB.piston); // a neck piston, not a neck
+    else P(-2, -45 + drop, 5, 4, pal.dark);            // neck
     var bodyPal = pal;
     if (pal.hat) {                                     // the helmet in the company's colour
       pal = {}; for (var bk2 in bodyPal) pal[bk2] = bodyPal[bk2];
@@ -3520,6 +3598,19 @@
         P(0, -50 + drop, 2, 1, '#4e5c6a');
         P(-8, -47 + drop, 2, 5, pal.dark);              // neck guard
         P(4, -56 + drop, 3, 2, pal.dark);               // crest fitting
+        break;
+      case 'bot':
+        /* a drone's sensor head: a low wedge, wider than it is tall, with one
+           lit optic band across the front and a stub aerial */
+        P(-6, -53 + drop, 14, 7, pal.helm);
+        P(-6, -53 + drop, 5, 7, pal.light);
+        P(-4, -54.5 + drop, 10, 1.5, pal.helm);
+        P(-6, -47 + drop, 14, 1, 'rgba(0,0,0,.4)');     // the jaw line
+        P(0, -51 + drop, 8.5, 2.6, '#101418');          // the optic band
+        P(1, -50.6 + drop, 6.5, 1.4, RB.eye);
+        P(4.5, -50.8 + drop, 2, 1.8, '#e9fbff');        // the lens, brightest
+        P(-5, -58 + drop, 1, 4, RB.joint);              // stub aerial
+        P(-5.3, -59 + drop, 1.6, 1.4, RB.eye);
         break;
       case 'sealed':
         P(-7, -56 + drop, 15, 12, pal.helm);
@@ -6179,6 +6270,8 @@
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
+    // the Light VTOL drone: a flying disc with two swept winglets and a gun under its lip
+    vtoldrone: { len: 1.45, wid: 1.45, hgt: 9, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
@@ -6585,15 +6678,14 @@
         }
         stroke([pts[0], pts[1]], m(0.8), GLO.m);                 // the leading edge
         if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
-        // a drone's aerials: two whips standing off the top edge of the dorsal wing
+        // a drone's aerial: one whip off the top edge of the dorsal wing, raked at the wing's own sweep, a blue light at its tip
         if (u.drone && w.dorsal && !dead) {
-          [0.62, 0.86].forEach(function (k) {
-            var at0 = le + (tp - le) * k, r0 = rf + (w.sp - rf) * k;
-            var a0 = P3(at0, r0, w.ph), a1 = P3(at0 - 0.12 * Lc, r0 + 0.7, w.ph);
-            stroke([a0, a1], 1.6, WH.dk);
-            stroke([a0, a1], 0.8, WH.lt);
-            ellipse(g, a1[0], a1[1], 1.8, 1.8, '#ff5040');
-          });
+          var k8 = 0.78, at0 = le + (tp - le) * k8, r0 = rf + (w.sp - rf) * k8;
+          var a0 = P3(at0, r0, w.ph), a1 = P3(at0 + (tp - le) * 0.42, r0 + (w.sp - rf) * 0.42, w.ph);
+          stroke([a0, a1], 1.6, WH.dk);
+          stroke([a0, a1], 0.8, WH.lt);
+          ellipse(g, a1[0], a1[1], 1.9, 1.9, '#6ebeff');
+          ellipse(g, a1[0], a1[1], 0.9, 0.9, '#e4f4ff');
         }
       }
       // the fuselage: rings of stations [t, r] turned into an eight-sided body
@@ -8934,6 +9026,39 @@
           });
           break;
         }
+        case 'disc': {
+          /* A saucer: a flat disc with a low hump on top where the sensor dome
+             sits, a ring of lift vents lit underneath, two small swept winglets
+             off the back and a gun slung under the front lip. */
+          var R0 = L * 0.5, ring = function (r) {
+            var out = [];
+            for (var a = 0; a < 16; a++) out.push([Math.cos(a / 16 * Math.PI * 2) * r, Math.sin(a / 16 * Math.PI * 2) * r]);
+            return out;
+          };
+          if (!dead) {
+            var ug = S3(AF(0, 0), z - 1);
+            sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
+          }
+          [-1, 1].forEach(function (sd) {
+            part(-R0 * 0.55, sd * R0 * 1.05, function () {
+              plate(AF, [[-R0 * 0.2, sd * R0 * 0.82], [-R0 * 0.85, sd * R0 * 1.32], [-R0 * 1.05, sd * R0 * 1.32], [-R0 * 0.75, sd * R0 * 0.75]], z + H * 0.28, 2);
+            });
+          });
+          part(0, 0, function () {
+            noseGun(R0 * 0.78, 0, z + H * 0.1, 0.34, 'mg');
+            shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
+            shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
+            shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
+            if (!dead) {
+              // running lights round the rim
+              for (var li = 0; li < 16; li += 2) {
+                var la = li / 16 * Math.PI * 2, lp = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
+                sEllipse(lp[0], lp[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
+              }
+            }
+          }, true);
+          break;
+        }
         case 'hawk': case 'chinook': case 'chinookcp': {
           var chin = st !== 'hawk';
           var cabL = chin ? L : L * 0.62;
@@ -9900,6 +10025,7 @@
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
       }
+      else if (spec.craft === 'disc') { back = 0; off = 0; y5 = lift + spec.hgt * 0.68; }     // on the disc's hump
       else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
@@ -9914,7 +10040,7 @@
       if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
-      if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
+      if (spec.fly && (spec.craft === 'jet' || spec.craft === 'disc')) return;      // a jet or a disc carries the dome only
       if (spec.fly) aq = along(-spec.len * 0.06, spec.wid * 0.3);   // a rotorcraft's stands on the back of its body
       else if (legs) aq = along(spec.len * back - 0.2, -spec.wid * 0.3);   // its left shoulder
       else {

@@ -58,7 +58,7 @@ async function pickAndFire(p, key, ms) {
   await p.click('#vfacs [data-fac="pmc"]');
   await p.waitForTimeout(250);
   Object.assign(loaded, await p.evaluate(() => ({ w: document.getElementById('vboard').width, h: document.getElementById('vboard').height })));
-  ok('every profile in all four lists is listed', loaded.units === 193, loaded.units + ' units');
+  ok('every profile in all four lists is listed', loaded.units === 200, loaded.units + ' units');
   ok('...grouped the way the book groups them', loaded.groups > 20, loaded.groups + ' groups');
   ok('...each a card drawn by the game\'s renderer', loaded.drawn > 0, loaded.drawn + ' pictures drawn in view');
   const listPick = await p.evaluate(() => {

@@ -2341,7 +2341,7 @@
       // the Overmind's reach rolling out, and the lost bugs coming back up out of the ground
       var minds = [];
       tide.forEach(function (l) {
-        var om = R.overmindFor(state, l.unit, true);
+        var om = R.overmindFor(state, l.unit, true, true);
         if (om && minds.indexOf(om) < 0) { minds.push(om); addFx({ kind: 'wave', x: om.x, y: om.y, up: 0, r: 18, rgb: '150,215,90', dur: 1400, blocking: true }); }
         addFx({ kind: 'rise', x: l.unit.x, y: l.unit.y, rgb: '205,170,95', n: 10, delay: 300, dur: 1400 });
       });
