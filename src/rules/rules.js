@@ -2422,7 +2422,7 @@
     var caught = state.units.filter(function (u) {
       return u.alive && !u.aboard && !isFlying(u) && inRect(u.x, u.y, r);
     });
-    var res = down ? destroyTerrain(state, r, log, a) : null;
+    var res = down ? destroyTerrain(state, r, log, a) : null, treated = [];
     caught.forEach(function (u) {
       var hits = Math.max(0, total - defenceAgainst(state, a, u, { basic: true }).value);
       if (!hits) {
@@ -2435,13 +2435,15 @@
         applyDamage(state, u, dm.damage, log, a);
       } else {
         var hr = resolveShootingHits(state, u, hits, 0, a);
+        if (hr.medic) treated.push({ id: u.id, medic: hr.medic });
         log.push({ t: 'hits', text: hr.rolls.join(' · ') });
         applyResult(state, u, hr, log, a);
       }
     });
     state.mined = null;
     a.activated = true;
-    return { log: log, down: down, result: res, total: total, roll: roll };
+    // `treated`: each squad caught in it that a MEDIC! answered for, and who answered
+    return { log: log, down: down, result: res, total: total, roll: roll, treated: treated };
   }
 
   /* Sappers going in with charges (p. 58): the same threshold, +4 for the rule,
@@ -2999,9 +3001,10 @@
       t: 'shoot', text: a.label + ' fires over the heads of ' + t.label + ' — NOT ONE STEP BACKWARDS!',
       math: parts.map(fmtPart).join(', ') + ' = ' + total + ' vs Defence ' + dres.value + ' → ' + hits + ' hit' + (hits === 1 ? '' : 's')
     }];
-    var removed = 0, before = t.sp || 0, killed = 0;
+    var removed = 0, before = t.sp || 0, killed = 0, medicId = null;
     if (hits > 0) {
       var res = resolveShootingHits(state, t, hits, status(t) === 'broken' ? 1 : 0, null);
+      medicId = res.medic || null;
       log.push({ t: 'hits', text: res.rolls.join(' · ') + ' — the Suppression is taken away, not given.' });
       // the dead are dead: casualties go through as normal, with no credit to anyone
       if (res.casualties) {
@@ -3017,7 +3020,7 @@
       }
     }
     if (t.alive) log.push({ t: 'rally', text: t.label + (removed ? ' sheds ' + removed + ' Suppression point' + (removed === 1 ? '' : 's') + ' (' + before + ' → ' + t.sp + ').' : ' is not moved by it.') });
-    return { log: log, hits: hits, removed: removed, killed: killed };
+    return medicId ? { log: log, hits: hits, removed: removed, killed: killed, medic: medicId } : { log: log, hits: hits, removed: removed, killed: killed };
   }
 
   /* ---------- assault ---------- */
