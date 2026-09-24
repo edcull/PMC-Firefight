@@ -43,7 +43,7 @@
   function close() {
     var m = el('menu');
     if (m) m.hidden = true;
-    Table.stop();
+    if (Table.on() === el('menu-table')) Table.stop();
     // a demo paused behind the menu picks up again
     try { root.dispatchEvent(new Event('pmc-menu-closed')); } catch (e) { }
   }
@@ -236,9 +236,15 @@
       timer = setTimeout(next, EVERY);
     }
 
-    function start() {
-      if (running || root.PMC_NO_BACKDROP) return;
-      cv = cv || el('menu-table');
+    /* The table runs behind the menu, or behind whatever other screen hands it a
+       canvas of its own (a new battle's set-up, on a desktop). One at a time:
+       starting it on another canvas moves it there, the last table coming along. */
+    function start(target) {
+      var want = target || el('menu-table');
+      if (running && want === cv) return;
+      if (running) stop();
+      if (root.PMC_NO_BACKDROP) return;
+      if (want !== cv) { cv = want; g = null; }
       if (!cv || !cv.getContext || !root.requestAnimationFrame || !ISO || !GEN || !R) return;
       // a canvas that is not on screen has nothing to show a table on
       if (!(cv.clientWidth > 0 && cv.clientHeight > 0)) return;
@@ -257,7 +263,8 @@
       raf = 0;
     }
     function resized() { if (running && fit() && !raf) raf = root.requestAnimationFrame(paint); }
-    return { start: start, stop: stop, fit: resized, flyby: function () { if (running) flyby(); } };
+    return { start: start, stop: stop, fit: resized, flyby: function () { if (running) flyby(); },
+      on: function () { return running ? cv : null; } };
   })();
 
   root.PMCMenu = { open: open, close: close, isOpen: isOpen, show: show, table: Table };
