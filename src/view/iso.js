@@ -2670,7 +2670,7 @@
     flagbig: { helm: 'beret', gun: 'flagbig', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     flaghuge: { helm: 'beret', gun: 'flaghuge', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     zealotrider: { helm: 'turban', gun: 'carbine', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', mount: true, tint: HOLY_A },
-    leaderrider: { helm: 'goggles', gun: 'banner', pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
+    leaderrider: { helm: 'goggles', gun: 'banner', plainFlag: true, pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
     leaderescort: { helm: 'goggles', gun: 'carbine', pack: 'none', mount: true, tint: FIELD_OCHRE, fitAs: 'rider' }
   };
 
@@ -3891,10 +3891,7 @@
         P(-8, wy - poleH + 8, fw2, 2, fl2);
         P(-8, wy - poleH + 6 + fh2, fw2, 2, fd);
         P(-8 + fw2 - 3, wy - poleH + 10, 3, fh2 - 2, fd);  // the fly, ragged and in shadow
-        if (big) {
-          P(-8 + fw2 * 0.35, wy - poleH + 12, fw2 * 0.3, fh2 * 0.45, '#e0b43a');  // an emblem sewn on
-          P(-8 + fw2 * 0.45, wy - poleH + 10, fw2 * 0.1, fh2 * 0.8, '#e0b43a');
-        }
+        // plain cloth: the colour alone says whose leader this is
         P(2, wy + 2, 12, 2, GUN.dk);                   // a carbine besides
         break;
       }
