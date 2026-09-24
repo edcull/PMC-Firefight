@@ -73,6 +73,11 @@
     flex: 1; min-height: 0;
     display: grid; grid-template-columns: 290px minmax(0, 1fr) 300px; gap: 12px; padding: 12px;
   }
+  /* A wide screen has room for four units a row in the list and still a good
+     stage in the middle; anything narrower keeps the list at two a row. */
+  @media (min-width: 1700px) {
+    main { grid-template-columns: 572px minmax(0, 1fr) 300px; }
+  }
 
   .vpanel {
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
