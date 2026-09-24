@@ -1584,8 +1584,8 @@
     // drone units carry what the squads they stand in for carry; the support drones lob shells
     // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
-    // the engineer drones carry nothing in hand and throw a pair of grenades; the support drones lob two rounds, up and over
-    dengineer: { p: 'none', s: 'arc', sn: 2 }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
+    // the engineer drones fire a sidearm and throw a grenade; the support drones lob three rounds, up and over
+    dengineer: { p: 'pistol', s: 'arc', sn: 1 }, dsupport: { p: 'arc', n: 3 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */

@@ -3615,8 +3615,8 @@
     // drone units carry what the squads they stand in for carry; the support drones lob shells
     // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
-    // the engineer drones carry nothing in hand and throw a pair of grenades; the support drones lob two rounds, up and over
-    dengineer: { p: 'none', s: 'arc', sn: 2 }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
+    // the engineer drones fire a sidearm and throw a grenade; the support drones lob three rounds, up and over
+    dengineer: { p: 'pistol', s: 'arc', sn: 1 }, dsupport: { p: 'arc', n: 3 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -14409,8 +14409,8 @@
     drshotgun: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
     drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, pouches: '#5d6e3a' },
     drscoutsmg: { helm: 'bot', gun: 'rifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, pouches: '#5d6e3a' },
-    drbreacher: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
-    drsapper: { helm: 'bot', gun: 'none', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drbreacher: { helm: 'bot', gun: 'pistol', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'pistol', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
     drheavy: { helm: 'bot', gun: 'heavy', shoulderGL: true, shoulderMsl: true, pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
     drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
     drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
