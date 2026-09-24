@@ -5148,10 +5148,11 @@
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
     else if (kind === 'ai') {
-      // the player's force starts empty, in their own colour, with a name to go with it until they give it one
+      // the player's force starts empty, in desert ochre, as "Your force" until they name it
+      muster.colour = 'ochre';
       drawColourPick();
       if (el('sel-tactic')) el('sel-tactic').value = '';
-      muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[musterFaction()];
+      muster.name = 'Your force';
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
     hotPaint();
@@ -5252,7 +5253,7 @@
     colourLabel();
   }
   function catModal(on) {
-    var m = document.querySelector('#setup .muster');
+    var m = document.querySelector('#setup .muster.hot-force');   // the units, not the name panel
     if (m) m.classList.toggle('picking', !!on);
     if (el('cat-back')) el('cat-back').classList.toggle('open', !!on);
     if (on && el('cat')) el('cat').scrollTop = 0;
