@@ -10142,9 +10142,9 @@ html { scroll-behavior: smooth; }
   function nowT() { return root.performance ? performance.now() : 0; }
   function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
   function cloakedKit(kit) { return !!kit && !!kit.xeno && !!kit.cloak; }
-  /* A cloaked model fades in and out between whole and half there, each at its
-     own beat so the squad shimmers rather than blinking as one. */
-  function cloakFade(mi) { return 0.75 + 0.25 * Math.sin(nowT() / 1100 + mi * 1.7); }
+  /* A cloaked model fades in and out between whole and a quarter there, each at
+     its own beat so the squad shimmers rather than blinking as one. */
+  function cloakFade(mi) { return 0.625 + 0.375 * Math.sin(nowT() / 700 + mi * 1.7); }
   // whether a unit is drawn differently from one moment to the next, so the board keeps redrawing it
   function animates(u) {
     if (!u || u.alive === false) return false;          // (a bench unit need not say it is alive)
