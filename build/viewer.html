@@ -186,9 +186,10 @@
   .vsg:hover { color: var(--ink); }
   .vsg.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
   input[type=range] { width: 100%; accent-color: var(--alpha); }
-  .vacts { display: flex; gap: 6px; margin-top: 10px; }
+  /* as many buttons as fit to a row, the rest wrapping onto a second, each row sharing out its width */
+  .vacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .vbtn {
-    flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    flex: 1 1 auto; min-width: 58px; white-space: nowrap; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
     border-radius: 5px; padding: 8px 6px; cursor: pointer;
     font-family: var(--display); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
   }
@@ -338,6 +339,30 @@
   #vlist canvas.tile.tall { height: 122px; }
   #vlist canvas.tile.inf { width: 120px; height: 96px; }
   #vlist figure.cell figcaption { display: none; }
+  /* A desktop: the unit's stats with its options under them, the whole panel scrolling as one,
+     and the unit list three cards to a row, each tile shrunk to its column */
+  @media (min-width: 1001px) {
+    main { grid-template-columns: 330px minmax(0, 1fr) 300px; }
+    #vctl { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-bottom: 12px; }
+    #vctl .vtabs { display: none; }
+    #vctl .vtabbody, #vctl .vtabbody[hidden] { display: block; flex: none; overflow: visible; padding: 10px 2px 0; }
+    #vctl .voptsbody { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    #vctl .voptsbody::before {
+      content: 'Options'; display: block; font-family: var(--display); font-size: 9.5px; letter-spacing: .09em;
+      text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
+    }
+    #vctl .voptsbody > .vacts:first-child { margin-top: 0; }
+    #vlist .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    #vlist .card.unit { width: auto; min-width: 0; padding: 4px 4px 5px; }
+    #vlist .card.unit h4 { gap: 3px; }
+    #vlist .card.unit h4 .code { font-size: 9px; padding: 0 4px; }
+    #vlist .card.unit h4 .tier { font-size: 8.5px; }
+    #vlist .card.unit .nm { font-size: 10.5px; }
+    #vlist .card .tiles, #vlist figure.cell { width: 100%; min-width: 0; }
+    #vlist canvas.tile { width: 100%; height: auto; aspect-ratio: 112 / 95; }
+    #vlist canvas.tile.tall { aspect-ratio: 112 / 122; }
+    #vlist canvas.tile.inf { width: 100%; aspect-ratio: 120 / 96; }
+  }
   #vlist .card .tiles .cell ~ .cell { display: none; }     /* one picture a card: a mounted unit on its first mount */
   .vatbar { flex: none; display: flex; flex-direction: column; gap: 7px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
   .atl h3.group {
@@ -1972,7 +1997,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
-    interceptor: { p: 'burst', s: 'shellbig', sn: 2 },
+    // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
+    interceptor: { p: 'missile', n: 2, s: 'burst' },
 
     /* ---- the Rebel list, read the same way ---- */
     // armed civilians: whatever was in the house, at 12"
@@ -2335,20 +2361,23 @@
      Amplifiers (p. 142). */
   function isMedic(u) { return has(u, 'Field Medics') || has(u, 'Psychic Support'); }
   function medicReach(state, u) { return has(u, 'Psychic Support') && doctrine(state, u.side, 'XT5') ? 12 : 6; }
-  function medicNearby(state, target) {
+  // the unit treating a squad's wounded: itself if it is the medics, else the nearest in reach
+  function medicFor(state, target) {
     // the medic team treats its own wounded whatever state it is in (p. 57)
-    if (isMedic(target)) return true;
+    if (isMedic(target)) return target;
+    var best = null, bd = Infinity;
     for (var i = 0; i < state.units.length; i++) {
-      var u = state.units[i];
+      var u = state.units[i], d;
       if (u.side === target.side && projects(u) && isMedic(u)
-        && unitDist(u, target) <= medicReach(state, u)) return true;
+        && (d = unitDist(u, target)) <= medicReach(state, u) && d < bd) { best = u; bd = d; }
     }
-    return false;
+    return best;
   }
+  function medicNearby(state, target) { return !!medicFor(state, target); }
 
   function resolveShootingHits(state, target, hits, mod, atk) {
     var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
-    var medics = medicNearby(state, target);
+    var medic = medicFor(state, target), medics = !!medic;
     var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
     var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
     for (var i = 0; i < hits; i++) {
@@ -2361,8 +2390,8 @@
       } else if (medics) {
         if (r <= 2) tag = 'Steady, boys!';
         else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
-        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; }
-        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; }
+        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
+        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
       } else if (has(target, 'Animal Behaviour')) {
         // bugs: shrug it off or burst (p. 116)
         if (r <= 3) tag = 'QUEKKK! (ignored)';
@@ -2831,7 +2860,7 @@
     var caught = state.units.filter(function (u) {
       return u.alive && !u.aboard && !isFlying(u) && inRect(u.x, u.y, r);
     });
-    var res = down ? destroyTerrain(state, r, log, a) : null;
+    var res = down ? destroyTerrain(state, r, log, a) : null, treated = [];
     caught.forEach(function (u) {
       var hits = Math.max(0, total - defenceAgainst(state, a, u, { basic: true }).value);
       if (!hits) {
@@ -2844,13 +2873,15 @@
         applyDamage(state, u, dm.damage, log, a);
       } else {
         var hr = resolveShootingHits(state, u, hits, 0, a);
+        if (hr.medic) treated.push({ id: u.id, medic: hr.medic });
         log.push({ t: 'hits', text: hr.rolls.join(' · ') });
         applyResult(state, u, hr, log, a);
       }
     });
     state.mined = null;
     a.activated = true;
-    return { log: log, down: down, result: res, total: total, roll: roll };
+    // `treated`: each squad caught in it that a MEDIC! answered for, and who answered
+    return { log: log, down: down, result: res, total: total, roll: roll, treated: treated };
   }
 
   /* Sappers going in with charges (p. 58): the same threshold, +4 for the rule,
@@ -3340,6 +3371,7 @@
       applyDamage(state, t, dres2.damage, log, a);
       return { log: log, hits: hits, wreck: wreck };
     }
+    var medicId = null;
     if (hits > 0) {
       var mod = 0;
       /* Undisciplined (p. 94): shooting at a Broken Rebel unit, or catching one in
@@ -3351,6 +3383,7 @@
       // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
       if (state.scen && state.scen.hitMod) mod += state.scen.hitMod(state, a, t) || 0;
       var res = resolveShootingHits(state, t, hits, mod, a);
+      medicId = res.medic || null;
       // Incendiary doubles the suppression of the attack itself, before any
       // extra points that special rules add
       var burn = '';
@@ -3373,7 +3406,8 @@
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       applyResult(state, t, res, log, a);
     }
-    return { log: log, hits: hits };
+    // who answered a MEDIC! on this volley, so the board can show them at work
+    return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
   }
 
   /* ---------- NOT ONE STEP BACKWARDS! (T5, p. 87) ----------
@@ -3405,9 +3439,10 @@
       t: 'shoot', text: a.label + ' fires over the heads of ' + t.label + ' — NOT ONE STEP BACKWARDS!',
       math: parts.map(fmtPart).join(', ') + ' = ' + total + ' vs Defence ' + dres.value + ' → ' + hits + ' hit' + (hits === 1 ? '' : 's')
     }];
-    var removed = 0, before = t.sp || 0, killed = 0;
+    var removed = 0, before = t.sp || 0, killed = 0, medicId = null;
     if (hits > 0) {
       var res = resolveShootingHits(state, t, hits, status(t) === 'broken' ? 1 : 0, null);
+      medicId = res.medic || null;
       log.push({ t: 'hits', text: res.rolls.join(' · ') + ' — the Suppression is taken away, not given.' });
       // the dead are dead: casualties go through as normal, with no credit to anyone
       if (res.casualties) {
@@ -3423,7 +3458,7 @@
       }
     }
     if (t.alive) log.push({ t: 'rally', text: t.label + (removed ? ' sheds ' + removed + ' Suppression point' + (removed === 1 ? '' : 's') + ' (' + before + ' → ' + t.sp + ').' : ' is not moved by it.') });
-    return { log: log, hits: hits, removed: removed, killed: killed };
+    return medicId ? { log: log, hits: hits, removed: removed, killed: killed, medic: medicId } : { log: log, hits: hits, removed: removed, killed: killed };
   }
 
   /* ---------- assault ---------- */
@@ -11462,6 +11497,7 @@
          the ground ahead. Teleport: the gate in its ring wing, a swirl of
          light filling it. Shield generator: emitters at the wingtips and the
          bubble they throw about the craft, rippling. */
+      mountAt('nose', P3(1.0 * Lc, 0, -Math.PI / 2));      // where a marker's beam leaves the craft
       function scanFan() {
         if (!spec.scan || dead) return;
         var sw = Math.sin(tnow / 700) * 0.6, reachT = 1.5;
@@ -15492,7 +15528,9 @@
            or a hacker's data stream (`data`: packets running along it). It
            reaches out, holds with a flicker, and puts a pulsing ring on the mark. */
         var ba = I.toScreen(f.x, f.y), bb = I.toScreen(f.tx, f.ty);
-        ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up); bb.y -= I.K * 0.5;
+        // from a machine's own mount (`mz`: a craft's nose, a barrel), else from about chest height
+        if (f.mz) { ba.x += f.mz.dx; ba.y += f.mz.dy - liftAt(f); } else ba.y -= liftAt(f) + I.K * (f.up == null ? 0.9 : f.up);
+        bb.y -= I.K * 0.5;
         var brgb = f.rgb || '255,70,60', bon = k < 0.85 ? 1 : (1 - k) / 0.15, reach = Math.min(1, k / 0.15);
         var bex = ba.x + (bb.x - ba.x) * reach, bey = ba.y + (bb.y - ba.y) * reach;
         var flick = 0.72 + 0.28 * Math.sin(k * 70);
@@ -16080,8 +16118,10 @@
       if (cv.dataset.mount) u.mount = cv.dataset.mount;
       var mach = machine(p);
       var walker = cv.dataset.prop === 'walker';
-      var mag = mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55;
-      var ground = mach ? H - (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : H - 16;
+      // a tile drawn narrower than the width it was framed for (o.fit) shrinks its figure to match, rather than cropping it
+      var ref = o.fit && (cv.classList.contains('inf') ? o.fit.inf : o.fit.other), k = ref ? Math.min(1, W / ref) : 1;
+      var mag = k * (mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55);
+      var ground = H - k * (mach ? (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : 16);
       var s0 = I.toScreen(10, 10);
       // the atlas draws as the first side, in its colour (repainting a side throws its baked figures away, so only on a change)
       if (I.PALETTE.A !== I.COLOURS[colour]) I.setSideColour('A', colour);
@@ -16089,7 +16129,7 @@
         if (cv.dataset.status === 'wrecked') {
           // a wreck sits on the ground, so it is framed like a ground vehicle and has headroom for its smoke
           u.alive = false;
-          var gw = H - 30;
+          var gw = H - 30 * k;
           g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (gw - s0.y * mag) * dpr);
           I.drawWreck(g, u, { x: 10, y: 10 }, 0, 1700);
         } else {
@@ -16208,7 +16248,7 @@
   var W = 24, H = 16;
   var FROM = { x: 6, y: 8 }, TO = { x: 19, y: 8 };
 
-  var cv, g, FX;
+  var cv, g, FX, STANDING;
   // the stage opens close on the unit; it pulls out to the whole firing line to show a shot
   // the stage's zooms: the whole firing line, the unit, and a close look at it
   var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
@@ -16227,7 +16267,7 @@
   /* Put a unit on the stage: every model, a state it can be in (a tank cannot
      be suppressed), and a ground vehicle on the running gear it usually has. */
   function choose(k) {
-    view.key = k; view.models = null;
+    view.key = k; view.models = null; view.tele = null;
     var p = profile();
     view.pickFac = p.faction || 'pmc';
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
@@ -16309,8 +16349,16 @@
     var u = unit(), t = mark();
     var arr = arriving();
     // far to near, so the nearer of the two covers the other
-    var order = [u, t].sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
+    var tv = traveller();
+    var order = [u, t].concat(tv ? [tv.u] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
+      if (tv && m === tv.u) {
+        if (tv.alpha <= 0) return;
+        g.save(); g.globalAlpha = tv.alpha;
+        I.drawUnit(g, m, { at: { x: m.x, y: m.y }, lift: 0, hop: tv.hop, walk: tv.walk, status: 'ready', morale: R.currentMorale(m) });
+        g.restore();
+        return;
+      }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
       if (m === u && arr.hidden) return;                 // not on the field yet
       var fading = m === u && arr.alpha != null;          // teleporting in
@@ -16327,6 +16375,10 @@
       });
       if (fading) g.restore();
     });
+    // a shield generator's dome is always up, as it is in the battle, while the unit is on the field
+    STANDING.clear();
+    if (shielded(u) && !arr.hidden) STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
+    STANDING.draw(g);
     FX.draw(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
@@ -16385,6 +16437,7 @@
     var acting = busy;
     if (view.walking) { stepWalk(dt); busy = true; }
     if (view.strafeAt) { strafing(); busy = true; acting = true; }
+    if (view.tele) { busy = true; acting = true; }       // a squad going through a teleport gate
     /* Firing pulls the camera out to the whole line; once the shots have
        finished playing it goes back in to the zoom the viewer chose. */
     if (view.wide) {
@@ -16399,10 +16452,13 @@
     } else view.zCur = want;
     // the wreck keeps burning, and a damaged hull keeps smoking
     if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
+    // and a shield's band of light keeps turning
+    if (shielded(unit())) busy = true;
     frame();
     if (busy) start(); else last = 0;
   }
   function start() { if (!loop) loop = requestAnimationFrame(tick); }
+  function shielded(u) { return view.status !== 'destroyed' && !!R.ruleValue(u, 'Shield Generator'); }
 
   /* ---------- movement ----------
      The unit walks out to the mark and back at its own Movement in inches a
@@ -16471,24 +16527,77 @@
     { rule: 'Dominant Species', name: 'Regain Control', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '110,190,255', dur: 1500 }]; }, sfx: 'shimmer' },
     { rule: 'Overmind', name: 'Overmind', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 18, rgb: '150,215,90', dur: 1700 }]; }, sfx: 'chitter' },
     { rule: 'Shield Generator', name: 'Shield', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 12, dur: 2200 }]; }, sfx: 'shimmer' },
-    { rule: 'Hackers', name: 'Hack', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '90,255,140', data: true, dur: 1800 }]; }, sfx: 'zap' },
+    { rule: 'Hackers', name: 'Hack', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '90,255,140', data: true, dur: 1800 }]; }, sfx: 'zap' },
     { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
     { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
-    { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
-    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
+    { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
     { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
     { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
-    { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
-    { rule: 'Teleport', name: 'Teleport', play: function () { return [{ kind: 'teleportin', x: TO.x, y: TO.y, r: 1.4, dur: 1500 }]; }, sfx: 'shimmer' },
+    { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
+    { rule: 'Teleport', name: 'Teleport', play: function (u) { return teleportThrough(u); }, sfx: 'shimmer' },
     { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
     { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
-    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
+    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
     { rule: '…but they\'ll never take our freedom!', name: 'Rally cry', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '240,120,80', dur: 1400 }, { kind: 'rise', x: u.x, y: u.y, rgb: '240,120,80', n: 8, dur: 1400 }]; }, sfx: 'chime' },
     { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Inspiring Presence', name: 'Inspire', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, rgb: '232,193,90', dur: 1300 }]; }, sfx: 'chime' },
     { rule: 'Counter-jamming', name: 'Counter-jam', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 6, rgb: '120,200,255', dur: 1800 }]; }, sfx: 'shimmer' }
   ];
+  /* Where a beam leaves a machine: a craft's nose, else the first barrel it has.
+     A trooper's beam leaves from about chest height (fx.js's default). */
+  function beamFrom(u) {
+    if (!R.isMachine(u)) return undefined;
+    var M = I.mounts(u), k = ['nose', 'gun', 'mg', 'auto', 'rocket'].filter(function (n) { return M[n] && M[n].length; })[0];
+    return k ? M[k][0] : undefined;
+  }
+  /* Teleport (p. 130): a squad within 4" walks into the gate and is gone in a
+     flash of it, and a moment later the gate flashes again and the squad walks
+     back out, to within 4" on the far side. The flashes stand around the gate
+     itself; the squad is drawn by frame() from view.tele. */
+  var TP = { IN: 1500, GONE: 2300, OUT: 3900, END: 4300, REACH: 3.5, NEAR: 0.5 };
+  function teleportThrough(u) {
+    view.tele = { t0: Date.now(), at: { x: u.x, y: u.y } };
+    var r = u.cls === 'aircraft' ? 2.6 : 2.2;
+    return [
+      { kind: 'teleportin', x: u.x, y: u.y, r: r, delay: TP.IN - 450, dur: TP.IN - 450 + 1300 },
+      { kind: 'teleportin', x: u.x, y: u.y, r: r, delay: TP.GONE - 250, dur: TP.GONE - 250 + 1300 }
+    ];
+  }
+  // the travelling squad, where it is along the walk in or out, or null while it is inside the gate
+  function traveller() {
+    var T = view.tele;
+    if (!T) return null;
+    var t = Date.now() - T.t0;
+    if (t >= TP.END) { view.tele = null; return null; }
+    if (t >= TP.IN && t < TP.GONE) return null;
+    var dx = TO.x - T.at.x, dy = TO.y - T.at.y, dl = Math.hypot(dx, dy) || 1;
+    dx /= dl; dy /= dl;
+    var from, to, k, alpha;
+    if (t < TP.IN) {
+      // in from behind the gate, fading as it steps into the ring
+      k = Math.min(1, t / (TP.IN - 200));
+      from = { x: T.at.x - dx * TP.REACH, y: T.at.y - dy * TP.REACH + 1 };
+      to = { x: T.at.x - dx * TP.NEAR, y: T.at.y - dy * TP.NEAR };
+      alpha = t < TP.IN - 450 ? 1 : Math.max(0, (TP.IN - t) / 450);
+    } else {
+      // out the other side toward the mark, forming out of the light as it goes
+      k = Math.min(1, (t - TP.GONE) / (TP.OUT - TP.GONE));
+      from = { x: T.at.x + dx * TP.NEAR, y: T.at.y + dy * TP.NEAR };
+      to = { x: T.at.x + dx * TP.REACH, y: T.at.y + dy * TP.REACH };
+      alpha = Math.min(1, (t - TP.GONE) / 450);
+    }
+    var e = k * k * (3 - 2 * k), walking = k > 0 && k < 1;
+    var p = R.profile('xbeta3');
+    var m = Object.assign({}, p, {
+      id: 'VTELE', side: view.side, label: p.name, models: p.size, rules: p.rules.slice(),
+      sp: 0, alive: true, damage: 0, cargo: [],
+      x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e,
+      facing: Math.atan2(to.y - from.y, to.x - from.x)
+    });
+    return { u: m, alpha: alpha, walk: walking ? 1 + (Math.floor(t / 140) % 2) : 0, hop: walking ? Math.abs(Math.sin(t / 140 * Math.PI)) * 1.6 : 0 };
+  }
   // every ability a unit has, in that order — an EW team hacks and jams — to a button each, three at most
   function abilitiesOf(u) {
     var rules = (u && u.rules) || [], out = [];
@@ -17082,6 +17191,7 @@
       picker = root.PMCAtlas.mount({
         main: el('vlist'), scroller: el('vside').querySelector('.vlistscroll'), search: el('vsearch'),
         faction: pickerFaction, colour: view.colour.A, prefix: 'vp-',
+        fit: { inf: 120, other: 112 },     // the list's own tile sizes; the desktop's three-to-a-row tiles come smaller
         findMore: function (p) { var w = R.weaponSpec(p); return styleName(w.p) + (w.s ? ' ' + styleName(w.s) : ''); }
       });
     } else if (want !== pickerShown) { picker.render(); el('vside').querySelector('.vlistscroll').scrollTop = 0; }
@@ -17107,7 +17217,8 @@
     h += '<div class="vtabs" role="tablist">' +
       '<button type="button" role="tab" data-tab="stats" aria-selected="' + (tab === 'stats') + '"' + (tab === 'stats' ? ' class="on"' : '') + '>Stats</button>' +
       '<button type="button" role="tab" data-tab="opts" aria-selected="' + (tab === 'opts') + '"' + (tab === 'opts' ? ' class="on"' : '') + '>Options</button></div>';
-    h += '<div class="vtabbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
+    h += '<div class="vtabbody vstatsbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
+    h += '<div class="vtabbody voptsbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
     h += '<div class="vacts">' +
       '<button class="vbtn primary" data-do="fire">Fire</button>' +
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
@@ -17133,11 +17244,12 @@
       h += '<div class="vgrp"><label>Models — ' + n + ' of ' + p.size + '</label>' +
         '<input type="range" id="vmodels" min="1" max="' + p.size + '" value="' + n + '"></div>';
     }
-    h += '</div><div class="vtabbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
-    var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0;
+    h += '</div>';
+    var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0, all = el('vctl').scrollTop;
     el('vctl').innerHTML = h;
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
+    el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, stats over options
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
@@ -17207,6 +17319,7 @@
     if (!cv) return;
     g = cv.getContext('2d');
     FX = root.PMCFx.create({ lift: function () { return 0; } });
+    STANDING = root.PMCFx.create({ lift: function () { return 0; } });
     I.setSideColour('A', view.colour.A);
     I.setSideColour('B', view.colour.B);
     fit();
