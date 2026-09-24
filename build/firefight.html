@@ -36761,7 +36761,7 @@
     if (line) line.innerHTML = archLine();
   }
   function hubView() {
-    var h = '<h2>Campaign</h2>';
+    var h = '<h2>Campaign' + (camp ? ' — turn ' + camp.turn : '') + '</h2>';
     if (!camp) {
       h += '<p class="lede">A never-ending series of battles between two forces that grow, ' +
         'scar over and occasionally fall apart. ' +
