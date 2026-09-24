@@ -105,7 +105,7 @@ async function drain(p) {
     const c = window.PMC_CAMPAIGN.get().companies.A;
     return window.PMC.profile(window.PMCCamp.byRid(c, c.cmdRid).key).group;
   }) === 'First Among Equals');
-  check('...and faces somebody', /next|Rival|against/.test(txt), (txt.match(/against ([^.]+)\./) || [])[1]);
+  check('...and faces somebody', /forces|Rival|against/.test(txt), (txt.match(/against ([^.]+)\./) || [])[1]);
   await shot(p, 'rebel-hub.png');
 
   const rival = await p.evaluate(() => {
@@ -239,8 +239,6 @@ async function drain(p) {
     (txt.match(/\+\d+ (IP|kUC)/) || [])[0]);
   check('...and says where the other two forces were', /elsewhere on the world/i.test(txt),
     (txt.split('\n').filter(l => /fought their own battle/.test(l))[0] || 'no line'));
-  check('...and who is coming next', /next:/i.test(txt),
-    (txt.match(/Next: [^\n]+/i) || [])[0]);
   await shot(p, 'rebel-aftermath.png');
   const after = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get(), A = c.companies.A;

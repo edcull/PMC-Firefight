@@ -224,8 +224,6 @@ async function drain(p) {
     (txt.split('\n').filter(l => /Territorial/.test(l))[0] || 'no line'));
   check('...and says where the other two forces were', /elsewhere on the world/i.test(txt),
     (txt.split('\n').filter(l => /fought their own battle/.test(l))[0] || 'no line'));
-  check('...and who is coming next', /next:/i.test(txt),
-    (txt.match(/Next: [^\n]+/i) || [])[0]);
   await shot(p, 'xeno-aftermath.png');
   const after = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get(), A = c.companies.A;

@@ -370,11 +370,11 @@
     h += '<div class="field"><label>' + (camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world') + '</label>' +
       '<button type="button" class="archline" data-go="fmodal" data-kind="rivals"><span>' +
       (camp.mode === 'hotseat' ? esc(B.name)
-        : n > 1 ? n + ' forces — <b>' + esc(B.name) + '</b> next' : esc(B.name)) +
+        : n > 1 ? n + ' forces' : esc(B.name)) +
       '</span><em>details</em></button></div>';
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
-        : rivals.map(function (co, i) { return rivalPanel(co, i, i === camp.facing); }).join('')) + '</div>');
+        : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
     if (camp.log.length) {
       h += '<h3>Recent battles</h3><div class="clog">';
       camp.log.slice(-6).reverse().forEach(function (l) {
@@ -503,11 +503,11 @@
       '</div>';
   }
 
-  function rivalPanel(co, idx, next) {
+  function rivalPanel(co, idx) {
     var a = C.archetype(co.archetype);
-    var h = '<div class="cpan cpan-B' + (next ? ' cpan-next' : '') + '"><div class="cphead">' + tierBadge(co) + '<b>' +
-      esc(co.name) + '</b>' +
-      (next ? '<span class="mk good">next</span>' : '') + '</div>';
+    // no 'next' on any of them: the player picks the contract, and with it who they meet
+    var h = '<div class="cpan cpan-B"><div class="cphead">' + tierBadge(co) + '<b>' +
+      esc(co.name) + '</b></div>';
     h += statRow(co, true);
     h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span><span class="dtag">' + esc(a.name) + '</span></div>';
     h += '<div class="cpstat">' + esc(co.blurb || a.blurb) + '</div>';
@@ -1576,12 +1576,6 @@
           return esc(e.name) + ' fought their own battle and took ' + e.kUC + ' ' +
             C.money(co) + '.';
         }).join('<br>') + '</div></div>';
-    }
-    if (after.next) {
-      h += '<div class="cpan cpan-next"><div class="cphead"><b>Next: ' + esc(after.next.name) + '</b>' +
-        '<span class="mk">' + C.words(after.next).side + '</span>' +
-        '<span class="ctier">' + C.words(after.next).tier +
-        ' Tier ' + ROMAN[after.next.tier] + '</span></div></div>';
     }
 
     var gaps = C.rebuildNeeds(camp.companies.A);

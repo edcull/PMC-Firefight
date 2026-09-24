@@ -84,7 +84,7 @@ async function clickText(p, re) {
   });
   check('...and a rival founded alongside', !!rival.arch && rival.units === 9,
     rival.name + ', ' + rival.arch + ', ' + rival.units + ' units');
-  check('...whose character the hub shows', new RegExp(rival.name).test(txt), true, rival.name);
+  check('...whose panel the hub lists', await p.evaluate((n) => [...document.querySelectorAll('#camp-body .cpan-B .cphead b')].some(b => b.textContent === n), rival.name), rival.name);
   await shot(p, 'camp-hub.png');
 
   /* the road to the next Company Tier, laid out step by step (pp. 83-84) */
