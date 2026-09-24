@@ -364,14 +364,7 @@
     var A = camp.companies.A, B = camp.companies.B;
     var rivals = camp.mode === 'hotseat' ? [] : (camp.rivals || [B]), n = rivals.length;
     if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) + '</p>';
-    /* One row: the dossier, the save file out and in, and the contract, which
-       is what the screen is for. */
-    h += '<div class="hubbar">' +
-      '<button class="lnk" data-go="roster">Dossier</button>' +
-      '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
-      '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
-      '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
-    h += companyPanel(A, 'A');
+    h += companyPanel(A, 'A', hubBar());
     /* Who else is on the world: one line, and their panels in a modal behind
        it (in hotseat, the second player's force). */
     h += '<div class="field"><label>' + (camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world') + '</label>' +
@@ -399,12 +392,23 @@
     return h;
   }
 
-  function companyPanel(co, side) {
+  /* One row under the name: the dossier, the save file out and in, and the
+     contract, which is what the screen is for. */
+  function hubBar() {
+    var h = '';
+    h += '<div class="hubbar">' +
+      '<button class="lnk" data-go="roster">Dossier</button>' +
+      '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
+      '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
+      '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
+    return h;
+  }
+  function companyPanel(co, side, bar) {
     var h = '<div class="cpan cpan-' + side + '">';
     h += '<div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b>' +
       (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
-    h += statRow(co);
+    h += (bar || '') + statRow(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
         var dd = C.doctrine(d);
@@ -484,16 +488,15 @@
   }
   /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
   function statRow(co, rival) {
-    var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co), r = co.record || {};
+    var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co);
     function pc(x) { return Math.round(x * 1000) / 10 + '%'; }
-    function cell(cls, pct, word, sub) {
-      return '<div class="cstat ' + cls + '"><b>' + pct + '</b><span>' + esc(word) + '</span><em>' + sub + '</em></div>';
+    function cell(cls, pct, word) {
+      return '<div class="cstat ' + cls + '"><b>' + pct + '</b><span>' + esc(word) + '</span></div>';
     }
     return '<div class="cstats">' +
-      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate',
-        (r.wins || 0) + '-' + (r.draws || 0) + '-' + (r.losses || 0) + ' W-D-L') +
-      cell('cs-exp', pc(ex.pct), ex.word, ex.honours + ' ' + esc(ex.noun)) +
-      cell('cs-tra', pc(tr.pct), tr.word, tr.traumas + ' ' + esc(tr.noun)) +
+      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate') +
+      cell('cs-exp', pc(ex.pct), ex.word) +
+      cell('cs-tra', pc(tr.pct), tr.word) +
       '</div>';
   }
 

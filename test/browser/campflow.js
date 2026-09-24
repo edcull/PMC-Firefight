@@ -76,7 +76,7 @@ async function clickText(p, re) {
   check('the hub shows the new company', /Task Force Ironhold/.test(txt));
   check('...at Company Tier I', await p.evaluate(() => (document.querySelector('#camp-body .cpan-A .tierbadge') || {}).textContent === 'I'));
   check('...with nine units', await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length === 9));
-  check('...win rate, veterancy and trauma in one row', await p.evaluate(() => document.querySelectorAll('#camp-body .cpan-A .cstats .cstat').length === 3));
+  check('...win rate, honours and trauma in one row', await p.evaluate(() => document.querySelectorAll('#camp-body .cpan-A .cstats .cstat').length === 3));
   check('...and the page itself does not scroll', await p.evaluate(() => { const b = document.getElementById('camp-body'); return b.scrollHeight <= b.clientHeight + 1; }));
   const rival = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get();

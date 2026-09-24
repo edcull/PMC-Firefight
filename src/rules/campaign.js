@@ -826,7 +826,7 @@
     var honours = (co.roster || []).reduce(function (n, e) { return n + (e.honours || []).length; }, 0);
     var units = (co.roster || []).length;
     return {
-      word: f === 'bugs' ? 'evolution' : f === 'xeno' ? 'enlightenment' : 'veterancy',
+      word: f === 'bugs' ? 'adaptations' : f === 'xeno' ? 'rites' : 'honours',
       honours: honours, units: units, pct: units ? honours / units : 0,
       noun: honours === 1 ? words(co).honour : words(co).honours
     };
@@ -844,7 +844,7 @@
     var traumas = (co.roster || []).reduce(function (n, e) { return n + (e.traumas || []).length; }, 0);
     var units = (co.roster || []).length;
     return {
-      word: f === 'bugs' ? 'genetic degradation' : f === 'xeno' ? 'infamy' : 'trauma',
+      word: f === 'bugs' ? 'defects' : f === 'xeno' ? 'infamy' : 'trauma',
       traumas: traumas, units: units, pct: units ? traumas / units : 0,
       noun: traumas === 1 ? words(co).trauma : words(co).traumas
     };
