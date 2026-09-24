@@ -2272,13 +2272,15 @@
         // only the first player's choice is remembered as "your" colour
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
-        if (muster.hot && muster.hot.kind === 'demo') demoRename();   // its name is its colour
+        // its name is its colour: a demo force's, and the AI opposition's until someone types one
+        var nm0 = ((el('hot-name') && el('hot-name').value) || '').trim();
+        if (muster.hot && (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && muster.hot.step === 2 && (!nm0 || isDemoName(nm0))))) demoRename();
         // a made-up name follows the colour
-        if (muster.hot && muster.hot.kind !== 'demo') {
+        if (muster.hot && muster.hot.kind !== 'demo' && !(muster.hot.kind === 'ai' && muster.hot.step === 2)) {
           var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
           if (!nm || isMadeUpName(nm)) { muster.name = ISO.COLOURS[muster.colour].name + ' ' + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
-          colourPop(false);                // the pick shuts the pop-up
         }
+        colourPop(false);                  // the pick shuts the pop-up
         drawColourPick();
       });
     });
@@ -4714,7 +4716,8 @@
     pts.textContent = c.spent + ' / ' + c.budget + ' points';
     pts.classList.toggle('over', c.spent > c.budget);
 
-    el('limits').innerHTML = (muster.solo ? 'Commando, by Tier — ' : 'Units by Tier — ') + [1, 2, 3, 4, 5].map(function (t) {
+    // the count at each Tier against its limits, on one line: I 1/0-8 · II 0/0-8 · …
+    el('limits').innerHTML = (muster.solo ? 'Commando — ' : '') + [1, 2, 3, 4, 5].map(function (t) {
       var lo = lims[t - 1][0], hi = lims[t - 1][1];
       if (hi === 0) return null;
       var txt = hi === 99 ? lo + '+' : lo + '-' + hi;
@@ -5157,7 +5160,7 @@
       el('sel-faction').value = 'pmc';             // a mercenary company, until they pick another kind
       drawColourPick();
       if (el('sel-tactic')) el('sel-tactic').value = '';
-      muster.name = 'Your force';
+      muster.name = 'Your Force';
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
     hotPaint();
@@ -5209,12 +5212,21 @@
     muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
     var other = muster.hot.sides[1 - i];
     if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
-    if (muster.hot.kind === 'demo') { muster.demoNoun = null; demoRename(); return; }
+    // a demo force, and the AI's opposition, take a name from their colour and kind: the Jade Brood
+    if (muster.hot.kind === 'demo' || (muster.hot.kind === 'ai' && i === 1)) {
+      var own = ((el('hot-name') && el('hot-name').value) || '').trim();
+      if (muster.hot.kind === 'ai' && own && !isDemoName(own) && !isMadeUpName(own)) { muster.name = own; return; }   // one typed stays
+      muster.demoNoun = null; demoRename(); return;
+    }
     // a name the player gave it stays; one made up from its colour and kind follows them
     var typed = ((el('hot-name') && el('hot-name').value) || '').trim();
     if (typed && !isMadeUpName(typed)) { muster.name = typed; return; }
     muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[f];
     if (el('hot-name')) el('hot-name').value = muster.name;
+  }
+  // "The Jade Brood": a name made up from a colour, the way a demo force is named
+  function isDemoName(n) {
+    return ISO.COLOUR_KEYS.some(function (k) { return n.indexOf(demoName(k, '')) === 0; });
   }
   function isMadeUpName(n) {
     return ISO.COLOUR_KEYS.some(function (k) {
@@ -5237,6 +5249,7 @@
       if (el('sel-tactic')) el('sel-tactic').value = sd.tactic || '';
       if (el('hot-name')) el('hot-name').value = sd.name;
     } else if (hotRolled(i + 1)) {
+      if (el('hot-name')) el('hot-name').value = '';   // a fresh force: the other one's name is not its own
       hotRandomise(i);
     } else {
       // a fresh force for the second player; in a hotseat, in a colour the first is not wearing

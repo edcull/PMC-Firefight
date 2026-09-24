@@ -482,7 +482,7 @@
   .muster-head b { font-family: var(--display); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
   .pts { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
   .pts.over { color: var(--bad); }
-  .limits { margin: 0 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+  .limits { margin: 0 0 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .limits b { color: var(--ink-dim); font-weight: 500; }
   .limits b.short { color: var(--warn); }
   .chosen { display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; }
@@ -741,7 +741,7 @@
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
   .forcebar-wrap, .forcebar-box { display: contents; }
-  #setup[data-quick] .demo-btns { display: flex; gap: 6px; margin: 9px 0 8px; }
+  #setup[data-quick] .demo-btns { display: flex; gap: 6px; margin: 9px 0 0; }
   #setup[data-quick] .demo-btns .lnk { flex: 1; }
   #setup[data-quick] .demo-btns .ico { display: grid; place-items: center; padding: 6px 0; min-height: 36px; }
   #setup[data-quick] .demo-btns .ico svg { width: 20px; height: 20px; }
