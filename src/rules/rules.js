@@ -1629,8 +1629,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
-    // the light VTOL drone's single nose gun
-    vtoldrone: { p: 'small' },
+    // the light VTOL drone carries no gun worth the name: a light sidearm's crack
+    vtoldrone: { p: 'pistol' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
     interceptor: { p: 'missile', n: 2, s: 'burst' },
 

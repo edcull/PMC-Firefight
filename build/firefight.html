@@ -3660,8 +3660,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
-    // the light VTOL drone's single nose gun
-    vtoldrone: { p: 'small' },
+    // the light VTOL drone carries no gun worth the name: a light sidearm's crack
+    vtoldrone: { p: 'pistol' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
     interceptor: { p: 'missile', n: 2, s: 'burst' },
 
@@ -18160,7 +18160,7 @@
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
-    // the Light VTOL drone: a small flying disc with side pods and a long gun on top
+    // the Light VTOL drone: a small flying disc with side pods and a sensor head, scanning
     vtoldrone: { len: 0.95, wid: 0.95, hgt: 6, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
@@ -20928,6 +20928,17 @@
           if (!dead) {
             var ug = S3(AF(0, 0), z - 1);
             sEllipse(ug[0], ug[1], R0 * K * 0.6, R0 * K * 0.3, 'rgba(110,190,255,.14)');
+            /* It is there to find and mark, not to fight: a scanning fan swept
+               across the ground ahead, as the Xenotripod recon craft throws. */
+            var tn = root.performance ? performance.now() : 0;
+            var sw = Math.sin(tn / 700) * 0.3, reach = R0 + 0.55;
+            var n0 = S3(AF(R0 * 0.97, 0), z + Math.round(H * 0.12));
+            var f0 = S3(AF(reach, sw - 0.32), 0), f1 = S3(AF(reach, sw + 0.32), 0);
+            poly(g, [n0, f0, f1], 'rgba(110,190,255,.12)');
+            line(n0, f0, 1, 'rgba(160,215,255,.45)'); line(n0, f1, 1, 'rgba(160,215,255,.45)');
+            line(f0, f1, 1.2, 'rgba(190,235,255,.7)');
+            var fm = S3(AF(reach, sw + 0.32 * Math.sin(tn / 180)), 0);
+            line(n0, fm, 1, 'rgba(210,240,255,.55)');
           }
           [-1, 1].forEach(function (sd) {
             part(0, sd * R0 * 1.1, function () {
@@ -20949,9 +20960,11 @@
                 sEllipse(lp2[0], lp2[1], 0.8, 0.6, 'rgba(150,215,255,.9)');
               }
             }
-            // the gun: a long barrel on a low mount, laid along the top to one side
-            shape(AF, [[R0 * 0.05, -R0 * 0.52], [R0 * 0.05, -R0 * 0.3], [-R0 * 0.35, -R0 * 0.3], [-R0 * 0.35, -R0 * 0.52]], z + Math.round(H * 0.32), 2, TB);
-            noseGun(-R0 * 0.1, -R0 * 0.41, z + Math.round(H * 0.32) + 3, 0.62, 'mg');
+            // the sensor head on the front of the rim, where its marker beam leaves
+            var sl = S3(AF(R0 * 0.97, 0), z + Math.round(H * 0.12));
+            sEllipse(sl[0], sl[1], 2.4, 1.9, '#123a6e');
+            sEllipse(sl[0], sl[1], 1.5, 1.2, dead ? '#3a4048' : '#6ebeff');
+            if (!dead) sEllipse(sl[0] - 0.4, sl[1] - 0.4, 0.6, 0.5, '#e4f4ff');
           }, true);
           break;
         }
