@@ -9829,7 +9829,7 @@
          be; on a walker, up on a shoulder; on a craft, the middle of its back. */
       var back = -0.3, off = -spec.wid * 0.26;
       // a craft's back is measured from where it flies, not from a ground hull's ride height
-      if (spec.fly) { back = 0.05; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.75 : 1); }
+      if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.75 : 0.72); }
       else if (legs) { back = -0.12; off = -spec.wid * 0.28; }
       else if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
       else if (body === 'guntruck') {
@@ -9845,7 +9845,8 @@
       ellipse(g, dp.x + r * 0.2, cy - r * 0.05, r * 0.28, r * 0.2, '#2a6f9a');     // the sensor behind the dome's skin
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
-      if (spec.fly) return;                              // a craft carries the dome only, no aerial
+      if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
+      if (spec.fly) aq = along(-spec.len * 0.06, spec.wid * 0.3);   // a rotorcraft's stands on the back of its body
       else if (legs) aq = along(spec.len * back - 0.2, off * 0.8);
       else {
         aq = along(-spec.len * 0.44, spec.wid * 0.32);
