@@ -187,14 +187,16 @@
   /* Who holds a point: at least one steady, unbroken, non-flying unit within 4",
      and none of the enemy's (p. 49). */
   function holderOf(state, x, y, radius) {
-    var claim = { A: 0, B: 0 };
+    // a Suppressed enemy cannot hold the point, but still denies it; a Broken one does neither
+    var claim = { A: 0, B: 0 }, deny = { A: 0, B: 0 };
     state.units.forEach(function (u) {
-      if (!onTable(u) || R.isFlying(u) || !unsuppressed(u)) return;
+      if (!onTable(u) || R.isFlying(u)) return;
       if (!R.holdsGround(u)) return;               // a drop pod holds nothing (p. 79)
       if (Math.max(0, dist(u.x, u.y, x, y) - R.UNIT_R) > (radius || 4)) return;
-      claim[u.side]++;
+      if (unsuppressed(u)) claim[u.side]++;
+      if (R.status(u) !== 'broken') deny[u.side]++;
     });
-    return claim.A > 0 && claim.B === 0 ? 'A' : (claim.B > 0 && claim.A === 0 ? 'B' : null);
+    return claim.A > 0 && deny.B === 0 ? 'A' : (claim.B > 0 && deny.A === 0 ? 'B' : null);
   }
 
   /* Rout: half a side's units destroyed or fled. Units still in reserve count as
@@ -206,7 +208,9 @@
     var pods = state.units.filter(function (u) {
       return u.side === side && !R.countsForVictory(u);
     }).length;
-    var started = Math.max(0, army.length - pods);
+    // Expendable troops whose collars went off "do not count as a casualty for the purposes of victory conditions" (p. 57)
+    var spent = state.units.filter(function (u) { return u.side === side && u.expended; }).length;
+    var started = Math.max(0, army.length - pods - spent);
     var left = state.units.filter(function (u) {
       return u.alive && u.side === side && R.countsForVictory(u);
     }).length;
@@ -476,9 +480,12 @@
             return [];
           }
           state.sc.zonesHot = 0;
-          // the second wave rolls in from turn 4, 5+ and easier every turn after
-          var need = Math.max(2, 5 - (state.turn - 4));
-          return pool.filter(function (u) { return u.wave === 2 && d6() >= need; });
+          /* The second wave comes down together, on one D6 for the lot (p. 53): 5+
+             on turn 4, and +1 to the roll every turn after — certain by turn 8. */
+          var need = 5 - (state.turn - 4);
+          var wave2 = pool.filter(function (u) { return u.wave === 2; });
+          if (!wave2.length) return [];
+          return need <= 1 || d6() >= need ? wave2 : [];
         }
         if (state.turn < 2) return [];
         return pool.filter(function () { return d6() >= 5; });

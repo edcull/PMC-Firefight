@@ -215,9 +215,9 @@
     { key: 'rshtv', code: 'SHV', name: 'Super heavy transport-combat vehicle', group: 'Rebel transport vehicles', faction: 'rebel', cls: 'vehicle', art: 'ttheavy', tier: 4, size: 1, move: 8, turn: 2, fp: 6, range: 18, def: 10, assault: 4, str: 14, transport: 3, rules: ['Ground vehicle', 'Transport (3)', 'Supporting Fire', 'Advanced Protection'], capPL: 1 },
 
     /* Flak vehicles (p. 107) — one per Priority Level */
-    { key: 'rlflak', code: 'LFV', name: 'Light FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aatech', tier: 2, size: 1, move: 10, turn: 2, fp: 3, range: 18, def: 9, assault: 2, str: 4, rules: ['Ground vehicle', 'Anti-aircraft'], capPL: 1 },
-    { key: 'rmflak', code: 'MFV', name: 'Medium FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aacar', tier: 3, size: 1, move: 8, turn: 2, fp: 4, range: 24, def: 11, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Suppressive Fire'], capPL: 1 },
-    { key: 'rhflak', code: 'HFV', name: 'Heavy FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aaheavy', tier: 4, size: 1, move: 6, turn: 2, fp: 5, range: 30, def: 12, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Anti-tank', 'Cumbersome Weapon'], capPL: 1 },
+    { key: 'rlflak', code: 'LFV', name: 'Light FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aatech', tier: 2, size: 1, move: 10, turn: 2, fp: 3, range: 18, def: 9, assault: 2, str: 4, rules: ['Ground vehicle', 'Anti-aircraft'], groupCapPL: 1 },
+    { key: 'rmflak', code: 'MFV', name: 'Medium FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aacar', tier: 3, size: 1, move: 8, turn: 2, fp: 4, range: 24, def: 11, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Suppressive Fire'], groupCapPL: 1 },
+    { key: 'rhflak', code: 'HFV', name: 'Heavy FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aaheavy', tier: 4, size: 1, move: 6, turn: 2, fp: 5, range: 30, def: 12, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Anti-tank', 'Cumbersome Weapon'], groupCapPL: 1 },
 
     /* Rebel aviation (p. 108) — civilian hulls pressed into service */
     { key: 'rpatrol', code: 'CPC', name: 'Captured patrol craft', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'hawk', tier: 2, size: 1, move: 18, fp: 3, range: 12, def: 9, assault: 1, str: 4, rules: ['Flying unit', 'Keen-Eyed', 'Smoke Markers'] },
@@ -353,6 +353,11 @@
      None of these change a Unit Tier: every one trades an advantage for a cost.
      An army entry may be written "lcv:tracked"; a bare key means wheeled. */
   var PROPULSION = {
+    // the optional propulsions are just that (p. 166): without one, a hull follows the standard rules
+    none: {
+      key: 'none', name: 'None', short: 'std',
+      note: 'No optional propulsion: the standard vehicle rules.'
+    },
     wheeled: {
       key: 'wheeled', name: 'Wheeled', short: 'whl',
       note: 'Follows all the standard rules.'
@@ -375,7 +380,7 @@
       note: 'Legs: pays the infantry 1" for difficult ground and takes cover from terrain, and its armoured flanks deny the +1 side shot — but its height costs 1 Defence.'
     }
   };
-  var PROP_ORDER = ['wheeled', 'tracked', 'grav', 'hover', 'walker'];
+  var PROP_ORDER = ['none', 'wheeled', 'tracked', 'grav', 'hover', 'walker'];
 
   /* "lcv:tracked", "lcv:tracked:drone" or "rfanatics:riders" -> { key, prop, drone, riders } */
   /* What a mounted unit rides (p. 93 says "bikes and beasts"): it changes the
@@ -383,6 +388,8 @@
   /* What a rider sits on (Appendix 3, pp. 166-167): each trades one of the
      Riders restrictions for a cost of its own. */
   var MOUNTS = {
+    // no optional mount (p. 166): the standard Riders rules, drawn on a bike
+    none: { name: 'None', note: 'No optional mount: the standard Riders rules.' },
     bike: { name: 'Motorbike', transport: true, rough: 6,
       note: 'Can be carried in a transport, but loses 6" crossing difficult terrain.' },
     gravbike: { name: 'Grav bike', smooth: true, def: -1,
@@ -400,7 +407,7 @@
     if (m.def) { u.def = Math.max(1, u.def + m.def); if (u.defPierced) u.defPierced = Math.max(1, u.defPierced + m.def); }
     return u;
   }
-  var MOUNT_ORDER = ['bike', 'gravbike', 'horse'];
+  var MOUNT_ORDER = ['none', 'bike', 'gravbike', 'horse'];
   // a unit that rides: the Mounted Warriors always, the Riders upgrade when taken
   function canMount(p, riders) { return !!p && (p.group === 'Mounted Warriors' || (!!riders && !!p.ridersUpgrade)); }
   function splitPick(entry) {
@@ -416,10 +423,10 @@
   }
   function joinPick(key, prop, drone, riders, mount) {
     var out = key;
-    if (prop && prop !== 'wheeled') out += ':' + prop;
+    if (prop && prop !== 'none') out += ':' + prop;
     if (drone) out += ':drone';
     if (riders) out += ':riders';
-    if (mount && mount !== 'bike') out += ':' + mount;
+    if (mount && mount !== 'none') out += ':' + mount;
     return out;
   }
   /* Riders upgrade (p. 93): the unit is mounted — half the models, Movement 10,
@@ -439,8 +446,13 @@
   // a vehicle with no Transport rule may be flown as a drone (p. 37)
   // the alien armies' hulls are what they are: no propulsion to pick, no drone option
   function alienHull(p) { return !!p && (p.faction === 'bugs' || p.faction === 'xeno'); }
+  /* Drone Control (p. 37): "Vehicles without the Transport special rule" — ground
+     hulls and aircraft alike (p. 39) — "can be fielded by all armies except the
+     Bugs". A turret is Drone Controlled already, and a Teleport craft carries troops. */
   function canBeDrone(p) {
-    return !!p && p.cls === 'vehicle' && !p.transport && !alienHull(p);
+    return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' &&
+      !(p.rules || []).some(function (r) { return /^(Transport|Teleport|Turret)/.test(r); }) &&
+      !/Turret/.test(p.group || '');
   }
   // which propulsions a profile may take: ground vehicles only
   function propsFor(p) { return p && p.cls === 'vehicle' && !alienHull(p) ? PROP_ORDER : []; }
@@ -459,7 +471,13 @@
     rltv: 'wheeled', ritv: 'wheeled', rshtv: 'tracked',
     rlflak: 'wheeled', rmflak: 'tracked', rhflak: 'tracked'
   };
+  // a hull goes out with no optional propulsion unless one is picked
   function defaultDrive(p) {
+    if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
+    return 'none';
+  }
+  // ...and is drawn on the running gear it usually goes to war on
+  function lookDrive(p) {
     if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
@@ -470,7 +488,7 @@
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
      Hacker can reach into it. */
   function applyDrone(u, on) {
-    if (!on || u.cls !== 'vehicle' || u.transport) { u.drone = false; return u; }
+    if (!on || !canBeDrone(u)) { u.drone = false; return u; }
     u.drone = true;
     u.str += 1;
     if (u.rules.indexOf('Drone Control') < 0) u.rules = u.rules.concat(['Drone Control']);
@@ -481,7 +499,7 @@
     // a giant bug or a Xenotripod hull goes on its own legs and fields: no drive at all
     if (alienHull(u)) { u.prop = null; return u; }
     var pr = PROPULSION[prop];
-    if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'wheeled' : null; return u; }
+    if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'none' : null; return u; }
     u.prop = pr.key;
     if (pr.move) u.move = Math.round(u.move * pr.move * 100) / 100;
     if (pr.turn) u.turn = Math.max(0, (u.turn || 0) + pr.turn);
@@ -858,6 +876,8 @@
   function deathOrGlory(state, u) {
     if (!state || !u || status(u) === 'broken') return null;
     if (hasOwn(u, 'Death or Glory, Comrades!')) return null;
+    // Deserters and POWs "do not follow army special rules (including Insurgent leader special rules)" (p. 103)
+    if (hasOwn(u, 'No Army Rules')) return null;
     var reach = u.tactic === 'wave' ? 18 : 12;
     for (var i = 0; i < state.units.length; i++) {
       var o = state.units[i];
@@ -1333,8 +1353,9 @@
     var aLv = a.side ? levelOf(state, a) : 0, bLv = b.side ? levelOf(state, b) : 0;
     for (var j = 0; j < state.units.length; j++) {
       var u = state.units[j];
-      if (!u.alive || u === a || u === b || u.aboard || u.x < 0) continue;
+      if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
       if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
+      if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
       if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
         var uLv = levelOf(state, u);
         if ((u.side === a.side && aLv > uLv) || (u.side === b.side && bLv > uLv)) continue;
@@ -1794,12 +1815,13 @@
   }
   /* Pheromone Markers: +1 for each friendly marker unit within 18" of the
      target (24" with Strong Pheromones), up to +3, for Animal Behaviour bugs. */
-  function pheromoneBonus(state, a, t) {
+  // `inAssault`: Intense Pheromone Markers count double for Firepower only (p. 125)
+  function pheromoneBonus(state, a, t, inAssault) {
     if (!state || !has(a, 'Animal Behaviour') || campFlag(a, 'deafSenses')) return 0;
     var reach = doctrine(state, a.side, 'BC3') ? 24 : 18, n = 0;
     state.units.forEach(function (o) {
       if (o.side !== a.side || !onBoard(o) || !has(o, 'Pheromone Markers')) return;
-      if (unitDist(o, t) <= reach) n += campFlag(o, 'intensePheromones') ? 2 : 1;
+      if (unitDist(o, t) <= reach) n += campFlag(o, 'intensePheromones') && !inAssault ? 2 : 1;
     });
     return Math.min(3, n);
   }
@@ -1846,12 +1868,13 @@
     if (flyInf(target)) return { v: 0, why: '' };
     if (has(target, 'Animal Behaviour') && !overmindFor(state, target, false)) return { v: 0, why: '' };
     var here = TERRAIN[terrainAt(state, target.x, target.y)].cover;
-    /* Last Stand (p. 95): Rebel infantry holding ground that already shelters them
-       dig in for +4 rather than the terrain's usual bonus. */
-    if (here && target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry') {
-      return { v: Math.max(here, 4), why: 'terrain cover — Last Stand' };
-    }
-    if (here) return { v: here, why: 'terrain cover' };
+    /* Last Stand (p. 95): Rebel infantry "get +4 to their Defence parameter when in
+       terrain which grants a Defence bonus" — behind a low wall as much as in ruins. */
+    var stand = target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry';
+    function held(v, why) { return stand ? { v: Math.max(v, 4), why: why + ' — Last Stand' } : { v: v, why: why }; }
+    if (here) return held(here, 'terrain cover');
+    // a dug-in gun sits behind its own sandbags, which count as cover (p. 94)
+    if (dugIn(target)) return { v: 2, why: 'dug in behind sandbags' };
     if (!attacker) return { v: 0, why: '' };
     // Indirect Fire falls from above, so a low wall shelters the target whichever
     // way the shot comes from
@@ -1867,8 +1890,8 @@
       if (inRect(attacker.x, attacker.y, r)) continue;
       if (rectPointDist(r, target.x, target.y) + UNIT_R > 2 + 1e-6) continue;
       // Indirect Fire falls from above, so the wall shelters them whichever way it comes
-      if (plunging) return { v: t.cover, why: 'low wall against plunging fire' };
-      if (segRect(attacker.x, attacker.y, target.x, target.y, r)) return { v: t.cover, why: 'behind a low wall' };
+      if (plunging) return held(t.cover, 'low wall against plunging fire');
+      if (segRect(attacker.x, attacker.y, target.x, target.y, r)) return held(t.cover, 'behind a low wall');
     }
     return { v: 0, why: '' };
   }
@@ -1892,10 +1915,12 @@
         var cv = cov.v === 2 && campFlag(target, 'invisibility') ? 3 : cov.v;
         def += cv; parts.push({ label: cov.why + (cv !== cov.v ? ' — Rite of Invisibility' : ''), v: cv });
       }
-      if (has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
-        var st = Math.floor(unitDist(attacker, target) / 6);
-        if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
-      }
+    }
+    /* Stealth (p. 59) is not cover: a hull has it too (the Shadow bug), and it
+       holds against defensive fire, which only strips terrain bonuses. */
+    if (!opts.assault && has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
+      var st = Math.floor(unitDist(attacker, target) / 6);
+      if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
     }
     // Shield Generator (p. 130): a dome against fire from outside it
     if (!opts.assault && attacker) {
@@ -2057,6 +2082,7 @@
       if (after === 'broken' && has(target, 'Expendable')) {
         target.alive = false;
         target.fled = true;                      // run off, not killed to the last man
+        target.expended = true;                  // ...and not counted as a loss for victory (p. 57)
         log.push({ t: 'kill', text: target.label + ' breaks — Expendable: removed from play.' });
       } else {
         log.push({ t: after, text: target.label + ' is ' + after.toUpperCase() + ' (' + target.sp + ' SP vs Morale ' + currentMorale(target) + ').' });
@@ -2096,6 +2122,8 @@
     t.alive = false;
     t.wipedOut = true;
     t.catastrophic = total > 5;
+    // whatever became of it, a ground hull's wreck stays where it stood and blocks sight (p. 36)
+    if (!isFlying(t)) t.wreckLoS = true;
     credit(t, from, 'kill');
     var crew = (t.cargo || []).slice();
     t.cargo = [];
@@ -2337,7 +2365,8 @@
      so a machine needs a Destructive Weapon even for that. */
   function canDemolish(u, r) {
     if (!isDestructible(r)) return false;
-    if (destructibleKind(r) === 'target') return !isMachine(u) || has(u, 'Destructive Weapon');
+    // the Demolish objective "can be destroyed only with the Demolish special action" (p. 54): not by fire
+    if (destructibleKind(r) === 'target') return false;
     if (has(u, 'Destructive Weapon')) return true;
     return destructibleKind(r) === 'building' && has(u, 'Incendiary Ammunition');
   }
@@ -2856,6 +2885,7 @@
       var noX = !!t.bld || !!TERRAIN[terrainOf(state, t)].noCrossfire;
       for (var i = 0; i < t.shotFrom.length && !isMachine(t) && !noX; i++) {
         var p = t.shotFrom[i];
+        if (p.basic) continue;
         // Crossfire: the target sits between this firer and an earlier one
         if (pointSegDist(t.x, t.y, p.x, p.y, a.x, a.y) < UNIT_R * 1.6) { crossfire = true; break; }
       }
@@ -2929,7 +2959,8 @@
       total += roll;
       parts.splice(1, 0, { label: 'Rite of Concentration — D10 doubled', v: roll });
     }
-    t.shotFrom.push({ x: a.x, y: a.y });
+    // a Basic Firepower attack is "not counted for Crossfire in any way" (p. 32)
+    t.shotFrom.push({ x: a.x, y: a.y, basic: !!basic });
 
     /* Destructive Weapon (p. 57): a final 15+ or an unmodified 9 against a target
        sheltering in a destructible piece brings it down, strips the cover from
@@ -3233,7 +3264,7 @@
     if (isMachine(def) && (!isMachine(atk) || isOvergrown(atk)) && !has(def, 'Advanced Protection')) {
       total += 4; parts.push({ label: 'assaulting a vehicle', v: 4 });
     }
-    var pheroA = pheromoneBonus(state, atk, def);
+    var pheroA = pheromoneBonus(state, atk, def, true);
     if (pheroA) { total += pheroA; parts.push({ label: 'Pheromone Markers', v: pheroA }); }
     // Fierce Attacks: Flying Infantry +4 in the first round (p. 124)
     if (n === 1 && flyInf(atk) && doctrine(state, atk.side, 'BB4')) { total += 4; parts.push({ label: 'Fierce Attacks', v: 4 }); }
@@ -3372,6 +3403,8 @@
     if (u.cls === 'vehicle' && (kind === 'building' || kind === 'bunker' || kind === 'burning')) return true;
     // ...though a Tier III-V hull simply drives through a wall and flattens it (p. 35)
     if (u.cls === 'vehicle' && u.tier >= 3 && TERRAIN[kind].destructible === 'linear') return false;
+    // below that, a hull crosses no linear obstacle but barbed wire (p. 35)
+    if (u.cls === 'vehicle' && TERRAIN[kind].linear && !TERRAIN[kind].wire) return true;
     var pr = propOf(u);
     // a hovercraft skims water and other liquids — but not hot lava
     if (pr && pr.water && kind === 'deep') return false;
@@ -3409,6 +3442,8 @@
       var x = i * STEP, y = j * STEP;
       if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) return true;
       if (terrainBars(u, kindAt(i, j))) return true;
+      // aircraft "can move over other units" (p. 38); they only may not finish within 1"
+      if (isFlying(u)) return false;
       for (var n = 0; n < state.units.length; n++) {
         var o = state.units[n];
         if (!o.alive || o === u || o.side === u.side || o.aboard || o.x < 0) continue;
@@ -3784,6 +3819,7 @@
   function freedomDice(state, u) {
     if (u.side == null) return 0;
     if (hasOwn(u, '…but they\'ll never take our freedom!')) return 0;
+    if (hasOwn(u, 'No Army Rules')) return 0;         // Deserters and POWs (p. 103)
     if (status(u) === 'broken') return 0;
     var reach = u.tactic === 'wave' ? 18 : 12;
     for (var i = 0; i < state.units.length; i++) {
@@ -4048,7 +4084,7 @@
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
-    defaultDrive: defaultDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
+    defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
     soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);
