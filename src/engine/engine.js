@@ -3696,8 +3696,11 @@
 
     /* Stand still and you may name a second target before the guns answer. The
        same target tapped twice is the book's other stationary option — one target,
-       two units — so either way the second tap sends them. */
-    var canSplit = !u.markMoved && !R.has(u, 'Smoke Markers') &&
+       two units — so either way the second tap sends them. Smoke Markers "work
+       like Markerlights" and always call two, even on the move (p. 94), so a
+       smoke-marking unit may split its call whether or not it has moved. */
+    var smokeOnly = !R.has(u, 'Markerlights') && R.has(u, 'Smoke Markers');
+    var canSplit = (!u.markMoved || smokeOnly) &&
       ui.markPicks.length < 2 && !already &&
       markTargets(u).some(function (t) { return ui.markPicks.indexOf(t) < 0; });
     if (canSplit && u.side === state.activeSide && !isAI(u.side)) {
