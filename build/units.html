@@ -13854,6 +13854,19 @@ html { scroll-behavior: smooth; }
             if (armed) launcher(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, 2, 3, sh, { tone: TB, warheads: RED });
             else slabF(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, TB, tL * 0.05, tL * 0.05, tW * 0.04);
           });
+        } else if (light && u.drone && !dead) {
+          /* A drone has no head to put a pilot in: the sensor dome sits on the
+             chest where it was, and the aerial stands off the back shoulder. */
+          var dz = shoulder - 1, dc = S3(TF(tL * 0.05, 0), dz), dr5 = Math.max(4, 6 * sf);
+          sEllipse(dc[0], dc[1] + dr5 * 0.15, dr5 * 1.2, dr5 * 0.6, '#14171c');
+          sEllipse(dc[0], dc[1] - dr5 * 0.35, dr5, dr5 * 0.85, '#aeb8c2');
+          sEllipse(dc[0], dc[1] - dr5 * 0.05, dr5, dr5 * 0.42, '#7d8894');
+          sEllipse(dc[0] - dr5 * 0.35, dc[1] - dr5 * 0.7, dr5 * 0.35, dr5 * 0.25, 'rgba(255,255,255,.75)');
+          sEllipse(dc[0] + dr5 * 0.2, dc[1] - dr5 * 0.25, dr5 * 0.28, dr5 * 0.2, '#2a6f9a');
+          var backS = nearOf(1) > 0 ? -1 : 1, ab = S3(TF(-tL * 0.4, backS * tW * 1.15), shoulder), at5 = S3(TF(-tL * 0.52, backS * tW * 1.15), shoulder + Math.round(18 * sf));
+          sEllipse(ab[0], ab[1], 2, 1.2, STEEL);                // its mount on the shoulder
+          line(ab, at5, 1.4, STEEL_LIT);
+          sEllipse(at5[0], at5[1], 1.6, 1.6, '#ff5040');
         } else if (light) {
           // the head sits straight on the chest, a size bigger, with a glassy blue eye
           var hz = shoulder - 1, hh = Math.round(9 * sf);
@@ -14006,6 +14019,7 @@ html { scroll-behavior: smooth; }
       if (!u.drone || dead || /Turret/.test(u.group || '')) return;
       var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
       var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+      if (legs && mechClass() === 'light') return;          // drawn in place of its head, with the mech
       var body = spec.style && spec.style.body;
       /* The dome: on a hull's roof off to one side, clear of a turret; on a
          pickup or gun truck, to one side of the flat plate where its cab used to
