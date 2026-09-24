@@ -71,7 +71,7 @@
       aim: view.aimFor === view.face + '|' + view.walking ? view.aim : null,
       faceL: view.faceL
     });
-    if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
+    if (R.propsFor(p).length) R.applyPropulsion(u, view.prop);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
@@ -1084,7 +1084,7 @@
         segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'none') + '</div></div>';
     }
     // an Overgrown Bug walks on its own legs: there is no drive to choose
-    if (isVeh && p.rules.indexOf('Overgrown Bug') < 0) {
+    if (R.propsFor(p).length) {                  // no drive to choose for an Overgrown Bug or a drop pod
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
     }
@@ -1122,7 +1122,7 @@
     /* The stats as fielded: a ground vehicle's propulsion (Appendix 3) changes
        its Movement, turn cost, Structure or Defence, and a changed figure is
        marked, with the printed one on it as a tooltip. */
-    var pr = p.cls === 'vehicle' && !R.alienHull(p) && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
+    var pr = R.propsFor(p).length && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
     var u = Object.assign({}, p, { rules: p.rules.slice(), models: p.size });
     if (pr) R.applyPropulsion(u, pr.key);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));

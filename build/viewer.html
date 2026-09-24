@@ -899,7 +899,9 @@
       !/Turret/.test(p.group || '');
   }
   // which propulsions a profile may take: ground vehicles only
-  function propsFor(p) { return p && p.cls === 'vehicle' && !alienHull(p) ? PROP_ORDER : []; }
+  // ...and not a drop pod, which comes down where it is put and never moves again (p. 79)
+  function immobile(p) { return !!p && (p.rules || []).indexOf('Immobile') >= 0; }
+  function propsFor(p) { return p && p.cls === 'vehicle' && !alienHull(p) && !immobile(p) ? PROP_ORDER : []; }
   /* The running gear each hull goes to war on unless someone picks otherwise —
      what the muster screen fills in and what the Unit Atlas shows. */
   var DEFAULT_DRIVE = {
@@ -917,12 +919,12 @@
   };
   // a hull goes out with no optional propulsion unless one is picked
   function defaultDrive(p) {
-    if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
+    if (!p || p.cls !== 'vehicle' || alienHull(p) || immobile(p)) return null;
     return 'none';
   }
   // ...and is drawn on the running gear it usually goes to war on
   function lookDrive(p) {
-    if (!p || p.cls !== 'vehicle' || alienHull(p)) return null;
+    if (!p || p.cls !== 'vehicle' || alienHull(p) || immobile(p)) return null;
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
   function propOf(u) { return PROPULSION[u && u.prop] || null; }
@@ -4011,7 +4013,8 @@
   function driveKey(state, u, allowance) {
     var k = [u.id, u.x, u.y, u.facing, u.turn, u.move, allowance, u.wireRoll, state.terrain.length];
     state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side) k.push(o.x, o.y, o.bld ? 1 : 0); });
-    state.terrain.forEach(function (r) { k.push(r.kind); });
+    // where every piece stands, not just what it is: a new table is a new drive
+    state.terrain.forEach(function (r) { k.push(r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0); });
     return k.join(',');
   }
 
@@ -6533,6 +6536,34 @@
         (p.kind === 'rubble' ? -0.01 : p.kind === 'searchsite' ? 2.4 : 0);
     });
     props.sort(function (a, b) { return a.depth - b.depth; });
+    /* Two blocks side by side are not ordered by their middles: a small wing at
+       the end of a long building can have its middle nearer the viewer and still
+       stand wholly behind it. A block that lies entirely behind another along
+       either axis is drawn first — put right, pass by pass, among the tall ones. */
+    var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1 };
+    function behind(p1, p2) {
+      var e = 1e-3;
+      var sepX = p1.x + p1.w <= p2.x + e, sepY = p1.y + p1.h <= p2.y + e;
+      var backX = p2.x + p2.w <= p1.x + e, backY = p2.y + p2.h <= p1.y + e;
+      return (sepX && !backY) || (sepY && !backX);
+    }
+    for (var pass = 0; pass < 6; pass++) {
+      var moved = false;
+      for (var i1 = 0; i1 < props.length; i1++) {
+        var pa = props[i1];
+        if (!BOX[pa.kind] || !pa.w) continue;
+        for (var j1 = i1 + 1; j1 < props.length; j1++) {
+          var pb = props[j1];
+          if (!BOX[pb.kind] || !pb.w) continue;
+          // pb is drawn after pa, but stands wholly behind it: pb goes first
+          if (behind(pb, pa) && !behind(pa, pb)) {
+            props.splice(j1, 1); props.splice(i1, 0, pb);
+            moved = true; pa = props[i1];
+          }
+        }
+      }
+      if (!moved) break;
+    }
     return props;
   }
 
@@ -13955,6 +13986,12 @@
         barrel(RF, 0, 0.42, 0, roof + 3, 1.4, 'mg', { col: '#15181e', brake: true });
       });
 
+      if (droneDue()) {
+        var dsp = droneSpot(), asp = along(-L * 0.44, Wd * 0.32);
+        part(dsp.x + dsp.y, function () { droneKit('dome'); });
+        part(asp.x + asp.y, function () { droneKit('aerial'); });
+        droneDone = true;
+      }
       parts.sort(function (p, q) { return p.d - q.d; }).forEach(function (p) { p.fn(); });
     }
 
@@ -14836,6 +14873,28 @@
       /* ---- on top: a heavy's missile boxes, a medium's crest, a light's head ---- */
       function drawTop() {
         extras();
+        /* A medium or heavy walker drone carries its sensor dome on its right
+           shoulder pad and the aerial on its left (a light one's dome takes its
+           head, below). */
+        if (u.drone && !dead && !light) {
+          var pad = tW * (heavy ? 1.42 : 1.14), pz = shoulder + (heavy ? 3 : 0);
+          var dc2 = S3(TF(-tL * 0.1, pad), pz), dr6 = Math.max(4, 6 * sf);
+          var kit = function () {
+            sEllipse(dc2[0], dc2[1] + dr6 * 0.15, dr6 * 1.2, dr6 * 0.6, '#14171c');
+            sEllipse(dc2[0], dc2[1] - dr6 * 0.35, dr6, dr6 * 0.85, '#aeb8c2');
+            sEllipse(dc2[0], dc2[1] - dr6 * 0.05, dr6, dr6 * 0.42, '#7d8894');
+            sEllipse(dc2[0] - dr6 * 0.35, dc2[1] - dr6 * 0.7, dr6 * 0.35, dr6 * 0.25, 'rgba(255,255,255,.75)');
+            sEllipse(dc2[0] + dr6 * 0.2, dc2[1] - dr6 * 0.25, dr6 * 0.28, dr6 * 0.2, '#2a6f9a');
+          };
+          var mast = function () {
+            var ab2 = S3(TF(-tL * 0.4, -pad), pz), at6 = S3(TF(-tL * 0.52, -pad), pz + Math.round(20 * sf));
+            sEllipse(ab2[0], ab2[1], 2, 1.2, STEEL);
+            line(ab2, at6, 1.4, STEEL_LIT);
+            sEllipse(at6[0], at6[1], 1.6, 1.6, '#ff5040');
+          };
+          // the far one first, so the near one is drawn over it
+          if (nearOf(1) > 0) { mast(); kit(); } else { kit(); mast(); }
+        }
         if (heavy) {
           // a low cowl where the head is sunk into the chest
           slabF(TF, -tL * 0.1, tL * 0.46, -tW * 0.3, tW * 0.3, shoulder - 1, Math.round(3 * sf), TB, tL * 0.2, tL * 0.05, tW * 0.06);
@@ -14847,6 +14906,20 @@
             if (armed) launcher(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, 2, 3, sh, { tone: TB, warheads: RED });
             else slabF(TF, a0, a1, Math.min(b0, b1), Math.max(b0, b1), bz, bh, TB, tL * 0.05, tL * 0.05, tW * 0.04);
           });
+        } else if (light && u.drone && !dead) {
+          /* A drone has no head to put a pilot in: the sensor dome sits on the
+             chest where it was, and the aerial stands off the back shoulder. */
+          // the dome on its right shoulder cap, the aerial on its left
+          var dz = shoulder, dc = S3(TF(0, -tW * 1.12), dz), dr5 = Math.max(4, 5.5 * sf);
+          sEllipse(dc[0], dc[1] + dr5 * 0.15, dr5 * 1.2, dr5 * 0.6, '#14171c');
+          sEllipse(dc[0], dc[1] - dr5 * 0.35, dr5, dr5 * 0.85, '#aeb8c2');
+          sEllipse(dc[0], dc[1] - dr5 * 0.05, dr5, dr5 * 0.42, '#7d8894');
+          sEllipse(dc[0] - dr5 * 0.35, dc[1] - dr5 * 0.7, dr5 * 0.35, dr5 * 0.25, 'rgba(255,255,255,.75)');
+          sEllipse(dc[0] + dr5 * 0.2, dc[1] - dr5 * 0.25, dr5 * 0.28, dr5 * 0.2, '#2a6f9a');
+          var ab = S3(TF(-tL * 0.4, tW * 1.15), shoulder), at5 = S3(TF(-tL * 0.52, tW * 1.15), shoulder + Math.round(18 * sf));
+          sEllipse(ab[0], ab[1], 2, 1.2, STEEL);                // its mount on the shoulder
+          line(ab, at5, 1.4, STEEL_LIT);
+          sEllipse(at5[0], at5[1], 1.6, 1.6, '#ff5040');
         } else if (light) {
           // the head sits straight on the chest, a size bigger, with a glassy blue eye
           var hz = shoulder - 1, hh = Math.round(9 * sf);
@@ -14995,39 +15068,77 @@
     /* Drone Control (p. 37): no crew, so the hull carries what flies it instead —
        a sensor dome on the roof towards the back, and a whip aerial beside it
        with a light on the tip. */
-    function drawDrone() {
-      if (!u.drone || dead || /Turret/.test(u.group || '')) return;
+    /* Drawn as one of a styled hull's parts where it has them, so a turret in
+       front of it hides it; otherwise last, over the hull. */
+    var droneDone = false;
+    function droneDue() { return u.drone && !dead && !/Turret/.test(u.group || ''); }
+    function drawDrone(only) {
+      if (droneDone || !droneDue()) return;
+      if (!only) droneDone = true;
+      droneKit(only);
+    }
+    // where the dome goes, as a point on the hull (for sorting it among the parts)
+    function droneSpot() {
+      var body = spec.style && spec.style.body, legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+      if (body === 'pickup') return along(spec.len * (driveOf(u) !== 'wheeled' ? 0.35 : 0.05), -spec.wid * 0.22);
+      if (body === 'guntruck') {
+        var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
+        return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
+      }
+      if (spec.fly) return along(spec.len * 0.05, 0);
+      if (legs) return along(-spec.len * 0.12, spec.wid * 0.3);
+      var carS = spec.style && spec.style.body === 'car';
+      return along(-spec.len * (carS ? 0.34 : 0.42), -spec.wid * (carS ? 0.26 : 0.34));
+    }
+    // `only`: 'dome' or 'aerial', when a styled hull sorts the two among its parts
+    function droneKit(only) {
       var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
       var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+      if (legs) return;                                      // a walker carries its own, on its shoulders
       var body = spec.style && spec.style.body;
       /* The dome: on a hull's roof off to one side, clear of a turret; on a
          pickup or gun truck, to one side of the flat plate where its cab used to
          be; on a walker, up on a shoulder; on a craft, the middle of its back. */
-      var back = -0.3, off = -spec.wid * 0.26;
-      if (spec.fly) { back = 0.05; off = 0; }
-      else if (legs) { back = -0.12; off = -spec.wid * 0.28; }
-      else if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
+      // the back corner of the roof, opposite the aerial — kept on the roof, which narrows to the top
+      var carB = spec.style && spec.style.body === 'car';
+      var back = carB ? -0.34 : -0.42, off = -spec.wid * (carB ? 0.26 : 0.34);
+      // a styled hull's roof is lower than its full height: sit on the roof itself
+      if (spec.style && !spec.fly) {
+        var stb = spec.style.body;
+        y5 = deck + spec.hgt * ({ mbt: 0.8, tank: 0.88, ltank: 0.88, future: 0.9, ifv: 0.85, bigbox: 1.08, car: 1, pickup: 0.45, truck: 1.45, mlrs: 0.55, guntruck: 0.5 }[stb] || 1) -
+          (stb === 'car' ? 2 : 0) + (stb === 'bigbox' ? spec.hgt * 0.3 : 0);
+      }
+      // a craft's back is measured from where it flies, not from a ground hull's ride height
+      // a pickup or gun truck carries it to one side of the flat plate where its cab used to be
+      if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
       else if (body === 'guntruck') {
         var cabL2 = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         back = 0.5 - cabL2 * 0.71; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.78;
       }
+      else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
+      else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
       var r = Math.max(3, K * 0.16), cy = dp.y - y5;
+      if (only !== 'aerial') {
       ellipse(g, dp.x, cy + r * 0.15, r * 1.25, r * 0.6, '#14171c');               // the collar it sits in
       ellipse(g, dp.x, cy - r * 0.2, r, r * 0.85, '#aeb8c2');                      // the dome
       ellipse(g, dp.x, cy + r * 0.05, r, r * 0.45, '#7d8894');
       ellipse(g, dp.x - r * 0.35, cy - r * 0.5, r * 0.35, r * 0.25, 'rgba(255,255,255,.75)');
       ellipse(g, dp.x + r * 0.2, cy - r * 0.05, r * 0.28, r * 0.2, '#2a6f9a');     // the sensor behind the dome's skin
+      }
+      if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
-      if (spec.fly) aq = along(-spec.len * 0.38, 0);
-      else if (legs) aq = along(spec.len * back - 0.2, off * 0.8);
+      if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
+      if (spec.fly) aq = along(-spec.len * 0.06, spec.wid * 0.3);   // a rotorcraft's stands on the back of its body
+      else if (legs) aq = along(spec.len * back - 0.2, -spec.wid * 0.3);   // its left shoulder
       else {
         aq = along(-spec.len * 0.44, spec.wid * 0.32);
         if (body === 'pickup' || body === 'guntruck') ya = deck + spec.hgt * 0.5;
       }
       var ap = toScreen(aq.x, aq.y), ay = ap.y - ya, ah = Math.max(10, K * 0.55);
-      thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 2, '#1a1d22');
+      ellipse(g, ap.x, ay, 2, 1.2, STEEL);                   // its mount
+      thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 1.4, STEEL_LIT);
       ellipse(g, ap.x + 1, ay - ah, 1.6, 1.6, '#ff5040');
     }
 
@@ -16809,7 +16920,7 @@
       aim: view.aimFor === view.face + '|' + view.walking ? view.aim : null,
       faceL: view.faceL
     });
-    if (p.cls === 'vehicle' && !R.alienHull(p)) R.applyPropulsion(u, view.prop);
+    if (R.propsFor(p).length) R.applyPropulsion(u, view.prop);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
@@ -17822,7 +17933,7 @@
         segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'none') + '</div></div>';
     }
     // an Overgrown Bug walks on its own legs: there is no drive to choose
-    if (isVeh && p.rules.indexOf('Overgrown Bug') < 0) {
+    if (R.propsFor(p).length) {                  // no drive to choose for an Overgrown Bug or a drop pod
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
     }
@@ -17860,7 +17971,7 @@
     /* The stats as fielded: a ground vehicle's propulsion (Appendix 3) changes
        its Movement, turn cost, Structure or Defence, and a changed figure is
        marked, with the printed one on it as a tooltip. */
-    var pr = p.cls === 'vehicle' && !R.alienHull(p) && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
+    var pr = R.propsFor(p).length && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
     var u = Object.assign({}, p, { rules: p.rules.slice(), models: p.size });
     if (pr) R.applyPropulsion(u, pr.key);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
