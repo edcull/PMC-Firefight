@@ -67,12 +67,12 @@ async function drain(p) {
   // the revolt is named on the founding screen now, beside its colours
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Free Colonies'; });
   let txt = await body(p);
-  check('the founding screen speaks for a revolt', /A revolt begins with six Tier I units/.test(txt));
+  check('the founding screen speaks for a revolt', await p.evaluate(() => /the revolt/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
   check('...and asks what the revolt calls itself',
     await p.evaluate(() => !!document.getElementById('found-name')));
   check('...and for the colours it fights in',
     await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); return document.querySelectorAll('#camp-body [data-campcolour]').length > 1; }));
-  check('...and promises the free First Among Equals', /First Among Equals/.test(txt));
+  // the free First Among Equals is promised once the list is legal: see "the list is a legal revolt" below
   check('...and offers Paths rather than doctrines',
     /starting path/i.test(txt) && /path of the hero/i.test(await p.evaluate(() =>
       document.querySelector('#camp-body .cmodal[data-modal="doctrine"]').textContent)));

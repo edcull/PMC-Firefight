@@ -3716,7 +3716,8 @@
     picks.forEach(function (t) {
       t.marked = true;
       // the marker's laser (or smoke round's trace) onto each mark
-      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200, blocking: true });
+      // drawn over whatever follows: the guns it calls are the player's to pick, and need not wait for it
+      addFx({ kind: 'beam', x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: smoke ? '255,200,80' : '255,70,60', dur: 1200 });
       // Smoke Markers: the grenade bursting on the mark, the flare burning in it
       if (smoke) addFx({ kind: 'puff', x: t.x, y: t.y, delay: 300, dur: 1800 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"

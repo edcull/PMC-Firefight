@@ -5349,7 +5349,8 @@
      kind of force, and for rebels a card for each tactic with its rule in full.
      A pick goes through the selectors, so it rolls and checks as they do. */
   function armyText(v) {
-    var o = el('sel-faction') && Array.prototype.filter.call(el('sel-faction').options, function (x) { return x.value === v; })[0];
+    var sel = el('sel-faction');
+    var o = sel && sel.options ? Array.prototype.filter.call(sel.options, function (x) { return x.value === v; })[0] : null;
     var t = o ? o.textContent : v, cut = t.indexOf(' \u2014 ');
     return cut < 0 ? { name: t, what: '' } : { name: t.slice(0, cut), what: t.slice(cut + 3) };
   }
@@ -5417,12 +5418,12 @@
     backLabel(el('btn-setup-back'), setupGoesHome());
     // the colours sit under the force's name, in the one panel
     var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
-    if (cwp && idp) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
+    if (cwp && idp && idp.appendChild && cwp.parentNode) { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
     hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
     var tp = el('tierpl-field');
-    if (tp) {
+    if (tp && tp.parentNode && el('hot-sum') && el('hot-sum').parentNode) {
       if (!tierHome) tierHome = { parent: tp.parentNode, next: tp.nextSibling };
       if (hotQuick(kind) && step === 3) el('hot-sum').parentNode.insertBefore(tp, el('hot-sum'));
       else if (tp.nextSibling !== tierHome.next) tierHome.parent.insertBefore(tp, tierHome.next);
