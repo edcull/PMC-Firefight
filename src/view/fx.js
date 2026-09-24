@@ -635,6 +635,27 @@
           }
         }
         g.restore();
+      } else if (f.kind === 'cjam') {
+        /* Counter-jamming at work: no bubble, but the ground it holds marked
+           out — a slowly turning dashed ring at its reach, clean signal rippling
+           out from the unit to it, and a blink at the emitter. */
+        var cc = I.toScreen(f.x, f.y); cc.y -= liftAt(f);
+        var crgb = f.rgb || '120,235,170', cr = (f.r || 6) * I.K * 0.72, ca = f.a || 0.5;
+        g.save();
+        g.lineWidth = I.PIXEL * 1.5;
+        g.setLineDash([I.PIXEL * 5, I.PIXEL * 4]);
+        g.lineDashOffset = -(t / 60) % (I.PIXEL * 9);
+        g.strokeStyle = 'rgba(' + crgb + ',' + (0.7 * ca) + ')';
+        g.beginPath(); g.ellipse(cc.x, cc.y, cr, cr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        g.setLineDash([]);
+        for (var ci = 0; ci < 3; ci++) {
+          var cph = ((t / 1400) + ci / 3) % 1, crr = cr * cph;
+          g.strokeStyle = 'rgba(' + crgb + ',' + (0.55 * ca * (1 - cph)) + ')';
+          g.beginPath(); g.ellipse(cc.x, cc.y, crr, crr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        }
+        var cb = 0.5 + 0.5 * Math.sin(t / 160);
+        I.ellipse(g, cc.x, cc.y - I.K * 1.2, I.PIXEL * (1.5 + cb), I.PIXEL * (1.5 + cb), 'rgba(' + crgb + ',' + (0.5 + 0.4 * cb) * ca + ')');
+        g.restore();
       } else if (f.kind === 'dome') {
         /* A shield: a bubble of light raised over the ground around a unit,
            rim bright, a band of light running up it. */

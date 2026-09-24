@@ -812,7 +812,7 @@
               ? { x: to.x + (j - (thrown - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up }
               : to;
             if (SFX) SFX.launch();
-            FX.add({ kind: 'lob', from: from, to: aim, dur: 520, heavy: style === 'arcbig' });
+            FX.add({ kind: 'lob', from: tubeOf(from, j), to: aim, dur: 520, heavy: style === 'arcbig' });
             setTimeout(function () { landing(aim, 4); start(); }, 520);
             start();
           }, j * 190);
@@ -914,11 +914,13 @@
           (function (i) {
             setTimeout(function () {
               if (SFX) SFX.launch();
-              FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: 220, big: true });
+              // each tube fires its own round: a team's two mortars, a battery's three
+              var F = tubeOf(from, i);
+              FX.add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 220, big: !F.mz });
               var aim = (spec.n || 1) > 1
                 ? { x: to.x + (i - ((spec.n || 1) - 1) / 2) * 1.6, y: to.y + (i % 2 ? 1 : -1) * 0.9 }
                 : to;
-              FX.add({ kind: 'lob', from: from, to: aim, dur: flight, heavy: heavy });
+              FX.add({ kind: 'lob', from: F, to: aim, dur: flight, heavy: heavy });
               if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
               setTimeout(function () { landing(aim, heavy ? 7 : 6, heavy); start(); }, flight);
               start();
@@ -1003,6 +1005,11 @@
       var on = el('vlist').querySelector('.unit.on');
       if (on) on.scrollIntoView({ block: 'center' });
     }
+  }
+  // the i-th barrel of a unit that works several (a mortar team's two tubes), else the one it has
+  function tubeOf(from, i) {
+    if (!from.pool || from.pool.length < 2) return from;
+    return { x: from.x, y: from.y, up: from.up, mz: from.pool[i % from.pool.length], pool: from.pool };
   }
   function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
   // the words a player might search a weapon style by
