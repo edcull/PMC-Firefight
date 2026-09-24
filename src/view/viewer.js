@@ -24,7 +24,7 @@
   var W = 24, H = 16;
   var FROM = { x: 6, y: 8 }, TO = { x: 19, y: 8 };
 
-  var cv, g, FX;
+  var cv, g, FX, STANDING;
   // the stage opens close on the unit; it pulls out to the whole firing line to show a shot
   // the stage's zooms: the whole firing line, the unit, and a close look at it
   var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
@@ -43,7 +43,7 @@
   /* Put a unit on the stage: every model, a state it can be in (a tank cannot
      be suppressed), and a ground vehicle on the running gear it usually has. */
   function choose(k) {
-    view.key = k; view.models = null;
+    view.key = k; view.models = null; view.tele = null;
     var p = profile();
     view.pickFac = p.faction || 'pmc';
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
@@ -125,8 +125,16 @@
     var u = unit(), t = mark();
     var arr = arriving();
     // far to near, so the nearer of the two covers the other
-    var order = [u, t].sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
+    var tv = traveller();
+    var order = [u, t].concat(tv ? [tv.u] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
+      if (tv && m === tv.u) {
+        if (tv.alpha <= 0) return;
+        g.save(); g.globalAlpha = tv.alpha;
+        I.drawUnit(g, m, { at: { x: m.x, y: m.y }, lift: 0, hop: tv.hop, walk: tv.walk, status: 'ready', morale: R.currentMorale(m) });
+        g.restore();
+        return;
+      }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
       if (m === u && arr.hidden) return;                 // not on the field yet
       var fading = m === u && arr.alpha != null;          // teleporting in
@@ -143,6 +151,10 @@
       });
       if (fading) g.restore();
     });
+    // a shield generator's dome is always up, as it is in the battle, while the unit is on the field
+    STANDING.clear();
+    if (shielded(u) && !arr.hidden) STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
+    STANDING.draw(g);
     FX.draw(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
@@ -201,6 +213,7 @@
     var acting = busy;
     if (view.walking) { stepWalk(dt); busy = true; }
     if (view.strafeAt) { strafing(); busy = true; acting = true; }
+    if (view.tele) { busy = true; acting = true; }       // a squad going through a teleport gate
     /* Firing pulls the camera out to the whole line; once the shots have
        finished playing it goes back in to the zoom the viewer chose. */
     if (view.wide) {
@@ -215,10 +228,13 @@
     } else view.zCur = want;
     // the wreck keeps burning, and a damaged hull keeps smoking
     if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
+    // and a shield's band of light keeps turning
+    if (shielded(unit())) busy = true;
     frame();
     if (busy) start(); else last = 0;
   }
   function start() { if (!loop) loop = requestAnimationFrame(tick); }
+  function shielded(u) { return view.status !== 'destroyed' && !!R.ruleValue(u, 'Shield Generator'); }
 
   /* ---------- movement ----------
      The unit walks out to the mark and back at its own Movement in inches a
@@ -287,24 +303,77 @@
     { rule: 'Dominant Species', name: 'Regain Control', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '110,190,255', dur: 1500 }]; }, sfx: 'shimmer' },
     { rule: 'Overmind', name: 'Overmind', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 18, rgb: '150,215,90', dur: 1700 }]; }, sfx: 'chitter' },
     { rule: 'Shield Generator', name: 'Shield', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 12, dur: 2200 }]; }, sfx: 'shimmer' },
-    { rule: 'Hackers', name: 'Hack', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '90,255,140', data: true, dur: 1800 }]; }, sfx: 'zap' },
+    { rule: 'Hackers', name: 'Hack', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '90,255,140', data: true, dur: 1800 }]; }, sfx: 'zap' },
     { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
     { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
-    { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
-    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
+    { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
     { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
     { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
-    { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
-    { rule: 'Teleport', name: 'Teleport', play: function () { return [{ kind: 'teleportin', x: TO.x, y: TO.y, r: 1.4, dur: 1500 }]; }, sfx: 'shimmer' },
+    { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
+    { rule: 'Teleport', name: 'Teleport', play: function (u) { return teleportThrough(u); }, sfx: 'shimmer' },
     { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
     { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
-    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
+    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
     { rule: '…but they\'ll never take our freedom!', name: 'Rally cry', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '240,120,80', dur: 1400 }, { kind: 'rise', x: u.x, y: u.y, rgb: '240,120,80', n: 8, dur: 1400 }]; }, sfx: 'chime' },
     { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Inspiring Presence', name: 'Inspire', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, rgb: '232,193,90', dur: 1300 }]; }, sfx: 'chime' },
     { rule: 'Counter-jamming', name: 'Counter-jam', play: function (u) { return [{ kind: 'dome', x: u.x, y: u.y, r: 6, rgb: '120,200,255', dur: 1800 }]; }, sfx: 'shimmer' }
   ];
+  /* Where a beam leaves a machine: a craft's nose, else the first barrel it has.
+     A trooper's beam leaves from about chest height (fx.js's default). */
+  function beamFrom(u) {
+    if (!R.isMachine(u)) return undefined;
+    var M = I.mounts(u), k = ['nose', 'gun', 'mg', 'auto', 'rocket'].filter(function (n) { return M[n] && M[n].length; })[0];
+    return k ? M[k][0] : undefined;
+  }
+  /* Teleport (p. 130): a squad within 4" walks into the gate and is gone in a
+     flash of it, and a moment later the gate flashes again and the squad walks
+     back out, to within 4" on the far side. The flashes stand around the gate
+     itself; the squad is drawn by frame() from view.tele. */
+  var TP = { IN: 1500, GONE: 2300, OUT: 3900, END: 4300, REACH: 3.5, NEAR: 0.5 };
+  function teleportThrough(u) {
+    view.tele = { t0: Date.now(), at: { x: u.x, y: u.y } };
+    var r = u.cls === 'aircraft' ? 2.6 : 2.2;
+    return [
+      { kind: 'teleportin', x: u.x, y: u.y, r: r, delay: TP.IN - 450, dur: TP.IN - 450 + 1300 },
+      { kind: 'teleportin', x: u.x, y: u.y, r: r, delay: TP.GONE - 250, dur: TP.GONE - 250 + 1300 }
+    ];
+  }
+  // the travelling squad, where it is along the walk in or out, or null while it is inside the gate
+  function traveller() {
+    var T = view.tele;
+    if (!T) return null;
+    var t = Date.now() - T.t0;
+    if (t >= TP.END) { view.tele = null; return null; }
+    if (t >= TP.IN && t < TP.GONE) return null;
+    var dx = TO.x - T.at.x, dy = TO.y - T.at.y, dl = Math.hypot(dx, dy) || 1;
+    dx /= dl; dy /= dl;
+    var from, to, k, alpha;
+    if (t < TP.IN) {
+      // in from behind the gate, fading as it steps into the ring
+      k = Math.min(1, t / (TP.IN - 200));
+      from = { x: T.at.x - dx * TP.REACH, y: T.at.y - dy * TP.REACH + 1 };
+      to = { x: T.at.x - dx * TP.NEAR, y: T.at.y - dy * TP.NEAR };
+      alpha = t < TP.IN - 450 ? 1 : Math.max(0, (TP.IN - t) / 450);
+    } else {
+      // out the other side toward the mark, forming out of the light as it goes
+      k = Math.min(1, (t - TP.GONE) / (TP.OUT - TP.GONE));
+      from = { x: T.at.x + dx * TP.NEAR, y: T.at.y + dy * TP.NEAR };
+      to = { x: T.at.x + dx * TP.REACH, y: T.at.y + dy * TP.REACH };
+      alpha = Math.min(1, (t - TP.GONE) / 450);
+    }
+    var e = k * k * (3 - 2 * k), walking = k > 0 && k < 1;
+    var p = R.profile('xbeta3');
+    var m = Object.assign({}, p, {
+      id: 'VTELE', side: view.side, label: p.name, models: p.size, rules: p.rules.slice(),
+      sp: 0, alive: true, damage: 0, cargo: [],
+      x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e,
+      facing: Math.atan2(to.y - from.y, to.x - from.x)
+    });
+    return { u: m, alpha: alpha, walk: walking ? 1 + (Math.floor(t / 140) % 2) : 0, hop: walking ? Math.abs(Math.sin(t / 140 * Math.PI)) * 1.6 : 0 };
+  }
   // every ability a unit has, in that order — an EW team hacks and jams — to a button each, three at most
   function abilitiesOf(u) {
     var rules = (u && u.rules) || [], out = [];
@@ -1026,6 +1095,7 @@
     if (!cv) return;
     g = cv.getContext('2d');
     FX = root.PMCFx.create({ lift: function () { return 0; } });
+    STANDING = root.PMCFx.create({ lift: function () { return 0; } });
     I.setSideColour('A', view.colour.A);
     I.setSideColour('B', view.colour.B);
     fit();

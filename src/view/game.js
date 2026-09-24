@@ -1984,6 +1984,21 @@
       if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
       STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
     });
+    /* Counter-jamming, while it is doing something: a faint 6" dome over a
+       counter-jammer that has a friend (itself included) inside it who stands
+       within 24" of an enemy's Jammers — the ground it is winning back. */
+    if (state) {
+      var onTable = function (u) { return u.alive && !u.aboard && !u.reserve && u.x >= 0; };
+      var jammers = state.units.filter(function (e) { return onTable(e) && R.has(e, 'Jammers'); });
+      if (jammers.length) state.units.forEach(function (c) {
+        if (!onTable(c) || !R.projects(c) || !R.has(c, 'Counter-jamming')) return;
+        var covering = state.units.some(function (f) {
+          return onTable(f) && f.side === c.side && R.unitDist(c, f) <= 6 &&
+            jammers.some(function (e) { return e.side !== f.side && R.unitDist(e, f) <= 24; });
+        });
+        if (covering) STANDING.add({ kind: 'dome', x: c.x, y: c.y, r: 6, rgb: '120,200,255', steady: true, a: 0.3, dur: 1e9 });
+      });
+    }
     STANDING.draw(pctx);
     FX.draw(pctx);
   }
