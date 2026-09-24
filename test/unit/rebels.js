@@ -342,6 +342,30 @@ ok('...but a militia squad will',
   R.canEmbark(table([truck, unit('rmilitia', { x: 10, y: 12 })]), truck,
     unit('rmilitia', { x: 10, y: 12 })) === true);
 
+/* What a rider rides (Appendix 3, pp. 166-167) */
+function mounted(m, over) { return R.applyMount(unit('rhellriders', over), m); }
+ok('a motorbike loses 6" to rough ground', R.terrainCost(mounted('bike'), 'woods') === 6);
+ok('...but may ride in a transport',
+  R.canEmbark(table([unit('rltv', { x: 10, y: 10 }), mounted('bike', { x: 10, y: 12 })]),
+    unit('rltv', { x: 10, y: 10 }), mounted('bike', { x: 10, y: 12 })) !== false);
+ok('a grav bike pays nothing for rough ground', R.terrainCost(mounted('gravbike'), 'woods') === 0);
+ok('...at a point of Defence', mounted('gravbike').def === unit('rhellriders').def - 1);
+ok('a horse jumps a low wall', R.terrainBars(mounted('horse'), 'barricade') === false);
+ok('...where a motorbike cannot', R.terrainBars(mounted('bike'), 'barricade') === true);
+ok('...nor does any mount get into a building', ['bike', 'gravbike', 'horse'].every(function (m) { return R.terrainBars(mounted(m), 'building'); }));
+ok('a horse will not board a transport',
+  R.canEmbark(table([unit('rltv', { x: 10, y: 10 }), mounted('horse', { x: 10, y: 12 })]),
+    unit('rltv', { x: 10, y: 10 }), mounted('horse', { x: 10, y: 12 })) === false);
+var shied = 0, struck = 0;
+for (var hs = 0; hs < 300; hs++) {
+  var gun = unit('rheavyac', { x: 10, y: 10 }), nag = mounted('horse', { x: 10, y: 20 });
+  nag.side = 'B';
+  var r0 = R.shoot(table([gun, nag]), gun, nag, 'fire', {});
+  struck++;
+  if (r0.log.some(function (l) { return /Horse \+1 SP|Horses shy/.test(l.text); })) shied++;
+}
+ok('a horse takes 1 more SP every time it is shot at', shied === struck, shied + ' of ' + struck + ' volleys');
+
 var fan = R.applyRiders(unit('rfanatics'), true);
 ok('the Riders upgrade halves the unit', fan.size === 3, '6 models became ' + fan.size);
 ok('...raises Movement to 10', fan.move === 10);

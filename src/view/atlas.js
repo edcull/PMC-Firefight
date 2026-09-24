@@ -83,7 +83,7 @@
     }
     function machine(p) { return p.cls === 'vehicle' || p.cls === 'aircraft'; }
     function stats(p) {
-      return kind(p) + ' · Tier ' + (R.ROMAN ? R.ROMAN[p.tier] : p.tier) + ' · Move ' + p.move + '" · FP ' + (p.fp == null ? '—' : p.fp) +
+      return kind(p) + ' · Tier ' + (R.ROMAN ? R.ROMAN[p.tier] : p.tier) + ' · Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · FP ' + (p.fp == null ? '—' : p.fp) +
         ' · Range ' + p.range + '" · Def ' + p.def + (p.str ? ' · Structure ' + p.str : ' · Models ' + p.size);
     }
     // what a search matches: the name, code and key, and whatever else the page adds (the viewer adds the weapons)

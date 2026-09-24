@@ -53,7 +53,8 @@
     // a different army wears its own colour; a colour picked for this one stays while browsing it
     if (view.pickFac !== wasFac && ARMY_COLOUR[view.pickFac]) paint('A', ARMY_COLOUR[view.pickFac]);
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
-    if (p.cls === 'vehicle' && !R.alienHull(p)) view.prop = R.defaultDrive(p);
+    // an Overgrown Bug or a Xenotripod hull has no drive: its stats stand as printed
+    view.prop = R.defaultDrive(p);
   }
 
   /* The unit as the battle would build it: a profile plus the state the bench
@@ -415,16 +416,17 @@
     view.strafeAt = Date.now();
     view.facing = 0;
     var fired = 0, guns = 7;
+    var hitRGB = R.isXeno(unit()) ? glowRGB() : unit().faction === 'bugs' ? '150,220,80' : null;
     (function burst() {
       if (fired >= guns || !view.strafeAt) return;
       var f = 0.2 + (fired / (guns - 1)) * 0.6;
       var x = FROM.x - 6 + (TO.x + 6 - (FROM.x - 6)) * f;
       FX.add({ kind: 'muzzle', x: x, y: FROM.y, dur: 180 });
-      FX.add({ kind: 'impact', x: x, y: FROM.y, n: 3, dur: 320 });
+      FX.add({ kind: 'impact', x: x, y: FROM.y, n: 3, rgb: hitRGB, dur: 320 });
       for (var d3 = 0; d3 < 3; d3++) {
         FX.add({
           kind: 'miss', x: x + (Math.random() - 0.5) * 2.4, y: FROM.y + (Math.random() - 0.5) * 2.4,
-          dur: 380 + Math.random() * 220
+          rgb: hitRGB, dur: 380 + Math.random() * 220
         });
       }
       if (view.sound && SFX) SFX.strafe(R.isXeno(unit()) ? 'xeno' : unit().faction, R.weaponStyle(unit()));
@@ -1031,7 +1033,8 @@
       h += '<div class="vgrp"><label>Mount</label><div class="vseg">' +
         segL('mount', R.MOUNT_ORDER.map(function (m) { return [m, R.MOUNTS[m].name]; }), view.mount || 'bike') + '</div></div>';
     }
-    if (isVeh) {
+    // an Overgrown Bug walks on its own legs: there is no drive to choose
+    if (isVeh && p.rules.indexOf('Overgrown Bug') < 0) {
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
     }
@@ -1066,18 +1069,43 @@
   var FACTION_NAME = { pmc: 'PMC', rebel: 'Rebels', bugs: 'Space Bugs', xeno: 'Xenotripods' };
   function rulesHtml(p) {
     var mach = R.isMachine(p);
-    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', p.size], ['Move', p.move + '"'],
+    /* The stats as fielded: a ground vehicle's propulsion (Appendix 3) changes
+       its Movement, turn cost, Structure or Defence, and a changed figure is
+       marked, with the printed one on it as a tooltip. */
+    var pr = p.cls === 'vehicle' && !R.alienHull(p) && R.PROPULSION[view.prop] ? R.PROPULSION[view.prop] : null;
+    var u = Object.assign({}, p, { rules: p.rules.slice(), models: p.size });
+    if (pr) R.applyPropulsion(u, pr.key);
+    // the Riders upgrade (p. 93): half the models, mounted, Movement 10" and the Riders rule
+    if (R.canRide(p) && view.ride === 'mounted') R.applyRiders(u, true);
+    // what it rides (Appendix 3): a grav bike costs a point of Defence
+    var mt = R.canMount(p, R.canRide(p) && view.ride === 'mounted') ? R.MOUNTS[view.mount || 'bike'] : null;
+    if (mt) R.applyMount(u, view.mount || 'bike');
+    function mod(v, was, txt) {
+      return v === was ? { t: txt } : { t: txt, mod: true, was: was };
+    }
+    // the turn cost rides with Movement, as the book prints it: 8 (1)
+    var mv = u.move + '"' + (u.turn != null ? ' (' + u.turn + ')' : '');
+    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', mod(u.size, p.size, u.size)],
+      ['Move', u.move === p.move && u.turn === p.turn ? mv
+        : { t: mv, mod: true, was: p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') }],
       ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
-      ['Def', p.def + (p.defPierced ? '/' + p.defPierced : '')], ['Asslt', p.assault],
-      mach ? ['Str', p.str] : ['Mor', p.morale]];
-    if (p.turn != null) cols.push(['Turn', p.turn]);
+      ['Def', mod(u.def, p.def, u.def + (p.defPierced ? '/' + p.defPierced : ''))], ['Asslt', p.assault],
+      mach ? ['Str', mod(u.str, p.str, u.str)] : ['Mor', p.morale]];
     var h = '<div class="vrules"><label>' + esc(FACTION_NAME[p.faction || 'pmc'] || '') + ' · ' +
       esc(p.group) + ' · ' + esc(p.code) + '</label>';
     h += '<table class="vtable"><tr>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') +
-      '</tr><tr>' + cols.map(function (c) { return '<td>' + esc(c[1]) + '</td>'; }).join('') + '</tr></table>';
+      '</tr><tr>' + cols.map(function (c) {
+        var v = c[1];
+        if (v && typeof v === 'object') {
+          return v.mod ? '<td class="vmod" title="' + esc('Printed: ' + v.was) + '">' + esc(v.t) + '</td>' : '<td>' + esc(v.t) + '</td>';
+        }
+        return '<td>' + esc(v) + '</td>';
+      }).join('') + '</tr></table>';
     var TXT = root.PMCRuleText;
-    if (!p.rules.length) h += '<p class="vrule">No special rules.</p>';
-    p.rules.forEach(function (r) {
+    if (!u.rules.length && !pr) h += '<p class="vrule">No special rules.</p>';
+    if (pr) h += '<div class="vrule"><b>Propulsion: ' + esc(pr.name) + '</b><p>' + esc(pr.note) + '</p></div>';
+    if (mt) h += '<div class="vrule"><b>Mount: ' + esc(mt.name) + '</b><p>' + esc(mt.note) + '</p></div>';
+    u.rules.forEach(function (r) {
       var d = TXT ? TXT.describe(r) : { name: r, text: '' };
       var tip = d.text && root.PMCTips ? ' ' + root.PMCTips.attr(d.name, d.text) : '';
       h += '<div class="vrule"><b' + tip + '>' + esc(d.name) + '</b>' +

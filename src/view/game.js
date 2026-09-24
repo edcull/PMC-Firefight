@@ -124,6 +124,7 @@
   function resetShow() {
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
+    anims.forEach(function (an) { if (an.unit) an.unit.burrow = null; });
     anims.length = 0;
     FX.clear && FX.clear();
     resQueue.length = 0; ui.resOpen = false;
@@ -1282,7 +1283,17 @@
     var t = nowMs(), alive = [];
     anims.forEach(function (an) {
       var k = Math.min(1, (t - an.t0) / an.dur);
-      if (an.kind === 'move') {
+      if (an.kind === 'move' && an.burrow) {
+        burrowStep(an, k);
+        if (an.follow) {
+          var bp = ISO.toScreen(an.unit.ax, an.unit.ay);
+          cam.x += (bp.x - cam.x) * 0.16;
+          cam.y += (bp.y - ISO.ELEV - cam.y) * 0.16;
+          clampCam();
+          cam.tx = cam.x; cam.ty = cam.y;
+          borrowCamera();
+        }
+      } else if (an.kind === 'move') {
         var d = k * an.total, seg = 0;
         while (seg < an.segs.length - 1 && d > an.segs[seg].end) seg++;
         var s = an.segs[seg];
@@ -1305,7 +1316,7 @@
         an.unit.ay = an.from.y + (an.to.y - an.from.y) * k;
       }
       if (k >= 1) {
-        if (an.kind === 'move') { an.unit.ax = an.unit.ay = null; an.unit.walk = 0; an.unit.hop = 0; an.unit.arc = 0; }
+        if (an.kind === 'move') { an.unit.ax = an.unit.ay = null; an.unit.walk = 0; an.unit.hop = 0; an.unit.arc = 0; an.unit.burrow = null; }
         if (an.kind === 'strafe') { an.unit.ax = an.unit.ay = null; }
         if (an.done) an.done();
       } else alive.push(an);
@@ -1381,6 +1392,60 @@
     }
   }
 
+  /* An aircraft covers a lot of table in one move; at a squad's pace it
+     flashes across, so it takes its time and reads as flying. */
+  // Underground Bugs do not walk across the table: they go down and come up
+  function burrows(u) { return !!u && u.faction === 'bugs' && u.group === 'Underground Bugs'; }
+  /* A burrowing move in three parts: the unit sinks into the ground where it
+     stands, travels unseen under a line of churned earth, and heaves itself up
+     at the end. */
+  var SINK = 0.28, RISE = 0.72;
+  function burrowStep(an, k) {
+    var u = an.unit, sub, e;
+    if (k < SINK) {
+      sub = k / SINK; e = sub * sub;
+      u.burrow = { lift: -Math.round(ISO.ELEV * 3 * e), alpha: Math.max(0, 1 - e * 0.9) };
+      var p0 = an.segs[0].a;
+      u.ax = p0.x; u.ay = p0.y;
+      if (an.phase === 0) {
+        an.phase = 1;
+        addFx({ kind: 'collapse', x: p0.x, y: p0.y, r: burrowR(u), dur: 700, blocking: true });
+        if (SFX) { SFX.step(); SFX.step(0.12); SFX.step(0.3); }
+      }
+      return;
+    }
+    if (k < RISE) {
+      u.burrow = { hidden: true };
+      var d = (k - SINK) / (RISE - SINK) * an.total, seg = 0;
+      while (seg < an.segs.length - 1 && d > an.segs[seg].end) seg++;
+      var sg = an.segs[seg];
+      var f = sg.len ? Math.max(0, Math.min(1, (d - sg.start) / sg.len)) : 1;
+      u.ax = sg.a.x + (sg.b.x - sg.a.x) * f;
+      u.ay = sg.a.y + (sg.b.y - sg.a.y) * f;
+      // the ground heaving over it as it goes, an inch at a time
+      if (Math.floor(d) !== an.lastDirt) {
+        an.lastDirt = Math.floor(d);
+        addFx({ kind: 'miss', x: u.ax, y: u.ay, dur: 700, blocking: true });
+        addFx({ kind: 'miss', x: u.ax + (Math.random() - 0.5) * 1.2, y: u.ay + (Math.random() - 0.5) * 1.2, dur: 900, blocking: true });
+        if (SFX && an.lastDirt % 2 === 0) SFX.step(0.02);
+      }
+      return;
+    }
+    var pe = an.segs[an.segs.length - 1].b;
+    u.ax = pe.x; u.ay = pe.y;
+    if (an.phase < 2) {
+      an.phase = 2;
+      addFx({ kind: 'collapse', x: pe.x, y: pe.y, r: burrowR(u), dur: 800, blocking: true });
+      if (SFX) { SFX.impact(0.05); SFX.step(0.15); SFX.step(0.35); }
+    }
+    sub = (k - RISE) / (1 - RISE); e = 1 - Math.pow(1 - sub, 2);
+    u.burrow = { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), alpha: Math.min(1, 0.25 + e) };
+  }
+  function burrowR(u) { return R.isMachine(u) ? 2.4 : 1.6; }
+  function moveMs(u, total) {
+    if (u.cls === 'aircraft') return Math.min(3200, 700 + total * 85);
+    return Math.min(1400, 240 + total * 42);
+  }
   function animateMove(u, path, follow) {
     if (!path || path.length < 2) return;
     var segs = [], total = 0;
@@ -1393,9 +1458,11 @@
     // a squad turns to the way it is going; a turret swings back to the front
     faceToward(u, path[path.length - 1].x, path[path.length - 1].y, path[0]);
     if (R.isMachine(u)) u.aim = null;
+    var dig = burrows(u);
     anims.push({
       kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
-      dur: Math.min(1400, 240 + total * 42), t0: nowMs(), lastStep: 0, lastPace: -1
+      dur: dig ? Math.max(1900, Math.min(3200, 1300 + total * 60)) : moveMs(u, total),
+      t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0
     });
     u.ax = path[0].x; u.ay = path[0].y;
     startLoop();
@@ -1485,6 +1552,7 @@
   /* Xenotripod energy — their shots, the orbs and the blasts — burns blue,
      whatever the army's colour; the colour stays on the models. */
   var XENO_BLUE = '110,190,255';
+  var BUG_GREEN = '150,220,80';
   function glowRGB(u) { return XENO_BLUE; }
   function shotRGB(u) { return R.isXeno(u) ? XENO_BLUE : null; }
   function playEnergy(shooter, from, to, count, land, gap) {
@@ -1961,8 +2029,10 @@
      along the line, which read as somebody else shooting. */
   function playStrafe(u, from, to, deaths, done) {
     var span = Math.hypot(to.x - from.x, to.y - from.y);
-    var dur = Math.max(1200, Math.min(2600, 700 + span * 90));
+    var dur = Math.max(1900, Math.min(4000, 1100 + span * 140));
     var steps = Math.max(5, Math.round(span * 1.2) + 4);
+    // the ground goes up in the colour of what hits it: xeno energy, bug acid
+    var hitRGB = !u ? null : R.isXeno(u) ? XENO_BLUE : u.faction === 'bugs' ? BUG_GREEN : null;
     if (u) {
       u.facing = Math.atan2(to.y - from.y, to.x - from.x);
       u.aim = null;
@@ -1981,11 +2051,11 @@
           addFx({ kind: 'muzzle', x: x, y: y, dur: 180, blocking: true });
           /* The ground going up under it: rounds walking along the line, each
              throwing its own dirt, spread either side of the run. */
-          addFx({ kind: 'impact', x: x, y: y, n: 3, dur: 320, blocking: true });
+          addFx({ kind: 'impact', x: x, y: y, n: 3, rgb: hitRGB, dur: 320, blocking: true });
           for (var d2 = 0; d2 < 3; d2++) {
             addFx({
               kind: 'miss', x: x + (Math.random() - 0.5) * 2.4, y: y + (Math.random() - 0.5) * 2.4,
-              dur: 380 + Math.random() * 220, blocking: true
+              rgb: hitRGB, dur: 380 + Math.random() * 220, blocking: true
             });
           }
           if (SFX) SFX.strafe(R.isXeno(u) ? 'xeno' : u.faction, R.weaponStyle(u));
@@ -2833,7 +2903,8 @@
         }
         var u = it.unit, ax = dispX(u), ay = dispY(u);
         var arr = arriving(u);
-        if (arr.hidden) return;                       // teleporting in: not here yet
+        if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
+        if (arr.hidden) return;                       // teleporting in, or under the ground: not here yet
         if (arr.alpha != null) { pctx.save(); pctx.globalAlpha = arr.alpha; }
         ISO.drawUnit(pctx, u, {
           at: { x: ax, y: ay },
@@ -3595,7 +3666,9 @@
       stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
       stat('SP', u.sp) + '</div>';
     h += honourChips(u);
-    h += ruleChips(u, R.terrainOf(state, u) !== 'open');
+    // a rider's mount, before its rules, the way a hull's drive is shown
+    var mt = R.mountOf(u);
+    h += ruleChips(u, R.terrainOf(state, u) !== 'open', mt ? [{ name: mt.name, text: mt.note }] : null);
     fillStats(box, h);
   }
   /* The stats are redrawn with every render, and in a demo that is every
@@ -4369,15 +4442,16 @@
     /* What the drive actually costs a hull: the ground, plus a turn for every
        90° it has to come round — or, if it would be going backwards, twice the
        distance at no turn cost (p. 35). */
-    var turns = u.cls === 'vehicle' ? R.turnsTo(u, spot.x, spot.y) : 0;
+    var drive = R.drives(u);
+    var turns = drive ? (spot.turns != null ? spot.turns : (path.turns || 0)) : 0;
     var ground = spot.cost !== undefined ? spot.cost : dist;
-    var spent = u.cls === 'vehicle' ? R.driveCost(u, spot.x, spot.y, ground) : ground;
+    var spent = spot.spent !== undefined ? spot.spent : ground;
     return {
       unit: u, spot: spot, advance: advance, dist: dist, path: path,
       kind: kind, terrain: terr, ghost: ghost,
       seen: seen, shots: shots, watchers: watchers,
       allowance: allowance, ground: ground, spent: spent, turns: turns,
-      reverse: u.cls === 'vehicle' && u.turn > 0 && turns === 2 && spent < ground + turns * u.turn,
+      reverse: drive && !!(spot.reverse || path.reverse),
       crushes: R.isMachine(u) && u.tier >= 3
     };
   }
@@ -4861,7 +4935,31 @@
     }
 
     var pts = el('pts');
+    // units a tactic or doctrine puts off the bill are named, or the sum looks wrong
     pts.textContent = c.spent + ' / ' + c.budget + ' points';
+    /* Human Wave Attacks (p. 95): two infantry units of the Battle Tier a Priority
+       Level come off the bill. Which ones are free is marked on their chips, and
+       the sum is written out under the Tier counts, so 7 Tier III units costing
+       9 points reads as the rule rather than a mistake. */
+    var freeIdx = {}, waveN = 0, gross = 0;
+    muster.keys.forEach(function (k, i) {
+      var fp = R.profile(R.splitPick(k).key);
+      if (!fp) return;
+      gross += fp.tier;
+      if (tactic === 'wave' && !muster.solo && waveN < 2 * pl && fp.cls === 'infantry' && fp.tier === tier) { freeIdx[i] = true; waveN++; }
+    });
+    var note = el('pts-note');
+    if (!note) {
+      note = document.createElement('p'); note.id = 'pts-note'; note.className = 'ptsnote';
+      el('limits').parentNode.insertBefore(note, el('limits').nextSibling);
+    }
+    var off = gross - c.spent;
+    note.hidden = !off;
+    note.innerHTML = off
+      ? gross + ' pts of units \u2212 <b>' + off + ' free</b>' +
+        (waveN ? ' (Human Wave Attacks: ' + waveN + ' Tier ' + R.ROMAN[tier] + ' infantry \u2014 up to 2 per Priority Level)' : '') +
+        ' = <b>' + c.spent + '</b> of ' + c.budget
+      : '';
     pts.classList.toggle('over', c.spent > c.budget);
 
     // the count at each Tier against its limits, on one line: I 1/0-8 · II 0/0-8 · …
@@ -4890,7 +4988,7 @@
         '" title="Drone Control: +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
         : '';
       var mnt = R.canMount(p, pick.riders)
-        ? '<select class="drive" data-mount="' + i + '" title="What they ride — the models only; the rules are the same">' +
+        ? '<select class="drive" data-mount="' + i + '" title="What they ride: a motorbike can go in a transport but bogs down in rough ground; a grav bike ignores the ground at \u22121 Defence; a horse jumps walls but takes 1 more SP whenever it is shot at">' +
         R.MOUNT_ORDER.map(function (m) {
           return '<option value="' + m + '"' + ((pick.mount || 'bike') === m ? ' selected' : '') + '>' + R.MOUNTS[m].name + '</option>';
         }).join('') + '</select>'
@@ -4900,8 +4998,10 @@
         '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
       return '<span class="pickwrap">' +
-        '<button type="button" class="pick" data-drop="' + i + '" title="Remove">' +
-        p.name + (pick.riders ? ' (mounted)' : '') + ' <b>' + R.ROMAN[p.tier] + '</b></button>' + drive + drone + ride + mnt + '</span>';
+        '<button type="button" class="pick' + (freeIdx[i] ? ' free' : '') + '" data-drop="' + i + '" title="' +
+        (freeIdx[i] ? 'Free: an extra unit from Human Wave Attacks. ' : '') + 'Remove">' +
+        p.name + (pick.riders ? ' (mounted)' : '') + ' <b>' + R.ROMAN[p.tier] + '</b>' +
+        (freeIdx[i] ? '<i class="freetag">FREE</i>' : '') + '</button>' + drive + drone + ride + mnt + '</span>';
     }).join('');
 
     var f = el('faults');

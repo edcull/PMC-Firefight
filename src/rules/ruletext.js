@@ -144,7 +144,8 @@
       'drones excepted — takes D6-1 Suppression. Not while Suppressed.',
     'Riders':
       'Mounted: always moves Movement +4", but loses 2" for rough ground, cannot cross walls or enter buildings, ' +
-      'and never rides in a transport.',
+      'and never rides in a transport. What it rides changes that: a motorbike may be carried but loses 6" to rough ground, ' +
+      'a grav bike ignores the ground at \u22121 Defence, and a horse jumps walls but takes 1 more SP every time it is shot at.',
     'Sappers':
       'Breach: carry charges against any wall or building, +4, bringing it down on a final 15+ or an unmodified 9 ' +
       '(a failed attempt falls back 2"). In the first round of an assault on a unit in cover they get +4, and the ' +
@@ -168,7 +169,7 @@
     'Supporting Fire':
       'Support: shoot without the stationary Fire! bonus, then still load or unload troops in the same activation.',
     'Suppressive Fire':
-      'A normal Fire! attack that hits adds +2 Suppression on top of the hit table. Does not apply at Basic Firepower.',
+      'Any shooting attack that scores hits — Basic Firepower and Indirect Fire included — adds +2 Suppression on top of the hit table. Not with the auxiliary weapon.',
     'Teleport':
       'Takes in a steady infantry unit within 4" that has not acted; on a D6 of 1-2 it comes out beside a random ' +
       'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',

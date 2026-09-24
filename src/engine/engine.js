@@ -344,7 +344,7 @@
         }
         var u = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, entry, pick.riders);
         if (R.has(u, 'Turret')) u.drone = true;             // a lone shield turret is Drone Controlled too
-        if (R.canMount(prof, pick.riders)) u.mount = pick.mount || 'bike';
+        if (R.canMount(prof, pick.riders)) R.applyMount(u, pick.mount || 'bike');   // what it rides, and what that costs
         u.startSize = u.models;
         // in a cooperative game each player has a commando of their own
         if (state.solo && side === 'A') {
@@ -806,10 +806,11 @@
   function moveBonus(u, action) {
     var base = R.isMachine(u) ? 4 : 2;
     /* Riders take their Movement +4" whatever they are doing (p. 94), and a Human
-       Wave carries the infantry 4" further on Move and Assault actions (p. 95). */
+       Wave moves the infantry M+4" on Move and Assault actions (p. 95) — in place
+       of the usual +2", not on top of it, so a rider gains nothing more from it. */
     if (R.has(u, 'Riders')) base = Math.max(base, 4);
     if (u.tactic === 'wave' && u.cls === 'infantry' &&
-      (action === 'move' || action === 'assault')) base += 4;
+      (action === 'move' || action === 'assault' || !action)) base = Math.max(base, 4);
     if (!C || !state) return base;
     return C.moveBonus(u, base, action || 'move', state.doctrines ? state.doctrines[u.side] : null);
   }
@@ -2144,8 +2145,71 @@
   }
 
   // The rally phase is walked unit by unit: roll, show the card, wait for Continue.
+  /* The start of the Rally phase (p. 34): every Broken unit on the table flees
+     Movement + 2" away from the closest enemy, paying for terrain as usual and
+     keeping away from the enemy as long as it can. One that can run off the
+     table does, and is gone — fled. Only then do the rally rolls come.
+     A solitaire game has no "own lines" either way: its scenarios may send a
+     broken unit somewhere instead — to the safe zone in the Evacuation, back
+     towards the evacuation point in Protecting the VIP. */
+  function fleeBroken() {
+    state.units.forEach(function (u) {
+      if (!onTable(u) || R.status(u) !== 'broken' || R.isMachine(u)) return;
+      // what cannot move stays put: emplaced guns, platforms (p. 94)
+      if (!u.move || R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile')) return;
+      var allow = u.move + 2;
+      var to = state.solo && state.scen.fallTo ? state.scen.fallTo(state, u) : null;
+      var foe = nearestEnemy(u);
+      if (!to && !foe) return;                                   // no one to run from
+      if (to && to.flee === undefined && to.limit == null && R.inches(u.x, u.y, to.x, to.y) < 0.5) return;
+      var was = { x: u.x, y: u.y };
+      if (u.bld) {
+        // out of a building the old way: through the far wall and straight on
+        var away = to ? { x: u.x - (to.x - u.x), y: u.y - (to.y - u.y) } : foe.unit;
+        if (R.fallBack(state, u, away, allow)) {
+          logLine('note', u.label + ' is broken and flees the building.');
+          animateMove(u, [was, { x: u.x, y: u.y }]);
+        }
+        return;
+      }
+      var foes = state.units.filter(function (t) { return t.alive && t.side !== u.side && onTable(t); });
+      function gap(c) {
+        var m = Infinity;
+        foes.forEach(function (t) { m = Math.min(m, R.inches(c.x, c.y, t.x, t.y)); });
+        return m;
+      }
+      var spots = R.reachable(state, u, allow).filter(function (c) { return canStand(u, c); });
+      spots.push({ x: u.x, y: u.y, spent: 0 });
+      var best = null, bv = -Infinity;
+      spots.forEach(function (c) {
+        var v;
+        if (to) {
+          if (to.limit != null && R.inches(c.x, c.y, to.x, to.y) > to.limit) return;
+          v = -R.inches(c.x, c.y, to.x, to.y);
+        } else v = gap(c);
+        if (v > bv + 1e-6) { bv = v; best = c; }
+      });
+      if (!best || (best.x === u.x && best.y === u.y)) return;
+      var path = R.pathTo(state, u, allow, best);
+      u.x = best.x; u.y = best.y; ui.vis = null; ui.visKey = '';
+      animateMove(u, path && path.length > 1 ? path : [was, { x: best.x, y: best.y }]);
+      /* Off the edge: what it has left of its flight carries it clear of the table
+         (every model past the edge), and it does not come back. */
+      var edge = Math.min(u.x, W - u.x, u.y, H - u.y) + UR;
+      if (!to && !u.noFlee && allow - (best.spent || 0) >= edge) {
+        u.alive = false; u.fled = true; u.brokenEver = true;
+        logLine('kill', u.label + ' is broken and runs off the table — fled.');
+        return;
+      }
+      logLine('note', u.label + ' is broken and flees ' + R.inches(was.x, was.y, u.x, u.y).toFixed(1) + '"' +
+        (to && to.flee ? ' towards the safe zone.' : to ? '.' : ' from the enemy.'));
+      soloAfterMove(u);
+    });
+  }
+
   function rallyPhase() {
     logLine('phase', 'Rally phase.');
+    fleeBroken();
     // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
     state.units.forEach(function (c) {
       if (!onTable(c) || c.cls !== 'aircraft' || !R.campFlag(c, 'psychicAmp')) return;
@@ -2269,27 +2333,6 @@
   }
 
   function endPhase() {
-    state.units.forEach(function (u) {
-      if (!onTable(u) || R.status(u) !== 'broken') return;
-      var awayFrom = { x: u.side === 'A' ? W + 5 : -5, y: u.y };
-      /* A solitaire game has no "own lines": broken units fall back away from
-         the enemy — or, in the Evacuation, run for the safe zone, and in
-         Protecting the VIP, back towards the evacuation point. */
-      var to = state.solo && state.scen.fallTo ? state.scen.fallTo(state, u) : null;
-      if (state.solo && !to && u.side === 'B') {
-        var nearP = nearestEnemy(u);
-        to = nearP ? { x: u.x + (u.x - nearP.unit.x) * 3, y: u.y + (u.y - nearP.unit.y) * 3 } : null;
-      }
-      if (to) awayFrom = { x: u.x - (to.x - u.x), y: u.y - (to.y - u.y) };
-      if (to && to.flee === undefined && to.limit == null && R.inches(u.x, u.y, to.x, to.y) < 0.5) return;
-      var was = { x: u.x, y: u.y };
-      if (R.fallBack(state, u, awayFrom, 4)) {
-        if (to && to.limit != null && R.inches(u.x, u.y, to.x, to.y) > to.limit) { u.x = was.x; u.y = was.y; return; }
-        logLine('note', u.label + ' is broken and falls back' + (to && to.flee ? ' towards the safe zone.' : state.solo ? '.' : ' toward its own lines.'));
-        soloAfterMove(u);
-      }
-    });
-
     /* Endless Tide (p. 116): an unbroken swarm near an unsuppressed Overmind
        digs D3 lost bugs back out of the ground. */
     var tide = R.endlessTide(state);
@@ -2609,6 +2652,8 @@
       }
       case 'aux': {
         if (u.fp === null) return { on: false, hint: 'This unit has no Firepower.' };
+        // aircraft carry no auxiliary weapons (p. 32)
+        if (R.isFlying(u)) return { on: false, hint: 'Aircraft have no auxiliary weapons.' };
         var ta = targetsFor(u, { aux: true });
         if (!ta.length) return { on: false, hint: 'Auxiliary weapons reach 12" — nothing in range.' };
         return { on: true, hint: 'Auxiliary weapons: FP 1, Range 12", no special rules. The only shot a suppressed unit may take.' };
@@ -3011,6 +3056,16 @@
   }
 
   // a hull ends up pointing the way it drove
+  /* A hull ends its drive facing the way its last straight leg ran; one that
+     went backwards still faces the way it did (p. 35). Other machines turn to
+     the way they went. */
+  function faceAfter(u, path, pt) {
+    if (path && path.facing !== undefined && R.drives(u)) {
+      if (path.facing !== null) u.facing = path.facing;
+      return;
+    }
+    faceAlong(u, u.x, u.y, pt.x, pt.y);
+  }
   function faceAlong(u, fromX, fromY, toX, toY) {
     if (!R.isMachine(u)) return;
     if (Math.hypot(toX - fromX, toY - fromY) < 0.2) return;
@@ -3077,7 +3132,7 @@
     var d = R.inches(u.x, u.y, pt.x, pt.y), wait = 0;
     if (d > 0.2) {
       var path = R.pathTo(state, u, u.move, pt);
-      faceAlong(u, u.x, u.y, pt.x, pt.y);
+      faceAfter(u, path, pt);
       u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
       crushAlong(u, path);
       animateMove(u, path, isAI(u.side));
@@ -3146,7 +3201,7 @@
     if (u.vortexNow) { allowance *= 2; u.vortexNow = false; }
     if (u.repairMove) { allowance = u.move; u.repairMove = false; }
     var path = R.pathTo(state, u, allowance, pt);
-    faceAlong(u, u.x, u.y, pt.x, pt.y);
+    faceAfter(u, path, pt);
     flightTurn(u);
     u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
     crushAlong(u, path);
@@ -3178,7 +3233,7 @@
     if (!u) return;
     var d = R.inches(u.x, u.y, pt.x, pt.y);
     var path = R.pathTo(state, u, u.move, pt);
-    faceAlong(u, u.x, u.y, pt.x, pt.y);
+    faceAfter(u, path, pt);
     u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
     u.markMoved = true;
     crushAlong(u, path);
@@ -3941,7 +3996,7 @@
     });
     if (best && R.inches(u.x, u.y, best.x, best.y) > 0.6) {
       var path = R.pathTo(state, u, allowance, best);
-      faceAlong(u, u.x, u.y, best.x, best.y);
+      faceAfter(u, path, best);
       var dist = R.inches(u.x, u.y, best.x, best.y);
       u.x = best.x; u.y = best.y;
       flightTurn(u);
@@ -4247,6 +4302,7 @@
     if (best) {
       var d = R.inches(u.x, u.y, best.x, best.y);
       var path = R.pathTo(state, u, allowance, best);
+      faceAfter(u, path, best);
       u.x = best.x; u.y = best.y;
       logLine('move', u.label + (behaviour === 'flee' ? ' withdraws ' : ' advances ') + d.toFixed(1) + '".');
       crushAlong(u, path);
@@ -4387,7 +4443,7 @@
   function boardableFor(veh) {
     return state.units.filter(function (u) {
       return u.side === veh.side && u.alive && u.cls === 'infantry' && !u.aboard &&
-        !R.has(u, 'Riders') && !R.has(u, 'Stationary Artillery') && u !== veh;
+        !(R.has(u, 'Riders') && !(R.mountOf(u) && R.mountOf(u).transport)) && !R.has(u, 'Stationary Artillery') && u !== veh;
     });
   }
 
