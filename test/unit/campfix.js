@@ -55,5 +55,18 @@ ok('it swaps one for another', good.ok && big.doctrines.indexOf('S1') < 0 && big
 ok('...keeping the same number held', big.doctrines.length === 4);
 ok('...and the next change is five battles on', big.doctrineSwapAt === 10 && !C.canSwapDoctrine(big).ok);
 
+console.log('\nSABOTAGE OBJECTIVES (p. 155)');
+require('../../src/rules/scenarios.js');
+require('../../src/rules/solitaire.js');
+var SAB = global.PMCSolo.SCENARIOS.s_sabotage;
+[[1, 3], [2, 5], [3, 7]].forEach(function (c) {
+  var st = { cfg: { pl: c[0] }, sc: {}, terrain: [], units: [], objectives: [] };
+  SAB.objectives(st);
+  var gap = Infinity;
+  st.sc.targets.forEach(function (a, i) { st.sc.targets.forEach(function (b, j) { if (i < j) gap = Math.min(gap, Math.hypot(a.x - b.x, a.y - b.y)); }); });
+  ok('Priority Level ' + c[0] + ': ' + c[1] + ' objectives' + (c[0] === 1 ? ', 12" apart' : ''),
+    st.sc.targets.length === c[1] && (c[0] > 1 || gap >= 12), st.sc.targets.length + ' placed, closest ' + gap.toFixed(1) + '"');
+});
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

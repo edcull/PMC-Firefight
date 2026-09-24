@@ -10563,7 +10563,11 @@
     win: 'Destroy all the objectives without being routed.',
     hint: 'A unit within 1" of an objective can destroy it as its action. Counters within 12" and in sight are revealed each Beginning phase, and D3−1 of the closest are revealed anyway. The OpFor turns aggressive near the objectives.',
     objectives: function (state) {
-      var n = 3 + 2 * (state.cfg.pl || 1), out = [];
+      /* "3 objectives are placed... Add 2 objectives per Priority Level" (p. 155):
+         3 at Priority Level 1, the book's base, and 2 more for each level above it
+         — so each extra player in a cooperative game brings two more targets.
+         They go 12" apart; only if the table cannot take that many does the gap close. */
+      var n = 3 + 2 * Math.max(0, (state.cfg.pl || 1) - 1), out = [];
       for (var apart = 12; apart >= 6 && out.length < n; apart -= 2) {
         out = [];
         for (var g = 0; g < 8000 && out.length < n; g++) {
