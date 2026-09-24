@@ -710,19 +710,10 @@
   #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
   #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
   #btn-quick-clear { display: none; }
-  /* ...and a force's colours come up in a modal from the line under its name */
-  .colour-box { display: contents; }
-  #setup .quick-only { display: none; }
-  #setup[data-hot="2"][data-kind="coop"] .hot-colourline { display: none; }
-  #setup[data-hot] .hot-colour { display: none !important; }
-  #setup[data-hot] .hot-colour.open {
-    display: grid !important; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; margin: 0; background: rgba(8, 11, 16, .78);
-  }
-  #setup[data-hot] .hot-colour.open .colour-box {
-    display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
-    width: min(400px, 100%); max-height: 100%; overflow-y: auto; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
-  }
-  #setup[data-hot] .hot-colour.open .askrow.quick-only { display: flex; margin-top: 12px; }
+  /* ...and a force's colours sit under its name, with no hint: who takes which is plain on the battlefield step */
+  #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
+  #setup[data-hot] .hot-name .hot-colour { margin: 0; }
+  #setup[data-hot] #colour-hint { display: none; }
   #setup[data-kind="ai"] #btn-quick-clear { display: inline-block; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
@@ -898,7 +889,16 @@
   .foundid .field { margin-bottom: 0; }
   @media (min-width: 620px) { .foundid { grid-template-columns: 1fr 1.4fr; align-items: start; } }
 
-  /* company colours */
+  /* company colours: a square each, as the unit viewer has them */
+  .csw { display: flex; flex-wrap: wrap; gap: 7px; }
+  .csw button {
+    width: 36px; height: 36px; padding: 2px; border-radius: 5px; cursor: pointer;
+    background: none; border: 1px solid var(--line);
+  }
+  .csw button span { display: block; width: 100%; height: 100%; border-radius: 3px; }
+  .csw button.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+  .csw button:hover { border-color: var(--ink-faint); }
+  .csw button:disabled { opacity: .25; cursor: not-allowed; }
   .swatches { display: flex; flex-wrap: wrap; gap: 7px; }
   .sw {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -1600,10 +1600,6 @@
         <label for="hot-name" id="hot-name-label">Company name</label>
         <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
       </div>
-      <div class="field hot-colourline">
-        <label id="hot-colour-label">Company colours</label>
-        <button type="button" class="archline" id="btn-quick-colour"><span class="sw-chip line-chip" id="colour-btn-chip"></span><span id="colour-btn-name"></span><em>change</em></button>
-      </div>
     </div>
     <div class="field hot-force">
       <label for="sel-faction">Your force</label>
@@ -1738,13 +1734,11 @@
         <option value="takeover">Hostile takeover — a prepared position</option>
       </select>
     </div>
+    <!-- the colours, a square each as the unit viewer has them; in a stepped skirmish they sit under the force's name -->
     <div class="field hot-force hot-colour" id="colour-wrap">
-      <div class="colour-box" role="dialog" aria-label="Colours">
-      <label id="colour-box-label">Company colours — what your troops are painted in</label>
-      <div class="swatches" id="colourpick"></div>
+      <label id="colour-box-label">Company colours</label>
+      <div class="csw" id="colourpick"></div>
       <p class="hint small" id="colour-hint">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
-      <div class="askrow quick-only"><button type="button" class="start" id="btn-colour-done">Done</button></div>
-      </div>
     </div>
     <!-- chosen on the menu now; kept because the start reads it -->
     <div class="field std-only" id="mode-field" hidden>
@@ -30173,20 +30167,16 @@
     }
     // in a hotseat muster the second player cannot wear the first player's colour
     var taken = muster.hot && muster.hot.step === 2 && muster.hot.sides[0] ? muster.hot.sides[0].colour : null;
+    // a square each, as the unit viewer has them, and the colour picked named in the label
     host.innerHTML = ISO.COLOUR_KEYS.map(function (k) {
       var c = ISO.COLOURS[k];
-      return '<button type="button" class="sw' + (k === muster.colour ? ' on' : '') +
+      return '<button type="button" class="' + (k === muster.colour ? 'on' : '') +
         '" data-colour="' + k + '" title="' + c.name + (k === taken ? ' \u2014 Player 1\u2019s colour' : '') + '"' +
         (k === taken ? ' disabled' : '') + '>' +
-        '<span class="sw-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
-        c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' +
-        '<span class="sw-name">' + c.name + '</span></button>';
+        '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
+        c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>';
     }).join('');
-    var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
-    if (chip && cc) {
-      chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
-      if (el('colour-btn-name')) el('colour-btn-name').textContent = cc.name;
-    }
+    colourLabel();
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
         muster.colour = b.getAttribute('data-colour');
@@ -30194,15 +30184,21 @@
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
         if (muster.hot && muster.hot.kind === 'demo') demoRename();   // its name is its colour
-        // a made-up name follows the colour; the modal shuts on the pick
+        // a made-up name follows the colour
         if (muster.hot && muster.hot.kind !== 'demo') {
           var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
           if (!nm || isMadeUpName(nm)) { muster.name = ISO.COLOURS[muster.colour].name + ' ' + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
-          if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
         }
         drawColourPick();
       });
     });
+  }
+  // "Tribe colours — Jade": the kind of force's word in a stepped skirmish, and the colour picked
+  function colourLabel() {
+    var lb = el('colour-box-label'), c = ISO.COLOURS[muster.colour];
+    if (!lb) return;
+    var n = muster.hot ? (ID_NOUN[musterFaction()] || 'Force') : 'Company';
+    lb.textContent = n + ' colours' + (c ? ' \u2014 ' + c.name : '');
   }
   /* A colour for the opposition: anything but the ones already on the table. */
   function foeColour(taken) {
@@ -33085,9 +33081,10 @@
     el('btn-start').textContent = 'Take the field';
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = 'Your force';
-    if (el('colour-box-label')) el('colour-box-label').textContent = 'Company colours \u2014 what your troops are painted in';
+    colourHome();
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
+    drawMuster();                        // its hints were written for the stepped muster
   }
   /* A demo force is not named by anyone: it goes by its colour and a noun
      that suits its kind — the Crimson Vultures, the Jade Brood. */
@@ -33160,8 +33157,13 @@
   function hotLabels() {
     var n = ID_NOUN[musterFaction()] || 'Force';
     if (el('hot-name-label')) el('hot-name-label').textContent = n + ' name';
-    if (el('hot-colour-label')) el('hot-colour-label').textContent = n + ' colours';
-    if (el('colour-box-label')) el('colour-box-label').textContent = n + ' colours';
+    colourLabel();
+  }
+  var colourHomeAt = null;
+  function colourHome() {
+    var cwp = el('colour-wrap');
+    if (cwp && colourHomeAt && cwp.parentNode !== colourHomeAt.parent) colourHomeAt.parent.insertBefore(cwp, colourHomeAt.next);
+    colourLabel();
   }
   function catModal(on) {
     var m = document.querySelector('#setup .muster');
@@ -33180,8 +33182,10 @@
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(hotQuick(kind) && step === 3)) || !!h.edit; });
     // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
-    if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
     catModal(false);
+    // the colours sit under the force's name, in the one panel
+    var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
+    if (cwp && idp && kind !== 'demo') { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
     hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
@@ -33562,10 +33566,6 @@
     if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
     if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
     if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
-    var cw = el('colour-wrap');
-    if (el('btn-quick-colour')) el('btn-quick-colour').addEventListener('click', function () { cw.classList.add('open'); });
-    if (el('btn-colour-done')) el('btn-colour-done').addEventListener('click', function () { cw.classList.remove('open'); });
-    if (cw) cw.addEventListener('click', function (ev) { if (ev.target === cw) cw.classList.remove('open'); });
     var saves = el('forcebar-wrap');
     if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
     if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
@@ -34655,25 +34655,17 @@
     return free[Math.floor(Math.random() * free.length)];
   }
   // a swatch row, as used on the founding screen
-  function swatches(pick) {
+  function squares(pick) {
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
-    return '<div class="swatches">' + colourKeys().map(function (k) {
+    return '<div class="csw">' + colourKeys().map(function (k) {
       var c = CO[k];
-      return '<button type="button" class="sw' + (k === pick ? ' on' : '') +
-        '" data-campcolour="' + k + '" title="' + esc(c.name) + '">' +
-        '<span class="sw-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
-        c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' +
-        '<span class="sw-name">' + esc(c.name) + '</span></button>';
+      return '<button type="button"' + (k === pick ? ' class="on"' : '') + ' data-campcolour="' + k + '" title="' + esc(c.name) + '">' +
+        '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>';
     }).join('') + '</div>';
   }
   function colourName(k) {
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
     return CO[k] ? CO[k].name : 'Choose a colour';
-  }
-  function colourChip(k) {
-    var c = ((root.PMCIso && root.PMCIso.COLOURS) || {})[k];
-    return c ? '<span class="sw-chip line-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
-      c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '';
   }
   /* A list opened over the page (the founding screen's pickers, the hub's
      rivals): drawn with the page, hidden unless open, so a pick made in it
@@ -34722,16 +34714,9 @@
       '<input class="tin" id="found-name" maxlength="28" autocomplete="off"' +
       ' placeholder="' + say('e.g. Task Force Ironhold', 'e.g. The Free Colonies', 'e.g. The Hive', 'e.g. The Ghadon Third') + '"' +
       ' value="' + esc(draft.name || '') + '"></div>' +
-      '<div class="field"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') + '</label>' +
-      '<button type="button" class="archline" data-go="fmodal" data-kind="colour">' + colourChip(draft.colour) +
-      '<span>' + esc(colourName(draft.colour)) + '</span><em>change</em></button></div></div>';
-    h += '<p class="lede">' + (xen
-      ? 'A tribe claims its ground with six Tier I units, two Tier II units and one free Tier I Alpha squad — its field commanders, who grow with the Tribe Tier. Primitive Epsilon troopers cost nothing to raise, and turrets are never bought — they only take up composition points. Then choose the Tribe Advancement it begins with.'
-      : bug
-      ? 'A swarm awakens with six Tier I units, two Tier II units and one free Tier I Leader Bug — the Overmind organism the whole swarm answers to. Tiny bug swarms cost nothing to spawn. Then choose the Evolutionary Pathway the swarm begins down.'
-      : reb
-      ? 'A revolt begins with six Tier I units, two Tier II units and one free Tier I First Among Equals — the leader who started it — with no more than two vehicles between them. Armed civilians cost nothing to call out. Then choose the Path the revolt sets off down.'
-      : 'A starting company is six Tier I units, two Tier II units and one free Tier I Field command, with no more than two vehicles between them. Then choose the doctrine the company is built around.') + '</p>';
+      // the colours a square each, as the unit viewer has them, the one picked named in the label
+      '<div class="field"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
+      ' \u2014 ' + esc(colourName(draft.colour)) + '</label>' + squares(draft.colour) + '</div></div>';
     var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
       t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
@@ -34753,10 +34738,6 @@
       '<em>' + (doc ? 'change' : 'tap to select') + '</em></button></div>';
 
     // the three pickers, each a modal over the page
-    h += cmodal('colour', say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour'),
-      '<p class="hint small">What your troops are painted in. ' +
-      say('The opposition', 'The forces sent against you', 'Whatever the swarm feeds on', 'Whoever trespasses') +
-      ' will take a colour of their own.</p><div class="cmodal-scroll">' + swatches(draft.colour) + '</div>');
     h += cmodal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
       head + '<div class="chosen">' + chosen + '</div>' +
       '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) {
@@ -35967,7 +35948,6 @@
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour');
-      if (openModal === 'colour') openModal = null;
       keepFoundName();
       render(); return;
     }

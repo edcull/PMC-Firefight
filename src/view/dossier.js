@@ -555,25 +555,17 @@
     return free[Math.floor(Math.random() * free.length)];
   }
   // a swatch row, as used on the founding screen
-  function swatches(pick) {
+  function squares(pick) {
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
-    return '<div class="swatches">' + colourKeys().map(function (k) {
+    return '<div class="csw">' + colourKeys().map(function (k) {
       var c = CO[k];
-      return '<button type="button" class="sw' + (k === pick ? ' on' : '') +
-        '" data-campcolour="' + k + '" title="' + esc(c.name) + '">' +
-        '<span class="sw-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
-        c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' +
-        '<span class="sw-name">' + esc(c.name) + '</span></button>';
+      return '<button type="button"' + (k === pick ? ' class="on"' : '') + ' data-campcolour="' + k + '" title="' + esc(c.name) + '">' +
+        '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>';
     }).join('') + '</div>';
   }
   function colourName(k) {
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
     return CO[k] ? CO[k].name : 'Choose a colour';
-  }
-  function colourChip(k) {
-    var c = ((root.PMCIso && root.PMCIso.COLOURS) || {})[k];
-    return c ? '<span class="sw-chip line-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
-      c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '';
   }
   /* A list opened over the page (the founding screen's pickers, the hub's
      rivals): drawn with the page, hidden unless open, so a pick made in it
@@ -622,16 +614,9 @@
       '<input class="tin" id="found-name" maxlength="28" autocomplete="off"' +
       ' placeholder="' + say('e.g. Task Force Ironhold', 'e.g. The Free Colonies', 'e.g. The Hive', 'e.g. The Ghadon Third') + '"' +
       ' value="' + esc(draft.name || '') + '"></div>' +
-      '<div class="field"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') + '</label>' +
-      '<button type="button" class="archline" data-go="fmodal" data-kind="colour">' + colourChip(draft.colour) +
-      '<span>' + esc(colourName(draft.colour)) + '</span><em>change</em></button></div></div>';
-    h += '<p class="lede">' + (xen
-      ? 'A tribe claims its ground with six Tier I units, two Tier II units and one free Tier I Alpha squad — its field commanders, who grow with the Tribe Tier. Primitive Epsilon troopers cost nothing to raise, and turrets are never bought — they only take up composition points. Then choose the Tribe Advancement it begins with.'
-      : bug
-      ? 'A swarm awakens with six Tier I units, two Tier II units and one free Tier I Leader Bug — the Overmind organism the whole swarm answers to. Tiny bug swarms cost nothing to spawn. Then choose the Evolutionary Pathway the swarm begins down.'
-      : reb
-      ? 'A revolt begins with six Tier I units, two Tier II units and one free Tier I First Among Equals — the leader who started it — with no more than two vehicles between them. Armed civilians cost nothing to call out. Then choose the Path the revolt sets off down.'
-      : 'A starting company is six Tier I units, two Tier II units and one free Tier I Field command, with no more than two vehicles between them. Then choose the doctrine the company is built around.') + '</p>';
+      // the colours a square each, as the unit viewer has them, the one picked named in the label
+      '<div class="field"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
+      ' \u2014 ' + esc(colourName(draft.colour)) + '</label>' + squares(draft.colour) + '</div></div>';
     var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
       t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
@@ -653,10 +638,6 @@
       '<em>' + (doc ? 'change' : 'tap to select') + '</em></button></div>';
 
     // the three pickers, each a modal over the page
-    h += cmodal('colour', say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour'),
-      '<p class="hint small">What your troops are painted in. ' +
-      say('The opposition', 'The forces sent against you', 'Whatever the swarm feeds on', 'Whoever trespasses') +
-      ' will take a colour of their own.</p><div class="cmodal-scroll">' + swatches(draft.colour) + '</div>');
     h += cmodal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
       head + '<div class="chosen">' + chosen + '</div>' +
       '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) {
@@ -1867,7 +1848,6 @@
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour');
-      if (openModal === 'colour') openModal = null;
       keepFoundName();
       render(); return;
     }

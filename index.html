@@ -710,19 +710,10 @@
   #setup[data-quick]:not([data-hot="3"]) #tierpl-field { display: none !important; }
   #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
   #btn-quick-clear { display: none; }
-  /* ...and a force's colours come up in a modal from the line under its name */
-  .colour-box { display: contents; }
-  #setup .quick-only { display: none; }
-  #setup[data-hot="2"][data-kind="coop"] .hot-colourline { display: none; }
-  #setup[data-hot] .hot-colour { display: none !important; }
-  #setup[data-hot] .hot-colour.open {
-    display: grid !important; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; margin: 0; background: rgba(8, 11, 16, .78);
-  }
-  #setup[data-hot] .hot-colour.open .colour-box {
-    display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
-    width: min(400px, 100%); max-height: 100%; overflow-y: auto; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
-  }
-  #setup[data-hot] .hot-colour.open .askrow.quick-only { display: flex; margin-top: 12px; }
+  /* ...and a force's colours sit under its name, with no hint: who takes which is plain on the battlefield step */
+  #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
+  #setup[data-hot] .hot-name .hot-colour { margin: 0; }
+  #setup[data-hot] #colour-hint { display: none; }
   #setup[data-kind="ai"] #btn-quick-clear { display: inline-block; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
   .demo-btns, .forcebar-wrap .demo-only { display: none; }
@@ -898,7 +889,16 @@
   .foundid .field { margin-bottom: 0; }
   @media (min-width: 620px) { .foundid { grid-template-columns: 1fr 1.4fr; align-items: start; } }
 
-  /* company colours */
+  /* company colours: a square each, as the unit viewer has them */
+  .csw { display: flex; flex-wrap: wrap; gap: 7px; }
+  .csw button {
+    width: 36px; height: 36px; padding: 2px; border-radius: 5px; cursor: pointer;
+    background: none; border: 1px solid var(--line);
+  }
+  .csw button span { display: block; width: 100%; height: 100%; border-radius: 3px; }
+  .csw button.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+  .csw button:hover { border-color: var(--ink-faint); }
+  .csw button:disabled { opacity: .25; cursor: not-allowed; }
   .swatches { display: flex; flex-wrap: wrap; gap: 7px; }
   .sw {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -1600,10 +1600,6 @@
         <label for="hot-name" id="hot-name-label">Company name</label>
         <input class="tin" id="hot-name" type="text" maxlength="28" autocomplete="off" placeholder="What this force is known as">
       </div>
-      <div class="field hot-colourline">
-        <label id="hot-colour-label">Company colours</label>
-        <button type="button" class="archline" id="btn-quick-colour"><span class="sw-chip line-chip" id="colour-btn-chip"></span><span id="colour-btn-name"></span><em>change</em></button>
-      </div>
     </div>
     <div class="field hot-force">
       <label for="sel-faction">Your force</label>
@@ -1738,13 +1734,11 @@
         <option value="takeover">Hostile takeover — a prepared position</option>
       </select>
     </div>
+    <!-- the colours, a square each as the unit viewer has them; in a stepped skirmish they sit under the force's name -->
     <div class="field hot-force hot-colour" id="colour-wrap">
-      <div class="colour-box" role="dialog" aria-label="Colours">
-      <label id="colour-box-label">Company colours — what your troops are painted in</label>
-      <div class="swatches" id="colourpick"></div>
+      <label id="colour-box-label">Company colours</label>
+      <div class="csw" id="colourpick"></div>
       <p class="hint small" id="colour-hint">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
-      <div class="askrow quick-only"><button type="button" class="start" id="btn-colour-done">Done</button></div>
-      </div>
     </div>
     <!-- chosen on the menu now; kept because the start reads it -->
     <div class="field std-only" id="mode-field" hidden>

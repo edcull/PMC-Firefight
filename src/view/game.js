@@ -2253,20 +2253,16 @@
     }
     // in a hotseat muster the second player cannot wear the first player's colour
     var taken = muster.hot && muster.hot.step === 2 && muster.hot.sides[0] ? muster.hot.sides[0].colour : null;
+    // a square each, as the unit viewer has them, and the colour picked named in the label
     host.innerHTML = ISO.COLOUR_KEYS.map(function (k) {
       var c = ISO.COLOURS[k];
-      return '<button type="button" class="sw' + (k === muster.colour ? ' on' : '') +
+      return '<button type="button" class="' + (k === muster.colour ? 'on' : '') +
         '" data-colour="' + k + '" title="' + c.name + (k === taken ? ' \u2014 Player 1\u2019s colour' : '') + '"' +
         (k === taken ? ' disabled' : '') + '>' +
-        '<span class="sw-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
-        c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' +
-        '<span class="sw-name">' + c.name + '</span></button>';
+        '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
+        c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>';
     }).join('');
-    var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
-    if (chip && cc) {
-      chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
-      if (el('colour-btn-name')) el('colour-btn-name').textContent = cc.name;
-    }
+    colourLabel();
     host.querySelectorAll('[data-colour]').forEach(function (b) {
       b.addEventListener('click', function () {
         muster.colour = b.getAttribute('data-colour');
@@ -2274,15 +2270,21 @@
         if (!muster.hot || muster.hot.step === 1) { try { localStorage.setItem('pmc-colour', muster.colour); } catch (e2) { } }
         if (SFX) SFX.click();
         if (muster.hot && muster.hot.kind === 'demo') demoRename();   // its name is its colour
-        // a made-up name follows the colour; the modal shuts on the pick
+        // a made-up name follows the colour
         if (muster.hot && muster.hot.kind !== 'demo') {
           var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
           if (!nm || isMadeUpName(nm)) { muster.name = ISO.COLOURS[muster.colour].name + ' ' + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
-          if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
         }
         drawColourPick();
       });
     });
+  }
+  // "Tribe colours — Jade": the kind of force's word in a stepped skirmish, and the colour picked
+  function colourLabel() {
+    var lb = el('colour-box-label'), c = ISO.COLOURS[muster.colour];
+    if (!lb) return;
+    var n = muster.hot ? (ID_NOUN[musterFaction()] || 'Force') : 'Company';
+    lb.textContent = n + ' colours' + (c ? ' \u2014 ' + c.name : '');
   }
   /* A colour for the opposition: anything but the ones already on the table. */
   function foeColour(taken) {
@@ -5165,9 +5167,10 @@
     el('btn-start').textContent = 'Take the field';
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = 'Your force';
-    if (el('colour-box-label')) el('colour-box-label').textContent = 'Company colours \u2014 what your troops are painted in';
+    colourHome();
     if (el('colour-hint')) el('colour-hint').textContent = 'The opponent takes a colour of its own, chosen at random from the ones you have left.';
     drawColourPick();
+    drawMuster();                        // its hints were written for the stepped muster
   }
   /* A demo force is not named by anyone: it goes by its colour and a noun
      that suits its kind — the Crimson Vultures, the Jade Brood. */
@@ -5240,8 +5243,13 @@
   function hotLabels() {
     var n = ID_NOUN[musterFaction()] || 'Force';
     if (el('hot-name-label')) el('hot-name-label').textContent = n + ' name';
-    if (el('hot-colour-label')) el('hot-colour-label').textContent = n + ' colours';
-    if (el('colour-box-label')) el('colour-box-label').textContent = n + ' colours';
+    colourLabel();
+  }
+  var colourHomeAt = null;
+  function colourHome() {
+    var cwp = el('colour-wrap');
+    if (cwp && colourHomeAt && cwp.parentNode !== colourHomeAt.parent) colourHomeAt.parent.insertBefore(cwp, colourHomeAt.next);
+    colourLabel();
   }
   function catModal(on) {
     var m = document.querySelector('#setup .muster');
@@ -5260,8 +5268,10 @@
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(hotQuick(kind) && step === 3)) || !!h.edit; });
     // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
-    if (el('colour-wrap')) el('colour-wrap').classList.remove('open');
     catModal(false);
+    // the colours sit under the force's name, in the one panel
+    var cwp = el('colour-wrap'), idp = document.querySelector('#setup .hot-name');
+    if (cwp && idp && kind !== 'demo') { if (!colourHomeAt) colourHomeAt = { parent: cwp.parentNode, next: cwp.nextSibling }; idp.appendChild(cwp); }
     hotLabels();
     var fl = document.querySelector('label[for="sel-faction"]');
     if (fl) fl.textContent = kind === 'ai' && step === 2 ? 'Their force' : kind === 'demo' ? 'Kind of force' : 'Your force';
@@ -5642,10 +5652,6 @@
     if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
     if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
     if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
-    var cw = el('colour-wrap');
-    if (el('btn-quick-colour')) el('btn-quick-colour').addEventListener('click', function () { cw.classList.add('open'); });
-    if (el('btn-colour-done')) el('btn-colour-done').addEventListener('click', function () { cw.classList.remove('open'); });
-    if (cw) cw.addEventListener('click', function (ev) { if (ev.target === cw) cw.classList.remove('open'); });
     var saves = el('forcebar-wrap');
     if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
     if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });

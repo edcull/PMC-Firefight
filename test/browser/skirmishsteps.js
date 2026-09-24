@@ -128,7 +128,7 @@ const { ROOT, SHOTS } = require('../where.js');
     start.sides[0].colour !== start.sides[1].colour && await shown('sel-terrain'), JSON.stringify(start).slice(0, 200));
   await p.click('[data-hotside="0"]');
   check('tap your force to change it: a name and colours of your own', /^Muster your force$/.test(await title()) &&
-    await shown('hot-name') && await shown('btn-quick-colour') && !(await shown('sel-op')));
+    await shown('hot-name') && await shown('colourpick') && !(await shown('sel-op')));
   await roll(); await name('Kowalski\u2019s Lads');
   await next();
   check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'));
