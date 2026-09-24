@@ -371,17 +371,17 @@
       logLine('note', sideName(side) + ' — Complex Teleport Network: a free set of ' + tprof.turretSet + ' Teleport turrets' + ((cfg.pl || 1) > 1 ? ' a Priority Level' : '') + '.');
     });
     /* Mimicry (p. 124), and the tribe's Underground Advance (p. 141): up to a
-       quarter of the force may be held back and come in by Battlefield
-       Insertion. The ones that already can are counted first. */
+       quarter of the force — rounded up, as every division is (p. 27) — may be
+       held back and come in by Battlefield Insertion, on top of the units that
+       have the rule of their own. */
     ['A', 'B'].forEach(function (side) {
       var docs = (state.doctrines && state.doctrines[side]) || [];
       if (docs.indexOf('BB2') < 0 && docs.indexOf('XO2') < 0) return;
       var mine = state.units.filter(function (u) { return u.side === side; });
-      var cap = Math.floor(mine.length / 4);
-      var have = mine.filter(function (u) { return R.has(u, 'Battlefield Insertion'); }).length;
+      var cap = Math.ceil(mine.length / 4);
       mine.filter(function (u) {
         return u.cls === 'infantry' && !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Overmind') && !R.has(u, 'Dominant Species');
-      }).slice(0, Math.max(0, cap - have)).forEach(function (u) { u.rules.push('Battlefield Insertion'); });
+      }).slice(0, cap).forEach(function (u) { u.rules.push('Battlefield Insertion'); });
     });
     /* A solitaire scenario can bring units of its own: a VIP and bodyguard,
        civilians and militia to protect, the enemy leaders to kill. */
@@ -858,7 +858,7 @@
   function markReserves(side) {
     if (SC.noInsertion(state)) return 0;             // the scenario forbids it
     var mine = state.units.filter(function (u) { return u.side === side; });
-    var cap = Math.floor(mine.length / 2);
+    var cap = Math.ceil(mine.length / 2);             // "no more than half", rounded up (p. 27)
     var n = 0;
     mine.forEach(function (u) {
       u.reserve = false;
@@ -882,7 +882,8 @@
 
   /* The arrival point holds on 1-3; on 4-6 the opponent shoves it up to 2D6" in
      any direction, and the opponent naturally shoves it towards their own guns. */
-  function scatterInsertion(u) {
+  function scatterInsertion(u, after) {
+    after = after || function () {};
     var die = R.d6();
     var tell = !isAI(u.side);                        // the OpFor's own drops just go in the log
     // Coordinated Hive (p. 124): the swarm re-rolls a failed die in the Reserve phase
@@ -899,9 +900,35 @@
         note: 'Battlefield Insertion — on 1-3 the arrival point stays where it was put.',
         outcome: { text: 'Lands on the nominated point.', tone: 'good' }
       });
+      after();
       return;
     }
     var drift = R.d6() + R.d6();
+    /* "...it can be moved by opponent up to 2D6 in any direction" (p. 56): a
+       human opponent makes that call, on the table. */
+    var foeSide = other(u.side);
+    if (!isAI(foeSide) && !(state.solo && foeSide === 'A')) {
+      var shoves = [];
+      for (var sx = Math.floor(u.x - drift); sx <= u.x + drift; sx += 1) {
+        for (var sy = Math.floor(u.y - drift); sy <= u.y + drift; sy += 1) {
+          var sp = { x: sx, y: sy };
+          if (R.inches(sp.x, sp.y, u.x, u.y) > drift) continue;
+          if (sp.x < UR || sp.y < UR || sp.x > W - UR || sp.y > H - UR) continue;
+          if (R.TERRAIN[R.terrainAt(state, sp.x, sp.y)].impassable) continue;
+          if (R.unitNear(state, sp.x, sp.y, u, 1)) continue;
+          shoves.push(sp);
+        }
+      }
+      shoves.push({ x: u.x, y: u.y });                  // "up to": it may be left where it is
+      logLine('note', u.label + ' inserts (D6 ' + die + '): ' + sideName(foeSide) + ' may shove it up to ' + drift + '".');
+      ui.insertion = { unit: u, by: foeSide, done: after, spots: shoves, kind: 'shove', drift: drift, die: die };
+      ui.selected = null; ui.mode = 'insert'; ui.targets = []; ui.moves = []; ui.terrain = [];
+      focusUnit(u, false, true);
+      setHint(null, 'D6 ' + die + ': move ' + u.name + '\u2019s arrival point up to ' + drift + '" — tap the shaded ground.');
+      revealConsole();
+      render();
+      return;
+    }
     // the enemy drags the marker towards their nearest gun; failing that, anywhere
     var foe = activeUnits(other(u.side)).filter(function (e) { return R.status(e) !== 'broken'; })
       .sort(function (a, b) { return R.inches(a.x, a.y, u.x, u.y) - R.inches(b.x, b.y, u.x, u.y); })[0];
@@ -921,6 +948,7 @@
       note: 'Battlefield Insertion — on 4-6 the opponent moves the arrival point up to 2D6" in any direction, and moves it towards their own guns.',
       outcome: { text: 'Shoved ' + drift + '" off the nominated point.', tone: 'warn' }
     });
+    after();
   }
 
   /* Arriving within 12" of the enemy invites a free shot from the closest
@@ -1383,7 +1411,7 @@
       if (i >= order.length) { done(); return; }
       var u = order[i++];
       if (!u.alive || !u.reserve) { next(); return; }
-      if (isAI(u.side)) { aiInsert(u); whenIdle(next); return; }
+      if (isAI(u.side)) { aiInsert(u, function () { whenIdle(next); }); return; }
       askInsertion(u, next);
     }
     next();
@@ -1542,7 +1570,7 @@
     /* Everyone else walks on from their own table edge — which in Demolish is the
        stretches of edge around the corners that side owns, not a whole side of
        the table (p. 54). */
-    var entry = sc && sc.entry && sc.entry[u.side];
+    var entry = entryFor(u);
     if (entry && entry.length) {
       for (var e = 0; e < 600; e++) {
         // which band — which table edge, which corner — is chosen fresh each time
@@ -1575,6 +1603,20 @@
      table edge, and choosing where inside it to come on is a decision worth
      making — behind the wall, or out wide. So the same area is sampled on a 2"
      lattice and offered the way an insertion is. */
+  /* Where a unit walks on from. Invasion's defender comes on "from a random
+     table edge (but from a point nominated by the defender)" (p. 53): the edge
+     is rolled for the unit as it arrives, and only the point along it chosen. */
+  var EDGE_NAMES = ['top', 'bottom', 'left', 'right'];
+  function entryFor(u) {
+    var sc = state.sc, entry = sc && sc.entry && sc.entry[u.side];
+    if (!entry || !entry.length) return entry;
+    if (!(sc.randomEdge && sc.randomEdge[u.side]) || entry.length !== 4) return entry;
+    if (u.entryEdge == null) {
+      u.entryEdge = Math.floor(Math.random() * 4);
+      logLine('note', u.label + ' — random table edge: the ' + EDGE_NAMES[u.entryEdge] + ' edge.');
+    }
+    return [entry[u.entryEdge]];
+  }
   function arrivalLegal(u, p) {
     if (p.x < UR || p.y < UR || p.x > W - UR || p.y > H - UR) return false;
     if (state.scen.arrivalLegal) return state.scen.arrivalLegal(state, u, p) && !R.unitNear(state, p.x, p.y, u, 1);
@@ -1588,7 +1630,7 @@
       return zones.some(function (z) { return R.inches(p.x, p.y, z.x, z.y) <= 4; });
     }
     // everyone else walks on from their own edge, or the corners they own
-    var entry = sc && sc.entry && sc.entry[u.side];
+    var entry = entryFor(u);
     if (entry && entry.length) {
       return entry.some(function (b) {
         return p.x >= b.x - 0.5 && p.x <= b.x + b.w + 0.5 &&
@@ -1611,7 +1653,8 @@
   }
 
   // the OpFor drops on the objective it most wants, or behind the player's line
-  function aiInsert(u) {
+  function aiInsert(u, done) {
+    done = done || function () {};
     var want = null, wd = Infinity;
     state.objectives.forEach(function (o) {
       var held = o.owner && o.owner !== u.side ? -6 : 0;
@@ -1627,12 +1670,12 @@
       if (R.unitNear(state, p.x, p.y, u, 1)) continue;
       u.x = p.x; u.y = p.y; u.reserve = false;
       logLine('note', u.label + ' comes in by Battlefield Insertion.');
-      scatterInsertion(u);
-      landUnit(u);
+      scatterInsertion(u, function () { landUnit(u); done(); });
       return;
     }
     u.reserve = false;                                // nowhere legal: it stays out
     logLine('note', u.label + ' could find no drop zone and stays in reserve.');
+    done();
   }
 
   /* Where a drop may legally go, sampled across the table on a 2" lattice. It
@@ -1750,7 +1793,8 @@
     if (state.scen.id === 'invasion' && sc && u.side === sc.attacker) {
       return 'within 4" of a landing zone you hold or that is still neutral';
     }
-    var entry = sc && sc.entry && sc.entry[u.side];
+    var entry = entryFor(u);
+    if (sc && sc.randomEdge && sc.randomEdge[u.side] && u.entryEdge != null) return 'along the ' + EDGE_NAMES[u.entryEdge] + ' table edge, the one rolled for it';
     if (entry && entry.length > 1) return 'along the stretches of table edge your side owns';
     return 'along your own table edge';
   }
@@ -1786,6 +1830,23 @@
       whenIdle(function () { doneL(); });
       return;
     }
+    if (ins.kind === 'shove') {
+      var sh = snapToSpot(ins, p);
+      if (!sh || R.inches(sh.x, sh.y, u.x, u.y) > ins.drift + 0.01) { setHint(null, 'Not there — within ' + ins.drift + '" of the arrival point, off impassable ground and clear of other units.'); return; }
+      var moved = R.inches(sh.x, sh.y, u.x, u.y);
+      u.x = sh.x; u.y = sh.y;
+      logLine('note', sideName(ins.by) + ' shoves ' + u.label + '\u2019s arrival point ' + moved.toFixed(1) + '".');
+      pushRes({
+        kind: 'Insertion', title: u.name, side: u.side,
+        dice: [{ label: 'D6', value: ins.die, tone: 'fail' }, { label: '2D6"', value: ins.drift }],
+        note: 'Battlefield Insertion — on 4-6 the opponent moves the arrival point up to 2D6" in any direction.',
+        outcome: { text: moved < 0.1 ? 'Left where it was.' : 'Shoved ' + moved.toFixed(1) + '" off the nominated point.', tone: 'warn' }
+      });
+      ui.insertion = null; ui.mode = 'idle'; ui.hint = null;
+      var doneS = ins.done;
+      doneS();
+      return;
+    }
     if (ins.kind === 'arrive') {
       if (!arrivalLegal(u, p)) {
         var near = snapToSpot(ins, p);
@@ -1814,11 +1875,9 @@
     }
     u.x = p.x; u.y = p.y; u.reserve = false;
     logLine('note', u.label + ' comes in by Battlefield Insertion.');
-    scatterInsertion(u);
-    landUnit(u);
     ui.insertion = null; ui.mode = 'idle';
     var done = ins.done;
-    whenIdle(function () { done(); });
+    scatterInsertion(u, function () { landUnit(u); render(); whenIdle(function () { done(); }); });
   }
 
   /* ---- solitaire / cooperative turns (p. 146) ----
@@ -1914,6 +1973,7 @@
     do { a = R.d10(); b = R.d10(); } while (a === b);
     state.initiative = a > b ? 'A' : 'B';
     state.activeSide = state.initiative;
+    state.phaseCount = null;
     state.streak = streakFor(state.activeSide);
     logLine('turn', 'Turn ' + state.turn + ' — initiative to ' + sideName(state.initiative) + ' (D10 ' + a + ' vs ' + b + ').');
     pushRes({
@@ -1927,6 +1987,7 @@
     revealBoard();
     whenIdle(function () {
       reservePhase(function () {
+        state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
         state.streak = streakFor(state.activeSide);
         render();
         maybeAI();
@@ -1966,8 +2027,12 @@
     }).length;
   }
 
+  /* "For the purpose of this rule, always take into account the number of
+     unbroken units at the beginning of the current phase" (p. 27): counted once
+     as the Action phase opens, not again as units break during it. */
   function streakFor(side) {
-    var mine = unbroken(side), theirs = unbroken(other(side));
+    var cnt = state.phaseCount;
+    var mine = cnt ? cnt[side] : unbroken(side), theirs = cnt ? cnt[other(side)] : unbroken(other(side));
     if (theirs === 0) return 99;
     var n = Math.max(1, Math.floor(mine / theirs));
     if (n > 1) logLine('note', sideName(side) + ' has overwhelming numbers — ' + n + ' activations in a row.');
@@ -2097,6 +2162,11 @@
     ui.sections = [];
     // the D6 for barbed wire is rolled for one move, not kept (p. 42)
     state.units.forEach(function (w) { w.wireRoll = null; });
+    // a scenario that ends the moment something happens (the VIP killed) does not wait for the End phase
+    if (!state.over && state.scen.sudden) {
+      var sd = state.scen.sudden(state);
+      if (sd) finish(sd.winner, sd.text.replace(/\bA\b/g, sideName('A')).replace(/\bB\b/g, sideName('B')));
+    }
     if (state.over) { render(); return; }
 
     // a Command Unit riding in a Command Vehicle may coordinate once the hull has acted
@@ -2521,7 +2591,10 @@
     if (u && R.has(u, 'Dominant Species')) out.push({ id: 'regain', label: 'Regain Control' });
     if (u && R.has(u, 'Molecular Reconstruction')) out.push({ id: 'selfrepair', label: 'Self-repair' });
     if (u && R.has(u, 'Teleport')) out.push({ id: 'teleport', label: 'Teleport' });
-    if (u && R.campFlag(u, 'vortex')) out.push({ id: 'vortex', label: 'Time Vortex' });
+    if (u && R.campFlag(u, 'vortex')) {
+      out.push({ id: 'vortex', label: 'Time Vortex move' });
+      out.push({ id: 'vortexadv', label: 'Time Vortex advance' });
+    }
     /* Buildings (p. 41): entering and leaving are special actions, and from
        inside a building of several sections, so is moving to the next one. */
     if (u && state.phase === 'battle' && R.canGarrison(u)) {
@@ -2594,7 +2667,7 @@
 
     /* A unit inside a building "may only exit it or make actions which do not
        require any movement (so it cannot Move, Advance, Assault, etc.)" (p. 41). */
-    if (u.bld && ['move', 'advance', 'wave', 'vortex', 'rush'].indexOf(id) >= 0) {
+    if (u.bld && ['move', 'advance', 'wave', 'vortex', 'vortexadv', 'rush'].indexOf(id) >= 0) {
       return { on: false, hint: 'Inside a building — only actions that need no movement. Exit the building first.' };
     }
 
@@ -2650,7 +2723,7 @@
         var dog = R.deathOrGlory(state, u);
         if (sup && !dog) return { on: false, hint: 'Suppressed units cannot charge.' };
         if (R.has(u, 'Cumbersome Weapon')) return { on: false, hint: 'Cumbersome Weapon: may not Assault.' };
-        var reachA = u.move + moveBonus(u, 'assault') - 2;
+        var reachA = chargeAllow(u);
         var near = assaultables(u, reachA);
         if (u.bld && !near.length) return { on: false, hint: 'Inside a building — the only charge is at an enemy in a section next to this one.' };
         if (!near.length) return { on: false, hint: 'No enemy within charge reach of ' + reachA + '".' };
@@ -2810,9 +2883,16 @@
         if (!u.damage) return { on: false, hint: 'Molecular Reconstruction: nothing to rebuild.' };
         return { on: true, hint: 'Self-repair: stay where it is and clear all ' + u.damage + ' Damage point' + (u.damage > 1 ? 's' : '') + '.' };
       }
-      case 'vortex': {
+      /* Time Vortex Generator (p. 142): "Once per game the aircraft may double
+         its Movement parameter for a Move or Advance action." */
+      case 'vortex': case 'vortexadv': {
         if (spent(u, 'vortex')) return { on: false, hint: 'Time Vortex Generator: already used this battle.' };
-        return { on: true, hint: 'Time Vortex Generator: a Move at double Movement — ' + 2 * (u.move + moveBonus(u)) + '". Once a battle.' };
+        if (id === 'vortexadv') {
+          var adv = actionState(u, 'advance');
+          if (!adv.on) return adv;
+          return { on: true, hint: 'Time Vortex Generator: an Advance at double Movement — ' + 2 * u.move + '", then fire. Once a battle.' };
+        }
+        return { on: true, hint: 'Time Vortex Generator: a Move at double Movement — ' + (2 * u.move + moveBonus(u)) + '". Once a battle.' };
       }
       case 'teleport': {
         var tpads = R.teleportPads(state, u.side);
@@ -2857,6 +2937,7 @@
     }
     if (!actionState(u, id).on) return;
     var st = R.status(u);
+    u.vortexNow = false;                               // only the Time Vortex actions switch it on
 
     if (id === 'rush' || id === 'laststand') { doOnce(u, id); return; }
     if (id === 'checkarea') { doCheckArea(u); return; }
@@ -2897,9 +2978,8 @@
       wireNote(u);
     } else if (id === 'assault') {
       ui.mode = 'assault';
-      var reach = u.move + moveBonus(u, 'assault') - 2;   // the charge bonus is +2 as standard
       var must = forcedCharge(u);
-      ui.targets = must ? [must] : assaultables(u, reach + 2);
+      ui.targets = must ? [must] : assaultables(u);
     } else if (id === 'wave') {
       ui.mode = 'wave';
       ui.moves = R.reachable(state, u, u.move).filter(function (c) { return canStand(u, c); });
@@ -2949,10 +3029,13 @@
       ui.moves = R.has(u, 'Stationary Artillery') ? [] : R.reachable(state, u, u.move);
       setHint(null, markHint(u));
     } else if (id === 'vortex') {
-      u.camp.once.vortex = true; u.vortexNow = true;
+      u.vortexNow = true;
       ui.mode = 'move';
-      ui.moves = R.reachable(state, u, 2 * (u.move + moveBonus(u, 'move'))).filter(function (c) { return canStand(u, c); });
-      logLine('note', u.label + ' — Time Vortex Generator: double Movement for this Move.');
+      ui.moves = R.reachable(state, u, 2 * u.move + moveBonus(u, 'move')).filter(function (c) { return canStand(u, c); });
+    } else if (id === 'vortexadv') {
+      u.vortexNow = true;
+      ui.mode = 'advance-move';
+      ui.moves = R.reachable(state, u, 2 * u.move).filter(function (c) { return canStand(u, c); });
     } else if (id === 'regain') {
       doRegain(u); return;
     } else if (id === 'selfrepair') {
@@ -3048,6 +3131,7 @@
     u.activated = true;
     logLine('note', u.label + ' checks the area — D6 ' + res.roll + ' on ' + res.need + '+: ' +
       (res.found ? 'this is the place.' : 'nothing here.'));
+    if (res.revealed) logLine('note', 'Two locations drawn blank — the objective has to be at the third. No search needed.');
     pushRes({
       kind: 'Search', title: u.name + ' checks the area', side: u.side,
       note: 'The ' + (res.order === 1 ? 'first' : res.order === 2 ? 'second' : 'third') +
@@ -3055,6 +3139,7 @@
       dice: [{ label: 'D6', value: res.roll, tone: res.found ? 'crit' : 'fail' }],
       outcome: res.found
         ? { text: 'Found it. Hold this ground to the end.', tone: 'good' }
+        : res.revealed ? { text: 'Nothing here — so it must be at the last location. Go and hold it.', tone: 'warn' }
         : { text: 'Nothing here — one fewer place for it to be.', tone: 'warn' }
     });
     // the stake goes over at every searched location, and the beacon goes up at the real one
@@ -3138,11 +3223,10 @@
     if (!blood && !R.aggressiveNow(state, u)) return null;
     if (R.status(u) !== 'ready' || (!blood && R.has(u, 'Cumbersome Weapon'))) return null;
     if (R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile')) return null;
-    var reach = u.move + moveBonus(u, 'assault') - 2, best = null, bd = Infinity;
-    activeUnits().forEach(function (e) {
-      if (e.side === u.side || !R.canAssault(u, e)) return;
+    var best = null, bd = Infinity;
+    assaultables(u).forEach(function (e) {
       var d = R.unitDist(u, e);
-      if (d <= reach && d < bd) { bd = d; best = e; }
+      if (d < bd) { bd = d; best = e; }
     });
     return best;
   }
@@ -3222,7 +3306,11 @@
     var carryFirst = ui.mode === 'carry-first';
     var allowance = ui.mode === 'advance-move' ? u.move : (ui.mode === 'carry-move' || carryFirst) ? u.move / 2 : u.move + moveBonus(u);
     u.carrying = false;
-    if (u.vortexNow) { allowance *= 2; u.vortexNow = false; }
+    if (u.vortexNow) {
+      // the Movement parameter doubled, the move bonus on top of it as usual
+      allowance += u.move; u.vortexNow = false; u.camp.once.vortex = true;
+      logLine('note', u.label + ' — Time Vortex Generator: double Movement for this ' + (ui.mode === 'advance-move' ? 'Advance' : 'Move') + '.');
+    }
     if (u.repairMove) { allowance = u.move; u.repairMove = false; }
     var path = R.pathTo(state, u, allowance, pt);
     faceAfter(u, path, pt);
@@ -3369,7 +3457,8 @@
     // Sappers: charges set against the wall or building the enemy is sheltering behind
     var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
     if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
-    var res = R.assault(st, a, t);
+    var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
+    var res = R.assault(st, a, t, { path: route ? route.path : null });
     abilityFx(res, t, null, trails);
     return res;
   }
@@ -3525,12 +3614,20 @@
     setHint(null, 'Barbed wire on the table: D6 ' + u.wireRoll + ' — each section crossed costs ' + u.wireRoll + '" of this move.');
   }
 
+  /* A charge covers Movement +2" (p. 33) — or whatever the unit's charge bonus
+     is — walked over the ground, not measured through it. */
+  function chargeAllow(u) { return u.move + moveBonus(u, 'assault'); }
   function assaultables(u, reach) {
+    var within = u.bld ? null : R.chargeReach(state, u, reach == null ? chargeAllow(u) : reach);
     return activeUnits().filter(function (e) {
       if (e.side === u.side || !R.canAssault(u, e)) return false;
       if (u.bld) return e.bld === u.bld && R.unitDist(u, e) <= 0.6;
-      return R.unitDist(u, e) <= reach;
+      return !!within(e);
     });
+  }
+  function canReachCharge(u, t) {
+    if (u.bld) return t.bld === u.bld && R.unitDist(u, t) <= 0.6;
+    return !!R.chargeRoute(state, u, t, chargeAllow(u));
   }
 
   function doEnter(u, s) {
@@ -3590,7 +3687,9 @@
     logLine('move', u.label + ' makes a strafing run.');
     hitList.forEach(function (t) {
       var res = abShoot(state, u, t, 'basic', {});
-      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
+      var ex = [];
+      scenAfterShot(u, t, ex);
+      res.log.concat(ex).forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     // friendly fire, on a 1-3
     friends.forEach(function (t) {
@@ -3615,6 +3714,12 @@
     endActivation();
   }
 
+  // Ambush!: an OpFor unit shot at in the first turn — by any shooting, a strafe included (p. 156)
+  function scenAfterShot(u, t, log) {
+    if (!state.scen.afterShot) return;
+    var extra = state.scen.afterShot(state, u, t);
+    if (extra) { log.push({ t: 'note', text: extra.text }); return extra; }
+  }
   function resolveShot(u, target, mode, opts) {
     var snap = snapshotAlive();
     var res = abShoot(state, u, target, mode, opts || {});
@@ -3656,6 +3761,7 @@
     var snap = snapshotAlive();
     var res = abShoot(state, u, target, 'support', {});
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
+    scenAfterShot(u, target, res.log);
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
     var card = fromLog('Supporting Fire', u.name + ' → ' + target.name, u.side, res.log);
@@ -3939,9 +4045,8 @@
         var wq = bestWaveSpot(u);
         if (wq && wq.n >= 2) { doWave(u, wq.pt); return; }
       }
-      var ogReach = u.move + moveBonus(u, 'assault') - 2;
       var prey = nearestEnemy(u);
-      if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit) && prey.dist <= ogReach &&
+      if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit) && prey.dist <= chargeAllow(u) && canReachCharge(u, prey.unit) &&
         (u.fp == null || u.assault >= u.fp || !shot.t)) { aiCharge(u, prey.unit); return; }
     }
 
@@ -4174,9 +4279,8 @@
        at it goes in rather than going to ground — that is the whole point of the
        rule, and the Suppression falls away as the charge starts. */
     if (R.status(u) === 'suppressed' && R.deathOrGlory(state, u) && !R.has(u, 'Cumbersome Weapon')) {
-      var dogReach = u.move + moveBonus(u, 'assault') - 2;
       var dogT = nearestEnemy(u);
-      if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= dogReach) {
+      if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
         var dsnap = snapshotAlive();
         var dres = abAssault(state, u, dogT.unit);
         dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
@@ -4298,6 +4402,10 @@
     // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
     if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
     logLine('ai', u.label + ' — behaviour D6 ' + roll + (why.length ? ' (' + why.join(', ') + ')' : '') + ' = ' + total + ': ' + behaviour + '.');
+    /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
+       closest enemy unit. If there are no valid targets, it makes a Move towards
+       the closest enemy" — a Move, so it does not shoot as well. */
+    var killAll = !!state.solo && u.side === 'B' && behaviour === 'assault';
 
     /* A garrison (p. 41) shoots from where it is, charges only an enemy in the
        next section, and comes out when it wants to press on and has nothing to
@@ -4307,7 +4415,7 @@
         var adj = assaultables(u, 0)[0];
         if (adj) { aiCharge(u, adj); return; }
       }
-      if (shot.t && shot.score > 0.2) { fire(u, shot.t, 'fire'); return; }
+      if (shot.t && shot.score > 0.2 && (!killAll || shot.forced)) { fire(u, shot.t, 'fire'); return; }
       if (behaviour === 'offensive' || behaviour === 'assault') {
         var goalB = pickGoal(u, behaviour), outs = R.exitSpots(state, u);
         if (outs.length) {
@@ -4323,9 +4431,9 @@
     // the VIP draws the charge too, when it is in reach
     if (behaviour === 'assault' && state.scen.mustTarget && u.side === 'B') {
       var vipA = state.scen.mustTarget(state, u);
-      if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && R.unitDist(u, vipA) <= u.move + 2) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
+      if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
     }
-    if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= u.move + 2 && !R.has(u, 'Cumbersome Weapon')) {
+    if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
       var snap = snapshotAlive();
       var res = abAssault(state, u, ne.unit);
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
@@ -4348,7 +4456,7 @@
       }
     }
     var goal = pickGoal(u, behaviour);
-    var allowance = behaviour === 'flee' ? u.move + 2 : u.move;
+    var allowance = behaviour === 'flee' || killAll ? u.move + moveBonus(u, 'move') : u.move;
     var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour);
     var best = null, bestScore = here + 0.6;
     R.reachable(state, u, allowance).forEach(function (c) {
@@ -4368,7 +4476,7 @@
       soloAfterMove(u);
       if (u.x < 0) { u.activated = true; endActivation(u); return; }
     }
-    if (behaviour !== 'flee' && !R.campFlag(u, 'noAdvance')) {
+    if (behaviour !== 'flee' && !killAll && !R.campFlag(u, 'noAdvance')) {
       var t2 = bestTarget(u, 'advance');
       if (t2.t && t2.score > 0.2) {
         whenIdle(function () { if (state && !state.over && u.alive) fire(u, t2.t, 'advance'); });
@@ -4600,8 +4708,9 @@
         deployDone: state.phase === 'deploy' ? deploymentDone() : false,
         insertion: ui.insertion ? {
           unit: ui.insertion.unit && ui.insertion.unit.id,
-          side: ui.insertion.unit ? ui.insertion.unit.side : 'A',
+          side: ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A'),
           owner: ui.insertion.owner || null,
+          by: ui.insertion.by || null, drift: ui.insertion.drift || null, die: ui.insertion.die || null,
           kind: ui.insertion.kind,
           spots: ui.insertion.spots
         } : null,
@@ -4677,6 +4786,7 @@
       ui.reservePick = us.reservePick || null;
       ui.insertion = us.insertion ? {
         unit: by[us.insertion.unit] || null, owner: us.insertion.owner,
+        by: us.insertion.by || null, drift: us.insertion.drift || null, die: us.insertion.die || null,
         kind: us.insertion.kind, spots: us.insertion.spots, done: null
       } : null;
       return state;
@@ -4970,6 +5080,7 @@
     function insertionSide() {
       var ins = ui.insertion;
       if (!ins) return null;
+      if (ins.by) return ins.by;       // the opponent shoving an insertion off its mark
       if (ins.unit) return ins.unit.side;
       return 'A';                      // a landing zone is always the players' own
     }

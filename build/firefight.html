@@ -2667,6 +2667,10 @@
     var labour = rebel && docs.indexOf('H3') >= 0;
     var airCap = doc('O1') ? 1 : 0;
     var hullCap = (labour ? 4 : 3) * pl + airCap;
+    // Air Superiority's extra machine has to be an aircraft: "one aircraft more" (p. 107)
+    if (airCap && machines <= hullCap && machines - aircraft > hullCap - airCap) {
+      faults.push('Air Superiority adds an aircraft, not a vehicle — max ' + (hullCap - airCap) + ' ground vehicles.');
+    }
     if (machines > hullCap && factions.xeno) faults.push('Max ' + hullCap + ' turrets (or turret sets) and aircraft — three per Priority Level.');
     else if (machines > hullCap) faults.push('Max ' + hullCap + ' vehicles and aircraft — ' + (labour ? 'four' : 'three') + ' per Priority Level' + (airCap ? ', and one more for Air Superiority' : '') + '.');
     if (aircraft && battleTier < 2) faults.push('Aircraft may only be fielded at Battle Tier II or higher.');
@@ -3609,8 +3613,10 @@
     cmd1: { p: 'pistol' }, highcmd: { p: 'pistol' },
     ew: { p: 'pistol' }, medics: { p: 'pistol' },
     // drone units carry what the squads they stand in for carry; the support drones lob shells
-    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'small' },
-    dengineer: { p: 'smg' }, dsupport: { p: 'arc', n: 2 }, dmedic: { p: 'pistol' },
+    // (the recon and engineer drones fire as light infantry do, a crack of single shots)
+    dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
+    // the support drones loose the missiles off their shoulders
+    dengineer: { p: 'pistol' }, dsupport: { p: 'rocket', n: 2 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
@@ -3654,8 +3660,8 @@
     // the flexible strike craft carries a rocket rack over the door gun
     fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
-    // the light VTOL drone's single nose gun
-    vtoldrone: { p: 'small' },
+    // the light VTOL drone carries no gun worth the name: a light sidearm's crack
+    vtoldrone: { p: 'pistol' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
     interceptor: { p: 'missile', n: 2, s: 'burst' },
 
@@ -4017,8 +4023,9 @@
   function holdsGround(u) { return !hasOwn(u, 'No Objectives'); }
   function countsForVictory(u) { return !hasOwn(u, 'No Objectives'); }
 
+  // on the table and steady: a unit still in reserve, or riding inside, projects nothing
   function projects(u) {
-    return !!u.alive && !u.aboard && status(u) === 'ready';
+    return !!u.alive && !u.aboard && !u.reserve && u.x >= 0 && status(u) === 'ready';
   }
 
   /* ---------- hit tables ---------- */
@@ -4280,7 +4287,7 @@
     var jammed = false;
     for (var i = 0; i < state.units.length; i++) {
       var e = state.units[i];
-      if (!e.alive || e.aboard) continue;
+      if (!e.alive || e.aboard || e.reserve || e.x < 0) continue;
       if (e.side !== u.side && has(e, 'Jammers') && unitDist(e, u) <= 24) jammed = true;
       if (e.side === u.side && projects(e) && has(e, 'Counter-jamming') && unitDist(e, u) <= 6) return false;
     }
@@ -4695,7 +4702,7 @@
   function infamyPanic(state, u, log) {
     if (!state || !state.units) return;
     state.units.forEach(function (o) {
-      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
+      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
       if (unitDist(o, u) > 18) return;
       var n = d6(), was = status(o);
       addSP(o, n);
@@ -5169,8 +5176,39 @@
     return true;
   }
 
-  function assault(state, a, t) {
+  /* How a charge gets there (p. 33): "the maximum distance between them is the
+     attacker's Movement + 2"... The assaulting unit moves in the shortest and
+     simplest way possible, with its movement reduced by terrain as normal." So
+     reach is walked over the ground, round what cannot be crossed and paying for
+     what slows it, not measured through a wall. The walk stops 1" short of the
+     enemy like any move; the last step into contact is the straight gap left.
+     Flyers, jump troops and anything fighting from inside a building keep the
+     straight line. Returns a function giving, for a target, { cost, path } — or
+     null when the charge cannot reach it. */
+  function chargeReach(state, a, allowance) {
+    var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a) || drives(a);
+    var f = straight ? null : field(state, a, allowance);
+    return function (t) {
+      var gap0 = unitDist(a, t);
+      if (straight) return gap0 <= allowance + 1e-6 ? { cost: gap0, path: [{ x: a.x, y: a.y }] } : null;
+      var q = t.bld ? sectionRect(t) : null, best = null;
+      f.seen.forEach(function (n) {
+        var x = n.i * STEP, y = n.j * STEP;
+        var gap = q ? Math.max(0, rectPointDist(q, x, y) - UNIT_R) : Math.max(0, Math.hypot(t.x - x, t.y - y) - 2 * UNIT_R);
+        if (gap > 1 + STEP * 1.5) return;               // only the last inch goes straight in
+        var tot = n.c + gap;
+        if (tot <= allowance + 1e-6 && (!best || tot < best.cost)) best = { cost: tot, x: x, y: y };
+      });
+      if (!best) return null;
+      var path = best.cost - gap0 < 1e-6 ? [{ x: a.x, y: a.y }] : pathTo(state, a, allowance, best);
+      return { cost: best.cost, path: path };
+    };
+  }
+  function chargeRoute(state, a, t, allowance) { return chargeReach(state, a, allowance)(t); }
+
+  function assault(state, a, t, opts) {
     var log = [], wrecked = null;
+    opts = opts || {};
     log.push({ t: 'assault', text: a.label + ' charges ' + t.label + ' — ' + unitDist(a, t).toFixed(1) + '" to contact.' });
 
     /* Martyrdom (Path of the Prophet, p. 113): before the first round is rolled,
@@ -5204,8 +5242,35 @@
       a.sp = 0;
     }
 
-    if (t.alive && status(t) === 'ready' && t.fp !== null && unitDist(a, t) <= t.range
-      && canShoot(state, t, a, 'defensive', {})) {
+    /* Defensive fire "is resolved immediately or as soon as the charging unit
+       enters the range and LoS" (p. 33): so it is looked for all along the way
+       in, and a charge that is stopped stops where it was shot. */
+    var fireAt = null;
+    if (t.alive && status(t) === 'ready' && t.fp !== null) {
+      var route = (opts.path || [{ x: a.x, y: a.y }]).slice();
+      var x0 = a.x, y0 = a.y, walk = [];
+      for (var wi = 0; wi < route.length; wi++) {
+        var from = wi ? route[wi - 1] : { x: a.x, y: a.y }, to = route[wi];
+        var len = Math.hypot(to.x - from.x, to.y - from.y), nstep = Math.max(1, Math.ceil(len / 0.5));
+        for (var ws = wi ? 1 : 0; ws <= nstep; ws++) walk.push({ x: from.x + (to.x - from.x) * ws / nstep, y: from.y + (to.y - from.y) * ws / nstep });
+      }
+      // and the last straight run into contact
+      var end = walk[walk.length - 1], cd = t.bld ? null : Math.hypot(t.x - end.x, t.y - end.y);
+      if (cd && cd > 2 * UNIT_R) {
+        var nIn = Math.ceil((cd - 2 * UNIT_R) / 0.5);
+        for (var wk = 1; wk <= nIn; wk++) {
+          var r0 = cd - (cd - 2 * UNIT_R) * wk / nIn;
+          walk.push({ x: t.x - (t.x - end.x) / cd * r0, y: t.y - (t.y - end.y) / cd * r0 });
+        }
+      }
+      for (var wp = 0; wp < walk.length && !fireAt; wp++) {
+        if (!a.bld) { a.x = walk[wp].x; a.y = walk[wp].y; }
+        if (unitDist(a, t) <= t.range && canShoot(state, t, a, 'defensive', {})) fireAt = walk[wp];
+      }
+      a.x = x0; a.y = y0;
+    }
+    if (fireAt) {
+      if (!a.bld) { a.x = fireAt.x; a.y = fireAt.y; }
       var df = shoot(state, t, a, 'defensive', {});
       df.log.forEach(function (l) { log.push(l); });
       if (!a.alive) return { log: log, ok: false, wreck: wrecked };
@@ -6139,7 +6204,7 @@
     rally: rally, fallBack: fallBack, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
-    canAssault: canAssault, canEmbark: canEmbark, embark: embark, disembark: disembark,
+    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
     steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
@@ -6752,7 +6817,7 @@
        but First Among Equals, ground vehicles and flying units — everybody else
        promotes inside their own. */
     'Freedom Warriors': ['Freedom Warriors', 'Holy Warriors', 'Mounted Warriors',
-      'Rebel support troops', 'Rebel artillery', 'Chosen Warriors', 'Miners'],
+      'Rebel support troops', 'Rebel artillery', 'Chosen Warriors', 'Miners', 'Deserters and POWs'],
     'Holy Warriors': ['Holy Warriors'],
     'Mounted Warriors': ['Mounted Warriors'],
     'Rebel support troops': ['Rebel support troops'],
@@ -6762,11 +6827,15 @@
     'Deserters and POWs': ['Deserters and POWs'],
     'First Among Equals': []   // they never earn EXP, so they never promote
   };
-  // the individual Basic troops each have their own narrower path
+  /* The individual Basic troops each have their own paths out (p. 87), on top
+     of the ordinary one: "to a unit from the same group ... of the same Tier or
+     1 Tier higher" — so any of them may also become other Basic troops. Only
+     penal troops are held to Basic troops alone, and nobody volunteers to
+     become one. */
   var BASIC_PATHS = {
-    recruits: ['Rifle infantry', 'Heavy infantry', 'Light support', 'Remote mortars'],
-    enforcers: ['Heavy infantry'],
-    irregulars: ['Assault troops', 'Light support', 'Light infantry'],
+    recruits: ['Basic troops', 'Rifle infantry', 'Heavy infantry', 'Light support', 'Remote mortars'],
+    enforcers: ['Basic troops', 'Heavy infantry'],
+    irregulars: ['Basic troops', 'Assault troops', 'Light support', 'Light infantry'],
     penal: ['Basic troops']
   };
 
@@ -6874,6 +6943,7 @@
     return R.listFor(p.faction).filter(function (q) {
       if (q.cls !== 'infantry' || isLeaderP(q)) return false;
       if (q.key === entry.key) return false;
+      if (q.key === 'penal') return false;                      // a sentence, not a promotion
       if (q.tier !== p.tier && q.tier !== p.tier + 1) return false;
       if (co && q.tier > co.tier + 1) return false;
       return groups.indexOf(q.group) >= 0;
@@ -8767,7 +8837,8 @@
         }
         return;
       }
-      var all = promotionTargets(e, co);
+      // a sideways step inside its own group (recruits to irregulars) gains a simulated company nothing
+      var all = promotionTargets(e, co).filter(function (q) { return q.tier > p.tier || q.group !== p.group; });
       var affordable = all.filter(function (q) {
         var c = promotionCost(e, q.key);
         return e.exp >= c.exp && co.kUC >= c.kUC;
@@ -9293,7 +9364,7 @@
         state.sc.hold = { A: 0, B: 0 };
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
-      hint: 'Three staked locations. Bring a unit within 4" and use "Check the area!" — 5+ at the first, 4+ at the second, automatic at the third.',
+      hint: 'Three staked locations. Bring a unit within 4" and use "Check the area!" — 5+ at the first, 4+ at the second; miss both and the third gives itself away.',
       /* From turn 3, every second turn, a number equal to the Priority Level comes
          on (p. 52) — which ones is the player's choice. */
       reservePick: function (state, side) {
@@ -9385,6 +9456,8 @@
            nominated by the defender)" (p. 53) — not from a side of their own. */
         state.sc.entry = {};
         state.sc.entry[def] = edgeBands(2);
+        state.sc.randomEdge = {};
+        state.sc.randomEdge[def] = true;
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       /* "The defender deploys up to 1/3 of his forces on the table at least 6" from
@@ -9741,7 +9814,7 @@
   function noInsertion(state) { return !!state.scen.noInsertion; }
 
   /* "Check the area!" (p. 52): a unit within 4" of an unchecked location rolls a
-     D6 — the first needs a 5+, the second a 4+, the third finds it outright. */
+     D6 — the first needs a 5+, the second a 4+; miss both and the third is it. */
   function searchSpots(state, u) {
     if (!state.sc || !state.sc.search || state.sc.found) return [];
     return state.sc.search.filter(function (s) {
@@ -9766,7 +9839,20 @@
         if (s !== spot && s.piece) { s.piece.checked = true; s.piece.cold = true; }
       });
     }
-    return { roll: roll, need: need, found: found, order: order + 1 };
+    /* "If the objective is not at the first two locations, it is at the third
+       one and no special action is needed to find it" (p. 52). */
+    var revealed = null;
+    if (!found && order + 1 === 2) {
+      revealed = state.sc.search.filter(function (s) { return !s.checked; })[0] || null;
+      if (revealed) {
+        revealed.checked = true;
+        state.sc.found = revealed;
+        if (revealed.piece) { revealed.piece.checked = true; revealed.piece.found = true; }
+        state.objectives = [{ x: revealed.x, y: revealed.y, owner: null }];
+        state.sc.search.forEach(function (s) { if (s !== revealed && s.piece) s.piece.cold = true; });
+      }
+    }
+    return { roll: roll, need: need, found: found, order: order + 1, revealed: revealed };
   }
 
   root.PMCScen = {
@@ -10347,6 +10433,13 @@
     fallTo: function (state, u) {
       if (u.side !== 'A') return null;
       return { x: state.sc.evac.x, y: state.sc.evac.y, limit: u.vip ? 6 : 12 };
+    },
+    /* "If the VIP unit is destroyed, the game automatically ends and the
+       player is defeated" (p. 151) — then and there, not at the End phase. */
+    sudden: function (state) {
+      var vip = state.units.filter(function (v) { return v.vip; })[0];
+      if (!vip || !vip.alive) return { winner: 'B', text: 'The VIP is dead — the mission has failed.' };
+      return null;
     },
     check: function (state) {
       var vip = state.units.filter(function (v) { return v.vip; })[0];
@@ -14310,17 +14403,17 @@
   var RB = { strut: '#555c65', joint: '#2a2e34', piston: '#a3aab3', foot: '#383d44', eye: '#5fe0ff' };
   var DRONE_GREY = { light: '#b9c0c8', mid: '#7f8791', dark: '#3b4047', helm: '#6c747e', cloth: '#5b626b', skin: '#8a929c', skinDark: '#5d646d' };
   var KIT = {
-    drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drshotgun: { helm: 'bot', gun: 'shotgun', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true },
-    drscoutsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true },
-    drbreacher: { helm: 'bot', gun: 'shotgun', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
-    drsapper: { helm: 'bot', gun: 'lascutter', pack: 'charges', tint: DRONE_GREY, sash: 'force', robot: true },
-    drheavy: { helm: 'bot', gun: 'heavy', pack: 'none', tint: DRONE_GREY, sash: 'force', robot: true, bulk: 1 },
-    drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, kneel: true, badge: '#e8f0f6' },
-    drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, sash: 'force', robot: true, badge: '#e8f0f6' },
+    drrifle: { helm: 'bot', gun: 'battlerifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
+    drlead: { helm: 'bot', gun: 'saw', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsmg: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
+    drshotgun: { helm: 'bot', gun: 'smg', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, vest: true },
+    drscout: { helm: 'bot', gun: 'optics', pack: 'dish', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, pouches: '#5d6e3a' },
+    drscoutsmg: { helm: 'bot', gun: 'rifle', pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, pouches: '#5d6e3a' },
+    drbreacher: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drsapper: { helm: 'bot', gun: 'smg', pack: 'charges', tint: DRONE_GREY, forcePad: true, robot: true },
+    drheavy: { helm: 'bot', gun: 'heavy', shoulderGL: true, shoulderMsl: true, pack: 'none', tint: DRONE_GREY, forcePad: true, robot: true, bulk: 1 },
+    drmedic: { helm: 'bot', gun: 'case', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, kneel: true, badge: '#e8f0f6' },
+    drcorpsman: { helm: 'bot', gun: 'pistol', pack: 'medic', tint: DRONE_GREY, forcePad: true, robot: true, badge: '#e8f0f6' },
     // line infantry: battle rifles, with a squad automatic in the front rank
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
@@ -14992,8 +15085,11 @@
     } else if (kit.robot) {
       /* A drone's chassis: a chest housing over a narrow spine, panel seams,
          a cooling grille and a single status light. No webbing, no pouches. */
-      P(tx, -40 + drop, tw, 13, pal.mid);              // the chest housing
-      P(tx, -40 + drop, 4, 13, pal.light);
+      // the housing painted to the squad it stands in for: grey plate for the
+      // assault drones, a green shell for the recon drones
+      var hsg = kit.vest ? ['#383c42', '#51575f'] : kit.pouches ? ['#4c5c30', '#6a7a44'] : [pal.mid, pal.light];
+      P(tx, -40 + drop, tw, 13, hsg[0]);               // the chest housing
+      P(tx, -40 + drop, 4, 13, hsg[1]);
       P(tx, -27 + drop, tw, 1, 'rgba(0,0,0,.45)');     // its lower edge
       P(-3, -26 + drop, 6, 7, RB.joint);               // the exposed spine at the waist
       P(-3, -25 + drop, 6, 0.8, pal.light); P(-3, -23 + drop, 6, 0.8, pal.light); P(-3, -21 + drop, 6, 0.8, pal.light);
@@ -15116,7 +15212,7 @@
         P(tx + 1.8 + bd * (tw - 4) / 6, -40.4 + drop + bd * 2.6, 1.2, 1, '#b8923a');
       }
     }
-    if (kit.pouches && !kit.armoured) {                 // light infantry: a green smock and chest rig
+    if (kit.pouches && !kit.armoured && !kit.robot) {                 // light infantry: a green smock and chest rig
       var GS = '#4c5c30', GSL = '#6a7a44', GSD = '#37431f';
       P(tx + 1, -41 + drop, tw - 2, 17, GS);            // the smock over the torso
       P(tx + 1, -41 + drop, 4, 17, GSL);                // its lit side
@@ -15252,6 +15348,13 @@
     P(tx - 2 - b, -41 + drop, 6 + b, 3, pal.helm);     // shoulder, barely a pad
     P(tx + tw - 3, -41 + drop, 6 + b, 3, pal.helm);
     P(tx - 1.5 - b, -41 + drop, 4 + b, 1, kit.blackPads ? '#4a4e4a' : pal.light);  // the pad's rounded top
+    if (kit.forcePad) {
+      // drones: the left shoulder plate alone in the company's colour
+      var fpc = vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.25);
+      P(tx - 3 - b, -42 + drop, 7 + b, 4.5, fpc);
+      P(tx - 3 - b, -42 + drop, 7 + b, 1, 'rgba(255,255,255,.35)');
+      P(tx - 3 - b, -38.3 + drop, 7 + b, 0.8, 'rgba(0,0,0,.35)');
+    }
     if (kit.forceShoulders) {
       // miners: the shoulders of the work suit painted in the company's colour
       var fsc = PALETTE_FORCE(pal), fsd = pal.forceMid || pal.mid;
@@ -15689,6 +15792,10 @@
           P(bx + 17, gy + 2.5, 1.5, 5, '#4a5260');
           P(bx + 2, gy - 2, 4, 2, '#5fd0f0');           // a sensor lens on the lid
           P(bx + 12, gy + 12, 4, 5, GUN.dk);            // its mount on the backplate
+          if (kit.shoulderMsl) {                        // a drone's missile pod: two tubes, warheads showing
+            P(bx + 14, gy + 1.5, 5, 4, GUN.dk); P(bx + 14, gy + 6.5, 5, 4, GUN.dk);
+            P(bx + 17.5, gy + 2.5, 2, 2, '#b8b0a0'); P(bx + 17.5, gy + 7.5, 2, 2, '#b8b0a0');
+          }
         }
         P(-3, wy, 23, 4, GUN.dk);                      // heavy gun
         P(20, wy + 1, 5, 3, GUN.lt);
@@ -18053,8 +18160,8 @@
     apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
     hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
-    // the Light VTOL drone: a flying disc with two swept winglets and a gun under its lip
-    vtoldrone: { len: 1.45, wid: 1.45, hgt: 9, fly: 2.8, craft: 'disc', gun: 0.6 },
+    // the Light VTOL drone: a small flying disc with swept winglets and a scanner pod under its lip
+    vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
@@ -20811,16 +20918,28 @@
         }
         case 'disc': {
           /* A saucer: a flat disc with a low hump on top where the sensor dome
-             sits, a ring of lift vents lit underneath, two small swept winglets
-             off the back and a gun slung under the front lip. */
+             sits, a ring of lift vents lit underneath and two small swept
+             winglets off the back. It is there to find and mark, not to fight:
+             a scanner pod hangs under the front lip — a row of lenses and a
+             marker laser — and sweeps a scanning fan across the ground ahead. */
           var R0 = L * 0.5, ring = function (r) {
             var out = [];
             for (var a = 0; a < 16; a++) out.push([Math.cos(a / 16 * Math.PI * 2) * r, Math.sin(a / 16 * Math.PI * 2) * r]);
             return out;
           };
+          var podZ = z - Math.round(H * 0.45);
           if (!dead) {
             var ug = S3(AF(0, 0), z - 1);
             sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
+            var tn = root.performance ? performance.now() : 0;
+            var sw = Math.sin(tn / 700) * 0.3, reach = R0 + 0.55;
+            var n0 = S3(AF(R0 * 1.14, 0), podZ + 2);
+            var f0 = S3(AF(reach, sw - 0.32), 0), f1 = S3(AF(reach, sw + 0.32), 0);
+            poly(g, [n0, f0, f1], 'rgba(110,190,255,.12)');
+            line(n0, f0, 1, 'rgba(160,215,255,.45)'); line(n0, f1, 1, 'rgba(160,215,255,.45)');
+            line(f0, f1, 1.2, 'rgba(190,235,255,.7)');
+            var fm = S3(AF(reach, sw + 0.32 * Math.sin(tn / 180)), 0);
+            line(n0, fm, 1, 'rgba(210,240,255,.55)');
           }
           [-1, 1].forEach(function (sd) {
             part(-R0 * 0.55, sd * R0 * 1.05, function () {
@@ -20828,15 +20947,29 @@
             });
           });
           part(0, 0, function () {
-            noseGun(R0 * 0.78, 0, z + H * 0.1, 0.34, 'mg');
+            // the scanner pod, slung under the front lip
+            strut(AF, R0 * 0.55, 0, R0 * 0.55, 0, podZ + Math.round(H * 0.3), 3);
+            shape(AF, [[R0 * 1.12, -R0 * 0.22], [R0 * 1.12, R0 * 0.22], [R0 * 0.55, R0 * 0.28], [R0 * 0.55, -R0 * 0.28]], podZ, Math.round(H * 0.4), TB);
+            [-0.1, 0, 0.1].forEach(function (q, i) {
+              var lp = S3(AF(R0 * 1.13, q * R0 * 1.4), podZ + Math.round(H * 0.2));
+              sEllipse(lp[0], lp[1], 1.3, 1.1, '#123a6e');
+              var blink = Math.floor((root.performance ? performance.now() : 0) / 240) % 3 === i;
+              sEllipse(lp[0], lp[1], 0.8, 0.7, dead ? '#3a4048' : blink ? '#e4f4ff' : '#6ebeff');
+            });
+            // the marker laser: a short emitter off the pod's flank, a red eye at its tip
+            var e0 = S3(AF(R0 * 0.8, -R0 * 0.3), podZ + 2), e1 = S3(AF(R0 * 1.3, -R0 * 0.3), podZ + 2);
+            line(e0, e1, 2.2, '#15181e');
+            line(e0, e1, 1, '#4a5260');
+            sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
             shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
             shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
             shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
             if (!dead) {
               // running lights round the rim
               for (var li = 0; li < 16; li += 2) {
-                var la = li / 16 * Math.PI * 2, lp = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
-                sEllipse(lp[0], lp[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
+                var la = li / 16 * Math.PI * 2, lp2 = S3(AF(Math.cos(la) * R0 * 0.99, Math.sin(la) * R0 * 0.99), z + Math.round(H * 0.24));
+                sEllipse(lp2[0], lp2[1], 1.1, 0.8, li === 0 ? '#ff5040' : 'rgba(150,215,255,.9)');
               }
             }
           }, true);
@@ -21778,6 +21911,7 @@
         var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
       }
+      if (spec.craft === 'disc') return along(0, 0);
       if (spec.fly) return along(spec.len * 0.05, 0);
       if (legs) return along(-spec.len * 0.12, spec.wid * 0.3);
       var carS = spec.style && spec.style.body === 'car';
@@ -21812,7 +21946,7 @@
       else if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = spec.wid * 0.3; }     // its right shoulder
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
-      var r = Math.max(3, K * 0.16), cy = dp.y - y5;
+      var r = Math.max(3, K * 0.16) * (spec.craft === 'disc' ? 0.75 : 1), cy = dp.y - y5;
       if (only !== 'aerial') {
       ellipse(g, dp.x, cy + r * 0.15, r * 1.25, r * 0.6, '#14171c');               // the collar it sits in
       ellipse(g, dp.x, cy - r * 0.2, r, r * 0.85, '#aeb8c2');                      // the dome
@@ -23777,17 +23911,17 @@
       logLine('note', sideName(side) + ' — Complex Teleport Network: a free set of ' + tprof.turretSet + ' Teleport turrets' + ((cfg.pl || 1) > 1 ? ' a Priority Level' : '') + '.');
     });
     /* Mimicry (p. 124), and the tribe's Underground Advance (p. 141): up to a
-       quarter of the force may be held back and come in by Battlefield
-       Insertion. The ones that already can are counted first. */
+       quarter of the force — rounded up, as every division is (p. 27) — may be
+       held back and come in by Battlefield Insertion, on top of the units that
+       have the rule of their own. */
     ['A', 'B'].forEach(function (side) {
       var docs = (state.doctrines && state.doctrines[side]) || [];
       if (docs.indexOf('BB2') < 0 && docs.indexOf('XO2') < 0) return;
       var mine = state.units.filter(function (u) { return u.side === side; });
-      var cap = Math.floor(mine.length / 4);
-      var have = mine.filter(function (u) { return R.has(u, 'Battlefield Insertion'); }).length;
+      var cap = Math.ceil(mine.length / 4);
       mine.filter(function (u) {
         return u.cls === 'infantry' && !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Overmind') && !R.has(u, 'Dominant Species');
-      }).slice(0, Math.max(0, cap - have)).forEach(function (u) { u.rules.push('Battlefield Insertion'); });
+      }).slice(0, cap).forEach(function (u) { u.rules.push('Battlefield Insertion'); });
     });
     /* A solitaire scenario can bring units of its own: a VIP and bodyguard,
        civilians and militia to protect, the enemy leaders to kill. */
@@ -24264,7 +24398,7 @@
   function markReserves(side) {
     if (SC.noInsertion(state)) return 0;             // the scenario forbids it
     var mine = state.units.filter(function (u) { return u.side === side; });
-    var cap = Math.floor(mine.length / 2);
+    var cap = Math.ceil(mine.length / 2);             // "no more than half", rounded up (p. 27)
     var n = 0;
     mine.forEach(function (u) {
       u.reserve = false;
@@ -24288,7 +24422,8 @@
 
   /* The arrival point holds on 1-3; on 4-6 the opponent shoves it up to 2D6" in
      any direction, and the opponent naturally shoves it towards their own guns. */
-  function scatterInsertion(u) {
+  function scatterInsertion(u, after) {
+    after = after || function () {};
     var die = R.d6();
     var tell = !isAI(u.side);                        // the OpFor's own drops just go in the log
     // Coordinated Hive (p. 124): the swarm re-rolls a failed die in the Reserve phase
@@ -24305,9 +24440,35 @@
         note: 'Battlefield Insertion — on 1-3 the arrival point stays where it was put.',
         outcome: { text: 'Lands on the nominated point.', tone: 'good' }
       });
+      after();
       return;
     }
     var drift = R.d6() + R.d6();
+    /* "...it can be moved by opponent up to 2D6 in any direction" (p. 56): a
+       human opponent makes that call, on the table. */
+    var foeSide = other(u.side);
+    if (!isAI(foeSide) && !(state.solo && foeSide === 'A')) {
+      var shoves = [];
+      for (var sx = Math.floor(u.x - drift); sx <= u.x + drift; sx += 1) {
+        for (var sy = Math.floor(u.y - drift); sy <= u.y + drift; sy += 1) {
+          var sp = { x: sx, y: sy };
+          if (R.inches(sp.x, sp.y, u.x, u.y) > drift) continue;
+          if (sp.x < UR || sp.y < UR || sp.x > W - UR || sp.y > H - UR) continue;
+          if (R.TERRAIN[R.terrainAt(state, sp.x, sp.y)].impassable) continue;
+          if (R.unitNear(state, sp.x, sp.y, u, 1)) continue;
+          shoves.push(sp);
+        }
+      }
+      shoves.push({ x: u.x, y: u.y });                  // "up to": it may be left where it is
+      logLine('note', u.label + ' inserts (D6 ' + die + '): ' + sideName(foeSide) + ' may shove it up to ' + drift + '".');
+      ui.insertion = { unit: u, by: foeSide, done: after, spots: shoves, kind: 'shove', drift: drift, die: die };
+      ui.selected = null; ui.mode = 'insert'; ui.targets = []; ui.moves = []; ui.terrain = [];
+      focusUnit(u, false, true);
+      setHint(null, 'D6 ' + die + ': move ' + u.name + '\u2019s arrival point up to ' + drift + '" — tap the shaded ground.');
+      revealConsole();
+      render();
+      return;
+    }
     // the enemy drags the marker towards their nearest gun; failing that, anywhere
     var foe = activeUnits(other(u.side)).filter(function (e) { return R.status(e) !== 'broken'; })
       .sort(function (a, b) { return R.inches(a.x, a.y, u.x, u.y) - R.inches(b.x, b.y, u.x, u.y); })[0];
@@ -24327,6 +24488,7 @@
       note: 'Battlefield Insertion — on 4-6 the opponent moves the arrival point up to 2D6" in any direction, and moves it towards their own guns.',
       outcome: { text: 'Shoved ' + drift + '" off the nominated point.', tone: 'warn' }
     });
+    after();
   }
 
   /* Arriving within 12" of the enemy invites a free shot from the closest
@@ -24789,7 +24951,7 @@
       if (i >= order.length) { done(); return; }
       var u = order[i++];
       if (!u.alive || !u.reserve) { next(); return; }
-      if (isAI(u.side)) { aiInsert(u); whenIdle(next); return; }
+      if (isAI(u.side)) { aiInsert(u, function () { whenIdle(next); }); return; }
       askInsertion(u, next);
     }
     next();
@@ -24948,7 +25110,7 @@
     /* Everyone else walks on from their own table edge — which in Demolish is the
        stretches of edge around the corners that side owns, not a whole side of
        the table (p. 54). */
-    var entry = sc && sc.entry && sc.entry[u.side];
+    var entry = entryFor(u);
     if (entry && entry.length) {
       for (var e = 0; e < 600; e++) {
         // which band — which table edge, which corner — is chosen fresh each time
@@ -24981,6 +25143,20 @@
      table edge, and choosing where inside it to come on is a decision worth
      making — behind the wall, or out wide. So the same area is sampled on a 2"
      lattice and offered the way an insertion is. */
+  /* Where a unit walks on from. Invasion's defender comes on "from a random
+     table edge (but from a point nominated by the defender)" (p. 53): the edge
+     is rolled for the unit as it arrives, and only the point along it chosen. */
+  var EDGE_NAMES = ['top', 'bottom', 'left', 'right'];
+  function entryFor(u) {
+    var sc = state.sc, entry = sc && sc.entry && sc.entry[u.side];
+    if (!entry || !entry.length) return entry;
+    if (!(sc.randomEdge && sc.randomEdge[u.side]) || entry.length !== 4) return entry;
+    if (u.entryEdge == null) {
+      u.entryEdge = Math.floor(Math.random() * 4);
+      logLine('note', u.label + ' — random table edge: the ' + EDGE_NAMES[u.entryEdge] + ' edge.');
+    }
+    return [entry[u.entryEdge]];
+  }
   function arrivalLegal(u, p) {
     if (p.x < UR || p.y < UR || p.x > W - UR || p.y > H - UR) return false;
     if (state.scen.arrivalLegal) return state.scen.arrivalLegal(state, u, p) && !R.unitNear(state, p.x, p.y, u, 1);
@@ -24994,7 +25170,7 @@
       return zones.some(function (z) { return R.inches(p.x, p.y, z.x, z.y) <= 4; });
     }
     // everyone else walks on from their own edge, or the corners they own
-    var entry = sc && sc.entry && sc.entry[u.side];
+    var entry = entryFor(u);
     if (entry && entry.length) {
       return entry.some(function (b) {
         return p.x >= b.x - 0.5 && p.x <= b.x + b.w + 0.5 &&
@@ -25017,7 +25193,8 @@
   }
 
   // the OpFor drops on the objective it most wants, or behind the player's line
-  function aiInsert(u) {
+  function aiInsert(u, done) {
+    done = done || function () {};
     var want = null, wd = Infinity;
     state.objectives.forEach(function (o) {
       var held = o.owner && o.owner !== u.side ? -6 : 0;
@@ -25033,12 +25210,12 @@
       if (R.unitNear(state, p.x, p.y, u, 1)) continue;
       u.x = p.x; u.y = p.y; u.reserve = false;
       logLine('note', u.label + ' comes in by Battlefield Insertion.');
-      scatterInsertion(u);
-      landUnit(u);
+      scatterInsertion(u, function () { landUnit(u); done(); });
       return;
     }
     u.reserve = false;                                // nowhere legal: it stays out
     logLine('note', u.label + ' could find no drop zone and stays in reserve.');
+    done();
   }
 
   /* Where a drop may legally go, sampled across the table on a 2" lattice. It
@@ -25156,7 +25333,8 @@
     if (state.scen.id === 'invasion' && sc && u.side === sc.attacker) {
       return 'within 4" of a landing zone you hold or that is still neutral';
     }
-    var entry = sc && sc.entry && sc.entry[u.side];
+    var entry = entryFor(u);
+    if (sc && sc.randomEdge && sc.randomEdge[u.side] && u.entryEdge != null) return 'along the ' + EDGE_NAMES[u.entryEdge] + ' table edge, the one rolled for it';
     if (entry && entry.length > 1) return 'along the stretches of table edge your side owns';
     return 'along your own table edge';
   }
@@ -25192,6 +25370,23 @@
       whenIdle(function () { doneL(); });
       return;
     }
+    if (ins.kind === 'shove') {
+      var sh = snapToSpot(ins, p);
+      if (!sh || R.inches(sh.x, sh.y, u.x, u.y) > ins.drift + 0.01) { setHint(null, 'Not there — within ' + ins.drift + '" of the arrival point, off impassable ground and clear of other units.'); return; }
+      var moved = R.inches(sh.x, sh.y, u.x, u.y);
+      u.x = sh.x; u.y = sh.y;
+      logLine('note', sideName(ins.by) + ' shoves ' + u.label + '\u2019s arrival point ' + moved.toFixed(1) + '".');
+      pushRes({
+        kind: 'Insertion', title: u.name, side: u.side,
+        dice: [{ label: 'D6', value: ins.die, tone: 'fail' }, { label: '2D6"', value: ins.drift }],
+        note: 'Battlefield Insertion — on 4-6 the opponent moves the arrival point up to 2D6" in any direction.',
+        outcome: { text: moved < 0.1 ? 'Left where it was.' : 'Shoved ' + moved.toFixed(1) + '" off the nominated point.', tone: 'warn' }
+      });
+      ui.insertion = null; ui.mode = 'idle'; ui.hint = null;
+      var doneS = ins.done;
+      doneS();
+      return;
+    }
     if (ins.kind === 'arrive') {
       if (!arrivalLegal(u, p)) {
         var near = snapToSpot(ins, p);
@@ -25220,11 +25415,9 @@
     }
     u.x = p.x; u.y = p.y; u.reserve = false;
     logLine('note', u.label + ' comes in by Battlefield Insertion.');
-    scatterInsertion(u);
-    landUnit(u);
     ui.insertion = null; ui.mode = 'idle';
     var done = ins.done;
-    whenIdle(function () { done(); });
+    scatterInsertion(u, function () { landUnit(u); render(); whenIdle(function () { done(); }); });
   }
 
   /* ---- solitaire / cooperative turns (p. 146) ----
@@ -25320,6 +25513,7 @@
     do { a = R.d10(); b = R.d10(); } while (a === b);
     state.initiative = a > b ? 'A' : 'B';
     state.activeSide = state.initiative;
+    state.phaseCount = null;
     state.streak = streakFor(state.activeSide);
     logLine('turn', 'Turn ' + state.turn + ' — initiative to ' + sideName(state.initiative) + ' (D10 ' + a + ' vs ' + b + ').');
     pushRes({
@@ -25333,6 +25527,7 @@
     revealBoard();
     whenIdle(function () {
       reservePhase(function () {
+        state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
         state.streak = streakFor(state.activeSide);
         render();
         maybeAI();
@@ -25372,8 +25567,12 @@
     }).length;
   }
 
+  /* "For the purpose of this rule, always take into account the number of
+     unbroken units at the beginning of the current phase" (p. 27): counted once
+     as the Action phase opens, not again as units break during it. */
   function streakFor(side) {
-    var mine = unbroken(side), theirs = unbroken(other(side));
+    var cnt = state.phaseCount;
+    var mine = cnt ? cnt[side] : unbroken(side), theirs = cnt ? cnt[other(side)] : unbroken(other(side));
     if (theirs === 0) return 99;
     var n = Math.max(1, Math.floor(mine / theirs));
     if (n > 1) logLine('note', sideName(side) + ' has overwhelming numbers — ' + n + ' activations in a row.');
@@ -25503,6 +25702,11 @@
     ui.sections = [];
     // the D6 for barbed wire is rolled for one move, not kept (p. 42)
     state.units.forEach(function (w) { w.wireRoll = null; });
+    // a scenario that ends the moment something happens (the VIP killed) does not wait for the End phase
+    if (!state.over && state.scen.sudden) {
+      var sd = state.scen.sudden(state);
+      if (sd) finish(sd.winner, sd.text.replace(/\bA\b/g, sideName('A')).replace(/\bB\b/g, sideName('B')));
+    }
     if (state.over) { render(); return; }
 
     // a Command Unit riding in a Command Vehicle may coordinate once the hull has acted
@@ -25927,7 +26131,10 @@
     if (u && R.has(u, 'Dominant Species')) out.push({ id: 'regain', label: 'Regain Control' });
     if (u && R.has(u, 'Molecular Reconstruction')) out.push({ id: 'selfrepair', label: 'Self-repair' });
     if (u && R.has(u, 'Teleport')) out.push({ id: 'teleport', label: 'Teleport' });
-    if (u && R.campFlag(u, 'vortex')) out.push({ id: 'vortex', label: 'Time Vortex' });
+    if (u && R.campFlag(u, 'vortex')) {
+      out.push({ id: 'vortex', label: 'Time Vortex move' });
+      out.push({ id: 'vortexadv', label: 'Time Vortex advance' });
+    }
     /* Buildings (p. 41): entering and leaving are special actions, and from
        inside a building of several sections, so is moving to the next one. */
     if (u && state.phase === 'battle' && R.canGarrison(u)) {
@@ -26000,7 +26207,7 @@
 
     /* A unit inside a building "may only exit it or make actions which do not
        require any movement (so it cannot Move, Advance, Assault, etc.)" (p. 41). */
-    if (u.bld && ['move', 'advance', 'wave', 'vortex', 'rush'].indexOf(id) >= 0) {
+    if (u.bld && ['move', 'advance', 'wave', 'vortex', 'vortexadv', 'rush'].indexOf(id) >= 0) {
       return { on: false, hint: 'Inside a building — only actions that need no movement. Exit the building first.' };
     }
 
@@ -26056,7 +26263,7 @@
         var dog = R.deathOrGlory(state, u);
         if (sup && !dog) return { on: false, hint: 'Suppressed units cannot charge.' };
         if (R.has(u, 'Cumbersome Weapon')) return { on: false, hint: 'Cumbersome Weapon: may not Assault.' };
-        var reachA = u.move + moveBonus(u, 'assault') - 2;
+        var reachA = chargeAllow(u);
         var near = assaultables(u, reachA);
         if (u.bld && !near.length) return { on: false, hint: 'Inside a building — the only charge is at an enemy in a section next to this one.' };
         if (!near.length) return { on: false, hint: 'No enemy within charge reach of ' + reachA + '".' };
@@ -26216,9 +26423,16 @@
         if (!u.damage) return { on: false, hint: 'Molecular Reconstruction: nothing to rebuild.' };
         return { on: true, hint: 'Self-repair: stay where it is and clear all ' + u.damage + ' Damage point' + (u.damage > 1 ? 's' : '') + '.' };
       }
-      case 'vortex': {
+      /* Time Vortex Generator (p. 142): "Once per game the aircraft may double
+         its Movement parameter for a Move or Advance action." */
+      case 'vortex': case 'vortexadv': {
         if (spent(u, 'vortex')) return { on: false, hint: 'Time Vortex Generator: already used this battle.' };
-        return { on: true, hint: 'Time Vortex Generator: a Move at double Movement — ' + 2 * (u.move + moveBonus(u)) + '". Once a battle.' };
+        if (id === 'vortexadv') {
+          var adv = actionState(u, 'advance');
+          if (!adv.on) return adv;
+          return { on: true, hint: 'Time Vortex Generator: an Advance at double Movement — ' + 2 * u.move + '", then fire. Once a battle.' };
+        }
+        return { on: true, hint: 'Time Vortex Generator: a Move at double Movement — ' + (2 * u.move + moveBonus(u)) + '". Once a battle.' };
       }
       case 'teleport': {
         var tpads = R.teleportPads(state, u.side);
@@ -26263,6 +26477,7 @@
     }
     if (!actionState(u, id).on) return;
     var st = R.status(u);
+    u.vortexNow = false;                               // only the Time Vortex actions switch it on
 
     if (id === 'rush' || id === 'laststand') { doOnce(u, id); return; }
     if (id === 'checkarea') { doCheckArea(u); return; }
@@ -26303,9 +26518,8 @@
       wireNote(u);
     } else if (id === 'assault') {
       ui.mode = 'assault';
-      var reach = u.move + moveBonus(u, 'assault') - 2;   // the charge bonus is +2 as standard
       var must = forcedCharge(u);
-      ui.targets = must ? [must] : assaultables(u, reach + 2);
+      ui.targets = must ? [must] : assaultables(u);
     } else if (id === 'wave') {
       ui.mode = 'wave';
       ui.moves = R.reachable(state, u, u.move).filter(function (c) { return canStand(u, c); });
@@ -26355,10 +26569,13 @@
       ui.moves = R.has(u, 'Stationary Artillery') ? [] : R.reachable(state, u, u.move);
       setHint(null, markHint(u));
     } else if (id === 'vortex') {
-      u.camp.once.vortex = true; u.vortexNow = true;
+      u.vortexNow = true;
       ui.mode = 'move';
-      ui.moves = R.reachable(state, u, 2 * (u.move + moveBonus(u, 'move'))).filter(function (c) { return canStand(u, c); });
-      logLine('note', u.label + ' — Time Vortex Generator: double Movement for this Move.');
+      ui.moves = R.reachable(state, u, 2 * u.move + moveBonus(u, 'move')).filter(function (c) { return canStand(u, c); });
+    } else if (id === 'vortexadv') {
+      u.vortexNow = true;
+      ui.mode = 'advance-move';
+      ui.moves = R.reachable(state, u, 2 * u.move).filter(function (c) { return canStand(u, c); });
     } else if (id === 'regain') {
       doRegain(u); return;
     } else if (id === 'selfrepair') {
@@ -26454,6 +26671,7 @@
     u.activated = true;
     logLine('note', u.label + ' checks the area — D6 ' + res.roll + ' on ' + res.need + '+: ' +
       (res.found ? 'this is the place.' : 'nothing here.'));
+    if (res.revealed) logLine('note', 'Two locations drawn blank — the objective has to be at the third. No search needed.');
     pushRes({
       kind: 'Search', title: u.name + ' checks the area', side: u.side,
       note: 'The ' + (res.order === 1 ? 'first' : res.order === 2 ? 'second' : 'third') +
@@ -26461,6 +26679,7 @@
       dice: [{ label: 'D6', value: res.roll, tone: res.found ? 'crit' : 'fail' }],
       outcome: res.found
         ? { text: 'Found it. Hold this ground to the end.', tone: 'good' }
+        : res.revealed ? { text: 'Nothing here — so it must be at the last location. Go and hold it.', tone: 'warn' }
         : { text: 'Nothing here — one fewer place for it to be.', tone: 'warn' }
     });
     // the stake goes over at every searched location, and the beacon goes up at the real one
@@ -26544,11 +26763,10 @@
     if (!blood && !R.aggressiveNow(state, u)) return null;
     if (R.status(u) !== 'ready' || (!blood && R.has(u, 'Cumbersome Weapon'))) return null;
     if (R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile')) return null;
-    var reach = u.move + moveBonus(u, 'assault') - 2, best = null, bd = Infinity;
-    activeUnits().forEach(function (e) {
-      if (e.side === u.side || !R.canAssault(u, e)) return;
+    var best = null, bd = Infinity;
+    assaultables(u).forEach(function (e) {
       var d = R.unitDist(u, e);
-      if (d <= reach && d < bd) { bd = d; best = e; }
+      if (d < bd) { bd = d; best = e; }
     });
     return best;
   }
@@ -26628,7 +26846,11 @@
     var carryFirst = ui.mode === 'carry-first';
     var allowance = ui.mode === 'advance-move' ? u.move : (ui.mode === 'carry-move' || carryFirst) ? u.move / 2 : u.move + moveBonus(u);
     u.carrying = false;
-    if (u.vortexNow) { allowance *= 2; u.vortexNow = false; }
+    if (u.vortexNow) {
+      // the Movement parameter doubled, the move bonus on top of it as usual
+      allowance += u.move; u.vortexNow = false; u.camp.once.vortex = true;
+      logLine('note', u.label + ' — Time Vortex Generator: double Movement for this ' + (ui.mode === 'advance-move' ? 'Advance' : 'Move') + '.');
+    }
     if (u.repairMove) { allowance = u.move; u.repairMove = false; }
     var path = R.pathTo(state, u, allowance, pt);
     faceAfter(u, path, pt);
@@ -26775,7 +26997,8 @@
     // Sappers: charges set against the wall or building the enemy is sheltering behind
     var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
     if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
-    var res = R.assault(st, a, t);
+    var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
+    var res = R.assault(st, a, t, { path: route ? route.path : null });
     abilityFx(res, t, null, trails);
     return res;
   }
@@ -26931,12 +27154,20 @@
     setHint(null, 'Barbed wire on the table: D6 ' + u.wireRoll + ' — each section crossed costs ' + u.wireRoll + '" of this move.');
   }
 
+  /* A charge covers Movement +2" (p. 33) — or whatever the unit's charge bonus
+     is — walked over the ground, not measured through it. */
+  function chargeAllow(u) { return u.move + moveBonus(u, 'assault'); }
   function assaultables(u, reach) {
+    var within = u.bld ? null : R.chargeReach(state, u, reach == null ? chargeAllow(u) : reach);
     return activeUnits().filter(function (e) {
       if (e.side === u.side || !R.canAssault(u, e)) return false;
       if (u.bld) return e.bld === u.bld && R.unitDist(u, e) <= 0.6;
-      return R.unitDist(u, e) <= reach;
+      return !!within(e);
     });
+  }
+  function canReachCharge(u, t) {
+    if (u.bld) return t.bld === u.bld && R.unitDist(u, t) <= 0.6;
+    return !!R.chargeRoute(state, u, t, chargeAllow(u));
   }
 
   function doEnter(u, s) {
@@ -26996,7 +27227,9 @@
     logLine('move', u.label + ' makes a strafing run.');
     hitList.forEach(function (t) {
       var res = abShoot(state, u, t, 'basic', {});
-      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
+      var ex = [];
+      scenAfterShot(u, t, ex);
+      res.log.concat(ex).forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
     });
     // friendly fire, on a 1-3
     friends.forEach(function (t) {
@@ -27021,6 +27254,12 @@
     endActivation();
   }
 
+  // Ambush!: an OpFor unit shot at in the first turn — by any shooting, a strafe included (p. 156)
+  function scenAfterShot(u, t, log) {
+    if (!state.scen.afterShot) return;
+    var extra = state.scen.afterShot(state, u, t);
+    if (extra) { log.push({ t: 'note', text: extra.text }); return extra; }
+  }
   function resolveShot(u, target, mode, opts) {
     var snap = snapshotAlive();
     var res = abShoot(state, u, target, mode, opts || {});
@@ -27062,6 +27301,7 @@
     var snap = snapshotAlive();
     var res = abShoot(state, u, target, 'support', {});
     if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
+    scenAfterShot(u, target, res.log);
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
     var card = fromLog('Supporting Fire', u.name + ' → ' + target.name, u.side, res.log);
@@ -27345,9 +27585,8 @@
         var wq = bestWaveSpot(u);
         if (wq && wq.n >= 2) { doWave(u, wq.pt); return; }
       }
-      var ogReach = u.move + moveBonus(u, 'assault') - 2;
       var prey = nearestEnemy(u);
-      if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit) && prey.dist <= ogReach &&
+      if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit) && prey.dist <= chargeAllow(u) && canReachCharge(u, prey.unit) &&
         (u.fp == null || u.assault >= u.fp || !shot.t)) { aiCharge(u, prey.unit); return; }
     }
 
@@ -27580,9 +27819,8 @@
        at it goes in rather than going to ground — that is the whole point of the
        rule, and the Suppression falls away as the charge starts. */
     if (R.status(u) === 'suppressed' && R.deathOrGlory(state, u) && !R.has(u, 'Cumbersome Weapon')) {
-      var dogReach = u.move + moveBonus(u, 'assault') - 2;
       var dogT = nearestEnemy(u);
-      if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= dogReach) {
+      if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
         var dsnap = snapshotAlive();
         var dres = abAssault(state, u, dogT.unit);
         dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
@@ -27704,6 +27942,10 @@
     // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
     if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
     logLine('ai', u.label + ' — behaviour D6 ' + roll + (why.length ? ' (' + why.join(', ') + ')' : '') + ' = ' + total + ': ' + behaviour + '.');
+    /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
+       closest enemy unit. If there are no valid targets, it makes a Move towards
+       the closest enemy" — a Move, so it does not shoot as well. */
+    var killAll = !!state.solo && u.side === 'B' && behaviour === 'assault';
 
     /* A garrison (p. 41) shoots from where it is, charges only an enemy in the
        next section, and comes out when it wants to press on and has nothing to
@@ -27713,7 +27955,7 @@
         var adj = assaultables(u, 0)[0];
         if (adj) { aiCharge(u, adj); return; }
       }
-      if (shot.t && shot.score > 0.2) { fire(u, shot.t, 'fire'); return; }
+      if (shot.t && shot.score > 0.2 && (!killAll || shot.forced)) { fire(u, shot.t, 'fire'); return; }
       if (behaviour === 'offensive' || behaviour === 'assault') {
         var goalB = pickGoal(u, behaviour), outs = R.exitSpots(state, u);
         if (outs.length) {
@@ -27729,9 +27971,9 @@
     // the VIP draws the charge too, when it is in reach
     if (behaviour === 'assault' && state.scen.mustTarget && u.side === 'B') {
       var vipA = state.scen.mustTarget(state, u);
-      if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && R.unitDist(u, vipA) <= u.move + 2) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
+      if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
     }
-    if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= u.move + 2 && !R.has(u, 'Cumbersome Weapon')) {
+    if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
       var snap = snapshotAlive();
       var res = abAssault(state, u, ne.unit);
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
@@ -27754,7 +27996,7 @@
       }
     }
     var goal = pickGoal(u, behaviour);
-    var allowance = behaviour === 'flee' ? u.move + 2 : u.move;
+    var allowance = behaviour === 'flee' || killAll ? u.move + moveBonus(u, 'move') : u.move;
     var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour);
     var best = null, bestScore = here + 0.6;
     R.reachable(state, u, allowance).forEach(function (c) {
@@ -27774,7 +28016,7 @@
       soloAfterMove(u);
       if (u.x < 0) { u.activated = true; endActivation(u); return; }
     }
-    if (behaviour !== 'flee' && !R.campFlag(u, 'noAdvance')) {
+    if (behaviour !== 'flee' && !killAll && !R.campFlag(u, 'noAdvance')) {
       var t2 = bestTarget(u, 'advance');
       if (t2.t && t2.score > 0.2) {
         whenIdle(function () { if (state && !state.over && u.alive) fire(u, t2.t, 'advance'); });
@@ -28006,8 +28248,9 @@
         deployDone: state.phase === 'deploy' ? deploymentDone() : false,
         insertion: ui.insertion ? {
           unit: ui.insertion.unit && ui.insertion.unit.id,
-          side: ui.insertion.unit ? ui.insertion.unit.side : 'A',
+          side: ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A'),
           owner: ui.insertion.owner || null,
+          by: ui.insertion.by || null, drift: ui.insertion.drift || null, die: ui.insertion.die || null,
           kind: ui.insertion.kind,
           spots: ui.insertion.spots
         } : null,
@@ -28083,6 +28326,7 @@
       ui.reservePick = us.reservePick || null;
       ui.insertion = us.insertion ? {
         unit: by[us.insertion.unit] || null, owner: us.insertion.owner,
+        by: us.insertion.by || null, drift: us.insertion.drift || null, die: us.insertion.die || null,
         kind: us.insertion.kind, spots: us.insertion.spots, done: null
       } : null;
       return state;
@@ -28376,6 +28620,7 @@
     function insertionSide() {
       var ins = ui.insertion;
       if (!ins) return null;
+      if (ins.by) return ins.by;       // the opponent shoving an insertion off its mark
       if (ins.unit) return ins.unit.side;
       return 'A';                      // a landing zone is always the players' own
     }
@@ -29371,7 +29616,7 @@
   function mySide() {
     if (!state || watching) return null;
     if (ui.insertion) {
-      var s = ui.insertion.unit ? ui.insertion.unit.side : 'A';
+      var s = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
       return seats.indexOf(s) >= 0 ? s : null;
     }
     var want = state.phase === 'deploy' ? Q.placingSide()
@@ -30234,6 +30479,12 @@
        almost anywhere and can be held back, and a scenario reinforcement, which
        is coming on whether you like it or not but still lets you choose where
        along its landing zone or table edge. */
+    if (ins.kind === 'shove') {
+      return '<div class="card"><h2>Enemy insertion</h2>' +
+        '<p class="sub"><b>' + esc(u.name) + '</b> rolled a ' + ins.die + ' coming in: you may move its arrival point up to <b>' +
+        ins.drift + '″</b> in any direction. Tap the shaded ground — or its own point to leave it.</p>' +
+        '<p class="hint">Battlefield Insertion, p. 56.</p></div>';
+    }
     if (ins.kind === 'arrive' && u.sfOffer) {
       return '<div class="card"><h2>Semper Fidelis</h2>' +
         '<p class="sub"><b>' + esc(sfName(u)) + '</b> may come on now without waiting for its roll. Tap the shaded ground ' +
@@ -31723,7 +31974,7 @@
          to be legible from the header, because the prompt itself sits in a panel
          that a phone can have scrolled past or hidden behind another tab. */
       act.textContent = ui.insertion.kind === 'arrive'
-        ? 'Place your reinforcements' : 'Pick a landing zone';
+        ? 'Place your reinforcements' : ui.insertion.kind === 'shove' ? 'Shove the enemy drop' : 'Pick a landing zone';
       act.className = 'pill pill-wait';
     } else if (state.solo) {
       if (state.activeSide === 'B') { act.textContent = 'OpFor phase'; act.className = 'pill pill-B'; }

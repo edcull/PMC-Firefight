@@ -265,8 +265,10 @@ var burn = world([{ kind: 'woods', x: 16, y: 16, w: 8, h: 8 }]);
 var chem = mk('chem', 'A', 26, 20);
 var hot = 0, cold = 0, armoured = 0, armouredCold = 0, n6 = 6000;
 for (var i3 = 0; i3 < n6; i3++) {
-  var a3 = mk('chem', 'A', 26, 20);
+  // Suppressive Fire (which the chem-warriors also have) adds its +2 SP either way: leave it out to see the doubling
+  var a3 = stripped('chem', 'A', 26, 20, 'Suppressive Fire');
   var bare3 = stripped('chem', 'A', 26, 20, 'Incendiary Ammunition');
+  bare3.rules = bare3.rules.filter(function (r) { return r !== 'Suppressive Fire'; });
   var t6 = mk('regular', 'B', 20, 20); burn.units = [a3, t6]; R.shoot(burn, a3, t6, 'fire', {});
   hot += t6.sp;
   var t7 = mk('regular', 'B', 20, 20); burn.units = [bare3, t7]; R.shoot(burn, bare3, t7, 'fire', {});

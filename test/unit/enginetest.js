@@ -84,7 +84,7 @@ function play(seed, opts) {
     // a unit is coming in: drop it on the first legal spot offered
     if (sel.insertion) {
       const ins = sel.insertion;
-      const side = ins.unit ? ins.unit.side : 'A';
+      const side = ins.by || (ins.unit ? ins.unit.side : 'A');
       const spot = (ins.spots || [])[0];
       const r = spot
         ? e.intent(side, { k: 'insert', x: spot.x, y: spot.y })
@@ -422,7 +422,7 @@ function arrivals() {
     for (let g = 0; g < 200 && !e.over(); g++) {
       const sel = e.sel();
       if (sel.insertion) {
-        const side = sel.insertion.unit ? sel.insertion.unit.side : 'A';
+        const side = sel.insertion.by || (sel.insertion.unit ? sel.insertion.unit.side : 'A');
         const spot = (sel.insertion.spots || [])[0];
         e.intent(side, spot ? { k: 'insert', x: spot.x, y: spot.y } : { k: 'holdinsert' });
         continue;
@@ -516,7 +516,7 @@ function advanceIsOneAction() {
     for (let g = 0; g < 160 && !e.over() && found < 4; g++) {
       const sel = e.sel(), st = e.state();
       if (sel.insertion) {
-        const sd = sel.insertion.unit ? sel.insertion.unit.side : 'A', sp = (sel.insertion.spots || [])[0];
+        const sd = sel.insertion.by || (sel.insertion.unit ? sel.insertion.unit.side : 'A'), sp = (sel.insertion.spots || [])[0];
         e.intent(sd, sp ? { k: 'insert', x: sp.x, y: sp.y } : { k: 'holdinsert' }); continue;
       }
       if (st.phase !== 'battle') break;
