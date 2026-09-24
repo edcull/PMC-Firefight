@@ -2669,8 +2669,8 @@
   setInterval(function () {
     if (!state || !state.scene || loop || document.hidden) return;
     ambientTick++;
-    // an aircraft on the table keeps its rotors turning and its scanners sweeping
-    var flying = state.units.some(function (u) { return u.alive && !u.aboard && u.x >= 0 && u.cls === 'aircraft'; });
+    // an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector breathes, a cloak shimmers
+    var flying = state.units.some(function (u) { return !u.aboard && u.x >= 0 && ISO.animates(u); });
     if (state.hazeOnView || flying || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
   }, 60);
 

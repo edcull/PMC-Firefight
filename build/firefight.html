@@ -17260,16 +17260,22 @@
       }
       /* the Beta's Personal Deflector: a bubble of blue light about the whole
          body, brighter at its rim, with a few facets catching the light */
+      /* ...and it is alive: `SHIELD_PHASE` (one of SHIELD_PHASES, turned by the
+         clock) breathes its light up and down, walks a band of brightness
+         round the rim and lights a different few of its hexes each time. */
       if (rank === 'beta' && !dead) {
+        var sph = SHIELD_PHASE / SHIELD_PHASES, pulse = 0.75 + 0.25 * Math.sin(sph * Math.PI * 2);
         var dcx = 4, dcy = by - 9, drx = 19, dry = 27;
-        E(dcx, dcy, drx, dry, 'rgba(140,210,255,.1)');
+        E(dcx, dcy, drx, dry, 'rgba(140,210,255,' + (0.1 * pulse).toFixed(3) + ')');
         E(dcx - 5, dcy - 9, drx * 0.45, dry * 0.35, 'rgba(220,242,255,.12)');        // a sheen high on the bubble
         var rim = [];
         for (var ri = 0; ri <= 28; ri++) { var ra = ri / 28 * Math.PI * 2; rim.push([dcx + Math.cos(ra) * drx, dcy + Math.sin(ra) * dry]); }
-        L(rim, 3.2, 'rgba(110,190,255,.28)');                                 // the glow off the rim
-        L(rim, 1.3, 'rgba(120,200,255,.95)');
-        L(rim.slice(15, 25), 1.8, 'rgba(220,242,255,.95)');                 // the lit shoulder of the bubble
-        [[-8, -14], [12, -18], [-12, 6], [14, 8]].forEach(function (h2) {        // hexes flickering in it
+        L(rim, 3.2, 'rgba(110,190,255,' + (0.28 * pulse).toFixed(3) + ')');   // the glow off the rim
+        L(rim, 1.3, 'rgba(120,200,255,' + (0.95 * pulse).toFixed(3) + ')');
+        var sweep = Math.round(sph * 28);                                   // the band of light running round the rim
+        L(rim.concat(rim.slice(1)).slice(sweep, sweep + 8), 1.8, 'rgba(220,242,255,.95)');
+        [[-8, -14], [12, -18], [-12, 6], [14, 8], [2, -24], [-4, 14], [16, -6], [-15, -4]].forEach(function (h2, hn) {   // hexes flickering in it
+          if ((hn + SHIELD_PHASE) % 3) return;
           var hx2 = dcx + h2[0], hy2 = dcy + h2[1], r2 = 2.2;
           var hp = [];
           for (var hi = 0; hi <= 6; hi++) { var ha = hi / 6 * Math.PI * 2; hp.push([hx2 + Math.cos(ha) * r2, hy2 + Math.sin(ha) * r2]); }
@@ -17278,14 +17284,7 @@
       }
     }
     g.restore();
-    // a cloaked squad is the same model, half there: 50% transparent, nothing added
-    if (kit.cloak && !dead) {
-      g.save();
-      g.globalCompositeOperation = 'destination-out';
-      g.fillStyle = 'rgba(0,0,0,.5)';
-      g.fillRect(0, 0, g.canvas.width, g.canvas.height);
-      g.restore();
-    }
+    // a cloaked squad is the same model, half there: faded as it is drawn (cloakFade), not baked in
   }
 
   /* A broken bug digs in: drawn crouched, then sunk half its height into the
@@ -17680,6 +17679,19 @@
     }
     g.putImageData(im, 0, 0);
   }
+  var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
+  function nowT() { return root.performance ? performance.now() : 0; }
+  function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
+  function cloakedKit(kit) { return !!kit && !!kit.xeno && !!kit.cloak; }
+  /* A cloaked model fades in and out between whole and half there, each at its
+     own beat so the squad shimmers rather than blinking as one. */
+  function cloakFade(mi) { return 0.75 + 0.25 * Math.sin(nowT() / 1100 + mi * 1.7); }
+  // whether a unit is drawn differently from one moment to the next, so the board keeps redrawing it
+  function animates(u) {
+    if (!u || !u.alive) return false;
+    if (u.cls === 'aircraft') return true;
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]); });
+  }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
     var kit = KIT[role] || KIT.rifle;
@@ -17700,7 +17712,10 @@
     // a man flat in the dirt is drawn a size up to read; a bug that has gone to ground is not
     if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '');
+    // a Beta's deflector is baked in SHIELD_PHASES states, one for each beat of its light
+    var shieldy = shieldAnimated(kit);
+    if (shieldy) SHIELD_PHASE = Math.floor(nowT() / 110) % SHIELD_PHASES;
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -22200,8 +22215,9 @@
          sprite pixel lands on a screen pixel. Zoomed out, the halving is a
          downscale, and that is the one place smoothing helps rather than blurs. */
       var rs = c.res || 1;
-      var was = g.imageSmoothingEnabled;
+      var was = g.imageSmoothingEnabled, wasA = g.globalAlpha;
       g.imageSmoothingEnabled = true;
+      if (cloakedKit(KIT[roleAt(art, mi)])) g.globalAlpha = wasA * cloakFade(mi);
       // snapped to the half-pixel, which is one pixel of a window drawn at 2x
       var bx = Math.round((mx - c.ox / rs) * rs) / rs, by = Math.round((my - c.oy / rs) * rs) / rs;
       if (u.faceL) {
@@ -22211,7 +22227,7 @@
         g.drawImage(c, bx - mx, by, c.width / rs, c.height / rs);
         g.restore();
       } else g.drawImage(c, bx, by, c.width / rs, c.height / rs);
-      g.imageSmoothingEnabled = was;
+      g.imageSmoothingEnabled = was; g.globalAlpha = wasA;
     }
 
     // a garrison's markers ride over the middle of the building
@@ -22363,6 +22379,7 @@
   root.PMCIso = {
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
+    animates: animates,
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
@@ -32178,8 +32195,8 @@
   setInterval(function () {
     if (!state || !state.scene || loop || document.hidden) return;
     ambientTick++;
-    // an aircraft on the table keeps its rotors turning and its scanners sweeping
-    var flying = state.units.some(function (u) { return u.alive && !u.aboard && u.x >= 0 && u.cls === 'aircraft'; });
+    // an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector breathes, a cloak shimmers
+    var flying = state.units.some(function (u) { return !u.aboard && u.x >= 0 && ISO.animates(u); });
     if (state.hazeOnView || flying || (state.fireOnView && ambientTick % 2 === 0)) drawBoard();
   }, 60);
 

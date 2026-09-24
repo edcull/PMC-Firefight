@@ -246,7 +246,7 @@
     // and a shield's band of light keeps turning
     if (shielded(unit())) busy = true;
     // an aircraft's rotors turn and its scanners sweep, even hanging still
-    if (unit().cls === 'aircraft' && view.status !== 'destroyed') busy = true;
+    if (I.animates(unit()) && view.status !== 'destroyed') busy = true;
     frame();
     if (busy) start(); else last = 0;
   }
