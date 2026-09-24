@@ -20408,7 +20408,12 @@
         barrel(RF, 0, 0.42, 0, roof + 3, 1.4, 'mg', { col: '#15181e', brake: true });
       });
 
-      if (droneDue()) { var dsp = droneSpot(); part(dsp.x + dsp.y, function () { drawDrone(); }); }
+      if (droneDue()) {
+        var dsp = droneSpot(), asp = along(-L * 0.44, Wd * 0.32);
+        part(dsp.x + dsp.y, function () { droneKit('dome'); });
+        part(asp.x + asp.y, function () { droneKit('aerial'); });
+        droneDone = true;
+      }
       parts.sort(function (p, q) { return p.d - q.d; }).forEach(function (p) { p.fn(); });
     }
 
@@ -21467,10 +21472,10 @@
        front of it hides it; otherwise last, over the hull. */
     var droneDone = false;
     function droneDue() { return u.drone && !dead && !/Turret/.test(u.group || ''); }
-    function drawDrone() {
+    function drawDrone(only) {
       if (droneDone || !droneDue()) return;
-      droneDone = true;
-      droneKit();
+      if (!only) droneDone = true;
+      droneKit(only);
     }
     // where the dome goes, as a point on the hull (for sorting it among the parts)
     function droneSpot() {
@@ -21482,9 +21487,10 @@
         var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
         return along(spec.len * (0.5 - c * 0.71), -spec.wid * 0.22);
       }
-      return along(-spec.len * 0.3, -spec.wid * 0.26);
+      return along(-spec.len * 0.4, -spec.wid * 0.3);
     }
-    function droneKit() {
+    // `only`: 'dome' or 'aerial', when a styled hull sorts the two among its parts
+    function droneKit(only) {
       var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
       var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
       if (legs && mechClass() === 'light') return;          // drawn in place of its head, with the mech
@@ -21492,9 +21498,9 @@
       /* The dome: on a hull's roof off to one side, clear of a turret; on a
          pickup or gun truck, to one side of the flat plate where its cab used to
          be; on a walker, up on a shoulder; on a craft, the middle of its back. */
-      var back = -0.3, off = -spec.wid * 0.26;
+      var back = -0.4, off = -spec.wid * 0.3;             // the back corner, opposite the aerial
       // a craft's back is measured from where it flies, not from a ground hull's ride height
-      if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.75 : 0.72); }
+      if (spec.fly) { back = 0.12; off = 0; y5 = lift + spec.hgt * (spec.craft === 'jet' ? 0.9 : 0.86); }
       else if (legs) { back = -0.12; off = -spec.wid * 0.28; }
       else if (body === 'pickup') { back = driveOf(u) !== 'wheeled' ? 0.35 : 0.05; off = -spec.wid * 0.22; y5 = deck + spec.hgt * 0.7; }
       else if (body === 'guntruck') {
@@ -21503,11 +21509,14 @@
       }
       var dq = along(spec.len * back, off), dp = toScreen(dq.x, dq.y);
       var r = Math.max(3, K * 0.16), cy = dp.y - y5;
+      if (only !== 'aerial') {
       ellipse(g, dp.x, cy + r * 0.15, r * 1.25, r * 0.6, '#14171c');               // the collar it sits in
       ellipse(g, dp.x, cy - r * 0.2, r, r * 0.85, '#aeb8c2');                      // the dome
       ellipse(g, dp.x, cy + r * 0.05, r, r * 0.45, '#7d8894');
       ellipse(g, dp.x - r * 0.35, cy - r * 0.5, r * 0.35, r * 0.25, 'rgba(255,255,255,.75)');
       ellipse(g, dp.x + r * 0.2, cy - r * 0.05, r * 0.28, r * 0.2, '#2a6f9a');     // the sensor behind the dome's skin
+      }
+      if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
       if (spec.fly && spec.craft === 'jet') return;      // a jet carries the dome only, no aerial
@@ -21518,7 +21527,8 @@
         if (body === 'pickup' || body === 'guntruck') ya = deck + spec.hgt * 0.5;
       }
       var ap = toScreen(aq.x, aq.y), ay = ap.y - ya, ah = Math.max(10, K * 0.55);
-      thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 2, '#1a1d22');
+      ellipse(g, ap.x, ay, 2, 1.2, STEEL);                   // its mount
+      thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 1.4, STEEL_LIT);
       ellipse(g, ap.x + 1, ay - ah, 1.6, 1.6, '#ff5040');
     }
 
