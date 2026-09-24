@@ -21043,10 +21043,14 @@
             }
             fuselage(pts2o, topo, z, H, TB);
             bandOnSides(g, box(off, 0, cabL, Wd), z + 2, 2, 2, 'rgba(10,9,7,.4)');
-            canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
+            /* The glazing is set into the cab below its roof and inside its width,
+               so only the nose's face shows it: with the nose turned away the
+               cab hides it altogether. */
+            if (fwd > 0) canopy(off + cabL * 0.22, off + cabL * 0.5, w * 0.8, z + H * 0.5, H * 0.45);
             var ns = nearSide();
             doorGun(ns, off - cabL * 0.05, z + H * 0.45, true);
-            noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
+            // ...and so is the gun under the nose
+            if (fwd > 0) noseGun(off + cabL * 0.46, 0, z + H * 0.34, 0.3, 'mg');
             if (st === 'chinookcp') {
               // the command post: a dome on the roof and aerials (its radar went on under the nose)
               var dm = S3(AF(-L * 0.05, 0), z + H + 1);
