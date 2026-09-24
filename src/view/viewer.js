@@ -1005,6 +1005,14 @@
     }
   }
   function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
+  // the words a player might search a weapon style by
+  var WEAPON_WORDS = {
+    small: 'rifle rifles', pistol: 'pistol sidearm', smg: 'smg submachinegun carbine', burst: 'machine gun mg',
+    chain: 'autocannon cannon', shell: 'cannon gun shell', shellbig: 'cannon gun shell heavy', arc: 'mortar grenade lobbed indirect',
+    arcbig: 'howitzer artillery lobbed indirect', missile: 'missile guided', rocket: 'rocket rockets', flame: 'flamer flame fire',
+    rail: 'gauss rail laser', spit: 'acid spit', spitbig: 'plasma acid', spine: 'spines darts', energy: 'energy pulse',
+    orb: 'plasma orb', orbbig: 'plasma orb heavy', none: 'unarmed no weapon'
+  };
 
   /* The list has a tab for each army; a search looks through all four. The
      open tab follows the unit on the stage until another is chosen. */
@@ -1029,7 +1037,10 @@
         main: el('vlist'), scroller: el('vside').querySelector('.vlistscroll'), search: el('vsearch'),
         faction: pickerFaction, colour: view.colour.A, prefix: 'vp-',
         fit: { inf: 120, other: 112 },     // the list's own tile sizes; the desktop's three-to-a-row tiles come smaller
-        findMore: function (p) { var w = R.weaponSpec(p); return styleName(w.p) + (w.s ? ' ' + styleName(w.s) : ''); }
+        findMore: function (p) {
+          var w = R.weaponSpec(p);
+          return [w.p, w.s].filter(Boolean).map(function (st) { return styleName(st) + ' ' + (WEAPON_WORDS[st] || ''); }).join(' ');
+        }
       });
     } else if (want !== pickerShown) { picker.render(); el('vside').querySelector('.vlistscroll').scrollTop = 0; }
     pickerShown = want;

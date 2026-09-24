@@ -14932,7 +14932,11 @@ html { scroll-behavior: smooth; }
         ' · Range ' + p.range + '" · Def ' + p.def + (p.str ? ' · Structure ' + p.str : ' · Models ' + p.size);
     }
     // what a search matches: the name, code and key, and whatever else the page adds (the viewer adds the weapons)
-    function findKey(p) { return esc((p.name + ' ' + p.code + ' ' + p.key + (o.findMore ? ' ' + o.findMore(p) : '')).toLowerCase()); }
+    // what a search matches a unit by: its name and code, its group, what it is, every special rule it has, and anything the page adds (its weapon)
+    function findKey(p) {
+      return esc([p.name, p.code, p.key, p.group || '', p.cls || 'infantry', (p.rules || []).join(' | '),
+        o.findMore ? o.findMore(p) : ''].join(' | ').toLowerCase());
+    }
     function cell(p, t, cls, cap) {
       return '<figure class="cell">' + tile(p, t, cls) + '<figcaption>' + cap + '</figcaption></figure>';
     }
@@ -15120,8 +15124,14 @@ html { scroll-behavior: smooth; }
     // ---- search ----
     function filter() {
       var q = o.search ? o.search.value.trim().toLowerCase() : '', any = false;
-      Array.prototype.forEach.call(main.querySelectorAll('.unit[data-find]'), function (a) {
-        var hit = !q || a.dataset.find.indexOf(q) >= 0;
+      /* The words as a phrase first ("machine gun"); failing that, a unit has
+         to answer to every one of them on its own ("sappers insertion"). */
+      var cards = main.querySelectorAll('.unit[data-find]');
+      var terms = q ? q.split(/[\s,]+/).filter(Boolean) : [];
+      var phrase = terms.length > 1 && Array.prototype.some.call(cards, function (a) { return a.dataset.find.indexOf(q) >= 0; });
+      Array.prototype.forEach.call(cards, function (a) {
+        var f = a.dataset.find;
+        var hit = !terms.length || (phrase ? f.indexOf(q) >= 0 : terms.every(function (t) { return f.indexOf(t) >= 0; }));
         a.hidden = !hit; if (hit) any = true;
       });
       Array.prototype.forEach.call(main.querySelectorAll('section[data-group]'), function (s) {

@@ -422,7 +422,7 @@
   <div class="vpanel vside" id="vside">
     <h3>Units <button type="button" class="vclose" id="vclose" aria-label="Close the unit list">×</button></h3>
     <div class="vfacs" id="vfacs" role="tablist" aria-label="Army"></div>
-    <div class="vsearchbar"><input id="vsearch" placeholder="Search by name, code or weapon…" autocomplete="off"></div>
+    <div class="vsearchbar"><input id="vsearch" placeholder="Search name, weapon or rule — e.g. sappers, markerlights…" autocomplete="off"></div>
     <div class="vscroll vlistscroll">
       <div id="vlist" class="atl"></div>
     </div>
@@ -16907,7 +16907,11 @@
         ' · Range ' + p.range + '" · Def ' + p.def + (p.str ? ' · Structure ' + p.str : ' · Models ' + p.size);
     }
     // what a search matches: the name, code and key, and whatever else the page adds (the viewer adds the weapons)
-    function findKey(p) { return esc((p.name + ' ' + p.code + ' ' + p.key + (o.findMore ? ' ' + o.findMore(p) : '')).toLowerCase()); }
+    // what a search matches a unit by: its name and code, its group, what it is, every special rule it has, and anything the page adds (its weapon)
+    function findKey(p) {
+      return esc([p.name, p.code, p.key, p.group || '', p.cls || 'infantry', (p.rules || []).join(' | '),
+        o.findMore ? o.findMore(p) : ''].join(' | ').toLowerCase());
+    }
     function cell(p, t, cls, cap) {
       return '<figure class="cell">' + tile(p, t, cls) + '<figcaption>' + cap + '</figcaption></figure>';
     }
@@ -17095,8 +17099,14 @@
     // ---- search ----
     function filter() {
       var q = o.search ? o.search.value.trim().toLowerCase() : '', any = false;
-      Array.prototype.forEach.call(main.querySelectorAll('.unit[data-find]'), function (a) {
-        var hit = !q || a.dataset.find.indexOf(q) >= 0;
+      /* The words as a phrase first ("machine gun"); failing that, a unit has
+         to answer to every one of them on its own ("sappers insertion"). */
+      var cards = main.querySelectorAll('.unit[data-find]');
+      var terms = q ? q.split(/[\s,]+/).filter(Boolean) : [];
+      var phrase = terms.length > 1 && Array.prototype.some.call(cards, function (a) { return a.dataset.find.indexOf(q) >= 0; });
+      Array.prototype.forEach.call(cards, function (a) {
+        var f = a.dataset.find;
+        var hit = !terms.length || (phrase ? f.indexOf(q) >= 0 : terms.every(function (t) { return f.indexOf(t) >= 0; }));
         a.hidden = !hit; if (hit) any = true;
       });
       Array.prototype.forEach.call(main.querySelectorAll('section[data-group]'), function (s) {
@@ -18134,6 +18144,14 @@
     }
   }
   function styleName(st) { return st === 'small' ? 'rifle' : st; }   // "small" (arms) reads as rifle to a player
+  // the words a player might search a weapon style by
+  var WEAPON_WORDS = {
+    small: 'rifle rifles', pistol: 'pistol sidearm', smg: 'smg submachinegun carbine', burst: 'machine gun mg',
+    chain: 'autocannon cannon', shell: 'cannon gun shell', shellbig: 'cannon gun shell heavy', arc: 'mortar grenade lobbed indirect',
+    arcbig: 'howitzer artillery lobbed indirect', missile: 'missile guided', rocket: 'rocket rockets', flame: 'flamer flame fire',
+    rail: 'gauss rail laser', spit: 'acid spit', spitbig: 'plasma acid', spine: 'spines darts', energy: 'energy pulse',
+    orb: 'plasma orb', orbbig: 'plasma orb heavy', none: 'unarmed no weapon'
+  };
 
   /* The list has a tab for each army; a search looks through all four. The
      open tab follows the unit on the stage until another is chosen. */
@@ -18158,7 +18176,10 @@
         main: el('vlist'), scroller: el('vside').querySelector('.vlistscroll'), search: el('vsearch'),
         faction: pickerFaction, colour: view.colour.A, prefix: 'vp-',
         fit: { inf: 120, other: 112 },     // the list's own tile sizes; the desktop's three-to-a-row tiles come smaller
-        findMore: function (p) { var w = R.weaponSpec(p); return styleName(w.p) + (w.s ? ' ' + styleName(w.s) : ''); }
+        findMore: function (p) {
+          var w = R.weaponSpec(p);
+          return [w.p, w.s].filter(Boolean).map(function (st) { return styleName(st) + ' ' + (WEAPON_WORDS[st] || ''); }).join(' ');
+        }
       });
     } else if (want !== pickerShown) { picker.render(); el('vside').querySelector('.vlistscroll').scrollTop = 0; }
     pickerShown = want;
