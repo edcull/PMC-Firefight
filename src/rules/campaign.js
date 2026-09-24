@@ -1394,6 +1394,8 @@
     if (p.leaderBug) return { total: 0, lines: [{ text: 'Leader Bugs never earn experience.', n: 0 }] };
     if (p.alpha) return { total: 0, lines: [{ text: 'Alpha squads never earn experience.', n: 0 }] };
     if (isTurretP(p)) return { total: 0, lines: [{ text: 'Turrets never earn experience.', n: 0 }] };
+    // Drone Control (p. 37): "they do not get any experience during campaigns"
+    if (entry.drone) return { total: 0, lines: [{ text: 'Drones never earn experience.', n: 0 }] };
     out.push({ text: 'Took part in the battle', n: 1 });
     if (ctx.enemyTier > ctx.ownTier) out.push({ text: 'Fought a Tier ' + R.ROMAN[ctx.enemyTier] + ' company', n: 1 });
     if (ctx.won) {

@@ -632,7 +632,10 @@
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
         esc(p.name) + ' <b>' + ROMAN[p.tier] + '</b></button>' +
         (R.propsFor(p).length ? '<button class="drive" data-cycle="' + i + '">' +
-          R.PROPULSION[s.prop || 'none'].short + '</button>' : '') + '</span>';
+          R.PROPULSION[s.prop || 'none'].short + '</button>' : '') +
+        (R.canBeDrone(p) ? '<button class="drive' + (s.drone ? ' on' : '') + '" data-fdrone="' + i +
+          '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' +
+          (s.drone ? 'DRN' : 'crew') + '</button>' : '') + '</span>';
     }).join('');
     h += '<div class="muster found-units">' + head +
       '<div class="chosen" id="found-chosen">' + chosen + '</div>' +
@@ -949,6 +952,11 @@
           (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"') + '>' +
           '<span class="t">' + ROMAN[p.tier] + '</span>' +
           '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p)) + '</small></span>' +
+          '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
+        // the same hull or craft, flown remotely (p. 37)
+        if (R.canBeDrone(p)) h += '<button class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' +
+          (chk.ok ? '' : ' disabled') + '><span class="t">' + ROMAN[p.tier] + '</span>' +
+          '<span><b>' + esc(p.name) + ' — drone</b><small>+1 Structure, no crew, no experience; can be hacked</small></span>' +
           '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
       });
     });
@@ -1746,6 +1754,10 @@
     if (t.hasAttribute('data-drop')) {
       draft.keys.splice(+t.getAttribute('data-drop'), 1); render(); return;
     }
+    if (t.hasAttribute('data-fdrone')) {
+      var di = +t.getAttribute('data-fdrone'), ds = R.splitPick(draft.keys[di]);
+      draft.keys[di] = R.joinPick(ds.key, ds.prop, !ds.drone); render(); return;
+    }
     if (t.hasAttribute('data-cycle')) {
       var i = +t.getAttribute('data-cycle'), s = R.splitPick(draft.keys[i]);
       var order = R.propsFor(profile(s.key));
@@ -1782,7 +1794,7 @@
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); render(); return; }
     if (t.hasAttribute('data-recruit')) {
-      C.recruit(co, t.getAttribute('data-recruit')); save(); render(); return;
+      C.recruit(co, t.getAttribute('data-recruit'), { drone: t.hasAttribute('data-asdrone') }); save(); render(); return;
     }
     if (t.hasAttribute('data-disband')) {
       var e = findEntry(co, t.getAttribute('data-disband'));

@@ -168,5 +168,21 @@ if (R.profile('fsc')) {
   ok('aircraft fly over a line of enemies', over);
 }
 
+/* ------------------------------------------------------ drone control */
+console.log('\nDRONE CONTROL (p. 37)');
+ok('a hull without Transport may be a drone', R.canBeDrone(R.profile('lcv')));
+ok('...and so may an aircraft', R.canBeDrone(R.profile('fsc')));
+ok('...and a Xenotripod craft', R.canBeDrone(R.profile('xstrike3')));
+ok('...but not a transport', !R.canBeDrone(R.profile('lapc')));
+ok('...nor anything of the Bugs', !R.canBeDrone(R.profile('bfirebeetle')));
+var dr = R.applyDrone(unit('lcv'), true);
+ok('a drone has +1 Structure and the Drone Control rule', dr.str === R.profile('lcv').str + 1 && dr.rules.indexOf('Drone Control') >= 0);
+global.window.PMC = R; require('../../src/rules/campaign.js');
+var CC = window.PMCCamp;
+if (CC && CC.expFor) {
+  var ex = CC.expFor({}, { entry: { key: 'lcv', drone: true }, company: {}, won: true, enemyTier: 3, ownTier: 1 });
+  ok('a drone earns no experience in a campaign', ex.total === 0, ex.lines[0].text);
+}
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

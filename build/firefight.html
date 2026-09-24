@@ -7730,6 +7730,8 @@
     if (p.leaderBug) return { total: 0, lines: [{ text: 'Leader Bugs never earn experience.', n: 0 }] };
     if (p.alpha) return { total: 0, lines: [{ text: 'Alpha squads never earn experience.', n: 0 }] };
     if (isTurretP(p)) return { total: 0, lines: [{ text: 'Turrets never earn experience.', n: 0 }] };
+    // Drone Control (p. 37): "they do not get any experience during campaigns"
+    if (entry.drone) return { total: 0, lines: [{ text: 'Drones never earn experience.', n: 0 }] };
     out.push({ text: 'Took part in the battle', n: 1 });
     if (ctx.enemyTier > ctx.ownTier) out.push({ text: 'Fought a Tier ' + R.ROMAN[ctx.enemyTier] + ' company', n: 1 });
     if (ctx.won) {
@@ -25545,6 +25547,7 @@
     if (u && u.transport) {
       out.push({ id: 'embark', label: 'Embark' });
       out.push({ id: 'disembark', label: 'Disembark' });
+      if (R.drives(u)) out.push({ id: 'drivefirst', label: 'Drive first' });
     }
     if (u && u.cls === 'aircraft') out.push({ id: 'strafe', label: 'Strafe' });
     if (u && R.has(u, 'Supporting Fire')) out.push({ id: 'support', label: 'Support' });
@@ -25612,6 +25615,9 @@
 
   function actionState(u, id) {
     if (!u) return { on: false, hint: 'Select one of your units on the table.' };
+    if (u.carryMoved && id !== 'embark' && id !== 'disembark') {
+      return { on: false, hint: 'Driven first — now Embark or Disembark (or press any action to stop there).' };
+    }
     if (u.supportUsed && ['embark', 'disembark', 'regroup'].indexOf(id) < 0) {
       return { on: false, hint: 'Supporting Fire given — load or unload, or pass.' };
     }
@@ -25736,7 +25742,14 @@
       }
       case 'disembark': {
         if (!(u.cargo || []).length) return { on: false, hint: 'Nobody aboard.' };
-        return { on: true, hint: 'Put the troops down within 4" of the hull. They may act again next turn.' };
+        return { on: true, hint: 'Put the troops down within 4" of the hull, then drive on up to half its Movement if you like.' };
+      }
+      case 'drivefirst': {
+        if (!R.drives(u)) return { on: false, hint: 'Only a ground vehicle drives before loading.' };
+        if (u.carryMoved) return { on: false, hint: 'Already driven: now load or unload.' };
+        var roomF = u.transport - (u.cargo || []).length;
+        if (!(u.cargo || []).length && roomF <= 0) return { on: false, hint: 'Nothing to load or unload.' };
+        return { on: true, hint: 'Drive up to half its Movement (' + (u.move / 2) + '"), then Embark or Disembark (p. 36).' };
       }
       case 'strafe': {
         if (u.cls !== 'aircraft') return { on: false, hint: 'Only aircraft may strafe.' };
@@ -25883,6 +25896,8 @@
   function chooseAction(id) {
     var u = ui.selected; if (!u) return;
     if (u.carrying) { stayPut(u); return; }             // loaded or unloaded: any button now means stay
+    // driven first: all that is left is to load or unload, and anything else ends it where it stands
+    if (u.carryMoved && id !== 'embark' && id !== 'disembark') { stayPut(u); return; }
     if (u.advancing) {
       if (id !== 'advance') return;
       if (ui.mode === 'advance-fire') { holdFire(u); return; }     // pressed again: it holds its fire
@@ -25950,6 +25965,9 @@
     } else if (id === 'exitbld') {
       ui.mode = 'exitbld';
       ui.moves = R.exitSpots(state, u);
+    } else if (id === 'drivefirst') {
+      ui.mode = 'carry-first';
+      ui.moves = R.reachable(state, u, u.move / 2).filter(function (c) { return canStand(u, c); });
     } else if (id === 'embark') {
       ui.mode = 'embark';
       ui.targets = activeUnits(u.side).filter(function (t) { return R.canEmbark(state, u, t); });
@@ -26255,7 +26273,8 @@
   function doMove(pt) {
     var u = ui.selected;
     var d = R.inches(u.x, u.y, pt.x, pt.y);
-    var allowance = ui.mode === 'advance-move' ? u.move : ui.mode === 'carry-move' ? u.move / 2 : u.move + moveBonus(u);
+    var carryFirst = ui.mode === 'carry-first';
+    var allowance = ui.mode === 'advance-move' ? u.move : (ui.mode === 'carry-move' || carryFirst) ? u.move / 2 : u.move + moveBonus(u);
     u.carrying = false;
     if (u.vortexNow) { allowance *= 2; u.vortexNow = false; }
     if (u.repairMove) { allowance = u.move; u.repairMove = false; }
@@ -26265,6 +26284,19 @@
     u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
     crushAlong(u, path);
     animateMove(u, path);
+    if (carryFirst) {
+      /* Driven its half: now it loads or unloads where it stands (p. 36). If
+         there is nobody to take on and nobody aboard, that is the end of it. */
+      logLine('move', u.label + ' drives ' + d.toFixed(1) + '" before loading.');
+      scenarioMoveEnd(u);
+      u.carryMoved = true; u.activated = false;
+      ui.mode = 'idle'; ui.moves = []; ui.targets = []; ui.preview = null;
+      var canLoad = (u.transport - (u.cargo || []).length) > 0 &&
+        activeUnits(u.side).some(function (t2) { return R.canEmbark(state, u, t2); });
+      if (!canLoad && !(u.cargo || []).length) { stayPut(u); return; }
+      render();
+      return;
+    }
     if (ui.mode === 'advance-move') {
       /* Moved, and not yet shot: the unit is half-way through its Advance. It
          has used its move, so all that is left to it is the Advance's shot. */
@@ -26314,6 +26346,8 @@
      follow-up — tap the ground, or press the action again to stay put. */
   function carryMove(u) {
     ui.targets = []; ui.terrain = [];
+    // it drove before it loaded or unloaded: that was its half move
+    if (u.carryMoved) { u.carryMoved = false; ui.moves = []; ui.mode = 'idle'; endActivation(); return; }
     if (!R.drives(u) || isAI(u.side) || !u.alive) { endActivation(); return; }
     ui.moves = R.reachable(state, u, u.move / 2).filter(function (c) { return canStand(u, c); });
     if (!ui.moves.length) { ui.moves = []; endActivation(); return; }
@@ -26322,8 +26356,8 @@
     render();
   }
   function stayPut(u) {
-    u.carrying = false; u.activated = true;
-    ui.mode = 'idle'; ui.moves = []; ui.preview = null;
+    u.carrying = false; u.carryMoved = false; u.activated = true;
+    ui.mode = 'idle'; ui.moves = []; ui.targets = []; ui.preview = null;
     logLine('note', u.label + ' stays where it is.');
     endActivation();
   }
@@ -27977,7 +28011,7 @@
           // half-way through an Advance there is nothing to go back to: it holds its fire
           var adv = ui.selected;
           if (adv && adv.advancing && !adv.activated && adv.side === side) { holdFire(adv); return yes; }
-          if (adv && adv.carrying && adv.side === side) { stayPut(adv); return yes; }
+          if (adv && (adv.carrying || adv.carryMoved) && adv.side === side) { stayPut(adv); return yes; }
           ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; ui.preview = null;
           render();
           return yes;
@@ -29890,6 +29924,7 @@
     regroup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg>',
     designate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l7 8-7 8-7-8z"/><circle cx="12" cy="12" r="2"/><path d="M12 1v2M12 21v2"/></svg>',
     coordinate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.4"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="20" r="2"/><path d="M10.4 10.4L6.4 7.4M13.6 10.4l4-3M12 14.4V18"/></svg>',
+    drivefirst: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="13" height="7" rx="1.5"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="13" cy="19" r="1.6"/><path d="M13 6h8M18 3l3 3-3 3"/></svg>',
     embark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="13" height="7" rx="1.5"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="13" cy="19" r="1.6"/><path d="M20 4v7M20 11l-2.5-2.5M20 11l2.5-2.5"/></svg>',
     disembark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="13" height="7" rx="1.5"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="13" cy="19" r="1.6"/><path d="M20 11V4M20 4l-2.5 2.5M20 4l2.5 2.5"/></svg>',
     strafe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h13l4 2-4 2H2z"/><path d="M9 12v4M13 12v4M5 12v4"/></svg>',
@@ -32414,7 +32449,9 @@
       box.classList.add('idle');
       return;
     }
-    if (ui.mode === 'carry-move') {
+    if (ui.mode === 'carry-first') {
+      box.innerHTML = '<b>' + u.name + '</b> drives up to half its Movement first — tap the shaded ground; then Embark or Disembark.';
+    } else if (ui.mode === 'carry-move') {
       box.innerHTML = '<b>' + u.name + '</b> may now drive up to half its Movement — tap the shaded ground, or press any action to stay put.';
     } else if (ui.mode === 'move' || ui.mode === 'advance-move') {
       box.innerHTML = 'Click anywhere in the shaded ground to move <b>' + u.name + '</b> there.';
@@ -33265,7 +33302,7 @@
     var u = ui.selected;
     if (!u || !spot) return null;
     var advance = ui.mode === 'advance-move';
-    var allowance = advance ? u.move : ui.mode === 'carry-move' ? u.move / 2 : u.move + moveBonus(u, 'move');
+    var allowance = advance ? u.move : (ui.mode === 'carry-move' || ui.mode === 'carry-first') ? u.move / 2 : u.move + moveBonus(u, 'move');
     var dist = R.inches(u.x, u.y, spot.x, spot.y);
     var path = R.pathTo(state, u, allowance, spot);
     var kind = R.terrainAt(state, spot.x, spot.y);
@@ -33609,7 +33646,7 @@
       var mspot = moveSpotUnder(c);
       if (mspot) { doMarkMove(mspot); return; }
     }
-    if (ui.moves.length && (ui.mode === 'move' || ui.mode === 'advance-move' || ui.mode === 'carry-move')) {
+    if (ui.moves.length && (ui.mode === 'move' || ui.mode === 'advance-move' || ui.mode === 'carry-move' || ui.mode === 'carry-first')) {
       var spot = moveSpotUnder(c);
       if (spot) { previewMove(spot); return; }
       if (!hit) {
@@ -36024,7 +36061,10 @@
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
         esc(p.name) + ' <b>' + ROMAN[p.tier] + '</b></button>' +
         (R.propsFor(p).length ? '<button class="drive" data-cycle="' + i + '">' +
-          R.PROPULSION[s.prop || 'none'].short + '</button>' : '') + '</span>';
+          R.PROPULSION[s.prop || 'none'].short + '</button>' : '') +
+        (R.canBeDrone(p) ? '<button class="drive' + (s.drone ? ' on' : '') + '" data-fdrone="' + i +
+          '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' +
+          (s.drone ? 'DRN' : 'crew') + '</button>' : '') + '</span>';
     }).join('');
     h += '<div class="muster found-units">' + head +
       '<div class="chosen" id="found-chosen">' + chosen + '</div>' +
@@ -36341,6 +36381,11 @@
           (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"') + '>' +
           '<span class="t">' + ROMAN[p.tier] + '</span>' +
           '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p)) + '</small></span>' +
+          '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
+        // the same hull or craft, flown remotely (p. 37)
+        if (R.canBeDrone(p)) h += '<button class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' +
+          (chk.ok ? '' : ' disabled') + '><span class="t">' + ROMAN[p.tier] + '</span>' +
+          '<span><b>' + esc(p.name) + ' — drone</b><small>+1 Structure, no crew, no experience; can be hacked</small></span>' +
           '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
       });
     });
@@ -37138,6 +37183,10 @@
     if (t.hasAttribute('data-drop')) {
       draft.keys.splice(+t.getAttribute('data-drop'), 1); render(); return;
     }
+    if (t.hasAttribute('data-fdrone')) {
+      var di = +t.getAttribute('data-fdrone'), ds = R.splitPick(draft.keys[di]);
+      draft.keys[di] = R.joinPick(ds.key, ds.prop, !ds.drone); render(); return;
+    }
     if (t.hasAttribute('data-cycle')) {
       var i = +t.getAttribute('data-cycle'), s = R.splitPick(draft.keys[i]);
       var order = R.propsFor(profile(s.key));
@@ -37174,7 +37223,7 @@
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); render(); return; }
     if (t.hasAttribute('data-recruit')) {
-      C.recruit(co, t.getAttribute('data-recruit')); save(); render(); return;
+      C.recruit(co, t.getAttribute('data-recruit'), { drone: t.hasAttribute('data-asdrone') }); save(); render(); return;
     }
     if (t.hasAttribute('data-disband')) {
       var e = findEntry(co, t.getAttribute('data-disband'));
