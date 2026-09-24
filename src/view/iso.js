@@ -2655,7 +2655,7 @@
     hellriderlead: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#f6f4ee', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, armband: 'force', tint: HOLY_B },
     hellriderblack: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
     hellridertan: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', armband: 'force', tint: HOLY_A },
-    legendrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, cape: true, mark: true, nvg: true, armband: 'force', tint: HOLY_B },
+    legendrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, cape: true, mark: true, armband: 'force', tint: HOLY_B },
     // scavenged heavy weapons, worked without much training
     rebgunner: { helm: 'std', gun: 'mg', forceHelm: true, pack: 'none', kneel: true, bulk: 1, ragged: true, tint: REBEL_DRAB },
     rebloader: { helm: 'std', gun: 'pistol', forceHelm: true, pack: 'ammo', kneel: true, ragged: true, tint: REBEL_DRAB },
