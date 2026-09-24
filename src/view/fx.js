@@ -317,6 +317,8 @@
         var span = Math.hypot(lb.x - la.x, lb.y - la.y);
         // high enough to read as a lob, low enough to stay in the frame
         var apex = Math.max(I.K * 1.8, Math.min(I.K * (f.heavy ? 5 : 4), span * (f.heavy ? 0.34 : 0.28)));
+        // a grenade is thrown, not fired: a lower arc
+        if (f.grenade) apex = Math.max(I.K * 1.2, Math.min(I.K * 3, span * 0.24));
         function at(s) {
           return {
             x: la.x + (lb.x - la.x) * s,
@@ -324,6 +326,32 @@
           };
         }
         var lp = at(k);
+        if (f.grenade) {
+          /* A smoke grenade (Smoke Markers): a small dark canister tumbling end over
+             end, its flare already fizzing, a thin trail of sparks behind it. */
+          var grgb = f.rgb || '255,200,80';
+          for (var sp2 = 1; sp2 < 8; sp2++) {
+            var ss2 = k - sp2 * 0.035;
+            if (ss2 <= 0) break;
+            var sq = at(ss2);
+            g.fillStyle = 'rgba(' + grgb + ',' + Math.max(0, 0.7 - sp2 * 0.09) + ')';
+            g.fillRect(sq.x - I.PIXEL * 0.9, sq.y - I.PIXEL * 0.9, I.PIXEL * 1.8, I.PIXEL * 1.8);
+          }
+          var spin = k * Math.PI * 6;
+          g.save();
+          g.translate(lp.x, lp.y); g.rotate(spin);
+          g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(-I.PIXEL * 3.3, -I.PIXEL * 2.2, I.PIXEL * 6.6, I.PIXEL * 4.4);
+          g.fillStyle = '#48503a'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 3.8);
+          g.fillStyle = '#8a9470'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 1.1);
+          g.fillStyle = '#c9c2a4'; g.fillRect(-I.PIXEL * 0.6, -I.PIXEL * 1.9, I.PIXEL * 1.2, I.PIXEL * 3.8);   // the band round it
+          g.restore();
+          var fz = 0.6 + 0.4 * Math.sin(k * 90);
+          I.ellipse(g, lp.x + Math.cos(spin) * I.PIXEL * 3.6, lp.y + Math.sin(spin) * I.PIXEL * 3.6,
+            I.PIXEL * 2, I.PIXEL * 2, 'rgba(' + grgb + ',' + fz + ')');
+          var gs = { x: la.x + (lb.x - la.x) * k, y: la.y + (lb.y - la.y) * k + I.K * 0.8 };
+          I.ellipse(g, gs.x, gs.y, I.PIXEL * 2, I.PIXEL * 1, 'rgba(10,9,7,.25)');
+          return;
+        }
         // the smoke trail, hanging most of the way back to the tube
         for (var tr = 1; tr < 22; tr++) {
           var ts = k - tr * 0.045;

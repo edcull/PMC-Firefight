@@ -15270,6 +15270,8 @@
         var span = Math.hypot(lb.x - la.x, lb.y - la.y);
         // high enough to read as a lob, low enough to stay in the frame
         var apex = Math.max(I.K * 1.8, Math.min(I.K * (f.heavy ? 5 : 4), span * (f.heavy ? 0.34 : 0.28)));
+        // a grenade is thrown, not fired: a lower arc
+        if (f.grenade) apex = Math.max(I.K * 1.2, Math.min(I.K * 3, span * 0.24));
         function at(s) {
           return {
             x: la.x + (lb.x - la.x) * s,
@@ -15277,6 +15279,32 @@
           };
         }
         var lp = at(k);
+        if (f.grenade) {
+          /* A smoke grenade (Smoke Markers): a small dark canister tumbling end over
+             end, its flare already fizzing, a thin trail of sparks behind it. */
+          var grgb = f.rgb || '255,200,80';
+          for (var sp2 = 1; sp2 < 8; sp2++) {
+            var ss2 = k - sp2 * 0.035;
+            if (ss2 <= 0) break;
+            var sq = at(ss2);
+            g.fillStyle = 'rgba(' + grgb + ',' + Math.max(0, 0.7 - sp2 * 0.09) + ')';
+            g.fillRect(sq.x - I.PIXEL * 0.9, sq.y - I.PIXEL * 0.9, I.PIXEL * 1.8, I.PIXEL * 1.8);
+          }
+          var spin = k * Math.PI * 6;
+          g.save();
+          g.translate(lp.x, lp.y); g.rotate(spin);
+          g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(-I.PIXEL * 3.3, -I.PIXEL * 2.2, I.PIXEL * 6.6, I.PIXEL * 4.4);
+          g.fillStyle = '#48503a'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 3.8);
+          g.fillStyle = '#8a9470'; g.fillRect(-I.PIXEL * 3, -I.PIXEL * 1.9, I.PIXEL * 6, I.PIXEL * 1.1);
+          g.fillStyle = '#c9c2a4'; g.fillRect(-I.PIXEL * 0.6, -I.PIXEL * 1.9, I.PIXEL * 1.2, I.PIXEL * 3.8);   // the band round it
+          g.restore();
+          var fz = 0.6 + 0.4 * Math.sin(k * 90);
+          I.ellipse(g, lp.x + Math.cos(spin) * I.PIXEL * 3.6, lp.y + Math.sin(spin) * I.PIXEL * 3.6,
+            I.PIXEL * 2, I.PIXEL * 2, 'rgba(' + grgb + ',' + fz + ')');
+          var gs = { x: la.x + (lb.x - la.x) * k, y: la.y + (lb.y - la.y) * k + I.K * 0.8 };
+          I.ellipse(g, gs.x, gs.y, I.PIXEL * 2, I.PIXEL * 1, 'rgba(10,9,7,.25)');
+          return;
+        }
         // the smoke trail, hanging most of the way back to the tube
         for (var tr = 1; tr < 22; tr++) {
           var ts = k - tr * 0.045;
@@ -16496,14 +16524,16 @@
     { rule: 'Jammers', name: 'Jam', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 24, rgb: '200,215,225', dash: true, dur: 1800 }]; }, sfx: 'shimmer' },
     { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
     { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
-    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '255,200,80', dur: 1600 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 300, dur: 2100 }]; }, sfx: 'zap' },
+    // a smoke grenade thrown onto the mark, bursting where it lands, the flare burning in it
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: TO.x, y: TO.y }, dur: 750 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 720, dur: 2500 }]; } },
     { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
     { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
     { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },
     { rule: 'Teleport', name: 'Teleport', play: function () { return [{ kind: 'teleportin', x: TO.x, y: TO.y, r: 1.4, dur: 1500 }]; }, sfx: 'shimmer' },
     { rule: 'Molecular Reconstruction', name: 'Self-repair', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1600 }]; }, sfx: 'shimmer' },
     { rule: 'Psychic Support', name: 'Psychic Support', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 6, dur: 1300 }]; }, sfx: 'wave' },
-    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }]; }, sfx: 'clash' },
+    /* the leader's shout, and the unit it reaches throwing off its Suppression to charge */
+    { rule: 'Death or Glory, Comrades!', name: 'Death or Glory', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '235,85,70', dur: 1300 }, { kind: 'beam', x: u.x, y: u.y, tx: TO.x, ty: TO.y, rgb: '235,85,70', dur: 1100 }, { kind: 'wave', x: TO.x, y: TO.y, up: 0, r: 3, rgb: '235,85,70', delay: 350, dur: 1400 }, { kind: 'rise', x: TO.x, y: TO.y, rgb: '235,85,70', n: 10, delay: 350, dur: 1700 }]; }, sfx: 'clash' },
     { rule: '…but they\'ll never take our freedom!', name: 'Rally cry', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '240,120,80', dur: 1400 }, { kind: 'rise', x: u.x, y: u.y, rgb: '240,120,80', n: 8, dur: 1400 }]; }, sfx: 'chime' },
     { rule: 'Command Unit', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
     { rule: 'Command Vehicle', name: 'Command', play: function (u) { return [{ kind: 'wave', x: u.x, y: u.y, r: 12, rgb: '232,193,90', dur: 1500 }]; }, sfx: 'chime' },
