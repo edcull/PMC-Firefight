@@ -284,9 +284,9 @@ console.log('trauma');
 vc.roster[0].traumas = [4];
 const ts = C.traumaStats(vc);
 ok('one Battle Trauma across 10 units is 10% trauma', ts.pct === 0.1 && ts.word === 'trauma' && ts.noun === 'Battle Trauma', (ts.pct * 100) + '% ' + ts.word);
-ok('the swarm calls it defects, of Genetic Flaws', (() => {
+ok('the swarm calls it flaws, of Genetic Flaws', (() => {
   const b = C.newCompany('S', { faction: 'bugs' }); b.roster = [C.newEntry('bsmall'), C.newEntry('battack')]; b.roster[0].traumas = [1, 2];
-  const st = C.traumaStats(b); return st.word === 'defects' && st.noun === 'Genetic Flaws' && st.pct === 1;
+  const st = C.traumaStats(b); return st.word === 'flaws' && st.noun === 'Genetic Flaws' && st.pct === 1;
 })());
 ok('the tribe calls it infamy, of Infamies', C.traumaStats(C.newCompany('T', { faction: 'xeno' })).word === 'infamy');
 

@@ -844,7 +844,7 @@
     var traumas = (co.roster || []).reduce(function (n, e) { return n + (e.traumas || []).length; }, 0);
     var units = (co.roster || []).length;
     return {
-      word: f === 'bugs' ? 'defects' : f === 'xeno' ? 'infamy' : 'trauma',
+      word: f === 'bugs' ? 'flaws' : f === 'xeno' ? 'infamy' : 'trauma',
       traumas: traumas, units: units, pct: units ? traumas / units : 0,
       noun: traumas === 1 ? words(co).trauma : words(co).traumas
     };

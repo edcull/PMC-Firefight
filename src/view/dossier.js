@@ -484,7 +484,10 @@
 
   /* The Company Tier as a badge, in the force's own word for it on hover. */
   function tierBadge(co) {
-    return '<span class="tierbadge" title="' + esc(C.words(co).tier + ' Tier ' + ROMAN[co.tier]) + '">' + ROMAN[co.tier] + '</span>';
+    // in the force's own colours
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
+    var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+    return '<span class="tierbadge"' + st + ' title="' + esc(C.words(co).tier + ' Tier ' + ROMAN[co.tier]) + '">' + ROMAN[co.tier] + '</span>';
   }
   /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
   function statRow(co, rival) {
