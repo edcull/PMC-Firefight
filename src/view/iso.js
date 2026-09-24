@@ -2424,14 +2424,22 @@
        green sash; the mujahideen are veterans, faces wrapped, heavy weapons in
        the ranks */
     holy1: ['acolyte', 'acolyte2'],
-    holy2: ['zealot', 'zealot2', 'flagellant'],
-    holy3: ['enlight', 'enlight2', 'enlight'],
+    // fanatics: tan robes and turbans, one of them with an RPG
+    holy2: ['zealot', 'zealotrpg', 'zealot2', 'zealot'],
+    // the enlightened: a mix of tan and olive, one RPG among them; turbans as the fanatics
+    // wind them — tan, the leader's white and one black
+    holy3: ['enlightlead', 'enlightrpg', 'enlight2', 'enlightblack', 'enlight2', 'enlight'],
+    // the mujahideen: all in olive
     holy4: ['mujlead', 'mujsaw', 'mujrpg', 'muj'],
     guard: ['guardlead', 'guardflag', 'guardrifle', 'guardrifle'],
-    rider: ['rider'],
+    /* The Mounted Warriors dress as the Holy Warriors of their standing: a rider
+       gang as acolytes, rider warriors as fanatics, hellriders as the
+       enlightened, and the legendary hellriders as mujahideen. */
+    rider: ['rider', 'rider', 'riderblack', 'rider'],
     ridergang: ['biker', 'biker2'],
-    hellrider: ['hellrider'],
-    legendrider: ['legendrider'],
+    hellrider: ['hellriderlead', 'hellrider', 'hellriderblack', 'hellridertan'],
+    // the legendary hellriders are the mujahideen in the saddle, man for man
+    legendrider: ['legendlead', 'legendsaw', 'legendrpg', 'legendrider'],
     rebac: ['rebacgunner', 'rebloader', 'rebrifle'],
     rebhac: ['rebacgunner', 'rebloader', 'gunloader'],
     rebelmg: ['rebgunner', 'rebloader', 'rebrifle'],
@@ -2449,13 +2457,20 @@
     // conscripts, still with the old wooden-furnitured rifles they were issued
     conscript: ['conscript', 'conscript2'],
     pow: ['pow', 'pow2'],
-    leader: ['agitator', 'standard', 'guardrifle'],
+    /* The leader himself grows grander up the Tiers: an acolyte with a rifle
+       (Instigators), a fanatic in tan and then in olive (Secondary and Insurgent
+       leaders), one of the enlightened with the side's sash and no weapon at all
+       (Influential leaders), and at the top a man in a black turban and the
+       side's sash, a gold-hilted blade at his belt, with the Insurgent leader's
+       figure beside him as his second (Rebellion leaders). The Insurgent leader's turban is white. */
+    leader: ['lead1', 'standard', 'guardrifle'],
     // insurgent leaders fly a small flag in the side's colour; the great leaders a large one
-    leadersmall: ['agitator', 'flagsmall', 'guardrifle'],
+    leadersmall: ['lead2', 'flagsmall', 'guardrifle'],
     // insurgent leaders carry the same big flag as the influential ones
-    leadermid: ['agitator', 'flagbig', 'guardrifle'],
-    leaderbig: ['agitator', 'flagbig', 'guardrifle', 'guardrifle'],
-    leaderhuge: ['agitator', 'flaghuge', 'guardrifle', 'guardrifle'],
+    leadermid: ['lead3', 'flagbig', 'guardrifle'],
+    leaderbig: ['lead4', 'flagbig', 'guardrifle', 'guardrifle'],
+    // the Rebellion's leader has a second at his side: the Insurgent leader's figure
+    leaderhuge: ['lead5', 'flaghuge', 'lead3black', 'guardrifle'],
     // the Riders upgrade (p. 93) puts the same troops on bikes and beasts
     holymounted: ['zealotrider'],
     holy1mounted: ['zealotrider'], holy2mounted: ['zealotrider'], holy3mounted: ['zealotrider'], holy4mounted: ['zealotrider'],
@@ -2618,20 +2633,35 @@
     zealot2: { helm: 'turban', gun: 'carbine', armband: 'force', pack: 'none', tunic: true, wrap: '#26262a', vest: '#4a3a2a', tint: HOLY_C },
     acolyte: { helm: 'pakol', gun: 'smg', armband: 'force', pack: 'none', tunic: true, vest: HOLY_A.mid, young: true, tint: HOLY_A },
     acolyte2: { helm: 'bare', gun: 'huntingrifle', armband: 'force', pack: 'none', tunic: true, vest: HOLY_C.mid, young: true, tint: HOLY_C },
-    enlight: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
-    enlight2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', tint: HOLY_A },
+    // one fanatic carries the RPG; the rest are the same tan robes and turbans
+    zealotrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', tint: HOLY_A },
+    enlightrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', tint: HOLY_B },
+    enlight: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
+    enlightlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, tint: HOLY_B },
+    enlightblack: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
+    enlight2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', tint: HOLY_A },
     mujlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
-    mujsaw: { helm: 'turban', gun: 'saw', armband: 'force', pack: 'ammo', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, bulk: 1, tint: HOLY_C },
-    mujrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, tint: HOLY_A },
+    mujsaw: { helm: 'turban', gun: 'saw', armband: 'force', pack: 'ammo', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, bulk: 1, tint: HOLY_B },
+    mujrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, tint: HOLY_B },
     muj: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, bandolier: true, tint: HOLY_B },
     // mounted warriors, over the tank of a stripped-down bike
-    rider: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#c9bfa4', vest: '#4a3f2e', armband: 'force', tint: HOLY_A },
+    // rider warriors: the fanatics' tan robes and pale turbans, one of them black
+    rider: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', armband: 'force', tint: HOLY_A },
+    riderblack: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#26262a', vest: '#4a3a2a', armband: 'force', tint: HOLY_C },
     // the gang: open-face biker helmets and black leathers
-    biker: { helm: 'turban', gun: 'smg', pack: 'none', mount: true, tunic: true, wrap: '#b8ac8a', vest: '#3b3a30', armband: 'force', tint: HOLY_C },
-    biker2: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#8a7a5a', vest: '#4a3a2a', armband: 'force', tint: HOLY_C },
+    // a rider gang: the acolytes' long tan shirts, a round cap or nothing on the head
+    biker: { helm: 'pakol', gun: 'smg', pack: 'none', mount: true, tunic: true, vest: HOLY_A.mid, armband: 'force', young: true, tint: HOLY_A },
+    biker2: { helm: 'bare', gun: 'carbine', pack: 'none', mount: true, tunic: true, vest: HOLY_C.mid, armband: 'force', young: true, tint: HOLY_C },
     // hellriders: spiked helmets, spiked shoulders, flames on the tank and a heavy gun
-    hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#26262a', vest: '#22241e', facewrap: true, bandolier: true, armband: 'force', tint: HOLY_B },
-    legendrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, cape: true, mark: true, nvg: true, armband: 'force', tint: HOLY_B },
+    // hellriders: the enlightened's tan and olive and green sash, turbans tan, the leader's white, one black
+    hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
+    hellriderlead: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, armband: 'force', tint: HOLY_B },
+    hellriderblack: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
+    hellridertan: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', armband: 'force', tint: HOLY_A },
+    legendlead: { helm: 'turban', mount: true, gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
+    legendsaw: { helm: 'turban', mount: true, gun: 'saw', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, bulk: 1, tint: HOLY_B },
+    legendrpg: { helm: 'turban', mount: true, gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, tint: HOLY_B },
+    legendrider: { helm: 'turban', mount: true, gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, bandolier: true, tint: HOLY_B },
     // scavenged heavy weapons, worked without much training
     rebgunner: { helm: 'std', gun: 'mg', forceHelm: true, pack: 'none', kneel: true, bulk: 1, ragged: true, tint: REBEL_DRAB },
     rebloader: { helm: 'std', gun: 'pistol', forceHelm: true, pack: 'ammo', kneel: true, ragged: true, tint: REBEL_DRAB },
@@ -2664,6 +2694,14 @@
     pow2: { helm: 'bandana', gun: 'smg', armband: 'force', pack: 'none', ragged: true, band: '#5a5a50', tint: REBEL_WORN },
     // First Among Equals: a pistol, a megaphone and the group's colours on a pole
     // the leader himself: a mujahideen veteran in the fanatics' white turban, the green sash of command
+    // the rebel leader, Tier by Tier (see the leader roles)
+    lead1: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: HOLY_A.mid, mark: true, tint: HOLY_A },
+    lead2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_A },
+    lead3: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
+    // the Rebellion leader's second: the Insurgent leader's figure, in a black turban like his chief's
+    lead3black: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
+    lead4: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
+    lead5: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#1c1c1e', vest: '#1c1e18', sash: 'force', blade: true, mark: true, bulk: 1, tint: HOLY_B },
     // the leader himself: the turban and the sash in the side's own colour
     agitator: { helm: 'turban', gun: 'battlerifle', pack: 'std', tunic: true, wrap: 'force', vest: '#1c1e18', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
     standard: { helm: 'beret', gun: 'banner', plainFlag: true, pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
@@ -3170,6 +3208,13 @@
       var shc = kit.sash === 'force' ? vividHex(pal.forceMid || PALETTE_FORCE(pal), 3, 1.25) : kit.sash;
       for (var sh2 = 0; sh2 < 6; sh2++) P(tx + tw - 5 - sh2 * 2.4, -41 + drop + sh2 * 3.2, 4, 3.4, shc);
       if (kit.sash === 'force') for (var sh3 = 0; sh3 < 6; sh3++) P(tx + tw - 5 - sh3 * 2.4, -41 + drop + sh3 * 3.2, 4, 0.8, 'rgba(255,255,255,.3)');
+    }
+    if (kit.blade) {                                    // a curved sword at the belt, gold at the hilt
+      P(tx + tw - 3, -27 + drop, 2.4, 13, '#2a1f14');      // the scabbard
+      P(tx + tw - 2.2, -15 + drop, 3, 2, '#2a1f14');       // curving at the tip
+      P(tx + tw - 4, -29.5 + drop, 5, 1.6, '#e0b43a');     // the guard
+      P(tx + tw - 2.6, -32.5 + drop, 1.8, 3.2, '#c9a13a'); // the grip
+      P(tx + tw - 2.8, -33.4 + drop, 2.2, 1.2, '#f0cf6a'); // the pommel
     }
     if (kit.grenades) {                                 // a belt hung with grenades, and a bandolier of them
       for (var gr2 = 0; gr2 < 5; gr2++) {
