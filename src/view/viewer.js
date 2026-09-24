@@ -42,11 +42,16 @@
 
   /* Put a unit on the stage: every model, a state it can be in (a tank cannot
      be suppressed), and a ground vehicle on the running gear it usually has. */
+  // each army's own colour, put on when the viewer turns to one of its units
+  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
   function choose(k) {
+    var wasFac = view.pickFac;
     view.key = k; view.models = null; view.tele = null;
     view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
+    // a different army wears its own colour; a colour picked for this one stays while browsing it
+    if (view.pickFac !== wasFac && ARMY_COLOUR[view.pickFac]) paint('A', ARMY_COLOUR[view.pickFac]);
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
     if (p.cls === 'vehicle' && !R.alienHull(p)) view.prop = R.defaultDrive(p);
   }
