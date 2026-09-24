@@ -124,6 +124,7 @@
   function resetShow() {
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
+    pendingArrive = {};
     anims.forEach(function (an) { if (an.unit) an.unit.burrow = null; });
     anims.length = 0;
     FX.clear && FX.clear();
@@ -185,10 +186,17 @@
      One event at a time, waiting for the animation each one starts before the
      next goes in. That is the pacing the game has always had: the shot is
      drawn, and only when it lands does the card come up. */
+  /* A unit whose arrival is still waiting in the queue is already on the
+     table in the state that came with it — but it is not drawn until the
+     arrival plays, so an AI's Battlefield Insertion does not sit there through
+     the beat before its drop. Kept by id: a networked state is rebuilt each turn. */
+  var pendingArrive = {};
+  function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
   var show = {
     queue: [],
     running: false,
     play: function (events) {
+      (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
       this.queue = this.queue.concat(events || []);
       this.pump();
     },
@@ -317,6 +325,7 @@
         return;
       }
       case 'arrive': {
+        delete pendingArrive[ev.id];
         var au = evUnit(ev.id);
         if (!au) return;
         if (ev.how === 'drop') landUnit(au);
@@ -2903,6 +2912,7 @@
           return;
         }
         var u = it.unit, ax = dispX(u), ay = dispY(u);
+        if (arrivalQueued(u)) return;                 // its arrival has not played yet
         var arr = arriving(u);
         if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
         if (arr.hidden) return;                       // teleporting in, or under the ground: not here yet
