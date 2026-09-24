@@ -415,16 +415,17 @@
     view.strafeAt = Date.now();
     view.facing = 0;
     var fired = 0, guns = 7;
+    var hitRGB = R.isXeno(unit()) ? glowRGB() : unit().faction === 'bugs' ? '150,220,80' : null;
     (function burst() {
       if (fired >= guns || !view.strafeAt) return;
       var f = 0.2 + (fired / (guns - 1)) * 0.6;
       var x = FROM.x - 6 + (TO.x + 6 - (FROM.x - 6)) * f;
       FX.add({ kind: 'muzzle', x: x, y: FROM.y, dur: 180 });
-      FX.add({ kind: 'impact', x: x, y: FROM.y, n: 3, dur: 320 });
+      FX.add({ kind: 'impact', x: x, y: FROM.y, n: 3, rgb: hitRGB, dur: 320 });
       for (var d3 = 0; d3 < 3; d3++) {
         FX.add({
           kind: 'miss', x: x + (Math.random() - 0.5) * 2.4, y: FROM.y + (Math.random() - 0.5) * 2.4,
-          dur: 380 + Math.random() * 220
+          rgb: hitRGB, dur: 380 + Math.random() * 220
         });
       }
       if (view.sound && SFX) SFX.strafe(R.isXeno(unit()) ? 'xeno' : unit().faction, R.weaponStyle(unit()));

@@ -780,7 +780,7 @@
         for (var m = 0; m < 5; m++) {
           var a2 = m * 1.3 + f.t0;
           I.rect(g, p3.x + Math.cos(a2) * k * I.K * 1.4, p3.y + Math.sin(a2) * k * I.K * 0.7 - k * 5,
-            I.PIXEL, I.PIXEL, 'rgba(150,138,112,' + (0.7 - k * 0.7) + ')');
+            I.PIXEL, I.PIXEL, 'rgba(' + (f.rgb || '150,138,112') + ',' + (0.7 - k * 0.7) + ')');
         }
       } else if (f.kind === 'clash') {
         var p4 = I.toScreen(f.x, f.y); p4.y -= liftAt(f) + I.K;
