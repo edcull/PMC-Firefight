@@ -144,8 +144,12 @@ var mls = R.shotMods(table([rifle, ls], [wall]), rifle, ls, 'fire', {});
 ok('Last Stand: +4 behind a low wall too', mls.def.value === ls.def + 4, 'Defence ' + mls.def.value);
 var gun = unit('rmedart', { side: 'B', x: 10, y: 30, dugIn: true });
 if (R.profile('rmedart')) {
+  gun.facing = Math.atan2(rifle.y - gun.y, rifle.x - gun.x);          // dug in facing the rifles
   var mg = R.shotMods(table([rifle, gun]), rifle, gun, 'fire', {});
   ok('a dug-in gun has its sandbags', mg.def.value === gun.def + 2, 'Defence ' + mg.def.value);
+  gun.facing += Math.PI / 2;                                          // ...and the same shot, into its flank
+  var mf = R.shotMods(table([rifle, gun]), rifle, gun, 'fire', {});
+  ok('...across its front only, not in the flank', mf.def.value === gun.def, 'Defence ' + mf.def.value);
 }
 var shadow = unit('bshadow', { side: 'B', x: 10, y: 30 });
 var ms = R.shotMods(table([rifle, shadow]), rifle, shadow, 'fire', {});
