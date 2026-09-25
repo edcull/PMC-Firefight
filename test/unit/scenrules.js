@@ -161,7 +161,7 @@ ok('a game never ends before turn 12', endRate(11), 0);
 ok('...ends on a 6 at turn 12', Math.abs(endRate(12) - 17) <= 3, true, endRate(12) + '%');
 ok('...on a 5+ at turn 13', Math.abs(endRate(13) - 33) <= 4, true, endRate(13) + '%');
 ok('...on a 4+ at turn 14', Math.abs(endRate(14) - 50) <= 4, true, endRate(14) + '%');
-ok('...and never becomes certain', endRate(20) < 100, true, endRate(20) + '% at turn 20');
+ok('...and ends for certain five turns on', endRate(17), 100);
 
 /* -------------------------------------------------------- attacker and defender */
 head('Attacker and defender');

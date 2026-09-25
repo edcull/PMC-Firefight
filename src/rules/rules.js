@@ -1418,6 +1418,16 @@
     r.top.forEach(function (q) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
     return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, poly: r.top };
   }
+  /* Aircraft may end a move over any terrain but "very high objects, such as very
+     high buildings or mountain peaks" (p. 38): here a high or reinforced
+     building, and the crown of a stepped hill. */
+  function tooHighToHover(state, x, y) {
+    if (groundLevel(state, x, y) >= 2) return true;
+    return state.terrain.some(function (r) {
+      if (r.kind !== 'building' && r.kind !== 'bunker') return false;
+      return sectionsOf(r).some(function (q) { return inRect(x, y, q) && sectionHigh(r, q); });
+    });
+  }
   function onHill(state, p) { return !!p && p.x >= 0 && terrainAt(state, p.x, p.y) === 'hill'; }
 
   function unitNear(state, x, y, ignore, pad) {
@@ -2428,6 +2438,7 @@
      sight and barring the ground, and whoever was inside has to get out. */
   function isDestructible(r) {
     var t = TERRAIN[r && r.kind];
+    if (r && r.reinforced) return false;               // a reinforced wall stands whatever is thrown at it (p. 41)
     return !!(t && t.destructible);
   }
   function destructibleKind(r) {
@@ -4237,7 +4248,7 @@
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
     canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding, exitSpots: exitSpots,
-    exitBuilding: exitBuilding, leaveAway: leaveAway, rectPointDist: rectPointDist, onHill: onHill,
+    exitBuilding: exitBuilding, leaveAway: leaveAway, rectPointDist: rectPointDist, onHill: onHill, tooHighToHover: tooHighToHover,
     unitNear: unitNear, clampBoard: clampBoard, pointSegDist: pointSegDist,
     has: has, ruleValue: ruleValue, currentMorale: currentMorale, status: status,
     projects: projects, markCall: markCall, holdsGround: holdsGround, countsForVictory: countsForVictory,

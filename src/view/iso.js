@@ -1334,7 +1334,7 @@
           props.push({
             kind: 'wallrun', x: whz ? r.x + wm : r.x + r.w / 2, y: whz ? r.y + r.h / 2 : r.y + wm,
             horiz: whz, len: wsl, first: ws === 0, last: ws === wn - 1, wire: wire, height: wh3,
-            seed: (wr() * 9999) | 0
+            reinforced: !!r.reinforced, seed: (wr() * 9999) | 0
           });
         }
         return;
@@ -2061,7 +2061,8 @@
            odd crack and bullet pock, and on some walls a coil of razor wire. */
         var wr2 = rng(pr.seed), lf2 = lift || 0;
         var ux2 = pr.horiz ? 1 : 0, uy2 = pr.horiz ? 0 : 1, vx2 = 1 - ux2, vy2 = 1 - uy2;
-        var L2 = pr.len, T2 = 0.22, H2 = pr.height;
+        // a reinforced wall (p. 41) is thicker, and banded at the foot so it reads as one that stays up
+        var L2 = pr.len, T2 = pr.reinforced ? 0.36 : 0.22, H2 = pr.height;
         function Q(t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; }
         function slab(t0, t1, v0, v1, z0, z1, pal2) {
           // the near side and the far end in shade, the top lit
@@ -2080,6 +2081,14 @@
           edgeLine(g, Q(tj, T2, 1), Q(tj, T2, H2 - 1), CONCRETE[1], 1);
         }
         edgeLine(g, Q(h0, T2, H2 * 0.5), Q(h1, T2, H2 * 0.5), 'rgba(40,38,34,.35)', 1);   // the pour line
+        if (pr.reinforced) {
+          // hazard chevrons along the foot of the face that shows
+          var nb = Math.max(2, Math.round(L2 / 0.35)), bz = Math.max(2, H2 * 0.14);
+          for (var hb = 0; hb < nb; hb++) {
+            var ta = h0 + (h1 - h0) * hb / nb, tb = h0 + (h1 - h0) * (hb + 1) / nb;
+            poly(g, [Q(ta, T2, 0), Q(tb, T2, 0), Q(tb, T2, bz), Q(ta, T2, bz)], hb % 2 ? '#26241f' : '#c9a23a');
+          }
+        }
         for (var gm = 0; gm < 26; gm++) {
           var gt = h0 + wr2() * L2, gz = wr2() * wr2() * H2 * 0.5;
           var gq = Q(gt, T2, gz); dot(g, gq[0], gq[1], 'rgba(40,34,26,.5)', 1);

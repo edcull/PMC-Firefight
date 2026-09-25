@@ -4937,7 +4937,10 @@
       if (spot) extra += '<br>Reachable — ' + spot.cost.toFixed(1) + '" of movement';
     }
 
-    tip.innerHTML = '<b>' + t.name + '</b><span>' + bits.join(' · ') + '</span>' +
+    // a reinforced wall is a high wall that stays up
+    var rw = tk === 'wall' && state.terrain.some(function (r) { return r.kind === 'wall' && r.reinforced && R.inRect(p.x, p.y, r); });
+    if (rw) bits = bits.filter(function (b) { return b !== 'can be brought down'; }).concat(['cannot be destroyed']);
+    tip.innerHTML = '<b>' + (rw ? 'Reinforced wall' : t.name) + '</b><span>' + bits.join(' · ') + '</span>' +
       (extra ? '<em>' + extra + '</em>' : '');
     tip.hidden = false;
 
@@ -5967,6 +5970,8 @@
     if (hotQuick(kind)) s.dataset.quick = '1'; else delete s.dataset.quick;
     // set on the first force only: changing one force from the battlefield must not leave the other illegal
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(hotQuick(kind) && step === 3)) || !!h.edit; });
+    // solitaire and co-op: Priority Level 1 a player, fixed
+    if ((kind === 'solo' || kind === 'coop') && el('sel-pl')) { el('sel-pl').value = '1'; el('sel-pl').disabled = true; }
     // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
     catModal(false);
@@ -6056,6 +6061,7 @@
     }
     var a = h.sides[0], b = h.sides[1], tier = musterTier(), pl = musterPL();
     var commando = h.kind === 'coop' || h.kind === 'solo';
+    if (commando) pl = 1;                            // each commando is Priority Level 1 (p. 147)
     // a force still to be mustered (or no longer legal): open it rather than take the field
     for (var si = 0; si < h.sides.length; si++) {
       var sd = h.sides[si];
@@ -6150,7 +6156,7 @@
      legal; the OpFor pool is rolled against its own table, a Priority Level
      higher for every extra player (p. 147). */
   function startSolo() {
-    var tier = musterTier(), pl = musterPL();
+    var tier = musterTier(), pl = 1;                 // Priority Level 1 a player (p. 147)
     var coop = el('sel-solo-mode').value === 'coop';
     soloSave();
     var plist = coop ? muster.players.slice(0, 2) : [muster.players ? muster.players[0] : { keys: muster.keys, faction: musterFaction() }];
@@ -6612,7 +6618,8 @@
     kind = kind || 'demo';
     var tierSel = el('sel-tier'), plSel = el('sel-pl');
     if (tierSel) tierSel.value = '3';
-    if (plSel) plSel.value = '2';
+    // a commando is always Priority Level 1 a player (p. 147): the OpFor grows with the players instead
+    if (plSel) plSel.value = kind === 'solo' || kind === 'coop' ? '1' : '2';
     hotBegin(kind);                                   // force 1, rolled
     hotSaveSide();
     if (kind !== 'solo') { muster.hot.step = 2; hotLoadSide(1); hotSaveSide(); }   // force 2, rolled, in another colour

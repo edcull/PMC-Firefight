@@ -235,7 +235,7 @@
 
   function rollEnd(state, after) {
     if (state.turn < after) return false;
-    var need = Math.max(2, 6 - (state.turn - after));
+    var need = Math.max(1, 6 - (state.turn - after));   // five turns on, any roll ends it
     var roll = d6();
     state.sc.lastEndRoll = { roll: roll, need: need };
     return roll >= need;

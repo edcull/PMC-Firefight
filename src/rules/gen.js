@@ -48,7 +48,7 @@
         { text: '1-3 hills or pools of shallow water', alts: [[P('hill', 1, 3)], [P('water', 1, 3)]] },
         { text: '1-4 ruins or rubble-covered areas', alts: [[P('ruins', 1, 4)], [P('crater', 1, 4)]] },
         { text: '1-3 buildings or reinforced buildings', alts: [[P('building', 1, 3)], [P('bunker', 1, 3)]] },
-        { text: '1-6 buildings and 1-6 low or reinforced walls', alts: [[P('building', 1, 6), P('barricade', 1, 6)], [P('building', 1, 6), P('wall', 1, 6)]] }
+        { text: '1-6 buildings and 1-6 low or reinforced walls', alts: [[P('building', 1, 6), P('barricade', 1, 6)], [P('building', 1, 6), P('wall', 1, 6, { reinforced: true })]] }
       ]
     },
     industrial: {
@@ -92,7 +92,7 @@
         { text: 'High impassable terrain (a volcano)', alts: [[P('rocks', 1, 1, { big: true })]] },
         { text: '1-4 rubble-covered areas', alts: [[P('crater', 1, 4)]] },
         { text: '1-4 hills or rocks', alts: [[P('hill', 1, 4)], [P('rocks', 1, 4)]] },
-        { text: 'Outpost: 1-3 reinforced buildings behind reinforced walls', alts: [[P('bunker', 1, 3), P('wall', 2, 6)]], once: true }
+        { text: 'Outpost: 1-3 reinforced buildings behind reinforced walls', alts: [[P('bunker', 1, 3), P('wall', 2, 6, { reinforced: true })]], once: true }
       ]
     }
   };
@@ -206,9 +206,11 @@
       });
     }
     walls.forEach(function (wl) {
-      var left = wl.n;
+      var left = wl.n, from = placed.length;
       if (built.length) left -= enclose(wl.spec, left, built, area, existing, placed, objectives, rand, W, H);
       if (left > 0) runOfWall(wl.spec, left, area, existing, placed, objectives, rand, W, H, inset);
+      // reinforced walls (p. 41): a high wall that nothing brings down
+      if (wl.spec.reinforced) for (var ri2 = from; ri2 < placed.length; ri2++) placed[ri2].reinforced = true;
     });
     var RR = root.PMC;
     if (RR && RR.shapePiece) placed.forEach(function (p) { RR.shapePiece(p, rand); });
