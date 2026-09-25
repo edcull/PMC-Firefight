@@ -193,6 +193,9 @@
      arrival plays, so an AI's Battlefield Insertion does not sit there through
      the beat before its drop. Kept by id: a networked state is rebuilt each turn. */
   var pendingArrive = {};
+  function moveQueued(u) {
+    return !!u && show.queue.some(function (ev) { return ev.e === 'move' && ev.id === u.id; });
+  }
   function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
   /* The battle arrives already resolved, and what happened is played out after
      it. Until each part plays, the table should show things as they stood: a
@@ -1528,7 +1531,15 @@
         an.unit.ay = an.from.y + (an.to.y - an.from.y) * k;
       }
       if (k >= 1) {
-        if (an.kind === 'move') { an.unit.ax = an.unit.ay = null; an.unit.walk = 0; an.unit.hop = 0; an.unit.arc = 0; an.unit.burrow = null; }
+        if (an.kind === 'move') {
+          an.unit.walk = 0; an.unit.hop = 0; an.unit.arc = 0; an.unit.burrow = null;
+          /* The state is already where everything still queued leaves it. A unit
+             with another move to come waits at the end of this one — and shoots
+             from there — rather than jumping ahead to where its last move ends. */
+          var endAt = an.segs[an.segs.length - 1].b;
+          if (moveQueued(an.unit)) { an.unit.ax = endAt.x; an.unit.ay = endAt.y; }
+          else an.unit.ax = an.unit.ay = null;
+        }
         if (an.kind === 'strafe') { an.unit.ax = an.unit.ay = null; }
         if (an.done) an.done();
       } else alive.push(an);
@@ -6743,6 +6754,7 @@
   window.__showQueue = function () { return show.queue.length; };
   window.__held = function () { return Object.keys(held).length; };
   window.__busy = function () { return busy(); };
+  window.__busyWhy = function () { return { anims: anims.map(function (a) { return a.kind + ':' + Math.round(nowMs() - a.t0) + '/' + a.dur; }), arriving: anyArriving(), fx: FX.busy(), fxk: FX.kinds ? FX.kinds() : null, idle: idleCbs.length, loop: !!loop }; };
   window.__uiMode = function () { return ui.mode; };
   window.__uiCounts = function () { return { targets: ui.targets.length, moves: ui.moves.length, terrain: ui.terrain.length }; };
   window.__pressCancel = function () { send({ k: 'cancel' }); };

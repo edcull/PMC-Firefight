@@ -9620,7 +9620,7 @@
              a pointed nose, the crew in stepped tandem under flat-plated glass,
              short swept stubs carrying the lift fans and no pods at all (its
              weapons ride in bays in the flanks), and a fan in the fin. */
-          var cw = w * 0.72;
+          var cw = w * 0.86;
           var cbody = [[L * 0.52, 0.001], [L * 0.36, cw * 0.62], [L * 0.16, cw], [-L * 0.2, cw], [-L * 0.32, cw * 0.55],
             [-L * 0.32, -cw * 0.55], [-L * 0.2, -cw], [L * 0.16, -cw], [L * 0.36, -cw * 0.62]];
           // the top is much narrower than the chines: the sides slope in, as a faceted hull does
@@ -9662,9 +9662,8 @@
             var ns = nearSide();
             var b0 = S3(AF(L * 0.1, ns * cw * 0.99), z + H * 0.3), b1 = S3(AF(-L * 0.16, ns * cw * 0.99), z + H * 0.3);
             edge(g, b0, b1, 'rgba(10,9,7,.45)', 0.8);
-            // stepped tandem canopies: the gunner low in front, the pilot behind and above
-            canopy(L * 0.2, L * 0.42, cw * 0.44, z + H * 0.74, H * 0.24);
-            canopy(L * 0.02, L * 0.2, cw * 0.48, z + H * 0.82, H * 0.3);
+            // one pilot under one long, flat-plated canopy
+            canopy(L * 0.04, L * 0.4, cw * 0.46, z + H * 0.78, H * 0.28);
           });
           // the chin gun, and the Gauss rails fire from it too
           part(L * 0.45, 0, function () { noseGun(L * 0.34, 0, z + 1, 0.3, 'gun', { rail: true, also: ['rail', 'auto', 'mg'] }); });
