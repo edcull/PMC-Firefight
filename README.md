@@ -113,7 +113,7 @@ browser.
 `index.html` carries the markup and all the CSS, and pulls the scripts in with
 `<script src>` tags. Opening `index.html` directly works too, and is the easier
 way to develop — the browser reloads each file separately. The server lives in
-`server/` and `server.js`; the design notes are in `docs/`.
+`server/` and `server.js`.
 
 ### Building
 

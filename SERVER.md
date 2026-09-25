@@ -98,7 +98,6 @@ test/where.js        where the tests are, relative to everything else
 
 scripts/             build, gallery, and the tools that performed the split
 build/               the built pages (kept, so a clone can play); shots/ is not kept
-docs/                design notes
 ```
 
 src/ is split by what a file is rather than by what it belongs to: the rulebook
