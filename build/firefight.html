@@ -14975,11 +14975,14 @@
     /* The Mounted Warriors dress as the Holy Warriors of their standing: a rider
        gang as acolytes, rider warriors as fanatics, hellriders as the
        enlightened, and the legendary hellriders as mujahideen. */
-    rider: ['rider', 'rider', 'riderblack', 'rider'],
-    ridergang: ['biker', 'biker2'],
-    hellrider: ['hellriderlead', 'hellrider', 'hellriderblack', 'hellridertan'],
+    /* the riders, a step up the list each: armed civilians on their own bikes,
+       then the young bikers, then the turbaned riders, and the Legendary
+       Hellriders in what the Hellriders wore, a rocket launcher among them */
+    rider: ['biker', 'biker2'],
+    ridergang: ['civrider1', 'civrider2', 'civrider3', 'civrider4'],
+    hellrider: ['rider', 'rider', 'riderblack', 'rider'],
     // the legendary hellriders are the mujahideen in the saddle, man for man
-    legendrider: ['legendlead', 'legendsaw', 'legendrpg', 'legendrider'],
+    legendrider: ['hellriderlead', 'hellrider', 'hellriderrpg', 'hellridertan'],
     rebac: ['rebacgunner', 'rebloader', 'rebrifle'],
     rebhac: ['rebacgunner', 'rebloader', 'gunloader'],
     rebelmg: ['rebgunner', 'rebloader', 'rebrifle'],
@@ -15181,6 +15184,10 @@
     civ3: { helm: 'bandana', gun: 'carbine', pack: 'none', armband: 'force', band: '#4a5560', tint: CIV_C },
     civ4: { helm: 'bare', gun: 'shotgun', pack: 'none', ragged: true, armband: 'force', tint: CIV_D },
     civ5: { helm: 'scarf', gun: 'huntingrifle', pack: 'none', armband: 'force', tint: CIV_E },
+    civrider1: { mount: true, helm: 'bare', gun: 'huntingrifle', pack: 'none', ragged: true, armband: 'force', tint: CIV_A },
+    civrider2: { mount: true, helm: 'cap', gun: 'pistol', pack: 'none', ragged: true, armband: 'force', tint: CIV_B },
+    civrider3: { mount: true, helm: 'bandana', gun: 'carbine', pack: 'none', armband: 'force', band: '#4a5560', tint: CIV_C },
+    civrider4: { mount: true, helm: 'bare', gun: 'shotgun', pack: 'none', ragged: true, armband: 'force', tint: CIV_D },
     rebrifle: { helm: 'std', gun: 'battlerifle', forceHelm: true, pack: 'none', ragged: true, tint: REBEL_DRAB },
     reblead: { helm: 'std', gun: 'smg', forceHelm: true, pack: 'none', ragged: true, mark: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
     rebsaw: { helm: 'std', gun: 'saw', forceHelm: true, pack: 'ammo', ragged: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
@@ -15225,6 +15232,7 @@
     hellriderlead: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, armband: 'force', tint: HOLY_B },
     hellriderblack: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
     hellridertan: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', armband: 'force', tint: HOLY_A },
+    hellriderrpg: { helm: 'turban', gun: 'rpg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', armband: 'force', tint: HOLY_B },
     legendlead: { helm: 'turban', mount: true, gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
     legendsaw: { helm: 'turban', mount: true, gun: 'saw', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, bulk: 1, tint: HOLY_B },
     legendrpg: { helm: 'turban', mount: true, gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, tint: HOLY_B },
