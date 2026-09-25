@@ -6435,13 +6435,13 @@
     thunter: { axles: 3, len: 2.25, wid: 1.30, hgt: 15, gun: 1.2, style: { body: 'ltank', skirts: true, turret: 'missile', tSize: 0.72 } },
     ldest: { axles: 3, len: 2.30, wid: 1.30, hgt: 15, gun: 2.0, style: { body: 'ltank', skirts: true, turret: 'light', tSize: 0.86, gunLen: 2.1, gunW: 2.4 } },
     mdest: { axles: 4, len: 2.55, wid: 1.45, hgt: 17, gun: 2.1, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'mbt', tSize: 1.0, gunLen: 2.5, gunW: 3.2, tMissiles: true, plasma: true } },
-    lorry: { axles: 2, len: 2.10, wid: 1.00, hgt: 15, wheelR: 0.72, gun: 0.8, style: { body: 'truck', noGuard: true } },
-    hlorry: { axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
-    m113: { axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },
-    ifv: { axles: 3, len: 2.35, wid: 1.30, hgt: 18, gun: 1.2, style: { body: 'ifv', turret: 'ifv', tSize: 0.72, tAt: 0.04, tSide: 0.12, skirts: 'panels' } },
-    cmdbox: { axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25] } },
-    bigapc: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels', hexNose: true, hex: true } },
-    bigifv: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels', hexNose: true, hex: true } },
+    lorry: { rearDoor: true, axles: 2, len: 2.10, wid: 1.00, hgt: 15, wheelR: 0.72, gun: 0.8, style: { body: 'truck', noGuard: true } },
+    hlorry: { rearDoor: true, axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
+    m113: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },
+    ifv: { rearDoor: true, axles: 3, len: 2.35, wid: 1.30, hgt: 18, gun: 1.2, style: { body: 'ifv', turret: 'ifv', tSize: 0.72, tAt: 0.04, tSide: 0.12, skirts: 'panels' } },
+    cmdbox: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25] } },
+    bigapc: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels', hexNose: true, hex: true } },
+    bigifv: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels', hexNose: true, hex: true } },
     engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, tanks: true, skirts: 'panels' } },
     enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, mech: 'heavy', style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true, hexNose: true, hex: true } },
     techmrl: { axles: 2, len: 2.00, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 1.0, elev: 10, style: { body: 'pickup', mrl: true } },
@@ -6452,7 +6452,7 @@
     plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.0, stubGun: true, energyGun: true, skirts: 'panels' } },
     aatank: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.3, twin: true, elev: 16, dish: true, style: { body: 'ltank', turret: 'aa', tSize: 0.85, skirts: true } },
     ewtank: { axles: 3, len: 2.25, wid: 1.25, hgt: 16, gun: 0.9, dish: true, style: { body: 'ltank', turret: 'dish', tSize: 0.72, skirts: true } },
-    medbox: { axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
+    medbox: { rearDoor: true, axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
     /* Rebel gun trucks: a light, medium and heavy lorry plated up in a yard,
        slits cut in a sheet welded over the windscreen, mismatched plate round
        the bed, and a weapon bolted on behind the cab. */
@@ -8423,6 +8423,44 @@
       });
     }
 
+    /* A door on the back of a hull, drawn when the back is towards the eye: the
+       face is at aR (the hull's rear), halfW either side of the middle, from z0
+       up h. 'ramp' is an APC's drop ramp with a crew door let into it, 'double'
+       a pair of cargo doors, 'canvas' a tarpaulin's rear flaps over a tailgate. */
+    function rearDoor(fr, aR, halfW, z0, h, kind) {
+      if ((cos + sin) >= -0.02) return;
+      var a = aR - 0.006;
+      function P(b, z) { return S3(fr(a, b), z); }
+      var DK = 'rgba(10,9,7,.6)', LT = 'rgba(255,248,232,.16)', MET = '#2a2f37';
+      function frame(b0, b1, zb, zt) {
+        edge(g, P(b0, zb), P(b0, zt), DK, 1); edge(g, P(b1, zb), P(b1, zt), DK, 1);
+        edge(g, P(b0, zt), P(b1, zt), DK, 1); edge(g, P(b0, zb), P(b1, zb), DK, 1);
+        edge(g, P(b0 + halfW * 0.04, zt - 1), P(b1 - halfW * 0.04, zt - 1), LT, 0.7);
+      }
+      function handle(b, z) { var q = P(b, z); poly(g, [[q[0] - 1.4, q[1] - 0.6], [q[0] + 1.4, q[1] - 0.6], [q[0] + 1.4, q[1] + 0.6], [q[0] - 1.4, q[1] + 0.6]], MET); }
+      function hinge(b, z) { var q = P(b, z); poly(g, [[q[0] - 0.9, q[1] - 1.1], [q[0] + 0.9, q[1] - 1.1], [q[0] + 0.9, q[1] + 1.1], [q[0] - 0.9, q[1] + 1.1]], MET); }
+      if (kind === 'ramp') {
+        // the ramp, hinged along its foot, and the crew door let into one side of it
+        frame(-halfW, halfW, z0, z0 + h);
+        line(P(-halfW * 0.9, z0 + 1), P(halfW * 0.9, z0 + 1), 1.6, MET);
+        frame(halfW * 0.08, halfW * 0.78, z0 + h * 0.12, z0 + h * 0.86);
+        handle(halfW * 0.2, z0 + h * 0.5);
+        line(P(halfW * 0.34, z0 + h * 0.7), P(halfW * 0.6, z0 + h * 0.7), 1.3, '#0b0e12');   // a vision block
+      } else if (kind === 'double') {
+        frame(-halfW, 0, z0, z0 + h); frame(0, halfW, z0, z0 + h);
+        [-1, 1].forEach(function (sd) {
+          hinge(sd * halfW * 0.92, z0 + h * 0.22); hinge(sd * halfW * 0.92, z0 + h * 0.78);
+          handle(sd * halfW * 0.14, z0 + h * 0.5);
+        });
+      } else {
+        // the canvas: two flaps meeting down the middle, laced shut, over a tailgate with its latches
+        edge(g, P(0, z0 + h * 0.3), P(0, z0 + h), DK, 1.1);
+        for (var k = 0; k < 4; k++) { var z = z0 + h * (0.4 + 0.15 * k); line(P(-halfW * 0.06, z), P(halfW * 0.06, z), 0.8, 'rgba(40,34,24,.8)'); }
+        edge(g, P(-halfW, z0 + h * 0.28), P(halfW, z0 + h * 0.28), DK, 1);
+        handle(-halfW * 0.7, z0 + h * 0.18); handle(halfW * 0.7, z0 + h * 0.18);
+      }
+    }
+
     function nearSide() { return (cos - sin) > 0 ? 1 : -1; }   // which flank faces the eye
     // the same, for something turned to its own angle (a traversed mount)
     function nearSideAt(ang) { return (Math.cos(ang) - Math.sin(ang)) > 0 ? 1 : -1; }
@@ -8509,7 +8547,8 @@
                 var s1 = S3(HF(sa - 0.06, nsT * w * 0.985), z0 + H * 0.4 + boxH * 0.72), s2 = S3(HF(sa + 0.06, nsT * w * 0.985), z0 + H * 0.4 + boxH * 0.72);
                 line(s1, s2, 1.4, '#15181e');
               }
-              if (fwdT < 0) {
+              if (spec.rearDoor) rearDoor(HF, bedA0 + 0.02, w * 0.72, z0 + H * 0.45, boxH - 3, 'double');
+              else if (fwdT < 0) {
                 var d1 = S3(HF(bedA0 + 0.015, -w * 0.4), z0 + H * 0.5), d2 = S3(HF(bedA0 + 0.015, w * 0.4), z0 + H * 0.5);
                 var d3 = S3(HF(bedA0 + 0.015, w * 0.4), z0 + H * 0.4 + boxH - 2), d4 = S3(HF(bedA0 + 0.015, -w * 0.4), z0 + H * 0.4 + boxH - 2);
                 edge(g, d1, d4, 'rgba(10,9,7,.5)', 0.8); edge(g, d2, d3, 'rgba(10,9,7,.5)', 0.8); edge(g, d4, d3, 'rgba(10,9,7,.5)', 0.8);
@@ -8517,6 +8556,7 @@
               return;
             }
             slabF(HF, bedA0 + 0.02, bedA1 - 0.02, -w * 0.98, w * 0.98, z0 + H * 0.4, boxH, TC, 0, 0, w * 0.1);
+            if (spec.rearDoor) rearDoor(HF, bedA0 + 0.02, w * 0.9, z0 + 1, H * 0.4 + boxH - 2, 'canvas');
             // hoops showing through the canvas
             var hoops = heavy ? 5 : 4;
             for (var hp = 1; hp < hoops; hp++) {
@@ -8648,10 +8688,13 @@
             // a raised troop compartment over the rear two thirds
             slabF(HF, -L * 0.48, L * 0.02, -w * 0.9, w * 0.9, z0 + hh, H * 0.3, TB, L * 0.05, 0, w * 0.04);
           }
-          // the rear ramp, where it can be seen
-          var ra = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + 2);
-          var rb = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + hh - 3);
-          if ((cos + sin) < 0) poly(g, [ra[0], ra[1], rb[1], rb[0]], mixc(hull, dark, 0.5));
+          // the rear ramp, where it can be seen: a proper door on the troop carriers, a darker plate on the rest
+          if (spec.rearDoor) rearDoor(HF, -L * 0.5, w * 0.62, z0 + 1.5, hh - 4, 'ramp');
+          else {
+            var ra = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + 2);
+            var rb = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + hh - 3);
+            if ((cos + sin) < 0) poly(g, [ra[0], ra[1], rb[1], rb[0]], mixc(hull, dark, 0.5));
+          }
           bandOnSides(g, box(0, 0, L, Wd * 0.94), z0 + 1, 2, 2, 'rgba(10,9,7,.45)');
           lights(HF, L * 0.49, -w * 0.62, z0 + hh * 0.45); lights(HF, L * 0.49, w * 0.62, z0 + hh * 0.45);
           grille(HF, L * 0.18, L * 0.3, w * 0.15, w * 0.75, z0 + hh + 0.3, 4);
@@ -9116,10 +9159,14 @@
         });
       }
       if (st.tanks) part(depthOf(HF, -L * 0.4, 0), function () {
-        // the flame fuel, in two armoured bottles across the engine deck
+        // the flame fuel, in two big armoured bottles across the engine deck, strapped down
         [-0.5, 0.5].forEach(function (b) {
-          var c1 = S3(HF(-L * 0.4, w * (b - 0.35)), roof + 3), c2 = S3(HF(-L * 0.4, w * (b + 0.35)), roof + 3);
-          line(c1, c2, 5.5, '#3a3f38'); line([c1[0], c1[1] - 1.5], [c2[0], c2[1] - 1.5], 1.4, '#6a7064');
+          var c1 = S3(HF(-L * 0.36, w * (b - 0.44)), roof + 4.5), c2 = S3(HF(-L * 0.36, w * (b + 0.44)), roof + 4.5);
+          line(c1, c2, 9, '#3a3f38'); line([c1[0], c1[1] - 2.4], [c2[0], c2[1] - 2.4], 2, '#6a7064');
+          [-0.25, 0.25].forEach(function (k) {
+            var sq = S3(HF(-L * 0.36, w * (b + k)), roof + 4.5);
+            line([sq[0], sq[1] - 4.5], [sq[0], sq[1] + 4.5], 1.2, '#23271f');
+          });
         });
       });
       if (st.cross) part(depthOf(HF, 0, 0) - 0.01, function () { crossOn(HF, -L * 0.08, 0, roof + 0.3, 0.3); });
@@ -10005,6 +10052,16 @@
           poly(g, [S3(TF(fa(k0), -fb(k0) * 0.6), waistY + cH * k0), S3(TF(fa(k0), fb(k0) * 0.6), waistY + cH * k0),
             S3(TF(fa(k1), fb(k1) * 0.72), waistY + cH * k1), S3(TF(fa(k1), -fb(k1) * 0.72), waistY + cH * k1)], TT.mid);
           edge(g, S3(TF(fa(k1), fb(k1) * 0.72), waistY + cH * k1), S3(TF(fa(k1), -fb(k1) * 0.72), waistY + cH * k1), TT.lit, 0.8);
+          /* a medical walker wears its red cross on the front of the chest, on the plate:
+             a white square and the cross, laid on the plate as it leans out */
+          if (spec.cross) {
+            var CP = function (u2, k) { return S3(TF(fa(k) + 0.004, u2 * fb(k) * 0.5), waistY + cH * k); };
+            var kc = (k0 + k1) / 2, kh = (k1 - k0) * 0.36;
+            var sq = function (u0, u1, ka, kb) { return [CP(u0, ka), CP(u1, ka), CP(u1, kb), CP(u0, kb)]; };
+            poly(g, sq(-0.72, 0.72, kc - kh, kc + kh), '#e8e3d8');
+            poly(g, sq(-0.54, 0.54, kc - kh * 0.25, kc + kh * 0.25), '#c23a32');
+            poly(g, sq(-0.18, 0.18, kc - kh * 0.75, kc + kh * 0.75), '#c23a32');
+          }
         }
       }
 
@@ -10180,11 +10237,11 @@
         }
         if (KITM.shoulder === 'tanks') {
           [-0.4, 0.4].forEach(function (b) {
-            var t1 = S3(TF(-tL * 1.1, tW * b), shoulder - 12), t2 = S3(TF(-tL * 1.1, tW * b), shoulder - 2);
-            line(t1, t2, 5, '#3a3f38'); line([t1[0] - 1.2, t1[1]], [t2[0] - 1.2, t2[1]], 1.2, '#6a7064');
+            var t1 = S3(TF(-tL * 1.12, tW * b), shoulder - 16), t2 = S3(TF(-tL * 1.12, tW * b), shoulder);
+            line(t1, t2, 8, '#3a3f38'); line([t1[0] - 2, t1[1]], [t2[0] - 2, t2[1]], 1.8, '#6a7064');
           });
         }
-        if (spec.cross) crossOn(TF, light ? -tL * 0.6 : -tL * 0.35, 0, shoulder + (heavy ? 0.3 : -0.7), tW * 0.3);
+        if (spec.cross && !light) crossOn(TF, -tL * 0.35, 0, shoulder + (heavy ? 0.3 : -0.7), tW * 0.3);
       }
 
     }
