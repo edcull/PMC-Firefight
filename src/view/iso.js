@@ -6415,7 +6415,11 @@
     function dep(t, s2) { var w = W(t, s2); return w.x + w.y; }
     var big = /heavy/.test(gun.key || '') ? 1.18 : 1;
     var pal = PALETTE[gun.paint || gun.side] || PALETTE.A;
-    var STL = '#4a5244', LIT = '#6c7662', DRK = '#2b3128', DEEP = '#1c211b', TYRE = '#1c201b', HUB = '#4a5247';
+    var STL = '#4a5244', LIT = '#6c7662', DRK = '#2b3128', DEEP = '#1c211b', DISC = (function () {
+      var a = [0x45, 0x4d, 0x58], m = String(pal.mid).replace('#', ''), out = '#';
+      for (var i = 0; i < 3; i++) out += ('0' + Math.round(a[i] * 0.75 + parseInt(m.substr(i * 2, 2), 16) * 0.25).toString(16)).slice(-2);
+      return out;                                       // the vehicles' steel, a quarter the company's colour
+    })();
     var zAx = 0.27 * big, rW = 0.27 * big, wS = 0.36 * big, tw = 0.11 * big;
     /* A box on the gun's own axes, its three faces that can be seen shaded as
        a hull's are: the top lit, a flank mid-tone, an end dark. */
@@ -6450,19 +6454,27 @@
       }
       var nearOut = dep(0, sOut) > dep(0, sIn), far = nearOut ? sIn : sOut, near = nearOut ? sOut : sIn;
       var fr = ring(far, rW), nr = ring(near, rW);
-      poly(g, fr, '#121511');
+      // in the vehicles' own wheel colours: dark tyre, steel rim, a disc tinted with the company's colour
+      poly(g, fr, '#0b0e12');
       for (var q = 0; q < N; q++) {                      // the tread, a band of quads round the tyre
         var q2 = (q + 1) % N;
-        poly(g, [fr[q], fr[q2], nr[q2], nr[q]], q % 2 ? '#1a1e19' : '#262b25');
+        poly(g, [fr[q], fr[q2], nr[q2], nr[q]], q % 2 ? '#101318' : '#14181d');
       }
-      poly(g, nr, TYRE);
-      poly(g, ring(near, rW * 0.64), '#39402f');         // the wheel's steel disc
-      poly(g, ring(near, rW * 0.5), '#2e342a');
-      poly(g, ring(near, rW * 0.24), HUB);               // its hub
-      var hb = S(0, near, zAx + rW * 0.08);
-      ellipse(g, hb[0], hb[1], Math.max(1, K * 0.03), Math.max(1, K * 0.03), '#7e8878');
+      poly(g, nr, '#161a20');
+      var ti = ring(near, rW * 0.82);
+      for (var tb = 0; tb < N; tb += 2) {                // tread blocks round the rim
+        var tp = nr[tb];
+        thickLine(g, ti[tb][0], ti[tb][1], tp[0], tp[1], Math.max(0.8, K * 0.02), '#272c34');
+      }
+      poly(g, ring(near, rW * 0.6), '#2b313a');          // the rim
+      poly(g, ring(near, rW * 0.52), DISC);              // the wheel's disc
+      poly(g, ring(near, rW * 0.2), '#1a1e25');          // its hub
+      for (var nb = 0; nb < 5; nb++) {                   // wheel nuts
+        var na = nb / 5 * Math.PI * 2, np = S(Math.cos(na) * rW * 0.32, near, zAx + Math.sin(na) * rW * 0.32);
+        ellipse(g, np[0], np[1], Math.max(0.5, K * 0.012), Math.max(0.5, K * 0.012), '#58616d');
+      }
     }
-    var sT = 0.13, sw2 = 0.32 * big;                     // where the shield stands, and its half width
+    var sT = 0.13, sw2 = 0.32 * big, sH = 0.72 * big;    // where the shield stands, its half width and its top
     var parts = [
       { d: dep(0, -wS), fn: function () { wheel(-1); } },
       { d: dep(0, wS), fn: function () { wheel(1); } },
@@ -6486,10 +6498,10 @@
       } },
       { d: dep(sT + 0.02, 0), fn: function () {
         // the shield: a plate with thickness, a sight slot, a stripe of the company's colour
-        box(sT, sT + 0.03, -sw2, sw2, 0.22, 0.58 * big, LIT, STL, STL);
-        var sl = [S(sT + 0.031, -0.14, 0.44 * big), S(sT + 0.031, -0.05, 0.44 * big), S(sT + 0.031, -0.05, 0.48 * big), S(sT + 0.031, -0.14, 0.48 * big)];
+        box(sT, sT + 0.03, -sw2, sw2, 0.22, sH, LIT, STL, STL);
+        var sl = [S(sT + 0.031, -0.14, 0.5 * big), S(sT + 0.031, -0.05, 0.5 * big), S(sT + 0.031, -0.05, 0.55 * big), S(sT + 0.031, -0.14, 0.55 * big)];
         if (dep(sT + 0.03, 0) > dep(sT, 0)) poly(g, sl, DEEP);
-        var st0 = S(sT + 0.032, -sw2, 0.54 * big), st1 = S(sT + 0.032, sw2, 0.54 * big);
+        var st0 = S(sT + 0.032, -sw2, sH - 0.05 * big), st1 = S(sT + 0.032, sw2, sH - 0.05 * big);
         thickLine(g, st0[0], st0[1], st1[0], st1[1], Math.max(1, K * 0.035), pal.mid);
       } },
       { d: dep(0.6, 0), fn: function () {
