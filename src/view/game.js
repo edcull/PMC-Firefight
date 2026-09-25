@@ -5561,9 +5561,11 @@
           muster.hot.sides.forEach(function (sd, i) {
             if (!sd) return;
             // a force a player musters is kept if it is empty or still legal; only the AI's is rolled again
-            if ((muster.hot.kind === 'hotseat' || (muster.hot.kind === 'ai' && i === 0)) && (!sd.keys.length ||
-              R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction).ok)) return;
-            sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction);
+            var hk = muster.hot.kind, cmd = hk === 'coop' || hk === 'solo';
+            var chk = cmd ? SOLO.checkCommando(sd.keys, musterTier(), musterPL(), sd.faction)
+              : R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction);
+            if (hotOwn(hk) && !(hk === 'ai' && i === 1) && (!sd.keys.length || chk.ok)) return;
+            sd.keys = cmd ? SOLO.rollCommando(musterTier(), musterPL(), sd.faction) : R.rollArmy(musterTier(), musterPL(), null, sd.faction);
           });
           hotPaint(); return;
         }
@@ -5734,6 +5736,7 @@
   function hotWho(step) {
     var k = muster.hot.kind;
     if (k === 'ai') return step === 1 ? 'Your force' : 'The opposition';
+    if (k === 'solo') return 'Your commando';
     return k === 'demo' ? 'Force ' + step : 'Player ' + step;
   }
   // does this step's force start rolled, and roll again when its kind changes?
@@ -5741,21 +5744,22 @@
     var k = muster.hot && muster.hot.kind;
     return k === 'demo' || (k === 'ai' && step === 2);
   }
-  // a demo, or a battle against the AI: set up on the battlefield step, with both forces rolled to start
-  // a demo, a battle against the AI and a hotseat all open on the battlefield, a card for each force
-  function hotQuick(kind) { return kind === 'demo' || kind === 'ai' || kind === 'hotseat'; }
+  // every skirmish opens on the battlefield, a card for each force (a solitaire game has just the one)
+  function hotQuick(kind) { return kind === 'demo' || kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo'; }
+  // a player's own force or commando, rather than one rolled for the AI
+  function hotOwn(kind) { return kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo'; }
   function hotBegin(kind) {
-    muster.hot = { kind: kind, step: 1, sides: [null, null] };
+    muster.hot = { kind: kind, step: 1, sides: kind === 'solo' ? [null] : [null, null] };
     muster.keys = []; muster.name = '';
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
-    else if (kind === 'ai' || kind === 'hotseat') {
+    else if (hotOwn(kind)) {
       // the player's force starts empty, in desert ochre, as "Your force" (or Player 1's) until they name it
       muster.colour = 'ochre';
       el('sel-faction').value = 'pmc';             // a mercenary company, until they pick another kind
       drawColourPick();
       if (el('sel-tactic')) el('sel-tactic').value = '';
-      muster.name = kind === 'hotseat' ? 'Player 1' : 'Your Force';
+      muster.name = kind === 'hotseat' || kind === 'coop' ? 'Player 1' : kind === 'solo' ? 'Your commando' : 'Your Force';
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
     hotPaint();
@@ -5836,6 +5840,8 @@
       name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
       colour: muster.colour || 'ochre', noun: muster.demoNoun || null
     };
+    // co-op commandos share a colour: Player 1's is both of theirs
+    if (muster.hot.kind === 'coop' && i === 0 && muster.hot.sides[1]) muster.hot.sides[1].colour = muster.hot.sides[0].colour;
   }
   function hotLoadSide(i) {
     var sd = muster.hot.sides[i];
@@ -5848,9 +5854,10 @@
       if (el('hot-name')) el('hot-name').value = '';   // a fresh force: the other one's name is not its own
       hotRandomise(i);
     } else {
-      // a fresh force for the second player; in a hotseat, in a colour the first is not wearing
-      muster.keys = []; muster.name = i === 1 && muster.hot.kind === 'hotseat' ? 'Player 2' : '';
-      if (i === 1 && muster.hot.kind === 'hotseat') muster.colour = foeColour([muster.hot.sides[0].colour]);
+      // a fresh force for the second player; in a hotseat, in a colour the first is not wearing, in co-op the same one
+      var two = i === 1 && (muster.hot.kind === 'hotseat' || muster.hot.kind === 'coop');
+      muster.keys = []; muster.name = two ? 'Player 2' : '';
+      if (two) muster.colour = muster.hot.kind === 'coop' ? muster.hot.sides[0].colour : foeColour([muster.hot.sides[0].colour]);
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
   }
@@ -5930,7 +5937,7 @@
   var tierHome = null;                 // where the Tier and Priority Level sit on the sheet, when not moved up for a demo
   function hotPaint() {
     var h = muster.hot, step = h.step, s = el('setup'), kind = h.kind;
-    var force = kind === 'coop' ? 'commando' : 'force';
+    var force = kind === 'coop' || kind === 'solo' ? 'commando' : 'force';
     s.dataset.hot = String(step);
     s.dataset.kind = kind;
     if (hotQuick(kind)) s.dataset.quick = '1'; else delete s.dataset.quick;
@@ -5955,6 +5962,7 @@
       else if (tp.nextSibling !== tierHome.next) tierHome.parent.insertBefore(tp, tierHome.next);
     }
     el('setup-title').textContent = step === 3 ? 'The battlefield'
+      : kind === 'solo' ? 'Muster your commando'
       : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
       : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
     var intro = {
@@ -5963,7 +5971,9 @@
         'A hotseat battle: two players, one screen. Set the Battle Tier and Priority Level, tap each player\u2019s force to muster it, then choose the scenario, the world and the table.'],
       coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
-        'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
+        'A co-operative game: two commandos against the OpFor. Set the Battle Tier and Priority Level, tap each player’s commando to muster it, then choose who you are up against, the solitaire scenario, the world and the table.'],
+      solo: ['A solitaire game: your commando against the OpFor. Pick its units from the commando table.', '',
+        'A solitaire game: your commando against the OpFor. Set the Battle Tier and Priority Level, tap your commando to muster it, then choose who you are up against, the solitaire scenario, the world and the table.'],
       ai: ['A battle against the AI. Build your force and set the Battle Tier and Priority Level; then choose what you are up against, and where.',
         ' is ready. Now the force the AI will command: it starts as a random kind of force with a rolled build \u2014 keep it, pick another kind to roll one of those, roll again, or build it by hand.',
         'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
@@ -6021,21 +6031,22 @@
       return;
     }
     var a = h.sides[0], b = h.sides[1], tier = musterTier(), pl = musterPL();
+    var commando = h.kind === 'coop' || h.kind === 'solo';
     // a force still to be mustered (or no longer legal): open it rather than take the field
-    for (var si = 0; si < 2; si++) {
+    for (var si = 0; si < h.sides.length; si++) {
       var sd = h.sides[si];
-      if (h.kind === 'coop' || !sd) continue;
-      if (!R.checkArmy(sd.keys, tier, pl, null, sd.tactic, sd.faction).ok) {
+      if (!sd) continue;
+      if (!(commando ? SOLO.checkCommando(sd.keys, tier, pl, sd.faction) : R.checkArmy(sd.keys, tier, pl, null, sd.tactic, sd.faction)).ok) {
         hotEdit(si);
         return hotRefuse(sd.keys.length ? hotWho(si + 1) + ' is not legal yet.' : 'Muster ' + hotWho(si + 1).replace(/^Your/, 'your') + ' first.');
       }
     }
     var planet = el('sel-planet').value, terrainSetup = el('sel-terrain') && h.kind !== 'demo' ? el('sel-terrain').value : 'auto';
-    if (h.kind === 'coop') {
-      // the two commandos take the field as one side, each player's units their own
-      var armyA = [], ownersA = [];
-      [a, b].forEach(function (sd, i) { sd.keys.forEach(function (k) { armyA.push(k); ownersA.push(i + 1); }); });
-      var gamePL = pl + 1, opFaction = el('sel-solo-op').value;
+    if (commando) {
+      // the commandos take the field as one side, each player's units their own
+      var coop = h.kind === 'coop', armyA = [], ownersA = [];
+      h.sides.forEach(function (sd, i) { sd.keys.forEach(function (k) { armyA.push(k); ownersA.push(i + 1); }); });
+      var gamePL = pl + (coop ? 1 : 0), opFaction = el('sel-solo-op').value;
       var machines = armyA.some(function (k) { var p = R.profile(R.splitPick(k).key); return p && p.cls !== 'infantry'; });
       var scen = el('sel-solo-scen').value;
       if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
@@ -6044,10 +6055,10 @@
       begin({
         tier: tier, pl: gamePL, scenario: scen,
         armyA: armyA, armyB: SOLO.rollOpFor(tier, gamePL, opFaction, machines), ownersA: ownersA,
-        nameA: a.name + ' & ' + b.name, nameB: 'OpFor',
+        nameA: coop ? a.name + ' & ' + b.name : a.name, nameB: 'OpFor',
         colourA: a.colour, colourB: foeColour([a.colour]),
         tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup,
-        solo: { coop: true, faction: a.faction || 'pmc', opFaction: opFaction, names: [a.name, b.name] }
+        solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name] }
       });
       return;
     }
@@ -6578,7 +6589,7 @@
     if (plSel) plSel.value = '2';
     hotBegin(kind);                                   // force 1, rolled
     hotSaveSide();
-    muster.hot.step = 2; hotLoadSide(1); hotSaveSide();   // force 2, rolled, in another colour
+    if (kind !== 'solo') { muster.hot.step = 2; hotLoadSide(1); hotSaveSide(); }   // force 2, rolled, in another colour
     muster.hot.step = 3; muster.hot.from3 = true;
     hotPaint(); drawMuster();
   }
@@ -6595,8 +6606,7 @@
     }[kind] || 'Muster your force';
     // hotseat, co-op and demo build both forces, one step each, before the battlefield
     // a demo, and a battle against the AI, open on the battlefield with both forces rolled
-    if (kind === 'demo' || kind === 'ai' || kind === 'hotseat') demoBegin(kind);
-    else if (kind === 'coop') hotBegin(kind); else hotEnd();
+    if (hotQuick(kind)) demoBegin(kind); else hotEnd();
     backLabel(el('btn-setup-back'), setupGoesHome());
     el('setup').hidden = false;
   };
