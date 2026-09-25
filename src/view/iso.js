@@ -6662,7 +6662,8 @@
     function dep(t, s2) { var w = W(t, s2); return w.x + w.y; }
     var R = { S: S, W: W, dep: dep, k: k, parts: [],
       STL: '#4a5244', LIT: '#6c7662', DRK: '#2b3128', DEEP: '#1c211b' };
-    R.part = function (t, s2, fn) { R.parts.push({ d: dep(t, s2), fn: fn }); };
+    // `over`: a part standing above a dug-in piece's sandbags (its barrel), drawn after them
+    R.part = function (t, s2, fn, over) { R.parts.push({ d: dep(t, s2), fn: fn, over: !!over }); };
     R.box = function (t0, t1, s0, s1, z0, z1, top, side, end) {
       var tm = (t0 + t1) / 2, sm = (s0 + s1) / 2;
       var sv = dep(tm, s1) > dep(tm, s0) ? s1 : s0, tv = dep(t1, sm) > dep(t0, sm) ? t1 : t0;
@@ -6726,6 +6727,7 @@
               beamR(R, [Math.cos(d0) * R0, Math.sin(d0) * R0], [Math.cos(d1) * R0, Math.sin(d1) * R0], 0.07,
                 cc * 0.09, cc * 0.09 + 0.095, '#8e836a', '#6e6450', '#5a5242', g);
             });
+            R.parts[R.parts.length - 1].bag = true;
           })(c, -half + (b + 0.5 + (c % 2 ? 0.5 : 0)) * (2 * half / (n + (c % 2 ? 1 : 0))));
         }
       }
@@ -6909,7 +6911,7 @@
           [-1, 1].forEach(function (sd) {
             if (R.dep(0, sd) > R.dep(0, -sd)) R.dot([0.94, sd * 0.051, 0.42], 0.014, '#0e110d');
           });
-        });
+        }, true);
       } },
     /* The guided-missile launcher: a long ready tube on a low tripod with
        carrying handles and banded caps, the guidance unit and its sights
@@ -7032,7 +7034,13 @@
     ps.forEach(function (pc, i) {
       var R = rig(g, { x: pc.x, y: pc.y, aim: pc.aim, k: pc.k, lift: opts.lift || 0 });
       pc.P.build(R, { pal: pal, g: g });
-      if (u.dugIn) R.sandbags(0.62, 3, 0.95);
+      if (u.dugIn) {
+        R.sandbags(0.62, 3, 0.95);
+        // the barrel runs out over the bags: it goes on after every one of them (but not after its own shield)
+        var top2 = -Infinity;
+        R.parts.forEach(function (q) { if (q.bag) top2 = Math.max(top2, q.d); });
+        R.parts.forEach(function (q) { if (q.over) q.d = Math.max(q.d, top2 + 0.001); });
+      }
       all = all.concat(R.parts);
       // this piece's share of the crew, in the places round it
       var mine = 0;
