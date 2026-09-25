@@ -1649,8 +1649,8 @@
        Limited Fire Arc. The strike craft below are the ones with weapons. */
     adaptedcraft: { p: 'small' }, lightcraft: { p: 'small' },
     heavycraft: { p: 'small' }, flyingcp: { p: 'small' },
-    // the flexible strike craft carries a rocket rack over the door gun
-    fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
+    // the flexible strike craft rakes with its nose gun under a rocket rack; the transport has a door gun
+    fsc: { p: 'burst', s: 'rocket' }, tsc: { p: 'small', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
     // the light VTOL drone carries no gun worth the name: a light sidearm's crack
     vtoldrone: { p: 'pistol' },

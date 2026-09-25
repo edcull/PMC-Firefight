@@ -107,10 +107,10 @@ async function pickAndFire(p, key, ms) {
   ok('a SAM team launches a guided missile',
     sam.spec.p === 'missile' && !!sam.seen.missile, sam.kinds.join(' '));
 
-  const gunship = await pickAndFire(p, 'tsc', 2000);
-  ok('a transport strike craft ripples rockets', gunship.spec.s === 'rocket' && !!gunship.seen.missile,
+  const gunship = await pickAndFire(p, 'fsc', 2000);
+  ok('a flexible strike craft ripples rockets', gunship.spec.s === 'rocket' && !!gunship.seen.missile,
     gunship.kinds.join(' '));
-  ok('...over its door gun', gunship.spec.p === 'burst' && !!gunship.seen.tracer);
+  ok('...over its nose gun', gunship.spec.p === 'burst' && !!gunship.seen.tracer);
 
   const flamer = await pickAndFire(p, 'chem', 1600);
   ok('chem-warriors throw a cone of fire',
