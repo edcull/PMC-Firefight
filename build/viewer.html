@@ -17656,12 +17656,13 @@
     // far to near, so the nearer of the two covers the other
     var tv = traveller();
     FX.drawGround(g);                                    // the ground broken open under what comes up through it
-    var order = [u, t].concat(tv ? [tv.u] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
+    var order = [u, t].concat(tv ? [tv.u, tv.pad] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
-      if (tv && m === tv.u) {
-        if (tv.alpha <= 0) return;
-        g.save(); g.globalAlpha = tv.alpha;
-        I.drawUnit(g, m, { at: { x: m.x, y: m.y }, lift: 0, status: 'ready', morale: R.currentMorale(m) });
+      if (tv && (m === tv.u || m === tv.pad)) {
+        var ma = m === tv.pad ? tv.padAlpha : tv.alpha;
+        if (ma <= 0) return;
+        g.save(); g.globalAlpha = ma;
+        I.drawUnit(g, m, { at: { x: m.x, y: m.y }, lift: 0, status: 'ready', morale: R.isMachine(m) ? 0 : R.currentMorale(m) });
         g.restore();
         return;
       }
@@ -17921,22 +17922,32 @@
     return k ? M[k][0] : undefined;
   }
   /* Teleport (p. 130), as the battle shows it (game.js): no walk in or out.
-     A squad stands by the gate, and is gone in a ring of light where it stands;
-     the column comes down and it flickers back into it, in place. The gate
-     itself stays put; the squad is drawn by frame() from view.tele. */
-  var TP = { OUT: 250, GONE: 650, IN: 1000, SHOWN: 1500, END: 2300, BY: 2.6 };
+     A Teleport turret comes in halfway to the target, the far end of the
+     network; a squad standing behind this unit is gone in a ring of light,
+     the two ends joined by a pulsing line while it is between, and it
+     flickers back in out of the column in front of the turret. The squad
+     and the turret are drawn by frame() from view.tele. */
+  var TP = { PAD: 700, OUT: 950, GONE: 1350, IN: 1700, SHOWN: 2200, END: 3400, BY: 2.4 };
   function teleportThrough(u) {
-    var dx = TO.x - u.x, dy = TO.y - u.y, dl = Math.hypot(dx, dy) || 1;
-    var at = { x: u.x + dx / dl * TP.BY, y: u.y + dy / dl * TP.BY };
-    view.tele = { t0: Date.now(), at: at };
+    var dx = TO.x - u.x, dy = TO.y - u.y, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl;
+    var from = { x: u.x - ux * TP.BY, y: u.y - uy * TP.BY };          // the squad, behind this unit
+    var pad = { x: u.x + dx * 0.5, y: u.y + dy * 0.5 };                // the turret it comes out at
+    var to = { x: pad.x + ux * TP.BY, y: pad.y + uy * TP.BY };         // ...in front of the turret
+    view.tele = { t0: Date.now(), from: from, pad: pad, to: to };
     var rgb = glowRGB();
     return [
-      { kind: 'wave', x: at.x, y: at.y, up: 0, r: 2, rgb: rgb, delay: TP.OUT, dur: TP.OUT + 700 },
-      { kind: 'teleportin', x: at.x, y: at.y, r: 1.4, delay: TP.IN - 250, dur: TP.IN - 250 + 1400 },
-      { kind: 'wave', x: at.x, y: at.y, up: 0, r: 2, rgb: rgb, delay: TP.IN, dur: TP.IN + 1050 }
+      // the far turret teleported in first
+      { kind: 'teleportin', x: pad.x, y: pad.y, r: 2.2, dur: TP.PAD + 200 },
+      // the squad going: a ring of light where it stood
+      { kind: 'wave', x: from.x, y: from.y, up: 0, r: 2, rgb: rgb, delay: TP.OUT, dur: TP.OUT + 700 },
+      // the two ends joined while it is between them
+      { kind: 'tplink', from: { x: u.x, y: u.y }, to: pad, rgb: rgb, delay: TP.OUT, dur: TP.SHOWN },
+      // and coming out, in front of the turret
+      { kind: 'teleportin', x: to.x, y: to.y, r: 1.4, delay: TP.IN - 250, dur: TP.IN - 250 + 1400 },
+      { kind: 'wave', x: to.x, y: to.y, up: 0, r: 2, rgb: rgb, delay: TP.IN, dur: TP.IN + 1050 }
     ];
   }
-  // the squad going through, and how much of it is there, or null once it is done
+  // the squad going through, and how much of it is there, and the far turret, or null once it is done
   function traveller() {
     var T = view.tele;
     if (!T) return null;
@@ -17950,12 +17961,22 @@
       var ta = (t - TP.IN) / (TP.SHOWN - TP.IN);
       alpha = Math.floor(t / 55) % (ta < 0.5 ? 2 : 4) === 0 ? ta * 0.3 : ta;
     } else alpha = 1;
+    var at = t < TP.GONE ? T.from : T.to;
     var p = R.profile('xbeta3');
     var m = Object.assign({}, p, {
       id: 'VTELE', side: view.side, label: p.name, models: p.size, rules: p.rules.slice(),
-      sp: 0, alive: true, damage: 0, cargo: [], x: T.at.x, y: T.at.y, facing: 0
+      sp: 0, alive: true, damage: 0, cargo: [], x: at.x, y: at.y, facing: 0
     });
-    return { u: m, alpha: alpha };
+    // the turret: flickering in out of its column, then standing; gone with the rest at the end
+    var pa = t < TP.PAD * 0.35 ? 0 : t < TP.PAD ? (Math.floor(t / 55) % 2 ? 0.3 : 1) * (t - TP.PAD * 0.35) / (TP.PAD * 0.65) : 1;
+    if (t > TP.END - 300) pa = Math.max(0, (TP.END - t) / 300);
+    var q = R.profile('xtturret2');
+    var pad = Object.assign({}, q, {
+      id: 'VPAD', side: view.side, label: q.name, models: 1, rules: q.rules.slice(),
+      sp: 0, alive: true, damage: 0, cargo: [], x: T.pad.x, y: T.pad.y, facing: Math.atan2(T.to.y - T.pad.y, T.to.x - T.pad.x)
+    });
+    if (t > TP.END - 300) alpha = Math.min(alpha, pa);
+    return { u: m, alpha: alpha, pad: pad, padAlpha: pa };
   }
   // every ability a unit has, in that order — an EW team hacks and jams — to a button each, three at most
   function abilitiesOf(u) {

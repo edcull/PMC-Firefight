@@ -337,6 +337,12 @@
       (camp.mode === 'hotseat' ? esc(B.name)
         : n > 1 ? n + ' forces' : esc(B.name)) +
       '</span><em>details</em></button></div>';
+    // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
+    var promoE = promoRid && C.byRid(A, promoRid);
+    if (promoE) {
+      h += cmodal('promote', 'Promote ' + promoE.name + ' \u2014 ' + promoE.exp + ' EXP',
+        '<div class="cmodal-scroll promo-list">' + spendActs(promoE, A) + '</div>');
+    }
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
         : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
@@ -371,7 +377,8 @@
       };
       return '<div class="hubbar dosbar">' +
         '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
-        tab('recruit', esc(C.words(co).recruit)) +
+        // while recruiting, the same button goes back to the dossier, and says so
+        tab('recruit', rosterTab === 'recruit' ? 'Dossier' : esc(C.words(co).recruit)) +
         tab('memorial', ICON_MEMORIAL, 'hubicon', 'Memorial') + go + '</div>';
     }
     return '<div class="hubbar">' +
@@ -495,24 +502,26 @@
     return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
   }
   /* What the force is like: what it fields, the best it has, and how it fights. */
+  /* What the force is like, in general terms: how big it is, what it fights
+     with and how seasoned it is, then how it fights, then what it has done
+     against you. The exact list is behind their dossier. */
   function rivalBlurb(co) {
-    var n = co.roster.length, inf = 0, veh = 0, air = 0, best = null;
+    var n = co.roster.length, inf = 0, veh = 0, air = 0, top = 0, exp = 0;
     co.roster.forEach(function (e) {
       var p = profile(e.key);
       if (!p) return;
-      if (/air/.test(p.cls || '')) air++; else if (/vehicle|walker/.test(p.cls || '')) veh++; else inf++;
-      if (!best || p.tier > profile(best.key).tier || (p.tier === profile(best.key).tier && e.exp > best.exp)) best = e;
+      if (p.cls === 'aircraft') air++; else if (p.cls !== 'infantry') veh++; else inf++;
+      top = Math.max(top, p.tier); exp += e.exp || 0;
     });
-    var parts = [];
-    if (inf) parts.push(inf + ' on foot');
-    if (veh) parts.push(veh + (veh === 1 ? ' vehicle' : ' vehicles'));
-    if (air) parts.push(air + ' in the air');
     var t = C.themeOf(co);
     if (n) {
-      var bp = best ? profile(best.key) : null;
-      t = 'It fields ' + n + ' unit' + (n === 1 ? '' : 's') +
-        (parts.length > 1 ? ' (' + parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] + ')' : '') +
-        (bp ? '; the pick of them is ' + (/^[aeiou]/i.test(bp.name) ? 'an ' : 'a ') + esc(bp.name) + ' at Tier ' + ROMAN[bp.tier] : '') + '. ' + t;
+      var size = n <= 8 ? 'A small force' : n <= 12 ? 'A force of fair size' : n <= 16 ? 'A large force' : 'A very large force';
+      var mix = veh + air === 0 ? 'all on foot'
+        : veh + air >= inf ? 'heavy on machines'
+        : veh + air >= 3 ? 'on foot with solid armoured support' : 'mostly on foot with a little armour';
+      if (air) mix += veh + air === air ? ', and aircraft overhead' : ', with air support';
+      var seasoned = exp / n >= 10 ? 'hardened by long fighting' : exp / n >= 4 ? 'with some fighting behind it' : top > co.tier ? 'with a few good troops among the green' : 'still green';
+      t = size + ', ' + mix + ', ' + seasoned + '. ' + t;
     }
     var r = co.record || {};
     if (r.battles) t += ' It has fought ' + r.battles + ' battle' + (r.battles === 1 ? '' : 's') + ' against you and won ' + (r.wins || 0) + '.';
@@ -543,8 +552,17 @@
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
     h += '<div class="cpstat">' + rivalBlurb(co) + '</div>';
-    h += '<button class="lnk" data-go="intel" data-rival="' + (idx == null ? 0 : idx) +
-      '">Their dossier</button></div>';
+    // their dossier opens in the card: their units, as your own are listed
+    var ri = idx == null ? 0 : idx, open = rivalOpen === ri;
+    h += '<button class="lnk' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
+      (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
+    if (open) {
+      h += '<div class="dlist rivdos">' + co.roster.slice().sort(function (a, b) {
+        var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
+        return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
+      }).map(function (e) { return entryCard(e, co, {}); }).join('') + '</div>';
+    }
+    h += '</div>';
     return h;
   }
 
@@ -817,10 +835,11 @@
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
         var open = !!menOpen[e.rid];
-        var spend = spendActs(e, co);                  // its experience is spent from its own card
+        // enough experience for something: a Promote button, opening the choices in a window
+        var spend = canSpend(e, co) ? '<button class="lnk good" data-promo="' + e.rid + '">Promote</button>' : '';
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
-        if (spend) acts += '<span class="dspend">' + spend + '</span>';
+        if (spend) acts += spend;
         h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
@@ -839,7 +858,8 @@
   /* On the hub the dossier takes the place of the Tier panel, in the same
      box: its tabs across the top and the list scrolling under them. */
   function dossierPanel(co) {
-    return '<div class="cprom cdos"><div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
+    // the recruiting list fills the panel and scrolls itself; the others scroll the panel
+    return '<div class="cprom cdos"><div class="cprom-list cdos-body' + (rosterTab === 'recruit' ? ' cdos-fill' : '') + '">' + rosterBody(co) + '</div></div>';
   }
   var hubPane = 'dossier';            // the hub opens on the unit cards
   var rosterTab = 'units';
@@ -916,6 +936,8 @@
   }
   var menOpen = {};               // which unit has its details open, by rid (one at a time)
   var showCard = null;            // a card just opened, to be scrolled fully into view
+  var promoRid = null;            // the unit whose promotion choices are open
+  var rivalOpen = null;           // which other force has its dossier open in its card
 
   /* Everything about one unit, opened from its card: the profile as it takes
      the field — honours, traumas, upgrades and doctrines already worked in, with
@@ -1012,6 +1034,8 @@
       }
     return acts;
   }
+  // whether a unit can afford anything it could spend its experience on
+  function canSpend(e, co) { return /<button(?![^>]*disabled)[^>]*data-(promote|honour|upgrade)=/.test(spendActs(e, co)); }
   function spendList(co) {
     var h = '<div class="dlist">';
     var any = false;
@@ -1088,12 +1112,11 @@
       ROMAN[co.tier] + '</span></div>';
     // how they fight, and what they are built around — never what they field
     h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
-    h += '<div class="cpstat">' + creedName + ': ' + (co.doctrines.length
-      ? co.doctrines.map(function (d) { return esc(C.doctrine(d).name); }).join(' · ')
-      : 'none declared yet') + '</div>';
-    h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
-      return '<span class="mk" title="' + esc(C.doctrine(d).text) + '">' + esc(C.doctrine(d).text) + '</span>';
-    }).join('') + '</div>';
+    // what it is built around: a pill each, what each does in its tip
+    h += '<div class="cpdoc">' + (co.doctrines.length ? co.doctrines.map(function (d) {
+      var dd = C.doctrine(d);
+      return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
+    }).join('') : '<span class="dnote">No ' + esc(creedName) + ' declared yet.</span>') + '</div>';
     h += '<div class="cpstat">' + co.record.battles + ' battles against you · ' +
       co.record.wins + ' won, ' + co.record.losses + ' lost' +
       (o.caught && o.caught.to > o.caught.from
@@ -2085,7 +2108,7 @@
       contract.altRoles = wasRoles;
       render(); return;
     }
-    if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); render(); return; }
+    if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
       C.recruit(co, t.getAttribute('data-recruit'), { drone: t.hasAttribute('data-asdrone') }); save(); render(); return;
     }
@@ -2127,9 +2150,11 @@
       });
       return;
     }
+    if (t.hasAttribute('data-rivdos')) { var rv = +t.getAttribute('data-rivdos'); rivalOpen = rivalOpen === rv ? null : rv; render(); return; }
+    if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
     if (t.hasAttribute('data-promote')) {
       var pe = findEntry(co, t.getAttribute('data-promote'));
-      C.promoteUnit(co, pe, t.getAttribute('data-to')); save(); render(); return;
+      C.promoteUnit(co, pe, t.getAttribute('data-to')); openModal = null; promoRid = null; save(); render(); return;
     }
     if (t.hasAttribute('data-honour')) {
       var he = findEntry(co, t.getAttribute('data-honour'));
