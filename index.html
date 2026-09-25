@@ -745,8 +745,10 @@
   .hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; }
   .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
   .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
-  .hubbar .start.hubgo { flex: 1.4 1 auto; width: auto; margin: 0; padding: 8px 12px; }
+  .hubbar .start.hubgo { flex: 0 0 150px; width: 150px; margin: 0; padding: 8px 12px; }
   .hubnote { margin: 0 0 8px; }
+  /* what a unit can spend its experience on, on its own card after its other actions */
+  .dspend { display: contents; }
   /* the dossier's tabs in the same row, at the same height as the buttons they replace */
   .hubbar.dosbar .lnk { min-height: 0; padding-block: 0; }
   .hubbar.dosbar { min-height: 33px; }
@@ -2141,5 +2143,5 @@
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
 <script src="src/view/game.js?v=887d25cb75"></script>
-<script src="src/view/dossier.js?v=715e239ee0"></script>
+<script src="src/view/dossier.js?v=d8b6de1655"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

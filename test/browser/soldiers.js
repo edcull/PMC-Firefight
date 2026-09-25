@@ -101,7 +101,6 @@ async function clickText(p, re) {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
     e.honours = []; e.traumas = [];
   }, rid);
-  await clickText(p, '^XP$');
   await toUnits(p);
   const listed = await p.evaluate((rid) => {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
@@ -136,7 +135,7 @@ async function clickText(p, re) {
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];
     window.PMC_CAMPAIGN.get().companies.A.record = { battles: 4, wins: 3, draws: 0, losses: 1 };
   });
-  await clickText(p, '^XP$');
+  await clickText(p, '^Recruit$');
   await toUnits(p);
   check('...as honours held over units on the books', (await cell('cs-exp')) === '33.3% honours', await cell('cs-exp'));
   check('...with the win rate first', (await cell('cs-win')) === '75% win rate', await cell('cs-win'));
@@ -151,7 +150,7 @@ async function clickText(p, re) {
     window.PMC_CAMPAIGN.get().companies.A.record = { battles: 0, wins: 0, draws: 0, losses: 0 }; });
 
   console.log('\nThe memorial');
-  await clickText(p, '^Memorial$');
+  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
   check('an empty memorial says so', /No one has been lost yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
@@ -163,7 +162,7 @@ async function clickText(p, re) {
     ];
   });
   await toUnits(p);
-  await clickText(p, '^Memorial$');
+  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
   const mem = await p.evaluate(() => ({
     text: document.getElementById('camp-body').innerText,
     heads: [...document.querySelectorAll('#camp-body .dmem-head')].map(h => h.innerText.replace(/\s+/g, ' '))
@@ -183,7 +182,7 @@ async function clickText(p, re) {
     co.faction = 'bugs'; co.memorial = []; co.biomass = { 'Small bugs': { models: 14, mass: 28 }, 'Attack forms': { models: 9, mass: 27 }, 'Queen': { models: 1, mass: 25 } };
   });
   await toUnits(p);
-  await clickText(p, '^Memorial$');
+  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
   const bio = await p.evaluate(() => ({
     text: document.getElementById('camp-body').innerText,
     rows: [...document.querySelectorAll('#camp-body .dmem-list li')].map(li => li.innerText.replace(/\s+/g, ' '))
@@ -208,7 +207,7 @@ async function clickText(p, re) {
     co.roster = [C.newEntry('xalpha3'), C.newEntry('xeps3'), C.newEntry('xeps2')];
     co.losses = { crocks: { lost: 1, departed: 0 }, eshaven: { lost: 6, departed: 0 } };
   });
-  await clickText(p, '^Memorial$');
+  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
   const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss:not(.dexpr)')].map(d => d.textContent));
   check('the tribe shows a loss rate for its Crocks and one for its Esh-Aven',
     tribe.length === 2 && /lost 1 of 4 Crocks$/.test(tribe[0]) && /lost 6 of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));

@@ -438,7 +438,6 @@ async function clickText(p, re) {
     camp.companies.A.roster.forEach(e => { e.exp = 40; });
     window.PMC_CAMPAIGN.set(camp);
   });
-  await clickText(p, '^XP$');
   await p.waitForTimeout(250);
   const opened = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-honour]');
@@ -514,7 +513,7 @@ async function clickText(p, re) {
   // Abandon sits in the Tier panel: close the dossier to bring it back
   await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
   await p.waitForTimeout(250);
-  await clickText(p, '^Abandon$');
+  await p.evaluate(() => document.querySelector('#camp-body [data-go="wipe"]').click());
   await p.waitForTimeout(300);
   check('Abandon asks in the page',
     await p.evaluate(() => !document.getElementById('camp-ask').hidden));

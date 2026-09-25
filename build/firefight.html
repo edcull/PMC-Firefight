@@ -745,8 +745,10 @@
   .hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; }
   .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
   .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
-  .hubbar .start.hubgo { flex: 1.4 1 auto; width: auto; margin: 0; padding: 8px 12px; }
+  .hubbar .start.hubgo { flex: 0 0 150px; width: 150px; margin: 0; padding: 8px 12px; }
   .hubnote { margin: 0 0 8px; }
+  /* what a unit can spend its experience on, on its own card after its other actions */
+  .dspend { display: contents; }
   /* the dossier's tabs in the same row, at the same height as the buttons they replace */
   .hubbar.dosbar .lnk { min-height: 0; padding-block: 0; }
   .hubbar.dosbar { min-height: 33px; }
@@ -37837,6 +37839,10 @@
   var after = null;             // the aftermath being worked through
   var ROMAN = R.ROMAN;
   var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
+  // the memorial: a headstone
+  var ICON_MEMORIAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V9a5 5 0 0 1 10 0v12"/><path d="M4 21h16"/><path d="M12 9v6"/><path d="M9.5 11.5h5"/></svg>';
+  // giving it all up: a white flag
+  var ICON_ABANDON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>';
   var ICON_LOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>';
 
   function save() {
@@ -38037,26 +38043,27 @@
   /* One row under the name: the dossier, the save file out and in, and the
      contract, which is what the screen is for. */
   function hubBar() {
-    var h = '';
+    var co = camp.companies.A;
+    var go = '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
     if (hubPane === 'dossier') {
-      /* In the dossier the row is its tabs: back to the company, or to the
-         experience, the recruiting or the memorial — the units themselves are
-         what shows when none of those is picked (tap the lit one to go back). */
-      var co = camp.companies.A;
-      var tab = function (key, label) {
+      /* In the dossier: back to the company, the recruiting (tap it again for
+         the units), the memorial, and the contract. */
+      var tab = function (key, label, cls, title) {
         var on = rosterTab === key;
-        return '<button class="lnk' + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '">' + label + '</button>';
+        return '<button class="lnk' + (cls ? ' ' + cls : '') + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '"' +
+          (title ? ' title="' + title + '" aria-label="' + title + '"' : '') + '>' + label + '</button>';
       };
       return '<div class="hubbar dosbar">' +
         '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
-        tab('spend', 'XP') + tab('recruit', esc(C.words(co).recruit)) + tab('memorial', 'Memorial') + '</div>';
+        tab('recruit', esc(C.words(co).recruit)) +
+        tab('memorial', ICON_MEMORIAL, 'hubicon', 'Memorial') + go + '</div>';
     }
-    h += '<div class="hubbar">' +
+    return '<div class="hubbar">' +
       '<button class="lnk" data-go="roster">Dossier</button>' +
       '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
       '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
-      '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
-    return h;
+      '<button class="lnk hubicon warn" data-go="wipe" title="Abandon the campaign" aria-label="Abandon the campaign">' + ICON_ABANDON + '</button>' +
+      go + '</div>';
   }
   function companyPanel(co, side, bar) {
     var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
@@ -38101,7 +38108,7 @@
     var pp = C.promotionProgress(co);
     var kind = C.words(co).force;
     // on the hub, giving the whole thing up sits on the same line (and asks first)
-    var quit = hub ? '<button class="lnk warn cprom-quit" data-go="wipe">Abandon</button>' : '';
+    var quit = '';                                   // Abandon is on the hub's button row
     if (pp.top) {
       /* Tier V: in place of a promotion, one change of doctrine every five
          battles (p. 87) — where the promote button would be */
@@ -38443,14 +38450,6 @@
   }
 
   /* ================= the dossier ================= */
-  function rosterTabs(co) {
-    return '<div class="dtabs">' +
-      '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
-      '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
-      '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
-      '<button class="lnk' + (rosterTab === 'memorial' ? ' on' : '') + '" data-rtab="memorial">Memorial</button>' +
-      '</div>';
-  }
   function rosterBody(co) {
     var h = '';
     if (rosterTab === 'units') {
@@ -38464,10 +38463,12 @@
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
         var open = !!menOpen[e.rid];
+        var spend = spendActs(e, co);                  // its experience is spent from its own card
         acts += '<button class="lnk" data-men="' + e.rid + '" aria-expanded="' + open + '">' +
           (open ? '\u25be ' : '\u25b8 ') + 'Details</button>';
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
+        if (spend) acts += '<span class="dspend">' + spend + '</span>';
         h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '' });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
@@ -38632,14 +38633,13 @@
     }).join('') + '</ol>';
   }
 
-  function spendList(co) {
-    var h = '<div class="dlist">';
-    var any = false;
-    co.roster.slice().sort(function (a, b) { return b.exp - a.exp; }).forEach(function (e) {
-      var p = profile(e.key);
-      if (C.isLeaderP(p)) return;
-      if ((p.rules || []).indexOf('Turret') >= 0) return;            // turrets never earn EXP
-      var acts = '';
+  /* What a unit can spend its experience on: a promotion to each unit it may
+     become, and an honour (or an upgrade, for a machine). */
+  function spendActs(e, co) {
+    var p = profile(e.key);
+    if (C.isLeaderP(p)) return '';
+    if ((p.rules || []).indexOf('Turret') >= 0) return '';            // turrets never earn EXP
+    var acts = '';
       C.promotionTargets(e, co).forEach(function (q) {
         var c = C.promotionCost(e, q.key);
         var can = e.exp >= c.exp && co.kUC >= c.kUC;
@@ -38657,6 +38657,13 @@
         acts += '<button class="lnk good" data-upgrade="' + e.rid + '"' +
           (uc.ok ? '' : ' disabled title="' + esc(uc.why || '') + '"') + '>Upgrade · 10 EXP</button>';
       }
+    return acts;
+  }
+  function spendList(co) {
+    var h = '<div class="dlist">';
+    var any = false;
+    co.roster.slice().sort(function (a, b) { return b.exp - a.exp; }).forEach(function (e) {
+      var acts = spendActs(e, co);
       if (acts) { any = true; h += entryCard(e, co, { actions: acts }); }
     });
     h += '</div>';
@@ -39763,7 +39770,7 @@
     }
     if (t.hasAttribute('data-fit')) {
       C.takeUpgrade(co, upState, +t.getAttribute('data-fit'));
-      save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'spend'; render(); return;
+      save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'units'; render(); return;
     }
     if (t.hasAttribute('data-pick')) {
       var pk = findEntry(co, t.getAttribute('data-pick'));
