@@ -2592,7 +2592,8 @@
     legendrider: ['hellriderlead', 'hellrider', 'hellriderrpg', 'hellridertan'],
     rebac: ['rebacgunner', 'rebloader', 'rebrifle'],
     rebhac: ['rebacgunner', 'rebloader', 'gunloader'],
-    rebelmg: ['rebgunner', 'rebloader', 'rebrifle'],
+    // three light machine guns, the rest of the squad with sub-machine guns (the guns alone do the shooting)
+    rebelmg: ['rebgunner', 'rebgunner', 'rebgunner', 'rebsmg', 'rebsmg', 'rebsmg'],
     rebelat: ['rebrpg', 'rebrpg', 'rebrpgloader', 'rebrifle'],
     rebelmortar: ['rebmortarman', 'rebmortarloader'],
     rebelgun: ['guncaptain', 'gunloader'],
@@ -2848,6 +2849,7 @@
     // scavenged heavy weapons, worked without much training
     rebgunner: { helm: 'std', gun: 'mg', forceHelm: true, pack: 'none', kneel: true, bulk: 1, ragged: true, tint: REBEL_DRAB },
     rebloader: { helm: 'std', gun: 'pistol', forceHelm: true, pack: 'ammo', kneel: true, ragged: true, tint: REBEL_DRAB },
+    rebsmg: { helm: 'std', gun: 'smg', forceHelm: true, pack: 'ammo', kneel: true, ragged: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
     rebrpg: { helm: 'std', gun: 'rpg', forceHelm: true, pack: 'none', kneel: true, ragged: true, tint: REBEL_DRAB },
     rebrpgloader: { helm: 'std', gun: 'huntingrifle', forceHelm: true, pack: 'missile', kneel: true, ragged: true, tint: REBEL_DRAB },
     rebacgunner: { helm: 'std', gun: 'none', forceHelm: true, pack: 'none', kneel: true, bulk: 1, ragged: true, tint: REBEL_DRAB },
