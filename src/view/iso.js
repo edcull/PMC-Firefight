@@ -6838,9 +6838,10 @@
           R.box(0.02, 0.1, 0.03, 0.1, 0.3, 0.37, '#4d564a', '#39413a', '#2b3128');   // the sight
         });
         var C = R.base;
-        C.part(-0.35, 0.3, function () {
-          C.box(-0.48, -0.26, 0.2, 0.38, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
-          for (var r = 0; r < 3; r++) C.rod([-0.44 + r * 0.06, 0.14, 0], [-0.44 + r * 0.06, 0.14, 0.12], 0.02, ['#6a4a22', '#8a5a2a', '#a8763c']);
+        // the bomb crate and rounds stood ready, beside the baseplate and clear of where the crew kneel
+        C.part(0.08, 0.34, function () {
+          C.box(0.0, 0.2, 0.26, 0.42, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
+          for (var r = 0; r < 3; r++) C.rod([0.03 + r * 0.06, 0.2, 0], [0.03 + r * 0.06, 0.2, 0.12], 0.02, ['#6a4a22', '#8a5a2a', '#a8763c']);
         });
       } },
     /* The heavy machine gun on its tripod: a perforated cooling jacket on the
@@ -7097,10 +7098,11 @@
     var art = u.art, P = PIECE3D[art], n = PIECE_COUNT[u.key] || 1;
     var pa = pieceAngles(u), f = pa.f;
     var ca = Math.cos(f), sa = Math.sin(f), out = [];
-    var across = n === 1 ? [0] : n === 2 ? [-0.55, 0.55] : [-0.95, 0, 0.95];
+    // one piece in the middle, two side by side and staggered, three in a triangle: one forward, two behind
+    var spots = n === 1 ? [[0.25, 0]] : n === 2 ? [[0.6, -0.55], [-0.1, 0.55]] : [[0.75, 0], [-0.25, -0.75], [-0.25, 0.75]];
     var top = pa.top;
-    across.forEach(function (sOff) {
-      var fwd = 0.25;
+    spots.forEach(function (sp) {
+      var fwd = sp[0], sOff = sp[1];
       out.push({ x: at.x + ca * fwd + sa * sOff, y: at.y + sa * fwd - ca * sOff, aim: f, top: top, k: P.k, P: P });
     });
     return out;
@@ -11520,7 +11522,10 @@
   function hullWithLoad(g, u, opts) {
     var atT = opts.at || u, m;
     var tg = towedGun(u);
-    var tBehind = tg && toScreen(atT.x - Math.cos(u.facing || 0), atT.y - Math.sin(u.facing || 0)).y < toScreen(atT.x, atT.y).y;
+    /* The gun goes on first when it is the further of the two — and when it is
+       level with the hull (a side-on tow, E or W), so the hull's near wheels
+       cover the hitch rather than the trail covering them. */
+    var tBehind = tg && (Math.cos(u.facing || 0) + Math.sin(u.facing || 0)) > -0.3;
     if (tg && tBehind) drawTowed(g, u, tg, atT);
     var sv = slungVehicle(u);
     if (sv) {
