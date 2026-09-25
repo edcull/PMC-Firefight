@@ -11520,7 +11520,10 @@
   function hullWithLoad(g, u, opts) {
     var atT = opts.at || u, m;
     var tg = towedGun(u);
-    var tBehind = tg && toScreen(atT.x - Math.cos(u.facing || 0), atT.y - Math.sin(u.facing || 0)).y < toScreen(atT.x, atT.y).y;
+    /* The gun goes on first when it is the further of the two — and when it is
+       level with the hull (a side-on tow, E or W), so the hull's near wheels
+       cover the hitch rather than the trail covering them. */
+    var tBehind = tg && (Math.cos(u.facing || 0) + Math.sin(u.facing || 0)) > -0.3;
     if (tg && tBehind) drawTowed(g, u, tg, atT);
     var sv = slungVehicle(u);
     if (sv) {

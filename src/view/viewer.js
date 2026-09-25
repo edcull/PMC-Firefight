@@ -715,6 +715,12 @@
   // pull out to the whole line for the length of a shot
   function showWide() { view.wide = true; view.wideUntil = performance.now() + 900; start(); }
   function onTow() { return stationary(profile()) && view.stance === 'towed'; }
+  // dug in, a gun cannot be turned: a mark outside the front 90° cannot be fired on (p. 94)
+  function outOfArc() {
+    if (!stationary(profile()) || view.stance !== 'dug') return false;
+    var u = unit(), f = faceAngle(view.face), b = Math.atan2(TO.y - u.y, TO.x - u.x);
+    return Math.abs(Math.atan2(Math.sin(b - f), Math.cos(b - f))) > Math.PI / 4 + 1e-6;
+  }
   // the bearing from the unit to the mark, and the facing nearest it
   function bearingToMark(u) { return Math.atan2(TO.y - u.y, TO.x - u.x); }
   function nearestFace(brg) {
@@ -729,7 +735,7 @@
      to the nearest facing (unless dug in), then the gun traversing onto it —
      and only then shoots. */
   function fire() {
-    if (view.status === 'destroyed' || onTow() || view.turning) return;
+    if (view.status === 'destroyed' || onTow() || outOfArc() || view.turning) return;
     var u0 = unit();
     if (turns(u0)) {
       var from = { f: u0.facing, a: u0.aim }, brg = bearingToMark(u0);
@@ -748,7 +754,7 @@
     fireNow();
   }
   function fireNow() {
-    if (view.status === 'destroyed' || onTow()) return;
+    if (view.status === 'destroyed' || onTow() || outOfArc()) return;
     showWide();
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
@@ -1237,7 +1243,8 @@
     h += '<div class="vtabbody voptsbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
     h += '<div class="vacts">' +
       // a gun on tow is limbered up behind its vehicle: it does not fire
-      '<button class="vbtn primary" data-do="fire"' + (onTow() ? ' disabled title="On tow: deploy it to fire"' : '') + '>Fire</button>' +
+      '<button class="vbtn primary" data-do="fire"' + (onTow() ? ' disabled title="On tow: deploy it to fire"'
+        : outOfArc() ? ' disabled title="Dug in: the mark is outside its 90° fire arc — turn it to face the mark"' : '') + '>Fire</button>' +
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
