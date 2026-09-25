@@ -5999,6 +5999,7 @@
     if (u.cls === 'aircraft') return true;
     if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
     if (u.art === 'engflame') return true;                                // the flame gun's pilot light
+    if (u.drone && (u.cls === 'vehicle' || u.cls === 'aircraft')) return true;   // a drone's aerial light blinks
     return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]) || winged(KIT[r]) || (KIT[r] && KIT[r].gun === 'flamer'); });
   }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
@@ -10220,7 +10221,7 @@
             var ab2 = S3(TF(-tL * 0.4, -pad), pz), at6 = S3(TF(-tL * 0.52, -pad), pz + Math.round(20 * sf));
             sEllipse(ab2[0], ab2[1], 2, 1.2, STEEL);
             line(ab2, at6, 1.4, STEEL_LIT);
-            sEllipse(at6[0], at6[1], 1.6, 1.6, '#ff5040');
+            droneLamp(at6[0], at6[1]);
           };
           // the far one first, so the near one is drawn over it
           if (nearOf(1) > 0) { mast(); kit(); } else { kit(); mast(); }
@@ -10249,7 +10250,7 @@
           var ab = S3(TF(-tL * 0.4, tW * 1.15), shoulder), at5 = S3(TF(-tL * 0.52, tW * 1.15), shoulder + Math.round(18 * sf));
           sEllipse(ab[0], ab[1], 2, 1.2, STEEL);                // its mount on the shoulder
           line(ab, at5, 1.4, STEEL_LIT);
-          sEllipse(at5[0], at5[1], 1.6, 1.6, '#ff5040');
+          droneLamp(at5[0], at5[1]);
         } else if (light) {
           // the head sits straight on the chest, a size bigger, with a glassy blue eye
           var hz = shoulder - 1, hh = Math.round(9 * sf);
@@ -10466,7 +10467,13 @@
       var ap = toScreen(aq.x, aq.y), ay = ap.y - ya, ah = Math.max(10, K * 0.55);
       ellipse(g, ap.x, ay, 2, 1.2, STEEL);                   // its mount
       thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 1.4, STEEL_LIT);
-      ellipse(g, ap.x + 1, ay - ah, 1.6, 1.6, '#ff5040');
+      droneLamp(ap.x + 1, ay - ah);
+    }
+    // the red light on a drone's aerial: it blinks, about once a second, and is out on a wreck
+    function droneLamp(x, y) {
+      var lit = !dead && Math.floor((root.performance ? performance.now() : 0) / 500) % 2 === 0;
+      if (lit) ellipse(g, x, y, 3.6, 3.6, 'rgba(255,80,64,.28)');
+      ellipse(g, x, y, 1.6, 1.6, lit ? '#ff5040' : '#5a1c16');
     }
 
     function drawDamage() {
