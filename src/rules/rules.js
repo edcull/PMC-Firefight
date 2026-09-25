@@ -3108,6 +3108,7 @@
        stays put and it traverses within its front arc. Nothing in the rules
        reads a squad's facing; this is how it is drawn. */
     if (a && t && !isMachine(a) && a.x != null && !(opts && opts.assault)) {
+      a._turnFrom = { f: a.facing, a: a.aim };          // where it pointed, so the swing can be played
       a.aim = Math.atan2(t.y - a.y, t.x - a.x);
       if (!dugIn(a)) a.facing = nearestFacing(a.aim);
     }

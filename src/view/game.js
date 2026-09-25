@@ -1899,6 +1899,17 @@
   }
 
   function playShooting(shooter, target, res, deaths, done) {
+    /* A crew-served piece swings onto its target before it fires: the carriage
+       round to its new facing, then the gun traversing onto the bearing. */
+    if (shooter && ISO.startTurn && ISO.turnsLikeMachine(shooter.art)) {
+      var swing = ISO.startTurn(shooter);
+      if (swing > 0) {
+        anims.push({ kind: 'turn', unit: shooter, t0: nowMs(), dur: swing });
+        startLoop();
+        setTimeout(function () { if (state) playShooting(shooter, target, res, deaths, done); }, swing + 40);
+        return;
+      }
+    }
     var spec = R.weaponSpec(shooter);
     /* A gunship fires from its airframe and is hit on its airframe, not on the
        ground it happens to be over. Every point a shot is drawn between carries

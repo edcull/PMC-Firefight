@@ -6647,9 +6647,9 @@
   var GUN_K = 1.2;                                      // the piece's size on the table
   var GUN_CREW = [[-0.35, -0.62], [-0.35, 0.62], [-0.8, -0.72], [-0.8, 0.72], [-1.2, -0.3], [-1.2, 0.3], [-0.55, 0], [-1.45, 0]];
   function gunOpts(u, at, mode) {
-    var f = u.facing == null ? (u.side === 'B' ? Math.PI : 0) : u.facing;
+    var pa = pieceAngles(u), f = pa.f;
     return {
-      x: at.x + Math.cos(f) * 0.35 * GUN_K, y: at.y + Math.sin(f) * 0.35 * GUN_K, aim: f, top: gunTop(u, f), k: GUN_K,
+      x: at.x + Math.cos(f) * 0.35 * GUN_K, y: at.y + Math.sin(f) * 0.35 * GUN_K, aim: f, top: pa.top, k: GUN_K,
       mode: mode || (u.dugIn ? 'dug' : 'fire'), heavy: /heavy/.test(u.key || ''),
       pal: PALETTE[u.paint || u.side] || PALETTE.A
     };
@@ -6663,6 +6663,43 @@
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
     return f + Math.max(-Math.PI / 4, Math.min(Math.PI / 4, d));
+  }
+  function angGap(a1, a0) { return Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)); }
+  /* Where a piece's mount faces (f) and its weapon points (top) this frame.
+     When it has just been given a new lay (u._turn, see startTurn) it gets
+     there in two moves: the carriage swings round to its new facing with the
+     gun carried as it was, then the gun traverses onto the target. */
+  function pieceAngles(u) {
+    var f = u.facing == null ? (u.side === 'B' ? Math.PI : 0) : u.facing, tr = u._turn;
+    if (tr) {
+      var el = Date.now() - tr.t0;
+      if (el < tr.d1 + tr.d2) {
+        if (el < tr.d1) {
+          var k1 = el / tr.d1; k1 = k1 * k1 * (3 - 2 * k1);
+          var fi = tr.f0 + angGap(tr.f1, tr.f0) * k1;
+          return { f: fi, top: fi + tr.off0 };
+        }
+        var k2 = (el - tr.d1) / tr.d2; k2 = k2 * k2 * (3 - 2 * k2);
+        var t0 = tr.f1 + tr.off0;
+        return { f: tr.f1, top: t0 + angGap(tr.top1, t0) * k2 };
+      }
+    }
+    return { f: f, top: gunTop(u, f) };
+  }
+  /* Give a piece its new lay to play: from where it pointed (u._turnFrom, left
+     by the rules when it fired) to where it points now. Answers how long the
+     swing takes, in ms, so the shot can wait for it; 0 when there is none. */
+  function startTurn(u) {
+    var from = u._turnFrom;
+    delete u._turnFrom;
+    if (!from || !(PIECE3D[u.art] || FIELD_GUN[u.art])) return 0;
+    var dflt = u.side === 'B' ? Math.PI : 0;
+    var f0 = from.f == null ? dflt : from.f, top0 = gunTop({ aim: from.a }, f0);
+    var f1 = u.facing == null ? dflt : u.facing, top1 = gunTop(u, f1), off0 = angGap(top0, f0);
+    var d1 = Math.abs(angGap(f1, f0)) / Math.PI * 1100, d2 = Math.abs(angGap(top1, f1 + off0)) / Math.PI * 900;
+    if (d1 + d2 < 60) return 0;
+    u._turn = { t0: Date.now(), d1: Math.max(1, d1), d2: Math.max(1, d2), f0: f0, f1: f1, off0: off0, top1: top1 };
+    return Math.max(1, d1) + Math.max(1, d2);
   }
   // does the crew face left on the screen, working a gun pointed this way?
   function gunFaceL(aim) { return Math.cos(aim) - Math.sin(aim) < 0; }
@@ -7058,10 +7095,10 @@
      way the unit faces, its crew shared out between them. */
   function pieces3D(u, at) {
     var art = u.art, P = PIECE3D[art], n = PIECE_COUNT[u.key] || 1;
-    var f = u.facing == null ? (u.side === 'B' ? Math.PI : 0) : u.facing;
+    var pa = pieceAngles(u), f = pa.f;
     var ca = Math.cos(f), sa = Math.sin(f), out = [];
     var across = n === 1 ? [0] : n === 2 ? [-0.55, 0.55] : [-0.95, 0, 0.95];
-    var top = gunTop(u, f);
+    var top = pa.top;
     across.forEach(function (sOff) {
       var fwd = 0.25;
       out.push({ x: at.x + ca * fwd + sa * sOff, y: at.y + sa * fwd - ca * sOff, aim: f, top: top, k: P.k, P: P });
@@ -11659,7 +11696,7 @@
       g.imageSmoothingEnabled = was;
     }
     if (PIECE3D[art] && !around) {
-      var fl3 = gunFaceL(u.facing == null ? (u.side === 'B' ? Math.PI : 0) : u.facing);
+      var fl3 = gunFaceL(pieceAngles(u).f);
       drawPieces3D(g, u, art, at, opts, function (mi, wx, wy) { crewman(mi, wx, wy, fl3); });
       spots = [];
       placed = true;
@@ -11900,7 +11937,9 @@
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec,
     hasPiece: function (art) { return art === 'rebelgun' || !!PIECE3D[art]; },   // a piece left knocked out when its crew is gone
-    turnsLikeMachine: function (art) { return !!(PIECE3D[art] || FIELD_GUN[art]); },   // a crew-served piece drawn in 3D, with a facing   // a piece with a knocked-out drawing of its own figureHeight: figureHeight, ROLES: ROLES,
+    turnsLikeMachine: function (art) { return !!(PIECE3D[art] || FIELD_GUN[art]); },
+    startTurn: startTurn,                     // a crew-served piece's swing onto its target, in ms
+    turning: function (u) { return !!(u && u._turn && Date.now() - u._turn.t0 < u._turn.d1 + u._turn.d2); },   // a crew-served piece drawn in 3D, with a facing   // a piece with a knocked-out drawing of its own figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
     figure: function (side, art, i, pose, step, mount) {
       return sprite(side || 'A', art, i || 0, pose || 'stand', step || 0, MODEL * fitScale(art, i || 0), 0, mount);
