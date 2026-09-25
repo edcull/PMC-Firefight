@@ -4012,6 +4012,7 @@
     logLine('note', res.text);
     if (res.ok && SFX && SFX.shimmer) SFX.shimmer();
     if (res.ok) {
+      addFx({ kind: 'tplink', from: { x: tp.x, y: tp.y }, to: { x: dest.x, y: dest.y }, rgb: glowRGB(u), dur: 1500, blocking: true });
       addFx({ kind: 'wave', x: from.x, y: from.y, up: 0, r: 2, rgb: glowRGB(u), dur: 700, blocking: true });
       addFx({ kind: 'wave', x: u.x, y: u.y, up: 0, r: 2, rgb: glowRGB(u), delay: 350, dur: 1050, blocking: true });
       addFx({ kind: 'teleportin', x: u.x, y: u.y, r: 1.4, delay: 250, dur: 1400, blocking: true });   // the column it comes out of

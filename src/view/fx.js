@@ -80,6 +80,19 @@
       g.restore();
     }
     // where a shared exit portal hangs: over its world point, clear of the ground
+    // a thin line of light between two points on the screen, a brighter pulse running along it
+    function link(x1, y1, x2, y2, rgb, a) {
+      if (a <= 0) return;
+      g.save();
+      g.lineCap = 'round';
+      g.strokeStyle = 'rgba(' + rgb + ',' + (0.25 * a) + ')'; g.lineWidth = I.PIXEL * 2.4;
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      g.strokeStyle = 'rgba(' + rgb + ',' + (0.8 * a) + ')'; g.lineWidth = Math.max(1, I.PIXEL * 0.8);
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      var ph = (t / 600) % 1, px = x1 + (x2 - x1) * ph, py = y1 + (y2 - y1) * ph;
+      I.ellipse(g, px, py, I.PIXEL * 1.6, I.PIXEL * 1.6, 'rgba(235,248,255,' + (0.9 * a) + ')');
+      g.restore();
+    }
     function exitScreen(e) {
       var q = I.toScreen(e.x, e.y);
       return { x: q.x, y: q.y - lift(e.x, e.y) - (e.up || 0) - I.K * 1.3 };
@@ -429,6 +442,11 @@
             var to = k < 0.3 ? 0 : k < 0.42 ? (k - 0.3) / 0.12 : k < 0.75 ? 1 : Math.max(0, 1 - (k - 0.75) / 0.2);
             portal(tx, ty, to, osz * 1.15);
           }
+          // the two portals joined for as long as the bomb is between them: a thin line of blue, pulsing
+          if (k > 0.03 && k < 0.8) {
+            var la = Math.min(1, (k - 0.03) / 0.08, (0.8 - k) / 0.1) * (0.45 + 0.35 * Math.sin(t / 70));
+            link(oa.x, oa.y, tx, ty, prgb, la);
+          }
           if (k > 0.42) {
             var kf = (k - 0.42) / 0.58;
             var apx = I.K * 0.9;
@@ -513,6 +531,12 @@
           g.fillRect(sx, sy2, I.PIXEL, I.PIXEL);
         }
         g.restore();
+      } else if (f.kind === 'tplink') {
+        /* a unit going through the Teleport network: the pad it went in at and
+           the one it comes out of, joined by a thin pulsing line while it is between */
+        var la2 = I.toScreen(f.from.x, f.from.y), lb2 = I.toScreen(f.to.x, f.to.y);
+        var lf = Math.min(1, k / 0.12, (1 - k) / 0.2) * (0.45 + 0.35 * Math.sin(t / 70));
+        link(la2.x, la2.y - lift(f.from.x, f.from.y) - I.K * 0.9, lb2.x, lb2.y - lift(f.to.x, f.to.y) - I.K * 0.9, f.rgb || '110,190,255', lf);
       } else if (f.kind === 'exitportal') {
         /* the salvo's one exit: opens as the first bomb goes into the gun,
            stays open while every bomb comes through, closes after the last */
