@@ -6,6 +6,8 @@
    bookkeeping and broadcasting. */
 'use strict';
 const P = require('../src/engine/protocol.js');
+// how long a seat is kept in setup for someone who dropped out (a refresh, a phone gone to sleep)
+const HOLD_SETUP_MS = 3 * 60 * 1000;
 
 function now() { return Date.now(); }
 
@@ -135,6 +137,19 @@ class Lobby {
       this.pushLobby();
       return;
     }
+    /* In setup a refresh, or a phone locking its screen, should not cost the seat
+       and the force built for it either: it is held for a while, and given up only
+       if they do not come back. */
+    if (room.phase === P.PHASE.SETUP && p.seat) {
+      p.sock = null;
+      room.push();
+      this.pushLobby();
+      const t = setTimeout(() => {
+        if (!p.sock && p.room === room && room.seats[p.seat] === p) this.leave(p);
+      }, HOLD_SETUP_MS);
+      if (t.unref) t.unref();
+      return;
+    }
     this.leave(p);
   }
 
@@ -184,7 +199,7 @@ class Lobby {
     if (!rejoined) return;
     rejoined.broadcast('game.chat', { from: null, text: p.name + ' is back.', at: now() });
     rejoined.push();
-    if (rejoined.table) rejoined.table.resync(p);
+    if (rejoined.table) rejoined.table.rejoin(p);
     this.pushLobby();
   }
 
@@ -246,7 +261,8 @@ class Lobby {
       at: now()
     });
     room.push();
-    if (room.table) room.table.resync(p);
+    // walking in on a battle already being fought: the board, then the table as it stands
+    if (room.table) room.table.rejoin(p);
     this.pushLobby();
   }
 

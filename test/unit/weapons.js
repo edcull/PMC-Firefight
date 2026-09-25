@@ -42,7 +42,7 @@ is('gausscannon', 'rail x3');
 all(['rminers', 'rfaceminers', 'rharshminers'], 'rail x2');
 
 head('Guided missiles');
-is('raa', 'missile x2');
+is('raa', 'shell');
 // the launcher teams put a pair in the air
 all(['sam', 'missile'], 'missile x2');
 // air defence hulls put the gun up first and the missiles off the rails after
@@ -136,9 +136,9 @@ is('rhflak', 'chain+burst');
 
 head('Machine guns');
 is('rlmg', 'burst');
-is('lmgsection', 'smg+burst');
+is('lmgsection', 'burst');
 // the MG team has a carbine in the section alongside the gun
-is('lmgteam', 'smg+burst');
+is('lmgteam', 'burst');
 is('tsc', 'small+rocket');
 // the flexible strike craft rakes with its nose gun under a rocket rack
 is('fsc', 'burst+rocket');
@@ -170,7 +170,8 @@ all(['recruits', 'rookie', 'regular'], 'small');
 all(['veterans', 'rangers'], 'small+smg');
 is('nomads', 'small');
 // the scouts carry a sidearm and one heavy shot between them
-all(['observers', 'sharpshooters'], 'shell+pistol');
+is('observers', 'small');
+is('sharpshooters', 'shell+pistol');
 
 head('And a sidearm is not a rifle');
 // Firepower 1 at 12": command, medics and signallers are defending themselves
@@ -225,7 +226,7 @@ ok('a support vehicle still lobs with a propulsion under it',
 ok('an autocannon hull keeps hammering whatever drives it',
   R.weaponStyle(R.applyPropulsion(build('hpv'), 'hover')) === 'chain');
 ok('a suppressed MG team fires the same way',
-  R.weaponStyle(Object.assign(build('lmgteam'), { sp: 9 })) === 'smg');
+  R.weaponStyle(Object.assign(build('lmgteam'), { sp: 9 })) === 'burst');
 /* A vehicle built as a drone (p. 37) has no crew, but it is the same hull with
    the same gun — a support drone still lobs, an assault drone still hammers. */
 ok('a support vehicle flown as a drone still lobs',

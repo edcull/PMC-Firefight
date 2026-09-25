@@ -2488,9 +2488,10 @@
     // the field command grades, each led by its commander in dress uniform
     command4: ['cmdr4', 'signals', 'cmdsmg'],
     command3: ['cmdr3', 'signals', 'cmdsmg'],
-    command2: ['cmdr2', 'signals', 'cmdsmg'],
-    command1: ['cmdr1', 'signals', 'cmdsmg'],
-    commandhi: ['cmdrhi', 'signals', 'cmdsmg'],
+    // the larger command groups carry a spotter: their marks and hacks are called from his eyes
+    command2: ['cmdr2', 'signals', 'cmdspotter', 'cmdsmg'],
+    command1: ['cmdr1', 'signals', 'cmdspotter', 'cmdsmg'],
+    commandhi: ['cmdrhi', 'signals', 'cmdspotter', 'cmdsmg'],
     // rifle teams: the leader at the front right with an SMG, the SAW at the front left, riflemen behind
     rifle: ['riflelead', 'saw', 'rifleman'],
     veteran: ['vetlead', 'vetsaw', 'vet'],
@@ -2498,7 +2499,8 @@
     lighteng: ['breacherlt', 'sapperlt'],
     rookie: ['rookielead', 'sawrk', 'riflemanrk'],
     // support teams: the standing men carry SMGs; the section has two guns down in front
-    mg: ['gunner', 'loader', 'supsmg'],
+    // the Light MG team: four machine guns and two men feeding them
+    mg: ['gunner', 'gunner', 'gunner', 'gunner', 'loader', 'loader'],
     mgsec: ['gunner', 'gunner', 'loader'],
     sniper: ['marksman', 'spotter', 'lightinf'],
     // the sniper team alone goes in with night-vision goggles
@@ -2590,7 +2592,8 @@
     legendrider: ['hellriderlead', 'hellrider', 'hellriderrpg', 'hellridertan'],
     rebac: ['rebacgunner', 'rebloader', 'rebrifle'],
     rebhac: ['rebacgunner', 'rebloader', 'gunloader'],
-    rebelmg: ['rebgunner', 'rebloader', 'rebrifle'],
+    // three light machine guns, the rest of the squad with sub-machine guns (the guns alone do the shooting)
+    rebelmg: ['rebgunner', 'rebgunner', 'rebgunner', 'rebsmg', 'rebsmg', 'rebsmg'],
     rebelat: ['rebrpg', 'rebrpg', 'rebrpgloader', 'rebrifle'],
     rebelmortar: ['rebmortarman', 'rebmortarloader'],
     rebelgun: ['guncaptain', 'gunloader'],
@@ -2663,6 +2666,7 @@
     signals: { helm: 'std', gun: 'pistol', pack: 'radio', fitAs: 'rifle' },
     // the field command's escort: carbines rather than rifles
     cmdsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
+    cmdspotter: { helm: 'std', gun: 'optics', pack: 'std', kneel: true, fitAs: 'rifle' },
     supsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
     /* the field command's commanders, in dress uniform that grows grander with the grade */
     cmdr4: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 1 },
@@ -2845,6 +2849,7 @@
     // scavenged heavy weapons, worked without much training
     rebgunner: { helm: 'std', gun: 'mg', forceHelm: true, pack: 'none', kneel: true, bulk: 1, ragged: true, tint: REBEL_DRAB },
     rebloader: { helm: 'std', gun: 'pistol', forceHelm: true, pack: 'ammo', kneel: true, ragged: true, tint: REBEL_DRAB },
+    rebsmg: { helm: 'std', gun: 'smg', forceHelm: true, pack: 'ammo', kneel: true, ragged: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
     rebrpg: { helm: 'std', gun: 'rpg', forceHelm: true, pack: 'none', kneel: true, ragged: true, tint: REBEL_DRAB },
     rebrpgloader: { helm: 'std', gun: 'huntingrifle', forceHelm: true, pack: 'missile', kneel: true, ragged: true, tint: REBEL_DRAB },
     rebacgunner: { helm: 'std', gun: 'none', forceHelm: true, pack: 'none', kneel: true, bulk: 1, ragged: true, tint: REBEL_DRAB },
@@ -4653,6 +4658,22 @@
     lascutter: [25, 2], rpg: [31, -8.5], banner: [14, 3], flagsmall: [14, 3], flagbig: [14, 3], flaghuge: [14, 3], megaphone: [17, 4], machete: [-7, -20]
   };
   var MUZZLE_PRONE = { long: [41, -9], mg: [35, -8.5], saw: [35, -8.5], optics: [27, -15], case: [24, -7], slate: [24, -7], console: [24, -7] };
+  /* Two more points a figure is drawn with, for what it does besides fire its gun:
+     the front of a Protector's shoulder pod, which the grenades leave, and the
+     eyes of a man with optics — the lens he has up to them, or the binoculars of
+     one lying prone — which a marker's laser and a Keen-Eyed glint come from. */
+  function legY(kit, y) { return kit.mount ? y : (y >= HIP ? y * LEG : y + HIP * (LEG - 1)); }
+  function podArt(kit, pose) {
+    if (!kit.shoulderGL || pose === 'prone') return null;
+    var wy = -32 + (pose === 'kneel' ? KNEEL_DROP : 0);
+    return [-7, legY(kit, wy - 15.5)];
+  }
+  function eyeArt(kit, pose) {
+    if (kit.gun !== 'optics') return null;
+    if (pose === 'prone') return MUZZLE_PRONE.optics;
+    var wy = -32 + (pose === 'kneel' || kit.kneel ? KNEEL_DROP : 0);
+    return [9, legY(kit, wy - 8.5)];
+  }
   function muzzleArt(kit, pose) {
     if (pose === 'prone') return MUZZLE_PRONE[kit.gun] || [31, -8];
     var drop = pose === 'kneel' ? KNEEL_DROP : 0, wy = -32 + drop;
@@ -6121,6 +6142,12 @@
     }
     c.ox = ox; c.oy = oy; c.res = SPRITE_RES;
     c.muz = [ma[0] * SU * sq, ma[1] * SU * sq];      // the muzzle, in board pixels from the feet
+    var pa = kit.bug || kit.xeno ? null : podArt(kit, pose), ea = kit.bug || kit.xeno ? null : eyeArt(kit, pose);
+    c.pod = pa ? [pa[0] * SU * sq, pa[1] * SU * sq] : null;
+    c.eye = ea ? [ea[0] * SU * sq, ea[1] * SU * sq] : null;
+    // a man whose hands hold optics, a slate or a case is not one of the guns
+    c.tool = /^(optics|slate|case|console)$/.test(kit.gun || '');
+    c.gun = kit.gun || null;                          // which weapon the man holds, for which shots he fires
     sprites[key] = c;
     return c;
   }
@@ -6903,14 +6930,18 @@
         }
         stroke([pts[0], pts[1]], m(0.8), GLO.m);                 // the leading edge
         if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
-        // a drone's aerial: one whip off the top edge of the dorsal wing, raked at the wing's own sweep, a blue light at its tip
-        if (u.drone && w.dorsal && !dead) {
+        /* A drone's aerial — and the teleport craft's, which steers its gate by it: one
+           whip off the top edge of the dorsal wing, raked at the wing's own sweep, a blue
+           light at its tip that blinks about once a second. */
+        if ((u.drone || spec.ring) && w.dorsal && !dead) {
           var k8 = 0.78, at0 = le + (tp - le) * k8, r0 = rf + (w.sp - rf) * k8;
           var a0 = P3(at0, r0, w.ph), a1 = P3(at0 + (tp - le) * 0.42, r0 + (w.sp - rf) * 0.42, w.ph);
           stroke([a0, a1], 1.6, WH.dk);
           stroke([a0, a1], 0.8, WH.lt);
-          ellipse(g, a1[0], a1[1], 1.9, 1.9, '#6ebeff');
-          ellipse(g, a1[0], a1[1], 0.9, 0.9, '#e4f4ff');
+          var blueOn = Math.floor(tnow / 500) % 2 === 0;
+          if (blueOn) ellipse(g, a1[0], a1[1], 3.8, 3.8, 'rgba(110,190,255,.3)');
+          ellipse(g, a1[0], a1[1], 1.9, 1.9, blueOn ? '#6ebeff' : '#1d3552');
+          if (blueOn) ellipse(g, a1[0], a1[1], 0.9, 0.9, '#e4f4ff');
         }
       }
       // the fuselage: rings of stations [t, r] turned into an eight-sided body
@@ -9472,11 +9503,13 @@
             var e0 = S3(AF(R0 * 0.8, -R0 * 0.3), podZ + 2), e1 = S3(AF(R0 * 1.3, -R0 * 0.3), podZ + 2);
             line(e0, e1, 2.2, '#15181e');
             line(e0, e1, 1, '#4a5260');
-            sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            // the red eye at its tip blinks, about once a second: the drone's light
+            var eyeOn = !dead && Math.floor((root.performance ? performance.now() : 0) / 500) % 2 === 0;
+            sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : eyeOn ? '#ff4038' : '#5a1c16');
             mount('nose', e1);                                   // where a marker's beam leaves the craft
             mount('scan', S3(AF(R0 * 1.13, 0), podZ + Math.round(H * 0.2)));   // and where it looks from
             mount('mg', S3(AF(R0 * 1.14, 0), podZ + Math.round(H * 0.12)));    // its light gun fires from the pod's nose
-            if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
+            if (eyeOn) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
             shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
             shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
             shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
@@ -10528,6 +10561,12 @@
       ellipse(g, dp.x - r * 0.35, cy - r * 0.5, r * 0.35, r * 0.25, 'rgba(255,255,255,.75)');
       ellipse(g, dp.x + r * 0.2, cy - r * 0.05, r * 0.28, r * 0.2, '#2a6f9a');     // the sensor behind the dome's skin
       }
+      // a jet has no aerial: its light blinks on top of the dome instead (a disc's is the red eye on its emitter)
+      if (only !== 'aerial' && spec.fly && spec.craft === 'jet') {
+        // just ahead of the dome, on the spine towards the nose
+        var lq = toScreen(along(spec.len * (back + 0.13), 0).x, along(spec.len * (back + 0.13), 0).y);
+        droneLamp(lq.x, lq.y - y5 - 1.2);
+      }
       if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
@@ -10603,8 +10642,13 @@
       var jx = ((hash(mi + 1, seed & 255, 7) * 2 - 1) * 3) | 0;
       var jy = ((hash(seed & 255, mi + 1, 11) * 2 - 1) * 2) | 0;
       var c = sprite(u.paint || u.side, art, mi, pose, 0, MODEL * fitScale(art, mi), Math.min(2, spots[k].rank), u.mount);
-      var m = c.muz || [SU * 12, -SU * 38];
-      out[mi] = { dx: spots[k].sx + jx + dir * m[0], dy: spots[k].sy + jy + m[1] - bugHover(art, mi, pose, 0), dir: dir };
+      var m = c.muz || [SU * 12, -SU * 38], hov = bugHover(art, mi, pose, 0);
+      var bx = spots[k].sx + jx, by = spots[k].sy + jy - hov;
+      out[mi] = { dx: bx + dir * m[0], dy: by + m[1], dir: dir };
+      if (c.tool) out[mi].tool = true;
+      if (c.gun) out[mi].gun = c.gun;
+      if (c.pod) out[mi].pod = { dx: bx + dir * c.pod[0], dy: by + c.pod[1], dir: dir };
+      if (c.eye) out[mi].eye = { dx: bx + dir * c.eye[0], dy: by + c.eye[1], dir: dir };
     }
     return out.filter(Boolean);
   }

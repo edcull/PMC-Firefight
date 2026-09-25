@@ -4341,7 +4341,8 @@
 
   function doHack(target) {
     var u = ui.selected;
-    if (u && target) addFx({ kind: 'beam', x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
+    // the hack goes out from the unit's own eyes (its spotter, where it has one)
+    if (u && target) addFx({ kind: 'beam', unit: u.id, x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
     var res = R.hack(state, u, target, function (drone, hits) {
       // taken over: it will act for the hacker's side, then burn
       drone.hijack = { from: drone.side, paint: drone.paint, hits: hits, by: u.id };
@@ -4529,7 +4530,7 @@
         /* Smoke Markers: a grenade thrown onto the mark, bursting where it lands,
            the flare burning in the smoke — in flight a little longer the further it goes */
         var gt = Math.round(Math.min(1000, 450 + R.unitDist(u, t) * 40));
-        addFx({ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: t.x, y: t.y }, dur: gt });
+        addFx({ kind: 'lob', grenade: true, unit: u.id, from: { x: u.x, y: u.y }, to: { x: t.x, y: t.y }, dur: gt });
         addFx({ kind: 'puff', x: t.x, y: t.y, delay: gt - 30, dur: gt + 1800 });
       } else addFx({ kind: 'beam', unit: u.id, x: u.x, y: u.y, tx: t.x, ty: t.y, rgb: '255,70,60', dur: 1200 });
       keenFx(u, t, 12);                                    // marking a Stealth unit past 12"

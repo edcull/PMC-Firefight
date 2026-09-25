@@ -80,6 +80,7 @@
       tier: 3, pl: 1,
       planet: 'random',
       scenario: 'roll',
+      terrain: 'auto',       // the table generated, or laid by hand ('manual')
       campaign: null,        // a campaign id on the server, or null for a one-off
       contract: null         // when a campaign is attached: which job is being fought
     };
@@ -95,6 +96,7 @@
     if ('pl' in patch) s.pl = oneOf(+patch.pl, PLS, s.pl);
     if ('planet' in patch) s.planet = oneOf(patch.planet, PLANETS, s.planet);
     if ('scenario' in patch) s.scenario = oneOf(patch.scenario, SCENARIOS, s.scenario);
+    if ('terrain' in patch) s.terrain = oneOf(patch.terrain, ['auto', 'manual'], s.terrain || 'auto');
     if ('campaign' in patch) s.campaign = patch.campaign ? clampText(patch.campaign, LIMITS.name) : null;
     if ('contract' in patch) s.contract = patch.contract == null ? null : clampText(String(patch.contract), 64);
     return s;
