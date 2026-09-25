@@ -913,9 +913,13 @@
      on the landing point, the squad flickers into being inside it, and the
      light thins away. Before it forms the squad is not drawn at all. */
   // coming up out of the ground: sunk and faint at first, rising to its full height
+  /* A giant bug breaks out of the ground rather than rising up through it: the
+     ground splits, the dust goes up, and it is there in the dust as it clears. */
   function heaving(age) {
-    var k = Math.min(1, age / (STAND_MS * 0.8)), e = 1 - Math.pow(1 - k, 2);
-    return { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), pose: null, alpha: Math.min(1, 0.25 + e) };
+    var k = Math.min(1, age / (STAND_MS * 0.85));
+    if (k < 0.18) return { lift: 0, pose: null, hidden: true };
+    var a = Math.min(1, (k - 0.18) / 0.6);
+    return { lift: 0, pose: null, alpha: a * a * (3 - 2 * a) };
   }
   function teleporting(age) {
     var k = age / TELE_MS;
@@ -1059,6 +1063,11 @@
         if (SFX) { SFX.impact(); SFX.impact(0.09); }
         render();
       }, DROP_MS - 60);
+    } else if (R.isMachine(u)) {
+      // the ground breaking open under it, and the dust thrown up round it
+      addFx({ kind: 'groundbreak', x: u.x, y: u.y, r: 2.4, dur: STAND_MS + 500, blocking: true });
+      addFx({ kind: 'collapse', x: u.x, y: u.y, r: 2.8, dur: STAND_MS, blocking: true });
+      if (SFX) { SFX.impact(0.05); SFX.impact(0.18); }
     } else {
       addFx({ kind: 'collapse', x: u.x, y: u.y, r: 1.6, dur: 600, blocking: true });
       // boots, then the squad on its feet

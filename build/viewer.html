@@ -10038,6 +10038,27 @@
     return o;
   }
 
+  /* A dead bug: thrown on its back, its legs curled up over it, the colour
+     gone out of the shell — not the one coming up out of the ground, which is
+     what its lying-low pose is on the table. The crumpled pose is painted, then
+     turned over so the shell lies on the ground and the legs stand up off it. */
+  function deadBug(g, w, h, ox, oy, pal, kit, s) {
+    var tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    var tg = tmp.getContext('2d');
+    paintBug(tg, ox, oy, pal, kit, 'prone', 0, s, true);
+    // how high it stands, so the overturned body rests on the same ground
+    var d = tg.getImageData(0, 0, w, h).data, top = h, bot = 0;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 20) { if (y < top) top = y; bot = y; break; }
+    }
+    if (bot <= top) return;
+    var k = 0.72;
+    g.save();
+    g.setTransform(1, 0, 0, -k, 0, oy + top * k);
+    g.drawImage(tmp, 0, 0);
+    g.restore();
+  }
   function paintBug(g, ox, oy, pal, kit, pose, step, s, dead) {
     var SH = dead
       ? { lt: '#5a5044', md: '#443c33', dk: '#26211b', gl: '#6a6052' }
@@ -11405,7 +11426,8 @@
       hp.hat = pal.helmForce || pal.forceMid || pal.mid; hp.hatLit = pal.helmLit || pal.force || pal.light; hp.hatDark = pal.helmDark || pal.forceDark || pal.dark;
       pal = hp;
     }
-    if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
+    if (kit.bug && CORPSE) deadBug(body.getContext('2d'), w, h, ox, oy, pal, kit, s);
+    else if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
       ma = [ma[0], ma[1] + burrowBug(body.getContext('2d'), w, h, ox, oy, pal, kit, step, s)];
     } else if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
     else if (kit.xeno) {
@@ -16888,6 +16910,36 @@
           I.rect(g, p4.x + Math.cos(ca) * cd, p4.y + Math.sin(ca) * cd * 0.55,
             I.PIXEL, I.PIXEL, 'rgba(255,' + (200 - c * 10) + ',140,' + (1 - k) + ')');
         }
+      } else if (f.kind === 'groundbreak') {
+        /* The ground splitting open where something comes up through it: a dark
+           rent opening in the middle, cracks running out from it, and clods of
+           earth thrown up and falling back — all fading as the dust settles. */
+        var gb = I.toScreen(f.x, f.y); gb.y -= liftAt(f);
+        var grd = (f.r || 2) * I.K, go = Math.min(1, k / 0.2), gf = k < 0.7 ? 1 : (1 - k) / 0.3;
+        g.save();
+        I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
+        I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
+        g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
+        for (var gc = 0; gc < 9; gc++) {
+          var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
+          var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
+          g.beginPath(); g.moveTo(gx, gy);
+          var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
+          g.lineTo(kx, ky);
+          g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
+          g.stroke();
+        }
+        // clods flung out, arcing up and falling back
+        for (var gd = 0; gd < 14; gd++) {
+          var ca2 = gd * 2.39 + 0.5, fly = Math.min(1, k / 0.55);
+          var dist = grd * (0.4 + (gd % 4) * 0.22) * fly;
+          var hgt = Math.sin(fly * Math.PI) * I.K * (1.2 + (gd % 3) * 0.6);
+          if (fly >= 1) hgt = 0;
+          var cx2 = gb.x + Math.cos(ca2) * dist, cy2 = gb.y + Math.sin(ca2) * dist * 0.5 - hgt;
+          var cz = I.PIXEL * (1.4 + (gd % 3) * 0.8);
+          I.rect(g, cx2 - cz / 2, cy2 - cz / 2, cz, cz, 'rgba(' + (gd % 3 ? '92,74,52' : '58,46,34') + ',' + gf + ')');
+        }
+        g.restore();
       } else if (f.kind === 'collapse') {
         // the cloud a demolished piece throws up
         var pc = I.toScreen(f.x, f.y); pc.y -= liftAt(f);
@@ -17943,10 +17995,12 @@
       return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
     }
     if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-    // a giant bug has no poses to get up through: it heaves itself up out of the ground (as game.js)
+    // a giant bug breaks out of the ground: there in the dust as it clears (as game.js)
     if (R.isMachine(unit())) {
-      var hk = Math.min(1, age / (STAND_MS * 0.8)), he = 1 - Math.pow(1 - hk, 2);
-      return { lift: -Math.round(I.ELEV * 3 * (1 - he)), pose: null, alpha: Math.min(1, 0.25 + he) };
+      var hk = Math.min(1, age / (STAND_MS * 0.85));
+      if (hk < 0.18) return { lift: 0, pose: null, hidden: true };
+      var ha = Math.min(1, (hk - 0.18) / 0.6);
+      return { lift: 0, pose: null, alpha: ha * ha * (3 - 2 * ha) };
     }
     // flat on its face, then up on one knee, then standing
     return {
@@ -17987,6 +18041,11 @@
           if (SFX) { SFX.impact(); SFX.impact(0.09); }
           start();
         }, DROP_MS - 60);
+      } else if (R.isMachine(u)) {
+        // the ground breaking open under a giant bug, and the dust thrown up round it
+        FX.add({ kind: 'groundbreak', x: at.x, y: at.y, r: 2.4, dur: STAND_MS + 500, blocking: true });
+        FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 2.8, dur: STAND_MS, blocking: true });
+        if (SFX) { SFX.impact(0.05); SFX.impact(0.18); }
       } else {
         FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 1.6, dur: 600, blocking: true });
         // boots, then the squad on its feet

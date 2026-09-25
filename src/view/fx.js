@@ -813,6 +813,36 @@
           I.rect(g, p4.x + Math.cos(ca) * cd, p4.y + Math.sin(ca) * cd * 0.55,
             I.PIXEL, I.PIXEL, 'rgba(255,' + (200 - c * 10) + ',140,' + (1 - k) + ')');
         }
+      } else if (f.kind === 'groundbreak') {
+        /* The ground splitting open where something comes up through it: a dark
+           rent opening in the middle, cracks running out from it, and clods of
+           earth thrown up and falling back — all fading as the dust settles. */
+        var gb = I.toScreen(f.x, f.y); gb.y -= liftAt(f);
+        var grd = (f.r || 2) * I.K, go = Math.min(1, k / 0.2), gf = k < 0.7 ? 1 : (1 - k) / 0.3;
+        g.save();
+        I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
+        I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
+        g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
+        for (var gc = 0; gc < 9; gc++) {
+          var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
+          var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
+          g.beginPath(); g.moveTo(gx, gy);
+          var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
+          g.lineTo(kx, ky);
+          g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
+          g.stroke();
+        }
+        // clods flung out, arcing up and falling back
+        for (var gd = 0; gd < 14; gd++) {
+          var ca2 = gd * 2.39 + 0.5, fly = Math.min(1, k / 0.55);
+          var dist = grd * (0.4 + (gd % 4) * 0.22) * fly;
+          var hgt = Math.sin(fly * Math.PI) * I.K * (1.2 + (gd % 3) * 0.6);
+          if (fly >= 1) hgt = 0;
+          var cx2 = gb.x + Math.cos(ca2) * dist, cy2 = gb.y + Math.sin(ca2) * dist * 0.5 - hgt;
+          var cz = I.PIXEL * (1.4 + (gd % 3) * 0.8);
+          I.rect(g, cx2 - cz / 2, cy2 - cz / 2, cz, cz, 'rgba(' + (gd % 3 ? '92,74,52' : '58,46,34') + ',' + gf + ')');
+        }
+        g.restore();
       } else if (f.kind === 'collapse') {
         // the cloud a demolished piece throws up
         var pc = I.toScreen(f.x, f.y); pc.y -= liftAt(f);
