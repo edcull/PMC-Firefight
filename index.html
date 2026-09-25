@@ -770,7 +770,9 @@
   /* your own badge opens the colours */
   button.tierbadge.tierpick { cursor: pointer; font: inherit; font-family: var(--display); font-size: 12px; font-weight: 700; }
   button.tierbadge.tierpick:hover, button.tierbadge.tierpick:focus-visible { outline: 2px solid color-mix(in srgb, currentColor 55%, transparent); outline-offset: 1px; }
-  .cmodal[data-modal="colour"] .cmodal-box { width: min(420px, 100%); }
+  /* your own colours, dropped down from the badge over the panel */
+  .cpan-A { position: relative; }
+  .found-pop.tierpop { right: auto; top: 44px; left: 8px; width: min(380px, calc(100% - 16px)); }
   .armypill { font-weight: 600; }
   .cpan .cphead { flex-wrap: nowrap; align-items: center; }
   .cpan .cphead b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2136,5 +2138,5 @@
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
 <script src="src/view/game.js?v=578e9596c7"></script>
-<script src="src/view/dossier.js?v=5ed8b16b02"></script>
+<script src="src/view/dossier.js?v=81df53be24"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

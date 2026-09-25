@@ -335,7 +335,6 @@
       (camp.mode === 'hotseat' ? esc(B.name)
         : n > 1 ? n + ' forces' : esc(B.name)) +
       '</span><em>details</em></button></div>';
-    h += cmodal('colour', C.words(A).Force + ' colours \u2014 ' + colourName(colourOf(A)), squares(colourOf(A)));
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
         : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
@@ -371,6 +370,11 @@
     h += '<div class="cphead">' + tierBadge(co, !!bar && side === 'A') + '<b>' + esc(co.name) + '</b>' +
       (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
+    // the colours, dropped down under your own badge
+    if (bar && side === 'A' && colourOpen) {
+      h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
+        '</label>' + squares(colourOf(co)) + '</div>';
+    }
     h += (bar || '') + statRow(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
@@ -456,7 +460,7 @@
     var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
     var what = C.words(co).tier + ' Tier ' + ROMAN[co.tier];
     if (pick) {
-      return '<button type="button" class="tierbadge tierpick"' + st + ' data-go="fmodal" data-kind="colour" title="' +
+      return '<button type="button" class="tierbadge tierpick"' + st + ' data-go="fcolour" aria-expanded="' + colourOpen + '" title="' +
         esc(what + ' \u2014 change colours') + '" aria-label="' + esc(what + ', change colours') + '">' + ROMAN[co.tier] + '</button>';
     }
     return '<span class="tierbadge"' + st + ' title="' + esc(what) + '">' + ROMAN[co.tier] + '</span>';
@@ -2118,7 +2122,7 @@
     if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
       camp.companies.A.colour = t.getAttribute('data-campcolour');
       try { localStorage.setItem('pmc-colour', camp.companies.A.colour); } catch (e) { }
-      save(); openModal = null; render(); return;
+      save(); colourOpen = false; render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
