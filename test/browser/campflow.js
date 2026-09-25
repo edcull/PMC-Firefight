@@ -353,6 +353,11 @@ async function clickText(p, re) {
     });
     await p.waitForTimeout(400);
   }
+  // Tough Negotiators (the company's doctrine) is decided first, on its own screen
+  txt = await body(p);
+  check('the payment dice are offered for Tough Negotiators first', /After the battle/i.test(txt) && /Tough Negotiators/i.test(txt));
+  await clickText(p, '^[Kk][Ee][Ee][Pp] [Tt][Hh][Ee][Mm] [Aa][Ll][Ll]$');
+  await p.waitForTimeout(300);
   txt = await body(p);
   check('the aftermath opened by itself', /Aftermath/.test(txt));
   check('...with a payment', /kUC/.test(txt), txt.match(/Two rolls of[^\n]*/)?.[0]);
