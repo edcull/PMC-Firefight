@@ -6398,17 +6398,66 @@
   function towedGun(u) {
     return (u.cargo || []).filter(function (c) { return c && (c.rules || []).indexOf('Stationary Artillery') >= 0; })[0] || null;
   }
+  /* A gun on tow, drawn as a machine is: built in the towing vehicle's own
+     frame, so it turns with it through every facing. Its trails run forward to
+     the hitch, the pair of road wheels on their axle, the shield, and the barrel
+     laid level for the road, pointing back the way the vehicle has come. Its
+     parts go down far to near. */
   function drawTowed(g, veh, gun, at) {
-    var art = gun.art, draw = EMPLACEMENT[art];
-    if (!draw) return;
     var hs = hullSpec(veh.art) || { len: 2 }, f = veh.facing || 0;
-    var back = hs.len * 0.5 + 0.7;
-    var gp = toScreen(at.x - Math.cos(f) * back, at.y - Math.sin(f) * back);
-    var hitch = toScreen(at.x - Math.cos(f) * hs.len * 0.5, at.y - Math.sin(f) * hs.len * 0.5);
-    var k = SU * MODEL * 1.35 * (PIECE_SCALE[art] || 1), dir = hitch.x > gp.x ? -1 : 1;
-    var pal = PALETTE[gun.paint || gun.side] || PALETTE.A;
-    thickLine(g, gp.x - 18 * k * dir, gp.y - 8 * k, hitch.x, hitch.y - a(0.4), Math.max(1.5, k * 2), '#2b2f2a');
-    draw(g, gp.x, gp.y, k, pal, dir, 'tow');
+    var fx = Math.cos(f), fy = Math.sin(f);
+    var back = hs.len * 0.5 + 0.8;
+    var cx = at.x - fx * back, cy = at.y - fy * back;          // the axle
+    var ZK = K * 0.9;                                           // pixels to an inch of height
+    // t along the gun's own axis (muzzle end +, away from the vehicle), s across it, z up, all in inches
+    function W(t, s2) { return { x: cx - fx * t - fy * s2, y: cy - fy * t + fx * s2 }; }
+    function S(t, s2, z) { var w = W(t, s2), q = toScreen(w.x, w.y); return [q.x, q.y - z * ZK]; }
+    function dep(t, s2) { var w = W(t, s2); return w.x + w.y; }
+    var big = /heavy/.test(gun.key || '') ? 1.18 : 1;
+    var STL = '#3b4139', LIT = '#57604f', DRK = '#262b24', TYRE = '#1c201b', HUB = '#4a5247';
+    var zAx = 0.2 * big, rW = 0.2 * big, wS = 0.34 * big;
+    function wheel(sd) {
+      var pts = [];
+      for (var a2 = 0; a2 < 14; a2++) {
+        var an = a2 / 14 * Math.PI * 2;
+        pts.push(S(Math.cos(an) * rW, sd * wS, zAx + Math.sin(an) * rW));
+      }
+      poly(g, pts, TYRE);
+      var h = S(0, sd * wS, zAx);
+      ellipse(g, h[0], h[1], rW * K * 0.42, rW * K * 0.42, HUB);
+    }
+    var parts = [
+      { d: dep(0, -wS), fn: function () { wheel(-1); } },
+      { d: dep(0, wS), fn: function () { wheel(1); } },
+      { d: dep(-0.45, 0), fn: function () {                     // the trails, closed up for the road
+        var z0 = 0.1, z1 = 0.16;
+        var top = [S(0.05, -0.13, z1), S(0.05, 0.13, z1), S(-0.8 * big, 0.03, z1), S(-0.8 * big, -0.03, z1)];
+        var bot = [S(0.05, -0.13, z0), S(0.05, 0.13, z0), S(-0.8 * big, 0.03, z0), S(-0.8 * big, -0.03, z0)];
+        poly(g, bot, DRK); poly(g, top, LIT);
+      } },
+      { d: dep(0, 0) + 0.001, fn: function () {                // the axle and the cradle on it
+        thickLine(g, S(0, -wS, zAx)[0], S(0, -wS, zAx)[1], S(0, wS, zAx)[0], S(0, wS, zAx)[1], Math.max(1.5, K * 0.06), DRK);
+        poly(g, [S(-0.12, -0.08, 0.36 * big), S(-0.12, 0.08, 0.36 * big), S(0.16, 0.08, 0.36 * big), S(0.16, -0.08, 0.36 * big)], LIT);
+        poly(g, [S(-0.12, -0.08, zAx), S(0.16, -0.08, zAx), S(0.16, -0.08, 0.36 * big), S(-0.12, -0.08, 0.36 * big)], STL);
+        poly(g, [S(-0.12, 0.08, zAx), S(0.16, 0.08, zAx), S(0.16, 0.08, 0.36 * big), S(-0.12, 0.08, 0.36 * big)], STL);
+      } },
+      { d: dep(0.55, 0), fn: function () {                     // the barrel, level, and its brake
+        var b0 = S(0.05, 0, 0.3 * big), b1 = S(1.0 * big, 0, 0.3 * big);
+        thickLine(g, b0[0], b0[1], b1[0], b1[1], Math.max(2, K * 0.1 * big), DRK);
+        thickLine(g, b0[0], b0[1] - 1, b1[0], b1[1] - 1, Math.max(1, K * 0.04), LIT);
+        var m0 = S(0.94 * big, 0, 0.3 * big), m1 = S(1.08 * big, 0, 0.3 * big);
+        thickLine(g, m0[0], m0[1], m1[0], m1[1], Math.max(3, K * 0.16 * big), STL);
+      } },
+      { d: dep(0.12, 0), fn: function () {                     // the shield, a welded plate across the front
+        var sh = [S(0.12, -0.3 * big, 0.2), S(0.12, 0.3 * big, 0.2), S(0.12, 0.3 * big, 0.52 * big), S(0.12, -0.3 * big, 0.52 * big)];
+        poly(g, sh, STL);
+        thickLine(g, sh[3][0], sh[3][1], sh[2][0], sh[2][1], 1, LIT);
+      } }
+    ];
+    // the tow bar, from the trail's end to the hitch at the vehicle's tail
+    var te = S(-0.8 * big, 0, 0.13), hq = toScreen(at.x - fx * hs.len * 0.5, at.y - fy * hs.len * 0.5);
+    thickLine(g, te[0], te[1], hq.x, hq.y - 0.3 * ZK, Math.max(1.5, K * 0.05), '#2b2f2a');
+    parts.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); });
   }
   // the light battery works a captured tube, the same piece the PMC mortar teams use
   EMPLACEMENT.rebelmortar = EMPLACEMENT.mortar;
