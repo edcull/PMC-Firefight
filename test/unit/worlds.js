@@ -27,8 +27,17 @@ function seeded(s) {
 }
 
 console.log('\nOne table');
-ok('a desert is laid from the barren table', G.tableFor('desert').rows, G.GENERATORS.barren.rows);
-ok('...and so is an arctic world', G.tableFor('arctic').rows, G.GENERATORS.barren.rows);
+// the barren table, row for row — only its impassable ground is the world's own (crystal fields, ice ravines)
+function sameTable(pl, kind) {
+  var rows = G.tableFor(pl).rows, base = G.GENERATORS.barren.rows;
+  return rows.length === base.length && rows.every(function (r, i) {
+    var kinds = JSON.stringify(r.alts.map(function (a) { return a.map(function (q) { return q.kind; }); }));
+    var want = JSON.stringify(base[i].alts.map(function (a) { return a.map(function (q) { return q.kind === 'lava' ? kind : q.kind; }); }));
+    return kinds === want;
+  });
+}
+ok('a desert is laid from the barren table, with crystal fields for impassable ground', sameTable('desert', 'crystal'), true);
+ok('...and an arctic world with ice ravines', sameTable('arctic', 'ravine'), true);
 ok('each goes by its own name', G.tableFor('desert').name + ' / ' + G.tableFor('arctic').name,
   'Desert world (barren) / Arctic world (barren)');
 var laid = G.generate({ width: 48, height: 48, planet: 'arctic', rand: seeded(3) });
