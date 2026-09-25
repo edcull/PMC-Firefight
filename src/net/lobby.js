@@ -38,7 +38,11 @@
     host.className = 'overlay lobby';
     host.id = 'lobby';
     host.hidden = true;
-    host.innerHTML = '<div class="sheet lobby-sheet"><div id="lobby-body"></div></div>';
+    /* Laid out as the skirmish set-up and the campaign are: a bar across the top
+       with the way back and the page's title, and under it the one thing that scrolls. */
+    host.innerHTML = '<div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby">\u2190 Back</button>' +
+      '<h1 id="lobby-title">Multiplayer</h1><span class="lob-code" id="lobby-code" hidden></span></div>' +
+      '<div class="sheet lobby-sheet"><div id="lobby-body"></div></div>';
     document.body.appendChild(host);
     style();
     host.addEventListener('click', onClick);
@@ -61,41 +65,41 @@
     var s = document.createElement('style');
     s.id = 'lobby-style';
     s.textContent = [
-      '.lobby-sheet{max-width:920px}',
-      '.lob-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}',
-      '.lob-head h2{margin:0}',
-      '.lob-who{margin-left:auto;display:flex;gap:6px;align-items:center}',
-      '.lob-who input{width:11em}',
-      '.lob-cols{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}',
-      '@media (max-width:760px){.lob-cols{grid-template-columns:1fr}}',
-      '.lob-list{display:flex;flex-direction:column;gap:6px;max-height:44vh;overflow:auto}',
-      '.lob-game{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid rgba(231,236,244,.14);border-radius:6px;background:rgba(255,255,255,.02)}',
-      '.lob-game b{font-size:14px}',
-      '.lob-game .code{font-family:"IBM Plex Mono",monospace;opacity:.65;font-size:12px}',
-      '.lob-game .seats{margin-left:auto;display:flex;gap:6px;font-size:12px;opacity:.8}',
-      '.lob-empty{opacity:.6;padding:14px 2px;font-size:13px}',
-      '.lob-chat{display:flex;flex-direction:column;gap:6px}',
-      '.lob-lines{height:38vh;overflow:auto;border:1px solid rgba(231,236,244,.12);border-radius:6px;padding:8px;font-size:13px;display:flex;flex-direction:column;gap:4px}',
+      /* the same page as the skirmish set-up and the campaign: full screen on a phone,
+         a card over the ground on a desktop, a bar with the way back across its top */
+      '#lobby.overlay{display:flex;flex-direction:column;padding:0;overflow:hidden;background:var(--ground);place-items:stretch}',
+      '#lobby > .sheet{flex:1;min-height:0;width:100%;max-width:none;max-height:none;overflow-y:auto;overscroll-behavior:contain;border:0;border-radius:0;background:transparent;padding:18px max(16px,calc((100% - 720px) / 2)) calc(22px + env(safe-area-inset-bottom,0px))}',
+      '#lobby > .camp-top .lob-code{margin-left:auto}',
+      '@media (min-width:1001px){' +
+        '#lobby.overlay{padding:28px 20px;align-items:center;justify-content:center}' +
+        '#lobby > .camp-top{position:relative;width:min(760px,100%);border:1px solid var(--line);border-radius:8px 8px 0 0;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
+        '#lobby.overlay > .sheet{position:relative;flex:0 1 auto;width:min(760px,100%);padding:18px 22px 22px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
+      '}',
+      '#lobby input[type=text]{flex:1;min-width:0;min-height:34px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:6px 9px;font-family:var(--body);font-size:12.5px}',
+      '#lobby input[type=text]:focus{outline:none;border-color:var(--alpha)}',
+      '.lob-row{display:flex;gap:6px;align-items:stretch}',
+      '.lob-row .lnk{flex:none;white-space:nowrap}',
+      '.lob-list{display:flex;flex-direction:column;gap:8px;margin:10px 0 16px}',
+      '.lob-game{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
+      '.lob-game b{font-family:var(--display);font-size:13.5px}',
+      '.lob-game .code{font-family:var(--mono);color:var(--ink-dim);font-size:12px;margin-left:6px}',
+      '.lob-game .f{color:var(--ink-dim);font-size:12px}',
+      '.lob-game .seats{margin-left:auto;font-size:12px;color:var(--ink-dim);text-align:right}',
+      '.lob-empty{color:var(--ink-dim);padding:10px 2px;font-size:13px;margin:0}',
+      '.lob-chat{display:flex;flex-direction:column;gap:6px;margin-top:14px}',
+      '.lob-chat h4{font-family:var(--display);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);margin:0}',
+      '.lob-lines{height:24vh;min-height:120px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);padding:8px;font-size:13px;display:flex;flex-direction:column;gap:4px}',
       '.lob-lines p{margin:0}',
-      '.lob-lines .said b{color:var(--ink,#e7ecf4);opacity:.9}',
-      '.lob-lines .note{opacity:.6;font-style:italic}',
-      '.lob-row{display:flex;gap:6px}',
-      '.lob-row input{flex:1}',
-      '.lob-seats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}',
-      '@media (max-width:620px){.lob-seats{grid-template-columns:1fr}}',
-      '.lob-seat{border:1px solid rgba(231,236,244,.16);border-radius:6px;padding:10px}',
-      '.lob-seat.ready{border-color:rgba(120,210,140,.55)}',
-      '.lob-seat.mine{background:rgba(255,255,255,.035)}',
-      '.lob-seat h4{margin:0 0 4px}',
-      '.lob-seat .f{font-size:12px;opacity:.75}',
-      '.lob-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}',
+      '.lob-lines .said b{color:var(--ink)}',
+      '.lob-lines .note{color:var(--ink-dim);font-style:italic}',
+      '.lob-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px}',
       '.lob-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}',
       '.lob-foot .start{margin-left:auto}',
-      '.lob-bad{color:#e88;font-size:13px;min-height:1.2em}',
-      '.lob-ok{color:#8d8;font-size:13px}',
-      '.lob-status{font-size:12px;opacity:.7}',
-      '.lob-code{font-family:"IBM Plex Mono",monospace;font-size:15px;letter-spacing:.18em;padding:2px 8px;border:1px solid rgba(231,236,244,.25);border-radius:5px}',
-      '.lob-intro{font-size:13px;opacity:.75;margin:0 0 12px}',
+      '.lob-bad{color:var(--warn,#e88);font-size:13px;margin:0}',
+      '.lob-bad:empty{display:none}',
+      '.lob-ok{color:#8d8}',
+      '.lob-status{font-size:12px;color:var(--ink-faint,#8a93a3)}',
+      '.lob-code{font-family:var(--mono);font-size:14px;letter-spacing:.18em;padding:2px 8px;border:1px solid var(--line);border-radius:5px;color:var(--ink)}',
       '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
       '@media (max-width:620px){.lob-forces{grid-template-columns:1fr}}',
       '.lob-forces .hot-side{margin:0}',
@@ -103,8 +107,7 @@
       '.lob-forces .lob-empty-seat{opacity:.7}',
       '.lob-forces .lob-empty-seat .lnk{margin-top:6px}',
       '.lob-wait{opacity:.6}',
-      '.lob-go{border-color:var(--alpha,#d8a13a)!important;color:var(--alpha,#d8a13a)!important}',
-      '.lob-sheet-room .lob-lines{height:22vh}'
+      '.lob-go{border-color:var(--alpha,#d8a13a)!important;color:var(--alpha,#d8a13a)!important}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -121,7 +124,11 @@
   /* ================= drawing ================= */
   function draw() {
     if (!host || host.hidden) return;
-    el('lobby-body').innerHTML = view === 'room' && room ? roomHTML() : lobbyHTML();
+    var inRoom = !!(view === 'room' && room);
+    el('lobby-body').innerHTML = inRoom ? roomHTML() : lobbyHTML();
+    if (el('lobby-title')) el('lobby-title').textContent = inRoom ? room.name : 'Multiplayer';
+    var cd = el('lobby-code');
+    if (cd) { cd.hidden = !inRoom; cd.textContent = inRoom ? room.id : ''; cd.title = 'Read this out to whoever you are playing'; }
     var sh = host.querySelector('.lobby-sheet');
     if (sh) sh.classList.toggle('lob-sheet-room', !!(view === 'room' && room));
     var box = el('lobby-say') || el('room-say');
@@ -129,32 +136,28 @@
   }
 
   function whoHTML() {
-    return '<div class="lob-who">' +
-      '<label for="lob-name" class="small">You</label>' +
-      '<input id="lob-name" maxlength="' + P.LIMITS.name + '" value="' + esc(me.name) + '" ' +
+    return '<div class="field"><label for="lob-name">Your name</label><div class="lob-row">' +
+      '<input id="lob-name" type="text" maxlength="' + P.LIMITS.name + '" value="' + esc(me.name) + '" ' +
       'placeholder="Your name" autocomplete="off">' +
       '<button class="lnk" data-lob="rename">Set</button>' +
-      '</div>';
+      '</div></div>';
   }
 
   function lobbyHTML() {
     var list = games.length ? games.map(gameRow).join('') :
       '<p class="lob-empty">No games open. Start one and read the code out to whoever you are playing.</p>';
-    return '<div class="lob-head"><h2>Multiplayer</h2>' +
-      '<span class="lob-status">' + esc(status) + '</span>' + whoHTML() + '</div>' +
+    return '<p class="lede">Play somebody else over the network. Start a game and read its code out, or join one with the code you were given. ' +
+      '<span class="lob-status">' + esc(status) + '</span></p>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
-      '<div class="lob-cols">' +
-      '<div>' +
-      '<div class="lob-row" style="margin-bottom:10px">' +
-      '<button class="lnk" data-lob="create">Start a game</button>' +
-      '<input id="join-code" placeholder="Join with a code…" maxlength="8" autocomplete="off">' +
+      whoHTML() +
+      '<div class="field"><label for="join-code">Games</label>' +
+      '<div class="lob-row">' +
+      '<button class="lnk lob-go" data-lob="create">Start a game</button>' +
+      '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
       '<button class="lnk" data-lob="join">Join</button>' +
-      '</div>' +
+      '</div></div>' +
       '<div class="lob-list">' + list + '</div>' +
-      '</div>' +
-      chatHTML('lobby') +
-      '</div>' +
-      '<div class="lob-foot"><button class="lnk" data-lob="leave-lobby">← Back</button></div>';
+      chatHTML('lobby');
   }
 
   function gameRow(g) {
@@ -175,7 +178,7 @@
   function chatHTML(where) {
     var lines = chat[where] || [];
     var id = where === 'lobby' ? 'lobby-say' : 'room-say';
-    return '<div class="lob-chat"><h4 style="margin:0">' +
+    return '<div class="lob-chat"><h4>' +
       (where === 'lobby' ? 'Lobby' : 'Table talk') + '</h4>' +
       '<div class="lob-lines" id="' + id + '-lines">' +
       (lines.length ? lines.map(function (l) {
@@ -184,7 +187,7 @@
           : '<p class="note">' + esc(l.text) + '</p>';
       }).join('') : '<p class="note">Nothing said yet.</p>') +
       '</div>' +
-      '<div class="lob-row"><input id="' + id + '" maxlength="' + P.LIMITS.chat +
+      '<div class="lob-row"><input id="' + id + '" type="text" maxlength="' + P.LIMITS.chat +
       '" placeholder="Say something…" autocomplete="off">' +
       '<button class="lnk" data-lob="say" data-where="' + where + '">Send</button></div></div>';
   }
@@ -196,13 +199,11 @@
     var host_ = room.hostId === me.id;
     var mine = mySeat();
     var ready = mine && room.seats[mine] && room.seats[mine].ready;
-    return '<div class="lob-head"><h2>' + esc(room.name) + '</h2>' +
-      '<span class="lob-code" title="Read this out to whoever you are playing">' + esc(room.id) + '</span>' +
-      '<span class="lob-status">' + esc(status) + '</span></div>' +
-      '<p class="lob-bad">' + esc(fault) + '</p>' +
-      '<p class="lob-intro">' + (host_
+    return '<p class="lob-bad">' + esc(fault) + '</p>' +
+      '<p class="lede">' + (host_
         ? 'A game over the network. Set the terms, muster your force, and read the code out to your opponent; take the field once you are both ready.'
-        : 'A game over the network. The host sets the terms; muster your force and say when you are ready.') + '</p>' +
+        : 'A game over the network. The host sets the terms; muster your force and say when you are ready.') +
+      ' <span class="lob-status">' + esc(status) + '</span></p>' +
       termsHTML(host_) +
       '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
       (room.watchers.length
@@ -420,7 +421,12 @@
       /* A seat still held for this browser comes back by itself with the hello.
          Otherwise, a game it was in is asked for again by its code — it may be
          over, or gone, and the server says so. */
+      /* Only a battle under way is walked back into. A game still being set up
+         is left in the list to join again by choice: walking into it by itself
+         put a player in an old room while their opponent waited in a new one. */
       var back = lastRoom();
+      var was = back && games.filter(function (gm) { return gm.id === back; })[0];
+      if (back && !(was && was.phase === 'battle')) { keepRoom(''); back = ''; }
       if (back) setTimeout(function () { if (!room && lastRoom() === back) net.send('game.join', { id: back }); }, 400);
     });
     net.on('lobby', function (m) { games = m.games || []; draw(); });
@@ -431,7 +437,8 @@
     });
     net.on('game', function (m) {
       room = m.room;
-      keepRoom(room && room.phase !== P.PHASE.OVER ? room.id : '');
+      // remembered to resume only once its battle is under way
+      keepRoom(room && room.phase === P.PHASE.BATTLE ? room.id : '');
       if (!room) { view = 'lobby'; draw(); return; }
       chat.room = room.chat || chat.room;
       view = 'room';

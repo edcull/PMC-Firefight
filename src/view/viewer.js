@@ -59,6 +59,18 @@
 
   /* The unit as the battle would build it: a profile plus the state the bench
      is asking to see. Everything that draws a unit takes one of these. */
+  function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
+  /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
+  function towing(u) {
+    var tp = R.profile('rtechnical');
+    if (!tp) return null;
+    var t = Object.assign({}, tp, {
+      id: 'VTOW', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0,
+      x: u.x, y: u.y, facing: u.facing != null ? u.facing : faceAngle(view.face), cargo: [u]
+    });
+    if (R.propsFor(tp).length) R.applyPropulsion(t, R.defaultDrive(tp));
+    return t;
+  }
   function unit() {
     var p = profile();
     var u = Object.assign({}, p, {
@@ -69,10 +81,13 @@
       facing: view.walking ? view.facing : faceAngle(view.face),
       // the turret stays on the mark it last fired at, until the hull is turned
       aim: view.aimFor === view.face + '|' + view.walking ? view.aim : null,
-      faceL: view.faceL
+      faceL: view.faceL,
+      ringUntil: view.ringUntil || 0                  // a teleport craft's gate, while it is sending
     });
     if (R.propsFor(p).length) R.applyPropulsion(u, view.prop);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
+    // Stationary Artillery (p. 94): dug in behind its sandbags, or not
+    if (stationary(p)) u.dugIn = view.stance === 'dug';
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -155,6 +170,11 @@
         return;
       }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
+      // a gun on tow is drawn hitched behind the technical towing it
+      if (m === u && stationary(u) && view.stance === 'towed') {
+        var tw = towing(u);
+        if (tw) { I.drawUnit(g, tw, { at: { x: u.x, y: u.y }, lift: 0, status: 'ready', morale: 0 }); return; }
+      }
       if (m === u && arr.hidden) return;                 // not on the field yet
       var fading = m === u && arr.alpha != null;          // teleporting in
       if (fading) { g.save(); g.globalAlpha = arr.alpha; }
@@ -188,6 +208,8 @@
     }
     var p = I.toScreen(u.x, u.y);
     var n = u.models || u.size || 1;
+    // a gun crew leaves its gun, knocked out, as the last of its fallen
+    if (I.hasPiece && I.hasPiece(u.art)) I.drawBody(g, p.x, p.y, { piece: true, side: u.side, paint: u.paint || null, art: u.art, flip: !!u.faceL });
     for (var i = n; i > 0; i--) {
       var cs = I.casualtySpot(u, i, i * 7);
       I.drawBody(g, p.x + cs.dx, p.y + cs.dy, {
@@ -428,13 +450,19 @@
     var to = { x: pad.x + ux * TP.BY, y: pad.y + uy * TP.BY };         // ...in front of the turret
     view.tele = { t0: Date.now(), from: from, pad: pad, to: to };
     var rgb = glowRGB();
+    // a teleport craft sends from its own gate: the link meets its middle, and the gate runs while it is up
+    var src = { x: u.x, y: u.y };
+    if (u.cls === 'aircraft') {
+      src.up = I.craftCentreUp(u);
+      view.ringUntil = (root.performance ? performance.now() : 0) + TP.OUT + TP.SHOWN + 200;
+    }
     return [
       // the far turret teleported in first
       { kind: 'teleportin', x: pad.x, y: pad.y, r: 2.2, dur: TP.PAD + 200 },
       // the squad going: a ring of light where it stood
       { kind: 'wave', x: from.x, y: from.y, up: 0, r: 2, rgb: rgb, delay: TP.OUT, dur: TP.OUT + 700 },
       // the two ends joined while it is between them
-      { kind: 'tplink', from: { x: u.x, y: u.y }, to: pad, rgb: rgb, delay: TP.OUT, dur: TP.SHOWN },
+      { kind: 'tplink', from: src, to: pad, rgb: rgb, delay: TP.OUT, dur: TP.SHOWN },
       // and coming out, in front of the turret
       { kind: 'teleportin', x: to.x, y: to.y, r: 1.4, delay: TP.IN - 250, dur: TP.IN - 250 + 1400 },
       { kind: 'wave', x: to.x, y: to.y, up: 0, r: 2, rgb: rgb, delay: TP.IN, dur: TP.IN + 1050 }
@@ -1153,6 +1181,11 @@
     if (R.canRide(p)) {
       h += '<div class="vgrp"><label>Riders</label><div class="vseg">' +
         segL('ride', [['foot', 'On foot'], ['mounted', 'Mounted']], view.ride || 'foot') + '</div></div>';
+    }
+    // Stationary Artillery (p. 94): emplaced, dug in behind sandbags, or on tow behind a vehicle
+    if (stationary(p)) {
+      h += '<div class="vgrp"><label>Stance</label><div class="vseg">' +
+        segL('stance', [['ready', 'Emplaced'], ['dug', 'Dug in'], ['towed', 'Towed']], view.stance || 'ready') + '</div></div>';
     }
     // Drone Control (p. 37): any hull or craft without Transport, in any army but the Bugs
     if (R.canBeDrone(p)) {

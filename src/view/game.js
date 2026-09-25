@@ -137,7 +137,7 @@
     ui.feedUnread = 0;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
     ui.insertion = null; ui.preview = null; ui.deployPick = null;
-    ui.watch = null;
+    ui.watch = null; ui.inspect = false;
   }
 
   /* ---- sending ---- */
@@ -453,6 +453,18 @@
   /* An effect the engine described without knowing how high anything is drawn.
      A flier's height is a matter for the view, so it is filled in here. */
   function reLift(f) {
+    /* A teleport link to or from a craft meets the craft's middle, and the
+       craft's gate runs for as long as the link is up. */
+    if (f && f.kind === 'tplink') {
+      [['fromId', 'from'], ['toId', 'to']].forEach(function (e) {
+        var cu = evUnit(f[e[0]]);
+        if (cu && cu.cls === 'aircraft') {
+          f[e[1]] = { x: f[e[1]].x, y: f[e[1]].y, up: ISO.craftCentreUp(cu) };
+          cu.ringUntil = nowMs() + (f.delay || 0) + (f.dur || 1500);
+        }
+      });
+      return f;
+    }
     /* A smoke round fired by a machine — a captured patrol craft's — leaves its
        gun, up where the craft flies, not the grass under it. */
     if (f && f.kind === 'lob' && f.unit) {
@@ -511,10 +523,10 @@
     ui.preview = null;
     /* In a demo the watcher's pick is the selection, and it stays picked
        while the AI activates one unit after another — until it is gone. */
-    if (handsOff() && ui.watch) {
+    if ((handsOff() || ui.inspect) && ui.watch) {
       var w = byId(ui.watch);
       if (w && w.alive) { ui.selected = w; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; }
-      else ui.watch = null;
+      else { ui.watch = null; ui.inspect = false; }
     }
   }
 
@@ -597,6 +609,10 @@
     send({ k: 'action', id: id });
   }
   // the watcher's own pick in a demo: shown, kept, and never sent to the engine
+  function inspectUnit(u) {
+    ui.inspect = true;
+    watchUnit(u);
+  }
   function watchUnit(u) {
     ui.watch = u.id;
     ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
@@ -607,6 +623,11 @@
   function select(u) {
     if (!u) return;
     if (handsOff()) { watchUnit(u); return; }
+    /* Out of turn, or an enemy's unit: picked to look at, on this screen only.
+       The selection the engine keeps belongs to whoever is acting, and both
+       screens are shown it — so a look is kept here and nothing is sent. */
+    if (!myTurn() || seats.indexOf(u.side) < 0) { inspectUnit(u); return; }
+    ui.inspect = false; ui.watch = null;
     /* On a phone the panel is one slice of screen: picking a unit is a request
        to act with it, so the panel comes back to the actions. */
     if (window.innerWidth <= 1000) setMTab('act');
@@ -2941,6 +2962,11 @@
             var cs = ISO.casualtySpot(u, n, rem.length * 7 + n);
             rem.push({ kind: 'body', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
               art: u.art, mi: cs.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
+            // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
+            if (n === 1 && left === 0 && ISO.hasPiece && ISO.hasPiece(u.art)) {
+              rem.push({ kind: 'body', piece: true, x: seen.x, y: seen.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null,
+                art: u.art, flip: !!u.faceL });
+            }
           }
         }
       }
