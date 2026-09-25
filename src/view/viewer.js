@@ -380,7 +380,7 @@
     { rule: 'Field Medics', name: 'Medics', play: function (u) { return [{ kind: 'rise', x: u.x, y: u.y, glyph: 'cross', dur: 1800 }]; }, sfx: 'chime' },
     { rule: 'Markerlights', name: 'Mark target', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, dur: 1600 }]; }, sfx: 'zap' },
     // a smoke grenade thrown onto the mark, bursting where it lands, the flare burning in it
-    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'lob', grenade: true, from: { x: u.x, y: u.y }, to: { x: TO.x, y: TO.y }, dur: 750 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 720, dur: 2500 }]; } },
+    { rule: 'Smoke Markers', name: 'Smoke marker', play: function (u) { return [{ kind: 'lob', grenade: true, from: R.isMachine(u) ? I.mountFor(I.mounts(u), R.weaponSpec(u).p, u, { x: u.x, y: u.y }) : { x: u.x, y: u.y }, to: { x: TO.x, y: TO.y }, dur: 750 }, { kind: 'puff', x: TO.x, y: TO.y, delay: 720, dur: 2500 }]; } },
     { rule: 'Keen-Eyed', name: 'Keen-eyed', play: function (u) { return [{ kind: 'glint', x: u.x, y: u.y, mz: glintFrom(u), dur: 800 }, { kind: 'glint', x: TO.x, y: TO.y, up: 0.8, delay: 300, dur: 1100 }]; } },
     { rule: 'Sappers', name: 'Demolition charges', play: function (u) { return [{ kind: 'charges', x: TO.x, y: TO.y, r: 1.5, n: 5, dur: 1600 }, { kind: 'clash', x: TO.x, y: TO.y, delay: 950, dur: 1400 }]; }, sfx: 'boom' },
     { rule: 'Pheromone Markers', name: 'Pheromones', play: function (u) { return [{ kind: 'beam', x: u.x, y: u.y, mz: beamFrom(u), tx: TO.x, ty: TO.y, rgb: '170,230,90', dur: 1600 }]; }, sfx: 'chitter' },

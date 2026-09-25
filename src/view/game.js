@@ -453,6 +453,13 @@
   /* An effect the engine described without knowing how high anything is drawn.
      A flier's height is a matter for the view, so it is filled in here. */
   function reLift(f) {
+    /* A smoke round fired by a machine — a captured patrol craft's — leaves its
+       gun, up where the craft flies, not the grass under it. */
+    if (f && f.kind === 'lob' && f.unit) {
+      var sm = evUnit(f.unit);
+      if (sm && R.isMachine(sm)) f.from = ISO.mountFor(ISO.mounts(sm), R.weaponSpec(sm).p, sm, f.from);
+      return f;
+    }
     /* A marker's laser and a Keen-Eyed glint come off the machine's own
        sensor, however high it flies: the nose of a craft, its scanner. */
     if (f && f.unit && (f.kind === 'beam' || f.kind === 'glint')) {
