@@ -59,6 +59,15 @@
 
   /* The unit as the battle would build it: a profile plus the state the bench
      is asking to see. Everything that draws a unit takes one of these. */
+  // a crew-served piece drawn in 3D: it has a facing to choose, as a machine does
+  function turns(p) { return !!p && !!I.turnsLikeMachine && I.turnsLikeMachine(p.art); }
+  // what a Lifter can be shown carrying: any of the rebels' ground vehicles (p. 94)
+  var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak'];
+  // a SAM leaves up the line its launcher's tubes are laid on (see the missile in fx.js)
+  function samFrom() {
+    var u = unit();
+    return u.art === 'samlauncher' ? { aim: u.facing || 0, elev: 0.8 } : null;
+  }
   function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
   /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
   function towing(u) {
@@ -66,7 +75,7 @@
     if (!tp) return null;
     var t = Object.assign({}, tp, {
       id: 'VTOW', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0,
-      x: u.x, y: u.y, facing: u.facing != null ? u.facing : faceAngle(view.face), cargo: [u]
+      x: u.x, y: u.y, facing: faceAngle(view.face), cargo: [u]
     });
     if (R.propsFor(tp).length) R.applyPropulsion(t, R.defaultDrive(tp));
     return t;
@@ -88,6 +97,17 @@
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     // Stationary Artillery (p. 94): dug in behind its sandbags, or not
     if (stationary(p)) u.dugIn = view.stance === 'dug';
+    // a Lifter carrying: the rebels' technical, slung under it
+    if ((p.rules || []).indexOf('Lifter') >= 0 && view.sling && view.sling !== 'none') {
+      var tp = R.profile(SLUNG.indexOf(view.sling) >= 0 ? view.sling : 'rtechnical');
+      if (tp) {
+        var t = Object.assign({}, tp, { id: 'VSLG', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0, cargo: [], aboard: u.id });
+        if (R.propsFor(tp).length) R.applyPropulsion(t, view.slingProp || 'wheeled');
+        u.cargo = [t];
+      }
+    }
+    // a crew-served piece stays laid on the mark it last fired at, until it is turned
+    if (turns(p) && view.stance !== 'towed' && !view.walking && view.gunAim != null && view.aimFor === view.face + '|gun') u.facing = view.gunAim;
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -209,7 +229,7 @@
     var p = I.toScreen(u.x, u.y);
     var n = u.models || u.size || 1;
     // a gun crew leaves its gun, knocked out, as the last of its fallen
-    if (I.hasPiece && I.hasPiece(u.art)) I.drawBody(g, p.x, p.y, { piece: true, side: u.side, paint: u.paint || null, art: u.art, flip: !!u.faceL });
+    if (I.hasPiece && I.hasPiece(u.art)) I.drawBody(g, p.x, p.y, { piece: true, side: u.side, paint: u.paint || null, art: u.art, key: u.key, aim: u.facing, flip: !!u.faceL });
     for (var i = n; i > 0; i--) {
       var cs = I.casualtySpot(u, i, i * 7);
       I.drawBody(g, p.x + cs.dx, p.y + cs.dy, {
@@ -699,6 +719,10 @@
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
     // troopers turn to the mark, and every round leaves one of their own barrels
+    if (turns(u)) {                               // the piece is slewed round onto the mark
+      u.facing = view.gunAim = Math.atan2(TO.y - u.y, TO.x - u.x);
+      view.aimFor = view.face + '|gun';
+    }
     if (!R.isMachine(u)) {
       var a0 = I.toScreen(u.x, u.y), b0 = I.toScreen(TO.x, TO.y);
       u.faceL = view.faceL = b0.x < a0.x;
@@ -938,7 +962,7 @@
           setTimeout(function () {
             if (SFX) SFX.missile(0, 0.9, 0.47);
             // no flash at the tube: a missile is ejected cold and lights at the top
-            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to) });
+            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to), sam: samFrom() });
             start();
           }, j * 260);
         })(m1);
@@ -1031,7 +1055,7 @@
           (function (j) {
             setTimeout(function () {
               if (SFX) SFX.missile(0, 0.9, 0.47);
-              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to) });
+              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to), sam: samFrom() });
               setTimeout(function () { landing(to, 6, true); start(); }, 900);
               start();
             }, j * 260);
@@ -1187,6 +1211,15 @@
       h += '<div class="vgrp"><label>Stance</label><div class="vseg">' +
         segL('stance', [['ready', 'Emplaced'], ['dug', 'Dug in'], ['towed', 'Towed']], view.stance || 'ready') + '</div></div>';
     }
+    // a Lifter (p. 94): flying empty, or with a technical slung under it
+    if ((p.rules || []).indexOf('Lifter') >= 0) {
+      h += '<div class="vgrp"><label>Load</label><div class="vseg">' +
+        segL('sling', [['none', 'Empty']].concat(SLUNG.map(function (k) { var sp = R.profile(k); return [k, sp ? sp.name : k]; })), view.sling || 'none') + '</div></div>';
+      if (view.sling && view.sling !== 'none') {
+        h += '<div class="vgrp"><label>Its drive</label><div class="vseg">' +
+          seg('slingProp', R.PROP_ORDER, view.slingProp || 'wheeled') + '</div></div>';
+      }
+    }
     // Drone Control (p. 37): any hull or craft without Transport, in any army but the Bugs
     if (R.canBeDrone(p)) {
       h += '<div class="vgrp"><label>Control</label><div class="vseg">' +
@@ -1201,7 +1234,7 @@
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
     }
-    if (R.isMachine(p)) {
+    if (R.isMachine(p) || turns(p)) {
       h += '<div class="vgrp"><label>Facing</label><div class="vseg">' +
         seg('face', FACES, view.face || 'SE') + '</div></div>';
     }

@@ -2386,6 +2386,8 @@
   /* ---------- transport ---------- */
   function canEmbark(state, veh, u) {
     if (!veh.transport || !u.alive || u.side !== veh.side) return false;
+    // a vehicle hanging under a Lifter takes nothing on, and hitches no gun (p. 94)
+    if (veh.aboard) return false;
     /* A Lifter is a flying crane: it picks up a single vehicle — with whatever is
        already riding inside it — and never infantry (p. 94). Every other hull is
        the other way round. */
@@ -2429,6 +2431,8 @@
     veh.cargo.splice(i, 1);
     u.aboard = null;
     u.disembarked = true;
+    // a gun unhitched is left pointing the way it trailed: back from the vehicle
+    if (has(u, 'Stationary Artillery')) u.facing = (veh.facing || 0) + Math.PI;
     if (pos && !TERRAIN[terrainAt(state, pos.x, pos.y)].impassable
       && !unitNear(state, pos.x, pos.y, u, 0.2) && unitDist({ x: pos.x, y: pos.y }, veh) <= 4) {
       u.x = pos.x; u.y = pos.y;
@@ -3063,6 +3067,10 @@
 
   function shoot(state, a, t, mode, opts) {
     opts = opts || {};
+    /* A squad or a gun on its trails turns onto what it fires at. Only a
+       machine's facing is ever read by the rules (Limited Fire Arc, which side
+       is hit), so for anyone else this only turns the drawing. */
+    if (a && t && !isMachine(a) && a.x != null && !(opts && opts.assault)) a.facing = Math.atan2(t.y - a.y, t.x - a.x);
     var m = shotMods(state, a, t, mode, opts);
     var aux = m.aux, basic = m.basic, parts = m.parts.slice(), pierce = m.pierce;
     var crossfire = m.crossfire, dist = m.dist, dres = m.def;

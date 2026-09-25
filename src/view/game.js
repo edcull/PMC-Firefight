@@ -2103,7 +2103,8 @@
               var F = pick(from, j);
               if (SFX) SFX.missile(0, mflight / 1000, mflight / 1000 * 0.52);
               // no flash at the tube: it is ejected cold and lights further out
-              addFx({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true });
+              addFx({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true,
+                sam: shooter.art === 'samlauncher' ? { aim: shooter.facing || 0, elev: 0.8 } : null });
               setTimeout(function () { land(3); }, mflight);
               render();
             }, j * birdGap);
@@ -2965,7 +2966,7 @@
             // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
             if (n === 1 && left === 0 && ISO.hasPiece && ISO.hasPiece(u.art)) {
               rem.push({ kind: 'body', piece: true, x: seen.x, y: seen.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null,
-                art: u.art, flip: !!u.faceL });
+                art: u.art, key: u.key, aim: u.facing, flip: !!u.faceL });
             }
           }
         }
@@ -4628,13 +4629,13 @@
     if (!hulls.length) return '';
     var h = '<div class="loadbox"><h3>Aboard before the battle</h3>' +
       '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired. ' +
-      'A Rapid insertion platform has to.</p>';
+      'A Rapid insertion platform has to. A Lifter can start with a vehicle slung under it, and a hull with a gun on tow.</p>';
     hulls.forEach(function (v) {
       var cargo = v.cargo || [], room = v.transport - cargo.length;
       var must = R.has(v, 'Immobile');
       h += '<div class="loadrow' + (must && !cargo.length ? ' needs' : '') + '">' +
         '<div class="loadhead"><b>' + esc(v.name) + '</b>' +
-        '<span class="mk">' + cargo.length + ' of ' + v.transport + ' aboard</span>' +
+        '<span class="mk">' + cargo.length + ' of ' + v.transport + (R.has(v, 'Lifter') ? ' slung' : ' aboard') + '</span>' +
         (must ? '<span class="mk warn">must carry a squad</span>' : '') + '</div>';
       if (cargo.length) {
         h += '<div class="loadlist">' + cargo.map(function (c) {
@@ -4649,7 +4650,7 @@
             return '<button class="lnk" data-load="' + c.id + '" data-hull="' + v.id + '">+ ' +
               esc(c.name) + '</button>';
           }).join('') + '</div>'
-          : '<div class="hint small">No infantry left to put aboard.</div>';
+          : '<div class="hint small">' + (R.has(v, 'Lifter') ? 'No vehicle left to sling under it.' : (v.cargo || []).some(function (c) { return R.has(c, 'Stationary Artillery'); }) ? 'A gun on the hook: nothing else rides.' : 'No infantry left to put aboard.') + '</div>';
       }
       h += '</div>';
     });

@@ -3105,6 +3105,15 @@
   var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, laststand: 1 };
   function actionState(u, id) {
     if (!u) return { on: false, hint: 'Select one of your units on the table.' };
+    /* Carried or towed, a unit does not activate at all: a gun on the hook is
+       limbered up, and nobody fires, digs in or does anything else from the back
+       of a hull (p. 94). It acts once it is off. */
+    if (u.aboard) {
+      var carrier = byId(u.aboard);
+      return { on: false, hint: R.has(u, 'Stationary Artillery')
+        ? 'On tow behind ' + (carrier ? carrier.name : 'its vehicle') + ': it cannot act until the vehicle deploys it.'
+        : 'Aboard ' + (carrier ? carrier.name : 'a transport') + ': it cannot act until it gets off.' };
+    }
     if (u.carryMoved && id !== 'embark' && id !== 'disembark') {
       return { on: false, hint: 'Driven first — now Embark or Disembark (or press any action to stop there).' };
     }
@@ -3663,8 +3672,8 @@
     }
     faceAlong(u, u.x, u.y, pt.x, pt.y);
   }
+  // (a squad's facing turns only its drawing: its crew-served pieces point the way it went)
   function faceAlong(u, fromX, fromY, toX, toY) {
-    if (!R.isMachine(u)) return;
     if (Math.hypot(toX - fromX, toY - fromY) < 0.2) return;
     u.facing = Math.atan2(toY - fromY, toX - fromX);
   }
@@ -5286,23 +5295,37 @@
     });
   }
 
-  // who could ride in this hull before the battle: any of the side's own infantry
+  /* Who could start the battle in (or on the hook of) this hull: any of the
+     side's own infantry; for a Lifter, one of its ground vehicles — with
+     whatever that vehicle already has aboard — as the crane slings it (p. 94);
+     and an emplaced gun on tow behind an empty hull, which then carries nothing
+     else (p. 94). */
+  function towingGun(veh) { return (veh.cargo || []).some(function (c) { return R.has(c, 'Stationary Artillery'); }); }
   function boardableFor(veh) {
+    var lifter = R.has(veh, 'Lifter');
+    // a hull with a gun on the hook takes nothing else, and one slung under a Lifter hitches no gun (p. 94)
+    if (towingGun(veh) || veh.aboard) return [];
     return state.units.filter(function (u) {
-      return u.side === veh.side && u.alive && u.cls === 'infantry' && !u.aboard &&
-        !(R.has(u, 'Riders') && !(R.mountOf(u) && R.mountOf(u).transport)) && !R.has(u, 'Stationary Artillery') && u !== veh;
+      if (u.side !== veh.side || !u.alive || u.aboard || u === veh) return false;
+      if (lifter) return u.cls === 'vehicle' && !R.has(u, 'Lifter') && !towingGun(u);
+      if (u.cls !== 'infantry') return false;
+      if (R.has(u, 'Stationary Artillery')) return veh.cls === 'vehicle' && !(veh.cargo || []).length && !R.has(veh, 'Immobile');
+      return !(R.has(u, 'Riders') && !(R.mountOf(u) && R.mountOf(u).transport));
     });
   }
 
   function loadBefore(veh, u, quiet) {
     if (!veh || !u || (veh.cargo || []).length >= veh.transport) return false;
+    if (boardableFor(veh).indexOf(u) < 0) return false;
     veh.cargo = veh.cargo || [];
     veh.cargo.push(u);
     u.aboard = veh.id;
     u.x = veh.x; u.y = veh.y;
     u.sp = 0;
     u.reserve = false;                   // it rides in with the hull, not on its own
-    if (!quiet) logLine('note', u.label + ' loads aboard ' + veh.name + ' before the battle.');
+    // everything riding in a slung vehicle goes with it
+    (u.cargo || []).forEach(function (c) { c.x = veh.x; c.y = veh.y; });
+    if (!quiet) logLine('note', u.label + (R.has(u, 'Stationary Artillery') ? ' is hitched behind ' : R.has(veh, 'Lifter') ? ' is slung under ' : ' loads aboard ') + veh.name + ' before the battle.');
     return true;
   }
 

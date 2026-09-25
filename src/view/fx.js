@@ -264,7 +264,35 @@
             y: v * v * ma.y + 2 * v * sq * mc.y + sq * sq * mb.y
           };
         }
+        /* A SAM off its launcher: pushed out cold up the line its tubes are
+           laid on, climbing until it has height, then its motor flares and it
+           runs straight at the aircraft, gathering speed. */
+        var samP = null, samQ = null;
+        if (f.sam) {
+          var sca = Math.cos(f.sam.aim || 0), ssa = Math.sin(f.sam.aim || 0), se2 = f.sam.elev || 0.5;
+          var sHgt = I.K * 2.6;                                        // how high it climbs before it lights
+          var sL = sHgt / (I.K * 0.9 * Math.sin(se2));                 // inches up the tube's line to get there
+          samP = {
+            x: ma.x + (sca - ssa) * I.K * Math.cos(se2) * sL,
+            y: ma.y + (sca + ssa) * I.K / 2 * Math.cos(se2) * sL - sHgt
+          };
+          /* The second handle holds it level: at the same height, over a point
+             most of the way along the ground to the target. From there the
+             curve runs on down (or up) into the target with no corner in it. */
+          var tAlt = liftB(f) + I.K * 0.5, gTo = mb.y + tAlt, gP = samP.y + sHgt, alt = Math.max(sHgt, tAlt);
+          samQ = { x: samP.x + (mb.x - samP.x) * 0.55, y: gP + (gTo - gP) * 0.55 - alt };
+          TOP = 0.3 + (v1 - 0.5) * 0.06;
+        }
         function mAt(t2) {
+          if (samP) {
+            /* One smooth curve: up the tubes' line, bending over into level
+               flight, then on into the target. It leaves slowly on the
+               ejection charge and gathers speed once the motor lights. */
+            var tt = Math.max(0, Math.min(1, t2));
+            var u3 = tt < TOP ? 0.3 * Math.pow(tt / TOP, 1.4) : 0.3 + 0.7 * Math.pow((tt - TOP) / (1 - TOP), 1.25);
+            var w0 = (1 - u3) * (1 - u3) * (1 - u3), w1 = 3 * (1 - u3) * (1 - u3) * u3, w2 = 3 * (1 - u3) * u3 * u3, w3 = u3 * u3 * u3;
+            return { x: w0 * ma.x + w1 * samP.x + w2 * samQ.x + w3 * mb.x, y: w0 * ma.y + w1 * samP.y + w2 * samQ.y + w3 * mb.y };
+          }
           if (mc) {
             if (t2 <= TOP) {
               // out along the nose, and round onto the target, unhurried
