@@ -6442,7 +6442,7 @@
     cmdbox: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25] } },
     bigapc: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels', hexNose: true, hex: true } },
     bigifv: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels', hexNose: true, hex: true } },
-    engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, tanks: true, skirts: 'panels' } },
+    engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, rearTank: true, skirts: 'panels' } },
     enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, mech: 'heavy', style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true, hexNose: true, hex: true } },
     techmrl: { axles: 2, len: 2.00, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 1.0, elev: 10, style: { body: 'pickup', mrl: true } },
     calliope: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.6, elev: 16, style: { body: 'ltank', turret: 'arty', tSize: 0.9, tAt: -0.1, skirts: true } },
@@ -7287,9 +7287,12 @@
     drawGear('far');
     if (spec.style) {
       skirts('far');
+      var tankBack = spec.style.rearTank && (cos + sin) < 0.3;   // side-on it stands clear of the hull too
+      if (spec.style.rearTank && !tankBack) rearTank();   // behind the hull
       styledHull();
       drawGear('near');
       skirts();
+      if (tankBack) rearTank();                           // the back is towards us: in front of it
       styledTop();
       drawDamage();
       return { lift: lift, hgt: ride + spec.hgt * 1.3 };
@@ -8465,6 +8468,33 @@
     // the same, for something turned to its own angle (a traversed mount)
     function nearSideAt(ang) { return (Math.cos(ang) - Math.sin(ang)) > 0 ? 1 : -1; }
 
+    /* A light engineering vehicle's flame fuel: one big armoured tank slung
+       across the back of the hull on brackets, strapped. It goes down before
+       the hull when the nose is towards the eye (the hull hides it) and after
+       it when the back is. */
+    function rearTank() {
+      var L = spec.len, w = spec.wid * 0.47, zc = deck + spec.hgt * 0.5;
+      var aT = -L * 0.5 - 0.16;
+      var c1 = S3(HF(aT, -w * 0.86), zc), c2 = S3(HF(aT, w * 0.86), zc);
+      // the brackets, back to the hull
+      [-0.6, 0.6].forEach(function (k) {
+        line(S3(HF(-L * 0.5, w * k), zc - 3), S3(HF(aT, w * k), zc - 3), 2, '#23271f');
+      });
+      var R = 7.5;
+      sEllipse(c1[0], c1[1], R * 0.55, R, '#2f342e');
+      line(c1, c2, R * 2, '#3a3f38');
+      line([c1[0], c1[1] - R * 0.55], [c2[0], c2[1] - R * 0.55], 2.2, '#6a7064');
+      line([c1[0], c1[1] + R * 0.6], [c2[0], c2[1] + R * 0.6], 1.6, '#262a24');
+      sEllipse(c2[0], c2[1], R * 0.55, R, '#454b43');
+      sEllipse(c2[0] - 0.8, c2[1] - 1.2, R * 0.3, R * 0.5, '#5a6157');
+      [-0.45, 0, 0.45].forEach(function (k) {
+        var q = S3(HF(aT, w * k), zc);
+        line([q[0], q[1] - R], [q[0], q[1] + R], 1.3, '#1d211b');
+      });
+      // the filler cap on top
+      var fc = S3(HF(aT, -w * 0.3), zc + 5);
+      sEllipse(fc[0], fc[1] - 1, 2, 1.3, '#23271f');
+    }
     function styledHull() {
       var L = spec.len, Wd = spec.wid, H = spec.hgt, z0 = deck, st = spec.style;
       var w = Wd * 0.47;
@@ -9158,17 +9188,6 @@
           });
         });
       }
-      if (st.tanks) part(depthOf(HF, -L * 0.4, 0), function () {
-        // the flame fuel, in two big armoured bottles across the engine deck, strapped down
-        [-0.5, 0.5].forEach(function (b) {
-          var c1 = S3(HF(-L * 0.36, w * (b - 0.44)), roof + 4.5), c2 = S3(HF(-L * 0.36, w * (b + 0.44)), roof + 4.5);
-          line(c1, c2, 9, '#3a3f38'); line([c1[0], c1[1] - 2.4], [c2[0], c2[1] - 2.4], 2, '#6a7064');
-          [-0.25, 0.25].forEach(function (k) {
-            var sq = S3(HF(-L * 0.36, w * (b + k)), roof + 4.5);
-            line([sq[0], sq[1] - 4.5], [sq[0], sq[1] + 4.5], 1.2, '#23271f');
-          });
-        });
-      });
       if (st.cross) part(depthOf(HF, 0, 0) - 0.01, function () { crossOn(HF, -L * 0.08, 0, roof + 0.3, 0.3); });
       if (st.aerials) part(depthOf(HF, -L * 0.4, 0), function () {
         for (var i = 0; i < st.aerials; i++) {
@@ -9810,6 +9829,7 @@
       armsBack.forEach(drawArm);
       drawLeg(legs2[0]);
       drawLeg(legs2[1]);
+      if (KITM.shoulder === 'tanks' && fwd > 0) backTanks();   // behind the chest
       drawTorso();
       armsFront.forEach(drawArm);
       drawTop();
@@ -10157,6 +10177,14 @@
       }
 
       /* ---- on top: a heavy's missile boxes, a medium's crest, a light's head ---- */
+      /* The flame fuel slung on a walker's back: two tall bottles, the nearer
+         drawn last. Facing the viewer they go down before the chest, which hides them. */
+      function backTanks() {
+        [-0.4, 0.4].sort(function (p, q) { return nearOf(p > 0 ? 1 : -1) * Math.abs(p) - nearOf(q > 0 ? 1 : -1) * Math.abs(q); }).forEach(function (b) {
+          var t1 = S3(TF(-tL * 1.12, tW * b), shoulder - 16), t2 = S3(TF(-tL * 1.12, tW * b), shoulder);
+          line(t1, t2, 8, '#3a3f38'); line([t1[0] - 2, t1[1]], [t2[0] - 2, t2[1]], 1.8, '#6a7064');
+        });
+      }
       function drawTop() {
         extras();
         /* A medium or heavy walker drone carries its sensor dome on its right
@@ -10235,12 +10263,7 @@
           line(db, dm, 1.2, STEEL);
           sEllipse(dm[0], dm[1] - 1.2, dr, dr * 0.72, '#9aa4b0'); sEllipse(dm[0] + 0.5, dm[1] - 1, dr * 0.78, dr * 0.52, '#c3ccd6');
         }
-        if (KITM.shoulder === 'tanks') {
-          [-0.4, 0.4].forEach(function (b) {
-            var t1 = S3(TF(-tL * 1.12, tW * b), shoulder - 16), t2 = S3(TF(-tL * 1.12, tW * b), shoulder);
-            line(t1, t2, 8, '#3a3f38'); line([t1[0] - 2, t1[1]], [t2[0] - 2, t2[1]], 1.8, '#6a7064');
-          });
-        }
+        if (KITM.shoulder === 'tanks' && fwd <= 0) backTanks();   // facing away, they are in front of the chest
         if (spec.cross && !light) crossOn(TF, -tL * 0.35, 0, shoulder + (heavy ? 0.3 : -0.7), tW * 0.3);
       }
 
