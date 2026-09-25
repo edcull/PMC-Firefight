@@ -6570,7 +6570,7 @@
      the tail, the A-frame drawbar on the vehicle's hook. */
   function towedPiece(g, veh, gun, at, hs, f) {
     var P = PIECE3D[gun.art], k = P.k, fx = Math.cos(f), fy = Math.sin(f);
-    var back = hs.len * 0.5 + 0.85 * k + 0.1;
+    var back = hs.len * 0.5 + (P.wheeled ? 0.79 : 0.85) * k + (P.wheeled ? 0.02 : 0.1);   // a short hitch to the hook
     if (P.wheeled) {                                    // on its own wheels, the trails closed into a drawbar
       var ow = { x: at.x - fx * back, y: at.y - fy * back, aim: f + Math.PI, k: k };
       var Gw = rig(g, ow);
@@ -11453,8 +11453,10 @@
       var vs = hullSpec(sv.art) || { len: 1.4, wid: 0.8, hgt: 12 }, f = u.facing || 0, c = Math.cos(f), sn = Math.sin(f);
       var hook = toScreen(atT.x, atT.y);
       hook.y -= base + climb + flyLift(u) - 2;
+      // a mech on its own legs is narrower than its hull's footprint: the cables close in on its shoulders
+      var mech = sv.prop === 'walker' && !(sv.transport && vs.style), cl = mech ? 0.12 : 0.36, cw = mech ? 0.16 : 0.36;
       [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) {
-        var t = q[0] * vs.len * 0.36, s2 = q[1] * vs.wid * 0.36;
+        var t = q[0] * vs.len * cl, s2 = q[1] * vs.wid * cw;
         var w = toScreen(atT.x + c * t - sn * s2, atT.y + sn * t + c * s2);
         thickLine(g, hook.x, hook.y, w.x, w.y - base - hang - top + 8, Math.max(1.2, K * 0.035), '#16181a');
       });

@@ -5294,7 +5294,8 @@
   function towingGun(veh) { return (veh.cargo || []).some(function (c) { return R.has(c, 'Stationary Artillery'); }); }
   function boardableFor(veh) {
     var lifter = R.has(veh, 'Lifter');
-    if (towingGun(veh)) return [];
+    // a hull with a gun on the hook takes nothing else, and one slung under a Lifter hitches no gun (p. 94)
+    if (towingGun(veh) || veh.aboard) return [];
     return state.units.filter(function (u) {
       if (u.side !== veh.side || !u.alive || u.aboard || u === veh) return false;
       if (lifter) return u.cls === 'vehicle' && !R.has(u, 'Lifter') && !towingGun(u);

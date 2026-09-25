@@ -2386,6 +2386,8 @@
   /* ---------- transport ---------- */
   function canEmbark(state, veh, u) {
     if (!veh.transport || !u.alive || u.side !== veh.side) return false;
+    // a vehicle hanging under a Lifter takes nothing on, and hitches no gun (p. 94)
+    if (veh.aboard) return false;
     /* A Lifter is a flying crane: it picks up a single vehicle — with whatever is
        already riding inside it — and never infantry (p. 94). Every other hull is
        the other way round. */
