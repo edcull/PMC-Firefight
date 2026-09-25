@@ -4741,7 +4741,7 @@ html { scroll-behavior: smooth; }
           var o = j * cw + i;
           P[o] += f.p * w; D[o] += f.d * w; N[o] += f.n * w;
           if (f.tint) {
-            var tc = hex3(r.kind === 'rocks' && ROCKTINT || f.tint), tw2 = Math.min(1, f.tw * (out < 0 ? 1 : Math.max(0, 1 - out / f.r) * (0.7 + vnoise(x / 1.6, y / 1.6, seed + 630) * 0.6)));
+            var tc = hex3((r.kind === 'rocks' || r.kind === 'crystal') && ROCKTINT || f.tint), tw2 = Math.min(1, f.tw * (out < 0 ? 1 : Math.max(0, 1 - out / f.r) * (0.7 + vnoise(x / 1.6, y / 1.6, seed + 630) * 0.6)));
             if (tw2 > TW[o]) { TW[o] = tw2; TR[o] = tc[0]; TG[o] = tc[1]; TB[o] = tc[2]; }
           }
           if (f.mud && out < f.mud) {              // a band of mud right at the water's edge
@@ -4773,7 +4773,12 @@ html { scroll-behavior: smooth; }
   /* The rubble under a rock pile is the world's own low ground broken up, not
      one grey for every planet: set with the ground as the table is baked. */
   var ROCKF = null, ROCKTINT = null;
-  function floorOf(kind) { return kind === 'rocks' && ROCKF || FLOOR[kind]; }
+  function floorOf(kind) {
+    if (ROCKF && kind === 'rocks') return ROCKF;
+    // a crystal field grows out of the same broken ground, with green glinting in it
+    if (ROCKF && kind === 'crystal') return { ramp: ROCKF.ramp, fleck: ['#5aff9a', '#9dffc4'].concat(ROCKF.fleck.slice(0, 2)), rim: ROCKF.rim };
+    return FLOOR[kind];
+  }
   function rockColours(GP) {
     var mud = GP.mud.map(hex3), sand = GP.sand.map(hex3), soil = GP.soil.map(hex3), scree = SCREE.map(hex3);
     function hx(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
@@ -5110,7 +5115,7 @@ html { scroll-behavior: smooth; }
     var y0 = Math.max(0, Math.floor(Math.min(c1.y, c2.y, c3.y, c4.y)) - pad - lift);
     var y1 = Math.min(PIXH - 1, Math.ceil(Math.max(c1.y, c2.y, c3.y, c4.y)) + pad - lift);
     var INV_K = 1 / K, INV_HK = 2 / K;
-    var WOB = lift ? 0 : 0.09;                     // how far the edge may wander, inches
+    var WOB = lift && !mask ? 0 : 0.09;            // how far the edge may wander, inches (a hill's own edge is crisp; a wood on it is not)
 
     for (var by = y0; by <= y1; by++) {
       var v0 = (by + lift - OY) * INV_HK;
@@ -6265,8 +6270,20 @@ html { scroll-behavior: smooth; }
         /* A cluster of green crystal: faceted prisms from one root, lit from
            within — a glow pooled on the ground round them and brightest at the tips. */
         var cr7 = rng(pr.seed), n7 = 3 + (cr7() * 4 | 0), sz7 = pr.size || 1;
-        ellipse(g, p.x, p.y, a(2.4 * sz7), a(1.1 * sz7), 'rgba(80,255,150,.10)');
-        ellipse(g, p.x, p.y, a(1.4 * sz7), a(0.6 * sz7), 'rgba(120,255,180,.18)');
+        /* a radioactive glow: light added to the ground, not paint on it —
+           a wide pool that fades out, with a hot core under the roots */
+        function halo(rx, ry, cy, alpha) {
+          g.save(); g.globalCompositeOperation = 'lighter';
+          g.translate(p.x, cy); g.scale(1, ry / rx);
+          var hg = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+          hg.addColorStop(0, 'rgba(110,255,160,' + alpha + ')');
+          hg.addColorStop(0.35, 'rgba(60,230,120,' + alpha * 0.55 + ')');
+          hg.addColorStop(1, 'rgba(30,200,90,0)');
+          g.fillStyle = hg; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill();
+          g.restore();
+        }
+        halo(a(4.6 * sz7), a(2.2 * sz7), p.y, 0.45);
+        ellipse(g, p.x, p.y, a(1.4 * sz7), a(0.6 * sz7), 'rgba(150,255,190,.3)');
         var shards = [];
         for (var k7 = 0; k7 < n7; k7++) {
           var lean = (cr7() - 0.5) * 0.8, hgt = a((1.6 + cr7() * 2.4) * sz7), wid = a((0.6 + cr7() * 0.45) * sz7);
@@ -6283,6 +6300,7 @@ html { scroll-behavior: smooth; }
           ellipse(g, tx, ty, a(0.5 * sz7), a(0.5 * sz7), 'rgba(160,255,200,.35)');               // the glow at the tip
           dot(g, tx, ty, '#ffffff', 1);
         });
+        halo(a(2.6 * sz7), a(2.6 * sz7), p.y - a(2 * sz7), 0.3);             // the air round them lit too
         break;
       }
       case 'vent': {

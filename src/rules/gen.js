@@ -466,9 +466,11 @@
     for (var attempt = 0; attempt < 40; attempt++) {
       var piece;
       if (spill) {
-        var k = (attempt < 20 ? 0.75 : 0.6) + rand() * 0.45;
-        var ww = hill.w * k, hh = hill.h * (k * (0.8 + rand() * 0.3));
-        var cx = hill.x + hill.w / 2 + (rand() - 0.5) * hill.w * 0.35, cy = hill.y + hill.h / 2 + (rand() - 0.5) * hill.h * 0.35;
+        // as big as the hill or bigger, pushed off-centre so it runs down one side
+        var k = (attempt < 20 ? 0.95 : 0.7) + rand() * 0.45;
+        var ww = hill.w * k, hh = hill.h * (k * (0.8 + rand() * 0.35));
+        var ang = rand() * Math.PI * 2, off = attempt < 30 ? 0.18 + rand() * 0.14 : rand() * 0.1;
+        var cx = hill.x + hill.w / 2 + Math.cos(ang) * hill.w * off, cy = hill.y + hill.h / 2 + Math.sin(ang) * hill.h * off;
         piece = { kind: 'woods', x: cx - ww / 2, y: cy - hh / 2, w: ww, h: hh, onHill: true };
       } else {
         var sz = sizeFor(spec, rand, attempt < 20 ? 0.75 : 0.55);
