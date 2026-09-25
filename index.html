@@ -688,6 +688,19 @@
   .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
   .found-units .chosen:empty::before { content: 'No units yet.'; }
   .found-add { align-self: flex-start; margin-top: 8px; }
+  /* the units picked, a card each */
+  .found-units .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .fcard { border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.02); padding: 7px 9px; }
+  .fcard-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .fcard-top b { font-family: var(--display); font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fcard-kind { font-size: 11px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: auto; }
+  .fcard-top .drive { flex: none; }
+  .fcard-drop { flex: none; padding: 2px 8px; }
+  .fcard-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 5px 0 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
+  .fcard-stats i { font-style: normal; color: var(--ink-faint); margin-right: 4px; }
+  .fcard-rules { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .docgroup { font-family: var(--display); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--alpha); margin: 10px 0 6px; }
+  .docgroup:first-child { margin-top: 2px; }
   /* A new battle's set-up on a desktop: a card in the middle of the screen, over
      a table rolling behind it as the main menu has. Nothing on the card may
      blur or transform, or the pop-ups inside it would be placed on it rather
@@ -2150,5 +2163,5 @@
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
 <script src="src/view/game.js?v=887d25cb75"></script>
-<script src="src/view/dossier.js?v=38ba9f8b17"></script>
+<script src="src/view/dossier.js?v=8795928a66"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

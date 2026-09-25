@@ -688,6 +688,19 @@
   .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
   .found-units .chosen:empty::before { content: 'No units yet.'; }
   .found-add { align-self: flex-start; margin-top: 8px; }
+  /* the units picked, a card each */
+  .found-units .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .fcard { border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.02); padding: 7px 9px; }
+  .fcard-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .fcard-top b { font-family: var(--display); font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fcard-kind { font-size: 11px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: auto; }
+  .fcard-top .drive { flex: none; }
+  .fcard-drop { flex: none; padding: 2px 8px; }
+  .fcard-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 5px 0 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
+  .fcard-stats i { font-style: normal; color: var(--ink-faint); margin-right: 4px; }
+  .fcard-rules { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .docgroup { font-family: var(--display); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--alpha); margin: 10px 0 6px; }
+  .docgroup:first-child { margin-top: 2px; }
   /* A new battle's set-up on a desktop: a card in the middle of the screen, over
      a table rolling behind it as the main menu has. Nothing on the card may
      blur or transform, or the pop-ups inside it would be placed on it rather
@@ -38370,7 +38383,7 @@
       '</div>';
     var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
-      t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
+      t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + ' vehicle' + (machines === 1 ? '' : 's') + ' (max 2)</span></div>';
     var chosen = draft.keys.map(function (k, i) {
       var s = R.splitPick(k), p = profile(s.key);
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
@@ -38381,8 +38394,32 @@
           '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' +
           (s.drone ? 'DRN' : 'crew') + '</button>' : '') + '</span>';
     }).join('');
+    /* On the page, each unit picked is a card: its name and kind, its Tier, its
+       numbers and its special rules, with its drive and its remove button. The
+       list scrolls when there are more than fit. */
+    var TXT = root.PMCRuleText;
+    var cards = draft.keys.map(function (k, i) {
+      var sp = R.splitPick(k), p0 = profile(sp.key);
+      var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p0, { rules: (p0.rules || []).slice(), models: p0.size }), sp.prop || R.defaultDrive(p0)), !!sp.drone);
+      var mach = p0.cls !== 'infantry';
+      var st = [['Move', u0.move + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
+        ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+      return '<div class="fcard">' +
+        '<div class="fcard-top">' + tierChip(p0.tier) + '<b>' + esc(p0.name) + '</b>' +
+        '<span class="fcard-kind">' + esc(p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +
+        (R.propsFor(p0).length ? '<button class="drive" data-cycle="' + i + '">' + R.PROPULSION[sp.prop || 'none'].short + '</button>' : '') +
+        (R.canBeDrone(p0) ? '<button class="drive' + (sp.drone ? ' on' : '') + '" data-fdrone="' + i +
+          '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' + (sp.drone ? 'DRN' : 'crew') + '</button>' : '') +
+        '<button class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
+        '<div class="fcard-stats">' + st.map(function (c) { return '<span><i>' + c[0] + '</i>' + esc(c[1]) + '</span>'; }).join('') + '</div>' +
+        ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
+          var d = TXT ? TXT.describe(r) : { name: r, text: '' };
+          return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
+        }).join('') + '</div>' : '') +
+        '</div>';
+    }).join('');
     h += '<div class="muster found-units">' + head +
-      '<div class="chosen" id="found-chosen">' + chosen + '</div>' +
+      '<div class="chosen fcards" id="found-chosen">' + cards + '</div>' +
       '<button type="button" class="lnk found-add" data-go="fmodal" data-kind="units">+ Add units</button></div>';
 
     var cr = C.creedOf(co), doc = draft.doctrine && C.doctrine(draft.doctrine);
@@ -38398,11 +38435,19 @@
         // a Tier II machine cannot be fielded in the Tier I battles a new force starts in
         return !p.leaderBug && !p.alpha && !(p.tier === 2 && p.cls !== 'infantry');
       }, co) + '</div>');
-    h += cmodal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll"><div class="docpick">' + cr.list.map(function (d) {
-      return '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
-        '<b>' + esc(d.name) + '</b><i>' + say(d.cat, 'Path of the ' + d.cat, d.cat + ' Pathway', d.cat + ' Advancement') + '</i>' +
-        '<span>' + esc(d.text) + '</span></button>';
-    }).join('') + '</div></div>');
+    // the doctrines in their groups, each under its own heading
+    var docGroups = [], byCat = {};
+    cr.list.forEach(function (d) {
+      if (!byCat[d.cat]) { byCat[d.cat] = []; docGroups.push(d.cat); }
+      byCat[d.cat].push(d);
+    });
+    h += cmodal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll">' + docGroups.map(function (cat) {
+      return '<h4 class="docgroup">' + esc(say(cat, 'Path of the ' + cat, cat + ' Pathway', cat + ' Advancement')) + '</h4>' +
+        '<div class="docpick">' + byCat[cat].map(function (d) {
+          return '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
+            '<b>' + esc(d.name) + '</b><span>' + esc(d.text) + '</span></button>';
+        }).join('') + '</div>';
+    }).join('') + '</div>');
 
     var named = !!(draft.name || '').trim();
     var rest = !!(t1 === 6 && t2 === 2 && machines <= 2 && draft.doctrine);
