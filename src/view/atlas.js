@@ -36,7 +36,7 @@
     var byKey = {};
     R.CATALOGUE.forEach(function (p) { byKey[p.key] = p; });
 
-    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function esc(s) { return R.esc(s); }   // the shared one, in the rules
     function kind(p) { return p.cls === 'aircraft' ? 'Aircraft' : p.cls === 'vehicle' ? 'Vehicle' : 'Infantry'; }
 
     // group the catalogue: faction, then the book's own groups, in book order

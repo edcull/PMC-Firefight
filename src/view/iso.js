@@ -6468,12 +6468,11 @@
      otherwise straight ahead. */
   function gunTop(u, f) {
     if (u.aim == null) return f;
-    var d = u.aim - f;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
+    var d = angWrap(u.aim - f);
     return f + Math.max(-Math.PI / 4, Math.min(Math.PI / 4, d));
   }
-  function angGap(a1, a0) { return Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)); }
+  function angWrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+  function angGap(a1, a0) { return angWrap(a1 - a0); }
   /* Where a piece's mount faces (f) and its weapon points (top) this frame.
      When it has just been given a new lay (u._turn, see startTurn) it gets
      there in two moves: the carriage swings round to its new facing with the

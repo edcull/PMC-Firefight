@@ -169,7 +169,7 @@
       if (view === 'hub' && el('camp') && !el('camp').hidden) render();
     });
   }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function esc(s) { return R.esc(s); }   // the shared one, in the rules
   /* The tooltip attributes, from tips.js. A Battle Honour or a Battle Trauma is
      a name and a rule, and the name alone tells you nothing — so wherever one is
      shown, what it does is one hover or one tap away. */

@@ -3141,7 +3141,7 @@
     // the octagon: a wedge to each facing, split half-way between its neighbours
     F.forEach(function (f, i) {
       var a0 = f - Math.PI / 8, a1 = f + Math.PI / 8;       // each a 45° slice of the ground round the gun
-      var on = Math.abs(Math.atan2(Math.sin(f - pick), Math.cos(f - pick))) < 0.01;
+      var on = Math.abs(R.angleWrap(f - pick)) < 0.01;
       fan(a0 + 0.02, a1 - 0.02, 1.5, 2.7, 6);
       g.fillStyle = on ? 'rgba(232,193,90,.75)' : 'rgba(20,24,30,.55)'; g.fill();
       g.strokeStyle = on ? '#ffe39a' : 'rgba(232,193,90,.45)'; g.lineWidth = on ? 2 : 1; g.stroke();
@@ -4229,11 +4229,7 @@
     });
     return out.length ? '<div class="chips">' + out.join('') + '</div>' : '';
   }
-  function esc(t) {
-    return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
-  }
+  function esc(t) { return R.esc(t); }   // the shared one, in the rules
   // the tooltip attributes, from tips.js; a page without it falls back to `title`
   function tip(head, body) {
     return window.PMCTips ? window.PMCTips.attr(head, body)
@@ -4689,7 +4685,7 @@
     var cells = grid.map(function (row) {
       return row.map(function (i) {
         if (i < 0) return '<span class="dig-mid">' + esc(u.code || '') + '</span>';
-        var on = Math.abs(Math.atan2(Math.sin(F[i] - pick), Math.cos(F[i] - pick))) < 0.01;
+        var on = Math.abs(R.angleWrap(F[i] - pick)) < 0.01;
         return '<button class="dig-dir' + (on ? ' on' : '') + '" data-digface="' + i + '">' + DIG_NAMES[i] + '</button>';
       }).join('');
     }).join('');
@@ -6294,7 +6290,7 @@
     }
     drawColourPick();
   }
-  function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function escHtml(t) { return R.esc(t); }
   function hotRefuse(why) {
     var f = el('faults');
     if (f) { f.textContent = why; f.className = 'faults'; if (f.scrollIntoView) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); }

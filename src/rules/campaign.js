@@ -18,8 +18,8 @@
   var R = root.PMC;
   var VERSION = 1;
 
-  function d6() { return 1 + Math.floor(Math.random() * 6); }
-  function d3() { return 1 + Math.floor(Math.random() * 3); }
+  function d6() { return R.d6(); }
+  function d3() { return R.d3(); }
   function d10() { return 1 + Math.floor(Math.random() * 10); }   // reads 1-10 here
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function shuffle(a) {

@@ -33,11 +33,7 @@
     return panel;
   }
 
-  function esc(t) {
-    return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
-  }
+  function esc(t) { return root.PMC.esc(t); }   // the shared one, in the rules
 
   /* Put the panel beside what it explains: above it if there is room, below if
      there is not, and always inside the window rather than half off the edge. */

@@ -24,11 +24,7 @@
   var campaigns = [];
   var myForce = null;           // the force this screen has built, as the lobby sees it
 
-  function esc(t) {
-    return String(t == null ? '' : t)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
+  function esc(t) { return root.PMC.esc(t); }   // the shared one, in the rules
   function el(id) { return document.getElementById(id); }
 
   /* ================= the screen ================= */
