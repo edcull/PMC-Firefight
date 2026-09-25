@@ -56,9 +56,8 @@
     // a skirmish in this browser can be thrown away; asked twice, since it cannot be had back
     var dis = el('btn-discard');
     if (dis) {
-      dis.hidden = !(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE());
-      dis.classList.remove('confirm');
-      el('menu-discard-sub').textContent = 'End the skirmish without finishing it';
+      dis.hidden = !live || !(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE());
+      unconfirm();
     }
     var camp = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get();
     var sub = el('menu-camp-sub');
@@ -69,6 +68,15 @@
     }
   }
 
+  // the x back to an x, and the card back to saying the battle is on
+  function unconfirm() {
+    var dis = el('btn-discard'), res = el('btn-resume'), sub = el('menu-resume-sub');
+    if (!dis) return;
+    dis.classList.remove('confirm'); dis.textContent = '\u00d7';
+    dis.setAttribute('aria-label', 'Discard this battle');
+    if (res) res.classList.remove('discarding');
+    if (sub) sub.textContent = 'The battle is still on';
+  }
   function wire() {
     var m = el('menu');
     if (!m) return;
@@ -80,13 +88,16 @@
       if (go) { show(go); return; }
       var kind = b.getAttribute('data-skirmish');
       if (kind) { close(); if (root.PMC_SKIRMISH) root.PMC_SKIRMISH(kind); return; }
+      if (b.id !== 'btn-discard') unconfirm();
       switch (b.id) {
         case 'btn-skirmish': show('skirmish'); return;
         case 'btn-resume': close(); return;
         case 'btn-discard':
           if (!b.classList.contains('confirm')) {
-            b.classList.add('confirm');
-            el('menu-discard-sub').textContent = 'Tap again to discard it — it cannot be got back';
+            b.classList.add('confirm'); b.textContent = 'Discard?';
+            b.setAttribute('aria-label', 'Discard this battle: tap again to confirm');
+            el('btn-resume').classList.add('discarding');
+            el('menu-resume-sub').textContent = 'Tap Discard? to end it — it cannot be undone';
             return;
           }
           if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
