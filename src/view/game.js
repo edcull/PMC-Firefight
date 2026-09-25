@@ -5337,7 +5337,7 @@
     if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
     var mh = document.querySelector('.muster-head b');
     if (mh) mh.textContent = muster.hot && muster.hot.step < 3
-      ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
+      ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' || muster.hot.kind === 'net' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
       : muster.solo
       ? (el('sel-solo-mode').value === 'coop' ? 'Player ' + (muster.cur + 1) + '\u2019s commando' : 'Your commando')
       : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';
@@ -5838,6 +5838,7 @@
     var k = muster.hot.kind;
     if (k === 'ai') return step === 1 ? 'Your force' : 'The opposition';
     if (k === 'solo') return 'Your commando';
+    if (k === 'net') return 'Your force';
     return k === 'demo' ? 'Force ' + step : 'Player ' + step;
   }
   // does this step's force start rolled, and roll again when its kind changes?
@@ -5848,9 +5849,12 @@
   // every skirmish opens on the battlefield, a card for each force (a solitaire game has just the one)
   function hotQuick(kind) { return kind === 'demo' || kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo'; }
   // a player's own force or commando, rather than one rolled for the AI
-  function hotOwn(kind) { return kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo'; }
+  function hotOwn(kind) { return kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo' || kind === 'net'; }
+  /* 'net': a network game's own force, built on the same sheet as a skirmish's
+     but on its own — the other player builds theirs on their own screen, and
+     the Tier and Priority Level are the host's. */
   function hotBegin(kind) {
-    muster.hot = { kind: kind, step: 1, sides: kind === 'solo' ? [null] : [null, null] };
+    muster.hot = { kind: kind, step: 1, sides: kind === 'solo' || kind === 'net' ? [null] : [null, null] };
     muster.keys = []; muster.name = '';
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
@@ -6044,6 +6048,8 @@
     ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = (step > 1 && !(hotQuick(kind) && step === 3)) || !!h.edit; });
     // solitaire and co-op: Priority Level 1 a player, fixed
     if ((kind === 'solo' || kind === 'coop') && el('sel-pl')) { el('sel-pl').value = '1'; el('sel-pl').disabled = true; }
+    // a network game's terms are the host's, set in the room
+    if (kind === 'net') ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = true; });
     // a demo sets the Tier and Priority Level for both forces, above them on the battlefield
     if (el('forcebar-wrap')) el('forcebar-wrap').classList.remove('open');   // a step on shuts the load-and-save list
     catModal(false);
@@ -6064,6 +6070,7 @@
     }
     el('setup-title').textContent = step === 3 ? 'The battlefield'
       : kind === 'solo' ? 'Muster your commando'
+      : kind === 'net' ? 'Muster your force'
       : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
       : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
     var intro = {
@@ -6080,10 +6087,14 @@
         'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
       demo: ['A demo: two AI forces fight it out while you watch. Each starts as a random kind of force with a rolled build — keep it, change the kind, roll again or pick units by hand.',
         ' is ready. Now the force it will face.',
-        'Both forces are ready. Choose the scenario, the world and how the table is laid, then watch.']
+        'Both forces are ready. Choose the scenario, the world and how the table is laid, then watch.'],
+      net: ['A game over the network: your force for ' + ((muster.forLobby && muster.forLobby.room) || 'the game') +
+        ', at Battle Tier {T}, Priority Level {P}, as the host has set them. Name it, paint it and pick its units, then take it back to the table.', '', '']
     }[kind];
-    el('hot-intro').textContent = step === 2 ? (h.sides[0].name + intro[1]).replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL()) : intro[step - 1];
-    el('btn-start').textContent = step < 3 && h.edit ? 'Back to the battlefield'
+    el('hot-intro').textContent = (step === 2 ? h.sides[0].name + intro[1] : intro[step - 1])
+      .replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL());
+    el('btn-start').textContent = kind === 'net' ? 'Back to the table'
+      : step < 3 && h.edit ? 'Back to the battlefield'
       : step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
       : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
     if (el('colour-hint')) el('colour-hint').textContent = step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
@@ -6122,6 +6133,15 @@
       if (other && muster.colour === other.colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
       if (el('hot-name')) el('hot-name').value = name;
       hotSaveSide();
+      // a network game's force goes back to the room it was built for
+      if (h.kind === 'net') {
+        var want = muster.forLobby, sd0 = h.sides[0];
+        muster.forLobby = null;
+        hotEnd();
+        el('setup').hidden = true;
+        if (want) want.done({ faction: sd0.faction, tactic: sd0.tactic || '', keys: sd0.keys.slice(), colour: sd0.colour, name: sd0.name });
+        return;
+      }
       if (h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); el('setup').querySelector('.sheet').scrollTop = 0; return; }
       h.step++;
       if (h.step === 2) hotLoadSide(1);
@@ -6215,6 +6235,14 @@
   }
   function setupBack() {
     var h = muster.hot;
+    if (muster.forLobby) {
+      var was = muster.forLobby;
+      muster.forLobby = null;
+      hotEnd();
+      el('setup').hidden = true;
+      if (was.done) was.done(null);           // nothing changed: straight back to the room
+      return;
+    }
     if (h && h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); return; }
     if (h && h.step > 1 && !(h.step === 3 && h.from3)) { hotBack(); return; }
     openMenu();
@@ -6501,7 +6529,7 @@
       /* The lobby borrowed this screen to have a force built. Hand the force
          back rather than starting a battle: the one that matters is being
          arranged in the room, and it starts when both sides say so. */
-      if (muster.forLobby) {
+      if (muster.forLobby && !(muster.hot && muster.hot.kind === 'net')) {
         var want = muster.forLobby;
         muster.forLobby = null;
         el('setup').hidden = true;
@@ -6738,15 +6766,27 @@
   };
   /* The lobby borrows the muster screen to build a force: it is the one place
      that knows the composition table and the unit cards. */
-  window.PMC_MUSTER_FOR = function (terms, done) {
+  window.PMC_MUSTER_FOR = function (terms, done, have, room) {
     hotEnd();
     el('setup').hidden = false;
-    muster.forLobby = { terms: terms, done: done };
+    muster.forLobby = { terms: terms, done: done, room: room || '' };
+    setSoloMode(false);
     if (terms) {
       if (el('sel-tier')) el('sel-tier').value = terms.tier;
       if (el('sel-pl')) el('sel-pl').value = terms.pl;
     }
-    setSoloMode(false);
+    hotBegin('net');
+    // the force already sent to the room, to change rather than start again
+    if (have && have.keys && have.keys.length) {
+      el('sel-faction').value = have.faction || 'pmc';
+      if (el('sel-tactic')) el('sel-tactic').value = have.tactic || '';
+      muster.keys = have.keys.slice();
+      muster.colour = have.colour || muster.colour;
+      muster.name = have.name || muster.name;
+      if (el('hot-name')) el('hot-name').value = muster.name;
+      drawColourPick();
+    }
+    hotPaint();
     drawMuster();
   };
   window.PMC_MUSTER_NOW = function () {

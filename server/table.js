@@ -156,7 +156,8 @@ class Table {
       /* Both seats are people. No side is driven by the behaviour table, which
          is what `hotseat` has always meant to newGame. */
       mode: 'hotseat',
-      planet: s.planet === 'random' ? null : s.planet
+      planet: s.planet === 'random' ? null : s.planet,
+      terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto'
     };
   }
 

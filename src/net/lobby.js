@@ -42,6 +42,8 @@
     document.body.appendChild(host);
     style();
     host.addEventListener('click', onClick);
+    // terms are sent as they are changed; the selects are redrawn often, so the overlay listens
+    host.addEventListener('change', onTermChange);
     host.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       var box = e.target;
@@ -91,7 +93,18 @@
       '.lob-foot .start{margin-left:auto}',
       '.lob-bad{color:#e88;font-size:13px;min-height:1.2em}',
       '.lob-ok{color:#8d8;font-size:13px}',
-      '.lob-status{font-size:12px;opacity:.7}'
+      '.lob-status{font-size:12px;opacity:.7}',
+      '.lob-code{font-family:"IBM Plex Mono",monospace;font-size:15px;letter-spacing:.18em;padding:2px 8px;border:1px solid rgba(231,236,244,.25);border-radius:5px}',
+      '.lob-intro{font-size:13px;opacity:.75;margin:0 0 12px}',
+      '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
+      '@media (max-width:620px){.lob-forces{grid-template-columns:1fr}}',
+      '.lob-forces .hot-side{margin:0}',
+      '.lob-forces .hot-side.ready{border-color:rgba(120,210,140,.55)}',
+      '.lob-forces .lob-empty-seat{opacity:.7}',
+      '.lob-forces .lob-empty-seat .lnk{margin-top:6px}',
+      '.lob-wait{opacity:.6}',
+      '.lob-go{border-color:var(--alpha,#d8a13a)!important;color:var(--alpha,#d8a13a)!important}',
+      '.lob-sheet-room .lob-lines{height:22vh}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -109,6 +122,8 @@
   function draw() {
     if (!host || host.hidden) return;
     el('lobby-body').innerHTML = view === 'room' && room ? roomHTML() : lobbyHTML();
+    var sh = host.querySelector('.lobby-sheet');
+    if (sh) sh.classList.toggle('lob-sheet-room', !!(view === 'room' && room));
     var box = el('lobby-say') || el('room-say');
     if (box && document.activeElement !== box) { /* leave the caret where it was */ }
   }
@@ -174,30 +189,42 @@
       '<button class="lnk" data-lob="say" data-where="' + where + '">Send</button></div></div>';
   }
 
+  /* The room is laid out as a skirmish's battlefield step is: the terms above,
+     then a card for each force — in its own colour, tap your own to muster it —
+     and the table talk below. */
   function roomHTML() {
     var host_ = room.hostId === me.id;
-    var mine = room.seats.A && room.seats.A.id === me.id ? 'A'
-      : room.seats.B && room.seats.B.id === me.id ? 'B' : null;
+    var mine = mySeat();
+    var ready = mine && room.seats[mine] && room.seats[mine].ready;
     return '<div class="lob-head"><h2>' + esc(room.name) + '</h2>' +
-      '<span class="code lob-status">code ' + esc(room.id) + '</span>' +
-      '<span class="lob-status">' + esc(status) + '</span>' + whoHTML() + '</div>' +
+      '<span class="lob-code" title="Read this out to whoever you are playing">' + esc(room.id) + '</span>' +
+      '<span class="lob-status">' + esc(status) + '</span></div>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
+      '<p class="lob-intro">' + (host_
+        ? 'A game over the network. Set the terms, muster your force, and read the code out to your opponent; take the field once you are both ready.'
+        : 'A game over the network. The host sets the terms; muster your force and say when you are ready.') + '</p>' +
       termsHTML(host_) +
-      '<div class="lob-seats">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
+      '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
       (room.watchers.length
         ? '<p class="small" style="opacity:.7">Watching: ' +
           room.watchers.map(function (w) { return esc(w.name); }).join(', ') + '</p>' : '') +
-      chatHTML('room') +
       '<div class="lob-foot">' +
       '<button class="lnk" data-lob="leave">Leave this game</button>' +
-      (mine ? '<button class="lnk" data-lob="muster">Pick my force…</button>' : '') +
-      (mine ? '<button class="lnk" data-lob="ready">' +
-        (room.seats[mine] && room.seats[mine].ready ? 'Not ready after all' : 'I am ready') +
-        '</button>' : '') +
+      (mine ? '<button class="lnk' + (ready ? '' : ' lob-go') + '" data-lob="ready">' +
+        (ready ? 'Not ready after all' : 'I am ready') + '</button>' : '') +
       (host_ ? '<button class="start" data-lob="start"' + (room.canStart ? '' : ' disabled') +
         '>Take the field</button>' : '<span class="lob-status start">' +
         (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
-      '</div>';
+      '</div>' +
+      chatHTML('room');
+  }
+
+  // the setup screen's own wording for a scenario or a world, where it has one
+  function optionText(selId, v, fallback) {
+    var sel = document.getElementById(selId);
+    var o = sel && sel.options && sel.options.length
+      ? Array.prototype.filter.call(sel.options, function (x) { return x.value === String(v); })[0] : null;
+    return o ? o.textContent : fallback;
   }
 
   function termsHTML(isHost) {
@@ -219,31 +246,42 @@
         return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
       }), s.tier) +
       sel('term-pl', 'Priority Level', [{ v: 1, t: '1 — skirmish' }, { v: 2, t: '2 — full battle' }], s.pl) +
-      sel('term-planet', 'Planet', P.PLANET_CHOICES.map(function (p) {
-        return { v: p, t: p === 'random' ? 'Randomise the planet' : p.charAt(0).toUpperCase() + p.slice(1) };
-      }), s.planet) +
       sel('term-scenario', 'Scenario', P.SCENARIOS.map(function (x) {
-        return { v: x, t: x === 'roll' ? 'Roll a D6' : x === 'rolld3' ? 'Roll a D3' : x.charAt(0).toUpperCase() + x.slice(1) };
+        return { v: x, t: optionText('sel-scen', x, x) };
       }), s.scenario) +
+      sel('term-planet', 'World', P.PLANET_CHOICES.map(function (x) {
+        return { v: x, t: optionText('sel-planet', x, x) };
+      }), s.planet) +
+      sel('term-terrain', 'Terrain set-up', [
+        { v: 'auto', t: optionText('sel-terrain', 'auto', 'Generate the table') },
+        { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
+      ], s.terrain || 'auto') +
       sel('term-campaign', 'Campaign', camps, s.campaign || '') +
       '</div>' +
       (isHost ? '' : '<p class="small" style="opacity:.65">The host sets the terms.</p>');
   }
 
+  // a force's card, as on the battlefield step: its name in its colour; your own opens the muster
   function seatHTML(which, mine) {
     var p = room.seats[which];
-    var cls = 'lob-seat' + (p && p.ready ? ' ready' : '') + (mine === which ? ' mine' : '');
     if (!p) {
-      return '<div class="' + cls + '"><h4>Seat ' + which + '</h4>' +
-        '<p class="f">Empty.' + (mine ? '' : ' <button class="lnk" data-lob="sit" data-seat="' + which + '">Sit here</button>') + '</p></div>';
+      return '<div class="hot-side lob-empty-seat"><b>Seat ' + which + '</b>' +
+        '<small>Empty — waiting for a player' + (mine ? '' : '') + '</small>' +
+        (mine ? '' : '<button class="lnk" data-lob="sit" data-seat="' + which + '">Sit here</button>') + '</div>';
     }
     var f = p.force || {};
-    return '<div class="' + cls + '"><h4>' + esc(p.name) + ' [' + which + ']' +
-      (p.host ? ' — host' : '') + (p.away ? ' — away' : '') + '</h4>' +
-      '<p class="f">' + esc(f.name || 'No force named yet') + '<br>' +
-      esc(factionName(f.faction)) + ' — ' + (f.keys ? f.keys.length : 0) + ' units' +
-      (f.tactic ? ' — ' + esc(f.tactic) : '') + '<br>' +
-      (p.ready ? '<span class="lob-ok">Ready</span>' : 'Not ready') + '</p></div>';
+    var col = root.PMCIso && root.PMCIso.COLOURS && root.PMCIso.COLOURS[f.colour];
+    var units = f.keys ? f.keys.length : 0;
+    var who = esc(p.name) + (p.host ? ' · host' : '') + (p.away ? ' · away' : '');
+    var body = '<b style="color:' + (col ? col.light : 'inherit') + '">' + esc(f.name || (units ? 'An unnamed force' : 'No force yet')) + '</b>' +
+      (which === mine ? '<em>' + (units ? 'change' : 'muster') + '</em>' : '') +
+      '<small>' + who + ' · ' + esc(factionName(f.faction)) + ' · ' +
+      (units ? units + ' units' : (which === mine ? 'tap to muster it' : 'still mustering')) +
+      (f.tactic ? ' · ' + esc(f.tactic) : '') + '</small>' +
+      '<small class="' + (p.ready ? 'lob-ok' : 'lob-wait') + '">' + (p.ready ? 'Ready' : 'Not ready yet') + '</small>';
+    return which === mine
+      ? '<button type="button" class="hot-side' + (p.ready ? ' ready' : '') + '" data-lob="muster">' + body + '</button>'
+      : '<div class="hot-side' + (p.ready ? ' ready' : '') + '">' + body + '</div>';
   }
 
   function factionName(f) {
@@ -326,11 +364,11 @@
   function askForMuster() {
     close();
     if (root.PMC_MUSTER_FOR) {
+      var mine = mySeat(), had = (mine && room.seats[mine] && room.seats[mine].force) || myForce;
       root.PMC_MUSTER_FOR(room.settings, function (force) {
-        myForce = force;
-        if (force) net.send('game.force', { force: force });
+        if (force) { myForce = force; net.send('game.force', { force: force }); }
         open('room');
-      });
+      }, had, room.name);
       return;
     }
     open('room');
@@ -341,20 +379,16 @@
 
   /* Terms are sent as they are changed rather than on a button: the other side
      should see the tier move while it is being argued about. */
-  function wireTerms() {
-    if (!host || host.hidden) return;
-    ['tier', 'pl', 'planet', 'scenario', 'campaign'].forEach(function (k) {
-      var box = el('term-' + k);
-      if (!box || box.__wired) return;
-      box.__wired = true;
-      box.addEventListener('change', function () {
-        var patch = {};
-        patch[k] = k === 'tier' || k === 'pl' ? +box.value : box.value;
-        if (k === 'campaign' && !box.value) patch.campaign = null;
-        net.send('game.settings', { patch: patch });
-      });
-    });
+  function onTermChange(e) {
+    var box = e.target, k = box && box.getAttribute && box.getAttribute('data-term');
+    if (!k || !net) return;
+    var patch = {};
+    patch[k] = k === 'tier' || k === 'pl' ? +box.value : box.value;
+    if (k === 'campaign' && !box.value) patch.campaign = null;
+    net.send('game.settings', { patch: patch });
   }
+  function wireTerms() { /* the overlay listens for every term; see onTermChange */ }
+
 
   /* The game this browser was last seated at, kept so a refresh (or coming back
      tomorrow) can walk straight back into it. */
