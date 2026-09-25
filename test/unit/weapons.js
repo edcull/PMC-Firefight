@@ -42,7 +42,7 @@ is('gausscannon', 'rail x3');
 all(['rminers', 'rfaceminers', 'rharshminers'], 'rail x2');
 
 head('Guided missiles');
-is('raa', 'missile x2');
+is('raa', 'shell x2');
 // the launcher teams put a pair in the air
 all(['sam', 'missile'], 'missile x2');
 // air defence hulls put the gun up first and the missiles off the rails after

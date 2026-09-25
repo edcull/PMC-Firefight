@@ -1677,8 +1677,8 @@
     rhellriders: { p: 'smg', s: 'arc', sn: 2 }, rlegendary: { p: 'chain', s: 'arc', sn: 2 },
     rlmg: { p: 'burst' }, rautocannon: { p: 'chain' },
     rat: { p: 'shell' },
-    // insurgents with AA put a pair of missiles up, like the PMC SAM team
-    raa: { p: 'missile', n: 2 },
+    // the insurgents' AA weapons are old shoulder guns: each fires a shell, not a guided missile
+    raa: { p: 'shell', n: 2 },
     rlightart: { p: 'arcbig', n: 1 }, rmedart: { p: 'arcbig', n: 2 }, rheavyart: { p: 'arcbig', n: 3 },
     // the heavy autocannon squad hammers, then puts three heavy rounds through it
     rheavyac: { p: 'chain', s: 'shellbig', sn: 3 },

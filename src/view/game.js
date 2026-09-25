@@ -1906,6 +1906,11 @@
         // (a SAW in a rifle squad is one of its rifles: only a unit with an MG weapon splits its men)
         var mgUnit = /^(burst|chain)$/.test(spec.p) || /^(burst|chain)$/.test(spec.s || '');
         var pl = mgStyle ? (mgs.length ? mgs : pool) : (mgUnit && rest.length && mgs.length ? rest : pool);
+        // a shell or a missile leaves a launcher, where the squad carries them
+        if (style === 'shell' || style === 'missile') {
+          var tubes = pool.filter(function (m) { return /^(rpg|atlauncher)$/.test(m.gun || ''); });
+          if (tubes.length) pl = tubes;
+        }
         return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod };
       };
       if (pool.length) { var pf = poolFor(spec.p); from.mz = pf.mz; from.pool = pf.pool; from.poolFor = poolFor; }
@@ -2126,7 +2131,8 @@
             setTimeout(function () {
               if (!state) return;
               if (SFX) SFX.rail();
-              addFx({ kind: 'rail', from: pick(from, j), to: to, rgb: shotRGB(shooter), dur: 380, blocking: true });
+              // each line leaves its own barrel, spread through a squad rather than the two at the front
+              addFx({ kind: 'rail', from: R.isMachine(shooter) ? pick(from, j) : spread(from, j, shots), to: to, rgb: shotRGB(shooter), dur: 380, blocking: true });
               if (j === shots - 1) setTimeout(function () { land(1); }, 90);
               render();
             }, j * railGap);

@@ -689,6 +689,11 @@
         // (a SAW in a rifle squad is one of its rifles: only a unit with an MG weapon splits its men)
         var mgUnit = /^(burst|chain)$/.test(spec.p) || /^(burst|chain)$/.test(spec.s || '');
         var pl = mgStyle ? (mgs.length ? mgs : pool) : (mgUnit && rest.length && mgs.length ? rest : pool);
+        // a shell or a missile leaves a launcher, where the squad carries them
+        if (style === 'shell' || style === 'missile') {
+          var tubes = pool.filter(function (m) { return /^(rpg|atlauncher)$/.test(m.gun || ''); });
+          if (tubes.length) pl = tubes;
+        }
         return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod };
       };
       if (pool.length) { var pf = poolFor(spec.p); from.mz = pf.mz; from.pool = pf.pool; from.poolFor = poolFor; }
@@ -960,8 +965,9 @@
           (function (j) {
             setTimeout(function () {
               if (SFX) SFX.shell();
-              FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: big ? 320 : 260, big: true });
-              FX.add({ kind: 'bolt', from: from, to: to, dur: big ? 340 : 300, heavy: big });
+              var F = tubeOf(from, j);                   // each round from its own barrel
+              FX.add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: big ? 320 : 260, big: true });
+              FX.add({ kind: 'bolt', from: F, to: to, dur: big ? 340 : 300, heavy: big });
               setTimeout(function () { landing(to, big ? 7 : 5, big); start(); }, big ? 340 : 300);
               start();
             }, j * 230);
@@ -1029,7 +1035,8 @@
           (function (j) {
             setTimeout(function () {
               if (SFX) SFX.rail();
-              FX.add({ kind: 'rail', from: from, to: to, rgb: shotRGB(), dur: 380 });
+              // each line leaves its own barrel: a mining team's two cutters, a hull's own guns
+              FX.add({ kind: 'rail', from: R.isMachine(unit()) ? tubeOf(from, j) : spreadOf(from, j, shots), to: to, rgb: shotRGB(), dur: 380 });
               if (j === shots - 1) setTimeout(function () { landing(to, 4); start(); }, 90);
               start();
             }, j * 170);
