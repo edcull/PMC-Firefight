@@ -9628,6 +9628,9 @@
               }
               g.restore();
             }
+            /* The company's jets are VTOL: they can hang in the air as well as fly
+               through it, so each wing carries an enclosed lift fan (over its armour tiles). */
+            if (!hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.16, sd * span * 0.5, z + H * 0.3 + 2, 0.3); });
           });
           part(0, 0, function () {
             fuselage(fus, fusTop, z, H, TB);
