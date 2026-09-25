@@ -38907,12 +38907,11 @@
       ROMAN[co.tier] + '</span></div>';
     // how they fight, and what they are built around — never what they field
     h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
-    h += '<div class="cpstat">' + creedName + ': ' + (co.doctrines.length
-      ? co.doctrines.map(function (d) { return esc(C.doctrine(d).name); }).join(' · ')
-      : 'none declared yet') + '</div>';
-    h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
-      return '<span class="mk" title="' + esc(C.doctrine(d).text) + '">' + esc(C.doctrine(d).text) + '</span>';
-    }).join('') + '</div>';
+    // what it is built around: a pill each, what each does in its tip
+    h += '<div class="cpdoc">' + (co.doctrines.length ? co.doctrines.map(function (d) {
+      var dd = C.doctrine(d);
+      return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
+    }).join('') : '<span class="dnote">No ' + esc(creedName) + ' declared yet.</span>') + '</div>';
     h += '<div class="cpstat">' + co.record.battles + ' battles against you · ' +
       co.record.wins + ' won, ' + co.record.losses + ' lost' +
       (o.caught && o.caught.to > o.caught.from

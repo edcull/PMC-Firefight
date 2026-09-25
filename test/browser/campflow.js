@@ -182,7 +182,7 @@ async function clickText(p, re) {
       rivals: c.rivals.length,
       names: c.rivals.filter(r => cards.some(k => k.textContent.includes(r.name))).length,
       scenarios: cards.filter(k => /Scenario D6/.test(k.textContent)).length,
-      doctrines: cards.filter(k => /Doctrines:|Paths:|Pathways:|Advancements:/.test(k.textContent)).length,
+      doctrines: cards.filter(k => !!k.querySelector('.cpdoc .mk, .cpdoc .dnote')).length,
       styles: c.rivals.filter(r => cards.some(k => k.textContent.includes(window.PMCCamp.themeOf(r)))).length,
       sizes: cards.filter(k => /Battle Tier/.test(k.textContent) && /Priority Level/.test(k.textContent) &&
         /most they can meet you at/.test(k.textContent)).length,
