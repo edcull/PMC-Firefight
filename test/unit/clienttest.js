@@ -463,7 +463,7 @@ ok('the multiplayer button is wired up', ash.doc.getElementById('btn-multi').hid
 ok('...and greyed out on a page with no server behind it', app.doc.getElementById('btn-multi').disabled === true &&
   app.doc.getElementById('btn-multi').hidden === false);
 const ashBody = () => ash.doc.getElementById('lobby-body').innerHTML;
-ok('the lobby screen draws', /Multiplayer/.test(ashBody()));
+ok('the lobby screen draws', /Start a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Multiplayer');
 ok('it says there are no games yet', /No games open/.test(ashBody()));
 
 /* Ash starts a game. */
@@ -473,10 +473,11 @@ ash.win.PMCLobby.net().send('game.create', {
   force: { faction: 'pmc', keys: app.win.PMC.rollArmy(3, 1, null, 'pmc'), colour: 'ochre', name: 'Ash Company' }
 });
 ash.drain(6);
-ok('the room opens on the screen', /lob-code[^>]*>[A-Z0-9]{5}</.test(ashBody()));
+const codeOf = (app) => (app.doc.getElementById('lobby-code') || {}).textContent || '';
+ok('the room opens on the screen', /^[A-Z0-9]{5}$/.test(codeOf(ash)));
 ok('it shows the terms', /Battle Tier/.test(ashBody()) && /Scenario/.test(ashBody()));
 ok('it shows the host in seat A', /Ash/.test(ashBody()) && /Seat B/.test(ashBody()));
-const roomCode = (/lob-code[^>]*>([A-Z0-9]{5})</.exec(ashBody()) || [])[1];
+const roomCode = codeOf(ash);
 
 /* Brann joins from another browser. */
 const brann = openScreen('Brann');
@@ -484,7 +485,7 @@ const brannBody = () => brann.doc.getElementById('lobby-body').innerHTML;
 ok('the other player sees the game listed', new RegExp(roomCode).test(brannBody()));
 brann.win.PMCLobby.net().send('game.join', { id: roomCode });
 brann.drain(6);
-ok('joining puts them in the room', /lob-code/.test(brannBody()) && /Ash/.test(brannBody()));
+ok('joining puts them in the room', codeOf(brann) === roomCode && /Ash/.test(brannBody()));
 ash.drain(4);
 ok('and the host sees them arrive', /Brann/.test(ashBody()));
 
