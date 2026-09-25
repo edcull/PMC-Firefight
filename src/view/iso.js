@@ -9350,7 +9350,7 @@
       function tailFin(p, zz, hh, twin, fanR) {
         (twin ? [-1, 1] : [0]).forEach(function (sd) {
           // a V-tail's two fins are canted well out, taking the tailplane's work as well
-          var q = sd * w * 0.5, lean = sd * (spec.vTail ? 0.5 : 0.12);
+          var q = sd * w * 0.5, lean = sd * (spec.vTail ? 0.32 : 0.12);
           var b0 = S3(AF(p + 0.04, q), zz - hh * 0.2), b1 = S3(AF(p - 0.4, q), zz - hh * 0.2);
           var t0 = S3(AF(p - 0.22, q + lean), zz + hh), t1 = S3(AF(p - 0.42, q + lean), zz + hh);
           poly(g, [b0, b1, t1, t0], sd <= 0 ? mixc(hull, lit, 0.5) : hull);
@@ -9623,7 +9623,7 @@
              on after them whichever way the jet faces: from ahead they were
              drawn with the body, and from behind the wings, drawn after the
              body, covered them. */
-          part(-L * 0.36, 0, function () { tailFin(-L * 0.3, z + H * 0.7, hyb ? 14 : 16, true); }, true);
+          part(-L * 0.36, 0, function () { tailFin(-L * 0.3, z + H * 0.7, hyb ? 14 : spec.vTail ? 10 : 16, true); }, true);
           part(L * 0.4, 0, function () {
             var gp = S3(AF(L * 0.26, -fw2 * 0.7), z + H * 0.7);
             mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);        // the gun port fires from here, without a dot to mark it
