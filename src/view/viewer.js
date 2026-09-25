@@ -143,6 +143,7 @@
     if (view.walking && view.burrow && !arr.hidden) arr = Object.assign({}, arr, view.burrow);
     // far to near, so the nearer of the two covers the other
     var tv = traveller();
+    FX.drawGround(g);                                    // the ground broken open under what comes up through it
     var order = [u, t].concat(tv ? [tv.u] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
       if (tv && m === tv.u) {
