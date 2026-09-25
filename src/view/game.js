@@ -271,17 +271,27 @@
   /* On a desktop, a new battle's set-up has the menu's table rolling behind it;
      it stops when the set-up goes away (or the screen is too narrow for it). */
   function setupBackdrop() {
-    var sp = el('setup'), cv = el('setup-table'), T = window.PMCMenu && window.PMCMenu.table;
-    if (!sp || !cv || !T || !T.on) return;
-    var want = !sp.hidden && window.innerWidth > 1000;
-    if (want) T.start(cv);
-    else if (T.on() === cv) T.stop();
+    var T = window.PMCMenu && window.PMCMenu.table;
+    if (!T || !T.on) return;
+    var wide = window.innerWidth > 1000, want = null;
+    [['setup', 'setup-table'], ['camp', 'camp-table']].forEach(function (pr) {
+      var sp = el(pr[0]), cv = el(pr[1]);
+      if (sp && cv && !sp.hidden && wide && !want) want = cv;
+    });
+    if (want) { if (T.on() !== want) T.start(want); }
+    else if (T.on() === el('setup-table') || T.on() === el('camp-table')) T.stop();
   }
   (function () {
-    var sp = el('setup');
-    if (!sp || !window.MutationObserver) return;
-    new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
-    window.addEventListener('resize', function () { setupBackdrop(); if (window.PMCMenu && window.PMCMenu.table.on() === el('setup-table')) window.PMCMenu.table.fit(); });
+    if (!window.MutationObserver) return;
+    ['setup', 'camp'].forEach(function (id) {
+      var sp = el(id);
+      if (sp) new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
+    });
+    window.addEventListener('resize', function () {
+      setupBackdrop();
+      var on = window.PMCMenu && window.PMCMenu.table.on();
+      if (on && (on === el('setup-table') || on === el('camp-table'))) window.PMCMenu.table.fit();
+    });
   })();
   function menuUp() {
     if (window.PMCMenu && window.PMCMenu.isOpen()) return true;
