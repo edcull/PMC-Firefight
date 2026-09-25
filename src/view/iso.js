@@ -8658,9 +8658,6 @@
           var ns4 = nearSide();
           hexFlank(HF, -L * 0.42, L * 0.3, ns4 * w * 1.0, z0 + 1, H * 0.8);
           hexNose(HF, L * 0.5, L * 0.14, -w * 0.45, w * 0.45, z0, H * 0.9, 3);   // and across the nose: a row of three over a row of two
-          // the dark sensor slit across the nose and the running lights
-          edge(g, S3(HF(L * 0.44, -w * 0.4), z0 + H * 0.3), S3(HF(L * 0.44, w * 0.4), z0 + H * 0.3), '#0b0d11', 1.6);
-          if (!dead) edge(g, S3(HF(L * 0.44, -w * 0.3), z0 + H * 0.3), S3(HF(L * 0.44, -w * 0.1), z0 + H * 0.3), '#7fd8e8', 0.9);
           grille(HF, -L * 0.42, -L * 0.24, -w * 0.5, w * 0.5, z0 + H * 0.9 + 0.2, 5);
           return;
         }
@@ -9009,7 +9006,9 @@
               var sn = S3(TF(-TR * 0.3, -TR * 0.25), tz + 9);
               sEllipse(sn[0], sn[1] - 1.2, 2.2, 1.8, '#c9ced6'); sEllipse(sn[0], sn[1] - 1.8, 1.2, 0.9, '#eef2f6');
               aerial(TF, -TR * 0.6, -TR * 0.32, tz + 9, 26, 0.04); aerial(TF, -TR * 0.62, -TR * 0.18, tz + 9, 18, 0.04);
-              if (!dead) edge(g, S3(TF(TR * 0.5, -TR * 0.25), tz + 5), S3(TF(TR * 0.5, TR * 0.25), tz + 5), '#7fd8e8', 0.9);
+              // the dark sensor slit across the turret's face, one end of it lit
+              edge(g, S3(TF(TR * 0.5, -TR * 0.3), tz + 5), S3(TF(TR * 0.5, TR * 0.3), tz + 5), '#0b0d11', 1.6);
+              if (!dead) edge(g, S3(TF(TR * 0.5, -TR * 0.22), tz + 5), S3(TF(TR * 0.5, -TR * 0.06), tz + 5), '#7fd8e8', 0.9);
             };
             gun = function () {
               if (st.plasma) plasmaBarrel(TR * 0.4, TR * (st.gunLen || 2.3), tz + 5, 3.4);
