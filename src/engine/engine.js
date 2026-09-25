@@ -857,6 +857,7 @@
     if (spot.onHill) pc.onHill = true;
     R.placePiece(pc, spot.x, spot.y);
     state.terrain.push(pc); a.placed.push(pc);
+    if (pc.onHill && GEN.levelUnder) GEN.levelUnder(state.terrain);
     a.count[a.spec] = (a.count[a.spec] || 0) + 1;
     ui.tsetHint = '';
     if (SFX && SFX.click) SFX.click();

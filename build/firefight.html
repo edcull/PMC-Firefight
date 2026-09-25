@@ -11925,6 +11925,7 @@
     });
     var RR = root.PMC;
     if (RR && RR.shapePiece) placed.forEach(function (p) { RR.shapePiece(p, rand); });
+    levelUnder(existing.concat(placed));
     return placed;
   }
 
@@ -12159,6 +12160,16 @@
   }
   // no two pieces share ground: half an inch of open ground between them at least
   // what may stand on a hill, inside its crest, clear of everything else on it
+  /* A building or bunker set on a hill stands on a levelled site: a hill that
+     rises in two steps loses its second step under it. */
+  function levelUnder(pieces) {
+    pieces.forEach(function (b) {
+      if (!b.onHill || (b.kind !== 'building' && b.kind !== 'bunker')) return;
+      pieces.forEach(function (h) {
+        if (h.kind === 'hill' && h.top && clashes(b, [h])) delete h.top;
+      });
+    });
+  }
   var ONHILL = { woods: 1, ruins: 1, building: 1, bunker: 1, crater: 1, rocks: 1 };
   function placeOnHill(spec, hill, existing, rand) {
     var inner = { x: hill.x + hill.w * 0.22, y: hill.y + hill.h * 0.22, w: hill.w * 0.56, h: hill.h * 0.56 };
@@ -12288,7 +12299,7 @@
 
   root.PMCGen = {
     GENERATORS: GENERATORS, SIZES: SIZES, generate: generate, areasOf: areasOf, rollArea: rollArea,
-    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place, ONHILL: ONHILL,
+    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place, ONHILL: ONHILL, levelUnder: levelUnder,
     tableFor: tableFor, resolvePlanet: resolvePlanet, VARIANTS: VARIANTS, BASE: BASE
   };
 })(window);
@@ -12642,7 +12653,7 @@
           var o = j * cw + i;
           P[o] += f.p * w; D[o] += f.d * w; N[o] += f.n * w;
           if (f.tint) {
-            var tc = hex3(f.tint), tw2 = Math.min(1, f.tw * (out < 0 ? 1 : Math.max(0, 1 - out / f.r) * (0.7 + vnoise(x / 1.6, y / 1.6, seed + 630) * 0.6)));
+            var tc = hex3(r.kind === 'rocks' && ROCKTINT || f.tint), tw2 = Math.min(1, f.tw * (out < 0 ? 1 : Math.max(0, 1 - out / f.r) * (0.7 + vnoise(x / 1.6, y / 1.6, seed + 630) * 0.6)));
             if (tw2 > TW[o]) { TW[o] = tw2; TR[o] = tc[0]; TG[o] = tc[1]; TB[o] = tc[2]; }
           }
           if (f.mud && out < f.mud) {              // a band of mud right at the water's edge
@@ -12671,6 +12682,23 @@
   /* What grows on this world, set with its ground as the table is baked: the
      colour of a tuft of grass, and how much of a hilltop carries one. */
   var BLADES = null, HILLTUFT = 0.65;
+  /* The rubble under a rock pile is the world's own low ground broken up, not
+     one grey for every planet: set with the ground as the table is baked. */
+  var ROCKF = null, ROCKTINT = null;
+  function floorOf(kind) { return kind === 'rocks' && ROCKF || FLOOR[kind]; }
+  function rockColours(GP) {
+    var mud = GP.mud.map(hex3), sand = GP.sand.map(hex3), soil = GP.soil.map(hex3), scree = SCREE.map(hex3);
+    function hx(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
+    var base = mud.concat([sand[1], sand[2]]).slice(0, 5);
+    return {
+      floor: {
+        ramp: base.map(function (c, i) { return hx(mix3(c, scree[i], 0.3)); }),
+        fleck: [hx(sand[3]), hx(mix3(mud[0], [0, 0, 0], 0.4)), hx(soil[4])],
+        rim: hx(mix3(mud[0], [0, 0, 0], 0.35))
+      },
+      tint: hx(mix3(mud[2] || mud[1], scree[3], 0.3))
+    };
+  }
   function hillColours(GP) {
     var soil = GP.soil.map(hex3), mud = GP.mud.map(hex3), scrub = GP.scrub.map(hex3), sand = GP.sand.map(hex3);
     function hx(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
@@ -12698,6 +12726,7 @@
       cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
     }
     HILLC = hillColours(GP);
+    var RC = rockColours(GP); ROCKF = RC.floor; ROCKTINT = RC.tint;
     BLADES = GP.blade || BLADE;
     HILLTUFT = GP.hillTufts != null ? GP.hillTufts : 0.65;
     var cv = document.createElement('canvas');
@@ -12775,7 +12804,7 @@
     /* --- every terrain rectangle, painted as the rectangle it is --- */
     terrain.forEach(function (r, ri) {
       if (r.kind === 'hill') return;               // the plateau is painted after the slopes
-      if (FLOOR[r.kind]) paintFloor(d, r, FLOOR[r.kind], seed + ri * 131, lat, fN, fD);
+      if (FLOOR[r.kind]) paintFloor(d, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD);
     });
 
     g.putImageData(img, 0, 0);
@@ -12827,7 +12856,7 @@
         return false;
       }
       terrain.forEach(function (r, ri) {
-        if (r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker') paintFloor(td, r, FLOOR[r.kind], seed + ri * 131, lat, fN, fD, ELEV, onAHill);
+        if (r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker') paintFloor(td, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD, ELEV, onAHill);
       });
       g.putImageData(top, 0, 0);
       hills.forEach(function (r) { hillCrest(g, r, seed); });
@@ -24969,6 +24998,7 @@
     if (spot.onHill) pc.onHill = true;
     R.placePiece(pc, spot.x, spot.y);
     state.terrain.push(pc); a.placed.push(pc);
+    if (pc.onHill && GEN.levelUnder) GEN.levelUnder(state.terrain);
     a.count[a.spec] = (a.count[a.spec] || 0) + 1;
     ui.tsetHint = '';
     if (SFX && SFX.click) SFX.click();

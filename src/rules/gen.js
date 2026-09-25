@@ -212,6 +212,7 @@
     });
     var RR = root.PMC;
     if (RR && RR.shapePiece) placed.forEach(function (p) { RR.shapePiece(p, rand); });
+    levelUnder(existing.concat(placed));
     return placed;
   }
 
@@ -446,6 +447,16 @@
   }
   // no two pieces share ground: half an inch of open ground between them at least
   // what may stand on a hill, inside its crest, clear of everything else on it
+  /* A building or bunker set on a hill stands on a levelled site: a hill that
+     rises in two steps loses its second step under it. */
+  function levelUnder(pieces) {
+    pieces.forEach(function (b) {
+      if (!b.onHill || (b.kind !== 'building' && b.kind !== 'bunker')) return;
+      pieces.forEach(function (h) {
+        if (h.kind === 'hill' && h.top && clashes(b, [h])) delete h.top;
+      });
+    });
+  }
   var ONHILL = { woods: 1, ruins: 1, building: 1, bunker: 1, crater: 1, rocks: 1 };
   function placeOnHill(spec, hill, existing, rand) {
     var inner = { x: hill.x + hill.w * 0.22, y: hill.y + hill.h * 0.22, w: hill.w * 0.56, h: hill.h * 0.56 };
@@ -575,7 +586,7 @@
 
   root.PMCGen = {
     GENERATORS: GENERATORS, SIZES: SIZES, generate: generate, areasOf: areasOf, rollArea: rollArea,
-    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place, ONHILL: ONHILL,
+    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place, ONHILL: ONHILL, levelUnder: levelUnder,
     tableFor: tableFor, resolvePlanet: resolvePlanet, VARIANTS: VARIANTS, BASE: BASE
   };
 })(window);
