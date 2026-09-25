@@ -8359,8 +8359,8 @@
       poly(g, arm1, '#c23a32'); poly(g, arm2, '#c23a32');
     }
     // hexagonal armour tiles set into a flank (future hulls): outlines on the lit side
-    function hexFlank(fr, a0, a1, bSide, z0, h) {
-      var n = 6, step = (a1 - a0) / n;
+    function hexFlank(fr, a0, a1, bSide, z0, h, cols) {
+      var n = cols || 6, step = (a1 - a0) / n;
       for (var i = 0; i < n; i++) {
         for (var r = 0; r < 2; r++) {
           var ca = a0 + step * (i + 0.5 + (r ? 0.5 : 0)), cz = z0 + h * (r ? 0.3 : 0.72);
@@ -8392,6 +8392,25 @@
           for (var k = 0; k < 6; k++) {
             var ang = k * Math.PI / 3, u = cu + Math.sin(ang) * 0.24;
             pts.push(S3(fr(aBot + (aTop - aBot) * u, cb + Math.cos(ang) * cw * 0.46), z0 + h * u));
+          }
+          poly(g, pts, 'rgba(255,248,232,.07)');
+          for (var e2 = 0; e2 < 6; e2++) edge(g, pts[e2], pts[(e2 + 1) % 6], 'rgba(10,12,16,.35)', 0.6);
+        }
+      }
+    }
+
+    /* The same tiles on any upright facet of a hull or chest: along the facet's
+       bottom edge from p0 to p1 (each [a, b] in the frame), from z0 up h. */
+    function hexFacet(fr, p0, p1, z0, h, cols) {
+      var n = cols || 2;
+      for (var r = 0; r < 2; r++) {
+        for (var i = 0; i < n; i++) {
+          var ct = (i + 0.5 + (r ? 0.5 : 0)) / n, cz = z0 + h * (r ? 0.3 : 0.72);
+          if (ct > 1 - 0.3 / n) continue;
+          var pts = [];
+          for (var k = 0; k < 6; k++) {
+            var ang = k * Math.PI / 3, t = ct + Math.cos(ang) * 0.46 / n;
+            pts.push(S3(fr(p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t), cz + Math.sin(ang) * h * 0.24));
           }
           poly(g, pts, 'rgba(255,248,232,.07)');
           for (var e2 = 0; e2 < 6; e2++) edge(g, pts[e2], pts[(e2 + 1) % 6], 'rgba(10,12,16,.35)', 0.6);
@@ -9939,6 +9958,17 @@
         if (fwd > 0) vents();
         shape(TF, R0, waistY, h1, TB, null, R1, true);
         shape(TF, R1, waistY + h1, h2, TB, null, null, true);
+        // a heavy engineering walker's hex armour, on the two front corners of its chest either side of the canopy
+        if (spec.style && spec.style.hexNose) {
+          [-1, 1].forEach(function (s) {
+            if (fwd * 0.7 + nearOf(s) * 0.7 <= 0.05) return;
+            hexFacet(TF, [tL, s * tW * 0.7], [tL * 0.7, s * tW], waistY + h1 + 1, h2 - 2, 2);
+          });
+          // and across the front plate either side of the canopy
+          if (fwd > 0.05) [-1, 1].forEach(function (s) {
+            hexFacet(TF, [tL + 0.006, s * tW * 0.34], [tL + 0.006, s * tW * 0.72], waistY + h1 + 1, h2 - 2, 2);
+          });
+        }
         shape(TF, R1, waistY + h1 + h2, h3, TB, null, R2);
         // the canopy, over the front plate and up onto the dome
         if (fwd > 0.05 && !u.drone) {
@@ -10002,6 +10032,8 @@
             var pz = shoulder - Math.round(14 * sf);
             slabF(TF, -tL * 0.66, tL * 0.62, off - tW * 0.42, off + tW * 0.42, pz - 2, 3, TS);
             slabF(TF, -tL * 0.64, tL * 0.6, off - tW * 0.4, off + tW * 0.4, pz, shoulder + 3 - pz, TT, tL * 0.18, tL * 0.18, tW * 0.12);
+            // the advanced combat vehicle's hex armour, on the outer face of each shoulder
+            if (spec.style && spec.style.body === 'future') hexFlank(TF, -tL * 0.58, tL * 0.54, off + s * tW * 0.4, pz + 1, shoulder + 1 - pz, 3);
           } else if (light) {
             // a shoulder cap reaching in over the top of the chest, so the arm is plainly joined on
             slabF(TF, -tL * 0.55, tL * 0.55, off - tW * 0.34, off + tW * 0.3, shoulder - Math.round(6 * sf), Math.round(6 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
