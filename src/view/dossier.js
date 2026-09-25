@@ -359,7 +359,7 @@
   function hubBar() {
     var h = '';
     h += '<div class="hubbar">' +
-      '<button class="lnk" data-go="roster">Dossier</button>' +
+      '<button class="lnk' + (hubPane === 'dossier' ? ' on' : '') + '" data-go="roster" aria-pressed="' + (hubPane === 'dossier') + '">Dossier</button>' +
       '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
       '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
       '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
@@ -382,7 +382,7 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
-    h += promotionPanel(co, side, !!bar);
+    h += bar && side === 'A' && hubPane === 'dossier' ? dossierPanel(co) : promotionPanel(co, side, !!bar);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
     }
@@ -703,18 +703,16 @@
   }
 
   /* ================= the dossier ================= */
-  function rosterView() {
-    var co = camp.companies.A;
-    var h = '<h2>' + esc(co.name) + '</h2>';
-    h += '<p class="lede">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + ' · ' + co.kUC + ' ' + C.money(co) + ' · ' +
-      co.roster.length + ' units on the books.</p>' + expLine(co);
-    h += '<div class="dtabs">' +
+  function rosterTabs(co) {
+    return '<div class="dtabs">' +
       '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
       '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
       '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
       '<button class="lnk' + (rosterTab === 'memorial' ? ' on' : '') + '" data-rtab="memorial">Memorial</button>' +
       '</div>';
+  }
+  function rosterBody(co) {
+    var h = '';
     if (rosterTab === 'units') {
       // every unit on the books has its soldiers named; an old save gets them now
       var named = false;
@@ -743,9 +741,15 @@
     } else {
       h += recruitList(co);
     }
-    h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
   }
+  /* On the hub the dossier takes the place of the Tier panel, in the same
+     box: its tabs across the top and the list scrolling under them. */
+  function dossierPanel(co) {
+    return '<div class="cprom cdos"><div class="cprom-head"><b>Dossier</b><span class="cprom-count">' +
+      C.words(co).tier + ' Tier ' + ROMAN[co.tier] + ' · ' + co.roster.length + ' units on the books</span></div>' + rosterTabs(co) + '<div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
+  }
+  var hubPane = 'tier';
   var rosterTab = 'units';
   /* Every soldier the force has lost in the campaign, most recent battle
      first: who they were, what they served in, and where they fell. */
@@ -1854,10 +1858,10 @@
     var body = el('camp-body');
     if (!body) return;
     var h = '';
+    if (view !== 'hub') hubPane = 'tier';                    // back at the hub, it opens on the Tier panel again
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view === 'found') h = foundView();
-    else if (view === 'roster') h = rosterView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') h = contractView();
     else if (view === 'aftermath') h = aftermathView();
@@ -2020,7 +2024,7 @@
     }
     if (t.hasAttribute('data-fit')) {
       C.takeUpgrade(co, upState, +t.getAttribute('data-fit'));
-      save(); view = 'roster'; rosterTab = 'spend'; render(); return;
+      save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'spend'; render(); return;
     }
     if (t.hasAttribute('data-pick')) {
       var pk = findEntry(co, t.getAttribute('data-pick'));
@@ -2119,7 +2123,11 @@
         render(); return;
       }
       case 'aspire': camp.companies[docSide].aspiring = true; save(); render(); return;
-      case 'roster': view = 'roster'; render(); return;
+      case 'roster':
+        // from the hub, the Dossier button swaps the Tier panel for the dossier and back again
+        if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
+        else { hubPane = 'dossier'; if (view !== 'hub') rosterTab = rosterTab || 'units'; }
+        view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;

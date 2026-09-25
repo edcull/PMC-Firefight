@@ -481,9 +481,8 @@ async function clickText(p, re) {
   let nativeDialogs = 0;
   p.on('dialog', async d => { nativeDialogs++; await d.dismiss(); });
 
-  await clickText(p, 'Back');
-  await p.waitForTimeout(250);
-  await clickText(p, '^Dossier$');
+  // the dossier is already open in the hub's Tier panel
+  if (!(await p.evaluate(() => !!document.querySelector('#camp-body .cdos')))) await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
   const renamed = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-rename]');
@@ -498,7 +497,8 @@ async function clickText(p, re) {
   check('...and the name sticks',
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.some(e => e.name === "Kowalski's Lads")));
 
-  await clickText(p, 'Back');
+  // Abandon sits in the Tier panel: close the dossier to bring it back
+  if (await p.evaluate(() => !!document.querySelector('#camp-body .cdos'))) await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
   await clickText(p, '^Abandon$');
   await p.waitForTimeout(300);
