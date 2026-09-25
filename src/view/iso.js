@@ -9568,9 +9568,11 @@
             tailFin(-L * 0.72, z + H * 0.91, 15, false, 0.17);
             plate(AF, [[-L * 0.66, -w * 0.9], [-L * 0.66, w * 0.9], [-L * 0.78, w * 0.9], [-L * 0.78, -w * 0.9]], z + H * 0.81, 1.5);
           });
-          // stub wings with pods, and a fan at each tip
+          /* stub wings with pods, and a fan at each tip: layered against the body,
+             the far one under it and the near one over it, from any angle */
+          var stubNear = nearSide(), bodyD = AF(0, 0);
           [-1, 1].forEach(function (sd) {
-            part(-L * 0.02, sd * w * 2.6, function () {
+            parts.push({ d: bodyD.x + bodyD.y + (sd === stubNear ? 0.001 : -0.001), fn: function () {
               var wz = z + H * 0.45;
               var npods = spec.noPods ? 0 : st === 'apacherk' || st === 'hindrk' ? 2 : 1;
               for (var pi = 0; pi < npods; pi++) {
@@ -9580,7 +9582,7 @@
               plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
               // the transport and the heavy craft lift more, on bigger fans
               fan(AF, -L * 0.05, sd * w * (hind ? 3.25 : 3.1), wz + 1, hind ? 0.48 : 0.4);
-            });
+            } });
           });
           part(0, 0, function () {
             fuselage(body2, top2, z, H, TB);
@@ -9632,13 +9634,16 @@
             tailFin(-L * 0.74, z + H * 0.94, 13, false, 0.2);
             droop(ns);
           });
-          // swept stubs, a fan at each tip
+          /* Swept stubs, a fan at each tip. They are layered against the body
+             rather than sorted by where their tips are: the far stub and its fan
+             go under the fuselage, the near ones over it, from any angle. */
+          var stubNear = nearSide(), bodyD = AF(0, 0);
           [-1, 1].forEach(function (sd) {
-            part(-L * 0.08, sd * tipQ, function () {
+            parts.push({ d: bodyD.x + bodyD.y + (sd === stubNear ? 0.001 : -0.001), fn: function () {
               var wz = z + H * 0.42;
               plate(AF, [[L * 0.08, sd * cw * 0.95], [-L * 0.06, sd * tipQ * 0.86], [-L * 0.16, sd * tipQ * 0.86], [-L * 0.14, sd * cw * 0.95]], wz, 1.6);
               fan(AF, -L * 0.1, sd * tipQ, wz + 1, 0.36, false, false, 0.3);
-            });
+            } });
           });
           part(0, 0, function () {
             fuselage(cbody, ctop, z, H, TB);
