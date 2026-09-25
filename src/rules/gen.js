@@ -109,7 +109,7 @@
     water: [5, 12, 4, 10],
     deep: [5, 12, 4, 10],
     lava: [5, 12, 4, 10],
-    mesa: [5, 10, 4, 8],
+    crystal: [5, 12, 4, 10],
     ravine: [6, 14, 2.5, 5],
     barricade: [3, 8, 1, 1],
     // the book destroys high walls in sections up to 6", so none is laid longer
@@ -532,10 +532,10 @@
 
   // the book's table for a world, under the world's own name
   /* The barren table fought on a desert or an arctic world: its impassable
-     ground is what that world has — a mesa standing out of the sand, a ravine in
+     ground is what that world has — a field of crystal in the sand, a ravine in
      the ice — rather than a lava field on either. */
   var IMPASSABLE = {
-    desert: { kind: 'mesa', text: '1-3 impassable areas (mesas, high rocks)' },
+    desert: { kind: 'crystal', text: '1-3 impassable areas (crystal fields, high rocks)' },
     arctic: { kind: 'ravine', text: '1-3 impassable areas (ice ravines, high rocks)' }
   };
   function worldRows(rows, planet) {
