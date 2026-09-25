@@ -3354,6 +3354,8 @@
 
   function drawHUD() {
     var i;
+    // the AI's own choices are not drawn (see drawBoard)
+    var aiSel = !!(ui.selected && state.cfg.aiSides.indexOf(ui.selected.side) >= 0);
     /* The ground each side may deploy into. It used to be painted as a flat 6"
        band on each table edge whatever the scenario actually said — wrong for
        Invasion's inset zones and for the circles in Demolish and Hostile
