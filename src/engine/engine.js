@@ -809,6 +809,19 @@
     var x0 = Math.max(a.x, 0.5), x1 = Math.min(a.x + a.w, W - 0.5) - g.w;
     var y0 = Math.max(a.y, 0.5), y1 = Math.min(a.y + a.h, H - 0.5) - g.h;
     if (x1 < x0 || y1 < y0) return null;
+    /* Tapped on a hill: a wood, a ruin, rubble, rocks or a building may stand
+       on it (p. 42) — inside its crest, clear of anything else up there. */
+    if (GEN.ONHILL[g.kind]) {
+      var hill = state.terrain.filter(function (h) {
+        return h.kind === 'hill' && R.inRect(cx, cy, h) && h.w >= g.w + 1 && h.h >= g.h + 1;
+      })[0];
+      if (hill) {
+        var hx = Math.max(hill.x + 0.5, Math.min(hill.x + hill.w - 0.5 - g.w, cx - g.w / 2));
+        var hy = Math.max(hill.y + 0.5, Math.min(hill.y + hill.h - 0.5 - g.h, cy - g.h / 2));
+        var others = state.terrain.filter(function (o) { return o !== hill; });
+        if (!GEN.clashes({ x: hx, y: hy, w: g.w, h: g.h }, others)) return { x: hx, y: hy, onHill: true };
+      }
+    }
     var best = null, bd = Infinity;
     for (var r = 0; r <= 12; r += 0.5) {
       var steps = r ? Math.max(8, Math.round(r * 8)) : 1;
@@ -841,6 +854,7 @@
       render(); return;
     }
     var pc = clonePiece(state.tset.ghost);
+    if (spot.onHill) pc.onHill = true;
     R.placePiece(pc, spot.x, spot.y);
     state.terrain.push(pc); a.placed.push(pc);
     a.count[a.spec] = (a.count[a.spec] || 0) + 1;

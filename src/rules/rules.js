@@ -1407,7 +1407,13 @@
     }
     return lv;
   }
-  function levelOf(state, u) { return u && u.x >= 0 ? groundLevel(state, u.x, u.y) : 0; }
+  /* A unit in a wood (or anything else) standing on a hill counts as being in
+     that piece only, and takes none of the hill's rules (p. 42). */
+  function levelOf(state, u) {
+    if (!u || u.x < 0) return 0;
+    var lv = groundLevel(state, u.x, u.y);
+    return lv && terrainAt(state, u.x, u.y) !== 'hill' ? 0 : lv;
+  }
   // the upper step of a stepped hill, as a piece of its own for sight lines
   function upperStep(r) {
     var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;

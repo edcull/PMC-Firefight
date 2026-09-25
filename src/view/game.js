@@ -6529,6 +6529,7 @@
   window.__insertionSpotsNow = function () { return ui.insertion ? ui.insertion.spots : null; };
   window.__tapInsertion = function (q) { placeInsertion(q); };
   window.__sendIntent = function (it) { send(it); };
+  window.__lookAt = function (x, y) { var q = ISO.toScreen(x, y); centreOn(q.x, q.y, true); render(); };
   window.__seats = function () { return seats.slice(); };
   window.__mySide = function () { return mySide(); };
 

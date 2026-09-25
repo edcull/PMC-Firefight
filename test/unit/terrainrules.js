@@ -207,5 +207,15 @@ R.enterBuilding(fw, gar, burn, 0);
 R.destroyTerrain(fw, burn, [], null);
 ok('the garrison leaves at once', !gar.bld && !R.inRect(gar.x, gar.y, burn), true);
 
+/* ---- terrain on a hill (p. 42): the smaller piece's rules only ---- */
+console.log('\nA WOOD ON A HILL');
+(function () {
+  var hill = { kind: 'hill', x: 10, y: 10, w: 12, h: 10 }, wood = { kind: 'woods', x: 13, y: 13, w: 5, h: 4, onHill: true };
+  var st = { terrain: [hill, wood], units: [], objectives: [] };
+  ok('inside the wood it is woods', R.terrainAt(st, 15, 15), 'woods');
+  ok('...and not the hill: no height bonus', R.onHill(st, { x: 15, y: 15 }), false);
+  ok('the rest of the hill is still a hill', R.terrainAt(st, 11, 11), 'hill');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

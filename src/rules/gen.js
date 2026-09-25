@@ -81,7 +81,7 @@
         { text: '1-4 impassable areas (high rocks, deep canyons)', alts: [[P('rocks', 1, 4, { big: true })]] },
         { text: '1-6 hills or huge rocks', alts: [[P('hill', 1, 6)], [P('rocks', 1, 6, { big: true })]] },
         { text: '1-6 hills or woods', alts: [[P('hill', 1, 6)], [P('woods', 1, 6)]] },
-        { text: 'Mine: 1-3 buildings, may be on a hill', alts: [[P('hill', 1, 1), P('building', 1, 3)]] }
+        { text: 'Mine: 1-3 buildings, may be on a hill', alts: [[P('hill', 1, 1), P('building', 1, 3, { onHill: true })]] }
       ]
     },
     unstable: {
@@ -171,10 +171,27 @@
     var inset = total < 3 ? Math.min(6, Math.min(area.w, area.h) * 0.3) : 0;
     // what stands goes down first, so the walls have something to be built round
     var walls = [];
-    alt.forEach(function (spec, si) {
+    // hills go down before whatever may stand on them
+    var order = alt.map(function (spec, si) { return si; }).sort(function (a2, b2) {
+      return (alt[a2].kind === 'hill' ? 0 : 1) - (alt[b2].kind === 'hill' ? 0 : 1);
+    });
+    order.forEach(function (si) {
+      var spec = alt[si];
       if (LINEAR[spec.kind]) { walls.push({ spec: spec, n: wants[si] }); return; }
       for (var c = 0; c < wants[si]; c++) {
-        var piece = place(spec, area, existing.concat(placed), objectives, rand, W, H, inset);
+        var all = existing.concat(placed), piece = null;
+        /* A smaller piece may stand on a hill — a wood on a hill, a mine on a
+           hill (pp. 42, 48) — and then counts as the smaller piece only. The
+           book's "may be on a hill" puts it there whenever it can; anything
+           else that could goes up now and then. */
+        if (ONHILL[spec.kind] && rand() < (spec.onHill ? 1 : 0.3)) {
+          var hills = all.filter(function (h) {
+            return h.kind === 'hill' && !h.top && h.w >= 6 && h.h >= 5 &&
+              h.x + h.w / 2 >= area.x && h.x + h.w / 2 < area.x + area.w && h.y + h.h / 2 >= area.y && h.y + h.h / 2 < area.y + area.h;
+          });
+          for (var hi = 0; hi < hills.length && !piece; hi++) piece = placeOnHill(spec, hills[hi], all, rand);
+        }
+        if (!piece) piece = place(spec, area, all, objectives, rand, W, H, inset);
         if (piece) placed.push(piece);
       }
     });
@@ -428,6 +445,33 @@
     return { w: w, h: h };
   }
   // no two pieces share ground: half an inch of open ground between them at least
+  // what may stand on a hill, inside its crest, clear of everything else on it
+  var ONHILL = { woods: 1, ruins: 1, building: 1, bunker: 1, crater: 1, rocks: 1 };
+  function placeOnHill(spec, hill, existing, rand) {
+    var inner = { x: hill.x + hill.w * 0.22, y: hill.y + hill.h * 0.22, w: hill.w * 0.56, h: hill.h * 0.56 };
+    /* A wood grows over most of the hill and may run on down its sides; a
+       building, a ruin or rocks stand on top, inside the crest. */
+    var spill = spec.kind === 'woods';
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var piece;
+      if (spill) {
+        var k = (attempt < 20 ? 0.75 : 0.6) + rand() * 0.45;
+        var ww = hill.w * k, hh = hill.h * (k * (0.8 + rand() * 0.3));
+        var cx = hill.x + hill.w / 2 + (rand() - 0.5) * hill.w * 0.35, cy = hill.y + hill.h / 2 + (rand() - 0.5) * hill.h * 0.35;
+        piece = { kind: 'woods', x: cx - ww / 2, y: cy - hh / 2, w: ww, h: hh, onHill: true };
+      } else {
+        var sz = sizeFor(spec, rand, attempt < 20 ? 0.75 : 0.55);
+        var w = Math.min(sz.w, inner.w), h = Math.min(sz.h, inner.h);
+        if (w < 2 || h < 2) return null;
+        piece = { kind: spec.kind, x: inner.x + rand() * (inner.w - w), y: inner.y + rand() * (inner.h - h), w: w, h: h, onHill: true };
+      }
+      if (piece.x < 0.5 || piece.y < 0.5 || piece.x + piece.w > (root.PMC ? root.PMC.BOARD.w : 48) - 0.5 || piece.y + piece.h > (root.PMC ? root.PMC.BOARD.h : 48) - 0.5) continue;
+      if (spec.big) piece.big = true;
+      var others = existing.filter(function (e) { return e !== hill; });
+      if (!clashes(piece, others)) return piece;
+    }
+    return null;
+  }
   function clashes(piece, existing) {
     for (var i = 0; i < existing.length; i++) {
       var e = existing[i];
@@ -531,7 +575,7 @@
 
   root.PMCGen = {
     GENERATORS: GENERATORS, SIZES: SIZES, generate: generate, areasOf: areasOf, rollArea: rollArea,
-    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place,
+    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place, ONHILL: ONHILL,
     tableFor: tableFor, resolvePlanet: resolvePlanet, VARIANTS: VARIANTS, BASE: BASE
   };
 })(window);

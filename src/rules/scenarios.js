@@ -154,7 +154,12 @@
     var kept = [];
     function free(p) {
       if (p.x < 0.5 || p.y < 0.5 || p.x + p.w > W - 0.5 || p.y + p.h > H - 0.5) return false;
-      for (var k = 0; k < kept.length; k++) if (clashes(p, kept[k])) return false;
+      for (var k = 0; k < kept.length; k++) {
+        // a piece standing on a hill overlaps it by design (p. 42)
+        if (p.onHill && kept[k].kind === 'hill' && clashes(p, kept[k])) continue;
+        if (kept[k].onHill && p.kind === 'hill' && clashes(kept[k], p)) continue;
+        if (clashes(p, kept[k])) return false;
+      }
       // keep clear of the objectives as the generator does, unless it is one
       if (p.kind !== 'objective' && p.kind !== 'searchsite') {
         for (var o = 0; o < (state.objectives || []).length; o++) {

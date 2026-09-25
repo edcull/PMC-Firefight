@@ -523,6 +523,14 @@
       hills.forEach(function (r, ri) {
         paintFloor(td, r, HILLC.floor, seed + ri * 419, lat, fN, fD, ELEV);
       });
+      // a wood (or rubble, or a ruin) standing on a hill lies on the plateau, not under it
+      function onAHill(x, y) {
+        for (var hq = 0; hq < hills.length; hq++) if (depthIn(hills[hq], x, y) > 0) return true;
+        return false;
+      }
+      terrain.forEach(function (r, ri) {
+        if (r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker') paintFloor(td, r, FLOOR[r.kind], seed + ri * 131, lat, fN, fD, ELEV, onAHill);
+      });
       g.putImageData(top, 0, 0);
       hills.forEach(function (r) { hillCrest(g, r, seed); });
       // the upper step of a two-step hill, raised again off the first
@@ -673,7 +681,8 @@
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   }
 
-  function paintFloor(d, r, spec, seed, lat, fN, fD, lift) {
+  // `mask(x, y)`: paint only where it says yes — a wood's floor on the part of it that is up on a hill
+  function paintFloor(d, r, spec, seed, lat, fN, fD, lift, mask) {
     lift = lift || 0;
     var ramp = spec.ramp.map(hex3), rim = hex3(spec.rim);
     var fleck = spec.fleck.map(hex3);
@@ -695,6 +704,7 @@
       var row = by * PIXW * 4, br = by & 3;
       for (var bx = x0; bx <= x1; bx++, wx += dx, wy += dy) {
         if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
+        if (mask && !mask(wx, wy)) continue;
         // distance inside the piece — its outline, or its rectangle — in inches
         var din = (r.poly || r.parts) ? (wx < r.x - 1 || wy < r.y - 1 || wx > r.x + r.w + 1 || wy > r.y + r.h + 1 ? -9 : depthIn(r, wx, wy))
           : Math.min(wx - r.x, r.x + r.w - wx, wy - r.y, r.y + r.h - wy);
