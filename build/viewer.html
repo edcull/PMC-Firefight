@@ -7878,11 +7878,6 @@
   var INFECT_B = { rebel: true, light: '#86806e', mid: '#666050', dark: '#34302a', helm: '#55503f', cloth: '#4e5458' };
   var INFECT_C = { rebel: true, light: '#6e7680', mid: '#525a62', dark: '#2a2e33', helm: '#434a50', cloth: '#6a5e50' };
   var IRR_OLIVE = { light: '#8a9068', mid: '#686e4a', dark: '#343822', helm: '#555b3c', cloth: '#7a6a4a' };
-  // and the rest of what irregulars turn up in: grey work clothes, brown leather, faded denim, rust
-  var IRR_GREY = { light: '#9a9c98', mid: '#737571', dark: '#383a37', helm: '#5c5e5a', cloth: '#6a5a44' };
-  var IRR_BROWN = { light: '#9a7a5a', mid: '#745a40', dark: '#3a2c1e', helm: '#5a4630', cloth: '#6e7a58' };
-  var IRR_DENIM = { light: '#7e8ea4', mid: '#5c6a80', dark: '#2e3644', helm: '#4a5466', cloth: '#8a7654' };
-  var IRR_RUST = { light: '#a8704e', mid: '#824f34', dark: '#42281a', helm: '#6a4430', cloth: '#56603e' };
   var IRR_KHAKI = { light: '#b0a07a', mid: '#8c7c58', dark: '#463c28', helm: '#6e6244', cloth: '#5a6a4a' };
   var BOOT = '#15181d';
   var GLASS = '#12161c';
@@ -7923,7 +7918,7 @@
     observer: ['observer', 'lightinfrs'],
     recruit: ['recruit'],
     enforcer: ['riot'],
-    // eight of them, and no two dressed or armed alike
+    // a leader in the side's colours, a gunner, and the rest in bandanas and boonies
     irregular: ['irregular', 'irregular2', 'irregular3', 'irregular4', 'irregular5', 'irregular6', 'irregular7', 'irregular8'],
     penal: ['convict'],
     shock: ['shocklead', 'shockbreacher', 'shock'],
@@ -8094,14 +8089,14 @@
     recruit: { helm: 'cap', gun: 'rifle', pack: 'none', sleeves: 'rolled' },
     riot: { helm: 'riot', gun: 'shotgun', pack: 'none', bulk: 1, shield: true },
     // gangers and free companies: rifles, a bandolier, and not much else
-    irregular: { helm: 'scarf', gun: 'battlerifle', pack: 'none', light: true, bandolier: true },
-    irregular2: { helm: 'boonie', gun: 'carbine', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
-    irregular3: { helm: 'bandana', gun: 'battlerifle', pack: 'std', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-    irregular4: { helm: 'cap', gun: 'shotgun', pack: 'none', light: true, tint: IRR_GREY },
-    irregular5: { helm: 'bare', gun: 'huntingrifle', pack: 'none', light: true, bandolier: true, tint: IRR_BROWN },
-    irregular6: { helm: 'balaclava', gun: 'smg', pack: 'none', light: true, tint: IRR_DENIM },
-    irregular7: { helm: 'beret', gun: 'carbine', pack: 'std', light: true, tint: IRR_RUST },
-    irregular8: { helm: 'hood', gun: 'battlerifle', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
+    irregular: { helm: 'scarf', gun: 'smg', pack: 'none', light: true, bandolier: true },
+    irregular2: { helm: 'boonie', gun: 'saw', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
+    irregular3: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
+    irregular4: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
+    irregular5: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
+    irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
+    irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
+    irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
     nomad: { helm: 'std', gun: 'battlerifle', pack: 'std', cloak: true },
     // penal troops: orange coveralls, a collar, and the company's armband
     convict: { helm: 'bare', gun: 'carbine', pack: 'none', collar: true, light: true, armband: 'force',
