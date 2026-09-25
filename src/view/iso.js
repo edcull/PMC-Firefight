@@ -6443,7 +6443,7 @@
     bigapc: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels', hexNose: true, hex: true } },
     bigifv: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels', hexNose: true, hex: true } },
     engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, tanks: true, skirts: 'panels' } },
-    enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true, hexNose: true, hex: true } },
+    enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, mech: 'heavy', style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true, hexNose: true, hex: true } },
     techmrl: { axles: 2, len: 2.00, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 1.0, elev: 10, style: { body: 'pickup', mrl: true } },
     calliope: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.6, elev: 16, style: { body: 'ltank', turret: 'arty', tSize: 0.9, tAt: -0.1, skirts: true } },
     mlrs: { axles: 3, len: 2.45, wid: 1.30, hgt: 17, gun: 1.2, elev: 14, style: { body: 'mlrs', mlrs: true } },
@@ -8399,25 +8399,6 @@
       }
     }
 
-    /* The same tiles on any upright facet of a hull or chest: along the facet's
-       bottom edge from p0 to p1 (each [a, b] in the frame), from z0 up h. */
-    function hexFacet(fr, p0, p1, z0, h, cols) {
-      var n = cols || 2;
-      for (var r = 0; r < 2; r++) {
-        for (var i = 0; i < n; i++) {
-          var ct = (i + 0.5 + (r ? 0.5 : 0)) / n, cz = z0 + h * (r ? 0.3 : 0.72);
-          if (ct > 1 - 0.3 / n) continue;
-          var pts = [];
-          for (var k = 0; k < 6; k++) {
-            var ang = k * Math.PI / 3, t = ct + Math.cos(ang) * 0.46 / n;
-            pts.push(S3(fr(p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t), cz + Math.sin(ang) * h * 0.24));
-          }
-          poly(g, pts, 'rgba(255,248,232,.07)');
-          for (var e2 = 0; e2 < 6; e2++) edge(g, pts[e2], pts[(e2 + 1) % 6], 'rgba(10,12,16,.35)', 0.6);
-        }
-      }
-    }
-
     function nearSide() { return (cos - sin) > 0 ? 1 : -1; }   // which flank faces the eye
     // the same, for something turned to its own angle (a traversed mount)
     function nearSideAt(ang) { return (Math.cos(ang) - Math.sin(ang)) > 0 ? 1 : -1; }
@@ -9586,7 +9567,8 @@
     }
     function mechClass() {
       var base = HULL[u.art] || HULL.wheeled;
-      // light tanks and cars under 2.3", the big future hulls from 2.55"
+      // light tanks and cars under 2.3", the big future hulls from 2.55" — or whatever the hull says it is
+      if (base.mech) return base.mech;
       return base.len < 2.3 ? 'light' : base.len >= 2.55 ? 'heavy' : 'medium';
     }
     /* legH: ground to hip; torsoH: hip to the top of the body; headH: what
@@ -9958,17 +9940,6 @@
         if (fwd > 0) vents();
         shape(TF, R0, waistY, h1, TB, null, R1, true);
         shape(TF, R1, waistY + h1, h2, TB, null, null, true);
-        // a heavy engineering walker's hex armour, on the two front corners of its chest either side of the canopy
-        if (spec.style && spec.style.hexNose) {
-          [-1, 1].forEach(function (s) {
-            if (fwd * 0.7 + nearOf(s) * 0.7 <= 0.05) return;
-            hexFacet(TF, [tL, s * tW * 0.7], [tL * 0.7, s * tW], waistY + h1 + 1, h2 - 2, 2);
-          });
-          // and across the front plate either side of the canopy
-          if (fwd > 0.05) [-1, 1].forEach(function (s) {
-            hexFacet(TF, [tL + 0.006, s * tW * 0.34], [tL + 0.006, s * tW * 0.72], waistY + h1 + 1, h2 - 2, 2);
-          });
-        }
         shape(TF, R1, waistY + h1 + h2, h3, TB, null, R2);
         // the canopy, over the front plate and up onto the dome
         if (fwd > 0.05 && !u.drone) {
@@ -10033,7 +10004,7 @@
             slabF(TF, -tL * 0.66, tL * 0.62, off - tW * 0.42, off + tW * 0.42, pz - 2, 3, TS);
             slabF(TF, -tL * 0.64, tL * 0.6, off - tW * 0.4, off + tW * 0.4, pz, shoulder + 3 - pz, TT, tL * 0.18, tL * 0.18, tW * 0.12);
             // the advanced combat vehicle's hex armour, on the outer face of each shoulder
-            if (spec.style && spec.style.body === 'future') hexFlank(TF, -tL * 0.58, tL * 0.54, off + s * tW * 0.4, pz + 1, shoulder + 1 - pz, 3);
+            if (spec.style && (spec.style.body === 'future' || spec.style.hexNose)) hexFlank(TF, -tL * 0.58, tL * 0.54, off + s * tW * 0.4, pz + 1, shoulder + 1 - pz, 3);
           } else if (light) {
             // a shoulder cap reaching in over the top of the chest, so the arm is plainly joined on
             slabF(TF, -tL * 0.55, tL * 0.55, off - tW * 0.34, off + tW * 0.3, shoulder - Math.round(6 * sf), Math.round(6 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
