@@ -118,17 +118,17 @@ var MACHINES = [
   ['EW vehicle', 3, 10, 1, 3, 18, 12, 2, 5, 'Ground vehicle, Jammers, Counter-jamming, Hackers, Keen-Eyed'],
   ['Medical vehicle', 3, 10, 1, 3, 18, 12, 2, 5, 'Ground vehicle, Field Medics'],
   // Transport aircraft, p. 80
-  ['Adapted transport craft', 2, 16, null, 2, 18, 8, 1, 3, 'Flying unit, Transport (1), Limited Fire Arc'],
-  ['Light transport craft', 3, 20, null, 2, 18, 11, 1, 4, 'Flying unit, Transport (1), Limited Fire Arc'],
-  ['Heavy transport craft', 4, 18, null, 2, 18, 12, 1, 5, 'Flying unit, Transport (2), Limited Fire Arc'],
-  ['Flying command post', 5, 24, null, 2, 18, 13, 1, 6, 'Flying unit, Transport (1), Limited Fire Arc, Command Vehicle'],
+  ['Adapted transport craft', 2, 16, null, 2, 18, 8, 0, 3, 'Flying unit, Transport (1), Limited Fire Arc'],
+  ['Light transport craft', 3, 20, null, 2, 18, 11, 0, 4, 'Flying unit, Transport (1), Limited Fire Arc'],
+  ['Heavy transport craft', 4, 18, null, 2, 18, 12, 0, 5, 'Flying unit, Transport (2), Limited Fire Arc'],
+  ['Flying command post', 5, 24, null, 2, 18, 13, 0, 6, 'Flying unit, Transport (1), Limited Fire Arc, Command Vehicle'],
   // Strike aircraft, pp. 81-82
-  ['Flexible Strike Craft', 3, 24, null, 7, 18, 12, 1, 4, 'Flying unit, Limited Fire Arc'],
-  ['Transport-Strike Craft', 4, 20, null, 6, 18, 12, 1, 4, 'Flying unit, Limited Fire Arc, Transport (1), Supporting Fire'],
-  ['Gunboat', 4, 12, null, 9, 18, 13, 1, 5, 'Flying unit, Incendiary Ammunition'],
-  ['Heavy Strike Craft', 5, 16, null, 9, 18, 13, 1, 5, 'Flying unit, Limited Fire Arc, Anti-tank'],
-  ['Interceptor', 4, 28, null, 6, 24, 11, 1, 3, 'Flying unit, Limited Fire Arc, Anti-aircraft'],
-  ['Advanced Strike Craft', 5, 24, null, 9, 18, 13, 1, 4, 'Flying unit, Limited Fire Arc'],
+  ['Flexible Strike Craft', 3, 24, null, 7, 18, 12, 0, 4, 'Flying unit, Limited Fire Arc'],
+  ['Transport-Strike Craft', 4, 20, null, 6, 18, 12, 0, 4, 'Flying unit, Limited Fire Arc, Transport (1), Supporting Fire'],
+  ['Gunboat', 4, 12, null, 9, 18, 13, 0, 5, 'Flying unit, Incendiary Ammunition'],
+  ['Heavy Strike Craft', 5, 16, null, 9, 18, 13, 0, 5, 'Flying unit, Limited Fire Arc, Anti-tank'],
+  ['Interceptor', 4, 28, null, 6, 24, 11, 0, 3, 'Flying unit, Limited Fire Arc, Anti-aircraft'],
+  ['Advanced Strike Craft', 5, 24, null, 9, 18, 13, 0, 4, 'Flying unit, Limited Fire Arc'],
   /* Rapid insertion platforms, p. 79. The book prints no Tier, no Movement, no
      Firepower, no Range and no Assault — an immobile Ground vehicle with
      Transport (1), Battlefield insertion, Defence 13 and Structure 3, costing one
