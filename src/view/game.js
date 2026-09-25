@@ -1189,10 +1189,28 @@
       '<p class="hint">Tap one of the ' + mp.pool.length + ' outlined pieces.</p>' +
       '<div class="acts"><button class="act" data-act="nomine"><span>No mine</span><small>Leave the charges in the crates</small></button></div></div>';
   }
+  // is the insertion being asked for this screen's to answer? (on a network, the other player may be the one asked)
+  function insertionMine() {
+    var ins = ui.insertion;
+    if (!ins) return false;
+    var by = ins.by || (ins.unit ? ins.unit.side : 'A');
+    return !watching && seats.indexOf(by) >= 0;
+  }
   function insertionCard() {
     var ins = ui.insertion;
     if (!ins) return '';
     var u = ins.unit;
+    if (!insertionMine()) {
+      /* The other player is the one asked — the opponent shoving this side's
+         drop, or placing their own arrival. This screen waits and says for what. */
+      var byS = ins.by || (u ? u.side : 'A');
+      return '<div class="card"><h2>' + (ins.kind === 'shove' ? 'Insertion' : 'Waiting') + '</h2>' +
+        '<p class="sub">' + (ins.kind === 'shove' && u
+          ? '<b>' + esc(u.name) + '</b> rolled a ' + ins.die + ' coming in: ' + esc(sideName(byS)) +
+            ' may move its arrival point up to <b>' + ins.drift + '″</b>.'
+          : esc(sideName(byS)) + ' is placing ' + (u ? '<b>' + esc(u.name) + '</b>' : 'a landing zone') + '.') + '</p>' +
+        '<p class="hint">Waiting for ' + esc(sideName(byS)) + '. Battlefield Insertion, p. 56.</p></div>';
+    }
     if (ins.kind === 'ilz') {
       return '<div class="card"><h2>Landing zone ' + ins.n + ' of 3</h2>' +
         '<p class="sub">The defender is down: nominate where the invasion comes in — an 8″ circle of open ground, ' +
@@ -3486,7 +3504,7 @@
     /* The ground a Battlefield Insertion may legally come down on — everything
        outside 12" of an objective and 4" in from the edge. It used to be an
        invisible rule the player had to guess at, one refused tap at a time. */
-    if (ui.insertion) {
+    if (ui.insertion && insertionMine()) {
       /* Painted strongly enough to be read at arm's length on a phone with the
          table zoomed out: at the old .16 the legal ground was all but invisible,
          and a player who missed the prompt had nothing on the table to go on. */
@@ -5076,7 +5094,7 @@
     // a unit is coming in: the tap is the drop point, nothing else
     // (p is the tap on the table, zoom and pan taken out; the raw canvas point is not)
     if (ui.insertion) {
-      placeInsertion(p);
+      if (insertionMine()) placeInsertion(p);
       return;
     }
 
