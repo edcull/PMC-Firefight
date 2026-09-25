@@ -672,5 +672,25 @@ console.log('  vs the OpFor AI');
   ok('a quarter without it', !e2.state().swapAvail.A || e2.state().swapAvail.A.total === Math.floor(n2 / 4));
 })();
 
+/* A Suppressed unit (p. 34): a move into cover, Auxiliary fire or Pass/Regroup, nothing else;
+   a Broken one is not activated at all. */
+(function () {
+  console.log('suppressed and broken');
+  const e = createEngine();
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
+    nameA: 'A', nameB: 'B', mode: 'hotseat', planet: 'sparse' });
+  e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  const st = e.state(), side = st.activeSide;
+  const u = st.units.find(x => x.side === side && x.cls === 'infantry' && x.alive && x.x >= 0 && !R.has(x, 'Determined'));
+  u.sp = R.currentMorale(u) + 1;                    // suppressed
+  ok('the unit is suppressed', R.status(u) === 'suppressed');
+  const ids = ['fire', 'advance', 'designate', 'marktarget', 'hack', 'sabotage', 'steady', 'vortex', 'vortexadv', 'rush', 'teleport', 'stance', 'coordinate', 'wave', 'breach', 'demolish', 'checkarea'];
+  const on = ids.filter(id => e.query.actionState(u, id).on);
+  ok('...no Fire!, Advance or special action is on', on.length === 0, on.join(', '));
+  ok('...Pass/Regroup is', e.query.actionState(u, 'regroup').on);
+  u.sp = 2 * R.currentMorale(u) + 1;                // broken
+  ok('a broken unit cannot be activated', R.status(u) === 'broken' && !e.query.eligible(side).includes(u));
+})();
+
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'all ') + checks + ' checks' + (bad ? '' : ' passed'));
 process.exit(bad ? 1 : 0);

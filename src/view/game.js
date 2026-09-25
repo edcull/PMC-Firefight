@@ -3918,14 +3918,17 @@
        in the colour of the band it has reached. */
     var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
     h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
+      '<b class="mb-num ' + fillC + '">' + u.sp + ' SP</b>' +
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
       '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
-      stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
-      stat('SP', u.sp) + '</div>';
+      /* Morale as it stands: less a point for each model lost beyond the free
+         ones (none for a Determined unit — currentMorale has already said so) */
+      stat('Morale', m + (m !== u.morale ? '<i class="mmod" ' + tip('Morale ' + u.morale + ' printed',
+        (u.morale - m) + ' down for casualties') + '>(' + (m - u.morale) + ')</i>' : '')) + '</div>';
     h += honourChips(u);
     // a rider's mount, before its rules, the way a hull's drive is shown
     var mt = R.mountOf(u);
@@ -4047,7 +4050,9 @@
       return '<i class="schg ' + (now > was ? 'up' : 'dn') + '"' + (why(stat) ? ' ' + tip('Printed ' + was, why(stat)) : '') + '>' + text + '</i>';
     }
     h += '<div class="stats">' +
-      stat('Structure', changed(left + '/' + u.str, u.str, base.str, 'str')) +
+      // red once it is down below half its Structure; what the drive did to it is in its tip
+      '<div class="st"><span>Structure</span><b' + (left * 2 < u.str ? ' class="hurt"' : '') +
+        (base.str != null && base.str !== u.str && why('str') ? ' ' + tip('Printed ' + base.str, why('str')) : '') + '>' + left + '/' + u.str + '</b></div>' +
       stat('Move', changed(u.move + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.assault) +
