@@ -6498,7 +6498,7 @@
     // the Light VTOL drone: a small flying disc with swept winglets and a scanner pod under its lip
     vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
-    jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, noseGun: true, gun: 1.0 },
+    jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, noseGun: true, vTail: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
 
     /* ---- improvised rebel hulls (pp. 105-108) ----
@@ -9349,7 +9349,8 @@
          rather than floating in front of whatever is nearer. */
       function tailFin(p, zz, hh, twin, fanR) {
         (twin ? [-1, 1] : [0]).forEach(function (sd) {
-          var q = sd * w * 0.5, lean = sd * 0.12;
+          // a V-tail's two fins are canted well out, taking the tailplane's work as well
+          var q = sd * w * 0.5, lean = sd * (spec.vTail ? 0.5 : 0.12);
           var b0 = S3(AF(p + 0.04, q), zz - hh * 0.2), b1 = S3(AF(p - 0.4, q), zz - hh * 0.2);
           var t0 = S3(AF(p - 0.22, q + lean), zz + hh), t1 = S3(AF(p - 0.42, q + lean), zz + hh);
           poly(g, [b0, b1, t1, t0], sd <= 0 ? mixc(hull, lit, 0.5) : hull);
@@ -9604,7 +9605,7 @@
               }
             });
             plate(AF, [[L * 0.14, -fw2], [L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, -span], [-L * 0.2, -span]], z + H * 0.3, 2);
-            plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
+            if (!spec.vTail) plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             if (hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36); });
             /* The company's jets are VTOL: they can hang in the air as well as fly
                through it, so each wing has a lift fan let flush into it (over its armour tiles). */
