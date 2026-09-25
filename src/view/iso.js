@@ -4128,8 +4128,11 @@
         P(-4, wy, 22, 2, '#5c6458');
         P(18, wy - 1, 7, 8, '#6a5a3a');                // flared muzzle
         P(18, wy - 1, 7, 2, '#8a7448');
-        P(25, wy, 4, 5, '#e08a3a');                    // pilot flame
-        P(27, wy + 1, 3, 3, '#ffc861');
+        // the pilot flame at the muzzle, licking up and flickering
+        var fp = FLAME_PHASE < 0 ? 1 : FLAME_PHASE, fh = [4, 6, 5, 7][fp], fl = [0, 1, 0, -1][fp];
+        P(25, wy + 5 - fh, 4, fh, '#e08a3a');
+        P(26 + fl, wy + 6 - fh - 2, 2, 2, '#e08a3a');
+        P(26, wy + 5 - Math.ceil(fh * 0.6), 2, Math.ceil(fh * 0.6), '#ffc861');
         P(-8, wy + 5, 7, 3, '#2f3a34');                // fuel line to the tanks
         P(-6, wy + 3, 4, 3, GUN.md);
         break;
@@ -5978,6 +5981,8 @@
   }
   var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
   var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  // a flamer's pilot light flickers through FLAME_PHASES baked states (-1: not burning)
+  var FLAME_PHASES = 4, FLAME_PHASE = -1;
   var WING_PHASES = 6, WING_PHASE = -1;
   var CORPSE = false;                                  // painting a body: its deflector has gone out
   function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
@@ -5993,7 +5998,8 @@
     if (!u || u.alive === false) return false;          // (a bench unit need not say it is alive)
     if (u.cls === 'aircraft') return true;
     if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
-    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]) || winged(KIT[r]); });
+    if (u.art === 'engflame') return true;                                // the flame gun's pilot light
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]) || winged(KIT[r]) || (KIT[r] && KIT[r].gun === 'flamer'); });
   }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
@@ -6024,7 +6030,10 @@
     // a winged bug's wings beat, about four times a second, unless it has gone to ground
     var flapping = winged(kit) && pose !== 'prone';
     WING_PHASE = flapping ? (Math.floor(nowT() / 40) + i * 2) % WING_PHASES : -1;   // each bug at its own beat
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '') + (CORPSE ? '|corpse' : '');
+    // a flamer's pilot light flickers, each man's at his own beat
+    var burning = kit.gun === 'flamer' && !CORPSE;
+    FLAME_PHASE = burning ? (Math.floor(nowT() / 90) + i) % FLAME_PHASES : -1;
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '') + (burning ? '|fp' + FLAME_PHASE : '') + (CORPSE ? '|corpse' : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -9018,7 +9027,14 @@
             };
             gun = function () {
               var tip = barrel(TF, TR * 0.3, TR * 1.05, 0, tz + 5, 4.2, 'flame', { col: '#3a3f38', lit: '#5c6458' });
-              if (!dead) { sEllipse(tip[0], tip[1], 1.6, 1.4, '#e08a3a'); sEllipse(tip[0], tip[1], 0.8, 0.7, '#ffd070'); }
+              // the pilot light at the nozzle: a small flame licking upward, flickering
+              if (!dead) {
+                var ft = (root.performance ? performance.now() : 0) / 90, fk = Math.floor(ft) % 4;
+                var fh = [5, 7, 6, 8][fk], fs = [0, 0.8, 0, -0.8][fk];
+                poly(g, [[tip[0] - 2, tip[1]], [tip[0] + fs, tip[1] - fh], [tip[0] + 2, tip[1]]], '#e08a3a');
+                poly(g, [[tip[0] - 1, tip[1]], [tip[0] + fs * 0.6, tip[1] - fh * 0.55], [tip[0] + 1, tip[1]]], '#ffd070');
+                sEllipse(tip[0], tip[1], 1.6, 1.2, '#e08a3a');
+              }
               coaxMG(TR, tz + 5, TR * 0.22);
             };
             break;
