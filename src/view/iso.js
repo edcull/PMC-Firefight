@@ -6348,6 +6348,7 @@
        'wreck' — knocked out: slewed, a wheel gone, the barrel down in the dirt.
      `o.extra` are other things to be sorted in with its parts by depth — the
      crew standing round it — each { d: x + y on the table, fn }. */
+  var GUN_ELEV = 0.82;                                  // laid for indirect fire: up at the arc its rounds fly
   function fieldGun(g, o) {
     var mode = o.mode || 'fire', wreck = mode === 'wreck', k = o.k || 1;
     var ca = Math.cos(o.aim || 0), sa = Math.sin(o.aim || 0);
@@ -6366,7 +6367,7 @@
     })();
     var zAx = 0.27 * big, rW = 0.27 * big, wS = 0.36 * big, tw = 0.11 * big;
     // the barrel pivots on its trunnions over the axle; laid up to fire, level on the road or dug in
-    var elev = mode === 'fire' ? 0.42 : mode === 'dug' ? 0.12 : wreck ? -0.27 : 0;
+    var elev = mode === 'fire' ? GUN_ELEV : mode === 'dug' ? 0.12 : wreck ? -0.27 : 0;
     var zP = 0.35 * big, ce = Math.cos(elev), se = Math.sin(elev);
     function B(L, s2, h) { return [L * ce - h * se, s2, zP + L * se + h * ce]; }   // barrel frame to gun frame
     /* A box on the gun's own axes, its three faces that can be seen shaded as
@@ -6547,7 +6548,7 @@
   // where a field gun's muzzle is, on the table and above it (see fieldGun)
   function fieldMuzzle(o) {
     var big = o.heavy ? 1.18 : 1, k = o.k || 1, L = 1.1 * big;
-    var elev = o.mode === 'fire' ? 0.42 : o.mode === 'dug' ? 0.12 : 0;
+    var elev = o.mode === 'fire' ? GUN_ELEV : o.mode === 'dug' ? 0.12 : 0;
     var t = L * Math.cos(elev), z = 0.35 * big + L * Math.sin(elev);
     var ca = Math.cos(o.aim || 0), sa = Math.sin(o.aim || 0);
     return { x: o.x + ca * t * k, y: o.y + sa * t * k, up: z * K * 0.9 * k };
