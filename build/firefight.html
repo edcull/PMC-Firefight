@@ -761,7 +761,14 @@
   .cs-exp b { color: var(--good); }
   .cs-tra b { color: var(--bad); }
   .cpan.orders { margin-top: 12px; }
-  .swaplist { display: grid; gap: 6px; margin: 8px 0; max-height: 46vh; overflow-y: auto; }
+  .cmodal-box.wide { width: min(980px, 100%); }
+  .swapgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .swapcol { display: grid; gap: 6px; min-width: 0; }
+  .swapcol h4 { margin: 0 0 2px; font-family: var(--display); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
+  .swapcol .act.on { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+  .swapfoe { border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; display: grid; }
+  .swapfoe small { color: var(--ink-dim); font-size: 11px; }
+  @media (max-width: 760px) { .swapgrid { grid-template-columns: 1fr; } .swapcol.theirs { order: -1; } }
   .dice-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 8px 0; }
   .dice-row .die { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-3, rgba(255,255,255,.04)); font-family: var(--mono); font-size: 13px; }
   .dice-row b { margin-left: 6px; font-family: var(--display); }
@@ -31546,26 +31553,36 @@
   /* Modifying the armies (p. 46): before deployment, with the enemy's list on
      the other panel, a player swaps some units for others of the same Tier. */
   function swapCard() {
-    var sa = state.swapAsk;
+    var sa = state.swapAsk, foeSide = sa.side === 'A' ? 'B' : 'A';
     var mine = state.units.filter(function (u) { return u.side === sa.side && u.pickIdx != null; });
-    var h = '<div class="card"><h2>Modify your army</h2>' +
-      '<p class="sub">You have seen the table and ' + esc(sideName(sa.side === 'A' ? 'B' : 'A')) + '’s force. Swap up to <b>' + sa.total +
-      '</b> unit' + (sa.total === 1 ? '' : 's') + ' for others of the same Tier' +
-      (state.cfg.dossier ? ' from your dossier' : '') + ' — ' + sa.left + ' left.</p>';
+    var theirs = state.units.filter(function (u) { return u.side === foeSide; });
+    var h = '<div class="cmodal" data-swapbox><div class="cmodal-box wide" role="dialog" aria-modal="true" aria-label="Modify your army">' +
+      '<h3>Modify your army</h3><p class="sub">Swap up to <b>' + sa.total + '</b> unit' + (sa.total === 1 ? '' : 's') +
+      ' for others of the same Tier' + (state.cfg.dossier ? ' from your dossier' : '') + ' — <b>' + sa.left + ' left</b>. ' +
+      'You have seen the table and their force.</p><div class="cmodal-scroll"><div class="swapgrid">';
+    // your list, the unit being swapped marked
+    h += '<div class="swapcol"><h4>Your force</h4>' + mine.map(function (m) {
+      var n = Q.swapOptions(sa.side, m.id).length, on = sa.pick === m.id;
+      return '<button class="act' + (on ? ' on' : '') + '" data-swappick="' + (on ? '' : m.id) + '"' + (n ? '' : ' disabled') + '><span>' + esc(m.name) +
+        '</span><small>Tier ' + R.ROMAN[m.tier] + (n ? (on ? ' — swapping' : '') : ' — nothing to swap in') + '</small></button>';
+    }).join('') + '</div>';
+    // what could stand in for it
+    h += '<div class="swapcol"><h4>' + (sa.pick ? 'Swap for' : 'Swap in') + '</h4>';
     if (sa.pick) {
-      var u = byId(sa.pick), opts = Q.swapOptions(sa.side, sa.pick);
-      h += '<p class="hint">Swap <b>' + esc(u ? u.name : '') + '</b> (Tier ' + (u ? R.ROMAN[u.tier] : '') + ') for:</p><div class="swaplist">' +
-        (opts.length ? opts.map(function (o) {
-          return '<button class="act" data-swapin="' + escHtml(o.id) + '"><span>' + esc(o.name) + '</span></button>';
-        }).join('') : '<p class="hint">Nothing of that Tier to swap in.</p>') +
-        '</div><div class="acts"><button class="act" data-act="swapback"><span>Back</span><small>Choose another unit</small></button></div>';
-    } else {
-      h += '<div class="swaplist">' + mine.map(function (m) {
-        var n = Q.swapOptions(sa.side, m.id).length;
-        return '<button class="act" data-swappick="' + m.id + '"' + (n ? '' : ' disabled') + '><span>' + esc(m.name) + '</span><small>Tier ' + R.ROMAN[m.tier] + (n ? '' : ' — nothing to swap in') + '</small></button>';
-      }).join('') + '</div>';
-    }
-    return h + '<div class="acts"><button class="act" data-act="swapdone"><span>' + (sa.left === sa.total ? 'Keep the list' : 'Done') + '</span><small>Back to deployment — the list is final</small></button></div></div>';
+      var opts = Q.swapOptions(sa.side, sa.pick);
+      h += opts.length ? opts.map(function (o) {
+        var pr = R.profile(R.splitPick(o.key).key);
+        return '<button class="act" data-swapin="' + escHtml(o.id) + '"><span>' + esc(o.name) + '</span><small>' +
+          esc(pr ? (pr.name !== o.name ? pr.name + ' · ' : '') + 'Move ' + pr.move + '" · FP ' + (pr.fp == null ? '—' : pr.fp) + ' · Range ' + pr.range + '" · Def ' + pr.def : '') + '</small></button>';
+      }).join('') : '<p class="hint">Nothing of that Tier to swap in.</p>';
+    } else h += '<p class="hint">Pick one of your units to see what could take its place.</p>';
+    h += '</div>';
+    // and what they are bringing, to swap against
+    h += '<div class="swapcol theirs"><h4>' + esc(sideName(foeSide)) + '</h4>' + theirs.map(function (t) {
+      return '<div class="swapfoe"><b>' + esc(t.name) + '</b><small>Tier ' + R.ROMAN[t.tier] + ' · ' + (t.cls === 'infantry' ? t.models + ' models' : t.cls) + '</small></div>';
+    }).join('') + '</div>';
+    h += '</div></div><div class="askrow"><button class="start" data-act="swapdone">' + (sa.left === sa.total ? 'Keep the list' : 'Done') + '</button></div></div></div>';
+    return h;
   }
   // placing pieces by hand: Last Stand, Fortify and Strike!, Detailed Terrain Knowledge
   function placeCard() {
@@ -34516,7 +34533,6 @@
     var ctxBox = el('context'), html = '';
     if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
-    else if (state.phase === 'deploy' && state.swapAsk && !isAI(state.swapAsk.side)) html = swapCard();
     else if (state.placeAsk && !isAI(state.placeAsk.side)) html = placeCard();
     else if (state.minePick && !isAI(state.minePick.side)) html = mineCard();
     else if (state.phase === 'deploy') html = deployCard();
@@ -34550,6 +34566,18 @@
     var con = document.querySelector('.console');
     if (con) con.classList.toggle('deploying', state.phase === 'deploy' || state.phase === 'terrain');
     wirePanel();
+    /* The army swap wants the whole screen: its modal is lifted out of the card
+       (which the board would draw over on a desktop) onto the page itself. */
+    var mh = el('modal-host');
+    if (!mh) { mh = document.createElement('div'); mh.id = 'modal-host'; document.body.appendChild(mh); }
+    var sw = ctxBox.querySelector('.cmodal[data-swapbox]');
+    var swScroll = mh.querySelector('.cmodal-scroll'), swTop = swScroll ? swScroll.scrollTop : 0;
+    mh.innerHTML = '';
+    if (sw) {
+      mh.appendChild(sw);
+      var sw2 = mh.querySelector('.cmodal-scroll'); if (sw2) sw2.scrollTop = swTop;
+      wireHost(mh);
+    }
     if (own) wireHost(own);
     if (opp) wireHost(opp);
     if (both) wireHost(both);
@@ -34808,6 +34836,7 @@
         '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
         '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
     }
+    if (state.swapAsk && state.swapAsk.side === me && !isAI(me)) h += swapCard();
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
