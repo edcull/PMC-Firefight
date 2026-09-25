@@ -33,30 +33,25 @@ const { ROOT, SHOTS } = require('../where.js');
   check('Multiplayer is shown but disabled with no server', !multi.hidden && multi.disabled && /server/i.test(multi.sub), multi.sub.replace(/\s+/g, ' '));
 
   console.log('\nHotseat');
+  // as against the AI: it opens on the battlefield, a card for each player's force
   await p.evaluate(() => window.PMC_SKIRMISH('hotseat'));
   await p.waitForTimeout(200);
-  check('player 1 musters first', /^Player 1 — muster your force$/.test(await title()), await title());
-  check('...with no battlefield choices yet', !(await shown('sel-scen')) && !(await shown('sel-planet')) && !(await shown('sel-op')));
-  await next();
-  check('...and cannot go on without a name and a legal force', (await hot()).step === 1);
-  await roll(); await name('Task Force Ironhold');
+  check('it opens on the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen') && await shown('sel-planet'), await title());
+  check('...with a card for each player, neither mustered yet', /Player 1[\s\S]*no units yet[\s\S]*Player 2[\s\S]*no units yet/.test(await p.evaluate(() => document.getElementById('hot-sum').innerText)));
   await next();
   let h = await hot();
-  check('player 2 musters next', h.step === 2 && /^Player 2 — muster your force$/.test(await title()));
-  check('...at player 1\'s Tier, which they cannot change', await p.evaluate(() => document.getElementById('sel-tier').disabled));
+  check('taking the field with an empty force opens it instead', h.step === 1 && /^Player 1 — muster your force$/.test(await title()), await title());
+  await roll(); await name('Task Force Ironhold');
+  await next();
+  check('...and back to the battlefield once it is mustered', (await hot()).step === 3 && /^The battlefield$/.test(await title()));
+  await p.evaluate(() => document.querySelector('[data-hotside="1"]').click()); await p.waitForTimeout(200);
+  h = await hot();
+  check('player 2\'s card opens their force', h.step === 2 && /^Player 2 — muster your force$/.test(await title()));
   check('...not in player 1\'s colour', await p.evaluate((c) => { const s = document.querySelector(`#colourpick [data-colour="${c}"]`); return s.disabled && !s.classList.contains('on'); }, h.sides[0].colour));
   await setVal('sel-faction', 'bugs');
   await roll(); await name('The Hive');
-  // back and forward again keeps both forces
-  await p.evaluate(() => document.getElementById('btn-setup-back').click()); await p.waitForTimeout(200);
-  h = await hot();
-  check('Back returns to player 1 with their force intact', h.step === 1 && await p.evaluate(() => document.getElementById('hot-name').value) === 'Task Force Ironhold' &&
-    await p.evaluate(() => document.getElementById('sel-faction').value) === h.sides[0].faction);
   await next();
-  check('...and forward again keeps player 2\'s', await p.evaluate(() => document.getElementById('hot-name').value) === 'The Hive' &&
-    await p.evaluate(() => document.getElementById('sel-faction').value) === 'bugs');
-  await next();
-  check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen') && await shown('sel-planet') && await shown('sel-terrain') &&
+  check('then the battlefield again', /^The battlefield$/.test(await title()) && await shown('sel-scen') && await shown('sel-planet') && await shown('sel-terrain') &&
     !(await shown('cat')));
   check('...summing up both forces', /Task Force Ironhold[\s\S]*The Hive/.test(await p.evaluate(() => document.getElementById('hot-sum').innerText)));
   await p.locator('#setup .sheet').screenshot({ path: path.join(SHOTS, 'skirmish-battlefield.png') });

@@ -36440,7 +36440,8 @@
         if (id !== 'sel-faction' && muster.hot && hotQuick(muster.hot.kind) && muster.hot.step === 3) {
           muster.hot.sides.forEach(function (sd, i) {
             if (!sd) return;
-            if (muster.hot.kind === 'ai' && i === 0 && (!sd.keys.length ||
+            // a force a player musters is kept if it is empty or still legal; only the AI's is rolled again
+            if ((muster.hot.kind === 'hotseat' || (muster.hot.kind === 'ai' && i === 0)) && (!sd.keys.length ||
               R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction).ok)) return;
             sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction);
           });
@@ -36621,19 +36622,20 @@
     return k === 'demo' || (k === 'ai' && step === 2);
   }
   // a demo, or a battle against the AI: set up on the battlefield step, with both forces rolled to start
-  function hotQuick(kind) { return kind === 'demo' || kind === 'ai'; }
+  // a demo, a battle against the AI and a hotseat all open on the battlefield, a card for each force
+  function hotQuick(kind) { return kind === 'demo' || kind === 'ai' || kind === 'hotseat'; }
   function hotBegin(kind) {
     muster.hot = { kind: kind, step: 1, sides: [null, null] };
     muster.keys = []; muster.name = '';
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
-    else if (kind === 'ai') {
-      // the player's force starts empty, in desert ochre, as "Your force" until they name it
+    else if (kind === 'ai' || kind === 'hotseat') {
+      // the player's force starts empty, in desert ochre, as "Your force" (or Player 1's) until they name it
       muster.colour = 'ochre';
       el('sel-faction').value = 'pmc';             // a mercenary company, until they pick another kind
       drawColourPick();
       if (el('sel-tactic')) el('sel-tactic').value = '';
-      muster.name = 'Your Force';
+      muster.name = kind === 'hotseat' ? 'Player 1' : 'Your Force';
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
     hotPaint();
@@ -36727,9 +36729,9 @@
       hotRandomise(i);
     } else {
       // a fresh force for the second player; in a hotseat, in a colour the first is not wearing
-      muster.keys = []; muster.name = '';
+      muster.keys = []; muster.name = i === 1 && muster.hot.kind === 'hotseat' ? 'Player 2' : '';
       if (i === 1 && muster.hot.kind === 'hotseat') muster.colour = foeColour([muster.hot.sides[0].colour]);
-      if (el('hot-name')) el('hot-name').value = '';
+      if (el('hot-name')) el('hot-name').value = muster.name;
     }
   }
   // the name and colour labels follow the kind of force, as founding one does
@@ -36838,7 +36840,7 @@
     var intro = {
       hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
         ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
-        'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
+        'A hotseat battle: two players, one screen. Set the Battle Tier and Priority Level, tap each player\u2019s force to muster it, then choose the scenario, the world and the table.'],
       coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
         'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
@@ -37473,8 +37475,8 @@
     }[kind] || 'Muster your force';
     // hotseat, co-op and demo build both forces, one step each, before the battlefield
     // a demo, and a battle against the AI, open on the battlefield with both forces rolled
-    if (kind === 'demo' || kind === 'ai') demoBegin(kind);
-    else if (kind === 'hotseat' || kind === 'coop') hotBegin(kind); else hotEnd();
+    if (kind === 'demo' || kind === 'ai' || kind === 'hotseat') demoBegin(kind);
+    else if (kind === 'coop') hotBegin(kind); else hotEnd();
     backLabel(el('btn-setup-back'), setupGoesHome());
     el('setup').hidden = false;
   };
