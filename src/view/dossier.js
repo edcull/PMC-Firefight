@@ -502,24 +502,26 @@
     return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
   }
   /* What the force is like: what it fields, the best it has, and how it fights. */
+  /* What the force is like, in general terms: how big it is, what it fights
+     with and how seasoned it is, then how it fights, then what it has done
+     against you. The exact list is behind their dossier. */
   function rivalBlurb(co) {
-    var n = co.roster.length, inf = 0, veh = 0, air = 0, best = null;
+    var n = co.roster.length, inf = 0, veh = 0, air = 0, top = 0, exp = 0;
     co.roster.forEach(function (e) {
       var p = profile(e.key);
       if (!p) return;
-      if (/air/.test(p.cls || '')) air++; else if (/vehicle|walker/.test(p.cls || '')) veh++; else inf++;
-      if (!best || p.tier > profile(best.key).tier || (p.tier === profile(best.key).tier && e.exp > best.exp)) best = e;
+      if (p.cls === 'aircraft') air++; else if (p.cls !== 'infantry') veh++; else inf++;
+      top = Math.max(top, p.tier); exp += e.exp || 0;
     });
-    var parts = [];
-    if (inf) parts.push(inf + ' on foot');
-    if (veh) parts.push(veh + (veh === 1 ? ' vehicle' : ' vehicles'));
-    if (air) parts.push(air + ' in the air');
     var t = C.themeOf(co);
     if (n) {
-      var bp = best ? profile(best.key) : null;
-      t = 'It fields ' + n + ' unit' + (n === 1 ? '' : 's') +
-        (parts.length > 1 ? ' (' + parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] + ')' : '') +
-        (bp ? '; the pick of them is ' + (/^[aeiou]/i.test(bp.name) ? 'an ' : 'a ') + esc(bp.name) + ' at Tier ' + ROMAN[bp.tier] : '') + '. ' + t;
+      var size = n <= 8 ? 'A small force' : n <= 12 ? 'A force of fair size' : n <= 16 ? 'A large force' : 'A very large force';
+      var mix = veh + air === 0 ? 'all on foot'
+        : veh + air >= inf ? 'heavy on machines'
+        : veh + air >= 3 ? 'on foot with solid armoured support' : 'mostly on foot with a little armour';
+      if (air) mix += veh + air === air ? ', and aircraft overhead' : ', with air support';
+      var seasoned = exp / n >= 10 ? 'hardened by long fighting' : exp / n >= 4 ? 'with some fighting behind it' : top > co.tier ? 'with a few good troops among the green' : 'still green';
+      t = size + ', ' + mix + ', ' + seasoned + '. ' + t;
     }
     var r = co.record || {};
     if (r.battles) t += ' It has fought ' + r.battles + ' battle' + (r.battles === 1 ? '' : 's') + ' against you and won ' + (r.wins || 0) + '.';
@@ -550,8 +552,17 @@
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
     h += '<div class="cpstat">' + rivalBlurb(co) + '</div>';
-    h += '<button class="lnk" data-go="intel" data-rival="' + (idx == null ? 0 : idx) +
-      '">Their dossier</button></div>';
+    // their dossier opens in the card: their units, as your own are listed
+    var ri = idx == null ? 0 : idx, open = rivalOpen === ri;
+    h += '<button class="lnk' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
+      (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
+    if (open) {
+      h += '<div class="dlist rivdos">' + co.roster.slice().sort(function (a, b) {
+        var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
+        return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
+      }).map(function (e) { return entryCard(e, co, {}); }).join('') + '</div>';
+    }
+    h += '</div>';
     return h;
   }
 
@@ -926,6 +937,7 @@
   var menOpen = {};               // which unit has its details open, by rid (one at a time)
   var showCard = null;            // a card just opened, to be scrolled fully into view
   var promoRid = null;            // the unit whose promotion choices are open
+  var rivalOpen = null;           // which other force has its dossier open in its card
 
   /* Everything about one unit, opened from its card: the profile as it takes
      the field — honours, traumas, upgrades and doctrines already worked in, with
@@ -2139,6 +2151,7 @@
       });
       return;
     }
+    if (t.hasAttribute('data-rivdos')) { var rv = +t.getAttribute('data-rivdos'); rivalOpen = rivalOpen === rv ? null : rv; render(); return; }
     if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
     if (t.hasAttribute('data-promote')) {
       var pe = findEntry(co, t.getAttribute('data-promote'));
