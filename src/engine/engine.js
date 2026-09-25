@@ -2323,7 +2323,11 @@
     var news = state.scen.beginning ? state.scen.beginning(state) || [] : [];
     news.forEach(function (l) {
       logLine('note', l.text);
-      if (l.unit) { l.unit.arriveAt = Date.now(); l.unit.arriveKind = 'stand'; addFx({ kind: 'collapse', x: l.unit.x, y: l.unit.y, r: 1.4, dur: 520, blocking: true }); }
+      /* A counter turned over is shown getting up where it lay. The view keeps
+         its own clock for that, so it is asked to draw it rather than handed a
+         time stamp: the engine's Date.now() against the page's performance.now()
+         left the unit "still arriving" for ever, and the whole replay with it. */
+      if (l.unit) stepOff(l.unit, null);
     });
     if (state.structs) { paintStructures(); ui.vis = null; ui.visKey = ''; }
     pushRes({
