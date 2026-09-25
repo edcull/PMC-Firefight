@@ -66,7 +66,7 @@
     if (!tp) return null;
     var t = Object.assign({}, tp, {
       id: 'VTOW', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0,
-      x: u.x, y: u.y, facing: u.facing != null ? u.facing : faceAngle(view.face), cargo: [u]
+      x: u.x, y: u.y, facing: faceAngle(view.face), cargo: [u]
     });
     if (R.propsFor(tp).length) R.applyPropulsion(t, R.defaultDrive(tp));
     return t;
@@ -87,7 +87,11 @@
     if (R.propsFor(p).length) R.applyPropulsion(u, view.prop);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     // Stationary Artillery (p. 94): dug in behind its sandbags, or not
-    if (stationary(p)) u.dugIn = view.stance === 'dug';
+    if (stationary(p)) {
+      u.dugIn = view.stance === 'dug';
+      // the gun stays laid on the mark it last fired at, until it is turned
+      if (view.stance !== 'towed' && view.gunAim != null && view.aimFor === view.face + '|gun') u.facing = view.gunAim;
+    }
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -209,7 +213,7 @@
     var p = I.toScreen(u.x, u.y);
     var n = u.models || u.size || 1;
     // a gun crew leaves its gun, knocked out, as the last of its fallen
-    if (I.hasPiece && I.hasPiece(u.art)) I.drawBody(g, p.x, p.y, { piece: true, side: u.side, paint: u.paint || null, art: u.art, flip: !!u.faceL });
+    if (I.hasPiece && I.hasPiece(u.art)) I.drawBody(g, p.x, p.y, { piece: true, side: u.side, paint: u.paint || null, art: u.art, key: u.key, aim: u.facing, flip: !!u.faceL });
     for (var i = n; i > 0; i--) {
       var cs = I.casualtySpot(u, i, i * 7);
       I.drawBody(g, p.x + cs.dx, p.y + cs.dy, {
@@ -699,6 +703,10 @@
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
     // troopers turn to the mark, and every round leaves one of their own barrels
+    if (stationary(u)) {                          // the gun is slewed round onto the mark
+      u.facing = view.gunAim = Math.atan2(TO.y - u.y, TO.x - u.x);
+      view.aimFor = view.face + '|gun';
+    }
     if (!R.isMachine(u)) {
       var a0 = I.toScreen(u.x, u.y), b0 = I.toScreen(TO.x, TO.y);
       u.faceL = view.faceL = b0.x < a0.x;
@@ -1201,7 +1209,7 @@
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
     }
-    if (R.isMachine(p)) {
+    if (R.isMachine(p) || stationary(p)) {
       h += '<div class="vgrp"><label>Facing</label><div class="vseg">' +
         seg('face', FACES, view.face || 'SE') + '</div></div>';
     }

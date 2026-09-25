@@ -2965,7 +2965,7 @@
             // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
             if (n === 1 && left === 0 && ISO.hasPiece && ISO.hasPiece(u.art)) {
               rem.push({ kind: 'body', piece: true, x: seen.x, y: seen.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null,
-                art: u.art, flip: !!u.faceL });
+                art: u.art, key: u.key, aim: u.facing, flip: !!u.faceL });
             }
           }
         }

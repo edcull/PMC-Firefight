@@ -2429,6 +2429,8 @@
     veh.cargo.splice(i, 1);
     u.aboard = null;
     u.disembarked = true;
+    // a gun unhitched is left pointing the way it trailed: back from the vehicle
+    if (has(u, 'Stationary Artillery')) u.facing = (veh.facing || 0) + Math.PI;
     if (pos && !TERRAIN[terrainAt(state, pos.x, pos.y)].impassable
       && !unitNear(state, pos.x, pos.y, u, 0.2) && unitDist({ x: pos.x, y: pos.y }, veh) <= 4) {
       u.x = pos.x; u.y = pos.y;
@@ -3063,6 +3065,8 @@
 
   function shoot(state, a, t, mode, opts) {
     opts = opts || {};
+    // a gun on its trails is slewed round onto what it fires at (no fire arc to it: only the drawing turns)
+    if (a && t && has(a, 'Stationary Artillery') && !(opts && opts.assault)) a.facing = Math.atan2(t.y - a.y, t.x - a.x);
     var m = shotMods(state, a, t, mode, opts);
     var aux = m.aux, basic = m.basic, parts = m.parts.slice(), pierce = m.pierce;
     var crossfire = m.crossfire, dist = m.dist, dres = m.def;
