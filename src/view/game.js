@@ -214,6 +214,7 @@
       syncUI();
       render();
       stepWatched();
+      scheduleReturn();
     }
   };
   // which events start something that takes time, and which land at once
@@ -1343,6 +1344,7 @@
     if (res && res.onClose) res.onClose();     // may queue the next step
     if (resQueue.length) showNextRes();
     else { render(); show.pump(); }
+    scheduleReturn();
   }
 
   function chipClass(text) {
@@ -2331,14 +2333,29 @@
     cam.borrowed = true;
     updateReturnHint();
   }
-  function returnHome() {
+  /* The camera goes over to the other side's unit as it activates. Once that
+     side is done — nothing left to draw, no card up, and it is this screen's
+     turn again — it waits a second, then comes back to where the player left it. */
+  var RETURN_AFTER = 1000;
+  function scheduleReturn() {
+    function cancel() { if (ui.retTimer) { clearTimeout(ui.retTimer); ui.retTimer = 0; } }
+    if (!cam.borrowed || !cam.home || handsOff() || !state || state.over) { cancel(); return; }
+    if (busy()) { cancel(); if (!ui.retIdle) { ui.retIdle = true; whenIdle(function () { ui.retIdle = false; scheduleReturn(); }); } return; }
+    if (!myTurn() || ui.resOpen || resQueue.length || show.queue.length) { cancel(); return; }
+    if (ui.retTimer) return;
+    ui.retTimer = setTimeout(function () {
+      ui.retTimer = 0;
+      if (cam.borrowed && myTurn() && !ui.resOpen && !busy() && !show.queue.length) returnHome(true);
+    }, RETURN_AFTER);
+  }
+  function returnHome(quiet) {
     if (!cam.home) return;
     if (cam.home.z !== cam.z) { cam.z = cam.home.z; zoomLabel(); }
     cam.borrowed = false;
     dropFollow();
     updateReturnHint();
     centreOn(cam.home.x, cam.home.y);
-    if (SFX) SFX.click();
+    if (SFX && !quiet) SFX.click();
   }
   function updateReturnHint() {
     var h = el('returnhint');

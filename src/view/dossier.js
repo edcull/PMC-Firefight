@@ -808,7 +808,7 @@
   function dossierPanel(co) {
     return '<div class="cprom cdos"><div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
   }
-  var hubPane = 'tier';
+  var hubPane = 'dossier';            // the hub opens on the unit cards
   var rosterTab = 'units';
   /* Every soldier the force has lost in the campaign, most recent battle
      first: who they were, what they served in, and where they fell. */
@@ -1917,7 +1917,7 @@
     var body = el('camp-body');
     if (!body) return;
     var h = '';
-    if (view !== 'hub') hubPane = 'tier';                    // back at the hub, it opens on the Tier panel again
+    if (view !== 'hub') hubPane = 'dossier';                 // back at the hub, it opens on the dossier
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view === 'found') h = foundView();

@@ -93,7 +93,11 @@ async function clickText(p, re) {
   check('...whose panel the hub lists', await p.evaluate((n) => [...document.querySelectorAll('#camp-body .cpan-B .cphead b')].some(b => b.textContent === n), rival.name), rival.name);
   await shot(p, 'camp-hub.png');
 
-  /* the road to the next Company Tier, laid out step by step (pp. 83-84) */
+  /* the road to the next Company Tier, laid out step by step (pp. 83-84) —
+     behind the Company button, the hub opening on the dossier */
+  check('the hub opens on the dossier', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
+  await p.waitForTimeout(200);
   const prom = await p.evaluate(() => {
     const el = document.querySelector('#camp-body .cprom');
     if (!el) return { none: true };
@@ -163,6 +167,8 @@ async function clickText(p, re) {
 
   /* -------------------------------------------------------- the contract */
   console.log('\nTaking a contract');
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  await p.waitForTimeout(200);
   await clickText(p, '^Contract$');
   txt = await body(p);
 
@@ -201,6 +207,8 @@ async function clickText(p, re) {
   check('every one can be taken', offers.buttons === offers.cards);
   // leaving and coming back must not re-roll the jobs
   await clickText(p, 'Back');
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  await p.waitForTimeout(200);
   await clickText(p, '^Contract$');
   const again = await p.evaluate(() =>
     JSON.stringify(window.PMC_CAMPAIGN.get().offers.map(o => o.scenario.id)));
