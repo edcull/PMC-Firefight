@@ -764,6 +764,9 @@
   .dice-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 8px 0; }
   .dice-row .die { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-3, rgba(255,255,255,.04)); font-family: var(--mono); font-size: 13px; }
   .dice-row b { margin-left: 6px; font-family: var(--display); }
+  .dice-row .die.pick { cursor: pointer; color: var(--ink); }
+  .dice-row .die.pick.on, .dice-row .die.re { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 18%, transparent); }
+  .dice-row .die.pick:disabled { opacity: .45; cursor: default; }
   .orow { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
   .orow:first-of-type { border-top: 0; }
   .orow em { font-style: normal; color: var(--ink-dim); font-size: 11.5px; }
@@ -2074,7 +2077,7 @@
 
 <script src="src/rules/rules.js?v=3ef8fcb3e3"></script>
 <script src="src/rules/ruletext.js?v=ef76e61bb9"></script>
-<script src="src/rules/campaign.js?v=7c8942b68f"></script>
+<script src="src/rules/campaign.js?v=71369bf580"></script>
 <script src="src/rules/scenarios.js?v=26ee1c97a8"></script>
 <script src="src/rules/solitaire.js?v=d53d464188"></script>
 <script src="src/view/sfx.js?v=c576028ac3"></script>
@@ -2087,5 +2090,5 @@
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
 <script src="src/view/game.js?v=d9e5878d3c"></script>
-<script src="src/view/dossier.js?v=69b4862b4f"></script>
+<script src="src/view/dossier.js?v=d45b6ea8f3"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

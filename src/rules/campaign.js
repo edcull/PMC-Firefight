@@ -1378,7 +1378,7 @@
      under Plunderer, which they decide on seeing it — as { dice: {A}, plunder: {A} }. */
   function payment(battleTier, pl, coA, coB, winner, attackDefend, preset) {
     preset = preset || {};
-    var pd = preset.dice || {}, pp = preset.plunder || {};
+    var pd = preset.dice || {}, pp = preset.plunder || {}, pn = preset.neg || {};
     var a = pd.A || rollPayment(battleTier, pl), b = pd.B || rollPayment(battleTier, pl);
     var negA = null, negB = null, plunder = { A: pp.A || null, B: pp.B || null };
     /* Plunderer (Path of the Villain, p. 112): a victorious revolt "may reroll
@@ -1392,8 +1392,10 @@
       return again;
     }
     a = loot(coA, 'A', a); b = loot(coB, 'B', b);
-    if (hasDoctrine(coA, 'S2')) { negA = negotiate(a); a = negA.dice; }
-    if (hasDoctrine(coB, 'S2')) { negB = negotiate(b); b = negB.dice; }
+    /* Tough Negotiators (p. 87): a player picks which dice to re-roll on seeing
+       them (preset.neg); a rival re-rolls its lowest half. */
+    if (pd.A) negA = pn.A || null; else if (hasDoctrine(coA, 'S2')) { negA = negotiate(a); a = negA.dice; }
+    if (pd.B) negB = pn.B || null; else if (hasDoctrine(coB, 'S2')) { negB = negotiate(b); b = negB.dice; }
     var hi = Math.max(sum(a), sum(b)), lo = Math.min(sum(a), sum(b));
     var out = { diceA: a, diceB: b, negA: negA, negB: negB, plunder: plunder,
       high: hi, low: lo, A: lo, B: lo, extra: { A: null, B: null }, thin: { A: false, B: false } };
@@ -1573,6 +1575,24 @@
     return best > 0 ? out : [];
   }
 
+  /* Enhanced Genetic Memory, taken up by a player for one offered unit: the new
+     recruit is paid for, and on a 2-6 it remembers everything the lost one had
+     before its last battle. */
+  function rebirth(co, offer) {
+    if (!offer || offer.done) return { ok: false, why: 'Already decided.' };
+    if (co.kUC < offer.cost) return { ok: false, why: 'Costs ' + offer.cost + ' ' + money(co) + ' — the tribe has ' + co.kUC + '.' };
+    co.kUC -= offer.cost;
+    var ne = newEntry(offer.key), mem = offer.mem, r2 = d6();
+    if (mem && r2 >= 2) {
+      ne.exp = mem.exp; ne.tp = mem.tp; ne.honours = mem.honours.slice(); ne.traumas = mem.traumas.slice();
+      ne.name = mem.name;
+      ne.history.push('Reborn with the memory of ' + mem.name + ' (Enhanced Genetic Memory, D6 ' + r2 + ').');
+    } else ne.history.push('Recruited in place of ' + offer.name + ' — the memory did not carry (D6 ' + r2 + ').');
+    co.roster.push(ne);
+    offer.done = { roll: r2, remembered: !!(mem && r2 >= 2), name: ne.name };
+    return { ok: true, roll: r2, remembered: offer.done.remembered };
+  }
+
   /* ================= the aftermath =================
      Takes a battle report and applies every book step in order, returning a
      record of what happened so the UI can show it and the player can see why. */
@@ -1587,7 +1607,7 @@
 
     out.payment = payment(report.battleTier, report.pl, coA, coB, report.winner,
       report.attackDefend != null ? report.attackDefend : ATTACK_DEFEND.indexOf(report.scenario) >= 0,
-      { dice: opts.dice, plunder: opts.plunder });
+      { dice: opts.dice, plunder: opts.plunder, neg: opts.neg });
     coA.kUC += out.payment.A;
     coB.kUC += out.payment.B;
 
@@ -1794,7 +1814,16 @@
       /* Enhanced Genetic Memory (p. 141): a destroyed infantry unit comes back as
          a new recruit of the same kind, and on a 2-6 it remembers everything it
          had before this battle. The recruit is paid for as usual. */
-      if (hasDoctrine(co, 'XS5')) {
+      if (hasDoctrine(co, 'XS5') && opts.askReborn && opts.askReborn[side]) {
+        /* A player "can recruit" each one (p. 141): offered on the aftermath
+           screen, and only there — it is gone once the next contract is taken. */
+        rec.rebornOffer = [];
+        rec.gone.forEach(function (e) {
+          var p0 = profile(e.key);
+          if (!p0 || p0.cls !== 'infantry' || isLeaderP(p0) || e.rid === co.cmdRid) return;
+          rec.rebornOffer.push({ rid: e.rid, name: e.name, key: e.key, cost: recruitCost(co, e.key), mem: before[e.rid] || null, done: null });
+        });
+      } else if (hasDoctrine(co, 'XS5')) {
         rec.reborn = [];
         rec.gone.forEach(function (e) {
           var p0 = profile(e.key);
@@ -2650,7 +2679,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
-    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, deepen: deepen,
+    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, rebirth: rebirth, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,

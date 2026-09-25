@@ -764,6 +764,9 @@
   .dice-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 8px 0; }
   .dice-row .die { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-3, rgba(255,255,255,.04)); font-family: var(--mono); font-size: 13px; }
   .dice-row b { margin-left: 6px; font-family: var(--display); }
+  .dice-row .die.pick { cursor: pointer; color: var(--ink); }
+  .dice-row .die.pick.on, .dice-row .die.re { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 18%, transparent); }
+  .dice-row .die.pick:disabled { opacity: .45; cursor: default; }
   .orow { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
   .orow:first-of-type { border-top: 0; }
   .orow em { font-style: normal; color: var(--ink-dim); font-size: 11.5px; }
@@ -7928,7 +7931,7 @@
      under Plunderer, which they decide on seeing it — as { dice: {A}, plunder: {A} }. */
   function payment(battleTier, pl, coA, coB, winner, attackDefend, preset) {
     preset = preset || {};
-    var pd = preset.dice || {}, pp = preset.plunder || {};
+    var pd = preset.dice || {}, pp = preset.plunder || {}, pn = preset.neg || {};
     var a = pd.A || rollPayment(battleTier, pl), b = pd.B || rollPayment(battleTier, pl);
     var negA = null, negB = null, plunder = { A: pp.A || null, B: pp.B || null };
     /* Plunderer (Path of the Villain, p. 112): a victorious revolt "may reroll
@@ -7942,8 +7945,10 @@
       return again;
     }
     a = loot(coA, 'A', a); b = loot(coB, 'B', b);
-    if (hasDoctrine(coA, 'S2')) { negA = negotiate(a); a = negA.dice; }
-    if (hasDoctrine(coB, 'S2')) { negB = negotiate(b); b = negB.dice; }
+    /* Tough Negotiators (p. 87): a player picks which dice to re-roll on seeing
+       them (preset.neg); a rival re-rolls its lowest half. */
+    if (pd.A) negA = pn.A || null; else if (hasDoctrine(coA, 'S2')) { negA = negotiate(a); a = negA.dice; }
+    if (pd.B) negB = pn.B || null; else if (hasDoctrine(coB, 'S2')) { negB = negotiate(b); b = negB.dice; }
     var hi = Math.max(sum(a), sum(b)), lo = Math.min(sum(a), sum(b));
     var out = { diceA: a, diceB: b, negA: negA, negB: negB, plunder: plunder,
       high: hi, low: lo, A: lo, B: lo, extra: { A: null, B: null }, thin: { A: false, B: false } };
@@ -8123,6 +8128,24 @@
     return best > 0 ? out : [];
   }
 
+  /* Enhanced Genetic Memory, taken up by a player for one offered unit: the new
+     recruit is paid for, and on a 2-6 it remembers everything the lost one had
+     before its last battle. */
+  function rebirth(co, offer) {
+    if (!offer || offer.done) return { ok: false, why: 'Already decided.' };
+    if (co.kUC < offer.cost) return { ok: false, why: 'Costs ' + offer.cost + ' ' + money(co) + ' — the tribe has ' + co.kUC + '.' };
+    co.kUC -= offer.cost;
+    var ne = newEntry(offer.key), mem = offer.mem, r2 = d6();
+    if (mem && r2 >= 2) {
+      ne.exp = mem.exp; ne.tp = mem.tp; ne.honours = mem.honours.slice(); ne.traumas = mem.traumas.slice();
+      ne.name = mem.name;
+      ne.history.push('Reborn with the memory of ' + mem.name + ' (Enhanced Genetic Memory, D6 ' + r2 + ').');
+    } else ne.history.push('Recruited in place of ' + offer.name + ' — the memory did not carry (D6 ' + r2 + ').');
+    co.roster.push(ne);
+    offer.done = { roll: r2, remembered: !!(mem && r2 >= 2), name: ne.name };
+    return { ok: true, roll: r2, remembered: offer.done.remembered };
+  }
+
   /* ================= the aftermath =================
      Takes a battle report and applies every book step in order, returning a
      record of what happened so the UI can show it and the player can see why. */
@@ -8137,7 +8160,7 @@
 
     out.payment = payment(report.battleTier, report.pl, coA, coB, report.winner,
       report.attackDefend != null ? report.attackDefend : ATTACK_DEFEND.indexOf(report.scenario) >= 0,
-      { dice: opts.dice, plunder: opts.plunder });
+      { dice: opts.dice, plunder: opts.plunder, neg: opts.neg });
     coA.kUC += out.payment.A;
     coB.kUC += out.payment.B;
 
@@ -8344,7 +8367,16 @@
       /* Enhanced Genetic Memory (p. 141): a destroyed infantry unit comes back as
          a new recruit of the same kind, and on a 2-6 it remembers everything it
          had before this battle. The recruit is paid for as usual. */
-      if (hasDoctrine(co, 'XS5')) {
+      if (hasDoctrine(co, 'XS5') && opts.askReborn && opts.askReborn[side]) {
+        /* A player "can recruit" each one (p. 141): offered on the aftermath
+           screen, and only there — it is gone once the next contract is taken. */
+        rec.rebornOffer = [];
+        rec.gone.forEach(function (e) {
+          var p0 = profile(e.key);
+          if (!p0 || p0.cls !== 'infantry' || isLeaderP(p0) || e.rid === co.cmdRid) return;
+          rec.rebornOffer.push({ rid: e.rid, name: e.name, key: e.key, cost: recruitCost(co, e.key), mem: before[e.rid] || null, done: null });
+        });
+      } else if (hasDoctrine(co, 'XS5')) {
         rec.reborn = [];
         rec.gone.forEach(function (e) {
           var p0 = profile(e.key);
@@ -9200,7 +9232,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
-    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, deepen: deepen,
+    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, rebirth: rebirth, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
@@ -38267,10 +38299,15 @@
       var co = camp.companies[sd];
       if (report.winner === sd && C.hasDoctrine(co, 'V2')) steps.push({ kind: 'plunder', side: sd });
     });
+    // Tough Negotiators (p. 87): after both sides have rolled — and after any Plunderer re-roll
+    players.forEach(function (sd) {
+      if (C.hasDoctrine(camp.companies[sd], 'S2')) steps.push({ kind: 'negotiate', side: sd });
+    });
     players.forEach(function (sd) {
       if (C.hasDoctrine(camp.companies[sd], 'V5')) steps.push({ kind: 'weak', side: sd });
     });
-    camp.post = { report: report, pre: { dice: {}, plunder: {}, tp: {}, weak: {} }, steps: steps };
+    var askReborn = {}; players.forEach(function (sd) { askReborn[sd] = true; });
+    camp.post = { report: report, pre: { dice: {}, plunder: {}, neg: {}, tp: {}, weak: {}, askReborn: askReborn }, steps: steps };
     if (!steps.length) { finishPost(); setTimeout(function () { open('aftermath'); }, 900); return; }
     save();
     view = 'post';
@@ -38310,6 +38347,30 @@
         h += '<p class="cpstat">A victorious revolt may go back through the wreckage and re-roll all the dice. The second roll stands, even if it is worse.</p>' +
           '<div class="cprom-row"><button class="start" data-go="plunder">Re-roll all</button>' +
           '<button class="lnk" data-go="postnext">Keep ' + tot + '</button></div>';
+      }
+      return h + '</div>';
+    }
+    if (st.kind === 'negotiate') {
+      if (!pre.dice[st.side]) { pre.dice[st.side] = C.rollPayment(rep.battleTier, rep.pl); save(); }
+      var nd = pre.dice[st.side], ntot = nd.reduce(function (a, b) { return a + b; }, 0), ng = pre.neg[st.side];
+      var cap = Math.ceil(nd.length / 2), sel = st.sel || [];
+      h += '<div class="cpan"><div class="cprom-head"><b>Tough Negotiators</b></div>' +
+        '<p class="cpstat">' + esc(co.name) + '’s payment roll. Up to ' + cap + ' of the dice may be re-rolled; the second result stands, even if it is worse.</p>';
+      if (ng) {
+        h += '<p class="dice-row">' + nd.map(function (v, i) {
+          var sw = ng.idx.indexOf(i) >= 0;
+          return '<span class="die' + (sw ? ' re' : '') + '">' + v + '</span>';
+        }).join('') + ' <b>= ' + ntot + ' ' + C.money(co) + '</b></p>' +
+          '<p class="cpstat">Re-rolled ' + ng.swapped.map(function (w) { return w.was + '→' + w.now; }).join(', ') + '.</p>' +
+          '<button class="start" data-go="postnext">Continue</button>';
+      } else {
+        h += '<p class="dice-row">' + nd.map(function (v, i) {
+          var on = sel.indexOf(i) >= 0;
+          return '<button class="die pick' + (on ? ' on' : '') + '" data-negdie="' + i + '"' +
+            (!on && sel.length >= cap ? ' disabled' : '') + '>' + v + '</button>';
+        }).join('') + ' <b>= ' + ntot + ' ' + C.money(co) + '</b></p>' +
+          '<div class="cprom-row"><button class="start" data-go="negotiate"' + (sel.length ? '' : ' disabled') + '>Re-roll ' + sel.length + ' of ' + cap + '</button>' +
+          '<button class="lnk" data-go="postnext">Keep them all</button></div>';
       }
       return h + '</div>';
     }
@@ -38382,6 +38443,16 @@
       h += '<div class="cpan"><div class="cpstat">Infamy of Degeneration — ' + rec.degenerated.map(function (d) {
         return esc(d.name) + ' (rolled ' + d.roll + ') lost ' + d.lost + ' EXP';
       }).join('; ') + '.</div></div>';
+    }
+    if (rec.rebornOffer && rec.rebornOffer.length) {
+      h += '<div class="cpan"><div class="cprom-head"><b>Enhanced Genetic Memory</b></div>' +
+        '<p class="cpstat">A lost infantry unit can be recruited again, now or never: on a D6 of 2-6 the new one remembers everything the old one had before this battle.</p>' +
+        rec.rebornOffer.map(function (r, i) {
+          if (r.done) return '<div class="orow"><b>' + esc(r.name) + '</b><em>Regrown (D6 ' + r.done.roll + ') — ' +
+            (r.done.remembered ? 'it remembers.' : 'the memory did not carry.') + '</em></div>';
+          return '<div class="orow"><b>' + esc(r.name) + '</b><span class="segs"><button class="lnk" data-go="reborn" data-i="' + i + '"' +
+            (camp.companies.A.kUC < r.cost ? ' disabled' : '') + '>Recruit again — ' + r.cost + ' ' + coin() + '</button></span></div>';
+        }).join('') + '</div>';
     }
     if (rec.reborn && rec.reborn.length) {
       h += '<div class="cpan"><div class="cpstat">Enhanced Genetic Memory — ' + rec.reborn.map(function (r) {
@@ -38812,6 +38883,15 @@
       contract.tactic = t.getAttribute('data-tactic') || null;
       render(); return;
     }
+    if (t.hasAttribute('data-negdie') && camp.post) {
+      var ns = camp.post.steps[0];
+      if (ns && ns.kind === 'negotiate') {
+        var di = +t.getAttribute('data-negdie'), sl = ns.sel = ns.sel || [], at = sl.indexOf(di);
+        if (at >= 0) sl.splice(at, 1); else if (sl.length < Math.ceil(camp.post.pre.dice[ns.side].length / 2)) sl.push(di);
+        save(); render();
+      }
+      return;
+    }
     if (t.hasAttribute('data-weak') && camp.post) {
       var ws = camp.post.steps[0];
       if (ws && ws.kind === 'weak') {
@@ -38901,6 +38981,22 @@
         var pr = camp.post.pre, was = pr.dice[pst.side];
         pr.dice[pst.side] = C.rollPayment(camp.post.report.battleTier, camp.post.report.pl);
         pr.plunder[pst.side] = { was: was.slice(), now: pr.dice[pst.side].slice() };
+        save(); render(); return;
+      }
+      case 'negotiate': {
+        var nst = camp.post && camp.post.steps[0];
+        if (!nst || nst.kind !== 'negotiate' || !(nst.sel || []).length) return;
+        var npr = camp.post.pre, dice = npr.dice[nst.side].slice(), sw = [];
+        nst.sel.forEach(function (i) { var was = dice[i]; dice[i] = 1 + Math.floor(Math.random() * 6); sw.push({ was: was, now: dice[i] }); });
+        npr.dice[nst.side] = dice;
+        npr.neg[nst.side] = { dice: dice.slice(), swapped: sw, idx: nst.sel.slice() };
+        save(); render(); return;
+      }
+      case 'reborn': {
+        var ro = after && after.sides.A && after.sides.A.rebornOffer, oi = +t.getAttribute('data-i');
+        if (!ro || !ro[oi]) return;
+        var rr = C.rebirth(camp.companies.A, ro[oi]);
+        if (!rr.ok) { note('Enhanced Genetic Memory', rr.why); return; }
         save(); render(); return;
       }
       case 'postnext':
