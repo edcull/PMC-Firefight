@@ -2395,7 +2395,18 @@
     rose:     { name: 'Rose',          ink: '#e0709e', light: '#e8a0bf', mid: '#b04c78', dark: '#4e1e34', helm: '#8e3c60', cloth: '#6a4456' },
     sand:     { name: 'Bone white',    ink: '#d8cfb4', light: '#e4ddc6', mid: '#b3aa8c', dark: '#585244', helm: '#948c72', cloth: '#8a8268' },
     slate:    { name: 'Gunmetal',      ink: '#9aa7b6', light: '#aab6c4', mid: '#6b7684', dark: '#2c333c', helm: '#535d69', cloth: '#4e5661' },
-    charcoal: { name: 'Charcoal black', ink: '#aab0b8', light: '#767c84', mid: '#484d54', dark: '#15181c', helm: '#2d3238', cloth: '#292d33' }
+    charcoal: { name: 'Charcoal black', ink: '#aab0b8', light: '#767c84', mid: '#484d54', dark: '#15181c', helm: '#2d3238', cloth: '#292d33' },
+    // ten more, to make two dozen: each well clear of the others on the table
+    maroon:   { name: 'Maroon',        ink: '#c0506a', light: '#c98090', mid: '#7e2e40', dark: '#38121c', helm: '#622434', cloth: '#553038' },
+    khaki:    { name: 'Khaki',         ink: '#c8b888', light: '#d6c9a0', mid: '#a09068', dark: '#4a4230', helm: '#80734f', cloth: '#6e664e' },
+    mud:      { name: 'Mud brown',     ink: '#b08860', light: '#c09c78', mid: '#80603e', dark: '#3a2a1a', helm: '#664c30', cloth: '#584636' },
+    lime:     { name: 'Acid lime',     ink: '#b8e04a', light: '#cce67a', mid: '#8cb030', dark: '#3a4a10', helm: '#6e8c22', cloth: '#5e6e36' },
+    teal:     { name: 'Deep teal',     ink: '#3cb4b4', light: '#78cccc', mid: '#2a8080', dark: '#0e3a3a', helm: '#1f6464', cloth: '#2e5656' },
+    cobalt:   { name: 'Cobalt blue',   ink: '#4c7ce0', light: '#86a6e8', mid: '#3456a8', dark: '#12204c', helm: '#284486', cloth: '#303e66' },
+    sky:      { name: 'Sky blue',      ink: '#8cc8f0', light: '#b4dcf6', mid: '#5e98c0', dark: '#223e56', helm: '#4a7ca0', cloth: '#4a647a' },
+    violet:   { name: 'Violet',        ink: '#9a6ce8', light: '#b89cef', mid: '#6c44b4', dark: '#2a1650', helm: '#553490', cloth: '#4c3c6e' },
+    magenta:  { name: 'Magenta',       ink: '#e050c8', light: '#e888d8', mid: '#a83096', dark: '#461040', helm: '#862478', cloth: '#643c5e' },
+    arctic:   { name: 'Arctic white',  ink: '#e8eef4', light: '#f2f6fa', mid: '#c4ccd6', dark: '#5e6672', helm: '#a8b2be', cloth: '#9aa2ac' }
   };
   var COLOUR_KEYS = Object.keys(COLOURS);
   function colour(key) { return COLOURS[key] || COLOURS.ochre; }

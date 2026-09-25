@@ -19,7 +19,8 @@
   'use strict';
   var R = root.PMC, SC = root.PMCScen, GEN = root.PMCGen, C = root.PMCCamp, SOLO = root.PMCSolo;
 
-  var COLOURS = ['ochre', 'steel', 'olive', 'crimson', 'slate', 'plum', 'sand', 'rust', 'jade', 'midnight', 'charcoal', 'hazard', 'rose', 'forest'];
+  var COLOURS = ['ochre', 'steel', 'olive', 'crimson', 'slate', 'plum', 'sand', 'rust', 'jade', 'midnight', 'charcoal', 'hazard', 'rose', 'forest',
+    'maroon', 'khaki', 'mud', 'lime', 'teal', 'cobalt', 'sky', 'violet', 'magenta', 'arctic'];
   var OBJECTIVES = [{ x: 12, y: 36 }, { x: 24, y: 24 }, { x: 36, y: 12 }];
   var STANDARD = [
     { id: 'move', label: 'Move' },
