@@ -1042,7 +1042,7 @@
     var craft = !!fromOrbit || R.isMachine(u) || !!u.jets;
     /* A swarm comes up out of the ground, whatever the scenario, giants and
        all — only what flies drops out of the sky. */
-    if (u.faction === 'bugs') craft = (R.isFlying(u) || R.flyInf(u)) && !R.isMachine(u);   // an Overgrown one, flier or not, breaks out of the ground
+    if (u.faction === 'bugs') craft = R.isFlying(u) || R.flyInf(u);
     u.arriveAt = nowMs();
     /* The Xenotripods teleport in rather than land, hulls and craft as well as
        squads — all but the Esh-Aven, who come up out of the ground as men do. */

@@ -5887,6 +5887,8 @@
       if (MOUNTS) {
         MOUNTS.gun = [{ dx: mouth.x - gp.x, dy: mouth.y - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
         if (kind === 'firebeetle') MOUNTS.flame = MOUNTS.gun;
+        // what it sees with: its eyes, on the front of the head (a Keen-Eyed glint comes off them)
+        MOUNTS.scan = [{ dx: hc.x - gp.x, dy: hc.y - hr * 0.2 - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
       }
     }
 

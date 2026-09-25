@@ -572,7 +572,7 @@
   function insert() {
     var u = unit(), craft = R.isMachine(u) || !!u.jets;
     // a swarm comes up out of the ground, giants and all; only what flies drops from the sky
-    if (u.faction === 'bugs') craft = (R.isFlying(u) || R.flyInf(u)) && !R.isMachine(u);   // an Overgrown one, flier or not, breaks out of the ground
+    if (u.faction === 'bugs') craft = R.isFlying(u) || R.flyInf(u);
     // the Xenotripods teleport in, hulls and craft too; the Esh-Aven come up out of the ground
     var pr = R.profile(u.key), tele = u.faction === 'xeno' && !u.eshAven && !(pr && pr.eshAven);
     if (view.walking) toggleWalk();
