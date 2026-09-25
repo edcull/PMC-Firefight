@@ -2482,11 +2482,12 @@
     command2: ['cmdr2', 'signals', 'cmdsmg'],
     command1: ['cmdr1', 'signals', 'cmdsmg'],
     commandhi: ['cmdrhi', 'signals', 'cmdsmg'],
-    rifle: ['saw', 'rifleman'],
+    // rifle teams: the leader at the front right with an SMG, the SAW at the front left, riflemen behind
+    rifle: ['riflelead', 'saw', 'rifleman'],
     veteran: ['vetlead', 'vetsaw', 'vet'],
     engineer: ['breacher', 'sapper'],
     lighteng: ['breacherlt', 'sapperlt'],
-    rookie: ['sawrk', 'riflemanrk'],
+    rookie: ['rookielead', 'sawrk', 'riflemanrk'],
     mg: ['gunner', 'loader', 'rifle'],
     sniper: ['marksman', 'spotter', 'lightinf'],
     // the sniper team alone goes in with night-vision goggles
@@ -2637,9 +2638,10 @@
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     saw: { helm: 'std', gun: 'saw', pack: 'ammo' },
+    riflelead: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
     vet: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true },
     vetsaw: { helm: 'heavy', gun: 'saw', pack: 'ammo', bulk: 1, mark: true },
-    vetlead: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true },
+    vetlead: { helm: 'heavy', gun: 'smg', pack: 'std', bulk: 1, mark: true },
     officer: { helm: 'cap', gun: 'slate', pack: 'std', badge: '#e8c15a' },
     signals: { helm: 'std', gun: 'pistol', pack: 'radio', fitAs: 'rifle' },
     // the field command's escort: carbines rather than rifles
@@ -2654,6 +2656,7 @@
     sapper: { helm: 'welder', gun: 'smg', pack: 'charges', vest: true },
     // rookies, light engineers, recruits and observers: shirt sleeves rolled up
     sawrk: { helm: 'std', gun: 'saw', pack: 'ammo' , sleeves: 'rolled' },
+    rookielead: { helm: 'std', gun: 'smg', pack: 'std', sleeves: 'rolled', fitAs: 'rifle' },
     riflemanrk: { helm: 'std', gun: 'battlerifle', pack: 'std' , sleeves: 'rolled' },
     breacherlt: { helm: 'welder', gun: 'shotgun', pack: 'charges', vest: true , sleeves: 'rolled' },
     sapperlt: { helm: 'welder', gun: 'smg', pack: 'charges', vest: true , sleeves: 'rolled' },
@@ -2698,7 +2701,7 @@
     shock: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, vest: true },
     ranger: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true },
     rangersaw: { helm: 'heavy', gun: 'saw', pack: 'ammo', bulk: 1, mark: true, nvg: true },
-    rangerlead: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true },
+    rangerlead: { helm: 'heavy', gun: 'smg', pack: 'std', bulk: 1, mark: true, nvg: true },
     commandolead: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, mark: true, vest: true, nvg: true },
     commandobreacher: { helm: 'welder', gun: 'shotgun', pack: 'charges', bulk: 1, vest: true, nvg: true },
     commando: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, vest: true, nvg: true },
