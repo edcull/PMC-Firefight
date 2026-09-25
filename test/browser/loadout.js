@@ -29,7 +29,7 @@ async function drain(p) {
 
 // the loading card lives in whichever panel this screen size uses
 const CARD = () => {
-  const hosts = [document.getElementById('context'), document.getElementById('panel')];
+  const hosts = [document.getElementById('modal-host'), document.getElementById('context'), document.getElementById('panel')];
   for (const h of hosts) {
     if (h && h.querySelector('.loadbox')) return h.querySelector('.loadbox');
   }
@@ -54,7 +54,7 @@ async function run(p, label) {
 
   const there = await p.evaluate(() => {
     const box = (() => {
-      const hosts = [document.getElementById('context'), document.getElementById('panel')];
+      const hosts = [document.getElementById('modal-host'), document.getElementById('context'), document.getElementById('panel')];
       for (const h of hosts) if (h && h.querySelector('.loadbox')) return h.querySelector('.loadbox');
       return null;
     })();
@@ -74,7 +74,7 @@ async function run(p, label) {
 
   /* ---- putting a squad aboard ---- */
   const loaded = await p.evaluate(async () => {
-    const hosts = [document.getElementById('context'), document.getElementById('panel')];
+    const hosts = [document.getElementById('modal-host'), document.getElementById('context'), document.getElementById('panel')];
     let box = null;
     for (const h of hosts) if (h && h.querySelector('.loadbox')) box = h.querySelector('.loadbox');
     const btn = box.querySelector('[data-load]');
@@ -94,7 +94,7 @@ async function run(p, label) {
 
   /* ---- and taking it back off ---- */
   const unloaded = await p.evaluate(async () => {
-    const hosts = [document.getElementById('context'), document.getElementById('panel')];
+    const hosts = [document.getElementById('modal-host'), document.getElementById('context'), document.getElementById('panel')];
     let box = null;
     for (const h of hosts) if (h && h.querySelector('.loadbox')) box = h.querySelector('.loadbox');
     const btn = box.querySelector('[data-unload]');
@@ -115,7 +115,7 @@ async function run(p, label) {
 
   /* ---- the card keeps up ---- */
   const redrawn = await p.evaluate(() => {
-    const hosts = [document.getElementById('context'), document.getElementById('panel')];
+    const hosts = [document.getElementById('modal-host'), document.getElementById('context'), document.getElementById('panel')];
     for (const h of hosts) if (h && h.querySelector('.loadbox')) {
       const box = h.querySelector('.loadbox');
       return { text: box.innerText.replace(/\n+/g, ' · ').slice(0, 90),

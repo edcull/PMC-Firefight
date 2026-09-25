@@ -204,7 +204,8 @@
     var sel = this.engine.sel();
     var want = sel.insertion
       ? (sel.insertion.unit ? sel.insertion.unit.side : 'A')
-      : st.phase === 'deploy' ? this.engine.query.placingSide()
+      : st.phase === 'deploy' && st.swapAsk ? st.swapAsk.side           // a hotseat's secret round of swaps
+        : st.phase === 'deploy' ? this.engine.query.placingSide()
         : st.phase === 'terrain' ? this.engine.query.terrainSide() : st.activeSide;
     return this.seats.indexOf(want) >= 0 ? want : this.seats[0];
   };
@@ -249,7 +250,8 @@
       card: function (card) { rec({ e: 'card', card: card }); },
       fx: function (f) { rec({ e: 'fx', f: f }); },
       move: function (u, path, follow) { rec({ e: 'move', id: u.id, path: path, follow: !!follow }); },
-      shoot: function (a, t, res, deaths) { rec({ e: 'shoot', from: a.id, to: t.id, res: res, deaths: ids(deaths) }); },
+      // a shot at a unit names it; one at a piece of the table (a demolition) gives the spot
+      shoot: function (a, t, res, deaths) { rec({ e: 'shoot', from: a.id, to: t.id, at: t.id ? undefined : { x: t.x, y: t.y }, res: res, deaths: ids(deaths) }); },
       assault: function (a, t, deaths) { rec({ e: 'assault', from: a.id, to: t.id, deaths: ids(deaths) }); },
       strafe: function (u, from, to, deaths) { rec({ e: 'strafe', id: u.id, from: from, to: to, deaths: ids(deaths) }); },
       arrive: function (u, how, from, veh) { rec({ e: 'arrive', id: u.id, how: how, from: from || null, veh: veh ? veh.id : null }); },

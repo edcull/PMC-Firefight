@@ -1,4 +1,4 @@
-/* Hotseat, co-op and against-the-AI skirmishes build both forces before the battle (a demo rolls both and opens on the battlefield): each
+/* Every skirmish opens on the battlefield, a card for each force to tap and muster: each
    side in turn (kind, name, colours, units), then the battlefield (scenario,
    world, terrain). The opposition against the AI starts as a random kind of
    force with a rolled build. And on a page with no
@@ -65,16 +65,21 @@ const { ROOT, SHOTS } = require('../where.js');
   console.log('\nCo-operative');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('coop'); });
   await p.waitForTimeout(200);
-  check('player 1 builds a commando', /^Player 1 — muster your commando$/.test(await title()), await title());
-  check('...with the old player tabs out of the way', !(await shown('solo-players')) && !(await shown('sel-solo-scen')));
+  check('it opens on the battlefield, a card for each commando', /^The battlefield$/.test(await title()) &&
+    await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length) === 2, await title());
+  check('...with the OpFor and the solitaire scenario there, the old player tabs out of the way', await shown('sel-solo-op') && await shown('sel-solo-scen') &&
+    !(await shown('solo-players')) && !(await shown('sel-solo-mode')) && !(await shown('sel-scen')));
+  await next();
+  check('taking the field with an empty commando opens it instead', /^Player 1 — muster your commando$/.test(await title()), await title());
   await roll(); await name('Ghost Team');
   await next();
-  check('player 2 builds a commando of their own', /^Player 2 — muster your commando$/.test(await title()));
-  check('...and the commandos share player 1\'s colour', !(await shown('colourpick')));
+  await p.evaluate(() => document.querySelector('[data-hotside="1"]').click()); await p.waitForTimeout(200);
+  check('player 2\'s card opens their commando', /^Player 2 — muster your commando$/.test(await title()));
+  check('...and the commandos share player 1\'s colour', !(await shown('colourpick')) && (await hot()).sides[1].colour === (await hot()).sides[0].colour);
   await setVal('sel-faction', 'rebel');
   await roll(); await name('Red Cell');
   await next();
-  check('then the battlefield: the OpFor and the solitaire scenario', await shown('sel-solo-op') && await shown('sel-solo-scen') && !(await shown('sel-solo-mode')) && !(await shown('sel-scen')));
+  check('then the battlefield again', /^The battlefield$/.test(await title()) && await shown('sel-solo-scen'));
   await setVal('sel-solo-scen', 's_crush');
   await next();
   await p.waitForTimeout(600);
@@ -152,12 +157,17 @@ const { ROOT, SHOTS } = require('../where.js');
   console.log('\nSolitaire');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('solo'); });
   await p.waitForTimeout(200);
-  check('solitaire keeps its single screen', !(await p.evaluate(() => window.__hot())) && await shown('sel-solo-scen') &&
-    await p.evaluate(() => document.getElementById('btn-start').textContent) === 'Take the field' && !(await p.evaluate(() => document.getElementById('sel-tier').disabled)));
+  check('solitaire opens on the battlefield, a card for your commando', /^The battlefield$/.test(await title()) &&
+    await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length) === 1 && await shown('sel-solo-scen') && await shown('sel-solo-op') &&
+    !(await p.evaluate(() => document.getElementById('sel-tier').disabled)));
   check('...and can be up against a Xenotripod tribe', await p.evaluate(() => [...document.getElementById('sel-solo-op').options].some(o => o.value === 'xeno')));
   await setVal('sel-solo-op', 'xeno');
   await setVal('sel-solo-scen', 's_decap');
+  await p.evaluate(() => document.querySelector('[data-hotside="0"]').click()); await p.waitForTimeout(200);
+  check('...tap it to muster your commando', /^Muster your commando$/.test(await title()), await title());
   await roll();
+  await next();
+  check('...and back to the battlefield', /^The battlefield$/.test(await title()) && await p.evaluate(() => document.getElementById('sel-solo-scen').value) === 's_decap');
   await next();
   await p.waitForTimeout(600);
   const sx = await p.evaluate(() => { const s = window.PMC_STATE(); const b = s.units.filter(u => u.side === 'B'); return { n: b.length, xeno: b.every(u => u.faction === 'xeno'), leader: b.some(u => u.soloLeader) }; });

@@ -18919,8 +18919,12 @@
       view.pickFac = t.getAttribute('data-fac');
       el('vsearch').value = '';
       // turning to an army's tab puts on that army's own colour, cards and bench alike
-      if (ARMY_COLOUR[view.pickFac]) { paint('A', ARMY_COLOUR[view.pickFac]); drawControls(); frame(); }
+      if (ARMY_COLOUR[view.pickFac]) paint('A', ARMY_COLOUR[view.pickFac]);
       drawPicker();
+      // and puts that army's first unit on the stage
+      var first = el('vlist').querySelector('.unit[data-k]');
+      if (first) { choose(first.getAttribute('data-k')); FX.clear(); markPicked(); }
+      drawControls(); frame();
       el('vside').querySelector('.vlistscroll').scrollTop = 0;
     });
 
