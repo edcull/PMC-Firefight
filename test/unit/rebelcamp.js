@@ -84,15 +84,14 @@ ok('one slot per Revolt Tier', (function () {
 head('Influence Points and what they buy');
 var co3 = revolt().companies.A;
 co3.kUC = 40;
-ok('Armed civilians are free while there are four or fewer', (function () {
+ok('Armed civilians are free up to the fourth', (function () {
   var c = C.newCompany('t', { faction: 'rebel' });
   c.roster = [];
   return C.recruitCost(c, 'rciv');
 })(), 0);
-ok('...and cost again past that', (function () {
+ok('...and the fifth is paid for', (function () {
   var c = C.newCompany('t', { faction: 'rebel' });
-  c.roster = [C.newEntry('rciv'), C.newEntry('rciv'), C.newEntry('rciv'),
-  C.newEntry('rciv'), C.newEntry('rciv')];
+  c.roster = [C.newEntry('rciv'), C.newEntry('rciv'), C.newEntry('rciv'), C.newEntry('rciv')];
   return C.recruitCost(c, 'rciv');
 })(), 1);
 ok('Militia cost the printed 4', C.recruitCost(co3, 'rmilitia'), 4);
