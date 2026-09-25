@@ -6440,10 +6440,10 @@
     m113: { axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },
     ifv: { axles: 3, len: 2.35, wid: 1.30, hgt: 18, gun: 1.2, style: { body: 'ifv', turret: 'ifv', tSize: 0.72, tAt: 0.04, tSide: 0.12, skirts: 'panels' } },
     cmdbox: { axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25] } },
-    bigapc: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels' } },
-    bigifv: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels' } },
+    bigapc: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels', hexNose: true } },
+    bigifv: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels', hexNose: true } },
     engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, tanks: true, skirts: 'panels' } },
-    enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true } },
+    enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true, hexNose: true } },
     techmrl: { axles: 2, len: 2.00, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 1.0, elev: 10, style: { body: 'pickup', mrl: true } },
     calliope: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.6, elev: 16, style: { body: 'ltank', turret: 'arty', tSize: 0.9, tAt: -0.1, skirts: true } },
     mlrs: { axles: 3, len: 2.45, wid: 1.30, hgt: 17, gun: 1.2, elev: 14, style: { body: 'mlrs', mlrs: true } },
@@ -8377,6 +8377,27 @@
       }
     }
 
+    /* The same tiles across the nose: laid on the (raked) front plate, which runs
+       from aBot at the foot up and back to aTop, across b0..b1. Only drawn when
+       the nose is towards the eye. */
+    function hexNose(fr, aBot, aTop, b0, b1, z0, h) {
+      if ((cos + sin) <= 0) return;
+      var cols = 5, rows = 2, cw = (b1 - b0) / cols;
+      for (var r = 0; r < rows; r++) {
+        for (var i = 0; i < cols; i++) {
+          var cb = b0 + cw * (i + 0.5 + (r ? 0.5 : 0)), cu = r ? 0.3 : 0.72;
+          if (cb > b1 - cw * 0.3) continue;
+          var pts = [];
+          for (var k = 0; k < 6; k++) {
+            var ang = k * Math.PI / 3, u = cu + Math.sin(ang) * 0.24;
+            pts.push(S3(fr(aBot + (aTop - aBot) * u, cb + Math.cos(ang) * cw * 0.46), z0 + h * u));
+          }
+          poly(g, pts, 'rgba(255,248,232,.07)');
+          for (var e2 = 0; e2 < 6; e2++) edge(g, pts[e2], pts[(e2 + 1) % 6], 'rgba(10,12,16,.35)', 0.6);
+        }
+      }
+    }
+
     function nearSide() { return (cos - sin) > 0 ? 1 : -1; }   // which flank faces the eye
     // the same, for something turned to its own angle (a traversed mount)
     function nearSideAt(ang) { return (Math.cos(ang) - Math.sin(ang)) > 0 ? 1 : -1; }
@@ -8595,6 +8616,8 @@
           var hh = H * (big ? 1.08 : ifv ? 0.85 : 1);
           // a tall box: the upper front plate raked back, the back straight down
           slabF(HF, -L * 0.5, L * 0.5, -w, w, z0, hh, TB, L * (ifv ? 0.3 : 0.24), 0.01, w * 0.04);
+          // the heavy carriers' glacis carries the hexagonal active armour
+          if (st.hexNose) hexNose(HF, L * 0.5, L * 0.5 - L * (ifv ? 0.3 : 0.24), -w * 0.9, w * 0.9, z0, hh);
           if (big) {
             // a raised troop compartment over the rear two thirds, and applique panels
             slabF(HF, -L * 0.48, L * 0.02, -w * 0.9, w * 0.9, z0 + hh, H * 0.3, TB, L * 0.05, 0, w * 0.04);
@@ -8632,6 +8655,7 @@
           shape(HF, fpts, z0, H * 0.9, TB, null, ftop);
           var ns4 = nearSide();
           hexFlank(HF, -L * 0.42, L * 0.3, ns4 * w * 1.0, z0 + 1, H * 0.8);
+          hexNose(HF, L * 0.5, L * 0.14, -w * 0.45, w * 0.45, z0, H * 0.9);   // and across the wedge of the nose
           // the dark sensor slit across the nose and the running lights
           edge(g, S3(HF(L * 0.44, -w * 0.4), z0 + H * 0.3), S3(HF(L * 0.44, w * 0.4), z0 + H * 0.3), '#0b0d11', 1.6);
           if (!dead) edge(g, S3(HF(L * 0.44, -w * 0.3), z0 + H * 0.3), S3(HF(L * 0.44, -w * 0.1), z0 + H * 0.3), '#7fd8e8', 0.9);
@@ -8643,6 +8667,7 @@
           var mbt = st.body === 'mbt';
           var hh2 = H * (mbt ? 0.8 : 0.88);
           slabF(HF, -L * 0.5, L * 0.5, -w * 0.94, w * 0.94, z0, hh2, TB, L * (mbt ? 0.26 : 0.2), L * 0.05, w * 0.03);
+          if (st.hexNose) hexNose(HF, L * 0.5, L * 0.5 - L * (mbt ? 0.26 : 0.2), -w * 0.86, w * 0.86, z0, hh2);
           // lower glacis wedge under the nose
           grille(HF, -L * 0.44, -L * 0.24, -w * 0.6, w * 0.6, z0 + hh2 + 0.2, mbt ? 6 : 4);
           lights(HF, L * 0.49, -w * 0.72, z0 + hh2 * 0.35); lights(HF, L * 0.49, w * 0.72, z0 + hh2 * 0.35);
