@@ -8399,6 +8399,30 @@
       }
     }
 
+    /* Hex tiles laid on one face, raked or upright: its bottom edge runs p0 to
+       p1 and its top edge q0 to q1 (each [a, b] in the frame), from z0 up h.
+       `rows` gives the tiles in each row, top row first, set between each other. */
+    function hexPanel(fr, p0, p1, q0, q1, z0, h, rows) {
+      var nr = rows.length, mx = Math.max.apply(null, rows);
+      function at(t, uu) {
+        var a = p0[0] + (p1[0] - p0[0]) * t, b = p0[1] + (p1[1] - p0[1]) * t;
+        var a2 = q0[0] + (q1[0] - q0[0]) * t, b2 = q0[1] + (q1[1] - q0[1]) * t;
+        return S3(fr(a + (a2 - a) * uu, b + (b2 - b) * uu), z0 + h * uu);
+      }
+      rows.forEach(function (n, r) {
+        var u = nr === 1 ? 0.5 : 0.74 - r * (0.48 / (nr - 1)), ru = nr === 1 ? 0.34 : 0.24;
+        for (var i = 0; i < n; i++) {
+          var t = 0.5 + (i - (n - 1) / 2) / mx, pts = [];
+          for (var k = 0; k < 6; k++) {
+            var ang = k * Math.PI / 3;
+            pts.push(at(t + Math.cos(ang) * 0.46 / mx, u + Math.sin(ang) * ru));
+          }
+          poly(g, pts, 'rgba(255,248,232,.07)');
+          for (var e2 = 0; e2 < 6; e2++) edge(g, pts[e2], pts[(e2 + 1) % 6], 'rgba(10,12,16,.35)', 0.6);
+        }
+      });
+    }
+
     function nearSide() { return (cos - sin) > 0 ? 1 : -1; }   // which flank faces the eye
     // the same, for something turned to its own angle (a traversed mount)
     function nearSideAt(ang) { return (Math.cos(ang) - Math.sin(ang)) > 0 ? 1 : -1; }
@@ -9699,6 +9723,8 @@
     function drawMech() {
       var hm = mechHeights(), cls = hm.cls, KITM = mechKit(), sf = hm.sf;
       var heavy = cls === 'heavy', light = cls === 'light';
+      // a heavy walker built on an advanced-protection hull wears its hex armour
+      var hexMech = heavy && !!(spec.style && (spec.style.body === 'future' || spec.style.hexNose));
       var hipY = lift + hm.legH;                       // where the legs meet the body
       var shoulder = hipY + hm.torsoH;                 // the top of the torso
       var waistY = hipY + Math.round(3 * sf);          // where the chest starts
@@ -9897,6 +9923,8 @@
         // the chest itself, hunched forward, its front plate raked back
         shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
           rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
+        // five hex tiles across the back of the chest, three over two, when the back is towards the eye
+        if (hexMech && fwd < -0.05) hexPanel(TF, [-tL * 0.95, tW * 0.8], [-tL * 0.95, -tW * 0.8], [-tL * 0.82, tW * 0.75], [-tL * 0.82, -tW * 0.75], zU, upH, [3, 2]);
         /* the cockpit: an angular armoured wedge standing out of the chest —
            a raked front facet, its corners cut back into angled cheeks, the
            top drawn in narrower — glazed in a T: a wide pane across the front
@@ -10003,8 +10031,14 @@
             var pz = shoulder - Math.round(14 * sf);
             slabF(TF, -tL * 0.66, tL * 0.62, off - tW * 0.42, off + tW * 0.42, pz - 2, 3, TS);
             slabF(TF, -tL * 0.64, tL * 0.6, off - tW * 0.4, off + tW * 0.4, pz, shoulder + 3 - pz, TT, tL * 0.18, tL * 0.18, tW * 0.12);
-            // the advanced combat vehicle's hex armour, on the outer face of each shoulder
-            if (spec.style && (spec.style.body === 'future' || spec.style.hexNose)) hexFlank(TF, -tL * 0.58, tL * 0.54, off + s * tW * 0.4, pz + 1, shoulder + 1 - pz, 3);
+            /* the advanced protection hex armour: two tiles on the front, the outer
+               side and the rear of each shoulder, on whichever of them shows */
+            if (hexMech) {
+              var pa0 = -tL * 0.64, pa1 = tL * 0.6, pin = tL * 0.18, pb = tW * 0.4, ph = shoulder + 3 - pz;
+              if (fwd > 0.05) hexPanel(TF, [pa1, off - pb], [pa1, off + pb], [pa1 - pin, off - pb * 0.7], [pa1 - pin, off + pb * 0.7], pz, ph, [2]);
+              if (fwd < -0.05) hexPanel(TF, [pa0, off + pb], [pa0, off - pb], [pa0 + pin, off + pb * 0.7], [pa0 + pin, off - pb * 0.7], pz, ph, [2]);
+              if (nearOf(s) > 0.05) hexPanel(TF, [pa0, off + s * pb], [pa1, off + s * pb], [pa0 + pin, off + s * pb * 0.7], [pa1 - pin, off + s * pb * 0.7], pz, ph, [2]);
+            }
           } else if (light) {
             // a shoulder cap reaching in over the top of the chest, so the arm is plainly joined on
             slabF(TF, -tL * 0.55, tL * 0.55, off - tW * 0.34, off + tW * 0.3, shoulder - Math.round(6 * sf), Math.round(6 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
