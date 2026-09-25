@@ -13168,7 +13168,8 @@ html { scroll-behavior: smooth; }
                 /* Half the reach of an artillery piece's barrel and much
                    thicker, but laid at the same angle: the rise is cut with the
                    run, so it points where the light support vehicle's points. */
-                var a0b = TR * 0.05, bz = tz + 9, reach = TR * (st.energyGun ? 0.55 : 0.9);
+                // out of the turret's front face, not up through its roof
+                var a0b = TR * 0.4, bz = tz + 8, reach = a0b + TR * (st.energyGun ? 0.5 : 0.85);
                 var rake = Math.round(42 * (reach - a0b) / (TR * 1.25));
                 var bt = barrel(TF, a0b, reach, 0, bz, st.energyGun ? 7.5 : 5.4, 'gun',
                   st.energyGun ? { up: rake, col: '#141b22', lit: '#2a313b' } : { up: rake, brake: true, fume: 0.4 });
