@@ -156,6 +156,8 @@
   var contract = null;          // the battle being set up
   var after = null;             // the aftermath being worked through
   var ROMAN = R.ROMAN;
+  var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
+  var ICON_LOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>';
 
   function save() {
     // the storage panel only knows how a write went once it has gone, so redraw then
@@ -288,42 +290,8 @@
   }
 
   /* ================= the hub ================= */
-  /* The rivals a new solo campaign has asked to meet. None is a random world;
-     they are ticked in a list of their own, behind one line on the hub. */
-  var archPick = [];
-  var ARCH_GROUPS = [['Mercenary companies', C.ARCHETYPES], ['Revolts', C.REBEL_ARCHETYPES],
-    ['Bug swarms', C.BUG_ARCHETYPES], ['Xenotripod tribes', C.XENO_ARCHETYPES]];
-  function archName(id) {
-    for (var i = 0; i < ARCH_GROUPS.length; i++) {
-      for (var j = 0; j < ARCH_GROUPS[i][1].length; j++) if (ARCH_GROUPS[i][1][j].id === id) return ARCH_GROUPS[i][1][j].name;
-    }
-    return id;
-  }
-  function archLine() {
-    return '<span>' + (archPick.length ? esc(archPick.map(archName).join(', ')) : 'Random world') + '</span>' +
-      '<em>' + (archPick.length ? 'change' : 'tap to select') + '</em>';
-  }
-  function openArchs() {
-    var h = '<h3>Who you are up against</h3><p>Tick any number, or none for a world that is all chance.</p>' +
-      '<div class="archpick">' + ARCH_GROUPS.map(function (g) {
-        return '<div class="archgrp"><h4>' + esc(g[0]) + '</h4>' + g[1].map(function (a) {
-          return '<label class="archopt"><input type="checkbox" class="camp-arch" value="' + a.id + '"' +
-            (archPick.indexOf(a.id) >= 0 ? ' checked' : '') + '>' +
-            '<span><b>' + esc(a.name) + '</b><small>' + esc(a.blurb) + '</small></span></label>';
-        }).join('') + '</div>';
-      }).join('') + '</div>' +
-      '<div class="askrow"><button type="button" class="lnk" data-go="archrandom">Random</button>' +
-      '<button type="button" class="start" data-go="archdone">Done</button></div>';
-    el('camp-archbox').innerHTML = h;
-    el('camp-archmodal').hidden = false;
-  }
-  function closeArchs() {
-    el('camp-archmodal').hidden = true;
-    var line = el('camp-archline');
-    if (line) line.innerHTML = archLine();
-  }
   function hubView() {
-    var h = '<h2>Campaign</h2>';
+    var h = '<h2>Campaign' + (camp ? ' — turn ' + camp.turn : '') + '</h2>';
     if (!camp) {
       h += '<p class="lede">A never-ending series of battles between two forces that grow, ' +
         'scar over and occasionally fall apart. ' +
@@ -340,12 +308,9 @@
         '<option value="solo">Solo — against a rival force that grows battle by battle</option>' +
         '<option value="hotseat">Hotseat — two dossiers, two players, one screen</option>' +
         '</select></div>';
-      /* Solo: the forces on the world are rolled, but the player may name any
-         of them they want to meet — tick as many as you like, or none for a
-         world that is all chance. Hotseat: there are no rolled rivals, only the
-         second player's force, so this asks what kind that is instead. */
-      h += '<div class="field" id="camp-archwrap"><label for="camp-archline">Who you are up against</label>' +
-        '<button type="button" class="archline" id="camp-archline" data-go="archopen">' + archLine() + '</button></div>';
+      /* Solo: the forces on the world are always rolled, and each grows into its
+         own character from the doctrines it draws. Hotseat: there are no rolled
+         rivals, only the second player's force, so this asks what kind that is. */
       h += '<div class="field" id="camp-bwrap" hidden><label for="camp-bfaction">What Player 2 is running</label>' +
         '<select id="camp-bfaction">' +
         '<option value="pmc">A private military company</option>' +
@@ -361,29 +326,18 @@
     }
     var A = camp.companies.A, B = camp.companies.B;
     var rivals = camp.mode === 'hotseat' ? [] : (camp.rivals || [B]), n = rivals.length;
-    h += '<p class="lede">Campaign turn ' + camp.turn + ' · ' +
-      (camp.mode !== 'solo' ? 'hotseat'
-        : n > 1
-          ? 'solo against ' + n + ' forces on this world — <b>' + esc(B.name) + '</b> next'
-          : 'solo against ' + esc(B.name)) + '.' +
-      (Store.note() ? ' ' + esc(Store.note()) : '') + '</p>';
-    h += '<div class="hubbar">' +
-      '<button class="lnk" data-go="roster">The dossier</button>' +
-      '<button class="lnk" data-go="export">Save to a file</button>' +
-      '<button class="lnk" data-go="import">Load a file</button></div>';
-    h += '<button class="start" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') +
-      '">Take a contract</button>';
-    h += companyPanel(A, 'A');
+    if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) + '</p>';
+    h += companyPanel(A, 'A', hubBar());
     /* Who else is on the world: one line, and their panels in a modal behind
        it (in hotseat, the second player's force). */
     h += '<div class="field"><label>' + (camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world') + '</label>' +
       '<button type="button" class="archline" data-go="fmodal" data-kind="rivals"><span>' +
       (camp.mode === 'hotseat' ? esc(B.name)
-        : n > 1 ? n + ' forces — <b>' + esc(B.name) + '</b> next' : esc(B.name)) +
+        : n > 1 ? n + ' forces' : esc(B.name)) +
       '</span><em>details</em></button></div>';
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
-        : rivals.map(function (co, i) { return rivalPanel(co, i, i === camp.facing); }).join('')) + '</div>');
+        : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
     if (camp.log.length) {
       h += '<h3>Recent battles</h3><div class="clog">';
       camp.log.slice(-6).reverse().forEach(function (l) {
@@ -396,24 +350,31 @@
     }
     h += '<p class="camp-foot">' +
       '<button class="lnk" data-go="menu">← Main menu</button>' +
-      '<button class="lnk warn" data-go="wipe">Abandon the campaign</button>' +
       '<input type="file" id="camp-file" accept="application/json" hidden></p>';
     return h;
   }
 
-  function companyPanel(co, side) {
+  /* One row under the name: the dossier, the save file out and in, and the
+     contract, which is what the screen is for. */
+  function hubBar() {
+    var h = '';
+    h += '<div class="hubbar">' +
+      '<button class="lnk" data-go="roster">Dossier</button>' +
+      '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
+      '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
+      '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
+    return h;
+  }
+  function companyPanel(co, side, bar) {
     var h = '<div class="cpan cpan-' + side + '">';
-    h += '<div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
-      '<span class="ctier">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + (co.aspiring ? ' — aspiring' : '') + '</span>' +
+    h += '<div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b>' +
+      (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
-    h += '<div class="cpstat">' + co.roster.length + ' units · ' +
-      co.record.battles + ' battles · ' + co.record.wins + ' won, ' +
-      co.record.draws + ' drawn, ' + co.record.losses + ' lost</div>' + expLine(co);
+    h += (bar || '') + statRow(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
         var dd = C.doctrine(d);
-        return '<span class="mk" title="' + esc(dd.text) + '">' + esc(dd.name) + '</span>';
+        return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
       }).join('')
       : '<span class="dnote">No ' + C.creedOf(co).one + ' chosen.</span>') + '</div>';
     var open = C.doctrineSlots(co) - co.doctrines.length;
@@ -421,13 +382,7 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
-    // Tier V: one change every five battles (p. 87)
-    if (co.tier >= 5) {
-      var sw = C.canSwapDoctrine(co);
-      h += '<button class="lnk" data-go="doctrine" data-side="' + side + '" data-swap="1"' + (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') +
-        '>Change a ' + C.creedOf(co).one + (sw.ok ? '' : ' — ' + esc(sw.why)) + '</button> ';
-    }
-    h += promotionPanel(co, side);
+    h += promotionPanel(co, side, !!bar);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
     }
@@ -444,12 +399,22 @@
      and a force can sit a long way short of one of them without knowing which.
      This lays them out: money banked, a legal army at every Tier up to the next,
      and — before Tier IV — a Tier III army at twice the size. */
-  function promotionPanel(co, side) {
+  function promotionPanel(co, side, hub) {
     var pp = C.promotionProgress(co);
     var kind = C.words(co).force;
+    // on the hub, giving the whole thing up sits on the same line (and asks first)
+    var quit = hub ? '<button class="lnk warn cprom-quit" data-go="wipe">Abandon</button>' : '';
     if (pp.top) {
+      /* Tier V: in place of a promotion, one change of doctrine every five
+         battles (p. 87) — where the promote button would be */
+      var sw = C.canSwapDoctrine(co);
+      var swap = '<button class="start cprom-go" data-go="doctrine" data-side="' + side + '" data-swap="1"' +
+        (sw.ok ? '' : ' disabled title="' + esc(sw.why) + '"') + '>' +
+        (sw.due != null ? 'Reselect in ' + (sw.due - co.record.battles) + ' battle' + (sw.due - co.record.battles === 1 ? '' : 's')
+          : 'Reselect a ' + C.creedOf(co).one) + '</button>';
       return '<div class="cprom done"><div class="cprom-head"><b>Tier V</b>' +
-        '<span class="mk">as high as a ' + kind + ' goes</span></div></div>';
+        '<span class="mk">as high as a ' + kind + ' goes</span></div>' +
+        '<div class="cprom-row">' + swap + quit + '</div></div>';
     }
     var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + '">';
     h += '<div class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +
@@ -470,10 +435,10 @@
       h += '</li>';
     });
     h += '</ul>';
-    h += '<button class="start cprom-go" data-go="promoteco" data-side="' + side + '"' +
+    h += '<div class="cprom-row"><button class="start cprom-go" data-go="promoteco" data-side="' + side + '"' +
       (pp.ok ? '' : ' disabled') + '>' +
       (pp.ok ? 'Promote to Tier ' + ROMAN[pp.next] + ' — ' + pp.cost + ' ' + C.money(co)
-        : 'Not yet — ' + (pp.total - pp.done) + ' still to do') + '</button>';
+        : 'Not yet — ' + (pp.total - pp.done) + ' still to do') + '</button>' + quit + '</div>';
     if (pp.ok) {
       h += '<div class="dnote">A promotion opens another ' +
         C.creedOf(co).one + ' slot, and the free ' +
@@ -483,20 +448,37 @@
     return h + '</div>';
   }
 
-  function rivalPanel(co, idx, next) {
+  /* The Company Tier as a badge, in the force's own word for it on hover. */
+  function tierBadge(co) {
+    // in the force's own colours
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
+    var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+    return '<span class="tierbadge"' + st + ' title="' + esc(C.words(co).tier + ' Tier ' + ROMAN[co.tier]) + '">' + ROMAN[co.tier] + '</span>';
+  }
+  /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
+  function statRow(co, rival) {
+    var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co);
+    function pc(x) { return Math.round(x * 1000) / 10 + '%'; }
+    function cell(cls, pct, word) {
+      return '<div class="cstat ' + cls + '"><b>' + pct + '</b><span>' + esc(word) + '</span></div>';
+    }
+    return '<div class="cstats">' +
+      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate') +
+      cell('cs-exp', pc(ex.pct), ex.word) +
+      cell('cs-tra', pc(tr.pct), tr.word) +
+      '</div>';
+  }
+
+  function rivalPanel(co, idx) {
     var a = C.archetype(co.archetype);
-    var h = '<div class="cpan cpan-B' + (next ? ' cpan-next' : '') + '"><div class="cphead">' + colourFlash(co) + '<b>' +
-      esc(co.name) + '</b>' +
-      (next ? '<span class="mk good">next</span>' : '') +
-      '<span class="mk">' + C.words(co).side + '</span>' +
-      '<span class="ctier">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + '</span>' +
-      '<span class="dtag">' + esc(a.name) + '</span></div>';
-    h += '<div class="cpstat">' + esc(co.blurb || a.blurb) + '</div>';
-    h += '<div class="cpstat">' + co.roster.length + ' units · ' + co.record.battles + ' battles · ' +
-      co.record.wins + ' won against you, ' + co.record.losses + ' lost</div>';
+    // no 'next' on any of them: the player picks the contract, and with it who they meet
+    var h = '<div class="cpan cpan-B"><div class="cphead">' + tierBadge(co) + '<b>' +
+      esc(co.name) + '</b></div>';
+    h += statRow(co, true);
+    h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span></div>';
+    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
     h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
-      return '<span class="mk" title="' + esc(C.doctrine(d).text) + '">' + esc(C.doctrine(d).name) + '</span>';
+      return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
     h += '<button class="lnk" data-go="intel" data-rival="' + (idx == null ? 0 : idx) +
       '">Their dossier</button></div>';
@@ -1000,10 +982,9 @@
     var h = '<div class="cpan cpan-B cpan-offer"><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
       '<span class="mk">' + C.words(co).side + '</span>' +
       '<span class="ctier">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + '</span>' +
-      '<span class="dtag">' + esc(a.name) + '</span></div>';
+      ROMAN[co.tier] + '</span></div>';
     // how they fight, and what they are built around — never what they field
-    h += '<div class="cpstat">' + esc(co.blurb || a.blurb) + '</div>';
+    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
     h += '<div class="cpstat">' + creedName + ': ' + (co.doctrines.length
       ? co.doctrines.map(function (d) { return esc(C.doctrine(d).name); }).join(' · ')
       : 'none declared yet') + '</div>';
@@ -1137,17 +1118,34 @@
     return co.roster.filter(function (e) { return !(e.restUntil > 0); });
   }
 
+  /* Drug Dealer (p. 112): "Before each battle, the player may choose up to 1/3
+     of infantry units" — chosen here, with the list. */
+  function ordersPanel(co) {
+    var rows = [];
+    if (C.hasDoctrine(co, 'V4')) {
+      var able = drugAble(contract.picks), cap = Math.floor(able.length / 3);
+      contract.drugs = (contract.drugs || []).filter(function (id) { return able.some(function (e) { return e.rid === id; }); }).slice(0, cap);
+      rows.push('<div class="orow"><b>Drug Dealer</b><em>Up to ' + cap + ' of the infantry go in Determined, and take D6+1 Trauma Points after (' +
+        contract.drugs.length + ' of ' + cap + ')</em><span class="segs wrap">' +
+        (able.length ? able.map(function (e) {
+          var on = contract.drugs.indexOf(e.rid) >= 0;
+          return '<button class="lnk' + (on ? ' on' : '') + '" data-drug="' + e.rid + '"' +
+            (!on && contract.drugs.length >= cap ? ' disabled' : '') + '>' + esc(e.name) + '</button>';
+        }).join('') : '<span class="dnote">No infantry in the list can take them.</span>') + '</span></div>');
+    }
+    return rows.length ? '<div class="cpan orders">' + rows.join('') + '</div>' : '';
+  }
   function contractView() {
     var A = camp.companies.A, B = camp.companies.B;
     var keys = contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-    var chk = R.checkArmy(keys, contract.tier, contract.pl, A.doctrines);
+    var chk = R.checkArmy(keys, contract.tier, contract.pl, A.doctrines, contract.tactic || null);
     var roll = contract.tierRoll;
     var h = '<h2>Contract</h2>';
     h += '<p class="lede">Against <b>' + esc(B.name) + '</b> — ' +
       C.words(B).side.toLowerCase() + ', ' +
       C.words(B).tier + ' Tier ' + ROMAN[B.tier] + '.<br>' +
-      'Battle Tier D6 ' + roll.roll +
-      (roll.tier < roll.roll
+      (contract.standard ? 'A standard contract' : 'Battle Tier D6 ' + roll.roll) +
+      (!contract.standard && roll.tier < roll.roll
         ? ', held to Tier ' + ROMAN[roll.cap] + (roll.thin
           ? ' by what the two forces can actually put on the table'
           : ' by the weaker force\u2019s standing')
@@ -1174,14 +1172,28 @@
           '<span class="mk">' + esc(sc.roles[mine]) +
           (contract.roles.bestDefence && contract.roles.bestDefence.swapped &&
             contract.roles.bestDefence.side === 'A'
-            ? ' The Best Defence is Good Offence pushed the attack onto them (D6 ' +
+            ? ' The Best Defence is Good Offence took the attack (D6 ' +
               contract.roles.bestDefence.roll + ').'
-            : '') + '</span>'
+            : contract.roles.bestDefence && contract.roles.bestDefence.side === 'A' && contract.roles.bestDefence.roll
+              ? ' The Best Defence is Good Offence: D6 ' + contract.roles.bestDefence.roll + ' — you stay the defender.' : '') + '</span>' +
+          (contract.roles.bestDefence && contract.roles.bestDefence.pending && contract.roles.bestDefence.side === 'A'
+            ? '<button class="lnk" data-go="bestdef">The Best Defence is Good Offence — roll to attack (2+)</button>' : '')
         : '<span class="mk">Attacker and defender are randomised when the battle opens. ' +
           esc(sc.roles.attacker) + ' ' + esc(sc.roles.defender) +
           (C.hasDoctrine(A, 'S1')
             ? ' The Best Defence is Good Offence gives you a 2+ to push the attack onto them if the roll makes you the defender.'
             : '') + '</span>') + '</div>';
+    }
+    /* Rebel Tactics (p. 95): chosen once the scenario and who attacks are known,
+       before a piece of terrain goes down — so here, with the list. */
+    if (A.faction === 'rebel') {
+      h += '<div class="cpan orders"><div class="cprom-head"><b>Tactic</b></div><div class="orow">' +
+        '<em>' + esc(contract.tactic ? R.tacticById(contract.tactic).text : 'A rebel force may take one tactic for the battle, or none.') + '</em>' +
+        '<span class="segs">' + [{ id: '', name: 'No tactic' }].concat(R.TACTICS).map(function (t) {
+          var on = (contract.tactic || '') === t.id;
+          return '<button class="lnk' + (on ? ' on' : '') + '" data-tactic="' + t.id + '"' +
+            (t.text ? ' ' + tip(t.name, t.text) : '') + '>' + esc(t.name) + '</button>';
+        }).join('') + '</span></div></div>';
     }
     if (contract.caught && contract.caught.to > contract.caught.from) {
       h += '<div class="cpdoc"><span class="mk">' + esc(contract.caught.name) +
@@ -1195,13 +1207,23 @@
         '<button class="lnk" data-tier="1"' + (contract.tier >= contract.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, contract.tier + 1)] + '</button></div>';
     }
 
+    /* The standard contract (p. 84): Tier III, Priority Level 2, the Tier not
+       rolled at all — when both forces can field it. */
+    if (!contract.standard && C.canStandard(A, B) && !(contract.tier === 3 && contract.pl === 2)) {
+      h += '<div class="cpdoc"><span class="mk">Both forces can field a Tier III army at Priority Level 2.</span> ' +
+        '<button class="lnk" data-go="standard">Take a standard contract instead</button></div>';
+    } else if (contract.standard) {
+      h += '<div class="cpdoc"><span class="mk">Standard contract — Tier III, Priority Level 2.</span></div>';
+    }
     // only offer a Priority Level both forces could actually fill
     var lv = contract.levels || [1, 2];
+    var PLN = { 1: 'skirmish', 2: 'full battle', 3: 'large battle', 4: 'major battle' };
     h += '<div class="field two"><div><label for="camp-pl">Priority Level</label>' +
-      '<select id="camp-pl">' + [1, 2].map(function (n) {
+      '<select id="camp-pl"' + (contract.standard ? ' disabled' : '') + '>' + [1, 2, 3, 4].map(function (n) {
         var can = lv.indexOf(n) >= 0;
+        if (!can && n > 2) return '';                 // the big ones only when someone can fill them
         return '<option value="' + n + '"' + (contract.pl === n ? ' selected' : '') +
-          (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') +
+          (can ? '' : ' disabled') + '>' + n + ' — ' + PLN[n] +
           (can ? '' : ' (neither force can fill it)') + '</option>';
       }).join('') + '</select></div>' +
       '<div><label for="camp-planet">Planet</label><select id="camp-planet">' +
@@ -1225,7 +1247,7 @@
     avail.forEach(function (e) {
       var p = profile(e.key);
       var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
-      var bad = blocking(R.checkArmy(trial, contract.tier, contract.pl, A.doctrines).faults);
+      var bad = blocking(R.checkArmy(trial, contract.tier, contract.pl, A.doctrines, contract.tactic || null).faults);
       h += '<button class="cu" data-pick="' + e.rid + '"' +
         (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
         '<span class="t">' + ROMAN[p.tier] + '</span>' +
@@ -1245,6 +1267,7 @@
       });
     }
     h += '</div></div>';
+    h += ordersPanel(A);
     if (!chk.ok) {
       var why;
       if (blocking(chk.faults).length) {
@@ -1266,7 +1289,7 @@
   }
 
   /* pick a legal force from the roster, the way the rival does */
-  function autoPick(co, tier, pl) {
+  function autoPick(co, tier, pl, tactic) {
     var avail = contractPicks(co).slice().sort(function (a, b) {
       return profile(b.key).tier - profile(a.key).tier;
     });
@@ -1299,10 +1322,10 @@
     // first, because an unspent composition point is a point wasted
     for (var guard = 0; guard < 60; guard++) {
       var keys = out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-      var legal = R.checkArmy(keys, tier, pl, docs).ok;
+      var legal = R.checkArmy(keys, tier, pl, docs, tactic).ok;
       var added = take(function (p, e) {
         var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
-        var res = R.checkArmy(trial, tier, pl, docs);
+        var res = R.checkArmy(trial, tier, pl, docs, tactic);
         // while the list is still illegal, take anything within budget that helps;
         // once it is legal, only take what keeps it legal
         return legal ? res.ok : res.spent <= comp.points * pl;
@@ -1314,7 +1337,7 @@
        never be reached — the trim would strip everything around it and still fail.
        Drop whichever single unit leaves the fewest hard faults behind. */
     for (var trim = 0; trim < 20 && out.length; trim++) {
-      var now = R.checkArmy(out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }), tier, pl, docs);
+      var now = R.checkArmy(out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }), tier, pl, docs, tactic);
       if (now.ok) break;
       var hard = blocking(now.faults);
       if (!hard.length) break;                     // only minimums left, and dropping cannot help
@@ -1322,7 +1345,7 @@
       for (var q = 0; q < out.length; q++) {
         var without = out.filter(function (_, i) { return i !== q; })
           .map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-        var res = R.checkArmy(without, tier, pl, docs);
+        var res = R.checkArmy(without, tier, pl, docs, tactic);
         var score = blocking(res.faults).length * 10 + res.faults.length;
         if (score < bestScore) { bestScore = score; bestAt = q; }
       }
@@ -1337,17 +1360,25 @@
      takes the field, and the marks are cleared again once the aftermath has read
      them. The unit with the most to prove goes first: the ones that have fought
      hardest and carry the least trauma already. */
-  function drugThem(co, picks) {
-    picks.forEach(function (e) { delete e.drugged; });
-    if (!C.hasDoctrine(co, 'V4')) return [];
-    var able = picks.filter(function (e) {
+  // who may be given the drugs: infantry, leaders aside, and up to a third of them
+  function drugAble(picks) {
+    return picks.filter(function (e) {
       var p = profile(e.key);
       return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command;
     });
+  }
+  function drugCap(picks) { return Math.floor(drugAble(picks).length / 3); }
+  /* `chosen`: the player's own pick of rids ("may choose up to 1/3"); without
+     one — the rival — the unit with the most to prove goes first. */
+  function drugThem(co, picks, chosen) {
+    picks.forEach(function (e) { delete e.drugged; });
+    if (!C.hasDoctrine(co, 'V4')) return [];
+    var able = drugAble(picks);
     var n = Math.floor(able.length / 3);
     if (n < 1) return [];
-    able.sort(function (a, b) { return a.tp - b.tp; });
-    var taken = able.slice(0, n);
+    var taken;
+    if (chosen) taken = able.filter(function (e) { return chosen.indexOf(e.rid) >= 0; }).slice(0, n);
+    else { able.sort(function (a, b) { return a.tp - b.tp; }); taken = able.slice(0, n); }
     taken.forEach(function (e) { e.drugged = true; });
     return taken;
   }
@@ -1355,14 +1386,16 @@
   /* ================= starting the battle ================= */
   function fight() {
     var A = camp.companies.A, B = camp.companies.B;
-    var theirs = autoPick(B, contract.tier, contract.pl);
+    // a rebel rival picks a tactic of its own, the way a player would (p. 95)
+    var theirTactic = B.faction === 'rebel' ? [null, 'laststand', 'wave', 'guerillas'][Math.floor(Math.random() * 4)] : null;
+    var theirs = autoPick(B, contract.tier, contract.pl, theirTactic);
     if (!R.checkArmy(theirs.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
-      contract.tier, contract.pl, B.doctrines).ok) {
+      contract.tier, contract.pl, B.doctrines, theirTactic).ok) {
       // the rival cannot field a legal list — let it hire in for this battle
       C.developRival(B);
-      theirs = autoPick(B, contract.tier, contract.pl);
+      theirs = autoPick(B, contract.tier, contract.pl, theirTactic);
     }
-    var druggedA = drugThem(A, contract.picks);
+    var druggedA = drugThem(A, contract.picks, contract.drugs || []);
     drugThem(B, theirs);
     camp.pending = {
       tier: contract.tier, pl: contract.pl, scenario: contract.scenario.id,
@@ -1388,7 +1421,10 @@
       nameA: A.name, nameB: B.name,
       colourA: colourOf(A), colourB: colourOf(B),
       dossier: { A: contract.picks, B: theirs },
+      // Modifying the armies (p. 46): what is left on the books, to swap in once the table is laid
+      bench: { A: A.roster.filter(function (e) { return contract.picks.indexOf(e) < 0 && !(e.restUntil > 0); }), B: [] },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
+      tactics: { A: A.faction === 'rebel' ? contract.tactic || null : null, B: theirTactic },
       campaign: true,
       mode: camp.mode === 'hotseat' ? 'hotseat' : 'ai',
       planet: contract.planet
@@ -1402,16 +1438,102 @@
     report.pl = camp.pending.pl;
     report.scenario = camp.pending.scenario;
     C.clearOffers(camp);            // a battle fought: three fresh jobs next turn
-    after = C.aftermath(camp, report);
+    /* The Paths' post-battle choices come first, each at its moment in the book
+       (p. 112): Plunderer once the pay is rolled after a win, No Place for the
+       Weak! once the Trauma Points are. Kept on the campaign, so a reload on the
+       way through picks them up again. */
+    var players = camp.mode === 'hotseat' ? ['A', 'B'] : ['A'], steps = [];
+    players.forEach(function (sd) {
+      var co = camp.companies[sd];
+      if (report.winner === sd && C.hasDoctrine(co, 'V2')) steps.push({ kind: 'plunder', side: sd });
+    });
+    // Tough Negotiators (p. 87): after both sides have rolled — and after any Plunderer re-roll
+    players.forEach(function (sd) {
+      if (C.hasDoctrine(camp.companies[sd], 'S2')) steps.push({ kind: 'negotiate', side: sd });
+    });
+    players.forEach(function (sd) {
+      if (C.hasDoctrine(camp.companies[sd], 'V5')) steps.push({ kind: 'weak', side: sd });
+    });
+    var askReborn = {}; players.forEach(function (sd) { askReborn[sd] = true; });
+    camp.post = { report: report, pre: { dice: {}, plunder: {}, neg: {}, tp: {}, weak: {}, askReborn: askReborn }, steps: steps };
+    if (!steps.length) { finishPost(); setTimeout(function () { open('aftermath'); }, 900); return; }
+    save();
+    view = 'post';
+    setTimeout(function () { open('post'); }, 900);
+  }
+  function finishPost() {
+    var post = camp.post;
+    after = C.aftermath(camp, post.report, post.pre);
     if (camp.mode === 'solo') {
       after.rival = C.developRival(camp.companies.B);
       // and the next opponent is drawn now, so the hub can say who is coming
       after.next = C.drawRival(camp);
     }
+    camp.post = null;
     camp.pending = null;
     save();
     view = 'aftermath';
-    setTimeout(function () { open('aftermath'); }, 900);
+  }
+  // the post-battle decisions, one to a screen
+  function postView() {
+    var post = camp.post, st = post && post.steps[0];
+    if (!st) { finishPost(); return aftermathView(); }
+    var co = camp.companies[st.side], rep = post.report, pre = post.pre;
+    var h = '<h2>After the battle</h2>';
+    if (camp.mode === 'hotseat') h += '<p class="lede">' + esc(co.name) + '</p>';
+    if (st.kind === 'plunder') {
+      if (!pre.dice[st.side]) { pre.dice[st.side] = C.rollPayment(rep.battleTier, rep.pl); save(); }
+      var d = pre.dice[st.side], tot = d.reduce(function (a, b) { return a + b; }, 0), pl = pre.plunder[st.side];
+      h += '<div class="cpan"><div class="cprom-head"><b>Plunderer</b></div>' +
+        '<p class="cpstat">' + esc(co.name) + ' won. Its payment roll: ' + d.length + 'D6.</p>' +
+        '<p class="dice-row">' + d.map(function (v) { return '<span class="die">' + v + '</span>'; }).join('') +
+        ' <b>= ' + tot + ' ' + C.money(co) + '</b></p>';
+      if (pl && pl.now) {
+        h += '<p class="cpstat">Re-rolled from ' + pl.was.reduce(function (a, b) { return a + b; }, 0) + '. The second roll stands.</p>' +
+          '<button class="start" data-go="postnext">Continue</button>';
+      } else {
+        h += '<p class="cpstat">A victorious revolt may go back through the wreckage and re-roll all the dice. The second roll stands, even if it is worse.</p>' +
+          '<div class="cprom-row"><button class="start" data-go="plunder">Re-roll all</button>' +
+          '<button class="lnk" data-go="postnext">Keep ' + tot + '</button></div>';
+      }
+      return h + '</div>';
+    }
+    if (st.kind === 'negotiate') {
+      if (!pre.dice[st.side]) { pre.dice[st.side] = C.rollPayment(rep.battleTier, rep.pl); save(); }
+      var nd = pre.dice[st.side], ntot = nd.reduce(function (a, b) { return a + b; }, 0), ng = pre.neg[st.side];
+      var cap = Math.ceil(nd.length / 2), sel = st.sel || [];
+      h += '<div class="cpan"><div class="cprom-head"><b>Tough Negotiators</b></div>' +
+        '<p class="cpstat">' + esc(co.name) + '’s payment roll. Up to ' + cap + ' of the dice may be re-rolled; the second result stands, even if it is worse.</p>';
+      if (ng) {
+        h += '<p class="dice-row">' + nd.map(function (v, i) {
+          var sw = ng.idx.indexOf(i) >= 0;
+          return '<span class="die' + (sw ? ' re' : '') + '">' + v + '</span>';
+        }).join('') + ' <b>= ' + ntot + ' ' + C.money(co) + '</b></p>' +
+          '<p class="cpstat">Re-rolled ' + ng.swapped.map(function (w) { return w.was + '→' + w.now; }).join(', ') + '.</p>' +
+          '<button class="start" data-go="postnext">Continue</button>';
+      } else {
+        h += '<p class="dice-row">' + nd.map(function (v, i) {
+          var on = sel.indexOf(i) >= 0;
+          return '<button class="die pick' + (on ? ' on' : '') + '" data-negdie="' + i + '"' +
+            (!on && sel.length >= cap ? ' disabled' : '') + '>' + v + '</button>';
+        }).join('') + ' <b>= ' + ntot + ' ' + C.money(co) + '</b></p>' +
+          '<div class="cprom-row"><button class="start" data-go="negotiate"' + (sel.length ? '' : ' disabled') + '>Re-roll ' + sel.length + ' of ' + cap + '</button>' +
+          '<button class="lnk" data-go="postnext">Keep them all</button></div>';
+      }
+      return h + '</div>';
+    }
+    // No Place for the Weak!
+    if (!pre.tp[st.side]) { pre.tp[st.side] = C.rollTP(camp, rep, st.side); save(); }
+    var cand = C.weakCandidates(camp, st.side, pre.tp[st.side]);
+    if (!cand.length) { post.steps.shift(); save(); return postView(); }
+    h += '<div class="cpan"><div class="cprom-head"><b>No Place for the Weak!</b></div>' +
+      '<p class="cpstat">' + (cand.length > 1 ? 'These units came back with the most Trauma Points, ' : cand[0].name + ' came back with the most Trauma Points, ') +
+      pre.tp[st.side][cand[0].rid].total + '. The revolt may execute ' + (cand.length > 1 ? 'one of them' : 'it') +
+      ': it is struck off, and every other unit’s Trauma Points from this battle are halved.</p>' +
+      '<div class="segs">' + cand.map(function (e) {
+        return '<button class="lnk warn" data-weak="' + e.rid + '">Execute ' + esc(e.name) + '</button>';
+      }).join('') + '<button class="lnk" data-weak="">Spare them</button></div></div>';
+    return h;
   }
 
   /* The day's experience and trauma, itemised. The book gives both as a list of
@@ -1469,6 +1591,16 @@
       h += '<div class="cpan"><div class="cpstat">Infamy of Degeneration — ' + rec.degenerated.map(function (d) {
         return esc(d.name) + ' (rolled ' + d.roll + ') lost ' + d.lost + ' EXP';
       }).join('; ') + '.</div></div>';
+    }
+    if (rec.rebornOffer && rec.rebornOffer.length) {
+      h += '<div class="cpan"><div class="cprom-head"><b>Enhanced Genetic Memory</b></div>' +
+        '<p class="cpstat">A lost infantry unit can be recruited again, now or never: on a D6 of 2-6 the new one remembers everything the old one had before this battle.</p>' +
+        rec.rebornOffer.map(function (r, i) {
+          if (r.done) return '<div class="orow"><b>' + esc(r.name) + '</b><em>Regrown (D6 ' + r.done.roll + ') — ' +
+            (r.done.remembered ? 'it remembers.' : 'the memory did not carry.') + '</em></div>';
+          return '<div class="orow"><b>' + esc(r.name) + '</b><span class="segs"><button class="lnk" data-go="reborn" data-i="' + i + '"' +
+            (camp.companies.A.kUC < r.cost ? ' disabled' : '') + '>Recruit again — ' + r.cost + ' ' + coin() + '</button></span></div>';
+        }).join('') + '</div>';
     }
     if (rec.reborn && rec.reborn.length) {
       h += '<div class="cpan"><div class="cpstat">Enhanced Genetic Memory — ' + rec.reborn.map(function (r) {
@@ -1561,12 +1693,6 @@
             C.money(co) + '.';
         }).join('<br>') + '</div></div>';
     }
-    if (after.next) {
-      h += '<div class="cpan cpan-next"><div class="cphead"><b>Next: ' + esc(after.next.name) + '</b>' +
-        '<span class="mk">' + C.words(after.next).side + '</span>' +
-        '<span class="ctier">' + C.words(after.next).tier +
-        ' Tier ' + ROMAN[after.next.tier] + '</span></div></div>';
-    }
 
     var gaps = C.rebuildNeeds(camp.companies.A);
     if (gaps.length) {
@@ -1627,7 +1753,7 @@
     var co = rivals[Math.min(intelIdx, rivals.length - 1)] || camp.companies.B;
     var a = C.archetype(co.archetype);
     var h = '<h2>' + esc(co.name) + '</h2>';
-    h += '<p class="lede">' + esc(co.blurb || a.blurb) + ' ' +
+    h += '<p class="lede">' + esc(C.themeOf(co)) + ' ' +
       C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
       ' · ' + co.roster.length + ' units · ' + co.record.battles + ' battles against you.</p>';
     // only the battles fought against this force count toward the record with it
@@ -1638,7 +1764,7 @@
       head + ' to you, ' + lost + ' to them, ' +
       mine2.filter(function (l) { return !l.winner; }).length + ' drawn.</div>' +
       '<div class="cpdoc">' + co.doctrines.map(function (d) {
-        return '<span class="mk" title="' + esc(C.doctrine(d).text) + '">' + esc(C.doctrine(d).name) + '</span>';
+        return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
       }).join('') + '</div></div>';
     h += '<div class="dlist">';
     co.roster.slice().sort(function (x, y) {
@@ -1729,11 +1855,13 @@
     if (!body) return;
     var h = '';
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
+    if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view === 'found') h = foundView();
     else if (view === 'roster') h = rosterView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') h = contractView();
     else if (view === 'aftermath') h = aftermathView();
+    else if (view === 'post') h = postView();
     else if (view === 'honour') h = honourView();
     else if (view === 'doctrine') h = doctrineView();
     else if (view === 'upgrade') h = upgradeView();
@@ -1750,6 +1878,7 @@
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
     body.classList.toggle('fit', view === 'found');
+    body.classList.toggle('hubfit', view === 'hub' && !!camp);
     body.innerHTML = h;
     body.scrollTop = 0;
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
@@ -1827,7 +1956,7 @@
       contract.scenario = contract.alt; contract.alt = was;
       var SCx = root.PMCScen;
       contract.roles = !wasRoles ? null : contract.altRoles || (SCx && SCx.rollRoles ? SCx.rollRoles(contract.scenario.id,
-        { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }) : null);
+        { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, ['A']) : null);
       contract.altRoles = wasRoles;
       render(); return;
     }
@@ -1898,6 +2027,32 @@
       if (pk) contract.picks.push(pk); render(); return;
     }
     if (t.hasAttribute('data-unpick')) { contract.picks.splice(+t.getAttribute('data-unpick'), 1); render(); return; }
+    if (t.hasAttribute('data-tactic') && contract) {
+      contract.tactic = t.getAttribute('data-tactic') || null;
+      render(); return;
+    }
+    if (t.hasAttribute('data-negdie') && camp.post) {
+      var ns = camp.post.steps[0];
+      if (ns && ns.kind === 'negotiate') {
+        var di = +t.getAttribute('data-negdie'), sl = ns.sel = ns.sel || [], at = sl.indexOf(di);
+        if (at >= 0) sl.splice(at, 1); else if (sl.length < Math.ceil(camp.post.pre.dice[ns.side].length / 2)) sl.push(di);
+        save(); render();
+      }
+      return;
+    }
+    if (t.hasAttribute('data-weak') && camp.post) {
+      var ws = camp.post.steps[0];
+      if (ws && ws.kind === 'weak') {
+        camp.post.pre.weak[ws.side] = t.getAttribute('data-weak') || false;
+        camp.post.steps.shift(); save(); render();
+      }
+      return;
+    }
+    if (t.hasAttribute('data-drug') && contract) {
+      var dr = t.getAttribute('data-drug'), dl = contract.drugs = contract.drugs || [], di = dl.indexOf(dr);
+      if (di >= 0) dl.splice(di, 1); else dl.push(dr);
+      render(); return;
+    }
     if (t.hasAttribute('data-tier')) {
       contract.tier = Math.max(1, Math.min(contract.tierRoll.cap, contract.tier + (+t.getAttribute('data-tier'))));
       contract.levels = C.levelsFor(camp.companies.A, camp.companies.B, contract.tier);
@@ -1923,24 +2078,16 @@
     if (t.hasAttribute('data-rival')) intelIdx = +t.getAttribute('data-rival') || 0;
 
     switch (go) {
-      case 'archopen': openArchs(); return;
       case 'fcolour': colourOpen = !colourOpen; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
       case 'fmodalclose': openModal = null; render(); return;
-      case 'archdone': closeArchs(); return;
-      case 'archrandom':
-        archPick = [];
-        Array.prototype.forEach.call(document.querySelectorAll('#camp-archbox .camp-arch'), function (x) { x.checked = false; });
-        return;
       case 'newcamp': {
-        var archs = archPick.slice();
-        archPick = [];
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
         // a name to start from; the player settles it on the founding screen
         beginFounding(fac === 'rebel' ? 'The Free Colonies' : fac === 'bugs' ? 'The Hive' : fac === 'xeno' ? 'The Ghadon Third' : 'Task Force Ironhold',
           el('camp-mode').value, fac);
-        draft.archs = archs;
+        draft.archs = [];                          // the world is always rolled
         render(); return;
       }
       case 'dofound': {
@@ -1976,7 +2123,48 @@
       case 'intel': view = 'intel'; render(); return;
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;
-      case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl); render(); return;
+      case 'plunder': {
+        var pst = camp.post && camp.post.steps[0];
+        if (!pst || pst.kind !== 'plunder') return;
+        var pr = camp.post.pre, was = pr.dice[pst.side];
+        pr.dice[pst.side] = C.rollPayment(camp.post.report.battleTier, camp.post.report.pl);
+        pr.plunder[pst.side] = { was: was.slice(), now: pr.dice[pst.side].slice() };
+        save(); render(); return;
+      }
+      case 'bestdef':
+        if (contract && contract.roles && root.PMCScen) {
+          var had = contract.picks.length;
+          root.PMCScen.bestDefence(contract.roles);
+          if (had && contract.roles.bestDefence && contract.roles.bestDefence.swapped) note('The Best Defence is Good Offence', 'D6 ' + contract.roles.bestDefence.roll + ' — you are the attacker now. Check the list still suits the job.');
+          save(); render();
+        }
+        return;
+      case 'negotiate': {
+        var nst = camp.post && camp.post.steps[0];
+        if (!nst || nst.kind !== 'negotiate' || !(nst.sel || []).length) return;
+        var npr = camp.post.pre, dice = npr.dice[nst.side].slice(), sw = [];
+        nst.sel.forEach(function (i) { var was = dice[i]; dice[i] = 1 + Math.floor(Math.random() * 6); sw.push({ was: was, now: dice[i] }); });
+        npr.dice[nst.side] = dice;
+        npr.neg[nst.side] = { dice: dice.slice(), swapped: sw, idx: nst.sel.slice() };
+        save(); render(); return;
+      }
+      case 'reborn': {
+        var ro = after && after.sides.A && after.sides.A.rebornOffer, oi = +t.getAttribute('data-i');
+        if (!ro || !ro[oi]) return;
+        var rr = C.rebirth(camp.companies.A, ro[oi]);
+        if (!rr.ok) { note('Enhanced Genetic Memory', rr.why); return; }
+        save(); render(); return;
+      }
+      case 'postnext':
+        if (camp.post) { camp.post.steps.shift(); save(); render(); }
+        return;
+      case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl, contract.tactic || null); render(); return;
+      case 'standard':
+        if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;
+        contract.standard = true; contract.tier = 3; contract.pl = 2; contract.levels = [2];
+        contract.tierRoll = { roll: 3, cap: 3, tier: 3, standing: 3, thin: false };
+        contract.adjusted = true; contract.picks = [];
+        render(); return;
       case 'fight': fight(); return;
       case 'drawnow': {
         if ((drawState.picked || []).length !== 3) return;
@@ -2088,14 +2276,12 @@
         return;
       }
       if (ev.target === el('camp-ask')) { closeAsk(); return; }   // tapping the backdrop
-      if (ev.target === el('camp-archmodal')) { closeArchs(); return; }
       if (ev.target.classList && ev.target.classList.contains('cmodal')) { openModal = null; render(); return; }
       if (asking) return;                                         // nothing behind it is live
       if (ev.target === host) { close(); return; }
       onClick(ev);
     });
     host.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape' && !el('camp-archmodal').hidden) { ev.preventDefault(); closeArchs(); return; }
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }
       if (!asking) return;
       if (ev.key === 'Enter') { ev.preventDefault(); answerAsk(); }
@@ -2103,15 +2289,9 @@
     });
     host.addEventListener('change', function (ev) {
       if (ev.target.id === 'camp-file') onFile(ev);
-      else if (ev.target.classList.contains('camp-arch')) {
-        var id = ev.target.value, at = archPick.indexOf(id);
-        if (ev.target.checked && at < 0) archPick.push(id);
-        else if (!ev.target.checked && at >= 0) archPick.splice(at, 1);
-      }
       // a hotseat campaign has no rival to choose: the second player founds their own
       else if (ev.target.id === 'camp-mode') {
-        var hs = ev.target.value === 'hotseat', aw = el('camp-archwrap'), bw = el('camp-bwrap');
-        if (aw) aw.hidden = hs;
+        var hs = ev.target.value === 'hotseat', bw = el('camp-bwrap');
         if (bw) bw.hidden = !hs;
       }
       else if (ev.target.id === 'camp-pl') {

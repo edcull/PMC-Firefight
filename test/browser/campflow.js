@@ -74,15 +74,17 @@ async function clickText(p, re) {
 
   txt = await body(p);
   check('the hub shows the new company', /Task Force Ironhold/.test(txt));
-  check('...at Company Tier I', /company tier i\b/i.test(txt));
-  check('...with nine units', /9 units/.test(txt), txt.match(/\d+ units[^\n]*/)?.[0]);
+  check('...at Company Tier I', await p.evaluate(() => (document.querySelector('#camp-body .cpan-A .tierbadge') || {}).textContent === 'I'));
+  check('...with nine units', await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length === 9));
+  check('...win rate, honours and trauma in one row', await p.evaluate(() => document.querySelectorAll('#camp-body .cpan-A .cstats .cstat').length === 3));
+  check('...and the page itself does not scroll', await p.evaluate(() => { const b = document.getElementById('camp-body'); return b.scrollHeight <= b.clientHeight + 1; }));
   const rival = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get();
     return { name: c.companies.B.name, arch: c.companies.B.archetype, units: c.companies.B.roster.length };
   });
   check('...and a rival founded alongside', !!rival.arch && rival.units === 9,
     rival.name + ', ' + rival.arch + ', ' + rival.units + ' units');
-  check('...whose character the hub shows', new RegExp(rival.name).test(txt), true, rival.name);
+  check('...whose panel the hub lists', await p.evaluate((n) => [...document.querySelectorAll('#camp-body .cpan-B .cphead b')].some(b => b.textContent === n), rival.name), rival.name);
   await shot(p, 'camp-hub.png');
 
   /* the road to the next Company Tier, laid out step by step (pp. 83-84) */
@@ -155,7 +157,7 @@ async function clickText(p, re) {
 
   /* -------------------------------------------------------- the contract */
   console.log('\nTaking a contract');
-  await clickText(p, 'Take a contract');
+  await clickText(p, '^Contract$');
   txt = await body(p);
 
   /* the three jobs on the table: who, how they fight, what it is for, and which
@@ -169,7 +171,7 @@ async function clickText(p, re) {
       names: c.rivals.filter(r => cards.some(k => k.textContent.includes(r.name))).length,
       scenarios: cards.filter(k => /Scenario D6/.test(k.textContent)).length,
       doctrines: cards.filter(k => /Doctrines:|Paths:|Pathways:|Advancements:/.test(k.textContent)).length,
-      styles: c.rivals.filter(r => cards.some(k => k.textContent.includes(r.blurb))).length,
+      styles: c.rivals.filter(r => cards.some(k => k.textContent.includes(window.PMCCamp.themeOf(r)))).length,
       sizes: cards.filter(k => /Battle Tier/.test(k.textContent) && /Priority Level/.test(k.textContent) &&
         /most they can meet you at/.test(k.textContent)).length,
       roles: cards.filter(k => /You attack|You defend|even terms/.test(k.textContent)).length,
@@ -193,7 +195,7 @@ async function clickText(p, re) {
   check('every one can be taken', offers.buttons === offers.cards);
   // leaving and coming back must not re-roll the jobs
   await clickText(p, 'Back');
-  await clickText(p, 'Take a contract');
+  await clickText(p, '^Contract$');
   const again = await p.evaluate(() =>
     JSON.stringify(window.PMC_CAMPAIGN.get().offers.map(o => o.scenario.id)));
   check('...and the jobs do not change if you leave and come back', again === offers.stable, again);
@@ -301,6 +303,15 @@ async function clickText(p, re) {
     if (r && !r.hidden) document.getElementById('res-continue').click();
   });
   await p.waitForTimeout(400);
+  // Modifying the armies (p. 46) comes first: the company can swap from its dossier, and keeps its list here
+  check('the company may modify its army from the dossier once the table is laid', await p.evaluate(async () => {
+    const b = document.querySelector('[data-act="swapopen"]'); if (!b) return false;
+    b.click(); await new Promise(r => setTimeout(r, 200));
+    const ok = document.querySelectorAll('[data-swappick]').length > 0;
+    const d = document.querySelector('[data-act="swapdone"]'); if (d) d.click();
+    return ok;
+  }));
+  await p.waitForTimeout(300);
   await p.evaluate(() => {
     const b2 = document.querySelector('button[data-act="autodeploy"]');
     if (b2) b2.click();
@@ -351,6 +362,11 @@ async function clickText(p, re) {
     });
     await p.waitForTimeout(400);
   }
+  // Tough Negotiators (the company's doctrine) is decided first, on its own screen
+  txt = await body(p);
+  check('the payment dice are offered for Tough Negotiators first', /After the battle/i.test(txt) && /Tough Negotiators/i.test(txt));
+  await clickText(p, '^[Kk][Ee][Ee][Pp] [Tt][Hh][Ee][Mm] [Aa][Ll][Ll]$');
+  await p.waitForTimeout(300);
   txt = await body(p);
   check('the aftermath opened by itself', /Aftermath/.test(txt));
   check('...with a payment', /kUC/.test(txt), txt.match(/Two rolls of[^\n]*/)?.[0]);
@@ -467,7 +483,7 @@ async function clickText(p, re) {
 
   await clickText(p, 'Back');
   await p.waitForTimeout(250);
-  await clickText(p, 'The dossier');
+  await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
   const renamed = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-rename]');
@@ -484,7 +500,7 @@ async function clickText(p, re) {
 
   await clickText(p, 'Back');
   await p.waitForTimeout(250);
-  await clickText(p, 'Abandon the campaign');
+  await clickText(p, '^Abandon$');
   await p.waitForTimeout(300);
   check('Abandon asks in the page',
     await p.evaluate(() => !document.getElementById('camp-ask').hidden));
@@ -501,7 +517,7 @@ async function clickText(p, re) {
   await click(p, '#btn-campaign');
   txt = await body(p);
   check('the campaign came back after a reload', /Task Force Ironhold/.test(txt));
-  check('...at the same campaign turn', /Campaign turn 1/.test(txt), txt.split('\n')[1]);
+  check('...at the same campaign turn', await p.evaluate(() => window.PMC_CAMPAIGN.get().turn === 1));
   const back = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
   check('...with the money intact', back === spent, back + ' kUC');
   const rosterBack = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);

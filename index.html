@@ -727,9 +727,62 @@
   .cmodal-box .docpick { margin-bottom: 0; }
   .cmodal-box .askrow { flex: none; }
   /* the hub: the dossier and the save file, one row under the campaign turn */
-  .hubbar { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 12px; }
-  .hubbar .lnk { flex: 1 1 auto; text-align: center; }
-  #camp-body .hubbar + .start { margin: 0 0 14px; }
+  .hubbar { display: flex; gap: 6px; margin: 0 0 12px; align-items: stretch; }
+  .hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; }
+  .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
+  .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
+  .hubbar .start.hubgo { flex: 1.4 1 auto; width: auto; margin: 0; padding: 8px 12px; }
+  .hubnote { margin: 0 0 8px; }
+  .cpan .hubbar { margin: 10px 0 0; }
+  /* the hub fits the screen: only the promotion checklist scrolls */
+  #camp.overlay > #camp-body.sheet.hubfit { display: flex; flex-direction: column; }
+  #camp-body.hubfit > * { flex: none; }
+  #camp-body.hubfit > .cpan-A { flex: 1 1 auto; min-height: 220px; display: flex; flex-direction: column; }
+  #camp-body.hubfit > .cpan-A > * { flex: none; }
+  #camp-body.hubfit > .cpan-A > .cprom { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #camp-body.hubfit > .cpan-A > .cprom > * { flex: none; }
+  #camp-body.hubfit > .cpan-A > .cprom > .cprom-list { flex: 1 1 auto; min-height: 40px; overflow-y: auto; overscroll-behavior: contain; }
+  #camp-body.hubfit .clog { max-height: 96px; overflow-y: auto; }
+  .tierbadge {
+    flex: none; align-self: center; display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 5px;
+    border: 1px solid color-mix(in srgb, var(--alpha) 70%, var(--line)); border-radius: 4px;
+    background: color-mix(in srgb, var(--alpha) 14%, transparent); color: var(--alpha);
+    font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: .04em; line-height: 1;
+  }
+  .cpan .cphead .cmoney { margin-left: auto; }
+  .cpan .cphead { flex-wrap: nowrap; align-items: center; }
+  .cpan .cphead b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 9px 0 8px; }
+  .cstat { background: rgba(255,255,255,.025); border: 1px solid var(--line); border-radius: 5px; padding: 6px 7px; display: flex; flex-direction: column; min-width: 0; }
+  .cstat b { font-family: var(--display); font-size: 17px; line-height: 1.1; }
+  .cstat span { font-size: 10px; color: var(--ink); text-transform: uppercase; letter-spacing: .02em; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cstat em { font-style: normal; font-size: 10.5px; color: var(--ink-dim); line-height: 1.3; margin-top: 1px; }
+  .cs-win b { color: var(--ink); }
+  .cs-exp b { color: var(--good); }
+  .cs-tra b { color: var(--bad); }
+  .cpan.orders { margin-top: 12px; }
+  .cmodal-box.wide { width: min(980px, 100%); }
+  .swapgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .swapcol { display: grid; gap: 6px; min-width: 0; }
+  .swapcol h4 { margin: 0 0 2px; font-family: var(--display); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
+  .swapcol .act.on { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+  .swapfoe { border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; display: grid; }
+  .swapfoe small { color: var(--ink-dim); font-size: 11px; }
+  @media (max-width: 760px) { .swapgrid { grid-template-columns: 1fr; } .swapcol.theirs { order: -1; } }
+  .dice-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 8px 0; }
+  .dice-row .die { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-3, rgba(255,255,255,.04)); font-family: var(--mono); font-size: 13px; }
+  .dice-row b { margin-left: 6px; font-family: var(--display); }
+  .dice-row .die.pick { cursor: pointer; color: var(--ink); }
+  .dice-row .die.pick.on, .dice-row .die.re { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 18%, transparent); }
+  .dice-row .die.pick:disabled { opacity: .45; cursor: default; }
+  .orow { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
+  .orow:first-of-type { border-top: 0; }
+  .orow em { font-style: normal; color: var(--ink-dim); font-size: 11.5px; }
+  .segs { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 3px; }
+  .segs .lnk.on { border-color: var(--alpha); color: var(--ink); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+  .carch { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0 0 2px; }
+  .carch .dtag { margin-left: 0; }
+  .cpan-B .tierbadge { border-color: color-mix(in srgb, var(--bravo) 70%, var(--line)); background: color-mix(in srgb, var(--bravo) 14%, transparent); color: var(--bravo); }
   .cmodal-box .cpan:last-child { margin-bottom: 0; }
   .tin {
     width: 100%; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
@@ -890,7 +943,7 @@
   /* how far a force is from its next Company Tier */
   .cprom { margin-top: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; background: rgba(255,255,255,.015); }
   .cprom.ready { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); background: color-mix(in srgb, var(--good) 7%, transparent); }
-  .cprom.done { opacity: .75; }
+  .cprom.done > .cprom-head { opacity: .75; }
   .cprom-head { display: flex; align-items: baseline; gap: 10px; }
   .cprom-head b { font-family: var(--display); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
   .cprom-count { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); }
@@ -908,6 +961,10 @@
   .cprom-sub { grid-column: 2; height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden; }
   .cprom-sub i { display: block; height: 100%; background: var(--alpha); opacity: .7; }
   .cprom-go { margin-top: 2px; }
+  .cprom-row { display: flex; gap: 6px; align-items: stretch; }
+  .cprom-row .cprom-go { flex: 1 1 auto; width: auto; margin: 0; }
+  .cprom-row .cprom-quit { flex: none; margin: 0; }
+  .cprom.done .cprom-row { margin-top: auto; padding-top: 10px; }
 
   /* what a unit is carrying, on the button that puts it in the list */
   .wear { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
@@ -1884,7 +1941,6 @@
     <h1 id="camp-title">Campaign</h1>
   </div>
   <div class="sheet camp-sheet" id="camp-body"></div>
-  <div class="askwrap" id="camp-archmodal" hidden><div class="askbox archbox" id="camp-archbox" role="dialog" aria-modal="true" aria-label="Who you are up against"></div></div>
   <div class="askwrap" id="camp-ask" hidden><div class="askbox" id="camp-askbox"></div></div>
 </div>
 
@@ -2027,20 +2083,20 @@
   </div>
 </div>
 
-<script src="src/rules/rules.js?v=d0123b795d"></script>
-<script src="src/rules/ruletext.js?v=f7cb7e5ae7"></script>
-<script src="src/rules/campaign.js?v=88463921a2"></script>
-<script src="src/rules/scenarios.js?v=9149ef69e4"></script>
-<script src="src/rules/solitaire.js?v=cb7300be13"></script>
+<script src="src/rules/rules.js?v=f7351f7648"></script>
+<script src="src/rules/ruletext.js?v=ef76e61bb9"></script>
+<script src="src/rules/campaign.js?v=68dcde086f"></script>
+<script src="src/rules/scenarios.js?v=195489f77c"></script>
+<script src="src/rules/solitaire.js?v=d53d464188"></script>
 <script src="src/view/sfx.js?v=c576028ac3"></script>
-<script src="src/rules/gen.js?v=c02eb26876"></script>
-<script src="src/view/iso.js?v=5503696f82"></script>
+<script src="src/rules/gen.js?v=b42de43295"></script>
+<script src="src/view/iso.js?v=14f0b1523d"></script>
 <script src="src/view/fx.js?v=03e963fb68"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
 <script src="src/engine/protocol.js?v=789f24fbb2"></script>
-<script src="src/engine/engine.js?v=ea31d0cf47"></script>
+<script src="src/engine/engine.js?v=84b3a5c4ea"></script>
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=a0469105ef"></script>
-<script src="src/view/dossier.js?v=1f27e73c4e"></script>
+<script src="src/view/game.js?v=7d8945fd1e"></script>
+<script src="src/view/dossier.js?v=945de21196"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

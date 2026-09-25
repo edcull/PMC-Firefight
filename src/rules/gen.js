@@ -81,7 +81,7 @@
         { text: '1-4 impassable areas (high rocks, deep canyons)', alts: [[P('rocks', 1, 4, { big: true })]] },
         { text: '1-6 hills or huge rocks', alts: [[P('hill', 1, 6)], [P('rocks', 1, 6, { big: true })]] },
         { text: '1-6 hills or woods', alts: [[P('hill', 1, 6)], [P('woods', 1, 6)]] },
-        { text: 'Mine: 1-3 buildings, may be on a hill', alts: [[P('hill', 1, 1), P('building', 1, 3)]] }
+        { text: 'Mine: 1-3 buildings, may be on a hill', alts: [[P('hill', 1, 1), P('building', 1, 3, { onHill: true })]] }
       ]
     },
     unstable: {
@@ -109,29 +109,19 @@
     water: [5, 12, 4, 10],
     deep: [5, 12, 4, 10],
     lava: [5, 12, 4, 10],
+    crystal: [5, 12, 4, 10],
+    ravine: [6, 14, 2.5, 5],
     barricade: [3, 8, 1, 1],
     // the book destroys high walls in sections up to 6", so none is laid longer
     wall: [3, 6, 1, 1]
   };
 
   function ri(rand, lo, hi) { return lo + Math.floor(rand() * (hi - lo + 1)); }
-  /* The same draw, leaning towards the top of the range. A table generated on
-     flat draws comes out emptier than the book's pictures of one — the ranges
-     read as "1-6 rocks", not "3 or 4 rocks" — so a count sits around 57% of its
-     range rather than halfway. It is a nudge, not a thumb on the scale. */
-  function riHigh(rand, lo, hi) {
-    if (hi <= lo) return lo;
-    return lo + Math.floor(Math.pow(rand(), 0.72) * (hi - lo + 1));
-  }
   function rf(rand, lo, hi) { return lo + rand() * (hi - lo); }
-  /* How many of a rolled feature go down. A "1-X" result that comes out at 1
-     is made 2: a quarter given "1-6 rocks" and then a single rock reads as the
-     roll having gone missing, not as terrain. A result of exactly one — "a
-     single crater" — is still one, and an "up to" count may still be none. */
+  /* How many of a rolled feature go down: straight off the book's range,
+     every count in it as likely as any other (p. 47). */
   function countFor(spec, rand) {
-    var n = riHigh(rand, spec.min, spec.max);
-    if (spec.min === 1 && spec.max >= 2 && n < 2) n = 2;
-    return n;
+    return ri(rand, spec.min, spec.max);
   }
 
   function overlap(a, b) {
@@ -154,14 +144,11 @@
     return out;
   }
 
-  /* One area's D6. One re-roll of a 1 or a 2: two areas in six coming up "a
-     single crater" left tables with nothing to fight over; this lifts the
-     average area roll from 3.5 to about 4.2 without ever forbidding an open
-     quarter. `memo` carries "no more than 1 - re-roll further 6s" across a table. */
+  /* One area's D6, as the book rolls it (p. 47) — no second chances.
+     `memo` carries "no more than 1 - re-roll further 6s" across a table. */
   function rollArea(gen, rand, memo) {
     memo = memo || {};
     var first = ri(rand, 1, 6), roll = first;
-    if (roll <= 2) roll = ri(rand, 1, 6);
     if (roll === 6 && gen.rows[5].once && memo.sixUsed) {
       while (roll === 6) roll = ri(rand, 1, 6);
     }
@@ -184,10 +171,27 @@
     var inset = total < 3 ? Math.min(6, Math.min(area.w, area.h) * 0.3) : 0;
     // what stands goes down first, so the walls have something to be built round
     var walls = [];
-    alt.forEach(function (spec, si) {
+    // hills go down before whatever may stand on them
+    var order = alt.map(function (spec, si) { return si; }).sort(function (a2, b2) {
+      return (alt[a2].kind === 'hill' ? 0 : 1) - (alt[b2].kind === 'hill' ? 0 : 1);
+    });
+    order.forEach(function (si) {
+      var spec = alt[si];
       if (LINEAR[spec.kind]) { walls.push({ spec: spec, n: wants[si] }); return; }
       for (var c = 0; c < wants[si]; c++) {
-        var piece = place(spec, area, existing.concat(placed), objectives, rand, W, H, inset);
+        var all = existing.concat(placed), piece = null;
+        /* A smaller piece may stand on a hill — a wood on a hill, a mine on a
+           hill (pp. 42, 48) — and then counts as the smaller piece only. The
+           book's "may be on a hill" puts it there whenever it can; anything
+           else that could goes up now and then. */
+        if (ONHILL[spec.kind] && rand() < (spec.onHill ? 1 : 0.3)) {
+          var hills = all.filter(function (h) {
+            return h.kind === 'hill' && !h.top && h.w >= 6 && h.h >= 5 &&
+              h.x + h.w / 2 >= area.x && h.x + h.w / 2 < area.x + area.w && h.y + h.h / 2 >= area.y && h.y + h.h / 2 < area.y + area.h;
+          });
+          for (var hi = 0; hi < hills.length && !piece; hi++) piece = placeOnHill(spec, hills[hi], all, rand);
+        }
+        if (!piece) piece = place(spec, area, all, objectives, rand, W, H, inset);
         if (piece) placed.push(piece);
       }
     });
@@ -208,6 +212,7 @@
     });
     var RR = root.PMC;
     if (RR && RR.shapePiece) placed.forEach(function (p) { RR.shapePiece(p, rand); });
+    levelUnder(existing.concat(placed));
     return placed;
   }
 
@@ -441,6 +446,45 @@
     return { w: w, h: h };
   }
   // no two pieces share ground: half an inch of open ground between them at least
+  // what may stand on a hill, inside its crest, clear of everything else on it
+  /* A building or bunker set on a hill stands on a levelled site: a hill that
+     rises in two steps loses its second step under it. */
+  function levelUnder(pieces) {
+    pieces.forEach(function (b) {
+      if (!b.onHill || (b.kind !== 'building' && b.kind !== 'bunker')) return;
+      pieces.forEach(function (h) {
+        if (h.kind === 'hill' && h.top && clashes(b, [h])) delete h.top;
+      });
+    });
+  }
+  var ONHILL = { woods: 1, ruins: 1, building: 1, bunker: 1, crater: 1, rocks: 1 };
+  function placeOnHill(spec, hill, existing, rand) {
+    var inner = { x: hill.x + hill.w * 0.22, y: hill.y + hill.h * 0.22, w: hill.w * 0.56, h: hill.h * 0.56 };
+    /* A wood grows over most of the hill and may run on down its sides; a
+       building, a ruin or rocks stand on top, inside the crest. */
+    var spill = spec.kind === 'woods';
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var piece;
+      if (spill) {
+        // as big as the hill or bigger, pushed off-centre so it runs down one side
+        var k = (attempt < 20 ? 0.95 : 0.7) + rand() * 0.45;
+        var ww = hill.w * k, hh = hill.h * (k * (0.8 + rand() * 0.35));
+        var ang = rand() * Math.PI * 2, off = attempt < 30 ? 0.18 + rand() * 0.14 : rand() * 0.1;
+        var cx = hill.x + hill.w / 2 + Math.cos(ang) * hill.w * off, cy = hill.y + hill.h / 2 + Math.sin(ang) * hill.h * off;
+        piece = { kind: 'woods', x: cx - ww / 2, y: cy - hh / 2, w: ww, h: hh, onHill: true };
+      } else {
+        var sz = sizeFor(spec, rand, attempt < 20 ? 0.75 : 0.55);
+        var w = Math.min(sz.w, inner.w), h = Math.min(sz.h, inner.h);
+        if (w < 2 || h < 2) return null;
+        piece = { kind: spec.kind, x: inner.x + rand() * (inner.w - w), y: inner.y + rand() * (inner.h - h), w: w, h: h, onHill: true };
+      }
+      if (piece.x < 0.5 || piece.y < 0.5 || piece.x + piece.w > (root.PMC ? root.PMC.BOARD.w : 48) - 0.5 || piece.y + piece.h > (root.PMC ? root.PMC.BOARD.h : 48) - 0.5) continue;
+      if (spec.big) piece.big = true;
+      var others = existing.filter(function (e) { return e !== hill; });
+      if (!clashes(piece, others)) return piece;
+    }
+    return null;
+  }
   function clashes(piece, existing) {
     for (var i = 0; i < existing.length; i++) {
       var e = existing[i];
@@ -500,11 +544,30 @@
   var WORLD_NAME = { desert: 'Desert world (barren)', arctic: 'Arctic world (barren)' };
 
   // the book's table for a world, under the world's own name
+  /* The barren table fought on a desert or an arctic world: its impassable
+     ground is what that world has — a field of crystal in the sand, a ravine in
+     the ice — rather than a lava field on either. */
+  var IMPASSABLE = {
+    desert: { kind: 'crystal', text: '1-3 impassable areas (crystal fields, high rocks)' },
+    arctic: { kind: 'ravine', text: '1-3 impassable areas (ice ravines, high rocks)' }
+  };
+  function worldRows(rows, planet) {
+    var im = IMPASSABLE[planet];
+    if (!im) return rows;
+    return rows.map(function (row) {
+      var hot = row.alts.some(function (alt) { return alt.some(function (sp) { return sp.kind === 'lava'; }); });
+      if (!hot) return row;
+      return {
+        text: im.text, once: row.once,
+        alts: row.alts.map(function (alt) { return alt.map(function (sp) { return sp.kind === 'lava' ? P(im.kind, sp.min, sp.max, sp.big ? { big: true } : null) : sp; }); })
+      };
+    });
+  }
   function tableFor(planet) {
     if (GENERATORS[planet]) return GENERATORS[planet];
     if (BASE[planet]) {
       var t = GENERATORS[BASE[planet]];
-      return { name: WORLD_NAME[planet], rows: t.rows };
+      return { name: WORLD_NAME[planet], rows: worldRows(t.rows, planet) };
     }
     return GENERATORS.sparse;
   }
@@ -525,7 +588,7 @@
 
   root.PMCGen = {
     GENERATORS: GENERATORS, SIZES: SIZES, generate: generate, areasOf: areasOf, rollArea: rollArea,
-    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place,
+    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place, ONHILL: ONHILL, levelUnder: levelUnder,
     tableFor: tableFor, resolvePlanet: resolvePlanet, VARIANTS: VARIANTS, BASE: BASE
   };
 })(window);

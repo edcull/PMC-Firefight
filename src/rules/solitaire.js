@@ -783,14 +783,28 @@
       if (u && u.soloMilitia) return x >= 12 && y >= 12 && x <= W - 12 && y <= H - 12;
       return inSafeZone(state, x, y);
     },
+    /* "The player may decide to keep some of their units in reserve. These units
+       may enter the table in any Reserve phase" (p. 153): which of them, and when,
+       is the player's to say — a pick each turn, none to all. */
+    pickReserves: true,
+    reservePick: function (state, side) {
+      if (side !== 'A') return null;
+      var pool = state.units.filter(function (u) {
+        return u.side === 'A' && u.alive && u.reserve && u.wave !== 'civ' && !u.soloCiv;
+      });
+      return pool.length ? { pool: pool, min: 0, max: pool.length,
+        text: 'Bring on any of your reserves this turn, beside the safe-zone building — or keep them back for later.' } : null;
+    },
     reserves: function (state, side) {
       if (side === 'A') {
         // civilian groups come out on a 5+; the player's own reserves come in by the safe building
+        // (all at once for an AI player; a player picks them, and the pick is added to these)
+        var picked = state.sc.picked && state.sc.picked.A;
         var out = [];
         state.units.forEach(function (u) {
           if (u.side !== 'A' || !u.alive || !u.reserve) return;
           if (u.wave === 'civ') { if (d6() >= 5) out.push(u); }
-          else if (!u.wave || u.wave === 'held') out.push(u);
+          else if (!picked && (!u.wave || u.wave === 'held')) out.push(u);
         });
         return out;
       }

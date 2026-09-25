@@ -9,6 +9,7 @@ const { page: PAGE } = require('../where.js');
   const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
   // the page is two levels up (test/browser/ has no index.html of its own)
   await p.goto('file://' + PAGE); await p.waitForTimeout(600); if (process.env.COOP) await p.evaluate(() => { window.__coop = true; });
+  const totals = { m: 0, r: 0 };
   const scens = (process.env.SCENS || 's_crush,s_vip,s_decap,s_evac,s_sabotage,s_ambush').split(',');
   for (const sc of scens) {
     await p.evaluate((sc) => {
@@ -43,9 +44,18 @@ const { page: PAGE } = require('../where.js');
       last = r;
       if (r.over || r.t >= (+process.env.TURNS || 5)) break;
     }
-    console.log(sc, JSON.stringify(last));
+    // every OpFor unit rolls on the behaviour table as it activates — hulls and aircraft too (p. 147)
+    const mrolls = await p.evaluate(() => {
+      const s = window.PMC_STATE();
+      const machines = s.units.filter(u => u.side === 'B' && (u.cls === 'vehicle' || u.cls === 'aircraft') && !(u.rules || []).some(r => /^(Turret|Immobile)/.test(r))).map(u => u.label);
+      const lines = (s.log || []).map(l => l.text || '').filter(t => /behaviour D6/.test(t));
+      return { machines: machines.length, rolled: lines.filter(t => machines.some(m => t.indexOf(m) === 0)).length };
+    });
+    if (mrolls.machines) totals.m += mrolls.machines, totals.r += mrolls.rolled;
+    console.log(sc, JSON.stringify(last), 'OpFor hulls ' + mrolls.machines + ', their behaviour rolls ' + mrolls.rolled);
     if (!last || (!last.over && last.t < 2)) { errs.push(sc + ' stalled at turn ' + (last && last.t)); }
   }
+  if (totals.m && !totals.r) errs.push('OpFor hulls never rolled on the behaviour table');
   console.log('errors:', errs.slice(0, 5).join(' | ') || 'none');
   if (errs.length) process.exitCode = 1;
   await b.close();

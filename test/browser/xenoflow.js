@@ -131,7 +131,7 @@ async function drain(p) {
 
   /* --------------------------------------------------------- the contract */
   console.log('\nA contract');
-  await clickText(p, '[Tt][Aa][Kk][Ee] [Aa] [Cc][Oo][Nn][Tt][Rr][Aa][Cc][Tt]');
+  await clickText(p, '^Contract$');
   await p.waitForTimeout(200);
   const offered = await p.evaluate(() => {
     const cards = [...document.querySelectorAll('#camp-body .cpan-offer')];
@@ -224,8 +224,6 @@ async function drain(p) {
     (txt.split('\n').filter(l => /Territorial/.test(l))[0] || 'no line'));
   check('...and says where the other two forces were', /elsewhere on the world/i.test(txt),
     (txt.split('\n').filter(l => /fought their own battle/.test(l))[0] || 'no line'));
-  check('...and who is coming next', /next:/i.test(txt),
-    (txt.match(/Next: [^\n]+/i) || [])[0]);
   await shot(p, 'xeno-aftermath.png');
   const after = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get(), A = c.companies.A;
@@ -250,9 +248,9 @@ async function drain(p) {
       if (!await clickText(p, '[Cc]ontinue|[Bb]ack|[Cc]lose|CONTINUE|BACK|CLOSE')) break;
     }
   }
-  check('the hub came back', /take a contract/i.test(await body(p)),
+  check('the hub came back', /\bcontract\b/i.test(await body(p)),
     (await body(p)).split('\n').slice(0, 2).join(' | '));
-  await clickText(p, '[Tt][Hh][Ee] [Dd][Oo][Ss][Ss][Ii][Ee][Rr]');
+  await clickText(p, '^Dossier$');
   txt = await body(p);
   check('the dossier opened', /units on the books/i.test(txt), txt.split('\n')[1]);
   check('the dossier speaks Territorial Points', /TerP/.test(txt) && !/kUC/.test(txt));

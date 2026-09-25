@@ -53,7 +53,7 @@ async function clickText(p, re) {
   check('the charter can be signed', await clickText(p, 'Sign the charter'));
 
   console.log('\nThe soldiers');
-  await clickText(p, 'The dossier');
+  await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
   const cards = await p.evaluate(() => [...document.querySelectorAll('#camp-body button[data-men]')].map(b => b.textContent));
   check('every unit card opens to its details', cards.length === 9 && cards.every(c => /Details/.test(c)), cards.join(' | '));
@@ -125,7 +125,7 @@ async function clickText(p, re) {
   const winText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dwin'); return d ? d.textContent : ''; });
   check('no win rate before the first battle', (await winText()) === '');
   const trauText = () => p.evaluate(() => { const d = document.querySelector('#camp-body .dtrau'); return d ? d.textContent : ''; });
-  check('the dossier shows veterancy', /^0% veterancy 0 Battle Honours across 9 units$/.test(await expText()), await expText());
+  check('the dossier shows honours', /^0% honours 0 Battle Honours across 9 units$/.test(await expText()), await expText());
   await p.evaluate(() => {
     const r = window.PMC_CAMPAIGN.get().companies.A.roster;
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];
@@ -133,7 +133,7 @@ async function clickText(p, re) {
   });
   await clickText(p, '^Spend EXP$');
   await clickText(p, '^Units$');
-  check('...as honours held over units on the books', /^33\.3% veterancy 3 Battle Honours across 9 units$/.test(await expText()), await expText());
+  check('...as honours held over units on the books', /^33\.3% honours 3 Battle Honours across 9 units$/.test(await expText()), await expText());
   check('...with the win rate first', /^75% won 3 of 4 battles$/.test(await winText()), await winText());
   check('...and trauma beside it', /^11\.1% trauma 1 Battle Trauma across 9 units$/.test(await trauText()), await trauText());
   // the head of the dossier, down to its tabs

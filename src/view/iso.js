@@ -289,7 +289,11 @@
     road: { ramp: ['#4c463a', '#575042', '#625a4b', '#6d6454', '#786e5d'], fleck: ['#3a342a', '#8a806c'], rim: '#2e2921' },
     water: { ramp: WATER, fleck: ['#74b0c2', '#22414f'], rim: '#1b3540', wet: true },
     deep: { ramp: DEEPW, fleck: ['#25506a', '#0d202c'], rim: '#0a1822', wet: true },
-    lava: { ramp: CRUST, fleck: ['#d1541a', '#f08a22', '#1a1412'], rim: '#140f0c', hot: true }
+    lava: { ramp: CRUST, fleck: ['#d1541a', '#f08a22', '#1a1412'], rim: '#140f0c', hot: true },
+    // a desert's crystal field: dark, scorched brown ground the crystals have grown through
+    crystal: { ramp: ['#1f1510', '#2a1d15', '#35251a', '#40301f'], fleck: ['#5aff9a', '#1a110b', '#54402c'], rim: '#140d09' },
+    // an arctic world's ice ravine: the floor far down in blue dark
+    ravine: { ramp: ['#060d15', '#0a1622', '#0f2030', '#152a3e'], fleck: ['#1f3d57', '#081018'], rim: '#dfeef7' }
   };
 
   function hex3(h) {
@@ -316,7 +320,9 @@
     bunker:   { r: 3, p: -0.14, d: 0.2, n: 0.02, tint: '#5d5850', tw: 0.2 },
     wall:     { r: 2, p: -0.08, d: 0.12, n: 0 },
     barricade:{ r: 1.6, p: -0.06, d: 0.1, n: -0.02 },
-    lava:     { r: 4, p: -0.16, d: 0.08, n: -0.12, tint: '#3b322b', tw: 0.45 }
+    lava:     { r: 4, p: -0.16, d: 0.08, n: -0.12, tint: '#3b322b', tw: 0.45 },
+    crystal:  { r: 3, p: -0.14, d: 0.1, n: -0.08, tint: '#4a3524', tw: 0.4 },
+    ravine:   { r: 2.5, p: -0.1, d: -0.04, n: 0.08, tint: '#f2f8fb', tw: 0.35 }
   };
   function groundFit(terrain, seed) {
     var STEP = 0.5, cw = Math.ceil(W / STEP) + 2, ch = Math.ceil(H / STEP) + 2;
@@ -338,7 +344,7 @@
           var o = j * cw + i;
           P[o] += f.p * w; D[o] += f.d * w; N[o] += f.n * w;
           if (f.tint) {
-            var tc = hex3(f.tint), tw2 = Math.min(1, f.tw * (out < 0 ? 1 : Math.max(0, 1 - out / f.r) * (0.7 + vnoise(x / 1.6, y / 1.6, seed + 630) * 0.6)));
+            var tc = hex3((r.kind === 'rocks' || r.kind === 'crystal') && ROCKTINT || f.tint), tw2 = Math.min(1, f.tw * (out < 0 ? 1 : Math.max(0, 1 - out / f.r) * (0.7 + vnoise(x / 1.6, y / 1.6, seed + 630) * 0.6)));
             if (tw2 > TW[o]) { TW[o] = tw2; TR[o] = tc[0]; TG[o] = tc[1]; TB[o] = tc[2]; }
           }
           if (f.mud && out < f.mud) {              // a band of mud right at the water's edge
@@ -367,6 +373,28 @@
   /* What grows on this world, set with its ground as the table is baked: the
      colour of a tuft of grass, and how much of a hilltop carries one. */
   var BLADES = null, HILLTUFT = 0.65;
+  /* The rubble under a rock pile is the world's own low ground broken up, not
+     one grey for every planet: set with the ground as the table is baked. */
+  var ROCKF = null, ROCKTINT = null;
+  function floorOf(kind) {
+    if (ROCKF && kind === 'rocks') return ROCKF;
+    // a crystal field grows out of the same broken ground, with green glinting in it
+    if (ROCKF && kind === 'crystal') return { ramp: ROCKF.ramp, fleck: ['#5aff9a', '#9dffc4'].concat(ROCKF.fleck.slice(0, 2)), rim: ROCKF.rim };
+    return FLOOR[kind];
+  }
+  function rockColours(GP) {
+    var mud = GP.mud.map(hex3), sand = GP.sand.map(hex3), soil = GP.soil.map(hex3), scree = SCREE.map(hex3);
+    function hx(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
+    var base = mud.concat([sand[1], sand[2]]).slice(0, 5);
+    return {
+      floor: {
+        ramp: base.map(function (c, i) { return hx(mix3(c, scree[i], 0.3)); }),
+        fleck: [hx(sand[3]), hx(mix3(mud[0], [0, 0, 0], 0.4)), hx(soil[4])],
+        rim: hx(mix3(mud[0], [0, 0, 0], 0.35))
+      },
+      tint: hx(mix3(mud[2] || mud[1], scree[3], 0.3))
+    };
+  }
   function hillColours(GP) {
     var soil = GP.soil.map(hex3), mud = GP.mud.map(hex3), scrub = GP.scrub.map(hex3), sand = GP.sand.map(hex3);
     function hx(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
@@ -394,6 +422,7 @@
       cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
     }
     HILLC = hillColours(GP);
+    var RC = rockColours(GP); ROCKF = RC.floor; ROCKTINT = RC.tint;
     BLADES = GP.blade || BLADE;
     HILLTUFT = GP.hillTufts != null ? GP.hillTufts : 0.65;
     var cv = document.createElement('canvas');
@@ -471,12 +500,12 @@
     /* --- every terrain rectangle, painted as the rectangle it is --- */
     terrain.forEach(function (r, ri) {
       if (r.kind === 'hill') return;               // the plateau is painted after the slopes
-      if (FLOOR[r.kind]) paintFloor(d, r, FLOOR[r.kind], seed + ri * 131, lat, fN, fD);
+      if (FLOOR[r.kind]) paintFloor(d, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD);
     });
 
     g.putImageData(img, 0, 0);
     // lava lies at the bottom of cracks: the rock walls go in over the melt
-    terrain.forEach(function (r, ri) { if (r.kind === 'lava') lavaWalls(g, r, seed + ri * 131); });
+    terrain.forEach(function (r, ri) { if (r.kind === 'lava' || r.kind === 'ravine') lavaWalls(g, r, seed + ri * 131, r.kind); });
 
     // the board itself: a slab with a lit top edge and a shadowed lip
     var n0 = toScreen(0, 0), nE = toScreen(W, 0), nS = toScreen(W, H), nWt = toScreen(0, H);
@@ -516,6 +545,14 @@
       var top = g.getImageData(0, 0, PIXW, PIXH), td = top.data;
       hills.forEach(function (r, ri) {
         paintFloor(td, r, HILLC.floor, seed + ri * 419, lat, fN, fD, ELEV);
+      });
+      // a wood (or rubble, or a ruin) standing on a hill lies on the plateau, not under it
+      function onAHill(x, y) {
+        for (var hq = 0; hq < hills.length; hq++) if (depthIn(hills[hq], x, y) > 0) return true;
+        return false;
+      }
+      terrain.forEach(function (r, ri) {
+        if (r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker') paintFloor(td, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD, ELEV, onAHill);
       });
       g.putImageData(top, 0, 0);
       hills.forEach(function (r) { hillCrest(g, r, seed); });
@@ -667,7 +704,8 @@
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   }
 
-  function paintFloor(d, r, spec, seed, lat, fN, fD, lift) {
+  // `mask(x, y)`: paint only where it says yes — a wood's floor on the part of it that is up on a hill
+  function paintFloor(d, r, spec, seed, lat, fN, fD, lift, mask) {
     lift = lift || 0;
     var ramp = spec.ramp.map(hex3), rim = hex3(spec.rim);
     var fleck = spec.fleck.map(hex3);
@@ -680,7 +718,7 @@
     var y0 = Math.max(0, Math.floor(Math.min(c1.y, c2.y, c3.y, c4.y)) - pad - lift);
     var y1 = Math.min(PIXH - 1, Math.ceil(Math.max(c1.y, c2.y, c3.y, c4.y)) + pad - lift);
     var INV_K = 1 / K, INV_HK = 2 / K;
-    var WOB = lift ? 0 : 0.09;                     // how far the edge may wander, inches
+    var WOB = lift && !mask ? 0 : 0.09;            // how far the edge may wander, inches (a hill's own edge is crisp; a wood on it is not)
 
     for (var by = y0; by <= y1; by++) {
       var v0 = (by + lift - OY) * INV_HK;
@@ -689,6 +727,7 @@
       var row = by * PIXW * 4, br = by & 3;
       for (var bx = x0; bx <= x1; bx++, wx += dx, wy += dy) {
         if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
+        if (mask && !mask(wx, wy)) continue;
         // distance inside the piece — its outline, or its rectangle — in inches
         var din = (r.poly || r.parts) ? (wx < r.x - 1 || wy < r.y - 1 || wx > r.x + r.w + 1 || wy > r.y + r.h + 1 ? -9 : depthIn(r, wx, wy))
           : Math.min(wx - r.x, r.x + r.w - wx, wy - r.y, r.y + r.h - wy);
@@ -792,7 +831,16 @@
      behind their own rim. Out from the points of the break, hairline cracks run
      on across the surrounding ground. All of it is inside the piece except the
      hairlines, which are only paint. */
-  function lavaWalls(g, r, seed) {
+  /* The same broken-crust hole serves an arctic world's ice ravine: its walls
+     are pale ice going down to blue dark rather than rock lit orange by melt. */
+  var WALLS = {
+    lava: { top: ['#6f6860', '#4f4943'], mid: ['#3d3833', '#2b2724'], deep: ['#2a1d16', '#b4521c', '#f08a22'], bevel: ['#8a8279', '#6a635c'],
+      foot: '#f08a22', rimFar: '#6e645a', rimNear: ['#15110e', '#5a5047'], crack: '#120e0c', crackGlow: 'rgba(240,120,40,.55)', crackLit: 'rgba(150,138,122,.25)', frac: 'rgba(120,108,96,.35)' },
+    ravine: { top: ['#eef6fb', '#cfe0ea'], mid: ['#9fc0d6', '#7fa3bd'], deep: ['#3f6a8a', '#16304a', '#08121c'], bevel: ['#ffffff', '#dce9f1'],
+      foot: '#0c1a28', rimFar: '#f4fbff', rimNear: ['#5c7f98', '#e8f2f8'], crack: '#5f86a3', crackGlow: 'rgba(200,230,250,.6)', crackLit: 'rgba(255,255,255,.45)', frac: 'rgba(255,255,255,.4)' }
+  };
+  function lavaWalls(g, r, seed, kind) {
+    var WP = WALLS[kind || 'lava'];
     var lr = rng(seed + Math.round(r.x * 41 + r.y * 13));
     var edges = hillOutline(r);
     var DEPTH = K * 1.7;
@@ -812,11 +860,11 @@
       // a neighbouring wall's depth at the shared corner, so the faces meet
       var dA = q.dep, dB = (far[k + 1] && far[k + 1].i === (q.i + 1) % edges.length) ? far[k + 1].dep : q.dep * (0.85 + lr() * 0.3);
       var lit = Math.max(0, Math.min(1, (e.nx - e.ny + 1) / 2));   // which way the face is turned
-      var top = lit > 0.5 ? '#6f6860' : '#4f4943', mid = lit > 0.5 ? '#3d3833' : '#2b2724';
+      var top = lit > 0.5 ? WP.top[0] : WP.top[1], mid = lit > 0.5 ? WP.mid[0] : WP.mid[1];
       poly(g, [A, B, [B[0], B[1] + dB], [A[0], A[1] + dA]],
-        vgrad(g, Math.min(A[1], B[1]), Math.max(A[1] + dA, B[1] + dB), [top, mid, '#2a1d16', '#b4521c', '#f08a22']));
+        vgrad(g, Math.min(A[1], B[1]), Math.max(A[1] + dA, B[1] + dB), [top, mid].concat(WP.deep)));
       // the broken slab's upper edge: a bevel of the ground's own crust catching the light
-      poly(g, [A, B, [B[0], B[1] + 3], [A[0], A[1] + 3]], lit > 0.5 ? '#8a8279' : '#6a635c');
+      poly(g, [A, B, [B[0], B[1] + 3], [A[0], A[1] + 3]], lit > 0.5 ? WP.bevel[0] : WP.bevel[1]);
       // blocky breaks: a step down part-way along the face
       if (lr() > 0.4) {
         var st = 0.3 + lr() * 0.4, sx0 = A[0] + (B[0] - A[0]) * st, sy0 = A[1] + (B[1] - A[1]) * st;
@@ -829,17 +877,17 @@
       for (var f = 0; f < span / 7; f++) {
         var t = lr(), fx = A[0] + (B[0] - A[0]) * t, fy = A[1] + (B[1] - A[1]) * t, fd = dA + (dB - dA) * t;
         edgeLine(g, [fx, fy + 1], [fx + (lr() - 0.5) * 3, fy + fd * (0.5 + lr() * 0.45)], 'rgba(10,8,7,.55)', 1);
-        if (lr() > 0.5) edgeLine(g, [fx + 1, fy + 2], [fx + 1, fy + fd * 0.35], 'rgba(120,108,96,.35)', 1);
+        if (lr() > 0.5) edgeLine(g, [fx + 1, fy + 2], [fx + 1, fy + fd * 0.35], WP.frac, 1);
       }
-      // the glow of the melt climbing the foot of the wall
-      edgeLine(g, [A[0], A[1] + dA - 1], [B[0], B[1] + dB - 1], '#f08a22', 1);
+      // the glow of the melt climbing the foot of the wall (or the ravine's dark)
+      edgeLine(g, [A[0], A[1] + dA - 1], [B[0], B[1] + dB - 1], WP.foot, 1);
     });
     g.restore();
     // the rim: a hard lit edge on the far side of the hole, a dark lip on the near
     edges.forEach(function (e) {
       var A = sp2(e.A[0], e.A[1]), B = sp2(e.B[0], e.B[1]);
-      if (e.nx + e.ny < 0.05) edgeLine(g, A, B, '#6e645a', 1);
-      else { edgeLine(g, A, B, '#15110e', 2); edgeLine(g, [A[0], A[1] - 1], [B[0], B[1] - 1], '#5a5047', 1); }
+      if (e.nx + e.ny < 0.05) edgeLine(g, A, B, WP.rimFar, 1);
+      else { edgeLine(g, A, B, WP.rimNear[0], 2); edgeLine(g, [A[0], A[1] - 1], [B[0], B[1] - 1], WP.rimNear[1], 1); }
     });
     // hairline cracks running on from the points of the break
     var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
@@ -861,9 +909,9 @@
       }
       for (var k = 1; k < pts.length; k++) {
         var w2 = Math.max(1, Math.round(width * (1 - k / pts.length)));
-        edgeLine(g, pts[k - 1], pts[k], '#120e0c', w2);
-        if (hot && k === 1) edgeLine(g, pts[k - 1], pts[k], 'rgba(240,120,40,.55)', 1);
-        else edgeLine(g, [pts[k - 1][0], pts[k - 1][1] + 1], [pts[k][0], pts[k][1] + 1], 'rgba(150,138,122,.25)', 1);
+        edgeLine(g, pts[k - 1], pts[k], WP.crack, w2);
+        if (hot && k === 1) edgeLine(g, pts[k - 1], pts[k], WP.crackGlow, 1);
+        else edgeLine(g, [pts[k - 1][0], pts[k - 1][1] + 1], [pts[k][0], pts[k][1] + 1], WP.crackLit, 1);
       }
     }
   }
@@ -1061,6 +1109,15 @@
         }
         return;
       }
+      if (r.kind === 'crystal') {
+        // clusters of glowing green crystal standing up out of the dark ground
+        for (var cz = 0; cz < Math.max(3, Math.round(area / 6)); cz++) {
+          var czq = spotIn(r, 0.5, rand);
+          props.push({ kind: 'crystals', x: czq.x, y: czq.y, size: 1.1 + rand() * 1.1, seed: (rand() * 9999) | 0 });
+        }
+        return;
+      }
+      if (r.kind === 'ravine') return;               // nothing stands in a crevasse
       if (r.kind === 'lava') {
         // smoke and heat rising out of the crack
         for (var vt = 0; vt < Math.max(1, Math.round(area / 22)); vt++) {
@@ -1810,6 +1867,43 @@
           ellipse(g, lx5 - 1, ly5 - 1, a(0.5), a(0.2), '#5b8a3a');
           if (lr() > 0.75) dot(g, lx5, ly5 - 1, '#e8b4c8', 2);
         }
+        break;
+      }
+      case 'crystals': {
+        /* A cluster of green crystal: faceted prisms from one root, lit from
+           within — a glow pooled on the ground round them and brightest at the tips. */
+        var cr7 = rng(pr.seed), n7 = 3 + (cr7() * 4 | 0), sz7 = pr.size || 1;
+        /* a radioactive glow: light added to the ground, not paint on it —
+           a wide pool that fades out, with a hot core under the roots */
+        function halo(rx, ry, cy, alpha) {
+          g.save(); g.globalCompositeOperation = 'lighter';
+          g.translate(p.x, cy); g.scale(1, ry / rx);
+          var hg = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+          hg.addColorStop(0, 'rgba(110,255,160,' + alpha + ')');
+          hg.addColorStop(0.35, 'rgba(60,230,120,' + alpha * 0.55 + ')');
+          hg.addColorStop(1, 'rgba(30,200,90,0)');
+          g.fillStyle = hg; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill();
+          g.restore();
+        }
+        halo(a(4.6 * sz7), a(2.2 * sz7), p.y, 0.45);
+        ellipse(g, p.x, p.y, a(1.4 * sz7), a(0.6 * sz7), 'rgba(150,255,190,.3)');
+        var shards = [];
+        for (var k7 = 0; k7 < n7; k7++) {
+          var lean = (cr7() - 0.5) * 0.8, hgt = a((1.6 + cr7() * 2.4) * sz7), wid = a((0.6 + cr7() * 0.45) * sz7);
+          shards.push({ ox: (cr7() - 0.5) * a(1.4 * sz7), lean: lean, h: hgt, w: wid });
+        }
+        shards.sort(function (s1, s2) { return s2.h - s1.h; }).forEach(function (sh) {
+          var bx7 = p.x + sh.ox, by7 = p.y, tx = bx7 + Math.sin(sh.lean) * sh.h, ty = by7 - Math.cos(sh.lean) * sh.h;
+          var cx7 = tx - Math.sin(sh.lean) * sh.w * 0.9, cy7 = ty + Math.cos(sh.lean) * sh.w * 0.9;
+          poly(g, [[bx7 - sh.w, by7], [cx7 - sh.w * 0.8, cy7], [tx, ty], [bx7, by7 + sh.w * 0.35]],
+            vgrad(g, ty, by7, ['#7dffb4', '#2fb56a', '#12502f']));                                  // shaded face
+          poly(g, [[bx7, by7 + sh.w * 0.35], [tx, ty], [cx7 + sh.w * 0.8, cy7], [bx7 + sh.w, by7]],
+            vgrad(g, ty, by7, ['#d4ffe6', '#5cf09a', '#1f8a4c']));                                  // lit face
+          edgeLine(g, [bx7, by7 + sh.w * 0.35], [tx, ty], 'rgba(235,255,245,.85)', 1);           // the glint down the edge
+          ellipse(g, tx, ty, a(0.5 * sz7), a(0.5 * sz7), 'rgba(160,255,200,.35)');               // the glow at the tip
+          dot(g, tx, ty, '#ffffff', 1);
+        });
+        halo(a(2.6 * sz7), a(2.6 * sz7), p.y - a(2 * sz7), 0.3);             // the air round them lit too
         break;
       }
       case 'vent': {
@@ -10397,7 +10491,7 @@
       var filled = Math.max(PIXEL, Math.round(Math.min(1, u.sp / (2 * opts.morale)) * w));
       rect(g, p.x - w / 2 - 1, head - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
       rect(g, p.x - w / 2, head, w, bh, '#15181d');
-      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : '#c9762f');
+      rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : rst === 'suppressed' ? '#e0a23a' : '#6fbf5a');
     }
     if (u.marked) {
       dot(g, p.x + a(5), head - a(2), '#e8c15a');
@@ -10539,6 +10633,9 @@
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
     animates: animates,
+    flush: function () {       // the browser threw our canvases away (a phone backgrounding the tab): paint them again
+      sprites = {}; corpses = {}; hullCache = {}; TEX_TILE = {}; DIM_CANVAS = null;
+    },
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution

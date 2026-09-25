@@ -556,7 +556,7 @@
     if (bugs) comp = COMPOSITION_BUGS[battleTier];
     // Rebel Tactics (p. 95) only bear on a Rebel list
     if (!rebel) tactic = null;
-    var budget = comp.points * pl, freeTier = battleTier - 1, freeUsed = 0;
+    var budget = comp.points * pl, freeTier = battleTier - 1, freeUsed = 0, waveFree = 0;
     /* Human Wave Attacks: two extra infantry units of the Battle Tier per Priority
        Level, over and above the points. They come off the bill the way Strength in
        Numbers does, but they are the Battle Tier's own units rather than a Tier below. */
@@ -566,7 +566,7 @@
         var p = BY_KEY[k];
         if (p && p.cls === 'infantry' && p.tier === battleTier) waveInf++;
       });
-      var waveFree = Math.min(2 * pl, waveInf);
+      waveFree = Math.min(2 * pl, waveInf);
       spent -= waveFree * battleTier;
       freeUsed += waveFree;
     }
@@ -584,6 +584,8 @@
       var lim = comp.limits[t - 1], lo = lim[0] * pl, hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (doc('O2') && t === battleTier) lo = Math.ceil(lo / 2);
       if (doc('O5') && t === freeTier && hi !== 99) hi += pl;
+      // Human Wave Attacks: the extra units are "additional" — over the Tier's limit as well as the points (p. 95)
+      if (tactic === 'wave' && t === battleTier && hi !== 99) hi += waveFree;
       if (counts[t] < lo) faults.push('Needs at least ' + lo + ' Tier ' + ROMAN[t] + ' units (has ' + counts[t] + ').');
       if (counts[t] > hi) faults.push('At most ' + hi + ' Tier ' + ROMAN[t] + ' units (has ' + counts[t] + ').');
     }
@@ -905,7 +907,7 @@
       var o = state.units[i];
       if (!o.alive || o.aboard || o.side !== u.side || o === u) continue;
       if (!hasOwn(o, 'Death or Glory, Comrades!')) continue;
-      if (status(o) === 'broken') continue;
+      if (!projects(o)) continue;                          // a pinned-down leader shouts at nobody (p. 28)
       if (u.tier >= o.tier + 2) continue;
       if (unitDist(o, u) <= reach) return o;
     }
@@ -941,6 +943,11 @@
     water:     { name: 'Shallow water', blocks: false, impassable: false, movePenalty: 1, cover: 0, fp: 0, shallow: true },
     deep:      { name: 'Deep water',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     lava:      { name: 'Lava field',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
+    /* The barren table's impassable ground (p. 47), as a desert or an arctic
+       world has it: a field of glowing crystal, or a ravine in the ice. Both
+       play as a lava field does — nobody crosses, everyone sees over. */
+    crystal:   { name: 'Crystal field', blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
+    ravine:    { name: 'Ice ravine',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     // the Demolish scenario's target: impassable, and only the Demolish action
     // touches it — a Sapper charge at +4, anyone else's at +2 (p. 54)
     objective: { name: 'The objective', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0, destructible: 'target' },
@@ -1166,7 +1173,7 @@
     return t;
   }
   // the pieces that come in natural outlines; built things stay square
-  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, hill: 1 };
+  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, crystal: 1, ravine: 1, hill: 1 };
   /* The families of outline each kind is drawn from:
        blob   — a lumpy round-cornered patch
        lobed  — two to four lobes, like a copse grown together or a clover of pools
@@ -1180,6 +1187,8 @@
     water: ['blob', 'kidney', 'kidney', 'long', 'lobed'],
     deep: ['blob', 'kidney', 'long', 'lobed'],
     lava: ['rift', 'rift', 'longrift', 'longrift', 'rift'],
+    crystal: ['blob', 'lobed', 'kidney'],
+    ravine: ['longrift', 'longrift', 'longrift', 'rift'],
     hill: ['blob', 'blob', 'lobed', 'kidney']
   };
   /* Every outline is star-shaped about its centre — one radius per direction —
@@ -1398,7 +1407,13 @@
     }
     return lv;
   }
-  function levelOf(state, u) { return u && u.x >= 0 ? groundLevel(state, u.x, u.y) : 0; }
+  /* A unit in a wood (or anything else) standing on a hill counts as being in
+     that piece only, and takes none of the hill's rules (p. 42). */
+  function levelOf(state, u) {
+    if (!u || u.x < 0) return 0;
+    var lv = groundLevel(state, u.x, u.y);
+    return lv && terrainAt(state, u.x, u.y) !== 'hill' ? 0 : lv;
+  }
   // the upper step of a stepped hill, as a piece of its own for sight lines
   function upperStep(r) {
     var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -1841,6 +1856,7 @@
       var o = state.units[i];
       if (o === u || o.side !== u.side || !onBoard(o) || !has(o, 'Overmind')) continue;
       if (!anyTier && o.tier < u.tier) continue;
+      if (!anyTier && !projects(o)) continue;               // cover and rally are bonuses: a steady Overmind only (p. 28)
       if (unsup && status(o) !== 'ready') continue;
       if (unitDist(o, u) <= reach) return o;
     }
@@ -1853,7 +1869,7 @@
     if (!state || !has(a, 'Animal Behaviour') || campFlag(a, 'deafSenses')) return 0;
     var reach = doctrine(state, a.side, 'BC3') ? 24 : 18, n = 0;
     state.units.forEach(function (o) {
-      if (o.side !== a.side || !onBoard(o) || !has(o, 'Pheromone Markers')) return;
+      if (o.side !== a.side || !projects(o) || !has(o, 'Pheromone Markers')) return;   // steady markers only (p. 28)
       if (unitDist(o, t) <= reach) n += campFlag(o, 'intensePheromones') && !inAssault ? 2 : 1;
     });
     return Math.min(3, n);
@@ -2034,6 +2050,8 @@
         if (r <= 2) tag = 'Steady, boys!';
         else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
         else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
+        // Combat Drugs stack with Field Medics (p. 87): the man the medic lost may still get up
+        else if (drugs && d6() === 6) { tag = 'MEDIC! man down — Combat Drugs: he gets back up (1 SP)'; out.sp += 1; out.medic = medic.id; }
         else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
       } else if (has(target, 'Animal Behaviour')) {
         // bugs: shrug it off or burst (p. 116)
@@ -2129,10 +2147,15 @@
   /* ---------- vehicles and aircraft: damage, wrecks and repairs ---------- */
   // A hit on a machine: 1 bounces, 2-5 does a point, 6+ is a critical for D3 —
   // or D6 when the shot came from an Anti-tank or Anti-aircraft weapon.
-  function resolveDamage(target, hits, pierce) {
+  // what a scenario adds to every Damage roll against a side (Protecting the VIP: +2, p. 151)
+  function dmgMod(state, a, t) {
+    return state && state.scen && state.scen.hitMod && a && t ? (state.scen.hitMod(state, a, t) || 0) : 0;
+  }
+  function resolveDamage(target, hits, pierce, mod) {
     var out = { damage: 0, rolls: [] };
+    mod = mod || 0;
     for (var i = 0; i < hits; i++) {
-      var r = d6(), tag;
+      var r0 = d6(), r = Math.min(6, r0 + mod), tag;
       if (r === 1) tag = 'Bounced off the armour!';
       else if (r <= 5) { tag = 'Target damaged! (1 DP)'; out.damage += 1; }
       else {
@@ -2140,7 +2163,7 @@
         tag = 'Critical hit! (' + (pierce ? 'D6 ' : 'D3 ') + crit + ' DP)';
         out.damage += crit;
       }
-      out.rolls.push('D6 ' + r + ' → ' + tag);
+      out.rolls.push('D6 ' + r0 + (mod ? '+' + mod : '') + ' → ' + tag);
     }
     return out;
   }
@@ -2286,22 +2309,53 @@
       log.push({ t: 'note', text: a.label + ' tries to break into ' + t.label + ' — D6 ' + roll + ': the ice holds.' });
       return { log: log, roll: roll, turned: false, locked: false };
     }
-    if (roll >= 5 && !t.activated && typeof fireBack === 'function') {
-      turned = fireBack(t);                       // the drone is made to shoot its own side
+    var hits = d3() + 1;
+    /* 5-6: "the drone is activated immediately under control of the player who
+       owns the hacking unit ... and afterwards suffers D3+1 hits". One that has
+       already acted, or cannot act, counts as a 3-4 (p. 57). `fireBack` starts
+       that activation and reports whether it could; the hits then wait for it. */
+    var canAct = !t.activated && t.alive && status(t) !== 'broken';
+    if (roll >= 5 && canAct && typeof fireBack === 'function') turned = !!fireBack(t, hits);
+    if (turned) {
+      log.push({ t: 'note', text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': taken over for one activation, then burned for ' + hits + ' hits.' });
+      return { log: log, roll: roll, turned: true, locked: false, hits: hits, pending: true };
     }
     locked = true;
     t.activated = true;
     t.hacked = true;
-    var hits = d3() + 1;
     log.push({
       t: 'note',
-      text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': ' +
-        (turned ? 'turned on its own side, then ' : '') + 'locked out and burned for ' + hits + ' hits.'
+      text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + (roll >= 5 ? ' (it cannot be activated, so as a 3-4)' : '') + ': locked out and burned for ' + hits + ' hits.'
     });
-    var dres = resolveDamage(t, hits, false);
-    log.push({ t: 'hits', text: dres.rolls.join(' · ') });
-    applyDamage(state, t, dres.damage, log, a);
-    return { log: log, roll: roll, turned: turned, locked: locked, hits: hits };
+    hackBurn(state, a, t, hits, log);
+    return { log: log, roll: roll, turned: false, locked: locked, hits: hits };
+  }
+  /* "...suffers D3+1 hits resolved like enemy fire" (p. 57): a hull takes them
+     as damage; a Drone unit, which has no Structure, on the hit table like any
+     squad (its +1 to those rolls included). */
+  /* Expendable (p. 57): the collars go off the moment a penal unit is Broken,
+     whatever broke it — a hit, a rite, a shout, a friend's melancholy. Returns
+     the lines to log. */
+  function collars(state) {
+    var out = [];
+    state.units.forEach(function (u) {
+      if (!u.alive || u.aboard || !has(u, 'Expendable') || status(u) !== 'broken') return;
+      u.alive = false; u.fled = true; u.expended = true;
+      out.push({ t: 'kill', text: u.label + ' breaks — Expendable: the collars go off, removed from play.' });
+    });
+    return out;
+  }
+  function hackBurn(state, a, t, hits, log) {
+    if (isMachine(t)) {
+      var dres = resolveDamage(t, hits, false, dmgMod(state, a, t));
+      log.push({ t: 'hits', text: dres.rolls.join(' · ') });
+      applyDamage(state, t, dres.damage, log, a);
+    } else {
+      var hres = resolveShootingHits(state, t, hits, dmgMod(state, a, t), a);
+      log.push({ t: 'hits', text: hres.rolls.join(' · ') });
+      applyResult(state, t, hres, log, a);
+    }
+    return log;
   }
 
   /* Command Vehicle (p. 56): a Command Unit riding inside lends the hull all of
@@ -2323,6 +2377,8 @@
       if (u.cls !== 'vehicle') return false;
       if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
       if (u.disembarked) return false;
+      // a hull towing an emplaced gun cannot be lifted (p. 94)
+      if ((u.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); })) return false;
       return unitDist(veh, u) <= 4;
     }
     if (isMachine(u)) return false;
@@ -2346,13 +2402,14 @@
     veh.cargo = veh.cargo || [];
     veh.cargo.push(u);
     u.aboard = veh.id;
+    u.boarded = true;                                   // "no single unit can be unloaded and loaded in the same turn" (p. 36)
     u.sp = 0;                                           // safe inside, and steadied
     u.x = -1; u.y = -1;
     return { text: u.label + ' embarks aboard ' + veh.name + '.' };
   }
   function disembark(state, veh, u, pos) {
     var i = (veh.cargo || []).indexOf(u);
-    if (i < 0) return null;
+    if (i < 0 || u.boarded) return null;               // loaded this turn: it stays aboard until the next
     veh.cargo.splice(i, 1);
     u.aboard = null;
     u.disembarked = true;
@@ -2391,6 +2448,10 @@
       if (!isDestructible(r2) || TERRAIN[r2.kind].blocks) continue;
       if (inRect(attacker.x, attacker.y, r2)) continue;
       if (segRect(attacker.x, attacker.y, target.x, target.y, r2)) return r2;
+      /* plunging fire: the low wall a target shelters by (within 2") is its cover
+         whichever way the shot comes, so it is the wall that can be brought down (p. 58) */
+      if (r2.kind === 'barricade' && has(attacker, 'Indirect Fire') &&
+        rectPointDist(r2, target.x, target.y) + UNIT_R <= 2 + 1e-6) return r2;
     }
     return null;
   }
@@ -2515,11 +2576,11 @@
         return;
       }
       if (isMachine(u)) {
-        var dm = resolveDamage(u, hits, false);
+        var dm = resolveDamage(u, hits, false, dmgMod(state, a, u));
         log.push({ t: 'hits', text: dm.rolls.join(' · ') });
         applyDamage(state, u, dm.damage, log, a);
       } else {
-        var hr = resolveShootingHits(state, u, hits, 0, a);
+        var hr = resolveShootingHits(state, u, hits, dmgMod(state, a, u), a);
         if (hr.medic) treated.push({ id: u.id, medic: hr.medic });
         log.push({ t: 'hits', text: hr.rolls.join(' · ') });
         applyResult(state, u, hr, log, a);
@@ -2727,16 +2788,21 @@
     if (r <= 3 && campFlag(u, 'knowledge')) { second = d6(); }
     var v = second != null ? second : r;
     var pads = teleportPads(state, tp.side);
+    var randomPad = pads[Math.floor(Math.random() * pads.length)] || tp;
     /* Auxiliary Teleportation System (p. 143): on a 2-3 the unit may come out
-       beside an aircraft carrying it instead. */
+       beside an aircraft carrying it instead. On a 2 that is the only choice
+       there is — the random pad, or the aircraft; on a 3 the aircraft joins the
+       owner's usual pick of pads. */
     var aux = state.units.filter(function (o) {
       return o.alive && o.side === tp.side && o.cls === 'aircraft' && o.x >= 0 && campFlag(o, 'auxTeleport');
     });
-    if ((v === 2 || v === 3) && aux.length) {
-      return { roll: r, reroll: second, value: v, random: false, pads: pads.concat(aux), aux: aux, randomPad: pads[0] || tp };
+    if (v === 2 && aux.length) {
+      return { roll: r, reroll: second, value: v, random: false, pads: [randomPad].concat(aux), aux: aux, randomPad: randomPad };
     }
-    return { roll: r, reroll: second, value: v, random: v <= 2, pads: pads,
-      randomPad: pads[Math.floor(Math.random() * pads.length)] || tp };
+    if (v === 3 && aux.length) {
+      return { roll: r, reroll: second, value: v, random: false, pads: pads.concat(aux), aux: aux, randomPad: randomPad };
+    }
+    return { roll: r, reroll: second, value: v, random: v <= 2, pads: pads, randomPad: randomPad };
   }
   function teleport(state, u, from, to) {
     // drop the unit onto clear ground within 4" of the exit pad
@@ -3027,7 +3093,7 @@
     var wreck = breach ? destroyTerrain(state, breach, log, a) : null;
 
     if (hits > 0 && isMachine(t)) {
-      var dres2 = resolveDamage(t, hits, pierce);
+      var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
       log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
       applyDamage(state, t, dres2.damage, log, a);
       return { log: log, hits: hits, wreck: wreck };
@@ -3042,7 +3108,7 @@
       if (crossfire) mod += loose ? 2 : 1;
       if (breach) mod += 1;
       // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
-      if (state.scen && state.scen.hitMod) mod += state.scen.hitMod(state, a, t) || 0;
+      mod += dmgMod(state, a, t);
       var res = resolveShootingHits(state, t, hits, mod, a);
       medicId = res.medic || null;
       // Incendiary doubles the suppression of the attack itself, before any
@@ -3175,6 +3241,12 @@
   }
   function chargeRoute(state, a, t, allowance) { return chargeReach(state, a, allowance)(t); }
 
+  // Martyrdom (p. 112): Holy Warriors of a force on the Path of the Prophet, with a man to spare
+  function canMartyr(state, u, foe) {
+    if (!u || !foe || !foe.alive || !doctrine(state, u.side, 'P1')) return false;
+    var p = BY_KEY[u.key];
+    return !!p && p.group === 'Holy Warriors' && u.models > 1;
+  }
   function assault(state, a, t, opts) {
     var log = [], wrecked = null;
     opts = opts || {};
@@ -3184,9 +3256,12 @@
        one of the Holy Warriors walks into the enemy and takes D3 of them with him.
        The unit takes no Suppression for the death. */
     function martyr(u, foe) {
-      if (!doctrine(state, u.side, 'P1')) return;
-      var p = BY_KEY[u.key];
-      if (!p || p.group !== 'Holy Warriors' || u.models <= 1 || !foe.alive) return;
+      if (!canMartyr(state, u, foe)) return;
+      /* "the Rebel commander may order" it (p. 112): a player says so as the
+         assault begins (opts.martyr); the AI spends a man only while the unit
+         has more than two to spare. */
+      var say = opts.martyr && opts.martyr[u.side];
+      if (say === false || (say == null && u.models <= 2)) return;
       u.models -= 1;
       var hits = d3();
       log.push({ t: 'assault', text: 'Martyrdom — one of ' + u.label + ' goes in alone. ' +
@@ -3388,18 +3463,18 @@
     });
     if (hits > 0 && isMachine(def)) {
       // a machine in close combat: 1 bounces, 2-3 a point, 4-6 D3
-      var out = { damage: 0, rolls: [] };
+      var out = { damage: 0, rolls: [] }, vm = dmgMod(state, atk, def);
       for (var h = 0; h < hits; h++) {
-        var r = d6(), tag;
+        var r0 = d6(), r = Math.min(6, r0 + vm), tag;
         if (r === 1) tag = 'Bounced off the armour!';
         else if (r <= 3) { tag = 'Hull breached (1 DP)'; out.damage += 1; }
         else { var c = d3(); tag = 'Charge placed! (D3 ' + c + ' DP)'; out.damage += c; }
-        out.rolls.push('D6 ' + r + ' → ' + tag);
+        out.rolls.push('D6 ' + r0 + (vm ? '+' + vm : '') + ' → ' + tag);
       }
       log.push({ t: 'hits', text: out.rolls.join(' · ') });
       applyDamage(state, def, out.damage, log, atk);
     } else if (hits > 0) {
-      var res = resolveAssaultHits(def, hits, breached ? 1 : 0, atk);
+      var res = resolveAssaultHits(def, hits, (breached ? 1 : 0) + dmgMod(state, atk, def), atk);
       log.push({ t: 'hits', text: res.rolls.join(' · ') +
         (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
       var fell = def.models;
@@ -4170,7 +4245,7 @@
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
     canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
-    rally: rally, fallBack: fallBack, medicNearby: medicNearby,
+    rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,
@@ -4182,7 +4257,7 @@
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
-    resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
+    canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
     applyDrone: applyDrone, canBeDrone: canBeDrone, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,

@@ -40,7 +40,8 @@
     barricade: ['low wall', 'low walls'], rocks: ['rock', 'rocks'], hill: ['hill', 'hills'],
     building: ['building', 'buildings'], bunker: ['reinforced building', 'reinforced buildings'],
     wall: ['high wall', 'high walls'], water: ['shallow pool', 'shallow pools'],
-    deep: ['deep water', 'deep waters'], lava: ['lava field', 'lava fields']
+    deep: ['deep water', 'deep waters'], lava: ['lava field', 'lava fields'],
+    crystal: ['crystal field', 'crystal fields'], ravine: ['ice ravine', 'ice ravines']
   };
 
   /* A view port that does nothing, so a caller that wants only the rules can
@@ -219,7 +220,7 @@
     var draining = false, paced = false;
     function canAI() {
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        isAI(state.activeSide);
+        !state.martyrAsk && !state.kyfAsk && isAI(state.activeSide);          // a player's Martyrdom answer holds the AI's charge
     }
     function maybeAI() {
       if (draining || !canAI()) return;
@@ -230,7 +231,7 @@
       } finally { draining = false; }
     }
     function aiStep() {
-      if (!state || state.over || !isAI(state.activeSide)) return false;
+      if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk) return false;
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
       if (state.solo && state.activeSide === 'B') {
@@ -343,6 +344,7 @@
           return;
         }
         var u = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, entry, pick.riders);
+        u.pickIdx = i;                                     // its place in the list, for Modifying the armies
         if (R.has(u, 'Turret')) u.drone = true;             // a lone shield turret is Drone Controlled too
         if (R.canMount(prof, pick.riders)) R.applyMount(u, pick.mount || 'none');   // what it rides, and what that costs
         u.startSize = u.models;
@@ -447,6 +449,9 @@
         state.mined = { side: side, piece: pool[Math.floor(Math.random() * pool.length)] };
       });
     })();
+    // a player's Last Stand barricades are placed by hand, once the deployment zones are known
+    state.manualLaststand = {};
+    ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && !isAI(sd)) state.manualLaststand[sd] = true; });
     SC.begin(state, scenId, { attacker: cfg.attacker, roles: cfg.roles });
     // the scenario may have moved or dropped pieces to keep them apart; a mined one must still be there
     if (state.mined && state.terrain.indexOf(state.mined.piece) < 0) {
@@ -456,9 +461,135 @@
       });
       state.mined = pool2.length ? { side: state.mined.side, piece: pool2[Math.floor(Math.random() * pool2.length)] } : null;
     }
-    ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO4') >= 0) terrainKnowledge(side); });
+    /* "the Rebel player may secretly choose" the piece (p. 112): a player picks
+       it — or none — before deploying; only the AI's is drawn for it. */
+    if (state.mined && !isAI(state.mined.side)) {
+      var mpool = state.terrain.map(function (r, i) {
+        var t = R.TERRAIN[r.kind];
+        return t && t.destructible && t.destructible !== 'target' ? i : -1;
+      }).filter(function (i) { return i >= 0; });
+      state.minePick = { side: state.mined.side, pool: mpool };
+      state.mined = null;
+    }
+    // Detailed Terrain Knowledge: the AI moves its pieces now; a player does, by hand, before deploying
+    state.placeQueue = [];
+    ['A', 'B'].forEach(function (side) {
+      if (docsOf(side).indexOf('XO4') < 0) return;
+      if (isAI(side)) terrainKnowledge(side);
+      else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: 2, total: 2 });
+    });
+    ['A', 'B'].forEach(function (side) {
+      if (state.manualLaststand[side]) {
+        var nls = 4 * (cfg.pl || 1);
+        state.placeQueue.push({ side: side, kind: 'barricade', why: 'laststand', left: nls, total: nls, len: 4 });
+      }
+    });
+    /* Modifying the armies (p. 46): with the table laid and both lists known, a
+       player may swap some of their units before anyone deploys. The set-up
+       waits here, and finishSetup carries on once they are done. */
+    finishSetup(built);
+    beginSwaps();
+  }
+
+  /* ---- Modifying the armies (p. 46): up to a quarter of a player's units — half
+     with Tactical Flexibility (p. 87) — swapped for others of the same Unit
+     Tier: from the dossier in a campaign, from the whole list otherwise. ---- */
+  function swapAllowance(side) {
+    var n = state.units.filter(function (u) { return u.side === side && u.pickIdx != null; }).length;
+    return Math.floor(n * (docsOf(side).indexOf('O6') >= 0 ? 0.5 : 0.25));
+  }
+  function swapOptions(side, u) {
+    var up = u && R.profile(u.key);
+    if (!u || u.pickIdx == null || u.command || !up || up.leaderBug || up.turretSet) return [];
+    if (u.aboard || (u.cargo && u.cargo.length)) return [];      // already strapped into a drop pod, or carrying one
+    var cfg = state.cfg;
+    if (cfg.dossier) {
+      return ((cfg.bench && cfg.bench[side]) || []).filter(function (e) {
+        var p = R.profile(e.key); return p && p.tier === u.tier && !p.command && !p.turretSet;
+      }).map(function (e) { return { id: e.rid, key: R.joinPick(e.key, e.prop, e.drone), name: e.name, entry: e }; });
+    }
+    return R.listFor(u.faction).filter(function (p) {
+      return p.tier === u.tier && !p.command && !p.turretSet && !p.noSlot && p.key !== u.key && !p.leaderBug;
+    }).map(function (p) { return { id: p.key, key: p.key, name: p.name, entry: null }; });
+  }
+  /* Each player's allowance, offered on the deployment card until they put their
+     first unit down: opening it (swapopen) brings up the swap card, and placing
+     a unit means the list stands as it is. */
+  function beginSwaps() {
+    state.swapAvail = {};
+    if (state.solo || state.cfg.noSwap) return;
+    ['A', 'B'].forEach(function (sd) {
+      if (isAI(sd) || swapAllowance(sd) < 1) return;
+      if (!state.units.some(function (u) { return u.side === sd && swapOptions(sd, u).length; })) return;
+      var n = swapAllowance(sd);
+      state.swapAvail[sd] = { side: sd, left: n, total: n, pick: null, done: [] };
+    });
+  }
+  function canSwapNow(side) {
+    var sa = state.swapAvail && state.swapAvail[side];
+    return !!sa && sa.left > 0 && state.phase === 'deploy' &&
+      !state.units.some(function (u) { return u.side === side && u.x >= 0; });
+  }
+  function nextSwap() { return false; }
+  function legalList(side, keys) {
+    var cfg = state.cfg;
+    return R.checkArmy(keys, cfg.tier, cfg.pl, docsOf(side), state.tactics && state.tactics[side], null);
+  }
+  function doSwap(side, outId, inId) {
+    var sa = state.swapAsk;
+    var old = byId(outId);
+    if (!sa || sa.side !== side || sa.left < 1) return 'No swaps left.';
+    if (!old || old.side !== side) return 'Not one of yours.';
+    var opt = swapOptions(side, old).filter(function (o) { return o.id === inId; })[0];
+    if (!opt) return 'That cannot be swapped in for it.';
+    var cfg = state.cfg, armyKey = side === 'A' ? 'armyA' : 'armyB';
+    var keys = cfg[armyKey].slice(), i = old.pickIdx;
+    var before = legalList(side, keys).ok;
+    keys[i] = opt.key;
+    var chk = legalList(side, keys);
+    if (before && !chk.ok) return chk.faults[0] || 'That would make the list illegal.';
+    var pick = R.splitPick(opt.key), prof = R.profile(pick.key);
+    var nu = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, opt.entry, pick.riders);
+    nu.id = old.id + 's' + (sa.done.length + 1);
+    nu.pickIdx = i;
+    if (R.canMount(prof, pick.riders)) R.applyMount(nu, pick.mount || 'none');
+    nu.startSize = nu.models;
+    // it takes the old unit's place in the army: its id, and whatever the scenario made of it
+    nu.id = old.id;
+    ['reserve', 'wave', 'owner', 'paint', 'x', 'y'].forEach(function (k) { if (old[k] !== undefined) nu[k] = old[k]; });
+    state.units[state.units.indexOf(old)] = nu;
+    cfg[armyKey][i] = opt.key;
+    if (cfg.dossier) {
+      var was = cfg.dossier[side][i];
+      cfg.dossier[side][i] = opt.entry;
+      var bench = cfg.bench[side];
+      bench.splice(bench.indexOf(opt.entry), 1);
+      if (was) bench.push(was);
+    }
+    sa.left--; sa.pick = null;
+    sa.done.push({ out: old.name, in: nu.name });
+    logLine('note', sideName(side) + ' swaps ' + old.name + ' for ' + nu.name + '.');
+    if (sa.left < 1) { swapsDone(); return null; }
+    render();
+    return null;
+  }
+  function swapsDone() {
+    var sa = state.swapAsk;
+    state.swapAsk = null;
+    if (sa) {
+      state.swapAvail[sa.side] = null;
+      if (sa.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sa.side), side: sa.side,
+        note: 'Swapped for units of the same Tier before deployment (p. 46).',
+        list: sa.done.map(function (d) { return { text: d.out + ' → ' + d.in, side: sa.side }; }) });
+    }
+    render();
+  }
+
+  function finishSetup(built) {
+    var cfg = state.cfg;
     ['A', 'B'].forEach(markReserves);
     SC.deploy(state);
+    nextPlace();
     seatPlatforms();             // every drop pod comes down with somebody in it
     baselineSplits();
     var scen = state.scen;
@@ -678,6 +809,19 @@
     var x0 = Math.max(a.x, 0.5), x1 = Math.min(a.x + a.w, W - 0.5) - g.w;
     var y0 = Math.max(a.y, 0.5), y1 = Math.min(a.y + a.h, H - 0.5) - g.h;
     if (x1 < x0 || y1 < y0) return null;
+    /* Tapped on a hill: a wood, a ruin, rubble, rocks or a building may stand
+       on it (p. 42) — inside its crest, clear of anything else up there. */
+    if (GEN.ONHILL[g.kind]) {
+      var hill = state.terrain.filter(function (h) {
+        return h.kind === 'hill' && R.inRect(cx, cy, h) && h.w >= g.w + 1 && h.h >= g.h + 1;
+      })[0];
+      if (hill) {
+        var hx = Math.max(hill.x + 0.5, Math.min(hill.x + hill.w - 0.5 - g.w, cx - g.w / 2));
+        var hy = Math.max(hill.y + 0.5, Math.min(hill.y + hill.h - 0.5 - g.h, cy - g.h / 2));
+        var others = state.terrain.filter(function (o) { return o !== hill; });
+        if (!GEN.clashes({ x: hx, y: hy, w: g.w, h: g.h }, others)) return { x: hx, y: hy, onHill: true };
+      }
+    }
     var best = null, bd = Infinity;
     for (var r = 0; r <= 12; r += 0.5) {
       var steps = r ? Math.max(8, Math.round(r * 8)) : 1;
@@ -710,8 +854,10 @@
       render(); return;
     }
     var pc = clonePiece(state.tset.ghost);
+    if (spot.onHill) pc.onHill = true;
     R.placePiece(pc, spot.x, spot.y);
     state.terrain.push(pc); a.placed.push(pc);
+    if (pc.onHill && GEN.levelUnder) GEN.levelUnder(state.terrain);
     a.count[a.spec] = (a.count[a.spec] || 0) + 1;
     ui.tsetHint = '';
     if (SFX && SFX.click) SFX.click();
@@ -800,6 +946,88 @@
     if (moved.length) logLine('terrain', sideName(side) + ' — Detailed Terrain Knowledge: moves the ' + moved.join(' and the ') + '.');
   }
 
+  /* ---- a player putting pieces on the table by hand: Last Stand's barricades,
+     Fortify and Strike!'s field fortifications, Detailed Terrain Knowledge's
+     moves. One spec at a time off state.placeQueue into state.placeAsk. ---- */
+  function nextPlace() {
+    state.placeAsk = (state.placeQueue && state.placeQueue.shift()) || null;
+    if (state.placeAsk) {
+      var pa = state.placeAsk;
+      setHint(null, pa.why === 'terrain' ? 'Detailed Terrain Knowledge: tap a piece, then where it goes (up to 12").'
+        : 'Tap the table to put down ' + (pa.why === 'fortify' ? 'a field fortification' : 'a barricade') + ' — ' + pa.left + ' to place.');
+      fitView();
+      revealConsole();
+    }
+    render();
+  }
+  // may a barricade stand here? on the table, clear of terrain and troops, in the right ground
+  function placeOK(pa, r) {
+    if (r.x < 0.5 || r.y < 0.5 || r.x + r.w > W - 0.5 || r.y + r.h > H - 0.5) return 'Not so close to the edge.';
+    var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    if (pa.why === 'fortify' && !deployOK(pa.side, cx, cy)) return 'Field fortifications go in your own deployment zone.';
+    if (pa.why === 'laststand' && deployOK(other(pa.side), cx, cy)) return 'Not in the enemy deployment zone.';
+    if (state.terrain.some(function (o) { return r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y; })) return 'That ground is taken.';
+    if (state.units.some(function (o) { return o.alive && o.x >= 0 && o.x > r.x - 1 && o.x < r.x + r.w + 1 && o.y > r.y - 1 && o.y < r.y + r.h + 1; })) return 'Troops are standing there.';
+    return null;
+  }
+  // the pieces Detailed Terrain Knowledge may move
+  function movablePieces() {
+    return state.terrain.filter(function (r) {
+      var t = R.TERRAIN[r.kind];
+      return t && t.destructible !== 'target' && !r.fixed && r.kind !== 'objective' && r.kind !== 'searchsite';
+    });
+  }
+  function placeAt(x, y) {
+    var pa = state.placeAsk;
+    if (!pa) return 'Nothing to place.';
+    if (pa.kind === 'barricade') {
+      var len = pa.len || 3, th = pa.why === 'fortify' ? 0.6 : 1;
+      var r = pa.vertical ? { kind: 'barricade', x: x - th / 2, y: y - len / 2, w: th, h: len }
+        : { kind: 'barricade', x: x - len / 2, y: y - th / 2, w: len, h: th };
+      var why = placeOK(pa, r);
+      if (why) return why;
+      state.terrain.push(r);
+      state.structsDirty = true;
+      pa.left--;
+    } else {
+      var pool = movablePieces();
+      if (pa.pick == null) {
+        var hit = pool.filter(function (q) { return R.inRect(x, y, q); })[0];
+        if (!hit) return 'Tap a piece of terrain to move.';
+        pa.pick = state.terrain.indexOf(hit);
+        setHint(null, 'Now tap where the ' + R.TERRAIN[hit.kind].name.toLowerCase() + ' goes — up to 12" away.');
+        render();
+        return null;
+      }
+      var q = state.terrain[pa.pick], ocx = q.x + q.w / 2, ocy = q.y + q.h / 2;
+      if (R.inRect(x, y, q)) { pa.pick = null; render(); return null; }      // tap it again to put it down
+      if (Math.hypot(x - ocx, y - ocy) > 12) return 'Up to 12" from where it stands.';
+      var nx = x - q.w / 2, ny = y - q.h / 2;
+      if (nx < 0 || ny < 0 || nx + q.w > W || ny + q.h > H) return 'It would go off the table.';
+      var clash = state.terrain.some(function (o) {
+        return o !== q && nx < o.x + o.w + 0.5 && nx + q.w + 0.5 > o.x && ny < o.y + o.h + 0.5 && ny + q.h + 0.5 > o.y;
+      }) || state.objectives.some(function (o) { return o.x > nx - 3 && o.x < nx + q.w + 3 && o.y > ny - 3 && o.y < ny + q.h + 3; });
+      if (clash) return 'Too close to other terrain or an objective.';
+      R.placePiece(q, nx, ny);
+      logLine('terrain', sideName(pa.side) + ' — Detailed Terrain Knowledge: moves the ' + R.TERRAIN[q.kind].name.toLowerCase() + ' ' + Math.hypot(x - ocx, y - ocy).toFixed(1) + '".');
+      state.scene = null; state.ground = null; state.structs = null;
+      pa.pick = null;
+      pa.left--;
+    }
+    if (pa.left <= 0) placeDone();
+    else { setHint(null, pa.left + ' more to ' + (pa.kind === 'move' ? 'move' : 'place') + '.'); render(); }
+    return null;
+  }
+  function placeDone() {
+    var pa = state.placeAsk;
+    if (!pa) return;
+    var n = pa.total - pa.left;
+    if (pa.kind === 'barricade' && n) logLine('terrain', sideName(pa.side) + ' — ' + (pa.why === 'fortify' ? 'Fortify and Strike!: ' + n + ' field fortifications thrown up.' : 'Last Stand: ' + n + ' barricades put up.'));
+    state.placeAsk = null;
+    if (pa.then === 'battle') { startBattle(); return; }
+    nextPlace();
+  }
+
   function docsOf(side) { return (state && state.doctrines && state.doctrines[side]) || []; }
 
   // vehicles and aircraft get +4" on a Move; everyone else +2"
@@ -822,6 +1050,7 @@
     return state.units.filter(function (u) { return onTable(u) && (!side || u.side === side); });
   }
 
+  // nothing has a zone until the scenario has laid out the deployment (after any army swaps)
   function zoneFor(side) { return SC.zoneFor(state, side); }
 
   // the scenario may use a circle rather than a strip
@@ -1262,8 +1491,18 @@
       render();
       return;
     }
+    /* Fortify and Strike! (p. 141): once the tribe is deployed, a player puts
+       down its four field fortifications by hand before the first turn. */
+    state.fortAsked = state.fortAsked || {};
+    var fs = ['A', 'B'].filter(function (sd) { return docsOf(sd).indexOf('XO5') >= 0 && !isAI(sd) && !state.fortAsked[sd]; })[0];
+    if (fs) {
+      state.fortAsked[fs] = true;
+      state.placeQueue = [{ side: fs, kind: 'barricade', why: 'fortify', left: 4, total: 4, len: 3, then: 'battle' }];
+      nextPlace();
+      return;
+    }
     state.phase = 'battle';
-    ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO5') >= 0) fortify(side); });
+    ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO5') >= 0 && isAI(side)) fortify(side); });
     // Ambush!: each unit settles into its hide before the first turn (p. 156)
     if (state.scen.beforeBattle) {
       var moved = state.scen.beforeBattle(state) || [];
@@ -1387,14 +1626,36 @@
     /* Know Your Foe! (p. 141): once a battle, the tribe stops every enemy
        reinforcement arriving this turn — used the first turn the enemy has any. */
     state.kyf = state.kyf || {};
+    state.kyfAsked = state.kyfAsked || {};
+    function useKyf(side) {
+      var foe = other(side);
+      state.kyf[side] = state.turn;
+      logLine('note', sideName(side) + ' — Know Your Foe!: no reinforcements reach ' + sideName(foe) + ' this turn.');
+      pushRes({ kind: 'Advancement', title: 'Know Your Foe!', side: side, note: 'Once a battle: every enemy reinforcement is held back this turn.' });
+    }
+    var kyfWait = null;
     ['A', 'B'].forEach(function (side) {
       var foe = other(side);
       if (docsOf(side).indexOf('XO6') < 0 || state.kyf[side]) return;
       if (!inReserve().some(function (u) { return u.side === foe && !u.wave; })) return;
-      state.kyf[side] = state.turn;
-      logLine('note', sideName(side) + ' — Know Your Foe!: no reinforcements reach ' + sideName(foe) + ' this turn.');
-      pushRes({ kind: 'Advancement', title: 'Know Your Foe!', side: side, note: 'Once a battle: every enemy reinforcement is held back this turn.' });
+      // the AI uses it the first turn it can; a player is asked, once a turn, whether this is the turn
+      if (isAI(side)) { useKyf(side); return; }
+      if (state.kyfAsked[side] !== state.turn && !kyfWait) kyfWait = side;
     });
+    if (kyfWait) {
+      state.kyfAsked[kyfWait] = state.turn;
+      state.kyfAsk = { side: kyfWait, n: inReserve().filter(function (u) { return u.side === other(kyfWait) && !u.wave; }).length };
+      ui.kyfThen = function (yes) {
+        var sd = state.kyfAsk.side;
+        state.kyfAsk = null; ui.kyfThen = null;
+        if (yes) useKyf(sd);
+        afterArrivals(done);
+      };
+      setHint(null, 'Know Your Foe! — hold back every enemy reinforcement this turn?');
+      revealConsole();
+      render();
+      return;
+    }
     function held(u) { var f = other(u.side); return state.kyf && state.kyf[f] === state.turn; }
     var mine = inReserve().filter(function (u) { return !u.wave && !held(u); });
     var i = 0;
@@ -1475,12 +1736,41 @@
     render();
   }
 
+  /* Invasion (p. 53): with the defender down, the attacker nominates the three
+     landing zones before the first wave drops — a tap for each, or the AI's pick. */
+  function askInvasionLZ(done) {
+    var atk = state.sc.attacker;
+    if (isAI(atk)) {
+      SC.setLZs(state, SC.autoLZs(state));
+      logLine('note', sideName(atk) + ' nominates three landing zones.');
+      done(); return;
+    }
+    var chosen = [];
+    function ask() {
+      var spots = SC.lzSpots(state, chosen);
+      if (!spots.length) { SC.setLZs(state, chosen.concat(SC.autoLZs(state)).slice(0, 3)); done(); return; }
+      ui.insertion = { unit: null, by: atk, owner: null, spots: spots, kind: 'ilz', chosen: chosen.slice(), n: chosen.length + 1,
+        done: function (p) {
+          chosen.push(p);
+          logLine('note', sideName(atk) + ' nominates landing zone ' + chosen.length + '.');
+          if (chosen.length >= 3) { SC.setLZs(state, chosen); done(); } else ask();
+        } };
+      ui.selected = null; ui.mode = 'insert'; ui.targets = []; ui.moves = []; ui.terrain = [];
+      setHint(null, 'Tap the shaded ground to nominate landing zone ' + (chosen.length + 1) + ' of 3.');
+      revealConsole();
+      render();
+    }
+    fitView();
+    ask();
+  }
+
   function scenarioArrivals(after) {
+    if (state.sc && state.sc.lzPending) { askInvasionLZ(function () { scenarioArrivals(after); }); return; }
     var lzFor = lzWanted();
     if (lzFor) { askLZ(lzFor, function () { scenarioArrivals(after); }); return; }
     if (state.sc.pickedTurn !== state.turn) { state.sc.picked = {}; state.sc.pickedTurn = state.turn; }
     var pickSide = ['A', 'B'].filter(function (sd) {
-      if (isAI(sd) || state.sc.picked[sd] || state.scen.autoArrive) return false;
+      if (isAI(sd) || state.sc.picked[sd] || (state.scen.autoArrive && !state.scen.pickReserves)) return false;
       var pk = SC.reservePick(state, sd);
       if (!pk) return false;
       if (!pk.pool.length) { state.sc.picked[sd] = []; return false; }
@@ -1493,8 +1783,22 @@
        comes on is a decision the book leaves open and a dice roll should not
        be making. */
     var ask = [];
-    ['A', 'B'].forEach(function (side) {
+    /* Who comes on first. Normally both sides alternate; an Invasion's attacker
+       lands after the defender's reserves are down, and a Demolish defender
+       after the attacker's (pp. 53-54). Every unit is taken in that order, the
+       placed ones and the asked-for ones alike. */
+    var sides = ['A', 'B'];
+    if (state.sc && state.sc.attacker) {
+      var atk0 = state.sc.attacker, def0 = atk0 === 'A' ? 'B' : 'A';
+      if (state.scen.id === 'invasion') sides = [def0, atk0];
+      else if (state.scen.id === 'demolish') sides = [atk0, def0];
+    }
+    sides.forEach(function (side) {
       var coming = state.sc.picked[side] ? state.sc.picked[side].slice() : SC.reserves(state, side);
+      // Evacuation: the pick is only the player's own reserves; the civilians still roll to come out
+      if (state.sc.picked[side] && state.scen.pickReserves) {
+        SC.reserves(state, side).forEach(function (u) { if (coming.indexOf(u) < 0) coming.push(u); });
+      }
       /* Semper Fidelis (Battle Honour, p. 88): a unit held in the scenario's
          reserve may come on automatically on any turn but the first — no roll,
          no waiting for its wave. Where it may come on is still the scenario's. */
@@ -1506,18 +1810,23 @@
           coming.push(u);
         });
       }
-      coming.forEach(function (u) {
-        if (!u.alive || !u.reserve) return;
-        // a solitaire scenario says exactly where its units come on
-        if (!isAI(u.side) && !state.scen.autoArrive) { ask.push(u); return; }
-        u.sfOffer = false;
-        var p = arrivalPoint(u);
-        if (!p) return;
-        landArrival(u, p, log);
-        if (semperFidelis(u)) log.push(u.label + ' — Semper Fidelis: arrives when called for.');
-        showArrival(u);
-      });
+      coming.forEach(function (u) { ask.push(u); });
     });
+    function placeAuto(u) {
+      u.sfOffer = false;
+      var p = arrivalPoint(u);
+      if (!p) return;
+      landArrival(u, p, log);
+      if (semperFidelis(u)) log.push(u.label + ' — Semper Fidelis: arrives when called for.');
+      showArrival(u);
+    }
+    // Coordinated Hive (p. 124): the swarm's failed reserve dice, rolled again
+    if (state.sc && state.sc.hive && state.sc.hive.turn === state.turn && !state.sc.hive.told) {
+      state.sc.hive.told = true;
+      var hv = state.sc.hive;
+      var hl = 'Coordinated Hive — ' + sideName(hv.side) + ' re-rolls ' + hv.n + ' failed reserve ' + (hv.n === 1 ? 'die' : 'dice') + ': ' + hv.up + ' come' + (hv.up === 1 ? 's' : '') + ' on after all.';
+      logLine('note', hl); log.push(hl);
+    }
     // Invasion: the second wave waved off because every zone is in enemy hands (p. 53)
     if (state.sc && state.sc.zonesHot === state.turn) {
       var hot = 'All landing zones are hot! Repeat! All landing zones are hot! — the '
@@ -1537,13 +1846,18 @@
       if (after) after();
     }
 
-    // ask for each of the player's in turn, then report the lot together
+    // in order: the OpFor's placed, the player's asked for, then the lot reported together
     var i = 0;
     (function next() {
-      if (i >= ask.length) { report(); return; }
-      var u = ask[i++];
-      if (!u.alive || !u.reserve) { next(); return; }
-      askArrival(u, log, next);
+      while (i < ask.length) {
+        var u = ask[i++];
+        if (!u.alive || !u.reserve) continue;
+        // a solitaire scenario says exactly where its units come on
+        if (isAI(u.side) || state.scen.autoArrive) { placeAuto(u); continue; }
+        askArrival(u, log, next);
+        return;
+      }
+      report();
     })();
   }
 
@@ -1572,25 +1886,30 @@
        the table (p. 54). */
     var entry = entryFor(u);
     if (entry && entry.length) {
-      for (var e = 0; e < 600; e++) {
-        // which band — which table edge, which corner — is chosen fresh each time
-        var b = entry[Math.floor(Math.random() * entry.length)];
-        var q = {
-          x: Math.max(UR, Math.min(W - UR, b.x + Math.random() * b.w)),
-          y: Math.max(UR, Math.min(H - UR, b.y + Math.random() * b.h))
-        };
-        if (R.TERRAIN[R.terrainAt(state, q.x, q.y)].impassable) continue;
-        if (R.unitNear(state, q.x, q.y, u, 1)) continue;
-        return { x: q.x, y: q.y, why: 'from its own table edge' };
+      // 12" clear of the enemy if it can be, closer only if it cannot (p. 30)
+      for (var pass = 0; pass < 2; pass++) {
+        for (var e = 0; e < 600; e++) {
+          // which band — which table edge, which corner — is chosen fresh each time
+          var b = entry[Math.floor(Math.random() * entry.length)];
+          var q = {
+            x: Math.max(UR, Math.min(W - UR, b.x + Math.random() * b.w)),
+            y: Math.max(UR, Math.min(H - UR, b.y + Math.random() * b.h))
+          };
+          if (R.TERRAIN[R.terrainAt(state, q.x, q.y)].impassable) continue;
+          if (R.unitNear(state, q.x, q.y, u, 1)) continue;
+          if (!pass && !clearOfEnemy(u, q)) continue;
+          return { x: q.x, y: q.y, why: 'from its own table edge' };
+        }
       }
       return null;
     }
     var edge = u.side === 'A' ? UR + 0.5 : W - UR - 0.5;
-    for (var k = 0; k < 400; k++) {
+    for (var pass2 = 0; pass2 < 2; pass2++) for (var k = 0; k < 400; k++) {
       var y = UR + Math.random() * (H - 2 * UR);
       var x = edge + (Math.random() - 0.5) * 2;
       if (R.TERRAIN[R.terrainAt(state, x, y)].impassable) continue;
       if (R.unitNear(state, x, y, u, 1)) continue;
+      if (!pass2 && !clearOfEnemy(u, { x: x, y: y })) continue;
       return { x: R.clampBoard({ x: x, y: y }).x, y: y, why: 'from its own table edge' };
     }
     return null;
@@ -1641,6 +1960,19 @@
     return Math.abs(p.x - edge) <= 1.5;
   }
 
+  /* "...placed up to 4\" from the table border and at least 12\" from the enemy.
+     If for any reason it is impossible, they should be placed closer" (p. 30). */
+  function clearOfEnemy(u, p) {
+    return !state.units.some(function (e) {
+      return e.alive && e.side !== u.side && !e.aboard && !e.reserve && e.x >= 0 && R.unitDist({ x: p.x, y: p.y }, e) < 12;
+    });
+  }
+  // a walk-on from a table edge keeps its distance; a landing zone or a scenario's own entry points do not
+  function edgeArrival(u) {
+    var sc = state.sc;
+    if (state.scen.arrivalPoint || state.scen.arrivalLegal) return false;
+    return !(state.scen.id === 'invasion' && sc && u.side === sc.attacker);
+  }
   function arrivalSpots(u) {
     var out = [];
     for (var x = 1; x <= W - 1; x += 1) {
@@ -1648,6 +1980,10 @@
         var p = { x: x, y: y };
         if (arrivalLegal(u, p)) out.push(p);
       }
+    }
+    if (edgeArrival(u)) {
+      var far = out.filter(function (p) { return clearOfEnemy(u, p); });
+      if (far.length) return far;
     }
     return out;
   }
@@ -1747,6 +2083,7 @@
     if (log) log.push(line);
     logLine('note', u.label + ' arrives' + (p.why ? ' ' + p.why : '') + '.');
     if (note) logLine('note', note.text);
+    samCheck(u);
     return line;
   }
 
@@ -1815,6 +2152,18 @@
     var ins = ui.insertion;
     if (!ins) return;
     var u = ins.unit;
+    if (ins.kind === 'ilz') {
+      if (!SC.lzOK(state, p, ins.chosen)) {
+        var nz2 = snapToSpot(ins, p);
+        if (!nz2) { setHint(null, 'Not there — open ground, 8" clear of every table edge and 12" from the other landing zones.'); return; }
+        p = nz2;
+      }
+      ui.insertion = null; ui.mode = 'idle';
+      var doneI = ins.done;
+      render();
+      whenIdle(function () { doneI({ x: p.x, y: p.y }); });
+      return;
+    }
     if (ins.kind === 'lz') {
       var lzOK = SOLO.lzLegal(state, p, ins.owner);
       if (!lzOK) {
@@ -1848,10 +2197,12 @@
       return;
     }
     if (ins.kind === 'arrive') {
-      if (!arrivalLegal(u, p)) {
+      // with ground 12" clear of the enemy on offer, it has to come on there
+      var mustClear = edgeArrival(u) && (ins.spots || []).some(function (q) { return clearOfEnemy(u, q); });
+      if (!arrivalLegal(u, p) || (mustClear && !clearOfEnemy(u, p))) {
         var near = snapToSpot(ins, p);
         if (!near) {
-          setHint(null, 'Not there — ' + arrivalWhere(u) + ', and off impassable ground.');
+          setHint(null, 'Not there — ' + arrivalWhere(u) + (mustClear ? ', 12" clear of the enemy' : '') + ', and off impassable ground.');
           return;
         }
         p = near;
@@ -1899,7 +2250,7 @@
     state.units.forEach(function (u) {
       u.activated = false; u.marked = false; u.markMoved = false; u.shotFrom = []; u.coordUsed = false;
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
-      u.disembarked = false;
+      u.disembarked = false; u.boarded = false;
     });
     state.chain = null; state.mark = null;
     state.initiative = null;
@@ -1965,7 +2316,7 @@
     state.units.forEach(function (u) {
       u.activated = false; u.marked = false; u.markMoved = false; u.shotFrom = []; u.coordUsed = false;
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
-      u.disembarked = false;
+      u.disembarked = false; u.boarded = false;
     });
     state.chain = null;
     state.mark = null;
@@ -1983,6 +2334,7 @@
     });
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.vis = null; ui.visKey = ''; ui.preview = null;
     beginningRites();
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     render();
     revealBoard();
     whenIdle(function () {
@@ -2150,6 +2502,10 @@
 
   function endActivation(actor) {
     ui.lastActed = actor || ui.selected || null;
+    // a hacked drone's borrowed activation is over: back to its owner, and it burns
+    var hj = hijacked();
+    if (hj && (ui.lastActed === hj || !hj.alive)) endHijack(hj);
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     if (ui.lastActed) ui.lastActed.advancing = false;   // an Advance ends with its activation
     // Infamy of Melancholy (p. 143): its activation weighs on every friend within 6"
     var mel = ui.lastActed;
@@ -2169,21 +2525,48 @@
     }
     if (state.over) { render(); return; }
 
-    // a Command Unit riding in a Command Vehicle may coordinate once the hull has acted
+    /* Command Vehicle (p. 57): "as soon as the Command Vehicle finishes its
+       activation, the Command Unit on board MAY perform one of their special
+       actions" — offered, not forced, and only to a steady Command Unit (a
+       Suppressed one cannot Coordinate any more than on foot). */
     var just = ui.lastActed;
-    if (just && just.alive && R.has(just, 'Command Vehicle') && !state.chain) {
+    if (just && just.alive && R.has(just, 'Command Vehicle') && !state.chain && !state.solo) {
       var cmd = R.commandAboard(just);
-      if (cmd && !cmd.coordUsed && R.status(cmd) !== 'broken') {
-        cmd.coordUsed = true;
-        addFx({ kind: 'wave', x: just.x, y: just.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
-        state.chain = {
-          side: just.side, remaining: R.ruleValue(just, 'Command Unit') + 1,
-          x: just.x, y: just.y, tier: cmd.tier
-        };
-        logLine('note', cmd.label + ', riding in ' + just.name + ', coordinates: up to ' +
-          R.ruleValue(just, 'Command Unit') + ' friendly units within 12" activate in a row.');
+      if (cmd && !cmd.coordUsed && R.status(cmd) === 'ready') {
+        if (isAI(just.side)) cmdCoordinate(just, cmd);
+        else {
+          state.cmdOffer = { veh: just.id, cmd: cmd.id };
+          setHint(null, cmd.name + ' is aboard ' + just.name + ': coordinate now, or let the activation pass.');
+          render();
+          return;
+        }
       }
     }
+    passOn(just);
+  }
+  function cmdCoordinate(veh, cmd) {
+    cmd.coordUsed = true;
+    addFx({ kind: 'wave', x: veh.x, y: veh.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
+    state.chain = {
+      side: veh.side, remaining: R.ruleValue(veh, 'Command Unit') + 1,
+      x: veh.x, y: veh.y, tier: cmd.tier
+    };
+    logLine('note', cmd.label + ', riding in ' + veh.name + ', coordinates: up to ' +
+      R.ruleValue(veh, 'Command Unit') + ' friendly units within 12" activate in a row.');
+  }
+  // the player's answer to the Command Vehicle's offer
+  function answerCmdOffer(take) {
+    var o = state.cmdOffer;
+    if (!o) return;
+    state.cmdOffer = null;
+    var veh = byId(o.veh), cmd = byId(o.cmd);
+    if (take && veh && cmd) cmdCoordinate(veh, cmd);
+    else if (cmd) { cmd.coordUsed = true; logLine('note', (cmd.label || 'The Command Unit') + ' stays quiet aboard ' + (veh ? veh.name : 'its vehicle') + '.'); }
+    ui.hint = null;
+    passOn(veh);
+  }
+  // the rest of an activation's ending: turrets together, chains, whose go it is next
+  function passOn(just) {
     /* All turrets are activated at once (p. 130): the first to act brings every
        other one of its side along before the activation passes. */
     if (just && R.has(just, 'Turret') && !state.chain && !state.solo) {
@@ -2279,6 +2662,7 @@
 
   function rallyPhase() {
     logLine('phase', 'Rally phase.');
+    R.collars(state).forEach(function (l) { logLine(l.t, l.text); });
     fleeBroken();
     // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
     state.units.forEach(function (c) {
@@ -2563,7 +2947,7 @@
     if (u && u.transport) {
       out.push({ id: 'embark', label: 'Embark' });
       out.push({ id: 'disembark', label: 'Disembark' });
-      if (R.drives(u)) out.push({ id: 'drivefirst', label: 'Drive first' });
+      if (movesToCarry(u)) out.push({ id: 'drivefirst', label: u.cls === 'aircraft' ? 'Fly first' : 'Drive first' });
     }
     if (u && u.cls === 'aircraft') out.push({ id: 'strafe', label: 'Strafe' });
     if (u && R.has(u, 'Supporting Fire')) out.push({ id: 'support', label: 'Support' });
@@ -2673,6 +3057,7 @@
 
     switch (id) {
       case 'enter': {
+        if (sup && alreadySafe(u)) return { on: false, hint: 'Suppressed, and already in cover or out of sight: it stays where it is (p. 34).' };
         var ents = R.enterTargets(state, u);
         if (!ents.length) return { on: false, hint: u.bld ? 'No empty section in contact with this one.' : 'No empty building within 4".' };
         return { on: true, hint: u.bld
@@ -2681,6 +3066,7 @@
             ' — but no moving until you come out.' };
       }
       case 'exitbld': {
+        if (sup) return { on: false, hint: 'Suppressed: it keeps the cover of the building (p. 34).' };
         var outs = R.exitSpots(state, u);
         return outs.length ? { on: true, hint: 'Come out and be placed within 4" of the building. Counts as the action.' }
           : { on: false, hint: 'There is no clear ground within 4" of the building to come out onto.' };
@@ -2694,6 +3080,7 @@
         }
         if (R.has(u, 'Turret')) return { on: false, hint: 'A turret is a stationary ground vehicle: it stays where it was teleported in.' };
         if (machine) return { on: true, hint: 'Drive up to Movement +4" — ' + (u.move + 4) + '". The hull ends up facing the way it travelled.' };
+        if (sup && alreadySafe(u)) return { on: false, hint: 'Suppressed, and already in cover or out of sight: it cannot move to another such place (p. 34).' };
         return sup
           ? { on: true, hint: 'Suppressed: may only move into cover or out of sight, up to ' + (u.move + 2) + '".' }
           : { on: true, hint: 'Move up to Movement +2" — ' + (u.move + 2) + '". Ends the activation.' };
@@ -2761,10 +3148,11 @@
       }
       case 'disembark': {
         if (!(u.cargo || []).length) return { on: false, hint: 'Nobody aboard.' };
+        if (!(u.cargo || []).some(function (c) { return !c.boarded; })) return { on: false, hint: 'Loaded this turn: they cannot get off again until the next (p. 36).' };
         return { on: true, hint: 'Put the troops down within 4" of the hull, then drive on up to half its Movement if you like.' };
       }
       case 'drivefirst': {
-        if (!R.drives(u)) return { on: false, hint: 'Only a ground vehicle drives before loading.' };
+        if (!movesToCarry(u)) return { on: false, hint: 'This transport cannot move before loading.' };
         if (u.carryMoved) return { on: false, hint: 'Already driven: now load or unload.' };
         var roomF = u.transport - (u.cargo || []).length;
         if (!(u.cargo || []).length && roomF <= 0) return { on: false, hint: 'Nothing to load or unload.' };
@@ -2962,13 +3350,7 @@
       ui.mode = 'move';
       ui.moves = R.reachable(state, u, u.move + moveBonus(u, 'move')).filter(function (c) { return canStand(u, c); });
       wireNote(u);
-      if (st === 'suppressed') {
-        ui.moves = ui.moves.filter(function (c) {
-          if (R.TERRAIN[R.terrainAt(state, c.x, c.y)].cover > 0) return true;
-          var ghost = { x: c.x, y: c.y, alive: true };
-          return !state.units.some(function (e) { return e.alive && e.side !== u.side && R.hasLoS(state, e, ghost); });
-        });
-      }
+      if (st === 'suppressed') ui.moves = ui.moves.filter(function (c) { return safeSpot(u, c.x, c.y); });
     } else if (id === 'fire' || id === 'aux') {
       ui.mode = id === 'aux' ? 'aux' : 'fire';
       ui.targets = targetsFor(u, { aux: id === 'aux' });
@@ -3204,7 +3586,13 @@
 
   function scenarioMoveEnd(u) {
     soloAfterMove(u);
-    if (!state.scen.onMoveEnd) return;
+    samCheck(u);
+  }
+  /* Demolish's SAM system (p. 54) fires on "any aircraft finishing its move"
+     within 12" — a Move, an Advance, a strafing run, the AI's own flying or an
+     arrival from reserve alike. */
+  function samCheck(u) {
+    if (!state || !state.scen.onMoveEnd || !u || !u.alive) return;
     var res = state.scen.onMoveEnd(state, u);
     if (!res) return;
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
@@ -3281,14 +3669,16 @@
 
   // an Overgrown bug charging from the AI's hands, when something is in reach
   function aiCharge(u, t) {
-    var snap = snapshotAlive();
-    var res = abAssault(state, u, t);
-    if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
-    res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-    soundFor(res.log);
-    var card = fromLog('Assault', u.name + ' → ' + t.name, u.side, res.log);
-    playAssault(u, t, deathsSince(snap), function () { pushRes(card); });
-    u.activated = true; endActivation(u);
+    martyrFirst(u, t, function (m) {
+      var snap = snapshotAlive();
+      var res = abAssault(state, u, t, m);
+      if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
+      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      soundFor(res.log);
+      var card = fromLog('Assault', u.name + ' → ' + t.name, u.side, res.log);
+      playAssault(u, t, deathsSince(snap), function () { pushRes(card); });
+      u.activated = true; endActivation(u);
+    });
   }
 
   // an Advance that moves and then does not shoot: the activation ends there
@@ -3339,6 +3729,7 @@
       ui.targets = targetsFor(u, {});
       logLine('move', u.label + ' advances ' + d.toFixed(1) + '".');
       soloAfterMove(u);
+      samCheck(u);
       if (!u.alive || u.x < 0) { u.activated = true; endActivation(); return; }
       if (!ui.targets.length) { u.activated = true; endActivation(); } else render();
       return;
@@ -3378,11 +3769,25 @@
   /* Embark and Disembark (p. 36): the hull loads or unloads and "then may move up
      to half its Movement". The player's hull is offered that drive as a
      follow-up — tap the ground, or press the action again to stay put. */
+  /* A transport's half move around loading or unloading (p. 36) — and "aircraft
+     which transport troops follow the same rules as ground transport vehicles"
+     (p. 39), so a transport craft flies its half as well. */
+  function movesToCarry(u) { return R.drives(u) || (!!u && u.cls === 'aircraft' && u.move > 0 && !!u.transport); }
+  /* A Suppressed unit "may only move to terrain which provides a Defence bonus,
+     or out of the enemy's Line of Sight. If the unit already is in such a
+     terrain or place, it cannot move to another one" (p. 34). Only enemies on
+     the table see anything. */
+  function safeSpot(u, x, y) {
+    if (R.TERRAIN[R.terrainAt(state, x, y)].cover > 0) return true;
+    var ghost = { x: x, y: y, alive: true };
+    return !state.units.some(function (e) { return onTable(e) && e.side !== u.side && R.hasLoS(state, e, ghost); });
+  }
+  function alreadySafe(u) { return !!u.bld || safeSpot(u, u.x, u.y); }
   function carryMove(u) {
     ui.targets = []; ui.terrain = [];
     // it drove before it loaded or unloaded: that was its half move
     if (u.carryMoved) { u.carryMoved = false; ui.moves = []; ui.mode = 'idle'; endActivation(); return; }
-    if (!R.drives(u) || isAI(u.side) || !u.alive) { endActivation(); return; }
+    if (!movesToCarry(u) || isAI(u.side) || !u.alive) { endActivation(); return; }
     ui.moves = R.reachable(state, u, u.move / 2).filter(function (c) { return canStand(u, c); });
     if (!ui.moves.length) { ui.moves = []; endActivation(); return; }
     u.carrying = true; u.activated = false;         // not done yet: the drive is still to come
@@ -3444,7 +3849,26 @@
     abilityFx(res, t, sh, trails);
     return res;
   }
-  function abAssault(st, a, t) {
+  /* Martyrdom (p. 112) is ordered as each assault begins, attacking or
+     defending: a player's Holy Warriors are asked, and the assault waits for
+     the answer; the AI decides for its own. `go(martyr)` runs the assault. */
+  function martyrFirst(a, t, go) {
+    var ask = [a, t].filter(function (u, i) {
+      return !isAI(u.side) && R.canMartyr(state, u, i ? a : t);
+    });
+    if (!ask.length) { go({}); return; }
+    var said = {};
+    (function next() {
+      var u = ask.shift();
+      if (!u) { state.martyrAsk = null; ui.martyrThen = null; go(said); return; }
+      state.martyrAsk = { unit: u.id, foe: (u === a ? t : a).id, side: u.side, charging: u === a };
+      ui.martyrThen = function (yes) { said[u.side] = !!yes; next(); };
+      setHint(null, 'Martyrdom — ' + u.name + ' may send one of its own in alone.');
+      revealConsole();
+      render();
+    })();
+  }
+  function abAssault(st, a, t, martyr) {
     var trails = pheromoneMarkers(a, t);
     // "Death or Glory, Comrades!": the leader's shout, and the charge throwing off its Suppression
     var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
@@ -3458,7 +3882,7 @@
     var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
     if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
     var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
-    var res = R.assault(st, a, t, { path: route ? route.path : null });
+    var res = R.assault(st, a, t, { path: route ? route.path : null, martyr: martyr || {} });
     abilityFx(res, t, null, trails);
     return res;
   }
@@ -3711,6 +4135,7 @@
     if (!log.length) card = { kind: 'Strafing run', title: u.name, side: u.side, note: 'Nothing under the flight path.' };
     u.activated = true;
     playStrafe(u, from, pt, deathsSince(snap), function () { pushRes(card); });
+    samCheck(u);
     endActivation();
   }
 
@@ -3744,14 +4169,16 @@
 
   function doAssault(target) {
     var u = ui.selected;
-    var snap = snapshotAlive();
-    var res = abAssault(state, u, target);
-    if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
-    res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-    soundFor(res.log);
-    var card = fromLog('Assault', u.name + ' → ' + target.name, u.side, res.log);
-    playAssault(u, target, deathsSince(snap), function () { pushRes(card); });
-    u.activated = true; endActivation();
+    martyrFirst(u, target, function (m) {
+      var snap = snapshotAlive();
+      var res = abAssault(state, u, target, m);
+      if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
+      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      soundFor(res.log);
+      var card = fromLog('Assault', u.name + ' → ' + target.name, u.side, res.log);
+      playAssault(u, target, deathsSince(snap), function () { pushRes(card); });
+      u.activated = true; endActivation();
+    });
   }
 
   /* Supporting Fire: shoot without the stationary bonus, then stay active so the
@@ -3790,21 +4217,51 @@
   function doHack(target) {
     var u = ui.selected;
     if (u && target) addFx({ kind: 'beam', x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
-    var res = R.hack(state, u, target, function (drone) {
-      // the drone is turned on the nearest unit of its own side
-      var own = activeUnits(drone.side).filter(function (o) {
-        return o !== drone && R.canShoot(state, drone, o, 'basic', {});
-      }).sort(function (a, b) { return R.unitDist(drone, a) - R.unitDist(drone, b); })[0];
-      if (!own) return false;
-      var back = abShoot(state, drone, own, 'basic', {});
-      back.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+    var res = R.hack(state, u, target, function (drone, hits) {
+      // taken over: it will act for the hacker's side, then burn
+      drone.hijack = { from: drone.side, paint: drone.paint, hits: hits, by: u.id };
+      if (!drone.paint) drone.paint = drone.side;          // it keeps its own colours
+      drone.side = u.side;
       return true;
     });
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     var card = fromLog('Hack', u.name + ' → ' + target.name, u.side, res.log);
     u.activated = true;
     pushRes(card);
+    if (res.pending) { startHijack(target); return; }
     endActivation();
+  }
+  /* The hacked drone's one activation for the hacker's side (p. 57): the player
+     who hacked it picks what it does (the AI, for the AI), and only then does it
+     burn and go back to its owner. */
+  function hijacked() {
+    if (!state || !state.hijackId) return null;
+    return state.units.filter(function (x) { return x.id === state.hijackId; })[0] || null;
+  }
+  function startHijack(drone) {
+    state.hijackId = drone.id;
+    logLine('note', drone.label + ' is under ' + sideName(drone.side) + '’s control for one activation.');
+    ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
+    if (isAI(drone.side)) { whenIdle(function () { if (state && !state.over && drone.alive) aiAct(drone); else endHijack(drone); }); return; }
+    ui.selected = drone;
+    focusUnit(drone);
+    setHint(null, drone.name + ' is hacked: give it one action for your side, then it burns.');
+    render();
+  }
+  function endHijack(drone) {
+    var h = drone && drone.hijack;
+    if (!h) return;
+    drone.side = h.from; drone.paint = h.paint;
+    delete drone.hijack;
+    state.hijackId = null;
+    drone.activated = true; drone.hacked = true;
+    if (drone.alive) {
+      var log = [];
+      var hacker = state.units.filter(function (x) { return x.id === h.by; })[0] || null;
+      R.hackBurn(state, hacker, drone, h.hits, log);
+      log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      pushRes(fromLog('Hack', drone.name + ' burns', h.from, [{ t: 'note', text: drone.label + ' goes back to its own side and burns for ' + h.hits + ' hits.' }].concat(log)));
+    }
   }
 
   function doDemolish(piece) {
@@ -4038,9 +4495,11 @@
       u.activated = true; endActivation(u); return;
     }
 
+    // a solitaire OpFor hull rolls on the behaviour table like everything else (p. 147)
+    var soloB = !!state.solo && u.side === 'B';
     /* An Overgrown bug is a beast, not a hull: the Queen sends out her wave when
        it catches two or more, and anything with more bite than spit charges. */
-    if (R.isOvergrown(u) && R.status(u) !== 'broken') {
+    if (R.isOvergrown(u) && R.status(u) !== 'broken' && !soloB) {
       if (R.has(u, 'Psychic Wave') && R.status(u) === 'ready') {
         var wq = bestWaveSpot(u);
         if (wq && wq.n >= 2) { doWave(u, wq.pt); return; }
@@ -4098,6 +4557,28 @@
       }
     }
 
+    if (soloB) {
+      var bh = rollBehaviour(u, shot);
+      // Run for Your Lives!: a Move as far as it can get from the player's units, no shot
+      if (bh === 'flee') return aiRoll(u, nearestEnemy(u), false, { flee: true, noShoot: true });
+      // Kill Them All!: charge the closest enemy — only an Overgrown bug can — or else Move at it, no shot
+      if (bh === 'assault') {
+        var prey2 = nearestEnemy(u);
+        if (R.isOvergrown(u) && prey2 && R.status(u) === 'ready' && R.canAssault(u, prey2.unit) &&
+          prey2.dist <= chargeAllow(u) && canReachCharge(u, prey2.unit)) { aiCharge(u, prey2.unit); return; }
+        return aiRoll(u, prey2, false, { close: true, noShoot: true });
+      }
+      // Reasonably Defensive or Neutral: engage from where it stands, or keep its distance
+      if (bh === 'defensive' || bh === 'neutral') {
+        if (shot.t) { fire(u, shot.t, 'fire'); return; }
+        if (bh === 'defensive') {
+          logLine('ai', u.label + ' holds back.');
+          u.activated = true; endActivation(u); return;
+        }
+        return aiRoll(u, nearestObjective(u) || nearestEnemy(u), true);
+      }
+      // Reasonably Offensive: on at them, as it always did
+    }
     // an aircraft with a line of targets makes a run
     if (u.cls === 'aircraft') {
       var lane = bestStrafe(u);
@@ -4147,14 +4628,18 @@
   }
 
   // drive toward something, then shoot if anything comes into arc
-  function aiRoll(u, goalUnit, cautious) {
+  /* `o.flee`: as far from the goal (the nearest enemy) as it can get; `o.close`:
+     as close as it can get; `o.noShoot`: a Move, so no shot after it. */
+  function aiRoll(u, goalUnit, cautious, o) {
+    o = o || {};
     var goal = goalUnit && goalUnit.unit ? { x: goalUnit.unit.x, y: goalUnit.unit.y }
       : goalUnit ? { x: goalUnit.x, y: goalUnit.y } : pickGoal(u, 'offensive');
     var allowance = u.move + moveBonus(u);
     var spots = R.reachable(state, u, allowance).filter(function (c) { return canStand(u, c); }), best = null, bestD = Infinity;
     var want = cautious ? 6 : Math.max(4, u.range * 0.45);
     spots.forEach(function (c) {
-      var d = Math.abs(R.inches(c.x, c.y, goal.x, goal.y) - want);
+      var gd = R.inches(c.x, c.y, goal.x, goal.y);
+      var d = o.flee ? -gd : o.close ? gd : Math.abs(gd - want);
       if (d < bestD) { bestD = d; best = c; }
     });
     if (best && R.inches(u.x, u.y, best.x, best.y) > 0.6) {
@@ -4166,8 +4651,10 @@
       logLine('move', u.label + ' drives ' + dist.toFixed(1) + '".');
       crushAlong(u, path);
       animateMove(u, path, true);
+      samCheck(u);
+      if (!u.alive) { u.activated = true; whenIdle(function () { if (state && !state.over) endActivation(u); }); return; }
     }
-    var t2 = bestTarget(u, 'advance');
+    var t2 = o.noShoot ? {} : bestTarget(u, 'advance');
     if (t2.t && t2.score > 0.2) {
       whenIdle(function () { if (state && !state.over && u.alive) fire(u, t2.t, 'advance'); });
       return;
@@ -4273,7 +4760,41 @@
     return best ? { unit: best, dist: bd } : null;
   }
 
+  /* The behaviour table (p. 147), rolled for every unit as it activates —
+     a hull or an aircraft as much as a squad. */
+  function rollBehaviour(u, shot) {
+    var roll = R.d6(), mods = 0, why = [];
+    var fp = u.fp || 0, as = u.assault || 0;
+    if (as >= 2 * fp && as > 0) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }
+    else if (as > fp) { mods += 1; why.push('Assault > Firepower +1'); }
+    if (!shot.t) { mods += 2; why.push('no enemy in range +2'); }
+    // the scenario's own temper: aggressive, defensive, or aggressive near the objectives
+    if (state.solo && u.side === 'B' && state.scen.behaviour) {
+      var bm = state.scen.behaviour(state, u) || {};
+      if (bm.mod) { mods += bm.mod; why.push(bm.why || ((bm.mod > 0 ? '+' : '') + bm.mod)); }
+    }
+    var total = roll + mods;
+    var behaviour = total <= 0 ? 'flee' : total <= 2 ? 'defensive' : total <= 4 ? 'neutral' : total <= 6 ? 'offensive' : 'assault';
+    // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
+    if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
+    logLine('ai', u.label + ' — behaviour D6 ' + roll + (why.length ? ' (' + why.join(', ') + ')' : '') + ' = ' + total + ': ' + behaviour + '.');
+    return behaviour;
+  }
+
   function aiAct(u) {
+    /* Decapitation: the OpFor's leaders "always act according to the Reasonably
+       Defensive result and never Move nor Advance" (p. 152) — whatever state they
+       are in, they shoot from where they are or keep their heads down. */
+    if (state.scen.noMove && state.scen.noMove(state, u)) {
+      var still = R.status(u) === 'ready' ? bestTarget(u, 'fire') : {};
+      logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
+      if (still.t) { fire(u, still.t, 'fire'); return; }
+      if (u.sp) {
+        var rr0 = abRally(state, u);
+        if (rr0) { logLine('rally', rr0.text); pushRes({ kind: 'Regroup', title: u.name + ' regroups', side: u.side, list: [{ text: rr0.text, side: u.side }] }); }
+      }
+      u.activated = true; endActivation(u); return;
+    }
     if (R.isMachine(u)) { aiDrive(u); return; }
     /* "Death or Glory, Comrades!" (p. 94): a shaken unit with a leader shouting
        at it goes in rather than going to ground — that is the whole point of the
@@ -4281,17 +4802,20 @@
     if (R.status(u) === 'suppressed' && R.deathOrGlory(state, u) && !R.has(u, 'Cumbersome Weapon')) {
       var dogT = nearestEnemy(u);
       if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
-        var dsnap = snapshotAlive();
-        var dres = abAssault(state, u, dogT.unit);
-        dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-        soundFor(dres.log);
-        var dcard = fromLog('Assault', u.name + ' → ' + dogT.unit.name, u.side, dres.log);
-        playAssault(u, dogT.unit, deathsSince(dsnap), function () { pushRes(dcard); });
-        u.activated = true; endActivation(u); return;
+        martyrFirst(u, dogT.unit, function (m) {
+          var dsnap = snapshotAlive();
+          var dres = abAssault(state, u, dogT.unit, m);
+          dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+          soundFor(dres.log);
+          var dcard = fromLog('Assault', u.name + ' → ' + dogT.unit.name, u.side, dres.log);
+          playAssault(u, dogT.unit, deathsSince(dsnap), function () { pushRes(dcard); });
+          u.activated = true; endActivation(u);
+        });
+        return;
       }
     }
     // a pinned squad beside an empty building gets inside it
-    if (R.status(u) === 'suppressed' && !u.bld && R.TERRAIN[R.terrainOf(state, u)].cover === 0) {
+    if (R.status(u) === 'suppressed' && !alreadySafe(u)) {
       var sin = R.enterTargets(state, u);
       if (sin.length) {
         sin.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
@@ -4301,7 +4825,7 @@
     }
     if (R.status(u) === 'suppressed') {
       var spots = R.reachable(state, u, u.move + 2).filter(function (c) { return R.TERRAIN[R.terrainAt(state, c.x, c.y)].cover > 0 && canStand(u, c); });
-      if (spots.length && R.TERRAIN[R.terrainOf(state, u)].cover === 0) {
+      if (spots.length && !alreadySafe(u)) {
         spots.sort(function (a, b) { return a.cost - b.cost; });
         var spath = R.pathTo(state, u, u.move + 2, spots[0]);
         u.x = spots[0].x; u.y = spots[0].y;
@@ -4378,30 +4902,8 @@
       }
     }
 
-    /* Decapitation: the OpFor's leaders always act Reasonably Defensive and never
-       Move nor Advance (p. 152) — they shoot from where they are, or keep their heads down. */
-    if (state.scen.noMove && state.scen.noMove(state, u)) {
-      var still = bestTarget(u, 'fire');
-      logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
-      if (still.t) { fire(u, still.t, 'fire'); return; }
-      u.activated = true; endActivation(u); return;
-    }
-
-    var roll = R.d6(), mods = 0, why = [];
-    if (u.fp && u.assault >= 2 * u.fp) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }
-    else if (u.assault > u.fp) { mods += 1; why.push('Assault > Firepower +1'); }
     var shot = bestTarget(u, 'fire');
-    if (!shot.t) { mods += 2; why.push('no enemy in range +2'); }
-    // the scenario's own temper: aggressive, defensive, or aggressive near the objectives
-    if (state.solo && u.side === 'B' && state.scen.behaviour) {
-      var bm = state.scen.behaviour(state, u) || {};
-      if (bm.mod) { mods += bm.mod; why.push(bm.why || ((bm.mod > 0 ? '+' : '') + bm.mod)); }
-    }
-    var total = roll + mods;
-    var behaviour = total <= 0 ? 'flee' : total <= 2 ? 'defensive' : total <= 4 ? 'neutral' : total <= 6 ? 'offensive' : 'assault';
-    // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
-    if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
-    logLine('ai', u.label + ' — behaviour D6 ' + roll + (why.length ? ' (' + why.join(', ') + ')' : '') + ' = ' + total + ': ' + behaviour + '.');
+    var behaviour = rollBehaviour(u, shot);
     /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
        closest enemy unit. If there are no valid targets, it makes a Move towards
        the closest enemy" — a Move, so it does not shoot as well. */
@@ -4434,13 +4936,17 @@
       if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
     }
     if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
-      var snap = snapshotAlive();
-      var res = abAssault(state, u, ne.unit);
-      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-      soundFor(res.log);
-      var card = fromLog('Assault', u.name + ' → ' + ne.unit.name, u.side, res.log);
-      playAssault(u, ne.unit, deathsSince(snap), function () { pushRes(card); });
-      u.activated = true; endActivation(u); return;
+      var nt = ne.unit;
+      martyrFirst(u, nt, function (m) {
+        var snap = snapshotAlive();
+        var res = abAssault(state, u, nt, m);
+        res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+        soundFor(res.log);
+        var card = fromLog('Assault', u.name + ' → ' + nt.name, u.side, res.log);
+        playAssault(u, nt, deathsSince(snap), function () { pushRes(card); });
+        u.activated = true; endActivation(u);
+      });
+      return;
     }
     if ((behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
       fire(u, shot.t, 'fire'); return;
@@ -4712,7 +5218,8 @@
           owner: ui.insertion.owner || null,
           by: ui.insertion.by || null, drift: ui.insertion.drift || null, die: ui.insertion.die || null,
           kind: ui.insertion.kind,
-          spots: ui.insertion.spots
+          spots: ui.insertion.spots,
+          n: ui.insertion.n || null, chosen: ui.insertion.chosen || null
         } : null,
         // which reserves come on this turn, being chosen
         reservePick: ui.reservePick ? {
@@ -4800,7 +5307,7 @@
     var yes = { ok: true };
 
     function mayDeploy(side) {
-      return state.phase === 'deploy' && placingSide() === side;
+      return state.phase === 'deploy' && placingSide() === side && !state.placeAsk && !state.minePick;
     }
     /* The terrain set-up goes an area at a time, and each area is one side's
        to lay (p. 47). Nobody else may touch it while it is being laid. */
@@ -4816,7 +5323,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion) return false;
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -4848,6 +5355,8 @@
           var u = unitOf(it.id);
           if (!u) return no('no such unit');
           if (!mayAct(side) && state.phase === 'battle') return no('not your activation');
+          var hjk = hijacked();
+          if (hjk && u !== hjk && u.side === side) return no(hjk.name + ' is hacked: act with it first');
           /* A unit half-way through an Advance has to finish it first; left
              behind, it could come back later in the turn for a whole action. */
           var mid = ui.selected;
@@ -4877,6 +5386,7 @@
           return yes;
         }
         case 'deploy': {
+          if (state.swapAsk && state.swapAsk.side === side) swapsDone();   // placing a unit keeps the list
           if (!mayDeploy(side)) return no('not your turn to place');
           return deployAt(side, it);
         }
@@ -4908,6 +5418,8 @@
         }
         case 'autodeploy': {
           if (state.phase !== 'deploy') return no('not deploying');
+          // deploying straight away means keeping the list as it is
+          if (state.swapAsk && state.swapAsk.side === side) swapsDone();
           autoDeploy(side);
           render();
           return yes;
@@ -4953,8 +5465,47 @@
           maybeAI();
           return yes;
         }
+        case 'swapopen': {
+          if (!canSwapNow(side)) return no('the list can no longer be changed');
+          state.swapAsk = state.swapAvail[side];
+          state.swapAsk.pick = null;
+          render();
+          return yes;
+        }
+        case 'swappick': case 'swapin': case 'swapdone': {
+          var sa2 = state.swapAsk;
+          if (!sa2 || sa2.side !== side) return no('nothing to swap');
+          if (it.k === 'swapdone') { swapsDone(); return yes; }
+          if (it.k === 'swappick') { sa2.pick = it.id || null; render(); return yes; }
+          var sw = doSwap(side, sa2.pick, it.id);
+          if (sw) { setHint(null, sw); render(); return no(sw); }
+          return yes;
+        }
+        case 'placeat': case 'placerot': case 'placedone': {
+          var pa = state.placeAsk;
+          if (!pa || pa.side !== side) return no('nothing to place');
+          if (it.k === 'placerot') { pa.vertical = !pa.vertical; render(); return yes; }
+          if (it.k === 'placedone') { placeDone(); return yes; }
+          var pw = placeAt(+it.x, +it.y);
+          if (pw) { setHint(null, pw); render(); return no(pw); }
+          return yes;
+        }
+        case 'mine': {
+          var mp = state.minePick;
+          if (!mp || mp.side !== side) return no('nothing to mine');
+          var mi = +it.i;
+          if (mi >= 0 && mp.pool.indexOf(mi) < 0) return no('that cannot be mined');
+          state.mined = mi >= 0 ? { side: side, piece: state.terrain[mi] } : null;
+          state.minePick = null;
+          logLine('note', sideName(side) + (mi >= 0 ? ' has quietly mined a piece of the table.' : ' leaves the charges in the crates.'));
+          render();
+          return yes;
+        }
         case 'start': {
           if (state.phase !== 'deploy') return no('already under way');
+          if (state.minePick) return no('the mined piece has not been chosen');
+          if (state.placeAsk) return no('there are pieces still to place');
+          if (state.swapAsk) swapsDone();
           if (!deploymentDone()) return no('there are still units to place');
           // Rapid Relocation is one side's to finish, and it starts the battle when it does
           if (state.relocating && state.relocating.side !== side) return no('the other side is still relocating');
@@ -4998,6 +5549,24 @@
           if (!ui.insertion || ui.insertion.kind !== 'insert') return no('nothing to hold back');
           if (insertionSide() !== side) return no('that is not your unit');
           holdInsertion();
+          return yes;
+        }
+        case 'kyf': case 'nokyf': {
+          if (!state.kyfAsk || state.kyfAsk.side !== side || !ui.kyfThen) return no('nothing to answer');
+          ui.kyfThen(it.k === 'kyf');
+          return yes;
+        }
+        case 'martyr': case 'nomartyr': {
+          var ma = state.martyrAsk;
+          if (!ma || ma.side !== side || !ui.martyrThen) return no('nothing to answer');
+          ui.martyrThen(it.k === 'martyr');
+          return yes;
+        }
+        case 'cmdcoord': case 'cmdskip': {
+          if (!state.cmdOffer) return no('nothing is offered');
+          var ov = byId(state.cmdOffer.veh);
+          if (!ov || ov.side !== side) return no('not your vehicle');
+          answerCmdOffer(it.k === 'cmdcoord');
           return yes;
         }
         case 'holdarrive': {
@@ -5162,6 +5731,11 @@
         forcedCharge: forcedCharge,
         snapToSpot: snapToSpot,
         insertionLegal: insertionLegal,
+        // Modifying the armies: what could stand in for this unit
+        canSwapNow: function (side) { return canSwapNow(side); },
+        swapOptions: function (side, id) {
+          return swapOptions(side, byId(id)).map(function (o) { return { id: o.id, name: o.name, key: o.key }; });
+        },
         arrivalLegal: arrivalLegal,
         /* Who holds each objective as things stand. The board shows it live,
            between the End phases that actually score it. */

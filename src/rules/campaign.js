@@ -826,7 +826,7 @@
     var honours = (co.roster || []).reduce(function (n, e) { return n + (e.honours || []).length; }, 0);
     var units = (co.roster || []).length;
     return {
-      word: f === 'bugs' ? 'evolution' : f === 'xeno' ? 'enlightenment' : 'veterancy',
+      word: f === 'bugs' ? 'adaptations' : f === 'xeno' ? 'rites' : 'honours',
       honours: honours, units: units, pct: units ? honours / units : 0,
       noun: honours === 1 ? words(co).honour : words(co).honours
     };
@@ -844,7 +844,7 @@
     var traumas = (co.roster || []).reduce(function (n, e) { return n + (e.traumas || []).length; }, 0);
     var units = (co.roster || []).length;
     return {
-      word: f === 'bugs' ? 'genetic degradation' : f === 'xeno' ? 'infamy' : 'trauma',
+      word: f === 'bugs' ? 'flaws' : f === 'xeno' ? 'infamy' : 'trauma',
       traumas: traumas, units: units, pct: units ? traumas / units : 0,
       noun: traumas === 1 ? words(co).trauma : words(co).traumas
     };
@@ -1193,8 +1193,8 @@
       if (civs <= 4) return 0;
     }
     var p = profile(key), cost = RECRUIT_COST[p.tier];
-    // a tribe's turrets are never bought, only fielded (p. 140)
-    if (isTurretP(p)) return 0;
+    // a tribe's turrets and a company's drop pods are never bought, only fielded (pp. 86, 140)
+    if (isTurretP(p) || p.noSlot) return 0;
     if (hasDoctrine(co, 'V1')) cost = Math.max(1, cost - 1);
     // Increased Population Growth: infantry below the Tribe Tier at half, rounding up
     if (hasDoctrine(co, 'XS1') && p.cls === 'infantry' && p.tier < co.tier) cost = Math.ceil(cost / 2);
@@ -1304,10 +1304,16 @@
     return Math.max(1, Math.min(5, Math.min(a, b)));
   }
   /* Which Priority Levels this pairing could actually fight at the given Tier. */
+  // "players can choose to play bigger ones as long as they can compose legal armies" (p. 84)
   function levelsFor(coA, coB, tier) {
-    return [1, 2].filter(function (pl) {
+    return [1, 2, 3, 4].filter(function (pl) {
       return canFieldArmy(coA, tier, pl, true) && canFieldArmy(coB, tier, pl, true);
     });
+  }
+  /* The standard contract (p. 84): Tier III at Priority Level 2, no roll for the
+     Tier, when both forces can put a legal army of it on the table. */
+  function canStandard(coA, coB) {
+    return canFieldArmy(coA, 3, 2, true) && canFieldArmy(coB, 3, 2, true);
   }
   function rollBattleTier(coA, coB, pl) {
     var cap = maxBattleTier(coA, coB, pl), roll = d6();
@@ -1368,20 +1374,28 @@
     });
     return { was: dice.slice(), now: out, total: sum(out), won: !!won };
   }
-  function payment(battleTier, pl, coA, coB, winner, attackDefend) {
-    var a = rollPayment(battleTier, pl), b = rollPayment(battleTier, pl);
-    var negA = null, negB = null, plunder = { A: null, B: null };
-    /* Plunderer (Path of the Villain): a victorious revolt goes back through the
-       wreckage and re-rolls the lot. */
-    function loot(co, side, dice, other) {
-      if (!hasDoctrine(co, 'V2') || winner !== side) return dice;
+  /* `preset`: a player's own roll, already made — and already re-rolled or kept
+     under Plunderer, which they decide on seeing it — as { dice: {A}, plunder: {A} }. */
+  function payment(battleTier, pl, coA, coB, winner, attackDefend, preset) {
+    preset = preset || {};
+    var pd = preset.dice || {}, pp = preset.plunder || {}, pn = preset.neg || {};
+    var a = pd.A || rollPayment(battleTier, pl), b = pd.B || rollPayment(battleTier, pl);
+    var negA = null, negB = null, plunder = { A: pp.A || null, B: pp.B || null };
+    /* Plunderer (Path of the Villain, p. 112): a victorious revolt "may reroll
+       all dice". A player chooses on seeing the roll; a rival re-rolls one that
+       came in under the odds. */
+    function loot(co, side, dice) {
+      if (pd[side] || !hasDoctrine(co, 'V2') || winner !== side) return dice;
+      if (sum(dice) >= dice.length * 3.5) { plunder[side] = { was: dice.slice(), kept: true }; return dice; }
       var again = rollPayment(battleTier, pl);
       plunder[side] = { was: dice.slice(), now: again.slice() };
       return again;
     }
     a = loot(coA, 'A', a); b = loot(coB, 'B', b);
-    if (hasDoctrine(coA, 'S2')) { negA = negotiate(a); a = negA.dice; }
-    if (hasDoctrine(coB, 'S2')) { negB = negotiate(b); b = negB.dice; }
+    /* Tough Negotiators (p. 87): a player picks which dice to re-roll on seeing
+       them (preset.neg); a rival re-rolls its lowest half. */
+    if (pd.A) negA = pn.A || null; else if (hasDoctrine(coA, 'S2')) { negA = negotiate(a); a = negA.dice; }
+    if (pd.B) negB = pn.B || null; else if (hasDoctrine(coB, 'S2')) { negB = negotiate(b); b = negB.dice; }
     var hi = Math.max(sum(a), sum(b)), lo = Math.min(sum(a), sum(b));
     var out = { diceA: a, diceB: b, negA: negA, negB: negB, plunder: plunder,
       high: hi, low: lo, A: lo, B: lo, extra: { A: null, B: null }, thin: { A: false, B: false } };
@@ -1507,6 +1521,9 @@
     var p = profile(entry.key), need, note;
     // an Overgrown bug is a creature, not a hull: there is nothing to recover
     if (p.faction === 'bugs') return { roll: null, saved: false, need: null, note: 'A dead Overgrown bug is a carcass, not a wreck.' };
+    // drop pods and turrets are never salvaged (pp. 86, 140) — they cost nothing to replace
+    if (p.noSlot) return { roll: null, saved: false, need: null, note: 'A drop pod is not salvaged once used.' };
+    if (isTurretP(p)) return { roll: null, saved: false, need: null, note: 'A turret is not salvaged.' };
     if (p.cls === 'aircraft') {
       need = (entry.upgrades || []).indexOf(1) >= 0 ? 2 : 4;   // Advanced Emergency Systems
       note = 'Aircraft make an emergency landing on a ' + need + '+' +
@@ -1525,15 +1542,72 @@
     return { roll: roll, need: need, saved: roll >= need, note: note };
   }
 
+  /* The Trauma Points each of a side's units earned in the battle, rolled once
+     — No Place for the Weak! is decided on them, and the aftermath reuses them. */
+  function rollTP(campaign, report, side) {
+    var co = campaign.companies[side], foe = campaign.companies[side === 'A' ? 'B' : 'A'];
+    var won = report.winner === side || (report.winner === null && hasDoctrine(co, 'S5'));
+    var lostBattle = report.winner && report.winner !== side;
+    var rolled = {};
+    (report.units || []).filter(function (l) { return l.side === side; }).forEach(function (line) {
+      var e = byRid(co, line.rid);
+      if (!e) return;
+      rolled[e.rid] = tpFor(line, {
+        entry: e, company: co, won: won, lost: !!lostBattle,
+        ownTier: co.tier, enemyTier: foe.tier, halveTP: false,
+        routed: !!report.routed && report.routed[side],
+        consecutive: e.lastBattle === campaign.turn && campaign.turn > 0
+      });
+    });
+    return rolled;
+  }
+  /* "the unit which got the most Trauma Points (if there are two or more such
+     units, the player selects only one of them)" (p. 112): every infantry unit
+     tied for the most, the leader aside. */
+  function weakCandidates(campaign, side, rolled) {
+    var co = campaign.companies[side], best = 0, out = [];
+    Object.keys(rolled).forEach(function (id) {
+      var e = byRid(co, id);
+      if (!e || e.rid === co.cmdRid || profile(e.key).cls !== 'infantry') return;
+      var n = rolled[id].total;
+      if (n > best) { best = n; out = [e]; } else if (n === best && n > 0) out.push(e);
+    });
+    return best > 0 ? out : [];
+  }
+
+  /* Enhanced Genetic Memory, taken up by a player for one offered unit: the new
+     recruit is paid for, and on a 2-6 it remembers everything the lost one had
+     before its last battle. */
+  function rebirth(co, offer) {
+    if (!offer || offer.done) return { ok: false, why: 'Already decided.' };
+    if (co.kUC < offer.cost) return { ok: false, why: 'Costs ' + offer.cost + ' ' + money(co) + ' — the tribe has ' + co.kUC + '.' };
+    co.kUC -= offer.cost;
+    var ne = newEntry(offer.key), mem = offer.mem, r2 = d6();
+    if (mem && r2 >= 2) {
+      ne.exp = mem.exp; ne.tp = mem.tp; ne.honours = mem.honours.slice(); ne.traumas = mem.traumas.slice();
+      ne.name = mem.name;
+      ne.history.push('Reborn with the memory of ' + mem.name + ' (Enhanced Genetic Memory, D6 ' + r2 + ').');
+    } else ne.history.push('Recruited in place of ' + offer.name + ' — the memory did not carry (D6 ' + r2 + ').');
+    co.roster.push(ne);
+    offer.done = { roll: r2, remembered: !!(mem && r2 >= 2), name: ne.name };
+    return { ok: true, roll: r2, remembered: offer.done.remembered };
+  }
+
   /* ================= the aftermath =================
      Takes a battle report and applies every book step in order, returning a
      record of what happened so the UI can show it and the player can see why. */
-  function aftermath(campaign, report) {
+  /* `opts` carries the choices a player made after the battle, before this runs:
+     their pay roll under Plunderer (dice, plunder), and under No Place for the
+     Weak! the Trauma Points already rolled (tp) and who, if anyone, was
+     executed (weak: a rid, or false). A side with nothing in it is decided here. */
+  function aftermath(campaign, report, opts) {
+    opts = opts || {};
     var out = { turn: campaign.turn + 1, winner: report.winner, sides: {}, payment: null };
     var coA = campaign.companies.A, coB = campaign.companies.B;
 
     out.payment = payment(report.battleTier, report.pl, coA, coB, report.winner,
-      report.attackDefend != null ? report.attackDefend : ATTACK_DEFEND.indexOf(report.scenario) >= 0);
+      report.attackDefend != null ? report.attackDefend : ATTACK_DEFEND.indexOf(report.scenario) >= 0,
+      { dice: opts.dice, plunder: opts.plunder, neg: opts.neg });
     coA.kUC += out.payment.A;
     coB.kUC += out.payment.B;
 
@@ -1581,25 +1655,14 @@
           before[e.rid] = { exp: e.exp, tp: e.tp, honours: e.honours.slice(), traumas: e.traumas.slice(), name: e.name };
         });
       }
-      var rolled = {}, halveTP = false;
-      (report.units || []).filter(function (l) { return l.side === side; }).forEach(function (line) {
-        var e = byRid(co, line.rid);
-        if (!e) return;
-        rolled[e.rid] = tpFor(line, {
-          entry: e, company: co, won: won, lost: !!lostBattle,
-          ownTier: co.tier, enemyTier: foe.tier, halveTP: false,
-          routed: !!report.routed && report.routed[side],
-          consecutive: e.lastBattle === campaign.turn && campaign.turn > 0
-        });
-      });
-      if (hasDoctrine(co, 'V5')) {
-        var worst = null, worstN = 0;
-        Object.keys(rolled).forEach(function (id) {
-          var e = byRid(co, id);
-          if (!e || e.rid === co.cmdRid || profile(e.key).cls !== 'infantry') return;
-          if (rolled[id].total > worstN) { worstN = rolled[id].total; worst = e; }
-        });
-        if (worst) {
+      var rolled = (opts.tp && opts.tp[side]) || rollTP(campaign, report, side), halveTP = false;
+      var choice = opts.weak && side in opts.weak ? opts.weak[side] : undefined;
+      if (hasDoctrine(co, 'V5') && choice !== false) {
+        // the player named the unit; left to itself, the force makes an example of the worst
+        var cand = weakCandidates(campaign, side, rolled);
+        var worst = choice ? byRid(co, choice) : (cand[0] || null);
+        var worstN = worst && rolled[worst.rid] ? rolled[worst.rid].total : 0;
+        if (worst && worstN > 0) {
           halveTP = true;
           rec.executed = { rid: worst.rid, name: worst.name, key: worst.key, tp: worstN };
           worst.history.push('Executed for coming back in the worst state of the force.');
@@ -1751,7 +1814,16 @@
       /* Enhanced Genetic Memory (p. 141): a destroyed infantry unit comes back as
          a new recruit of the same kind, and on a 2-6 it remembers everything it
          had before this battle. The recruit is paid for as usual. */
-      if (hasDoctrine(co, 'XS5')) {
+      if (hasDoctrine(co, 'XS5') && opts.askReborn && opts.askReborn[side]) {
+        /* A player "can recruit" each one (p. 141): offered on the aftermath
+           screen, and only there — it is gone once the next contract is taken. */
+        rec.rebornOffer = [];
+        rec.gone.forEach(function (e) {
+          var p0 = profile(e.key);
+          if (!p0 || p0.cls !== 'infantry' || isLeaderP(p0) || e.rid === co.cmdRid) return;
+          rec.rebornOffer.push({ rid: e.rid, name: e.name, key: e.key, cost: recruitCost(co, e.key), mem: before[e.rid] || null, done: null });
+        });
+      } else if (hasDoctrine(co, 'XS5')) {
         rec.reborn = [];
         rec.gone.forEach(function (e) {
           var p0 = profile(e.key);
@@ -2065,6 +2137,89 @@
       spend: 'promote'
     }
   ];
+  /* A rival's character, written from the doctrines it actually holds rather
+     than a fixed theme: each doctrine carries a clause, and the first two or
+     three held make a sentence. */
+  var THEMES = {
+    S1: 'strikes first rather than wait to be hit',
+    S2: 'haggles over every credit of the fee',
+    S3: 'keeps its nerve when the fire comes in',
+    S4: 'picks the size of the fight it takes',
+    S5: 'sells every draw as a victory',
+    S6: 'turns recruits into veterans at speed',
+    O1: 'owns the sky over its battles',
+    O2: 'fields whatever it can get its hands on',
+    O3: 'is never quite where it deployed',
+    O4: 'brings more support weapons than anyone needs',
+    O5: 'buries a position under cheap bodies',
+    O6: 'changes its line-up the night before',
+    T1: 'fights on things no doctor would prescribe',
+    T2: 'stands its ground under repeated fire',
+    T3: 'shoots on the move and never stops',
+    T4: 'settles things at knife range',
+    T5: 'never gives up an inch',
+    T6: 'walks its guns onto the target',
+    BC1: 'eats what would poison anything else',
+    BC2: 'melts armour with concentrated acid',
+    BC3: 'marks its prey from far away',
+    BC4: 'leaves its victims writhing in venom',
+    BC5: 'lobs bioplasma over any cover',
+    BC6: 'drips toxin from every gland',
+    BB1: 'moves as one hive mind',
+    BB2: 'hides in plain sight until it strikes',
+    BB3: 'holds its lesser forms on a long leash',
+    BB4: 'hits hardest in the first moment of contact',
+    BB5: 'feeds on the fallen as it fights',
+    BB6: 'learns from every battle it survives',
+    BP1: 'spawns faster than it can be killed',
+    BP2: 'covers ground on huge, springing legs',
+    BP3: 'shrugs off pain that would stop anything else',
+    BP4: 'grows fungus armour over its hide',
+    BP5: 'hides under thick chitin plates',
+    BP6: 'tears through steel with metal-clad talons',
+    XS1: 'breeds warriors faster than it loses them',
+    XS2: 'wastes nothing it takes',
+    XS3: 'looks after its own',
+    XS4: 'trusts no one outside the tribe',
+    XS5: 'remembers every lesson its ancestors learned',
+    XS6: 'accepts nothing short of perfection',
+    XO1: 'moves its warriors through a web of teleports',
+    XO2: 'comes up from below without warning',
+    XO3: 'sees the battle before it begins',
+    XO4: 'knows every rock of the ground it fights on',
+    XO5: 'digs in, then strikes',
+    XO6: 'studies its enemies before it meets them',
+    XT1: 'fills the sky with strange craft',
+    XT2: 'fights in a meditative calm',
+    XT3: 'cows its enemies with sheer presence',
+    XT4: 'is half-invisible on the battlefield',
+    XT5: 'amplifies the minds of its warriors',
+    XT6: 'switches its weapons to suit the fight',
+    H1: 'marches under the banner of the revolution',
+    H2: 'is led by a hero of the people',
+    H3: 'is organised by union men',
+    H4: 'keeps coming back from the edge of defeat',
+    H5: 'robs the rich to feed the poor',
+    H6: "rallies the crowd with liberty's flag",
+    V1: 'runs guns and contraband on the side',
+    V2: 'strips every battlefield it wins',
+    V3: 'mines the ground it means to lose',
+    V4: 'keeps its fighters high',
+    V5: 'shoots its own weaklings',
+    V6: 'keeps everyone guessing whose side it is on',
+    P1: 'sends martyrs walking into the enemy',
+    P2: 'counts no sacrifice as too great',
+    P3: 'promises its dead a stairway to heaven',
+    P4: 'fights in a holy fury',
+    P5: 'follows the word of a preacher',
+    P6: 'goes to war in incense and iron'
+  };
+  function themeOf(co) {
+    var bits = (co.doctrines || []).map(function (d) { return THEMES[d]; }).filter(Boolean).slice(0, 3);
+    if (!bits.length) return 'A new force, still finding its way to fight.';
+    var t = bits.length === 1 ? bits[0] : bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1];
+    return 'It ' + t + '.';
+  }
   function archetypesFor(faction) {
     return faction === 'rebel' ? REBEL_ARCHETYPES : faction === 'bugs' ? BUG_ARCHETYPES
       : faction === 'xeno' ? XENO_ARCHETYPES : ARCHETYPES;
@@ -2207,7 +2362,7 @@
       var alt = hasDoctrine(A, 'XO3') ? rollScenario(false) : null;
       return {
         alt: alt,
-        altRoles: alt && SC ? SC.rollRoles(alt.id, docs) : null,
+        altRoles: alt && SC ? SC.rollRoles(alt.id, docs, null, ['A']) : null,
         rival: idx,
         scenario: scen,
         tierRoll: tier,
@@ -2216,7 +2371,7 @@
         // the biggest fight this pairing could put on, whatever the D6 said
         capTier: maxBattleTier(A, co, 1),
         capLevels: levelsFor(A, co, maxBattleTier(A, co, 1)),
-        roles: SC ? SC.rollRoles(scen.id, docs) : null,
+        roles: SC ? SC.rollRoles(scen.id, docs, null, ['A']) : null,
         caught: caught[idx]
       };
     });
@@ -2318,7 +2473,10 @@
     h1.forEach(function (k) { keys.push(k); });
     for (var j = 0; j < 2 - h2.length; j++) keys.push(t2pool[j % t2pool.length]);
     h2.forEach(function (k) { keys.push(k); });
-    var res = found(co, keys, a.doctrines[0]);
+    /* No fixed theme: the doctrines it will grow into are drawn at random, in
+       the order it will take them, and its character is read from them. */
+    co.docPlan = shuffle(creedOf(co).list.map(function (d) { return d.id; }));
+    var res = found(co, keys, co.docPlan[0]);
     // a starting list that breaks a per-army cap gets the offender swapped out
     for (var g = 0; g < 8 && !res.ok; g++) {
       co.roster.some(function (e, idx) {
@@ -2328,8 +2486,9 @@
         keys[idx - 1] = pick(t1pool);
         return true;
       });
-      res = found(co, keys, a.doctrines[0]);
+      res = found(co, keys, co.docPlan[0]);
     }
+    co.blurb = null;                              // read from its doctrines instead: themeOf
     return co;
   }
 
@@ -2491,7 +2650,7 @@
     if (pr.ok) {
       promoteCompany(co);
       var creed = creedOf(co);
-      var next = a.doctrines.filter(function (d) { return canTakeDoctrine(co, d).ok; });
+      var next = (co.docPlan || a.doctrines).filter(function (d) { return canTakeDoctrine(co, d).ok; });
       var free = next.length ? next
         : creed.list.filter(function (d) { return canTakeDoctrine(co, d.id).ok; }).map(function (d) { return d.id; });
       if (free.length) {
@@ -2520,7 +2679,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
-    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, deepen: deepen,
+    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, rebirth: rebirth, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
@@ -2551,7 +2710,7 @@
     rollPayment: rollPayment, negotiate: negotiate, payment: payment,
     expFor: expFor, tpFor: tpFor, traumaThreshold: traumaThreshold, rollTrauma: rollTrauma,
     salvage: salvage, aftermath: aftermath, developRival: developRival,
-    ARCHETYPES: ARCHETYPES, archetype: archetype, foundRival: foundRival,
+    ARCHETYPES: ARCHETYPES, archetype: archetype, foundRival: foundRival, themeOf: themeOf,
     d6: d6, d3: d3, d10: d10
   };
 })(typeof window !== 'undefined' ? window : global);

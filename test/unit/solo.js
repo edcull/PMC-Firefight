@@ -65,8 +65,10 @@ C.ARCHETYPES.forEach(function (a) {
   var chk = C.foundingCheck(co);
   ok(a.name + ' founds a legal company', chk.ok, true, chk.ok ? co.name : chk.faults.join(' '));
   ok('...and can field a legal Tier I army', C.canFieldArmy(co, 1, 1), true);
-  ok('...taking its own first doctrine', co.doctrines[0], a.doctrines[0],
+  // no fixed theme: the first doctrine is the first of its own random plan, and its character is read from it
+  ok('...taking the first doctrine of its random plan', co.doctrines[0], co.docPlan[0],
     C.doctrine(co.doctrines[0]).name);
+  ok('...and described by it', /^It /.test(C.themeOf(co)), true, C.themeOf(co));
 });
 
 /* ------------------------------------------------------ thirty campaign turns */
@@ -282,9 +284,10 @@ var elite = spendOn('elite', 'recruits', 12);
 ok('the elite promotes into its own groups',
   ['Rifle infantry', 'Heavy infantry', 'Assault troops'].indexOf(R.profile(elite.key).group) >= 0, true,
   'became a ' + R.profile(elite.key).name);
-ok('...and its Rapid Training Methods halves the first honour', (function () {
+ok('Rapid Training Methods halves a rival\'s first honour', (function () {
   var co = C.newCompany('x');
   C.foundRival(co, 'elite');
+  co.doctrines = ['S6'];                          // doctrines are drawn at random now: give it the one under test
   var e = co.roster.filter(function (x) { return !x.free; })[0];
   return C.honourCost(e, co);
 })(), 5);

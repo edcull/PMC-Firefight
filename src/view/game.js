@@ -1002,10 +1002,106 @@
     render();
   }
 
+  // a Command Unit riding in a Command Vehicle, offered its special action (p. 57)
+  function cmdOfferCard() {
+    var o = state.cmdOffer, veh = byId(o.veh), cmd = byId(o.cmd);
+    if (!veh || !cmd) return '';
+    var n = R.ruleValue(veh, 'Command Unit');
+    return '<div class="card"><h2>Command Vehicle</h2>' +
+      '<p class="sub"><b>' + esc(cmd.name) + '</b> is riding in <b>' + esc(veh.name) + '</b>. Now the vehicle has acted, it may Coordinate: ' +
+      'up to ' + n + ' friendly units within 12" of the vehicle activate in a row.</p>' +
+      '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
+      '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
+  }
+  /* Modifying the armies (p. 46): before deployment, with the enemy's list on
+     the other panel, a player swaps some units for others of the same Tier. */
+  function swapCard() {
+    var sa = state.swapAsk, foeSide = sa.side === 'A' ? 'B' : 'A';
+    var mine = state.units.filter(function (u) { return u.side === sa.side && u.pickIdx != null; });
+    var theirs = state.units.filter(function (u) { return u.side === foeSide; });
+    var h = '<div class="cmodal" data-swapbox><div class="cmodal-box wide" role="dialog" aria-modal="true" aria-label="Modify your army">' +
+      '<h3>Modify your army</h3><p class="sub">Swap up to <b>' + sa.total + '</b> unit' + (sa.total === 1 ? '' : 's') +
+      ' for others of the same Tier' + (state.cfg.dossier ? ' from your dossier' : '') + ' — <b>' + sa.left + ' left</b>. ' +
+      'You have seen the table and their force.</p><div class="cmodal-scroll"><div class="swapgrid">';
+    // your list, the unit being swapped marked
+    h += '<div class="swapcol"><h4>Your force</h4>' + mine.map(function (m) {
+      var n = Q.swapOptions(sa.side, m.id).length, on = sa.pick === m.id;
+      return '<button class="act' + (on ? ' on' : '') + '" data-swappick="' + (on ? '' : m.id) + '"' + (n ? '' : ' disabled') + '><span>' + esc(m.name) +
+        '</span><small>Tier ' + R.ROMAN[m.tier] + (n ? (on ? ' — swapping' : '') : ' — nothing to swap in') + '</small></button>';
+    }).join('') + '</div>';
+    // what could stand in for it
+    h += '<div class="swapcol"><h4>' + (sa.pick ? 'Swap for' : 'Swap in') + '</h4>';
+    if (sa.pick) {
+      var opts = Q.swapOptions(sa.side, sa.pick);
+      h += opts.length ? opts.map(function (o) {
+        var pr = R.profile(R.splitPick(o.key).key);
+        return '<button class="act" data-swapin="' + escHtml(o.id) + '"><span>' + esc(o.name) + '</span><small>' +
+          esc(pr ? (pr.name !== o.name ? pr.name + ' · ' : '') + 'Move ' + pr.move + '" · FP ' + (pr.fp == null ? '—' : pr.fp) + ' · Range ' + pr.range + '" · Def ' + pr.def : '') + '</small></button>';
+      }).join('') : '<p class="hint">Nothing of that Tier to swap in.</p>';
+    } else h += '<p class="hint">Pick one of your units to see what could take its place.</p>';
+    h += '</div>';
+    // and what they are bringing, to swap against
+    h += '<div class="swapcol theirs"><h4>' + esc(sideName(foeSide)) + '</h4>' + theirs.map(function (t) {
+      return '<div class="swapfoe"><b>' + esc(t.name) + '</b><small>Tier ' + R.ROMAN[t.tier] + ' · ' + (t.cls === 'infantry' ? t.models + ' models' : t.cls) + '</small></div>';
+    }).join('') + '</div>';
+    h += '</div></div><div class="askrow"><button class="start" data-act="swapdone">' + (sa.left === sa.total ? 'Keep the list' : 'Done') + '</button></div></div></div>';
+    return h;
+  }
+  // placing pieces by hand: Last Stand, Fortify and Strike!, Detailed Terrain Knowledge
+  function placeCard() {
+    var pa = state.placeAsk;
+    var T = { laststand: ['Last Stand', 'Put up to ' + pa.total + ' barricades (low walls) anywhere but the enemy deployment zone.'],
+      fortify: ['Fortify and Strike!', 'Put up to ' + pa.total + ' field fortifications (low walls) in your deployment zone.'],
+      terrain: ['Detailed Terrain Knowledge', 'Move up to ' + pa.total + ' pieces of terrain up to 12" each. Tap a piece, then where it goes.'] }[pa.why];
+    var picked = pa.kind === 'move' && pa.pick != null ? state.terrain[pa.pick] : null;
+    return '<div class="card"><h2>' + T[0] + '</h2><p class="sub">' + T[1] + '</p>' +
+      '<p class="hint">' + (picked ? 'Moving the ' + esc(R.TERRAIN[picked.kind].name.toLowerCase()) + ' — tap where it goes, or tap it again to put it back down.'
+        : pa.left + ' of ' + pa.total + ' left.') + '</p>' +
+      '<div class="acts">' +
+      (pa.kind === 'barricade' ? '<button class="act" data-act="placerot"><span>Turn</span><small>' + (pa.vertical ? 'Running up the table' : 'Running across the table') + '</small></button>' : '') +
+      '<button class="act" data-act="placedone"><span>' + (pa.left === pa.total ? 'Skip' : 'Done') + '</span><small>' +
+      (pa.left === pa.total ? 'Leave the table as it is' : 'That will do') + '</small></button></div></div>';
+  }
+  /* Terrorist (p. 112): before deploying, the side on the Path of the Villain
+     picks one destructible piece to mine — or none. */
+  // Know Your Foe! (p. 141): once a battle, at the start of a turn the enemy has reinforcements coming
+  function kyfCard() {
+    var k = state.kyfAsk;
+    return '<div class="card"><h2>Know Your Foe!</h2>' +
+      '<p class="sub">The enemy has ' + k.n + ' unit' + (k.n === 1 ? '' : 's') + ' waiting to come on. Once a battle, the tribe may stop every enemy reinforcement arriving this turn.</p>' +
+      '<div class="acts"><button class="act" data-act="kyf"><span>Hold them back</span><small>This turn — it cannot be used again</small></button>' +
+      '<button class="act" data-act="nokyf"><span>Not now</span><small>Keep it for a later turn</small></button></div></div>';
+  }
+  // Martyrdom (p. 112): asked as each assault with Holy Warriors in it begins
+  function martyrCard() {
+    var m = state.martyrAsk, u = byId(m.unit), foe = byId(m.foe);
+    if (!u || !foe) return '';
+    return '<div class="card"><h2>Martyrdom</h2>' +
+      '<p class="sub">' + (m.charging ? '<b>' + esc(u.name) + '</b> is charging <b>' + esc(foe.name) + '</b>'
+        : '<b>' + esc(foe.name) + '</b> is charging <b>' + esc(u.name) + '</b>') +
+      '. Before the first round, one of the Holy Warriors may walk into the enemy alone: ' +
+      'one model is removed, and ' + esc(foe.name) + ' takes D3 automatic hits. No Suppression for the death.</p>' +
+      '<div class="acts"><button class="act" data-act="martyr"><span>Send one in</span><small>' + u.models + ' models, one of them goes</small></button>' +
+      '<button class="act" data-act="nomartyr"><span>Hold back</span><small>Fight the assault as it stands</small></button></div></div>';
+  }
+  function mineCard() {
+    var mp = state.minePick;
+    return '<div class="card"><h2>Terrorist</h2>' +
+      '<p class="sub">Before anyone deploys, you may secretly mine one destructible piece of terrain other than the objective. ' +
+      'Any First Among Equals unit can set it off during the battle — Firepower 10, Destructive Weapon.</p>' +
+      '<p class="hint">Tap one of the ' + mp.pool.length + ' outlined pieces.</p>' +
+      '<div class="acts"><button class="act" data-act="nomine"><span>No mine</span><small>Leave the charges in the crates</small></button></div></div>';
+  }
   function insertionCard() {
     var ins = ui.insertion;
     if (!ins) return '';
     var u = ins.unit;
+    if (ins.kind === 'ilz') {
+      return '<div class="card"><h2>Landing zone ' + ins.n + ' of 3</h2>' +
+        '<p class="sub">The defender is down: nominate where the invasion comes in — an 8″ circle of open ground, ' +
+        '8″ clear of every table edge and 12″ from the other zones. The first wave drops into one, two or all three of them.</p>' +
+        '<p class="hint">Tap the shaded ground. Invasion, p. 53.</p></div>';
+    }
     if (ins.kind === 'lz') {
       return '<div class="card"><h2>Landing zone</h2>' +
         '<p class="sub">' + (state.solo && state.solo.coop ? '<b>' + esc(soloOwnerName(ins.owner)) + '</b>: n' : 'N') +
@@ -2515,7 +2611,8 @@
          to be legible from the header, because the prompt itself sits in a panel
          that a phone can have scrolled past or hidden behind another tab. */
       act.textContent = ui.insertion.kind === 'arrive'
-        ? 'Place your reinforcements' : ui.insertion.kind === 'shove' ? 'Shove the enemy drop' : 'Pick a landing zone';
+        ? 'Place your reinforcements' : ui.insertion.kind === 'shove' ? 'Shove the enemy drop'
+          : ui.insertion.kind === 'ilz' ? 'Nominate landing zone ' + ui.insertion.n + ' of 3' : 'Pick a landing zone';
       act.className = 'pill pill-wait';
     } else if (state.solo) {
       if (state.activeSide === 'B') { act.textContent = 'OpFor phase'; act.className = 'pill pill-B'; }
@@ -2770,6 +2867,13 @@
   function drawBoard() {
     // everything drawn on the board itself is in CSS pixels, scaled to its density
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    /* The objectives' beacons are painted with the structures: when they move
+       or arrive (an Invasion's zones are nominated after deployment), repaint. */
+    // a barricade put down by hand: the structures again, not the whole table
+    if (state.structsDirty && state.structs) { state.structsDirty = false; paintStructures(); }
+    var ok0 = state.objectives.map(function (o) { return o.x.toFixed(1) + ',' + o.y.toFixed(1); }).join(';');
+    if (state.structs && state.objKey != null && state.objKey !== ok0) paintStructures();
+    state.objKey = ok0;
     // the plate is large: paint it once, off the first frame, with a word to the player
     if (!state.scene) {
       if (!state.baking) {
@@ -3163,7 +3267,7 @@
       });
       // pieces down since the table was last baked, as flat footprints until it is
       var TINT = { woods: '64,110,52', ruins: '120,112,100', crater: '110,96,80', barricade: '150,140,112', rocks: '118,112,104',
-        hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30' };
+        hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235' };
       state.terrain.slice(state.tset.baked || 0).forEach(function (pc) {
         var sh = pc.parts ? pc.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
           : [pc.poly || [[pc.x, pc.y], [pc.x + pc.w, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x, pc.y + pc.h]]];
@@ -3253,6 +3357,11 @@
         ctx.moveTo(q[0].x, q[0].y);
         for (var n = 1; n < 4; n++) ctx.lineTo(q[n].x, q[n].y);
         ctx.closePath(); ctx.fill();
+      });
+      // an Invasion's zones already nominated, while the next is chosen
+      (ui.insertion.chosen || []).forEach(function (z) {
+        ctx.setLineDash([6, 6]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(235,240,248,.85)';
+        isoRing(z.x, z.y, 4, liftOf(z.x, z.y)); ctx.stroke(); ctx.setLineDash([]);
       });
       // and the 12" exclusion round each objective, so the shape makes sense
       ctx.setLineDash([7, 6]);
@@ -3399,6 +3508,28 @@
         roundRect(ctx, mid.x - w / 2, mid.y - 9, w, 18, 4); ctx.fill();
         ctx.strokeStyle = '#8fe0a6'; ctx.lineWidth = 1; ctx.stroke();
         ctx.fillStyle = '#e7ecf4'; ctx.fillText(label, mid.x, mid.y + 1);
+      });
+      ctx.restore();
+    }
+    // Detailed Terrain Knowledge: the piece in hand, and how far it may go
+    if (state.placeAsk && state.placeAsk.kind === 'move' && !isAI(state.placeAsk.side) && state.placeAsk.pick != null) {
+      var mp = state.terrain[state.placeAsk.pick];
+      if (mp) {
+        ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = '#e8c15a'; ctx.lineWidth = 2;
+        isoRing(mp.x + mp.w / 2, mp.y + mp.h / 2, 12, liftOf(mp.x + mp.w / 2, mp.y + mp.h / 2)); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    // Terrorist: the pieces that may be mined
+    if (state.minePick && !isAI(state.minePick.side)) {
+      ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#e4693f'; ctx.lineWidth = 2;
+      state.minePick.pool.forEach(function (i) {
+        var r = state.terrain[i];
+        var c = (r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]])
+          .map(function (q) { return hud(q[0], q[1], liftOf(q[0], q[1])); });
+        ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y);
+        for (var j = 1; j < c.length; j++) ctx.lineTo(c[j].x, c[j].y);
+        ctx.closePath(); ctx.stroke();
       });
       ctx.restore();
     }
@@ -3865,9 +3996,14 @@
     var ctxBox = el('context'), html = '';
     if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
+    else if (state.placeAsk && !isAI(state.placeAsk.side)) html = placeCard();
+    else if (state.minePick && !isAI(state.minePick.side)) html = mineCard();
     else if (state.phase === 'deploy') html = deployCard();
     else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
+    else if (state.cmdOffer) html = cmdOfferCard();
+    else if (state.martyrAsk && !isAI(state.martyrAsk.side)) html = martyrCard();
+    else if (state.kyfAsk && !isAI(state.kyfAsk.side)) html = kyfCard();
     else if (state.over) html = overCard();
     else if (ui.terrain.length && ui.selected &&
       (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
@@ -3893,6 +4029,18 @@
     var con = document.querySelector('.console');
     if (con) con.classList.toggle('deploying', state.phase === 'deploy' || state.phase === 'terrain');
     wirePanel();
+    /* The army swap wants the whole screen: its modal is lifted out of the card
+       (which the board would draw over on a desktop) onto the page itself. */
+    var mh = el('modal-host');
+    if (!mh) { mh = document.createElement('div'); mh.id = 'modal-host'; document.body.appendChild(mh); }
+    var sw = ctxBox.querySelector('.cmodal[data-swapbox]');
+    var swScroll = mh.querySelector('.cmodal-scroll'), swTop = swScroll ? swScroll.scrollTop : 0;
+    mh.innerHTML = '';
+    if (sw) {
+      mh.appendChild(sw);
+      var sw2 = mh.querySelector('.cmodal-scroll'); if (sw2) sw2.scrollTop = swTop;
+      wireHost(mh);
+    }
     if (own) wireHost(own);
     if (opp) wireHost(opp);
     if (both) wireHost(both);
@@ -4125,6 +4273,12 @@
         '</b> stay in reserve and come in by Battlefield Insertion from the second turn on.' : '') + '</p>';
     if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
       (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
+    // Modifying the armies (p. 46): offered until the first unit goes down
+    if (!isAI(me) && Q.canSwapNow(me)) {
+      var sv = state.swapAvail[me];
+      h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left +
+        ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier, having seen the table and their force</small></button></div>';
+    }
     h += deployList(me);
     /* The scenario's split (which units go on the table and which wait, or
        which wave each comes in) and who starts the battle aboard a hull are
@@ -4145,6 +4299,7 @@
         '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
         '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
     }
+    if (state.swapAsk && state.swapAsk.side === me && !isAI(me)) h += swapCard();
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
@@ -4302,10 +4457,12 @@
        `data-act`, so selecting on `[data-act]` alone never bound them and
        nothing happened when they were pressed: troops could not be put aboard
        a hull, or taken off one, during deployment. All three are selected. */
-    host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick]').forEach(function (b) {
+    host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
       b.addEventListener('click', function () {
         var a = b.getAttribute('data-act');
         if (SFX) SFX.click();
+        if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
+        if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
         if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
         if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }
         if (b.hasAttribute('data-load')) {
@@ -4322,6 +4479,12 @@
         else if (a === 'holdinsert') { holdInsertion(); return; }
         else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
+        else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
+        else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
+        else if (a === 'placerot' || a === 'placedone' || a === 'swapdone') { send({ k: a }); return; }
+        else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
+        else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
+        else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf') { send({ k: a }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
@@ -4665,6 +4828,14 @@
     var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 
     if (state.phase === 'terrain') { terrainTap(p); return; }
+    // a piece being put down or moved by hand
+    if (state.placeAsk && !isAI(state.placeAsk.side)) { send({ k: 'placeat', x: p.x, y: p.y }); return; }
+    // Terrorist: the tap nominates the piece to mine
+    if (state.minePick && !isAI(state.minePick.side)) {
+      var mpk = state.minePick.pool.filter(function (i) { return R.inRect(p.x, p.y, state.terrain[i]); })[0];
+      if (mpk != null) send({ k: 'mine', i: mpk });
+      return;
+    }
     if (state.phase === 'deploy' && state.relocating) { relocTap(p); return; }
     if (state.phase === 'deploy') {
       var pending = deployNext();
@@ -5891,6 +6062,7 @@
   /* ================= boot ================= */
   function boot() {
     canvas = el('board'); ctx = canvas.getContext('2d');
+    canvas.addEventListener('contextrestored', function () { restoreCanvases(true); });
     /* A phone screen is tall and narrow, but the isometric table is 1.7:1 the
        other way. A 560x680 window used to leave the whole-table view sitting in
        360px of black — over half the frame — with nothing to pan into. The window
@@ -6355,6 +6527,9 @@
   window.__pressCancel = function () { send({ k: 'cancel' }); };
   window.__holdInsertion = function () { holdInsertion(); };
   window.__insertionSpotsNow = function () { return ui.insertion ? ui.insertion.spots : null; };
+  window.__tapInsertion = function (q) { placeInsertion(q); };
+  window.__sendIntent = function (it) { send(it); };
+  window.__lookAt = function (x, y) { var q = ISO.toScreen(x, y); centreOn(q.x, q.y, true); render(); };
   window.__seats = function () { return seats.slice(); };
   window.__mySide = function () { return mySide(); };
 
@@ -6510,6 +6685,32 @@
   };
   window.__previewConfirm = function () { commitMove(); };
   window.__previewCancel = function () { cancelPreview(); };
+  /* A phone that puts the tab in the background may throw away every canvas
+     it holds and hand them back blank — the table, the troops, the lot. Coming
+     back, look at the table: if it has gone clear, paint everything again. */
+  function canvasesLost() {
+    if (!state || !state.ground || !state.ground.getContext) return false;
+    try {
+      var gg = state.ground.getContext('2d');
+      if (gg.isContextLost && gg.isContextLost()) return true;
+      var d = gg.getImageData(state.ground.width >> 1, state.ground.height >> 1, 1, 1).data;
+      return d[3] === 0;                            // the ground is opaque everywhere
+    } catch (e) { return false; }
+  }
+  function restoreCanvases(force) {
+    if (!state || !pix || !(force || canvasesLost())) return;
+    ISO.flush();
+    if (pix.getContext) pctx = pix.getContext('2d');
+    hazeBuf = null; hazeCtx = null;
+    state.scene = null; state.ground = null; state.structs = null; state.structsOpen = null;
+    drawBoard();
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) restoreCanvases(false); });
+    window.addEventListener('pageshow', function () { restoreCanvases(false); });
+    window.addEventListener('focus', function () { restoreCanvases(false); });
+  }
+  window.__restoreCanvases = restoreCanvases;
   window.__rebuildScene = function () { state.scene = null; state.ground = null; state.structs = null; drawBoard(); };
   window.__tapTerrain = function (i) {
     var r = ui.terrain[i];

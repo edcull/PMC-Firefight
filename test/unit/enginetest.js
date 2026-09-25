@@ -7,6 +7,19 @@
    by `npm test` rather than by a game that wedges halfway through turn four. */
 'use strict';
 const { R, Engine } = require('../../server/rules.js');
+/* Modifying the armies (p. 46) waits on each player before deployment; these
+   battles keep their lists, so every game started here answers it at once. */
+const createEngine = Engine.create;
+Engine.create = function (hooks) {
+  const e = createEngine(hooks);
+  const start = e.start;
+  e.start = function (cfg) {
+    const r = start(cfg);
+    for (let g = 0; g < 4 && e.state() && e.state().swapAsk; g++) e.intent(e.state().swapAsk.side, { k: 'swapdone' });
+    return r;
+  };
+  return e;
+};
 
 let checks = 0, bad = 0;
 function ok(what, cond, detail) {
@@ -51,6 +64,8 @@ function play(seed, opts) {
 
   /* ---- deployment: put every unit down, wherever the engine will take it ---- */
   while (e.state().phase === 'deploy' && guard++ < 4000) {
+    // Modifying the armies (p. 46): keep the lists as they are
+    if (e.state().swapAsk) { e.intent(e.state().swapAsk.side, { k: 'swapdone' }); continue; }
     const side = e.query.placingSide();
     if (!side) break;
     const u = e.query.deployNext();
@@ -628,6 +643,33 @@ console.log('  vs the OpFor AI');
   e.intent('A', { k: 'start' });
   ok('the OpFor took its turn without being asked',
     e.state().activeSide === 'A' || !!e.over() || !!e.sel().insertion);
+})();
+
+/* Modifying the armies (p. 46): a quarter of the list — half with Tactical
+   Flexibility — swapped for units of the same Tier, before anyone deploys. */
+(function () {
+  console.log('modifying the armies');
+  const e = createEngine();
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
+    nameA: 'A', nameB: 'B', mode: 'ai', planet: 'sparse', doctrines: { A: ['O6'], B: [] } });
+  const st = e.state(), n = st.units.filter(u => u.side === 'A' && u.pickIdx != null).length;
+  ok('the player may modify the list before deploying', e.intent('A', { k: 'swapopen' }).ok && !!e.state().swapAsk);
+  ok('...up to half the list with Tactical Flexibility', e.state().swapAsk.total === Math.floor(n / 2), e.state().swapAsk.total + ' of ' + n);
+  const u = st.units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry');
+  const alt = R.listFor('pmc').find(p => p.tier === u.tier && p.key !== u.key && !p.command && p.cls === 'infantry');
+  e.intent('A', { k: 'swappick', id: u.id });
+  ok('a unit of the same Tier can be swapped in', e.intent('A', { k: 'swapin', id: alt.key }).ok && e.state().units.some(x => x.side === 'A' && x.key === alt.key));
+  const other = R.listFor('pmc').find(p => p.tier !== u.tier && !p.command && p.cls === 'infantry');
+  const v = e.state().units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry' && x.key !== alt.key);
+  if (v && other) { e.intent('A', { k: 'swappick', id: v.id }); ok('...but not one of another Tier', !e.intent('A', { k: 'swapin', id: other.key }).ok); }
+  e.intent('A', { k: 'swapdone' });
+  ok('done, the deployment goes on', !e.state().swapAsk && e.intent('A', { k: 'autodeploy' }).ok && e.query.deploymentDone());
+  ok('...and once a unit is down the list is final', !e.intent('A', { k: 'swapopen' }).ok);
+  const e2 = createEngine();
+  e2.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
+    nameA: 'A', nameB: 'B', mode: 'ai', planet: 'sparse' });
+  const n2 = e2.state().units.filter(u => u.side === 'A' && u.pickIdx != null).length;
+  ok('a quarter without it', !e2.state().swapAvail.A || e2.state().swapAvail.A.total === Math.floor(n2 / 4));
 })();
 
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'all ') + checks + ' checks' + (bad ? '' : ' passed'));

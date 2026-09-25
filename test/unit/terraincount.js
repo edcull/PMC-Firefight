@@ -1,9 +1,8 @@
 /* How many pieces a rolled result puts down.
 
-   A "1-X" result never comes out at exactly one: a quarter given "1-6 rocks"
-   and then a single rock reads as the roll having gone missing. A result that
-   is exactly one ("a single crater") is still one, an "up to" count may still
-   be none, and nothing ever goes over the top of its range. */
+   Straight off the book's range (p. 47): a "1-6" can be one, every count is
+   as likely as any other, an "up to" count may be none, and nothing ever goes
+   over the top of its range. */
 'use strict';
 global.window = global;
 require('../../src/rules/rules.js');
@@ -42,10 +41,11 @@ function range(seen) {
 
 console.log('\nHow many go down');
 var six = counts({ kind: 'rocks', min: 1, max: 6 }, 400);
-ok('"1-6 rocks" never gives a single rock', !six[1], true, JSON.stringify(six));
+ok('"1-6 rocks" can give a single rock, as the book rolls it', six[1] > 0, true, JSON.stringify(six));
+ok('...every count about as likely as any other', Object.keys(six).every(function (k) { return six[k] > 40 && six[k] < 95; }), true);
 ok('...and still reaches six', range(six)[1], 6);
 var two = counts({ kind: 'woods', min: 1, max: 2 }, 200);
-ok('"1-2 woods" always gives two', range(two).join('-'), '2-2');
+ok('"1-2 woods" gives one or two', range(two).join('-'), '1-2');
 var one = counts({ kind: 'crater', min: 1, max: 1 }, 100);
 ok('"a single crater" is still one', range(one).join('-'), '1-1');
 var upTo = counts({ kind: 'barricade', min: 0, max: 4 }, 400);

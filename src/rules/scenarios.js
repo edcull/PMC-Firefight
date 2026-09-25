@@ -17,6 +17,17 @@
   var R = root.PMC;
   var W = R.BOARD.w, H = R.BOARD.h;
   function d6() { return R.d6(); }
+  /* A reserve die for `side`: Coordinated Hive (p. 124) re-rolls one that
+     failed, and the re-rolls are counted for the log. */
+  function reserveDie(state, side, need) {
+    if (d6() >= need) return true;
+    if (!state.doctrines || (state.doctrines[side] || []).indexOf('BB1') < 0) return false;
+    state.sc.hive = state.sc.hive && state.sc.hive.turn === state.turn ? state.sc.hive : { turn: state.turn, side: side, n: 0, up: 0 };
+    state.sc.hive.n++;
+    var ok = d6() >= need;
+    if (ok) state.sc.hive.up++;
+    return ok;
+  }
   function d3() { return R.d3(); }
   function dist(a, b, c, d) { return R.inches(a, b, c, d); }
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -106,6 +117,7 @@
   function lastStandBarricades(state) {
     ['A', 'B'].forEach(function (side) {
       if (!state.tactics || state.tactics[side] !== 'laststand') return;
+      if (state.manualLaststand && state.manualLaststand[side]) return;   // a player puts theirs down by hand
       var n = 4 * (state.cfg.pl || 1);
       var near = side === 'A';                      // A holds the low edge, B the high
       for (var i = 0; i < n; i++) {
@@ -142,7 +154,12 @@
     var kept = [];
     function free(p) {
       if (p.x < 0.5 || p.y < 0.5 || p.x + p.w > W - 0.5 || p.y + p.h > H - 0.5) return false;
-      for (var k = 0; k < kept.length; k++) if (clashes(p, kept[k])) return false;
+      for (var k = 0; k < kept.length; k++) {
+        // a piece standing on a hill overlaps it by design (p. 42)
+        if (p.onHill && kept[k].kind === 'hill' && clashes(p, kept[k])) continue;
+        if (kept[k].onHill && p.kind === 'hill' && clashes(kept[k], p)) continue;
+        if (clashes(p, kept[k])) return false;
+      }
       // keep clear of the objectives as the generator does, unless it is one
       if (p.kind !== 'objective' && p.kind !== 'searchsite') {
         for (var o = 0; o < (state.objectives || []).length; o++) {
@@ -208,8 +225,9 @@
     var pods = state.units.filter(function (u) {
       return u.side === side && !R.countsForVictory(u);
     }).length;
-    // Expendable troops whose collars went off "do not count as a casualty for the purposes of victory conditions" (p. 57)
-    var spent = state.units.filter(function (u) { return u.side === side && u.expended; }).length;
+    /* Expendable troops, "when destroyed ... do not count as a casualty for the
+       purposes of victory conditions" (p. 57) — however they went. */
+    var spent = state.units.filter(function (u) { return u.side === side && !u.alive && (u.expended || R.has(u, 'Expendable')); }).length;
     var started = Math.max(0, army.length - pods - spent);
     var left = state.units.filter(function (u) {
       return u.alive && u.side === side && R.countsForVictory(u);
@@ -417,15 +435,9 @@
         attacker: 'As the attacker your whole force comes down from orbit into the landing zones — nothing deploys on the table, and the infantry take D3 SP as they land.',
         defender: 'As the defender you set up to a third of your force anywhere 6" in from the table edges; the rest walks on from a random edge, on a 5+ a unit from turn 2.'
       },
-      objectives: function (state) {
-        // three 8" circles, 12" from each other, 8" in from the edges, in open
-        // ground (p. 53) — nobody drops a platoon into a wood or onto rocks
-        var zones = clusterAt(W / 2, H / 2, 3, 15, 12, function (p) {
-          return R.terrainAt(state, p.x, p.y) === 'open';
-        });
-        state.sc.zones3 = zones.map(function (p) { return { x: p.x, y: p.y, owner: null }; });
-        return zones;                            // the landing zones are the objectives
-      },
+      /* The landing zones are the objectives, and the attacker only nominates
+         them once the defender is down (p. 53): the table starts with none. */
+      objectives: function (state) { state.sc.lzPending = true; return []; },
       deploy: function (state) {
         var atk = state.sc.attacker, def = state.sc.attacker === 'A' ? 'B' : 'A';
         // the defender puts no more than a third on the table, 6" in from the edges
@@ -487,10 +499,10 @@
           var need = 5 - (state.turn - 4);
           var wave2 = pool.filter(function (u) { return u.wave === 2; });
           if (!wave2.length) return [];
-          return need <= 1 || d6() >= need ? wave2 : [];
+          return need <= 1 || reserveDie(state, side, need) ? wave2 : [];
         }
         if (state.turn < 2) return [];
-        return pool.filter(function () { return d6() >= 5; });
+        return pool.filter(function () { return reserveDie(state, side, 5); });
       },
       // landing infantry are shaken by the drop
       onArrive: function (state, u) {
@@ -608,7 +620,7 @@
         }
         if (state.turn < 2) return [];
         return state.units.filter(function (u) {
-          return u.side === side && u.alive && u.reserve && d6() >= 5;
+          return u.side === side && u.alive && u.reserve && reserveDie(state, side, 5);
         });
       },
       /* The SAM system: any aircraft finishing its move within 12" of the objective
@@ -744,7 +756,10 @@
      It lives on its own because a campaign settles the roles when it offers the
      contract, so the player knows which side of the fight they are taking on
      before they pick the force for it — and then hands the answer back here. */
-  function rollRoles(id, docs, forced) {
+  /* `ask`: the sides whose player decides for themselves whether to roll (p. 87
+     — "the player may decide to roll"). Their roll is left pending, and made by
+     bestDefence() if they choose to. */
+  function rollRoles(id, docs, forced, ask) {
     var s = SCENARIOS[id] || SCENARIOS.secure;
     if (!s.attacker) return null;
     var atk = forced || (Math.random() < 0.5 ? 'A' : 'B');
@@ -753,12 +768,23 @@
     var defHas = (docs[def] || []).indexOf('S1') >= 0;
     var atkHas = (docs[atk] || []).indexOf('S1') >= 0;
     var bd = null;
-    if (defHas && !atkHas) {
+    if (defHas && !atkHas && ask && ask.indexOf(def) >= 0) {
+      bd = { side: def, pending: true };
+    } else if (defHas && !atkHas) {
       var roll = d6();
       bd = { side: def, roll: roll, swapped: roll >= 2 };
       if (roll >= 2) { var t = atk; atk = def; def = t; }
     }
     return { attacker: atk, defender: def, bestDefence: bd };
+  }
+  // the defender's player takes up The Best Defence is Good Offence: a D6, and 2-6 swaps the roles
+  function bestDefence(roles) {
+    var bd = roles && roles.bestDefence;
+    if (!bd || !bd.pending) return roles;
+    var roll = d6();
+    roles.bestDefence = { side: bd.side, roll: roll, swapped: roll >= 2 };
+    if (roll >= 2) { var t = roles.attacker; roles.attacker = roles.defender; roles.defender = t; }
+    return roles;
   }
 
   function begin(state, id, opts) {
@@ -782,6 +808,47 @@
   }
 
   function deploy(state) { if (state.scen.deploy) state.scen.deploy(state); }
+
+  /* Invasion's landing zones (p. 53): three 8" circles in open ground, at least
+     12" from each other and 8" from every table edge, nominated by the attacker
+     after the defender has deployed. */
+  function lzOK(state, p, chosen) {
+    if (p.x < 8 || p.y < 8 || p.x > W - 8 || p.y > H - 8) return false;
+    if (R.terrainAt(state, p.x, p.y) !== 'open') return false;
+    return (chosen || []).every(function (q) { return dist(p.x, p.y, q.x, q.y) >= 12; });
+  }
+  function lzSpots(state, chosen) {
+    var out = [];
+    for (var x = 8; x <= W - 8; x += 1) for (var y = 8; y <= H - 8; y += 1) {
+      if (lzOK(state, { x: x, y: y }, chosen)) out.push({ x: x, y: y });
+    }
+    return out;
+  }
+  /* The attacker's own pick: as far from the defenders as it can get, each zone
+     in turn, but not so far off to one side that it cannot reach the others. */
+  function autoLZs(state) {
+    var def = state.sc.attacker === 'A' ? 'B' : 'A';
+    var foes = state.units.filter(function (u) { return u.side === def && u.alive && u.x >= 0 && !u.reserve; });
+    var chosen = [];
+    for (var n = 0; n < 3; n++) {
+      var spots = lzSpots(state, chosen);
+      if (!spots.length) spots = clusterAt(W / 2, H / 2, 1, 20, 0, null).filter(function (p) { return lzOK(state, p, []); });
+      if (!spots.length) spots = [{ x: W / 2 + (n - 1) * 12, y: H / 2 }];
+      var best = null, bs = -Infinity;
+      spots.forEach(function (p) {
+        var near = foes.reduce(function (m, f) { return Math.min(m, dist(p.x, p.y, f.x, f.y)); }, 36);
+        var mid = dist(p.x, p.y, W / 2, H / 2);
+        var sc = Math.min(near, 30) - mid * 0.35 + Math.random() * 2;
+        if (sc > bs) { bs = sc; best = p; }
+      });
+      chosen.push(best);
+    }
+    return chosen;
+  }
+  function setLZs(state, pts) {
+    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null }; });
+    state.sc.lzPending = false;
+  }
   function zoneFor(state, side) {
     return (state.scen.zoneFor && state.scen.zoneFor(state, side)) || strip(side, 6);
   }
@@ -854,10 +921,10 @@
 
   root.PMCScen = {
     SCENARIOS: SCENARIOS, ORDER: ORDER,
-    begin: begin, deploy: deploy, zoneFor: zoneFor, deployOK: deployOK,
+    begin: begin, deploy: deploy, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     holderOf: holderOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
-    rollRoles: rollRoles,
+    rollRoles: rollRoles, bestDefence: bestDefence,
     searchSpots: searchSpots, checkArea: checkArea
   };
 })(typeof window !== 'undefined' ? window : global);

@@ -9,7 +9,7 @@ const WANT = {
   meeting: { objectives: 0, attacker: false },
   secure: { objectives: 3, attacker: false },
   find: { objectives: 0, attacker: false },       // nothing is an objective until it is found
-  invasion: { objectives: 3, attacker: true },
+  invasion: { objectives: 0, attacker: true },     // the zones are nominated after the defender deploys (p. 53)
   demolish: { objectives: 1, attacker: true },
   takeover: { objectives: 1, attacker: true }
 };
@@ -60,7 +60,8 @@ async function playOne(p, id) {
   });
   const want = WANT[id];
   ok('the right scenario is running', setup.scen === id, setup.name);
-  ok('objectives placed', setup.objectives === want.objectives, setup.objectives + ' placed');
+  // an Invasion's zones come after the defender deploys: none yet, or three if the AIs have already begun
+  ok('objectives placed', setup.objectives === want.objectives || (id === 'invasion' && setup.objectives === 3), setup.objectives + ' placed');
   ok('attacker and defender', !!setup.attacker === want.attacker,
     setup.attacker ? setup.attacker + ' attacks' : 'neither side attacks');
   if (id === 'find') ok('three places to search', setup.search === 3, setup.search + ' locations');
@@ -121,6 +122,7 @@ async function playOne(p, id) {
       sam: s.log.filter(l => /SAM/.test(l.text)).length,
       landed: s.log.filter(l => /SP coming down/.test(l.text)).length,
       standing: s.terrain.filter(t => t.kind === 'objective').length,
+      zones: s.objectives.length,
       report: s.report ? s.report.scenario : null
     };
   }, setup.wavedIds);
@@ -154,6 +156,7 @@ async function playOne(p, id) {
       sites.marked + ' of 3 marked, ' + sites.cold + ' written off as false');
   }
   if (id === 'invasion') {
+    ok('three landing zones were nominated', after.zones === 3, after.zones + ' zones');
     ok('the landing shook the troops', after.landed > 0, after.landed + ' units took D3 on arrival');
     ok('Battlefield Insertion is off', await p.evaluate(() =>
       window.PMC_STATE().units.every(u => !u.reserve || u.wave)), true);
@@ -175,7 +178,7 @@ async function playOne(p, id) {
   await p.waitForTimeout(600);
 
   const results = {};
-  for (const id of ['meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover']) {
+  for (const id of (process.env.SCENS || 'meeting,secure,find,invasion,demolish,takeover').split(',')) {
     results[id] = await playOne(p, id);
   }
 

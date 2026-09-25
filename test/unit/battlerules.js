@@ -245,5 +245,142 @@ for (var dq = 0; dq < 40; dq++) {
 }
 ok('...a unit charged from beyond its range still gets its defensive fire in', dfs >= 30, dfs + ' of 40');
 
+/* ------------------------------------------------------ hacking a Drone unit */
+console.log('\nHACKING A DRONE UNIT (p. 57)');
+var wiped = 0, tries = 0;
+for (var hq = 0; hq < 300; hq++) {
+  var hk = unit('ew', { x: 10, y: 10 }), dd = unit('dcombat', { side: 'B', x: 10, y: 20 });
+  R.applyDrone(dd, false);
+  var hr = R.hack(table([hk, dd]), hk, dd, null);
+  if (hr.roll >= 3) { tries++; if (!dd.alive) wiped++; }
+}
+ok('a hacked Drone unit takes D3+1 hits, not vehicle damage', tries > 50 && wiped < tries * 0.2, wiped + ' of ' + tries + ' wiped out');
+
+/* ------------------------------------------------------ loading and unloading */
+console.log('\nTRANSPORT (p. 36)');
+var apc = unit('lapc', { x: 10, y: 10 }), pax = unit('recruits', { x: 12, y: 10 });
+var tb2 = table([apc, pax]);
+ok('a squad boards', !!R.embark(tb2, apc, pax));
+ok('...and cannot get off again the same turn', R.disembark(tb2, apc, pax, { x: 12, y: 12 }) === null);
+pax.boarded = false;                                   // a new turn
+ok('...but can the next', !!R.disembark(tb2, apc, pax, { x: 12, y: 12 }));
+
+/* ------------------------------------------------------ a 5-6 hack, an Expendable unit, plunging breach */
+console.log('\nHACK 5-6, EXPENDABLE, PLUNGING FIRE');
+var took = 0, fell = 0, n56 = 0;
+for (var h5 = 0; h5 < 400; h5++) {
+  var hk2 = unit('ew', { x: 10, y: 10 }), vv = unit('lcv', { side: 'B', x: 10, y: 20 });
+  vv.drone = true; vv.rules = vv.rules.concat(['Drone Control']);
+  var r56 = R.hack(table([hk2, vv]), hk2, vv, function () { return true; });
+  if (r56.roll >= 5) { n56++; if (r56.pending && !vv.activated && !vv.damage) took++; }
+  var vb = unit('lcv', { side: 'B', x: 10, y: 20, activated: true }); vb.drone = true;
+  var rb = R.hack(table([unit('ew', { x: 10, y: 10 }), vb]), unit('ew', { x: 10, y: 10 }), vb, function () { return true; });
+  if (rb.roll >= 5 && !rb.pending) fell++;
+}
+ok('5-6: the drone is handed over first, its hits held back', n56 > 30 && took === n56, took + ' of ' + n56);
+ok('...one that has already acted counts as a 3-4', fell > 30, fell + ' times');
+var pen = unit('penal', { side: 'A', x: 10, y: 10, sp: 12 });
+var cl = R.collars(table([pen]));
+ok('a penal unit broken by anything sets its collars off', !pen.alive && pen.expended && cl.length === 1);
+var mort = unit('mortarteam', { x: 10, y: 10 }), hid = unit('recruits', { side: 'B', x: 30, y: 30 });
+var lw = { kind: 'barricade', x: 29, y: 30.8, w: 4, h: 0.5 };
+ok('plunging fire can bring down the low wall a target shelters by', R.shelterOf(table([mort, hid], [lw]), mort, hid) === lw);
+
+/* ------------------------------------------------------ army rules: auras, Lifter, Aux teleport */
+console.log('\nAURAS FROM STEADY UNITS, LIFTER, AUX TELEPORT');
+var ldr = unit('rsecondary', { x: 10, y: 10 }), civ = unit('rciv', { x: 14, y: 10 });
+var dg = table([ldr, civ]);
+ok('Death or Glory: a steady leader shouts', R.deathOrGlory(dg, civ) === ldr);
+ldr.sp = ldr.morale + 1;
+ok('...a suppressed one does not', R.deathOrGlory(dg, civ) === null);
+var pm = unit('bsmallpath', { x: 10, y: 10 }), bug = unit('btiny', { x: 30, y: 10 }), prey = unit('recruits', { side: 'B', x: 14, y: 10 });
+var pt = table([pm, bug, prey]);
+ok('Pheromone Markers: a steady marker unit counts', R.pheromoneBonus(pt, bug, prey) === 1);
+pm.sp = pm.morale + 1;
+ok('...a suppressed one does not', R.pheromoneBonus(pt, bug, prey) === 0);
+var om = unit('bwatchlarva', { x: 10, y: 10 }), tb = unit('btiny', { x: 14, y: 10 });
+var ot = table([om, tb]);
+ok('Overmind: a steady one gives cover and rally', R.overmindFor(ot, tb, false) === om);
+om.sp = om.morale + 1;
+ok('...a suppressed one does not', R.overmindFor(ot, tb, false) === null);
+ok('...but still holds back Aggressive', R.overmindFor(ot, tb, false, true) === om);
+var lft = unit('rlifter', { x: 10, y: 10 }), trk = unit('rltv', { x: 12, y: 10 }), gun = unit('rmedart', { x: 12, y: 10 });
+var lt = table([lft, trk, gun]);
+ok('a Lifter picks up a transport', R.canEmbark(lt, lft, trk));
+trk.cargo = [gun];
+ok('...but not one towing a gun', !R.canEmbark(lt, lft, trk));
+var got2 = 0, got3 = 0, n2 = 0, n3 = 0;
+for (var tq = 0; tq < 300; tq++) {
+  var pa = unit('xtturret2', { x: 10, y: 10 }), pb = unit('xtturret2', { x: 40, y: 10 }), pc = unit('xtturret2', { x: 40, y: 40 });
+  var ac = unit('xstrike2', { x: 20, y: 30, camp: { flags: { auxTeleport: true } } }), tu = unit('recruits', { x: 12, y: 10 });
+  var tt = table([pa, pb, pc, ac, tu]);
+  var rr = R.teleportRoll(tt, tu, pa);
+  if (rr.value === 2) { n2++; if (!rr.random && rr.pads.length === 2 && rr.pads.indexOf(ac) >= 0 && rr.pads[0] === rr.randomPad) got2++; }
+  if (rr.value === 3) { n3++; if (!rr.random && rr.pads.length === 4 && rr.pads.indexOf(ac) >= 0) got3++; }
+}
+ok('Aux teleport on a 2: the random pad or the aircraft, nothing else', n2 > 10 && got2 === n2, got2 + ' of ' + n2);
+ok('...on a 3: any pad or the aircraft', n3 > 10 && got3 === n3, got3 + ' of ' + n3);
+
+/* ------------------------------------------------------ Protecting the VIP: +2 to every Damage roll */
+console.log('\nVIP: +2 TO DAMAGE ROLLS');
+var vipScen = { hitMod: function (st, a, t) { return a.side === 'A' && t.side === 'B' ? 2 : 0; } };
+var bounced = 0, runs = 0;
+for (var vq = 0; vq < 300; vq++) {
+  var pc = unit('regular', { x: 10, y: 10 }), tk = unit('lcv', { side: 'B', x: 10, y: 20 });
+  var vt = table([pc, tk]); vt.scen = vipScen;
+  var dr = R.resolveDamage(tk, 3, false, 2); runs += 3;
+  bounced += dr.rolls.filter(function (x) { return /Bounced/.test(x); }).length;
+}
+ok('a vehicle hit never bounces with +2 to the roll', bounced === 0 && runs > 0, bounced + ' bounced');
+var keep = 0, keepPlain = 0;
+for (var vr = 0; vr < 300; vr++) {
+  var ch = unit('shock', { x: 10, y: 10 }), op = unit('regular', { side: 'B', x: 10, y: 11 });
+  var at = table([ch, op]); at.scen = vipScen;
+  var ar = R.assault(at, ch, op);
+  var mine = false;
+  (ar.log || []).forEach(function (l) {
+    if (l.t === 'round') mine = (l.text || '').indexOf(ch.label + ' (') >= 0;
+    if (mine && l.t === 'hits' && /Keep fighting/.test(l.text || '')) keep++;
+  });
+  var ch2 = unit('shock', { x: 10, y: 10 }), op2 = unit('regular', { side: 'B', x: 10, y: 11 });
+  var ar2 = R.assault(table([ch2, op2]), ch2, op2);
+  var mine2 = false;
+  (ar2.log || []).forEach(function (l) {
+    if (l.t === 'round') mine2 = (l.text || '').indexOf(ch2.label + ' (') >= 0;
+    if (mine2 && l.t === 'hits' && /Keep fighting/.test(l.text || '')) keepPlain++;
+  });
+}
+ok('...and an assault on the OpFor never rolls a "Keep fighting!"', keep === 0 && keepPlain > 0, keep + ' against ' + keepPlain + ' without');
+
+/* ------------------------------------------------------ Combat Drugs stack with Field Medics */
+console.log('\nCOMBAT DRUGS AND FIELD MEDICS');
+var upWith = 0;
+for (var cd = 0; cd < 400; cd++) {
+  var md = unit('medics', { x: 10, y: 10 }), sh = unit('regular', { side: 'B', x: 30, y: 10 });
+  var tdr = table([md, sh]); tdr.doctrines = { A: ['T1'], B: [] };
+  var rs = R.resolveShootingHits(tdr, md, 6, 3, sh);
+  upWith += rs.rolls.filter(function (x) { return /Combat Drugs/.test(x); }).length;
+}
+ok('a medic-treated man down can still get up on Combat Drugs', upWith > 0, upWith + ' times');
+
+/* ------------------------------------------------------ Martyrdom: ordered as each assault begins */
+console.log('\nMARTYRDOM');
+function holy(n) {
+  var hk = R.CATALOGUE.filter(function (p) { return p.group === 'Holy Warriors' && p.cls === 'infantry'; })[0].key;
+  return unit(hk, { x: 10, y: 10, models: n });
+}
+function martyrs(opts, n) {
+  var hw = holy(n), en = unit('regular', { side: 'B', x: 10, y: 11 });
+  var tb3 = table([hw, en]); tb3.doctrines = { A: ['P1'], B: [] };
+  var r = R.assault(tb3, hw, en, opts);
+  return r.log.some(function (l) { return /Martyrdom/.test(l.text || ''); });
+}
+// defensive fire can stop a charge before it lands, so each is tried a few times
+function often(opts, n) { var k = 0; for (var i = 0; i < 30; i++) if (martyrs(opts, n)) k++; return k; }
+ok('a player who says yes sends one in', often({ martyr: { A: true } }, 6) > 0);
+ok('...even with only two left', often({ martyr: { A: true } }, 2) > 0);
+ok('a player who says no does not', often({ martyr: { A: false } }, 6) === 0);
+ok('the AI keeps its last two', often({}, 2) === 0 && often({}, 6) > 0);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

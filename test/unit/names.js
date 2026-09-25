@@ -269,24 +269,24 @@ vc.roster = ['recruits', 'enforcers', 'irregulars', 'rookie', 'regular', 'vetera
 vc.roster[4].honours = [3, 7];
 vc.roster[5].honours = [2];
 const vs = C.experienceStats(vc);
-ok('10 units, one with two honours and one with one, is 30% veterancy', vs.pct === 0.3 && vs.word === 'veterancy' &&
+ok('10 units, one with two honours and one with one, is 30% honours', vs.pct === 0.3 && vs.word === 'honours' &&
   vs.honours === 3 && vs.units === 10, (vs.pct * 100) + '% ' + vs.word);
-ok('a revolt calls it veterancy too', C.experienceStats(C.newCompany('R', { faction: 'rebel' })).word === 'veterancy');
-ok('the swarm calls it evolution, of Adaptations', (() => {
+ok('a revolt calls it honours too', C.experienceStats(C.newCompany('R', { faction: 'rebel' })).word === 'honours');
+ok('the swarm calls it adaptations', (() => {
   const b = C.newCompany('S', { faction: 'bugs' }); b.roster = [C.newEntry('bsmall')]; b.roster[0].honours = [1];
-  const st = C.experienceStats(b); return st.word === 'evolution' && st.noun === 'Adaptation' && st.pct === 1;
+  const st = C.experienceStats(b); return st.word === 'adaptations' && st.noun === 'Adaptation' && st.pct === 1;
 })());
-ok('the tribe calls it enlightenment, of Rites', (() => {
-  const st = C.experienceStats(C.newCompany('T', { faction: 'xeno' })); return st.word === 'enlightenment' && st.noun === 'Rites' && st.pct === 0;
+ok('the tribe calls it rites', (() => {
+  const st = C.experienceStats(C.newCompany('T', { faction: 'xeno' })); return st.word === 'rites' && st.noun === 'Rites' && st.pct === 0;
 })());
 
 console.log('trauma');
 vc.roster[0].traumas = [4];
 const ts = C.traumaStats(vc);
 ok('one Battle Trauma across 10 units is 10% trauma', ts.pct === 0.1 && ts.word === 'trauma' && ts.noun === 'Battle Trauma', (ts.pct * 100) + '% ' + ts.word);
-ok('the swarm calls it genetic degradation, of Genetic Flaws', (() => {
+ok('the swarm calls it flaws, of Genetic Flaws', (() => {
   const b = C.newCompany('S', { faction: 'bugs' }); b.roster = [C.newEntry('bsmall'), C.newEntry('battack')]; b.roster[0].traumas = [1, 2];
-  const st = C.traumaStats(b); return st.word === 'genetic degradation' && st.noun === 'Genetic Flaws' && st.pct === 1;
+  const st = C.traumaStats(b); return st.word === 'flaws' && st.noun === 'Genetic Flaws' && st.pct === 1;
 })());
 ok('the tribe calls it infamy, of Infamies', C.traumaStats(C.newCompany('T', { faction: 'xeno' })).word === 'infamy');
 

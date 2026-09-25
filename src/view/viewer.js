@@ -148,7 +148,7 @@
       if (tv && m === tv.u) {
         if (tv.alpha <= 0) return;
         g.save(); g.globalAlpha = tv.alpha;
-        I.drawUnit(g, m, { at: { x: m.x, y: m.y }, lift: 0, hop: tv.hop, walk: tv.walk, status: 'ready', morale: R.currentMorale(m) });
+        I.drawUnit(g, m, { at: { x: m.x, y: m.y }, lift: 0, status: 'ready', morale: R.currentMorale(m) });
         g.restore();
         return;
       }
@@ -229,8 +229,8 @@
     var busy = FX.prune();
     var acting = busy;
     if (view.walking) { stepWalk(dt); busy = true; }
+    if (view.tele) { busy = true; acting = true; }       // a squad teleporting by the gate
     if (view.strafeAt) { strafing(); busy = true; acting = true; }
-    if (view.tele) { busy = true; acting = true; }       // a squad going through a teleport gate
     /* Firing pulls the camera out to the whole line; once the shots have
        finished playing it goes back in to the zoom the viewer chose. */
     if (view.wide) {
@@ -407,51 +407,42 @@
     var M = I.mounts(u), k = ['nose', 'gun', 'mg', 'auto', 'rocket'].filter(function (n) { return M[n] && M[n].length; })[0];
     return k ? M[k][0] : undefined;
   }
-  /* Teleport (p. 130): a squad within 4" walks into the gate and is gone in a
-     flash of it, and a moment later the gate flashes again and the squad walks
-     back out, to within 4" on the far side. The flashes stand around the gate
-     itself; the squad is drawn by frame() from view.tele. */
-  var TP = { IN: 1500, GONE: 2300, OUT: 3900, END: 4300, REACH: 3.5, NEAR: 0.5 };
+  /* Teleport (p. 130), as the battle shows it (game.js): no walk in or out.
+     A squad stands by the gate, and is gone in a ring of light where it stands;
+     the column comes down and it flickers back into it, in place. The gate
+     itself stays put; the squad is drawn by frame() from view.tele. */
+  var TP = { OUT: 250, GONE: 650, IN: 1000, SHOWN: 1500, END: 2300, BY: 2.6 };
   function teleportThrough(u) {
-    view.tele = { t0: Date.now(), at: { x: u.x, y: u.y } };
-    var r = u.cls === 'aircraft' ? 2.6 : 2.2;
+    var dx = TO.x - u.x, dy = TO.y - u.y, dl = Math.hypot(dx, dy) || 1;
+    var at = { x: u.x + dx / dl * TP.BY, y: u.y + dy / dl * TP.BY };
+    view.tele = { t0: Date.now(), at: at };
+    var rgb = glowRGB();
     return [
-      { kind: 'teleportin', x: u.x, y: u.y, r: r, delay: TP.IN - 450, dur: TP.IN - 450 + 1300 },
-      { kind: 'teleportin', x: u.x, y: u.y, r: r, delay: TP.GONE - 250, dur: TP.GONE - 250 + 1300 }
+      { kind: 'wave', x: at.x, y: at.y, up: 0, r: 2, rgb: rgb, delay: TP.OUT, dur: TP.OUT + 700 },
+      { kind: 'teleportin', x: at.x, y: at.y, r: 1.4, delay: TP.IN - 250, dur: TP.IN - 250 + 1400 },
+      { kind: 'wave', x: at.x, y: at.y, up: 0, r: 2, rgb: rgb, delay: TP.IN, dur: TP.IN + 1050 }
     ];
   }
-  // the travelling squad, where it is along the walk in or out, or null while it is inside the gate
+  // the squad going through, and how much of it is there, or null once it is done
   function traveller() {
     var T = view.tele;
     if (!T) return null;
-    var t = Date.now() - T.t0;
+    var t = Date.now() - T.t0, alpha;
     if (t >= TP.END) { view.tele = null; return null; }
-    if (t >= TP.IN && t < TP.GONE) return null;
-    var dx = TO.x - T.at.x, dy = TO.y - T.at.y, dl = Math.hypot(dx, dy) || 1;
-    dx /= dl; dy /= dl;
-    var from, to, k, alpha;
-    if (t < TP.IN) {
-      // in from behind the gate, fading as it steps into the ring
-      k = Math.min(1, t / (TP.IN - 200));
-      from = { x: T.at.x - dx * TP.REACH, y: T.at.y - dy * TP.REACH + 1 };
-      to = { x: T.at.x - dx * TP.NEAR, y: T.at.y - dy * TP.NEAR };
-      alpha = t < TP.IN - 450 ? 1 : Math.max(0, (TP.IN - t) / 450);
-    } else {
-      // out the other side toward the mark, forming out of the light as it goes
-      k = Math.min(1, (t - TP.GONE) / (TP.OUT - TP.GONE));
-      from = { x: T.at.x + dx * TP.NEAR, y: T.at.y + dy * TP.NEAR };
-      to = { x: T.at.x + dx * TP.REACH, y: T.at.y + dy * TP.REACH };
-      alpha = Math.min(1, (t - TP.GONE) / 450);
-    }
-    var e = k * k * (3 - 2 * k), walking = k > 0 && k < 1;
+    if (t < TP.OUT) alpha = 1;
+    else if (t < TP.GONE) alpha = 1 - (t - TP.OUT) / (TP.GONE - TP.OUT);
+    else if (t < TP.IN) alpha = 0;
+    else if (t < TP.SHOWN) {
+      // flickering back in, as a squad teleporting in does in the battle
+      var ta = (t - TP.IN) / (TP.SHOWN - TP.IN);
+      alpha = Math.floor(t / 55) % (ta < 0.5 ? 2 : 4) === 0 ? ta * 0.3 : ta;
+    } else alpha = 1;
     var p = R.profile('xbeta3');
     var m = Object.assign({}, p, {
       id: 'VTELE', side: view.side, label: p.name, models: p.size, rules: p.rules.slice(),
-      sp: 0, alive: true, damage: 0, cargo: [],
-      x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e,
-      facing: Math.atan2(to.y - from.y, to.x - from.x)
+      sp: 0, alive: true, damage: 0, cargo: [], x: T.at.x, y: T.at.y, facing: 0
     });
-    return { u: m, alpha: alpha, walk: walking ? 1 + (Math.floor(t / 140) % 2) : 0, hop: walking ? Math.abs(Math.sin(t / 140 * Math.PI)) * 1.6 : 0 };
+    return { u: m, alpha: alpha };
   }
   // every ability a unit has, in that order — an EW team hacks and jams — to a button each, three at most
   function abilitiesOf(u) {

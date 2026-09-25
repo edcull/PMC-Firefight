@@ -89,5 +89,34 @@ var four = ['lpv', 'hpv', 'lhunter', 'unarmoured'];
 ok('Air Superiority: a fourth ground vehicle is refused', hullFault(R.checkArmy(four, 3, 1, ['O1'])));
 ok('...a fourth machine that is an aircraft is not', !hullFault(R.checkArmy(veh.concat(air), 3, 1, ['O1'])));
 
+console.log('\nPODS, TURRETS, STANDING ORDERS, BIGGER CONTRACTS');
+var pod = C.newEntry('insertplat');
+ok('a drop pod is never salvaged', C.salvage({ catastrophic: false }, pod, true).saved === false);
+ok('...nor a turret', C.salvage({ catastrophic: false }, C.newEntry('xtturret2'), true).saved === false);
+var pco = C.newCompany('P', { faction: 'pmc' });
+ok('a drop pod costs nothing to recruit', C.recruitCost(pco, 'insertplat') === 0);
+var vco = C.newCompany('V', { faction: 'rebel' }); vco.doctrines = ['V2', 'V5'];
+// Plunderer (p. 112): the player's own roll, re-rolled or kept on seeing it, goes in as it is
+var mine = [6, 6, 6];
+var pr = C.payment(1, 1, vco, pco, 'A', false, { dice: { A: mine }, plunder: { A: null } });
+ok('Plunderer: a player’s kept roll stands as it was', pr.diceA.join() === '6,6,6' && !pr.plunder.A);
+var redone = 0;
+for (var q2 = 0; q2 < 60; q2++) { var pay2 = C.payment(3, 1, vco, pco, 'A'); if (pay2.plunder.A && pay2.plunder.A.now) redone++; }
+ok('...a rival re-rolls only a low roll', redone > 5 && redone < 55, redone + ' of 60');
+// No Place for the Weak! (p. 112): the candidates are the infantry tied for the most Trauma Points
+var wc = { companies: { A: vco, B: pco } };
+vco.roster = [C.newEntry('rciv'), C.newEntry('rciv'), C.newEntry('rmilitia')];
+var fake = {}; fake[vco.roster[0].rid] = { total: 5 }; fake[vco.roster[1].rid] = { total: 5 }; fake[vco.roster[2].rid] = { total: 2 };
+ok('No Place for the Weak!: every unit tied for the most is offered', C.weakCandidates(wc, 'A', fake).length === 2);
+
+console.log('\nENHANCED GENETIC MEMORY, OFFERED');
+var xco = C.newCompany('X', { faction: 'xeno' }); xco.kUC = 50;
+var ik = R.listFor('xeno').filter(function (p) { return p.cls === 'infantry' && !p.command && p.tier === 1; })[0].key;
+var offer = { rid: 'gone1', name: 'Lost', key: ik, cost: C.recruitCost(xco, ik), mem: { exp: 7, tp: 3, honours: [2], traumas: [], name: 'Old Guard' }, done: null };
+var before = xco.roster.length, rb = C.rebirth(xco, offer);
+ok('taking it recruits the unit and pays for it', rb.ok && xco.roster.length === before + 1 && xco.kUC === 50 - offer.cost);
+ok('...once only', !C.rebirth(xco, offer).ok);
+ok('...remembering on a 2-6', rb.remembered === (rb.roll >= 2), 'D6 ' + rb.roll);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);
