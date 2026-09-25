@@ -4341,7 +4341,8 @@
 
   function doHack(target) {
     var u = ui.selected;
-    if (u && target) addFx({ kind: 'beam', x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
+    // the hack goes out from the unit's own eyes (its spotter, where it has one)
+    if (u && target) addFx({ kind: 'beam', unit: u.id, x: u.x, y: u.y, tx: target.x, ty: target.y, rgb: '90,255,140', data: true, dur: 1300, blocking: true });
     var res = R.hack(state, u, target, function (drone, hits) {
       // taken over: it will act for the hacker's side, then burn
       drone.hijack = { from: drone.side, paint: drone.paint, hits: hits, by: u.id };

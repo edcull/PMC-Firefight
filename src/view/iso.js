@@ -2488,9 +2488,10 @@
     // the field command grades, each led by its commander in dress uniform
     command4: ['cmdr4', 'signals', 'cmdsmg'],
     command3: ['cmdr3', 'signals', 'cmdsmg'],
-    command2: ['cmdr2', 'signals', 'cmdsmg'],
-    command1: ['cmdr1', 'signals', 'cmdsmg'],
-    commandhi: ['cmdrhi', 'signals', 'cmdsmg'],
+    // the larger command groups carry a spotter: their marks and hacks are called from his eyes
+    command2: ['cmdr2', 'signals', 'cmdspotter', 'cmdsmg'],
+    command1: ['cmdr1', 'signals', 'cmdspotter', 'cmdsmg'],
+    commandhi: ['cmdrhi', 'signals', 'cmdspotter', 'cmdsmg'],
     // rifle teams: the leader at the front right with an SMG, the SAW at the front left, riflemen behind
     rifle: ['riflelead', 'saw', 'rifleman'],
     veteran: ['vetlead', 'vetsaw', 'vet'],
@@ -2664,6 +2665,7 @@
     signals: { helm: 'std', gun: 'pistol', pack: 'radio', fitAs: 'rifle' },
     // the field command's escort: carbines rather than rifles
     cmdsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
+    cmdspotter: { helm: 'std', gun: 'optics', pack: 'std', kneel: true, fitAs: 'rifle' },
     supsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
     /* the field command's commanders, in dress uniform that grows grander with the grade */
     cmdr4: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 1 },
