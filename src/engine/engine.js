@@ -551,7 +551,6 @@
     return !!sa && sa.left > 0 && state.phase === 'deploy' &&
       !state.units.some(function (u) { return u.side === side && u.x >= 0; });
   }
-  function nextSwap() { return false; }
   function legalList(side, keys) {
     var cfg = state.cfg;
     return R.checkArmy(keys, cfg.tier, cfg.pl, docsOf(side), state.tactics && state.tactics[side], null);

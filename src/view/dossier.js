@@ -243,10 +243,6 @@
 
   /* ================= small pieces ================= */
   function profile(key) { return R.profile(key); }
-  function unitLine(e) {
-    var p = profile(e.key);
-    return p.name + ' · Tier ' + ROMAN[p.tier];
-  }
   function tierChip(t) { return '<span class="ct">' + ROMAN[t] + '</span>'; }
 
   function entryCard(e, co, opts) {
@@ -879,20 +875,6 @@
   /* The loss rate: everything lost against everything that has ever served,
      replacements included — soldiers, the tribe's warriors, or the swarm's
      biomass. */
-  // the experience rate: honours held against units on the books
-  // ...and the trauma rate beside it: traumas carried against units on the books
-  function expLine(co) {
-    var st = C.experienceStats(co), tr = C.traumaStats(co), wn = C.winStats(co);
-    // the win rate leads, once there has been a battle to win
-    var won = wn.battles ? '<div class="dloss dexpr dwin"><b>' + Math.round(wn.pct * 1000) / 10 + '%</b> won <span>' +
-      wn.wins + ' of ' + wn.battles + (wn.battles === 1 ? ' battle' : ' battles') + '</span></div>' : '';
-    if (!st.units) return won;
-    function line(cls, pct, word, n, noun) {
-      return '<div class="dloss ' + cls + '"><b>' + Math.round(pct * 1000) / 10 + '%</b> ' + word + ' <span>' + n + ' ' +
-        esc(noun) + ' across ' + st.units + (st.units === 1 ? ' unit' : ' units') + '</span></div>';
-    }
-    return won + line('dexpr', st.pct, st.word, st.honours, st.noun) + line('dexpr dtrau', tr.pct, tr.word, tr.traumas, tr.noun);
-  }
   function lossLine(co) {
     return C.lossStats(co).map(function (st) {
       if (!st.served) return '';
@@ -1502,7 +1484,6 @@
       return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command;
     });
   }
-  function drugCap(picks) { return Math.floor(drugAble(picks).length / 3); }
   /* `chosen`: the player's own pick of rids ("may choose up to 1/3"); without
      one — the rival — the unit with the most to prove goes first. */
   function drugThem(co, picks, chosen) {

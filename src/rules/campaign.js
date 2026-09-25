@@ -485,8 +485,6 @@
   function money(co) { return words(co).money; }
 
   function profile(key) { return R.profile(key); }
-  function isMachineKey(key) { var p = profile(key); return !!p && p.cls !== 'infantry'; }
-  function isCommandKey(key) { var p = profile(key); return !!p && !!p.command; }
 
   /* Every legal promotion target for a roster entry. With the company given, no
      higher than one Tier over the Company Tier: "a Tier II Aspiring Company...

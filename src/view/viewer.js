@@ -531,7 +531,6 @@
     });
     return out;
   }
-  function abilityOf(u) { return abilitiesOf(u)[0] || null; }
   function ability(i) {
     var u = unit(), a = abilitiesOf(u)[i || 0];
     if (!a || view.status === 'destroyed') return;
