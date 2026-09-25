@@ -105,7 +105,9 @@ async function drain(p) {
     const c = window.PMC_CAMPAIGN.get().companies.A;
     return window.PMC.profile(window.PMCCamp.byRid(c, c.cmdRid).key).group;
   }) === 'First Among Equals');
-  check('...and faces somebody', /forces|Rival|against/.test(txt), (txt.match(/against ([^.]+)\./) || [])[1]);
+  // who else is on the world is in the campaign's window
+  const foes = await p.evaluate(() => { const b = document.querySelector('#camp-body [data-kind="rivals"]'); return b ? b.textContent : ''; });
+  check('...and faces somebody', /forces|Rival|against/.test(foes), foes);
   await shot(p, 'rebel-hub.png');
 
   const rival = await p.evaluate(() => {

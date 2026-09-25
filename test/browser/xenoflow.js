@@ -88,7 +88,7 @@ async function drain(p) {
   console.log('\nThe hub');
   txt = await body(p);
   check('the tribe is on the books', /The Ghadon Third/.test(txt));
-  check('...paid in Territorial Points', /TerP/.test(txt) && !/\bkUC\b/.test(txt),
+  check('...paid in Territorial Points', /\bTP\b/.test(txt) && !/\bkUC\b/.test(txt),
     /kUC/.test(txt) ? 'kUC still appears: ' + (txt.split('\n').filter(l => /kUC/.test(l))[0] || '') : '');
   check('...led by an Alpha squad', await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get().companies.A;
@@ -219,8 +219,8 @@ async function drain(p) {
   txt = await body(p);
   check('the aftermath screen opened', /aftermath|EXP/i.test(txt), txt.split('\n')[0]);
   // the revolt is paid in IP; a mercenary company fighting elsewhere is still paid in kUC
-  check('...and pays the tribe in Territorial Points', /\+\d+ TerP/.test(txt),
-    (txt.match(/\+\d+ (TerP|IP|kUC)/) || [])[0]);
+  check('...and pays the tribe in Territorial Points', /\+\d+ TP/.test(txt),
+    (txt.match(/\+\d+ (TP|IP|kUC)/) || [])[0]);
   check('...recalculating territory when the scenario calls for it',
     !/Invasion|Demolish|Hostile takeover/.test(txt) || /Territorial recalculation/.test(txt) || !/won|lost/i.test(txt),
     (txt.split('\n').filter(l => /Territorial/.test(l))[0] || 'no line'));
@@ -236,7 +236,7 @@ async function drain(p) {
     };
   });
   check('the campaign turn advanced', after.turn === 1, 'turn ' + after.turn);
-  check('the tribe was paid', after.ip >= 0, after.ip + ' TerP');
+  check('the tribe was paid', after.ip >= 0, after.ip + ' TP');
   check('units earned experience', after.exp > 0, after.exp + ' EXP across the roster');
   check('...but the Alpha never does', after.cmdExp === 0, after.cmdExp + ' EXP');
 
@@ -255,7 +255,7 @@ async function drain(p) {
   await clickText(p, '^Dossier$');
   txt = await body(p);
   check('the dossier opened', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
-  check('the dossier speaks Territorial Points', /TerP/.test(txt) && !/kUC/.test(txt));
+  check('the dossier speaks Territorial Points', /\bTP\b/.test(txt) && !/kUC/.test(txt));
   const badge = await p.evaluate(() => document.querySelector('#camp-body .tierbadge').title);
   check('...and calls it a Tribe Tier', /tribe tier/i.test(badge), badge);
   await shot(p, 'xeno-roster.png');

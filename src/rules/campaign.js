@@ -467,7 +467,7 @@
      or "spawn" without asking which army it is looking at. */
   function words(co) {
     var f = (co && co.faction) || 'pmc';
-    if (f === 'xeno') return { tier: 'Tribe', force: 'tribe', Force: 'Tribe', side: 'Xenotripods', money: 'TerP',
+    if (f === 'xeno') return { tier: 'Tribe', force: 'tribe', Force: 'Tribe', side: 'Xenotripods', money: 'TP',
       moneyLong: 'Territorial Points', cmd: 'Alpha squad', recruit: 'Recruit', recruited: 'recruited',
       honour: 'Rite', honours: 'Rites', trauma: 'Infamy', traumas: 'Infamies', unitWord: 'unit' };
     if (f === 'bugs') return { tier: 'Swarm', force: 'swarm', Force: 'Swarm', side: 'Space Bugs', money: 'RP',

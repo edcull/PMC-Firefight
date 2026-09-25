@@ -328,7 +328,7 @@
     pmc: { key: 'pmc', name: 'PMC', full: 'Private military company', money: 'kUC', moneyLong: 'thousand Universal Credits' },
     rebel: { key: 'rebel', name: 'Rebels', full: 'Insurgent force', money: 'IP', moneyLong: 'Influence Points' },
     bugs: { key: 'bugs', name: 'Space Bugs', full: 'Bug swarm', money: 'RP', moneyLong: 'Resource Points' },
-    xeno: { key: 'xeno', name: 'Xenotripods', full: 'Xenotripod tribe', money: 'TerP', moneyLong: 'Territorial Points' }
+    xeno: { key: 'xeno', name: 'Xenotripods', full: 'Xenotripod tribe', money: 'TP', moneyLong: 'Territorial Points' }
   };
   function factionOf(keys) {
     for (var i = 0; i < (keys || []).length; i++) {
