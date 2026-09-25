@@ -1552,6 +1552,7 @@
   }
 
   function tick() {
+    if (!state) { loop = null; return; }              // the battle was put away between frames
     var t = nowMs(), alive = [];
     anims.forEach(function (an) {
       var k = Math.min(1, (t - an.t0) / an.dur);
@@ -3153,6 +3154,7 @@
     g.restore();
   }
   function drawBoard() {
+    if (!state) return;
     /* Choosing a facing to dig in on: the gun is shown turned to it while the
        player looks round, and put back after. */
     var dg = ui.mode === 'digface' && ui.selected && state && state.phase === 'battle' ? ui.selected : null, keep = null;
@@ -6926,6 +6928,24 @@
   };
   window.PMC_BATTLE_LIVE = function () {
     return !!(state && state.phase && !state.over);
+  };
+  /* A skirmish running in this browser can be thrown away from the menu. Not a
+     campaign's battle (the campaign is waiting on its result), and not one on
+     a game server (the other player is still in it). */
+  function discardable() {
+    return !!(state && state.phase && !state.over && net && window.PMCNet && net instanceof window.PMCNet.Local &&
+      !(state.cfg && state.cfg.campaign));
+  }
+  window.PMC_BATTLE_DISCARDABLE = discardable;
+  window.PMC_DISCARD_BATTLE = function () {
+    if (!discardable()) return false;
+    resetShow();
+    try { net.disconnect(); } catch (e) { }
+    net = null; mirror = null; Q = null; state = null;
+    ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
+    ui.preview = null; ui.hover = null; ui.insertion = null; ui.reservePick = null; ui.digHover = null;
+    document.body.removeAttribute('data-battle');
+    return true;
   };
 
   /* ---- the ways in ----

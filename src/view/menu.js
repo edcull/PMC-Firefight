@@ -53,6 +53,13 @@
   function paint() {
     var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE();
     el('btn-resume').hidden = !live;
+    // a skirmish in this browser can be thrown away; asked twice, since it cannot be had back
+    var dis = el('btn-discard');
+    if (dis) {
+      dis.hidden = !(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE());
+      dis.classList.remove('confirm');
+      el('menu-discard-sub').textContent = 'End the skirmish without finishing it';
+    }
     var camp = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get();
     var sub = el('menu-camp-sub');
     if (sub) {
@@ -76,6 +83,15 @@
       switch (b.id) {
         case 'btn-skirmish': show('skirmish'); return;
         case 'btn-resume': close(); return;
+        case 'btn-discard':
+          if (!b.classList.contains('confirm')) {
+            b.classList.add('confirm');
+            el('menu-discard-sub').textContent = 'Tap again to discard it — it cannot be got back';
+            return;
+          }
+          if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
+          paint();
+          return;
         /* The campaign and multiplayer cards are wired by the screens they
            open (dossier.js, game.js); all the menu does is get out of the way. */
         case 'btn-campaign': case 'btn-multi': close(); return;
