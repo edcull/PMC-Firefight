@@ -108,6 +108,7 @@
     }
     // a crew-served piece stays laid on the mark it last fired at, until it is turned
     if (turns(p) && view.stance !== 'towed' && !view.walking && view.gunAim != null && view.aimFor === view.face + '|gun') u.aim = view.gunAim;
+    if (turns(p) && view.turn && Date.now() - view.turn.t0 < view.turn.d1 + view.turn.d2) u._turn = view.turn;   // swinging onto the mark
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -127,11 +128,10 @@
   /* Which way a machine points, picked on the screen: E is to the right, S
      toward you. A screen direction is turned into a heading on the table. */
   var FACES = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+  // the eight facings, 45° apart on the table as the battle has them (E straight right, S straight down)
   function faceAngle(name) {
     var i = FACES.indexOf(name || 'SE');
-    var th = (i < 0 ? 1 : i) * Math.PI / 4;
-    var u2 = Math.cos(th), v2 = 2 * Math.sin(th);
-    return Math.atan2(v2 - u2, u2 + v2);
+    return -Math.PI / 4 + (i < 0 ? 1 : i) * Math.PI / 4;
   }
   // the thing being shot at: a plain rifle team, so the eye is on the shooter
   function mark() {
@@ -291,6 +291,8 @@
     if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
     // and a shield's band of light keeps turning
     if (shielded(unit())) busy = true;
+    // and a piece swinging onto its mark
+    if (view.turn && Date.now() - view.turn.t0 < view.turn.d1 + view.turn.d2) busy = true;
     // an aircraft's rotors turn and its scanners sweep, even hanging still
     if (I.animates(unit()) && view.status !== 'destroyed') busy = true;
     frame();
@@ -712,8 +714,41 @@
   }
   // pull out to the whole line for the length of a shot
   function showWide() { view.wide = true; view.wideUntil = performance.now() + 900; start(); }
+  function onTow() { return stationary(profile()) && view.stance === 'towed'; }
+  // the bearing from the unit to the mark, and the facing nearest it
+  function bearingToMark(u) { return Math.atan2(TO.y - u.y, TO.x - u.x); }
+  function nearestFace(brg) {
+    var best = view.face, bd = Infinity;
+    FACES.forEach(function (fn) {
+      var d = Math.abs(Math.atan2(Math.sin(brg - faceAngle(fn)), Math.cos(brg - faceAngle(fn))));
+      if (d < bd) { bd = d; best = fn; }
+    });
+    return best;
+  }
+  /* Fire!: a crew-served piece first swings onto the mark — the carriage round
+     to the nearest facing (unless dug in), then the gun traversing onto it —
+     and only then shoots. */
   function fire() {
-    if (view.status === 'destroyed') return;
+    if (view.status === 'destroyed' || onTow() || view.turning) return;
+    var u0 = unit();
+    if (turns(u0)) {
+      var from = { f: u0.facing, a: u0.aim }, brg = bearingToMark(u0);
+      if (!u0.dugIn) view.face = nearestFace(brg);
+      view.gunAim = brg; view.aimFor = view.face + '|gun';
+      var u1 = unit();
+      u1._turnFrom = from;
+      var D = I.startTurn(u1);
+      if (D > 0) {
+        view.turn = u1._turn; view.turning = true;
+        drawControls(); showWide(); start();
+        setTimeout(function () { view.turning = false; fireNow(); }, D + 40);
+        return;
+      }
+    }
+    fireNow();
+  }
+  function fireNow() {
+    if (view.status === 'destroyed' || onTow()) return;
     showWide();
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
@@ -723,13 +758,9 @@
        turns to the nearest facing first — unless it is dug in, which cannot be
        turned (p. 94), and traverses only within its front arc. */
     if (turns(u)) {
-      var brg = Math.atan2(TO.y - u.y, TO.x - u.x);
+      var brg = bearingToMark(u);
       if (!u.dugIn) {
-        var best = view.face, bd = Infinity;
-        FACES.forEach(function (fn) {
-          var d = Math.abs(Math.atan2(Math.sin(brg - faceAngle(fn)), Math.cos(brg - faceAngle(fn))));
-          if (d < bd) { bd = d; best = fn; }
-        });
+        var best = nearestFace(brg);
         if (best !== view.face) { view.face = best; drawControls(); }
         u.facing = faceAngle(view.face);
       }
@@ -1205,7 +1236,8 @@
     h += '<div class="vtabbody vstatsbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
     h += '<div class="vtabbody voptsbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
     h += '<div class="vacts">' +
-      '<button class="vbtn primary" data-do="fire">Fire</button>' +
+      // a gun on tow is limbered up behind its vehicle: it does not fire
+      '<button class="vbtn primary" data-do="fire"' + (onTow() ? ' disabled title="On tow: deploy it to fire"' : '') + '>Fire</button>' +
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
@@ -1574,6 +1606,7 @@
     },
     states: function () { return statesFor(profile()); },
     fire: fire,
+    fireNow: function () { fireNow(); },
     walk: toggleWalk,
     gait: function () { return gaitOf(unit()); },
     insert: insert,

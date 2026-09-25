@@ -483,6 +483,15 @@
   .le-ai p, .le-note p, .le-move p, .le-phase p { color: var(--ink-faint); }
 
   .acts { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  /* Dig in!: the eight facings as an octagon of buttons */
+  .dig-oct { display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 40px); gap: 5px; justify-content: center; margin: 12px 0 2px; }
+  .dig-dir { font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--ink); background: var(--panel-2, #1a2230);
+    border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .dig-oct > :nth-child(1) { border-radius: 16px 6px 6px 6px; } .dig-oct > :nth-child(3) { border-radius: 6px 16px 6px 6px; }
+  .dig-oct > :nth-child(7) { border-radius: 6px 6px 6px 16px; } .dig-oct > :nth-child(9) { border-radius: 6px 6px 16px 6px; }
+  .dig-dir:hover, .dig-dir:focus-visible { border-color: var(--gold, #e8c15a); color: var(--gold, #e8c15a); }
+  .dig-dir.on { background: var(--gold, #e8c15a); color: #1a1407; border-color: #ffe39a; }
+  .dig-mid { display: grid; place-items: center; font-family: var(--mono); font-size: 11px; color: var(--ink-dim); border: 1px dashed var(--line); border-radius: 50%; }
   .act {
     text-align: left; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
     border-radius: 5px; padding: 8px 10px; cursor: pointer; font-family: var(--body); font-size: 13px; width: 100%;
@@ -2183,20 +2192,20 @@
   </div>
 </div>
 
-<script src="src/rules/rules.js?v=8b70ea79a9"></script>
+<script src="src/rules/rules.js?v=ae605e53c6"></script>
 <script src="src/rules/ruletext.js?v=116e95866c"></script>
 <script src="src/rules/campaign.js?v=868ac16688"></script>
 <script src="src/rules/scenarios.js?v=da8b69b77b"></script>
 <script src="src/rules/solitaire.js?v=0b7f43f0a3"></script>
 <script src="src/view/sfx.js?v=c576028ac3"></script>
 <script src="src/rules/gen.js?v=91b2e77a2b"></script>
-<script src="src/view/iso.js?v=69f65df4cf"></script>
+<script src="src/view/iso.js?v=7765ce69e0"></script>
 <script src="src/view/fx.js?v=449fedd8af"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
 <script src="src/engine/protocol.js?v=3b336aa214"></script>
-<script src="src/engine/engine.js?v=06ced9bfe1"></script>
+<script src="src/engine/engine.js?v=ff0ad6acfc"></script>
 <script src="src/net/net.js?v=eaa07d90ac"></script>
 <script src="src/net/lobby.js?v=55003102fe"></script>
-<script src="src/view/game.js?v=9d89692ef0"></script>
+<script src="src/view/game.js?v=a34c972644"></script>
 <script src="src/view/dossier.js?v=216e69f26d"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

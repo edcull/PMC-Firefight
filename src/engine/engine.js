@@ -4465,18 +4465,35 @@
   /* "Dig in!" / "Normal stance!" (p. 94). The trails swing round to face whatever
      the gun is being laid on, since an emplaced piece dug in this way only bears
      on its front quarter. */
+  // the facing a gun digs in on unless told otherwise: towards the nearest enemy
+  function digDefault(u) {
+    var foe = null, best = Infinity;
+    state.units.forEach(function (o) {
+      if (!o.alive || o.aboard || o.side === u.side || o.x < 0) return;
+      var d = R.unitDist(u, o);
+      if (d < best) { best = d; foe = o; }
+    });
+    if (foe) return R.nearestFacing(Math.atan2(foe.y - u.y, foe.x - u.x));
+    return R.nearestFacing(u.facing == null ? (u.side === 'A' ? 0 : Math.PI) : u.facing);
+  }
+  /* Dig in! (p. 94): the gun is laid over open sights facing one way, and
+     cannot be turned after — so a player chooses which of the eight facings
+     it digs in on (a tap round the gun, or on the panel's octagon). The AI
+     faces its nearest enemy. Normal stance! needs no choosing. */
   function doStance(u) {
-    u.dugIn = !u.dugIn; u.activated = true;
-    if (u.dugIn) {
-      var foe = null, best = Infinity;
-      state.units.forEach(function (o) {
-        if (!o.alive || o.aboard || o.side === u.side) return;
-        var d = R.unitDist(u, o);
-        if (d < best) { best = d; foe = o; }
-      });
-      if (foe) u.facing = Math.atan2(foe.y - u.y, foe.x - u.x);
-      else if (u.facing == null) u.facing = u.side === 'A' ? 0 : Math.PI;
+    if (!u.dugIn && !isAI(u.side)) {
+      ui.mode = 'digface'; ui.targets = []; ui.moves = [];
+      ui.digDir = digDefault(u);
+      setHint(null, 'Dig in!: choose the way it faces — tap a direction around the gun, or on the octagon. Its fire arc is the 90° in front.');
+      render();
+      return;
     }
+    finishStance(u, u.dugIn ? null : digDefault(u));
+  }
+  function finishStance(u, dir) {
+    u.dugIn = !u.dugIn; u.activated = true;
+    if (u.dugIn) { u.facing = dir; u.aim = null; }
+    ui.mode = 'idle'; ui.digDir = null;
     logLine('note', u.dugIn
       ? u.label + ' digs in: Range 24", minimum 6", front quarter only — but firing with every modifier.'
       : u.label + ' returns to normal stance: indirect fire out to ' + u.range + '" again.');
@@ -5403,6 +5420,7 @@
         terrain: (ui.terrain || []).map(function (r) { return state.terrain.indexOf(r); }),
         deployPick: ui.deployPick,
         markKind: ui.markKind,
+        digDir: ui.mode === 'digface' ? ui.digDir : null,     // Dig in!: the facing offered
         markPicks: idsOf(ui.markPicks),
         hint: ui.hint,
         tsetHint: ui.tsetHint || '',
@@ -5839,6 +5857,14 @@
           var r = state.terrain[it.i];
           if (!r || ui.terrain.indexOf(r) < 0) return no('not a legal piece');
           if (ui.mode === 'breach') doBreach(r); else doDemolish(r);
+          return yes;
+        }
+        case 'digface': {
+          // Dig in!: the facing chosen, as a bearing (it is put on the nearest of the eight)
+          if (!mayAct(side) || !selected(side)) return no('not your activation');
+          if (ui.mode !== 'digface' || !ui.selected || !R.has(ui.selected, 'Stationary Artillery')) return no('not digging in');
+          if (typeof it.dir !== 'number' || !isFinite(it.dir)) return no('which way?');
+          finishStance(ui.selected, R.nearestFacing(it.dir));
           return yes;
         }
         case 'cancel': {
