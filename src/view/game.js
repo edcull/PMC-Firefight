@@ -6039,17 +6039,15 @@
       VIEW_W = Math.max(320, Math.min(1400, Math.round(bw)));
       VIEW_H = Math.max(260, Math.min(1400, Math.round(bh)));
     } else {
+      /* The table takes all the room its box has: the box is the column under
+         the header, less the action row pinned at its foot, so this is just the
+         box less its padding and the hint line under the table. */
       var avail = wrap ? wrap.clientWidth - 12 : window.innerWidth - 380;
-      /* The table takes all the height there is: the window, less the header
-         above it and, under it, the hint line and the row of action buttons (the
-         unit's text is in the left rail now, and the log is not shown). */
-      var used = 151;
-      var top = wrap ? wrap.getBoundingClientRect().top + window.scrollY : 120;
-      var room = Math.round(window.innerHeight - top - used);
-      VIEW_W = Math.max(720, Math.min(2200, Math.round(avail)));
-      VIEW_H = Math.max(420, Math.min(1400, room));
-      // never much taller than it is wide: the projection is a wide diamond
-      VIEW_H = Math.min(VIEW_H, Math.round(VIEW_W * 0.9));
+      var hintEl = wrap && wrap.querySelector('.viewhint');
+      var room = wrap ? wrap.clientHeight - 10 - (hintEl ? hintEl.offsetHeight + 4 : 20)
+        : Math.round(window.innerHeight - 280);
+      VIEW_W = Math.max(320, Math.min(2200, Math.round(avail)));
+      VIEW_H = Math.max(240, Math.min(1600, Math.round(room)));
     }
     DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
     var bw2 = Math.round(VIEW_W * DPR), bh2 = Math.round(VIEW_H * DPR);
@@ -6085,6 +6083,21 @@
       clampCam();
       if (state) render();
     });
+    /* On a desktop the table's box is whatever the action row leaves it, and
+       that row changes height as the phases come and go: follow the box. */
+    var bwrap = document.querySelector('.board-wrap');
+    if (bwrap && window.ResizeObserver) {
+      var roPend = 0;
+      new ResizeObserver(function () {
+        if (window.innerWidth <= 1000 || roPend) return;
+        roPend = requestAnimationFrame(function () {
+          roPend = 0;
+          if (!sizeView(false)) return;
+          clampCam();
+          if (state) render();
+        });
+      }).observe(bwrap);
+    }
     pix = document.createElement('canvas');
     pix.width = ISO.PIXW; pix.height = ISO.PIXH;
     pctx = pix.getContext('2d');

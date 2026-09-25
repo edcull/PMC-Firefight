@@ -1365,6 +1365,20 @@
     aside.tab-log #panel { display: none; }
     .logbox { height: auto; flex: 1; min-height: 220px; }
   }
+  /* Desktop: the table column is the height of the screen under the header and
+     stays put as the side rails scroll; the action row is pinned to its foot
+     and the table window takes every pixel above it. */
+  @media (min-width: 1001px) {
+    .stage {
+      position: sticky; top: calc(var(--hdr, 52px) + 14px);
+      height: calc(100vh - var(--hdr, 52px) - 14px - 14px); height: calc(100dvh - var(--hdr, 52px) - 14px - 14px);
+    }
+    .stage > .board-wrap { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+    .stage > .board-wrap > canvas#board { flex: none; }
+    .stage > .board-wrap > .viewhint { margin-top: auto; }
+    .stage > .console { flex: none; margin-top: auto; }
+    .wrap { padding-block-end: 14px; }
+  }
   @media (min-width: 1001px) {
     .scrim { display: none !important; }
     .console > #statstrip { display: none; }   /* the left rail has it */
@@ -2121,6 +2135,6 @@
 <script src="src/engine/engine.js?v=84b3a5c4ea"></script>
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=712ca52bf9"></script>
+<script src="src/view/game.js?v=578e9596c7"></script>
 <script src="src/view/dossier.js?v=5ed8b16b02"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>
