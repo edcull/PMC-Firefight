@@ -9618,9 +9618,12 @@
             // the tailplane first, always under the body (and the fins, which go on last)
             if (!spec.vTail) plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             fuselage(fus, fusTop, z, H, TB);
-            // the engine nozzle at the back
-            var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
-            sEllipse(nz[0], nz[1], 3.4, 3, STEEL); sEllipse(nz[0], nz[1], 2, 1.8, dead ? '#15181e' : '#c96a2a');
+            // the engine nozzle at the back: seen only when the tail is towards the eye or side-on;
+            // with the nose towards the eye the fuselage hides it
+            if ((cos + sin) < 0.5) {
+              var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
+              sEllipse(nz[0], nz[1], 3.4, 3, STEEL); sEllipse(nz[0], nz[1], 2, 1.8, dead ? '#15181e' : '#c96a2a');
+            }
             canopy(L * 0.12, L * 0.36, fw2 * 0.5, z + H, 4);
             if (hyb) { var sp = S3(AF(L * 0.1, 0), z + H + 1); sEllipse(sp[0], sp[1] - 1, 2.4, 1.6, STEEL); }
           });
