@@ -2819,12 +2819,14 @@
   function syncRemains() {
     if (!state || !state.units) return;
     var rem = state.remains || (state.remains = []);
-    state.units.forEach(function (u) {
-      var seen = u._seen, here = u.alive && u.x >= 0 && !u.aboard;
+    state.units.forEach(function (u0) {
+      // as it is drawn: the dead fall when the shot that kills them lands, not before
+      var u = shownAs(u0);
+      var seen = u0._seen, here = u.alive && u.x >= 0 && !u.aboard;
       if (seen && seen.here) {
         if (R.isMachine(u)) {
-          if (!u.alive && !u.fled && !u._wrecked) {
-            u._wrecked = true;
+          if (!u.alive && !u.fled && !u0._wrecked) {
+            u0._wrecked = true;
             // a snapshot, so the wreck stays a wreck even if the unit itself is used again
             var snap = {};
             for (var k in u) snap[k] = u[k];
@@ -2840,9 +2842,9 @@
           }
         }
       }
-      u._seen = { here: here, x: u.x, y: u.y, models: u.models || 0 };
+      u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0 };
       // a unit the engine has sent back to the OpFor pool is off the table now
-      if (u.wave === 'pool' && u.x < 0) u._seen = { here: false, x: -1, y: -1, models: u.models };
+      if (u.wave === 'pool' && u.x < 0) u0._seen = { here: false, x: -1, y: -1, models: u.models };
     });
     // the table only holds so many; the oldest dead go first, never a wreck
     var bodies = rem.filter(function (r) { return r.kind === 'body'; });
@@ -3921,7 +3923,7 @@
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
       '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
-      stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
+      stat('Models', u.models + '/' + u.size) + stat('Move', Math.floor(u.move) + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
       stat('Assault', u.assault) +
@@ -4055,11 +4057,11 @@
       // red once it is down below half its Structure; what the drive did to it is in its tip
       '<div class="st"><span>Structure</span><b' + (left * 2 < u.str ? ' class="hurt"' : '') +
         (base.str != null && base.str !== u.str && why('str') ? ' ' + tip('Printed ' + base.str, why('str')) : '') + '>' + left + '/' + u.str + '</b></div>' +
-      stat('Move', changed(u.move + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
+      // a half inch of Movement is kept, but shown rounded down
+      stat('Move', changed(Math.floor(u.move) + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.assault) +
-      stat('Damage', u.damage) +
-      stat('Carrying', u.transport ? (u.cargo || []).length + '/' + u.transport : '—') + '</div>';
+      stat('Damage', u.damage) + '</div>';
     if ((u.cargo || []).length) {
       h += '<div class="chips">' + u.cargo.map(function (c) {
         return '<span class="chip">aboard: ' + c.name + '</span>';
@@ -4152,17 +4154,21 @@
     (only ? [only] : ['A', 'B']).forEach(function (side) {
       h += '<div class="force force-' + side + '"><h3>' + (side === 'A' ? state.cfg.nameA : state.cfg.nameB) +
         ' <span class="tag">' + side + '</span></h3><ul>';
-      state.units.filter(function (u) { return u.side === side; }).forEach(function (u) {
+      // the living in their order, and whatever is gone below them
+      var mine = state.units.filter(function (u) { return u.side === side; });
+      mine.filter(function (u) { return u.alive; }).concat(mine.filter(function (u) { return !u.alive; })).forEach(function (u) {
         var st = u.alive ? R.status(u) : 'dead';
+        var gone = u.alive ? '' : u.fled ? 'fled' : R.isMachine(u) ? 'destroyed' : 'wiped out';
         h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected === u ? ' sel' : '') +
           '" data-unit="' + u.id + '"><span class="ru-code">' + u.code + '</span>' +
           '<span class="ru-name">' + u.name + honourMarks(u) +
           (state.solo && state.solo.coop && side === 'A' ? ' <small class="own own' + (u.owner || 1) + '">P' + (u.owner || 1) + '</small>' : '') + '</span>' +
-          '<span class="ru-num">' + (!u.alive ? '—' : R.isMachine(u)
+          (gone ? '<span class="ru-gone">' + gone + '</span>' :
+          '<span class="ru-num">' + (R.isMachine(u)
             ? Math.max(0, u.str - u.damage) + '/' + u.str
             : u.models + '/' + u.size) + '</span>' +
-          '<span class="ru-sp">' + (!u.alive ? 'lost' : u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
-            : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span></li>';
+          '<span class="ru-sp">' + (u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
+            : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') + '</li>';
       });
       h += '</ul></div>';
     });
