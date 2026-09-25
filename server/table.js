@@ -164,18 +164,28 @@ class Table {
     this.cfg = this.buildConfig();
     this.events = [];
     this.engine.start(this.cfg);
-    const room = this.room;
-    room.everyone().forEach((p) => {
-      p.send('started', {
-        seat: p.seat, cfg: {
-          tier: this.cfg.tier, pl: this.cfg.pl, scenario: this.cfg.scenario,
-          nameA: this.cfg.nameA, nameB: this.cfg.nameB,
-          colourA: this.cfg.colourA, colourB: this.cfg.colourB,
-          campaign: room.settings.campaign || null
-        }
-      });
-    });
+    this.room.everyone().forEach((p) => this.announce(p));
     this.flush();
+  }
+
+  /* What a player is told when the battle starts — or when they come back to it,
+     or walk in to watch it half-way through: which seat is theirs, and what the
+     board needs to paint the two sides. */
+  announce(p) {
+    p.send('started', {
+      seat: p.seat, cfg: {
+        tier: this.cfg.tier, pl: this.cfg.pl, scenario: this.cfg.scenario,
+        nameA: this.cfg.nameA, nameB: this.cfg.nameB,
+        colourA: this.cfg.colourA, colourB: this.cfg.colourB,
+        campaign: this.room.settings.campaign || null
+      }
+    });
+  }
+  // back at the table after a refresh or a dropped connection: the board, then where things stand
+  rejoin(p) {
+    if (!this.cfg) return;
+    this.announce(p);
+    this.resync(p);
   }
 
   /* ---- an intent, and what came of it ---- */

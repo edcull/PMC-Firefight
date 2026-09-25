@@ -279,6 +279,8 @@ async function main() {
   c.hello();
   const back = await c.until('game');
   ok('a dropped player walks back into their seat', seatOf(back.room, c.id) === 'B');
+  const again = await c.until('started');
+  ok('...told the battle is on again, so the board can be put back up', again.seat === 'B' && !!again.cfg && !!again.cfg.nameA, JSON.stringify(again));
   const resync = await c.until('turn');
   ok('and is sent the table again', !!resync.state && resync.state.turn === a.state.turn);
   both.B = c;                        // and plays out the rest of the battle

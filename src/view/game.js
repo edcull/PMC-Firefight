@@ -6622,7 +6622,9 @@
     if (mb) mb.disabled = true;
     function serverUp() {
       mb.disabled = false;
-      if (el('menu-multi-sub')) el('menu-multi-sub').textContent = 'Play somebody else over the network';
+      var back = window.PMCLobby.resumable && window.PMCLobby.resumable();
+      if (el('menu-multi-sub')) el('menu-multi-sub').textContent = back
+        ? 'Resume your game — code ' + back : 'Play somebody else over the network';
       mb.addEventListener('click', function () {
         el('setup').hidden = true;
         if (window.PMCMenu) window.PMCMenu.close();
@@ -6729,7 +6731,8 @@
     if (window.PMCMenu) window.PMCMenu.close();
     if (cfg && cfg.colourA) ISO.setSideColour('A', cfg.colourA);
     if (cfg && cfg.colourB) ISO.setSideColour('B', cfg.colourB);
-    wireNet(transport);
+    // the same connection comes back here on every rejoin: its handlers go on once
+    if (!transport.__board) { wireNet(transport); transport.__board = true; }
     joinBattle(transport, seat);
     transport.send('resync');
   };

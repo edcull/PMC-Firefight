@@ -277,7 +277,7 @@
         return;
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
       case 'sit': net.send('game.seat', { seat: b.getAttribute('data-seat') }); return;
-      case 'leave': net.send('game.leave'); view = 'lobby'; draw(); return;
+      case 'leave': keepRoom(''); net.send('game.leave'); view = 'lobby'; draw(); return;
       case 'leave-lobby':
         close();
         // back to the battle if one is on, otherwise to the menu
@@ -356,6 +356,14 @@
     });
   }
 
+  /* The game this browser was last seated at, kept so a refresh (or coming back
+     tomorrow) can walk straight back into it. */
+  var ROOM_KEY = 'pmc-room';
+  function lastRoom() { try { return localStorage.getItem(ROOM_KEY) || ''; } catch (e) { return ''; } }
+  function keepRoom(id) {
+    try { if (id) localStorage.setItem(ROOM_KEY, id); else localStorage.removeItem(ROOM_KEY); } catch (e) { }
+  }
+
   /* ================= the wire ================= */
   function connect(url) {
     if (net) return net;
@@ -375,6 +383,11 @@
       status = 'connected as ' + me.name;
       loadCampaigns();
       draw();
+      /* A seat still held for this browser comes back by itself with the hello.
+         Otherwise, a game it was in is asked for again by its code — it may be
+         over, or gone, and the server says so. */
+      var back = lastRoom();
+      if (back) setTimeout(function () { if (!room && lastRoom() === back) net.send('game.join', { id: back }); }, 400);
     });
     net.on('lobby', function (m) { games = m.games || []; draw(); });
     net.on('lobby.chat', function (m) {
@@ -384,6 +397,7 @@
     });
     net.on('game', function (m) {
       room = m.room;
+      keepRoom(room && room.phase !== P.PHASE.OVER ? room.id : '');
       if (!room) { view = 'lobby'; draw(); return; }
       chat.room = room.chat || chat.room;
       view = 'room';
@@ -395,12 +409,16 @@
       if (chat.room.length > P.LIMITS.chatLog) chat.room.shift();
       draw();
     });
-    net.on('error', function (m) { fault = m.text || ''; draw(); });
+    net.on('error', function (m) {
+      fault = m.text || '';
+      if (/no game with that code/.test(fault) && lastRoom()) { keepRoom(''); fault = ''; }   // it has gone since
+      draw();
+    });
     net.on('started', function (m) {
       close();
       if (root.PMC_JOIN_BATTLE) root.PMC_JOIN_BATTLE(net, m.seat, m.cfg);
     });
-    net.on('over', function () { /* the board shows the result; the room reopens by itself */ });
+    net.on('over', function () { keepRoom(''); /* the board shows the result; the room reopens by itself */ });
 
     net.connect(me.name || 'Commander');
     return net;
@@ -424,6 +442,8 @@
       open(room ? 'room' : 'lobby');
     },
     close: close,
-    net: function () { return net; }
+    net: function () { return net; },
+    // the code of a game this browser was seated at and may go back to
+    resumable: function () { return lastRoom(); }
   };
 })(typeof window !== 'undefined' ? window : global);
