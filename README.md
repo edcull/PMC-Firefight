@@ -11,9 +11,13 @@ No build step is required to play, and there are no dependencies to install.
 
 ## Playing it
 
-Open **`build/firefight.html`** in any modern browser. That is the whole game in
-one self-contained file — no server, no network, nothing to install. Double-click
-it, or drag it onto a browser window.
+Open **`index.html`** in any modern browser — straight from the folder, no
+server needed. Double-click it, or drag it onto a browser window. It is also
+what GitHub Pages serves.
+
+For a single self-contained file to carry around or publish, run
+`npm run build` and use **`build/firefight.html`**: the whole game, every script
+inlined, nothing else needed.
 
 The game opens on a main menu — Skirmish, Campaign and, when a server served
 the page, Multiplayer — over a battlefield rolled fresh every few seconds.
@@ -129,7 +133,7 @@ scripts/             build.js, gallery.js (the unit sheet), test.js (the test ru
 test/
   unit/              plain Node: `npm test`
   browser/           through a real browser with Playwright
-build/               the built single-file pages (npm run build)
+build/               the built single-file pages, made by `npm run build` (not kept in git)
 ```
 
 `index.html` carries the markup and all the CSS, and pulls the scripts in with
@@ -152,7 +156,7 @@ takes no arguments and needs nothing but a Node runtime.
 
 ### The unit viewer
 
-Open **`viewer.html`** (or the self-contained `build/viewer.html`) for a bench that shows one unit at a time: every profile
+Open **`viewer.html`** (or, after a build, the self-contained `build/viewer.html`) for a bench that shows one unit at a time: every profile
 in all four lists, in each of its states, at any strength, walking at its own
 Movement, coming in off a Battlefield Insertion, and firing whatever the weapon
 table says it carries. It loads `rules.js`, `ruletext.js`, `sfx.js`, `iso.js`,

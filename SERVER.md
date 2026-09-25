@@ -41,7 +41,7 @@ same messages:
 
 - `PMCNet.Remote` — a WebSocket to a server running the engine.
 - `PMCNet.Local` — the engine in this tab, behind the same message names, for
-  solitaire, hotseat and the published single-file build, which has no server.
+  solitaire, hotseat and the single-file build, which has no server.
 
 Because both speak one protocol, the board has one path through it, and a
 solitaire game exercises the same code a networked one does.
@@ -97,7 +97,7 @@ test/browser/        driven through a real browser: `npm run test:browser`
 test/where.js        where the tests are, relative to everything else
 
 scripts/             build, gallery, the test runner, and the tools that performed the split
-build/               the built pages (kept, so a clone can play); shots/ is not kept
+build/               the built pages, made by `npm run build` (not kept in git)
 ```
 
 src/ is split by what a file is rather than by what it belongs to: the rulebook

@@ -1,8 +1,8 @@
 node_modules/
 # campaigns saved by a running server: players' data, not source
 campaigns/
-# screenshots the browser harnesses take
-build/shots/
 # screenshots a few older harnesses drop in the project root
 /shot-*.png
-build/test-logs/
+
+# the built single-file pages: `npm run build` makes them
+build/
