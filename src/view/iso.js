@@ -9622,7 +9622,7 @@
             var tz = z + H * 0.84, ns = nearSide();
             function droop(sd) {
               var r0 = S3(AF(-L * 0.64, sd * cw * 0.2), tz), r1 = S3(AF(-L * 0.75, sd * cw * 0.2), tz);
-              var t1 = S3(AF(-L * 0.78, sd * w * 1.05), tz - 6), t0 = S3(AF(-L * 0.7, sd * w * 1.05), tz - 6);
+              var t1 = S3(AF(-L * 0.78, sd * w * 1.05), tz - 3.5), t0 = S3(AF(-L * 0.7, sd * w * 1.05), tz - 3.5);
               var th = 1.3;
               poly(g, [[r0[0], r0[1] + th], [r1[0], r1[1] + th], [t1[0], t1[1] + th], [t0[0], t0[1] + th]], mixc(hull, dark, 0.55));
               poly(g, [r0, r1, t1, t0], sd === ns ? hull : mixc(hull, lit, 0.4));
