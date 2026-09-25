@@ -3023,8 +3023,13 @@
     // the Command Unit rule is not used in solitaire games (p. 149)
     if (u && R.has(u, 'Command Unit') && !state.solo) out.push({ id: 'coordinate', label: 'Coordinate' });
     if (u && u.transport) {
-      out.push({ id: 'embark', label: 'Embark' });
-      out.push({ id: 'disembark', label: 'Disembark' });
+      /* A gun is towed rather than carried (Stationary Artillery, p. 94): where
+         what it would take on, or has on, is a gun, the actions say Tow and Deploy. */
+      var gunsIn = (u.cargo || []).filter(function (c) { return R.has(c, 'Stationary Artillery'); }).length;
+      var near = activeUnits(u.side).filter(function (t2) { return t2 !== u && R.canEmbark(state, u, t2); });
+      var gunsNear = near.filter(function (t2) { return R.has(t2, 'Stationary Artillery'); }).length;
+      out.push({ id: 'embark', label: gunsNear && gunsNear === near.length ? 'Tow' : gunsNear ? 'Embark / tow' : 'Embark' });
+      out.push({ id: 'disembark', label: gunsIn && gunsIn === (u.cargo || []).length ? 'Deploy gun' : gunsIn ? 'Disembark / deploy' : 'Disembark' });
       if (movesToCarry(u)) out.push({ id: 'drivefirst', label: u.cls === 'aircraft' ? 'Fly first' : 'Drive first' });
     }
     if (u && u.cls === 'aircraft') out.push({ id: 'strafe', label: 'Strafe' });
@@ -3242,6 +3247,8 @@
         var room = u.transport - (u.cargo || []).length;
         if (room <= 0) return { on: false, hint: 'Full — carrying ' + u.cargo.length + ' of ' + u.transport + '.' };
         var ready = activeUnits(u.side).filter(function (t2) { return R.canEmbark(state, u, t2); });
+        var guns = ready.filter(function (t2) { return R.has(t2, 'Stationary Artillery'); }).length;
+        if (guns && guns === ready.length) return { on: true, hint: 'Hitch up a gun within 4" and tow it. It goes where the vehicle goes, and deploys again when unloaded.' };
         return ready.length
           ? { on: true, hint: 'Pick up a squad within 4". Room for ' + room + '. They lose their suppression on boarding.' }
           : { on: false, hint: 'No steady squad within 4" to pick up.' };
