@@ -2216,7 +2216,7 @@
     { key: 'snipers', code: 'SNP', name: 'Sniper team', group: 'Light infantry', art: 'sniperteam', tier: 5, size: 2, move: 5, fp: 6, range: 30, def: 8, assault: 2, morale: 4, rules: ['Markerlights', 'Stealth', 'Cumbersome Weapon', 'Keen-Eyed', 'Gauss Weapon', 'Suppressive Fire', 'Battlefield Insertion'] },
 
     /* Light support troops (p. 67) */
-    { key: 'lmgsection', code: 'LMS', name: 'Light MG section', group: 'Light support', art: 'mg', tier: 2, size: 3, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 3, rules: [] },
+    { key: 'lmgsection', code: 'LMS', name: 'Light MG section', group: 'Light support', art: 'mgsec', tier: 2, size: 3, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 3, rules: [] },
     { key: 'lmgteam', code: 'MG', name: 'Light MG team', group: 'Light support', art: 'mg', tier: 3, size: 6, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 4, rules: [] },
     { key: 'hmgteam', code: 'HMG', name: 'Heavy MG team', group: 'Light support', art: 'hmg', tier: 4, size: 3, move: 3, fp: 5, range: 30, def: 9, assault: 1, morale: 5, rules: ['Cumbersome Weapon', 'Suppressive Fire'] },
     { key: 'gausscannon', code: 'GAU', name: 'Gauss cannon', group: 'Light support', art: 'gauss', tier: 5, size: 3, move: 3, fp: 6, range: 30, def: 9, assault: 1, morale: 5, rules: ['Specialisation (ground)', 'Cumbersome Weapon', 'Destructive Weapon', 'Gauss Weapon', 'Anti-tank'] },
@@ -14852,11 +14852,6 @@
   var INFECT_B = { rebel: true, light: '#86806e', mid: '#666050', dark: '#34302a', helm: '#55503f', cloth: '#4e5458' };
   var INFECT_C = { rebel: true, light: '#6e7680', mid: '#525a62', dark: '#2a2e33', helm: '#434a50', cloth: '#6a5e50' };
   var IRR_OLIVE = { light: '#8a9068', mid: '#686e4a', dark: '#343822', helm: '#555b3c', cloth: '#7a6a4a' };
-  // and the rest of what irregulars turn up in: grey work clothes, brown leather, faded denim, rust
-  var IRR_GREY = { light: '#9a9c98', mid: '#737571', dark: '#383a37', helm: '#5c5e5a', cloth: '#6a5a44' };
-  var IRR_BROWN = { light: '#9a7a5a', mid: '#745a40', dark: '#3a2c1e', helm: '#5a4630', cloth: '#6e7a58' };
-  var IRR_DENIM = { light: '#7e8ea4', mid: '#5c6a80', dark: '#2e3644', helm: '#4a5466', cloth: '#8a7654' };
-  var IRR_RUST = { light: '#a8704e', mid: '#824f34', dark: '#42281a', helm: '#6a4430', cloth: '#56603e' };
   var IRR_KHAKI = { light: '#b0a07a', mid: '#8c7c58', dark: '#463c28', helm: '#6e6244', cloth: '#5a6a4a' };
   var BOOT = '#15181d';
   var GLASS = '#12161c';
@@ -14870,12 +14865,15 @@
     command2: ['cmdr2', 'signals', 'cmdsmg'],
     command1: ['cmdr1', 'signals', 'cmdsmg'],
     commandhi: ['cmdrhi', 'signals', 'cmdsmg'],
-    rifle: ['saw', 'rifleman'],
+    // rifle teams: the leader at the front right with an SMG, the SAW at the front left, riflemen behind
+    rifle: ['riflelead', 'saw', 'rifleman'],
     veteran: ['vetlead', 'vetsaw', 'vet'],
     engineer: ['breacher', 'sapper'],
     lighteng: ['breacherlt', 'sapperlt'],
-    rookie: ['sawrk', 'riflemanrk'],
-    mg: ['gunner', 'loader', 'rifle'],
+    rookie: ['rookielead', 'sawrk', 'riflemanrk'],
+    // support teams: the standing men carry SMGs; the section has two guns down in front
+    mg: ['gunner', 'loader', 'supsmg'],
+    mgsec: ['gunner', 'gunner', 'loader'],
     sniper: ['marksman', 'spotter', 'lightinf'],
     // the sniper team alone goes in with night-vision goggles
     sniperteam: ['marksmannv', 'spotternv', 'sniperinf'],
@@ -14891,33 +14889,36 @@
     protector: ['protector'],
     protectorhm: ['protectorhm'],
     // crew-served guns on tripods
-    hmg: ['hmgunner', 'loader', 'rifle'],
-    gauss: ['gaussgunner', 'loader', 'rifle'],
+    hmg: ['hmgunner', 'loader', 'supsmg'],
+    gauss: ['gaussgunner', 'loader', 'supsmg'],
     medic: ['medic', 'corpsman'],
     observer: ['observer', 'lightinfrs'],
     recruit: ['recruit'],
     enforcer: ['riot'],
-    // eight of them, and no two dressed or armed alike
-    irregular: ['irregular', 'irregular2', 'irregular3', 'irregular4', 'irregular5', 'irregular6', 'irregular7', 'irregular8'],
+    // a leader in the side's colours, a gunner, and the rest in bandanas and boonies, mixed through the ranks
+    irregular: ['irregular', 'irregular2', 'irregular3', 'irregular6', 'irregular4', 'irregular7', 'irregular5', 'irregular8'],
     penal: ['convict'],
     shock: ['shocklead', 'shockbreacher', 'shock'],
     // rangers and commandos: the veteran and assault kit, with night-vision goggles
     ranger: ['rangerlead', 'rangersaw', 'ranger'],
     commando: ['commandolead', 'commandobreacher', 'commando'],
-    antitank: ['atgunner', 'atloader', 'rifle'],
+    antitank: ['atgunner', 'atloader', 'supsmg'],
     // the missile-armed and SAM teams work a launcher set up on a tripod
-    atgm: ['msloperator', 'atloader', 'rifle', 'rifle'],
-    samlauncher: ['msloperator', 'atloader', 'rifle', 'rifle'],
+    atgm: ['msloperator', 'atloader', 'supsmg', 'supsmg'],
+    samlauncher: ['msloperator', 'atloader', 'supsmg', 'supsmg'],
     mortar: ['mortarman', 'mortarloader', 'mortarloader'],
-    nomad: ['nomad'],
+    // the leader at the front right with an SMG
+    nomad: ['nomadlead', 'nomad'],
     ew: ['ewop', 'signals'],
     chem: ['chem'],
 
     /* ---- the rebel army (pp. 96-104) ----
        Nothing matches. A revolt arms itself from what the colony had: hunting
        rifles, mining gear, work clothes and whatever the last ambush left behind. */
-    rebel: ['rebrifle', 'rebciv', 'rebmolotov'],
-    civilian: ['civ1', 'civ2', 'civ3', 'civ4', 'civ5'],
+    // the leader at the front right with an SMG, the SAW at the front left, the rest mixed
+    rebel: ['reblead', 'rebsaw', 'rebrifle', 'rebciv', 'rebmolotov', 'rebrifle', 'rebciv', 'rebrifle', 'rebciv', 'rebrifle'],
+    // all ten different from their neighbours, the five kinds of clothes mixed through the ranks
+    civilian: ['civ1', 'civ2', 'civ3', 'civ4', 'civ5', 'civ2', 'civ4', 'civ1', 'civ5', 'civ3'],
     // the Space Bugs: one caste to a unit, as the book fields them
     bug_tiny: ['btiny'], bug_small: ['bsmall'], bug_attack: ['battack'], bug_oversized: ['boversized'],
     bug_under: ['bunder'], bug_hugeunder: ['bhugeunder'],
@@ -14935,7 +14936,7 @@
     x_delta1: ['xdelta'], x_delta2: ['xdeltagun'], x_delta3: ['xdeltagun'],
     x_eps1: ['esh1', 'esh1b'], x_eps2: ['esh2'], x_eps3: ['esh3'], x_eps4: ['esh4'], x_eps5: ['esh5'],
     // hardened insurgents: the guard's green field kit, with helmets in the side's colour
-    insurgent: ['hardlead', 'hardrifle', 'hardrifle'],
+    insurgent: ['hardlead', 'hardsaw', 'hardrifle'],
     holy: ['zealot', 'flagellant', 'zealot2'],
     /* the holy warriors by standing: acolytes are boys in long shirts; the
        fanatics wear the turban and a rig; the enlightened go in black with a
@@ -15025,13 +15026,15 @@
     rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
     saw: { helm: 'std', gun: 'saw', pack: 'ammo' },
+    riflelead: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
     vet: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true },
     vetsaw: { helm: 'heavy', gun: 'saw', pack: 'ammo', bulk: 1, mark: true },
-    vetlead: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true },
+    vetlead: { helm: 'heavy', gun: 'smg', pack: 'std', bulk: 1, mark: true },
     officer: { helm: 'cap', gun: 'slate', pack: 'std', badge: '#e8c15a' },
     signals: { helm: 'std', gun: 'pistol', pack: 'radio', fitAs: 'rifle' },
     // the field command's escort: carbines rather than rifles
     cmdsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
+    supsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
     /* the field command's commanders, in dress uniform that grows grander with the grade */
     cmdr4: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 1 },
     cmdr3: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 2 },
@@ -15042,6 +15045,7 @@
     sapper: { helm: 'welder', gun: 'smg', pack: 'charges', vest: true },
     // rookies, light engineers, recruits and observers: shirt sleeves rolled up
     sawrk: { helm: 'std', gun: 'saw', pack: 'ammo' , sleeves: 'rolled' },
+    rookielead: { helm: 'std', gun: 'smg', pack: 'std', sleeves: 'rolled', fitAs: 'rifle' },
     riflemanrk: { helm: 'std', gun: 'battlerifle', pack: 'std' , sleeves: 'rolled' },
     breacherlt: { helm: 'welder', gun: 'shotgun', pack: 'charges', vest: true , sleeves: 'rolled' },
     sapperlt: { helm: 'welder', gun: 'smg', pack: 'charges', vest: true , sleeves: 'rolled' },
@@ -15068,15 +15072,16 @@
     recruit: { helm: 'cap', gun: 'rifle', pack: 'none', sleeves: 'rolled' },
     riot: { helm: 'riot', gun: 'shotgun', pack: 'none', bulk: 1, shield: true },
     // gangers and free companies: rifles, a bandolier, and not much else
-    irregular: { helm: 'scarf', gun: 'battlerifle', pack: 'none', light: true, bandolier: true },
-    irregular2: { helm: 'boonie', gun: 'carbine', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
-    irregular3: { helm: 'bandana', gun: 'battlerifle', pack: 'std', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-    irregular4: { helm: 'cap', gun: 'shotgun', pack: 'none', light: true, tint: IRR_GREY },
-    irregular5: { helm: 'bare', gun: 'huntingrifle', pack: 'none', light: true, bandolier: true, tint: IRR_BROWN },
-    irregular6: { helm: 'balaclava', gun: 'smg', pack: 'none', light: true, tint: IRR_DENIM },
-    irregular7: { helm: 'beret', gun: 'carbine', pack: 'std', light: true, tint: IRR_RUST },
-    irregular8: { helm: 'hood', gun: 'battlerifle', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
+    irregular: { helm: 'scarf', gun: 'smg', pack: 'none', light: true, bandolier: true },
+    irregular2: { helm: 'boonie', gun: 'saw', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
+    irregular3: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
+    irregular4: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
+    irregular5: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
+    irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
+    irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
+    irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
     nomad: { helm: 'std', gun: 'battlerifle', pack: 'std', cloak: true },
+    nomadlead: { helm: 'std', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
     // penal troops: orange coveralls, a collar, and the company's armband
     convict: { helm: 'bare', gun: 'carbine', pack: 'none', collar: true, light: true, armband: 'force',
       tint: { light: '#dd8f43', mid: '#bd6c2c', dark: '#6b3a15', helm: '#a05520', cloth: '#8a5a2a' } },
@@ -15086,7 +15091,7 @@
     shock: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, vest: true },
     ranger: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true },
     rangersaw: { helm: 'heavy', gun: 'saw', pack: 'ammo', bulk: 1, mark: true, nvg: true },
-    rangerlead: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true },
+    rangerlead: { helm: 'heavy', gun: 'smg', pack: 'std', bulk: 1, mark: true, nvg: true },
     commandolead: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, mark: true, vest: true, nvg: true },
     commandobreacher: { helm: 'welder', gun: 'shotgun', pack: 'charges', bulk: 1, vest: true, nvg: true },
     commando: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, vest: true, nvg: true },
@@ -15156,13 +15161,16 @@
     civ4: { helm: 'bare', gun: 'shotgun', pack: 'none', ragged: true, armband: 'force', tint: CIV_D },
     civ5: { helm: 'scarf', gun: 'huntingrifle', pack: 'none', armband: 'force', tint: CIV_E },
     rebrifle: { helm: 'std', gun: 'battlerifle', forceHelm: true, pack: 'none', ragged: true, tint: REBEL_DRAB },
+    reblead: { helm: 'std', gun: 'smg', forceHelm: true, pack: 'none', ragged: true, mark: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
+    rebsaw: { helm: 'std', gun: 'saw', forceHelm: true, pack: 'ammo', ragged: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
     rebmolotov: { helm: 'std', gun: 'molotov', forceHelm: true, pack: 'none', ragged: true, tint: REBEL_DRAB },
     inslead: { helm: 'std', gun: 'battlerifle', forceHelm: true, pack: 'none', mark: true, tint: REBEL_FIELD },
     insrifle: { helm: 'std', gun: 'battlerifle', forceHelm: true, pack: 'std', tint: REBEL_FIELD },
     // the revolutionary guard: ochre fatigues, the helmet and the flag in the side's colour
     guardlead: { helm: 'beret', gun: 'battlerifle', pack: 'none', mark: true, tint: FIELD_OCHRE },
     guardrifle: { helm: 'beret', gun: 'battlerifle', pack: 'std', tint: FIELD_OCHRE },
-    hardlead: { helm: 'std', forceHelm: true, gun: 'battlerifle', pack: 'none', mark: true, tint: FIELD_OCHRE },
+    hardlead: { helm: 'std', forceHelm: true, gun: 'smg', pack: 'none', mark: true, tint: FIELD_OCHRE },
+    hardsaw: { helm: 'std', forceHelm: true, gun: 'saw', pack: 'ammo', tint: FIELD_OCHRE },
     hardrifle: { helm: 'std', forceHelm: true, gun: 'battlerifle', pack: 'std', tint: FIELD_OCHRE },
     guardflag: { helm: 'beret', gun: 'flagsmall', pack: 'std', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     // holy warriors: robes, a blade, and no interest whatever in cover
@@ -15175,10 +15183,10 @@
     zealotrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', tint: HOLY_A },
     enlightrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', tint: HOLY_B },
     enlight: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
-    enlightlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, tint: HOLY_B },
+    enlightlead: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, mark: true, tint: HOLY_B },
     enlightblack: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#22241e', sash: '#2e7a3a', bandolier: true, tint: HOLY_B },
     enlight2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', tint: HOLY_A },
-    mujlead: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
+    mujlead: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, mark: true, bulk: 1, tint: HOLY_B },
     mujsaw: { helm: 'turban', gun: 'saw', armband: 'force', pack: 'ammo', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, bandolier: true, bulk: 1, tint: HOLY_B },
     mujrpg: { helm: 'turban', gun: 'rpg', armband: 'force', pack: 'none', tunic: true, wrap: '#141416', vest: '#1c1e18', facewrap: true, tint: HOLY_B },
     muj: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#141416', vest: '#1c1e18', sash: '#2e7a3a', facewrap: true, bandolier: true, tint: HOLY_B },
@@ -15223,7 +15231,7 @@
     // harsh-environment miners: the miner, with armour plates bolted over the work suit
     hardsuit: { helm: 'welder', gun: 'lascutter', forceShoulders: true, pack: 'minerpack', plates: true, bulk: 1, tint: REBEL_MINE },
     // deserters, still in the uniform they walked out of
-    deserter: { helm: 'std', gun: 'rifle', armband: 'force', pack: 'none', tint: REBEL_WORN },
+    deserter: { helm: 'std', gun: 'smg', armband: 'force', pack: 'none', mark: true, tint: REBEL_WORN, fitAs: 'desrifle' },   // the ex-sergeant, at the front right
     desrifle: { helm: 'std', gun: 'battlerifle', armband: 'force', pack: 'std', tint: REBEL_WORN },
     conscript: { helm: 'std', gun: 'rifle', armband: 'force', pack: 'none', wood: true, tint: REBEL_WORN },
     conscript2: { helm: 'cap', gun: 'battlerifle', armband: 'force', pack: 'std', wood: true, tint: REBEL_WORN },
@@ -15233,9 +15241,9 @@
     // First Among Equals: a pistol, a megaphone and the group's colours on a pole
     // the leader himself: a mujahideen veteran in the fanatics' white turban, the green sash of command
     // the rebel leader, Tier by Tier (see the leader roles)
-    lead1: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: HOLY_A.mid, mark: true, tint: HOLY_A },
-    lead2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_A },
-    lead3: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
+    lead1: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: HOLY_A.mid, mark: true, tint: HOLY_A },
+    lead2: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_A },
+    lead3: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
     // the Rebellion leader's second: the Insurgent leader's figure, in a black turban like his chief's
     lead3black: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
     lead4: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
@@ -37996,7 +38004,6 @@
     h += '<div class="dtop">' + tierChip(p.tier) +
       '<b class="dname">' + esc(e.name) + '</b>' +
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
-    if (e.free) h += '<span class="dtag">' + esc(C.words(co).cmd) + '</span>';
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     h += '</div>';
     if (!C.isLeaderP(p) && !(co.faction === 'xeno' && (p.rules || []).indexOf('Turret') >= 0)) {
@@ -38008,9 +38015,7 @@
           '<i style="width:' + pct + '%"></i></span><span class="dtpn">' + e.tp + '/' + threshold + ' TP</span>';
       }
       h += '</div>';
-    } else {
-      h += '<div class="dbars"><span class="dnote">' + (p.leaderBug ? 'Leader Bugs' : p.alpha ? 'Alpha squads' : C.isLeaderP(p) ? 'Command Units' : 'Turrets') + ' never earn experience.</span></div>';
-    }
+    }                                                // a command unit or a turret: no experience bars, and nothing said about it
     var marks = [];
     (e.honours || []).forEach(function (n) {
       var hx = C.honourTable(e.key)[n - 1];

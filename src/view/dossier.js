@@ -259,7 +259,6 @@
     h += '<div class="dtop">' + tierChip(p.tier) +
       '<b class="dname">' + esc(e.name) + '</b>' +
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
-    if (e.free) h += '<span class="dtag">' + esc(C.words(co).cmd) + '</span>';
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     h += '</div>';
     if (!C.isLeaderP(p) && !(co.faction === 'xeno' && (p.rules || []).indexOf('Turret') >= 0)) {
@@ -271,9 +270,7 @@
           '<i style="width:' + pct + '%"></i></span><span class="dtpn">' + e.tp + '/' + threshold + ' TP</span>';
       }
       h += '</div>';
-    } else {
-      h += '<div class="dbars"><span class="dnote">' + (p.leaderBug ? 'Leader Bugs' : p.alpha ? 'Alpha squads' : C.isLeaderP(p) ? 'Command Units' : 'Turrets') + ' never earn experience.</span></div>';
-    }
+    }                                                // a command unit or a turret: no experience bars, and nothing said about it
     var marks = [];
     (e.honours || []).forEach(function (n) {
       var hx = C.honourTable(e.key)[n - 1];
