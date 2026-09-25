@@ -2312,7 +2312,7 @@
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
       u.disembarked = false; u.boarded = false;
     });
-    state.chain = null; state.mark = null;
+    state.chain = null; state.mark = null; state.remark = null;
     state.initiative = null;
     state.activeSide = 'A';
     state.activeOwner = state.solo.owners[0];
@@ -2383,7 +2383,7 @@
       u.disembarked = false; u.boarded = false;
     });
     state.chain = null;
-    state.mark = null;
+    state.mark = null; state.remark = null;
     var a, b;
     do { a = R.d10(); b = R.d10(); } while (a === b);
     state.initiative = a > b ? 'A' : 'B';
@@ -2539,6 +2539,11 @@
   }
 
   function eligible(side) {
+    // a marker that stood still is naming its second target: nothing else goes until it has
+    if (state.remark && state.remark.side === side) {
+      var rm = byId(state.remark.by);
+      return rm && rm.alive ? [rm] : [];
+    }
     return state.units.filter(function (u) {
       if (!u.alive || u.side !== side || u.activated || u.aboard || u.reserve) return false;
       if (R.status(u) === 'broken') return false;
@@ -2642,17 +2647,24 @@
         logLine('note', 'The turrets act as one — ' + restT.length + ' more to go before the activation passes.');
       }
     }
-    if (state.solo) { soloNext(); return; }
+    /* A chain (a Command Unit's, the turrets', a marker's call) runs its course
+       first — in a solitaire game as well, whose players have no streak to count. */
     if (state.chain && state.chain.side === state.activeSide) {
       state.chain.remaining -= 1;
       if (state.chain.remaining > 0 && eligible(state.activeSide).length > 0) { render(); maybeAI(); return; }
-      if (state.chain.kind === 'mark') clearMark();
+      if (state.chain.kind === 'mark') {
+        // a marker that stood still names a second target once the first answer is in
+        if (offerSecondMark()) return;
+        clearMark();
+      }
       state.chain = null;
-      state.streak -= 1;
-    } else {
-      state.streak -= 1;
     }
-
+    afterChain();
+  }
+  // the activation (and any chain it started) is over: whose go is it now?
+  function afterChain() {
+    if (state.solo) { soloNext(); return; }
+    state.streak -= 1;
     if (state.streak > 0 && eligible(state.activeSide).length > 0) { render(); maybeAI(); return; }
 
     var next = other(state.activeSide);
@@ -3096,6 +3108,14 @@
     if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
     if (u.side !== state.activeSide) return { on: false, hint: state.solo ? 'The OpFor is acting.' : 'It is ' + sideName(state.activeSide) + '’s activation.' };
     if (u.activated) return { on: false, hint: u.name + ' has already acted this turn.' };
+    /* In the middle of a chain — a marker's call, a Command Unit's, the turrets
+       acting as one — only the units the chain calls on may act. */
+    if (state.chain && state.chain.side === u.side && eligible(u.side).indexOf(u) < 0) {
+      return { on: false, hint: state.chain.kind === 'mark'
+        ? 'Answering the ' + (state.mark && state.mark.kind === 'mark' ? 'mark' : 'designation') + ': only a unit that can fire at ' +
+          (state.mark && state.mark.targets[0] ? state.mark.targets[0].name : 'the target') + ' may act.'
+        : 'Only the units in this chain may act now.' };
+    }
     /* An Advance is one action: the move, then the shot (p. 27). Half-way
        through it, Fire!, Assault, another move — none of them is on; the unit
        shoots without the Fire! bonus, or holds its fire. */
@@ -3256,13 +3276,13 @@
         }
         if (smoke) {
           return { on: true, hint: 'Smoke Markers: a grenade and a flare on an enemy within 12". ' +
-            'Two Indirect Fire units shoot at it there and then, without needing sight — and this unit may move first.' };
+            'An Indirect Fire unit shoots at it there and then, without needing sight; then another smoke round, and a second unit — and this unit may move first.' };
         }
         return { on: true, hint: mkKind === 'designate'
-          ? 'Designate target: an enemy within 24" and in sight. Indirect Fire units shoot it at once, no sight needed. ' +
-            'Stand still for two of them, or move up to ' + u.move + '" first and get one.'
-          : 'Mark the target: an enemy within 24" and in sight. A unit that can see it fires at once, as though at half range. ' +
-            'Stand still for two of them, or move up to ' + u.move + '" first and get one.' };
+          ? 'Designate target: an enemy within 24" and in sight, and an Indirect Fire unit shoots it at once, no sight needed. ' +
+            'Stand still and, after that, designate again (the same enemy or another) for a second; move up to ' + u.move + '" first and get one.'
+          : 'Mark the target: an enemy within 24" and in sight, and a unit that can see it fires at once, as though at half range. ' +
+            'Stand still and, after that, mark again (the same enemy or another) for a second; move up to ' + u.move + '" first and get one.' };
       }
       case 'support': {
         if (u.supportUsed) return { on: false, hint: 'Supporting Fire already given — now load or unload.' };
@@ -4467,7 +4487,7 @@
       return (ui.moves.length ? 'Move up to ' + u.move + '" first if you like, then pick ' : 'Pick ') +
         'an enemy to ' + (kind === 'mark' ? 'mark' : 'designate') + '.';
     }
-    return 'Tap the same enemy again to send both guns at it, or a second enemy to split them.';
+    return 'Pick the enemy for this call.';
   }
 
   /* Designate target / Mark the target (p. 58), and Smoke Markers (p. 94).
@@ -4482,25 +4502,10 @@
     if (!u) return;
     var mk = kind || ui.markKind || 'designate';
     if (!R.has(u, 'Markerlights')) mk = 'designate';       // Smoke Markers designate only
-    ui.markPicks = ui.markPicks || [];
-    var already = ui.markPicks.indexOf(target) >= 0;
-    if (!already) ui.markPicks.push(target);
-
-    /* Stand still and you may name a second target before the guns answer. The
-       same target tapped twice is the book's other stationary option — one target,
-       two units — so either way the second tap sends them. Smoke Markers "work
-       like Markerlights" and always call two, even on the move (p. 94), so a
-       smoke-marking unit may split its call whether or not it has moved. */
-    var smokeOnly = !R.has(u, 'Markerlights') && R.has(u, 'Smoke Markers');
-    var canSplit = (!u.markMoved || smokeOnly) &&
-      ui.markPicks.length < 2 && !already &&
-      markTargets(u).some(function (t) { return ui.markPicks.indexOf(t) < 0; });
-    if (canSplit && u.side === state.activeSide && !isAI(u.side)) {
-      ui.targets = markTargets(u);
-      setHint(null, markHint(u));
-      render();
-      return;
-    }
+    /* One target at a time: it is named, one unit answers it, and only then does
+       a marker that stood still name its second — the same enemy again, or
+       another (see offerSecondMark). */
+    ui.markPicks = [target];
     commitMark(u, mk);
   }
 
@@ -4508,8 +4513,14 @@
     var picks = (ui.markPicks || []).slice();
     if (!picks.length) return;
     var smoke = !R.has(u, 'Markerlights') && R.has(u, 'Smoke Markers');
-    var shots = smoke ? 2 : (u.markMoved ? 1 : 2);
-    state.mark = { side: u.side, kind: kind, targets: picks, smoke: smoke };
+    /* A marker that stood still (and Smoke Markers, moved or not: p. 94) calls two
+       units; one that moved calls one. They come one at a time, each on a target
+       named just before it fires. */
+    var second = !!state.remark;
+    if (second) { state.remark = null; state.chain = null; }
+    var shots = 1;
+    state.mark = { side: u.side, kind: kind, targets: picks, smoke: smoke, by: u.id,
+      again: !second && (smoke || !u.markMoved) };
     picks.forEach(function (t) {
       t.marked = true;
       // the marker's laser (or smoke round's trace) onto each mark
@@ -4533,7 +4544,7 @@
     logLine('note', u.label + (smoke ? ' puts smoke and a flare on ' :
       kind === 'mark' ? ' marks ' : ' designates ') +
       picks.map(function (t) { return t.label; }).join(' and ') +
-      (u.markMoved ? ', on the move' : '') + ' — ' +
+      (second ? ' for its second call' : u.markMoved ? ', on the move' : '') + ' — ' +
       (calls ? calls + ' friendly unit' + (calls > 1 ? 's fire' : ' fires') + ' at once' +
         (kind === 'mark' ? ', as though at half range' : ', without needing to see it')
         : 'but nobody is in a position to answer') + '.');
@@ -4546,7 +4557,55 @@
       clearMark();
     }
     ui.markPicks = []; ui.markKind = null;
+    if (second) {
+      /* The marker already had its activation: the second call runs as a chain of
+         its own, and when nobody could answer it the go passes on as usual. */
+      ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = [];
+      if (calls) { state.chain.remaining = calls; render(); maybeAI(); }
+      else afterChain();
+      return;
+    }
     endActivation(u);
+  }
+
+  /* After the first answer, a marker that stood still names its second target:
+     the same enemy again, or another, so long as someone is left to answer it.
+     The player picks it (or Cancels to let the call go); the AI takes the best. */
+  function offerSecondMark() {
+    var m = state.mark;
+    if (!m || !m.again) return false;
+    var u = byId(m.by);
+    if (!u || !u.alive || R.status(u) === 'broken') return false;
+    var kind = m.kind;
+    var can = markTargets(u).filter(function (t) {
+      return state.units.some(function (o) {
+        return o.alive && !o.aboard && !o.activated && !o.reserve && o.side === u.side && o !== u &&
+          R.status(o) !== 'broken' && canAnswerMark(o, t, kind);
+      });
+    });
+    clearMark();
+    if (!can.length) return false;
+    state.chain = null;
+    state.remark = { by: u.id, side: u.side, kind: kind };
+    ui.selected = u; ui.mode = 'designate'; ui.markKind = kind; ui.markPicks = [];
+    ui.targets = can; ui.moves = []; ui.terrain = []; ui.preview = null;
+    if (isAI(u.side)) {
+      can.sort(function (a2, b2) { return (b2.models || 1) * b2.tier - (a2.models || 1) * a2.tier; });
+      doDesignate(can[0], u, kind);
+      return true;
+    }
+    setHint(null, u.name + ' stood still: ' + (kind === 'mark' ? 'mark' : 'designate') +
+      ' a second target — the same one again, or another — or Cancel to let the second call go.');
+    render();
+    return true;
+  }
+  // the player lets the second call go
+  function declineSecondMark() {
+    var u = state.remark && byId(state.remark.by);
+    state.remark = null;
+    ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.markPicks = []; ui.markKind = null;
+    if (u) logLine('note', u.label + ' makes no second call.');
+    afterChain();
   }
 
   function clearMark() {
@@ -5276,6 +5335,7 @@
       });
       out.mark = state.mark ? {
         side: state.mark.side, kind: state.mark.kind, smoke: state.mark.smoke,
+        by: state.mark.by, again: !!state.mark.again,
         targets: idsOf(state.mark.targets)
       } : null;
       out.mined = state.mined ? { side: state.mined.side, piece: state.terrain.indexOf(state.mined.piece) } : null;
@@ -5466,6 +5526,9 @@
           if (hjk && u !== hjk && u.side === side) return no(hjk.name + ' is hacked: act with it first');
           /* A unit half-way through an Advance has to finish it first; left
              behind, it could come back later in the turn for a whole action. */
+          if (state.remark && state.remark.side === side && u.id !== state.remark.by) {
+            return no('the marker is naming its second target — pick one, or Cancel');
+          }
           var mid = ui.selected;
           if (mid && mid !== u && mid.advancing && !mid.activated) {
             return no(mid.name + ' is half-way through its Advance — let it shoot, or hold its fire, first');
@@ -5747,6 +5810,8 @@
         }
         case 'cancel': {
           if (!mayAct(side)) return no('not your activation');
+          // a marker's second call, let go
+          if (state.remark && state.remark.side === side) { declineSecondMark(); return yes; }
           // half-way through an Advance there is nothing to go back to: it holds its fire
           var adv = ui.selected;
           if (adv && adv.advancing && !adv.activated && adv.side === side) { holdFire(adv); return yes; }
