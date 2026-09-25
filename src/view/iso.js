@@ -9591,27 +9591,32 @@
             [-L * 0.5, -fw2 * 0.6], [-L * 0.46, -fw2 * 0.9], [L * 0.1, -fw2], [L * 0.32, -fw2 * 0.8]];
           var fusTop = fus.map(function (q2) { return [q2[0] * 0.96, q2[1] * 0.62]; });
           var span = hyb ? w * 3.4 : w * 2.9;
-          // the wing: a broad trapezoid, the fuselage over it
-          part(-L * 0.1, 0, function () {
-            // the pods go under the wing first, so it covers all but their noses
-            var jlead = function (bb) { return L * 0.14 + (Math.abs(bb) - fw2) / (span - fw2) * (-L * 0.34); };
-            [-1, 1].forEach(function (sd) {
-              if (spec.noPods) return;                   // a clean wing: its guns are in the body
-              var q1 = sd * span * (hyb ? 0.92 : 0.6);
-              podUnder(jlead(q1), q1, z + H * 0.3, hyb ? 'rocket' : 'missile', false);
-              if (spec.extraPods) {                      // a rocket pod inboard, a missile rail outboard
-                podUnder(jlead(span * 0.36), sd * span * 0.36, z + H * 0.3, 'rocket', true);
-                podUnder(jlead(span * 0.84), sd * span * 0.84, z + H * 0.3, 'missile', false);
+          /* The wing, a broad trapezoid, is laid in two halves, each placed by its own
+             depth: side-on the near wing (with its pod and fan) goes over the fuselage
+             and the far one under it, rather than both under it. Each half runs in to
+             the fuselage's side, so neither is ever drawn across the body. */
+          var jlead = function (bb) { return L * 0.14 + (Math.abs(bb) - fw2) / (span - fw2) * (-L * 0.34); };
+          [-1, 1].forEach(function (sd) {
+            part(-L * 0.2, sd * span * 0.55, function () {
+              // the pods go under the wing first, so it covers all but their noses
+              if (!spec.noPods) {                        // a clean wing: its guns are in the body
+                var q1 = sd * span * (hyb ? 0.92 : 0.6);
+                podUnder(jlead(q1), q1, z + H * 0.3, hyb ? 'rocket' : 'missile', false);
+                if (spec.extraPods) {                    // a rocket pod inboard, a missile rail outboard
+                  podUnder(jlead(span * 0.36), sd * span * 0.36, z + H * 0.3, 'rocket', true);
+                  podUnder(jlead(span * 0.84), sd * span * 0.84, z + H * 0.3, 'missile', false);
+                }
               }
+              plate(AF, [[L * 0.14, sd * fw2 * 0.98], [-L * 0.2, sd * span], [-L * 0.36, sd * span], [-L * 0.36, sd * fw2 * 0.92]], z + H * 0.3, 2);
+              if (hyb) fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36);
+              /* The company's jets are VTOL: they can hang in the air as well as fly
+                 through it, so each wing has a lift fan let flush into it. */
+              else fan(AF, -L * 0.16, sd * span * 0.5, z + H * 0.3 + 2, 0.3, false, true);
             });
-            plate(AF, [[L * 0.14, -fw2], [L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, -span], [-L * 0.2, -span]], z + H * 0.3, 2);
-            if (!spec.vTail) plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
-            if (hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36); });
-            /* The company's jets are VTOL: they can hang in the air as well as fly
-               through it, so each wing has a lift fan let flush into it (over its armour tiles). */
-            if (!hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.16, sd * span * 0.5, z + H * 0.3 + 2, 0.3, false, true); });
           });
           part(0, 0, function () {
+            // the tailplane first, always under the body (and the fins, which go on last)
+            if (!spec.vTail) plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             fuselage(fus, fusTop, z, H, TB);
             // the engine nozzle at the back
             var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
