@@ -6434,7 +6434,7 @@
        so the long gun has to be able to bear all the way round. */
     thunter: { axles: 3, len: 2.25, wid: 1.30, hgt: 15, gun: 1.2, style: { body: 'ltank', skirts: true, turret: 'missile', tSize: 0.72 } },
     ldest: { axles: 3, len: 2.30, wid: 1.30, hgt: 15, gun: 2.0, style: { body: 'ltank', skirts: true, turret: 'light', tSize: 0.86, gunLen: 2.1, gunW: 2.4 } },
-    mdest: { axles: 4, len: 2.55, wid: 1.45, hgt: 17, gun: 2.1, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'mbt', tSize: 1.0, gunLen: 2.5, gunW: 3.2, tMissiles: true, plasma: true } },
+    mdest: { axles: 4, len: 2.55, wid: 1.45, hgt: 17, gun: 2.1, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'mbt', tSize: 1.0, gunLen: 2.5, gunW: 3.2, tMissiles: true, plasma: true, hex: true } },
     lorry: { axles: 2, len: 2.10, wid: 1.00, hgt: 15, wheelR: 0.72, gun: 0.8, style: { body: 'truck', noGuard: true } },
     hlorry: { axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
     m113: { axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },
@@ -6449,7 +6449,7 @@
     mlrs: { axles: 3, len: 2.45, wid: 1.30, hgt: 17, gun: 1.2, elev: 14, style: { body: 'mlrs', mlrs: true } },
     /* The advanced support vehicle: an energy howitzer — a short, fat Gauss
        barrel laid well up out of a boxy turret, the charge burning blue in it. */
-    plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.0, stubGun: true, energyGun: true, skirts: 'panels' } },
+    plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.0, stubGun: true, energyGun: true, skirts: 'panels', hex: true } },
     aatank: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.3, twin: true, elev: 16, dish: true, style: { body: 'ltank', turret: 'aa', tSize: 0.85, skirts: true } },
     ewtank: { axles: 3, len: 2.25, wid: 1.25, hgt: 16, gun: 0.9, dish: true, style: { body: 'ltank', turret: 'dish', tSize: 0.72, skirts: true } },
     medbox: { axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
@@ -8648,6 +8648,8 @@
           lights(HF, L * 0.49, -w * 0.72, z0 + hh2 * 0.35); lights(HF, L * 0.49, w * 0.72, z0 + hh2 * 0.35);
           // tools and a tow cable along the deck
           edge(g, S3(HF(-L * 0.2, -w * 0.8), z0 + hh2 + 0.5), S3(HF(L * 0.1, -w * 0.8), z0 + hh2 + 0.5), '#3a2f22', 1.2);
+          // the Tier V hulls carry the same hexagonal active armour as the advanced combat vehicle
+          if (st.hex) hexFlank(HF, -L * 0.42, L * 0.3, nearSide() * w * 0.94, z0 + 1, hh2 * 0.9);
           return;
         }
       }
@@ -9469,9 +9471,10 @@
               };
               var hr = w * 0.46, zt = z + H * 0.3 + 2;
               g.save();
-              g.lineWidth = 1;
-              g.strokeStyle = dead ? 'rgba(60,56,50,.6)' : 'rgba(140,146,154,.85)';
-              var hl = dead ? 'rgba(80,72,60,.3)' : 'rgba(210,216,222,.35)';
+              // the same active armour tiles as the advanced combat vehicle's flanks: a faint lit face, a dark seam
+              g.lineWidth = 0.6;
+              g.strokeStyle = 'rgba(10,12,16,.35)';
+              var hl = 'rgba(255,248,232,.07)';
               for (var hi = -8; hi <= 8; hi++) {
                 for (var hj = 0; hj <= 14; hj++) {
                   [-1, 1].forEach(function (sd2) {
@@ -9486,10 +9489,8 @@
                     var sp3 = vs.map(function (q3) { return S3(AF(q3[0], q3[1]), zt); });
                     g.beginPath();
                     sp3.forEach(function (q3, k3) { if (k3) g.lineTo(q3[0], q3[1]); else g.moveTo(q3[0], q3[1]); });
-                    g.closePath(); g.stroke();
-                    g.strokeStyle = hl;
-                    g.beginPath(); g.moveTo(sp3[3][0], sp3[3][1] + 1); g.lineTo(sp3[4][0], sp3[4][1] + 1); g.stroke();
-                    g.strokeStyle = dead ? 'rgba(60,56,50,.6)' : 'rgba(140,146,154,.85)';
+                    g.closePath();
+                    g.fillStyle = hl; g.fill(); g.stroke();
                   });
                 }
               }
