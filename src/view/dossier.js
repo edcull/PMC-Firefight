@@ -346,15 +346,22 @@
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
         : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
+    /* The battles fought: the last one on a line, and all of them behind it in a window. */
     if (camp.log.length) {
-      h += '<h3>Recent battles</h3><div class="clog">';
-      camp.log.slice(-6).reverse().forEach(function (l) {
-        h += '<div class="crow"><b>' + l.turn + '</b>' +
+      var battleRow = function (l) {
+        return '<div class="crow"><b>' + l.turn + '</b>' +
           '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl + '</span>' +
           '<em>' + (l.winner === 'A' ? 'won' : l.winner === 'B' ? 'lost' : 'drawn') + '</em>' +
           '<span class="cmoney">+' + l.kUC.A + ' ' + coin() + '</span></div>';
-      });
-      h += '</div>';
+      };
+      var last = camp.log[camp.log.length - 1];
+      h += '<div class="field"><label>Battles fought</label>' +
+        '<button type="button" class="archline battleline" data-go="fmodal" data-kind="battles"><span>' +
+        esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl +
+        ' \u2014 ' + (last.winner === 'A' ? 'won' : last.winner === 'B' ? 'lost' : 'drawn') + '</span>' +
+        '<em>' + (camp.log.length > 1 ? 'all ' + camp.log.length : 'details') + '</em></button></div>';
+      h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll"><div class="clog">' +
+        camp.log.slice().reverse().map(battleRow).join('') + '</div></div>');
     }
     h += '<p class="camp-foot">' +
       '<button class="lnk" data-go="menu">← Main menu</button>' +
@@ -377,8 +384,10 @@
       };
       return '<div class="hubbar dosbar">' +
         '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
-        // while recruiting, the same button goes back to the dossier, and says so
-        tab('recruit', rosterTab === 'recruit' ? 'Dossier' : esc(C.words(co).recruit)) +
+        // while recruiting or in the memorial, the same button goes back to the dossier, and says so
+        (rosterTab === 'memorial'
+          ? '<button class="lnk" data-rtab="units">Dossier</button>'
+          : tab('recruit', rosterTab === 'recruit' ? 'Dossier' : esc(C.words(co).recruit))) +
         tab('memorial', ICON_MEMORIAL, 'hubicon', 'Memorial') + go + '</div>';
     }
     return '<div class="hubbar">' +
