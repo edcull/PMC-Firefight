@@ -8380,9 +8380,10 @@
     /* The same tiles across the nose: laid on the (raked) front plate, which runs
        from aBot at the foot up and back to aTop, across b0..b1. Only drawn when
        the nose is towards the eye. */
-    function hexNose(fr, aBot, aTop, b0, b1, z0, h) {
+    function hexNose(fr, aBot, aTop, b0, b1, z0, h, cols) {
       if ((cos + sin) <= 0) return;
-      var cols = 5, rows = 2, cw = (b1 - b0) / cols;
+      cols = cols || 5;                                  // the upper row; the lower, set between, has one fewer
+      var rows = 2, cw = (b1 - b0) / cols;
       for (var r = 0; r < rows; r++) {
         for (var i = 0; i < cols; i++) {
           var cb = b0 + cw * (i + 0.5 + (r ? 0.5 : 0)), cu = r ? 0.3 : 0.72;
@@ -8656,7 +8657,7 @@
           shape(HF, fpts, z0, H * 0.9, TB, null, ftop);
           var ns4 = nearSide();
           hexFlank(HF, -L * 0.42, L * 0.3, ns4 * w * 1.0, z0 + 1, H * 0.8);
-          hexNose(HF, L * 0.5, L * 0.14, -w * 0.45, w * 0.45, z0, H * 0.9);   // and across the wedge of the nose
+          hexNose(HF, L * 0.5, L * 0.14, -w * 0.45, w * 0.45, z0, H * 0.9, 3);   // and across the nose: a row of three over a row of two
           // the dark sensor slit across the nose and the running lights
           edge(g, S3(HF(L * 0.44, -w * 0.4), z0 + H * 0.3), S3(HF(L * 0.44, w * 0.4), z0 + H * 0.3), '#0b0d11', 1.6);
           if (!dead) edge(g, S3(HF(L * 0.44, -w * 0.3), z0 + H * 0.3), S3(HF(L * 0.44, -w * 0.1), z0 + H * 0.3), '#7fd8e8', 0.9);
