@@ -20,6 +20,13 @@ the page, Multiplayer — over a battlefield rolled fresh every few seconds.
 Skirmish covers a battle against the AI, a hotseat game on one screen,
 solitaire or co-op against the OpFor, and a demo between two AI forces.
 
+Every kind of skirmish opens on **the battlefield**: the Battle Tier and
+Priority Level, the scenario, the world and the table, with a card for each
+force. Tap a card to muster that force — against the AI the opposition starts
+as a random kind of force with a rolled build, to keep or change. In a hotseat
+game the two players then modify their armies in turn before anyone deploys,
+each in secret: neither sees the other's swaps until both are done.
+
 Every game, even a solitaire one, is played through the same engine. The screen
 draws the table and sends what you asked for ("shoot that", "go there"), and
 the engine decides what happens and rolls the dice. With no server it runs in
@@ -66,9 +73,8 @@ and you can't leave the unit half-done to move another one.
 
 ### Keeping a skirmish force
 
-The setup screen builds a one-off force: pick a Battle Tier and a Priority
-Level, then spend composition points on units, with the rulebook's limits
-enforced as you go. A force built that way can be **named and saved** — the
+Mustering a force spends composition points on units, with the rulebook's
+limits enforced as you go. A force built that way can be **named and saved** — the
 units and their propulsions and upgrades, and also the Tier, the Level, the
 faction, the rebel tactic and the colour, because a list of units without the
 Tier it was legal at is not a force. Saved forces are kept in the browser and
@@ -85,35 +91,51 @@ nothing and run under Node as well as in a browser, which is what lets a server
 be the authority in a networked game; the view and the net only run in a
 browser.
 
-| File | What is in it |
-|---|---|
-| **`src/rules/`** | **The rulebook** |
-| `rules.js` | Every profile from the book, the composition table, geometry, line of sight, shooting, assault, suppression, morale, vehicles, terrain and buildings, and the special-rules list. |
-| `campaign.js` | The campaign layer (pp. 83–91): companies, experience, trauma, Battle Honours, promotions, doctrines, contracts, and the rival AI's growth. |
-| `scenarios.js` | The six scenarios (pp. 48–55) — objectives, deployment zones, reserves and victory conditions. |
-| `solitaire.js` | Solitaire and co-op against the OpFor (pp. 146–156). |
-| `ruletext.js` | What each special rule does, in a sentence, for the tooltips. |
-| `gen.js` | The rulebook's terrain generators (pp. 46–48): the table is divided into 2′ × 2′ areas and a D6 rolled for each. |
-| **`src/engine/`** | **The game** |
-| `engine.js` | The turn structure, every action, the terrain set-up, deployment, the OpFor AI. Every decision and every die roll. It answers intents — "shoot that", "go there" — with the events that followed and the table they left. |
-| `protocol.js` | The message names and legal settings, shared by the browser and the server. |
-| **`src/view/`** | **The browser** |
-| `game.js` | The board and the interface: the camera, animation and every panel. It turns taps into intents and draws what comes back. |
-| `iso.js` | The isometric renderer — ground, terrain props, buildings and their garrisons, infantry sprites and machine hulls, all drawn as code rather than art files. |
-| `fx.js` | Every battlefield effect: tracers, bolts, lobbed rounds, rail lines, flame, missiles and rockets, muzzle flashes, impacts, drop marks. The game and the unit viewer both draw out of this one file. |
-| `sfx.js` | Synthesised sound. Everything is generated with the Web Audio API; there are no audio files. |
-| `tips.js` | The tooltip layer: one floating panel, shared by every screen. |
-| `menu.js` | The main menu, and the table rolling behind it. |
-| `dossier.js` | The campaign screens. |
-| `viewer.js` | The unit viewer. |
-| **`src/net/`** | **Playing somebody else** |
-| `net.js` | The two transports: a socket to a server, or the engine running in this tab. |
-| `lobby.js` | The multiplayer screen: the lobby, the room and the chat. |
+```
+index.html           the game's page: all the markup and CSS, loading src/ script by script
+viewer.html          the unit viewer's page, the same way
+server.js            starts the server (see SERVER.md)
+
+src/
+  rules/             the rulebook — draws nothing, runs in Node as well as a browser
+    rules.js         every profile, the composition table, geometry, line of sight, shooting,
+                     assault, suppression, morale, vehicles, terrain, buildings, special rules
+    campaign.js      the campaign (pp. 83–91): companies, experience, trauma, honours,
+                     promotions, doctrines, contracts, and the rivals' growth
+    scenarios.js     the six scenarios (pp. 48–55): objectives, deployment, reserves, victory
+    solitaire.js     solitaire and co-op against the OpFor (pp. 146–156)
+    gen.js           the terrain generators (pp. 46–48), a D6 for each 2′ × 2′ area
+    ruletext.js      each special rule in a sentence, for the tooltips
+  engine/            the game — every decision and every die roll
+    engine.js        turns, actions, terrain set-up, deployment, the OpFor AI; answers
+                     intents ("shoot that", "go there") with events and the table they left
+    protocol.js      message names and legal settings, shared by browser and server
+  view/              the browser
+    game.js          the board and every panel: camera, animation, taps into intents
+    iso.js           the isometric renderer: ground, terrain, buildings, troops and hulls, all code
+    fx.js            battlefield effects: tracers, bolts, flame, missiles, impacts
+    sfx.js           synthesised sound (Web Audio, no audio files)
+    atlas.js         the unit cards, drawn by the game's own renderer
+    tips.js          the shared tooltip layer
+    menu.js          the main menu and the table rolling behind it
+    dossier.js       the campaign screens
+    viewer.js        the unit viewer
+  net/               playing somebody else
+    net.js           the two transports: a socket to a server, or the engine in this tab
+    lobby.js         the multiplayer lobby, room and chat
+
+server/              the multiplayer server (see SERVER.md)
+scripts/             build.js, gallery.js (the unit sheet), test.js (the test runner)
+test/
+  unit/              plain Node: `npm test`
+  browser/           through a real browser with Playwright
+build/               the built single-file pages (npm run build)
+```
 
 `index.html` carries the markup and all the CSS, and pulls the scripts in with
 `<script src>` tags. Opening `index.html` directly works too, and is the easier
-way to develop — the browser reloads each file separately. The server lives in
-`server/` and `server.js`.
+way to develop — the browser reloads each file separately. `viewer.html` is the
+unit viewer's page in the same way. The server lives in `server/` and `server.js`.
 
 ### Building
 
@@ -121,13 +143,16 @@ way to develop — the browser reloads each file separately. The server lives in
 npm run build
 ```
 
-That inlines every script into `index.html` and writes `build/firefight.html`
-(`scripts/build.js`), then draws `build/units.html` (`scripts/gallery.js`). It
+That inlines every script into `index.html` and writes `build/firefight.html`,
+does the same for `viewer.html` into `build/viewer.html` (`scripts/build.js`),
+then draws `build/units.html`, a sheet of every unit (`scripts/gallery.js`).
+The two root pages are the ones to develop against; the `build/` copies are
+single self-contained files to play or publish. It
 takes no arguments and needs nothing but a Node runtime.
 
 ### The unit viewer
 
-Open **`viewer.html`** for a bench that shows one unit at a time: every profile
+Open **`viewer.html`** (or the self-contained `build/viewer.html`) for a bench that shows one unit at a time: every profile
 in all four lists, in each of its states, at any strength, walking at its own
 Movement, coming in off a Battlefield Insertion, and firing whatever the weapon
 table says it carries. It loads `rules.js`, `ruletext.js`, `sfx.js`, `iso.js`,
@@ -135,7 +160,9 @@ table says it carries. It loads `rules.js`, `ruletext.js`, `sfx.js`, `iso.js`,
 the real code rather than a mock-up of it. The panel gives the whole profile:
 the statistics as the book prints them, and every special rule the unit carries
 with what that rule does, on the page and on a tooltip. Any of the army colours
-can be painted on. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts.
+can be painted on. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts,
+<kbd>S</kbd> steps through its states, <kbd>A</kbd> through its abilities,
+<kbd>D</kbd> toggles a drone crew and <kbd>P</kbd> steps its propulsion.
 
 ---
 
@@ -145,15 +172,31 @@ The rules are held to the book by harnesses that re-type the printed data and
 check the engine against it. They are the reason a rule can be changed without
 quietly breaking three others.
 
-**Rules, campaign, engine and server** — `npm test` runs all of `test/unit/`
-(plain Node, no browser):
+All of it runs through one runner, a few files at a time, carrying on past a
+failure and saying at the end which failed and how long each took:
+
+```
+npm test                      # test/unit/ — plain Node, seconds
+npm run test:quick            # the unit tests and the quicker browser tests
+npm run test:slow             # the browser tests that play whole battles or campaigns
+npm run test:all              # everything
+node scripts/test.js camp     # any test whose name contains "camp"
+```
+
+Every test's output is kept in `build/test-logs/<name>.log`, and a failing
+test's is printed after the summary.
+
+**Rules, campaign, engine and server** — `test/unit/`:
 
 ```
 test.js          # the engine end to end, plus a duel fuzzer
 roster.js        # every printed profile and the composition table
+battlerules.js   # Suppressive Fire, the auxiliary weapon, assault rounds, vehicle turns
 vehicles.js      # armour, damage, destruction, repairs, transport
+carrymove.js     # a transport's half move with loading and unloading
 propulsion.js    # the five ground propulsions, over 600 rolled armies
 specialrules.js  # the General special rules list (pp. 56–59)
+ruletext.js      # every special rule on every profile has its tooltip line
 terrain.js       # terrain effects, cover, and bringing pieces down
 terrainrules.js  # movement penalties, hills and stepped hills, low walls, buildings, jump troops
 walls.js         # walled compounds round buildings, and lengths of wall
@@ -161,8 +204,10 @@ terraincount.js  # how many pieces a rolled result puts down
 worlds.js        # the desert and arctic looks of the barren world
 shapes.js        # terrain piece shapes
 weapons.js       # how each unit's weapon sounds and looks
+names.js         # every soldier a name and a rank, and the casualties by name
 scenrules.js     # objectives, deployment and victory conditions
 camp.js          # the campaign: experience, trauma, honours, promotion
+campfix.js       # salvage, promotion caps, doctrine changes at Tier V
 camphooks.js     # what a campaign unit carries onto the table
 campextras.js    # the campaign extras
 solo.js          # the solitaire rival archetypes
@@ -171,16 +216,16 @@ rebelcamp.js     # the Rebel campaign
 solitairetest.js # solitaire and co-op against the OpFor
 bugs.js          # the Bug army list; bugcamp.js its campaign
 xeno.js          # the Xeno army list; xenocamp.js its campaign
-enginetest.js    # whole battles driven by intent; terrain set-up and turning pieces;
-                 # garrisons; arrivals; no shots at units off the table; Advance as one action
+enginetest.js    # whole battles driven by intent; terrain set-up; garrisons; arrivals;
+                 # modifying the armies, and the hotseat's secret round of swaps
 clienttest.js    # the page booted without a browser, and the lobby against a real one
 servertest.js    # two players on two sockets against the real server
 ```
 
-**Interface** — `npm run test:browser` runs all of `test/browser/`, each of
-which drives a real browser through Playwright:
+**Interface** — `test/browser/`, each driving a real browser through Playwright:
 
 ```
+skirmishsteps.js # every kind of skirmish set up from the battlefield step
 mobile.js        # the phone shell, at three screen sizes
 deployorder.js   # choosing the deployment order; insertion escapes
 movepreview.js   # the move/advance preview and its confirmation
@@ -192,6 +237,8 @@ loadout.js       # putting troops aboard a hull before the battle
 dropzone.js      # being asked for a landing zone, on a phone
 forces.js        # building a skirmish force, saving it and loading it back
 founding.js      # founding a company: its name, colours, roster and charter
+hotseatfound.js  # a hotseat campaign founding both players' forces
+soldiers.js      # the soldiers on a campaign dossier, renamed and remembered
 markerlight.js   # Markerlights, end to end
 deployzones.js   # every scenario's deployment zone
 deploytap.js     # placing units by tapping
@@ -204,10 +251,15 @@ terrainsetup.js  # laying the terrain by hand, area by area
 bldflow.js       # going into buildings, holding them and coming out
 shapeflow.js     # terrain shapes on the table
 extrasflow.js    # the campaign extras, through the interface
-scentest.js      # all six scenarios played out
 campflow.js      # the campaign screens
 rebelflow.js     # a Rebel campaign, through the interface
-report.js        # a long unattended run, checking invariants
+xenoflow.js      # a Xenotripod campaign, through the interface
+bugplay.js       # a bug swarm against every army, AI against AI
+xenoplay.js      # a Xenotripod tribe against every army            (slow)
+rebelplay.js     # an insurgent group with each Tactic              (slow)
+soloplay.js      # every solitaire scenario, solitaire and co-op    (slow)
+scentest.js      # all six scenarios played out                     (slow)
+report.js        # a long unattended run, checking invariants       (slow)
 ```
 
 Screenshots the browser harnesses take go to `build/shots/`.
@@ -228,17 +280,24 @@ non-zero on a failure, so they drop straight into CI.
 
 ---
 
-## What is implemented
+## What is not implemented
 
-Everything in the core rulebook that a skirmish needs: the army lists (PMC,
-Rebel, Bug and Xeno) with every printed profile, the composition table and its limits, the six
-scenarios, the terrain generators, the General special rules, vehicles and
-aircraft with facing and arcs, the optional ground propulsions (Appendix 3), and
-the campaign.
+The core rulebook is in: all four army lists (PMC, Rebel, Bug and Xeno) with every
+printed profile, the composition table, the six scenarios, the terrain
+generators, the special rules, vehicles and aircraft, solitaire and co-op, and
+the campaign for all four armies. What is not:
+
+- **Appendix 1, Close Encounters** — compounds, corridors, doors, hidden
+  movement, opportunity fire, and its three scenarios.
+- **Appendix 2, Other Worlds** — gravity, atmosphere, radiation and anomalies.
+  Only the terrain generators' world types are used.
+- **Appendix 3, Optional Rules** — "There can be only two!" and bookkeeper-style
+  rout counting. The propulsions and mounts from this appendix are in.
+- **The co-op campaign** — halving money and experience between two players.
 
 Where the book leaves something to the players, or where a tabletop convention
-has no digital equivalent, the reading taken is written down — in the **Rules**
-panel inside the game, under "Interpretations", and in the design notes.
+has no digital equivalent, the reading taken is noted in the code beside the
+rule, with the page it comes from.
 
 ## Credits
 

@@ -4176,8 +4176,9 @@
       return t.side !== u.side && !R.isFlying(t) &&
         R.pointSegDist(t.x, t.y, from.x, from.y, pt.x, pt.y) <= 2.2;
     });
+    // the run is against ground units: its own side's aircraft are above it, not under it
     var friends = activeUnits(u.side).filter(function (t) {
-      return t !== u && R.pointSegDist(t.x, t.y, from.x, from.y, pt.x, pt.y) <= 2.2;
+      return t !== u && !R.isFlying(t) && R.pointSegDist(t.x, t.y, from.x, from.y, pt.x, pt.y) <= 2.2;
     });
     u.x = pt.x; u.y = pt.y;
     var log = [];

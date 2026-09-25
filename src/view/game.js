@@ -4078,7 +4078,7 @@
       // a half inch of Movement is kept, but shown rounded down
       stat('Move', changed(Math.floor(u.move) + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
-      stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.assault) +
+      stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.cls === 'aircraft' ? '—' : u.assault) +   // aircraft have none (a '–' in the book)
       stat('Damage', u.damage) + '</div>';
     if ((u.cargo || []).length) {
       h += '<div class="chips">' + u.cargo.map(function (c) {

@@ -28,10 +28,10 @@
       '+4 to hit aircraft, and a critical hit on an aircraft does D6 Damage instead of D3. ' +
       'Works even when firing at Basic Firepower.',
     'Anti-tank':
-      '+4 to hit vehicles, critical hits on a vehicle do D6 Damage instead of D3, and the shot strips ' +
-      'the +2 from Battle Armour.',
+      '+4 to hit ground vehicles, and a critical hit on a ground vehicle does D6 Damage instead of D3. ' +
+      'Works even when firing at Basic Firepower, and the shot strips the +2 from Battle Armour.',
     'Anti-tank (limited)':
-      'Counts as Anti-tank — +4 against vehicles, D6 criticals, pierces Battle Armour — but only against ' +
+      'Counts as Anti-tank — +4 against ground vehicles, D6 criticals, pierces Battle Armour — but only against ' +
       'targets within 6".',
     'Battle Armour':
       'Its Defence includes +2 for the suits, lost against Anti-tank and Gauss weapons (the second Defence value). ' +
@@ -47,7 +47,8 @@
       'Other Command Units, turrets and units two or more Tiers higher cannot be called on. Not used in solitaire games.',
     'Command Vehicle':
       'A Command Unit riding inside lends the vehicle all of its special rules, and when the vehicle finishes its ' +
-      'activation it may Coordinate from inside (if steady).',
+      'activation the unit may take one of its special actions from inside — Coordinate or any other it has — or none ' +
+      '(only while steady). It counts as stationary for it.',
     'Counter-jamming':
       'Friendly units within 6" ignore enemy Jammers and rally and repair on 4+ as normal. Only works while this ' +
       'unit is steady and on the table.',
@@ -94,8 +95,8 @@
       'to turn and 2" for rough ground, never takes cover or suffers Crossfire, and is easier to hit from the side and rear.',
     'Hackers':
       'Hack: once a turn, reach into an enemy drone within 24". D6 — 1-2 nothing, 3-4 it is locked out for the ' +
-      'turn and takes D3+1 hits, 5-6 you take one activation with it, then it takes the same hits (a drone that ' +
-      'has acted, or cannot, counts as 3-4).',
+      'turn and takes D3+1 hits, 5-6 you activate it at once under your control (it goes back to its owner next ' +
+      'turn), then it takes the same hits. A drone that has already acted, or cannot act, counts 5-6 as 3-4.',
     'Immobile':
       'Never moves. It comes down with a squad already aboard, can only put it out, and never takes anyone back on.',
     'Incendiary Ammunition':
