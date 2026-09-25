@@ -128,11 +128,10 @@
   /* Which way a machine points, picked on the screen: E is to the right, S
      toward you. A screen direction is turned into a heading on the table. */
   var FACES = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+  // the eight facings, 45° apart on the table as the battle has them (E straight right, S straight down)
   function faceAngle(name) {
     var i = FACES.indexOf(name || 'SE');
-    var th = (i < 0 ? 1 : i) * Math.PI / 4;
-    var u2 = Math.cos(th), v2 = 2 * Math.sin(th);
-    return Math.atan2(v2 - u2, u2 + v2);
+    return -Math.PI / 4 + (i < 0 ? 1 : i) * Math.PI / 4;
   }
   // the thing being shot at: a plain rifle team, so the eye is on the shooter
   function mark() {

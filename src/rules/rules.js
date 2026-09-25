@@ -2851,14 +2851,12 @@
     return { ok: true, from: was, text: u.label + ' vanishes at ' + from.label + ' and steps out beside ' + to.label + '.' };
   }
 
-  /* The eight facings a model can be turned to, as they look on the table
-     (east, south-east, ... on screen): its bearings in the table's own axes. */
+  /* The eight facings a model can be turned to: 45° apart on the table itself,
+     named by where they point on the screen — E (straight to the right), SE,
+     S (straight down), and round. */
   var FACINGS = (function () {
     var out = [];
-    for (var i = 0; i < 8; i++) {
-      var th = i * Math.PI / 4, u2 = Math.cos(th), v2 = 2 * Math.sin(th);
-      out.push(Math.atan2(v2 - u2, u2 + v2));
-    }
+    for (var i = 0; i < 8; i++) out.push(-Math.PI / 4 + i * Math.PI / 4);
     return out;
   })();
   function nearestFacing(ang) {

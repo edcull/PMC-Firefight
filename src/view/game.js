@@ -511,6 +511,7 @@
     ui.terrain = s.terrain;
     ui.markKind = s.markKind;
     ui.markPicks = s.markPicks;
+    ui.digDir = s.digDir == null ? null : s.digDir;     // Dig in!: the facing on offer
     ui.deployPick = s.deployPick;
     var wasAsked = !!ui.insertion || !!ui.reservePick;
     ui.reservePick = s.reservePick || null;
@@ -3099,7 +3100,66 @@
     });
   }
 
+  /* ---- Dig in!: choosing the facing ----
+     The eight facings, as bearings on the table, and the one the player is
+     pointing at (the mouse round the gun), else the one on offer. */
+  var DIG_NAMES = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+  // (45° apart on the table, as the rules have them: E, SE, S, ... on the screen)
+  function digFacings() {
+    var out = [];
+    for (var i = 0; i < 8; i++) out.push(-Math.PI / 4 + i * Math.PI / 4);
+    return out;
+  }
+  function digPreview(u) {
+    if (ui.digHover != null) return ui.digHover;
+    if (ui.hover && !isTouch()) {
+      var dx = ui.hover.x - dispX(u), dy = ui.hover.y - dispY(u);
+      if (Math.hypot(dx, dy) > 0.4) return R.nearestFacing(Math.atan2(dy, dx));
+    }
+    return ui.digDir != null ? ui.digDir : (u.facing || 0);
+  }
+  function isTouch() { return !!(window.matchMedia && window.matchMedia('(hover: none)').matches); }
+  /* The overlay round the gun: an octagon of eight wedges, one to a facing,
+     the one pointed at lit; and that facing's fire arc (the front 90°) laid out
+     on the ground from its 6" minimum to its 24" dug-in range. */
+  function drawDigFacing(g, u) {
+    var cx = dispX(u), cy = dispY(u), lift = liftOf(cx, cy), F = digFacings(), pick = digPreview(u);
+    function P(ang, r) { var q = ISO.toScreen(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r); return [q.x, q.y - lift]; }
+    function fan(a0, a1, r0, r1, n) {
+      var pts = [], i;
+      for (i = 0; i <= n; i++) pts.push(P(a0 + (a1 - a0) * i / n, r1));
+      for (i = n; i >= 0; i--) pts.push(P(a0 + (a1 - a0) * i / n, r0));
+      g.beginPath(); pts.forEach(function (q, j) { if (j) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath();
+    }
+    g.save();
+    // the fire arc for the facing pointed at
+    fan(pick - Math.PI / 4, pick + Math.PI / 4, 6, 24, 24);
+    g.fillStyle = 'rgba(232,193,90,.20)'; g.fill();
+    g.strokeStyle = 'rgba(12,10,6,.5)'; g.lineWidth = 3.5; g.stroke();              // a dark edge, so it reads on pale ground
+    g.strokeStyle = '#f0cf72'; g.lineWidth = 1.8; g.setLineDash([7, 5]); g.stroke(); g.setLineDash([]);
+    // the octagon: a wedge to each facing, split half-way between its neighbours
+    F.forEach(function (f, i) {
+      var a0 = f - Math.PI / 8, a1 = f + Math.PI / 8;       // each a 45° slice of the ground round the gun
+      var on = Math.abs(Math.atan2(Math.sin(f - pick), Math.cos(f - pick))) < 0.01;
+      fan(a0 + 0.02, a1 - 0.02, 1.5, 2.7, 6);
+      g.fillStyle = on ? 'rgba(232,193,90,.75)' : 'rgba(20,24,30,.55)'; g.fill();
+      g.strokeStyle = on ? '#ffe39a' : 'rgba(232,193,90,.45)'; g.lineWidth = on ? 2 : 1; g.stroke();
+      var lp = P(f, 2.1);
+      g.fillStyle = on ? '#1a1407' : 'rgba(232,193,90,.85)';
+      g.font = '700 ' + Math.max(9, Math.round(ISO.K * 0.32)) + 'px Oxanium, system-ui, sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(DIG_NAMES[i], lp[0], lp[1]);
+    });
+    g.restore();
+  }
   function drawBoard() {
+    /* Choosing a facing to dig in on: the gun is shown turned to it while the
+       player looks round, and put back after. */
+    var dg = ui.mode === 'digface' && ui.selected && state && state.phase === 'battle' ? ui.selected : null, keep = null;
+    if (dg) { keep = { f: dg.facing, a: dg.aim }; dg.facing = digPreview(dg); dg.aim = null; }
+    try { drawBoardNow(); } finally { if (dg) { dg.facing = keep.f; dg.aim = keep.a; } }
+  }
+  function drawBoardNow() {
     // everything drawn on the board itself is in CSS pixels, scaled to its density
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     /* The objectives' beacons are painted with the structures: when they move
@@ -3202,6 +3262,8 @@
         pctx.fillRect(Math.round(p.x) - mw / 2, Math.round(p.y) - l - mh / 2, mw, mh);
       });
     }
+
+    if (ui.mode === 'digface' && ui.selected && !aiSel) drawDigFacing(pctx, ui.selected);
 
     /* ---- units and the buildings that hide them ----
        The structures are one baked layer under everything, so a unit used to be
@@ -4257,6 +4319,7 @@
     else if (ui.terrain.length && ui.selected &&
       (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
     else if (ui.mode === 'enter' && ui.sections.length && ui.selected) html = sectionPanel(ui.selected);
+    else if (ui.mode === 'digface' && ui.selected && !isAI(ui.selected.side)) html = digFaceCard(ui.selected);
     else if (ui.preview) html = movePreviewCard();
     else if (ui.targets.length && ui.selected && ['fire', 'aux', 'advance-fire', 'assault', 'designate'].indexOf(ui.mode) >= 0) {
       html = targetPanel(ui.selected);
@@ -4613,6 +4676,25 @@
   }
 
   // which of the reserves come on this turn, where the scenario lets the player choose
+  /* Dig in!: the eight facings as an octagon of buttons, laid out as they
+     point on the screen, the one on offer marked; hovering one shows its fire
+     arc on the table, pressing it digs the gun in that way. */
+  function digFaceCard(u) {
+    var F = digFacings(), pick = digPreview(u);
+    var grid = [[5, 6, 7], [4, -1, 0], [3, 2, 1]];     // NW N NE / W · E / SW S SE
+    var cells = grid.map(function (row) {
+      return row.map(function (i) {
+        if (i < 0) return '<span class="dig-mid">' + esc(u.code || '') + '</span>';
+        var on = Math.abs(Math.atan2(Math.sin(F[i] - pick), Math.cos(F[i] - pick))) < 0.01;
+        return '<button class="dig-dir' + (on ? ' on' : '') + '" data-digface="' + i + '">' + DIG_NAMES[i] + '</button>';
+      }).join('');
+    }).join('');
+    return '<div class="card"><h2>Dig in! — which way?</h2>' +
+      '<p class="sub">' + esc(u.name) + ' is laid over open sights and cannot be turned after: it fires only across the 90° in front, 6"–24". ' +
+      'Tap a direction round the gun on the table, or here.</p>' +
+      '<div class="dig-oct">' + cells + '</div>' +
+      '<div class="acts"><button class="act" data-act="digcancel"><span>Cancel</span><small>Keep its normal stance</small></button></div></div>';
+  }
   function reservePickCard() {
     var rp = ui.reservePick;
     var mine = !isAI(rp.side);
@@ -4732,6 +4814,12 @@
        `data-act`, so selecting on `[data-act]` alone never bound them and
        nothing happened when they were pressed: troops could not be put aboard
        a hull, or taken off one, during deployment. All three are selected. */
+    host.querySelectorAll('[data-digface]').forEach(function (b) {
+      var i = +b.getAttribute('data-digface');
+      b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'digface', dir: digFacings()[i] }); });
+      b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
+      b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
+    });
     host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
       b.addEventListener('click', function () {
         var a = b.getAttribute('data-act');
@@ -4753,6 +4841,7 @@
         else if (a === 'movecancel') { cancelPreview(); return; }
         else if (a === 'holdinsert') { holdInsertion(); return; }
         else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
+        else if (a === 'digcancel') { ui.digHover = null; send({ k: 'cancel' }); return; }
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
         else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
@@ -5108,6 +5197,12 @@
     var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 
     if (state.phase === 'terrain') { terrainTap(p); return; }
+    // Dig in!: a tap round the gun chooses the way it faces
+    if (ui.mode === 'digface' && ui.selected) {
+      var dgx = p.x - dispX(ui.selected), dgy = p.y - dispY(ui.selected);
+      if (Math.hypot(dgx, dgy) > 0.4) send({ k: 'digface', dir: Math.atan2(dgy, dgx) });
+      return;
+    }
     // a piece being put down or moved by hand
     if (state.placeAsk && !isAI(state.placeAsk.side)) { send({ k: 'placeat', x: p.x, y: p.y }); return; }
     // Terrorist: the tap nominates the piece to mine
