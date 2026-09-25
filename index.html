@@ -644,10 +644,23 @@
     background: color-mix(in srgb, var(--alpha) 12%, transparent); outline: none;
   }
   #btn-resume { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
-  /* throwing the battle away: quieter than going back to it, and red once it asks to be sure */
-  #btn-discard { padding-top: 10px; padding-bottom: 10px; }
-  #btn-discard.confirm { border-color: color-mix(in srgb, var(--bad) 70%, transparent); background: color-mix(in srgb, var(--bad) 14%, transparent); }
-  #btn-discard.confirm small { color: var(--bad); }
+  /* throwing the battle away: a small x in the corner of Back to the battle,
+     which turns into a red Discard? once, and asks the card to say so */
+  .resume-wrap { position: relative; display: flex; flex-direction: column; }
+  .resume-wrap:has(#btn-resume[hidden]) { display: none; }
+  .resume-wrap #btn-resume { padding-right: 52px; }
+  .resume-x {
+    position: absolute; top: 8px; right: 8px; min-width: 32px; height: 32px; padding: 0 9px; border-radius: 16px;
+    border: 1px solid var(--line); background: color-mix(in srgb, var(--ground) 80%, transparent); color: var(--ink-dim);
+    font: 600 20px/1 var(--display); cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+  }
+  .resume-x:hover, .resume-x:focus-visible { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 60%, transparent); outline: none; }
+  .resume-x.confirm {
+    color: #fff; background: var(--bad); border-color: var(--bad);
+    font: 700 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
+  }
+  #btn-resume.discarding { border-color: color-mix(in srgb, var(--bad) 70%, transparent); padding-right: 120px; }
+  #btn-resume.discarding small { color: var(--bad); }
   .mcard.menu-back { text-align: center; }
   .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
   .menu-foot a.lnk { text-decoration: none; }
@@ -1798,8 +1811,11 @@
   <div class="menu-box">
     <h1 class="menu-title">PMC <span>2670</span><small>Firefight</small></h1>
     <div class="menu-pane" id="menu-main">
-      <button class="mcard" id="btn-resume" hidden>Back to the battle<small id="menu-resume-sub">The battle is still on</small></button>
-      <button class="mcard mcard-discard" id="btn-discard" hidden>Discard this battle<small id="menu-discard-sub">End the skirmish without finishing it</small></button>
+      <div class="resume-wrap" id="resume-wrap">
+        <button class="mcard" id="btn-resume" hidden>Back to the battle<small id="menu-resume-sub">The battle is still on</small></button>
+        <!-- a skirmish can be thrown away: the x on the card, asked twice -->
+        <button class="resume-x" id="btn-discard" hidden aria-label="Discard this battle" title="Discard this battle">&times;</button>
+      </div>
       <button class="mcard" id="btn-skirmish">Skirmish<small>One battle: against the AI, a friend on this screen, or the OpFor</small></button>
       <button class="mcard" id="btn-campaign">Campaign<small id="menu-camp-sub">Raise a force and see it through a war</small></button>
       <!-- only offered when the page came from a game server: a game opened
@@ -2213,4 +2229,4 @@
 <script src="src/net/lobby.js?v=55003102fe"></script>
 <script src="src/view/game.js?v=d8a840d56c"></script>
 <script src="src/view/dossier.js?v=216e69f26d"></script>
-<script src="src/view/menu.js?v=83f029b704"></script>
+<script src="src/view/menu.js?v=362b5aea84"></script>

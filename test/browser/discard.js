@@ -15,7 +15,8 @@ const menu = (p) => p.evaluate(() => ({
   resume: !document.getElementById('btn-resume').hidden,
   discard: !document.getElementById('btn-discard').hidden,
   confirm: document.getElementById('btn-discard').classList.contains('confirm'),
-  sub: document.getElementById('menu-discard-sub').textContent,
+  sub: document.getElementById('menu-resume-sub').textContent,
+  x: document.getElementById('btn-discard').textContent,
   live: !!window.PMC_BATTLE_LIVE()
 }));
 async function skirmish(p, extra) {
@@ -39,11 +40,11 @@ async function skirmish(p, extra) {
   await p.evaluate(() => window.PMCMenu.open());
   await p.waitForTimeout(200);
   let m = await menu(p);
-  ok('the menu offers the battle back, and to discard it', m.open && m.resume && m.discard && m.live);
+  ok('the menu offers the battle back, with an x on it to discard it', m.open && m.resume && m.discard && m.live && m.x === '\u00d7', m.x);
   await p.evaluate(() => document.getElementById('btn-discard').click());
   await p.waitForTimeout(150);
   m = await menu(p);
-  ok('the first tap only asks to be sure', m.confirm && m.live && /again/i.test(m.sub), m.sub);
+  ok('the first tap on the x only asks to be sure', m.confirm && m.live && /undone/i.test(m.sub) && /discard/i.test(m.x), m.x + ' / ' + m.sub);
   await p.evaluate(() => document.getElementById('btn-discard').click());
   await p.waitForTimeout(250);
   m = await menu(p);
