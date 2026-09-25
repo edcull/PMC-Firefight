@@ -148,7 +148,8 @@ const { ROOT, SHOTS } = require('../where.js');
   }
   check('...or Random force to roll it again', changed);
   await next();
-  check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'));
+  check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'),
+    await title() + ' · ' + await p.evaluate(() => document.getElementById('faults').textContent + ' · hot ' + JSON.stringify(window.__hot() && { step: window.__hot().step, edit: window.__hot().edit })));
   await next();
   await p.waitForTimeout(600);
   const ai = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, bx: s.units.filter(u => u.side === 'B').every(u => u.faction === 'xeno'), odd: s.units.filter(u => u.side === 'B' && u.faction !== 'xeno').map(u => u.key + ':' + u.faction) }; });

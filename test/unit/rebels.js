@@ -77,11 +77,12 @@ var BOOK = [
   ['Medium FlaK vehicle', 3, 1, 8, 4, 24, 11, 2, 6],
   ['Heavy FlaK vehicle', 4, 1, 6, 5, 30, 12, 2, 6],
   // Rebel aviation (p. 108)
-  ['Captured patrol craft', 2, 1, 18, 3, 12, 9, 1, 4],
-  ['Armed light shuttle', 3, 1, 18, 5, 18, 11, 1, 6],
-  ['Armed medium shuttle', 4, 1, 18, 5, 18, 11, 1, 7],
-  ['Armed heavy shuttle', 5, 1, 18, 5, 18, 11, 1, 8],
-  ['Lifter', 3, 1, 16, 0, 0, 10, 1, 7]
+  // the aircraft print '–' for Assault: kept as 0, as the Xenotripod craft have it
+  ['Captured patrol craft', 2, 1, 18, 3, 12, 9, 0, 4],
+  ['Armed light shuttle', 3, 1, 18, 5, 18, 11, 0, 6],
+  ['Armed medium shuttle', 4, 1, 18, 5, 18, 11, 0, 7],
+  ['Armed heavy shuttle', 5, 1, 18, 5, 18, 11, 0, 8],
+  ['Lifter', 3, 1, 16, 0, 0, 10, 0, 7]
 ];
 /* the turn cost printed in brackets after a ground vehicle's Movement */
 var TURNS = {

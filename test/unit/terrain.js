@@ -185,7 +185,7 @@ ok('a Sapper brings it down more often than a rifle team', (function () {
     Math.round(100 * plain / runs) + '%)';
 })().slice(0, 4), 'true');
 ok('gunfire alone will not bring the objective down',
-  R.canDemolish(who('regular'), target) && !R.canDemolish(mk('lcv', 'A', 24, 20), target), true,
-  'a hull needs a Destructive Weapon even for that');
+  !R.canDemolish(who('regular'), target) && !R.canDemolish(mk('lcv', 'A', 24, 20), target), true,
+  'only the Demolish special action touches it (p. 54)');
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

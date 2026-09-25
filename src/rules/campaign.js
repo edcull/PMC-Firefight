@@ -58,7 +58,7 @@
     { id: 'O4', cat: 'Operational', name: 'Reinforced Light Support', where: 'list',
       text: 'All Light support troops have their Size increased by 2.' },
     { id: 'O5', cat: 'Operational', name: 'Strength in Numbers', where: 'list',
-      text: 'Field one extra unit of a Tier below the Battle Tier per Priority Level, free and without spending composition points.' },
+      text: 'Field one extra unit of one Tier below the Battle Tier (Battle Tier − 1) per Priority Level, free and without spending composition points.' },
     { id: 'O6', cat: 'Operational', name: 'Tactical Flexibility', where: 'list',
       text: 'May swap up to half the army when modifying it before the battle, instead of a quarter.' },
     /* --- tactical --- */
@@ -1182,15 +1182,15 @@
   function effectiveTier(co) { return co.tier + (co.aspiring ? 1 : 0); }
 
   /* ================= recruitment ================= */
-  /* Armed Civilians cost nothing while the revolt has four of them or fewer
+  /* Armed Civilians cost nothing until the revolt has four of them
      (p. 110), and Penal troops were always free. Smuggler takes a point off
      everything else, down to a floor of one. */
   function recruitCost(co, key) {
     if (key === 'penal') return 0;
-    // Armed Civilians (p. 110) and Tiny Bug Swarms (p. 124): free up to the fifth
+    // Armed Civilians (p. 110), Tiny Bug Swarms (p. 124) and Primitive Epsilons: the first four are free, the fifth is paid for
     if (key === 'rciv' || key === 'btiny' || key === 'xeps1') {
       var civs = co.roster.filter(function (e) { return e.key === key; }).length;
-      if (civs <= 4) return 0;
+      if (civs < 4) return 0;
     }
     var p = profile(key), cost = RECRUIT_COST[p.tier];
     // a tribe's turrets and a company's drop pods are never bought, only fielded (pp. 86, 140)

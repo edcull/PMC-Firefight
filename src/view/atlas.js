@@ -19,6 +19,7 @@
        onPick,       // (key) -> a unit's sheet was clicked
        prefix,       // the id each unit's sheet is given, before its key (default 'u-')
        findMore      // (profile) -> more words a search should match it by (optional)
+       nameOnly      // true: a search matches the unit's name and nothing else
      })
    returns { render, filter, setColour, scrollTo }. */
 (function (root) {
@@ -86,9 +87,11 @@
       return kind(p) + ' · Tier ' + (R.ROMAN ? R.ROMAN[p.tier] : p.tier) + ' · Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · FP ' + (p.fp == null ? '—' : p.fp) +
         ' · Range ' + p.range + '" · Def ' + p.def + (p.str ? ' · Structure ' + p.str : ' · Models ' + p.size);
     }
-    // what a search matches: the name, code and key, and whatever else the page adds (the viewer adds the weapons)
-    // what a search matches a unit by: its name and code, its group, what it is, every special rule it has, and anything the page adds (its weapon)
+    /* What a search matches a unit by: its name and code, its group, what it is,
+       every special rule it has, and anything the page adds — or, where the page
+       asks for it (the viewer does), the unit's name alone. */
     function findKey(p) {
+      if (o.nameOnly) return esc(p.name.toLowerCase());
       return esc([p.name, p.code, p.key, p.group || '', p.cls || 'infantry', (p.rules || []).join(' | '),
         o.findMore ? o.findMore(p) : ''].join(' | ').toLowerCase());
     }

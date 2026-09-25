@@ -57,9 +57,11 @@ ok('another Alpha must be of a lower Tier', C.canRecruit(t1.co, 'xalpha3').ok + 
 
 head('What is free (p. 140)');
 var t2 = tribe();
-ok('with four Primitive Epsilons, a fifth is free', C.recruitCost(t2.co, 'xeps1'), 0);
-C.recruit(t2.co, 'xeps1');
-ok('with five, the next costs the usual 1', C.recruitCost(t2.co, 'xeps1'), 1);
+ok('with four Primitive Epsilons, a fifth costs the usual 1', C.recruitCost(t2.co, 'xeps1'), 1);
+ok('...while the fourth was free', (function () {
+  var c = tribe().co; c.roster = c.roster.filter(function (e) { return e.key !== 'xeps1'; }).concat([C.newEntry('xeps1'), C.newEntry('xeps1'), C.newEntry('xeps1')]);
+  return C.recruitCost(c, 'xeps1');
+})(), 0);
 var pe = t2.co.roster.filter(function (e) { return e.key === 'xeps1'; })[0];
 ok('promoting one costs EXP only', C.promotionCost(pe, 'xeps2', t2.co).kUC, 0);
 ok('...and only to another Epsilon', C.promotionTargets(pe).every(function (q) { return q.group === 'Epsilon Squads'; }), true);

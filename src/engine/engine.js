@@ -2550,7 +2550,9 @@
           if (!m) return false;
           return m.targets.some(function (t) { return canAnswerMark(u, t, m.kind); });
         }
-        if (R.inches(u.x, u.y, state.chain.x, state.chain.y) > 12) return false;
+        // 12" between the closest models of the two units, not their middles
+        var cmdU = state.chain.by && byId(state.chain.by);
+        if ((cmdU ? R.unitDist(u, cmdU) : R.inches(u.x, u.y, state.chain.x, state.chain.y)) > 12) return false;
         if (R.has(u, 'Command Unit')) return false;
         if (R.has(u, 'Turret')) return false;              // untouched by Command Units
         if (u.tier >= state.chain.tier + 2) return false;
@@ -2609,7 +2611,7 @@
     addFx({ kind: 'wave', x: veh.x, y: veh.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300 });
     state.chain = {
       side: veh.side, remaining: R.ruleValue(veh, 'Command Unit') + 1,
-      x: veh.x, y: veh.y, tier: cmd.tier
+      x: veh.x, y: veh.y, tier: cmd.tier, by: veh.id
     };
     logLine('note', cmd.label + ', riding in ' + veh.name + ', coordinates: up to ' +
       R.ruleValue(veh, 'Command Unit') + ' friendly units within 12" activate in a row.');
@@ -3071,6 +3073,8 @@
     if (!state || !u) return [];
     return state.terrain.filter(function (r) {
       if (!R.canCharge(u, r)) return false;
+      // the Demolish objective is the attacker's to blow up, never the defender's own (p. 54)
+      if (r === (state.sc && state.sc.target) && state.sc.attacker && u.side !== state.sc.attacker) return false;
       var mid = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
       return R.inches(u.x, u.y, mid.x, mid.y) - Math.max(r.w, r.h) / 2 <= u.move + 2;
     });
@@ -3505,7 +3509,7 @@
     } else if (id === 'coordinate') {
       u.coordUsed = true; u.activated = true;
       addFx({ kind: 'wave', x: u.x, y: u.y, up: 0, r: 12, rgb: '232,193,90', dur: 1300, blocking: true });
-      state.chain = { side: u.side, remaining: R.ruleValue(u, 'Command Unit') + 1, x: u.x, y: u.y, tier: u.tier };
+      state.chain = { side: u.side, remaining: R.ruleValue(u, 'Command Unit') + 1, x: u.x, y: u.y, tier: u.tier, by: u.id };
       logLine('note', u.label + ' coordinates: up to ' + R.ruleValue(u, 'Command Unit') + ' friendly units within 12" activate in a row.');
       endActivation(); return;
     } else if (id === 'regroup') {
@@ -3881,7 +3885,6 @@
     boardAnim(target, u, was);
     logLine('note', r.text);
     if (SFX) SFX.click();
-    u.activated = true;
     pushRes({
       kind: 'Embark', title: u.name + ' takes on troops', side: u.side,
       note: r.text, outcome: {
@@ -3889,6 +3892,18 @@
         tone: 'good'
       }
     });
+    /* Embark (p. 36) loads "one or more" squads: with room left and somebody else
+       in reach, another tap loads them too, and Cancel drives on without. */
+    var more = !isAI(u.side) && u.cargo.length < u.transport &&
+      activeUnits(u.side).filter(function (t2) { return R.canEmbark(state, u, t2); });
+    if (more && more.length) {
+      u.loading = true; u.activated = false;
+      ui.mode = 'embark'; ui.targets = more;
+      setHint(null, 'Room for ' + (u.transport - u.cargo.length) + ' more: tap another squad to load it — or Cancel to drive on.');
+      render();
+      return;
+    }
+    u.loading = false; u.activated = true;
     carryMove(u);
   }
 
@@ -4147,9 +4162,12 @@
     endActivation(u);
   }
 
-  function doDisembark(pt) {
+  /* Disembark (p. 36): "one or more" of those aboard. A player puts them down a
+     squad a tap, and may stop there and drive on (Cancel); the AI empties the hull. */
+  function doDisembark(pt, all) {
     var u = ui.selected;
-    var out = (u.cargo || []).slice();
+    var out = (u.cargo || []).filter(function (c) { return !c.boarded; });
+    if (!all) out = out.slice(0, 1);
     var lines = [];
     out.forEach(function (rider, i) {
       var spot = { x: pt.x + (i % 2 ? 1.6 : -1.6), y: pt.y + (i > 1 ? 1.6 : 0) };
@@ -4157,12 +4175,21 @@
       if (r) { logLine('note', r.text); lines.push({ text: r.text }); stepOff(rider, u); }
     });
     if (SFX) { SFX.step(); SFX.step(0.22); }
-    u.activated = true;
     pushRes({
       kind: 'Disembark', title: u.name + ' unloads', side: u.side,
       note: 'Troops are placed within 4" of the hull and may act this turn if they have not already.',
       list: lines
     });
+    // more still aboard: another tap puts the next squad down, Cancel keeps them in and drives on
+    if (!all && !isAI(u.side) && (u.cargo || []).some(function (c) { return !c.boarded; })) {
+      u.unloading = true; u.activated = false;
+      ui.moves = R.reachable(state, u, 4).filter(function (c) { return R.inches(c.x, c.y, u.x, u.y) <= 4; });
+      if (!ui.moves.length) ui.moves = [{ x: u.x, y: u.y, cost: 0 }];
+      setHint(null, 'Tap where the next squad gets off — or Cancel to keep the rest aboard.');
+      render();
+      return;
+    }
+    u.unloading = false; u.activated = true;
     carryMove(u);
   }
 
@@ -4176,8 +4203,9 @@
       return t.side !== u.side && !R.isFlying(t) &&
         R.pointSegDist(t.x, t.y, from.x, from.y, pt.x, pt.y) <= 2.2;
     });
+    // the run is against ground units: its own side's aircraft are above it, not under it
     var friends = activeUnits(u.side).filter(function (t) {
-      return t !== u && R.pointSegDist(t.x, t.y, from.x, from.y, pt.x, pt.y) <= 2.2;
+      return t !== u && !R.isFlying(t) && R.pointSegDist(t.x, t.y, from.x, from.y, pt.x, pt.y) <= 2.2;
     });
     u.x = pt.x; u.y = pt.y;
     var log = [];
@@ -4592,7 +4620,7 @@
           if (R.unitNear(state, q.x, q.y, u, 0.6)) continue;
           spot = q;
         }
-        ui.selected = u; doDisembark(spot || { x: u.x, y: u.y }); return;
+        ui.selected = u; doDisembark(spot || { x: u.x, y: u.y }, true); return;
       }
       u.activated = true; endActivation(u); return;
     }
@@ -4779,6 +4807,8 @@
 
   // a scenario may put ground off limits: the VIP's leash, the safe zone the OpFor cannot enter
   function canStand(u, c) {
+    // an aircraft keeps low: never over a tall building or a hilltop (p. 38)
+    if (R.isFlying(u) && R.tooHighToHover(state, c.x, c.y)) return false;
     return !state.scen.moveOK || state.scen.moveOK(state, u, c);
   }
 
@@ -5436,6 +5466,9 @@
           if (mid && mid !== u && mid.advancing && !mid.activated) {
             return no(mid.name + ' is half-way through its Advance — let it shoot, or hold its fire, first');
           }
+          if (mid && mid !== u && (mid.loading || mid.unloading) && !mid.activated) {
+            return no(mid.name + ' is still ' + (mid.loading ? 'taking troops on' : 'putting troops down') + ' — load the next, or Cancel to drive on');
+          }
           ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
           ui.preview = null; ui.hint = null;
           focusUnit(u);
@@ -5713,6 +5746,10 @@
           // half-way through an Advance there is nothing to go back to: it holds its fire
           var adv = ui.selected;
           if (adv && adv.advancing && !adv.activated && adv.side === side) { holdFire(adv); return yes; }
+          // loading or unloading a squad at a time: that is enough, now the hull may drive
+          if (adv && (adv.loading || adv.unloading) && adv.side === side) {
+            adv.loading = false; adv.unloading = false; adv.activated = true; carryMove(adv); return yes;
+          }
           if (adv && (adv.carrying || adv.carryMoved) && adv.side === side) { stayPut(adv); return yes; }
           ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; ui.preview = null;
           render();

@@ -139,18 +139,18 @@
     { key: 'medveh', code: 'MDV', name: 'Medical vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'medbox', tier: 3, size: 1, move: 10, turn: 1, fp: 3, range: 18, def: 12, assault: 2, str: 5, rules: ['Ground vehicle', 'Field Medics'] },
 
     /* ---- Transport aircraft (p. 80) ---- */
-    { key: 'adaptedcraft', code: 'ATC', name: 'Adapted transport craft', group: 'Transport aircraft', cls: 'aircraft', art: 'hawk', tier: 2, size: 1, move: 16, fp: 2, range: 18, def: 8, assault: 1, str: 3, transport: 1, rules: ['Flying unit', 'Transport (1)', 'Limited Fire Arc'] },
-    { key: 'lightcraft', code: 'LTC', name: 'Light transport craft', group: 'Transport aircraft', cls: 'aircraft', art: 'hawk', tier: 3, size: 1, move: 20, fp: 2, range: 18, def: 11, assault: 1, str: 4, transport: 1, rules: ['Flying unit', 'Transport (1)', 'Limited Fire Arc'] },
-    { key: 'heavycraft', code: 'HTC', name: 'Heavy transport craft', group: 'Transport aircraft', cls: 'aircraft', art: 'chinook', tier: 4, size: 1, move: 18, fp: 2, range: 18, def: 12, assault: 1, str: 5, transport: 2, rules: ['Flying unit', 'Transport (2)', 'Limited Fire Arc'] },
-    { key: 'flyingcp', code: 'FCP', name: 'Flying command post', group: 'Transport aircraft', cls: 'aircraft', art: 'chinookcp', tier: 5, size: 1, move: 24, fp: 2, range: 18, def: 13, assault: 1, str: 6, transport: 1, rules: ['Flying unit', 'Transport (1)', 'Limited Fire Arc', 'Command Vehicle'] },
+    { key: 'adaptedcraft', code: 'ATC', name: 'Adapted transport craft', group: 'Transport aircraft', cls: 'aircraft', art: 'hawk', tier: 2, size: 1, move: 16, fp: 2, range: 18, def: 8, assault: 0, str: 3, transport: 1, rules: ['Flying unit', 'Transport (1)', 'Limited Fire Arc'] },
+    { key: 'lightcraft', code: 'LTC', name: 'Light transport craft', group: 'Transport aircraft', cls: 'aircraft', art: 'hawk', tier: 3, size: 1, move: 20, fp: 2, range: 18, def: 11, assault: 0, str: 4, transport: 1, rules: ['Flying unit', 'Transport (1)', 'Limited Fire Arc'] },
+    { key: 'heavycraft', code: 'HTC', name: 'Heavy transport craft', group: 'Transport aircraft', cls: 'aircraft', art: 'chinook', tier: 4, size: 1, move: 18, fp: 2, range: 18, def: 12, assault: 0, str: 5, transport: 2, rules: ['Flying unit', 'Transport (2)', 'Limited Fire Arc'] },
+    { key: 'flyingcp', code: 'FCP', name: 'Flying command post', group: 'Transport aircraft', cls: 'aircraft', art: 'chinookcp', tier: 5, size: 1, move: 24, fp: 2, range: 18, def: 13, assault: 0, str: 6, transport: 1, rules: ['Flying unit', 'Transport (1)', 'Limited Fire Arc', 'Command Vehicle'] },
 
     /* ---- Strike aircraft (pp. 81-82) ---- */
-    { key: 'fsc', code: 'FSC', name: 'Flexible Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'apache', tier: 3, size: 1, move: 24, fp: 7, range: 18, def: 12, assault: 1, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
-    { key: 'tsc', code: 'TSC', name: 'Transport-Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hind', tier: 4, size: 1, move: 20, fp: 6, range: 18, def: 12, assault: 1, str: 4, transport: 1, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (1)', 'Supporting Fire'] },
-    { key: 'gunboat', code: 'GNB', name: 'Gunboat', group: 'Strike aircraft', cls: 'aircraft', art: 'apacherk', tier: 4, size: 1, move: 12, fp: 9, range: 18, def: 13, assault: 1, str: 5, rules: ['Flying unit', 'Incendiary Ammunition'], cap: 1 },
-    { key: 'hsc', code: 'HSC', name: 'Heavy Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hindrk', tier: 5, size: 1, move: 16, fp: 9, range: 18, def: 13, assault: 1, str: 5, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-tank'] },
-    { key: 'interceptor', code: 'INT', name: 'Interceptor', group: 'Strike aircraft', cls: 'aircraft', art: 'jet', tier: 4, size: 1, move: 28, fp: 6, range: 24, def: 11, assault: 1, str: 3, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-aircraft'] },
-    { key: 'asc', code: 'ASC', name: 'Advanced Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'jetstrike', tier: 5, size: 1, move: 24, fp: 9, range: 18, def: 13, assault: 1, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
+    { key: 'fsc', code: 'FSC', name: 'Flexible Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'apache', tier: 3, size: 1, move: 24, fp: 7, range: 18, def: 12, assault: 0, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
+    { key: 'tsc', code: 'TSC', name: 'Transport-Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hind', tier: 4, size: 1, move: 20, fp: 6, range: 18, def: 12, assault: 0, str: 4, transport: 1, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (1)', 'Supporting Fire'] },
+    { key: 'gunboat', code: 'GNB', name: 'Gunboat', group: 'Strike aircraft', cls: 'aircraft', art: 'apacherk', tier: 4, size: 1, move: 12, fp: 9, range: 18, def: 13, assault: 0, str: 5, rules: ['Flying unit', 'Incendiary Ammunition'], cap: 1 },
+    { key: 'hsc', code: 'HSC', name: 'Heavy Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hindrk', tier: 5, size: 1, move: 16, fp: 9, range: 18, def: 13, assault: 0, str: 5, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-tank'] },
+    { key: 'interceptor', code: 'INT', name: 'Interceptor', group: 'Strike aircraft', cls: 'aircraft', art: 'jet', tier: 4, size: 1, move: 28, fp: 6, range: 24, def: 11, assault: 0, str: 3, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-aircraft'] },
+    { key: 'asc', code: 'ASC', name: 'Advanced Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'comanche', tier: 5, size: 1, move: 24, fp: 9, range: 18, def: 13, assault: 0, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
     // Light VTOL drone (p. 82): always Drone Controlled, the extra Structure point already in its profile
     { key: 'vtoldrone', code: 'VTD', name: 'Light VTOL drone', group: 'Strike aircraft', cls: 'aircraft', art: 'vtoldrone', tier: 3, size: 1, move: 20, fp: 1, range: 12, def: 11, assault: 0, str: 4, mustDrone: true, rules: ['Flying unit', 'Limited Fire Arc', 'Markerlights', 'Stealth', 'Keen-Eyed', 'Drone Control'] },
 
@@ -230,11 +230,11 @@
     { key: 'rhflak', code: 'HFV', name: 'Heavy FlaK vehicle', group: 'Rebel flak vehicles', faction: 'rebel', cls: 'vehicle', art: 'aaheavy', tier: 4, size: 1, move: 6, turn: 2, fp: 5, range: 30, def: 12, assault: 2, str: 6, rules: ['Ground vehicle', 'Anti-aircraft', 'Anti-tank', 'Cumbersome Weapon'], groupCapPL: 1 },
 
     /* Rebel aviation (p. 108) — civilian hulls pressed into service */
-    { key: 'rpatrol', code: 'CPC', name: 'Captured patrol craft', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'hawk', tier: 2, size: 1, move: 18, fp: 3, range: 12, def: 9, assault: 1, str: 4, rules: ['Flying unit', 'Keen-Eyed', 'Smoke Markers'] },
-    { key: 'rlshuttle', code: 'ALS', name: 'Armed light shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'apachenp', tier: 3, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 1, str: 6, transport: 1, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (1)'] },
-    { key: 'rmshuttle', code: 'AMS', name: 'Armed medium shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'hindnp', tier: 4, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 1, str: 7, transport: 2, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (2)', 'Supporting Fire'] },
-    { key: 'rhshuttle', code: 'AHS', name: 'Armed heavy shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'chinookwl', tier: 5, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 1, str: 8, transport: 4, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (4)', 'Supporting Fire'] },
-    { key: 'rlifter', code: 'LFT', name: 'Lifter', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'chinook', tier: 3, size: 1, move: 16, fp: 0, range: 0, def: 10, assault: 1, str: 7, transport: 1, rules: ['Flying unit', 'Lifter', 'Unarmed'] },
+    { key: 'rpatrol', code: 'CPC', name: 'Captured patrol craft', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'hawk', tier: 2, size: 1, move: 18, fp: 3, range: 12, def: 9, assault: 0, str: 4, rules: ['Flying unit', 'Keen-Eyed', 'Smoke Markers'] },
+    { key: 'rlshuttle', code: 'ALS', name: 'Armed light shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'apachenp', tier: 3, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 0, str: 6, transport: 1, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (1)'] },
+    { key: 'rmshuttle', code: 'AMS', name: 'Armed medium shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'hindnp', tier: 4, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 0, str: 7, transport: 2, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (2)', 'Supporting Fire'] },
+    { key: 'rhshuttle', code: 'AHS', name: 'Armed heavy shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'chinookwl', tier: 5, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 0, str: 8, transport: 4, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (4)', 'Supporting Fire'] },
+    { key: 'rlifter', code: 'LFT', name: 'Lifter', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'chinook', tier: 3, size: 1, move: 16, fp: 0, range: 0, def: 10, assault: 0, str: 7, transport: 1, rules: ['Flying unit', 'Lifter', 'Unarmed'] },
 
     /* ---- the Space Bugs (pp. 113-123) ----
        Overgrown bugs follow vehicle rules and Overgrown flying bugs aircraft rules,
@@ -387,7 +387,7 @@
     walker: {
       key: 'walker', name: 'Walker', short: 'wlk', def: -1,
       cover: true, footed: true, noSideArc: true,
-      note: 'Legs: pays the infantry 1" for difficult ground and takes cover from terrain, and its armoured flanks deny the +1 side shot — but its height costs 1 Defence.'
+      note: 'Legs: pays the infantry 1" for difficult area terrain (walls and fences still cost it the full 2") and takes cover from terrain, and its armoured flanks deny the +1 side shot — but its height costs 1 Defence.'
     }
   };
   var PROP_ORDER = ['none', 'wheeled', 'tracked', 'grav', 'hover', 'walker'];
@@ -617,8 +617,7 @@
       var p = BY_KEY[k];
       if (!p) return;
       if (p.mustLoad) plats++;
-      else if (p.cls === 'infantry' && !p.command &&
-        (p.rules || []).indexOf('Cumbersome Weapons') < 0) riders++;
+      else if (p.cls === 'infantry' && !p.command) riders++;   // any infantry squad may ride one (p. 80)
     });
     if (plats > riders) {
       faults.push('Every Rapid insertion platform starts the battle with an infantry unit aboard — ' +
@@ -777,8 +776,7 @@
         keys.push(joinPick(p.key, null, false, true));      // mounted, now and then
       } else keys.push(p.key);
       if (p.mustLoad) plats++;
-      else if (p.cls === 'infantry' && !p.command &&
-        (p.rules || []).indexOf('Cumbersome Weapons') < 0) riders++;
+      else if (p.cls === 'infantry' && !p.command) riders++;   // any infantry squad may ride one (p. 80)
       if (!p.noSlot) counts[p.tier]++;                 // a platform fills nobody's Tier row
       spent += p.tier;
       perKey[p.key] = (perKey[p.key] || 0) + 1;
@@ -1420,6 +1418,16 @@
     r.top.forEach(function (q) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
     return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, poly: r.top };
   }
+  /* Aircraft may end a move over any terrain but "very high objects, such as very
+     high buildings or mountain peaks" (p. 38): here a high or reinforced
+     building, and the crown of a stepped hill. */
+  function tooHighToHover(state, x, y) {
+    if (groundLevel(state, x, y) >= 2) return true;
+    return state.terrain.some(function (r) {
+      if (r.kind !== 'building' && r.kind !== 'bunker') return false;
+      return sectionsOf(r).some(function (q) { return inRect(x, y, q) && sectionHigh(r, q); });
+    });
+  }
   function onHill(state, p) { return !!p && p.x >= 0 && terrainAt(state, p.x, p.y) === 'hill'; }
 
   function unitNear(state, x, y, ignore, pad) {
@@ -1641,8 +1649,8 @@
        Limited Fire Arc. The strike craft below are the ones with weapons. */
     adaptedcraft: { p: 'small' }, lightcraft: { p: 'small' },
     heavycraft: { p: 'small' }, flyingcp: { p: 'small' },
-    // the flexible strike craft carries a rocket rack over the door gun
-    fsc: { p: 'small', s: 'rocket' }, tsc: { p: 'burst', s: 'rocket' },
+    // the flexible strike craft rakes with its nose gun under a rocket rack; the transport has a door gun
+    fsc: { p: 'burst', s: 'rocket' }, tsc: { p: 'small', s: 'rocket' },
     gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
     // the light VTOL drone carries no gun worth the name: a light sidearm's crack
     vtoldrone: { p: 'pistol' },
@@ -1968,7 +1976,8 @@
     /* Stealth (p. 59) is not cover: a hull has it too (the Shadow bug), and it
        holds against defensive fire, which only strips terrain bonuses. */
     if (!opts.assault && has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
-      var st = Math.floor(unitDist(attacker, target) / 6);
+      // +1 above 6", +2 above 12"...: exactly 6" away is not yet out of the first band
+      var st = Math.max(0, Math.ceil(unitDist(attacker, target) / 6) - 1);
       if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
     }
     // Shield Generator (p. 130): a dome against fire from outside it
@@ -2429,6 +2438,7 @@
      sight and barring the ground, and whoever was inside has to get out. */
   function isDestructible(r) {
     var t = TERRAIN[r && r.kind];
+    if (r && r.reinforced) return false;               // a reinforced wall stands whatever is thrown at it (p. 41)
     return !!(t && t.destructible);
   }
   function destructibleKind(r) {
@@ -3544,8 +3554,8 @@
     if (isFlying(u) || flyInf(u) || jumps(u)) return 0;   // aircraft, Flying Infantry and jump packs ignore the ground
     var pr = propOf(u);
     if (pr && pr.water && (t.shallow || kind === 'deep')) return 0;   // a hovercraft skims
-    // a walker steps over what a hull has to grind through
-    var heavy = u.cls === 'vehicle' && !(pr && pr.footed);
+    // a walker steps through difficult area terrain as infantry does — but a wall or a fence costs it what it costs any hull (p. 180)
+    var heavy = u.cls === 'vehicle' && !(pr && pr.footed && !t.linear);
     // Riders (p. 94) lose 2" to rough going where a man on foot loses 1"
     // barbed wire: the extra D6" rolled before the move (p. 42), whatever is crossing
     if (t.wire) return u.wireRoll || 6;
@@ -4238,7 +4248,7 @@
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
     canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding, exitSpots: exitSpots,
-    exitBuilding: exitBuilding, leaveAway: leaveAway, rectPointDist: rectPointDist, onHill: onHill,
+    exitBuilding: exitBuilding, leaveAway: leaveAway, rectPointDist: rectPointDist, onHill: onHill, tooHighToHover: tooHighToHover,
     unitNear: unitNear, clampBoard: clampBoard, pointSegDist: pointSegDist,
     has: has, ruleValue: ruleValue, currentMorale: currentMorale, status: status,
     projects: projects, markCall: markCall, holdsGround: holdsGround, countsForVictory: countsForVictory,

@@ -41,7 +41,7 @@ same messages:
 
 - `PMCNet.Remote` — a WebSocket to a server running the engine.
 - `PMCNet.Local` — the engine in this tab, behind the same message names, for
-  solitaire, hotseat and the published single-file build, which has no server.
+  solitaire, hotseat and the single-file build, which has no server.
 
 Because both speak one protocol, the board has one path through it, and a
 solitaire game exercises the same code a networked one does.
@@ -96,9 +96,8 @@ test/unit/           what `npm test` runs: no browser, no network
 test/browser/        driven through a real browser: `npm run test:browser`
 test/where.js        where the tests are, relative to everything else
 
-scripts/             build, gallery, and the tools that performed the split
-build/               the built pages (kept, so a clone can play); shots/ is not kept
-docs/                design notes
+scripts/             build, gallery, the test runner, and the tools that performed the split
+build/               the built pages, made by `npm run build` (not kept in git)
 ```
 
 src/ is split by what a file is rather than by what it belongs to: the rulebook
@@ -113,7 +112,7 @@ now, and editing `game.js` will not regenerate it.
 ## A game, end to end
 
 1. Both players open the server's page and press **Multiplayer**. The button is
-   hidden when the page did not come from a server, because then there is
+   greyed out when the page did not come from a server, because then there is
    nothing to connect to.
 2. One starts a game and reads the five-letter code out. The other joins, and
    takes the free seat; anyone after that watches.
@@ -128,7 +127,8 @@ now, and editing `game.js` will not regenerate it.
 
 ## Tests
 
-`npm test` runs the rules tests as before, and then:
+`npm test` runs every unit test (see the README for the runner). Three of them
+are about the split:
 
 - `enginetest.js` — whole battles driven by intent, every scenario, all four
   factions, plus the intents a player is not allowed to send and a snapshot

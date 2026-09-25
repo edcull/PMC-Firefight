@@ -61,9 +61,11 @@ ok('another Leader Bug must be of a lower Tier', C.canRecruit(s1.co, 'bwatchers'
 
 head('Tiny Bug Swarms (p. 124)');
 var s2 = swarm();
-ok('with four already, a fifth is free', C.recruitCost(s2.co, 'btiny'), 0);
-C.recruit(s2.co, 'btiny');
-ok('with five, the next costs the usual 1', C.recruitCost(s2.co, 'btiny'), 1);
+ok('with four already, a fifth costs the usual 1', C.recruitCost(s2.co, 'btiny'), 1);
+ok('...while the fourth was free', (function () {
+  var c = swarm().co; c.roster = c.roster.filter(function (e) { return e.key !== 'btiny'; }).concat([C.newEntry('btiny'), C.newEntry('btiny'), C.newEntry('btiny')]);
+  return C.recruitCost(c, 'btiny');
+})(), 0);
 var tiny = s2.co.roster.filter(function (e) { return e.key === 'btiny'; })[0];
 ok('promoting one costs experience only', C.promotionCost(tiny, 'bsmall', s2.co).kUC, 0);
 

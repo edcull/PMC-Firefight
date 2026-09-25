@@ -250,10 +250,11 @@
      further turn" (pp. 52-53). */
   function rollEnd(state, after) {
     if (state.turn < after) return false;
-    var need = 6 - (state.turn - after);
+    // +1 a turn: five turns on, any roll ends it
+    var need = Math.max(1, 6 - (state.turn - after));
     var roll = d6();
-    state.sc.lastEndRoll = { roll: roll, need: Math.max(2, need) };
-    return roll >= Math.max(2, need);
+    state.sc.lastEndRoll = { roll: roll, need: need };
+    return roll >= need;
   }
 
   /* A strip on one table edge. */
@@ -380,16 +381,17 @@
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       hint: 'Three staked locations. Bring a unit within 4" and use "Check the area!" — 5+ at the first, 4+ at the second; miss both and the third gives itself away.',
-      /* From turn 3, every second turn, a number equal to the Priority Level comes
-         on (p. 52) — which ones is the player's choice. */
+      /* From turn 3, every second turn, up to the Priority Level in units may come
+         on (p. 52) — how many, and which, is the player's choice. */
       reservePick: function (state, side) {
         if (state.turn < 3 || state.turn % 2 === 0) return null;
         var pool = state.units.filter(function (u) {
           return u.side === side && u.alive && u.reserve && u.wave === 2;
         });
         var n = Math.min(state.cfg.pl, pool.length);
-        return pool.length ? { pool: pool, min: n, max: n,
-          text: 'A number of units equal to the Priority Level comes on from reserve — ' + n + ' this turn. You choose which.' } : null;
+        // "may deploy": up to that many, and none at all if the player would rather wait
+        return pool.length ? { pool: pool, min: 0, max: n,
+          text: 'Up to ' + n + ' unit' + (n === 1 ? '' : 's') + ' (the Priority Level) may come on from reserve this turn. You choose which — or none.' } : null;
       },
       // from turn 3, every second turn, a number equal to the Priority Level comes on
       reserves: function (state, side) {
@@ -882,7 +884,9 @@
   function searchSpots(state, u) {
     if (!state.sc || !state.sc.search || state.sc.found) return [];
     return state.sc.search.filter(function (s) {
-      return !s.checked && dist(u.x, u.y, s.x, s.y) <= 4 + R.UNIT_R;
+      // within 4" of the location itself — its edge, not its middle
+      var edge = s.piece ? R.rectPointDist(s.piece, u.x, u.y) : Math.max(0, dist(u.x, u.y, s.x, s.y) - 2);
+      return !s.checked && edge <= 4 + R.UNIT_R;
     });
   }
   function checkArea(state, u, spot) {

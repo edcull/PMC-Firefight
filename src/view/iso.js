@@ -1334,7 +1334,7 @@
           props.push({
             kind: 'wallrun', x: whz ? r.x + wm : r.x + r.w / 2, y: whz ? r.y + r.h / 2 : r.y + wm,
             horiz: whz, len: wsl, first: ws === 0, last: ws === wn - 1, wire: wire, height: wh3,
-            seed: (wr() * 9999) | 0
+            reinforced: !!r.reinforced, seed: (wr() * 9999) | 0
           });
         }
         return;
@@ -2061,7 +2061,8 @@
            odd crack and bullet pock, and on some walls a coil of razor wire. */
         var wr2 = rng(pr.seed), lf2 = lift || 0;
         var ux2 = pr.horiz ? 1 : 0, uy2 = pr.horiz ? 0 : 1, vx2 = 1 - ux2, vy2 = 1 - uy2;
-        var L2 = pr.len, T2 = 0.22, H2 = pr.height;
+        // a reinforced wall (p. 41) is thicker, and banded at the foot so it reads as one that stays up
+        var L2 = pr.len, T2 = pr.reinforced ? 0.36 : 0.22, H2 = pr.height;
         function Q(t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; }
         function slab(t0, t1, v0, v1, z0, z1, pal2) {
           // the near side and the far end in shade, the top lit
@@ -2080,6 +2081,14 @@
           edgeLine(g, Q(tj, T2, 1), Q(tj, T2, H2 - 1), CONCRETE[1], 1);
         }
         edgeLine(g, Q(h0, T2, H2 * 0.5), Q(h1, T2, H2 * 0.5), 'rgba(40,38,34,.35)', 1);   // the pour line
+        if (pr.reinforced) {
+          // hazard chevrons along the foot of the face that shows
+          var nb = Math.max(2, Math.round(L2 / 0.35)), bz = Math.max(2, H2 * 0.14);
+          for (var hb = 0; hb < nb; hb++) {
+            var ta = h0 + (h1 - h0) * hb / nb, tb = h0 + (h1 - h0) * (hb + 1) / nb;
+            poly(g, [Q(ta, T2, 0), Q(tb, T2, 0), Q(tb, T2, bz), Q(ta, T2, bz)], hb % 2 ? '#26241f' : '#c9a23a');
+          }
+        }
         for (var gm = 0; gm < 26; gm++) {
           var gt = h0 + wr2() * L2, gz = wr2() * wr2() * H2 * 0.5;
           var gq = Q(gt, T2, gz); dot(g, gq[0], gq[1], 'rgba(40,34,26,.5)', 1);
@@ -4119,8 +4128,11 @@
         P(-4, wy, 22, 2, '#5c6458');
         P(18, wy - 1, 7, 8, '#6a5a3a');                // flared muzzle
         P(18, wy - 1, 7, 2, '#8a7448');
-        P(25, wy, 4, 5, '#e08a3a');                    // pilot flame
-        P(27, wy + 1, 3, 3, '#ffc861');
+        // the pilot flame at the muzzle, licking up and flickering
+        var fp = FLAME_PHASE < 0 ? 1 : FLAME_PHASE, fh = [6, 9, 7, 10][fp], fl = [0, 1, 0, -1][fp];
+        P(25, wy + 6 - fh, 5, fh, '#e08a3a');
+        P(26 + fl, wy + 6 - fh - 3, 3, 3, '#e08a3a');
+        P(26, wy + 6 - Math.ceil(fh * 0.65), 3, Math.ceil(fh * 0.65), '#ffc861');
         P(-8, wy + 5, 7, 3, '#2f3a34');                // fuel line to the tanks
         P(-6, wy + 3, 4, 3, GUN.md);
         break;
@@ -5969,6 +5981,8 @@
   }
   var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
   var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  // a flamer's pilot light flickers through FLAME_PHASES baked states (-1: not burning)
+  var FLAME_PHASES = 4, FLAME_PHASE = -1;
   var WING_PHASES = 6, WING_PHASE = -1;
   var CORPSE = false;                                  // painting a body: its deflector has gone out
   function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
@@ -5984,7 +5998,9 @@
     if (!u || u.alive === false) return false;          // (a bench unit need not say it is alive)
     if (u.cls === 'aircraft') return true;
     if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
-    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]) || winged(KIT[r]); });
+    if (u.art === 'engflame') return true;                                // the flame gun's pilot light
+    if (u.drone && (u.cls === 'vehicle' || u.cls === 'aircraft')) return true;   // a drone's aerial light blinks
+    return (ROLES[u.art] || []).some(function (r) { return shieldAnimated(KIT[r]) || cloakedKit(KIT[r]) || brainy(KIT[r]) || winged(KIT[r]) || (KIT[r] && KIT[r].gun === 'flamer'); });
   }
   function sprite(side, art, i, pose, step, scale, shade, mountKind) {
     var role = roleAt(art, i);
@@ -6015,7 +6031,10 @@
     // a winged bug's wings beat, about four times a second, unless it has gone to ground
     var flapping = winged(kit) && pose !== 'prone';
     WING_PHASE = flapping ? (Math.floor(nowT() / 40) + i * 2) % WING_PHASES : -1;   // each bug at its own beat
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '') + (CORPSE ? '|corpse' : '');
+    // a flamer's pilot light flickers, each man's at his own beat
+    var burning = kit.gun === 'flamer' && !CORPSE;
+    FLAME_PHASE = burning ? (Math.floor(nowT() / 90) + i) % FLAME_PHASES : -1;
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '') + (burning ? '|fp' + FLAME_PHASE : '') + (CORPSE ? '|corpse' : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -6426,15 +6445,15 @@
     thunter: { axles: 3, len: 2.25, wid: 1.30, hgt: 15, gun: 1.2, style: { body: 'ltank', skirts: true, turret: 'missile', tSize: 0.72 } },
     ldest: { axles: 3, len: 2.30, wid: 1.30, hgt: 15, gun: 2.0, style: { body: 'ltank', skirts: true, turret: 'light', tSize: 0.86, gunLen: 2.1, gunW: 2.4 } },
     mdest: { axles: 4, len: 2.55, wid: 1.45, hgt: 17, gun: 2.1, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'mbt', tSize: 1.0, gunLen: 2.5, gunW: 3.2, tMissiles: true, plasma: true } },
-    lorry: { axles: 2, len: 2.10, wid: 1.00, hgt: 15, wheelR: 0.72, gun: 0.8, style: { body: 'truck', noGuard: true } },
-    hlorry: { axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
-    m113: { axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },
-    ifv: { axles: 3, len: 2.35, wid: 1.30, hgt: 18, gun: 1.2, style: { body: 'ifv', turret: 'ifv', tSize: 0.72, tAt: 0.04, tSide: 0.12, skirts: 'panels' } },
-    cmdbox: { axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25] } },
-    bigapc: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels' } },
-    bigifv: { axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels' } },
-    engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, tanks: true, skirts: 'panels' } },
-    enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true } },
+    lorry: { rearDoor: true, axles: 2, len: 2.10, wid: 1.00, hgt: 15, wheelR: 0.72, gun: 0.8, style: { body: 'truck', noGuard: true } },
+    hlorry: { rearDoor: true, axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
+    m113: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },
+    ifv: { rearDoor: true, axles: 3, len: 2.35, wid: 1.30, hgt: 18, gun: 1.2, style: { body: 'ifv', turret: 'ifv', tSize: 0.72, tAt: 0.04, tSide: 0.12, skirts: 'panels' } },
+    cmdbox: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25] } },
+    bigapc: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels', hexNose: true, hex: true } },
+    bigifv: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels', hexNose: true, hex: true } },
+    engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, rearTank: true, skirts: 'panels' } },
+    enghow: { axles: 4, len: 2.50, wid: 1.45, hgt: 18, gun: 1.3, fat: true, mech: 'heavy', style: { body: 'mbt', skirts: 'panels', turret: 'howitzer', tSize: 1.05, plasma: true, hexNose: true, hex: true } },
     techmrl: { axles: 2, len: 2.00, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 1.0, elev: 10, style: { body: 'pickup', mrl: true } },
     calliope: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.6, elev: 16, style: { body: 'ltank', turret: 'arty', tSize: 0.9, tAt: -0.1, skirts: true } },
     mlrs: { axles: 3, len: 2.45, wid: 1.30, hgt: 17, gun: 1.2, elev: 14, style: { body: 'mlrs', mlrs: true } },
@@ -6443,7 +6462,7 @@
     plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.0, stubGun: true, energyGun: true, skirts: 'panels' } },
     aatank: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.3, twin: true, elev: 16, dish: true, style: { body: 'ltank', turret: 'aa', tSize: 0.85, skirts: true } },
     ewtank: { axles: 3, len: 2.25, wid: 1.25, hgt: 16, gun: 0.9, dish: true, style: { body: 'ltank', turret: 'dish', tSize: 0.72, skirts: true } },
-    medbox: { axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
+    medbox: { rearDoor: true, axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
     /* Rebel gun trucks: a light, medium and heavy lorry plated up in a yard,
        slits cut in a sheet welded over the windscreen, mismatched plate round
        the bed, and a weapon bolted on behind the cab. */
@@ -6478,8 +6497,8 @@
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
     // the Light VTOL drone: a small flying disc with swept winglets and a scanner pod under its lip
     vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
-    // the advanced strike craft: the interceptor's airframe, loaded for ground attack
-    jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
+    // the advanced strike craft: a stealth gunship, faceted, its weapons carried inside, a fan in its fin
+    comanche: { len: 2.45, wid: 0.60, hgt: 12, fly: 2.7, craft: 'comanche', noPods: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
 
     /* ---- improvised rebel hulls (pp. 105-108) ----
@@ -6715,7 +6734,7 @@
   /* How far a styled craft's wings or fans reach, as a multiple of the hull
      width — what it lays on the ground when it flies over. */
   var CRAFT_SPAN = {
-    jet: 2.9, hybrid: 3.4, apache: 2.6, apacherk: 2.6, hind: 2.6, hindrk: 2.6,
+    jet: 2.9, hybrid: 3.4, comanche: 2.5, apache: 2.6, apacherk: 2.6, hind: 2.8, hindrk: 2.8,
     civ: 1.9, hawk: 1.2, chinook: 1.2, chinookcp: 2.1
   };
   /* A volley takes the muzzles in turn, so they are handed over left, right,
@@ -7278,9 +7297,12 @@
     drawGear('far');
     if (spec.style) {
       skirts('far');
+      var tankBack = spec.style.rearTank && (cos + sin) < 0.3;   // side-on it stands clear of the hull too
+      if (spec.style.rearTank && !tankBack) rearTank();   // behind the hull
       styledHull();
       drawGear('near');
       skirts();
+      if (tankBack) rearTank();                           // the back is towards us: in front of it
       styledTop();
       drawDamage();
       return { lift: lift, hgt: ride + spec.hgt * 1.3 };
@@ -8350,8 +8372,8 @@
       poly(g, arm1, '#c23a32'); poly(g, arm2, '#c23a32');
     }
     // hexagonal armour tiles set into a flank (future hulls): outlines on the lit side
-    function hexFlank(fr, a0, a1, bSide, z0, h) {
-      var n = 6, step = (a1 - a0) / n;
+    function hexFlank(fr, a0, a1, bSide, z0, h, cols) {
+      var n = cols || 6, step = (a1 - a0) / n;
       for (var i = 0; i < n; i++) {
         for (var r = 0; r < 2; r++) {
           var ca = a0 + step * (i + 0.5 + (r ? 0.5 : 0)), cz = z0 + h * (r ? 0.3 : 0.72);
@@ -8368,10 +8390,121 @@
       }
     }
 
+    /* The same tiles across the nose: laid on the (raked) front plate, which runs
+       from aBot at the foot up and back to aTop, across b0..b1. Only drawn when
+       the nose is towards the eye. */
+    function hexNose(fr, aBot, aTop, b0, b1, z0, h, cols) {
+      if ((cos + sin) <= 0) return;
+      cols = cols || 5;                                  // the upper row; the lower, set between, has one fewer
+      var rows = 2, cw = (b1 - b0) / cols;
+      for (var r = 0; r < rows; r++) {
+        for (var i = 0; i < cols; i++) {
+          var cb = b0 + cw * (i + 0.5 + (r ? 0.5 : 0)), cu = r ? 0.3 : 0.72;
+          if (cb > b1 - cw * 0.3) continue;
+          var pts = [];
+          for (var k = 0; k < 6; k++) {
+            var ang = k * Math.PI / 3, u = cu + Math.sin(ang) * 0.24;
+            pts.push(S3(fr(aBot + (aTop - aBot) * u, cb + Math.cos(ang) * cw * 0.46), z0 + h * u));
+          }
+          poly(g, pts, 'rgba(255,248,232,.07)');
+          for (var e2 = 0; e2 < 6; e2++) edge(g, pts[e2], pts[(e2 + 1) % 6], 'rgba(10,12,16,.35)', 0.6);
+        }
+      }
+    }
+
+    /* Hex tiles laid on one face, raked or upright: its bottom edge runs p0 to
+       p1 and its top edge q0 to q1 (each [a, b] in the frame), from z0 up h.
+       `rows` gives the tiles in each row, top row first, set between each other. */
+    function hexPanel(fr, p0, p1, q0, q1, z0, h, rows) {
+      var nr = rows.length, mx = Math.max.apply(null, rows);
+      function at(t, uu) {
+        var a = p0[0] + (p1[0] - p0[0]) * t, b = p0[1] + (p1[1] - p0[1]) * t;
+        var a2 = q0[0] + (q1[0] - q0[0]) * t, b2 = q0[1] + (q1[1] - q0[1]) * t;
+        return S3(fr(a + (a2 - a) * uu, b + (b2 - b) * uu), z0 + h * uu);
+      }
+      rows.forEach(function (n, r) {
+        var u = nr === 1 ? 0.5 : 0.74 - r * (0.48 / (nr - 1)), ru = nr === 1 ? 0.34 : 0.24;
+        for (var i = 0; i < n; i++) {
+          var t = 0.5 + (i - (n - 1) / 2) / mx, pts = [];
+          for (var k = 0; k < 6; k++) {
+            var ang = k * Math.PI / 3;
+            pts.push(at(t + Math.cos(ang) * 0.46 / mx, u + Math.sin(ang) * ru));
+          }
+          poly(g, pts, 'rgba(255,248,232,.07)');
+          for (var e2 = 0; e2 < 6; e2++) edge(g, pts[e2], pts[(e2 + 1) % 6], 'rgba(10,12,16,.35)', 0.6);
+        }
+      });
+    }
+
+    /* A door on the back of a hull, drawn when the back is towards the eye: the
+       face is at aR (the hull's rear), halfW either side of the middle, from z0
+       up h. 'ramp' is an APC's drop ramp with a crew door let into it, 'double'
+       a pair of cargo doors, 'canvas' a tarpaulin's rear flaps over a tailgate. */
+    function rearDoor(fr, aR, halfW, z0, h, kind) {
+      if ((cos + sin) >= -0.02) return;
+      var a = aR - 0.006;
+      function P(b, z) { return S3(fr(a, b), z); }
+      var DK = 'rgba(10,9,7,.6)', LT = 'rgba(255,248,232,.16)', MET = '#2a2f37';
+      function frame(b0, b1, zb, zt) {
+        edge(g, P(b0, zb), P(b0, zt), DK, 1); edge(g, P(b1, zb), P(b1, zt), DK, 1);
+        edge(g, P(b0, zt), P(b1, zt), DK, 1); edge(g, P(b0, zb), P(b1, zb), DK, 1);
+        edge(g, P(b0 + halfW * 0.04, zt - 1), P(b1 - halfW * 0.04, zt - 1), LT, 0.7);
+      }
+      function handle(b, z) { var q = P(b, z); poly(g, [[q[0] - 1.4, q[1] - 0.6], [q[0] + 1.4, q[1] - 0.6], [q[0] + 1.4, q[1] + 0.6], [q[0] - 1.4, q[1] + 0.6]], MET); }
+      function hinge(b, z) { var q = P(b, z); poly(g, [[q[0] - 0.9, q[1] - 1.1], [q[0] + 0.9, q[1] - 1.1], [q[0] + 0.9, q[1] + 1.1], [q[0] - 0.9, q[1] + 1.1]], MET); }
+      if (kind === 'ramp') {
+        // the ramp, hinged along its foot, and the crew door let into one side of it
+        frame(-halfW, halfW, z0, z0 + h);
+        line(P(-halfW * 0.9, z0 + 1), P(halfW * 0.9, z0 + 1), 1.6, MET);
+        frame(halfW * 0.08, halfW * 0.78, z0 + h * 0.12, z0 + h * 0.86);
+        handle(halfW * 0.2, z0 + h * 0.5);
+        line(P(halfW * 0.34, z0 + h * 0.7), P(halfW * 0.6, z0 + h * 0.7), 1.3, '#0b0e12');   // a vision block
+      } else if (kind === 'double') {
+        frame(-halfW, 0, z0, z0 + h); frame(0, halfW, z0, z0 + h);
+        [-1, 1].forEach(function (sd) {
+          hinge(sd * halfW * 0.92, z0 + h * 0.22); hinge(sd * halfW * 0.92, z0 + h * 0.78);
+          handle(sd * halfW * 0.14, z0 + h * 0.5);
+        });
+      } else {
+        // the canvas: two flaps meeting down the middle, laced shut, over a tailgate with its latches
+        edge(g, P(0, z0 + h * 0.3), P(0, z0 + h), DK, 1.1);
+        for (var k = 0; k < 4; k++) { var z = z0 + h * (0.4 + 0.15 * k); line(P(-halfW * 0.06, z), P(halfW * 0.06, z), 0.8, 'rgba(40,34,24,.8)'); }
+        edge(g, P(-halfW, z0 + h * 0.28), P(halfW, z0 + h * 0.28), DK, 1);
+        handle(-halfW * 0.7, z0 + h * 0.18); handle(halfW * 0.7, z0 + h * 0.18);
+      }
+    }
+
     function nearSide() { return (cos - sin) > 0 ? 1 : -1; }   // which flank faces the eye
     // the same, for something turned to its own angle (a traversed mount)
     function nearSideAt(ang) { return (Math.cos(ang) - Math.sin(ang)) > 0 ? 1 : -1; }
 
+    /* A light engineering vehicle's flame fuel: one big armoured tank slung
+       across the back of the hull on brackets, strapped. It goes down before
+       the hull when the nose is towards the eye (the hull hides it) and after
+       it when the back is. */
+    function rearTank() {
+      var L = spec.len, w = spec.wid * 0.47, zc = deck + spec.hgt * 0.5;
+      var aT = -L * 0.5 - 0.16;
+      var c1 = S3(HF(aT, -w * 0.86), zc), c2 = S3(HF(aT, w * 0.86), zc);
+      // the brackets, back to the hull
+      [-0.6, 0.6].forEach(function (k) {
+        line(S3(HF(-L * 0.5, w * k), zc - 3), S3(HF(aT, w * k), zc - 3), 2, '#23271f');
+      });
+      var R = 7.5;
+      sEllipse(c1[0], c1[1], R * 0.55, R, '#2f342e');
+      line(c1, c2, R * 2, '#3a3f38');
+      line([c1[0], c1[1] - R * 0.55], [c2[0], c2[1] - R * 0.55], 2.2, '#6a7064');
+      line([c1[0], c1[1] + R * 0.6], [c2[0], c2[1] + R * 0.6], 1.6, '#262a24');
+      sEllipse(c2[0], c2[1], R * 0.55, R, '#454b43');
+      sEllipse(c2[0] - 0.8, c2[1] - 1.2, R * 0.3, R * 0.5, '#5a6157');
+      [-0.45, 0, 0.45].forEach(function (k) {
+        var q = S3(HF(aT, w * k), zc);
+        line([q[0], q[1] - R], [q[0], q[1] + R], 1.3, '#1d211b');
+      });
+      // the filler cap on top
+      var fc = S3(HF(aT, -w * 0.3), zc + 5);
+      sEllipse(fc[0], fc[1] - 1, 2, 1.3, '#23271f');
+    }
     function styledHull() {
       var L = spec.len, Wd = spec.wid, H = spec.hgt, z0 = deck, st = spec.style;
       var w = Wd * 0.47;
@@ -8454,7 +8587,8 @@
                 var s1 = S3(HF(sa - 0.06, nsT * w * 0.985), z0 + H * 0.4 + boxH * 0.72), s2 = S3(HF(sa + 0.06, nsT * w * 0.985), z0 + H * 0.4 + boxH * 0.72);
                 line(s1, s2, 1.4, '#15181e');
               }
-              if (fwdT < 0) {
+              if (spec.rearDoor) rearDoor(HF, bedA0 + 0.02, w * 0.72, z0 + H * 0.45, boxH - 3, 'double');
+              else if (fwdT < 0) {
                 var d1 = S3(HF(bedA0 + 0.015, -w * 0.4), z0 + H * 0.5), d2 = S3(HF(bedA0 + 0.015, w * 0.4), z0 + H * 0.5);
                 var d3 = S3(HF(bedA0 + 0.015, w * 0.4), z0 + H * 0.4 + boxH - 2), d4 = S3(HF(bedA0 + 0.015, -w * 0.4), z0 + H * 0.4 + boxH - 2);
                 edge(g, d1, d4, 'rgba(10,9,7,.5)', 0.8); edge(g, d2, d3, 'rgba(10,9,7,.5)', 0.8); edge(g, d4, d3, 'rgba(10,9,7,.5)', 0.8);
@@ -8462,6 +8596,7 @@
               return;
             }
             slabF(HF, bedA0 + 0.02, bedA1 - 0.02, -w * 0.98, w * 0.98, z0 + H * 0.4, boxH, TC, 0, 0, w * 0.1);
+            if (spec.rearDoor) rearDoor(HF, bedA0 + 0.02, w * 0.9, z0 + 1, H * 0.4 + boxH - 2, 'canvas');
             // hoops showing through the canvas
             var hoops = heavy ? 5 : 4;
             for (var hp = 1; hp < hoops; hp++) {
@@ -8586,15 +8721,20 @@
           var hh = H * (big ? 1.08 : ifv ? 0.85 : 1);
           // a tall box: the upper front plate raked back, the back straight down
           slabF(HF, -L * 0.5, L * 0.5, -w, w, z0, hh, TB, L * (ifv ? 0.3 : 0.24), 0.01, w * 0.04);
+          // the heavy carriers' glacis carries the hexagonal active armour
+          if (st.hexNose) hexNose(HF, L * 0.5, L * 0.5 - L * (ifv ? 0.3 : 0.24), -w * 0.9, w * 0.9, z0, hh);
+          if (st.hex) hexFlank(HF, -L * 0.46, L * 0.24, nearSide() * w, z0 + 1, hh * 0.9);
           if (big) {
-            // a raised troop compartment over the rear two thirds, and applique panels
+            // a raised troop compartment over the rear two thirds
             slabF(HF, -L * 0.48, L * 0.02, -w * 0.9, w * 0.9, z0 + hh, H * 0.3, TB, L * 0.05, 0, w * 0.04);
-            bandOnSides(g, box(0, 0, L, Wd * 0.94), z0 + hh * 0.35, 3, 2, trim);
           }
-          // the rear ramp, where it can be seen
-          var ra = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + 2);
-          var rb = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + hh - 3);
-          if ((cos + sin) < 0) poly(g, [ra[0], ra[1], rb[1], rb[0]], mixc(hull, dark, 0.5));
+          // the rear ramp, where it can be seen: a proper door on the troop carriers, a darker plate on the rest
+          if (spec.rearDoor) rearDoor(HF, -L * 0.5, w * 0.62, z0 + 1.5, hh - 4, 'ramp');
+          else {
+            var ra = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + 2);
+            var rb = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + hh - 3);
+            if ((cos + sin) < 0) poly(g, [ra[0], ra[1], rb[1], rb[0]], mixc(hull, dark, 0.5));
+          }
           bandOnSides(g, box(0, 0, L, Wd * 0.94), z0 + 1, 2, 2, 'rgba(10,9,7,.45)');
           lights(HF, L * 0.49, -w * 0.62, z0 + hh * 0.45); lights(HF, L * 0.49, w * 0.62, z0 + hh * 0.45);
           grille(HF, L * 0.18, L * 0.3, w * 0.15, w * 0.75, z0 + hh + 0.3, 4);
@@ -8605,12 +8745,7 @@
         case 'mlrs': {
           // an armoured cab at the front, a flat launcher bed behind it
           slabF(HF, -L * 0.5, L * 0.5, -w, w, z0, H * 0.55, TB, L * 0.04, 0, w * 0.03);
-          slabF(HF, L * 0.16, L * 0.5, -w * 0.96, w * 0.96, z0 + H * 0.55, H * 0.8, TB, L * 0.1, 0, w * 0.06);
-          if (cos + sin > 0.02) {                          // the windscreen, only when the front faces us
-            var m1 = S3(HF(L * 0.45, -w * 0.78), z0 + H * 0.75), m2 = S3(HF(L * 0.45, w * 0.78), z0 + H * 0.75);
-            var m3 = S3(HF(L * 0.4, w * 0.74), z0 + H * 1.25), m4 = S3(HF(L * 0.4, -w * 0.74), z0 + H * 1.25);
-            poly(g, [m1, m2, m3, m4], GLASS); edge(g, m4, m3, GLINT, 0.8);
-          }
+          // (the cab itself goes on with the launcher, in styledTop, so the two layer by depth)
           lights(HF, L * 0.5, -w * 0.62, z0 + H * 0.35); lights(HF, L * 0.5, w * 0.62, z0 + H * 0.35);
           return;
         }
@@ -8623,9 +8758,7 @@
           shape(HF, fpts, z0, H * 0.9, TB, null, ftop);
           var ns4 = nearSide();
           hexFlank(HF, -L * 0.42, L * 0.3, ns4 * w * 1.0, z0 + 1, H * 0.8);
-          // the dark sensor slit across the nose and the running lights
-          edge(g, S3(HF(L * 0.44, -w * 0.4), z0 + H * 0.3), S3(HF(L * 0.44, w * 0.4), z0 + H * 0.3), '#0b0d11', 1.6);
-          if (!dead) edge(g, S3(HF(L * 0.44, -w * 0.3), z0 + H * 0.3), S3(HF(L * 0.44, -w * 0.1), z0 + H * 0.3), '#7fd8e8', 0.9);
+          hexNose(HF, L * 0.5, L * 0.14, -w * 0.45, w * 0.45, z0, H * 0.9, 3);   // and across the nose: a row of three over a row of two
           grille(HF, -L * 0.42, -L * 0.24, -w * 0.5, w * 0.5, z0 + H * 0.9 + 0.2, 5);
           return;
         }
@@ -8634,11 +8767,14 @@
           var mbt = st.body === 'mbt';
           var hh2 = H * (mbt ? 0.8 : 0.88);
           slabF(HF, -L * 0.5, L * 0.5, -w * 0.94, w * 0.94, z0, hh2, TB, L * (mbt ? 0.26 : 0.2), L * 0.05, w * 0.03);
+          if (st.hexNose) hexNose(HF, L * 0.5, L * 0.5 - L * (mbt ? 0.26 : 0.2), -w * 0.86, w * 0.86, z0, hh2);
           // lower glacis wedge under the nose
           grille(HF, -L * 0.44, -L * 0.24, -w * 0.6, w * 0.6, z0 + hh2 + 0.2, mbt ? 6 : 4);
           lights(HF, L * 0.49, -w * 0.72, z0 + hh2 * 0.35); lights(HF, L * 0.49, w * 0.72, z0 + hh2 * 0.35);
           // tools and a tow cable along the deck
           edge(g, S3(HF(-L * 0.2, -w * 0.8), z0 + hh2 + 0.5), S3(HF(L * 0.1, -w * 0.8), z0 + hh2 + 0.5), '#3a2f22', 1.2);
+          // the Tier V hulls carry the same hexagonal active armour as the advanced combat vehicle
+          if (st.hex) hexFlank(HF, -L * 0.42, L * 0.3, nearSide() * w * 0.94, z0 + 1, hh2 * 0.9);
           return;
         }
       }
@@ -8750,6 +8886,7 @@
         }
         var mz = S3(TF(len, 0), z);
         if (!dead) sEllipse(mz[0], mz[1], wd * 0.48, wd * 0.43, 'rgba(180,245,255,.95)');
+        return mz;
       }
       function pintle(fr, p, q, z, shield) {
         // a post, a machine gun on it, and a shield plate in front
@@ -8887,7 +9024,14 @@
             };
             gun = function () {
               var tip = barrel(TF, TR * 0.3, TR * 1.05, 0, tz + 5, 4.2, 'flame', { col: '#3a3f38', lit: '#5c6458' });
-              if (!dead) { sEllipse(tip[0], tip[1], 1.6, 1.4, '#e08a3a'); sEllipse(tip[0], tip[1], 0.8, 0.7, '#ffd070'); }
+              // the pilot light at the nozzle: a small flame licking upward, flickering
+              if (!dead) {
+                var ft = (root.performance ? performance.now() : 0) / 90, fk = Math.floor(ft) % 4;
+                var fh = [5, 7, 6, 8][fk], fs = [0, 0.8, 0, -0.8][fk];
+                poly(g, [[tip[0] - 2, tip[1]], [tip[0] + fs, tip[1] - fh], [tip[0] + 2, tip[1]]], '#e08a3a');
+                poly(g, [[tip[0] - 1, tip[1]], [tip[0] + fs * 0.6, tip[1] - fh * 0.55], [tip[0] + 1, tip[1]]], '#ffd070');
+                sEllipse(tip[0], tip[1], 1.6, 1.2, '#e08a3a');
+              }
               coaxMG(TR, tz + 5, TR * 0.22);
             };
             break;
@@ -8971,13 +9115,16 @@
               var sn = S3(TF(-TR * 0.3, -TR * 0.25), tz + 9);
               sEllipse(sn[0], sn[1] - 1.2, 2.2, 1.8, '#c9ced6'); sEllipse(sn[0], sn[1] - 1.8, 1.2, 0.9, '#eef2f6');
               aerial(TF, -TR * 0.6, -TR * 0.32, tz + 9, 26, 0.04); aerial(TF, -TR * 0.62, -TR * 0.18, tz + 9, 18, 0.04);
-              if (!dead) edge(g, S3(TF(TR * 0.5, -TR * 0.25), tz + 5), S3(TF(TR * 0.5, TR * 0.25), tz + 5), '#7fd8e8', 0.9);
+              // the dark sensor slit across the turret's face, one end of it lit
+              edge(g, S3(TF(TR * 0.5, -TR * 0.3), tz + 5), S3(TF(TR * 0.5, TR * 0.3), tz + 5), '#0b0d11', 1.6);
+              if (!dead) edge(g, S3(TF(TR * 0.5, -TR * 0.22), tz + 5), S3(TF(TR * 0.5, -TR * 0.06), tz + 5), '#7fd8e8', 0.9);
             };
             gun = function () {
-              if (st.plasma) plasmaBarrel(TR * 0.4, TR * (st.gunLen || 2.3), tz + 5, 3.4);
-              else barrel(TF, TR * 0.4, TR * (st.gunLen || 2.3), 0, tz + 5, 2.2, 'gun', { col: '#262b33' });
-              // the rail driver slung under the main gun
-              barrel(TF, TR * 0.45, TR * 1.1, 0.001, tz + 2.5, 1.2, 'rail', { col: '#15181e', lit: '#7fd8e8' });
+              var ftip = st.plasma ? plasmaBarrel(TR * 0.4, TR * (st.gunLen || 2.3), tz + 5, 3.4)
+                : barrel(TF, TR * 0.4, TR * (st.gunLen || 2.3), 0, tz + 5, 2.2, 'gun', { col: '#262b33' });
+              // the rail driver fires down the same barrel: its shots leave from the main gun's muzzle
+              var fbase = S3(TF(TR * 0.4, 0), tz + 5);
+              mount('rail', ftip, ftip[0] >= fbase[0] ? 1 : -1);
             };
             break;
         }
@@ -9041,6 +9188,20 @@
           launcher(MF, -0.3, 0.3, -w * 0.62, w * 0.62, roof + 4, 6, 2, 6, 'rocket', { up: 6, tone: TT, warheads: '#8a3a24' });
         });
       }
+      if (st.body === 'mlrs') {
+        /* The cab stands up off the bed: with the nose towards the eye it goes on
+           after the launcher and hides the lower end of it and its base; with the
+           tail towards the eye the launcher goes over it. */
+        var mw = w, mz = deck;
+        part(depthOf(HF, L * 0.33, 0), function () {
+          slabF(HF, L * 0.16, L * 0.5, -mw * 0.96, mw * 0.96, mz + H * 0.55, H * 0.8, TB, L * 0.1, 0, mw * 0.06);
+          if (cos + sin > 0.02) {                          // the windscreen, only when the front faces us
+            var m1 = S3(HF(L * 0.45, -mw * 0.78), mz + H * 0.75), m2 = S3(HF(L * 0.45, mw * 0.78), mz + H * 0.75);
+            var m3 = S3(HF(L * 0.4, mw * 0.74), mz + H * 1.25), m4 = S3(HF(L * 0.4, -mw * 0.74), mz + H * 1.25);
+            poly(g, [m1, m2, m3, m4], GLASS); edge(g, m4, m3, GLINT, 0.8);
+          }
+        });
+      }
       if (st.mlrs) {
         var LF = frameAt(-L * 0.18, 0, AIM);
         part(depthOf(HF, -L * 0.18, 0), function () {
@@ -9051,17 +9212,10 @@
              right round and the hull's near flank is the pods' far one. */
           var nsL = nearSideAt(AIM);
           [-nsL, nsL].forEach(function (sd) {
-            launcher(LF, -L * 0.3, L * 0.26, Math.min(sd * w * 0.04, sd * w * 0.9), Math.max(sd * w * 0.04, sd * w * 0.9), roof + 4, 10, 2, 3, 'rocket', { up: 10, tone: TB, warheads: '#15181e' });
+            launcher(LF, -L * 0.3, L * 0.26, Math.min(sd * w * 0.04, sd * w * 0.9), Math.max(sd * w * 0.04, sd * w * 0.9), roof + 4, 10, 2, 3, 'rocket', { up: 15, tone: TB, warheads: '#15181e' });
           });
         });
       }
-      if (st.tanks) part(depthOf(HF, -L * 0.4, 0), function () {
-        // the flame fuel, in two armoured bottles across the engine deck
-        [-0.5, 0.5].forEach(function (b) {
-          var c1 = S3(HF(-L * 0.4, w * (b - 0.35)), roof + 3), c2 = S3(HF(-L * 0.4, w * (b + 0.35)), roof + 3);
-          line(c1, c2, 5.5, '#3a3f38'); line([c1[0], c1[1] - 1.5], [c2[0], c2[1] - 1.5], 1.4, '#6a7064');
-        });
-      });
       if (st.cross) part(depthOf(HF, 0, 0) - 0.01, function () { crossOn(HF, -L * 0.08, 0, roof + 0.3, 0.3); });
       if (st.aerials) part(depthOf(HF, -L * 0.4, 0), function () {
         for (var i = 0; i < st.aerials; i++) {
@@ -9088,7 +9242,7 @@
        Ducted fans in place of open rotors: every one of these lifts on shrouded
        fans, so the rotor discs are gone and a ring of shroud with a blur of
        blades inside it stands in for each. */
-    function fan(fr, p, q, z, r, vertical) {
+    function fan(fr, p, q, z, r, vertical, flush, tilt) {
       // a rebel machine's fans come off whatever it was patched up from
       var ft0 = patch(TB, fr(p, q), 97), hull = ft0.mid, lit = ft0.lit, dark = ft0.dark;
       var c = S3(fr(p, q), z), rx = r * K, ry = vertical ? r * K : r * K * 0.5;
@@ -9100,11 +9254,44 @@
         if (!dead) sEllipse(c[0], c[1], rx * vx * 0.9, ry * 0.9, 'rgba(190,200,214,.3)');
         return;
       }
+      /* A fan let flush into a wing: no housing, only the opening in the skin
+         with its thin rim, the dark well and the blades turning in it. */
+      if (flush) {
+        sEllipse(c[0], c[1], rx + 1, ry + 0.8, mixc(hull, dark, 0.55));      // the rim of the opening
+        sEllipse(c[0], c[1] + 0.3, rx, ry, '#0e1115');                      // the well
+        if (!dead) {
+          sEllipse(c[0], c[1] + 0.5, rx * 0.9, ry * 0.9, 'rgba(170,182,198,.22)');
+          var fsp = ((root.performance ? performance.now() : 0) * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
+          for (var fi = 0; fi < 5; fi++) {
+            var fa = fi * Math.PI * 2 / 5 + 0.4 + fsp;
+            line([c[0], c[1] + 0.5], [c[0] + Math.cos(fa) * rx * 0.9, c[1] + 0.5 + Math.sin(fa) * ry * 0.9], 1.1, 'rgba(206,214,226,.3)');
+          }
+        }
+        sEllipse(c[0], c[1] + 0.5, Math.max(1.2, rx * 0.16), Math.max(0.8, ry * 0.16), STEEL_LIT);   // hub
+        return;
+      }
       /* A shrouded fan, layered as a real one would be: the far half of the
          shroud's lip first, then the dark well and the blur of the blades
          inside it, then the near half of the lip over the blade tips, and
          last the outer wall of the shroud dropping down in front of all of it. */
       var dh = Math.max(3, r * K * 0.28), cy = c[1] - dh, lipW = Math.max(1.6, r * K * 0.13);
+      /* `tilt` pitches the fan forward by that angle, its front edge dipping,
+         as a gunship's fans lean to drive it along: the fan is drawn level and
+         the canvas turned, so the level disc lands on the leaning one. */
+      g.save();
+      if (tilt) {
+        var ea = S3(fr(p + 1, q), z), eb = S3(fr(p, q + 1), z);
+        var ax = ea[0] - c[0], ay = ea[1] - c[1], bx = eb[0] - c[0], by = eb[1] - c[1];
+        // the forward axis tips down: its screen step shortens and drops
+        var ax2 = ax * Math.cos(tilt), ay2 = ay * Math.cos(tilt) + K * Math.sin(tilt);
+        var det = ax * by - ay * bx;
+        if (Math.abs(det) > 1e-6) {
+          // T = [a' b] [a b]^-1
+          var i00 = by / det, i01 = -bx / det, i10 = -ay / det, i11 = ax / det;
+          var t00 = ax2 * i00 + bx * i10, t01 = ax2 * i01 + bx * i11, t10 = ay2 * i00 + by * i10, t11 = ay2 * i01 + by * i11;
+          g.translate(c[0], c[1]); g.transform(t00, t10, t01, t11, 0, 0); g.translate(-c[0], -c[1]);
+        }
+      }
       sEllipse(c[0], c[1] + 0.5, rx + 1.6, ry + 1.2, 'rgba(8,10,14,.45)');
       function arcBand(y, from, to, col, wdt) {
         g.strokeStyle = col; g.lineWidth = wdt;
@@ -9128,6 +9315,7 @@
       g.ellipse(c[0], cy, rx + lipW * 0.5, ry + lipW * 0.35, 0, Math.PI, 0, true); g.closePath(); g.fill();
       arcBand(cy, 0, Math.PI, lit, lipW);
       arcBand(cy - lipW * 0.25, 0.15, Math.PI - 0.15, mixc(lit, '#ffffff', 0.35), 0.7);
+      g.restore();
     }
     // a strut from the body out to a fan pod
     function strut(fr, p0, q0, p1, q1, z, wdt) {
@@ -9391,9 +9579,11 @@
             tailFin(-L * 0.72, z + H * 0.91, 15, false, 0.17);
             plate(AF, [[-L * 0.66, -w * 0.9], [-L * 0.66, w * 0.9], [-L * 0.78, w * 0.9], [-L * 0.78, -w * 0.9]], z + H * 0.81, 1.5);
           });
-          // stub wings with pods, and a fan at each tip
+          /* stub wings with pods, and a fan at each tip: layered against the body,
+             the far one under it and the near one over it, from any angle */
+          var stubNear = nearSide(), bodyD = AF(0, 0);
           [-1, 1].forEach(function (sd) {
-            part(-L * 0.02, sd * w * 2.6, function () {
+            parts.push({ d: bodyD.x + bodyD.y + (sd === stubNear ? 0.001 : -0.001), fn: function () {
               var wz = z + H * 0.45;
               var npods = spec.noPods ? 0 : st === 'apacherk' || st === 'hindrk' ? 2 : 1;
               for (var pi = 0; pi < npods; pi++) {
@@ -9401,8 +9591,9 @@
                 podUnder(lead, sd * pq, wz, npods > 1 && pi === 1 ? 'missile' : 'rocket', st === 'hindrk');
               }
               plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
-              fan(AF, -L * 0.05, sd * w * 3.1, wz + 1, 0.4);
-            });
+              // the transport and the heavy craft lift more, on bigger fans
+              fan(AF, -L * 0.05, sd * w * (hind ? 3.25 : 3.1), wz + 1, hind ? 0.48 : 0.4);
+            } });
           });
           part(0, 0, function () {
             fuselage(body2, top2, z, H, TB);
@@ -9424,6 +9615,61 @@
           part(L * 0.45, 0, function () { noseGun(L * 0.42, 0, z + 1, hind ? 0.5 : 0.42, 'mg'); });
           break;
         }
+        case 'comanche': {
+          /* A stealth gunship: a long, narrow, faceted body with sharp chines and
+             a pointed nose, the crew in stepped tandem under flat-plated glass,
+             short swept stubs carrying the lift fans and no pods at all (its
+             weapons ride in bays in the flanks), and a fan in the fin. */
+          var cw = w * 0.72;
+          var cbody = [[L * 0.52, 0.001], [L * 0.36, cw * 0.62], [L * 0.16, cw], [-L * 0.2, cw], [-L * 0.32, cw * 0.55],
+            [-L * 0.32, -cw * 0.55], [-L * 0.2, -cw], [L * 0.16, -cw], [L * 0.36, -cw * 0.62]];
+          // the top is much narrower than the chines: the sides slope in, as a faceted hull does
+          var ctop = cbody.map(function (q2) { return [q2[0] * 0.94 - (q2[0] > 0 ? L * 0.03 : 0), q2[1] * 0.5]; });
+          var tipQ = w * 2.3;
+          // the boom tapers back from the top of the body to the fin, with its fan and a small tailplane
+          part(-L * 0.55, 0, function () {
+            shape(AF, [[-L * 0.28, -cw * 0.5], [-L * 0.28, cw * 0.5], [-L * 0.84, cw * 0.2], [-L * 0.84, -cw * 0.2]], z + H * 0.6, H * 0.34, TB, 0.85,
+              [[-L * 0.3, -cw * 0.24], [-L * 0.3, cw * 0.24], [-L * 0.82, cw * 0.1], [-L * 0.82, -cw * 0.1]]);
+            /* The tailplane's halves droop from the boom, their tips well below
+               their roots: the far half goes in before the fin, the near one after. */
+            var tz = z + H * 0.84, ns = nearSide();
+            function droop(sd) {
+              var r0 = S3(AF(-L * 0.64, sd * cw * 0.2), tz), r1 = S3(AF(-L * 0.75, sd * cw * 0.2), tz);
+              var t1 = S3(AF(-L * 0.78, sd * w * 1.05), tz - 3.5), t0 = S3(AF(-L * 0.7, sd * w * 1.05), tz - 3.5);
+              var th = 1.3;
+              poly(g, [[r0[0], r0[1] + th], [r1[0], r1[1] + th], [t1[0], t1[1] + th], [t0[0], t0[1] + th]], mixc(hull, dark, 0.55));
+              poly(g, [r0, r1, t1, t0], sd === ns ? hull : mixc(hull, lit, 0.4));
+              edge(g, t0, t1, trim, 1);
+            }
+            droop(-ns);
+            tailFin(-L * 0.74, z + H * 0.94, 13, false, 0.2);
+            droop(ns);
+          });
+          /* Swept stubs, a fan at each tip. They are layered against the body
+             rather than sorted by where their tips are: the far stub and its fan
+             go under the fuselage, the near ones over it, from any angle. */
+          var stubNear = nearSide(), bodyD = AF(0, 0);
+          [-1, 1].forEach(function (sd) {
+            parts.push({ d: bodyD.x + bodyD.y + (sd === stubNear ? 0.001 : -0.001), fn: function () {
+              var wz = z + H * 0.42;
+              plate(AF, [[L * 0.08, sd * cw * 0.95], [-L * 0.06, sd * tipQ * 0.86], [-L * 0.16, sd * tipQ * 0.86], [-L * 0.14, sd * cw * 0.95]], wz, 1.6);
+              fan(AF, -L * 0.1, sd * tipQ, wz + 1, 0.36, false, false, 0.3);
+            } });
+          });
+          part(0, 0, function () {
+            fuselage(cbody, ctop, z, H, TB);
+            // the weapon bay doors, closed flush in the flanks
+            var ns = nearSide();
+            var b0 = S3(AF(L * 0.1, ns * cw * 0.99), z + H * 0.3), b1 = S3(AF(-L * 0.16, ns * cw * 0.99), z + H * 0.3);
+            edge(g, b0, b1, 'rgba(10,9,7,.45)', 0.8);
+            // stepped tandem canopies: the gunner low in front, the pilot behind and above
+            canopy(L * 0.2, L * 0.42, cw * 0.44, z + H * 0.74, H * 0.24);
+            canopy(L * 0.02, L * 0.2, cw * 0.48, z + H * 0.82, H * 0.3);
+          });
+          // the chin gun, and the Gauss rails fire from it too
+          part(L * 0.45, 0, function () { noseGun(L * 0.34, 0, z + 1, 0.3, 'gun', { rail: true, also: ['rail', 'auto', 'mg'] }); });
+          break;
+        }
         case 'jet': case 'hybrid': {
           var hyb = st === 'hybrid';
           var fw2 = w * 0.62;
@@ -9431,67 +9677,39 @@
             [-L * 0.5, -fw2 * 0.6], [-L * 0.46, -fw2 * 0.9], [L * 0.1, -fw2], [L * 0.32, -fw2 * 0.8]];
           var fusTop = fus.map(function (q2) { return [q2[0] * 0.96, q2[1] * 0.62]; });
           var span = hyb ? w * 3.4 : w * 2.9;
-          // the wing: a broad trapezoid, the fuselage over it
-          part(-L * 0.1, 0, function () {
-            // the pods go under the wing first, so it covers all but their noses
-            var jlead = function (bb) { return L * 0.14 + (Math.abs(bb) - fw2) / (span - fw2) * (-L * 0.34); };
-            [-1, 1].forEach(function (sd) {
-              if (spec.noPods) return;                   // a clean wing: its guns are in the body
-              var q1 = sd * span * (hyb ? 0.92 : 0.6);
-              podUnder(jlead(q1), q1, z + H * 0.3, hyb ? 'rocket' : 'missile', false);
-              if (spec.extraPods) {                      // a rocket pod inboard, a missile rail outboard
-                podUnder(jlead(span * 0.36), sd * span * 0.36, z + H * 0.3, 'rocket', true);
-                podUnder(jlead(span * 0.84), sd * span * 0.84, z + H * 0.3, 'missile', false);
-              }
-            });
-            plate(AF, [[L * 0.14, -fw2], [L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, -span], [-L * 0.2, -span]], z + H * 0.3, 2);
-            plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
-            if (hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36); });
-            /* The advanced craft's wings are skinned in hexagonal plates: a
-               honeycomb laid over the top of each, clipped to the wing. */
-            if (spec.hexWings) {
-              var wing = [[L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, fw2]];
-              var inWing = function (a1, b1) {
-                var bb = Math.abs(b1);
-                if (bb < fw2 || bb > span || a1 < -L * 0.36) return false;
-                // the leading edge runs from (0.14L, fw2) out to (-0.2L, span)
-                var lead = L * 0.14 + (bb - fw2) / (span - fw2) * (-L * 0.34);
-                return a1 <= lead;
-              };
-              var hr = w * 0.46, zt = z + H * 0.3 + 2;
-              g.save();
-              g.lineWidth = 1;
-              g.strokeStyle = dead ? 'rgba(60,56,50,.6)' : 'rgba(140,146,154,.85)';
-              var hl = dead ? 'rgba(80,72,60,.3)' : 'rgba(210,216,222,.35)';
-              for (var hi = -8; hi <= 8; hi++) {
-                for (var hj = 0; hj <= 14; hj++) {
-                  [-1, 1].forEach(function (sd2) {
-                    var ca = -L * 0.36 + hi * hr * 1.5 + L * 0.2;
-                    var cb = sd2 * (fw2 + hj * hr * 1.732 + (hi % 2 ? hr * 0.866 : 0));
-                    var vs = [];
-                    for (var v = 0; v < 6; v++) {
-                      var an = v * Math.PI / 3;
-                      vs.push([ca + Math.cos(an) * hr * 0.92, cb + Math.sin(an) * hr * 0.92]);
-                    }
-                    if (!vs.every(function (q3) { return inWing(q3[0], q3[1]); })) return;
-                    var sp3 = vs.map(function (q3) { return S3(AF(q3[0], q3[1]), zt); });
-                    g.beginPath();
-                    sp3.forEach(function (q3, k3) { if (k3) g.lineTo(q3[0], q3[1]); else g.moveTo(q3[0], q3[1]); });
-                    g.closePath(); g.stroke();
-                    g.strokeStyle = hl;
-                    g.beginPath(); g.moveTo(sp3[3][0], sp3[3][1] + 1); g.lineTo(sp3[4][0], sp3[4][1] + 1); g.stroke();
-                    g.strokeStyle = dead ? 'rgba(60,56,50,.6)' : 'rgba(140,146,154,.85)';
-                  });
+          /* The wing, a broad trapezoid, is laid in two halves, each placed by its own
+             depth: side-on the near wing (with its pod and fan) goes over the fuselage
+             and the far one under it, rather than both under it. Each half runs in to
+             the fuselage's side, so neither is ever drawn across the body. */
+          var jlead = function (bb) { return L * 0.14 + (Math.abs(bb) - fw2) / (span - fw2) * (-L * 0.34); };
+          [-1, 1].forEach(function (sd) {
+            part(-L * 0.2, sd * span * 0.55, function () {
+              // the pods go under the wing first, so it covers all but their noses
+              if (!spec.noPods) {                        // a clean wing: its guns are in the body
+                var q1 = sd * span * (hyb ? 0.92 : 0.6);
+                podUnder(jlead(q1), q1, z + H * 0.3, hyb ? 'rocket' : 'missile', false);
+                if (spec.extraPods) {                    // a rocket pod inboard, a missile rail outboard
+                  podUnder(jlead(span * 0.36), sd * span * 0.36, z + H * 0.3, 'rocket', true);
+                  podUnder(jlead(span * 0.84), sd * span * 0.84, z + H * 0.3, 'missile', false);
                 }
               }
-              g.restore();
-            }
+              plate(AF, [[L * 0.14, sd * fw2 * 0.98], [-L * 0.2, sd * span], [-L * 0.36, sd * span], [-L * 0.36, sd * fw2 * 0.92]], z + H * 0.3, 2);
+              if (hyb) fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36);
+              /* The company's jets are VTOL: they can hang in the air as well as fly
+                 through it, so each wing has a lift fan let flush into it. */
+              else fan(AF, -L * 0.16, sd * span * 0.5, z + H * 0.3 + 2, 0.3, false, true);
+            });
           });
           part(0, 0, function () {
+            // the tailplane first, always under the body (and the fins, which go on last)
+            plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             fuselage(fus, fusTop, z, H, TB);
-            // the engine nozzle at the back
-            var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
-            sEllipse(nz[0], nz[1], 3.4, 3, STEEL); sEllipse(nz[0], nz[1], 2, 1.8, dead ? '#15181e' : '#c96a2a');
+            // the engine nozzle at the back: seen only when the tail is towards the eye or side-on;
+            // with the nose towards the eye the fuselage hides it
+            if ((cos + sin) < 0.5) {
+              var nz = S3(AF(-L * 0.52, 0), z + H * 0.45);
+              sEllipse(nz[0], nz[1], 3.4, 3, STEEL); sEllipse(nz[0], nz[1], 2, 1.8, dead ? '#15181e' : '#c96a2a');
+            }
             canopy(L * 0.12, L * 0.36, fw2 * 0.5, z + H, 4);
             if (hyb) { var sp = S3(AF(L * 0.1, 0), z + H + 1); sEllipse(sp[0], sp[1] - 1, 2.4, 1.6, STEEL); }
           });
@@ -9503,8 +9721,7 @@
           part(L * 0.4, 0, function () {
             var gp = S3(AF(L * 0.26, -fw2 * 0.7), z + H * 0.7);
             mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);        // the gun port fires from here, without a dot to mark it
-            if (spec.noseGun) noseGun(L * 0.46, 0, z + 1, 0.12, 'gun', { rail: true, also: ['rail', 'auto'] });
-            else if (hyb) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
+            if (hyb) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
           });
           break;
         }
@@ -9532,7 +9749,8 @@
     }
     function mechClass() {
       var base = HULL[u.art] || HULL.wheeled;
-      // light tanks and cars under 2.3", the big future hulls from 2.55"
+      // light tanks and cars under 2.3", the big future hulls from 2.55" — or whatever the hull says it is
+      if (base.mech) return base.mech;
       return base.len < 2.3 ? 'light' : base.len >= 2.55 ? 'heavy' : 'medium';
     }
     /* legH: ground to hip; torsoH: hip to the top of the body; headH: what
@@ -9663,6 +9881,8 @@
     function drawMech() {
       var hm = mechHeights(), cls = hm.cls, KITM = mechKit(), sf = hm.sf;
       var heavy = cls === 'heavy', light = cls === 'light';
+      // a heavy walker built on an advanced-protection hull wears its hex armour
+      var hexMech = heavy && !!(spec.style && (spec.style.body === 'future' || spec.style.hexNose));
       var hipY = lift + hm.legH;                       // where the legs meet the body
       var shoulder = hipY + hm.torsoH;                 // the top of the torso
       var waistY = hipY + Math.round(3 * sf);          // where the chest starts
@@ -9701,6 +9921,7 @@
       armsBack.forEach(drawArm);
       drawLeg(legs2[0]);
       drawLeg(legs2[1]);
+      if (KITM.shoulder === 'tanks' && fwd > 0) backTanks();   // behind the chest
       drawTorso();
       armsFront.forEach(drawArm);
       drawTop();
@@ -9861,6 +10082,8 @@
         // the chest itself, hunched forward, its front plate raked back
         shape(TF, rectPts(-tL * 0.95, tL * 0.9, -tW, tW), zU, upH, TB, null,
           rectPts(-tL * 0.82, tL * 0.56, -tW * 0.94, tW * 0.94));
+        // five hex tiles across the back of the chest, three over two, when the back is towards the eye
+        if (hexMech && fwd < -0.05) hexPanel(TF, [-tL * 0.95, tW * 0.8], [-tL * 0.95, -tW * 0.8], [-tL * 0.82, tW * 0.75], [-tL * 0.82, -tW * 0.75], zU, upH, [3, 2]);
         /* the cockpit: an angular armoured wedge standing out of the chest —
            a raked front facet, its corners cut back into angled cheeks, the
            top drawn in narrower — glazed in a T: a wide pane across the front
@@ -9941,6 +10164,16 @@
           poly(g, [S3(TF(fa(k0), -fb(k0) * 0.6), waistY + cH * k0), S3(TF(fa(k0), fb(k0) * 0.6), waistY + cH * k0),
             S3(TF(fa(k1), fb(k1) * 0.72), waistY + cH * k1), S3(TF(fa(k1), -fb(k1) * 0.72), waistY + cH * k1)], TT.mid);
           edge(g, S3(TF(fa(k1), fb(k1) * 0.72), waistY + cH * k1), S3(TF(fa(k1), -fb(k1) * 0.72), waistY + cH * k1), TT.lit, 0.8);
+          /* a medical walker wears its red cross on the front of the chest, on the plate:
+             a white square and the cross, laid on the plate as it leans out */
+          if (spec.cross) {
+            var CP = function (u2, k) { return S3(TF(fa(k) + 0.004, u2 * fb(k) * 0.5), waistY + cH * k); };
+            var kc = (k0 + k1) / 2, kh = (k1 - k0) * 0.36;
+            var sq = function (u0, u1, ka, kb) { return [CP(u0, ka), CP(u1, ka), CP(u1, kb), CP(u0, kb)]; };
+            poly(g, sq(-0.72, 0.72, kc - kh, kc + kh), '#e8e3d8');
+            poly(g, sq(-0.54, 0.54, kc - kh * 0.25, kc + kh * 0.25), '#c23a32');
+            poly(g, sq(-0.18, 0.18, kc - kh * 0.75, kc + kh * 0.75), '#c23a32');
+          }
         }
       }
 
@@ -9967,6 +10200,14 @@
             var pz = shoulder - Math.round(14 * sf);
             slabF(TF, -tL * 0.66, tL * 0.62, off - tW * 0.42, off + tW * 0.42, pz - 2, 3, TS);
             slabF(TF, -tL * 0.64, tL * 0.6, off - tW * 0.4, off + tW * 0.4, pz, shoulder + 3 - pz, TT, tL * 0.18, tL * 0.18, tW * 0.12);
+            /* the advanced protection hex armour: two tiles on the front, the outer
+               side and the rear of each shoulder, on whichever of them shows */
+            if (hexMech) {
+              var pa0 = -tL * 0.64, pa1 = tL * 0.6, pin = tL * 0.18, pb = tW * 0.4, ph = shoulder + 3 - pz;
+              if (fwd > 0.05) hexPanel(TF, [pa1, off - pb], [pa1, off + pb], [pa1 - pin, off - pb * 0.7], [pa1 - pin, off + pb * 0.7], pz, ph, [2]);
+              if (fwd < -0.05) hexPanel(TF, [pa0, off + pb], [pa0, off - pb], [pa0 + pin, off + pb * 0.7], [pa0 + pin, off - pb * 0.7], pz, ph, [2]);
+              if (nearOf(s) > 0.05) hexPanel(TF, [pa0, off + s * pb], [pa1, off + s * pb], [pa0 + pin, off + s * pb * 0.7], [pa1 - pin, off + s * pb * 0.7], pz, ph, [2]);
+            }
           } else if (light) {
             // a shoulder cap reaching in over the top of the chest, so the arm is plainly joined on
             slabF(TF, -tL * 0.55, tL * 0.55, off - tW * 0.34, off + tW * 0.3, shoulder - Math.round(6 * sf), Math.round(6 * sf), TB, tL * 0.15, tL * 0.1, tW * 0.05);
@@ -10028,6 +10269,14 @@
       }
 
       /* ---- on top: a heavy's missile boxes, a medium's crest, a light's head ---- */
+      /* The flame fuel slung on a walker's back: two tall bottles, the nearer
+         drawn last. Facing the viewer they go down before the chest, which hides them. */
+      function backTanks() {
+        [-0.4, 0.4].sort(function (p, q) { return nearOf(p > 0 ? 1 : -1) * Math.abs(p) - nearOf(q > 0 ? 1 : -1) * Math.abs(q); }).forEach(function (b) {
+          var t1 = S3(TF(-tL * 1.12, tW * b), shoulder - 16), t2 = S3(TF(-tL * 1.12, tW * b), shoulder);
+          line(t1, t2, 8, '#3a3f38'); line([t1[0] - 2, t1[1]], [t2[0] - 2, t2[1]], 1.8, '#6a7064');
+        });
+      }
       function drawTop() {
         extras();
         /* A medium or heavy walker drone carries its sensor dome on its right
@@ -10047,7 +10296,7 @@
             var ab2 = S3(TF(-tL * 0.4, -pad), pz), at6 = S3(TF(-tL * 0.52, -pad), pz + Math.round(20 * sf));
             sEllipse(ab2[0], ab2[1], 2, 1.2, STEEL);
             line(ab2, at6, 1.4, STEEL_LIT);
-            sEllipse(at6[0], at6[1], 1.6, 1.6, '#ff5040');
+            droneLamp(at6[0], at6[1]);
           };
           // the far one first, so the near one is drawn over it
           if (nearOf(1) > 0) { mast(); kit(); } else { kit(); mast(); }
@@ -10076,7 +10325,7 @@
           var ab = S3(TF(-tL * 0.4, tW * 1.15), shoulder), at5 = S3(TF(-tL * 0.52, tW * 1.15), shoulder + Math.round(18 * sf));
           sEllipse(ab[0], ab[1], 2, 1.2, STEEL);                // its mount on the shoulder
           line(ab, at5, 1.4, STEEL_LIT);
-          sEllipse(at5[0], at5[1], 1.6, 1.6, '#ff5040');
+          droneLamp(at5[0], at5[1]);
         } else if (light) {
           // the head sits straight on the chest, a size bigger, with a glassy blue eye
           var hz = shoulder - 1, hh = Math.round(9 * sf);
@@ -10106,13 +10355,8 @@
           line(db, dm, 1.2, STEEL);
           sEllipse(dm[0], dm[1] - 1.2, dr, dr * 0.72, '#9aa4b0'); sEllipse(dm[0] + 0.5, dm[1] - 1, dr * 0.78, dr * 0.52, '#c3ccd6');
         }
-        if (KITM.shoulder === 'tanks') {
-          [-0.4, 0.4].forEach(function (b) {
-            var t1 = S3(TF(-tL * 1.1, tW * b), shoulder - 12), t2 = S3(TF(-tL * 1.1, tW * b), shoulder - 2);
-            line(t1, t2, 5, '#3a3f38'); line([t1[0] - 1.2, t1[1]], [t2[0] - 1.2, t2[1]], 1.2, '#6a7064');
-          });
-        }
-        if (spec.cross) crossOn(TF, light ? -tL * 0.6 : -tL * 0.35, 0, shoulder + (heavy ? 0.3 : -0.7), tW * 0.3);
+        if (KITM.shoulder === 'tanks' && fwd <= 0) backTanks();   // facing away, they are in front of the chest
+        if (spec.cross && !light) crossOn(TF, -tL * 0.35, 0, shoulder + (heavy ? 0.3 : -0.7), tW * 0.3);
       }
 
     }
@@ -10298,7 +10542,13 @@
       var ap = toScreen(aq.x, aq.y), ay = ap.y - ya, ah = Math.max(10, K * 0.55);
       ellipse(g, ap.x, ay, 2, 1.2, STEEL);                   // its mount
       thickLine(g, ap.x, ay, ap.x + 1, ay - ah, 1.4, STEEL_LIT);
-      ellipse(g, ap.x + 1, ay - ah, 1.6, 1.6, '#ff5040');
+      droneLamp(ap.x + 1, ay - ah);
+    }
+    // the red light on a drone's aerial: it blinks, about once a second, and is out on a wreck
+    function droneLamp(x, y) {
+      var lit = !dead && Math.floor((root.performance ? performance.now() : 0) / 500) % 2 === 0;
+      if (lit) ellipse(g, x, y, 3.6, 3.6, 'rgba(255,80,64,.28)');
+      ellipse(g, x, y, 1.6, 1.6, lit ? '#ff5040' : '#5a1c16');
     }
 
     function drawDamage() {
