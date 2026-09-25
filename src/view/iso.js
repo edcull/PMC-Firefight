@@ -9231,7 +9231,7 @@
        Ducted fans in place of open rotors: every one of these lifts on shrouded
        fans, so the rotor discs are gone and a ring of shroud with a blur of
        blades inside it stands in for each. */
-    function fan(fr, p, q, z, r, vertical, flush) {
+    function fan(fr, p, q, z, r, vertical, flush, tilt) {
       // a rebel machine's fans come off whatever it was patched up from
       var ft0 = patch(TB, fr(p, q), 97), hull = ft0.mid, lit = ft0.lit, dark = ft0.dark;
       var c = S3(fr(p, q), z), rx = r * K, ry = vertical ? r * K : r * K * 0.5;
@@ -9264,6 +9264,23 @@
          inside it, then the near half of the lip over the blade tips, and
          last the outer wall of the shroud dropping down in front of all of it. */
       var dh = Math.max(3, r * K * 0.28), cy = c[1] - dh, lipW = Math.max(1.6, r * K * 0.13);
+      /* `tilt` pitches the fan forward by that angle, its front edge dipping,
+         as a gunship's fans lean to drive it along: the fan is drawn level and
+         the canvas turned, so the level disc lands on the leaning one. */
+      g.save();
+      if (tilt) {
+        var ea = S3(fr(p + 1, q), z), eb = S3(fr(p, q + 1), z);
+        var ax = ea[0] - c[0], ay = ea[1] - c[1], bx = eb[0] - c[0], by = eb[1] - c[1];
+        // the forward axis tips down: its screen step shortens and drops
+        var ax2 = ax * Math.cos(tilt), ay2 = ay * Math.cos(tilt) + K * Math.sin(tilt);
+        var det = ax * by - ay * bx;
+        if (Math.abs(det) > 1e-6) {
+          // T = [a' b] [a b]^-1
+          var i00 = by / det, i01 = -bx / det, i10 = -ay / det, i11 = ax / det;
+          var t00 = ax2 * i00 + bx * i10, t01 = ax2 * i01 + bx * i11, t10 = ay2 * i00 + by * i10, t11 = ay2 * i01 + by * i11;
+          g.translate(c[0], c[1]); g.transform(t00, t10, t01, t11, 0, 0); g.translate(-c[0], -c[1]);
+        }
+      }
       sEllipse(c[0], c[1] + 0.5, rx + 1.6, ry + 1.2, 'rgba(8,10,14,.45)');
       function arcBand(y, from, to, col, wdt) {
         g.strokeStyle = col; g.lineWidth = wdt;
@@ -9287,6 +9304,7 @@
       g.ellipse(c[0], cy, rx + lipW * 0.5, ry + lipW * 0.35, 0, Math.PI, 0, true); g.closePath(); g.fill();
       arcBand(cy, 0, Math.PI, lit, lipW);
       arcBand(cy - lipW * 0.25, 0.15, Math.PI - 0.15, mixc(lit, '#ffffff', 0.35), 0.7);
+      g.restore();
     }
     // a strut from the body out to a fan pod
     function strut(fr, p0, q0, p1, q1, z, wdt) {
@@ -9607,7 +9625,7 @@
             part(-L * 0.08, sd * tipQ, function () {
               var wz = z + H * 0.42;
               plate(AF, [[L * 0.08, sd * cw * 0.95], [-L * 0.06, sd * tipQ * 0.86], [-L * 0.16, sd * tipQ * 0.86], [-L * 0.14, sd * cw * 0.95]], wz, 1.6);
-              fan(AF, -L * 0.1, sd * tipQ, wz + 1, 0.36);
+              fan(AF, -L * 0.1, sd * tipQ, wz + 1, 0.36, false, false, 0.3);
             });
           });
           part(0, 0, function () {
