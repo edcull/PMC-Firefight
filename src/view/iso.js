@@ -7097,8 +7097,8 @@
     var art = u.art, P = PIECE3D[art], n = PIECE_COUNT[u.key] || 1;
     var pa = pieceAngles(u), f = pa.f;
     var ca = Math.cos(f), sa = Math.sin(f), out = [];
-    // one piece in the middle, two side by side, three in a triangle: one forward, two behind
-    var spots = n === 1 ? [[0.25, 0]] : n === 2 ? [[0.25, -0.55], [0.25, 0.55]] : [[0.75, 0], [-0.25, -0.75], [-0.25, 0.75]];
+    // one piece in the middle, two side by side and staggered, three in a triangle: one forward, two behind
+    var spots = n === 1 ? [[0.25, 0]] : n === 2 ? [[0.6, -0.55], [-0.1, 0.55]] : [[0.75, 0], [-0.25, -0.75], [-0.25, 0.75]];
     var top = pa.top;
     spots.forEach(function (sp) {
       var fwd = sp[0], sOff = sp[1];
