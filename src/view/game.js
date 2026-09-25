@@ -205,7 +205,7 @@
     shown = {};
     if (!state) return;
     state.units.forEach(function (u) {
-      shown[u.id] = { models: u.models, sp: u.sp, alive: u.alive, x: u.x, y: u.y, aboard: u.aboard, reserve: u.reserve, dp: u.dp };
+      shown[u.id] = { models: u.models, sp: u.sp, alive: u.alive, x: u.x, y: u.y, aboard: u.aboard, reserve: u.reserve, damage: u.damage, fled: u.fled };
     });
   }
   function holdForShow(events) {
@@ -227,7 +227,7 @@
         if (!id || held[id] || !shown[id]) return;
         var was = shown[id], u = evUnit(id);
         if (!u || !was.alive) return;
-        if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.dp !== u.dp) held[id] = was;
+        if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.damage !== u.damage) held[id] = was;
       });
     });
   }
@@ -241,7 +241,7 @@
     var h = u && held[u.id];
     if (!h) return u;
     var o = Object.create(u);
-    o.models = h.models; o.sp = h.sp; o.alive = h.alive; o.dp = h.dp;
+    o.models = h.models; o.sp = h.sp; o.alive = h.alive; o.damage = h.damage; o.fled = h.fled;
     if (!u.alive) { o.x = h.x; o.y = h.y; o.aboard = h.aboard; o.reserve = h.reserve; }
     return o;
   }
@@ -262,7 +262,8 @@
         show.queue.shift();
         try { applyEvent(ev); }
         catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
-        if (waits) { whenIdle(function () { releaseFor(ev); show.pump(); }); return; }
+        // what it did to them shows on the panels once it has been drawn, not before
+        if (waits) { whenIdle(function () { releaseFor(ev); drawStats(); drawPanel(); show.pump(); }); return; }
       }
       held = {};
       snapshotShown();
@@ -377,7 +378,7 @@
         return;
       }
       case 'shoot': {
-        var sa = evUnit(ev.from), sb = evUnit(ev.to);
+        var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
         if (sa && sb) playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), null);
         return;
       }
@@ -405,7 +406,9 @@
       case 'focus': {
         var fu = evUnit(ev.id);
         if (!fu) return;
-        focusUnit(fu, false, !myTurn());
+        // the other side's unit borrows the camera; it is handed back once they are done. (Whose
+        // turn it is by the state would be wrong here: by the time this is drawn it is already ours.)
+        focusUnit(fu, false, seats.indexOf(fu.side) < 0);
         // a pause before the other side's unit acts — and before every unit in a demo, where both sides are the AI's
         if (seats.indexOf(fu.side) < 0 || handsOff()) beat(OPPONENT_BEAT);
         return;
@@ -1095,13 +1098,20 @@
     var sa = state.swapAsk, foeSide = sa.side === 'A' ? 'B' : 'A';
     var mine = state.units.filter(function (u) { return u.side === sa.side && u.pickIdx != null; });
     var theirs = state.units.filter(function (u) { return u.side === foeSide; });
+    // a hotseat's secret round: whose turn it is, and what they have down to swap so far
+    var stg = state.swapStage, held = {};
+    sa.done.forEach(function (d) { if (d.held) held[d.outId] = d.in; });
     var h = '<div class="cmodal" data-swapbox><div class="cmodal-box wide" role="dialog" aria-modal="true" aria-label="Modify your army">' +
-      '<h3>Modify your army</h3><p class="sub">Swap up to <b>' + sa.total + '</b> unit' + (sa.total === 1 ? '' : 's') +
+      '<h3>' + (stg ? esc(sideName(sa.side)) + ' — modify your army' : 'Modify your army') + '</h3>' +
+      (stg ? '<p class="sub"><b>' + esc(sideName(foeSide)) + ', look away.</b> Your swaps stay secret until ' +
+        (stg.order.length > 1 ? 'both of you are done' : 'you are done') + '; the other side sees your force as it was mustered.</p>' : '') +
+      '<p class="sub">Swap up to <b>' + sa.total + '</b> unit' + (sa.total === 1 ? '' : 's') +
       ' for others of the same Tier' + (state.cfg.dossier ? ' from your dossier' : '') + ' — <b>' + sa.left + ' left</b>. ' +
       'You have seen the table and their force.</p><div class="cmodal-scroll"><div class="swapgrid">';
     // your list, the unit being swapped marked
     h += '<div class="swapcol"><h4>Your force</h4>' + mine.map(function (m) {
       var n = Q.swapOptions(sa.side, m.id).length, on = sa.pick === m.id;
+      if (held[m.id]) return '<button class="act on" disabled><span>' + esc(m.name) + ' → ' + esc(held[m.id]) + '</span><small>Tier ' + R.ROMAN[m.tier] + ' — swapped</small></button>';
       return '<button class="act' + (on ? ' on' : '') + '" data-swappick="' + (on ? '' : m.id) + '"' + (n ? '' : ' disabled') + '><span>' + esc(m.name) +
         '</span><small>Tier ' + R.ROMAN[m.tier] + (n ? (on ? ' — swapping' : '') : ' — nothing to swap in') + '</small></button>';
     }).join('') + '</div>';
@@ -1120,7 +1130,7 @@
     h += '<div class="swapcol theirs"><h4>' + esc(sideName(foeSide)) + '</h4>' + theirs.map(function (t) {
       return '<div class="swapfoe"><b>' + esc(t.name) + '</b><small>Tier ' + R.ROMAN[t.tier] + ' · ' + (t.cls === 'infantry' ? t.models + ' models' : t.cls) + '</small></div>';
     }).join('') + '</div>';
-    h += '</div></div><div class="askrow"><button class="start" data-act="swapdone">' + (sa.left === sa.total ? 'Keep the list' : 'Done') + '</button></div></div></div>';
+    h += '</div></div><div class="askrow"><button class="start" data-act="swapdone" data-who="' + sa.side + '">' + (sa.left === sa.total ? 'Keep the list' : 'Done') + '</button></div></div></div>';
     return h;
   }
   // placing pieces by hand: Last Stand, Fortify and Strike!, Detailed Terrain Knowledge
@@ -2684,6 +2694,9 @@
   }
 
   function drawHeader() {
+    // two players at one screen: the phone's one-row header shows whose turn it is too
+    var hdrEl = document.querySelector('header');
+    if (hdrEl) hdrEl.classList.toggle('two-seat', state.cfg.mode === 'hotseat' || !!(state.solo && state.solo.coop));
     syncHeaderHeight();
     // the phone's turn counter, a fixed width at the right of its one-row header
     if (el('hdr-turn')) el('hdr-turn').textContent = state.phase === 'terrain' ? 'Setup' : state.phase === 'deploy' ? 'Deploy' : 'Turn ' + state.turn;
@@ -2698,7 +2711,12 @@
       act.textContent = ta ? 'Terrain: ' + ta.name : 'Terrain';
       act.className = 'pill pill-' + (ta ? ta.side : 'A');
     } else if (state.phase === 'deploy') {
-      act.textContent = 'Deploy your force'; act.className = 'pill pill-A';
+      // in a hotseat the header says whose turn it is to place a unit
+      var dn = state.cfg.mode === 'hotseat' ? deployNext() : null;
+      var nm = function (sd) { return sd === 'A' ? state.cfg.nameA : state.cfg.nameB; };
+      if (state.swapStage && state.swapAsk) { act.textContent = 'Modifying: ' + nm(state.swapAsk.side); act.className = 'pill pill-' + state.swapAsk.side; }
+      else if (dn) { act.textContent = 'Deploying: ' + nm(dn.side); act.className = 'pill pill-' + dn.side; }
+      else { act.textContent = 'Deploy your force'; act.className = 'pill pill-A'; }
     } else if (ui.insertion) {
       /* The game is waiting for a place on the table and nothing else. That has
          to be legible from the header, because the prompt itself sits in a panel
@@ -3897,7 +3915,7 @@
   }
   function statsInto(box) {
     if (!box) return;
-    var u = ui.selected;
+    var u = ui.selected && shownAs(ui.selected);
     // keep whatever the layout put on it; only the statstrip's own state changes
     var keep = (box.getAttribute('data-keep') || '').trim();
     if (!keep) {
@@ -4138,11 +4156,13 @@
     if (!mh) { mh = document.createElement('div'); mh.id = 'modal-host'; document.body.appendChild(mh); }
     var sw = ctxBox.querySelector('.cmodal[data-swapbox]');
     var swScroll = mh.querySelector('.cmodal-scroll'), swTop = swScroll ? swScroll.scrollTop : 0;
+    // the next player's list opens at the top, not where the last one was scrolled to
+    var swWho = state.swapAsk ? state.swapAsk.side : '';
+    if (mh.dataset.swapWho !== swWho) { swTop = 0; mh.dataset.swapWho = swWho; }
     mh.innerHTML = '';
     if (sw) {
       mh.appendChild(sw);
-      var sw2 = mh.querySelector('.cmodal-scroll'); if (sw2) sw2.scrollTop = swTop;
-      wireHost(mh);
+      var sw2 = mh.querySelector('.cmodal-scroll'); if (sw2) sw2.scrollTop = swTop;   // wired where it was drawn
     }
     /* ...and so does the reserves-and-transports modal: in the side rail it was
        drawn under the board, so opening it seemed to do nothing. It is already
@@ -4160,11 +4180,12 @@
       h += '<div class="force force-' + side + '"><h3>' + (side === 'A' ? state.cfg.nameA : state.cfg.nameB) +
         ' <span class="tag">' + side + '</span></h3><ul>';
       // the living in their order, and whatever is gone below them
-      var mine = state.units.filter(function (u) { return u.side === side; });
+      // each as it stands on the table: a unit still to be hit in what is being drawn is shown as it was
+      var mine = state.units.filter(function (u) { return u.side === side; }).map(shownAs);
       mine.filter(function (u) { return u.alive; }).concat(mine.filter(function (u) { return !u.alive; })).forEach(function (u) {
         var st = u.alive ? R.status(u) : 'dead';
         var gone = u.alive ? '' : u.fled ? 'fled' : R.isMachine(u) ? 'destroyed' : 'wiped out';
-        h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected === u ? ' sel' : '') +
+        h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected && ui.selected.id === u.id ? ' sel' : '') +
           '" data-unit="' + u.id + '"><span class="ru-code">' + u.code + '</span>' +
           '<span class="ru-name">' + u.name + honourMarks(u) +
           (state.solo && state.solo.coop && side === 'A' ? ' <small class="own own' + (u.owner || 1) + '">P' + (u.owner || 1) + '</small>' : '') + '</span>' +
@@ -4415,11 +4436,12 @@
       // no hull to fill and no split to set: the button is there, greyed out, so it is known to exist
       h += '<div class="acts"><button class="act" disabled title="Nothing in this force can carry troops"><span>Transports</span><small>No transports in this force</small></button></div>';
     }
-    if (state.swapAsk && state.swapAsk.side === me && !isAI(me)) h += swapCard();
-    h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
+    if (state.swapAsk && !isAI(state.swapAsk.side) && (state.swapAsk.side === me || state.swapStage)) h += swapCard();
+    // the way on stays at the foot of the card, however long the order of battle above it
+    h += '<div class="acts deploy-go"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
     if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
     else if (emptyPlatforms(me).length) {
-      h += '</div><p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p><div class="acts">';
+      h += '<p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p>';
     }
     return h + '</div></div>';
   }
@@ -4597,7 +4619,9 @@
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
         else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
-        else if (a === 'placerot' || a === 'placedone' || a === 'swapdone') { send({ k: a }); return; }
+        // whose list is being kept: in a hotseat's round of swaps the next player is up the moment it is
+        else if (a === 'swapdone') { send({ k: a, who: b.getAttribute('data-who') }); return; }
+        else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }
         else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
         else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
         else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf') { send({ k: a }); return; }
@@ -6073,7 +6097,8 @@
       armyA: a.keys, armyB: b.keys, nameA: a.name, nameB: b.name,
       colourA: a.colour, colourB: b.colour,
       tactics: { A: a.tactic, B: b.tactic },
-      mode: mode, planet: planet, terrainSetup: terrainSetup
+      mode: mode, planet: planet, terrainSetup: terrainSetup,
+      secretSwaps: mode === 'hotseat'           // two players at one screen swap in turn, unseen
     });
   }
   function hotBack() {
@@ -6118,6 +6143,7 @@
     openMenu();
   }
   window.__hot = function () { return muster.hot ? JSON.parse(JSON.stringify(muster.hot)) : null; };
+  window.__cam = function () { return { x: cam.x, y: cam.y, z: cam.z, borrowed: !!cam.borrowed, home: cam.home ? { x: cam.home.x, y: cam.home.y } : null }; };
 
   /* Start a solitaire or co-op game from the muster screen. Each player's
      commando is checked against the commando table and rolled if it is not
@@ -6539,7 +6565,7 @@
       b.addEventListener('click', function () { setDrawerTab(b.getAttribute('data-tab')); if (SFX) SFX.click(); });
     });
     setDrawerTab('forces');
-    el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
+    if (el('btn-notes')) el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
 
     // the same switch on the top bar and on the menu
     var sndBtns = [el('btn-sound'), el('btn-menu-sound')].filter(Boolean);

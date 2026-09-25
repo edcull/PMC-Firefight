@@ -502,10 +502,12 @@
     var up = u && R.profile(u.key);
     if (!u || u.pickIdx == null || u.command || !up || up.leaderBug || up.turretSet) return [];
     if (u.aboard || (u.cargo && u.cargo.length)) return [];      // already strapped into a drop pod, or carrying one
-    var cfg = state.cfg;
+    var cfg = state.cfg, held = heldSwaps(side);
+    if (held.some(function (d) { return d.outId === u.id; })) return [];   // already down to be swapped
     if (cfg.dossier) {
       return ((cfg.bench && cfg.bench[side]) || []).filter(function (e) {
-        var p = R.profile(e.key); return p && p.tier === u.tier && !p.command && !p.turretSet;
+        var p = R.profile(e.key); return p && p.tier === u.tier && !p.command && !p.turretSet &&
+          !held.some(function (d) { return d.entry === e; });
       }).map(function (e) { return { id: e.rid, key: R.joinPick(e.key, e.prop, e.drone), name: e.name, entry: e }; });
     }
     return R.listFor(u.faction).filter(function (p) {
@@ -517,6 +519,7 @@
      a unit means the list stands as it is. */
   function beginSwaps() {
     state.swapAvail = {};
+    state.swapStage = null;
     if (state.solo || state.cfg.noSwap) return;
     ['A', 'B'].forEach(function (sd) {
       if (isAI(sd) || swapAllowance(sd) < 1) return;
@@ -524,8 +527,25 @@
       var n = swapAllowance(sd);
       state.swapAvail[sd] = { side: sd, left: n, total: n, pick: null, done: [] };
     });
+    /* In a hotseat both players modify their armies in secret, one after the
+       other, before anyone deploys: each swap is held back until both are done,
+       so the second player sees the first one's force as it was mustered. */
+    if (state.cfg.secretSwaps) {
+      var order = ['A', 'B'].filter(function (sd) { return state.swapAvail[sd]; });
+      if (order.length) {
+        state.swapStage = { order: order, i: 0 };
+        state.swapAsk = state.swapAvail[order[0]];
+        state.swapAsk.pick = null;
+      }
+    }
+  }
+  // the swaps a side has made but not yet revealed, in a hotseat's secret round
+  function heldSwaps(side) {
+    var sa = state.swapStage && state.swapAvail && state.swapAvail[side];
+    return sa ? sa.done.filter(function (d) { return d.held; }) : [];
   }
   function canSwapNow(side) {
+    if (state.swapStage) return false;             // the secret round asks each player in turn
     var sa = state.swapAvail && state.swapAvail[side];
     return !!sa && sa.left > 0 && state.phase === 'deploy' &&
       !state.units.some(function (u) { return u.side === side && u.x >= 0; });
@@ -544,10 +564,27 @@
     if (!opt) return 'That cannot be swapped in for it.';
     var cfg = state.cfg, armyKey = side === 'A' ? 'armyA' : 'armyB';
     var keys = cfg[armyKey].slice(), i = old.pickIdx;
+    heldSwaps(side).forEach(function (d) { keys[byId(d.outId).pickIdx] = d.key; });
     var before = legalList(side, keys).ok;
     keys[i] = opt.key;
     var chk = legalList(side, keys);
     if (before && !chk.ok) return chk.faults[0] || 'That would make the list illegal.';
+    if (state.swapStage) {
+      // a secret round: noted now, made when both players are done
+      sa.left--; sa.pick = null;
+      sa.done.push({ out: old.name, in: opt.name, outId: old.id, key: opt.key, entry: opt.entry, held: true });
+      if (sa.left < 1) { swapsDone(); return null; }
+      render();
+      return null;
+    }
+    applySwap(side, old, opt, sa);
+    sa.left--; sa.pick = null;
+    if (sa.left < 1) { swapsDone(); return null; }
+    render();
+    return null;
+  }
+  function applySwap(side, old, opt, sa) {
+    var cfg = state.cfg, armyKey = side === 'A' ? 'armyA' : 'armyB', i = old.pickIdx;
     var pick = R.splitPick(opt.key), prof = R.profile(pick.key);
     var nu = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, opt.entry, pick.riders);
     nu.id = old.id + 's' + (sa.done.length + 1);
@@ -566,16 +603,39 @@
       bench.splice(bench.indexOf(opt.entry), 1);
       if (was) bench.push(was);
     }
-    sa.left--; sa.pick = null;
-    sa.done.push({ out: old.name, in: nu.name });
+    var d = sa.done.filter(function (x) { return x.held && x.outId === old.id; })[0];
+    if (d) { d.held = false; d.in = nu.name; }
+    else sa.done.push({ out: old.name, in: nu.name });
     logLine('note', sideName(side) + ' swaps ' + old.name + ' for ' + nu.name + '.');
-    if (sa.left < 1) { swapsDone(); return null; }
-    render();
-    return null;
   }
   function swapsDone() {
     var sa = state.swapAsk;
     state.swapAsk = null;
+    var stg = state.swapStage;
+    if (stg) {
+      // the next player's turn to modify theirs, or, with both done, every swap made at once
+      if (++stg.i < stg.order.length) {
+        state.swapAsk = state.swapAvail[stg.order[stg.i]];
+        state.swapAsk.pick = null;
+        render();
+        return;
+      }
+      state.swapStage = null;
+      stg.order.forEach(function (sd) {
+        var s2 = state.swapAvail[sd];
+        s2.done.filter(function (x) { return x.held; }).forEach(function (x) {
+          var old = byId(x.outId);
+          applySwap(sd, old, { id: x.entry ? x.entry.rid : x.key, key: x.key, name: x.in, entry: x.entry }, s2);
+        });
+        state.swapAvail[sd] = null;
+        if (s2.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sd), side: sd,
+          note: 'Swapped in secret for units of the same Tier before deployment (p. 46).',
+          list: s2.done.map(function (x) { return { text: x.out + ' → ' + x.in, side: sd }; }) });
+      });
+      lookAtDeployment();
+      render();
+      return;
+    }
     if (sa) {
       state.swapAvail[sa.side] = null;
       if (sa.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sa.side), side: sa.side,
@@ -4282,12 +4342,11 @@
     var res = R.shootTerrain(state, u, piece);
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     var mid = { x: piece.x + piece.w / 2, y: piece.y + piece.h / 2 };
-    addFx({ kind: 'muzzle', x: u.x, y: u.y, dur: 180 });
-    addFx({ kind: 'tracer', from: { x: u.x, y: u.y }, to: mid, dur: 220 });
-    addFx({ kind: 'impact', x: mid.x, y: mid.y, n: 3, dur: 380, delay: 200 });
-    if (SFX) SFX.shot && SFX.shot();
+    // the unit's own weapons, drawn and heard as any shot of theirs is, at the piece
+    faceAlong(u, u.x, u.y, mid.x, mid.y);
+    var card = fromLog('Demolition', u.name + ' → ' + piece.kind, u.side, res.log);
+    playShooting(u, mid, { hits: res.down ? 4 : 2 }, [], function () { pushRes(card); });
     if (res.result) whenIdle(function () { repaintTerrain([res.result]); });
-    pushRes(fromLog('Demolition', u.name + ' → ' + piece.kind, u.side, res.log));
     endActivation(u);
   }
 
@@ -5321,7 +5380,7 @@
     var yes = { ok: true };
 
     function mayDeploy(side) {
-      return state.phase === 'deploy' && placingSide() === side && !state.placeAsk && !state.minePick;
+      return state.phase === 'deploy' && placingSide() === side && !state.placeAsk && !state.minePick && !state.swapStage;
     }
     /* The terrain set-up goes an area at a time, and each area is one side's
        to lay (p. 47). Nobody else may touch it while it is being laid. */
@@ -5400,6 +5459,7 @@
           return yes;
         }
         case 'deploy': {
+          if (state.swapStage) return no('the armies are still being modified');
           if (state.swapAsk && state.swapAsk.side === side) swapsDone();   // placing a unit keeps the list
           if (!mayDeploy(side)) return no('not your turn to place');
           return deployAt(side, it);
@@ -5432,6 +5492,7 @@
         }
         case 'autodeploy': {
           if (state.phase !== 'deploy') return no('not deploying');
+          if (state.swapStage) return no('the armies are still being modified');
           // deploying straight away means keeping the list as it is
           if (state.swapAsk && state.swapAsk.side === side) swapsDone();
           autoDeploy(side);
@@ -5489,6 +5550,7 @@
         case 'swappick': case 'swapin': case 'swapdone': {
           var sa2 = state.swapAsk;
           if (!sa2 || sa2.side !== side) return no('nothing to swap');
+          if (it.who && it.who !== side) return no('that was the other player\u2019s list');
           if (it.k === 'swapdone') { swapsDone(); return yes; }
           if (it.k === 'swappick') { sa2.pick = it.id || null; render(); return yes; }
           var sw = doSwap(side, sa2.pick, it.id);
@@ -5519,6 +5581,7 @@
           if (state.phase !== 'deploy') return no('already under way');
           if (state.minePick) return no('the mined piece has not been chosen');
           if (state.placeAsk) return no('there are pieces still to place');
+          if (state.swapStage) return no('the armies are still being modified');
           if (state.swapAsk) swapsDone();
           if (!deploymentDone()) return no('there are still units to place');
           // Rapid Relocation is one side's to finish, and it starts the battle when it does

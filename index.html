@@ -143,6 +143,11 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
   }
   .flank-own > #context:empty { display: none; }
+  /* the deployment's way on — auto-deploy, begin the battle — held at the foot of the scrolling card */
+  #context .acts.deploy-go {
+    position: sticky; bottom: 0; z-index: 2; margin: 12px -14px -14px; padding: 10px 14px 14px;
+    background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -8px 12px -8px rgba(0,0,0,.6);
+  }
 
   /* the running feed of rolls, in place of a card to dismiss */
   .resfeed {
@@ -1472,8 +1477,7 @@
       background: var(--panel-2); box-shadow: 0 6px 18px rgba(0,0,0,.5);
     }
     .hdr-btns.open #btn-sound { top: 26px; }
-    .hdr-btns.open #btn-notes { top: 54px; }
-    .hdr-btns.open #btn-campaign { top: 82px; }
+    .hdr-btns.open #btn-campaign { top: 54px; }
     .pill { font-size: 8.5px; padding: 1px 6px; }
     /* One row: Menu on the left; the objectives and the turn on the right. The
        rest of the header is folded away on a phone. */
@@ -1484,6 +1488,9 @@
     #btn-menu { order: 0; }
     #btn-obj { order: 1; margin-left: auto; }
     #hdr-turn { display: inline-block; order: 2; width: 58px; text-align: center; font-size: 10px; }
+    /* hotseat and co-op: whose turn it is, between Menu and Objectives, as the desktop header shows it */
+    header.two-seat #hdr-active { display: inline-block !important; order: 1; margin-left: 8px; min-width: 0; max-width: 46vw;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; padding: 3px 8px; }
     header .lnk#btn-menu, header .lnk#btn-obj { font-size: 10px; padding: 4px 9px; }
     main { display: block; padding-top: 0; height: calc(100% - var(--hdr, 52px)); }
     .stage { display: block; height: 100%; gap: 0; }
@@ -1690,7 +1697,6 @@
         <button class="lnk only-narrow" id="btn-drawer">Forces</button>
         <button class="lnk" id="btn-more" hidden aria-label="More">⋯</button>
         <button class="lnk" id="btn-sound" aria-pressed="true">Sound on</button>
-        <button class="lnk" id="btn-notes">Rules</button>
         <button class="lnk" id="btn-menu">Menu</button>
       </span>
     </div>
@@ -2187,9 +2193,9 @@
 <script src="src/view/fx.js?v=82fe32144a"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
 <script src="src/engine/protocol.js?v=789f24fbb2"></script>
-<script src="src/engine/engine.js?v=ec0b2a718f"></script>
-<script src="src/net/net.js?v=b483e61500"></script>
+<script src="src/engine/engine.js?v=04307f4619"></script>
+<script src="src/net/net.js?v=eaa07d90ac"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=e578cf782a"></script>
+<script src="src/view/game.js?v=6e4a206ecc"></script>
 <script src="src/view/dossier.js?v=216e69f26d"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

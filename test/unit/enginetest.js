@@ -672,6 +672,29 @@ console.log('  vs the OpFor AI');
   ok('a quarter without it', !e2.state().swapAvail.A || e2.state().swapAvail.A.total === Math.floor(n2 / 4));
 })();
 
+/* A hotseat's round of swaps: each player in turn, in secret, before anyone deploys. */
+(function () {
+  console.log('secret swaps in a hotseat');
+  const e = createEngine();
+  e.start({ tier: 3, pl: 2, scenario: 'meeting', armyA: R.rollArmy(3, 2, null, 'pmc'), armyB: R.rollArmy(3, 2, null, 'pmc'),
+    nameA: 'A', nameB: 'B', mode: 'hotseat', secretSwaps: true, planet: 'sparse' });
+  ok('player A is asked first', e.state().swapStage && e.state().swapAsk.side === 'A');
+  ok('...and nobody deploys until the round is over', !e.intent('A', { k: 'autodeploy' }).ok && !e.intent('B', { k: 'autodeploy' }).ok);
+  const pick = (sd) => { const u = e.state().units.find(x => x.side === sd && e.query.swapOptions(sd, x.id).length); return [u, e.query.swapOptions(sd, u.id)[0]]; };
+  const [u, o] = pick('A');
+  e.intent('A', { k: 'swappick', id: u.id });
+  ok('A swaps a unit', e.intent('A', { k: 'swapin', id: o.id }).ok);
+  ok('...which is not made yet, so B sees the list as it was mustered', e.state().units.find(x => x.id === u.id).name === u.name);
+  ok('B cannot end A\'s turn', !e.intent('B', { k: 'swapdone', who: 'A' }).ok);
+  e.intent('A', { k: 'swapdone', who: 'A' });
+  ok('then B is asked', e.state().swapAsk && e.state().swapAsk.side === 'B');
+  ok('...and a second tap of A\'s Done does not end B\'s turn', !e.intent('B', { k: 'swapdone', who: 'A' }).ok && e.state().swapAsk.side === 'B');
+  e.intent('B', { k: 'swapdone', who: 'B' });
+  const st = e.state();
+  ok('with both done, the swaps are made', !st.swapStage && !st.swapAsk && st.units.find(x => x.id === u.id).name === o.name, st.units.find(x => x.id === u.id).name);
+  ok('...and deployment goes on', e.intent('A', { k: 'autodeploy' }).ok && e.intent('B', { k: 'autodeploy' }).ok && e.query.deploymentDone());
+})();
+
 /* A Suppressed unit (p. 34): a move into cover, Auxiliary fire or Pass/Regroup, nothing else;
    a Broken one is not activated at all. */
 (function () {
