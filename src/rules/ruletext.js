@@ -122,7 +122,8 @@
     'Markerlights':
       'Designate or Mark an enemy within 24" in sight (12" against Stealth). Designate calls friendly Indirect ' +
       'Fire units to shoot it at once without needing sight; Mark calls units that can see it to fire as though ' +
-      'at half range (+2). Standing still calls two units, moving first calls one.',
+      'at half range (+2). One unit answers each call, and counts as activated. Standing still, it then calls ' +
+      'again (the same enemy or another) for a second unit; moving first, it calls once.',
     'Minimum Range (X)':
       'Its main weapon cannot fire at targets closer than {X}".',
     'Molecular Reconstruction':
@@ -160,7 +161,7 @@
       'generator. Only the best shield counts.',
     'Smoke Markers':
       'Works like Markerlights, but designates only, out to 12" in sight: a smoke grenade and a flare on one or ' +
-      'two enemies, and two friendly Indirect Fire units shoot at once without needing sight — even if this unit moved first.',
+      'two enemies in turn, each answered at once by a friendly Indirect Fire unit that needs no sight — two calls even if this unit moved first.',
     'Specialisation (air)':
       'Its main weapon can only engage aircraft, never ground targets.',
     'Specialisation (ground)':
