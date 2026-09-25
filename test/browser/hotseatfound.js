@@ -42,20 +42,9 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
     if (!cond) problems.push(name);
   }
 
-  console.log('\nA solo world, with the rivals the player asked for');
+  console.log('\nA solo world, always rolled');
   await click(p, '#btn-campaign');
-  check('the rivals are one line, a random world until some are picked', await p.evaluate(() =>
-    /random/i.test(document.getElementById('camp-archline').textContent) && !document.querySelector('#camp-body .camp-arch')));
-  await click(p, '#camp-archline');
-  check('...which opens a list of them', await p.evaluate(() => !document.getElementById('camp-archmodal').hidden));
-  const offered = await p.evaluate(() => [...document.querySelectorAll('#camp-archbox .camp-arch')].map(x => x.value));
-  check('any number of rivals can be ticked', offered.length > 8 && await p.evaluate(() => document.querySelectorAll('#camp-archbox .camp-arch[type="checkbox"]').length) === offered.length,
-    offered.length + ' to choose from');
-  const want = [offered[0], offered[offered.length - 1]];
-  for (const id of want) await click(p, `#camp-archbox .camp-arch[value="${id}"]`);
-  await click(p, '#camp-archbox [data-go="archdone"]');
-  const line = await p.evaluate(() => ({ shut: document.getElementById('camp-archmodal').hidden, txt: document.getElementById('camp-archline').textContent }));
-  check('...and the line names the ones picked', line.shut && !/random/i.test(line.txt) && line.txt.indexOf(',') > 0, line.txt);
+  check('there is no picking the rivals', await p.evaluate(() => !document.getElementById('camp-archline') && !document.getElementById('camp-archmodal')));
   await clickText(p, 'Raise the force');
   await p.evaluate(() => { document.getElementById('found-name').value = 'Solo Company'; });
   for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) {
@@ -63,9 +52,9 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   }
   await click(p, '#camp-body button[data-doc="S2"]');
   await clickText(p, 'Sign the charter');
-  const world = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return { archs: c.rivals.map(r => r.archetype), facing: c.companies.B.archetype }; });
-  check('...and both are on the world, the first of them faced first', want.every(w => world.archs.indexOf(w) >= 0) && world.facing === want[0],
-    world.archs.join(', ') + ' — facing ' + world.facing);
+  const world = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return c.rivals.map(r => ({ plan: (r.docPlan || []).length, docs: r.doctrines.length, theme: window.PMCCamp.themeOf(r) })); });
+  check('...three rivals, each with a random plan of doctrines and a character read from them',
+    world.length === 3 && world.every(w => w.docs >= 1 && /^It /.test(w.theme)), world.map(w => w.theme).join(' | '));
   await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });
   await p.reload();
   await p.waitForTimeout(900);
@@ -75,7 +64,6 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   await p.evaluate(() => {
     const m = document.getElementById('camp-mode'); m.value = 'hotseat'; m.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  check('a hotseat campaign has no rival to pick', await p.evaluate(() => document.getElementById('camp-archwrap').hidden));
   check('...it asks what player 2 is running instead', await p.evaluate(() => !document.getElementById('camp-bwrap').hidden &&
     [...document.getElementById('camp-bfaction').options].map(o => o.value).join() === 'pmc,rebel,bugs,xeno'));
   await p.evaluate(() => { document.getElementById('camp-bfaction').value = 'xeno'; });

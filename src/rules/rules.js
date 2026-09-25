@@ -556,7 +556,7 @@
     if (bugs) comp = COMPOSITION_BUGS[battleTier];
     // Rebel Tactics (p. 95) only bear on a Rebel list
     if (!rebel) tactic = null;
-    var budget = comp.points * pl, freeTier = battleTier - 1, freeUsed = 0;
+    var budget = comp.points * pl, freeTier = battleTier - 1, freeUsed = 0, waveFree = 0;
     /* Human Wave Attacks: two extra infantry units of the Battle Tier per Priority
        Level, over and above the points. They come off the bill the way Strength in
        Numbers does, but they are the Battle Tier's own units rather than a Tier below. */
@@ -566,7 +566,7 @@
         var p = BY_KEY[k];
         if (p && p.cls === 'infantry' && p.tier === battleTier) waveInf++;
       });
-      var waveFree = Math.min(2 * pl, waveInf);
+      waveFree = Math.min(2 * pl, waveInf);
       spent -= waveFree * battleTier;
       freeUsed += waveFree;
     }
@@ -584,6 +584,8 @@
       var lim = comp.limits[t - 1], lo = lim[0] * pl, hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (doc('O2') && t === battleTier) lo = Math.ceil(lo / 2);
       if (doc('O5') && t === freeTier && hi !== 99) hi += pl;
+      // Human Wave Attacks: the extra units are "additional" — over the Tier's limit as well as the points (p. 95)
+      if (tactic === 'wave' && t === battleTier && hi !== 99) hi += waveFree;
       if (counts[t] < lo) faults.push('Needs at least ' + lo + ' Tier ' + ROMAN[t] + ' units (has ' + counts[t] + ').');
       if (counts[t] > hi) faults.push('At most ' + hi + ' Tier ' + ROMAN[t] + ' units (has ' + counts[t] + ').');
     }

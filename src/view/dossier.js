@@ -290,40 +290,6 @@
   }
 
   /* ================= the hub ================= */
-  /* The rivals a new solo campaign has asked to meet. None is a random world;
-     they are ticked in a list of their own, behind one line on the hub. */
-  var archPick = [];
-  var ARCH_GROUPS = [['Mercenary companies', C.ARCHETYPES], ['Revolts', C.REBEL_ARCHETYPES],
-    ['Bug swarms', C.BUG_ARCHETYPES], ['Xenotripod tribes', C.XENO_ARCHETYPES]];
-  function archName(id) {
-    for (var i = 0; i < ARCH_GROUPS.length; i++) {
-      for (var j = 0; j < ARCH_GROUPS[i][1].length; j++) if (ARCH_GROUPS[i][1][j].id === id) return ARCH_GROUPS[i][1][j].name;
-    }
-    return id;
-  }
-  function archLine() {
-    return '<span>' + (archPick.length ? esc(archPick.map(archName).join(', ')) : 'Random world') + '</span>' +
-      '<em>' + (archPick.length ? 'change' : 'tap to select') + '</em>';
-  }
-  function openArchs() {
-    var h = '<h3>Who you are up against</h3><p>Tick any number, or none for a world that is all chance.</p>' +
-      '<div class="archpick">' + ARCH_GROUPS.map(function (g) {
-        return '<div class="archgrp"><h4>' + esc(g[0]) + '</h4>' + g[1].map(function (a) {
-          return '<label class="archopt"><input type="checkbox" class="camp-arch" value="' + a.id + '"' +
-            (archPick.indexOf(a.id) >= 0 ? ' checked' : '') + '>' +
-            '<span><b>' + esc(a.name) + '</b><small>' + esc(a.blurb) + '</small></span></label>';
-        }).join('') + '</div>';
-      }).join('') + '</div>' +
-      '<div class="askrow"><button type="button" class="lnk" data-go="archrandom">Random</button>' +
-      '<button type="button" class="start" data-go="archdone">Done</button></div>';
-    el('camp-archbox').innerHTML = h;
-    el('camp-archmodal').hidden = false;
-  }
-  function closeArchs() {
-    el('camp-archmodal').hidden = true;
-    var line = el('camp-archline');
-    if (line) line.innerHTML = archLine();
-  }
   function hubView() {
     var h = '<h2>Campaign' + (camp ? ' — turn ' + camp.turn : '') + '</h2>';
     if (!camp) {
@@ -342,12 +308,9 @@
         '<option value="solo">Solo — against a rival force that grows battle by battle</option>' +
         '<option value="hotseat">Hotseat — two dossiers, two players, one screen</option>' +
         '</select></div>';
-      /* Solo: the forces on the world are rolled, but the player may name any
-         of them they want to meet — tick as many as you like, or none for a
-         world that is all chance. Hotseat: there are no rolled rivals, only the
-         second player's force, so this asks what kind that is instead. */
-      h += '<div class="field" id="camp-archwrap"><label for="camp-archline">Who you are up against</label>' +
-        '<button type="button" class="archline" id="camp-archline" data-go="archopen">' + archLine() + '</button></div>';
+      /* Solo: the forces on the world are always rolled, and each grows into its
+         own character from the doctrines it draws. Hotseat: there are no rolled
+         rivals, only the second player's force, so this asks what kind that is. */
       h += '<div class="field" id="camp-bwrap" hidden><label for="camp-bfaction">What Player 2 is running</label>' +
         '<select id="camp-bfaction">' +
         '<option value="pmc">A private military company</option>' +
@@ -512,8 +475,8 @@
     var h = '<div class="cpan cpan-B"><div class="cphead">' + tierBadge(co) + '<b>' +
       esc(co.name) + '</b></div>';
     h += statRow(co, true);
-    h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span><span class="dtag">' + esc(a.name) + '</span></div>';
-    h += '<div class="cpstat">' + esc(co.blurb || a.blurb) + '</div>';
+    h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span></div>';
+    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
     h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
@@ -1019,10 +982,9 @@
     var h = '<div class="cpan cpan-B cpan-offer"><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
       '<span class="mk">' + C.words(co).side + '</span>' +
       '<span class="ctier">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + '</span>' +
-      '<span class="dtag">' + esc(a.name) + '</span></div>';
+      ROMAN[co.tier] + '</span></div>';
     // how they fight, and what they are built around — never what they field
-    h += '<div class="cpstat">' + esc(co.blurb || a.blurb) + '</div>';
+    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
     h += '<div class="cpstat">' + creedName + ': ' + (co.doctrines.length
       ? co.doctrines.map(function (d) { return esc(C.doctrine(d).name); }).join(' · ')
       : 'none declared yet') + '</div>';
@@ -1189,7 +1151,7 @@
   function contractView() {
     var A = camp.companies.A, B = camp.companies.B;
     var keys = contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-    var chk = R.checkArmy(keys, contract.tier, contract.pl, A.doctrines);
+    var chk = R.checkArmy(keys, contract.tier, contract.pl, A.doctrines, contract.tactic || null);
     var roll = contract.tierRoll;
     var h = '<h2>Contract</h2>';
     h += '<p class="lede">Against <b>' + esc(B.name) + '</b> — ' +
@@ -1231,6 +1193,17 @@
           (C.hasDoctrine(A, 'S1')
             ? ' The Best Defence is Good Offence gives you a 2+ to push the attack onto them if the roll makes you the defender.'
             : '') + '</span>') + '</div>';
+    }
+    /* Rebel Tactics (p. 95): chosen once the scenario and who attacks are known,
+       before a piece of terrain goes down — so here, with the list. */
+    if (A.faction === 'rebel') {
+      h += '<div class="cpan orders"><div class="cprom-head"><b>Tactic</b></div><div class="orow">' +
+        '<em>' + esc(contract.tactic ? R.tacticById(contract.tactic).text : 'A rebel force may take one tactic for the battle, or none.') + '</em>' +
+        '<span class="segs">' + [{ id: '', name: 'No tactic' }].concat(R.TACTICS).map(function (t) {
+          var on = (contract.tactic || '') === t.id;
+          return '<button class="lnk' + (on ? ' on' : '') + '" data-tactic="' + t.id + '"' +
+            (t.text ? ' ' + tip(t.name, t.text) : '') + '>' + esc(t.name) + '</button>';
+        }).join('') + '</span></div></div>';
     }
     if (contract.caught && contract.caught.to > contract.caught.from) {
       h += '<div class="cpdoc"><span class="mk">' + esc(contract.caught.name) +
@@ -1284,7 +1257,7 @@
     avail.forEach(function (e) {
       var p = profile(e.key);
       var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
-      var bad = blocking(R.checkArmy(trial, contract.tier, contract.pl, A.doctrines).faults);
+      var bad = blocking(R.checkArmy(trial, contract.tier, contract.pl, A.doctrines, contract.tactic || null).faults);
       h += '<button class="cu" data-pick="' + e.rid + '"' +
         (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
         '<span class="t">' + ROMAN[p.tier] + '</span>' +
@@ -1326,7 +1299,7 @@
   }
 
   /* pick a legal force from the roster, the way the rival does */
-  function autoPick(co, tier, pl) {
+  function autoPick(co, tier, pl, tactic) {
     var avail = contractPicks(co).slice().sort(function (a, b) {
       return profile(b.key).tier - profile(a.key).tier;
     });
@@ -1359,10 +1332,10 @@
     // first, because an unspent composition point is a point wasted
     for (var guard = 0; guard < 60; guard++) {
       var keys = out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-      var legal = R.checkArmy(keys, tier, pl, docs).ok;
+      var legal = R.checkArmy(keys, tier, pl, docs, tactic).ok;
       var added = take(function (p, e) {
         var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
-        var res = R.checkArmy(trial, tier, pl, docs);
+        var res = R.checkArmy(trial, tier, pl, docs, tactic);
         // while the list is still illegal, take anything within budget that helps;
         // once it is legal, only take what keeps it legal
         return legal ? res.ok : res.spent <= comp.points * pl;
@@ -1374,7 +1347,7 @@
        never be reached — the trim would strip everything around it and still fail.
        Drop whichever single unit leaves the fewest hard faults behind. */
     for (var trim = 0; trim < 20 && out.length; trim++) {
-      var now = R.checkArmy(out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }), tier, pl, docs);
+      var now = R.checkArmy(out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }), tier, pl, docs, tactic);
       if (now.ok) break;
       var hard = blocking(now.faults);
       if (!hard.length) break;                     // only minimums left, and dropping cannot help
@@ -1382,7 +1355,7 @@
       for (var q = 0; q < out.length; q++) {
         var without = out.filter(function (_, i) { return i !== q; })
           .map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-        var res = R.checkArmy(without, tier, pl, docs);
+        var res = R.checkArmy(without, tier, pl, docs, tactic);
         var score = blocking(res.faults).length * 10 + res.faults.length;
         if (score < bestScore) { bestScore = score; bestAt = q; }
       }
@@ -1423,12 +1396,14 @@
   /* ================= starting the battle ================= */
   function fight() {
     var A = camp.companies.A, B = camp.companies.B;
-    var theirs = autoPick(B, contract.tier, contract.pl);
+    // a rebel rival picks a tactic of its own, the way a player would (p. 95)
+    var theirTactic = B.faction === 'rebel' ? [null, 'laststand', 'wave', 'guerillas'][Math.floor(Math.random() * 4)] : null;
+    var theirs = autoPick(B, contract.tier, contract.pl, theirTactic);
     if (!R.checkArmy(theirs.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
-      contract.tier, contract.pl, B.doctrines).ok) {
+      contract.tier, contract.pl, B.doctrines, theirTactic).ok) {
       // the rival cannot field a legal list — let it hire in for this battle
       C.developRival(B);
-      theirs = autoPick(B, contract.tier, contract.pl);
+      theirs = autoPick(B, contract.tier, contract.pl, theirTactic);
     }
     var druggedA = drugThem(A, contract.picks, contract.drugs || []);
     drugThem(B, theirs);
@@ -1458,6 +1433,7 @@
       dossier: { A: contract.picks, B: theirs },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
       orders: { A: { martyr: C.orderOf(A, 'martyr') }, B: { martyr: true } },
+      tactics: { A: A.faction === 'rebel' ? contract.tactic || null : null, B: theirTactic },
       campaign: true,
       mode: camp.mode === 'hotseat' ? 'hotseat' : 'ai',
       planet: contract.planet
@@ -1690,7 +1666,7 @@
     var co = rivals[Math.min(intelIdx, rivals.length - 1)] || camp.companies.B;
     var a = C.archetype(co.archetype);
     var h = '<h2>' + esc(co.name) + '</h2>';
-    h += '<p class="lede">' + esc(co.blurb || a.blurb) + ' ' +
+    h += '<p class="lede">' + esc(C.themeOf(co)) + ' ' +
       C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
       ' · ' + co.roster.length + ' units · ' + co.record.battles + ' battles against you.</p>';
     // only the battles fought against this force count toward the record with it
@@ -1962,6 +1938,10 @@
       if (pk) contract.picks.push(pk); render(); return;
     }
     if (t.hasAttribute('data-unpick')) { contract.picks.splice(+t.getAttribute('data-unpick'), 1); render(); return; }
+    if (t.hasAttribute('data-tactic') && contract) {
+      contract.tactic = t.getAttribute('data-tactic') || null;
+      render(); return;
+    }
     if (t.hasAttribute('data-order')) {
       C.setOrder(camp.companies.A, t.getAttribute('data-order'), JSON.parse(t.getAttribute('data-val')));
       save(); render(); return;
@@ -1996,24 +1976,16 @@
     if (t.hasAttribute('data-rival')) intelIdx = +t.getAttribute('data-rival') || 0;
 
     switch (go) {
-      case 'archopen': openArchs(); return;
       case 'fcolour': colourOpen = !colourOpen; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
       case 'fmodalclose': openModal = null; render(); return;
-      case 'archdone': closeArchs(); return;
-      case 'archrandom':
-        archPick = [];
-        Array.prototype.forEach.call(document.querySelectorAll('#camp-archbox .camp-arch'), function (x) { x.checked = false; });
-        return;
       case 'newcamp': {
-        var archs = archPick.slice();
-        archPick = [];
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
         // a name to start from; the player settles it on the founding screen
         beginFounding(fac === 'rebel' ? 'The Free Colonies' : fac === 'bugs' ? 'The Hive' : fac === 'xeno' ? 'The Ghadon Third' : 'Task Force Ironhold',
           el('camp-mode').value, fac);
-        draft.archs = archs;
+        draft.archs = [];                          // the world is always rolled
         render(); return;
       }
       case 'dofound': {
@@ -2049,7 +2021,7 @@
       case 'intel': view = 'intel'; render(); return;
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;
-      case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl); render(); return;
+      case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl, contract.tactic || null); render(); return;
       case 'standard':
         if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;
         contract.standard = true; contract.tier = 3; contract.pl = 2; contract.levels = [2];
@@ -2167,14 +2139,12 @@
         return;
       }
       if (ev.target === el('camp-ask')) { closeAsk(); return; }   // tapping the backdrop
-      if (ev.target === el('camp-archmodal')) { closeArchs(); return; }
       if (ev.target.classList && ev.target.classList.contains('cmodal')) { openModal = null; render(); return; }
       if (asking) return;                                         // nothing behind it is live
       if (ev.target === host) { close(); return; }
       onClick(ev);
     });
     host.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape' && !el('camp-archmodal').hidden) { ev.preventDefault(); closeArchs(); return; }
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }
       if (!asking) return;
       if (ev.key === 'Enter') { ev.preventDefault(); answerAsk(); }
@@ -2182,15 +2152,9 @@
     });
     host.addEventListener('change', function (ev) {
       if (ev.target.id === 'camp-file') onFile(ev);
-      else if (ev.target.classList.contains('camp-arch')) {
-        var id = ev.target.value, at = archPick.indexOf(id);
-        if (ev.target.checked && at < 0) archPick.push(id);
-        else if (!ev.target.checked && at >= 0) archPick.splice(at, 1);
-      }
       // a hotseat campaign has no rival to choose: the second player founds their own
       else if (ev.target.id === 'camp-mode') {
-        var hs = ev.target.value === 'hotseat', aw = el('camp-archwrap'), bw = el('camp-bwrap');
-        if (aw) aw.hidden = hs;
+        var hs = ev.target.value === 'hotseat', bw = el('camp-bwrap');
         if (bw) bw.hidden = !hs;
       }
       else if (ev.target.id === 'camp-pl') {
