@@ -358,19 +358,25 @@
   .status-suppressed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
   .status-broken { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 
-  /* as many to a row as fit, so a narrow panel wraps them rather than cutting the last ones off */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 1px; margin: 10px 0 0; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-  @media (max-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
-  .st { background: var(--panel-2); padding: 6px 7px; }
+  /* as many to a row as fit, so a narrow panel wraps them rather than cutting the last ones off,
+     and the last row stretched across so it leaves no empty cells */
+  .stats { display: flex; flex-wrap: wrap; gap: 1px; margin: 10px 0 0; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  /* on a phone the stats are one row, each cell as narrow as it needs */
+  @media (max-width: 720px) {
+    .stats { flex-wrap: nowrap; }
+    .stats .st { flex: 1 1 0; padding: 5px 3px; text-align: center; }
+    .stats .st span { font-size: 8px; letter-spacing: .02em; overflow: hidden; text-overflow: clip; white-space: nowrap; }
+    .stats .st b { font-size: 11.5px; }
+  }
+  .st { background: var(--panel-2); padding: 6px 7px; flex: 1 1 58px; min-width: 0; }
   .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
   .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* suppression against Morale: three bands, the SP laid over them */
   .moralebar { margin: 8px 0; display: flex; align-items: center; gap: 7px; }
   .moralebar .mb-track { flex: 1; }
-  /* the Suppression on the unit, beside the bar it fills */
-  .mb-num { flex: none; min-width: 34px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
-  .mb-num.good { color: var(--good); } .mb-num.warn { color: var(--warn); } .mb-num.bad { color: var(--bad); }
+  /* the Suppression on the unit, in the colour of the band it has reached */
+  .st b.sp-warn { color: var(--warn); } .st b.sp-bad { color: var(--bad); }
   .st b .mmod { color: var(--bad); font-size: 11px; margin-left: 3px; }
   .st b.hurt { color: var(--bad); }
   .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
@@ -442,7 +448,10 @@
   .ru.done { opacity: .5; }
   .ru.suppressed .ru-sp { color: var(--warn); }
   .ru.broken, .ru.broken .ru-sp { color: var(--bad); }
-  .ru.dead { opacity: .35; text-decoration: line-through; }
+  .ru.dead { opacity: .45; }
+  .ru.dead .ru-name { text-decoration: line-through; }
+  /* what became of it, across the two columns its numbers had */
+  .ru-gone { grid-column: span 2; justify-self: end; font-family: var(--mono); font-size: 11px; color: var(--bad); white-space: nowrap; }
 
   .logbox { padding: 10px 12px; height: 300px; overflow-y: auto; }
   .logbox h4 { font-family: var(--display); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 8px; position: sticky; top: -10px; background: var(--panel); padding-block: 4px; }
@@ -33652,12 +33661,14 @@
   function syncRemains() {
     if (!state || !state.units) return;
     var rem = state.remains || (state.remains = []);
-    state.units.forEach(function (u) {
-      var seen = u._seen, here = u.alive && u.x >= 0 && !u.aboard;
+    state.units.forEach(function (u0) {
+      // as it is drawn: the dead fall when the shot that kills them lands, not before
+      var u = shownAs(u0);
+      var seen = u0._seen, here = u.alive && u.x >= 0 && !u.aboard;
       if (seen && seen.here) {
         if (R.isMachine(u)) {
-          if (!u.alive && !u.fled && !u._wrecked) {
-            u._wrecked = true;
+          if (!u.alive && !u.fled && !u0._wrecked) {
+            u0._wrecked = true;
             // a snapshot, so the wreck stays a wreck even if the unit itself is used again
             var snap = {};
             for (var k in u) snap[k] = u[k];
@@ -33673,9 +33684,9 @@
           }
         }
       }
-      u._seen = { here: here, x: u.x, y: u.y, models: u.models || 0 };
+      u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0 };
       // a unit the engine has sent back to the OpFor pool is off the table now
-      if (u.wave === 'pool' && u.x < 0) u._seen = { here: false, x: -1, y: -1, models: u.models };
+      if (u.wave === 'pool' && u.x < 0) u0._seen = { here: false, x: -1, y: -1, models: u.models };
     });
     // the table only holds so many; the oldest dead go first, never a wreck
     var bodies = rem.filter(function (r) { return r.kind === 'body'; });
@@ -34751,17 +34762,19 @@
        in the colour of the band it has reached. */
     var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
     h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
-      '<b class="mb-num ' + fillC + '">' + u.sp + ' SP</b>' +
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
       '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
-      stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
+      stat('Models', u.models + '/' + u.size) + stat('Move', Math.floor(u.move) + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
+      stat('Assault', u.assault) +
       /* Morale as it stands: less a point for each model lost beyond the free
          ones (none for a Determined unit — currentMorale has already said so) */
       stat('Morale', m + (m !== u.morale ? '<i class="mmod" ' + tip('Morale ' + u.morale + ' printed',
-        (u.morale - m) + ' down for casualties') + '>(' + (m - u.morale) + ')</i>' : '')) + '</div>';
+        (u.morale - m) + ' down for casualties') + '>(' + (m - u.morale) + ')</i>' : '')) +
+      // its Suppression, in the colour of the band it has reached on the bar
+      '<div class="st"><span>SP</span><b class="sp-' + fillC + '">' + u.sp + '</b></div>' + '</div>';
     h += honourChips(u);
     // a rider's mount, before its rules, the way a hull's drive is shown
     var mt = R.mountOf(u);
@@ -34886,11 +34899,11 @@
       // red once it is down below half its Structure; what the drive did to it is in its tip
       '<div class="st"><span>Structure</span><b' + (left * 2 < u.str ? ' class="hurt"' : '') +
         (base.str != null && base.str !== u.str && why('str') ? ' ' + tip('Printed ' + base.str, why('str')) : '') + '>' + left + '/' + u.str + '</b></div>' +
-      stat('Move', changed(u.move + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
+      // a half inch of Movement is kept, but shown rounded down
+      stat('Move', changed(Math.floor(u.move) + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.assault) +
-      stat('Damage', u.damage) +
-      stat('Carrying', u.transport ? (u.cargo || []).length + '/' + u.transport : '—') + '</div>';
+      stat('Damage', u.damage) + '</div>';
     if ((u.cargo || []).length) {
       h += '<div class="chips">' + u.cargo.map(function (c) {
         return '<span class="chip">aboard: ' + c.name + '</span>';
@@ -34983,17 +34996,21 @@
     (only ? [only] : ['A', 'B']).forEach(function (side) {
       h += '<div class="force force-' + side + '"><h3>' + (side === 'A' ? state.cfg.nameA : state.cfg.nameB) +
         ' <span class="tag">' + side + '</span></h3><ul>';
-      state.units.filter(function (u) { return u.side === side; }).forEach(function (u) {
+      // the living in their order, and whatever is gone below them
+      var mine = state.units.filter(function (u) { return u.side === side; });
+      mine.filter(function (u) { return u.alive; }).concat(mine.filter(function (u) { return !u.alive; })).forEach(function (u) {
         var st = u.alive ? R.status(u) : 'dead';
+        var gone = u.alive ? '' : u.fled ? 'fled' : R.isMachine(u) ? 'destroyed' : 'wiped out';
         h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected === u ? ' sel' : '') +
           '" data-unit="' + u.id + '"><span class="ru-code">' + u.code + '</span>' +
           '<span class="ru-name">' + u.name + honourMarks(u) +
           (state.solo && state.solo.coop && side === 'A' ? ' <small class="own own' + (u.owner || 1) + '">P' + (u.owner || 1) + '</small>' : '') + '</span>' +
-          '<span class="ru-num">' + (!u.alive ? '—' : R.isMachine(u)
+          (gone ? '<span class="ru-gone">' + gone + '</span>' :
+          '<span class="ru-num">' + (R.isMachine(u)
             ? Math.max(0, u.str - u.damage) + '/' + u.str
             : u.models + '/' + u.size) + '</span>' +
-          '<span class="ru-sp">' + (!u.alive ? 'lost' : u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
-            : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span></li>';
+          '<span class="ru-sp">' + (u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
+            : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') + '</li>';
       });
       h += '</ul></div>';
     });
