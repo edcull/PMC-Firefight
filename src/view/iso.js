@@ -2858,9 +2858,9 @@
     // First Among Equals: a pistol, a megaphone and the group's colours on a pole
     // the leader himself: a mujahideen veteran in the fanatics' white turban, the green sash of command
     // the rebel leader, Tier by Tier (see the leader roles)
-    lead1: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: HOLY_A.mid, mark: true, tint: HOLY_A },
-    lead2: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_A },
-    lead3: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
+    lead1: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: HOLY_A.mid, mark: true, tint: HOLY_A },
+    lead2: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_A },
+    lead3: { helm: 'turban', gun: 'smg', armband: 'force', pack: 'std', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
     // the Rebellion leader's second: the Insurgent leader's figure, in a black turban like his chief's
     lead3black: { helm: 'turban', gun: 'battlerifle', armband: 'force', pack: 'std', tunic: true, wrap: '#1c1c1e', vest: '#3b3a30', bandolier: true, mark: true, tint: HOLY_B },
     lead4: { helm: 'turban', gun: 'none', armband: 'force', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: 'force', mark: true, bulk: 1, tint: HOLY_B },
