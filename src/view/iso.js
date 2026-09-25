@@ -9617,8 +9617,20 @@
           part(-L * 0.55, 0, function () {
             shape(AF, [[-L * 0.28, -cw * 0.5], [-L * 0.28, cw * 0.5], [-L * 0.84, cw * 0.2], [-L * 0.84, -cw * 0.2]], z + H * 0.6, H * 0.34, TB, 0.85,
               [[-L * 0.3, -cw * 0.24], [-L * 0.3, cw * 0.24], [-L * 0.82, cw * 0.1], [-L * 0.82, -cw * 0.1]]);
-            plate(AF, [[-L * 0.66, -w * 0.75], [-L * 0.66, w * 0.75], [-L * 0.74, w * 0.75], [-L * 0.74, -w * 0.75]], z + H * 0.82, 1.2);
+            /* The tailplane's halves droop from the boom, their tips well below
+               their roots: the far half goes in before the fin, the near one after. */
+            var tz = z + H * 0.84, ns = nearSide();
+            function droop(sd) {
+              var r0 = S3(AF(-L * 0.64, sd * cw * 0.2), tz), r1 = S3(AF(-L * 0.75, sd * cw * 0.2), tz);
+              var t1 = S3(AF(-L * 0.78, sd * w * 1.05), tz - 6), t0 = S3(AF(-L * 0.7, sd * w * 1.05), tz - 6);
+              var th = 1.3;
+              poly(g, [[r0[0], r0[1] + th], [r1[0], r1[1] + th], [t1[0], t1[1] + th], [t0[0], t0[1] + th]], mixc(hull, dark, 0.55));
+              poly(g, [r0, r1, t1, t0], sd === ns ? hull : mixc(hull, lit, 0.4));
+              edge(g, t0, t1, trim, 1);
+            }
+            droop(-ns);
             tailFin(-L * 0.74, z + H * 0.94, 13, false, 0.2);
+            droop(ns);
           });
           // swept stubs, a fan at each tip
           [-1, 1].forEach(function (sd) {
