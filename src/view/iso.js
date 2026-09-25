@@ -9503,11 +9503,13 @@
             var e0 = S3(AF(R0 * 0.8, -R0 * 0.3), podZ + 2), e1 = S3(AF(R0 * 1.3, -R0 * 0.3), podZ + 2);
             line(e0, e1, 2.2, '#15181e');
             line(e0, e1, 1, '#4a5260');
-            sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : '#ff4038');
+            // the red eye at its tip blinks, about once a second: the drone's light
+            var eyeOn = !dead && Math.floor((root.performance ? performance.now() : 0) / 500) % 2 === 0;
+            sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : eyeOn ? '#ff4038' : '#5a1c16');
             mount('nose', e1);                                   // where a marker's beam leaves the craft
             mount('scan', S3(AF(R0 * 1.13, 0), podZ + Math.round(H * 0.2)));   // and where it looks from
             mount('mg', S3(AF(R0 * 1.14, 0), podZ + Math.round(H * 0.12)));    // its light gun fires from the pod's nose
-            if (!dead) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
+            if (eyeOn) sEllipse(e1[0], e1[1], 2.2, 1.8, 'rgba(255,70,60,.3)');
             shape(AF, ring(R0 * 0.86), z, Math.round(H * 0.22), TB, null, ring(R0));                  // the underside, flaring out
             shape(AF, ring(R0), z + Math.round(H * 0.22), Math.round(H * 0.18), TB, null, ring(R0 * 0.72)); // the upper face
             shape(AF, ring(R0 * 0.5), z + Math.round(H * 0.4), Math.round(H * 0.28), TB, null, ring(R0 * 0.36)); // the hump
@@ -10559,8 +10561,12 @@
       ellipse(g, dp.x - r * 0.35, cy - r * 0.5, r * 0.35, r * 0.25, 'rgba(255,255,255,.75)');
       ellipse(g, dp.x + r * 0.2, cy - r * 0.05, r * 0.28, r * 0.2, '#2a6f9a');     // the sensor behind the dome's skin
       }
-      // a jet or a disc has no aerial: its light blinks on top of the dome instead
-      if (only !== 'aerial' && spec.fly && (spec.craft === 'jet' || spec.craft === 'disc')) droneLamp(dp.x, cy - r * 1.05);
+      // a jet has no aerial: its light blinks on top of the dome instead (a disc's is the red eye on its emitter)
+      if (only !== 'aerial' && spec.fly && spec.craft === 'jet') {
+        // just ahead of the dome, on the spine towards the nose
+        var lq = toScreen(along(spec.len * (back + 0.13), 0).x, along(spec.len * (back + 0.13), 0).y);
+        droneLamp(lq.x, lq.y - y5 - 1.2);
+      }
       if (only === 'dome') return;
       // the aerial, at the back: the rear corner of a hull or its bed, a craft's tail, behind a walker's dome
       var aq, ya = y5;
