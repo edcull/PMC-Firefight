@@ -644,6 +644,10 @@
     background: color-mix(in srgb, var(--alpha) 12%, transparent); outline: none;
   }
   #btn-resume { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+  /* throwing the battle away: quieter than going back to it, and red once it asks to be sure */
+  #btn-discard { padding-top: 10px; padding-bottom: 10px; }
+  #btn-discard.confirm { border-color: color-mix(in srgb, var(--bad) 70%, transparent); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+  #btn-discard.confirm small { color: var(--bad); }
   .mcard.menu-back { text-align: center; }
   .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
   .menu-foot a.lnk { text-decoration: none; }
@@ -1795,6 +1799,7 @@
     <h1 class="menu-title">PMC <span>2670</span><small>Firefight</small></h1>
     <div class="menu-pane" id="menu-main">
       <button class="mcard" id="btn-resume" hidden>Back to the battle<small id="menu-resume-sub">The battle is still on</small></button>
+      <button class="mcard mcard-discard" id="btn-discard" hidden>Discard this battle<small id="menu-discard-sub">End the skirmish without finishing it</small></button>
       <button class="mcard" id="btn-skirmish">Skirmish<small>One battle: against the AI, a friend on this screen, or the OpFor</small></button>
       <button class="mcard" id="btn-campaign">Campaign<small id="menu-camp-sub">Raise a force and see it through a war</small></button>
       <!-- only offered when the page came from a game server: a game opened
@@ -2206,6 +2211,6 @@
 <script src="src/engine/engine.js?v=ff0ad6acfc"></script>
 <script src="src/net/net.js?v=eaa07d90ac"></script>
 <script src="src/net/lobby.js?v=55003102fe"></script>
-<script src="src/view/game.js?v=cc980ee8b0"></script>
+<script src="src/view/game.js?v=d8a840d56c"></script>
 <script src="src/view/dossier.js?v=216e69f26d"></script>
-<script src="src/view/menu.js?v=609e1b9a6d"></script>
+<script src="src/view/menu.js?v=83f029b704"></script>
