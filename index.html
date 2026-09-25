@@ -705,7 +705,9 @@
   .found-units .chosen:empty::before { content: 'No units yet.'; }
   .found-add { align-self: flex-start; margin-top: 8px; }
   /* the units picked, a card each */
-  .found-units .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .found-units .chosen.fcards, .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .chosen.fcards:empty::before { content: 'No units yet.'; color: var(--ink-faint); font-size: 12px; }
+  .fcard-top select.drive { flex: none; max-width: 110px; }
   .fcard { border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.02); padding: 7px 9px; }
   .fcard-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
   .fcard-top b { font-family: var(--display); font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -966,7 +968,8 @@
   #setup[data-hot] .muster.picking > * { flex: none; }
   #setup[data-hot] .muster.picking > .cat { flex: 1 1 auto; min-height: 0; max-height: none; overscroll-behavior: contain; }
   #setup[data-hot] .muster.picking > .cat h4 { background: var(--panel); z-index: 1; margin-top: 0; padding: 6px 0 4px; }
-  #setup[data-hot] .muster.picking > #chosen { margin-bottom: 8px; max-height: 84px; overflow-y: auto; align-content: flex-start; }
+  /* while picking, the cards stay behind: the Tier counts above the list say what is picked */
+  #setup[data-hot] .muster.picking > #chosen { display: none; }
   #setup[data-hot] .muster.picking > .cat-add, #setup[data-hot] .muster.picking > .muster-btns,
   #setup[data-hot] .muster.picking > .demo-btns, #setup[data-hot] .muster.picking > .limits { display: none !important; }
   #setup[data-hot] .muster.picking > .cat-done { display: flex; margin-top: 12px; }
@@ -2187,6 +2190,6 @@
 <script src="src/engine/engine.js?v=ec0b2a718f"></script>
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=6125e08b09"></script>
+<script src="src/view/game.js?v=76f8673d50"></script>
 <script src="src/view/dossier.js?v=216e69f26d"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

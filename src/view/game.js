@@ -5311,12 +5311,28 @@
         ? '<button type="button" class="drone' + (pick.riders ? ' on' : '') + '" data-riders="' + i +
         '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
-      return '<span class="pickwrap">' +
-        '<button type="button" class="pick' + (freeIdx[i] ? ' free' : '') + '" data-drop="' + i + '" title="' +
-        (freeIdx[i] ? 'Free: an extra unit from Human Wave Attacks. ' : '') + 'Remove">' +
-        p.name + (pick.riders ? ' (mounted)' : '') + ' <b>' + R.ROMAN[p.tier] + '</b>' +
-        (freeIdx[i] ? '<i class="freetag">FREE</i>' : '') + '</button>' + drive + drone + ride + mnt + '</span>';
+      /* a card each, as the campaign's founding shows them: name and kind, Tier,
+         its numbers as fielded (drive and drone worked in), its rules, its
+         options and the way to take it off the list */
+      var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size }),
+        pick.prop || R.defaultDrive(p)), !!pick.drone);
+      var mach = p.cls !== 'infantry';
+      var st = [['Move', Math.floor(u0.move) + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
+        ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', pick.riders ? Math.ceil(u0.size / 2) : u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+      var TXT = window.PMCRuleText;
+      return '<div class="fcard' + (freeIdx[i] ? ' free' : '') + '">' +
+        '<div class="fcard-top"><span class="ct">' + R.ROMAN[p.tier] + '</span><b>' + esc(p.name) + (pick.riders ? ' (mounted)' : '') + '</b>' +
+        '<span class="fcard-kind">' + esc(p.group || '') + '</span>' +
+        (freeIdx[i] ? '<i class="freetag" title="Free: an extra unit from Human Wave Attacks">FREE</i>' : '') +
+        drive + drone + ride + mnt +
+        '<button type="button" class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p.name) + '">\u2715</button></div>' +
+        '<div class="fcard-stats">' + st.map(function (c2) { return '<span><i>' + c2[0] + '</i>' + esc(String(c2[1])) + '</span>'; }).join('') + '</div>' +
+        ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
+          var d = TXT ? TXT.describe(r) : { name: r, text: '' };
+          return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
+        }).join('') + '</div>' : '') + '</div>';
     }).join('');
+    el('chosen').classList.add('fcards');
 
     var f = el('faults');
     if (!muster.keys.length) {

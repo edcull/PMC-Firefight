@@ -132,18 +132,18 @@ const { ROOT, SHOTS } = require('../where.js');
   await roll(); await name('Kowalski\u2019s Lads');
   await next();
   await p.click('[data-hotside="1"]');
-  const op = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length,
+  const op = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .fcard').length,
     legal: /legal/i.test(document.getElementById('faults').textContent), name: document.getElementById('hot-name').value }));
   check('then the opposition: a random kind of force, already rolled, with a name of its own', /^The opposition/.test(await title()) && op.units > 0 && op.legal && !!op.name && op.name !== 'Kowalski\u2019s Lads', JSON.stringify(op));
   // the army is picked in a modal now; picking there goes through the same selector
   await p.click('#btn-army'); await p.click('[data-army-pick="xeno"]'); await p.click('#btn-army-done');
-  const opx = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .pick').length, legal: /legal/i.test(document.getElementById('faults').textContent), line: document.getElementById('army-line-text').textContent }));
+  const opx = await p.evaluate(() => ({ units: document.querySelectorAll('#chosen .fcard').length, legal: /legal/i.test(document.getElementById('faults').textContent), line: document.getElementById('army-line-text').textContent }));
   check('...pick an army type and it is rolled for you', opx.units > 0 && opx.legal && /Xenotripods/.test(opx.line), JSON.stringify(opx));
-  const was = await p.evaluate(() => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join());
+  const was = await p.evaluate(() => [...document.querySelectorAll('#chosen .fcard')].map(b => b.textContent).join());
   let changed = false;
   for (let i = 0; i < 5 && !changed; i++) {
     await p.evaluate(() => document.getElementById('btn-demo-roll').click());
-    changed = await p.evaluate((w) => [...document.querySelectorAll('#chosen .pick')].map(b => b.textContent).join() !== w &&
+    changed = await p.evaluate((w) => [...document.querySelectorAll('#chosen .fcard')].map(b => b.textContent).join() !== w &&
       /legal/i.test(document.getElementById('faults').textContent), was);
   }
   check('...or Random force to roll it again', changed);

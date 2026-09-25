@@ -705,7 +705,9 @@
   .found-units .chosen:empty::before { content: 'No units yet.'; }
   .found-add { align-self: flex-start; margin-top: 8px; }
   /* the units picked, a card each */
-  .found-units .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .found-units .chosen.fcards, .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .chosen.fcards:empty::before { content: 'No units yet.'; color: var(--ink-faint); font-size: 12px; }
+  .fcard-top select.drive { flex: none; max-width: 110px; }
   .fcard { border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.02); padding: 7px 9px; }
   .fcard-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
   .fcard-top b { font-family: var(--display); font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -966,7 +968,8 @@
   #setup[data-hot] .muster.picking > * { flex: none; }
   #setup[data-hot] .muster.picking > .cat { flex: 1 1 auto; min-height: 0; max-height: none; overscroll-behavior: contain; }
   #setup[data-hot] .muster.picking > .cat h4 { background: var(--panel); z-index: 1; margin-top: 0; padding: 6px 0 4px; }
-  #setup[data-hot] .muster.picking > #chosen { margin-bottom: 8px; max-height: 84px; overflow-y: auto; align-content: flex-start; }
+  /* while picking, the cards stay behind: the Tier counts above the list say what is picked */
+  #setup[data-hot] .muster.picking > #chosen { display: none; }
   #setup[data-hot] .muster.picking > .cat-add, #setup[data-hot] .muster.picking > .muster-btns,
   #setup[data-hot] .muster.picking > .demo-btns, #setup[data-hot] .muster.picking > .limits { display: none !important; }
   #setup[data-hot] .muster.picking > .cat-done { display: flex; margin-top: 12px; }
@@ -36188,12 +36191,28 @@
         ? '<button type="button" class="drone' + (pick.riders ? ' on' : '') + '" data-riders="' + i +
         '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
-      return '<span class="pickwrap">' +
-        '<button type="button" class="pick' + (freeIdx[i] ? ' free' : '') + '" data-drop="' + i + '" title="' +
-        (freeIdx[i] ? 'Free: an extra unit from Human Wave Attacks. ' : '') + 'Remove">' +
-        p.name + (pick.riders ? ' (mounted)' : '') + ' <b>' + R.ROMAN[p.tier] + '</b>' +
-        (freeIdx[i] ? '<i class="freetag">FREE</i>' : '') + '</button>' + drive + drone + ride + mnt + '</span>';
+      /* a card each, as the campaign's founding shows them: name and kind, Tier,
+         its numbers as fielded (drive and drone worked in), its rules, its
+         options and the way to take it off the list */
+      var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size }),
+        pick.prop || R.defaultDrive(p)), !!pick.drone);
+      var mach = p.cls !== 'infantry';
+      var st = [['Move', Math.floor(u0.move) + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
+        ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', pick.riders ? Math.ceil(u0.size / 2) : u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+      var TXT = window.PMCRuleText;
+      return '<div class="fcard' + (freeIdx[i] ? ' free' : '') + '">' +
+        '<div class="fcard-top"><span class="ct">' + R.ROMAN[p.tier] + '</span><b>' + esc(p.name) + (pick.riders ? ' (mounted)' : '') + '</b>' +
+        '<span class="fcard-kind">' + esc(p.group || '') + '</span>' +
+        (freeIdx[i] ? '<i class="freetag" title="Free: an extra unit from Human Wave Attacks">FREE</i>' : '') +
+        drive + drone + ride + mnt +
+        '<button type="button" class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p.name) + '">\u2715</button></div>' +
+        '<div class="fcard-stats">' + st.map(function (c2) { return '<span><i>' + c2[0] + '</i>' + esc(String(c2[1])) + '</span>'; }).join('') + '</div>' +
+        ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
+          var d = TXT ? TXT.describe(r) : { name: r, text: '' };
+          return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
+        }).join('') + '</div>' : '') + '</div>';
     }).join('');
+    el('chosen').classList.add('fcards');
 
     var f = el('faults');
     if (!muster.keys.length) {
