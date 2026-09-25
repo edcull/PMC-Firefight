@@ -335,6 +335,7 @@
       (camp.mode === 'hotseat' ? esc(B.name)
         : n > 1 ? n + ' forces' : esc(B.name)) +
       '</span><em>details</em></button></div>';
+    h += cmodal('colour', C.words(A).Force + ' colours \u2014 ' + colourName(colourOf(A)), squares(colourOf(A)));
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
         : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
@@ -366,8 +367,8 @@
     return h;
   }
   function companyPanel(co, side, bar) {
-    var h = '<div class="cpan cpan-' + side + '">';
-    h += '<div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b>' +
+    var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
+    h += '<div class="cphead">' + tierBadge(co, !!bar && side === 'A') + '<b>' + esc(co.name) + '</b>' +
       (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
     h += (bar || '') + statRow(co);
@@ -449,11 +450,54 @@
   }
 
   /* The Company Tier as a badge, in the force's own word for it on hover. */
-  function tierBadge(co) {
-    // in the force's own colours
+  function tierBadge(co, pick) {
+    // in the force's own colours; on your own force it is also where the colours are changed
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
     var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
-    return '<span class="tierbadge"' + st + ' title="' + esc(C.words(co).tier + ' Tier ' + ROMAN[co.tier]) + '">' + ROMAN[co.tier] + '</span>';
+    var what = C.words(co).tier + ' Tier ' + ROMAN[co.tier];
+    if (pick) {
+      return '<button type="button" class="tierbadge tierpick"' + st + ' data-go="fmodal" data-kind="colour" title="' +
+        esc(what + ' \u2014 change colours') + '" aria-label="' + esc(what + ', change colours') + '">' + ROMAN[co.tier] + '</button>';
+    }
+    return '<span class="tierbadge"' + st + ' title="' + esc(what) + '">' + ROMAN[co.tier] + '</span>';
+  }
+  /* The side stripe down a force's panel, in its own colour. */
+  function stripe(co) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
+    return c ? ' style="border-left-color:' + c.light + '"' : '';
+  }
+  /* The kind of force, as a pill in that army's colour: ochre mercenaries,
+     crimson insurgents, olive bugs, steel Xenotripods. */
+  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
+  function armyPill(co) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[ARMY_COLOUR[co.faction || 'pmc']];
+    var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+    return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
+  }
+  /* What the force is like: what it fields, the best it has, and how it fights. */
+  function rivalBlurb(co) {
+    var n = co.roster.length, inf = 0, veh = 0, air = 0, best = null;
+    co.roster.forEach(function (e) {
+      var p = profile(e.key);
+      if (!p) return;
+      if (/air/.test(p.cls || '')) air++; else if (/vehicle|walker/.test(p.cls || '')) veh++; else inf++;
+      if (!best || p.tier > profile(best.key).tier || (p.tier === profile(best.key).tier && e.exp > best.exp)) best = e;
+    });
+    var parts = [];
+    if (inf) parts.push(inf + ' on foot');
+    if (veh) parts.push(veh + (veh === 1 ? ' vehicle' : ' vehicles'));
+    if (air) parts.push(air + ' in the air');
+    var t = C.themeOf(co);
+    if (n) {
+      var bp = best ? profile(best.key) : null;
+      t = 'It fields ' + n + ' unit' + (n === 1 ? '' : 's') +
+        (parts.length > 1 ? ' (' + parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] + ')' : '') +
+        (bp ? '; the pick of them is ' + (/^[aeiou]/i.test(bp.name) ? 'an ' : 'a ') + esc(bp.name) + ' at Tier ' + ROMAN[bp.tier] : '') + '. ' + t;
+    }
+    var r = co.record || {};
+    if (r.battles) t += ' It has fought ' + r.battles + ' battle' + (r.battles === 1 ? '' : 's') + ' against you and won ' + (r.wins || 0) + '.';
+    else t += ' It has not met you in the field yet.';
+    return t;
   }
   /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
   function statRow(co, rival) {
@@ -470,16 +514,15 @@
   }
 
   function rivalPanel(co, idx) {
-    var a = C.archetype(co.archetype);
     // no 'next' on any of them: the player picks the contract, and with it who they meet
-    var h = '<div class="cpan cpan-B"><div class="cphead">' + tierBadge(co) + '<b>' +
+    var h = '<div class="cpan cpan-B"' + stripe(co) + '><div class="cphead">' + tierBadge(co) + '<b>' +
       esc(co.name) + '</b></div>';
     h += statRow(co, true);
-    h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span></div>';
-    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
-    h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
+    // the kind of force, and its doctrines beside it on the one line
+    h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
+    h += '<div class="cpstat">' + rivalBlurb(co) + '</div>';
     h += '<button class="lnk" data-go="intel" data-rival="' + (idx == null ? 0 : idx) +
       '">Their dossier</button></div>';
     return h;
@@ -2071,6 +2114,11 @@
       draft.name = keepName;
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;
+    }
+    if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
+      camp.companies.A.colour = t.getAttribute('data-campcolour');
+      try { localStorage.setItem('pmc-colour', camp.companies.A.colour); } catch (e) { }
+      save(); openModal = null; render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
