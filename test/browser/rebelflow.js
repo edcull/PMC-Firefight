@@ -74,7 +74,7 @@ async function drain(p) {
     await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); return document.querySelectorAll('#camp-body [data-campcolour]').length > 1; }));
   // the free First Among Equals is promised once the list is legal: see "the list is a legal revolt" below
   check('...and offers Paths rather than doctrines',
-    /starting path/i.test(txt) && /path of the hero/i.test(await p.evaluate(() =>
+    /choose a path/i.test(txt) && /path of the hero/i.test(await p.evaluate(() =>
       document.querySelector('#camp-body .cmodal[data-modal="doctrine"]').textContent)));
   check('...eighteen of them', await p.evaluate(() =>
     document.querySelectorAll('#camp-body [data-doc]').length) === 18);
@@ -89,8 +89,8 @@ async function drain(p) {
     if (!await click(p, `#camp-body button[data-add="${k}"]`)) problems.push('could not add ' + k);
   }
   await click(p, '#camp-body [data-doc="H1"]');
-  txt = await body(p);
-  check('the list is a legal revolt', /ready\. the first among equals/i.test(txt), txt.split('\n').slice(-3)[0]);
+  const sign = await p.evaluate(() => { const b = document.getElementById('found-sign'); return { title: b.title, off: b.disabled }; });
+  check('the list is a legal revolt', /ready\. the first among equals/i.test(sign.title) && !sign.off, sign.title);
   await shot(p, 'rebel-found.png');
   check('the banner can be raised', await clickText(p, '(?:RAISE|Raise) THE BANNER|Raise the banner'));
 

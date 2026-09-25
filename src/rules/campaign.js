@@ -473,7 +473,7 @@
     if (f === 'bugs') return { tier: 'Swarm', force: 'swarm', Force: 'Swarm', side: 'Space Bugs', money: 'RP',
       moneyLong: 'Resource Points', cmd: 'Leader Bug', recruit: 'Spawn', recruited: 'spawned',
       honour: 'Adaptation', honours: 'Adaptations', trauma: 'Genetic Flaw', traumas: 'Genetic Flaws', unitWord: 'bug unit' };
-    if (f === 'rebel') return { tier: 'Revolt', force: 'revolt', Force: 'Revolt', side: 'Insurgents', money: 'IP',
+    if (f === 'rebel') return { tier: 'Revolt', force: 'revolution', Force: 'Revolution', side: 'Insurgents', money: 'IP',
       moneyLong: 'Influence Points', cmd: 'First Among Equals', recruit: 'Recruit', recruited: 'recruited',
       honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit' };
     return { tier: 'Company', force: 'company', Force: 'Company', side: 'Mercenaries', money: 'kUC',

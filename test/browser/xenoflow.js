@@ -65,7 +65,7 @@ async function drain(p) {
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Ghadon Third'; });
   let txt = await body(p);
   check('the founding screen speaks for a tribe', await p.evaluate(() => /the tribe/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
-  check('...offers Tribe Advancements', /starting tribe advancement/i.test(txt), (txt.match(/Starting [^\n]+/i) || [])[0]);
+  check('...offers Tribe Advancements', /choose a tribe advancement/i.test(txt), (txt.match(/Choose [^\n]+/i) || [])[0]);
   check('...eighteen of them', await p.evaluate(() =>
     document.querySelectorAll('#camp-body [data-doc]').length) === 18);
   const xenoOnly = await p.evaluate(() =>
@@ -79,8 +79,8 @@ async function drain(p) {
     if (!await click(p, `#camp-body button[data-add="${k}"]`)) problems.push('could not add ' + k);
   }
   await click(p, '#camp-body [data-doc="XO6"]');
-  txt = await body(p);
-  check('the list is a legal tribe', /ready\. the alpha squad/i.test(txt), txt.split('\n').slice(-3)[0]);
+  const sign = await p.evaluate(() => { const b = document.getElementById('found-sign'); return { title: b.title, off: b.disabled }; });
+  check('the list is a legal tribe', /ready\. the alpha squad/i.test(sign.title) && !sign.off, sign.title);
   await shot(p, 'xeno-found.png');
   check('the ground can be claimed', await clickText(p, '(?:CLAIM|Claim) THE GROUND|Claim the ground'));
 
