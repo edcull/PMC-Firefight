@@ -361,6 +361,8 @@
   function evUnit(id) { return id ? Q.byId(id) : null; }
 
   function applyEvent(ev) {
+    // a test can ask for the order the show is played in, and when
+    if (window.__traceShow) window.__traceShow.push({ t: Math.round(nowMs()), e: ev.e, id: ev.id || ev.from || (ev.f && ev.f.kind) || (ev.card && ev.card.kind) || '', to: ev.to || '', busy: busy() });
     switch (ev.e) {
       case 'log': logLine(ev.t, ev.text, ev.math); return;
       case 'card': pushRes(ev.card); return;
@@ -1827,12 +1829,14 @@
     /* A gunship fires from its airframe and is hit on its airframe, not on the
        ground it happens to be over. Every point a shot is drawn between carries
        how high above its own ground it sits. */
-    var from = { x: shooter.x, y: shooter.y, up: ISO.flyLift(shooter) };
-    var to = { x: target.x, y: target.y, up: ISO.flyLift(target) };
+    /* Where each is drawn, not where the rules have already put it: a target that
+       breaks and runs is still standing where it was hit until its own move plays. */
+    var from = { x: dispX(shooter), y: dispY(shooter), up: ISO.flyLift(shooter) };
+    var to = { x: dispX(target), y: dispY(target), up: ISO.flyLift(target) };
     /* Troopers turn to face what they are shooting at, and each shot leaves one
        of their own barrels: the pool is every surviving model's muzzle. */
     if (!R.isMachine(shooter)) {
-      faceToward(shooter, target.x, target.y);
+      faceToward(shooter, to.x, to.y, from);
       var pool = ISO.muzzles(shooter, R.status(shooter));
       if (pool.length) { from.mz = pool[0]; from.pool = pool; }
     }
@@ -1841,7 +1845,7 @@
        from the machine gun, rockets from the rack. */
     var mountFrom = function () { return from; };
     if (R.isMachine(shooter)) {
-      shooter.aim = Math.atan2(target.y - shooter.y, target.x - shooter.x);
+      shooter.aim = Math.atan2(to.y - from.y, to.x - from.x);
       var M = ISO.mounts(shooter);
       mountFrom = function (style) { return ISO.mountFor(M, style, shooter, from); };
       from = mountFrom(spec.p);
@@ -3065,8 +3069,12 @@
     // a building that is hiding somebody is recomposited with its near walls off
     blockers.forEach(function (it) { if (it.open) repaintProp(it.pr, true); });
 
+    /* The AI's choices are not drawn: its reach, its targets and its range rings
+       are where the rules have already left it, ahead of the move still being
+       shown, and they are its business rather than the player's. */
+    var aiSel = !!(ui.selected && state.cfg.aiSides.indexOf(ui.selected.side) >= 0);
     // reachable ground
-    if (ui.moves.length) {
+    if (ui.moves.length && !aiSel) {
       var mw = Math.ceil(K * 0.6), mh = Math.ceil(K * 0.35);
       ui.moves.forEach(function (c) {
         if (!onView(c.x, c.y)) return;
@@ -3502,7 +3510,7 @@
     });
 
     var u = ui.selected;
-    if (u && u.alive) {
+    if (u && u.alive && !aiSel) {
       var lift = liftOf(u.x, u.y);
       // keep the auras on the table
       ctx.save();
@@ -3648,7 +3656,7 @@
       ctx.restore();
     }
     // destructible pieces offered as targets
-    if (ui.terrain.length) {
+    if (ui.terrain.length && !aiSel) {
       ctx.save();
       ctx.setLineDash([5, 4]);
       ctx.strokeStyle = ui.mode === 'breach' ? '#e4693f' : '#e8c15a';
@@ -3680,7 +3688,7 @@
     }
 
     // targets
-    ui.targets.forEach(function (t) {
+    (aiSel ? [] : ui.targets).forEach(function (t) {
       var p = hud(t.x, t.y, liftOf(t.x, t.y));
       ctx.strokeStyle = ui.mode === 'assault' ? '#e4693f' : '#e8c15a';
       ctx.lineWidth = 2;
@@ -5253,7 +5261,27 @@
       ' · A' + p.assault + ' · Mor ' + p.morale;
   }
 
+  /* The Battle Tier list gives each Tier's composition points: a commando's own
+     table in solitaire and co-op (p. 147 — a Rebel commando gets more, in place of
+     a tactic), a swarm's for the Bugs, the standard table otherwise. */
+  function tierLabels() {
+    var sel = el('sel-tier');
+    if (!sel) return;
+    var f = musterFaction();
+    Array.prototype.forEach.call(sel.options, function (o) {
+      var t = +o.value, txt;
+      if (muster.solo && SOLO.COMMANDO && SOLO.COMMANDO[t]) {
+        var cp = SOLO.COMMANDO[t].points;
+        txt = cp[0] + ' points (' + cp[1] + ' for Rebels)';
+      } else {
+        var comp = f === 'bugs' && R.COMPOSITION_BUGS ? R.COMPOSITION_BUGS[t] : R.COMPOSITION[t];
+        txt = (comp ? comp.points : t * 6) + ' points';
+      }
+      o.textContent = R.ROMAN[t] + ' \u2014 ' + txt;
+    });
+  }
   function drawMuster() {
+    tierLabels();
     var tier = musterTier(), pl = musterPL(), faction = musterFaction(), tactic = musterTactic();
     var c = musterCheck(muster.keys);
     var lims = musterLimits(tier, pl, c);
@@ -5263,7 +5291,7 @@
     if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
     var mh = document.querySelector('.muster-head b');
     if (mh) mh.textContent = muster.hot && muster.hot.step < 3
-      ? (muster.hot.kind === 'ai' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
+      ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
       : muster.solo
       ? (el('sel-solo-mode').value === 'coop' ? 'Player ' + (muster.cur + 1) + '\u2019s commando' : 'Your commando')
       : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';
