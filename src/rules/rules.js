@@ -1934,12 +1934,18 @@
     var here = TERRAIN[terrainAt(state, target.x, target.y)].cover;
     /* Last Stand (p. 95): Rebel infantry "get +4 to their Defence parameter when in
        terrain which grants a Defence bonus" — behind a low wall as much as in ruins. */
-    var stand = target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry';
+    // (the gun crews of the Rebel artillery are not the infantry it means)
+    var stand = target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry' &&
+      target.group !== 'Rebel artillery';
     function held(v, why) { return stand ? { v: Math.max(v, 4), why: why + ' — Last Stand' } : { v: v, why: why }; }
     if (here) return held(here, 'terrain cover');
-    // a dug-in gun sits behind its own sandbags, which count as cover (p. 94)
-    if (dugIn(target)) return { v: 2, why: 'dug in behind sandbags' };
     if (!attacker) return { v: 0, why: '' };
+    /* A dug-in gun sits behind its own sandbags (p. 94): a short linear obstacle
+       across its front, so like a low wall it shelters the gun from fire coming
+       over it — from its front, or plunging down from any side. */
+    if (dugIn(target) && (has(attacker, 'Indirect Fire') || sandbagged(target, attacker))) {
+      return { v: 2, why: has(attacker, 'Indirect Fire') ? 'sandbags against plunging fire' : 'dug in behind sandbags' };
+    }
     // Indirect Fire falls from above, so a low wall shelters the target whichever
     // way the shot comes from
     /* Low walls (p. 42): "When a whole unit is behind a low wall (up to 2" from
@@ -2846,6 +2852,14 @@
   }
 
   function dugIn(u) { return !!(u && u.dugIn && hasOwn(u, 'Stationary Artillery')); }
+  // is the shooter out in front of the dug-in gun, where its sandbags lie between them?
+  function sandbagged(gun, shooter) {
+    var f = gun.facing == null ? (gun.side === 'B' ? Math.PI : 0) : gun.facing;
+    var d = Math.atan2(shooter.y - gun.y, shooter.x - gun.x) - f;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    return Math.abs(d) <= Math.PI / 3;
+  }
   function shotRange(a) { return dugIn(a) ? Math.min(a.range, 24) : a.range; }
   function shotMinRange(a) { return dugIn(a) ? 6 : ruleValue(a, 'Minimum Range'); }
 
@@ -3070,7 +3084,8 @@
     /* A squad or a gun on its trails turns onto what it fires at. Only a
        machine's facing is ever read by the rules (Limited Fire Arc, which side
        is hit), so for anyone else this only turns the drawing. */
-    if (a && t && !isMachine(a) && a.x != null && !(opts && opts.assault)) a.facing = Math.atan2(t.y - a.y, t.x - a.x);
+    // (a dug-in gun "cannot be turned", p. 94: it fires only across the front it dug in facing)
+    if (a && t && !isMachine(a) && !dugIn(a) && a.x != null && !(opts && opts.assault)) a.facing = Math.atan2(t.y - a.y, t.x - a.x);
     var m = shotMods(state, a, t, mode, opts);
     var aux = m.aux, basic = m.basic, parts = m.parts.slice(), pierce = m.pierce;
     var crossfire = m.crossfire, dist = m.dist, dres = m.def;

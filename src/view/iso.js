@@ -6520,7 +6520,7 @@
          low enough for the barrel, laid level, to clear. */
       var R0 = 0.62 * big;
       for (var c2 = 0; c2 < 3; c2++) {
-        for (var bg = -3; bg <= 3; bg++) {
+        for (var bg = -5; bg <= 5; bg++) {              // across about 60° either side of the line of fire
           (function (c3, th) {
             var d0 = th - 0.1, d1 = th + 0.1;
             part(Math.cos(th) * R0, Math.sin(th) * R0, function () {
