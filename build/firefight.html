@@ -693,7 +693,7 @@
      blur or transform, or the pop-ups inside it would be placed on it rather
      than on the screen. */
   #setup .hot-name.foundid { grid-template-columns: 1fr; }   /* one row: the chip and the name */
-  #setup-table { display: none; }
+  #setup-table, #camp-table { display: none; }
   @media (min-width: 1001px) {
     #setup.overlay { padding: 28px 20px; align-items: center; justify-content: center; }
     #setup-table { display: block; position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; pointer-events: none; }
@@ -708,6 +708,20 @@
     }
     /* a force's screen keeps its fit: a card of a steady height, the units picked scrolling inside it */
     #setup[data-quick]:not([data-hot="3"]) > .sheet { flex: 1 1 auto; max-height: 880px; }
+    /* the campaign likewise: a card over the table, the hub and the founding
+       keeping their fit inside a card of a steady height */
+    #camp.overlay { padding: 28px 20px; align-items: center; justify-content: center; }
+    #camp-table { display: block; position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; pointer-events: none; }
+    #camp > .camp-top {
+      position: relative; width: min(760px, 100%); flex: none;
+      border: 1px solid var(--line); border-radius: 8px 8px 0 0; background: color-mix(in srgb, var(--panel) 95%, transparent);
+    }
+    #camp.overlay > #camp-body.sheet {
+      position: relative; flex: 0 1 auto; width: min(760px, 100%); max-width: none;
+      padding: 18px 22px 22px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 8px 8px;
+      background: color-mix(in srgb, var(--panel) 95%, transparent);
+    }
+    #camp.overlay > #camp-body.sheet.fit, #camp.overlay > #camp-body.sheet.hubfit { flex: 1 1 auto; max-height: 920px; }
   }
   .cmodal {
     position: fixed; inset: 0; z-index: 70; background: rgba(8, 11, 16, .78);
@@ -733,6 +747,9 @@
   .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
   .hubbar .start.hubgo { flex: 1.4 1 auto; width: auto; margin: 0; padding: 8px 12px; }
   .hubnote { margin: 0 0 8px; }
+  /* the dossier's tabs in the same row, at the same height as the buttons they replace */
+  .hubbar.dosbar .lnk { min-height: 0; padding-block: 0; }
+  .hubbar.dosbar { min-height: 33px; }
   .cpan .hubbar { margin: 10px 0 0; }
   /* the hub fits the screen: only the promotion checklist scrolls */
   #camp.overlay > #camp-body.sheet.hubfit { display: flex; flex-direction: column; }
@@ -743,6 +760,9 @@
   #camp-body.hubfit > .cpan-A > .cprom > * { flex: none; }
   #camp-body.hubfit > .cpan-A > .cprom > .cprom-list { flex: 1 1 auto; min-height: 40px; overflow-y: auto; overscroll-behavior: contain; }
   #camp-body.hubfit .clog { max-height: 96px; overflow-y: auto; }
+  /* the dossier in the Tier panel's place: tabs fixed at the top, the list under them scrolling */
+  .cdos .dtabs { margin-bottom: 9px; flex-wrap: wrap; }
+  .cdos-body { gap: 0; margin: 0; }
   .tierbadge {
     flex: none; align-self: center; display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 5px;
     border: 1px solid color-mix(in srgb, var(--alpha) 70%, var(--line)); border-radius: 4px;
@@ -750,6 +770,13 @@
     font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: .04em; line-height: 1;
   }
   .cpan .cphead .cmoney { margin-left: auto; }
+  /* your own badge opens the colours */
+  button.tierbadge.tierpick { cursor: pointer; font: inherit; font-family: var(--display); font-size: 12px; font-weight: 700; }
+  button.tierbadge.tierpick:hover, button.tierbadge.tierpick:focus-visible { outline: 2px solid color-mix(in srgb, currentColor 55%, transparent); outline-offset: 1px; }
+  /* your own colours, dropped down from the badge over the panel */
+  .cpan-A { position: relative; }
+  .found-pop.tierpop { right: auto; top: 44px; left: 8px; width: min(380px, calc(100% - 16px)); }
+  .armypill { font-weight: 600; }
   .cpan .cphead { flex-wrap: nowrap; align-items: center; }
   .cpan .cphead b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 9px 0 8px; }
@@ -1342,6 +1369,20 @@
     aside.tab-forces .logbox { display: none; }
     aside.tab-log #panel { display: none; }
     .logbox { height: auto; flex: 1; min-height: 220px; }
+  }
+  /* Desktop: the table column is the height of the screen under the header and
+     stays put as the side rails scroll; the action row is pinned to its foot
+     and the table window takes every pixel above it. */
+  @media (min-width: 1001px) {
+    .stage {
+      position: sticky; top: calc(var(--hdr, 52px) + 14px);
+      height: calc(100vh - var(--hdr, 52px) - 14px - 14px); height: calc(100dvh - var(--hdr, 52px) - 14px - 14px);
+    }
+    .stage > .board-wrap { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+    .stage > .board-wrap > canvas#board { flex: none; }
+    .stage > .board-wrap > .viewhint { margin-top: auto; }
+    .stage > .console { flex: none; margin-top: auto; }
+    .wrap { padding-block-end: 14px; }
   }
   @media (min-width: 1001px) {
     .scrim { display: none !important; }
@@ -1936,6 +1977,8 @@
 </div>
 
 <div class="overlay" id="camp" hidden>
+  <!-- on a desktop the campaign sits over a table, as a new battle's set-up does -->
+  <canvas id="camp-table" aria-hidden="true"></canvas>
   <div class="camp-top">
     <button type="button" class="camp-back" id="camp-back" data-go="menu">← Back</button>
     <h1 id="camp-title">Campaign</h1>
@@ -16955,6 +16998,27 @@
     return o;
   }
 
+  /* A dead bug: thrown on its back, its legs curled up over it, the colour
+     gone out of the shell — not the one coming up out of the ground, which is
+     what its lying-low pose is on the table. The crumpled pose is painted, then
+     turned over so the shell lies on the ground and the legs stand up off it. */
+  function deadBug(g, w, h, ox, oy, pal, kit, s) {
+    var tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    var tg = tmp.getContext('2d');
+    paintBug(tg, ox, oy, pal, kit, 'prone', 0, s, true);
+    // how high it stands, so the overturned body rests on the same ground
+    var d = tg.getImageData(0, 0, w, h).data, top = h, bot = 0;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 20) { if (y < top) top = y; bot = y; break; }
+    }
+    if (bot <= top) return;
+    var k = 0.72;
+    g.save();
+    g.setTransform(1, 0, 0, -k, 0, oy + top * k);
+    g.drawImage(tmp, 0, 0);
+    g.restore();
+  }
   function paintBug(g, ox, oy, pal, kit, pose, step, s, dead) {
     var SH = dead
       ? { lt: '#5a5044', md: '#443c33', dk: '#26211b', gl: '#6a6052' }
@@ -18177,6 +18241,8 @@
       if (MOUNTS) {
         MOUNTS.gun = [{ dx: mouth.x - gp.x, dy: mouth.y - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
         if (kind === 'firebeetle') MOUNTS.flame = MOUNTS.gun;
+        // what it sees with: its eyes, on the front of the head (a Keen-Eyed glint comes off them)
+        MOUNTS.scan = [{ dx: hc.x - gp.x, dy: hc.y - hr * 0.2 - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
       }
     }
 
@@ -18322,7 +18388,8 @@
       hp.hat = pal.helmForce || pal.forceMid || pal.mid; hp.hatLit = pal.helmLit || pal.force || pal.light; hp.hatDark = pal.helmDark || pal.forceDark || pal.dark;
       pal = hp;
     }
-    if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
+    if (kit.bug && CORPSE) deadBug(body.getContext('2d'), w, h, ox, oy, pal, kit, s);
+    else if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
       ma = [ma[0], ma[1] + burrowBug(body.getContext('2d'), w, h, ox, oy, pal, kit, step, s)];
     } else if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
     else if (kit.xeno) {
@@ -21082,7 +21149,8 @@
                 /* Half the reach of an artillery piece's barrel and much
                    thicker, but laid at the same angle: the rise is cut with the
                    run, so it points where the light support vehicle's points. */
-                var a0b = TR * 0.05, bz = tz + 9, reach = TR * (st.energyGun ? 0.55 : 0.9);
+                // out of the turret's front face, not up through its roof
+                var a0b = TR * 0.4, bz = tz + 8, reach = a0b + TR * (st.energyGun ? 0.5 : 0.85);
                 var rake = Math.round(42 * (reach - a0b) / (TR * 1.25));
                 var bt = barrel(TF, a0b, reach, 0, bz, st.energyGun ? 7.5 : 5.4, 'gun',
                   st.energyGun ? { up: rake, col: '#141b22', lit: '#2a313b' } : { up: rake, brake: true, fume: 0.4 });
@@ -23805,6 +23873,36 @@
           I.rect(g, p4.x + Math.cos(ca) * cd, p4.y + Math.sin(ca) * cd * 0.55,
             I.PIXEL, I.PIXEL, 'rgba(255,' + (200 - c * 10) + ',140,' + (1 - k) + ')');
         }
+      } else if (f.kind === 'groundbreak') {
+        /* The ground splitting open where something comes up through it: a dark
+           rent opening in the middle, cracks running out from it, and clods of
+           earth thrown up and falling back — all fading as the dust settles. */
+        var gb = I.toScreen(f.x, f.y); gb.y -= liftAt(f);
+        var grd = (f.r || 2) * I.K, go = Math.min(1, k / 0.2), gf = k < 0.7 ? 1 : (1 - k) / 0.3;
+        g.save();
+        I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
+        I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
+        g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
+        for (var gc = 0; gc < 9; gc++) {
+          var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
+          var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
+          g.beginPath(); g.moveTo(gx, gy);
+          var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
+          g.lineTo(kx, ky);
+          g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
+          g.stroke();
+        }
+        // clods flung out, arcing up and falling back
+        for (var gd = 0; gd < 14; gd++) {
+          var ca2 = gd * 2.39 + 0.5, fly = Math.min(1, k / 0.55);
+          var dist = grd * (0.4 + (gd % 4) * 0.22) * fly;
+          var hgt = Math.sin(fly * Math.PI) * I.K * (1.2 + (gd % 3) * 0.6);
+          if (fly >= 1) hgt = 0;
+          var cx2 = gb.x + Math.cos(ca2) * dist, cy2 = gb.y + Math.sin(ca2) * dist * 0.5 - hgt;
+          var cz = I.PIXEL * (1.4 + (gd % 3) * 0.8);
+          I.rect(g, cx2 - cz / 2, cy2 - cz / 2, cz, cz, 'rgba(' + (gd % 3 ? '92,74,52' : '58,46,34') + ',' + gf + ')');
+        }
+        g.restore();
       } else if (f.kind === 'collapse') {
         // the cloud a demolished piece throws up
         var pc = I.toScreen(f.x, f.y); pc.y -= liftAt(f);
@@ -30792,6 +30890,8 @@
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
     pendingArrive = {};
+    held = {};
+    if (state) state.units.forEach(function (u) { u.ax = u.ay = null; });   // nothing is part-way through a move now
     anims.forEach(function (an) { if (an.unit) an.unit.burrow = null; });
     anims.length = 0;
     FX.clear && FX.clear();
@@ -30859,11 +30959,63 @@
      the beat before its drop. Kept by id: a networked state is rebuilt each turn. */
   var pendingArrive = {};
   function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
+  /* The battle arrives already resolved, and what happened is played out after
+     it. Until each part plays, the table should show things as they stood: a
+     unit that is about to move stands where it started, and a unit about to be
+     shot keeps the models, the suppression and the life it had until the shots
+     land. `shown` is the table as it was last drawn at rest; `held` is what is
+     kept back from the new state until its event plays. */
+  var shown = {}, held = {};
+  function snapshotShown() {
+    shown = {};
+    if (!state) return;
+    state.units.forEach(function (u) {
+      shown[u.id] = { models: u.models, sp: u.sp, alive: u.alive, x: u.x, y: u.y, aboard: u.aboard, reserve: u.reserve, dp: u.dp };
+    });
+  }
+  function holdForShow(events) {
+    if (!state) return;
+    var moved = {};
+    events.forEach(function (ev) {
+      if (ev.e === 'move' && ev.id && !moved[ev.id]) {
+        moved[ev.id] = true;
+        var mu = evUnit(ev.id), p0 = ev.path && ev.path[0];
+        // it stands where it started until its move is drawn
+        if (mu && p0 && (mu.ax === null || mu.ax === undefined) && !anims.some(function (an) { return an.unit === mu; })) {
+          mu.ax = p0.x; mu.ay = p0.y;
+        }
+      }
+      var hit = [];
+      if (ev.e === 'shoot' || ev.e === 'assault') hit.push(ev.to, ev.from);
+      (ev.deaths || []).forEach(function (d) { hit.push(d.id); });
+      hit.forEach(function (id) {
+        if (!id || held[id] || !shown[id]) return;
+        var was = shown[id], u = evUnit(id);
+        if (!u || !was.alive) return;
+        if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.dp !== u.dp) held[id] = was;
+      });
+    });
+  }
+  function releaseFor(ev) {
+    if (!ev) return;
+    [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
+      .forEach(function (id) { if (id) delete held[id]; });
+  }
+  // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
+  function shownAs(u) {
+    var h = u && held[u.id];
+    if (!h) return u;
+    var o = Object.create(u);
+    o.models = h.models; o.sp = h.sp; o.alive = h.alive; o.dp = h.dp;
+    if (!u.alive) { o.x = h.x; o.y = h.y; o.aboard = h.aboard; o.reserve = h.reserve; }
+    return o;
+  }
   var show = {
     queue: [],
     running: false,
     play: function (events) {
       (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
+      holdForShow(events || []);
       this.queue = this.queue.concat(events || []);
       this.pump();
     },
@@ -30875,12 +31027,15 @@
         show.queue.shift();
         try { applyEvent(ev); }
         catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
-        if (waits) { whenIdle(show.pump); return; }
+        if (waits) { whenIdle(function () { releaseFor(ev); show.pump(); }); return; }
       }
+      held = {};
+      snapshotShown();
       show.running = false;
       syncUI();
       render();
       stepWatched();
+      scheduleReturn();
     }
   };
   // which events start something that takes time, and which land at once
@@ -30938,17 +31093,27 @@
   /* On a desktop, a new battle's set-up has the menu's table rolling behind it;
      it stops when the set-up goes away (or the screen is too narrow for it). */
   function setupBackdrop() {
-    var sp = el('setup'), cv = el('setup-table'), T = window.PMCMenu && window.PMCMenu.table;
-    if (!sp || !cv || !T || !T.on) return;
-    var want = !sp.hidden && window.innerWidth > 1000;
-    if (want) T.start(cv);
-    else if (T.on() === cv) T.stop();
+    var T = window.PMCMenu && window.PMCMenu.table;
+    if (!T || !T.on) return;
+    var wide = window.innerWidth > 1000, want = null;
+    [['setup', 'setup-table'], ['camp', 'camp-table']].forEach(function (pr) {
+      var sp = el(pr[0]), cv = el(pr[1]);
+      if (sp && cv && !sp.hidden && wide && !want) want = cv;
+    });
+    if (want) { if (T.on() !== want) T.start(want); }
+    else if (T.on() === el('setup-table') || T.on() === el('camp-table')) T.stop();
   }
   (function () {
-    var sp = el('setup');
-    if (!sp || !window.MutationObserver) return;
-    new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
-    window.addEventListener('resize', function () { setupBackdrop(); if (window.PMCMenu && window.PMCMenu.table.on() === el('setup-table')) window.PMCMenu.table.fit(); });
+    if (!window.MutationObserver) return;
+    ['setup', 'camp'].forEach(function (id) {
+      var sp = el(id);
+      if (sp) new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
+    });
+    window.addEventListener('resize', function () {
+      setupBackdrop();
+      var on = window.PMCMenu && window.PMCMenu.table.on();
+      if (on && (on === el('setup-table') || on === el('camp-table'))) window.PMCMenu.table.fit();
+    });
   })();
   function menuUp() {
     if (window.PMCMenu && window.PMCMenu.isOpen()) return true;
@@ -31513,9 +31678,13 @@
      on the landing point, the squad flickers into being inside it, and the
      light thins away. Before it forms the squad is not drawn at all. */
   // coming up out of the ground: sunk and faint at first, rising to its full height
+  /* A giant bug breaks out of the ground rather than rising up through it: the
+     ground splits, the dust goes up, and it is there in the dust as it clears. */
   function heaving(age) {
-    var k = Math.min(1, age / (STAND_MS * 0.8)), e = 1 - Math.pow(1 - k, 2);
-    return { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), pose: null, alpha: Math.min(1, 0.25 + e) };
+    var k = Math.min(1, age / (STAND_MS * 0.85));
+    if (k < 0.18) return { lift: 0, pose: null, hidden: true };
+    var a = Math.min(1, (k - 0.18) / 0.6);
+    return { lift: 0, pose: null, alpha: a * a * (3 - 2 * a) };
   }
   function teleporting(age) {
     var k = age / TELE_MS;
@@ -31659,6 +31828,11 @@
         if (SFX) { SFX.impact(); SFX.impact(0.09); }
         render();
       }, DROP_MS - 60);
+    } else if (R.isMachine(u)) {
+      // the ground breaking open under it, and the dust thrown up round it
+      addFx({ kind: 'groundbreak', x: u.x, y: u.y, r: 2.4, dur: STAND_MS + 500, blocking: true });
+      addFx({ kind: 'collapse', x: u.x, y: u.y, r: 2.8, dur: STAND_MS, blocking: true });
+      if (SFX) { SFX.impact(0.05); SFX.impact(0.18); }
     } else {
       addFx({ kind: 'collapse', x: u.x, y: u.y, r: 1.6, dur: 600, blocking: true });
       // boots, then the squad on its feet
@@ -32000,6 +32174,7 @@
     if (res && res.onClose) res.onClose();     // may queue the next step
     if (resQueue.length) showNextRes();
     else { render(); show.pump(); }
+    scheduleReturn();
   }
 
   function chipClass(text) {
@@ -32875,6 +33050,7 @@
   }
 
   function spawnDeaths(deaths) {
+    (deaths || []).forEach(function (d) { if (d.u) delete held[d.u.id]; });
     (deaths || []).forEach(function (d) {
       addFx({
         kind: 'ghost', x: d.x, y: d.y, side: d.u.side, code: d.u.code,
@@ -32988,14 +33164,29 @@
     cam.borrowed = true;
     updateReturnHint();
   }
-  function returnHome() {
+  /* The camera goes over to the other side's unit as it activates. Once that
+     side is done — nothing left to draw, no card up, and it is this screen's
+     turn again — it waits a second, then comes back to where the player left it. */
+  var RETURN_AFTER = 1000;
+  function scheduleReturn() {
+    function cancel() { if (ui.retTimer) { clearTimeout(ui.retTimer); ui.retTimer = 0; } }
+    if (!cam.borrowed || !cam.home || handsOff() || !state || state.over) { cancel(); return; }
+    if (busy()) { cancel(); if (!ui.retIdle) { ui.retIdle = true; whenIdle(function () { ui.retIdle = false; scheduleReturn(); }); } return; }
+    if (!myTurn() || ui.resOpen || resQueue.length || show.queue.length) { cancel(); return; }
+    if (ui.retTimer) return;
+    ui.retTimer = setTimeout(function () {
+      ui.retTimer = 0;
+      if (cam.borrowed && myTurn() && !ui.resOpen && !busy() && !show.queue.length) returnHome(true);
+    }, RETURN_AFTER);
+  }
+  function returnHome(quiet) {
     if (!cam.home) return;
     if (cam.home.z !== cam.z) { cam.z = cam.home.z; zoomLabel(); }
     cam.borrowed = false;
     dropFollow();
     updateReturnHint();
     centreOn(cam.home.x, cam.home.y);
-    if (SFX) SFX.click();
+    if (SFX && !quiet) SFX.click();
   }
   function updateReturnHint() {
     var h = el('returnhint');
@@ -33044,7 +33235,7 @@
   function handsOff() { return !!(state && state.cfg && state.cfg.mode === 'demo'); }
   function focusUnit(u, instant, borrowed) {
     if (!u || u.x < 0 || handsOff()) return;
-    var p = ISO.toScreen(u.x, u.y);
+    var p = ISO.toScreen(dispX(u), dispY(u));
     centreOn(p.x, p.y - ISO.ELEV, instant);
     if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
   }
@@ -33643,7 +33834,7 @@
        Occupied is what the player cares about: a squad is in the building if it
        is standing inside its footprint, and then you want to see it. */
     var now0 = nowMs();
-    var order = state.units.filter(function (u) { return onTable(u) && onView(dispX(u), dispY(u)); })
+    var order = state.units.filter(function (u) { return (onTable(u) || (held[u.id] && onTable(shownAs(u)))) && onView(dispX(u), dispY(u)); })
       .map(function (u) {
         var d = dispX(u) + dispY(u);
         /* A unit inside a building belongs just in front of it, so it is drawn
@@ -33703,7 +33894,7 @@
           ISO.drawWreck(pctx, it.u, { x: it.r.x, y: it.r.y }, liftOf(it.r.x, it.r.y), now + it.r.t0);
           return;
         }
-        var u = it.unit, ax = dispX(u), ay = dispY(u);
+        var u = shownAs(it.unit), ax = dispX(u), ay = dispY(u);
         if (arrivalQueued(u)) return;                 // its arrival has not played yet
         var arr = arriving(u);
         if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
@@ -36696,17 +36887,15 @@
       VIEW_W = Math.max(320, Math.min(1400, Math.round(bw)));
       VIEW_H = Math.max(260, Math.min(1400, Math.round(bh)));
     } else {
+      /* The table takes all the room its box has: the box is the column under
+         the header, less the action row pinned at its foot, so this is just the
+         box less its padding and the hint line under the table. */
       var avail = wrap ? wrap.clientWidth - 12 : window.innerWidth - 380;
-      /* The table takes all the height there is: the window, less the header
-         above it and, under it, the hint line and the row of action buttons (the
-         unit's text is in the left rail now, and the log is not shown). */
-      var used = 151;
-      var top = wrap ? wrap.getBoundingClientRect().top + window.scrollY : 120;
-      var room = Math.round(window.innerHeight - top - used);
-      VIEW_W = Math.max(720, Math.min(2200, Math.round(avail)));
-      VIEW_H = Math.max(420, Math.min(1400, room));
-      // never much taller than it is wide: the projection is a wide diamond
-      VIEW_H = Math.min(VIEW_H, Math.round(VIEW_W * 0.9));
+      var hintEl = wrap && wrap.querySelector('.viewhint');
+      var room = wrap ? wrap.clientHeight - 10 - (hintEl ? hintEl.offsetHeight + 4 : 20)
+        : Math.round(window.innerHeight - 280);
+      VIEW_W = Math.max(320, Math.min(2200, Math.round(avail)));
+      VIEW_H = Math.max(240, Math.min(1600, Math.round(room)));
     }
     DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
     var bw2 = Math.round(VIEW_W * DPR), bh2 = Math.round(VIEW_H * DPR);
@@ -36742,6 +36931,21 @@
       clampCam();
       if (state) render();
     });
+    /* On a desktop the table's box is whatever the action row leaves it, and
+       that row changes height as the phases come and go: follow the box. */
+    var bwrap = document.querySelector('.board-wrap');
+    if (bwrap && window.ResizeObserver) {
+      var roPend = 0;
+      new ResizeObserver(function () {
+        if (window.innerWidth <= 1000 || roPend) return;
+        roPend = requestAnimationFrame(function () {
+          roPend = 0;
+          if (!sizeView(false)) return;
+          clampCam();
+          if (state) render();
+        });
+      }).observe(bwrap);
+    }
     pix = document.createElement('canvas');
     pix.width = ISO.PIXW; pix.height = ISO.PIXH;
     pctx = pix.getContext('2d');
@@ -37188,6 +37392,7 @@
   };
   window.__actionState = function (u, id) { return actionState(u, id); };
   window.__showQueue = function () { return show.queue.length; };
+  window.__held = function () { return Object.keys(held).length; };
   window.__busy = function () { return busy(); };
   window.__uiMode = function () { return ui.mode; };
   window.__uiCounts = function () { return { targets: ui.targets.length, moves: ui.moves.length, terrain: ui.terrain.length }; };
@@ -37824,6 +38029,19 @@
      contract, which is what the screen is for. */
   function hubBar() {
     var h = '';
+    if (hubPane === 'dossier') {
+      /* In the dossier the row is its tabs: back to the company, or to the
+         experience, the recruiting or the memorial — the units themselves are
+         what shows when none of those is picked (tap the lit one to go back). */
+      var co = camp.companies.A;
+      var tab = function (key, label) {
+        var on = rosterTab === key;
+        return '<button class="lnk' + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '">' + label + '</button>';
+      };
+      return '<div class="hubbar dosbar">' +
+        '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
+        tab('spend', 'XP') + tab('recruit', esc(C.words(co).recruit)) + tab('memorial', 'Memorial') + '</div>';
+    }
     h += '<div class="hubbar">' +
       '<button class="lnk" data-go="roster">Dossier</button>' +
       '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
@@ -37832,10 +38050,15 @@
     return h;
   }
   function companyPanel(co, side, bar) {
-    var h = '<div class="cpan cpan-' + side + '">';
-    h += '<div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b>' +
+    var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
+    h += '<div class="cphead">' + tierBadge(co, !!bar && side === 'A') + '<b>' + esc(co.name) + '</b>' +
       (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
+    // the colours, dropped down under your own badge
+    if (bar && side === 'A' && colourOpen) {
+      h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
+        '</label>' + squares(colourOf(co)) + '</div>';
+    }
     h += (bar || '') + statRow(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
@@ -37848,7 +38071,7 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
-    h += promotionPanel(co, side, !!bar);
+    h += bar && side === 'A' && hubPane === 'dossier' ? dossierPanel(co) : promotionPanel(co, side, !!bar);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
     }
@@ -37915,11 +38138,54 @@
   }
 
   /* The Company Tier as a badge, in the force's own word for it on hover. */
-  function tierBadge(co) {
-    // in the force's own colours
+  function tierBadge(co, pick) {
+    // in the force's own colours; on your own force it is also where the colours are changed
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
     var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
-    return '<span class="tierbadge"' + st + ' title="' + esc(C.words(co).tier + ' Tier ' + ROMAN[co.tier]) + '">' + ROMAN[co.tier] + '</span>';
+    var what = C.words(co).tier + ' Tier ' + ROMAN[co.tier];
+    if (pick) {
+      return '<button type="button" class="tierbadge tierpick"' + st + ' data-go="fcolour" aria-expanded="' + colourOpen + '" title="' +
+        esc(what + ' \u2014 change colours') + '" aria-label="' + esc(what + ', change colours') + '">' + ROMAN[co.tier] + '</button>';
+    }
+    return '<span class="tierbadge"' + st + ' title="' + esc(what) + '">' + ROMAN[co.tier] + '</span>';
+  }
+  /* The side stripe down a force's panel, in its own colour. */
+  function stripe(co) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
+    return c ? ' style="border-left-color:' + c.light + '"' : '';
+  }
+  /* The kind of force, as a pill in that army's colour: ochre mercenaries,
+     crimson insurgents, olive bugs, steel Xenotripods. */
+  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
+  function armyPill(co) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[ARMY_COLOUR[co.faction || 'pmc']];
+    var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+    return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
+  }
+  /* What the force is like: what it fields, the best it has, and how it fights. */
+  function rivalBlurb(co) {
+    var n = co.roster.length, inf = 0, veh = 0, air = 0, best = null;
+    co.roster.forEach(function (e) {
+      var p = profile(e.key);
+      if (!p) return;
+      if (/air/.test(p.cls || '')) air++; else if (/vehicle|walker/.test(p.cls || '')) veh++; else inf++;
+      if (!best || p.tier > profile(best.key).tier || (p.tier === profile(best.key).tier && e.exp > best.exp)) best = e;
+    });
+    var parts = [];
+    if (inf) parts.push(inf + ' on foot');
+    if (veh) parts.push(veh + (veh === 1 ? ' vehicle' : ' vehicles'));
+    if (air) parts.push(air + ' in the air');
+    var t = C.themeOf(co);
+    if (n) {
+      var bp = best ? profile(best.key) : null;
+      t = 'It fields ' + n + ' unit' + (n === 1 ? '' : 's') +
+        (parts.length > 1 ? ' (' + parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] + ')' : '') +
+        (bp ? '; the pick of them is ' + (/^[aeiou]/i.test(bp.name) ? 'an ' : 'a ') + esc(bp.name) + ' at Tier ' + ROMAN[bp.tier] : '') + '. ' + t;
+    }
+    var r = co.record || {};
+    if (r.battles) t += ' It has fought ' + r.battles + ' battle' + (r.battles === 1 ? '' : 's') + ' against you and won ' + (r.wins || 0) + '.';
+    else t += ' It has not met you in the field yet.';
+    return t;
   }
   /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
   function statRow(co, rival) {
@@ -37936,16 +38202,15 @@
   }
 
   function rivalPanel(co, idx) {
-    var a = C.archetype(co.archetype);
     // no 'next' on any of them: the player picks the contract, and with it who they meet
-    var h = '<div class="cpan cpan-B"><div class="cphead">' + tierBadge(co) + '<b>' +
+    var h = '<div class="cpan cpan-B"' + stripe(co) + '><div class="cphead">' + tierBadge(co) + '<b>' +
       esc(co.name) + '</b></div>';
     h += statRow(co, true);
-    h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span></div>';
-    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
-    h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
+    // the kind of force, and its doctrines beside it on the one line
+    h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
+    h += '<div class="cpstat">' + rivalBlurb(co) + '</div>';
     h += '<button class="lnk" data-go="intel" data-rival="' + (idx == null ? 0 : idx) +
       '">Their dossier</button></div>';
     return h;
@@ -38169,18 +38434,16 @@
   }
 
   /* ================= the dossier ================= */
-  function rosterView() {
-    var co = camp.companies.A;
-    var h = '<h2>' + esc(co.name) + '</h2>';
-    h += '<p class="lede">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + ' · ' + co.kUC + ' ' + C.money(co) + ' · ' +
-      co.roster.length + ' units on the books.</p>' + expLine(co);
-    h += '<div class="dtabs">' +
+  function rosterTabs(co) {
+    return '<div class="dtabs">' +
       '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
       '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
       '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
       '<button class="lnk' + (rosterTab === 'memorial' ? ' on' : '') + '" data-rtab="memorial">Memorial</button>' +
       '</div>';
+  }
+  function rosterBody(co) {
+    var h = '';
     if (rosterTab === 'units') {
       // every unit on the books has its soldiers named; an old save gets them now
       var named = false;
@@ -38209,9 +38472,14 @@
     } else {
       h += recruitList(co);
     }
-    h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
   }
+  /* On the hub the dossier takes the place of the Tier panel, in the same
+     box: its tabs across the top and the list scrolling under them. */
+  function dossierPanel(co) {
+    return '<div class="cprom cdos"><div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
+  }
+  var hubPane = 'dossier';            // the hub opens on the unit cards
   var rosterTab = 'units';
   /* Every soldier the force has lost in the campaign, most recent battle
      first: who they were, what they served in, and where they fell. */
@@ -39320,10 +39588,10 @@
     var body = el('camp-body');
     if (!body) return;
     var h = '';
+    if (view !== 'hub') hubPane = 'dossier';                 // back at the hub, it opens on the dossier
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view === 'found') h = foundView();
-    else if (view === 'roster') h = rosterView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') h = contractView();
     else if (view === 'aftermath') h = aftermathView();
@@ -39486,7 +39754,7 @@
     }
     if (t.hasAttribute('data-fit')) {
       C.takeUpgrade(co, upState, +t.getAttribute('data-fit'));
-      save(); view = 'roster'; rosterTab = 'spend'; render(); return;
+      save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'spend'; render(); return;
     }
     if (t.hasAttribute('data-pick')) {
       var pk = findEntry(co, t.getAttribute('data-pick'));
@@ -39533,6 +39801,11 @@
       draft.name = keepName;
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;
+    }
+    if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
+      camp.companies.A.colour = t.getAttribute('data-campcolour');
+      try { localStorage.setItem('pmc-colour', camp.companies.A.colour); } catch (e) { }
+      save(); colourOpen = false; render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
@@ -39585,7 +39858,11 @@
         render(); return;
       }
       case 'aspire': camp.companies[docSide].aspiring = true; save(); render(); return;
-      case 'roster': view = 'roster'; render(); return;
+      case 'roster':
+        // from the hub, the Dossier button swaps the Tier panel for the dossier and back again
+        if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
+        else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
+        view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;

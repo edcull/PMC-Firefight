@@ -9041,6 +9041,27 @@ html { scroll-behavior: smooth; }
     return o;
   }
 
+  /* A dead bug: thrown on its back, its legs curled up over it, the colour
+     gone out of the shell — not the one coming up out of the ground, which is
+     what its lying-low pose is on the table. The crumpled pose is painted, then
+     turned over so the shell lies on the ground and the legs stand up off it. */
+  function deadBug(g, w, h, ox, oy, pal, kit, s) {
+    var tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    var tg = tmp.getContext('2d');
+    paintBug(tg, ox, oy, pal, kit, 'prone', 0, s, true);
+    // how high it stands, so the overturned body rests on the same ground
+    var d = tg.getImageData(0, 0, w, h).data, top = h, bot = 0;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 20) { if (y < top) top = y; bot = y; break; }
+    }
+    if (bot <= top) return;
+    var k = 0.72;
+    g.save();
+    g.setTransform(1, 0, 0, -k, 0, oy + top * k);
+    g.drawImage(tmp, 0, 0);
+    g.restore();
+  }
   function paintBug(g, ox, oy, pal, kit, pose, step, s, dead) {
     var SH = dead
       ? { lt: '#5a5044', md: '#443c33', dk: '#26211b', gl: '#6a6052' }
@@ -10263,6 +10284,8 @@ html { scroll-behavior: smooth; }
       if (MOUNTS) {
         MOUNTS.gun = [{ dx: mouth.x - gp.x, dy: mouth.y - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
         if (kind === 'firebeetle') MOUNTS.flame = MOUNTS.gun;
+        // what it sees with: its eyes, on the front of the head (a Keen-Eyed glint comes off them)
+        MOUNTS.scan = [{ dx: hc.x - gp.x, dy: hc.y - hr * 0.2 - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
       }
     }
 
@@ -10408,7 +10431,8 @@ html { scroll-behavior: smooth; }
       hp.hat = pal.helmForce || pal.forceMid || pal.mid; hp.hatLit = pal.helmLit || pal.force || pal.light; hp.hatDark = pal.helmDark || pal.forceDark || pal.dark;
       pal = hp;
     }
-    if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
+    if (kit.bug && CORPSE) deadBug(body.getContext('2d'), w, h, ox, oy, pal, kit, s);
+    else if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
       ma = [ma[0], ma[1] + burrowBug(body.getContext('2d'), w, h, ox, oy, pal, kit, step, s)];
     } else if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
     else if (kit.xeno) {
@@ -13168,7 +13192,8 @@ html { scroll-behavior: smooth; }
                 /* Half the reach of an artillery piece's barrel and much
                    thicker, but laid at the same angle: the rise is cut with the
                    run, so it points where the light support vehicle's points. */
-                var a0b = TR * 0.05, bz = tz + 9, reach = TR * (st.energyGun ? 0.55 : 0.9);
+                // out of the turret's front face, not up through its roof
+                var a0b = TR * 0.4, bz = tz + 8, reach = a0b + TR * (st.energyGun ? 0.5 : 0.85);
                 var rake = Math.round(42 * (reach - a0b) / (TR * 1.25));
                 var bt = barrel(TF, a0b, reach, 0, bz, st.energyGun ? 7.5 : 5.4, 'gun',
                   st.energyGun ? { up: rake, col: '#141b22', lit: '#2a313b' } : { up: rake, brake: true, fume: 0.4 });

@@ -551,10 +551,12 @@
       return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
     }
     if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-    // a giant bug has no poses to get up through: it heaves itself up out of the ground (as game.js)
+    // a giant bug breaks out of the ground: there in the dust as it clears (as game.js)
     if (R.isMachine(unit())) {
-      var hk = Math.min(1, age / (STAND_MS * 0.8)), he = 1 - Math.pow(1 - hk, 2);
-      return { lift: -Math.round(I.ELEV * 3 * (1 - he)), pose: null, alpha: Math.min(1, 0.25 + he) };
+      var hk = Math.min(1, age / (STAND_MS * 0.85));
+      if (hk < 0.18) return { lift: 0, pose: null, hidden: true };
+      var ha = Math.min(1, (hk - 0.18) / 0.6);
+      return { lift: 0, pose: null, alpha: ha * ha * (3 - 2 * ha) };
     }
     // flat on its face, then up on one knee, then standing
     return {
@@ -595,6 +597,11 @@
           if (SFX) { SFX.impact(); SFX.impact(0.09); }
           start();
         }, DROP_MS - 60);
+      } else if (R.isMachine(u)) {
+        // the ground breaking open under a giant bug, and the dust thrown up round it
+        FX.add({ kind: 'groundbreak', x: at.x, y: at.y, r: 2.4, dur: STAND_MS + 500, blocking: true });
+        FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 2.8, dur: STAND_MS, blocking: true });
+        if (SFX) { SFX.impact(0.05); SFX.impact(0.18); }
       } else {
         FX.add({ kind: 'collapse', x: at.x, y: at.y, r: 1.6, dur: 600, blocking: true });
         // boots, then the squad on its feet

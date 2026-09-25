@@ -21,6 +21,12 @@ async function click(p, sel) {
   await p.waitForTimeout(220);
   return hit;
 }
+// the dossier's unit cards: tap the lit tab to go back to them
+async function toUnits(p) {
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-rtab="units"]'); if (b) b.click(); });
+  await p.waitForTimeout(220);
+}
+
 async function clickText(p, re) {
   const hit = await p.evaluate((src) => {
     const rx = new RegExp(src);
@@ -87,7 +93,11 @@ async function clickText(p, re) {
   check('...whose panel the hub lists', await p.evaluate((n) => [...document.querySelectorAll('#camp-body .cpan-B .cphead b')].some(b => b.textContent === n), rival.name), rival.name);
   await shot(p, 'camp-hub.png');
 
-  /* the road to the next Company Tier, laid out step by step (pp. 83-84) */
+  /* the road to the next Company Tier, laid out step by step (pp. 83-84) —
+     behind the Company button, the hub opening on the dossier */
+  check('the hub opens on the dossier', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
+  await p.waitForTimeout(200);
   const prom = await p.evaluate(() => {
     const el = document.querySelector('#camp-body .cprom');
     if (!el) return { none: true };
@@ -157,6 +167,8 @@ async function clickText(p, re) {
 
   /* -------------------------------------------------------- the contract */
   console.log('\nTaking a contract');
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  await p.waitForTimeout(200);
   await clickText(p, '^Contract$');
   txt = await body(p);
 
@@ -195,6 +207,8 @@ async function clickText(p, re) {
   check('every one can be taken', offers.buttons === offers.cards);
   // leaving and coming back must not re-roll the jobs
   await clickText(p, 'Back');
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  await p.waitForTimeout(200);
   await clickText(p, '^Contract$');
   const again = await p.evaluate(() =>
     JSON.stringify(window.PMC_CAMPAIGN.get().offers.map(o => o.scenario.id)));
@@ -412,7 +426,7 @@ async function clickText(p, re) {
   check('a unit can be recruited from the dossier', recruited);
   const spent = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
   check('...and it cost a kUC', spent === afterState.kUC - 1, spent + ' kUC left');
-  await clickText(p, 'Units');
+  await toUnits(p);
   const now = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('the new unit is on the books', now === before + 1, now + ' units');
   await shot(p, 'camp-roster.png');
@@ -424,7 +438,7 @@ async function clickText(p, re) {
     camp.companies.A.roster.forEach(e => { e.exp = 40; });
     window.PMC_CAMPAIGN.set(camp);
   });
-  await clickText(p, 'Spend EXP');
+  await clickText(p, '^XP$');
   await p.waitForTimeout(250);
   const opened = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-honour]');
@@ -471,7 +485,7 @@ async function clickText(p, re) {
   check('...and only the three are left on the screen', drew.shown === 3, drew.shown + ' shown');
   await clickText(p, 'Back to the dossier');
   await p.waitForTimeout(200);
-  await clickText(p, 'Units');
+  await toUnits(p);
   await p.waitForTimeout(200);
 
   /* ---------------------------------------------- asking, without native dialogs */
@@ -481,9 +495,8 @@ async function clickText(p, re) {
   let nativeDialogs = 0;
   p.on('dialog', async d => { nativeDialogs++; await d.dismiss(); });
 
-  await clickText(p, 'Back');
-  await p.waitForTimeout(250);
-  await clickText(p, '^Dossier$');
+  // the dossier is already open in the hub's Tier panel
+  if (!(await p.evaluate(() => !!document.querySelector('#camp-body .cdos')))) await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
   const renamed = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-rename]');
@@ -498,7 +511,8 @@ async function clickText(p, re) {
   check('...and the name sticks',
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.some(e => e.name === "Kowalski's Lads")));
 
-  await clickText(p, 'Back');
+  // Abandon sits in the Tier panel: close the dossier to bring it back
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
   await p.waitForTimeout(250);
   await clickText(p, '^Abandon$');
   await p.waitForTimeout(300);

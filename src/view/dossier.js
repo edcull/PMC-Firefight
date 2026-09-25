@@ -358,6 +358,19 @@
      contract, which is what the screen is for. */
   function hubBar() {
     var h = '';
+    if (hubPane === 'dossier') {
+      /* In the dossier the row is its tabs: back to the company, or to the
+         experience, the recruiting or the memorial — the units themselves are
+         what shows when none of those is picked (tap the lit one to go back). */
+      var co = camp.companies.A;
+      var tab = function (key, label) {
+        var on = rosterTab === key;
+        return '<button class="lnk' + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '">' + label + '</button>';
+      };
+      return '<div class="hubbar dosbar">' +
+        '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
+        tab('spend', 'XP') + tab('recruit', esc(C.words(co).recruit)) + tab('memorial', 'Memorial') + '</div>';
+    }
     h += '<div class="hubbar">' +
       '<button class="lnk" data-go="roster">Dossier</button>' +
       '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
@@ -366,10 +379,15 @@
     return h;
   }
   function companyPanel(co, side, bar) {
-    var h = '<div class="cpan cpan-' + side + '">';
-    h += '<div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b>' +
+    var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
+    h += '<div class="cphead">' + tierBadge(co, !!bar && side === 'A') + '<b>' + esc(co.name) + '</b>' +
       (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
       '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
+    // the colours, dropped down under your own badge
+    if (bar && side === 'A' && colourOpen) {
+      h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
+        '</label>' + squares(colourOf(co)) + '</div>';
+    }
     h += (bar || '') + statRow(co);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
@@ -382,7 +400,7 @@
       h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
         C.creedOf(co).one + ' (' + open + ' free)</button> ';
     }
-    h += promotionPanel(co, side, !!bar);
+    h += bar && side === 'A' && hubPane === 'dossier' ? dossierPanel(co) : promotionPanel(co, side, !!bar);
     if (!co.aspiring && C.canAspire(co)) {
       h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
     }
@@ -449,11 +467,54 @@
   }
 
   /* The Company Tier as a badge, in the force's own word for it on hover. */
-  function tierBadge(co) {
-    // in the force's own colours
+  function tierBadge(co, pick) {
+    // in the force's own colours; on your own force it is also where the colours are changed
     var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
     var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
-    return '<span class="tierbadge"' + st + ' title="' + esc(C.words(co).tier + ' Tier ' + ROMAN[co.tier]) + '">' + ROMAN[co.tier] + '</span>';
+    var what = C.words(co).tier + ' Tier ' + ROMAN[co.tier];
+    if (pick) {
+      return '<button type="button" class="tierbadge tierpick"' + st + ' data-go="fcolour" aria-expanded="' + colourOpen + '" title="' +
+        esc(what + ' \u2014 change colours') + '" aria-label="' + esc(what + ', change colours') + '">' + ROMAN[co.tier] + '</button>';
+    }
+    return '<span class="tierbadge"' + st + ' title="' + esc(what) + '">' + ROMAN[co.tier] + '</span>';
+  }
+  /* The side stripe down a force's panel, in its own colour. */
+  function stripe(co) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
+    return c ? ' style="border-left-color:' + c.light + '"' : '';
+  }
+  /* The kind of force, as a pill in that army's colour: ochre mercenaries,
+     crimson insurgents, olive bugs, steel Xenotripods. */
+  var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
+  function armyPill(co) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[ARMY_COLOUR[co.faction || 'pmc']];
+    var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+    return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
+  }
+  /* What the force is like: what it fields, the best it has, and how it fights. */
+  function rivalBlurb(co) {
+    var n = co.roster.length, inf = 0, veh = 0, air = 0, best = null;
+    co.roster.forEach(function (e) {
+      var p = profile(e.key);
+      if (!p) return;
+      if (/air/.test(p.cls || '')) air++; else if (/vehicle|walker/.test(p.cls || '')) veh++; else inf++;
+      if (!best || p.tier > profile(best.key).tier || (p.tier === profile(best.key).tier && e.exp > best.exp)) best = e;
+    });
+    var parts = [];
+    if (inf) parts.push(inf + ' on foot');
+    if (veh) parts.push(veh + (veh === 1 ? ' vehicle' : ' vehicles'));
+    if (air) parts.push(air + ' in the air');
+    var t = C.themeOf(co);
+    if (n) {
+      var bp = best ? profile(best.key) : null;
+      t = 'It fields ' + n + ' unit' + (n === 1 ? '' : 's') +
+        (parts.length > 1 ? ' (' + parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] + ')' : '') +
+        (bp ? '; the pick of them is ' + (/^[aeiou]/i.test(bp.name) ? 'an ' : 'a ') + esc(bp.name) + ' at Tier ' + ROMAN[bp.tier] : '') + '. ' + t;
+    }
+    var r = co.record || {};
+    if (r.battles) t += ' It has fought ' + r.battles + ' battle' + (r.battles === 1 ? '' : 's') + ' against you and won ' + (r.wins || 0) + '.';
+    else t += ' It has not met you in the field yet.';
+    return t;
   }
   /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
   function statRow(co, rival) {
@@ -470,16 +531,15 @@
   }
 
   function rivalPanel(co, idx) {
-    var a = C.archetype(co.archetype);
     // no 'next' on any of them: the player picks the contract, and with it who they meet
-    var h = '<div class="cpan cpan-B"><div class="cphead">' + tierBadge(co) + '<b>' +
+    var h = '<div class="cpan cpan-B"' + stripe(co) + '><div class="cphead">' + tierBadge(co) + '<b>' +
       esc(co.name) + '</b></div>';
     h += statRow(co, true);
-    h += '<div class="carch"><span class="mk">' + C.words(co).side + '</span></div>';
-    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
-    h += '<div class="cpdoc">' + co.doctrines.map(function (d) {
+    // the kind of force, and its doctrines beside it on the one line
+    h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
+    h += '<div class="cpstat">' + rivalBlurb(co) + '</div>';
     h += '<button class="lnk" data-go="intel" data-rival="' + (idx == null ? 0 : idx) +
       '">Their dossier</button></div>';
     return h;
@@ -703,18 +763,16 @@
   }
 
   /* ================= the dossier ================= */
-  function rosterView() {
-    var co = camp.companies.A;
-    var h = '<h2>' + esc(co.name) + '</h2>';
-    h += '<p class="lede">' + C.words(co).tier + ' Tier ' +
-      ROMAN[co.tier] + ' · ' + co.kUC + ' ' + C.money(co) + ' · ' +
-      co.roster.length + ' units on the books.</p>' + expLine(co);
-    h += '<div class="dtabs">' +
+  function rosterTabs(co) {
+    return '<div class="dtabs">' +
       '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
       '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
       '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
       '<button class="lnk' + (rosterTab === 'memorial' ? ' on' : '') + '" data-rtab="memorial">Memorial</button>' +
       '</div>';
+  }
+  function rosterBody(co) {
+    var h = '';
     if (rosterTab === 'units') {
       // every unit on the books has its soldiers named; an old save gets them now
       var named = false;
@@ -743,9 +801,14 @@
     } else {
       h += recruitList(co);
     }
-    h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
   }
+  /* On the hub the dossier takes the place of the Tier panel, in the same
+     box: its tabs across the top and the list scrolling under them. */
+  function dossierPanel(co) {
+    return '<div class="cprom cdos"><div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
+  }
+  var hubPane = 'dossier';            // the hub opens on the unit cards
   var rosterTab = 'units';
   /* Every soldier the force has lost in the campaign, most recent battle
      first: who they were, what they served in, and where they fell. */
@@ -1854,10 +1917,10 @@
     var body = el('camp-body');
     if (!body) return;
     var h = '';
+    if (view !== 'hub') hubPane = 'dossier';                 // back at the hub, it opens on the dossier
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view === 'found') h = foundView();
-    else if (view === 'roster') h = rosterView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') h = contractView();
     else if (view === 'aftermath') h = aftermathView();
@@ -2020,7 +2083,7 @@
     }
     if (t.hasAttribute('data-fit')) {
       C.takeUpgrade(co, upState, +t.getAttribute('data-fit'));
-      save(); view = 'roster'; rosterTab = 'spend'; render(); return;
+      save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'spend'; render(); return;
     }
     if (t.hasAttribute('data-pick')) {
       var pk = findEntry(co, t.getAttribute('data-pick'));
@@ -2067,6 +2130,11 @@
       draft.name = keepName;
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;
+    }
+    if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
+      camp.companies.A.colour = t.getAttribute('data-campcolour');
+      try { localStorage.setItem('pmc-colour', camp.companies.A.colour); } catch (e) { }
+      save(); colourOpen = false; render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
@@ -2119,7 +2187,11 @@
         render(); return;
       }
       case 'aspire': camp.companies[docSide].aspiring = true; save(); render(); return;
-      case 'roster': view = 'roster'; render(); return;
+      case 'roster':
+        // from the hub, the Dossier button swaps the Tier panel for the dossier and back again
+        if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
+        else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
+        view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;

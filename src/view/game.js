@@ -125,6 +125,8 @@
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
     pendingArrive = {};
+    held = {};
+    if (state) state.units.forEach(function (u) { u.ax = u.ay = null; });   // nothing is part-way through a move now
     anims.forEach(function (an) { if (an.unit) an.unit.burrow = null; });
     anims.length = 0;
     FX.clear && FX.clear();
@@ -192,11 +194,63 @@
      the beat before its drop. Kept by id: a networked state is rebuilt each turn. */
   var pendingArrive = {};
   function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
+  /* The battle arrives already resolved, and what happened is played out after
+     it. Until each part plays, the table should show things as they stood: a
+     unit that is about to move stands where it started, and a unit about to be
+     shot keeps the models, the suppression and the life it had until the shots
+     land. `shown` is the table as it was last drawn at rest; `held` is what is
+     kept back from the new state until its event plays. */
+  var shown = {}, held = {};
+  function snapshotShown() {
+    shown = {};
+    if (!state) return;
+    state.units.forEach(function (u) {
+      shown[u.id] = { models: u.models, sp: u.sp, alive: u.alive, x: u.x, y: u.y, aboard: u.aboard, reserve: u.reserve, dp: u.dp };
+    });
+  }
+  function holdForShow(events) {
+    if (!state) return;
+    var moved = {};
+    events.forEach(function (ev) {
+      if (ev.e === 'move' && ev.id && !moved[ev.id]) {
+        moved[ev.id] = true;
+        var mu = evUnit(ev.id), p0 = ev.path && ev.path[0];
+        // it stands where it started until its move is drawn
+        if (mu && p0 && (mu.ax === null || mu.ax === undefined) && !anims.some(function (an) { return an.unit === mu; })) {
+          mu.ax = p0.x; mu.ay = p0.y;
+        }
+      }
+      var hit = [];
+      if (ev.e === 'shoot' || ev.e === 'assault') hit.push(ev.to, ev.from);
+      (ev.deaths || []).forEach(function (d) { hit.push(d.id); });
+      hit.forEach(function (id) {
+        if (!id || held[id] || !shown[id]) return;
+        var was = shown[id], u = evUnit(id);
+        if (!u || !was.alive) return;
+        if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.dp !== u.dp) held[id] = was;
+      });
+    });
+  }
+  function releaseFor(ev) {
+    if (!ev) return;
+    [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
+      .forEach(function (id) { if (id) delete held[id]; });
+  }
+  // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
+  function shownAs(u) {
+    var h = u && held[u.id];
+    if (!h) return u;
+    var o = Object.create(u);
+    o.models = h.models; o.sp = h.sp; o.alive = h.alive; o.dp = h.dp;
+    if (!u.alive) { o.x = h.x; o.y = h.y; o.aboard = h.aboard; o.reserve = h.reserve; }
+    return o;
+  }
   var show = {
     queue: [],
     running: false,
     play: function (events) {
       (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
+      holdForShow(events || []);
       this.queue = this.queue.concat(events || []);
       this.pump();
     },
@@ -208,12 +262,15 @@
         show.queue.shift();
         try { applyEvent(ev); }
         catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
-        if (waits) { whenIdle(show.pump); return; }
+        if (waits) { whenIdle(function () { releaseFor(ev); show.pump(); }); return; }
       }
+      held = {};
+      snapshotShown();
       show.running = false;
       syncUI();
       render();
       stepWatched();
+      scheduleReturn();
     }
   };
   // which events start something that takes time, and which land at once
@@ -271,17 +328,27 @@
   /* On a desktop, a new battle's set-up has the menu's table rolling behind it;
      it stops when the set-up goes away (or the screen is too narrow for it). */
   function setupBackdrop() {
-    var sp = el('setup'), cv = el('setup-table'), T = window.PMCMenu && window.PMCMenu.table;
-    if (!sp || !cv || !T || !T.on) return;
-    var want = !sp.hidden && window.innerWidth > 1000;
-    if (want) T.start(cv);
-    else if (T.on() === cv) T.stop();
+    var T = window.PMCMenu && window.PMCMenu.table;
+    if (!T || !T.on) return;
+    var wide = window.innerWidth > 1000, want = null;
+    [['setup', 'setup-table'], ['camp', 'camp-table']].forEach(function (pr) {
+      var sp = el(pr[0]), cv = el(pr[1]);
+      if (sp && cv && !sp.hidden && wide && !want) want = cv;
+    });
+    if (want) { if (T.on() !== want) T.start(want); }
+    else if (T.on() === el('setup-table') || T.on() === el('camp-table')) T.stop();
   }
   (function () {
-    var sp = el('setup');
-    if (!sp || !window.MutationObserver) return;
-    new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
-    window.addEventListener('resize', function () { setupBackdrop(); if (window.PMCMenu && window.PMCMenu.table.on() === el('setup-table')) window.PMCMenu.table.fit(); });
+    if (!window.MutationObserver) return;
+    ['setup', 'camp'].forEach(function (id) {
+      var sp = el(id);
+      if (sp) new MutationObserver(setupBackdrop).observe(sp, { attributes: true, attributeFilter: ['hidden'] });
+    });
+    window.addEventListener('resize', function () {
+      setupBackdrop();
+      var on = window.PMCMenu && window.PMCMenu.table.on();
+      if (on && (on === el('setup-table') || on === el('camp-table'))) window.PMCMenu.table.fit();
+    });
   })();
   function menuUp() {
     if (window.PMCMenu && window.PMCMenu.isOpen()) return true;
@@ -846,9 +913,13 @@
      on the landing point, the squad flickers into being inside it, and the
      light thins away. Before it forms the squad is not drawn at all. */
   // coming up out of the ground: sunk and faint at first, rising to its full height
+  /* A giant bug breaks out of the ground rather than rising up through it: the
+     ground splits, the dust goes up, and it is there in the dust as it clears. */
   function heaving(age) {
-    var k = Math.min(1, age / (STAND_MS * 0.8)), e = 1 - Math.pow(1 - k, 2);
-    return { lift: -Math.round(ISO.ELEV * 3 * (1 - e)), pose: null, alpha: Math.min(1, 0.25 + e) };
+    var k = Math.min(1, age / (STAND_MS * 0.85));
+    if (k < 0.18) return { lift: 0, pose: null, hidden: true };
+    var a = Math.min(1, (k - 0.18) / 0.6);
+    return { lift: 0, pose: null, alpha: a * a * (3 - 2 * a) };
   }
   function teleporting(age) {
     var k = age / TELE_MS;
@@ -992,6 +1063,11 @@
         if (SFX) { SFX.impact(); SFX.impact(0.09); }
         render();
       }, DROP_MS - 60);
+    } else if (R.isMachine(u)) {
+      // the ground breaking open under it, and the dust thrown up round it
+      addFx({ kind: 'groundbreak', x: u.x, y: u.y, r: 2.4, dur: STAND_MS + 500, blocking: true });
+      addFx({ kind: 'collapse', x: u.x, y: u.y, r: 2.8, dur: STAND_MS, blocking: true });
+      if (SFX) { SFX.impact(0.05); SFX.impact(0.18); }
     } else {
       addFx({ kind: 'collapse', x: u.x, y: u.y, r: 1.6, dur: 600, blocking: true });
       // boots, then the squad on its feet
@@ -1333,6 +1409,7 @@
     if (res && res.onClose) res.onClose();     // may queue the next step
     if (resQueue.length) showNextRes();
     else { render(); show.pump(); }
+    scheduleReturn();
   }
 
   function chipClass(text) {
@@ -2208,6 +2285,7 @@
   }
 
   function spawnDeaths(deaths) {
+    (deaths || []).forEach(function (d) { if (d.u) delete held[d.u.id]; });
     (deaths || []).forEach(function (d) {
       addFx({
         kind: 'ghost', x: d.x, y: d.y, side: d.u.side, code: d.u.code,
@@ -2321,14 +2399,29 @@
     cam.borrowed = true;
     updateReturnHint();
   }
-  function returnHome() {
+  /* The camera goes over to the other side's unit as it activates. Once that
+     side is done — nothing left to draw, no card up, and it is this screen's
+     turn again — it waits a second, then comes back to where the player left it. */
+  var RETURN_AFTER = 1000;
+  function scheduleReturn() {
+    function cancel() { if (ui.retTimer) { clearTimeout(ui.retTimer); ui.retTimer = 0; } }
+    if (!cam.borrowed || !cam.home || handsOff() || !state || state.over) { cancel(); return; }
+    if (busy()) { cancel(); if (!ui.retIdle) { ui.retIdle = true; whenIdle(function () { ui.retIdle = false; scheduleReturn(); }); } return; }
+    if (!myTurn() || ui.resOpen || resQueue.length || show.queue.length) { cancel(); return; }
+    if (ui.retTimer) return;
+    ui.retTimer = setTimeout(function () {
+      ui.retTimer = 0;
+      if (cam.borrowed && myTurn() && !ui.resOpen && !busy() && !show.queue.length) returnHome(true);
+    }, RETURN_AFTER);
+  }
+  function returnHome(quiet) {
     if (!cam.home) return;
     if (cam.home.z !== cam.z) { cam.z = cam.home.z; zoomLabel(); }
     cam.borrowed = false;
     dropFollow();
     updateReturnHint();
     centreOn(cam.home.x, cam.home.y);
-    if (SFX) SFX.click();
+    if (SFX && !quiet) SFX.click();
   }
   function updateReturnHint() {
     var h = el('returnhint');
@@ -2377,7 +2470,7 @@
   function handsOff() { return !!(state && state.cfg && state.cfg.mode === 'demo'); }
   function focusUnit(u, instant, borrowed) {
     if (!u || u.x < 0 || handsOff()) return;
-    var p = ISO.toScreen(u.x, u.y);
+    var p = ISO.toScreen(dispX(u), dispY(u));
     centreOn(p.x, p.y - ISO.ELEV, instant);
     if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
   }
@@ -2976,7 +3069,7 @@
        Occupied is what the player cares about: a squad is in the building if it
        is standing inside its footprint, and then you want to see it. */
     var now0 = nowMs();
-    var order = state.units.filter(function (u) { return onTable(u) && onView(dispX(u), dispY(u)); })
+    var order = state.units.filter(function (u) { return (onTable(u) || (held[u.id] && onTable(shownAs(u)))) && onView(dispX(u), dispY(u)); })
       .map(function (u) {
         var d = dispX(u) + dispY(u);
         /* A unit inside a building belongs just in front of it, so it is drawn
@@ -3036,7 +3129,7 @@
           ISO.drawWreck(pctx, it.u, { x: it.r.x, y: it.r.y }, liftOf(it.r.x, it.r.y), now + it.r.t0);
           return;
         }
-        var u = it.unit, ax = dispX(u), ay = dispY(u);
+        var u = shownAs(it.unit), ax = dispX(u), ay = dispY(u);
         if (arrivalQueued(u)) return;                 // its arrival has not played yet
         var arr = arriving(u);
         if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
@@ -6029,17 +6122,15 @@
       VIEW_W = Math.max(320, Math.min(1400, Math.round(bw)));
       VIEW_H = Math.max(260, Math.min(1400, Math.round(bh)));
     } else {
+      /* The table takes all the room its box has: the box is the column under
+         the header, less the action row pinned at its foot, so this is just the
+         box less its padding and the hint line under the table. */
       var avail = wrap ? wrap.clientWidth - 12 : window.innerWidth - 380;
-      /* The table takes all the height there is: the window, less the header
-         above it and, under it, the hint line and the row of action buttons (the
-         unit's text is in the left rail now, and the log is not shown). */
-      var used = 151;
-      var top = wrap ? wrap.getBoundingClientRect().top + window.scrollY : 120;
-      var room = Math.round(window.innerHeight - top - used);
-      VIEW_W = Math.max(720, Math.min(2200, Math.round(avail)));
-      VIEW_H = Math.max(420, Math.min(1400, room));
-      // never much taller than it is wide: the projection is a wide diamond
-      VIEW_H = Math.min(VIEW_H, Math.round(VIEW_W * 0.9));
+      var hintEl = wrap && wrap.querySelector('.viewhint');
+      var room = wrap ? wrap.clientHeight - 10 - (hintEl ? hintEl.offsetHeight + 4 : 20)
+        : Math.round(window.innerHeight - 280);
+      VIEW_W = Math.max(320, Math.min(2200, Math.round(avail)));
+      VIEW_H = Math.max(240, Math.min(1600, Math.round(room)));
     }
     DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
     var bw2 = Math.round(VIEW_W * DPR), bh2 = Math.round(VIEW_H * DPR);
@@ -6075,6 +6166,21 @@
       clampCam();
       if (state) render();
     });
+    /* On a desktop the table's box is whatever the action row leaves it, and
+       that row changes height as the phases come and go: follow the box. */
+    var bwrap = document.querySelector('.board-wrap');
+    if (bwrap && window.ResizeObserver) {
+      var roPend = 0;
+      new ResizeObserver(function () {
+        if (window.innerWidth <= 1000 || roPend) return;
+        roPend = requestAnimationFrame(function () {
+          roPend = 0;
+          if (!sizeView(false)) return;
+          clampCam();
+          if (state) render();
+        });
+      }).observe(bwrap);
+    }
     pix = document.createElement('canvas');
     pix.width = ISO.PIXW; pix.height = ISO.PIXH;
     pctx = pix.getContext('2d');
@@ -6521,6 +6627,7 @@
   };
   window.__actionState = function (u, id) { return actionState(u, id); };
   window.__showQueue = function () { return show.queue.length; };
+  window.__held = function () { return Object.keys(held).length; };
   window.__busy = function () { return busy(); };
   window.__uiMode = function () { return ui.mode; };
   window.__uiCounts = function () { return { targets: ui.targets.length, moves: ui.moves.length, terrain: ui.terrain.length }; };

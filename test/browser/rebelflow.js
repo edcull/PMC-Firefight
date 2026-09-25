@@ -153,6 +153,8 @@ async function drain(p) {
 
   /* --------------------------------------------------------- the contract */
   console.log('\nA contract');
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  await p.waitForTimeout(200);
   await clickText(p, '^Contract$');
   await p.waitForTimeout(200);
   const offered = await p.evaluate(() => {
@@ -263,13 +265,14 @@ async function drain(p) {
       if (!await clickText(p, '[Cc]ontinue|[Bb]ack|[Cc]lose|CONTINUE|BACK|CLOSE')) break;
     }
   }
-  check('the hub came back', /\bcontract\b/i.test(await body(p)),
+  check('the hub came back', await p.evaluate(() => !!document.querySelector('#camp-body .cpan-A .hubbar')),
     (await body(p)).split('\n').slice(0, 2).join(' | '));
   await clickText(p, '^Dossier$');
   txt = await body(p);
-  check('the dossier opened', /units on the books/i.test(txt), txt.split('\n')[1]);
+  check('the dossier opened', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
   check('the dossier speaks Influence Points', /IP/.test(txt) && !/kUC/.test(txt));
-  check('...and calls it a Revolt Tier', /revolt tier/i.test(txt), txt.split('\n')[1]);
+  const badge = await p.evaluate(() => document.querySelector('#camp-body .tierbadge').title);
+  check('...and calls it a Revolt Tier', /revolt tier/i.test(badge), badge);
   await shot(p, 'rebel-roster.png');
 
   /* -------------------------------------------------------------- reload */
