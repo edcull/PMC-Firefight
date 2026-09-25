@@ -6497,9 +6497,7 @@
     jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
     // the Light VTOL drone: a small flying disc with swept winglets and a scanner pod under its lip
     vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
-    // the advanced strike craft: the interceptor's airframe, loaded for ground attack
-    jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, noseGun: true, vTail: true, gun: 1.0 },
-    // ...or a stealth gunship on the same pattern: faceted, its weapons carried inside, a fan in its fin
+    // the advanced strike craft: a stealth gunship, faceted, its weapons carried inside, a fan in its fin
     comanche: { len: 2.45, wid: 0.60, hgt: 12, fly: 2.7, craft: 'comanche', noPods: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
 
@@ -9351,8 +9349,7 @@
          rather than floating in front of whatever is nearer. */
       function tailFin(p, zz, hh, twin, fanR) {
         (twin ? [-1, 1] : [0]).forEach(function (sd) {
-          // a V-tail's two fins are canted well out, taking the tailplane's work as well
-          var q = sd * w * 0.5, lean = sd * (spec.vTail ? 0.32 : 0.12);
+          var q = sd * w * 0.5, lean = sd * 0.12;
           var b0 = S3(AF(p + 0.04, q), zz - hh * 0.2), b1 = S3(AF(p - 0.4, q), zz - hh * 0.2);
           var t0 = S3(AF(p - 0.22, q + lean), zz + hh), t1 = S3(AF(p - 0.42, q + lean), zz + hh);
           poly(g, [b0, b1, t1, t0], sd <= 0 ? mixc(hull, lit, 0.5) : hull);
@@ -9659,7 +9656,7 @@
           });
           part(0, 0, function () {
             // the tailplane first, always under the body (and the fins, which go on last)
-            if (!spec.vTail) plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
+            plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             fuselage(fus, fusTop, z, H, TB);
             // the engine nozzle at the back: seen only when the tail is towards the eye or side-on;
             // with the nose towards the eye the fuselage hides it
@@ -9674,12 +9671,11 @@
              on after them whichever way the jet faces: from ahead they were
              drawn with the body, and from behind the wings, drawn after the
              body, covered them. */
-          part(-L * 0.36, 0, function () { tailFin(-L * 0.3, z + H * 0.7, hyb ? 14 : spec.vTail ? 10 : 16, true); }, true);
+          part(-L * 0.36, 0, function () { tailFin(-L * 0.3, z + H * 0.7, hyb ? 14 : 16, true); }, true);
           part(L * 0.4, 0, function () {
             var gp = S3(AF(L * 0.26, -fw2 * 0.7), z + H * 0.7);
             mount('mg', gp, (cos - sin) >= 0 ? 1 : -1);        // the gun port fires from here, without a dot to mark it
-            if (spec.noseGun) noseGun(L * 0.46, 0, z + 1, 0.12, 'gun', { rail: true, also: ['rail', 'auto'] });
-            else if (hyb) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
+            if (hyb) noseGun(L * 0.46, 0, z + 1, 0.3, 'mg');
           });
           break;
         }
