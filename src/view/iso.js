@@ -6499,6 +6499,8 @@
     vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
     jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, noseGun: true, vTail: true, gun: 1.0 },
+    // ...or a stealth gunship on the same pattern: faceted, its weapons carried inside, a fan in its fin
+    comanche: { len: 2.45, wid: 0.60, hgt: 12, fly: 2.7, craft: 'comanche', noPods: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
 
     /* ---- improvised rebel hulls (pp. 105-108) ----
@@ -6734,7 +6736,7 @@
   /* How far a styled craft's wings or fans reach, as a multiple of the hull
      width — what it lays on the ground when it flies over. */
   var CRAFT_SPAN = {
-    jet: 2.9, hybrid: 3.4, apache: 2.6, apacherk: 2.6, hind: 2.6, hindrk: 2.6,
+    jet: 2.9, hybrid: 3.4, comanche: 2.5, apache: 2.6, apacherk: 2.6, hind: 2.8, hindrk: 2.8,
     civ: 1.9, hawk: 1.2, chinook: 1.2, chinookcp: 2.1
   };
   /* A volley takes the muzzles in turn, so they are handed over left, right,
@@ -9561,7 +9563,8 @@
                 podUnder(lead, sd * pq, wz, npods > 1 && pi === 1 ? 'missile' : 'rocket', st === 'hindrk');
               }
               plate(AF, [[L * 0.05, sd * fw * 0.9], [L * 0.02, sd * w * 2.6], [-L * 0.12, sd * w * 2.6], [-L * 0.14, sd * fw * 0.9]], wz, 2);
-              fan(AF, -L * 0.05, sd * w * 3.1, wz + 1, 0.4);
+              // the transport and the heavy craft lift more, on bigger fans
+              fan(AF, -L * 0.05, sd * w * (hind ? 3.25 : 3.1), wz + 1, hind ? 0.48 : 0.4);
             });
           });
           part(0, 0, function () {
@@ -9582,6 +9585,46 @@
             }
           });
           part(L * 0.45, 0, function () { noseGun(L * 0.42, 0, z + 1, hind ? 0.5 : 0.42, 'mg'); });
+          break;
+        }
+        case 'comanche': {
+          /* A stealth gunship: a long, narrow, faceted body with sharp chines and
+             a pointed nose, the crew in stepped tandem under flat-plated glass,
+             short swept stubs carrying the lift fans and no pods at all (its
+             weapons ride in bays in the flanks), and a fan in the fin. */
+          var cw = w * 0.72;
+          var cbody = [[L * 0.52, 0.001], [L * 0.36, cw * 0.62], [L * 0.16, cw], [-L * 0.2, cw], [-L * 0.32, cw * 0.55],
+            [-L * 0.32, -cw * 0.55], [-L * 0.2, -cw], [L * 0.16, -cw], [L * 0.36, -cw * 0.62]];
+          // the top is much narrower than the chines: the sides slope in, as a faceted hull does
+          var ctop = cbody.map(function (q2) { return [q2[0] * 0.94 - (q2[0] > 0 ? L * 0.03 : 0), q2[1] * 0.5]; });
+          var tipQ = w * 2.3;
+          // the boom tapers back from the top of the body to the fin, with its fan and a small tailplane
+          part(-L * 0.55, 0, function () {
+            shape(AF, [[-L * 0.28, -cw * 0.5], [-L * 0.28, cw * 0.5], [-L * 0.84, cw * 0.2], [-L * 0.84, -cw * 0.2]], z + H * 0.6, H * 0.34, TB, 0.85,
+              [[-L * 0.3, -cw * 0.24], [-L * 0.3, cw * 0.24], [-L * 0.82, cw * 0.1], [-L * 0.82, -cw * 0.1]]);
+            plate(AF, [[-L * 0.66, -w * 0.75], [-L * 0.66, w * 0.75], [-L * 0.74, w * 0.75], [-L * 0.74, -w * 0.75]], z + H * 0.82, 1.2);
+            tailFin(-L * 0.74, z + H * 0.94, 13, false, 0.2);
+          });
+          // swept stubs, a fan at each tip
+          [-1, 1].forEach(function (sd) {
+            part(-L * 0.08, sd * tipQ, function () {
+              var wz = z + H * 0.42;
+              plate(AF, [[L * 0.08, sd * cw * 0.95], [-L * 0.06, sd * tipQ * 0.86], [-L * 0.16, sd * tipQ * 0.86], [-L * 0.14, sd * cw * 0.95]], wz, 1.6);
+              fan(AF, -L * 0.1, sd * tipQ, wz + 1, 0.36);
+            });
+          });
+          part(0, 0, function () {
+            fuselage(cbody, ctop, z, H, TB);
+            // the weapon bay doors, closed flush in the flanks
+            var ns = nearSide();
+            var b0 = S3(AF(L * 0.1, ns * cw * 0.99), z + H * 0.3), b1 = S3(AF(-L * 0.16, ns * cw * 0.99), z + H * 0.3);
+            edge(g, b0, b1, 'rgba(10,9,7,.45)', 0.8);
+            // stepped tandem canopies: the gunner low in front, the pilot behind and above
+            canopy(L * 0.2, L * 0.42, cw * 0.44, z + H * 0.74, H * 0.24);
+            canopy(L * 0.02, L * 0.2, cw * 0.48, z + H * 0.82, H * 0.3);
+          });
+          // the chin gun, and the Gauss rails fire from it too
+          part(L * 0.45, 0, function () { noseGun(L * 0.34, 0, z + 1, 0.3, 'gun', { rail: true, also: ['rail', 'auto', 'mg'] }); });
           break;
         }
         case 'jet': case 'hybrid': {

@@ -150,7 +150,7 @@
     { key: 'gunboat', code: 'GNB', name: 'Gunboat', group: 'Strike aircraft', cls: 'aircraft', art: 'apacherk', tier: 4, size: 1, move: 12, fp: 9, range: 18, def: 13, assault: 0, str: 5, rules: ['Flying unit', 'Incendiary Ammunition'], cap: 1 },
     { key: 'hsc', code: 'HSC', name: 'Heavy Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'hindrk', tier: 5, size: 1, move: 16, fp: 9, range: 18, def: 13, assault: 0, str: 5, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-tank'] },
     { key: 'interceptor', code: 'INT', name: 'Interceptor', group: 'Strike aircraft', cls: 'aircraft', art: 'jet', tier: 4, size: 1, move: 28, fp: 6, range: 24, def: 11, assault: 0, str: 3, rules: ['Flying unit', 'Limited Fire Arc', 'Anti-aircraft'] },
-    { key: 'asc', code: 'ASC', name: 'Advanced Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'jetstrike', tier: 5, size: 1, move: 24, fp: 9, range: 18, def: 13, assault: 0, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
+    { key: 'asc', code: 'ASC', name: 'Advanced Strike Craft', group: 'Strike aircraft', cls: 'aircraft', art: 'comanche', tier: 5, size: 1, move: 24, fp: 9, range: 18, def: 13, assault: 0, str: 4, rules: ['Flying unit', 'Limited Fire Arc'] },
     // Light VTOL drone (p. 82): always Drone Controlled, the extra Structure point already in its profile
     { key: 'vtoldrone', code: 'VTD', name: 'Light VTOL drone', group: 'Strike aircraft', cls: 'aircraft', art: 'vtoldrone', tier: 3, size: 1, move: 20, fp: 1, range: 12, def: 11, assault: 0, str: 4, mustDrone: true, rules: ['Flying unit', 'Limited Fire Arc', 'Markerlights', 'Stealth', 'Keen-Eyed', 'Drone Control'] },
 
