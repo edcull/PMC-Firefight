@@ -944,9 +944,9 @@
     deep:      { name: 'Deep water',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     lava:      { name: 'Lava field',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     /* The barren table's impassable ground (p. 47), as a desert or an arctic
-       world has it: a field of crystal, or a ravine in the ice. Both play as a
-       lava field does — nobody crosses, everyone sees over. */
-    crystal:   { name: 'Crystal field', blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
+       world has it. A mesa is high rock: nobody climbs it and nobody sees past
+       it. An ice ravine is a hole: nobody crosses, everyone sees over. */
+    mesa:      { name: 'Mesa',        blocks: true,  impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     ravine:    { name: 'Ice ravine',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     // the Demolish scenario's target: impassable, and only the Demolish action
     // touches it — a Sapper charge at +4, anyone else's at +2 (p. 54)
@@ -1173,7 +1173,7 @@
     return t;
   }
   // the pieces that come in natural outlines; built things stay square
-  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, crystal: 1, ravine: 1, hill: 1 };
+  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, mesa: 1, ravine: 1, hill: 1 };
   /* The families of outline each kind is drawn from:
        blob   — a lumpy round-cornered patch
        lobed  — two to four lobes, like a copse grown together or a clover of pools
@@ -1187,7 +1187,7 @@
     water: ['blob', 'kidney', 'kidney', 'long', 'lobed'],
     deep: ['blob', 'kidney', 'long', 'lobed'],
     lava: ['rift', 'rift', 'longrift', 'longrift', 'rift'],
-    crystal: ['blob', 'lobed', 'kidney'],
+    mesa: ['blob', 'lobed', 'kidney'],
     ravine: ['longrift', 'longrift', 'longrift', 'rift'],
     hill: ['blob', 'blob', 'lobed', 'kidney']
   };

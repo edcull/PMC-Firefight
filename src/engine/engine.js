@@ -41,7 +41,7 @@
     building: ['building', 'buildings'], bunker: ['reinforced building', 'reinforced buildings'],
     wall: ['high wall', 'high walls'], water: ['shallow pool', 'shallow pools'],
     deep: ['deep water', 'deep waters'], lava: ['lava field', 'lava fields'],
-    crystal: ['crystal field', 'crystal fields'], ravine: ['ice ravine', 'ice ravines']
+    mesa: ['mesa', 'mesas'], ravine: ['ice ravine', 'ice ravines']
   };
 
   /* A view port that does nothing, so a caller that wants only the rules can

@@ -1388,9 +1388,9 @@
     deep:      { name: 'Deep water',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     lava:      { name: 'Lava field',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     /* The barren table's impassable ground (p. 47), as a desert or an arctic
-       world has it: a field of crystal, or a ravine in the ice. Both play as a
-       lava field does — nobody crosses, everyone sees over. */
-    crystal:   { name: 'Crystal field', blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
+       world has it. A mesa is high rock: nobody climbs it and nobody sees past
+       it. An ice ravine is a hole: nobody crosses, everyone sees over. */
+    mesa:      { name: 'Mesa',        blocks: true,  impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     ravine:    { name: 'Ice ravine',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     // the Demolish scenario's target: impassable, and only the Demolish action
     // touches it — a Sapper charge at +4, anyone else's at +2 (p. 54)
@@ -1617,7 +1617,7 @@
     return t;
   }
   // the pieces that come in natural outlines; built things stay square
-  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, crystal: 1, ravine: 1, hill: 1 };
+  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, mesa: 1, ravine: 1, hill: 1 };
   /* The families of outline each kind is drawn from:
        blob   — a lumpy round-cornered patch
        lobed  — two to four lobes, like a copse grown together or a clover of pools
@@ -1631,7 +1631,7 @@
     water: ['blob', 'kidney', 'kidney', 'long', 'lobed'],
     deep: ['blob', 'kidney', 'long', 'lobed'],
     lava: ['rift', 'rift', 'longrift', 'longrift', 'rift'],
-    crystal: ['blob', 'lobed', 'kidney'],
+    mesa: ['blob', 'lobed', 'kidney'],
     ravine: ['longrift', 'longrift', 'longrift', 'rift'],
     hill: ['blob', 'blob', 'lobed', 'kidney']
   };
@@ -5678,8 +5678,8 @@
     water: { ramp: WATER, fleck: ['#74b0c2', '#22414f'], rim: '#1b3540', wet: true },
     deep: { ramp: DEEPW, fleck: ['#25506a', '#0d202c'], rim: '#0a1822', wet: true },
     lava: { ramp: CRUST, fleck: ['#d1541a', '#f08a22', '#1a1412'], rim: '#140f0c', hot: true },
-    // a desert world's crystal field: green glass grown out of the sand
-    crystal: { ramp: ['#2b3e34', '#35503f', '#40614b', '#4d7358', '#5d8668'], fleck: ['#8fe3b3', '#d8f7e6', '#1a2a21'], rim: '#16241c' },
+    // the ground under a desert mesa: red sandstone scree (the rock itself is a prop)
+    mesa: { ramp: ['#4a2618', '#5e321f', '#733f27', '#884c2f'], fleck: ['#a8623c', '#2e170e'], rim: '#2a150c' },
     // an arctic world's ice ravine: the floor far down in blue dark
     ravine: { ramp: ['#060d15', '#0a1622', '#0f2030', '#152a3e'], fleck: ['#1f3d57', '#081018'], rim: '#dfeef7' }
   };
@@ -5709,7 +5709,7 @@
     wall:     { r: 2, p: -0.08, d: 0.12, n: 0 },
     barricade:{ r: 1.6, p: -0.06, d: 0.1, n: -0.02 },
     lava:     { r: 4, p: -0.16, d: 0.08, n: -0.12, tint: '#3b322b', tw: 0.45 },
-    crystal:  { r: 3, p: -0.1, d: 0.06, n: 0.04, tint: '#8fb59c', tw: 0.3 },
+    mesa:     { r: 3, p: -0.14, d: 0.18, n: -0.04, tint: '#8a4f31', tw: 0.4 },
     ravine:   { r: 2.5, p: -0.1, d: -0.04, n: 0.08, tint: '#f2f8fb', tw: 0.35 }
   };
   function groundFit(terrain, seed) {
@@ -6464,12 +6464,9 @@
         }
         return;
       }
-      if (r.kind === 'crystal') {
-        // clusters of green crystal standing up out of the glassy ground
-        for (var cz = 0; cz < Math.max(3, Math.round(area / 6)); cz++) {
-          var czq = spotIn(r, 0.5, rand);
-          props.push({ kind: 'crystals', x: czq.x, y: czq.y, size: 1.3 + rand() * 1.1, seed: (rand() * 9999) | 0 });
-        }
+      if (r.kind === 'mesa') {
+        // a desert mesa: the whole rock stands as one prop, sorted in with the rest
+        props.push({ kind: 'mesa', x: r.x, y: r.y, w: r.w, h: r.h, piece: r, height: a(11 + rand() * 6), seed: (rand() * 9999) | 0 });
         return;
       }
       if (r.kind === 'ravine') return;               // nothing stands in a crevasse
@@ -6737,7 +6734,7 @@
        the end of a long building can have its middle nearer the viewer and still
        stand wholly behind it. A block that lies entirely behind another along
        either axis is drawn first — put right, pass by pass, among the tall ones. */
-    var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1 };
+    var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, mesa: 1 };
     function behind(p1, p2) {
       var e = 1e-3;
       var sepX = p1.x + p1.w <= p2.x + e, sepY = p1.y + p1.h <= p2.y + e;
@@ -7224,26 +7221,58 @@
         }
         break;
       }
-      case 'crystals': {
-        // three to six shards leaning out of one root, glassy green, lit on one face
-        var cr7 = rng(pr.seed), n7 = 3 + (cr7() * 4 | 0), sz7 = pr.size || 1;
-        shadowBlob(g, { x: p.x + a(0.8), y: p.y + a(0.35) }, a(1.6 * sz7), a(0.7 * sz7));
-        ellipse(g, p.x, p.y, a(1.2 * sz7), a(0.5 * sz7), 'rgba(140,255,190,.14)');
-        var shards = [];
-        for (var k7 = 0; k7 < n7; k7++) {
-          var lean = (cr7() - 0.5) * 0.8, hgt = a((1.6 + cr7() * 2.4) * sz7), wid = a((0.7 + cr7() * 0.5) * sz7);
-          shards.push({ ox: (cr7() - 0.5) * a(1.4 * sz7), lean: lean, h: hgt, w: wid });
+      case 'mesa': {
+        /* Sheer sandstone walls round the piece's own outline, banded in strata
+           and split by vertical joints, under a flat, sun-baked top. Only the
+           faces turned to the viewer are drawn; the top covers the rest. */
+        var mr = rng(pr.seed), MH = pr.height, pc = pr.piece;
+        var medges = hillOutline(pc);
+        var mfoot = medges.map(function (e) { return sp2(e.A[0], e.A[1], lift); });
+        for (var ms2 = 0; ms2 < 4; ms2++) {
+          var mo = 4 + ms2 * 4;
+          poly(g, mfoot.map(function (q) { return [q[0] + mo, q[1] + mo * 0.55]; }), 'rgba(40,18,8,.14)');
         }
-        shards.sort(function (s1, s2) { return s1.h - s2.h; }).reverse().forEach(function (sh) {
-          var bx7 = p.x + sh.ox, by7 = p.y, tx = bx7 + Math.sin(sh.lean) * sh.h, ty = by7 - Math.cos(sh.lean) * sh.h;
-          // a hexagonal prism with a pointed cap: two side faces and a facet at the tip
-          var cx7 = tx - Math.sin(sh.lean) * sh.w * 0.9, cy7 = ty + Math.cos(sh.lean) * sh.w * 0.9;
-          poly(g, [[bx7 - sh.w, by7], [cx7 - sh.w * 0.8, cy7], [tx, ty], [bx7, by7 + sh.w * 0.35]], '#23704b');   // shaded face
-          poly(g, [[bx7, by7 + sh.w * 0.35], [tx, ty], [cx7 + sh.w * 0.8, cy7], [bx7 + sh.w, by7]], '#4fbf82');   // lit face
-          poly(g, [[cx7 - sh.w * 0.8, cy7], [tx, ty], [cx7 + sh.w * 0.8, cy7], [cx7, cy7 + sh.w * 0.3]], '#9df0c3'); // cap facet
-          edgeLine(g, [bx7, by7 + sh.w * 0.35], [tx, ty], 'rgba(220,255,235,.75)', 1);         // the glint down the edge
-          edgeLine(g, [bx7 - sh.w, by7], [cx7 - sh.w * 0.8, cy7], 'rgba(10,40,25,.7)', 1);
-          dot(g, tx, ty, '#f0fff6', 1);
+        medges.filter(function (e) { return e.nx + e.ny > 0.02; })
+          .sort(function (e1, e2) { return (e1.mx + e1.my) - (e2.mx + e2.my); })
+          .forEach(function (e) {
+            var lit = Math.max(0, Math.min(1, (e.ny - e.nx + 1) / 2));
+            var A = sp2(e.A[0], e.A[1], lift), B = sp2(e.B[0], e.B[1], lift);
+            var AT = [A[0], A[1] - MH], BT = [B[0], B[1] - MH];
+            var top = lit > 0.5 ? '#d08452' : '#94502f', mid = lit > 0.5 ? '#a8603a' : '#6e3822', foot = lit > 0.5 ? '#7a4127' : '#4a2415';
+            poly(g, [A, B, BT, AT], vgrad(g, Math.min(AT[1], BT[1]), Math.max(A[1], B[1]), [top, mid, foot]));
+            var len = Math.hypot(B[0] - A[0], B[1] - A[1]);
+            // strata: level bands the length of the face
+            for (var k8 = 1; k8 < 5; k8++) {
+              var up8 = MH * k8 / 5 + (mr() - 0.5) * 2;
+              edgeLine(g, [A[0], A[1] - up8], [B[0], B[1] - up8], k8 & 1 ? 'rgba(60,24,10,.45)' : 'rgba(240,180,130,.22)', 1);
+            }
+            // vertical joints, and the odd fallen block at the foot
+            for (var j8 = 0; j8 < len / 8; j8++) {
+              var f8 = mr(), jx = A[0] + (B[0] - A[0]) * f8, jy = A[1] + (B[1] - A[1]) * f8;
+              edgeLine(g, [jx, jy - MH * (0.1 + mr() * 0.3)], [jx + (mr() - 0.5) * 2, jy - MH * (0.55 + mr() * 0.45)], 'rgba(40,16,6,.55)', 1);
+              if (mr() > 0.6) { rect(g, Math.round(jx), Math.round(jy - 2), 3 + (mr() * 3 | 0), 2, lit > 0.5 ? '#b26a42' : '#6e3822'); }
+            }
+          });
+        // the flat top, and its lit far rim
+        var mtop = medges.map(function (e) { return sp2(e.A[0], e.A[1], lift + MH); });
+        poly(g, mtop, '#b9744a');
+        // wind-scoured caprock: patches of lighter and darker stone, grit, and a crack or two
+        var tarea = pc.w * pc.h;
+        for (var tb = 0; tb < tarea / 6; tb++) {
+          var tb0 = spotIn(pc, 0.8, mr), tbs = sp2(tb0.x, tb0.y, lift + MH);
+          ellipse(g, tbs.x, tbs.y, a(0.8 + mr() * 1.4), a(0.4 + mr() * 0.6), mr() > 0.5 ? 'rgba(230,170,120,.35)' : 'rgba(110,55,30,.3)');
+        }
+        for (var tq = 0; tq < tarea * 4; tq++) {
+          var tp = spotIn(pc, 0.3, mr), ts = sp2(tp.x, tp.y, lift + MH);
+          dot(g, ts.x, ts.y, mr() > 0.5 ? '#dfa574' : '#7e4428', 1);
+        }
+        for (var tc = 0; tc < 2 + tarea / 25; tc++) {
+          var c0 = spotIn(pc, 0.8, mr), cang = mr() * Math.PI, clen = 1 + mr() * 2.5;
+          edgeLine(g, sp2(c0.x, c0.y, lift + MH), sp2(c0.x + Math.cos(cang) * clen, c0.y + Math.sin(cang) * clen, lift + MH), 'rgba(70,30,14,.6)', 1);
+        }
+        medges.forEach(function (e) {
+          var A2 = sp2(e.A[0], e.A[1], lift + MH), B2 = sp2(e.B[0], e.B[1], lift + MH);
+          edgeLine(g, A2, B2, e.nx + e.ny < 0.05 ? '#e9ae7c' : '#f0c090', 1);
         });
         break;
       }

@@ -27,7 +27,7 @@ function seeded(s) {
 }
 
 console.log('\nOne table');
-// the barren table, row for row — only its impassable ground is the world's own (crystal fields, ice ravines)
+// the barren table, row for row — only its impassable ground is the world's own (mesas, ice ravines)
 function sameTable(pl, kind) {
   var rows = G.tableFor(pl).rows, base = G.GENERATORS.barren.rows;
   return rows.length === base.length && rows.every(function (r, i) {
@@ -36,7 +36,7 @@ function sameTable(pl, kind) {
     return kinds === want;
   });
 }
-ok('a desert is laid from the barren table, with crystal fields for impassable ground', sameTable('desert', 'crystal'), true);
+ok('a desert is laid from the barren table, with mesas for impassable ground', sameTable('desert', 'mesa'), true);
 ok('...and an arctic world with ice ravines', sameTable('arctic', 'ravine'), true);
 ok('each goes by its own name', G.tableFor('desert').name + ' / ' + G.tableFor('arctic').name,
   'Desert world (barren) / Arctic world (barren)');
