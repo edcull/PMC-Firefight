@@ -6201,12 +6201,30 @@
     },
     /* A rebel field piece: a salvaged howitzer on split trails, sandbagged in,
        with the barrel up at the angle the crew worked out by eye. */
-    rebelgun: function (g, cx, cy, s, pal, dir) {
+    rebelgun: function (g, cx, cy, s, pal, dir, mode) {
+      /* `mode`: 'dug' — Dig in! (p. 94): the barrel brought down level to fire
+         over open sights, and a wall of sandbags built up in front of it;
+         'tow' — hitched up: the barrel level for the road, no ready rounds;
+         otherwise emplaced for indirect fire, the barrel laid well up. */
       var P = pieceP(g, cx, cy, s, dir);
+      if (mode === 'wreck') {
+        /* Knocked out: the piece slewed off its trails, a wheel gone, the shield
+           buckled and the barrel down in the dirt, on a scorched patch. */
+        ellipse(g, cx, cy - 2 * s, 24 * s, 9 * s, 'rgba(20,16,12,.55)');
+        P(-20, -7, 14, 3, '#2c302b');                  // a trail, splayed
+        P(-12, -4, 12, 3, '#262a25');
+        P(-6, -15, 5, 10, '#2e342d');                  // the carriage, tipped
+        ellipse(g, cx + 6 * s * (dir || 1), cy - 5 * s, 5 * s, 5 * s, '#191c18');   // the one wheel left
+        P(-11, -21, 16, 5, '#383e36');                 // the shield, buckled
+        P(-11, -21, 4, 3, '#4a5247');
+        for (var w = 0; w < 18; w++) P(-1 + w * 1.2, -15 + w * 0.5, 5, 3, '#2d332b');   // the barrel, nose down
+        P(20, -7, 7, 3, '#3a4038');
+        P(-26, -6, 7, 6, '#3a342a');                   // a spilt crate
+        P(24, -4, 3, 3, '#6a4a22'); P(28, -2, 3, 3, '#6a4a22');
+        return;
+      }
+      var dug = mode === 'dug', tow = mode === 'tow', level = dug || tow;
       ellipse(g, cx + 2 * s * (dir || 1), cy, 21 * s, 8 * s, 'rgba(12,10,8,.36)');
-      P(-22, -6, 12, 4, '#5c5344');                    // sandbags round the trail
-      P(-22, -6, 12, 2, '#7a6e58');
-      P(-24, -3, 16, 3, '#4a4337');
       P(-18, -10, 14, 4, '#3b4139');                   // split trails
       P(-18, -10, 14, 1, '#57604f');
       P(-6, -20, 5, 14, '#39413a');                    // carriage
@@ -6218,21 +6236,44 @@
       P(-10, -27, 18, 6, '#454e43');                   // gun shield, welded plate
       P(-10, -27, 5, 6, '#616b5c');
       P(-8, -25, 5, 2, '#262b24');                     // sighting slot
-      for (var i = 0; i < 22; i++) {                   // the barrel, laid well up
-        P(-2 + i * 1.05, -22 - i * 0.78, 6, 3, '#39413a');
-        P(-2 + i * 1.05, -22 - i * 0.78, 2, 3, '#525c4e');
+      if (level) {
+        for (var j = 0; j < 22; j++) {                 // the barrel, brought down level
+          P(-2 + j * 1.15, -22, 6, 3, '#39413a');
+          P(-2 + j * 1.15, -22, 2, 3, '#525c4e');
+        }
+        P(24, -23.5, 8, 4.5, '#5b6659');               // muzzle brake
+        P(24, -24, 8, 2, '#7d8a78');
+      } else {
+        for (var i = 0; i < 22; i++) {                 // the barrel, laid well up
+          P(-2 + i * 1.05, -22 - i * 0.78, 6, 3, '#39413a');
+          P(-2 + i * 1.05, -22 - i * 0.78, 2, 3, '#525c4e');
+        }
+        P(20, -39, 8, 4, '#5b6659');                   // muzzle brake
+        P(20, -40, 8, 2, '#7d8a78');
+        P(14, -30, 4, 3, '#2e342c');
       }
-      P(20, -39, 8, 4, '#5b6659');                     // muzzle brake
-      P(20, -40, 8, 2, '#7d8a78');
-      P(14, -30, 4, 3, '#2e342c');
-      P(16, -22, 8, 7, '#4a4438');                     // ready rounds, stacked
-      P(16, -22, 8, 2, '#6a5a3a');
-      P(18, -26, 3, 5, '#a8702c');
-      P(21, -26, 3, 5, '#a8702c');
-      P(-28, -12, 6, 7, pal.dark);                     // a crate of charges in unit colours
-      P(-28, -12, 6, 2, pal.mid);
+      if (!tow) {
+        P(16, -22 + (dug ? 8 : 0), 8, 7, '#4a4438');   // ready rounds, stacked
+        P(16, -22 + (dug ? 8 : 0), 8, 2, '#6a5a3a');
+        P(-28, -12, 6, 7, pal.dark);                   // a crate of charges in unit colours
+        P(-28, -12, 6, 2, pal.mid);
+      }
+      if (dug) sandbags(g, cx, cy, s, dir);
     }
   };
+  /* The sandbag wall a dug-in piece fires over (p. 94): two courses of bags
+     across its front, the barrel's line just clearing the top. */
+  function sandbags(g, cx, cy, s, dir) {
+    var P = pieceP(g, cx, cy, s, dir);
+    for (var r = 0; r < 3; r++) {
+      var y = -6 - r * 5, n = 4 - (r === 2 ? 1 : 0), x0 = 10 + (r % 2) * 3;
+      for (var k = 0; k < n; k++) {
+        P(x0 + k * 7, y, 7, 5, '#6e6450');
+        P(x0 + k * 7, y, 7, 1.6, '#8e836a');
+        P(x0 + k * 7 + 6, y + 1, 1, 4, '#4a4337');
+      }
+    }
+  }
   /* The heavy machine gun on its tripod: a long barrel with a cooling jacket,
      spade grips at the back, a belt feeding out of a green ammunition box. */
   EMPLACEMENT.hmg = function (g, cx, cy, s, pal, dir) {
@@ -6321,6 +6362,7 @@
   // the SAM team fires from the same launcher as the guided-missile team
   EMPLACEMENT.samlauncher = EMPLACEMENT.atgm;
   // where each piece's barrel ends, in its own units
+  var PIECE_MUZZLE_DUG = { rebelgun: [31, -21.5] };
   var PIECE_MUZZLE = { mortar: [13, -42], rebelmortar: [13, -42], rebelgun: [27, -38],
     hmg: [27, -16.5], gauss: [31, -20], rebac: [31, -18.5], rebhac: [36, -21],
     atgm: [22, -24], samlauncher: [22, -24] };
@@ -6333,8 +6375,29 @@
     return at.map(function (o) { return { x: p.x + o[0], y: p.y + o[1], s: k }; });
   }
   function drawPieces(g, u, art, p, scale, pal) {
-    var dir = u.faceL ? -1 : 1;
-    pieceSpots(u, art, p, scale).forEach(function (q) { EMPLACEMENT[art](g, q.x, q.y, q.s, pal, dir); });
+    var dir = u.faceL ? -1 : 1, mode = u.dugIn ? 'dug' : null;
+    pieceSpots(u, art, p, scale).forEach(function (q) {
+      EMPLACEMENT[art](g, q.x, q.y, q.s, pal, dir, mode);
+      // a dug-in piece without a stance of its own still gets its wall of bags
+      if (mode === 'dug' && art !== 'rebelgun') sandbags(g, q.x, q.y, q.s, dir);
+    });
+  }
+  /* A gun on tow (Stationary Artillery, p. 94): hitched behind the vehicle
+     towing it, its trails towards the hull on a tow bar, barrel level. */
+  function towedGun(u) {
+    return (u.cargo || []).filter(function (c) { return c && (c.rules || []).indexOf('Stationary Artillery') >= 0; })[0] || null;
+  }
+  function drawTowed(g, veh, gun, at) {
+    var art = gun.art, draw = EMPLACEMENT[art];
+    if (!draw) return;
+    var hs = hullSpec(veh.art) || { len: 2 }, f = veh.facing || 0;
+    var back = hs.len * 0.5 + 0.7;
+    var gp = toScreen(at.x - Math.cos(f) * back, at.y - Math.sin(f) * back);
+    var hitch = toScreen(at.x - Math.cos(f) * hs.len * 0.5, at.y - Math.sin(f) * hs.len * 0.5);
+    var k = SU * MODEL * 1.35 * (PIECE_SCALE[art] || 1), dir = hitch.x > gp.x ? -1 : 1;
+    var pal = PALETTE[gun.paint || gun.side] || PALETTE.A;
+    thickLine(g, gp.x - 18 * k * dir, gp.y - 8 * k, hitch.x, hitch.y - a(0.4), Math.max(1.5, k * 2), '#2b2f2a');
+    draw(g, gp.x, gp.y, k, pal, dir, 'tow');
   }
   // the light battery works a captured tube, the same piece the PMC mortar teams use
   EMPLACEMENT.rebelmortar = EMPLACEMENT.mortar;
@@ -10659,7 +10722,7 @@
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
     var dir = u.faceL ? -1 : 1;
     if (EMPLACEMENT[art] && PIECE_MUZZLE[art]) {
-      var pm = PIECE_MUZZLE[art];
+      var pm = (u.dugIn && PIECE_MUZZLE_DUG[art]) || PIECE_MUZZLE[art];
       return pieceSpots(u, art, { x: 0, y: 0 }, MODEL).map(function (q) {
         return { dx: q.x + dir * pm[0] * q.s, dy: q.y + pm[1] * q.s, dir: dir };
       });
@@ -10721,7 +10784,13 @@
         dg.fillRect(0, 0, DW, DH);
         dg.globalCompositeOperation = 'source-over';
         g.drawImage(dc, ox, oy);
-      } else m = drawMachine(g, u, opts);
+      } else {
+        var tg = towedGun(u), atT = opts.at || u;
+        var tBehind = tg && toScreen(atT.x - Math.cos(u.facing || 0), atT.y - Math.sin(u.facing || 0)).y < toScreen(atT.x, atT.y).y;
+        if (tg && tBehind) drawTowed(g, u, tg, atT);
+        m = drawMachine(g, u, opts);
+        if (tg && !tBehind) drawTowed(g, u, tg, atT);
+      }
       if (opts.selected) {
         var ring = toScreen(at.x, at.y);
         ellipseRing(g, ring.x, ring.y, a(9), a(4.5), '#ffffff');
@@ -10920,6 +10989,12 @@
     return { dx: sp.sx * 0.3 + Math.cos(ang) * a(8.5) * rr, dy: sp.sy * 0.3 + Math.sin(ang) * a(4.2) * rr, mi: n - 1 };
   }
   function drawBody(g, sx, sy, b) {
+    /* The last of a gun crew to fall leaves the gun: knocked out where it stood. */
+    if (b.piece && EMPLACEMENT[b.art]) {
+      var pk = SU * MODEL * 1.35 * (PIECE_SCALE[b.art] || 1);
+      EMPLACEMENT[b.art](g, sx, sy, pk, PALETTE[b.paint || b.side] || PALETTE.A, b.flip ? -1 : 1, 'wreck');
+      return;
+    }
     var c = corpseSprite(b.paint || b.side, b.art || 'rifle', b.mi || 0), rs = c.res || 1;
     // what it bled: a man red, a bug its green ichor, a Crock the tribe's blue
     var art0 = b.art || '', kit0 = KIT[(ROLES[art0] || [])[0]] || {};
@@ -11009,7 +11084,8 @@
       sprites = {}; corpses = {}; hullCache = {}; TEX_TILE = {}; DIM_CANVAS = null;
     },
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
-    flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec, figureHeight: figureHeight, ROLES: ROLES,
+    flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec,
+    hasPiece: function (art) { return art === 'rebelgun'; },   // a piece with a knocked-out drawing of its own figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
     figure: function (side, art, i, pose, step, mount) {
       return sprite(side || 'A', art, i || 0, pose || 'stand', step || 0, MODEL * fitScale(art, i || 0), 0, mount);

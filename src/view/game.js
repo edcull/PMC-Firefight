@@ -2962,6 +2962,11 @@
             var cs = ISO.casualtySpot(u, n, rem.length * 7 + n);
             rem.push({ kind: 'body', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
               art: u.art, mi: cs.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
+            // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
+            if (n === 1 && left === 0 && ISO.hasPiece && ISO.hasPiece(u.art)) {
+              rem.push({ kind: 'body', piece: true, x: seen.x, y: seen.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null,
+                art: u.art, flip: !!u.faceL });
+            }
           }
         }
       }

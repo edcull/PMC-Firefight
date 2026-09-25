@@ -59,6 +59,18 @@
 
   /* The unit as the battle would build it: a profile plus the state the bench
      is asking to see. Everything that draws a unit takes one of these. */
+  function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
+  /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
+  function towing(u) {
+    var tp = R.profile('rtechnical');
+    if (!tp) return null;
+    var t = Object.assign({}, tp, {
+      id: 'VTOW', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0,
+      x: u.x, y: u.y, facing: u.facing != null ? u.facing : faceAngle(view.face), cargo: [u]
+    });
+    if (R.propsFor(tp).length) R.applyPropulsion(t, R.defaultDrive(tp));
+    return t;
+  }
   function unit() {
     var p = profile();
     var u = Object.assign({}, p, {
@@ -74,6 +86,8 @@
     });
     if (R.propsFor(p).length) R.applyPropulsion(u, view.prop);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
+    // Stationary Artillery (p. 94): dug in behind its sandbags, or not
+    if (stationary(p)) u.dugIn = view.stance === 'dug';
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -156,6 +170,11 @@
         return;
       }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
+      // a gun on tow is drawn hitched behind the technical towing it
+      if (m === u && stationary(u) && view.stance === 'towed') {
+        var tw = towing(u);
+        if (tw) { I.drawUnit(g, tw, { at: { x: u.x, y: u.y }, lift: 0, status: 'ready', morale: 0 }); return; }
+      }
       if (m === u && arr.hidden) return;                 // not on the field yet
       var fading = m === u && arr.alpha != null;          // teleporting in
       if (fading) { g.save(); g.globalAlpha = arr.alpha; }
@@ -189,6 +208,8 @@
     }
     var p = I.toScreen(u.x, u.y);
     var n = u.models || u.size || 1;
+    // a gun crew leaves its gun, knocked out, as the last of its fallen
+    if (I.hasPiece && I.hasPiece(u.art)) I.drawBody(g, p.x, p.y, { piece: true, side: u.side, paint: u.paint || null, art: u.art, flip: !!u.faceL });
     for (var i = n; i > 0; i--) {
       var cs = I.casualtySpot(u, i, i * 7);
       I.drawBody(g, p.x + cs.dx, p.y + cs.dy, {
@@ -1160,6 +1181,11 @@
     if (R.canRide(p)) {
       h += '<div class="vgrp"><label>Riders</label><div class="vseg">' +
         segL('ride', [['foot', 'On foot'], ['mounted', 'Mounted']], view.ride || 'foot') + '</div></div>';
+    }
+    // Stationary Artillery (p. 94): emplaced, dug in behind sandbags, or on tow behind a vehicle
+    if (stationary(p)) {
+      h += '<div class="vgrp"><label>Stance</label><div class="vseg">' +
+        segL('stance', [['ready', 'Emplaced'], ['dug', 'Dug in'], ['towed', 'Towed']], view.stance || 'ready') + '</div></div>';
     }
     // Drone Control (p. 37): any hull or craft without Transport, in any army but the Bugs
     if (R.canBeDrone(p)) {

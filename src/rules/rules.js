@@ -1569,6 +1569,8 @@
        orbbig  the same, heavier and slower, landing in a splash of blue fire
                (the advanced support vehicle's energy howitzer)
        none    it has no gun at all */
+  // what a dug-in piece fires instead, laid level over open sights
+  var DUG_WEAPONS = { rmedart: { p: 'shellbig' }, rheavyart: { p: 'shellbig', n: 2 } };
   var WEAPONS = {
     /* ---- PMC infantry ---- */
     recruits: { p: 'small' },
@@ -1779,6 +1781,8 @@
     if (!u) return { p: 'small', n: 1, sn: 1 };
     if (u.fp === null || u.fp === undefined || hasOwn(u, 'Unarmed')) return { p: 'none', n: 1, sn: 1 };
     var w = WEAPONS[u.key] || guessWeapon(u);
+    // dug in, a field piece fires over open sights: big shells straight at the target (p. 94)
+    if (DUG_WEAPONS[u.key] && dugIn(u)) w = DUG_WEAPONS[u.key];
     // `n` is how many the primary puts out at once; `sn` the same for the secondary
     return { p: w.p, s: w.s || null, n: w.n || 1, sn: w.sn || 1 };
   }
