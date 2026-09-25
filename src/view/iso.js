@@ -8621,9 +8621,8 @@
           if (st.hexNose) hexNose(HF, L * 0.5, L * 0.5 - L * (ifv ? 0.3 : 0.24), -w * 0.9, w * 0.9, z0, hh);
           if (st.hex) hexFlank(HF, -L * 0.46, L * 0.24, nearSide() * w, z0 + 1, hh * 0.9);
           if (big) {
-            // a raised troop compartment over the rear two thirds, and applique panels
+            // a raised troop compartment over the rear two thirds
             slabF(HF, -L * 0.48, L * 0.02, -w * 0.9, w * 0.9, z0 + hh, H * 0.3, TB, L * 0.05, 0, w * 0.04);
-            bandOnSides(g, box(0, 0, L, Wd * 0.94), z0 + hh * 0.35, 3, 2, trim);
           }
           // the rear ramp, where it can be seen
           var ra = project(box(-L * 0.5, 0, 0.01, Wd * 0.72), z0 + 2);
