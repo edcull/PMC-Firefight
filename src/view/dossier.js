@@ -358,8 +358,21 @@
      contract, which is what the screen is for. */
   function hubBar() {
     var h = '';
+    if (hubPane === 'dossier') {
+      /* In the dossier the row is its tabs: back to the company, or to the
+         experience, the recruiting or the memorial — the units themselves are
+         what shows when none of those is picked (tap the lit one to go back). */
+      var co = camp.companies.A;
+      var tab = function (key, label) {
+        var on = rosterTab === key;
+        return '<button class="lnk' + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '">' + label + '</button>';
+      };
+      return '<div class="hubbar dosbar">' +
+        '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
+        tab('spend', 'XP') + tab('recruit', esc(C.words(co).recruit)) + tab('memorial', 'Memorial') + '</div>';
+    }
     h += '<div class="hubbar">' +
-      '<button class="lnk' + (hubPane === 'dossier' ? ' on' : '') + '" data-go="roster" aria-pressed="' + (hubPane === 'dossier') + '">Dossier</button>' +
+      '<button class="lnk" data-go="roster">Dossier</button>' +
       '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
       '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
       '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
@@ -793,8 +806,7 @@
   /* On the hub the dossier takes the place of the Tier panel, in the same
      box: its tabs across the top and the list scrolling under them. */
   function dossierPanel(co) {
-    return '<div class="cprom cdos"><div class="cprom-head"><b>Dossier</b><span class="cprom-count">' +
-      C.words(co).tier + ' Tier ' + ROMAN[co.tier] + ' · ' + co.roster.length + ' units on the books</span></div>' + rosterTabs(co) + '<div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
+    return '<div class="cprom cdos"><div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
   }
   var hubPane = 'tier';
   var rosterTab = 'units';
@@ -2178,7 +2190,7 @@
       case 'roster':
         // from the hub, the Dossier button swaps the Tier panel for the dossier and back again
         if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
-        else { hubPane = 'dossier'; if (view !== 'hub') rosterTab = rosterTab || 'units'; }
+        else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
         view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
       case 'offers': view = 'offers'; render(); return;

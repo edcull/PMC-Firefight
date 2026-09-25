@@ -252,9 +252,10 @@ async function drain(p) {
     (await body(p)).split('\n').slice(0, 2).join(' | '));
   await clickText(p, '^Dossier$');
   txt = await body(p);
-  check('the dossier opened', /units on the books/i.test(txt), txt.split('\n')[1]);
+  check('the dossier opened', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
   check('the dossier speaks Territorial Points', /TerP/.test(txt) && !/kUC/.test(txt));
-  check('...and calls it a Tribe Tier', /tribe tier/i.test(txt), txt.split('\n')[1]);
+  const badge = await p.evaluate(() => document.querySelector('#camp-body .tierbadge').title);
+  check('...and calls it a Tribe Tier', /tribe tier/i.test(badge), badge);
   await shot(p, 'xeno-roster.png');
 
   /* -------------------------------------------------------------- reload */

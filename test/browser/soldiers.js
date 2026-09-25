@@ -14,6 +14,12 @@ async function click(p, sel) {
   await p.waitForTimeout(220);
   return hit;
 }
+// the dossier's unit cards: tap the lit tab to go back to them
+async function toUnits(p) {
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-rtab="units"]'); if (b) b.click(); });
+  await p.waitForTimeout(220);
+}
+
 async function clickText(p, re) {
   const hit = await p.evaluate((src) => {
     const rx = new RegExp(src);
@@ -95,8 +101,8 @@ async function clickText(p, re) {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
     e.honours = []; e.traumas = [];
   }, rid);
-  await clickText(p, '^Spend EXP$');
-  await clickText(p, '^Units$');
+  await clickText(p, '^XP$');
+  await toUnits(p);
   const listed = await p.evaluate((rid) => {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
     const rows = [...document.querySelectorAll('#camp-body .dmen li')].map(li => li.innerText.replace(/\s+/g, ' '));
@@ -130,14 +136,14 @@ async function clickText(p, re) {
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];
     window.PMC_CAMPAIGN.get().companies.A.record = { battles: 4, wins: 3, draws: 0, losses: 1 };
   });
-  await clickText(p, '^Spend EXP$');
-  await clickText(p, '^Units$');
+  await clickText(p, '^XP$');
+  await toUnits(p);
   check('...as honours held over units on the books', (await cell('cs-exp')) === '33.3% honours', await cell('cs-exp'));
   check('...with the win rate first', (await cell('cs-win')) === '75% win rate', await cell('cs-win'));
   check('...and trauma beside it', (await cell('cs-tra')) === '11.1% trauma', await cell('cs-tra'));
   // the head of the dossier, down to its tabs
   const top = await p.evaluate(() => {
-    const a = document.getElementById('camp-body').getBoundingClientRect(), t = document.querySelector('#camp-body .dtabs').getBoundingClientRect();
+    const a = document.getElementById('camp-body').getBoundingClientRect(), t = document.querySelector('#camp-body .dosbar').getBoundingClientRect();
     return { x: a.x, y: a.y, width: a.width, height: t.bottom - a.y + 12 };
   });
   await p.screenshot({ path: path.join(SHOTS, 'camp-veterancy.png'), clip: top });
@@ -156,7 +162,7 @@ async function clickText(p, re) {
       { name: 'Kofi Park', rank: 'Commander', type: 'Light patrol vehicle', unit: 'Light patrol vehicle', turn: 5, battle: 2, against: 'Salvage Rights', scenario: 'secure' }
     ];
   });
-  await clickText(p, '^Units$');
+  await toUnits(p);
   await clickText(p, '^Memorial$');
   const mem = await p.evaluate(() => ({
     text: document.getElementById('camp-body').innerText,
@@ -176,7 +182,7 @@ async function clickText(p, re) {
     co._was = { faction: co.faction, memorial: co.memorial };
     co.faction = 'bugs'; co.memorial = []; co.biomass = { 'Small bugs': { models: 14, mass: 28 }, 'Attack forms': { models: 9, mass: 27 }, 'Queen': { models: 1, mass: 25 } };
   });
-  await clickText(p, '^Units$');
+  await toUnits(p);
   await clickText(p, '^Memorial$');
   const bio = await p.evaluate(() => ({
     text: document.getElementById('camp-body').innerText,
@@ -192,7 +198,7 @@ async function clickText(p, re) {
     const co = window.PMC_CAMPAIGN.get().companies.A;
     co.faction = co._was.faction; co.memorial = co._was.memorial; delete co.biomass; delete co._was;
   });
-  await clickText(p, '^Units$');
+  await toUnits(p);
 
   // the tribe keeps two counts: its Crocks and its Esh-Aven
   await p.evaluate(() => {
@@ -211,7 +217,7 @@ async function clickText(p, re) {
     const co = window.PMC_CAMPAIGN.get().companies.A;
     Object.assign(co, co._was); delete co._was;
   });
-  await clickText(p, '^Units$');
+  await toUnits(p);
 
   console.log('\nOn the field');
   const icons = await p.evaluate(() => {

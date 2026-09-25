@@ -267,9 +267,10 @@ async function drain(p) {
     (await body(p)).split('\n').slice(0, 2).join(' | '));
   await clickText(p, '^Dossier$');
   txt = await body(p);
-  check('the dossier opened', /units on the books/i.test(txt), txt.split('\n')[1]);
+  check('the dossier opened', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
   check('the dossier speaks Influence Points', /IP/.test(txt) && !/kUC/.test(txt));
-  check('...and calls it a Revolt Tier', /revolt tier/i.test(txt), txt.split('\n')[1]);
+  const badge = await p.evaluate(() => document.querySelector('#camp-body .tierbadge').title);
+  check('...and calls it a Revolt Tier', /revolt tier/i.test(badge), badge);
   await shot(p, 'rebel-roster.png');
 
   /* -------------------------------------------------------------- reload */

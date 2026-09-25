@@ -21,6 +21,12 @@ async function click(p, sel) {
   await p.waitForTimeout(220);
   return hit;
 }
+// the dossier's unit cards: tap the lit tab to go back to them
+async function toUnits(p) {
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-rtab="units"]'); if (b) b.click(); });
+  await p.waitForTimeout(220);
+}
+
 async function clickText(p, re) {
   const hit = await p.evaluate((src) => {
     const rx = new RegExp(src);
@@ -412,7 +418,7 @@ async function clickText(p, re) {
   check('a unit can be recruited from the dossier', recruited);
   const spent = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
   check('...and it cost a kUC', spent === afterState.kUC - 1, spent + ' kUC left');
-  await clickText(p, 'Units');
+  await toUnits(p);
   const now = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('the new unit is on the books', now === before + 1, now + ' units');
   await shot(p, 'camp-roster.png');
@@ -424,7 +430,7 @@ async function clickText(p, re) {
     camp.companies.A.roster.forEach(e => { e.exp = 40; });
     window.PMC_CAMPAIGN.set(camp);
   });
-  await clickText(p, 'Spend EXP');
+  await clickText(p, '^XP$');
   await p.waitForTimeout(250);
   const opened = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-honour]');
@@ -471,7 +477,7 @@ async function clickText(p, re) {
   check('...and only the three are left on the screen', drew.shown === 3, drew.shown + ' shown');
   await clickText(p, 'Back to the dossier');
   await p.waitForTimeout(200);
-  await clickText(p, 'Units');
+  await toUnits(p);
   await p.waitForTimeout(200);
 
   /* ---------------------------------------------- asking, without native dialogs */
@@ -498,7 +504,7 @@ async function clickText(p, re) {
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.some(e => e.name === "Kowalski's Lads")));
 
   // Abandon sits in the Tier panel: close the dossier to bring it back
-  if (await p.evaluate(() => !!document.querySelector('#camp-body .cdos'))) await clickText(p, '^Dossier$');
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
   await p.waitForTimeout(250);
   await clickText(p, '^Abandon$');
   await p.waitForTimeout(300);
