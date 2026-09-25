@@ -139,9 +139,9 @@ is('rlmg', 'burst');
 is('lmgsection', 'smg+burst');
 // the MG team has a carbine in the section alongside the gun
 is('lmgteam', 'smg+burst');
-is('tsc', 'burst+rocket');
-// the flexible strike craft carries a rocket rack over its door gun
-is('fsc', 'small+rocket');
+is('tsc', 'small+rocket');
+// the flexible strike craft rakes with its nose gun under a rocket rack
+is('fsc', 'burst+rocket');
 // a patrol jeep has the crew's rifles; the heavy one mounts a machine gun
 is('lpv', 'small');
 is('hpv', 'chain');

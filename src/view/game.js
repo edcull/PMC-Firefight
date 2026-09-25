@@ -5268,7 +5268,7 @@
      a tactic), a swarm's for the Bugs, the standard table otherwise. */
   function tierLabels() {
     var sel = el('sel-tier');
-    if (!sel) return;
+    if (!sel || !sel.options) return;
     var f = musterFaction();
     Array.prototype.forEach.call(sel.options, function (o) {
       var t = +o.value, txt;
