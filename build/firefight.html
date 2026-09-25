@@ -358,10 +358,11 @@
   .status-suppressed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
   .status-broken { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 
-  /* as many to a row as fit, so a narrow panel wraps them rather than cutting the last ones off */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 1px; margin: 10px 0 0; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-  @media (max-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
-  .st { background: var(--panel-2); padding: 6px 7px; }
+  /* as many to a row as fit, so a narrow panel wraps them rather than cutting the last ones off,
+     and the last row stretched across so it leaves no empty cells */
+  .stats { display: flex; flex-wrap: wrap; gap: 1px; margin: 10px 0 0; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  @media (max-width: 720px) { .stats .st { flex-basis: 22%; } }
+  .st { background: var(--panel-2); padding: 6px 7px; flex: 1 1 58px; min-width: 0; }
   .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
   .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -34758,6 +34759,7 @@
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
+      stat('Assault', u.assault) +
       /* Morale as it stands: less a point for each model lost beyond the free
          ones (none for a Determined unit — currentMorale has already said so) */
       stat('Morale', m + (m !== u.morale ? '<i class="mmod" ' + tip('Morale ' + u.morale + ' printed',

@@ -3925,6 +3925,7 @@
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
+      stat('Assault', u.assault) +
       /* Morale as it stands: less a point for each model lost beyond the free
          ones (none for a Determined unit — currentMorale has already said so) */
       stat('Morale', m + (m !== u.morale ? '<i class="mmod" ' + tip('Morale ' + u.morale + ' printed',
