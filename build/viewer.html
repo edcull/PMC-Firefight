@@ -7941,7 +7941,8 @@
     /* ---- the rebel army (pp. 96-104) ----
        Nothing matches. A revolt arms itself from what the colony had: hunting
        rifles, mining gear, work clothes and whatever the last ambush left behind. */
-    rebel: ['rebrifle', 'rebciv', 'rebmolotov'],
+    // the leader at the front right with an SMG, the SAW at the front left, the rest mixed
+    rebel: ['reblead', 'rebsaw', 'rebrifle', 'rebciv', 'rebmolotov', 'rebrifle', 'rebciv', 'rebrifle', 'rebciv', 'rebrifle'],
     // all ten different from their neighbours, the five kinds of clothes mixed through the ranks
     civilian: ['civ1', 'civ2', 'civ3', 'civ4', 'civ5', 'civ2', 'civ4', 'civ1', 'civ5', 'civ3'],
     // the Space Bugs: one caste to a unit, as the book fields them
@@ -7961,7 +7962,7 @@
     x_delta1: ['xdelta'], x_delta2: ['xdeltagun'], x_delta3: ['xdeltagun'],
     x_eps1: ['esh1', 'esh1b'], x_eps2: ['esh2'], x_eps3: ['esh3'], x_eps4: ['esh4'], x_eps5: ['esh5'],
     // hardened insurgents: the guard's green field kit, with helmets in the side's colour
-    insurgent: ['hardlead', 'hardrifle', 'hardrifle'],
+    insurgent: ['hardlead', 'hardsaw', 'hardrifle'],
     holy: ['zealot', 'flagellant', 'zealot2'],
     /* the holy warriors by standing: acolytes are boys in long shirts; the
        fanatics wear the turban and a rig; the enlightened go in black with a
@@ -8186,13 +8187,16 @@
     civ4: { helm: 'bare', gun: 'shotgun', pack: 'none', ragged: true, armband: 'force', tint: CIV_D },
     civ5: { helm: 'scarf', gun: 'huntingrifle', pack: 'none', armband: 'force', tint: CIV_E },
     rebrifle: { helm: 'std', gun: 'battlerifle', forceHelm: true, pack: 'none', ragged: true, tint: REBEL_DRAB },
+    reblead: { helm: 'std', gun: 'smg', forceHelm: true, pack: 'none', ragged: true, mark: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
+    rebsaw: { helm: 'std', gun: 'saw', forceHelm: true, pack: 'ammo', ragged: true, tint: REBEL_DRAB, fitAs: 'rebrifle' },
     rebmolotov: { helm: 'std', gun: 'molotov', forceHelm: true, pack: 'none', ragged: true, tint: REBEL_DRAB },
     inslead: { helm: 'std', gun: 'battlerifle', forceHelm: true, pack: 'none', mark: true, tint: REBEL_FIELD },
     insrifle: { helm: 'std', gun: 'battlerifle', forceHelm: true, pack: 'std', tint: REBEL_FIELD },
     // the revolutionary guard: ochre fatigues, the helmet and the flag in the side's colour
     guardlead: { helm: 'beret', gun: 'battlerifle', pack: 'none', mark: true, tint: FIELD_OCHRE },
     guardrifle: { helm: 'beret', gun: 'battlerifle', pack: 'std', tint: FIELD_OCHRE },
-    hardlead: { helm: 'std', forceHelm: true, gun: 'battlerifle', pack: 'none', mark: true, tint: FIELD_OCHRE },
+    hardlead: { helm: 'std', forceHelm: true, gun: 'smg', pack: 'none', mark: true, tint: FIELD_OCHRE },
+    hardsaw: { helm: 'std', forceHelm: true, gun: 'saw', pack: 'ammo', tint: FIELD_OCHRE },
     hardrifle: { helm: 'std', forceHelm: true, gun: 'battlerifle', pack: 'std', tint: FIELD_OCHRE },
     guardflag: { helm: 'beret', gun: 'flagsmall', pack: 'std', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
     // holy warriors: robes, a blade, and no interest whatever in cover
