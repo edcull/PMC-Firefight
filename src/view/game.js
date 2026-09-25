@@ -2103,7 +2103,8 @@
               var F = pick(from, j);
               if (SFX) SFX.missile(0, mflight / 1000, mflight / 1000 * 0.52);
               // no flash at the tube: it is ejected cold and lights further out
-              addFx({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true });
+              addFx({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true,
+                sam: shooter.art === 'samlauncher' ? { aim: shooter.facing || 0, elev: 0.8 } : null });
               setTimeout(function () { land(3); }, mflight);
               render();
             }, j * birdGap);

@@ -264,7 +264,29 @@
             y: v * v * ma.y + 2 * v * sq * mc.y + sq * sq * mb.y
           };
         }
+        /* A SAM off its launcher: pushed out cold up the line its tubes are
+           laid on, climbing until it has height, then its motor flares and it
+           runs straight at the aircraft, gathering speed. */
+        var samP = null;
+        if (f.sam) {
+          var sca = Math.cos(f.sam.aim || 0), ssa = Math.sin(f.sam.aim || 0), se2 = f.sam.elev || 0.5;
+          var sHgt = I.K * 2.6;                                        // how high it climbs before it lights
+          var sL = sHgt / (I.K * 0.9 * Math.sin(se2));                 // inches up the tube's line to get there
+          samP = {
+            x: ma.x + (sca - ssa) * I.K * Math.cos(se2) * sL,
+            y: ma.y + (sca + ssa) * I.K / 2 * Math.cos(se2) * sL - sHgt
+          };
+          TOP = 0.34 + (v1 - 0.5) * 0.06;
+        }
         function mAt(t2) {
+          if (samP) {
+            if (t2 <= TOP) {
+              var bq = Math.max(0, t2) / TOP, be = bq * bq * (3 - 2 * bq) * 0.7 + bq * 0.3;   // off the ejection charge, easing up
+              return { x: ma.x + (samP.x - ma.x) * be, y: ma.y + (samP.y - ma.y) * be };
+            }
+            var sq3 = Math.pow((t2 - TOP) / (1 - TOP), 1.3);
+            return { x: samP.x + (mb.x - samP.x) * sq3, y: samP.y + (mb.y - samP.y) * sq3 };
+          }
           if (mc) {
             if (t2 <= TOP) {
               // out along the nose, and round onto the target, unhurried

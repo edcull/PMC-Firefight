@@ -61,6 +61,13 @@
      is asking to see. Everything that draws a unit takes one of these. */
   // a crew-served piece drawn in 3D: it has a facing to choose, as a machine does
   function turns(p) { return !!p && !!I.turnsLikeMachine && I.turnsLikeMachine(p.art); }
+  // what a Lifter can be shown carrying: any of the rebels' ground vehicles (p. 94)
+  var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak'];
+  // a SAM leaves up the line its launcher's tubes are laid on (see the missile in fx.js)
+  function samFrom() {
+    var u = unit();
+    return u.art === 'samlauncher' ? { aim: u.facing || 0, elev: 0.8 } : null;
+  }
   function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
   /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
   function towing(u) {
@@ -91,11 +98,11 @@
     // Stationary Artillery (p. 94): dug in behind its sandbags, or not
     if (stationary(p)) u.dugIn = view.stance === 'dug';
     // a Lifter carrying: the rebels' technical, slung under it
-    if ((p.rules || []).indexOf('Lifter') >= 0 && view.sling === 'sling') {
-      var tp = R.profile('rtechnical');
+    if ((p.rules || []).indexOf('Lifter') >= 0 && view.sling && view.sling !== 'none') {
+      var tp = R.profile(SLUNG.indexOf(view.sling) >= 0 ? view.sling : 'rtechnical');
       if (tp) {
         var t = Object.assign({}, tp, { id: 'VSLG', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0, cargo: [], aboard: u.id });
-        if (R.propsFor(tp).length) R.applyPropulsion(t, R.defaultDrive(tp));
+        if (R.propsFor(tp).length) R.applyPropulsion(t, view.slingProp || 'wheeled');
         u.cargo = [t];
       }
     }
@@ -955,7 +962,7 @@
           setTimeout(function () {
             if (SFX) SFX.missile(0, 0.9, 0.47);
             // no flash at the tube: a missile is ejected cold and lights at the top
-            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to) });
+            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to), sam: samFrom() });
             start();
           }, j * 260);
         })(m1);
@@ -1048,7 +1055,7 @@
           (function (j) {
             setTimeout(function () {
               if (SFX) SFX.missile(0, 0.9, 0.47);
-              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to) });
+              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to), sam: samFrom() });
               setTimeout(function () { landing(to, 6, true); start(); }, 900);
               start();
             }, j * 260);
@@ -1207,7 +1214,11 @@
     // a Lifter (p. 94): flying empty, or with a technical slung under it
     if ((p.rules || []).indexOf('Lifter') >= 0) {
       h += '<div class="vgrp"><label>Load</label><div class="vseg">' +
-        segL('sling', [['none', 'Empty'], ['sling', 'Vehicle slung']], view.sling || 'none') + '</div></div>';
+        segL('sling', [['none', 'Empty']].concat(SLUNG.map(function (k) { var sp = R.profile(k); return [k, sp ? sp.name : k]; })), view.sling || 'none') + '</div></div>';
+      if (view.sling && view.sling !== 'none') {
+        h += '<div class="vgrp"><label>Its drive</label><div class="vseg">' +
+          seg('slingProp', R.PROP_ORDER, view.slingProp || 'wheeled') + '</div></div>';
+      }
     }
     // Drone Control (p. 37): any hull or craft without Transport, in any army but the Bugs
     if (R.canBeDrone(p)) {

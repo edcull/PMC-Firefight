@@ -6937,10 +6937,10 @@
       } },
     /* The SAM launcher: twin tubes laid up at the sky on the tripod, the
        IFF antenna and a thermal battery pack on the cradle. */
-    samlauncher: { k: 1.3, crew: [[-0.45, 0.12], [-0.3, -0.36], [-0.7, -0.12], [-0.62, 0.42]], muz: function () { return [0.3, 0, 0.62]; },
+    samlauncher: { k: 1.3, crew: [[-0.45, 0.12], [-0.3, -0.36], [-0.7, -0.12], [-0.62, 0.42]], muz: function () { return [0.29, 0, 0.72]; },
       build: function (R, o) {
         R.tripod(0.26, 0.24, 0.4);
-        var p0 = [-0.02, 0, 0.4], e = 0.5;
+        var p0 = [-0.02, 0, 0.4], e = SAM_ELEV;
         R.part(-0.15, 0, function () {
           R.box(-0.1, 0.06, -0.06, 0.06, 0.26, 0.37, '#4d564a', '#2e3530', '#262b25');
           R.box(-0.24, -0.1, -0.04, 0.04, 0.28, 0.34, '#39413a', '#262b25', '#1c201b');   // battery pack
@@ -6958,6 +6958,7 @@
         });
       } }
   };
+  var SAM_ELEV = 0.8;                                   // the SAM tubes' lay: the missiles leave up this line
   function pal2(o) { return o.pal.mid; }
   /* The heavy autocannon knocked out: the carriage down on its axle where a
      wheel was torn off (it lies flat nearby), the barrel nosed into the dirt,
@@ -11412,6 +11413,20 @@
   /* A hull with what it carries outside: a gun on tow behind it, drawn first
      when the gun is the further of the two; or, under a Lifter, the vehicle
      slung below it on its cables (p. 94), hanging under the airframe. */
+  // how tall a machine stands, in pixels above its ground: its hull on its running gear or legs
+  function machineTop(unit) {
+    var sp = hullSpec(unit.art);
+    if (sp.heli) return ELEV * sp.fly + sp.hgt + 26;
+    if (unit.prop === 'walker' && unit.transport && sp.style) return 16 + sp.hgt * 1.3 + 12;
+    if (unit.prop === 'walker') {                 // a mech stands well clear of its hull
+      var mL = sp.len * 0.8, mH = sp.hgt * 0.8;
+      var sf2 = mL / 2.0, bl = (HULL[unit.art] || HULL.wheeled).len;
+      if (bl < 2.3) return Math.round(24 * sf2 + mH * 0.4) + Math.round(10 * sf2 + mH * 0.3) + Math.round(11 * sf2) + 10;
+      if (bl >= 2.55) return Math.round(20 * sf2 + mH * 0.35) + Math.round(24 * sf2 + mH * 0.5) + Math.round(9 * sf2) + 12;
+      return Math.round(22 * sf2 + mH * 0.4) + Math.round(20 * sf2 + mH * 0.5) + Math.round(6 * sf2) + 12;
+    }
+    return (DRIVE[unit.prop] ? DRIVE[unit.prop].ride : 7) + sp.hgt + (sp.tHgt || 0) + 6;
+  }
   function slungVehicle(u) {
     if (!u || u.cls !== 'aircraft') return null;
     return (u.cargo || []).filter(function (c) { return c && c.cls === 'vehicle'; })[0] || null;
@@ -11424,8 +11439,8 @@
     var sv = slungVehicle(u);
     if (sv) {
       // laden, the Lifter rides higher, the vehicle hanging clear under it on long cables
-      var vs0 = hullSpec(sv.art) || { hgt: 12 };
-      var climb = (vs0.hgt || 12) * 1.6 + 22, hang = climb * 0.35, base = opts.lift || 0;
+      var top = machineTop(sv);
+      var hang = 14 + top * 0.25, climb = hang + top + 24, base = opts.lift || 0;
       var lo = {};
       for (var ok in opts) lo[ok] = opts[ok];
       lo.lift = base + climb;
@@ -11441,7 +11456,7 @@
       [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) {
         var t = q[0] * vs.len * 0.36, s2 = q[1] * vs.wid * 0.36;
         var w = toScreen(atT.x + c * t - sn * s2, atT.y + sn * t + c * s2);
-        thickLine(g, hook.x, hook.y, w.x, w.y - base - hang - (vs.hgt || 12) * 0.9, Math.max(1.2, K * 0.035), '#16181a');
+        thickLine(g, hook.x, hook.y, w.x, w.y - base - hang - top + 8, Math.max(1.2, K * 0.035), '#16181a');
       });
     }
     m = drawMachine(g, u, opts);
@@ -11849,21 +11864,7 @@
     colour: colour, setSideColour: setSideColour,
     headroom: function (models, status, unit) {
       // a machine's clearance is its own hull, not a rank of troopers
-      if (unit && unit.cls && unit.cls !== 'infantry') {
-        var sp = hullSpec(unit.art);
-        if (sp.heli) return ELEV * sp.fly + sp.hgt + 26;
-        if (unit.prop === 'walker' && unit.transport && sp.style) return 16 + sp.hgt * 1.3 + 12;
-        if (unit.prop === 'walker') {                 // a mech stands well clear of its hull
-          var mL = sp.len * 0.8, mH = sp.hgt * 0.8;
-          var sf2 = mL / 2.0, bl = (HULL[unit.art] || HULL.wheeled).len;
-          if (bl < 2.3) return Math.round(24 * sf2 + mH * 0.4) + Math.round(10 * sf2 + mH * 0.3) + Math.round(11 * sf2) + 10;
-          if (bl >= 2.55) return Math.round(20 * sf2 + mH * 0.35) + Math.round(24 * sf2 + mH * 0.5) + Math.round(9 * sf2) + 12;
-          return Math.round(22 * sf2 + mH * 0.4) + Math.round(20 * sf2 + mH * 0.5) +
-            Math.round(6 * sf2) + 12;
-        }
-        return (DRIVE[unit.prop] ? DRIVE[unit.prop].ride : 7) + sp.hgt +
-          (sp.tHgt || 0) + 6;
-      }
+      if (unit && unit.cls && unit.cls !== 'infantry') return machineTop(unit);
       var n = Math.max(1, Math.min(8, models || 1));
       return headroom(n, statusPose(status, unit && unit.art),
         isArmoured(unit && unit.art));
