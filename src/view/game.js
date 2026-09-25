@@ -3912,7 +3912,9 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     state.units.forEach(function (u2) {
       if (!u2.alive || u2.x < 0) return;
-      var p = hud(u2.x, u2.y, liftOf(u2.x, u2.y) + ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5);
+      // the label rides with the model as it is shown — mid-move, where the move has got to — not where the rules have put it
+      var lx = dispX(u2), ly = dispY(u2);
+      var p = hud(lx, ly, liftOf(lx, ly) + ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5);
       var mark = terrainMark(u2);
       var rec = labelIcons(u2), honoured = rec.star, scarred = rec.heart;
       var icons = (honoured ? 1 : 0) + (scarred ? 1 : 0);
@@ -3938,7 +3940,7 @@
 
     // measuring tape
     if (u && ui.hover) {
-      var a2 = hud(u.x, u.y, liftOf(u.x, u.y));
+      var a2 = hud(dispX(u), dispY(u), liftOf(dispX(u), dispY(u)));
       var b2 = hud(ui.hover.x, ui.hover.y, 0);
       var dist = Math.max(0, R.inches(u.x, u.y, ui.hover.x, ui.hover.y) - UR);
       // a dark edge under the light dash, so the tape reads on snow as well as on soil
