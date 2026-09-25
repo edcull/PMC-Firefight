@@ -125,6 +125,8 @@
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
     pendingArrive = {};
+    held = {};
+    if (state) state.units.forEach(function (u) { u.ax = u.ay = null; });   // nothing is part-way through a move now
     anims.forEach(function (an) { if (an.unit) an.unit.burrow = null; });
     anims.length = 0;
     FX.clear && FX.clear();
@@ -192,11 +194,63 @@
      the beat before its drop. Kept by id: a networked state is rebuilt each turn. */
   var pendingArrive = {};
   function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
+  /* The battle arrives already resolved, and what happened is played out after
+     it. Until each part plays, the table should show things as they stood: a
+     unit that is about to move stands where it started, and a unit about to be
+     shot keeps the models, the suppression and the life it had until the shots
+     land. `shown` is the table as it was last drawn at rest; `held` is what is
+     kept back from the new state until its event plays. */
+  var shown = {}, held = {};
+  function snapshotShown() {
+    shown = {};
+    if (!state) return;
+    state.units.forEach(function (u) {
+      shown[u.id] = { models: u.models, sp: u.sp, alive: u.alive, x: u.x, y: u.y, aboard: u.aboard, reserve: u.reserve, dp: u.dp };
+    });
+  }
+  function holdForShow(events) {
+    if (!state) return;
+    var moved = {};
+    events.forEach(function (ev) {
+      if (ev.e === 'move' && ev.id && !moved[ev.id]) {
+        moved[ev.id] = true;
+        var mu = evUnit(ev.id), p0 = ev.path && ev.path[0];
+        // it stands where it started until its move is drawn
+        if (mu && p0 && (mu.ax === null || mu.ax === undefined) && !anims.some(function (an) { return an.unit === mu; })) {
+          mu.ax = p0.x; mu.ay = p0.y;
+        }
+      }
+      var hit = [];
+      if (ev.e === 'shoot' || ev.e === 'assault') hit.push(ev.to, ev.from);
+      (ev.deaths || []).forEach(function (d) { hit.push(d.id); });
+      hit.forEach(function (id) {
+        if (!id || held[id] || !shown[id]) return;
+        var was = shown[id], u = evUnit(id);
+        if (!u || !was.alive) return;
+        if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.dp !== u.dp) held[id] = was;
+      });
+    });
+  }
+  function releaseFor(ev) {
+    if (!ev) return;
+    [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
+      .forEach(function (id) { if (id) delete held[id]; });
+  }
+  // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
+  function shownAs(u) {
+    var h = u && held[u.id];
+    if (!h) return u;
+    var o = Object.create(u);
+    o.models = h.models; o.sp = h.sp; o.alive = h.alive; o.dp = h.dp;
+    if (!u.alive) { o.x = h.x; o.y = h.y; o.aboard = h.aboard; o.reserve = h.reserve; }
+    return o;
+  }
   var show = {
     queue: [],
     running: false,
     play: function (events) {
       (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
+      holdForShow(events || []);
       this.queue = this.queue.concat(events || []);
       this.pump();
     },
@@ -208,8 +262,10 @@
         show.queue.shift();
         try { applyEvent(ev); }
         catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
-        if (waits) { whenIdle(show.pump); return; }
+        if (waits) { whenIdle(function () { releaseFor(ev); show.pump(); }); return; }
       }
+      held = {};
+      snapshotShown();
       show.running = false;
       syncUI();
       render();
@@ -2220,6 +2276,7 @@
   }
 
   function spawnDeaths(deaths) {
+    (deaths || []).forEach(function (d) { if (d.u) delete held[d.u.id]; });
     (deaths || []).forEach(function (d) {
       addFx({
         kind: 'ghost', x: d.x, y: d.y, side: d.u.side, code: d.u.code,
@@ -2404,7 +2461,7 @@
   function handsOff() { return !!(state && state.cfg && state.cfg.mode === 'demo'); }
   function focusUnit(u, instant, borrowed) {
     if (!u || u.x < 0 || handsOff()) return;
-    var p = ISO.toScreen(u.x, u.y);
+    var p = ISO.toScreen(dispX(u), dispY(u));
     centreOn(p.x, p.y - ISO.ELEV, instant);
     if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
   }
@@ -3003,7 +3060,7 @@
        Occupied is what the player cares about: a squad is in the building if it
        is standing inside its footprint, and then you want to see it. */
     var now0 = nowMs();
-    var order = state.units.filter(function (u) { return onTable(u) && onView(dispX(u), dispY(u)); })
+    var order = state.units.filter(function (u) { return (onTable(u) || (held[u.id] && onTable(shownAs(u)))) && onView(dispX(u), dispY(u)); })
       .map(function (u) {
         var d = dispX(u) + dispY(u);
         /* A unit inside a building belongs just in front of it, so it is drawn
@@ -3063,7 +3120,7 @@
           ISO.drawWreck(pctx, it.u, { x: it.r.x, y: it.r.y }, liftOf(it.r.x, it.r.y), now + it.r.t0);
           return;
         }
-        var u = it.unit, ax = dispX(u), ay = dispY(u);
+        var u = shownAs(it.unit), ax = dispX(u), ay = dispY(u);
         if (arrivalQueued(u)) return;                 // its arrival has not played yet
         var arr = arriving(u);
         if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
@@ -6561,6 +6618,7 @@
   };
   window.__actionState = function (u, id) { return actionState(u, id); };
   window.__showQueue = function () { return show.queue.length; };
+  window.__held = function () { return Object.keys(held).length; };
   window.__busy = function () { return busy(); };
   window.__uiMode = function () { return ui.mode; };
   window.__uiCounts = function () { return { targets: ui.targets.length, moves: ui.moves.length, terrain: ui.terrain.length }; };
