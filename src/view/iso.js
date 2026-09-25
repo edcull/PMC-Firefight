@@ -8886,6 +8886,7 @@
         }
         var mz = S3(TF(len, 0), z);
         if (!dead) sEllipse(mz[0], mz[1], wd * 0.48, wd * 0.43, 'rgba(180,245,255,.95)');
+        return mz;
       }
       function pintle(fr, p, q, z, shield) {
         // a post, a machine gun on it, and a shield plate in front
@@ -9119,10 +9120,11 @@
               if (!dead) edge(g, S3(TF(TR * 0.5, -TR * 0.22), tz + 5), S3(TF(TR * 0.5, -TR * 0.06), tz + 5), '#7fd8e8', 0.9);
             };
             gun = function () {
-              if (st.plasma) plasmaBarrel(TR * 0.4, TR * (st.gunLen || 2.3), tz + 5, 3.4);
-              else barrel(TF, TR * 0.4, TR * (st.gunLen || 2.3), 0, tz + 5, 2.2, 'gun', { col: '#262b33' });
-              // the rail driver slung under the main gun
-              barrel(TF, TR * 0.45, TR * 1.1, 0.001, tz + 2.5, 1.2, 'rail', { col: '#15181e', lit: '#7fd8e8' });
+              var ftip = st.plasma ? plasmaBarrel(TR * 0.4, TR * (st.gunLen || 2.3), tz + 5, 3.4)
+                : barrel(TF, TR * 0.4, TR * (st.gunLen || 2.3), 0, tz + 5, 2.2, 'gun', { col: '#262b33' });
+              // the rail driver fires down the same barrel: its shots leave from the main gun's muzzle
+              var fbase = S3(TF(TR * 0.4, 0), tz + 5);
+              mount('rail', ftip, ftip[0] >= fbase[0] ? 1 : -1);
             };
             break;
         }
