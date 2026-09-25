@@ -5072,9 +5072,10 @@
   function fromLog(kind, title, side, entries) {
     var blocks = [], cur = null;
     entries.forEach(function (l) {
-      if (l.t === 'shoot' || l.t === 'round') {
+      // a line that carries its own roll starts a block: a shot, an assault round, or charges set against a wall
+      if (l.t === 'shoot' || l.t === 'round' || (l.t === 'assault' && l.math)) {
         cur = { head: l.text, math: l.math || '', die: null, chips: [], banners: [] };
-        var m = (l.math || '').match(/D10 rolls (\d)/);
+        var m = (l.math || '').match(/D10(?: rolls)? (\d)/);
         if (m) cur.die = parseInt(m[1], 10);
         blocks.push(cur);
       } else if (l.t === 'hits' && cur) {
@@ -5082,7 +5083,7 @@
       } else if (cur && (l.t === 'suppressed' || l.t === 'broken' || l.t === 'kill' || l.t === 'note')) {
         cur.banners.push({ text: l.text, tone: l.t === 'note' ? '' : l.t === 'suppressed' ? 'warn' : 'bad' });
       } else if (!cur) {
-        blocks.push({ head: l.text, math: '', die: null, chips: [], banners: [] });
+        blocks.push({ head: l.text, math: l.math || '', die: null, chips: [], banners: [] });
       }
     });
     return { kind: kind, title: title, side: side, blocks: blocks };
