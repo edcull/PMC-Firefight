@@ -1934,9 +1934,8 @@
     var here = TERRAIN[terrainAt(state, target.x, target.y)].cover;
     /* Last Stand (p. 95): Rebel infantry "get +4 to their Defence parameter when in
        terrain which grants a Defence bonus" — behind a low wall as much as in ruins. */
-    // (the gun crews of the Rebel artillery are not the infantry it means)
-    var stand = target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry' &&
-      target.group !== 'Rebel artillery';
+    // (gun crews count: the mortar teams, autocannon teams and field guns are infantry too)
+    var stand = target.tactic === 'laststand' && target.faction === 'rebel' && target.cls === 'infantry';
     function held(v, why) { return stand ? { v: Math.max(v, 4), why: why + ' — Last Stand' } : { v: v, why: why }; }
     if (here) return held(here, 'terrain cover');
     if (!attacker) return { v: 0, why: '' };
@@ -1944,7 +1943,8 @@
        across its front, so like a low wall it shelters the gun from fire coming
        over it — from its front, or plunging down from any side. */
     if (dugIn(target) && (has(attacker, 'Indirect Fire') || sandbagged(target, attacker))) {
-      return { v: 2, why: has(attacker, 'Indirect Fire') ? 'sandbags against plunging fire' : 'dug in behind sandbags' };
+      // the sandbags are terrain that grants a Defence bonus, so Last Stand makes it +4
+      return held(2, has(attacker, 'Indirect Fire') ? 'sandbags against plunging fire' : 'dug in behind sandbags');
     }
     // Indirect Fire falls from above, so a low wall shelters the target whichever
     // way the shot comes from

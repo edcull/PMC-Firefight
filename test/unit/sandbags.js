@@ -1,8 +1,8 @@
 /* A dug-in gun's sandbags (p. 94): a short linear obstacle across its front.
    Like a low wall they shelter it from direct fire coming over them — from the
    front — and from plunging fire from any side, but not from a shot in the
-   flank or rear. The gun cannot be turned once dug in. Last Stand's +4 is for
-   the Rebel infantry, not the artillery crews. */
+   flank or rear. The gun cannot be turned once dug in. Under Last Stand the
+   sandbags, being terrain with a Defence bonus, give the crew +4. */
 'use strict';
 const { R, Engine } = require('../../server/rules.js');
 
@@ -51,7 +51,9 @@ ok('...while one on its trails slews round onto the target', Math.abs(gun.facing
 console.log('\nLast Stand');
 gun.tactic = 'laststand'; gun.dugIn = true; gun.facing = 0;
 at(rifles, 32, 21);
-ok('the artillery crew get the sandbags\' +2, not +4', R.coverFor(s, rifles, gun).v === 2);
+ok('Last Stand makes the sandbags +4 for the gun crew', R.coverFor(s, rifles, gun).v === 4, R.coverFor(s, rifles, gun).why);
+at(rifles, 20, 34);
+ok('...but still nothing in the flank', R.coverFor(s, rifles, gun).v === 0);
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);
