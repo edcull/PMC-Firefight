@@ -96,16 +96,18 @@ ok('...nor a turret', C.salvage({ catastrophic: false }, C.newEntry('xtturret2')
 var pco = C.newCompany('P', { faction: 'pmc' });
 ok('a drop pod costs nothing to recruit', C.recruitCost(pco, 'insertplat') === 0);
 var vco = C.newCompany('V', { faction: 'rebel' }); vco.doctrines = ['V2', 'V5'];
-ok('Plunderer: re-rolls only a low payment by default', C.orderOf(vco, 'plunder') === 'low');
-C.setOrder(vco, 'plunder', 'never');
-var kept = 0;
-for (var q = 0; q < 50; q++) { var pay = C.payment(3, 1, vco, pco, 'A'); if (!pay.plunder.A || !pay.plunder.A.now) kept++; }
-ok('...and never, when told never', kept === 50);
-C.setOrder(vco, 'plunder', 'always');
+// Plunderer (p. 112): the player's own roll, re-rolled or kept on seeing it, goes in as it is
+var mine = [6, 6, 6];
+var pr = C.payment(1, 1, vco, pco, 'A', false, { dice: { A: mine }, plunder: { A: null } });
+ok('Plunderer: a player’s kept roll stands as it was', pr.diceA.join() === '6,6,6' && !pr.plunder.A);
 var redone = 0;
-for (var q2 = 0; q2 < 50; q2++) { var pay2 = C.payment(3, 1, vco, pco, 'A'); if (pay2.plunder.A && pay2.plunder.A.now) redone++; }
-ok('...and always, when told always', redone === 50);
-ok('No Place for the Weak! can be told to spare them', (C.setOrder(vco, 'weak', false), C.orderOf(vco, 'weak') === false));
+for (var q2 = 0; q2 < 60; q2++) { var pay2 = C.payment(3, 1, vco, pco, 'A'); if (pay2.plunder.A && pay2.plunder.A.now) redone++; }
+ok('...a rival re-rolls only a low roll', redone > 5 && redone < 55, redone + ' of 60');
+// No Place for the Weak! (p. 112): the candidates are the infantry tied for the most Trauma Points
+var wc = { companies: { A: vco, B: pco } };
+vco.roster = [C.newEntry('rciv'), C.newEntry('rciv'), C.newEntry('rmilitia')];
+var fake = {}; fake[vco.roster[0].rid] = { total: 5 }; fake[vco.roster[1].rid] = { total: 5 }; fake[vco.roster[2].rid] = { total: 2 };
+ok('No Place for the Weak!: every unit tied for the most is offered', C.weakCandidates(wc, 'A', fake).length === 2);
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

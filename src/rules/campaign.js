@@ -1305,15 +1305,6 @@
   }
   /* Which Priority Levels this pairing could actually fight at the given Tier. */
   // "players can choose to play bigger ones as long as they can compose legal armies" (p. 84)
-  /* The standing orders for a doctrine that says "may" (Path of the Villain and
-     of the Prophet, p. 112): whether the force takes the option, set by its
-     player on the contract screen and kept on the company. */
-  var ORDER_DEFAULTS = { plunder: 'low', weak: true, martyr: true };
-  function orderOf(co, k) {
-    var o = co && co.orders;
-    return o && o[k] !== undefined ? o[k] : ORDER_DEFAULTS[k];
-  }
-  function setOrder(co, k, v) { co.orders = co.orders || {}; co.orders[k] = v; }
   function levelsFor(coA, coB, tier) {
     return [1, 2, 3, 4].filter(function (pl) {
       return canFieldArmy(coA, tier, pl, true) && canFieldArmy(coB, tier, pl, true);
@@ -1383,18 +1374,19 @@
     });
     return { was: dice.slice(), now: out, total: sum(out), won: !!won };
   }
-  function payment(battleTier, pl, coA, coB, winner, attackDefend) {
-    var a = rollPayment(battleTier, pl), b = rollPayment(battleTier, pl);
-    var negA = null, negB = null, plunder = { A: null, B: null };
-    /* Plunderer (Path of the Villain): a victorious revolt goes back through the
-       wreckage and re-rolls the lot. */
-    function loot(co, side, dice, other) {
-      if (!hasDoctrine(co, 'V2') || winner !== side) return dice;
-      /* "may reroll all dice" — the revolt's standing order says whether it does:
-         always, never, or only when the first roll came in under the odds. */
-      var od = orderOf(co, 'plunder');
-      if (od === 'never') return dice;
-      if (od === 'low' && sum(dice) >= dice.length * 3.5) { plunder[side] = { was: dice.slice(), kept: true }; return dice; }
+  /* `preset`: a player's own roll, already made — and already re-rolled or kept
+     under Plunderer, which they decide on seeing it — as { dice: {A}, plunder: {A} }. */
+  function payment(battleTier, pl, coA, coB, winner, attackDefend, preset) {
+    preset = preset || {};
+    var pd = preset.dice || {}, pp = preset.plunder || {};
+    var a = pd.A || rollPayment(battleTier, pl), b = pd.B || rollPayment(battleTier, pl);
+    var negA = null, negB = null, plunder = { A: pp.A || null, B: pp.B || null };
+    /* Plunderer (Path of the Villain, p. 112): a victorious revolt "may reroll
+       all dice". A player chooses on seeing the roll; a rival re-rolls one that
+       came in under the odds. */
+    function loot(co, side, dice) {
+      if (pd[side] || !hasDoctrine(co, 'V2') || winner !== side) return dice;
+      if (sum(dice) >= dice.length * 3.5) { plunder[side] = { was: dice.slice(), kept: true }; return dice; }
       var again = rollPayment(battleTier, pl);
       plunder[side] = { was: dice.slice(), now: again.slice() };
       return again;
@@ -1548,15 +1540,54 @@
     return { roll: roll, need: need, saved: roll >= need, note: note };
   }
 
+  /* The Trauma Points each of a side's units earned in the battle, rolled once
+     — No Place for the Weak! is decided on them, and the aftermath reuses them. */
+  function rollTP(campaign, report, side) {
+    var co = campaign.companies[side], foe = campaign.companies[side === 'A' ? 'B' : 'A'];
+    var won = report.winner === side || (report.winner === null && hasDoctrine(co, 'S5'));
+    var lostBattle = report.winner && report.winner !== side;
+    var rolled = {};
+    (report.units || []).filter(function (l) { return l.side === side; }).forEach(function (line) {
+      var e = byRid(co, line.rid);
+      if (!e) return;
+      rolled[e.rid] = tpFor(line, {
+        entry: e, company: co, won: won, lost: !!lostBattle,
+        ownTier: co.tier, enemyTier: foe.tier, halveTP: false,
+        routed: !!report.routed && report.routed[side],
+        consecutive: e.lastBattle === campaign.turn && campaign.turn > 0
+      });
+    });
+    return rolled;
+  }
+  /* "the unit which got the most Trauma Points (if there are two or more such
+     units, the player selects only one of them)" (p. 112): every infantry unit
+     tied for the most, the leader aside. */
+  function weakCandidates(campaign, side, rolled) {
+    var co = campaign.companies[side], best = 0, out = [];
+    Object.keys(rolled).forEach(function (id) {
+      var e = byRid(co, id);
+      if (!e || e.rid === co.cmdRid || profile(e.key).cls !== 'infantry') return;
+      var n = rolled[id].total;
+      if (n > best) { best = n; out = [e]; } else if (n === best && n > 0) out.push(e);
+    });
+    return best > 0 ? out : [];
+  }
+
   /* ================= the aftermath =================
      Takes a battle report and applies every book step in order, returning a
      record of what happened so the UI can show it and the player can see why. */
-  function aftermath(campaign, report) {
+  /* `opts` carries the choices a player made after the battle, before this runs:
+     their pay roll under Plunderer (dice, plunder), and under No Place for the
+     Weak! the Trauma Points already rolled (tp) and who, if anyone, was
+     executed (weak: a rid, or false). A side with nothing in it is decided here. */
+  function aftermath(campaign, report, opts) {
+    opts = opts || {};
     var out = { turn: campaign.turn + 1, winner: report.winner, sides: {}, payment: null };
     var coA = campaign.companies.A, coB = campaign.companies.B;
 
     out.payment = payment(report.battleTier, report.pl, coA, coB, report.winner,
-      report.attackDefend != null ? report.attackDefend : ATTACK_DEFEND.indexOf(report.scenario) >= 0);
+      report.attackDefend != null ? report.attackDefend : ATTACK_DEFEND.indexOf(report.scenario) >= 0,
+      { dice: opts.dice, plunder: opts.plunder });
     coA.kUC += out.payment.A;
     coB.kUC += out.payment.B;
 
@@ -1604,25 +1635,14 @@
           before[e.rid] = { exp: e.exp, tp: e.tp, honours: e.honours.slice(), traumas: e.traumas.slice(), name: e.name };
         });
       }
-      var rolled = {}, halveTP = false;
-      (report.units || []).filter(function (l) { return l.side === side; }).forEach(function (line) {
-        var e = byRid(co, line.rid);
-        if (!e) return;
-        rolled[e.rid] = tpFor(line, {
-          entry: e, company: co, won: won, lost: !!lostBattle,
-          ownTier: co.tier, enemyTier: foe.tier, halveTP: false,
-          routed: !!report.routed && report.routed[side],
-          consecutive: e.lastBattle === campaign.turn && campaign.turn > 0
-        });
-      });
-      if (hasDoctrine(co, 'V5') && orderOf(co, 'weak') !== false) {
-        var worst = null, worstN = 0;
-        Object.keys(rolled).forEach(function (id) {
-          var e = byRid(co, id);
-          if (!e || e.rid === co.cmdRid || profile(e.key).cls !== 'infantry') return;
-          if (rolled[id].total > worstN) { worstN = rolled[id].total; worst = e; }
-        });
-        if (worst) {
+      var rolled = (opts.tp && opts.tp[side]) || rollTP(campaign, report, side), halveTP = false;
+      var choice = opts.weak && side in opts.weak ? opts.weak[side] : undefined;
+      if (hasDoctrine(co, 'V5') && choice !== false) {
+        // the player named the unit; left to itself, the force makes an example of the worst
+        var cand = weakCandidates(campaign, side, rolled);
+        var worst = choice ? byRid(co, choice) : (cand[0] || null);
+        var worstN = worst && rolled[worst.rid] ? rolled[worst.rid].total : 0;
+        if (worst && worstN > 0) {
           halveTP = true;
           rec.executed = { rid: worst.rid, name: worst.name, key: worst.key, tp: worstN };
           worst.history.push('Executed for coming back in the worst state of the force.');
@@ -2630,7 +2650,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
-    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, orderOf: orderOf, setOrder: setOrder, deepen: deepen,
+    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,

@@ -363,5 +363,24 @@ for (var cd = 0; cd < 400; cd++) {
 }
 ok('a medic-treated man down can still get up on Combat Drugs', upWith > 0, upWith + ' times');
 
+/* ------------------------------------------------------ Martyrdom: ordered as each assault begins */
+console.log('\nMARTYRDOM');
+function holy(n) {
+  var hk = R.CATALOGUE.filter(function (p) { return p.group === 'Holy Warriors' && p.cls === 'infantry'; })[0].key;
+  return unit(hk, { x: 10, y: 10, models: n });
+}
+function martyrs(opts, n) {
+  var hw = holy(n), en = unit('regular', { side: 'B', x: 10, y: 11 });
+  var tb3 = table([hw, en]); tb3.doctrines = { A: ['P1'], B: [] };
+  var r = R.assault(tb3, hw, en, opts);
+  return r.log.some(function (l) { return /Martyrdom/.test(l.text || ''); });
+}
+// defensive fire can stop a charge before it lands, so each is tried a few times
+function often(opts, n) { var k = 0; for (var i = 0; i < 30; i++) if (martyrs(opts, n)) k++; return k; }
+ok('a player who says yes sends one in', often({ martyr: { A: true } }, 6) > 0);
+ok('...even with only two left', often({ martyr: { A: true } }, 2) > 0);
+ok('a player who says no does not', often({ martyr: { A: false } }, 6) === 0);
+ok('the AI keeps its last two', often({}, 2) === 0 && often({}, 6) > 0);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

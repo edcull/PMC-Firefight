@@ -3672,6 +3672,12 @@
   }
   function chargeRoute(state, a, t, allowance) { return chargeReach(state, a, allowance)(t); }
 
+  // Martyrdom (p. 112): Holy Warriors of a force on the Path of the Prophet, with a man to spare
+  function canMartyr(state, u, foe) {
+    if (!u || !foe || !foe.alive || !doctrine(state, u.side, 'P1')) return false;
+    var p = BY_KEY[u.key];
+    return !!p && p.group === 'Holy Warriors' && u.models > 1;
+  }
   function assault(state, a, t, opts) {
     var log = [], wrecked = null;
     opts = opts || {};
@@ -3681,12 +3687,12 @@
        one of the Holy Warriors walks into the enemy and takes D3 of them with him.
        The unit takes no Suppression for the death. */
     function martyr(u, foe) {
-      if (!doctrine(state, u.side, 'P1')) return;
-      // "the Rebel commander may order" it (p. 112): the player's standing order, and never the last two men
-      if (state.orders && state.orders[u.side] && state.orders[u.side].martyr === false) return;
-      if (u.models <= 2) return;
-      var p = BY_KEY[u.key];
-      if (!p || p.group !== 'Holy Warriors' || u.models <= 1 || !foe.alive) return;
+      if (!canMartyr(state, u, foe)) return;
+      /* "the Rebel commander may order" it (p. 112): a player says so as the
+         assault begins (opts.martyr); the AI spends a man only while the unit
+         has more than two to spare. */
+      var say = opts.martyr && opts.martyr[u.side];
+      if (say === false || (say == null && u.models <= 2)) return;
       u.models -= 1;
       var hits = d3();
       log.push({ t: 'assault', text: 'Martyrdom — one of ' + u.label + ' goes in alone. ' +
@@ -4682,7 +4688,7 @@
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
-    resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
+    canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
     applyDrone: applyDrone, canBeDrone: canBeDrone, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,

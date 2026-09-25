@@ -1118,23 +1118,10 @@
     return co.roster.filter(function (e) { return !(e.restUntil > 0); });
   }
 
-  /* The "may" doctrines, as standing orders the player sets before the battle
-     (pp. 112-113): whether to re-roll the pay, execute the weakest, send a
-     martyr in, and which units get the drugs. */
+  /* Drug Dealer (p. 112): "Before each battle, the player may choose up to 1/3
+     of infantry units" — chosen here, with the list. */
   function ordersPanel(co) {
     var rows = [];
-    function seg(k, opts) {
-      var cur = C.orderOf(co, k);
-      return '<span class="segs">' + opts.map(function (o) {
-        return '<button class="lnk' + (cur === o[0] ? ' on' : '') + '" data-order="' + k + '" data-val="' + JSON.stringify(o[0]).replace(/"/g, '&quot;') + '">' + o[1] + '</button>';
-      }).join('') + '</span>';
-    }
-    if (C.hasDoctrine(co, 'V2')) rows.push('<div class="orow"><b>Plunderer</b><em>Re-roll the pay after a win</em>' +
-      seg('plunder', [['low', 'If it rolled low'], ['always', 'Always'], ['never', 'Never']]) + '</div>');
-    if (C.hasDoctrine(co, 'V5')) rows.push('<div class="orow"><b>No Place for the Weak!</b><em>Execute the unit with the most Trauma Points, halving everyone else’s</em>' +
-      seg('weak', [[true, 'Execute'], [false, 'Spare them']]) + '</div>');
-    if (C.hasDoctrine(co, 'P1')) rows.push('<div class="orow"><b>Martyrdom</b><em>A Holy Warrior goes in alone at the start of an assault (never the last two)</em>' +
-      seg('martyr', [[true, 'Send one'], [false, 'Hold back']]) + '</div>');
     if (C.hasDoctrine(co, 'V4')) {
       var able = drugAble(contract.picks), cap = Math.floor(able.length / 3);
       contract.drugs = (contract.drugs || []).filter(function (id) { return able.some(function (e) { return e.rid === id; }); }).slice(0, cap);
@@ -1146,7 +1133,7 @@
             (!on && contract.drugs.length >= cap ? ' disabled' : '') + '>' + esc(e.name) + '</button>';
         }).join('') : '<span class="dnote">No infantry in the list can take them.</span>') + '</span></div>');
     }
-    return rows.length ? '<div class="cpan orders"><div class="cprom-head"><b>Standing orders</b></div>' + rows.join('') + '</div>' : '';
+    return rows.length ? '<div class="cpan orders">' + rows.join('') + '</div>' : '';
   }
   function contractView() {
     var A = camp.companies.A, B = camp.companies.B;
@@ -1432,7 +1419,6 @@
       colourA: colourOf(A), colourB: colourOf(B),
       dossier: { A: contract.picks, B: theirs },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
-      orders: { A: { martyr: C.orderOf(A, 'martyr') }, B: { martyr: true } },
       tactics: { A: A.faction === 'rebel' ? contract.tactic || null : null, B: theirTactic },
       campaign: true,
       mode: camp.mode === 'hotseat' ? 'hotseat' : 'ai',
@@ -1447,16 +1433,73 @@
     report.pl = camp.pending.pl;
     report.scenario = camp.pending.scenario;
     C.clearOffers(camp);            // a battle fought: three fresh jobs next turn
-    after = C.aftermath(camp, report);
+    /* The Paths' post-battle choices come first, each at its moment in the book
+       (p. 112): Plunderer once the pay is rolled after a win, No Place for the
+       Weak! once the Trauma Points are. Kept on the campaign, so a reload on the
+       way through picks them up again. */
+    var players = camp.mode === 'hotseat' ? ['A', 'B'] : ['A'], steps = [];
+    players.forEach(function (sd) {
+      var co = camp.companies[sd];
+      if (report.winner === sd && C.hasDoctrine(co, 'V2')) steps.push({ kind: 'plunder', side: sd });
+    });
+    players.forEach(function (sd) {
+      if (C.hasDoctrine(camp.companies[sd], 'V5')) steps.push({ kind: 'weak', side: sd });
+    });
+    camp.post = { report: report, pre: { dice: {}, plunder: {}, tp: {}, weak: {} }, steps: steps };
+    if (!steps.length) { finishPost(); setTimeout(function () { open('aftermath'); }, 900); return; }
+    save();
+    view = 'post';
+    setTimeout(function () { open('post'); }, 900);
+  }
+  function finishPost() {
+    var post = camp.post;
+    after = C.aftermath(camp, post.report, post.pre);
     if (camp.mode === 'solo') {
       after.rival = C.developRival(camp.companies.B);
       // and the next opponent is drawn now, so the hub can say who is coming
       after.next = C.drawRival(camp);
     }
+    camp.post = null;
     camp.pending = null;
     save();
     view = 'aftermath';
-    setTimeout(function () { open('aftermath'); }, 900);
+  }
+  // the post-battle decisions, one to a screen
+  function postView() {
+    var post = camp.post, st = post && post.steps[0];
+    if (!st) { finishPost(); return aftermathView(); }
+    var co = camp.companies[st.side], rep = post.report, pre = post.pre;
+    var h = '<h2>After the battle</h2>';
+    if (camp.mode === 'hotseat') h += '<p class="lede">' + esc(co.name) + '</p>';
+    if (st.kind === 'plunder') {
+      if (!pre.dice[st.side]) { pre.dice[st.side] = C.rollPayment(rep.battleTier, rep.pl); save(); }
+      var d = pre.dice[st.side], tot = d.reduce(function (a, b) { return a + b; }, 0), pl = pre.plunder[st.side];
+      h += '<div class="cpan"><div class="cprom-head"><b>Plunderer</b></div>' +
+        '<p class="cpstat">' + esc(co.name) + ' won. Its payment roll: ' + d.length + 'D6.</p>' +
+        '<p class="dice-row">' + d.map(function (v) { return '<span class="die">' + v + '</span>'; }).join('') +
+        ' <b>= ' + tot + ' ' + C.money(co) + '</b></p>';
+      if (pl && pl.now) {
+        h += '<p class="cpstat">Re-rolled from ' + pl.was.reduce(function (a, b) { return a + b; }, 0) + '. The second roll stands.</p>' +
+          '<button class="start" data-go="postnext">Continue</button>';
+      } else {
+        h += '<p class="cpstat">A victorious revolt may go back through the wreckage and re-roll all the dice. The second roll stands, even if it is worse.</p>' +
+          '<div class="cprom-row"><button class="start" data-go="plunder">Re-roll all</button>' +
+          '<button class="lnk" data-go="postnext">Keep ' + tot + '</button></div>';
+      }
+      return h + '</div>';
+    }
+    // No Place for the Weak!
+    if (!pre.tp[st.side]) { pre.tp[st.side] = C.rollTP(camp, rep, st.side); save(); }
+    var cand = C.weakCandidates(camp, st.side, pre.tp[st.side]);
+    if (!cand.length) { post.steps.shift(); save(); return postView(); }
+    h += '<div class="cpan"><div class="cprom-head"><b>No Place for the Weak!</b></div>' +
+      '<p class="cpstat">' + (cand.length > 1 ? 'These units came back with the most Trauma Points, ' : cand[0].name + ' came back with the most Trauma Points, ') +
+      pre.tp[st.side][cand[0].rid].total + '. The revolt may execute ' + (cand.length > 1 ? 'one of them' : 'it') +
+      ': it is struck off, and every other unit’s Trauma Points from this battle are halved.</p>' +
+      '<div class="segs">' + cand.map(function (e) {
+        return '<button class="lnk warn" data-weak="' + e.rid + '">Execute ' + esc(e.name) + '</button>';
+      }).join('') + '<button class="lnk" data-weak="">Spare them</button></div></div>';
+    return h;
   }
 
   /* The day's experience and trauma, itemised. The book gives both as a list of
@@ -1768,11 +1811,13 @@
     if (!body) return;
     var h = '';
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
+    if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view === 'found') h = foundView();
     else if (view === 'roster') h = rosterView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') h = contractView();
     else if (view === 'aftermath') h = aftermathView();
+    else if (view === 'post') h = postView();
     else if (view === 'honour') h = honourView();
     else if (view === 'doctrine') h = doctrineView();
     else if (view === 'upgrade') h = upgradeView();
@@ -1942,9 +1987,13 @@
       contract.tactic = t.getAttribute('data-tactic') || null;
       render(); return;
     }
-    if (t.hasAttribute('data-order')) {
-      C.setOrder(camp.companies.A, t.getAttribute('data-order'), JSON.parse(t.getAttribute('data-val')));
-      save(); render(); return;
+    if (t.hasAttribute('data-weak') && camp.post) {
+      var ws = camp.post.steps[0];
+      if (ws && ws.kind === 'weak') {
+        camp.post.pre.weak[ws.side] = t.getAttribute('data-weak') || false;
+        camp.post.steps.shift(); save(); render();
+      }
+      return;
     }
     if (t.hasAttribute('data-drug') && contract) {
       var dr = t.getAttribute('data-drug'), dl = contract.drugs = contract.drugs || [], di = dl.indexOf(dr);
@@ -2021,6 +2070,17 @@
       case 'intel': view = 'intel'; render(); return;
       case 'offers': view = 'offers'; render(); return;
       case 'contract': beginContract(); render(); return;
+      case 'plunder': {
+        var pst = camp.post && camp.post.steps[0];
+        if (!pst || pst.kind !== 'plunder') return;
+        var pr = camp.post.pre, was = pr.dice[pst.side];
+        pr.dice[pst.side] = C.rollPayment(camp.post.report.battleTier, camp.post.report.pl);
+        pr.plunder[pst.side] = { was: was.slice(), now: pr.dice[pst.side].slice() };
+        save(); render(); return;
+      }
+      case 'postnext':
+        if (camp.post) { camp.post.steps.shift(); save(); render(); }
+        return;
       case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl, contract.tactic || null); render(); return;
       case 'standard':
         if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;

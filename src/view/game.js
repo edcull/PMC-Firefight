@@ -1015,6 +1015,17 @@
   }
   /* Terrorist (p. 112): before deploying, the side on the Path of the Villain
      picks one destructible piece to mine — or none. */
+  // Martyrdom (p. 112): asked as each assault with Holy Warriors in it begins
+  function martyrCard() {
+    var m = state.martyrAsk, u = byId(m.unit), foe = byId(m.foe);
+    if (!u || !foe) return '';
+    return '<div class="card"><h2>Martyrdom</h2>' +
+      '<p class="sub"><b>' + esc(u.name) + '</b> ' + (u.id === (ui.selected && ui.selected.id) ? 'charges' : 'is charged by') +
+      ' <b>' + esc(foe.name) + '</b>. Before the first round, one of them may walk into the enemy alone: ' +
+      'one model is removed, and ' + esc(foe.name) + ' takes D3 automatic hits. No Suppression for the death.</p>' +
+      '<div class="acts"><button class="act" data-act="martyr"><span>Send one in</span><small>' + u.models + ' models, one of them goes</small></button>' +
+      '<button class="act" data-act="nomartyr"><span>Hold back</span><small>Fight the assault as it stands</small></button></div></div>';
+  }
   function mineCard() {
     var mp = state.minePick;
     return '<div class="card"><h2>Terrorist</h2>' +
@@ -3921,6 +3932,7 @@
     else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
     else if (state.cmdOffer) html = cmdOfferCard();
+    else if (state.martyrAsk && !isAI(state.martyrAsk.side)) html = martyrCard();
     else if (state.over) html = overCard();
     else if (ui.terrain.length && ui.selected &&
       (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
@@ -4377,6 +4389,7 @@
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
         else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
+        else if (a === 'martyr' || a === 'nomartyr') { send({ k: a }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();

@@ -219,7 +219,7 @@
     var draining = false, paced = false;
     function canAI() {
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        isAI(state.activeSide);
+        !state.martyrAsk && isAI(state.activeSide);          // a player's Martyrdom answer holds the AI's charge
     }
     function maybeAI() {
       if (draining || !canAI()) return;
@@ -230,7 +230,7 @@
       } finally { draining = false; }
     }
     function aiStep() {
-      if (!state || state.over || !isAI(state.activeSide)) return false;
+      if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk) return false;
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
       if (state.solo && state.activeSide === 'B') {
@@ -303,7 +303,6 @@
       streak: 0, chain: null, log: [], over: null,
       campaign: cfg.campaign || null,
       doctrines: cfg.doctrines || null,
-      orders: cfg.orders || null,            // a campaign force's standing orders for its "may" doctrines
       tactics: cfg.tactics || { A: null, B: null },
       routed: { A: false, B: false },
       seed: (Math.random() * 100000) | 0,
@@ -3412,14 +3411,16 @@
 
   // an Overgrown bug charging from the AI's hands, when something is in reach
   function aiCharge(u, t) {
-    var snap = snapshotAlive();
-    var res = abAssault(state, u, t);
-    if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
-    res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-    soundFor(res.log);
-    var card = fromLog('Assault', u.name + ' → ' + t.name, u.side, res.log);
-    playAssault(u, t, deathsSince(snap), function () { pushRes(card); });
-    u.activated = true; endActivation(u);
+    martyrFirst(u, t, function (m) {
+      var snap = snapshotAlive();
+      var res = abAssault(state, u, t, m);
+      if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
+      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      soundFor(res.log);
+      var card = fromLog('Assault', u.name + ' → ' + t.name, u.side, res.log);
+      playAssault(u, t, deathsSince(snap), function () { pushRes(card); });
+      u.activated = true; endActivation(u);
+    });
   }
 
   // an Advance that moves and then does not shoot: the activation ends there
@@ -3590,7 +3591,26 @@
     abilityFx(res, t, sh, trails);
     return res;
   }
-  function abAssault(st, a, t) {
+  /* Martyrdom (p. 112) is ordered as each assault begins, attacking or
+     defending: a player's Holy Warriors are asked, and the assault waits for
+     the answer; the AI decides for its own. `go(martyr)` runs the assault. */
+  function martyrFirst(a, t, go) {
+    var ask = [a, t].filter(function (u, i) {
+      return !isAI(u.side) && R.canMartyr(state, u, i ? a : t);
+    });
+    if (!ask.length) { go({}); return; }
+    var said = {};
+    (function next() {
+      var u = ask.shift();
+      if (!u) { state.martyrAsk = null; ui.martyrThen = null; go(said); return; }
+      state.martyrAsk = { unit: u.id, foe: (u === a ? t : a).id, side: u.side };
+      ui.martyrThen = function (yes) { said[u.side] = !!yes; next(); };
+      setHint(null, 'Martyrdom — ' + u.name + ' may send one of its own in alone.');
+      revealConsole();
+      render();
+    })();
+  }
+  function abAssault(st, a, t, martyr) {
     var trails = pheromoneMarkers(a, t);
     // "Death or Glory, Comrades!": the leader's shout, and the charge throwing off its Suppression
     var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
@@ -3604,7 +3624,7 @@
     var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
     if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
     var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
-    var res = R.assault(st, a, t, { path: route ? route.path : null });
+    var res = R.assault(st, a, t, { path: route ? route.path : null, martyr: martyr || {} });
     abilityFx(res, t, null, trails);
     return res;
   }
@@ -3891,14 +3911,16 @@
 
   function doAssault(target) {
     var u = ui.selected;
-    var snap = snapshotAlive();
-    var res = abAssault(state, u, target);
-    if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
-    res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-    soundFor(res.log);
-    var card = fromLog('Assault', u.name + ' → ' + target.name, u.side, res.log);
-    playAssault(u, target, deathsSince(snap), function () { pushRes(card); });
-    u.activated = true; endActivation();
+    martyrFirst(u, target, function (m) {
+      var snap = snapshotAlive();
+      var res = abAssault(state, u, target, m);
+      if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
+      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      soundFor(res.log);
+      var card = fromLog('Assault', u.name + ' → ' + target.name, u.side, res.log);
+      playAssault(u, target, deathsSince(snap), function () { pushRes(card); });
+      u.activated = true; endActivation();
+    });
   }
 
   /* Supporting Fire: shoot without the stationary bonus, then stay active so the
@@ -4522,13 +4544,16 @@
     if (R.status(u) === 'suppressed' && R.deathOrGlory(state, u) && !R.has(u, 'Cumbersome Weapon')) {
       var dogT = nearestEnemy(u);
       if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
-        var dsnap = snapshotAlive();
-        var dres = abAssault(state, u, dogT.unit);
-        dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-        soundFor(dres.log);
-        var dcard = fromLog('Assault', u.name + ' → ' + dogT.unit.name, u.side, dres.log);
-        playAssault(u, dogT.unit, deathsSince(dsnap), function () { pushRes(dcard); });
-        u.activated = true; endActivation(u); return;
+        martyrFirst(u, dogT.unit, function (m) {
+          var dsnap = snapshotAlive();
+          var dres = abAssault(state, u, dogT.unit, m);
+          dres.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+          soundFor(dres.log);
+          var dcard = fromLog('Assault', u.name + ' → ' + dogT.unit.name, u.side, dres.log);
+          playAssault(u, dogT.unit, deathsSince(dsnap), function () { pushRes(dcard); });
+          u.activated = true; endActivation(u);
+        });
+        return;
       }
     }
     // a pinned squad beside an empty building gets inside it
@@ -4653,13 +4678,17 @@
       if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
     }
     if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
-      var snap = snapshotAlive();
-      var res = abAssault(state, u, ne.unit);
-      res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
-      soundFor(res.log);
-      var card = fromLog('Assault', u.name + ' → ' + ne.unit.name, u.side, res.log);
-      playAssault(u, ne.unit, deathsSince(snap), function () { pushRes(card); });
-      u.activated = true; endActivation(u); return;
+      var nt = ne.unit;
+      martyrFirst(u, nt, function (m) {
+        var snap = snapshotAlive();
+        var res = abAssault(state, u, nt, m);
+        res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+        soundFor(res.log);
+        var card = fromLog('Assault', u.name + ' → ' + nt.name, u.side, res.log);
+        playAssault(u, nt, deathsSince(snap), function () { pushRes(card); });
+        u.activated = true; endActivation(u);
+      });
+      return;
     }
     if ((behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
       fire(u, shot.t, 'fire'); return;
@@ -5036,7 +5065,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -5232,6 +5261,12 @@
           if (!ui.insertion || ui.insertion.kind !== 'insert') return no('nothing to hold back');
           if (insertionSide() !== side) return no('that is not your unit');
           holdInsertion();
+          return yes;
+        }
+        case 'martyr': case 'nomartyr': {
+          var ma = state.martyrAsk;
+          if (!ma || ma.side !== side || !ui.martyrThen) return no('nothing to answer');
+          ui.martyrThen(it.k === 'martyr');
           return yes;
         }
         case 'cmdcoord': case 'cmdskip': {
