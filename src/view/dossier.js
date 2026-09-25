@@ -259,7 +259,6 @@
     h += '<div class="dtop">' + tierChip(p.tier) +
       '<b class="dname">' + esc(e.name) + '</b>' +
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
-    if (e.free) h += '<span class="dtag">' + esc(C.words(co).cmd) + '</span>';
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     h += '</div>';
     if (!C.isLeaderP(p) && !(co.faction === 'xeno' && (p.rules || []).indexOf('Turret') >= 0)) {
