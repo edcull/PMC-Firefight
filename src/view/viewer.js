@@ -90,6 +90,15 @@
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     // Stationary Artillery (p. 94): dug in behind its sandbags, or not
     if (stationary(p)) u.dugIn = view.stance === 'dug';
+    // a Lifter carrying: the rebels' technical, slung under it
+    if ((p.rules || []).indexOf('Lifter') >= 0 && view.sling === 'sling') {
+      var tp = R.profile('rtechnical');
+      if (tp) {
+        var t = Object.assign({}, tp, { id: 'VSLG', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0, cargo: [], aboard: u.id });
+        if (R.propsFor(tp).length) R.applyPropulsion(t, R.defaultDrive(tp));
+        u.cargo = [t];
+      }
+    }
     // a crew-served piece stays laid on the mark it last fired at, until it is turned
     if (turns(p) && view.stance !== 'towed' && !view.walking && view.gunAim != null && view.aimFor === view.face + '|gun') u.facing = view.gunAim;
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
@@ -1194,6 +1203,11 @@
     if (stationary(p)) {
       h += '<div class="vgrp"><label>Stance</label><div class="vseg">' +
         segL('stance', [['ready', 'Emplaced'], ['dug', 'Dug in'], ['towed', 'Towed']], view.stance || 'ready') + '</div></div>';
+    }
+    // a Lifter (p. 94): flying empty, or with a technical slung under it
+    if ((p.rules || []).indexOf('Lifter') >= 0) {
+      h += '<div class="vgrp"><label>Load</label><div class="vseg">' +
+        segL('sling', [['none', 'Empty'], ['sling', 'Vehicle slung']], view.sling || 'none') + '</div></div>';
     }
     // Drone Control (p. 37): any hull or craft without Transport, in any army but the Bugs
     if (R.canBeDrone(p)) {

@@ -6557,12 +6557,76 @@
   function drawTowed(g, veh, gun, at) {
     var hs = hullSpec(veh.art) || { len: 2 }, f = veh.facing || 0;
     var fx = Math.cos(f), fy = Math.sin(f);
+    if (PIECE3D[gun.art]) { towedPiece(g, veh, gun, at, hs, f); return; }
     var back = hs.len * 0.5 + 0.8;
     fieldGun(g, {
       x: at.x - fx * back, y: at.y - fy * back, aim: f + Math.PI, mode: 'tow',
       heavy: /heavy/.test(gun.key || ''), pal: PALETTE[gun.paint || gun.side] || PALETTE.A,
       hitch: { x: at.x - fx * hs.len * 0.5, y: at.y - fy * hs.len * 0.5 }
     });
+  }
+  /* A tripod weapon on tow (the heavy autocannon): lifted onto a little
+     two-wheeled trailer, its legs folded along the bed, the barrel back over
+     the tail, the A-frame drawbar on the vehicle's hook. */
+  function towedPiece(g, veh, gun, at, hs, f) {
+    var P = PIECE3D[gun.art], k = P.k, fx = Math.cos(f), fy = Math.sin(f);
+    var back = hs.len * 0.5 + 0.85 * k + 0.1;
+    if (P.wheeled) {                                    // on its own wheels, the trails closed into a drawbar
+      var ow = { x: at.x - fx * back, y: at.y - fy * back, aim: f + Math.PI, k: k };
+      var Gw = rig(g, ow);
+      P.build(Gw, { pal: PALETTE[gun.paint || gun.side] || PALETTE.A, g: g, tow: true });
+      var ew = Gw.S(-0.75, 0, 0.18), hw = toScreen(at.x - fx * hs.len * 0.5, at.y - fy * hs.len * 0.5);
+      thickLine(g, ew[0], ew[1], hw.x, hw.y - 0.3 * K * 0.9, Math.max(1.5, K * 0.05), '#2b2f2a');
+      var wasW = SMOOTH;
+      SMOOTH = true;
+      try { Gw.parts.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
+      finally { SMOOTH = wasW; }
+      return;
+    }
+    var o = { x: at.x - fx * back, y: at.y - fy * back, aim: f + Math.PI, k: k };
+    var pal = PALETTE[gun.paint || gun.side] || PALETTE.A;
+    var T = rig(g, o), G = rig(g, { x: o.x, y: o.y, aim: o.aim, k: k, z0: -0.04 });
+    T.part(0, -0.3, function () { T.wheel(0, -0.3, 0.17, 0.08); });
+    T.part(0, 0.3, function () { T.wheel(0, 0.3, 0.17, 0.08); });
+    T.part(-0.05, 0, function () {
+      T.rod([0, -0.3, 0.17], [0, 0.3, 0.17], 0.025, [T.DEEP, T.DRK, T.STL]);          // the axle
+      T.box(-0.28, 0.26, -0.21, 0.21, 0.2, 0.26);                                      // the bed
+      [-1, 1].forEach(function (sd) { T.rod([-0.26, sd * 0.18, 0.22], [-0.72, 0, 0.2], 0.018, [T.DEEP, T.DRK, T.STL]); });
+      T.dot([-0.74, 0, 0.2], 0.035, T.DEEP);                                           // the towing eye
+    });
+    // the tripod's legs, folded and strapped along the bed
+    G.tripod = function () {
+      G.part(-0.1, 0, function () {
+        [-0.1, 0, 0.1].forEach(function (sd) { G.rod([-0.3, sd, 0.32], [0.24, sd, 0.32], 0.022, [G.DEEP, G.DRK, G.STL]); });
+      });
+    };
+    P.build(G, { pal: pal, g: g });
+    var te = T.S(-0.74, 0, 0.2), hq = toScreen(at.x - fx * hs.len * 0.5, at.y - fy * hs.len * 0.5);
+    thickLine(g, te[0], te[1], hq.x, hq.y - 0.3 * K * 0.9, Math.max(1.5, K * 0.05), '#2b2f2a');
+    var was = SMOOTH;
+    SMOOTH = true;
+    try { T.parts.concat(G.parts).sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
+    finally { SMOOTH = was; }
+  }
+  /* What is left of a crew-served weapon when the last of its crew falls:
+     each piece knocked down and leaning over, burnt dark, on a scorched patch. */
+  function pieceWreck(g, b, wp) {
+    var P = PIECE3D[b.art];
+    var u = { key: b.key, art: b.art, facing: (b.aim != null ? b.aim : 0) + 0.4, side: b.side };
+    var pal = PALETTE[b.paint || b.side] || PALETTE.A, all = [];
+    pieces3D(u, wp).forEach(function (pc) {
+      var sc = toScreen(pc.x, pc.y);
+      ellipse(g, sc.x, sc.y, K * 0.55 * pc.k, K * 0.28 * pc.k, 'rgba(20,16,12,.5)');
+      var R = rig(g, { x: pc.x, y: pc.y, aim: pc.aim, k: pc.k, wreck: !P.wreck });
+      (P.wreck || P.build)(R, { pal: pal, g: g });
+      all = all.concat(R.parts);
+    });
+    g.save();
+    try { g.filter = 'saturate(0.2) brightness(0.55) sepia(0.35)'; } catch (e) { /* no filters: left unburnt */ }
+    var was = SMOOTH;
+    SMOOTH = true;
+    try { all.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
+    finally { SMOOTH = was; g.restore(); }
   }
   /* A rebel field piece stands on the table as a machine does, facing where it
      last fired, its crew round the trails; the unit's point is between them. */
@@ -6587,7 +6651,13 @@
   function rig(g, o) {
     var k = o.k || 1, ca = Math.cos(o.aim || 0), sa = Math.sin(o.aim || 0), ZK = K * 0.9;
     function W(t, s2) { return { x: o.x + (ca * t + sa * s2) * k, y: o.y + (sa * t - ca * s2) * k }; }
-    function S(t, s2, z) { var w = W(t, s2), q = toScreen(w.x, w.y); return [q.x, q.y - z * ZK * k - (o.lift || 0)]; }
+    /* `o.z0` stands the whole piece higher or lower (on a trailer's bed);
+       `o.wreck` knocks it down: sagged toward the ground and leaning over. */
+    function S(t, s2, z) {
+      z += o.z0 || 0;
+      if (o.wreck) { s2 += z * 0.55; z = Math.max(0.01, z * 0.4); }
+      var w = W(t, s2), q = toScreen(w.x, w.y); return [q.x, q.y - z * ZK * k - (o.lift || 0)];
+    }
     function dep(t, s2) { var w = W(t, s2); return w.x + w.y; }
     var R = { S: S, W: W, dep: dep, k: k, parts: [],
       STL: '#4a5244', LIT: '#6c7662', DRK: '#2b3128', DEEP: '#1c211b' };
@@ -6614,6 +6684,24 @@
       return [p[0] + L * Math.cos(e) - (h || 0) * Math.sin(e), p[1] + (s2 || 0), p[2] + L * Math.sin(e) + (h || 0) * Math.cos(e)];
     };
     R.dot = function (p, r, c) { var q = S(p[0], p[1], p[2]); ellipse(g, q[0], q[1], Math.max(0.6, r * K * k), Math.max(0.6, r * K * k), c); };
+    /* A road wheel on an axle across the piece at `t`, its middle `s2` out: a
+       tyre with its tread band, the rim and hub on the face toward the eye. */
+    R.wheel = function (t, s2, r, tw) {
+      var N = 16, sIn = s2 - tw / 2, sOut = s2 + tw / 2;
+      function ring(sx, rr) {
+        var out = [];
+        for (var a2 = 0; a2 < N; a2++) { var an = a2 / N * Math.PI * 2; out.push(S(t + Math.cos(an) * rr, sx, r + Math.sin(an) * rr)); }
+        return out;
+      }
+      var nearOut = dep(t, sOut) > dep(t, sIn), far = nearOut ? sIn : sOut, near = nearOut ? sOut : sIn;
+      var fr = ring(far, r), nr = ring(near, r);
+      poly(g, fr, '#0b0e12');
+      for (var q = 0; q < N; q++) { var q2 = (q + 1) % N; poly(g, [fr[q], fr[q2], nr[q2], nr[q]], q % 2 ? '#101318' : '#14181d'); }
+      poly(g, nr, '#161a20');
+      poly(g, ring(near, r * 0.6), '#2b313a');
+      poly(g, ring(near, r * 0.5), o.disc || '#454d58');
+      poly(g, ring(near, r * 0.2), '#1a1e25');
+    };
     /* A low tripod: its head at height `h`, two legs splayed forward and one
        trailing back, each a thin bar down to a foot. */
     R.tripod = function (h, spread, back) {
@@ -6680,114 +6768,248 @@
           for (var r = 0; r < 3; r++) R.rod([-0.44 + r * 0.06, 0.14, 0], [-0.44 + r * 0.06, 0.14, 0.12], 0.02, ['#6a4a22', '#8a5a2a', '#a8763c']);
         });
       } },
-    /* The heavy machine gun on its tripod: a cooling jacket on the barrel,
-       spade grips at the back, a belt feeding from a green box. */
-    hmg: { k: 1.35, crew: [[-0.45, 0.1], [-0.3, -0.35], [-0.7, -0.15], [-0.65, 0.4]], muz: function () { return [0.66, 0, 0.34]; },
+    /* The heavy machine gun on its tripod: a perforated cooling jacket on the
+       barrel, a feed cover and rear sight on the receiver, spade grips at the
+       back, a carrying handle, and the belt feeding in from a green box. */
+    hmg: { k: 1.35, crew: [[-0.45, 0.1], [-0.3, -0.35], [-0.7, -0.15], [-0.65, 0.4]], muz: function () { return [0.7, 0, 0.33]; },
       build: function (R, o) {
         R.tripod(0.28, 0.24, 0.42);
-        R.part(0.15, 0, function () {
-          R.box(-0.16, 0.08, -0.045, 0.045, 0.28, 0.38);                        // receiver
-          R.rod([-0.24, 0, 0.33], [-0.16, 0, 0.33], 0.02, [R.DEEP, R.DRK, R.STL]);   // spade grips
-          R.rod([0.08, 0, 0.33], [0.42, 0, 0.33], 0.036);                        // the jacket
-          R.rod([0.42, 0, 0.33], [0.62, 0, 0.33], 0.016);                        // the barrel
-          R.rod([0.6, 0, 0.33], [0.66, 0, 0.33], 0.024, [R.DEEP, R.DRK, R.STL]);
+        R.part(-0.05, 0, function () {
+          R.box(-0.04, 0.04, -0.05, 0.05, 0.24, 0.29, R.DRK, R.DEEP, R.DEEP);    // the cradle on the head
+          R.box(-0.16, 0.08, -0.045, 0.045, 0.28, 0.37);                        // receiver
+          R.box(-0.12, 0.06, -0.047, 0.047, 0.37, 0.4, '#7a8470', R.STL, R.DRK);   // feed cover
+          R.box(-0.15, -0.12, -0.012, 0.012, 0.4, 0.45, R.DRK, R.DEEP, R.DEEP);  // rear sight
+          R.rod([-0.24, -0.03, 0.33], [-0.16, -0.03, 0.33], 0.016, [R.DEEP, R.DRK, R.STL]);   // spade grips
+          R.rod([-0.24, 0.03, 0.33], [-0.16, 0.03, 0.33], 0.016, [R.DEEP, R.DRK, R.STL]);
+          R.rod([-0.02, 0.05, 0.33], [-0.02, 0.1, 0.33], 0.012, [R.DEEP, R.DRK, R.STL]);     // cocking handle
+        });
+        R.part(0.35, 0, function () {
+          R.rod([0.08, 0, 0.33], [0.44, 0, 0.33], 0.04);                          // the jacket
+          for (var h = 0; h < 5; h++) R.dot([0.13 + h * 0.065, 0, 0.36], 0.009, R.DEEP);   // its cooling holes
+          R.rod([0.18, 0, 0.375], [0.3, 0, 0.375], 0.008, [R.DEEP, R.DRK, R.STL]);   // carrying handle
+          R.rod([0.44, 0, 0.33], [0.64, 0, 0.33], 0.017);                          // the barrel
+          R.rod([0.62, 0, 0.33], [0.7, 0, 0.33], 0.028, [R.DEEP, R.DRK, R.STL]);   // flash hider
+          R.box(0.4, 0.43, -0.01, 0.01, 0.36, 0.41, R.DRK, R.DEEP, R.DEEP);       // front sight
         });
         R.part(0.02, 0.2, function () {
-          R.box(-0.06, 0.1, 0.08, 0.2, 0.2, 0.31, '#5f6d48', '#4d5a3a', '#3a4430');   // the ammunition box
-          var b0 = R.S(0.02, 0.08, 0.3), b1 = R.S(0.0, 0.045, 0.34);
-          thickLine(o.g, b0[0], b0[1], b1[0], b1[1], Math.max(1, K * R.k * 0.03), '#b08a3a');
+          R.box(-0.08, 0.1, 0.1, 0.24, 0.16, 0.3, '#5f6d48', '#4d5a3a', '#3a4430');   // the ammunition box
+          R.box(-0.08, 0.1, 0.1, 0.24, 0.3, 0.315, '#6f7d58', '#4d5a3a', '#3a4430');  // its lid
+          belt(R, o.g, [-0.05, 0.13, 0.31], [-0.06, 0.047, 0.35], 0.07);
         });
       } },
-    /* The Gauss cannon: twin rails wound with coils on the tripod, the
-       capacitor housing behind, a cable back to the power pack on the ground. */
-    gauss: { k: 1.35, crew: [[-0.5, 0.1], [-0.3, -0.38], [-0.75, -0.2], [-0.7, 0.45]], muz: function () { return [0.78, 0, 0.35]; },
+    /* The Gauss cannon: twin rails wound with coils on the tripod, a panelled
+       capacitor housing with its charge strip glowing, an optic on top, and a
+       cable back to the power pack on the ground. */
+    gauss: { k: 1.35, crew: [[-0.5, 0.1], [-0.3, -0.38], [-0.75, -0.2], [-0.7, 0.45]], muz: function () { return [0.8, 0, 0.35]; },
       build: function (R, o) {
         R.tripod(0.28, 0.26, 0.42);
         R.part(-0.55, 0.3, function () {
           R.box(-0.68, -0.44, 0.2, 0.4, 0, 0.16, '#4a5866', '#34404c', '#28313a');   // the power pack
-          R.dot([-0.56, 0.3, 0.165], 0.02, '#7fe0ff');
+          R.box(-0.64, -0.48, 0.24, 0.36, 0.16, 0.19, '#56687a', '#34404c', '#28313a');
+          R.dot([-0.56, 0.3, 0.195], 0.02, '#7fe0ff');
           var c0 = R.S(-0.5, 0.25, 0.1), c1 = R.S(-0.18, 0.04, 0.3);
-          thickLine(o.g, c0[0], c0[1], c1[0], c1[1], Math.max(1, K * R.k * 0.025), o.pal.dark);
+          thickLine(o.g, c0[0], c0[1], c1[0], c1[1], Math.max(1.5, K * R.k * 0.035), o.pal.dark);
         });
-        R.part(0.2, 0, function () {
+        R.part(-0.05, 0, function () {
+          R.box(-0.04, 0.04, -0.05, 0.05, 0.24, 0.29, R.DRK, R.DEEP, R.DEEP);
           R.box(-0.22, 0.1, -0.055, 0.055, 0.28, 0.42, '#5a6878', '#3e4a56', '#2c353e');   // the capacitor housing
+          [-0.14, -0.04, 0.05].forEach(function (t) {                                    // its panel seams
+            var a0 = R.S(t, 0.056, 0.29), a1 = R.S(t, 0.056, 0.41), b0 = R.S(t, -0.056, 0.29), b1 = R.S(t, -0.056, 0.41);
+            thickLine(o.g, a0[0], a0[1], a1[0], a1[1], 1, '#2c353e');
+            thickLine(o.g, b0[0], b0[1], b1[0], b1[1], 1, '#2c353e');
+          });
+          [-1, 1].forEach(function (sd) {                                                // the charge strip
+            var a0 = R.S(-0.2, sd * 0.057, 0.31), a1 = R.S(0.08, sd * 0.057, 0.31);
+            thickLine(o.g, a0[0], a0[1], a1[0], a1[1], Math.max(1, K * R.k * 0.012), '#7fe0ff');
+          });
+          R.box(-0.12, 0.0, -0.025, 0.025, 0.42, 0.48, '#3e4a56', '#2c353e', '#1f262d'); // the optic
+          R.dot([0.001, 0, 0.45], 0.012, '#7fe0ff');
+          R.rod([-0.3, 0, 0.34], [-0.22, 0, 0.34], 0.02, [R.DEEP, R.DRK, R.STL]);       // the grips
+        });
+        R.part(0.45, 0, function () {
           R.rod([0.1, 0, 0.35], [0.76, 0, 0.35], 0.028, ['#1f262d', '#34404c', '#56687a']);   // the rails' shroud
           [-1, 1].forEach(function (sd) {
-            R.rod([0.1, sd * 0.03, 0.37], [0.78, sd * 0.03, 0.37], 0.012, ['#2c353e', '#6f8090', '#9fb2c4']);
+            R.rod([0.1, sd * 0.03, 0.37], [0.8, sd * 0.03, 0.37], 0.012, ['#2c353e', '#6f8090', '#9fb2c4']);
           });
           for (var c = 0; c < 5; c++) {                      // the coils wound round them
             var t = 0.2 + c * 0.11;
             R.rod([t, 0, 0.35], [t + 0.035, 0, 0.35], 0.045, ['#2c353e', '#6f8090', '#9fb2c4']);
           }
-          R.dot([0.77, 0, 0.35], 0.022, '#7fe0ff');
+          R.dot([0.8, 0, 0.36], 0.022, '#7fe0ff');
         });
       } },
-    /* The rebels' light autocannon on a tripod: a long barrel with a muzzle
-       brake and a box magazine standing up out of the receiver. */
-    rebac: { k: 1.35, crew: [[-0.45, 0.12], [-0.3, -0.36], [-0.7, -0.15], [-0.62, 0.42], [-0.95, 0.15], [-0.95, -0.4]], muz: function () { return [0.8, 0, 0.34]; },
+    /* The rebels' light autocannon on a tripod: a long ribbed barrel with a
+       muzzle brake, a box magazine standing up out of the receiver, a sight. */
+    rebac: { k: 1.35, crew: [[-0.45, 0.12], [-0.3, -0.36], [-0.7, -0.15], [-0.62, 0.42], [-0.95, 0.15], [-0.95, -0.4]], muz: function () { return [0.82, 0, 0.34]; },
       build: function (R, o) {
         R.tripod(0.28, 0.25, 0.44);
-        R.part(0.2, 0, function () {
+        R.part(-0.05, 0, function () {
+          R.box(-0.04, 0.04, -0.05, 0.05, 0.24, 0.29, R.DRK, R.DEEP, R.DEEP);
           R.box(-0.22, 0.12, -0.05, 0.05, 0.28, 0.4);
-          R.rod([0.12, 0, 0.34], [0.72, 0, 0.34], 0.024);
-          R.rod([0.7, 0, 0.34], [0.8, 0, 0.34], 0.036, [R.DEEP, R.DRK, R.STL]);
-          R.box(-0.1, 0.04, -0.03, 0.03, 0.4, 0.52, R.LIT, R.STL, R.DRK);      // the magazine
+          [-0.14, -0.06, 0.02].forEach(function (t) { R.box(t, t + 0.02, -0.052, 0.052, 0.3, 0.38, R.DRK, R.DEEP, R.DEEP); });   // ribs
+          R.box(-0.1, 0.04, -0.03, 0.03, 0.4, 0.54, R.LIT, R.STL, R.DRK);      // the magazine
+          R.box(0.05, 0.1, 0.05, 0.08, 0.36, 0.44, R.DRK, R.DEEP, R.DEEP);     // the sight
           R.box(-0.3, -0.22, -0.02, 0.02, 0.26, 0.36, R.DRK, R.DEEP, R.DEEP);  // the grips
+        });
+        R.part(0.45, 0, function () {
+          R.rod([0.12, 0, 0.34], [0.74, 0, 0.34], 0.026);
+          for (var r = 0; r < 4; r++) R.rod([0.16 + r * 0.05, 0, 0.34], [0.18 + r * 0.05, 0, 0.34], 0.036, [R.DEEP, R.DRK, R.STL]);   // cooling rings
+          R.rod([0.72, 0, 0.34], [0.82, 0, 0.34], 0.04, [R.DEEP, R.DRK, R.STL]);
+          [-1, 1].forEach(function (sd) {                    // the brake's ports
+            if (R.dep(0, sd) > R.dep(0, -sd)) R.dot([0.77, sd * 0.041, 0.34], 0.012, '#0e110d');
+          });
         });
         R.part(-0.4, 0.4, function () {
           R.box(-0.5, -0.3, 0.32, 0.48, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
+          R.box(-0.47, -0.33, 0.35, 0.45, 0.12, 0.14, o.pal.light, o.pal.dark, o.pal.dark);
         });
       } },
-    /* The heavy autocannon: the same on a heavier mount, with a welded shield. */
-    rebhac: { k: 1.35, crew: [[-0.5, 0.15], [-0.35, -0.4], [-0.8, -0.15], [-0.7, 0.45]], muz: function () { return [0.98, 0, 0.42]; },
+    /* The heavy autocannon: the same on a heavier mount, with a welded shield
+       of two swept wings the barrel runs out between. */
+    rebhac: { k: 1.35, wheeled: true, wreck: rebhacWreck, crew: [[-0.5, 0.15], [-0.35, -0.5], [-0.85, -0.15], [-0.75, 0.5]], muz: function () { return [1.0, 0, 0.42]; },
       build: function (R, o) {
-        R.tripod(0.34, 0.3, 0.52);
-        R.part(0.25, 0, function () {
-          R.box(-0.26, 0.14, -0.065, 0.065, 0.34, 0.49);
-          R.rod([0.14, 0, 0.42], [0.88, 0, 0.42], 0.032);
-          R.rod([0.86, 0, 0.42], [0.98, 0, 0.42], 0.046, [R.DEEP, R.DRK, R.STL]);
-          R.box(-0.12, 0.04, -0.04, 0.04, 0.49, 0.63, R.LIT, R.STL, R.DRK);
+        /* On its own two-wheeled carriage: emplaced, the trails spread and a
+           jack let down in front; on tow, the trails closed into a drawbar. */
+        [-1, 1].forEach(function (sd) { R.part(-0.05, sd * 0.235, function () { R.wheel(-0.05, sd * 0.235, 0.18, 0.07); }); });
+        R.part(-0.1, 0, function () {
+          R.rod([-0.05, -0.235, 0.18], [-0.05, 0.235, 0.18], 0.028, [R.DEEP, R.DRK, R.STL]);    // the axle
+          R.box(-0.1, 0.06, -0.08, 0.08, 0.16, 0.3, R.STL, R.DRK, R.DEEP);                    // the pedestal
+          [-1, 1].forEach(function (sd) {
+            var end = o.tow ? [-0.72, sd * 0.02, 0.18] : [-0.62, sd * 0.36, 0.02];
+            R.rod([-0.08, sd * 0.09, 0.2], end, 0.028, [R.DEEP, R.DRK, R.STL]);            // a trail
+            if (!o.tow) R.box(end[0] - 0.04, end[0] + 0.02, end[1] - 0.06, end[1] + 0.06, 0, 0.07, R.STL, R.DRK, R.DEEP);   // its spade
+          });
+          if (o.tow) R.dot([-0.75, 0, 0.18], 0.035, R.DEEP);                                  // the towing eye
+          else R.rod([0.08, 0, 0.2], [0.22, 0, 0], 0.022, [R.DEEP, R.DRK, R.STL]);          // the jack
+        });
+        R.part(-0.08, 0, function () {
+          R.box(-0.05, 0.05, -0.06, 0.06, 0.28, 0.35, R.DRK, R.DEEP, R.DEEP);
+          R.box(-0.26, 0.08, -0.065, 0.065, 0.34, 0.49);
+          [-0.18, -0.08].forEach(function (t) { R.box(t, t + 0.025, -0.067, 0.067, 0.36, 0.47, R.DRK, R.DEEP, R.DEEP); });
+          R.box(-0.12, 0.04, -0.04, 0.04, 0.49, 0.65, R.LIT, R.STL, R.DRK);
           R.box(-0.36, -0.26, -0.025, 0.025, 0.32, 0.44, R.DRK, R.DEEP, R.DEEP);
+          R.rod([0.08, 0, 0.42], [0.16, 0, 0.42], 0.034);    // the barrel's root, behind the shield
         });
         [-1, 1].forEach(function (sd) {                      // the shield, two swept wings
-          R.part(0.15, sd * 0.1, function () {
-            beamR(R, [0.18, 0], [0.12, sd * 0.19], 0.01, 0.3, 0.52, R.LIT, R.STL, R.DRK, o.g);
-            var a0 = R.S(0.178, sd * 0.01, 0.49), a1 = R.S(0.122, sd * 0.18, 0.49);
+          R.part(0.16, sd * 0.1, function () {
+            beamR(R, [0.18, 0], [0.12, sd * 0.19], 0.01, 0.3, 0.54, R.LIT, R.STL, R.DRK, o.g);
+            var a0 = R.S(0.178, sd * 0.01, 0.5), a1 = R.S(0.122, sd * 0.18, 0.5);
             thickLine(o.g, a0[0], a0[1], a1[0], a1[1], Math.max(1, K * R.k * 0.03), o.pal.mid);
+            for (var rv = 0; rv < 3; rv++) {                // rivets along its foot
+              var f = 0.2 + rv * 0.3, rp = [0.18 - 0.06 * f + 0.012, sd * 0.19 * f, 0.33];
+              R.dot(rp, 0.008, R.DRK);
+            }
+          });
+        });
+        R.part(0.6, 0, function () {
+          R.rod([0.18, 0, 0.42], [0.9, 0, 0.42], 0.032);
+          for (var r = 0; r < 4; r++) R.rod([0.24 + r * 0.06, 0, 0.42], [0.265 + r * 0.06, 0, 0.42], 0.044, [R.DEEP, R.DRK, R.STL]);
+          R.rod([0.88, 0, 0.42], [1.0, 0, 0.42], 0.05, [R.DEEP, R.DRK, R.STL]);
+          [-1, 1].forEach(function (sd) {
+            if (R.dep(0, sd) > R.dep(0, -sd)) R.dot([0.94, sd * 0.051, 0.42], 0.014, '#0e110d');
           });
         });
       } },
-    /* The guided-missile launcher: a long ready tube on a low tripod, the
-       guidance unit and its sight under it, a spare round in its case. */
+    /* The guided-missile launcher: a long ready tube on a low tripod with
+       carrying handles and banded caps, the guidance unit and its sights
+       under it, a spare round in its case. */
     atgm: { k: 1.3, crew: [[-0.45, 0.12], [-0.3, -0.36], [-0.7, -0.12], [-0.62, 0.42]], muz: function () { return [0.4, 0, 0.44]; },
       build: function (R, o) {
         R.tripod(0.26, 0.24, 0.4);
-        R.part(0.1, 0, function () {
-          R.box(-0.12, 0.06, -0.06, 0.06, 0.26, 0.36, '#4d564a', '#2e3530', '#262b25');   // guidance unit
+        R.part(-0.1, 0, function () {
+          R.box(-0.12, 0.06, -0.06, 0.06, 0.26, 0.37, '#4d564a', '#2e3530', '#262b25');   // guidance unit
+          R.box(-0.1, 0.04, -0.062, 0.062, 0.3, 0.32, '#39413a', '#262b25', '#1c201b');
           R.dot([0.065, -0.03, 0.31], 0.018, '#8fb8cc');
-          R.rod([-0.34, 0, 0.42], [0.4, 0, 0.44], 0.05, ['#2e3a24', '#4a5a3a', '#6a7a52']);   // the launch tube
-          R.rod([-0.36, 0, 0.42], [-0.32, 0, 0.42], 0.056, [R.DEEP, '#2e3a24', '#3a4630']);
-          R.box(-0.02, 0.1, -0.035, 0.035, 0.48, 0.55, '#4d564a', '#39413a', '#2b3128');     // day sight
+          R.rod([-0.2, 0.0, 0.3], [-0.12, 0.0, 0.3], 0.018, [R.DEEP, R.DRK, R.STL]);   // grips
+        });
+        R.part(0.05, 0, function () {
+          R.rod([-0.34, 0, 0.42], [0.4, 0, 0.44], 0.052, ['#2e3a24', '#4a5a3a', '#6a7a52']);   // the launch tube
+          [-0.34, 0.37].forEach(function (t) { R.rod([t, 0, 0.42], [t + 0.04, 0, 0.42], 0.058, [R.DEEP, '#2e3a24', '#3a4630']); });   // caps
+          R.rod([-0.05, 0, 0.42], [0.0, 0, 0.42], 0.056, [R.DEEP, pal2(o), pal2(o)]);   // a band of company paint
+          R.rod([-0.18, 0, 0.5], [-0.06, 0, 0.5], 0.008, [R.DEEP, R.DRK, R.STL]);       // carrying handle
+          R.box(-0.02, 0.1, -0.035, 0.035, 0.48, 0.56, '#4d564a', '#39413a', '#2b3128');   // day sight
+          R.dot([0.101, 0, 0.52], 0.014, '#8fb8cc');
         });
         R.part(-0.5, -0.35, function () {
-          R.rod([-0.7, -0.35, 0.04], [-0.3, -0.35, 0.04], 0.04, ['#2e3a24', '#4a5a3a', '#6a7a52']);
+          R.box(-0.72, -0.28, -0.4, -0.3, 0, 0.08, '#4a5a3a', '#3a4630', '#2e3a24');   // the spare round's case
+          R.box(-0.72, -0.68, -0.4, -0.3, 0, 0.08, pal2(o), o.pal.dark, o.pal.dark);
         });
       } },
-    /* The SAM launcher: twin tubes laid up at the sky on the tripod. */
+    /* The SAM launcher: twin tubes laid up at the sky on the tripod, the
+       IFF antenna and a thermal battery pack on the cradle. */
     samlauncher: { k: 1.3, crew: [[-0.45, 0.12], [-0.3, -0.36], [-0.7, -0.12], [-0.62, 0.42]], muz: function () { return [0.3, 0, 0.62]; },
       build: function (R, o) {
         R.tripod(0.26, 0.24, 0.4);
-        R.part(0.05, 0, function () {
-          R.box(-0.1, 0.06, -0.06, 0.06, 0.26, 0.36, '#4d564a', '#2e3530', '#262b25');
-          var p0 = [-0.02, 0, 0.4], e = 0.5;
+        var p0 = [-0.02, 0, 0.4], e = 0.5;
+        R.part(-0.15, 0, function () {
+          R.box(-0.1, 0.06, -0.06, 0.06, 0.26, 0.37, '#4d564a', '#2e3530', '#262b25');
+          R.box(-0.24, -0.1, -0.04, 0.04, 0.28, 0.34, '#39413a', '#262b25', '#1c201b');   // battery pack
+          R.rod([-0.06, -0.08, 0.37], [-0.06, -0.08, 0.6], 0.006, [R.DEEP, R.DRK, R.STL]);   // IFF antenna
+          R.dot([-0.06, -0.08, 0.6], 0.012, '#8fb8cc');
+        });
+        R.part(0.1, 0, function () {
           [-1, 1].forEach(function (sd) {
-            R.rod(R.along(p0, e, -0.3, 0, sd * 0.05), R.along(p0, e, 0.42, 0, sd * 0.05), 0.04, ['#2e3a24', '#4a5a3a', '#6a7a52']);
+            R.rod(R.along(p0, e, -0.3, 0, sd * 0.05), R.along(p0, e, 0.42, 0, sd * 0.05), 0.042, ['#2e3a24', '#4a5a3a', '#6a7a52']);
+            R.rod(R.along(p0, e, 0.38, 0, sd * 0.05), R.along(p0, e, 0.43, 0, sd * 0.05), 0.046, [R.DEEP, '#2e3a24', '#3a4630']);
+            R.rod(R.along(p0, e, 0.0, 0, sd * 0.05), R.along(p0, e, 0.05, 0, sd * 0.05), 0.046, [R.DEEP, pal2(o), pal2(o)]);
           });
-          R.box(-0.02, 0.08, 0.07, 0.13, 0.36, 0.46, '#4d564a', '#39413a', '#2b3128');
-          R.dot([0.08, 0.1, 0.41], 0.016, '#8fb8cc');
+          R.box(-0.02, 0.08, 0.08, 0.14, 0.36, 0.46, '#4d564a', '#39413a', '#2b3128');
+          R.dot([0.081, 0.11, 0.41], 0.016, '#8fb8cc');
         });
       } }
   };
+  function pal2(o) { return o.pal.mid; }
+  /* The heavy autocannon knocked out: the carriage down on its axle where a
+     wheel was torn off (it lies flat nearby), the barrel nosed into the dirt,
+     one shield wing hanging and the other blown off, the magazine thrown clear. */
+  function rebhacWreck(R, o) {
+    R.part(-0.05, -0.235, function () { R.wheel(-0.05, -0.235, 0.18, 0.07); });
+    R.part(-0.4, 0.62, function () {                     // the lost wheel, lying on its side
+      var S = R.S, ring = function (rr, z) {
+        var out = [];
+        for (var a2 = 0; a2 < 16; a2++) { var an = a2 / 16 * Math.PI * 2; out.push(S(-0.4 + Math.cos(an) * rr, 0.62 + Math.sin(an) * rr, z)); }
+        return out;
+      };
+      poly(o.g, ring(0.18, 0.0), '#0b0e12');
+      poly(o.g, ring(0.18, 0.07), '#161a20');
+      poly(o.g, ring(0.1, 0.071), '#2b313a');
+      poly(o.g, ring(0.04, 0.072), '#1a1e25');
+    });
+    R.part(-0.1, 0, function () {
+      R.rod([-0.05, -0.235, 0.18], [-0.05, 0.22, 0.03], 0.028, [R.DEEP, R.DRK, R.STL]);   // the axle, down at one end
+      R.box(-0.1, 0.06, -0.08, 0.08, 0.04, 0.17, R.STL, R.DRK, R.DEEP);
+      R.rod([-0.08, -0.09, 0.14], [-0.62, -0.36, 0.02], 0.028, [R.DEEP, R.DRK, R.STL]);   // a trail, still spread
+      R.rod([-0.08, 0.09, 0.08], [-0.45, 0.2, 0.02], 0.028, [R.DEEP, R.DRK, R.STL]);      // the other, snapped short
+      R.box(-0.26, 0.08, -0.03, 0.1, 0.08, 0.22);                                        // the receiver, slewed down
+      R.box(-0.36, -0.26, 0.0, 0.05, 0.06, 0.16, R.DRK, R.DEEP, R.DEEP);
+    });
+    R.part(0.12, -0.1, function () {                     // the one shield wing left, hanging
+      beamR(R, [0.14, 0.02], [0.1, -0.19], 0.01, 0.05, 0.3, R.LIT, R.STL, R.DRK, o.g);
+    });
+    R.part(0.5, 0.15, function () {
+      R.rod([0.08, 0.04, 0.16], [0.82, 0.3, 0.02], 0.032);                                 // the barrel, nose in the dirt
+      R.rod([0.8, 0.29, 0.02], [0.9, 0.33, 0.0], 0.05, [R.DEEP, R.DRK, R.STL]);
+    });
+    R.part(0.45, -0.45, function () {                    // the other wing, blown off and lying flat
+      R.box(0.3, 0.52, -0.55, -0.36, 0, 0.02, R.LIT, R.STL, R.DRK);
+    });
+    R.part(0.2, 0.55, function () {                      // the magazine, thrown clear
+      R.box(0.14, 0.3, 0.48, 0.56, 0, 0.08, R.LIT, R.STL, R.DRK);
+    });
+  }
+  /* A belt of rounds from a box to a gun: a band of brass, a dark line across
+     it at every round. */
+  function belt(R, g, a, b, w) {
+    var n = 7, pts = [], S = R.S;
+    var q = [S(a[0], a[1], a[2]), S(a[0] + w, a[1], a[2]), S(b[0] + w, b[1], b[2]), S(b[0], b[1], b[2])];
+    poly(g, q, '#b08a3a');
+    for (var i = 0; i <= n; i++) {
+      var f = i / n, p0 = S(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f + 0.004),
+        p1 = S(a[0] + w + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f + 0.004);
+      thickLine(g, p0[0], p0[1], p1[0], p1[1], 1, i % 2 ? '#6a5020' : '#d8b060');
+    }
+    void pts;
+  }
   PIECE3D.rebelmortar = PIECE3D.mortar;
   /* Where a unit's pieces stand: in a line across its front, each turned the
      way the unit faces, its crew shared out between them. */
@@ -11187,6 +11409,46 @@
     return out.filter(Boolean);
   }
 
+  /* A hull with what it carries outside: a gun on tow behind it, drawn first
+     when the gun is the further of the two; or, under a Lifter, the vehicle
+     slung below it on its cables (p. 94), hanging under the airframe. */
+  function slungVehicle(u) {
+    if (!u || u.cls !== 'aircraft') return null;
+    return (u.cargo || []).filter(function (c) { return c && c.cls === 'vehicle'; })[0] || null;
+  }
+  function hullWithLoad(g, u, opts) {
+    var atT = opts.at || u, m;
+    var tg = towedGun(u);
+    var tBehind = tg && toScreen(atT.x - Math.cos(u.facing || 0), atT.y - Math.sin(u.facing || 0)).y < toScreen(atT.x, atT.y).y;
+    if (tg && tBehind) drawTowed(g, u, tg, atT);
+    var sv = slungVehicle(u);
+    if (sv) {
+      // laden, the Lifter rides higher, the vehicle hanging clear under it on long cables
+      var vs0 = hullSpec(sv.art) || { hgt: 12 };
+      var climb = (vs0.hgt || 12) * 1.6 + 22, hang = climb * 0.35, base = opts.lift || 0;
+      var lo = {};
+      for (var ok in opts) lo[ok] = opts[ok];
+      lo.lift = base + climb;
+      opts = lo;
+      var v2 = {};
+      for (var key in sv) v2[key] = sv[key];
+      v2.facing = u.facing; v2.aim = null; v2.cargo = [];
+      drawMachine(g, v2, { at: atT, lift: base + hang, status: 'ready' });
+      // the cables, from the belly hook down to the vehicle's four corners
+      var vs = hullSpec(sv.art) || { len: 1.4, wid: 0.8, hgt: 12 }, f = u.facing || 0, c = Math.cos(f), sn = Math.sin(f);
+      var hook = toScreen(atT.x, atT.y);
+      hook.y -= base + climb + flyLift(u) - 2;
+      [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) {
+        var t = q[0] * vs.len * 0.36, s2 = q[1] * vs.wid * 0.36;
+        var w = toScreen(atT.x + c * t - sn * s2, atT.y + sn * t + c * s2);
+        thickLine(g, hook.x, hook.y, w.x, w.y - base - hang - (vs.hgt || 12) * 0.9, Math.max(1.2, K * 0.035), '#16181a');
+      });
+    }
+    m = drawMachine(g, u, opts);
+    if (tg && !tBehind) drawTowed(g, u, tg, atT);
+    return m;
+  }
+
   var DIM_CANVAS = null;
   function drawUnit(g, u, opts) {
     opts = opts || {};
@@ -11221,7 +11483,7 @@
         dg.clearRect(0, 0, DW, DH);
         dg.imageSmoothingEnabled = false;
         dg.translate(-ox, -oy);
-        m = drawMachine(dg, u, opts);
+        m = hullWithLoad(dg, u, opts);
         dg.setTransform(1, 0, 0, 1, 0, 0);
         dg.globalCompositeOperation = 'source-atop';
         dg.fillStyle = 'rgba(6,8,12,.42)';
@@ -11229,11 +11491,7 @@
         dg.globalCompositeOperation = 'source-over';
         g.drawImage(dc, ox, oy);
       } else {
-        var tg = towedGun(u), atT = opts.at || u;
-        var tBehind = tg && toScreen(atT.x - Math.cos(u.facing || 0), atT.y - Math.sin(u.facing || 0)).y < toScreen(atT.x, atT.y).y;
-        if (tg && tBehind) drawTowed(g, u, tg, atT);
-        m = drawMachine(g, u, opts);
-        if (tg && !tBehind) drawTowed(g, u, tg, atT);
+        m = hullWithLoad(g, u, opts);
       }
       if (opts.selected) {
         var ring = toScreen(at.x, at.y);
@@ -11473,6 +11731,7 @@
   }
   function drawBody(g, sx, sy, b) {
     /* The last of a gun crew to fall leaves the gun: knocked out where it stood. */
+    if (b.piece && PIECE3D[b.art]) { pieceWreck(g, b, toWorld(sx, sy)); return; }
     if (b.piece && FIELD_GUN[b.art]) {
       var wp = toWorld(sx, sy), aim0 = b.aim != null ? b.aim : (b.flip ? Math.PI * 0.75 : -Math.PI * 0.25);
       var gw = gunOpts({ facing: aim0 + 0.5, key: b.key, side: b.side, paint: b.paint }, wp, 'wreck');
@@ -11574,7 +11833,7 @@
     },
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec,
-    hasPiece: function (art) { return art === 'rebelgun'; },
+    hasPiece: function (art) { return art === 'rebelgun' || !!PIECE3D[art]; },   // a piece left knocked out when its crew is gone
     turnsLikeMachine: function (art) { return !!(PIECE3D[art] || FIELD_GUN[art]); },   // a crew-served piece drawn in 3D, with a facing   // a piece with a knocked-out drawing of its own figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
     figure: function (side, art, i, pose, step, mount) {
