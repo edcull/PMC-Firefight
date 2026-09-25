@@ -61,25 +61,26 @@ async function clickText(p, re) {
   console.log('\nThe soldiers');
   await clickText(p, '^Dossier$');
   await p.waitForTimeout(250);
-  const cards = await p.evaluate(() => [...document.querySelectorAll('#camp-body button[data-men]')].map(b => b.textContent));
-  check('every unit card opens to its details', cards.length === 9 && cards.every(c => /Details/.test(c)), cards.join(' | '));
+  const cards = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard.dclick')].map(b => b.getAttribute('aria-expanded')));
+  check('every unit card opens to its details', cards.length === 9 && cards.every(c => c === 'false'), cards.join(' | '));
+  check('...the command at the top', await p.evaluate(() => /command/i.test(document.querySelector('#camp-body .dcard .dname').textContent)));
   const rid = await p.evaluate(() => {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.key === 'recruits');
     return e.rid;
   });
   check('...and nothing is shown until asked', await p.evaluate(() => !document.querySelector('#camp-body .ddet')));
   const lpv = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.key === 'lpv').rid);
-  await click(p, `#camp-body button[data-men="${lpv}"]`);
+  await click(p, `#camp-body .dcard[data-rid=\"${lpv}\"] .dtop`);
   const hullDet = await p.evaluate(() => document.querySelector('#camp-body .ddet').innerText);
   check('a vehicle shows its Structure and its crew', /Str/.test(hullDet) && /Crew \(1\)/i.test(hullDet), hullDet.split('\n').slice(0, 3).join(' '));
-  await click(p, `#camp-body button[data-men="${lpv}"]`);
+  await click(p, `#camp-body .dcard[data-rid=\"${lpv}\"] .dtop`);
 
   // an honour and a trauma, to see them spelled out and worked into the numbers
   await p.evaluate((rid) => {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid);
     e.honours = [4]; e.traumas = [5];
   }, rid);
-  await click(p, `#camp-body button[data-men="${rid}"]`);
+  await click(p, `#camp-body .dcard[data-rid=\"${rid}\"] .dtop`);
   const det = await p.evaluate((rid) => {
     const e = window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.rid === rid), C = window.PMCCamp;
     const box = document.querySelector('#camp-body .ddet');
@@ -122,7 +123,7 @@ async function clickText(p, re) {
     const list = document.querySelector('#camp-body .dmen');
     return e.men[1].name === 'Jan "Tank" Novak' && !!list && /Jan "Tank" Novak/.test(list.innerText);
   }, rid));
-  await click(p, `#camp-body button[data-men="${rid}"]`);
+  await click(p, `#camp-body .dcard[data-rid=\"${rid}\"] .dtop`);
   check('...and the details close again', await p.evaluate(() => !document.querySelector('#camp-body .ddet')));
 
   console.log('\nExperience');

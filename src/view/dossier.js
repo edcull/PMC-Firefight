@@ -254,7 +254,8 @@
     var p = profile(e.key), h = '';
     var machine = p.cls !== 'infantry';
     var threshold = C.traumaThreshold(co);
-    h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + '" data-rid="' + e.rid + '">';
+    h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + (opts.expand ? ' dclick' + (opts.men ? ' open' : '') : '') + '" data-rid="' + e.rid + '"' +
+      (opts.expand ? ' aria-expanded="' + !!opts.men + '"' : '') + '>';
     h += '<div class="dtop">' + tierChip(p.tier) +
       '<b class="dname">' + esc(e.name) + '</b>' +
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
@@ -715,15 +716,19 @@
     }).join('') + '</div></div>');
 
     var named = !!(draft.name || '').trim();
-    var chk = { ok: t1 === 6 && t2 === 2 && machines <= 2 && draft.doctrine && named };
-    h += '<p class="faults' + (chk.ok ? ' ok' : '') + '">' + (chk.ok
-      ? (xen ? 'Ready. The Alpha squad joins free, at the Tribe Tier, and grows with it.'
-        : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
-        : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
-        : 'Ready. The field command is added free, at the Company Tier.')
-      : !named ? say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.')
-        : 'Six Tier I units, two Tier II, at most two vehicles, one ' + C.creedOf(co).one + '.') + '</p>';
-    h += '<button class="start" data-go="dofound"' + (chk.ok ? '' : ' disabled') + '>' +
+    var rest = !!(t1 === 6 && t2 === 2 && machines <= 2 && draft.doctrine);
+    var chk = { ok: rest && named };
+    var readyTxt = xen ? 'Ready. The Alpha squad joins free, at the Tribe Tier, and grows with it.'
+      : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
+      : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
+      : 'Ready. The field command is added free, at the Company Tier.';
+    var nameTxt = say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
+    // the name is typed without a redraw: the line and the button follow it as it is typed (see mount)
+    h += '<p class="faults' + (chk.ok ? ' ok' : '') + '" id="found-faults" data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '">' + (chk.ok
+      ? readyTxt
+      : rest && !named ? nameTxt
+        : 'Six Tier I units, two Tier II, at most two vehicles, one ' + C.creedOf(co).one + '.' + (named ? '' : ' ' + nameTxt)) + '</p>';
+    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound"' + (chk.ok ? '' : ' disabled') + '>' +
       say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
     // the second player cannot step back out: the campaign needs their force
     if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
@@ -776,18 +781,18 @@
       co.roster.forEach(function (e) { if (C.menOf(e, co)) named = true; });
       if (named) save();
       h += '<div class="dlist">';
+      // the command first — it earns no experience and carries no honours or traumas — then by Tier and experience
       co.roster.slice().sort(function (a, b) {
-        return profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
+        var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
+        return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
         var open = !!menOpen[e.rid];
         var spend = spendActs(e, co);                  // its experience is spent from its own card
-        acts += '<button class="lnk" data-men="' + e.rid + '" aria-expanded="' + open + '">' +
-          (open ? '\u25be ' : '\u25b8 ') + 'Details</button>';
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
         if (spend) acts += '<span class="dspend">' + spend + '</span>';
-        h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '' });
+        h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
         }
@@ -880,7 +885,8 @@
           (bio[t].mass ? ' \u00b7 ' + bio[t].mass + ' biomass' : ' \u00b7 not biomass') + '</span></li>';
       }).join('') + '</ol></div>';
   }
-  var menOpen = {};               // which units have their details open, by rid
+  var menOpen = {};               // which unit has its details open, by rid (one at a time)
+  var showCard = null;            // a card just opened, to be scrolled fully into view
 
   /* Everything about one unit, opened from its card: the profile as it takes
      the field — honours, traumas, upgrades and doctrines already worked in, with
@@ -935,7 +941,7 @@
     h += marks(W.honours, e.honours, C.honourTable(e.key), 'good');
     h += marks('Upgrades', e.upgrades, C.upgradeTable(e.key), 'good');
     h += marks(W.traumas, e.traumas, C.traumaTable(e.key), 'bad');
-    if (!(e.honours || []).length && !(e.traumas || []).length && !(e.upgrades || []).length) {
+    if (!C.isLeaderP(p) && !(e.honours || []).length && !(e.traumas || []).length && !(e.upgrades || []).length) {
       h += '<p class="ddet-note">No ' + esc(W.honours) + ' or ' + esc(W.traumas) + ' yet.</p>';
     }
     if ((e.men || []).length) h += '<h5>' + (mach ? 'Crew' : 'Soldiers') + ' (' + e.men.length + ')</h5>' + menPanel(e);
@@ -1947,8 +1953,20 @@
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
     body.classList.toggle('fit', view === 'found');
     body.classList.toggle('hubfit', view === 'hub' && !!camp);
+    var dl = body.querySelector('.cdos-body'), dlTop = dl ? dl.scrollTop : 0;
     body.innerHTML = h;
     body.scrollTop = 0;
+    var dl2 = body.querySelector('.cdos-body');
+    if (dl2) {
+      dl2.scrollTop = dlTop;                        // a redraw keeps the list where it was
+      var oc = showCard && dl2.querySelector('.dcard[data-rid="' + showCard + '"]');
+      if (oc) {
+        var lr = dl2.getBoundingClientRect(), cr2 = oc.getBoundingClientRect();
+        if (cr2.bottom > lr.bottom) dl2.scrollTop += Math.min(cr2.bottom - lr.bottom + 6, cr2.top - lr.top - 4);
+        else if (cr2.top < lr.top) dl2.scrollTop -= lr.top - cr2.top + 4;
+      }
+    }
+    showCard = null;
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
     var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
@@ -1972,6 +1990,16 @@
     if (colourOpen && !ev.target.closest('.found-pop') && !(t && t.getAttribute('data-go') === 'fcolour')) {
       keepFoundName(); colourOpen = false; render();
       if (!t) return;
+    }
+    /* A tap on a unit's card, anywhere but its buttons, opens its details and
+       closes any other; the list scrolls to show the whole of the opened card. */
+    var card = !t && !ev.target.closest('.ddet') && ev.target.closest('#camp-body .dcard.dclick');
+    if (card) {
+      var cr = card.getAttribute('data-rid');
+      var was = !!menOpen[cr];
+      menOpen = {};
+      if (!was) { menOpen[cr] = true; showCard = cr; }
+      render(); return;
     }
     if (!t) return;
     if (view === 'found') keepFoundName();
@@ -2158,8 +2186,8 @@
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
         // a name to start from; the player settles it on the founding screen
-        beginFounding(fac === 'rebel' ? 'The Free Colonies' : fac === 'bugs' ? 'The Hive' : fac === 'xeno' ? 'The Ghadon Third' : 'Task Force Ironhold',
-          el('camp-mode').value, fac);
+        // no name to start from: the player gives one on the founding screen (the box suggests one)
+        beginFounding('', el('camp-mode').value, fac);
         draft.archs = [];                          // the world is always rolled
         render(); return;
       }
@@ -2357,6 +2385,16 @@
       if (asking) return;                                         // nothing behind it is live
       if (ev.target === host) { close(); return; }
       onClick(ev);
+    });
+    // the name box: the charter can be signed as soon as it has a name, without waiting on a redraw
+    host.addEventListener('input', function (ev) {
+      if (!ev.target || ev.target.id !== 'found-name' || !draft) return;
+      draft.name = ev.target.value;
+      var sign = el('found-sign'), fl = el('found-faults');
+      if (!sign || sign.getAttribute('data-rest') !== '1') return;
+      var ok = !!draft.name.trim();
+      sign.disabled = !ok;
+      if (fl) { fl.textContent = fl.getAttribute(ok ? 'data-ready' : 'data-noname'); fl.classList.toggle('ok', ok); }
     });
     host.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }
