@@ -4129,10 +4129,10 @@
         P(18, wy - 1, 7, 8, '#6a5a3a');                // flared muzzle
         P(18, wy - 1, 7, 2, '#8a7448');
         // the pilot flame at the muzzle, licking up and flickering
-        var fp = FLAME_PHASE < 0 ? 1 : FLAME_PHASE, fh = [4, 6, 5, 7][fp], fl = [0, 1, 0, -1][fp];
-        P(25, wy + 5 - fh, 4, fh, '#e08a3a');
-        P(26 + fl, wy + 6 - fh - 2, 2, 2, '#e08a3a');
-        P(26, wy + 5 - Math.ceil(fh * 0.6), 2, Math.ceil(fh * 0.6), '#ffc861');
+        var fp = FLAME_PHASE < 0 ? 1 : FLAME_PHASE, fh = [6, 9, 7, 10][fp], fl = [0, 1, 0, -1][fp];
+        P(25, wy + 6 - fh, 5, fh, '#e08a3a');
+        P(26 + fl, wy + 6 - fh - 3, 3, 3, '#e08a3a');
+        P(26, wy + 6 - Math.ceil(fh * 0.65), 3, Math.ceil(fh * 0.65), '#ffc861');
         P(-8, wy + 5, 7, 3, '#2f3a34');                // fuel line to the tanks
         P(-6, wy + 3, 4, 3, GUN.md);
         break;
@@ -6498,7 +6498,7 @@
     // the Light VTOL drone: a small flying disc with swept winglets and a scanner pod under its lip
     vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
     // the advanced strike craft: the interceptor's airframe, loaded for ground attack
-    jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, hexWings: true, noseGun: true, gun: 1.0 },
+    jetstrike: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.0, craft: 'jet', noPods: true, noseGun: true, gun: 1.0 },
     hybrid: { len: 2.45, wid: 0.72, hgt: 11, fly: 2.8, craft: 'hybrid', gun: 1.0 },
 
     /* ---- improvised rebel hulls (pp. 105-108) ----
@@ -9231,7 +9231,7 @@
        Ducted fans in place of open rotors: every one of these lifts on shrouded
        fans, so the rotor discs are gone and a ring of shroud with a blur of
        blades inside it stands in for each. */
-    function fan(fr, p, q, z, r, vertical) {
+    function fan(fr, p, q, z, r, vertical, flush) {
       // a rebel machine's fans come off whatever it was patched up from
       var ft0 = patch(TB, fr(p, q), 97), hull = ft0.mid, lit = ft0.lit, dark = ft0.dark;
       var c = S3(fr(p, q), z), rx = r * K, ry = vertical ? r * K : r * K * 0.5;
@@ -9241,6 +9241,22 @@
         sEllipse(c[0], c[1], rx * vx + 1.5, ry + 1.5, dark);
         sEllipse(c[0], c[1], rx * vx, ry, '#15181e');
         if (!dead) sEllipse(c[0], c[1], rx * vx * 0.9, ry * 0.9, 'rgba(190,200,214,.3)');
+        return;
+      }
+      /* A fan let flush into a wing: no housing, only the opening in the skin
+         with its thin rim, the dark well and the blades turning in it. */
+      if (flush) {
+        sEllipse(c[0], c[1], rx + 1, ry + 0.8, mixc(hull, dark, 0.55));      // the rim of the opening
+        sEllipse(c[0], c[1] + 0.3, rx, ry, '#0e1115');                      // the well
+        if (!dead) {
+          sEllipse(c[0], c[1] + 0.5, rx * 0.9, ry * 0.9, 'rgba(170,182,198,.22)');
+          var fsp = ((root.performance ? performance.now() : 0) * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
+          for (var fi = 0; fi < 5; fi++) {
+            var fa = fi * Math.PI * 2 / 5 + 0.4 + fsp;
+            line([c[0], c[1] + 0.5], [c[0] + Math.cos(fa) * rx * 0.9, c[1] + 0.5 + Math.sin(fa) * ry * 0.9], 1.1, 'rgba(206,214,226,.3)');
+          }
+        }
+        sEllipse(c[0], c[1] + 0.5, Math.max(1.2, rx * 0.16), Math.max(0.8, ry * 0.16), STEEL_LIT);   // hub
         return;
       }
       /* A shrouded fan, layered as a real one would be: the far half of the
@@ -9590,47 +9606,9 @@
             plate(AF, [[L * 0.14, -fw2], [L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, -span], [-L * 0.2, -span]], z + H * 0.3, 2);
             plate(AF, [[-L * 0.34, -fw2], [-L * 0.34, fw2], [-L * 0.46, w * 1.6], [-L * 0.52, w * 1.6], [-L * 0.52, -w * 1.6], [-L * 0.46, -w * 1.6]], z + H * 0.4, 1.6);
             if (hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.2, sd * span * 0.62, z + H * 0.3 + 2, 0.36); });
-            /* The advanced craft's wings are skinned in hexagonal plates: a
-               honeycomb laid over the top of each, clipped to the wing. */
-            if (spec.hexWings) {
-              var wing = [[L * 0.14, fw2], [-L * 0.2, span], [-L * 0.36, span], [-L * 0.36, fw2]];
-              var inWing = function (a1, b1) {
-                var bb = Math.abs(b1);
-                if (bb < fw2 || bb > span || a1 < -L * 0.36) return false;
-                // the leading edge runs from (0.14L, fw2) out to (-0.2L, span)
-                var lead = L * 0.14 + (bb - fw2) / (span - fw2) * (-L * 0.34);
-                return a1 <= lead;
-              };
-              var hr = w * 0.46, zt = z + H * 0.3 + 2;
-              g.save();
-              // the same active armour tiles as the advanced combat vehicle's flanks: a faint lit face, a dark seam
-              g.lineWidth = 0.6;
-              g.strokeStyle = 'rgba(10,12,16,.35)';
-              var hl = 'rgba(255,248,232,.07)';
-              for (var hi = -8; hi <= 8; hi++) {
-                for (var hj = 0; hj <= 14; hj++) {
-                  [-1, 1].forEach(function (sd2) {
-                    var ca = -L * 0.36 + hi * hr * 1.5 + L * 0.2;
-                    var cb = sd2 * (fw2 + hj * hr * 1.732 + (hi % 2 ? hr * 0.866 : 0));
-                    var vs = [];
-                    for (var v = 0; v < 6; v++) {
-                      var an = v * Math.PI / 3;
-                      vs.push([ca + Math.cos(an) * hr * 0.92, cb + Math.sin(an) * hr * 0.92]);
-                    }
-                    if (!vs.every(function (q3) { return inWing(q3[0], q3[1]); })) return;
-                    var sp3 = vs.map(function (q3) { return S3(AF(q3[0], q3[1]), zt); });
-                    g.beginPath();
-                    sp3.forEach(function (q3, k3) { if (k3) g.lineTo(q3[0], q3[1]); else g.moveTo(q3[0], q3[1]); });
-                    g.closePath();
-                    g.fillStyle = hl; g.fill(); g.stroke();
-                  });
-                }
-              }
-              g.restore();
-            }
             /* The company's jets are VTOL: they can hang in the air as well as fly
-               through it, so each wing carries an enclosed lift fan (over its armour tiles). */
-            if (!hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.16, sd * span * 0.5, z + H * 0.3 + 2, 0.3); });
+               through it, so each wing has a lift fan let flush into it (over its armour tiles). */
+            if (!hyb) [-1, 1].forEach(function (sd) { fan(AF, -L * 0.16, sd * span * 0.5, z + H * 0.3 + 2, 0.3, false, true); });
           });
           part(0, 0, function () {
             fuselage(fus, fusTop, z, H, TB);
