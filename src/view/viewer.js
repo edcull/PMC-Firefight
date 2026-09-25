@@ -46,7 +46,7 @@
   var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
   function choose(k) {
     var wasFac = view.pickFac;
-    view.key = k; view.models = null; view.tele = null;
+    view.key = k; view.models = null; view.tele = null; view.abNext = 0;
     view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
@@ -143,6 +143,7 @@
     if (view.walking && view.burrow && !arr.hidden) arr = Object.assign({}, arr, view.burrow);
     // far to near, so the nearer of the two covers the other
     var tv = traveller();
+    FX.drawGround(g);                                    // the ground broken open under what comes up through it
     var order = [u, t].concat(tv ? [tv.u] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
       if (tv && m === tv.u) {
@@ -1080,6 +1081,7 @@
   }
 
   function drawControls() {
+    drawColourButton();
     var p = profile(), w = R.weaponSpec(p);
     var isVeh = p.cls === 'vehicle';
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -1102,8 +1104,6 @@
       abilitiesOf(unit()).map(function (a, i) { return '<button class="vbtn" data-do="ability" data-ab="' + i + '">' + esc(a.name) + '</button>'; }).join('') +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
-    h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
-      '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
     // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
@@ -1140,6 +1140,17 @@
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
     el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, options over stats
+  }
+  /* The colours, a swatch at the top left of the stage: tap it for the whole
+     set, dropped down under it; a pick or a tap anywhere else puts them away. */
+  var colOpen = false;
+  function drawColourButton() {
+    var box = el('vcolbtn');
+    if (!box) return;
+    var k = view.colour[view.side], c = I.COLOURS[k];
+    box.innerHTML = '<button type="button" class="vcolnow" aria-expanded="' + colOpen + '" title="Colours: ' + esc(c.name) + '" aria-label="Colours: ' + esc(c.name) + '">' +
+      '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>' +
+      (colOpen ? '<div class="vcolpop"><label>Colours — ' + esc(c.name) + '</label><div class="vsw">' + swatches(k) + '</div></div>' : '');
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
@@ -1343,6 +1354,15 @@
         drawControls();
       }
     });
+    el('vcolbtn') && el('vcolbtn').addEventListener('click', function (e) {
+      e.stopPropagation();                         // redrawn under the tap: not a tap elsewhere
+      var sw = e.target.closest('[data-colour]');
+      if (sw) { paint(view.side, sw.getAttribute('data-colour')); colOpen = false; drawControls(); frame(); return; }
+      if (e.target.closest('.vcolnow')) { colOpen = !colOpen; drawColourButton(); }
+    });
+    document.addEventListener('click', function (e) {
+      if (colOpen && !e.target.closest('#vcolbtn')) { colOpen = false; drawColourButton(); }
+    });
     el('vctl').addEventListener('input', function (e) {
       if (e.target.id === 'vmodels') {
         view.models = +e.target.value;
@@ -1369,8 +1389,31 @@
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
-      if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
-      if (e.key === 'a' || e.key === 'A') { ability(); e.preventDefault(); }
+      // S steps through the unit's states; A through its abilities, one each press
+      if (e.key === 's' || e.key === 'S') {
+        var sts = statesFor(profile());
+        setStatus(sts[(sts.indexOf(view.status) + 1) % sts.length]); e.preventDefault();
+      }
+      if (e.key === 'a' || e.key === 'A') {
+        var abs = abilitiesOf(unit());
+        if (abs.length) { view.abNext = ((view.abNext || 0) % abs.length); ability(view.abNext); view.abNext++; }
+        e.preventDefault();
+      }
+      // D: crewed or a drone, where it may be one; P: the next drive it may have
+      if (e.key === 'd' || e.key === 'D') {
+        if (R.canBeDrone(profile())) { view.drone = view.drone === 'drone' ? 'crew' : 'drone'; drawControls(); frame(); }
+        e.preventDefault();
+      }
+      if (e.key === 'p' || e.key === 'P') {
+        var props = R.propsFor(profile());
+        if (props.length) {
+          var order = R.PROP_ORDER.filter(function (q) { return props.indexOf(q) >= 0 || q === view.prop; });
+          if (order.indexOf(view.prop) < 0) order.unshift(view.prop);
+          view.prop = order[(order.indexOf(view.prop) + 1) % order.length];
+          drawControls(); frame();
+        }
+        e.preventDefault();
+      }
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });

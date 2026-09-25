@@ -688,6 +688,19 @@
   .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
   .found-units .chosen:empty::before { content: 'No units yet.'; }
   .found-add { align-self: flex-start; margin-top: 8px; }
+  /* the units picked, a card each */
+  .found-units .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .fcard { border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.02); padding: 7px 9px; }
+  .fcard-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .fcard-top b { font-family: var(--display); font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fcard-kind { font-size: 11px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: auto; }
+  .fcard-top .drive { flex: none; }
+  .fcard-drop { flex: none; padding: 2px 8px; }
+  .fcard-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 5px 0 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
+  .fcard-stats i { font-style: normal; color: var(--ink-faint); margin-right: 4px; }
+  .fcard-rules { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .docgroup { font-family: var(--display); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--alpha); margin: 10px 0 6px; }
+  .docgroup:first-child { margin-top: 2px; }
   /* A new battle's set-up on a desktop: a card in the middle of the screen, over
      a table rolling behind it as the main menu has. Nothing on the card may
      blur or transform, or the pop-ups inside it would be placed on it rather
@@ -745,8 +758,16 @@
   .hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; }
   .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
   .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
-  .hubbar .start.hubgo { flex: 1.4 1 auto; width: auto; margin: 0; padding: 8px 12px; }
+  .hubbar .start.hubgo { flex: 0 0 150px; width: 150px; margin: 0; padding: 8px 12px; }
   .hubnote { margin: 0 0 8px; }
+  /* what a unit can spend its experience on, on its own card after its other actions */
+  .dspend { display: contents; }
+  /* a unit's card opens where it is tapped */
+  .dcard.dclick { cursor: pointer; }
+  .dcard.dclick:hover { border-color: color-mix(in srgb, var(--alpha) 40%, var(--line)); }
+  .dcard.dclick .dtop::after { content: '\25b8'; margin-left: auto; padding-left: 8px; color: var(--ink-faint); font-size: 11px; }
+  .dcard.dclick.open .dtop::after { content: '\25be'; }
+  .dcard.dclick .ddet { cursor: default; }
   /* the dossier's tabs in the same row, at the same height as the buttons they replace */
   .hubbar.dosbar .lnk { min-height: 0; padding-block: 0; }
   .hubbar.dosbar { min-height: 33px; }
@@ -978,7 +999,7 @@
   .cprom-bar i { display: block; height: 100%; background: var(--good); transition: width .3s ease; }
   .cprom.ready .cprom-bar i { background: var(--good); }
   .cprom-list { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
-  .cprom-list li { display: grid; grid-template-columns: 16px 1fr; gap: 2px 6px; align-items: start; font-size: 11.5px; }
+  .cprom-list > li { display: grid; grid-template-columns: 16px 1fr; gap: 2px 6px; align-items: start; font-size: 11.5px; }
   .cprom-list .tick { font-family: var(--mono); color: var(--ink-dim); line-height: 1.35; }
   .cprom-list li.met .tick { color: var(--good); }
   .cprom-list .what b { color: var(--ink); font-weight: 600; }
@@ -1177,6 +1198,7 @@
   .ddet .ddet-rules { list-style: none; margin: 0; padding: 0; color: var(--ink); font-size: 12px; }
   .ddet-rules li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
   .ddet-rules li:last-child { border-bottom: 0; }
+  .ddet-rules li > b { display: block; }        /* the rule's name on a line of its own, over what it does */
   .ddet-rules li > span:not(.mk) { display: block; color: var(--ink-dim); font-size: 11.5px; }
   .ddet-rules li.good > b { color: var(--good); }
   .ddet-rules li.bad > b { color: var(--bad); }
@@ -23100,7 +23122,9 @@
         return false;
       },
       kinds: function () { return list.map(function (f) { return f.kind; }); },
-      draw: function (g) { paint(g, list, lift); }
+      draw: function (g) { paint(g, list, lift); },
+      // what lies on the ground itself, drawn before the units stand on it
+      drawGround: function (g) { paint(g, list, lift, 'ground'); }
     };
   }
 
@@ -23108,7 +23132,7 @@
      from one has to leave and arrive at the airframe rather than at the grass
      underneath it. A point carries that extra height as `up`, and a point effect
      carries its own — nothing else here needs to know what a flier is. */
-  function paint(g, fx, lift) {
+  function paint(g, fx, lift, layer) {
     var t = nowMs();
     function liftA(f) { return lift(f.from.x, f.from.y) + (f.from.up || 0); }
     function liftB(f) { return lift(f.to.x, f.to.y) + (f.to.up || 0); }
@@ -23148,6 +23172,8 @@
       return q;
     }
     fx.forEach(function (f) {
+      // the ground layer is only the ground break's rent in the earth; everything else is drawn over the units
+      if (layer === 'ground' && f.kind !== 'groundbreak') return;
       var age = t - f.t0 - (f.delay || 0);
       if (age < 0) return;
       var k = Math.min(1, age / (f.dur - (f.delay || 0)));
@@ -23880,19 +23906,23 @@
         var gb = I.toScreen(f.x, f.y); gb.y -= liftAt(f);
         var grd = (f.r || 2) * I.K, go = Math.min(1, k / 0.2), gf = k < 0.7 ? 1 : (1 - k) / 0.3;
         g.save();
-        I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
-        I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
-        g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
-        for (var gc = 0; gc < 9; gc++) {
-          var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
-          var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
-          g.beginPath(); g.moveTo(gx, gy);
-          var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
-          g.lineTo(kx, ky);
-          g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
-          g.stroke();
+        if (layer === 'ground') {
+          I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
+          I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
+          g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
+          for (var gc = 0; gc < 9; gc++) {
+            var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
+            var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
+            g.beginPath(); g.moveTo(gx, gy);
+            var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
+            g.lineTo(kx, ky);
+            g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
+            g.stroke();
+          }
+          g.restore();
+          return;
         }
-        // clods flung out, arcing up and falling back
+        // clods flung out, arcing up and falling back — over the unit coming up
         for (var gd = 0; gd < 14; gd++) {
           var ca2 = gd * 2.39 + 0.5, fly = Math.min(1, k / 0.55);
           var dist = grd * (0.4 + (gd % 4) * 0.22) * fly;
@@ -33833,6 +33863,7 @@
 
        Occupied is what the player cares about: a squad is in the building if it
        is standing inside its footprint, and then you want to see it. */
+    FX.drawGround && FX.drawGround(pctx);        // the ground broken open under what comes up through it
     var now0 = nowMs();
     var order = state.units.filter(function (u) { return (onTable(u) || (held[u.id] && onTable(shownAs(u)))) && onView(dispX(u), dispY(u)); })
       .map(function (u) {
@@ -37828,6 +37859,10 @@
   var after = null;             // the aftermath being worked through
   var ROMAN = R.ROMAN;
   var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
+  // the memorial: a headstone
+  var ICON_MEMORIAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V9a5 5 0 0 1 10 0v12"/><path d="M4 21h16"/><path d="M12 9v6"/><path d="M9.5 11.5h5"/></svg>';
+  // giving it all up: a white flag
+  var ICON_ABANDON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>';
   var ICON_LOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>';
 
   function save() {
@@ -37921,7 +37956,8 @@
     var p = profile(e.key), h = '';
     var machine = p.cls !== 'infantry';
     var threshold = C.traumaThreshold(co);
-    h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + '" data-rid="' + e.rid + '">';
+    h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + (opts.expand ? ' dclick' + (opts.men ? ' open' : '') : '') + '" data-rid="' + e.rid + '"' +
+      (opts.expand ? ' aria-expanded="' + !!opts.men + '"' : '') + '>';
     h += '<div class="dtop">' + tierChip(p.tier) +
       '<b class="dname">' + esc(e.name) + '</b>' +
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
@@ -38028,26 +38064,27 @@
   /* One row under the name: the dossier, the save file out and in, and the
      contract, which is what the screen is for. */
   function hubBar() {
-    var h = '';
+    var co = camp.companies.A;
+    var go = '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
     if (hubPane === 'dossier') {
-      /* In the dossier the row is its tabs: back to the company, or to the
-         experience, the recruiting or the memorial — the units themselves are
-         what shows when none of those is picked (tap the lit one to go back). */
-      var co = camp.companies.A;
-      var tab = function (key, label) {
+      /* In the dossier: back to the company, the recruiting (tap it again for
+         the units), the memorial, and the contract. */
+      var tab = function (key, label, cls, title) {
         var on = rosterTab === key;
-        return '<button class="lnk' + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '">' + label + '</button>';
+        return '<button class="lnk' + (cls ? ' ' + cls : '') + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '"' +
+          (title ? ' title="' + title + '" aria-label="' + title + '"' : '') + '>' + label + '</button>';
       };
       return '<div class="hubbar dosbar">' +
         '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
-        tab('spend', 'XP') + tab('recruit', esc(C.words(co).recruit)) + tab('memorial', 'Memorial') + '</div>';
+        tab('recruit', esc(C.words(co).recruit)) +
+        tab('memorial', ICON_MEMORIAL, 'hubicon', 'Memorial') + go + '</div>';
     }
-    h += '<div class="hubbar">' +
+    return '<div class="hubbar">' +
       '<button class="lnk" data-go="roster">Dossier</button>' +
       '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
       '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
-      '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button></div>';
-    return h;
+      '<button class="lnk hubicon warn" data-go="wipe" title="Abandon the campaign" aria-label="Abandon the campaign">' + ICON_ABANDON + '</button>' +
+      go + '</div>';
   }
   function companyPanel(co, side, bar) {
     var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
@@ -38092,7 +38129,7 @@
     var pp = C.promotionProgress(co);
     var kind = C.words(co).force;
     // on the hub, giving the whole thing up sits on the same line (and asks first)
-    var quit = hub ? '<button class="lnk warn cprom-quit" data-go="wipe">Abandon</button>' : '';
+    var quit = '';                                   // Abandon is on the hub's button row
     if (pp.top) {
       /* Tier V: in place of a promotion, one change of doctrine every five
          battles (p. 87) — where the promote button would be */
@@ -38346,7 +38383,7 @@
       '</div>';
     var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
       '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
-      t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + '/2 vehicles</span></div>';
+      t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + ' vehicle' + (machines === 1 ? '' : 's') + ' (max 2)</span></div>';
     var chosen = draft.keys.map(function (k, i) {
       var s = R.splitPick(k), p = profile(s.key);
       return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
@@ -38357,8 +38394,32 @@
           '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' +
           (s.drone ? 'DRN' : 'crew') + '</button>' : '') + '</span>';
     }).join('');
+    /* On the page, each unit picked is a card: its name and kind, its Tier, its
+       numbers and its special rules, with its drive and its remove button. The
+       list scrolls when there are more than fit. */
+    var TXT = root.PMCRuleText;
+    var cards = draft.keys.map(function (k, i) {
+      var sp = R.splitPick(k), p0 = profile(sp.key);
+      var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p0, { rules: (p0.rules || []).slice(), models: p0.size }), sp.prop || R.defaultDrive(p0)), !!sp.drone);
+      var mach = p0.cls !== 'infantry';
+      var st = [['Move', u0.move + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
+        ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+      return '<div class="fcard">' +
+        '<div class="fcard-top">' + tierChip(p0.tier) + '<b>' + esc(p0.name) + '</b>' +
+        '<span class="fcard-kind">' + esc(p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +
+        (R.propsFor(p0).length ? '<button class="drive" data-cycle="' + i + '">' + R.PROPULSION[sp.prop || 'none'].short + '</button>' : '') +
+        (R.canBeDrone(p0) ? '<button class="drive' + (sp.drone ? ' on' : '') + '" data-fdrone="' + i +
+          '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' + (sp.drone ? 'DRN' : 'crew') + '</button>' : '') +
+        '<button class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
+        '<div class="fcard-stats">' + st.map(function (c) { return '<span><i>' + c[0] + '</i>' + esc(c[1]) + '</span>'; }).join('') + '</div>' +
+        ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
+          var d = TXT ? TXT.describe(r) : { name: r, text: '' };
+          return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
+        }).join('') + '</div>' : '') +
+        '</div>';
+    }).join('');
     h += '<div class="muster found-units">' + head +
-      '<div class="chosen" id="found-chosen">' + chosen + '</div>' +
+      '<div class="chosen fcards" id="found-chosen">' + cards + '</div>' +
       '<button type="button" class="lnk found-add" data-go="fmodal" data-kind="units">+ Add units</button></div>';
 
     var cr = C.creedOf(co), doc = draft.doctrine && C.doctrine(draft.doctrine);
@@ -38374,22 +38435,34 @@
         // a Tier II machine cannot be fielded in the Tier I battles a new force starts in
         return !p.leaderBug && !p.alpha && !(p.tier === 2 && p.cls !== 'infantry');
       }, co) + '</div>');
-    h += cmodal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll"><div class="docpick">' + cr.list.map(function (d) {
-      return '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
-        '<b>' + esc(d.name) + '</b><i>' + say(d.cat, 'Path of the ' + d.cat, d.cat + ' Pathway', d.cat + ' Advancement') + '</i>' +
-        '<span>' + esc(d.text) + '</span></button>';
-    }).join('') + '</div></div>');
+    // the doctrines in their groups, each under its own heading
+    var docGroups = [], byCat = {};
+    cr.list.forEach(function (d) {
+      if (!byCat[d.cat]) { byCat[d.cat] = []; docGroups.push(d.cat); }
+      byCat[d.cat].push(d);
+    });
+    h += cmodal('doctrine', 'Starting ' + cr.one, '<div class="cmodal-scroll">' + docGroups.map(function (cat) {
+      return '<h4 class="docgroup">' + esc(say(cat, 'Path of the ' + cat, cat + ' Pathway', cat + ' Advancement')) + '</h4>' +
+        '<div class="docpick">' + byCat[cat].map(function (d) {
+          return '<button class="doc' + (draft.doctrine === d.id ? ' on' : '') + '" data-doc="' + d.id + '">' +
+            '<b>' + esc(d.name) + '</b><span>' + esc(d.text) + '</span></button>';
+        }).join('') + '</div>';
+    }).join('') + '</div>');
 
     var named = !!(draft.name || '').trim();
-    var chk = { ok: t1 === 6 && t2 === 2 && machines <= 2 && draft.doctrine && named };
-    h += '<p class="faults' + (chk.ok ? ' ok' : '') + '">' + (chk.ok
-      ? (xen ? 'Ready. The Alpha squad joins free, at the Tribe Tier, and grows with it.'
-        : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
-        : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
-        : 'Ready. The field command is added free, at the Company Tier.')
-      : !named ? say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.')
-        : 'Six Tier I units, two Tier II, at most two vehicles, one ' + C.creedOf(co).one + '.') + '</p>';
-    h += '<button class="start" data-go="dofound"' + (chk.ok ? '' : ' disabled') + '>' +
+    var rest = !!(t1 === 6 && t2 === 2 && machines <= 2 && draft.doctrine);
+    var chk = { ok: rest && named };
+    var readyTxt = xen ? 'Ready. The Alpha squad joins free, at the Tribe Tier, and grows with it.'
+      : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
+      : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
+      : 'Ready. The field command is added free, at the Company Tier.';
+    var nameTxt = say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
+    // the name is typed without a redraw: the line and the button follow it as it is typed (see mount)
+    h += '<p class="faults' + (chk.ok ? ' ok' : '') + '" id="found-faults" data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '">' + (chk.ok
+      ? readyTxt
+      : rest && !named ? nameTxt
+        : 'Six Tier I units, two Tier II, at most two vehicles, one ' + C.creedOf(co).one + '.' + (named ? '' : ' ' + nameTxt)) + '</p>';
+    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound"' + (chk.ok ? '' : ' disabled') + '>' +
       say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
     // the second player cannot step back out: the campaign needs their force
     if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
@@ -38434,14 +38507,6 @@
   }
 
   /* ================= the dossier ================= */
-  function rosterTabs(co) {
-    return '<div class="dtabs">' +
-      '<button class="lnk' + (rosterTab === 'units' ? ' on' : '') + '" data-rtab="units">Units</button>' +
-      '<button class="lnk' + (rosterTab === 'spend' ? ' on' : '') + '" data-rtab="spend">Spend EXP</button>' +
-      '<button class="lnk' + (rosterTab === 'recruit' ? ' on' : '') + '" data-rtab="recruit">' + C.words(co).recruit + '</button>' +
-      '<button class="lnk' + (rosterTab === 'memorial' ? ' on' : '') + '" data-rtab="memorial">Memorial</button>' +
-      '</div>';
-  }
   function rosterBody(co) {
     var h = '';
     if (rosterTab === 'units') {
@@ -38450,16 +38515,18 @@
       co.roster.forEach(function (e) { if (C.menOf(e, co)) named = true; });
       if (named) save();
       h += '<div class="dlist">';
+      // the command first — it earns no experience and carries no honours or traumas — then by Tier and experience
       co.roster.slice().sort(function (a, b) {
-        return profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
+        var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
+        return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
         var open = !!menOpen[e.rid];
-        acts += '<button class="lnk" data-men="' + e.rid + '" aria-expanded="' + open + '">' +
-          (open ? '\u25be ' : '\u25b8 ') + 'Details</button>';
+        var spend = spendActs(e, co);                  // its experience is spent from its own card
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
-        h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '' });
+        if (spend) acts += '<span class="dspend">' + spend + '</span>';
+        h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
         }
@@ -38552,7 +38619,8 @@
           (bio[t].mass ? ' \u00b7 ' + bio[t].mass + ' biomass' : ' \u00b7 not biomass') + '</span></li>';
       }).join('') + '</ol></div>';
   }
-  var menOpen = {};               // which units have their details open, by rid
+  var menOpen = {};               // which unit has its details open, by rid (one at a time)
+  var showCard = null;            // a card just opened, to be scrolled fully into view
 
   /* Everything about one unit, opened from its card: the profile as it takes
      the field — honours, traumas, upgrades and doctrines already worked in, with
@@ -38607,7 +38675,7 @@
     h += marks(W.honours, e.honours, C.honourTable(e.key), 'good');
     h += marks('Upgrades', e.upgrades, C.upgradeTable(e.key), 'good');
     h += marks(W.traumas, e.traumas, C.traumaTable(e.key), 'bad');
-    if (!(e.honours || []).length && !(e.traumas || []).length && !(e.upgrades || []).length) {
+    if (!C.isLeaderP(p) && !(e.honours || []).length && !(e.traumas || []).length && !(e.upgrades || []).length) {
       h += '<p class="ddet-note">No ' + esc(W.honours) + ' or ' + esc(W.traumas) + ' yet.</p>';
     }
     if ((e.men || []).length) h += '<h5>' + (mach ? 'Crew' : 'Soldiers') + ' (' + e.men.length + ')</h5>' + menPanel(e);
@@ -38623,14 +38691,13 @@
     }).join('') + '</ol>';
   }
 
-  function spendList(co) {
-    var h = '<div class="dlist">';
-    var any = false;
-    co.roster.slice().sort(function (a, b) { return b.exp - a.exp; }).forEach(function (e) {
-      var p = profile(e.key);
-      if (C.isLeaderP(p)) return;
-      if ((p.rules || []).indexOf('Turret') >= 0) return;            // turrets never earn EXP
-      var acts = '';
+  /* What a unit can spend its experience on: a promotion to each unit it may
+     become, and an honour (or an upgrade, for a machine). */
+  function spendActs(e, co) {
+    var p = profile(e.key);
+    if (C.isLeaderP(p)) return '';
+    if ((p.rules || []).indexOf('Turret') >= 0) return '';            // turrets never earn EXP
+    var acts = '';
       C.promotionTargets(e, co).forEach(function (q) {
         var c = C.promotionCost(e, q.key);
         var can = e.exp >= c.exp && co.kUC >= c.kUC;
@@ -38648,6 +38715,13 @@
         acts += '<button class="lnk good" data-upgrade="' + e.rid + '"' +
           (uc.ok ? '' : ' disabled title="' + esc(uc.why || '') + '"') + '>Upgrade · 10 EXP</button>';
       }
+    return acts;
+  }
+  function spendList(co) {
+    var h = '<div class="dlist">';
+    var any = false;
+    co.roster.slice().sort(function (a, b) { return b.exp - a.exp; }).forEach(function (e) {
+      var acts = spendActs(e, co);
       if (acts) { any = true; h += entryCard(e, co, { actions: acts }); }
     });
     h += '</div>';
@@ -39613,8 +39687,20 @@
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
     body.classList.toggle('fit', view === 'found');
     body.classList.toggle('hubfit', view === 'hub' && !!camp);
+    var dl = body.querySelector('.cdos-body'), dlTop = dl ? dl.scrollTop : 0;
     body.innerHTML = h;
     body.scrollTop = 0;
+    var dl2 = body.querySelector('.cdos-body');
+    if (dl2) {
+      dl2.scrollTop = dlTop;                        // a redraw keeps the list where it was
+      var oc = showCard && dl2.querySelector('.dcard[data-rid="' + showCard + '"]');
+      if (oc) {
+        var lr = dl2.getBoundingClientRect(), cr2 = oc.getBoundingClientRect();
+        if (cr2.bottom > lr.bottom) dl2.scrollTop += Math.min(cr2.bottom - lr.bottom + 6, cr2.top - lr.top - 4);
+        else if (cr2.top < lr.top) dl2.scrollTop -= lr.top - cr2.top + 4;
+      }
+    }
+    showCard = null;
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
     var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
@@ -39638,6 +39724,16 @@
     if (colourOpen && !ev.target.closest('.found-pop') && !(t && t.getAttribute('data-go') === 'fcolour')) {
       keepFoundName(); colourOpen = false; render();
       if (!t) return;
+    }
+    /* A tap on a unit's card, anywhere but its buttons, opens its details and
+       closes any other; the list scrolls to show the whole of the opened card. */
+    var card = !t && !ev.target.closest('.ddet') && ev.target.closest('#camp-body .dcard.dclick');
+    if (card) {
+      var cr = card.getAttribute('data-rid');
+      var was = !!menOpen[cr];
+      menOpen = {};
+      if (!was) { menOpen[cr] = true; showCard = cr; }
+      render(); return;
     }
     if (!t) return;
     if (view === 'found') keepFoundName();
@@ -39754,7 +39850,7 @@
     }
     if (t.hasAttribute('data-fit')) {
       C.takeUpgrade(co, upState, +t.getAttribute('data-fit'));
-      save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'spend'; render(); return;
+      save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'units'; render(); return;
     }
     if (t.hasAttribute('data-pick')) {
       var pk = findEntry(co, t.getAttribute('data-pick'));
@@ -39824,8 +39920,8 @@
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
         // a name to start from; the player settles it on the founding screen
-        beginFounding(fac === 'rebel' ? 'The Free Colonies' : fac === 'bugs' ? 'The Hive' : fac === 'xeno' ? 'The Ghadon Third' : 'Task Force Ironhold',
-          el('camp-mode').value, fac);
+        // no name to start from: the player gives one on the founding screen (the box suggests one)
+        beginFounding('', el('camp-mode').value, fac);
         draft.archs = [];                          // the world is always rolled
         render(); return;
       }
@@ -40023,6 +40119,16 @@
       if (asking) return;                                         // nothing behind it is live
       if (ev.target === host) { close(); return; }
       onClick(ev);
+    });
+    // the name box: the charter can be signed as soon as it has a name, without waiting on a redraw
+    host.addEventListener('input', function (ev) {
+      if (!ev.target || ev.target.id !== 'found-name' || !draft) return;
+      draft.name = ev.target.value;
+      var sign = el('found-sign'), fl = el('found-faults');
+      if (!sign || sign.getAttribute('data-rest') !== '1') return;
+      var ok = !!draft.name.trim();
+      sign.disabled = !ok;
+      if (fl) { fl.textContent = fl.getAttribute(ok ? 'data-ready' : 'data-noname'); fl.classList.toggle('ok', ok); }
     });
     host.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }

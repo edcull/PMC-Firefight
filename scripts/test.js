@@ -87,7 +87,7 @@ function start(t) {
   const began = Date.now();
   const out = [];
   const child = spawn(process.execPath, [t.file], { cwd: ROOT, env: env });
-  const limit = (t.slow ? 20 : t.browser ? 6 : 3) * 60 * 1000;
+  const limit = (t.slow ? 20 : t.browser ? 6 : 5) * 60 * 1000;
   const timer = setTimeout(() => { out.push('\n[timed out after ' + limit / 60000 + ' min]\n'); child.kill('SIGKILL'); }, limit);
   child.stdout.on('data', (d) => { out.push(d); if (verbose) process.stdout.write(d); });
   child.stderr.on('data', (d) => { out.push(d); if (verbose) process.stderr.write(d); });

@@ -138,6 +138,19 @@
     font-family: var(--display); font-size: 12px; min-width: 28px; height: 26px; padding: 0 7px; cursor: pointer;
   }
   .vzoom button:hover { border-color: var(--alpha); }
+  .vcolbtn { position: absolute; top: 8px; left: 8px; z-index: 3; }
+  .vcolbtn > button.vcolnow {
+    width: 34px; height: 34px; padding: 3px; border-radius: 6px; cursor: pointer;
+    background: rgba(12, 16, 20, .72); border: 1px solid var(--line);
+  }
+  .vcolbtn > button.vcolnow:hover, .vcolbtn > button.vcolnow[aria-expanded="true"] { border-color: var(--alpha); }
+  .vcolbtn > button.vcolnow span { display: block; width: 100%; height: 100%; border-radius: 4px; }
+  .vcolpop {
+    position: absolute; top: 40px; left: 0; width: min(300px, calc(100vw - 40px));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  }
+  .vcolpop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
   .vzoom button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
   #vboard { touch-action: pan-y; }
   /* a tap on the stage fires; it does not flash the browser's tap highlight or select anything */
@@ -414,7 +427,7 @@
   <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
-  <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe · <kbd>A</kbd> ability</span>
+  <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> state · <kbd>A</kbd> ability</span>
 </header>
 
 <div class="vscrim" id="vscrim"></div>
@@ -429,6 +442,8 @@
   </div>
 
   <div class="vstage">
+    <!-- the colours the unit wears: a swatch, and the whole set dropped down from it -->
+    <div class="vcolbtn" id="vcolbtn"></div>
     <div class="vzoom" id="vzoom" aria-label="Zoom">
       <button type="button" data-vzoom="wide" title="Zoom out, to the whole firing line (−)">Wide</button>
       <button type="button" data-vzoom="close" title="Zoom in, close on the unit (+)">Close</button>
@@ -16139,7 +16154,9 @@
         return false;
       },
       kinds: function () { return list.map(function (f) { return f.kind; }); },
-      draw: function (g) { paint(g, list, lift); }
+      draw: function (g) { paint(g, list, lift); },
+      // what lies on the ground itself, drawn before the units stand on it
+      drawGround: function (g) { paint(g, list, lift, 'ground'); }
     };
   }
 
@@ -16147,7 +16164,7 @@
      from one has to leave and arrive at the airframe rather than at the grass
      underneath it. A point carries that extra height as `up`, and a point effect
      carries its own — nothing else here needs to know what a flier is. */
-  function paint(g, fx, lift) {
+  function paint(g, fx, lift, layer) {
     var t = nowMs();
     function liftA(f) { return lift(f.from.x, f.from.y) + (f.from.up || 0); }
     function liftB(f) { return lift(f.to.x, f.to.y) + (f.to.up || 0); }
@@ -16187,6 +16204,8 @@
       return q;
     }
     fx.forEach(function (f) {
+      // the ground layer is only the ground break's rent in the earth; everything else is drawn over the units
+      if (layer === 'ground' && f.kind !== 'groundbreak') return;
       var age = t - f.t0 - (f.delay || 0);
       if (age < 0) return;
       var k = Math.min(1, age / (f.dur - (f.delay || 0)));
@@ -16919,19 +16938,23 @@
         var gb = I.toScreen(f.x, f.y); gb.y -= liftAt(f);
         var grd = (f.r || 2) * I.K, go = Math.min(1, k / 0.2), gf = k < 0.7 ? 1 : (1 - k) / 0.3;
         g.save();
-        I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
-        I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
-        g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
-        for (var gc = 0; gc < 9; gc++) {
-          var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
-          var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
-          g.beginPath(); g.moveTo(gx, gy);
-          var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
-          g.lineTo(kx, ky);
-          g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
-          g.stroke();
+        if (layer === 'ground') {
+          I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
+          I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
+          g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
+          for (var gc = 0; gc < 9; gc++) {
+            var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
+            var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
+            g.beginPath(); g.moveTo(gx, gy);
+            var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
+            g.lineTo(kx, ky);
+            g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
+            g.stroke();
+          }
+          g.restore();
+          return;
         }
-        // clods flung out, arcing up and falling back
+        // clods flung out, arcing up and falling back — over the unit coming up
         for (var gd = 0; gd < 14; gd++) {
           var ca2 = gd * 2.39 + 0.5, fly = Math.min(1, k / 0.55);
           var dist = grd * (0.4 + (gd % 4) * 0.22) * fly;
@@ -17492,7 +17515,7 @@
   var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
   function choose(k) {
     var wasFac = view.pickFac;
-    view.key = k; view.models = null; view.tele = null;
+    view.key = k; view.models = null; view.tele = null; view.abNext = 0;
     view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
@@ -17589,6 +17612,7 @@
     if (view.walking && view.burrow && !arr.hidden) arr = Object.assign({}, arr, view.burrow);
     // far to near, so the nearer of the two covers the other
     var tv = traveller();
+    FX.drawGround(g);                                    // the ground broken open under what comes up through it
     var order = [u, t].concat(tv ? [tv.u] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
       if (tv && m === tv.u) {
@@ -18526,6 +18550,7 @@
   }
 
   function drawControls() {
+    drawColourButton();
     var p = profile(), w = R.weaponSpec(p);
     var isVeh = p.cls === 'vehicle';
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -18548,8 +18573,6 @@
       abilitiesOf(unit()).map(function (a, i) { return '<button class="vbtn" data-do="ability" data-ab="' + i + '">' + esc(a.name) + '</button>'; }).join('') +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
-    h += '<div class="vgrp"><label>Colours — ' + esc(I.COLOURS[view.colour[view.side]].name) + '</label>' +
-      '<div class="vsw">' + swatches(view.colour[view.side]) + '</div></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
     // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
@@ -18586,6 +18609,17 @@
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
     if (now) now.scrollTop = top;       // a redraw (a colour picked, a state set) keeps the place
     el('vctl').scrollTop = all;         // on a desktop the whole panel scrolls, options over stats
+  }
+  /* The colours, a swatch at the top left of the stage: tap it for the whole
+     set, dropped down under it; a pick or a tap anywhere else puts them away. */
+  var colOpen = false;
+  function drawColourButton() {
+    var box = el('vcolbtn');
+    if (!box) return;
+    var k = view.colour[view.side], c = I.COLOURS[k];
+    box.innerHTML = '<button type="button" class="vcolnow" aria-expanded="' + colOpen + '" title="Colours: ' + esc(c.name) + '" aria-label="Colours: ' + esc(c.name) + '">' +
+      '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>' +
+      (colOpen ? '<div class="vcolpop"><label>Colours — ' + esc(c.name) + '</label><div class="vsw">' + swatches(k) + '</div></div>' : '');
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
@@ -18789,6 +18823,15 @@
         drawControls();
       }
     });
+    el('vcolbtn') && el('vcolbtn').addEventListener('click', function (e) {
+      e.stopPropagation();                         // redrawn under the tap: not a tap elsewhere
+      var sw = e.target.closest('[data-colour]');
+      if (sw) { paint(view.side, sw.getAttribute('data-colour')); colOpen = false; drawControls(); frame(); return; }
+      if (e.target.closest('.vcolnow')) { colOpen = !colOpen; drawColourButton(); }
+    });
+    document.addEventListener('click', function (e) {
+      if (colOpen && !e.target.closest('#vcolbtn')) { colOpen = false; drawColourButton(); }
+    });
     el('vctl').addEventListener('input', function (e) {
       if (e.target.id === 'vmodels') {
         view.models = +e.target.value;
@@ -18815,8 +18858,31 @@
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
-      if (e.key === 's' || e.key === 'S') { if (canStrafe()) strafe(); e.preventDefault(); }
-      if (e.key === 'a' || e.key === 'A') { ability(); e.preventDefault(); }
+      // S steps through the unit's states; A through its abilities, one each press
+      if (e.key === 's' || e.key === 'S') {
+        var sts = statesFor(profile());
+        setStatus(sts[(sts.indexOf(view.status) + 1) % sts.length]); e.preventDefault();
+      }
+      if (e.key === 'a' || e.key === 'A') {
+        var abs = abilitiesOf(unit());
+        if (abs.length) { view.abNext = ((view.abNext || 0) % abs.length); ability(view.abNext); view.abNext++; }
+        e.preventDefault();
+      }
+      // D: crewed or a drone, where it may be one; P: the next drive it may have
+      if (e.key === 'd' || e.key === 'D') {
+        if (R.canBeDrone(profile())) { view.drone = view.drone === 'drone' ? 'crew' : 'drone'; drawControls(); frame(); }
+        e.preventDefault();
+      }
+      if (e.key === 'p' || e.key === 'P') {
+        var props = R.propsFor(profile());
+        if (props.length) {
+          var order = R.PROP_ORDER.filter(function (q) { return props.indexOf(q) >= 0 || q === view.prop; });
+          if (order.indexOf(view.prop) < 0) order.unshift(view.prop);
+          view.prop = order[(order.indexOf(view.prop) + 1) % order.length];
+          drawControls(); frame();
+        }
+        e.preventDefault();
+      }
       if (e.key === '+' || e.key === '=') { stepZoom(1); e.preventDefault(); }
       if (e.key === '-' || e.key === '_') { stepZoom(-1); e.preventDefault(); }
     });

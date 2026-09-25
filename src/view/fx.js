@@ -40,7 +40,9 @@
         return false;
       },
       kinds: function () { return list.map(function (f) { return f.kind; }); },
-      draw: function (g) { paint(g, list, lift); }
+      draw: function (g) { paint(g, list, lift); },
+      // what lies on the ground itself, drawn before the units stand on it
+      drawGround: function (g) { paint(g, list, lift, 'ground'); }
     };
   }
 
@@ -48,7 +50,7 @@
      from one has to leave and arrive at the airframe rather than at the grass
      underneath it. A point carries that extra height as `up`, and a point effect
      carries its own — nothing else here needs to know what a flier is. */
-  function paint(g, fx, lift) {
+  function paint(g, fx, lift, layer) {
     var t = nowMs();
     function liftA(f) { return lift(f.from.x, f.from.y) + (f.from.up || 0); }
     function liftB(f) { return lift(f.to.x, f.to.y) + (f.to.up || 0); }
@@ -88,6 +90,8 @@
       return q;
     }
     fx.forEach(function (f) {
+      // the ground layer is only the ground break's rent in the earth; everything else is drawn over the units
+      if (layer === 'ground' && f.kind !== 'groundbreak') return;
       var age = t - f.t0 - (f.delay || 0);
       if (age < 0) return;
       var k = Math.min(1, age / (f.dur - (f.delay || 0)));
@@ -820,19 +824,23 @@
         var gb = I.toScreen(f.x, f.y); gb.y -= liftAt(f);
         var grd = (f.r || 2) * I.K, go = Math.min(1, k / 0.2), gf = k < 0.7 ? 1 : (1 - k) / 0.3;
         g.save();
-        I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
-        I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
-        g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
-        for (var gc = 0; gc < 9; gc++) {
-          var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
-          var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
-          g.beginPath(); g.moveTo(gx, gy);
-          var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
-          g.lineTo(kx, ky);
-          g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
-          g.stroke();
+        if (layer === 'ground') {
+          I.ellipse(g, gb.x, gb.y, grd * 0.62 * go, grd * 0.3 * go, 'rgba(22,16,11,' + (0.85 * gf) + ')');
+          I.ellipse(g, gb.x, gb.y - I.PIXEL, grd * 0.42 * go, grd * 0.18 * go, 'rgba(8,6,4,' + (0.9 * gf) + ')');
+          g.strokeStyle = 'rgba(28,20,14,' + (0.8 * gf) + ')'; g.lineWidth = I.PIXEL * 1.4; g.lineCap = 'round';
+          for (var gc = 0; gc < 9; gc++) {
+            var ga = gc / 9 * Math.PI * 2 + 0.3, glen = grd * (0.8 + ((gc * 7) % 5) * 0.12) * go;
+            var gx = gb.x + Math.cos(ga) * grd * 0.5, gy = gb.y + Math.sin(ga) * grd * 0.25;
+            g.beginPath(); g.moveTo(gx, gy);
+            var kx = gb.x + Math.cos(ga + 0.25) * glen * 0.75, ky = gb.y + Math.sin(ga + 0.25) * glen * 0.37;
+            g.lineTo(kx, ky);
+            g.lineTo(gb.x + Math.cos(ga - 0.1) * glen, gb.y + Math.sin(ga - 0.1) * glen * 0.5);
+            g.stroke();
+          }
+          g.restore();
+          return;
         }
-        // clods flung out, arcing up and falling back
+        // clods flung out, arcing up and falling back — over the unit coming up
         for (var gd = 0; gd < 14; gd++) {
           var ca2 = gd * 2.39 + 0.5, fly = Math.min(1, k / 0.55);
           var dist = grd * (0.4 + (gd % 4) * 0.22) * fly;

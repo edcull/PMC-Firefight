@@ -3068,6 +3068,7 @@
 
        Occupied is what the player cares about: a squad is in the building if it
        is standing inside its footprint, and then you want to see it. */
+    FX.drawGround && FX.drawGround(pctx);        // the ground broken open under what comes up through it
     var now0 = nowMs();
     var order = state.units.filter(function (u) { return (onTable(u) || (held[u.id] && onTable(shownAs(u)))) && onView(dispX(u), dispY(u)); })
       .map(function (u) {

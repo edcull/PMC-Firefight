@@ -688,6 +688,19 @@
   .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
   .found-units .chosen:empty::before { content: 'No units yet.'; }
   .found-add { align-self: flex-start; margin-top: 8px; }
+  /* the units picked, a card each */
+  .found-units .chosen.fcards { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .fcard { border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.02); padding: 7px 9px; }
+  .fcard-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .fcard-top b { font-family: var(--display); font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fcard-kind { font-size: 11px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: auto; }
+  .fcard-top .drive { flex: none; }
+  .fcard-drop { flex: none; padding: 2px 8px; }
+  .fcard-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 5px 0 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
+  .fcard-stats i { font-style: normal; color: var(--ink-faint); margin-right: 4px; }
+  .fcard-rules { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .docgroup { font-family: var(--display); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--alpha); margin: 10px 0 6px; }
+  .docgroup:first-child { margin-top: 2px; }
   /* A new battle's set-up on a desktop: a card in the middle of the screen, over
      a table rolling behind it as the main menu has. Nothing on the card may
      blur or transform, or the pop-ups inside it would be placed on it rather
@@ -745,8 +758,16 @@
   .hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; }
   .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
   .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
-  .hubbar .start.hubgo { flex: 1.4 1 auto; width: auto; margin: 0; padding: 8px 12px; }
+  .hubbar .start.hubgo { flex: 0 0 150px; width: 150px; margin: 0; padding: 8px 12px; }
   .hubnote { margin: 0 0 8px; }
+  /* what a unit can spend its experience on, on its own card after its other actions */
+  .dspend { display: contents; }
+  /* a unit's card opens where it is tapped */
+  .dcard.dclick { cursor: pointer; }
+  .dcard.dclick:hover { border-color: color-mix(in srgb, var(--alpha) 40%, var(--line)); }
+  .dcard.dclick .dtop::after { content: '\25b8'; margin-left: auto; padding-left: 8px; color: var(--ink-faint); font-size: 11px; }
+  .dcard.dclick.open .dtop::after { content: '\25be'; }
+  .dcard.dclick .ddet { cursor: default; }
   /* the dossier's tabs in the same row, at the same height as the buttons they replace */
   .hubbar.dosbar .lnk { min-height: 0; padding-block: 0; }
   .hubbar.dosbar { min-height: 33px; }
@@ -978,7 +999,7 @@
   .cprom-bar i { display: block; height: 100%; background: var(--good); transition: width .3s ease; }
   .cprom.ready .cprom-bar i { background: var(--good); }
   .cprom-list { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
-  .cprom-list li { display: grid; grid-template-columns: 16px 1fr; gap: 2px 6px; align-items: start; font-size: 11.5px; }
+  .cprom-list > li { display: grid; grid-template-columns: 16px 1fr; gap: 2px 6px; align-items: start; font-size: 11.5px; }
   .cprom-list .tick { font-family: var(--mono); color: var(--ink-dim); line-height: 1.35; }
   .cprom-list li.met .tick { color: var(--good); }
   .cprom-list .what b { color: var(--ink); font-weight: 600; }
@@ -1177,6 +1198,7 @@
   .ddet .ddet-rules { list-style: none; margin: 0; padding: 0; color: var(--ink); font-size: 12px; }
   .ddet-rules li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
   .ddet-rules li:last-child { border-bottom: 0; }
+  .ddet-rules li > b { display: block; }        /* the rule's name on a line of its own, over what it does */
   .ddet-rules li > span:not(.mk) { display: block; color: var(--ink-dim); font-size: 11.5px; }
   .ddet-rules li.good > b { color: var(--good); }
   .ddet-rules li.bad > b { color: var(--bad); }
@@ -2134,12 +2156,12 @@
 <script src="src/view/sfx.js?v=c576028ac3"></script>
 <script src="src/rules/gen.js?v=b42de43295"></script>
 <script src="src/view/iso.js?v=1490d1e173"></script>
-<script src="src/view/fx.js?v=0ce1bb28c8"></script>
+<script src="src/view/fx.js?v=2257423a4b"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
 <script src="src/engine/protocol.js?v=789f24fbb2"></script>
 <script src="src/engine/engine.js?v=84b3a5c4ea"></script>
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=f4e66c925b"></script>
-<script src="src/view/dossier.js?v=715e239ee0"></script>
+<script src="src/view/game.js?v=887d25cb75"></script>
+<script src="src/view/dossier.js?v=8795928a66"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>
