@@ -439,8 +439,15 @@ async function clickText(p, re) {
     window.PMC_CAMPAIGN.set(camp);
   });
   await p.waitForTimeout(250);
+  // a unit with the experience for it shows Promote; the honour is one of the choices behind it
+  check('a unit with the experience shows Promote', await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body button[data-promo]')].find(x => /Recruits|Enforcers|rifle/i.test(x.closest('.dcard').textContent));
+    if (!b) return false;
+    b.click(); return true;
+  }));
+  await p.waitForTimeout(250);
   const opened = await p.evaluate(() => {
-    const b = document.querySelector('#camp-body button[data-honour]');
+    const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([disabled])');
     if (!b) return false;
     b.click(); return true;
   });

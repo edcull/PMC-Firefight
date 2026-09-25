@@ -337,6 +337,12 @@
       (camp.mode === 'hotseat' ? esc(B.name)
         : n > 1 ? n + ' forces' : esc(B.name)) +
       '</span><em>details</em></button></div>';
+    // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
+    var promoE = promoRid && C.byRid(A, promoRid);
+    if (promoE) {
+      h += cmodal('promote', 'Promote ' + promoE.name + ' \u2014 ' + promoE.exp + ' EXP',
+        '<div class="cmodal-scroll promo-list">' + spendActs(promoE, A) + '</div>');
+    }
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
         : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
@@ -371,7 +377,8 @@
       };
       return '<div class="hubbar dosbar">' +
         '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
-        tab('recruit', esc(C.words(co).recruit)) +
+        // while recruiting, the same button goes back to the dossier, and says so
+        tab('recruit', rosterTab === 'recruit' ? 'Dossier' : esc(C.words(co).recruit)) +
         tab('memorial', ICON_MEMORIAL, 'hubicon', 'Memorial') + go + '</div>';
     }
     return '<div class="hubbar">' +
@@ -817,10 +824,11 @@
       }).forEach(function (e) {
         var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
         var open = !!menOpen[e.rid];
-        var spend = spendActs(e, co);                  // its experience is spent from its own card
+        // enough experience for something: a Promote button, opening the choices in a window
+        var spend = canSpend(e, co) ? '<button class="lnk good" data-promo="' + e.rid + '">Promote</button>' : '';
         var dis = C.canDisband(co, e);
         acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
-        if (spend) acts += '<span class="dspend">' + spend + '</span>';
+        if (spend) acts += spend;
         h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
         if (e.history && e.history.length) {
           h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
@@ -839,7 +847,8 @@
   /* On the hub the dossier takes the place of the Tier panel, in the same
      box: its tabs across the top and the list scrolling under them. */
   function dossierPanel(co) {
-    return '<div class="cprom cdos"><div class="cprom-list cdos-body">' + rosterBody(co) + '</div></div>';
+    // the recruiting list fills the panel and scrolls itself; the others scroll the panel
+    return '<div class="cprom cdos"><div class="cprom-list cdos-body' + (rosterTab === 'recruit' ? ' cdos-fill' : '') + '">' + rosterBody(co) + '</div></div>';
   }
   var hubPane = 'dossier';            // the hub opens on the unit cards
   var rosterTab = 'units';
@@ -916,6 +925,7 @@
   }
   var menOpen = {};               // which unit has its details open, by rid (one at a time)
   var showCard = null;            // a card just opened, to be scrolled fully into view
+  var promoRid = null;            // the unit whose promotion choices are open
 
   /* Everything about one unit, opened from its card: the profile as it takes
      the field — honours, traumas, upgrades and doctrines already worked in, with
@@ -1012,6 +1022,8 @@
       }
     return acts;
   }
+  // whether a unit can afford anything it could spend its experience on
+  function canSpend(e, co) { return /<button(?![^>]*disabled)[^>]*data-(promote|honour|upgrade)=/.test(spendActs(e, co)); }
   function spendList(co) {
     var h = '<div class="dlist">';
     var any = false;
@@ -2085,7 +2097,7 @@
       contract.altRoles = wasRoles;
       render(); return;
     }
-    if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); render(); return; }
+    if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
       C.recruit(co, t.getAttribute('data-recruit'), { drone: t.hasAttribute('data-asdrone') }); save(); render(); return;
     }
@@ -2127,9 +2139,10 @@
       });
       return;
     }
+    if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
     if (t.hasAttribute('data-promote')) {
       var pe = findEntry(co, t.getAttribute('data-promote'));
-      C.promoteUnit(co, pe, t.getAttribute('data-to')); save(); render(); return;
+      C.promoteUnit(co, pe, t.getAttribute('data-to')); openModal = null; promoRid = null; save(); render(); return;
     }
     if (t.hasAttribute('data-honour')) {
       var he = findEntry(co, t.getAttribute('data-honour'));

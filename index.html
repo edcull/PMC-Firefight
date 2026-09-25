@@ -777,7 +777,14 @@
   .hubbar .start.hubgo { flex: 0 0 150px; width: 150px; margin: 0; padding: 8px 12px; }
   .hubnote { margin: 0 0 8px; }
   /* what a unit can spend its experience on, on its own card after its other actions */
-  .dspend { display: contents; }
+  /* the recruiting list: as tall as the panel, scrolling inside it, each group's heading over its rows */
+  #camp-body.hubfit > .cpan-A > .cprom > .cprom-list.cdos-fill { overflow: hidden; display: flex; flex-direction: column; }
+  .cdos-fill > .dnote { flex: none; }
+  .cdos-fill > .cat, .cdos-fill > .cat.tall { flex: 1 1 auto; min-height: 0; max-height: none; }
+  .cdos-fill > .cat h4 { position: sticky; top: 0; z-index: 1; background: var(--panel-2); padding-block: 5px 4px; }
+  /* a unit's promotion choices, one to a line */
+  .promo-list { display: flex; flex-direction: column; gap: 6px; }
+  .promo-list .lnk { width: 100%; text-align: left; padding: 9px 12px; }
   /* a unit's card opens where it is tapped */
   .dcard.dclick { cursor: pointer; }
   .dcard.dclick:hover { border-color: color-mix(in srgb, var(--alpha) 40%, var(--line)); }
@@ -2179,5 +2186,5 @@
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
 <script src="src/view/game.js?v=6125e08b09"></script>
-<script src="src/view/dossier.js?v=6ef24595ca"></script>
+<script src="src/view/dossier.js?v=4d52ade462"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>
