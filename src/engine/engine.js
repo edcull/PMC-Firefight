@@ -219,7 +219,7 @@
     var draining = false, paced = false;
     function canAI() {
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && isAI(state.activeSide);          // a player's Martyrdom answer holds the AI's charge
+        !state.martyrAsk && !state.kyfAsk && isAI(state.activeSide);          // a player's Martyrdom answer holds the AI's charge
     }
     function maybeAI() {
       if (draining || !canAI()) return;
@@ -447,6 +447,9 @@
         state.mined = { side: side, piece: pool[Math.floor(Math.random() * pool.length)] };
       });
     })();
+    // a player's Last Stand barricades are placed by hand, once the deployment zones are known
+    state.manualLaststand = {};
+    ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && !isAI(sd)) state.manualLaststand[sd] = true; });
     SC.begin(state, scenId, { attacker: cfg.attacker, roles: cfg.roles });
     // the scenario may have moved or dropped pieces to keep them apart; a mined one must still be there
     if (state.mined && state.terrain.indexOf(state.mined.piece) < 0) {
@@ -466,9 +469,22 @@
       state.minePick = { side: state.mined.side, pool: mpool };
       state.mined = null;
     }
-    ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO4') >= 0) terrainKnowledge(side); });
+    // Detailed Terrain Knowledge: the AI moves its pieces now; a player does, by hand, before deploying
+    state.placeQueue = [];
+    ['A', 'B'].forEach(function (side) {
+      if (docsOf(side).indexOf('XO4') < 0) return;
+      if (isAI(side)) terrainKnowledge(side);
+      else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: 2, total: 2 });
+    });
+    ['A', 'B'].forEach(function (side) {
+      if (state.manualLaststand[side]) {
+        var nls = 4 * (cfg.pl || 1);
+        state.placeQueue.push({ side: side, kind: 'barricade', why: 'laststand', left: nls, total: nls, len: 4 });
+      }
+    });
     ['A', 'B'].forEach(markReserves);
     SC.deploy(state);
+    nextPlace();
     seatPlatforms();             // every drop pod comes down with somebody in it
     baselineSplits();
     var scen = state.scen;
@@ -808,6 +824,88 @@
       moved.push(R.TERRAIN[r.kind].name.toLowerCase() + ' ' + step.toFixed(1) + '"');
     }
     if (moved.length) logLine('terrain', sideName(side) + ' — Detailed Terrain Knowledge: moves the ' + moved.join(' and the ') + '.');
+  }
+
+  /* ---- a player putting pieces on the table by hand: Last Stand's barricades,
+     Fortify and Strike!'s field fortifications, Detailed Terrain Knowledge's
+     moves. One spec at a time off state.placeQueue into state.placeAsk. ---- */
+  function nextPlace() {
+    state.placeAsk = (state.placeQueue && state.placeQueue.shift()) || null;
+    if (state.placeAsk) {
+      var pa = state.placeAsk;
+      setHint(null, pa.why === 'terrain' ? 'Detailed Terrain Knowledge: tap a piece, then where it goes (up to 12").'
+        : 'Tap the table to put down ' + (pa.why === 'fortify' ? 'a field fortification' : 'a barricade') + ' — ' + pa.left + ' to place.');
+      fitView();
+      revealConsole();
+    }
+    render();
+  }
+  // may a barricade stand here? on the table, clear of terrain and troops, in the right ground
+  function placeOK(pa, r) {
+    if (r.x < 0.5 || r.y < 0.5 || r.x + r.w > W - 0.5 || r.y + r.h > H - 0.5) return 'Not so close to the edge.';
+    var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    if (pa.why === 'fortify' && !deployOK(pa.side, cx, cy)) return 'Field fortifications go in your own deployment zone.';
+    if (pa.why === 'laststand' && deployOK(other(pa.side), cx, cy)) return 'Not in the enemy deployment zone.';
+    if (state.terrain.some(function (o) { return r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y; })) return 'That ground is taken.';
+    if (state.units.some(function (o) { return o.alive && o.x >= 0 && o.x > r.x - 1 && o.x < r.x + r.w + 1 && o.y > r.y - 1 && o.y < r.y + r.h + 1; })) return 'Troops are standing there.';
+    return null;
+  }
+  // the pieces Detailed Terrain Knowledge may move
+  function movablePieces() {
+    return state.terrain.filter(function (r) {
+      var t = R.TERRAIN[r.kind];
+      return t && t.destructible !== 'target' && !r.fixed && r.kind !== 'objective' && r.kind !== 'searchsite';
+    });
+  }
+  function placeAt(x, y) {
+    var pa = state.placeAsk;
+    if (!pa) return 'Nothing to place.';
+    if (pa.kind === 'barricade') {
+      var len = pa.len || 3, th = pa.why === 'fortify' ? 0.6 : 1;
+      var r = pa.vertical ? { kind: 'barricade', x: x - th / 2, y: y - len / 2, w: th, h: len }
+        : { kind: 'barricade', x: x - len / 2, y: y - th / 2, w: len, h: th };
+      var why = placeOK(pa, r);
+      if (why) return why;
+      state.terrain.push(r);
+      state.structsDirty = true;
+      pa.left--;
+    } else {
+      var pool = movablePieces();
+      if (pa.pick == null) {
+        var hit = pool.filter(function (q) { return R.inRect(x, y, q); })[0];
+        if (!hit) return 'Tap a piece of terrain to move.';
+        pa.pick = state.terrain.indexOf(hit);
+        setHint(null, 'Now tap where the ' + R.TERRAIN[hit.kind].name.toLowerCase() + ' goes — up to 12" away.');
+        render();
+        return null;
+      }
+      var q = state.terrain[pa.pick], ocx = q.x + q.w / 2, ocy = q.y + q.h / 2;
+      if (R.inRect(x, y, q)) { pa.pick = null; render(); return null; }      // tap it again to put it down
+      if (Math.hypot(x - ocx, y - ocy) > 12) return 'Up to 12" from where it stands.';
+      var nx = x - q.w / 2, ny = y - q.h / 2;
+      if (nx < 0 || ny < 0 || nx + q.w > W || ny + q.h > H) return 'It would go off the table.';
+      var clash = state.terrain.some(function (o) {
+        return o !== q && nx < o.x + o.w + 0.5 && nx + q.w + 0.5 > o.x && ny < o.y + o.h + 0.5 && ny + q.h + 0.5 > o.y;
+      }) || state.objectives.some(function (o) { return o.x > nx - 3 && o.x < nx + q.w + 3 && o.y > ny - 3 && o.y < ny + q.h + 3; });
+      if (clash) return 'Too close to other terrain or an objective.';
+      R.placePiece(q, nx, ny);
+      logLine('terrain', sideName(pa.side) + ' — Detailed Terrain Knowledge: moves the ' + R.TERRAIN[q.kind].name.toLowerCase() + ' ' + Math.hypot(x - ocx, y - ocy).toFixed(1) + '".');
+      state.scene = null; state.ground = null; state.structs = null;
+      pa.pick = null;
+      pa.left--;
+    }
+    if (pa.left <= 0) placeDone();
+    else { setHint(null, pa.left + ' more to ' + (pa.kind === 'move' ? 'move' : 'place') + '.'); render(); }
+    return null;
+  }
+  function placeDone() {
+    var pa = state.placeAsk;
+    if (!pa) return;
+    var n = pa.total - pa.left;
+    if (pa.kind === 'barricade' && n) logLine('terrain', sideName(pa.side) + ' — ' + (pa.why === 'fortify' ? 'Fortify and Strike!: ' + n + ' field fortifications thrown up.' : 'Last Stand: ' + n + ' barricades put up.'));
+    state.placeAsk = null;
+    if (pa.then === 'battle') { startBattle(); return; }
+    nextPlace();
   }
 
   function docsOf(side) { return (state && state.doctrines && state.doctrines[side]) || []; }
@@ -1272,8 +1370,18 @@
       render();
       return;
     }
+    /* Fortify and Strike! (p. 141): once the tribe is deployed, a player puts
+       down its four field fortifications by hand before the first turn. */
+    state.fortAsked = state.fortAsked || {};
+    var fs = ['A', 'B'].filter(function (sd) { return docsOf(sd).indexOf('XO5') >= 0 && !isAI(sd) && !state.fortAsked[sd]; })[0];
+    if (fs) {
+      state.fortAsked[fs] = true;
+      state.placeQueue = [{ side: fs, kind: 'barricade', why: 'fortify', left: 4, total: 4, len: 3, then: 'battle' }];
+      nextPlace();
+      return;
+    }
     state.phase = 'battle';
-    ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO5') >= 0) fortify(side); });
+    ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO5') >= 0 && isAI(side)) fortify(side); });
     // Ambush!: each unit settles into its hide before the first turn (p. 156)
     if (state.scen.beforeBattle) {
       var moved = state.scen.beforeBattle(state) || [];
@@ -1397,14 +1505,36 @@
     /* Know Your Foe! (p. 141): once a battle, the tribe stops every enemy
        reinforcement arriving this turn — used the first turn the enemy has any. */
     state.kyf = state.kyf || {};
+    state.kyfAsked = state.kyfAsked || {};
+    function useKyf(side) {
+      var foe = other(side);
+      state.kyf[side] = state.turn;
+      logLine('note', sideName(side) + ' — Know Your Foe!: no reinforcements reach ' + sideName(foe) + ' this turn.');
+      pushRes({ kind: 'Advancement', title: 'Know Your Foe!', side: side, note: 'Once a battle: every enemy reinforcement is held back this turn.' });
+    }
+    var kyfWait = null;
     ['A', 'B'].forEach(function (side) {
       var foe = other(side);
       if (docsOf(side).indexOf('XO6') < 0 || state.kyf[side]) return;
       if (!inReserve().some(function (u) { return u.side === foe && !u.wave; })) return;
-      state.kyf[side] = state.turn;
-      logLine('note', sideName(side) + ' — Know Your Foe!: no reinforcements reach ' + sideName(foe) + ' this turn.');
-      pushRes({ kind: 'Advancement', title: 'Know Your Foe!', side: side, note: 'Once a battle: every enemy reinforcement is held back this turn.' });
+      // the AI uses it the first turn it can; a player is asked, once a turn, whether this is the turn
+      if (isAI(side)) { useKyf(side); return; }
+      if (state.kyfAsked[side] !== state.turn && !kyfWait) kyfWait = side;
     });
+    if (kyfWait) {
+      state.kyfAsked[kyfWait] = state.turn;
+      state.kyfAsk = { side: kyfWait, n: inReserve().filter(function (u) { return u.side === other(kyfWait) && !u.wave; }).length };
+      ui.kyfThen = function (yes) {
+        var sd = state.kyfAsk.side;
+        state.kyfAsk = null; ui.kyfThen = null;
+        if (yes) useKyf(sd);
+        afterArrivals(done);
+      };
+      setHint(null, 'Know Your Foe! — hold back every enemy reinforcement this turn?');
+      revealConsole();
+      render();
+      return;
+    }
     function held(u) { var f = other(u.side); return state.kyf && state.kyf[f] === state.turn; }
     var mine = inReserve().filter(function (u) { return !u.wave && !held(u); });
     var i = 0;
@@ -1568,6 +1698,13 @@
       landArrival(u, p, log);
       if (semperFidelis(u)) log.push(u.label + ' — Semper Fidelis: arrives when called for.');
       showArrival(u);
+    }
+    // Coordinated Hive (p. 124): the swarm's failed reserve dice, rolled again
+    if (state.sc && state.sc.hive && state.sc.hive.turn === state.turn && !state.sc.hive.told) {
+      state.sc.hive.told = true;
+      var hv = state.sc.hive;
+      var hl = 'Coordinated Hive — ' + sideName(hv.side) + ' re-rolls ' + hv.n + ' failed reserve ' + (hv.n === 1 ? 'die' : 'dice') + ': ' + hv.up + ' come' + (hv.up === 1 ? 's' : '') + ' on after all.';
+      logLine('note', hl); log.push(hl);
     }
     // Invasion: the second wave waved off because every zone is in enemy hands (p. 53)
     if (state.sc && state.sc.zonesHot === state.turn) {
@@ -2698,8 +2835,6 @@
     if (u && state.phase === 'battle' && R.steadyShooter(state, u) && R.steadyTargets(state, u).length) {
       out.push({ id: 'steady', label: 'Not one step back!' });
     }
-    // Martyrdom (p. 112): a charge with one of the Holy Warriors sent in alone first
-    if (u && state.phase === 'battle' && R.canMartyr(state, u, u)) out.push({ id: 'martyr', label: 'Martyr assault' });
     if (u && (R.has(u, 'Destructive Weapon') || R.has(u, 'Incendiary Ammunition'))) {
       out.push({ id: 'demolish', label: 'Demolish' });
     }
@@ -2862,12 +2997,6 @@
           ? '"Death or Glory, Comrades!" — ' + dog.name + ' is shouting: charge within ' + reachA +
             '" and every Suppression point falls away as you go in.'
           : 'Charge within ' + reachA + '": defensive fire, then three rounds each way.' };
-      }
-      case 'martyr': {
-        var ma = actionState(u, 'assault');
-        if (!ma.on) return ma;
-        return { on: true, hint: 'Martyrdom: charge, and before the first round one of ' + u.name +
-          ' walks into the enemy alone — one model lost, D3 automatic hits on them, no Suppression for the death.' };
       }
       case 'aux': {
         if (u.fp === null) return { on: false, hint: 'This unit has no Firepower.' };
@@ -3059,7 +3188,6 @@
 
   function chooseAction(id) {
     var u = ui.selected; if (!u) return;
-    ui.martyrCharge = false;
     if (u.carrying) { stayPut(u); return; }             // loaded or unloaded: any button now means stay
     // driven first: all that is left is to load or unload, and anything else ends it where it stands
     if (u.carryMoved && id !== 'embark' && id !== 'disembark') { stayPut(u); return; }
@@ -3109,9 +3237,8 @@
       ui.mode = 'advance-move';
       ui.moves = R.reachable(state, u, u.move).filter(function (c) { return canStand(u, c); });
       wireNote(u);
-    } else if (id === 'assault' || id === 'martyr') {
+    } else if (id === 'assault') {
       ui.mode = 'assault';
-      ui.martyrCharge = id === 'martyr';
       var must = forcedCharge(u);
       ui.targets = must ? [must] : assaultables(u);
     } else if (id === 'wave') {
@@ -3605,16 +3732,15 @@
      defending: a player's Holy Warriors are asked, and the assault waits for
      the answer; the AI decides for its own. `go(martyr)` runs the assault. */
   function martyrFirst(a, t, go) {
+    var ask = [a, t].filter(function (u, i) {
+      return !isAI(u.side) && R.canMartyr(state, u, i ? a : t);
+    });
+    if (!ask.length) { go({}); return; }
     var said = {};
-    // the charging player already said, by choosing Martyr assault or plain Assault
-    if (!isAI(a.side)) { said[a.side] = !!ui.martyrCharge; ui.martyrCharge = false; }
-    // the one being charged is asked, since it is not their activation
-    var ask = [t].filter(function (u) { return !isAI(u.side) && R.canMartyr(state, u, a); });
-    if (!ask.length) { go(said); return; }
     (function next() {
       var u = ask.shift();
       if (!u) { state.martyrAsk = null; ui.martyrThen = null; go(said); return; }
-      state.martyrAsk = { unit: u.id, foe: (u === a ? t : a).id, side: u.side };
+      state.martyrAsk = { unit: u.id, foe: (u === a ? t : a).id, side: u.side, charging: u === a };
       ui.martyrThen = function (yes) { said[u.side] = !!yes; next(); };
       setHint(null, 'Martyrdom — ' + u.name + ' may send one of its own in alone.');
       revealConsole();
@@ -5060,7 +5186,7 @@
     var yes = { ok: true };
 
     function mayDeploy(side) {
-      return state.phase === 'deploy' && placingSide() === side;
+      return state.phase === 'deploy' && placingSide() === side && !state.placeAsk && !state.minePick;
     }
     /* The terrain set-up goes an area at a time, and each area is one side's
        to lay (p. 47). Nobody else may touch it while it is being laid. */
@@ -5076,7 +5202,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -5215,6 +5341,15 @@
           maybeAI();
           return yes;
         }
+        case 'placeat': case 'placerot': case 'placedone': {
+          var pa = state.placeAsk;
+          if (!pa || pa.side !== side) return no('nothing to place');
+          if (it.k === 'placerot') { pa.vertical = !pa.vertical; render(); return yes; }
+          if (it.k === 'placedone') { placeDone(); return yes; }
+          var pw = placeAt(+it.x, +it.y);
+          if (pw) { setHint(null, pw); render(); return no(pw); }
+          return yes;
+        }
         case 'mine': {
           var mp = state.minePick;
           if (!mp || mp.side !== side) return no('nothing to mine');
@@ -5229,6 +5364,7 @@
         case 'start': {
           if (state.phase !== 'deploy') return no('already under way');
           if (state.minePick) return no('the mined piece has not been chosen');
+          if (state.placeAsk) return no('there are pieces still to place');
           if (!deploymentDone()) return no('there are still units to place');
           // Rapid Relocation is one side's to finish, and it starts the battle when it does
           if (state.relocating && state.relocating.side !== side) return no('the other side is still relocating');
@@ -5272,6 +5408,11 @@
           if (!ui.insertion || ui.insertion.kind !== 'insert') return no('nothing to hold back');
           if (insertionSide() !== side) return no('that is not your unit');
           holdInsertion();
+          return yes;
+        }
+        case 'kyf': case 'nokyf': {
+          if (!state.kyfAsk || state.kyfAsk.side !== side || !ui.kyfThen) return no('nothing to answer');
+          ui.kyfThen(it.k === 'kyf');
           return yes;
         }
         case 'martyr': case 'nomartyr': {

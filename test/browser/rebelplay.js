@@ -34,6 +34,14 @@ async function run(p, label, cfg, checks) {
   }, cfg);
   await p.waitForTimeout(800);
   for (let i = 0; i < 12; i++) { await drain(p); await p.waitForTimeout(100); }
+  // a player's Last Stand barricades go down by hand: tap across the table until they are all placed
+  await p.evaluate(() => {
+    for (let y = 6; y < 44 && window.PMC_STATE().placeAsk; y += 3) {
+      for (let x = 4; x < 44 && window.PMC_STATE().placeAsk; x += 5) window.__sendIntent({ k: 'placeat', x, y });
+    }
+    if (window.PMC_STATE().placeAsk) window.__sendIntent({ k: 'placedone' });
+  });
+  await p.waitForTimeout(200);
 
   const set = await p.evaluate(() => {
     const s = window.PMC_STATE();

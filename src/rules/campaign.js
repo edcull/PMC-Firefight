@@ -2362,7 +2362,7 @@
       var alt = hasDoctrine(A, 'XO3') ? rollScenario(false) : null;
       return {
         alt: alt,
-        altRoles: alt && SC ? SC.rollRoles(alt.id, docs) : null,
+        altRoles: alt && SC ? SC.rollRoles(alt.id, docs, null, ['A']) : null,
         rival: idx,
         scenario: scen,
         tierRoll: tier,
@@ -2371,7 +2371,7 @@
         // the biggest fight this pairing could put on, whatever the D6 said
         capTier: maxBattleTier(A, co, 1),
         capLevels: levelsFor(A, co, maxBattleTier(A, co, 1)),
-        roles: SC ? SC.rollRoles(scen.id, docs) : null,
+        roles: SC ? SC.rollRoles(scen.id, docs, null, ['A']) : null,
         caught: caught[idx]
       };
     });

@@ -17,6 +17,17 @@
   var R = root.PMC;
   var W = R.BOARD.w, H = R.BOARD.h;
   function d6() { return R.d6(); }
+  /* A reserve die for `side`: Coordinated Hive (p. 124) re-rolls one that
+     failed, and the re-rolls are counted for the log. */
+  function reserveDie(state, side, need) {
+    if (d6() >= need) return true;
+    if (!state.doctrines || (state.doctrines[side] || []).indexOf('BB1') < 0) return false;
+    state.sc.hive = state.sc.hive && state.sc.hive.turn === state.turn ? state.sc.hive : { turn: state.turn, side: side, n: 0, up: 0 };
+    state.sc.hive.n++;
+    var ok = d6() >= need;
+    if (ok) state.sc.hive.up++;
+    return ok;
+  }
   function d3() { return R.d3(); }
   function dist(a, b, c, d) { return R.inches(a, b, c, d); }
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -106,6 +117,7 @@
   function lastStandBarricades(state) {
     ['A', 'B'].forEach(function (side) {
       if (!state.tactics || state.tactics[side] !== 'laststand') return;
+      if (state.manualLaststand && state.manualLaststand[side]) return;   // a player puts theirs down by hand
       var n = 4 * (state.cfg.pl || 1);
       var near = side === 'A';                      // A holds the low edge, B the high
       for (var i = 0; i < n; i++) {
@@ -482,10 +494,10 @@
           var need = 5 - (state.turn - 4);
           var wave2 = pool.filter(function (u) { return u.wave === 2; });
           if (!wave2.length) return [];
-          return need <= 1 || d6() >= need ? wave2 : [];
+          return need <= 1 || reserveDie(state, side, need) ? wave2 : [];
         }
         if (state.turn < 2) return [];
-        return pool.filter(function () { return d6() >= 5; });
+        return pool.filter(function () { return reserveDie(state, side, 5); });
       },
       // landing infantry are shaken by the drop
       onArrive: function (state, u) {
@@ -603,7 +615,7 @@
         }
         if (state.turn < 2) return [];
         return state.units.filter(function (u) {
-          return u.side === side && u.alive && u.reserve && d6() >= 5;
+          return u.side === side && u.alive && u.reserve && reserveDie(state, side, 5);
         });
       },
       /* The SAM system: any aircraft finishing its move within 12" of the objective
@@ -739,7 +751,10 @@
      It lives on its own because a campaign settles the roles when it offers the
      contract, so the player knows which side of the fight they are taking on
      before they pick the force for it — and then hands the answer back here. */
-  function rollRoles(id, docs, forced) {
+  /* `ask`: the sides whose player decides for themselves whether to roll (p. 87
+     — "the player may decide to roll"). Their roll is left pending, and made by
+     bestDefence() if they choose to. */
+  function rollRoles(id, docs, forced, ask) {
     var s = SCENARIOS[id] || SCENARIOS.secure;
     if (!s.attacker) return null;
     var atk = forced || (Math.random() < 0.5 ? 'A' : 'B');
@@ -748,12 +763,23 @@
     var defHas = (docs[def] || []).indexOf('S1') >= 0;
     var atkHas = (docs[atk] || []).indexOf('S1') >= 0;
     var bd = null;
-    if (defHas && !atkHas) {
+    if (defHas && !atkHas && ask && ask.indexOf(def) >= 0) {
+      bd = { side: def, pending: true };
+    } else if (defHas && !atkHas) {
       var roll = d6();
       bd = { side: def, roll: roll, swapped: roll >= 2 };
       if (roll >= 2) { var t = atk; atk = def; def = t; }
     }
     return { attacker: atk, defender: def, bestDefence: bd };
+  }
+  // the defender's player takes up The Best Defence is Good Offence: a D6, and 2-6 swaps the roles
+  function bestDefence(roles) {
+    var bd = roles && roles.bestDefence;
+    if (!bd || !bd.pending) return roles;
+    var roll = d6();
+    roles.bestDefence = { side: bd.side, roll: roll, swapped: roll >= 2 };
+    if (roll >= 2) { var t = roles.attacker; roles.attacker = roles.defender; roles.defender = t; }
+    return roles;
   }
 
   function begin(state, id, opts) {
@@ -893,7 +919,7 @@
     begin: begin, deploy: deploy, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     holderOf: holderOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
-    rollRoles: rollRoles,
+    rollRoles: rollRoles, bestDefence: bestDefence,
     searchSpots: searchSpots, checkArea: checkArea
   };
 })(typeof window !== 'undefined' ? window : global);

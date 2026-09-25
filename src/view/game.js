@@ -1013,14 +1013,39 @@
       '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
       '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
   }
+  // placing pieces by hand: Last Stand, Fortify and Strike!, Detailed Terrain Knowledge
+  function placeCard() {
+    var pa = state.placeAsk;
+    var T = { laststand: ['Last Stand', 'Put up to ' + pa.total + ' barricades (low walls) anywhere but the enemy deployment zone.'],
+      fortify: ['Fortify and Strike!', 'Put up to ' + pa.total + ' field fortifications (low walls) in your deployment zone.'],
+      terrain: ['Detailed Terrain Knowledge', 'Move up to ' + pa.total + ' pieces of terrain up to 12" each. Tap a piece, then where it goes.'] }[pa.why];
+    var picked = pa.kind === 'move' && pa.pick != null ? state.terrain[pa.pick] : null;
+    return '<div class="card"><h2>' + T[0] + '</h2><p class="sub">' + T[1] + '</p>' +
+      '<p class="hint">' + (picked ? 'Moving the ' + esc(R.TERRAIN[picked.kind].name.toLowerCase()) + ' — tap where it goes, or tap it again to put it back down.'
+        : pa.left + ' of ' + pa.total + ' left.') + '</p>' +
+      '<div class="acts">' +
+      (pa.kind === 'barricade' ? '<button class="act" data-act="placerot"><span>Turn</span><small>' + (pa.vertical ? 'Running up the table' : 'Running across the table') + '</small></button>' : '') +
+      '<button class="act" data-act="placedone"><span>' + (pa.left === pa.total ? 'Skip' : 'Done') + '</span><small>' +
+      (pa.left === pa.total ? 'Leave the table as it is' : 'That will do') + '</small></button></div></div>';
+  }
   /* Terrorist (p. 112): before deploying, the side on the Path of the Villain
      picks one destructible piece to mine — or none. */
+  // Know Your Foe! (p. 141): once a battle, at the start of a turn the enemy has reinforcements coming
+  function kyfCard() {
+    var k = state.kyfAsk;
+    return '<div class="card"><h2>Know Your Foe!</h2>' +
+      '<p class="sub">The enemy has ' + k.n + ' unit' + (k.n === 1 ? '' : 's') + ' waiting to come on. Once a battle, the tribe may stop every enemy reinforcement arriving this turn.</p>' +
+      '<div class="acts"><button class="act" data-act="kyf"><span>Hold them back</span><small>This turn — it cannot be used again</small></button>' +
+      '<button class="act" data-act="nokyf"><span>Not now</span><small>Keep it for a later turn</small></button></div></div>';
+  }
   // Martyrdom (p. 112): asked as each assault with Holy Warriors in it begins
   function martyrCard() {
     var m = state.martyrAsk, u = byId(m.unit), foe = byId(m.foe);
     if (!u || !foe) return '';
     return '<div class="card"><h2>Martyrdom</h2>' +
-      '<p class="sub"><b>' + esc(foe.name) + '</b> is charging <b>' + esc(u.name) + '</b>. Before the first round, one of them may walk into the enemy alone: ' +
+      '<p class="sub">' + (m.charging ? '<b>' + esc(u.name) + '</b> is charging <b>' + esc(foe.name) + '</b>'
+        : '<b>' + esc(foe.name) + '</b> is charging <b>' + esc(u.name) + '</b>') +
+      '. Before the first round, one of the Holy Warriors may walk into the enemy alone: ' +
       'one model is removed, and ' + esc(foe.name) + ' takes D3 automatic hits. No Suppression for the death.</p>' +
       '<div class="acts"><button class="act" data-act="martyr"><span>Send one in</span><small>' + u.models + ' models, one of them goes</small></button>' +
       '<button class="act" data-act="nomartyr"><span>Hold back</span><small>Fight the assault as it stands</small></button></div></div>';
@@ -1125,7 +1150,6 @@
     wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="2.2"/><path d="M7.5 7.5a6.4 6.4 0 000 9M16.5 7.5a6.4 6.4 0 010 9"/><path d="M4.4 4.4a10.8 10.8 0 000 15.2M19.6 4.4a10.8 10.8 0 010 15.2"/></svg>',
     rush: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L5 14h6l-2 8 8-12h-6z"/></svg>',
     laststand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z"/><path d="M12 8v5M12 16h.01"/></svg>',
-    martyr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.5v6.5M8 10.5h8M12 14l-3 6M12 14l3 6"/><path d="M4 4l2 2M20 4l-2 2M3 11h2M19 11h2"/></svg>',
     detonate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="13" width="9" height="8" rx="1"/><path d="M8.5 13V9"/><path d="M8.5 9l7-4"/><path d="M15 3l2 1-1 2"/><path d="M18 11l1.5-1.5M20 15h2M18 19l1.5 1.5"/></svg>',
     stance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h18"/><path d="M6 19l3-5M18 19l-3-5"/><path d="M8 14l9-7"/><path d="M16 5l3 1-1 3"/></svg>',
     empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 12h10"/></svg>'
@@ -2811,6 +2835,8 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     /* The objectives' beacons are painted with the structures: when they move
        or arrive (an Invasion's zones are nominated after deployment), repaint. */
+    // a barricade put down by hand: the structures again, not the whole table
+    if (state.structsDirty && state.structs) { state.structsDirty = false; paintStructures(); }
     var ok0 = state.objectives.map(function (o) { return o.x.toFixed(1) + ',' + o.y.toFixed(1); }).join(';');
     if (state.structs && state.objKey != null && state.objKey !== ok0) paintStructures();
     state.objKey = ok0;
@@ -3451,6 +3477,15 @@
       });
       ctx.restore();
     }
+    // Detailed Terrain Knowledge: the piece in hand, and how far it may go
+    if (state.placeAsk && state.placeAsk.kind === 'move' && !isAI(state.placeAsk.side) && state.placeAsk.pick != null) {
+      var mp = state.terrain[state.placeAsk.pick];
+      if (mp) {
+        ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = '#e8c15a'; ctx.lineWidth = 2;
+        isoRing(mp.x + mp.w / 2, mp.y + mp.h / 2, 12, liftOf(mp.x + mp.w / 2, mp.y + mp.h / 2)); ctx.stroke();
+        ctx.restore();
+      }
+    }
     // Terrorist: the pieces that may be mined
     if (state.minePick && !isAI(state.minePick.side)) {
       ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#e4693f'; ctx.lineWidth = 2;
@@ -3927,12 +3962,14 @@
     var ctxBox = el('context'), html = '';
     if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
+    else if (state.placeAsk && !isAI(state.placeAsk.side)) html = placeCard();
     else if (state.minePick && !isAI(state.minePick.side)) html = mineCard();
     else if (state.phase === 'deploy') html = deployCard();
     else if (ui.reservePick) html = reservePickCard();
     else if (ui.insertion) html = insertionCard();
     else if (state.cmdOffer) html = cmdOfferCard();
     else if (state.martyrAsk && !isAI(state.martyrAsk.side)) html = martyrCard();
+    else if (state.kyfAsk && !isAI(state.kyfAsk.side)) html = kyfCard();
     else if (state.over) html = overCard();
     else if (ui.terrain.length && ui.selected &&
       (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
@@ -4389,7 +4426,8 @@
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
         else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
-        else if (a === 'martyr' || a === 'nomartyr') { send({ k: a }); return; }
+        else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }
+        else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf') { send({ k: a }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
         else if (a === 'autodeploy') autoDeployMine();
@@ -4733,6 +4771,8 @@
     var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 
     if (state.phase === 'terrain') { terrainTap(p); return; }
+    // a piece being put down or moved by hand
+    if (state.placeAsk && !isAI(state.placeAsk.side)) { send({ k: 'placeat', x: p.x, y: p.y }); return; }
     // Terrorist: the tap nominates the piece to mine
     if (state.minePick && !isAI(state.minePick.side)) {
       var mpk = state.minePick.pool.filter(function (i) { return R.inRect(p.x, p.y, state.terrain[i]); })[0];

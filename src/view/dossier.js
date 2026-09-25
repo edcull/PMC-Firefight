@@ -1172,9 +1172,12 @@
           '<span class="mk">' + esc(sc.roles[mine]) +
           (contract.roles.bestDefence && contract.roles.bestDefence.swapped &&
             contract.roles.bestDefence.side === 'A'
-            ? ' The Best Defence is Good Offence pushed the attack onto them (D6 ' +
+            ? ' The Best Defence is Good Offence took the attack (D6 ' +
               contract.roles.bestDefence.roll + ').'
-            : '') + '</span>'
+            : contract.roles.bestDefence && contract.roles.bestDefence.side === 'A' && contract.roles.bestDefence.roll
+              ? ' The Best Defence is Good Offence: D6 ' + contract.roles.bestDefence.roll + ' — you stay the defender.' : '') + '</span>' +
+          (contract.roles.bestDefence && contract.roles.bestDefence.pending && contract.roles.bestDefence.side === 'A'
+            ? '<button class="lnk" data-go="bestdef">The Best Defence is Good Offence — roll to attack (2+)</button>' : '')
         : '<span class="mk">Attacker and defender are randomised when the battle opens. ' +
           esc(sc.roles.attacker) + ' ' + esc(sc.roles.defender) +
           (C.hasDoctrine(A, 'S1')
@@ -1951,7 +1954,7 @@
       contract.scenario = contract.alt; contract.alt = was;
       var SCx = root.PMCScen;
       contract.roles = !wasRoles ? null : contract.altRoles || (SCx && SCx.rollRoles ? SCx.rollRoles(contract.scenario.id,
-        { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }) : null);
+        { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, ['A']) : null);
       contract.altRoles = wasRoles;
       render(); return;
     }
@@ -2126,6 +2129,14 @@
         pr.plunder[pst.side] = { was: was.slice(), now: pr.dice[pst.side].slice() };
         save(); render(); return;
       }
+      case 'bestdef':
+        if (contract && contract.roles && root.PMCScen) {
+          var had = contract.picks.length;
+          root.PMCScen.bestDefence(contract.roles);
+          if (had && contract.roles.bestDefence && contract.roles.bestDefence.swapped) note('The Best Defence is Good Offence', 'D6 ' + contract.roles.bestDefence.roll + ' — you are the attacker now. Check the list still suits the job.');
+          save(); render();
+        }
+        return;
       case 'negotiate': {
         var nst = camp.post && camp.post.steps[0];
         if (!nst || nst.kind !== 'negotiate' || !(nst.sel || []).length) return;
