@@ -57,7 +57,7 @@
     { key: 'snipers', code: 'SNP', name: 'Sniper team', group: 'Light infantry', art: 'sniperteam', tier: 5, size: 2, move: 5, fp: 6, range: 30, def: 8, assault: 2, morale: 4, rules: ['Markerlights', 'Stealth', 'Cumbersome Weapon', 'Keen-Eyed', 'Gauss Weapon', 'Suppressive Fire', 'Battlefield Insertion'] },
 
     /* Light support troops (p. 67) */
-    { key: 'lmgsection', code: 'LMS', name: 'Light MG section', group: 'Light support', art: 'mg', tier: 2, size: 3, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 3, rules: [] },
+    { key: 'lmgsection', code: 'LMS', name: 'Light MG section', group: 'Light support', art: 'mgsec', tier: 2, size: 3, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 3, rules: [] },
     { key: 'lmgteam', code: 'MG', name: 'Light MG team', group: 'Light support', art: 'mg', tier: 3, size: 6, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 4, rules: [] },
     { key: 'hmgteam', code: 'HMG', name: 'Heavy MG team', group: 'Light support', art: 'hmg', tier: 4, size: 3, move: 3, fp: 5, range: 30, def: 9, assault: 1, morale: 5, rules: ['Cumbersome Weapon', 'Suppressive Fire'] },
     { key: 'gausscannon', code: 'GAU', name: 'Gauss cannon', group: 'Light support', art: 'gauss', tier: 5, size: 3, move: 3, fp: 6, range: 30, def: 9, assault: 1, morale: 5, rules: ['Specialisation (ground)', 'Cumbersome Weapon', 'Destructive Weapon', 'Gauss Weapon', 'Anti-tank'] },

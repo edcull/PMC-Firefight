@@ -2488,7 +2488,9 @@
     engineer: ['breacher', 'sapper'],
     lighteng: ['breacherlt', 'sapperlt'],
     rookie: ['rookielead', 'sawrk', 'riflemanrk'],
-    mg: ['gunner', 'loader', 'rifle'],
+    // support teams: the standing men carry SMGs; the section has two guns down in front
+    mg: ['gunner', 'loader', 'supsmg'],
+    mgsec: ['gunner', 'gunner', 'loader'],
     sniper: ['marksman', 'spotter', 'lightinf'],
     // the sniper team alone goes in with night-vision goggles
     sniperteam: ['marksmannv', 'spotternv', 'sniperinf'],
@@ -2504,8 +2506,8 @@
     protector: ['protector'],
     protectorhm: ['protectorhm'],
     // crew-served guns on tripods
-    hmg: ['hmgunner', 'loader', 'rifle'],
-    gauss: ['gaussgunner', 'loader', 'rifle'],
+    hmg: ['hmgunner', 'loader', 'supsmg'],
+    gauss: ['gaussgunner', 'loader', 'supsmg'],
     medic: ['medic', 'corpsman'],
     observer: ['observer', 'lightinfrs'],
     recruit: ['recruit'],
@@ -2517,12 +2519,13 @@
     // rangers and commandos: the veteran and assault kit, with night-vision goggles
     ranger: ['rangerlead', 'rangersaw', 'ranger'],
     commando: ['commandolead', 'commandobreacher', 'commando'],
-    antitank: ['atgunner', 'atloader', 'rifle'],
+    antitank: ['atgunner', 'atloader', 'supsmg'],
     // the missile-armed and SAM teams work a launcher set up on a tripod
-    atgm: ['msloperator', 'atloader', 'rifle', 'rifle'],
-    samlauncher: ['msloperator', 'atloader', 'rifle', 'rifle'],
+    atgm: ['msloperator', 'atloader', 'supsmg', 'supsmg'],
+    samlauncher: ['msloperator', 'atloader', 'supsmg', 'supsmg'],
     mortar: ['mortarman', 'mortarloader', 'mortarloader'],
-    nomad: ['nomad'],
+    // the leader at the front right with an SMG
+    nomad: ['nomadlead', 'nomad'],
     ew: ['ewop', 'signals'],
     chem: ['chem'],
 
@@ -2646,6 +2649,7 @@
     signals: { helm: 'std', gun: 'pistol', pack: 'radio', fitAs: 'rifle' },
     // the field command's escort: carbines rather than rifles
     cmdsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
+    supsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
     /* the field command's commanders, in dress uniform that grows grander with the grade */
     cmdr4: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 1 },
     cmdr3: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 2 },
@@ -2692,6 +2696,7 @@
     irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
     irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
     nomad: { helm: 'std', gun: 'battlerifle', pack: 'std', cloak: true },
+    nomadlead: { helm: 'std', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
     // penal troops: orange coveralls, a collar, and the company's armband
     convict: { helm: 'bare', gun: 'carbine', pack: 'none', collar: true, light: true, armband: 'force',
       tint: { light: '#dd8f43', mid: '#bd6c2c', dark: '#6b3a15', helm: '#a05520', cloth: '#8a5a2a' } },

@@ -185,7 +185,7 @@ html { scroll-behavior: smooth; }
     { key: 'snipers', code: 'SNP', name: 'Sniper team', group: 'Light infantry', art: 'sniperteam', tier: 5, size: 2, move: 5, fp: 6, range: 30, def: 8, assault: 2, morale: 4, rules: ['Markerlights', 'Stealth', 'Cumbersome Weapon', 'Keen-Eyed', 'Gauss Weapon', 'Suppressive Fire', 'Battlefield Insertion'] },
 
     /* Light support troops (p. 67) */
-    { key: 'lmgsection', code: 'LMS', name: 'Light MG section', group: 'Light support', art: 'mg', tier: 2, size: 3, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 3, rules: [] },
+    { key: 'lmgsection', code: 'LMS', name: 'Light MG section', group: 'Light support', art: 'mgsec', tier: 2, size: 3, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 3, rules: [] },
     { key: 'lmgteam', code: 'MG', name: 'Light MG team', group: 'Light support', art: 'mg', tier: 3, size: 6, move: 4, fp: 5, range: 24, def: 8, assault: 1, morale: 4, rules: [] },
     { key: 'hmgteam', code: 'HMG', name: 'Heavy MG team', group: 'Light support', art: 'hmg', tier: 4, size: 3, move: 3, fp: 5, range: 30, def: 9, assault: 1, morale: 5, rules: ['Cumbersome Weapon', 'Suppressive Fire'] },
     { key: 'gausscannon', code: 'GAU', name: 'Gauss cannon', group: 'Light support', art: 'gauss', tier: 5, size: 3, move: 3, fp: 6, range: 30, def: 9, assault: 1, morale: 5, rules: ['Specialisation (ground)', 'Cumbersome Weapon', 'Destructive Weapon', 'Gauss Weapon', 'Anti-tank'] },
@@ -6885,7 +6885,9 @@ html { scroll-behavior: smooth; }
     engineer: ['breacher', 'sapper'],
     lighteng: ['breacherlt', 'sapperlt'],
     rookie: ['rookielead', 'sawrk', 'riflemanrk'],
-    mg: ['gunner', 'loader', 'rifle'],
+    // support teams: the standing men carry SMGs; the section has two guns down in front
+    mg: ['gunner', 'loader', 'supsmg'],
+    mgsec: ['gunner', 'gunner', 'loader'],
     sniper: ['marksman', 'spotter', 'lightinf'],
     // the sniper team alone goes in with night-vision goggles
     sniperteam: ['marksmannv', 'spotternv', 'sniperinf'],
@@ -6901,8 +6903,8 @@ html { scroll-behavior: smooth; }
     protector: ['protector'],
     protectorhm: ['protectorhm'],
     // crew-served guns on tripods
-    hmg: ['hmgunner', 'loader', 'rifle'],
-    gauss: ['gaussgunner', 'loader', 'rifle'],
+    hmg: ['hmgunner', 'loader', 'supsmg'],
+    gauss: ['gaussgunner', 'loader', 'supsmg'],
     medic: ['medic', 'corpsman'],
     observer: ['observer', 'lightinfrs'],
     recruit: ['recruit'],
@@ -6914,12 +6916,13 @@ html { scroll-behavior: smooth; }
     // rangers and commandos: the veteran and assault kit, with night-vision goggles
     ranger: ['rangerlead', 'rangersaw', 'ranger'],
     commando: ['commandolead', 'commandobreacher', 'commando'],
-    antitank: ['atgunner', 'atloader', 'rifle'],
+    antitank: ['atgunner', 'atloader', 'supsmg'],
     // the missile-armed and SAM teams work a launcher set up on a tripod
-    atgm: ['msloperator', 'atloader', 'rifle', 'rifle'],
-    samlauncher: ['msloperator', 'atloader', 'rifle', 'rifle'],
+    atgm: ['msloperator', 'atloader', 'supsmg', 'supsmg'],
+    samlauncher: ['msloperator', 'atloader', 'supsmg', 'supsmg'],
     mortar: ['mortarman', 'mortarloader', 'mortarloader'],
-    nomad: ['nomad'],
+    // the leader at the front right with an SMG
+    nomad: ['nomadlead', 'nomad'],
     ew: ['ewop', 'signals'],
     chem: ['chem'],
 
@@ -7043,6 +7046,7 @@ html { scroll-behavior: smooth; }
     signals: { helm: 'std', gun: 'pistol', pack: 'radio', fitAs: 'rifle' },
     // the field command's escort: carbines rather than rifles
     cmdsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
+    supsmg: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
     /* the field command's commanders, in dress uniform that grows grander with the grade */
     cmdr4: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 1 },
     cmdr3: { helm: 'sidecap', gun: 'pistol', pack: 'none', dress: 2 },
@@ -7089,6 +7093,7 @@ html { scroll-behavior: smooth; }
     irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
     irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
     nomad: { helm: 'std', gun: 'battlerifle', pack: 'std', cloak: true },
+    nomadlead: { helm: 'std', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
     // penal troops: orange coveralls, a collar, and the company's armband
     convict: { helm: 'bare', gun: 'carbine', pack: 'none', collar: true, light: true, armband: 'force',
       tint: { light: '#dd8f43', mid: '#bd6c2c', dark: '#6b3a15', helm: '#a05520', cloth: '#8a5a2a' } },
