@@ -343,6 +343,7 @@
           return;
         }
         var u = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, entry, pick.riders);
+        u.pickIdx = i;                                     // its place in the list, for Modifying the armies
         if (R.has(u, 'Turret')) u.drone = true;             // a lone shield turret is Drone Controlled too
         if (R.canMount(prof, pick.riders)) R.applyMount(u, pick.mount || 'none');   // what it rides, and what that costs
         u.startSize = u.models;
@@ -482,6 +483,109 @@
         state.placeQueue.push({ side: side, kind: 'barricade', why: 'laststand', left: nls, total: nls, len: 4 });
       }
     });
+    /* Modifying the armies (p. 46): with the table laid and both lists known, a
+       player may swap some of their units before anyone deploys. The set-up
+       waits here, and finishSetup carries on once they are done. */
+    finishSetup(built);
+    beginSwaps();
+  }
+
+  /* ---- Modifying the armies (p. 46): up to a quarter of a player's units — half
+     with Tactical Flexibility (p. 87) — swapped for others of the same Unit
+     Tier: from the dossier in a campaign, from the whole list otherwise. ---- */
+  function swapAllowance(side) {
+    var n = state.units.filter(function (u) { return u.side === side && u.pickIdx != null; }).length;
+    return Math.floor(n * (docsOf(side).indexOf('O6') >= 0 ? 0.5 : 0.25));
+  }
+  function swapOptions(side, u) {
+    var up = u && R.profile(u.key);
+    if (!u || u.pickIdx == null || u.command || !up || up.leaderBug || up.turretSet) return [];
+    if (u.aboard || (u.cargo && u.cargo.length)) return [];      // already strapped into a drop pod, or carrying one
+    var cfg = state.cfg;
+    if (cfg.dossier) {
+      return ((cfg.bench && cfg.bench[side]) || []).filter(function (e) {
+        var p = R.profile(e.key); return p && p.tier === u.tier && !p.command && !p.turretSet;
+      }).map(function (e) { return { id: e.rid, key: R.joinPick(e.key, e.prop, e.drone), name: e.name, entry: e }; });
+    }
+    return R.listFor(u.faction).filter(function (p) {
+      return p.tier === u.tier && !p.command && !p.turretSet && !p.noSlot && p.key !== u.key && !p.leaderBug;
+    }).map(function (p) { return { id: p.key, key: p.key, name: p.name, entry: null }; });
+  }
+  /* Each player's allowance, offered on the deployment card until they put their
+     first unit down: opening it (swapopen) brings up the swap card, and placing
+     a unit means the list stands as it is. */
+  function beginSwaps() {
+    state.swapAvail = {};
+    if (state.solo || state.cfg.noSwap) return;
+    ['A', 'B'].forEach(function (sd) {
+      if (isAI(sd) || swapAllowance(sd) < 1) return;
+      if (!state.units.some(function (u) { return u.side === sd && swapOptions(sd, u).length; })) return;
+      var n = swapAllowance(sd);
+      state.swapAvail[sd] = { side: sd, left: n, total: n, pick: null, done: [] };
+    });
+  }
+  function canSwapNow(side) {
+    var sa = state.swapAvail && state.swapAvail[side];
+    return !!sa && sa.left > 0 && state.phase === 'deploy' &&
+      !state.units.some(function (u) { return u.side === side && u.x >= 0; });
+  }
+  function nextSwap() { return false; }
+  function legalList(side, keys) {
+    var cfg = state.cfg;
+    return R.checkArmy(keys, cfg.tier, cfg.pl, docsOf(side), state.tactics && state.tactics[side], null);
+  }
+  function doSwap(side, outId, inId) {
+    var sa = state.swapAsk;
+    var old = byId(outId);
+    if (!sa || sa.side !== side || sa.left < 1) return 'No swaps left.';
+    if (!old || old.side !== side) return 'Not one of yours.';
+    var opt = swapOptions(side, old).filter(function (o) { return o.id === inId; })[0];
+    if (!opt) return 'That cannot be swapped in for it.';
+    var cfg = state.cfg, armyKey = side === 'A' ? 'armyA' : 'armyB';
+    var keys = cfg[armyKey].slice(), i = old.pickIdx;
+    var before = legalList(side, keys).ok;
+    keys[i] = opt.key;
+    var chk = legalList(side, keys);
+    if (before && !chk.ok) return chk.faults[0] || 'That would make the list illegal.';
+    var pick = R.splitPick(opt.key), prof = R.profile(pick.key);
+    var nu = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, opt.entry, pick.riders);
+    nu.id = old.id + 's' + (sa.done.length + 1);
+    nu.pickIdx = i;
+    if (R.canMount(prof, pick.riders)) R.applyMount(nu, pick.mount || 'none');
+    nu.startSize = nu.models;
+    // it takes the old unit's place in the army: its id, and whatever the scenario made of it
+    nu.id = old.id;
+    ['reserve', 'wave', 'owner', 'paint', 'x', 'y'].forEach(function (k) { if (old[k] !== undefined) nu[k] = old[k]; });
+    state.units[state.units.indexOf(old)] = nu;
+    cfg[armyKey][i] = opt.key;
+    if (cfg.dossier) {
+      var was = cfg.dossier[side][i];
+      cfg.dossier[side][i] = opt.entry;
+      var bench = cfg.bench[side];
+      bench.splice(bench.indexOf(opt.entry), 1);
+      if (was) bench.push(was);
+    }
+    sa.left--; sa.pick = null;
+    sa.done.push({ out: old.name, in: nu.name });
+    logLine('note', sideName(side) + ' swaps ' + old.name + ' for ' + nu.name + '.');
+    if (sa.left < 1) { swapsDone(); return null; }
+    render();
+    return null;
+  }
+  function swapsDone() {
+    var sa = state.swapAsk;
+    state.swapAsk = null;
+    if (sa) {
+      state.swapAvail[sa.side] = null;
+      if (sa.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sa.side), side: sa.side,
+        note: 'Swapped for units of the same Tier before deployment (p. 46).',
+        list: sa.done.map(function (d) { return { text: d.out + ' → ' + d.in, side: sa.side }; }) });
+    }
+    render();
+  }
+
+  function finishSetup(built) {
+    var cfg = state.cfg;
     ['A', 'B'].forEach(markReserves);
     SC.deploy(state);
     nextPlace();
@@ -930,6 +1034,7 @@
     return state.units.filter(function (u) { return onTable(u) && (!side || u.side === side); });
   }
 
+  // nothing has a zone until the scenario has laid out the deployment (after any army swaps)
   function zoneFor(side) { return SC.zoneFor(state, side); }
 
   // the scenario may use a circle rather than a strip
@@ -5265,6 +5370,7 @@
           return yes;
         }
         case 'deploy': {
+          if (state.swapAsk && state.swapAsk.side === side) swapsDone();   // placing a unit keeps the list
           if (!mayDeploy(side)) return no('not your turn to place');
           return deployAt(side, it);
         }
@@ -5296,6 +5402,8 @@
         }
         case 'autodeploy': {
           if (state.phase !== 'deploy') return no('not deploying');
+          // deploying straight away means keeping the list as it is
+          if (state.swapAsk && state.swapAsk.side === side) swapsDone();
           autoDeploy(side);
           render();
           return yes;
@@ -5341,6 +5449,22 @@
           maybeAI();
           return yes;
         }
+        case 'swapopen': {
+          if (!canSwapNow(side)) return no('the list can no longer be changed');
+          state.swapAsk = state.swapAvail[side];
+          state.swapAsk.pick = null;
+          render();
+          return yes;
+        }
+        case 'swappick': case 'swapin': case 'swapdone': {
+          var sa2 = state.swapAsk;
+          if (!sa2 || sa2.side !== side) return no('nothing to swap');
+          if (it.k === 'swapdone') { swapsDone(); return yes; }
+          if (it.k === 'swappick') { sa2.pick = it.id || null; render(); return yes; }
+          var sw = doSwap(side, sa2.pick, it.id);
+          if (sw) { setHint(null, sw); render(); return no(sw); }
+          return yes;
+        }
         case 'placeat': case 'placerot': case 'placedone': {
           var pa = state.placeAsk;
           if (!pa || pa.side !== side) return no('nothing to place');
@@ -5365,6 +5489,7 @@
           if (state.phase !== 'deploy') return no('already under way');
           if (state.minePick) return no('the mined piece has not been chosen');
           if (state.placeAsk) return no('there are pieces still to place');
+          if (state.swapAsk) swapsDone();
           if (!deploymentDone()) return no('there are still units to place');
           // Rapid Relocation is one side's to finish, and it starts the battle when it does
           if (state.relocating && state.relocating.side !== side) return no('the other side is still relocating');
@@ -5590,6 +5715,11 @@
         forcedCharge: forcedCharge,
         snapToSpot: snapToSpot,
         insertionLegal: insertionLegal,
+        // Modifying the armies: what could stand in for this unit
+        canSwapNow: function (side) { return canSwapNow(side); },
+        swapOptions: function (side, id) {
+          return swapOptions(side, byId(id)).map(function (o) { return { id: o.id, name: o.name, key: o.key }; });
+        },
         arrivalLegal: arrivalLegal,
         /* Who holds each objective as things stand. The board shows it live,
            between the End phases that actually score it. */

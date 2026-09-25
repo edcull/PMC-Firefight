@@ -1421,6 +1421,8 @@
       nameA: A.name, nameB: B.name,
       colourA: colourOf(A), colourB: colourOf(B),
       dossier: { A: contract.picks, B: theirs },
+      // Modifying the armies (p. 46): what is left on the books, to swap in once the table is laid
+      bench: { A: A.roster.filter(function (e) { return contract.picks.indexOf(e) < 0 && !(e.restUntil > 0); }), B: [] },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
       tactics: { A: A.faction === 'rebel' ? contract.tactic || null : null, B: theirTactic },
       campaign: true,

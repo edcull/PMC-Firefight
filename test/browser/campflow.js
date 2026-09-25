@@ -303,6 +303,15 @@ async function clickText(p, re) {
     if (r && !r.hidden) document.getElementById('res-continue').click();
   });
   await p.waitForTimeout(400);
+  // Modifying the armies (p. 46) comes first: the company can swap from its dossier, and keeps its list here
+  check('the company may modify its army from the dossier once the table is laid', await p.evaluate(async () => {
+    const b = document.querySelector('[data-act="swapopen"]'); if (!b) return false;
+    b.click(); await new Promise(r => setTimeout(r, 200));
+    const ok = document.querySelectorAll('[data-swappick]').length > 0;
+    const d = document.querySelector('[data-act="swapdone"]'); if (d) d.click();
+    return ok;
+  }));
+  await p.waitForTimeout(300);
   await p.evaluate(() => {
     const b2 = document.querySelector('button[data-act="autodeploy"]');
     if (b2) b2.click();

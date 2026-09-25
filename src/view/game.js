@@ -1013,6 +1013,30 @@
       '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
       '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
   }
+  /* Modifying the armies (p. 46): before deployment, with the enemy's list on
+     the other panel, a player swaps some units for others of the same Tier. */
+  function swapCard() {
+    var sa = state.swapAsk;
+    var mine = state.units.filter(function (u) { return u.side === sa.side && u.pickIdx != null; });
+    var h = '<div class="card"><h2>Modify your army</h2>' +
+      '<p class="sub">You have seen the table and ' + esc(sideName(sa.side === 'A' ? 'B' : 'A')) + '’s force. Swap up to <b>' + sa.total +
+      '</b> unit' + (sa.total === 1 ? '' : 's') + ' for others of the same Tier' +
+      (state.cfg.dossier ? ' from your dossier' : '') + ' — ' + sa.left + ' left.</p>';
+    if (sa.pick) {
+      var u = byId(sa.pick), opts = Q.swapOptions(sa.side, sa.pick);
+      h += '<p class="hint">Swap <b>' + esc(u ? u.name : '') + '</b> (Tier ' + (u ? R.ROMAN[u.tier] : '') + ') for:</p><div class="swaplist">' +
+        (opts.length ? opts.map(function (o) {
+          return '<button class="act" data-swapin="' + escHtml(o.id) + '"><span>' + esc(o.name) + '</span></button>';
+        }).join('') : '<p class="hint">Nothing of that Tier to swap in.</p>') +
+        '</div><div class="acts"><button class="act" data-act="swapback"><span>Back</span><small>Choose another unit</small></button></div>';
+    } else {
+      h += '<div class="swaplist">' + mine.map(function (m) {
+        var n = Q.swapOptions(sa.side, m.id).length;
+        return '<button class="act" data-swappick="' + m.id + '"' + (n ? '' : ' disabled') + '><span>' + esc(m.name) + '</span><small>Tier ' + R.ROMAN[m.tier] + (n ? '' : ' — nothing to swap in') + '</small></button>';
+      }).join('') + '</div>';
+    }
+    return h + '<div class="acts"><button class="act" data-act="swapdone"><span>' + (sa.left === sa.total ? 'Keep the list' : 'Done') + '</span><small>Back to deployment — the list is final</small></button></div></div>';
+  }
   // placing pieces by hand: Last Stand, Fortify and Strike!, Detailed Terrain Knowledge
   function placeCard() {
     var pa = state.placeAsk;
@@ -3962,6 +3986,7 @@
     var ctxBox = el('context'), html = '';
     if (state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
     if (state.phase === 'terrain') html = terrainCard();
+    else if (state.phase === 'deploy' && state.swapAsk && !isAI(state.swapAsk.side)) html = swapCard();
     else if (state.placeAsk && !isAI(state.placeAsk.side)) html = placeCard();
     else if (state.minePick && !isAI(state.minePick.side)) html = mineCard();
     else if (state.phase === 'deploy') html = deployCard();
@@ -4227,6 +4252,12 @@
         '</b> stay in reserve and come in by Battlefield Insertion from the second turn on.' : '') + '</p>';
     if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
       (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
+    // Modifying the armies (p. 46): offered until the first unit goes down
+    if (!isAI(me) && Q.canSwapNow(me)) {
+      var sv = state.swapAvail[me];
+      h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left +
+        ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier, having seen the table and their force</small></button></div>';
+    }
     h += deployList(me);
     /* The scenario's split (which units go on the table and which wait, or
        which wave each comes in) and who starts the battle aboard a hull are
@@ -4404,10 +4435,12 @@
        `data-act`, so selecting on `[data-act]` alone never bound them and
        nothing happened when they were pressed: troops could not be put aboard
        a hull, or taken off one, during deployment. All three are selected. */
-    host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick]').forEach(function (b) {
+    host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
       b.addEventListener('click', function () {
         var a = b.getAttribute('data-act');
         if (SFX) SFX.click();
+        if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
+        if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
         if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
         if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }
         if (b.hasAttribute('data-load')) {
@@ -4426,7 +4459,9 @@
         else if (a === 'holdarrive') { holdArrival(); return; }
         else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
         else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
-        else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }
+        else if (a === 'placerot' || a === 'placedone' || a === 'swapdone') { send({ k: a }); return; }
+        else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
+        else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
         else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf') { send({ k: a }); return; }
         else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
         else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
