@@ -4144,6 +4144,11 @@
       var sw2 = mh.querySelector('.cmodal-scroll'); if (sw2) sw2.scrollTop = swTop;
       wireHost(mh);
     }
+    /* ...and so does the reserves-and-transports modal: in the side rail it was
+       drawn under the board, so opening it seemed to do nothing. It is already
+       wired where it was drawn, so it is only moved. */
+    var db = ctxBox.querySelector('.cmodal[data-deploybox]');
+    if (db) mh.appendChild(db);
     if (own) wireHost(own);
     if (opp) wireHost(opp);
     if (both) wireHost(both);
@@ -4405,6 +4410,10 @@
       h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
         '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
         '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
+    }
+    else {
+      // no hull to fill and no split to set: the button is there, greyed out, so it is known to exist
+      h += '<div class="acts"><button class="act" disabled title="Nothing in this force can carry troops"><span>Transports</span><small>No transports in this force</small></button></div>';
     }
     if (state.swapAsk && state.swapAsk.side === me && !isAI(me)) h += swapCard();
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
