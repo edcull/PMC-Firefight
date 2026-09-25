@@ -8745,12 +8745,7 @@
         case 'mlrs': {
           // an armoured cab at the front, a flat launcher bed behind it
           slabF(HF, -L * 0.5, L * 0.5, -w, w, z0, H * 0.55, TB, L * 0.04, 0, w * 0.03);
-          slabF(HF, L * 0.16, L * 0.5, -w * 0.96, w * 0.96, z0 + H * 0.55, H * 0.8, TB, L * 0.1, 0, w * 0.06);
-          if (cos + sin > 0.02) {                          // the windscreen, only when the front faces us
-            var m1 = S3(HF(L * 0.45, -w * 0.78), z0 + H * 0.75), m2 = S3(HF(L * 0.45, w * 0.78), z0 + H * 0.75);
-            var m3 = S3(HF(L * 0.4, w * 0.74), z0 + H * 1.25), m4 = S3(HF(L * 0.4, -w * 0.74), z0 + H * 1.25);
-            poly(g, [m1, m2, m3, m4], GLASS); edge(g, m4, m3, GLINT, 0.8);
-          }
+          // (the cab itself goes on with the launcher, in styledTop, so the two layer by depth)
           lights(HF, L * 0.5, -w * 0.62, z0 + H * 0.35); lights(HF, L * 0.5, w * 0.62, z0 + H * 0.35);
           return;
         }
@@ -9191,6 +9186,20 @@
           launcher(MF, -0.3, 0.3, -w * 0.62, w * 0.62, roof + 4, 6, 2, 6, 'rocket', { up: 6, tone: TT, warheads: '#8a3a24' });
         });
       }
+      if (st.body === 'mlrs') {
+        /* The cab stands up off the bed: with the nose towards the eye it goes on
+           after the launcher and hides the lower end of it and its base; with the
+           tail towards the eye the launcher goes over it. */
+        var mw = w, mz = deck;
+        part(depthOf(HF, L * 0.33, 0), function () {
+          slabF(HF, L * 0.16, L * 0.5, -mw * 0.96, mw * 0.96, mz + H * 0.55, H * 0.8, TB, L * 0.1, 0, mw * 0.06);
+          if (cos + sin > 0.02) {                          // the windscreen, only when the front faces us
+            var m1 = S3(HF(L * 0.45, -mw * 0.78), mz + H * 0.75), m2 = S3(HF(L * 0.45, mw * 0.78), mz + H * 0.75);
+            var m3 = S3(HF(L * 0.4, mw * 0.74), mz + H * 1.25), m4 = S3(HF(L * 0.4, -mw * 0.74), mz + H * 1.25);
+            poly(g, [m1, m2, m3, m4], GLASS); edge(g, m4, m3, GLINT, 0.8);
+          }
+        });
+      }
       if (st.mlrs) {
         var LF = frameAt(-L * 0.18, 0, AIM);
         part(depthOf(HF, -L * 0.18, 0), function () {
@@ -9201,7 +9210,7 @@
              right round and the hull's near flank is the pods' far one. */
           var nsL = nearSideAt(AIM);
           [-nsL, nsL].forEach(function (sd) {
-            launcher(LF, -L * 0.3, L * 0.26, Math.min(sd * w * 0.04, sd * w * 0.9), Math.max(sd * w * 0.04, sd * w * 0.9), roof + 4, 10, 2, 3, 'rocket', { up: 10, tone: TB, warheads: '#15181e' });
+            launcher(LF, -L * 0.3, L * 0.26, Math.min(sd * w * 0.04, sd * w * 0.9), Math.max(sd * w * 0.04, sd * w * 0.9), roof + 4, 10, 2, 3, 'rocket', { up: 15, tone: TB, warheads: '#15181e' });
           });
         });
       }
