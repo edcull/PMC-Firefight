@@ -6415,16 +6415,32 @@
     function dep(t, s2) { var w = W(t, s2); return w.x + w.y; }
     var big = /heavy/.test(gun.key || '') ? 1.18 : 1;
     var STL = '#3b4139', LIT = '#57604f', DRK = '#262b24', TYRE = '#1c201b', HUB = '#4a5247';
-    var zAx = 0.2 * big, rW = 0.2 * big, wS = 0.34 * big;
+    var zAx = 0.27 * big, rW = 0.27 * big, wS = 0.36 * big, tw = 0.11 * big;
+    /* A road wheel as a solid: a tyre with width, its tread band joining the
+       inner face to the outer, so it still reads edge-on; the face towards the
+       eye goes on last, with its rim and hub. */
     function wheel(sd) {
-      var pts = [];
-      for (var a2 = 0; a2 < 14; a2++) {
-        var an = a2 / 14 * Math.PI * 2;
-        pts.push(S(Math.cos(an) * rW, sd * wS, zAx + Math.sin(an) * rW));
+      var N = 18, sIn = sd * (wS - tw / 2), sOut = sd * (wS + tw / 2);
+      function ring(s2, r) {
+        var out = [];
+        for (var a2 = 0; a2 < N; a2++) {
+          var an = a2 / N * Math.PI * 2;
+          out.push(S(Math.cos(an) * r, s2, zAx + Math.sin(an) * r));
+        }
+        return out;
       }
-      poly(g, pts, TYRE);
-      var h = S(0, sd * wS, zAx);
-      ellipse(g, h[0], h[1], rW * K * 0.42, rW * K * 0.42, HUB);
+      var nearOut = dep(0, sOut) > dep(0, sIn), far = nearOut ? sIn : sOut, near = nearOut ? sOut : sIn;
+      var fr = ring(far, rW), nr = ring(near, rW);
+      poly(g, fr, '#121511');
+      for (var q = 0; q < N; q++) {                      // the tread, a band of quads round the tyre
+        var q2 = (q + 1) % N;
+        poly(g, [fr[q], fr[q2], nr[q2], nr[q]], q % 2 ? '#1a1e19' : '#232822');
+      }
+      poly(g, nr, TYRE);
+      poly(g, ring(near, rW * 0.62), '#2e342d');         // the wheel's steel disc
+      poly(g, ring(near, rW * 0.26), HUB);               // its hub
+      var hb = S(0, near, zAx + rW * 0.08);
+      ellipse(g, hb[0], hb[1], Math.max(1, K * 0.03), Math.max(1, K * 0.03), '#6e7868');
     }
     var parts = [
       { d: dep(0, -wS), fn: function () { wheel(-1); } },
