@@ -6838,9 +6838,10 @@
           R.box(0.02, 0.1, 0.03, 0.1, 0.3, 0.37, '#4d564a', '#39413a', '#2b3128');   // the sight
         });
         var C = R.base;
-        C.part(-0.35, 0.3, function () {
-          C.box(-0.48, -0.26, 0.2, 0.38, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
-          for (var r = 0; r < 3; r++) C.rod([-0.44 + r * 0.06, 0.14, 0], [-0.44 + r * 0.06, 0.14, 0.12], 0.02, ['#6a4a22', '#8a5a2a', '#a8763c']);
+        // the bomb crate and rounds stood ready, beside the baseplate and clear of where the crew kneel
+        C.part(0.08, 0.34, function () {
+          C.box(0.0, 0.2, 0.26, 0.42, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
+          for (var r = 0; r < 3; r++) C.rod([0.03 + r * 0.06, 0.2, 0], [0.03 + r * 0.06, 0.2, 0.12], 0.02, ['#6a4a22', '#8a5a2a', '#a8763c']);
         });
       } },
     /* The heavy machine gun on its tripod: a perforated cooling jacket on the
