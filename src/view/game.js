@@ -419,7 +419,13 @@
         return;
       }
       case 'hint': setHint(null, ev.text || undefined); return;
-      case 'colour': ISO.setSideColour(ev.side, ev.key); return;
+      case 'colour': {
+        ISO.setSideColour(ev.side, ev.key);
+        // the panels, pills and P1/P2 tags wear the colours the forces are painted in
+        var cvar = { A: '--own-A', C: '--own-C' }[ev.side];
+        if (cvar && ISO.PALETTE[ev.side]) document.documentElement.style.setProperty(cvar, sideInk(ev.side));
+        return;
+      }
       case 'terrain': {
         var pieces = (ev.pieces || []).map(function (i) { return { piece: state.terrain[i] }; })
           .filter(function (w) { return !!w.piece; });
@@ -2744,7 +2750,7 @@
       if (state.activeSide === 'B') { act.textContent = 'OpFor phase'; act.className = 'pill pill-B'; }
       else {
         act.textContent = state.solo.coop ? soloOwnerName(state.activeOwner) + ' to act' : 'Your commando';
-        act.className = 'pill pill-' + (state.solo.coop && state.activeOwner === 2 ? 'C' : 'A');
+        act.className = 'pill pill-' + (state.solo.coop ? (state.activeOwner === 2 ? 'C' : 'P1') : 'A');
       }
     } else {
       act.textContent = 'Activating: ' + sideName(state.activeSide);
@@ -4197,19 +4203,28 @@
 
   function forceList(only) {
     var h = '<div class="forces">';
+    /* A co-op game's commandos are one side, but each player's is listed on its
+       own, under its name and in its colour. */
+    var groups = [];
     (only ? [only] : ['A', 'B']).forEach(function (side) {
-      h += '<div class="force force-' + side + '"><h3>' + (side === 'A' ? state.cfg.nameA : state.cfg.nameB) +
-        ' <span class="tag">' + side + '</span></h3><ul>';
+      if (side === 'A' && state.solo && state.solo.coop) {
+        state.solo.owners.forEach(function (o) { groups.push({ side: side, owner: o, name: soloOwnerName(o) }); });
+      } else groups.push({ side: side, owner: null, name: side === 'A' ? state.cfg.nameA : state.cfg.nameB });
+    });
+    groups.forEach(function (gp) {
+      var side = gp.side;
+      h += '<div class="force force-' + side + (gp.owner ? ' force-own' + gp.owner : '') + '"><h3>' + esc(gp.name) +
+        ' <span class="tag">' + (gp.owner ? 'P' + gp.owner : side) + '</span></h3><ul>';
       // the living in their order, and whatever is gone below them
       // each as it stands on the table: a unit still to be hit in what is being drawn is shown as it was
-      var mine = state.units.filter(function (u) { return u.side === side; }).map(shownAs);
+      var mine = state.units.filter(function (u) { return u.side === side && (!gp.owner || (u.owner || 1) === gp.owner); }).map(shownAs);
       mine.filter(function (u) { return u.alive; }).concat(mine.filter(function (u) { return !u.alive; })).forEach(function (u) {
         var st = u.alive ? R.status(u) : 'dead';
         var gone = u.alive ? '' : u.fled ? 'fled' : R.isMachine(u) ? 'destroyed' : 'wiped out';
         h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected && ui.selected.id === u.id ? ' sel' : '') +
           '" data-unit="' + u.id + '"><span class="ru-code">' + u.code + '</span>' +
           '<span class="ru-name">' + u.name + honourMarks(u) +
-          (state.solo && state.solo.coop && side === 'A' ? ' <small class="own own' + (u.owner || 1) + '">P' + (u.owner || 1) + '</small>' : '') + '</span>' +
+          '</span>' +
           (gone ? '<span class="ru-gone">' + gone + '</span>' :
           '<span class="ru-num">' + (R.isMachine(u)
             ? Math.max(0, u.str - u.damage) + '/' + u.str
@@ -5908,8 +5923,6 @@
       name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
       colour: muster.colour || 'ochre', noun: muster.demoNoun || null
     };
-    // co-op commandos share a colour: Player 1's is both of theirs
-    if (muster.hot.kind === 'coop' && i === 0 && muster.hot.sides[1]) muster.hot.sides[1].colour = muster.hot.sides[0].colour;
   }
   function hotLoadSide(i) {
     var sd = muster.hot.sides[i];
@@ -5922,10 +5935,10 @@
       if (el('hot-name')) el('hot-name').value = '';   // a fresh force: the other one's name is not its own
       hotRandomise(i);
     } else {
-      // a fresh force for the second player; in a hotseat, in a colour the first is not wearing, in co-op the same one
+      // a fresh force for the second player, in a colour the first is not wearing
       var two = i === 1 && (muster.hot.kind === 'hotseat' || muster.hot.kind === 'coop');
       muster.keys = []; muster.name = two ? 'Player 2' : '';
-      if (two) muster.colour = muster.hot.kind === 'coop' ? muster.hot.sides[0].colour : foeColour([muster.hot.sides[0].colour]);
+      if (two) muster.colour = foeColour([muster.hot.sides[0].colour]);
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
   }
@@ -6039,7 +6052,7 @@
       hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
         ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
         'A hotseat battle: two players, one screen. Set the Battle Tier and Priority Level, tap each player\u2019s force to muster it, then choose the scenario, the world and the table.'],
-      coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
+      coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, names it, paints it and sets the Battle Tier; then Player 2 does the same, in a colour of their own.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
         'A co-operative game: two commandos against the OpFor. Set the Battle Tier and Priority Level, tap each player’s commando to muster it, then choose who you are up against, the solitaire scenario, the world and the table.'],
       solo: ['A solitaire game: your commando against the OpFor. Pick its units from the commando table.', '',
@@ -6055,9 +6068,7 @@
     el('btn-start').textContent = step < 3 && h.edit ? 'Back to the battlefield'
       : step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
       : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
-    if (el('colour-hint')) el('colour-hint').textContent = kind === 'coop'
-      ? 'What both commandos are painted in: the two of you are one side on the table.'
-      : step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
+    if (el('colour-hint')) el('colour-hint').textContent = step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
         : 'What ' + hotWho(2).replace(/^The/, 'the') + '’s troops are painted in — anything but ' + hotWho(1).replace(/^Your/, 'your') + '’s colour.';
     if (step === 3) {
       // each force is a button: tap it to go back and change it
@@ -6090,7 +6101,7 @@
       if (!chk.ok) return hotRefuse((h.kind === 'ai' ? who : who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force')) + ' is not legal yet: ' + (chk.faults.join(' ') || 'pick some units.'));
       var other = h.step === 2 ? h.sides[0] : h.edit ? h.sides[1] : null;
       if (other && name === other.name) return hotRefuse('The two need different names.');
-      if (other && h.kind !== 'coop' && muster.colour === other.colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
+      if (other && muster.colour === other.colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
       if (el('hot-name')) el('hot-name').value = name;
       hotSaveSide();
       if (h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); el('setup').querySelector('.sheet').scrollTop = 0; return; }
@@ -6127,7 +6138,8 @@
         tier: tier, pl: gamePL, scenario: scen,
         armyA: armyA, armyB: SOLO.rollOpFor(tier, gamePL, opFaction, machines), ownersA: ownersA,
         nameA: coop ? a.name + ' & ' + b.name : a.name, nameB: 'OpFor',
-        colourA: a.colour, colourB: foeColour([a.colour]),
+        // each commando in its own colour; the OpFor in one neither is wearing
+        colourA: a.colour, colourC: coop ? b.colour : null, colourB: foeColour(coop ? [a.colour, b.colour] : [a.colour]),
         tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup,
         solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name] }
       });

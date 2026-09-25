@@ -16,6 +16,8 @@
     --ink-faint: #64728a;
     --alpha: #d8a13a;
     --bravo: #5aa9c8;
+    /* a co-op game's two players, in the colours their commandos are painted in */
+    --own-A: #d8a13a; --own-C: #7ecfc0;
     --warn: #e08a3a;
     --bad: #e0557a;
     --good: #7ed6a0;
@@ -439,6 +441,8 @@
   }
   .force-A h3 { color: var(--alpha); }
   .force-B h3 { color: var(--bravo); }
+  .force-own1 h3 { color: var(--own-A); }
+  .force-own2 h3 { color: var(--own-C); }
   .tag { font-family: var(--mono); font-size: 10px; border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; color: var(--ink-faint); }
   .force ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
   .ru {
@@ -874,9 +878,10 @@
   .playertabs button { font: 600 12px var(--display, system-ui); letter-spacing: .06em; text-transform: uppercase; padding: 7px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: inherit; cursor: pointer; }
   .playertabs button[aria-pressed="true"] { background: rgba(216,161,58,.16); border-color: rgba(216,161,58,.7); color: #f0c566; }
   .own { font: 600 10px var(--mono, monospace); padding: 0 4px; border-radius: 3px; margin-left: 4px; }
-  .own1 { color: #d8a13a; border: 1px solid rgba(216,161,58,.5); }
-  .own2 { color: #7ecfc0; border: 1px solid rgba(126,207,192,.5); }
-  .pill-C { color: #7ecfc0; border-color: rgba(126,207,192,.45); background: rgba(126,207,192,.1); }
+  .own1 { color: var(--own-A); border: 1px solid color-mix(in srgb, var(--own-A) 50%, transparent); }
+  .own2 { color: var(--own-C); border: 1px solid color-mix(in srgb, var(--own-C) 50%, transparent); }
+  .pill-P1 { color: var(--own-A); border-color: color-mix(in srgb, var(--own-A) 45%, transparent); background: color-mix(in srgb, var(--own-A) 10%, transparent); }
+  .pill-C { color: var(--own-C); border-color: color-mix(in srgb, var(--own-C) 45%, transparent); background: color-mix(in srgb, var(--own-C) 10%, transparent); }
   #setup.solo-mode .std-only { display: none !important; }
   /* a hotseat skirmish is mustered in three steps: each player's force, then the battlefield */
   #setup .hot-only { display: none; }
@@ -896,7 +901,6 @@
   #setup[data-quick][data-hot="3"] #tierpl-field { display: grid !important; }
   #setup:not([data-kind="ai"]) #btn-quick-clear { display: none !important; }
   /* ...and a force's colours sit under its name, with no hint: who takes which is plain on the battlefield step */
-  #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
   #setup[data-hot] .hot-name { position: relative; }
   #setup[data-hot] .hot-name .hot-colour { display: none; margin: 0; }
   #setup[data-hot] .hot-name .hot-colour.open {
@@ -921,7 +925,6 @@
   }
   .chip-btn span { display: block; height: 100%; min-height: 28px; border-radius: 3px; }
   .chip-btn:hover, .chip-btn:focus-visible, .chip-btn[aria-expanded="true"] { border-color: var(--ink); }
-  #setup[data-hot="2"][data-kind="coop"] #btn-colour-pop { display: none; }
   #setup[data-hot] #colour-hint { display: none; }
   #setup[data-kind="ai"] #btn-quick-clear { display: grid; }
   /* a demo force's own buttons: roll it again, or load and save it from a modal */
@@ -979,8 +982,6 @@
   #setup[data-hot] .muster.picking > .demo-btns, #setup[data-hot] .muster.picking > .limits { display: none !important; }
   #setup[data-hot] .muster.picking > .cat-done { display: flex; margin-top: 12px; }
   .cat-back.open { display: block; position: fixed; inset: 0; z-index: 70; background: rgba(8, 11, 16, .78); }
-  /* co-op: the two commandos are one side on the table, in one colour, chosen by Player 1 */
-  #setup[data-hot="2"][data-kind="coop"] .hot-colour { display: none !important; }
   .hot-sum .hot-side {
     display: block; width: 100%; text-align: left; cursor: pointer; color: var(--ink); font: inherit;
     border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel-2);
@@ -2196,6 +2197,6 @@
 <script src="src/engine/engine.js?v=5926f0ed54"></script>
 <script src="src/net/net.js?v=eaa07d90ac"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=38d8c7da07"></script>
+<script src="src/view/game.js?v=ced5a33c99"></script>
 <script src="src/view/dossier.js?v=216e69f26d"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>

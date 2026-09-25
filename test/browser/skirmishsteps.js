@@ -75,19 +75,23 @@ const { ROOT, SHOTS } = require('../where.js');
   await next();
   await p.evaluate(() => document.querySelector('[data-hotside="1"]').click()); await p.waitForTimeout(200);
   check('player 2\'s card opens their commando', /^Player 2 — muster your commando$/.test(await title()));
-  check('...and the commandos share player 1\'s colour', !(await shown('colourpick')) && (await hot()).sides[1].colour === (await hot()).sides[0].colour);
+  check('...with colours of their own to choose', await shown('btn-colour-pop'));
   await setVal('sel-faction', 'rebel');
   await roll(); await name('Red Cell');
   await next();
   check('then the battlefield again', /^The battlefield$/.test(await title()) && await shown('sel-solo-scen'));
+  h = await hot();
+  check('...player 2 painted in a colour player 1 is not wearing', h.sides[1].colour !== h.sides[0].colour, h.sides.map(sd => sd.colour).join(' / '));
   await setVal('sel-solo-scen', 's_crush');
   await next();
   await p.waitForTimeout(600);
   const cs = await p.evaluate(() => { const s = window.PMC_STATE(); return { coop: !!(s.solo && s.solo.coop), names: s.solo && s.solo.names, scen: s.cfg.scenario,
+    colours: [s.cfg.colourA, s.cfg.colourC, s.cfg.colourB],
     owners: [...new Set(s.units.filter(u => u.side === 'A' && !u.extra).map(u => u.owner))].sort().join(),
     p2rebel: s.units.filter(u => u.side === 'A' && u.owner === 2 && !u.extra).every(u => u.faction === 'rebel') }; });
   check('the co-op battle has both commandos, each their own', cs.coop && cs.names.join() === 'Ghost Team,Red Cell' && cs.owners === '1,2' && cs.p2rebel && cs.scen === 's_crush',
     JSON.stringify(cs));
+  check('...each in its own colour, and the OpFor in a third', new Set(cs.colours).size === 3 && cs.colours.every(Boolean), cs.colours.join(' / '));
 
   console.log('\nDemo');
   // a demo opens on the battlefield with both forces already rolled
