@@ -138,6 +138,19 @@
     font-family: var(--display); font-size: 12px; min-width: 28px; height: 26px; padding: 0 7px; cursor: pointer;
   }
   .vzoom button:hover { border-color: var(--alpha); }
+  .vcolbtn { position: absolute; top: 8px; left: 8px; z-index: 3; }
+  .vcolbtn > button.vcolnow {
+    width: 34px; height: 34px; padding: 3px; border-radius: 6px; cursor: pointer;
+    background: rgba(12, 16, 20, .72); border: 1px solid var(--line);
+  }
+  .vcolbtn > button.vcolnow:hover, .vcolbtn > button.vcolnow[aria-expanded="true"] { border-color: var(--alpha); }
+  .vcolbtn > button.vcolnow span { display: block; width: 100%; height: 100%; border-radius: 4px; }
+  .vcolpop {
+    position: absolute; top: 40px; left: 0; width: min(300px, calc(100vw - 40px));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  }
+  .vcolpop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
   .vzoom button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
   #vboard { touch-action: pan-y; }
   /* a tap on the stage fires; it does not flash the browser's tap highlight or select anything */
@@ -414,7 +427,7 @@
   <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
-  <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> strafe · <kbd>A</kbd> ability</span>
+  <span class="keys">tap the stage or <kbd>F</kbd> fire · <kbd>W</kbd> walk · <kbd>I</kbd> insert · <kbd>S</kbd> state · <kbd>A</kbd> ability</span>
 </header>
 
 <div class="vscrim" id="vscrim"></div>
@@ -429,6 +442,8 @@
   </div>
 
   <div class="vstage">
+    <!-- the colours the unit wears: a swatch, and the whole set dropped down from it -->
+    <div class="vcolbtn" id="vcolbtn"></div>
     <div class="vzoom" id="vzoom" aria-label="Zoom">
       <button type="button" data-vzoom="wide" title="Zoom out, to the whole firing line (−)">Wide</button>
       <button type="button" data-vzoom="close" title="Zoom in, close on the unit (+)">Close</button>
@@ -448,4 +463,4 @@
 <script src="src/view/fx.js?v=2257423a4b"></script>
 <script src="src/view/tips.js?v=89a75a2241"></script>
 <script src="src/view/atlas.js?v=97bf1a5b96"></script>
-<script src="src/view/viewer.js?v=093191f439"></script>
+<script src="src/view/viewer.js?v=adb0ecd839"></script>
