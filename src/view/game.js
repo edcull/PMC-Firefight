@@ -137,7 +137,7 @@
     ui.feedUnread = 0;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
     ui.insertion = null; ui.preview = null; ui.deployPick = null;
-    ui.watch = null;
+    ui.watch = null; ui.inspect = false;
   }
 
   /* ---- sending ---- */
@@ -523,10 +523,10 @@
     ui.preview = null;
     /* In a demo the watcher's pick is the selection, and it stays picked
        while the AI activates one unit after another — until it is gone. */
-    if (handsOff() && ui.watch) {
+    if ((handsOff() || ui.inspect) && ui.watch) {
       var w = byId(ui.watch);
       if (w && w.alive) { ui.selected = w; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; }
-      else ui.watch = null;
+      else { ui.watch = null; ui.inspect = false; }
     }
   }
 
@@ -609,6 +609,10 @@
     send({ k: 'action', id: id });
   }
   // the watcher's own pick in a demo: shown, kept, and never sent to the engine
+  function inspectUnit(u) {
+    ui.inspect = true;
+    watchUnit(u);
+  }
   function watchUnit(u) {
     ui.watch = u.id;
     ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
@@ -619,6 +623,11 @@
   function select(u) {
     if (!u) return;
     if (handsOff()) { watchUnit(u); return; }
+    /* Out of turn, or an enemy's unit: picked to look at, on this screen only.
+       The selection the engine keeps belongs to whoever is acting, and both
+       screens are shown it — so a look is kept here and nothing is sent. */
+    if (!myTurn() || seats.indexOf(u.side) < 0) { inspectUnit(u); return; }
+    ui.inspect = false; ui.watch = null;
     /* On a phone the panel is one slice of screen: picking a unit is a request
        to act with it, so the panel comes back to the actions. */
     if (window.innerWidth <= 1000) setMTab('act');
