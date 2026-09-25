@@ -453,6 +453,18 @@
   /* An effect the engine described without knowing how high anything is drawn.
      A flier's height is a matter for the view, so it is filled in here. */
   function reLift(f) {
+    /* A teleport link to or from a craft meets the craft's middle, and the
+       craft's gate runs for as long as the link is up. */
+    if (f && f.kind === 'tplink') {
+      [['fromId', 'from'], ['toId', 'to']].forEach(function (e) {
+        var cu = evUnit(f[e[0]]);
+        if (cu && cu.cls === 'aircraft') {
+          f[e[1]] = { x: f[e[1]].x, y: f[e[1]].y, up: ISO.craftCentreUp(cu) };
+          cu.ringUntil = nowMs() + (f.delay || 0) + (f.dur || 1500);
+        }
+      });
+      return f;
+    }
     /* A smoke round fired by a machine — a captured patrol craft's — leaves its
        gun, up where the craft flies, not the grass under it. */
     if (f && f.kind === 'lob' && f.unit) {

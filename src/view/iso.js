@@ -6693,6 +6693,15 @@
   /* How high a flier's hull hangs above the point it stands on. The game needs
      this to aim shots at the airframe rather than at the grass beneath it; a
      ground hull sits on its own ground, so it answers nothing. */
+  /* How high over its ground a craft's middle is drawn — where a line to it (a
+     teleport link) should meet it. A tri-wing's axis rides above its stand. */
+  function craftCentreUp(u) {
+    if (!u || !u.art) return 0;
+    var hs = hullSpec(u.art), x3 = XENO3D[u.art];
+    var fly = hs && hs.fly ? ELEV * hs.fly : 0;
+    if (x3 && x3.kind === 'craft') return fly + ((x3.span || 0.7) * Math.sin((x3.droop || 40) * Math.PI / 180) + 0.04) * K * 0.9;
+    return fly + ((hs && hs.hgt) || 12) * 0.5;
+  }
   function flyLift(u) {
     if (!u || !u.art) return 0;
     var spec = hullSpec(u.art);
@@ -6991,15 +7000,25 @@
          fuselage, square to it, set back where the three wings are broadest
          so they run through it and hold it. Its far half goes in behind the
          wings and body, its near half over them; the gate burns blue inside. */
+      /* While it is sending or receiving through the network the gate is live:
+         the inside fills with a pulsing blue sheet and light runs round the band. */
+      var gateOn = !dead && u.ringUntil && tnow < u.ringUntil;
+      var pulse = gateOn ? 0.5 + 0.5 * Math.sin(tnow / 90) : 0;
       function hoop(near) {
         if (!spec.ring) return;
         var ht = (spec.tip || -0.72) * Lc * 0.62, hr = span * 0.56, bw = 0.07, N = 40, fr2 = [], bk = [];
+        if (gateOn && !near) {
+          // the sheet across the gate, behind the near half of the band
+          var sheet = [];
+          for (var si = 0; si < N; si++) sheet.push(P3(ht, hr * 0.96, si / N * Math.PI * 2));
+          path(sheet, 'rgba(110,190,255,' + (0.18 + 0.22 * pulse) + ')');
+        }
         function flush() {
           if (fr2.length > 1) {
             var band = fr2.concat(bk.slice().reverse());
             path(band, near ? WH.lt : WH.dk); stroke(band, 1, WH.seam, true);
-            stroke(near ? fr2 : bk, m(0.8), BLU.m);
-            if (!dead) stroke(near ? fr2 : bk, m(0.3), BLU.l);
+            stroke(near ? fr2 : bk, m(0.8 + (gateOn ? 0.5 * pulse : 0)), BLU.m);
+            if (!dead) stroke(near ? fr2 : bk, m(0.3 + (gateOn ? 0.4 * pulse : 0)), BLU.l);
           }
           fr2 = []; bk = [];
         }
@@ -7008,6 +7027,14 @@
           if ((dot3(roll(hph), EYE) >= 0) === near) { fr2.push(P3(ht + bw, hr, hph)); bk.push(P3(ht - bw, hr, hph)); } else flush();
         }
         flush();
+        if (gateOn && near) {
+          // two sparks running round the band
+          [0, Math.PI].forEach(function (off) {
+            var sp = P3(ht, hr, tnow / 160 + off);
+            ellipse(g, sp[0], sp[1], m(1.6), m(1.4), 'rgba(110,190,255,.45)');
+            ellipse(g, sp[0], sp[1], m(0.8), m(0.7), '#e4f4ff');
+          });
+        }
       }
       // a support craft's gun is a token: short, thin, one coil
       var gk = spec.support ? 0.5 : 1, gEnd = spec.support ? 1.06 : 1.25;
@@ -10982,7 +11009,7 @@
       sprites = {}; corpses = {}; hullCache = {}; TEX_TILE = {}; DIM_CANVAS = null;
     },
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
-    flyLift: flyLift, hullSpec: hullSpec, figureHeight: figureHeight, ROLES: ROLES,
+    flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
     figure: function (side, art, i, pose, step, mount) {
       return sprite(side || 'A', art, i || 0, pose || 'stand', step || 0, MODEL * fitScale(art, i || 0), 0, mount);

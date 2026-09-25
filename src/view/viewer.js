@@ -69,7 +69,8 @@
       facing: view.walking ? view.facing : faceAngle(view.face),
       // the turret stays on the mark it last fired at, until the hull is turned
       aim: view.aimFor === view.face + '|' + view.walking ? view.aim : null,
-      faceL: view.faceL
+      faceL: view.faceL,
+      ringUntil: view.ringUntil || 0                  // a teleport craft's gate, while it is sending
     });
     if (R.propsFor(p).length) R.applyPropulsion(u, view.prop);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
@@ -428,13 +429,19 @@
     var to = { x: pad.x + ux * TP.BY, y: pad.y + uy * TP.BY };         // ...in front of the turret
     view.tele = { t0: Date.now(), from: from, pad: pad, to: to };
     var rgb = glowRGB();
+    // a teleport craft sends from its own gate: the link meets its middle, and the gate runs while it is up
+    var src = { x: u.x, y: u.y };
+    if (u.cls === 'aircraft') {
+      src.up = I.craftCentreUp(u);
+      view.ringUntil = (root.performance ? performance.now() : 0) + TP.OUT + TP.SHOWN + 200;
+    }
     return [
       // the far turret teleported in first
       { kind: 'teleportin', x: pad.x, y: pad.y, r: 2.2, dur: TP.PAD + 200 },
       // the squad going: a ring of light where it stood
       { kind: 'wave', x: from.x, y: from.y, up: 0, r: 2, rgb: rgb, delay: TP.OUT, dur: TP.OUT + 700 },
       // the two ends joined while it is between them
-      { kind: 'tplink', from: { x: u.x, y: u.y }, to: pad, rgb: rgb, delay: TP.OUT, dur: TP.SHOWN },
+      { kind: 'tplink', from: src, to: pad, rgb: rgb, delay: TP.OUT, dur: TP.SHOWN },
       // and coming out, in front of the turret
       { kind: 'teleportin', x: to.x, y: to.y, r: 1.4, delay: TP.IN - 250, dur: TP.IN - 250 + 1400 },
       { kind: 'wave', x: to.x, y: to.y, up: 0, r: 2, rgb: rgb, delay: TP.IN, dur: TP.IN + 1050 }

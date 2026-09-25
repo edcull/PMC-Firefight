@@ -536,7 +536,9 @@
            the one it comes out of, joined by a thin pulsing line while it is between */
         var la2 = I.toScreen(f.from.x, f.from.y), lb2 = I.toScreen(f.to.x, f.to.y);
         var lf = Math.min(1, k / 0.12, (1 - k) / 0.2) * (0.45 + 0.35 * Math.sin(t / 70));
-        link(la2.x, la2.y - lift(f.from.x, f.from.y) - I.K * 0.9, lb2.x, lb2.y - lift(f.to.x, f.to.y) - I.K * 0.9, f.rgb || '110,190,255', lf);
+        // an end at a craft meets the craft's middle (`up`); a pad's, a little over the ground
+        var ha2 = f.from.up != null ? f.from.up : I.K * 0.9, hb2 = f.to.up != null ? f.to.up : I.K * 0.9;
+        link(la2.x, la2.y - lift(f.from.x, f.from.y) - ha2, lb2.x, lb2.y - lift(f.to.x, f.to.y) - hb2, f.rgb || '110,190,255', lf);
       } else if (f.kind === 'exitportal') {
         /* the salvo's one exit: opens as the first bomb goes into the gun,
            stays open while every bomb comes through, closes after the last */
