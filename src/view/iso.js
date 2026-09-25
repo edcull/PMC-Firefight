@@ -9053,7 +9053,9 @@
         /* ground machines are patched plate by plate (one prism, one plate);
            a flier's skin is patched face by face, so its few big panels vary */
         var pa = PATCH_FACE ? base[fc.i] : a1, pb = PATCH_FACE ? base[fc.j] : b1;
-        var ft = patch(tn0, { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 }, Math.round(z0) + 3);
+        // (salted by the plate's height on the hull itself, not above the ground: a machine
+        // flying higher, or hopping as it walks, keeps its own colours)
+        var ft = patch(tn0, { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 }, Math.round(z0 - lift) + 3);
         var colr = k > 0.5 ? mixc(ft.mid, ft.lit, (k - 0.5) * 2) : mixc(ft.dark, ft.mid, k * 2);
         var face = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]];
         poly(g, face, colr);
@@ -9074,7 +9076,7 @@
       });
       if (!noTop && tn.top) {
         var cxT = 0, cyT = 0; base.forEach(function (q) { cxT += q.x; cyT += q.y; });
-        var topT = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h) + 11), topCol = topT.top;
+        var topT = patch(tn0, { x: cxT / base.length, y: cyT / base.length }, Math.round(z0 + h - lift) + 11), topCol = topT.top;
         poly(g, Ts, topCol);
         if (topT.tex) texOn(Ts, topT.tex);
         if (CAMO && (tn0 === TB || tn0 === TT)) camoOn(Ts, topCol, z0 + h, true);
