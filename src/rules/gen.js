@@ -109,6 +109,8 @@
     water: [5, 12, 4, 10],
     deep: [5, 12, 4, 10],
     lava: [5, 12, 4, 10],
+    crystal: [5, 12, 4, 10],
+    ravine: [6, 14, 2.5, 5],
     barricade: [3, 8, 1, 1],
     // the book destroys high walls in sections up to 6", so none is laid longer
     wall: [3, 6, 1, 1]
@@ -485,11 +487,30 @@
   var WORLD_NAME = { desert: 'Desert world (barren)', arctic: 'Arctic world (barren)' };
 
   // the book's table for a world, under the world's own name
+  /* The barren table fought on a desert or an arctic world: its impassable
+     ground is what that world has — a crystal field in the sand, a ravine in
+     the ice — rather than a lava field on either. */
+  var IMPASSABLE = {
+    desert: { kind: 'crystal', text: '1-3 impassable areas (crystal fields, high rocks)' },
+    arctic: { kind: 'ravine', text: '1-3 impassable areas (ice ravines, high rocks)' }
+  };
+  function worldRows(rows, planet) {
+    var im = IMPASSABLE[planet];
+    if (!im) return rows;
+    return rows.map(function (row) {
+      var hot = row.alts.some(function (alt) { return alt.some(function (sp) { return sp.kind === 'lava'; }); });
+      if (!hot) return row;
+      return {
+        text: im.text, once: row.once,
+        alts: row.alts.map(function (alt) { return alt.map(function (sp) { return sp.kind === 'lava' ? P(im.kind, sp.min, sp.max, sp.big ? { big: true } : null) : sp; }); })
+      };
+    });
+  }
   function tableFor(planet) {
     if (GENERATORS[planet]) return GENERATORS[planet];
     if (BASE[planet]) {
       var t = GENERATORS[BASE[planet]];
-      return { name: WORLD_NAME[planet], rows: t.rows };
+      return { name: WORLD_NAME[planet], rows: worldRows(t.rows, planet) };
     }
     return GENERATORS.sparse;
   }

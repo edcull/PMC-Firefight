@@ -3023,6 +3023,11 @@
     water:     { name: 'Shallow water', blocks: false, impassable: false, movePenalty: 1, cover: 0, fp: 0, shallow: true },
     deep:      { name: 'Deep water',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     lava:      { name: 'Lava field',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
+    /* The barren table's impassable ground (p. 47), as a desert or an arctic
+       world has it: a field of crystal, or a ravine in the ice. Both play as a
+       lava field does — nobody crosses, everyone sees over. */
+    crystal:   { name: 'Crystal field', blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
+    ravine:    { name: 'Ice ravine',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     // the Demolish scenario's target: impassable, and only the Demolish action
     // touches it — a Sapper charge at +4, anyone else's at +2 (p. 54)
     objective: { name: 'The objective', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0, destructible: 'target' },
@@ -3248,7 +3253,7 @@
     return t;
   }
   // the pieces that come in natural outlines; built things stay square
-  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, hill: 1 };
+  var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, crystal: 1, ravine: 1, hill: 1 };
   /* The families of outline each kind is drawn from:
        blob   — a lumpy round-cornered patch
        lobed  — two to four lobes, like a copse grown together or a clover of pools
@@ -3262,6 +3267,8 @@
     water: ['blob', 'kidney', 'kidney', 'long', 'lobed'],
     deep: ['blob', 'kidney', 'long', 'lobed'],
     lava: ['rift', 'rift', 'longrift', 'longrift', 'rift'],
+    crystal: ['blob', 'lobed', 'kidney'],
+    ravine: ['longrift', 'longrift', 'longrift', 'rift'],
     hill: ['blob', 'blob', 'lobed', 'kidney']
   };
   /* Every outline is star-shaped about its centre — one radius per direction —
@@ -11797,6 +11804,8 @@
     water: [5, 12, 4, 10],
     deep: [5, 12, 4, 10],
     lava: [5, 12, 4, 10],
+    crystal: [5, 12, 4, 10],
+    ravine: [6, 14, 2.5, 5],
     barricade: [3, 8, 1, 1],
     // the book destroys high walls in sections up to 6", so none is laid longer
     wall: [3, 6, 1, 1]
@@ -12173,11 +12182,30 @@
   var WORLD_NAME = { desert: 'Desert world (barren)', arctic: 'Arctic world (barren)' };
 
   // the book's table for a world, under the world's own name
+  /* The barren table fought on a desert or an arctic world: its impassable
+     ground is what that world has — a crystal field in the sand, a ravine in
+     the ice — rather than a lava field on either. */
+  var IMPASSABLE = {
+    desert: { kind: 'crystal', text: '1-3 impassable areas (crystal fields, high rocks)' },
+    arctic: { kind: 'ravine', text: '1-3 impassable areas (ice ravines, high rocks)' }
+  };
+  function worldRows(rows, planet) {
+    var im = IMPASSABLE[planet];
+    if (!im) return rows;
+    return rows.map(function (row) {
+      var hot = row.alts.some(function (alt) { return alt.some(function (sp) { return sp.kind === 'lava'; }); });
+      if (!hot) return row;
+      return {
+        text: im.text, once: row.once,
+        alts: row.alts.map(function (alt) { return alt.map(function (sp) { return sp.kind === 'lava' ? P(im.kind, sp.min, sp.max, sp.big ? { big: true } : null) : sp; }); })
+      };
+    });
+  }
   function tableFor(planet) {
     if (GENERATORS[planet]) return GENERATORS[planet];
     if (BASE[planet]) {
       var t = GENERATORS[BASE[planet]];
-      return { name: WORLD_NAME[planet], rows: t.rows };
+      return { name: WORLD_NAME[planet], rows: worldRows(t.rows, planet) };
     }
     return GENERATORS.sparse;
   }
@@ -12497,7 +12525,11 @@
     road: { ramp: ['#4c463a', '#575042', '#625a4b', '#6d6454', '#786e5d'], fleck: ['#3a342a', '#8a806c'], rim: '#2e2921' },
     water: { ramp: WATER, fleck: ['#74b0c2', '#22414f'], rim: '#1b3540', wet: true },
     deep: { ramp: DEEPW, fleck: ['#25506a', '#0d202c'], rim: '#0a1822', wet: true },
-    lava: { ramp: CRUST, fleck: ['#d1541a', '#f08a22', '#1a1412'], rim: '#140f0c', hot: true }
+    lava: { ramp: CRUST, fleck: ['#d1541a', '#f08a22', '#1a1412'], rim: '#140f0c', hot: true },
+    // a desert world's crystal field: green glass grown out of the sand
+    crystal: { ramp: ['#2b3e34', '#35503f', '#40614b', '#4d7358', '#5d8668'], fleck: ['#8fe3b3', '#d8f7e6', '#1a2a21'], rim: '#16241c' },
+    // an arctic world's ice ravine: the floor far down in blue dark
+    ravine: { ramp: ['#060d15', '#0a1622', '#0f2030', '#152a3e'], fleck: ['#1f3d57', '#081018'], rim: '#dfeef7' }
   };
 
   function hex3(h) {
@@ -12524,7 +12556,9 @@
     bunker:   { r: 3, p: -0.14, d: 0.2, n: 0.02, tint: '#5d5850', tw: 0.2 },
     wall:     { r: 2, p: -0.08, d: 0.12, n: 0 },
     barricade:{ r: 1.6, p: -0.06, d: 0.1, n: -0.02 },
-    lava:     { r: 4, p: -0.16, d: 0.08, n: -0.12, tint: '#3b322b', tw: 0.45 }
+    lava:     { r: 4, p: -0.16, d: 0.08, n: -0.12, tint: '#3b322b', tw: 0.45 },
+    crystal:  { r: 3, p: -0.1, d: 0.06, n: 0.04, tint: '#8fb59c', tw: 0.3 },
+    ravine:   { r: 2.5, p: -0.1, d: -0.04, n: 0.08, tint: '#f2f8fb', tw: 0.35 }
   };
   function groundFit(terrain, seed) {
     var STEP = 0.5, cw = Math.ceil(W / STEP) + 2, ch = Math.ceil(H / STEP) + 2;
@@ -12684,7 +12718,7 @@
 
     g.putImageData(img, 0, 0);
     // lava lies at the bottom of cracks: the rock walls go in over the melt
-    terrain.forEach(function (r, ri) { if (r.kind === 'lava') lavaWalls(g, r, seed + ri * 131); });
+    terrain.forEach(function (r, ri) { if (r.kind === 'lava' || r.kind === 'ravine') lavaWalls(g, r, seed + ri * 131, r.kind); });
 
     // the board itself: a slab with a lit top edge and a shadowed lip
     var n0 = toScreen(0, 0), nE = toScreen(W, 0), nS = toScreen(W, H), nWt = toScreen(0, H);
@@ -13000,7 +13034,16 @@
      behind their own rim. Out from the points of the break, hairline cracks run
      on across the surrounding ground. All of it is inside the piece except the
      hairlines, which are only paint. */
-  function lavaWalls(g, r, seed) {
+  /* The same broken-crust hole serves an arctic world's ice ravine: its walls
+     are pale ice going down to blue dark rather than rock lit orange by melt. */
+  var WALLS = {
+    lava: { top: ['#6f6860', '#4f4943'], mid: ['#3d3833', '#2b2724'], deep: ['#2a1d16', '#b4521c', '#f08a22'], bevel: ['#8a8279', '#6a635c'],
+      foot: '#f08a22', rimFar: '#6e645a', rimNear: ['#15110e', '#5a5047'], crack: '#120e0c', crackGlow: 'rgba(240,120,40,.55)', crackLit: 'rgba(150,138,122,.25)', frac: 'rgba(120,108,96,.35)' },
+    ravine: { top: ['#eef6fb', '#cfe0ea'], mid: ['#9fc0d6', '#7fa3bd'], deep: ['#3f6a8a', '#16304a', '#08121c'], bevel: ['#ffffff', '#dce9f1'],
+      foot: '#0c1a28', rimFar: '#f4fbff', rimNear: ['#5c7f98', '#e8f2f8'], crack: '#5f86a3', crackGlow: 'rgba(200,230,250,.6)', crackLit: 'rgba(255,255,255,.45)', frac: 'rgba(255,255,255,.4)' }
+  };
+  function lavaWalls(g, r, seed, kind) {
+    var WP = WALLS[kind || 'lava'];
     var lr = rng(seed + Math.round(r.x * 41 + r.y * 13));
     var edges = hillOutline(r);
     var DEPTH = K * 1.7;
@@ -13020,11 +13063,11 @@
       // a neighbouring wall's depth at the shared corner, so the faces meet
       var dA = q.dep, dB = (far[k + 1] && far[k + 1].i === (q.i + 1) % edges.length) ? far[k + 1].dep : q.dep * (0.85 + lr() * 0.3);
       var lit = Math.max(0, Math.min(1, (e.nx - e.ny + 1) / 2));   // which way the face is turned
-      var top = lit > 0.5 ? '#6f6860' : '#4f4943', mid = lit > 0.5 ? '#3d3833' : '#2b2724';
+      var top = lit > 0.5 ? WP.top[0] : WP.top[1], mid = lit > 0.5 ? WP.mid[0] : WP.mid[1];
       poly(g, [A, B, [B[0], B[1] + dB], [A[0], A[1] + dA]],
-        vgrad(g, Math.min(A[1], B[1]), Math.max(A[1] + dA, B[1] + dB), [top, mid, '#2a1d16', '#b4521c', '#f08a22']));
+        vgrad(g, Math.min(A[1], B[1]), Math.max(A[1] + dA, B[1] + dB), [top, mid].concat(WP.deep)));
       // the broken slab's upper edge: a bevel of the ground's own crust catching the light
-      poly(g, [A, B, [B[0], B[1] + 3], [A[0], A[1] + 3]], lit > 0.5 ? '#8a8279' : '#6a635c');
+      poly(g, [A, B, [B[0], B[1] + 3], [A[0], A[1] + 3]], lit > 0.5 ? WP.bevel[0] : WP.bevel[1]);
       // blocky breaks: a step down part-way along the face
       if (lr() > 0.4) {
         var st = 0.3 + lr() * 0.4, sx0 = A[0] + (B[0] - A[0]) * st, sy0 = A[1] + (B[1] - A[1]) * st;
@@ -13037,17 +13080,17 @@
       for (var f = 0; f < span / 7; f++) {
         var t = lr(), fx = A[0] + (B[0] - A[0]) * t, fy = A[1] + (B[1] - A[1]) * t, fd = dA + (dB - dA) * t;
         edgeLine(g, [fx, fy + 1], [fx + (lr() - 0.5) * 3, fy + fd * (0.5 + lr() * 0.45)], 'rgba(10,8,7,.55)', 1);
-        if (lr() > 0.5) edgeLine(g, [fx + 1, fy + 2], [fx + 1, fy + fd * 0.35], 'rgba(120,108,96,.35)', 1);
+        if (lr() > 0.5) edgeLine(g, [fx + 1, fy + 2], [fx + 1, fy + fd * 0.35], WP.frac, 1);
       }
-      // the glow of the melt climbing the foot of the wall
-      edgeLine(g, [A[0], A[1] + dA - 1], [B[0], B[1] + dB - 1], '#f08a22', 1);
+      // the glow of the melt climbing the foot of the wall (or the ravine's dark)
+      edgeLine(g, [A[0], A[1] + dA - 1], [B[0], B[1] + dB - 1], WP.foot, 1);
     });
     g.restore();
     // the rim: a hard lit edge on the far side of the hole, a dark lip on the near
     edges.forEach(function (e) {
       var A = sp2(e.A[0], e.A[1]), B = sp2(e.B[0], e.B[1]);
-      if (e.nx + e.ny < 0.05) edgeLine(g, A, B, '#6e645a', 1);
-      else { edgeLine(g, A, B, '#15110e', 2); edgeLine(g, [A[0], A[1] - 1], [B[0], B[1] - 1], '#5a5047', 1); }
+      if (e.nx + e.ny < 0.05) edgeLine(g, A, B, WP.rimFar, 1);
+      else { edgeLine(g, A, B, WP.rimNear[0], 2); edgeLine(g, [A[0], A[1] - 1], [B[0], B[1] - 1], WP.rimNear[1], 1); }
     });
     // hairline cracks running on from the points of the break
     var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
@@ -13069,9 +13112,9 @@
       }
       for (var k = 1; k < pts.length; k++) {
         var w2 = Math.max(1, Math.round(width * (1 - k / pts.length)));
-        edgeLine(g, pts[k - 1], pts[k], '#120e0c', w2);
-        if (hot && k === 1) edgeLine(g, pts[k - 1], pts[k], 'rgba(240,120,40,.55)', 1);
-        else edgeLine(g, [pts[k - 1][0], pts[k - 1][1] + 1], [pts[k][0], pts[k][1] + 1], 'rgba(150,138,122,.25)', 1);
+        edgeLine(g, pts[k - 1], pts[k], WP.crack, w2);
+        if (hot && k === 1) edgeLine(g, pts[k - 1], pts[k], WP.crackGlow, 1);
+        else edgeLine(g, [pts[k - 1][0], pts[k - 1][1] + 1], [pts[k][0], pts[k][1] + 1], WP.crackLit, 1);
       }
     }
   }
@@ -13269,6 +13312,15 @@
         }
         return;
       }
+      if (r.kind === 'crystal') {
+        // clusters of green crystal standing up out of the glassy ground
+        for (var cz = 0; cz < Math.max(3, Math.round(area / 6)); cz++) {
+          var czq = spotIn(r, 0.5, rand);
+          props.push({ kind: 'crystals', x: czq.x, y: czq.y, size: 1.3 + rand() * 1.1, seed: (rand() * 9999) | 0 });
+        }
+        return;
+      }
+      if (r.kind === 'ravine') return;               // nothing stands in a crevasse
       if (r.kind === 'lava') {
         // smoke and heat rising out of the crack
         for (var vt = 0; vt < Math.max(1, Math.round(area / 22)); vt++) {
@@ -14018,6 +14070,29 @@
           ellipse(g, lx5 - 1, ly5 - 1, a(0.5), a(0.2), '#5b8a3a');
           if (lr() > 0.75) dot(g, lx5, ly5 - 1, '#e8b4c8', 2);
         }
+        break;
+      }
+      case 'crystals': {
+        // three to six shards leaning out of one root, glassy green, lit on one face
+        var cr7 = rng(pr.seed), n7 = 3 + (cr7() * 4 | 0), sz7 = pr.size || 1;
+        shadowBlob(g, { x: p.x + a(0.8), y: p.y + a(0.35) }, a(1.6 * sz7), a(0.7 * sz7));
+        ellipse(g, p.x, p.y, a(1.2 * sz7), a(0.5 * sz7), 'rgba(140,255,190,.14)');
+        var shards = [];
+        for (var k7 = 0; k7 < n7; k7++) {
+          var lean = (cr7() - 0.5) * 0.8, hgt = a((1.6 + cr7() * 2.4) * sz7), wid = a((0.7 + cr7() * 0.5) * sz7);
+          shards.push({ ox: (cr7() - 0.5) * a(1.4 * sz7), lean: lean, h: hgt, w: wid });
+        }
+        shards.sort(function (s1, s2) { return s1.h - s2.h; }).reverse().forEach(function (sh) {
+          var bx7 = p.x + sh.ox, by7 = p.y, tx = bx7 + Math.sin(sh.lean) * sh.h, ty = by7 - Math.cos(sh.lean) * sh.h;
+          // a hexagonal prism with a pointed cap: two side faces and a facet at the tip
+          var cx7 = tx - Math.sin(sh.lean) * sh.w * 0.9, cy7 = ty + Math.cos(sh.lean) * sh.w * 0.9;
+          poly(g, [[bx7 - sh.w, by7], [cx7 - sh.w * 0.8, cy7], [tx, ty], [bx7, by7 + sh.w * 0.35]], '#23704b');   // shaded face
+          poly(g, [[bx7, by7 + sh.w * 0.35], [tx, ty], [cx7 + sh.w * 0.8, cy7], [bx7 + sh.w, by7]], '#4fbf82');   // lit face
+          poly(g, [[cx7 - sh.w * 0.8, cy7], [tx, ty], [cx7 + sh.w * 0.8, cy7], [cx7, cy7 + sh.w * 0.3]], '#9df0c3'); // cap facet
+          edgeLine(g, [bx7, by7 + sh.w * 0.35], [tx, ty], 'rgba(220,255,235,.75)', 1);         // the glint down the edge
+          edgeLine(g, [bx7 - sh.w, by7], [cx7 - sh.w * 0.8, cy7], 'rgba(10,40,25,.7)', 1);
+          dot(g, tx, ty, '#f0fff6', 1);
+        });
         break;
       }
       case 'vent': {
@@ -24004,7 +24079,8 @@
     barricade: ['low wall', 'low walls'], rocks: ['rock', 'rocks'], hill: ['hill', 'hills'],
     building: ['building', 'buildings'], bunker: ['reinforced building', 'reinforced buildings'],
     wall: ['high wall', 'high walls'], water: ['shallow pool', 'shallow pools'],
-    deep: ['deep water', 'deep waters'], lava: ['lava field', 'lava fields']
+    deep: ['deep water', 'deep waters'], lava: ['lava field', 'lava fields'],
+    crystal: ['crystal field', 'crystal fields'], ravine: ['ice ravine', 'ice ravines']
   };
 
   /* A view port that does nothing, so a caller that wants only the rules can
@@ -33711,7 +33787,7 @@
       });
       // pieces down since the table was last baked, as flat footprints until it is
       var TINT = { woods: '64,110,52', ruins: '120,112,100', crater: '110,96,80', barricade: '150,140,112', rocks: '118,112,104',
-        hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30' };
+        hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235' };
       state.terrain.slice(state.tset.baked || 0).forEach(function (pc) {
         var sh = pc.parts ? pc.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
           : [pc.poly || [[pc.x, pc.y], [pc.x + pc.w, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x, pc.y + pc.h]]];
