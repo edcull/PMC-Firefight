@@ -4144,6 +4144,11 @@
       var sw2 = mh.querySelector('.cmodal-scroll'); if (sw2) sw2.scrollTop = swTop;
       wireHost(mh);
     }
+    /* ...and so does the reserves-and-transports modal: in the side rail it was
+       drawn under the board, so opening it seemed to do nothing. It is already
+       wired where it was drawn, so it is only moved. */
+    var db = ctxBox.querySelector('.cmodal[data-deploybox]');
+    if (db) mh.appendChild(db);
     if (own) wireHost(own);
     if (opp) wireHost(opp);
     if (both) wireHost(both);
@@ -4405,6 +4410,10 @@
       h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
         '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
         '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
+    }
+    else {
+      // no hull to fill and no split to set: the button is there, greyed out, so it is known to exist
+      h += '<div class="acts"><button class="act" disabled title="Nothing in this force can carry troops"><span>Transports</span><small>No transports in this force</small></button></div>';
     }
     if (state.swapAsk && state.swapAsk.side === me && !isAI(me)) h += swapCard();
     h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
@@ -5311,12 +5320,28 @@
         ? '<button type="button" class="drone' + (pick.riders ? ' on' : '') + '" data-riders="' + i +
         '" title="Riders upgrade: half the models, Movement 10, and the Riders rule — no buildings, no walls, no lifts">RDR</button>'
         : '';
-      return '<span class="pickwrap">' +
-        '<button type="button" class="pick' + (freeIdx[i] ? ' free' : '') + '" data-drop="' + i + '" title="' +
-        (freeIdx[i] ? 'Free: an extra unit from Human Wave Attacks. ' : '') + 'Remove">' +
-        p.name + (pick.riders ? ' (mounted)' : '') + ' <b>' + R.ROMAN[p.tier] + '</b>' +
-        (freeIdx[i] ? '<i class="freetag">FREE</i>' : '') + '</button>' + drive + drone + ride + mnt + '</span>';
+      /* a card each, as the campaign's founding shows them: name and kind, Tier,
+         its numbers as fielded (drive and drone worked in), its rules, its
+         options and the way to take it off the list */
+      var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size }),
+        pick.prop || R.defaultDrive(p)), !!pick.drone);
+      var mach = p.cls !== 'infantry';
+      var st = [['Move', Math.floor(u0.move) + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
+        ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', pick.riders ? Math.ceil(u0.size / 2) : u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+      var TXT = window.PMCRuleText;
+      return '<div class="fcard' + (freeIdx[i] ? ' free' : '') + '">' +
+        '<div class="fcard-top"><span class="ct">' + R.ROMAN[p.tier] + '</span><b>' + esc(p.name) + (pick.riders ? ' (mounted)' : '') + '</b>' +
+        '<span class="fcard-kind">' + esc(p.group || '') + '</span>' +
+        (freeIdx[i] ? '<i class="freetag" title="Free: an extra unit from Human Wave Attacks">FREE</i>' : '') +
+        drive + drone + ride + mnt +
+        '<button type="button" class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p.name) + '">\u2715</button></div>' +
+        '<div class="fcard-stats">' + st.map(function (c2) { return '<span><i>' + c2[0] + '</i>' + esc(String(c2[1])) + '</span>'; }).join('') + '</div>' +
+        ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
+          var d = TXT ? TXT.describe(r) : { name: r, text: '' };
+          return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
+        }).join('') + '</div>' : '') + '</div>';
     }).join('');
+    el('chosen').classList.add('fcards');
 
     var f = el('faults');
     if (!muster.keys.length) {
@@ -5535,7 +5560,8 @@
         if (id !== 'sel-faction' && muster.hot && hotQuick(muster.hot.kind) && muster.hot.step === 3) {
           muster.hot.sides.forEach(function (sd, i) {
             if (!sd) return;
-            if (muster.hot.kind === 'ai' && i === 0 && (!sd.keys.length ||
+            // a force a player musters is kept if it is empty or still legal; only the AI's is rolled again
+            if ((muster.hot.kind === 'hotseat' || (muster.hot.kind === 'ai' && i === 0)) && (!sd.keys.length ||
               R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction).ok)) return;
             sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction);
           });
@@ -5716,19 +5742,20 @@
     return k === 'demo' || (k === 'ai' && step === 2);
   }
   // a demo, or a battle against the AI: set up on the battlefield step, with both forces rolled to start
-  function hotQuick(kind) { return kind === 'demo' || kind === 'ai'; }
+  // a demo, a battle against the AI and a hotseat all open on the battlefield, a card for each force
+  function hotQuick(kind) { return kind === 'demo' || kind === 'ai' || kind === 'hotseat'; }
   function hotBegin(kind) {
     muster.hot = { kind: kind, step: 1, sides: [null, null] };
     muster.keys = []; muster.name = '';
     if (el('hot-name')) el('hot-name').value = '';
     if (kind === 'demo') hotRandomise(0);
-    else if (kind === 'ai') {
-      // the player's force starts empty, in desert ochre, as "Your force" until they name it
+    else if (kind === 'ai' || kind === 'hotseat') {
+      // the player's force starts empty, in desert ochre, as "Your force" (or Player 1's) until they name it
       muster.colour = 'ochre';
       el('sel-faction').value = 'pmc';             // a mercenary company, until they pick another kind
       drawColourPick();
       if (el('sel-tactic')) el('sel-tactic').value = '';
-      muster.name = 'Your Force';
+      muster.name = kind === 'hotseat' ? 'Player 1' : 'Your Force';
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
     hotPaint();
@@ -5822,9 +5849,9 @@
       hotRandomise(i);
     } else {
       // a fresh force for the second player; in a hotseat, in a colour the first is not wearing
-      muster.keys = []; muster.name = '';
+      muster.keys = []; muster.name = i === 1 && muster.hot.kind === 'hotseat' ? 'Player 2' : '';
       if (i === 1 && muster.hot.kind === 'hotseat') muster.colour = foeColour([muster.hot.sides[0].colour]);
-      if (el('hot-name')) el('hot-name').value = '';
+      if (el('hot-name')) el('hot-name').value = muster.name;
     }
   }
   // the name and colour labels follow the kind of force, as founding one does
@@ -5933,7 +5960,7 @@
     var intro = {
       hotseat: ['A hotseat battle: two players, one screen. Player 1 builds a force first and sets the Battle Tier and Priority Level; then Player 2 builds theirs, and then you choose where to fight.',
         ' is ready. Player 2 now builds a force of their own, at Battle Tier {T}, Priority Level {P}.',
-        'Both forces are ready. Choose the scenario, the world and how the table is laid, then take the field.'],
+        'A hotseat battle: two players, one screen. Set the Battle Tier and Priority Level, tap each player\u2019s force to muster it, then choose the scenario, the world and the table.'],
       coop: ['A co-operative game: two commandos, one each, against the OpFor. Player 1 builds a commando first, and sets the Battle Tier, the Priority Level and the commandos’ colours.',
         ' is ready. Player 2 now builds a commando of their own. The OpFor is rolled a Priority Level higher for the two of you.',
         'Both commandos are ready. Choose who you are up against, the solitaire scenario, the world and the table.'],
@@ -6568,8 +6595,8 @@
     }[kind] || 'Muster your force';
     // hotseat, co-op and demo build both forces, one step each, before the battlefield
     // a demo, and a battle against the AI, open on the battlefield with both forces rolled
-    if (kind === 'demo' || kind === 'ai') demoBegin(kind);
-    else if (kind === 'hotseat' || kind === 'coop') hotBegin(kind); else hotEnd();
+    if (kind === 'demo' || kind === 'ai' || kind === 'hotseat') demoBegin(kind);
+    else if (kind === 'coop') hotBegin(kind); else hotEnd();
     backLabel(el('btn-setup-back'), setupGoesHome());
     el('setup').hidden = false;
   };
