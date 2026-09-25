@@ -2498,7 +2498,8 @@
     lighteng: ['breacherlt', 'sapperlt'],
     rookie: ['rookielead', 'sawrk', 'riflemanrk'],
     // support teams: the standing men carry SMGs; the section has two guns down in front
-    mg: ['gunner', 'loader', 'supsmg'],
+    // the Light MG team: four machine guns and two men feeding them
+    mg: ['gunner', 'gunner', 'gunner', 'gunner', 'loader', 'loader'],
     mgsec: ['gunner', 'gunner', 'loader'],
     sniper: ['marksman', 'spotter', 'lightinf'],
     // the sniper team alone goes in with night-vision goggles
@@ -4653,6 +4654,22 @@
     lascutter: [25, 2], rpg: [31, -8.5], banner: [14, 3], flagsmall: [14, 3], flagbig: [14, 3], flaghuge: [14, 3], megaphone: [17, 4], machete: [-7, -20]
   };
   var MUZZLE_PRONE = { long: [41, -9], mg: [35, -8.5], saw: [35, -8.5], optics: [27, -15], case: [24, -7], slate: [24, -7], console: [24, -7] };
+  /* Two more points a figure is drawn with, for what it does besides fire its gun:
+     the front of a Protector's shoulder pod, which the grenades leave, and the
+     eyes of a man with optics — the lens he has up to them, or the binoculars of
+     one lying prone — which a marker's laser and a Keen-Eyed glint come from. */
+  function legY(kit, y) { return kit.mount ? y : (y >= HIP ? y * LEG : y + HIP * (LEG - 1)); }
+  function podArt(kit, pose) {
+    if (!kit.shoulderGL || pose === 'prone') return null;
+    var wy = -32 + (pose === 'kneel' ? KNEEL_DROP : 0);
+    return [-7, legY(kit, wy - 15.5)];
+  }
+  function eyeArt(kit, pose) {
+    if (kit.gun !== 'optics') return null;
+    if (pose === 'prone') return MUZZLE_PRONE.optics;
+    var wy = -32 + (pose === 'kneel' || kit.kneel ? KNEEL_DROP : 0);
+    return [9, legY(kit, wy - 8.5)];
+  }
   function muzzleArt(kit, pose) {
     if (pose === 'prone') return MUZZLE_PRONE[kit.gun] || [31, -8];
     var drop = pose === 'kneel' ? KNEEL_DROP : 0, wy = -32 + drop;
@@ -6121,6 +6138,12 @@
     }
     c.ox = ox; c.oy = oy; c.res = SPRITE_RES;
     c.muz = [ma[0] * SU * sq, ma[1] * SU * sq];      // the muzzle, in board pixels from the feet
+    var pa = kit.bug || kit.xeno ? null : podArt(kit, pose), ea = kit.bug || kit.xeno ? null : eyeArt(kit, pose);
+    c.pod = pa ? [pa[0] * SU * sq, pa[1] * SU * sq] : null;
+    c.eye = ea ? [ea[0] * SU * sq, ea[1] * SU * sq] : null;
+    // a man whose hands hold optics, a slate or a case is not one of the guns
+    c.tool = /^(optics|slate|case|console)$/.test(kit.gun || '');
+    c.gun = kit.gun || null;                          // which weapon the man holds, for which shots he fires
     sprites[key] = c;
     return c;
   }
@@ -10603,8 +10626,13 @@
       var jx = ((hash(mi + 1, seed & 255, 7) * 2 - 1) * 3) | 0;
       var jy = ((hash(seed & 255, mi + 1, 11) * 2 - 1) * 2) | 0;
       var c = sprite(u.paint || u.side, art, mi, pose, 0, MODEL * fitScale(art, mi), Math.min(2, spots[k].rank), u.mount);
-      var m = c.muz || [SU * 12, -SU * 38];
-      out[mi] = { dx: spots[k].sx + jx + dir * m[0], dy: spots[k].sy + jy + m[1] - bugHover(art, mi, pose, 0), dir: dir };
+      var m = c.muz || [SU * 12, -SU * 38], hov = bugHover(art, mi, pose, 0);
+      var bx = spots[k].sx + jx, by = spots[k].sy + jy - hov;
+      out[mi] = { dx: bx + dir * m[0], dy: by + m[1], dir: dir };
+      if (c.tool) out[mi].tool = true;
+      if (c.gun) out[mi].gun = c.gun;
+      if (c.pod) out[mi].pod = { dx: bx + dir * c.pod[0], dy: by + c.pod[1], dir: dir };
+      if (c.eye) out[mi].eye = { dx: bx + dir * c.eye[0], dy: by + c.eye[1], dir: dir };
     }
     return out.filter(Boolean);
   }

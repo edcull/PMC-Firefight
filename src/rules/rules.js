@@ -1586,13 +1586,16 @@
     // the Protectors go in close, behind three charges rather than two
     protectors: { p: 'arc', n: 3, s: 'smg' },
     protectorshm: { p: 'arc', n: 3, s: 'smg' },
-    observers: { p: 'shell', s: 'pistol' }, sharpshooters: { p: 'shell', s: 'pistol' },
+    // the forward observers carry rifles, and fire them like any rifle team
+    observers: { p: 'small' }, sharpshooters: { p: 'shell', s: 'pistol' },
     lrrp: { p: 'rail', n: 2 },
     // the sniper team: a pair of heavy rounds, then a pair of Gauss lines
     snipers: { p: 'shell', n: 2, s: 'rail', sn: 2 },
-    lmgsection: { p: 'smg', s: 'burst' },
+    // the section is its two machine guns: the loader feeds them rather than shooting
+    lmgsection: { p: 'burst' },
     // the MG team has a carbine in the section alongside the gun
-    lmgteam: { p: 'smg', s: 'burst' },
+    // four machine guns, fed by two loaders
+    lmgteam: { p: 'burst' },
     // a crew-served Gauss cannon: three shots in quick succession, not one
     hmgteam: { p: 'chain' }, gausscannon: { p: 'rail', n: 3 },
     lightat: { p: 'shell' }, atteam: { p: 'shell' },

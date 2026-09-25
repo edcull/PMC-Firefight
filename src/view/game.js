@@ -457,7 +457,11 @@
        sensor, however high it flies: the nose of a craft, its scanner. */
     if (f && f.unit && (f.kind === 'beam' || f.kind === 'glint')) {
       var src = evUnit(f.unit);
-      if (src && (src.cls === 'aircraft' || src.cls === 'vehicle')) {
+      if (src && !R.isMachine(src)) {
+        // a squad's laser and glint come off the eyes of the man with the optics — the spotter, the observer
+        var sq = ISO.muzzles(src, R.status(src)).filter(function (m) { return m.eye; })[0];
+        if (sq) f.mz = sq.eye;
+      } else if (src && (src.cls === 'aircraft' || src.cls === 'vehicle')) {
         var M = ISO.mounts(src), at = f.kind === 'beam' ? (M.nose || M.scan) : (M.scan || M.nose);
         if (at && at.length) f.mz = at[0];
         else if (ISO.flyLift(src)) f.mz = { dx: 0, dy: -ISO.flyLift(src) };
@@ -1789,6 +1793,13 @@
     else if (b.x > a.x + ISO.K * 0.3) u.faceL = false;
   }
 
+  /* Charges thrown by a squad come from men spread through it rather than the
+     two at the front: the i-th of n goes to the man that far along the rank. */
+  function spread(from, i, n) {
+    if (!from.pool || from.pool.length < 2 || n < 2) return pick(from, i);
+    var len = from.pool.length, at = Math.round(i * (len - 1) / (n - 1));
+    return { x: from.x, y: from.y, up: from.up, mz: from.pool[at % len], pool: from.pool };
+  }
   // the i-th round of a volley leaves the i-th barrel or tube in the pool
   function pick(from, i) {
     if (!from.pool || from.pool.length < 2) return from;
@@ -1873,7 +1884,24 @@
     if (!R.isMachine(shooter)) {
       faceToward(shooter, to.x, to.y, from);
       var pool = ISO.muzzles(shooter, R.status(shooter));
-      if (pool.length) { from.mz = pool[0]; from.pool = pool; }
+      // the grenades leave the leader's shoulder pod, where the squad carries one
+      var pod = pool.filter(function (m) { return m.pod; })[0];
+      if (pod) from.pod = pod.pod;
+      // a spotter with his optics up is not one of the guns
+      var guns = pool.filter(function (m) { return !m.tool; });
+      if (guns.length) pool = guns;
+      /* A machine gun's burst comes off the men holding machine guns; the carbines
+         and rifles off everyone else — each weapon from the hands that carry it. */
+      var mgs = pool.filter(function (m) { return /^(mg|saw)$/.test(m.gun || ''); });
+      var rest = pool.filter(function (m) { return !/^(mg|saw)$/.test(m.gun || ''); });
+      var poolFor = function (style) {
+        var mgStyle = style === 'burst' || style === 'chain';
+        // (a SAW in a rifle squad is one of its rifles: only a unit with an MG weapon splits its men)
+        var mgUnit = /^(burst|chain)$/.test(spec.p) || /^(burst|chain)$/.test(spec.s || '');
+        var pl = mgStyle ? (mgs.length ? mgs : pool) : (mgUnit && rest.length && mgs.length ? rest : pool);
+        return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod };
+      };
+      if (pool.length) { var pf = poolFor(spec.p); from.mz = pf.mz; from.pool = pf.pool; from.poolFor = poolFor; }
     }
     /* A machine turns its turret onto the target, and each weapon fires from
        its own barrel or tubes: the main gun from the muzzle, the machine gun
@@ -1918,7 +1946,7 @@
 
     // the secondary goes off alongside the primary, a beat later
     if (spec.s) setTimeout(function () {
-      if (state) playSecondary(spec.s, shooter, mountFrom(spec.s), to, hits, spec.sn);
+      if (state) playSecondary(spec.s, shooter, from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s), to, hits, spec.sn);
     }, 150);
 
     var tail = spec.s ? 320 + ((spec.sn || 1) - 1) * 260 : 0;
@@ -2004,12 +2032,14 @@
         var range = R.unitDist(shooter, target);
         var flight = Math.round((heavy ? 640 : 520) + Math.min(760, range * 16));
         var tubes = spec.n || 1;
+        // the Protectors' charges leave the leader's shoulder pod, one after another
+        var tubeFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod } : from;
         for (var q = 0; q < tubes; q++) {
           (function (i) {
             var off = i * 130;
             setTimeout(function () {
               if (!state) return;
-              var F = pick(from, i);
+              var F = from.pod ? pick(tubeFrom, i) : R.isMachine(shooter) ? pick(tubeFrom, i) : spread(tubeFrom, i, tubes);
               if (SFX) SFX.launch();
               // a mortar's tube gives a short flash at its mouth, not a tank gun's blast
               addFx({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 220, big: !F.mz, blocking: true });
@@ -2138,6 +2168,8 @@
         /* Thrown charges: a short, high lob with a puff where it lands, and
            `count` of them — assault troops go in with a grenade in each hand. */
         var flight = 520, thrown = count || 1;
+        // a squad with a shoulder pod fires its charges from the leader's pod rather than throwing them
+        var throwFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod } : from;
         for (var q = 0; q < thrown; q++) {
           (function (j) {
             setTimeout(function () {
@@ -2147,7 +2179,7 @@
                 ? { x: to.x + (j - (thrown - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up }
                 : to;
               if (SFX) SFX.launch();
-              addFx({ kind: 'lob', from: pick(from, j), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
+              addFx({ kind: 'lob', from: from.pod ? throwFrom : spread(throwFrom, j, thrown), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
               setTimeout(function () {
                 if (!state) return;
                 addFx({ kind: 'impact', x: aim.x, y: aim.y, up: aim.up, n: 4, dur: 380, blocking: true });

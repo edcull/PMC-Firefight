@@ -398,14 +398,19 @@
   /* Where a beam leaves a machine: a craft's nose, else the first barrel it has.
      A trooper's beam leaves from about chest height (fx.js's default). */
   // a keen eye looks out of a machine's own sensor, and a flier's up where it flies (as in the battle)
+  // a squad's laser and glint come off the eyes of its man with optics: the spotter, the observer
+  function eyeFrom(u) {
+    var e = I.muzzles(u, view.status).filter(function (m) { return m.eye; })[0];
+    return e ? e.eye : undefined;
+  }
   function glintFrom(u) {
-    if (!R.isMachine(u)) return undefined;
+    if (!R.isMachine(u)) return eyeFrom(u);
     var M = I.mounts(u), k = ['scan', 'nose'].filter(function (n) { return M[n] && M[n].length; })[0];
     if (k) return M[k][0];
     return I.flyLift(u) ? { dx: 0, dy: -I.flyLift(u) } : undefined;
   }
   function beamFrom(u) {
-    if (!R.isMachine(u)) return undefined;
+    if (!R.isMachine(u)) return eyeFrom(u);
     var M = I.mounts(u), k = ['nose', 'gun', 'mg', 'auto', 'rocket'].filter(function (n) { return M[n] && M[n].length; })[0];
     return k ? M[k][0] : undefined;
   }
@@ -670,7 +675,23 @@
       var a0 = I.toScreen(u.x, u.y), b0 = I.toScreen(TO.x, TO.y);
       u.faceL = view.faceL = b0.x < a0.x;
       var pool = I.muzzles(u, view.status);
-      if (pool.length) { from.mz = pool[0]; from.pool = pool; }
+      // the grenades leave the leader's shoulder pod, where the squad carries one
+      var pod = pool.filter(function (m) { return m.pod; })[0];
+      if (pod) from.pod = pod.pod;
+      var guns = pool.filter(function (m) { return !m.tool; });   // optics are not a gun
+      if (guns.length) pool = guns;
+      /* A machine gun's burst comes off the men holding machine guns; the carbines
+         and rifles off everyone else — each weapon from the hands that carry it. */
+      var mgs = pool.filter(function (m) { return /^(mg|saw)$/.test(m.gun || ''); });
+      var rest = pool.filter(function (m) { return !/^(mg|saw)$/.test(m.gun || ''); });
+      var poolFor = function (style) {
+        var mgStyle = style === 'burst' || style === 'chain';
+        // (a SAW in a rifle squad is one of its rifles: only a unit with an MG weapon splits its men)
+        var mgUnit = /^(burst|chain)$/.test(spec.p) || /^(burst|chain)$/.test(spec.s || '');
+        var pl = mgStyle ? (mgs.length ? mgs : pool) : (mgUnit && rest.length && mgs.length ? rest : pool);
+        return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod };
+      };
+      if (pool.length) { var pf = poolFor(spec.p); from.mz = pf.mz; from.pool = pf.pool; from.poolFor = poolFor; }
     }
     var mountFrom = function () { return from; };
     if (R.isMachine(u)) {
@@ -681,7 +702,7 @@
       mountFrom = function (style) { return I.mountFor(M, style, u, base); };
       from = mountFrom(spec.p);
     }
-    from.second = mountFrom(spec.s);
+    from.second = from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s);
     var hits = 3;
     syncSound();
     play(spec, from, to, hits, u);
@@ -853,7 +874,7 @@
               ? { x: to.x + (j - (thrown - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up }
               : to;
             if (SFX) SFX.launch();
-            FX.add({ kind: 'lob', from: tubeOf(from, j), to: aim, dur: 520, heavy: style === 'arcbig' });
+            FX.add({ kind: 'lob', from: from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod } : spreadOf(from, j, thrown), to: aim, dur: 520, heavy: style === 'arcbig' });
             setTimeout(function () { landing(aim, 4); start(); }, 520);
             start();
           }, j * 190);
@@ -956,7 +977,8 @@
             setTimeout(function () {
               if (SFX) SFX.launch();
               // each tube fires its own round: a team's two mortars, a battery's three
-              var F = tubeOf(from, i);
+              var F = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod }
+                : R.isMachine(unit()) ? tubeOf(from, i) : spreadOf(from, i, spec.n || 1);
               FX.add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 220, big: !F.mz });
               var aim = (spec.n || 1) > 1
                 ? { x: to.x + (i - ((spec.n || 1) - 1) / 2) * 1.6, y: to.y + (i % 2 ? 1 : -1) * 0.9 }
@@ -1048,6 +1070,12 @@
     }
   }
   // the i-th barrel of a unit that works several (a mortar team's two tubes), else the one it has
+  // charges thrown by a squad come from men spread through it, not the two at the front
+  function spreadOf(from, i, n) {
+    if (!from.pool || from.pool.length < 2 || n < 2) return tubeOf(from, i);
+    var len = from.pool.length, at = Math.round(i * (len - 1) / (n - 1));
+    return { x: from.x, y: from.y, up: from.up, mz: from.pool[at % len], pool: from.pool };
+  }
   function tubeOf(from, i) {
     if (!from.pool || from.pool.length < 2) return from;
     return { x: from.x, y: from.y, up: from.up, mz: from.pool[i % from.pool.length], pool: from.pool };
