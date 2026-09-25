@@ -1020,8 +1020,7 @@
     var m = state.martyrAsk, u = byId(m.unit), foe = byId(m.foe);
     if (!u || !foe) return '';
     return '<div class="card"><h2>Martyrdom</h2>' +
-      '<p class="sub"><b>' + esc(u.name) + '</b> ' + (u.id === (ui.selected && ui.selected.id) ? 'charges' : 'is charged by') +
-      ' <b>' + esc(foe.name) + '</b>. Before the first round, one of them may walk into the enemy alone: ' +
+      '<p class="sub"><b>' + esc(foe.name) + '</b> is charging <b>' + esc(u.name) + '</b>. Before the first round, one of them may walk into the enemy alone: ' +
       'one model is removed, and ' + esc(foe.name) + ' takes D3 automatic hits. No Suppression for the death.</p>' +
       '<div class="acts"><button class="act" data-act="martyr"><span>Send one in</span><small>' + u.models + ' models, one of them goes</small></button>' +
       '<button class="act" data-act="nomartyr"><span>Hold back</span><small>Fight the assault as it stands</small></button></div></div>';
@@ -1126,6 +1125,7 @@
     wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="2.2"/><path d="M7.5 7.5a6.4 6.4 0 000 9M16.5 7.5a6.4 6.4 0 010 9"/><path d="M4.4 4.4a10.8 10.8 0 000 15.2M19.6 4.4a10.8 10.8 0 010 15.2"/></svg>',
     rush: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L5 14h6l-2 8 8-12h-6z"/></svg>',
     laststand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z"/><path d="M12 8v5M12 16h.01"/></svg>',
+    martyr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.5v6.5M8 10.5h8M12 14l-3 6M12 14l3 6"/><path d="M4 4l2 2M20 4l-2 2M3 11h2M19 11h2"/></svg>',
     detonate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="13" width="9" height="8" rx="1"/><path d="M8.5 13V9"/><path d="M8.5 9l7-4"/><path d="M15 3l2 1-1 2"/><path d="M18 11l1.5-1.5M20 15h2M18 19l1.5 1.5"/></svg>',
     stance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h18"/><path d="M6 19l3-5M18 19l-3-5"/><path d="M8 14l9-7"/><path d="M16 5l3 1-1 3"/></svg>',
     empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 12h10"/></svg>'

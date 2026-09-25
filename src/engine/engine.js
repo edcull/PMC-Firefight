@@ -2698,6 +2698,8 @@
     if (u && state.phase === 'battle' && R.steadyShooter(state, u) && R.steadyTargets(state, u).length) {
       out.push({ id: 'steady', label: 'Not one step back!' });
     }
+    // Martyrdom (p. 112): a charge with one of the Holy Warriors sent in alone first
+    if (u && state.phase === 'battle' && R.canMartyr(state, u, u)) out.push({ id: 'martyr', label: 'Martyr assault' });
     if (u && (R.has(u, 'Destructive Weapon') || R.has(u, 'Incendiary Ammunition'))) {
       out.push({ id: 'demolish', label: 'Demolish' });
     }
@@ -2860,6 +2862,12 @@
           ? '"Death or Glory, Comrades!" — ' + dog.name + ' is shouting: charge within ' + reachA +
             '" and every Suppression point falls away as you go in.'
           : 'Charge within ' + reachA + '": defensive fire, then three rounds each way.' };
+      }
+      case 'martyr': {
+        var ma = actionState(u, 'assault');
+        if (!ma.on) return ma;
+        return { on: true, hint: 'Martyrdom: charge, and before the first round one of ' + u.name +
+          ' walks into the enemy alone — one model lost, D3 automatic hits on them, no Suppression for the death.' };
       }
       case 'aux': {
         if (u.fp === null) return { on: false, hint: 'This unit has no Firepower.' };
@@ -3051,6 +3059,7 @@
 
   function chooseAction(id) {
     var u = ui.selected; if (!u) return;
+    ui.martyrCharge = false;
     if (u.carrying) { stayPut(u); return; }             // loaded or unloaded: any button now means stay
     // driven first: all that is left is to load or unload, and anything else ends it where it stands
     if (u.carryMoved && id !== 'embark' && id !== 'disembark') { stayPut(u); return; }
@@ -3100,8 +3109,9 @@
       ui.mode = 'advance-move';
       ui.moves = R.reachable(state, u, u.move).filter(function (c) { return canStand(u, c); });
       wireNote(u);
-    } else if (id === 'assault') {
+    } else if (id === 'assault' || id === 'martyr') {
       ui.mode = 'assault';
+      ui.martyrCharge = id === 'martyr';
       var must = forcedCharge(u);
       ui.targets = must ? [must] : assaultables(u);
     } else if (id === 'wave') {
@@ -3595,11 +3605,12 @@
      defending: a player's Holy Warriors are asked, and the assault waits for
      the answer; the AI decides for its own. `go(martyr)` runs the assault. */
   function martyrFirst(a, t, go) {
-    var ask = [a, t].filter(function (u, i) {
-      return !isAI(u.side) && R.canMartyr(state, u, i ? a : t);
-    });
-    if (!ask.length) { go({}); return; }
     var said = {};
+    // the charging player already said, by choosing Martyr assault or plain Assault
+    if (!isAI(a.side)) { said[a.side] = !!ui.martyrCharge; ui.martyrCharge = false; }
+    // the one being charged is asked, since it is not their activation
+    var ask = [t].filter(function (u) { return !isAI(u.side) && R.canMartyr(state, u, a); });
+    if (!ask.length) { go(said); return; }
     (function next() {
       var u = ask.shift();
       if (!u) { state.martyrAsk = null; ui.martyrThen = null; go(said); return; }
