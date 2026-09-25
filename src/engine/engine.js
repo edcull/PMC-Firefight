@@ -3016,6 +3016,7 @@
     });
   }
 
+  var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, laststand: 1 };
   function actionState(u, id) {
     if (!u) return { on: false, hint: 'Select one of your units on the table.' };
     if (u.carryMoved && id !== 'embark' && id !== 'disembark') {
@@ -3042,11 +3043,22 @@
     var machine = R.isMachine(u), bonus = moveBonus(u);
     /* Aggressive (p. 116): with no Overmind within 18" to hold it back, a bug
        that can reach an enemy must charge the closest one — nothing else. */
-    var fc = forcedCharge(u);
+    // "whenever possible" — and a Suppressed bug cannot charge, so it is not held to it
+    var fc = sup && !R.deathOrGlory(state, u) ? null : forcedCharge(u);
     if (fc && id !== 'assault') {
       if (R.campFlag(u, 'bloodlust')) return { on: false, hint: 'Bloodlust: ' + u.name + ' must charge the closest enemy it can reach, ' + fc.name + '.' };
       return { on: false, hint: 'Aggressive: ' + u.name + ' must charge the closest enemy, ' + fc.name +
         ' — no Overmind within ' + R.overmindReach(state, u.side) + '" to hold it back.' };
+    }
+
+    /* A Suppressed unit has three things it may do instead of a standard
+       action (p. 34): a Move into cover or out of sight, a Fire! with its
+       Auxiliary weapons, or Pass/Regroup. Going into a building is that move;
+       a charge only when "Death or Glory, Comrades!" shakes it loose (the
+       assault case says so); Last Stand is how it sheds the Suppression.
+       Nothing else — no special action, no ability — is on while it is pinned. */
+    if (sup && !SUPPRESSED_OK[id]) {
+      return { on: false, hint: 'Suppressed: it may only move into cover or out of sight, fire its Auxiliary weapons, or Pass/Regroup (p. 34).' };
     }
 
     /* A unit inside a building "may only exit it or make actions which do not

@@ -358,14 +358,21 @@
   .status-suppressed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
   .status-broken { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 
-  .stats { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; margin: 10px 0 0; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  /* as many to a row as fit, so a narrow panel wraps them rather than cutting the last ones off */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 1px; margin: 10px 0 0; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
   @media (max-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
   .st { background: var(--panel-2); padding: 6px 7px; }
   .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
   .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* suppression against Morale: three bands, the SP laid over them */
-  .moralebar { margin: 8px 0; }
+  .moralebar { margin: 8px 0; display: flex; align-items: center; gap: 7px; }
+  .moralebar .mb-track { flex: 1; }
+  /* the Suppression on the unit, beside the bar it fills */
+  .mb-num { flex: none; min-width: 34px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .mb-num.good { color: var(--good); } .mb-num.warn { color: var(--warn); } .mb-num.bad { color: var(--bad); }
+  .st b .mmod { color: var(--bad); font-size: 11px; margin-left: 3px; }
+  .st b.hurt { color: var(--bad); }
   .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
   .mb-band { flex: 1; opacity: .18; }
   .mb-band + .mb-band { border-left: 1px solid rgba(255,255,255,.25); }
@@ -27305,6 +27312,7 @@
     });
   }
 
+  var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, laststand: 1 };
   function actionState(u, id) {
     if (!u) return { on: false, hint: 'Select one of your units on the table.' };
     if (u.carryMoved && id !== 'embark' && id !== 'disembark') {
@@ -27331,11 +27339,22 @@
     var machine = R.isMachine(u), bonus = moveBonus(u);
     /* Aggressive (p. 116): with no Overmind within 18" to hold it back, a bug
        that can reach an enemy must charge the closest one — nothing else. */
-    var fc = forcedCharge(u);
+    // "whenever possible" — and a Suppressed bug cannot charge, so it is not held to it
+    var fc = sup && !R.deathOrGlory(state, u) ? null : forcedCharge(u);
     if (fc && id !== 'assault') {
       if (R.campFlag(u, 'bloodlust')) return { on: false, hint: 'Bloodlust: ' + u.name + ' must charge the closest enemy it can reach, ' + fc.name + '.' };
       return { on: false, hint: 'Aggressive: ' + u.name + ' must charge the closest enemy, ' + fc.name +
         ' — no Overmind within ' + R.overmindReach(state, u.side) + '" to hold it back.' };
+    }
+
+    /* A Suppressed unit has three things it may do instead of a standard
+       action (p. 34): a Move into cover or out of sight, a Fire! with its
+       Auxiliary weapons, or Pass/Regroup. Going into a building is that move;
+       a charge only when "Death or Glory, Comrades!" shakes it loose (the
+       assault case says so); Last Stand is how it sheds the Suppression.
+       Nothing else — no special action, no ability — is on while it is pinned. */
+    if (sup && !SUPPRESSED_OK[id]) {
+      return { on: false, hint: 'Suppressed: it may only move into cover or out of sight, fire its Auxiliary weapons, or Pass/Regroup (p. 34).' };
     }
 
     /* A unit inside a building "may only exit it or make actions which do not
@@ -34713,14 +34732,17 @@
        in the colour of the band it has reached. */
     var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
     h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
+      '<b class="mb-num ' + fillC + '">' + u.sp + ' SP</b>' +
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
       '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
       stat('Models', u.models + '/' + u.size) + stat('Move', u.move + '"') +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
-      stat('Assault', u.assault) + stat('Morale', m + (m !== u.morale ? ' of ' + u.morale : '')) +
-      stat('SP', u.sp) + '</div>';
+      /* Morale as it stands: less a point for each model lost beyond the free
+         ones (none for a Determined unit — currentMorale has already said so) */
+      stat('Morale', m + (m !== u.morale ? '<i class="mmod" ' + tip('Morale ' + u.morale + ' printed',
+        (u.morale - m) + ' down for casualties') + '>(' + (m - u.morale) + ')</i>' : '')) + '</div>';
     h += honourChips(u);
     // a rider's mount, before its rules, the way a hull's drive is shown
     var mt = R.mountOf(u);
@@ -34842,7 +34864,9 @@
       return '<i class="schg ' + (now > was ? 'up' : 'dn') + '"' + (why(stat) ? ' ' + tip('Printed ' + was, why(stat)) : '') + '>' + text + '</i>';
     }
     h += '<div class="stats">' +
-      stat('Structure', changed(left + '/' + u.str, u.str, base.str, 'str')) +
+      // red once it is down below half its Structure; what the drive did to it is in its tip
+      '<div class="st"><span>Structure</span><b' + (left * 2 < u.str ? ' class="hurt"' : '') +
+        (base.str != null && base.str !== u.str && why('str') ? ' ' + tip('Printed ' + base.str, why('str')) : '') + '>' + left + '/' + u.str + '</b></div>' +
       stat('Move', changed(u.move + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
       stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
       stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.assault) +
