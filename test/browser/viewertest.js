@@ -68,13 +68,14 @@ async function pickAndFire(p, key, ms) {
   ok('picking a card puts that unit on the stage', listPick.name === 'Veterans' && listPick.on === 'vp-veterans', JSON.stringify(listPick));
   const found = await p.evaluate(async () => {
     const q = document.getElementById('vsearch');
-    q.value = 'rifle'; q.dispatchEvent(new Event('input'));
-    const n = [...document.querySelectorAll('#vlist .unit')].filter(u => !u.hidden).length;
-    const armies = document.querySelectorAll('#vlist h2.faction').length;
+    const hits = (w) => { q.value = w; q.dispatchEvent(new Event('input')); return [...document.querySelectorAll('#vlist .unit')].filter(u => !u.hidden).length; };
+    const n = hits('rifle'), armies = document.querySelectorAll('#vlist h2.faction').length;
+    const rule = hits('markerlights');                  // a special rule, in no unit's name
     q.value = ''; q.dispatchEvent(new Event('input'));
-    return { n, armies };
+    return { n, armies, rule };
   });
-  ok('a search looks through every army, weapons included', found.n > 20 && found.armies > 1, found.n + ' matches across ' + found.armies + ' armies');
+  ok('a search looks through every army by unit name', found.n > 3 && found.armies > 1 && found.rule === 0,
+    found.n + ' named rifle across ' + found.armies + ' armies, ' + found.rule + ' for a rule');
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,
     loaded.w + '×' + loaded.h);
