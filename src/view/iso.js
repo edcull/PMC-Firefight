@@ -10982,7 +10982,7 @@
       sprites = {}; corpses = {}; hullCache = {}; TEX_TILE = {}; DIM_CANVAS = null;
     },
     bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
-    flyLift: flyLift, figureHeight: figureHeight, ROLES: ROLES,
+    flyLift: flyLift, hullSpec: hullSpec, figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
     figure: function (side, art, i, pose, step, mount) {
       return sprite(side || 'A', art, i || 0, pose || 'stand', step || 0, MODEL * fitScale(art, i || 0), 0, mount);

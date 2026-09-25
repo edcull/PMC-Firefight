@@ -214,6 +214,13 @@
       var ref = o.fit && (cv.classList.contains('inf') ? o.fit.inf : o.fit.other), k = ref ? Math.min(1, W / ref) : 1;
       var mag = k * (mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55);
       var ground = H - k * (mach ? (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : 16);
+      /* A flier is framed on itself, not on the ground under it: the craft's body
+         sits in the middle of the tile, and its stand and shadow run down below. */
+      var up = I.flyLift ? I.flyLift(u) : 0;
+      if (up) {
+        var bodyH = (I.hullSpec && I.hullSpec(u.art) && I.hullSpec(u.art).hgt) || 14;
+        ground = H * 0.56 + (up + bodyH * 0.5) * mag;
+      }
       var s0 = I.toScreen(10, 10);
       // the atlas draws as the first side, in its colour (repainting a side throws its baked figures away, so only on a change)
       if (I.PALETTE.A !== I.COLOURS[colour]) I.setSideColour('A', colour);
