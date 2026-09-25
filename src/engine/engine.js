@@ -3663,8 +3663,8 @@
     }
     faceAlong(u, u.x, u.y, pt.x, pt.y);
   }
+  // (a squad's facing turns only its drawing: its crew-served pieces point the way it went)
   function faceAlong(u, fromX, fromY, toX, toY) {
-    if (!R.isMachine(u)) return;
     if (Math.hypot(toX - fromX, toY - fromY) < 0.2) return;
     u.facing = Math.atan2(toY - fromY, toX - fromX);
   }

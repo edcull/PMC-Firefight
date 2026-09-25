@@ -59,6 +59,8 @@
 
   /* The unit as the battle would build it: a profile plus the state the bench
      is asking to see. Everything that draws a unit takes one of these. */
+  // a crew-served piece drawn in 3D: it has a facing to choose, as a machine does
+  function turns(p) { return !!p && !!I.turnsLikeMachine && I.turnsLikeMachine(p.art); }
   function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
   /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
   function towing(u) {
@@ -87,11 +89,9 @@
     if (R.propsFor(p).length) R.applyPropulsion(u, view.prop);
     R.applyDrone(u, view.drone === 'drone' && R.canBeDrone(p));
     // Stationary Artillery (p. 94): dug in behind its sandbags, or not
-    if (stationary(p)) {
-      u.dugIn = view.stance === 'dug';
-      // the gun stays laid on the mark it last fired at, until it is turned
-      if (view.stance !== 'towed' && view.gunAim != null && view.aimFor === view.face + '|gun') u.facing = view.gunAim;
-    }
+    if (stationary(p)) u.dugIn = view.stance === 'dug';
+    // a crew-served piece stays laid on the mark it last fired at, until it is turned
+    if (turns(p) && view.stance !== 'towed' && !view.walking && view.gunAim != null && view.aimFor === view.face + '|gun') u.facing = view.gunAim;
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -703,7 +703,7 @@
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
     // troopers turn to the mark, and every round leaves one of their own barrels
-    if (stationary(u)) {                          // the gun is slewed round onto the mark
+    if (turns(u)) {                               // the piece is slewed round onto the mark
       u.facing = view.gunAim = Math.atan2(TO.y - u.y, TO.x - u.x);
       view.aimFor = view.face + '|gun';
     }
@@ -1209,7 +1209,7 @@
       h += '<div class="vgrp"><label>Propulsion</label><div class="vseg">' +
         seg('prop', R.PROP_ORDER, view.prop) + '</div></div>';
     }
-    if (R.isMachine(p) || stationary(p)) {
+    if (R.isMachine(p) || turns(p)) {
       h += '<div class="vgrp"><label>Facing</label><div class="vseg">' +
         seg('face', FACES, view.face || 'SE') + '</div></div>';
     }

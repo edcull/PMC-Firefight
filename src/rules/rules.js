@@ -3065,8 +3065,10 @@
 
   function shoot(state, a, t, mode, opts) {
     opts = opts || {};
-    // a gun on its trails is slewed round onto what it fires at (no fire arc to it: only the drawing turns)
-    if (a && t && has(a, 'Stationary Artillery') && !(opts && opts.assault)) a.facing = Math.atan2(t.y - a.y, t.x - a.x);
+    /* A squad or a gun on its trails turns onto what it fires at. Only a
+       machine's facing is ever read by the rules (Limited Fire Arc, which side
+       is hit), so for anyone else this only turns the drawing. */
+    if (a && t && !isMachine(a) && a.x != null && !(opts && opts.assault)) a.facing = Math.atan2(t.y - a.y, t.x - a.x);
     var m = shotMods(state, a, t, mode, opts);
     var aux = m.aux, basic = m.basic, parts = m.parts.slice(), pierce = m.pierce;
     var crossfire = m.crossfire, dist = m.dist, dres = m.def;
