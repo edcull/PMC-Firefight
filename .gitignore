@@ -6,3 +6,4 @@ campaigns/
 
 # the built single-file pages: `npm run build` makes them
 build/
+test/art/diff/

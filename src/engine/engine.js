@@ -551,7 +551,6 @@
     return !!sa && sa.left > 0 && state.phase === 'deploy' &&
       !state.units.some(function (u) { return u.side === side && u.x >= 0; });
   }
-  function nextSwap() { return false; }
   function legalList(side, keys) {
     var cfg = state.cfg;
     return R.checkArmy(keys, cfg.tier, cfg.pl, docsOf(side), state.tactics && state.tactics[side], null);
@@ -4802,9 +4801,7 @@
     if (!u || u.cls !== 'aircraft' || !R.campFlag(u, 'advControl')) return;
     var ne = nearestEnemy(u);
     if (!ne) return;
-    var want = Math.atan2(ne.unit.y - u.y, ne.unit.x - u.x), d = want - (u.facing || 0);
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
+    var want = Math.atan2(ne.unit.y - u.y, ne.unit.x - u.x), d = R.angleWrap(want - (u.facing || 0));
     u.facing = (u.facing || 0) + Math.max(-Math.PI / 2, Math.min(Math.PI / 2, d));
   }
 

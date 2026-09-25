@@ -127,7 +127,9 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
     return { A: c.companies.A.name, B: c.companies.B.name, bf: c.companies.B.faction, bn: c.companies.B.roster.length,
       bdoc: c.companies.B.doctrines.length, rivals: (c.rivals || []).length, colours: [c.companies.A.colour, c.companies.B.colour] };
   });
-  check('both forces are on the hub', /Task Force Ironhold/.test(txt) && /The Hive/.test(txt), camp.A + ' / ' + camp.B);
+  // player 2's force is in the campaign's window
+  const p2 = () => p.evaluate(() => { const b = document.querySelector('#camp-body [data-kind="rivals"]'); return b ? b.textContent : ''; });
+  check('both forces are on the hub', /Task Force Ironhold/.test(txt) && /The Hive/.test(await p2()), camp.A + ' / ' + camp.B);
   check('...player 2\'s as founded, and no generated rivals', camp.bf === 'bugs' && camp.bn === 9 && camp.bdoc === 1 && camp.rivals === 1,
     camp.bn + ' units, ' + camp.rivals + ' rival');
   check('...in two different colours', camp.colours[0] !== camp.colours[1], camp.colours.join(' / '));
@@ -135,7 +137,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   await p.reload();
   await p.waitForTimeout(900);
   await click(p, '#btn-campaign');
-  check('both survive a reload', /Task Force Ironhold/.test(await body(p)) && /The Hive/.test(await body(p)));
+  check('both survive a reload', /Task Force Ironhold/.test(await body(p)) && /The Hive/.test(await p2()));
   check('no page errors', errs.length === 0, errs.join('; '));
 
   await b.close();

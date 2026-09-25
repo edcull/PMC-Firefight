@@ -65,7 +65,7 @@ async function drain(p) {
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Ghadon Third'; });
   let txt = await body(p);
   check('the founding screen speaks for a tribe', await p.evaluate(() => /the tribe/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
-  check('...offers Tribe Advancements', /starting tribe advancement/i.test(txt), (txt.match(/Starting [^\n]+/i) || [])[0]);
+  check('...offers Tribe Advancements', /choose a tribe advancement/i.test(txt), (txt.match(/Choose [^\n]+/i) || [])[0]);
   check('...eighteen of them', await p.evaluate(() =>
     document.querySelectorAll('#camp-body [data-doc]').length) === 18);
   const xenoOnly = await p.evaluate(() =>
@@ -79,8 +79,8 @@ async function drain(p) {
     if (!await click(p, `#camp-body button[data-add="${k}"]`)) problems.push('could not add ' + k);
   }
   await click(p, '#camp-body [data-doc="XO6"]');
-  txt = await body(p);
-  check('the list is a legal tribe', /ready\. the alpha squad/i.test(txt), txt.split('\n').slice(-3)[0]);
+  const sign = await p.evaluate(() => { const b = document.getElementById('found-sign'); return { title: b.title, off: b.disabled }; });
+  check('the list is a legal tribe', /ready\. the alpha squad/i.test(sign.title) && !sign.off, sign.title);
   await shot(p, 'xeno-found.png');
   check('the ground can be claimed', await clickText(p, '(?:CLAIM|Claim) THE GROUND|Claim the ground'));
 
@@ -88,7 +88,7 @@ async function drain(p) {
   console.log('\nThe hub');
   txt = await body(p);
   check('the tribe is on the books', /The Ghadon Third/.test(txt));
-  check('...paid in Territorial Points', /TerP/.test(txt) && !/\bkUC\b/.test(txt),
+  check('...paid in Territorial Points', /\bTP\b/.test(txt) && !/\bkUC\b/.test(txt),
     /kUC/.test(txt) ? 'kUC still appears: ' + (txt.split('\n').filter(l => /kUC/.test(l))[0] || '') : '');
   check('...led by an Alpha squad', await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get().companies.A;
@@ -219,8 +219,8 @@ async function drain(p) {
   txt = await body(p);
   check('the aftermath screen opened', /aftermath|EXP/i.test(txt), txt.split('\n')[0]);
   // the revolt is paid in IP; a mercenary company fighting elsewhere is still paid in kUC
-  check('...and pays the tribe in Territorial Points', /\+\d+ TerP/.test(txt),
-    (txt.match(/\+\d+ (TerP|IP|kUC)/) || [])[0]);
+  check('...and pays the tribe in Territorial Points', /\+\d+ TP/.test(txt),
+    (txt.match(/\+\d+ (TP|IP|kUC)/) || [])[0]);
   check('...recalculating territory when the scenario calls for it',
     !/Invasion|Demolish|Hostile takeover/.test(txt) || /Territorial recalculation/.test(txt) || !/won|lost/i.test(txt),
     (txt.split('\n').filter(l => /Territorial/.test(l))[0] || 'no line'));
@@ -236,7 +236,7 @@ async function drain(p) {
     };
   });
   check('the campaign turn advanced', after.turn === 1, 'turn ' + after.turn);
-  check('the tribe was paid', after.ip >= 0, after.ip + ' TerP');
+  check('the tribe was paid', after.ip >= 0, after.ip + ' TP');
   check('units earned experience', after.exp > 0, after.exp + ' EXP across the roster');
   check('...but the Alpha never does', after.cmdExp === 0, after.cmdExp + ' EXP');
 
@@ -255,7 +255,7 @@ async function drain(p) {
   await clickText(p, '^Dossier$');
   txt = await body(p);
   check('the dossier opened', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
-  check('the dossier speaks Territorial Points', /TerP/.test(txt) && !/kUC/.test(txt));
+  check('the dossier speaks Territorial Points', /\bTP\b/.test(txt) && !/kUC/.test(txt));
   const badge = await p.evaluate(() => document.querySelector('#camp-body .tierbadge').title);
   check('...and calls it a Tribe Tier', /tribe tier/i.test(badge), badge);
   await shot(p, 'xeno-roster.png');

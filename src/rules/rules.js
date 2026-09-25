@@ -14,6 +14,14 @@
   /* ---------- dice ---------- */
   function d10() { return Math.floor(Math.random() * 10); }      // reads 0-9
   function d6() { return 1 + Math.floor(Math.random() * 6); }
+  // an angle brought into (-π, π]: how far one bearing is round from another
+  function angleWrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+  // text made safe to put into HTML, attributes included
+  function esc(t) {
+    return String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
   function d3() { return 1 + Math.floor(Math.random() * 3); }
 
   /* ---------- the PMC infantry list (rulebook pp. 60-71, 79) ----------
@@ -320,7 +328,7 @@
     pmc: { key: 'pmc', name: 'PMC', full: 'Private military company', money: 'kUC', moneyLong: 'thousand Universal Credits' },
     rebel: { key: 'rebel', name: 'Rebels', full: 'Insurgent force', money: 'IP', moneyLong: 'Influence Points' },
     bugs: { key: 'bugs', name: 'Space Bugs', full: 'Bug swarm', money: 'RP', moneyLong: 'Resource Points' },
-    xeno: { key: 'xeno', name: 'Xenotripods', full: 'Xenotripod tribe', money: 'TerP', moneyLong: 'Territorial Points' }
+    xeno: { key: 'xeno', name: 'Xenotripods', full: 'Xenotripod tribe', money: 'TP', moneyLong: 'Territorial Points' }
   };
   function factionOf(keys) {
     for (var i = 0; i < (keys || []).length; i++) {
@@ -1264,7 +1272,7 @@
       rad += (rand() - 0.5) * 0.06;
       if (fam === 'lobed') rad += lobeA * Math.cos(lobes * t + lobePh);
       if (fam === 'kidney') {
-        var dd = Math.atan2(Math.sin(t - bayAt), Math.cos(t - bayAt));
+        var dd = angleWrap(t - bayAt);
         rad *= 1 - bayD * Math.exp(-dd * dd / (2 * baySig * baySig));
       }
       if (rift) {
@@ -1822,9 +1830,7 @@
   function arcOf(target, shooter) {
     if (!isMachine(target) || target.facing == null) return 'front';
     if (hasOwn(target, 'Turret')) return 'front';          // a turret has no sides or rear (p. 130)
-    var a = Math.atan2(shooter.y - target.y, shooter.x - target.x) - target.facing;
-    while (a > Math.PI) a -= Math.PI * 2;
-    while (a < -Math.PI) a += Math.PI * 2;
+    var a = angleWrap(Math.atan2(shooter.y - target.y, shooter.x - target.x) - target.facing);
     var d = Math.abs(a);
     if (d <= Math.PI / 4) return 'front';
     if (d <= Math.PI * 3 / 4) return 'side';
@@ -1833,9 +1839,7 @@
   // Limited Fire Arc: the target has to sit in the shooter's front quarter.
   function inFireArc(shooter, target) {
     if (shooter.facing == null) return true;
-    var a = Math.atan2(target.y - shooter.y, target.x - shooter.x) - shooter.facing;
-    while (a > Math.PI) a -= Math.PI * 2;
-    while (a < -Math.PI) a += Math.PI * 2;
+    var a = angleWrap(Math.atan2(target.y - shooter.y, target.x - shooter.x) - shooter.facing);
     return Math.abs(a) <= Math.PI / 4;
   }
   function sizeBonus(models) {
@@ -2862,7 +2866,7 @@
   function nearestFacing(ang) {
     var best = FACINGS[0], bd = Infinity;
     FACINGS.forEach(function (f) {
-      var d = Math.abs(Math.atan2(Math.sin(ang - f), Math.cos(ang - f)));
+      var d = Math.abs(angleWrap(ang - f));
       if (d < bd) { bd = d; best = f; }
     });
     return best;
@@ -2871,9 +2875,7 @@
   // is the shooter out in front of the dug-in gun, where its sandbags lie between them?
   function sandbagged(gun, shooter) {
     var f = gun.facing == null ? (gun.side === 'B' ? Math.PI : 0) : gun.facing;
-    var d = Math.atan2(shooter.y - gun.y, shooter.x - gun.x) - f;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
+    var d = angleWrap(Math.atan2(shooter.y - gun.y, shooter.x - gun.x) - f);
     return Math.abs(d) <= Math.PI / 3;
   }
   function shotRange(a) { return dugIn(a) ? Math.min(a.range, 24) : a.range; }
@@ -3745,9 +3747,7 @@
      is what it actually does. `driveCost` answers both together. */
   function turnsTo(u, x, y) {
     var f = u.facing == null ? 0 : u.facing;
-    var d = Math.atan2(y - u.y, x - u.x) - f;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
+    var d = angleWrap(Math.atan2(y - u.y, x - u.x) - f);
     d = Math.abs(d);
     if (d <= Math.PI / 4) return 0;                    // inside the front quarter
     if (d <= Math.PI * 3 / 4) return 1;                // a quarter turn either way
@@ -4294,7 +4294,7 @@
     dugIn: dugIn, nearestFacing: nearestFacing, shotRange: shotRange, shotMinRange: shotMinRange,
     profile: function (k) { return BY_KEY[k]; },
     checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN,
-    d10: d10, d6: d6, d3: d3,
+    d10: d10, d6: d6, d3: d3, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, inRect: inRect, segRect: segRect,

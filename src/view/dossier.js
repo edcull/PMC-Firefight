@@ -158,7 +158,14 @@
   var ROMAN = R.ROMAN;
   var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
   // the memorial: a headstone
+  // the other forces: two banners
+  var ICON_FORCES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h9l-2 3.5 2 3.5H5"/><path d="M19 21V9"/><path d="M19 9h-6"/><path d="M13 9l1.5 2.5L13 14h6"/></svg>';
+  // the battles fought: crossed swords
+  var ICON_BATTLES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M9.5 17.5L21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6"/><path d="M8 16l-4 4"/><path d="M5 21l-2-2"/></svg>';
   var ICON_MEMORIAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V9a5 5 0 0 1 10 0v12"/><path d="M4 21h16"/><path d="M12 9v6"/><path d="M9.5 11.5h5"/></svg>';
+  // managing the campaign's file: a folder with a gear
+  var ICON_MANAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3"/><path d="M3 7v10a2 2 0 0 0 2 2h7"/><circle cx="18" cy="17" r="2.2"/><path d="M18 12.8v1.6M18 19.6v1.6M13.8 17h1.6M20.6 17h1.6M15 14l1.1 1.1M19.9 18.9L21 20M15 20l1.1-1.1M19.9 15.1L21 14"/></svg>';
+  // recruiting: a plus
   // giving it all up: a white flag
   var ICON_ABANDON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>';
   var ICON_LOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>';
@@ -169,7 +176,7 @@
       if (view === 'hub' && el('camp') && !el('camp').hidden) render();
     });
   }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function esc(s) { return R.esc(s); }   // the shared one, in the rules
   /* The tooltip attributes, from tips.js. A Battle Honour or a Battle Trauma is
      a name and a rule, and the name alone tells you nothing — so wherever one is
      shown, what it does is one hover or one tap away. */
@@ -243,10 +250,6 @@
 
   /* ================= small pieces ================= */
   function profile(key) { return R.profile(key); }
-  function unitLine(e) {
-    var p = profile(e.key);
-    return p.name + ' · Tier ' + ROMAN[p.tier];
-  }
   function tierChip(t) { return '<span class="ct">' + ROMAN[t] + '</span>'; }
 
   function entryCard(e, co, opts) {
@@ -330,38 +333,47 @@
     var rivals = camp.mode === 'hotseat' ? [] : (camp.rivals || [B]), n = rivals.length;
     if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) + '</p>';
     h += companyPanel(A, 'A', hubBar());
-    /* Who else is on the world: one line, and their panels in a modal behind
-       it (in hotseat, the second player's force). */
-    h += '<div class="field"><label>' + (camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world') + '</label>' +
-      '<button type="button" class="archline" data-go="fmodal" data-kind="rivals"><span>' +
-      (camp.mode === 'hotseat' ? esc(B.name)
-        : n > 1 ? n + ' forces' : esc(B.name)) +
-      '</span><em>details</em></button></div>';
     // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
     var promoE = promoRid && C.byRid(A, promoRid);
     if (promoE) {
       h += cmodal('promote', 'Promote ' + promoE.name + ' \u2014 ' + promoE.exp + ' EXP',
         '<div class="cmodal-scroll promo-list">' + spendActs(promoE, A) + '</div>');
     }
+    /* The campaign's window: who else is on the world (in hotseat, the second
+       player's force), the battles fought, the fallen, and the campaign's
+       file: out to a file, back in from one, or given up. */
+    var last = camp.log.length ? camp.log[camp.log.length - 1] : null;
+    var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">Back</button>';
+    var result = function (l) { return l.winner === 'A' ? 'won' : l.winner === 'B' ? 'lost' : 'drawn'; };
+    h += cmodal('manage', 'The campaign', '<div class="cmodal-scroll manage-list">' +
+      '<button type="button" class="archline" data-go="fmodal" data-kind="rivals">' + ICON_FORCES + '<span>' +
+      (camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world') + '<small>' +
+      (camp.mode === 'hotseat' ? esc(B.name) : n > 1 ? n + ' forces' : esc(B.name)) + '</small></span></button>' +
+      (last ? '<button type="button" class="archline" data-go="fmodal" data-kind="battles">' + ICON_BATTLES + '<span>Battles fought<small>' +
+        (camp.log.length > 1 ? camp.log.length + ' battles \u2014 the last: ' : '') +
+        esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl + ', ' + result(last) +
+        '</small></span></button>' : '') +
+      '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + ICON_MEMORIAL + '<span>Memorial<small>' +
+      (A.faction === 'bugs' ? 'The biomass spent over the campaign' : 'Everyone lost, battle by battle') + '</small></span></button>' +
+      '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
+      '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
+      '<button type="button" class="archline warn" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
+      '</div>');
+    // the fallen, opened from the campaign's window (Back returns to it)
+    h += cmodal('memorial', 'Memorial', '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);
     h += cmodal('rivals', camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
       '<div class="cmodal-scroll">' + (camp.mode === 'hotseat' ? companyPanel(B, 'B')
-        : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
-    /* The battles fought: the last one on a line, and all of them behind it in a window. */
-    if (camp.log.length) {
+        : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
+    // every battle fought, the latest first
+    if (last) {
       var battleRow = function (l) {
         return '<div class="crow"><b>' + l.turn + '</b>' +
           '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl + '</span>' +
-          '<em>' + (l.winner === 'A' ? 'won' : l.winner === 'B' ? 'lost' : 'drawn') + '</em>' +
+          '<em>' + result(l) + '</em>' +
           '<span class="cmoney">+' + l.kUC.A + ' ' + coin() + '</span></div>';
       };
-      var last = camp.log[camp.log.length - 1];
-      h += '<div class="field"><label>Battles fought</label>' +
-        '<button type="button" class="archline battleline" data-go="fmodal" data-kind="battles"><span>' +
-        esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl +
-        ' \u2014 ' + (last.winner === 'A' ? 'won' : last.winner === 'B' ? 'lost' : 'drawn') + '</span>' +
-        '<em>' + (camp.log.length > 1 ? 'all ' + camp.log.length : 'details') + '</em></button></div>';
       h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll"><div class="clog">' +
-        camp.log.slice().reverse().map(battleRow).join('') + '</div></div>');
+        camp.log.slice().reverse().map(battleRow).join('') + '</div></div>', back);
     }
     h += '<p class="camp-foot">' +
       '<button class="lnk" data-go="menu">← Main menu</button>' +
@@ -374,28 +386,17 @@
   function hubBar() {
     var co = camp.companies.A;
     var go = '<button class="start hubgo" data-go="' + (camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
+    // the other forces, the battles, the memorial, saving, loading and abandoning, together behind the one button
+    var manage = '<button class="lnk hubicon" data-go="fmodal" data-kind="manage" title="The campaign" aria-label="The campaign">' + ICON_MANAGE + '</button>';
     if (hubPane === 'dossier') {
-      /* In the dossier: back to the company, the recruiting (tap it again for
-         the units), the memorial, and the contract. */
-      var tab = function (key, label, cls, title) {
-        var on = rosterTab === key;
-        return '<button class="lnk' + (cls ? ' ' + cls : '') + (on ? ' on' : '') + '" data-rtab="' + (on ? 'units' : key) + '" aria-pressed="' + on + '"' +
-          (title ? ' title="' + title + '" aria-label="' + title + '"' : '') + '>' + label + '</button>';
-      };
+      // in the dossier: back to the company, the campaign's window, and the contract (recruiting is at the foot of the dossier)
       return '<div class="hubbar dosbar">' +
-        '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' +
-        // while recruiting or in the memorial, the same button goes back to the dossier, and says so
-        (rosterTab === 'memorial'
-          ? '<button class="lnk" data-rtab="units">Dossier</button>'
-          : tab('recruit', rosterTab === 'recruit' ? 'Dossier' : esc(C.words(co).recruit))) +
-        tab('memorial', ICON_MEMORIAL, 'hubicon', 'Memorial') + go + '</div>';
+        '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' + manage +
+        go + '</div>';
     }
     return '<div class="hubbar">' +
       '<button class="lnk" data-go="roster">Dossier</button>' +
-      '<button class="lnk hubicon" data-go="export" title="Save to a file" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
-      '<button class="lnk hubicon" data-go="import" title="Load a file" aria-label="Load a file">' + ICON_LOAD + '</button>' +
-      '<button class="lnk hubicon warn" data-go="wipe" title="Abandon the campaign" aria-label="Abandon the campaign">' + ICON_ABANDON + '</button>' +
-      go + '</div>';
+      manage + go + '</div>';
   }
   function companyPanel(co, side, bar) {
     var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
@@ -407,7 +408,7 @@
       h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
         '</label>' + squares(colourOf(co)) + '</div>';
     }
-    h += (bar || '') + statRow(co);
+    h += (bar || '') + statRow(co, false);
     h += '<div class="cpdoc">' + (co.doctrines.length
       ? co.doctrines.map(function (d) {
         var dd = C.doctrine(d);
@@ -740,15 +741,14 @@
         }).join('') + '</div>' : '') +
         '</div>';
     }).join('');
+    // under the list, side by side: the units to add, and the starting doctrine
+    var cr = C.creedOf(co), doc = draft.doctrine && C.doctrine(draft.doctrine);
     h += '<div class="muster found-units">' + head +
       '<div class="chosen fcards" id="found-chosen">' + cards + '</div>' +
-      '<button type="button" class="lnk found-add" data-go="fmodal" data-kind="units">+ Add units</button></div>';
-
-    var cr = C.creedOf(co), doc = draft.doctrine && C.doctrine(draft.doctrine);
-    h += '<div class="field"><label>Starting ' + cr.one + '</label>' +
-      '<button type="button" class="archline" data-go="fmodal" data-kind="doctrine">' +
-      '<span>' + (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</span>' +
-      '<em>' + (doc ? 'change' : 'tap to select') + '</em></button></div>';
+      '<div class="found-row">' +
+      '<button type="button" class="lnk" data-go="fmodal" data-kind="units">+ Add units</button>' +
+      '<button type="button" class="lnk' + (doc ? ' on' : '') + '" data-go="fmodal" data-kind="doctrine" title="Starting ' + cr.one + '">' +
+      (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</button></div></div>';
 
     // the three pickers, each a modal over the page
     h += cmodal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
@@ -778,13 +778,14 @@
       : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
       : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
       : 'Ready. The field command is added free, at the Company Tier.';
-    var nameTxt = say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
-    // the name is typed without a redraw: the line and the button follow it as it is typed (see mount)
-    h += '<p class="faults' + (chk.ok ? ' ok' : '') + '" id="found-faults" data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '">' + (chk.ok
-      ? readyTxt
-      : rest && !named ? nameTxt
-        : 'Six Tier I units, two Tier II, at most two vehicles, one ' + C.creedOf(co).one + '.' + (named ? '' : ' ' + nameTxt)) + '</p>';
-    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound"' + (chk.ok ? '' : ' disabled') + '>' +
+    var nameTxt = say('The company needs a name.', 'The revolution needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
+    /* No line of help under it: what the charter still wants is on the
+       button, for a hover or a long press. The name is typed without a
+       redraw, so the button follows it as it is typed (see mount). */
+    var why = chk.ok ? readyTxt : rest && !named ? nameTxt
+      : 'Six Tier I units, two Tier II, at most two vehicles, one ' + cr.one + '.' + (named ? '' : ' ' + nameTxt);
+    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound" title="' + esc(why) + '"' +
+      ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '"' + (chk.ok ? '' : ' disabled') + '>' +
       say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
     // the second player cannot step back out: the campaign needs their force
     if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
@@ -855,8 +856,6 @@
         }
       });
       h += '</div>';
-    } else if (rosterTab === 'memorial') {
-      h += memorialList(co);
     } else if (rosterTab === 'spend') {
       h += spendList(co);
     } else {
@@ -868,7 +867,12 @@
      box: its tabs across the top and the list scrolling under them. */
   function dossierPanel(co) {
     // the recruiting list fills the panel and scrolls itself; the others scroll the panel
-    return '<div class="cprom cdos"><div class="cprom-list cdos-body' + (rosterTab === 'recruit' ? ' cdos-fill' : '') + '">' + rosterBody(co) + '</div></div>';
+    /* At its foot, the way in to recruiting; while recruiting, the same
+       button goes back to the units, and says so. */
+    var rec = rosterTab === 'recruit';
+    var foot = '<div class="cdos-foot"><button class="lnk' + (rec ? ' on' : '') + '" data-rtab="' + (rec ? 'units' : 'recruit') + '" aria-pressed="' + rec + '">' +
+      (rec ? '\u2190 Back to the dossier' : '+ ' + esc(C.words(co).recruit)) + '</button></div>';
+    return '<div class="cprom cdos"><div class="cprom-list cdos-body' + (rec ? ' cdos-fill' : '') + '">' + rosterBody(co) + '</div>' + foot + '</div>';
   }
   var hubPane = 'dossier';            // the hub opens on the unit cards
   var rosterTab = 'units';
@@ -879,20 +883,6 @@
   /* The loss rate: everything lost against everything that has ever served,
      replacements included — soldiers, the tribe's warriors, or the swarm's
      biomass. */
-  // the experience rate: honours held against units on the books
-  // ...and the trauma rate beside it: traumas carried against units on the books
-  function expLine(co) {
-    var st = C.experienceStats(co), tr = C.traumaStats(co), wn = C.winStats(co);
-    // the win rate leads, once there has been a battle to win
-    var won = wn.battles ? '<div class="dloss dexpr dwin"><b>' + Math.round(wn.pct * 1000) / 10 + '%</b> won <span>' +
-      wn.wins + ' of ' + wn.battles + (wn.battles === 1 ? ' battle' : ' battles') + '</span></div>' : '';
-    if (!st.units) return won;
-    function line(cls, pct, word, n, noun) {
-      return '<div class="dloss ' + cls + '"><b>' + Math.round(pct * 1000) / 10 + '%</b> ' + word + ' <span>' + n + ' ' +
-        esc(noun) + ' across ' + st.units + (st.units === 1 ? ' unit' : ' units') + '</span></div>';
-    }
-    return won + line('dexpr', st.pct, st.word, st.honours, st.noun) + line('dexpr dtrau', tr.pct, tr.word, tr.traumas, tr.noun);
-  }
   function lossLine(co) {
     return C.lossStats(co).map(function (st) {
       if (!st.served) return '';
@@ -1502,7 +1492,6 @@
       return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command;
     });
   }
-  function drugCap(picks) { return Math.floor(drugAble(picks).length / 3); }
   /* `chosen`: the player's own pick of rids ("may choose up to 1/3"); without
      one — the rival — the unit with the most to prove goes first. */
   function drugThem(co, picks, chosen) {
@@ -1719,7 +1708,7 @@
     if (p.territory && p.territory.A) {
       var tt = p.territory.A;
       h += '<div class="cpan"><div class="cpstat">Territorial recalculation (' + (tt.won ? 'the tribe claimed ground' : 'the tribe gave ground') + '): ' +
-        '<span class="dcx">' + tt.was.join(' ') + '</span> → <span class="dcx">' + tt.now.join(' ') + '</span> = ' + tt.total + ' TerP.</div></div>';
+        '<span class="dcx">' + tt.was.join(' ') + '</span> → <span class="dcx">' + tt.now.join(' ') + '</span> = ' + tt.total + ' TP.</div></div>';
     }
     var rec = after.sides.A;
     if (rec.degenerated && rec.degenerated.length) {
@@ -1739,8 +1728,8 @@
     }
     if (rec.reborn && rec.reborn.length) {
       h += '<div class="cpan"><div class="cpstat">Enhanced Genetic Memory — ' + rec.reborn.map(function (r) {
-        return r.afford ? esc(r.name) + ' is regrown for ' + r.cost + ' TerP' + (r.remembered ? ', remembering its experience' : ', its memories lost')
-          : esc(r.name) + ' could not be regrown (needs ' + r.cost + ' TerP)';
+        return r.afford ? esc(r.name) + ' is regrown for ' + r.cost + ' TP' + (r.remembered ? ', remembering its experience' : ', its memories lost')
+          : esc(r.name) + ' could not be regrown (needs ' + r.cost + ' TP)';
       }).join('; ') + '.</div></div>';
     }
     if (rec.healed && rec.healed.length) {
@@ -2342,9 +2331,10 @@
       }
       case 'hub': view = 'hub'; render(); return;
       case 'menu': toMenu(); return;
-      case 'export': doExport(); return;
-      case 'import': el('camp-file').click(); return;
+      case 'export': if (openModal === 'manage') { openModal = null; render(); } doExport(); return;
+      case 'import': if (openModal === 'manage') { openModal = null; render(); } el('camp-file').click(); return;
       case 'wipe':
+        if (openModal === 'manage') { openModal = null; render(); }
         ask({
           kind: 'confirm', title: 'Abandon this campaign?', danger: true,
           text: 'Every dossier goes, everywhere it is saved — this browser, your account and your server. ' +
@@ -2453,11 +2443,11 @@
     host.addEventListener('input', function (ev) {
       if (!ev.target || ev.target.id !== 'found-name' || !draft) return;
       draft.name = ev.target.value;
-      var sign = el('found-sign'), fl = el('found-faults');
+      var sign = el('found-sign');
       if (!sign || sign.getAttribute('data-rest') !== '1') return;
       var ok = !!draft.name.trim();
       sign.disabled = !ok;
-      if (fl) { fl.textContent = fl.getAttribute(ok ? 'data-ready' : 'data-noname'); fl.classList.toggle('ok', ok); }
+      sign.title = sign.getAttribute(ok ? 'data-ready' : 'data-noname');
     });
     host.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }

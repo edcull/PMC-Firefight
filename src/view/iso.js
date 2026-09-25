@@ -806,7 +806,6 @@
   /* Lava: plates of black crust split by glowing seams, hottest down the middle
      of each crack, with the odd pool still liquid. */
   var HOT = GLOW.map(hex3), WHITEHOT = hex3('#fff1b8'), CRUSTC = [hex3('#2a1a12'), hex3('#4a2412')];
-  var BASALT = [hex3('#0f0c0b'), hex3('#1c1714'), hex3('#2c2520')], ASH = hex3('#5a534d');
   /* Lava, seen down a crack in the ground: the melt at the bottom, orange and
      moving, with brighter threads where it runs fastest and dark skins of crust
      drifting on it. The rock walls of the crack are drawn over this afterwards
@@ -916,16 +915,6 @@
     }
   }
 
-  /* a hill is its rectangle, raised: the plateau is exactly the ground that gives
-     the +2 Firepower, corners included */
-  function hillCorners(r) {
-    function pt(x, y, up) { var p = toScreen(x, y); return [p.x, p.y - (up || 0)]; }
-    return {
-      n: pt(r.x, r.y), e: pt(r.x + r.w, r.y), s: pt(r.x + r.w, r.y + r.h), w: pt(r.x, r.y + r.h),
-      nT: pt(r.x, r.y, ELEV), eT: pt(r.x + r.w, r.y, ELEV),
-      sT: pt(r.x + r.w, r.y + r.h, ELEV), wT: pt(r.x, r.y + r.h, ELEV)
-    };
-  }
 
   // a vertical gradient between two screen heights
   function vgrad(g, y0, y1, stops) {
@@ -2427,9 +2416,7 @@
     for (var k in sprites) if (k.charAt(0) === side) delete sprites[k];
     for (var k2 in corpses) if (k2.charAt(0) === side) delete corpses[k2];
   }
-  var FLAG_RED = { light: '#e0584a', mid: '#b8302a', dark: '#6e1814' };
   var GUN = { dk: '#191d23', md: '#262b33', lt: '#3a424c', hot: '#e8c15a' };
-  var CLOAK = { light: '#8f8469', mid: '#6e6551', dark: '#474132' };
   /* Rebel wardrobes. Each tint overrides part of the side palette, so the unit's
      own colour still shows on the armband, the beret and the shoulder. */
   /* The rebels dress in whatever they could find, but brightly: every rebel
@@ -2456,7 +2443,6 @@
   }
   var REBEL_DRAB = { rebel: true, light: '#9a8a6c', mid: '#7a6b4f', dark: '#3f3828', helm: '#6a5c3f', cloth: '#8a5a3a' };
   var REBEL_FIELD = { rebel: true, light: '#7e8a67', mid: '#5f6b4a', dark: '#2f3722', helm: '#4e5a3a', cloth: '#6f7a54' };
-  var REBEL_ROBE = { rebel: true, light: '#cfc4a8', mid: '#a89a79', dark: '#534b39', helm: '#8e8264', cloth: '#b8a884' };
   var REBEL_NIGHT = { rebel: true, light: '#565f66', mid: '#3c444b', dark: '#1c2024', helm: '#2e353b', cloth: '#333a40' };
   var REBEL_MINE = { rebel: true, light: '#c08b3a', mid: '#8f6626', dark: '#443014', helm: '#e0a33a', cloth: '#6d4e1e' };
   var REBEL_WORN = { rebel: true, light: '#8a8a7a', mid: '#69695c', dark: '#33332c', helm: '#565649', cloth: '#6b6255' };
@@ -2470,20 +2456,8 @@
   var HOLY_A = { rebel: true, light: '#a3927a', mid: '#80705a', dark: '#433a2c', helm: '#6a5c48', cloth: '#5a4c3a' };
   var HOLY_B = { rebel: true, light: '#8c9280', mid: '#6b7160', dark: '#363a2e', helm: '#565b4c', cloth: '#4a4a3c' };
   var HOLY_C = { rebel: true, light: '#b0a584', mid: '#8c8264', dark: '#474130', helm: '#6f674e', cloth: '#5c5440' };
-  // hellriders: blackened leathers, gunmetal helmets and a red that means it
-  var LEATHER = { rebel: true, light: '#5a5048', mid: '#2e2926', dark: '#141110', helm: '#1c1c20', cloth: '#6a4a30' };
-  var HELL = { rebel: true, light: '#5f4d46', mid: '#3e302b', dark: '#1c1512', helm: '#2a2d33', cloth: '#8a1e1a' };
-  // irregulars: odd bits of uniform, no two the same
-  // the revolutionary guard and the leaders: the old ochre fatigues, whatever the side's colour
-  var OCHRE_UNI = { rebel: true, light: '#dcb673', mid: '#b1853a', dark: '#5f4620', helm: '#93702a', cloth: '#6b5c3a' };
-  /* the guard, the leaders' escorts and the hardened insurgents: dark green
-     fatigues, over-printed in black (see applyCamo) */
-  /* the guard, the leaders' escorts and the hardened insurgents: plain green
-     fatigues with black pads at the shoulders, knees and shins */
   // as they used to look: the plain green field kit, helmets and pads included; only the flags carry the side's colour
   var FIELD_OCHRE = { rebel: true, light: '#7e8a67', mid: '#5f6b4a', dark: '#2f3722', helm: '#4e5a3a', cloth: '#6f7a54' };
-  var GREEN_UNI = { rebel: true, light: '#7a9460', mid: '#58703f', dark: '#2e3d22', helm: '#1c1e1c', cloth: '#3e5030' };
-  var CAMO_UNI = { rebel: true, light: '#4f6240', mid: '#36472c', dark: '#1d2618', helm: '#2e3b25', cloth: '#28331f' };
   // the infected: what they wore, gone grey and damp; tinted as rebels so the fungus is bright
   var INFECT_A = { rebel: true, light: '#7a7e78', mid: '#5c605a', dark: '#2e312c', helm: '#4c504a', cloth: '#5e5a50' };
   var INFECT_B = { rebel: true, light: '#86806e', mid: '#666050', dark: '#34302a', helm: '#55503f', cloth: '#4e5458' };
@@ -4308,7 +4282,7 @@
 
      Coordinates are the figure's own art units, as everywhere in paintFigure;
      fractions of a unit exist only at the new resolution, which is the point. */
-  var SKIN = '#8d6f4e', SKIN_D = '#6b5238', SKIN_DD = '#5a4330';
+  var SKIN_D = '#6b5238', SKIN_DD = '#5a4330';
   var HIGHLIGHT = '#f0e2c2', LENS = '#8fd0e8';
 
   var HELM_DETAIL = {
@@ -6163,175 +6137,10 @@
     return c;
   }
 
-  /* ---------- crew-served pieces on the base ---------- */
-  // Drawn between the back and front ranks, so the crew work around it.
-  // a painter for a crew-served piece, mirrored when the squad faces left
-  function pieceP(g, cx, cy, s, dir) {
-    dir = dir || 1;
-    var P = function (dx, dy, w, h, c) {
-      g.fillStyle = c;
-      var x = dir < 0 ? cx - (dx + w) * s : cx + dx * s;
-      g.fillRect(Math.round(x), Math.round(cy + dy * s), Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s)));
-    };
-    // a leg or strut from one point to another, laid in short steps
-    P.strut = function (x0, y0, x1, y1, w, c) {
-      var n = Math.max(2, Math.round(Math.hypot(x1 - x0, y1 - y0)));
-      for (var i = 0; i <= n; i++) P(x0 + (x1 - x0) * i / n - w / 2, y0 + (y1 - y0) * i / n - w / 2, w, w, c);
-    };
-    return P;
-  }
-  /* A tripod: three legs splayed from a pintle head, a gun cradled on it. */
-  function tripodBase(P, h, heavy) {
-    var lw = heavy ? 2.4 : 1.8;
-    P.strut(0, -h, -13, 0, lw, '#2a3029');
-    P.strut(0, -h, 11, 0, lw, '#343b33');
-    P.strut(0, -h, 3, 2, lw, '#2a3029');
-    P(-14, -1, 3, 1.5, '#1c201b'); P(10, -1, 3, 1.5, '#1c201b');   // feet
-    P(-2, -h - 2, 4, 4, '#39413a');                                  // the pintle head
-  }
-  var EMPLACEMENT = {
-    mortar: function (g, cx, cy, s, pal, dir) {
-      var P = pieceP(g, cx, cy, s, dir);
-      ellipse(g, cx + 2 * s * (dir || 1), cy, 17 * s, 7 * s, 'rgba(12,10,8,.36)');
-      P(-12, -5, 24, 5, '#2f3630');                    // baseplate
-      P(-12, -5, 24, 2, '#535d50');
-      P(-9, -22, 3, 18, '#39413a');                    // bipod
-      P(8, -22, 3, 18, '#39413a');
-      P(-9, -24, 20, 3, '#4d564a');                    // traverse bar
-      // the tube, leaning back over the plate
-      for (var i = 0; i < 26; i++) {                   // the tube, leaning back
-        P(-2 + i * 0.42, -7 - i * 1.3, 7, 3, '#39413a');
-        P(-2 + i * 0.42, -7 - i * 1.3, 2, 3, '#4e574c');
-      }
-      P(8, -43, 10, 4, '#5b6659');                     // muzzle
-      P(8, -44, 10, 2, '#7d8a78');
-      P(-20, -8, 10, 8, '#4a4438');                    // ammunition crate
-      P(-20, -8, 10, 2, '#6a5a3a');
-      P(-18, -12, 3, 5, '#8a5a2a');                    // rounds standing ready
-      P(-14, -12, 3, 5, '#8a5a2a');
-    }
-  };
-  /* The sandbag wall a dug-in piece fires over (p. 94): two courses of bags
-     across its front, the barrel's line just clearing the top. */
-  function sandbags(g, cx, cy, s, dir) {
-    var P = pieceP(g, cx, cy, s, dir);
-    for (var r = 0; r < 3; r++) {
-      var y = -6 - r * 5, n = 4 - (r === 2 ? 1 : 0), x0 = 10 + (r % 2) * 3;
-      for (var k = 0; k < n; k++) {
-        P(x0 + k * 7, y, 7, 5, '#6e6450');
-        P(x0 + k * 7, y, 7, 1.6, '#8e836a');
-        P(x0 + k * 7 + 6, y + 1, 1, 4, '#4a4337');
-      }
-    }
-  }
-  /* The heavy machine gun on its tripod: a long barrel with a cooling jacket,
-     spade grips at the back, a belt feeding out of a green ammunition box. */
-  EMPLACEMENT.hmg = function (g, cx, cy, s, pal, dir) {
-    var P = pieceP(g, cx, cy, s, dir);
-    ellipse(g, cx + 2 * s * (dir || 1), cy, 15 * s, 6 * s, 'rgba(12,10,8,.34)');
-    tripodBase(P, 13, false);
-    P(-9, -19, 15, 5, '#262b33');                    // receiver
-    P(-9, -19, 15, 1.5, '#454d58');
-    P(-12, -20, 3, 5, '#1c2026');                    // spade grips
-    P(6, -18, 17, 2.5, '#1c2026');                   // barrel
-    P(6, -18.5, 10, 3.5, '#2e343c');                 // its cooling jacket
-    P(8, -18.5, 0.8, 3.5, '#1a1d22'); P(11, -18.5, 0.8, 3.5, '#1a1d22');
-    P(23, -18.8, 4, 4, '#3a424c');                   // flash hider
-    P(-3, -14, 7, 5, '#4a5a3a');                     // ammunition box
-    P(-3, -14, 7, 1.2, '#6a7a52');
-    P(3, -16, 3, 2, '#b8923a');                      // the belt going in
-  };
-  /* The Gauss cannon: a heavy coil barrel on a braced tripod, capacitor
-     housing at the breech, cyan coils glowing along the barrel. */
-  EMPLACEMENT.gauss = function (g, cx, cy, s, pal, dir) {
-    var P = pieceP(g, cx, cy, s, dir);
-    ellipse(g, cx + 2 * s * (dir || 1), cy, 17 * s, 7 * s, 'rgba(12,10,8,.36)');
-    tripodBase(P, 15, true);
-    P(-12, -25, 13, 10, '#2c333c');                  // capacitor housing
-    P(-12, -25, 13, 2, '#4a535f');
-    P(-10, -21, 9, 1, '#5fd0f0');
-    P(1, -22, 28, 4, '#232830');                     // the barrel
-    P(1, -22, 28, 1, '#4a535f');
-    for (var i = 0; i < 5; i++) {                    // cooling vents, inside the barrel
-      P(4 + i * 5, -21, 2, 2, '#1a1e25');
-      P(4.5 + i * 5, -20.5, 1, 1, '#7fe0f0');
-    }
-    P(28, -23, 3, 6, '#39424d');                     // muzzle
-    P(-16, -17, 5, 4, pal.dark);                     // power cable to the crew's pack
-  };
-  /* A rebel autocannon on a salvaged tripod: drum-fed, a welded shield. */
-  EMPLACEMENT.rebac = function (g, cx, cy, s, pal, dir) {
-    var P = pieceP(g, cx, cy, s, dir);
-    ellipse(g, cx + 2 * s * (dir || 1), cy, 16 * s, 6 * s, 'rgba(12,10,8,.34)');
-    tripodBase(P, 14, true);
-    P(-9, -21, 14, 6, '#39413a');                    // receiver
-    P(-9, -21, 14, 1.5, '#57604f');
-    P(-6, -15, 7, 6, '#2a2f2a');                     // the drum
-    P(-6, -15, 7, 1.2, '#4a5247');
-    P(4, -26, 3, 11, '#454e43');                     // shield
-    P(4, -26, 1, 11, '#616b5c');
-    P(5, -20, 22, 3, '#262b24');                     // barrel
-    P(27, -20.5, 4, 4, '#5b6659');                   // muzzle brake
-  };
-  /* The heavy autocannon: a bigger gun on a heavier tripod, sandbagged. */
-  EMPLACEMENT.rebhac = function (g, cx, cy, s, pal, dir) {
-    var P = pieceP(g, cx, cy, s, dir);
-    ellipse(g, cx + 2 * s * (dir || 1), cy, 19 * s, 7 * s, 'rgba(12,10,8,.36)');
-    P(-20, -5, 12, 5, '#5c5344'); P(-20, -5, 12, 1.5, '#7a6e58');   // sandbags round the feet
-    P(8, -4, 11, 4, '#5c5344'); P(8, -4, 11, 1.5, '#7a6e58');
-    tripodBase(P, 16, true);
-    P(-12, -24, 17, 8, '#39413a');                   // receiver
-    P(-12, -24, 17, 2, '#57604f');
-    P(-8, -16, 9, 7, '#2a2f2a');                     // magazine
-    P(5, -31, 4, 15, '#454e43');                     // shield
-    P(5, -31, 1.5, 15, '#616b5c');
-    P(7, -23, 26, 4, '#262b24');                     // barrel
-    P(7, -23, 26, 1, '#4a5247');
-    P(31, -24, 5, 6, '#5b6659');                     // muzzle brake
-    P(-18, -12, 6, 7, pal.dark); P(-18, -12, 6, 2, pal.mid);         // a box of rounds in unit colours
-  };
-  /* The guided-missile team's launcher: a long ready tube on a low tripod,
-     a boxed guidance unit and sight under it, a spare round in its case. */
-  EMPLACEMENT.atgm = function (g, cx, cy, s, pal, dir) {
-    var P = pieceP(g, cx, cy, s, dir);
-    ellipse(g, cx + 2 * s * (dir || 1), cy, 17 * s, 6 * s, 'rgba(12,10,8,.34)');
-    tripodBase(P, 12, false);
-    P(-8, -20, 12, 7, '#2e3530');                    // guidance unit
-    P(-8, -20, 12, 1.5, '#4d564a');
-    P(-6, -17, 4, 2, '#8fb8cc');                     // its thermal sight glass
-    P(-14, -27, 36, 6, '#4a5a3a');                   // the launch tube
-    P(-14, -27, 36, 1.5, '#6a7a52');
-    P(-14, -27, 2, 6, '#2e3a24'); P(20, -27, 2, 6, '#2e3a24');     // end caps
-    P(2, -21, 2, 2, '#1c201b');                      // the tube's clamp on the cradle
-    P(-2, -31, 6, 4, '#39413a');                     // day sight on top
-    P(3, -30, 1.5, 2, '#8fb8cc');
-    P(-26, -6, 22, 5, '#4a5a3a');                    // a spare round in its case, on the ground
-    P(-26, -6, 22, 1.2, '#6a7a52');
-    P(-26, -6, 2, 5, pal.dark);
-  };
-  // the SAM team fires from the same launcher as the guided-missile team
-  EMPLACEMENT.samlauncher = EMPLACEMENT.atgm;
-  // where each piece's barrel ends, in its own units
-  var PIECE_MUZZLE_DUG = {};
-  var PIECE_MUZZLE = { mortar: [13, -42], rebelmortar: [13, -42],
-    hmg: [27, -16.5], gauss: [31, -20], rebac: [31, -18.5], rebhac: [36, -21],
-    atgm: [22, -24], samlauncher: [22, -24] };
-  // how many pieces a unit works, and how large they stand beside the crew
+  /* ---------- crew-served pieces ----------
+     The mortars and tripod weapons are drawn in 3D (PIECE3D, below); how many
+     pieces a unit works: */
   var PIECE_COUNT = { mortarsection: 1, mortarteam: 2, mortarbattery: 3 };
-  var PIECE_SCALE = { mortar: 0.72, rebelmortar: 0.8, atgm: 1.15, samlauncher: 1.15 };
-  function pieceSpots(u, art, p, scale) {
-    var n = PIECE_COUNT[u.key] || 1, k = SU * scale * 1.35 * (PIECE_SCALE[art] || 1);
-    var at = n === 1 ? [[0, 0]] : n === 2 ? [[-a(5.5), -a(1)], [a(5), a(1.2)]] : [[-a(7), -a(1.5)], [a(0.5), -a(3)], [a(6.5), a(1.5)]];
-    return at.map(function (o) { return { x: p.x + o[0], y: p.y + o[1], s: k }; });
-  }
-  function drawPieces(g, u, art, p, scale, pal) {
-    var dir = u.faceL ? -1 : 1, mode = u.dugIn ? 'dug' : null;
-    pieceSpots(u, art, p, scale).forEach(function (q) {
-      EMPLACEMENT[art](g, q.x, q.y, q.s, pal, dir, mode);
-      // a dug-in piece without a stance of its own still gets its wall of bags
-      if (mode === 'dug') sandbags(g, q.x, q.y, q.s, dir);
-    });
-  }
   /* A gun on tow (Stationary Artillery, p. 94): hitched behind the vehicle
      towing it, its trails towards the hull on a tow bar, barrel level. */
   function towedGun(u) {
@@ -6659,12 +6468,11 @@
      otherwise straight ahead. */
   function gunTop(u, f) {
     if (u.aim == null) return f;
-    var d = u.aim - f;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
+    var d = angWrap(u.aim - f);
     return f + Math.max(-Math.PI / 4, Math.min(Math.PI / 4, d));
   }
-  function angGap(a1, a0) { return Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)); }
+  function angWrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+  function angGap(a1, a0) { return angWrap(a1 - a0); }
   /* Where a piece's mount faces (f) and its weapon points (top) this frame.
      When it has just been given a new lay (u._turn, see startTurn) it gets
      there in two moves: the carriage swings round to its new facing with the
@@ -7144,8 +6952,6 @@
       return { dx: q.x - q0.x, dy: q.y - q0.y - m[2] * K * 0.9 * pc.k, dir: gunFaceL(pc.top) ? -1 : 1 };
     });
   }
-  // the light battery works a captured tube, the same piece the PMC mortar teams use
-  EMPLACEMENT.rebelmortar = EMPLACEMENT.mortar;
 
   /* ---------- formation ---------- */
   var ROWS = {
@@ -8619,21 +8425,6 @@
       }
     }
 
-    /* Grav and hover hulls, recon and heavier, carry the same guard a tracked
-       hull does: a plate over the running gear on each side, from nose to
-       tail. Patrol cars, trucks and pickups go without. The far side's goes
-       down before the hull. */
-    function tankBody() { return spec.style && !/^(pickup|truck|car|guntruck)$/.test(spec.style.body); }
-    function floatGuards(phase) {
-      if (!tankBody()) return;
-      var outer = spec.wid * 0.5 + gearOut(), inner = outer - spec.wid * 0.24;
-      [-1, 1].forEach(function (sd) {
-        if (!want(phase, sd)) return;
-        var b0 = sd * (inner - 0.02), b1 = sd * (outer + 0.02);
-        slabF(HF, -spec.len * 0.49, spec.len * 0.49, Math.min(b0, b1), Math.max(b0, b1), deck + 6, 2, TB,
-          spec.len * 0.02, spec.len * 0.01, 0);
-      });
-    }
 
     function skirt(phase) {
       // a rubber plenum skirt all round, billowing where it meets the ground
@@ -11478,12 +11269,6 @@
       var go = gunOpts(u, u), mz = fieldMuzzle(go), q0 = toScreen(u.x, u.y), q1 = toScreen(mz.x, mz.y);
       return [{ dx: q1.x - q0.x, dy: q1.y - q0.y - mz.up, dir: gunFaceL(go.aim) ? -1 : 1 }];
     }
-    if (EMPLACEMENT[art] && PIECE_MUZZLE[art]) {
-      var pm = (u.dugIn && PIECE_MUZZLE_DUG[art]) || PIECE_MUZZLE[art];
-      return pieceSpots(u, art, { x: 0, y: 0 }, MODEL).map(function (q) {
-        return { dx: q.x + dir * pm[0] * q.s, dy: q.y + pm[1] * q.s, dir: dir };
-      });
-    }
     for (var k = 0; k < spots.length; k++) {
       var mi = spots.length - 1 - k;
       var jx = ((hash(mi + 1, seed & 255, 7) * 2 - 1) * 3) | 0;
@@ -11686,7 +11471,6 @@
     var spots = around ? garrisonSpots(around, n, at) : formation(n);
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
-    var piece = EMPLACEMENT[art], placed = !piece;
     // one of a gun crew, drawn where it kneels at (wx, wy) on the table, facing its piece's way
     function crewman(mi, wx, wy, fl) {
       var c = sprite(u.paint || u.side, art, mi, pose, (pose === 'stand' && opts.walk) ? (opts.walk + mi) % 2 : 0,
@@ -11706,7 +11490,6 @@
       var fl3 = gunFaceL(pieceAngles(u).f);
       drawPieces3D(g, u, art, at, opts, function (mi, wx, wy) { crewman(mi, wx, wy, fl3); });
       spots = [];
-      placed = true;
     }
     if (FIELD_GUN[art] && !around) {
       /* The gun on its own axes and its crew round the trails, all sorted by
@@ -11724,13 +11507,8 @@
       go.extra = crew;
       fieldGun(g, go);
       spots = [];
-      placed = true;
     }
     for (var k = 0; k < spots.length; k++) {
-      if (!placed && spots[k].sy >= 0) {               // the piece stands among its crew
-        drawPieces(g, u, art, p, scale, pal);
-        placed = true;
-      }
       var mi = spots.length - 1 - k;                   // the front rank is the specialists
       var jx = ((hash(mi + 1, seed & 255, 7) * 2 - 1) * 3) | 0;
       var jy = ((hash(seed & 255, mi + 1, 11) * 2 - 1) * 2) | 0;
@@ -11776,7 +11554,6 @@
     // the markers ride just above the tallest helmet in the squad
     var standing = p.y - headroom(n, pose, isArmoured(art));
     var head = standing - (u.jets && opts.walk ? (opts.arc || 0) : 0);   // markers ride the jump
-    if (!placed) drawPieces(g, u, art, p, scale, pal);
 
     if (u.sp > 0 && opts.morale) {
       var w = a(6.5), bh = a(0.8);
@@ -11846,11 +11623,6 @@
       var wp = toWorld(sx, sy), aim0 = b.aim != null ? b.aim : (b.flip ? Math.PI * 0.75 : -Math.PI * 0.25);
       var gw = gunOpts({ facing: aim0 + 0.5, key: b.key, side: b.side, paint: b.paint }, wp, 'wreck');
       fieldGun(g, gw);
-      return;
-    }
-    if (b.piece && EMPLACEMENT[b.art]) {
-      var pk = SU * MODEL * 1.35 * (PIECE_SCALE[b.art] || 1);
-      EMPLACEMENT[b.art](g, sx, sy, pk, PALETTE[b.paint || b.side] || PALETTE.A, b.flip ? -1 : 1, 'wreck');
       return;
     }
     var c = corpseSprite(b.paint || b.side, b.art || 'rifle', b.mi || 0), rs = c.res || 1;

@@ -14,9 +14,13 @@ async function click(p, sel) {
   await p.waitForTimeout(220);
   return hit;
 }
-// the dossier's unit cards: tap the lit tab to go back to them
+// the dossier's unit cards: back to them from recruiting, or out of a window over them
 async function toUnits(p) {
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-rtab="units"]'); if (b) b.click(); });
+  await p.evaluate(() => {
+    const b = document.querySelector('#camp-body [data-rtab="units"]') ||
+      document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]');
+    if (b) b.click();
+  });
   await p.waitForTimeout(220);
 }
 
@@ -136,7 +140,7 @@ async function clickText(p, re) {
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];
     window.PMC_CAMPAIGN.get().companies.A.record = { battles: 4, wins: 3, draws: 0, losses: 1 };
   });
-  await clickText(p, '^Recruit$');
+  await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
   await toUnits(p);
   check('...as honours held over units on the books', (await cell('cs-exp')) === '33.3% honours', await cell('cs-exp'));
   check('...with the win rate first', (await cell('cs-win')) === '75% win rate', await cell('cs-win'));
@@ -151,7 +155,8 @@ async function clickText(p, re) {
     window.PMC_CAMPAIGN.get().companies.A.record = { battles: 0, wins: 0, draws: 0, losses: 0 }; });
 
   console.log('\nThe memorial');
-  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
+  // opened from the campaign's window (the folder on the company's row), in a window of its own
+  await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
   check('an empty memorial says so', /No one has been lost yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
@@ -163,7 +168,7 @@ async function clickText(p, re) {
     ];
   });
   await toUnits(p);
-  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
+  await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
   const mem = await p.evaluate(() => ({
     text: document.getElementById('camp-body').innerText,
     heads: [...document.querySelectorAll('#camp-body .dmem-head')].map(h => h.innerText.replace(/\s+/g, ' '))
@@ -174,7 +179,7 @@ async function clickText(p, re) {
   check('...most recent battle first, with the enemy and the scenario',
     mem.heads.length === 2 && /Campaign turn 2 · against Salvage Rights · Secure and control/.test(mem.heads[0]), mem.heads[0]);
   check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
-  await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
+  await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
 
   // the swarm's memorial is biomass by kind of bug, not names
   await p.evaluate(() => {
@@ -183,7 +188,7 @@ async function clickText(p, re) {
     co.faction = 'bugs'; co.memorial = []; co.biomass = { 'Small bugs': { models: 14, mass: 28 }, 'Attack forms': { models: 9, mass: 27 }, 'Queen': { models: 1, mass: 25 } };
   });
   await toUnits(p);
-  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
+  await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
   const bio = await p.evaluate(() => ({
     text: document.getElementById('camp-body').innerText,
     rows: [...document.querySelectorAll('#camp-body .dmem-list li')].map(li => li.innerText.replace(/\s+/g, ' '))
@@ -193,7 +198,7 @@ async function clickText(p, re) {
   check('...and the memorial totals it', /Biomass lost\s*80/.test(bio.text));
   check('...by kind of bug, most biomass first', bio.rows.length === 3 && /Small bugs × 14 · 28 biomass/.test(bio.rows[0]) &&
     /Queen × 1 · 25 biomass/.test(bio.rows[2]), bio.rows.join(' | '));
-  await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-biomass.png') });
+  await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-biomass.png') });
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
     co.faction = co._was.faction; co.memorial = co._was.memorial; delete co.biomass; delete co._was;
@@ -208,14 +213,16 @@ async function clickText(p, re) {
     co.roster = [C.newEntry('xalpha3'), C.newEntry('xeps3'), C.newEntry('xeps2')];
     co.losses = { crocks: { lost: 1, departed: 0 }, eshaven: { lost: 6, departed: 0 } };
   });
-  await p.evaluate(() => document.querySelector('#camp-body .dosbar [title="Memorial"]').click()); await p.waitForTimeout(220);
+  await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
   const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss:not(.dexpr)')].map(d => d.textContent));
   check('the tribe shows a loss rate for its Crocks and one for its Esh-Aven',
     tribe.length === 2 && /lost 1 of 4 Crocks$/.test(tribe[0]) && /lost 6 of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
-  await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-tribe.png') });
+  await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-tribe.png') });
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
     Object.assign(co, co._was); delete co._was;
+    // the units behind the memorial were drawn (and saved) as the tribe's: put the company back on file
+    window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get());
   });
   await toUnits(p);
 

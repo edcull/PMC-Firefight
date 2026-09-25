@@ -32,7 +32,7 @@ var xs = R.CATALOGUE.filter(function (p) { return p.faction === 'xeno'; });
 ok('39 Xenotripod rows (turret sets one row each)', xs.length, 39);
 ok('no ground vehicles but turrets', xs.filter(function (p) { return p.cls === 'vehicle' && p.rules.indexOf('Turret') < 0; }).length, 0);
 ok('Epsilon squads are nine Esh-Aven', R.profile('xeps3').size, 9);
-ok('the faction pays in Territorial Points', R.FACTIONS.xeno.money, 'TerP');
+ok('the faction pays in Territorial Points', R.FACTIONS.xeno.money, 'TP');
 ok('turrets take no propulsion', R.propsFor(R.profile('xdturret3')).length, 0);
 ok('and are not offered as drones (they already are)', R.canBeDrone(R.profile('xdturret3')), false);
 for (var bt = 1; bt <= 5; bt++) for (var pl = 1; pl <= 2; pl++) {

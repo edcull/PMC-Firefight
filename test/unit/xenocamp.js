@@ -25,7 +25,7 @@ ok('no id collides with another army\'s', C.ADVANCEMENTS.every(function (a) {
   return !C.DOCTRINES.concat(C.PATHS).concat(C.PATHWAYS).some(function (d) { return d.id === a.id; });
 }), true);
 ok('a tribe is offered Advancements', C.creedOf({ faction: 'xeno' }).one, 'Tribe Advancement');
-ok('...pays in Territorial Points', C.money({ faction: 'xeno' }), 'TerP');
+ok('...pays in Territorial Points', C.money({ faction: 'xeno' }), 'TP');
 ok('...at a Tribe Tier', C.words({ faction: 'xeno' }).tier, 'Tribe');
 
 head('Rites, Infamies and the aircraft upgrades (p. 143)');
@@ -78,7 +78,7 @@ var h = tribe('XS4').co;
 ok('Hermetic Society: recruiting doubles (Beta 4 → 8)', C.recruitCost(h, 'xbeta2'), 8);
 var b2 = C.newEntry('xbeta2'); b2.exp = 20;
 var pc = C.promotionCost(b2, 'xbeta3', h);
-ok('...promotion halves: 9 EXP → 5, 4 TerP → 2', pc.exp + '/' + pc.kUC, '5/2');
+ok('...promotion halves: 9 EXP → 5, 4 TP → 2', pc.exp + '/' + pc.kUC, '5/2');
 var g = tribe('XS1').co; g.tier = 3;
 ok('Increased Population Growth: a Tier II squad at half (2)', C.recruitCost(g, 'xeps2'), 2);
 ok('...a Tier III one at full (8)', C.recruitCost(g, 'xeps3'), 8);
@@ -192,7 +192,7 @@ head('A hundred campaign turns: a player tribe against a rival tribe');
     C.developRival(b);
     C.developRival(a);
     [a, b].forEach(function (co) {
-      if (co.kUC < 0) bad.push('negative TerP');
+      if (co.kUC < 0) bad.push('negative TP');
       C.ADVANCEMENT_GROUPS.forEach(function (g) {
         if (co.doctrines.filter(function (x) { return C.BY_ADVANCEMENT[x] && C.BY_ADVANCEMENT[x].cat === g; }).length > 2) bad.push('3 in ' + g);
       });

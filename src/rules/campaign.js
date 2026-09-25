@@ -18,8 +18,8 @@
   var R = root.PMC;
   var VERSION = 1;
 
-  function d6() { return 1 + Math.floor(Math.random() * 6); }
-  function d3() { return 1 + Math.floor(Math.random() * 3); }
+  function d6() { return R.d6(); }
+  function d3() { return R.d3(); }
   function d10() { return 1 + Math.floor(Math.random() * 10); }   // reads 1-10 here
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function shuffle(a) {
@@ -467,13 +467,13 @@
      or "spawn" without asking which army it is looking at. */
   function words(co) {
     var f = (co && co.faction) || 'pmc';
-    if (f === 'xeno') return { tier: 'Tribe', force: 'tribe', Force: 'Tribe', side: 'Xenotripods', money: 'TerP',
+    if (f === 'xeno') return { tier: 'Tribe', force: 'tribe', Force: 'Tribe', side: 'Xenotripods', money: 'TP',
       moneyLong: 'Territorial Points', cmd: 'Alpha squad', recruit: 'Recruit', recruited: 'recruited',
       honour: 'Rite', honours: 'Rites', trauma: 'Infamy', traumas: 'Infamies', unitWord: 'unit' };
     if (f === 'bugs') return { tier: 'Swarm', force: 'swarm', Force: 'Swarm', side: 'Space Bugs', money: 'RP',
       moneyLong: 'Resource Points', cmd: 'Leader Bug', recruit: 'Spawn', recruited: 'spawned',
       honour: 'Adaptation', honours: 'Adaptations', trauma: 'Genetic Flaw', traumas: 'Genetic Flaws', unitWord: 'bug unit' };
-    if (f === 'rebel') return { tier: 'Revolt', force: 'revolt', Force: 'Revolt', side: 'Insurgents', money: 'IP',
+    if (f === 'rebel') return { tier: 'Revolt', force: 'revolution', Force: 'Revolution', side: 'Insurgents', money: 'IP',
       moneyLong: 'Influence Points', cmd: 'First Among Equals', recruit: 'Recruit', recruited: 'recruited',
       honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit' };
     return { tier: 'Company', force: 'company', Force: 'Company', side: 'Mercenaries', money: 'kUC',
@@ -485,8 +485,6 @@
   function money(co) { return words(co).money; }
 
   function profile(key) { return R.profile(key); }
-  function isMachineKey(key) { var p = profile(key); return !!p && p.cls !== 'infantry'; }
-  function isCommandKey(key) { var p = profile(key); return !!p && !!p.command; }
 
   /* Every legal promotion target for a roster entry. With the company given, no
      higher than one Tier over the Company Tier: "a Tier II Aspiring Company...

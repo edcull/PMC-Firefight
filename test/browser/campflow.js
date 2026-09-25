@@ -23,7 +23,7 @@ async function click(p, sel) {
 }
 // the dossier's unit cards: tap the lit tab to go back to them
 async function toUnits(p) {
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-rtab="units"]'); if (b) b.click(); });
+  await p.evaluate(() => { const b = document.querySelector('#camp-body [data-rtab="units"]'); if (b) b.click(); });
   await p.waitForTimeout(220);
 }
 
@@ -420,7 +420,7 @@ async function clickText(p, re) {
 
   console.log('\nSpending the pay');
   await clickText(p, 'Spend the pay');
-  await clickText(p, 'Recruit');
+  await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
   check('a unit can be recruited from the dossier', recruited);

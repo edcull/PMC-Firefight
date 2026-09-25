@@ -531,7 +531,6 @@
     });
     return out;
   }
-  function abilityOf(u) { return abilitiesOf(u)[0] || null; }
   function ability(i) {
     var u = unit(), a = abilitiesOf(u)[i || 0];
     if (!a || view.status === 'destroyed') return;
@@ -719,14 +718,14 @@
   function outOfArc() {
     if (!stationary(profile()) || view.stance !== 'dug') return false;
     var u = unit(), f = faceAngle(view.face), b = Math.atan2(TO.y - u.y, TO.x - u.x);
-    return Math.abs(Math.atan2(Math.sin(b - f), Math.cos(b - f))) > Math.PI / 4 + 1e-6;
+    return Math.abs(R.angleWrap(b - f)) > Math.PI / 4 + 1e-6;
   }
   // the bearing from the unit to the mark, and the facing nearest it
   function bearingToMark(u) { return Math.atan2(TO.y - u.y, TO.x - u.x); }
   function nearestFace(brg) {
     var best = view.face, bd = Infinity;
     FACES.forEach(function (fn) {
-      var d = Math.abs(Math.atan2(Math.sin(brg - faceAngle(fn)), Math.cos(brg - faceAngle(fn))));
+      var d = Math.abs(R.angleWrap(brg - faceAngle(fn)));
       if (d < bd) { bd = d; best = fn; }
     });
     return best;
