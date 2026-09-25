@@ -107,7 +107,7 @@
       }
     }
     // a crew-served piece stays laid on the mark it last fired at, until it is turned
-    if (turns(p) && view.stance !== 'towed' && !view.walking && view.gunAim != null && view.aimFor === view.face + '|gun') u.facing = view.gunAim;
+    if (turns(p) && view.stance !== 'towed' && !view.walking && view.gunAim != null && view.aimFor === view.face + '|gun') u.aim = view.gunAim;
     /* The Riders upgrade (p. 93): Holy Warriors and the First Among Equals may
        ride — half the models, mounted. Anyone riding is on the mount picked. */
     var riding = R.canRide(p) && view.ride === 'mounted';
@@ -719,8 +719,21 @@
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
     // troopers turn to the mark, and every round leaves one of their own barrels
-    if (turns(u) && !u.dugIn) {                   // the piece is slewed round onto the mark (a dug-in gun cannot be turned)
-      u.facing = view.gunAim = Math.atan2(TO.y - u.y, TO.x - u.x);
+    /* A piece lays its weapon on the mark, traversed like a turret; its mount
+       turns to the nearest facing first — unless it is dug in, which cannot be
+       turned (p. 94), and traverses only within its front arc. */
+    if (turns(u)) {
+      var brg = Math.atan2(TO.y - u.y, TO.x - u.x);
+      if (!u.dugIn) {
+        var best = view.face, bd = Infinity;
+        FACES.forEach(function (fn) {
+          var d = Math.abs(Math.atan2(Math.sin(brg - faceAngle(fn)), Math.cos(brg - faceAngle(fn))));
+          if (d < bd) { bd = d; best = fn; }
+        });
+        if (best !== view.face) { view.face = best; drawControls(); }
+        u.facing = faceAngle(view.face);
+      }
+      u.aim = view.gunAim = brg;
       view.aimFor = view.face + '|gun';
     }
     if (!R.isMachine(u)) {

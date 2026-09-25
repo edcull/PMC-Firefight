@@ -43,10 +43,14 @@ console.log('\nA dug-in gun is not turned');
 gun.dugIn = true; gun.facing = 0;
 at(rifles, 30, 26);
 R.shoot(s, gun, rifles, 'fire', {});
+const brg = Math.atan2(6, 10);
 ok('it keeps the facing it dug in with', gun.facing === 0, String(gun.facing));
+ok('...and traverses its barrel onto the target', Math.abs(gun.aim - brg) < 1e-6);
 gun.dugIn = false;
 R.shoot(s, gun, rifles, 'fire', {});
-ok('...while one on its trails slews round onto the target', Math.abs(gun.facing - Math.atan2(6, 10)) < 1e-6);
+ok('one on its trails turns its carriage to the nearest facing', Math.abs(gun.facing - R.nearestFacing(brg)) < 1e-9 && gun.facing !== 0,
+  gun.facing.toFixed(3) + ' for a bearing of ' + brg.toFixed(3));
+ok('...and lays its barrel exactly on the target', Math.abs(gun.aim - brg) < 1e-6);
 
 console.log('\nLast Stand');
 gun.tactic = 'laststand'; gun.dugIn = true; gun.facing = 0;

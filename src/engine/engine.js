@@ -3674,6 +3674,7 @@
   }
   // (a squad's facing turns only its drawing: its crew-served pieces point the way it went)
   function faceAlong(u, fromX, fromY, toX, toY) {
+    if (!R.isMachine(u)) u.aim = null;                // a piece on the move carries its weapon straight ahead
     if (Math.hypot(toX - fromX, toY - fromY) < 0.2) return;
     u.facing = Math.atan2(toY - fromY, toX - fromX);
   }

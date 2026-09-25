@@ -2851,6 +2851,24 @@
     return { ok: true, from: was, text: u.label + ' vanishes at ' + from.label + ' and steps out beside ' + to.label + '.' };
   }
 
+  /* The eight facings a model can be turned to, as they look on the table
+     (east, south-east, ... on screen): its bearings in the table's own axes. */
+  var FACINGS = (function () {
+    var out = [];
+    for (var i = 0; i < 8; i++) {
+      var th = i * Math.PI / 4, u2 = Math.cos(th), v2 = 2 * Math.sin(th);
+      out.push(Math.atan2(v2 - u2, u2 + v2));
+    }
+    return out;
+  })();
+  function nearestFacing(ang) {
+    var best = FACINGS[0], bd = Infinity;
+    FACINGS.forEach(function (f) {
+      var d = Math.abs(Math.atan2(Math.sin(ang - f), Math.cos(ang - f)));
+      if (d < bd) { bd = d; best = f; }
+    });
+    return best;
+  }
   function dugIn(u) { return !!(u && u.dugIn && hasOwn(u, 'Stationary Artillery')); }
   // is the shooter out in front of the dug-in gun, where its sandbags lie between them?
   function sandbagged(gun, shooter) {
@@ -3084,8 +3102,15 @@
     /* A squad or a gun on its trails turns onto what it fires at. Only a
        machine's facing is ever read by the rules (Limited Fire Arc, which side
        is hit), so for anyone else this only turns the drawing. */
-    // (a dug-in gun "cannot be turned", p. 94: it fires only across the front it dug in facing)
-    if (a && t && !isMachine(a) && !dugIn(a) && a.x != null && !(opts && opts.assault)) a.facing = Math.atan2(t.y - a.y, t.x - a.x);
+    /* A crew-served piece lays its weapon on the target (`aim`, the exact
+       bearing, traversed like a turret); its mount turns only to the nearest of
+       the eight facings. A dug-in gun "cannot be turned" (p. 94): its mount
+       stays put and it traverses within its front arc. Nothing in the rules
+       reads a squad's facing; this is how it is drawn. */
+    if (a && t && !isMachine(a) && a.x != null && !(opts && opts.assault)) {
+      a.aim = Math.atan2(t.y - a.y, t.x - a.x);
+      if (!dugIn(a)) a.facing = nearestFacing(a.aim);
+    }
     var m = shotMods(state, a, t, mode, opts);
     var aux = m.aux, basic = m.basic, parts = m.parts.slice(), pierce = m.pierce;
     var crossfire = m.crossfire, dist = m.dist, dres = m.def;
@@ -4267,7 +4292,7 @@
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,
     applyRiders: applyRiders, canRide: canRide, freedomDice: freedomDice,
     undisciplined: undisciplined, freeLosses: freeLosses, deathOrGlory: deathOrGlory,
-    dugIn: dugIn, shotRange: shotRange, shotMinRange: shotMinRange,
+    dugIn: dugIn, nearestFacing: nearestFacing, shotRange: shotRange, shotMinRange: shotMinRange,
     profile: function (k) { return BY_KEY[k]; },
     checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN,
     d10: d10, d6: d6, d3: d3,
