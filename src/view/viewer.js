@@ -719,7 +719,7 @@
     // a flier shoots from its airframe, not from the grass under it
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
     // troopers turn to the mark, and every round leaves one of their own barrels
-    if (turns(u)) {                               // the piece is slewed round onto the mark
+    if (turns(u) && !u.dugIn) {                   // the piece is slewed round onto the mark (a dug-in gun cannot be turned)
       u.facing = view.gunAim = Math.atan2(TO.y - u.y, TO.x - u.x);
       view.aimFor = view.face + '|gun';
     }

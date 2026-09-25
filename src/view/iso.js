@@ -6348,6 +6348,7 @@
        'wreck' — knocked out: slewed, a wheel gone, the barrel down in the dirt.
      `o.extra` are other things to be sorted in with its parts by depth — the
      crew standing round it — each { d: x + y on the table, fn }. */
+  var GUN_ELEV = 0.82;                                  // laid for indirect fire: up at the arc its rounds fly
   function fieldGun(g, o) {
     var mode = o.mode || 'fire', wreck = mode === 'wreck', k = o.k || 1;
     var ca = Math.cos(o.aim || 0), sa = Math.sin(o.aim || 0);
@@ -6366,7 +6367,7 @@
     })();
     var zAx = 0.27 * big, rW = 0.27 * big, wS = 0.36 * big, tw = 0.11 * big;
     // the barrel pivots on its trunnions over the axle; laid up to fire, level on the road or dug in
-    var elev = mode === 'fire' ? 0.42 : mode === 'dug' ? 0.12 : wreck ? -0.27 : 0;
+    var elev = mode === 'fire' ? GUN_ELEV : mode === 'dug' ? 0.12 : wreck ? -0.27 : 0;
     var zP = 0.35 * big, ce = Math.cos(elev), se = Math.sin(elev);
     function B(L, s2, h) { return [L * ce - h * se, s2, zP + L * se + h * ce]; }   // barrel frame to gun frame
     /* A box on the gun's own axes, its three faces that can be seen shaded as
@@ -6519,7 +6520,7 @@
          low enough for the barrel, laid level, to clear. */
       var R0 = 0.62 * big;
       for (var c2 = 0; c2 < 3; c2++) {
-        for (var bg = -3; bg <= 3; bg++) {
+        for (var bg = -5; bg <= 5; bg++) {              // across about 60° either side of the line of fire
           (function (c3, th) {
             var d0 = th - 0.1, d1 = th + 0.1;
             part(Math.cos(th) * R0, Math.sin(th) * R0, function () {
@@ -6547,7 +6548,7 @@
   // where a field gun's muzzle is, on the table and above it (see fieldGun)
   function fieldMuzzle(o) {
     var big = o.heavy ? 1.18 : 1, k = o.k || 1, L = 1.1 * big;
-    var elev = o.mode === 'fire' ? 0.42 : o.mode === 'dug' ? 0.12 : 0;
+    var elev = o.mode === 'fire' ? GUN_ELEV : o.mode === 'dug' ? 0.12 : 0;
     var t = L * Math.cos(elev), z = 0.35 * big + L * Math.sin(elev);
     var ca = Math.cos(o.aim || 0), sa = Math.sin(o.aim || 0);
     return { x: o.x + ca * t * k, y: o.y + sa * t * k, up: z * K * 0.9 * k };
@@ -6661,7 +6662,8 @@
     function dep(t, s2) { var w = W(t, s2); return w.x + w.y; }
     var R = { S: S, W: W, dep: dep, k: k, parts: [],
       STL: '#4a5244', LIT: '#6c7662', DRK: '#2b3128', DEEP: '#1c211b' };
-    R.part = function (t, s2, fn) { R.parts.push({ d: dep(t, s2), fn: fn }); };
+    // `over`: a part standing above a dug-in piece's sandbags (its barrel), drawn after them
+    R.part = function (t, s2, fn, over) { R.parts.push({ d: dep(t, s2), fn: fn, over: !!over }); };
     R.box = function (t0, t1, s0, s1, z0, z1, top, side, end) {
       var tm = (t0 + t1) / 2, sm = (s0 + s1) / 2;
       var sv = dep(tm, s1) > dep(tm, s0) ? s1 : s0, tv = dep(t1, sm) > dep(t0, sm) ? t1 : t0;
@@ -6725,6 +6727,7 @@
               beamR(R, [Math.cos(d0) * R0, Math.sin(d0) * R0], [Math.cos(d1) * R0, Math.sin(d1) * R0], 0.07,
                 cc * 0.09, cc * 0.09 + 0.095, '#8e836a', '#6e6450', '#5a5242', g);
             });
+            R.parts[R.parts.length - 1].bag = true;
           })(c, -half + (b + 0.5 + (c % 2 ? 0.5 : 0)) * (2 * half / (n + (c % 2 ? 1 : 0))));
         }
       }
@@ -6908,7 +6911,7 @@
           [-1, 1].forEach(function (sd) {
             if (R.dep(0, sd) > R.dep(0, -sd)) R.dot([0.94, sd * 0.051, 0.42], 0.014, '#0e110d');
           });
-        });
+        }, true);
       } },
     /* The guided-missile launcher: a long ready tube on a low tripod with
        carrying handles and banded caps, the guidance unit and its sights
@@ -7031,7 +7034,13 @@
     ps.forEach(function (pc, i) {
       var R = rig(g, { x: pc.x, y: pc.y, aim: pc.aim, k: pc.k, lift: opts.lift || 0 });
       pc.P.build(R, { pal: pal, g: g });
-      if (u.dugIn) R.sandbags(0.62, 3, 0.95);
+      if (u.dugIn) {
+        R.sandbags(0.62, 3, 0.95);
+        // the barrel runs out over the bags: it goes on after every one of them (but not after its own shield)
+        var top2 = -Infinity;
+        R.parts.forEach(function (q) { if (q.bag) top2 = Math.max(top2, q.d); });
+        R.parts.forEach(function (q) { if (q.over) q.d = Math.max(q.d, top2 + 0.001); });
+      }
       all = all.concat(R.parts);
       // this piece's share of the crew, in the places round it
       var mine = 0;
