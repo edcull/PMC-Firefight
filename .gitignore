@@ -5,3 +5,4 @@ campaigns/
 build/shots/
 # screenshots a few older harnesses drop in the project root
 /shot-*.png
+build/test-logs/
