@@ -369,9 +369,8 @@
   /* suppression against Morale: three bands, the SP laid over them */
   .moralebar { margin: 8px 0; display: flex; align-items: center; gap: 7px; }
   .moralebar .mb-track { flex: 1; }
-  /* the Suppression on the unit, beside the bar it fills */
-  .mb-num { flex: none; min-width: 34px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
-  .mb-num.good { color: var(--good); } .mb-num.warn { color: var(--warn); } .mb-num.bad { color: var(--bad); }
+  /* the Suppression on the unit, in the colour of the band it has reached */
+  .st b.sp-warn { color: var(--warn); } .st b.sp-bad { color: var(--bad); }
   .st b .mmod { color: var(--bad); font-size: 11px; margin-left: 3px; }
   .st b.hurt { color: var(--bad); }
   .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
@@ -34752,7 +34751,6 @@
        in the colour of the band it has reached. */
     var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
     h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
-      '<b class="mb-num ' + fillC + '">' + u.sp + ' SP</b>' +
       '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
       '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
     h += '<div class="stats">' +
@@ -34763,7 +34761,9 @@
       /* Morale as it stands: less a point for each model lost beyond the free
          ones (none for a Determined unit — currentMorale has already said so) */
       stat('Morale', m + (m !== u.morale ? '<i class="mmod" ' + tip('Morale ' + u.morale + ' printed',
-        (u.morale - m) + ' down for casualties') + '>(' + (m - u.morale) + ')</i>' : '')) + '</div>';
+        (u.morale - m) + ' down for casualties') + '>(' + (m - u.morale) + ')</i>' : '')) +
+      // its Suppression, in the colour of the band it has reached on the bar
+      '<div class="st"><span>SP</span><b class="sp-' + fillC + '">' + u.sp + '</b></div>' + '</div>';
     h += honourChips(u);
     // a rider's mount, before its rules, the way a hull's drive is shown
     var mt = R.mountOf(u);

@@ -369,9 +369,8 @@
   /* suppression against Morale: three bands, the SP laid over them */
   .moralebar { margin: 8px 0; display: flex; align-items: center; gap: 7px; }
   .moralebar .mb-track { flex: 1; }
-  /* the Suppression on the unit, beside the bar it fills */
-  .mb-num { flex: none; min-width: 34px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
-  .mb-num.good { color: var(--good); } .mb-num.warn { color: var(--warn); } .mb-num.bad { color: var(--bad); }
+  /* the Suppression on the unit, in the colour of the band it has reached */
+  .st b.sp-warn { color: var(--warn); } .st b.sp-bad { color: var(--bad); }
   .st b .mmod { color: var(--bad); font-size: 11px; margin-left: 3px; }
   .st b.hurt { color: var(--bad); }
   .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
@@ -2170,6 +2169,6 @@
 <script src="src/engine/engine.js?v=af4ece4c50"></script>
 <script src="src/net/net.js?v=b483e61500"></script>
 <script src="src/net/lobby.js?v=10dde5c711"></script>
-<script src="src/view/game.js?v=cb033d16e1"></script>
+<script src="src/view/game.js?v=4b3c5a6b42"></script>
 <script src="src/view/dossier.js?v=6ef24595ca"></script>
 <script src="src/view/menu.js?v=609e1b9a6d"></script>
