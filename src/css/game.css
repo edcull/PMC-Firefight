@@ -958,6 +958,7 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 #setup[data-quick] #faction-field, #setup[data-quick] #tactic-field { display: none !important; }
 #army-tactics h4 { font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 14px 0 7px; }
 #army-tactics .docpick { margin-bottom: 0; }
+#army-tactics .docnote { margin: 14px 0 0; font-size: 12px; color: var(--ink-dim); }
 #setup[data-quick] .forcebar-wrap { display: none; }
 #setup[data-quick] .forcebar-wrap.open {
   display: grid; position: fixed; inset: 0; z-index: 70; place-items: center; padding: 20px; background: rgba(8, 11, 16, .78);

@@ -305,7 +305,8 @@
       streak: 0, chain: null, log: [], over: null,
       campaign: cfg.campaign || null,
       doctrines: cfg.doctrines || null,
-      tactics: cfg.tactics || { A: null, B: null },
+      // "Rebel forces cannot use tactics" in a solitaire or cooperative game (p. 145)
+      tactics: cfg.solo ? { A: null, B: null } : cfg.tactics || { A: null, B: null },
       routed: { A: false, B: false },
       seed: (Math.random() * 100000) | 0,
       /* Solitaire / cooperative (pp. 146-156): one or two players against an
