@@ -370,11 +370,15 @@
        only stand inside a hill, so at a point in a hill and in something else,
        the something else is what counts; otherwise the most significant piece. */
     function terrainAt(state, x, y) {
-      var rs = regionsAt(state, x, y), best = 'open', onHill = false, inOther = false;
-      for (var i = 0; i < rs.length; i++) {
-        if (rs[i].kind === 'hill') { onHill = true; continue; }
+      // the pieces at the point, walked in place rather than gathered into a list (this is asked a great deal)
+      var ts = state.terrain, best = 'open', bestRank = 0, onHill = false, inOther = false;
+      for (var i = 0; i < ts.length; i++) {
+        var r = ts[i];
+        if (!inRect(x, y, r)) continue;
+        if (r.kind === 'hill') { onHill = true; continue; }
         inOther = true;
-        if (rank(rs[i].kind) > rank(best)) best = rs[i].kind;
+        var rk = rank(r.kind);
+        if (rk > bestRank) { best = r.kind; bestRank = rk; }
       }
       // in something on the hill (even flat ground, such as a road): its rules, not the hill's
       if (inOther) return best;
@@ -399,11 +403,17 @@
       return pts;
     }
     // the terrain a unit (or a token at x, y) is in, as a one-kind list
+    // the rim's offsets from the middle, worked out once (footprint gives the same points)
+    var RIM_DX = null, RIM_DY = null, RIM_R = null;
     function kindsUnder(state, u, x, y) {
       if (u && u.bld) return [u.bld.kind];
       var px = x != null ? x : u.x, py = y != null ? y : u.y;
-      var pts = footprint(px, py), kc = terrainAt(state, px, py), n = {};
-      for (var i = 1; i < pts.length; i++) { var k = terrainAt(state, pts[i].x, pts[i].y); n[k] = (n[k] || 0) + 1; }
+      if (RIM_R !== UNIT_R) {
+        RIM_R = UNIT_R; RIM_DX = []; RIM_DY = [];
+        for (var q = 0; q < RIM; q++) { var an = q / RIM * Math.PI * 2; RIM_DX.push(Math.cos(an) * UNIT_R); RIM_DY.push(Math.sin(an) * UNIT_R); }
+      }
+      var kc = terrainAt(state, px, py), n = {};
+      for (var i = 0; i < RIM; i++) { var k = terrainAt(state, px + RIM_DX[i], py + RIM_DY[i]); n[k] = (n[k] || 0) + 1; }
       if ((n[kc] || 0) >= RIM / 2) return [kc];
       for (var kk in n) if (n[kk] > RIM / 2) return [kk];
       return [kc];

@@ -78,6 +78,8 @@
       var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
       var res = R.assault(st, a, t, { path: route ? route.path : null, martyr: martyr || {} });
       abilityFx(res, t, null, trails);
+      // whatever the assault brought down is repainted, whoever made it (as for a shot)
+      if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
       return res;
     }
     function abRally(st, u) { jamFx(u); leaderFx(u); return R.rally(st, u); }

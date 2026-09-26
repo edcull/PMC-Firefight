@@ -143,6 +143,34 @@
         }
       };
     }
+    /* Which lattice points are within 1" of an enemy, for a side: the same for
+       every unit on it until someone moves, so worked out a point at a time and
+       kept for the last couple of layouts of the enemy. */
+    var foeCache = [];
+    function foeGrid(state, u, N, cols) {
+      var foes = state.units.filter(function (o) { return o.alive && o.side !== u.side && !o.aboard && o.x >= 0; });
+      var key = u.side + ':' + foes.map(function (o) { return o.id + ',' + o.x + ',' + o.y + ',' + (o.bld ? sectionRect(o).x + '/' + sectionRect(o).y : ''); }).join(';');
+      var hit = null;
+      for (var n = 0; n < foeCache.length; n++) if (foeCache[n].state === state && foeCache[n].key === key && foeCache[n].g.length === N) hit = foeCache[n];
+      if (!hit) {
+        hit = { state: state, key: key, g: new Int8Array(N) };   // 0 not yet asked, 1 clear, 2 too close
+        foeCache.unshift(hit);
+        if (foeCache.length > 3) foeCache.pop();
+      }
+      var g = hit.g;
+      return function (i, j) {
+        var c = j * cols + i;
+        if (g[c] === 0) {
+          var x = i * STEP, y = j * STEP, b = 1;
+          for (var k = 0; k < foes.length; k++) {
+            var o = foes[k];
+            if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) { b = 2; break; }   // stay 1" clear of the enemy
+          }
+          g[c] = b;
+        }
+        return g[c] === 2;
+      };
+    }
     function fieldOf(state, u, allowance) {
       var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
       var N = cols * rows;
@@ -180,18 +208,13 @@
         if (blk[c] === 0) blk[c] = blockedAt(i, j) ? 2 : 1;
         return blk[c] === 2;
       }
-      var foes = state.units.filter(function (o) { return o.alive && o !== u && o.side !== u.side && !o.aboard && o.x >= 0; });
+      var near = isFlying(u) ? null : foeGrid(state, u, N, cols);
       function blockedAt(i, j) {
         var x = i * STEP, y = j * STEP;
         if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) return true;
         if (kBar[kindAt(i, j)]) return true;
         // aircraft "can move over other units" (p. 38); they only may not finish within 1"
-        if (isFlying(u)) return false;
-        for (var n = 0; n < foes.length; n++) {
-          var o = foes[n];
-          if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) return true;   // stay 1" clear of the enemy
-        }
-        return false;
+        return near ? near(i, j) : false;
       }
       var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
       /* The area terrain a unit standing at a point counts as in (see
@@ -270,9 +293,9 @@
           }
         }
       }
-      // the cheaper of the two layers, for each point on the table
-      var best = new Float64Array(N);
-      for (var q = 0; q < N; q++) best[q] = Math.min(cost[q * 2], cost[q * 2 + 1]);
+      // the cheaper of the two layers, for each point reached (and nowhere for the rest)
+      var best = new Float64Array(N).fill(Infinity);
+      for (var q = 0; q < seen.length; q++) { var sq = idx(seen[q].i, seen[q].j); best[sq] = Math.min(cost[sq * 2], cost[sq * 2 + 1]); }
       var seenOnce = [], mark = new Uint8Array(N);
       seen.forEach(function (sn) {
         var k = idx(sn.i, sn.j);

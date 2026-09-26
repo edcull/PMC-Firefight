@@ -382,7 +382,9 @@
         log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
       }
       // who answered a MEDIC! on this volley, so the board can show them at work
-      return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
+      var out = medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
+      if (wreck) out.wreck = wreck;                     // what the shot brought down, for the board to repaint
+      return out;
     }
 
     // once every kit is made, the others' functions themselves rather than the stubs for them
