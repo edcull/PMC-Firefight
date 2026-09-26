@@ -90,7 +90,17 @@ async function askArrival(p) {
     await settle(p);
     await drain(p);
     await settle(p);
-    const st = await p.evaluate(() => window.__insertionState());
+    let st = await p.evaluate(() => window.__insertionState());
+    if (st && st.kind === 'arrive') return true;
+    /* Something else is being asked first — the attacker's landing zones, or a
+       first-wave insertion: answer it at the first legal spot and look again.
+       (Left, the reserves below would be pushed to later waves while it
+       waited, and could all be down before the question the check is for.) */
+    for (let q = 0; q < 12 && st && st.kind !== 'arrive'; q++) {
+      await p.evaluate(() => { const sp = window.__insertionSpotsNow(); if (sp && sp.length) window.__tapInsertion(sp[0]); else window.__holdInsertion(); });
+      await settle(p); await drain(p);
+      st = await p.evaluate(() => window.__insertionState());
+    }
     if (st && st.kind === 'arrive') return true;
     const any = await p.evaluate(() => {
       const s = window.PMC_STATE();
