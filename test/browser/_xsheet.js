@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const { page, SHOTS } = require('../where.js');
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1500, height: 1100 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + page);

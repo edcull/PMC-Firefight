@@ -20,7 +20,7 @@ async function shot(p, name) {
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1340, height: 900 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));

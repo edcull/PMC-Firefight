@@ -23,7 +23,7 @@ const WORLDS = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', '
 const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in with walls, trenches and a bunker
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const ctx = await b.newContext({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(() => {
     const T = 1700000000000;

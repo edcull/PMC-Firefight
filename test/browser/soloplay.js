@@ -4,7 +4,7 @@
 const { chromium } = require('playwright');
 const { page: PAGE } = require('../where.js');
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1300, height: 850 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
   // the page is two levels up (test/browser/ has no index.html of its own)

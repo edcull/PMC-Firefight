@@ -89,7 +89,7 @@ async function run(p, label, scen, shotName) {
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const errs = [];
   const screens = [
     { name: 'PHONE  420x860', w: 420, h: 860, mobile: true },

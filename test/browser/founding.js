@@ -3,7 +3,7 @@ const { page } = require('../where.js');
 let pass=0, fail=0;
 const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(note?'  — '+note:''));};
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1500, height: 1100 } });
   const errs=[]; p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + page);

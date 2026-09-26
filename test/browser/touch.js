@@ -11,7 +11,7 @@ const { ROOT, startSkirmish } = require('../where.js');
     console.log('  ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
     if (!cond) problems.push(name);
   }
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const browser = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const ctx = await browser.newContext({
     ...devices['iPhone 13'],
     hasTouch: true, isMobile: true
