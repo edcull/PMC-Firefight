@@ -113,7 +113,8 @@
       var co = (E.camp.rivals || []).filter(function (r) { return r.name === sm.name; })[0];
       var pc = lossPct(b, sm.name);
       return { name: sm.name, result: sm.result === 'won' ? 'Won' : sm.result === 'lost' ? 'Lost' : 'Drew',
-        loss: pc == null ? '' : pc + '% lost', pay: '+' + sm.kUC + ' ' + C.money(co) };
+        loss: pc == null ? '' : pc + '% lost', pay: '+' + sm.kUC + ' ' + C.money(co),
+        gain: '+' + (sm.exp || 0) + ' EXP' + (sm.tp != null ? ' · +' + sm.tp + ' trauma' : '') };
     }
     function frontCard(sums) {
       var b = sums[0] && sums[0].battle;
@@ -125,7 +126,7 @@
         var r = frontSide(sm, b);
         // only the winner is marked, or both sides when it was drawn
         h += '<div class="front-unit front-row"><span><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') + '</span>' +
-          '<span class="front-num">' + [r.loss, r.pay].filter(Boolean).join(' · ') + '</span></div>';
+          '<span class="front-num">' + [r.loss, r.pay].filter(Boolean).join(' · ') + '<br>' + r.gain + '</span></div>';
       });
       return h + '</div>';
     }
@@ -368,7 +369,7 @@
         }
         var brief = function (e) {
           var r = frontSide(e, e.battle);
-          return esc(r.name) + ' ' + [r.loss, r.pay].filter(Boolean).join(', ');
+          return esc(r.name) + ' ' + [r.loss, r.pay, r.gain.replace(' · ', ', ')].filter(Boolean).join(', ');
         };
         h += '<h3>Elsewhere on the world</h3><div class="cpan"><div class="cpstat">' +
           battles.map(function (pr) {

@@ -1705,7 +1705,7 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .front-row { font-size: 12px; padding: 4px 0; border-top: 1px solid var(--line); }
 .front-row i { font-style: normal; font-size: 11px; margin-left: 4px; }
 .front-row i.good { color: var(--good); }
-.front-num { font-family: var(--mono); color: var(--ink-dim); white-space: nowrap; }
+.front-num { font-family: var(--mono); color: var(--ink-dim); white-space: nowrap; text-align: right; }
 .front-bar { height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; margin-top: 6px; }
 .front-bar i { display: block; height: 100%; width: 30%; background: var(--accent, var(--good)); animation: frontbar 1.2s ease-in-out infinite; }
 @keyframes frontbar { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
