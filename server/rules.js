@@ -12,7 +12,7 @@ if (!global.window) global.window = global;
 const ROOT = path.join(__dirname, '..');
 [
   'src/rules/rules.js', 'src/rules/campaign.js', 'src/rules/scenarios.js',
-  'src/rules/solitaire.js', 'src/rules/gen.js', 'src/engine/engine.js'
+  'src/rules/solitaire.js', 'src/rules/gen.js', 'src/engine/ai.js', 'src/engine/engine.js'
 ]
   .forEach((f) => require(path.join(ROOT, f)));
 
