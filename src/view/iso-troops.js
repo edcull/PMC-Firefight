@@ -1781,7 +1781,7 @@
           P(18, wy - 1, 7, 8, '#6a5a3a');                // flared muzzle
           P(18, wy - 1, 7, 2, '#8a7448');
           // the pilot flame at the muzzle, licking up and flickering
-          var fp = B.FLAME_PHASE < 0 ? 1 : B.FLAME_PHASE, fh = [6, 9, 7, 10][fp], fl = [0, 1, 0, -1][fp];
+          var fp = B.PH.flame < 0 ? 1 : B.PH.flame, fh = [6, 9, 7, 10][fp], fl = [0, 1, 0, -1][fp];
           P(25, wy + 6 - fh, 5, fh, '#e08a3a');
           P(26 + fl, wy + 6 - fh - 3, 3, 3, '#e08a3a');
           P(26, wy + 6 - Math.ceil(fh * 0.65), 3, Math.ceil(fh * 0.65), '#ffc861');

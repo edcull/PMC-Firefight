@@ -161,7 +161,7 @@
      plate's pixel grid. A machine is drawn live into the board's working
      window at up to twice the plate's resolution, and there the scanline's
      whole-pixel rows show up as horizontal banding down every sloped face — so
-     while a machine is being drawn (SMOOTH) it is filled as a true path. */
+     while a machine is being drawn (PH.smooth) it is filled as a true path. */
   // the convex hull of a set of screen points (monotone chain)
   function hull2d(pts) {
     var p = pts.slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
@@ -172,10 +172,15 @@
     up.pop(); lo.pop();
     return lo.concat(up);
   }
-  var SMOOTH = false;
+  /* What is being drawn right now, set by whoever is drawing it and read by
+     the painting underneath: one object for the whole renderer, so its parts
+     in their own files all see the same. smooth: a machine is being drawn
+     (filled paths, not dithered); corpse: a body (its deflector gone out);
+     shield, brain, flame, wing: the frame each animation is on. */
+  var PH = { smooth: false, corpse: false, shield: 0, brain: 0, flame: -1, wing: -1 };
   var RING_VIS = -1;
   function poly(g, pts, c) {
-    if (SMOOTH) {
+    if (PH.smooth) {
       g.fillStyle = c;
       g.beginPath();
       g.moveTo(pts[0][0], pts[0][1]);
@@ -416,7 +421,7 @@
     function brain(cx, cy, rx, ry) {
       /* It pulses, slowly: swelling a little and its glow brightening, one
          beat in BRAIN_PHASES baked states turned by the clock. */
-      var bp = dead ? 0 : Math.sin(BRAIN_PHASE / BRAIN_PHASES * Math.PI * 2);
+      var bp = dead ? 0 : Math.sin(PH.brain / BRAIN_PHASES * Math.PI * 2);
       rx *= 1 + 0.05 * bp; ry *= 1 + 0.05 * bp;
       if (!dead) E(cx, cy, rx * (1.3 + 0.08 * bp), ry * (1.3 + 0.08 * bp), 'rgba(185,140,242,' + (0.2 + 0.1 * bp).toFixed(3) + ')');
       E(cx, cy, rx, ry, psy.d);
@@ -435,7 +440,7 @@
       }
       /* The beat: a flier hanging in the air flaps all the time, WING_PHASES
          baked states turned by the clock; on the move it is the step's two beats. */
-      var up = WING_PHASE >= 0 ? -0.1 - 1.1 * (0.5 + 0.5 * Math.sin(WING_PHASE / WING_PHASES * Math.PI * 2)) : step ? -0.9 : -0.35;
+      var up = PH.wing >= 0 ? -0.1 - 1.1 * (0.5 + 0.5 * Math.sin(PH.wing / WING_PHASES * Math.PI * 2)) : step ? -0.9 : -0.35;
       var a2 = up + (big ? 0 : 0.1);
       function wing(ang, l, alpha) {
         var tx = cx + Math.cos(ang) * l * -0.35, ty = cy + Math.sin(ang) * l;
@@ -1156,8 +1161,8 @@
       /* ...and it is alive: `SHIELD_PHASE` (one of SHIELD_PHASES, turned by the
          clock) breathes its light up and down, walks a band of brightness
          round the rim and lights a different few of its hexes each time. */
-      if (rank === 'beta' && !dead && !CORPSE) {
-        var sph = SHIELD_PHASE / SHIELD_PHASES, pulse = 0.75 + 0.25 * Math.sin(sph * Math.PI * 2);
+      if (rank === 'beta' && !dead && !PH.corpse) {
+        var sph = PH.shield / SHIELD_PHASES, pulse = 0.75 + 0.25 * Math.sin(sph * Math.PI * 2);
         var dcx = 4, dcy = by - 9, drx = 19, dry = 27;
         E(dcx, dcy, drx, dry, 'rgba(140,210,255,' + (0.1 * pulse).toFixed(3) + ')');
         E(dcx - 5, dcy - 9, drx * 0.45, dry * 0.35, 'rgba(220,242,255,.12)');        // a sheen high on the bubble
@@ -1168,7 +1173,7 @@
         var sweep = Math.round(sph * 28);                                   // the band of light running round the rim
         L(rim.concat(rim.slice(1)).slice(sweep, sweep + 8), 1.8, 'rgba(220,242,255,.95)');
         [[-8, -14], [12, -18], [-12, 6], [14, 8], [2, -24], [-4, 14], [16, -6], [-15, -4]].forEach(function (h2, hn) {   // hexes flickering in it
-          if ((hn + SHIELD_PHASE) % 3) return;
+          if ((hn + PH.shield) % 3) return;
           var hx2 = dcx + h2[0], hy2 = dcy + h2[1], r2 = 2.2;
           var hp = [];
           for (var hi = 0; hi <= 6; hi++) { var ha = hi / 6 * Math.PI * 2; hp.push([hx2 + Math.cos(ha) * r2, hy2 + Math.sin(ha) * r2]); }
@@ -1575,12 +1580,11 @@
     }
     g.putImageData(im, 0, 0);
   }
-  var SHIELD_PHASES = 8, SHIELD_PHASE = 0;
-  var BRAIN_PHASES = 10, BRAIN_PHASE = 0;
+  var SHIELD_PHASES = 8;
+  var BRAIN_PHASES = 10;
   // a flamer's pilot light flickers through FLAME_PHASES baked states (-1: not burning)
-  var FLAME_PHASES = 4, FLAME_PHASE = -1;
-  var WING_PHASES = 6, WING_PHASE = -1;
-  var CORPSE = false;                                  // painting a body: its deflector has gone out
+  var FLAME_PHASES = 4;
+  var WING_PHASES = 6;
   function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
   function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
   function nowT() { return root.performance ? performance.now() : 0; }
@@ -1619,18 +1623,18 @@
     if (pose === 'prone' && !kit.bug) scale *= 1.25;
     var sq = Math.round(scale * 60) / 60;
     // a Beta's deflector is baked in SHIELD_PHASES states, one for each beat of its light
-    var shieldy = shieldAnimated(kit) && !CORPSE;
-    if (shieldy) SHIELD_PHASE = Math.floor(nowT() / 110) % SHIELD_PHASES;
+    var shieldy = shieldAnimated(kit) && !PH.corpse;
+    if (shieldy) PH.shield = Math.floor(nowT() / 110) % SHIELD_PHASES;
     // a leader bug's brain beats slowly, about once in two seconds
     var thinking = brainy(kit);
-    if (thinking) BRAIN_PHASE = Math.floor(nowT() / 200) % BRAIN_PHASES;
+    if (thinking) PH.brain = Math.floor(nowT() / 200) % BRAIN_PHASES;
     // a winged bug's wings beat, about four times a second, unless it has gone to ground
     var flapping = winged(kit) && pose !== 'prone';
-    WING_PHASE = flapping ? (Math.floor(nowT() / 40) + i * 2) % WING_PHASES : -1;   // each bug at its own beat
+    PH.wing = flapping ? (Math.floor(nowT() / 40) + i * 2) % WING_PHASES : -1;   // each bug at its own beat
     // a flamer's pilot light flickers, each man's at his own beat
-    var burning = kit.gun === 'flamer' && !CORPSE;
-    FLAME_PHASE = burning ? (Math.floor(nowT() / 90) + i) % FLAME_PHASES : -1;
-    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + SHIELD_PHASE : '') + (thinking ? '|bp' + BRAIN_PHASE : '') + (flapping ? '|wp' + WING_PHASE : '') + (burning ? '|fp' + FLAME_PHASE : '') + (CORPSE ? '|corpse' : '');
+    var burning = kit.gun === 'flamer' && !PH.corpse;
+    PH.flame = burning ? (Math.floor(nowT() / 90) + i) % FLAME_PHASES : -1;
+    var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + PH.shield : '') + (thinking ? '|bp' + PH.brain : '') + (flapping ? '|wp' + PH.wing : '') + (burning ? '|fp' + PH.flame : '') + (PH.corpse ? '|corpse' : '');
     var c = sprites[key];
     if (c) return c;
 
@@ -1676,7 +1680,7 @@
       hp.hat = pal.helmForce || pal.forceMid || pal.mid; hp.hatLit = pal.helmLit || pal.force || pal.light; hp.hatDark = pal.helmDark || pal.forceDark || pal.dark;
       pal = hp;
     }
-    if (kit.bug && CORPSE) deadBug(body.getContext('2d'), w, h, ox, oy, pal, kit, s);
+    if (kit.bug && PH.corpse) deadBug(body.getContext('2d'), w, h, ox, oy, pal, kit, s);
     else if (kit.bug && pose === 'prone' && !kit.fly && kit.bug !== 'under' && kit.bug !== 'hugeunder') {
       ma = [ma[0], ma[1] + burrowBug(body.getContext('2d'), w, h, ox, oy, pal, kit, step, s)];
     } else if (kit.bug) paintBug(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
@@ -1951,10 +1955,10 @@
       var te = S(-0.8 * big, 0, 0.13), hq = toScreen(o.hitch.x, o.hitch.y);
       thickLine(g, te[0], te[1], hq.x, hq.y - 0.3 * ZK, Math.max(1.5, K * 0.05), '#2b2f2a');
     }
-    var wasSmooth = SMOOTH;
-    SMOOTH = true;                                     // drawn as a machine is: filled, not dithered
+    var wasSmooth = PH.smooth;
+    PH.smooth = true;                                     // drawn as a machine is: filled, not dithered
     try { parts.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
-    finally { SMOOTH = wasSmooth; }
+    finally { PH.smooth = wasSmooth; }
   }
   // where a field gun's muzzle is, on the table and above it (see fieldGun)
   function fieldMuzzle(o) {
@@ -1989,10 +1993,10 @@
       P.build(Gw, { pal: PALETTE[gun.paint || gun.side] || PALETTE.A, g: g, tow: true });
       var ew = Gw.S(-0.75, 0, 0.18), hw = toScreen(at.x - fx * hs.len * 0.5, at.y - fy * hs.len * 0.5);
       thickLine(g, ew[0], ew[1], hw.x, hw.y - 0.3 * K * 0.9, Math.max(1.5, K * 0.05), '#2b2f2a');
-      var wasW = SMOOTH;
-      SMOOTH = true;
+      var wasW = PH.smooth;
+      PH.smooth = true;
       try { Gw.parts.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
-      finally { SMOOTH = wasW; }
+      finally { PH.smooth = wasW; }
       return;
     }
     var o = { x: at.x - fx * back, y: at.y - fy * back, aim: f + Math.PI, k: k };
@@ -2015,10 +2019,10 @@
     P.build(G, { pal: pal, g: g });
     var te = T.S(-0.74, 0, 0.2), hq = toScreen(at.x - fx * hs.len * 0.5, at.y - fy * hs.len * 0.5);
     thickLine(g, te[0], te[1], hq.x, hq.y - 0.3 * K * 0.9, Math.max(1.5, K * 0.05), '#2b2f2a');
-    var was = SMOOTH;
-    SMOOTH = true;
+    var was = PH.smooth;
+    PH.smooth = true;
     try { T.parts.concat(G.parts).sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
-    finally { SMOOTH = was; }
+    finally { PH.smooth = was; }
   }
   /* What is left of a crew-served weapon when the last of its crew falls:
      each piece knocked down and leaning over, burnt dark, on a scorched patch. */
@@ -2035,10 +2039,10 @@
     });
     g.save();
     try { g.filter = 'saturate(0.2) brightness(0.55) sepia(0.35)'; } catch (e) { /* no filters: left unburnt */ }
-    var was = SMOOTH;
-    SMOOTH = true;
+    var was = PH.smooth;
+    PH.smooth = true;
     try { all.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
-    finally { SMOOTH = was; g.restore(); }
+    finally { PH.smooth = was; g.restore(); }
   }
   /* A rebel field piece stands on the table as a machine does, facing where it
      last fired, its crew round the trails; the unit's point is between them. */
@@ -2529,10 +2533,10 @@
         mine++;
       }
     });
-    var was = SMOOTH;
-    SMOOTH = true;
+    var was = PH.smooth;
+    PH.smooth = true;
     try { all.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
-    finally { SMOOTH = was; }
+    finally { PH.smooth = was; }
   }
   function pieceMuzzles3D(u) {
     var q0 = toScreen(u.x, u.y);
@@ -2858,7 +2862,7 @@
       var lit = (a1[0] + b1[0]) / 2 <= cx;
       var face = [a1, b1, roof[(i + 1) % 4], roof[i]];
       poly(g, face, lit ? sideLit : sideDark);
-      if (SMOOTH && h > 1.5) {
+      if (PH.smooth && h > 1.5) {
         var yT = Math.min(face[2][1], face[3][1]), yB = Math.max(a1[1], b1[1]);
         var gr = g.createLinearGradient(0, yT, 0, yB);
         gr.addColorStop(0, 'rgba(255,246,228,' + (lit ? 0.16 : 0.07) + ')');
@@ -2871,7 +2875,7 @@
     }
     if (top) {
       poly(g, roof, top);
-      if (SMOOTH && roof.length === 4) {
+      if (PH.smooth && roof.length === 4) {
         // the top, lit from the far north-west corner
         var ys = roof.map(function (q) { return q[1]; });
         var gt = g.createLinearGradient(0, Math.min.apply(null, ys), 0, Math.max.apply(null, ys));
@@ -2905,7 +2909,7 @@
   }
   // a line with thickness, drawn on the pixel grid
   function thickLine(g, x0, y0, x1, y1, w, c) {
-    if (SMOOTH) {                                      // a machine's part: a true stroke, not stair-steps
+    if (PH.smooth) {                                      // a machine's part: a true stroke, not stair-steps
       g.save(); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'butt';
       g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.restore();
       return;
@@ -3481,10 +3485,10 @@
   }
 
   function drawMachine(g, u, opts) {
-    var was = SMOOTH;
-    SMOOTH = true;
+    var was = PH.smooth;
+    PH.smooth = true;
     try { return drawMachineBody(g, u, opts); }
-    finally { SMOOTH = was; }
+    finally { PH.smooth = was; }
   }
   function drawMachineBody(g, u, opts) {
     if (BIGBUG[u.art]) return drawBigBug(g, u, opts);
@@ -7211,8 +7215,8 @@
   function corpseSprite(side, art, mi) {
     var key = side + '|' + art + '|' + mi;
     if (corpses[key]) return corpses[key];
-    CORPSE = true;
-    try { var src = sprite(side, art, mi, 'prone', 0, MODEL * fitScale(art, mi), 0); } finally { CORPSE = false; }
+    PH.corpse = true;
+    try { var src = sprite(side, art, mi, 'prone', 0, MODEL * fitScale(art, mi), 0); } finally { PH.corpse = false; }
     var c = document.createElement('canvas');
     c.width = src.width; c.height = src.height;
     var g = c.getContext('2d');
@@ -7331,7 +7335,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var ISOTROOPS = window.PMCIsoTroops({
-    get FLAME_PHASE() { return FLAME_PHASE; }, ellipse: ellipse, A: A, K: K, PIXEL: PIXEL, corpses: corpses
+    PH: PH, ellipse: ellipse, A: A, K: K, PIXEL: PIXEL, corpses: corpses
   });
   var COLOURS = ISOTROOPS.COLOURS, COLOUR_KEYS = ISOTROOPS.COLOUR_KEYS, GLASS = ISOTROOPS.GLASS;
   var KIT = ISOTROOPS.KIT, KNEEL_DROP = ISOTROOPS.KNEEL_DROP, MODEL = ISOTROOPS.MODEL;
