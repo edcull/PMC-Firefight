@@ -764,7 +764,7 @@
   function play(spec, from, to, hits, u) {
     var dist = R.unitDist(u, to);
     if (spec.s) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn); start(); }, 150);
-    SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, land: function (extra) { SHOTS.hit(u, to, hits, extra); } });
+    SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, land: function (extra, at) { SHOTS.hit(u, at || to, hits, extra); } });
   }
 
 

@@ -99,6 +99,32 @@
     return state;
   }
 
+  /* A battle this browser was in the middle of when the page went away —
+     refreshed, or the phone threw the tab out — is played back up to where it
+     was, behind the menu, which then offers to go back to it. */
+  function resumeSaved() {
+    var book = window.PMCNet && window.PMCNet.savedBattle && window.PMCNet.savedBattle();
+    if (!book) return false;
+    var cfg = book.cfg;
+    seats = book.seats && book.seats.length ? book.seats : ['A'];
+    watching = false;
+    loadAutoAdvance(cfg.mode);
+    resetShow();
+    net = new window.PMCNet.Local();
+    wireNet(net);
+    net.connect();
+    var ok = false;
+    try { ok = net.resume(book); } catch (e) { ok = false; }
+    if (!ok) {
+      window.PMCNet.forgetBattle();
+      net = null; mirror = null; Q = null; state = null;
+      return false;
+    }
+    document.body.setAttribute('data-battle', cfg.mode || '');
+    if (window.innerWidth <= 1000) setMTab('act');
+    return true;
+  }
+
   /* Join a battle already running on a server: the seat is given, the table
      arrives by itself. */
   function joinBattle(transport, seat) {
@@ -122,6 +148,8 @@
   function resetShow() {
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
+    show.waiting = false; show.gen++;
+    slideAfter = {};
     pendingArrive = {};
     held = {};
     if (state) state.units.forEach(function (u) { u.ax = u.ay = null; });   // nothing is part-way through a move now
@@ -143,6 +171,11 @@
      is so the board can grey a button out rather than offer a refusal. */
   function mySide() {
     if (!state || watching) return null;
+    /* In the battle, nothing is this screen's to do while what has already
+       happened is still being drawn: the rules may have moved on to its turn,
+       but a tap now would be resolved before the other side's move is shown.
+       (Deploying is left alone — every unit put down plays a short arrival.) */
+    if (state.phase === 'battle' && replaying()) return null;
     if (ui.insertion) {
       var s = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
       return seats.indexOf(s) >= 0 ? s : null;
@@ -155,6 +188,11 @@
 
   function send(intent) {
     if (!net) return false;
+    // a button drawn before the replay began is not a way round it (see mySide)
+    if (state && state.phase === 'battle' && replaying() && !watching && intent && intent.k !== 'step') {
+      setHint(null, 'Wait for the move to finish.');
+      return false;
+    }
     return net.send('intent', { intent: intent });
   }
 
@@ -209,8 +247,15 @@
       shown[u.id] = { models: u.models, sp: u.sp, alive: u.alive, x: u.x, y: u.y, aboard: u.aboard, reserve: u.reserve, damage: u.damage, fled: u.fled };
     });
   }
+  /* Where a unit was pushed without a move of its own to play — an assault's
+     loser falling back 2", a garrison put out of its building — it stays on
+     the spot it was hit on until the attack that did it has been drawn, then
+     goes to where the rules have put it. Kept by id, like `held`. */
+  var slideAfter = {};
   function holdForShow(events) {
     if (!state) return;
+    var walks = {};
+    events.forEach(function (ev) { if (ev.e === 'move' && ev.id) walks[ev.id] = true; });
     var moved = {};
     events.forEach(function (ev) {
       if (ev.e === 'move' && ev.id && !moved[ev.id]) {
@@ -225,7 +270,14 @@
       if (ev.e === 'shoot' || ev.e === 'assault') hit.push(ev.to, ev.from);
       (ev.deaths || []).forEach(function (d) { hit.push(d.id); });
       hit.forEach(function (id) {
-        if (!id || held[id] || !shown[id]) return;
+        if (!id || !shown[id]) return;
+        var was0 = shown[id], u0 = evUnit(id);
+        // shot at here, whatever the rules have done with it since: the rounds fly to where it stood
+        if (u0 && !walks[id] && !slideAfter[id] && was0.x >= 0 && (u0.ax === null || u0.ax === undefined) &&
+            (Math.abs(u0.x - was0.x) > 0.01 || Math.abs(u0.y - was0.y) > 0.01)) {
+          u0.ax = was0.x; u0.ay = was0.y; slideAfter[id] = true;
+        }
+        if (held[id]) return;
         var was = shown[id], u = evUnit(id);
         if (!u || !was.alive) return;
         if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.damage !== u.damage) held[id] = was;
@@ -235,7 +287,18 @@
   function releaseFor(ev) {
     if (!ev) return;
     [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
-      .forEach(function (id) { if (id) delete held[id]; });
+      .forEach(function (id) {
+        if (!id) return;
+        delete held[id];
+        if (!slideAfter[id]) return;
+        delete slideAfter[id];
+        var u = evUnit(id);
+        if (!u) return;
+        var from = { x: u.ax, y: u.ay };
+        u.ax = null; u.ay = null;
+        // off to where it now stands, if it still stands anywhere on the table
+        if (u.alive && u.x >= 0 && from.x != null) animateMove(u, [from, { x: u.x, y: u.y }]);
+      });
   }
   // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
   function shownAs(u) {
@@ -249,6 +312,8 @@
   var show = {
     queue: [],
     running: false,
+    waiting: false,           // an event that takes time is being drawn
+    gen: 0,                   // which battle's show this is (resetShow moves it on)
     play: function (events) {
       (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
       holdForShow(events || []);
@@ -260,13 +325,45 @@
         var ev = show.queue[0];
         var waits = SHOWN[ev.e] === 'wait';
         if (waits && busy()) { whenIdle(show.pump); return; }
+        /* The other side's next activation waits for this one to be finished
+           with: its cards read and put away, not just its shots drawn. Closing
+           the last card pumps again (closeRes). */
+        if (ev.e === 'focus' && (ui.resOpen || resQueue.length) && otherSides(ev.id)) return;
         show.queue.shift();
-        try { applyEvent(ev); }
-        catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
-        // what it did to them shows on the panels once it has been drawn, not before
-        if (waits) { whenIdle(function () { releaseFor(ev); drawStats(); drawPanel(); show.pump(); }); return; }
+        if (!waits) {
+          try { applyEvent(ev); }
+          catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
+          continue;
+        }
+        /* An event that takes time says when it is done: the move drawn to its
+           end, the last round landed. Only then — and once the table has
+           settled — does the next come on. Nothing is inferred from whether the
+           table happens to be moving at the instant it was started. A backstop
+           keeps a callback that never comes from stalling the battle. */
+        show.waiting = true;
+        (function (ev, gen) {
+          var settled = false, guard = setTimeout(fin, 12000);
+          function fin() {
+            if (settled) return;
+            settled = true; clearTimeout(guard);
+            whenIdle(function () {
+              if (gen !== show.gen) return;          // a new battle since: this one's show is over
+              show.waiting = false;
+              // what it did to them shows on the panels once it has been drawn, not before
+              releaseFor(ev); drawStats(); drawPanel(); show.pump();
+            });
+          }
+          var took = false;
+          try { took = applyEvent(ev, fin); }
+          catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
+          if (!took) fin();
+        })(ev, show.gen);
+        return;
       }
       held = {};
+      // anything still waiting to go where the rules put it goes now
+      Object.keys(slideAfter).forEach(function (id) { var u = evUnit(id); if (u) { u.ax = null; u.ay = null; } });
+      slideAfter = {};
       snapshotShown();
       show.running = false;
       syncUI();
@@ -275,6 +372,13 @@
       scheduleReturn();
     }
   };
+  // is anything that has already happened still to be drawn, or being drawn?
+  function replaying() { return show.queue.length > 0 || show.waiting; }
+  // is this event's unit the other side's — not one this screen plays?
+  function otherSides(id) {
+    var u = evUnit(id);
+    return !!u && seats.indexOf(u.side) < 0;
+  }
   // which events start something that takes time, and which land at once
   var SHOWN = {
     move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', arrive: 'wait',
@@ -361,7 +465,10 @@
 
   function evUnit(id) { return id ? Q.byId(id) : null; }
 
-  function applyEvent(ev) {
+  /* Play one event. One that takes time is handed `done` and returns true if it
+     will call it when it has been drawn; false leaves the replay to wait on the
+     table settling. */
+  function applyEvent(ev, done) {
     // a test can ask for the order the show is played in, and when
     if (window.__traceShow) window.__traceShow.push({ t: Math.round(nowMs()), e: ev.e, id: ev.id || ev.from || (ev.f && ev.f.kind) || (ev.card && ev.card.kind) || '', to: ev.to || '', busy: busy() });
     switch (ev.e) {
@@ -377,23 +484,27 @@
       }
       case 'move': {
         var mu = evUnit(ev.id);
-        if (mu) animateMove(mu, ev.path, ev.follow);
-        return;
+        if (!mu) return false;
+        animateMove(mu, ev.path, ev.follow, done);
+        return !!done;
       }
       case 'shoot': {
         var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
-        if (sa && sb) playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), null);
-        return;
+        if (!(sa && sb)) return false;
+        playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null);
+        return !!done;
       }
       case 'assault': {
         var aa = evUnit(ev.from), ab = evUnit(ev.to);
-        if (aa && ab) playAssault(aa, ab, deathsOf(ev.deaths), null);
-        return;
+        if (!(aa && ab)) return false;
+        playAssault(aa, ab, deathsOf(ev.deaths), done || null);
+        return !!done;
       }
       case 'strafe': {
         var su = evUnit(ev.id);
-        if (su) playStrafe(su, ev.from, ev.to, deathsOf(ev.deaths), null);
-        return;
+        if (!su) return false;
+        playStrafe(su, ev.from, ev.to, deathsOf(ev.deaths), done || null);
+        return !!done;
       }
       case 'arrive': {
         delete pendingArrive[ev.id];
@@ -622,9 +733,12 @@
     /* On a phone the panel is one slice of screen: picking a unit is a request
        to act with it, so the panel comes back to the actions. */
     if (window.innerWidth <= 1000) setMTab('act');
-    dropFollow();
-    ensureVisible(u);
-    if (cam.borrowed) setHome(cam.x, cam.y);     // the player is driving again
+    // while the other side's move is still being drawn the camera stays with it (camLocked)
+    if (!camLocked()) {
+      dropFollow();
+      ensureVisible(u);
+      if (cam.borrowed) setHome(cam.x, cam.y);     // the player is driving again
+    }
     send({ k: 'select', id: u.id });
     revealConsole();
   }
@@ -777,317 +891,21 @@
         if (an.done) an.done();
       } else alive.push(an);
     });
-    anims = alive;
+    anims.splice.apply(anims, [0, anims.length].concat(alive));   // the same array: modules hold it
 
     FX.prune();
 
     drawBoard();
 
     if (!busy() && idleCbs.length) {
-      var cbs = idleCbs; idleCbs = [];
+      var cbs = idleCbs.splice(0);                  // (the same array: callbacks added meanwhile wait)
       cbs.forEach(function (cb) { cb(); });
     }
     if (anims.length || fx.length || anyArriving()) loop = requestAnimationFrame(tick);
     else { loop = null; drawBoard(); show.pump(); }
   }
 
-  /* ---- how a unit is drawn crossing the ground ----
-
-     A walk is made of footfalls, and a footfall happens every so many inches —
-     not every so many milliseconds. Driving the frames off the clock instead
-     made the feet slide: the same eleven paces whether the unit shuffled 3" or
-     sprinted 12". Driving them off distance covered means a squad hurrying puts
-     its legs down faster, which is what the eye is looking for.
-
-     The body rides with the feet: up between paces, down onto each one, so the
-     bob and the step land together instead of drifting against each other as
-     they did when both ran on their own timers. A step is heard on each footfall,
-     rate-limited so a long sprint is a walk rather than a drum roll. */
-  // the gait itself — pace, stride, how high a jump arcs — is motion.js's
-  var MOTION = window.PMCMotion;   // the timings and shapes of movement, shared with the Unit Viewer (motion.js)
-  var STEP_GAP = MOTION.STEP_GAP, gaitOf = MOTION.gaitOf, jetApex = MOTION.jetApex;
-
-  function pace(an, d, k, t) {
-    var gait = gaitOf(an.unit);
-    if (!gait) { an.unit.walk = 0; an.unit.hop = 0; return; }
-    if (gait.arc) {
-      /* A jet-assisted bound: one arc from where the squad stood to where it
-         lands, higher the further it goes, the burn flickering all the way. */
-      an.unit.walk = 1 + (Math.floor(t / 70) % 2);
-      an.unit.hop = 0;
-      an.unit.arc = Math.sin(Math.min(1, k) * Math.PI) * jetApex(an.total || d);
-      if (an.lastPace < 0 && k < 1) {
-        an.lastPace = 0;
-        if (SFX && SFX.jetpack) SFX.jetpack((an.dur || 800) / 1000);
-      }
-      return;
-    }
-    var paces = d / gait.span;
-    var n = Math.floor(paces);
-    an.unit.walk = 1 + (n % 2);
-    // the body is highest halfway between footfalls and lowest on each one
-    an.unit.hop = Math.sin((paces - n) * Math.PI) * gait.lift;
-    if (n !== an.lastPace && k < 1) {
-      an.lastPace = n;
-      if (gait.sound && t - an.lastStep > STEP_GAP) { an.lastStep = t; if (SFX) SFX.step(); }
-    }
-  }
-
-  // Underground Bugs do not walk across the table: they go down and come up (motion.js)
-  var burrows = MOTION.burrows, burrowR = MOTION.burrowR, moveMs = MOTION.moveMs;
-  /* A burrowing move in three parts: the unit fades out where it stands as it
-     goes down, travels unseen under a line of churned earth, and fades back in
-     where it comes up. */
-  var SINK = MOTION.BURROW_SINK, RISE = MOTION.BURROW_RISE;
-  function burrowStep(an, k) {
-    var u = an.unit, sub, e;
-    if (k < SINK) {
-      sub = k / SINK; e = sub * sub;
-      u.burrow = { lift: 0, alpha: Math.max(0, 1 - e) };
-      var p0 = an.segs[0].a;
-      u.ax = p0.x; u.ay = p0.y;
-      if (an.phase === 0) {
-        an.phase = 1;
-        addFx({ kind: 'collapse', x: p0.x, y: p0.y, r: burrowR(u), dur: 700, blocking: true });
-        if (SFX) { SFX.step(); SFX.step(0.12); SFX.step(0.3); }
-      }
-      return;
-    }
-    if (k < RISE) {
-      u.burrow = { hidden: true };
-      var d = (k - SINK) / (RISE - SINK) * an.total, seg = 0;
-      while (seg < an.segs.length - 1 && d > an.segs[seg].end) seg++;
-      var sg = an.segs[seg];
-      var f = sg.len ? Math.max(0, Math.min(1, (d - sg.start) / sg.len)) : 1;
-      u.ax = sg.a.x + (sg.b.x - sg.a.x) * f;
-      u.ay = sg.a.y + (sg.b.y - sg.a.y) * f;
-      // the ground heaving over it as it goes, an inch at a time
-      if (Math.floor(d) !== an.lastDirt) {
-        an.lastDirt = Math.floor(d);
-        addFx({ kind: 'miss', x: u.ax, y: u.ay, dur: 700, blocking: true });
-        addFx({ kind: 'miss', x: u.ax + (Math.random() - 0.5) * 1.2, y: u.ay + (Math.random() - 0.5) * 1.2, dur: 900, blocking: true });
-        if (SFX && an.lastDirt % 2 === 0) SFX.step(0.02);
-      }
-      return;
-    }
-    var pe = an.segs[an.segs.length - 1].b;
-    u.ax = pe.x; u.ay = pe.y;
-    if (an.phase < 2) {
-      an.phase = 2;
-      addFx({ kind: 'collapse', x: pe.x, y: pe.y, r: burrowR(u), dur: 800, blocking: true });
-      if (SFX) { SFX.impact(0.05); SFX.step(0.15); SFX.step(0.35); }
-    }
-    sub = (k - RISE) / (1 - RISE); e = 1 - Math.pow(1 - sub, 2);
-    u.burrow = { lift: 0, alpha: Math.min(1, e) };
-  }
-  function animateMove(u, path, follow) {
-    if (!path || path.length < 2) return;
-    var segs = [], total = 0;
-    for (var i = 1; i < path.length; i++) {
-      var len = R.inches(path[i - 1].x, path[i - 1].y, path[i].x, path[i].y);
-      segs.push({ a: path[i - 1], b: path[i], start: total, len: len, end: total + len });
-      total += len;
-    }
-    if (!total) return;
-    // a squad turns to the way it is going; a turret swings back to the front
-    faceToward(u, path[path.length - 1].x, path[path.length - 1].y, path[0]);
-    if (R.isMachine(u)) u.aim = null;
-    var dig = burrows(u);
-    anims.push({
-      kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
-      dur: dig ? MOTION.burrowMs(total) : moveMs(u, total),
-      t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0
-    });
-    u.ax = path[0].x; u.ay = path[0].y;
-    startLoop();
-  }
-
-  function addFx(f) {
-    FX.add(f);
-    startLoop();
-  }
-
-  /* ---- a shot, played the way that unit's weapon actually works ----
-     The weapons themselves are drawn by fire.js, which the Unit Viewer shares:
-     each style with its own cadence, its own effect on the table and its own
-     sound, timed so the hits land when the rounds arrive. What is the
-     battle's is around them: the gun swinging onto its target, where each
-     shot leaves, and the casualties when it lands. */
-  var SHOTS = window.PMCFire.make({
-    add: addFx,
-    redraw: function () { render(); },
-    alive: function () { return !!state; }
-  });
-  var FIRE = SHOTS.FIRE, streamLength = SHOTS.streamLength;
-  var playSecondary = SHOTS.secondary;
-  var XENO_BLUE = window.PMCFire.XENO_BLUE, BUG_GREEN = window.PMCFire.BUG_GREEN;
-
-  // a squad on foot turns to face left or right on the screen
-  function faceToward(u, x, y, from) {
-    if (R.isMachine(u)) return;
-    from = from || u;
-    var a = ISO.toScreen(from.x, from.y), b = ISO.toScreen(x, y);
-    if (b.x < a.x - ISO.K * 0.3) u.faceL = true;
-    else if (b.x > a.x + ISO.K * 0.3) u.faceL = false;
-  }
-
-
-  function playShooting(shooter, target, res, deaths, done) {
-    /* A crew-served piece swings onto its target before it fires: the carriage
-       round to its new facing, then the gun traversing onto the bearing. */
-    if (shooter && ISO.startTurn && ISO.turnsLikeMachine(shooter.art)) {
-      var swing = ISO.startTurn(shooter);
-      if (swing > 0) {
-        anims.push({ kind: 'turn', unit: shooter, t0: nowMs(), dur: swing });
-        startLoop();
-        setTimeout(function () { if (state) playShooting(shooter, target, res, deaths, done); }, swing + 40);
-        return;
-      }
-    }
-    var spec = R.weaponSpec(shooter);
-    /* A gunship fires from its airframe and is hit on its airframe, not on the
-       ground it happens to be over. Every point a shot is drawn between carries
-       how high above its own ground it sits. */
-    /* Where each is drawn, not where the rules have already put it: a target that
-       breaks and runs is still standing where it was hit until its own move plays. */
-    var from = { x: dispX(shooter), y: dispY(shooter), up: ISO.flyLift(shooter) };
-    var to = { x: dispX(target), y: dispY(target), up: ISO.flyLift(target) };
-    /* Troopers turn to face what they are shooting at, and each shot leaves one
-       of their own barrels: the pool is every surviving model's muzzle. */
-    if (!R.isMachine(shooter)) {
-      faceToward(shooter, to.x, to.y, from);
-      window.PMCFire.troop(from, spec, ISO.muzzles(shooter, R.status(shooter)));
-    }
-    /* A machine turns its turret onto the target, and each weapon fires from
-       its own barrel or tubes: the main gun from the muzzle, the machine gun
-       from the machine gun, rockets from the rack. */
-    var mountFrom = function () { return from; };
-    if (R.isMachine(shooter)) {
-      shooter.aim = Math.atan2(to.y - from.y, to.x - from.x);
-      var M = ISO.mounts(shooter);
-      mountFrom = function (style) { return ISO.mountFor(M, style, shooter, from); };
-      from = mountFrom(spec.p);
-    }
-    var hits = res.hits || 1;
-    var fired = false;
-    function land(extra, at) {
-      if (!state) return;
-      if (res.hits > 0) {
-        SHOTS.hit(shooter, to, hits, extra);
-      } else {
-        addFx({ kind: 'miss', x: to.x, y: to.y, up: to.up, dur: 320, blocking: true });
-      }
-      if (!fired) { fired = true; spawnDeaths(deaths); }
-    }
-    function finish(ms) { setTimeout(function () { if (done) done(); }, ms); }
-
-    // the secondary goes off alongside the primary, a beat later
-    if (spec.s) setTimeout(function () {
-      if (state) playSecondary(spec.s, shooter, from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s), to, hits, spec.sn);
-    }, 150);
-
-    var tail = spec.s ? 320 + ((spec.sn || 1) - 1) * 260 : 0;
-
-    finish(SHOTS.primary(spec, shooter, from, to, { hits: hits, dist: R.unitDist(shooter, target), land: land }) + tail);
-  }
-
-  // the aircraft runs the line, throwing fire out to either side
-  /* A strafing run: the craft flies the length of it, guns going, and the
-     ground walks up under it. It used to stand still while the fire appeared
-     along the line, which read as somebody else shooting. */
-  function playStrafe(u, from, to, deaths, done) {
-    var span = Math.hypot(to.x - from.x, to.y - from.y);
-    var dur = MOTION.strafeMs(span);
-    var steps = Math.max(5, Math.round(span * 1.2) + 4);
-    // the ground goes up in the colour of what hits it: xeno energy, bug acid
-    var hitRGB = !u ? null : R.isXeno(u) ? XENO_BLUE : u.faction === 'bugs' ? BUG_GREEN : null;
-    if (u) {
-      u.facing = Math.atan2(to.y - from.y, to.x - from.x);
-      u.aim = null;
-      u.ax = from.x; u.ay = from.y;
-      anims.push({ kind: 'strafe', unit: u, from: from, to: to, dur: dur, t0: nowMs() });
-      startLoop();
-    }
-    /* The bursts go down where the craft is as it passes, over the middle of
-       the run — it opens up after the approach and stops before it pulls off. */
-    for (var i = 0; i < steps; i++) {
-      (function (n) {
-        setTimeout(function () {
-          if (!state) return;
-          var f = 0.18 + (n / (steps - 1)) * 0.64;
-          var x = from.x + (to.x - from.x) * f, y = from.y + (to.y - from.y) * f;
-          addFx({ kind: 'muzzle', x: x, y: y, rgb: hitRGB, dur: 180, blocking: true });
-          /* The ground going up under it: rounds walking along the line, each
-             throwing its own dirt, spread either side of the run. */
-          addFx({ kind: 'impact', x: x, y: y, n: 3, rgb: hitRGB, dur: 320, blocking: true });
-          for (var d2 = 0; d2 < 3; d2++) {
-            addFx({
-              kind: 'miss', x: x + (Math.random() - 0.5) * 2.4, y: y + (Math.random() - 0.5) * 2.4,
-              rgb: hitRGB, dur: 380 + Math.random() * 220, blocking: true
-            });
-          }
-          if (SFX) SFX.strafe(R.isXeno(u) ? 'xeno' : u.faction, R.weaponStyle(u));
-        }, dur * 0.18 + n * (dur * 0.64 / Math.max(1, steps - 1)));
-      })(i);
-    }
-    setTimeout(function () { spawnDeaths(deaths); }, dur * 0.6);
-    setTimeout(function () { if (done) done(); }, dur + 220);
-  }
-
-  function playAssault(attacker, target, deaths, done) {
-    var mid = { x: (attacker.x + target.x) / 2, y: (attacker.y + target.y) / 2 };
-    for (var i = 0; i < 4; i++) {
-      (function (n) {
-        setTimeout(function () {
-          if (!state) return;
-          addFx({ kind: 'clash', x: mid.x + (Math.random() - 0.5), y: mid.y + (Math.random() - 0.5), dur: 300, blocking: true });
-          // an assault goes in firing carbines from the hip — or, for bugs, all mandibles
-          if (SFX) { if (attacker.faction === 'bugs') SFX.chitter(); else SFX.smg(4); }
-        }, n * 170);
-      })(i);
-    }
-    setTimeout(function () { spawnDeaths(deaths); }, 320);
-    setTimeout(function () { if (done) done(); }, 900);
-  }
-
-  function spawnDeaths(deaths) {
-    (deaths || []).forEach(function (d) { if (d.u) delete held[d.u.id]; });
-    (deaths || []).forEach(function (d) {
-      addFx({
-        kind: 'ghost', x: d.x, y: d.y, side: d.u.side, code: d.u.code,
-        models: Math.max(1, d.u.size), dur: 700, blocking: true
-      });
-    });
-    if (deaths && deaths.length && SFX) SFX.casualty();
-  }
-
-  /* The effects themselves live in fx.js, so the game and the unit viewer draw
-     the same ones from the same code. This is only the game's window onto it. */
-  function drawFx() {
-    STANDING.clear();
-    if (state) state.units.forEach(function (u) {
-      if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
-      STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
-    });
-    /* Counter-jamming, while it is doing something: its 6" marked out on the ground round a
-       counter-jammer that has a friend (itself included) inside it who stands
-       within 24" of an enemy's Jammers — the ground it is winning back. */
-    if (state) {
-      var onTable = function (u) { return u.alive && !u.aboard && !u.reserve && u.x >= 0; };
-      var jammers = state.units.filter(function (e) { return onTable(e) && R.has(e, 'Jammers'); });
-      if (jammers.length) state.units.forEach(function (c) {
-        if (!onTable(c) || !R.projects(c) || !R.has(c, 'Counter-jamming')) return;
-        var covering = state.units.some(function (f) {
-          return onTable(f) && f.side === c.side && R.unitDist(c, f) <= 6 &&
-            jammers.some(function (e) { return e.side !== f.side && R.unitDist(e, f) <= 24; });
-        });
-        if (covering) STANDING.add({ kind: 'cjam', x: c.x, y: c.y, r: 6, a: 1, dur: 1e9 });
-      });
-    }
-    STANDING.draw(pctx);
-    FX.draw(pctx);
-  }
-
+  // moves and shots played on the board: play.js (installed with the modules, below)
   /* ================= logging ================= */
   /* The engine has already written the line into state.log (the page's state
      is the engine's, or a snapshot of it): the event is only word that it
@@ -1221,7 +1039,7 @@
       if (list.length === 2) {
         pinch = { d: Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y) };
         list.forEach(function (p) { p.moved = true; });        // a pinch is never a tap
-      } else if (list.length === 1) {
+      } else if (list.length === 1 && !camLocked()) {
         cam.drag = { cx: cam.x, cy: cam.y, ox: cam.ox || 0, oy: cam.oy || 0 };
       }
     });
@@ -1234,6 +1052,7 @@
 
       var list = pointerList();
       if (list.length === 2 && pinch) {
+        if (camLocked()) return;                           // following the other side: no zooming it away
         var d = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
         if (d > pinch.d * 1.35) { setZoom(1); pinch.d = d; }
         else if (d < pinch.d * 0.74) { setZoom(-1); pinch.d = d; }
@@ -1276,6 +1095,7 @@
     canvas.addEventListener('wheel', function (e) {
       if (!state) return;
       e.preventDefault();
+      if (camLocked()) return;                              // following the other side's move
       var sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
       if (e.shiftKey || sideways) {
         panBy(e.deltaX * 0.7 / cam.z, e.deltaY * 0.7 / cam.z);
@@ -1302,7 +1122,7 @@
     document.addEventListener('keydown', onKey);
 
     el('viewctl').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-zoom]'); if (!b || !state) return;
+      var b = e.target.closest('[data-zoom]'); if (!b || !state || camLocked()) return;
       var z = b.getAttribute('data-zoom');
       if (z === 'in') setZoom(1);
       else if (z === 'out') setZoom(-1);
@@ -1498,6 +1318,7 @@
     });
     el('btn-notes-close').addEventListener('click', function () { el('notes').hidden = true; });
     el('resolution').addEventListener('click', function (e) { if (e.target.id === 'resolution') closeRes(); });
+    resumeSaved();
   }
 
   window.PMC_STATE = function () { return state; };
@@ -1555,7 +1376,7 @@
   window.PMC_DISCARD_BATTLE = function () {
     if (!discardable()) return false;
     resetShow();
-    try { net.disconnect(); } catch (e) { }
+    try { net.forget(); net.disconnect(); } catch (e) { }
     net = null; mirror = null; Q = null; state = null;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
     ui.preview = null; ui.hover = null; ui.insertion = null; ui.reservePick = null; ui.digHover = null;
@@ -1563,249 +1384,6 @@
     return true;
   };
 
-  /* ---- the ways in ----
-     Four screens start a battle — the muster screen, solitaire, a campaign
-     contract and a room in the lobby — and all four arrive here. The first
-     three run the engine in this tab; the fourth is already running on a
-     server and only hands over the seat. */
-  window.PMC_JOIN_BATTLE = function (transport, seat, cfg) {
-    var setup = el('setup');
-    if (setup) setup.hidden = true;
-    if (window.PMCMenu) window.PMCMenu.close();
-    if (cfg && cfg.colourA) ISO.setSideColour('A', cfg.colourA);
-    if (cfg && cfg.colourB) ISO.setSideColour('B', cfg.colourB);
-    // the same connection comes back here on every rejoin: its handlers go on once
-    if (!transport.__board) { wireNet(transport); transport.__board = true; }
-    joinBattle(transport, seat);
-    transport.send('resync');
-  };
-  /* The lobby borrows the muster screen to build a force: it is the one place
-     that knows the composition table and the unit cards. */
-  window.PMC_MUSTER_FOR = function (terms, done, have, room) {
-    hotEnd();
-    el('setup').hidden = false;
-    muster.forLobby = { terms: terms, done: done, room: room || '' };
-    setSoloMode(false);
-    if (terms) {
-      if (el('sel-tier')) el('sel-tier').value = terms.tier;
-      if (el('sel-pl')) el('sel-pl').value = terms.pl;
-    }
-    hotBegin('net');
-    // the force already sent to the room, to change rather than start again
-    if (have && have.keys && have.keys.length) {
-      el('sel-faction').value = have.faction || 'pmc';
-      if (el('sel-tactic')) el('sel-tactic').value = have.tactic || '';
-      muster.keys = have.keys.slice();
-      muster.colour = have.colour || muster.colour;
-      muster.name = have.name || muster.name;
-      if (el('hot-name')) el('hot-name').value = muster.name;
-      drawColourPick();
-    }
-    hotPaint();
-    drawMuster();
-  };
-  window.PMC_MUSTER_NOW = function () {
-    return {
-      faction: musterFaction(), tactic: musterTactic() || '',
-      keys: muster.keys.slice(), colour: muster.colour || 'ochre',
-      name: muster.name || ''
-    };
-  };
-  window.__begin = function (cfg, opts) { return begin(cfg, opts); };
-  window.__startBattle = function () { startBattle(); };
-  window.__deployDone = function () { return deploymentDone(); };
-  /* Driving the board the way a player does: the units that may act, the
-     actions on offer for one of them, and whatever the chosen action is
-     waiting to be pointed at. */
-  window.__eligibleUnits = function () { return eligible(state.activeSide); };
-  window.__actionIds = function (u) {
-    return STANDARD.map(function (a) { return a.id; })
-      .filter(function (id) { return id !== 'regroup'; })
-      .concat(specialsFor(u).map(function (a) { return a.id; }))
-      .concat(['regroup']);
-  };
-  window.__commitWhatever = function () {
-    if (ui.targets.length) { doShoot(ui.targets[0]); return true; }
-    if (ui.terrain.length) { doDemolish(ui.terrain[0]); return true; }
-    if (ui.moves.length) {
-      var c = ui.moves[ui.moves.length - 1];
-      if (ui.mode === 'wave') doWave(ui.selected, c);
-      else if (ui.mode === 'disembark') doDisembark(c);
-      else if (ui.mode === 'strafe') doStrafe(c);
-      else if (ui.mode === 'designate') doMarkMove(c);
-      else doMove(c);
-      return true;
-    }
-    return false;
-  };
-  window.__actionState = function (u, id) { return actionState(u, id); };
-  window.__showQueue = function () { return show.queue.length; };
-  window.__held = function () { return Object.keys(held).length; };
-  window.__busy = function () { return busy(); };
-  window.__busyWhy = function () { return { anims: anims.map(function (a) { return a.kind + ':' + Math.round(nowMs() - a.t0) + '/' + a.dur; }), arriving: anyArriving(), fx: FX.busy(), fxk: FX.kinds ? FX.kinds() : null, idle: idleCbs.length, loop: !!loop }; };
-  window.__uiMode = function () { return ui.mode; };
-  window.__uiCounts = function () { return { targets: ui.targets.length, moves: ui.moves.length, terrain: ui.terrain.length }; };
-  window.__pressCancel = function () { send({ k: 'cancel' }); };
-  window.__holdInsertion = function () { holdInsertion(); };
-  window.__insertionSpotsNow = function () { return ui.insertion ? ui.insertion.spots : null; };
-  window.__tapInsertion = function (q) { placeInsertion(q); };
-  window.__sendIntent = function (it) { send(it); };
-  window.__lookAt = function (x, y) { var q = ISO.toScreen(x, y); centreOn(q.x, q.y, true); render(); };
-  window.__seats = function () { return seats.slice(); };
-  window.__mySide = function () { return mySide(); };
-
-  /* Test hooks: where a canvas pixel lands on the table, and whether the side
-     still placing units may deploy there. */
-  window.__toWorldFromCanvasPx = function (px, py) {
-    var b = bufferFromCanvas({ x: px, y: py });
-    return ISO.toWorld(b.x, b.y);
-  };
-  window.__autoDeployBoth = function () { autoDeployMine(); };
-  window.__deployOK = function (x, y, side) {
-    side = side || placingSide();
-    return !!side && deployOK(side, x, y);
-  };
-  /* The campaign layer starts a battle through here rather than through the
-     muster screen: the same config, plus the dossier entries and the doctrines. */
-  window.PMC_NEWGAME = function (cfg) {
-    var setup = el('setup');
-    if (setup) setup.hidden = true;
-    begin(cfg);
-  };
-  window.__report = function () { return state && state.report; };
-  window.__labelIcons = function () {
-    return state ? state.units.filter(function (u) { return u.alive && u.x >= 0; }).map(function (u) {
-      var r = labelIcons(u); return { code: u.code, side: u.side, star: r.star, heart: r.heart };
-    }) : [];
-  };
-  Object.defineProperty(window, '__moves', { get: function () { return ui.moves; } });
-  window.__clearSel = function () { ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; render(); };
-  window.__fxdebug = function () { return { anims: anims.length, fx: fx.length, tracers: fx.filter(function (f) { return f.kind === 'tracer'; }).length }; };
-  window.PMC_VIEW = function () { var v = viewRect(); v.W = VIEW_W; v.H = VIEW_H; return v; };
-  window.PMC_LIFT = function (x, y) { return liftOf(x, y); };
-  // put an arriving unit down where the harness says, through the engine
-  window.__forceDrop = function (u, p) {
-    send({ k: 'insert', x: p.x, y: p.y });
-    return !!(u && u.alive);
-  };
-  window.__insertionAsking = function () { return ui.insertion ? (ui.insertion.unit ? ui.insertion.unit.code : 'LZ') : null; };
-  window.__insertionState = function () {
-    return ui.insertion
-      ? { unit: ui.insertion.unit ? ui.insertion.unit.code : null, spots: ui.insertion.spots.length, kind: ui.insertion.kind }
-      : null;
-  };
-  window.__insertionSpots = function (u) { return insertionSpots(u || null); };
-  window.__arrivalSpots = function (u) { return arrivalSpots(u); };
-  window.__arrivalLegal = function (u, p) { return arrivalLegal(u, p); };
-  // how far off a tap may be and still count, at the zoom in use
-  window.__snapReach = function () { return snapReach(); };
-  window.__setZoom = function (z) { cam.z = z; };
-  window.__landUnit = function (u) { landUnit(u); };
-  window.__setMTab = function (which) { setMTab(which); };
-  // saved skirmish forces, for the harness
-  window.__forces = {
-    list: function () { return loadForces(); },
-    current: function (n) { return currentForce(n || 'test'); },
-    apply: function (f) { return applyForce(f); },
-    save: function () { return saveCurrentForce(); },
-    note: function () { var n = el('force-note'); return n ? n.textContent : ''; },
-    muster: function () { return muster.keys.slice(); },
-    clear: function () { try { localStorage.removeItem('pmc-forces'); } catch (e) { } drawForceList(); }
-  };
-  window.__mTab = function () {
-    var c = document.querySelector('.console');
-    return c ? c.getAttribute('data-mtab') : null;
-  };
-  /* The gait a unit is drawn with, and a sampling of it across a move: the
-     harness uses this to check that feet and body stay in step. */
-  window.__gait = function (u) { return gaitOf(u); };
-  window.__pacing = function (u, inches, samples) {
-    var g2 = gaitOf(u);
-    if (!g2) return null;
-    var out = [];
-    var an = { unit: { prop: u.prop, cls: u.cls, rules: u.rules || [] }, lastPace: -1, lastStep: 0 };
-    an.unit = Object.assign({}, u);
-    an.total = inches;
-    for (var i = 0; i <= samples; i++) {
-      var d = inches * (i / samples);
-      pace(an, d, i / samples, 0);
-      out.push({ d: d, walk: an.unit.walk, hop: Math.round(an.unit.hop * 100) / 100, arc: Math.round((an.unit.arc || 0) * 10) / 10 });
-    }
-    return { span: g2.span, lift: g2.lift, sound: g2.sound, samples: out };
-  };
-  // how a unit's move is drawn part way through (0-1): a burrower sinks, goes unseen and comes up
-  window.__burrowSample = function (u, ks) {
-    if (!burrows(u)) return null;
-    var an = { unit: Object.assign({}, u), total: 6, phase: 0, lastDirt: -1,
-      segs: [{ a: { x: u.x, y: u.y }, b: { x: u.x + 6, y: u.y }, start: 0, end: 6, len: 6 }] };
-    return ks.map(function (k) { burrowStep(an, k); return Object.assign({}, an.unit.burrow); });
-  };
-  window.__deployNext = deployNext;
-  // a legal spot in the deploying side's own zone, n places along
-  window.__deployAim = function (n) {
-    var u = deployNext();
-    if (!u) return null;
-    var got = [];
-    for (var x = 1; x < W; x += 1.5) {
-      for (var y = 1; y < H; y += 1.5) {
-        if (!deployOK(u.side, x, y, u)) continue;
-        if (R.TERRAIN[R.terrainAt(state, x, y)].impassable) continue;
-        if (R.unitNear(state, x, y, u, 1)) continue;
-        got.push({ x: x, y: y });
-      }
-    }
-    return got[Math.min(got.length - 1, n || 0)] || null;
-  };
-  // a board tap at a table point, bypassing the pixel maths
-  window.__boardTapAt = function (x, y) {
-    var s = ISO.toScreen(x, y), v = viewRect();
-    onBoardTap({
-      clientX: 0, clientY: 0,
-      __pt: { x: (s.x - v.sx) * v.z + v.dx, y: (s.y - v.sy) * v.z + v.dy }
-    });
-  };
-  window.__tset = function () {
-    if (!state || !state.tset) return null;
-    var a = curArea(), ts = state.tset;
-    return {
-      phase: state.phase, i: ts.i, starter: ts.starter, edges: state.edges || null,
-      sides: ts.areas.map(function (x) { return x.side; }),
-      area: a ? { name: a.name, side: a.side, x: a.x, y: a.y, w: a.w, h: a.h, alt: a.alt, spec: a.spec, count: a.count.slice(), alts: a.row.alts.length, roll: a.roll } : null,
-      ghost: ts.ghost ? { kind: ts.ghost.kind, w: ts.ghost.w, h: ts.ghost.h } : null,
-      placed: a ? a.placed.length : 0
-    };
-  };
-  window.__terrainAct = function (act, arg) { terrainAct(act, arg); };
-  window.__uiMode = function () { return { mode: ui.mode, sections: (ui.sections || []).length, sel: ui.selected ? ui.selected.id : null, moves: ui.moves.length }; };
-  window.__resOpen = function () { return ui.resOpen ? (ui.currentRes ? ui.currentRes.kind + ':' + ui.currentRes.title : 'open') + ' q' + resQueue.length : false; };
-  window.__insertionLegal = function (p) { return insertionLegal(p) && !R.unitNear(state, p.x, p.y, ui.insertion ? ui.insertion.unit : null, 1); };
-  window.__dropHere = function (p) { placeInsertion(p); };
-  window.__terrainPicks = function () { return ui.mode + ': ' + ui.terrain.map(function (r) { return r.kind; }).join(', '); };
-  window.__terrainList = function () { return ui.terrain.map(function (r) { return { kind: r.kind, x: r.x, y: r.y }; }); };
-  window.__tapMove = function (spot) { if (ui.mode === 'disembark') doDisembark(spot); else previewMove(spot); };
-  window.__sel = function () { return ui.selected; };
-  window.__canvasAt = function (x, y) {
-    var c = canvasFromWorld(x, y, liftOf(x, y));
-    var r = el('board').getBoundingClientRect();
-    return { x: Math.round(c.x + r.left), y: Math.round(c.y + r.top) };
-  };
-  window.__moveSpots = function () { return ui.moves.slice(); };
-  window.__previewState = function () {
-    var pv = ui.preview;
-    if (!pv) return null;
-    return {
-      at: { x: Math.round(pv.spot.x * 10) / 10, y: Math.round(pv.spot.y * 10) / 10 },
-      advance: pv.advance, dist: Math.round(pv.dist * 10) / 10,
-      terrain: pv.terrain.name, cover: pv.terrain.cover,
-      sees: pv.seen.map(function (o) { return o.code; }),
-      shots: pv.shots.map(function (o) { return o.code; }),
-      watchers: pv.watchers.map(function (o) { return o.code; }),
-      moved: pv.unit.x !== pv.spot.x || pv.unit.y !== pv.spot.y,
-      card: (document.getElementById('context') || {}).textContent || ''
-    };
-  };
-  window.__previewConfirm = function () { commitMove(); };
-  window.__previewCancel = function () { cancelPreview(); };
   /* A phone that puts the tab in the background may throw away every canvas
      it holds and hand them back blank — the table, the troops, the lot. Coming
      back, look at the table: if it has gone clear, paint everything again. */
@@ -1831,89 +1409,67 @@
     window.addEventListener('pageshow', function () { restoreCanvases(false); });
     window.addEventListener('focus', function () { restoreCanvases(false); });
   }
-  window.__restoreCanvases = restoreCanvases;
-  window.__rebuildScene = function () { state.scene = null; state.ground = null; state.structs = null; drawBoard(); };
-  window.__tapTerrain = function (i) {
-    var r = ui.terrain[i];
-    if (!r) return false;
-    if (ui.mode === 'breach') doBreach(r); else doDemolish(r);
-    return true;
-  };
-  window.__targetCodes = function () { return ui.mode + ': ' + ui.targets.map(function (t) { return t.code + '/' + t.side; }).join(', '); };
-  window.__testShoot = function (a, b, res) { playShooting(a, b, res || { hits: 2 }, [], null); };
-  window.__shootAt = function (id) { doShoot(byId(id)); };
-  window.__fxkinds = function () { return fx.map(function (f) { return f.kind; }); };
-  /* What the effects layer was told, not just what kind it was: the harness uses
-     this to check that a shot to or from a flier leaves the airframe. */
-  window.__fxlive = function () {
-    return fx.map(function (f) {
-      return {
-        kind: f.kind,
-        // how high the effect starts: its lift plus, when it leaves a barrel,
-        // how far that barrel sits above the ground
-        up: (f.up || 0) + (f.mz ? -f.mz.dy : 0),
-        fromUp: f.from ? (f.from.up || 0) + (f.from.mz ? -f.from.mz.dy : 0) : null,
-        toUp: f.to ? (f.to.up || 0) : null
-      };
-    });
-  };
-  window.__flyLift = function (u) { return ISO.flyLift(u); };
-  window.__addFx = function (f) { addFx(f); };
-  // the cadence each streaming style fires at, which the viewer also reads
-  window.__fireSpec = function (style) {
-    var f = FIRE[style];
-    return f ? { gap: f.gap, clump: f.clump || 0, clumpGap: f.clumpGap || 0,
-      min: f.n(0), max: f.n(99), length: streamLength(style, 2) } : null;
-  };
-  // test hook: act on a unit as though it had been tapped on the table
-  window.__tapUnit = function (u) {
-    if (!u) return false;
-    if (ui.targets.indexOf(u) < 0) return false;
-    if (ui.mode === 'assault') doAssault(u);
-    else if (ui.mode === 'designate') doDesignate(u);
-    else if (ui.mode === 'embark') doEmbark(u);
-    else if (ui.mode === 'hack') doHack(u);
-    else if (ui.mode === 'steady') doSteady(u);
-    else if (ui.mode === 'support') doSupport(u);
-    else doShoot(u);
-    return true;
-  };
-  // test hooks: drive a unit through the bar the way a player would
-  window.__select = function (u) { if (!u) return false; select(u); return ui.selected === u; };
-  window.__actionState = function (id) { return ui.selected ? actionState(ui.selected, id) : null; };
-  window.__specials = function () { return specialsFor(ui.selected).map(function (x) { return x.id; }); };
-  window.__forcedCharge = function (u) { var f = forcedCharge(u); return f ? f.id : null; };
-  window.__relocating = function () { return state.relocating ? { side: state.relocating.side, cap: state.relocating.cap, moved: state.relocating.moved.slice() } : null; };
-  window.__pressAction = function (id) {
-    var u = ui.selected;
-    if (!u) return false;
-    var st = actionState(u, id);
-    if (!st.on) return false;
-    chooseAction(id);
-    return true;
-  };
-  window.__eligibleCodes = function () {
-    return eligible(state.activeSide).map(function (u) { return u.code; });
-  };
-  window.__markState = function () {
-    return {
-      mode: ui.mode, kind: ui.markKind || null, reach: ui.selected ? markReach(ui.selected) : 0,
-      targets: ui.targets.length, moves: ui.moves.length,
-      picks: (ui.markPicks || []).length
-    };
-  };
-  window.__colours = function () { return { A: muster.colour, B: ui.foeColour || null }; };
-  window.PMC_SETVIEW = function (wx, wy, z) {
-    var p = ISO.toScreen(wx, wy);
-    if (z) { cam.z = z; zoomLabel(); }
-    cam.x = cam.tx = p.x; cam.y = cam.ty = p.y;
-    clampCam(); setHome(cam.x, cam.y); drawBoard();
-  };
 
+  // the ways in: hooks.js (installed with the modules, below)
   /* ================= the modules =================
      The parts of the board that live in files of their own, installed here —
      after everything they borrow of this closure is declared — each with the
      board it borrows from, and handing back what the rest of the game uses. */
+  /* ---------- hooks.js: the ways in ----------
+     The board it borrows from: getters for what changes as the game runs,
+     and the functions and fixed values it uses. */
+  window.PMCHooks({
+    get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
+    get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
+    get held() { return held; }, get loop() { return loop; }, get muster() { return muster; },
+    get seats() { return seats; }, get state() { return state; },
+    get streamLength() { return streamLength; }, get addFx() { return addFx; },
+    get anyArriving() { return anyArriving; }, get applyForce() { return applyForce; },
+    get arriving() { return arriving; }, get bufferFromCanvas() { return bufferFromCanvas; },
+    get burrowStep() { return burrowStep; }, get cancelPreview() { return cancelPreview; },
+    get canvasFromWorld() { return canvasFromWorld; }, get centreOn() { return centreOn; },
+    get clampCam() { return clampCam; }, get commitMove() { return commitMove; },
+    get currentForce() { return currentForce; }, get drawBoard() { return drawBoard; },
+    get drawColourPick() { return drawColourPick; }, get drawForceList() { return drawForceList; },
+    get drawMuster() { return drawMuster; }, get hotBegin() { return hotBegin; },
+    get hotEnd() { return hotEnd; }, get hotPaint() { return hotPaint; },
+    get labelIcons() { return labelIcons; }, get landUnit() { return landUnit; },
+    get loadForces() { return loadForces; }, get musterFaction() { return musterFaction; },
+    get musterTactic() { return musterTactic; }, get onBoardTap() { return onBoardTap; },
+    get pace() { return pace; }, get playShooting() { return playShooting; },
+    get previewMove() { return previewMove; }, get render() { return render; },
+    get saveCurrentForce() { return saveCurrentForce; }, get setHome() { return setHome; },
+    get setMTab() { return setMTab; }, get setSoloMode() { return setSoloMode; },
+    get snapReach() { return snapReach; }, get viewRect() { return viewRect; },
+    get zoomLabel() { return zoomLabel; }, actionState: actionState, arrivalLegal: arrivalLegal,
+    arrivalSpots: arrivalSpots, autoDeployMine: autoDeployMine, begin: begin, busy: busy, byId: byId,
+    chooseAction: chooseAction, curArea: curArea, deployNext: deployNext, deployOK: deployOK,
+    deploymentDone: deploymentDone, doAssault: doAssault, doBreach: doBreach, doDemolish: doDemolish,
+    doDesignate: doDesignate, doDisembark: doDisembark, doEmbark: doEmbark, doHack: doHack,
+    doMarkMove: doMarkMove, doMove: doMove, doShoot: doShoot, doSteady: doSteady, doStrafe: doStrafe,
+    doSupport: doSupport, doWave: doWave, eligible: eligible, forcedCharge: forcedCharge,
+    holdInsertion: holdInsertion, insertionLegal: insertionLegal, insertionSpots: insertionSpots,
+    joinBattle: joinBattle, liftOf: liftOf, markReach: markReach, mySide: mySide, nowMs: nowMs,
+    placeInsertion: placeInsertion, placingSide: placingSide, restoreCanvases: restoreCanvases,
+    select: select, send: send, specialsFor: specialsFor, startBattle: startBattle, terrainAct: terrainAct,
+    wireNet: wireNet, FX: FX, H: H, ISO: ISO, R: R, W: W, anims: anims, cam: cam, el: el, fx: fx,
+    idleCbs: idleCbs, resQueue: resQueue, show: show, ui: ui
+  });
+
+  /* ---------- play.js: moves and shots played on the board ----------
+     The board it borrows from: getters for what changes as the game runs,
+     and the functions and fixed values it uses. */
+  var PLAY = window.PMCPlay({
+    get held() { return held; }, get pctx() { return pctx; }, get state() { return state; },
+    get handsOff() { return handsOff; }, get render() { return render; }, dispX: dispX, dispY: dispY,
+    nowMs: nowMs, onTable: onTable, startLoop: startLoop, FX: FX, ISO: ISO, R: R, SFX: SFX,
+    STANDING: STANDING, anims: anims
+  });
+  var FIRE = PLAY.FIRE, addFx = PLAY.addFx, animateMove = PLAY.animateMove, burrowStep = PLAY.burrowStep;
+  var burrows = PLAY.burrows, drawFx = PLAY.drawFx, gaitOf = PLAY.gaitOf, pace = PLAY.pace;
+  var playAssault = PLAY.playAssault, playShooting = PLAY.playShooting, playStrafe = PLAY.playStrafe;
+  var streamLength = PLAY.streamLength;
+
   /* ---------- terrainset.js: the terrain set-up (pp. 46-47) ----------
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
@@ -1935,7 +1491,7 @@
     get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; },
     get closeDrawer() { return closeDrawer; }, get closeRes() { return closeRes; },
     get drawBoard() { return drawBoard; }, get drawerEl() { return drawerEl; }, get esc() { return esc; },
-    get fitView() { return fitView; }, get handsOff() { return handsOff; },
+    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; },
     get insertionMine() { return insertionMine; }, get panBy() { return panBy; },
     get render() { return render; }, get returnHome() { return returnHome; },
     get setHint() { return setHint; }, get setZoom() { return setZoom; }, get tip() { return tip; },
@@ -2030,7 +1586,7 @@
     soloOwnerName: soloOwnerName, whenIdle: whenIdle, ISO: ISO, K: K, R: R, SFX: SFX, ZOOMS: ZOOMS, cam: cam,
     el: el, resQueue: resQueue, show: show, ui: ui
   });
-  var TERRAIN_MARK = VIEW.TERRAIN_MARK, borrowCamera = VIEW.borrowCamera, centreOn = VIEW.centreOn;
+  var TERRAIN_MARK = VIEW.TERRAIN_MARK, borrowCamera = VIEW.borrowCamera, camLocked = VIEW.camLocked, centreOn = VIEW.centreOn;
   var clampCam = VIEW.clampCam, colourLabel = VIEW.colourLabel, drawColourPick = VIEW.drawColourPick;
   var dropFollow = VIEW.dropFollow, edgedStroke = VIEW.edgedStroke, ensureVisible = VIEW.ensureVisible;
   var fitView = VIEW.fitView, focusUnit = VIEW.focusUnit, foeColour = VIEW.foeColour;

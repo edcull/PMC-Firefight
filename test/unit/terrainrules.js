@@ -230,5 +230,18 @@ console.log('\nA BUILDING ON A TWO-STEP HILL');
   ok('a hill elsewhere keeps its own', !!far.top, true);
 })();
 
+/* The Demolish objective is a structure standing on the table (p. 54): sight
+   does not pass through it, but it can still be shot at. */
+head('The Demolish objective');
+(function () {
+  var obj = { kind: 'objective', x: 18, y: 18, w: 4, h: 4, cx: 20, cy: 20 };
+  var a = mk('regular', 'A', 12, 20), b = mk('regular', 'B', 28, 20);
+  var st = world([a, b], [obj]);
+  ok('it blocks sight across it', R.lineClear(st, a, b), false);
+  ok('...but not to a point on it, so it can be shot at', R.lineClear(st, a, { x: 20, y: 20 }), true);
+  b.y = 30;
+  ok('...and not past it', R.lineClear(st, a, b), true);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

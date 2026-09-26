@@ -28,6 +28,7 @@
     function esc() { return B.esc.apply(this, arguments); }
     function fitView() { return B.fitView.apply(this, arguments); }
     function handsOff() { return B.handsOff.apply(this, arguments); }
+    function camLocked() { return B.camLocked.apply(this, arguments); }
     function insertionMine() { return B.insertionMine.apply(this, arguments); }
     function panBy() { return B.panBy.apply(this, arguments); }
     function render() { return B.render.apply(this, arguments); }
@@ -392,7 +393,9 @@
         return;
       }
 
-      // the OpFor has been driving the camera: a tap on open ground gives it back
+      // the OpFor has been driving the camera: a tap on open ground gives it back —
+      // once it has finished; while it is still moving, the view stays with it
+      if (camLocked() && !hit) return;
       if (cam.borrowed && !hit) {
         var reclaim = !(ui.moves.length && moveSpotUnder(c));
         if (reclaim) { returnHome(); return; }
@@ -491,6 +494,8 @@
         send({ k: 'cancel' });
         return;
       }
+      // the view follows the other side's move until it is done: the camera keys wait
+      if (camLocked() && (/^[+=\-_0fF]$/.test(e.key) || e.key.indexOf('Arrow') === 0)) { e.preventDefault(); return; }
       if (e.key === '+' || e.key === '=') { setZoom(1); return; }
       if (e.key === '-' || e.key === '_') { setZoom(-1); return; }
       if (e.key === '0' || e.key.toLowerCase() === 'f') { fitView(); return; }

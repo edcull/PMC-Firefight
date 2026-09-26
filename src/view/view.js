@@ -84,6 +84,7 @@
     var RETURN_AFTER = 1000;
     function scheduleReturn() {
       function cancel() { if (ui.retTimer) { clearTimeout(ui.retTimer); ui.retTimer = 0; } }
+      updateReturnHint();
       if (!cam.borrowed || !cam.home || handsOff() || !B.state || B.state.over) { cancel(); return; }
       if (busy()) { cancel(); if (!ui.retIdle) { ui.retIdle = true; whenIdle(function () { ui.retIdle = false; scheduleReturn(); }); } return; }
       if (!myTurn() || ui.resOpen || resQueue.length || show.queue.length) { cancel(); return; }
@@ -92,6 +93,14 @@
         ui.retTimer = 0;
         if (cam.borrowed && myTurn() && !ui.resOpen && !busy() && !show.queue.length) returnHome(true);
       }, RETURN_AFTER);
+    }
+    /* While the camera is following the other side's move, it is not the
+       player's to drive: no dragging, pinching, zooming or tapping it back.
+       It comes home on its own once that side is done (scheduleReturn). */
+    function camLocked() {
+      // the engine is done with the move long before it has finished playing out here:
+      // the camera stays with it while anything of it is still being drawn
+      return !!cam.borrowed && !handsOff() && (!myTurn() || busy() || show.queue.length > 0);
     }
     function returnHome(quiet) {
       if (!cam.home) return;
@@ -103,8 +112,14 @@
       if (SFX && !quiet) SFX.click();
     }
     function updateReturnHint() {
-      var h = el('returnhint');
-      if (h) h.hidden = !cam.borrowed;
+      var h = el('returnhint'), locked = camLocked();
+      if (h) {
+        h.hidden = !cam.borrowed;
+        h.textContent = locked ? 'Following the other side\u2019s move \u2014 your view comes back when it is done'
+          : 'Camera is following the action \u2014 tap the table to return to your view';
+      }
+      var vc = el('viewctl');
+      if (vc) vc.classList.toggle('locked', locked);
     }
 
     /* How much empty frame there is around the table on each axis, in screen pixels.
@@ -461,6 +476,7 @@
     return {
       TERRAIN_MARK: TERRAIN_MARK,
       borrowCamera: borrowCamera,
+      camLocked: camLocked,
       centreOn: centreOn,
       clampCam: clampCam,
       colourLabel: colourLabel,

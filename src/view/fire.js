@@ -145,7 +145,7 @@
                 }
               }
               if (SFX) { SFX.impact(); if (big) SFX.impact(0.08); }
-              if (land && j === n - 1) land(2);
+              if (land && j === n - 1) land(2, aim);
             }, fl);
             redraw();
           }, j * 200);
@@ -226,7 +226,7 @@
                   if (!alive()) return;
                   add({ kind: 'splat', x: aim.x, y: aim.y, up: aim.up, big: sbig, dur: 620, blocking: true });
                   if (SFX) SFX.splat();
-                  if (j === globs - 1) land(sbig ? 3 : 1);
+                  if (j === globs - 1) land(sbig ? 3 : 1, aim);
                 }, sflight);
                 redraw();
               }, j * sgap);
@@ -283,7 +283,7 @@
                   : to;
                 add({ kind: 'lob', from: F, to: aim, dur: flight, heavy: heavy, blocking: true });
                 if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
-                setTimeout(function () { land(heavy ? 4 : 3); }, flight);
+                setTimeout(function () { land(heavy ? 4 : 3, aim); }, flight);
               }, off);
             })(q);
           }
@@ -370,6 +370,12 @@
       }
     }
 
+    // where a secondary's round comes down: its own burst, the casualties left to the primary
+    function secondaryLands(shooter, to, n) {
+      add({ kind: 'impact', x: to.x, y: to.y, up: to.up, rgb: shotRGB(shooter), n: n, dur: 420, blocking: true });
+      if (SFX) SFX.impact();
+    }
+
     /* A secondary weapon: the coaxial under a tank's main gun, the guns beneath a
        gunship's rockets, the grenades assault troops throw as they close. It makes
        its own noise and its own mark, but the casualties belong to the primary —
@@ -437,6 +443,7 @@
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 240, big: true, blocking: true });
                 add({ kind: 'bolt', from: pick(from, j), to: to, dur: 300, heavy: style === 'shellbig', blocking: true });
+                setTimeout(function () { if (alive()) secondaryLands(shooter, to, style === 'shellbig' ? 3 : 2); }, 300);
                 redraw();
               }, j * 230);
             })(q2);
@@ -466,6 +473,7 @@
                 if (!alive()) return;
                 if (SFX) SFX.missile(0, 0.9, 0.47);
                 add({ kind: 'missile', from: pick(from, j), to: to, seed: j, dur: 900, blocking: true });
+                setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 900);
                 redraw();
               }, j * 260);
             })(q4);
@@ -481,6 +489,7 @@
                 if (!alive()) return;
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 180, big: true, blocking: true });
                 add({ kind: 'missile', from: pick(from, j), to: to, rocket: true, seed: j, dur: 420, blocking: true });
+                if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
                 redraw();
               }, j * 78);
             })(q5);

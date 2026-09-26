@@ -225,7 +225,7 @@ async function drain(p) {
     !/Invasion|Demolish|Hostile takeover/.test(txt) || /Territorial recalculation/.test(txt) || !/won|lost/i.test(txt),
     (txt.split('\n').filter(l => /Territorial/.test(l))[0] || 'no line'));
   check('...and says where the other two forces were', /elsewhere on the world/i.test(txt),
-    (txt.split('\n').filter(l => /fought their own battle/.test(l))[0] || 'no line'));
+    (txt.split('\n').filter(l => / beat | lost to | draw with /.test(l))[0] || 'no line'));
   await shot(p, 'xeno-aftermath.png');
   const after = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get(), A = c.companies.A;

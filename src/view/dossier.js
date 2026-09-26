@@ -368,7 +368,8 @@
     if (last) {
       var battleRow = function (l) {
         return '<div class="crow"><b>' + l.turn + '</b>' +
-          '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl + '</span>' +
+          '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
+          (l.against ? '<small>vs ' + esc(l.against) + '</small>' : '') + '</span>' +
           '<em>' + result(l) + '</em>' +
           '<span class="cmoney">+' + l.kUC.A + ' ' + coin() + '</span></div>';
       };
@@ -515,13 +516,18 @@
   function statRow(co, rival) {
     var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co);
     function pc(x) { return Math.round(x * 1000) / 10 + '%'; }
-    function cell(cls, pct, word) {
-      return '<div class="cstat ' + cls + '"><b>' + pct + '</b><span>' + esc(word) + '</span></div>';
+    /* On the company's own hub the win rate opens the battles fought, and the
+       trauma the memorial: the numbers, and what they were made of. */
+    function cell(cls, pct, word, modal) {
+      var inner = '<b>' + pct + '</b><span>' + esc(word) + '</span>';
+      return modal ? '<button type="button" class="cstat ' + cls + '" data-go="fmodal" data-kind="' + modal + '">' + inner + '</button>'
+        : '<div class="cstat ' + cls + '">' + inner + '</div>';
     }
+    var own = !rival && co === camp.companies.A;
     return '<div class="cstats">' +
-      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate') +
+      cell('cs-win', pc(wn.pct), 'win rate', own && camp.log.length ? 'battles' : null) +
       cell('cs-exp', pc(ex.pct), ex.word) +
-      cell('cs-tra', pc(tr.pct), tr.word) +
+      cell('cs-tra', pc(tr.pct), tr.word, own ? 'memorial' : null) +
       '</div>';
   }
 
@@ -1774,8 +1780,13 @@
       h += '<h3>Elsewhere on the world</h3><div class="cpan"><div class="cpstat">' +
         after.elsewhere.map(function (e) {
           var co = (camp.rivals || []).filter(function (r) { return r.name === e.name; })[0];
-          return esc(e.name) + ' fought their own battle and took ' + e.kUC + ' ' +
-            C.money(co) + '.';
+          if (!e.vs) return esc(e.name) + ' fought their own battle and took ' + e.kUC + ' ' + C.money(co) + '.';
+          var bits = [e.kUC + ' ' + C.money(co)];
+          if (e.fell) bits.push(e.fell + ' fell');
+          if (e.gone && e.gone.length) bits.push(e.gone.length === 1 ? esc(e.gone[0]) + ' wiped out' : e.gone.length + ' units wiped out');
+          if (e.traumas) bits.push(e.traumas + ' ' + (e.traumas === 1 ? C.words(co).trauma : C.words(co).traumas).toLowerCase());
+          return '<b>' + esc(e.name) + '</b> ' + (e.result === 'won' ? 'beat' : e.result === 'lost' ? 'lost to' : 'fought to a draw with') +
+            ' ' + esc(e.vs) + ' \u2014 ' + bits.join(', ') + '.';
         }).join('<br>') + '</div></div>';
     }
 
@@ -1838,7 +1849,7 @@
     var co = rivals[Math.min(intelIdx, rivals.length - 1)] || camp.companies.B;
     var h = '<h2>' + esc(co.name) + '</h2>';
     h += '<p class="lede">' + C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
-      ' · ' + co.roster.length + ' units · ' + co.record.battles + ' battles against you.</p>';
+      ' · ' + co.roster.length + ' units · ' + camp.log.filter(function (l) { return l.against === co.name; }).length + ' battles against you.</p>';
     // only the battles fought against this force count toward the record with it
     var mine2 = camp.log.filter(function (l) { return !l.against || l.against === co.name; });
     var head = mine2.filter(function (l) { return l.winner === 'A'; }).length;
@@ -2067,7 +2078,17 @@
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
-      C.recruit(co, t.getAttribute('data-recruit'), { drone: t.hasAttribute('data-asdrone') }); save(); render(); return;
+      // recruiting spends the money: say what it costs, and what there is, before it is spent
+      var rk = t.getAttribute('data-recruit'), asDrone = t.hasAttribute('data-asdrone');
+      var rp = profile(rk), rcost = C.recruitCost(co, rk), purse = co.kUC, coinWord = C.money(co);
+      ask({
+        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : '') + '?',
+        text: (rcost ? 'It costs ' + rcost + ' ' + coinWord + '. You have ' + purse + ' ' + coinWord +
+          ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.'),
+        okLabel: C.words(co).recruit + (rcost ? ' for ' + rcost + ' ' + coinWord : ''),
+        onOk: function () { C.recruit(co, rk, { drone: asDrone }); save(); render(); }
+      });
+      return;
     }
     if (t.hasAttribute('data-disband')) {
       var e = findEntry(co, t.getAttribute('data-disband'));
@@ -2434,6 +2455,14 @@
     function enter() {
       var setup = el('setup');
       if (setup) setup.hidden = true;                 // the muster sheet would sit on top
+      /* The campaign's battle is still being fought (the page was refreshed in
+         the middle of it, say): Campaign goes back to it. */
+      var st = root.PMC_STATE && root.PMC_STATE();
+      if (camp && camp.pending && st && st.cfg && st.cfg.campaign && root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE()) {
+        if (root.PMCMenu) root.PMCMenu.close();
+        return;
+      }
+      if (camp && camp.pending) { camp.pending = null; save(); }   // a battle abandoned mid-flight
       open(view === 'aftermath' ? 'aftermath' : 'hub');
     }
     var btn = el('btn-campaign');
@@ -2443,7 +2472,9 @@
     if (setupBtn) setupBtn.addEventListener('click', enter);
     Store.load().then(function (got) {
       camp = got;
-      if (camp && camp.pending) camp.pending = null;    // a battle abandoned mid-flight
+      // a battle abandoned mid-flight — unless it was kept, and is waiting to be gone back to
+      var kept = root.PMCNet && root.PMCNet.savedBattle && root.PMCNet.savedBattle();
+      if (camp && camp.pending && !(kept && kept.cfg && kept.cfg.campaign)) camp.pending = null;
       ensureColours();
       if (needsSecond()) beginSecond();                // the second player had not founded yet
       render();

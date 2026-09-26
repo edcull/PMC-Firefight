@@ -423,6 +423,11 @@ async function clickText(p, re) {
   await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
+  // it asks first, saying what it costs and what there is to spend
+  const asked = await p.evaluate(() => { const b = document.getElementById('camp-askbox'); return !document.getElementById('camp-ask').hidden && b ? b.textContent : ''; });
+  const unspent = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
+  check('recruiting asks first, with the cost and the funds', /costs 1 kUC/.test(asked) && new RegExp('have ' + unspent + ' kUC').test(asked) && unspent === afterState.kUC, asked);
+  await p.evaluate(() => document.querySelector('#camp-askbox [data-ask="ok"]').click()); await p.waitForTimeout(220);
   check('a unit can be recruited from the dossier', recruited);
   const spent = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
   check('...and it cost a kUC', spent === afterState.kUC - 1, spent + ' kUC left');
