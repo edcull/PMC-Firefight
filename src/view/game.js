@@ -43,8 +43,6 @@
   var STANDING = window.PMCFx.create({ lift: function (x, y) { return liftOf(x, y); } });
   var el = function (id) { return document.getElementById(id); };
 
-  var OBJECTIVES = [{ x: 12, y: 36 }, { x: 24, y: 24 }, { x: 36, y: 12 }];
-
   /* ================= where the game actually happens =================
 
      None of it happens here. engine.js decides everything and rolls every die;
@@ -541,7 +539,6 @@
   function isAI(side) { return Q.isAI(side); }
   function actionState(u, id) { return Q.actionState(u, id); }
   function specialsFor(u) { return Q.specialsFor(u); }
-  function targetsFor(u, o) { return Q.targetsFor(u, o); }
   function eligible(side) { return Q.eligible(side); }
   function activeUnits(side) { return Q.activeUnits(side); }
   function onTable(u) { return Q.onTable(u); }
@@ -577,15 +574,8 @@
   function boardableFor(v) { return Q.boardableFor(v); }
   function moveBonus(u, a) { return Q.moveBonus(u, a); }
   function markReach(u) { return Q.markReach(u); }
-  function markHint(u) { return Q.markHint(u); }
-  function demolishTargets(u, m) { return Q.demolishTargets(u, m); }
-  function breachTargets(u) { return Q.breachTargets(u); }
   function forcedCharge(u) { return Q.forcedCharge(u); }
-  function canStand(u, c) { return Q.canStand(u, c); }
   function soloOwnerName(o) { return Q.soloOwnerName(o); }
-  function bestTarget(u, mode, opts) { return Q.bestTarget(u, mode, opts); }
-  function gapToFoes(u) { return Q.gapToFoes(u); }
-  function fromLog(kind, title, side, entries) { return Q.fromLog(kind, title, side, entries); }
   function snapToSpot(ins, p) { return Q.snapToSpot(ins, p); }
   function scoreObjectives() { return Q.scoreObjectives(); }
   function curArea() { return Q.curArea(); }
@@ -934,17 +924,6 @@
     clampCam();
   }
 
-  // on a phone the panels sit below the table; make sure the table comes back into view
-  function revealBoard() {
-    if (window.innerWidth > 1000) return;
-    var b = document.querySelector('.board-wrap');
-    if (!b) return;
-    var r = b.getBoundingClientRect();
-    if (r.top >= -12 && r.top < window.innerHeight * 0.4) return;
-    try { b.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
-    catch (e) { b.scrollIntoView(); }
-  }
-
   /* ================= coming down ==================
      A Battlefield Insertion is not a unit blinking into existence. A craft drops
      out of the sky onto its landing point and throws up the dust it lands in; a
@@ -1013,17 +992,9 @@
     addFx({ kind: 'hold', x: veh.x, y: veh.y, dur: u.boarding.dur + 60, blocking: true });
   }
 
-  /* How a scenario reinforcement is shown coming on. The Invasion attacker is
-     coming down from orbit, so it lands the way a Battlefield Insertion does;
-     everyone else is walking or driving on from a table edge, so it is shown
-     doing exactly that — from the nearest edge in to where it was put. */
-  function showArrival(u) {
-    if (state.scen.id === 'invasion' && state.sc && u.side === state.sc.attacker) { landUnit(u); return; }
-    // a solitaire scenario: a drop into a landing zone, or a walk in from where the unit came out
-    var how = state.scen.arriveHow ? state.scen.arriveHow(state, u) : null;
-    if (how === 'drop') { landUnit(u); return; }
-    walkOn(u, how && how.x != null ? how : null);
-  }
+  /* A unit walking or driving on from a table edge, shown coming in from the
+     nearest edge (or from `start`, where the scenario says it came out) to
+     where it was put. */
   function walkOn(u, start) {
     var dl = u.x, dr = W - u.x, dt = u.y, db = H - u.y, m = Math.min(dl, dr, dt, db);
     var from = start ? { x: start.x, y: start.y } : m === dl ? { x: 0.2, y: u.y } : m === dr ? { x: W - 0.2, y: u.y }
@@ -1306,13 +1277,6 @@
   var STANDARD = window.PMCEngine.STANDARD;
   var SPECIAL_SLOTS = window.PMCEngine.SPECIAL_SLOTS;
 
-  function soundFor(entries) {
-    if (!SFX) return;
-    entries.forEach(function (l) {
-      if (l.t === 'suppressed') SFX.suppress();
-      else if (l.t === 'broken') SFX.broken();
-    });
-  }
 
 
 
