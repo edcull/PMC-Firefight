@@ -102,15 +102,16 @@
       sub = (k - RISE) / (1 - RISE); e = 1 - Math.pow(1 - sub, 2);
       u.burrow = { lift: 0, alpha: Math.min(1, e) };
     }
-    function animateMove(u, path, follow) {
-      if (!path || path.length < 2) return;
+    // `done`, if given, is called once the move has been drawn (at once, when there is nothing to draw)
+    function animateMove(u, path, follow, done) {
+      if (!path || path.length < 2) { if (done) done(); return; }
       var segs = [], total = 0;
       for (var i = 1; i < path.length; i++) {
         var len = R.inches(path[i - 1].x, path[i - 1].y, path[i].x, path[i].y);
         segs.push({ a: path[i - 1], b: path[i], start: total, len: len, end: total + len });
         total += len;
       }
-      if (!total) return;
+      if (!total) { if (done) done(); return; }
       // a squad turns to the way it is going; a turret swings back to the front
       faceToward(u, path[path.length - 1].x, path[path.length - 1].y, path[0]);
       if (R.isMachine(u)) u.aim = null;
@@ -118,7 +119,7 @@
       anims.push({
         kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
         dur: dig ? MOTION.burrowMs(total) : moveMs(u, total),
-        t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0
+        t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0, done: done || null
       });
       u.ax = path[0].x; u.ay = path[0].y;
       startLoop();

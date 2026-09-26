@@ -39,17 +39,21 @@ function ok(name, cond, note) {
     let was = false, lastCard = null;
     setInterval(() => {
       const c = window.__cam(), open = window.__resOpen();
-      if (open && open !== lastCard && window.__mySide()) window.__mineCards++;
+      if (open && open !== lastCard && !c.borrowed) window.__mineCards++;     // the camera is ours: our own activation's card
       lastCard = open || null;
       if (c.borrowed && !was) { window.__aiStarts++; if (open) window.__bad.push(open); }
+      // while the other side's move is still being drawn, nothing is the player's to do
+      if (window.__showQueue() > 0 && c.borrowed && window.__mySide()) window.__early = (window.__early || 0) + 1;
       was = c.borrowed;
     }, 4);
   });
   // play a few activations, leaving each card up a while before putting it away
+  // by the clock rather than a count of loops: a busy machine gets through fewer of them
   let acts = 0;
-  for (let k = 0; k < 500 && acts < 5; k++) {
+  const until = Date.now() + 120000;
+  for (let k = 0; Date.now() < until && acts < 5; k++) {
     if (await card()) {
-      const mine = await p.evaluate(() => !!window.__mySide());
+      const mine = await p.evaluate(() => !window.__cam().borrowed);
       await p.waitForTimeout(mine ? 900 : 100);      // reading it
       await cont();
       await p.waitForTimeout(80);
@@ -63,14 +67,18 @@ function ok(name, cond, note) {
     if (did) acts++;
     await p.waitForTimeout(60);
   }
-  for (let k = 0; k < 120; k++) {
+  // and let the other side answer the last of them
+  const answer = Date.now() + 30000;
+  while (Date.now() < answer) {
     if (await card()) { await p.waitForTimeout(300); await cont(); }
     await p.waitForTimeout(60);
+    if (await p.evaluate(() => window.__aiStarts >= 3 && !!window.__mySide())) break;
   }
-  const r = await p.evaluate(() => ({ bad: window.__bad, mine: window.__mineCards, ai: window.__aiStarts }));
+  const r = await p.evaluate(() => ({ bad: window.__bad, mine: window.__mineCards, ai: window.__aiStarts, early: window.__early || 0 }));
   ok('the player acted, and the other side answered', acts >= 3 && r.ai >= 2, acts + ' activations, the AI started ' + r.ai + ' times');
   ok('...with cards up on the player’s turn to read', r.mine >= 1, r.mine + ' cards');
   ok('the other side never started while a card was up', r.bad.length === 0, r.bad.join(' | '));
+  ok('the player could not act while the other side\u2019s move was still being drawn', r.early === 0, r.early + ' moments it could');
   ok('no page errors', errs.length === 0, errs.join(' | '));
   console.log('\n  ' + pass + ' checks passed, ' + fail + ' failed.');
   await b.close();

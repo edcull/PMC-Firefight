@@ -148,6 +148,7 @@
   function resetShow() {
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
+    show.waiting = false; show.gen++;
     slideAfter = {};
     pendingArrive = {};
     held = {};
@@ -170,6 +171,11 @@
      is so the board can grey a button out rather than offer a refusal. */
   function mySide() {
     if (!state || watching) return null;
+    /* In the battle, nothing is this screen's to do while what has already
+       happened is still being drawn: the rules may have moved on to its turn,
+       but a tap now would be resolved before the other side's move is shown.
+       (Deploying is left alone — every unit put down plays a short arrival.) */
+    if (state.phase === 'battle' && replaying()) return null;
     if (ui.insertion) {
       var s = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
       return seats.indexOf(s) >= 0 ? s : null;
@@ -182,6 +188,11 @@
 
   function send(intent) {
     if (!net) return false;
+    // a button drawn before the replay began is not a way round it (see mySide)
+    if (state && state.phase === 'battle' && replaying() && !watching && intent && intent.k !== 'step') {
+      setHint(null, 'Wait for the move to finish.');
+      return false;
+    }
     return net.send('intent', { intent: intent });
   }
 
@@ -301,6 +312,8 @@
   var show = {
     queue: [],
     running: false,
+    waiting: false,           // an event that takes time is being drawn
+    gen: 0,                   // which battle's show this is (resetShow moves it on)
     play: function (events) {
       (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
       holdForShow(events || []);
@@ -317,10 +330,35 @@
            the last card pumps again (closeRes). */
         if (ev.e === 'focus' && (ui.resOpen || resQueue.length) && otherSides(ev.id)) return;
         show.queue.shift();
-        try { applyEvent(ev); }
-        catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
-        // what it did to them shows on the panels once it has been drawn, not before
-        if (waits) { whenIdle(function () { releaseFor(ev); drawStats(); drawPanel(); show.pump(); }); return; }
+        if (!waits) {
+          try { applyEvent(ev); }
+          catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
+          continue;
+        }
+        /* An event that takes time says when it is done: the move drawn to its
+           end, the last round landed. Only then — and once the table has
+           settled — does the next come on. Nothing is inferred from whether the
+           table happens to be moving at the instant it was started. A backstop
+           keeps a callback that never comes from stalling the battle. */
+        show.waiting = true;
+        (function (ev, gen) {
+          var settled = false, guard = setTimeout(fin, 12000);
+          function fin() {
+            if (settled) return;
+            settled = true; clearTimeout(guard);
+            whenIdle(function () {
+              if (gen !== show.gen) return;          // a new battle since: this one's show is over
+              show.waiting = false;
+              // what it did to them shows on the panels once it has been drawn, not before
+              releaseFor(ev); drawStats(); drawPanel(); show.pump();
+            });
+          }
+          var took = false;
+          try { took = applyEvent(ev, fin); }
+          catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
+          if (!took) fin();
+        })(ev, show.gen);
+        return;
       }
       held = {};
       // anything still waiting to go where the rules put it goes now
@@ -334,6 +372,8 @@
       scheduleReturn();
     }
   };
+  // is anything that has already happened still to be drawn, or being drawn?
+  function replaying() { return show.queue.length > 0 || show.waiting; }
   // is this event's unit the other side's — not one this screen plays?
   function otherSides(id) {
     var u = evUnit(id);
@@ -425,7 +465,10 @@
 
   function evUnit(id) { return id ? Q.byId(id) : null; }
 
-  function applyEvent(ev) {
+  /* Play one event. One that takes time is handed `done` and returns true if it
+     will call it when it has been drawn; false leaves the replay to wait on the
+     table settling. */
+  function applyEvent(ev, done) {
     // a test can ask for the order the show is played in, and when
     if (window.__traceShow) window.__traceShow.push({ t: Math.round(nowMs()), e: ev.e, id: ev.id || ev.from || (ev.f && ev.f.kind) || (ev.card && ev.card.kind) || '', to: ev.to || '', busy: busy() });
     switch (ev.e) {
@@ -441,23 +484,27 @@
       }
       case 'move': {
         var mu = evUnit(ev.id);
-        if (mu) animateMove(mu, ev.path, ev.follow);
-        return;
+        if (!mu) return false;
+        animateMove(mu, ev.path, ev.follow, done);
+        return !!done;
       }
       case 'shoot': {
         var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
-        if (sa && sb) playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), null);
-        return;
+        if (!(sa && sb)) return false;
+        playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null);
+        return !!done;
       }
       case 'assault': {
         var aa = evUnit(ev.from), ab = evUnit(ev.to);
-        if (aa && ab) playAssault(aa, ab, deathsOf(ev.deaths), null);
-        return;
+        if (!(aa && ab)) return false;
+        playAssault(aa, ab, deathsOf(ev.deaths), done || null);
+        return !!done;
       }
       case 'strafe': {
         var su = evUnit(ev.id);
-        if (su) playStrafe(su, ev.from, ev.to, deathsOf(ev.deaths), null);
-        return;
+        if (!su) return false;
+        playStrafe(su, ev.from, ev.to, deathsOf(ev.deaths), done || null);
+        return !!done;
       }
       case 'arrive': {
         delete pendingArrive[ev.id];
