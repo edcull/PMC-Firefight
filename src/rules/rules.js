@@ -1394,6 +1394,7 @@
   function drives(u) { return (KIT_MOVE || kitMove()).drives(u); }
   function reachable(state, u, allowance) { return (KIT_MOVE || kitMove()).reachable(state, u, allowance); }
   function pathTo(state, u, allowance, target) { return (KIT_MOVE || kitMove()).pathTo(state, u, allowance, target); }
+  function groundLookup(state) { return (KIT_MOVE || kitMove()).groundLookup(state); }
 
   /* ---------- rally ---------- */
   /* Inspiring Presence (p. 58): "Friendly troops within 12\" of a unit with the
@@ -1798,7 +1799,7 @@
     has: has, ruleValue: ruleValue, currentMorale: currentMorale, status: status,
     projects: projects, markCall: markCall, holdsGround: holdsGround, countsForVictory: countsForVictory,
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
-    canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo,
+    canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
     rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,

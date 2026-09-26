@@ -219,7 +219,7 @@
       h += honourChips(u);
       // a rider's mount, before its rules, the way a hull's drive is shown
       var mt = R.mountOf(u);
-      h += ruleChips(u, R.terrainOf(B.state, u) !== 'open', mt && mt !== R.MOUNTS.none ? [{ name: mt.name, text: mt.note }] : null);
+      h += ruleChips(u, R.kindsUnder(B.state, u)[0] !== 'open', mt && mt !== R.MOUNTS.none ? [{ name: mt.name, text: mt.note }] : null);
       fillStats(box, h);
     }
     /* The stats are redrawn with every render, and in a demo that is every
@@ -359,7 +359,7 @@
         out.push('<span class="chip chip-drive" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>');
       });
       if (showGround) {
-        var tk = R.terrainOf(B.state, u), mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
+        var tk = R.kindsUnder(B.state, u)[0], mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
         out.push('<span class="chip tpill" ' + tip(R.TERRAIN[tk].name, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +
           (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(R.TERRAIN[tk].name) + '</span>');
       }

@@ -115,6 +115,34 @@
       }
       return groundCache;
     }
+    /* The same ground, for anyone asking about many points of one table at a
+       time (the AI weighing where to stand): the terrain under a point and the
+       kind a token there counts as in (kindsUnder), read from the shared grid
+       where the point is on the lattice and worked out afresh where it is not. */
+    function groundLookup(state) {
+      var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
+      var g = groundOf(state, cols * rows), kinds = Object.keys(TERRAIN), kindIndex = {};
+      kinds.forEach(function (k, n) { kindIndex[k] = n; });
+      function cell(x, y) {
+        var i = x / STEP, j = y / STEP;
+        if (i !== Math.round(i) || j !== Math.round(j) || i < 0 || j < 0 || i >= cols || j >= rows) return -1;
+        return j * cols + i;
+      }
+      return {
+        at: function (x, y) {
+          var c = cell(x, y);
+          if (c < 0) return terrainAt(state, x, y);
+          if (g.at[c] === 0) g.at[c] = 1 + kindIndex[terrainAt(state, x, y)];
+          return kinds[g.at[c] - 1];
+        },
+        under: function (x, y) {
+          var c = cell(x, y);
+          if (c < 0) return kindsUnder(state, null, x, y)[0];
+          if (g.under[c] === 0) g.under[c] = 1 + kindIndex[kindsUnder(state, null, x, y)[0]];
+          return kinds[g.under[c] - 1];
+        }
+      };
+    }
     function fieldOf(state, u, allowance) {
       var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
       var N = cols * rows;
@@ -559,7 +587,8 @@
     return {
       relink: relink,
       jumps: jumps, terrainCost: terrainCost, terrainBars: terrainBars, field: field, turnsTo: turnsTo,
-      turnToll: turnToll, driveCost: driveCost, drives: drives, reachable: reachable, pathTo: pathTo
+      turnToll: turnToll, driveCost: driveCost, drives: drives, reachable: reachable, pathTo: pathTo,
+      groundLookup: groundLookup
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCMove;

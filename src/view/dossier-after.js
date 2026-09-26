@@ -92,45 +92,39 @@
       save();
       E.view = E.after ? 'aftermath' : 'hub';
     }
-    function titleCase(s) { return String(s || '').replace(/^./, function (c) { return c.toUpperCase(); }); }
+    /* A battle among the other forces, in brief: Tier, Priority Level and
+       scenario, then for each side whether it won, what share of its force it
+       lost, and what it was paid. */
+    function lossPct(b, name) {
+      var sd = b && b.sides.filter(function (x) { return x.name === name; })[0];
+      if (!sd) return null;
+      var st = 0, en = 0;
+      sd.units.forEach(function (un) { st += un.start || 0; en += un.lost ? 0 : Math.min(un.end || 0, un.start || 0); });
+      return st ? Math.round(100 * (st - en) / st) : null;
+    }
+    function frontFacts(b) {
+      var f = [];
+      if (b.tier) f.push('Tier ' + ROMAN[b.tier]);
+      if (b.pl) f.push('PL ' + b.pl);
+      f.push(C.SCENARIO_NAMES[b.scenario] || b.scenario);
+      return f.join(' · ');
+    }
+    function frontSide(sm, b) {
+      var co = (E.camp.rivals || []).filter(function (r) { return r.name === sm.name; })[0];
+      var pc = lossPct(b, sm.name);
+      return { name: sm.name, result: sm.result === 'won' ? 'Won' : sm.result === 'lost' ? 'Lost' : 'Drew',
+        loss: pc == null ? '' : pc + '% lost', pay: '+' + sm.kUC + ' ' + C.money(co) };
+    }
     function frontCard(sums) {
       var b = sums[0] && sums[0].battle;
       if (!b) return '';
-      var bySide = {}; sums.forEach(function (sm) { bySide[sm.name] = sm; });
-      var h = '<div class="cpan front"><div class="cprom-head"><b>' + esc(b.sides[0].name) + ' v ' + esc(b.sides[1].name) + '</b></div>';
-      var facts = [C.SCENARIO_NAMES[b.scenario] || b.scenario];
-      if (b.tier) facts.push('Tier ' + ROMAN[b.tier]);
-      if (b.turns) facts.push(b.turns + (b.turns === 1 ? ' turn' : ' turns'));
-      if (b.planet && b.planet !== 'random') facts.push(titleCase(b.planet));
-      if (b.paper) facts.push('not fought out');
-      h += '<p class="cpstat">' + esc(facts.join(' · ')) + '</p>';
-      h += '<p class="front-result">' + (b.winner ? '<b>' + esc(b.winner) + '</b> won' : 'Neither side carried the day') +
-        (b.text ? ' — ' + esc(b.text.replace(/ \[[AB]\]/g, '')) : '') + '</p>';
-      b.sides.forEach(function (sd) {
-        var sm = bySide[sd.name], co = (E.camp.rivals || []).filter(function (r) { return r.name === sd.name; })[0];
-        h += '<div class="front-side"><div class="front-name"><b>' + esc(sd.name) + '</b>';
-        if (sm) {
-          var bits = [sm.kUC + ' ' + C.money(co)];
-          if (sm.exp) bits.push(sm.exp + ' exp');
-          if (sd.fell) bits.push(sd.fell + ' fell');
-          if (sm.traumas) bits.push(sm.traumas + ' ' + (sm.traumas === 1 ? C.words(co).trauma : C.words(co).traumas).toLowerCase());
-          h += ' <span>' + bits.join(' · ') + '</span>';
-        } else if (sd.fell) h += ' <span>' + sd.fell + ' fell</span>';
-        h += '</div><div class="front-units">' + sd.units.map(function (u) {
-          var fate = u.lost ? ' <i class="bad">wiped out</i>' : u.fled ? ' <i class="bad">fled</i>' : '';
-          return '<div class="front-unit' + (u.lost ? ' gone' : '') + '"><span>' + esc(u.name) +
-            (u.type && u.type !== u.name ? ' <small>' + esc(u.type) + '</small>' : '') + '</span>' +
-            '<span class="front-num">' + (u.start != null ? u.start + '→' + (u.end || 0) : '') +
-            (u.kills ? ' · ' + u.kills + (u.kills === 1 ? ' kill' : ' kills') : '') + fate + '</span></div>';
-        }).join('') + '</div>';
-        if (sm && sm.did && sm.did.length) {
-          h += sm.did.map(function (d) {
-            return '<div class="dledger"><b>' + (d.what === 'tier' ? 'Tier' : d.what === 'doctrine' ? 'Doctrine' :
-              d.what === 'promote' ? 'Promotion' : d.what === 'honour' ? 'Honour' : d.what === 'upgrade' ? 'Upgrade' : 'Recruit') +
-              '</b> ' + esc(d.text) + '</div>';
-          }).join('');
-        }
-        h += '</div>';
+      var sides = sums.slice().sort(function (x, y) { return (y.result === 'won') - (x.result === 'won'); });
+      var h = '<div class="cpan front"><div class="cprom-head"><b>' + esc(b.sides[0].name) + ' v ' + esc(b.sides[1].name) + '</b></div>' +
+        '<p class="cpstat">' + esc(frontFacts(b)) + '</p>';
+      sides.forEach(function (sm) {
+        var r = frontSide(sm, b);
+        h += '<div class="front-unit front-row"><span><b>' + esc(r.name) + '</b> <i class="' + (r.result === 'Lost' ? 'bad' : 'good') + '">' + r.result + '</i></span>' +
+          '<span class="front-num">' + [r.loss, r.pay].filter(Boolean).join(' · ') + '</span></div>';
       });
       return h + '</div>';
     }
@@ -363,16 +357,24 @@
       }
 
       if (E.after.elsewhere && E.after.elsewhere.length) {
+        /* One line a battle: the two sides of a battle between two rivals come
+           in one after the other, and are told together, the winner first. */
+        var battles = [], ew = E.after.elsewhere;
+        for (var bi = 0; bi < ew.length; bi++) {
+          var e1 = ew[bi], e2 = ew[bi + 1];
+          if (e2 && e2.name === e1.vs && e2.vs === e1.name) { battles.push(e2.result === 'won' ? [e2, e1] : [e1, e2]); bi++; }
+          else battles.push([e1]);
+        }
+        var brief = function (e) {
+          var r = frontSide(e, e.battle);
+          return esc(r.name) + ' ' + [r.loss, r.pay].filter(Boolean).join(', ');
+        };
         h += '<h3>Elsewhere on the world</h3><div class="cpan"><div class="cpstat">' +
-          E.after.elsewhere.map(function (e) {
-            var co = (E.camp.rivals || []).filter(function (r) { return r.name === e.name; })[0];
-            if (!e.vs) return esc(e.name) + ' fought their own battle and took ' + e.kUC + ' ' + C.money(co) + '.';
-            var bits = [e.kUC + ' ' + C.money(co)];
-            if (e.fell) bits.push(e.fell + ' fell');
-            if (e.gone && e.gone.length) bits.push(e.gone.length === 1 ? esc(e.gone[0]) + ' wiped out' : e.gone.length + ' units wiped out');
-            if (e.traumas) bits.push(e.traumas + ' ' + (e.traumas === 1 ? C.words(co).trauma : C.words(co).traumas).toLowerCase());
-            return '<b>' + esc(e.name) + '</b> ' + (e.result === 'won' ? 'beat' : e.result === 'lost' ? 'lost to' : 'fought to a draw with') +
-              ' ' + esc(e.vs) + ' \u2014 ' + bits.join(', ') + '.';
+          battles.map(function (pr) {
+            var e = pr[0], f = pr[1];
+            var head = '<b>' + esc(e.name) + '</b> ' + (e.result === 'won' ? 'beat' : e.result === 'lost' ? 'lost to' : 'fought to a draw with') +
+              ' ' + (f ? '<b>' + esc(e.vs) + '</b>' : esc(e.vs)) + (e.battle ? ' (' + esc(frontFacts(e.battle)) + ')' : '');
+            return head + ' \u2014 ' + brief(e) + (f ? '; ' + brief(f) : '') + '.';
           }).join('<br>') + '</div></div>';
       }
 

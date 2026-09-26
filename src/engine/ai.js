@@ -474,7 +474,7 @@
           var spath = R.pathTo(E.state, u, u.move + 2, spots[0]);
           u.x = spots[0].x; u.y = spots[0].y;
           animateMove(u, spath, true);
-          logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.terrainOf(E.state, u)].name.toLowerCase() + '.');
+          logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.kindsUnder(E.state, u)[0]].name.toLowerCase() + '.');
         } else {
           var rr = abRally(E.state, u);
           logLine('rally', rr ? rr.text : u.label + ' regroups.');
@@ -607,12 +607,13 @@
       }
       var goal = pickGoal(u, behaviour);
       var allowance = behaviour === 'flee' || killAll ? u.move + moveBonus(u, 'move') : u.move;
-      var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour);
+      var look = R.groundLookup(E.state);             // the ground under every spot, read off the shared grid
+      var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
       var best = null, bestScore = here + 0.6;
       R.reachable(E.state, u, allowance).forEach(function (c) {
         if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
         if (!canStand(u, c)) return;
-        var s = scoreSpot(u, c, goal, behaviour);
+        var s = scoreSpot(u, c, goal, behaviour, look);
         if (s > bestScore) { bestScore = s; best = c; }
       });
       if (best) {
@@ -664,18 +665,19 @@
       return foe ? { x: foe.unit.x, y: foe.unit.y } : { x: W / 2, y: H / 2 };
     }
 
-    function scoreSpot(u, c, goal, behaviour) {
+    function scoreSpot(u, c, goal, behaviour, look) {
       var s = 0;
-      var terr = R.TERRAIN[R.terrainAt(E.state, c.x, c.y)];
-      s += R.coverAt(E.state, c.x, c.y, u) * 1.6;
+      var terr = R.TERRAIN[look ? look.at(c.x, c.y) : R.terrainAt(E.state, c.x, c.y)];
+      s += (look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u)) * 1.6;
       if (terr.fp) s += 2;
       s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
       var ghost = { x: c.x, y: c.y, alive: true };
       var exposure = 0, opportunity = 0;
       E.state.units.forEach(function (e) {
         if (!e.alive || e.side === u.side) return;
-        if (!R.hasLoS(E.state, e, ghost)) return;
         var d = Math.max(0, R.inches(c.x, c.y, e.x, e.y) - 2 * UR);
+        if (d > u.range && d > e.range) return;          // out of reach either way: no need to look
+        if (!R.hasLoS(E.state, e, ghost)) return;
         if (d <= u.range) opportunity += 1.4;
         if (d <= e.range) exposure += 1.0;
       });
