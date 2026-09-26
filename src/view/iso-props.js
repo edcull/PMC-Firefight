@@ -7,8 +7,8 @@
 (function (root) {
   'use strict';
   root.PMCIsoProps = function (B) {
-    var a = B.a, dot = B.dot, ellipse = B.ellipse, pal2 = B.pal2, poly = B.poly, rect = B.rect, rng = B.rng;
-    var slab = B.slab, toScreen = B.toScreen, A = B.A, BAG = B.BAG, BARK = B.BARK, BRICK = B.BRICK;
+    var a = B.a, dot = B.dot, ellipse = B.ellipse, poly = B.poly, rect = B.rect, rng = B.rng;
+    var toScreen = B.toScreen, BAG = B.BAG, BARK = B.BARK, BRICK = B.BRICK;
     var CHAR = B.CHAR, CONCRETE = B.CONCRETE, K = B.K, LEAF = B.LEAF, PIXEL = B.PIXEL, PREFAB = B.PREFAB;
     var ROOF = B.ROOF, STONE = B.STONE;
     // from modules installed after this one: looked up when called

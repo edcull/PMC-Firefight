@@ -8,7 +8,7 @@
   'use strict';
   root.PMCIsoAliens = function (B) {
     var a = B.a, dot = B.dot, ellipse = B.ellipse, fbm = B.fbm, hullSpec = B.hullSpec, poly = B.poly;
-    var rng = B.rng, toScreen = B.toScreen, A = B.A, ELEV = B.ELEV, K = B.K, PH = B.PH, W = B.W;
+    var rng = B.rng, toScreen = B.toScreen, A = B.A, ELEV = B.ELEV, K = B.K, PH = B.PH;
     // from modules installed after this one: looked up when called
     function eyeArt() { return B.eyeArt.apply(this, arguments); }
     function finishFigure() { return B.finishFigure.apply(this, arguments); }
@@ -17,7 +17,6 @@
     function paintFigure() { return B.paintFigure.apply(this, arguments); }
     function podArt() { return B.podArt.apply(this, arguments); }
     function roleAt() { return B.roleAt.apply(this, arguments); }
-    function sp2() { return B.sp2.apply(this, arguments); }
     function vividHex() { return B.vividHex.apply(this, arguments); }
 
     /* ---------- the Space Bugs ----------

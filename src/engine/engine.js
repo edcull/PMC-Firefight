@@ -12,9 +12,12 @@
 
    This was split out of game.js, which had grown to hold the turn structure
    and the isometric renderer in one closure and could therefore only run in a
-   browser. scripts/build-engine.js is the tool that did the splitting, kept
-   for the record; it has done its job and the file below is now the source.
-   game.js is the view that sits on top of it. */
+   browser; game.js is the view that sits on top of it. Most of the game has
+   since moved into the files beside this one in src/engine/ (deployment,
+   arrivals, actions, moves, combat, the end of the turn, saving, the OpFor
+   and the rest), each made from create() below the first time it is wanted.
+   What stays here is the battle's state, the view port, the setup, and
+   intent(): every command from a player or the network comes in there. */
 (function (root) {
   'use strict';
   var R = root.PMC, SC = root.PMCScen, GEN = root.PMCGen, C = root.PMCCamp, SOLO = root.PMCSolo;
@@ -1815,7 +1818,6 @@
         insertionSpots: insertionSpots,
         arrivalSpots: arrivalSpots,
         markTargets: markTargets,
-        targetsFor: targetsFor,
         inReserve: inReserve,
         unitById: unitById,
         playerSide: playerSide,

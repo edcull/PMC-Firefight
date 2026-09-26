@@ -1,9 +1,7 @@
 /* PMC 2670 — Firefight : the Space Bugs: the swarm's figures, the dead, the burrowing, and the Overgrown
 
-   Made once by iso-aliens.js, the first time it is wanted. E is what it needs
-   of iso-aliens.js: what never changes bound here once, and
-   what does (the battle itself, and anything else reassigned) read through
-   E as it is now. It hands back the functions below. */
+   Made once by iso-aliens.js, the first time it is wanted, with E: the names
+   of iso-aliens.js this needs, bound here once. It hands back the functions below. */
 (function (root) {
   'use strict';
   root.PMCIsoBugs = function (E) {

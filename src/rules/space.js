@@ -1,9 +1,9 @@
 /* PMC 2670 — Firefight : the table: geometry, buildings and their sections, piece shapes, terrain underfoot, hills and line of sight
 
-   Made once by rules.js, the first time it is wanted. E is what it needs
-   of rules.js: what never changes bound here once, and
-   what does (the battle itself, and anything else reassigned) read through
-   E as it is now. It hands back the functions below. */
+   Made by rules.js as it loads, with E: the names of rules.js this needs,
+   bound here once. Once every such file is made, rules.js hands each of them
+   the others' functions themselves (relink), so a call from one to another
+   goes straight there. It hands back the functions below. */
 (function (root) {
   'use strict';
   root.PMCSpace = function (E) {

@@ -1,9 +1,7 @@
 /* PMC 2670 — Firefight : the Xenotripods' machines: the Crocks' grav hulls, shield generators, turrets and telecraft
 
-   Made once by iso-machines.js, the first time it is wanted. E is what it needs
-   of iso-machines.js: what never changes bound here once, and
-   what does (the battle itself, and anything else reassigned) read through
-   E as it is now. It hands back the functions below. */
+   Made once by iso-machines.js, the first time it is wanted, with E: the names
+   of iso-machines.js this needs, bound here once. It hands back the functions below. */
 (function (root) {
   'use strict';
   root.PMCIsoXenoMachines = function (E) {

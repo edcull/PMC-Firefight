@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCIsoTroops = function (B) {
-    var ellipse = B.ellipse, A = B.A, K = B.K, PIXEL = B.PIXEL, corpses = B.corpses;
+    var ellipse = B.ellipse, K = B.K, PIXEL = B.PIXEL, corpses = B.corpses;
 
     /* ---------- unit sprites ----------
        Troopers are drawn on their own finer grid — one sprite pixel is one buffer

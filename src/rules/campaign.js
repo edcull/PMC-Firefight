@@ -1388,7 +1388,6 @@
     canSwapDoctrine: canSwapDoctrine, swapDoctrine: swapDoctrine,
     canFieldArmy: canFieldArmy, canPromoteCompany: canPromoteCompany, promoteCompany: promoteCompany,
     canAspire: canAspire, effectiveTier: effectiveTier, rebuildNeeds: rebuildNeeds,
-    traumaThreshold: traumaThreshold,
     promotionProgress: promotionProgress, fieldReport: fieldReport,
     canRecruit: canRecruit, recruit: recruit, canDisband: canDisband, disband: disband,
 

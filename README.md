@@ -102,27 +102,49 @@ server.js            starts the server (see SERVER.md)
 
 src/
   rules/             the rulebook — draws nothing, runs in Node as well as a browser
-    rules.js         every profile, the composition table, geometry, line of sight, shooting,
-                     assault, suppression, morale, vehicles, terrain, buildings, special rules
-    campaign.js      the campaign (pp. 83–91): companies, experience, trauma, honours,
-                     promotions, doctrines, contracts, and the rivals' growth
+    rules.js         profiles and composition, unit state, transport, rally, special rules;
+                     loads the files below as it starts and links them to each other
+    data.js          the tables: every unit a force can field, and what each one shoots with
+    space.js         the table: geometry, buildings and sections, piece shapes, terrain
+                     underfoot, hills, line of sight
+    move.js          movement: paths, costs, reach, turning, a ground vehicle's drive
+    shoot.js         shooting: facings, range, modifiers, odds, the shot itself
+    assault.js       charges, close combat, falling back
+    damage.js        hit tables, medics, vehicle damage, wrecks, repairs, hacking
+    destruct.js      destructible terrain: shelter, demolition, crushing
+    xeno.js          the Xenotripods' own rules: senses, shields, bonds, teleports
+    campaign.js      the campaign (pp. 83–91): the dossier, doctrines, honours, traumas
+    camp-company.js  fielding an army, promotion, recruiting, upgrades
+    camp-contract.js the contract: Battle Tier, scenario, payment, experience, salvage
+    camp-aftermath.js  the aftermath, and the battles fought elsewhere
+    camp-rivals.js   the other forces on the world and how they grow
     scenarios.js     the six scenarios (pp. 48–55): objectives, deployment, reserves, victory
     solitaire.js     solitaire and co-op against the OpFor (pp. 146–156)
     gen.js           the terrain generators (pp. 46–48), a D6 for each 2′ × 2′ area
     ruletext.js      each special rule in a sentence, for the tooltips
   engine/            the game — every decision and every die roll
-    engine.js        turns, actions, terrain set-up, deployment, the OpFor AI; answers
-                     intents ("shoot that", "go there") with events and the table they left
+    engine.js        the battle's state, setup, and intent(): answers intents ("shoot that",
+                     "go there") with events and the table they left
+    swaps.js, terrainsetup.js, deploy.js, arrivals.js, solo.js, endphase.js,
+    actions.js, moves.js, abilities.js, combat.js, marks.js, save.js
+                     each part of the turn, made by engine.js when first wanted
+    ai.js            the OpFor: its moves, targets and ground
     protocol.js      message names and legal settings, shared by browser and server
   view/              the browser
     game.js          the board and every panel: camera, animation, taps into intents
-    iso.js           the isometric renderer: ground, terrain, buildings, troops and hulls, all code
+                     (with view.js, input.js, draw.js, panels.js, play.js, replay.js, ...)
+    iso.js           the isometric renderer: camera, projection, shared drawing state;
+                     its parts are the iso-*.js files — ground, props and prop kinds,
+                     troops and their parts, bugs, xeno figures, guns, machines and
+                     their hulls, gear, craft, rotors and mechs, xeno machines
     fx.js            battlefield effects: tracers, bolts, flame, missiles, impacts
     sfx.js           synthesised sound (Web Audio, no audio files)
     atlas.js         the unit cards, drawn by the game's own renderer
     tips.js          the shared tooltip layer
     menu.js          the main menu and the table rolling behind it
-    dossier.js       the campaign screens
+    muster.js        mustering a force for a skirmish, solitaire or co-op
+    dossier.js       the campaign screens: storage, rendering, the clicks; the screens
+                     themselves in dossier-hub/found/roster/contract/after.js
     viewer.js        the unit viewer
   net/               playing somebody else
     net.js           the two transports: a socket to a server, or the engine in this tab
@@ -159,8 +181,8 @@ takes no arguments and needs nothing but a Node runtime.
 Open **`viewer.html`** (or, after a build, the self-contained `build/viewer.html`) for a bench that shows one unit at a time: every profile
 in all four lists, in each of its states, at any strength, walking at its own
 Movement, coming in off a Battlefield Insertion, and firing whatever the weapon
-table says it carries. It loads `rules.js`, `ruletext.js`, `sfx.js`, `iso.js`,
-`fx.js` and `tips.js` and nothing else — no game — so what it draws and sounds is
+table says it carries. It loads the rules (`rules.js` and its files), `ruletext.js`, `sfx.js`, the
+renderer (`iso.js` and its parts), `fx.js` and `tips.js` and nothing else — no game — so what it draws and sounds is
 the real code rather than a mock-up of it. The panel gives the whole profile:
 the statistics as the book prints them, and every special rule the unit carries
 with what that rule does, on the page and on a tooltip. Any of the army colours

@@ -9,17 +9,12 @@
   root.PMCIsoMachines = function (B) {
     var a = B.a, clamp01 = B.clamp01, dot = B.dot, ellipse = B.ellipse, ellipseRing = B.ellipseRing;
     var hash = B.hash, hull2d = B.hull2d, poly = B.poly, rect = B.rect, rng = B.rng, toScreen = B.toScreen;
-    var ELEV = B.ELEV, H = B.H, K = B.K, PH = B.PH, RING_VIS = B.RING_VIS, W = B.W;
+    var ELEV = B.ELEV, K = B.K, PH = B.PH, RING_VIS = B.RING_VIS;
     // from modules installed after this one: looked up when called
-    function R0() { return B.R0.apply(this, arguments); }
-    function belt() { return B.belt.apply(this, arguments); }
-    function box() { return B.box.apply(this, arguments); }
-    function colour() { return B.colour.apply(this, arguments); }
     function drawBigBug() { return B.drawBigBug.apply(this, arguments); }
     function hex3() { return B.hex3.apply(this, arguments); }
     function hexA() { return B.hexA.apply(this, arguments); }
     function hexMix() { return B.hexMix.apply(this, arguments); }
-    function sp2() { return B.sp2.apply(this, arguments); }
     function xenoGlow() { return B.xenoGlow.apply(this, arguments); }
 
     /* ---------- vehicles and aircraft ----------

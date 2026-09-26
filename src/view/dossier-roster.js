@@ -1,9 +1,9 @@
 /* PMC 2670 — Firefight : the dossier: the roster, a unit's details, the memorial, spending experience and recruiting
 
    Made once by dossier.js, the first time it is wanted. E is what it needs
-   of dossier.js: what never changes bound here once, and
-   what does (the battle itself, and anything else reassigned) read through
-   E as it is now. It hands back the functions below. */
+   of dossier.js: what never changes bound here once, and what does (the
+   campaign, the contract, which screen is open) read through E as it is
+   now. It hands back the functions below. */
 (function (root) {
   'use strict';
   root.PMCDossierRoster = function (E) {
