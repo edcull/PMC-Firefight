@@ -978,15 +978,15 @@
           sEllipse: sEllipse, scr: scr, sin: sin, slabF: slabF, spec: spec, trim: trim
         }));
       }
-      function want() { return kitGear().want.apply(null, arguments); }
-      function gearOut() { return kitGear().gearOut.apply(null, arguments); }
-      function alongOrder() { return kitGear().alongOrder.apply(null, arguments); }
-      function drawGlow() { return kitGear().drawGlow.apply(null, arguments); }
-      function drawGear() { return kitGear().drawGear.apply(null, arguments); }
-      function dropBody() { return kitGear().dropBody.apply(null, arguments); }
-      function dropHatch() { return kitGear().dropHatch.apply(null, arguments); }
-      function wheelGeom() { return kitGear().wheelGeom.apply(null, arguments); }
-      function walkLegs() { return kitGear().walkLegs.apply(null, arguments); }
+      function want(phase, s, nearest) { return (KIT_GEAR || kitGear()).want(phase, s, nearest); }
+      function gearOut() { return (KIT_GEAR || kitGear()).gearOut(); }
+      function alongOrder(list) { return (KIT_GEAR || kitGear()).alongOrder(list); }
+      function drawGlow() { return (KIT_GEAR || kitGear()).drawGlow(); }
+      function drawGear(phase) { return (KIT_GEAR || kitGear()).drawGear(phase); }
+      function dropBody() { return (KIT_GEAR || kitGear()).dropBody(); }
+      function dropHatch() { return (KIT_GEAR || kitGear()).dropHatch(); }
+      function wheelGeom() { return (KIT_GEAR || kitGear()).wheelGeom(); }
+      function walkLegs(phase) { return (KIT_GEAR || kitGear()).walkLegs(phase); }
       /* ---- the plain hull and its fittings: in iso-plainhull.js ---- */
       var KIT_PLAINHULL = null;
       function kitPlainHull() {
@@ -996,8 +996,8 @@
           scr: scr, sin: sin, spec: spec, top: top, trim: trim
         }));
       }
-      function drawHull() { return kitPlainHull().drawHull.apply(null, arguments); }
-      function drawFittings() { return kitPlainHull().drawFittings.apply(null, arguments); }
+      function drawHull() { return (KIT_PLAINHULL || kitPlainHull()).drawHull(); }
+      function drawFittings() { return (KIT_PLAINHULL || kitPlainHull()).drawFittings(); }
 
       /* ================= styled hulls =================
          Every PMC machine now has a look of its own, named after the kind of real
@@ -1539,10 +1539,10 @@
           sin: sin, slabF: slabF, spec: spec, tone: tone, trim: trim, u: u, want: want, wheelGeom: wheelGeom
         }));
       }
-      function rearTank() { return kitHulls().rearTank.apply(null, arguments); }
-      function styledHull() { return kitHulls().styledHull.apply(null, arguments); }
-      function skirts() { return kitHulls().skirts.apply(null, arguments); }
-      function styledTop() { return kitHulls().styledTop.apply(null, arguments); }
+      function rearTank() { return (KIT_HULLS || kitHulls()).rearTank(); }
+      function styledHull() { return (KIT_HULLS || kitHulls()).styledHull(); }
+      function skirts(phase) { return (KIT_HULLS || kitHulls()).skirts(phase); }
+      function styledTop() { return (KIT_HULLS || kitHulls()).styledTop(); }
 
       /* ---- the aircraft: in iso-craft.js ---- */
       var KIT_CRAFT = null;
@@ -1555,7 +1555,7 @@
           sEllipse: sEllipse, shape: shape, sin: sin, slabF: slabF, spec: spec, tone: tone, trim: trim, u: u
         }));
       }
-      function drawCraft() { return kitCraft().drawCraft.apply(null, arguments); }
+      function drawCraft() { return (KIT_CRAFT || kitCraft()).drawCraft(); }
 
       /* ---- the walkers: in iso-mechs.js ---- */
       var KIT_MECHS = null;
@@ -1568,8 +1568,8 @@
           sEllipse: sEllipse, shape: shape, sin: sin, slabF: slabF, spec: spec, u: u, vents: vents
         }));
       }
-      function mechHeights() { return kitMechs().mechHeights.apply(null, arguments); }
-      function drawMech() { return kitMechs().drawMech.apply(null, arguments); }
+      function mechHeights() { return (KIT_MECHS || kitMechs()).mechHeights(); }
+      function drawMech() { return (KIT_MECHS || kitMechs()).drawMech(); }
       /* ---- the rotorcraft: in iso-rotors.js ---- */
       var KIT_ROTORS = null;
       function kitRotors() {
@@ -1579,7 +1579,7 @@
           lit: lit, scr: scr, sin: sin, spec: spec, trim: trim
         }));
       }
-      function drawRotorcraft() { return kitRotors().drawRotorcraft.apply(null, arguments); }
+      function drawRotorcraft() { return (KIT_ROTORS || kitRotors()).drawRotorcraft(); }
 
       /* Drone Control (p. 37): no crew, so the hull carries what flies it instead —
          a sensor dome on the roof towards the back, and a whip aerial beside it

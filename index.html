@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=329d713235">
-<link rel="stylesheet" href="src/css/game.css?v=f65c790298">
+<link rel="stylesheet" href="src/css/game.css?v=f63e368ecf">
 
 <div class="wrap">
   <header>
@@ -135,7 +135,7 @@
       <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
     </p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2609261804</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2609261845</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -481,7 +481,14 @@
   </div>
 </div>
 
-<script src="src/rules/rules.js?v=77739d19c7"></script>
+<script src="src/rules/move.js?v=c86f98cf16"></script>
+<script src="src/rules/assault.js?v=ff813a7b16"></script>
+<script src="src/rules/shoot.js?v=6103f589c8"></script>
+<script src="src/rules/xeno.js?v=b16a9f60b4"></script>
+<script src="src/rules/destruct.js?v=6d3289f090"></script>
+<script src="src/rules/damage.js?v=5388ead223"></script>
+<script src="src/rules/space.js?v=ecde59db9c"></script>
+<script src="src/rules/rules.js?v=ffb102d5ce"></script>
 <script src="src/rules/ruletext.js?v=116e95866c"></script>
 <script src="src/rules/campaign.js?v=299d791f4c"></script>
 <script src="src/rules/scenarios.js?v=2e02ca14b2"></script>
@@ -490,24 +497,24 @@
 <script src="src/rules/gen.js?v=6f1b8fa196"></script>
 <script src="src/view/iso-ground.js?v=265ed4be22"></script>
 <script src="src/view/iso-props.js?v=845e22c634"></script>
-<script src="src/view/iso-troops.js?v=ed1bf0f86a"></script>
-<script src="src/view/iso-aliens.js?v=224a98331e"></script>
+<script src="src/view/iso-troops.js?v=2a241644b3"></script>
+<script src="src/view/iso-aliens.js?v=5400242236"></script>
 <script src="src/view/iso-guns.js?v=108e366687"></script>
-<script src="src/view/iso-machines.js?v=11978ecc00"></script>
+<script src="src/view/iso-machines.js?v=6fe163ae41"></script>
 <script src="src/view/iso-craft.js?v=404234b4d0"></script>
 <script src="src/view/iso-mechs.js?v=7cfa4e44eb"></script>
 <script src="src/view/iso-hulls.js?v=3ec92ef916"></script>
 <script src="src/view/iso-gear.js?v=8f171c0e88"></script>
 <script src="src/view/iso-rotors.js?v=fe08795141"></script>
 <script src="src/view/iso-plainhull.js?v=528b5f10d7"></script>
-<script src="src/view/iso.js?v=cb9b2a94b9"></script>
+<script src="src/view/iso.js?v=08c6a30c50"></script>
 <script src="src/view/fx.js?v=449fedd8af"></script>
 <script src="src/view/fire.js?v=b69474ee2d"></script>
 <script src="src/view/motion.js?v=823a5c18f7"></script>
 <script src="src/view/tips.js?v=d9ad8fa292"></script>
 <script src="src/engine/protocol.js?v=3b336aa214"></script>
 <script src="src/engine/ai.js?v=6656def8c7"></script>
-<script src="src/engine/engine.js?v=3c2c43bbe6"></script>
+<script src="src/engine/engine.js?v=0b601dbe76"></script>
 <script src="src/net/net.js?v=d781797d45"></script>
 <script src="src/net/lobby.js?v=e561ff9de3"></script>
 <script src="src/view/replay.js?v=46c01437fb"></script>
@@ -517,10 +524,10 @@
 <script src="src/view/input.js?v=b8925c1406"></script>
 <script src="src/view/arrive.js?v=37e7f9557f"></script>
 <script src="src/view/actions.js?v=57f515285b"></script>
-<script src="src/view/draw.js?v=3f696a0612"></script>
+<script src="src/view/draw.js?v=3068cd0edc"></script>
 <script src="src/view/view.js?v=295be701b3"></script>
 <script src="src/view/panels.js?v=e9cc9dbd8b"></script>
-<script src="src/view/muster.js?v=eaaa7e1cd8"></script>
+<script src="src/view/muster.js?v=c2c9e7c1dc"></script>
 <script src="src/view/game.js?v=d94d2809c4"></script>
 <script src="src/view/dossier.js?v=e0043ab7d3"></script>
 <script src="src/view/menu.js?v=362b5aea84"></script>

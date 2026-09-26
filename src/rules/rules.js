@@ -968,533 +968,56 @@
     burning:   { name: 'Burning building', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0, wreck: true }
   };
 
-  /* ---------- geometry ---------- */
-  function centreDist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-  /* Closest models. A unit inside a building is measured from the building's
-     wall, both when it shoots and when it is shot at or charged (p. 41). */
-  function unitDist(a, b) {
-    var ra = a && a.bld ? sectionRect(a) : null, rb = b && b.bld ? sectionRect(b) : null;
-    if (!ra && !rb) return Math.max(0, centreDist(a, b) - 2 * UNIT_R);
-    if (ra && rb) return ra === rb ? 0 : rectRectDist(ra, rb);
-    if (ra) return Math.max(0, rectPointDist(ra, b.x, b.y) - UNIT_R);
-    return Math.max(0, rectPointDist(rb, a.x, a.y) - UNIT_R);
+  /* ---- the table: in rules/space.js ---- */
+  var KIT_SPACE = null;
+  // what the space kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
+  function eSpace() {
+    return {
+      BOARD: BOARD, SHAPED: SHAPED, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap,
+      hasOwn: hasOwn, isFlying: isFlying, nearestClear: nearestClear, sightRange: sightRange, status: status
+    };
   }
-  function rectPointDist(q, x, y) {
-    var dx = Math.max(q.x - x, 0, x - (q.x + q.w)), dy = Math.max(q.y - y, 0, y - (q.y + q.h));
-    return Math.hypot(dx, dy);
+  function kitSpace() {
+    return KIT_SPACE || (KIT_SPACE = (root.PMCSpace || require('./space.js'))(eSpace()));
   }
-  function rectRectDist(a, b) {
-    var dx = Math.max(a.x - (b.x + b.w), 0, b.x - (a.x + a.w)), dy = Math.max(a.y - (b.y + b.h), 0, b.y - (a.y + a.h));
-    return Math.hypot(dx, dy);
-  }
-
-  /* ---------- buildings (p. 41) ---------- */
-  function enterable(r) { return !!(r && TERRAIN[r.kind] && TERRAIN[r.kind].enterable && !r.wrecked); }
-  // the sections of a building: its wings, or the whole of a single block
-  function sectionsOf(r) { return r.parts && r.parts.length ? r.parts : [r]; }
-  function sectionRect(u) {
-    if (!u || !u.bld) return null;
-    var ss = sectionsOf(u.bld);
-    return ss[u.sec || 0] || ss[0];
-  }
-  /* A section is a high building if it stands tall: a tower, or a full-height
-     wing of a building of any size. Only a high building gives Firepower. */
-  function sectionHigh(r, q) {
-    if (!r) return false;
-    if (r.kind === 'bunker') return true;
-    q = q || r;
-    var hf = q.hf || 1;
-    return hf >= 1.3 || (hf >= 1 && Math.max(r.w, r.h) >= 6.5);
-  }
-  function occupant(state, r, sec) {
-    for (var i = 0; i < state.units.length; i++) {
-      var u = state.units[i];
-      if (u.alive && !u.aboard && u.bld === r && (u.sec || 0) === (sec || 0)) return u;
-    }
-    return null;
-  }
-  function canGarrison(u) {
-    return !!u && u.alive && !u.aboard && u.x >= 0 && u.cls === 'infantry' && !hasOwn(u, 'Riders') &&
-      !isFlying(u) && !hasOwn(u, 'Stationary Artillery') && !hasOwn(u, 'Immobile');
-  }
-  /* Where this unit could go in: any empty section within 4" of it, or — from
-     inside a building of several sections — an empty section in contact with
-     its own (p. 41, Huge buildings). */
-  function enterTargets(state, u) {
-    if (!canGarrison(u) || status(u) === 'broken') return [];
-    var out = [];
-    state.terrain.forEach(function (r) {
-      if (!enterable(r)) return;
-      sectionsOf(r).forEach(function (q, i) {
-        if (occupant(state, r, i)) return;
-        if (u.bld) {
-          if (u.bld !== r || (u.sec || 0) === i) return;
-          if (rectRectDist(q, sectionRect(u)) > 0.6) return;
-        } else if (rectPointDist(q, u.x, u.y) - UNIT_R > 4) return;
-        out.push({ piece: r, sec: i, rect: q, move: !!u.bld });
-      });
-    });
-    return out;
-  }
-  function enterBuilding(state, u, r, sec) {
-    var q = sectionsOf(r)[sec || 0];
-    u.bld = r; u.sec = sec || 0;
-    u.x = q.x + q.w / 2; u.y = q.y + q.h / 2;
-    return q;
-  }
-  /* Where a unit coming out may be put: within 4" of the wall, on ground it
-     can stand on, clear of every other unit. */
-  function exitSpots(state, u) {
-    var q = sectionRect(u);
-    if (!q) return [];
-    var out = [];
-    for (var x = Math.floor(q.x - 5); x <= q.x + q.w + 5; x += STEP) {
-      for (var y = Math.floor(q.y - 5); y <= q.y + q.h + 5; y += STEP) {
-        if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) continue;
-        var d = rectPointDist(q, x, y);
-        if (d < UNIT_R || d > 4) continue;
-        if (TERRAIN[terrainAt(state, x, y)].impassable) continue;
-        if (unitNear(state, x, y, u, 1)) continue;
-        out.push({ x: x, y: y, cost: d, spent: d, turns: 0 });
-      }
-    }
-    return out;
-  }
-  function exitBuilding(state, u, p) {
-    u.bld = null; u.sec = null;
-    if (p) { u.x = p.x; u.y = p.y; }
-  }
-  // out through the wall facing away from `from`, as the garrison of a lost building does
-  function leaveAway(state, u, from) {
-    var spots = exitSpots(state, u);
-    var q = sectionRect(u);
-    exitBuilding(state, u, null);
-    if (!spots.length) { var p0 = nearestClear(state, u, q); u.x = p0.x; u.y = p0.y; return; }
-    var best = spots.sort(function (a, b) {
-      return (inches(b.x, b.y, from.x, from.y) - b.cost * 0.5) - (inches(a.x, a.y, from.x, from.y) - a.cost * 0.5);
-    })[0];
-    u.x = best.x; u.y = best.y;
-  }
-  function inches(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
-
-  /* A terrain piece is its bounding rectangle, and — for the natural pieces —
-     an irregular outline inside it (`r.poly`, a list of [x, y] points). Every
-     rule asks the same two questions of a piece: is this point in it, and does
-     this line cross it. With an outline, the answer is the outline's: a unit
-     standing in the rectangle's corner but outside the trees is in the open. */
-  function inRect(x, y, r) {
-    if (x < r.x || x > r.x + r.w || y < r.y || y > r.y + r.h) return false;
-    if (r.parts) {                                 // a building of several wings
-      for (var i = 0; i < r.parts.length; i++) {
-        var q = r.parts[i];
-        if (x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h) return true;
-      }
-      return false;
-    }
-    return r.poly ? inPoly(x, y, r.poly) : true;
-  }
-  function inPoly(x, y, pts) {
-    var inside = false;
-    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-      var xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
-      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
-    }
-    return inside;
-  }
-  function segsCross(ax, ay, bx, by, cx, cy, dx, dy) {
-    var d1 = (dx - cx) * (ay - cy) - (dy - cy) * (ax - cx);
-    var d2 = (dx - cx) * (by - cy) - (dy - cy) * (bx - cx);
-    var d3 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
-    var d4 = (bx - ax) * (dy - ay) - (by - ay) * (dx - ax);
-    return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
-  }
-  function segPoly(x1, y1, x2, y2, pts) {
-    if (inPoly(x1, y1, pts) || inPoly(x2, y2, pts)) return true;
-    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-      if (segsCross(x1, y1, x2, y2, pts[j][0], pts[j][1], pts[i][0], pts[i][1])) return true;
-    }
-    return false;
-  }
-  /* How far inside a piece a point is, in inches — negative outside. The ground
-     painter uses it to lay a piece's floor exactly where the rules have it. */
-  function pieceDepth(r, x, y) {
-    if (r.parts) {
-      var bd = -Infinity;
-      r.parts.forEach(function (q) { bd = Math.max(bd, Math.min(x - q.x, q.x + q.w - x, y - q.y, q.y + q.h - y)); });
-      return bd;
-    }
-    if (!r.poly) return Math.min(x - r.x, r.x + r.w - x, y - r.y, r.y + r.h - y);
-    var pts = r.poly, best = Infinity;
-    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-      best = Math.min(best, pointSegDist(x, y, pts[j][0], pts[j][1], pts[i][0], pts[i][1]));
-    }
-    return inPoly(x, y, pts) ? best : -best;
-  }
-  /* Move or resize a piece, taking its outline with it: the outline is stretched
-     from the old rectangle onto the new one. Anything that shifts a piece after
-     it is laid must go through here, or the drawn shape and the rules part ways. */
-  function placePiece(t, x, y, w, h) {
-    if (w == null) w = t.w;
-    if (h == null) h = t.h;
-    var ox = t.x, oy = t.y, ow = t.w || 1, oh = t.h || 1;
-    if (t.poly) {
-      t.poly = t.poly.map(function (q) { return [x + (q[0] - ox) / ow * w, y + (q[1] - oy) / oh * h]; });
-    }
-    if (t.top) {
-      t.top = t.top.map(function (q) { return [x + (q[0] - ox) / ow * w, y + (q[1] - oy) / oh * h]; });
-    }
-    if (t.parts) {
-      t.parts = t.parts.map(function (q) {
-        var o = {}; for (var k in q) o[k] = q[k];
-        o.x = x + (q.x - ox) / ow * w; o.y = y + (q.y - oy) / oh * h; o.w = q.w / ow * w; o.h = q.h / oh * h;
-        return o;
-      });
-    }
-    t.x = x; t.y = y; t.w = w; t.h = h;
-    return t;
-  }
-  /* Turn the whole table a number of quarter turns about its centre. One
-     quarter turn carries the north edge to the west, the east to the north:
-     (x, y) -> (y, W - x). The table is square, so it still fits itself. */
-  function turnPoint(x, y, k) {
-    k = ((k % 4) + 4) % 4;
-    for (var i = 0; i < k; i++) { var t = x; x = y; y = BOARD.w - t; }
-    return [x, y];
-  }
-  function turnRect(q, k) {
-    var a = turnPoint(q.x, q.y, k), b = turnPoint(q.x + q.w, q.y + q.h, k);
-    return { x: Math.min(a[0], b[0]), y: Math.min(a[1], b[1]), w: Math.abs(b[0] - a[0]), h: Math.abs(b[1] - a[1]) };
-  }
-  function turnPiece(t, k) {
-    if (!(((k % 4) + 4) % 4)) return t;
-    var pts = function (list) { return list.map(function (q) { return turnPoint(q[0], q[1], k); }); };
-    if (t.poly) t.poly = pts(t.poly);
-    if (t.top) t.top = pts(t.top);
-    if (t.parts) t.parts = t.parts.map(function (q) {
-      var o = {}, r = turnRect(q, k); for (var key in q) o[key] = q[key];
-      o.x = r.x; o.y = r.y; o.w = r.w; o.h = r.h; return o;
-    });
-    var r2 = turnRect(t, k);
-    t.x = r2.x; t.y = r2.y; t.w = r2.w; t.h = r2.h;
-    return t;
-  }
+  function centreDist(a, b) { return (KIT_SPACE || kitSpace()).centreDist(a, b); }
+  function unitDist(a, b) { return (KIT_SPACE || kitSpace()).unitDist(a, b); }
+  function rectPointDist(q, x, y) { return (KIT_SPACE || kitSpace()).rectPointDist(q, x, y); }
+  function enterable(r) { return (KIT_SPACE || kitSpace()).enterable(r); }
+  function sectionsOf(r) { return (KIT_SPACE || kitSpace()).sectionsOf(r); }
+  function sectionRect(u) { return (KIT_SPACE || kitSpace()).sectionRect(u); }
+  function sectionHigh(r, q) { return (KIT_SPACE || kitSpace()).sectionHigh(r, q); }
+  function occupant(state, r, sec) { return (KIT_SPACE || kitSpace()).occupant(state, r, sec); }
+  function canGarrison(u) { return (KIT_SPACE || kitSpace()).canGarrison(u); }
+  function enterTargets(state, u) { return (KIT_SPACE || kitSpace()).enterTargets(state, u); }
+  function enterBuilding(state, u, r, sec) { return (KIT_SPACE || kitSpace()).enterBuilding(state, u, r, sec); }
+  function exitSpots(state, u) { return (KIT_SPACE || kitSpace()).exitSpots(state, u); }
+  function exitBuilding(state, u, p) { return (KIT_SPACE || kitSpace()).exitBuilding(state, u, p); }
+  function leaveAway(state, u, from) { return (KIT_SPACE || kitSpace()).leaveAway(state, u, from); }
+  function inches(ax, ay, bx, by) { return (KIT_SPACE || kitSpace()).inches(ax, ay, bx, by); }
+  function inRect(x, y, r) { return (KIT_SPACE || kitSpace()).inRect(x, y, r); }
+  function inPoly(x, y, pts) { return (KIT_SPACE || kitSpace()).inPoly(x, y, pts); }
+  function pieceDepth(r, x, y) { return (KIT_SPACE || kitSpace()).pieceDepth(r, x, y); }
+  function placePiece(t, x, y, w, h) { return (KIT_SPACE || kitSpace()).placePiece(t, x, y, w, h); }
+  function turnPoint(x, y, k) { return (KIT_SPACE || kitSpace()).turnPoint(x, y, k); }
+  function turnPiece(t, k) { return (KIT_SPACE || kitSpace()).turnPiece(t, k); }
+  function shapePiece(r, rand, family) { return (KIT_SPACE || kitSpace()).shapePiece(r, rand, family); }
+  function terrainAt(state, x, y) { return (KIT_SPACE || kitSpace()).terrainAt(state, x, y); }
+  function terrainOf(state, u) { return (KIT_SPACE || kitSpace()).terrainOf(state, u); }
+  function footprint(x, y) { return (KIT_SPACE || kitSpace()).footprint(x, y); }
+  function kindsUnder(state, u, x, y) { return (KIT_SPACE || kitSpace()).kindsUnder(state, u, x, y); }
+  function coverAt(state, x, y, u) { return (KIT_SPACE || kitSpace()).coverAt(state, x, y, u); }
+  function segRect(x1, y1, x2, y2, r) { return (KIT_SPACE || kitSpace()).segRect(x1, y1, x2, y2, r); }
+  function pointSegDist(px, py, x1, y1, x2, y2) { return (KIT_SPACE || kitSpace()).pointSegDist(px, py, x1, y1, x2, y2); }
+  function hasLoS(state, a, b) { return (KIT_SPACE || kitSpace()).hasLoS(state, a, b); }
+  function lineClear(state, a, b) { return (KIT_SPACE || kitSpace()).lineClear(state, a, b); }
+  function groundLevel(state, x, y) { return (KIT_SPACE || kitSpace()).groundLevel(state, x, y); }
+  function levelOf(state, u) { return (KIT_SPACE || kitSpace()).levelOf(state, u); }
+  function tooHighToHover(state, x, y) { return (KIT_SPACE || kitSpace()).tooHighToHover(state, x, y); }
+  function onHill(state, p) { return (KIT_SPACE || kitSpace()).onHill(state, p); }
+  function unitNear(state, x, y, ignore, pad) { return (KIT_SPACE || kitSpace()).unitNear(state, x, y, ignore, pad); }
   // the pieces that come in natural outlines; built things stay square
   var SHAPED = { woods: 1, crater: 1, rocks: 1, water: 1, deep: 1, lava: 1, crystal: 1, ravine: 1, hill: 1 };
-  /* The families of outline each kind is drawn from:
-       blob   — a lumpy round-cornered patch
-       lobed  — two to four lobes, like a copse grown together or a clover of pools
-       kidney — a patch with a bay bitten out of one side
-       long   — a band laid diagonally across its ground: a lava flow, a creek, a strip of wood
-       rift   — ground torn open: a jagged, splintered hole (longrift: a fissure) */
-  var FAMILIES = {
-    woods: ['blob', 'lobed', 'lobed', 'kidney', 'long'],
-    crater: ['blob', 'lobed', 'long'],
-    rocks: ['blob', 'lobed'],
-    water: ['blob', 'kidney', 'kidney', 'long', 'lobed'],
-    deep: ['blob', 'kidney', 'long', 'lobed'],
-    lava: ['rift', 'rift', 'longrift', 'longrift', 'rift'],
-    crystal: ['blob', 'lobed', 'kidney'],
-    ravine: ['longrift', 'longrift', 'longrift', 'rift'],
-    hill: ['blob', 'blob', 'lobed', 'kidney']
-  };
-  /* Every outline is star-shaped about its centre — one radius per direction —
-     so it can never cross itself, and it is then stretched to fill its piece's
-     rectangle, so the rectangle stays an honest bounding box. */
-  /* A building's floor plan: one block, or wings joined into an L, a T, a U
-     round a yard, or a main hall with a lower annex or a tower. The wings are
-     rectangles that share edges and never overlap; together they are the
-     building — cover, sight, all of it — and the ground between them is open. */
-  var PLANS = ['block', 'L', 'L', 'T', 'U', 'annex', 'tower'];
-  function planBuilding(r, rand, plan) {
-    if (r.parts || r.w < 4 || r.h < 4) return r;
-    plan = plan || PLANS[Math.floor(rand() * PLANS.length)];
-    var x = r.x, y = r.y, w = r.w, h = r.h, parts;
-    function P(px, py, pw, ph, hf) { return { x: px, y: py, w: pw, h: ph, hf: hf || 1 }; }
-    var fx = rand() < 0.5, fy = rand() < 0.5, swap = rand() < 0.5 && plan !== 'block';
-    // plans are laid out along u (across) and v (down), then flipped and turned into place
-    var U = swap ? h : w, V = swap ? w : h;
-    var cu = U * (0.4 + rand() * 0.15), cv = V * (0.4 + rand() * 0.15);
-    switch (plan) {
-      case 'L': parts = [P(0, 0, U, V - cv), P(0, V - cv, U - cu, cv)]; break;
-      case 'T': {
-        var sw = U * (0.36 + rand() * 0.12), so = (U - sw) / 2 + (rand() - 0.5) * U * 0.15;
-        parts = [P(0, 0, U, V - cv), P(so, V - cv, sw, cv, 0.8)];
-        break;
-      }
-      case 'U': {
-        var lw = U * (0.28 + rand() * 0.06);
-        parts = [P(0, 0, U, V * 0.42), P(0, V * 0.42, lw, V * 0.58, 0.85), P(U - lw, V * 0.42, lw, V * 0.58, 0.85)];
-        break;
-      }
-      case 'annex': {
-        var mw = U * (0.55 + rand() * 0.15), ah = V * (0.55 + rand() * 0.2), ay = (V - ah) * rand();
-        parts = [P(0, 0, mw, V), P(mw, ay, U - mw, ah, 0.6)];
-        break;
-      }
-      case 'tower': {
-        var tw = U * (0.35 + rand() * 0.1), th = V * (0.4 + rand() * 0.15);
-        parts = [P(0, 0, U - tw, V, 0.8), P(U - tw, 0, tw, th, 1.45), P(U - tw, th, tw, V - th, 0.8)];
-        break;
-      }
-      default: parts = [P(0, 0, U, V)];
-    }
-    r.parts = parts.map(function (q) {
-      var qu = fx ? U - q.x - q.w : q.x, qv = fy ? V - q.y - q.h : q.y;
-      return swap ? P(x + qv, y + qu, q.h, q.w, q.hf) : P(x + qu, y + qv, q.w, q.h, q.hf);
-    });
-    r.plan = plan;
-    return r;
-  }
-  function shapePiece(r, rand, family) {
-    if (r.kind === 'building') return planBuilding(r, rand || Math.random, family);
-    if (!SHAPED[r.kind] || r.poly || r.w < 2 || r.h < 2) return r;
-    rand = rand || Math.random;
-    var fams = FAMILIES[r.kind] || ['blob'];
-    var fam = family || fams[Math.floor(rand() * fams.length)];
-    if (fam === 'long' && Math.min(r.w, r.h) < 3) fam = 'blob';
-    if (fam === 'longrift' && Math.min(r.w, r.h) < 3) fam = 'rift';
-    var rift = fam === 'rift' || fam === 'longrift';
-    if (rift) n = 26;
-    var n = 40, TAU = Math.PI * 2;
-    var ex = 0.5 + rand() * 0.45;                 // 0.5: nearly square, 1: an ellipse
-    var h = [], k2;
-    for (k2 = 0; k2 < 4; k2++) h.push({ m: [2, 3, 5, 7][k2], a: [0.12, 0.08, 0.05, 0.025][k2] * (0.5 + rand()), ph: rand() * TAU });
-    var lobes = 2 + Math.floor(rand() * 3), lobeA = 0.16 + rand() * 0.16, lobePh = rand() * TAU;
-    // a hill is one rise of ground: gentle lobes, no starfish
-    if (r.kind === 'hill') { lobes = 2 + Math.floor(rand() * 2); lobeA *= 0.55; h.forEach(function (q) { q.a *= 0.7; }); }
-    var bayAt = rand() * TAU, bayD = 0.32 + rand() * 0.2, baySig = 0.45 + rand() * 0.25;
-    var asp = 2.2 + rand() * 1.4, rot = (rand() < 0.5 ? -1 : 1) * (0.35 + rand() * 0.55);
-    var raw = [];
-    for (var i = 0; i < n; i++) {
-      var t = i / n * TAU, c = Math.cos(t), sn = Math.sin(t);
-      var rad = 1;
-      for (k2 = 0; k2 < h.length; k2++) rad += h[k2].a * Math.sin(h[k2].m * t + h[k2].ph);
-      rad += (rand() - 0.5) * 0.06;
-      if (fam === 'lobed') rad += lobeA * Math.cos(lobes * t + lobePh);
-      if (fam === 'kidney') {
-        var dd = angleWrap(t - bayAt);
-        rad *= 1 - bayD * Math.exp(-dd * dd / (2 * baySig * baySig));
-      }
-      if (rift) {
-        // splintered: a torn edge of points and notches, no two alike
-        rad = 0.84 + (rand() - 0.5) * 0.16;
-        if (i % 4 === 0 && rand() < 0.7) rad += 0.1 + rand() * 0.12;     // a splinter of the break
-        else if (rand() < 0.25) rad -= 0.1 + rand() * 0.1;               // a notch
-      }
-      rad = Math.max(0.35, rad);
-      var sx = (c < 0 ? -1 : 1) * Math.pow(Math.abs(c), ex), sy = (sn < 0 ? -1 : 1) * Math.pow(Math.abs(sn), ex);
-      var x = sx * rad, y = sy * rad;
-      if (fam === 'long' || fam === 'longrift') {
-        x *= fam === 'longrift' ? asp * 1.25 : asp;
-        var cr = Math.cos(rot), sr = Math.sin(rot), x2 = x * cr - y * sr, y2 = x * sr + y * cr;
-        x = x2; y = y2;
-      }
-      raw.push([x, y]);
-    }
-    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    raw.forEach(function (q) { minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); minY = Math.min(minY, q[1]); maxY = Math.max(maxY, q[1]); });
-    r.poly = raw.map(function (q) {
-      return [r.x + (q[0] - minX) / (maxX - minX) * r.w, r.y + (q[1] - minY) / (maxY - minY) * r.h];
-    });
-    r.shape = fam;
-    /* a big hill may rise in two steps: a second, smaller rise on its top,
-       the same outline drawn in towards the middle */
-    if (r.kind === 'hill' && r.w >= 7 && r.h >= 6 && rand() < 0.5) {
-      var cx0 = r.x + r.w / 2, cy0 = r.y + r.h / 2, k0 = 0.45 + rand() * 0.15;
-      var sx0 = (rand() - 0.5) * r.w * 0.12, sy0 = (rand() - 0.5) * r.h * 0.12;
-      var top = r.poly.map(function (q) {
-        var kk = k0 * (0.92 + rand() * 0.12);
-        return [cx0 + sx0 + (q[0] - cx0) * kk, cy0 + sy0 + (q[1] - cy0) * kk];
-      });
-      // keep it well inside the lower step
-      var inside = top.every(function (q) { return inPoly(q[0], q[1], r.poly) && pieceDepth({ poly: r.poly, x: r.x, y: r.y, w: r.w, h: r.h }, q[0], q[1]) > 0.8; });
-      if (inside) r.top = top;
-    }
-    return r;
-  }
-
-  function regionsAt(state, x, y) {
-    var out = [];
-    for (var i = 0; i < state.terrain.length; i++) if (inRect(x, y, state.terrain[i])) out.push(state.terrain[i]);
-    return out;
-  }
-  // "One foot in the grave" — the most significant piece applies
-  function rank(k) {
-    var t = TERRAIN[k];
-    return t.impassable ? 5 : t.blocks ? 4 : t.cover ? 3 : t.fp ? 2 : (t.movePenalty || t.wire) ? 1 : 0;
-  }
-  /* The "chest rule" (p. 42): "if there is a smaller terrain within a larger
-     area terrain, use the rules of the smaller one only" — a wood on a hill is a
-     wood, and so is shallow water, a road or anything else put on one. Pieces
-     only stand inside a hill, so at a point in a hill and in something else,
-     the something else is what counts; otherwise the most significant piece. */
-  function terrainAt(state, x, y) {
-    var rs = regionsAt(state, x, y), best = 'open', onHill = false, inOther = false;
-    for (var i = 0; i < rs.length; i++) {
-      if (rs[i].kind === 'hill') { onHill = true; continue; }
-      inOther = true;
-      if (rank(rs[i].kind) > rank(best)) best = rs[i].kind;
-    }
-    // in something on the hill (even flat ground, such as a road): its rules, not the hill's
-    if (inOther) return best;
-    return onHill ? 'hill' : 'open';
-  }
-  function terrainOf(state, u) { return terrainAt(state, u.x, u.y); }
-  /* Which terrain a unit is in. "One foot in grave" (p. 42) has a unit in
-     several pieces at once take the worst of them; but on the table the men
-     stand on their own bases, not in a circle, and a player sets them in the
-     wood or along the trench. A 2" token is only a rough outline of that, so
-     it gets some leeway: it is in whatever terrain at least half of the eight
-     points round its rim are in, and at four and four its middle decides. It
-     is always in one terrain, and the models are drawn standing in it. A
-     garrison is in its building and nothing else. */
-  var RIM = 8;
-  function footprint(x, y) {
-    var pts = [{ x: x, y: y }];
-    for (var k = 0; k < RIM; k++) {
-      var an = k / RIM * Math.PI * 2;
-      pts.push({ x: x + Math.cos(an) * UNIT_R, y: y + Math.sin(an) * UNIT_R });
-    }
-    return pts;
-  }
-  // the terrain a unit (or a token at x, y) is in, as a one-kind list
-  function kindsUnder(state, u, x, y) {
-    if (u && u.bld) return [u.bld.kind];
-    var px = x != null ? x : u.x, py = y != null ? y : u.y;
-    var pts = footprint(px, py), kc = terrainAt(state, px, py), n = {};
-    for (var i = 1; i < pts.length; i++) { var k = terrainAt(state, pts[i].x, pts[i].y); n[k] = (n[k] || 0) + 1; }
-    if ((n[kc] || 0) >= RIM / 2) return [kc];
-    for (var kk in n) if (n[kk] > RIM / 2) return [kk];
-    return [kc];
-  }
-  // the Defence bonus the ground gives a unit (or a token) standing at x, y
-  function coverAt(state, x, y, u) {
-    return Math.min.apply(null, kindsUnder(state, null, x, y).map(function (k) { return TERRAIN[k].cover || 0; }));
-  }
-
-  // segment vs a piece: its rectangle (Liang-Barsky), then its outline if it has one
-  function segRect(x1, y1, x2, y2, r) {
-    if (!segBox(x1, y1, x2, y2, r)) return false;
-    if (r.parts) return r.parts.some(function (q) { return segBox(x1, y1, x2, y2, q); });
-    return r.poly ? segPoly(x1, y1, x2, y2, r.poly) : true;
-  }
-  function segBox(x1, y1, x2, y2, r) {
-    var t0 = 0, t1 = 1, dx = x2 - x1, dy = y2 - y1;
-    var p = [-dx, dx, -dy, dy];
-    var q = [x1 - r.x, r.x + r.w - x1, y1 - r.y, r.y + r.h - y1];
-    for (var i = 0; i < 4; i++) {
-      if (p[i] === 0) { if (q[i] < 0) return false; }
-      else {
-        var t = q[i] / p[i];
-        if (p[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
-        else { if (t < t0) return false; if (t < t1) t1 = t; }
-      }
-    }
-    return true;
-  }
-
-  function pointSegDist(px, py, x1, y1, x2, y2) {
-    var dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy;
-    if (l2 === 0) return Math.hypot(px - x1, py - y1);
-    var t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2));
-    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
-  }
-
-  // Line of sight, centre to centre. Blocked by LoS-blocking terrain (unless the unit is
-  // standing in it — you can see in and out) and by intervening units.
-  function hasLoS(state, a, b) {
-    if (centreDist(a, b) > sightRange(a)) return false;
-    return lineClear(state, a, b);
-  }
-  // the line itself, however far: terrain that blocks and units standing in the way
-  function lineClear(state, a, b) {
-    for (var i = 0; i < state.terrain.length; i++) {
-      var r = state.terrain[i], t = TERRAIN[r.kind];
-      if (!t.blocks && !t.hill) continue;
-      var aIn = inRect(a.x, a.y, r), bIn = inRect(b.x, b.y, r);
-      /* A hill that rises in two steps: the upper step is a hill standing on a
-         hill, and it blocks sight across it the same way — for everyone but a
-         unit up on it. Two squads on the lower slope, with the crown between
-         them, do not see each other; nor does one on the slope see past the
-         crown to the ground beyond. */
-      if (t.hill && r.top) {
-        var aTop = aIn && inPoly(a.x, a.y, r.top), bTop = bIn && inPoly(b.x, b.y, r.top);
-        if (!aTop && !bTop && segRect(a.x, a.y, b.x, b.y, upperStep(r))) return false;
-      }
-      // a hill blocks sight across it, but not for a unit standing on it (p. 42)
-      if (aIn || bIn) continue;
-      if (segRect(a.x, a.y, b.x, b.y, r)) return false;
-    }
-    /* "Units on hills can shoot/be shot at over friendly units below them (but
-       not over enemy ones)" — the friends of whichever end is up on the hill,
-       taken a step at a time: from the crown, over friends on the slope below
-       it as well as on the level ground. */
-    var aLv = a.side ? levelOf(state, a) : 0, bLv = b.side ? levelOf(state, b) : 0;
-    for (var j = 0; j < state.units.length; j++) {
-      var u = state.units[j];
-      if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
-      if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
-      if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
-      if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
-        var uLv = levelOf(state, u);
-        if ((u.side === a.side && aLv > uLv) || (u.side === b.side && bLv > uLv)) continue;
-      }
-      return false;
-    }
-    return true;
-  }
-
-  /* How high a point stands: level ground (0), a hill (1), or the upper step
-     of a hill that rises in two (2). */
-  function groundLevel(state, x, y) {
-    var lv = 0;
-    for (var i = 0; i < state.terrain.length; i++) {
-      var r = state.terrain[i];
-      if (r.kind !== 'hill' || !inRect(x, y, r)) continue;
-      lv = Math.max(lv, r.top && inPoly(x, y, r.top) ? 2 : 1);
-    }
-    return lv;
-  }
-  /* A unit in a wood (or anything else) standing on a hill counts as being in
-     that piece only, and takes none of the hill's rules (p. 42). */
-  function levelOf(state, u) {
-    if (!u || u.x < 0) return 0;
-    if (u.bld) return 0;                               // in a building: the building's rules only
-    /* Up on the hill if it counts as on it (see kindsUnder), at the lowest
-       level of the parts of it that are; not if it is in a wood or the like
-       standing on it, which has its own rules only (p. 42). */
-    if (kindsUnder(state, u)[0] !== 'hill') return 0;
-    return Math.min.apply(null, footprint(u.x, u.y).filter(function (p) {
-      return terrainAt(state, p.x, p.y) === 'hill';
-    }).map(function (p) { return groundLevel(state, p.x, p.y); }));
-  }
-  // the upper step of a stepped hill, as a piece of its own for sight lines
-  function upperStep(r) {
-    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    r.top.forEach(function (q) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
-    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, poly: r.top };
-  }
-  /* Aircraft may end a move over any terrain but "very high objects, such as very
-     high buildings or mountain peaks" (p. 38): here a high or reinforced
-     building, and the crown of a stepped hill. */
-  function tooHighToHover(state, x, y) {
-    if (groundLevel(state, x, y) >= 2) return true;
-    return state.terrain.some(function (r) {
-      if (r.kind !== 'building' && r.kind !== 'bunker') return false;
-      return sectionsOf(r).some(function (q) { return inRect(x, y, q) && sectionHigh(r, q); });
-    });
-  }
-  function onHill(state, p) { return !!p && p.x >= 0 && terrainAt(state, p.x, p.y) === 'hill'; }
-
-  function unitNear(state, x, y, ignore, pad) {
-    for (var i = 0; i < state.units.length; i++) {
-      var u = state.units[i];
-      if (!u.alive || u === ignore) continue;
-      if (Math.hypot(u.x - x, u.y - y) < 2 * UNIT_R + (pad || 0)) return u;
-    }
-    return null;
-  }
-
   /* ---------- unit state ---------- */
   function hasOwn(u, rule) {
     var rs = u.rules;
@@ -2089,359 +1612,37 @@
     return !!u.alive && !u.aboard && !u.reserve && u.x >= 0 && status(u) === 'ready';
   }
 
-  /* ---------- hit tables ---------- */
-  /* Psychic Support (p. 130) counts as Field Medics — to 12" with Mind
-     Amplifiers (p. 142). */
-  function isMedic(u) { return has(u, 'Field Medics') || has(u, 'Psychic Support'); }
-  function medicReach(state, u) { return has(u, 'Psychic Support') && doctrine(state, u.side, 'XT5') ? 12 : 6; }
-  // the unit treating a squad's wounded: itself if it is the medics, else the nearest in reach
-  function medicFor(state, target) {
-    // the medic team treats its own wounded whatever state it is in (p. 57)
-    if (isMedic(target)) return target;
-    var best = null, bd = Infinity;
-    for (var i = 0; i < state.units.length; i++) {
-      var u = state.units[i], d;
-      if (u.side === target.side && projects(u) && isMedic(u)
-        && (d = unitDist(u, target)) <= medicReach(state, u) && d < bd) { best = u; bd = d; }
-    }
-    return best;
-  }
-  function medicNearby(state, target) { return !!medicFor(state, target); }
-
-  function resolveShootingHits(state, target, hits, mod, atk) {
-    var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
-    // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
-    if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
-    var medic = medicFor(state, target), medics = !!medic;
-    var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
-    var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
-    for (var i = 0; i < hits; i++) {
-      var raw = d6(), r = raw + mod, tag, down = false;
-      if (suicidal) {
-        // ignores hits on 1-2, but goes down on a 5-6
-        if (r <= 2) tag = 'Steady, boys!';
-        else if (r <= 4) { tag = 'Get down! (1 SP)'; out.sp += 1; }
-        else { tag = 'Man down! (1 model, 2 SP)'; down = true; }
-      } else if (medics) {
-        if (r <= 2) tag = 'Steady, boys!';
-        else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
-        else if (d6() === 6) { tag = 'MEDIC! casualty stabilised (1 SP)'; out.sp += 1; out.medic = medic.id; }
-        // Combat Drugs stack with Field Medics (p. 87): the man the medic lost may still get up
-        else if (drugs && d6() === 6) { tag = 'MEDIC! man down — Combat Drugs: he gets back up (1 SP)'; out.sp += 1; out.medic = medic.id; }
-        else { tag = 'MEDIC! man down (1 SP)'; out.casualties += 1; out.sp += 1; out.medic = medic.id; }
-      } else if (has(target, 'Animal Behaviour')) {
-        // bugs: shrug it off or burst (p. 116)
-        if (r <= 3) tag = 'QUEKKK! (ignored)';
-        else { tag = 'SPLASH! (1 bug, 2 SP)'; down = true; }
-      } else {
-        if (r <= 1) tag = 'Steady, boys!';
-        else if (r <= 5) { tag = 'Get down! (1 SP)'; out.sp += 1; }
-        else { tag = 'Man down! (1 model, 2 SP)'; down = true; }
-      }
-      if (down) {
-        var saved = drugs && d6() === 6;
-        // Adamantium Exoskeletons (an Adaptation): shrugs it off on a 5+
-        var shell = !saved && campFlag(target, 'adamantium') && d6() >= 5;
-        if (saved) { tag = 'Man down! — Combat Drugs: he gets back up (1 SP)'; out.sp += 1; }
-        else if (shell) { tag += ' — Adamantium Exoskeletons: ignored'; }
-        else { out.casualties += 1; out.sp += campFlag(target, 'overreact') ? 4 : 2; }
-      }
-      out.rolls.push('D6 ' + raw + (mod ? '+' + mod : '') + ' → ' + tag);
-    }
-    // Style Bonus on the firer: one more point of suppression per man killed
-    if (atk && campFlag(atk, 'style') && out.casualties) {
-      out.sp += out.casualties;
-      out.notes.push('Style Bonus +' + out.casualties + ' SP');
-    }
-    // Brave shrugs one point off every ranged attack
-    if (campFlag(target, 'brave') && out.sp > 0) { out.sp -= 1; out.notes.push('Brave -1 SP'); }
-    // Courage Under Fire: the second and later attacks on a unit in the same turn
-    if (target.shotFrom && target.shotFrom.length > 1 && doctrine(state, target.side, 'T2') && out.sp > 0) {
-      out.sp -= 1; out.notes.push('Courage Under Fire -1 SP');
-    }
-    return out;
-  }
-
-  function resolveAssaultHits(target, hits, mod, atk) {
-    mod = (mod || 0) + (droneUnit(target) ? 1 : 0);          // drone units, p. 40
-    var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
-    var nbk = campFlag(atk, 'nbk');                     // Natural Born Killers
-    for (var i = 0; i < hits; i++) {
-      var raw = d6(), r = raw + mod, tag;
-      var down = false;
-      if (target && has(target, 'Animal Behaviour')) {
-        if (r <= 3) tag = 'QUEKKK! (ignored)';
-        else { tag = 'SPLASH! (1 bug, 2 SP)'; down = true; }
-      } else if (nbk) {
-        if (r <= 1) tag = 'Keep fighting!';
-        else { tag = 'Man down! (1 model, 2 SP)'; down = true; }
-      } else if (r <= 1) tag = 'Keep fighting!';
-      else if (r <= 3) { tag = 'Ouch! (1 SP)'; out.sp += 1; }
-      else { tag = 'Man down! (1 model, 2 SP)'; down = true; }
-      if (down) {
-        if (campFlag(target, 'adamantium') && d6() >= 5) tag += ' — Adamantium Exoskeletons: ignored';
-        else { out.casualties += 1; out.sp += campFlag(target, 'overreact') ? 4 : 2; }
-      }
-      out.rolls.push('D6 ' + raw + (mod ? '+' + mod : '') + ' → ' + tag);
-    }
-    if (nbk) out.notes.push('Natural Born Killers: down on a 2+');
-    return out;
-  }
-
-  function applyResult(state, target, res, log, atk) {
-    var before = status(target);
-    if (target.minModels == null) target.minModels = target.models;
-    addSP(target, res.sp);
-    var lost = 0;
-    for (var i = 0; i < res.casualties; i++) {
-      target.models -= 1; lost++;
-      if (target.models <= 0) { target.models = 0; target.alive = false; break; }
-    }
-    target.minModels = Math.min(target.minModels, target.models);
-    if (lost) psychicBond(state, target, lost, log);
-    if ((!target.alive || (status(target) === 'broken' && before !== 'broken'))) infamyPanic(state, target, log);
-    if (!target.alive) {
-      target.wipedOut = true;
-      credit(target, atk, 'kill');
-      log.push({ t: 'kill', text: target.label + ' is wiped out.' });
-      return;
-    }
-    var after = status(target);
-    if (after === 'broken') { target.brokenEver = true; credit(target, atk, 'broke'); }
-    if (after !== before && after !== 'ready') {
-      if (after === 'broken' && has(target, 'Expendable')) {
-        target.alive = false;
-        target.fled = true;                      // run off, not killed to the last man
-        target.expended = true;                  // ...and not counted as a loss for victory (p. 57)
-        log.push({ t: 'kill', text: target.label + ' breaks — Expendable: removed from play.' });
-      } else {
-        log.push({ t: after, text: target.label + ' is ' + after.toUpperCase() + ' (' + target.sp + ' SP vs Morale ' + currentMorale(target) + ').' });
-      }
-    }
-  }
-
-  /* ---------- vehicles and aircraft: damage, wrecks and repairs ---------- */
-  // A hit on a machine: 1 bounces, 2-5 does a point, 6+ is a critical for D3 —
-  // or D6 when the shot came from an Anti-tank or Anti-aircraft weapon.
-  // what a scenario adds to every Damage roll against a side (Protecting the VIP: +2, p. 151)
-  function dmgMod(state, a, t) {
-    return state && state.scen && state.scen.hitMod && a && t ? (state.scen.hitMod(state, a, t) || 0) : 0;
-  }
-  function resolveDamage(target, hits, pierce, mod) {
-    var out = { damage: 0, rolls: [] };
-    mod = mod || 0;
-    for (var i = 0; i < hits; i++) {
-      var r0 = d6(), r = Math.min(6, r0 + mod), tag;
-      if (r === 1) tag = 'Bounced off the armour!';
-      else if (r <= 5) { tag = 'Target damaged! (1 DP)'; out.damage += 1; }
-      else {
-        var crit = pierce ? d6() : d3();
-        tag = 'Critical hit! (' + (pierce ? 'D6 ' : 'D3 ') + crit + ' DP)';
-        out.damage += crit;
-      }
-      out.rolls.push('D6 ' + r0 + (mod ? '+' + mod : '') + ' → ' + tag);
-    }
-    return out;
-  }
-
-  function applyDamage(state, t, damage, log, from) {
-    t.damage = (t.damage || 0) + damage;
-    if (t.damage <= t.str) {
-      log.push({ t: 'note', text: t.label + ' takes ' + damage + ' damage (' + t.damage + ' of ' + t.str + ').' });
-      return;
-    }
-    // knocked out: how badly depends on how far past its Structure it went
-    var over = t.damage - t.str - 1;
-    var bonus = over > 4 ? 2 : over > 2 ? 1 : 0;
-    var roll = d6(), total = roll + bonus;
-    t.alive = false;
-    t.wipedOut = true;
-    t.catastrophic = total > 5;
-    // whatever became of it, a ground hull's wreck stays where it stood and blocks sight (p. 36)
-    if (!isFlying(t)) t.wreckLoS = true;
-    credit(t, from, 'kill');
-    var crew = (t.cargo || []).slice();
-    t.cargo = [];
-    var how;
-    if (isFlying(t)) {
-      how = 'shot out of the sky';
-      crew.forEach(function (u) {
-        u.alive = false; u.models = 0; u.aboard = null;
-        /* In a campaign a downed aircraft makes an emergency landing on a 4+ and
-           "troops on-board survive, but get 5 TPs" (p. 86), so who was aboard
-           which machine is recorded for the aftermath to read. */
-        u.lostAboard = t.rid || t.id || true;
-        log.push({ t: 'kill', text: u.label + ' goes down with the aircraft.' });
-      });
-      log.push({ t: 'kill', text: t.label + ' is destroyed — ' + how + '.' });
-      return;
-    }
-    if (total <= 3) {
-      how = 'Abandoned! The crew is out of the game';
-      crew.forEach(function (u) {
-        dropOff(state, t, u);
-        addSP(u, d6());
-        log.push({ t: 'note', text: u.label + ' bails out — ' + u.sp + ' SP.' });
-      });
-    } else if (total <= 5) {
-      how = 'Vehicle on fire! The crew is lost';
-      crew.forEach(function (u) {
-        dropOff(state, t, u);
-        var burn = shoot(state, { label: 'The burning ' + t.name, side: t.side, alive: true, models: 1, fp: 6, range: 48, rules: [], x: u.x, y: u.y, shotFrom: [], cls: 'infantry' }, u, 'basic', {});
-        burn.log.forEach(function (l) { log.push(l); });
-      });
-    } else {
-      how = 'Catastrophic explosion!';
-      crew.forEach(function (u) {
-        u.alive = false; u.models = 0; u.aboard = null;
-        log.push({ t: 'kill', text: u.label + ' is destroyed inside the wreck.' });
-      });
-    }
-    log.push({
-      t: 'kill',
-      text: t.label + ' is knocked out — D6 ' + roll + (bonus ? ' +' + bonus + ' overkill' : '') + ': ' + how,
-      math: t.damage + ' damage against Structure ' + t.str
-    });
-    // only a catastrophic explosion catches the troops around the wreck (p. 36)
-    if (total <= 5) return;
-    var fp = 3 + t.tier;
-    state.units.forEach(function (u) {
-      if (!u.alive || u === t || isFlying(u) || u.aboard) return;
-      if (unitDist(u, t) > 4) return;
-      var blast = shoot(state, { label: 'The exploding ' + t.name, side: t.side === 'A' ? 'B' : 'A', alive: true, models: 1, fp: fp, range: 48, rules: [], x: t.x, y: t.y, shotFrom: [], cls: 'infantry' }, u, 'basic', {});
-      blast.log.forEach(function (l) { log.push(l); });
-    });
-  }
-
-  // put a passenger back on the table, as close to the vehicle as will fit
-  function dropOff(state, veh, u) {
-    u.aboard = null;
-    for (var t = 0; t < 60; t++) {
-      var ang = Math.random() * Math.PI * 2, d = 2 * UNIT_R + Math.random() * 2;
-      var p = clampBoard({ x: veh.x + Math.cos(ang) * d, y: veh.y + Math.sin(ang) * d });
-      if (TERRAIN[terrainAt(state, p.x, p.y)].impassable) continue;
-      if (unitNear(state, p.x, p.y, u, 0.2)) continue;
-      u.x = p.x; u.y = p.y;
-      return true;
-    }
-    u.x = veh.x; u.y = veh.y;
-    return false;
-  }
-
-  // Rally phase: a machine patches itself up. Jammers make it harder.
-  function repair(state, u) {
-    if (!u.damage) return null;
-    // Nanobots (p. 89): the repair rolls dice for the whole Structure, not for what is left of it
-    var dice = campFlag(u, 'nanobots') ? u.str : Math.max(1, u.str - u.damage), need = jammedNearby(state, u) ? 5 : 4;
-    var rolls = [], fixed = 0;
-    for (var i = 0; i < dice; i++) {
-      var r = d6();
-      rolls.push({ value: r, ok: r >= need });
-      if (r >= need) fixed++;
-    }
-    var before = u.damage;
-    u.damage = Math.max(0, u.damage - fixed);
+  /* ---- hits and damage: in rules/damage.js ---- */
+  var KIT_DAMAGE = null;
+  // what the damage kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
+  function eDamage() {
     return {
-      dice: dice, need: need, rolls: rolls, fixed: fixed, before: before, after: u.damage,
-      text: u.label + ' repairs: ' + dice + 'D6 [' + rolls.map(function (r) { return r.value; }).join(' ') +
-        '] on ' + need + '+ — ' + fixed + ' damage cleared (' + before + ' → ' + u.damage + ').'
+      TERRAIN: TERRAIN, UNIT_R: UNIT_R, addSP: addSP, campFlag: campFlag, clampBoard: clampBoard,
+      credit: credit, currentMorale: currentMorale, d3: d3, d6: d6, doctrine: doctrine, droneUnit: droneUnit,
+      has: has, hasOwn: hasOwn, infamyPanic: infamyPanic, isFlying: isFlying, isMachine: isMachine,
+      projects: projects, psychicBond: psychicBond, shoot: shoot, status: status, terrainAt: terrainAt,
+      unitDist: unitDist, unitNear: unitNear
     };
   }
-  /* Jammers: enemies within 24" rally — and repair — on 5+ instead of 4+.
-     Counter-jamming within 6" of the victim shuts that out again. */
-  /* Jammers is a penalty, so it bites from a unit that is suppressed or broken;
-     Counter-jamming is a bonus, so it does not (p. 28). */
-  function jammedNearby(state, u) {
-    var jammed = false;
-    for (var i = 0; i < state.units.length; i++) {
-      var e = state.units[i];
-      if (!e.alive || e.aboard || e.reserve || e.x < 0) continue;
-      if (e.side !== u.side && has(e, 'Jammers') && unitDist(e, u) <= 24) jammed = true;
-      if (e.side === u.side && projects(e) && has(e, 'Counter-jamming') && unitDist(e, u) <= 6) return false;
-    }
-    return jammed;
+  function kitDamage() {
+    return KIT_DAMAGE || (KIT_DAMAGE = (root.PMCDamage || require('./damage.js'))(eDamage()));
   }
-
-  /* Hackers (p. 57): reach into an enemy drone within 24".
-     1-2 nothing, 3-4 it is locked out for the turn and takes D3+1 hits,
-     5-6 it is turned on its own side first, then takes the same hits. */
-  function canHack(state, a, t) {
-    if (!a.alive || !t.alive || a.side === t.side) return false;
-    if (!has(a, 'Hackers') || !t.drone) return false;
-    if (a.hackUsed) return false;
-    return unitDist(a, t) <= 24;
-  }
-
-  function hack(state, a, t, fireBack) {
-    var log = [], roll = d6();
-    // a Xenotripod turret's systems are alien: a 5-6 only ever locks it out (p. 130)
-    if (roll >= 5 && hasOwn(t, 'Turret')) {
-      log.push({ t: 'note', text: 'Turret — the alien code will not turn: D6 ' + roll + ' counts as ' + (roll - 2) + '.' });
-      roll -= 2;
-    }
-    a.hackUsed = true;
-    var turned = false, locked = false;
-    if (roll <= 2) {
-      log.push({ t: 'note', text: a.label + ' tries to break into ' + t.label + ' — D6 ' + roll + ': the ice holds.' });
-      return { log: log, roll: roll, turned: false, locked: false };
-    }
-    var hits = d3() + 1;
-    /* 5-6: "the drone is activated immediately under control of the player who
-       owns the hacking unit ... and afterwards suffers D3+1 hits". One that has
-       already acted, or cannot act, counts as a 3-4 (p. 57). `fireBack` starts
-       that activation and reports whether it could; the hits then wait for it. */
-    var canAct = !t.activated && t.alive && status(t) !== 'broken';
-    if (roll >= 5 && canAct && typeof fireBack === 'function') turned = !!fireBack(t, hits);
-    if (turned) {
-      log.push({ t: 'note', text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + ': taken over for one activation, then burned for ' + hits + ' hits.' });
-      return { log: log, roll: roll, turned: true, locked: false, hits: hits, pending: true };
-    }
-    locked = true;
-    t.activated = true;
-    t.hacked = true;
-    log.push({
-      t: 'note',
-      text: a.label + ' hacks ' + t.label + ' — D6 ' + roll + (roll >= 5 ? ' (it cannot be activated, so as a 3-4)' : '') + ': locked out and burned for ' + hits + ' hits.'
-    });
-    hackBurn(state, a, t, hits, log);
-    return { log: log, roll: roll, turned: false, locked: locked, hits: hits };
-  }
-  /* "...suffers D3+1 hits resolved like enemy fire" (p. 57): a hull takes them
-     as damage; a Drone unit, which has no Structure, on the hit table like any
-     squad (its +1 to those rolls included). */
-  /* Expendable (p. 57): the collars go off the moment a penal unit is Broken,
-     whatever broke it — a hit, a rite, a shout, a friend's melancholy. Returns
-     the lines to log. */
-  function collars(state) {
-    var out = [];
-    state.units.forEach(function (u) {
-      if (!u.alive || u.aboard || !has(u, 'Expendable') || status(u) !== 'broken') return;
-      u.alive = false; u.fled = true; u.expended = true;
-      out.push({ t: 'kill', text: u.label + ' breaks — Expendable: the collars go off, removed from play.' });
-    });
-    return out;
-  }
-  function hackBurn(state, a, t, hits, log) {
-    if (isMachine(t)) {
-      var dres = resolveDamage(t, hits, false, dmgMod(state, a, t));
-      log.push({ t: 'hits', text: dres.rolls.join(' · ') });
-      applyDamage(state, t, dres.damage, log, a);
-    } else {
-      var hres = resolveShootingHits(state, t, hits, dmgMod(state, a, t), a);
-      log.push({ t: 'hits', text: hres.rolls.join(' · ') });
-      applyResult(state, t, hres, log, a);
-    }
-    return log;
-  }
-
-  /* Command Vehicle (p. 56): a Command Unit riding inside lends the hull all of
-     its special rules, and may still act once the vehicle has finished. */
-  function commandAboard(veh) {
-    var cargo = veh && veh.cargo;
-    if (!cargo || !has(veh, 'Command Vehicle')) return null;
-    for (var i = 0; i < cargo.length; i++) if (has(cargo[i], 'Command Unit')) return cargo[i];
-    return null;
-  }
+  function isMedic(u) { return (KIT_DAMAGE || kitDamage()).isMedic(u); }
+  function medicNearby(state, target) { return (KIT_DAMAGE || kitDamage()).medicNearby(state, target); }
+  function resolveShootingHits(state, target, hits, mod, atk) { return (KIT_DAMAGE || kitDamage()).resolveShootingHits(state, target, hits, mod, atk); }
+  function resolveAssaultHits(target, hits, mod, atk) { return (KIT_DAMAGE || kitDamage()).resolveAssaultHits(target, hits, mod, atk); }
+  function applyResult(state, target, res, log, atk) { return (KIT_DAMAGE || kitDamage()).applyResult(state, target, res, log, atk); }
+  function dmgMod(state, a, t) { return (KIT_DAMAGE || kitDamage()).dmgMod(state, a, t); }
+  function resolveDamage(target, hits, pierce, mod) { return (KIT_DAMAGE || kitDamage()).resolveDamage(target, hits, pierce, mod); }
+  function applyDamage(state, t, damage, log, from) { return (KIT_DAMAGE || kitDamage()).applyDamage(state, t, damage, log, from); }
+  function dropOff(state, veh, u) { return (KIT_DAMAGE || kitDamage()).dropOff(state, veh, u); }
+  function repair(state, u) { return (KIT_DAMAGE || kitDamage()).repair(state, u); }
+  function jammedNearby(state, u) { return (KIT_DAMAGE || kitDamage()).jammedNearby(state, u); }
+  function canHack(state, a, t) { return (KIT_DAMAGE || kitDamage()).canHack(state, a, t); }
+  function hack(state, a, t, fireBack) { return (KIT_DAMAGE || kitDamage()).hack(state, a, t, fireBack); }
+  function collars(state) { return (KIT_DAMAGE || kitDamage()).collars(state); }
+  function hackBurn(state, a, t, hits, log) { return (KIT_DAMAGE || kitDamage()).hackBurn(state, a, t, hits, log); }
+  function commandAboard(veh) { return (KIT_DAMAGE || kitDamage()).commandAboard(veh); }
 
   /* ---------- transport ---------- */
   function canEmbark(state, veh, u) {
@@ -2502,773 +1703,99 @@
     return { text: u.label + ' disembarks from ' + veh.name + '.' };
   }
 
-  /* ---------- destructible terrain (pp. 41-43, 57-58) ----------
-     Low walls, high walls and ordinary buildings can be brought down; reinforced
-     walls and bunkers, woods, ruins and rocks cannot. A demolished wall leaves
-     rubble that no longer shelters anyone; a demolished building burns, blocking
-     sight and barring the ground, and whoever was inside has to get out. */
-  function isDestructible(r) {
-    var t = TERRAIN[r && r.kind];
-    if (r && r.reinforced) return false;               // a reinforced wall stands whatever is thrown at it (p. 41)
-    return !!(t && t.destructible);
-  }
-  function destructibleKind(r) {
-    var t = TERRAIN[r && r.kind];
-    return t ? t.destructible : null;
-  }
-  // the piece a unit is standing in or sheltering behind, from this attacker's side
-  function shelterOf(state, attacker, target) {
-    for (var i = 0; i < state.terrain.length; i++) {
-      var r = state.terrain[i];
-      if (!isDestructible(r)) continue;
-      if (inRect(target.x, target.y, r)) return r;
-    }
-    if (!attacker) return null;
-    /* The low wall it shelters behind — the one that gives it its cover (see
-       coverFor, p. 42): within 2" of the whole unit, and between it and the
-       shooter, or on any side of it against plunging fire (p. 58). A wall
-       further off on the line of fire is not the target's shelter, and is not
-       what a shot at the target brings down. The nearest such wall, if two. */
-    var plunging = has(attacker, 'Indirect Fire'), best = null, bd = Infinity;
-    for (var j = 0; j < state.terrain.length; j++) {
-      var r2 = state.terrain[j];
-      if (!isDestructible(r2) || TERRAIN[r2.kind].blocks) continue;
-      if (inRect(attacker.x, attacker.y, r2)) continue;
-      var d = rectPointDist(r2, target.x, target.y);
-      if (d + UNIT_R > 2 + 1e-6) continue;
-      if (!plunging && !segRect(attacker.x, attacker.y, target.x, target.y, r2)) continue;
-      if (d < bd) { bd = d; best = r2; }
-    }
-    return best;
-  }
-  // Incendiary Ammunition counts as a Destructive Weapon against buildings
-  /* Shooting a piece of terrain down (p. 57): a Destructive Weapon against
-     anything, Incendiary Ammunition against a building. The Demolish scenario's
-     objective can only be brought down by the Demolish action, not by gunfire,
-     so a machine needs a Destructive Weapon even for that. */
-  function canDemolish(u, r) {
-    if (!isDestructible(r)) return false;
-    // the Demolish objective "can be destroyed only with the Demolish special action" (p. 54): not by fire
-    if (destructibleKind(r) === 'target') return false;
-    if (has(u, 'Destructive Weapon')) return true;
-    return destructibleKind(r) === 'building' && has(u, 'Incendiary Ammunition');
-  }
-
-  /* Putting charges against a piece by hand — the Demolish special action, which
-     is resolved as an assault (pp. 58-59). Sappers may do it to any destructible
-     piece; in the Demolish scenario "all units can make the Demolish special
-     action targetting the objective" (p. 54) and "ALL attacking infantry units
-     are allowed to demolish it, but only Sappers can demolish other objects"
-     (p. 49) — at +2 rather than the Sappers' +4. Nobody assaults with a
-     Cumbersome Weapon, and vehicles do not assault at all. */
-  function canCharge(u, r) {
-    if (!isDestructible(r) || !u) return false;
-    if (isMachine(u) || u.cls !== 'infantry') return false;
-    if (has(u, 'Cumbersome Weapon')) return false;
-    if (has(u, 'Sappers')) return true;
-    return destructibleKind(r) === 'target';
-  }
-
-  function destroyTerrain(state, r, log, by) {
-    var kind = destructibleKind(r);
-    if (!kind) return null;
-    var was = TERRAIN[r.kind].name;
-    r.kind = kind === 'building' ? 'burning' : 'razed';
-    r.wrecked = true;
-    var out = { piece: r, was: was, kind: r.kind, evicted: [] };
-    log.push({
-      t: 'kill',
-      text: (by ? by.label + ' brings down ' : 'Down comes ') + was.toLowerCase() +
-        (kind === 'building' ? ' — it goes up in flames.' : ' — only rubble is left.')
-    });
-    if (kind === 'building') {
-      // the burning shell is impassable, so anyone inside must leave at once
-      for (var i = 0; i < state.units.length; i++) {
-        var u = state.units[i];
-        if (!u.alive || u.aboard || u.x < 0) continue;
-        if (u.bld !== r && !inRect(u.x, u.y, r)) continue;
-        u.bld = null; u.sec = null;
-        var p = nearestClear(state, u, r);
-        u.x = p.x; u.y = p.y;
-        out.evicted.push(u);
-        log.push({ t: 'note', text: u.label + ' scrambles clear of the burning building.' });
-      }
-    }
-    return out;
-  }
-  // the closest point outside a piece that the unit can actually stand on
-  function nearestClear(state, u, r) {
-    for (var step = 1; step <= 24; step++) {
-      for (var a = 0; a < 12; a++) {
-        var ang = a * Math.PI / 6;
-        var x = u.x + Math.cos(ang) * (step * 0.5), y = u.y + Math.sin(ang) * (step * 0.5);
-        var p = clampBoard({ x: x, y: y });
-        if (inRect(p.x, p.y, r)) continue;
-        if (TERRAIN[terrainAt(state, p.x, p.y)].impassable) continue;
-        if (unitNear(state, p.x, p.y, u, 0.2)) continue;
-        return p;
-      }
-    }
-    return clampBoard({ x: u.x + 2, y: u.y + 2 });
-  }
-
-  /* Shooting a piece down on its own (p. 57): a final 15+, or an unmodified 9. */
-  function shootTerrain(state, a, r) {
-    var log = [], parts = [], total = 0;
-    var roll = d10();
-    total = roll; parts.push({ label: 'D10', v: roll });
-    total += a.fp; parts.push({ label: 'Firepower', v: a.fp });
-    var sb = sizeBonus(a.models);
-    if (sb) { total += sb; parts.push({ label: a.models + ' models', v: sb }); }
-    if (has(a, 'Demolisher')) { total += 4; parts.push({ label: 'Demolisher', v: 4 }); }
-    var down = roll === 9 || total >= 15;
-    log.push({
-      t: 'shoot',
-      text: a.label + ' fires on the ' + TERRAIN[r.kind].name.toLowerCase(),
-      math: parts.map(fmtPart).join(', ') + ' = ' + total + ' — needs 15+, or an unmodified 9 → ' +
-        (down ? 'it comes down' : 'it holds')
-    });
-    var res = down ? destroyTerrain(state, r, log, a) : null;
-    a.activated = true;
-    return { log: log, down: down, result: res, total: total, roll: roll };
-  }
-
-  /* Terrorist (Path of the Villain, p. 112). A piece of terrain was mined before
-     the battle; any First Among Equals may set it off from anywhere on the table.
-     It resolves as a shooting attack at Firepower 10 with Destructive Weapon —
-     so the piece itself almost always goes, and anyone sheltering in it is
-     caught by the same blast. */
-  function detonate(state, a, r) {
-    var log = [], parts = [];
-    var roll = d10(), total = roll + 10;
-    parts.push({ label: 'D10', v: roll });
-    parts.push({ label: 'Firepower (charge)', v: 10 });
-    var down = roll === 9 || total >= 15;
-    log.push({
-      t: 'shoot',
-      text: a.label + ' sets off the charge under the ' + TERRAIN[r.kind].name.toLowerCase() + '.',
-      math: parts.map(fmtPart).join(', ') + ' = ' + total + ' — needs 15+, or an unmodified 9 → ' +
-        (down ? 'it comes down' : 'it holds')
-    });
-    // whoever was sheltering in it takes the blast, Firepower 10 and Destructive
-    var caught = state.units.filter(function (u) {
-      return u.alive && !u.aboard && !isFlying(u) && inRect(u.x, u.y, r);
-    });
-    var res = down ? destroyTerrain(state, r, log, a) : null, treated = [];
-    caught.forEach(function (u) {
-      var hits = Math.max(0, total - defenceAgainst(state, a, u, { basic: true }).value);
-      if (!hits) {
-        log.push({ t: 'note', text: u.label + ' rides out the blast.' });
-        return;
-      }
-      if (isMachine(u)) {
-        var dm = resolveDamage(u, hits, false, dmgMod(state, a, u));
-        log.push({ t: 'hits', text: dm.rolls.join(' · ') });
-        applyDamage(state, u, dm.damage, log, a);
-      } else {
-        var hr = resolveShootingHits(state, u, hits, dmgMod(state, a, u), a);
-        if (hr.medic) treated.push({ id: u.id, medic: hr.medic });
-        log.push({ t: 'hits', text: hr.rolls.join(' · ') });
-        applyResult(state, u, hr, log, a);
-      }
-    });
-    state.mined = null;
-    a.activated = true;
-    // `treated`: each squad caught in it that a MEDIC! answered for, and who answered
-    return { log: log, down: down, result: res, total: total, roll: roll, treated: treated };
-  }
-
-  /* Sappers going in with charges (p. 58): the same threshold, +4 for the rule,
-     and a 2" fall-back if the wall holds. */
-  function assaultTerrain(state, a, r) {
-    var log = [], parts = [], total = 0;
-    var roll = d10();
-    total = roll; parts.push({ label: 'D10', v: roll });
-    total += a.assault; parts.push({ label: 'Assault', v: a.assault });
-    var sb = sizeBonus(a.models);
-    if (sb) { total += sb; parts.push({ label: a.models + ' models', v: sb }); }
-    var bonus = chargeBonus(a, r);
-    if (bonus) { total += bonus; parts.push({ label: bonus === 4 ? 'Sappers' : 'demolition charges', v: bonus }); }
-    var down = roll === 9 || total >= 15;
-    log.push({
-      t: 'assault',
-      text: a.label + ' sets charges against the ' + TERRAIN[r.kind].name.toLowerCase(),
-      math: parts.map(fmtPart).join(', ') + ' = ' + total + ' — needs 15+, or an unmodified 9 → ' +
-        (down ? 'the charges blow' : 'the charges fail')
-    });
-    var res = down ? destroyTerrain(state, r, log, a) : null;
-    if (!down) {
-      fallBack(state, a, { x: r.x + r.w / 2, y: r.y + r.h / 2 }, 2);
-      log.push({ t: 'note', text: a.label + ' falls back 2" from the wall.' });
-    }
-    a.activated = true;
-    return { log: log, down: down, result: res, total: total, roll: roll };
-  }
-
-  /* A Tier III-V vehicle simply drives through a low or high wall (p. 35). */
-  function crushOnMove(state, u, from, to, log) {
-    if (u.cls !== 'vehicle' || u.tier < 3) return [];
-    var gone = [];
-    for (var i = 0; i < state.terrain.length; i++) {
-      var r = state.terrain[i];
-      if (destructibleKind(r) !== 'linear') continue;
-      if (!segRect(from.x, from.y, to.x, to.y, r) && !inRect(to.x, to.y, r)) continue;
-      var res = destroyTerrain(state, r, log, u);
-      if (res) gone.push(res);
-    }
-    return gone;
-  }
-
-  /* ---------- shooting ---------- */
-  /* "Dig in!" (p. 94): the crew drag the trails round and shoot over open sights.
-     The piece loses its reach and its all-round traverse, and gains everything a
-     direct-fire gun has — full modifiers instead of Basic Firepower. */
-  /* ---------- the Xenotripods (pp. 129-130, 140-143) ---------- */
-  function isXeno(u) { return !!u && u.faction === 'xeno'; }
-  // the army rules pass the drones by — and every turret is Drone Controlled
-  function xenoSenses(u) { return isXeno(u) && !u.drone && !hasOwn(u, 'Drone Control'); }
-  // Limited Senses: 12", or 18" with the Rite of Farsight; everyone else 36"
-  function sightRange(u) {
-    if (!xenoSenses(u)) return 36;
-    return campFlag(u, 'farsight') ? 18 : 12;
-  }
-  /* Mental Projection: an enemy seen by any unbroken Xenotripod is seen by the
-     whole tribe. Aircraft see over everything, but no further than 12". */
-  function tribeSeers(state, side, t) {
-    var out = [];
-    for (var i = 0; i < state.units.length; i++) {
-      var o = state.units[i];
-      if (!o.alive || o.side !== side || o.aboard || o.reserve || o.x < 0 || !xenoSenses(o)) continue;
-      if (campFlag(o, 'banished') || status(o) === 'broken') continue;
-      if (centreDist(o, t) > sightRange(o)) continue;
-      if (isFlying(o) || isFlying(t) || lineClear(state, o, t)) out.push(o);
-    }
-    return out;
-  }
-  function tribeSees(state, side, t) { return tribeSeers(state, side, t).length > 0; }
-  // Dual-mode Weapons (p. 142): Indirect Fire at full modifiers on a target in sight
-  function dualMode(state, a, t) {
-    return !!state && doctrine(state, a.side, 'XT6') && !isFlying(a) && !!t && hasLoS(state, a, t);
-  }
-  // Shield Generator (p. 130): +2 from a turret, +1 from a craft, the best one only
-  function shieldFor(state, attacker, target) {
-    if (!state || !attacker || !target) return null;
-    var best = null;
-    for (var i = 0; i < state.units.length; i++) {
-      var g = state.units[i];
-      if (!g.alive || g.side !== target.side || g.aboard || g.reserve || g.x < 0) continue;
-      var v = ruleValue(g, 'Shield Generator');
-      if (!v) continue;
-      // the whole unit inside the dome, and the shot fired from outside it
-      if (centreDist(g, target) + UNIT_R > 12) continue;
-      if (unitDist(g, attacker) <= 12) continue;
-      if (!best || v > best.v) best = { v: v, from: g };
-    }
-    return best;
-  }
-  function enemyWithin(state, u, r) {
-    for (var i = 0; i < state.units.length; i++) {
-      var o = state.units[i];
-      if (o.alive && o.side !== u.side && !o.aboard && !o.reserve && o.x >= 0 && unitDist(o, u) <= r) return true;
-    }
-    return false;
-  }
-  // Rite of Disruption (p. 142): an enemy infantry unit within 6" rallies on 6s
-  function disruptedBy(state, u) {
-    for (var i = 0; i < state.units.length; i++) {
-      var o = state.units[i];
-      if (o.alive && o.side !== u.side && !o.aboard && campFlag(o, 'disruption') && unitDist(o, u) <= 6) return o;
-    }
-    return null;
-  }
-  // Psychic Bond, the kind half: the best Morale of a friend within 6"
-  function bondMorale(state, u) {
-    if (!xenoSenses(u) || isMachine(u)) return null;
-    var best = null;
-    for (var i = 0; i < state.units.length; i++) {
-      var o = state.units[i];
-      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0) continue;
-      if (!xenoSenses(o) || isMachine(o) || unitDist(o, u) > 6) continue;
-      var m = currentMorale(o);
-      if (!best || m > best.m) best = { m: m, from: o };
-    }
-    return best;
-  }
-  /* Psychic Bond, the cruel half: every model a Xenotripod unit loses puts a
-     Suppression point on each friend within 6" — three under the Infamy of
-     Overreaction; none under the Rite of Stability. */
-  function psychicBond(state, u, lost, log) {
-    if (!state || !state.units || !xenoSenses(u) || !lost) return;
-    var hit = [];
-    for (var i = 0; i < state.units.length; i++) {
-      var o = state.units[i];
-      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0) continue;
-      if (!xenoSenses(o) || isMachine(o) || campFlag(o, 'stability')) continue;
-      if (unitDist(o, u) > 6) continue;
-      var n = lost * (campFlag(o, 'overreaction') ? 3 : 1), was = status(o);
-      addSP(o, n);
-      var now = status(o);
-      if (now === 'broken') o.brokenEver = true;
-      hit.push(o.label + ' +' + n + (now !== was ? ' (' + now + ')' : ''));
-    }
-    if (hit.length && log) log.push({ t: 'hits', text: 'Psychic Bond — ' + u.label + '’s ' + lost + ' dead are felt by ' + hit.join(', ') + '.' });
-  }
-  /* Infamy of Panic (p. 143): a friend within 18" broken or destroyed, and the
-     unit takes D6 Suppression. */
-  function infamyPanic(state, u, log) {
-    if (!state || !state.units) return;
-    state.units.forEach(function (o) {
-      if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
-      if (unitDist(o, u) > 18) return;
-      var n = d6(), was = status(o);
-      addSP(o, n);
-      if (status(o) === 'broken') o.brokenEver = true;
-      if (log) log.push({ t: 'hits', text: 'Infamy of Panic — ' + o.label + ' sees ' + u.label + ' go and takes ' + n + ' SP' + (status(o) !== was ? ' (' + status(o) + ')' : '') + '.' });
-    });
-  }
-  /* Regain Control (Dominant Species, p. 129): the Crocks stand still and every
-     Epsilon squad of their Tier or lower within 12" sheds all its Suppression. */
-  function regainTargets(state, u) {
-    return state.units.filter(function (o) {
-      return o.alive && o.side === u.side && !o.aboard && !o.reserve && o.x >= 0 && o !== u &&
-        BY_KEY[o.key] && BY_KEY[o.key].group === 'Epsilon Squads' && o.tier <= u.tier &&
-        o.sp > 0 && unitDist(o, u) <= 12;
-    });
-  }
-  function regainControl(state, u) {
-    var log = [], freed = regainTargets(state, u);
-    log.push({ t: 'rally', text: u.label + ' reaches out to the Esh-Aven — Regain Control.' });
-    freed.forEach(function (o) {
-      log.push({ t: 'rally', text: o.label + ' — ' + o.sp + ' SP gone.' });
-      o.sp = 0;
-    });
-    if (!freed.length) log.push({ t: 'note', text: 'No shaken Epsilon squad within 12" to steady.' });
-    return { log: log, freed: freed };
-  }
-  // Self-repair (Molecular Reconstruction, p. 129): stay still, lose every Damage point
-  function selfRepair(state, u) {
-    var was = u.damage || 0;
-    u.damage = 0;
-    return { log: [{ t: 'rally', text: u.label + ' rebuilds itself — Molecular Reconstruction clears ' + was + ' Damage.' }], cleared: was };
-  }
-  /* Teleport (p. 130): a Teleport unit takes in one infantry unit that could board
-     it, and on a D6 of 1-2 it comes out at a random Teleport unit — perhaps the
-     same one — and on 3-6 at the one its owner picks. It is not an activation. */
-  function teleportFrom(state, tp) {
-    return state.units.filter(function (u) {
-      if (!u.alive || u.side !== tp.side || u.aboard || u.reserve || u.x < 0) return false;
-      if (u.cls !== 'infantry' || u.activated || u.disembarked || hasOwn(u, 'Riders')) return false;
-      if (campFlag(u, 'backward')) return false;              // Infamy of Backwardness
-      if (status(u) !== 'ready') return false;
-      return unitDist(u, tp) <= 4;
-    });
-  }
-  function teleportPads(state, side) {
-    return state.units.filter(function (u) {
-      return u.alive && u.side === side && !u.aboard && !u.reserve && u.x >= 0 && hasOwn(u, 'Teleport');
-    });
-  }
-  function teleportRoll(state, u, tp) {
-    var r = d6(), second = null;
-    // Rite of Knowledge (p. 142): a 1-3 may be rolled again, and the second stands
-    if (r <= 3 && campFlag(u, 'knowledge')) { second = d6(); }
-    var v = second != null ? second : r;
-    var pads = teleportPads(state, tp.side);
-    var randomPad = pads[Math.floor(Math.random() * pads.length)] || tp;
-    /* Auxiliary Teleportation System (p. 143): on a 2-3 the unit may come out
-       beside an aircraft carrying it instead. On a 2 that is the only choice
-       there is — the random pad, or the aircraft; on a 3 the aircraft joins the
-       owner's usual pick of pads. */
-    var aux = state.units.filter(function (o) {
-      return o.alive && o.side === tp.side && o.cls === 'aircraft' && o.x >= 0 && campFlag(o, 'auxTeleport');
-    });
-    if (v === 2 && aux.length) {
-      return { roll: r, reroll: second, value: v, random: false, pads: [randomPad].concat(aux), aux: aux, randomPad: randomPad };
-    }
-    if (v === 3 && aux.length) {
-      return { roll: r, reroll: second, value: v, random: false, pads: pads.concat(aux), aux: aux, randomPad: randomPad };
-    }
-    return { roll: r, reroll: second, value: v, random: v <= 2, pads: pads, randomPad: randomPad };
-  }
-  function teleport(state, u, from, to) {
-    // drop the unit onto clear ground within 4" of the exit pad
-    var best = null;
-    for (var ring = 2.2; ring <= 4 && !best; ring += 0.6) {
-      for (var k = 0; k < 16; k++) {
-        var ang = k * Math.PI / 8 + (ring * 0.7);
-        var x = to.x + Math.cos(ang) * ring, y = to.y + Math.sin(ang) * ring;
-        if (x < 1 || y < 1 || x > BOARD.w - 1 || y > BOARD.h - 1) continue;
-        if (TERRAIN[terrainAt(state, x, y)].impassable || unitNear(state, x, y, u, 0.2)) continue;
-        best = { x: x, y: y }; break;
-      }
-    }
-    if (!best) return { ok: false, text: 'There is no room at ' + to.label + ' — ' + u.label + ' stays where it is.' };
-    var was = { x: u.x, y: u.y };
-    u.bld = null; u.sec = null;
-    u.x = best.x; u.y = best.y;
-    u.disembarked = true;                                   // "embarked" — not back through the same turn
-    return { ok: true, from: was, text: u.label + ' vanishes at ' + from.label + ' and steps out beside ' + to.label + '.' };
-  }
-
-  /* The eight facings a model can be turned to: 45° apart on the table itself,
-     named by where they point on the screen — E (straight to the right), SE,
-     S (straight down), and round. */
-  var FACINGS = (function () {
-    var out = [];
-    for (var i = 0; i < 8; i++) out.push(-Math.PI / 4 + i * Math.PI / 4);
-    return out;
-  })();
-  function nearestFacing(ang) {
-    var best = FACINGS[0], bd = Infinity;
-    FACINGS.forEach(function (f) {
-      var d = Math.abs(angleWrap(ang - f));
-      if (d < bd) { bd = d; best = f; }
-    });
-    return best;
-  }
-  function dugIn(u) { return !!(u && u.dugIn && hasOwn(u, 'Stationary Artillery')); }
-  // is the shooter out in front of the dug-in gun, where its sandbags lie between them?
-  function sandbagged(gun, shooter) {
-    var f = gun.facing == null ? (gun.side === 'B' ? Math.PI : 0) : gun.facing;
-    var d = angleWrap(Math.atan2(shooter.y - gun.y, shooter.x - gun.x) - f);
-    return Math.abs(d) <= Math.PI / 3;
-  }
-  function shotRange(a) { return dugIn(a) ? Math.min(a.range, 24) : a.range; }
-  function shotMinRange(a) { return dugIn(a) ? 6 : ruleValue(a, 'Minimum Range'); }
-
-  function canShoot(state, a, t, mode, opts) {
-    opts = opts || {};
-    if (!a.alive || !t.alive || a.side === t.side || a.fp === null) return false;
-    /* Only what is on the table can be shot at. A unit held in reserve is parked
-       just off the table's corner at (-1, -1), and a unit riding inside a hull is
-       not there at all; neither is a target, however close the numbers say. */
-    if (t.reserve || t.aboard || t.x < 0 || t.y < 0) return false;
-    if (!opts.aux) {
-      // a main weapon set up for one kind of target cannot engage the other
-      if (has(a, 'Specialisation (air)') && !isFlying(t)) return false;
-      if (has(a, 'Specialisation (ground)') && isFlying(t)) return false;
-      // a fixed mount only bears on the front quarter
-      if ((has(a, 'Limited Fire Arc') || dugIn(a)) && !inFireArc(a, t)) return false;
-    }
-    var d = unitDist(a, t);
-    var range = opts.aux ? 12 : shotRange(a);
-    if (d > range) return false;
-    // Cloaking System (p. 129): nobody draws a bead on it from further than 12"
-    if (has(t, 'Cloaking System') && d > 12) return false;
-    var minR = shotMinRange(a);
-    if (!opts.aux && minR && d < minR) return false;
-    // Cumbersome Weapons cannot be fired from shallow water, nor on the turn the
-    // crew stepped off a vehicle
-    if (!opts.aux && has(a, 'Cumbersome Weapon') &&
-      (kindsUnder(state, a).some(function (k) { return !!TERRAIN[k].shallow; }) || a.disembarked)) return false;
-    // a dug-in gun is laying over its sights, so it needs to see what it hits
-    if (!opts.aux && markCall(state, a, t, opts) === 'designate') return true;
-    /* Limited Senses and Mental Projection (p. 129): a Xenotripod sees 12", but
-       whatever one of the tribe sees, all of them see. An aircraft is over
-       everything; Indirect Fire lobs over whatever is in the way. */
-    var senses = xenoSenses(a) && !campFlag(a, 'banished');
-    if (isFlying(a) || isFlying(t)) {                  // aircraft shoot and are shot over everything
-      return !xenoSenses(a) || centreDist(a, t) <= sightRange(a) || (senses && tribeSees(state, a.side, t));
-    }
-    if (hasLoS(state, a, t)) return true;
-    if (!senses || !tribeSees(state, a.side, t)) return false;
-    if (!opts.aux && has(a, 'Indirect Fire')) return true;
-    return lineClear(state, a, t);
-  }
-
-  /* A live Markerlight call (p. 58). The mark is not a condition the target wears
-     for the rest of the turn: it exists only for the one or two units the marker
-     calls up, and what it is worth depends on which of the two actions was used.
-
-       Designate target — feeds units with Indirect Fire, which may then shoot
-                          without line of sight (the target must still be in range).
-       Mark the target  — feeds units WITHOUT Indirect Fire, which must have the
-                          target in sight and in range, and fire as though it were
-                          within half of theirs.
-
-     `opts.markKind` asks the question hypothetically — could this unit answer a
-     call of that kind — which is how the action bar decides what to offer. */
-  function markCall(state, a, t, opts) {
-    var kind = (opts && opts.markKind) || null;
-    if (!kind) {
-      var m = state && state.mark;
-      if (!m || !t || m.side !== a.side) return null;
-      if (m.targets.indexOf(t) < 0) return null;
-      kind = m.kind;
-    }
-    if (kind === 'designate') return has(a, 'Indirect Fire') && !dugIn(a) ? 'designate' : null;
-    return has(a, 'Indirect Fire') ? null : 'mark';
-  }
-
-  /* The auxiliary weapon as a shooter: the unit where it stands, with none of its
-     special rules — so no Gauss or Anti-tank against the target's armour or cover,
-     no Keen-Eyed against Stealth, no Indirect Fire over a wall. */
-  var AUX_RANGE = 12;
-  function auxGun(a) { return Object.assign({}, a, { rules: [], cargo: [], camp: null, fp: 1, range: AUX_RANGE }); }
-
-  /* Every modifier on a shot except the die, in one place, so the odds shown on the
-     board and the roll that follows can never drift apart. */
-  function shotMods(state, a, t, mode, opts) {
-    opts = opts || {};
-    var aux = !!opts.aux;
-    var basic = mode === 'defensive' || mode === 'basic' ||
-      (has(a, 'Always Basic Firepower') && !aux) || (has(a, 'Indirect Fire') && !aux && !dugIn(a) && !dualMode(state, a, t)) ||
-      isFlying(a) || isFlying(t) ||                    // aircraft shoot, and are shot at, basic
-      flyInf(a) || flyInf(t);                          // and so do Flying Infantry (p. 116)
-    var parts = [], total = 0;
-
-    var fp = aux ? 1 : a.fp;
-    total += fp; parts.push({ label: aux ? 'Auxiliary FP' : 'Firepower', v: fp });
-    var phero = aux ? 0 : pheromoneBonus(state, a, t);
-    if (phero) { total += phero; parts.push({ label: 'Pheromone Markers', v: phero }); }
-    var sb = sizeBonus(a.models);
-    if (sb) { total += sb; parts.push({ label: a.models + ' models', v: sb }); }
-
-    var dist = unitDist(a, t), crossfire = false, arc = 'front';
-    // Anti-tank and Anti-aircraft bear even when firing basic
-    var pierce = false;
-    if (!aux) {
-      if (t.cls === 'vehicle' && antiTank(a, dist)) {
-        total += 4; parts.push({ label: 'Anti-tank', v: 4 }); pierce = true;
-      }
-      // Temporal Armour Amplifier (a Xenotripod aircraft upgrade, p. 143): immune to it
-      if (isFlying(t) && has(a, 'Anti-aircraft') && !campFlag(t, 'temporal')) {
-        total += 4; parts.push({ label: 'Anti-aircraft', v: 4 }); pierce = true;
-      }
-      // a Gauss weapon punches harder through a hull
-      if (t.cls === 'vehicle' && has(a, 'Gauss Weapon')) {
-        total += 1; parts.push({ label: 'Gauss Weapon', v: 1 });
-      }
-    }
-    /* A hull's flanks are softer to anything, the auxiliary weapon included — but
-       Basic Firepower counts nothing beyond Firepower and models (p. 32). */
-    if (t.cls === 'vehicle' && !has(t, 'Advanced Protection') && !basic) {
-      arc = arcOf(t, a);
-      var tp = propOf(t);
-      if (arc === 'side' && !(tp && tp.noSideArc)) { total += 1; parts.push({ label: 'side armour', v: 1 }); }
-      else if (arc === 'rear') { total += 2; parts.push({ label: 'rear armour', v: 2 }); }
-    }
-    // Spotters (an Adaptation, p. 125): +1 for every friendly unit within 6", up to +3
-    if (!aux && campFlag(a, 'spotters') && state && state.units) {
-      var near6 = state.units.filter(function (o) {
-        return o !== a && o.alive && !o.aboard && o.side === a.side && unitDist(o, a) <= 6;
-      }).length;
-      if (near6) { total += Math.min(3, near6); parts.push({ label: 'Spotters', v: Math.min(3, near6) }); }
-    }
-    /* The auxiliary weapon (p. 32) fires "without ANY special rules" — its own
-       or the unit's — but the ordinary modifiers of a shot still apply to it:
-       standing still, half range, height, Crossfire, and the target's cover. */
-    if (!basic) {
-      // Effective Toxin Glands: Spore and Flying Bugs get +2 for Fire! (p. 124)
-      var toxin = !aux && bugRanged(a) && doctrine(state, a.side, 'BC6');
-      // ...and so does a Xenotripod unit with the Rite of Perfection (p. 142)
-      var perfect = !aux && campFlag(a, 'perfection');
-      var fireB = mode === 'fire' && (toxin || perfect) ? 2 : 1;
-      if (mode === 'fire') { total += fireB; parts.push({ label: fireB === 2 ? (perfect ? 'Fire! — Rite of Perfection' : 'Fire! — Effective Toxin Glands') : 'Fire! (stationary)', v: fireB }); }
-      // Chaotic Ranged Attacks (a Genetic Flaw): no bonus inside half range
-      var rng = aux ? AUX_RANGE : shotRange(a);
-      if (dist <= rng / 2 && !aux && campFlag(a, 'chaotic')) {
-        parts.push({ label: 'Chaotic Ranged Attacks — no half-range bonus', v: 0 });
-      } else if (dist <= rng / 2) {
-        // Rain of Fire doubles the close-range bonus
-        var close = !aux && campFlag(a, 'rainOfFire') ? 4 : 2;
-        total += close;
-        parts.push({ label: close === 4 ? 'Rain of Fire, within half range' : 'within half range', v: close });
-      }
-      else if (!aux && markCall(state, a, t, opts) === 'mark') {
-        total += 2; parts.push({ label: 'Markerlight', v: 2 });
-      }
-      /* Height: +2 for firing down on a target standing lower — from a hill on
-         to the level ground, and from the crown of a stepped hill on to its
-         lower slope as well. Once, however many steps down it is. */
-      var la = levelOf(state, a), lt = levelOf(state, t);
-      if (la > lt) {
-        total += 2;
-        parts.push({ label: la === 2 && lt === 1 ? 'firing down from the crown of the hill' : 'firing from a hill', v: 2 });
-      }
-      // a good shooting position: a high building or a reinforced one (pp. 41, 43)
-      if (a.bld && sectionHigh(a.bld, sectionRect(a))) {
-        total += 2; parts.push({ label: a.bld.kind === 'bunker' ? 'firing from a reinforced building' : 'firing from a high building', v: 2 });
-      }
-      /* Troops inside buildings, and in trenches, are not affected by Crossfire
-         (pp. 41-42). */
-      // immune only with the whole unit in the trench (p. 42)
-      var noX = !!t.bld || kindsUnder(state, t).every(function (k) { return !!TERRAIN[k].noCrossfire; });
-      for (var i = 0; i < t.shotFrom.length && !isMachine(t) && !noX; i++) {
-        var p = t.shotFrom[i];
-        if (p.basic) continue;
-        // Crossfire: the target sits between this firer and an earlier one
-        if (pointSegDist(t.x, t.y, p.x, p.y, a.x, a.y) < UNIT_R * 1.6) { crossfire = true; break; }
-      }
-      if (crossfire) { total += 2; parts.push({ label: 'Crossfire', v: 2 }); }
-      // Zero-in: every later attack on a target already shot at this turn
-      if (t.shotFrom.length && doctrine(state, a.side, 'T6')) {
-        total += 1; parts.push({ label: 'Zero-in', v: 1 });
-      }
-    }
-    // Demolisher: a machine fitted for knocking buildings down
-    if (!aux && campFlag(a, 'demolisher') && shelterOf(state, a, t)) {
-      total += 4; parts.push({ label: 'Demolisher', v: 4 });
-    }
-    // a unit charging home cannot claim cover from the defensive fire it draws
-    var dres = defenceAgainst(state, aux ? auxGun(a) : a, t,
-      { noCover: mode === 'defensive', defensiveFire: mode === 'defensive' });
+  /* ---- destructible terrain: in rules/destruct.js ---- */
+  var KIT_DESTRUCT = null;
+  // what the destruct kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
+  function eDestruct() {
     return {
-      total: total, parts: parts, basic: basic, aux: aux, pierce: pierce,
-      crossfire: crossfire, arc: arc, dist: dist, def: dres
+      TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage, applyResult: applyResult,
+      chargeBonus: chargeBonus, clampBoard: clampBoard, d10: d10, defenceAgainst: defenceAgainst,
+      dmgMod: dmgMod, fallBack: fallBack, fmtPart: fmtPart, has: has, inRect: inRect, isFlying: isFlying,
+      isMachine: isMachine, rectPointDist: rectPointDist, resolveDamage: resolveDamage,
+      resolveShootingHits: resolveShootingHits, segRect: segRect, sizeBonus: sizeBonus, terrainAt: terrainAt,
+      unitNear: unitNear
     };
   }
+  function kitDestruct() {
+    return KIT_DESTRUCT || (KIT_DESTRUCT = (root.PMCDestruct || require('./destruct.js'))(eDestruct()));
+  }
+  function isDestructible(r) { return (KIT_DESTRUCT || kitDestruct()).isDestructible(r); }
+  function destructibleKind(r) { return (KIT_DESTRUCT || kitDestruct()).destructibleKind(r); }
+  function shelterOf(state, attacker, target) { return (KIT_DESTRUCT || kitDestruct()).shelterOf(state, attacker, target); }
+  function canDemolish(u, r) { return (KIT_DESTRUCT || kitDestruct()).canDemolish(u, r); }
+  function canCharge(u, r) { return (KIT_DESTRUCT || kitDestruct()).canCharge(u, r); }
+  function destroyTerrain(state, r, log, by) { return (KIT_DESTRUCT || kitDestruct()).destroyTerrain(state, r, log, by); }
+  function nearestClear(state, u, r) { return (KIT_DESTRUCT || kitDestruct()).nearestClear(state, u, r); }
+  function shootTerrain(state, a, r) { return (KIT_DESTRUCT || kitDestruct()).shootTerrain(state, a, r); }
+  function detonate(state, a, r) { return (KIT_DESTRUCT || kitDestruct()).detonate(state, a, r); }
+  function assaultTerrain(state, a, r) { return (KIT_DESTRUCT || kitDestruct()).assaultTerrain(state, a, r); }
+  function crushOnMove(state, u, from, to, log) { return (KIT_DESTRUCT || kitDestruct()).crushOnMove(state, u, from, to, log); }
 
-  /* The exact chance of the shot telling, by walking all ten faces of the die:
-     an unmodified 0 always fails and an unmodified 9 always scores at least one hit. */
-  function shotOdds(state, a, t, mode, opts) {
-    var m = shotMods(state, a, t, mode, opts);
-    var tell = 0, sum = 0;
-    for (var r = 0; r <= 9; r++) {
-      var h = r === 0 ? 0 : r === 9 ? Math.max(1, r + m.total - m.def.value)
-        : Math.max(0, r + m.total - m.def.value);
-      if (h > 0) tell++;
-      sum += h;
-    }
+  /* ---- shooting: in rules/shoot.js ---- */
+  var KIT_SHOOT = null;
+  // what the shoot kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
+  function eShoot() {
     return {
-      chance: tell / 10, avgHits: sum / 10, mods: m.total, def: m.def.value,
-      need: Math.max(1, m.def.value - m.total + 1), parts: m.parts, defParts: m.def.parts
+      TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap, antiTank: antiTank, applyDamage: applyDamage,
+      applyResult: applyResult, arcOf: arcOf, bugRanged: bugRanged, campFlag: campFlag,
+      canDemolish: canDemolish, centreDist: centreDist, d10: d10, defenceAgainst: defenceAgainst,
+      destroyTerrain: destroyTerrain, dmgMod: dmgMod, doctrine: doctrine, dualMode: dualMode, flyInf: flyInf,
+      fmtPart: fmtPart, has: has, hasLoS: hasLoS, hasOwn: hasOwn, inFireArc: inFireArc, isFlying: isFlying,
+      isMachine: isMachine, kindsUnder: kindsUnder, levelOf: levelOf, lineClear: lineClear, mountOf: mountOf,
+      pheromoneBonus: pheromoneBonus, pointSegDist: pointSegDist, propOf: propOf,
+      resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, ruleValue: ruleValue,
+      sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
+      sizeBonus: sizeBonus, status: status, tribeSees: tribeSees, undisciplined: undisciplined,
+      unitDist: unitDist, xenoSenses: xenoSenses
     };
   }
-
-  // the same sum for a single round of an assault
-  function assaultOdds(state, atk, def) {
-    var total = atk.assault + sizeBonus(atk.models);
-    if (doctrine(state, atk.side, 'T4')) total += 1;
-    if (isMachine(def) && !isMachine(atk) && !has(def, 'Advanced Protection')) total += 4;
-    var dres = defenceAgainst(state, atk, def, { assault: true });
-    var tell = 0, sum = 0;
-    for (var r = 0; r <= 9; r++) {
-      var h = r === 0 ? 0 : r === 9 ? Math.max(1, r + total - dres.value)
-        : Math.max(0, r + total - dres.value);
-      if (h > 0) tell++;
-      sum += h;
-    }
-    return { chance: tell / 10, avgHits: sum / 10, mods: total, def: dres.value,
-      need: Math.max(1, dres.value - total + 1) };
+  function kitShoot() {
+    return KIT_SHOOT || (KIT_SHOOT = (root.PMCShoot || require('./shoot.js'))(eShoot()));
   }
-
-  function shoot(state, a, t, mode, opts) {
-    opts = opts || {};
-    /* A squad or a gun on its trails turns onto what it fires at. Only a
-       machine's facing is ever read by the rules (Limited Fire Arc, which side
-       is hit), so for anyone else this only turns the drawing. */
-    /* A crew-served piece lays its weapon on the target (`aim`, the exact
-       bearing, traversed like a turret); its mount turns only to the nearest of
-       the eight facings. A dug-in gun "cannot be turned" (p. 94): its mount
-       stays put and it traverses within its front arc. Nothing in the rules
-       reads a squad's facing; this is how it is drawn. */
-    if (a && t && !isMachine(a) && a.x != null && !(opts && opts.assault)) {
-      a._turnFrom = { f: a.facing, a: a.aim };          // where it pointed, so the swing can be played
-      a.aim = Math.atan2(t.y - a.y, t.x - a.x);
-      if (!dugIn(a)) a.facing = nearestFacing(a.aim);
-    }
-    var m = shotMods(state, a, t, mode, opts);
-    var aux = m.aux, basic = m.basic, parts = m.parts.slice(), pierce = m.pierce;
-    var crossfire = m.crossfire, dist = m.dist, dres = m.def;
-    var log = [];
-    var roll = d10();
-    var total = m.total + roll;
-    parts.unshift({ label: 'D10', v: roll });
-    /* Rite of Concentration (p. 142): once a battle the D10 is doubled. It is
-       spent on the first roll where doubling is worth having; the unmodified 0
-       and 9 are still read off the die itself. */
-    if (!aux && roll >= 5 && roll < 9 && campFlag(a, 'concentration') && a.camp && a.camp.once && !a.camp.once.concentration) {
-      a.camp.once.concentration = true;
-      total += roll;
-      parts.splice(1, 0, { label: 'Rite of Concentration — D10 doubled', v: roll });
-    }
-    // a Basic Firepower attack is "not counted for Crossfire in any way" (p. 32)
-    t.shotFrom.push({ x: a.x, y: a.y, basic: !!basic });
-
-    /* Destructive Weapon (p. 57): a final 15+ or an unmodified 9 against a target
-       sheltering in a destructible piece brings it down, strips the cover from
-       this very attack, and makes the hits bite one step harder. */
-    var breach = null;
-    if (!aux && (roll === 9 || total >= 15)) {
-      var shelter = shelterOf(state, a, t);
-      if (shelter && canDemolish(a, shelter)) {
-        breach = shelter;
-        dres = defenceAgainst(state, a, t, { noCover: true });
-      }
-    }
-
-    var hits;
-    if (roll === 0) hits = 0;
-    else if (roll === 9) hits = Math.max(1, total - dres.value);
-    else hits = Math.max(0, total - dres.value);
-
-    log.push({
-      t: 'shoot',
-      text: a.label + (aux ? ' (auxiliary weapons)' : '') + (basic && !aux ? ' (Basic Firepower)' : '') +
-        ' fires at ' + t.label + ' at ' + dist.toFixed(1) + '"' +
-        (breach ? ' — and the ' + TERRAIN[breach.kind].name.toLowerCase() + ' comes apart' : ''),
-      math: parts.map(fmtPart).join(', ') + ' = ' + total + ' vs Defence ' + dres.value +
-        ' [' + dres.parts.map(function (p) { return p.label + ' ' + p.v; }).join(', ') + '] → ' +
-        hits + ' hit' + (hits === 1 ? '' : 's')
-    });
-    var wreck = breach ? destroyTerrain(state, breach, log, a) : null;
-
-    if (hits > 0 && isMachine(t)) {
-      var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
-      log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
-      applyDamage(state, t, dres2.damage, log, a);
-      return { log: log, hits: hits, wreck: wreck };
-    }
-    var medicId = null;
-    if (hits > 0) {
-      var mod = 0;
-      /* Undisciplined (p. 94): shooting at a Broken Rebel unit, or catching one in
-         a crossfire, is worth +2 on the hit table rather than the usual +1. */
-      var loose = undisciplined(t);
-      if (status(t) === 'broken') mod += loose ? 2 : 1;
-      if (crossfire) mod += loose ? 2 : 1;
-      if (breach) mod += 1;
-      // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
-      mod += dmgMod(state, a, t);
-      var res = resolveShootingHits(state, t, hits, mod, a);
-      medicId = res.medic || null;
-      // Incendiary doubles the suppression of the attack itself, before any
-      // extra points that special rules add
-      var burn = '';
-      // Nerves of Steel, and the Rite of Shielding (p. 142), shrug off the extra points
-      var steady = campFlag(t, 'nerves') || campFlag(t, 'shielding');
-      if (has(a, 'Incendiary Ammunition') && !aux && !has(t, 'Battle Armour') && !steady) {
-        // "in any area terrain other than open terrain or shallow water" (Incendiary Ammunition) — any
-        // part of it being, the worst for it (p. 42)
-        var tk = kindsUnder(state, t).filter(function (k) { return k !== 'open' && !TERRAIN[k].shallow && !TERRAIN[k].linear; })[0];
-        if (tk) {
-          res.sp *= 2;
-          burn = ' · Incendiary Ammunition: suppression doubled in ' + TERRAIN[tk].name.toLowerCase();
-        }
-      }
-      // Suppressive Fire (p. 59): any successful attack, Basic Firepower included —
-      // the auxiliary weapon alone carries no special rules
-      var supp = has(a, 'Suppressive Fire') && !aux && !steady;
-      if (supp) res.sp += 2;
-      // a horse shies whenever it is shot at: one more Suppression point (Appendix 3)
-      var mtS = mountOf(t);
-      if (mtS && mtS.shotSP && !steady) { res.sp += mtS.shotSP; res.notes.push('Horse +' + mtS.shotSP + ' SP'); }
-      // Highly Irritating Venom: a Spore or Flying Bug's suppression bites one more (p. 124)
-      if (res.sp > 0 && !aux && bugRanged(a) && doctrine(state, a.side, 'BC4') && !campFlag(t, 'shielding')) {
-        res.sp += 1; res.notes.push('Highly Irritating Venom +1 SP');
-      }
-      log.push({ t: 'hits', text: res.rolls.join(' · ') + burn + (supp ? ' · Suppressive Fire +2 SP' : '') +
-        (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
-      applyResult(state, t, res, log, a);
-    } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
-      // a horse shies at being shot at, hit or not (Appendix 3)
-      applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);
-      log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
-    }
-    // who answered a MEDIC! on this volley, so the board can show them at work
-    return medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
+  function nearestFacing(ang) { return (KIT_SHOOT || kitShoot()).nearestFacing(ang); }
+  function dugIn(u) { return (KIT_SHOOT || kitShoot()).dugIn(u); }
+  function sandbagged(gun, shooter) { return (KIT_SHOOT || kitShoot()).sandbagged(gun, shooter); }
+  function shotRange(a) { return (KIT_SHOOT || kitShoot()).shotRange(a); }
+  function shotMinRange(a) { return (KIT_SHOOT || kitShoot()).shotMinRange(a); }
+  function canShoot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).canShoot(state, a, t, mode, opts); }
+  function markCall(state, a, t, opts) { return (KIT_SHOOT || kitShoot()).markCall(state, a, t, opts); }
+  function shotMods(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotMods(state, a, t, mode, opts); }
+  function shotOdds(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotOdds(state, a, t, mode, opts); }
+  function assaultOdds(state, atk, def) { return (KIT_SHOOT || kitShoot()).assaultOdds(state, atk, def); }
+  function shoot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shoot(state, a, t, mode, opts); }
+  /* ---- the Xenotripods: in rules/xeno.js ---- */
+  var KIT_XENO = null;
+  // what the xeno kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
+  function eXeno() {
+    return {
+      BOARD: BOARD, BY_KEY: BY_KEY, TERRAIN: TERRAIN, UNIT_R: UNIT_R, addSP: addSP, campFlag: campFlag,
+      centreDist: centreDist, currentMorale: currentMorale, d6: d6, doctrine: doctrine, hasLoS: hasLoS,
+      hasOwn: hasOwn, isFlying: isFlying, isMachine: isMachine, lineClear: lineClear, ruleValue: ruleValue,
+      status: status, terrainAt: terrainAt, unitDist: unitDist, unitNear: unitNear
+    };
   }
+  function kitXeno() {
+    return KIT_XENO || (KIT_XENO = (root.PMCXeno || require('./xeno.js'))(eXeno()));
+  }
+  function isXeno(u) { return (KIT_XENO || kitXeno()).isXeno(u); }
+  function xenoSenses(u) { return (KIT_XENO || kitXeno()).xenoSenses(u); }
+  function sightRange(u) { return (KIT_XENO || kitXeno()).sightRange(u); }
+  function tribeSeers(state, side, t) { return (KIT_XENO || kitXeno()).tribeSeers(state, side, t); }
+  function tribeSees(state, side, t) { return (KIT_XENO || kitXeno()).tribeSees(state, side, t); }
+  function dualMode(state, a, t) { return (KIT_XENO || kitXeno()).dualMode(state, a, t); }
+  function shieldFor(state, attacker, target) { return (KIT_XENO || kitXeno()).shieldFor(state, attacker, target); }
+  function enemyWithin(state, u, r) { return (KIT_XENO || kitXeno()).enemyWithin(state, u, r); }
+  function disruptedBy(state, u) { return (KIT_XENO || kitXeno()).disruptedBy(state, u); }
+  function bondMorale(state, u) { return (KIT_XENO || kitXeno()).bondMorale(state, u); }
+  function psychicBond(state, u, lost, log) { return (KIT_XENO || kitXeno()).psychicBond(state, u, lost, log); }
+  function infamyPanic(state, u, log) { return (KIT_XENO || kitXeno()).infamyPanic(state, u, log); }
+  function regainTargets(state, u) { return (KIT_XENO || kitXeno()).regainTargets(state, u); }
+  function regainControl(state, u) { return (KIT_XENO || kitXeno()).regainControl(state, u); }
+  function selfRepair(state, u) { return (KIT_XENO || kitXeno()).selfRepair(state, u); }
+  function teleportFrom(state, tp) { return (KIT_XENO || kitXeno()).teleportFrom(state, tp); }
+  function teleportPads(state, side) { return (KIT_XENO || kitXeno()).teleportPads(state, side); }
+  function teleportRoll(state, u, tp) { return (KIT_XENO || kitXeno()).teleportRoll(state, u, tp); }
+  function teleport(state, u, from, to) { return (KIT_XENO || kitXeno()).teleport(state, u, from, to); }
 
   /* ---------- NOT ONE STEP BACKWARDS! (T5, p. 87) ----------
      A Command Unit, or a friend within 12" of one, may shoot at a friendly unit
@@ -3321,782 +1848,60 @@
     return medicId ? { log: log, hits: hits, removed: removed, killed: killed, medic: medicId } : { log: log, hits: hits, removed: removed, killed: killed };
   }
 
-  /* ---------- assault ---------- */
-  // Vehicles and aircraft never charge; nothing can charge an aircraft.
-  function canAssault(a, t) {
-    // Overgrown bugs follow vehicle and aircraft rules, but may still assault (p. 116)
-    if (isMachine(a) && !isOvergrown(a)) return false;
-    // only Flying Infantry may assault aircraft, or other Flying Infantry
-    if ((isFlying(t) || flyInf(t)) && !flyInf(a)) return false;
-    // Cloaking System: charged only from 12" or closer
-    if (has(t, 'Cloaking System') && a.x != null && t.x != null && unitDist(a, t) > 12) return false;
-    // a Turret never leaves its pad
-    if (hasOwn(a, 'Turret')) return false;
-    return true;
-  }
-
-  /* How a charge gets there (p. 33): "the maximum distance between them is the
-     attacker's Movement + 2"... The assaulting unit moves in the shortest and
-     simplest way possible, with its movement reduced by terrain as normal." So
-     reach is walked over the ground, round what cannot be crossed and paying for
-     what slows it, not measured through a wall. The walk stops 1" short of the
-     enemy like any move; the last step into contact is the straight gap left.
-     Flyers, jump troops and anything fighting from inside a building keep the
-     straight line. Returns a function giving, for a target, { cost, path } — or
-     null when the charge cannot reach it. */
-  function chargeReach(state, a, allowance) {
-    // a unit not on the table (in reserve, or aboard a transport) cannot charge anything from there
-    if (a.x < 0 || a.y < 0 || a.aboard) return function () { return null; };
-    var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a) || drives(a);
-    var f = straight ? null : field(state, a, allowance);
-    return function (t) {
-      var gap0 = unitDist(a, t);
-      if (straight) return gap0 <= allowance + 1e-6 ? { cost: gap0, path: [{ x: a.x, y: a.y }] } : null;
-      var q = t.bld ? sectionRect(t) : null, best = null;
-      f.seen.forEach(function (n) {
-        var x = n.i * STEP, y = n.j * STEP;
-        var gap = q ? Math.max(0, rectPointDist(q, x, y) - UNIT_R) : Math.max(0, Math.hypot(t.x - x, t.y - y) - 2 * UNIT_R);
-        if (gap > 1 + STEP * 1.5) return;               // only the last inch goes straight in
-        var tot = n.c + gap;
-        if (tot <= allowance + 1e-6 && (!best || tot < best.cost)) best = { cost: tot, x: x, y: y };
-      });
-      if (!best) return null;
-      var path = best.cost - gap0 < 1e-6 ? [{ x: a.x, y: a.y }] : pathTo(state, a, allowance, best);
-      return { cost: best.cost, path: path };
+  /* ---- assault: in rules/assault.js ---- */
+  var KIT_ASSAULT = null;
+  // what the assault kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
+  function eAssault() {
+    return {
+      BOARD: BOARD, BY_KEY: BY_KEY, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage,
+      applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot,
+      clampTo: clampTo, d10: d10, d3: d3, d6: d6, deathOrGlory: deathOrGlory, defenceAgainst: defenceAgainst,
+      destroyTerrain: destroyTerrain, destructibleKind: destructibleKind, dmgMod: dmgMod, doctrine: doctrine,
+      drives: drives, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
+      fmtPart: fmtPart, has: has, hasOwn: hasOwn, isDestructible: isDestructible, isFlying: isFlying,
+      isMachine: isMachine, isOvergrown: isOvergrown, jumps: jumps, leaveAway: leaveAway, occupant: occupant,
+      pathTo: pathTo, pheromoneBonus: pheromoneBonus, rectPointDist: rectPointDist,
+      resolveAssaultHits: resolveAssaultHits, resolveDamage: resolveDamage, sectionRect: sectionRect,
+      shelterOf: shelterOf, shoot: shoot, sizeBonus: sizeBonus, status: status, terrainAt: terrainAt,
+      unitDist: unitDist, unitNear: unitNear
     };
   }
-  function chargeRoute(state, a, t, allowance) { return chargeReach(state, a, allowance)(t); }
-
-  // Martyrdom (p. 112): Holy Warriors of a force on the Path of the Prophet, with a man to spare
-  function canMartyr(state, u, foe) {
-    if (!u || !foe || !foe.alive || !doctrine(state, u.side, 'P1')) return false;
-    var p = BY_KEY[u.key];
-    return !!p && p.group === 'Holy Warriors' && u.models > 1;
+  function kitAssault() {
+    return KIT_ASSAULT || (KIT_ASSAULT = (root.PMCAssault || require('./assault.js'))(eAssault()));
   }
-  function assault(state, a, t, opts) {
-    var log = [], wrecked = null;
-    opts = opts || {};
-    log.push({ t: 'assault', text: a.label + ' charges ' + t.label + ' — ' + unitDist(a, t).toFixed(1) + '" to contact.' });
+  function canAssault(a, t) { return (KIT_ASSAULT || kitAssault()).canAssault(a, t); }
+  function chargeReach(state, a, allowance) { return (KIT_ASSAULT || kitAssault()).chargeReach(state, a, allowance); }
+  function chargeRoute(state, a, t, allowance) { return (KIT_ASSAULT || kitAssault()).chargeRoute(state, a, t, allowance); }
+  function canMartyr(state, u, foe) { return (KIT_ASSAULT || kitAssault()).canMartyr(state, u, foe); }
+  function assault(state, a, t, opts) { return (KIT_ASSAULT || kitAssault()).assault(state, a, t, opts); }
+  function chargeBonus(u, r) { return (KIT_ASSAULT || kitAssault()).chargeBonus(u, r); }
+  function clampBoard(p) { return (KIT_ASSAULT || kitAssault()).clampBoard(p); }
+  function fallBack(state, u, from, inch) { return (KIT_ASSAULT || kitAssault()).fallBack(state, u, from, inch); }
 
-    /* Martyrdom (Path of the Prophet, p. 113): before the first round is rolled,
-       one of the Holy Warriors walks into the enemy and takes D3 of them with him.
-       The unit takes no Suppression for the death. */
-    function martyr(u, foe) {
-      if (!canMartyr(state, u, foe)) return;
-      /* "the Rebel commander may order" it (p. 112): a player says so as the
-         assault begins (opts.martyr); the AI spends a man only while the unit
-         has more than two to spare. */
-      var say = opts.martyr && opts.martyr[u.side];
-      if (say === false || (say == null && u.models <= 2)) return;
-      u.models -= 1;
-      var hits = d3();
-      log.push({ t: 'assault', text: 'Martyrdom — one of ' + u.label + ' goes in alone. ' +
-        hits + ' automatic hit' + (hits === 1 ? '' : 's') + ' on ' + foe.label + '.' });
-      if (isMachine(foe)) {
-        var dm = resolveDamage(foe, hits, false);
-        log.push({ t: 'hits', text: dm.rolls.join(' · ') });
-        applyDamage(state, foe, dm.damage, log, u);
-      } else {
-        var mr = resolveAssaultHits(foe, hits, 0, u);
-        log.push({ t: 'hits', text: mr.rolls.join(' · ') });
-        applyResult(state, foe, mr, log, u);
-      }
-    }
-
-    /* "Death or Glory, Comrades!" (p. 94): the shout lands as the charge begins and
-       every Suppression point goes with it. Defensive fire can still pin them. */
-    var shout = a.sp ? deathOrGlory(state, a) : null;
-    if (shout) {
-      log.push({ t: 'rally', text: '"Death or Glory, Comrades!" — ' + shout.name + ' sends ' + a.label +
-        ' in, and all ' + a.sp + ' Suppression falls away.' });
-      a.sp = 0;
-    }
-
-    /* Defensive fire "is resolved immediately or as soon as the charging unit
-       enters the range and LoS" (p. 33): so it is looked for all along the way
-       in, and a charge that is stopped stops where it was shot. */
-    var fireAt = null;
-    if (t.alive && status(t) === 'ready' && t.fp !== null) {
-      var route = (opts.path || [{ x: a.x, y: a.y }]).slice();
-      var x0 = a.x, y0 = a.y, walk = [];
-      for (var wi = 0; wi < route.length; wi++) {
-        var from = wi ? route[wi - 1] : { x: a.x, y: a.y }, to = route[wi];
-        var len = Math.hypot(to.x - from.x, to.y - from.y), nstep = Math.max(1, Math.ceil(len / 0.5));
-        for (var ws = wi ? 1 : 0; ws <= nstep; ws++) walk.push({ x: from.x + (to.x - from.x) * ws / nstep, y: from.y + (to.y - from.y) * ws / nstep });
-      }
-      // and the last straight run into contact
-      var end = walk[walk.length - 1], cd = t.bld ? null : Math.hypot(t.x - end.x, t.y - end.y);
-      if (cd && cd > 2 * UNIT_R) {
-        var nIn = Math.ceil((cd - 2 * UNIT_R) / 0.5);
-        for (var wk = 1; wk <= nIn; wk++) {
-          var r0 = cd - (cd - 2 * UNIT_R) * wk / nIn;
-          walk.push({ x: t.x - (t.x - end.x) / cd * r0, y: t.y - (t.y - end.y) / cd * r0 });
-        }
-      }
-      for (var wp = 0; wp < walk.length && !fireAt; wp++) {
-        if (!a.bld) { a.x = walk[wp].x; a.y = walk[wp].y; }
-        if (unitDist(a, t) <= t.range && canShoot(state, t, a, 'defensive', {})) fireAt = walk[wp];
-      }
-      a.x = x0; a.y = y0;
-    }
-    if (fireAt) {
-      if (!a.bld) { a.x = fireAt.x; a.y = fireAt.y; }
-      var df = shoot(state, t, a, 'defensive', {});
-      df.log.forEach(function (l) { log.push(l); });
-      if (!a.alive) return { log: log, ok: false, wreck: wrecked };
-      var after = status(a);
-      if (after !== 'ready') {
-        log.push({ t: 'note', text: 'Defensive fire stops the charge — ' + a.label + ' is ' + after + ' and the assault fails.' });
-        return { log: log, ok: false };
-      }
-    }
-
-    /* Into base-to-base contact — against a garrison, up against its wall. A unit
-       going at the next section of its own building stays where it is. */
-    var held = t.bld ? { piece: t.bld, sec: t.sec || 0 } : null;
-    if (a.bld) { /* already in contact, wall to wall */ }
-    else if (held) {
-      var q0 = sectionRect(t);
-      var cx = clampTo(a.x, q0.x, q0.x + q0.w), cy = clampTo(a.y, q0.y, q0.y + q0.h);
-      var ux = a.x - cx, uy = a.y - cy, ul = Math.hypot(ux, uy) || 1;
-      a.x = cx + ux / ul * (UNIT_R + 0.05); a.y = cy + uy / ul * (UNIT_R + 0.05);
-    } else {
-      var v = Math.hypot(t.x - a.x, t.y - a.y) || 1;
-      a.x = t.x - (t.x - a.x) / v * (2 * UNIT_R);
-      a.y = t.y - (t.y - a.y) / v * (2 * UNIT_R);
-    }
-
-    martyr(a, t);
-    if (!t.alive || !a.alive) return { log: log, ok: true, wreck: wrecked };
-    martyr(t, a);
-    if (!t.alive || !a.alive) return { log: log, ok: true, wreck: wrecked };
-
-    var order = [{ atk: a, def: t }, { atk: t, def: a }];
-    // ...but the enemy strikes first when those bugs are the ones charging
-    if (bugGround(a) && doctrine(state, a.side, 'BP5')) {
-      order.reverse();
-      log.push({ t: 'note', text: 'Chitin Exoskeletons — ' + t.label + ' strikes first.' });
-    }
-    /* Three rounds each, taken in turn (p. 33): the attacker strikes, then the
-       assaulted unit answers, and again, until one of them breaks or six rounds
-       are done. A unit that is already Broken does not fight back at all — but
-       the attacker's three rounds are still all resolved against it. */
-    var ended = false;
-    var cowed = status(t) === 'broken';
-    if (cowed) log.push({ t: 'note', text: t.label + ' is broken and does not fight back.' });
-    for (var r = 0; r < 3 && !ended; r++) {
-      for (var o = 0; o < order.length && !ended; o++) {
-        var pair = order[o];
-        if (cowed && pair.atk === t) continue;
-        if (!pair.atk.alive || !pair.def.alive) { ended = true; break; }
-        var rd = assaultRound(state, pair.atk, pair.def, pair.atk === a ? 'attacker' : 'defender', r + 1);
-        if (rd.wreck) wrecked = rd.wreck;
-        rd.log.forEach(function (l) { log.push(l); });
-        if (!pair.def.alive) { ended = true; break; }
-        if (cowed) continue;                                  // it is already running: the blows keep coming
-        if (status(pair.def) === 'broken') {
-          fallBack(state, pair.def, pair.atk, 2);
-          log.push({ t: 'note', text: pair.def.label + ' breaks and falls back 2" — the assault ends.' });
-          ended = true; break;
-        }
-      }
-    }
-    if (cowed && !ended && t.alive) {
-      fallBack(state, t, a, 2);
-      log.push({ t: 'note', text: t.label + ' gives ground and falls back 2".' });
-      ended = true;
-    }
-    if (!ended && a.alive && t.alive) {
-      if (a.bld) log.push({ t: 'note', text: 'Neither side breaks — ' + a.label + ' holds its own section.' });
-      else {
-        fallBack(state, a, t, 2);
-        log.push({ t: 'note', text: 'Neither side breaks — ' + a.label + ' falls back 2".' });
-      }
-    }
-    /* "If the attackers win, they occupy the building and the defenders leave it
-       and fall back 2"" (p. 41). */
-    if (held && a.alive && status(a) !== 'broken' && (!t.alive || t.bld !== held.piece) &&
-      enterable(held.piece) && !occupant(state, held.piece, held.sec)) {
-      if (!t.alive && t.bld) { t.bld = null; t.sec = null; }
-      enterBuilding(state, a, held.piece, held.sec);
-      log.push({ t: 'note', text: a.label + ' takes the building.' });
-    }
-    a.frenzyOwed = 0; t.frenzyOwed = 0;
-    // Rite of Calmness (p. 142): the unit that won the assault sheds all its Suppression
-    var beaten = function (u) { return !u.alive || status(u) === 'broken'; };
-    var victor = beaten(t) && !beaten(a) ? a : beaten(a) && !beaten(t) ? t : null;
-    if (victor && victor.sp && campFlag(victor, 'calmness')) {
-      log.push({ t: 'rally', text: 'Rite of Calmness — ' + victor.label + ' sheds all ' + victor.sp + ' SP.' });
-      victor.sp = 0;
-    }
-    return { log: log, ok: true, wreck: wrecked };
-  }
-
-  /* Sappers go in against a wall or a building with demolition charges: +4 on the
-     first round, and a final 15+ or an unmodified 9 blows the cover in, so the
-     defender loses it for that round and the hits land one step harder. */
-  function sappingAt(state, atk, def, n) {
-    if (n !== 1 || !has(atk, 'Sappers') || isMachine(def)) return false;
-    return !!shelterOf(state, atk, def);             // in or behind something they can blow in
-  }
-  // the charge bonus against a piece of terrain: Sappers +4, anyone else +2 and
-  // only against the scenario objective (p. 54)
-  function chargeBonus(u, r) {
-    if (has(u, 'Sappers')) return 4;
-    return destructibleKind(r) === 'target' ? 2 : 0;
-  }
-
-  function assaultRound(state, atk, def, role, n) {
-    var log = [], parts = [], total = 0;
-    var roll = d10(); total = roll;
-    parts.push({ label: 'D10', v: roll });
-    total += atk.assault; parts.push({ label: 'Assault', v: atk.assault });
-    if (doctrine(state, atk.side, 'T4')) { total += 1; parts.push({ label: 'Improved HTH Training', v: 1 }); }
-    // Holy Fury (Path of the Prophet, p. 113): +2 in any assault, either way round
-    if (doctrine(state, atk.side, 'P4')) { total += 2; parts.push({ label: 'Holy Fury', v: 2 }); }
-    var sb = sizeBonus(atk.models);
-    if (sb) { total += sb; parts.push({ label: atk.models + ' models', v: sb }); }
-    if (isMachine(def) && (!isMachine(atk) || isOvergrown(atk)) && !has(def, 'Advanced Protection')) {
-      total += 4; parts.push({ label: 'assaulting a vehicle', v: 4 });
-    }
-    var pheroA = pheromoneBonus(state, atk, def, true);
-    if (pheroA) { total += pheroA; parts.push({ label: 'Pheromone Markers', v: pheroA }); }
-    // Fierce Attacks: Flying Infantry +4 in the first round (p. 124)
-    if (n === 1 && flyInf(atk) && doctrine(state, atk.side, 'BB4')) { total += 4; parts.push({ label: 'Fierce Attacks', v: 4 }); }
-    // Metal-covered Talons: +2 against vehicles (p. 124)
-    if (isMachine(def) && doctrine(state, atk.side, 'BP6')) { total += 2; parts.push({ label: 'Metal-covered Talons', v: 2 }); }
-    var sapping = sappingAt(state, atk, def, n);
-    if (sapping) { total += 4; parts.push({ label: 'Sappers', v: 4 }); }
-    var breached = sapping && (roll === 9 || total >= 15);
-    var wreck = null;
-    if (breached) {
-      var piece = shelterOf(state, atk, def);
-      if (piece && isDestructible(piece)) wreck = destroyTerrain(state, piece, log, atk);
-    }
-    var dres = defenceAgainst(state, atk, def, { assault: true });
-    var hits;
-    if (roll === 0) hits = 0;
-    else if (roll === 9) hits = Math.max(1, total - dres.value);
-    else hits = Math.max(0, total - dres.value);
-    // Rite of Frenzy (p. 142): the hits owed for the fallen land with this round
-    var owed = atk.frenzyOwed || 0;
-    if (owed) { hits += owed; atk.frenzyOwed = 0; parts.push({ label: 'Rite of Frenzy — owed hits', v: owed }); }
-    log.push({
-      t: 'round', text: 'Round ' + n + ' — ' + atk.label + ' (' + role + ')' +
-        (breached ? ' — charges blow the cover in!' : ''),
-      math: parts.map(fmtPart).join(', ') + ' = ' + total + ' vs Defence ' + dres.value +
-        ' → ' + hits + ' hit' + (hits === 1 ? '' : 's')
-    });
-    if (hits > 0 && isMachine(def)) {
-      // a machine in close combat: 1 bounces, 2-3 a point, 4-6 D3
-      var out = { damage: 0, rolls: [] }, vm = dmgMod(state, atk, def);
-      for (var h = 0; h < hits; h++) {
-        var r0 = d6(), r = Math.min(6, r0 + vm), tag;
-        if (r === 1) tag = 'Bounced off the armour!';
-        else if (r <= 3) { tag = 'Hull breached (1 DP)'; out.damage += 1; }
-        else { var c = d3(); tag = 'Charge placed! (D3 ' + c + ' DP)'; out.damage += c; }
-        out.rolls.push('D6 ' + r0 + (vm ? '+' + vm : '') + ' → ' + tag);
-      }
-      log.push({ t: 'hits', text: out.rolls.join(' · ') });
-      applyDamage(state, def, out.damage, log, atk);
-    } else if (hits > 0) {
-      var res = resolveAssaultHits(def, hits, (breached ? 1 : 0) + dmgMod(state, atk, def), atk);
-      log.push({ t: 'hits', text: res.rolls.join(' · ') +
-        (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
-      var fell = def.models;
-      applyResult(state, def, res, log, atk);
-      fell = Math.max(0, fell - def.models);
-      /* Rite of Frenzy: for every one of them killed, D3-1 automatic hits on the
-         enemy in the next round — unless the unit has broken. */
-      if (fell && def.alive && campFlag(def, 'frenzy') && status(def) !== 'broken') {
-        var fz = 0;
-        for (var fi = 0; fi < fell; fi++) fz += d3() - 1;
-        if (fz) { def.frenzyOwed = (def.frenzyOwed || 0) + fz; log.push({ t: 'note', text: 'Rite of Frenzy — ' + def.label + ' owes ' + fz + ' hit' + (fz > 1 ? 's' : '') + ' for its dead.' }); }
-      }
-    }
-    /* What the swarm's campaign needs to know: which enemy units died in an
-       assault, and which of those were human (Alternate Carbon-based Metabolism,
-       Fungi Symbiosis, p. 124). */
-    if (!def.alive && !def.fled) {
-      atk.assaultKills = (atk.assaultKills || 0) + 1;
-      if (def.faction !== 'bugs') atk.assaultKillsHuman = (atk.assaultKillsHuman || 0) + 1;
-    }
-    return { log: log, wreck: wreck };
-  }
-
-  function clampBoard(p) {
-    p.x = Math.max(UNIT_R, Math.min(BOARD.w - UNIT_R, p.x));
-    p.y = Math.max(UNIT_R, Math.min(BOARD.h - UNIT_R, p.y));
-    return p;
-  }
-
-  function fallBack(state, u, from, inch) {
-    // "the defenders leave it and fall back 2"" (p. 41): out through the far wall first
-    if (u.bld) leaveAway(state, u, from);
-    var vx = u.x - from.x, vy = u.y - from.y, len = Math.hypot(vx, vy) || 1;
-    for (var s = inch; s >= 0.5; s -= 0.5) {
-      var p = clampBoard({ x: u.x + vx / len * s, y: u.y + vy / len * s });
-      if (!TERRAIN[terrainAt(state, p.x, p.y)].impassable && !unitNear(state, p.x, p.y, u, 0.2)) {
-        u.x = p.x; u.y = p.y; return true;
-      }
-    }
-    return false;
-  }
-
-  /* ---------- movement ---------- */
-  // 16 directions, so lattice distance tracks a tape measure to about 1%
-  var NEI = (function () {
-    var out = [];
-    for (var di = -2; di <= 2; di++) for (var dj = -2; dj <= 2; dj++) {
-      if (!di && !dj) continue;
-      if (Math.abs(di) === 2 && Math.abs(dj) !== 1) continue;
-      if (Math.abs(dj) === 2 && Math.abs(di) !== 1) continue;
-      out.push([di, dj]);
-    }
-    return out;
-  })();
-
-  // Dijkstra over a half-inch lattice: distance in inches plus 1" for entering
-  // difficult terrain, so the reachable area is the real shape of the move.
-  // how much a piece of ground costs this unit to enter, and whether it can at all
-  /* Protectors in hi-mobility battle armour ("jump-pack powersuits", p. 65) go
-     over the ground rather than through it: no terrain penalties, and they can
-     clear walls, water, rocks and buildings — but they have to come down on
-     ground they could stand on. Unlike Flying Infantry they still take cover
-     where they land. */
-  function jumps(u) { return !!(u && u.jets && u.cls === 'infantry'); }
-  function terrainCost(u, kind) {
-    var t = TERRAIN[kind];
-    if (isFlying(u) || flyInf(u) || jumps(u)) return 0;   // aircraft, Flying Infantry and jump packs ignore the ground
-    var pr = propOf(u);
-    if (pr && pr.water && (t.shallow || kind === 'deep')) return 0;   // a hovercraft skims
-    // a walker steps through difficult area terrain as infantry does — but a wall or a fence costs it what it costs any hull (p. 180)
-    var heavy = u.cls === 'vehicle' && !(pr && pr.footed && !t.linear);
-    // Riders (p. 94) lose 2" to rough going where a man on foot loses 1"
-    // barbed wire: the extra D6" rolled before the move (p. 42), whatever is crossing
-    if (t.wire) return u.wireRoll || 6;
-    if (!heavy && hasOwn(u, 'Riders')) {
-      var mt = mountOf(u);
-      if (mt && mt.smooth) return 0;                         // a grav bike skims it
-      if (mt && mt.rough && t.movePenalty && !t.linear) return mt.rough;   // a motorbike bogs down in rough ground
-      return t.movePenalty * 2;
-    }
-    return t.movePenalty * (heavy ? 2 : 1);
-  }
-  function terrainBars(u, kind) {
-    var t = TERRAIN[kind];
-    if (isFlying(u) || flyInf(u) || jumps(u)) return false;
-    /* Riders (p. 94) cannot cross a linear obstacle nor occupy a building: bikes,
-       beasts and grav sleds go around. */
-    if (hasOwn(u, 'Riders')) {
-      if (kind === 'building' || kind === 'bunker' || kind === 'burning') return true;
-      // ...nor cross a wall, unless it rides a horse, which jumps it (Appendix 3)
-      var mtL = mountOf(u);
-      if (TERRAIN[kind].destructible === 'linear' && !(mtL && mtL.linear)) return true;
-    }
-    // a vehicle cannot enter a building or cross a high wall either
-    if (u.cls === 'vehicle' && (kind === 'building' || kind === 'bunker' || kind === 'burning')) return true;
-    // ...though a Tier III-V hull simply drives through a wall and flattens it (p. 35)
-    if (u.cls === 'vehicle' && u.tier >= 3 && TERRAIN[kind].destructible === 'linear') return false;
-    // below that, a hull crosses no linear obstacle but barbed wire (p. 35)
-    if (u.cls === 'vehicle' && TERRAIN[kind].linear && !TERRAIN[kind].wire) return true;
-    var pr = propOf(u);
-    // a hovercraft skims water and other liquids — but not hot lava
-    if (pr && pr.water && kind === 'deep') return false;
-    return t.impassable;
-  }
-
-  /* Movement penalty (p. 42): 1" (2" for a vehicle) "when crossing a section of
-     linear terrain (cumulative – apply penalty for each crossed terrain) or
-     moving into or through a piece of area terrain (not cumulative – apply only
-     once, irrespective of the distance of the move in area terrain or
-     terrains)". So the search runs on two layers — before and after the area
-     penalty has been paid — and a unit that starts in area terrain is moving
-     through it, so it has paid from the first step. */
-  function field(state, u, allowance) {
-    var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
-    var N = cols * rows;
-    var idx = function (i, j) { return j * cols + i; };
-    var i0 = Math.round(u.x / STEP), j0 = Math.round(u.y / STEP);
-    var cost = new Float64Array(N * 2).fill(Infinity);
-    var came = new Int32Array(N * 2).fill(-1);
-    var terr = new Uint8Array(N);
-    var kindIndex = {}; var kinds = Object.keys(TERRAIN);
-    kinds.forEach(function (k, n) { kindIndex[k] = n; });
-    // a section of wire crossed costs the D6 rolled for this move
-    if (u.wireRoll == null && !isFlying(u) && !flyInf(u) && !jumps(u) && state.terrain.some(function (r) { return r.kind === 'wire'; })) {
-      u.wireRoll = d6();
-    }
-
-    function kindAt(i, j) {
-      var k = idx(i, j);
-      if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
-      return kinds[terr[k] - 1];
-    }
-    function blockedBy(i, j) {
-      var x = i * STEP, y = j * STEP;
-      if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) return true;
-      if (terrainBars(u, kindAt(i, j))) return true;
-      // aircraft "can move over other units" (p. 38); they only may not finish within 1"
-      if (isFlying(u)) return false;
-      for (var n = 0; n < state.units.length; n++) {
-        var o = state.units[n];
-        if (!o.alive || o === u || o.side === u.side || o.aboard || o.x < 0) continue;
-        if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) return true;   // stay 1" clear of the enemy
-      }
-      return false;
-    }
-    var linear = function (k) { return !!TERRAIN[k].linear; };
-    var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
-    /* The area terrain a unit standing at a point counts as in (see
-       kindsUnder), or null; worked out once a point. Stepping into it, or
-       starting in it, costs the penalty once a move (p. 42). */
-    var areaCache = new Int16Array(N).fill(-1);
-    function areaAt(i, j) {
-      var c = idx(i, j);
-      if (areaCache[c] < 0) {
-        var kk = kindsUnder(state, null, i * STEP, j * STEP)[0];
-        areaCache[c] = area(kk) ? kindIndex[kk] + 1 : 0;
-      }
-      return areaCache[c] ? kinds[areaCache[c] - 1] : null;
-    }
-
-    var k0 = kindsUnder(state, u)[0];
-    var startPaid = area(k0) ? 1 : 0;
-    var heap = [{ i: i0, j: j0, p: startPaid, c: startPaid ? terrainCost(u, k0) : 0 }];
-    cost[idx(i0, j0) * 2 + startPaid] = heap[0].c;
-    var seen = [];
-    while (heap.length) {
-      var bi = 0;
-      for (var h = 1; h < heap.length; h++) if (heap[h].c < heap[bi].c) bi = h;
-      var cur = heap.splice(bi, 1)[0];
-      var ck = idx(cur.i, cur.j) * 2 + cur.p;
-      if (cur.c > cost[ck]) continue;
-      seen.push(cur);
-      for (var n = 0; n < NEI.length; n++) {
-        var di = NEI[n][0], dj = NEI[n][1];
-        var ni = cur.i + di, nj = cur.j + dj;
-        if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue;
-        if (blockedBy(ni, nj)) continue;
-        var mi = cur.i + Math.round(di / 2), mj = cur.j + Math.round(dj / 2);
-        if ((Math.abs(di) > 1 || Math.abs(dj) > 1) && blockedBy(mi, mj)) continue;
-        var step = STEP * Math.hypot(di, dj), paid = cur.p;
-        var k1 = kindAt(cur.i, cur.j), k2 = kindAt(ni, nj), km = kindAt(mi, mj);
-        // a linear piece is paid for every time it is crossed: on stepping onto it
-        if (linear(k2) && k2 !== k1) step += terrainCost(u, k2);
-        else if (linear(km) && km !== k1 && km !== k2) step += terrainCost(u, km);
-        // area terrain once in the whole move
-        var a2 = areaAt(ni, nj);
-        if (!paid && (a2 || area(km))) { step += terrainCost(u, a2 || km); paid = 1; }
-        var nc = cur.c + step;
-        if (nc > allowance + 1e-6) continue;
-        var nk = idx(ni, nj) * 2 + paid;
-        if (nc < cost[nk]) {
-          cost[nk] = nc;
-          came[nk] = ck;
-          heap.push({ i: ni, j: nj, p: paid, c: nc });
-        }
-      }
-    }
-    // the cheaper of the two layers, for each point on the table
-    var best = new Float64Array(N);
-    for (var q = 0; q < N; q++) best[q] = Math.min(cost[q * 2], cost[q * 2 + 1]);
-    var seenOnce = [], mark = new Uint8Array(N);
-    seen.forEach(function (sn) {
-      var k = idx(sn.i, sn.j);
-      if (mark[k]) return;
-      mark[k] = 1; seenOnce.push({ i: sn.i, j: sn.j, c: best[k] });
-    });
-    return { cols: cols, rows: rows, cost: best, layered: cost, came: came, seen: seenOnce, idx: idx };
-  }
-
-  /* A rough measure of how far a hull must come round to face a point: none
-     inside its front quarter, one turn to either side, two to face about. The
-     drive itself is priced turn by turn along its route by `driveField` below;
-     this is only for asking the question from where a unit stands.
-
-     The same page lets it go backwards instead: "vehicles may move backwards in
-     a straight line, but their movement distance is halved when doing so". That
-     needs no turn at all, so for ground behind the hull the cheaper of the two
-     is what it actually does. `driveCost` answers both together. */
-  function turnsTo(u, x, y) {
-    var f = u.facing == null ? 0 : u.facing;
-    var d = angleWrap(Math.atan2(y - u.y, x - u.x) - f);
-    d = Math.abs(d);
-    if (d <= Math.PI / 4) return 0;                    // inside the front quarter
-    if (d <= Math.PI * 3 / 4) return 1;                // a quarter turn either way
-    return 2;                                          // about face
-  }
-  function turnToll(u, x, y) {
-    if (!u || u.cls !== 'vehicle' || !u.turn) return 0;
-    return turnsTo(u, x, y) * u.turn;
-  }
-  /* What a given destination really costs this unit: for infantry, the ground it
-     walks over; for a vehicle, that plus its turns — or, if the ground is behind
-     it, twice the distance driven in reverse with no turn at all. */
-  function driveCost(u, x, y, ground) {
-    if (!u || u.cls !== 'vehicle') return ground;
-    var forward = ground + turnToll(u, x, y);
-    if (!u.turn || turnsTo(u, x, y) < 2) return forward;
-    // an about-face: reversing in a straight line may well be cheaper
-    return Math.min(forward, ground * 2);
-  }
-
-  /* ---------- a ground vehicle's drive (p. 35) ----------
-     "Vehicles move in straight lines, and may make turns by reducing the range of
-     their movement... the cost of a single turn of up to 90°... for every turn
-     made on the way." So a hull is searched for with its heading as part of where
-     it is: it rolls straight on along one of the lattice's sixteen headings, and
-     changing heading costs a turn for every 90° or part of it — each bend on the
-     way round a wood is paid for, not just the angle to the finish.
-
-     "Vehicles may move backwards in a straight line, but their movement distance
-     is halved": straight back along the line it faces, at two inches of
-     allowance for every inch, with no turn and its front still where it was. */
-  var HEAD = NEI.map(function (d) { return Math.atan2(d[1], d[0]); });
-  function turnsBetween(h1, h2) {
-    var d = Math.abs(HEAD[h1] - HEAD[h2]);
-    if (d > Math.PI) d = 2 * Math.PI - d;
-    return d < 1e-6 ? 0 : Math.ceil(d / (Math.PI / 2) - 1e-9);
-  }
-  function nearestHead(a) {
-    var best = 0, bd = Infinity;
-    for (var h = 0; h < HEAD.length; h++) {
-      var d = Math.abs(HEAD[h] - a);
-      if (d > Math.PI) d = 2 * Math.PI - d;
-      if (d < bd) { bd = d; best = h; }
-    }
-    return best;
-  }
-  function drives(u) { return !!u && u.cls === 'vehicle' && u.move > 0 && !hasOwn(u, 'Immobile'); }
-
-  var driveCache = { key: null, f: null };
-  function driveKey(state, u, allowance) {
-    var k = [u.id, u.x, u.y, u.facing, u.turn, u.move, allowance, u.wireRoll, state.terrain.length];
-    state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side) k.push(o.x, o.y, o.bld ? 1 : 0); });
-    // where every piece stands, not just what it is: a new table is a new drive
-    state.terrain.forEach(function (r) { k.push(r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0); });
-    return k.join(',');
-  }
-
-  function driveField(state, u, allowance) {
-    var key = driveKey(state, u, allowance);
-    if (driveCache.key === key) return driveCache.f;
-    var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
-    var N = cols * rows, H = HEAD.length;
-    var idx = function (i, j) { return j * cols + i; };
-    var i0 = Math.round(u.x / STEP), j0 = Math.round(u.y / STEP);
-    var terr = new Uint8Array(N), blk = new Int8Array(N);   // 0 unknown, 1 open, 2 blocked
-    var kinds = Object.keys(TERRAIN), kindIndex = {};
-    kinds.forEach(function (k, n) { kindIndex[k] = n; });
-    if (u.wireRoll == null && state.terrain.some(function (r) { return r.kind === 'wire'; })) u.wireRoll = d6();
-    function kindAt(i, j) {
-      var k = idx(i, j);
-      if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
-      return kinds[terr[k] - 1];
-    }
-    function blockedBy(i, j) {
-      var k = idx(i, j);
-      if (blk[k]) return blk[k] === 2;
-      var x = i * STEP, y = j * STEP, b = false;
-      if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) b = true;
-      else if (terrainBars(u, kindAt(i, j))) b = true;
-      else for (var n = 0; n < state.units.length; n++) {
-        var o = state.units[n];
-        if (!o.alive || o === u || o.side === u.side || o.aboard || o.x < 0) continue;
-        if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) { b = true; break; }
-      }
-      blk[k] = b ? 2 : 1;
-      return b;
-    }
-    var linear = function (k) { return !!TERRAIN[k].linear; };
-    var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
-    // one step straight on along heading h: its cost, and whether it pays the area penalty
-    function stepCost(ci, cj, h, paid) {
-      var di = NEI[h][0], dj = NEI[h][1], ni = ci + di, nj = cj + dj;
-      if (ni < 0 || nj < 0 || ni >= cols || nj >= rows || blockedBy(ni, nj)) return null;
-      var mi = ci + Math.round(di / 2), mj = cj + Math.round(dj / 2);
-      if ((Math.abs(di) > 1 || Math.abs(dj) > 1) && blockedBy(mi, mj)) return null;
-      var run = STEP * Math.hypot(di, dj), pen = 0;
-      var k1 = kindAt(ci, cj), k2 = kindAt(ni, nj), km = kindAt(mi, mj);
-      if (linear(k2) && k2 !== k1) pen += terrainCost(u, k2);
-      else if (linear(km) && km !== k1 && km !== k2) pen += terrainCost(u, km);
-      if (!paid && (area(k2) || area(km))) { pen += terrainCost(u, area(k2) ? k2 : km); paid = 1; }
-      return { i: ni, j: nj, run: run, pen: pen, paid: paid };
-    }
-
-    var S = N * H * 2;
-    var cost = new Float64Array(S).fill(Infinity), came = new Int32Array(S).fill(-1), turnsN = new Uint8Array(S);
-    var sid = function (cell, h, p) { return (cell * H + h) * 2 + p; };
-    // a binary heap of states by cost
-    var hc = [], hs = [];
-    function push(c, st) {
-      var n = hc.length; hc.push(c); hs.push(st);
-      while (n > 0) {
-        var pa = (n - 1) >> 1;
-        if (hc[pa] <= hc[n]) break;
-        var tc = hc[pa]; hc[pa] = hc[n]; hc[n] = tc; var ts = hs[pa]; hs[pa] = hs[n]; hs[n] = ts; n = pa;
-      }
-    }
-    function pop() {
-      var top = hs[0], lc = hc.pop(), ls = hs.pop();
-      if (hc.length) {
-        hc[0] = lc; hs[0] = ls;
-        var n = 0, L = hc.length;
-        for (;;) {
-          var a = 2 * n + 1, b = a + 1, m = n;
-          if (a < L && hc[a] < hc[m]) m = a;
-          if (b < L && hc[b] < hc[m]) m = b;
-          if (m === n) break;
-          var tc = hc[m]; hc[m] = hc[n]; hc[n] = tc; var ts = hs[m]; hs[m] = hs[n]; hs[n] = ts; n = m;
-        }
-      }
-      return top;
-    }
-    var k0 = kindAt(i0, j0), startPaid = area(k0) ? 1 : 0, c0 = startPaid ? terrainCost(u, k0) : 0;
-    var h0 = nearestHead(u.facing == null ? 0 : u.facing), turn = u.turn || 0;
-    var cell0 = idx(i0, j0);
-    cost[sid(cell0, h0, startPaid)] = c0; push(c0, sid(cell0, h0, startPaid));
-    var best = new Float64Array(N).fill(Infinity), bestState = new Int32Array(N).fill(-1);
-    while (hc.length) {
-      var cc = hc[0], st = pop();
-      if (cc > cost[st]) continue;
-      var p = st & 1, h = (st >> 1) % H, cell = Math.floor((st >> 1) / H);
-      var ci = cell % cols, cj = Math.floor(cell / cols);
-      if (cc < best[cell]) { best[cell] = cc; bestState[cell] = st; }
-      // come round to another heading, where it stands
-      for (var h2 = 0; h2 < H; h2++) {
-        if (h2 === h) continue;
-        var tcst = cc + turnsBetween(h, h2) * turn, ts2 = sid(cell, h2, p);
-        if (tcst > allowance + 1e-6 || tcst >= cost[ts2]) continue;
-        cost[ts2] = tcst; came[ts2] = st; turnsN[ts2] = turnsN[st] + turnsBetween(h, h2); push(tcst, ts2);
-      }
-      // ...or roll straight on
-      var sc = stepCost(ci, cj, h, p);
-      if (!sc) continue;
-      var nc = cc + sc.run + sc.pen, ns = sid(idx(sc.i, sc.j), h, sc.paid);
-      if (nc > allowance + 1e-6 || nc >= cost[ns]) continue;
-      cost[ns] = nc; came[ns] = st; turnsN[ns] = turnsN[st]; push(nc, ns);
-    }
-    // backwards, in a straight line, at half distance
-    var rev = new Float64Array(N).fill(Infinity);
-    var hb = nearestHead((u.facing == null ? 0 : u.facing) + Math.PI);
-    var ri = i0, rj = j0, rp = startPaid, rc = c0;
-    for (;;) {
-      var rs = stepCost(ri, rj, hb, rp);
-      if (!rs) break;
-      rc += 2 * rs.run + rs.pen;
-      if (rc > allowance + 1e-6) break;
-      ri = rs.i; rj = rs.j; rp = rs.paid;
-      rev[idx(ri, rj)] = rc;
-    }
-    var seen = [];
-    for (var q = 0; q < N; q++) {
-      var fc = Math.min(best[q], rev[q]);
-      if (isFinite(fc)) seen.push({ i: q % cols, j: Math.floor(q / cols), c: fc });
-    }
-    var f = {
-      cols: cols, rows: rows, idx: idx, seen: seen,
-      cost: (function () { var o = new Float64Array(N); for (var q2 = 0; q2 < N; q2++) o[q2] = Math.min(best[q2], rev[q2]); return o; })(),
-      // what it costs to finish on this point, and how: turns taken, backwards or not
-      at: function (ti, tj) {
-        var k = idx(ti, tj);
-        if (rev[k] < best[k]) return { spent: rev[k], turns: 0, reverse: true, ground: rev[k] / 2 };
-        if (!isFinite(best[k])) return null;
-        var t = turnsN[bestState[k]];
-        return { spent: best[k], turns: t, reverse: false, ground: best[k] - t * turn };
-      },
-      // the route there: its corners, the heading it ends on (none when reversing)
-      route: function (ti, tj) {
-        var k = idx(ti, tj);
-        if (rev[k] < best[k]) {
-          var r0 = [{ x: u.x, y: u.y }, { x: ti * STEP, y: tj * STEP }];
-          r0.facing = null; r0.reverse = true; r0.turns = 0;
-          return r0;
-        }
-        if (bestState[k] < 0) return null;
-        var pts = [], st2 = bestState[k], guard = 0, last = -1;
-        var endH = (st2 >> 1) % H;
-        while (st2 >= 0 && guard++ < 20000) {
-          var c2 = Math.floor((st2 >> 1) / H);
-          if (c2 !== last) { pts.push({ x: (c2 % cols) * STEP, y: Math.floor(c2 / cols) * STEP }); last = c2; }
-          st2 = came[st2];
-        }
-        pts.reverse();
-        pts.facing = HEAD[endH]; pts.reverse = false; pts.turns = turnsN[bestState[k]];
-        return pts;
-      }
+  /* ---- movement: in rules/move.js ---- */
+  var KIT_MOVE = null;
+  // what the move kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
+  function eMove() {
+    return {
+      BOARD: BOARD, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap, d6: d6,
+      flyInf: flyInf, hasOwn: hasOwn, isFlying: isFlying, kindsUnder: kindsUnder, mountOf: mountOf,
+      propOf: propOf, rectPointDist: rectPointDist, sectionRect: sectionRect, terrainAt: terrainAt,
+      unitNear: unitNear
     };
-    driveCache.key = key; driveCache.f = f;
-    return f;
   }
-
-  function reachable(state, u, allowance) {
-    if (drives(u)) {
-      var df = driveField(state, u, allowance), dout = [];
-      df.seen.forEach(function (n) {
-        var x = n.i * STEP, y = n.j * STEP;
-        if (unitNear(state, x, y, u, 1)) return;
-        var at = df.at(n.i, n.j);
-        if (!at || at.spent > allowance + 1e-6) return;
-        dout.push({ x: x, y: y, cost: at.ground, spent: at.spent, turns: at.turns, reverse: at.reverse });
-      });
-      return dout;
-    }
-    var f = field(state, u, allowance), out = [];
-    f.seen.forEach(function (n) {
-      var x = n.i * STEP, y = n.j * STEP;
-      if (unitNear(state, x, y, u, 1)) return;      // must finish at least 1" from other units
-      // Flying Infantry and jump troops go over impassable ground but cannot land on it
-      if ((flyInf(u) || jumps(u)) && TERRAIN[terrainAt(state, x, y)].impassable) return;
-      var ground = f.cost[f.idx(n.i, n.j)];
-      var real = driveCost(u, x, y, ground);
-      if (real > allowance) return;
-      out.push({ x: x, y: y, cost: ground, spent: real, turns: u.cls === 'vehicle' ? turnsTo(u, x, y) : 0,
-        reverse: u.cls === 'vehicle' && real < ground + turnToll(u, x, y) });
-    });
-    return out;
+  function kitMove() {
+    return KIT_MOVE || (KIT_MOVE = (root.PMCMove || require('./move.js'))(eMove()));
   }
-
-  // the route the unit actually takes, for showing the move
-  function pathTo(state, u, allowance, target) {
-    if (drives(u)) {
-      var df = driveField(state, u, allowance);
-      var rt = df.route(Math.round(target.x / STEP), Math.round(target.y / STEP));
-      if (!rt) { var none = [{ x: u.x, y: u.y }, { x: target.x, y: target.y }]; none.facing = undefined; return none; }
-      // thin it to its corners, and finish on the very point asked for
-      var dp = [rt[0]];
-      for (var dn = 1; dn < rt.length - 1; dn++) {
-        var da = dp[dp.length - 1], db = rt[dn], dc = rt[dn + 1];
-        if (Math.abs((db.x - da.x) * (dc.y - da.y) - (db.y - da.y) * (dc.x - da.x)) > 0.01) dp.push(db);
-      }
-      dp.push({ x: target.x, y: target.y });
-      dp[0] = { x: u.x, y: u.y };
-      dp.facing = rt.facing; dp.reverse = rt.reverse; dp.turns = rt.turns;
-      return dp;
-    }
-    var f = field(state, u, allowance);
-    var ti = Math.round(target.x / STEP), tj = Math.round(target.y / STEP);
-    var k0 = f.idx(ti, tj);
-    if (!isFinite(f.cost[k0])) return [{ x: u.x, y: u.y }, { x: target.x, y: target.y }];
-    var k = f.layered[k0 * 2] <= f.layered[k0 * 2 + 1] ? k0 * 2 : k0 * 2 + 1;
-    var pts = [], guard = 0;
-    while (k >= 0 && guard++ < 4000) {
-      var cell = k >> 1, i = cell % f.cols, j = Math.floor(cell / f.cols);
-      pts.push({ x: i * STEP, y: j * STEP });
-      k = f.came[k];
-    }
-    pts.reverse();
-    // thin it out: keep the corners, drop points on a straight run
-    var out = [pts[0]];
-    for (var n = 1; n < pts.length - 1; n++) {
-      var a2 = out[out.length - 1], b2 = pts[n], c2 = pts[n + 1];
-      var cross = (b2.x - a2.x) * (c2.y - a2.y) - (b2.y - a2.y) * (c2.x - a2.x);
-      if (Math.abs(cross) > 0.01) out.push(b2);
-    }
-    out.push(pts[pts.length - 1]);
-    return out;
-  }
+  function jumps(u) { return (KIT_MOVE || kitMove()).jumps(u); }
+  function terrainCost(u, kind) { return (KIT_MOVE || kitMove()).terrainCost(u, kind); }
+  function terrainBars(u, kind) { return (KIT_MOVE || kitMove()).terrainBars(u, kind); }
+  function field(state, u, allowance) { return (KIT_MOVE || kitMove()).field(state, u, allowance); }
+  function turnsTo(u, x, y) { return (KIT_MOVE || kitMove()).turnsTo(u, x, y); }
+  function turnToll(u, x, y) { return (KIT_MOVE || kitMove()).turnToll(u, x, y); }
+  function driveCost(u, x, y, ground) { return (KIT_MOVE || kitMove()).driveCost(u, x, y, ground); }
+  function drives(u) { return (KIT_MOVE || kitMove()).drives(u); }
+  function reachable(state, u, allowance) { return (KIT_MOVE || kitMove()).reachable(state, u, allowance); }
+  function pathTo(state, u, allowance, target) { return (KIT_MOVE || kitMove()).pathTo(state, u, allowance, target); }
 
   /* ---------- rally ---------- */
   /* Inspiring Presence (p. 58): "Friendly troops within 12\" of a unit with the
@@ -4357,6 +2162,126 @@
   function survivors(u) {
     return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });
   }
+
+  /* The kits, made now that everything they are handed exists, and linked:
+     each name above that stood in for a kit's function becomes that function,
+     and every kit is handed the others' functions themselves, so a path search
+     calling terrainAt does not go through a stub each time. */
+  (function linkKits() {
+    kitSpace(); kitDamage(); kitDestruct(); kitShoot(); kitXeno(); kitAssault(); kitMove();
+    centreDist = KIT_SPACE.centreDist;
+    unitDist = KIT_SPACE.unitDist;
+    rectPointDist = KIT_SPACE.rectPointDist;
+    enterable = KIT_SPACE.enterable;
+    sectionsOf = KIT_SPACE.sectionsOf;
+    sectionRect = KIT_SPACE.sectionRect;
+    sectionHigh = KIT_SPACE.sectionHigh;
+    occupant = KIT_SPACE.occupant;
+    canGarrison = KIT_SPACE.canGarrison;
+    enterTargets = KIT_SPACE.enterTargets;
+    enterBuilding = KIT_SPACE.enterBuilding;
+    exitSpots = KIT_SPACE.exitSpots;
+    exitBuilding = KIT_SPACE.exitBuilding;
+    leaveAway = KIT_SPACE.leaveAway;
+    inches = KIT_SPACE.inches;
+    inRect = KIT_SPACE.inRect;
+    inPoly = KIT_SPACE.inPoly;
+    pieceDepth = KIT_SPACE.pieceDepth;
+    placePiece = KIT_SPACE.placePiece;
+    turnPoint = KIT_SPACE.turnPoint;
+    turnPiece = KIT_SPACE.turnPiece;
+    shapePiece = KIT_SPACE.shapePiece;
+    terrainAt = KIT_SPACE.terrainAt;
+    terrainOf = KIT_SPACE.terrainOf;
+    footprint = KIT_SPACE.footprint;
+    kindsUnder = KIT_SPACE.kindsUnder;
+    coverAt = KIT_SPACE.coverAt;
+    segRect = KIT_SPACE.segRect;
+    pointSegDist = KIT_SPACE.pointSegDist;
+    hasLoS = KIT_SPACE.hasLoS;
+    lineClear = KIT_SPACE.lineClear;
+    groundLevel = KIT_SPACE.groundLevel;
+    levelOf = KIT_SPACE.levelOf;
+    tooHighToHover = KIT_SPACE.tooHighToHover;
+    onHill = KIT_SPACE.onHill;
+    unitNear = KIT_SPACE.unitNear;
+    isMedic = KIT_DAMAGE.isMedic;
+    medicNearby = KIT_DAMAGE.medicNearby;
+    resolveShootingHits = KIT_DAMAGE.resolveShootingHits;
+    resolveAssaultHits = KIT_DAMAGE.resolveAssaultHits;
+    applyResult = KIT_DAMAGE.applyResult;
+    dmgMod = KIT_DAMAGE.dmgMod;
+    resolveDamage = KIT_DAMAGE.resolveDamage;
+    applyDamage = KIT_DAMAGE.applyDamage;
+    dropOff = KIT_DAMAGE.dropOff;
+    repair = KIT_DAMAGE.repair;
+    jammedNearby = KIT_DAMAGE.jammedNearby;
+    canHack = KIT_DAMAGE.canHack;
+    hack = KIT_DAMAGE.hack;
+    collars = KIT_DAMAGE.collars;
+    hackBurn = KIT_DAMAGE.hackBurn;
+    commandAboard = KIT_DAMAGE.commandAboard;
+    isDestructible = KIT_DESTRUCT.isDestructible;
+    destructibleKind = KIT_DESTRUCT.destructibleKind;
+    shelterOf = KIT_DESTRUCT.shelterOf;
+    canDemolish = KIT_DESTRUCT.canDemolish;
+    canCharge = KIT_DESTRUCT.canCharge;
+    destroyTerrain = KIT_DESTRUCT.destroyTerrain;
+    nearestClear = KIT_DESTRUCT.nearestClear;
+    shootTerrain = KIT_DESTRUCT.shootTerrain;
+    detonate = KIT_DESTRUCT.detonate;
+    assaultTerrain = KIT_DESTRUCT.assaultTerrain;
+    crushOnMove = KIT_DESTRUCT.crushOnMove;
+    nearestFacing = KIT_SHOOT.nearestFacing;
+    dugIn = KIT_SHOOT.dugIn;
+    sandbagged = KIT_SHOOT.sandbagged;
+    shotRange = KIT_SHOOT.shotRange;
+    shotMinRange = KIT_SHOOT.shotMinRange;
+    canShoot = KIT_SHOOT.canShoot;
+    markCall = KIT_SHOOT.markCall;
+    shotMods = KIT_SHOOT.shotMods;
+    shotOdds = KIT_SHOOT.shotOdds;
+    assaultOdds = KIT_SHOOT.assaultOdds;
+    shoot = KIT_SHOOT.shoot;
+    isXeno = KIT_XENO.isXeno;
+    xenoSenses = KIT_XENO.xenoSenses;
+    sightRange = KIT_XENO.sightRange;
+    tribeSeers = KIT_XENO.tribeSeers;
+    tribeSees = KIT_XENO.tribeSees;
+    dualMode = KIT_XENO.dualMode;
+    shieldFor = KIT_XENO.shieldFor;
+    enemyWithin = KIT_XENO.enemyWithin;
+    disruptedBy = KIT_XENO.disruptedBy;
+    bondMorale = KIT_XENO.bondMorale;
+    psychicBond = KIT_XENO.psychicBond;
+    infamyPanic = KIT_XENO.infamyPanic;
+    regainTargets = KIT_XENO.regainTargets;
+    regainControl = KIT_XENO.regainControl;
+    selfRepair = KIT_XENO.selfRepair;
+    teleportFrom = KIT_XENO.teleportFrom;
+    teleportPads = KIT_XENO.teleportPads;
+    teleportRoll = KIT_XENO.teleportRoll;
+    teleport = KIT_XENO.teleport;
+    canAssault = KIT_ASSAULT.canAssault;
+    chargeReach = KIT_ASSAULT.chargeReach;
+    chargeRoute = KIT_ASSAULT.chargeRoute;
+    canMartyr = KIT_ASSAULT.canMartyr;
+    assault = KIT_ASSAULT.assault;
+    chargeBonus = KIT_ASSAULT.chargeBonus;
+    clampBoard = KIT_ASSAULT.clampBoard;
+    fallBack = KIT_ASSAULT.fallBack;
+    jumps = KIT_MOVE.jumps;
+    terrainCost = KIT_MOVE.terrainCost;
+    terrainBars = KIT_MOVE.terrainBars;
+    field = KIT_MOVE.field;
+    turnsTo = KIT_MOVE.turnsTo;
+    turnToll = KIT_MOVE.turnToll;
+    driveCost = KIT_MOVE.driveCost;
+    drives = KIT_MOVE.drives;
+    reachable = KIT_MOVE.reachable;
+    pathTo = KIT_MOVE.pathTo;
+    KIT_SPACE.relink(eSpace()); KIT_DAMAGE.relink(eDamage()); KIT_DESTRUCT.relink(eDestruct()); KIT_SHOOT.relink(eShoot()); KIT_XENO.relink(eXeno()); KIT_ASSAULT.relink(eAssault()); KIT_MOVE.relink(eMove());
+  })();
 
   root.PMC = {
     BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,

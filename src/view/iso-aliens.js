@@ -1433,7 +1433,10 @@
       if (kit.forceHelm) {
         var hp = {};
         for (var hk in pal) hp[hk] = pal[hk];
-        hp.hat = pal.helmForce || pal.forceMid || pal.mid; hp.hatLit = pal.helmLit || pal.force || pal.light; hp.hatDark = pal.helmDark || pal.forceDark || pal.dark;
+        var hc = pal.helmForce || pal.forceMid || pal.mid, hl = pal.helmLit || pal.force || pal.light, hd = pal.helmDark || pal.forceDark || pal.dark;
+        // a drab helmet with a band of the colour round it, or the whole helmet painted
+        if (PH.helmBand) { hp.helmBand = hc; hp.helmBandLit = hl; hp.helmBandDark = hd; }
+        else { hp.hat = hc; hp.hatLit = hl; hp.hatDark = hd; }
         pal = hp;
       }
       if (kit.bug && PH.corpse) deadBug(body.getContext('2d'), w, h, ox, oy, pal, kit, s);

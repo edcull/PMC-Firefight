@@ -721,5 +721,21 @@ console.log('  vs the OpFor AI');
   ok('...and the engine refuses one', !(r && r.ok), r && r.why);
 })();
 
+/* "Rebel forces cannot use tactics" in a solitaire or cooperative game (p. 145):
+   whatever the set-up hands in, the engine takes none. */
+(function () {
+  console.log('\nsolitaire: no rebel tactics');
+  const e = Engine.create();
+  e.start({
+    tier: 3, pl: 1, scenario: 'secure',
+    armyA: R.rollArmy(3, 1, null, 'rebel'), armyB: R.rollArmy(3, 1, null, 'rebel'),
+    nameA: 'Commando', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel',
+    tactics: { A: 'wave', B: 'laststand' }, mode: 'ai', planet: 'sparse',
+    solo: { coop: false, faction: 'rebel', opFaction: 'rebel', names: ['Commando'] }
+  });
+  const t = e.state().tactics;
+  ok('a solitaire game has no tactic on either side', !t.A && !t.B, JSON.stringify(t));
+})();
+
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'all ') + checks + ' checks' + (bad ? '' : ' passed'));
 process.exit(bad ? 1 : 0);

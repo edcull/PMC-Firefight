@@ -39,7 +39,8 @@
     function musterPL() { return parseInt(el('sel-pl').value, 10) || 1; }
     function musterFaction() { return el('sel-faction') ? el('sel-faction').value : 'pmc'; }
     function musterTactic() {
-      if (musterFaction() !== 'rebel') return null;
+      // "Rebel forces cannot use tactics" in a solitaire or cooperative game (p. 145)
+      if (musterFaction() !== 'rebel' || muster.solo) return null;
       return (el('sel-tactic') && el('sel-tactic').value) || null;
     }
 
@@ -96,7 +97,7 @@
       var lims = musterLimits(tier, pl, c);
 
       var tf = el('tactic-field');
-      // Rebels cannot use Tactics in a solitaire game; they get the extra points instead (p. 147)
+      // Rebels cannot use Tactics in a solitaire game; they get the extra points instead (p. 145)
       if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
       var mh = document.querySelector('.muster-head b');
       if (mh) mh.textContent = muster.hot && muster.hot.step < 3
@@ -828,7 +829,8 @@
         return '<button type="button" class="doc' + (v === f ? ' on' : '') + '" data-army-pick="' + v + '"><b>' + escHtml(a.name) + '</b>' +
           '<span>' + escHtml(a.what) + '</span></button>';
       }).join('');
-      el('army-tactics').innerHTML = f !== 'rebel' ? '' :
+      el('army-tactics').innerHTML = f !== 'rebel' ? '' : muster.solo
+        ? '<p class="docnote">Rebel forces cannot use tactics in a solitaire or cooperative game: they get more composition points instead.</p>' :
         '<h4>Rebel tactic \u2014 chosen before the terrain goes down</h4><div class="docpick">' +
         [{ id: '', name: 'No tactic', text: 'A rebel force may take one tactic, or none.' }].concat(R.TACTICS).map(function (t) {
           return '<button type="button" class="doc' + (t.id === tac ? ' on' : '') + '" data-tactic-pick="' + t.id + '"><b>' + escHtml(t.name) + '</b>' +
