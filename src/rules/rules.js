@@ -3287,6 +3287,8 @@
      straight line. Returns a function giving, for a target, { cost, path } — or
      null when the charge cannot reach it. */
   function chargeReach(state, a, allowance) {
+    // a unit not on the table (in reserve, or aboard a transport) cannot charge anything from there
+    if (a.x < 0 || a.y < 0 || a.aboard) return function () { return null; };
     var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a) || drives(a);
     var f = straight ? null : field(state, a, allowance);
     return function (t) {
