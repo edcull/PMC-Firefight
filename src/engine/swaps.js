@@ -1,0 +1,173 @@
+/* PMC 2670 — Firefight : modifying the armies before the battle: what may be swapped for what
+
+   Made once by engine.js, the first time it is wanted. E is what it needs
+   of engine.js: what never changes bound here once, and
+   what does (the battle itself, and anything else reassigned) read through
+   E as it is now. It hands back the functions below. */
+(function (root) {
+  'use strict';
+  root.PMCEngineSwaps = function (E) {
+    var R = E.R, byId = E.byId, docsOf = E.docsOf, isAI = E.isAI, logLine = E.logLine,
+        lookAtDeployment = E.lookAtDeployment, makeUnit = E.makeUnit, pushRes = E.pushRes, render = E.render,
+        sideName = E.sideName;
+
+    /* ---- Modifying the armies (p. 46): up to a quarter of a player's units — half
+       with Tactical Flexibility (p. 87) — swapped for others of the same Unit
+       Tier: from the dossier in a campaign, from the whole list otherwise. ---- */
+    function swapAllowance(side) {
+      var n = E.state.units.filter(function (u) { return u.side === side && u.pickIdx != null; }).length;
+      return Math.floor(n * (docsOf(side).indexOf('O6') >= 0 ? 0.5 : 0.25));
+    }
+    function swapOptions(side, u) {
+      var up = u && R.profile(u.key);
+      if (!u || u.pickIdx == null || u.command || !up || up.leaderBug || up.turretSet) return [];
+      if (u.aboard || (u.cargo && u.cargo.length)) return [];      // already strapped into a drop pod, or carrying one
+      var cfg = E.state.cfg, held = heldSwaps(side);
+      if (held.some(function (d) { return d.outId === u.id; })) return [];   // already down to be swapped
+      if (cfg.dossier) {
+        return ((cfg.bench && cfg.bench[side]) || []).filter(function (e) {
+          var p = R.profile(e.key); return p && p.tier === u.tier && !p.command && !p.turretSet &&
+            !held.some(function (d) { return d.entry === e; });
+        }).map(function (e) { return { id: e.rid, key: R.joinPick(e.key, e.prop, e.drone), name: e.name, entry: e }; });
+      }
+      return R.listFor(u.faction).filter(function (p) {
+        return p.tier === u.tier && !p.command && !p.turretSet && !p.noSlot && p.key !== u.key && !p.leaderBug;
+      }).map(function (p) { return { id: p.key, key: p.key, name: p.name, entry: null }; });
+    }
+    /* Each player's allowance, offered on the deployment card until they put their
+       first unit down: opening it (swapopen) brings up the swap card, and placing
+       a unit means the list stands as it is. */
+    function beginSwaps() {
+      E.state.swapAvail = {};
+      E.state.swapStage = null;
+      if (E.state.solo || E.state.cfg.noSwap) return;
+      ['A', 'B'].forEach(function (sd) {
+        if (isAI(sd) || swapAllowance(sd) < 1) return;
+        if (!E.state.units.some(function (u) { return u.side === sd && swapOptions(sd, u).length; })) return;
+        var n = swapAllowance(sd);
+        E.state.swapAvail[sd] = { side: sd, left: n, total: n, pick: null, done: [] };
+      });
+      /* In a hotseat both players modify their armies in secret, one after the
+         other, before anyone deploys: each swap is held back until both are done,
+         so the second player sees the first one's force as it was mustered. */
+      if (E.state.cfg.secretSwaps) {
+        var order = ['A', 'B'].filter(function (sd) { return E.state.swapAvail[sd]; });
+        if (order.length) {
+          E.state.swapStage = { order: order, i: 0 };
+          E.state.swapAsk = E.state.swapAvail[order[0]];
+          E.state.swapAsk.pick = null;
+        }
+      }
+    }
+    // the swaps a side has made but not yet revealed, in a hotseat's secret round
+    function heldSwaps(side) {
+      var sa = E.state.swapStage && E.state.swapAvail && E.state.swapAvail[side];
+      return sa ? sa.done.filter(function (d) { return d.held; }) : [];
+    }
+    function canSwapNow(side) {
+      if (E.state.swapStage) return false;             // the secret round asks each player in turn
+      var sa = E.state.swapAvail && E.state.swapAvail[side];
+      return !!sa && sa.left > 0 && E.state.phase === 'deploy' &&
+        !E.state.units.some(function (u) { return u.side === side && u.x >= 0; });
+    }
+    function legalList(side, keys) {
+      var cfg = E.state.cfg;
+      return R.checkArmy(keys, cfg.tier, cfg.pl, docsOf(side), E.state.tactics && E.state.tactics[side], null);
+    }
+    function doSwap(side, outId, inId) {
+      var sa = E.state.swapAsk;
+      var old = byId(outId);
+      if (!sa || sa.side !== side || sa.left < 1) return 'No swaps left.';
+      if (!old || old.side !== side) return 'Not one of yours.';
+      var opt = swapOptions(side, old).filter(function (o) { return o.id === inId; })[0];
+      if (!opt) return 'That cannot be swapped in for it.';
+      var cfg = E.state.cfg, armyKey = side === 'A' ? 'armyA' : 'armyB';
+      var keys = cfg[armyKey].slice(), i = old.pickIdx;
+      heldSwaps(side).forEach(function (d) { keys[byId(d.outId).pickIdx] = d.key; });
+      var before = legalList(side, keys).ok;
+      keys[i] = opt.key;
+      var chk = legalList(side, keys);
+      if (before && !chk.ok) return chk.faults[0] || 'That would make the list illegal.';
+      if (E.state.swapStage) {
+        // a secret round: noted now, made when both players are done
+        sa.left--; sa.pick = null;
+        sa.done.push({ out: old.name, in: opt.name, outId: old.id, key: opt.key, entry: opt.entry, held: true });
+        if (sa.left < 1) { swapsDone(); return null; }
+        render();
+        return null;
+      }
+      applySwap(side, old, opt, sa);
+      sa.left--; sa.pick = null;
+      if (sa.left < 1) { swapsDone(); return null; }
+      render();
+      return null;
+    }
+    function applySwap(side, old, opt, sa) {
+      var cfg = E.state.cfg, armyKey = side === 'A' ? 'armyA' : 'armyB', i = old.pickIdx;
+      var pick = R.splitPick(opt.key), prof = R.profile(pick.key);
+      var nu = makeUnit(prof, side, i, pick.prop || R.defaultDrive(prof), pick.drone, opt.entry, pick.riders);
+      nu.id = old.id + 's' + (sa.done.length + 1);
+      nu.pickIdx = i;
+      if (R.canMount(prof, pick.riders)) R.applyMount(nu, pick.mount || 'none');
+      nu.startSize = nu.models;
+      // it takes the old unit's place in the army: its id, and whatever the scenario made of it
+      nu.id = old.id;
+      ['reserve', 'wave', 'owner', 'paint', 'x', 'y'].forEach(function (k) { if (old[k] !== undefined) nu[k] = old[k]; });
+      E.state.units[E.state.units.indexOf(old)] = nu;
+      cfg[armyKey][i] = opt.key;
+      if (cfg.dossier) {
+        var was = cfg.dossier[side][i];
+        cfg.dossier[side][i] = opt.entry;
+        var bench = cfg.bench[side];
+        bench.splice(bench.indexOf(opt.entry), 1);
+        if (was) bench.push(was);
+      }
+      var d = sa.done.filter(function (x) { return x.held && x.outId === old.id; })[0];
+      if (d) { d.held = false; d.in = nu.name; }
+      else sa.done.push({ out: old.name, in: nu.name });
+      logLine('note', sideName(side) + ' swaps ' + old.name + ' for ' + nu.name + '.');
+    }
+    function swapsDone() {
+      var sa = E.state.swapAsk;
+      E.state.swapAsk = null;
+      var stg = E.state.swapStage;
+      if (stg) {
+        // the next player's turn to modify theirs, or, with both done, every swap made at once
+        if (++stg.i < stg.order.length) {
+          E.state.swapAsk = E.state.swapAvail[stg.order[stg.i]];
+          E.state.swapAsk.pick = null;
+          render();
+          return;
+        }
+        E.state.swapStage = null;
+        stg.order.forEach(function (sd) {
+          var s2 = E.state.swapAvail[sd];
+          s2.done.filter(function (x) { return x.held; }).forEach(function (x) {
+            var old = byId(x.outId);
+            applySwap(sd, old, { id: x.entry ? x.entry.rid : x.key, key: x.key, name: x.in, entry: x.entry }, s2);
+          });
+          E.state.swapAvail[sd] = null;
+          if (s2.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sd), side: sd,
+            note: 'Swapped in secret for units of the same Tier before deployment (p. 46).',
+            list: s2.done.map(function (x) { return { text: x.out + ' → ' + x.in, side: sd }; }) });
+        });
+        lookAtDeployment();
+        render();
+        return;
+      }
+      if (sa) {
+        E.state.swapAvail[sa.side] = null;
+        if (sa.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sa.side), side: sa.side,
+          note: 'Swapped for units of the same Tier before deployment (p. 46).',
+          list: sa.done.map(function (d) { return { text: d.out + ' → ' + d.in, side: sa.side }; }) });
+      }
+      render();
+    }
+
+    return {
+      swapOptions: swapOptions, beginSwaps: beginSwaps, canSwapNow: canSwapNow, doSwap: doSwap,
+      swapsDone: swapsDone
+    };
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineSwaps;
+})(typeof window !== 'undefined' ? window : global);
