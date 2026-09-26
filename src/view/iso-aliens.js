@@ -1435,7 +1435,7 @@
         for (var hk in pal) hp[hk] = pal[hk];
         var hc = pal.helmForce || pal.forceMid || pal.mid, hl = pal.helmLit || pal.force || pal.light, hd = pal.helmDark || pal.forceDark || pal.dark;
         // a drab helmet with a band of the colour round it, or the whole helmet painted
-        if (PH.helmBand) { hp.helmBand = hc; hp.helmBandLit = hl; hp.helmBandDark = hd; }
+        if (PH.helmBand) { hp.helmBand = hc; hp.helmBandLit = hl; hp.helmBandDark = hd; hp.helmTop = PH.helmTop; }
         else { hp.hat = hc; hp.hatLit = hl; hp.hatDark = hd; }
         pal = hp;
       }

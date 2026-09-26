@@ -178,7 +178,7 @@
      (filled paths, not dithered); corpse: a body (its deflector gone out);
      shield, brain, flame, wing: the frame each animation is on; mounts: where
      the barrels end, collected while a machine is drawn into a scratch canvas. */
-  var PH = { smooth: false, corpse: false, shield: 0, brain: 0, flame: -1, wing: -1, mounts: null, helmBand: true };
+  var PH = { smooth: false, corpse: false, shield: 0, brain: 0, flame: -1, wing: -1, mounts: null, helmBand: true, helmTop: false };
   var RING_VIS = -1;
   function poly(g, pts, c) {
     if (PH.smooth) {
@@ -968,10 +968,12 @@
       [sprites, corpses, hullCache, TEX_TILE].forEach(function (c) { for (var k in c) delete c[k]; });
       DIM_CANVAS = null;
     },
-    /* A rebel's helmet: all in the side's colour ('full'), or drab with a band
-       of the colour round it ('band'). The figures are painted again. */
+    /* A rebel's helmet: all in the side's colour ('full'), drab with a band of
+       the colour round it ('band'), or the band and the crown ('bandtop').
+       The figures are painted again. */
     helmStyle: function (style) {
-      PH.helmBand = style === 'band';
+      PH.helmBand = style === 'band' || style === 'bandtop';
+      PH.helmTop = style === 'bandtop';                 // the crown in the colour as well as the band
       for (var k in sprites) delete sprites[k];
       for (var c in corpses) delete corpses[c];
     },
