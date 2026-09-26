@@ -23,6 +23,9 @@
       }
       return out;
     })();
+    // each neighbour's length, and the lattice point half way to it (for the long steps)
+    var NEI_LEN = NEI.map(function (d) { return STEP * Math.hypot(d[0], d[1]); });
+    var NEI_MID = NEI.map(function (d) { return [Math.round(d[0] / 2), Math.round(d[1] / 2)]; });
 
     // Dijkstra over a half-inch lattice: distance in inches plus 1" for entering
     // difficult terrain, so the reachable area is the real shape of the move.
@@ -81,14 +84,45 @@
        terrains)". So the search runs on two layers — before and after the area
        penalty has been paid — and a unit that starts in area terrain is moving
        through it, so it has paid from the first step. */
+    /* The last few fields worked out, by everything that goes into one: the AI
+       asks for a unit's reach and then its route over the same ground, and the
+       board asks again every time it redraws a preview. */
+    var fieldCache = [];
+    function fieldKey(state, u, allowance) {
+      var k = [u.id, u.key, u.cls, u.x, u.y, u.move, allowance, u.wireRoll, u.bld ? 1 : 0, (u.rules || []).join('/'), state.terrain.length];
+      state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side && o.x >= 0) k.push(o.x, o.y, o.bld ? 1 : 0); });
+      state.terrain.forEach(function (r) { k.push(r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0); });
+      return k.join(',');
+    }
     function field(state, u, allowance) {
+      var key = fieldKey(state, u, allowance);
+      for (var fc = 0; fc < fieldCache.length; fc++) if (fieldCache[fc].key === key && fieldCache[fc].state === state) return fieldCache[fc].f;
+      var made = fieldOf(state, u, allowance);
+      // the wire's D6 is rolled on the first look: file it under the roll it now has
+      fieldCache.unshift({ key: fieldKey(state, u, allowance), state: state, f: made });
+      if (fieldCache.length > 4) fieldCache.pop();
+      return made;
+    }
+    /* The terrain at every lattice point — under its middle, and the kind a
+       token standing there counts as in (kindsUnder) — for one table as it
+       stands. It is the same for every unit, so it is worked out once for each
+       layout of the terrain and shared by every field on it. */
+    var groundCache = { key: null, state: null, at: null, under: null };
+    function groundOf(state, N) {
+      var key = state.terrain.length + ';' + state.terrain.map(function (r) { return [r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0].join(','); }).join(';');
+      if (groundCache.state !== state || groundCache.key !== key) {
+        groundCache = { key: key, state: state, at: new Uint8Array(N), under: new Uint8Array(N) };   // 0: not yet looked at
+      }
+      return groundCache;
+    }
+    function fieldOf(state, u, allowance) {
       var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
       var N = cols * rows;
       var idx = function (i, j) { return j * cols + i; };
       var i0 = Math.round(u.x / STEP), j0 = Math.round(u.y / STEP);
       var cost = new Float64Array(N * 2).fill(Infinity);
       var came = new Int32Array(N * 2).fill(-1);
-      var terr = new Uint8Array(N);
+      var ground = groundOf(state, N), terr = ground.at;
       var kindIndex = {}; var kinds = Object.keys(TERRAIN);
       kinds.forEach(function (k, n) { kindIndex[k] = n; });
       // a section of wire crossed costs the D6 rolled for this move
@@ -101,7 +135,13 @@
         if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
         return kinds[terr[k] - 1];
       }
+      var blk = new Int8Array(N);                        // 0 not yet asked, 1 open, 2 blocked
       function blockedBy(i, j) {
+        var c = idx(i, j);
+        if (blk[c] === 0) blk[c] = blockedAt(i, j) ? 2 : 1;
+        return blk[c] === 2;
+      }
+      function blockedAt(i, j) {
         var x = i * STEP, y = j * STEP;
         if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) return true;
         if (terrainBars(u, kindAt(i, j))) return true;
@@ -119,25 +159,50 @@
       /* The area terrain a unit standing at a point counts as in (see
          kindsUnder), or null; worked out once a point. Stepping into it, or
          starting in it, costs the penalty once a move (p. 42). */
-      var areaCache = new Int16Array(N).fill(-1);
+      var under = ground.under;
       function areaAt(i, j) {
         var c = idx(i, j);
-        if (areaCache[c] < 0) {
-          var kk = kindsUnder(state, null, i * STEP, j * STEP)[0];
-          areaCache[c] = area(kk) ? kindIndex[kk] + 1 : 0;
-        }
-        return areaCache[c] ? kinds[areaCache[c] - 1] : null;
+        if (under[c] === 0) under[c] = 1 + kindIndex[kindsUnder(state, null, i * STEP, j * STEP)[0]];
+        var kk = kinds[under[c] - 1];
+        return area(kk) ? kk : null;
       }
 
       var k0 = kindsUnder(state, u)[0];
       var startPaid = area(k0) ? 1 : 0;
-      var heap = [{ i: i0, j: j0, p: startPaid, c: startPaid ? terrainCost(u, k0) : 0 }];
+      /* The open points in a binary heap, cheapest first, and of two at the same
+         cost the one found first — the order a scan of a list would give, so the
+         routes and the order of the points are the same as they always were. */
+      var heap = [], seq = 0;
+      function before(x, y) { return x.c < y.c || (x.c === y.c && x.s < y.s); }
+      function push(nd) {
+        nd.s = seq++;
+        var n = heap.length; heap.push(nd);
+        while (n > 0) {
+          var pa = (n - 1) >> 1;
+          if (!before(heap[n], heap[pa])) break;
+          var t = heap[pa]; heap[pa] = heap[n]; heap[n] = t; n = pa;
+        }
+      }
+      function pop() {
+        var top = heap[0], last = heap.pop();
+        if (heap.length) {
+          heap[0] = last;
+          var n = 0, L = heap.length;
+          for (;;) {
+            var a = 2 * n + 1, b = a + 1, m = n;
+            if (a < L && before(heap[a], heap[m])) m = a;
+            if (b < L && before(heap[b], heap[m])) m = b;
+            if (m === n) break;
+            var t = heap[m]; heap[m] = heap[n]; heap[n] = t; n = m;
+          }
+        }
+        return top;
+      }
+      push({ i: i0, j: j0, p: startPaid, c: startPaid ? terrainCost(u, k0) : 0 });
       cost[idx(i0, j0) * 2 + startPaid] = heap[0].c;
       var seen = [];
       while (heap.length) {
-        var bi = 0;
-        for (var h = 1; h < heap.length; h++) if (heap[h].c < heap[bi].c) bi = h;
-        var cur = heap.splice(bi, 1)[0];
+        var cur = pop();
         var ck = idx(cur.i, cur.j) * 2 + cur.p;
         if (cur.c > cost[ck]) continue;
         seen.push(cur);
@@ -146,9 +211,9 @@
           var ni = cur.i + di, nj = cur.j + dj;
           if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue;
           if (blockedBy(ni, nj)) continue;
-          var mi = cur.i + Math.round(di / 2), mj = cur.j + Math.round(dj / 2);
-          if ((Math.abs(di) > 1 || Math.abs(dj) > 1) && blockedBy(mi, mj)) continue;
-          var step = STEP * Math.hypot(di, dj), paid = cur.p;
+          var mi = cur.i + NEI_MID[n][0], mj = cur.j + NEI_MID[n][1];
+          if ((di > 1 || di < -1 || dj > 1 || dj < -1) && blockedBy(mi, mj)) continue;
+          var step = NEI_LEN[n], paid = cur.p;
           var k1 = kindAt(cur.i, cur.j), k2 = kindAt(ni, nj), km = kindAt(mi, mj);
           // a linear piece is paid for every time it is crossed: on stepping onto it
           if (linear(k2) && k2 !== k1) step += terrainCost(u, k2);
@@ -162,7 +227,7 @@
           if (nc < cost[nk]) {
             cost[nk] = nc;
             came[nk] = ck;
-            heap.push({ i: ni, j: nj, p: paid, c: nc });
+            push({ i: ni, j: nj, p: paid, c: nc });
           }
         }
       }
