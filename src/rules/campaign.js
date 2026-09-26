@@ -1022,18 +1022,44 @@
       : co.roster.slice();
     var comp = R.COMPOSITION[battleTier];
     if (!comp) return { ok: false, missing: [], fault: 'No such Battle Tier.' };
-    var picked = [], used = {};
+    var picked = [], pickedE = [], used = {};
+    /* A unit of a kind already in the list goes in last: most of what caps a
+       list is how many of one thing it holds (one turret unit, one of a core
+       squad at this Level, so many aircraft), and a roster deep in one kind
+       has others that fit. */
     function take(test) {
-      for (var i = 0; i < avail.length; i++) {
-        var e = avail[i];
-        if (used[e.rid]) continue;
+      var have = {};
+      pickedE.forEach(function (e) { have[e.key] = (have[e.key] || 0) + 1; });
+      var order = avail.filter(function (e) { return !used[e.rid]; })
+        .sort(function (x, y) { return (have[x.key] || 0) - (have[y.key] || 0); });
+      for (var i = 0; i < order.length; i++) {
+        var e = order[i];
         if (!test(profile(e.key), e)) continue;
-        used[e.rid] = 1; picked.push(R.joinPick(e.key, e.prop, e.drone));
+        used[e.rid] = 1; picked.push(R.joinPick(e.key, e.prop, e.drone)); pickedE.push(e);
         return true;
       }
       return false;
     }
-    function ofTier(t) { return function (p) { return p.tier === t; }; }
+    // the rules a list breaks by holding too much of something, rather than too little
+    function capFaults(list) {
+      return R.checkArmy(list, battleTier, pl, docs).faults.filter(function (f) { return /^(Max |At most |Only )/.test(f); }).length;
+    }
+    /* A unit of the Tier that does not take the list over one of its caps: a
+       Tier the roster can only fill that way is short, and says so. */
+    var capsAt = -1, capsNow = 0;           // the list's own count, worked out once for each length it reaches
+    function ofTier(t) {
+      return function (p, e) {
+        if (p.tier !== t) return false;
+        // a cap is on how many of a kind: with nothing like it in the list yet, it cannot be the one over
+        var alike = pickedE.some(function (o) {
+          var q = profile(o.key);
+          return o.key === e.key || (q.group && q.group === p.group) || (q.cls === 'aircraft' && p.cls === 'aircraft');
+        });
+        if (!alike) return true;
+        if (capsAt !== picked.length) { capsAt = picked.length; capsNow = capFaults(picked); }
+        return capFaults(picked.concat([R.joinPick(e.key, e.prop, e.drone)])) <= capsNow;
+      };
+    }
     var missing = [];
     /* A swarm fights under one Leader Bug of the Battle Tier or higher (p. 114):
        the lowest one that qualifies goes in, and every other Leader Bug stays home. */
@@ -1081,11 +1107,32 @@
       if (res.ok) return { ok: true, missing: [], fault: null };
       var added = take(function (p, e) {
         var trial = picked.concat([R.joinPick(e.key, e.prop, e.drone)]);
-        return R.checkArmy(trial, battleTier, pl, docs).spent <= comp.points * pl;
+        var tr = R.checkArmy(trial, battleTier, pl, docs);
+        // within the points, and breaking nothing the list did not already break
+        return tr.spent <= comp.points * pl && tr.faults.length <= res.faults.length;
       });
       if (!added) break;
     }
     var last = R.checkArmy(picked, battleTier, pl, docs);
+    /* Still breaking a rule: swap one unit at a time for one left at home of
+       the same Tier, keeping any swap that leaves fewer faults, until it is
+       legal or nothing helps. */
+    for (var round = 0; round < 20 && !last.ok; round++) {
+      var better = null;
+      for (var pi = 0; pi < pickedE.length && !better; pi++) {
+        var out = pickedE[pi], ot = profile(out.key).tier;
+        for (var ai = 0; ai < avail.length; ai++) {
+          var inn = avail[ai];
+          if (used[inn.rid] || profile(inn.key).tier !== ot || inn.key === out.key) continue;
+          var trial = picked.slice(); trial[pi] = R.joinPick(inn.key, inn.prop, inn.drone);
+          var tr = R.checkArmy(trial, battleTier, pl, docs);
+          if (tr.ok || tr.faults.length < last.faults.length) { better = { pi: pi, e: inn, pick: trial, res: tr }; break; }
+        }
+      }
+      if (!better) break;
+      delete used[pickedE[better.pi].rid]; used[better.e.rid] = 1;
+      pickedE[better.pi] = better.e; picked = better.pick; last = better.res;
+    }
     return { ok: last.ok, missing: [], fault: last.ok ? null : (last.faults[0] || 'No legal list.') };
   }
   function canFieldArmy(co, battleTier, pl, available) {

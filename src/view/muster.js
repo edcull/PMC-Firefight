@@ -14,7 +14,7 @@
     var begin = G.begin, openMenu = G.openMenu, colourLabel = G.colourLabel, drawColourPick = G.drawColourPick, foeColour = G.foeColour;
 
     var muster = { keys: [], name: '', solo: false };
-    var SOLO = window.PMCSolo;
+    var SOLO = window.PMCSolo, SFX = window.SFX;
 
     /* The composition check the muster screen is building against: the standard
        table, or in a solitaire game the commando table (p. 147). */
@@ -563,6 +563,80 @@
       }
       // open empty, with the whole list live to pick from
       drawMuster();
+      wireSheet();
+    }
+    /* The sheet's own buttons: back, roll again, clear, the colour pop-up, the
+       unit and army modals, the saved forces, the hotseat summary, Take the
+       field, and the terrain set-up choice this browser remembers. */
+    function wireSheet() {
+      if (el('btn-setup-back')) el('btn-setup-back').addEventListener('click', setupBack);
+      // a demo force: rolled again as the same kind, or loaded and saved from a modal
+      if (el('btn-demo-roll')) el('btn-demo-roll').addEventListener('click', function () {
+        if (!muster.hot || muster.hot.step > 2) return;
+        hotRandomise(muster.hot.step - 1, true, true);
+        drawMuster();
+      });
+      if (el('btn-quick-clear')) el('btn-quick-clear').addEventListener('click', function () {
+        if (!muster.hot || muster.hot.step > 2) return;
+        muster.keys = [];
+        drawMuster();
+      });
+      // the units to pick from, in a modal
+      if (el('btn-colour-pop')) el('btn-colour-pop').addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        colourPop(!el('colour-wrap').classList.contains('open'));
+      });
+      // a tap anywhere else puts it away
+      document.addEventListener('click', function (ev) {
+        var cw = el('colour-wrap');
+        if (cw && cw.classList.contains('open') && !cw.contains(ev.target)) colourPop(false);
+      });
+      if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
+      if (el('btn-army')) el('btn-army').addEventListener('click', function () { armyModal(true); });
+      if (el('btn-army-done')) el('btn-army-done').addEventListener('click', function () { armyModal(false); });
+      if (el('army-modal')) el('army-modal').addEventListener('click', function (ev) {
+        if (ev.target === el('army-modal')) { armyModal(false); return; }
+        var a = ev.target.closest('[data-army-pick]'), t = ev.target.closest('[data-tactic-pick]');
+        if (a) pickInto('sel-faction', a.getAttribute('data-army-pick'));
+        else if (t) pickInto('sel-tactic', t.getAttribute('data-tactic-pick'));
+        else return;
+        if (SFX) SFX.click();
+        drawArmyModal();
+      });
+      if (el('btn-cat-add2')) el('btn-cat-add2').addEventListener('click', function () { catModal(true); });
+      if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
+      if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
+      var saves = el('forcebar-wrap');
+      if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
+      if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
+      if (saves) saves.addEventListener('click', function (ev) { if (ev.target === saves) saves.classList.remove('open'); });
+      if (el('hot-sum')) el('hot-sum').addEventListener('click', function (ev) {
+        var b = ev.target.closest && ev.target.closest('[data-hotside]');
+        if (b) hotEdit(+b.getAttribute('data-hotside'));
+      });
+      el('btn-start').addEventListener('click', function () {
+        /* The lobby borrowed this screen to have a force built. Hand the force
+           back rather than starting a battle: the one that matters is being
+           arranged in the room, and it starts when both sides say so. */
+        if (muster.forLobby && !(muster.hot && muster.hot.kind === 'net')) {
+          var want = muster.forLobby;
+          muster.forLobby = null;
+          el('setup').hidden = true;
+          want.done(window.PMC_MUSTER_NOW());
+          return;
+        }
+        // every skirmish is mustered in steps now: Take the field is the next one
+        if (muster.hot) hotNext();
+      });
+      /* The terrain set-up choice is remembered, and a campaign battle — which
+         starts without this screen — uses whichever was picked last. */
+      (function () {
+        var st = el('sel-terrain');
+        if (!st) return;
+        try { var v = localStorage.getItem('pmc-terrainsetup'); if (v) st.value = v; } catch (e) { }
+        st.addEventListener('change', function () { try { localStorage.setItem('pmc-terrainsetup', st.value); } catch (e) { } });
+      })();
+      drawColourPick();
     }
 
     /* ---- a two-force skirmish, mustered in three steps ----
@@ -999,24 +1073,18 @@
       FORCE_NOUN: FORCE_NOUN,
       ID_NOUN: ID_NOUN,
       applyForce: applyForce,
-      armyModal: armyModal,
       backLabel: backLabel,
-      catModal: catModal,
       colourPop: colourPop,
       currentForce: currentForce,
       demoRename: demoRename,
-      drawArmyModal: drawArmyModal,
       drawForceList: drawForceList,
       drawMuster: drawMuster,
       escHtml: escHtml,
       hotBegin: hotBegin,
-      hotEdit: hotEdit,
       hotEnd: hotEnd,
       hotLoadSide: hotLoadSide,
-      hotNext: hotNext,
       hotPaint: hotPaint,
       hotQuick: hotQuick,
-      hotRandomise: hotRandomise,
       hotSaveSide: hotSaveSide,
       isDemoName: isDemoName,
       isMadeUpName: isMadeUpName,
@@ -1024,10 +1092,8 @@
       muster: muster,
       musterFaction: musterFaction,
       musterTactic: musterTactic,
-      pickInto: pickInto,
       saveCurrentForce: saveCurrentForce,
       setSoloMode: setSoloMode,
-      setupBack: setupBack,
       setupGoesHome: setupGoesHome,
       wireMuster: wireMuster
     };

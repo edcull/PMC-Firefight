@@ -75,7 +75,9 @@ async function drain(p) {
       }
       return out;
     }, pair);
-    const last = seen[seen.length - 1].d;
+    // where it is once everything has settled, taken fresh rather than the last sample in flight
+    await p.waitForTimeout(300);
+    const last = await p.evaluate((pr) => window.__drawnAt(pr.t), pair);
     const pushed = Math.hypot(last.rx - pair.x, last.ry - pair.y) > 0.5;
     if (!pushed) continue;                  // it held its ground (or was wiped out): try again
     got = { pair, seen, last };
