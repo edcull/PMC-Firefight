@@ -2135,89 +2135,6 @@
       spend: 'promote'
     }
   ];
-  /* A rival's character, written from the doctrines it actually holds rather
-     than a fixed theme: each doctrine carries a clause, and the first two or
-     three held make a sentence. */
-  var THEMES = {
-    S1: 'strikes first rather than wait to be hit',
-    S2: 'haggles over every credit of the fee',
-    S3: 'keeps its nerve when the fire comes in',
-    S4: 'picks the size of the fight it takes',
-    S5: 'sells every draw as a victory',
-    S6: 'turns recruits into veterans at speed',
-    O1: 'owns the sky over its battles',
-    O2: 'fields whatever it can get its hands on',
-    O3: 'is never quite where it deployed',
-    O4: 'brings more support weapons than anyone needs',
-    O5: 'buries a position under cheap bodies',
-    O6: 'changes its line-up the night before',
-    T1: 'fights on things no doctor would prescribe',
-    T2: 'stands its ground under repeated fire',
-    T3: 'shoots on the move and never stops',
-    T4: 'settles things at knife range',
-    T5: 'never gives up an inch',
-    T6: 'walks its guns onto the target',
-    BC1: 'eats what would poison anything else',
-    BC2: 'melts armour with concentrated acid',
-    BC3: 'marks its prey from far away',
-    BC4: 'leaves its victims writhing in venom',
-    BC5: 'lobs bioplasma over any cover',
-    BC6: 'drips toxin from every gland',
-    BB1: 'moves as one hive mind',
-    BB2: 'hides in plain sight until it strikes',
-    BB3: 'holds its lesser forms on a long leash',
-    BB4: 'hits hardest in the first moment of contact',
-    BB5: 'feeds on the fallen as it fights',
-    BB6: 'learns from every battle it survives',
-    BP1: 'spawns faster than it can be killed',
-    BP2: 'covers ground on huge, springing legs',
-    BP3: 'shrugs off pain that would stop anything else',
-    BP4: 'grows fungus armour over its hide',
-    BP5: 'hides under thick chitin plates',
-    BP6: 'tears through steel with metal-clad talons',
-    XS1: 'breeds warriors faster than it loses them',
-    XS2: 'wastes nothing it takes',
-    XS3: 'looks after its own',
-    XS4: 'trusts no one outside the tribe',
-    XS5: 'remembers every lesson its ancestors learned',
-    XS6: 'accepts nothing short of perfection',
-    XO1: 'moves its warriors through a web of teleports',
-    XO2: 'comes up from below without warning',
-    XO3: 'sees the battle before it begins',
-    XO4: 'knows every rock of the ground it fights on',
-    XO5: 'digs in, then strikes',
-    XO6: 'studies its enemies before it meets them',
-    XT1: 'fills the sky with strange craft',
-    XT2: 'fights in a meditative calm',
-    XT3: 'cows its enemies with sheer presence',
-    XT4: 'is half-invisible on the battlefield',
-    XT5: 'amplifies the minds of its warriors',
-    XT6: 'switches its weapons to suit the fight',
-    H1: 'marches under the banner of the revolution',
-    H2: 'is led by a hero of the people',
-    H3: 'is organised by union men',
-    H4: 'keeps coming back from the edge of defeat',
-    H5: 'robs the rich to feed the poor',
-    H6: "rallies the crowd with liberty's flag",
-    V1: 'runs guns and contraband on the side',
-    V2: 'strips every battlefield it wins',
-    V3: 'mines the ground it means to lose',
-    V4: 'keeps its fighters high',
-    V5: 'shoots its own weaklings',
-    V6: 'keeps everyone guessing whose side it is on',
-    P1: 'sends martyrs walking into the enemy',
-    P2: 'counts no sacrifice as too great',
-    P3: 'promises its dead a stairway to heaven',
-    P4: 'fights in a holy fury',
-    P5: 'follows the word of a preacher',
-    P6: 'goes to war in incense and iron'
-  };
-  function themeOf(co) {
-    var bits = (co.doctrines || []).map(function (d) { return THEMES[d]; }).filter(Boolean).slice(0, 3);
-    if (!bits.length) return 'A new force, still finding its way to fight.';
-    var t = bits.length === 1 ? bits[0] : bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1];
-    return 'It ' + t + '.';
-  }
   function archetypesFor(faction) {
     return faction === 'rebel' ? REBEL_ARCHETYPES : faction === 'bugs' ? BUG_ARCHETYPES
       : faction === 'xeno' ? XENO_ARCHETYPES : ARCHETYPES;
@@ -2486,7 +2403,7 @@
       });
       res = found(co, keys, co.docPlan[0]);
     }
-    co.blurb = null;                              // read from its doctrines instead: themeOf
+    co.blurb = null;
     return co;
   }
 
@@ -2708,7 +2625,7 @@
     rollPayment: rollPayment, negotiate: negotiate, payment: payment,
     expFor: expFor, tpFor: tpFor, traumaThreshold: traumaThreshold, rollTrauma: rollTrauma,
     salvage: salvage, aftermath: aftermath, developRival: developRival,
-    ARCHETYPES: ARCHETYPES, archetype: archetype, foundRival: foundRival, themeOf: themeOf,
+    ARCHETYPES: ARCHETYPES, archetype: archetype, foundRival: foundRival,
     d6: d6, d3: d3, d10: d10
   };
 })(typeof window !== 'undefined' ? window : global);

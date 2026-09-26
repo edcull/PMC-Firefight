@@ -68,7 +68,6 @@ C.ARCHETYPES.forEach(function (a) {
   // no fixed theme: the first doctrine is the first of its own random plan, and its character is read from it
   ok('...taking the first doctrine of its random plan', co.doctrines[0], co.docPlan[0],
     C.doctrine(co.doctrines[0]).name);
-  ok('...and described by it', /^It /.test(C.themeOf(co)), true, C.themeOf(co));
 });
 
 /* ------------------------------------------------------ thirty campaign turns */

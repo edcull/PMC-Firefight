@@ -511,33 +511,6 @@
     var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
     return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
   }
-  /* What the force is like: what it fields, the best it has, and how it fights. */
-  /* What the force is like, in general terms: how big it is, what it fights
-     with and how seasoned it is, then how it fights, then what it has done
-     against you. The exact list is behind their dossier. */
-  function rivalBlurb(co) {
-    var n = co.roster.length, inf = 0, veh = 0, air = 0, top = 0, exp = 0;
-    co.roster.forEach(function (e) {
-      var p = profile(e.key);
-      if (!p) return;
-      if (p.cls === 'aircraft') air++; else if (p.cls !== 'infantry') veh++; else inf++;
-      top = Math.max(top, p.tier); exp += e.exp || 0;
-    });
-    var t = C.themeOf(co);
-    if (n) {
-      var size = n <= 8 ? 'A small force' : n <= 12 ? 'A force of fair size' : n <= 16 ? 'A large force' : 'A very large force';
-      var mix = veh + air === 0 ? 'all on foot'
-        : veh + air >= inf ? 'heavy on machines'
-        : veh + air >= 3 ? 'on foot with solid armoured support' : 'mostly on foot with a little armour';
-      if (air) mix += veh + air === air ? ', and aircraft overhead' : ', with air support';
-      var seasoned = exp / n >= 10 ? 'hardened by long fighting' : exp / n >= 4 ? 'with some fighting behind it' : top > co.tier ? 'with a few good troops among the green' : 'still green';
-      t = size + ', ' + mix + ', ' + seasoned + '. ' + t;
-    }
-    var r = co.record || {};
-    if (r.battles) t += ' It has fought ' + r.battles + ' battle' + (r.battles === 1 ? '' : 's') + ' against you and won ' + (r.wins || 0) + '.';
-    else t += ' It has not met you in the field yet.';
-    return t;
-  }
   /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
   function statRow(co, rival) {
     var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co);
@@ -561,10 +534,9 @@
     h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
-    h += '<div class="cpstat">' + rivalBlurb(co) + '</div>';
     // their dossier opens in the card: their units, as your own are listed
     var ri = idx == null ? 0 : idx, open = rivalOpen === ri;
-    h += '<button class="lnk' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
+    h += '<button class="lnk rivdos-go' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
       (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
     if (open) {
       h += '<div class="dlist rivdos">' + co.roster.slice().sort(function (a, b) {
@@ -1870,8 +1842,7 @@
     var co = rivals[Math.min(intelIdx, rivals.length - 1)] || camp.companies.B;
     var a = C.archetype(co.archetype);
     var h = '<h2>' + esc(co.name) + '</h2>';
-    h += '<p class="lede">' + esc(C.themeOf(co)) + ' ' +
-      C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
+    h += '<p class="lede">' + C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
       ' · ' + co.roster.length + ' units · ' + co.record.battles + ' battles against you.</p>';
     // only the battles fought against this force count toward the record with it
     var mine2 = camp.log.filter(function (l) { return !l.against || l.against === co.name; });
