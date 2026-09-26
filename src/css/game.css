@@ -1699,3 +1699,19 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 /* anything with a tip says so: a dotted underline and the right cursor */
 [data-tip] { cursor: help; }
 [data-tip]:focus-visible { outline: 2px solid var(--alpha, #d8a13a); outline-offset: 2px; }
+
+/* elsewhere on the world: the other forces' battles, fought out and reported */
+.cpan.front .front-result { font-size: 12px; margin: 0 0 8px; }
+.cpan.front .front-result b { color: var(--good); }
+.front-side { border-top: 1px solid var(--line); padding: 7px 0 2px; }
+.front-name { font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.front-name span { font-size: 11px; color: var(--ink-dim); font-family: var(--mono); }
+.front-units { margin: 4px 0 2px; }
+.front-unit { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; padding: 1px 0; }
+.front-unit small { color: var(--ink-dim); }
+.front-unit.gone > span:first-child { color: var(--ink-dim); text-decoration: line-through; }
+.front-num { font-family: var(--mono); color: var(--ink-dim); white-space: nowrap; }
+.front-num i.bad { color: var(--bad); font-style: normal; }
+.front-bar { height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; margin-top: 6px; }
+.front-bar i { display: block; height: 100%; width: 30%; background: var(--accent, var(--good)); animation: frontbar 1.2s ease-in-out infinite; }
+@keyframes frontbar { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }

@@ -331,13 +331,23 @@
          other, two by two, and the odd one out the locals. Their battles are
          played on paper, and go through the same aftermath as yours: experience,
          trauma, losses and the pay, which they then spend. */
-      var idle = shuffle((campaign.rivals || []).filter(function (co, i) { return co !== coB && i !== campaign.facing; }));
+      var pairs = elsewherePairs(campaign, coB);
       out.elsewhere = [];
-      while (idle.length) {
-        var x = idle.shift(), y = idle.shift() || null;
-        out.elsewhere = out.elsewhere.concat(battleElsewhere(campaign, x, y));
-      }
+      /* Asked to (opts.defer), the pairs are handed back instead, to be fought out
+         on a table nobody sees (engine/offtable.js) and settled one at a time. */
+      if (opts && opts.defer) { out.pairs = pairs; return out; }
+      pairs.forEach(function (pr) {
+        out.elsewhere = out.elsewhere.concat(battleElsewhere(campaign, campaign.rivals[pr[0]], pr[1] == null ? null : campaign.rivals[pr[1]]));
+      });
       return out;
+    }
+    // the forces that sat this battle out, two by two (and the odd one out alone), as indices into the rivals
+    function elsewherePairs(campaign, coB) {
+      var idle = shuffle((campaign.rivals || []).map(function (co, i) { return i; })
+        .filter(function (i) { return campaign.rivals[i] !== coB && i !== campaign.facing; }));
+      var pairs = [];
+      while (idle.length) { var x = idle.shift(); pairs.push([x, idle.length ? idle.shift() : null]); }
+      return pairs;
     }
 
     /* ---- a battle fought off the table ----
@@ -415,11 +425,15 @@
       });
       return report;
     }
-    function battleElsewhere(campaign, x, y) {
+    /* One battle among the other forces, settled: `played` is the report of a
+       battle actually fought out between them (engine/offtable.js), with x as
+       side A; without one it is rolled on paper. */
+    function battleElsewhere(campaign, x, y, played) {
       var foe = y || locals(x);
       var mini = { companies: { A: x, B: foe }, turn: campaign.turn - 1, log: [], mode: 'solo' };
-      var report = paperBattle(x, foe);
+      var report = played || paperBattle(x, foe);
       var res = aftermath(mini, report, {});
+      var brief = briefOf(report, x, foe);
       function summary(co, side) {
         var r = res.sides[side];
         var sum0 = {
@@ -430,13 +444,38 @@
           gone: r.gone.map(function (e) { return e.name; }),
           traumas: r.traumas.length,
           exp: r.units.reduce(function (n, u) { return n + (u.exp ? u.exp.total : 0); }, 0),
-          did: developRival(co)
+          did: developRival(co),
+          battle: brief
         };
         return sum0;
       }
       var out = [summary(x, 'A')];
       if (y) out.push(summary(y, 'B'));
       return out;
+    }
+
+    /* What the report screen tells of a battle among the other forces: where,
+       who won, how long it lasted, and unit by unit what each side took in and
+       brought out. */
+    function briefOf(report, x, foe) {
+      function unitName(co, rid) { var e = (co.roster || []).filter(function (r) { return r.rid === rid; })[0]; return e ? e.name : null; }
+      return {
+        scenario: report.scenario, tier: report.battleTier, pl: report.pl, turns: report.turns, planet: report.planet || null,
+        paper: !!report.paper, text: report.text || null,
+        winner: report.winner === 'A' ? x.name : report.winner === 'B' ? foe.name : null,
+        sides: ['A', 'B'].map(function (sd) {
+          var co = sd === 'A' ? x : foe;
+          return {
+            name: co.name, faction: co.faction || 'pmc',
+            units: (report.units || []).filter(function (l) { return l.side === sd; }).map(function (l) {
+              var p = profile(l.key) || {};
+              return { name: unitName(co, l.rid) || p.name || l.key, type: p.name || l.key, start: l.startSize, end: l.endSize,
+                lost: !!(l.wiped || l.destroyed), fled: !!l.fled, kills: (l.kills || []).length };
+            }),
+            fell: (report.casualties || []).filter(function (c) { return c.side === sd; }).reduce(function (n, c) { return n + (c.count || 1); }, 0)
+          };
+        })
+      };
     }
 
     /* After losses, a player unable to field a legal army must rebuild from the
@@ -450,7 +489,7 @@
     }
 
     return {
-      aftermath: aftermath, rebuildNeeds: rebuildNeeds
+      aftermath: aftermath, rebuildNeeds: rebuildNeeds, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCCampAftermath;

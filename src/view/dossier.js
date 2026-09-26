@@ -387,11 +387,12 @@
       get camp() { return camp; }, get docSide() { return docSide; }, get docSwap() { return docSwap; },
       get drawState() { return drawState; }, get intelIdx() { return intelIdx; },
       get swapOut() { return swapOut; }, get upState() { return upState; },
-      get view() { return view; }, set view(v) { view = v; }
+      get view() { return view; }, set view(v) { view = v; }, render: function () { render(); }
     }));
   }
   function onFinish(report) { return (KIT_AFTER || kitAfter()).onFinish(report); }
   function postView() { return (KIT_AFTER || kitAfter()).postView(); }
+  function frontsView() { return (KIT_AFTER || kitAfter()).frontsView(); }
   function aftermathView() { return (KIT_AFTER || kitAfter()).aftermathView(); }
   function honourView() { return (KIT_AFTER || kitAfter()).honourView(); }
   function intelView() { return (KIT_AFTER || kitAfter()).intelView(); }
@@ -405,11 +406,13 @@
     if (view !== 'hub') hubPane = 'dossier';                 // back at the hub, it opens on the dossier
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
+    else if (camp && camp.fronts && !camp.post && view !== 'found') view = 'fronts';   // the other forces' battles are still being fought
     if (view === 'found') h = foundView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') h = contractView();
     else if (view === 'aftermath') h = aftermathView();
     else if (view === 'post') h = postView();
+    else if (view === 'fronts') h = frontsView();
     else if (view === 'honour') h = honourView();
     else if (view === 'doctrine') h = doctrineView();
     else if (view === 'upgrade') h = upgradeView();
@@ -748,6 +751,7 @@
         if (!rr.ok) { note('Enhanced Genetic Memory', rr.why); return; }
         save(); render(); return;
       }
+      case 'frontsdone': (KIT_AFTER || kitAfter()).frontsDone(); render(); return;
       case 'postnext':
         if (camp.post) { camp.post.steps.shift(); save(); render(); }
         return;
@@ -796,6 +800,7 @@
      the world had). The first of theirs is the one they face first. */
   function foundRival(archIds) {
     C.foundRivals(camp);
+    C.evenWorld(camp);                  // the world's forces pair off: an even number of them
     (archIds || []).forEach(function (archId, i) {
       var a = C.archetype(archId);
       if (!a) return;
@@ -852,7 +857,7 @@
       try {
         var got = JSON.parse(rd.result);
         if (!got || !got.companies) throw new Error('not a campaign file');
-        camp = C.rehydrate(got); ensureColours(); save(); view = 'hub'; render();
+        camp = C.rehydrate(got); C.evenWorld(camp); ensureColours(); save(); view = 'hub'; render();
       } catch (e) { note('That file will not load', 'It does not look like a campaign save file.'); }
     };
     rd.readAsText(f);
@@ -929,6 +934,7 @@
       // a battle abandoned mid-flight — unless it was kept, and is waiting to be gone back to
       var kept = root.PMCNet && root.PMCNet.savedBattle && root.PMCNet.savedBattle();
       if (camp && camp.pending && !(kept && kept.cfg && kept.cfg.campaign)) camp.pending = null;
+      if (camp && camp.companies && C.evenWorld(camp)) save();   // a campaign from before the forces paired off
       ensureColours();
       if (needsSecond()) beginSecond();                // the second player had not founded yet
       render();

@@ -34,14 +34,19 @@
       });
       var askReborn = {}; players.forEach(function (sd) { askReborn[sd] = true; });
       E.camp.post = { report: report, pre: { dice: {}, plunder: {}, neg: {}, tp: {}, weak: {}, askReborn: askReborn }, steps: steps };
-      if (!steps.length) { finishPost(); setTimeout(function () { open('aftermath'); }, 900); return; }
+      if (!steps.length) { finishPost(); setTimeout(function () { open(E.view); }, 900); return; }
       save();
       E.view = 'post';
       setTimeout(function () { open('post'); }, 900);
     }
     function finishPost() {
       var post = E.camp.post;
-      E.after = C.aftermath(E.camp, post.report, post.pre);
+      var opts = {}; for (var k in post.pre) opts[k] = post.pre[k];
+      opts.defer = true;                // the other forces' battles are fought out below, not rolled
+      E.after = C.aftermath(E.camp, post.report, opts);
+      /* Kept on the campaign, battle by battle as each is settled, so a reload
+         part way through goes on from the next one rather than starting over. */
+      if (E.after.pairs && E.after.pairs.length) E.camp.fronts = { pairs: E.after.pairs, done: [], planet: post.report.planet || null };
       if (E.camp.mode === 'solo') {
         E.after.rival = C.developRival(E.camp.companies.B);
         // and the next opponent is drawn now, so the hub can say who is coming
@@ -50,12 +55,106 @@
       E.camp.post = null;
       E.camp.pending = null;
       save();
-      E.view = 'aftermath';
+      E.view = E.camp.fronts ? 'fronts' : 'aftermath';
+    }
+
+    /* ================= elsewhere on the world =================
+       While the player counts the cost, the world's other forces fight each
+       other two by two, the whole battle played out by the AI on both sides on
+       a table nobody sees (engine/offtable.js), one after another. Each is then
+       settled like any battle — experience, trauma, losses, pay — and reported
+       here, unit by unit, before the player's own aftermath. */
+    var running = null;                 // the pair being fought now, by its place in the list
+    function nextFront() {
+      var fr = E.camp && E.camp.fronts;
+      if (!fr || running != null || fr.done.length >= fr.pairs.length) return;
+      var at = fr.done.length, pr = fr.pairs[at], rivals = E.camp.rivals || [];
+      var x = rivals[pr[0]], y = pr[1] == null ? null : rivals[pr[1]];
+      running = at;
+      function settle(rep) {
+        running = null;
+        if (E.camp.fronts !== fr) return;               // given up on meanwhile
+        fr.done.push(x ? C.battleElsewhere(E.camp, x, y, rep || null) : []);
+        save();
+        if (E.view === 'fronts') E.render();
+      }
+      // the odd one out, if there is one, fights the locals, and that is rolled
+      if (!x || !y || !root.PMCOffTable) { setTimeout(function () { settle(null); }, 0); return; }
+      root.PMCOffTable.play(x, y, { planet: fr.planet || 'random' }, settle, function (turn) {
+        var t = root.document && root.document.getElementById('front-turn');
+        if (t) t.textContent = turn ? 'Turn ' + turn : 'Deploying';
+      });
+    }
+    function frontsDone() {
+      var fr = E.camp.fronts;
+      if (E.after) E.after.elsewhere = [].concat.apply([], fr ? fr.done : []);
+      E.camp.fronts = null;
+      save();
+      E.view = E.after ? 'aftermath' : 'hub';
+    }
+    function titleCase(s) { return String(s || '').replace(/^./, function (c) { return c.toUpperCase(); }); }
+    function frontCard(sums) {
+      var b = sums[0] && sums[0].battle;
+      if (!b) return '';
+      var bySide = {}; sums.forEach(function (sm) { bySide[sm.name] = sm; });
+      var h = '<div class="cpan front"><div class="cprom-head"><b>' + esc(b.sides[0].name) + ' v ' + esc(b.sides[1].name) + '</b></div>';
+      var facts = [C.SCENARIO_NAMES[b.scenario] || b.scenario];
+      if (b.tier) facts.push('Tier ' + ROMAN[b.tier]);
+      if (b.turns) facts.push(b.turns + (b.turns === 1 ? ' turn' : ' turns'));
+      if (b.planet && b.planet !== 'random') facts.push(titleCase(b.planet));
+      if (b.paper) facts.push('not fought out');
+      h += '<p class="cpstat">' + esc(facts.join(' · ')) + '</p>';
+      h += '<p class="front-result">' + (b.winner ? '<b>' + esc(b.winner) + '</b> won' : 'Neither side carried the day') +
+        (b.text ? ' — ' + esc(b.text.replace(/ \[[AB]\]/g, '')) : '') + '</p>';
+      b.sides.forEach(function (sd) {
+        var sm = bySide[sd.name], co = (E.camp.rivals || []).filter(function (r) { return r.name === sd.name; })[0];
+        h += '<div class="front-side"><div class="front-name"><b>' + esc(sd.name) + '</b>';
+        if (sm) {
+          var bits = [sm.kUC + ' ' + C.money(co)];
+          if (sm.exp) bits.push(sm.exp + ' exp');
+          if (sd.fell) bits.push(sd.fell + ' fell');
+          if (sm.traumas) bits.push(sm.traumas + ' ' + (sm.traumas === 1 ? C.words(co).trauma : C.words(co).traumas).toLowerCase());
+          h += ' <span>' + bits.join(' · ') + '</span>';
+        } else if (sd.fell) h += ' <span>' + sd.fell + ' fell</span>';
+        h += '</div><div class="front-units">' + sd.units.map(function (u) {
+          var fate = u.lost ? ' <i class="bad">wiped out</i>' : u.fled ? ' <i class="bad">fled</i>' : '';
+          return '<div class="front-unit' + (u.lost ? ' gone' : '') + '"><span>' + esc(u.name) +
+            (u.type && u.type !== u.name ? ' <small>' + esc(u.type) + '</small>' : '') + '</span>' +
+            '<span class="front-num">' + (u.start != null ? u.start + '→' + (u.end || 0) : '') +
+            (u.kills ? ' · ' + u.kills + (u.kills === 1 ? ' kill' : ' kills') : '') + fate + '</span></div>';
+        }).join('') + '</div>';
+        if (sm && sm.did && sm.did.length) {
+          h += sm.did.map(function (d) {
+            return '<div class="dledger"><b>' + (d.what === 'tier' ? 'Tier' : d.what === 'doctrine' ? 'Doctrine' :
+              d.what === 'promote' ? 'Promotion' : d.what === 'honour' ? 'Honour' : d.what === 'upgrade' ? 'Upgrade' : 'Recruit') +
+              '</b> ' + esc(d.text) + '</div>';
+          }).join('');
+        }
+        h += '</div>';
+      });
+      return h + '</div>';
+    }
+    function frontsView() {
+      var fr = E.camp && E.camp.fronts;
+      if (!fr) { E.view = E.after ? 'aftermath' : 'hub'; return E.after ? aftermathView() : ''; }
+      var total = fr.pairs.length, left = total - fr.done.length;
+      nextFront();
+      var h = '<h2>Elsewhere on the world</h2>';
+      h += '<p class="lede">' + (left ? 'The other forces are fighting too. Battle ' + (fr.done.length + 1) + ' of ' + total +
+        ': <span id="front-turn">Deploying</span>…' : 'The other forces’ battles, while you fought yours.') + '</p>';
+      if (left) {
+        var pr = fr.pairs[fr.done.length], rv = E.camp.rivals || [];
+        h += '<div class="cpan front running"><div class="cprom-head"><b>' + esc((rv[pr[0]] || {}).name || '') +
+          (pr[1] != null ? ' v ' + esc((rv[pr[1]] || {}).name || '') : '') + '</b></div><div class="front-bar"><i></i></div></div>';
+      }
+      h += fr.done.slice().reverse().map(frontCard).join('');
+      if (!left) h += '<div class="camp-foot"><button class="start" data-go="frontsdone">Continue</button></div>';
+      return h;
     }
     // the post-battle decisions, one to a screen
     function postView() {
       var post = E.camp.post, st = post && post.steps[0];
-      if (!st) { finishPost(); return aftermathView(); }
+      if (!st) { finishPost(); return E.view === 'fronts' ? frontsView() : aftermathView(); }
       var co = E.camp.companies[st.side], rep = post.report, pre = post.pre;
       var h = '<h2>After the battle</h2>';
       if (E.camp.mode === 'hotseat') h += '<p class="lede">' + esc(co.name) + '</p>';
@@ -427,7 +526,7 @@
     }
 
     return {
-      onFinish: onFinish, postView: postView, aftermathView: aftermathView, honourView: honourView,
+      onFinish: onFinish, postView: postView, aftermathView: aftermathView, frontsView: frontsView, frontsDone: frontsDone, honourView: honourView,
       intelView: intelView, upgradeView: upgradeView, doctrineView: doctrineView
     };
   };

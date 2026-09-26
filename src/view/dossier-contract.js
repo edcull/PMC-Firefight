@@ -343,72 +343,8 @@
       return h;
     }
 
-    /* pick a legal force from the roster, the way the rival does */
-    function autoPick(co, tier, pl, tactic) {
-      var avail = contractPicks(co).slice().sort(function (a, b) {
-        return profile(b.key).tier - profile(a.key).tier;
-      });
-      var docs = co.doctrines || [];
-      var comp = R.compFor(co.faction, tier), out = [], used = {};
-      function take(test) {
-        for (var i = 0; i < avail.length; i++) {
-          var e = avail[i];
-          if (used[e.rid] || !test(profile(e.key), e)) continue;
-          used[e.rid] = 1; out.push(e); return true;
-        }
-        return false;
-      }
-      /* A swarm fields one Leader Bug of the Battle Tier or higher (p. 114): the
-         lowest that qualifies, and every other Leader Bug stays behind. */
-      var credit = {};
-      if (co.faction === 'bugs') {
-        var leaders = avail.filter(function (e) { return profile(e.key).leaderBug; })
-          .sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier; });
-        var lead = leaders.filter(function (e) { return profile(e.key).tier >= tier; })[0];
-        leaders.forEach(function (e) { used[e.rid] = 1; });
-        if (lead) { out.push(lead); credit[profile(lead.key).tier] = 1; }
-      }
-      for (var t = 1; t <= 5; t++) {
-        var need = comp.limits[t - 1][0] * pl - (credit[t] || 0);
-        if (docs.indexOf('O2') >= 0 && t === tier) need = Math.ceil(need / 2);
-        for (var i = 0; i < need; i++) take(function (p) { return p.tier === t; });
-      }
-      // then spend what is left: anything that keeps the list legal goes in, biggest
-      // first, because an unspent composition point is a point wasted
-      for (var guard = 0; guard < 60; guard++) {
-        var keys = out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-        var legal = R.checkArmy(keys, tier, pl, docs, tactic).ok;
-        var added = take(function (p, e) {
-          var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
-          var res = R.checkArmy(trial, tier, pl, docs, tactic);
-          // while the list is still illegal, take anything within budget that helps;
-          // once it is legal, only take what keeps it legal
-          return legal ? res.ok : res.spent <= comp.points * pl;
-        });
-        if (!added) break;
-      }
-      /* A last trim if the fill overshot. Popping from the end was wrong: the list is
-         sorted by Tier descending, so an illegal high-Tier machine sits first and could
-         never be reached — the trim would strip everything around it and still fail.
-         Drop whichever single unit leaves the fewest hard faults behind. */
-      for (var trim = 0; trim < 20 && out.length; trim++) {
-        var now = R.checkArmy(out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }), tier, pl, docs, tactic);
-        if (now.ok) break;
-        var hard = blocking(now.faults);
-        if (!hard.length) break;                     // only minimums left, and dropping cannot help
-        var bestAt = -1, bestScore = Infinity;
-        for (var q = 0; q < out.length; q++) {
-          var without = out.filter(function (_, i) { return i !== q; })
-            .map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
-          var res = R.checkArmy(without, tier, pl, docs, tactic);
-          var score = blocking(res.faults).length * 10 + res.faults.length;
-          if (score < bestScore) { bestScore = score; bestAt = q; }
-        }
-        if (bestAt < 0) break;
-        out.splice(bestAt, 1);
-      }
-      return out;
-    }
+    // pick a legal force from the roster, the way the rival does (campaign.js)
+    function autoPick(co, tier, pl, tactic) { return C.pickForce(co, tier, pl, tactic); }
 
     /* Drug Dealer (p. 112): up to a third of the infantry, leaders aside, are sent
        in Determined — and pay for it afterwards. The choice is made as the force
