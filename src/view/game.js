@@ -637,74 +637,6 @@
     wireTable(canvas);
 
     wireMuster();
-    if (el('btn-setup-back')) el('btn-setup-back').addEventListener('click', setupBack);
-    // a demo force: rolled again as the same kind, or loaded and saved from a modal
-    if (el('btn-demo-roll')) el('btn-demo-roll').addEventListener('click', function () {
-      if (!muster.hot || muster.hot.step > 2) return;
-      hotRandomise(muster.hot.step - 1, true, true);
-      drawMuster();
-    });
-    if (el('btn-quick-clear')) el('btn-quick-clear').addEventListener('click', function () {
-      if (!muster.hot || muster.hot.step > 2) return;
-      muster.keys = [];
-      drawMuster();
-    });
-    // the units to pick from, in a modal
-    if (el('btn-colour-pop')) el('btn-colour-pop').addEventListener('click', function (ev) {
-      ev.stopPropagation();
-      colourPop(!el('colour-wrap').classList.contains('open'));
-    });
-    // a tap anywhere else puts it away
-    document.addEventListener('click', function (ev) {
-      var cw = el('colour-wrap');
-      if (cw && cw.classList.contains('open') && !cw.contains(ev.target)) colourPop(false);
-    });
-    if (el('btn-cat-open')) el('btn-cat-open').addEventListener('click', function () { catModal(true); });
-    if (el('btn-army')) el('btn-army').addEventListener('click', function () { armyModal(true); });
-    if (el('btn-army-done')) el('btn-army-done').addEventListener('click', function () { armyModal(false); });
-    if (el('army-modal')) el('army-modal').addEventListener('click', function (ev) {
-      if (ev.target === el('army-modal')) { armyModal(false); return; }
-      var a = ev.target.closest('[data-army-pick]'), t = ev.target.closest('[data-tactic-pick]');
-      if (a) pickInto('sel-faction', a.getAttribute('data-army-pick'));
-      else if (t) pickInto('sel-tactic', t.getAttribute('data-tactic-pick'));
-      else return;
-      if (SFX) SFX.click();
-      drawArmyModal();
-    });
-    if (el('btn-cat-add2')) el('btn-cat-add2').addEventListener('click', function () { catModal(true); });
-    if (el('btn-cat-done')) el('btn-cat-done').addEventListener('click', function () { catModal(false); });
-    if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
-    var saves = el('forcebar-wrap');
-    if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
-    if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
-    if (saves) saves.addEventListener('click', function (ev) { if (ev.target === saves) saves.classList.remove('open'); });
-    if (el('hot-sum')) el('hot-sum').addEventListener('click', function (ev) {
-      var b = ev.target.closest && ev.target.closest('[data-hotside]');
-      if (b) hotEdit(+b.getAttribute('data-hotside'));
-    });
-    el('btn-start').addEventListener('click', function () {
-      /* The lobby borrowed this screen to have a force built. Hand the force
-         back rather than starting a battle: the one that matters is being
-         arranged in the room, and it starts when both sides say so. */
-      if (muster.forLobby && !(muster.hot && muster.hot.kind === 'net')) {
-        var want = muster.forLobby;
-        muster.forLobby = null;
-        el('setup').hidden = true;
-        want.done(window.PMC_MUSTER_NOW());
-        return;
-      }
-      // every skirmish is mustered in steps now: Take the field is the next one
-      if (muster.hot) hotNext();
-    });
-    /* The terrain set-up choice is remembered, and a campaign battle — which
-       starts without this screen — uses whichever was picked last. */
-    (function () {
-      var st = el('sel-terrain');
-      if (!st) return;
-      try { var v = localStorage.getItem('pmc-terrainsetup'); if (v) st.value = v; } catch (e) { }
-      st.addEventListener('change', function () { try { localStorage.setItem('pmc-terrainsetup', st.value); } catch (e) { } });
-    })();
-    drawColourPick();
     // the phone header's overflow menu
     var more = el('btn-more');
     if (more) {
@@ -1168,18 +1100,14 @@
     begin: begin, openMenu: openMenu, colourLabel: colourLabel, drawColourPick: drawColourPick, foeColour: foeColour
   });
   var FORCE_NOUN = MUSTER.FORCE_NOUN, ID_NOUN = MUSTER.ID_NOUN, applyForce = MUSTER.applyForce;
-  var armyModal = MUSTER.armyModal, backLabel = MUSTER.backLabel, catModal = MUSTER.catModal;
-  var colourPop = MUSTER.colourPop, currentForce = MUSTER.currentForce, demoRename = MUSTER.demoRename;
-  var drawArmyModal = MUSTER.drawArmyModal, drawForceList = MUSTER.drawForceList;
-  var drawMuster = MUSTER.drawMuster, escHtml = MUSTER.escHtml, hotBegin = MUSTER.hotBegin;
-  var hotEdit = MUSTER.hotEdit, hotEnd = MUSTER.hotEnd, hotLoadSide = MUSTER.hotLoadSide;
-  var hotNext = MUSTER.hotNext, hotPaint = MUSTER.hotPaint, hotQuick = MUSTER.hotQuick;
-  var hotRandomise = MUSTER.hotRandomise, hotSaveSide = MUSTER.hotSaveSide, isDemoName = MUSTER.isDemoName;
-  var isMadeUpName = MUSTER.isMadeUpName, loadForces = MUSTER.loadForces, muster = MUSTER.muster;
-  var musterFaction = MUSTER.musterFaction, musterTactic = MUSTER.musterTactic, pickInto = MUSTER.pickInto;
-  var saveCurrentForce = MUSTER.saveCurrentForce, setSoloMode = MUSTER.setSoloMode;
-  var setupBack = MUSTER.setupBack, setupGoesHome = MUSTER.setupGoesHome;
-  var wireMuster = MUSTER.wireMuster;
+  var backLabel = MUSTER.backLabel, colourPop = MUSTER.colourPop, currentForce = MUSTER.currentForce;
+  var demoRename = MUSTER.demoRename, drawForceList = MUSTER.drawForceList, drawMuster = MUSTER.drawMuster;
+  var escHtml = MUSTER.escHtml, hotBegin = MUSTER.hotBegin, hotEnd = MUSTER.hotEnd;
+  var hotLoadSide = MUSTER.hotLoadSide, hotPaint = MUSTER.hotPaint, hotQuick = MUSTER.hotQuick;
+  var hotSaveSide = MUSTER.hotSaveSide, isDemoName = MUSTER.isDemoName, isMadeUpName = MUSTER.isMadeUpName;
+  var loadForces = MUSTER.loadForces, muster = MUSTER.muster, musterFaction = MUSTER.musterFaction;
+  var musterTactic = MUSTER.musterTactic, saveCurrentForce = MUSTER.saveCurrentForce;
+  var setSoloMode = MUSTER.setSoloMode, setupGoesHome = MUSTER.setupGoesHome, wireMuster = MUSTER.wireMuster;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
