@@ -11,7 +11,7 @@ if (!global.window) global.window = global;
 
 const ROOT = path.join(__dirname, '..');
 [
-  'src/rules/move.js', 'src/rules/assault.js', 'src/rules/shoot.js', 'src/rules/xeno.js', 'src/rules/destruct.js', 'src/rules/damage.js', 'src/rules/space.js', 'src/rules/rules.js', 'src/rules/camp-company.js', 'src/rules/camp-contract.js', 'src/rules/camp-aftermath.js', 'src/rules/camp-rivals.js', 'src/rules/campaign.js', 'src/rules/scenarios.js',
+  'src/rules/data.js', 'src/rules/move.js', 'src/rules/assault.js', 'src/rules/shoot.js', 'src/rules/xeno.js', 'src/rules/destruct.js', 'src/rules/damage.js', 'src/rules/space.js', 'src/rules/rules.js', 'src/rules/camp-company.js', 'src/rules/camp-contract.js', 'src/rules/camp-aftermath.js', 'src/rules/camp-rivals.js', 'src/rules/campaign.js', 'src/rules/scenarios.js',
   'src/rules/solitaire.js', 'src/rules/gen.js', 'src/engine/ai.js', 'src/engine/save.js', 'src/engine/marks.js', 'src/engine/combat.js', 'src/engine/abilities.js', 'src/engine/moves.js', 'src/engine/actions.js', 'src/engine/endphase.js', 'src/engine/solo.js', 'src/engine/arrivals.js', 'src/engine/deploy.js', 'src/engine/terrainsetup.js', 'src/engine/swaps.js', 'src/engine/engine.js'
 ]
   .forEach((f) => require(path.join(ROOT, f)));
