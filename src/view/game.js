@@ -633,117 +633,8 @@
     pctx = pix.getContext('2d');
     cam.x = cam.tx = ISO.PIXW / 2; cam.y = cam.ty = ISO.PIXH / 2;
 
-    var pointers = {}, pinch = null;
-    var TAP_SLOP = 12;          // client px a finger may wander and still count as a tap
-    var TAP_TIME = 700;         // ms
-
-    function pointerList() {
-      var out = [];
-      for (var k in pointers) out.push(pointers[k]);
-      return out;
-    }
-
-    canvas.addEventListener('pointerdown', function (e) {
-      if (!state) return;
-      /* Only the primary button taps. A right or middle button still drags the
-         camera, but a right click is a turn of the piece in hand (see the
-         contextmenu handler), and must never also put the piece down. */
-      pointers[e.pointerId] = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: nowMs(), moved: false,
-        tapless: e.pointerType === 'mouse' && e.button > 0 };
-      try { canvas.setPointerCapture(e.pointerId); } catch (err) { }
-      var list = pointerList();
-      if (list.length === 2) {
-        pinch = { d: Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y) };
-        list.forEach(function (p) { p.moved = true; });        // a pinch is never a tap
-      } else if (list.length === 1 && !camLocked()) {
-        cam.drag = { cx: cam.x, cy: cam.y, ox: cam.ox || 0, oy: cam.oy || 0 };
-      }
-    });
-
-    canvas.addEventListener('pointermove', function (e) {
-      var p = pointers[e.pointerId];
-      if (!p) { onBoardMove(e); return; }
-      p.x = e.clientX; p.y = e.clientY;
-      if (Math.hypot(p.x - p.x0, p.y - p.y0) > TAP_SLOP) p.moved = true;
-
-      var list = pointerList();
-      if (list.length === 2 && pinch) {
-        if (camLocked()) return;                           // following the other side: no zooming it away
-        var d = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
-        if (d > pinch.d * 1.35) { setZoom(1); pinch.d = d; }
-        else if (d < pinch.d * 0.74) { setZoom(-1); pinch.d = d; }
-        return;
-      }
-      if (list.length === 1 && cam.drag && p.moved) {
-        var sl = slack();
-        var r = canvas.getBoundingClientRect(), scale = r.width / VIEW_W;
-        if (sl.x > 0.5) cam.ox = cam.drag.ox + (p.x - p.x0) / scale;
-        else cam.x = cam.drag.cx - (p.x - p.x0) / scale / cam.z;
-        if (sl.y > 0.5) cam.oy = cam.drag.oy + (p.y - p.y0) / scale;
-        else cam.y = cam.drag.cy - (p.y - p.y0) / scale / cam.z;
-        panBy(0, 0);
-      }
-    });
-
-    function endPointer(e) {
-      var p = pointers[e.pointerId];
-      delete pointers[e.pointerId];
-      if (!pointerList().length) { pinch = null; cam.drag = null; }
-      if (!p) return;
-      var ux = (typeof e.clientX === 'number' && (e.clientX || e.clientY)) ? e.clientX : p.x;
-      var uy = (typeof e.clientY === 'number' && (e.clientX || e.clientY)) ? e.clientY : p.y;
-      if (Math.hypot(ux - p.x0, uy - p.y0) > TAP_SLOP) p.moved = true;
-      // act where the finger landed, not where the up event reports
-      if (!p.moved && !p.tapless && nowMs() - p.t0 < TAP_TIME) {
-        onBoardTap({ clientX: p.x0, clientY: p.y0, pointerType: e.pointerType });
-      }
-    }
-    canvas.addEventListener('pointerup', endPointer);
-    canvas.addEventListener('pointercancel', function (e) {
-      delete pointers[e.pointerId];
-      if (!pointerList().length) { pinch = null; cam.drag = null; }
-    });
-    canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-    /* The wheel zooms, about whatever is under the pointer — which is what a
-       mouse expects on a map. Shift (or a sideways wheel) pans instead, and so
-       does a trackpad's two-finger drag, which arrives as a wheel with both
-       axes moving. */
-    canvas.addEventListener('wheel', function (e) {
-      if (!state) return;
-      e.preventDefault();
-      if (camLocked()) return;                              // following the other side's move
-      var sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
-      if (e.shiftKey || sideways) {
-        panBy(e.deltaX * 0.7 / cam.z, e.deltaY * 0.7 / cam.z);
-        return;
-      }
-      if (!e.deltaY) return;
-      var now2 = nowMs();
-      if (now2 - (ui.wheelAt || 0) < 55) return;      // one notch at a time
-      ui.wheelAt = now2;
-      zoomAt(e.deltaY < 0 ? 1 : -1, canvasPoint(e));
-    }, { passive: false });
-    canvas.addEventListener('mouseleave', function () { ui.hover = null; if (state) drawBoard(); });
-    /* Laying terrain by hand, a right click turns the piece in hand a quarter —
-       the same as R or the Turn it button, without taking the pointer off the
-       spot it is about to go down on. Any other time the board is left alone. */
-    canvas.addEventListener('contextmenu', function (e) {
-      if (!state || state.phase !== 'terrain' || !state.tset || !state.tset.ghost) return;
-      var ta = curArea();
-      if (!ta || isAI(ta.side) || seats.indexOf(ta.side) < 0) return;
-      e.preventDefault();
-      terrainAct('trotate');
-      if (SFX) SFX.click();
-    });
-    document.addEventListener('keydown', onKey);
-
-    el('viewctl').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-zoom]'); if (!b || !state || camLocked()) return;
-      var z = b.getAttribute('data-zoom');
-      if (z === 'in') setZoom(1);
-      else if (z === 'out') setZoom(-1);
-      else fitView();
-    });
+    // the table's pointers, pinch, wheel, right click and keys, and the zoom buttons (input.js)
+    wireTable(canvas);
 
     wireMuster();
     if (el('btn-setup-back')) el('btn-setup-back').addEventListener('click', setupBack);
@@ -1136,7 +1027,8 @@
     get insertionMine() { return insertionMine; }, get panBy() { return panBy; },
     get render() { return render; }, get returnHome() { return returnHome; },
     get setHint() { return setHint; }, get setZoom() { return setZoom; }, get tip() { return tip; },
-    get viewRect() { return viewRect; }, chooseAction: chooseAction, curArea: curArea,
+    get viewRect() { return viewRect; }, get slack() { return slack; }, get zoomAt() { return zoomAt; },
+    nowMs: nowMs, chooseAction: chooseAction, curArea: curArea,
     deployNext: deployNext, deployOK: deployOK, deployRoster: deployRoster, dispX: dispX, dispY: dispY,
     doAssault: doAssault, doBreach: doBreach, doDemolish: doDemolish, doDesignate: doDesignate,
     doDisembark: doDisembark, doEmbark: doEmbark, doEnter: doEnter, doExitBld: doExitBld, doHack: doHack,
@@ -1149,11 +1041,10 @@
     ISO: ISO, R: R, SFX: SFX, UR: UR, cam: cam, el: el, ui: ui
   });
   var bufferFromCanvas = INPUT.bufferFromCanvas, cancelPreview = INPUT.cancelPreview;
-  var canvasFromWorld = INPUT.canvasFromWorld, canvasPoint = INPUT.canvasPoint;
-  var commitMove = INPUT.commitMove, hideTerrainTip = INPUT.hideTerrainTip;
-  var movePreviewCard = INPUT.movePreviewCard, onBoardMove = INPUT.onBoardMove;
-  var onBoardTap = INPUT.onBoardTap, onKey = INPUT.onKey, previewMove = INPUT.previewMove;
-  var terrainBits = INPUT.terrainBits;
+  var canvasFromWorld = INPUT.canvasFromWorld, commitMove = INPUT.commitMove;
+  var hideTerrainTip = INPUT.hideTerrainTip, movePreviewCard = INPUT.movePreviewCard;
+  var onBoardTap = INPUT.onBoardTap, previewMove = INPUT.previewMove, terrainBits = INPUT.terrainBits;
+  var wireTable = INPUT.wireTable;
 
   /* ---------- arrive.js: arrivals ----------
      The board it borrows from: getters for what changes as the game runs,
