@@ -1700,6 +1700,17 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 [data-tip] { cursor: help; }
 [data-tip]:focus-visible { outline: 2px solid var(--alpha, #d8a13a); outline-offset: 2px; }
 
+/* the aftermath's way on, pinned to the foot of the sheet however far it scrolls */
+.camp-dock {
+  position: sticky; bottom: calc(-22px - env(safe-area-inset-bottom, 0px)); z-index: 2;
+  margin: 14px 0 0; padding: 12px 0 calc(22px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--panel) 70%, transparent);
+}
+.camp-dock .start { width: 100%; }
+.camp-dock .start:disabled { opacity: .6; }
+@media (min-width: 1001px) { .camp-dock { bottom: -22px; padding-bottom: 22px; } }
+.front-dev { font-size: 11.5px; color: var(--ink-dim); margin: 2px 0 6px; line-height: 1.45; }
+.front-dev b { color: var(--ink); font-weight: 600; margin-right: 4px; }
 /* elsewhere on the world: the other forces' battles, fought out and reported */
 .front-row { font-size: 12px; padding: 8px 0 0; border-top: 1px solid var(--line); }
 .front-row .cstats { margin: 6px 0 4px; }

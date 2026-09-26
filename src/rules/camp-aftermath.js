@@ -445,6 +445,7 @@
           traumas: r.traumas.length,
           exp: r.units.reduce(function (n, u) { return n + (u.exp ? u.exp.total : 0); }, 0),
           tp: r.units.reduce(function (n, u) { return n + (u.tp ? u.tp.total : 0); }, 0),
+          traumaList: r.traumas.map(function (t) { return { unit: t.name, name: t.trauma && t.trauma.name }; }),
           did: developRival(co),
           battle: brief
         };

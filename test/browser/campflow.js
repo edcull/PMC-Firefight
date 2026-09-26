@@ -38,17 +38,18 @@ async function clickText(p, re) {
   return hit;
 }
 
-/* The other forces' battles are fought out after yours, and reported, before
-   your own aftermath: wait them out and carry on past the report. */
+/* The other forces' battles are fought out after yours and reported at the
+   foot of the aftermath; its Dossier button waits for them. Wait them out,
+   and say whether their reports came up. */
 async function pastFronts(p) {
   for (let i = 0; i < 600; i++) {
     const at = await p.evaluate(() => {
-      if (!/Elsewhere on the world/i.test(document.getElementById('camp-title').textContent)) return 'past';
-      const b = document.querySelector('#camp-body [data-go="frontsdone"]');
-      if (b) { b.click(); return 'clicked'; }
-      return 'fighting';
+      const b = document.querySelector('#camp-body .camp-dock [data-go="roster"]');
+      if (!b) return 'none';
+      if (b.disabled) return 'fighting';
+      return document.querySelectorAll('#camp-body .cpan.front').length ? 'reported' : 'none';
     });
-    if (at !== 'fighting') { await p.waitForTimeout(300); return at === 'clicked'; }
+    if (at !== 'fighting') return at === 'reported';
     await p.waitForTimeout(250);
   }
   return false;
@@ -397,7 +398,7 @@ async function pastFronts(p) {
   check('the payment dice are offered for Tough Negotiators first', /After the battle/i.test(txt) && /Tough Negotiators/i.test(txt));
   await clickText(p, '^[Kk][Ee][Ee][Pp] [Tt][Hh][Ee][Mm] [Aa][Ll][Ll]$');
   await p.waitForTimeout(300);
-  check('the other forces\u2019 battles were fought and reported first', await pastFronts(p));
+  check('the other forces\u2019 battles were fought and reported on the aftermath', await pastFronts(p));
   txt = await body(p);
   check('the aftermath opened by itself', /Aftermath/.test(txt));
   check('...with a payment', /kUC/.test(txt), txt.match(/Two rolls of[^\n]*/)?.[0]);
@@ -436,7 +437,7 @@ async function pastFronts(p) {
   check('the next opponent is drawn and aliased', !!nextUp, nextUp);
 
   console.log('\nSpending the pay');
-  await clickText(p, 'Spend the pay');
+  await clickText(p, '^(Dossier|DOSSIER)$');
   await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
