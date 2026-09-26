@@ -780,12 +780,15 @@
       : 'Ready. The field command is added free, at the Company Tier.';
     var nameTxt = say('The company needs a name.', 'The revolution needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
     /* No line of help under it: what the charter still wants is on the
-       button, for a hover or a long press. The name is typed without a
-       redraw, so the button follows it as it is typed (see mount). */
+       button, in the game's own tip — on a hover, and on a press while it is
+       greyed out (aria-disabled rather than disabled, so the press arrives).
+       The name is typed without a redraw, so the button follows it as it is
+       typed (see mount). */
     var why = chk.ok ? readyTxt : rest && !named ? nameTxt
       : 'Six Tier I units, two Tier II, at most two vehicles, one ' + cr.one + '.' + (named ? '' : ' ' + nameTxt);
-    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound" title="' + esc(why) + '"' +
-      ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '"' + (chk.ok ? '' : ' disabled') + '>' +
+    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound"' +
+      ' data-tip="' + esc(why) + '" data-tip-title="' + (chk.ok ? 'Ready' : 'Still needed') + '"' +
+      ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '" aria-disabled="' + !chk.ok + '">' +
       say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
     // the second player cannot step back out: the campaign needs their force
     if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
@@ -1049,9 +1052,8 @@
 
   function recruitList(co) {
     var top = Math.min(5, co.tier + 2);
-    var h = '<p class="dnote">A Tier ' + ROMAN[co.tier] + ' ' + C.words(co).force + ' may ' + C.words(co).recruit.toLowerCase() + ' up to Tier ' +
-      ROMAN[top] + '. ' + co.kUC + ' ' + C.money(co) + ' in hand.</p>';
-    h += '<div class="cat tall">';
+    // the list is what may be recruited, up to two Tiers above the force's own; the money is on the panel's head
+    var h = '<div class="cat tall">';
     var groups = {}, order = [];
     ourList().forEach(function (p) {
       if (p.tier > top) return;
@@ -1092,9 +1094,6 @@
     var A = camp.companies.A;
     var offers = C.rollOffers(camp);
     var h = '<h2>Contracts on offer</h2>';
-    h += '<p class="lede">Three forces are fighting over this world and all three will ' +
-      'take you on. Pick your war: you are told who they are and what the battle is for, ' +
-      'but not a thing about what they will bring to it.</p>';
     offers.forEach(function (o, i) { h += offerPanel(o, i); });
     h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
@@ -2244,6 +2243,8 @@
         render(); return;
       }
       case 'dofound': {
+        // greyed out: say what the charter still needs, and go no further
+        if (t.getAttribute('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return; }
         var nm = (el('found-name') ? el('found-name').value : draft.name || '').trim();
         if (!nm) { note('It needs a name', 'Give the force something to be known by.'); return; }
         draft.name = nm;
@@ -2446,8 +2447,9 @@
       var sign = el('found-sign');
       if (!sign || sign.getAttribute('data-rest') !== '1') return;
       var ok = !!draft.name.trim();
-      sign.disabled = !ok;
-      sign.title = sign.getAttribute(ok ? 'data-ready' : 'data-noname');
+      sign.setAttribute('aria-disabled', String(!ok));
+      sign.setAttribute('data-tip', sign.getAttribute(ok ? 'data-ready' : 'data-noname'));
+      sign.setAttribute('data-tip-title', ok ? 'Ready' : 'Still needed');
     });
     host.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }

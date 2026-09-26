@@ -600,10 +600,10 @@
     font-family: var(--display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
     padding: 11px; border-radius: 5px; cursor: pointer; font-size: 13px;
   }
-  .start:hover:not(:disabled) { background: color-mix(in srgb, var(--alpha) 26%, transparent); }
+  .start:hover:not(:disabled):not([aria-disabled="true"]) { background: color-mix(in srgb, var(--alpha) 26%, transparent); }
   /* a disabled primary button used to look identical to a live one, so pressing it
      and having nothing happen read as a broken button rather than an illegal list */
-  .start:disabled {
+  .start:disabled, .start[aria-disabled="true"] {
     opacity: .4; cursor: not-allowed;
     background: none; border-color: var(--line); color: var(--ink-faint);
   }
@@ -820,7 +820,7 @@
   /* the recruiting list: as tall as the panel, scrolling inside it, each group's heading over its rows */
   #camp-body.hubfit > .cpan-A > .cprom > .cprom-list.cdos-fill { overflow: hidden; display: flex; flex-direction: column; }
   .cdos-fill > .dnote { flex: none; }
-  .cdos-fill > .cat, .cdos-fill > .cat.tall { flex: 1 1 auto; min-height: 0; max-height: none; }
+  .cdos-fill > .cat, .cdos-fill > .cat.tall { flex: 1 1 auto; min-height: 0; max-height: none; border-top: 0; padding-top: 0; }
   .cdos-fill > .cat h4 { position: sticky; top: 0; z-index: 1; background: var(--panel-2); padding-block: 5px 4px; }
   .rivdos { margin-top: 8px; }
   /* a unit's promotion choices, one to a line */
@@ -2241,5 +2241,5 @@
 <script src="src/net/net.js?v=eaa07d90ac"></script>
 <script src="src/net/lobby.js?v=e561ff9de3"></script>
 <script src="src/view/game.js?v=10577b77e8"></script>
-<script src="src/view/dossier.js?v=9078ab979f"></script>
+<script src="src/view/dossier.js?v=426f00805a"></script>
 <script src="src/view/menu.js?v=362b5aea84"></script>

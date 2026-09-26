@@ -89,7 +89,7 @@ async function drain(p) {
     if (!await click(p, `#camp-body button[data-add="${k}"]`)) problems.push('could not add ' + k);
   }
   await click(p, '#camp-body [data-doc="H1"]');
-  const sign = await p.evaluate(() => { const b = document.getElementById('found-sign'); return { title: b.title, off: b.disabled }; });
+  const sign = await p.evaluate(() => { const b = document.getElementById('found-sign'); return { title: b.getAttribute('data-tip'), off: b.getAttribute('aria-disabled') === 'true' }; });
   check('the list is a legal revolt', /ready\. the first among equals/i.test(sign.title) && !sign.off, sign.title);
   await shot(p, 'rebel-found.png');
   check('the banner can be raised', await clickText(p, '(?:RAISE|Raise) THE BANNER|Raise the banner'));
