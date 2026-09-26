@@ -1903,13 +1903,114 @@
     });
     if (campaign.log.length > 40) campaign.log.shift();
 
-    /* The forces that sat this one out were fighting somebody else. They take a
-       payment at their own standing and spend it, so the world does not wait. */
+    /* The forces that sat this one out were fighting somebody else — each
+       other, two by two, and the odd one out the locals. Their battles are
+       played on paper, and go through the same aftermath as yours: experience,
+       trauma, losses and the pay, which they then spend. */
+    var idle = shuffle((campaign.rivals || []).filter(function (co, i) { return co !== coB && i !== campaign.facing; }));
     out.elsewhere = [];
-    (campaign.rivals || []).forEach(function (co, i) {
-      if (co === coB || i === campaign.facing) return;
-      out.elsewhere.push(idleTurn(co));
+    while (idle.length) {
+      var x = idle.shift(), y = idle.shift() || null;
+      out.elsewhere = out.elsewhere.concat(battleElsewhere(campaign, x, y));
+    }
+    return out;
+  }
+
+  /* ---- a battle fought off the table ----
+     Nobody sees it, so it is rolled rather than played: who won, weighted by
+     Company Tier; then, unit by unit, how many it lost — more on the losing
+     side — and now and then a unit wiped out or a machine knocked out. That is
+     turned into the same report a battle on the table hands back, and the
+     book's aftermath does the rest. */
+  function paperUnit(e) {
+    var p = profile(e.key);
+    return { key: e.key, name: e.name, faction: p.faction, tier: p.tier, group: p.group, cls: p.cls,
+      command: !!p.command, rules: p.rules, models: R.isMachine(p) ? 1 : p.size, drone: !!e.drone };
+  }
+  // the phantom the odd force out fights: whoever holds that part of the world
+  function locals(co) {
+    var foe = newCompany(co.faction === 'rebel' ? 'Garrison forces' : 'Local militia', { faction: co.faction === 'rebel' ? 'pmc' : 'rebel' });
+    foe.tier = co.tier;
+    foe.phantom = true;
+    return foe;
+  }
+  function paperBattle(coA, coB) {
+    var tier = Math.max(1, Math.min(coA.tier, coB.tier));
+    var edge = 0.5 + 0.12 * (coA.tier - coB.tier);
+    var roll = Math.random();
+    var winner = roll < 1 / 8 ? null : roll < 1 / 8 + (7 / 8) * Math.max(0.15, Math.min(0.85, edge)) ? 'A' : 'B';
+    var report = { winner: winner, battleTier: tier, pl: 1, scenario: pick(SCENARIOS), attackDefend: false,
+      routed: { A: false, B: false }, turns: 5, units: [], casualties: [], paper: true };
+    var taken = {}, byside = { A: [], B: [] };
+    ['A', 'B'].forEach(function (side) {
+      var co = side === 'A' ? coA : coB;
+      if (co.phantom) return;
+      var lost = winner && winner !== side, won = winner === side;
+      // who took the field: the command, and up to seven more not in the workshop
+      var ready = co.roster.filter(function (e) { return !(e.restUntil > 0) && e.rid !== co.cmdRid; });
+      var fielded = co.roster.filter(function (e) { return e.rid === co.cmdRid; }).concat(shuffle(ready).slice(0, 7));
+      fielded.forEach(function (e) {
+        var u = paperUnit(e), p = profile(e.key), machine = R.isMachine(p);
+        R.musterMen(u, e.men, taken);
+        var start = u.models, frac = lost ? 0.15 + Math.random() * 0.55 : won ? Math.random() * 0.35 : Math.random() * 0.5;
+        var gone = Math.random() < (lost ? 0.12 : 0.04);
+        var end = machine ? (gone ? 0 : 1) : gone && e.rid !== co.cmdRid ? 0 : Math.max(1, start - Math.round(start * frac));
+        u.models = end;
+        R.syncMen(u, 1 + Math.floor(Math.random() * 5), taken);
+        var line = {
+          rid: e.rid, side: side, key: e.key, tier: p.tier, startSize: start, endSize: end,
+          destroyed: machine && end === 0, catastrophic: false, brokenEver: Math.random() < (lost ? 0.4 : 0.15),
+          wiped: !machine && end <= 0, fled: false, aboardDowned: false, lostAboard: null, drugged: !!e.drugged,
+          minSize: machine ? null : end, assaultKills: 0, assaultKillsHuman: 0,
+          men: R.survivors(u), kills: []
+        };
+        report.units.push(line);
+        byside[side].push(line);
+        if (R.counted(u)) {
+          if (start > end) {
+            var c = { side: side, count: start - end, type: p.name, unit: e.name, rid: e.rid, turn: 0 };
+            if (p.faction === 'bugs') { c.swarm = true; c.mass = (start - end) * R.biomassOf(p); } else c.anon = true;
+            report.casualties.push(c);
+          }
+        } else {
+          (u.men || []).forEach(function (m) {
+            if (m.lost == null) return;
+            report.casualties.push({ side: side, name: m.name, rank: m.rank, turn: m.lost, type: p.name, unit: e.name, rid: e.rid });
+          });
+        }
+      });
     });
+    // a unit broken or wiped out was somebody's doing: the credit goes to one of the other side's
+    ['A', 'B'].forEach(function (side) {
+      var mine = byside[side === 'A' ? 'B' : 'A'];
+      if (!mine.length) return;
+      byside[side].forEach(function (l) {
+        if (!(l.brokenEver || l.wiped || l.destroyed)) return;
+        pick(mine).kills.push({ tier: l.tier, broken: l.brokenEver, key: l.key });
+      });
+    });
+    return report;
+  }
+  function battleElsewhere(campaign, x, y) {
+    var foe = y || locals(x);
+    var mini = { companies: { A: x, B: foe }, turn: campaign.turn - 1, log: [], mode: 'solo' };
+    var report = paperBattle(x, foe);
+    var res = aftermath(mini, report, {});
+    function summary(co, side) {
+      var r = res.sides[side];
+      return {
+        name: co.name, vs: side === 'A' ? foe.name : x.name,
+        result: report.winner === side ? 'won' : report.winner ? 'lost' : 'drew',
+        kUC: r.kUC, fell: report.casualties.filter(function (c) { return c.side === side; })
+          .reduce(function (n, c) { return n + (c.count || 1); }, 0),
+        gone: r.gone.map(function (e) { return e.name; }),
+        traumas: r.traumas.length,
+        exp: r.units.reduce(function (n, u) { return n + (u.exp ? u.exp.total : 0); }, 0),
+        did: developRival(co)
+      };
+    }
+    var out = [summary(x, 'A')];
+    if (y) out.push(summary(y, 'B'));
     return out;
   }
 

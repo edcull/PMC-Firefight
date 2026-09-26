@@ -525,7 +525,7 @@
     }
     var own = !rival && co === camp.companies.A;
     return '<div class="cstats">' +
-      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate', own && camp.log.length ? 'battles' : null) +
+      cell('cs-win', pc(wn.pct), 'win rate', own && camp.log.length ? 'battles' : null) +
       cell('cs-exp', pc(ex.pct), ex.word) +
       cell('cs-tra', pc(tr.pct), tr.word, own ? 'memorial' : null) +
       '</div>';
@@ -1780,8 +1780,13 @@
       h += '<h3>Elsewhere on the world</h3><div class="cpan"><div class="cpstat">' +
         after.elsewhere.map(function (e) {
           var co = (camp.rivals || []).filter(function (r) { return r.name === e.name; })[0];
-          return esc(e.name) + ' fought their own battle and took ' + e.kUC + ' ' +
-            C.money(co) + '.';
+          if (!e.vs) return esc(e.name) + ' fought their own battle and took ' + e.kUC + ' ' + C.money(co) + '.';
+          var bits = [e.kUC + ' ' + C.money(co)];
+          if (e.fell) bits.push(e.fell + ' fell');
+          if (e.gone && e.gone.length) bits.push(e.gone.length === 1 ? esc(e.gone[0]) + ' wiped out' : e.gone.length + ' units wiped out');
+          if (e.traumas) bits.push(e.traumas + ' ' + (e.traumas === 1 ? C.words(co).trauma : C.words(co).traumas).toLowerCase());
+          return '<b>' + esc(e.name) + '</b> ' + (e.result === 'won' ? 'beat' : e.result === 'lost' ? 'lost to' : 'fought to a draw with') +
+            ' ' + esc(e.vs) + ' \u2014 ' + bits.join(', ') + '.';
         }).join('<br>') + '</div></div>';
     }
 
@@ -1844,7 +1849,7 @@
     var co = rivals[Math.min(intelIdx, rivals.length - 1)] || camp.companies.B;
     var h = '<h2>' + esc(co.name) + '</h2>';
     h += '<p class="lede">' + C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
-      ' · ' + co.roster.length + ' units · ' + co.record.battles + ' battles against you.</p>';
+      ' · ' + co.roster.length + ' units · ' + camp.log.filter(function (l) { return l.against === co.name; }).length + ' battles against you.</p>';
     // only the battles fought against this force count toward the record with it
     var mine2 = camp.log.filter(function (l) { return !l.against || l.against === co.name; });
     var head = mine2.filter(function (l) { return l.winner === 'A'; }).length;

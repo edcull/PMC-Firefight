@@ -242,7 +242,7 @@ async function drain(p) {
   check('...and pays the revolt in Influence Points', /\+\d+ IP/.test(txt),
     (txt.match(/\+\d+ (IP|kUC)/) || [])[0]);
   check('...and says where the other two forces were', /elsewhere on the world/i.test(txt),
-    (txt.split('\n').filter(l => /fought their own battle/.test(l))[0] || 'no line'));
+    (txt.split('\n').filter(l => / beat | lost to | draw with /.test(l))[0] || 'no line'));
   await shot(p, 'rebel-aftermath.png');
   const after = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get(), A = c.companies.A;
