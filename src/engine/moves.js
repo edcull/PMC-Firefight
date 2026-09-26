@@ -258,7 +258,7 @@
         if (!ui.targets.length) { u.activated = true; endActivation(); } else render();
         return;
       }
-      var terr = R.TERRAIN[R.terrainOf(E.state, u)];
+      var terr = R.TERRAIN[R.kindsUnder(E.state, u)[0]];
       logLine('move', u.label + ' moves ' + d.toFixed(1) + '"' + (terr.cover ? ' into ' + terr.name.toLowerCase() + '.' : '.'));
       u.activated = true;
       scenarioMoveEnd(u);

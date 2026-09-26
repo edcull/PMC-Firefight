@@ -250,8 +250,9 @@
       water:     { ch: '~', col: '#6fb0cc' },
       razed:     { ch: 'r', col: '#9a948a' }
     };
+    // the ground the rules count the unit in (half its base or more, see R.kindsUnder), not just what is under its middle
     function terrainMark(u) {
-      var kind = R.terrainOf(B.state, u);
+      var kind = R.kindsUnder(B.state, u)[0];
       var m = TERRAIN_MARK[kind];
       if (!m) return null;
       // a hull gets no cover, so only the ground that still costs or helps it shows

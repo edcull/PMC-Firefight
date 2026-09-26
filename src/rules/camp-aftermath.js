@@ -444,6 +444,7 @@
           gone: r.gone.map(function (e) { return e.name; }),
           traumas: r.traumas.length,
           exp: r.units.reduce(function (n, u) { return n + (u.exp ? u.exp.total : 0); }, 0),
+          tp: r.units.reduce(function (n, u) { return n + (u.tp ? u.tp.total : 0); }, 0),
           did: developRival(co),
           battle: brief
         };
