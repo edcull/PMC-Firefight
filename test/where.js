@@ -15,7 +15,8 @@ const SHOTS = path.join(ROOT, 'build', 'shots');
 
 /* A skirmish started the way the old one-screen muster started one: your
    units if they make a legal army (else a rolled one), an opposition rolled
-   (or your own list mirrored), the scenario rolled unless one is named, and
+   (insurgents against mercenaries, mercenaries against anyone else — or your
+   own list mirrored), the scenario rolled unless one is named, and
    the Tier, Priority Level, planet and terrain from the setup screen's own
    selects unless given. The menu's skirmishes go through the step-by-step
    muster now; this is for tests that just want a battle with these units. */
@@ -26,13 +27,18 @@ async function startSkirmish(page, o) {
     const tier = +(o.tier || val('sel-tier') || 3), pl = +(o.pl || val('sel-pl') || 1), faction = o.faction || 'pmc';
     let mine = (o.keys || []).slice();
     if (!R.checkArmy(mine, tier, pl, null, null, faction).ok) mine = R.rollArmy(tier, pl, null, faction);
-    const theirs = o.mirror ? mine.slice() : R.rollArmy(tier, pl, null, o.opFaction || 'pmc');
+    // the old sheet's Opposition default: mercenaries draw insurgents, anyone else mercenaries
+    const opFaction = o.mirror ? faction : o.opFaction || (faction === 'pmc' ? 'rebel' : 'pmc');
+    const theirs = o.mirror ? mine.slice() : R.rollArmy(tier, pl, null, opFaction);
+    // an insurgent opposition picks a tactic of its own, the way a player would
+    const opTactic = opFaction === 'rebel' && !o.mirror ? R.TACTICS[Math.floor(Math.random() * R.TACTICS.length)].id : null;
     let scen = o.scenario || val('sel-scen') || 'roll';
     if (scen === 'roll') scen = SC.ORDER[R.d6() - 1];
     else if (scen === 'rolld3') scen = SC.ORDER[R.d3() - 1];
     window.PMC_NEWGAME({
       tier: tier, pl: pl, scenario: scen, armyA: mine, armyB: theirs,
-      nameA: 'Test force', nameB: o.mirror ? 'Mirror force' : 'OpFor company',
+      nameA: 'Test force', nameB: o.mirror ? 'Mirror force' : opFaction === 'rebel' ? 'Insurgent group' : 'OpFor company',
+      colourA: 'ochre', tactics: { A: null, B: opTactic },
       mode: o.mode || 'ai', planet: o.planet || val('sel-planet') || 'sparse',
       terrainSetup: o.terrain || val('sel-terrain') || 'auto'
     });
