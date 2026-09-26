@@ -67,10 +67,10 @@
       // "Death or Glory, Comrades!": the leader's shout, and the charge throwing off its Suppression
       var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
       if (shout) {
-        addFx({ kind: 'beam', x: shout.x, y: shout.y, tx: a.x, ty: a.y, rgb: '235,85,70', dur: 900 });
+        addFx({ kind: 'beam', x: shout.x, y: shout.y, tx: a.x, ty: a.y, rgb: '235,85,70', dur: 900, blocking: true });
         addFx({ kind: 'wave', x: a.x, y: a.y, up: 0, r: 3, rgb: '235,85,70', delay: 200, dur: 1100 });
         // and on the unit it reaches: the red of the shout rising off it as its Suppression goes
-        addFx({ kind: 'rise', x: a.x, y: a.y, rgb: '235,85,70', n: 10, delay: 250, dur: 1500 });
+        addFx({ kind: 'rise', x: a.x, y: a.y, rgb: '235,85,70', n: 10, delay: 250, dur: 1500, blocking: true });
       }
       // Sappers: charges set against the wall or building the enemy is sheltering behind
       var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
@@ -78,6 +78,8 @@
       var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
       var res = R.assault(st, a, t, { path: route ? route.path : null, martyr: martyr || {} });
       abilityFx(res, t, null, trails);
+      // whatever the assault brought down is repainted, whoever made it (as for a shot)
+      if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
       return res;
     }
     function abRally(st, u) { jamFx(u); leaderFx(u); return R.rally(st, u); }
@@ -91,8 +93,8 @@
       var o = free || insp;
       if (!o) return;
       var rgb = free ? '240,120,80' : '232,193,90';
-      addFx({ kind: 'beam', x: o.x, y: o.y, tx: u.x, ty: u.y, rgb: rgb, dur: 1000 });
-      addFx({ kind: 'rise', x: u.x, y: u.y, rgb: rgb, n: 8, delay: 250, dur: 1300 });
+      addFx({ kind: 'beam', x: o.x, y: o.y, tx: u.x, ty: u.y, rgb: rgb, dur: 1000, blocking: true });
+      addFx({ kind: 'rise', x: u.x, y: u.y, rgb: rgb, n: 8, delay: 250, dur: 1300, blocking: true });
     }
     function nearestWith(u, rule, reach) {
       return E.state.units.filter(function (o) {
@@ -111,7 +113,7 @@
     function abilityFx(res, t, sh, trails) {
       if (!t) return;
       (trails || []).forEach(function (o) {
-        addFx({ kind: 'beam', x: o.x, y: o.y, tx: t.x, ty: t.y, up: 0.5, rgb: '170,230,90', dur: 1100 });
+        addFx({ kind: 'beam', x: o.x, y: o.y, tx: t.x, ty: t.y, up: 0.5, rgb: '170,230,90', dur: 1100, blocking: true });
       });
       if (sh && sh.from) addFx({ kind: 'dome', x: sh.from.x, y: sh.from.y, r: 12, delay: 250, dur: 1500 });
       if (res && res.medic) medicFx(t, res.medic, 500);
@@ -122,8 +124,8 @@
     function medicFx(t, medicId, delay) {
       var med = medicId && E.state.units.filter(function (o) { return o.id === medicId; })[0];
       if (!t || !med) return;
-      if (med !== t) addFx({ kind: 'beam', x: med.x, y: med.y, tx: t.x, ty: t.y, rgb: '120,230,150', delay: delay, dur: delay + 1300 });
-      addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: delay + (med !== t ? 250 : 0), dur: delay + 1900 });
+      if (med !== t) addFx({ kind: 'beam', x: med.x, y: med.y, tx: t.x, ty: t.y, rgb: '120,230,150', delay: delay, dur: delay + 1300, blocking: true });
+      addFx({ kind: 'rise', x: t.x, y: t.y, glyph: 'cross', delay: delay + (med !== t ? 250 : 0), dur: delay + 1900, blocking: true });
     }
     /* Keen-Eyed: a spotter seeing straight through a Stealth unit's
        concealment — a glint off its optics, and one on the unit it picks out.
@@ -160,7 +162,7 @@
       u.activated = true;
       res.log.forEach(function (l) { logLine(l.t, l.text); });
       addFx({ kind: 'wave', x: u.x, y: u.y, up: V.flyLift(u), r: 2.5, rgb: glowRGB(u), dur: 900, blocking: true });
-      addFx({ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1500 });   // the machine knitting itself back together
+      addFx({ kind: 'rise', x: u.x, y: u.y, rgb: '120,220,255', n: 12, dur: 1500, blocking: true });   // the machine knitting itself back together
       pushRes({ kind: 'Repair', title: u.name + ' — Self-repair', side: u.side,
         note: 'Molecular Reconstruction: the unit stays where it is and removes every Damage point.',
         outcome: { text: res.cleared + ' Damage cleared — Structure ' + u.str + ' intact.', tone: 'good' } });

@@ -392,7 +392,6 @@
   }
   function onFinish(report) { return (KIT_AFTER || kitAfter()).onFinish(report); }
   function postView() { return (KIT_AFTER || kitAfter()).postView(); }
-  function frontsView() { return (KIT_AFTER || kitAfter()).frontsView(); }
   function aftermathView() { return (KIT_AFTER || kitAfter()).aftermathView(); }
   function honourView() { return (KIT_AFTER || kitAfter()).honourView(); }
   function intelView() { return (KIT_AFTER || kitAfter()).intelView(); }
@@ -406,13 +405,12 @@
     if (view !== 'hub') hubPane = 'dossier';                 // back at the hub, it opens on the dossier
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
-    else if (camp && camp.fronts && !camp.post && view !== 'found') view = 'fronts';   // the other forces' battles are still being fought
+    if (camp && camp.fronts && !camp.post) (KIT_AFTER || kitAfter()).nextFront();   // the other forces' battles, still being fought
     if (view === 'found') h = foundView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') h = contractView();
     else if (view === 'aftermath') h = aftermathView();
     else if (view === 'post') h = postView();
-    else if (view === 'fronts') h = frontsView();
     else if (view === 'honour') h = honourView();
     else if (view === 'doctrine') h = doctrineView();
     else if (view === 'upgrade') h = upgradeView();
@@ -751,7 +749,6 @@
         if (!rr.ok) { note('Enhanced Genetic Memory', rr.why); return; }
         save(); render(); return;
       }
-      case 'frontsdone': (KIT_AFTER || kitAfter()).frontsDone(); render(); return;
       case 'postnext':
         if (camp.post) { camp.post.steps.shift(); save(); render(); }
         return;

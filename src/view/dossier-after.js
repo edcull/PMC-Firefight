@@ -55,7 +55,7 @@
       E.camp.post = null;
       E.camp.pending = null;
       save();
-      E.view = E.camp.fronts ? 'fronts' : 'aftermath';
+      E.view = 'aftermath';
     }
 
     /* ================= elsewhere on the world =================
@@ -63,7 +63,7 @@
        other two by two, the whole battle played out by the AI on both sides on
        a table nobody sees (engine/offtable.js), one after another. Each is then
        settled like any battle — experience, trauma, losses, pay — and reported
-       here, unit by unit, before the player's own aftermath. */
+       at the foot of the player's own aftermath as each one ends. */
     var running = null;                 // the pair being fought now, by its place in the list
     function nextFront() {
       var fr = E.camp && E.camp.fronts;
@@ -75,8 +75,8 @@
         running = null;
         if (E.camp.fronts !== fr) return;               // given up on meanwhile
         fr.done.push(x ? C.battleElsewhere(E.camp, x, y, rep || null) : []);
-        save();
-        if (E.view === 'fronts') E.render();
+        if (fr.done.length >= fr.pairs.length) frontsDone(); else save();
+        if (E.view === 'aftermath' || E.view === 'hub') E.render();
       }
       // the odd one out, if there is one, fights the locals, and that is rolled
       if (!x || !y || !root.PMCOffTable) { setTimeout(function () { settle(null); }, 0); return; }
@@ -85,12 +85,12 @@
         if (t) t.textContent = turn ? 'Turn ' + turn : 'Deploying';
       });
     }
+    // all fought: the reports go on the aftermath, and the world is free to move on
     function frontsDone() {
       var fr = E.camp.fronts;
-      if (E.after) E.after.elsewhere = [].concat.apply([], fr ? fr.done : []);
+      if (E.after && fr) { E.after.elsewhere = [].concat.apply([], fr.done); E.after.fronts = fr.done; }
       E.camp.fronts = null;
       save();
-      E.view = E.after ? 'aftermath' : 'hub';
     }
     /* A battle among the other forces, in brief: Tier, Priority Level and
        scenario, then for each side whether it won, what share of its force it
@@ -122,6 +122,21 @@
           { cls: 'cs-tra', v: '+' + (sm.tp || 0), w: 'Trauma' }
         ] };
     }
+    /* What each force made of it afterwards, in its own words: who it took on,
+       who it promoted, the honours it won and the traumas it came away with. */
+    function devList(sm) {
+      var co = (E.camp.rivals || []).filter(function (r) { return r.name === sm.name; })[0], w = C.words(co);
+      var did = sm.did || [], rows = [
+        { k: w.recruit === 'Spawn' ? 'Spawned' : 'Recruited', v: did.filter(function (d) { return d.what === 'recruit'; }).map(function (d) { return d.text.replace(/^(recruited|spawned|took delivery of an?) /, ''); }) },
+        { k: 'Promotions', v: did.filter(function (d) { return d.what === 'promote' || d.what === 'tier'; }).map(function (d) { return d.text; }) },
+        { k: w.honours, v: did.filter(function (d) { return d.what === 'honour'; }).map(function (d) { return d.text.replace(' earned ', ': '); }) },
+        { k: w.traumas, v: (sm.traumaList || []).map(function (t) { return t.unit + ': ' + t.name; }) }
+      ].filter(function (r) { return r.v.length; });
+      if (!rows.length) return '';
+      return '<div class="front-dev">' + rows.map(function (r) {
+        return '<div><b>' + esc(r.k) + '</b> ' + r.v.map(esc).join(' · ') + '</div>';
+      }).join('') + '</div>';
+    }
     function frontCard(sums) {
       var b = sums[0] && sums[0].battle;
       if (!b) return '';
@@ -130,36 +145,42 @@
         '<p class="cpstat">' + esc(frontFacts(b)) + '</p>';
       sides.forEach(function (sm) {
         var r = frontSide(sm, b);
-        // only the winner is marked, or both sides when it was drawn
-        // the side's day in the hub's stat cells: what it lost, was paid, and took away in experience and trauma
+        // only the winner is marked, or both sides when it was drawn;
+        // the side's day in the hub's stat cells, then what it made of it
         h += '<div class="front-row"><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') +
           '<div class="cstats four">' + r.cells.map(function (c) {
             return '<div class="cstat ' + c.cls + '"><b>' + c.v + '</b><span>' + esc(c.w) + '</span></div>';
-          }).join('') + '</div></div>';
+          }).join('') + '</div>' + devList(sm) + '</div>';
       });
       return h + '</div>';
     }
-    function frontsView() {
-      var fr = E.camp && E.camp.fronts;
-      if (!fr) { E.view = E.after ? 'aftermath' : 'hub'; return E.after ? aftermathView() : ''; }
-      var total = fr.pairs.length, left = total - fr.done.length;
-      nextFront();
-      var h = '<h2>Elsewhere on the world</h2>';
-      h += '<p class="lede">' + (left ? 'The other forces are fighting too. Battle ' + (fr.done.length + 1) + ' of ' + total +
-        ': <span id="front-turn">Deploying</span>…' : 'The other forces’ battles, while you fought yours.') + '</p>';
-      if (left) {
+    // the other forces' battles on the aftermath: those fought so far, and the one being fought now
+    function frontsSection() {
+      var fr = E.camp.fronts, done = fr ? fr.done : (E.after.fronts || regroup(E.after.elsewhere || []));
+      if (!fr && !done.length) return '';
+      var h = '<h3>Elsewhere on the world</h3>';
+      if (fr && fr.done.length < fr.pairs.length) {
+        nextFront();
         var pr = fr.pairs[fr.done.length], rv = E.camp.rivals || [];
         h += '<div class="cpan front running"><div class="cprom-head"><b>' + esc((rv[pr[0]] || {}).name || '') +
-          (pr[1] != null ? ' v ' + esc((rv[pr[1]] || {}).name || '') : '') + '</b></div><div class="front-bar"><i></i></div></div>';
+          (pr[1] != null ? ' v ' + esc((rv[pr[1]] || {}).name || '') : '') + '</b></div>' +
+          '<p class="cpstat">Fighting — <span id="front-turn">deploying</span></p><div class="front-bar"><i></i></div></div>';
       }
-      h += fr.done.slice().reverse().map(frontCard).join('');
-      if (!left) h += '<div class="camp-foot"><button class="start" data-go="frontsdone">Continue</button></div>';
-      return h;
+      return h + done.map(frontCard).join('');
+    }
+    // a flat list of summaries back into battles: the two sides of one come one after the other
+    function regroup(ew) {
+      var out = [];
+      for (var i = 0; i < ew.length; i++) {
+        var e1 = ew[i], e2 = ew[i + 1];
+        if (e2 && e2.name === e1.vs && e2.vs === e1.name) { out.push([e1, e2]); i++; } else out.push([e1]);
+      }
+      return out;
     }
     // the post-battle decisions, one to a screen
     function postView() {
       var post = E.camp.post, st = post && post.steps[0];
-      if (!st) { finishPost(); return E.view === 'fronts' ? frontsView() : aftermathView(); }
+      if (!st) { finishPost(); return aftermathView(); }
       var co = E.camp.companies[st.side], rep = post.report, pre = post.pre;
       var h = '<h2>After the battle</h2>';
       if (E.camp.mode === 'hotseat') h += '<p class="lede">' + esc(co.name) + '</p>';
@@ -355,39 +376,7 @@
       });
       h += '</div>';
 
-      if (E.after.rival && E.after.rival.length) {
-        h += '<h3>' + esc(E.camp.companies.B.name) + '</h3><div class="cpan cpan-B">';
-        h += '<div class="cpstat">While you were spending, they were too.</div>';
-        E.after.rival.forEach(function (d) {
-          h += '<div class="dledger"><b>' +
-            (d.what === 'tier' ? 'Tier' : d.what === 'doctrine' ? C.creedOf(E.camp.companies.B).one.replace(/^./, function (c) { return c.toUpperCase(); }) :
-              d.what === 'promote' ? 'Promotion' : d.what === 'honour' ? 'Honour' :
-                d.what === 'upgrade' ? 'Upgrade' : 'Recruit') + '</b> ' + esc(d.text) + '</div>';
-        });
-        h += '<button class="lnk" data-go="intel">Their dossier</button></div>';
-      }
-
-      if (E.after.elsewhere && E.after.elsewhere.length) {
-        /* One line a battle: the two sides of a battle between two rivals come
-           in one after the other, and are told together, the winner first. */
-        var battles = [], ew = E.after.elsewhere;
-        for (var bi = 0; bi < ew.length; bi++) {
-          var e1 = ew[bi], e2 = ew[bi + 1];
-          if (e2 && e2.name === e1.vs && e2.vs === e1.name) { battles.push(e2.result === 'won' ? [e2, e1] : [e1, e2]); bi++; }
-          else battles.push([e1]);
-        }
-        var brief = function (e) {
-          var r = frontSide(e, e.battle);
-          return esc(r.name) + ' ' + [r.loss, r.pay, r.gain.replace(' · ', ', ')].filter(Boolean).join(', ');
-        };
-        h += '<h3>Elsewhere on the world</h3><div class="cpan"><div class="cpstat">' +
-          battles.map(function (pr) {
-            var e = pr[0], f = pr[1];
-            var head = '<b>' + esc(e.name) + '</b> ' + (e.result === 'won' ? 'beat' : e.result === 'lost' ? 'lost to' : 'fought to a draw with') +
-              ' ' + (f ? '<b>' + esc(e.vs) + '</b>' : esc(e.vs)) + (e.battle ? ' (' + esc(frontFacts(e.battle)) + ')' : '');
-            return head + ' \u2014 ' + brief(e) + (f ? '; ' + brief(f) : '') + '.';
-          }).join('<br>') + '</div></div>';
-      }
+      h += frontsSection();
 
       var gaps = C.rebuildNeeds(E.camp.companies.A);
       if (gaps.length) {
@@ -395,7 +384,10 @@
           gaps.map(function (t) { return ROMAN[t]; }).join(', ') +
           '. Recruit or promote from the lowest Tier up before the next contract.</div>';
       }
-      h += '<button class="start" data-go="roster">Spend the pay</button>';
+      // on to the dossier, pinned at the foot; not until the other forces' battles are done
+      var busy = !!E.camp.fronts;
+      h += '<div class="camp-dock"><button class="start" data-go="roster"' + (busy ? ' disabled' : '') + '>' +
+        (busy ? 'The other forces are fighting…' : 'Dossier') + '</button></div>';
       h += '<p class="camp-foot"><button class="lnk" data-go="hub">The campaign</button></p>';
       return h;
     }
@@ -539,7 +531,7 @@
     }
 
     return {
-      onFinish: onFinish, postView: postView, aftermathView: aftermathView, frontsView: frontsView, frontsDone: frontsDone, honourView: honourView,
+      onFinish: onFinish, postView: postView, aftermathView: aftermathView, nextFront: nextFront, honourView: honourView,
       intelView: intelView, upgradeView: upgradeView, doctrineView: doctrineView
     };
   };

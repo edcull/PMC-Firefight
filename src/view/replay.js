@@ -102,6 +102,17 @@
       var walks = {};
       events.forEach(function (ev) { if (ev.e === 'move' && ev.id) walks[ev.id] = true; });
       var moved = {};
+      /* Anyone the rules have put somewhere new with no move of theirs in this
+         batch, and nothing already drawing them, stays where the table last
+         showed them, and slides across when an event names them (or when the
+         batch has played). */
+      B.state.units.forEach(function (su) {
+        if (walks[su.id] || su._drawnX == null || !su.alive || su.x < 0 || su.aboard) return;
+        if (su.ax !== null && su.ax !== undefined) return;
+        if (anims.some(function (an) { return an.unit === su; })) return;
+        if (Math.abs(su.x - su._drawnX) < 0.05 && Math.abs(su.y - su._drawnY) < 0.05) return;
+        su.ax = su._drawnX; su.ay = su._drawnY; slideAfter[su.id] = true;
+      });
       events.forEach(function (ev) {
         if (ev.e === 'move' && ev.id && !moved[ev.id]) {
           moved[ev.id] = true;
@@ -206,8 +217,14 @@
           return;
         }
         clearHeld();
-        // anything still waiting to go where the rules put it goes now
-        Object.keys(slideAfter).forEach(function (id) { var u = evUnit(id); if (u) { u.ax = null; u.ay = null; } });
+        // anything still waiting to go where the rules put it goes there now, drawn across rather than jumping
+        Object.keys(slideAfter).forEach(function (id) {
+          var u = evUnit(id);
+          if (!u) return;
+          var from = { x: u.ax, y: u.ay };
+          u.ax = null; u.ay = null;
+          if (u.alive && u.x >= 0 && !u.aboard && from.x != null && (Math.abs(from.x - u.x) > 0.05 || Math.abs(from.y - u.y) > 0.05)) animateMove(u, [from, { x: u.x, y: u.y }]);
+        });
         slideAfter = {};
         snapshotShown();
         show.running = false;
@@ -440,7 +457,9 @@
       resetShow: resetShow,
       show: show,
       shownAs: shownAs,
-      stepWatched: stepWatched
+      stepWatched: stepWatched,
+      // a move drawn to its end short of where the rules left the unit: it waits there, and slides on later
+      slideLater: function (u) { if (u) slideAfter[u.id] = true; }
     };
   };
 })(window);
