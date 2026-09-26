@@ -637,30 +637,8 @@
     wireTable(canvas);
 
     wireMuster();
-    // the phone header's overflow menu
-    var more = el('btn-more');
-    if (more) {
-      more.hidden = false;
-      more.addEventListener('click', function () {
-        var box = document.querySelector('.hdr-btns');
-        if (box) box.classList.toggle('open');
-        if (SFX) SFX.click();
-      });
-      document.addEventListener('click', function (e) {
-        var box = document.querySelector('.hdr-btns');
-        if (box && box.classList.contains('open') && !box.contains(e.target)) box.classList.remove('open');
-      });
-    }
-    var mt = el('mtabs');
-    if (mt) {
-      mt.addEventListener('click', function (e) {
-        var b = e.target.closest('[data-mtab]');
-        if (!b) return;
-        setMTab(b.getAttribute('data-mtab'));
-        if (SFX) SFX.click();
-      });
-      setMTab('act');
-    }
+    // the screen's own controls: header, tabs, drawer, log, sound (panels.js)
+    wireChrome();
     // the board window follows the window it is in
     var rsz = null;
     window.addEventListener('resize', function () {
@@ -671,92 +649,6 @@
         if (state) render();
       }, 120);
     });
-    // the log dock: shut by default, and it remembers if you open it
-    var dock = el('logdock'), dockBtn = el('btn-logdock');
-    if (dock && dockBtn) {
-      try { if (localStorage.getItem('pmc-logdock') === '1') dock.classList.add('open'); } catch (e4) { }
-      dockBtn.setAttribute('aria-expanded', dock.classList.contains('open') ? 'true' : 'false');
-      dockBtn.addEventListener('click', function () {
-        var open = dock.classList.toggle('open');
-        dockBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        try { localStorage.setItem('pmc-logdock', open ? '1' : '0'); } catch (e5) { }
-        if (open) { var h = el('log-dock'); if (h) h.parentElement.scrollTop = h.parentElement.scrollHeight; }
-        if (SFX) SFX.click();
-      });
-    }
-    var fc = el('btn-feedclear');
-    if (fc) fc.addEventListener('click', function () {
-      var host = el('resfeed-list');
-      if (host) host.innerHTML = '';
-      if (SFX) SFX.click();
-    });
-    el('btn-menu').addEventListener('click', openMenu);
-    if (el('btn-obj')) el('btn-obj').addEventListener('click', openObjectives);
-    if (el('obj-modal')) el('obj-modal').addEventListener('click', function (e) {
-      if (e.target === el('obj-modal') || e.target.id === 'obj-done') el('obj-modal').hidden = true;
-    });
-
-    /* Multiplayer only works when this page came from a game server. A game
-       opened from a file, or the published single file, has nowhere to send an
-       intent and nobody to send it to, so there the card is shown greyed out
-       and disabled, saying what it needs, rather than leading to a screen that
-       cannot work. */
-    /* Being on http is not enough: a static host (GitHub Pages, say) serves the
-       page with no game server behind it. So the card stays greyed out until
-       the server's own /health answers. */
-    var mb = el('btn-multi'), online = !!(window.PMCLobby && window.PMCLobby.available());
-    if (mb) mb.disabled = true;
-    function serverUp() {
-      mb.disabled = false;
-      var back = window.PMCLobby.resumable && window.PMCLobby.resumable();
-      if (el('menu-multi-sub')) el('menu-multi-sub').textContent = back
-        ? 'Resume your game — code ' + back : 'Play somebody else over the network';
-      mb.addEventListener('click', function () {
-        el('setup').hidden = true;
-        if (window.PMCMenu) window.PMCMenu.close();
-        window.PMCLobby.open();
-      });
-    }
-    if (mb && online && window.fetch) {
-      window.fetch('/health', { cache: 'no-store' })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (h) { if (h && h.ok === true && h.rooms != null) serverUp(); })
-        .catch(function () { });
-    }
-    el('btn-drawer').addEventListener('click', toggleDrawer);
-    el('btn-drawer-close').addEventListener('click', closeDrawer);
-    el('scrim').addEventListener('click', closeDrawer);
-    drawerEl().querySelectorAll('.dtab').forEach(function (b) {
-      b.addEventListener('click', function () { setDrawerTab(b.getAttribute('data-tab')); if (SFX) SFX.click(); });
-    });
-    setDrawerTab('forces');
-    if (el('btn-notes')) el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
-
-    // the same switch on the top bar and on the menu
-    var sndBtns = [el('btn-sound'), el('btn-menu-sound')].filter(Boolean);
-    function paintSound() {
-      var live = SFX && SFX.enabled();
-      sndBtns.forEach(function (b) {
-        b.textContent = live ? 'Sound on' : 'Sound off';
-        b.setAttribute('aria-pressed', live ? 'true' : 'false');
-        b.style.opacity = live ? '' : '.55';
-      });
-    }
-    sndBtns.forEach(function (b) {
-      b.addEventListener('click', function () {
-        if (!SFX) return;
-        SFX.setEnabled(!SFX.enabled());
-        paintSound();
-        if (SFX.enabled()) SFX.chime();
-      });
-    });
-    paintSound();
-    document.addEventListener('pointerdown', function unlock() {
-      if (SFX) SFX.unlock();
-      document.removeEventListener('pointerdown', unlock);
-    });
-    el('btn-notes-close').addEventListener('click', function () { el('notes').hidden = true; });
-    el('resolution').addEventListener('click', function (e) { if (e.target.id === 'resolution') closeRes(); });
     resumeSaved();
   }
 
@@ -1066,6 +958,7 @@
      and the functions and fixed values it uses. */
   var PANELS = window.PMCPanels({
     get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; },
+    get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
     cancelPreview: cancelPreview, carriersFor: carriersFor, chooseAction: chooseAction,
     cmdOfferCard: cmdOfferCard, commitMove: commitMove, curArea: curArea, deployNext: deployNext,
@@ -1088,8 +981,9 @@
   var closeDrawer = PANELS.closeDrawer, drawBar = PANELS.drawBar, drawLog = PANELS.drawLog;
   var drawOdds = PANELS.drawOdds, drawPanel = PANELS.drawPanel, drawStats = PANELS.drawStats;
   var drawerEl = PANELS.drawerEl, esc = PANELS.esc, oddsOn = PANELS.oddsOn;
-  var revealConsole = PANELS.revealConsole, roundRect = PANELS.roundRect, setDrawerTab = PANELS.setDrawerTab;
-  var setHint = PANELS.setHint, tip = PANELS.tip, toggleDrawer = PANELS.toggleDrawer;
+  var revealConsole = PANELS.revealConsole, roundRect = PANELS.roundRect;
+  var setHint = PANELS.setHint, tip = PANELS.tip;
+  var wireChrome = PANELS.wireChrome;
 
   /* ================= mustering a company =================
      The muster screen, the saved skirmish forces and the two-force skirmish's

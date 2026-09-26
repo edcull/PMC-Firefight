@@ -28,6 +28,9 @@
     var unloadBefore = B.unloadBefore, C = B.C, DIG_NAMES = B.DIG_NAMES, ICONS = B.ICONS, ISO = B.ISO;
     var PIECE_NOUN = B.PIECE_NOUN, R = B.R, SFX = B.SFX, SPECIAL_SLOTS = B.SPECIAL_SLOTS;
     var STANDARD = B.STANDARD, TERRAIN_MARK = B.TERRAIN_MARK, UR = B.UR, el = B.el, ui = B.ui;
+    function setMTab() { return B.setMTab.apply(this, arguments); }
+    function openObjectives() { return B.openObjectives.apply(this, arguments); }
+    function closeRes() { return B.closeRes.apply(this, arguments); }
 
     /* ---------- action bar ---------- */
     function drawBar() {
@@ -996,7 +999,125 @@
     }
 
 
+    /* The screen round the table, wired once at boot: the phone header's
+       overflow menu and its tabs, the log dock, the results feed, the menu and
+       objectives buttons, the multiplayer card (live only with a game server
+       behind the page), the drawer, the notes, and the sound switch. */
+    function wireChrome() {
+      // the phone header's overflow menu
+      var more = el('btn-more');
+      if (more) {
+        more.hidden = false;
+        more.addEventListener('click', function () {
+          var box = document.querySelector('.hdr-btns');
+          if (box) box.classList.toggle('open');
+          if (SFX) SFX.click();
+        });
+        document.addEventListener('click', function (e) {
+          var box = document.querySelector('.hdr-btns');
+          if (box && box.classList.contains('open') && !box.contains(e.target)) box.classList.remove('open');
+        });
+      }
+      var mt = el('mtabs');
+      if (mt) {
+        mt.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-mtab]');
+          if (!b) return;
+          setMTab(b.getAttribute('data-mtab'));
+          if (SFX) SFX.click();
+        });
+        setMTab('act');
+      }
+      // the log dock: shut by default, and it remembers if you open it
+      var dock = el('logdock'), dockBtn = el('btn-logdock');
+      if (dock && dockBtn) {
+        try { if (localStorage.getItem('pmc-logdock') === '1') dock.classList.add('open'); } catch (e4) { }
+        dockBtn.setAttribute('aria-expanded', dock.classList.contains('open') ? 'true' : 'false');
+        dockBtn.addEventListener('click', function () {
+          var open = dock.classList.toggle('open');
+          dockBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          try { localStorage.setItem('pmc-logdock', open ? '1' : '0'); } catch (e5) { }
+          if (open) { var h = el('log-dock'); if (h) h.parentElement.scrollTop = h.parentElement.scrollHeight; }
+          if (SFX) SFX.click();
+        });
+      }
+      var fc = el('btn-feedclear');
+      if (fc) fc.addEventListener('click', function () {
+        var host = el('resfeed-list');
+        if (host) host.innerHTML = '';
+        if (SFX) SFX.click();
+      });
+      el('btn-menu').addEventListener('click', openMenu);
+      if (el('btn-obj')) el('btn-obj').addEventListener('click', openObjectives);
+      if (el('obj-modal')) el('obj-modal').addEventListener('click', function (e) {
+        if (e.target === el('obj-modal') || e.target.id === 'obj-done') el('obj-modal').hidden = true;
+      });
+
+      /* Multiplayer only works when this page came from a game server. A game
+         opened from a file, or the published single file, has nowhere to send an
+         intent and nobody to send it to, so there the card is shown greyed out
+         and disabled, saying what it needs, rather than leading to a screen that
+         cannot work. */
+      /* Being on http is not enough: a static host (GitHub Pages, say) serves the
+         page with no game server behind it. So the card stays greyed out until
+         the server's own /health answers. */
+      var mb = el('btn-multi'), online = !!(window.PMCLobby && window.PMCLobby.available());
+      if (mb) mb.disabled = true;
+      function serverUp() {
+        mb.disabled = false;
+        var back = window.PMCLobby.resumable && window.PMCLobby.resumable();
+        if (el('menu-multi-sub')) el('menu-multi-sub').textContent = back
+          ? 'Resume your game — code ' + back : 'Play somebody else over the network';
+        mb.addEventListener('click', function () {
+          el('setup').hidden = true;
+          if (window.PMCMenu) window.PMCMenu.close();
+          window.PMCLobby.open();
+        });
+      }
+      if (mb && online && window.fetch) {
+        window.fetch('/health', { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (h) { if (h && h.ok === true && h.rooms != null) serverUp(); })
+          .catch(function () { });
+      }
+      el('btn-drawer').addEventListener('click', toggleDrawer);
+      el('btn-drawer-close').addEventListener('click', closeDrawer);
+      el('scrim').addEventListener('click', closeDrawer);
+      drawerEl().querySelectorAll('.dtab').forEach(function (b) {
+        b.addEventListener('click', function () { setDrawerTab(b.getAttribute('data-tab')); if (SFX) SFX.click(); });
+      });
+      setDrawerTab('forces');
+      if (el('btn-notes')) el('btn-notes').addEventListener('click', function () { el('notes').hidden = false; });
+
+      // the same switch on the top bar and on the menu
+      var sndBtns = [el('btn-sound'), el('btn-menu-sound')].filter(Boolean);
+      function paintSound() {
+        var live = SFX && SFX.enabled();
+        sndBtns.forEach(function (b) {
+          b.textContent = live ? 'Sound on' : 'Sound off';
+          b.setAttribute('aria-pressed', live ? 'true' : 'false');
+          b.style.opacity = live ? '' : '.55';
+        });
+      }
+      sndBtns.forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (!SFX) return;
+          SFX.setEnabled(!SFX.enabled());
+          paintSound();
+          if (SFX.enabled()) SFX.chime();
+        });
+      });
+      paintSound();
+      document.addEventListener('pointerdown', function unlock() {
+        if (SFX) SFX.unlock();
+        document.removeEventListener('pointerdown', unlock);
+      });
+      el('btn-notes-close').addEventListener('click', function () { el('notes').hidden = true; });
+      el('resolution').addEventListener('click', function (e) { if (e.target.id === 'resolution') closeRes(); });
+    }
+
     return {
+      wireChrome: wireChrome,
       closeDrawer: closeDrawer,
       drawBar: drawBar,
       drawLog: drawLog,
