@@ -183,5 +183,17 @@ head('Rolled tables');
   ok('walls with nothing to go round mostly join up', joined > 0.6, true, Math.round(joined * 100) + '% joined to another');
 })();
 
+(function () {
+  // every section long enough for a squad (its 2" base) to line: 3" at least
+  var planets = Object.keys(G.GENERATORS), shortest = Infinity, n = 0;
+  for (var i = 0; i < 300; i++) {
+    G.generate({ width: 48, height: 48, planet: planets[i % planets.length] }).terrain.forEach(function (p) {
+      if (p.kind !== 'wall' && p.kind !== 'barricade') return;
+      n++; shortest = Math.min(shortest, Math.max(p.w, p.h));
+    });
+  }
+  ok('no wall section shorter than 3"', shortest >= 3 - 1e-6, true, n + ' sections, shortest ' + shortest.toFixed(2) + '"');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

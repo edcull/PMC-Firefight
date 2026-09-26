@@ -1326,6 +1326,15 @@
 
     h += '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
       '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span></div>';
+    /* What each Tier asks for at this Battle Tier and Priority Level, and how
+       many of each are in the list — the line the skirmish muster sheet shows. */
+    var lims = R.compFor(A.faction || 'pmc', contract.tier).limits, cnt = chk.counts || {};
+    h += '<p class="limits">' + [1, 2, 3, 4, 5].map(function (t) {
+      var lo = lims[t - 1][0] * contract.pl, hi = lims[t - 1][1] === 99 ? 99 : lims[t - 1][1] * contract.pl;
+      if (hi === 0) return null;
+      var n = cnt[t] || 0, short = n < lo || n > hi;
+      return ROMAN[t] + ' <b' + (short ? ' class="short"' : '') + '>' + n + '/' + (hi === 99 ? lo + '+' : lo + '-' + hi) + '</b>';
+    }).filter(Boolean).join(' \u00b7 ') + '</p>';
     h += '<div class="chosen">' + contract.picks.map(function (e, i) {
       var p = profile(e.key);
       return '<span class="pickwrap"><button class="pick" data-unpick="' + i + '">' +

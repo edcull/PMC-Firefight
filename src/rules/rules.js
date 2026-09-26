@@ -1323,12 +1323,54 @@
     var t = TERRAIN[k];
     return t.impassable ? 5 : t.blocks ? 4 : t.cover ? 3 : t.fp ? 2 : (t.movePenalty || t.wire) ? 1 : 0;
   }
+  /* The "chest rule" (p. 42): "if there is a smaller terrain within a larger
+     area terrain, use the rules of the smaller one only" — a wood on a hill is a
+     wood, and so is shallow water, a road or anything else put on one. Pieces
+     only stand inside a hill, so at a point in a hill and in something else,
+     the something else is what counts; otherwise the most significant piece. */
   function terrainAt(state, x, y) {
-    var rs = regionsAt(state, x, y), best = 'open';
-    for (var i = 0; i < rs.length; i++) if (rank(rs[i].kind) > rank(best)) best = rs[i].kind;
-    return best;
+    var rs = regionsAt(state, x, y), best = 'open', onHill = false, inOther = false;
+    for (var i = 0; i < rs.length; i++) {
+      if (rs[i].kind === 'hill') { onHill = true; continue; }
+      inOther = true;
+      if (rank(rs[i].kind) > rank(best)) best = rs[i].kind;
+    }
+    // in something on the hill (even flat ground, such as a road): its rules, not the hill's
+    if (inOther) return best;
+    return onHill ? 'hill' : 'open';
   }
   function terrainOf(state, u) { return terrainAt(state, u.x, u.y); }
+  /* Which terrain a unit is in. "One foot in grave" (p. 42) has a unit in
+     several pieces at once take the worst of them; but on the table the men
+     stand on their own bases, not in a circle, and a player sets them in the
+     wood or along the trench. A 2" token is only a rough outline of that, so
+     it gets some leeway: it is in whatever terrain at least half of the eight
+     points round its rim are in, and at four and four its middle decides. It
+     is always in one terrain, and the models are drawn standing in it. A
+     garrison is in its building and nothing else. */
+  var RIM = 8;
+  function footprint(x, y) {
+    var pts = [{ x: x, y: y }];
+    for (var k = 0; k < RIM; k++) {
+      var an = k / RIM * Math.PI * 2;
+      pts.push({ x: x + Math.cos(an) * UNIT_R, y: y + Math.sin(an) * UNIT_R });
+    }
+    return pts;
+  }
+  // the terrain a unit (or a token at x, y) is in, as a one-kind list
+  function kindsUnder(state, u, x, y) {
+    if (u && u.bld) return [u.bld.kind];
+    var px = x != null ? x : u.x, py = y != null ? y : u.y;
+    var pts = footprint(px, py), kc = terrainAt(state, px, py), n = {};
+    for (var i = 1; i < pts.length; i++) { var k = terrainAt(state, pts[i].x, pts[i].y); n[k] = (n[k] || 0) + 1; }
+    if ((n[kc] || 0) >= RIM / 2) return [kc];
+    for (var kk in n) if (n[kk] > RIM / 2) return [kk];
+    return [kc];
+  }
+  // the Defence bonus the ground gives a unit (or a token) standing at x, y
+  function coverAt(state, x, y, u) {
+    return Math.min.apply(null, kindsUnder(state, null, x, y).map(function (k) { return TERRAIN[k].cover || 0; }));
+  }
 
   // segment vs a piece: its rectangle (Liang-Barsky), then its outline if it has one
   function segRect(x1, y1, x2, y2, r) {
@@ -1417,8 +1459,14 @@
      that piece only, and takes none of the hill's rules (p. 42). */
   function levelOf(state, u) {
     if (!u || u.x < 0) return 0;
-    var lv = groundLevel(state, u.x, u.y);
-    return lv && terrainAt(state, u.x, u.y) !== 'hill' ? 0 : lv;
+    if (u.bld) return 0;                               // in a building: the building's rules only
+    /* Up on the hill if it counts as on it (see kindsUnder), at the lowest
+       level of the parts of it that are; not if it is in a wood or the like
+       standing on it, which has its own rules only (p. 42). */
+    if (kindsUnder(state, u)[0] !== 'hill') return 0;
+    return Math.min.apply(null, footprint(u.x, u.y).filter(function (p) {
+      return terrainAt(state, p.x, p.y) === 'hill';
+    }).map(function (p) { return groundLevel(state, p.x, p.y); }));
   }
   // the upper step of a stepped hill, as a piece of its own for sight lines
   function upperStep(r) {
@@ -1848,7 +1896,8 @@
     if (models >= 3) return 1;
     return 0;
   }
-  function addSP(u, n) { u.sp = Math.min(12, u.sp + n); }
+  var SP_MAX = 12;                 // the most Suppression a unit can carry
+  function addSP(u, n) { u.sp = Math.min(SP_MAX, u.sp + n); }
   function fmtPart(p) {
     if (p.label === 'D10') return 'D10 rolls ' + p.v;
     return p.label + ' ' + (p.v >= 0 ? '+' : '') + p.v;
@@ -1935,7 +1984,8 @@
     // Flying Infantry get nothing from the ground; Animal Behaviour bugs only under an Overmind
     if (flyInf(target)) return { v: 0, why: '' };
     if (has(target, 'Animal Behaviour') && !overmindFor(state, target, false)) return { v: 0, why: '' };
-    var here = TERRAIN[terrainAt(state, target.x, target.y)].cover;
+    // the whole unit in cover or none of it: partly in the open, it is in the open when shot at (p. 42)
+    var here = Math.min.apply(null, kindsUnder(state, target).map(function (k) { return TERRAIN[k].cover || 0; }));
     /* Last Stand (p. 95): Rebel infantry "get +4 to their Defence parameter when in
        terrain which grants a Defence bonus" — behind a low wall as much as in ruins. */
     // (gun crews count: the mortar teams, autocannon teams and field guns are infantry too)
@@ -2474,17 +2524,22 @@
       if (inRect(target.x, target.y, r)) return r;
     }
     if (!attacker) return null;
+    /* The low wall it shelters behind — the one that gives it its cover (see
+       coverFor, p. 42): within 2" of the whole unit, and between it and the
+       shooter, or on any side of it against plunging fire (p. 58). A wall
+       further off on the line of fire is not the target's shelter, and is not
+       what a shot at the target brings down. The nearest such wall, if two. */
+    var plunging = has(attacker, 'Indirect Fire'), best = null, bd = Infinity;
     for (var j = 0; j < state.terrain.length; j++) {
       var r2 = state.terrain[j];
       if (!isDestructible(r2) || TERRAIN[r2.kind].blocks) continue;
       if (inRect(attacker.x, attacker.y, r2)) continue;
-      if (segRect(attacker.x, attacker.y, target.x, target.y, r2)) return r2;
-      /* plunging fire: the low wall a target shelters by (within 2") is its cover
-         whichever way the shot comes, so it is the wall that can be brought down (p. 58) */
-      if (r2.kind === 'barricade' && has(attacker, 'Indirect Fire') &&
-        rectPointDist(r2, target.x, target.y) + UNIT_R <= 2 + 1e-6) return r2;
+      var d = rectPointDist(r2, target.x, target.y);
+      if (d + UNIT_R > 2 + 1e-6) continue;
+      if (!plunging && !segRect(attacker.x, attacker.y, target.x, target.y, r2)) continue;
+      if (d < bd) { bd = d; best = r2; }
     }
-    return null;
+    return best;
   }
   // Incendiary Ammunition counts as a Destructive Weapon against buildings
   /* Shooting a piece of terrain down (p. 57): a Destructive Weapon against
@@ -2905,7 +2960,7 @@
     // Cumbersome Weapons cannot be fired from shallow water, nor on the turn the
     // crew stepped off a vehicle
     if (!opts.aux && has(a, 'Cumbersome Weapon') &&
-      (TERRAIN[terrainOf(state, a)].shallow || a.disembarked)) return false;
+      (kindsUnder(state, a).some(function (k) { return !!TERRAIN[k].shallow; }) || a.disembarked)) return false;
     // a dug-in gun is laying over its sights, so it needs to see what it hits
     if (!opts.aux && markCall(state, a, t, opts) === 'designate') return true;
     /* Limited Senses and Mental Projection (p. 129): a Xenotripod sees 12", but
@@ -3037,7 +3092,8 @@
       }
       /* Troops inside buildings, and in trenches, are not affected by Crossfire
          (pp. 41-42). */
-      var noX = !!t.bld || !!TERRAIN[terrainOf(state, t)].noCrossfire;
+      // immune only with the whole unit in the trench (p. 42)
+      var noX = !!t.bld || kindsUnder(state, t).every(function (k) { return !!TERRAIN[k].noCrossfire; });
       for (var i = 0; i < t.shotFrom.length && !isMachine(t) && !noX; i++) {
         var p = t.shotFrom[i];
         if (p.basic) continue;
@@ -3183,8 +3239,10 @@
       // Nerves of Steel, and the Rite of Shielding (p. 142), shrug off the extra points
       var steady = campFlag(t, 'nerves') || campFlag(t, 'shielding');
       if (has(a, 'Incendiary Ammunition') && !aux && !has(t, 'Battle Armour') && !steady) {
-        var tk = terrainOf(state, t);
-        if (tk !== 'open' && !TERRAIN[tk].shallow) {
+        // "in any area terrain other than open terrain or shallow water" (Incendiary Ammunition) — any
+        // part of it being, the worst for it (p. 42)
+        var tk = kindsUnder(state, t).filter(function (k) { return k !== 'open' && !TERRAIN[k].shallow && !TERRAIN[k].linear; })[0];
+        if (tk) {
           res.sp *= 2;
           burn = ' · Incendiary Ammunition: suppression doubled in ' + TERRAIN[tk].name.toLowerCase();
         }
@@ -3690,8 +3748,21 @@
     }
     var linear = function (k) { return !!TERRAIN[k].linear; };
     var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
+    /* The area terrain a unit standing at a point counts as in (see
+       kindsUnder), or null; worked out once a point. Stepping into it, or
+       starting in it, costs the penalty once a move (p. 42). */
+    var areaCache = new Int16Array(N).fill(-1);
+    function areaAt(i, j) {
+      var c = idx(i, j);
+      if (areaCache[c] < 0) {
+        var kk = kindsUnder(state, null, i * STEP, j * STEP)[0];
+        areaCache[c] = area(kk) ? kindIndex[kk] + 1 : 0;
+      }
+      return areaCache[c] ? kinds[areaCache[c] - 1] : null;
+    }
 
-    var k0 = kindAt(i0, j0), startPaid = area(k0) ? 1 : 0;
+    var k0 = kindsUnder(state, u)[0];
+    var startPaid = area(k0) ? 1 : 0;
     var heap = [{ i: i0, j: j0, p: startPaid, c: startPaid ? terrainCost(u, k0) : 0 }];
     cost[idx(i0, j0) * 2 + startPaid] = heap[0].c;
     var seen = [];
@@ -3715,7 +3786,8 @@
         if (linear(k2) && k2 !== k1) step += terrainCost(u, k2);
         else if (linear(km) && km !== k1 && km !== k2) step += terrainCost(u, km);
         // area terrain once in the whole move
-        if (!paid && (area(k2) || area(km))) { step += terrainCost(u, area(k2) ? k2 : km); paid = 1; }
+        var a2 = areaAt(ni, nj);
+        if (!paid && (a2 || area(km))) { step += terrainCost(u, a2 || km); paid = 1; }
         var nc = cur.c + step;
         if (nc > allowance + 1e-6) continue;
         var nk = idx(ni, nj) * 2 + paid;
@@ -4287,7 +4359,7 @@
   }
 
   root.PMC = {
-    BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP,
+    BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
     COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, FACTIONS: FACTIONS, TACTICS: TACTICS,
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,
@@ -4299,7 +4371,7 @@
     d10: d10, d6: d6, d3: d3, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
-    terrainAt: terrainAt, terrainOf: terrainOf, inRect: inRect, segRect: segRect,
+    terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,

@@ -243,6 +243,7 @@
   var THICK = 1;            // a wall's depth, in inches
   var JOINT = 0.55;         // between neighbouring sections: just over the half inch every piece keeps
   var GATE = 4;             // a gateway: a 2" base with room either side
+  var MIN_SECTION = 3;      // the shortest: long enough for a squad to line
   var SECTION = 6;          // the longest section the book allows
 
   function bbox(list) {
@@ -288,11 +289,13 @@
 
   /* A side of the ring, cut into sections no longer than the book allows,
      with a gateway taken out of its middle if it is the front. */
+  /* No section shorter than a unit can shelter behind: its 2" base, and a
+     little over, so the squad can line it (MIN_SECTION). */
   function cutSide(from, to, gate) {
     var spans = [[from, to]];
     if (gate) {
       var len = to - from;
-      if (len >= GATE + 2 * 1.5) {
+      if (len >= GATE + 2 * MIN_SECTION) {
         var mid = from + len / 2;
         spans = [[from, mid - GATE / 2], [mid + GATE / 2, to]];
       } else {
@@ -302,9 +305,11 @@
     var out = [];
     spans.forEach(function (s) {
       var len = s[1] - s[0];
-      if (len < 1.5) return;
+      if (len < MIN_SECTION) return;
       var k = Math.ceil((len + JOINT) / (SECTION + JOINT));
       var each = (len - (k - 1) * JOINT) / k;
+      // rather one section fewer and a wider breach than sections too short to line
+      while (k > 1 && each < MIN_SECTION) { k--; each = Math.min(SECTION, (len - (k - 1) * JOINT) / k); }
       for (var i = 0; i < k; i++) out.push([s[0] + i * (each + JOINT), s[0] + i * (each + JOINT) + each]);
     });
     return out;

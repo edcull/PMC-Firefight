@@ -243,5 +243,62 @@ head('The Demolish objective');
   ok('...and not past it', R.lineClear(st, a, b), true);
 })();
 
+/* The wall a Destructive Weapon brings down is the one sheltering the target
+   (p. 57): the low wall within 2" that gives it its cover — not another stretch
+   of wall further off that the shot happens to cross. */
+head('The wall a shot brings down');
+(function () {
+  var near = { kind: 'barricade', x: 25.5, y: 17, w: 0.8, h: 6 };      // an inch in front of the target
+  var far = { kind: 'barricade', x: 14, y: 17, w: 0.8, h: 6 };         // out on the line, by the guns
+  var gun = mk('rmedart', 'A', 8, 20), tank = mk('mcv', 'A', 8, 20), t = mk('regular', 'B', 27, 20);
+  var st = world([gun, tank, t], [far, near]);
+  ok('plunging fire: the wall beside the target, not the one it crosses', R.shelterOf(st, gun, t) === near, true);
+  ok('direct fire: the same', R.shelterOf(st, tank, t) === near, true);
+  var st2 = world([gun, tank, t], [far]);
+  ok('a wall out on the line only is nobody\'s shelter', R.shelterOf(st2, tank, t), null);
+  ok('...nor against plunging fire', R.shelterOf(st2, gun, t), null);
+})();
+
+head('Several terrains at once (p. 42): half the rim, the middle at a tie');
+(function () {
+  var sh = mk('regular', 'A', 5, 20);
+  var wood = { kind: 'woods', x: 20, y: 14, w: 10, h: 12 };
+  function cov(t, terr) { return R.coverFor(world([sh, t], terr), sh, t).v; }
+  ok('wholly in a wood: cover', cov(mk('regular', 'B', 25, 20), [wood]), 2);
+  ok('middle in, most of the rim in: cover', cov(mk('regular', 'B', 20.3, 20), [wood]), 2);
+  ok('middle on the edge, four and four, middle in: cover', cov(mk('regular', 'B', 20, 20), [wood]), 2);
+  ok('middle just out, four and four: the middle decides, no cover', cov(mk('regular', 'B', 19.95, 20), [wood]), 0);
+  ok('middle out, rim barely touching: no cover', cov(mk('regular', 'B', 19.4, 20), [wood]), 0);
+  ok('middle in, most of the rim out: open, no cover', cov(mk('regular', 'B', 20, 20),
+    [{ kind: 'woods', x: 19.5, y: 19.5, w: 1, h: 1 }]), 0);
+  var st = world([], [wood]);
+  var gap = world([], [{ kind: 'woods', x: 14, y: 14, w: 5.95, h: 12 }, { kind: 'woods', x: 20.05, y: 14, w: 5, h: 12 }]);
+  ok('middle in a narrow gap between woods, six rim points in: woods', R.kindsUnder(gap, null, 20, 20)[0], 'woods');
+  ok('rim through the corner of a wood, mostly in: woods', R.kindsUnder(st, null, 20.6, 20)[0], 'woods');
+
+  var trench = { kind: 'trench', x: 30, y: 30, w: 4, h: 1.6 };
+  var dug = mk('regular', 'B', 32, 30.8);
+  ok('a 1.6" trench holds a 2" token (six of eight rim points): cover', cov(dug, [trench]), 2);
+  ok('...from the side too', (function () {
+    var a = mk('regular', 'A', 32, 20), b2 = mk('regular', 'A', 42, 30.8);
+    var w = world([a, b2, dug], [trench]);
+    return R.coverFor(w, a, dug).v;
+  })(), 2);
+
+  var inf = mk('regular', 'A', 19.5, 16), stP = world([inf], [wood]);
+  ok('walking along a wood\'s edge, rim brushing it: no penalty', reachCost(stP, inf, 10, 19.5, 24), 8);
+  var inf2 = mk('regular', 'A', 20.5, 20), stS = world([inf2], [wood]);
+  ok('starting in the wood\'s edge, moving out: pays the wood', reachCost(stS, inf2, 10, 15.5, 20) > 5, true);
+
+  var hill = { kind: 'hill', x: 0, y: 0, w: 40, h: 40, level: 1 };
+  var deep = mk('regular', 'B', 25, 20), woodOnHill = world([deep], [hill, wood]);
+  ok('a wood on a hill is a wood only (the smaller terrain rules)', R.terrainAt(woodOnHill, 25, 20), 'woods');
+  ok('...and a unit in it is not up on the hill', R.levelOf(woodOnHill, deep), 0);
+  var onHill = mk('regular', 'B', 10, 10), edgeHill = mk('regular', 'B', 39.8, 10), offHill = mk('regular', 'B', 40.3, 10);
+  ok('bare hill: up on the hill', R.levelOf(world([onHill], [hill]), onHill) > 0, true);
+  ok('on the brow, most of it on: up on the hill', R.levelOf(world([edgeHill], [hill]), edgeHill) > 0, true);
+  ok('mostly off: not', R.levelOf(world([offHill], [hill]), offHill), 0);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

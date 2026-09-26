@@ -1,6 +1,6 @@
 /* When the camera goes over to the AI's unit as it acts, it is the AI's
    until that side is done: the player cannot drag, pinch, zoom or tap it
-   away meanwhile, the hint says so, and the view comes back on its own to
+   away meanwhile, no hint is put under the table, and the view comes back on its own to
    where the player left it once the AI has finished. */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -83,7 +83,7 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
   }
   ok('the AI takes the camera for its own unit', !!seen);
   if (seen) {
-    ok('...the hint says the view comes back by itself', /comes back/.test(seen.hint), seen.hint);
+    ok('...with no hint put up under the table', seen.hint === '', seen.hint);
     ok('...and the zoom buttons are dimmed', seen.dim);
     ok('the wheel, the + key and the + button do not zoom it', seen.after.z === seen.before.z, seen.before.z + ' → ' + seen.after.z);
     // the AI's own follow may nudge it along; the player's drag would have thrown it 100+ px

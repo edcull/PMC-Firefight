@@ -713,6 +713,12 @@ console.log('  vs the OpFor AI');
   ok('...Pass/Regroup is', e.query.actionState(u, 'regroup').on);
   u.sp = 2 * R.currentMorale(u) + 1;                // broken
   ok('a broken unit cannot be activated', R.status(u) === 'broken' && !e.query.eligible(side).includes(u));
+  // ...and picked to look at, nothing on its bar is live, nor will the engine take one
+  const live = ['move', 'fire', 'advance', 'assault', 'aux', 'regroup'].filter(id => e.query.actionState(u, id).on);
+  ok('...not one of its actions is on', live.length === 0, live.join(', '));
+  e.intent(side, { k: 'select', id: u.id });
+  const r = e.intent(side, { k: 'action', id: 'move' });
+  ok('...and the engine refuses one', !(r && r.ok), r && r.why);
 })();
 
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'all ') + checks + ' checks' + (bad ? '' : ' passed'));

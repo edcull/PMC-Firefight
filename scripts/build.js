@@ -18,8 +18,14 @@ function stamp(page) {
     // the page's own stylesheets (not the fonts, which come from outside)
     .replace(/<link rel="stylesheet" href="(src\/[^"?]+)(?:\?v=[0-9a-f]+)?">/g, (m, src) =>
       '<link rel="stylesheet" href="' + src + '?v=' + v(src) + '">');
-  if (after !== before) fs.writeFileSync(file, after);
+  if (after === before) return;
+  /* Something the page loads has changed, so this is a new build: the menu
+     says which, as v0.1.0 and the moment it was built (UTC, YYMMDDHHmm). */
+  const d = new Date(), p2 = (n) => String(n).padStart(2, '0');
+  const build = String(d.getUTCFullYear()).slice(2) + p2(d.getUTCMonth() + 1) + p2(d.getUTCDate()) + p2(d.getUTCHours()) + p2(d.getUTCMinutes());
+  fs.writeFileSync(file, after.replace(/(<p class="menu-ver" id="menu-ver">)v[\d.]+(<\/p>)/, '$1' + VERSION + '.' + build + '$2'));
 }
+const VERSION = 'v0.1.0';
 stamp('index.html');
 stamp('viewer.html');
 

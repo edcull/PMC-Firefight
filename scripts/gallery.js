@@ -6,7 +6,11 @@ const path = require('path');
 // the tool lives in scripts/; everything it reads and writes is a level up
 const ROOT = path.join(__dirname, '..');
 const rules = fs.readFileSync(path.join(ROOT, 'src/rules/rules.js'), 'utf8');
-const iso = fs.readFileSync(path.join(ROOT, 'src/view/iso.js'), 'utf8');
+/* The renderer is iso.js and the parts it installs (iso-*.js), loaded before
+   it: all of them, in the order the game's own page loads them. */
+const iso = (fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
+  .match(/src\/view\/iso[\w-]*\.js/g) || ['src/view/iso.js'])
+  .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 // the atlas itself, shared with the unit viewer's Atlas mode
 const atlas = fs.readFileSync(path.join(ROOT, 'src/view/atlas.js'), 'utf8');
 

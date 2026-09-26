@@ -113,10 +113,10 @@
     }
     function updateReturnHint() {
       var h = el('returnhint'), locked = camLocked();
+      // while the other side's move is being followed there is nothing to say: the view comes back by itself
       if (h) {
-        h.hidden = !cam.borrowed;
-        h.textContent = locked ? 'Following the other side\u2019s move \u2014 your view comes back when it is done'
-          : 'Camera is following the action \u2014 tap the table to return to your view';
+        h.hidden = !cam.borrowed || locked;
+        h.textContent = 'Camera is following the action \u2014 tap the table to return to your view';
       }
       var vc = el('viewctl');
       if (vc) vc.classList.toggle('locked', locked);
