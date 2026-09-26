@@ -11,17 +11,26 @@ const crypto = require('crypto');
 function stamp(page) {
   const file = path.join(ROOT, page);
   const before = fs.readFileSync(file, 'utf8');
-  const after = before.replace(/<script src="([^"?]+)(?:\?v=[0-9a-f]+)?"><\/script>/g, (m, src) => {
-    const code = fs.readFileSync(path.join(ROOT, src));
-    const v = crypto.createHash('sha1').update(code).digest('hex').slice(0, 10);
-    return '<script src="' + src + '?v=' + v + '"></script>';
-  });
+  const v = (src) => crypto.createHash('sha1').update(fs.readFileSync(path.join(ROOT, src))).digest('hex').slice(0, 10);
+  const after = before
+    .replace(/<script src="([^"?]+)(?:\?v=[0-9a-f]+)?"><\/script>/g, (m, src) =>
+      '<script src="' + src + '?v=' + v(src) + '"></script>')
+    // the page's own stylesheets (not the fonts, which come from outside)
+    .replace(/<link rel="stylesheet" href="(src\/[^"?]+)(?:\?v=[0-9a-f]+)?">/g, (m, src) =>
+      '<link rel="stylesheet" href="' + src + '?v=' + v(src) + '">');
   if (after !== before) fs.writeFileSync(file, after);
 }
 stamp('index.html');
 stamp('viewer.html');
 
-let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+/* The single-file builds carry their stylesheets inline too: each of the
+   page's own <link rel="stylesheet"> becomes a <style> holding that file. */
+function inlineStyles(page) {
+  return page.replace(/<link rel="stylesheet" href="(src\/[^"?]+)(?:\?v=[0-9a-f]+)?">/g, (m, src) =>
+    '<style>\n/* ---- ' + src + ' ---- */\n' + fs.readFileSync(path.join(ROOT, src), 'utf8') + '</style>');
+}
+
+let html = inlineStyles(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));
 html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, src) => {
   src = src.split('?')[0];
   const code = fs.readFileSync(path.join(ROOT, src), 'utf8');
@@ -35,7 +44,7 @@ console.log((fs.statSync(out).size / 1024).toFixed(0) + ' KB → ' + out);
 // the attack viewer, inlined the same way, so it can be published on its own
 (function () {
   var fs2 = require('fs'), p2 = require('path');
-  var v = fs2.readFileSync(p2.join(ROOT, 'viewer.html'), 'utf8');
+  var v = inlineStyles(fs2.readFileSync(p2.join(ROOT, 'viewer.html'), 'utf8'));
   v = v.replace(/<script src="([^"]+)"><\/script>/g, function (m, src) {
     src = src.split('?')[0];
     return '<script>\n' + fs2.readFileSync(p2.join(ROOT, src), 'utf8').replace(/<\/script/g, '<\\/script') + '\n</script>';
