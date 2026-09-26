@@ -963,6 +963,22 @@
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
     animates: animates,
+    /* How much the caches hold: how many pictures, and their pixels in bytes
+       (four to a pixel) — for watching memory over a long battle. */
+    cacheStats: function () {
+      function tally(c) {
+        var n = 0, px = 0;
+        for (var k in c) {
+          var v = c[k];
+          (Array.isArray(v) ? v : [v]).forEach(function (x) {
+            if (x && x.width && x.height) { n++; px += x.width * x.height; }
+            else if (x && x.canvas && x.canvas.width) { n++; px += x.canvas.width * x.canvas.height; }
+          });
+        }
+        return { n: n, mb: +(px * 4 / 1048576).toFixed(1) };
+      }
+      return { sprites: tally(sprites), corpses: tally(corpses), textures: tally(TEX_TILE) };
+    },
     flush: function () {       // the browser threw our canvases away (a phone backgrounding the tab): paint them again
       // the caches are emptied rather than replaced: the parts hold the same objects
       [sprites, corpses, hullCache, TEX_TILE].forEach(function (c) { for (var k in c) delete c[k]; });

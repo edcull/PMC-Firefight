@@ -224,6 +224,8 @@ async function askArrival(p) {
   const inv = await p.evaluate(async () => {
     window.PMC_NEWGAME({
       tier: 4, pl: 2, mode: 'ai', planet: 'barren', scenario: 'invasion',
+      // the player attacks, so it is the player's second wave that is held back (rolled, it is B's half the time)
+      roles: { attacker: 'A', defender: 'B' },
       nameA: 'Ours', nameB: 'Theirs',
       armyA: ['cmd3', 'regular', 'veterans', 'rookie', 'lmgteam', 'lcv:tracked'],
       armyB: ['cmd3', 'regular', 'veterans', 'rookie']
