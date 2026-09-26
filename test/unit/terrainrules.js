@@ -243,5 +243,21 @@ head('The Demolish objective');
   ok('...and not past it', R.lineClear(st, a, b), true);
 })();
 
+/* The wall a Destructive Weapon brings down is the one sheltering the target
+   (p. 57): the low wall within 2" that gives it its cover — not another stretch
+   of wall further off that the shot happens to cross. */
+head('The wall a shot brings down');
+(function () {
+  var near = { kind: 'barricade', x: 25.5, y: 17, w: 0.8, h: 6 };      // an inch in front of the target
+  var far = { kind: 'barricade', x: 14, y: 17, w: 0.8, h: 6 };         // out on the line, by the guns
+  var gun = mk('rmedart', 'A', 8, 20), tank = mk('mcv', 'A', 8, 20), t = mk('regular', 'B', 27, 20);
+  var st = world([gun, tank, t], [far, near]);
+  ok('plunging fire: the wall beside the target, not the one it crosses', R.shelterOf(st, gun, t) === near, true);
+  ok('direct fire: the same', R.shelterOf(st, tank, t) === near, true);
+  var st2 = world([gun, tank, t], [far]);
+  ok('a wall out on the line only is nobody\'s shelter', R.shelterOf(st2, tank, t), null);
+  ok('...nor against plunging fire', R.shelterOf(st2, gun, t), null);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

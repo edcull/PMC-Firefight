@@ -2475,17 +2475,22 @@
       if (inRect(target.x, target.y, r)) return r;
     }
     if (!attacker) return null;
+    /* The low wall it shelters behind — the one that gives it its cover (see
+       coverFor, p. 42): within 2" of the whole unit, and between it and the
+       shooter, or on any side of it against plunging fire (p. 58). A wall
+       further off on the line of fire is not the target's shelter, and is not
+       what a shot at the target brings down. The nearest such wall, if two. */
+    var plunging = has(attacker, 'Indirect Fire'), best = null, bd = Infinity;
     for (var j = 0; j < state.terrain.length; j++) {
       var r2 = state.terrain[j];
       if (!isDestructible(r2) || TERRAIN[r2.kind].blocks) continue;
       if (inRect(attacker.x, attacker.y, r2)) continue;
-      if (segRect(attacker.x, attacker.y, target.x, target.y, r2)) return r2;
-      /* plunging fire: the low wall a target shelters by (within 2") is its cover
-         whichever way the shot comes, so it is the wall that can be brought down (p. 58) */
-      if (r2.kind === 'barricade' && has(attacker, 'Indirect Fire') &&
-        rectPointDist(r2, target.x, target.y) + UNIT_R <= 2 + 1e-6) return r2;
+      var d = rectPointDist(r2, target.x, target.y);
+      if (d + UNIT_R > 2 + 1e-6) continue;
+      if (!plunging && !segRect(attacker.x, attacker.y, target.x, target.y, r2)) continue;
+      if (d < bd) { bd = d; best = r2; }
     }
-    return null;
+    return best;
   }
   // Incendiary Ammunition counts as a Destructive Weapon against buildings
   /* Shooting a piece of terrain down (p. 57): a Destructive Weapon against

@@ -3981,6 +3981,8 @@
     if (!(opts && opts.assault)) keenFx(a, t, 6);
     var res = R.shoot(st, a, t, mode, opts);
     abilityFx(res, t, sh, trails);
+    // whatever the shot brought down is repainted, whoever fired it and why
+    if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     return res;
   }
   /* Martyrdom (p. 112) is ordered as each assault begins, attacking or
@@ -4296,7 +4298,6 @@
   function resolveShot(u, target, mode, opts) {
     var snap = snapshotAlive();
     var res = abShoot(state, u, target, mode, opts || {});
-    if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     // Ambush!: the column caught off guard in the first turn (p. 156)
     if (state.scen.afterShot) {
       var extra = state.scen.afterShot(state, u, target);
@@ -4335,7 +4336,6 @@
     var u = ui.selected;
     var snap = snapshotAlive();
     var res = abShoot(state, u, target, 'support', {});
-    if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
     scenAfterShot(u, target, res.log);
     res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
     soundFor(res.log);
