@@ -389,6 +389,15 @@
     function drawBoardNow() {
       // everything drawn on the board itself is in CSS pixels, scaled to its density
       B.ctx.setTransform(B.DPR, 0, 0, B.DPR, 0, 0);
+      /* Where each unit was last drawn: when the rules put one somewhere new
+         without a move of its own to play (pushed back, turned out of a
+         building, pulled into a fight), the replay holds it here until its
+         part comes round, rather than letting it jump while something else is
+         still being drawn. */
+      B.state.units.forEach(function (u) {
+        var on = u.alive && u.x >= 0 && !u.aboard;
+        u._drawnX = on ? dispX(u) : null; u._drawnY = on ? dispY(u) : null;
+      });
       /* The objectives' beacons are painted with the structures: when they move
          or arrive (an Invasion's zones are nominated after deployment), repaint. */
       // a barricade put down by hand: the structures again, not the whole table

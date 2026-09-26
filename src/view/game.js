@@ -506,6 +506,12 @@
              from there — rather than jumping ahead to where its last move ends. */
           var endAt = an.segs[an.segs.length - 1].b;
           if (moveQueued(an.unit)) { an.unit.ax = endAt.x; an.unit.ay = endAt.y; }
+          /* ...and one the rules then put somewhere else without a move to show
+             it (pulled into a fight, pushed back) stays at the end of this one
+             until the replay gets there, then slides across. */
+          else if (replaying() && (Math.abs(endAt.x - an.unit.x) > 0.05 || Math.abs(endAt.y - an.unit.y) > 0.05)) {
+            an.unit.ax = endAt.x; an.unit.ay = endAt.y; REPLAY.slideLater(an.unit);
+          }
           else an.unit.ax = an.unit.ay = null;
         }
         if (an.kind === 'strafe') { an.unit.ax = an.unit.ay = null; }

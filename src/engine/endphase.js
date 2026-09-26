@@ -213,7 +213,7 @@
         tide.forEach(function (l) {
           var om = R.overmindFor(E.state, l.unit, true, true);
           if (om && minds.indexOf(om) < 0) { minds.push(om); addFx({ kind: 'wave', x: om.x, y: om.y, up: 0, r: 18, rgb: '150,215,90', dur: 1400, blocking: true }); }
-          addFx({ kind: 'rise', x: l.unit.x, y: l.unit.y, rgb: '205,170,95', n: 10, delay: 300, dur: 1400 });
+          addFx({ kind: 'rise', x: l.unit.x, y: l.unit.y, rgb: '205,170,95', n: 10, delay: 300, dur: 1400, blocking: true });
         });
         if (SFX) SFX.chitter();
         pushRes({ kind: 'Endless Tide', title: 'The swarm replenishes', side: tide[0].unit.side,
