@@ -778,7 +778,7 @@
       : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
       : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
       : 'Ready. The field command is added free, at the Company Tier.';
-    var nameTxt = say('The company needs a name.', 'The revolution needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
+    var nameTxt = say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
     /* No line of help under it: what the charter still wants is on the
        button, in the game's own tip — on a hover, and on a press while it is
        greyed out (aria-disabled rather than disabled, so the press arrives).
@@ -1104,7 +1104,7 @@
     var a = C.archetype(co.archetype);
     var SC = root.PMCScen, sc = SC && SC.SCENARIOS[o.scenario.id];
     var creedName = co.faction === 'rebel' ? 'Paths' : co.faction === 'bugs' ? 'Evolutionary Pathways' : co.faction === 'xeno' ? 'Tribe Advancements' : 'Doctrines';
-    var h = '<div class="cpan cpan-B cpan-offer"><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
+    var h = '<div class="cpan cpan-B cpan-offer"' + stripe(co) + '><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
       '<span class="ctier">' + C.words(co).tier + ' Tier ' +
       ROMAN[co.tier] + '</span></div>';
     // won, veterancy and trauma, as your own company's row shows them — never what they field
