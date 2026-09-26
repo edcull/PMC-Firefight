@@ -3122,6 +3122,12 @@
     if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
     if (u.side !== state.activeSide) return { on: false, hint: state.solo ? 'The OpFor is acting.' : 'It is ' + sideName(state.activeSide) + '’s activation.' };
     if (u.activated) return { on: false, hint: u.name + ' has already acted this turn.' };
+    /* Broken (p. 34): it is not activated at all — it flees at the start of
+       the Rally phase, and rallies, if it can, in it. It can still be picked
+       to look at, but nothing on its bar is live. */
+    if (R.status(u) === 'broken') {
+      return { on: false, hint: u.name + ' is Broken: it cannot act. It flees at the start of the Rally phase, and may rally there.' };
+    }
     /* In the middle of a chain — a marker's call, a Command Unit's, the turrets
        acting as one — only the units the chain calls on may act. */
     if (state.chain && state.chain.side === u.side && eligible(u.side).indexOf(u) < 0) {
