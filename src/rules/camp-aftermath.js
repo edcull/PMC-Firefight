@@ -1,9 +1,7 @@
 /* PMC 2670 — Firefight : after the battle: experience, casualties, honours and traumas, payment and salvage, and the battles fought elsewhere
 
-   Made once by campaign.js, the first time it is wanted. E is what it needs
-   of campaign.js: what never changes bound here once, and
-   what does (the battle itself, and anything else reassigned) read through
-   E as it is now. It hands back the functions below. */
+   Made once by campaign.js, the first time it is wanted, with E: the names
+   of campaign.js this needs, bound here once. It hands back the functions below. */
 (function (root) {
   'use strict';
   root.PMCCampAftermath = function (E) {

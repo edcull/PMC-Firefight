@@ -1,9 +1,7 @@
 /* PMC 2670 — Firefight : the other forces on the world: founding them, the contracts on offer, and how a rival grows between battles
 
-   Made once by campaign.js, the first time it is wanted. E is what it needs
-   of campaign.js: what never changes bound here once, and
-   what does (the battle itself, and anything else reassigned) read through
-   E as it is now. It hands back the functions below. */
+   Made once by campaign.js, the first time it is wanted, with E: the names
+   of campaign.js this needs, bound here once. It hands back the functions below. */
 (function (root) {
   'use strict';
   root.PMCCampRivals = function (E) {

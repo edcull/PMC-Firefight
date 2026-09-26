@@ -129,7 +129,8 @@ main {
 }
 .vcolpop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
 .vzoom button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
-#vboard { touch-action: pan-y; }
+/* the stage takes every drag itself: a swipe steps through the units (see viewer.js), a pinch zooms */
+#vboard { touch-action: none; }
 /* a tap on the stage fires; it does not flash the browser's tap highlight or select anything */
 #vboard, .vstage { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; outline: none; }
 #vboard {

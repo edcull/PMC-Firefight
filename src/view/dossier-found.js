@@ -1,9 +1,9 @@
 /* PMC 2670 — Firefight : founding a force: the second player, colours, the pickers and the founding sheet
 
    Made once by dossier.js, the first time it is wanted. E is what it needs
-   of dossier.js: what never changes bound here once, and
-   what does (the battle itself, and anything else reassigned) read through
-   E as it is now. It hands back the functions below. */
+   of dossier.js: what never changes bound here once, and what does (the
+   campaign, the contract, which screen is open) read through E as it is
+   now. It hands back the functions below. */
 (function (root) {
   'use strict';
   root.PMCDossierFound = function (E) {
