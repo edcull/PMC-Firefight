@@ -1998,7 +1998,7 @@
     var res = aftermath(mini, report, {});
     function summary(co, side) {
       var r = res.sides[side];
-      return {
+      var sum0 = {
         name: co.name, vs: side === 'A' ? foe.name : x.name,
         result: report.winner === side ? 'won' : report.winner ? 'lost' : 'drew',
         kUC: r.kUC, fell: report.casualties.filter(function (c) { return c.side === side; })
@@ -2008,6 +2008,7 @@
         exp: r.units.reduce(function (n, u) { return n + (u.exp ? u.exp.total : 0); }, 0),
         did: developRival(co)
       };
+      return sum0;
     }
     var out = [summary(x, 'A')];
     if (y) out.push(summary(y, 'B'));
@@ -2675,6 +2676,15 @@
       }
       did.push({ what: 'tier', text: 'promoted to ' + words(co).tier + ' Tier ' + R.ROMAN[co.tier] });
     }
+    /* Whatever the fighting and the promotions have left it short of, a force
+       out working the world hires back to a legal army at every Tier it holds:
+       it is always ready for the next contract. */
+    rebuildNeeds(co).forEach(function (t) {
+      // only a shortage is mended by hiring; a list over a cap is not
+      if (!(fieldReport(co, t, 1).missing || []).length) return;
+      var n = co.roster.length;
+      if (deepen(co, t, 1) && co.roster.length > n) did.push({ what: 'recruit', text: 'hired back up to a legal Tier ' + R.ROMAN[t] + ' army' });
+    });
     return did;
   }
 
