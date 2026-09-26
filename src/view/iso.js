@@ -178,7 +178,7 @@
      (filled paths, not dithered); corpse: a body (its deflector gone out);
      shield, brain, flame, wing: the frame each animation is on; mounts: where
      the barrels end, collected while a machine is drawn into a scratch canvas. */
-  var PH = { smooth: false, corpse: false, shield: 0, brain: 0, flame: -1, wing: -1, mounts: null, helmBand: false };
+  var PH = { smooth: false, corpse: false, shield: 0, brain: 0, flame: -1, wing: -1, mounts: null, helmBand: true };
   var RING_VIS = -1;
   function poly(g, pts, c) {
     if (PH.smooth) {
