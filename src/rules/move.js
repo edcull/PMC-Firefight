@@ -130,10 +130,21 @@
         u.wireRoll = d6();
       }
 
+      /* What each kind of ground means to this unit — what it costs to enter,
+         whether it bars the way, whether it is linear or area terrain — asked
+         once for each kind rather than at every step of the search. */
+      var KN = kinds.length, kCost = new Float64Array(KN), kLin = new Uint8Array(KN), kArea = new Uint8Array(KN), kBar = new Uint8Array(KN);
+      for (var kn = 0; kn < KN; kn++) {
+        kCost[kn] = terrainCost(u, kinds[kn]);
+        kLin[kn] = TERRAIN[kinds[kn]].linear ? 1 : 0;
+        kArea[kn] = !kLin[kn] && kCost[kn] > 0 ? 1 : 0;
+        kBar[kn] = terrainBars(u, kinds[kn]) ? 1 : 0;
+      }
+      // the kind of ground at a lattice point, as its place in `kinds`
       function kindAt(i, j) {
         var k = idx(i, j);
         if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
-        return kinds[terr[k] - 1];
+        return terr[k] - 1;
       }
       var blk = new Int8Array(N);                        // 0 not yet asked, 1 open, 2 blocked
       function blockedBy(i, j) {
@@ -141,30 +152,29 @@
         if (blk[c] === 0) blk[c] = blockedAt(i, j) ? 2 : 1;
         return blk[c] === 2;
       }
+      var foes = state.units.filter(function (o) { return o.alive && o !== u && o.side !== u.side && !o.aboard && o.x >= 0; });
       function blockedAt(i, j) {
         var x = i * STEP, y = j * STEP;
         if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) return true;
-        if (terrainBars(u, kindAt(i, j))) return true;
+        if (kBar[kindAt(i, j)]) return true;
         // aircraft "can move over other units" (p. 38); they only may not finish within 1"
         if (isFlying(u)) return false;
-        for (var n = 0; n < state.units.length; n++) {
-          var o = state.units[n];
-          if (!o.alive || o === u || o.side === u.side || o.aboard || o.x < 0) continue;
+        for (var n = 0; n < foes.length; n++) {
+          var o = foes[n];
           if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) return true;   // stay 1" clear of the enemy
         }
         return false;
       }
-      var linear = function (k) { return !!TERRAIN[k].linear; };
       var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
       /* The area terrain a unit standing at a point counts as in (see
-         kindsUnder), or null; worked out once a point. Stepping into it, or
-         starting in it, costs the penalty once a move (p. 42). */
+         kindsUnder), as its place in `kinds`, or -1; worked out once a point.
+         Stepping into it, or starting in it, costs the penalty once a move (p. 42). */
       var under = ground.under;
       function areaAt(i, j) {
         var c = idx(i, j);
         if (under[c] === 0) under[c] = 1 + kindIndex[kindsUnder(state, null, i * STEP, j * STEP)[0]];
-        var kk = kinds[under[c] - 1];
-        return area(kk) ? kk : null;
+        var kk = under[c] - 1;
+        return kArea[kk] ? kk : -1;
       }
 
       var k0 = kindsUnder(state, u)[0];
@@ -206,6 +216,7 @@
         var ck = idx(cur.i, cur.j) * 2 + cur.p;
         if (cur.c > cost[ck]) continue;
         seen.push(cur);
+        var k1 = kindAt(cur.i, cur.j);
         for (var n = 0; n < NEI.length; n++) {
           var di = NEI[n][0], dj = NEI[n][1];
           var ni = cur.i + di, nj = cur.j + dj;
@@ -214,13 +225,13 @@
           var mi = cur.i + NEI_MID[n][0], mj = cur.j + NEI_MID[n][1];
           if ((di > 1 || di < -1 || dj > 1 || dj < -1) && blockedBy(mi, mj)) continue;
           var step = NEI_LEN[n], paid = cur.p;
-          var k1 = kindAt(cur.i, cur.j), k2 = kindAt(ni, nj), km = kindAt(mi, mj);
+          var k2 = kindAt(ni, nj), km = kindAt(mi, mj);
           // a linear piece is paid for every time it is crossed: on stepping onto it
-          if (linear(k2) && k2 !== k1) step += terrainCost(u, k2);
-          else if (linear(km) && km !== k1 && km !== k2) step += terrainCost(u, km);
+          if (kLin[k2] && k2 !== k1) step += kCost[k2];
+          else if (kLin[km] && km !== k1 && km !== k2) step += kCost[km];
           // area terrain once in the whole move
           var a2 = areaAt(ni, nj);
-          if (!paid && (a2 || area(km))) { step += terrainCost(u, a2 || km); paid = 1; }
+          if (!paid && (a2 >= 0 || kArea[km])) { step += kCost[a2 >= 0 ? a2 : km]; paid = 1; }
           var nc = cur.c + step;
           if (nc > allowance + 1e-6) continue;
           var nk = idx(ni, nj) * 2 + paid;
@@ -323,27 +334,33 @@
       var kinds = Object.keys(TERRAIN), kindIndex = {};
       kinds.forEach(function (k, n) { kindIndex[k] = n; });
       if (u.wireRoll == null && state.terrain.some(function (r) { return r.kind === 'wire'; })) u.wireRoll = d6();
+      // what each kind of ground means to this hull, asked once a kind (as in fieldOf)
+      var KN = kinds.length, kCost = new Float64Array(KN), kLin = new Uint8Array(KN), kArea = new Uint8Array(KN), kBar = new Uint8Array(KN);
+      for (var kn = 0; kn < KN; kn++) {
+        kCost[kn] = terrainCost(u, kinds[kn]);
+        kLin[kn] = TERRAIN[kinds[kn]].linear ? 1 : 0;
+        kArea[kn] = !kLin[kn] && kCost[kn] > 0 ? 1 : 0;
+        kBar[kn] = terrainBars(u, kinds[kn]) ? 1 : 0;
+      }
+      var foes = state.units.filter(function (o) { return o.alive && o !== u && o.side !== u.side && !o.aboard && o.x >= 0; });
       function kindAt(i, j) {
         var k = idx(i, j);
         if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
-        return kinds[terr[k] - 1];
+        return terr[k] - 1;
       }
       function blockedBy(i, j) {
         var k = idx(i, j);
         if (blk[k]) return blk[k] === 2;
         var x = i * STEP, y = j * STEP, b = false;
         if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) b = true;
-        else if (terrainBars(u, kindAt(i, j))) b = true;
-        else for (var n = 0; n < state.units.length; n++) {
-          var o = state.units[n];
-          if (!o.alive || o === u || o.side === u.side || o.aboard || o.x < 0) continue;
+        else if (kBar[kindAt(i, j)]) b = true;
+        else for (var n = 0; n < foes.length; n++) {
+          var o = foes[n];
           if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) { b = true; break; }
         }
         blk[k] = b ? 2 : 1;
         return b;
       }
-      var linear = function (k) { return !!TERRAIN[k].linear; };
-      var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
       // one step straight on along heading h: its cost, and whether it pays the area penalty
       function stepCost(ci, cj, h, paid) {
         var di = NEI[h][0], dj = NEI[h][1], ni = ci + di, nj = cj + dj;
@@ -352,9 +369,9 @@
         if ((Math.abs(di) > 1 || Math.abs(dj) > 1) && blockedBy(mi, mj)) return null;
         var run = STEP * Math.hypot(di, dj), pen = 0;
         var k1 = kindAt(ci, cj), k2 = kindAt(ni, nj), km = kindAt(mi, mj);
-        if (linear(k2) && k2 !== k1) pen += terrainCost(u, k2);
-        else if (linear(km) && km !== k1 && km !== k2) pen += terrainCost(u, km);
-        if (!paid && (area(k2) || area(km))) { pen += terrainCost(u, area(k2) ? k2 : km); paid = 1; }
+        if (kLin[k2] && k2 !== k1) pen += kCost[k2];
+        else if (kLin[km] && km !== k1 && km !== k2) pen += kCost[km];
+        if (!paid && (kArea[k2] || kArea[km])) { pen += kCost[kArea[k2] ? k2 : km]; paid = 1; }
         return { i: ni, j: nj, run: run, pen: pen, paid: paid };
       }
 
@@ -386,7 +403,7 @@
         }
         return top;
       }
-      var k0 = kindAt(i0, j0), startPaid = area(k0) ? 1 : 0, c0 = startPaid ? terrainCost(u, k0) : 0;
+      var k0 = kindAt(i0, j0), startPaid = kArea[k0] ? 1 : 0, c0 = startPaid ? kCost[k0] : 0;
       var h0 = nearestHead(u.facing == null ? 0 : u.facing), turn = u.turn || 0;
       var cell0 = idx(i0, j0);
       cost[sid(cell0, h0, startPaid)] = c0; push(c0, sid(cell0, h0, startPaid));
