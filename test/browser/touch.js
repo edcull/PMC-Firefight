@@ -210,7 +210,14 @@ const { ROOT, startSkirmish } = require('../where.js');
     check('Move is offered for the selected unit', false, 'disabled');
   }
 
-  // drag should pan, not select
+  // drag should pan, not select — once the other side's answer to that move has played out,
+  // since while the camera is following it the table is not the player's to pan
+  for (let i = 0; i < 200; i++) {
+    const idle = await p.evaluate(() => !window.__cam().borrowed && !window.__busy() && !window.__showQueue());
+    if (idle) break;
+    await p.evaluate(() => { const r = document.getElementById('resolution'); if (r && !r.hidden) document.getElementById('res-continue').click(); });
+    await p.waitForTimeout(100);
+  }
   await p.evaluate(() => window.__clearSel && window.__clearSel());
   await p.waitForTimeout(150);
   const v0 = await p.evaluate(() => window.PMC_VIEW());
