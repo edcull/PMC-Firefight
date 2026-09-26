@@ -1,13 +1,13 @@
 /* PMC 2670 — Firefight : the parts of a trooper: the mount, legs, pack, torso, arms, helmet and weapon
 
-   Made by iso-troops.js once, with the palettes and pieces it shares (K). Each
+   Made by iso-troops.js once, with the palettes and pieces it shares (S). Each
    function paints one part of a figure through its pixel pen P, from what
    the figure is (kit, palette, pose) and where the part sits. */
 (function (root) {
   'use strict';
-  root.PMCIsoParts = function (K) {
-    var B = K.B, BOOT = K.BOOT, GLASS = K.GLASS, GUN = K.GUN, PALETTE_FORCE = K.PALETTE_FORCE, RB = K.RB,
-        ellipse = K.ellipse, vividHex = K.vividHex;
+  root.PMCIsoParts = function (S) {
+    var B = S.B, BOOT = S.BOOT, GLASS = S.GLASS, GUN = S.GUN, PALETTE_FORCE = S.PALETTE_FORCE, RB = S.RB,
+        ellipse = S.ellipse, vividHex = S.vividHex;
 
     function mount(P, g, kit, ox, oy, pal, pose, s, step) {
       if (kit.mount && pose !== 'prone') {
