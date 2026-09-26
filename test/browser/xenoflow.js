@@ -39,8 +39,24 @@ async function drain(p) {
   });
 }
 
+/* The other forces' battles are fought out after yours, and reported, before
+   your own aftermath: wait them out and carry on past the report. */
+async function pastFronts(p) {
+  for (let i = 0; i < 600; i++) {
+    const at = await p.evaluate(() => {
+      if (!/Elsewhere on the world/i.test(document.getElementById('camp-title').textContent)) return 'past';
+      const b = document.querySelector('#camp-body [data-go="frontsdone"]');
+      if (b) { b.click(); return 'clicked'; }
+      return 'fighting';
+    });
+    if (at !== 'fighting') { await p.waitForTimeout(300); return at === 'clicked'; }
+    await p.waitForTimeout(250);
+  }
+  return false;
+}
+
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1340, height: 940 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
@@ -216,6 +232,7 @@ async function drain(p) {
   await p.waitForTimeout(1600);
   for (let i = 0; i < 10; i++) { await drain(p); await p.waitForTimeout(160); }
   await p.waitForTimeout(700);
+  check('the other forces\u2019 battles were fought and reported first', await pastFronts(p));
   txt = await body(p);
   check('the aftermath screen opened', /aftermath|EXP/i.test(txt), txt.split('\n')[0]);
   // the revolt is paid in IP; a mercenary company fighting elsewhere is still paid in kUC

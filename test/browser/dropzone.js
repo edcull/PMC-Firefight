@@ -90,7 +90,17 @@ async function askArrival(p) {
     await settle(p);
     await drain(p);
     await settle(p);
-    const st = await p.evaluate(() => window.__insertionState());
+    let st = await p.evaluate(() => window.__insertionState());
+    if (st && st.kind === 'arrive') return true;
+    /* Something else is being asked first — the attacker's landing zones, or a
+       first-wave insertion: answer it at the first legal spot and look again.
+       (Left, the reserves below would be pushed to later waves while it
+       waited, and could all be down before the question the check is for.) */
+    for (let q = 0; q < 12 && st && st.kind !== 'arrive'; q++) {
+      await p.evaluate(() => { const sp = window.__insertionSpotsNow(); if (sp && sp.length) window.__tapInsertion(sp[0]); else window.__holdInsertion(); });
+      await settle(p); await drain(p);
+      st = await p.evaluate(() => window.__insertionState());
+    }
     if (st && st.kind === 'arrive') return true;
     const any = await p.evaluate(() => {
       const s = window.PMC_STATE();
@@ -107,7 +117,7 @@ async function askArrival(p) {
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({
     viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true,
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 ' +
@@ -224,6 +234,8 @@ async function askArrival(p) {
   const inv = await p.evaluate(async () => {
     window.PMC_NEWGAME({
       tier: 4, pl: 2, mode: 'ai', planet: 'barren', scenario: 'invasion',
+      // the player attacks, so it is the player's second wave that is held back (rolled, it is B's half the time)
+      roles: { attacker: 'A', defender: 'B' },
       nameA: 'Ours', nameB: 'Theirs',
       armyA: ['cmd3', 'regular', 'veterans', 'rookie', 'lmgteam', 'lcv:tracked'],
       armyB: ['cmd3', 'regular', 'veterans', 'rookie']

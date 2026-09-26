@@ -35,7 +35,7 @@ async function newGame(p, cfg) {
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1500, height: 1000 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
@@ -127,8 +127,12 @@ async function newGame(p, cfg) {
     if (st.over || st.turn >= 4) break;
   }
   const log = await p.evaluate(() => window.PMC_STATE().log.map(l => l.text).filter(t => /building/.test(t)).slice(0, 6));
+  /* The state is only looked at every quarter second, and a squad can go in
+     and come out again between two looks — so the log's word that one went
+     in counts as well. */
+  const wentIn = await p.evaluate(() => window.PMC_STATE().log.filter(l => / goes into the /.test(l.text || '')).length);
   ok('the machine plays several turns on a built-up table without error', turn >= 2 && !errs.length, 'turn ' + turn);
-  ok('...and garrisons buildings as it goes', entered > 0, entered + ' at once · ' + log.join(' | ').slice(0, 200));
+  ok('...and garrisons buildings as it goes', entered > 0 || wentIn > 0, entered + ' at once, ' + wentIn + ' went in · ' + log.join(' | ').slice(0, 200));
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   console.log('page errors: ' + (errs.length ? errs.slice(0, 4).join(' | ') : 'none'));

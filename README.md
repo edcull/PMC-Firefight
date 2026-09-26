@@ -129,6 +129,7 @@ src/
     actions.js, moves.js, abilities.js, combat.js, marks.js, save.js
                      each part of the turn, made by engine.js when first wanted
     ai.js            the OpFor: its moves, targets and ground
+    offtable.js      the other forces' battles, fought AI v AI on a table nobody sees
     protocol.js      message names and legal settings, shared by browser and server
   view/              the browser
     game.js          the board and every panel: camera, animation, taps into intents

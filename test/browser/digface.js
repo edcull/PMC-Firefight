@@ -69,7 +69,7 @@ async function digIn(p) {
 const gun = (p) => p.evaluate(() => { const g = window.PMC_STATE().units.find(u => u.key === 'rmedart'); return { dug: !!g.dugIn, facing: g.facing, activated: g.activated }; });
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1340, height: 1000 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));

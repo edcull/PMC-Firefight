@@ -22,7 +22,7 @@ const BASE = path.join(ROOT, 'test', 'art', 'baseline.json');
 const DIFF = path.join(ROOT, 'test', 'art', 'diff');
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const ctx = await b.newContext({ viewport: { width: 900, height: 700 }, deviceScaleFactor: 1 });
   /* A frozen clock and seeded dice: rotors, lights, flames and the wobble of a
      burning wreck are all worked from the time, and misses from Math.random. */

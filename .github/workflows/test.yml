@@ -1,0 +1,32 @@
+# Every push and pull request: the unit tests (with the lint), the build, and
+# the art snapshots (every unit and terrain picture, against its fingerprint).
+name: test
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save eslint@9
+      - run: npm test
+      - run: npm run build
+  # The art fingerprints were taken with one build of Chromium; another may draw
+  # a pixel differently, so this job reports but does not block (yet).
+  art:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: node test/browser/artsnap.js
+      - run: node test/browser/terrainsnap.js

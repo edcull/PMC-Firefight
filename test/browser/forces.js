@@ -21,7 +21,7 @@ function ok(name, cond, note) {
 function head(t) { console.log('\n  ' + t); }
 
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1400, height: 1000 },
     acceptDownloads: true });
   const errs = [];

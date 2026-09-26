@@ -1081,6 +1081,8 @@
   }
   function aftermath(campaign, report, opts) { return (KIT_AFTERMATH || kitAftermath()).aftermath(campaign, report, opts); }
   function rebuildNeeds(co) { return (KIT_AFTERMATH || kitAftermath()).rebuildNeeds(co); }
+  function battleElsewhere(campaign, x, y, played) { return (KIT_AFTERMATH || kitAftermath()).battleElsewhere(campaign, x, y, played); }
+  function elsewherePairs(campaign, coB) { return (KIT_AFTERMATH || kitAftermath()).elsewherePairs(campaign, coB); }
 
   /* ================= the rival's development policy (solo play) =================
      Deliberately simple and legible: fix any legality gap first, then promote the
@@ -1349,6 +1351,87 @@
   function idleTurn(co) { return (KIT_RIVALS || kitRivals()).idleTurn(co); }
   function foundRival(co, archId, usedNames) { return (KIT_RIVALS || kitRivals()).foundRival(co, archId, usedNames); }
   function developRival(co) { return (KIT_RIVALS || kitRivals()).developRival(co); }
+  /* A legal force picked from a company's roster, the way a rival picks one:
+     the minimums of each Tier first, highest Tier first, then whatever else
+     keeps the list legal, biggest first; and if that overshot, the one unit
+     whose loss leaves the fewest hard faults dropped, and again. A swarm fields
+     one Leader Bug of the Battle Tier or higher (p. 114). */
+  function pickForce(co, tier, pl, tactic) {
+    var avail = co.roster.filter(function (e) { return !(e.restUntil > 0); }).slice().sort(function (a, b) {
+      return profile(b.key).tier - profile(a.key).tier;
+    });
+    var docs = co.doctrines || [];
+    var comp = R.compFor(co.faction, tier), out = [], used = {};
+    function blocking(faults) {
+      return (faults || []).filter(function (f) { return !/Needs at least/.test(f) && !/No units chosen/.test(f); });
+    }
+    function keyOf(e) { return R.joinPick(e.key, e.prop, e.drone); }
+    function take(test) {
+      for (var i = 0; i < avail.length; i++) {
+        var e = avail[i];
+        if (used[e.rid] || !test(profile(e.key), e)) continue;
+        used[e.rid] = 1; out.push(e); return true;
+      }
+      return false;
+    }
+    var credit = {};
+    if (co.faction === 'bugs') {
+      var leaders = avail.filter(function (e) { return profile(e.key).leaderBug; })
+        .sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier; });
+      var lead = leaders.filter(function (e) { return profile(e.key).tier >= tier; })[0];
+      leaders.forEach(function (e) { used[e.rid] = 1; });
+      if (lead) { out.push(lead); credit[profile(lead.key).tier] = 1; }
+    }
+    for (var t = 1; t <= 5; t++) {
+      var need = comp.limits[t - 1][0] * pl - (credit[t] || 0);
+      if (docs.indexOf('O2') >= 0 && t === tier) need = Math.ceil(need / 2);
+      for (var i = 0; i < need; i++) take(function (p) { return p.tier === t; });
+    }
+    for (var guard = 0; guard < 60; guard++) {
+      var keys = out.map(keyOf);
+      var legal = R.checkArmy(keys, tier, pl, docs, tactic).ok;
+      var added = take(function (p, e) {
+        var res = R.checkArmy(keys.concat([keyOf(e)]), tier, pl, docs, tactic);
+        return legal ? res.ok : res.spent <= comp.points * pl;
+      });
+      if (!added) break;
+    }
+    for (var trim = 0; trim < 20 && out.length; trim++) {
+      var now = R.checkArmy(out.map(keyOf), tier, pl, docs, tactic);
+      if (now.ok) break;
+      if (!blocking(now.faults).length) break;
+      var bestAt = -1, bestScore = Infinity;
+      for (var q = 0; q < out.length; q++) {
+        var res = R.checkArmy(out.filter(function (_, n) { return n !== q; }).map(keyOf), tier, pl, docs, tactic);
+        var score = blocking(res.faults).length * 10 + res.faults.length;
+        if (score < bestScore) { bestScore = score; bestAt = q; }
+      }
+      if (bestAt < 0) break;
+      out.splice(bestAt, 1);
+    }
+    return out;
+  }
+
+  /* The forces on a world pair off between battles, so there is always an even
+     number of them: the players' own, and the others. A world with one over
+     gets one more rival — a new force arriving — founded the usual way. */
+  function evenWorld(campaign) {
+    var players = campaign.mode === 'hotseat' ? 2 : 1;
+    campaign.rivals = campaign.rivals || [];
+    if ((players + campaign.rivals.length) % 2 === 0) return null;
+    var used = campaign.rivals.map(function (r) { return r.name; });
+    var usedArch = campaign.rivals.map(function (r) { return r.archetype; });
+    var f = pick(['pmc', 'rebel']);
+    var pool = archetypesFor(f).filter(function (a) { return usedArch.indexOf(a.id) < 0; });
+    var co = newCompany('Rival ' + (campaign.rivals.length + 1), { faction: f });
+    foundRival(co, (pool.length ? pick(pool) : pick(archetypesFor(f))).id, used);
+    // it has been fighting too: brought up to the others' standing
+    var tier = Math.max.apply(null, campaign.rivals.map(function (r) { return r.tier || 1; }).concat([1]));
+    if (tier > (co.tier || 1)) catchUp(co, tier);
+    campaign.rivals.push(co);
+    return co;
+  }
+
   root.PMCCamp = {
     VERSION: VERSION,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
@@ -1396,6 +1479,7 @@
     rollPayment: rollPayment, negotiate: negotiate, payment: payment,
     expFor: expFor, tpFor: tpFor, traumaThreshold: traumaThreshold, rollTrauma: rollTrauma,
     salvage: salvage, aftermath: aftermath, developRival: developRival,
+    pickForce: pickForce, evenWorld: evenWorld, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs,
     ARCHETYPES: ARCHETYPES, archetype: archetype, foundRival: foundRival,
     d6: d6, d3: d3, d10: d10
   };
