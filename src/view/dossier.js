@@ -2067,7 +2067,17 @@
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
-      C.recruit(co, t.getAttribute('data-recruit'), { drone: t.hasAttribute('data-asdrone') }); save(); render(); return;
+      // recruiting spends the money: say what it costs, and what there is, before it is spent
+      var rk = t.getAttribute('data-recruit'), asDrone = t.hasAttribute('data-asdrone');
+      var rp = profile(rk), rcost = C.recruitCost(co, rk), purse = co.kUC, coinWord = C.money(co);
+      ask({
+        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : '') + '?',
+        text: (rcost ? 'It costs ' + rcost + ' ' + coinWord + '. You have ' + purse + ' ' + coinWord +
+          ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.'),
+        okLabel: C.words(co).recruit + (rcost ? ' for ' + rcost + ' ' + coinWord : ''),
+        onOk: function () { C.recruit(co, rk, { drone: asDrone }); save(); render(); }
+      });
+      return;
     }
     if (t.hasAttribute('data-disband')) {
       var e = findEntry(co, t.getAttribute('data-disband'));
