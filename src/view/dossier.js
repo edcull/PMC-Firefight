@@ -368,7 +368,8 @@
     if (last) {
       var battleRow = function (l) {
         return '<div class="crow"><b>' + l.turn + '</b>' +
-          '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl + '</span>' +
+          '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
+          (l.against ? '<small>vs ' + esc(l.against) + '</small>' : '') + '</span>' +
           '<em>' + result(l) + '</em>' +
           '<span class="cmoney">+' + l.kUC.A + ' ' + coin() + '</span></div>';
       };
@@ -515,13 +516,18 @@
   function statRow(co, rival) {
     var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co);
     function pc(x) { return Math.round(x * 1000) / 10 + '%'; }
-    function cell(cls, pct, word) {
-      return '<div class="cstat ' + cls + '"><b>' + pct + '</b><span>' + esc(word) + '</span></div>';
+    /* On the company's own hub the win rate opens the battles fought, and the
+       trauma the memorial: the numbers, and what they were made of. */
+    function cell(cls, pct, word, modal) {
+      var inner = '<b>' + pct + '</b><span>' + esc(word) + '</span>';
+      return modal ? '<button type="button" class="cstat ' + cls + '" data-go="fmodal" data-kind="' + modal + '">' + inner + '</button>'
+        : '<div class="cstat ' + cls + '">' + inner + '</div>';
     }
+    var own = !rival && co === camp.companies.A;
     return '<div class="cstats">' +
-      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate') +
+      cell('cs-win', pc(wn.pct), rival ? 'won vs you' : 'win rate', own && camp.log.length ? 'battles' : null) +
       cell('cs-exp', pc(ex.pct), ex.word) +
-      cell('cs-tra', pc(tr.pct), tr.word) +
+      cell('cs-tra', pc(tr.pct), tr.word, own ? 'memorial' : null) +
       '</div>';
   }
 
