@@ -114,7 +114,13 @@
       var pc = lossPct(b, sm.name);
       return { name: sm.name, result: sm.result === 'won' ? 'Won' : sm.result === 'lost' ? 'Lost' : 'Drew',
         loss: pc == null ? '' : pc + '% lost', pay: '+' + sm.kUC + ' ' + C.money(co),
-        gain: '+' + (sm.exp || 0) + ' EXP' + (sm.tp != null ? ' · +' + sm.tp + ' trauma' : '') };
+        gain: '+' + (sm.exp || 0) + ' EXP' + (sm.tp != null ? ' · +' + sm.tp + ' TP' : ''),
+        cells: [
+          { cls: 'cs-lost', v: pc == null ? '—' : pc + '%', w: 'lost' },
+          { cls: 'cs-win', v: '+' + sm.kUC, w: C.money(co) },
+          { cls: 'cs-exp', v: '+' + (sm.exp || 0), w: 'EXP' },
+          { cls: 'cs-tra', v: '+' + (sm.tp || 0), w: 'TP' }
+        ] };
     }
     function frontCard(sums) {
       var b = sums[0] && sums[0].battle;
@@ -125,8 +131,11 @@
       sides.forEach(function (sm) {
         var r = frontSide(sm, b);
         // only the winner is marked, or both sides when it was drawn
-        h += '<div class="front-unit front-row"><span><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') + '</span>' +
-          '<span class="front-num">' + [r.loss, r.pay].filter(Boolean).join(' · ') + '<br>' + r.gain + '</span></div>';
+        // the side's day in the hub's stat cells: what it lost, was paid, and took away in experience and trauma
+        h += '<div class="front-row"><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') +
+          '<div class="cstats four">' + r.cells.map(function (c) {
+            return '<div class="cstat ' + c.cls + '"><b>' + c.v + '</b><span>' + esc(c.w) + '</span></div>';
+          }).join('') + '</div></div>';
       });
       return h + '</div>';
     }
