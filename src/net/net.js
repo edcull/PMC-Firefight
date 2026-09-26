@@ -203,7 +203,8 @@
     if (!st) return this.seats[0];
     var sel = this.engine.sel();
     var want = sel.insertion
-      ? (sel.insertion.unit ? sel.insertion.unit.side : 'A')
+      // the side the engine is asking: the opponent, when it is shoving an insertion off its mark
+      ? (sel.insertion.by || (sel.insertion.unit ? sel.insertion.unit.side : 'A'))
       : st.phase === 'deploy' && st.swapAsk ? st.swapAsk.side           // a hotseat's secret round of swaps
         : st.phase === 'deploy' ? this.engine.query.placingSide()
         : st.phase === 'terrain' ? this.engine.query.terrainSide() : st.activeSide;
