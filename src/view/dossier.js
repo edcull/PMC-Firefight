@@ -632,8 +632,6 @@
   function rivalName() { return 'Rival company'; }
   // what this campaign calls its money, and what its creed is called
   function coin() { return C.money(camp && camp.companies ? camp.companies.A : null); }
-  function creed() { return C.creedOf(camp && camp.companies ? camp.companies.A : null); }
-  function isRebel() { return !!(camp && camp.companies && camp.companies.A.faction === 'rebel'); }
 
   function foundView() {
     var side = draft.side || 'A', co = camp.companies[side];
@@ -1063,7 +1061,6 @@
      The offers are rolled once a campaign turn and kept, so leaving the screen
      and coming back cannot be used to fish for an easier job. */
   function offersView() {
-    var A = camp.companies.A;
     var offers = C.rollOffers(camp);
     var h = '<h2>Contracts on offer</h2>';
     offers.forEach(function (o, i) { h += offerPanel(o, i); });
@@ -1073,7 +1070,6 @@
 
   function offerPanel(o, i) {
     var co = (camp.rivals || [camp.companies.B])[o.rival] || camp.companies.B;
-    var a = C.archetype(co.archetype);
     var SC = root.PMCScen, sc = SC && SC.SCENARIOS[o.scenario.id];
     var creedName = co.faction === 'rebel' ? 'Paths' : co.faction === 'bugs' ? 'Evolutionary Pathways' : co.faction === 'xeno' ? 'Tribe Advancements' : 'Doctrines';
     var h = '<div class="cpan cpan-B cpan-offer"' + stripe(co) + '><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
@@ -1840,7 +1836,6 @@
   function intelView() {
     var rivals = camp.rivals || [camp.companies.B];
     var co = rivals[Math.min(intelIdx, rivals.length - 1)] || camp.companies.B;
-    var a = C.archetype(co.archetype);
     var h = '<h2>' + esc(co.name) + '</h2>';
     h += '<p class="lede">' + C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
       ' · ' + co.roster.length + ' units · ' + co.record.battles + ' battles against you.</p>';

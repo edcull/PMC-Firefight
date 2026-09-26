@@ -1,7 +1,7 @@
 /* Battlefield Insertion: held in reserve, arriving from the second turn on. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, openMuster } = require('../where.js');
+const { ROOT, startSkirmish } = require('../where.js');
 async function drain(p) {
   for (let i = 0; i < 16; i++) {
     const open = await p.evaluate(() => !document.getElementById('resolution').hidden);
@@ -18,15 +18,8 @@ async function drain(p) {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
-  // the muster screen sits behind the main menu now
-  await openMuster(p);
-  await p.evaluate(() => {
-    document.getElementById('sel-tier').value = '4';
-    document.getElementById('sel-mode').value = 'ai';
-    // LRRP, snipers and nomads all carry Battlefield Insertion
-    window.__setMuster(['cmd1', 'veterans', 'veterans', 'lrrp', 'shock', 'protectors']);
-  });
-  await p.click('#btn-start');
+  // LRRP, snipers and nomads all carry Battlefield Insertion
+  await startSkirmish(p, { tier: 4, mode: 'ai', keys: ['cmd1', 'veterans', 'veterans', 'lrrp', 'shock', 'protectors'] });
   await p.waitForTimeout(1300);
   await drain(p);
 

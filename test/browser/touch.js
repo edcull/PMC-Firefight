@@ -1,6 +1,6 @@
 const { chromium, devices } = require('playwright');
 const path = require('path');
-const { ROOT, openMuster } = require('../where.js');
+const { ROOT, startSkirmish } = require('../where.js');
 
 /* The battle on a phone, driven by touch: tapping a unit selects it, Move then
    two taps on a spot previews and makes the move, and a drag pans the table
@@ -37,22 +37,12 @@ const { ROOT, openMuster } = require('../where.js');
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(700);
-  // the muster screen sits behind the main menu now
-  await openMuster(p);
   /* One battle, the same every run: an infantry company in a meeting
      engagement on open desert, against the AI. Left to chance, some battles
      start with the whole force in reserve or tucked inside buildings, and the
      touch checks below would be testing the dice rather than the fingers. */
-  await p.evaluate(() => {
-    document.getElementById('sel-tier').value = '3';
-    document.getElementById('sel-mode').value = 'ai';
-    document.getElementById('sel-scen').value = 'meeting';
-    document.getElementById('sel-planet').value = 'desert';
-    document.getElementById('sel-terrain').value = 'auto';
-    window.__setMuster(['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie']);
-  });
-
-  await p.tap('#btn-start');
+  await startSkirmish(p, { tier: 3, mode: 'ai', scenario: 'meeting', planet: 'desert', terrain: 'auto',
+    keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'] });
   await p.waitForTimeout(1200);
   // results are a running feed now, not a card to dismiss — but keep the tap
   // working for the one card that is still modal

@@ -1,7 +1,7 @@
 /* The special actions, driven through the real interface: Hack and Supporting Fire. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, openMuster } = require('../where.js');
+const { ROOT, startSkirmish } = require('../where.js');
 async function drain(p) {
   for (let i = 0; i < 14; i++) {
     const open = await p.evaluate(() => !document.getElementById('resolution').hidden);
@@ -32,15 +32,7 @@ async function press(p, label) {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
-  // the muster screen sits behind the main menu now
-  await openMuster(p);
-  await p.evaluate(() => {
-    document.getElementById('sel-tier').value = '3';
-    document.getElementById('sel-mode').value = 'hotseat';
-    document.getElementById('sel-op').value = 'mirror';
-    window.__setMuster(['cmd2', 'regular', 'engineers', 'lifv', 'ew', 'recon:tracked:drone']);
-  });
-  await p.click('#btn-start');
+  await startSkirmish(p, { tier: 3, mode: 'hotseat', mirror: true, keys: ['cmd2', 'regular', 'engineers', 'lifv', 'ew', 'recon:tracked:drone'] });
   await p.waitForTimeout(900);
   await drain(p);
   await p.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());

@@ -831,8 +831,7 @@
 
   function drawControls() {
     drawColourButton();
-    var p = profile(), w = R.weaponSpec(p);
-    var isVeh = p.cls === 'vehicle';
+    var p = profile();
     var riding = R.canRide(p) && view.ride === 'mounted';
     var maxModels = p.cls === 'infantry' ? (riding ? Math.max(1, Math.round(p.size / 2)) : p.size) : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +

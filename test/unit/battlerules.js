@@ -237,6 +237,11 @@ var wood = table([unit('recruits', { x: 10, y: 10 }), unit('recruits', { side: '
   [{ kind: 'woods', x: 0, y: 12, w: 48, h: 3 }]);
 var rw = R.chargeRoute(wood, wood.units[0], wood.units[1], wood.units[0].move + 2);
 ok('...and terrain it crosses costs it as a move would', !rw || rw.cost > rt.cost + 0.5, rw ? rw.cost.toFixed(1) + '"' : 'out of reach');
+// a unit off the table (in reserve, or aboard a transport) is asked what it could charge each time the bar is drawn
+var held = unit('recruits', { x: -10, y: -10 }), near = unit('recruits', { side: 'B', x: 10, y: 12 });
+var heldAns;
+try { heldAns = R.chargeRoute(table([held, near]), held, near, 30); } catch (e) { heldAns = 'threw: ' + e.message; }
+ok('a unit not on the table reaches nothing, and does not throw', heldAns === null, String(heldAns));
 // defensive fire from the first point in range, not from where the charge began
 var far = unit('recruits', { x: 10, y: 10, move: 30 }), gun = unit('recruits', { side: 'B', x: 10, y: 44, range: 12 });
 var dfs = 0;

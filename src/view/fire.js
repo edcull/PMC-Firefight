@@ -95,7 +95,6 @@
     /* Xenotripod energy — their shots, the orbs and the blasts — burns blue,
        whatever the army's colour; the colour stays on the models. */
     var XENO_BLUE = '110,190,255';
-    var BUG_GREEN = '150,220,80';
     function glowRGB(u) { return XENO_BLUE; }
     function shotRGB(u) { return R.isXeno(u) ? XENO_BLUE : null; }
     function playEnergy(shooter, from, to, count, land, gap) {

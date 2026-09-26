@@ -1,0 +1,26 @@
+/* PMC 2670 — Firefight: what every page shares. The colours and faces are
+   named here once; game.css (the game) and viewer.css (the Unit Viewer) are
+   written in them. */
+:root {
+  --ground: #0d1117;
+  --panel: #141a24;
+  --panel-2: #1a2230;
+  --panel-3: #212b3b;
+  --line: #26303f;
+  --ink: #e7ecf4;
+  --ink-dim: #93a1b5;
+  --ink-faint: #64728a;
+  --alpha: #d8a13a;
+  --bravo: #5aa9c8;
+  /* a co-op game's two players, in the colours their commandos are painted in */
+  --own-A: #d8a13a; --own-C: #7ecfc0;
+  --warn: #e08a3a;
+  --bad: #e0557a;
+  --good: #7ed6a0;
+  --display: 'Oxanium', system-ui, sans-serif;
+  --body: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
