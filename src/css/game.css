@@ -639,6 +639,8 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .mcard.menu-back { text-align: center; }
 .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
 .menu-foot a.lnk { text-decoration: none; }
+/* the build, small under everything */
+.menu-ver { margin: 10px 0 0; text-align: center; font: 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-faint); opacity: .8; }
 /* the foot's second button: the unit viewer under the main menu, the demo
    under the skirmish list (set by the stylesheet too, so a stale script
    cannot leave the wrong one showing) */
