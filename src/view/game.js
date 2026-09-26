@@ -925,7 +925,7 @@
       if (list.length === 2) {
         pinch = { d: Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y) };
         list.forEach(function (p) { p.moved = true; });        // a pinch is never a tap
-      } else if (list.length === 1) {
+      } else if (list.length === 1 && !camLocked()) {
         cam.drag = { cx: cam.x, cy: cam.y, ox: cam.ox || 0, oy: cam.oy || 0 };
       }
     });
@@ -938,6 +938,7 @@
 
       var list = pointerList();
       if (list.length === 2 && pinch) {
+        if (camLocked()) return;                           // following the other side: no zooming it away
         var d = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
         if (d > pinch.d * 1.35) { setZoom(1); pinch.d = d; }
         else if (d < pinch.d * 0.74) { setZoom(-1); pinch.d = d; }
@@ -980,6 +981,7 @@
     canvas.addEventListener('wheel', function (e) {
       if (!state) return;
       e.preventDefault();
+      if (camLocked()) return;                              // following the other side's move
       var sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
       if (e.shiftKey || sideways) {
         panBy(e.deltaX * 0.7 / cam.z, e.deltaY * 0.7 / cam.z);
@@ -1006,7 +1008,7 @@
     document.addEventListener('keydown', onKey);
 
     el('viewctl').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-zoom]'); if (!b || !state) return;
+      var b = e.target.closest('[data-zoom]'); if (!b || !state || camLocked()) return;
       var z = b.getAttribute('data-zoom');
       if (z === 'in') setZoom(1);
       else if (z === 'out') setZoom(-1);
@@ -1374,7 +1376,7 @@
     get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; },
     get closeDrawer() { return closeDrawer; }, get closeRes() { return closeRes; },
     get drawBoard() { return drawBoard; }, get drawerEl() { return drawerEl; }, get esc() { return esc; },
-    get fitView() { return fitView; }, get handsOff() { return handsOff; },
+    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; },
     get insertionMine() { return insertionMine; }, get panBy() { return panBy; },
     get render() { return render; }, get returnHome() { return returnHome; },
     get setHint() { return setHint; }, get setZoom() { return setZoom; }, get tip() { return tip; },
@@ -1469,7 +1471,7 @@
     soloOwnerName: soloOwnerName, whenIdle: whenIdle, ISO: ISO, K: K, R: R, SFX: SFX, ZOOMS: ZOOMS, cam: cam,
     el: el, resQueue: resQueue, show: show, ui: ui
   });
-  var TERRAIN_MARK = VIEW.TERRAIN_MARK, borrowCamera = VIEW.borrowCamera, centreOn = VIEW.centreOn;
+  var TERRAIN_MARK = VIEW.TERRAIN_MARK, borrowCamera = VIEW.borrowCamera, camLocked = VIEW.camLocked, centreOn = VIEW.centreOn;
   var clampCam = VIEW.clampCam, colourLabel = VIEW.colourLabel, drawColourPick = VIEW.drawColourPick;
   var dropFollow = VIEW.dropFollow, edgedStroke = VIEW.edgedStroke, ensureVisible = VIEW.ensureVisible;
   var fitView = VIEW.fitView, focusUnit = VIEW.focusUnit, foeColour = VIEW.foeColour;

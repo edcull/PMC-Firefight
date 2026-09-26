@@ -217,6 +217,8 @@ canvas#board:active { cursor: grabbing; }
   background: rgba(13,17,23,.78); border: 1px solid var(--line);
   border-radius: 5px; padding: 3px 5px;
 }
+/* following the other side's move: the camera is not the player's until it comes back */
+.viewctl.locked { opacity: .45; pointer-events: none; }
 .viewctl span {
   font-family: var(--mono); font-size: 11px; color: var(--ink-dim);
   min-width: 22px; text-align: center; font-variant-numeric: tabular-nums;
