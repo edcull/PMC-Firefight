@@ -188,7 +188,9 @@ the statistics as the book prints them, and every special rule the unit carries
 with what that rule does, on the page and on a tooltip. Any of the army colours
 can be painted on. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts,
 <kbd>S</kbd> steps through its states, <kbd>A</kbd> through its abilities,
-<kbd>D</kbd> toggles a drone crew and <kbd>P</kbd> steps its propulsion.
+<kbd>D</kbd> toggles a drone crew and <kbd>P</kbd> steps its propulsion. Swipe left or right on the stage (or press <kbd>←</kbd>
+<kbd>→</kbd>) for the next or previous unit in the list, and up or down (<kbd>↑</kbd>
+<kbd>↓</kbd>) for the next or previous group.
 
 ---
 

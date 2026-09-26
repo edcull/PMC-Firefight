@@ -822,6 +822,41 @@
     pickerShown = want;
     markPicked();
   }
+  /* Stepping through the list without it: the next or the previous unit,
+     and the first unit of the next or the previous group, in the order the
+     list shows them (the army's tab, or what a search found). */
+  function listOrder() {
+    var ks = Array.prototype.map.call(el('vlist').querySelectorAll('.unit[data-k]'), function (c) { return c.getAttribute('data-k'); });
+    if (!ks.length) {
+      var fac = profile().faction || 'pmc';
+      ks = R.CATALOGUE.filter(function (q) { return (q.faction || 'pmc') === fac; }).map(function (q) { return q.key; });
+    }
+    return ks;
+  }
+  function stepUnit(dir) {
+    var ks = listOrder(), i = ks.indexOf(view.key);
+    if (!ks.length) return;
+    showUnit(ks[((i < 0 ? 0 : i + dir) + ks.length) % ks.length]);
+  }
+  function stepGroup(dir) {
+    var ks = listOrder(), groups = [];
+    ks.forEach(function (k) {
+      var g = (R.profile(k) || {}).group, last = groups[groups.length - 1];
+      if (!last || last.g !== g) groups.push({ g: g, first: k });
+    });
+    if (!groups.length) return;
+    var here = (profile() || {}).group, gi = 0;
+    groups.forEach(function (x, n) { if (x.g === here) gi = n; });
+    showUnit(groups[(gi + dir + groups.length) % groups.length].first);
+  }
+  function showUnit(k) {
+    if (!k || k === view.key) return;
+    choose(k);
+    FX.clear();
+    drawPicker(); drawControls(); frame();
+    var c = el('vlist').querySelector('#vp-' + k);
+    if (c && !phone()) c.scrollIntoView({ block: 'nearest' });
+  }
   // the card of the unit on the stage, picked out
   function markPicked() {
     el('vlist').querySelectorAll('.unit.on').forEach(function (c) { c.classList.remove('on'); });
@@ -1029,8 +1064,8 @@
 
     // tap the stage to fire: on a phone the buttons are further down the page
     /* Tap the stage to fire; a pinch or the wheel steps through the zooms, and a pinch is never taken for a tap. */
-    var pts = {}, pinch = null, pinched = 0, wheeled = 0;
-    cv.addEventListener('click', function () { if (Date.now() - pinched < 400) return; fire(); });
+    var pts = {}, pinch = null, pinched = 0, wheeled = 0, swipe = null, swiped = 0;
+    cv.addEventListener('click', function () { if (Date.now() - pinched < 400 || Date.now() - swiped < 400) return; fire(); });
     cv.addEventListener('wheel', function (e) {
       e.preventDefault();
       if (Date.now() - wheeled > 250) { wheeled = Date.now(); stepZoom(e.deltaY < 0 ? 1 : -1); }   // one step a flick
@@ -1038,6 +1073,8 @@
     cv.addEventListener('pointerdown', function (e) {
       pts[e.pointerId] = { x: e.clientX, y: e.clientY };
       var ids = Object.keys(pts);
+      // one finger down: perhaps a swipe; a second makes it a pinch instead
+      swipe = ids.length === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now() } : null;
       if (ids.length === 2) {
         var a = pts[ids[0]], b2 = pts[ids[1]];
         pinch = { d: Math.hypot(a.x - b2.x, a.y - b2.y) || 1, z: view.zoom };
@@ -1054,6 +1091,19 @@
       }
     });
     function lift(e) { delete pts[e.pointerId]; if (Object.keys(pts).length < 2) pinch = null; }
+    /* A swipe across the stage: left for the next unit and right for the one
+       before, as a page turns; up for the next group and down for the one
+       before. Short, slow or diagonal drags are not swipes, and a swipe is
+       never taken for a tap. */
+    cv.addEventListener('pointerup', function (e) {
+      var sw = swipe;
+      swipe = null;
+      if (!sw || sw.id !== e.pointerId || Date.now() - pinched < 400 || Date.now() - sw.t > 800) return;
+      var dx = e.clientX - sw.x, dy = e.clientY - sw.y, ax = Math.abs(dx), ay = Math.abs(dy);
+      if (Math.max(ax, ay) < 50) return;
+      if (ax > ay * 1.5) { swiped = Date.now(); stepUnit(dx < 0 ? 1 : -1); }
+      else if (ay > ax * 1.5) { swiped = Date.now(); stepGroup(dy < 0 ? 1 : -1); }
+    });
     cv.addEventListener('pointerup', lift);
     cv.addEventListener('pointercancel', lift);
     el('vzoom').addEventListener('click', function (e) {
@@ -1155,6 +1205,11 @@
     document.addEventListener('keydown', function (e) {
       if (e.target.tagName === 'INPUT') return;
       if (e.key === 'f' || e.key === 'F') { fire(); e.preventDefault(); }
+      // the arrows do what a swipe does: left and right a unit, up and down a group
+      if (e.key === 'ArrowRight') { stepUnit(1); e.preventDefault(); }
+      if (e.key === 'ArrowLeft') { stepUnit(-1); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { stepGroup(1); e.preventDefault(); }
+      if (e.key === 'ArrowUp') { stepGroup(-1); e.preventDefault(); }
       if (e.key === 'w' || e.key === 'W') { toggleWalk(); e.preventDefault(); }
       if (e.key === 'i' || e.key === 'I') { insert(); e.preventDefault(); }
       // S steps through the unit's states; A through its abilities, one each press
@@ -1218,6 +1273,7 @@
     fire: fire,
     fireNow: function () { fireNow(); },
     walk: toggleWalk,
+    stepUnit: stepUnit, stepGroup: stepGroup, key: function () { return view.key; },
     gait: function () { return gaitOf(unit()); },
     insert: insert,
     strafe: strafe,
