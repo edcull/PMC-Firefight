@@ -511,33 +511,6 @@
     var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
     return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
   }
-  /* What the force is like: what it fields, the best it has, and how it fights. */
-  /* What the force is like, in general terms: how big it is, what it fights
-     with and how seasoned it is, then how it fights, then what it has done
-     against you. The exact list is behind their dossier. */
-  function rivalBlurb(co) {
-    var n = co.roster.length, inf = 0, veh = 0, air = 0, top = 0, exp = 0;
-    co.roster.forEach(function (e) {
-      var p = profile(e.key);
-      if (!p) return;
-      if (p.cls === 'aircraft') air++; else if (p.cls !== 'infantry') veh++; else inf++;
-      top = Math.max(top, p.tier); exp += e.exp || 0;
-    });
-    var t = C.themeOf(co);
-    if (n) {
-      var size = n <= 8 ? 'A small force' : n <= 12 ? 'A force of fair size' : n <= 16 ? 'A large force' : 'A very large force';
-      var mix = veh + air === 0 ? 'all on foot'
-        : veh + air >= inf ? 'heavy on machines'
-        : veh + air >= 3 ? 'on foot with solid armoured support' : 'mostly on foot with a little armour';
-      if (air) mix += veh + air === air ? ', and aircraft overhead' : ', with air support';
-      var seasoned = exp / n >= 10 ? 'hardened by long fighting' : exp / n >= 4 ? 'with some fighting behind it' : top > co.tier ? 'with a few good troops among the green' : 'still green';
-      t = size + ', ' + mix + ', ' + seasoned + '. ' + t;
-    }
-    var r = co.record || {};
-    if (r.battles) t += ' It has fought ' + r.battles + ' battle' + (r.battles === 1 ? '' : 's') + ' against you and won ' + (r.wins || 0) + '.';
-    else t += ' It has not met you in the field yet.';
-    return t;
-  }
   /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
   function statRow(co, rival) {
     var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co);
@@ -561,10 +534,9 @@
     h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
       return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
     }).join('') + '</div>';
-    h += '<div class="cpstat">' + rivalBlurb(co) + '</div>';
     // their dossier opens in the card: their units, as your own are listed
     var ri = idx == null ? 0 : idx, open = rivalOpen === ri;
-    h += '<button class="lnk' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
+    h += '<button class="lnk rivdos-go' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
       (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
     if (open) {
       h += '<div class="dlist rivdos">' + co.roster.slice().sort(function (a, b) {
@@ -778,14 +750,17 @@
       : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
       : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
       : 'Ready. The field command is added free, at the Company Tier.';
-    var nameTxt = say('The company needs a name.', 'The revolution needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
+    var nameTxt = say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
     /* No line of help under it: what the charter still wants is on the
-       button, for a hover or a long press. The name is typed without a
-       redraw, so the button follows it as it is typed (see mount). */
+       button, in the game's own tip — on a hover, and on a press while it is
+       greyed out (aria-disabled rather than disabled, so the press arrives).
+       The name is typed without a redraw, so the button follows it as it is
+       typed (see mount). */
     var why = chk.ok ? readyTxt : rest && !named ? nameTxt
       : 'Six Tier I units, two Tier II, at most two vehicles, one ' + cr.one + '.' + (named ? '' : ' ' + nameTxt);
-    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound" title="' + esc(why) + '"' +
-      ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '"' + (chk.ok ? '' : ' disabled') + '>' +
+    h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound"' +
+      ' data-tip="' + esc(why) + '" data-tip-title="' + (chk.ok ? 'Ready' : 'Still needed') + '"' +
+      ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '" aria-disabled="' + !chk.ok + '">' +
       say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
     // the second player cannot step back out: the campaign needs their force
     if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
@@ -1049,9 +1024,8 @@
 
   function recruitList(co) {
     var top = Math.min(5, co.tier + 2);
-    var h = '<p class="dnote">A Tier ' + ROMAN[co.tier] + ' ' + C.words(co).force + ' may ' + C.words(co).recruit.toLowerCase() + ' up to Tier ' +
-      ROMAN[top] + '. ' + co.kUC + ' ' + C.money(co) + ' in hand.</p>';
-    h += '<div class="cat tall">';
+    // the list is what may be recruited, up to two Tiers above the force's own; the money is on the panel's head
+    var h = '<div class="cat tall">';
     var groups = {}, order = [];
     ourList().forEach(function (p) {
       if (p.tier > top) return;
@@ -1092,9 +1066,6 @@
     var A = camp.companies.A;
     var offers = C.rollOffers(camp);
     var h = '<h2>Contracts on offer</h2>';
-    h += '<p class="lede">Three forces are fighting over this world and all three will ' +
-      'take you on. Pick your war: you are told who they are and what the battle is for, ' +
-      'but not a thing about what they will bring to it.</p>';
     offers.forEach(function (o, i) { h += offerPanel(o, i); });
     h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
     return h;
@@ -1105,34 +1076,28 @@
     var a = C.archetype(co.archetype);
     var SC = root.PMCScen, sc = SC && SC.SCENARIOS[o.scenario.id];
     var creedName = co.faction === 'rebel' ? 'Paths' : co.faction === 'bugs' ? 'Evolutionary Pathways' : co.faction === 'xeno' ? 'Tribe Advancements' : 'Doctrines';
-    var h = '<div class="cpan cpan-B cpan-offer"><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
-      '<span class="mk">' + C.words(co).side + '</span>' +
+    var h = '<div class="cpan cpan-B cpan-offer"' + stripe(co) + '><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
       '<span class="ctier">' + C.words(co).tier + ' Tier ' +
       ROMAN[co.tier] + '</span></div>';
-    // how they fight, and what they are built around — never what they field
-    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
-    // what it is built around: a pill each, what each does in its tip
-    h += '<div class="cpdoc">' + (co.doctrines.length ? co.doctrines.map(function (d) {
+    // won, veterancy and trauma, as your own company's row shows them — never what they field
+    h += statRow(co, true);
+    // the kind of force, then what it is built around: a pill each, what each does in its tip
+    h += '<div class="cpdoc carch">' + armyPill(co) + (co.doctrines.length ? co.doctrines.map(function (d) {
       var dd = C.doctrine(d);
       return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
     }).join('') : '<span class="dnote">No ' + esc(creedName) + ' declared yet.</span>') + '</div>';
-    h += '<div class="cpstat">' + co.record.battles + ' battles against you · ' +
-      co.record.wins + ' won, ' + co.record.losses + ' lost' +
-      (o.caught && o.caught.to > o.caught.from
-        ? ' · fighting elsewhere since you last met — Tier ' + ROMAN[o.caught.from] +
-          ' to ' + ROMAN[o.caught.to]
-        : '') + '</div>';
+    // grown since you last met, fighting someone else
+    if (o.caught && o.caught.to > o.caught.from) {
+      h += '<div class="cpstat">Fighting elsewhere since you last met — Tier ' + ROMAN[o.caught.from] +
+        ' to ' + ROMAN[o.caught.to] + '</div>';
+    }
 
     // the job itself
     h += '<div class="offer-job"><div class="offer-scen"><b>' + esc(o.scenario.name) + '</b>' +
       '<span class="mk">Scenario D6 ' + o.scenario.roll + '</span></div>';
-    /* How big a fight this pairing can actually put on: the Battle Tier the D6
-       gave this job, and the ceiling the two rosters between them could reach. */
+    // how big a fight it is: the Battle Tier the D6 gave this job, and the Priority Levels it may be fought at
     h += '<div class="offer-size"><span>Battle Tier <b>' + ROMAN[o.tier] + '</b></span>' +
-      '<span>Priority Level <b>' + (o.levels.length ? o.levels.join(' or ') : '1') + '</b></span>' +
-      '<span class="offer-cap">most they can meet you at: Tier ' + ROMAN[o.capTier] +
-      ', PL ' + (o.capLevels.length ? o.capLevels[o.capLevels.length - 1] : 1) + '</span></div>';
-    if (sc) h += '<div class="cpstat">' + esc(sc.blurb) + '</div>';
+      '<span>Priority Level <b>' + (o.levels.length ? o.levels.join(' or ') : '1') + '</b></span></div>';
     if (o.roles) {
       var mine = o.roles.attacker === 'A' ? 'attacker' : 'defender';
       h += '<div class="offer-role role-' + mine + '">You ' +
@@ -1877,8 +1842,7 @@
     var co = rivals[Math.min(intelIdx, rivals.length - 1)] || camp.companies.B;
     var a = C.archetype(co.archetype);
     var h = '<h2>' + esc(co.name) + '</h2>';
-    h += '<p class="lede">' + esc(C.themeOf(co)) + ' ' +
-      C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
+    h += '<p class="lede">' + C.words(co).tier + ' Tier ' + ROMAN[co.tier] +
       ' · ' + co.roster.length + ' units · ' + co.record.battles + ' battles against you.</p>';
     // only the battles fought against this force count toward the record with it
     var mine2 = camp.log.filter(function (l) { return !l.against || l.against === co.name; });
@@ -2244,6 +2208,8 @@
         render(); return;
       }
       case 'dofound': {
+        // greyed out: say what the charter still needs, and go no further
+        if (t.getAttribute('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return; }
         var nm = (el('found-name') ? el('found-name').value : draft.name || '').trim();
         if (!nm) { note('It needs a name', 'Give the force something to be known by.'); return; }
         draft.name = nm;
@@ -2446,8 +2412,9 @@
       var sign = el('found-sign');
       if (!sign || sign.getAttribute('data-rest') !== '1') return;
       var ok = !!draft.name.trim();
-      sign.disabled = !ok;
-      sign.title = sign.getAttribute(ok ? 'data-ready' : 'data-noname');
+      sign.setAttribute('aria-disabled', String(!ok));
+      sign.setAttribute('data-tip', sign.getAttribute(ok ? 'data-ready' : 'data-noname'));
+      sign.setAttribute('data-tip-title', ok ? 'Ready' : 'Still needed');
     });
     host.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }

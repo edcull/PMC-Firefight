@@ -10,6 +10,7 @@
   'use strict';
 
   var R = root.PMC, I = root.PMCIso, SFX = root.SFX;
+  var MOTION = root.PMCMotion;   // how things move: the battle's own gait, burrow, flight and arrival (motion.js)
   var el = function (id) { return document.getElementById(id); };
   var esc = function (t) {
     return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) {
@@ -63,11 +64,6 @@
   function turns(p) { return !!p && !!I.turnsLikeMachine && I.turnsLikeMachine(p.art); }
   // what a Lifter can be shown carrying: any of the rebels' ground vehicles (p. 94)
   var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak'];
-  // a SAM leaves up the line its launcher's tubes are laid on (see the missile in fx.js)
-  function samFrom() {
-    var u = unit();
-    return u.art === 'samlauncher' ? { aim: u.facing || 0, elev: 0.8 } : null;
-  }
   function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
   /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
   function towing(u) {
@@ -309,13 +305,7 @@
      every so many inches covered, not every so many milliseconds, so a fast
      unit puts its legs down faster rather than sliding. The body is up between
      footfalls and down on each one. */
-  var PACE = 2.2, STRIDE = 3.4, ROLL = 2.8;
-  function gaitOf(u) {
-    if (!R.isMachine(u)) return { span: PACE, lift: 1.6, sound: true };
-    if (u.prop === 'walker') return { span: STRIDE, lift: 1.3, sound: true };
-    if (u.prop === 'grav' || u.prop === 'hover' || u.cls === 'aircraft') return null;
-    return { span: ROLL, lift: 0.5, sound: false };
-  }
+  var gaitOf = MOTION.gaitOf;
 
   function stepWalk(dt) {
     var u = unit();
@@ -325,7 +315,7 @@
        moveMs), and a full Move is Movement +4" for a machine. */
     if (u.cls === 'aircraft') {
       var full = (u.move || 12) + 4;
-      speed = full * 1000 / Math.min(3200, 700 + full * 85);
+      speed = full * 1000 / MOTION.moveMs(u, full);
     }
     view.walkT += (dt / 1000) * speed;
     var span = TO.x - FROM.x - 3;
@@ -342,7 +332,7 @@
       var bound = Math.max(3, u.move || 7), bt = view.walkT / bound, bn = Math.floor(bt);
       view.walkFrame = 1 + (Math.floor(Date.now() / 70) % 2);
       view.hop = 0;
-      view.arc = Math.sin((bt - bn) * Math.PI) * Math.min(I.K * 3, I.K * (0.9 + bound * 0.22));
+      view.arc = Math.sin((bt - bn) * Math.PI) * MOTION.jetApex(bound);
       if (bn !== view.lastPace) {
         view.lastPace = bn;
         if (view.sound && SFX && SFX.jetpack) SFX.jetpack(bound / speed);
@@ -364,12 +354,11 @@
      where they stand, go along it unseen under a line of churned earth, and
      heave themselves up at the far end — the move the battle plays (game.js:
      burrowStep). */
-  function burrows(u) { return !!u && u.faction === 'bugs' && u.group === 'Underground Bugs'; }
-  var B_SINK = 0.22, B_RISE = 0.78;
+  var burrows = MOTION.burrows, B_SINK = MOTION.BURROW_SINK, B_RISE = MOTION.BURROW_RISE;
   function burrowWalk(u, span) {
     var leg = Math.floor(view.walkT / span), k = (view.walkT % span) / span;
     var back = leg % 2 === 1, x0 = back ? FROM.x + span : FROM.x, x1 = back ? FROM.x : FROM.x + span;
-    var r = R.isMachine(u) ? 2.4 : 1.6, e;
+    var r = MOTION.burrowR(u), e;
     view.facing = back ? Math.PI : 0;
     view.walkFrame = 0; view.hop = 0; view.arc = 0;
     var phase = k < B_SINK ? 0 : k < B_RISE ? 1 : 2;
@@ -407,7 +396,7 @@
   /* A strafing run takes as long as the game gives the same stretch of table
      (game.js playStrafe: 1.1s plus 140ms an inch, between 1.9s and 4s). The
      bench's run is from 6" short of the start mark to 6" past the target. */
-  var STRAFE_MS = Math.max(1900, Math.min(4000, 1100 + ((TO.x + 6) - (FROM.x - 6)) * 140));
+  var STRAFE_MS = MOTION.strafeMs((TO.x + 6) - (FROM.x - 6));
   function canStrafe() { return unit().cls === 'aircraft'; }
 
   /* A unit's special ability, played on the stage: the first rule it has that
@@ -597,7 +586,7 @@
      already on the ground when you see it and comes up out of cover: drawn broken,
      then suppressed, then standing. It is only how it is drawn; the state the
      bench is set to is untouched. */
-  var DROP_MS = 900, STAND_MS = 1150, TELE_MS = 1300;
+  var DROP_MS = MOTION.DROP_MS, STAND_MS = MOTION.STAND_MS, TELE_MS = MOTION.TELE_MS;
 
   function syncSound() {
     if (!SFX) return;
@@ -610,35 +599,9 @@
     var age = Date.now() - view.arriveAt;
     // before it arrives the field is empty: the unit is not on the table yet
     if (age < 0) return { lift: 0, pose: null, hidden: true };
-    if (view.arriveKind === 'drop') {
-      if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-      // gathering speed the whole way down, so it arrives hard rather than drifting in
-      var eased = 1 - Math.pow(1 - age / DROP_MS, 0.45);
-      return { lift: Math.round(I.ELEV * 5.5 * (1 - eased)), pose: null };
-    }
-    if (view.arriveKind === 'teleport') {
-      /* a Xenotripod squad teleports in (as the battle shows it, game.js):
-         not there while the pillar of light forms, then flickering into it */
-      if (age >= TELE_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-      var tk = age / TELE_MS;
-      if (tk < 0.3) return { lift: 0, pose: null, hidden: true };
-      var ta = Math.min(1, (tk - 0.3) / 0.35);
-      var flick = ta < 1 && Math.floor(age / 55) % (ta < 0.5 ? 2 : 4) === 0;
-      return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
-    }
-    if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-    // a giant bug breaks out of the ground: there in the dust as it clears (as game.js)
-    if (R.isMachine(unit())) {
-      var hk = Math.min(1, age / (STAND_MS * 0.85));
-      if (hk < 0.18) return { lift: 0, pose: null, hidden: true };
-      var ha = Math.min(1, (hk - 0.18) / 0.6);
-      return { lift: 0, pose: null, alpha: ha * ha * (3 - 2 * ha) };
-    }
-    // flat on its face, then up on one knee, then standing
-    return {
-      lift: 0,
-      pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null
-    };
+    var a = MOTION.arrival(view.arriveKind, age, R.isMachine(unit()));
+    if (!a) { view.arriveAt = 0; return { lift: 0, pose: null }; }
+    return a;
   }
 
   /* An arrival starts from an empty field: the unit is taken off the stage
@@ -663,7 +626,7 @@
     setTimeout(function () {
       if (view.arriveAt !== landing) return;          // another arrival or a new unit since
       if (tele) {
-        FX.add({ kind: 'teleportin', x: at.x, y: at.y, r: u.cls === 'aircraft' ? 2.6 : R.isMachine(u) ? 2.2 : 1.4, dur: TELE_MS + 200, blocking: true });
+        FX.add({ kind: 'teleportin', x: at.x, y: at.y, r: MOTION.teleportR(u), dur: TELE_MS + 200, blocking: true });
         if (SFX && SFX.shimmer) SFX.shimmer();
       } else if (craft) {
         FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
@@ -775,29 +738,7 @@
     if (!R.isMachine(u)) {
       var a0 = I.toScreen(u.x, u.y), b0 = I.toScreen(TO.x, TO.y);
       u.faceL = view.faceL = b0.x < a0.x;
-      var pool = I.muzzles(u, view.status);
-      // the grenades leave the leader's shoulder pod, where the squad carries one
-      var pod = pool.filter(function (m) { return m.pod; })[0];
-      if (pod) from.pod = pod.pod;
-      var guns = pool.filter(function (m) { return !m.tool; });   // optics are not a gun
-      if (guns.length) pool = guns;
-      /* A machine gun's burst comes off the men holding machine guns; the carbines
-         and rifles off everyone else — each weapon from the hands that carry it. */
-      var mgs = pool.filter(function (m) { return /^(mg|saw)$/.test(m.gun || ''); });
-      var rest = pool.filter(function (m) { return !/^(mg|saw)$/.test(m.gun || ''); });
-      var poolFor = function (style) {
-        var mgStyle = style === 'burst' || style === 'chain';
-        // (a SAW in a rifle squad is one of its rifles: only a unit with an MG weapon splits its men)
-        var mgUnit = /^(burst|chain)$/.test(spec.p) || /^(burst|chain)$/.test(spec.s || '');
-        var pl = mgStyle ? (mgs.length ? mgs : pool) : (mgUnit && rest.length && mgs.length ? rest : pool);
-        // a shell or a missile leaves a launcher, where the squad carries them
-        if (style === 'shell' || style === 'missile') {
-          var tubes = pool.filter(function (m) { return /^(rpg|atlauncher)$/.test(m.gun || ''); });
-          if (tubes.length) pl = tubes;
-        }
-        return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod };
-      };
-      if (pool.length) { var pf = poolFor(spec.p); from.mz = pf.mz; from.pool = pf.pool; from.poolFor = poolFor; }
+      root.PMCFire.troop(from, spec, I.muzzles(u, view.status));
     }
     var mountFrom = function () { return from; };
     if (R.isMachine(u)) {
@@ -815,340 +756,15 @@
     start();
   }
 
-  var FIRE = {
-    small: { n: 9, gap: 112, spread: 0.42, muzzle: 520, perShot: true },
-    pistol: { n: 5, gap: 185, spread: 0.34, short: true, muzzle: 150, perShot: true },
-    smg:   { n: 10, gap: 68, spread: 0.5, short: true, muzzle: 460 },
-    burst: { n: 10, gap: 38, spread: 0.55, muzzle: 460 },
-    chain: { n: 9, gap: 92, spread: 0.3, fat: true, muzzle: 92, perShot: true },
-    spine: { n: 10, gap: 45, spread: 0.6, short: true, bio: true, muzzle: 0, noFlash: true }
-  };
-  // a bug's acid: `n` globs lobbed low, each landing in a green splash
-  function spit(from, to, n, big) {
-    var fl = big ? 760 : 560;
-    for (var q = 0; q < (n || 1); q++) {
-      (function (j) {
-        setTimeout(function () {
-          if (SFX) SFX.spit(0, big);
-          var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 0.9, y: to.y + (j % 2 ? 0.6 : -0.6), up: to.up } : to;
-          FX.add({ kind: 'glob', from: from, to: aim, dur: fl, big: big });
-          setTimeout(function () {
-            FX.add({ kind: 'splat', x: aim.x, y: aim.y, up: aim.up, big: big, dur: 620 });
-            if (SFX) SFX.splat();
-            start();
-          }, fl);
-          start();
-        }, j * (big ? 260 : 150));
-      })(q);
-    }
-  }
-
-  /* A missile off an aircraft flies level and leaves on the line the craft is
-     flying, curving onto the mark from there — the same path the battle draws.
-     This is the point out ahead of the nose that it bends through. */
-  function flightCurve(from, to) {
-    var u = unit();
-    if (!u || u.cls !== 'aircraft') return null;
-    var a = u.facing == null ? 0 : u.facing;
-    var reach = Math.max(4, Math.hypot(to.x - from.x, to.y - from.y) * 0.55);
-    return { x: from.x + Math.cos(a) * reach, y: from.y + Math.sin(a) * reach, up: I.flyLift(u) };
-  }
-
-  // a Xenotripod's weapons, burning in its army's colour
-  // Xenotripod energy burns blue, as it does in the battle
-  function glowRGB() { return '110,190,255'; }
-  function shotRGB() { return R.isXeno(unit()) ? glowRGB() : null; }
-  function energy(from, to, n, land) {
-    var rgb = glowRGB();
-    for (var q = 0; q < (n || 1); q++) {
-      (function (j) {
-        setTimeout(function () {
-          if (SFX && SFX.zap) SFX.zap();
-          FX.add({ kind: 'pulse', from: from, to: to, rgb: rgb, dur: 260 });
-          if (land) setTimeout(function () { landing(to, 2); start(); }, 250);
-          start();
-        }, j * 120);
-      })(q);
-    }
-  }
-  function orbs(from, to, n, tele, big) {
-    var rgb = glowRGB(), fl = tele ? 1000 : big ? 960 : 760;
-    var exit = null;
-    if (tele) {                                  // one exit portal for the whole salvo
-      var ex = from.x - to.x, ey = from.y - to.y, ed = Math.hypot(ex, ey) || 1, eb = Math.min(ed * 0.45, 2.4);
-      exit = { x: to.x + ex / ed * eb, y: to.y + ey / ed * eb, up: to.up };
-      FX.add({ kind: 'exitportal', exit: exit, open: 300, dur: fl + ((n || 1) - 1) * 200 });
-    }
-    for (var q = 0; q < (n || 1); q++) {
-      (function (j) {
-        setTimeout(function () {
-          if (tele && SFX && SFX.shimmer) SFX.shimmer(); else if (SFX && SFX.launch) SFX.launch();
-          var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.1, y: to.y + (j % 2 ? 0.7 : -0.7), up: to.up } : to;
-          FX.add({ kind: 'orb', from: from, to: aim, rgb: rgb, tele: !!tele, exit: exit, big: !!big, dur: fl });
-          setTimeout(function () {
-            FX.add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, big: !!big, dur: big ? 800 : 600 });
-            // a heavy round throws the ground up with it, in blue fire
-            if (big) {
-              FX.add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, dur: 1000 });
-              for (var sp = 0; sp < 5; sp++) {
-                FX.add({
-                  kind: 'orbburst', rgb: rgb, dur: 520 + Math.random() * 260,
-                  x: aim.x + (Math.random() - 0.5) * 3.2, y: aim.y + (Math.random() - 0.5) * 3.2, up: aim.up
-                });
-              }
-            }
-            if (SFX) { SFX.impact(); if (big) SFX.impact(0.08); }
-            start();
-          }, fl);
-          start();
-        }, j * 200);
-      })(q);
-    }
-  }
-
-  function stream(style, from, to) {
-    var f = FIRE[style] || FIRE.small;
-    if (SFX && R.isXeno(unit()) && SFX.zaps) SFX.zaps(style, 3);
-    else if (SFX) {
-      if (style === 'chain') SFX.chain(3);
-      else if (style === 'burst') SFX.rattle(3);
-      else if (style === 'smg') SFX.smg(3);
-      else if (style === 'pistol') SFX.pistol(3);
-      else if (style === 'spine') SFX.spine(3);
-      else SFX.burst(3, false);
-    }
-    var pool = from.pool || [from.mz];
-    function gun(i) { return { x: from.x, y: from.y, up: from.up, mz: pool[i % pool.length] }; }
-    if (f.noFlash) {
-      // a bug has no muzzle to flash
-    } else if (f.perShot) {
-      for (var m = 0; m < f.n; m++) {
-        FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pool[m % pool.length], rgb: shotRGB(), delay: m * f.gap, dur: f.muzzle + m * f.gap });
-      }
-    } else {
-      for (var m2 = 0; m2 < Math.min(pool.length, f.n); m2++) {
-        FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pool[m2], rgb: shotRGB(), delay: m2 * 23, dur: f.muzzle + m2 * 23 });
-      }
-    }
-    for (var i = 0; i < f.n; i++) {
-      var at = f.clump
-        ? Math.floor(i / f.clump) * f.clumpGap + (i % f.clump) * f.gap
-        : i * f.gap;
-      FX.add({
-        kind: 'tracer', from: gun(i), to: to, spread: f.spread, fat: f.fat, short: f.short, bio: f.bio, rgb: shotRGB(),
-        delay: at, dur: 250 + at
-      });
-    }
-  }
-  /* The same pumped cone the battle draws: six jets in quick succession, barely
-     off each other, converging on the same ground. */
-  var FLAME_JET = 620, FLAME_GAP = 165;
-  function flameJets(from, to, n, onLand) {
-    var dx = to.x - from.x, dy = to.y - from.y;
-    var len = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
-    var px = -dy / len, py = dx / len;
-    var span = (n - 1) * FLAME_GAP + FLAME_JET;      // how long the roar has to hold
-    for (var i = 0; i < n; i++) {
-      (function (j) {
-        setTimeout(function () {
-          var off = (j - (n - 1) / 2) * 0.45;
-          var aim = { x: to.x + px * off, y: to.y + py * off };
-          if (SFX) { if (j === 0) SFX.flame(0, span / 1000); else SFX.flamepuff(); }
-          FX.add({ kind: 'flame', from: from, to: aim, dur: FLAME_JET });
-          if (onLand && j === n - 1) setTimeout(function () { onLand(); start(); }, 360);
-          start();
-        }, j * FLAME_GAP);
-      })(i);
-    }
-  }
-
-  function landing(to, n, big) {
-    FX.add({ kind: 'impact', x: to.x, y: to.y, n: n, rgb: shotRGB(), dur: big ? 560 : 420 });
-    if (SFX) { SFX.impact(); if (big) SFX.impact(0.06); }
-  }
-
-  /* A secondary: a coaxial, a gunship's guns, or the grenades assault troops
-     throw as they close. The same shapes the battle draws, minus the casualties. */
-  function secondary(style, from, to, count) {
-    if (FIRE[style]) { stream(style, from, to); return; }
-    if (style === 'arc' || style === 'arcbig') {
-      var thrown = count || 1;
-      for (var q = 0; q < thrown; q++) {
-        (function (j) {
-          setTimeout(function () {
-            var aim = thrown > 1
-              ? { x: to.x + (j - (thrown - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up }
-              : to;
-            if (SFX) SFX.launch();
-            FX.add({ kind: 'lob', from: from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod } : spreadOf(from, j, thrown), to: aim, dur: 520, heavy: style === 'arcbig' });
-            setTimeout(function () { landing(aim, 4); start(); }, 520);
-            start();
-          }, j * 190);
-        })(q);
-      }
-      return;
-    }
-    if (style === 'flame') { flameJets(from, to, 4, null); return; }
-    if (style === 'spit' || style === 'spitbig') { spit(from, to, count || 1, style === 'spitbig'); return; }
-    if (style === 'energy') { energy(from, to, count || 1, false); return; }
-    if (style === 'orb') { orbs(from, to, count || 1, !R.isMachine(unit())); return; }
-    if (style === 'orbbig') { orbs(from, to, count || 1, false, true); return; }
-    if (style === 'rail') {
-      for (var r1 = 0; r1 < (count || 1); r1++) {
-        (function (j) {
-          setTimeout(function () {
-            if (SFX) SFX.rail();
-            FX.add({ kind: 'rail', from: from, to: to, rgb: shotRGB(), dur: 380 });
-            start();
-          }, j * 170);
-        })(r1);
-      }
-      return;
-    }
-    if (style === 'missile') {
-      for (var m1 = 0; m1 < (count || 1); m1++) {
-        (function (j) {
-          setTimeout(function () {
-            if (SFX) SFX.missile(0, 0.9, 0.47);
-            // no flash at the tube: a missile is ejected cold and lights at the top
-            FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to), sam: samFrom() });
-            start();
-          }, j * 260);
-        })(m1);
-      }
-      return;
-    }
-    if (style === 'rocket') {
-      if (SFX) SFX.rocket(3);
-      for (var k1 = 0; k1 < 5; k1++) {
-        (function (j) {
-          setTimeout(function () {
-            FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: 180, big: true });
-            FX.add({ kind: 'missile', from: from, to: to, rocket: true, seed: j, dur: 420 });
-            start();
-          }, j * 78);
-        })(k1);
-      }
-      return;
-    }
-    if (style === 'shell' || style === 'shellbig') {
-      var fired = count || 1;
-      for (var q2 = 0; q2 < fired; q2++) {
-        (function (j) {
-          setTimeout(function () {
-            if (SFX) SFX.shell();
-            FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: 240, big: true });
-            FX.add({ kind: 'bolt', from: from, to: to, dur: 300, heavy: style === 'shellbig' });
-            start();
-          }, j * 230);
-        })(q2);
-      }
-      return;
-    }
-    stream(style, from, to);
-  }
-
+  /* The shots themselves are fire.js's, the battle's own: the same cadence,
+     the same flight and the same landing for every weapon, with three hits
+     scored so there is something to see land. Nothing is resolved here. */
+  var SHOTS = root.PMCFire.make({ add: function (f) { FX.add(f); start(); }, redraw: start });
+  function glowRGB() { return root.PMCFire.XENO_BLUE; }
   function play(spec, from, to, hits, u) {
-    if (spec.s) setTimeout(function () { secondary(spec.s, from.second || from, to, spec.sn); start(); }, 150);
-    switch (spec.p) {
-      case 'none': return;
-      case 'energy': energy(from, to, spec.n || 1, true); return;
-      case 'orb': orbs(from, to, spec.n || 1, !R.isMachine(u || unit())); return;
-      case 'orbbig': orbs(from, to, spec.n || 1, false, true); return;
-      case 'spit': case 'spitbig':
-        spit(from, to, spec.n || 1, spec.p === 'spitbig');
-        setTimeout(function () { landing(to, spec.p === 'spitbig' ? 5 : 3); start(); }, spec.p === 'spitbig' ? 760 : 560);
-        return;
-      case 'shell': case 'shellbig': {
-        var big = spec.p === 'shellbig';
-        var rounds = spec.n || 1;
-        for (var sh = 0; sh < rounds; sh++) {
-          (function (j) {
-            setTimeout(function () {
-              if (SFX) SFX.shell();
-              var F = tubeOf(from, j);                   // each round from its own barrel
-              FX.add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: big ? 320 : 260, big: true });
-              FX.add({ kind: 'bolt', from: F, to: to, dur: big ? 340 : 300, heavy: big });
-              setTimeout(function () { landing(to, big ? 7 : 5, big); start(); }, big ? 340 : 300);
-              start();
-            }, j * 230);
-          })(sh);
-        }
-        return;
-      }
-      case 'arc': case 'arcbig': {
-        var heavy = spec.p === 'arcbig';
-        var flight = heavy ? 900 : 760;
-        for (var q = 0; q < (spec.n || 1); q++) {
-          (function (i) {
-            setTimeout(function () {
-              if (SFX) SFX.launch();
-              // each tube fires its own round: a team's two mortars, a battery's three
-              var F = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod }
-                : R.isMachine(unit()) ? tubeOf(from, i) : spreadOf(from, i, spec.n || 1);
-              FX.add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 220, big: !F.mz });
-              var aim = (spec.n || 1) > 1
-                ? { x: to.x + (i - ((spec.n || 1) - 1) / 2) * 1.6, y: to.y + (i % 2 ? 1 : -1) * 0.9 }
-                : to;
-              FX.add({ kind: 'lob', from: F, to: aim, dur: flight, heavy: heavy });
-              if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
-              setTimeout(function () { landing(aim, heavy ? 7 : 6, heavy); start(); }, flight);
-              start();
-            }, i * 130);
-          })(q);
-        }
-        return;
-      }
-      case 'missile': {
-        for (var mi2 = 0; mi2 < (spec.n || 1); mi2++) {
-          (function (j) {
-            setTimeout(function () {
-              if (SFX) SFX.missile(0, 0.9, 0.47);
-              FX.add({ kind: 'missile', from: from, to: to, seed: j, dur: 900, curve: flightCurve(from, to), sam: samFrom() });
-              setTimeout(function () { landing(to, 6, true); start(); }, 900);
-              start();
-            }, j * 260);
-          })(mi2);
-        }
-        return;
-      }
-      case 'rocket': {
-        if (SFX) SFX.rocket(3);
-        for (var r = 0; r < 5; r++) {
-          (function (i) {
-            setTimeout(function () {
-              FX.add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: from.mz, dur: 180, big: true });
-              FX.add({ kind: 'missile', from: from, to: to, rocket: true, seed: i, dur: 420 });
-              setTimeout(function () { if (i === 4) landing(to, 6, true); start(); }, 420);
-              start();
-            }, i * 78);
-          })(r);
-        }
-        return;
-      }
-      case 'flame':
-        flameJets(from, to, 6, function () { landing(to, 5, true); });
-        return;
-      case 'rail': {
-        // one line for a marksman's rifle, three in quick succession for a cannon
-        var shots = spec.n || 1;
-        for (var rs = 0; rs < shots; rs++) {
-          (function (j) {
-            setTimeout(function () {
-              if (SFX) SFX.rail();
-              // each line leaves its own barrel: a mining team's two cutters, a hull's own guns
-              FX.add({ kind: 'rail', from: R.isMachine(unit()) ? tubeOf(from, j) : spreadOf(from, j, shots), to: to, rgb: shotRGB(), dur: 380 });
-              if (j === shots - 1) setTimeout(function () { landing(to, 4); start(); }, 90);
-              start();
-            }, j * 170);
-          })(rs);
-        }
-        return;
-      }
-      default:
-        stream(spec.p, from, to);
-        setTimeout(function () { landing(to, 4); start(); }, 330);
-    }
+    var dist = R.unitDist(u, to);
+    if (spec.s) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn); start(); }, 150);
+    SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, land: function (extra) { SHOTS.hit(u, to, hits, extra); } });
   }
 
 
@@ -1176,17 +792,6 @@
       var on = el('vlist').querySelector('.unit.on');
       if (on) on.scrollIntoView({ block: 'center' });
     }
-  }
-  // the i-th barrel of a unit that works several (a mortar team's two tubes), else the one it has
-  // charges thrown by a squad come from men spread through it, not the two at the front
-  function spreadOf(from, i, n) {
-    if (!from.pool || from.pool.length < 2 || n < 2) return tubeOf(from, i);
-    var len = from.pool.length, at = Math.round(i * (len - 1) / (n - 1));
-    return { x: from.x, y: from.y, up: from.up, mz: from.pool[at % len], pool: from.pool };
-  }
-  function tubeOf(from, i) {
-    if (!from.pool || from.pool.length < 2) return from;
-    return { x: from.x, y: from.y, up: from.up, mz: from.pool[i % from.pool.length], pool: from.pool };
   }
   /* The list has a tab for each army; a search looks through all four. The
      open tab follows the unit on the stage until another is chosen. */

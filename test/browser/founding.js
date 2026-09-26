@@ -35,6 +35,17 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
   ok('...with one already picked', !!found.on, found.on);
   ok('the heading no longer repeats a name you have not given', !/Ironhold/.test(found.heading), found.heading);
 
+  // pressed while it is greyed out, the charter says what it still needs rather than doing nothing
+  const early = await p.evaluate(() => {
+    const btn = document.querySelector('[data-go="dofound"]');
+    const off = btn.getAttribute('aria-disabled') === 'true';
+    btn.click();
+    const tip = document.querySelector('.tip.on');
+    return { off: off, tip: tip ? tip.textContent : '', stillFounding: !!document.getElementById('found-name') };
+  });
+  ok('a greyed-out charter, pressed, says what it still needs', early.off && /Six Tier I units/.test(early.tip) && early.stillFounding, early.tip);
+  await p.evaluate(() => window.PMCTips && window.PMCTips.hide());
+
   // type a name, pick a colour, then add units — the name must survive the redraws
   await p.evaluate(() => { const n=document.getElementById('found-name'); n.value='Cullen Free Company'; });
   await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); document.querySelector('[data-campcolour="crimson"]').click(); });
@@ -69,7 +80,7 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
 
   const signed = await p.evaluate(() => {
     const btn = document.querySelector('[data-go="dofound"]');
-    const wasOff = btn.disabled;
+    const wasOff = btn.getAttribute('aria-disabled') === 'true';
     btn.click();
     const c = window.PMC_CAMPAIGN.get();
     return { wasOff: wasOff, name: c.companies.A.name, colour: c.companies.A.colour,

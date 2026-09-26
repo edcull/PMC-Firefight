@@ -52,9 +52,9 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   }
   await click(p, '#camp-body button[data-doc="S2"]');
   await clickText(p, 'Sign the charter');
-  const world = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return c.rivals.map(r => ({ plan: (r.docPlan || []).length, docs: r.doctrines.length, theme: window.PMCCamp.themeOf(r) })); });
-  check('...three rivals, each with a random plan of doctrines and a character read from them',
-    world.length === 3 && world.every(w => w.docs >= 1 && /^It /.test(w.theme)), world.map(w => w.theme).join(' | '));
+  const world = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return c.rivals.map(r => ({ plan: (r.docPlan || []).length, docs: r.doctrines.length })); });
+  check('...three rivals, each with a random plan of doctrines',
+    world.length === 3 && world.every(w => w.docs >= 1 && w.plan >= 1), JSON.stringify(world));
   await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });
   await p.reload();
   await p.waitForTimeout(900);
