@@ -1596,7 +1596,7 @@
   function aiRelocate(side) {
     var cap = relocCap(side), n = 0;
     var foe = state.units.filter(function (e) { return e.side !== side && onTable(e); });
-    function coverAt(x, y) { return R.TERRAIN[R.terrainAt(state, x, y)].cover || 0; }
+    function coverAt(x, y) { return R.coverAt(state, x, y); }
     function nearFoe(u) { return foe.reduce(function (m, e) { return Math.min(m, R.unitDist(u, e)); }, 999); }
     var cand = state.units.filter(function (u) {
       return u.side === side && u.alive && u.x >= 0 && !u.reserve && !u.aboard && !R.isMachine(u) && !coverAt(u.x, u.y);
@@ -3781,10 +3781,10 @@
     });
     if (!foes.length) return null;
     function count(c) { return foes.filter(function (e) { return R.inches(c.x, c.y, e.x, e.y) - 2 * UR <= 12; }).length; }
-    var best = { x: u.x, y: u.y }, bn = count(best), bs = bn * 10 + R.TERRAIN[R.terrainOf(state, u)].cover;
+    var best = { x: u.x, y: u.y }, bn = count(best), bs = bn * 10 + R.coverAt(state, u.x, u.y, u);
     R.reachable(state, u, u.move).forEach(function (c) {
       if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2) || !canStand(u, c)) return;
-      var n = count(c), sc = n * 10 + R.TERRAIN[R.terrainAt(state, c.x, c.y)].cover - c.cost * 0.1;
+      var n = count(c), sc = n * 10 + R.coverAt(state, c.x, c.y) - c.cost * 0.1;
       if (sc > bs) { bs = sc; bn = n; best = c; }
     });
     return { pt: best, n: bn };
@@ -3901,7 +3901,7 @@
      terrain or place, it cannot move to another one" (p. 34). Only enemies on
      the table see anything. */
   function safeSpot(u, x, y) {
-    if (R.TERRAIN[R.terrainAt(state, x, y)].cover > 0) return true;
+    if (R.coverAt(state, x, y) > 0) return true;
     var ghost = { x: x, y: y, alive: true };
     return !state.units.some(function (e) { return onTable(e) && e.side !== u.side && R.hasLoS(state, e, ghost); });
   }
@@ -4920,7 +4920,7 @@
     var mods = (opts && opts.aux ? 1 : u.fp) + R.sizeBonus(u.models);
     if (mode === 'fire') mods += 1;
     if (d <= u.range / 2) mods += 2;
-    if (R.terrainOf(state, u) === 'hill') mods += 2;
+    if (R.levelOf(state, u) > 0) mods += 2;
     var def = R.defenceAgainst(state, u, t, {}).value;
     var e = 0;
     for (var roll = 1; roll <= 9; roll++) {
@@ -5028,7 +5028,7 @@
       }
     }
     if (R.status(u) === 'suppressed') {
-      var spots = R.reachable(state, u, u.move + 2).filter(function (c) { return R.TERRAIN[R.terrainAt(state, c.x, c.y)].cover > 0 && canStand(u, c); });
+      var spots = R.reachable(state, u, u.move + 2).filter(function (c) { return R.coverAt(state, c.x, c.y) > 0 && canStand(u, c); });
       if (spots.length && !alreadySafe(u)) {
         spots.sort(function (a, b) { return a.cost - b.cost; });
         var spath = R.pathTo(state, u, u.move + 2, spots[0]);
@@ -5157,7 +5157,7 @@
     }
 
     // a cautious squad next to an empty building takes it rather than standing in the open
-    if ((behaviour === 'defensive' || behaviour === 'neutral') && R.TERRAIN[R.terrainOf(state, u)].cover === 0 && Math.random() < 0.7) {
+    if ((behaviour === 'defensive' || behaviour === 'neutral') && R.coverAt(state, u.x, u.y, u) === 0 && Math.random() < 0.7) {
       var ins = R.enterTargets(state, u);
       if (ins.length) {
         ins.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
@@ -5227,7 +5227,7 @@
   function scoreSpot(u, c, goal, behaviour) {
     var s = 0;
     var terr = R.TERRAIN[R.terrainAt(state, c.x, c.y)];
-    s += terr.cover * 1.6;
+    s += R.coverAt(state, c.x, c.y) * 1.6;
     if (terr.fp) s += 2;
     s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
     var ghost = { x: c.x, y: c.y, alive: true };

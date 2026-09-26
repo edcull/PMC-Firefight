@@ -259,5 +259,24 @@ head('The wall a shot brings down');
   ok('...nor against plunging fire', R.shelterOf(st2, gun, t), null);
 })();
 
+head('Several terrains at once (p. 42)');
+(function () {
+  var sh = mk('regular', 'A', 5, 20);
+  var wood = { kind: 'woods', x: 20, y: 14, w: 10, h: 12 };
+  var deep = mk('regular', 'B', 25, 20), edge = mk('regular', 'B', 20.3, 20);
+  ok('wholly in a wood: cover', R.coverFor(world([sh, deep], [wood]), sh, deep).v, 2);
+  ok('one foot in the wood, one in the open: counts as open when shot at', R.coverFor(world([sh, edge], [wood]), sh, edge).v, 0);
+  var inf = mk('regular', 'A', 19.5, 20), stR = world([inf], [wood]);
+  ok('...but pays the wood when it moves (out into the open, away)', reachCost(stR, inf, 10, 14.5, 20) > 5, true);
+  var hill = { kind: 'hill', x: 0, y: 0, w: 40, h: 40, level: 1 };
+  var woodOnHill = world([deep], [hill, wood]);
+  ok('a wood on a hill is a wood only (the smaller terrain rules)', R.terrainAt(woodOnHill, 25, 20), 'woods');
+  ok('...and a unit in it is not up on the hill', R.levelOf(woodOnHill, deep), 0);
+  var onHill = mk('regular', 'B', 10, 10);
+  ok('bare hill: up on the hill', R.levelOf(world([onHill], [hill]), onHill) > 0, true);
+  var halfHill = mk('regular', 'B', 39.7, 10);
+  ok('half off the hill: not up there', R.levelOf(world([halfHill], [hill]), halfHill), 0);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
