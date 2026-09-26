@@ -286,6 +286,10 @@
         var ev = show.queue[0];
         var waits = SHOWN[ev.e] === 'wait';
         if (waits && busy()) { whenIdle(show.pump); return; }
+        /* The other side's next activation waits for this one to be finished
+           with: its cards read and put away, not just its shots drawn. Closing
+           the last card pumps again (closeRes). */
+        if (ev.e === 'focus' && (ui.resOpen || resQueue.length) && otherSides(ev.id)) return;
         show.queue.shift();
         try { applyEvent(ev); }
         catch (e) { if (window.console) console.error('replaying ' + ev.e, e); }
@@ -301,6 +305,11 @@
       scheduleReturn();
     }
   };
+  // is this event's unit the other side's — not one this screen plays?
+  function otherSides(id) {
+    var u = evUnit(id);
+    return !!u && seats.indexOf(u.side) < 0;
+  }
   // which events start something that takes time, and which land at once
   var SHOWN = {
     move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', arrive: 'wait',
@@ -648,9 +657,12 @@
     /* On a phone the panel is one slice of screen: picking a unit is a request
        to act with it, so the panel comes back to the actions. */
     if (window.innerWidth <= 1000) setMTab('act');
-    dropFollow();
-    ensureVisible(u);
-    if (cam.borrowed) setHome(cam.x, cam.y);     // the player is driving again
+    // while the other side's move is still being drawn the camera stays with it (camLocked)
+    if (!camLocked()) {
+      dropFollow();
+      ensureVisible(u);
+      if (cam.borrowed) setHome(cam.x, cam.y);     // the player is driving again
+    }
     send({ k: 'select', id: u.id });
     revealConsole();
   }

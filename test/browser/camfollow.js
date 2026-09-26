@@ -70,7 +70,8 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
   let c = await cam(p), home = null, seen = null;
   for (let k = 0; k < 600 && !seen; k++) {
     await drain(p);
-    if (c.mine) {
+    // the player acts once the other side's move has been drawn, as a player would
+    if (c.mine && !c.borrowed && !(await p.evaluate(() => window.__busy() || window.__showQueue() > 0 || !!window.__resOpen()))) {
       await p.evaluate(() => {
         const u = window.__eligibleUnits()[0];
         if (u && window.__select(u) && window.__pressAction('regroup')) window.__armed = true;   // the player has chosen a view
