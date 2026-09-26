@@ -288,16 +288,16 @@ app.drain(4);
   ok('Skirmish opens its own list', byId('menu-skirmish').hidden === false && byId('menu-main').hidden === true);
   W.PMCMenu.close(); W.PMC_SKIRMISH('hotseat');
   ok('Hotseat opens the muster sheet, set for hotseat',
-    byId('setup').hidden === false && byId('sel-mode').value === 'hotseat');
+    byId('setup').hidden === false && W.__hot().kind === 'hotseat');
   ok('...and it is not in commando mode', byId('solo-box').hidden === true);
   W.PMCMenu.open();
   ok('going back to the menu puts the muster sheet away', byId('setup').hidden === true);
   W.PMCMenu.close(); W.PMC_SKIRMISH('coop');
   ok('Co-operative opens the sheet in commando mode', byId('solo-box').hidden === false &&
-    byId('sel-solo-mode').value === 'coop');
+    W.__hot().kind === 'coop');
   W.PMCMenu.close(); W.PMC_SKIRMISH('ai');
   ok('...and a standard battle turns commando mode off again', byId('solo-box').hidden === true &&
-    byId('sel-mode').value === 'ai');
+    W.__hot().kind === 'ai');
   W.PMC_CAMPAIGN.open('hub');
   ok('the campaign screen puts the menu away', !W.PMCMenu.isOpen() && byId('camp').hidden === false);
   byId('camp').hidden = true; byId('setup').hidden = true;

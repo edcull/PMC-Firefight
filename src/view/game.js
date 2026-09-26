@@ -4842,8 +4842,8 @@
   var isMadeUpName = MUSTER.isMadeUpName, loadForces = MUSTER.loadForces, muster = MUSTER.muster;
   var musterFaction = MUSTER.musterFaction, musterTactic = MUSTER.musterTactic, pickInto = MUSTER.pickInto;
   var saveCurrentForce = MUSTER.saveCurrentForce, setSoloMode = MUSTER.setSoloMode;
-  var setupBack = MUSTER.setupBack, setupGoesHome = MUSTER.setupGoesHome, soloPlayersUI = MUSTER.soloPlayersUI;
-  var startSolo = MUSTER.startSolo, wireMuster = MUSTER.wireMuster;
+  var setupBack = MUSTER.setupBack, setupGoesHome = MUSTER.setupGoesHome;
+  var wireMuster = MUSTER.wireMuster;
 
   /* The board window is sized to the screen it is on rather than to a fixed
      900x540 box: on a desktop it takes the whole width left over beside the
@@ -5094,39 +5094,8 @@
         want.done(window.PMC_MUSTER_NOW());
         return;
       }
-      if (muster.hot) { hotNext(); return; }
-      if (muster.solo) { startSolo(); return; }
-      var tier = parseInt(el('sel-tier').value, 10), pl = parseInt(el('sel-pl').value, 10);
-      var faction = musterFaction(), tactic = musterTactic();
-      var mine = muster.keys.slice();
-      if (!R.checkArmy(mine, tier, pl, null, tactic, faction).ok) mine = R.rollArmy(tier, pl, null, faction);
-      var opChoice = el('sel-op').value;
-      var opFaction = opChoice === 'mirror' ? faction : opChoice.split(':')[1] || 'pmc';
-      var theirs = opChoice === 'mirror' ? mine.slice() : R.rollArmy(tier, pl, null, opFaction);
-      // the OpFor rebels pick a tactic of their own, the way a player would
-      var opTactic = opFaction !== 'rebel' ? null
-        : opChoice === 'mirror' ? tactic
-          : R.TACTICS[Math.floor(Math.random() * R.TACTICS.length)].id;
-      /* Randomising the mission (p. 46) is a D6 across all six. The book also
-         allows a D3 in a smaller game, which only ever reaches the first three —
-         that is the player's choice to make, not the game's, so it is its own
-         option rather than a coin flip hidden in here. */
-      var pickScen = el('sel-scen') ? el('sel-scen').value : 'secure';
-      if (pickScen === 'roll') pickScen = SC.ORDER[R.d6() - 1];
-      else if (pickScen === 'rolld3') pickScen = SC.ORDER[R.d3() - 1];
-      el('setup').hidden = true;
-      begin({
-        tier: tier, pl: pl, scenario: pickScen,
-        armyA: mine, armyB: theirs,
-        nameA: muster.name || ('Battle Tier ' + R.ROMAN[tier] + ' company'),
-        nameB: opChoice === 'mirror' ? 'Mirror force'
-          : opFaction === 'rebel' ? 'Insurgent group' : opFaction === 'bugs' ? 'Bug swarm' : opFaction === 'xeno' ? 'Xenotripod tribe' : 'OpFor company',
-        colourA: muster.colour || 'ochre',
-        colourB: foeColour([muster.colour || 'ochre']),
-        tactics: { A: tactic, B: opTactic },
-        mode: el('sel-mode').value, planet: el('sel-planet').value,
-        terrainSetup: el('sel-terrain') ? el('sel-terrain').value : 'auto'
-      });
+      // every skirmish is mustered in steps now: Take the field is the next one
+      if (muster.hot) hotNext();
     });
     /* The terrain set-up choice is remembered, and a campaign battle — which
        starts without this screen — uses whichever was picked last. */
@@ -5290,8 +5259,6 @@
     if (solo !== !!muster.solo) setSoloMode(solo);
     el('solo-box').hidden = !solo;
     el('setup').classList.toggle('solo-mode', solo);
-    if (solo) { el('sel-solo-mode').value = kind; soloPlayersUI(); }
-    else el('sel-mode').value = kind;
     el('setup-title').textContent = {
       ai: 'Muster your force', hotseat: 'Muster your force — hotseat', demo: 'Muster a force to watch',
       solo: 'Muster your commando', coop: 'Muster your commandos'
@@ -5663,7 +5630,6 @@
       picks: (ui.markPicks || []).length
     };
   };
-  window.__setMuster = function (keys) { muster.keys = keys.slice(); muster.name = 'Test force'; drawMuster(); };
   window.__colours = function () { return { A: muster.colour, B: ui.foeColour || null }; };
   window.PMC_SETVIEW = function (wx, wy, z) {
     var p = ISO.toScreen(wx, wy);

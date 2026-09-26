@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=329d713235">
-<link rel="stylesheet" href="src/css/game.css?v=93d9b6c6f5">
+<link rel="stylesheet" href="src/css/game.css?v=146c67b457">
 
 <div class="wrap">
   <header>
@@ -145,15 +145,7 @@
   </div>
   <div class="sheet">
     <div class="solo-box" id="solo-box" hidden>
-      <p class="lede hot-hide">Solitaire and co-operative play: your commando — or two of them, one each — against an OpFor that acts in a phase of its own, driven by the behaviour table. Commandos are small: build yours from the commando composition table. The OpFor pool is rolled for you from its own table, and in a co-op game it is rolled a Priority Level higher for the second player.</p>
-      <div class="field two hot-field">
-        <div class="hot-hide">
-          <label for="sel-solo-mode">Players</label>
-          <select id="sel-solo-mode">
-            <option value="solo" selected>Solitaire — one player</option>
-            <option value="coop">Co-operative — two players, one screen</option>
-          </select>
-        </div>
+      <div class="field hot-field">
         <div>
           <label for="sel-solo-op">The OpFor</label>
           <select id="sel-solo-op">
@@ -176,14 +168,9 @@
           <option value="s_ambush">Ambush! — hit the column on the road</option>
         </select>
       </div>
-      <div class="playertabs hot-hide" id="solo-players" hidden>
-        <button type="button" data-player="0" aria-pressed="true">Player 1’s commando</button>
-        <button type="button" data-player="1" aria-pressed="false">Player 2’s commando</button>
-      </div>
     </div>
     <p class="lede hot-only hot-intro" id="hot-intro"></p>
     <div class="hot-only hot-sum" id="hot-sum"></div>
-    <p class="lede std-only hot-hide">A mercenary company, an insurgent group, a bug swarm or a Xenotripod tribe fights one of the book's six scenarios on a 4′ × 4′ table. Pick your force, a Battle Tier and a Priority Level, then spend composition points — the sum of your units' Tiers — against the rulebook's table.</p>
     <!-- who the force is, as founding a company has it: its name, and its colours on a line that opens them in a modal -->
     <div class="muster foundid hot-only hot-name">
       <div class="field">
@@ -298,16 +285,6 @@
     </div>
     <div class="cat-back" id="cat-back"></div>
 
-    <div class="field std-only hot-hide">
-      <label for="sel-op">Opposition force</label>
-      <select id="sel-op">
-        <option value="roll:pmc">Rolled — a mercenary company for this Tier</option>
-        <option value="roll:rebel" selected>Rolled — an insurgent group for this Tier</option>
-        <option value="roll:bugs">Rolled — a bug swarm for this Tier</option>
-        <option value="roll:xeno">Rolled — a Xenotripod tribe for this Tier</option>
-        <option value="mirror">Mirror — the same force as yours</option>
-      </select>
-    </div>
     <div class="field hot-field">
       <label for="sel-planet">Planet — terrain generator</label>
       <select id="sel-planet">
@@ -347,15 +324,6 @@
       <label id="colour-box-label">Company colours</label>
       <div class="csw" id="colourpick"></div>
       <p class="hint small" id="colour-hint">The opponent takes a colour of its own, chosen at random from the ones you have left.</p>
-    </div>
-    <!-- chosen on the menu now; kept because the start reads it -->
-    <div class="field std-only" id="mode-field" hidden>
-      <label for="sel-mode">Play against</label>
-      <select id="sel-mode">
-        <option value="ai">OpFor AI — behaviour table drives every activation</option>
-        <option value="hotseat">Hotseat — two players, one screen</option>
-        <option value="demo">Demo — watch two AI forces fight it out</option>
-      </select>
     </div>
     <button class="start" id="btn-start">Take the field</button>
   </div>
@@ -511,7 +479,7 @@
   </div>
 </div>
 
-<script src="src/rules/rules.js?v=c98c99d767"></script>
+<script src="src/rules/rules.js?v=d89b484b53"></script>
 <script src="src/rules/ruletext.js?v=116e95866c"></script>
 <script src="src/rules/campaign.js?v=caff2b3bc6"></script>
 <script src="src/rules/scenarios.js?v=da8b69b77b"></script>
@@ -525,9 +493,9 @@
 <script src="src/view/tips.js?v=d9ad8fa292"></script>
 <script src="src/engine/protocol.js?v=3b336aa214"></script>
 <script src="src/engine/engine.js?v=edfb8edb85"></script>
-<script src="src/net/net.js?v=eaa07d90ac"></script>
+<script src="src/net/net.js?v=eb115617f6"></script>
 <script src="src/net/lobby.js?v=e561ff9de3"></script>
-<script src="src/view/muster.js?v=3a81bc906f"></script>
-<script src="src/view/game.js?v=2b97ec6be9"></script>
+<script src="src/view/muster.js?v=4cbb40a071"></script>
+<script src="src/view/game.js?v=7a60714a02"></script>
 <script src="src/view/dossier.js?v=09b253187d"></script>
 <script src="src/view/menu.js?v=362b5aea84"></script>

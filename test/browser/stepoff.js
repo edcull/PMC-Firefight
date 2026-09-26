@@ -8,7 +8,7 @@
    platform it steps out of got its own drop first. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, openMuster } = require('../where.js');
+const { ROOT, startSkirmish } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -34,19 +34,9 @@ async function drain(p) {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
-  // the muster screen sits behind the main menu now
-  await openMuster(p);
-
-  await p.evaluate(() => {
-    document.getElementById('sel-tier').value = '4';
-    document.getElementById('sel-mode').value = 'ai';
-    // the same open battle every run, so the platforms come down on clear ground
-    document.getElementById('sel-scen').value = 'meeting';
-    document.getElementById('sel-planet').value = 'desert';
-    document.getElementById('sel-terrain').value = 'auto';
-    window.__setMuster(['cmd1', 'veterans', 'shock', 'insertplat', 'insertplat', 'protectors']);
-  });
-  await p.click('#btn-start');
+  // the same open battle every run, so the platforms come down on clear ground
+  await startSkirmish(p, { tier: 4, mode: 'ai', scenario: 'meeting', planet: 'desert', terrain: 'auto',
+    keys: ['cmd1', 'veterans', 'shock', 'insertplat', 'insertplat', 'protectors'] });
   await p.waitForTimeout(1200);
   await drain(p);
 

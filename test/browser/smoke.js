@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, openMuster } = require('../where.js');
+const { ROOT, startSkirmish } = require('../where.js');
 
 async function dismissEarly(page) {
   for (let i = 0; i < 10; i++) {
@@ -27,9 +27,7 @@ async function dismissEarly(page) {
 
   await page.goto('file://' + path.join(ROOT, 'index.html'));
   await page.waitForTimeout(500);
-  // the muster screen sits behind the main menu now
-  await openMuster(page);
-  await page.click('#btn-start');
+  await startSkirmish(page, {});
   await page.waitForTimeout(600);
   await page.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
   await page.waitForTimeout(300);

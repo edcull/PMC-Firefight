@@ -885,9 +885,6 @@ button.tierbadge.tierpick:hover, button.tierbadge.tierpick:focus-visible { outli
 }
 .camp-foot { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
 .solo-box { margin: 0 0 6px; }
-.playertabs { display: flex; gap: 6px; margin: 10px 0 2px; flex-wrap: wrap; }
-.playertabs button { font: 600 12px var(--display, system-ui); letter-spacing: .06em; text-transform: uppercase; padding: 7px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: inherit; cursor: pointer; }
-.playertabs button[aria-pressed="true"] { background: rgba(216,161,58,.16); border-color: rgba(216,161,58,.7); color: #f0c566; }
 .own { font: 600 10px var(--mono, monospace); padding: 0 4px; border-radius: 3px; margin-left: 4px; }
 .own1 { color: var(--own-A); border: 1px solid color-mix(in srgb, var(--own-A) 50%, transparent); }
 .own2 { color: var(--own-C); border: 1px solid color-mix(in srgb, var(--own-C) 50%, transparent); }

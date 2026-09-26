@@ -13,7 +13,7 @@
     var ISO = G.ISO, R = G.R, SC = G.SC, el = G.el, esc = G.esc, tip = G.tip, cam = G.cam;
     var begin = G.begin, openMenu = G.openMenu, colourLabel = G.colourLabel, drawColourPick = G.drawColourPick, foeColour = G.foeColour;
 
-    var muster = { keys: [], name: '', opFaction: null, solo: false, players: null, cur: 0 };
+    var muster = { keys: [], name: '', solo: false };
     var SOLO = window.PMCSolo;
 
     /* The composition check the muster screen is building against: the standard
@@ -26,39 +26,13 @@
       if (muster.solo) return c.limits;
       return R.compFor(musterFaction(), tier).limits.map(function (l) { return [l[0] * pl, l[1] === 99 ? 99 : l[1] * pl]; });
     }
-    // co-op: two players, each with a commando of their own
-    function soloSave() {
-      if (!muster.players) return;
-      muster.players[muster.cur] = { keys: muster.keys.slice(), name: muster.name, faction: musterFaction() };
-    }
-    function soloLoad(i) {
-      soloSave();
-      muster.cur = i;
-      var p = muster.players[i] || { keys: [], name: '', faction: musterFaction() };
-      muster.keys = p.keys.slice(); muster.name = p.name || '';
-      if (el('sel-faction')) el('sel-faction').value = p.faction || 'pmc';
-      Array.prototype.forEach.call(document.querySelectorAll('#solo-players [data-player]'), function (b) {
-        b.setAttribute('aria-pressed', String(+b.getAttribute('data-player') === i));
-      });
-      drawMuster();
-    }
     function setSoloMode(on) {
       muster.solo = on;
       el('setup').classList.toggle('solo-mode', on);
       el('solo-box').hidden = !on;
       el('setup-title').textContent = on ? 'Muster your commando' : 'Muster your force';
-      var b = el('btn-setup-solo');
-      if (b) b.textContent = on ? 'Back to a standard battle' : 'Solitaire or co-op against the OpFor';
       muster.keys = []; muster.name = '';
-      muster.players = on ? [{ keys: [], name: '', faction: musterFaction() }, { keys: [], name: '', faction: musterFaction() }] : null;
-      muster.cur = 0;
-      soloPlayersUI();
       drawMuster();
-    }
-    function soloPlayersUI() {
-      var coop = muster.solo && el('sel-solo-mode').value === 'coop';
-      el('solo-players').hidden = !coop;
-      if (!coop && muster.cur !== 0) soloLoad(0);
     }
 
     function musterTier() { return parseInt(el('sel-tier').value, 10) || 3; }
@@ -128,7 +102,7 @@
       if (mh) mh.textContent = muster.hot && muster.hot.step < 3
         ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' || muster.hot.kind === 'net' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
         : muster.solo
-        ? (el('sel-solo-mode').value === 'coop' ? 'Player ' + (muster.cur + 1) + '\u2019s commando' : 'Your commando')
+        ? 'Your commando'
         : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';
       armyLine();
       var tn = el('tactic-note');
@@ -138,15 +112,6 @@
           ? 'A rebel force may take one tactic, or none. It is declared once the scenario is known but before a single piece of terrain is placed — and never in a solitaire game.'
           : '');
       }
-      /* The opposition follows the player's choice of force — mercenaries draw
-         insurgents and the other way about — but only until the player says
-         otherwise, and only when the force itself changes. */
-      var op = el('sel-op');
-      if (op && muster.opFaction !== faction) {
-        muster.opFaction = faction;
-        if (op.dataset.touched !== '1') op.value = faction === 'rebel' || faction === 'bugs' || faction === 'xeno' ? 'roll:pmc' : 'roll:rebel';
-      }
-
       var pts = el('pts');
       // units a tactic or doctrine puts off the bill are named, or the sum looks wrong
       pts.textContent = c.spent + ' / ' + c.budget + ' points';
@@ -482,7 +447,6 @@
         });
       });
       if (el('sel-tactic')) el('sel-tactic').addEventListener('change', drawMuster);
-      if (el('sel-op')) el('sel-op').addEventListener('change', function () { el('sel-op').dataset.touched = '1'; });
       el('chosen').addEventListener('click', function (e) {
         var dr = e.target.closest('[data-drone]');
         if (dr) {
@@ -597,14 +561,6 @@
         });
         drawForceList();
       }
-      // solitaire and co-op: the switch, the player tabs, and the mode
-      if (el('btn-setup-solo')) el('btn-setup-solo').addEventListener('click', function () { setSoloMode(!muster.solo); });
-      if (el('sel-solo-mode')) el('sel-solo-mode').addEventListener('change', function () { soloPlayersUI(); drawMuster(); });
-      if (el('solo-players')) el('solo-players').addEventListener('click', function (e) {
-        var b = e.target.closest('[data-player]');
-        if (!b) return;
-        soloLoad(+b.getAttribute('data-player'));
-      });
       // open empty, with the whole list live to pick from
       drawMuster();
     }
@@ -1039,43 +995,6 @@
     window.__hot = function () { return muster.hot ? JSON.parse(JSON.stringify(muster.hot)) : null; };
     window.__cam = function () { return { x: cam.x, y: cam.y, z: cam.z, borrowed: !!cam.borrowed, home: cam.home ? { x: cam.home.x, y: cam.home.y } : null }; };
 
-    /* Start a solitaire or co-op game from the muster screen. Each player's
-       commando is checked against the commando table and rolled if it is not
-       legal; the OpFor pool is rolled against its own table, a Priority Level
-       higher for every extra player (p. 147). */
-    function startSolo() {
-      var tier = musterTier(), pl = 1;                 // Priority Level 1 a player (p. 147)
-      var coop = el('sel-solo-mode').value === 'coop';
-      soloSave();
-      var plist = coop ? muster.players.slice(0, 2) : [muster.players ? muster.players[0] : { keys: muster.keys, faction: musterFaction() }];
-      var armyA = [], ownersA = [], names = [];
-      plist.forEach(function (p, i) {
-        var f = p.faction || 'pmc', keys = p.keys || [];
-        if (!SOLO.checkCommando(keys, tier, pl, f).ok) keys = SOLO.rollCommando(tier, pl, f);
-        keys.forEach(function (k) { armyA.push(k); ownersA.push(i + 1); });
-        names.push(coop ? 'Player ' + (i + 1) : 'Your commando');
-      });
-      var gamePL = pl + (coop ? 1 : 0);
-      var opFaction = el('sel-solo-op').value;
-      var machines = armyA.some(function (k) { var p = R.profile(R.splitPick(k).key); return p && p.cls !== 'infantry'; });
-      var armyB = SOLO.rollOpFor(tier, gamePL, opFaction, machines);
-      var scen = el('sel-solo-scen').value;
-      if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
-      el('setup').hidden = true;
-      var colA = muster.colour || 'ochre';
-      begin({
-        tier: tier, pl: gamePL, scenario: scen,
-        armyA: armyA, armyB: armyB, ownersA: ownersA,
-        nameA: coop ? 'The commandos' : (muster.players && muster.players[0].name) || 'Your commando',
-        nameB: 'OpFor',
-        colourA: colA, colourB: foeColour([colA]),
-        tactics: { A: null, B: null },
-        mode: 'ai', planet: el('sel-planet').value,
-        terrainSetup: el('sel-terrain') ? el('sel-terrain').value : 'auto',
-        solo: { coop: coop, faction: (plist[0].faction || 'pmc'), opFaction: opFaction, names: names }
-      });
-    }
-
     return {
       FORCE_NOUN: FORCE_NOUN,
       ID_NOUN: ID_NOUN,
@@ -1110,8 +1029,6 @@
       setSoloMode: setSoloMode,
       setupBack: setupBack,
       setupGoesHome: setupGoesHome,
-      soloPlayersUI: soloPlayersUI,
-      startSolo: startSolo,
       wireMuster: wireMuster
     };
   };

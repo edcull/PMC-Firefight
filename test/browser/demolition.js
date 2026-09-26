@@ -3,7 +3,7 @@
    barricade. Writes a before-and-after sheet. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, SHOTS, openMuster } = require('../where.js');
+const { ROOT, SHOTS, startSkirmish } = require('../where.js');
 
 async function drain(p) {
   for (let i = 0; i < 14; i++) {
@@ -26,14 +26,7 @@ async function shot(p, name) {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
-  // the muster screen sits behind the main menu now
-  await openMuster(p);
-  await p.evaluate(() => {
-    document.getElementById('sel-tier').value = '4';
-    document.getElementById('sel-mode').value = 'hotseat';
-    window.__setMuster(['cmd1', 'veterans', 'shock', 'mcv:tracked', 'protectors', 'veterans']);
-  });
-  await p.click('#btn-start');
+  await startSkirmish(p, { tier: 4, mode: 'hotseat', keys: ['cmd1', 'veterans', 'shock', 'mcv:tracked', 'protectors', 'veterans'] });
   await p.waitForTimeout(1400);
   await drain(p);
   await p.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());
