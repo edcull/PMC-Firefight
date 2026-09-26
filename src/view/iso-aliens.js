@@ -1171,7 +1171,7 @@
           }
           head.mx = hx; head.my = hy;
         });
-        if (B.MOUNTS) B.MOUNTS.gun = [{ dx: head.x - gp.x, dy: head.y - gp.y - (opts.lift || 0) + base, dir: 1 }];
+        if (B.PH.mounts) B.PH.mounts.gun = [{ dx: head.x - gp.x, dy: head.y - gp.y - (opts.lift || 0) + base, dir: 1 }];
       } else {
         var segs3 = spec3.segs;
         // legs: eight of them, four a side
@@ -1280,11 +1280,11 @@
             });
           });
         }
-        if (B.MOUNTS) {
-          B.MOUNTS.gun = [{ dx: mouth.x - gp.x, dy: mouth.y - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
-          if (kind === 'firebeetle') B.MOUNTS.flame = B.MOUNTS.gun;
+        if (B.PH.mounts) {
+          B.PH.mounts.gun = [{ dx: mouth.x - gp.x, dy: mouth.y - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
+          if (kind === 'firebeetle') B.PH.mounts.flame = B.PH.mounts.gun;
           // what it sees with: its eyes, on the front of the head (a Keen-Eyed glint comes off them)
-          B.MOUNTS.scan = [{ dx: hc.x - gp.x, dy: hc.y - hr * 0.2 - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
+          B.PH.mounts.scan = [{ dx: hc.x - gp.x, dy: hc.y - hr * 0.2 - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 }];
         }
       }
 

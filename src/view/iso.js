@@ -176,8 +176,9 @@
      the painting underneath: one object for the whole renderer, so its parts
      in their own files all see the same. smooth: a machine is being drawn
      (filled paths, not dithered); corpse: a body (its deflector gone out);
-     shield, brain, flame, wing: the frame each animation is on. */
-  var PH = { smooth: false, corpse: false, shield: 0, brain: 0, flame: -1, wing: -1 };
+     shield, brain, flame, wing: the frame each animation is on; mounts: where
+     the barrels end, collected while a machine is drawn into a scratch canvas. */
+  var PH = { smooth: false, corpse: false, shield: 0, brain: 0, flame: -1, wing: -1, mounts: null };
   var RING_VIS = -1;
   function poly(g, pts, c) {
     if (PH.smooth) {
@@ -681,13 +682,13 @@
      mounts being recorded, and returned as screen offsets from the ground point
      under it, keyed by kind — 'gun', 'auto', 'mg', 'missile', 'rocket', 'flame',
      'rail'. Fliers include their height, so a shot leaves the airframe. */
-  var MOUNTS = null, mountCanvas = null;
+  var mountCanvas = null;
   function mounts(u) {
     if (!u || (u.cls !== 'vehicle' && u.cls !== 'aircraft')) return {};
     if (!mountCanvas) { mountCanvas = document.createElement('canvas'); mountCanvas.width = mountCanvas.height = 1; }
-    MOUNTS = {};
+    PH.mounts = {};
     try { drawMachine(mountCanvas.getContext('2d'), u, { at: { x: u.x, y: u.y }, lift: 0 }); }
-    finally { var out = MOUNTS; MOUNTS = null; }
+    finally { var out = PH.mounts; PH.mounts = null; }
     return out;
   }
 
@@ -799,8 +800,8 @@
     function halo(p, r, c) { ellipse(g, p[0], p[1], r, r * 0.8, c); }
     var gp = toScreen(at.x, at.y); gp.y -= base;
     function mountAt(kind, p) {
-      if (!MOUNTS) return;
-      (MOUNTS[kind] = MOUNTS[kind] || []).push({ dx: p[0] - gp.x, dy: p[1] - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 });
+      if (!PH.mounts) return;
+      (PH.mounts[kind] = PH.mounts[kind] || []).push({ dx: p[0] - gp.x, dy: p[1] - gp.y - (opts.lift || 0) + base, dir: (cos - sin) >= 0 ? 1 : -1 });
     }
     // a vertical prism of n faces, from z0 to z1, radius r0 tapering to r1
     function prism(n, r0, r1, z0, z1, T, t0, s0) {
@@ -1955,7 +1956,7 @@
        vehicle it is drawn from — a technical, an armoured car, a light tank, a
        main battle tank, a boxy carrier — and built from extruded outlines in the
        hull's own frame rather than from one box with a turret on it. The parts
-       that fire record where their barrels and tubes end (MOUNTS), so the game
+       that fire record where their barrels and tubes end (PH.mounts), so the game
        can start each shot at the weapon that fired it. A turret turns to
        whatever the machine last shot at (u.aim); a fixed gun points where the
        hull does. */
@@ -2107,8 +2108,8 @@
       g.restore();
     }
     function mount(kind, pt, dir) {
-      if (!MOUNTS) return;
-      (MOUNTS[kind] = MOUNTS[kind] || []).push({ dx: pt[0] - P0.x, dy: pt[1] - P0.y, dir: dir || 1 });
+      if (!PH.mounts) return;
+      (PH.mounts[kind] = PH.mounts[kind] || []).push({ dx: pt[0] - P0.x, dy: pt[1] - P0.y, dir: dir || 1 });
     }
     function S3(q, z) { var s2 = toScreen(q.x, q.y); return [s2.x, s2.y - z]; }
     // a frame: local (a forward, b across) about a pivot, turned to an angle
@@ -5072,7 +5073,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var ISOALIENS = window.PMCIsoAliens({
-    get KIT() { return KIT; }, get KNEEL_DROP() { return KNEEL_DROP; }, get MOUNTS() { return MOUNTS; },
+    get KIT() { return KIT; }, get KNEEL_DROP() { return KNEEL_DROP; },
     get PALETTE() { return PALETTE; }, get ROLES() { return ROLES; }, get SPR() { return SPR; },
     get SPRITE_RES() { return SPRITE_RES; }, get SU() { return SU; }, get XENO_LOW() { return XENO_LOW; },
     get sprites() { return sprites; }, get eyeArt() { return eyeArt; },
