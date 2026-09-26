@@ -150,6 +150,58 @@
   }
   Local.prototype = Object.create(Emitter.prototype);
 
+  /* ---- a battle in this tab outlives a refresh ----
+     The engine rolls every die through Math.random, and only while it is
+     answering begin() or an intent. So a battle is kept as what it began with,
+     a seed for its dice, and every intent in order: played through again with
+     the same dice it comes out the same. A fingerprint of the table says
+     whether it did — if not, it is not offered back. */
+  var SAVE_KEY = 'pmc-live-battle', SAVE_V = 1;
+  function dice(seed) {
+    var a = seed >>> 0;
+    return function () {                              // mulberry32
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function fingerprint(st) {
+    if (!st) return '';
+    var s = st.phase + '|' + st.turn + '|' + st.activeSide + '|' + !!st.over;
+    (st.units || []).forEach(function (u) {
+      s += '|' + u.id + ',' + Math.round((u.x || 0) * 100) + ',' + Math.round((u.y || 0) * 100) + ',' +
+        u.models + ',' + (u.alive ? 1 : 0) + ',' + (u.sp || 0) + ',' + (u.damage || 0);
+    });
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(36) + '.' + s.length;
+  }
+  function savedBattle() {
+    try {
+      var got = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      return got && got.v === SAVE_V && got.cfg && got.intents ? got : null;
+    } catch (e) { return null; }
+  }
+  function forgetBattle() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }
+  function clone(o) { return o === undefined ? null : JSON.parse(JSON.stringify(o)); }
+
+  // the engine's work, done with this battle's own dice
+  Local.prototype.rolling = function (fn) {
+    var real = Math.random;
+    Math.random = this.rng || real;
+    try { return fn.call(this); } finally { Math.random = real; }
+  };
+  Local.prototype.keep = function () {
+    if (!this.book || !this.engine) return;
+    if (this.engine.over()) { this.book = null; forgetBattle(); return; }
+    this.book.fp = fingerprint(this.engine.state());
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.book)); } catch (e) { }
+  };
+  // thrown away from the menu, or given up: not offered again
+  Local.prototype.forget = function () { this.book = null; forgetBattle(); };
+
   Local.prototype.connect = function (name) {
     if (name) { this.me.name = name; remember(name); }
     this.live = true;
@@ -167,16 +219,53 @@
     this.seats = seats && seats.length ? seats : ['A'];
     this.cfg = cfg;
     this.events = [];
+    var seed = (Math.random() * 4294967296) >>> 0;
+    this.rng = dice(seed);
+    // a demo is only watched: there is nothing to come back to
+    this.book = cfg.mode === 'demo' ? null : { v: SAVE_V, cfg: clone(cfg), seats: this.seats.slice(), seed: seed, intents: [], at: Date.now() };
+    if (!this.book) forgetBattle();
     this.engine = root.PMCEngine.create(recorder(this));
     /* The board is handed the engine before the battle is laid out, because
        laying it out is itself a stream of events — the terrain rolled, the
        scenario read out, the deployment zones — and they have to arrive
        somewhere that can already answer questions about the table. */
     this.emit('engine', { engine: this.engine, local: true });
-    this.engine.start(cfg);
+    this.rolling(function () { this.engine.start(cfg); });
     this.emit('started', { seat: this.seats[0], cfg: cfg, local: true });
     this.flush();
+    this.keep();
     return this.engine;
+  };
+
+  /* The battle kept from before the refresh, played through again out of
+     sight. What was written to the log comes back with it; the cards and the
+     effects do not. False if there was none, or it did not come out the same. */
+  Local.prototype.resume = function (book) {
+    book = book || savedBattle();
+    if (!book) return false;
+    var cfg = clone(book.cfg);
+    this.seats = book.seats && book.seats.length ? book.seats : ['A'];
+    this.cfg = cfg;
+    this.rng = dice(book.seed);
+    this.replaying = [];
+    var engine = this.engine = root.PMCEngine.create(recorder(this));
+    this.rolling(function () {
+      engine.start(cfg);
+      book.intents.forEach(function (x) { try { engine.intent(x[0], x[1]); } catch (e) { } });
+    });
+    var logs = this.replaying;
+    this.replaying = null;
+    this.events = [];
+    if (engine.over() || fingerprint(engine.state()) !== book.fp) {
+      this.engine = null; forgetBattle();
+      return false;
+    }
+    this.book = book;
+    this.emit('engine', { engine: engine, local: true });
+    this.emit('started', { seat: this.seats[0], cfg: cfg, local: true, resumed: true });
+    var st = engine.state();
+    this.flush([{ e: 'newtable', whole: st.phase === 'terrain' }].concat(logs.slice(-400)));
+    return true;
   };
 
   Local.prototype.send = function (t, body) {
@@ -214,13 +303,17 @@
   Local.prototype.intent = function (it) {
     if (!this.engine) return false;
     this.events = [];
-    var res;
-    try { res = this.engine.intent(this.seatNow(), it); }
+    var res, seat = this.seatNow();
+    // kept whether or not it is allowed: a refusal may have rolled a die on the way
+    if (this.book) this.book.intents.push([seat, clone(it)]);
+    try { res = this.rolling(function () { return this.engine.intent(seat, it); }); }
     catch (e) {
+      this.keep();
       this.emit('error', { text: 'that could not be done: ' + (e && e.message) });
       this.flush([]);
       return false;
     }
+    this.keep();
     if (!res || !res.ok) {
       this.emit('refused', { intent: it, why: (res && res.why) || 'not allowed' });
       this.flush([]);
@@ -244,7 +337,11 @@
   /* The view port a local engine writes into: the same events the server sends,
      built the same way, so the board replays one code path. */
   function recorder(net) {
-    function rec(e) { if (net.events.length < 4000) net.events.push(e); }
+    function rec(e) {
+      // played through again after a refresh: only the log is wanted
+      if (net.replaying) { if (e.e === 'log') net.replaying.push(e); return; }
+      if (net.events.length < 4000) net.events.push(e);
+    }
     function ids(list) { return (list || []).map(function (d) { return { id: d.u.id, x: d.x, y: d.y }; }); }
     return {
       log: function (t, text, math) { rec({ e: 'log', t: t, text: text, math: math }); },
@@ -270,7 +367,7 @@
       structures: function () { rec({ e: 'structures' }); },
       clearCards: function () { rec({ e: 'clearcards' }); },
       look: function (side) { rec({ e: 'look', side: side }); },
-      finished: function (report) { net.emit('finished', { report: report }); },
+      finished: function (report) { if (!net.replaying) net.emit('finished', { report: report }); },
       flyLift: function (u) { return root.PMCIso ? root.PMCIso.flyLift(u) : 0; }
     };
   }
@@ -281,6 +378,9 @@
     identity: identity,
     remember: remember,
     defaultURL: defaultURL,
+    // a battle this browser was playing when the page went away
+    savedBattle: savedBattle,
+    forgetBattle: forgetBattle,
     /* Is there a server to talk to at all? A page served over http has one; a
        file:// page or the published single file does not. */
     online: function () { return !!defaultURL(); }

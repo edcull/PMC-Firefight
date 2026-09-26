@@ -99,6 +99,32 @@
     return state;
   }
 
+  /* A battle this browser was in the middle of when the page went away —
+     refreshed, or the phone threw the tab out — is played back up to where it
+     was, behind the menu, which then offers to go back to it. */
+  function resumeSaved() {
+    var book = window.PMCNet && window.PMCNet.savedBattle && window.PMCNet.savedBattle();
+    if (!book) return false;
+    var cfg = book.cfg;
+    seats = book.seats && book.seats.length ? book.seats : ['A'];
+    watching = false;
+    loadAutoAdvance(cfg.mode);
+    resetShow();
+    net = new window.PMCNet.Local();
+    wireNet(net);
+    net.connect();
+    var ok = false;
+    try { ok = net.resume(book); } catch (e) { ok = false; }
+    if (!ok) {
+      window.PMCNet.forgetBattle();
+      net = null; mirror = null; Q = null; state = null;
+      return false;
+    }
+    document.body.setAttribute('data-battle', cfg.mode || '');
+    if (window.innerWidth <= 1000) setMTab('act');
+    return true;
+  }
+
   /* Join a battle already running on a server: the seat is given, the table
      arrives by itself. */
   function joinBattle(transport, seat) {
@@ -1204,6 +1230,7 @@
     });
     el('btn-notes-close').addEventListener('click', function () { el('notes').hidden = true; });
     el('resolution').addEventListener('click', function (e) { if (e.target.id === 'resolution') closeRes(); });
+    resumeSaved();
   }
 
   window.PMC_STATE = function () { return state; };
@@ -1261,7 +1288,7 @@
   window.PMC_DISCARD_BATTLE = function () {
     if (!discardable()) return false;
     resetShow();
-    try { net.disconnect(); } catch (e) { }
+    try { net.forget(); net.disconnect(); } catch (e) { }
     net = null; mirror = null; Q = null; state = null;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
     ui.preview = null; ui.hover = null; ui.insertion = null; ui.reservePick = null; ui.digHover = null;

@@ -49,7 +49,7 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
     window.__lockSeen = null;
     const probe = setInterval(() => {
       const c = window.__cam();
-      if (!(c.borrowed && (!window.__mySide() || window.__busy())) || window.__lockSeen) return;
+      if (!window.__armed || !(c.borrowed && (!window.__mySide() || window.__busy())) || window.__lockSeen) return;
       clearInterval(probe);
       const before = { x: c.x, y: c.y, z: c.z };
       const hint = document.getElementById('returnhint');
@@ -73,7 +73,7 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
     if (c.mine) {
       await p.evaluate(() => {
         const u = window.__eligibleUnits()[0];
-        if (u && window.__select(u)) window.__pressAction('regroup');
+        if (u && window.__select(u) && window.__pressAction('regroup')) window.__armed = true;   // the player has chosen a view
       });
     }
     await p.waitForTimeout(40);

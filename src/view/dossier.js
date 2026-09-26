@@ -2444,6 +2444,14 @@
     function enter() {
       var setup = el('setup');
       if (setup) setup.hidden = true;                 // the muster sheet would sit on top
+      /* The campaign's battle is still being fought (the page was refreshed in
+         the middle of it, say): Campaign goes back to it. */
+      var st = root.PMC_STATE && root.PMC_STATE();
+      if (camp && camp.pending && st && st.cfg && st.cfg.campaign && root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE()) {
+        if (root.PMCMenu) root.PMCMenu.close();
+        return;
+      }
+      if (camp && camp.pending) { camp.pending = null; save(); }   // a battle abandoned mid-flight
       open(view === 'aftermath' ? 'aftermath' : 'hub');
     }
     var btn = el('btn-campaign');
@@ -2453,7 +2461,9 @@
     if (setupBtn) setupBtn.addEventListener('click', enter);
     Store.load().then(function (got) {
       camp = got;
-      if (camp && camp.pending) camp.pending = null;    // a battle abandoned mid-flight
+      // a battle abandoned mid-flight — unless it was kept, and is waiting to be gone back to
+      var kept = root.PMCNet && root.PMCNet.savedBattle && root.PMCNet.savedBattle();
+      if (camp && camp.pending && !(kept && kept.cfg && kept.cfg.campaign)) camp.pending = null;
       ensureColours();
       if (needsSecond()) beginSecond();                // the second player had not founded yet
       render();
