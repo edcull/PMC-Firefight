@@ -113,13 +113,13 @@
       var co = (E.camp.rivals || []).filter(function (r) { return r.name === sm.name; })[0];
       var pc = lossPct(b, sm.name);
       return { name: sm.name, result: sm.result === 'won' ? 'Won' : sm.result === 'lost' ? 'Lost' : 'Drew',
-        loss: pc == null ? '' : pc + '% lost', pay: '+' + sm.kUC + ' ' + C.money(co),
-        gain: '+' + (sm.exp || 0) + ' EXP' + (sm.tp != null ? ' · +' + sm.tp + ' TP' : ''),
+        loss: pc == null ? '' : pc + '% losses', pay: '+' + sm.kUC + ' ' + C.money(co),
+        gain: '+' + (sm.exp || 0) + ' EXP' + (sm.tp != null ? ' · +' + sm.tp + ' trauma' : ''),
         cells: [
-          { cls: 'cs-lost', v: pc == null ? '—' : pc + '%', w: 'lost' },
+          { cls: 'cs-lost', v: pc == null ? '—' : pc + '%', w: 'losses' },
           { cls: 'cs-win', v: '+' + sm.kUC, w: C.money(co) },
           { cls: 'cs-exp', v: '+' + (sm.exp || 0), w: 'EXP' },
-          { cls: 'cs-tra', v: '+' + (sm.tp || 0), w: 'TP' }
+          { cls: 'cs-tra', v: '+' + (sm.tp || 0), w: 'Trauma' }
         ] };
     }
     function frontCard(sums) {
