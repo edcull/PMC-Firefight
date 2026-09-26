@@ -45,7 +45,7 @@
         var d = R.rectPointDist(r, x, y);
         if (d <= reach + 1e-6 && d < bd) { bd = d; best = r; }
       });
-      if (!best) return null;
+      if (!best) return intoArea(u, x, y, n);
       var alongX = best.w >= best.h;
       var lo = alongX ? best.x : best.y, len = alongX ? best.w : best.h;
       var thick = alongX ? best.h : best.w, mid = (alongX ? best.y : best.x) + thick / 2;
@@ -75,6 +75,53 @@
         out.push(alongX ? { x: t, y: cross } : { x: cross, y: t });
       }
       return out;
+    }
+
+    /* A squad in a crater field, woods, ruins or on a hill stands in its usual
+       ranks — but a man who would be standing outside the piece is brought in
+       onto it, to the nearest free spot close by, spaced from the others. The
+       unit is where it is; only the men are moved. Null when all are in already. */
+    var AREA_IN = { crater: 1, woods: 1, ruins: 1, hill: 1 };
+    function intoArea(u, x, y, n) {
+      var piece = null;
+      B.state.terrain.some(function (r) {
+        if (AREA_IN[r.kind] && R.inRect(x, y, r)) { piece = r; return true; }
+        return false;
+      });
+      if (!piece) return null;
+      // in, and a little way in: a man on the very edge reads as standing outside it
+      var M = 0.3;
+      function inside(px, py) {
+        return R.inRect(px - M, py, piece) && R.inRect(px + M, py, piece) && R.inRect(px, py - M, piece) && R.inRect(px, py + M, piece);
+      }
+      var pts = ISO.formationTable(n).map(function (o) { return { x: x + o.dx, y: y + o.dy, rank: o.rank }; });
+      var outside = pts.filter(function (q) { return !inside(q.x, q.y); });
+      if (!outside.length) return null;
+      var placed = pts.filter(function (q) { return outside.indexOf(q) < 0; });
+      // the spots a man could move to: rings round the unit, out to a little over its base
+      var spots = [];
+      [0.56, 0.9, 1.25, 1.6].forEach(function (rr, ri) {
+        var steps = 8 + ri * 4;
+        for (var k = 0; k < steps; k++) {
+          var ang = (k + (ri % 2) * 0.5) / steps * Math.PI * 2;
+          var sx = x + Math.cos(ang) * rr, sy = y + Math.sin(ang) * rr;
+          if (inside(sx, sy)) spots.push({ x: sx, y: sy });
+        }
+      });
+      spots.push({ x: x, y: y });
+      outside.forEach(function (q) {
+        var bestS = null, bestV = -Infinity;
+        spots.forEach(function (sp) {
+          var room = Infinity;
+          placed.forEach(function (o) { room = Math.min(room, Math.hypot(o.x - sp.x, o.y - sp.y)); });
+          // elbow room first, up to a man's width; then as near as it can be to where he was
+          var v = Math.min(room, 0.5) * 10 - Math.hypot(q.x - sp.x, q.y - sp.y);
+          if (v > bestV) { bestV = v; bestS = sp; }
+        });
+        if (bestS) { q.x = bestS.x; q.y = bestS.y; }
+        placed.push(q);
+      });
+      return pts;
     }
 
     /* ---------- board ---------- */
