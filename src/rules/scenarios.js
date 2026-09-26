@@ -176,9 +176,11 @@
       var scales = [1, 0.8, 0.6];
       for (var si = 0; si < scales.length; si++) {
         var sc = scales[si];
-        var w = (t.kind === 'barricade' || t.kind === 'wall') ? t.w : Math.max(2, t.w * sc);
-        var h = (t.kind === 'barricade' || t.kind === 'wall') ? t.h : Math.max(2, t.h * sc);
-        if (sc < 1 && (t.kind === 'barricade' || t.kind === 'wall')) break;
+        // walls and trenches keep their size: trimmed, they would not hold a squad
+        var lin = t.kind === 'barricade' || t.kind === 'wall' || t.kind === 'trench';
+        var w = lin ? t.w : Math.max(2, t.w * sc);
+        var h = lin ? t.h : Math.max(2, t.h * sc);
+        if (sc < 1 && lin) break;
         var cx = t.x + t.w / 2, cy = t.y + t.h / 2;
         for (var rad = 0.5; rad <= 10; rad += 0.5) {
           var steps = Math.max(8, Math.round(rad * 6));
@@ -677,7 +679,7 @@
           /* "trench, wall or barbed wire sections" (p. 55): low walls to fight
              behind, trenches to fight from, and wire further out to slow them. */
           var pick = Math.random(), kind = pick < 0.45 ? 'barricade' : pick < 0.75 ? 'trench' : 'wire';
-          var thick = kind === 'trench' ? 1.6 : 1;
+          var thick = kind === 'trench' ? 2 : 1;             // a trench as wide as a squad's base
           if (kind === 'wire') r += 1;
           state.terrain.push({
             kind: kind,

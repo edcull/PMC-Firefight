@@ -38,14 +38,16 @@
       if (!B.state || R.isMachine(u) || u.aboard || x < 0 || u.walk || u.hop || u.arc) return null;
       var n = Math.max(1, Math.min(8, u.models || 1));
       if (n < 2) return null;
+      // the terrain the rules count it in (half its rim or more): a trench it only half fills still holds it
+      var kind = R.kindsUnder(B.state, null, x, y)[0];
       var best = null, bd = Infinity;
       B.state.terrain.forEach(function (r) {
-        var reach = LINE_REACH[r.kind];
+        var reach = r.kind === 'trench' && kind === 'trench' ? R.UNIT_R : LINE_REACH[r.kind];
         if (reach == null || r.poly) return;
         var d = R.rectPointDist(r, x, y);
         if (d <= reach + 1e-6 && d < bd) { bd = d; best = r; }
       });
-      if (!best) return intoArea(u, x, y, n);
+      if (!best) return intoArea(u, x, y, n, kind);
       var alongX = best.w >= best.h;
       var lo = alongX ? best.x : best.y, len = alongX ? best.w : best.h;
       var thick = alongX ? best.h : best.w, mid = (alongX ? best.y : best.x) + thick / 2;
@@ -77,16 +79,20 @@
       return out;
     }
 
-    /* A squad in a crater field, woods, ruins or on a hill stands in its usual
-       ranks — but a man who would be standing outside the piece is brought in
-       onto it, to the nearest free spot close by, spaced from the others. The
-       unit is where it is; only the men are moved. Null when all are in already. */
+    /* A squad the rules count in a crater field, woods, ruins or on a hill (at
+       least half its rim on it, see R.kindsUnder) stands in its usual ranks —
+       but a man who would be standing outside the piece is brought in onto it,
+       to the nearest free spot close by, spaced from the others. The unit is
+       where it is; only the men are moved. Null when all are in already. */
     var AREA_IN = { crater: 1, woods: 1, ruins: 1, hill: 1 };
-    function intoArea(u, x, y, n) {
-      var piece = null;
-      B.state.terrain.some(function (r) {
-        if (AREA_IN[r.kind] && R.inRect(x, y, r)) { piece = r; return true; }
-        return false;
+    function intoArea(u, x, y, n, kind) {
+      if (!AREA_IN[kind]) return null;
+      // the piece of that kind most of the token is on
+      var piece = null, most = 0, fp = R.footprint(x, y);
+      B.state.terrain.forEach(function (r) {
+        if (r.kind !== kind) return;
+        var c = fp.filter(function (p) { return R.inRect(p.x, p.y, r); }).length;
+        if (c > most) { most = c; piece = r; }
       });
       if (!piece) return null;
       // in, and a little way in: a man on the very edge reads as standing outside it

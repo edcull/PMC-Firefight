@@ -1340,20 +1340,15 @@
     return onHill ? 'hill' : 'open';
   }
   function terrainOf(state, u) { return terrainAt(state, u.x, u.y); }
-  /* "One foot in grave" (p. 42): a unit in several pieces of area terrain at
-     once is "affected by the most disadvantageous effect of any terrain it
-     occupies for the given situation" — partly in the open and partly in a
-     wood, it is in the open when shot at and in the wood when it moves. A
-     garrison is in its building and nothing else.
-     On the table the men are placed one by one, each on its own base, within
-     1" of each other and no more than 6" across (p. 17), so a player puts the
-     whole team in the wood, or lines a trench, wherever they fit. A squad here
-     is one 2" token, so it is wholly in the piece its middle is in when its
-     models would fit there: one to a 15mm base, in reach of each other, within
-     3" of the middle. Only when they will not (a copse too small, a trench too
-     short) does the rim of the token decide, and it is partly in both. A
-     machine is one model, its whole hull on the ground: the rim, always. */
-  var RIM = 8, BASE = 0.6, SPREAD = 3;
+  /* Which terrain a unit is in. "One foot in grave" (p. 42) has a unit in
+     several pieces at once take the worst of them; but on the table the men
+     stand on their own bases, not in a circle, and a player sets them in the
+     wood or along the trench. A 2" token is only a rough outline of that, so
+     it gets some leeway: it is in whatever terrain at least half of the eight
+     points round its rim are in, and at four and four its middle decides. It
+     is always in one terrain, and the models are drawn standing in it. A
+     garrison is in its building and nothing else. */
+  var RIM = 8;
   function footprint(x, y) {
     var pts = [{ x: x, y: y }];
     for (var k = 0; k < RIM; k++) {
@@ -1362,32 +1357,19 @@
     }
     return pts;
   }
-  // can n men stand in the piece of `kind` at x, y, each in reach of the next?
-  function fits(state, x, y, kind, n) {
-    var lim = Math.floor(SPREAD / BASE), seen = { '0,0': 1 }, q = [[0, 0]], got = 0;
-    while (q.length) {
-      var c = q.shift();
-      if (++got >= n) return true;
-      for (var d = 0; d < 4; d++) {
-        var i = c[0] + (d === 0 ? 1 : d === 1 ? -1 : 0), j = c[1] + (d === 2 ? 1 : d === 3 ? -1 : 0);
-        if (i * i + j * j > lim * lim || seen[i + ',' + j]) continue;
-        seen[i + ',' + j] = 1;
-        if (terrainAt(state, x + i * BASE, y + j * BASE) === kind) q.push([i, j]);
-      }
-    }
-    return false;
-  }
-  // the terrain a unit (or a squad of six at x, y) is in: one kind, or each part of its token
+  // the terrain a unit (or a token at x, y) is in, as a one-kind list
   function kindsUnder(state, u, x, y) {
     if (u && u.bld) return [u.bld.kind];
     var px = x != null ? x : u.x, py = y != null ? y : u.y;
-    var k0 = terrainAt(state, px, py);
-    if ((!u || (u.cls || 'infantry') === 'infantry') && fits(state, px, py, k0, u ? Math.max(1, u.models) : 6)) return [k0];
-    return footprint(px, py).map(function (p) { return terrainAt(state, p.x, p.y); });
+    var pts = footprint(px, py), kc = terrainAt(state, px, py), n = {};
+    for (var i = 1; i < pts.length; i++) { var k = terrainAt(state, pts[i].x, pts[i].y); n[k] = (n[k] || 0) + 1; }
+    if ((n[kc] || 0) >= RIM / 2) return [kc];
+    for (var kk in n) if (n[kk] > RIM / 2) return [kk];
+    return [kc];
   }
-  // the Defence bonus the ground gives a unit (or a squad of six) standing at x, y
+  // the Defence bonus the ground gives a unit (or a token) standing at x, y
   function coverAt(state, x, y, u) {
-    return Math.min.apply(null, kindsUnder(state, u ? { models: u.models, cls: u.cls } : null, x, y).map(function (k) { return TERRAIN[k].cover || 0; }));
+    return Math.min.apply(null, kindsUnder(state, null, x, y).map(function (k) { return TERRAIN[k].cover || 0; }));
   }
 
   // segment vs a piece: its rectangle (Liang-Barsky), then its outline if it has one
@@ -1478,15 +1460,13 @@
   function levelOf(state, u) {
     if (!u || u.x < 0) return 0;
     if (u.bld) return 0;                               // in a building: the building's rules only
-    /* The whole unit up there, or it counts as not: partly off the hill it
-       neither gets the hill's Firepower nor sees over friends below it, and
-       shot at from the hill it is the lower one (p. 42, the worst for it). */
-    var ks = kindsUnder(state, u);
-    if (ks.length === 1) return ks[0] === 'hill' ? groundLevel(state, u.x, u.y) : 0;
-    return Math.min.apply(null, footprint(u.x, u.y).map(function (p) {
-      var lv = groundLevel(state, p.x, p.y);
-      return lv && terrainAt(state, p.x, p.y) !== 'hill' ? 0 : lv;
-    }));
+    /* Up on the hill if it counts as on it (see kindsUnder), at the lowest
+       level of the parts of it that are; not if it is in a wood or the like
+       standing on it, which has its own rules only (p. 42). */
+    if (kindsUnder(state, u)[0] !== 'hill') return 0;
+    return Math.min.apply(null, footprint(u.x, u.y).filter(function (p) {
+      return terrainAt(state, p.x, p.y) === 'hill';
+    }).map(function (p) { return groundLevel(state, p.x, p.y); }));
   }
   // the upper step of a stepped hill, as a piece of its own for sight lines
   function upperStep(r) {
@@ -3768,15 +3748,20 @@
     }
     var linear = function (k) { return !!TERRAIN[k].linear; };
     var area = function (k) { return !TERRAIN[k].linear && terrainCost(u, k) > 0; };
-    /* The area terrain a unit standing at a point is in, if any. On its way it
-       keeps its men out of a wood it only brushes past (see kindsUnder); where
-       it starts, it is wherever they stand (below). */
-    function areaAt(i, j) { var k = kindAt(i, j); return area(k) ? k : null; }
+    /* The area terrain a unit standing at a point counts as in (see
+       kindsUnder), or null; worked out once a point. Stepping into it, or
+       starting in it, costs the penalty once a move (p. 42). */
+    var areaCache = new Int16Array(N).fill(-1);
+    function areaAt(i, j) {
+      var c = idx(i, j);
+      if (areaCache[c] < 0) {
+        var kk = kindsUnder(state, null, i * STEP, j * STEP)[0];
+        areaCache[c] = area(kk) ? kindIndex[kk] + 1 : 0;
+      }
+      return areaCache[c] ? kinds[areaCache[c] - 1] : null;
+    }
 
-    /* A unit partly in area terrain is in it when it moves (p. 42): it has
-       paid from the first step, at the dearest of what its token is in. */
-    var k0 = kindAt(i0, j0);
-    kindsUnder(state, u).forEach(function (k) { if (area(k) && (!area(k0) || terrainCost(u, k) > terrainCost(u, k0))) k0 = k; });
+    var k0 = kindsUnder(state, u)[0];
     var startPaid = area(k0) ? 1 : 0;
     var heap = [{ i: i0, j: j0, p: startPaid, c: startPaid ? terrainCost(u, k0) : 0 }];
     cost[idx(i0, j0) * 2 + startPaid] = heap[0].c;
