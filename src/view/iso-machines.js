@@ -987,176 +987,17 @@
       function dropHatch() { return kitGear().dropHatch.apply(null, arguments); }
       function wheelGeom() { return kitGear().wheelGeom.apply(null, arguments); }
       function walkLegs() { return kitGear().walkLegs.apply(null, arguments); }
-      /* ================= the hull ================= */
-      function drawHull() {
-        if (spec.drop) return dropBody();                 // a pod is a cone, not a box
-        var lo = box(0, 0, spec.len, spec.wid);
-        var hi = box(-spec.len * 0.02, 0, spec.len * 0.96, spec.wid * spec.taper);
-        taper(g, lo, hi, deck, spec.hgt, dark, hull, lit);
-        bandOnSides(g, lo, deck, 2, 2, 'rgba(10,9,7,.5)');          // shadow at the skirt line
-        bandOnSides(g, hi, deck + spec.hgt - 3, 3, 2, trim);        // panel line under the roof
-
-        // sloped glacis: a wedge from the nose up to the fighting deck
-        var gl = project(box(spec.len * 0.5, 0, 0.02, spec.wid * spec.taper * 0.98), deck + 3);
-        var gh = project(box(spec.len * 0.24, 0, 0.02, spec.wid * spec.taper), top);
-        poly(g, [gl[0], gl[1], gh[1], gh[0]], trim);
-        poly(g, [gh[0], gh[1], [gh[1][0], gh[1][1] - 2], [gh[0][0], gh[0][1] - 2]], lit);
-
-        // the upper deck: a narrower box set back from the nose
-        if (spec.deck) {
-          var dl = box(-spec.len * 0.04, 0, spec.len * spec.deck, spec.wid * spec.taper * 0.94);
-          var dh = box(-spec.len * 0.04, 0, spec.len * spec.deck * 0.94, spec.wid * spec.taper * 0.82);
-          taper(g, dl, dh, top, spec.dHgt, dark, hull, lit);
-          bandOnSides(g, dl, top, 2, 2, 'rgba(10,9,7,.4)');
-        }
-        // engine grille across the rear deck
-        var eg = project(box(-spec.len * 0.4, 0, spec.len * 0.12, spec.wid * spec.taper * 0.8), top);
-        poly(g, eg, STEEL);
-        for (var i = 0; i < 3; i++) {
-          var lp2 = scr(-spec.len * 0.43 + i * spec.len * 0.03, 0);
-          rect(g, lp2.x - a(3), lp2.y - top - 1, a(6), 1, STEEL_LIT);
-        }
-        // headlights either side of the nose
-        [-1, 1].forEach(function (s) {
-          var lp3 = scr(spec.len * 0.46, s * spec.wid * 0.3);
-          rect(g, lp3.x - 2, lp3.y - deck - Math.round(spec.hgt * 0.62), 3, 3, dead ? STEEL : '#f0e2b4');
-        });
-        // an aerial whip off the back deck
-        var ap2 = scr(-spec.len * 0.34, spec.wid * 0.3);
-        rect(g, ap2.x, ap2.y - top - 16, 1, 16, STEEL_LIT);
-        // stowage bins along the lit flank
-        if (spec.bins) {
-          for (var bnum = 0; bnum < 2; bnum++) {
-            var bt = -spec.len * 0.06 - bnum * spec.len * 0.2;
-            var bn = box(bt, -spec.wid * spec.taper * 0.52, spec.len * 0.16, spec.wid * 0.1);
-            taper(g, bn, bn, deck + Math.round(spec.hgt * 0.45), 7, dark, '#6a6250', '#7b7360');
-          }
-        }
-        // a rear ramp seam on a carrier
-        if (spec.ramp) {
-          var rp2 = project(box(-spec.len * 0.5, 0, 0.02, spec.wid * spec.taper * 0.8), deck + 2);
-          var rq = project(box(-spec.len * 0.5, 0, 0.02, spec.wid * spec.taper * 0.8), top - 2);
-          poly(g, [rp2[0], rp2[1], rq[1], rq[0]], dark);
-        }
+      /* ---- the plain hull and its fittings: in iso-plainhull.js ---- */
+      var KIT_PLAINHULL = null;
+      function kitPlainHull() {
+        return KIT_PLAINHULL || (KIT_PLAINHULL = MAKE_PLAINHULL({
+          GLASS: GLASS, GLINT: GLINT, STEEL: STEEL, STEEL_LIT: STEEL_LIT, box: box, cos: cos, dark: dark,
+          dead: dead, deck: deck, dropBody: dropBody, dropHatch: dropHatch, g: g, hull: hull, lit: lit,
+          scr: scr, sin: sin, spec: spec, top: top, trim: trim
+        }));
       }
-
-      /* ================= fittings ================= */
-      function drawFittings() {
-        if (spec.drop) return dropHatch();               // a pod has a door and nothing else
-        var axis = cos + sin;                            // >0 when the nose is towards us
-        var parts = [];
-        function part(t, fn) { parts.push({ d: t * axis, fn: fn }); }
-
-        if (spec.cab) part(spec.len * 0.3, function () {
-          var cab = box(spec.len * 0.3, 0, spec.len * 0.3, spec.wid * 0.94);
-          taper(g, cab, box(spec.len * 0.31, 0, spec.len * 0.26, spec.wid * 0.84), top, 14, dark, hull, lit);
-          var wf = project(box(spec.len * 0.44, 0, 0.01, spec.wid * 0.7), top + 4);
-          poly(g, [wf[0], wf[1], [wf[1][0], wf[1][1] + 8], [wf[0][0], wf[0][1] + 8]], GLASS);
-          poly(g, [wf[0], wf[1], [wf[1][0], wf[1][1] + 2], [wf[0][0], wf[0][1] + 2]], GLINT);
-        });
-        if (spec.bed) part(-spec.len * 0.14, function () {
-          var tilt = box(-spec.len * 0.14, 0, spec.len * 0.52, spec.wid * 0.9);
-          taper(g, tilt, box(-spec.len * 0.14, 0, spec.len * 0.48, spec.wid * 0.78), top, 13,
-            '#4c4433', '#6d6149', '#7d7054');
-          bandOnSides(g, tilt, top, 13, 2, '#3a3427');
-        });
-        if (spec.hatch) part(-spec.len * 0.26, function () {
-          var hc = box(-spec.len * 0.26, 0, spec.len * 0.22, spec.wid * 0.44);
-          taper(g, hc, hc, top + (spec.dHgt || 0), 4, dark, hull, trim);
-        });
-        if (spec.drum) part(-spec.len * 0.36, function () {
-          var dp2 = scr(-spec.len * 0.36, 0);
-          var y = top + (spec.dHgt || 0);
-          rect(g, dp2.x - 7, dp2.y - y - 12, 14, 12, dark);
-          rect(g, dp2.x - 7, dp2.y - y - 12, 14, 3, trim);
-          rect(g, dp2.x - 7, dp2.y - y - 5, 14, 2, '#8a3a24');
-        });
-        if (spec.spade) part(-spec.len * 0.5, function () {
-          var sp2 = scr(-spec.len * 0.5, 0);
-          rect(g, sp2.x - 9, sp2.y - deck + 1, 18, 5, STEEL);
-          rect(g, sp2.x - 9, sp2.y - deck + 1, 18, 2, STEEL_LIT);
-        });
-        if (spec.dish) part(-spec.len * 0.2, function () {
-          var dp3 = scr(-spec.len * 0.2, 0);
-          var y2 = top + (spec.dHgt || 0);
-          rect(g, dp3.x - 1, dp3.y - y2 - 11, 2, 11, STEEL_LIT);
-          ellipse(g, dp3.x, dp3.y - y2 - 13, a(2.1), a(1.1), '#b9c2cc');
-          ellipse(g, dp3.x, dp3.y - y2 - 14, a(1.3), a(0.6), '#5d6775');
-        });
-        if (spec.cross) part(0, function () {
-          var cp2 = scr(0, 0);
-          var y3 = top + (spec.dHgt || 0);
-          rect(g, cp2.x - 7, cp2.y - y3 - 1, 14, 5, '#e8e3d8');
-          rect(g, cp2.x - 5, cp2.y - y3 - 1, 10, 5, '#c23a32');
-          rect(g, cp2.x - 1, cp2.y - y3 - 3, 3, 9, '#c23a32');
-        });
-
-        if (spec.turret) {
-          var tBase = top + (spec.deck ? spec.dHgt : 0);
-          var tOff = -spec.len * 0.05;
-          var barrel = function () {
-            var gy = tBase + Math.round(spec.tHgt * 0.5);
-            var up = spec.elev || 0, w = spec.fat ? 7 : 5;
-            var lat = spec.twin ? [-0.16, 0.16] : [0];
-            lat.forEach(function (o) {
-              var g0 = scr(spec.turret * 0.45, o), g1 = scr(spec.gun, o);
-              thickLine(g, g0.x, g0.y - gy, g1.x, g1.y - gy - up, w, '#1a1e25');
-              thickLine(g, g0.x, g0.y - gy - 1, g1.x, g1.y - gy - up - 1, 2, STEEL_LIT);
-              // a fume extractor two thirds along
-              var fe = scr(spec.turret * 0.45 + (spec.gun - spec.turret * 0.45) * 0.62, o);
-              rect(g, fe.x - w / 2 - 1, fe.y - gy - up * 0.62 - 4, w + 2, 6, '#1a1e25');
-              var mz = scr(spec.gun * 1.04, o);
-              rect(g, mz.x - w / 2 - 1, mz.y - gy - up - 5, w + 2, 7, STEEL_LIT);
-              rect(g, mz.x - w / 2, mz.y - gy - up - 4, w, 5, '#15181e');
-            });
-          };
-          var turret = function () {
-            var tc = box(tOff, 0, spec.turret, spec.turret * 0.9);
-            var th = box(tOff - spec.turret * 0.06, 0, spec.turret * 0.8, spec.turret * 0.72);
-            taper(g, tc, th, tBase, spec.tHgt, dark, hull, lit);
-            bandOnSides(g, tc, tBase, spec.tHgt, 2, trim);
-            if (spec.bustle) {                           // a stowage bustle behind
-              var bs = box(tOff - spec.turret * 0.62, 0, spec.turret * 0.4, spec.turret * 0.8);
-              taper(g, bs, bs, tBase + 2, Math.round(spec.tHgt * 0.6), dark, '#6a6250', '#7b7360');
-            }
-            // mantlet at the gun's root
-            var mt = box(tOff + spec.turret * 0.42, 0, spec.turret * 0.18, spec.turret * 0.66);
-            taper(g, mt, mt, tBase + 1, spec.tHgt - 2, dark, hull, lit);
-            if (spec.cupola) {                           // commander's cupola and its sight
-              var cu = scr(tOff - spec.turret * 0.18, -spec.turret * 0.22);
-              var cy2 = tBase + spec.tHgt;
-              rect(g, cu.x - 4, cu.y - cy2 - 6, 8, 7, hull);
-              rect(g, cu.x - 4, cu.y - cy2 - 6, 8, 2, lit);
-              rect(g, cu.x - 2, cu.y - cy2 - 8, 4, 3, STEEL);
-              rect(g, cu.x - 2, cu.y - cy2 - 8, 4, 1, GLINT);
-            }
-            if (spec.smoke) {                            // smoke-grenade racks on the cheeks
-              [-1, 1].forEach(function (s) {
-                var sp3 = scr(tOff + spec.turret * 0.2, s * spec.turret * 0.46);
-                for (var i = 0; i < 3; i++) rect(g, sp3.x - 3 + i * 3, sp3.y - tBase - spec.tHgt + 2, 2, 4, STEEL);
-              });
-            }
-          };
-          part(tOff, axis >= 0 ? function () { turret(); barrel(); }
-            : function () { barrel(); turret(); });
-        }
-        if (spec.fixedGun) part(spec.len * 0.2, function () {
-          var gy2 = top + (spec.deck ? spec.dHgt : 0) - 2;
-          var mant = box(spec.len * 0.2, 0, spec.len * 0.22, spec.wid * 0.56);
-          var f0 = scr(spec.len * 0.2, 0), f1 = scr(spec.fixedGun, 0), mb = scr(spec.fixedGun * 1.04, 0);
-          var gun = function () {
-            thickLine(g, f0.x, f0.y - gy2, f1.x, f1.y - gy2, 6, '#1a1e25');
-            thickLine(g, f0.x, f0.y - gy2 - 1, f1.x, f1.y - gy2 - 1, 2, STEEL_LIT);
-            rect(g, mb.x - 5, mb.y - gy2 - 5, 10, 8, STEEL_LIT);
-            rect(g, mb.x - 4, mb.y - gy2 - 4, 8, 6, '#15181e');
-          };
-          if (axis < 0) gun();
-          taper(g, mant, box(spec.len * 0.2, 0, spec.len * 0.16, spec.wid * 0.42), gy2 - 6, 10, dark, hull, lit);
-          if (axis >= 0) gun();
-        });
-
-        parts.sort(function (p, q) { return p.d - q.d; }).forEach(function (p) { p.fn(); });
-      }
+      function drawHull() { return kitPlainHull().drawHull.apply(null, arguments); }
+      function drawFittings() { return kitPlainHull().drawFittings.apply(null, arguments); }
 
       /* ================= styled hulls =================
          Every PMC machine now has a look of its own, named after the kind of real
@@ -1729,110 +1570,16 @@
       }
       function mechHeights() { return kitMechs().mechHeights.apply(null, arguments); }
       function drawMech() { return kitMechs().drawMech.apply(null, arguments); }
-      /* ================= rotorcraft ================= */
-      function drawRotorcraft() {
-        var base = lift, cabTop = base + spec.hgt;
-
-        // skids, slung under the cabin
-        if (spec.skids) {
-          [-1, 1].forEach(function (s) {
-            var s0 = scr(spec.len * 0.34, s * spec.wid * 0.52);
-            var s1 = scr(-spec.len * 0.3, s * spec.wid * 0.52);
-            thickLine(g, s0.x, s0.y - base + 7, s1.x, s1.y - base + 7, 2, STEEL);
-            [0.22, -0.16].forEach(function (t) {
-              var sp4 = scr(spec.len * t, s * spec.wid * 0.5);
-              thickLine(g, sp4.x, sp4.y - base - 2, sp4.x + a(s * 1.2), sp4.y - base + 7, 2, STEEL);
-            });
-          });
-        }
-
-        // tail boom, tapering back from the cabin, with a fin and a tail rotor
-        var bl = box(-spec.len * 0.42 - spec.boom * 0.42, 0, spec.boom, spec.wid * 0.34);
-        var bh = box(-spec.len * 0.42 - spec.boom * 0.5, 0, spec.boom * 0.9, spec.wid * 0.2);
-        taper(g, bl, bh, base + Math.round(spec.hgt * 0.45), 7, dark, hull, lit);
-        var tailT = -spec.len * 0.42 - spec.boom * 0.92;
-        var tp = scr(tailT, 0);
-        var finY = base + Math.round(spec.hgt * 0.45);
-        rect(g, tp.x - 2, tp.y - finY - 17, 4, 18, hull);       // fin
-        rect(g, tp.x - 2, tp.y - finY - 17, 4, 3, trim);
-        [-1, 1].forEach(function (s) {                          // tailplane
-          var th2 = scr(tailT + spec.len * 0.1, s * spec.wid * 0.42);
-          thickLine(g, tp.x, tp.y - finY - 4, th2.x, th2.y - finY - 4, 3, hull);
-        });
-        // the tail rotor, seen edge-on as a disc
-        var trp = scr(tailT - spec.len * 0.02, spec.wid * 0.18);
-        if (!dead) ellipseRing(g, trp.x, trp.y - finY - 8, a(2.6), a(2.5), 'rgba(190,200,214,.34)');
-        dot(g, trp.x, trp.y - finY - 8, STEEL_LIT, 3);
-
-        // the cabin, deep at the front and narrowing to the boom
-        var cl = box(spec.len * 0.02, 0, spec.len, spec.wid);
-        var ch = box(-spec.len * 0.06, 0, spec.len * 0.86, spec.wid * spec.taper);
-        taper(g, cl, ch, base, spec.hgt, dark, hull, lit);
-        bandOnSides(g, cl, base, spec.hgt, 2, trim);
-
-        // stub wings with pylons and pods
-        if (spec.pylons) {
-          [-1, 1].forEach(function (s) {
-            var root = along(-spec.len * 0.1, s * spec.wid * 0.46);
-            var tip = along(-spec.len * 0.12, s * spec.wid * (spec.stubs ? 1.5 : 1.25));
-            var wing = [
-              [root.x, root.y], [tip.x, tip.y],
-              [tip.x - cos * spec.len * 0.16, tip.y - sin * spec.len * 0.16],
-              [root.x - cos * spec.len * 0.2, root.y - sin * spec.len * 0.2]
-            ];
-            var wy = base + Math.round(spec.hgt * 0.52);
-            var wlo = project(wing, wy), whi = project(wing, wy + 3);
-            poly(g, [wlo[1], wlo[2], whi[2], whi[1]], dark);
-            poly(g, whi, s < 0 ? lit : hull);
-            for (var pnum = 0; pnum < spec.pylons; pnum++) {
-              var ps = s * spec.wid * (0.72 + pnum * 0.3);
-              var pp2 = scr(-spec.len * 0.1, ps);
-              rect(g, pp2.x - 1, pp2.y - wy + 2, 2, 4, STEEL);            // pylon
-              rect(g, pp2.x - a(2.2), pp2.y - wy + 5, a(4.4), 5, STEEL);  // rocket pod
-              rect(g, pp2.x - a(2.2), pp2.y - wy + 5, a(4.4), 2, STEEL_LIT);
-            }
-          });
-        }
-
-        // canopy: stepped and tandem on the gunships, a wide screen on the lifter
-        var cp3 = scr(spec.len * 0.3, 0);
-        if (spec.tandem) {
-          rect(g, cp3.x - 5, cp3.y - cabTop - 4, 10, 6, GLASS);
-          rect(g, cp3.x - 5, cp3.y - cabTop - 4, 10, 2, GLINT);
-          var cp4 = scr(spec.len * 0.06, 0);
-          rect(g, cp4.x - 6, cp4.y - cabTop - 8, 12, 7, GLASS);
-          rect(g, cp4.x - 6, cp4.y - cabTop - 8, 12, 2, GLINT);
-        } else {
-          rect(g, cp3.x - 8, cp3.y - cabTop - 5, 16, 8, GLASS);
-          rect(g, cp3.x - 8, cp3.y - cabTop - 5, 16, 2, GLINT);
-          var dr = scr(-spec.len * 0.06, -spec.wid * 0.5);               // cabin door
-          rect(g, dr.x - a(3), dr.y - base - spec.hgt + 3, a(6), spec.hgt - 7, dark);
-        }
-        // chin turret on the gunships
-        if (spec.chin) {
-          var cn = scr(spec.len * 0.42, 0);
-          dot(g, cn.x, cn.y - base - 3, STEEL, 5);
-          var cb = scr(spec.len * 0.72, 0);
-          thickLine(g, cn.x, cn.y - base - 2, cb.x, cb.y - base - 2, 3, '#1a1e25');
-        }
-
-        // the mast, hub and blades, with the disc they sweep
-        var mp = toScreen(at.x, at.y);
-        var rotY = cabTop + 11;
-        rect(g, mp.x - 2, mp.y - rotY, 4, 12, STEEL);
-        dot(g, mp.x, mp.y - rotY, STEEL_LIT, 5);
-        if (!dead) ellipseRing(g, mp.x, mp.y - rotY - 1, spec.rotor * K * 0.5, spec.rotor * K * 0.25,
-          'rgba(198,210,224,.26)');
-        for (var bnum2 = 0; bnum2 < spec.blades; bnum2++) {
-          var ang = f + bnum2 * (Math.PI * 2 / spec.blades) + 0.4;
-          var bx = at.x + Math.cos(ang) * spec.rotor * 0.5;
-          var by = at.y + Math.sin(ang) * spec.rotor * 0.5;
-          var bp = toScreen(bx, by);
-          thickLine(g, mp.x, mp.y - rotY - 1, bp.x, bp.y - rotY - 1, 2, dead ? '#2b2721' : '#3a4150');
-        }
-
-        drawDamage();
+      /* ---- the rotorcraft: in iso-rotors.js ---- */
+      var KIT_ROTORS = null;
+      function kitRotors() {
+        return KIT_ROTORS || (KIT_ROTORS = MAKE_ROTORS({
+          GLASS: GLASS, GLINT: GLINT, STEEL: STEEL, STEEL_LIT: STEEL_LIT, along: along, at: at, box: box,
+          cos: cos, dark: dark, dead: dead, drawDamage: drawDamage, f: f, g: g, hull: hull, lift: lift,
+          lit: lit, scr: scr, sin: sin, spec: spec, trim: trim
+        }));
       }
+      function drawRotorcraft() { return kitRotors().drawRotorcraft.apply(null, arguments); }
 
       /* Drone Control (p. 37): no crew, so the hull carries what flies it instead —
          a sensor dome on the roof towards the back, and a whip aerial beside it
@@ -1955,6 +1702,16 @@
     var MAKE_GEAR = root.PMCIsoGear({
       K: K, MACHINE: MACHINE, bandOnSides: bandOnSides, dot: dot, ellipse: ellipse, hull2d: hull2d,
       poly: poly, project: project, rect: rect, taper: taper, thickLine: thickLine, toScreen: toScreen
+    });
+
+    var MAKE_ROTORS = root.PMCIsoRotors({
+      K: K, a: a, bandOnSides: bandOnSides, dot: dot, ellipseRing: ellipseRing, poly: poly, project: project,
+      rect: rect, taper: taper, thickLine: thickLine, toScreen: toScreen
+    });
+
+    var MAKE_PLAINHULL = root.PMCIsoPlainHull({
+      a: a, bandOnSides: bandOnSides, ellipse: ellipse, poly: poly, project: project, rect: rect,
+      taper: taper, thickLine: thickLine
     });
 
     return {
