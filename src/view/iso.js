@@ -2040,6 +2040,8 @@
     // a flier that is shot down is a wreck on the ground, not one hanging in the air
     var downed = opts.status === 'wrecked' || u.alive === false;
     var lift = (opts.lift || 0) + (spec.fly && !downed ? ELEV * spec.fly : 0) - (opts.hop || 0);
+    // the ground it stands on (up a hill, the hill's top): where its shadow falls, whatever height it rides at
+    var ground = opts.ground != null ? opts.ground : (opts.lift || 0);
     var dead = opts.status === 'wrecked' || u.alive === false;
 
     var hull = pal.mid, lit = pal.light, dark = pal.dark, trim = pal.helm;
@@ -2072,11 +2074,11 @@
          hull: a rotorcraft the disc it hangs under, a winged craft its wings. */
       var sf2 = frameAt(0, 0, f);
       if (spec.heli && spec.rotor) {
-        var hub = S3(sf2(0, 0), 0), rr = spec.rotor * K;
+        var hub = S3(sf2(0, 0), ground), rr = spec.rotor * K;
         sEllipse(hub[0], hub[1], rr, rr * 0.5, shCol);
         poly(g, [[-spec.len * 0.55, -spec.wid * 0.3], [spec.len * 0.2, -spec.wid * 0.45],
           [spec.len * 0.2, spec.wid * 0.45], [-spec.len * 0.55, spec.wid * 0.3]]
-          .map(function (q) { return S3(sf2(q[0], q[1]), 0); }), shCol);
+          .map(function (q) { return S3(sf2(q[0], q[1]), ground); }), shCol);
       } else if (spec.craft) {
         // nose, the wings at their widest, then the tail
         var span = CRAFT_SPAN[spec.craft] || 1.1;
@@ -2085,15 +2087,15 @@
         poly(g, [[L2 * 0.5, 0], [L2 * 0.14, hw], [-L2 * 0.12, sp2], [-L2 * 0.32, sp2],
           [-L2 * 0.44, hw * 0.9], [-L2 * 0.5, hw * 0.3], [-L2 * 0.5, -hw * 0.3],
           [-L2 * 0.44, -hw * 0.9], [-L2 * 0.32, -sp2], [-L2 * 0.12, -sp2], [L2 * 0.14, -hw]]
-          .map(function (q) { return S3(sf2(q[0], q[1]), 0); }), shCol);
+          .map(function (q) { return S3(sf2(q[0], q[1]), ground); }), shCol);
       } else {
-        var sc = project(box(0.25 / MACHINE, 0.25 / MACHINE, spec.len * 0.95, spec.wid * 0.95), 0);
+        var sc = project(box(0.25 / MACHINE, 0.25 / MACHINE, spec.len * 0.95, spec.wid * 0.95), ground);
         poly(g, sc, shCol);
       }
     }
     if (spec.fly && !downed) {
       var cg = toScreen(at.x, at.y);
-      rect(g, cg.x - 1, cg.y - lift, 2, lift, 'rgba(120,130,145,.18)');
+      rect(g, cg.x - 1, cg.y - lift, 2, lift - ground, 'rgba(120,130,145,.18)');
     }
 
     styleInit();
@@ -4708,7 +4710,7 @@
       var RED = dead ? '#3a2e22' : '#c8322a';          // missile tips
 
       // the shadow the machine casts is its feet, not a hull-sized slab
-      var fpr = project(box(0, 0, MS.len * (heavy ? 0.66 : light ? 0.42 : 0.56), MS.wid * (heavy ? 0.9 : light ? 0.5 : 0.75)), 0);
+      var fpr = project(box(0, 0, MS.len * (heavy ? 0.66 : light ? 0.42 : 0.56), MS.wid * (heavy ? 0.9 : light ? 0.5 : 0.75)), ground);
       poly(g, fpr, 'rgba(14,11,8,.34)');
 
       /* Legs stride: one forward, one back, so the pair reads in three quarters.
@@ -5469,11 +5471,12 @@
       var lo = {};
       for (var ok in opts) lo[ok] = opts[ok];
       lo.lift = base + climb;
+      lo.ground = base;                              // raised by its load, not off the ground: the shadow stays down there
       opts = lo;
       var v2 = {};
       for (var key in sv) v2[key] = sv[key];
       v2.facing = u.facing; v2.aim = null; v2.cargo = [];
-      drawMachine(g, v2, { at: atT, lift: base + hang, status: 'ready' });
+      drawMachine(g, v2, { at: atT, lift: base + hang, ground: base, status: 'ready' });
       // the cables, from the belly hook down to the vehicle's four corners
       var vs = hullSpec(sv.art) || { len: 1.4, wid: 0.8, hgt: 12 }, f = u.facing || 0, c = Math.cos(f), sn = Math.sin(f);
       var hook = toScreen(atT.x, atT.y);
