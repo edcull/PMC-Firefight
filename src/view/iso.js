@@ -7171,6 +7171,13 @@
       rect(g, p.x - w / 2 - 1, head - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
       rect(g, p.x - w / 2, head, w, bh, '#15181d');
       rect(g, p.x - w / 2, head, filled, bh, rst === 'broken' ? '#d1476b' : rst === 'suppressed' ? '#e0a23a' : '#6fbf5a');
+      // a red ! to the right when it carries all the Suppression it can
+      if (window.PMC && u.sp >= window.PMC.SP_MAX) {
+        var ex = p.x + w / 2 + a(1.2), ew = Math.max(PIXEL, a(0.5)), et = head - a(1.4), eh = a(1.6), eg = Math.max(PIXEL, a(0.35));
+        rect(g, ex - 1, et - 1, ew + 2, eh + eg + ew + 2, 'rgba(8,10,14,.7)');
+        rect(g, ex, et, ew, eh, '#e5485f');
+        rect(g, ex, et + eh + eg, ew, ew, '#e5485f');
+      }
     }
     if (u.marked) {
       dot(g, p.x + a(5), head - a(2), '#e8c15a');

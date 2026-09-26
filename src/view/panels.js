@@ -202,7 +202,9 @@
       var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
       h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
         '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
-        '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div></div>';
+        '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
+        // at 12 SP, the most a unit can carry: it cannot be suppressed any further
+        (u.sp >= R.SP_MAX ? '<b class="mb-max" title="' + R.SP_MAX + ' SP — the most Suppression a unit can carry">!</b>' : '') + '</div>';
       h += '<div class="stats">' +
         stat('Models', u.models + '/' + u.size) + stat('Move', Math.floor(u.move) + '"') +
         stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +

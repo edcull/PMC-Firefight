@@ -1848,7 +1848,8 @@
     if (models >= 3) return 1;
     return 0;
   }
-  function addSP(u, n) { u.sp = Math.min(12, u.sp + n); }
+  var SP_MAX = 12;                 // the most Suppression a unit can carry
+  function addSP(u, n) { u.sp = Math.min(SP_MAX, u.sp + n); }
   function fmtPart(p) {
     if (p.label === 'D10') return 'D10 rolls ' + p.v;
     return p.label + ' ' + (p.v >= 0 ? '+' : '') + p.v;
@@ -4287,7 +4288,7 @@
   }
 
   root.PMC = {
-    BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP,
+    BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
     COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, FACTIONS: FACTIONS, TACTICS: TACTICS,
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,
