@@ -26,14 +26,17 @@ async function shot(p, name) {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
-  await startSkirmish(p, { tier: 4, mode: 'hotseat', keys: ['cmd1', 'veterans', 'shock', 'mcv:tracked', 'protectors', 'veterans'] });
+  // a meeting engagement: it opens straight on deployment, whatever the dice (the stage is rebuilt below anyway)
+  await startSkirmish(p, { tier: 4, mode: 'hotseat', scenario: 'meeting', keys: ['cmd1', 'veterans', 'shock', 'mcv:tracked', 'protectors', 'veterans'] });
   await p.waitForTimeout(1400);
   await drain(p);
-  await p.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());
+  // both forces down through the board's own hook: the deployment card may open on a unit already
+  // being placed rather than on the list with Auto-deploy under it
+  await p.evaluate(() => window.__autoDeployBoth());
   await p.waitForTimeout(400);
   await drain(p);
-  await p.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await p.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  // and the battle begun the same way, as clienttest begins its own
+  await p.evaluate(() => window.__startBattle());
   await p.waitForTimeout(800);
   await drain(p);
 
