@@ -582,7 +582,8 @@
             status: R.status(u),
             // getting up as it arrives is a pose, not a state
             pose: arr.pose || undefined,
-            activated: u.activated,
+            // a unit that has acted is not dimmed: the label says which have still to go (below)
+            activated: false,
             selected: ui.selected === u,
             morale: R.currentMorale(u)
           });
@@ -1129,6 +1130,14 @@
         }
         B.ctx.closePath(); B.ctx.fillStyle = '#f2c14e'; B.ctx.fill();
       }
+      // a unit yet to activate this turn: a play arrow, in the green the board uses for "go"
+      function readyMark(cx, cy) {
+        B.ctx.beginPath();
+        B.ctx.moveTo(cx - 2.6, cy - 3.8);
+        B.ctx.lineTo(cx + 3.4, cy);
+        B.ctx.lineTo(cx - 2.6, cy + 3.8);
+        B.ctx.closePath(); B.ctx.fillStyle = '#7fd68f'; B.ctx.fill();
+      }
       function heart(cx, cy, r) {
         B.ctx.beginPath();
         B.ctx.moveTo(cx, cy + r * 0.9);
@@ -1146,12 +1155,15 @@
         var mark = terrainMark(u2);
         var rec = labelIcons(u2), honoured = rec.star, scarred = rec.heart;
         var icons = (honoured ? 1 : 0) + (scarred ? 1 : 0);
+        // still to act this turn: a small arrow ahead of the code
+        var toGo = B.state.phase === 'battle' && !B.state.over && !u2.activated;
         var tw = B.ctx.measureText(u2.code).width;
-        var w = tw + 8 + icons * 11 + (mark ? 12 : 0);
+        var w = tw + 8 + icons * 11 + (mark ? 12 : 0) + (toGo ? 10 : 0);
         B.ctx.fillStyle = 'rgba(8,11,16,.72)';
         B.ctx.fillRect(p.x - w / 2, p.y - 10, w, 13);
+        if (toGo) readyMark(p.x - w / 2 + 7, p.y - 3.5);
         B.ctx.fillStyle = sideInk(u2.side);
-        var tx = p.x - w / 2 + 4 + tw / 2;
+        var tx = p.x - w / 2 + 4 + (toGo ? 10 : 0) + tw / 2;
         B.ctx.fillText(u2.code, tx, p.y);
         var ix = tx + tw / 2 + 6.5;
         if (honoured) { star(ix, p.y - 3.5, 4.6); ix += 11; }
