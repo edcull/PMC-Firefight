@@ -28,6 +28,55 @@
     function terrainMark() { return B.terrainMark.apply(this, arguments); }
     function viewRect() { return B.viewRect.apply(this, arguments); }
 
+    /* ---------- a squad lining a trench or a wall ----------
+       A squad standing in a trench, or behind a wall or a line of sandbags,
+       is drawn spread along it rather than bunched on its base: in the trench,
+       down its middle; at a wall, tight in behind it, on the side away from
+       the enemy. Only the men are drawn there — the unit stays where it is. */
+    var LINE_REACH = { trench: 0, barricade: 1.0, wall: 1.3 };
+    function lineUp(u, x, y) {
+      if (!B.state || R.isMachine(u) || u.aboard || x < 0 || u.walk || u.hop || u.arc) return null;
+      var n = Math.max(1, Math.min(8, u.models || 1));
+      if (n < 2) return null;
+      var best = null, bd = Infinity;
+      B.state.terrain.forEach(function (r) {
+        var reach = LINE_REACH[r.kind];
+        if (reach == null || r.poly) return;
+        var d = R.rectPointDist(r, x, y);
+        if (d <= reach + 1e-6 && d < bd) { bd = d; best = r; }
+      });
+      if (!best) return null;
+      var alongX = best.w >= best.h;
+      var lo = alongX ? best.x : best.y, len = alongX ? best.w : best.h;
+      var thick = alongX ? best.h : best.w, mid = (alongX ? best.y : best.x) + thick / 2;
+      // a man every 0.6" or so, the squad no wider than about three inches, and all of it on the piece
+      var gap = Math.min(0.6, 3.2 / (n - 1), Math.max(0.2, len - 0.4) / (n - 1)), span = gap * (n - 1);
+      var at = alongX ? x : y;
+      var c = Math.max(lo + span / 2 + 0.2, Math.min(lo + len - span / 2 - 0.2, at));
+      if (span + 0.4 > len) c = lo + len / 2;
+      var cross = mid;
+      if (best.kind !== 'trench') {
+        // behind it: the side the unit is on, or if it is standing on the line, the side away from the nearest enemy
+        var off = (alongX ? y : x) - mid, side = off > 0 ? 1 : -1;
+        if (Math.abs(off) < thick / 2 + 0.05) {
+          var foe = null, fd = Infinity;
+          B.state.units.forEach(function (e) {
+            if (e.side === u.side || !e.alive || e.x < 0 || e.aboard) return;
+            var dd = Math.hypot(e.x - x, e.y - y);
+            if (dd < fd) { fd = dd; foe = e; }
+          });
+          side = foe ? ((alongX ? foe.y : foe.x) > mid ? -1 : 1) : 1;
+        }
+        cross = mid + side * (thick / 2 + 0.35);
+      }
+      var out = [];
+      for (var i = 0; i < n; i++) {
+        var t = c - span / 2 + i * gap;
+        out.push(alongX ? { x: t, y: cross } : { x: cross, y: t });
+      }
+      return out;
+    }
+
     /* ---------- board ---------- */
     var SS = 1;       // how finely this frame is drawn, in buffer pixels a plate pixel (see DPR, at the top)
     /* The table is painted onto two plates: the ground, which is expensive to bake
@@ -472,6 +521,7 @@
           ISO.drawUnit(B.pctx, u, {
             at: { x: ax, y: ay },
             around: u.bld ? R.sectionRect(u) : null,
+            lineAt: u.bld ? null : lineUp(u, ax, ay),
             lift: liftOf(ax, ay) + arr.lift,
             hop: u.hop || 0,
             walk: u.walk || 0,

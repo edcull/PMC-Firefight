@@ -6978,6 +6978,16 @@
     }
     return out.sort(function (a2, b2) { return a2.depth - b2.depth; });
   }
+  /* The models of a squad lining a trench or a wall: at the table points the
+     board worked out along it (`pts`), as screen offsets from the unit's own
+     spot `at`, drawn far to near. The unit has not moved; its men have. */
+  function lineSpots(pts, at) {
+    var c0 = toScreen(at.x, at.y);
+    return pts.map(function (q0) {
+      var q = toScreen(q0.x, q0.y);
+      return { sx: q.x - c0.x, sy: q.y - c0.y, rank: 0, depth: q0.x + q0.y };
+    }).sort(function (a2, b2) { return a2.depth - b2.depth; });
+  }
   function formation(n) {
     var rows = ROWS[Math.max(1, Math.min(8, n))] || [3, 3, 2], out = [];
     for (var r = 0; r < rows.length; r++) {
@@ -11468,7 +11478,8 @@
     // one height for a man, whatever squad he is in — see fitScale
     var scale = MODEL;
     var pose = opts.pose || statusPose(st, art);
-    var spots = around ? garrisonSpots(around, n, at) : formation(n);
+    var spots = around ? garrisonSpots(around, n, at)
+      : opts.lineAt && opts.lineAt.length === n ? lineSpots(opts.lineAt, at) : formation(n);
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
     // one of a gun crew, drawn where it kneels at (wx, wy) on the table, facing its piece's way

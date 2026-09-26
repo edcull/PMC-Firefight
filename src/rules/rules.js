@@ -956,7 +956,7 @@
     ravine:    { name: 'Ice ravine',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     // the Demolish scenario's target: impassable, and only the Demolish action
     // touches it — a Sapper charge at +4, anyone else's at +2 (p. 54)
-    objective: { name: 'The objective', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0, destructible: 'target' },
+    objective: { name: 'The objective', blocks: true,  impassable: true, movePenalty: 0, cover: 0, fp: 0, destructible: 'target' },
     /* Find and secure's three possible locations (p. 52): "small, passable area
        terrain pieces, which do not block line of sight, do not provide cover and
        cannot be destroyed". They are there to be seen and searched, nothing else. */
