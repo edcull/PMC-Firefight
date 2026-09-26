@@ -263,19 +263,33 @@ head('Several terrains at once (p. 42)');
 (function () {
   var sh = mk('regular', 'A', 5, 20);
   var wood = { kind: 'woods', x: 20, y: 14, w: 10, h: 12 };
-  var deep = mk('regular', 'B', 25, 20), edge = mk('regular', 'B', 20.3, 20);
+  var deep = mk('regular', 'B', 25, 20), edge = mk('regular', 'B', 20.3, 20), brush = mk('regular', 'B', 19.4, 20);
   ok('wholly in a wood: cover', R.coverFor(world([sh, deep], [wood]), sh, deep).v, 2);
-  ok('one foot in the wood, one in the open: counts as open when shot at', R.coverFor(world([sh, edge], [wood]), sh, edge).v, 0);
-  var inf = mk('regular', 'A', 19.5, 20), stR = world([inf], [wood]);
-  ok('...but pays the wood when it moves (out into the open, away)', reachCost(stR, inf, 10, 14.5, 20) > 5, true);
+  ok('token over the edge, middle in: the men step in, cover', R.coverFor(world([sh, edge], [wood]), sh, edge).v, 2);
+  ok('token over the edge, middle out: the men stay out, no cover', R.coverFor(world([sh, brush], [wood]), sh, brush).v, 0);
+  var copse = { kind: 'woods', x: 20, y: 19.5, w: 1, h: 1 };
+  var jammed = mk('regular', 'B', 20.5, 20);
+  ok('a copse too small for the squad: partly in, no cover', R.coverFor(world([sh, jammed], [copse]), sh, jammed).v, 0);
+  var inf = mk('regular', 'A', 20.5, 20), stC = world([inf], [copse]);
+  ok('...but moving out of it pays the wood', reachCost(stC, inf, 10, 15.5, 20) > 5, true);
+  var pass2 = mk('regular', 'A', 19.5, 16), stP = world([pass2], [wood]);
+  ok('walking along a wood\'s edge, men kept out: no penalty', reachCost(stP, pass2, 10, 19.5, 24), 8);
+
+  var trench = { kind: 'trench', x: 30, y: 30, w: 4, h: 1.6 };
+  var dug = mk('regular', 'B', 32, 30.8);
+  ok('a squad lines a 1.6" trench: cover', R.coverFor(world([sh, dug], [trench]), sh, dug).v, 2);
+  ok('...and how many it holds counts', R.kindsUnder(world([dug], [trench]), dug).length, 1);
+  var big = mk('regular', 'B', 32, 30.8); big.models = 30;
+  ok('a crowd it cannot hold is partly out', R.kindsUnder(world([big], [trench]), big).length > 1, true);
+
   var hill = { kind: 'hill', x: 0, y: 0, w: 40, h: 40, level: 1 };
   var woodOnHill = world([deep], [hill, wood]);
   ok('a wood on a hill is a wood only (the smaller terrain rules)', R.terrainAt(woodOnHill, 25, 20), 'woods');
   ok('...and a unit in it is not up on the hill', R.levelOf(woodOnHill, deep), 0);
   var onHill = mk('regular', 'B', 10, 10);
   ok('bare hill: up on the hill', R.levelOf(world([onHill], [hill]), onHill) > 0, true);
-  var halfHill = mk('regular', 'B', 39.7, 10);
-  ok('half off the hill: not up there', R.levelOf(world([halfHill], [hill]), halfHill), 0);
+  var knoll = { kind: 'hill', x: 50, y: 10, w: 1, h: 1, level: 1 }, top = mk('regular', 'B', 50.5, 10.5);
+  ok('a knoll too small for them all: not up there', R.levelOf(world([top], [knoll]), top), 0);
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

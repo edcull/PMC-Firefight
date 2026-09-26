@@ -3784,7 +3784,7 @@
     var best = { x: u.x, y: u.y }, bn = count(best), bs = bn * 10 + R.coverAt(state, u.x, u.y, u);
     R.reachable(state, u, u.move).forEach(function (c) {
       if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2) || !canStand(u, c)) return;
-      var n = count(c), sc = n * 10 + R.coverAt(state, c.x, c.y) - c.cost * 0.1;
+      var n = count(c), sc = n * 10 + R.coverAt(state, c.x, c.y, u) - c.cost * 0.1;
       if (sc > bs) { bs = sc; bn = n; best = c; }
     });
     return { pt: best, n: bn };
@@ -3901,7 +3901,7 @@
      terrain or place, it cannot move to another one" (p. 34). Only enemies on
      the table see anything. */
   function safeSpot(u, x, y) {
-    if (R.coverAt(state, x, y) > 0) return true;
+    if (R.coverAt(state, x, y, u) > 0) return true;
     var ghost = { x: x, y: y, alive: true };
     return !state.units.some(function (e) { return onTable(e) && e.side !== u.side && R.hasLoS(state, e, ghost); });
   }
@@ -5028,7 +5028,7 @@
       }
     }
     if (R.status(u) === 'suppressed') {
-      var spots = R.reachable(state, u, u.move + 2).filter(function (c) { return R.coverAt(state, c.x, c.y) > 0 && canStand(u, c); });
+      var spots = R.reachable(state, u, u.move + 2).filter(function (c) { return R.coverAt(state, c.x, c.y, u) > 0 && canStand(u, c); });
       if (spots.length && !alreadySafe(u)) {
         spots.sort(function (a, b) { return a.cost - b.cost; });
         var spath = R.pathTo(state, u, u.move + 2, spots[0]);
@@ -5227,7 +5227,7 @@
   function scoreSpot(u, c, goal, behaviour) {
     var s = 0;
     var terr = R.TERRAIN[R.terrainAt(state, c.x, c.y)];
-    s += R.coverAt(state, c.x, c.y) * 1.6;
+    s += R.coverAt(state, c.x, c.y, u) * 1.6;
     if (terr.fp) s += 2;
     s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
     var ghost = { x: c.x, y: c.y, alive: true };
