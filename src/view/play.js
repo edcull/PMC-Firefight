@@ -161,6 +161,7 @@
         var swing = ISO.startTurn(shooter);
         if (swing > 0) {
           anims.push({ kind: 'turn', unit: shooter, t0: nowMs(), dur: swing });
+          holdFor(swing + 80);               // no gap between the swing and the shot
           startLoop();
           setTimeout(function () { if (B.state) playShooting(shooter, target, res, deaths, done); }, swing + 40);
           return;
@@ -212,7 +213,18 @@
 
       var tail = spec.s ? 320 + ((spec.sn || 1) - 1) * 260 : 0;
 
-      finish(SHOTS.primary(spec, shooter, from, to, { hits: hits, dist: R.unitDist(shooter, target), land: land }) + tail);
+      var ms = SHOTS.primary(spec, shooter, from, to, { hits: hits, dist: R.unitDist(shooter, target), land: land }) + tail;
+      holdFor(ms);
+      finish(ms);
+    }
+    /* The replay waits on the table being busy. Most weapons put their first
+       effect up a moment after they are called (a timer, not at once), and in
+       that moment the table was idle: the shot counted as over before it began,
+       the target showed what it did to them and the next event came on. So an
+       attack keeps the table busy for as long as it takes. */
+    function holdFor(ms) {
+      anims.push({ kind: 'beat', dur: ms, t0: nowMs() });
+      startLoop();
     }
 
     // the aircraft runs the line, throwing fire out to either side
@@ -259,7 +271,9 @@
     }
 
     function playAssault(attacker, target, deaths, done) {
-      var mid = { x: (attacker.x + target.x) / 2, y: (attacker.y + target.y) / 2 };
+      // where the two are drawn: a defender driven back is still where it was charged
+      var mid = { x: (dispX(attacker) + dispX(target)) / 2, y: (dispY(attacker) + dispY(target)) / 2 };
+      holdFor(900);
       for (var i = 0; i < 4; i++) {
         (function (n) {
           setTimeout(function () {

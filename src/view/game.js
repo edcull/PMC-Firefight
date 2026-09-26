@@ -148,6 +148,7 @@
   function resetShow() {
     if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
     show.queue.length = 0;
+    slideAfter = {};
     pendingArrive = {};
     held = {};
     if (state) state.units.forEach(function (u) { u.ax = u.ay = null; });   // nothing is part-way through a move now
@@ -235,8 +236,15 @@
       shown[u.id] = { models: u.models, sp: u.sp, alive: u.alive, x: u.x, y: u.y, aboard: u.aboard, reserve: u.reserve, damage: u.damage, fled: u.fled };
     });
   }
+  /* Where a unit was pushed without a move of its own to play — an assault's
+     loser falling back 2", a garrison put out of its building — it stays on
+     the spot it was hit on until the attack that did it has been drawn, then
+     goes to where the rules have put it. Kept by id, like `held`. */
+  var slideAfter = {};
   function holdForShow(events) {
     if (!state) return;
+    var walks = {};
+    events.forEach(function (ev) { if (ev.e === 'move' && ev.id) walks[ev.id] = true; });
     var moved = {};
     events.forEach(function (ev) {
       if (ev.e === 'move' && ev.id && !moved[ev.id]) {
@@ -251,7 +259,14 @@
       if (ev.e === 'shoot' || ev.e === 'assault') hit.push(ev.to, ev.from);
       (ev.deaths || []).forEach(function (d) { hit.push(d.id); });
       hit.forEach(function (id) {
-        if (!id || held[id] || !shown[id]) return;
+        if (!id || !shown[id]) return;
+        var was0 = shown[id], u0 = evUnit(id);
+        // shot at here, whatever the rules have done with it since: the rounds fly to where it stood
+        if (u0 && !walks[id] && !slideAfter[id] && was0.x >= 0 && (u0.ax === null || u0.ax === undefined) &&
+            (Math.abs(u0.x - was0.x) > 0.01 || Math.abs(u0.y - was0.y) > 0.01)) {
+          u0.ax = was0.x; u0.ay = was0.y; slideAfter[id] = true;
+        }
+        if (held[id]) return;
         var was = shown[id], u = evUnit(id);
         if (!u || !was.alive) return;
         if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.damage !== u.damage) held[id] = was;
@@ -261,7 +276,18 @@
   function releaseFor(ev) {
     if (!ev) return;
     [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
-      .forEach(function (id) { if (id) delete held[id]; });
+      .forEach(function (id) {
+        if (!id) return;
+        delete held[id];
+        if (!slideAfter[id]) return;
+        delete slideAfter[id];
+        var u = evUnit(id);
+        if (!u) return;
+        var from = { x: u.ax, y: u.ay };
+        u.ax = null; u.ay = null;
+        // off to where it now stands, if it still stands anywhere on the table
+        if (u.alive && u.x >= 0 && from.x != null) animateMove(u, [from, { x: u.x, y: u.y }]);
+      });
   }
   // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
   function shownAs(u) {
@@ -297,6 +323,9 @@
         if (waits) { whenIdle(function () { releaseFor(ev); drawStats(); drawPanel(); show.pump(); }); return; }
       }
       held = {};
+      // anything still waiting to go where the rules put it goes now
+      Object.keys(slideAfter).forEach(function (id) { var u = evUnit(id); if (u) { u.ax = null; u.ay = null; } });
+      slideAfter = {};
       snapshotShown();
       show.running = false;
       syncUI();
