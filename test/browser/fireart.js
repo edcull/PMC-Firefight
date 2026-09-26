@@ -137,6 +137,29 @@ async function fireAndWatch(p, code, ms) {
     mortar.firstImpact > tank.firstImpact,
     tank.firstImpact + 'ms against ' + mortar.firstImpact + 'ms');
 
+  /* Three tubes walk their rounds apart, and each goes up where it comes down:
+     three bursts in three places, not three on the one spot. */
+  head('A mortar battery lands each round where it falls');
+  await stage(p, ['mortarbattery', 'regular', 'veterans']);
+  const spots = await p.evaluate(async () => {
+    const s = window.PMC_STATE();
+    const u = s.units.find(x => x.side === 'A' && x.code === 'MRB');
+    u.activated = false;
+    window.__select(u);
+    window.__pressAction('fire');
+    const e = s.units.find(x => x.side === 'B' && x.alive && window.PMC.canShoot(s, u, x, 'fire', {}));
+    if (!e) return { none: true };
+    window.__shootAt(e.id);
+    const at = {};
+    for (let i = 0; i < 70; i++) {
+      window.__fxlive().forEach(f => { if (f.kind === 'impact' || f.kind === 'miss') at[f.x + ',' + f.y] = 1; });
+      await new Promise(r => setTimeout(r, 40));
+    }
+    return { at: Object.keys(at), target: e.x.toFixed(1) + ',' + e.y.toFixed(1) };
+  });
+  ok('three rounds, three bursts, each in its own place', !spots.none && spots.at.length >= 3,
+    spots.none ? 'nothing in sight' : spots.at.join(' | ') + ' round ' + spots.target);
+
   /* ------------------------------------------------------------------- burst */
   head('A machine gun keeps firing');
   /* The heavy patrol vehicle used to be the machine gun here; the weapon table

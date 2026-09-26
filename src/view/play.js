@@ -192,12 +192,14 @@
       }
       var hits = res.hits || 1;
       var fired = false;
+      // `at`: where this round came down, when a salvo spreads its rounds round the mark
       function land(extra, at) {
         if (!B.state) return;
+        var p = at || to;
         if (res.hits > 0) {
-          SHOTS.hit(shooter, to, hits, extra);
+          SHOTS.hit(shooter, p, hits, extra);
         } else {
-          addFx({ kind: 'miss', x: to.x, y: to.y, up: to.up, dur: 320, blocking: true });
+          addFx({ kind: 'miss', x: p.x, y: p.y, up: p.up, dur: 320, blocking: true });
         }
         if (!fired) { fired = true; spawnDeaths(deaths); }
       }
