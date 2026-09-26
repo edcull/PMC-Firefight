@@ -123,7 +123,8 @@
         '<p class="cpstat">' + esc(frontFacts(b)) + '</p>';
       sides.forEach(function (sm) {
         var r = frontSide(sm, b);
-        h += '<div class="front-unit front-row"><span><b>' + esc(r.name) + '</b> <i class="' + (r.result === 'Lost' ? 'bad' : 'good') + '">' + r.result + '</i></span>' +
+        // only the winner is marked, or both sides when it was drawn
+        h += '<div class="front-unit front-row"><span><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') + '</span>' +
           '<span class="front-num">' + [r.loss, r.pay].filter(Boolean).join(' · ') + '</span></div>';
       });
       return h + '</div>';
