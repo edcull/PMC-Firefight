@@ -1105,33 +1105,27 @@
     var SC = root.PMCScen, sc = SC && SC.SCENARIOS[o.scenario.id];
     var creedName = co.faction === 'rebel' ? 'Paths' : co.faction === 'bugs' ? 'Evolutionary Pathways' : co.faction === 'xeno' ? 'Tribe Advancements' : 'Doctrines';
     var h = '<div class="cpan cpan-B cpan-offer"><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
-      '<span class="mk">' + C.words(co).side + '</span>' +
       '<span class="ctier">' + C.words(co).tier + ' Tier ' +
       ROMAN[co.tier] + '</span></div>';
-    // how they fight, and what they are built around — never what they field
-    h += '<div class="cpstat">' + esc(C.themeOf(co)) + '</div>';
-    // what it is built around: a pill each, what each does in its tip
-    h += '<div class="cpdoc">' + (co.doctrines.length ? co.doctrines.map(function (d) {
+    // won, veterancy and trauma, as your own company's row shows them — never what they field
+    h += statRow(co, true);
+    // the kind of force, then what it is built around: a pill each, what each does in its tip
+    h += '<div class="cpdoc carch">' + armyPill(co) + (co.doctrines.length ? co.doctrines.map(function (d) {
       var dd = C.doctrine(d);
       return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
     }).join('') : '<span class="dnote">No ' + esc(creedName) + ' declared yet.</span>') + '</div>';
-    h += '<div class="cpstat">' + co.record.battles + ' battles against you · ' +
-      co.record.wins + ' won, ' + co.record.losses + ' lost' +
-      (o.caught && o.caught.to > o.caught.from
-        ? ' · fighting elsewhere since you last met — Tier ' + ROMAN[o.caught.from] +
-          ' to ' + ROMAN[o.caught.to]
-        : '') + '</div>';
+    // grown since you last met, fighting someone else
+    if (o.caught && o.caught.to > o.caught.from) {
+      h += '<div class="cpstat">Fighting elsewhere since you last met — Tier ' + ROMAN[o.caught.from] +
+        ' to ' + ROMAN[o.caught.to] + '</div>';
+    }
 
     // the job itself
     h += '<div class="offer-job"><div class="offer-scen"><b>' + esc(o.scenario.name) + '</b>' +
       '<span class="mk">Scenario D6 ' + o.scenario.roll + '</span></div>';
-    /* How big a fight this pairing can actually put on: the Battle Tier the D6
-       gave this job, and the ceiling the two rosters between them could reach. */
+    // how big a fight it is: the Battle Tier the D6 gave this job, and the Priority Levels it may be fought at
     h += '<div class="offer-size"><span>Battle Tier <b>' + ROMAN[o.tier] + '</b></span>' +
-      '<span>Priority Level <b>' + (o.levels.length ? o.levels.join(' or ') : '1') + '</b></span>' +
-      '<span class="offer-cap">most they can meet you at: Tier ' + ROMAN[o.capTier] +
-      ', PL ' + (o.capLevels.length ? o.capLevels[o.capLevels.length - 1] : 1) + '</span></div>';
-    if (sc) h += '<div class="cpstat">' + esc(sc.blurb) + '</div>';
+      '<span>Priority Level <b>' + (o.levels.length ? o.levels.join(' or ') : '1') + '</b></span></div>';
     if (o.roles) {
       var mine = o.roles.attacker === 'A' ? 'attacker' : 'defender';
       h += '<div class="offer-role role-' + mine + '">You ' +

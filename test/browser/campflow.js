@@ -183,9 +183,9 @@ async function clickText(p, re) {
       names: c.rivals.filter(r => cards.some(k => k.textContent.includes(r.name))).length,
       scenarios: cards.filter(k => /Scenario D6/.test(k.textContent)).length,
       doctrines: cards.filter(k => !!k.querySelector('.cpdoc .mk, .cpdoc .dnote')).length,
-      styles: c.rivals.filter(r => cards.some(k => k.textContent.includes(window.PMCCamp.themeOf(r)))).length,
-      sizes: cards.filter(k => /Battle Tier/.test(k.textContent) && /Priority Level/.test(k.textContent) &&
-        /most they can meet you at/.test(k.textContent)).length,
+      // their record against you, the way your own company's row shows it
+      styles: cards.filter(k => k.querySelectorAll('.cstats .cstat').length === 3 && k.querySelector('.cpdoc .armypill')).length,
+      sizes: cards.filter(k => /Battle Tier/.test(k.textContent) && /Priority Level/.test(k.textContent)).length,
       roles: cards.filter(k => /You attack|You defend|even terms/.test(k.textContent)).length,
       buttons: cards.filter(k => /Take this contract/.test(k.textContent)).length,
       // nothing that gives away the list: no unit counts, no dossier peek
@@ -197,7 +197,7 @@ async function clickText(p, re) {
     offers.cards + ' jobs against ' + offers.rivals + ' forces');
   check('...each named', offers.names >= Math.min(offers.cards, offers.rivals) - 1,
     offers.names + ' of ' + offers.rivals + ' forces named');
-  check('...with the way they fight', offers.styles >= Math.min(offers.cards, offers.rivals) - 1);
+  check('...with their record and the kind of force they are', offers.styles === offers.cards, offers.styles + ' of ' + offers.cards);
   check('...and how big a fight they can meet you at', offers.sizes === offers.cards);
   check('...and what they are built around', offers.doctrines === offers.cards);
   check('...a rolled scenario', offers.scenarios === offers.cards);
