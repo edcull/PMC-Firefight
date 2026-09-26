@@ -1612,16 +1612,16 @@
       ui: ui, whenIdle: whenIdle, get state() { return state; }
     }));
   }
-  function aiRelocate() { return kitAI().aiRelocate.apply(null, arguments); }
-  function aiInsert() { return kitAI().aiInsert.apply(null, arguments); }
-  function aiPadFor() { return kitAI().aiPadFor.apply(null, arguments); }
-  function flightTurn() { return kitAI().flightTurn.apply(null, arguments); }
-  function gapToFoes() { return kitAI().gapToFoes.apply(null, arguments); }
-  function canStand() { return kitAI().canStand.apply(null, arguments); }
-  function expectedHits() { return kitAI().expectedHits.apply(null, arguments); }
-  function bestTarget() { return kitAI().bestTarget.apply(null, arguments); }
-  function nearestEnemy() { return kitAI().nearestEnemy.apply(null, arguments); }
-  function aiAct() { return kitAI().aiAct.apply(null, arguments); }
+  function aiRelocate(side) { return (KIT_AI || kitAI()).aiRelocate(side); }
+  function aiInsert(u, done) { return (KIT_AI || kitAI()).aiInsert(u, done); }
+  function aiPadFor(u, pads) { return (KIT_AI || kitAI()).aiPadFor(u, pads); }
+  function flightTurn(u) { return (KIT_AI || kitAI()).flightTurn(u); }
+  function gapToFoes(u) { return (KIT_AI || kitAI()).gapToFoes(u); }
+  function canStand(u, c) { return (KIT_AI || kitAI()).canStand(u, c); }
+  function expectedHits(u, t, mode, opts) { return (KIT_AI || kitAI()).expectedHits(u, t, mode, opts); }
+  function bestTarget(u, mode, opts) { return (KIT_AI || kitAI()).bestTarget(u, mode, opts); }
+  function nearestEnemy(u) { return (KIT_AI || kitAI()).nearestEnemy(u); }
+  function aiAct(u) { return (KIT_AI || kitAI()).aiAct(u); }
 
   // a tap on the table while the player is relocating
   function relocTap(p) {

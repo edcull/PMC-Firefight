@@ -466,7 +466,16 @@
       return out;
     }
 
+    // once every kit is made, the others' functions themselves rather than the stubs for them
+    function relink(L) {
+      BOARD = L.BOARD; STEP = L.STEP; TERRAIN = L.TERRAIN; UNIT_R = L.UNIT_R; angleWrap = L.angleWrap;
+      d6 = L.d6; flyInf = L.flyInf; hasOwn = L.hasOwn; isFlying = L.isFlying; kindsUnder = L.kindsUnder;
+      mountOf = L.mountOf; propOf = L.propOf; rectPointDist = L.rectPointDist; sectionRect = L.sectionRect;
+      terrainAt = L.terrainAt; unitNear = L.unitNear;
+    }
+
     return {
+      relink: relink,
       jumps: jumps, terrainCost: terrainCost, terrainBars: terrainBars, field: field, turnsTo: turnsTo,
       turnToll: turnToll, driveCost: driveCost, drives: drives, reachable: reachable, pathTo: pathTo
     };

@@ -6,7 +6,7 @@ const path = require('path');
 // the tool lives in scripts/; everything it reads and writes is a level up
 const ROOT = path.join(__dirname, '..');
 // rules.js makes its kits (movement, assault...) from these files the first time each is wanted: they go in first
-const rules = ['src/rules/move.js', 'src/rules/rules.js'].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+const rules = ['src/rules/move.js', 'src/rules/assault.js', 'src/rules/shoot.js', 'src/rules/xeno.js', 'src/rules/destruct.js', 'src/rules/damage.js', 'src/rules/space.js', 'src/rules/rules.js'].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 /* The renderer is iso.js and the parts it installs (iso-*.js), loaded before
    it: all of them, in the order the game's own page loads them. */
 const iso = (fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
