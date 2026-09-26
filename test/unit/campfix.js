@@ -25,7 +25,10 @@ ok('a drone that was not blown apart can still be recovered', back > 0 && back <
 
 console.log('\nTHE WORKSHOP');
 // play the aftermath's bookkeeping by hand: set as salvaged, then count down on the next missed battle
-var src = require('fs').readFileSync(require('path').join(__dirname, '../../src/rules/campaign.js'), 'utf8');
+// the campaign rules and the kits split out of them
+var src = ['campaign', 'camp-company', 'camp-contract', 'camp-aftermath', 'camp-rivals'].map(function (f) {
+  return require('fs').readFileSync(require('path').join(__dirname, '../../src/rules/' + f + '.js'), 'utf8');
+}).join('\n');
 ok('a salvaged machine is set to sit out one battle', /if \(sv\.saved\) \{ entry\.restUntil = 1;/.test(src));
 
 console.log('\nPROMOTION CAP (p. 84)');

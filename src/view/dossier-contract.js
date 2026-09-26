@@ -1,0 +1,494 @@
+/* PMC 2670 — Firefight : the contract: the offers, picking the force, orders, the auto-pick and starting the battle
+
+   Made once by dossier.js, the first time it is wanted. E is what it needs
+   of dossier.js: what never changes bound here once, and
+   what does (the battle itself, and anything else reassigned) read through
+   E as it is now. It hands back the functions below. */
+(function (root) {
+  'use strict';
+  root.PMCDossierContract = function (E) {
+    var C = E.C, R = E.R, ROMAN = E.ROMAN, armyPill = E.armyPill, close = E.close,
+        colourFlash = E.colourFlash, colourOf = E.colourOf, esc = E.esc, note = E.note, profile = E.profile,
+        quietTip = E.quietTip, root = E.root, save = E.save, spellOut = E.spellOut, statRow = E.statRow,
+        stripe = E.stripe, tip = E.tip;
+    /* ================= the contract ================= */
+    /* ================= the contracts on offer =================
+       Three forces are on this world, and three jobs are on the table. Each names
+       the enemy, how they fight, what the fighting is for and — where the scenario
+       has an attacker and a defender — which of the two you would be. What it does
+       not name is a single unit of theirs: you learn that when they arrive.
+
+       The offers are rolled once a campaign turn and kept, so leaving the screen
+       and coming back cannot be used to fish for an easier job. */
+    function offersView() {
+      var offers = C.rollOffers(E.camp);
+      var h = '<h2>Contracts on offer</h2>';
+      offers.forEach(function (o, i) { h += offerPanel(o, i); });
+      h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+      return h;
+    }
+
+    function offerPanel(o, i) {
+      var co = (E.camp.rivals || [E.camp.companies.B])[o.rival] || E.camp.companies.B;
+      var SC = root.PMCScen, sc = SC && SC.SCENARIOS[o.scenario.id];
+      var creedName = co.faction === 'rebel' ? 'Paths' : co.faction === 'bugs' ? 'Evolutionary Pathways' : co.faction === 'xeno' ? 'Tribe Advancements' : 'Doctrines';
+      var h = '<div class="cpan cpan-B cpan-offer"' + stripe(co) + '><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
+        '<span class="ctier">' + C.words(co).tier + ' Tier ' +
+        ROMAN[co.tier] + '</span></div>';
+      // won, veterancy and trauma, as your own company's row shows them — never what they field
+      h += statRow(co, true);
+      // the kind of force, then what it is built around: a pill each, what each does in its tip
+      h += '<div class="cpdoc carch">' + armyPill(co) + (co.doctrines.length ? co.doctrines.map(function (d) {
+        var dd = C.doctrine(d);
+        return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
+      }).join('') : '<span class="dnote">No ' + esc(creedName) + ' declared yet.</span>') + '</div>';
+      // grown since you last met, fighting someone else
+      if (o.caught && o.caught.to > o.caught.from) {
+        h += '<div class="cpstat">Fighting elsewhere since you last met — Tier ' + ROMAN[o.caught.from] +
+          ' to ' + ROMAN[o.caught.to] + '</div>';
+      }
+
+      // the job itself
+      h += '<div class="offer-job"><div class="offer-scen"><b>' + esc(o.scenario.name) + '</b>' +
+        '<span class="mk">Scenario D6 ' + o.scenario.roll + '</span></div>';
+      // how big a fight it is: the Battle Tier the D6 gave this job, and the Priority Levels it may be fought at
+      h += '<div class="offer-size"><span>Battle Tier <b>' + ROMAN[o.tier] + '</b></span>' +
+        '<span>Priority Level <b>' + (o.levels.length ? o.levels.join(' or ') : '1') + '</b></span></div>';
+      if (o.roles) {
+        var mine = o.roles.attacker === 'A' ? 'attacker' : 'defender';
+        h += '<div class="offer-role role-' + mine + '">You ' +
+          (mine === 'attacker' ? 'attack' : 'defend') + '</div>';
+        h += '<div class="cpstat">' + esc(sc ? sc.roles[mine] : '') +
+          (o.roles.bestDefence && o.roles.bestDefence.swapped && o.roles.bestDefence.side === 'A'
+            ? ' <b>The Best Defence is Good Offence</b> pushed the attack onto them (D6 ' +
+              o.roles.bestDefence.roll + ').'
+            : '') + '</div>';
+      } else {
+        h += '<div class="cpstat">Neither side has the initiative here — you meet on even terms.</div>';
+      }
+      h += '<div class="cpstat">' + esc(sc ? sc.win : '') + '</div>';
+      h += '</div>';
+      h += '<button class="start" data-take-offer="' + i + '">Take this contract</button>';
+      return h + '</div>';
+    }
+
+    /* What a unit is carrying, on the button that picks it for a battle: the
+       experience it has banked and — the thing that decides whether to give it the
+       day off — how close it is to its next Battle Trauma (p. 85). A unit hits a
+       Trauma at 10 Trauma Points, 15 with Mental Training, and taking it into
+       another fight is what pushes it over. */
+    function wear(e) {
+      var co = E.camp.companies.A, wd = C.words(co);
+      var cap = C.traumaThreshold(co);
+      var tp = e.tp || 0;
+      var near = tp >= cap - 2;
+      var h = '<span class="wear">';
+      if (e.exp) h += '<span class="w-exp">' + e.exp + ' EXP</span>';
+      h += '<span class="w-tp' + (near ? ' hot' : '') + '" ' + tip('Trauma Points',
+        tp + ' of ' + cap + '. A unit that reaches ' + cap + ' rolls on the ' + wd.trauma + ' ' +
+        'table and the count starts again.') + '>' + tp + '/' + cap + ' TP</span>';
+      if ((e.traumas || []).length) {
+        h += '<span class="w-tr" ' + tip(
+          e.traumas.length === 1 ? wd.trauma : e.traumas.length + ' ' + wd.traumas,
+          spellOut(e.traumas, C.traumaTable(e.key))) + '>' +
+          e.traumas.length + ' trauma' + (e.traumas.length > 1 ? 's' : '') + '</span>';
+      }
+      if ((e.honours || []).length) {
+        h += '<span class="w-hon" ' + tip(
+          e.honours.length === 1 ? wd.honour : e.honours.length + ' ' + wd.honours,
+          spellOut(e.honours, C.honourTable(e.key))) + '>' +
+          e.honours.length + ' honour' + (e.honours.length > 1 ? 's' : '') + '</span>';
+      }
+      return h + '</span>';
+    }
+
+    function beginContract() {
+      var A = E.camp.companies.A;
+      /* Whichever force is drawn has been fighting elsewhere, and comes to meet you
+         at something like your own standing — give or take a Tier, and never more
+         than one above you. */
+      var B = E.camp.companies.B;
+      var caught = null;
+      if (E.camp.rivals && E.camp.rivals.length) {
+        B = E.camp.companies.B;
+        var want = C.catchUpTarget(A.tier);
+        if (B.tier < want) caught = C.catchUp(B, want);
+      }
+      var tier = C.rollBattleTier(A, B);
+      var scen = C.rollScenario(false);        // a D6 across all six, whatever the Tier
+      var alt = C.hasDoctrine(A, 'XO3') ? C.rollScenario(false) : null;
+      var levels = C.levelsFor(A, B, tier.tier);
+      E.contract = {
+        pl: levels.length ? levels[levels.length - 1] : 1,
+        levels: levels,
+        tierRoll: tier, tier: tier.tier, scenario: scen, planet: 'random', alt: alt,
+        picks: [], adjusted: false, caught: caught
+      };
+      E.view = 'contract';
+    }
+
+    /* The player has picked one of the three. The job was settled when it was
+       offered — the enemy, the scenario, the Battle Tier and which side of the
+       fight they are on — so nothing is rolled again here. */
+    function takeOffer(i) {
+      var offers = C.rollOffers(E.camp);
+      var o = offers[Math.max(0, Math.min(offers.length - 1, i | 0))];
+      if (!o) return;
+      C.faceRival(E.camp, o.rival);
+      E.contract = {
+        pl: o.levels.length ? o.levels[o.levels.length - 1] : 1,
+        levels: o.levels,
+        tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: 'random',
+        roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null,
+        picks: [], adjusted: false, caught: o.caught
+      };
+      save();
+      E.view = 'contract';
+    }
+
+    /* Which faults are hard. A missing minimum is fixable by adding more units; a
+       cap, a budget or a Tier restriction is not, and the unit causing it has to go. */
+    function blocking(faults) {
+      return (faults || []).filter(function (f) {
+        return !/Needs at least/.test(f) && !/No units chosen/.test(f);
+      });
+    }
+
+    /* Could this company field *any* legal army for this contract? Uses the same greedy
+       fill the rules engine uses, restricted to units not away being repaired. */
+    function canEverField(co, tier, pl) {
+      return C.canFieldArmy(co, tier, pl, true);
+    }
+
+    function contractPicks(co, tier, pl) {
+      return co.roster.filter(function (e) { return !(e.restUntil > 0); });
+    }
+
+    /* Drug Dealer (p. 112): "Before each battle, the player may choose up to 1/3
+       of infantry units" — chosen here, with the list. */
+    function ordersPanel(co) {
+      var rows = [];
+      if (C.hasDoctrine(co, 'V4')) {
+        var able = drugAble(E.contract.picks), cap = Math.floor(able.length / 3);
+        E.contract.drugs = (E.contract.drugs || []).filter(function (id) { return able.some(function (e) { return e.rid === id; }); }).slice(0, cap);
+        rows.push('<div class="orow"><b>Drug Dealer</b><em>Up to ' + cap + ' of the infantry go in Determined, and take D6+1 Trauma Points after (' +
+          E.contract.drugs.length + ' of ' + cap + ')</em><span class="segs wrap">' +
+          (able.length ? able.map(function (e) {
+            var on = E.contract.drugs.indexOf(e.rid) >= 0;
+            return '<button class="lnk' + (on ? ' on' : '') + '" data-drug="' + e.rid + '"' +
+              (!on && E.contract.drugs.length >= cap ? ' disabled' : '') + '>' + esc(e.name) + '</button>';
+          }).join('') : '<span class="dnote">No infantry in the list can take them.</span>') + '</span></div>');
+      }
+      return rows.length ? '<div class="cpan orders">' + rows.join('') + '</div>' : '';
+    }
+    function contractView() {
+      var A = E.camp.companies.A, B = E.camp.companies.B;
+      var keys = E.contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
+      var chk = R.checkArmy(keys, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null);
+      var roll = E.contract.tierRoll;
+      var h = '<h2>Contract</h2>';
+      h += '<p class="lede">Against <b>' + esc(B.name) + '</b> — ' +
+        C.words(B).side.toLowerCase() + ', ' +
+        C.words(B).tier + ' Tier ' + ROMAN[B.tier] + '.<br>' +
+        (E.contract.standard ? 'A standard contract' : 'Battle Tier D6 ' + roll.roll) +
+        (!E.contract.standard && roll.tier < roll.roll
+          ? ', held to Tier ' + ROMAN[roll.cap] + (roll.thin
+            ? ' by what the two forces can actually put on the table'
+            : ' by the weaker force\u2019s standing')
+          : '') +
+        ' — <b>Battle Tier ' + ROMAN[E.contract.tier] + '</b>. ' +
+        'Scenario D6 ' + E.contract.scenario.roll + ' — <b>' + esc(E.contract.scenario.name) + '</b>.</p>';
+      if (E.contract.alt && E.contract.alt.id === E.contract.scenario.id) {
+        h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die agreed: ' +
+          esc(E.contract.alt.name) + ' it is.</div></div>';
+      } else if (E.contract.alt) {
+        h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die showed ' +
+          E.contract.alt.roll + ', <b>' + esc(E.contract.alt.name) + '</b>. The tribe may keep either.</div>' +
+          '<button class="lnk" data-foresee="1">Fight ' + esc(E.contract.alt.name) + ' instead</button></div>';
+      }
+      /* Three of the six give one company the attack and the other the ground, and
+         the two play nothing alike — so the force is chosen knowing which it is. */
+      var SC = root.PMCScen, sc = SC && SC.SCENARIOS[E.contract.scenario.id];
+      if (sc && sc.attacker) {
+        var mine = E.contract.roles
+          ? (E.contract.roles.attacker === 'A' ? 'attacker' : 'defender') : null;
+        h += '<div class="cpdoc">' + (mine
+          ? '<span class="offer-role role-' + mine + '">You ' +
+            (mine === 'attacker' ? 'attack' : 'defend') + '</span>' +
+            '<span class="mk">' + esc(sc.roles[mine]) +
+            (E.contract.roles.bestDefence && E.contract.roles.bestDefence.swapped &&
+              E.contract.roles.bestDefence.side === 'A'
+              ? ' The Best Defence is Good Offence took the attack (D6 ' +
+                E.contract.roles.bestDefence.roll + ').'
+              : E.contract.roles.bestDefence && E.contract.roles.bestDefence.side === 'A' && E.contract.roles.bestDefence.roll
+                ? ' The Best Defence is Good Offence: D6 ' + E.contract.roles.bestDefence.roll + ' — you stay the defender.' : '') + '</span>' +
+            (E.contract.roles.bestDefence && E.contract.roles.bestDefence.pending && E.contract.roles.bestDefence.side === 'A'
+              ? '<button class="lnk" data-go="bestdef">The Best Defence is Good Offence — roll to attack (2+)</button>' : '')
+          : '<span class="mk">Attacker and defender are randomised when the battle opens. ' +
+            esc(sc.roles.attacker) + ' ' + esc(sc.roles.defender) +
+            (C.hasDoctrine(A, 'S1')
+              ? ' The Best Defence is Good Offence gives you a 2+ to push the attack onto them if the roll makes you the defender.'
+              : '') + '</span>') + '</div>';
+      }
+      /* Rebel Tactics (p. 95): chosen once the scenario and who attacks are known,
+         before a piece of terrain goes down — so here, with the list. */
+      if (A.faction === 'rebel') {
+        h += '<div class="cpan orders"><div class="cprom-head"><b>Tactic</b></div><div class="orow">' +
+          '<em>' + esc(E.contract.tactic ? R.tacticById(E.contract.tactic).text : 'A rebel force may take one tactic for the battle, or none.') + '</em>' +
+          '<span class="segs">' + [{ id: '', name: 'No tactic' }].concat(R.TACTICS).map(function (t) {
+            var on = (E.contract.tactic || '') === t.id;
+            return '<button class="lnk' + (on ? ' on' : '') + '" data-tactic="' + t.id + '"' +
+              (t.text ? ' ' + tip(t.name, t.text) : '') + '>' + esc(t.name) + '</button>';
+          }).join('') + '</span></div></div>';
+      }
+      if (E.contract.caught && E.contract.caught.to > E.contract.caught.from) {
+        h += '<div class="cpdoc"><span class="mk">' + esc(E.contract.caught.name) +
+          ' has been fighting elsewhere — Tier ' + ROMAN[E.contract.caught.from] + ' to ' +
+          ROMAN[E.contract.caught.to] + ' since you last met.</span></div>';
+      }
+
+      if (C.hasDoctrine(A, 'S4') && !E.contract.adjusted) {
+        h += '<div class="cpdoc"><b>On Our Terms…</b> lets you shift the Battle Tier by one. ' +
+          '<button class="lnk" data-tier="-1"' + (E.contract.tier <= 1 ? ' disabled' : '') + '>Down to ' + ROMAN[Math.max(1, E.contract.tier - 1)] + '</button> ' +
+          '<button class="lnk" data-tier="1"' + (E.contract.tier >= E.contract.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, E.contract.tier + 1)] + '</button></div>';
+      }
+
+      /* The standard contract (p. 84): Tier III, Priority Level 2, the Tier not
+         rolled at all — when both forces can field it. */
+      if (!E.contract.standard && C.canStandard(A, B) && !(E.contract.tier === 3 && E.contract.pl === 2)) {
+        h += '<div class="cpdoc"><span class="mk">Both forces can field a Tier III army at Priority Level 2.</span> ' +
+          '<button class="lnk" data-go="standard">Take a standard contract instead</button></div>';
+      } else if (E.contract.standard) {
+        h += '<div class="cpdoc"><span class="mk">Standard contract — Tier III, Priority Level 2.</span></div>';
+      }
+      // only offer a Priority Level both forces could actually fill
+      var lv = E.contract.levels || [1, 2];
+      var PLN = { 1: 'skirmish', 2: 'full battle', 3: 'large battle', 4: 'major battle' };
+      h += '<div class="field two"><div><label for="camp-pl">Priority Level</label>' +
+        '<select id="camp-pl"' + (E.contract.standard ? ' disabled' : '') + '>' + [1, 2, 3, 4].map(function (n) {
+          var can = lv.indexOf(n) >= 0;
+          if (!can && n > 2) return '';                 // the big ones only when someone can fill them
+          return '<option value="' + n + '"' + (E.contract.pl === n ? ' selected' : '') +
+            (can ? '' : ' disabled') + '>' + n + ' — ' + PLN[n] +
+            (can ? '' : ' (neither force can fill it)') + '</option>';
+        }).join('') + '</select></div>' +
+        '<div><label for="camp-planet">Planet</label><select id="camp-planet">' +
+        ['random', 'desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'].map(function (k) {
+          return '<option value="' + k + '"' + (E.contract.planet === k ? ' selected' : '') + '>' +
+            (k === 'random' ? 'Randomise' : k.charAt(0).toUpperCase() + k.slice(1)) + '</option>';
+        }).join('') + '</select></div></div>';
+
+      h += '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
+        '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span></div>';
+      /* What each Tier asks for at this Battle Tier and Priority Level, and how
+         many of each are in the list — the line the skirmish muster sheet shows. */
+      var lims = R.compFor(A.faction || 'pmc', E.contract.tier).limits, cnt = chk.counts || {};
+      h += '<p class="limits">' + [1, 2, 3, 4, 5].map(function (t) {
+        var lo = lims[t - 1][0] * E.contract.pl, hi = lims[t - 1][1] === 99 ? 99 : lims[t - 1][1] * E.contract.pl;
+        if (hi === 0) return null;
+        var n = cnt[t] || 0, short = n < lo || n > hi;
+        return ROMAN[t] + ' <b' + (short ? ' class="short"' : '') + '>' + n + '/' + (hi === 99 ? lo + '+' : lo + '-' + hi) + '</b>';
+      }).filter(Boolean).join(' \u00b7 ') + '</p>';
+      h += '<div class="chosen">' + E.contract.picks.map(function (e, i) {
+        var p = profile(e.key);
+        return '<span class="pickwrap"><button class="pick" data-unpick="' + i + '">' +
+          esc(e.name) + ' <b>' + ROMAN[p.tier] + '</b></button></span>';
+      }).join('') + '</div>';
+      h += '<p class="faults' + (chk.ok ? ' ok' : '') + '">' +
+        (chk.ok ? 'A legal Battle Tier ' + ROMAN[E.contract.tier] + ' army.' : esc(chk.faults[0] || '')) + '</p>';
+      h += '<div class="cat tall">';
+      var avail = contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; });
+      if (!avail.length) h += '<p class="dnote">Every unit on the books is already in the list.</p>';
+      avail.forEach(function (e) {
+        var p = profile(e.key);
+        var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
+        var bad = blocking(R.checkArmy(trial, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
+        h += '<button class="cu" data-pick="' + e.rid + '"' +
+          (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
+          '<span class="t">' + ROMAN[p.tier] + '</span>' +
+          '<span><b>' + esc(e.name) + '</b>' + wear(e) + '<small>' + esc(p.name) +
+          ((e.honours || []).length ? ' · <span ' + quietTip(C.words(A).honours, spellOut(e.honours, C.honourTable(e.key))) +
+            '>' + esc(e.honours.map(function (n) { return C.honourTable(e.key)[n - 1].name; }).join(', ')) + '</span>' : '') +
+          ((e.traumas || []).length ? ' · <span ' + quietTip(C.words(A).traumas, spellOut(e.traumas, C.traumaTable(e.key))) +
+            '>' + esc(e.traumas.map(function (n) { return C.traumaTable(e.key)[n - 1].name; }).join(', ')) + '</span>' : '') +
+          '</small></span><span class="st">' + (p.cls === 'infantry' ? p.size + ' men' : p.cls) + '</span></button>';
+      });
+      var resting = A.roster.filter(function (e) { return e.restUntil > 0; });
+      if (resting.length) {
+        h += '<h4>In the workshop — sitting this one out</h4>';
+        resting.forEach(function (e) {
+          h += '<button class="cu" disabled><span class="t">' + ROMAN[profile(e.key).tier] + '</span>' +
+            '<span><b>' + esc(e.name) + '</b><small>salvaged from the last battle</small></span></button>';
+        });
+      }
+      h += '</div></div>';
+      h += ordersPanel(A);
+      if (!chk.ok) {
+        var why;
+        if (blocking(chk.faults).length) {
+          why = esc(chk.faults[0]) + ' Drop a unit, or change the list.';
+        } else if (!canEverField(A, E.contract.tier, E.contract.pl)) {
+          // the company simply does not own the units this contract asks for
+          why = esc(chk.faults[0]) + ' ' + esc(A.name) + ' cannot field a legal army at Battle Tier ' +
+            ROMAN[E.contract.tier] + ', Priority Level ' + E.contract.pl +
+            (E.contract.pl > 1 ? ' — try Priority Level 1.' : ' — recruit or promote first, then come back.');
+        } else {
+          why = esc(chk.faults[0]) + ' Add more units.';
+        }
+        h += '<p class="blockwhy">' + why + '</p>';
+      }
+      h += '<button class="start" data-go="fight"' + (chk.ok ? '' : ' disabled') + '>Take the field</button>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="autopick">Fill the list for me</button>' +
+        '<button class="lnk" data-go="hub">Back</button></p>';
+      return h;
+    }
+
+    /* pick a legal force from the roster, the way the rival does */
+    function autoPick(co, tier, pl, tactic) {
+      var avail = contractPicks(co).slice().sort(function (a, b) {
+        return profile(b.key).tier - profile(a.key).tier;
+      });
+      var docs = co.doctrines || [];
+      var comp = R.compFor(co.faction, tier), out = [], used = {};
+      function take(test) {
+        for (var i = 0; i < avail.length; i++) {
+          var e = avail[i];
+          if (used[e.rid] || !test(profile(e.key), e)) continue;
+          used[e.rid] = 1; out.push(e); return true;
+        }
+        return false;
+      }
+      /* A swarm fields one Leader Bug of the Battle Tier or higher (p. 114): the
+         lowest that qualifies, and every other Leader Bug stays behind. */
+      var credit = {};
+      if (co.faction === 'bugs') {
+        var leaders = avail.filter(function (e) { return profile(e.key).leaderBug; })
+          .sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier; });
+        var lead = leaders.filter(function (e) { return profile(e.key).tier >= tier; })[0];
+        leaders.forEach(function (e) { used[e.rid] = 1; });
+        if (lead) { out.push(lead); credit[profile(lead.key).tier] = 1; }
+      }
+      for (var t = 1; t <= 5; t++) {
+        var need = comp.limits[t - 1][0] * pl - (credit[t] || 0);
+        if (docs.indexOf('O2') >= 0 && t === tier) need = Math.ceil(need / 2);
+        for (var i = 0; i < need; i++) take(function (p) { return p.tier === t; });
+      }
+      // then spend what is left: anything that keeps the list legal goes in, biggest
+      // first, because an unspent composition point is a point wasted
+      for (var guard = 0; guard < 60; guard++) {
+        var keys = out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
+        var legal = R.checkArmy(keys, tier, pl, docs, tactic).ok;
+        var added = take(function (p, e) {
+          var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
+          var res = R.checkArmy(trial, tier, pl, docs, tactic);
+          // while the list is still illegal, take anything within budget that helps;
+          // once it is legal, only take what keeps it legal
+          return legal ? res.ok : res.spent <= comp.points * pl;
+        });
+        if (!added) break;
+      }
+      /* A last trim if the fill overshot. Popping from the end was wrong: the list is
+         sorted by Tier descending, so an illegal high-Tier machine sits first and could
+         never be reached — the trim would strip everything around it and still fail.
+         Drop whichever single unit leaves the fewest hard faults behind. */
+      for (var trim = 0; trim < 20 && out.length; trim++) {
+        var now = R.checkArmy(out.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }), tier, pl, docs, tactic);
+        if (now.ok) break;
+        var hard = blocking(now.faults);
+        if (!hard.length) break;                     // only minimums left, and dropping cannot help
+        var bestAt = -1, bestScore = Infinity;
+        for (var q = 0; q < out.length; q++) {
+          var without = out.filter(function (_, i) { return i !== q; })
+            .map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
+          var res = R.checkArmy(without, tier, pl, docs, tactic);
+          var score = blocking(res.faults).length * 10 + res.faults.length;
+          if (score < bestScore) { bestScore = score; bestAt = q; }
+        }
+        if (bestAt < 0) break;
+        out.splice(bestAt, 1);
+      }
+      return out;
+    }
+
+    /* Drug Dealer (p. 112): up to a third of the infantry, leaders aside, are sent
+       in Determined — and pay for it afterwards. The choice is made as the force
+       takes the field, and the marks are cleared again once the aftermath has read
+       them. The unit with the most to prove goes first: the ones that have fought
+       hardest and carry the least trauma already. */
+    // who may be given the drugs: infantry, leaders aside, and up to a third of them
+    function drugAble(picks) {
+      return picks.filter(function (e) {
+        var p = profile(e.key);
+        return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command;
+      });
+    }
+    /* `chosen`: the player's own pick of rids ("may choose up to 1/3"); without
+       one — the rival — the unit with the most to prove goes first. */
+    function drugThem(co, picks, chosen) {
+      picks.forEach(function (e) { delete e.drugged; });
+      if (!C.hasDoctrine(co, 'V4')) return [];
+      var able = drugAble(picks);
+      var n = Math.floor(able.length / 3);
+      if (n < 1) return [];
+      var taken;
+      if (chosen) taken = able.filter(function (e) { return chosen.indexOf(e.rid) >= 0; }).slice(0, n);
+      else { able.sort(function (a, b) { return a.tp - b.tp; }); taken = able.slice(0, n); }
+      taken.forEach(function (e) { e.drugged = true; });
+      return taken;
+    }
+
+    /* ================= starting the battle ================= */
+    function fight() {
+      var A = E.camp.companies.A, B = E.camp.companies.B;
+      // a rebel rival picks a tactic of its own, the way a player would (p. 95)
+      var theirTactic = B.faction === 'rebel' ? [null, 'laststand', 'wave', 'guerillas'][Math.floor(Math.random() * 4)] : null;
+      var theirs = autoPick(B, E.contract.tier, E.contract.pl, theirTactic);
+      if (!R.checkArmy(theirs.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
+        E.contract.tier, E.contract.pl, B.doctrines, theirTactic).ok) {
+        // the rival cannot field a legal list — let it hire in for this battle
+        C.developRival(B);
+        theirs = autoPick(B, E.contract.tier, E.contract.pl, theirTactic);
+      }
+      var druggedA = drugThem(A, E.contract.picks, E.contract.drugs || []);
+      drugThem(B, theirs);
+      E.camp.pending = {
+        tier: E.contract.tier, pl: E.contract.pl, scenario: E.contract.scenario.id,
+        A: E.contract.picks.map(function (e) { return e.rid; }),
+        B: theirs.map(function (e) { return e.rid; }),
+        drugged: E.contract.picks.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; })
+          .concat(theirs.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; }))
+      };
+      if (druggedA.length) {
+        note('Drug Dealer',
+          druggedA.map(function (e) { return e.name; }).join(', ') +
+          ' go in Determined. They will each take D6+1 extra Trauma Points afterwards.');
+      }
+      save();
+      close();
+      root.PMC_NEWGAME({
+        tier: E.contract.tier, pl: E.contract.pl,
+        scenario: E.contract.scenario.id,
+        // the attacker and defender were settled when the contract was taken
+        roles: E.contract.roles || null,
+        armyA: E.contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
+        armyB: theirs.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
+        nameA: A.name, nameB: B.name,
+        colourA: colourOf(A), colourB: colourOf(B),
+        dossier: { A: E.contract.picks, B: theirs },
+        // Modifying the armies (p. 46): what is left on the books, to swap in once the table is laid
+        bench: { A: A.roster.filter(function (e) { return E.contract.picks.indexOf(e) < 0 && !(e.restUntil > 0); }), B: [] },
+        doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
+        tactics: { A: A.faction === 'rebel' ? E.contract.tactic || null : null, B: theirTactic },
+        campaign: true,
+        mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
+        planet: E.contract.planet
+      });
+    }
+
+    return {
+      offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, contractView: contractView,
+      autoPick: autoPick, fight: fight
+    };
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierContract;
+})(typeof window !== 'undefined' ? window : global);
