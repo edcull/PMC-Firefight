@@ -953,58 +953,21 @@
      is a broken one. So an arriving squad is drawn broken, then suppressed, then
      standing, over about a second. It is only how it is drawn: the unit's real
      status, and everything the rules ask of it, is untouched. */
-  var DROP_MS = 900;          // how long a craft is falling
-  var STAND_MS = 1150;        // how long a squad takes to get up
-  var TELE_MS = 1300;         // how long a Xenotripod squad takes to teleport in
-  /* A Xenotripod squad does not land: it teleports in. A pillar of light forms
-     on the landing point, the squad flickers into being inside it, and the
-     light thins away. Before it forms the squad is not drawn at all. */
-  // coming up out of the ground: sunk and faint at first, rising to its full height
-  /* A giant bug breaks out of the ground rather than rising up through it: the
-     ground splits, the dust goes up, and it is there in the dust as it clears. */
-  function heaving(age) {
-    var k = Math.min(1, age / (STAND_MS * 0.85));
-    if (k < 0.18) return { lift: 0, pose: null, hidden: true };
-    var a = Math.min(1, (k - 0.18) / 0.6);
-    return { lift: 0, pose: null, alpha: a * a * (3 - 2 * a) };
-  }
-  function teleporting(age) {
-    var k = age / TELE_MS;
-    if (k < 0.3) return { lift: 0, pose: null, hidden: true };
-    var a = Math.min(1, (k - 0.3) / 0.35);
-    // flickering in: every other few frames it drops out, less often as it firms up
-    var flick = a < 1 && Math.floor(age / 55) % (a < 0.5 ? 2 : 4) === 0;
-    return { lift: 0, pose: null, alpha: flick ? a * 0.3 : a };
-  }
-
+  var MOTION = window.PMCMotion;   // the timings and shapes of movement, shared with the Unit Viewer (motion.js)
+  var DROP_MS = MOTION.DROP_MS, STAND_MS = MOTION.STAND_MS, TELE_MS = MOTION.TELE_MS;
+  // how an arriving unit is drawn now (motion.js: arrival); once it is over, it is done arriving
   function arriving(u) {
     if (!u || !u.arriveAt) return { lift: 0, pose: null };
-    var age = nowMs() - u.arriveAt;
-    if (u.arriveKind === 'drop') {
-      if (age >= DROP_MS) { u.arriveAt = 0; u.dropFrom = null; return { lift: 0, pose: null }; }
-      var k = age / DROP_MS;
-      // gathering speed the whole way down, so it arrives hard rather than drifting in
-      var eased = 1 - Math.pow(1 - k, 0.45);
-      var fromUp = u.dropFrom != null ? u.dropFrom : ISO.ELEV * 5.5;
-      return { lift: Math.round(fromUp * (1 - eased)), pose: null };
-    }
-    if (u.arriveKind === 'teleport') {
-      if (age >= TELE_MS) { u.arriveAt = 0; return { lift: 0, pose: null }; }
-      return teleporting(age);
-    }
-    if (age >= STAND_MS) { u.arriveAt = 0; return { lift: 0, pose: null }; }
-    // a giant bug has no poses to get up through: it heaves itself up out of the ground
-    if (R.isMachine(u)) return heaving(age);
-    // flat on its face, then up on one knee, then standing
-    return { lift: 0, pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null };
+    var a = MOTION.arrival(u.arriveKind, nowMs() - u.arriveAt, R.isMachine(u), u.dropFrom);
+    if (!a) { u.arriveAt = 0; u.dropFrom = null; return { lift: 0, pose: null }; }
+    return a;
   }
   function anyArriving() {
     /* An arrival ends by the clock, drawn or not: a unit that came up off screen
        used to hold the whole game waiting for a frame that never drew it. */
     return state && state.units.some(function (u) {
       if (!u.arriveAt) return false;
-      var span = u.arriveKind === 'drop' ? DROP_MS : u.arriveKind === 'teleport' ? TELE_MS : STAND_MS;
-      if (nowMs() - u.arriveAt >= span) { u.arriveAt = 0; u.dropFrom = null; return false; }
+      if (nowMs() - u.arriveAt >= MOTION.arrivalMs(u.arriveKind)) { u.arriveAt = 0; u.dropFrom = null; return false; }
       return true;
     });
   }
@@ -1077,9 +1040,7 @@
     return u.faction === 'xeno' && !u.eshAven && !(p && p.eshAven);
   }
   // the pillar is sized to what comes through it
-  function teleportR(u) {
-    return u.cls === 'aircraft' ? 2.6 : R.isMachine(u) ? 2.2 : 1.4;
-  }
+  var teleportR = MOTION.teleportR;
   function landUnit(u, fromOrbit) {
     focusUnit(u, false, true);
     /* A hull comes down on its landing point, and so do jump troops on their
@@ -1628,24 +1589,8 @@
      bob and the step land together instead of drifting against each other as
      they did when both ran on their own timers. A step is heard on each footfall,
      rate-limited so a long sprint is a walk rather than a drum roll. */
-  var PACE = 2.2;          // inches a pace, for a squad on foot
-  var STRIDE = 3.4;        // a walker's legs are longer, and slower
-  var ROLL = 2.8;          // how often a ground hull pitches on its suspension
-  var STEP_GAP = 130;      // never more than one footstep sound this often
-
-  function gaitOf(u) {
-    // jump troops go up on their jets and come down where they were going
-    if (u.jets) return { arc: true };
-    if (!R.isMachine(u)) return { span: PACE, lift: 1.6, sound: true };
-    if (u.prop === 'walker') return { span: STRIDE, lift: 1.3, sound: true };
-    // grav and hover hulls float: nothing to bounce, nothing to hear
-    if (u.prop === 'grav' || u.prop === 'hover') return null;
-    if (u.cls === 'aircraft') return null;
-    return { span: ROLL, lift: 0.5, sound: false };   // wheels and tracks, pitching
-  }
-
-  // how high a jump squad's arc peaks, in plate pixels, for a bound this long
-  function jetApex(inches) { return Math.min(ISO.K * 3, ISO.K * (0.9 + inches * 0.22)); }
+  // the gait itself — pace, stride, how high a jump arcs — is motion.js's
+  var STEP_GAP = MOTION.STEP_GAP, gaitOf = MOTION.gaitOf, jetApex = MOTION.jetApex;
 
   function pace(an, d, k, t) {
     var gait = gaitOf(an.unit);
@@ -1673,14 +1618,12 @@
     }
   }
 
-  /* An aircraft covers a lot of table in one move; at a squad's pace it
-     flashes across, so it takes its time and reads as flying. */
-  // Underground Bugs do not walk across the table: they go down and come up
-  function burrows(u) { return !!u && u.faction === 'bugs' && u.group === 'Underground Bugs'; }
+  // Underground Bugs do not walk across the table: they go down and come up (motion.js)
+  var burrows = MOTION.burrows, burrowR = MOTION.burrowR, moveMs = MOTION.moveMs;
   /* A burrowing move in three parts: the unit fades out where it stands as it
      goes down, travels unseen under a line of churned earth, and fades back in
      where it comes up. */
-  var SINK = 0.28, RISE = 0.72;
+  var SINK = MOTION.BURROW_SINK, RISE = MOTION.BURROW_RISE;
   function burrowStep(an, k) {
     var u = an.unit, sub, e;
     if (k < SINK) {
@@ -1722,11 +1665,6 @@
     sub = (k - RISE) / (1 - RISE); e = 1 - Math.pow(1 - sub, 2);
     u.burrow = { lift: 0, alpha: Math.min(1, e) };
   }
-  function burrowR(u) { return R.isMachine(u) ? 2.4 : 1.6; }
-  function moveMs(u, total) {
-    if (u.cls === 'aircraft') return Math.min(3200, 700 + total * 85);
-    return Math.min(1400, 240 + total * 42);
-  }
   function animateMove(u, path, follow) {
     if (!path || path.length < 2) return;
     var segs = [], total = 0;
@@ -1742,7 +1680,7 @@
     var dig = burrows(u);
     anims.push({
       kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
-      dur: dig ? Math.max(1900, Math.min(3200, 1300 + total * 60)) : moveMs(u, total),
+      dur: dig ? MOTION.burrowMs(total) : moveMs(u, total),
       t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0
     });
     u.ax = path[0].x; u.ay = path[0].y;
@@ -1844,7 +1782,7 @@
      along the line, which read as somebody else shooting. */
   function playStrafe(u, from, to, deaths, done) {
     var span = Math.hypot(to.x - from.x, to.y - from.y);
-    var dur = Math.max(1900, Math.min(4000, 1100 + span * 140));
+    var dur = MOTION.strafeMs(span);
     var steps = Math.max(5, Math.round(span * 1.2) + 4);
     // the ground goes up in the colour of what hits it: xeno energy, bug acid
     var hitRGB = !u ? null : R.isXeno(u) ? XENO_BLUE : u.faction === 'bugs' ? BUG_GREEN : null;

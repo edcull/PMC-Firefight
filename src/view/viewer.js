@@ -10,6 +10,7 @@
   'use strict';
 
   var R = root.PMC, I = root.PMCIso, SFX = root.SFX;
+  var MOTION = root.PMCMotion;   // how things move: the battle's own gait, burrow, flight and arrival (motion.js)
   var el = function (id) { return document.getElementById(id); };
   var esc = function (t) {
     return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) {
@@ -304,13 +305,7 @@
      every so many inches covered, not every so many milliseconds, so a fast
      unit puts its legs down faster rather than sliding. The body is up between
      footfalls and down on each one. */
-  var PACE = 2.2, STRIDE = 3.4, ROLL = 2.8;
-  function gaitOf(u) {
-    if (!R.isMachine(u)) return { span: PACE, lift: 1.6, sound: true };
-    if (u.prop === 'walker') return { span: STRIDE, lift: 1.3, sound: true };
-    if (u.prop === 'grav' || u.prop === 'hover' || u.cls === 'aircraft') return null;
-    return { span: ROLL, lift: 0.5, sound: false };
-  }
+  var gaitOf = MOTION.gaitOf;
 
   function stepWalk(dt) {
     var u = unit();
@@ -320,7 +315,7 @@
        moveMs), and a full Move is Movement +4" for a machine. */
     if (u.cls === 'aircraft') {
       var full = (u.move || 12) + 4;
-      speed = full * 1000 / Math.min(3200, 700 + full * 85);
+      speed = full * 1000 / MOTION.moveMs(u, full);
     }
     view.walkT += (dt / 1000) * speed;
     var span = TO.x - FROM.x - 3;
@@ -337,7 +332,7 @@
       var bound = Math.max(3, u.move || 7), bt = view.walkT / bound, bn = Math.floor(bt);
       view.walkFrame = 1 + (Math.floor(Date.now() / 70) % 2);
       view.hop = 0;
-      view.arc = Math.sin((bt - bn) * Math.PI) * Math.min(I.K * 3, I.K * (0.9 + bound * 0.22));
+      view.arc = Math.sin((bt - bn) * Math.PI) * MOTION.jetApex(bound);
       if (bn !== view.lastPace) {
         view.lastPace = bn;
         if (view.sound && SFX && SFX.jetpack) SFX.jetpack(bound / speed);
@@ -359,12 +354,11 @@
      where they stand, go along it unseen under a line of churned earth, and
      heave themselves up at the far end — the move the battle plays (game.js:
      burrowStep). */
-  function burrows(u) { return !!u && u.faction === 'bugs' && u.group === 'Underground Bugs'; }
-  var B_SINK = 0.22, B_RISE = 0.78;
+  var burrows = MOTION.burrows, B_SINK = MOTION.BURROW_SINK, B_RISE = MOTION.BURROW_RISE;
   function burrowWalk(u, span) {
     var leg = Math.floor(view.walkT / span), k = (view.walkT % span) / span;
     var back = leg % 2 === 1, x0 = back ? FROM.x + span : FROM.x, x1 = back ? FROM.x : FROM.x + span;
-    var r = R.isMachine(u) ? 2.4 : 1.6, e;
+    var r = MOTION.burrowR(u), e;
     view.facing = back ? Math.PI : 0;
     view.walkFrame = 0; view.hop = 0; view.arc = 0;
     var phase = k < B_SINK ? 0 : k < B_RISE ? 1 : 2;
@@ -402,7 +396,7 @@
   /* A strafing run takes as long as the game gives the same stretch of table
      (game.js playStrafe: 1.1s plus 140ms an inch, between 1.9s and 4s). The
      bench's run is from 6" short of the start mark to 6" past the target. */
-  var STRAFE_MS = Math.max(1900, Math.min(4000, 1100 + ((TO.x + 6) - (FROM.x - 6)) * 140));
+  var STRAFE_MS = MOTION.strafeMs((TO.x + 6) - (FROM.x - 6));
   function canStrafe() { return unit().cls === 'aircraft'; }
 
   /* A unit's special ability, played on the stage: the first rule it has that
@@ -592,7 +586,7 @@
      already on the ground when you see it and comes up out of cover: drawn broken,
      then suppressed, then standing. It is only how it is drawn; the state the
      bench is set to is untouched. */
-  var DROP_MS = 900, STAND_MS = 1150, TELE_MS = 1300;
+  var DROP_MS = MOTION.DROP_MS, STAND_MS = MOTION.STAND_MS, TELE_MS = MOTION.TELE_MS;
 
   function syncSound() {
     if (!SFX) return;
@@ -605,35 +599,9 @@
     var age = Date.now() - view.arriveAt;
     // before it arrives the field is empty: the unit is not on the table yet
     if (age < 0) return { lift: 0, pose: null, hidden: true };
-    if (view.arriveKind === 'drop') {
-      if (age >= DROP_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-      // gathering speed the whole way down, so it arrives hard rather than drifting in
-      var eased = 1 - Math.pow(1 - age / DROP_MS, 0.45);
-      return { lift: Math.round(I.ELEV * 5.5 * (1 - eased)), pose: null };
-    }
-    if (view.arriveKind === 'teleport') {
-      /* a Xenotripod squad teleports in (as the battle shows it, game.js):
-         not there while the pillar of light forms, then flickering into it */
-      if (age >= TELE_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-      var tk = age / TELE_MS;
-      if (tk < 0.3) return { lift: 0, pose: null, hidden: true };
-      var ta = Math.min(1, (tk - 0.3) / 0.35);
-      var flick = ta < 1 && Math.floor(age / 55) % (ta < 0.5 ? 2 : 4) === 0;
-      return { lift: 0, pose: null, alpha: flick ? ta * 0.3 : ta };
-    }
-    if (age >= STAND_MS) { view.arriveAt = 0; return { lift: 0, pose: null }; }
-    // a giant bug breaks out of the ground: there in the dust as it clears (as game.js)
-    if (R.isMachine(unit())) {
-      var hk = Math.min(1, age / (STAND_MS * 0.85));
-      if (hk < 0.18) return { lift: 0, pose: null, hidden: true };
-      var ha = Math.min(1, (hk - 0.18) / 0.6);
-      return { lift: 0, pose: null, alpha: ha * ha * (3 - 2 * ha) };
-    }
-    // flat on its face, then up on one knee, then standing
-    return {
-      lift: 0,
-      pose: age < STAND_MS * 0.38 ? 'prone' : age < STAND_MS * 0.74 ? 'kneel' : null
-    };
+    var a = MOTION.arrival(view.arriveKind, age, R.isMachine(unit()));
+    if (!a) { view.arriveAt = 0; return { lift: 0, pose: null }; }
+    return a;
   }
 
   /* An arrival starts from an empty field: the unit is taken off the stage
@@ -658,7 +626,7 @@
     setTimeout(function () {
       if (view.arriveAt !== landing) return;          // another arrival or a new unit since
       if (tele) {
-        FX.add({ kind: 'teleportin', x: at.x, y: at.y, r: u.cls === 'aircraft' ? 2.6 : R.isMachine(u) ? 2.2 : 1.4, dur: TELE_MS + 200, blocking: true });
+        FX.add({ kind: 'teleportin', x: at.x, y: at.y, r: MOTION.teleportR(u), dur: TELE_MS + 200, blocking: true });
         if (SFX && SFX.shimmer) SFX.shimmer();
       } else if (craft) {
         FX.add({ kind: 'dropmark', x: at.x, y: at.y, dur: DROP_MS, blocking: true });
