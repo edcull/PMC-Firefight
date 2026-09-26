@@ -656,6 +656,7 @@
           P(8, -18, 9, 8, pal.cloth); P(8, -18, 4, 4, 'rgba(255,255,255,.18)');
         } else {
           P(8, -18, 9, 8, pal.hat || pal.helm); P(8, -18, 4, 3, pal.hatLit || pal.light);
+          if (pal.helmBand) { P(8, -15, 9, 2, pal.helmBand); P(8, -15, 3, 2, pal.helmBandLit); }   // the band
           P(7, -11, 11, 1.5, pal.dark);                               // the rim
         }
         P(15, -13, 3, 3, '#8d6f4e');                                  // the face at the sight
@@ -1645,6 +1646,11 @@
           P(-7, -47 + drop, 2, 4, pal.dark);              // neck guard
           P(-3, -44 + drop, 7, 1, pal.dark);              // chin strap
           P(5, -52 + drop, 2, 3, pal.dark);               // a strap clip on the side
+          if (bodyPal.helmBand) {                         // a band of the side's colour round a drab helmet
+            P(-6, -51.5 + drop, 13, 2, bodyPal.helmBand);
+            P(-6, -51.5 + drop, 4, 2, bodyPal.helmBandLit);
+            P(-6, -49.5 + drop, 13, 0.5, bodyPal.helmBandDark);
+          }
       }
 
       if (HELM_DETAIL[kit.helm]) HELM_DETAIL[kit.helm](P, pal, drop);
