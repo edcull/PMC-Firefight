@@ -337,8 +337,9 @@
       spotter: { helm: 'hood', gun: 'optics', pack: 'std', kneel: true, pouches: '#5d6e3a' },
       spotternv: { helm: 'hood', gun: 'optics', pack: 'std', kneel: true, pouches: '#5d6e3a', nvg: true },
       armour: { helm: 'sealed', gun: 'heavy', pack: 'none', bulk: 2, armoured: true },
-      // the Protectors: battle armour with a grenade box on the shoulder and night-vision goggles
-      protector: { helm: 'sealed', gun: 'heavy', shoulderGL: true, pack: 'none', bulk: 2, armoured: true, nvg: true },
+      // the Protectors: battle armour with a grenade box on the shoulder, the sealed helm bare;
+      // the hi-mobility squad keeps its night-vision goggles
+      protector: { helm: 'sealed', gun: 'heavy', shoulderGL: true, pack: 'none', bulk: 2, armoured: true },
       protectorhm: { helm: 'sealed', gun: 'heavy', shoulderGL: true, pack: 'jetpack', bulk: 2, armoured: true, nvg: true },
       medic: { helm: 'std', gun: 'case', pack: 'medic', kneel: true, badge: '#e8f0f6' },
       corpsman: { helm: 'std', gun: 'pistol', pack: 'medic', badge: '#e8f0f6' },

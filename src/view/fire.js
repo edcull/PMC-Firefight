@@ -159,7 +159,7 @@
       if (SFX) { SFX.impact(); if (big) SFX.impact(0.08); }
     }
     /* A plasma breaching gun: one big blue bolt, flat and fast like a shell,
-       landing in the heavy plasma splash. */
+       bursting in a single large splash where it strikes. */
     function playPlasmaBolts(shooter, from, to, count, land) {
       var rgb = glowRGB(shooter), n = count || 1, fl = 420;
       for (var q = 0; q < n; q++) {
@@ -172,7 +172,9 @@
             add({ kind: 'plasmabolt', from: F, to: to, rgb: rgb, dur: fl, blocking: true });
             setTimeout(function () {
               if (!alive()) return;
-              plasmaSplash(to, rgb, true);
+              // one big burst where it strikes: no scatter, the whole charge in one place
+              add({ kind: 'orbburst', x: to.x, y: to.y, up: to.up, rgb: rgb, huge: true, dur: 1000, blocking: true });
+              if (SFX) { SFX.impact(); SFX.impact(0.08); }
               if (land && j === n - 1) land(2, to);
             }, fl);
             redraw();

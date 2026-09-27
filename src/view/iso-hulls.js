@@ -390,8 +390,9 @@
         var TF = frameAt(tT, st.tSide ? w * st.tSide : 0, AIM);     // the turret frame
         var tz = roof;
         /* A gun truck's turret stands on a pedestal in the bed, up at the height
-           of the cab's roof, so its guns clear the cab. */
-        var pedestal = st.body === 'pickup' && st.turret;
+           of the cab's roof, so its guns clear the cab. A drone's has no cab to
+           clear — only a low armoured block — so its turret sits in the bed. */
+        var pedestal = st.body === 'pickup' && st.turret && !u.drone;
         if (pedestal) tz = deck + H * 1.25;
 
         // ---- turrets ----
@@ -681,10 +682,11 @@
           if (pedestal) {
             var body0 = body;
             body = function () {
-              // the post it turns on, from the bed floor up to the turret ring
-              var pb = S3(TF(0, 0), roof), pt = S3(TF(0, 0), tz);
-              line(pb, pt, 4.2, '#0c0f13'); line(pb, pt, 3.2, STEEL);
-              sEllipse(pt[0], pt[1], TR * K * 0.28, TR * K * 0.14, mixc(hull, dark, 0.4));
+              /* the pedestal it turns on, from the bed floor up to the turret: a
+                 column as wide as the turret, in the hull's own camouflage */
+              var pr = TR * 0.36, oct = [];
+              for (var pi = 0; pi < 8; pi++) oct.push([Math.cos((pi + 0.5) * Math.PI / 4) * pr, Math.sin((pi + 0.5) * Math.PI / 4) * pr]);
+              shape(TF, oct, roof, tz - roof, TB, 1);
               body0();
               // the cab, where it is nearer than the turret, hides the post and the turret's foot
               if (pickupFront) pickupFront();

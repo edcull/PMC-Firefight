@@ -62,8 +62,8 @@
      is asking to see. Everything that draws a unit takes one of these. */
   // a crew-served piece drawn in 3D: it has a facing to choose, as a machine does
   function turns(p) { return !!p && !!I.turnsLikeMachine && I.turnsLikeMachine(p.art); }
-  // what a Lifter can be shown carrying: any of the rebels' ground vehicles (p. 94)
-  var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak'];
+  // what a Lifter can be shown carrying: any of the rebels' ground vehicles, or one of their guns (p. 94)
+  var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak', 'rmedart', 'rheavyart', 'rheavyac'];
   function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
   /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
   function towing(u) {
@@ -98,7 +98,7 @@
       var tp = R.profile(SLUNG.indexOf(view.sling) >= 0 ? view.sling : 'rtechnical');
       if (tp) {
         var t = Object.assign({}, tp, { id: 'VSLG', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0, cargo: [], aboard: u.id });
-        if (R.propsFor(tp).length) R.applyPropulsion(t, view.slingProp || 'wheeled');
+        if (R.propsFor(tp).length && tp.cls === 'vehicle') R.applyPropulsion(t, view.slingProp || 'wheeled');
         u.cargo = [t];
       }
     }
@@ -905,7 +905,7 @@
     if ((p.rules || []).indexOf('Lifter') >= 0) {
       h += '<div class="vgrp"><label>Load</label><div class="vseg">' +
         segL('sling', [['none', 'Empty']].concat(SLUNG.map(function (k) { var sp = R.profile(k); return [k, sp ? sp.name : k]; })), view.sling || 'none') + '</div></div>';
-      if (view.sling && view.sling !== 'none') {
+      if (view.sling && view.sling !== 'none' && (R.profile(view.sling) || {}).cls === 'vehicle') {
         h += '<div class="vgrp"><label>Its drive</label><div class="vseg">' +
           seg('slingProp', R.PROP_ORDER, view.slingProp || 'wheeled') + '</div></div>';
       }

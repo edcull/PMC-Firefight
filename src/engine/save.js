@@ -70,7 +70,8 @@
 
     /* Who could start the battle in (or on the hook of) this hull: any of the
        side's own infantry; for a Lifter, one of its ground vehicles — with
-       whatever that vehicle already has aboard — as the crane slings it (p. 94);
+       whatever that vehicle already has aboard — or an emplaced gun, as the
+       crane slings it (p. 94);
        and an emplaced gun on tow behind an empty hull, which then carries nothing
        else (p. 94). */
     function towingGun(veh) { return (veh.cargo || []).some(function (c) { return R.has(c, 'Stationary Artillery'); }); }
@@ -80,7 +81,8 @@
       if (towingGun(veh) || veh.aboard) return [];
       return E.state.units.filter(function (u) {
         if (u.side !== veh.side || !u.alive || u.aboard || u === veh) return false;
-        if (lifter) return u.cls === 'vehicle' && !R.has(u, 'Lifter') && !towingGun(u);
+        // a Lifter slings a ground vehicle, or an emplaced gun
+        if (lifter) return (u.cls === 'vehicle' || R.has(u, 'Stationary Artillery')) && !R.has(u, 'Lifter') && !towingGun(u);
         if (u.cls !== 'infantry') return false;
         if (R.has(u, 'Stationary Artillery')) return veh.cls === 'vehicle' && !(veh.cargo || []).length && !R.has(veh, 'Immobile');
         return !(R.has(u, 'Riders') && !(R.mountOf(u) && R.mountOf(u).transport));
@@ -98,7 +100,7 @@
       u.reserve = false;                   // it rides in with the hull, not on its own
       // everything riding in a slung vehicle goes with it
       (u.cargo || []).forEach(function (c) { c.x = veh.x; c.y = veh.y; });
-      if (!quiet) logLine('note', u.label + (R.has(u, 'Stationary Artillery') ? ' is hitched behind ' : R.has(veh, 'Lifter') ? ' is slung under ' : ' loads aboard ') + veh.name + ' before the battle.');
+      if (!quiet) logLine('note', u.label + (R.has(veh, 'Lifter') ? ' is slung under ' : R.has(u, 'Stationary Artillery') ? ' is hitched behind ' : ' loads aboard ') + veh.name + ' before the battle.');
       return true;
     }
 

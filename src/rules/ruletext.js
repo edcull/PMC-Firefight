@@ -115,8 +115,8 @@
       'Sees through Stealth: targets get no Stealth bonus against its shots, and it can mark Stealth units ' +
       'at full range.',
     'Lifter':
-      'A flying crane: it picks up a single vehicle within 4" — along with anyone riding in it — and never ' +
-      'carries infantry.',
+      'A flying crane: it picks up a single vehicle within 4" — along with anyone riding in it — or an ' +
+      'emplaced gun, and never carries infantry.',
     'Limited Fire Arc':
       'Its main weapon can only fire at targets in its front quarter.',
     'Markerlights':
@@ -167,7 +167,7 @@
     'Specialisation (ground)':
       'Its main weapon can only engage ground targets, never aircraft.',
     'Stationary Artillery':
-      'An emplaced gun: it never moves and is never held in reserve, but a transport can tow it. It can Dig in to ' +
+      'An emplaced gun: it never moves and is never held in reserve, but a ground transport can tow it, and a Lifter can sling it. It can Dig in to ' +
       'fire over open sights — range 24", minimum 6", front quarter only, but with every modifier.',
     'Stealth':
       '+1 Defence for every full 6" between it and the shooter, unless the shooter is Keen-Eyed. Markerlights ' +

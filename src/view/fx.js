@@ -613,13 +613,17 @@
       } else if (f.kind === 'orbburst') {
         // where the plasma lands: a ring of light thrown out, and a white flash
         var ob0 = I.toScreen(f.x, f.y); ob0.y -= liftAt(f);
-        var orr = (f.big ? 1.6 : 1.1) * I.K, brgb = f.rgb || '150,220,255';
+        // `huge`: the plasma breaching gun's single large splash
+        var orr = (f.huge ? 2.8 : f.big ? 1.6 : 1.1) * I.K, brgb = f.rgb || '150,220,255';
         g.save();
         g.strokeStyle = 'rgba(' + brgb + ',' + (0.9 * (1 - k)) + ')';
         g.lineWidth = I.PIXEL * 2.5 * (1 - k * 0.6);
         g.beginPath(); g.ellipse(ob0.x, ob0.y, orr * (0.2 + k), orr * (0.1 + k * 0.5), 0, 0, Math.PI * 2); g.stroke();
         g.restore();
-        if (k < 0.4) I.ellipse(g, ob0.x, ob0.y - I.K * 0.3, I.K * 0.6 * (1 - k * 2), I.K * 0.5 * (1 - k * 2), 'rgba(255,255,255,' + (0.9 - k * 2) + ')');
+        var fl2 = f.huge ? 1.9 : 1;
+        if (k < 0.4) I.ellipse(g, ob0.x, ob0.y - I.K * 0.3 * fl2, I.K * 0.6 * fl2 * (1 - k * 2), I.K * 0.5 * fl2 * (1 - k * 2), 'rgba(255,255,255,' + (0.9 - k * 2) + ')');
+        // a huge one: a dome of blue fire standing over the strike as the ring goes out
+        if (f.huge && k < 0.7) I.ellipse(g, ob0.x, ob0.y - I.K * 0.45 * (1 - k), orr * 0.45 * (1 - k * 0.6), orr * 0.38 * (1 - k * 0.6), 'rgba(' + brgb + ',' + (0.55 * (1 - k / 0.7)) + ')');
         I.ellipse(g, ob0.x, ob0.y, orr * 0.5 * (1 - k * 0.5), orr * 0.25 * (1 - k * 0.5), 'rgba(' + brgb + ',' + (0.35 * (1 - k)) + ')');
       } else if (f.kind === 'glob') {
         /* Bug acid: a wet glob in a low lob, trailing drips, glowing green.
