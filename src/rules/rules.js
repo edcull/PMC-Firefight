@@ -1584,7 +1584,9 @@
   var NICK = ['Ghost', 'Spider', 'Doc', 'Sparks', 'Lucky', 'Hammer', 'Wolf', 'Crow', 'Moth', 'Saint',
     'Brick', 'Fox', 'Deacon', 'Rook', 'Tinker', 'Viper', 'Blue', 'Ash'];
   var XENO_SYL = ['ka', 'tha', 'ir', 'zha', 'ul', 'vek', 'sa', 'ren', 'oth', 'qua', 'li', 'mar', 'es', 'dro', 'ya', 'kel', 'un', 'ssi'];
-  var OFFICER = ['Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel', 'Colonel'];
+  // a command unit's officer, and the senior NCO or warrant officer beside him, by the unit's Tier
+  var OFFICER = ['Second Lieutenant', 'Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel'];
+  var COMMAND_SECOND = ['Sergeant', 'Staff Sergeant', 'Master Sergeant', 'Warrant Officer', 'Chief Warrant Officer'];
   /* A PMC hull is commanded by an NCO, heavier and better hulls by more senior
      ones; a command or EW vehicle by a junior officer, and the flying command
      post by a senior field officer. */
@@ -1649,7 +1651,7 @@
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
-    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? 'Sergeant Major' : 'Staff Sergeant';
+    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? COMMAND_SECOND[tier - 1] : 'Staff Sergeant';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
     if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
     if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';

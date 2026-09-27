@@ -27,7 +27,8 @@ ok('...led by a sergeant, then a corporal', rifles.men[0].rank === 'Sergeant' &&
 ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Private'));
 const cmd = unit('cmd2');
 R.musterMen(cmd, null, taken);
-ok('a field command is led by an officer', cmd.men[0].rank === 'Major', cmd.men[0].rank);
+ok('a field command is led by an officer, a senior NCO beside him', cmd.men[0].rank === 'Captain' && cmd.men[1].rank === 'Master Sergeant',
+  cmd.men.slice(0, 2).map((m) => m.rank).join(', '));
 const fcp = unit('flyingcp');
 R.musterMen(fcp, null, taken);
 ok('a flying command post is commanded by a senior field officer', fcp.men[0].rank === 'Lieutenant Colonel', fcp.men[0].rank);
