@@ -74,6 +74,9 @@ console.log('\nTowing in the battle (p. 95)');
   ok('a transport vehicle may hitch a gun beside it', R.canEmbark(s, ltv, art));
   ok('an aircraft may not', !R.canEmbark(s, sh, art));
   ok('nor a combat vehicle', !R.canEmbark(s, cv, art));
+  art.dugIn = true;
+  ok('a gun dug in cannot be hitched (p. 95)', !R.canEmbark(s, ltv, art));
+  art.dugIn = false;
   R.embark(s, ltv, art);
   ok('towing, it still takes a squad on', R.canEmbark(s, ltv, inf));
 }

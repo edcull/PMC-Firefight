@@ -1174,6 +1174,8 @@
     if (hasOwn(u, 'Riders') && !(mountOf(u) && mountOf(u).transport)) return false;
     // an emplaced gun goes on the hook of a transport vehicle, one to a hull
     if (hasOwn(u, 'Stationary Artillery') && (!canTow(veh) || towedGuns(veh).length)) return false;
+    // "The gun in defensive position cannot be turned or embarked by transport vehicle" (p. 95)
+    if (dugIn(u)) return false;
     if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
     if (status(u) !== 'ready') return false;            // shaken troops will not board
     if (u.disembarked) return false;                    // not back aboard the same turn
