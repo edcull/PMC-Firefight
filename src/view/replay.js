@@ -236,6 +236,13 @@
     };
     // is anything that has already happened still to be drawn, or being drawn?
     function replaying() { return show.queue.length > 0 || show.waiting; }
+    /* The other side's attack: the camera, already on the unit acting, goes on
+       to what it is shooting at or charging, so the result is seen where it
+       lands. It is borrowed, and handed back as it is after their activation. */
+    function lookAtTarget(fromId, target) {
+      if (!target || !otherSides(fromId)) return;
+      focusUnit(target, false, true);
+    }
     // is this event's unit the other side's — not one this screen plays?
     function otherSides(id) {
       var u = evUnit(id);
@@ -300,12 +307,14 @@
         case 'shoot': {
           var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
           if (!(sa && sb)) return false;
+          lookAtTarget(ev.from, sb);
           playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null);
           return !!done;
         }
         case 'assault': {
           var aa = evUnit(ev.from), ab = evUnit(ev.to);
           if (!(aa && ab)) return false;
+          lookAtTarget(ev.from, ab);
           playAssault(aa, ab, deathsOf(ev.deaths), done || null);
           return !!done;
         }
