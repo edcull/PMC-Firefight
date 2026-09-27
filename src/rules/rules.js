@@ -439,10 +439,13 @@
     var comp = COMPOSITION[battleTier], budget = comp.points * pl;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
     var keys = [], counts = [0, 0, 0, 0, 0, 0], perKey = {}, perGroup = {}, commands = 0, spent = 0;
-    var machines = 0, aircraft = 0, plats = 0, riders = 0;
+    var machines = 0, aircraft = 0, plats = 0, riders = 0, drones = 0;
+    var isDrone = function (p) { return (p.rules || []).indexOf('Drone unit') >= 0; };
 
     function room(p) {
       if (spent + p.tier > budget) return false;
+      // never more Drone units than other units (p. 40)
+      if (isDrone(p) && drones + 1 > keys.length - drones) return false;
       var lim = comp.limits[p.tier - 1];
       var hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (!p.noSlot && counts[p.tier] + 1 > hi) return false;
@@ -490,6 +493,8 @@
       } else if (p.ridersUpgrade && rnd() < 0.3) {
         keys.push(joinPick(p.key, null, false, true));      // mounted, now and then
       } else keys.push(p.key);
+      if (isDrone(p)) drones++;
+      if (isDrone(p)) drones++;
       if (p.mustLoad) plats++;
       else if (p.cls === 'infantry' && !p.command) riders++;   // any infantry squad may ride one (p. 80)
       if (!p.noSlot) counts[p.tier]++;                 // a platform fills nobody's Tier row

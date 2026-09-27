@@ -115,10 +115,10 @@ var bat2 = mk('bats', 'B', 20, 20);
 woods.units = [normal, bat2];
 ok('Battle Armour takes no terrain cover', defv(woods, normal, bat2), bat2.def);
 ok('Battle Armour is stripped by Anti-tank', defv(world(), at, bat2), bat2.defPierced);
-var sniper = mk('snipers', 'B', 20, 20), far2 = mk('regular', 'A', 34, 20);
+var sniper = mk('snipers', 'B', 20, 20), far2 = mk('regular', 'A', 36, 20);
 var keen = mk('lrrp', 'A', 34, 20);
 var w2 = world(); w2.units = [far2, sniper];
-ok('Stealth adds +1 Defence per 6"', defv(w2, far2, sniper) - sniper.def, 2, '14" away');
+ok('Stealth adds +1 Defence per 6"', defv(w2, far2, sniper) - sniper.def, 2, 'over 12" base to base');
 w2.units = [keen, sniper];
 ok('Keen-Eyed sees through Stealth', defv(w2, keen, sniper) - sniper.def, 0);
 
@@ -542,3 +542,4 @@ head('Leaving the field without dying (pp. 29, 34)');
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
+process.exit(fail ? 1 : 0);

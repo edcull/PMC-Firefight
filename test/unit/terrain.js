@@ -189,3 +189,4 @@ ok('gunfire alone will not bring the objective down',
   'only the Demolish special action touches it (p. 54)');
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
+process.exit(fail ? 1 : 0);

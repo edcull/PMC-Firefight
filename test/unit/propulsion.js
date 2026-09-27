@@ -134,3 +134,4 @@ for (var bt2 = 1; bt2 <= 5; bt2++) {
 console.log('600 rolled armies — wrong:', wrong);
 if (wrong) bad++;
 console.log(bad ? bad + ' PROPULSION CHECKS FAILED' : 'every propulsion behaves as the book says');
+process.exit(bad ? 1 : 0);
