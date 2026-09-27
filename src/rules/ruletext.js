@@ -167,7 +167,8 @@
     'Specialisation (ground)':
       'Its main weapon can only engage ground targets, never aircraft.',
     'Stationary Artillery':
-      'An emplaced gun: it never moves and is never held in reserve, but a transport can tow it. It can Dig in to ' +
+      'An emplaced gun: it never moves and is never held in reserve, but a transport vehicle can tow it, the gun ' +
+      'taking one of its places (a Lifter cannot lift a hull that is towing). It can Dig in to ' +
       'fire over open sights — range 24", minimum 6", front quarter only, but with every modifier.',
     'Stealth':
       '+1 Defence for every full 6" between it and the shooter, unless the shooter is Keen-Eyed. Markerlights ' +

@@ -71,24 +71,24 @@
     /* Who could start the battle in (or on the hook of) this hull: any of the
        side's own infantry; for a Lifter, one of its ground vehicles — with
        whatever that vehicle already has aboard — as the crane slings it (p. 94);
-       and an emplaced gun on tow behind an empty hull, which then carries nothing
-       else (p. 94). */
-    function towingGun(veh) { return (veh.cargo || []).some(function (c) { return R.has(c, 'Stationary Artillery'); }); }
+       and an emplaced gun on tow behind a transport vehicle, taking one of its
+       places (p. 95). */
+    function towingGun(veh) { return R.towedGuns(veh).length > 0; }
     function boardableFor(veh) {
       var lifter = R.has(veh, 'Lifter');
-      // a hull with a gun on the hook takes nothing else, and one slung under a Lifter hitches no gun (p. 94)
-      if (towingGun(veh) || veh.aboard) return [];
+      // one slung under a Lifter takes nothing on and hitches no gun (p. 94)
+      if (veh.aboard) return [];
       return E.state.units.filter(function (u) {
         if (u.side !== veh.side || !u.alive || u.aboard || u === veh) return false;
         if (lifter) return u.cls === 'vehicle' && !R.has(u, 'Lifter') && !towingGun(u);
         if (u.cls !== 'infantry') return false;
-        if (R.has(u, 'Stationary Artillery')) return veh.cls === 'vehicle' && !(veh.cargo || []).length && !R.has(veh, 'Immobile');
+        if (R.has(u, 'Stationary Artillery')) return R.canTow(veh) && !towingGun(veh);
         return !(R.has(u, 'Riders') && !(R.mountOf(u) && R.mountOf(u).transport));
       });
     }
 
     function loadBefore(veh, u, quiet) {
-      if (!veh || !u || (veh.cargo || []).length >= veh.transport) return false;
+      if (!veh || !u || !veh.transport || (veh.cargo || []).length >= veh.transport) return false;
       if (boardableFor(veh).indexOf(u) < 0) return false;
       veh.cargo = veh.cargo || [];
       veh.cargo.push(u);

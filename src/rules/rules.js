@@ -1142,6 +1142,16 @@
   function commandAboard(veh) { return (KIT_DAMAGE || kitDamage()).commandAboard(veh); }
 
   /* ---------- transport ---------- */
+  /* Stationary Artillery is "transported (towed) by transport vehicles" (p. 95):
+     the ground transports — for the rebels the light, improved and super heavy
+     transport vehicles — and not an aircraft, a Lifter or a combat hull. The gun
+     on the hook fills one of the hull's Transport places. */
+  function canTow(veh) {
+    if (!veh || veh.cls !== 'vehicle' || !veh.transport || hasOwn(veh, 'Immobile')) return false;
+    var group = veh.group || (BY_KEY[veh.key] || {}).group || '';
+    return /transport vehicles$/i.test(group);
+  }
+  function towedGuns(veh) { return (veh.cargo || []).filter(function (c) { return hasOwn(c, 'Stationary Artillery'); }); }
   function canEmbark(state, veh, u) {
     if (!veh.transport || !u.alive || u.side !== veh.side) return false;
     // a vehicle hanging under a Lifter takes nothing on, and hitches no gun (p. 94)
@@ -1162,11 +1172,8 @@
     if (hasOwn(veh, 'Immobile')) return false;
     // Riders never ride in anything: the mounts do not fit (p. 94) — bar a motorbike (Appendix 3)
     if (hasOwn(u, 'Riders') && !(mountOf(u) && mountOf(u).transport)) return false;
-    /* An emplaced gun is towed rather than carried, and a hull with a gun on the
-       hook has no room for troops (p. 94). */
-    var towing = (veh.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); });
-    if (towing) return false;
-    if (hasOwn(u, 'Stationary Artillery') && (veh.cargo || []).length) return false;
+    // an emplaced gun goes on the hook of a transport vehicle, one to a hull
+    if (hasOwn(u, 'Stationary Artillery') && (!canTow(veh) || towedGuns(veh).length)) return false;
     if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
     if (status(u) !== 'ready') return false;            // shaken troops will not board
     if (u.disembarked) return false;                    // not back aboard the same turn
@@ -1815,7 +1822,7 @@
     rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
-    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,
+    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
     steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,

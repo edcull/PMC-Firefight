@@ -877,7 +877,7 @@
               return '<button class="lnk" data-load="' + c.id + '" data-hull="' + v.id + '">+ ' +
                 esc(c.name) + '</button>';
             }).join('') + '</div>'
-            : '<div class="hint small">' + (R.has(v, 'Lifter') ? 'No vehicle left to sling under it.' : (v.cargo || []).some(function (c) { return R.has(c, 'Stationary Artillery'); }) ? 'A gun on the hook: nothing else rides.' : 'No infantry left to put aboard.') + '</div>';
+            : '<div class="hint small">' + (R.has(v, 'Lifter') ? 'No vehicle left to sling under it.' : 'No infantry left to put aboard.') + '</div>';
         }
         h += '</div>';
       });

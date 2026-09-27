@@ -65,9 +65,9 @@
   // what a Lifter can be shown carrying: any of the rebels' ground vehicles (p. 94)
   var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak'];
   function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
-  /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
+  /* On tow: the piece hitched behind a light transport vehicle, which is what is drawn in its place (p. 95). */
   function towing(u) {
-    var tp = R.profile('rtechnical');
+    var tp = R.profile('rltv');
     if (!tp) return null;
     var t = Object.assign({}, tp, {
       id: 'VTOW', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0,
@@ -186,7 +186,7 @@
         return;
       }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
-      // a gun on tow is drawn hitched behind the technical towing it
+      // a gun on tow is drawn hitched behind the transport vehicle towing it
       if (m === u && stationary(u) && view.stance === 'towed') {
         var tw = towing(u);
         if (tw) { I.drawUnit(g, tw, { at: { x: u.x, y: u.y }, lift: 0, status: 'ready', morale: 0 }); return; }
