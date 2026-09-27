@@ -50,7 +50,7 @@ const { ROOT, startSkirmish } = require('../where.js');
     await p.tap('#res-continue');
   }
   await p.waitForTimeout(400);
-  await p.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());
+  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
   await p.waitForTimeout(400);
   for (let i = 0; i < 12; i++) {
     const open = await p.evaluate(() => !document.getElementById('resolution').hidden);

@@ -157,7 +157,8 @@
       var b = bufferFromCanvas({ x: px, y: py });
       return ISO.toWorld(b.x, b.y);
     };
-    window.__autoDeployBoth = function () { autoDeployMine(); };
+    // the test harness's way through deployment: the scenario's own reserves, then everyone down
+    window.__autoDeployBoth = function () { send({ k: 'autosplit' }); autoDeployMine(); };
     window.__deployOK = function (x, y, side) {
       side = side || placingSide();
       return !!side && deployOK(side, x, y);

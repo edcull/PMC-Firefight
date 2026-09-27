@@ -98,6 +98,18 @@
         h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll"><div class="clog">' +
           E.camp.log.map(battleRow).reverse().join('') + '</div></div>', back);
       }
+      // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
+      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">Back</button>';
+      rivals.forEach(function (co, i) {
+        if (!(co.log || []).length) return;
+        h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><div class="clog">' +
+          co.log.slice().reverse().map(function (l) {
+            return '<div class="crow"><b>' + l.turn + '</b>' +
+              '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
+              '<small>vs ' + esc(l.vs) + '</small></span><em>' + l.result + '</em>' +
+              '<span class="cmoney">+' + l.kUC + ' ' + esc(C.money(co)) + '</span></div>';
+          }).join('') + '</div></div>', backRivals);
+      });
       h += '<p class="camp-foot">' +
         '<button class="lnk" data-go="menu">← Main menu</button>' +
         '<input type="file" id="camp-file" accept="application/json" hidden></p>';
@@ -254,7 +266,9 @@
       }
       var own = !rival && co === E.camp.companies.A;
       return '<div class="cstats">' +
-        cell('cs-win', pc(wn.pct), 'win rate', own && E.camp.log.length ? 'battles' : null) +
+        // your own win rate opens the battles fought; a rival's, the battles it has fought
+        cell('cs-win', pc(wn.pct), 'win rate', own && E.camp.log.length ? 'battles'
+          : fkey && fkey.charAt(0) === 'r' && (co.log || []).length ? 'rbattles' + fkey.slice(1) : null) +
         (fkey ? toggle('cs-exp', pc(ex.pct), ex.word, 'honour') : cell('cs-exp', pc(ex.pct), ex.word)) +
         (fkey ? toggle('cs-tra', pc(tr.pct), tr.word, 'trauma') : cell('cs-tra', pc(tr.pct), tr.word)) +
         '</div>';

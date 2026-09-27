@@ -8,7 +8,9 @@
 'use strict';
 const { R, Engine } = require('../../server/rules.js');
 /* Modifying the armies (p. 46) waits on each player before deployment; these
-   battles keep their lists, so every game started here answers it at once. */
+   battles keep their lists, so every game started here answers it at once.
+   A player also chooses their own reserves where a scenario holds some back;
+   these take the scenario's suggestion (autosplit) before deploying. */
 const createEngine = Engine.create;
 Engine.create = function (hooks) {
   const e = createEngine(hooks);
@@ -63,6 +65,7 @@ function play(seed, opts) {
   let guard = 0;
 
   /* ---- deployment: put every unit down, wherever the engine will take it ---- */
+  e.intent('A', { k: 'autosplit' });      // the reserves the scenario would hold back
   while (e.state().phase === 'deploy' && guard++ < 4000) {
     // Modifying the armies (p. 46): keep the lists as they are
     if (e.state().swapAsk) { e.intent(e.state().swapAsk.side, { k: 'swapdone' }); continue; }
@@ -82,7 +85,7 @@ function play(seed, opts) {
         if (res.ok && u.x >= 0) placed = true;
       }
     }
-    if (!placed) { e.intent(seatOf(side), { k: 'autodeploy' }); }
+    if (!placed) { (e.intent(seatOf(side), { k: 'autosplit' }), e.intent(seatOf(side), { k: 'autodeploy' })); }
   }
   ok('deployment finished', e.query.deploymentDone(), 'units still in hand');
 
@@ -237,8 +240,8 @@ function refusals() {
     !e.intent(placing, { k: 'nonsense' }).ok);
   ok('a malformed intent is refused', !e.intent(placing, null).ok);
 
-  e.intent('A', { k: 'autodeploy' });
-  e.intent('B', { k: 'autodeploy' });
+  (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' }));
+  (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' }));
   const started = e.intent('A', { k: 'start' });
   ok('auto-deploy fills both sides', started.ok, started.why);
 
@@ -257,8 +260,8 @@ function roundTrip() {
     armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'bugs'),
     nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'crimson', mode: 'hotseat', planet: 'jungle'
   });
-  e.intent('A', { k: 'autodeploy' });
-  e.intent('B', { k: 'autodeploy' });
+  (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' }));
+  (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' }));
   e.intent('A', { k: 'start' });
 
   const snap = e.snapshot();
@@ -430,7 +433,7 @@ function arrivals() {
     });
     battles++;
     const attacker = e.state().sc.attacker;
-    e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' });
+    (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })); (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' }));
     const began = e.intent(e.query.placingSide() || 'A', { k: 'start' });
     if (!began.ok) e.intent(attacker === 'A' ? 'B' : 'A', { k: 'start' });
     // bring every arrival down: the attacker chooses where in its zone each one lands
@@ -526,7 +529,7 @@ function advanceIsOneAction() {
       armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'rebel'),
       nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'barren'
     });
-    e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' });
+    (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })); (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' }));
     if (!e.intent(e.query.placingSide() || 'A', { k: 'start' }).ok) e.intent('B', { k: 'start' });
     for (let g = 0; g < 160 && !e.over() && found < 4; g++) {
       const sel = e.sel(), st = e.state();
@@ -638,7 +641,7 @@ console.log('  vs the OpFor AI');
     nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel',
     mode: 'ai', planet: 'dense'
   });
-  e.intent('A', { k: 'autodeploy' });
+  (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' }));
   ok('the OpFor deploys itself', e.query.deploymentDone());
   e.intent('A', { k: 'start' });
   ok('the OpFor took its turn without being asked',
@@ -663,7 +666,7 @@ console.log('  vs the OpFor AI');
   const v = e.state().units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry' && x.key !== alt.key);
   if (v && other) { e.intent('A', { k: 'swappick', id: v.id }); ok('...but not one of another Tier', !e.intent('A', { k: 'swapin', id: other.key }).ok); }
   e.intent('A', { k: 'swapdone' });
-  ok('done, the deployment goes on', !e.state().swapAsk && e.intent('A', { k: 'autodeploy' }).ok && e.query.deploymentDone());
+  ok('done, the deployment goes on', !e.state().swapAsk && (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })).ok && e.query.deploymentDone());
   ok('...and once a unit is down the list is final', !e.intent('A', { k: 'swapopen' }).ok);
   const e2 = createEngine();
   e2.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
@@ -679,7 +682,7 @@ console.log('  vs the OpFor AI');
   e.start({ tier: 3, pl: 2, scenario: 'meeting', armyA: R.rollArmy(3, 2, null, 'pmc'), armyB: R.rollArmy(3, 2, null, 'pmc'),
     nameA: 'A', nameB: 'B', mode: 'hotseat', secretSwaps: true, planet: 'sparse' });
   ok('player A is asked first', e.state().swapStage && e.state().swapAsk.side === 'A');
-  ok('...and nobody deploys until the round is over', !e.intent('A', { k: 'autodeploy' }).ok && !e.intent('B', { k: 'autodeploy' }).ok);
+  ok('...and nobody deploys until the round is over', !(e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })).ok && !(e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' })).ok);
   const pick = (sd) => { const u = e.state().units.find(x => x.side === sd && e.query.swapOptions(sd, x.id).length); return [u, e.query.swapOptions(sd, u.id)[0]]; };
   const [u, o] = pick('A');
   e.intent('A', { k: 'swappick', id: u.id });
@@ -692,7 +695,7 @@ console.log('  vs the OpFor AI');
   e.intent('B', { k: 'swapdone', who: 'B' });
   const st = e.state();
   ok('with both done, the swaps are made', !st.swapStage && !st.swapAsk && st.units.find(x => x.id === u.id).name === o.name, st.units.find(x => x.id === u.id).name);
-  ok('...and deployment goes on', e.intent('A', { k: 'autodeploy' }).ok && e.intent('B', { k: 'autodeploy' }).ok && e.query.deploymentDone());
+  ok('...and deployment goes on', (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })).ok && (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' })).ok && e.query.deploymentDone());
 })();
 
 /* A Suppressed unit (p. 34): a move into cover, Auxiliary fire or Pass/Regroup, nothing else;
@@ -702,7 +705,7 @@ console.log('  vs the OpFor AI');
   const e = createEngine();
   e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
     nameA: 'A', nameB: 'B', mode: 'hotseat', planet: 'sparse' });
-  e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })); (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' })); e.intent('A', { k: 'start' });
   const st = e.state(), side = st.activeSide;
   const u = st.units.find(x => x.side === side && x.cls === 'infantry' && x.alive && x.x >= 0 && !R.has(x, 'Determined'));
   u.sp = R.currentMorale(u) + 1;                    // suppressed

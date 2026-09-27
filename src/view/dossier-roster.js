@@ -33,9 +33,6 @@
           acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
           if (spend) acts += spend;
           h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
-          // what has happened to it lately, less the casualties (the memorial has those)
-          var hist = (e.history || []).filter(function (x) { return !/^(Casualties:|Biomass lost:|Lost \d)/.test(x); });
-          if (hist.length) h += '<div class="dhist">' + hist.slice(-3).map(esc).join(' · ') + '</div>';
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {

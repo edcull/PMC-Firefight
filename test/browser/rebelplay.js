@@ -65,7 +65,7 @@ async function run(p, label, cfg, checks) {
   if (checks) checks(set);
 
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="autodeploy"]');
+    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
     if (b) b.click();
   });
   await p.waitForTimeout(300);

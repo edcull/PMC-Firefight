@@ -475,6 +475,13 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .act small { display: block; color: var(--ink-faint); font-size: 11px; margin-top: 1px; }
 .act:hover { border-color: var(--alpha); }
 .act.primary { border-color: color-mix(in srgb, var(--alpha) 60%, transparent); background: color-mix(in srgb, var(--alpha) 12%, transparent); }
+.act.primary.blocked { opacity: .45; filter: grayscale(.6); cursor: not-allowed; }
+/* why the battle cannot begin yet, pinned over the button that was pressed */
+.deploy-go { position: relative; }
+.tipbubble { position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 5; padding: 9px 11px; border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--warn, #e0a040) 60%, transparent); background: var(--panel-3); color: var(--ink); font-size: 12px; line-height: 1.4;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.tipbubble .lnk { margin-left: 4px; }
 
 .targets { padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
 .targets h4 { font-family: var(--display); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 8px; }

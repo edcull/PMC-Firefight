@@ -413,6 +413,33 @@
         sp.min = Math.min(sp.min, n); sp.max = Math.max(sp.max, n);
       });
     }
+    /* A player's split starts empty: who is held back (or goes in the second
+       wave) is theirs to choose, and the battle waits until they have. What the
+       scenario would have held is kept, for autoSplit to put back on request.
+       The OpFor's split stands as the scenario made it. */
+    function clearSplits() {
+      var all = (E.state.sc && E.state.sc.split) || {};
+      Object.keys(all).forEach(function (side) {
+        if (isAI(side)) return;
+        var sp = all[side];
+        sp.auto = [];
+        sp.ids.forEach(function (id) {
+          var u = byId(id);
+          if (!u) return;
+          if (sp.kind === 'wave') { if (u.wave === 2) { sp.auto.push(id); u.wave = 1; } return; }
+          if (u.reserve && u.wave === 2) { sp.auto.push(id); u.reserve = false; delete u.wave; u.x = -1; u.y = -1; }
+        });
+      });
+    }
+    // the scenario's own split, put back (the test harness's way through; the page never does it unasked)
+    function autoSplit(side) {
+      var sp = E.state.sc && E.state.sc.split && E.state.sc.split[side], f = splitFor(side);
+      if (!sp || !f) return;
+      (sp.auto || []).forEach(function (id) {
+        var x = f.units.filter(function (w) { return w.id === id; })[0];
+        if (x && !x.held) toggleHold(side, id);
+      });
+    }
     function splitsOK() {
       return ['A', 'B'].every(function (side) { var f = splitFor(side); return !f || f.ok; });
     }
@@ -492,7 +519,8 @@
       zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext,
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
-      toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle
+      toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,
+      clearSplits: clearSplits, autoSplit: autoSplit, splitsOK: splitsOK
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineDeploy;

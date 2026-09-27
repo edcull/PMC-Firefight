@@ -350,7 +350,7 @@ async function pastFronts(p) {
   }), swapNote);
   await p.waitForTimeout(300);
   await p.evaluate(() => {
-    const b2 = document.querySelector('button[data-act="autodeploy"]');
+    const b2 = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
     if (b2) b2.click();
   });
   await p.waitForTimeout(500);
