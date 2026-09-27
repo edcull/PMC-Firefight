@@ -71,7 +71,7 @@
       mlrs: { axles: 3, len: 2.45, wid: 1.30, hgt: 17, gun: 1.2, elev: 14, style: { body: 'mlrs', mlrs: true } },
       /* The advanced support vehicle: an energy howitzer — a short, fat Gauss
          barrel laid well up out of a boxy turret, the charge burning blue in it. */
-      plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.0, stubGun: true, energyGun: true, skirts: 'panels' } },
+      plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.7, energyGun: true, skirts: 'panels' } },
       aatank: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.3, twin: true, elev: 16, dish: true, style: { body: 'ltank', turret: 'aa', tSize: 0.85, skirts: true } },
       ewtank: { axles: 3, len: 2.25, wid: 1.25, hgt: 16, gun: 0.9, dish: true, style: { body: 'ltank', turret: 'dish', tSize: 0.72, skirts: true } },
       medbox: { rearDoor: true, axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
