@@ -1024,25 +1024,32 @@
       for (var i = 0; i < n; i++) o.push(i);
       return o.sort(function (a, b) { return ((a * 7 + 3) % n) - ((b * 7 + 3) % n); });
     },
-    /* The squad breaks and runs as the collars start to go: every man bolts the
-       same way (`ang`, away from the danger), and each falls where he has got
-       to when his own collar fires, so they leave a trail of bodies. `pts` are
-       their places in formation at `t0`. Hands back, for each man in formation
+    /* The squad panics as the collars start to go: every man bolts, broadly
+       away from the danger (`ang`) but each on his own heading, up to 45° off
+       it, and at his own pace — and each falls where he has got to when his
+       own collar fires, so they leave a scatter of bodies. `pts` are their
+       places in formation at `t0`. Hands back, for each man in formation
        order, when his collar fires (`at`), where he falls (`end`), and his
-       velocity (`vx`, `vy`), with `where(i, t)` for where he is at time t. */
-    plan: function (pts, t0, ang) {
-      var vx = Math.cos(ang) * COLLAR.run, vy = Math.sin(ang) * COLLAR.run, at = [], end = [];
-      var clamp = function (v) { return Math.max(1, Math.min(47, v)); };
+       own velocity (`v[i]`: vx, vy), with `where(i, t)` for where he is at t. */
+    SPREAD: Math.PI / 4,
+    plan: function (pts, t0, ang, rand) {
+      rand = rand || Math.random;
+      var at = [], end = [], v = [];
+      var clamp = function (x) { return Math.max(1, Math.min(47, x)); };
+      pts.forEach(function (p, i) {
+        var a = ang + (rand() * 2 - 1) * COLLAR.SPREAD, sp = COLLAR.run * (0.7 + rand() * 0.6);
+        v[i] = { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp };
+      });
       COLLAR.order(pts.length).forEach(function (idx, i) {
         var delay = i * COLLAR.step, pop = delay + COLLAR.blink;
         at[idx] = t0 + pop;
-        end[idx] = { x: clamp(pts[idx].x + vx * pop), y: clamp(pts[idx].y + vy * pop), delay: delay };
+        end[idx] = { x: clamp(pts[idx].x + v[idx].vx * pop), y: clamp(pts[idx].y + v[idx].vy * pop), delay: delay };
       });
       return {
-        t0: t0, at: at, end: end, vx: vx, vy: vy, pts: pts,
+        t0: t0, at: at, end: end, v: v, pts: pts,
         where: function (i, t) {
           var e = Math.max(0, Math.min(t, at[i]) - t0);
-          return { x: clamp(pts[i].x + vx * e), y: clamp(pts[i].y + vy * e) };
+          return { x: clamp(pts[i].x + v[i].vx * e), y: clamp(pts[i].y + v[i].vy * e) };
         }
       };
     }

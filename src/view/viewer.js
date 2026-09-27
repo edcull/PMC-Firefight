@@ -229,30 +229,31 @@
     var plan = CL.plan(pts, t0, (u.facing || 0) - Math.PI / 2);
     CL.order(n).forEach(function (idx, i) {
       var p = plan.end[idx], delay = p.delay;
-      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.vx, vy: plan.vy, neck: 0.68, delay: delay, dur: delay + CL.dur });
+      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.v[idx].vx, vy: plan.v[idx].vy, neck: 0.68, delay: delay, dur: delay + CL.dur });
       if (view.sound && SFX && SFX.impact) SFX.impact((delay + CL.blink) / 1000);
     });
     view.collar = { pts: pts, at: plan.at, plan: plan };
   }
   function drawCollared(u) {
     var cl = view.collar, now = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
-    var standing = [];
-    cl.pts.forEach(function (p, i) {
-      if (cl.at[i] > now) { standing.push(cl.plan.where(i, now)); return; }
-      // down where he had run to
-      var q = I.toScreen(cl.plan.end[i].x, cl.plan.end[i].y);
-      I.drawBody(g, q.x, q.y, { side: u.side, paint: u.paint || null, art: u.art, mi: i, flip: i % 3 === 0 });
-    });
-    if (standing.length) {
-      var cx = 0, cy = 0;
-      standing.forEach(function (p) { cx += p.x; cy += p.y; });
-      cx /= standing.length; cy /= standing.length;
-      // on their feet and running, facing the way they run
-      I.drawUnit(g, Object.assign({}, u, { models: standing.length, x: cx, y: cy, faceL: (cl.plan.vx - cl.plan.vy) < 0, facing: Math.atan2(cl.plan.vy, cl.plan.vx) }), {
-        at: { x: cx, y: cy }, lineAt: standing, lift: 0, status: 'ready', morale: 0,
-        walk: 1 + Math.floor((now - cl.plan.t0) / 110) % 2
+    // the dead where each had run to, and the living running, far to near
+    var items = cl.pts.map(function (p, i) {
+      var q = cl.at[i] > now ? cl.plan.where(i, now) : cl.plan.end[i];
+      return { i: i, x: q.x, y: q.y, up: cl.at[i] > now };
+    }).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
+    items.forEach(function (it) {
+      if (!it.up) {
+        var q = I.toScreen(it.x, it.y);
+        I.drawBody(g, q.x, q.y, { side: u.side, paint: u.paint || null, art: u.art, mi: it.i, flip: it.i % 3 === 0 });
+        return;
+      }
+      // on his feet, running his own way in his own stride
+      var mv = cl.plan.v[it.i];
+      I.drawUnit(g, Object.assign({}, u, { models: 1, x: it.x, y: it.y, faceL: (mv.vx - mv.vy) < 0, facing: Math.atan2(mv.vy, mv.vx) }), {
+        at: { x: it.x, y: it.y }, lift: 0, status: 'ready', morale: 0, noRing: true,
+        walk: 1 + Math.floor((now - cl.plan.t0 + it.i * 53) / 110) % 2
       });
-    }
+    });
   }
 
   /* What is left of it: a machine is a burning wreck, and a squad is its
@@ -314,6 +315,8 @@
     if (view.strafeAt) { strafing(); busy = true; acting = true; }
     /* Firing pulls the camera out to the whole line; once the shots have
        finished playing it goes back in to the zoom the viewer chose. */
+    // a penal squad's collars going off: pulled out, so the men scattering stay in frame
+    if (view.collar) { view.wide = true; acting = true; }
     if (view.wide) {
       if (acting) view.wideUntil = t + 700;
       else if (t > (view.wideUntil || 0)) view.wide = false;

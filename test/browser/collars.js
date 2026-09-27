@@ -86,13 +86,14 @@ async function drain(p) {
   const after = await p.evaluate((a) => {
     const s = window.PMC_STATE(), u = s.units.find((x) => x.id === a.id);
     const bodies = (window.__vc().remains || []).filter((r) => r.kind === 'body');
-    const here = bodies.filter((r) => Math.hypot(r.x - 20, r.y - 20) < 2);
+    // the squad bolts as its collars go, each man falling where he has run to: a scatter a few inches round where it stood
+    const here = bodies.filter((r) => Math.hypot(r.x - 20, r.y - 20) < 5);
     return { alive: u.alive, models: u.models, fled: !!u.fled, expended: !!u.expended, bodies: bodies.length, here: here.length,
       log: s.log.slice(-6).map((l) => l.text).join(' / ') };
   }, before);
   ok('the collars went off', !after.alive && after.expended && after.models === 0, after.log);
   ok('...killed, not fled', !after.fled);
-  ok('...and every man left his body where the squad stood', after.here === before.models,
+  ok('...and every man left his body near where the squad stood', after.here === before.models,
     after.here + ' bodies there, of ' + before.models + ' men');
   await p.evaluate(() => window.PMC_SETVIEW(20, 20, 2.2));
   await p.waitForTimeout(400);

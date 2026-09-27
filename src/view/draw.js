@@ -199,7 +199,7 @@
       var plan = CL.plan(pts, t0, fleeAngle(u, seen));
       CL.order(pts.length).forEach(function (idx, i) {
         var p = plan.end[idx], delay = p.delay, popAt = plan.at[idx];
-        addFx({ kind: 'collar', x: p.x, y: p.y, vx: plan.vx, vy: plan.vy, neck: 0.68, delay: delay, dur: delay + COLLAR_FX });
+        addFx({ kind: 'collar', x: p.x, y: p.y, vx: plan.v[idx].vx, vy: plan.v[idx].vy, neck: 0.68, delay: delay, dur: delay + COLLAR_FX });
         if (SFX && SFX.impact) SFX.impact((delay + COLLAR_BLINK) / 1000);
         rem.push({ kind: 'body', x: p.x, y: p.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null, art: u.art,
           mi: idx, flip: (i % 3 === 0) !== !!u.faceL, showAt: popAt + 30 });
@@ -571,14 +571,12 @@
       B.state.units.forEach(function (u) {
         var cl = u._collar;
         if (!cl || now0 >= cl.until || !onView(cl.x, cl.y)) return;
-        // the men still on their feet, where they have run to by now
-        var standing = [];
-        cl.pts.forEach(function (p, i) { if (cl.at[i] > now0) standing.push(cl.plan ? cl.plan.where(i, now0) : p); });
-        if (!standing.length) return;
-        var cx = 0, cy = 0;
-        standing.forEach(function (p) { cx += p.x; cy += p.y; });
-        cx /= standing.length; cy /= standing.length;
-        order.push({ depth: cx + cy, draw: 'collared', u: u, cl: cl, pts: standing, x: cx, y: cy, age: now0 - (cl.plan ? cl.plan.t0 : now0) });
+        // the men still on their feet, each where he has run to by now, drawn one by one
+        cl.pts.forEach(function (p, i) {
+          if (cl.at[i] <= now0) return;
+          var q = cl.plan ? cl.plan.where(i, now0) : p;
+          order.push({ depth: q.x + q.y, draw: 'collared', u: u, cl: cl, i: i, x: q.x, y: q.y, age: now0 - (cl.plan ? cl.plan.t0 : now0) });
+        });
       });
       // squads walking into a hull, drawn until they are inside it
       B.state.units.forEach(function (u) {
@@ -619,12 +617,13 @@
           if (it.draw === 'collared') {
             var cu = {};
             for (var ck in it.u) cu[ck] = it.u[ck];
-            cu.alive = true; cu.models = it.pts.length; cu.x = it.x; cu.y = it.y;
-            // on their feet and running, facing the way they run
-            if (it.cl.plan) { cu.faceL = (it.cl.plan.vx - it.cl.plan.vy) < 0; cu.facing = Math.atan2(it.cl.plan.vy, it.cl.plan.vx); }
+            cu.alive = true; cu.models = 1; cu.x = it.x; cu.y = it.y; cu.mi = it.i;
+            // on his feet and running, facing the way he runs, in his own stride
+            var mv = it.cl.plan && it.cl.plan.v[it.i];
+            if (mv) { cu.faceL = (mv.vx - mv.vy) < 0; cu.facing = Math.atan2(mv.vy, mv.vx); }
             ISO.drawUnit(B.pctx, cu, {
-              at: { x: it.x, y: it.y }, lineAt: it.pts, lift: liftOf(it.x, it.y),
-              hop: 0, walk: 1 + Math.floor(it.age / 110) % 2, status: 'ready', activated: false, selected: false, morale: 0
+              at: { x: it.x, y: it.y }, lift: liftOf(it.x, it.y), noRing: true,
+              hop: 0, walk: 1 + Math.floor((it.age + it.i * 53) / 110) % 2, status: 'ready', activated: false, selected: false, morale: 0
             });
             return;
           }
