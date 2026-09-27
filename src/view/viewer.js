@@ -166,6 +166,23 @@
     var at = view.at || FROM, f = toScreen(at.x, at.y), up = I.flyLift(unit()) * 0.6;
     var k = Math.max(0, Math.min(1, zc - 1));
     var px = mid.x + (f.x - mid.x) * k, py = (mid.y - I.K * 1.2) + ((f.y - I.K * 0.8 - up) - (mid.y - I.K * 1.2)) * k;
+    /* A penal squad scattering as its collars go: framed just wide enough to
+       hold every man from where he started to where he falls, figures and all,
+       and centred on them. The zoom eases there (view.zWant, in tick); the
+       centre slides across. */
+    if (view.collar && view.collar.plan) {
+      var cp = view.collar.plan, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      cp.pts.concat(cp.end).forEach(function (q) {
+        var sq = toScreen(q.x, q.y);
+        x0 = Math.min(x0, sq.x - I.K * 0.5); x1 = Math.max(x1, sq.x + I.K * 0.5);
+        y0 = Math.min(y0, sq.y - I.K * 1.7); y1 = Math.max(y1, sq.y + I.K * 0.4);
+      });
+      var zFit = Math.min(w / (x1 - x0), h / (y1 - y0)) * 0.9;
+      view.zWant = Math.max(1, Math.min(view.zoom, zFit / zWide));
+      var tx = (x0 + x1) / 2, ty = (y0 + y1) / 2, cc = view.collarCam || (view.collarCam = { x: px, y: py });
+      cc.x += (tx - cc.x) * 0.15; cc.y += (ty - cc.y) * 0.15;
+      px = cc.x; py = cc.y;
+    } else { view.zWant = null; view.collarCam = null; }
     g.setTransform(z, 0, 0, z, Math.round(w / 2 - px * z), Math.round(h / 2 - py * z));
 
     drawGround();
@@ -229,30 +246,31 @@
     var plan = CL.plan(pts, t0, (u.facing || 0) - Math.PI / 2);
     CL.order(n).forEach(function (idx, i) {
       var p = plan.end[idx], delay = p.delay;
-      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.vx, vy: plan.vy, neck: 0.68, delay: delay, dur: delay + CL.dur });
+      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.v[idx].vx, vy: plan.v[idx].vy, ran: p.ran, neck: 0.68, delay: delay, dur: delay + CL.dur });
       if (view.sound && SFX && SFX.impact) SFX.impact((delay + CL.blink) / 1000);
     });
     view.collar = { pts: pts, at: plan.at, plan: plan };
   }
   function drawCollared(u) {
     var cl = view.collar, now = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
-    var standing = [];
-    cl.pts.forEach(function (p, i) {
-      if (cl.at[i] > now) { standing.push(cl.plan.where(i, now)); return; }
-      // down where he had run to
-      var q = I.toScreen(cl.plan.end[i].x, cl.plan.end[i].y);
-      I.drawBody(g, q.x, q.y, { side: u.side, paint: u.paint || null, art: u.art, mi: i, flip: i % 3 === 0 });
-    });
-    if (standing.length) {
-      var cx = 0, cy = 0;
-      standing.forEach(function (p) { cx += p.x; cy += p.y; });
-      cx /= standing.length; cy /= standing.length;
-      // on their feet and running, facing the way they run
-      I.drawUnit(g, Object.assign({}, u, { models: standing.length, x: cx, y: cy, faceL: (cl.plan.vx - cl.plan.vy) < 0, facing: Math.atan2(cl.plan.vy, cl.plan.vx) }), {
-        at: { x: cx, y: cy }, lineAt: standing, lift: 0, status: 'ready', morale: 0,
-        walk: 1 + Math.floor((now - cl.plan.t0) / 110) % 2
+    // the dead where each had run to, and the living running, far to near
+    var items = cl.pts.map(function (p, i) {
+      var q = cl.at[i] > now ? cl.plan.where(i, now) : cl.plan.end[i];
+      return { i: i, x: q.x, y: q.y, up: cl.at[i] > now };
+    }).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
+    items.forEach(function (it) {
+      if (!it.up) {
+        var q = I.toScreen(it.x, it.y);
+        I.drawBody(g, q.x, q.y, { side: u.side, paint: u.paint || null, art: u.art, mi: it.i, flip: it.i % 3 === 0 });
+        return;
+      }
+      // on his feet, running his own way in his own stride
+      var mv = cl.plan.v[it.i];
+      I.drawUnit(g, Object.assign({}, u, { models: 1, x: it.x, y: it.y, faceL: (mv.vx - mv.vy) < 0, facing: Math.atan2(mv.vy, mv.vx) }), {
+        at: { x: it.x, y: it.y }, lift: 0, status: 'ready', morale: 0, noRing: true,
+        walk: 1 + Math.floor((now - cl.plan.t0 + it.i * 53) / 110) % 2
       });
-    }
+    });
   }
 
   /* What is left of it: a machine is a burning wreck, and a squad is its
@@ -314,12 +332,14 @@
     if (view.strafeAt) { strafing(); busy = true; acting = true; }
     /* Firing pulls the camera out to the whole line; once the shots have
        finished playing it goes back in to the zoom the viewer chose. */
+    // a penal squad's collars going off: the camera eases out just enough to hold them all (frame)
+    if (view.collar) { acting = true; busy = true; }
     if (view.wide) {
       if (acting) view.wideUntil = t + 700;
       else if (t > (view.wideUntil || 0)) view.wide = false;
       busy = true;
     }
-    var want = view.wide ? 1 : view.zoom;
+    var want = view.collar && view.zWant ? view.zWant : view.wide ? 1 : view.zoom;
     if (Math.abs((view.zCur || 1) - want) > 0.005) {
       view.zCur = (view.zCur || 1) + (want - (view.zCur || 1)) * Math.min(1, dt / 140);
       busy = true;

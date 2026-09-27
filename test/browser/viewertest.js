@@ -474,7 +474,8 @@ async function pickAndFire(p, key, ms) {
   await p.screenshot({ path: path.join(SHOTS, 'viewer-collars.png') });
   ok('every man\'s collar goes off', mid.blasts === mid.n && mid.n === 8, mid.blasts + ' of ' + mid.n);
   ok('...on men still standing, a few at a time', mid.standing > 0 && mid.standing < mid.n, mid.standing + ' still standing');
-  await p.waitForTimeout(2200);
+  // (the first goes off standing; the rest bolt and go off as they run: about 3s from first blink to last smoke)
+  await p.waitForTimeout(2800);
   const end = await p.evaluate(() => {
     const st = window.__viewer.state(), now = performance.now();
     return { standing: st.collar.at.filter((t) => t > now).length, fx: window.__viewer.fx().length };
