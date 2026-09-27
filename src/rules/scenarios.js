@@ -218,22 +218,25 @@
     return claim.A > 0 && deny.B === 0 ? 'A' : (claim.B > 0 && deny.A === 0 ? 'B' : null);
   }
 
-  /* Rout: half a side's units destroyed or fled. Units still in reserve count as
-     perfectly fine (p. 49), so they are neither losses nor part of the tally. */
+  /* Rout: half a side's units destroyed or fled — units, whatever their Tier
+     (p. 49), so a turret set is as many units as it has turrets, and the free
+     turrets, extra waves and anything spawned in the battle count as well. That
+     is every unit the side has had, so the tally is taken from the units rather
+     than from the army list. Units still in reserve count as perfectly fine
+     (p. 49): they are part of the tally and not losses. */
   function routed(state, side) {
-    /* A Rapid insertion platform "does not count towards victory conditions"
-       (p. 79), so it is in neither the tally nor the losses. */
-    var army = state.cfg[side === 'A' ? 'armyA' : 'armyB'] || [];
-    var pods = state.units.filter(function (u) {
-      return u.side === side && !R.countsForVictory(u);
-    }).length;
-    /* Expendable troops, "when destroyed ... do not count as a casualty for the
-       purposes of victory conditions" (p. 57) — however they went. */
-    var spent = state.units.filter(function (u) { return u.side === side && !u.alive && (u.expended || R.has(u, 'Expendable')); }).length;
-    var started = Math.max(0, army.length - pods - spent);
-    var left = state.units.filter(function (u) {
-      return u.alive && u.side === side && R.countsForVictory(u);
-    }).length;
+    var started = 0, left = 0;
+    state.units.forEach(function (u) {
+      if (u.side !== side) return;
+      /* A Rapid insertion platform "does not count towards victory conditions"
+         (p. 79), so it is in neither the tally nor the losses. */
+      if (!R.countsForVictory(u)) return;
+      /* Expendable troops, "when destroyed ... do not count as a casualty for
+         the purposes of victory conditions" (p. 57) — however they went. */
+      if (!u.alive && (u.expended || R.has(u, 'Expendable'))) return;
+      started++;
+      if (u.alive) left++;
+    });
     return (started - left) >= Math.ceil(started / 2);
   }
 
