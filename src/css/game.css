@@ -472,6 +472,9 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .act:hover { border-color: var(--alpha); }
 .act.primary { border-color: color-mix(in srgb, var(--alpha) 60%, transparent); background: color-mix(in srgb, var(--alpha) 12%, transparent); }
 .act.primary.blocked { opacity: .45; filter: grayscale(.6); cursor: not-allowed; }
+/* a choice among several (Hostile takeover's fortification kinds and lengths) */
+.act.on { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+.act:disabled { opacity: .4; cursor: not-allowed; }
 /* why the battle cannot begin yet, pinned over the button that was pressed */
 .deploy-go { position: relative; }
 .tipbubble { position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 5; padding: 9px 11px; border-radius: 6px;

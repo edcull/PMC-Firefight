@@ -30,15 +30,18 @@
       if (x < UR || y < UR || x > W - UR || y > H - UR) return false;
       var say = SC.deployOK(E.state, side, x, y, u);
       if (say !== null) return say;
-      var bx = boxesFor(side);
+      var bx = boxesFor(side, u);
       if (bx) return SC.inBoxes(bx, x, y);
       var z = zoneFor(side);
       return !!z && x >= z[0] && x <= z[1];
     }
 
-    // some scenarios hand a side a set of rectangles rather than a strip or a circle
-    function boxesFor(side) {
-      return (E.state.sc && E.state.sc.boxes && E.state.sc.boxes[side]) || null;
+    /* Some scenarios hand a side a set of rectangles rather than a strip or a
+       circle — and may narrow them as the side deploys (Hostile takeover's one
+       edge); `u`, the unit being placed, is left out of that. */
+    function boxesFor(side, u) {
+      if (!E.state.sc) return null;
+      return SC.boxesFor(E.state, side, u) || null;
     }
 
     function pointInBox(b) {
@@ -205,7 +208,9 @@
             x = R.clampBoard({ x: circ.x + Math.cos(a) * r, y: circ.y + Math.sin(a) * r }).x;
             y = clampY(circ.y + Math.sin(a) * r);
           } else if (boxes) {
-            var pb = pointInBox(boxes[(i + attempt) % boxes.length]);
+            // the side's ground as it stands now: one edge, once the first of it is down
+            var now = boxesFor(side, u) || boxes;
+            var pb = pointInBox(now[(i + attempt) % now.length]);
             x = pb.x; y = pb.y;
           } else if (z) {
             y = 3 + ((i * 5.2 + attempt * 0.7) % (H - 6));
@@ -327,7 +332,7 @@
        across the view as a narrow diagonal — so a tap that misses by a few inches
        is pulled to the nearest legal ground rather than refused outright. */
     function nearestDeploySpot(u, x, y, pull) {
-      var boxes = boxesFor(u.side);
+      var boxes = boxesFor(u.side, u);
       var z = boxes ? null : zoneFor(u.side);
       var circ = E.state.sc && E.state.sc.defCircle && E.state.sc.defender === u.side
         ? E.state.sc.defCircle : null;

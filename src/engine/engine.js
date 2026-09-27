@@ -478,6 +478,8 @@
     // a player's Last Stand barricades are placed by hand, once the deployment zones are known
     state.manualLaststand = {};
     ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && !isAI(sd)) state.manualLaststand[sd] = true; });
+    // and so is a player's own position in Hostile takeover (p. 55)
+    state.manualForts = { A: !isAI('A'), B: !isAI('B') };
     SC.begin(state, scenId, { attacker: cfg.attacker, roles: cfg.roles });
     // the scenario may have moved or dropped pieces to keep them apart; a mined one must still be there
     if (state.mined && state.terrain.indexOf(state.mined.piece) < 0) {
@@ -504,6 +506,13 @@
       if (isAI(side)) terrainKnowledge(side);
       else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: 2, total: 2 });
     });
+    /* Hostile takeover (p. 55): up to ten sections and a bunker within 12" of
+       the objective, put down by the defender after the roles are known. */
+    if (state.sc.fortsByHand) {
+      var nf = SC.FORT_SECTIONS;
+      state.placeQueue.push({ side: state.sc.defender, kind: 'fort', why: 'takeover', piece: 'trench', len: 6,
+        sections: nf, bunkers: 1, left: nf + 1, total: nf + 1 });
+    }
     ['A', 'B'].forEach(function (side) {
       if (state.manualLaststand[side]) {
         var nls = 4 * (cfg.pl || 1);
@@ -613,7 +622,8 @@
       GEN: GEN, H: H, OBJECTIVES: OBJECTIVES, PIECE_NOUN: PIECE_NOUN, R: R, SFX: SFX, V: V, W: W,
       afterTerrain: afterTerrain, deployOK: deployOK, fitView: fitView, isAI: isAI, logLine: logLine,
       other: other, pushRes: pushRes, queueBake: queueBake, render: render, revealConsole: revealConsole,
-      setHint: setHint, sideName: sideName, startBattle: startBattle, ui: ui, get state() { return state; }
+      setHint: setHint, sideName: sideName, startBattle: startBattle, ui: ui, get state() { return state; },
+      lookAtDeployment: function (side) { lookAtDeployment(side); }
     }));
   }
   function pieceNoun(spec, n) { return (KIT_TERRAINSETUP || kitTerrainSetup()).pieceNoun(spec, n); }
@@ -630,6 +640,7 @@
   function nextPlace() { return (KIT_TERRAINSETUP || kitTerrainSetup()).nextPlace(); }
   function placeAt(x, y) { return (KIT_TERRAINSETUP || kitTerrainSetup()).placeAt(x, y); }
   function placeDone() { return (KIT_TERRAINSETUP || kitTerrainSetup()).placeDone(); }
+  function placeAuto() { return (KIT_TERRAINSETUP || kitTerrainSetup()).placeAuto(); }
 
   function docsOf(side) { return (state && state.doctrines && state.doctrines[side]) || []; }
 
@@ -965,9 +976,7 @@
         '" of the objective.';
     }
     if (boxesFor(side)) {
-      return state.scen && state.scen.id === 'takeover'
-        ? 'Place each unit inside the shaded band — you may come on from any table edge you like.'
-        : 'Place each unit inside one of the shaded bands — the stretches of table edge that are yours.';
+      return 'Place each unit inside one of the shaded bands — the stretches of table edge that are yours.';
     }
     var z = zoneFor(side);
     if (!z || (sc.zones && sc.zones[side] === null && sc.attacker === side)) {
@@ -1707,11 +1716,22 @@
           if (sw) { setHint(null, sw); render(); return no(sw); }
           return yes;
         }
-        case 'placeat': case 'placerot': case 'placedone': {
+        case 'placeat': case 'placerot': case 'placedone': case 'placekind': case 'placelen': case 'placeauto': {
           var pa = state.placeAsk;
           if (!pa || pa.side !== side) return no('nothing to place');
           if (it.k === 'placerot') { pa.vertical = !pa.vertical; render(); return yes; }
           if (it.k === 'placedone') { placeDone(); return yes; }
+          if (it.k === 'placekind' || it.k === 'placelen' || it.k === 'placeauto') {
+            if (pa.kind !== 'fort') return no('nothing to choose');
+            if (it.k === 'placeauto') { placeAuto(); return yes; }
+            if (it.k === 'placekind') {
+              if (it.kind !== 'bunker' && !SC.FORT_KINDS[it.kind]) return no('not a fortification');
+              if (it.kind === 'bunker' && !pa.bunkers) return no('the bunker is already down');
+              if (it.kind !== 'bunker' && !pa.sections) return no('all ten sections are down');
+              pa.piece = it.kind;
+            } else pa.len = Math.max(2, Math.min(6, Math.round(+it.len) || 6));
+            render(); return yes;
+          }
           var pw = placeAt(+it.x, +it.y);
           if (pw) { setHint(null, pw); render(); return no(pw); }
           return yes;

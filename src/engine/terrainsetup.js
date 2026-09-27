@@ -320,10 +320,11 @@
       if (E.state.placeAsk) {
         var pa = E.state.placeAsk;
         setHint(null, pa.why === 'terrain' ? 'Detailed Terrain Knowledge: tap a piece, then where it goes (up to 12").'
+          : pa.why === 'takeover' ? 'Hostile takeover: tap the table within 12" of the objective to put down your fortifications — or let them be placed for you.'
           : 'Tap the table to put down ' + (pa.why === 'fortify' ? 'a field fortification' : 'a barricade') + ' — ' + pa.left + ' to place.');
         fitView();
         revealConsole();
-      }
+      } else if (E.state.phase === 'deploy') E.lookAtDeployment();   // back to the ground to fill
       render();
     }
     // may a barricade stand here? on the table, clear of terrain and troops, in the right ground
@@ -346,7 +347,14 @@
     function placeAt(x, y) {
       var pa = E.state.placeAsk;
       if (!pa) return 'Nothing to place.';
-      if (pa.kind === 'barricade') {
+      if (pa.kind === 'fort') {
+        var SCN = root.PMCScen;
+        var fr = SCN.fortRect(pa.piece, x, y, pa.len, pa.vertical);
+        var fw = SCN.fortWhy(E.state, fr);
+        if (fw) return fw;
+        E.state.terrain.push(fr);
+        fortLaid(pa, fr);
+      } else if (pa.kind === 'barricade') {
         var len = pa.len || 3, th = pa.why === 'fortify' ? 0.6 : 1;
         var r = pa.vertical ? { kind: 'barricade', x: x - th / 2, y: y - len / 2, w: th, h: len }
           : { kind: 'barricade', x: x - len / 2, y: y - th / 2, w: len, h: th };
@@ -384,17 +392,51 @@
       else { setHint(null, pa.left + ' more to ' + (pa.kind === 'move' ? 'move' : 'place') + '.'); render(); }
       return null;
     }
+    // a Hostile takeover piece is down: count it off, and change the tool once the kind runs out
+    function fortLaid(pa, r) {
+      if (r.kind === 'bunker') pa.bunkers--; else pa.sections--;
+      pa.left = pa.sections + pa.bunkers;
+      if (pa.piece === 'bunker' && !pa.bunkers) pa.piece = 'trench';
+      if (pa.piece !== 'bunker' && !pa.sections && pa.bunkers) pa.piece = 'bunker';
+      pa.laid = (pa.laid || []).concat(r.kind);
+      E.state.scene = null; E.state.ground = null; E.state.structs = null; E.state.structsDirty = true;
+    }
+    /* "Auto-deploy fortifications": the rest of the defender's allowance put down
+       as the machine would, and the placing is over. */
+    function placeAuto() {
+      var pa = E.state.placeAsk;
+      if (!pa || pa.kind !== 'fort') return;
+      var laid = root.PMCScen.takeoverForts(E.state, pa.side, pa.sections, pa.bunkers);
+      laid.forEach(function (r) { fortLaid(pa, r); });
+      pa.sections = 0; pa.bunkers = 0; pa.left = 0;
+      placeDone();
+    }
     function placeDone() {
       var pa = E.state.placeAsk;
       if (!pa) return;
       var n = pa.total - pa.left;
+      if (pa.kind === 'fort') {
+        var laid = pa.laid || [];
+        logLine('terrain', sideName(pa.side) + ' — Hostile takeover: ' + (laid.length ? 'digs in round the objective with ' + fortTally(laid) + '.' : 'puts up no fortifications.'));
+      }
       if (pa.kind === 'barricade' && n) logLine('terrain', sideName(pa.side) + ' — ' + (pa.why === 'fortify' ? 'Fortify and Strike!: ' + n + ' field fortifications thrown up.' : 'Last Stand: ' + n + ' barricades put up.'));
       E.state.placeAsk = null;
       if (pa.then === 'battle') { startBattle(); return; }
       nextPlace();
     }
 
+    // "3 trenches, 2 low walls and a bunker"
+    var FORT_NOUN = { trench: ['trench', 'trenches'], barricade: ['low wall', 'low walls'], wall: ['high wall', 'high walls'],
+      wire: ['stretch of barbed wire', 'stretches of barbed wire'], bunker: ['bunker', 'bunkers'] };
+    function fortTally(kinds) {
+      var n = {}, order = [];
+      kinds.forEach(function (k) { if (!n[k]) { n[k] = 0; order.push(k); } n[k]++; });
+      var parts = order.map(function (k) { var w = FORT_NOUN[k] || [k, k]; return n[k] === 1 ? 'a ' + w[0] : n[k] + ' ' + w[1]; });
+      return parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0];
+    }
+
     return {
+      placeAuto: placeAuto,
       pieceNoun: pieceNoun, specRange: specRange, wantsManualTerrain: wantsManualTerrain,
       startTerrainSetup: startTerrainSetup, curArea: curArea, placedSummary: placedSummary,
       clonePiece: clonePiece, fitGhost: fitGhost, terrainTap: terrainTap, terrainAct: terrainAct,

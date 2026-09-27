@@ -303,6 +303,9 @@
       // the side the engine is asking: the opponent, when it is shoving an insertion off its mark
       ? (sel.insertion.by || (sel.insertion.unit ? sel.insertion.unit.side : 'A'))
       : st.phase === 'deploy' && st.swapAsk ? st.swapAsk.side           // a hotseat's secret round of swaps
+        // pieces put down by hand (Hostile takeover, Last Stand, Fortify), and the Terrorist's mine: whoever is asked
+        : st.phase === 'deploy' && st.placeAsk ? st.placeAsk.side
+        : st.phase === 'deploy' && st.minePick ? st.minePick.side
         : st.phase === 'deploy' ? this.engine.query.placingSide()
         : st.phase === 'terrain' ? this.engine.query.terrainSide() : st.activeSide;
     return this.seats.indexOf(want) >= 0 ? want : this.seats[0];
