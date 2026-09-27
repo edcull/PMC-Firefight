@@ -28,6 +28,10 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
 const cmd = unit('cmd2');
 R.musterMen(cmd, null, taken);
 ok('a field command is led by an officer', cmd.men[0].rank === 'Major', cmd.men[0].rank);
+ok('...with an officer a rank below as second-in-command', cmd.men[1].rank === 'Captain', cmd.men[1].rank);
+const fcp = unit('flyingcp');
+R.musterMen(fcp, null, taken);
+ok('a flying command post is commanded by a senior field officer', fcp.men[0].rank === 'Lieutenant Colonel', fcp.men[0].rank);
 const lcv = unit('lcv');
 R.musterMen(lcv, null, taken);
 ok('a crewed vehicle has one named commander, an NCO', lcv.men.length === 1 && /Corporal|Sergeant/.test(lcv.men[0].rank), lcv.men[0] && lcv.men[0].rank);

@@ -1586,7 +1586,8 @@
   var XENO_SYL = ['ka', 'tha', 'ir', 'zha', 'ul', 'vek', 'sa', 'ren', 'oth', 'qua', 'li', 'mar', 'es', 'dro', 'ya', 'kel', 'un', 'ssi'];
   var OFFICER = ['Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel', 'Colonel'];
   /* A PMC hull is commanded by an NCO, heavier and better hulls by more senior
-     ones; a command or EW vehicle (and a flying command post) by a junior officer. */
+     ones; a command or EW vehicle by a junior officer, and the flying command
+     post by a senior field officer. */
   var CREW_NCO = ['Corporal', 'Corporal', 'Sergeant', 'Staff Sergeant', 'Master Sergeant'];
   var CREW_OFFICER = ['Second Lieutenant', 'Second Lieutenant', 'Lieutenant', 'Lieutenant', 'Captain'];
   var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
@@ -1629,7 +1630,8 @@
   function rankFor(u, i) {
     var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
     if (isMachine(u)) {
-      if (f === 'pmc' && (u.key === 'cmdveh' || u.key === 'ewveh' || u.key === 'flyingcp' || hasOwn(u, 'Command Vehicle'))) return CREW_OFFICER[tier - 1];
+      if (f === 'pmc' && u.key === 'flyingcp') return 'Lieutenant Colonel';
+      if (f === 'pmc' && (u.key === 'cmdveh' || u.key === 'ewveh' || hasOwn(u, 'Command Vehicle'))) return CREW_OFFICER[tier - 1];
       if (isFlying(u)) return 'Pilot';
       return f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : CREW_NCO[tier - 1];
     }
@@ -1647,7 +1649,9 @@
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
-    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? 'Sergeant Major' : 'Staff Sergeant';
+    /* A command unit: its officer by the unit's grade, a second officer one rank
+       below as second-in-command, and the rest senior NCOs. */
+    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? (tier > 1 ? OFFICER[tier - 2] : 'Second Lieutenant') : i === 2 ? 'Sergeant Major' : 'Staff Sergeant';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
     if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
     if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';
