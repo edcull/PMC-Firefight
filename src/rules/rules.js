@@ -1651,7 +1651,8 @@
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
-    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? COMMAND_SECOND[tier - 1] : 'Staff Sergeant';
+    // then a corporal, and the rest privates: the staff's signallers, runners and guards
+    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? COMMAND_SECOND[tier - 1] : i === 2 ? 'Corporal' : 'Private';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
     if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
     if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';
