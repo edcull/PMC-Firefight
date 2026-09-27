@@ -1312,12 +1312,15 @@
      carrying Suppression. The shot is resolved as normal — a 'Man down!' still
      kills — but every Suppression point the result would have given is taken
      away instead (two 'Get down!' and one 'Man down!' remove 4). */
+  /* A command unit of the army's list — every Field command grade, the 4th
+     too, which has no "Command Unit (X)" activations of its own. */
+  function commandUnit(u) { return !!u && (!!u.command || hasOwn(u, 'Command Unit')); }
   function steadyShooter(state, a) {
     if (!doctrine(state, a.side, 'T5') || a.fp === null || isMachine(a) || !a.alive || a.x < 0) return false;
     if (status(a) !== 'ready') return false;
-    if (hasOwn(a, 'Command Unit')) return true;
+    if (commandUnit(a)) return true;
     return state.units.some(function (c) {
-      return c !== a && c.alive && c.side === a.side && c.x >= 0 && !c.aboard && hasOwn(c, 'Command Unit') && unitDist(a, c) <= 12;
+      return c !== a && c.alive && c.side === a.side && c.x >= 0 && !c.aboard && commandUnit(c) && unitDist(a, c) <= 12;
     });
   }
   /* On the table and in the fight: alive, set down, not riding inside anything
