@@ -88,18 +88,23 @@
        asks for a unit's reach and then its route over the same ground, and the
        board asks again every time it redraws a preview. */
     var fieldCache = [];
-    function fieldKey(state, u, allowance) {
-      var k = [u.id, u.key, u.cls, u.x, u.y, u.move, allowance, u.wireRoll, u.bld ? 1 : 0, (u.rules || []).join('/'), state.terrain.length];
+    // the table's terrain as it stands, as a string: worked out once a look, and shared by the keys below
+    function terrainKey(state) {
+      return state.terrain.length + ';' + state.terrain.map(function (r) { return [r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0].join(','); }).join(';');
+    }
+    function fieldKey(state, u, allowance, tk) {
+      var k = [u.id, u.key, u.cls, u.x, u.y, u.move, allowance, u.wireRoll, u.bld ? 1 : 0, (u.rules || []).join('/')];
       state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side && o.x >= 0) k.push(o.x, o.y, o.bld ? 1 : 0); });
-      state.terrain.forEach(function (r) { k.push(r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0); });
-      return k.join(',');
+      return k.join(',') + '|' + tk;
     }
     function field(state, u, allowance) {
-      var key = fieldKey(state, u, allowance);
+      var tk = terrainKey(state), wire = u.wireRoll;
+      var key = fieldKey(state, u, allowance, tk);
       for (var fc = 0; fc < fieldCache.length; fc++) if (fieldCache[fc].key === key && fieldCache[fc].state === state) return fieldCache[fc].f;
-      var made = fieldOf(state, u, allowance);
+      var made = fieldOf(state, u, allowance, tk);
       // the wire's D6 is rolled on the first look: file it under the roll it now has
-      fieldCache.unshift({ key: fieldKey(state, u, allowance), state: state, f: made });
+      if (u.wireRoll !== wire) key = fieldKey(state, u, allowance, tk);
+      fieldCache.unshift({ key: key, state: state, f: made });
       if (fieldCache.length > 4) fieldCache.pop();
       return made;
     }
@@ -108,8 +113,8 @@
        stands. It is the same for every unit, so it is worked out once for each
        layout of the terrain and shared by every field on it. */
     var groundCache = { key: null, state: null, at: null, under: null };
-    function groundOf(state, N) {
-      var key = state.terrain.length + ';' + state.terrain.map(function (r) { return [r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0].join(','); }).join(';');
+    function groundOf(state, N, tk) {
+      var key = tk || terrainKey(state);
       if (groundCache.state !== state || groundCache.key !== key) {
         groundCache = { key: key, state: state, at: new Uint8Array(N), under: new Uint8Array(N) };   // 0: not yet looked at
       }
@@ -171,14 +176,23 @@
         return g[c] === 2;
       };
     }
-    function fieldOf(state, u, allowance) {
+    function fieldOf(state, u, allowance, tk) {
       var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
       var N = cols * rows;
       var idx = function (i, j) { return j * cols + i; };
       var i0 = Math.round(u.x / STEP), j0 = Math.round(u.y / STEP);
-      var cost = new Float64Array(N * 2).fill(Infinity);
-      var came = new Int32Array(N * 2).fill(-1);
-      var ground = groundOf(state, N), terr = ground.at;
+      /* Only the patch of table the move could reach is searched and kept: a
+         step is never shorter than it is long, so nothing further than the
+         allowance (in lattice steps, and a margin) from the start is reachable.
+         The costs are kept for that window, with one slot past its end standing
+         for everywhere outside it, out of reach. */
+      var R = isFinite(allowance) ? Math.ceil(allowance / STEP) + 3 : Math.max(cols, rows);
+      var wi0 = Math.max(0, i0 - R), wi1 = Math.min(cols - 1, i0 + R), wj0 = Math.max(0, j0 - R), wj1 = Math.min(rows - 1, j0 + R);
+      var wc = wi1 - wi0 + 1, wr = wj1 - wj0 + 1, WN = wc * wr;
+      var lidx = function (i, j) { return (j - wj0) * wc + (i - wi0); };
+      var cost = new Float64Array(WN * 2 + 2).fill(Infinity);
+      var came = new Int32Array(WN * 2).fill(-1);
+      var ground = groundOf(state, N, tk), terr = ground.at;
       var kindIndex = {}; var kinds = Object.keys(TERRAIN);
       kinds.forEach(function (k, n) { kindIndex[k] = n; });
       // a section of wire crossed costs the D6 rolled for this move
@@ -202,9 +216,9 @@
         if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
         return terr[k] - 1;
       }
-      var blk = new Int8Array(N);                        // 0 not yet asked, 1 open, 2 blocked
+      var blk = new Int8Array(WN);                       // 0 not yet asked, 1 open, 2 blocked
       function blockedBy(i, j) {
-        var c = idx(i, j);
+        var c = lidx(i, j);
         if (blk[c] === 0) blk[c] = blockedAt(i, j) ? 2 : 1;
         return blk[c] === 2;
       }
@@ -260,22 +274,28 @@
         return top;
       }
       push({ i: i0, j: j0, p: startPaid, c: startPaid ? terrainCost(u, k0) : 0 });
-      cost[idx(i0, j0) * 2 + startPaid] = heap[0].c;
+      cost[lidx(i0, j0) * 2 + startPaid] = heap[0].c;
       var seen = [];
       while (heap.length) {
         var cur = pop();
-        var ck = idx(cur.i, cur.j) * 2 + cur.p;
+        var ck = lidx(cur.i, cur.j) * 2 + cur.p;
         if (cur.c > cost[ck]) continue;
         seen.push(cur);
-        var k1 = kindAt(cur.i, cur.j);
+        var k1 = kindAt(cur.i, cur.j), cc = cur.c, cp = cur.p;
         for (var n = 0; n < NEI.length; n++) {
           var di = NEI[n][0], dj = NEI[n][1];
           var ni = cur.i + di, nj = cur.j + dj;
-          if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue;
+          if (ni < wi0 || nj < wj0 || ni > wi1 || nj > wj1) continue;   // (beyond the window is beyond the allowance)
+          /* A step costs at least its length, so where even that is beyond the
+             allowance, or no cheaper than the point already has on either layer
+             it could land on, there is nothing to find: pass it by unlooked-at. */
+          var lb = cc + NEI_LEN[n], ncell = (nj - wj0) * wc + (ni - wi0);
+          if (lb > allowance + 1e-6) continue;
+          if (lb >= cost[ncell * 2 + cp] && lb >= cost[ncell * 2 + 1]) continue;
           if (blockedBy(ni, nj)) continue;
           var mi = cur.i + NEI_MID[n][0], mj = cur.j + NEI_MID[n][1];
           if ((di > 1 || di < -1 || dj > 1 || dj < -1) && blockedBy(mi, mj)) continue;
-          var step = NEI_LEN[n], paid = cur.p;
+          var step = NEI_LEN[n], paid = cp;
           var k2 = kindAt(ni, nj), km = kindAt(mi, mj);
           // a linear piece is paid for every time it is crossed: on stepping onto it
           if (kLin[k2] && k2 !== k1) step += kCost[k2];
@@ -283,9 +303,9 @@
           // area terrain once in the whole move
           var a2 = areaAt(ni, nj);
           if (!paid && (a2 >= 0 || kArea[km])) { step += kCost[a2 >= 0 ? a2 : km]; paid = 1; }
-          var nc = cur.c + step;
+          var nc = cc + step;
           if (nc > allowance + 1e-6) continue;
-          var nk = idx(ni, nj) * 2 + paid;
+          var nk = ncell * 2 + paid;
           if (nc < cost[nk]) {
             cost[nk] = nc;
             came[nk] = ck;
@@ -294,15 +314,21 @@
         }
       }
       // the cheaper of the two layers, for each point reached (and nowhere for the rest)
-      var best = new Float64Array(N).fill(Infinity);
-      for (var q = 0; q < seen.length; q++) { var sq = idx(seen[q].i, seen[q].j); best[sq] = Math.min(cost[sq * 2], cost[sq * 2 + 1]); }
-      var seenOnce = [], mark = new Uint8Array(N);
+      var best = new Float64Array(WN + 1).fill(Infinity);
+      for (var q = 0; q < seen.length; q++) { var sq = lidx(seen[q].i, seen[q].j); best[sq] = Math.min(cost[sq * 2], cost[sq * 2 + 1]); }
+      var seenOnce = [], mark = new Uint8Array(WN);
       seen.forEach(function (sn) {
-        var k = idx(sn.i, sn.j);
+        var k = lidx(sn.i, sn.j);
         if (mark[k]) return;
         mark[k] = 1; seenOnce.push({ i: sn.i, j: sn.j, c: best[k] });
       });
-      return { cols: cols, rows: rows, cost: best, layered: cost, came: came, seen: seenOnce, idx: idx };
+      /* Indexed by the window: idx gives a point's slot (the one past the end,
+         out of reach, for anywhere outside it), and a slot's point is
+         (i0 + slot % cols, j0 + slot / cols). */
+      return {
+        cols: wc, rows: wr, i0: wi0, j0: wj0, cost: best, layered: cost, came: came, seen: seenOnce,
+        idx: function (i, j) { return i < wi0 || j < wj0 || i > wi1 || j > wj1 ? WN : lidx(i, j); }
+      };
     }
 
     /* A rough measure of how far a hull must come round to face a point: none
@@ -583,7 +609,7 @@
       var k = f.layered[k0 * 2] <= f.layered[k0 * 2 + 1] ? k0 * 2 : k0 * 2 + 1;
       var pts = [], guard = 0;
       while (k >= 0 && guard++ < 4000) {
-        var cell = k >> 1, i = cell % f.cols, j = Math.floor(cell / f.cols);
+        var cell = k >> 1, i = f.i0 + cell % f.cols, j = f.j0 + Math.floor(cell / f.cols);
         pts.push({ x: i * STEP, y: j * STEP });
         k = f.came[k];
       }
