@@ -210,8 +210,8 @@ head('And a sidearm is not a rifle');
 // Firepower 1 at 12": command, medics and signallers are defending themselves
 all(['cmd4', 'cmd3', 'cmd2', 'cmd1', 'highcmd'], 'pistol');
 all(['ew', 'medics'], 'pistol');
-// penal troops are issued a sidearm and a shovel
-is('penal', 'pistol');
+// penal troops are handed cheap SMGs
+is('penal', 'smg');
 // armed civilians: whatever was in the house
 is('rciv', 'pistol');
 

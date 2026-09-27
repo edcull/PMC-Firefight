@@ -916,9 +916,23 @@
   function fitCommand(co) {
     var e = byRid(co, co.cmdRid);
     if (!e) return;
-    var was = e.name === profile(e.key).name;
+    var was = e.name === profile(e.key).name, oldKey = e.key;
     e.key = commandKey(co);
     if (was) e.name = profile(e.key).name;
+    if (e.key !== oldKey) rerankMen(e);
+  }
+  /* The company's own command squad, going up a grade with the force's Tier,
+     takes its new ranks at once: each soldier keeps his name — the
+     one he was given, or the one a player renamed him to — and takes the rank
+     of his place in the unit as it now is (a Second Lieutenant leading a Field
+     command 4th grade leads the 3rd grade as a Lieutenant). */
+  function rerankMen(entry) {
+    var p = profile(entry.key);
+    if (!p || !entry.men || !entry.men.length) return;
+    var u = {};
+    for (var k in p) u[k] = p[k];
+    u.key = entry.key; u.faction = p.faction || 'pmc'; u.rules = (p.rules || []).slice();
+    entry.men.forEach(function (m, i) { m.rank = R.rankFor(u, i); });
   }
   function byRid(co, id) {
     for (var i = 0; i < co.roster.length; i++) if (co.roster[i].rid === id) return co.roster[i];
@@ -1012,7 +1026,7 @@
       COMPANY_COST: COMPANY_COST, R: R, RECRUIT_COST: RECRUIT_COST, addLoss: addLoss, byRid: byRid,
       availableHonours: availableHonours, availableUpgrades: availableUpgrades,
       canTakeHonour: canTakeHonour, canTakeUpgrade: canTakeUpgrade, commandKey: commandKey,
-      fitCommand: fitCommand, hasDoctrine: hasDoctrine, honourTable: honourTable, isBugKey: isBugKey,
+      fitCommand: fitCommand, rerankMen: rerankMen, hasDoctrine: hasDoctrine, honourTable: honourTable, isBugKey: isBugKey,
       isLeaderP: isLeaderP, isTurretP: isTurretP, isXenoKey: isXenoKey, massOf: massOf, money: money,
       newEntry: newEntry, poolOf: poolOf, profile: profile, promotionCost: promotionCost,
       promotionTargets: promotionTargets, upgradeTable: upgradeTable
@@ -1476,7 +1490,7 @@
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
     newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
-    found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand,
+    found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand, rerankMen: rerankMen,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,
     hasTraumaFlag: hasTraumaFlag, hasHonourFlag: hasHonourFlag,

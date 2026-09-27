@@ -461,10 +461,10 @@ async function pickAndFire(p, key, ms) {
   ok('it sounds them with sfx.js', shared.sfx);
   ok('...and every profile resolves to a style it can draw', shared.agrees);
 
-  /* Expendable (p. 57): destroyed, a penal squad goes the way it does in the
-     battle — each man's collar blinks and fires while he stands, then he falls. */
-  console.log('\n  penal troops, destroyed');
-  await p.evaluate(() => { window.__viewer.pick('penal'); window.__viewer.destroy(); });
+  /* Expendable (p. 57): broken, a penal squad goes the way it does in the
+     battle — each man's collar blinks and fires as he runs, then he falls. */
+  console.log('\n  penal troops, broken: the collars');
+  await p.evaluate(() => { window.__viewer.pick('penal'); window.__viewer.set('status', 'broken'); });
   await p.waitForTimeout(420);
   const mid = await p.evaluate(() => {
     const st = window.__viewer.state(), now = performance.now();
@@ -480,13 +480,18 @@ async function pickAndFire(p, key, ms) {
     return { standing: st.collar.at.filter((t) => t > now).length, fx: window.__viewer.fx().length };
   });
   ok('...until all are down', end.standing === 0 && end.fx === 0);
+  // destroyed is the squad lying dead, with no collars going off
   await p.evaluate(() => window.__viewer.destroy());
+  await p.waitForTimeout(200);
+  const dead = await p.evaluate(() => ({ collar: !!window.__viewer.state().collar, blasts: window.__viewer.fx().filter((k) => k === 'collar').length }));
+  ok('destroyed, a penal squad just lies dead', !dead.collar && dead.blasts === 0, JSON.stringify(dead));
+  await p.evaluate(() => window.__viewer.set('status', 'broken'));
   await p.waitForTimeout(100);
   const again = await p.evaluate(() => {
     const st = window.__viewer.state(), now = performance.now();
     return { blasts: window.__viewer.fx().filter((k) => k === 'collar').length, standing: st.collar.at.filter((t) => t > now).length };
   });
-  ok('Destroyed pressed again plays it over', again.blasts === 8 && again.standing === 8, JSON.stringify(again));
+  ok('Broken pressed again plays it over', again.blasts === 8 && again.standing === 8, JSON.stringify(again));
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('another unit is not left mid-detonation', !(await p.evaluate(() => window.__viewer.state().collar)));
 

@@ -342,8 +342,8 @@
   var WEAPONS = {
     /* ---- PMC infantry ---- */
     recruits: { p: 'small' },
-    // irregulars scavenge carbines; penal troops are issued a sidearm and a shovel
-    irregulars: { p: 'smg' }, penal: { p: 'pistol' },
+    // irregulars scavenge carbines, and penal troops are handed out cheap SMGs
+    irregulars: { p: 'smg' }, penal: { p: 'smg' },
     enforcers: { p: 'smg' },
     rookie: { p: 'small' }, regular: { p: 'small' },
     // the senior rifle teams have carbines in the squad alongside the rifles

@@ -154,6 +154,8 @@
     window.__tapInsertion = function (q) { placeInsertion(q); };
     window.__sendIntent = function (it) { send(it); };
     window.__lookAt = function (x, y) { var q = ISO.toScreen(x, y); centreOn(q.x, q.y, true); render(); };
+    // the part of the table on screen, in table pixels: { sx, sy, sw, sh }
+    window.__viewRect = function () { return viewRect(); };
     window.__seats = function () { return B.seats.slice(); };
     window.__mySide = function () { return mySide(); };
 

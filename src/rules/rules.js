@@ -1346,8 +1346,9 @@
         unitDist(a, t) <= a.range && hasLoS(state, a, t);
     });
   }
-  function steadyFire(state, a, t) {
-    var m = shotMods(state, a, t, 'fire', {});
+  // `mode`: 'fire' standing still, with Fire!'s +1; 'advance' after an Advance's move, without it
+  function steadyFire(state, a, t, mode) {
+    var m = shotMods(state, a, t, mode === 'advance' ? 'advance' : 'fire', {});
     var roll = d10(), total = m.total + roll, dres = m.def, parts = m.parts.slice();
     parts.unshift({ label: 'D10', v: roll });
     var hits = roll === 0 ? 0 : roll === 9 ? Math.max(1, total - dres.value) : Math.max(0, total - dres.value);
@@ -1583,7 +1584,14 @@
   var NICK = ['Ghost', 'Spider', 'Doc', 'Sparks', 'Lucky', 'Hammer', 'Wolf', 'Crow', 'Moth', 'Saint',
     'Brick', 'Fox', 'Deacon', 'Rook', 'Tinker', 'Viper', 'Blue', 'Ash'];
   var XENO_SYL = ['ka', 'tha', 'ir', 'zha', 'ul', 'vek', 'sa', 'ren', 'oth', 'qua', 'li', 'mar', 'es', 'dro', 'ya', 'kel', 'un', 'ssi'];
-  var OFFICER = ['Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel', 'Colonel'];
+  // a command unit's officer, and the senior NCO or warrant officer beside him, by the unit's Tier
+  var OFFICER = ['Second Lieutenant', 'Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel'];
+  var COMMAND_SECOND = ['Sergeant', 'Staff Sergeant', 'Master Sergeant', 'Warrant Officer', 'Chief Warrant Officer'];
+  /* A PMC hull is commanded by an NCO, heavier and better hulls by more senior
+     ones; a command or EW vehicle by a junior officer, and the flying command
+     post by a Major. */
+  var CREW_NCO = ['Corporal', 'Corporal', 'Sergeant', 'Staff Sergeant', 'Master Sergeant'];
+  var CREW_OFFICER = ['Second Lieutenant', 'Second Lieutenant', 'Lieutenant', 'Lieutenant', 'Captain'];
   var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
 
   function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
@@ -1623,7 +1631,12 @@
      lost its sergeant closes up behind the corporal when it is mustered again. */
   function rankFor(u, i) {
     var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
-    if (isMachine(u)) return isFlying(u) ? 'Pilot' : (f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : 'Commander');
+    if (isMachine(u)) {
+      if (f === 'pmc' && u.key === 'flyingcp') return 'Major';
+      if (f === 'pmc' && (u.key === 'cmdveh' || u.key === 'ewveh' || hasOwn(u, 'Command Vehicle'))) return CREW_OFFICER[tier - 1];
+      if (isFlying(u)) return 'Pilot';
+      return f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : CREW_NCO[tier - 1];
+    }
     if (u.vip) return i === 0 ? 'VIP' : 'Bodyguard';
     if (f === 'xeno') {
       if (u.command) return i === 0 ? 'Warleader' : 'Chosen';
@@ -1638,7 +1651,8 @@
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
-    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? 'Sergeant Major' : 'Staff Sergeant';
+    // then a corporal, and the rest privates: the staff's signallers, runners and guards
+    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? COMMAND_SECOND[tier - 1] : i === 2 ? 'Corporal' : 'Private';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
     if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
     if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';

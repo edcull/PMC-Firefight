@@ -841,10 +841,14 @@
         /* Expendable: a penal trooper's collar going off at his neck, while he is
            still on his feet — a red telltale blinking faster and faster, then a
            sharp flash, a spray of sparks and a wisp of dark smoke. */
-        // at the collar's own red light, on the neck of a man down on one knee (as the squad waits, Broken)
-        var qp = I.toScreen(f.x, f.y);
-        qp.y -= liftAt(f) + I.K * (f.neck || 0.52);
+        /* At the collar's own red light: `neck` is its height, 0.68" on a man on
+           his feet (running) and 0.52" on one down on a knee. */
         var blink = 0.24, pop = 0.44;
+        /* A man running as it blinks: (x, y) is where he is when it fires, and
+           until then the telltale is drawn back along his run, on him. */
+        var popAge = blink * (f.dur - (f.delay || 0)), back = Math.max(0, popAge - age);
+        var qp = I.toScreen(f.x - (f.vx || 0) * back, f.y - (f.vy || 0) * back);
+        qp.y -= liftAt(f) + I.K * (f.neck || 0.52);
         if (k < blink) {
           var bk = k / blink;
           if (Math.sin(bk * bk * 60) > 0) {
@@ -1014,10 +1018,33 @@
      `dur` ms in all. The order they go in, over a squad's places in formation. */
   var COLLAR = {
     step: 170, blink: 360, dur: 1500,
+    run: 0.0017,              // how fast the squad bolts as they go off, in inches a millisecond (~2.5" in all)
     order: function (n) {
       var o = [];
       for (var i = 0; i < n; i++) o.push(i);
       return o.sort(function (a, b) { return ((a * 7 + 3) % n) - ((b * 7 + 3) % n); });
+    },
+    /* The squad breaks and runs as the collars start to go: every man bolts the
+       same way (`ang`, away from the danger), and each falls where he has got
+       to when his own collar fires, so they leave a trail of bodies. `pts` are
+       their places in formation at `t0`. Hands back, for each man in formation
+       order, when his collar fires (`at`), where he falls (`end`), and his
+       velocity (`vx`, `vy`), with `where(i, t)` for where he is at time t. */
+    plan: function (pts, t0, ang) {
+      var vx = Math.cos(ang) * COLLAR.run, vy = Math.sin(ang) * COLLAR.run, at = [], end = [];
+      var clamp = function (v) { return Math.max(1, Math.min(47, v)); };
+      COLLAR.order(pts.length).forEach(function (idx, i) {
+        var delay = i * COLLAR.step, pop = delay + COLLAR.blink;
+        at[idx] = t0 + pop;
+        end[idx] = { x: clamp(pts[idx].x + vx * pop), y: clamp(pts[idx].y + vy * pop), delay: delay };
+      });
+      return {
+        t0: t0, at: at, end: end, vx: vx, vy: vy, pts: pts,
+        where: function (i, t) {
+          var e = Math.max(0, Math.min(t, at[i]) - t0);
+          return { x: clamp(pts[i].x + vx * e), y: clamp(pts[i].y + vy * e) };
+        }
+      };
     }
   };
   root.PMCFx = { create: create, paint: paint, COLLAR: COLLAR };
