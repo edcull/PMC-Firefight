@@ -1104,8 +1104,7 @@
         var back = window.PMCLobby.resumable && window.PMCLobby.resumable();
         if (el('menu-multi-sub')) el('menu-multi-sub').textContent = back
           ? 'Resume your game — code ' + back : 'Play somebody else over the network';
-        // the card opens the Multiplayer list (menu.js); a game to go back to is under Skirmish
-        if (back && el('menu-online-sub')) el('menu-online-sub').textContent = 'Resume your game — code ' + back;
+        // the card opens the lobby (menu.js)
       }
       if (mb && online && window.fetch) {
         window.fetch('/health', { cache: 'no-store' })

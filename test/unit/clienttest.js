@@ -295,10 +295,7 @@ app.drain(4);
   ok('Hotseat opens its own list', byId('menu-hotseat').hidden === false && byId('menu-single').hidden === true);
   ok('...with a skirmish, co-op and the campaign on it', /data-skirmish="hotseat"/.test(pane('hotseat')) &&
     /data-skirmish="coop"/.test(pane('hotseat')) && /data-camp="hotseat"/.test(pane('hotseat')));
-  ok('Multiplayer is on the main menu, with a skirmish, co-op and a campaign under it', /id="btn-multi"/.test(pane('main')) &&
-    ['skirmish', 'coop', 'campaign'].every((k) => pane('multi').indexOf('data-online="' + k + '"') >= 0));
-  W.PMCMenu.show('multi');
-  ok('...and it stays shut with no server behind the page', byId('menu-multi').hidden === true && byId('menu-main').hidden === false);
+  ok('Multiplayer is on the main menu, and goes straight to the lobby', /id="btn-multi"/.test(pane('main')) && !/id="menu-multi"/.test(page));
   W.PMCMenu.show('main');
   W.PMCMenu.close(); W.PMC_SKIRMISH('hotseat');
   ok('Hotseat opens the muster sheet, set for hotseat',
@@ -477,10 +474,7 @@ ok('the multiplayer button is wired up', ash.doc.getElementById('btn-multi').hid
 ok('...and greyed out on a page with no server behind it', app.doc.getElementById('btn-multi').disabled === true &&
   app.doc.getElementById('btn-multi').hidden === false);
 const ashBody = () => ash.doc.getElementById('lobby-body').innerHTML;
-ok('the lobby screen draws', /Start a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Online skirmish');
-ash.win.PMCMenu.show('multi');
-ok('with a server, Multiplayer opens its own list', ash.doc.getElementById('menu-multi').hidden === false);
-ash.win.PMCMenu.show('main');
+ok('the lobby screen draws', /Start a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Multiplayer');
 ok('it says there are no games yet', /No games open/.test(ashBody()));
 
 /* Ash starts a game. */

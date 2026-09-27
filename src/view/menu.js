@@ -1,7 +1,8 @@
 /* The main menu: the first screen, and the one every "back" leads to.
 
-   Single player, Hotseat and Multiplayer each open a list of their own —
-   a skirmish, co-op or solitaire, and a campaign — and every card on those hands over to the screen that
+   Single player and Hotseat each open a list of their own — a skirmish, co-op
+   or solitaire, and a campaign — and Multiplayer goes straight to the lobby,
+   which asks the same when a game is started. Every card hands over to the screen that
    already does the job — the muster sheet, the campaign dossier, the lobby —
    so this file only decides which one to open and how it is set up.
 
@@ -23,14 +24,12 @@
   function el(id) { return document.getElementById(id); }
 
   /* ================= navigation ================= */
-  var PANES = ['main', 'single', 'hotseat', 'multi'];
+  var PANES = ['main', 'single', 'hotseat'];
   // where Back (and Escape) goes from each list
-  var UP = { single: 'main', hotseat: 'main', multi: 'main' };
+  var UP = { single: 'main', hotseat: 'main' };
   var at = 'main';
 
   function show(pane) {
-    // Multiplayer is only there with a game server behind the page
-    if (pane === 'multi' && el('btn-multi') && el('btn-multi').disabled) pane = 'main';
     if (PANES.indexOf(pane) < 0) pane = 'main';
     at = pane;
     PANES.forEach(function (p) { var e = el('menu-' + p); if (e) e.hidden = p !== pane; });
@@ -108,19 +107,15 @@
       // the campaign, solo or hotseat: the dossier takes it from here (dossier.js)
       var cm = b.getAttribute('data-camp');
       if (cm) { if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.enter) root.PMC_CAMPAIGN.enter(cm); else close(); return; }
-      // a game over the network: the lobby, set for the kind picked (lobby.js)
-      var net = b.getAttribute('data-online');
-      if (net) {
-        if (b.disabled || !root.PMCLobby) return;
-        var s = el('setup');
-        if (s) s.hidden = true;
-        close();
-        root.PMCLobby.open(net);
-        return;
-      }
       if (b.id !== 'btn-discard') unconfirm();
       switch (b.id) {
-        case 'btn-multi': show('multi'); return;
+        // a game over the network: the lobby, which asks what kind when one is started (lobby.js)
+        case 'btn-multi':
+          if (b.disabled || !root.PMCLobby) return;
+          if (el('setup')) el('setup').hidden = true;
+          close();
+          root.PMCLobby.open();
+          return;
         case 'btn-resume': close(); return;
         case 'btn-discard':
           if (!b.classList.contains('confirm')) {
