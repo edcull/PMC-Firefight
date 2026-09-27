@@ -64,17 +64,29 @@ async function drain(p) {
   await p.waitForTimeout(200);
   await p.evaluate(() => window.PMC_SETVIEW(20, 20, 2.2));
   await p.evaluate(() => window.__pressAction('regroup'));
-  // each man's collar goes off where he falls, one after another
-  await p.waitForTimeout(260);
-  const blasts = await p.evaluate(() => window.__fxkinds().filter((k) => k === 'collar').length);
+  /* the men are still standing while their collars blink and go off, one after
+     another; each falls only as his own goes */
+  await p.waitForTimeout(420);
+  const mid = await p.evaluate((a) => {
+    const s = window.PMC_STATE(), u = s.units.find((x) => x.id === a.id), now = performance.now();
+    const cl = u._collar;
+    return {
+      blasts: window.__fxkinds().filter((k) => k === 'collar').length,
+      standing: cl ? cl.at.filter((t) => t > now).length : -1,
+      down: (s.remains || []).filter((r) => r.kind === 'body' && (!r.showAt || r.showAt <= now) && Math.hypot(r.x - 20, r.y - 20) < 2).length
+    };
+  }, before);
   await p.locator('.board-wrap').screenshot({ path: path.join(SHOTS, 'collars-blast.png') });
+  ok('part way through, some men are still on their feet', mid.standing > 0 && mid.standing < before.models, mid.standing + ' standing');
+  ok('...and only the fallen have bodies yet', mid.down === before.models - mid.standing, mid.down + ' down');
+  const blasts = mid.blasts;
   await p.waitForTimeout(1500);
   await drain(p);
 
   const after = await p.evaluate((a) => {
     const s = window.PMC_STATE(), u = s.units.find((x) => x.id === a.id);
     const bodies = (s.remains || []).filter((r) => r.kind === 'body');
-    const here = bodies.filter((r) => Math.hypot(r.x - 20, r.y - 20) < 0.5);
+    const here = bodies.filter((r) => Math.hypot(r.x - 20, r.y - 20) < 2);
     return { alive: u.alive, models: u.models, fled: !!u.fled, expended: !!u.expended, bodies: bodies.length, here: here.length,
       log: s.log.slice(-6).map((l) => l.text).join(' / ') };
   }, before);
