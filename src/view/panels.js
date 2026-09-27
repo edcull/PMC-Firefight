@@ -766,6 +766,9 @@
         (wave ? 'The two waves' : 'Held back') + ' \u2014 ' +
         '<b class="' + (sp.ok ? 'ok' : 'short') + '">' + sp.held + '</b> of ' + range + (wave ? ' in the second wave' : ' to hold back') + '</div>' +
         '<p class="hint small">' + esc(sp.rule) + ' Tap a unit to ' + (wave ? 'switch its wave' : 'hold it back or bring it onto the table') + '.</p>' +
+        // or let the scenario's own split stand: every other unit, the biggest first
+        '<div class="acts"><button class="act" data-act="autosplit"><span>' + (wave ? 'Split the waves for me' : 'Choose reserves for me') + '</span>' +
+        '<small>' + (wave ? 'Every other unit in the second wave' : 'Every other unit held back, the biggest first') + '</small></button></div>' +
         rows +
         (sp.ok ? '' : '<p class="cpwarn">' + (wave ? 'Put ' : 'Hold back ') + (sp.held < sp.min ? (sp.min === sp.max ? 'exactly ' + sp.min : 'at least ' + sp.min) : (sp.min === sp.max ? 'exactly ' + sp.max : 'no more than ' + sp.max)) +
           (wave ? ' in the second wave' : '') + ' before the battle can begin.</p>') +
@@ -953,6 +956,7 @@
           else if (a === 'autodeploy') autoDeployMine();
           else if (a === 'rpickdone') send({ k: 'rpickdone' });
           else if (a === 'deploybox') { deployBox = true; render(); }
+          else if (a === 'autosplit') send({ k: 'autosplit' });
           else if (a === 'deployboxdone') { deployBox = false; render(); }
           else if (a === 'start') { ui.startAsk = false; ui.startWhy = false; startBattle(); }
           // greyed until the reserves are chosen: say so, for a few seconds

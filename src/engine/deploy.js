@@ -431,10 +431,14 @@
         });
       });
     }
-    // the scenario's own split, put back (the test harness's way through; the page never does it unasked)
+    /* The scenario's own split, put in place of whatever the player had chosen
+       (the "Choose reserves for me" button, and the test harnesses' way
+       through deployment). */
     function autoSplit(side) {
       var sp = E.state.sc && E.state.sc.split && E.state.sc.split[side], f = splitFor(side);
       if (!sp || !f) return;
+      f.units.forEach(function (x) { if (x.held && (sp.auto || []).indexOf(x.id) < 0) toggleHold(side, x.id); });
+      f = splitFor(side);
       (sp.auto || []).forEach(function (id) {
         var x = f.units.filter(function (w) { return w.id === id; })[0];
         if (x && !x.held) toggleHold(side, id);

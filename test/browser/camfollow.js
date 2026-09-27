@@ -20,7 +20,7 @@ async function drain(p) {
   }
 }
 const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!window.__mySide(),
-  hint: (document.getElementById('returnhint') || {}).textContent, hintOn: !document.getElementById('returnhint').hidden,
+  hint: (document.getElementById('returnhint') || {}).textContent || '', hintOn: !!document.getElementById('returnhint') && !document.getElementById('returnhint').hidden,
   dim: document.getElementById('viewctl').classList.contains('locked') }));
 
 (async () => {
@@ -64,7 +64,7 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
       // and when it is handed back, where it was handed back to
       const back = setInterval(() => { const n = window.__cam(); if (!n.borrowed) { clearInterval(back); window.__backTo = n.home; } }, 5);
       window.__lockSeen = { home: c.home, before, after: { x: after.x, y: after.y, z: after.z, borrowed: after.borrowed },
-        hint: hint.hidden ? '' : hint.textContent, dim: document.getElementById('viewctl').classList.contains('locked') };
+        hint: !hint || hint.hidden ? '' : hint.textContent, dim: document.getElementById('viewctl').classList.contains('locked') };
     }, 5);
   });
   let c = await cam(p), home = null, seen = null;

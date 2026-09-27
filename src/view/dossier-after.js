@@ -44,6 +44,17 @@
       var opts = {}; for (var k in post.pre) opts[k] = post.pre[k];
       opts.defer = true;                // the other forces' battles are fought out below, not rolled
       E.after = C.aftermath(E.camp, post.report, opts);
+      // the share of each force lost, from the report (for the figures at the head of the aftermath)
+      E.after.loss = {};
+      ['A', 'B'].forEach(function (sd) {
+        var st = 0, en = 0;
+        (post.report.units || []).forEach(function (l) {
+          if (l.side !== sd) return;
+          st += l.startSize || 0;
+          en += l.wiped || l.destroyed ? 0 : Math.min(l.endSize || 0, l.startSize || 0);
+        });
+        E.after.loss[sd] = st ? Math.round(100 * (st - en) / st) : null;
+      });
       /* Kept on the campaign, battle by battle as each is settled, so a reload
          part way through goes on from the next one rather than starting over. */
       if (E.after.pairs && E.after.pairs.length) E.camp.fronts = { pairs: E.after.pairs, done: [], planet: post.report.planet || null };
@@ -100,7 +111,7 @@
     function keepAfter() {
       var last = E.camp.log[E.camp.log.length - 1];
       if (!E.after || !last || last.turn !== E.after.turn) return;
-      var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, sides: { A: a.sides.A }, fronts: a.fronts || null, elsewhere: a.elsewhere || [] };
+      var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, loss: a.loss || null, sides: { A: a.sides.A }, fronts: a.fronts || null, elsewhere: a.elsewhere || [] };
       if (E.camp.mode === 'hotseat' && a.sides.B) keep.sides.B = a.sides.B;
       last.after = JSON.parse(JSON.stringify(keep));
       last.balance = E.camp.companies.A.kUC;
@@ -293,8 +304,20 @@
     }
     function afterPage(pastLine) {
       var h = '<h2>Aftermath' + (pastLine ? ' \u2014 turn ' + pastLine.turn : '') + '</h2>';
-      var res = E.after.winner === 'A' ? 'A victory.' : E.after.winner === 'B' ? 'A defeat.' : 'A draw.';
-      h += '<p class="lede">Campaign turn ' + E.after.turn + '. ' + res + '</p>';
+      /* The day at a glance, as the other forces' battles are shown: whether it
+         was won, then what the force lost, was paid, and took away in
+         experience and trauma. */
+      var coA = E.camp.companies.A, recA = E.after.sides.A, lossA = E.after.loss ? E.after.loss.A : null;
+      var sum = function (k) { return recA.units.reduce(function (n, u) { return n + (u[k] ? u[k].total : 0); }, 0); };
+      var won = E.after.winner === 'A' ? 'Won' : E.after.winner ? '' : 'Draw';
+      h += '<div class="front-row after-head"><b>' + esc(coA.name) + '</b>' + (won ? ' <i class="good">' + won + '</i>' : ' <i class="bad">Lost</i>') +
+        '<div class="cstats four">' + [
+          { cls: 'cs-lost', v: lossA == null ? '\u2014' : lossA + '%', w: 'losses' },
+          { cls: 'cs-win', v: '+' + E.after.payment.A, w: C.money(coA) },
+          { cls: 'cs-exp', v: '+' + sum('exp'), w: 'EXP' },
+          { cls: 'cs-tra', v: '+' + sum('tp'), w: 'Trauma' }
+        ].map(function (c) { return '<div class="cstat ' + c.cls + '"><b>' + c.v + '</b><span>' + esc(c.w) + '</span></div>'; }).join('') +
+        '</div></div>';
 
       h += '<h3>Payment</h3>';
       var p = E.after.payment;

@@ -117,12 +117,43 @@ async function newGame(p, cfg) {
 
   head('A battle with buildings in it');
   await newGame(p, { mode: 'demo', planet: 'dense', scenario: 'secure', armyA: ['cmd3', 'regular', 'veterans', 'regular', 'hmgteam', 'regular'], armyB: ['cmd3', 'regular', 'veterans', 'regular', 'hmgteam', 'regular'] });
+  /* The machine takes a building when a squad of its stands in the open beside
+     one and its behaviour roll comes up defensive or neutral, 70% of the time
+     (engine/ai.js). So that is arranged rather than hoped for: every squad of
+     one side is put in the open just outside a building of its own, and the
+     dice come up low until one has gone in. */
+  const placed = await p.evaluate(() => {
+    const s = window.PMC_STATE(), R = window.PMC;
+    // a dense table is rolled, and the roll can come up with no buildings at all: then two are put up in the middle
+    if (!s.terrain.some(t => t.kind === 'building')) {
+      s.terrain.push({ kind: 'building', x: 14, y: 21, w: 4, h: 4 }, { kind: 'building', x: 30, y: 21, w: 4, h: 4 });
+      window.__rebuildScene();
+    }
+    const blds = s.terrain.filter(t => t.kind === 'building');
+    let n = 0;
+    s.units.filter(u => u.side === 'B' && u.alive && !u.bld && u.x >= 0 && !R.isMachine(u)).forEach((u, i) => {
+      const b = blds[i % Math.max(1, blds.length)];
+      if (!b) return;
+      const tries = [[b.x - 1.8, b.y + b.h / 2], [b.x + b.w + 1.8, b.y + b.h / 2], [b.x + b.w / 2, b.y - 1.8], [b.x + b.w / 2, b.y + b.h + 1.8]];
+      const at = tries.find(q => q[0] > 1.5 && q[1] > 1.5 && q[0] < 46.5 && q[1] < 46.5 && R.terrainAt(s, q[0], q[1]) === 'open' &&
+        !s.units.some(o => o !== u && o.alive && o.x >= 0 && Math.hypot(o.x - q[0], o.y - q[1]) < 2.6));
+      if (!at) return;
+      u.x = at[0]; u.y = at[1]; u.ax = u.ay = null; n++;
+    });
+    window.__realRandom = Math.random;
+    Math.random = () => 0.02;
+    window.__clearSel();
+    return { buildings: blds.length, placed: n };
+  });
+  ok('squads of one side stand in the open beside the buildings', placed.placed > 0, placed.placed + ' placed beside ' + placed.buildings + ' buildings');
   let entered = 0, turn = 0;
   for (let k = 0; k < 120; k++) {
     await p.waitForTimeout(250);
     await drain(p);
     const st = await p.evaluate(() => { const s = window.PMC_STATE(); return { turn: s.turn, over: !!s.over, inside: s.units.filter(u => u.alive && u.bld).length, twice: (function () { const seen = {}; let bad = 0; s.units.forEach(u => { if (!u.alive || !u.bld) return; const k2 = s.terrain.indexOf(u.bld) + ':' + (u.sec || 0); if (seen[k2]) bad++; seen[k2] = 1; }); return bad; })() }; });
     entered = Math.max(entered, st.inside); turn = st.turn;
+    // one in: the dice go back to being dice
+    if (st.inside) await p.evaluate(() => { if (window.__realRandom) { Math.random = window.__realRandom; window.__realRandom = null; } });
     if (st.twice) { ok('never two units in one building', false, 'turn ' + st.turn); break; }
     if (st.over || st.turn >= 4) break;
   }

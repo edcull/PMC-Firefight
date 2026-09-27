@@ -445,7 +445,11 @@
 
   // the terrain set-up (pp. 46-47): terrainset.js (installed with the modules, below)
   /* ================= motion and effects ================= */
-  function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+  /* The board's clock. A test harness may run it faster (window.PMC_TIME_SCALE,
+     set before the page loads) so a watched AI battle plays out in a fraction
+     of the time; nothing a player can reach changes it. */
+  var TIME_SCALE = +window.PMC_TIME_SCALE || 1;
+  function nowMs() { return ((window.performance && performance.now) ? performance.now() : Date.now()) * TIME_SCALE; }
 
   function busy() {
     return anims.length > 0 || anyArriving() || FX.busy();

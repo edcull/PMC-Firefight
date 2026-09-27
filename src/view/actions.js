@@ -168,7 +168,7 @@
       var actor = res.side || B.state.activeSide;
       if (!isAI(actor) && B.state.cfg.aiSides.length < 2) return;
       var wait = res.kind === 'Assault' ? 3200 : res.kind === 'Initiative' ? 1400 : 2200;
-      ui.resTimer = setTimeout(closeRes, wait);
+      ui.resTimer = setTimeout(closeRes, wait / (+window.PMC_TIME_SCALE || 1));
     }
 
     function closeRes() {

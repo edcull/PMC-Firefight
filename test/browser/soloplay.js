@@ -6,6 +6,8 @@ const { page: PAGE } = require('../where.js');
 (async () => {
   const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1300, height: 850 } });
+  // the battles are watched, not played: the drawing runs twenty-five times over (game.js, PMC_TIME_SCALE)
+  await p.addInitScript(() => { window.PMC_TIME_SCALE = 25; });
   const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
   // the page is two levels up (test/browser/ has no index.html of its own)
   await p.goto('file://' + PAGE); await p.waitForTimeout(600); if (process.env.COOP) await p.evaluate(() => { window.__coop = true; });
