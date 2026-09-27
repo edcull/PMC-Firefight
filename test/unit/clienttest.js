@@ -93,6 +93,10 @@ function makeElement(tag, doc) {
     get() { return el._html || ''; },
     set(v) { el._html = String(v); el.children = []; }
   });
+  // the battle log adds its new lines to the end rather than writing itself again
+  el.insertAdjacentHTML = function (where, v) {
+    el._html = where === 'afterbegin' || where === 'beforebegin' ? String(v) + (el._html || '') : (el._html || '') + String(v);
+  };
   Object.defineProperty(el, 'firstChild', { get() { return el.children[0] || null; } });
   /* Giving an element an id is how the code makes it findable, so doing it
      registers it the way attaching it to a real document would. */
