@@ -29,7 +29,7 @@
         var o = state.units[i];
         if (!o.alive || o.side !== side || o.aboard || o.reserve || o.x < 0 || !xenoSenses(o)) continue;
         if (campFlag(o, 'banished') || status(o) === 'broken') continue;
-        if (centreDist(o, t) > sightRange(o)) continue;
+        if (unitDist(o, t) > sightRange(o)) continue;
         if (isFlying(o) || isFlying(t) || lineClear(state, o, t)) out.push(o);
       }
       return out;

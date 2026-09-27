@@ -83,7 +83,7 @@
          everything; Indirect Fire lobs over whatever is in the way. */
       var senses = xenoSenses(a) && !campFlag(a, 'banished');
       if (isFlying(a) || isFlying(t)) {                  // aircraft shoot and are shot over everything
-        return !xenoSenses(a) || centreDist(a, t) <= sightRange(a) || (senses && tribeSees(state, a.side, t));
+        return !xenoSenses(a) || unitDist(a, t) <= sightRange(a) || (senses && tribeSees(state, a.side, t));
       }
       if (hasLoS(state, a, t)) return true;
       if (!senses || !tribeSees(state, a.side, t)) return false;

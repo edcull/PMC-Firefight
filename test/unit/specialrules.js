@@ -122,6 +122,18 @@ ok('Stealth adds +1 Defence per 6"', defv(w2, far2, sniper) - sniper.def, 2, 'ov
 w2.units = [keen, sniper];
 ok('Keen-Eyed sees through Stealth', defv(w2, keen, sniper) - sniper.def, 0);
 
+head('Sight: 36" between the closest models (p. 26)');
+(function () {
+  var mortar = mk('mortarteam', 'A', 4, 20), w = world();
+  var gap = function (t) { return R.unitDist(mortar, t).toFixed(1) + '" base to base'; };
+  var near = mk('regular', 'B', 4 + 35 + 2 * R.UNIT_R, 20), far = mk('regular', 'B', 4 + 37 + 2 * R.UNIT_R, 20);
+  w.units = [mortar, near];
+  ok('a unit 35" away is in sight', R.hasLoS(w, mortar, near), true, gap(near));
+  ok('...and in a 48" mortar\'s reach', R.canShoot(w, mortar, near, 'fire'), true);
+  w.units = [mortar, far];
+  ok('one 37" away is not', R.hasLoS(w, mortar, far), false, gap(far));
+})();
+
 head('Specialisation, Limited Fire Arc, Minimum Range, Cumbersome');
 var w3 = world();
 var ground = mk('regular', 'B', 26, 20);

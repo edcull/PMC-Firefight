@@ -485,10 +485,11 @@
       return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
     }
 
-    // Line of sight, centre to centre. Blocked by LoS-blocking terrain (unless the unit is
-    // standing in it — you can see in and out) and by intervening units.
+    // Line of sight, centre to centre, out to 36" measured base to base (p. 26). Blocked by
+    // LoS-blocking terrain (unless the unit is standing in it — you can see in and out)
+    // and by intervening units.
     function hasLoS(state, a, b) {
-      if (centreDist(a, b) > sightRange(a)) return false;
+      if (unitDist(a, b) > sightRange(a)) return false;
       return lineClear(state, a, b);
     }
     // the line itself, however far: terrain that blocks and units standing in the way
