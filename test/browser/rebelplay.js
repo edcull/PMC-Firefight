@@ -65,6 +65,12 @@ async function run(p, label, cfg, checks) {
   if (checks) checks(set);
 
   await p.evaluate(() => {
+    /* Pieces the player puts down by hand come first — Last Stand's barricades,
+       a Hostile takeover defender's position: settled the quick way (the auto
+       button for the position, Done for the rest), as a player in a hurry would. */
+    for (let n = 0; n < 4 && window.PMC_STATE().placeAsk; n++) {
+      window.__sendIntent({ k: window.PMC_STATE().placeAsk.kind === 'fort' ? 'placeauto' : 'placedone' });
+    }
     const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
     if (b) b.click();
   });
@@ -75,7 +81,8 @@ async function run(p, label, cfg, checks) {
     s.cfg.aiSides = ['A', 'B'];                  // AI against AI, unpaced
     const b = window.__beginButton();
     if (b) b.click();
-    return s.phase;
+    return s.phase === 'battle' ? s.phase : s.phase + ' ' + JSON.stringify({ scen: s.scen && s.scen.id, place: s.placeAsk && s.placeAsk.why, mine: !!s.minePick, swap: s.swapStage || null, button: !!b,
+      left: s.units.filter(u => u.x < 0 && !u.reserve && !u.aboard && u.alive).map(u => u.side + ':' + u.name).join(', ') });
   });
   ok('the battle starts once both forces are down', started === 'battle', started);
   await p.waitForTimeout(400);
