@@ -268,7 +268,9 @@
       var mv = cl.plan.v[it.i];
       I.drawUnit(g, Object.assign({}, u, { models: 1, x: it.x, y: it.y, faceL: (mv.vx - mv.vy) < 0, facing: Math.atan2(mv.vy, mv.vx) }), {
         at: { x: it.x, y: it.y }, lift: 0, status: 'ready', morale: 0, noRing: true,
-        walk: 1 + Math.floor((now - cl.plan.t0 + it.i * 53) / 110) % 2
+        walk: 1 + Math.floor((now - cl.plan.t0 + it.i * 53) / 110) % 2,
+        // his collar lamp: amber as the squad breaks, red once his own collar is counting down
+        lamp: now < cl.at[it.i] - root.PMCFx.COLLAR.blink ? 'broken' : 'red'
       });
     });
   }
