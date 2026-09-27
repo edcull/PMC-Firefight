@@ -790,7 +790,7 @@
       var rows = sp.units.map(function (x) {
         var note = x.locked ? 'emplaced \u2014 never held back'
           : wave ? (x.held ? 'second wave' : 'first wave')
-          : x.held ? 'held back' : 'on the table';
+          : x.held ? (x.insert ? 'held back \u2014 by insertion' : 'held back') : x.inserter ? 'on the table \u2014 can insert' : 'on the table';
         return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-holdback="' + x.id + '"' + (x.locked ? ' disabled' : '') + '>' +
           '<span class="dpr-mark">' + (x.held ? (wave ? '2' : '\u21a9') : (wave ? '1' : '\u2713')) + '</span>' +
           '<span class="dpr-name">' + esc(x.name) + '</span>' +

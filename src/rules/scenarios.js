@@ -896,12 +896,22 @@
     if (!state.scen.deployOK) return null;
     return state.scen.deployOK(state, side, x, y, u);
   }
+  /* A unit held back in the scenario's split that has Battlefield Insertion
+     (`insert`) counts toward the reserves the scenario asks for, but comes in by
+     insertion from turn 2 (p. 56), not on the scenario's schedule or edges. */
   function reserves(state, side) {
-    return state.scen.reserves ? (state.scen.reserves(state, side) || []) : [];
+    var r = state.scen.reserves ? (state.scen.reserves(state, side) || []) : [];
+    return r.filter(function (u) { return !u.insert; });
   }
   // the reserves a player picks from this turn, where the scenario leaves the choice to them
   function reservePick(state, side) {
-    return state.scen.reservePick ? state.scen.reservePick(state, side) : null;
+    var p = state.scen.reservePick ? state.scen.reservePick(state, side) : null;
+    if (p && p.pool) {
+      p.pool = p.pool.filter(function (u) { return !u.insert; });
+      p.max = Math.min(p.max, p.pool.length); p.min = Math.min(p.min, p.max);
+      if (!p.pool.length) return null;
+    }
+    return p;
   }
   /* Every End phase: the automatic victory of p. 49 comes first, because it holds
      in every scenario — including the three that have no rout clause of their own —

@@ -512,7 +512,21 @@
   function finishSetup(built) {
     var cfg = state.cfg;
     ['A', 'B'].forEach(markReserves);
+    /* A player's units held for Battlefield Insertion go into the scenario's own
+       split, if it makes one, and are toggled with the rest of its reserves (a
+       held one still comes in by insertion): so they are let go before it splits
+       the force, and held again only where it makes no split. */
+    var heldIns = {};
+    ['A', 'B'].forEach(function (sd) {
+      if (isAI(sd)) return;
+      heldIns[sd] = state.units.filter(function (u) { return u.side === sd && u.reserve && u.wave == null; });
+      heldIns[sd].forEach(function (u) { u.reserve = false; });
+    });
     SC.deploy(state);
+    Object.keys(heldIns).forEach(function (sd) {
+      if (state.sc.split && state.sc.split[sd]) return;
+      heldIns[sd].forEach(function (u) { if (!u.reserve) { u.reserve = true; u.x = -1; u.y = -1; } });
+    });
     nextPlace();
     seatPlatforms();             // every drop pod comes down with somebody in it
     baselineSplits();

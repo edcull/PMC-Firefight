@@ -54,5 +54,31 @@ const spare = e2.state().units.find((u) => u.side === 'A' && u.key === 'nomads' 
 const more = e2.intent('A', { k: 'insertion', id: spare.id });
 ok('...and a fifth is refused: no more than half the army', !more.ok, more.why);
 
+console.log('\nIn a scenario with reserves, inserters are held back with the rest');
+(function () {
+  const SC = global.PMCScen;
+  const e3 = Engine.create();
+  e3.start({
+    tier: 3, pl: 1, scenario: 'find', mode: 'ai', planet: 'barren',
+    armyA: ['cmd2', 'regular', 'regular', 'regular', 'nomads', 'nomads', 'nomads', 'nomads'],
+    armyB: R.rollArmy(3, 1, null, 'pmc'), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
+  });
+  const st3 = e3.state(), sp = e3.query.splitFor('A');
+  const nm = st3.units.filter((u) => u.side === 'A' && u.key === 'nomads');
+  ok('they are in the scenario\'s own split', nm.every((u) => sp.units.some((x) => x.id === u.id)));
+  ok('...not in a list of their own', !e3.query.insertionFor('A'));
+  ok('...and, like the rest, none starts held back', sp.held === 0 && nm.every((u) => !u.reserve));
+  e3.intent('A', { k: 'holdback', id: nm[0].id });
+  const sp2 = e3.query.splitFor('A');
+  ok('held back, an inserter counts toward the scenario\'s reserves', sp2.held === 1);
+  ok('...and comes in by insertion, not on the scenario\'s schedule', nm[0].insert === true &&
+    SC.reserves(st3, 'A').indexOf(nm[0]) < 0 && sp2.units.find((x) => x.id === nm[0].id).insert);
+  const reg = st3.units.find((u) => u.side === 'A' && u.key === 'regular');
+  e3.intent('A', { k: 'holdback', id: reg.id });
+  ok('a unit without the rule held back waits for the scenario', !reg.insert);
+  e3.intent('A', { k: 'holdback', id: nm[0].id });
+  ok('let go again, it is on the table like any other', !nm[0].reserve && !nm[0].insert);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
