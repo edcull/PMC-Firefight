@@ -78,6 +78,38 @@ is('lsupport', 'arcbig x3');
 is('msupport', 'arcbig+arcbig x5');
 // the advanced support hull's heavy plasma cannon: four bolts, each bursting
 is('asupport', 'orbbig x3');
+
+head('Xenotripod strike craft and Deltas');
+// the strike craft lob one orb more with each grade, and nothing else
+is('xstrike2', 'orb x2');
+is('xstrike3', 'orb x3');
+is('xstrike4', 'orb x3');
+is('xstrike5', 'orb x4');
+// the Deltas' energy SMGs, every round landing in its own splash
+is('xdelta2', 'smg');
+is('xdelta3', 'smg');
+ok('Delta SMG rounds splash', spec('xdelta2').splash === true && spec('xdelta3').splash === true);
+ok('...and nothing else does', !spec('regular').splash && !spec('xbeta3').splash);
+
+head('Xenotripod salvos');
+all(['xalpha1', 'xalpha2', 'xalpha3', 'xalpha4', 'xalpha5'], 'energy x2');
+is('xbeta3', 'energy x3');
+is('xbeta4', 'energy x4');
+all(['xgamma3', 'xgamma4', 'xgamma5'], 'orb x3');
+is('xeps2', 'pistol');
+is('xeps3', 'small');
+is('xeps4', 'rail x4');
+is('xeps5', 'rail x5');
+all(['xdturret1', 'xdturret2', 'xdturret3', 'xdturret4', 'xdturret5'], 'orb x3');
+
+head('Bug salvos');
+is('bspitlarva', 'spit x2');
+is('bsporethrow', 'spit x3');
+is('bbioplasma', 'spitbig x4');
+is('bcarrier', 'spit x4');
+is('bovermind', 'spit x4');
+is('bqueen', 'spit x4');
+all(['blargewing', 'bsmallpath', 'bpathfinder', 'blurkers', 'bshadow'], 'spine');
 is('mortarsection', 'arc');
 is('mortarteam', 'arc x2');
 is('mortarbattery', 'arc x3');

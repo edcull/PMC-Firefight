@@ -226,10 +226,12 @@
     /* A stream of energy fire from a Xenotripod unit using an ordinary
        firearm's rhythm: the same shots, spaced the same, but every one an energy pulse.
        `style` is the gun's style, `n` roughly how much fire goes down. */
-    zaps: function (style, n) {
+    // `delay` in seconds; `only` caps how many pulses go out (one half of a double burst)
+    zaps: function (style, n, delay, only) {
       if (!ensure()) return;
       var R = { pistol: [4, 0.19, 1.15], small: [8, 0.11, 1], smg: [10, 0.065, 1.1], burst: [12, 0.045, 0.92], chain: [8, 0.1, 0.75] }[style] || [8, 0.11, 1];
-      var count = Math.max(3, Math.min(R[0] + (n || 0), R[0] + 4)), t0 = now();
+      var count = Math.max(3, Math.min(R[0] + (n || 0), R[0] + 4)), t0 = now() + (delay || 0);
+      if (only) count = Math.max(3, Math.min(count, only));
       for (var i = 0; i < count; i++) {
         var t = t0 + i * R[1] + (i % 3) * 0.003, pf = R[2] * (0.985 + (i % 4) * 0.01);
         // each shot is the energy pulse's own sound: a chirp falling away and a glassy ring

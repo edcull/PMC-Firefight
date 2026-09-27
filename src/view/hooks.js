@@ -347,7 +347,7 @@
     // the cadence each streaming style fires at, which the viewer also reads
     window.__fireSpec = function (style) {
       var f = B.FIRE[style];
-      return f ? { gap: f.gap, clump: f.clump || 0, clumpGap: f.clumpGap || 0,
+      return f ? { gap: f.gap, clump: f.clump || 0, clumpGap: f.clumpGap || 0, bursts: f.bursts || 1,
         min: f.n(0), max: f.n(99), length: B.streamLength(style, 2) } : null;
     };
     // test hook: act on a unit as though it had been tapped on the table

@@ -177,6 +177,8 @@ console.log('\nDRONE CONTROL (p. 37)');
 ok('a hull without Transport may be a drone', R.canBeDrone(R.profile('lcv')));
 ok('...and so may an aircraft', R.canBeDrone(R.profile('fsc')));
 ok('...and a Xenotripod craft', R.canBeDrone(R.profile('xstrike3')));
+ok('...the Teleport craft among them', R.canBeDrone(R.profile('xtelecraft')));
+ok('...but not a Teleport turret', !R.canBeDrone(R.profile('xtturret3')));
 ok('...but not a transport', !R.canBeDrone(R.profile('lapc')));
 ok('...nor anything of the Bugs', !R.canBeDrone(R.profile('bfirebeetle')));
 var dr = R.applyDrone(unit('lcv'), true);
