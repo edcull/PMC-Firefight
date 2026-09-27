@@ -439,8 +439,9 @@
             }
           });
         }
-        function coaxMG(sz, z, b) {
-          return barrel(TF, sz * 0.3, sz * 0.62, b, z, 1.2, 'mg', { col: '#15181e' });
+        // (`a0`: where it leaves the turret, when that is further out than the usual mantlet)
+        function coaxMG(sz, z, b, a0) {
+          return barrel(TF, a0 != null ? a0 : sz * 0.3, sz * 0.62, b, z, 1.2, 'mg', { col: '#15181e' });
         }
         // a plasma cannon's barrel: coil rings along it, a cyan throat at the muzzle
         // `up` lays it toward the sky, the rings following it up the barrel
@@ -527,9 +528,13 @@
                 if (st.tMissiles) launcher(TF, -TR * 0.45, TR * 0.1, -TR * 0.7, -TR * 0.46, tz + 4, 7, 2, 2, 'missile', { warheads: '#6a5a3a' });
               };
               gun = function () {
-                if (st.plasma) plasmaBarrel(TR * 0.3, TR * (st.gunLen || 2.15), tz + 6, st.gunW || 3.6);
-                else barrel(TF, TR * 0.3, TR * (st.gunLen || 2.15), 0, tz + 6, st.gunW || 2.8, 'gun', { fume: 0.45, brake: !!st.gunW });
-                coaxMG(TR, tz + 5, TR * 0.18);
+                /* Out of the wedge's point, not from inside the turret: drawn over the
+                   turret, any length behind the armour showed across its front plates. */
+                var g0 = TR * 0.58;
+                if (st.plasma) plasmaBarrel(g0, TR * (st.gunLen || 2.15), tz + 6, st.gunW || 3.6);
+                else barrel(TF, g0, TR * (st.gunLen || 2.15), 0, tz + 6, st.gunW || 2.8, 'gun', { fume: 0.45, brake: !!st.gunW });
+                // the coax leaves the plate beside the gun, where the wedge has swept back (0.26 in, over 0.46 across)
+                coaxMG(TR, tz + 5, TR * 0.18, TR * (0.62 - 0.26 * 0.18 / 0.46 - 0.02));
               };
               break;
             case 'arty':
