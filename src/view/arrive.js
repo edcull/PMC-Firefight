@@ -154,10 +154,22 @@
       var o = B.state.cmdOffer, veh = byId(o.veh), cmd = byId(o.cmd);
       if (!veh || !cmd) return '';
       var n = R.ruleValue(veh, 'Command Unit');
+      var WHAT = {
+        coordinate: n + ' more activations in a row',
+        hack: 'An enemy drone within 24"',
+        designate: R.has(cmd, 'Markerlights') ? 'An Indirect Fire unit shoots, no sight needed' : 'Smoke on an enemy within 12"',
+        marktarget: 'A unit that sees it fires, as at half range',
+        regain: 'Shaken Epsilon squads within 12"'
+      };
+      var acts = o.acts || [{ id: 'coordinate', label: 'Coordinate' }];
       return '<div class="card"><h2>Command Vehicle</h2>' +
-        '<p class="sub"><b>' + esc(cmd.name) + '</b> is riding in <b>' + esc(veh.name) + '</b>. Now the vehicle has acted, it may Coordinate: ' +
-        'up to ' + n + ' friendly units within 12" of the vehicle activate in a row.</p>' +
-        '<div class="acts"><button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + n + ' more activations in a row</small></button>' +
+        '<p class="sub"><b>' + esc(cmd.name) + '</b> is riding in <b>' + esc(veh.name) + '</b>. Now the vehicle has acted, the Command Unit ' +
+        'may take one of its special actions from inside, as though it had stood still.</p>' +
+        '<div class="acts">' + acts.map(function (a) {
+          return a.id === 'coordinate'
+            ? '<button class="act" data-act="cmdcoord"><span>Coordinate</span><small>' + WHAT.coordinate + '</small></button>'
+            : '<button class="act" data-act="cmdact" data-id="' + a.id + '"><span>' + esc(a.label) + '</span><small>' + (WHAT[a.id] || '') + '</small></button>';
+        }).join('') +
         '<button class="act" data-act="cmdskip"><span>No action</span><small>Let the activation pass</small></button></div></div>';
     }
     /* Modifying the armies (p. 46): before deployment, with the enemy's list on

@@ -821,7 +821,7 @@
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
       u.disembarked = false; u.boarded = false;
     });
-    state.chain = null; state.rush = null;
+    state.chain = null; state.rush = null; state.cmdAct = null;
     state.mark = null; state.remark = null;
     var a, b;
     do { a = R.d10(); b = R.d10(); } while (a === b);
@@ -979,6 +979,11 @@
 
   function eligible(side) {
     // an Adrenaline Rush: the unit's second action comes straight after its first
+    // the Command Unit aboard a Command Vehicle taking its own action (p. 57)
+    if (state.cmdAct) {
+      var cv = byId(state.cmdAct.veh);
+      if (cv && cv.side === side && !cv.activated) return cv.alive ? [cv] : [];
+    }
     if (state.rush) {
       var ru = byId(state.rush);
       if (ru && ru.side === side) return ru.alive && !ru.activated && !ru.aboard && R.status(ru) !== 'broken' ? [ru] : [];
@@ -1045,19 +1050,43 @@
        actions" — offered, not forced, and only to a steady Command Unit (a
        Suppressed one cannot Coordinate any more than on foot). */
     var just = ui.lastActed;
+    // the Command Unit's own action from inside the vehicle is over: the go passes on
+    if (state.cmdAct) { state.cmdAct = null; passOn(just); return; }
     if (just && just.alive && R.has(just, 'Command Vehicle') && !state.chain && !state.solo) {
       var cmd = R.commandAboard(just);
-      if (cmd && !cmd.coordUsed && R.status(cmd) === 'ready') {
-        if (isAI(just.side)) cmdCoordinate(just, cmd);
+      var acts = cmd ? cmdOfferActs(just, cmd) : [];
+      if (acts.length) {
+        if (isAI(just.side)) { if (acts[0].id === 'coordinate') cmdCoordinate(just, cmd); }
         else {
-          state.cmdOffer = { veh: just.id, cmd: cmd.id };
-          setHint(null, cmd.name + ' is aboard ' + just.name + ': coordinate now, or let the activation pass.');
+          state.cmdOffer = { veh: just.id, cmd: cmd.id, acts: acts };
+          setHint(null, cmd.name + ' is aboard ' + just.name + ': ' +
+            acts.map(function (a) { return a.label.toLowerCase(); }).join(', ') + ' now, or let the activation pass.');
           render();
           return;
         }
       }
     }
     passOn(just);
+  }
+  /* What the Command Unit riding in a Command Vehicle may do once the vehicle has
+     acted (p. 57): Coordinate, or "an action allowed by any other special rule" of
+     its own — a hack, a mark or a designation. It counts as stationary for it, and
+     a Suppressed Command Unit does nothing, as on foot. */
+  function cmdOfferActs(veh, cmd) {
+    if (R.status(cmd) !== 'ready' || R.status(veh) === 'broken') return [];
+    var out = [];
+    if (R.has(cmd, 'Command Unit') && !cmd.coordUsed) out.push({ id: 'coordinate', label: 'Coordinate' });
+    var own = [];
+    if (R.has(cmd, 'Hackers')) own.push({ id: 'hack', label: 'Hack' });
+    if (R.has(cmd, 'Markerlights')) own.push({ id: 'designate', label: 'Designate' }, { id: 'marktarget', label: 'Mark' });
+    else if (R.has(cmd, 'Smoke Markers')) own.push({ id: 'designate', label: 'Smoke & flare' });
+    if (R.has(cmd, 'Dominant Species')) own.push({ id: 'regain', label: 'Regain Control' });
+    // asked of the vehicle as it stands, the activation it has just spent put aside
+    var was = veh.activated;
+    veh.activated = false;
+    own.forEach(function (a) { if (actionState(veh, a.id).on) out.push(a); });
+    veh.activated = was;
+    return out;
   }
   function cmdCoordinate(veh, cmd) {
     cmd.coordUsed = true;
@@ -1075,6 +1104,20 @@
     if (!o) return;
     state.cmdOffer = null;
     var veh = byId(o.veh), cmd = byId(o.cmd);
+    // one of its own special actions: the vehicle is readied for that one, and nothing else
+    if (take && take !== true && veh && cmd) {
+      cmd.coordUsed = true;
+      veh.activated = false;
+      state.cmdAct = { veh: veh.id, id: take };
+      logLine('note', cmd.label + ', riding in ' + veh.name + ', takes its own action.');
+      ui.selected = veh; ui.hint = null;
+      focusUnit(veh);
+      chooseAction(take);
+      // it counts as stationary (p. 57): no move before a mark, and so a second call
+      ui.moves = [];
+      render();
+      return;
+    }
     if (take && veh && cmd) cmdCoordinate(veh, cmd);
     else if (cmd) { cmd.coordUsed = true; logLine('note', (cmd.label || 'The Command Unit') + ' stays quiet aboard ' + (veh ? veh.name : 'its vehicle') + '.'); }
     ui.hint = null;
@@ -1476,6 +1519,9 @@
           if (state.remark && state.remark.side === side && u.id !== state.remark.by) {
             return no('the marker is naming its second target — pick one, or Cancel');
           }
+          if (state.cmdAct && u.side === side && u.id !== state.cmdAct.veh && !(byId(state.cmdAct.veh) || {}).activated) {
+            return no('the Command Unit aboard is taking its action');
+          }
           if (state.rush && state.phase === 'battle' && u.side === side && u.id !== state.rush) {
             var rsh = byId(state.rush);
             return no((rsh ? rsh.name : 'the rushing unit') + ' is taking its second action of the Adrenaline Rush');
@@ -1723,6 +1769,15 @@
           var ov = byId(state.cmdOffer.veh);
           if (!ov || ov.side !== side) return no('not your vehicle');
           answerCmdOffer(it.k === 'cmdcoord');
+          return yes;
+        }
+        case 'cmdact': {
+          var co = state.cmdOffer;
+          if (!co) return no('nothing is offered');
+          var cv = byId(co.veh);
+          if (!cv || cv.side !== side) return no('not your vehicle');
+          if (!(co.acts || []).some(function (a) { return a.id === it.id && a.id !== 'coordinate'; })) return no('that action is not offered');
+          answerCmdOffer(it.id);
           return yes;
         }
         case 'holdarrive': {

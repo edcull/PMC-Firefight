@@ -42,6 +42,11 @@
       if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
       if (u.side !== E.state.activeSide) return { on: false, hint: E.state.solo ? 'The OpFor is acting.' : 'It is ' + sideName(E.state.activeSide) + '’s activation.' };
       if (u.activated) return { on: false, hint: u.name + ' has already acted this turn.' };
+      // the Command Unit aboard has one action of its own to take from the vehicle (p. 57)
+      var ca = E.state.cmdAct;
+      if (ca && ca.veh === u.id && id !== ca.id) {
+        return { on: false, hint: 'The Command Unit aboard is taking its own action — only that one now.' };
+      }
       /* Broken (p. 34): it is not activated at all — it flees at the start of
          the Rally phase, and rallies, if it can, in it. It can still be picked
          to look at, but nothing on its bar is live. */

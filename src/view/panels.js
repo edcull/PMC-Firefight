@@ -979,6 +979,7 @@
           else if (a === 'digcancel') { ui.digHover = null; send({ k: 'cancel' }); return; }
           else if (a === 'holdarrive') { holdArrival(); return; }
           else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
+          else if (a === 'cmdact') { send({ k: a, id: b.getAttribute('data-id') }); return; }
           else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
           // whose list is being kept: in a hotseat's round of swaps the next player is up the moment it is
           else if (a === 'swapdone') { send({ k: a, who: b.getAttribute('data-who') }); return; }
