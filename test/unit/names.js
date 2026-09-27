@@ -27,10 +27,20 @@ ok('...led by a sergeant, then a corporal', rifles.men[0].rank === 'Sergeant' &&
 ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Private'));
 const cmd = unit('cmd2');
 R.musterMen(cmd, null, taken);
-ok('a field command is led by an officer', cmd.men[0].rank === 'Major', cmd.men[0].rank);
+ok('a field command is led by an officer, a senior NCO beside him', cmd.men[0].rank === 'Captain' && cmd.men[1].rank === 'Master Sergeant',
+  cmd.men.slice(0, 2).map((m) => m.rank).join(', '));
+const fcp = unit('flyingcp');
+R.musterMen(fcp, null, taken);
+ok('a flying command post is commanded by a field officer', fcp.men[0].rank === 'Major', fcp.men[0].rank);
 const lcv = unit('lcv');
 R.musterMen(lcv, null, taken);
-ok('a crewed vehicle has one named commander', lcv.men.length === 1 && lcv.men[0].rank === 'Commander');
+ok('a crewed vehicle has one named commander, an NCO', lcv.men.length === 1 && /Corporal|Sergeant/.test(lcv.men[0].rank), lcv.men[0] && lcv.men[0].rank);
+// a command or EW vehicle is in the hands of a junior officer
+['cmdveh', 'ewveh'].forEach((k) => {
+  const v = unit(k);
+  R.musterMen(v, null, taken);
+  ok('a ' + v.name + ' is commanded by a junior officer', /Lieutenant|Captain/.test(v.men[0].rank), v.men[0].rank);
+});
 const bug = unit('bsmall');
 R.musterMen(bug, null, taken);
 ok('a bug unit has no named individuals', bug.men.length === 0);
@@ -295,6 +305,26 @@ vc.record = { battles: 5, wins: 3, draws: 1, losses: 1 };
 const wr = C.winStats(vc);
 ok('3 won of 5 fought is 60% — a draw is fought, not won', wr.pct === 0.6 && wr.wins === 3 && wr.battles === 5);
 ok('no battles yet is 0%', C.winStats(C.newCompany('New')).pct === 0);
+
+/* A command squad that goes up a grade with the company takes its new ranks
+   at once, and every soldier keeps his name, renamed or not. */
+{
+  const co = C.newCompany('Rankers');
+  C.found(co, ['recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'regular', 'regular'], 'T5');
+  const cmd = C.byRid(co, co.cmdRid);
+  const u0 = Object.assign({}, R.profile(cmd.key), { key: cmd.key, faction: 'pmc', models: R.profile(cmd.key).size, rules: R.profile(cmd.key).rules.slice() });
+  cmd.men = R.musterMen(u0, null, {}).map((m) => ({ name: m.name, rank: m.rank }));
+  C.renameSoldier(cmd, 0, 'Dana Voss');
+  const second = cmd.men[1].name;
+  ok('a new company\'s command squad is a Second Lieutenant and a Sergeant', cmd.men[0].rank === 'Second Lieutenant' && cmd.men[1].rank === 'Sergeant',
+    cmd.men.map((m) => m.rank).join(', '));
+  co.tier = 2; C.fitCommand(co);
+  ok('at the company\'s Tier II its command is the 3rd grade', cmd.key === 'cmd3', cmd.key);
+  ok('...its officer a Lieutenant now, still named as the player renamed him', cmd.men[0].rank === 'Lieutenant' && cmd.men[0].name === 'Dana Voss',
+    cmd.men[0].rank + ' ' + cmd.men[0].name);
+  ok('...and the Sergeant a Staff Sergeant, his name unchanged', cmd.men[1].rank === 'Staff Sergeant' && cmd.men[1].name === second,
+    cmd.men[1].rank + ' ' + cmd.men[1].name);
+}
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

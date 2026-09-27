@@ -841,10 +841,15 @@
         /* Expendable: a penal trooper's collar going off at his neck, while he is
            still on his feet — a red telltale blinking faster and faster, then a
            sharp flash, a spray of sparks and a wisp of dark smoke. */
-        // at the collar's own red light, on the neck of a man down on one knee (as the squad waits, Broken)
-        var qp = I.toScreen(f.x, f.y);
-        qp.y -= liftAt(f) + I.K * (f.neck || 0.52);
+        /* At the collar's own red light: `neck` is its height, 0.68" on a man on
+           his feet (running) and 0.52" on one down on a knee. */
         var blink = 0.24, pop = 0.44;
+        /* A man running as it blinks: (x, y) is where he is when it fires, and
+           until then the telltale is drawn back along his run, on him. */
+        // (`ran`: how long he has been running when it fires — before that he stood)
+        var popAge = blink * (f.dur - (f.delay || 0)), back = Math.min(Math.max(0, popAge - age), f.ran == null ? Infinity : f.ran);
+        var qp = I.toScreen(f.x - (f.vx || 0) * back, f.y - (f.vy || 0) * back);
+        qp.y -= liftAt(f) + I.K * (f.neck || 0.52);
         if (k < blink) {
           var bk = k / blink;
           if (Math.sin(bk * bk * 60) > 0) {
@@ -1014,10 +1019,44 @@
      `dur` ms in all. The order they go in, over a squad's places in formation. */
   var COLLAR = {
     step: 170, blink: 360, dur: 1500,
+    run: 0.0017,              // how fast the squad bolts as they go off, in inches a millisecond (~2.5" in all)
     order: function (n) {
       var o = [];
       for (var i = 0; i < n; i++) o.push(i);
       return o.sort(function (a, b) { return ((a * 7 + 3) % n) - ((b * 7 + 3) % n); });
+    },
+    /* The squad panics as the collars start to go: every man bolts, broadly
+       away from the danger (`ang`) but each on his own heading, up to 45° off
+       it, and at his own pace — and each falls where he has got to when his
+       own collar fires, so they leave a scatter of bodies. `pts` are their
+       places in formation at `t0`. Hands back, for each man in formation
+       order, when his collar fires (`at`), where he falls (`end`), and his
+       own velocity (`v[i]`: vx, vy), with `where(i, t)` for where he is at t. */
+    SPREAD: Math.PI / 4,
+    react: 140,               // how long after the first collar goes the rest break and run, ms
+    /* The first man's collar goes off with the squad still standing; the rest
+       break and run `react` ms later, and theirs go off one after another as
+       they flee. `last` is when the last of them fires, from t0. */
+    plan: function (pts, t0, ang, rand) {
+      rand = rand || Math.random;
+      var at = [], end = [], v = [], last = 0;
+      var clamp = function (x) { return Math.max(1, Math.min(47, x)); };
+      var runAt = COLLAR.blink + COLLAR.react;             // the moment they bolt, from t0
+      COLLAR.order(pts.length).forEach(function (idx, i) {
+        var a = ang + (rand() * 2 - 1) * COLLAR.SPREAD, sp = i === 0 ? 0 : COLLAR.run * (0.7 + rand() * 0.6);
+        v[idx] = { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp };
+        // the first where he stands; each of the rest a step apart once they are running
+        var pop = i === 0 ? COLLAR.blink : runAt + 60 + i * COLLAR.step, delay = pop - COLLAR.blink, ran = Math.max(0, pop - runAt);
+        at[idx] = t0 + pop; last = Math.max(last, pop);
+        end[idx] = { x: clamp(pts[idx].x + v[idx].vx * ran), y: clamp(pts[idx].y + v[idx].vy * ran), delay: delay, ran: ran };
+      });
+      return {
+        t0: t0, at: at, end: end, v: v, pts: pts, last: last, runAt: runAt,
+        where: function (i, t) {
+          var e = Math.max(0, Math.min(t, at[i]) - t0 - runAt);
+          return { x: clamp(pts[i].x + v[i].vx * e), y: clamp(pts[i].y + v[i].vy * e) };
+        }
+      };
     }
   };
   root.PMCFx = { create: create, paint: paint, COLLAR: COLLAR };

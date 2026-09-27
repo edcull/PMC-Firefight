@@ -67,6 +67,31 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
         hint: !hint || hint.hidden ? '' : hint.textContent, dim: document.getElementById('viewctl').classList.contains('locked') };
     }, 5);
   });
+  /* And when the AI's unit shoots, the camera goes on to what it is shooting
+     at: a moment after the shot starts, it is centred on the target. */
+  await p.evaluate(() => {
+    window.__traceShow = [];
+    window.__shotLook = null;
+    let at = 0;
+    const watch = setInterval(() => {
+      const tr = window.__traceShow;
+      for (; at < tr.length; at++) {
+        const ev = tr[at], s = window.PMC_STATE();
+        if ((ev.e !== 'shoot' && ev.e !== 'assault') || !ev.to) continue;
+        const from = s.units.find(u => u.id === ev.id), to = s.units.find(u => u.id === ev.to);
+        if (!from || !to || window.__mySide() === from.side || window.__shotLook) continue;
+        const q = window.PMCIso.toScreen(to.x, to.y), want = { x: q.x, y: q.y - window.PMCIso.ELEV };
+        setTimeout(() => {
+          const c = window.__cam(), v = window.__viewRect();
+          // well inside the view: centred on it, or as near as the table's edge lets the camera go
+          const inView = want.x > v.sx + v.sw * 0.2 && want.x < v.sx + v.sw * 0.8 && want.y > v.sy + v.sh * 0.2 && want.y < v.sy + v.sh * 0.8;
+          window.__shotLook = { want, cam: { x: c.x, y: c.y }, inView, by: from.name, at: to.name };
+        }, 900);
+        clearInterval(watch);
+        return;
+      }
+    }, 10);
+  });
   let c = await cam(p), home = null, seen = null;
   for (let k = 0; k < 600 && !seen; k++) {
     await drain(p);
@@ -90,6 +115,31 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
     ok('a drag does not pan it, and a tap does not take it back', seen.after.borrowed &&
       Math.abs(seen.after.x - seen.before.x) < 40 && Math.abs(seen.after.y - seen.before.y) < 40, JSON.stringify(seen));
   }
+
+  /* A meeting starts far apart, and the AI may spend turns closing: the
+     player's squads are put a few inches from its units, so its next unit up
+     has something to shoot at. */
+  await p.evaluate(() => {
+    const s = window.PMC_STATE(), me = window.__mySide() || 'A';
+    const theirs = s.units.filter(u => u.side !== me && u.alive && u.x >= 0 && !u.aboard);
+    s.units.filter(u => u.side === me && u.alive && u.x >= 0 && !u.aboard && !u.bld).forEach((u, i) => {
+      const t = theirs[i % theirs.length];
+      if (!t) return;
+      u.x = Math.max(2, Math.min(46, t.x + (i % 2 ? 5 : -5))); u.y = Math.max(2, Math.min(46, t.y + 2 + (i % 3)));
+      u.ax = u.ay = null;
+    });
+  });
+  for (let k = 0; k < 1500 && !(await p.evaluate(() => window.__shotLook)); k++) {
+    await drain(p);
+    if (c.mine && !c.borrowed && !(await p.evaluate(() => window.__busy() || window.__showQueue() > 0 || !!window.__resOpen()))) {
+      await p.evaluate(() => { const u = window.__eligibleUnits()[0]; if (u && window.__select(u)) window.__pressAction('regroup'); });
+    }
+    await p.waitForTimeout(60);
+    c = await cam(p);
+  }
+  const look = await p.evaluate(() => window.__shotLook);
+  ok('the AI shooting (or charging) takes the camera on to its target', !!look && (look.inView || (Math.abs(look.cam.x - look.want.x) < 30 && Math.abs(look.cam.y - look.want.y) < 30)),
+    JSON.stringify(look));
 
   console.log('\n  When the AI is done');
   for (let k = 0; k < 300 && (c.borrowed || !c.mine); k++) {

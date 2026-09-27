@@ -571,6 +571,8 @@
           var o = R.shotOdds(B.state, u, t, oddsMode, { aux: aux });
           extra = '+' + o.mods + ' vs Def ' + o.def + ' · hits on ' + o.need + '+ · ' +
             Math.round(o.chance * 100) + '% · ' + o.avgHits.toFixed(1) + ' hits';
+          // a friend on the list is steadied, not shot (NOT ONE STEP BACKWARDS!)
+          if (t.side === u.side) extra = 'Not one step back! · ' + t.sp + ' SP · ' + extra;
         }
         h += '<button class="tgt" data-target="' + t.id + '"><b>' + t.name + '</b><span>' + d + '" · ' + t.models + ' models · ' + extra + '</span></button>';
       });

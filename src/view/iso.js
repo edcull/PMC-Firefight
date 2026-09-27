@@ -620,6 +620,8 @@
        What is left is the ring — which is carrying information, since its colour
        is the unit's state — and a shadow tight enough under the models to sit
        them on the ground rather than ring them. */
+    // (`noRing`: a lone man drawn on his own — one of a squad scattering — has neither)
+    if (!opts.noRing) {
     ellipse(g, p.x + a(0.5), p.y + a(0.5), a(4.5), a(2.2), 'rgba(16,12,8,.20)');
 
     /* The ring is the only thing carrying the unit's state now, so it is given a
@@ -630,6 +632,7 @@
     ellipseRing(g, p.x, p.y, br, brY, pal.light);
     statusDashes(g, p.x, p.y, br, brY, rst, PIXEL);
     if (opts.selected) ellipseRing(g, p.x, p.y, br + a(2), brY + a(1), '#ffffff');
+    }
     }
 
     // every surviving model, in ranks, drawn from the back of the base forwards

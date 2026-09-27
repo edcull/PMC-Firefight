@@ -248,7 +248,8 @@
            has used its move, so all that is left to it is the Advance's shot. */
         u.advancing = true;
         ui.mode = 'advance-fire'; ui.moves = [];
-        ui.targets = targetsFor(u, {});
+        // what it may shoot at: the enemy, and (NOT ONE STEP BACKWARDS!) a friend carrying Suppression
+        ui.targets = targetsFor(u, {}).concat(R.steadyTargets(E.state, u));
         logLine('move', u.label + ' advances ' + d.toFixed(1) + '".');
         soloAfterMove(u);
         samCheck(u);
