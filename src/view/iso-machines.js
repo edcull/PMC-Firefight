@@ -1139,7 +1139,7 @@
       function kitHulls() {
         return KIT_HULLS || (KIT_HULLS = MAKE_HULLS({
           AIM: AIM, GLASS: GLASS, GLINT: GLINT, HF: HF, S3: S3, STEEL: STEEL, TB: TB, TC: TC, TS: TS, TT: TT,
-          aerial: aerial, along: along, alongOrder: alongOrder, barrel: barrel, box: box, cos: cos,
+          aerial: aerial, along: along, alongOrder: alongOrder, barrel: barrel, box: box, camoOn: camoOn, cos: cos,
           crossOn: crossOn, dark: dark, dead: dead, deck: deck, drive: drive, droneDue: droneDue,
           droneKit: droneKit, droneMark: droneMark, droneSpot: droneSpot, frameAt: frameAt, g: g,
           gearOut: gearOut, grille: grille, hatch: hatch, hexFlank: hexFlank, hexNose: hexNose, hull: hull,

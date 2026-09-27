@@ -11,7 +11,7 @@
     return function (M) {
       var AIM = M.AIM, GLASS = M.GLASS, GLINT = M.GLINT, HF = M.HF, S3 = M.S3, STEEL = M.STEEL, TB = M.TB,
           TC = M.TC, TS = M.TS, TT = M.TT, aerial = M.aerial, along = M.along, alongOrder = M.alongOrder,
-          barrel = M.barrel, box = M.box, cos = M.cos, crossOn = M.crossOn, dark = M.dark, dead = M.dead,
+          barrel = M.barrel, box = M.box, camoOn = M.camoOn, cos = M.cos, crossOn = M.crossOn, dark = M.dark, dead = M.dead,
           deck = M.deck, drive = M.drive, droneDue = M.droneDue, droneKit = M.droneKit,
           droneMark = M.droneMark, droneSpot = M.droneSpot, frameAt = M.frameAt, g = M.g,
           gearOut = M.gearOut, grille = M.grille, hatch = M.hatch, hexFlank = M.hexFlank,
@@ -327,12 +327,11 @@
         }
       }
 
-      // side skirts over the running gear, drawn after the near wheels or tracks
-      /* An armoured car's mudguards: a raked plate over each wheel, set outboard
-         over the tyre, drawn after the wheels so the arch sits over its tyre. */
-      /* An armoured car's mudguards: a raked plate over each wheel, set outboard
-         over the tyre. The far side's go down before the hull, which hides them;
-         the inner edge runs in under the hull so they meet it from any side. */
+      /* An armoured car's mudguards: over each wheel, a bent plate — raked down
+         at the front, flat over the top, raked down at the back — open at the
+         sides, so the tyre shows under it. The far side's go down before the
+         hull, which hides them; the inner edge runs in under the hull so they
+         meet it from any side. */
       function carFenders(phase) {
         var WG = wheelGeom(), rIn = WG.r / K, w = spec.wid * 0.47;
         var ns = nearSide();
@@ -341,10 +340,25 @@
           var tsF = [];
           for (var i0 = 0; i0 < WG.n; i0++) tsF.push((i0 / (WG.n - 1) - 0.5) * WG.span);
           tsF = alongOrder(tsF);                            // the far arch first, the near one over it
+          var bIn = sd * w * 0.6, bOut = sd * (spec.wid * 0.5 + gearOut() + 0.01);
+          var z0 = lift + WG.r * 1.55, z1 = z0 + WG.r * 0.55 + 1.5;
+          function P(a, b, z) { return S3(HF(a, b), z); }
           for (var i = 0; i < WG.n; i++) {
-            var t = tsF[i];
-            var z0 = lift + WG.r * 1.55, h = WG.r * 0.55 + 1.5;
-            slabF(HF, t - rIn * 1.15, t + rIn * 1.15, sd * w * 0.6, sd * (spec.wid * 0.5 + gearOut() + 0.01), z0, h, TB, rIn * 0.45, rIn * 0.45, 0);
+            var t = tsF[i], aF = t + rIn * 1.15, aB = t - rIn * 1.15, tF = t + rIn * 0.7, tB = t - rIn * 0.7;
+            var front = [P(aF, bIn, z0), P(aF, bOut, z0), P(tF, bOut, z1), P(tF, bIn, z1)];
+            var back = [P(aB, bIn, z0), P(aB, bOut, z0), P(tB, bOut, z1), P(tB, bIn, z1)];
+            var top = [P(tB, bIn, z1), P(tB, bOut, z1), P(tF, bOut, z1), P(tF, bIn, z1)];
+            // the rake that faces away shows its underside through the open side
+            var dF = HF(aF, bOut), dB = HF(aB, bOut), fNear = dF.x + dF.y > dB.x + dB.y;
+            var far = fNear ? back : front, near = fNear ? front : back;
+            var cFar = mixc(TB.dark, '#0c0d0f', 0.45);
+            poly(g, far, cFar); camoOn(far, cFar, (z0 + z1) / 2, false, z1 - z0);
+            poly(g, top, TB.top); camoOn(top, TB.top, z1, true);
+            poly(g, near, TB.mid); camoOn(near, TB.mid, (z0 + z1) / 2, false, z1 - z0);
+            // the plate's rolled outer edge
+            edge(g, near[1], near[2], 'rgba(8,9,11,.55)', 0.9);
+            edge(g, top[1], top[2], 'rgba(255,240,214,.4)', 0.7);
+            edge(g, far[1], far[2], 'rgba(8,9,11,.55)', 0.9);
           }
         });
       }
