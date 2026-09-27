@@ -984,6 +984,9 @@
           // whose list is being kept: in a hotseat's round of swaps the next player is up the moment it is
           else if (a === 'swapdone') { send({ k: a, who: b.getAttribute('data-who') }); return; }
           else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }
+          else if (a === 'placeauto') { send({ k: a }); return; }
+          else if (a === 'placekind') { send({ k: a, kind: b.getAttribute('data-kind') }); return; }
+          else if (a === 'placelen') { send({ k: a, len: +b.getAttribute('data-len') }); return; }
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }

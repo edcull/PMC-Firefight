@@ -214,8 +214,29 @@
       return h;
     }
     // placing pieces by hand: Last Stand, Fortify and Strike!, Detailed Terrain Knowledge
+    // Hostile takeover (p. 55): the defender's own position, piece by piece or all at once
+    function fortCard(pa) {
+      var KINDS = [['trench', 'Trench'], ['barricade', 'Low wall'], ['wall', 'High wall'], ['wire', 'Barbed wire'], ['bunker', 'Bunker']];
+      var kinds = KINDS.map(function (k) {
+        var out = k[0] === 'bunker' ? !pa.bunkers : !pa.sections;
+        return '<button class="act' + (pa.piece === k[0] ? ' on' : '') + '" data-act="placekind" data-kind="' + k[0] + '"' + (out ? ' disabled' : '') + '><span>' + k[1] + '</span>' +
+          '<small>' + (k[0] === 'bunker' ? (pa.bunkers ? 'Reinforced building, 4"' : 'Already down') : pa.sections + ' section' + (pa.sections === 1 ? '' : 's') + ' left') + '</small></button>';
+      }).join('');
+      var lens = pa.piece === 'bunker' ? '' : '<div class="acts">' + [3, 4, 5, 6].map(function (n) {
+        return '<button class="act' + (pa.len === n ? ' on' : '') + '" data-act="placelen" data-len="' + n + '"><span>' + n + '"</span><small>long</small></button>';
+      }).join('') + '<button class="act" data-act="placerot"><span>Turn</span><small>' + (pa.vertical ? 'Running up the table' : 'Running across the table') + '</small></button></div>';
+      return '<div class="card"><h2>Hostile takeover — fortifications</h2>' +
+        '<p class="sub">Put up to ten trench, wall or barbed wire sections (up to 6" long each) and a single bunker, all within 12" of the objective. Tap the table to place the piece chosen below.</p>' +
+        '<p class="hint">' + pa.sections + ' of 10 sections and ' + (pa.bunkers ? 'the bunker' : 'no bunker') + ' left.</p>' +
+        '<div class="acts">' + kinds + '</div>' + lens +
+        '<div class="acts"><button class="act primary" data-act="placeauto"><span>Auto-deploy fortifications</span><small>' +
+        (pa.left === pa.total ? 'Dig the whole position in for me' : 'Place the rest for me') + '</small></button>' +
+        '<button class="act" data-act="placedone"><span>' + (pa.left === pa.total ? 'Skip' : 'Done') + '</span><small>' +
+        (pa.left === pa.total ? 'No fortifications' : 'That will do') + '</small></button></div></div>';
+    }
     function placeCard() {
       var pa = B.state.placeAsk;
+      if (pa.kind === 'fort') return fortCard(pa);
       var T = { laststand: ['Last Stand', 'Put up to ' + pa.total + ' barricades (low walls) anywhere but the enemy deployment zone.'],
         fortify: ['Fortify and Strike!', 'Put up to ' + pa.total + ' field fortifications (low walls) in your deployment zone.'],
         terrain: ['Detailed Terrain Knowledge', 'Move up to ' + pa.total + ' pieces of terrain up to 12" each. Tap a piece, then where it goes.'] }[pa.why];

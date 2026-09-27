@@ -164,7 +164,12 @@
       return ISO.toWorld(b.x, b.y);
     };
     // the test harness's way through deployment: the scenario's own reserves, then everyone down
-    window.__autoDeployBoth = function () { send({ k: 'autosplit' }); autoDeployMine(); };
+    window.__autoDeployBoth = function () {
+      // a Hostile takeover defender's position first: nothing deploys until it is dug in
+      var pa = B.state && B.state.placeAsk;
+      if (pa && pa.kind === 'fort') send({ k: 'placeauto' });
+      send({ k: 'autosplit' }); autoDeployMine();
+    };
     window.__deployOK = function (x, y, side) {
       side = side || placingSide();
       return !!side && deployOK(side, x, y);

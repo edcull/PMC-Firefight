@@ -1114,6 +1114,38 @@
           B.ctx.restore();
         }
       }
+      /* A piece being put down by hand (Hostile takeover's fortifications, Last
+         Stand, Fortify and Strike!): the ground it may go in, and where it would
+         land under the pointer — green where it may stand, red where it may not. */
+      var pk = B.state.placeAsk;
+      if (pk && pk.kind !== 'move' && !isAI(pk.side)) {
+        var SCN = window.PMCScen;
+        B.ctx.save();
+        if (pk.kind === 'fort' && B.state.sc && B.state.sc.centre) {
+          var cc = B.state.sc.centre;
+          B.ctx.setLineDash([8, 6]); B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(232,193,90,.85)';
+          B.ctx.fillStyle = 'rgba(232,193,90,.08)';
+          isoRing(cc.x, cc.y, 12, liftOf(cc.x, cc.y)); B.ctx.fill(); B.ctx.stroke();
+        }
+        if (ui.hover) {
+          var gq = pk.kind === 'fort' ? SCN.fortRect(pk.piece, ui.hover.x, ui.hover.y, pk.len, pk.vertical)
+            : (function () {
+              var ln = pk.len || 3, th = pk.why === 'fortify' ? 0.6 : 1;
+              return pk.vertical ? { x: ui.hover.x - th / 2, y: ui.hover.y - ln / 2, w: th, h: ln }
+                : { x: ui.hover.x - ln / 2, y: ui.hover.y - th / 2, w: ln, h: th };
+            })();
+          var bad = pk.kind === 'fort' ? !!SCN.fortWhy(B.state, gq) : false;
+          var gc = [hud(gq.x, gq.y, liftOf(gq.x, gq.y)), hud(gq.x + gq.w, gq.y, liftOf(gq.x + gq.w, gq.y)),
+            hud(gq.x + gq.w, gq.y + gq.h, liftOf(gq.x + gq.w, gq.y + gq.h)), hud(gq.x, gq.y + gq.h, liftOf(gq.x, gq.y + gq.h))];
+          B.ctx.setLineDash([]); B.ctx.lineWidth = 2;
+          B.ctx.strokeStyle = bad ? 'rgba(228,105,63,.95)' : 'rgba(143,224,166,.95)';
+          B.ctx.fillStyle = bad ? 'rgba(228,105,63,.22)' : 'rgba(143,224,166,.22)';
+          B.ctx.beginPath(); B.ctx.moveTo(gc[0].x, gc[0].y);
+          for (var gi = 1; gi < 4; gi++) B.ctx.lineTo(gc[gi].x, gc[gi].y);
+          B.ctx.closePath(); B.ctx.fill(); B.ctx.stroke();
+        }
+        B.ctx.restore();
+      }
       // Terrorist: the pieces that may be mined
       if (B.state.minePick && !isAI(B.state.minePick.side)) {
         B.ctx.save(); B.ctx.setLineDash([5, 4]); B.ctx.strokeStyle = '#e4693f'; B.ctx.lineWidth = 2;

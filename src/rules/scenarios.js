@@ -315,6 +315,71 @@
     });
   }
 
+  /* ---------- Hostile takeover's fortifications (p. 55) ---------- */
+  var FORT_SECTIONS = 10, FORT_REACH = 12, FORT_MAX = 6;
+  // the ground each kind covers: a trench as wide as a squad's base, the rest a line
+  var FORT_KINDS = { trench: 2, barricade: 1, wall: 1, wire: 1 };
+  function fortRect(kind, x, y, len, vertical) {
+    if (kind === 'bunker') return { kind: 'bunker', x: x - 2, y: y - 2, w: 4, h: 4 };
+    var th = FORT_KINDS[kind] || 1;
+    len = Math.max(2, Math.min(FORT_MAX, len || FORT_MAX));
+    return vertical ? { kind: kind, x: x - th / 2, y: y - len / 2, w: th, h: len }
+      : { kind: kind, x: x - len / 2, y: y - th / 2, w: len, h: th };
+  }
+  /* Why a piece may not go there, or null: the whole of it within 12" of the
+     objective, clear of the objective itself, of the table edge, of the other
+     terrain and of any troops. */
+  function fortWhy(state, r) {
+    var c = state.sc.centre;
+    if (r.x < 0.5 || r.y < 0.5 || r.x + r.w > W - 0.5 || r.y + r.h > H - 0.5) return 'Not so close to the edge.';
+    var far = [[r.x, r.y], [r.x + r.w, r.y], [r.x, r.y + r.h], [r.x + r.w, r.y + r.h]].some(function (q) { return dist(q[0], q[1], c.x, c.y) > FORT_REACH; });
+    if (far) return 'All of it within 12" of the objective.';
+    if (R.rectPointDist(r, c.x, c.y) < 2) return 'Not on the objective itself.';
+    if (state.terrain.some(function (o) { return o.kind !== 'hill' && clashes(r, o); })) return 'That ground is taken.';
+    if (state.units.some(function (o) { return o.alive && o.x >= 0 && R.rectPointDist(r, o.x, o.y) < 1; })) return 'Troops are standing there.';
+    return null;
+  }
+  /* The machine's position — or the rest of a player's, from the auto button:
+     `sections` more sections and `bunkers` more bunkers. The bunker goes on the
+     side facing the attacker's likeliest approach, 6-9" out; the sections ring
+     the objective across the lines of approach, trenches and low walls to fight
+     from, a high wall or two to hide behind, and wire further out to slow them.
+     Returns what was put down. */
+  function takeoverForts(state, side, sections, bunkers) {
+    var c = state.sc.centre, laid = [];
+    function tryPut(kind, a, r, len, jitter) {
+      for (var k = 0; k < 40; k++) {
+        var aa = a + (Math.random() - 0.5) * jitter * (1 + k / 10), rr = r + (Math.random() - 0.5) * (k / 8);
+        var x = c.x + Math.cos(aa) * rr, y = c.y + Math.sin(aa) * rr;
+        // running across the line to the objective, not along it
+        var vertical = Math.abs(Math.cos(aa)) > Math.abs(Math.sin(aa));
+        var q = fortRect(kind, x, y, len, vertical);
+        if (fortWhy(state, q)) continue;
+        state.terrain.push(q); laid.push(q);
+        return q;
+      }
+      // that line of approach is crowded: anywhere else in the circle that is clear
+      for (var m = 0; m < 300; m++) {
+        var ma = Math.random() * Math.PI * 2, mr = 3 + Math.random() * 9;
+        var mq = fortRect(kind, c.x + Math.cos(ma) * mr, c.y + Math.sin(ma) * mr, m < 150 ? len : 3, Math.random() < 0.5);
+        if (fortWhy(state, mq)) continue;
+        state.terrain.push(mq); laid.push(mq);
+        return mq;
+      }
+      return null;
+    }
+    var base = Math.random() * Math.PI * 2;
+    for (var b = 0; b < bunkers; b++) tryPut('bunker', base + b * Math.PI, 6 + Math.random() * 3, 4, 1.2);
+    for (var i = 0; i < sections; i++) {
+      var pick = Math.random();
+      var kind = pick < 0.35 ? 'trench' : pick < 0.65 ? 'barricade' : pick < 0.8 ? 'wall' : 'wire';
+      var a = base + (i / Math.max(1, sections)) * Math.PI * 2 + 0.4;
+      var r = kind === 'wire' ? 9.5 + Math.random() * 1 : 5 + Math.random() * 4;
+      tryPut(kind, a, r, 4 + Math.floor(Math.random() * 3), 0.5);
+    }
+    return laid;
+  }
+
   /* ================= the six ================= */
   var SCENARIOS = {
 
@@ -582,9 +647,7 @@
         var cx = clamp(W / 2 + Math.cos(a) * r, 10, W - 10);
         var cy = clamp(H / 2 + Math.sin(a) * r, 10, H - 10);
         state.sc.target = { kind: 'objective', x: cx - 2, y: cy - 2, w: 4, h: 4, cx: cx, cy: cy };
-        state.terrain = state.terrain.filter(function (t) {
-          return dist(t.x + t.w / 2, t.y + t.h / 2, cx, cy) > 6;
-        });
+        // whatever stood there is moved off it (separateTerrain), not taken away
         state.terrain.push(state.sc.target);
         return [{ x: cx, y: cy }];
       },
@@ -693,44 +756,23 @@
       turns: 20,
       attacker: true,
       roles: {
-        attacker: 'As the attacker you come on from any table edge you like, half at once and the other half from turn 3, and have to be standing on the objective at the end of turn 20.',
-        defender: 'As the defender you set up within 12" of the objective, behind up to ten wall sections and a bunker of your own.'
+        attacker: 'As the attacker you come on along a table edge you choose with half your force, the other half from any edge from turn 3, and have to be standing on the objective at the end of turn 20.',
+        defender: 'As the defender you put up to ten trench, wall and wire sections and a bunker within 12" of the objective, then set up within 12" of it.'
       },
       objectives: function (state) {
         var cx = W / 2, cy = H / 2;
         state.sc.centre = { x: cx, y: cy };
         return [{ x: cx, y: cy }];
       },
-      setupTerrain: function (state) {
-        // the defender digs in: walls and a bunker within 12" of the objective
-        var c = state.sc.centre;
-        state.terrain = state.terrain.filter(function (t) {
-          return dist(t.x + t.w / 2, t.y + t.h / 2, c.x, c.y) > 3;
-        });
-        var n = 6 + Math.floor(Math.random() * 5);           // up to ten sections
-        for (var i = 0; i < n; i++) {
-          var a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
-          var r = 6 + Math.random() * 5;
-          var horiz = Math.abs(Math.cos(a)) < 0.6;
-          var len = 3 + Math.floor(Math.random() * 4);       // no section over 6"
-          /* "trench, wall or barbed wire sections" (p. 55): low walls to fight
-             behind, trenches to fight from, and wire further out to slow them. */
-          var pick = Math.random(), kind = pick < 0.45 ? 'barricade' : pick < 0.75 ? 'trench' : 'wire';
-          var thick = kind === 'trench' ? 2 : 1;             // a trench as wide as a squad's base
-          if (kind === 'wire') r += 1;
-          state.terrain.push({
-            kind: kind,
-            x: clamp(c.x + Math.cos(a) * r - (horiz ? len / 2 : thick / 2), 2, W - len - 2),
-            y: clamp(c.y + Math.sin(a) * r - (horiz ? thick / 2 : len / 2), 2, H - len - 2),
-            w: horiz ? len : thick, h: horiz ? thick : len
-          });
-        }
-        var ba = Math.random() * Math.PI * 2;
-        state.terrain.push({
-          kind: 'bunker',
-          x: clamp(c.x + Math.cos(ba) * 8 - 2, 2, W - 6),
-          y: clamp(c.y + Math.sin(ba) * 8 - 2, 2, H - 6), w: 4, h: 4
-        });
+      /* "the defender may place up to 10 trenches, walls and/or barbed wire
+         sections (up to 6" long each), as well as a single bunker" within 12" of
+         the objective (p. 55). A player puts them down by hand before deploying
+         (engine: placeAsk 'fort'); the machine's are laid here, once the rest of
+         the terrain has been settled round the objective. */
+      fortify: function (state) {
+        var def = state.sc.defender;
+        if (state.manualForts && state.manualForts[def]) { state.sc.fortsByHand = true; return; }
+        takeoverForts(state, def, FORT_SECTIONS, 1);
       },
       deploy: function (state) {
         var atk = state.sc.attacker, def = atk === 'A' ? 'B' : 'A';
@@ -747,10 +789,30 @@
            any table edge chosen by the attacker… The second part may enter in any
            turn starting from the 3rd from any table edge" (p. 55). Every edge is the
            attacker's, which is what makes this attack hard to face. */
+        var bands = edgeBands(6);
+        for (var i = bands.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = bands[i]; bands[i] = bands[j]; bands[j] = t; }
         state.sc.boxes = {};
-        state.sc.boxes[atk] = edgeBands(6);
+        state.sc.boxes[atk] = bands;
         state.sc.entry = {};
         state.sc.entry[atk] = edgeBands(2);
+      },
+      /* The first part comes on "from any table edge chosen by the attacker" —
+         one edge (p. 55): the first unit down chooses it, and the rest of the
+         first part goes along the same edge. Picked up again, the choice is open
+         again. `u`, when given, is the unit being placed, which does not count. */
+      boxes: function (state, side, u) {
+        var all = state.sc.boxes && state.sc.boxes[side];
+        if (!all || side !== state.sc.attacker || state.phase !== 'deploy') return all;
+        var down = state.units.filter(function (x) {
+          return x.side === side && x !== u && x.alive && x.x >= 0 && !x.aboard && !x.reserve;
+        });
+        if (!down.length) return all;
+        var fit = all.filter(function (b) { return down.every(function (x) { return inBoxes([b], x.x, x.y); }); });
+        return fit.length ? fit : all;
+      },
+      deployText: function (state, side) {
+        if (side === state.sc.defender) return 'Place each unit inside the shaded circle — within ' + state.sc.defCircle.r + '" of the objective.';
+        return 'Place each unit inside a shaded band. The first unit down chooses the table edge; the rest of the first part comes on along the same edge.';
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       deployOK: function (state, side, x, y) {
@@ -758,7 +820,7 @@
         var c = state.sc.defCircle;
         return dist(x, y, c.x, c.y) <= c.r;
       },
-      hint: 'One objective at the centre, dug in behind walls and a bunker. The attacker has twenty turns to be standing on it — nothing else counts.',
+      hint: 'One objective at the centre, dug in behind trenches, walls, wire and a bunker. The attacker comes on along one edge, the rest from any edge from turn 3, and has twenty turns to be standing on it — nothing else counts.',
       /* "The second part may enter in any turn starting from the 3rd" (p. 55): the
          attacker brings on as many of it as they like each turn, and which. */
       reservePick: function (state, side) {
@@ -845,6 +907,7 @@
     if (s.setupTerrain) s.setupTerrain(state);
     lastStandBarricades(state);
     separateTerrain(state);
+    if (s.fortify) s.fortify(state);
     return s;
   }
 
@@ -978,6 +1041,11 @@
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     holderOf: holderOf, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
     rollRoles: rollRoles, bestDefence: bestDefence,
-    searchSpots: searchSpots, checkArea: checkArea
+    searchSpots: searchSpots, checkArea: checkArea,
+    boxesFor: function (state, side, u) {
+      if (state.scen && state.scen.boxes) return state.scen.boxes(state, side, u);
+      return (state.sc && state.sc.boxes && state.sc.boxes[side]) || null;
+    },
+    FORT_SECTIONS: FORT_SECTIONS, FORT_KINDS: FORT_KINDS, fortRect: fortRect, fortWhy: fortWhy, takeoverForts: takeoverForts
   };
 })(typeof window !== 'undefined' ? window : global);

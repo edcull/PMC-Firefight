@@ -269,9 +269,10 @@ ok('Demolish puts the objective within 4" of the centre',
   R.inches(dem.sc.target.cx, dem.sc.target.cy, 24, 24).toFixed(1) + '" out');
 ok('...as a piece of impassable terrain', R.TERRAIN.objective.impassable, true);
 ok('...that only the Demolish action touches', R.destructibleKind({ kind: 'objective' }), 'target');
-ok('...cleared of anything that was standing there', dem.terrain.filter(function (t) {
-  return t.kind !== 'objective' && R.inches(t.x + t.w / 2, t.y + t.h / 2, dem.sc.target.cx, dem.sc.target.cy) <= 6;
-}).length, 0);
+ok('...what stood there is moved off it, not taken away (p. 54 clears nothing)', [dem.terrain.filter(function (t) {
+  var o = dem.sc.target;
+  return t !== o && t.x < o.x + o.w && o.x < t.x + t.w && t.y < o.y + o.h && o.y < t.y + t.h;
+}).length, dem.terrain.filter(function (t) { return t.kind === 'woods'; }).length].join(','), '0,1');
 /* Demolish, p. 54: at Priority Level 2+ the attacker may hold units back */
 var demPL = function (pl) {
   var st = world([unit('A', 1, 1), unit('A', 2, 2), unit('A', 3, 3), unit('A', 4, 4),
@@ -307,9 +308,22 @@ ok('...no section longer than 6"', tko.terrain.filter(function (t) {
 }).length, 0);
 ok('...with one bunker', tko.terrain.filter(function (t) { return t.kind === 'bunker'; }).length, 1);
 ok('...all of it within 12" of the objective', tko.terrain.filter(function (t) {
-  return (works(t) || t.kind === 'bunker') &&
-    R.inches(t.x + t.w / 2, t.y + t.h / 2, 24, 24) > 13.5;
+  return (works(t) || t.kind === 'bunker' || t.kind === 'wall') &&
+    [[t.x, t.y], [t.x + t.w, t.y], [t.x, t.y + t.h], [t.x + t.w, t.y + t.h]].some(function (q) { return R.inches(q[0], q[1], 24, 24) > 12.001; });
 }).length, 0);
+ok('...no more than ten sections', tko.terrain.filter(function (t) { return works(t) || t.kind === 'wall'; }).length <= 10, true);
+ok('...and the ground round the objective is not cleared (p. 55)', tko.terrain.filter(function (t) { return t.kind === 'woods'; }).length, 1);
+/* a player places them by hand: nothing is laid for them */
+var tkm = world([unit('A', 1, 1), unit('B', 44, 44)]);
+tkm.manualForts = { A: true, B: true };
+S.begin(tkm, 'takeover', { attacker: 'A' });
+ok('...a player defender lays their own', [tkm.sc.fortsByHand, tkm.terrain.some(function (t) { return t.kind === 'bunker'; })].join(','), 'true,false');
+ok('...a piece more than 12" out is refused', S.fortWhy(tkm, S.fortRect('trench', 24, 37, 6, false)), 'All of it within 12" of the objective.');
+ok('...one on the objective itself too', S.fortWhy(tkm, S.fortRect('barricade', 24, 24, 4, false)), 'Not on the objective itself.');
+ok('...one 10" out is fine', S.fortWhy(tkm, S.fortRect('wire', 24, 34, 6, false)), 'null');
+ok('...a section is never over 6"', S.fortRect('wall', 24, 30, 9, true).h, 6);
+var tkl = S.takeoverForts(tkm, 'B', 10, 1);
+ok('...the auto button lays up to ten and the bunker', [tkl.length > 6, tkl.filter(function (t) { return t.kind === 'bunker'; }).length].join(','), 'true,1');
 
 head('Who waits in reserve');
 function reserveSplit(id) {
@@ -613,10 +627,21 @@ function zoneOf(id, side) {
     [a.ok(3, 24), a.ok(24, 24), b.ok(45, 24), b.ok(24, 24)].join(','), 'true,false,true,false');
 });
 var tkA = setupOf('takeover'), tkAtk = tkA.sc.attacker, tkDef = tkAtk === 'A' ? 'B' : 'A';
-ok('Hostile takeover: the attacker may use any table edge (p. 55)',
-  [S.inBoxes(tkA.sc.boxes[tkAtk], 24, 3), S.inBoxes(tkA.sc.boxes[tkAtk], 24, 45),
-    S.inBoxes(tkA.sc.boxes[tkAtk], 3, 24), S.inBoxes(tkA.sc.boxes[tkAtk], 45, 24)].join(','),
+tkA.phase = 'deploy';
+tkA.units.forEach(function (u) { u.x = -1; u.y = -1; });
+ok('Hostile takeover: the attacker may choose any table edge (p. 55)',
+  [S.inBoxes(S.boxesFor(tkA, tkAtk), 24, 3), S.inBoxes(S.boxesFor(tkA, tkAtk), 24, 45),
+    S.inBoxes(S.boxesFor(tkA, tkAtk), 3, 24), S.inBoxes(S.boxesFor(tkA, tkAtk), 45, 24)].join(','),
   'true,true,true,true');
+var tkFirst = tkA.units.filter(function (u) { return u.side === tkAtk; });
+tkFirst[0].x = 3; tkFirst[0].y = 24;
+ok('...but one: once the first unit is down, the first part comes on along that edge',
+  [S.inBoxes(S.boxesFor(tkA, tkAtk), 3, 40), S.inBoxes(S.boxesFor(tkA, tkAtk), 24, 45), S.inBoxes(S.boxesFor(tkA, tkAtk), 45, 24)].join(','),
+  'true,false,false');
+ok('...and the unit that chose it may still move to another', S.inBoxes(S.boxesFor(tkA, tkAtk, tkFirst[0]), 45, 24), true);
+tkFirst[0].x = -1;
+tkA.phase = 'battle';
+ok('...the second part may come on from any edge from turn 3', tkA.sc.entry[tkAtk].length, 4);
 ok('...and not the middle of the table', S.inBoxes(tkA.sc.boxes[tkAtk], 24, 24), false);
 ok('...while the defender sets up within 12" of the objective',
   [S.SCENARIOS.takeover.deployOK(tkA, tkDef, 24, 30), S.SCENARIOS.takeover.deployOK(tkA, tkDef, 24, 40)].join(','),
