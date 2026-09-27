@@ -719,7 +719,9 @@
             if (mv) { cu.faceL = (mv.vx - mv.vy) < 0; cu.facing = Math.atan2(mv.vy, mv.vx); }
             ISO.drawUnit(B.pctx, cu, {
               at: { x: it.x, y: it.y }, lift: liftOf(it.x, it.y), noRing: true,
-              hop: 0, walk: 1 + Math.floor((it.age + it.i * 53) / 110) % 2, status: 'ready', activated: false, selected: false, morale: 0
+              hop: 0, walk: 1 + Math.floor((it.age + it.i * 53) / 110) % 2, status: 'ready', activated: false, selected: false, morale: 0,
+              // his collar lamp: amber as the squad breaks, red once his own collar is counting down
+              lamp: nowMs() < it.cl.at[it.i] - COLLAR_BLINK ? 'broken' : 'red'
             });
             return;
           }

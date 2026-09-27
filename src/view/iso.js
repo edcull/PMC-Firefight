@@ -401,13 +401,16 @@
      tunnelling up out of the ground on a Battlefield Insertion). */
   /* A penal trooper's collar lamp: green, flashing slowly, each man a beat
      behind the one beside him; amber and flashing fast once the squad is
-     suppressed. It is out when the collars have gone. */
+     suppressed or broken; red, flashing faster still, once his own collar has
+     started to count down (`st` 'red', from the collars' sequence), until it
+     goes off. It is out when he is dead. */
   function collarLamp(g, x, y, mi, st) {
-    if (st === 'destroyed' || st === 'broken') return;
-    var sup = st === 'suppressed', t = root.performance ? performance.now() : 0;
-    var per = sup ? 420 : 1100, lit = ((t + mi * (sup ? 70 : 180)) % per) < per * 0.45;
-    var on = sup ? '#ffb030' : '#5cff7a', off = sup ? '#6a4414' : '#1f4a2a';
-    if (lit) ellipse(g, x, y, 2.6, 2.2, sup ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
+    if (st === 'destroyed') return;
+    var t = root.performance ? performance.now() : 0;
+    var red = st === 'red', warn = st === 'suppressed' || st === 'broken';
+    var per = red ? 180 : warn ? 420 : 1100, lit = ((t + mi * (red ? 30 : warn ? 70 : 180)) % per) < per * 0.5;
+    var on = red ? '#ff3b2e' : warn ? '#ffb030' : '#5cff7a', off = red ? '#5a1410' : warn ? '#6a4414' : '#1f4a2a';
+    if (lit) ellipse(g, x, y, 2.6, 2.2, red ? 'rgba(255,60,40,.38)' : warn ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
     g.fillStyle = lit ? on : off;
     g.fillRect(x - 0.7, y - 0.7, 1.4, 1.4);
   }
@@ -734,7 +737,7 @@
         g.restore();
       } else g.drawImage(c, bx, by, c.width / rs, c.height / rs);
       g.imageSmoothingEnabled = was; g.globalAlpha = wasA;
-      if (c.lamp) collarLamp(g, mx + (u.faceL ? -1 : 1) * c.lamp[0], my + c.lamp[1], mi, st);
+      if (c.lamp) collarLamp(g, mx + (u.faceL ? -1 : 1) * c.lamp[0], my + c.lamp[1], mi, opts.lamp || st);
     }
 
     // a garrison's markers ride over the middle of the building
