@@ -181,14 +181,12 @@
        telltale blinks at a man's neck, it goes off, and only then does he fall,
        his body left where he stood. The squad is drawn from the plan kept on the
        unit (u0._collar) until the last of them is down. */
-    var COLLAR_STEP = 170, COLLAR_BLINK = 360, COLLAR_FX = 1500;
+    var CL = window.PMCFx.COLLAR, COLLAR_STEP = CL.step, COLLAR_BLINK = CL.blink, COLLAR_FX = CL.dur;
     function collarSequence(u0, u, seen, rem) {
       var t0 = nowMs(), n = Math.max(1, Math.min(8, seen.models));
       var pts = ISO.formationTable(n).map(function (o) { return { x: seen.x + o.dx, y: seen.y + o.dy, rank: o.rank }; });
       // the order they go in, fixed for the squad
-      var order = pts.map(function (p, i) { return i; }).sort(function (a, b) {
-        return ((a * 7 + 3) % pts.length) - ((b * 7 + 3) % pts.length);
-      });
+      var order = CL.order(pts.length);
       var at = [];
       order.forEach(function (idx, i) {
         var p = pts[idx], delay = i * COLLAR_STEP, popAt = t0 + delay + COLLAR_BLINK;

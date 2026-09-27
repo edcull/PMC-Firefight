@@ -54,6 +54,7 @@
     // a different army wears its own colour; a colour picked for this one stays while browsing it
     if (view.pickFac !== wasFac && ARMY_COLOUR[view.pickFac]) paint('A', ARMY_COLOUR[view.pickFac]);
     if (statesFor(p).indexOf(view.status) < 0 || view.status === 'destroyed') view.status = 'ready';
+    view.collar = null;
     // an Overgrown Bug or a Xenotripod hull has no drive: its stats stand as printed
     view.prop = R.defaultDrive(p);
   }
@@ -214,9 +215,41 @@
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
 
+  /* Expendable (p. 57): the collars going off, as the battle plays it — each
+     man standing until his own collar blinks and fires, then down where he
+     stood (see collarSequence in draw.js). The plan is kept on view.collar. */
+  function collarsGo(u) {
+    var CL = root.PMCFx.COLLAR, t0 = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
+    var n = Math.max(1, Math.min(8, u.models || u.size || 1));
+    var pts = I.formationTable(n).map(function (o) { return { x: u.x + o.dx, y: u.y + o.dy, rank: o.rank }; });
+    var at = [];
+    CL.order(n).forEach(function (idx, i) {
+      var delay = i * CL.step;
+      at[idx] = t0 + delay + CL.blink;
+      FX.add({ kind: 'collar', x: pts[idx].x, y: pts[idx].y, delay: delay, dur: delay + CL.dur });
+      if (view.sound && SFX && SFX.impact) SFX.impact((delay + CL.blink) / 1000);
+    });
+    view.collar = { pts: pts, at: at };
+  }
+  function drawCollared(u) {
+    var cl = view.collar, now = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
+    var standing = cl.pts.filter(function (p, i) { return cl.at[i] > now; });
+    cl.pts.forEach(function (p, i) {
+      if (cl.at[i] > now) return;
+      var q = I.toScreen(p.x, p.y);
+      I.drawBody(g, q.x, q.y, { side: u.side, paint: u.paint || null, art: u.art, mi: i, flip: i % 3 === 0 });
+    });
+    if (standing.length) {
+      I.drawUnit(g, Object.assign({}, u, { models: standing.length }), {
+        at: { x: u.x, y: u.y }, lineAt: standing, lift: 0, status: 'broken', morale: 0
+      });
+    }
+  }
+
   /* What is left of it: a machine is a burning wreck, and a squad is its
      models lying where they fell, laid out the way the battle scatters them. */
   function drawDestroyed(u) {
+    if (view.collar && !R.isMachine(u)) { drawCollared(u); return; }
     if (R.isMachine(u)) {
       var dead = Object.assign({}, u, { alive: false, cargo: [], damage: 0 });
       I.drawWreck(g, dead, { x: u.x, y: u.y }, 0, Date.now());
@@ -1022,11 +1055,14 @@
     if (statesFor(profile()).indexOf(s) < 0) s = 'ready';
     var was = view.status;
     view.status = s;
+    if (s !== 'destroyed') view.collar = null;
     if (s === 'destroyed' && was !== 'destroyed') {
       // the dead stand still: whatever it was doing stops
       view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
       view.strafeAt = 0; view.at = null; view.arriveAt = 0;
       FX.clear();
+      // penal troops go the way they do in the battle: their collars
+      if (!R.isMachine(unit()) && R.has(unit(), 'Expendable')) collarsGo(unit());
     }
     drawControls(); start(); frame();
   }
@@ -1280,6 +1316,12 @@
     ability: function (i) { var a = abilitiesOf(unit())[i || 0]; ability(i); return a ? a.name : null; },
     abilities: function () { return abilitiesOf(unit()).map(function (a) { return a.name; }); },
     destroy: function (on) { setStatus(on === false ? 'ready' : 'destroyed'); },
+    // jump past any effect still playing (the collars): the picture it settles to
+    settle: function () {
+      FX.clear();
+      if (view.collar) view.collar.at = view.collar.at.map(function () { return -Infinity; });
+      frame();
+    },
     strafing: function () { return !!view.strafeAt; },
     burrow: function () { return view.burrow ? Object.assign({}, view.burrow) : null; },
     arriving: arriving,

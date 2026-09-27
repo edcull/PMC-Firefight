@@ -4,7 +4,7 @@
    it draws for each weapon style is what that style actually is. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT } = require('../where.js');
+const { ROOT, SHOTS } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -457,6 +457,28 @@ async function pickAndFire(p, key, ms) {
   ok('it plays effects out of fx.js', shared.fx);
   ok('it sounds them with sfx.js', shared.sfx);
   ok('...and every profile resolves to a style it can draw', shared.agrees);
+
+  /* Expendable (p. 57): destroyed, a penal squad goes the way it does in the
+     battle — each man's collar blinks and fires while he stands, then he falls. */
+  console.log('\n  penal troops, destroyed');
+  await p.evaluate(() => { window.__viewer.pick('penal'); window.__viewer.destroy(); });
+  await p.waitForTimeout(420);
+  const mid = await p.evaluate(() => {
+    const st = window.__viewer.state(), now = performance.now();
+    return { blasts: window.__viewer.fx().filter((k) => k === 'collar').length,
+      standing: st.collar ? st.collar.at.filter((t) => t > now).length : -1, n: st.collar ? st.collar.pts.length : 0 };
+  });
+  await p.screenshot({ path: path.join(SHOTS, 'viewer-collars.png') });
+  ok('every man\'s collar goes off', mid.blasts === mid.n && mid.n === 8, mid.blasts + ' of ' + mid.n);
+  ok('...on men still standing, a few at a time', mid.standing > 0 && mid.standing < mid.n, mid.standing + ' still standing');
+  await p.waitForTimeout(2200);
+  const end = await p.evaluate(() => {
+    const st = window.__viewer.state(), now = performance.now();
+    return { standing: st.collar.at.filter((t) => t > now).length, fx: window.__viewer.fx().length };
+  });
+  ok('...until all are down', end.standing === 0 && end.fx === 0);
+  await p.evaluate(() => window.__viewer.pick('regular'));
+  ok('another unit is not left mid-detonation', !(await p.evaluate(() => window.__viewer.state().collar)));
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   console.log('page errors: ' + (errs.join(' | ') || 'none'));

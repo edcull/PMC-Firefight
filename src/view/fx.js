@@ -967,5 +967,17 @@
     });
   }
 
-  root.PMCFx = { create: create, paint: paint };
+  /* A penal squad's collars going off (Expendable): how the battle and the unit
+     viewer both time it. Each man's collar starts `step` ms after the last; its
+     telltale blinks for `blink` ms, then it fires and he falls; the effect runs
+     `dur` ms in all. The order they go in, over a squad's places in formation. */
+  var COLLAR = {
+    step: 170, blink: 360, dur: 1500,
+    order: function (n) {
+      var o = [];
+      for (var i = 0; i < n; i++) o.push(i);
+      return o.sort(function (a, b) { return ((a * 7 + 3) % n) - ((b * 7 + 3) % n); });
+    }
+  };
+  root.PMCFx = { create: create, paint: paint, COLLAR: COLLAR };
 })(window);
