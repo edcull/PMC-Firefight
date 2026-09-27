@@ -121,5 +121,24 @@ ok('taking it recruits the unit and pays for it', rb.ok && xco.roster.length ===
 ok('...once only', !C.rebirth(xco, offer).ok);
 ok('...remembering on a 2-6', rb.remembered === (rb.roll >= 2), 'D6 ' + rb.roll);
 
+/* No Battle Honour or Upgrade twice, and each Upgrade only on its own kind of
+   machine (pp. 88-89) — however it is asked for. */
+(function () {
+  var co = { kUC: 0, doctrines: [], roster: [], tier: 3 };
+  var sq = C.newEntry('regular'); sq.exp = 40;
+  ok('an honour is taken once', C.takeHonour(co, sq, 5).ok && !C.takeHonour(co, sq, 5).ok);
+  var car = C.newEntry('lpv'); car.exp = 40;
+  ok('an aircraft\'s upgrade is refused for a ground vehicle', !C.takeUpgrade(co, car, 1).ok);
+  ok('...and an upgrade is fitted once', C.takeUpgrade(co, car, 3).ok && !C.takeUpgrade(co, car, 3).ok);
+})();
+/* Efficient Spawn Cycle (p. 124) cuts the cost of spawning, not of promoting. */
+(function () {
+  var plain = { doctrines: [] }, spawn = { doctrines: ['BP1'] };
+  var e = C.newEntry('bsmall');
+  ok('promoting a Lesser bug costs the same with Efficient Spawn Cycle',
+    C.promotionCost(e, 'boversized', spawn).kUC === C.promotionCost(e, 'boversized', plain).kUC,
+    C.promotionCost(e, 'boversized', plain).kUC + ' kUC');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

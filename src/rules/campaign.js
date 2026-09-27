@@ -520,8 +520,7 @@
     // ...as do Primitive Epsilon troopers (p. 140)
     var free = entry.key === 'penal' || entry.key === 'rciv' || entry.key === 'btiny' || entry.key === 'xeps1';
     var kUC = free ? 0 : Math.ceil(RECRUIT_COST[q.tier] / 2);
-    // Efficient Spawn Cycle: Lesser and Underground Bugs at two thirds
-    if (kUC && co && hasDoctrine(co, 'BP1') && /^(Lesser|Underground) Bugs$/.test(q.group)) kUC = Math.ceil(kUC * 2 / 3);
+    // (Efficient Spawn Cycle cuts the cost of spawning, not of promoting: p. 124, and camp-company.js)
     // Smuggler (Path of the Villain): a point off everything, down to a floor of 1
     if (kUC && co && hasDoctrine(co, 'V1')) kUC = Math.max(1, kUC - 1);
     if (kUC && hermetic) kUC = Math.ceil(kUC / 2);
@@ -1005,6 +1004,7 @@
   function kitCompany() {
     return KIT_COMPANY || (KIT_COMPANY = (root.PMCCampCompany || require('./camp-company.js'))({
       COMPANY_COST: COMPANY_COST, R: R, RECRUIT_COST: RECRUIT_COST, addLoss: addLoss, byRid: byRid,
+      availableHonours: availableHonours, availableUpgrades: availableUpgrades,
       canTakeHonour: canTakeHonour, canTakeUpgrade: canTakeUpgrade, commandKey: commandKey,
       fitCommand: fitCommand, hasDoctrine: hasDoctrine, honourTable: honourTable, isBugKey: isBugKey,
       isLeaderP: isLeaderP, isTurretP: isTurretP, isXenoKey: isXenoKey, massOf: massOf, money: money,

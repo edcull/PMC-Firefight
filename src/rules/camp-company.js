@@ -6,6 +6,7 @@
   'use strict';
   root.PMCCampCompany = function (E) {
     var COMPANY_COST = E.COMPANY_COST, R = E.R, RECRUIT_COST = E.RECRUIT_COST, addLoss = E.addLoss,
+        availableHonours = E.availableHonours, availableUpgrades = E.availableUpgrades,
         byRid = E.byRid, canTakeHonour = E.canTakeHonour, canTakeUpgrade = E.canTakeUpgrade,
         commandKey = E.commandKey, fitCommand = E.fitCommand, hasDoctrine = E.hasDoctrine,
         honourTable = E.honourTable, isBugKey = E.isBugKey, isLeaderP = E.isLeaderP, isTurretP = E.isTurretP,
@@ -291,7 +292,10 @@
     }
     function canDisband(co, entry) {
       if (entry.rid === co.cmdRid) return { ok: false, why: 'The field command cannot be disbanded.' };
-      var trial = { roster: co.roster.filter(function (e) { return e !== entry; }), tier: co.tier, cmdRid: co.cmdRid };
+      // the company as it would be, faction and doctrines and all: a swarm is judged on a swarm's table
+      var trial = {};
+      for (var k in co) trial[k] = co[k];
+      trial.roster = co.roster.filter(function (e) { return e !== entry; });
       for (var t = 1; t <= co.tier; t++) {
         if (!canFieldArmy(trial, t, 1)) return { ok: false, why: 'Without it the company could not field a legal Tier ' + R.ROMAN[t] + ' army.' };
       }
@@ -327,6 +331,8 @@
     function takeHonour(co, entry, honourN) {
       var chk = canTakeHonour(entry, co);
       if (!chk.ok) return chk;
+      // never the same one twice, nor one this unit could not take (p. 88)
+      if (!availableHonours(entry).some(function (h) { return h.n === honourN; })) return { ok: false, why: 'That one is not open to this unit.' };
       entry.exp -= chk.cost;
       var H = honourTable(entry.key);
       entry.honours.push(honourN);
@@ -336,6 +342,8 @@
     function takeUpgrade(co, entry, upgradeN) {
       var chk = canTakeUpgrade(entry);
       if (!chk.ok) return chk;
+      // "no vehicle or aircraft can be given the same Upgrade twice", and each is for its own kind of machine (p. 89)
+      if (!availableUpgrades(entry).some(function (g) { return g.n === upgradeN; })) return { ok: false, why: 'That Upgrade is not open to this machine.' };
       entry.exp -= 10;
       entry.upgrades.push(upgradeN);
       var UT = upgradeTable(entry.key);
