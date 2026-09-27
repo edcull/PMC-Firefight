@@ -1061,9 +1061,10 @@
       view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
       view.strafeAt = 0; view.at = null; view.arriveAt = 0;
       FX.clear();
-      // penal troops go the way they do in the battle: their collars
-      if (!R.isMachine(unit()) && R.has(unit(), 'Expendable')) collarsGo(unit());
     }
+    /* Penal troops go the way they do in the battle: their collars. Pressed
+       again, Destroyed plays the explosions over. */
+    if (s === 'destroyed' && !R.isMachine(unit()) && R.has(unit(), 'Expendable')) { FX.clear(); collarsGo(unit()); }
     drawControls(); start(); frame();
   }
   // a segmented choice whose buttons read differently from the values they set
