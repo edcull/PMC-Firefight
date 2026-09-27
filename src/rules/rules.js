@@ -1258,7 +1258,6 @@
   function markCall(state, a, t, opts) { return (KIT_SHOOT || kitShoot()).markCall(state, a, t, opts); }
   function shotMods(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotMods(state, a, t, mode, opts); }
   function shotOdds(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotOdds(state, a, t, mode, opts); }
-  function assaultOdds(state, atk, def) { return (KIT_SHOOT || kitShoot()).assaultOdds(state, atk, def); }
   function shoot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shoot(state, a, t, mode, opts); }
   /* ---- the Xenotripods: in rules/xeno.js ---- */
   var KIT_XENO = null;
@@ -1371,6 +1370,7 @@
   function chargeRoute(state, a, t, allowance) { return (KIT_ASSAULT || kitAssault()).chargeRoute(state, a, t, allowance); }
   function canMartyr(state, u, foe) { return (KIT_ASSAULT || kitAssault()).canMartyr(state, u, foe); }
   function assault(state, a, t, opts) { return (KIT_ASSAULT || kitAssault()).assault(state, a, t, opts); }
+  function assaultOdds(state, atk, def, opts) { return (KIT_ASSAULT || kitAssault()).assaultOdds(state, atk, def, opts); }
   function chargeBonus(u, r) { return (KIT_ASSAULT || kitAssault()).chargeBonus(u, r); }
   function clampBoard(p) { return (KIT_ASSAULT || kitAssault()).clampBoard(p); }
   function fallBack(state, u, from, inch) { return (KIT_ASSAULT || kitAssault()).fallBack(state, u, from, inch); }
@@ -1745,7 +1745,6 @@
     markCall = KIT_SHOOT.markCall;
     shotMods = KIT_SHOOT.shotMods;
     shotOdds = KIT_SHOOT.shotOdds;
-    assaultOdds = KIT_SHOOT.assaultOdds;
     shoot = KIT_SHOOT.shoot;
     isXeno = KIT_XENO.isXeno;
     xenoSenses = KIT_XENO.xenoSenses;
@@ -1771,6 +1770,7 @@
     chargeRoute = KIT_ASSAULT.chargeRoute;
     canMartyr = KIT_ASSAULT.canMartyr;
     assault = KIT_ASSAULT.assault;
+    assaultOdds = KIT_ASSAULT.assaultOdds;
     chargeBonus = KIT_ASSAULT.chargeBonus;
     clampBoard = KIT_ASSAULT.clampBoard;
     fallBack = KIT_ASSAULT.fallBack;

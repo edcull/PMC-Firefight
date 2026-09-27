@@ -266,10 +266,10 @@
       return destructibleKind(r) === 'target' ? 2 : 0;
     }
 
-    function assaultRound(state, atk, def, role, n, opts) {
-      var log = [], parts = [], total = 0;
-      var roll = d10(); total = roll;
-      parts.push({ label: 'D10', v: roll });
+    /* Everything added to a round's D10, bar the die itself: one list for the roll
+       and for the odds shown before the charge, so the two cannot disagree. */
+    function assaultMods(state, atk, def, role, n, opts) {
+      var parts = [], total = 0;
       total += atk.assault; parts.push({ label: 'Assault', v: atk.assault });
       if (doctrine(state, atk.side, 'T4')) { total += 1; parts.push({ label: 'Improved HTH Training', v: 1 }); }
       // Holy Fury (Path of the Prophet, p. 113): +2 in any assault, either way round
@@ -289,6 +289,29 @@
          them to perform a standard Assault action" instead (p. 59): then no +4. */
       var sapping = role === 'attacker' && !(opts && opts.noSap) && sappingAt(state, atk, def, n);
       if (sapping) { total += 4; parts.push({ label: 'Sappers', v: 4 }); }
+      return { total: total, parts: parts, sapping: sapping };
+    }
+    // the odds of the charge's first round, as the attacker will roll it
+    function assaultOdds(state, atk, def, opts) {
+      var total = assaultMods(state, atk, def, 'attacker', 1, opts).total;
+      var dres = defenceAgainst(state, atk, def, { assault: true });
+      var tell = 0, sum = 0;
+      for (var r = 0; r <= 9; r++) {
+        var h = r === 0 ? 0 : r === 9 ? Math.max(1, r + total - dres.value)
+          : Math.max(0, r + total - dres.value);
+        if (h > 0) tell++;
+        sum += h;
+      }
+      return { chance: tell / 10, avgHits: sum / 10, mods: total, def: dres.value,
+        need: Math.max(1, dres.value - total + 1) };
+    }
+
+    function assaultRound(state, atk, def, role, n, opts) {
+      var log = [];
+      var roll = d10();
+      var am = assaultMods(state, atk, def, role, n, opts);
+      var parts = [{ label: 'D10', v: roll }].concat(am.parts), total = roll + am.total;
+      var sapping = am.sapping;
       var breached = sapping && (roll === 9 || total >= 15);
       var wreck = null;
       if (breached) {
@@ -389,7 +412,7 @@
     return {
       relink: relink,
       canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canMartyr: canMartyr,
-      assault: assault, chargeBonus: chargeBonus, clampBoard: clampBoard, fallBack: fallBack
+      assault: assault, assaultOdds: assaultOdds, chargeBonus: chargeBonus, clampBoard: clampBoard, fallBack: fallBack
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCAssault;

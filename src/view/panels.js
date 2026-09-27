@@ -497,7 +497,7 @@
     function oddsOn(t) {
       var u = ui.selected;
       if (!u) return null;
-      if (ui.mode === 'assault') return R.assaultOdds(B.state, u, t);
+      if (ui.mode === 'assault') return R.assaultOdds(B.state, u, t, { noSap: ui.noSap });
       if (['fire', 'aux', 'advance-fire'].indexOf(ui.mode) < 0) return null;
       return R.shotOdds(B.state, u, t, ui.mode === 'aux' ? 'fire' : ui.mode,
         { aux: ui.mode === 'aux' });
@@ -561,7 +561,7 @@
       ui.targets.forEach(function (t) {
         var d = R.unitDist(u, t).toFixed(1), extra = '';
         if (ui.mode === 'assault') {
-          var ao = R.assaultOdds(B.state, u, t);
+          var ao = R.assaultOdds(B.state, u, t, { noSap: ui.noSap });
           extra = 'Assault +' + ao.mods + ' vs Def ' + ao.def + ' · hits on ' + ao.need + '+ · ' +
             Math.round(ao.chance * 100) + '% a round';
         } else if (ui.mode !== 'designate') {

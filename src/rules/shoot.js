@@ -251,23 +251,6 @@
       };
     }
 
-    // the same sum for a single round of an assault
-    function assaultOdds(state, atk, def) {
-      var total = atk.assault + sizeBonus(atk.models);
-      if (doctrine(state, atk.side, 'T4')) total += 1;
-      if (isMachine(def) && !isMachine(atk) && !has(def, 'Advanced Protection')) total += 4;
-      var dres = defenceAgainst(state, atk, def, { assault: true });
-      var tell = 0, sum = 0;
-      for (var r = 0; r <= 9; r++) {
-        var h = r === 0 ? 0 : r === 9 ? Math.max(1, r + total - dres.value)
-          : Math.max(0, r + total - dres.value);
-        if (h > 0) tell++;
-        sum += h;
-      }
-      return { chance: tell / 10, avgHits: sum / 10, mods: total, def: dres.value,
-        need: Math.max(1, dres.value - total + 1) };
-    }
-
     function shoot(state, a, t, mode, opts) {
       opts = opts || {};
       /* A squad or a gun on its trails turns onto what it fires at. Only a
@@ -408,7 +391,7 @@
       relink: relink,
       nearestFacing: nearestFacing, dugIn: dugIn, sandbagged: sandbagged, shotRange: shotRange,
       shotMinRange: shotMinRange, canShoot: canShoot, markCall: markCall, shotMods: shotMods,
-      shotOdds: shotOdds, assaultOdds: assaultOdds, shoot: shoot
+      shotOdds: shotOdds, shoot: shoot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCShoot;
