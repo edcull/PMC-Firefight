@@ -31,7 +31,7 @@ ok('a field command is led by an officer, a senior NCO beside him', cmd.men[0].r
   cmd.men.slice(0, 2).map((m) => m.rank).join(', '));
 const fcp = unit('flyingcp');
 R.musterMen(fcp, null, taken);
-ok('a flying command post is commanded by a senior field officer', fcp.men[0].rank === 'Lieutenant Colonel', fcp.men[0].rank);
+ok('a flying command post is commanded by a field officer', fcp.men[0].rank === 'Major', fcp.men[0].rank);
 const lcv = unit('lcv');
 R.musterMen(lcv, null, taken);
 ok('a crewed vehicle has one named commander, an NCO', lcv.men.length === 1 && /Corporal|Sergeant/.test(lcv.men[0].rank), lcv.men[0] && lcv.men[0].rank);

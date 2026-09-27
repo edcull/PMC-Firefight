@@ -1589,7 +1589,7 @@
   var COMMAND_SECOND = ['Sergeant', 'Staff Sergeant', 'Master Sergeant', 'Warrant Officer', 'Chief Warrant Officer'];
   /* A PMC hull is commanded by an NCO, heavier and better hulls by more senior
      ones; a command or EW vehicle by a junior officer, and the flying command
-     post by a senior field officer. */
+     post by a Major. */
   var CREW_NCO = ['Corporal', 'Corporal', 'Sergeant', 'Staff Sergeant', 'Master Sergeant'];
   var CREW_OFFICER = ['Second Lieutenant', 'Second Lieutenant', 'Lieutenant', 'Lieutenant', 'Captain'];
   var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
@@ -1632,7 +1632,7 @@
   function rankFor(u, i) {
     var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
     if (isMachine(u)) {
-      if (f === 'pmc' && u.key === 'flyingcp') return 'Lieutenant Colonel';
+      if (f === 'pmc' && u.key === 'flyingcp') return 'Major';
       if (f === 'pmc' && (u.key === 'cmdveh' || u.key === 'ewveh' || hasOwn(u, 'Command Vehicle'))) return CREW_OFFICER[tier - 1];
       if (isFlying(u)) return 'Pilot';
       return f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : CREW_NCO[tier - 1];
