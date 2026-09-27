@@ -1649,9 +1649,7 @@
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
-    /* A command unit: its officer by the unit's grade, a second officer one rank
-       below as second-in-command, and the rest senior NCOs. */
-    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? (tier > 1 ? OFFICER[tier - 2] : 'Second Lieutenant') : i === 2 ? 'Sergeant Major' : 'Staff Sergeant';
+    if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? 'Sergeant Major' : 'Staff Sergeant';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
     if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
     if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';
