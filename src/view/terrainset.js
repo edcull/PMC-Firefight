@@ -32,12 +32,12 @@
        at once, and the table is re-baked a moment after the player stops. The
        old plate stays on screen while it bakes — no black flash. */
     function queueBake() {
-      if (!B.state || B.state.phase !== 'terrain') { if (B.state) { B.state.scene = null; B.state.ground = null; B.state.structs = null; } return; }
+      if (!B.state || B.state.phase !== 'terrain') { if (B.state) { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null; } return; }
       clearTimeout(ui.bakeTimer);
       ui.bakeTimer = setTimeout(function () {
-        if (!B.state || B.state.phase !== 'terrain' || !B.state.scene) return;
+        if (!B.state || B.state.phase !== 'terrain' || !B.vc.scene) return;
         buildScene();
-        B.state.tset.baked = B.state.terrain.length;
+        B.vc.tsetBaked = B.state.terrain.length;
         drawBoard();
       }, 650);
     }

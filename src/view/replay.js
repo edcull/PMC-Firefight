@@ -353,7 +353,7 @@
         case 'newtable': newTable(ev.whole); return;
         case 'scenery': queueBake(); return;
         case 'fit': fitView(); return;
-        case 'structures': if (B.state.structs) paintStructures(); return;
+        case 'structures': if (B.vc.structs) paintStructures(); return;
         case 'clearcards': {
           /* Clear the table's cards and effects, but not the rest of the batch
              this came in: the new game's table, its zoom and its first look are

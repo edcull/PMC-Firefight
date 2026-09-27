@@ -9,7 +9,7 @@
   root.PMCEngineTerrainSetup = function (E) {
     var GEN = E.GEN, H = E.H, OBJECTIVES = E.OBJECTIVES, PIECE_NOUN = E.PIECE_NOUN, R = E.R, SFX = E.SFX,
         V = E.V, W = E.W, afterTerrain = E.afterTerrain, deployOK = E.deployOK, fitView = E.fitView,
-        isAI = E.isAI, logLine = E.logLine, other = E.other, pushRes = E.pushRes, queueBake = E.queueBake,
+        isAI = E.isAI, logLine = E.logLine, other = E.other, paintStructures = E.paintStructures, pushRes = E.pushRes, queueBake = E.queueBake,
         render = E.render, revealConsole = E.revealConsole, setHint = E.setHint, sideName = E.sideName,
         startBattle = E.startBattle, ui = E.ui;
 
@@ -361,7 +361,7 @@
         var why = placeOK(pa, r);
         if (why) return why;
         E.state.terrain.push(r);
-        E.state.structsDirty = true;
+        paintStructures();
         pa.left--;
       } else {
         var pool = movablePieces();
@@ -384,7 +384,7 @@
         if (clash) return 'Too close to other terrain or an objective.';
         R.placePiece(q, nx, ny);
         logLine('terrain', sideName(pa.side) + ' — Detailed Terrain Knowledge: moves the ' + R.TERRAIN[q.kind].name.toLowerCase() + ' ' + Math.hypot(x - ocx, y - ocy).toFixed(1) + '".');
-        E.state.scene = null; E.state.ground = null; E.state.structs = null;
+        queueBake();
         pa.pick = null;
         pa.left--;
       }
@@ -399,7 +399,7 @@
       if (pa.piece === 'bunker' && !pa.bunkers) pa.piece = 'trench';
       if (pa.piece !== 'bunker' && !pa.sections && pa.bunkers) pa.piece = 'bunker';
       pa.laid = (pa.laid || []).concat(r.kind);
-      E.state.scene = null; E.state.ground = null; E.state.structs = null; E.state.structsDirty = true;
+      queueBake();
     }
     /* "Auto-deploy fortifications": the rest of the defender's allowance put down
        as the machine would, and the placing is over. */

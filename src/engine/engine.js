@@ -586,7 +586,6 @@
       dice: built.rolls.map(function (r) { return { label: r.area, value: r.roll }; }),
       list: built.rolls.map(function (r) { return { text: r.area + ' — ' + r.text }; })
     });
-    state.scene = null; state.ground = null; state.structs = null;
     /* Open on a view that shows enough of the table to place a force in. On a
        phone the board now fills the screen, so a step above "the whole table" is
        readable; on a desktop it is a step above that again. */
@@ -621,7 +620,7 @@
     return KIT_TERRAINSETUP || (KIT_TERRAINSETUP = (root.PMCEngineTerrainSetup || require('./terrainsetup.js'))({
       GEN: GEN, H: H, OBJECTIVES: OBJECTIVES, PIECE_NOUN: PIECE_NOUN, R: R, SFX: SFX, V: V, W: W,
       afterTerrain: afterTerrain, deployOK: deployOK, fitView: fitView, isAI: isAI, logLine: logLine,
-      other: other, pushRes: pushRes, queueBake: queueBake, render: render, revealConsole: revealConsole,
+      other: other, paintStructures: paintStructures, pushRes: pushRes, queueBake: queueBake, render: render, revealConsole: revealConsole,
       setHint: setHint, sideName: sideName, startBattle: startBattle, ui: ui, get state() { return state; },
       lookAtDeployment: function (side) { lookAtDeployment(side); }
     }));
@@ -804,7 +803,7 @@
       placed++;
     });
     if (placed) {
-      state.scene = null; state.ground = null; state.structs = null;
+      queueBake();
       logLine('terrain', sideName(side) + ' — Fortify and Strike!: ' + placed + ' field fortifications thrown up.');
     }
   }

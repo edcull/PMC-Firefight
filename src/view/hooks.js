@@ -316,7 +316,9 @@
     window.__previewConfirm = function () { commitMove(); };
     window.__previewCancel = function () { cancelPreview(); };
     window.__restoreCanvases = restoreCanvases;
-    window.__rebuildScene = function () { B.state.scene = null; B.state.ground = null; B.state.structs = null; drawBoard(); };
+    // the view's own caches of the table (the baked plates, the bodies): not the battle's
+    window.__vc = function () { return B.vc; };
+    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null; drawBoard(); };
     window.__tapTerrain = function (i) {
       var r = ui.terrain[i];
       if (!r) return false;

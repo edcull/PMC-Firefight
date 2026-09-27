@@ -50,7 +50,7 @@ async function drain(p) {
     window.__rebuildScene();
     window.PMC_SETVIEW(20, 22, 1.5);
     return { id: pen.id, rifles: rifles.id, models: pen.models, morale: R.currentMorale(pen),
-      bodies: (s.remains || []).filter((r) => r.kind === 'body').length };
+      bodies: (window.__vc().remains || []).filter((r) => r.kind === 'body').length };
   });
   await p.waitForTimeout(400);
   ok('the stage is set', before.models > 0, before.models + ' penal troopers');
@@ -73,7 +73,7 @@ async function drain(p) {
     return {
       blasts: window.__fxkinds().filter((k) => k === 'collar').length,
       standing: cl ? cl.at.filter((t) => t > now).length : -1,
-      down: (s.remains || []).filter((r) => r.kind === 'body' && (!r.showAt || r.showAt <= now) && Math.hypot(r.x - 20, r.y - 20) < 2).length
+      down: (window.__vc().remains || []).filter((r) => r.kind === 'body' && (!r.showAt || r.showAt <= now) && Math.hypot(r.x - 20, r.y - 20) < 2).length
     };
   }, before);
   await p.locator('.board-wrap').screenshot({ path: path.join(SHOTS, 'collars-blast.png') });
@@ -85,7 +85,7 @@ async function drain(p) {
 
   const after = await p.evaluate((a) => {
     const s = window.PMC_STATE(), u = s.units.find((x) => x.id === a.id);
-    const bodies = (s.remains || []).filter((r) => r.kind === 'body');
+    const bodies = (window.__vc().remains || []).filter((r) => r.kind === 'body');
     const here = bodies.filter((r) => Math.hypot(r.x - 20, r.y - 20) < 2);
     return { alive: u.alive, models: u.models, fled: !!u.fled, expended: !!u.expended, bodies: bodies.length, here: here.length,
       log: s.log.slice(-6).map((l) => l.text).join(' / ') };
