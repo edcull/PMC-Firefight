@@ -136,33 +136,33 @@
        and never changes, and the structures, which are cheap and have to be repainted
        whenever something is knocked down. */
     function buildScene() {
-      B.state.ground = ISO.bakeGround(B.state.terrain, B.state.seed, B.state.cfg.planet);
-      B.state.structs = document.createElement('canvas');
-      B.state.structs.width = ISO.PIXW; B.state.structs.height = ISO.PIXH;
+      B.vc.ground = ISO.bakeGround(B.state.terrain, B.state.seed, B.state.cfg.planet);
+      B.vc.structs = document.createElement('canvas');
+      B.vc.structs.width = ISO.PIXW; B.vc.structs.height = ISO.PIXH;
       paintStructures();
-      B.state.scene = B.state.ground;
-      if (B.state.tset && B.state.phase === 'terrain') B.state.tset.baked = B.state.terrain.length;
+      B.vc.scene = B.vc.ground;
+      if (B.state.tset && B.state.phase === 'terrain') B.vc.tsetBaked = B.state.terrain.length;
     }
 
     function paintStructures() {
-      B.state.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
-      var sg = B.state.structs.getContext('2d');
-      sg.clearRect(0, 0, B.state.structs.width, B.state.structs.height);
-      B.state.props.forEach(function (p) { ISO.drawProp(sg, p, liftOf(p.x, p.y)); });
+      B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
+      var sg = B.vc.structs.getContext('2d');
+      sg.clearRect(0, 0, B.vc.structs.width, B.vc.structs.height);
+      B.vc.props.forEach(function (p) { ISO.drawProp(sg, p, liftOf(p.x, p.y)); });
       /* And the same table again with every building cut away — the near walls off
          so you can see into the room. A building with somebody inside it, or with
          somebody behind it, is composited from this layer instead of the solid
          one, which is what lets the player see the troops a wall would hide. */
-      B.state.structsOpen = document.createElement('canvas');
-      B.state.structsOpen.width = ISO.PIXW; B.state.structsOpen.height = ISO.PIXH;
-      var og = B.state.structsOpen.getContext('2d');
-      og.clearRect(0, 0, B.state.structsOpen.width, B.state.structsOpen.height);
-      B.state.props.forEach(function (p) { ISO.drawProp(og, p, liftOf(p.x, p.y), true); });
+      B.vc.structsOpen = document.createElement('canvas');
+      B.vc.structsOpen.width = ISO.PIXW; B.vc.structsOpen.height = ISO.PIXH;
+      var og = B.vc.structsOpen.getContext('2d');
+      og.clearRect(0, 0, B.vc.structsOpen.width, B.vc.structsOpen.height);
+      B.vc.props.forEach(function (p) { ISO.drawProp(og, p, liftOf(p.x, p.y), true); });
     }
 
     /* Something has come down: repaint the structures and let the player see it. */
     function repaintTerrain(wrecks) {
-      if (!wrecks || !wrecks.length || !B.state.structs) return;
+      if (!wrecks || !wrecks.length || !B.vc.structs) return;
       paintStructures();
       ui.vis = null; ui.visKey = '';
       wrecks.forEach(function (w) {
@@ -215,7 +215,7 @@
 
     function syncRemains() {
       if (!B.state || !B.state.units) return;
-      var rem = B.state.remains || (B.state.remains = []);
+      var rem = B.vc.remains || (B.vc.remains = []);
       B.state.units.forEach(function (u0) {
         // as it is drawn: the dead fall when the shot that kills them lands, not before
         var u = shownAs(u0);
@@ -254,7 +254,7 @@
       var bodies = rem.filter(function (r) { return r.kind === 'body'; });
       if (bodies.length > 240) {
         var drop = bodies.slice(0, bodies.length - 240);
-        B.state.remains = rem.filter(function (r) { return drop.indexOf(r) < 0; });
+        B.vc.remains = rem.filter(function (r) { return drop.indexOf(r) < 0; });
       }
     }
     /* Between moves the board is still: it is only redrawn while something on
@@ -263,13 +263,13 @@
        steps rather than flows, so lava in view gets about sixteen. */
     var ambientTick = 0;
     setInterval(function () {
-      if (!B.state || !B.state.scene || B.loop || document.hidden) return;
+      if (!B.state || !B.vc.scene || B.loop || document.hidden) return;
       ambientTick++;
       /* an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector
          breathes, a cloak shimmers — but only one in view (drawBoard notes it) is worth
          redrawing the whole board for; rotors and sweeps read as well at eight frames
          a second as a fire does */
-      if (B.state.hazeOnView || ((B.state.animOnView || B.state.fireOnView) && ambientTick % 2 === 0)) drawBoard();
+      if (B.vc.hazeOnView || ((B.vc.animOnView || B.vc.fireOnView) && ambientTick % 2 === 0)) drawBoard();
     }, 60);
 
     /* ================= heat haze =================
@@ -307,7 +307,7 @@
     }
 
     function heatHaze(v) {
-      B.state.hazeOnView = false;
+      B.vc.hazeOnView = false;
       if (calmMotion || !B.state.terrain) return;
       var lavas = B.state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; });
       if (!lavas.length) return;
@@ -327,7 +327,7 @@
         var bx0 = Math.max(v.sx, Math.floor(x0 - AMP - 1)), bx1 = Math.min(v.sx + v.sw, Math.ceil(x1 + AMP + 1));
         var by0 = Math.max(v.sy, Math.floor(y0)), by1 = Math.min(v.sy + v.sh, Math.ceil(y1));
         if (bx1 <= bx0 || by1 <= by0) return;
-        B.state.hazeOnView = true;
+        B.vc.hazeOnView = true;
 
         // the patch as it stands, in the window's own pixels
         var px0 = Math.round((bx0 - v.sx) * SS), py0 = Math.round((by0 - v.sy) * SS);
@@ -442,14 +442,14 @@
       /* The objectives' beacons are painted with the structures: when they move
          or arrive (an Invasion's zones are nominated after deployment), repaint. */
       // a barricade put down by hand: the structures again, not the whole table
-      if (B.state.structsDirty && B.state.structs) { B.state.structsDirty = false; paintStructures(); }
+      if (B.vc.structsDirty && B.vc.structs) { B.vc.structsDirty = false; paintStructures(); }
       var ok0 = B.state.objectives.map(function (o) { return o.x.toFixed(1) + ',' + o.y.toFixed(1); }).join(';');
-      if (B.state.structs && B.state.objKey != null && B.state.objKey !== ok0) paintStructures();
-      B.state.objKey = ok0;
+      if (B.vc.structs && B.vc.objKey != null && B.vc.objKey !== ok0) paintStructures();
+      B.vc.objKey = ok0;
       // the plate is large: paint it once, off the first frame, with a word to the player
-      if (!B.state.scene) {
-        if (!B.state.baking) {
-          B.state.baking = true;
+      if (!B.vc.scene) {
+        if (!B.vc.baking) {
+          B.vc.baking = true;
           B.ctx.fillStyle = '#080b10';
           B.ctx.fillRect(0, 0, B.VIEW_W, B.VIEW_H);
           B.ctx.fillStyle = '#93a1b5';
@@ -459,7 +459,7 @@
           setTimeout(function () {
             if (!B.state) return;
             buildScene();
-            B.state.baking = false;
+            B.vc.baking = false;
             drawBoard();
           }, 30);
         }
@@ -485,8 +485,8 @@
       // cleared first — otherwise sprites drawn over that void smear as the camera moves
       B.pctx.fillStyle = '#080b10';
       B.pctx.fillRect(v.sx, v.sy, v.sw, v.sh);
-      B.pctx.drawImage(B.state.ground, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
-      B.pctx.drawImage(B.state.structs, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
+      B.pctx.drawImage(B.vc.ground, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
+      B.pctx.drawImage(B.vc.structs, v.sx, v.sy, v.sw, v.sh, v.sx, v.sy, v.sw, v.sh);
       heatHaze(v);
 
       var pad = K * 3;
@@ -502,7 +502,7 @@
          its silhouette covers. Every other building stays solid, and is put back
          over the units the depth sort says are behind it. */
       var blockers = [];
-      (B.state.props || []).forEach(function (pr) {
+      (B.vc.props || []).forEach(function (pr) {
         if (pr.kind !== 'building' && pr.kind !== 'bunker' && pr.kind !== 'highwall') return;
         if (!onView(pr.x + pr.w / 2, pr.y + pr.h / 2)) return;
         var depth = propDepth(pr), b = null;
@@ -560,7 +560,7 @@
           var d = dispX(u) + dispY(u);
           /* A unit inside a building belongs just in front of it, so it is drawn
              over the near wall rather than being buried by it. */
-          (B.state.props || []).forEach(function (pr) {
+          (B.vc.props || []).forEach(function (pr) {
             if (pr.kind !== 'building' && pr.kind !== 'bunker') return;
             if (R.inRect(dispX(u), dispY(u), pr)) d = Math.max(d, propDepth(pr) + 0.01);
           });
@@ -592,7 +592,7 @@
       });
       // the dead and the wrecks stay where they fell
       var now = now0, anyFire = false;
-      (B.state.remains || []).forEach(function (r) {
+      (B.vc.remains || []).forEach(function (r) {
         if (!onView(r.x, r.y)) return;
         if (r.kind === 'wreck') {
           var wu = r.snap || unitById(r.id);
@@ -603,9 +603,9 @@
       });
       // a machine at half Structure trails smoke, which has to keep moving too
       if (!anyFire) anyFire = order.some(function (it) { return it.draw === 'unit' && ISO.smoking(it.unit); });
-      B.state.fireOnView = anyFire;
+      B.vc.fireOnView = anyFire;
       // an aircraft's rotors, a deflector, a cloak: only worth redrawing for while one is in view
-      B.state.animOnView = order.some(function (it) { return it.draw === 'unit' && !it.unit.aboard && ISO.animates(it.unit); });
+      B.vc.animOnView = order.some(function (it) { return it.draw === 'unit' && !it.unit.aboard && ISO.animates(it.unit); });
 
       order.concat(blockers)
         .sort(function (a, b) { return a.depth - b.depth; })
@@ -878,7 +878,7 @@
         // pieces down since the table was last baked, as flat footprints until it is
         var TINT = { woods: '64,110,52', ruins: '120,112,100', crater: '110,96,80', barricade: '150,140,112', rocks: '118,112,104',
           hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235' };
-        B.state.terrain.slice(B.state.tset.baked || 0).forEach(function (pc) {
+        B.state.terrain.slice(B.vc.tsetBaked || 0).forEach(function (pc) {
           var sh = pc.parts ? pc.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
             : [pc.poly || [[pc.x, pc.y], [pc.x + pc.w, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x, pc.y + pc.h]]];
           B.ctx.fillStyle = 'rgba(' + (TINT[pc.kind] || '140,140,140') + ',.85)';
@@ -1129,6 +1129,38 @@
           isoRing(mp.x + mp.w / 2, mp.y + mp.h / 2, 12, liftOf(mp.x + mp.w / 2, mp.y + mp.h / 2)); B.ctx.stroke();
           B.ctx.restore();
         }
+      }
+      /* A piece being put down by hand (Hostile takeover's fortifications, Last
+         Stand, Fortify and Strike!): the ground it may go in, and where it would
+         land under the pointer — green where it may stand, red where it may not. */
+      var pk = B.state.placeAsk;
+      if (pk && pk.kind !== 'move' && !isAI(pk.side)) {
+        var SCN = window.PMCScen;
+        B.ctx.save();
+        if (pk.kind === 'fort' && B.state.sc && B.state.sc.centre) {
+          var cc = B.state.sc.centre;
+          B.ctx.setLineDash([8, 6]); B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(232,193,90,.85)';
+          B.ctx.fillStyle = 'rgba(232,193,90,.08)';
+          isoRing(cc.x, cc.y, 12, liftOf(cc.x, cc.y)); B.ctx.fill(); B.ctx.stroke();
+        }
+        if (ui.hover) {
+          var gq = pk.kind === 'fort' ? SCN.fortRect(pk.piece, ui.hover.x, ui.hover.y, pk.len, pk.vertical)
+            : (function () {
+              var ln = pk.len || 3, th = pk.why === 'fortify' ? 0.6 : 1;
+              return pk.vertical ? { x: ui.hover.x - th / 2, y: ui.hover.y - ln / 2, w: th, h: ln }
+                : { x: ui.hover.x - ln / 2, y: ui.hover.y - th / 2, w: ln, h: th };
+            })();
+          var bad = pk.kind === 'fort' ? !!SCN.fortWhy(B.state, gq) : false;
+          var gc = [hud(gq.x, gq.y, liftOf(gq.x, gq.y)), hud(gq.x + gq.w, gq.y, liftOf(gq.x + gq.w, gq.y)),
+            hud(gq.x + gq.w, gq.y + gq.h, liftOf(gq.x + gq.w, gq.y + gq.h)), hud(gq.x, gq.y + gq.h, liftOf(gq.x, gq.y + gq.h))];
+          B.ctx.setLineDash([]); B.ctx.lineWidth = 2;
+          B.ctx.strokeStyle = bad ? 'rgba(228,105,63,.95)' : 'rgba(143,224,166,.95)';
+          B.ctx.fillStyle = bad ? 'rgba(228,105,63,.22)' : 'rgba(143,224,166,.22)';
+          B.ctx.beginPath(); B.ctx.moveTo(gc[0].x, gc[0].y);
+          for (var gi = 1; gi < 4; gi++) B.ctx.lineTo(gc[gi].x, gc[gi].y);
+          B.ctx.closePath(); B.ctx.fill(); B.ctx.stroke();
+        }
+        B.ctx.restore();
       }
       // Terrorist: the pieces that may be mined
       if (B.state.minePick && !isAI(B.state.minePick.side)) {

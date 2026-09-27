@@ -273,7 +273,7 @@
     /* Put one structure back on top of whatever has been drawn over it, taking the
        pixels from the layer it was baked into. */
     function repaintProp(pr, open) {
-      var src = open ? B.state.structsOpen : B.state.structs;
+      var src = open ? B.vc.structsOpen : B.vc.structs;
       if (!src) return;
       var b = propBox(pr);
       if (b.w <= 0 || b.h <= 0) return;

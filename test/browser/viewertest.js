@@ -485,6 +485,13 @@ async function pickAndFire(p, key, ms) {
   await p.waitForTimeout(200);
   const dead = await p.evaluate(() => ({ collar: !!window.__viewer.state().collar, blasts: window.__viewer.fx().filter((k) => k === 'collar').length }));
   ok('destroyed, a penal squad just lies dead', !dead.collar && dead.blasts === 0, JSON.stringify(dead));
+  await p.evaluate(() => window.__viewer.set('status', 'broken'));
+  await p.waitForTimeout(100);
+  const again = await p.evaluate(() => {
+    const st = window.__viewer.state(), now = performance.now();
+    return { blasts: window.__viewer.fx().filter((k) => k === 'collar').length, standing: st.collar.at.filter((t) => t > now).length };
+  });
+  ok('Broken pressed again plays it over', again.blasts === 8 && again.standing === 8, JSON.stringify(again));
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('another unit is not left mid-detonation', !(await p.evaluate(() => window.__viewer.state().collar)));
 

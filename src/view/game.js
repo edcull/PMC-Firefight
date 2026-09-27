@@ -58,6 +58,18 @@
      caught up. */
   var net = null;                 // the transport
   var mirror = null;              // an engine instance holding the battle we are shown
+  /* The view's own caches of the table — the baked ground, the structure
+     plates, the props, the bodies lying where they fell, and the flags the idle
+     loop reads. They belong to this screen, never to the battle it shows: the
+     engine's state is the battle alone, the same shape here as on the wire. One
+     set a battle (by its seed and world); the engine asks for a repaint through
+     the scenery and structures events rather than by blanking fields. */
+  var vcache = { key: null };
+  function vc() {
+    var k = state ? state.seed + '|' + (state.cfg && state.cfg.planet) : null;
+    if (vcache.key !== k) vcache = { key: k };
+    return vcache;
+  }
   var Q = null;                   // its queries: everything the board needs to ask
   var seats = ['A'];              // the sides this screen plays; both, in hotseat
   var watching = false;           // true when this screen has no seat at all
@@ -441,7 +453,7 @@
      set-up asks for the whole table, since all four areas are about to be laid;
      otherwise it opens on the ground the first side deploys into. */
   function newTable(whole) {
-    state.scene = null; state.ground = null; state.structs = null;
+    var c = vc(); c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null;
     sizeView(false);
     if (whole) {
       cam.z = ZOOMS[0];
@@ -750,11 +762,12 @@
      it holds and hand them back blank — the table, the troops, the lot. Coming
      back, look at the table: if it has gone clear, paint everything again. */
   function canvasesLost() {
-    if (!state || !state.ground || !state.ground.getContext) return false;
+    var gr = state && vc().ground;
+    if (!gr || !gr.getContext) return false;
     try {
-      var gg = state.ground.getContext('2d');
+      var gg = gr.getContext('2d');
       if (gg.isContextLost && gg.isContextLost()) return true;
-      var d = gg.getImageData(state.ground.width >> 1, state.ground.height >> 1, 1, 1).data;
+      var d = gg.getImageData(gr.width >> 1, gr.height >> 1, 1, 1).data;
       return d[3] === 0;                            // the ground is opaque everywhere
     } catch (e) { return false; }
   }
@@ -763,7 +776,7 @@
     ISO.flush();
     if (pix.getContext) pctx = pix.getContext('2d');
     dropHaze();
-    state.scene = null; state.ground = null; state.structs = null; state.structsOpen = null;
+    var c = vc(); c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null;
     drawBoard();
   }
   if (typeof document !== 'undefined' && document.addEventListener) {
@@ -782,7 +795,7 @@
      and the functions and fixed values it uses. */
   var REPLAY = window.PMCReplay({
     get Q() { return Q; }, get mirror() { return mirror; }, get net() { return net; },
-    get seats() { return seats; }, get state() { return state; }, get addFx() { return addFx; },
+    get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); }, get addFx() { return addFx; },
     get animateMove() { return animateMove; }, get boardAnim() { return boardAnim; },
     get drawPanel() { return drawPanel; }, get drawStats() { return drawStats; },
     get feedHosts() { return feedHosts; }, get fitView() { return fitView; },
@@ -809,7 +822,7 @@
     get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
     get held() { return held; }, get loop() { return loop; }, get muster() { return muster; },
-    get seats() { return seats; }, get state() { return state; },
+    get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get streamLength() { return streamLength; }, get addFx() { return addFx; },
     get anyArriving() { return anyArriving; }, get applyForce() { return applyForce; },
     get arriving() { return arriving; }, get bufferFromCanvas() { return bufferFromCanvas; },
@@ -847,7 +860,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var PLAY = window.PMCPlay({
-    get held() { return held; }, get pctx() { return pctx; }, get state() { return state; },
+    get held() { return held; }, get pctx() { return pctx; }, get state() { return state; }, get vc() { return vc(); },
     get handsOff() { return handsOff; }, get render() { return render; }, dispX: dispX, dispY: dispY,
     nowMs: nowMs, onTable: onTable, startLoop: startLoop, FX: FX, ISO: ISO, R: R, SFX: SFX,
     STANDING: STANDING, anims: anims
@@ -861,7 +874,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var TERRAINSET = window.PMCTerrainSet({
-    get seats() { return seats; }, get state() { return state; }, get buildScene() { return buildScene; },
+    get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); }, get buildScene() { return buildScene; },
     get clampCam() { return clampCam; }, get drawBoard() { return drawBoard; }, get esc() { return esc; },
     get render() { return render; }, curArea: curArea, isAI: isAI, pieceNoun: pieceNoun,
     placedSummary: placedSummary, placingSide: placingSide, sideName: sideName, specRange: specRange,
@@ -875,7 +888,7 @@
      and the functions and fixed values it uses. */
   var INPUT = window.PMCInput({
     get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; },
-    get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; },
+    get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get closeDrawer() { return closeDrawer; }, get closeRes() { return closeRes; },
     get drawBoard() { return drawBoard; }, get drawerEl() { return drawerEl; }, get esc() { return esc; },
     get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; },
@@ -905,7 +918,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var ARRIVE = window.PMCArrive({
-    get Q() { return Q; }, get seats() { return seats; }, get state() { return state; },
+    get Q() { return Q; }, get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get watching() { return watching; }, get esc() { return esc; }, get escHtml() { return escHtml; },
     get focusUnit() { return focusUnit; }, get render() { return render; }, addFx: addFx,
     animateMove: animateMove, arrivalWhere: arrivalWhere, byId: byId, nowMs: nowMs, sfName: sfName,
@@ -922,7 +935,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var ACTIONS = window.PMCActions({
-    get state() { return state; }, get render() { return render; },
+    get state() { return state; }, get vc() { return vc(); }, get render() { return render; },
     get scheduleReturn() { return scheduleReturn; }, isAI: isAI, SFX: SFX, el: el, resQueue: resQueue,
     show: show, ui: ui
   });
@@ -937,7 +950,7 @@
     get DPR() { return DPR; }, get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; },
     get canvas() { return canvas; }, get ctx() { return ctx; }, get held() { return held; },
     get loop() { return loop; }, get pctx() { return pctx; }, get pix() { return pix; },
-    get state() { return state; }, get drawOdds() { return drawOdds; },
+    get state() { return state; }, get vc() { return vc(); }, get drawOdds() { return drawOdds; },
     get edgedStroke() { return edgedStroke; }, get hud() { return hud; },
     get labelIcons() { return labelIcons; }, get oddsOn() { return oddsOn; },
     get propBox() { return propBox; }, get render() { return render; },
@@ -961,7 +974,7 @@
     get FORCE_NOUN() { return FORCE_NOUN; }, get ID_NOUN() { return ID_NOUN; },
     get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; }, get anims() { return anims; },
     get ctx() { return ctx; }, get muster() { return muster; }, get pctx() { return pctx; },
-    get state() { return state; }, get colourPop() { return colourPop; },
+    get state() { return state; }, get vc() { return vc(); }, get colourPop() { return colourPop; },
     get demoRename() { return demoRename; }, get drawBar() { return drawBar; },
     get drawLog() { return drawLog; }, get drawPanel() { return drawPanel; },
     get drawStats() { return drawStats; }, get esc() { return esc; },
@@ -988,7 +1001,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var PANELS = window.PMCPanels({
-    get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get seats() { return seats; },
+    get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get vc() { return vc(); }, get seats() { return seats; },
     get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
     cancelPreview: cancelPreview, carriersFor: carriersFor, chooseAction: chooseAction,

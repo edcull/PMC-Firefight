@@ -479,7 +479,8 @@
     function onBoardMove(e) {
       if (!B.state || e.pointerType === 'touch') return;
       ui.hover = worldFromEvent(e);
-      if (ui.selected || B.state.phase === 'terrain') drawBoard();
+      var pa = B.state.placeAsk;
+      if (ui.selected || B.state.phase === 'terrain' || (pa && pa.kind !== 'move')) drawBoard();
     }
 
     function onKey(e) {

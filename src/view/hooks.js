@@ -166,7 +166,12 @@
       return ISO.toWorld(b.x, b.y);
     };
     // the test harness's way through deployment: the scenario's own reserves, then everyone down
-    window.__autoDeployBoth = function () { send({ k: 'autosplit' }); autoDeployMine(); };
+    window.__autoDeployBoth = function () {
+      // a Hostile takeover defender's position first: nothing deploys until it is dug in
+      var pa = B.state && B.state.placeAsk;
+      if (pa && pa.kind === 'fort') send({ k: 'placeauto' });
+      send({ k: 'autosplit' }); autoDeployMine();
+    };
     window.__deployOK = function (x, y, side) {
       side = side || placingSide();
       return !!side && deployOK(side, x, y);
@@ -313,7 +318,9 @@
     window.__previewConfirm = function () { commitMove(); };
     window.__previewCancel = function () { cancelPreview(); };
     window.__restoreCanvases = restoreCanvases;
-    window.__rebuildScene = function () { B.state.scene = null; B.state.ground = null; B.state.structs = null; drawBoard(); };
+    // the view's own caches of the table (the baked plates, the bodies): not the battle's
+    window.__vc = function () { return B.vc; };
+    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null; drawBoard(); };
     window.__tapTerrain = function (i) {
       var r = ui.terrain[i];
       if (!r) return false;

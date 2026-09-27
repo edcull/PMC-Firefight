@@ -69,6 +69,8 @@ function play(seed, opts) {
   while (e.state().phase === 'deploy' && guard++ < 4000) {
     // Modifying the armies (p. 46): keep the lists as they are
     if (e.state().swapAsk) { e.intent(e.state().swapAsk.side, { k: 'swapdone' }); continue; }
+    // Hostile takeover (p. 55): the defender's position goes down by the auto button
+    if (e.state().placeAsk) { e.intent(e.state().placeAsk.side, { k: e.state().placeAsk.kind === 'fort' ? 'placeauto' : 'placedone' }); continue; }
     const side = e.query.placingSide();
     if (!side) break;
     const u = e.query.deployNext();

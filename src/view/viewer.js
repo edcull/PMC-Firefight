@@ -1071,8 +1071,10 @@
       view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
       view.strafeAt = 0; view.at = null; view.arriveAt = 0;
       FX.clear();
-      if (collared && s === 'broken') collarsGo(unit());
     }
+    /* Penal troops go the way they do in the battle: Broken, their collars go
+       off. Pressed again, Broken plays the explosions over. */
+    if (collared && s === 'broken') { FX.clear(); collarsGo(unit()); }
     drawControls(); start(); frame();
   }
   // a segmented choice whose buttons read differently from the values they set
