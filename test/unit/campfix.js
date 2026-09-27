@@ -143,5 +143,9 @@ ok('...remembering on a 2-6', rb.remembered === (rb.roll >= 2), 'D6 ' + rb.roll)
 // Nanobots (p. 89) is for a vehicle or an aircraft
 ok('an aircraft may be fitted with Nanobots', C.availableUpgrades(C.newEntry('fsc')).some(function (g) { return g.n === 6; }));
 
+// a save with no version is stamped on load, so a later change has something to key on (2.12)
+var oldSave = { companies: {}, turn: 3 };
+ok('a campaign saved without a version is stamped with one on load', C.migrate(oldSave).v === C.VERSION);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

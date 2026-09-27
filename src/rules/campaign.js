@@ -1340,7 +1340,21 @@
     }));
   }
   function faceRival(campaign, i) { return (KIT_RIVALS || kitRivals()).faceRival(campaign, i); }
-  function rehydrate(campaign) { return (KIT_RIVALS || kitRivals()).rehydrate(campaign); }
+  /* A save from an older build is brought up to this one before anything reads
+     it: one step per version, keyed on `v`, each step ending with v one higher.
+     There are none yet — version 1 is the first — but a save with no `v` is
+     stamped, so the next change to the dossier's shape has something to key on.
+     Nothing is ever refused: a save that will not load is a campaign lost. */
+  var MIGRATE = {
+    // 1: function (camp) { ...; camp.v = 2; }
+  };
+  function migrate(campaign) {
+    if (!campaign) return campaign;
+    if (!campaign.v) campaign.v = 1;
+    while (campaign.v < VERSION && MIGRATE[campaign.v]) MIGRATE[campaign.v](campaign);
+    return campaign;
+  }
+  function rehydrate(campaign) { return (KIT_RIVALS || kitRivals()).rehydrate(migrate(campaign)); }
   function forSave(campaign) { return (KIT_RIVALS || kitRivals()).forSave(campaign); }
   function foundRivals(campaign, n, opts) { return (KIT_RIVALS || kitRivals()).foundRivals(campaign, n, opts); }
   function rollOffers(campaign) { return (KIT_RIVALS || kitRivals()).rollOffers(campaign); }
@@ -1434,7 +1448,7 @@
   }
 
   root.PMCCamp = {
-    VERSION: VERSION,
+    VERSION: VERSION, migrate: migrate,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,

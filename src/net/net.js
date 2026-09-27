@@ -251,7 +251,8 @@
     var engine = this.engine = root.PMCEngine.create(recorder(this));
     this.rolling(function () {
       engine.start(cfg);
-      book.intents.forEach(function (x) { try { engine.intent(x[0], x[1]); } catch (e) { } });
+      var broke = 0;
+      book.intents.forEach(function (x) { try { engine.intent(x[0], x[1]); } catch (e) { broke++; if (broke === 1 && root.console) console.warn('replaying the saved battle', e); } });
     });
     var logs = this.replaying;
     this.replaying = null;
