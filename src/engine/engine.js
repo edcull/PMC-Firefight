@@ -305,7 +305,7 @@
       // nothing is nominated until the table is set (the scenario places them)
       objectives: manual ? [] : OBJECTIVES.map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
       units: [], turn: 0, phase: 'deploy', activeSide: 'A', initiative: null,
-      streak: 0, chain: null, log: [], over: null,
+      streak: 0, chain: null, rush: null, log: [], over: null,
       campaign: cfg.campaign || null,
       doctrines: cfg.doctrines || null,
       // "Rebel forces cannot use tactics" in a solitaire or cooperative game (p. 145)
@@ -512,7 +512,21 @@
   function finishSetup(built) {
     var cfg = state.cfg;
     ['A', 'B'].forEach(markReserves);
+    /* A player's units held for Battlefield Insertion go into the scenario's own
+       split, if it makes one, and are toggled with the rest of its reserves (a
+       held one still comes in by insertion): so they are let go before it splits
+       the force, and held again only where it makes no split. */
+    var heldIns = {};
+    ['A', 'B'].forEach(function (sd) {
+      if (isAI(sd)) return;
+      heldIns[sd] = state.units.filter(function (u) { return u.side === sd && u.reserve && u.wave == null; });
+      heldIns[sd].forEach(function (u) { u.reserve = false; });
+    });
     SC.deploy(state);
+    Object.keys(heldIns).forEach(function (sd) {
+      if (state.sc.split && state.sc.split[sd]) return;
+      heldIns[sd].forEach(function (u) { if (!u.reserve) { u.reserve = true; u.x = -1; u.y = -1; } });
+    });
     nextPlace();
     seatPlatforms();             // every drop pod comes down with somebody in it
     baselineSplits();
@@ -647,6 +661,8 @@
   function splitFor(side) { return (KIT_DEPLOY || kitDeploy()).splitFor(side); }
   function baselineSplits() { return (KIT_DEPLOY || kitDeploy()).baselineSplits(); }
   function toggleHold(side, id) { return (KIT_DEPLOY || kitDeploy()).toggleHold(side, id); }
+  function insertionFor(side) { return (KIT_DEPLOY || kitDeploy()).insertionFor(side); }
+  function toggleInsertion(side, id) { return (KIT_DEPLOY || kitDeploy()).toggleInsertion(side, id); }
   function clearSplits() { return (KIT_DEPLOY || kitDeploy()).clearSplits(); }
   function autoSplit(side) { return (KIT_DEPLOY || kitDeploy()).autoSplit(side); }
   function splitsOK() { return (KIT_DEPLOY || kitDeploy()).splitsOK(); }
@@ -805,7 +821,7 @@
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
       u.disembarked = false; u.boarded = false;
     });
-    state.chain = null;
+    state.chain = null; state.rush = null;
     state.mark = null; state.remark = null;
     var a, b;
     do { a = R.d10(); b = R.d10(); } while (a === b);
@@ -962,6 +978,11 @@
   }
 
   function eligible(side) {
+    // an Adrenaline Rush: the unit's second action comes straight after its first
+    if (state.rush) {
+      var ru = byId(state.rush);
+      if (ru && ru.side === side) return ru.alive && !ru.activated && !ru.aboard && R.status(ru) !== 'broken' ? [ru] : [];
+    }
     // a marker that stood still is naming its second target: nothing else goes until it has
     if (state.remark && state.remark.side === side) {
       var rm = byId(state.remark.by);
@@ -1061,6 +1082,21 @@
   }
   // the rest of an activation's ending: turrets together, chains, whose go it is next
   function passOn(just) {
+    /* Adrenaline Rush (p. 88): after the first of its two actions the unit is
+       readied to go again, and nothing else moves until it has; the second action
+       ends the activation as usual, so the pair costs the side one activation. */
+    if (just && state.rush === just.id) state.rush = null;
+    else if (just && just.rushArmed) {
+      just.rushArmed = false;
+      if (just.alive && !just.aboard && R.status(just) !== 'broken' && !state.over) {
+        just.activated = false;
+        state.rush = just.id;
+        logLine('note', just.label + ' goes again — Adrenaline Rush.');
+        if (!isAI(just.side)) setHint(null, just.label + ' goes again: its second action of the Adrenaline Rush.');
+        render(); maybeAI();
+        return;
+      }
+    }
     /* All turrets are activated at once (p. 130): the first to act brings every
        other one of its side along before the activation passes. */
     if (just && R.has(just, 'Turret') && !state.chain && !state.solo) {
@@ -1105,6 +1141,7 @@
       activeUnits: activeUnits, addFx: addFx, animateMove: animateMove, beginTurn: beginTurn,
       canStand: canStand, focusUnit: focusUnit, logLine: logLine, nearestEnemy: nearestEnemy,
       onTable: onTable, pushRes: pushRes, render: render, sideName: sideName, soloAfterMove: soloAfterMove,
+      isAI: isAI, makeStand: makeStand, revealConsole: revealConsole,
       ui: ui, get state() { return state; }
     }));
   }
@@ -1182,6 +1219,28 @@
 
   function spent(u, which) { return !!(u && u.camp && u.camp.once && u.camp.once[which]); }
 
+  /* Last Stand (p. 88): "once per battle the unit can remove all its Suppression
+     points" — at any time, and not as an action. A player calls on it from the
+     order of battle whenever they like, or from the unit's own action bar; the
+     rally that would see the unit off the table stops to ask first (endphase.js). */
+  function standable(u) {
+    return !!(u && u.alive && !u.reserve && u.x >= 0 && u.sp > 0 && R.campFlag(u, 'lastStand') && !spent(u, 'lastStand') &&
+      state && state.phase === 'battle' && !state.over);
+  }
+  function makeStand(u, why) {
+    u.camp.once = u.camp.once || {};
+    u.camp.once.lastStand = true;
+    var was = u.sp;
+    u.sp = 0;
+    logLine('rally', u.label + ' makes a Last Stand' + (why ? ' ' + why : '') + ' and shakes off all ' + was + ' SP.');
+    pushRes({
+      kind: 'Honour', title: 'Last Stand', side: u.side,
+      note: u.label + ' steadies and throws off every point of suppression.',
+      outcome: { text: was + ' SP cleared — the unit is ready again.', tone: 'good' }
+    });
+    return was;
+  }
+
   /* the destructible pieces this unit could shoot at, or set charges against */
   function demolishTargets(u, melee) {
     if (!state || !u) return [];
@@ -1235,7 +1294,7 @@
       endActivation: endActivation, flightTurn: flightTurn, fromLog: fromLog, isAI: isAI, logLine: logLine,
       markHint: markHint, markTargets: markTargets, moveBonus: moveBonus, onTable: onTable,
       paintStructures: paintStructures, pushRes: pushRes, render: render, repaintTerrain: repaintTerrain,
-      setHint: setHint, ui: ui, whenIdle: whenIdle, get state() { return state; }
+      setHint: setHint, ui: ui, whenIdle: whenIdle, makeStand: makeStand, get state() { return state; }
     }));
   }
   function doOnce(u, id) { return (KIT_MOVES || kitMoves()).doOnce(u, id); }
@@ -1378,7 +1437,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -1416,6 +1475,10 @@
              behind, it could come back later in the turn for a whole action. */
           if (state.remark && state.remark.side === side && u.id !== state.remark.by) {
             return no('the marker is naming its second target — pick one, or Cancel');
+          }
+          if (state.rush && state.phase === 'battle' && u.side === side && u.id !== state.rush) {
+            var rsh = byId(state.rush);
+            return no((rsh ? rsh.name : 'the rushing unit') + ' is taking its second action of the Adrenaline Rush');
           }
           var mid = ui.selected;
           if (mid && mid !== u && mid.advancing && !mid.activated) {
@@ -1463,6 +1526,28 @@
           var why = toggleHold(side, it.id);
           if (why) return no(why);
           render();
+          return yes;
+        }
+        case 'insertion': {
+          if (state.phase !== 'deploy') return no('not deploying');
+          var whyI = toggleInsertion(side, it.id);
+          if (whyI) return no(whyI);
+          render();
+          return yes;
+        }
+        case 'laststand': {
+          var ls = unitOf(it.id, side);
+          if (!ls) return no('no such unit');
+          if (state.standAsk && state.standAsk.unit === ls.id && ui.standThen) { ui.standThen(true); return yes; }
+          if (!standable(ls)) return no(spent(ls, 'lastStand') ? 'Last Stand is spent' : 'nothing to make a stand against');
+          makeStand(ls);
+          render();
+          return yes;
+        }
+        case 'stand': case 'nostand': {
+          var sa = state.standAsk;
+          if (!sa || sa.side !== side || !ui.standThen) return no('nothing to answer');
+          ui.standThen(it.k === 'stand');
           return yes;
         }
         case 'rpick': {
@@ -1744,6 +1829,13 @@
     function deployAt(side, it) {
       var pending = it.id ? byId(it.id) : deployNext();
       if (!pending || pending.side !== side) return no('no such unit');
+      /* A unit the scenario holds back is brought on through the split; one held
+         for Battlefield Insertion, set down on the table, deploys like the rest
+         (p. 56: it "can" come in that way, not must). */
+      if (pending.reserve) {
+        if (pending.wave === 2) return no(pending.name + ' is held back by the scenario — bring it onto the table in Reserves first');
+        if (toggleInsertion(side, pending.id)) return no(pending.name + ' is in reserve');
+      }
       if (pending.x < 0 && deployNext() !== pending) ui.deployPick = pending.id;
       var p = { x: +it.x, y: +it.y };
       var clear = deployOK(side, p.x, p.y, pending) &&
@@ -1789,7 +1881,7 @@
         deployNext: deployNext,
         deployRoster: deployRoster,
         deploymentDone: deploymentDone,
-        splitFor: splitFor,
+        splitFor: splitFor, insertionFor: insertionFor,
         placingSide: placingSide,
         zoneFor: zoneFor,
         zoneCentre: zoneCentre,

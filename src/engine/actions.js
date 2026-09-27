@@ -338,7 +338,7 @@
         case 'laststand': {
           if (spent(u, 'lastStand')) return { on: false, hint: 'Last Stand: already used this battle.' };
           if (!u.sp) return { on: false, hint: 'Nothing to shake off.' };
-          return { on: true, hint: 'Last Stand: shed all ' + u.sp + ' Suppression at once. Once a battle, and it ends the activation.' };
+          return { on: true, hint: 'Last Stand: shed all ' + u.sp + ' Suppression at once, and still act. Once a battle.' };
         }
         case 'coordinate': {
           if (sup) return { on: false, hint: 'Suppressed units cannot coordinate.' };

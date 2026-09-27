@@ -300,5 +300,24 @@ head('Several terrains at once (p. 42): half the rim, the middle at a tie');
   ok('mostly off: not', R.levelOf(world([offHill], [hill]), offHill), 0);
 })();
 
+/* A Tier III-V vehicle drives through a wall and flattens it (p. 35) — but not
+   a reinforced one, which "cannot be crossed" and nothing brings down (p. 41). */
+head('Reinforced walls (p. 41)');
+(function () {
+  function across(reinforced) {
+    var hunter = mk('hunter', 'A', 24, 14);
+    var wall = { kind: 'wall', x: 0, y: 19.7, w: 48, h: 0.6, reinforced: reinforced };
+    var st = world([hunter], [wall]);
+    var beyond = R.reachable(st, hunter, 14).filter(function (q) { return q.y > 21; }).length;
+    var gone = R.crushOnMove(st, hunter, { x: 24, y: 14 }, { x: 24, y: 24 }, []);
+    return { beyond: beyond, crushed: gone.length, stands: !wall.gone };
+  }
+  var plain = across(false), hard = across(true);
+  ok('a Tier III hull drives through a plain high wall', plain.beyond > 0, true, plain.beyond + ' spots beyond it');
+  ok('...and flattens it', plain.crushed, 1);
+  ok('a reinforced wall stops it', hard.beyond, 0);
+  ok('...and is not flattened', hard.crushed + ' ' + hard.stands, '0 true');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

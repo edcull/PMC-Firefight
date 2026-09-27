@@ -64,18 +64,51 @@ var far = world([unit('A', 20, 20)]);
 ok('the radius is measured from the token edge', S.holderOf(far, 25, 20, 4), 'A',
   '5" centre to centre is 4" edge to edge');
 
+/* An area objective (p. 49) is measured from its own edge, and "count units
+   within them first, and only if there are no units in the objective, take into
+   account units within 4"": an Invasion landing zone is an 8" circle (p. 53), a
+   Find and Secure site a piece up to 4" across (p. 52). */
+head('Area objectives (p. 49)');
+var lz = { r: 4 }, UR = R.UNIT_R;
+ok('a unit 4" from a landing zone\'s edge holds it', S.holderOf(world([unit('A', 24 + 4 + 4 + UR, 24)]), 24, 24, 4, lz), 'A',
+  'measured from the circle, not its middle');
+ok('...one further off does not', S.holderOf(world([unit('A', 24 + 4 + 4 + UR + 0.5, 24)]), 24, 24, 4, lz), 'null');
+ok('a unit inside the zone holds it against an enemy outside',
+  S.holderOf(world([unit('A', 25, 24), unit('B', 24, 24 + 4 + 2)]), 24, 24, 4, lz), 'A', 'the units inside count first');
+ok('...but an enemy inside it too contests it',
+  S.holderOf(world([unit('A', 25, 24), unit('B', 23, 24)]), 24, 24, 4, lz), 'null');
+ok('with nobody inside, the units within 4" of it count',
+  S.holderOf(world([unit('A', 24 + 6, 24), unit('B', 24, 24 + 6)]), 24, 24, 4, lz), 'null');
+var site = { rect: { x: 18, y: 18, w: 4, h: 4 } };
+ok('a unit 3.9" from a search site\'s edge holds it', S.holderOf(world([unit('A', 22 + 3.9 + UR, 20)]), 20, 20, 4, site), 'A',
+  'as it may search it from there');
+
 /* ---------------------------------------------------------------------- routing */
 head('Routing (p. 49)');
-var four = { armyA: ['a', 'b', 'c', 'd'], armyB: ['a', 'b', 'c', 'd'], pl: 1 };
-var r1 = world([unit('A', 1, 1), unit('A', 2, 2), unit('A', 3, 3)], four);
+function dead(side) { return unit(side, -1, -1, { alive: false }); }
+var r1 = world([unit('A', 1, 1), unit('A', 2, 2), unit('A', 3, 3), dead('A')]);
 ok('one of four lost is not a rout', S.routed(r1, 'A'), false);
-var r2 = world([unit('A', 1, 1), unit('A', 2, 2)], four);
+var r2 = world([unit('A', 1, 1), unit('A', 2, 2), dead('A'), dead('A')]);
 ok('two of four is', S.routed(r2, 'A'), true);
-var r3 = world([unit('A', 1, 1), unit('A', 2, 2), unit('A', 3, 3), unit('A', 4, 4, { reserve: true })], four);
+var r3 = world([unit('A', 1, 1), unit('A', 2, 2), unit('A', 3, 3), unit('A', 4, 4, { reserve: true })]);
 ok('a unit still in reserve counts as perfectly fine', S.routed(r3, 'A'), false);
-var five = { armyA: ['a', 'b', 'c', 'd', 'e'], armyB: ['a'], pl: 1 };
-var r4 = world([unit('A', 1, 1), unit('A', 2, 2)], five);
+var r4 = world([unit('A', 1, 1), unit('A', 2, 2), dead('A'), dead('A'), dead('A')]);
 ok('three of five is a rout', S.routed(r4, 'A'), true, 'half of five rounds up to three');
+/* A turret set is one pick on the army list but a unit for every turret, and
+   "their Unit Tiers are of no importance" (p. 49): five units and a set of four
+   turrets is nine units, routed at five lost, not at the six the picks gave. */
+function turrets(n, lost) {
+  var us = [];
+  for (var i = 0; i < 5; i++) us.push(unit('A', 1 + i, 1));
+  for (var t = 0; t < 4; t++) us.push(unit('A', 10 + t, 1));
+  for (var k = 0; k < lost; k++) us[k].alive = false;
+  return world(us, { armyA: ['a', 'b', 'c', 'd', 'e', 'turrets'], armyB: ['a'], pl: 1 });
+}
+ok('a turret set counts a unit a turret: four of nine lost is not a rout', S.routed(turrets(4, 4), 'A'), false);
+ok('...and five of nine is', S.routed(turrets(4, 5), 'A'), true, 'the army list has six picks; the table has nine units');
+var sp = world([unit('A', 1, 1), unit('A', 2, 2), unit('A', 3, 3), dead('A'), unit('A', 5, 5, { alive: false })]);
+sp.units[4].rules.push('Expendable');
+ok('a destroyed Expendable unit is neither a loss nor in the tally', S.routed(sp, 'A'), false, 'one of four');
 
 /* ------------------------------------------------------- Check the area! (p. 52) */
 head('Check the area!');
@@ -306,14 +339,14 @@ ok('...and keeps the defender on the table', (tk.atk === 'A' ? tk.B : tk.A), 0);
 head('Victory conditions (p. 49 and the six)');
 
 /* A table with the scenario already begun and both sides down to whatever the
-   test wants. `armyA`/`armyB` are the forces that took the field, so cutting the
-   unit list is how a side is routed. */
+   test wants: each side took the field with four units, and the ones beyond
+   `liveA`/`liveB` have been destroyed. */
 function board(id, opts) {
   opts = opts || {};
   var nA = opts.liveA != null ? opts.liveA : 4, nB = opts.liveB != null ? opts.liveB : 4;
   var us = [];
-  for (var i = 0; i < nA; i++) us.push(unit('A', 2 + i, 2));
-  for (var j = 0; j < nB; j++) us.push(unit('B', 44 - j, 44));
+  for (var i = 0; i < Math.max(4, nA); i++) us.push(unit('A', 2 + i, 2, { alive: i < nA }));
+  for (var j = 0; j < Math.max(4, nB); j++) us.push(unit('B', 44 - j, 44, { alive: j < nB }));
   var st = world(us);
   st.terrain = [];
   S.begin(st, id, opts.attacker ? { attacker: opts.attacker } : {});

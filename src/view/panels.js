@@ -23,7 +23,7 @@
     var playerSide = B.playerSide, relocPick = B.relocPick, render = B.render, roleOf = B.roleOf;
     var roleSentence = B.roleSentence, select = B.select, send = B.send, shownAs = B.shownAs;
     var sideName = B.sideName, soloOwnerName = B.soloOwnerName, specialsFor = B.specialsFor;
-    var splitFor = B.splitFor, startBattle = B.startBattle, swapCard = B.swapCard, terrainAct = B.terrainAct;
+    var splitFor = B.splitFor, insertionFor = B.insertionFor, startBattle = B.startBattle, swapCard = B.swapCard, terrainAct = B.terrainAct;
     var terrainBits = B.terrainBits, terrainCard = B.terrainCard, terrainMark = B.terrainMark;
     var unloadBefore = B.unloadBefore, C = B.C, DIG_NAMES = B.DIG_NAMES, ICONS = B.ICONS, ISO = B.ISO;
     var PIECE_NOUN = B.PIECE_NOUN, R = B.R, SFX = B.SFX, SPECIAL_SLOTS = B.SPECIAL_SLOTS;
@@ -384,6 +384,7 @@
       else if (ui.reservePick) html = reservePickCard();
       else if (ui.insertion) html = insertionCard();
       else if (B.state.cmdOffer) html = cmdOfferCard();
+      else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.over) html = overCard();
@@ -436,6 +437,23 @@
       if (both) wireHost(both);
     }
 
+    // Last Stand (p. 88), asked when a rally would see the unit off the table
+    function standCard() {
+      var a = B.state.standAsk, u = byId(a.unit);
+      if (!u) return '';
+      return '<div class="card"><h2>Last Stand</h2>' +
+        '<p class="sub"><b>' + esc(u.name) + '</b> is left with ' + a.sp + ' SP after its rally \u2014 over three times its Morale of ' + a.morale +
+        '. It is about to scatter and flee the field. It still has its Last Stand: once a battle, every point of suppression gone.</p>' +
+        '<div class="acts"><button class="act primary" data-act="stand"><span>Make its Last Stand</span><small>All ' + a.sp + ' SP cleared \u2014 it stays</small></button>' +
+        '<button class="act" data-act="nostand"><span>Let it flee</span><small>Keep nothing back: it counts as fled</small></button></div></div>';
+    }
+    // a player's own unit that could make its Last Stand now (p. 88: at any time)
+    function mayStand(u) {
+      return !!(u && u.alive && !isAI(u.side) && B.state.phase === 'battle' && !B.state.over && !B.state.standAsk &&
+        !u.reserve && u.x >= 0 && u.sp > 0 && R.campFlag(u, 'lastStand') && !(u.camp && u.camp.once && u.camp.once.lastStand) &&
+        (!B.seats || B.seats.indexOf(u.side) >= 0));
+    }
+
     function forceList(only) {
       var h = '<div class="forces">';
       /* A co-op game's commandos are one side, but each player's is listed on its
@@ -465,7 +483,9 @@
               ? Math.max(0, u.str - u.damage) + '/' + u.str
               : u.models + '/' + u.size) + '</span>' +
             '<span class="ru-sp">' + (u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
-              : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') + '</li>';
+              : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') +
+            (mayStand(u) ? '<button class="ru-stand" data-stand="' + u.id + '" title="Last Stand — shed all ' + u.sp + ' SP, once a battle, at any time">Last Stand</button>' : '') +
+            '</li>';
         });
         h += '</ul></div>';
       });
@@ -663,8 +683,6 @@
     function deployCard() {
       if (B.state.relocating) return relocCard();
       var next = deployNext();
-      // the units coming in by Battlefield Insertion — not the ones the scenario holds back
-      var held = inReserve().filter(function (u) { return !isAI(u.side) && u.wave == null; });
       var me = next ? next.side : (playerSide() || 'A');
       var role = roleOf(me);
       var h = '<div class="card"><h2>' + (B.state.scen ? B.state.scen.name : 'Deployment') +
@@ -672,9 +690,7 @@
           (role === 'attacker' ? 'attack' : 'defend') + '</span>' : '') + '</h2>' +
         (role ? '<p class="sub"><b>' + roleSentence() + '</b></p>' : '') +
         '<p class="sub">' + (B.state.scen ? B.state.scen.hint : '') + '</p>' +
-        '<p class="sub">' + deployWhere(me) +
-        (held.length ? ' <b>' + held.map(function (u) { return u.name; }).join(', ') +
-          '</b> stay in reserve and come in by Battlefield Insertion from the second turn on.' : '') + '</p>';
+        '<p class="sub">' + deployWhere(me) + '</p>';
       if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
         (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
       // Modifying the armies (p. 46): offered until the first unit goes down
@@ -684,6 +700,7 @@
           ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier, having seen the table and their force</small></button></div>';
       }
       h += deployList(me);
+      h += insertionList(me);
       /* The scenario's split (which units go on the table and which wait, or
          which wave each comes in) and who starts the battle aboard a hull are
          set in a modal, opened from a button, whenever there is either. */
@@ -747,6 +764,23 @@
        tapped to move it between the table and the reserve (or between the waves),
        and a count against what the rule allows. */
     var deployBox = false;           // the reserves-and-transports modal, open over the deployment card
+    /* Battlefield Insertion (p. 56) is the player's choice: the units that have
+       it start held for it, and a tap sets one down on the table instead, or
+       holds it back again, up to half the army. */
+    function insertionList(side) {
+      var ins = insertionFor && insertionFor(side);
+      if (!ins) return '';
+      var rows = ins.units.map(function (x) {
+        return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-insertion="' + x.id + '">' +
+          '<span class="dpr-mark">' + (x.held ? '\u2193' : '\u2713') + '</span>' +
+          '<span class="dpr-name">' + esc(x.name) + '</span>' +
+          '<span class="dpr-note">' + (x.held ? 'by insertion, from turn 2' : 'on the table') + '</span></button>';
+      }).join('');
+      return '<div class="dplist splitlist"><div class="dphead">Battlefield Insertion \u2014 <b>' + ins.used + '</b> of up to ' + ins.cap + '</div>' +
+        '<p class="hint small">These units can drop in from the second turn on instead of deploying. Tap one to set it down on the table, or to hold it for insertion.</p>' +
+        rows + '</div>';
+    }
+
     function splitCard(side) {
       var sp = splitFor(side);
       if (!sp) return '';
@@ -756,7 +790,7 @@
       var rows = sp.units.map(function (x) {
         var note = x.locked ? 'emplaced \u2014 never held back'
           : wave ? (x.held ? 'second wave' : 'first wave')
-          : x.held ? 'held back' : 'on the table';
+          : x.held ? (x.insert ? 'held back \u2014 by insertion' : 'held back') : x.inserter ? 'on the table \u2014 can insert' : 'on the table';
         return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-holdback="' + x.id + '"' + (x.locked ? ' disabled' : '') + '>' +
           '<span class="dpr-mark">' + (x.held ? (wave ? '2' : '\u21a9') : (wave ? '1' : '\u2713')) + '</span>' +
           '<span class="dpr-name">' + esc(x.name) + '</span>' +
@@ -920,13 +954,14 @@
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });
-      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
+      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-act');
           if (SFX) SFX.click();
           if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
           if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
           if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
+          if (b.hasAttribute('data-insertion')) { send({ k: 'insertion', id: b.getAttribute('data-insertion') }); return; }
           if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }
           if (b.hasAttribute('data-load')) {
             var lv = byId(b.getAttribute('data-hull')), lu = byId(b.getAttribute('data-load'));
@@ -950,7 +985,7 @@
           else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
-          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf') { send({ k: a }); return; }
+          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();
@@ -991,6 +1026,13 @@
           else if (ui.mode === 'steady') doSteady(t);
           else if (ui.mode === 'support') doSupport(t);
           else doShoot(t);
+        });
+      });
+      host.querySelectorAll('[data-stand]').forEach(function (b) {
+        b.addEventListener('click', function (ev) {
+          ev.stopPropagation();                       // not a pick of the unit's row
+          if (SFX) SFX.click();
+          send({ k: 'laststand', id: b.getAttribute('data-stand') });
         });
       });
       host.querySelectorAll('[data-unit]').forEach(function (b) {

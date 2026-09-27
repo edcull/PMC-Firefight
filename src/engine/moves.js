@@ -15,29 +15,27 @@
         paintStructures = E.paintStructures, pushRes = E.pushRes, render = E.render,
         repaintTerrain = E.repaintTerrain, setHint = E.setHint, ui = E.ui, whenIdle = E.whenIdle;
 
-    /* Adrenaline Rush and Last Stand: each once a battle, each spent from u.camp.once. */
+    /* Adrenaline Rush and Last Stand: each once a battle, each spent from u.camp.once;
+       neither is an action in itself. */
     function doOnce(u, id) {
-      u.camp.once[id === 'rush' ? 'adrenaline' : 'lastStand'] = true;
       if (id === 'laststand') {
-        var was = u.sp;
-        u.sp = 0;
-        logLine('note', u.label + ' makes a Last Stand and shakes off all ' + was + ' SP.');
-        pushRes({
-          kind: 'Honour', title: 'Last Stand', side: u.side,
-          note: u.label + ' steadies and throws off every point of suppression.',
-          outcome: { text: was + ' SP cleared — the unit is ready again.', tone: 'good' }
-        });
-        u.activated = true;
-        endActivation(u);
+        /* "Once per battle the unit can remove all its Suppression points" (p. 88):
+           at any time, and not an action, so the unit still has its activation to
+           spend, steady (engine.js makeStand). */
+        E.makeStand(u);
+        ui.mode = 'idle'; render();
         return;
       }
-      // a Rush buys one more activation in a row, on top of whatever the side has left
-      E.state.streak = (E.state.streak || 1) + 1;
+      u.camp.once.adrenaline = true;
+      /* "Once per battle the unit can make two actions in a row" (p. 88): the unit
+         itself goes again the moment this action ends (engine.js passOn), and the
+         two count as the one activation. */
+      u.rushArmed = true;
       logLine('note', u.label + ' — Adrenaline Rush: two actions in a row.');
       pushRes({
         kind: 'Honour', title: 'Adrenaline Rush', side: u.side,
         note: u.label + ' goes again the moment this action ends.',
-        outcome: { text: 'One extra activation in a row.', tone: 'good' }
+        outcome: { text: 'Two actions in a row.', tone: 'good' }
       });
       ui.mode = 'idle'; render();
     }

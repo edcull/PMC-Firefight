@@ -1502,11 +1502,17 @@
     /* ...unless a scenario says otherwise: an Evacuation's civilians keep
        stumbling towards safety however shaken, and a Decapitation's leaders
        never break at all (pp. 152-154). */
-    if (u.sp > 3 * currentMorale(u) && !u.noFlee && !u.noBreak) { u.alive = false; gone = true; u.fled = true; u.brokenEver = true; }
+    var standing = false;
+    if (u.sp > 3 * currentMorale(u) && !u.noFlee && !u.noBreak) {
+      /* ...unless it has a Last Stand still to make (p. 88), which it may make at
+         any time: the rally stops short, and whoever commands it is asked. */
+      if (campFlag(u, 'lastStand') && !(u.camp.once && u.camp.once.lastStand)) standing = true;
+      else { u.alive = false; gone = true; u.fled = true; u.brokenEver = true; }
+    }
     var note = gone ? ' — SP exceeds 3× Morale: the unit scatters and flees the field.' : '.';
     return {
       morale: m, dice: dice, removed: removed, before: before, after: u.sp,
-      reroll: reroll, gone: gone, need: need, jammed: jammed, extras: extras,
+      reroll: reroll, gone: gone, standing: standing, need: need, jammed: jammed, extras: extras,
       statusBefore: statusBefore, statusAfter: gone ? 'removed' : status(u),
       text: u.label + ' rallies: ' + m + 'D6 [' + rolls.join(' ') + '] on ' + need + '+' +
         (jammed ? ' (Jammers)' : '') + (reroll ? ' (Inspiring Presence re-rolls)' : '') +

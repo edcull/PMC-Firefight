@@ -397,7 +397,8 @@
         side: side, kind: sp.kind, rule: sp.rule, min: sp.min, max: sp.max, held: n,
         ok: n >= sp.min && n <= sp.max,
         units: units.map(function (u) {
-          return { id: u.id, name: u.name, held: held(u), locked: R.has(u, 'Stationary Artillery'), aboard: !!u.aboard };
+          return { id: u.id, name: u.name, held: held(u), locked: R.has(u, 'Stationary Artillery'), aboard: !!u.aboard,
+            insert: !!u.insert, inserter: sp.kind !== 'wave' && R.has(u, 'Battlefield Insertion') && !SC.noInsertion(E.state) };
         })
       };
     }
@@ -453,13 +454,59 @@
       if (R.has(u, 'Stationary Artillery')) return 'an emplaced gun is never held back';
       if (sp.kind === 'wave') { u.wave = u.wave === 2 ? 1 : 2; return null; }
       if (u.reserve && u.wave === 2) {
-        u.reserve = false; delete u.wave; u.x = -1; u.y = -1;      // back in hand, to be set down
+        u.reserve = false; delete u.wave; delete u.insert; u.x = -1; u.y = -1;      // back in hand, to be set down
         return null;
       }
       if (u.aboard) return 'take it out of the hull first';
       (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
       if (u.bld) R.exitBuilding(E.state, u, null);
       u.reserve = true; u.wave = 2; u.x = -1; u.y = -1;
+      /* A unit with Battlefield Insertion held back here counts toward the
+         scenario's reserves and comes in by insertion (p. 56) — while no more
+         than half the army does; past that, it waits with the rest. */
+      if (canInsert(u)) u.insert = true;
+      if (ui.deployPick === u.id) ui.deployPick = null;
+      return null;
+    }
+
+    /* Battlefield Insertion (p. 56): units with the rule "can" come in by it —
+       a choice, not an order. They start held for it (markReserves), and the
+       player may set any of them down on the table instead, or hold one back
+       again, as long as no more than half the army comes in that way. The ones
+       a scenario holds back (`wave` 2) are the scenario's split, not this. */
+    // may this unit, being held back, come in by Battlefield Insertion?
+    function canInsert(u) {
+      if (!R.has(u, 'Battlefield Insertion') || R.has(u, 'Stationary Artillery') || SC.noInsertion(E.state)) return false;
+      var mine = E.state.units.filter(function (x) { return x.side === u.side && x.alive; });
+      var using = mine.filter(function (x) { return x !== u && x.reserve && (x.insert || !x.wave); }).length;
+      return using < Math.ceil(mine.length / 2);             // "no more than half of the army" (p. 56)
+    }
+    function insertionFor(side) {
+      if (!E.state || E.state.phase !== 'deploy' || isAI(side) || SC.noInsertion(E.state)) return null;
+      if (splitFor(side)) return null;                       // the scenario's split holds them back instead
+      var mine = E.state.units.filter(function (u) { return u.side === side && u.alive; });
+      var units = mine.filter(function (u) {
+        return R.has(u, 'Battlefield Insertion') && !R.has(u, 'Stationary Artillery') && !u.aboard && u.wave !== 2;
+      });
+      if (!units.length) return null;
+      var cap = Math.ceil(mine.length / 2);              // "no more than half of the army", rounded up (p. 27)
+      var used = units.filter(function (u) { return u.reserve; }).length;
+      return {
+        side: side, cap: cap, used: used,
+        units: units.map(function (u) { return { id: u.id, name: u.name, held: !!u.reserve }; })
+      };
+    }
+    function toggleInsertion(side, id) {
+      var ins = insertionFor(side), u = byId(id);
+      if (!ins || !u || ins.units.every(function (x) { return x.id !== id; })) return 'that unit cannot come in by Battlefield Insertion';
+      if (u.reserve) {
+        u.reserve = false; u.x = -1; u.y = -1;             // back in hand, to be set down with the rest
+        return null;
+      }
+      if (ins.used >= ins.cap) return 'no more than half the army (' + ins.cap + ' units) may come in by Battlefield Insertion';
+      (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
+      if (u.bld) R.exitBuilding(E.state, u, null);
+      u.reserve = true; u.x = -1; u.y = -1;
       if (ui.deployPick === u.id) ui.deployPick = null;
       return null;
     }
@@ -524,7 +571,7 @@
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,
-      clearSplits: clearSplits, autoSplit: autoSplit, splitsOK: splitsOK
+      clearSplits: clearSplits, autoSplit: autoSplit, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineDeploy;

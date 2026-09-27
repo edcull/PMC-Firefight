@@ -39,14 +39,14 @@
       ['A', 'B'].forEach(function (side) {
         var foe = other(side);
         if (docsOf(side).indexOf('XO6') < 0 || E.state.kyf[side]) return;
-        if (!inReserve().some(function (u) { return u.side === foe && !u.wave; })) return;
+        if (!inReserve().some(function (u) { return u.side === foe && (!u.wave || u.insert); })) return;
         // the AI uses it the first turn it can; a player is asked, once a turn, whether this is the turn
         if (isAI(side)) { useKyf(side); return; }
         if (E.state.kyfAsked[side] !== E.state.turn && !kyfWait) kyfWait = side;
       });
       if (kyfWait) {
         E.state.kyfAsked[kyfWait] = E.state.turn;
-        E.state.kyfAsk = { side: kyfWait, n: inReserve().filter(function (u) { return u.side === other(kyfWait) && !u.wave; }).length };
+        E.state.kyfAsk = { side: kyfWait, n: inReserve().filter(function (u) { return u.side === other(kyfWait) && (!u.wave || u.insert); }).length };
         ui.kyfThen = function (yes) {
           var sd = E.state.kyfAsk.side;
           E.state.kyfAsk = null; ui.kyfThen = null;
@@ -59,7 +59,8 @@
         return;
       }
       function held(u) { var f = other(u.side); return E.state.kyf && E.state.kyf[f] === E.state.turn; }
-      var mine = inReserve().filter(function (u) { return !u.wave && !held(u); });
+      // by Battlefield Insertion: those held for it, and those the scenario's split holds back to come in by it
+      var mine = inReserve().filter(function (u) { return (!u.wave || u.insert) && !held(u); });
       var i = 0;
       if (!mine.length) { done(); return; }
       // the sides take it in turn, starting with the initiative

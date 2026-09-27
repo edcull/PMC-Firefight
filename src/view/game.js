@@ -284,6 +284,7 @@
   function deployRoster(side) { return Q.deployRoster(side); }
   function deploymentDone() { return Q.deploymentDone(); }
   function splitFor(side) { return Q.splitFor ? Q.splitFor(side) : null; }
+  function insertionFor(side) { return Q.insertionFor ? Q.insertionFor(side) : null; }
   function deployOK(side, x, y, u) { return Q.deployOK(side, x, y, u); }
   function placingSide() { return Q.placingSide(); }
   function zoneFor(side) { return Q.zoneFor(side); }
@@ -972,7 +973,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var PANELS = window.PMCPanels({
-    get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; },
+    get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get seats() { return seats; },
     get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
     cancelPreview: cancelPreview, carriersFor: carriersFor, chooseAction: chooseAction,
@@ -987,7 +988,7 @@
     openMenu: openMenu, pickToDeploy: pickToDeploy, placeCard: placeCard, placingSide: placingSide,
     playerSide: playerSide, relocPick: relocPick, render: render, roleOf: roleOf, roleSentence: roleSentence,
     select: select, send: send, shownAs: shownAs, sideName: sideName, soloOwnerName: soloOwnerName,
-    specialsFor: specialsFor, splitFor: splitFor, startBattle: startBattle, swapCard: swapCard,
+    specialsFor: specialsFor, splitFor: splitFor, insertionFor: insertionFor, startBattle: startBattle, swapCard: swapCard,
     terrainAct: terrainAct, terrainBits: terrainBits, terrainCard: terrainCard, terrainMark: terrainMark,
     unloadBefore: unloadBefore, C: C, DIG_NAMES: DIG_NAMES, ICONS: ICONS, ISO: ISO, PIECE_NOUN: PIECE_NOUN,
     R: R, SFX: SFX, SPECIAL_SLOTS: SPECIAL_SLOTS, STANDARD: STANDARD, TERRAIN_MARK: TERRAIN_MARK, UR: UR,
