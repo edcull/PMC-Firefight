@@ -510,8 +510,8 @@
     xalpha4: { p: 'energy', n: 2 }, xalpha5: { p: 'energy', n: 2 },
     xbeta2: { p: 'energy', n: 2 }, xbeta3: { p: 'energy', n: 3 }, xbeta4: { p: 'energy', n: 4 },
     xgamma3: { p: 'orb', n: 3 }, xgamma4: { p: 'orb', n: 3 }, xgamma5: { p: 'orb', n: 3 },
-    // the Deltas' energy SMGs: the leader's alone at Low grade, a pair at Core, every round splashing
-    xdelta1: { p: 'none' }, xdelta2: { p: 'smg', splash: true }, xdelta3: { p: 'smg', splash: true },
+    // Low-grade Deltas fire a rifle volley; Core Deltas their energy SMGs, every round splashing
+    xdelta1: { p: 'none' }, xdelta2: { p: 'small' }, xdelta3: { p: 'smg', splash: true },
     // the Esh-Aven: bursts of tracer, but it is energy that crackles out of them
     xeps1: { p: 'none' }, xeps2: { p: 'pistol' }, xeps3: { p: 'small' },
     xeps4: { p: 'rail', n: 4 }, xeps5: { p: 'rail', n: 5 },

@@ -85,10 +85,10 @@ is('xstrike2', 'orb x2');
 is('xstrike3', 'orb x3');
 is('xstrike4', 'orb x3');
 is('xstrike5', 'orb x4');
-// the Deltas' energy SMGs, every round landing in its own splash
-is('xdelta2', 'smg');
+// Low-grade Deltas fire a rifle volley; Core Deltas their energy SMGs, every round landing in its own splash
+is('xdelta2', 'small');
 is('xdelta3', 'smg');
-ok('Delta SMG rounds splash', spec('xdelta2').splash === true && spec('xdelta3').splash === true);
+ok('Core Delta SMG rounds splash', spec('xdelta3').splash === true);
 ok('...and nothing else does', !spec('regular').splash && !spec('xbeta3').splash);
 
 head('Xenotripod salvos');
