@@ -113,9 +113,10 @@
 
     /* A machine gun does not fire in ones. It works in long rattling bursts,
        with the rate audible in the gaps rather than the rounds. */
-    rattle: function (rounds, delay) {
+    // `count`: exactly that many rounds (a machine gun's burst as it is drawn)
+    rattle: function (rounds, delay, count) {
       if (!ensure()) return;
-      var n = Math.max(8, Math.min(22, (rounds || 3) * 4));
+      var n = count ? Math.max(4, Math.min(24, count)) : Math.max(8, Math.min(22, (rounds || 3) * 4));
       var t0 = (delay || 0);
       for (var i = 0; i < n; i++) {
         var t = now() + t0 + i * 0.038 + Math.random() * 0.008;

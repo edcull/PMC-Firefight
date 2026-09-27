@@ -35,8 +35,8 @@
          rounds in it, but still recognisably single shots rather than a stream. */
       smg:      { n: function (h) { return clampN(h * 2 + 4, 5, 12); }, gap: 68, tracer: { spread: 0.5, short: true }, land: 300, muzzle: 460 },
       /* A machine gun, rattling in a double burst: the rounds split into two
-         bursts with a breath between them (`bursts`, `pause` ms). */
-      burst:    { n: function (h) { return clampN(h * 2 + 4, 6, 12); }, gap: 38, bursts: 2, pause: 220, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
+         long bursts with a breath between them (`bursts`, `pause` ms). */
+      burst:    { n: function (h) { return clampN(h * 4 + 8, 12, 24); }, gap: 38, bursts: 2, pause: 220, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
       // an autocannon: heavier, slower, countable
       chain:    { n: function (h) { return clampN(h * 2 + 3, 5, 10); }, gap: 92, tracer: { spread: 0.3, fat: true }, land: 330, muzzle: 92, perShot: true },
       // a bug's volley of chitin spines: a quick dry spray, bone-pale, no flash
@@ -568,7 +568,8 @@
         else SFX.zaps(style, hits);
       } else if (SFX) {
         if (style === 'chain') SFX.chain(hits);
-        else if (style === 'burst') { SFX.rattle(Math.ceil(hits / 2)); SFX.rattle(Math.ceil(hits / 2), second); }
+        // each burst heard round for round as it is drawn
+        else if (style === 'burst') { SFX.rattle(0, 0, Math.ceil(n / 2)); SFX.rattle(0, second, Math.floor(n / 2)); }
         else if (style === 'smg') SFX.smg(hits);
         else if (style === 'pistol') SFX.pistol(hits);
         else if (style === 'spine') SFX.spine(hits);
