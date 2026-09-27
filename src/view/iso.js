@@ -400,14 +400,14 @@
      goes low the same way (its sunk-in-the-earth pose is kept for a swarm
      tunnelling up out of the ground on a Battlefield Insertion). */
   /* A penal trooper's collar lamp: green, flashing slowly, each man a beat
-     behind the one beside him; yellow and flashing fast once the squad is
+     behind the one beside him; amber and flashing fast once the squad is
      suppressed. It is out when the collars have gone. */
   function collarLamp(g, x, y, mi, st) {
     if (st === 'destroyed' || st === 'broken') return;
     var sup = st === 'suppressed', t = root.performance ? performance.now() : 0;
     var per = sup ? 420 : 1100, lit = ((t + mi * (sup ? 70 : 180)) % per) < per * 0.45;
-    var on = sup ? '#ffe83a' : '#5cff7a', off = sup ? '#5e5412' : '#1f4a2a';
-    if (lit) ellipse(g, x, y, 2.6, 2.2, sup ? 'rgba(255,232,60,.32)' : 'rgba(80,255,120,.28)');
+    var on = sup ? '#ffb030' : '#5cff7a', off = sup ? '#6a4414' : '#1f4a2a';
+    if (lit) ellipse(g, x, y, 2.6, 2.2, sup ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
     g.fillStyle = lit ? on : off;
     g.fillRect(x - 0.7, y - 0.7, 1.4, 1.4);
   }
