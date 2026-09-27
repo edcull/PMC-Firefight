@@ -200,7 +200,7 @@
   function mine(state, side) {
     return state.units.filter(function (u) { return u.side === side && u.alive && !u.aboard; });
   }
-  function onTable(u) { return u.alive && u.x >= 0 && !u.aboard && !u.reserve; }
+  var onTable = R.onTable;
   function unsuppressed(u) { return R.status(u) === 'ready'; }
 
   /* Who holds an objective (p. 49): "at least one unsuppressed, unbroken unit

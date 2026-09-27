@@ -228,7 +228,7 @@
     return Math.hypot(dx, dy);
   }
   function mine(state, side) { return state.units.filter(function (u) { return u.side === side; }); }
-  function onTable(u) { return u.alive && u.x >= 0 && !u.aboard; }
+  var onTable = R.onTable;
   function players(state) { return state.units.filter(function (u) { return u.side === 'A' && onTable(u); }); }
   function passable(state, x, y) {
     if (x < UR || y < UR || x > W - UR || y > H - UR) return false;

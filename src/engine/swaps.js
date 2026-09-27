@@ -16,7 +16,7 @@
        Tier: from the dossier in a campaign, from the whole list otherwise. ---- */
     function swapAllowance(side) {
       var n = E.state.units.filter(function (u) { return u.side === side && u.pickIdx != null; }).length;
-      return Math.floor(n * (docsOf(side).indexOf('O6') >= 0 ? 0.5 : 0.25));
+      return R.swapAllowance(n, docsOf(side).indexOf('O6') >= 0);
     }
     function swapOptions(side, u) {
       var up = u && R.profile(u.key);

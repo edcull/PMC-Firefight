@@ -1316,6 +1316,12 @@
       return c !== a && c.alive && c.side === a.side && c.x >= 0 && !c.aboard && hasOwn(c, 'Command Unit') && unitDist(a, c) <= 12;
     });
   }
+  /* On the table and in the fight: alive, set down, not riding inside anything
+     and not waiting in reserve. The one reading every part of the game uses. */
+  function onTable(u) { return !!u && u.alive && u.x >= 0 && !u.aboard && !u.reserve; }
+  /* How many units may be swapped when modifying the armies: no more than a
+     quarter (p. 46), half with Tactical Flexibility (O6, p. 87). */
+  function swapAllowance(n, flexible) { return Math.floor(n * (flexible ? 0.5 : 0.25)); }
   /* The OpFor's "+2 if there are no enemy units within the active unit's Range"
      (p. 147): a plain distance, whatever stands in the way or wherever the gun
      points. A unit with no Firepower has no Range, so nothing is within it. */
@@ -1840,7 +1846,7 @@
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
-    enemyWithinRange: enemyWithinRange, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
+    enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,

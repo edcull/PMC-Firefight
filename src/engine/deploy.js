@@ -15,7 +15,7 @@
         render = E.render, revealBoard = E.revealBoard, revealConsole = E.revealConsole, setHint = E.setHint,
         sideName = E.sideName, ui = E.ui, unloadBefore = E.unloadBefore;
 
-    function onTable(u) { return u.alive && u.x >= 0 && !u.aboard; }
+    var onTable = R.onTable;
 
     // troops riding inside are off the table entirely
     function activeUnits(side) {
