@@ -1142,10 +1142,11 @@
     // a vehicle hanging under a Lifter takes nothing on, and hitches no gun (p. 94)
     if (veh.aboard) return false;
     /* A Lifter is a flying crane: it picks up a single vehicle — with whatever is
-       already riding inside it — and never infantry (p. 94). Every other hull is
-       the other way round. */
+       already riding inside it — or an emplaced gun, and never infantry (p. 94).
+       Every other hull is the other way round. */
     if (hasOwn(veh, 'Lifter')) {
-      if (u.cls !== 'vehicle') return false;
+      if (u.cls !== 'vehicle' && !hasOwn(u, 'Stationary Artillery')) return false;
+      if (u.bld) return false;
       if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
       if (u.disembarked) return false;
       // a hull towing an emplaced gun cannot be lifted (p. 94)
@@ -1161,7 +1162,8 @@
        hook has no room for troops (p. 94). */
     var towing = (veh.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); });
     if (towing) return false;
-    if (hasOwn(u, 'Stationary Artillery') && (veh.cargo || []).length) return false;
+    // a gun is towed on the ground: an aircraft cannot tow one (only a Lifter slings one)
+    if (hasOwn(u, 'Stationary Artillery') && (veh.cls !== 'vehicle' || (veh.cargo || []).length)) return false;
     if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
     if (status(u) !== 'ready') return false;            // shaken troops will not board
     if (u.disembarked) return false;                    // not back aboard the same turn

@@ -263,6 +263,23 @@
         hitch: { x: at.x - fx * hs.len * 0.5, y: at.y - fy * hs.len * 0.5 }
       });
     }
+    /* A gun slung under a Lifter (p. 94): drawn closed up as for the road,
+       `lift` pixels off the ground on the crane's cables, pointing the way the
+       craft flies. */
+    function drawSlung(g, veh, gun, at, lift) {
+      var f = veh.facing || 0, pal = B.PALETTE[gun.paint || gun.side] || B.PALETTE.A;
+      var P = PIECE3D[gun.art];
+      if (P) {
+        var G = rig(g, { x: at.x, y: at.y, aim: f, k: P.k, z0: lift / (K * 0.9 * P.k) });
+        P.build(G, { pal: pal, g: g, tow: true });
+        var wasS = PH.smooth;
+        PH.smooth = true;
+        try { G.parts.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
+        finally { PH.smooth = wasS; }
+        return;
+      }
+      fieldGun(g, { x: at.x, y: at.y, aim: f, mode: 'tow', heavy: /heavy/.test(gun.key || ''), pal: pal, lift: lift });
+    }
     /* A tripod weapon on tow (the heavy autocannon): lifted onto a little
        two-wheeled trailer, its legs folded along the bed, the barrel back over
        the tail, the A-frame drawbar on the vehicle's hook. */
@@ -837,7 +854,7 @@
       PIECE3D: PIECE3D,
       belt: belt,
       drawPieces3D: drawPieces3D,
-      drawTowed: drawTowed,
+      drawTowed: drawTowed, drawSlung: drawSlung,
       fieldGun: fieldGun,
       fieldMuzzle: fieldMuzzle,
       gunFaceL: gunFaceL,
