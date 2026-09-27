@@ -31,13 +31,15 @@
         endActivation(u);
         return;
       }
-      // a Rush buys one more activation in a row, on top of whatever the side has left
-      E.state.streak = (E.state.streak || 1) + 1;
+      /* "Once per battle the unit can make two actions in a row" (p. 88): the unit
+         itself goes again the moment this action ends (engine.js passOn), and the
+         two count as the one activation. */
+      u.rushArmed = true;
       logLine('note', u.label + ' — Adrenaline Rush: two actions in a row.');
       pushRes({
         kind: 'Honour', title: 'Adrenaline Rush', side: u.side,
         note: u.label + ' goes again the moment this action ends.',
-        outcome: { text: 'One extra activation in a row.', tone: 'good' }
+        outcome: { text: 'Two actions in a row.', tone: 'good' }
       });
       ui.mode = 'idle'; render();
     }

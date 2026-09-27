@@ -305,7 +305,7 @@
       // nothing is nominated until the table is set (the scenario places them)
       objectives: manual ? [] : OBJECTIVES.map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
       units: [], turn: 0, phase: 'deploy', activeSide: 'A', initiative: null,
-      streak: 0, chain: null, log: [], over: null,
+      streak: 0, chain: null, rush: null, log: [], over: null,
       campaign: cfg.campaign || null,
       doctrines: cfg.doctrines || null,
       // "Rebel forces cannot use tactics" in a solitaire or cooperative game (p. 145)
@@ -805,7 +805,7 @@
       u.hackUsed = false; u.hacked = false; u.supportUsed = false; u.advancing = false;
       u.disembarked = false; u.boarded = false;
     });
-    state.chain = null;
+    state.chain = null; state.rush = null;
     state.mark = null; state.remark = null;
     var a, b;
     do { a = R.d10(); b = R.d10(); } while (a === b);
@@ -962,6 +962,11 @@
   }
 
   function eligible(side) {
+    // an Adrenaline Rush: the unit's second action comes straight after its first
+    if (state.rush) {
+      var ru = byId(state.rush);
+      if (ru && ru.side === side) return ru.alive && !ru.activated && !ru.aboard && R.status(ru) !== 'broken' ? [ru] : [];
+    }
     // a marker that stood still is naming its second target: nothing else goes until it has
     if (state.remark && state.remark.side === side) {
       var rm = byId(state.remark.by);
@@ -1061,6 +1066,21 @@
   }
   // the rest of an activation's ending: turrets together, chains, whose go it is next
   function passOn(just) {
+    /* Adrenaline Rush (p. 88): after the first of its two actions the unit is
+       readied to go again, and nothing else moves until it has; the second action
+       ends the activation as usual, so the pair costs the side one activation. */
+    if (just && state.rush === just.id) state.rush = null;
+    else if (just && just.rushArmed) {
+      just.rushArmed = false;
+      if (just.alive && !just.aboard && R.status(just) !== 'broken' && !state.over) {
+        just.activated = false;
+        state.rush = just.id;
+        logLine('note', just.label + ' goes again — Adrenaline Rush.');
+        if (!isAI(just.side)) setHint(null, just.label + ' goes again: its second action of the Adrenaline Rush.');
+        render(); maybeAI();
+        return;
+      }
+    }
     /* All turrets are activated at once (p. 130): the first to act brings every
        other one of its side along before the activation passes. */
     if (just && R.has(just, 'Turret') && !state.chain && !state.solo) {
@@ -1416,6 +1436,10 @@
              behind, it could come back later in the turn for a whole action. */
           if (state.remark && state.remark.side === side && u.id !== state.remark.by) {
             return no('the marker is naming its second target — pick one, or Cancel');
+          }
+          if (state.rush && state.phase === 'battle' && u.side === side && u.id !== state.rush) {
+            var rsh = byId(state.rush);
+            return no((rsh ? rsh.name : 'the rushing unit') + ' is taking its second action of the Adrenaline Rush');
           }
           var mid = ui.selected;
           if (mid && mid !== u && mid.advancing && !mid.activated) {
