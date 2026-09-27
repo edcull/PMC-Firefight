@@ -77,6 +77,26 @@
       return t.impassable;
     }
 
+    /* A Tier III-V hull drives through a wall and flattens it (p. 35), but not a
+       reinforced one: "cannot be crossed" and nothing brings it down (p. 41). The
+       kind of ground at a point does not say whether the wall there is
+       reinforced, so for a hull that crushes walls the reinforced ones are asked
+       about on their own. Returns a test for a point, or null when none apply. */
+    function reinforcedBar(state, u) {
+      if (u.cls !== 'vehicle' || u.tier < 3 || isFlying(u)) return null;
+      var rs = state.terrain.filter(function (r) {
+        return r.reinforced && !r.gone && TERRAIN[r.kind] && TERRAIN[r.kind].destructible === 'linear';
+      });
+      if (!rs.length) return null;
+      return function (x, y) {
+        for (var i = 0; i < rs.length; i++) {
+          var r = rs[i];
+          if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return true;
+        }
+        return false;
+      };
+    }
+
     /* Movement penalty (p. 42): 1" (2" for a vehicle) "when crossing a section of
        linear terrain (cumulative – apply penalty for each crossed terrain) or
        moving into or through a piece of area terrain (not cumulative – apply only
@@ -223,10 +243,12 @@
         return blk[c] === 2;
       }
       var near = isFlying(u) ? null : foeGrid(state, u, N, cols);
+      var reinf = reinforcedBar(state, u);
       function blockedAt(i, j) {
         var x = i * STEP, y = j * STEP;
         if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) return true;
         if (kBar[kindAt(i, j)]) return true;
+        if (reinf && reinf(x, y)) return true;
         // aircraft "can move over other units" (p. 38); they only may not finish within 1"
         return near ? near(i, j) : false;
       }
@@ -420,6 +442,7 @@
         kBar[kn] = terrainBars(u, kinds[kn]) ? 1 : 0;
       }
       var foes = state.units.filter(function (o) { return o.alive && o !== u && o.side !== u.side && !o.aboard && o.x >= 0; });
+      var reinf = reinforcedBar(state, u);
       function kindAt(i, j) {
         var k = idx(i, j);
         if (terr[k] === 0) terr[k] = 1 + kindIndex[terrainAt(state, i * STEP, j * STEP)];
@@ -431,6 +454,7 @@
         var x = i * STEP, y = j * STEP, b = false;
         if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) b = true;
         else if (kBar[kindAt(i, j)]) b = true;
+        else if (reinf && reinf(x, y)) b = true;
         else for (var n = 0; n < foes.length; n++) {
           var o = foes[n];
           if (o.bld ? rectPointDist(sectionRect(o), x, y) < UNIT_R + 1 : Math.hypot(o.x - x, o.y - y) < 2 * UNIT_R + 1) { b = true; break; }

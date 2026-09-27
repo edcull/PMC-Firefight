@@ -223,7 +223,8 @@
       var gone = [];
       for (var i = 0; i < state.terrain.length; i++) {
         var r = state.terrain[i];
-        if (destructibleKind(r) !== 'linear') continue;
+        // a reinforced wall is not flattened: it stops the hull instead (p. 41)
+        if (destructibleKind(r) !== 'linear' || !isDestructible(r)) continue;
         if (!segRect(from.x, from.y, to.x, to.y, r) && !inRect(to.x, to.y, r)) continue;
         var res = destroyTerrain(state, r, log, u);
         if (res) gone.push(res);

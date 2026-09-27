@@ -219,5 +219,15 @@ head('A hundred campaign turns: a player tribe against a rival tribe');
   ok('the tribes grew', topTier >= 3, true, 'reached Tribe Tier ' + topTier);
 })();
 
+/* A tribe's aircraft upgrade 1 is Improved Engines (p. 143), not the PMC
+   table's Advanced Emergency Systems (p. 89): no 2+ emergency landing. */
+(function () {
+  var C = global.PMCCamp;
+  var strike = C.newEntry('xstrike2', {}); strike.upgrades = [1];
+  var fsc = C.newEntry('fsc', {}); fsc.upgrades = [1];
+  ok('a tribe aircraft with Improved Engines lands on a 4+', C.salvage({}, strike, false).need, 4);
+  ok('...a PMC aircraft with Advanced Emergency Systems on a 2+', C.salvage({}, fsc, false).need, 2);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

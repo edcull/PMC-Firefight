@@ -11,7 +11,8 @@
         abRepair = E.abRepair, activeUnits = E.activeUnits, addFx = E.addFx, animateMove = E.animateMove,
         beginTurn = E.beginTurn, canStand = E.canStand, focusUnit = E.focusUnit, logLine = E.logLine,
         nearestEnemy = E.nearestEnemy, onTable = E.onTable, pushRes = E.pushRes, render = E.render,
-        sideName = E.sideName, soloAfterMove = E.soloAfterMove, ui = E.ui;
+        sideName = E.sideName, soloAfterMove = E.soloAfterMove, ui = E.ui, isAI = E.isAI, makeStand = E.makeStand,
+        revealConsole = E.revealConsole;
 
     // The rally phase is walked unit by unit: roll, show the card, wait for Continue.
     /* The start of the Rally phase (p. 34): every Broken unit on the table flees
@@ -139,9 +140,37 @@
       if (u.sp === 0) { rallyNext(list, i + 1); return; }
       var r = abRally(E.state, u);
       if (!r) { rallyNext(list, i + 1); return; }
+      if (r.standing) { askStand(u, r, function () { showRally(list, i, u, r); }); return; }
+      showRally(list, i, u, r);
+    }
+    function showRally(list, i, u, r) {
       logLine('rally', r.text);
       if (SFX && r.gone) SFX.broken();
       pushRes(rallyCard(u, r, i + 1, list.length, function () { rallyNext(list, i + 1); }));
+      render();
+    }
+
+    /* The rally has left the unit over three times its Morale, and it has a Last
+       Stand still to make (p. 88): it may make it now, or scatter and flee. A
+       player is asked; the AI makes its stand. */
+    function askStand(u, r, then) {
+      function answer(yes) {
+        E.state.standAsk = null; ui.standThen = null;
+        if (yes) {
+          makeStand(u, 'rather than flee');
+          r.after = 0; r.statusAfter = 'ready'; r.stood = true;
+        } else {
+          u.alive = false; u.fled = true; u.brokenEver = true;
+          r.gone = true; r.statusAfter = 'removed';
+          r.text += ' — SP exceeds 3× Morale: the unit scatters and flees the field.';
+        }
+        then();
+      }
+      if (isAI(u.side)) { answer(true); return; }
+      E.state.standAsk = { unit: u.id, side: u.side, sp: u.sp, morale: r.morale };
+      ui.standThen = answer;
+      ui.selected = u; focusUnit(u, false, true);
+      revealConsole();
       render();
     }
 
@@ -149,6 +178,8 @@
       var outcome;
       if (r.gone) {
         outcome = { text: u.name + ' flees the field — suppression over three times Morale.', tone: 'bad' };
+      } else if (r.stood) {
+        outcome = { text: u.name + ' makes its Last Stand instead of fleeing — every point of suppression is gone.', tone: 'good' };
       } else if (r.statusBefore !== r.statusAfter) {
         outcome = r.statusAfter === 'ready'
           ? { text: u.name + ' steadies — no longer ' + r.statusBefore + '.', tone: 'good' }
@@ -233,21 +264,19 @@
       beginTurn();
     }
 
-    function objDist(u, o) { return Math.max(0, R.inches(u.x, u.y, o.x, o.y) - UR); }
-
+    /* Who holds each objective, by the one test the scenarios use (scenarios.js
+       holderOf, p. 49): a drop pod holds nothing, an area objective is measured
+       from its edge, and the units inside it count first. */
+    // from a token's edge to an objective's: a marker's point, or an area's own edge
+    function objDist(u, o) {
+      var a = SC.areaOf(o), d;
+      if (a && a.rect) d = R.rectPointDist(a.rect, u.x, u.y);
+      else d = Math.max(0, R.inches(u.x, u.y, o.x, o.y) - (a && a.r || 0));
+      return Math.max(0, d - UR);
+    }
     function scoreObjectives() {
       E.state.objectives.forEach(function (o) {
-        /* Held by an unsuppressed, unbroken unit within 4"; denied by any enemy
-           there that is not Broken — a Suppressed one still stands in the way
-           (p. 49). Aircraft neither hold nor deny. */
-        var claim = { A: 0, B: 0 }, deny = { A: 0, B: 0 };
-        E.state.units.forEach(function (u) {
-          if (!onTable(u) || R.isFlying(u) || objDist(u, o) > 4) return;
-          var st = R.status(u);
-          if (st === 'ready') claim[u.side]++;
-          if (st !== 'broken') deny[u.side]++;
-        });
-        o.owner = claim.A > 0 && deny.B === 0 ? 'A' : (claim.B > 0 && deny.A === 0 ? 'B' : null);
+        o.owner = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
       });
     }
 
