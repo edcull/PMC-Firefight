@@ -48,9 +48,28 @@
       if (a.x < 0 || a.y < 0 || a.aboard) return function () { return null; };
       var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a) || drives(a);
       var f = straight ? null : field(state, a, allowance);
+      /* A scenario's bounds on where a unit may go hold for a charge as for any
+         move (pp. 151, 154): the OpFor may not charge into Evacuation's safe zone,
+         nor the commando out past Protecting the VIP's 12". Judged where the charge
+         ends, in contact. */
+      var bound = state.scen && state.scen.moveOK;
+      function allowed(t, fx, fy) {
+        if (!bound || a.bld) return true;
+        var c;
+        if (t.bld) {
+          var q = sectionRect(t);
+          var cx = Math.max(q.x, Math.min(q.x + q.w, fx)), cy = Math.max(q.y, Math.min(q.y + q.h, fy));
+          var ux = fx - cx, uy = fy - cy, ul = Math.hypot(ux, uy) || 1;
+          c = { x: cx + ux / ul * (UNIT_R + 0.05), y: cy + uy / ul * (UNIT_R + 0.05) };
+        } else {
+          var v = Math.hypot(t.x - fx, t.y - fy) || 1;
+          c = { x: t.x - (t.x - fx) / v * (2 * UNIT_R), y: t.y - (t.y - fy) / v * (2 * UNIT_R) };
+        }
+        return bound(state, a, c);
+      }
       return function (t) {
         var gap0 = unitDist(a, t);
-        if (straight) return gap0 <= allowance + 1e-6 ? { cost: gap0, path: [{ x: a.x, y: a.y }] } : null;
+        if (straight) return gap0 <= allowance + 1e-6 && allowed(t, a.x, a.y) ? { cost: gap0, path: [{ x: a.x, y: a.y }] } : null;
         var q = t.bld ? sectionRect(t) : null, best = null;
         f.seen.forEach(function (n) {
           var x = n.i * STEP, y = n.j * STEP;
@@ -60,6 +79,7 @@
           if (tot <= allowance + 1e-6 && (!best || tot < best.cost)) best = { cost: tot, x: x, y: y };
         });
         if (!best) return null;
+        if (!allowed(t, best.cost - gap0 < 1e-6 ? a.x : best.x, best.cost - gap0 < 1e-6 ? a.y : best.y)) return null;
         var path = best.cost - gap0 < 1e-6 ? [{ x: a.x, y: a.y }] : pathTo(state, a, allowance, best);
         return { cost: best.cost, path: path };
       };

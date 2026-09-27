@@ -72,5 +72,28 @@ head('A Decapitation leader can be pinned down but not broken');
 var cu = { sp: 99, morale: 4, noBreak: true, rules: [], cls: 'infantry', models: 8, size: 8 };
 ok('twenty SP on Morale 4 is only Suppressed', R.status(cu) === 'suppressed');
 
+/* A scenario's bounds on movement hold for a charge too (pp. 151, 154): the
+   OpFor may not charge into Evacuation's safe zone. */
+head('Charges and the scenario\'s bounds');
+(function () {
+  function mkU(key, side, x, y) {
+    var p = R.profile(key);
+    return { id: side + key + x, side: side, key: key, name: p.name, label: p.name, cls: p.cls || 'infantry', tier: p.tier,
+      size: p.size, models: p.size, move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale,
+      rules: p.rules.slice(), x: x, y: y, sp: 0, alive: true, activated: false, shotFrom: [], cargo: [] };
+  }
+  var evac = SC.SCENARIOS.s_evac;
+  var st = { units: [], terrain: [], objectives: [], log: [], sc: { safe: { x: 0, y: 0, r: 12 } }, scen: evac };
+  var inside = mkU('regular', 'A', 8, 6), opfor = mkU('regular', 'B', 16, 6);
+  st.units = [inside, opfor];
+  ok('the defender stands inside the safe zone', Math.hypot(inside.x, inside.y) < 12);
+  ok('an OpFor unit within reach may not charge it there', !R.chargeRoute(st, opfor, inside, opfor.move + 2));
+  var st2 = { units: st.units, terrain: [], objectives: [], log: [], sc: st.sc };
+  ok('...though it could were there no safe zone', !!R.chargeRoute(st2, opfor, inside, opfor.move + 2));
+  var outside = mkU('regular', 'A', 18, 12);
+  st.units.push(outside);
+  ok('...and it may charge one outside the zone', !!R.chargeRoute(st, opfor, outside, opfor.move + 2));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
