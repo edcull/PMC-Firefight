@@ -44,7 +44,7 @@ async function newGame(p, cfg) {
 
   head('Going in and coming out');
   await newGame(p);
-  await p.evaluate(() => { window.__autoDeployBoth(); const b = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')); if (b) b.click(); });
+  await p.evaluate(() => { window.__autoDeployBoth(); const b = window.__beginButton(); if (b) b.click(); });
   await p.waitForTimeout(500); await drain(p);
   const r1 = await p.evaluate(() => {
     const s = window.PMC_STATE();

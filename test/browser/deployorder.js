@@ -134,7 +134,7 @@ async function newGame(p, cfg) {
   const wedged = await p.evaluate(async () => {
     const s = window.PMC_STATE();
     window.__autoDeployBoth();
-    (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')).click();
+    window.__beginButton().click();
     return !!s;
   });
   ok('the battle begins', wedged);

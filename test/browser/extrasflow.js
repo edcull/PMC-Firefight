@@ -66,7 +66,7 @@ async function newGame(p, cfg) {
 async function start(p) {
   await p.evaluate(() => { window.__autoDeployBoth(); });
   await p.waitForTimeout(150);
-  await p.evaluate(() => { const b = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')); if (b) b.click(); });
+  await p.evaluate(() => { const b = window.__beginButton(); if (b) b.click(); });
   await p.waitForTimeout(500);
   await drain(p);
   await settle(p);
@@ -120,7 +120,7 @@ async function start(p) {
   ok('three units can be picked up and set down elsewhere', moved.moved.slice(0, 3).every(Boolean), moved.moved.join(' '));
   ok('...but not a fourth', moved.moved[3] === false);
   ok('...and no unit moves twice', moved.again === false);
-  const clicked = await p.evaluate(() => { const b = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')); if (b) { b.click(); return true; } return false; });
+  const clicked = await p.evaluate(() => { const b = window.__beginButton(); if (b) { b.click(); return true; } return false; });
   await p.waitForTimeout(500);
   await drain(p);
   ok('beginning the battle ends the relocation', await p.evaluate(() => !window.__relocating() && window.PMC_STATE().phase === 'battle'));

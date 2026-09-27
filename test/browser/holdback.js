@@ -45,7 +45,7 @@ async function drain(p) {
       window.__rebuildScene(); window.__clearSel();
     });
     await p.waitForTimeout(200);
-    await p.evaluate(() => { const b2 = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')); if (b2) b2.click(); });
+    await p.evaluate(() => { const b2 = window.__beginButton(); if (b2) b2.click(); });
     await p.waitForTimeout(450);
     await drain(p);
     // a veteran squad a step from a rookie one, ready to go in
@@ -106,7 +106,7 @@ async function drain(p) {
     s.units.filter(u => u.side === 'A').forEach((u, i) => { u.x = 10; u.y = 10 + i * 6; });
     s.units.filter(u => u.side === 'B').forEach((t, i) => { t.x = 26; t.y = 10 + i * 6; });
     window.__rebuildScene(); window.__clearSel();
-    const b2 = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')); if (b2) b2.click();
+    const b2 = window.__beginButton(); if (b2) b2.click();
     await new Promise(r => setTimeout(r, 450));
     for (let i = 0; i < 20 && !document.getElementById('resolution').hidden; i++) { document.getElementById('res-continue').click(); await new Promise(r => setTimeout(r, 100)); }
     s.activeSide = 'A'; s.initiative = 'A'; s.units.forEach(u => { u.activated = false; });

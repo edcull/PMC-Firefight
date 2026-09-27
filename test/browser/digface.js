@@ -41,7 +41,7 @@ async function stage(p) {
     theirs.forEach((t, i) => { t.x = 34 + i * 3; t.y = 24; });            // the enemy out to the east
     window.__rebuildScene();
     window.__clearSel();
-    const b = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]'));
+    const b = window.__beginButton();
     if (b) b.click();
   });
   await p.waitForTimeout(500);

@@ -110,6 +110,14 @@
     };
     window.__begin = function (cfg, opts) { return begin(cfg, opts); };
     window.__startBattle = function () { startBattle(); };
+    /* The deployment card's Begin the battle, for a harness to press: pressing
+       it goes through the question about empty transports, as a player
+       answering "Begin" would. Null while it is not on offer. */
+    window.__beginButton = function () {
+      var b = document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]');
+      if (!b) return null;
+      return { click: function () { if (b.getAttribute('data-act') === 'startask') { ui.startAsk = false; startBattle(); } else b.click(); } };
+    };
     window.__deployDone = function () { return deploymentDone(); };
     /* Driving the board the way a player does: the units that may act, the
        actions on offer for one of them, and whatever the chosen action is

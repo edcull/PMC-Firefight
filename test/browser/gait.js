@@ -83,7 +83,7 @@ function head(t) { console.log('\n  ' + t); }
     window.__clearSel();                 // and redraw, so the Begin button appears
     await new Promise(r => setTimeout(r, 250));
     s.activeSide = 'A'; s.initiative = 'A';
-    const b2 = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]'));
+    const b2 = window.__beginButton();
     if (b2) b2.click();
     await new Promise(r => setTimeout(r, 500));
     for (let i = 0; i < 8; i++) {
