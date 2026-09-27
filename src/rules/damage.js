@@ -32,7 +32,19 @@
     }
     function medicNearby(state, target) { return !!medicFor(state, target); }
 
-    function resolveShootingHits(state, target, hits, mod, atk) {
+    /* Brave "ignores 1 Suppression point from each ranged attack" (p. 88), and
+       Courage Under Fire takes one off the second and later attacks in a turn:
+       both off the attack's final count, after Incendiary, Suppressive Fire and
+       the rest have been added. */
+    function shotRelief(state, target, out) {
+      if (campFlag(target, 'brave') && out.sp > 0) { out.sp -= 1; out.notes.push('Brave -1 SP'); }
+      if (target.shotFrom && target.shotFrom.length > 1 && doctrine(state, target.side, 'T2') && out.sp > 0) {
+        out.sp -= 1; out.notes.push('Courage Under Fire -1 SP');
+      }
+      return out;
+    }
+    // `later`: the caller adds to the attack's suppression afterwards, and calls shotRelief itself
+    function resolveShootingHits(state, target, hits, mod, atk, later) {
       var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
       // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
       if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
@@ -77,13 +89,7 @@
         out.sp += out.casualties;
         out.notes.push('Style Bonus +' + out.casualties + ' SP');
       }
-      // Brave shrugs one point off every ranged attack
-      if (campFlag(target, 'brave') && out.sp > 0) { out.sp -= 1; out.notes.push('Brave -1 SP'); }
-      // Courage Under Fire: the second and later attacks on a unit in the same turn
-      if (target.shotFrom && target.shotFrom.length > 1 && doctrine(state, target.side, 'T2') && out.sp > 0) {
-        out.sp -= 1; out.notes.push('Courage Under Fire -1 SP');
-      }
-      return out;
+      return later ? out : shotRelief(state, target, out);
     }
 
     function resolveAssaultHits(target, hits, mod, atk) {
@@ -141,10 +147,8 @@
       if (after === 'broken') { target.brokenEver = true; credit(target, atk, 'broke'); }
       if (after !== before && after !== 'ready') {
         if (after === 'broken' && has(target, 'Expendable')) {
-          target.alive = false;
-          target.fled = true;                      // run off, not killed to the last man
-          target.expended = true;                  // ...and not counted as a loss for victory (p. 57)
-          log.push({ t: 'kill', text: target.label + ' breaks — Expendable: removed from play.' });
+          collarsGo(target);
+          log.push({ t: 'kill', text: target.label + ' breaks — Expendable: the collars go off, removed from play.' });
         } else {
           log.push({ t: after, text: target.label + ' is ' + after.toUpperCase() + ' (' + target.sp + ' SP vs Morale ' + currentMorale(target) + ').' });
         }
@@ -245,8 +249,10 @@
     }
 
     // put a passenger back on the table, as close to the vehicle as will fit
+    // bailing out of a wreck is getting off: not back aboard this turn, and no Cumbersome shot (pp. 36, 58)
     function dropOff(state, veh, u) {
       u.aboard = null;
+      u.disembarked = true;
       for (var t = 0; t < 60; t++) {
         var ang = Math.random() * Math.PI * 2, d = 2 * UNIT_R + Math.random() * 2;
         var p = clampBoard({ x: veh.x + Math.cos(ang) * d, y: veh.y + Math.sin(ang) * d });
@@ -346,11 +352,19 @@
     /* Expendable (p. 57): the collars go off the moment a penal unit is Broken,
        whatever broke it — a hit, a rite, a shout, a friend's melancholy. Returns
        the lines to log. */
+    /* The collars explode: every man left in the unit is killed and it is removed
+       from play; "penal troops do not count as a casualty for the purposes of
+       victory conditions, either during the battle or after it" (p. 57). */
+    function collarsGo(u) {
+      u.models = 0;
+      u.alive = false;
+      u.expended = true;
+    }
     function collars(state) {
       var out = [];
       state.units.forEach(function (u) {
         if (!u.alive || u.aboard || !has(u, 'Expendable') || status(u) !== 'broken') return;
-        u.alive = false; u.fled = true; u.expended = true;
+        collarsGo(u);
         out.push({ t: 'kill', text: u.label + ' breaks — Expendable: the collars go off, removed from play.' });
       });
       return out;
@@ -389,7 +403,7 @@
 
     return {
       relink: relink,
-      isMedic: isMedic, medicNearby: medicNearby, resolveShootingHits: resolveShootingHits,
+      isMedic: isMedic, medicNearby: medicNearby, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief,
       resolveAssaultHits: resolveAssaultHits, applyResult: applyResult, dmgMod: dmgMod,
       resolveDamage: resolveDamage, applyDamage: applyDamage, dropOff: dropOff, repair: repair,
       jammedNearby: jammedNearby, canHack: canHack, hack: hack, collars: collars, hackBurn: hackBurn,

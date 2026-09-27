@@ -176,6 +176,35 @@
       render();
     }
 
+    /* Expendable (p. 57): a penal squad whose collars go off. The men are left
+       standing where they were and the collars fire one after another: a red
+       telltale blinks at a man's neck, it goes off, and only then does he fall,
+       his body left where he stood. The squad is drawn from the plan kept on the
+       unit (u0._collar) until the last of them is down. */
+    var CL = window.PMCFx.COLLAR, COLLAR_STEP = CL.step, COLLAR_BLINK = CL.blink, COLLAR_FX = CL.dur;
+    function collarSequence(u0, u, seen, rem) {
+      var t0 = nowMs(), n = Math.max(1, Math.min(8, seen.models));
+      var pts = ISO.formationTable(n).map(function (o) { return { x: seen.x + o.dx, y: seen.y + o.dy, rank: o.rank }; });
+      // the order they go in, fixed for the squad
+      var order = CL.order(pts.length);
+      var at = [];
+      order.forEach(function (idx, i) {
+        var p = pts[idx], delay = i * COLLAR_STEP, popAt = t0 + delay + COLLAR_BLINK;
+        at[idx] = popAt;
+        addFx({ kind: 'collar', x: p.x, y: p.y, delay: delay, dur: delay + COLLAR_FX });
+        if (SFX && SFX.impact) SFX.impact((delay + COLLAR_BLINK) / 1000);
+        rem.push({ kind: 'body', x: p.x, y: p.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null, art: u.art,
+          mi: idx, flip: (i % 3 === 0) !== !!u.faceL, showAt: popAt + 30 });
+      });
+      // a squad bigger than the eight drawn leaves the rest of its dead with the last of them
+      for (var extra = n; extra < seen.models; extra++) {
+        var cs = ISO.casualtySpot(u, n, rem.length * 7 + extra);
+        rem.push({ kind: 'body', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
+          art: u.art, mi: cs.mi, flip: extra % 2 === 0, showAt: t0 + (n - 1) * COLLAR_STEP + COLLAR_BLINK + 30 });
+      }
+      u0._collar = { x: seen.x, y: seen.y, pts: pts, at: at, until: t0 + (n - 1) * COLLAR_STEP + COLLAR_BLINK + 30 };
+    }
+
     function syncRemains() {
       if (!B.state || !B.state.units) return;
       var rem = B.state.remains || (B.state.remains = []);
@@ -193,7 +222,9 @@
               snap.alive = false; snap.cargo = []; snap.damage = 0; snap.marked = false;
               rem.push({ kind: 'wreck', id: u.id, x: seen.x, y: seen.y, snap: snap, t0: Math.floor(Math.random() * 5000) });
             }
-          } else {
+          } else if (u.expended && !u.alive && !u0._collar) {
+            collarSequence(u0, u, seen, rem);
+          } else if (!u0._collar) {
             var left = u.alive ? (u.models || 0) : u.fled ? seen.models : 0;
             for (var n = seen.models; n > left; n--) {
               var cs = ISO.casualtySpot(u, n, rem.length * 7 + n);
@@ -528,6 +559,13 @@
           return { unit: u, depth: d, draw: 'unit' };
         });
 
+      // a penal squad whose collars are going off, the men still standing until each one's fires
+      B.state.units.forEach(function (u) {
+        var cl = u._collar;
+        if (!cl || now0 >= cl.until || !onView(cl.x, cl.y)) return;
+        var standing = cl.pts.filter(function (p, i) { return cl.at[i] > now0; });
+        if (standing.length) order.push({ depth: cl.x + cl.y, draw: 'collared', u: u, cl: cl, pts: standing });
+      });
       // squads walking into a hull, drawn until they are inside it
       B.state.units.forEach(function (u) {
         var bd = u.boarding;
@@ -547,7 +585,7 @@
           if (!wu) return;
           anyFire = true;
           order.push({ depth: r.x + r.y, draw: 'wreck', r: r, u: wu });
-        } else order.push({ depth: r.x + r.y - 0.4, draw: 'body', r: r });
+        } else if (!(r.showAt && r.showAt > now0)) order.push({ depth: r.x + r.y - 0.4, draw: 'body', r: r });
       });
       // a machine at half Structure trails smoke, which has to keep moving too
       if (!anyFire) anyFire = order.some(function (it) { return it.draw === 'unit' && ISO.smoking(it.unit); });
@@ -562,6 +600,16 @@
           if (it.draw === 'body') {
             var bp = ISO.toScreen(it.r.x, it.r.y);
             ISO.drawBody(B.pctx, bp.x + it.r.dx, bp.y + it.r.dy - liftOf(it.r.x, it.r.y), it.r);
+            return;
+          }
+          if (it.draw === 'collared') {
+            var cu = {};
+            for (var ck in it.u) cu[ck] = it.u[ck];
+            cu.alive = true; cu.models = it.pts.length; cu.x = it.cl.x; cu.y = it.cl.y;
+            ISO.drawUnit(B.pctx, cu, {
+              at: { x: it.cl.x, y: it.cl.y }, lineAt: it.pts, lift: liftOf(it.cl.x, it.cl.y),
+              hop: 0, walk: 0, status: 'broken', activated: false, selected: false, morale: 0
+            });
             return;
           }
           if (it.draw === 'boarding') {

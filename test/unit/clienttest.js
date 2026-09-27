@@ -93,6 +93,10 @@ function makeElement(tag, doc) {
     get() { return el._html || ''; },
     set(v) { el._html = String(v); el.children = []; }
   });
+  // the battle log adds its new lines to the end rather than writing itself again
+  el.insertAdjacentHTML = function (where, v) {
+    el._html = where === 'afterbegin' || where === 'beforebegin' ? String(v) + (el._html || '') : (el._html || '') + String(v);
+  };
   Object.defineProperty(el, 'firstChild', { get() { return el.children[0] || null; } });
   /* Giving an element an id is how the code makes it findable, so doing it
      registers it the way attaching it to a real document would. */
@@ -237,6 +241,16 @@ function boot(root, opts) {
     vm.runInContext(code, ctx, { filename: src });
     loaded.push(src);
   });
+  /* The table's ground is baked pixel by pixel, seconds of work for a picture
+     nobody here looks at, once for every battle this test starts. A blank
+     canvas of the same size stands in for it. */
+  if (win.PMCIso && win.PMCIso.bakeGround) {
+    win.PMCIso.bakeGround = function () {
+      const c = doc.createElement('canvas');
+      c.width = win.PMCIso.PIXW; c.height = win.PMCIso.PIXH;
+      return c;
+    };
+  }
 
   /* Run whatever the scripts queued, a few rounds of it, the way a browser
      would get round to them. */

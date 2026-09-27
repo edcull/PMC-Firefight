@@ -301,8 +301,14 @@
        the table see anything. */
     function safeSpot(u, x, y) {
       if (R.coverAt(E.state, x, y, u) > 0) return true;
-      var ghost = { x: x, y: y, alive: true };
-      return !E.state.units.some(function (e) { return onTable(e) && e.side !== u.side && R.hasLoS(E.state, e, ghost); });
+      var ghost = { x: x, y: y, alive: true, of: u };
+      var foes = E.state.units.filter(function (e) { return onTable(e) && e.side !== u.side; });
+      /* "area or linear terrain" (p. 34): behind a low wall is cover too, when the
+         wall stands between the unit and an enemy (or anyone's plunging fire) */
+      var there = Object.create(u);
+      there.x = x; there.y = y; there.bld = null;
+      if (foes.some(function (e) { return /low wall/.test(R.coverFor(E.state, e, there).why); })) return true;
+      return !foes.some(function (e) { return R.hasLoS(E.state, e, ghost); });
     }
     function alreadySafe(u) { return !!u.bld || safeSpot(u, u.x, u.y); }
     function carryMove(u) {

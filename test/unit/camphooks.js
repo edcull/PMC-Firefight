@@ -92,6 +92,66 @@ ok('Brave shrugs a point off every attack that lands',
   brave.sp.toFixed(2) + ' SP against ' + base.sp.toFixed(2) +
   ' — short of a full point because a shot that misses has none to shrug');
 
+/* ...and off the attack's final count (p. 88): after Suppressive Fire's +2 and
+   Incendiary's doubling, not before. The same dice, rolled once at a plain
+   squad and once at a Brave one: every attack that lands differs by a point. */
+(function () {
+  var was = Math.random, seed;
+  function volley(hon, shooter, terrain) {
+    Math.random = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    var w = world(terrain), a = mk(shooter, 'A', 20, 20), t = mk('regular', 'B', 26, 20, { honours: hon });
+    w.units = [a, t];
+    var r = R.shoot(w, a, t, 'fire', {});
+    return { sp: t.sp, hits: r.hits };
+  }
+  var off = [];
+  [['hmgteam', null, 'Suppressive Fire'], ['chem', [{ kind: 'woods', x: 22, y: 14, w: 10, h: 12 }], 'Incendiary in woods']].forEach(function (c) {
+    for (var k = 1; k <= 300; k++) {
+      seed = k * 7919; var plain = volley([], c[0], c[1]);
+      seed = k * 7919; var brv = volley([2], c[0], c[1]);
+      // (short of the 12-point cap, where there is nothing left to take off)
+      if (plain.hits > 0 && plain.sp < 12 && plain.sp - brv.sp !== 1) { off.push(c[2] + ': ' + plain.sp + ' against ' + brv.sp); break; }
+    }
+  });
+  Math.random = was;
+  ok('...once, off the whole attack: Suppressive Fire and Incendiary included', off.length, 0, off.join('; '));
+})();
+
+// Broken-minded halves the dice, rounded up as every division is (p. 17)
+(function () {
+  var u = mk('veterans', 'A', 10, 10, { traumas: [4] }); u.sp = u.morale + 2;
+  var w = world(); w.units = [u];
+  ok('Broken-minded: Morale ' + u.morale + ' rolls ' + Math.ceil(u.morale / 2) + ' dice, rounded up', R.rally(w, u).dice.length, Math.ceil(u.morale / 2));
+})();
+// Rite of Concentration (p. 142): the unit "may" double its D10, once — the player's call
+(function () {
+  var was = Math.random;
+  function shot(opts, aiSides) {
+    Math.random = function () { return 0.65; };      // every die a 6 (a D10 of 6)
+    var w = world(); w.cfg = { aiSides: aiSides || [] };
+    var a = mk('regular', 'A', 20, 20), t = mk('regular', 'B', 26, 20);
+    a.camp = { flags: { concentration: true }, once: {} };
+    w.units = [a, t];
+    var r = R.shoot(w, a, t, 'fire', opts || {});
+    Math.random = was;
+    return { used: !!a.camp.once.concentration, math: (r.log.find(function (l) { return l.t === 'shoot'; }) || {}).math || '' };
+  }
+  ok('a player\'s shot does not spend the Rite unasked', shot({}).used, false);
+  var asked = shot({ concentrate: true });
+  ok('...it doubles the D10 when the player calls for it', asked.used && /Rite of Concentration/.test(asked.math), true, asked.math);
+  ok('the AI spends it on a roll worth doubling', shot({}, ['A']).used, true);
+})();
+// Surrounded, but Steady (p. 88): a die for every enemy on the table within 18", not those still in reserve
+(function () {
+  var u = mk('regular', 'A', 3, 3, { honours: [19] }); u.sp = 5;
+  var r1 = mk('regular', 'B', -1, -1), r2 = mk('regular', 'B', -1, -1);
+  r1.reserve = true; r2.reserve = true;
+  var near = mk('regular', 'B', 12, 3);
+  var w = world(); w.units = [u, r1, r2, near];
+  var ex = (R.rally(w, u).extras || []).join('; ');
+  ok('Surrounded, but Steady counts the one enemy on the table, not two in reserve', /Surrounded, but Steady \+1 dice/.test(ex), true, ex);
+})();
+
 var style = duel({ honours: [17] }, {}, { n: 40000 });
 var styleBase = duel({}, {}, { n: 40000 });
 var perKill = (style.sp - styleBase.sp) / style.dead;

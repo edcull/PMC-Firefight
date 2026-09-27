@@ -200,7 +200,7 @@
   function mine(state, side) {
     return state.units.filter(function (u) { return u.side === side && u.alive && !u.aboard; });
   }
-  function onTable(u) { return u.alive && u.x >= 0 && !u.aboard && !u.reserve; }
+  var onTable = R.onTable;
   function unsuppressed(u) { return R.status(u) === 'ready'; }
 
   /* Who holds an objective (p. 49): "at least one unsuppressed, unbroken unit
@@ -485,7 +485,7 @@
         defs.sort(function (a, b) {
           return (R.has(b, 'Stationary Artillery') ? 1 : 0) - (R.has(a, 'Stationary Artillery') ? 1 : 0);
         });
-        var keep = Math.max(1, Math.floor(defs.length / 3));
+        var keep = Math.max(1, Math.ceil(defs.length / 3));          // divisions round up (p. 17)
         defs.slice(keep).forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
         noteSplit(state, def, 'hold', defs, defs.length - keep, defs.length - 1,
           'Up to a third of the force sets up on the table; the rest walks on later, on a 5+ a unit from turn 2.');
@@ -624,13 +624,14 @@
         var atkBands = [];
         CORNERS.forEach(function (c) {
           if (c.x === corner.x && c.y === corner.y) return;
-          atkBands = atkBands.concat(cornerBands(c, 12, 6));
+          // reserves come on "up to 4" from the table border" (p. 27): the whole base inside 4"
+          atkBands = atkBands.concat(cornerBands(c, 12, 4 - R.UNIT_R));
         });
         state.sc.boxes = {};
         state.sc.boxes[atk] = atkBands;
         state.sc.entry = {};
         state.sc.entry[atk] = atkBands;
-        state.sc.entry[def] = cornerBands(corner, 12, 6);
+        state.sc.entry[def] = cornerBands(corner, 12, 4 - R.UNIT_R);
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       deployOK: function (state, side, x, y) {
@@ -667,7 +668,8 @@
       onMoveEnd: function (state, u) {
         if (!R.isFlying(u)) return null;
         var t = state.sc.target;
-        if (!t || dist(u.x, u.y, t.cx, t.cy) > 12) return null;
+        // closer than 12" to the objective: its edge (a 4" piece) to the craft's (p. 54)
+        if (!t || R.rectPointDist(t, u.x, u.y) - R.UNIT_R > 12) return null;
         var sam = {
           label: 'The objective’s SAM system', side: u.side === 'A' ? 'B' : 'A', alive: true,
           models: 1, fp: 12, range: 48, rules: [], x: t.cx, y: t.cy, shotFrom: [], cls: 'infantry'

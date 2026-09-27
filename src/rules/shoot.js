@@ -15,7 +15,7 @@
         hasLoS = E.hasLoS, hasOwn = E.hasOwn, inFireArc = E.inFireArc, isFlying = E.isFlying,
         isMachine = E.isMachine, kindsUnder = E.kindsUnder, levelOf = E.levelOf, lineClear = E.lineClear,
         mountOf = E.mountOf, pheromoneBonus = E.pheromoneBonus, pointSegDist = E.pointSegDist,
-        propOf = E.propOf, resolveDamage = E.resolveDamage, resolveShootingHits = E.resolveShootingHits,
+        propOf = E.propOf, resolveDamage = E.resolveDamage, resolveShootingHits = E.resolveShootingHits, shotRelief = E.shotRelief,
         ruleValue = E.ruleValue, sectionHigh = E.sectionHigh, sectionRect = E.sectionRect,
         shelterOf = E.shelterOf, sightRange = E.sightRange, sizeBonus = E.sizeBonus, status = E.status,
         tribeSees = E.tribeSees, undisciplined = E.undisciplined, unitDist = E.unitDist,
@@ -83,7 +83,7 @@
          everything; Indirect Fire lobs over whatever is in the way. */
       var senses = xenoSenses(a) && !campFlag(a, 'banished');
       if (isFlying(a) || isFlying(t)) {                  // aircraft shoot and are shot over everything
-        return !xenoSenses(a) || centreDist(a, t) <= sightRange(a) || (senses && tribeSees(state, a.side, t));
+        return !xenoSenses(a) || unitDist(a, t) <= sightRange(a) || (senses && tribeSees(state, a.side, t));
       }
       if (hasLoS(state, a, t)) return true;
       if (!senses || !tribeSees(state, a.side, t)) return false;
@@ -126,6 +126,8 @@
     function shotMods(state, a, t, mode, opts) {
       opts = opts || {};
       var aux = !!opts.aux;
+      // a piece of terrain as the target (p. 57): only what the shooter brings counts
+      var atT = !!opts.terrain;
       var basic = mode === 'defensive' || mode === 'basic' ||
         (has(a, 'Always Basic Firepower') && !aux) || (has(a, 'Indirect Fire') && !aux && !dugIn(a) && !dualMode(state, a, t)) ||
         isFlying(a) || isFlying(t) ||                    // aircraft shoot, and are shot at, basic
@@ -134,7 +136,7 @@
 
       var fp = aux ? 1 : a.fp;
       total += fp; parts.push({ label: aux ? 'Auxiliary FP' : 'Firepower', v: fp });
-      var phero = aux ? 0 : pheromoneBonus(state, a, t);
+      var phero = aux || atT ? 0 : pheromoneBonus(state, a, t);
       if (phero) { total += phero; parts.push({ label: 'Pheromone Markers', v: phero }); }
       var sb = sizeBonus(a.models);
       if (sb) { total += sb; parts.push({ label: a.models + ' models', v: sb }); }
@@ -222,11 +224,11 @@
         }
       }
       // Demolisher: a machine fitted for knocking buildings down
-      if (!aux && campFlag(a, 'demolisher') && shelterOf(state, a, t)) {
+      if (!aux && !atT && campFlag(a, 'demolisher') && shelterOf(state, a, t)) {
         total += 4; parts.push({ label: 'Demolisher', v: 4 });
       }
       // a unit charging home cannot claim cover from the defensive fire it draws
-      var dres = defenceAgainst(state, aux ? auxGun(a) : a, t,
+      var dres = atT ? null : defenceAgainst(state, aux ? auxGun(a) : a, t,
         { noCover: mode === 'defensive', defensiveFire: mode === 'defensive' });
       return {
         total: total, parts: parts, basic: basic, aux: aux, pierce: pierce,
@@ -251,23 +253,6 @@
       };
     }
 
-    // the same sum for a single round of an assault
-    function assaultOdds(state, atk, def) {
-      var total = atk.assault + sizeBonus(atk.models);
-      if (doctrine(state, atk.side, 'T4')) total += 1;
-      if (isMachine(def) && !isMachine(atk) && !has(def, 'Advanced Protection')) total += 4;
-      var dres = defenceAgainst(state, atk, def, { assault: true });
-      var tell = 0, sum = 0;
-      for (var r = 0; r <= 9; r++) {
-        var h = r === 0 ? 0 : r === 9 ? Math.max(1, r + total - dres.value)
-          : Math.max(0, r + total - dres.value);
-        if (h > 0) tell++;
-        sum += h;
-      }
-      return { chance: tell / 10, avgHits: sum / 10, mods: total, def: dres.value,
-        need: Math.max(1, dres.value - total + 1) };
-    }
-
     function shoot(state, a, t, mode, opts) {
       opts = opts || {};
       /* A squad or a gun on its trails turns onto what it fires at. Only a
@@ -290,10 +275,14 @@
       var roll = d10();
       var total = m.total + roll;
       parts.unshift({ label: 'D10', v: roll });
-      /* Rite of Concentration (p. 142): once a battle the D10 is doubled. It is
-         spent on the first roll where doubling is worth having; the unmodified 0
-         and 9 are still read off the die itself. */
-      if (!aux && roll >= 5 && roll < 9 && campFlag(a, 'concentration') && a.camp && a.camp.once && !a.camp.once.concentration) {
+      /* Rite of Concentration (p. 142): once a battle the unit "may double its D10".
+         A player calls for it on the shot (opts.concentrate); the AI spends it on
+         its first roll where doubling is worth having. The unmodified 0 and 9 are
+         still read off the die itself. */
+      var riteLeft = !aux && campFlag(a, 'concentration') && a.camp && a.camp.once && !a.camp.once.concentration;
+      var aiSide = state && state.cfg && (state.cfg.aiSides || []).indexOf(a.side) >= 0;
+      var wantRite = opts.concentrate != null ? !!opts.concentrate : aiSide && roll >= 5;
+      if (riteLeft && wantRite && roll > 0 && roll < 9) {
         a.camp.once.concentration = true;
         total += roll;
         parts.splice(1, 0, { label: 'Rite of Concentration — D10 doubled', v: roll });
@@ -346,7 +335,7 @@
         if (breach) mod += 1;
         // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
         mod += dmgMod(state, a, t);
-        var res = resolveShootingHits(state, t, hits, mod, a);
+        var res = resolveShootingHits(state, t, hits, mod, a, true);
         medicId = res.medic || null;
         // Incendiary doubles the suppression of the attack itself, before any
         // extra points that special rules add
@@ -373,6 +362,8 @@
         if (res.sp > 0 && !aux && bugRanged(a) && doctrine(state, a.side, 'BC4') && !campFlag(t, 'shielding')) {
           res.sp += 1; res.notes.push('Highly Irritating Venom +1 SP');
         }
+        // Brave and Courage Under Fire, off the attack's whole count (p. 88)
+        shotRelief(state, t, res);
         log.push({ t: 'hits', text: res.rolls.join(' · ') + burn + (supp ? ' · Suppressive Fire +2 SP' : '') +
           (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
         applyResult(state, t, res, log, a);
@@ -397,7 +388,7 @@
       hasLoS = L.hasLoS; hasOwn = L.hasOwn; inFireArc = L.inFireArc; isFlying = L.isFlying;
       isMachine = L.isMachine; kindsUnder = L.kindsUnder; levelOf = L.levelOf; lineClear = L.lineClear;
       mountOf = L.mountOf; pheromoneBonus = L.pheromoneBonus; pointSegDist = L.pointSegDist;
-      propOf = L.propOf; resolveDamage = L.resolveDamage; resolveShootingHits = L.resolveShootingHits;
+      propOf = L.propOf; resolveDamage = L.resolveDamage; resolveShootingHits = L.resolveShootingHits; shotRelief = L.shotRelief;
       ruleValue = L.ruleValue; sectionHigh = L.sectionHigh; sectionRect = L.sectionRect;
       shelterOf = L.shelterOf; sightRange = L.sightRange; sizeBonus = L.sizeBonus; status = L.status;
       tribeSees = L.tribeSees; undisciplined = L.undisciplined; unitDist = L.unitDist;
@@ -408,7 +399,7 @@
       relink: relink,
       nearestFacing: nearestFacing, dugIn: dugIn, sandbagged: sandbagged, shotRange: shotRange,
       shotMinRange: shotMinRange, canShoot: canShoot, markCall: markCall, shotMods: shotMods,
-      shotOdds: shotOdds, assaultOdds: assaultOdds, shoot: shoot
+      shotOdds: shotOdds, shoot: shoot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCShoot;

@@ -163,21 +163,23 @@ async function run(p, label, cfg, checks) {
      rule itself is staged here: a suppressed squad a few inches from one of
      the revolt's leaders rallies, and the leader's cry adds its dice. */
   // a fresh revolt, so its leaders are alive whatever happened to the last battle's
+  // a revolt that has a leader and a squad it can reach: the rolled armies are chance, so both are named
   await p.evaluate(() => {
     const R = window.PMC;
     window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'hotseat', planet: 'sparse', scenario: 'meeting', nameA: 'A', nameB: 'B',
-      armyA: R.rollArmy(3, 1, null, 'rebel'), armyB: R.rollArmy(3, 1, null, 'rebel') });
+      armyA: ['rleaders', 'rmilitia', 'rmilitia', 'rinsurgents'], armyB: R.rollArmy(3, 1, null, 'rebel') });
   });
   await p.waitForTimeout(800);
   const cry = await p.evaluate(() => {
     const R = window.PMC, s = window.PMC_STATE();
     const RULE = '\u2026but they\'ll never take our freedom!';
-    const lead = s.units.find(u => u.alive && !u.aboard && R.has(u, RULE));
+    const lead = s.units.find(u => u.alive && !u.aboard && u.side === 'A' && R.has(u, RULE));
     if (lead) { lead.x = 20; lead.y = 24; lead.reserve = false; }
     if (!lead) return { note: 'no leader on the table' };
     const sq = s.units.find(u => u.alive && u.side === lead.side && u !== lead && !R.has(u, RULE) && !R.isMachine(u) && u.tier < lead.tier + 2);
     if (!sq) return { note: 'no squad beside the leader' };
-    sq.bld = null; sq.aboard = null; sq.reserve = false; sq.x = lead.x + 4; sq.y = lead.y; sq.sp = 3;
+    // Suppressed, whatever its Morale, so the rally has something to do
+    sq.bld = null; sq.aboard = null; sq.reserve = false; sq.x = lead.x + 4; sq.y = lead.y; sq.sp = R.currentMorale(sq) + 1;
     const r = R.rally(s, sq);
     return { extras: (r && r.extras || []).join('; ') };
   });

@@ -57,7 +57,7 @@
     }
     // how many units may be swapped in the "modify the armies" step (p. 46)
     function swapAllowance(co, listLength) {
-      return Math.floor(listLength * (hasDoctrine(co, 'O6') ? 0.5 : 0.25));
+      return R.swapAllowance(listLength, hasDoctrine(co, 'O6'));
     }
 
     /* ================= payment (p. 84) =================

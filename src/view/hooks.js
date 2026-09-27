@@ -143,12 +143,10 @@
       }
       return false;
     };
-    window.__actionState = function (u, id) { return actionState(u, id); };
     window.__showQueue = function () { return show.queue.length; };
     window.__held = function () { return Object.keys(B.held).length; };
     window.__busy = function () { return busy(); };
     window.__busyWhy = function () { return { anims: anims.map(function (a) { return a.kind + ':' + Math.round(nowMs() - a.t0) + '/' + a.dur; }), arriving: anyArriving(), fx: FX.busy(), fxk: FX.kinds ? FX.kinds() : null, idle: idleCbs.length, loop: !!B.loop }; };
-    window.__uiMode = function () { return ui.mode; };
     window.__uiCounts = function () { return { targets: ui.targets.length, moves: ui.moves.length, terrain: ui.terrain.length }; };
     window.__pressCancel = function () { send({ k: 'cancel' }); };
     window.__holdInsertion = function () { holdInsertion(); };

@@ -62,7 +62,7 @@
         render();
       })();
     }
-    function abAssault(st, a, t, martyr) {
+    function abAssault(st, a, t, martyr, noSap) {
       var trails = pheromoneMarkers(a, t);
       // "Death or Glory, Comrades!": the leader's shout, and the charge throwing off its Suppression
       var shout = a && a.sp ? R.deathOrGlory(st, a) : null;
@@ -73,10 +73,10 @@
         addFx({ kind: 'rise', x: a.x, y: a.y, rgb: '235,85,70', n: 10, delay: 250, dur: 1500, blocking: true });
       }
       // Sappers: charges set against the wall or building the enemy is sheltering behind
-      var cover = a && t && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
+      var cover = a && t && !noSap && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
       if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
       var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
-      var res = R.assault(st, a, t, { path: route ? route.path : null, martyr: martyr || {} });
+      var res = R.assault(st, a, t, { path: route ? route.path : null, martyr: martyr || {}, noSap: !!noSap });
       abilityFx(res, t, null, trails);
       // whatever the assault brought down is repainted, whoever made it (as for a shot)
       if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });

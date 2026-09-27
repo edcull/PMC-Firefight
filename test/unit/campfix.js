@@ -143,5 +143,44 @@ ok('...remembering on a 2-6', rb.remembered === (rb.roll >= 2), 'D6 ' + rb.roll)
 // Nanobots (p. 89) is for a vehicle or an aircraft
 ok('an aircraft may be fitted with Nanobots', C.availableUpgrades(C.newEntry('fsc')).some(function (g) { return g.n === 6; }));
 
+/* Penal troops (Expendable, p. 57): their dead are a class of their own, counted
+   apart and kept out of the company's loss rate. */
+(function () {
+  var co = C.newCompany('P', {});
+  ok('penal troopers have their own count', C.poolOf(R.profile('penal')) === 'penal' && C.poolOf(R.profile('regular')) === 'soldiers');
+  co.losses = { soldiers: { lost: 2, departed: 0 }, penal: { lost: 6, departed: 0 } };
+  co.roster = [C.newEntry('regular', {})];
+  var st = C.lossStats(co), sold = st.filter(function (x) { return x.pool === 'soldiers'; })[0], pen = st.filter(function (x) { return x.pool === 'penal'; })[0];
+  ok('...counted, and shown as a count only', !!pen && pen.lost === 6 && pen.countOnly);
+  ok('...and not in the soldiers\' loss rate', sold.lost === 2 && sold.served === 2 + C.strengthOf(co.roster[0], co));
+})();
+
+// ...end to end: a penal squad whose collars went off, through the aftermath
+(function () {
+  var camp = C.newCampaign({ mode: 'solo' });
+  C.found(camp.companies.A, ['cmd4', 'penal', 'recruits', 'recruits', 'rookie', 'rookie'], 'S2');
+  C.found(camp.companies.B, ['cmd4', 'recruits', 'recruits', 'rookie', 'rookie', 'rookie'], 'O1');
+  var A = camp.companies.A, pen = A.roster.filter(function (e) { return e.key === 'penal'; })[0];
+  var size = R.profile('penal').size;
+  var rows = A.roster.map(function (e) {
+    var dead = e === pen;
+    return { rid: e.rid, side: 'A', key: e.key, startSize: R.profile(e.key).size, endSize: dead ? 0 : R.profile(e.key).size,
+      destroyed: false, brokenEver: dead, wiped: dead, kills: [] };
+  }).concat(camp.companies.B.roster.map(function (e) {
+    return { rid: e.rid, side: 'B', key: e.key, startSize: R.profile(e.key).size, endSize: R.profile(e.key).size, destroyed: false, brokenEver: false, wiped: false, kills: [] };
+  }));
+  C.aftermath(camp, { winner: 'A', battleTier: 1, pl: 1, scenario: 'meeting', routed: { A: false, B: false }, units: rows,
+    casualties: [{ side: 'A', count: size, type: R.profile('penal').name, unit: pen.name, rid: pen.rid, turn: 0, anon: true }] });
+  var L = A.losses || {};
+  ok('the collared squad is gone from the books', A.roster.indexOf(pen) < 0);
+  ok('...its dead counted as penal troopers', (L.penal || {}).lost === size && !((L.soldiers || {}).lost));
+  var m = (A.memorial || []).filter(function (x) { return x.anon; })[0];
+  ok('...and on the memorial as a count of penal troopers', !!m && m.count === size && m.noun === 'penal troopers');
+})();
+
+// a save with no version is stamped on load, so a later change has something to key on (2.12)
+var oldSave = { companies: {}, turn: 3 };
+ok('a campaign saved without a version is stamped with one on load', C.migrate(oldSave).v === C.VERSION);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

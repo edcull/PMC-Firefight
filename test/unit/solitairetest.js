@@ -27,7 +27,9 @@ var allLegal = true, why = '';
   });
 });
 ok('every rolled commando is legal, every Tier, both lists, PL 1-2', allLegal, why);
-ok('a Command Unit has no place in a commando', !S.checkCommando(['cmd2', 'regular', 'regular'], 3, 1, 'pmc').ok);
+// the Command Unit *rule* is not used (p. 146), but the squad may still be fielded
+ok('a Command Unit profile may be fielded in a commando', S.checkCommando(['cmd2', 'regular', 'regular'], 3, 1, 'pmc').faults.every(function (f) { return !/no place/.test(f); }));
+ok('...a Rapid insertion platform may not', S.checkCommando(['insertplat', 'regular', 'regular'], 3, 1, 'pmc').faults.some(function (f) { return /no place/.test(f); }));
 ok('one vehicle a Priority Level', !S.checkCommando(['regular', 'lcv', 'lcv'], 3, 1, 'pmc').ok &&
   S.checkCommando(['regular', 'lcv:tracked', 'regular'], 3, 1, 'pmc').faults.every(function (f) { return !/vehicle/.test(f); }));
 ok('no vehicle above the Battle Tier', S.checkCommando(['regular', 'mcv'], 3, 1, 'pmc').faults.some(function (f) { return /above the Battle Tier/.test(f); }));
@@ -38,7 +40,7 @@ var opOK = true, opWhy = '';
 [1, 2, 3, 4, 5].forEach(function (bt) {
   for (var i = 0; i < 20; i++) {
     var k = S.rollOpFor(bt, 1, i % 2 ? 'rebel' : 'pmc', false), spent = 0, counts = [0, 0, 0, 0, 0, 0];
-    k.forEach(function (e) { var p = R.profile(R.splitPick(e).key); spent += p.tier; counts[p.tier]++; if (p.command) { opOK = false; opWhy = 'a command unit'; } });
+    k.forEach(function (e) { var p = R.profile(R.splitPick(e).key); spent += p.tier; counts[p.tier]++; if (p.mustLoad) { opOK = false; opWhy = 'an insertion platform'; } });
     if (spent > S.OPFOR[bt].points) { opOK = false; opWhy = 'over points at BT ' + bt; }
     for (var t = 1; t <= 5; t++) {
       var lim = S.OPFOR[bt].limits[t - 1];
@@ -93,6 +95,127 @@ head('Charges and the scenario\'s bounds');
   var outside = mkU('regular', 'A', 18, 12);
   st.units.push(outside);
   ok('...and it may charge one outside the zone', !!R.chargeRoute(st, opfor, outside, opfor.move + 2));
+})();
+
+head('Evacuation: no cap on OpFor arrivals (p. 154)');
+(function () {
+  var evac = SC.SCENARIOS.s_evac;
+  function mkB(i) { var p = R.profile('regular');
+    return { id: 'B' + i, side: 'B', key: 'regular', name: p.name, label: p.name, cls: 'infantry', tier: p.tier, size: p.size, models: p.size,
+      move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale, rules: [], x: -1, y: -1,
+      sp: 0, alive: true, reserve: true, wave: 'pool', shotFrom: [], cargo: [] }; }
+  var entries = [{ id: 1, x: 30, y: 30 }, { id: 2, x: 40, y: 12 }, { id: 3, x: 12, y: 40 }, { id: 4, x: 44, y: 44 }, { id: 5, x: 24, y: 44 }, { id: 6, x: 44, y: 24 }];
+  var most = 0;
+  for (var t = 0; t < 30; t++) {
+    var units = []; for (var i = 0; i < 24; i++) units.push(mkB(i));
+    var st = { units: units, terrain: [], objectives: [], log: [], sc: { safe: { x: 0, y: 0, r: 12 }, entries: entries }, scen: evac };
+    most = Math.max(most, evac.reserves(st, 'B').length);
+  }
+  ok('more than six may come on in one turn', most > 6, 'up to ' + most + ' of 24');
+  var units2 = []; for (var j = 0; j < 10; j++) units2.push(mkB(j));
+  var st2 = { units: units2, terrain: [], objectives: [], log: [], sc: { safe: { x: 0, y: 0, r: 12 }, entries: entries.slice(0, 2) }, scen: evac };
+  var placed = 0;
+  units2.forEach(function (u) {
+    var q = evac.arrivalPoint(st2, u);
+    if (q) { u.x = q.x; u.y = q.y; u.reserve = false; placed++; }
+  });
+  ok('two entry points take ten units in one turn', placed === 10, placed + ' placed');
+})();
+
+head('The VIP comes from the commando\'s own army list (p. 151)');
+(function () {
+  var bad = [];
+  ['pmc', 'rebel', 'bugs', 'xeno'].forEach(function (f) {
+    [1, 3, 5].forEach(function (bt) {
+      var st = { cfg: { tier: bt }, solo: { faction: f, owners: [1] }, units: [] };
+      var v = SC.SCENARIOS.s_vip.extraUnits(st)[0].profile;
+      if ((v.faction || 'pmc') !== f) bad.push(f + ' BT' + bt + ' got a ' + (v.faction || 'pmc') + ' statline');
+      if (v.rules.length) bad.push(f + ' BT' + bt + ' kept special rules');
+    });
+  });
+  ok('every faction\'s VIP has its own leaders\' statline, and no special rules', !bad.length, bad.join('; '));
+})();
+
+head('Sabotage: "within 12" of an objective" from its edge (p. 155)');
+(function () {
+  var sab = SC.SCENARIOS.s_sabotage, UR = R.UNIT_R;
+  var st = { units: [], terrain: [], objectives: [], log: [], sc: { targets: [{ x: 24, y: 24 }] } };
+  // 11.5" between the unit's edge and the objective's: aggressive
+  var u = { side: 'B', x: 24 + 1 + 11.5 + UR, y: 24 };
+  ok('an OpFor unit 11.5" from the objective\'s edge is aggressive', sab.behaviour(st, u).mod === 1);
+  u.x = 24 + 1 + 12.5 + UR;
+  ok('...one 12.5" off is not', sab.behaviour(st, u).mod === 0);
+})();
+
+head('A counter with no room to reveal keeps its counter (p. 150)');
+(function () {
+  var crush = SC.SCENARIOS.s_crush, p = R.profile('regular');
+  function mkU(side, x, y, extra) {
+    var u = { id: side + x + '_' + y, side: side, key: 'regular', name: p.name, label: p.name, cls: 'infantry', tier: p.tier,
+      size: p.size, models: p.size, move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale,
+      rules: [], x: x, y: y, sp: 0, alive: true, activated: false, shotFrom: [], cargo: [] };
+    for (var k in extra || {}) u[k] = extra[k];
+    return u;
+  }
+  var hidden = mkU('B', -1, -1, { reserve: true, wave: 'pool' });
+  // the counter out in the middle of a lake: nowhere within 10" to stand
+  var st = { units: [mkU('A', 4, 4), hidden], terrain: [{ kind: 'deep', x: 14, y: 14, w: 34, h: 34 }], objectives: [], log: [],
+    sc: { counters: [{ id: 1, x: 32, y: 32 }] }, scen: crush };
+  var out = crush.beginning(st);
+  ok('no room: the unit stays in the pool', hidden.reserve && hidden.x < 0);
+  ok('...and its counter stays on the table, to be found again', st.sc.counters.length === 1,
+    out.map(function (o) { return o.text; }).join(' / '));
+  st.terrain = [];
+  crush.beginning(st);
+  ok('with room, it is revealed and the counter goes', !hidden.reserve && hidden.x > 0 && st.sc.counters.length === 0);
+})();
+
+head('"No enemy within Range" is a distance (p. 147)');
+(function () {
+  function mk(key, side, x, y) {
+    var p = R.profile(key);
+    return { id: side + key + x, side: side, key: key, name: p.name, label: p.name, cls: p.cls || 'infantry', tier: p.tier,
+      size: p.size, models: p.size, move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale,
+      rules: p.rules.slice(), x: x, y: y, sp: 0, alive: true, activated: false, shotFrom: [], cargo: [] };
+  }
+  var wall = { kind: 'building', x: 18, y: 14, w: 4, h: 12 };
+  var opfor = mk('regular', 'B', 12, 20), hidden = mk('regular', 'A', 26, 20);
+  var st = { units: [opfor, hidden], terrain: [wall], objectives: [], log: [] };
+  ok('an enemy 12" off behind a building cannot be shot', !R.canShoot(st, opfor, hidden, 'fire'));
+  ok('...but it is within Range: no +2', R.enemyWithinRange(st, opfor));
+  hidden.x = 40;
+  ok('one out beyond Range is not', !R.enemyWithinRange(st, opfor));
+  hidden.x = 26; hidden.reserve = true; hidden.x = -1; hidden.y = -1;
+  ok('nor one still in reserve', !R.enemyWithinRange(st, opfor));
+})();
+
+head('The Ambush! column stays on the road (p. 156)');
+(function () {
+  var W = R.BOARD.w, UR = R.UNIT_R, amb = SC.SCENARIOS.s_ambush;
+  [6, 14, 20, 30].forEach(function (n) {
+    var worst = '', ok1 = true;
+    for (var trial = 0; trial < 40; trial++) {
+      var units = [];
+      for (var i = 0; i < n; i++) units.push({ id: 'B' + i, side: 'B', key: 'regular', alive: true, x: -1, y: -1, rules: [], cargo: [] });
+      var st = { units: units, terrain: [], objectives: [], log: [], sc: {} };
+      amb.deploy(st);
+      units.forEach(function (u) {
+        if (u.x < UR - 1e-6 || u.x > W - UR + 1e-6) { ok1 = false; worst = 'off the table at x ' + u.x.toFixed(1); }
+      });
+      for (var a = 0; a < n; a++) for (var b = a + 1; b < n; b++) {
+        var d = Math.hypot(units[a].x - units[b].x, units[a].y - units[b].y) - 2 * UR;
+        if (d < 1 - 0.51) { ok1 = false; worst = 'two ' + d.toFixed(2) + '" apart'; }
+      }
+      // in each file, neighbours no further than 3" apart
+      var byFile = {};
+      units.forEach(function (u) { var k = Math.round(u.y); (byFile[k] = byFile[k] || []).push(u.x); });
+      Object.keys(byFile).forEach(function (k) {
+        var xs = byFile[k].sort(function (p, q) { return p - q; });
+        for (var j = 1; j < xs.length; j++) if (xs[j] - xs[j - 1] - 2 * UR > 3 + 1e-6) { ok1 = false; worst = 'a gap of ' + (xs[j] - xs[j - 1] - 2 * UR).toFixed(1) + '"'; }
+      });
+    }
+    ok('a column of ' + n + ' fits, 1-3" apart, none overlapping', ok1, worst);
+  });
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

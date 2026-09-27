@@ -10,7 +10,7 @@
         developRival = E.developRival, expFor = E.expFor, hasDoctrine = E.hasDoctrine,
         hasTraumaFlag = E.hasTraumaFlag, isLeaderP = E.isLeaderP, manned = E.manned,
         newCompany = E.newCompany, newEntry = E.newEntry, payment = E.payment, pick = E.pick,
-        poolOf = E.poolOf, poolsFor = E.poolsFor, profile = E.profile, recruitCost = E.recruitCost,
+        poolOf = E.poolOf, POOL_NAMES = E.POOL_NAMES, poolsFor = E.poolsFor, profile = E.profile, recruitCost = E.recruitCost,
         rollTP = E.rollTP, rollTrauma = E.rollTrauma, salvage = E.salvage, shuffle = E.shuffle,
         tpFor = E.tpFor, traumaTable = E.traumaTable, traumaThreshold = E.traumaThreshold,
         weakCandidates = E.weakCandidates, weightOf = E.weightOf;
@@ -152,7 +152,7 @@
             var mass = cas.reduce(function (n, c) { return n + (c.mass != null ? c.mass : c.count); }, 0);
             var bodies = cas.reduce(function (n, c) { return n + (c.count || 0); }, 0);
             entry.history.push(cas[0].swarm ? (mass ? 'Biomass lost: ' + mass + '.' : 'Lost ' + bodies + '.')
-              : cas[0].anon ? 'Lost ' + bodies + ' Esh-Aven.'
+              : cas[0].anon ? 'Lost ' + bodies + ' ' + POOL_NAMES[poolOf(profile(entry.key))] + '.'
               : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
           }
           if (line.men && !line.landed) entry.men = line.men.slice();   // a landing's passengers are all still there
@@ -310,9 +310,11 @@
             t.models += c.count;
             return;
           }
-          // the Esh-Aven go on it unnamed, as a count for the unit
+          // the Esh-Aven and penal troopers go on it unnamed, as a count for the unit
           if (c.anon) {
-            co.memorial.push({ anon: true, count: c.count, type: c.type, unit: c.unit, battle: out.turn, against: foe.name, scenario: report.scenario });
+            var cp = R.CATALOGUE.filter(function (q) { return q.name === c.type; })[0];
+            co.memorial.push({ anon: true, count: c.count, type: c.type, unit: c.unit, noun: POOL_NAMES[poolOf(cp)],
+              battle: out.turn, against: foe.name, scenario: report.scenario });
             return;
           }
           co.memorial.push({

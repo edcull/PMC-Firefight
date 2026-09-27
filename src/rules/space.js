@@ -485,10 +485,11 @@
       return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
     }
 
-    // Line of sight, centre to centre. Blocked by LoS-blocking terrain (unless the unit is
-    // standing in it — you can see in and out) and by intervening units.
+    // Line of sight, centre to centre, out to 36" measured base to base (p. 26). Blocked by
+    // LoS-blocking terrain (unless the unit is standing in it — you can see in and out)
+    // and by intervening units.
     function hasLoS(state, a, b) {
-      if (centreDist(a, b) > sightRange(a)) return false;
+      if (unitDist(a, b) > sightRange(a)) return false;
       return lineClear(state, a, b);
     }
     // the line itself, however far: terrain that blocks and units standing in the way
@@ -518,6 +519,8 @@
       for (var j = 0; j < state.units.length; j++) {
         var u = state.units[j];
         if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
+        // a ghost (where a unit might stand) is not hidden by the unit itself, where it stands now
+        if (u === a.of || u === b.of) continue;
         if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
         if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
         if (aLv < 0) { aLv = a.side ? levelOf(state, a) : 0; bLv = b.side ? levelOf(state, b) : 0; }

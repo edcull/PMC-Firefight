@@ -82,7 +82,7 @@ var BOOK = [
   ['Armed light shuttle', 3, 1, 18, 5, 18, 11, 0, 6],
   ['Armed medium shuttle', 4, 1, 18, 5, 18, 11, 0, 7],
   ['Armed heavy shuttle', 5, 1, 18, 5, 18, 11, 0, 8],
-  ['Lifter', 3, 1, 16, 0, 0, 10, 0, 7]
+  ['Lifter', 3, 1, 16, null, 0, 10, 0, 7]
 ];
 /* the turn cost printed in brackets after a ground vehicle's Movement */
 var TURNS = {
@@ -420,12 +420,16 @@ var hull = unit('rtechnical', { x: 10, y: 12 });
 var foot = unit('rmilitia', { x: 10, y: 12 });
 ok('a Lifter picks up a vehicle', R.canEmbark(table([lift, hull]), lift, hull) === true);
 ok('...and never infantry', R.canEmbark(table([lift, foot]), lift, foot) === false);
+var prey = unit('rookie', { side: 'B', x: 14, y: 10 });
+var liftShot = R.canShoot(table([lift, prey]), lift, prey, 'fire');
+ok('it carries no guns: no Firepower, so it never shoots (p. 94)',
+  lift.fp === null && liftShot === false);
 var shuttle = unit('rlshuttle', { x: 10, y: 10 });
 ok('an ordinary shuttle is the other way about',
   R.canEmbark(table([shuttle, foot]), shuttle, foot) === true &&
   R.canEmbark(table([shuttle, hull]), shuttle, hull) === false);
 var fieldgun = unit('rmedart', { x: 10, y: 12 });
-ok('a Lifter slings an emplaced gun', R.canEmbark(table([lift, fieldgun]), lift, fieldgun) === true);
+ok('a Lifter cannot sling an emplaced gun: it is no vehicle', R.canEmbark(table([lift, fieldgun]), lift, fieldgun) === false);
 ok('...but no aircraft tows one', R.canEmbark(table([shuttle, fieldgun]), shuttle, fieldgun) === false);
 var lorry = unit('rltv', { x: 10, y: 12 });
 ok('...which a ground transport still can', R.canEmbark(table([lorry, fieldgun]), lorry, fieldgun) === true);

@@ -48,6 +48,16 @@ for (var i = 0; i < n; i++) {
 }
 ok('a 15+ or an unmodified 9 brings a wall down', down > n * 0.1 && down < n * 0.9, true,
   Math.round(100 * down / n) + '% of shots');
+// "with all modifiers applied" (p. 57): the shot's own, as at a unit
+function mods(gx, terrain) {
+  var w = world([{ kind: 'barricade', x: 26, y: 18, w: 4, h: 4 }].concat(terrain || []));
+  var g = mk('mcv', 'A', gx, 20); w.units = [g];
+  var r = R.shootTerrain(w, g, w.terrain[0]);
+  return r.total - r.roll;
+}
+ok('within half range: Firepower 8, Fire! +1, half range +2', mods(18), 11);
+ok('beyond it: Firepower 8 and Fire! +1', mods(8), 9, '18" off');
+ok('from a hill, +2 more', mods(8, [{ kind: 'hill', x: 4, y: 16, w: 8, h: 8 }]), 11);
 var noDW = world([{ kind: 'barricade', x: 26, y: 18, w: 4, h: 4 }]);
 ok('rifles carry no Destructive Weapon',
   R.canDemolish(mk('regular', 'A', 18, 20), noDW.terrain[0]), false);
@@ -109,6 +119,22 @@ for (var i3 = 0; i3 < k; i3++) {
 }
 ok('Sappers blow a high wall in on 15+ or a 9', sapDown > k * 0.4, true,
   Math.round(100 * sapDown / k) + '% of charges');
+/* Only Sappers who assault set charges (p. 58), and the player may order a
+   standard Assault instead, without the +4 (p. 59). */
+function sapTrial(attackerIsSapper, opts) {
+  var sapped = 0;
+  for (var i = 0; i < 60; i++) {
+    var w = world([{ kind: 'barricade', x: 26, y: 16, w: 0.5, h: 8 }]);
+    var sp = mk('engineers', 'A', 24.5, 20), foe = mk('regular', 'B', 27.5, 20);
+    w.units = [sp, foe];
+    var res = attackerIsSapper ? R.assault(w, sp, foe, opts) : R.assault(w, foe, sp, opts);
+    if (JSON.stringify(res.log).indexOf('Sappers') >= 0) sapped++;
+  }
+  return sapped;
+}
+ok('Sappers set charges when they assault a unit behind a low wall', sapTrial(true) > 0, true);
+ok('...but not when they are the ones assaulted', sapTrial(false), 0);
+ok('...nor when ordered to a standard Assault', sapTrial(true, { noSap: true }), 0);
 var fb = world([{ kind: 'wall', x: 26, y: 16, w: 1, h: 8 }]);
 var eng2 = mk('engineers', 'A', 22, 20);
 fb.units = [eng2];
@@ -189,3 +215,4 @@ ok('gunfire alone will not bring the objective down',
   'only the Demolish special action touches it (p. 54)');
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
+process.exit(fail ? 1 : 0);

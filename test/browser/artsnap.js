@@ -68,6 +68,7 @@ const DIFF = path.join(ROOT, 'test', 'art', 'diff');
       const V = window.__viewer;
       V.pick(c.key);
       V.destroy(!!c.destroyed);
+      V.settle();
       V.set('stance', 'ready'); V.set('sling', 'none');
       for (const k in (c.set || {})) V.set(k, c.set[k]);
       V.set('face', c.face);

@@ -837,6 +837,44 @@
             }
           }
         }
+      } else if (f.kind === 'collar') {
+        /* Expendable: a penal trooper's collar going off at his neck, while he is
+           still on his feet — a red telltale blinking faster and faster, then a
+           sharp flash, a spray of sparks and a wisp of dark smoke. */
+        var qp = I.toScreen(f.x, f.y);
+        qp.y -= liftAt(f) + I.K * (f.neck || 0.34);
+        var blink = 0.24, pop = 0.44;
+        if (k < blink) {
+          var bk = k / blink;
+          if (Math.sin(bk * bk * 60) > 0) {
+            I.ellipse(g, qp.x, qp.y, I.PIXEL * 2.6, I.PIXEL * 2.6, 'rgba(255,40,30,0.35)');
+            I.ellipse(g, qp.x, qp.y, I.PIXEL * 1.2, I.PIXEL * 1.2, 'rgba(255,70,50,1)');
+          }
+        } else {
+          if (k < pop) {
+            var pk = (k - blink) / (pop - blink), fade = (1 - pk) * (1 - pk);
+            I.ellipse(g, qp.x, qp.y, I.K * (0.18 + pk * 0.3), I.K * (0.14 + pk * 0.2), 'rgba(255,140,40,' + (0.75 * fade) + ')');
+            I.ellipse(g, qp.x, qp.y - I.K * 0.04, I.K * (0.16 - pk * 0.1), I.K * (0.13 - pk * 0.08), 'rgba(255,250,210,' + (1 - pk) + ')');
+            I.rect(g, qp.x - I.PIXEL, qp.y - I.K * (0.2 + pk * 0.3), I.PIXEL * 2, I.K * (0.2 + pk * 0.2), 'rgba(255,210,120,' + fade + ')');
+          }
+          // sparks thrown up and out, falling back
+          var zk = Math.min(1, (k - blink) / 0.36);
+          if (zk < 1) {
+            for (var qs = 0; qs < 10; qs++) {
+              var qa = qs * 0.63 + f.x, qd = zk * I.K * (0.5 + (qs % 3) * 0.2);
+              var zy = qp.y + Math.sin(qa) * qd * 0.5 - (zk * 1.2 - zk * zk * 1.6) * I.K;
+              I.rect(g, qp.x + Math.cos(qa) * qd, zy, I.PIXEL * (qs % 2 ? 1 : 2), I.PIXEL * (qs % 2 ? 1 : 2),
+                'rgba(255,' + (220 - qs * 12) + ',' + (qs % 3 ? 80 : 160) + ',' + (1 - zk) + ')');
+            }
+          }
+          // and a wisp of dark smoke going up from where he stood
+          var sk = (k - blink) / (1 - blink);
+          for (var qw = 0; qw < 3; qw++) {
+            var wr = I.K * (0.1 + sk * 0.24 + qw * 0.04);
+            I.ellipse(g, qp.x + Math.sin(sk * 5 + qw) * I.K * 0.12, qp.y - sk * I.K * (0.7 + qw * 0.3), wr, wr * 0.8,
+              'rgba(' + (qw % 2 ? '96,92,88' : '64,62,60') + ',' + (0.55 * (1 - sk)) + ')');
+          }
+        }
       } else if (f.kind === 'hold') {
         /* Nothing to draw: it exists so the frame loop keeps turning while a
            unit is coming down, and so the game waits for it. */
@@ -969,5 +1007,17 @@
     });
   }
 
-  root.PMCFx = { create: create, paint: paint };
+  /* A penal squad's collars going off (Expendable): how the battle and the unit
+     viewer both time it. Each man's collar starts `step` ms after the last; its
+     telltale blinks for `blink` ms, then it fires and he falls; the effect runs
+     `dur` ms in all. The order they go in, over a squad's places in formation. */
+  var COLLAR = {
+    step: 170, blink: 360, dur: 1500,
+    order: function (n) {
+      var o = [];
+      for (var i = 0; i < n; i++) o.push(i);
+      return o.sort(function (a, b) { return ((a * 7 + 3) % n) - ((b * 7 + 3) % n); });
+    }
+  };
+  root.PMCFx = { create: create, paint: paint, COLLAR: COLLAR };
 })(window);

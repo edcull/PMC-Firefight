@@ -102,6 +102,14 @@
   /* A battle this browser was in the middle of when the page went away —
      refreshed, or the phone threw the tab out — is played back up to where it
      was, behind the menu, which then offers to go back to it. */
+  /* Something went wrong that the player should hear about: said on the menu,
+     and in the hint line if a battle is showing, and written to the console. */
+  function notice(text, err) {
+    if (err && window.console) console.error(text, err);
+    var n = document.getElementById('menu-note');
+    if (n) { n.textContent = text; n.hidden = false; }
+    if (state) setHint(null, text);
+  }
   function resumeSaved() {
     var book = window.PMCNet && window.PMCNet.savedBattle && window.PMCNet.savedBattle();
     if (!book) return false;
@@ -114,8 +122,11 @@
     wireNet(net);
     net.connect();
     var ok = false;
-    try { ok = net.resume(book); } catch (e) { ok = false; }
+    var err = null;
+    try { ok = net.resume(book); } catch (e) { ok = false; err = e; }
     if (!ok) {
+      // a save made by an older build (or one that no longer plays out the same) cannot be picked up again
+      notice('The battle in progress could not be resumed — the game has changed since it was saved — so it has been put away.', err);
       window.PMCNet.forgetBattle();
       net = null; mirror = null; Q = null; state = null;
       return false;
@@ -195,7 +206,11 @@
     });
     transport.on('over', function () { render(); });
     transport.on('finished', function (m) {
-      if (window.PMC_ONFINISH) { try { window.PMC_ONFINISH(m.report); } catch (e) { } }
+      if (window.PMC_ONFINISH) {
+        try { window.PMC_ONFINISH(m.report); } catch (e) {
+          notice('The campaign could not record this battle (' + (e && e.message || e) + '). Its dossier has not been updated.', e);
+        }
+      }
     });
     return transport;
   }

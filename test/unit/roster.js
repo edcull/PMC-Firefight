@@ -129,6 +129,8 @@ var MACHINES = [
   ['Heavy Strike Craft', 5, 16, null, 9, 18, 13, 0, 5, 'Flying unit, Limited Fire Arc, Anti-tank'],
   ['Interceptor', 4, 28, null, 6, 24, 11, 0, 3, 'Flying unit, Limited Fire Arc, Anti-aircraft'],
   ['Advanced Strike Craft', 5, 24, null, 9, 18, 13, 0, 4, 'Flying unit, Limited Fire Arc'],
+  // p. 82: its Structure already carries the Drone Control point
+  ['Light VTOL drone', 3, 20, null, 1, 12, 11, 0, 4, 'Flying unit, Limited Fire Arc, Markerlights, Stealth, Keen-Eyed, Drone Control'],
   /* Rapid insertion platforms, p. 79. The book prints no Tier, no Movement, no
      Firepower, no Range and no Assault — an immobile Ground vehicle with
      Transport (1), Battlefield insertion, Defence 13 and Structure 3, costing one
@@ -195,4 +197,6 @@ for (var bt = 1; bt <= 5; bt++) {
   }
 }
 console.log('legality checks:', checks, '— wrong:', wrong);
+if (wrong) bad++;
 console.log(bad ? bad + ' PROFILE OR TABLE MISMATCHES' : 'every profile and the composition table match the book');
+process.exit(bad ? 1 : 0);

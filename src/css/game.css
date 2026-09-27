@@ -645,6 +645,7 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 /* the unit viewer is a link to another page, set as the buttons around it are */
 a.mcard { text-decoration: none; line-height: normal; }
 /* the build, small under everything */
+.menu-note { margin: 10px auto 0; max-width: 36em; text-align: center; font-size: 12.5px; line-height: 1.4; color: var(--warn, #e0a050); }
 .menu-ver { margin: 10px 0 0; text-align: center; font: 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-faint); opacity: .8; }
 /* the foot's demo: under the main menu only (set by the stylesheet too, so a
    stale script cannot leave it showing under a list) */

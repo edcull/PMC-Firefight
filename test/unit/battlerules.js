@@ -293,6 +293,8 @@ ok('...one that has already acted counts as a 3-4', fell > 30, fell + ' times');
 var pen = unit('penal', { side: 'A', x: 10, y: 10, sp: 12 });
 var cl = R.collars(table([pen]));
 ok('a penal unit broken by anything sets its collars off', !pen.alive && pen.expended && cl.length === 1);
+ok('...and every man left in it is killed, not fled', pen.models === 0 && !pen.fled);
+ok('...its losses are a count, not names, like the Esh-Aven', R.counted(pen));
 var mort = unit('mortarteam', { x: 10, y: 10 }), hid = unit('recruits', { side: 'B', x: 30, y: 30 });
 var lw = { kind: 'barricade', x: 29, y: 30.8, w: 4, h: 0.5 };
 ok('plunging fire can bring down the low wall a target shelters by', R.shelterOf(table([mort, hid], [lw]), mort, hid) === lw);
@@ -392,6 +394,25 @@ ok('a player who says yes sends one in', often({ martyr: { A: true } }, 6) > 0);
 ok('...even with only two left', often({ martyr: { A: true } }, 2) > 0);
 ok('a player who says no does not', often({ martyr: { A: false } }, 6) === 0);
 ok('the AI keeps its last two', often({}, 2) === 0 && often({}, 6) > 0);
+
+console.log('\nBailing out of a wreck is getting off (pp. 36, 58)');
+(function () {
+  var hull = unit('lapc', { x: 20, y: 20 }), gunners = unit('hmgteam', { x: -1, y: -1 }), other = unit('lapc', { x: 24, y: 20 });
+  var st = table([hull, gunners, other]);
+  hull.cargo = [gunners]; gunners.aboard = hull.id;
+  var was = Math.random;
+  Math.random = function () { return 0.01; };        // every die a 1: Abandoned!
+  var log = [];
+  R.applyDamage(st, hull, hull.str + 1, log);
+  Math.random = was;
+  ok('the hull is abandoned and the crew bails out', !hull.alive && gunners.alive && !gunners.aboard,
+    log.map(function (l) { return l.text; }).join(' / '));
+  gunners.sp = 0; gunners.x = other.x + 2.5; gunners.y = other.y;
+  ok('...and cannot climb into another hull the same turn', !R.canEmbark(st, other, gunners));
+  var foe = unit('regular', { side: 'B', x: gunners.x + 10, y: gunners.y });
+  st.units.push(foe);
+  ok('...nor fire its Cumbersome Weapon', !R.canShoot(st, gunners, foe, 'fire'));
+})();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

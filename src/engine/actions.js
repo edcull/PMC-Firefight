@@ -21,7 +21,7 @@
         soloOwnerName = E.soloOwnerName, spent = E.spent, stayPut = E.stayPut, targetsFor = E.targetsFor,
         ui = E.ui, wireNote = E.wireNote;
 
-    var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, laststand: 1 };
+    var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, plainassault: 1, laststand: 1 };
     function actionState(u, id) {
       if (!u) return { on: false, hint: 'Select one of your units on the table.' };
       /* Carried or towed, a unit does not activate at all: a gun on the hook is
@@ -42,6 +42,11 @@
       if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
       if (u.side !== E.state.activeSide) return { on: false, hint: E.state.solo ? 'The OpFor is acting.' : 'It is ' + sideName(E.state.activeSide) + '’s activation.' };
       if (u.activated) return { on: false, hint: u.name + ' has already acted this turn.' };
+      // the Command Unit aboard has one action of its own to take from the vehicle (p. 57)
+      var ca = E.state.cmdAct;
+      if (ca && ca.veh === u.id && id !== ca.id) {
+        return { on: false, hint: 'The Command Unit aboard is taking its own action — only that one now.' };
+      }
       /* Broken (p. 34): it is not activated at all — it flees at the start of
          the Rally phase, and rallies, if it can, in it. It can still be picked
          to look at, but nothing on its bar is live. */
@@ -73,7 +78,7 @@
          that can reach an enemy must charge the closest one — nothing else. */
       // "whenever possible" — and a Suppressed bug cannot charge, so it is not held to it
       var fc = sup && !R.deathOrGlory(E.state, u) ? null : forcedCharge(u);
-      if (fc && id !== 'assault') {
+      if (fc && id !== 'assault' && id !== 'plainassault') {
         if (R.campFlag(u, 'bloodlust')) return { on: false, hint: 'Bloodlust: ' + u.name + ' must charge the closest enemy it can reach, ' + fc.name + '.' };
         return { on: false, hint: 'Aggressive: ' + u.name + ' must charge the closest enemy, ' + fc.name +
           ' — no Overmind within ' + R.overmindReach(E.state, u.side) + '" to hold it back.' };
@@ -132,6 +137,12 @@
             ? { on: true, hint: 'Stand and shoot: +1 to the firing roll, +2 inside ' + (u.range / 2) + '". ' + t.length + ' target' + (t.length > 1 ? 's' : '') + ' in range.' }
             : { on: false, hint: 'No enemy within ' + u.range + '" and line of sight.' };
         }
+        case 'fireconc': {
+          if (spent(u, 'concentration')) return { on: false, hint: 'Rite of Concentration: already used this battle.' };
+          var fc2 = actionState(u, 'fire');
+          if (!fc2.on) return fc2;
+          return { on: true, hint: 'Fire! with the Rite of Concentration: the D10 is doubled. Once a battle — kept if the die shows 0 or 9.' };
+        }
         case 'advance': {
           if (R.campFlag(u, 'noAdvance')) return { on: false, hint: 'Uncoordinated: this unit cannot Advance.' };
           if (sup) return { on: false, hint: 'Suppressed units cannot Advance.' };
@@ -140,6 +151,17 @@
           if (R.has(u, 'Cumbersome Weapon')) return { on: false, hint: 'Cumbersome Weapon: may not Advance.' };
           if (u.fp === null) return { on: false, hint: 'This unit has no Firepower.' };
           return { on: true, hint: 'Move up to ' + u.move + '", then shoot without the Fire! bonus.' };
+        }
+        /* Sappers "do not have to attempt to destroy that terrain piece – the player
+           may order them to perform a standard Assault action" (p. 59): the charge
+           without the demolition charges, and without their +4. */
+        case 'plainassault': {
+          if (!R.has(u, 'Sappers')) return { on: false, hint: 'Only Sappers carry demolition charges to leave behind.' };
+          var pa = actionState(u, 'assault');
+          if (!pa.on) return pa;
+          var walled = (fc ? [fc] : assaultables(u, chargeAllow(u))).some(function (t) { return !R.isMachine(t) && R.shelterOf(E.state, u, t); });
+          if (!walled) return { on: false, hint: 'No enemy within reach is in or behind something to blow in: a plain Assault is all there is.' };
+          return { on: true, hint: 'A standard Assault: charge in without setting the demolition charges — no +4, and the wall or building stays.' };
         }
         case 'assault': {
           if (machine && !R.isOvergrown(u)) return { on: false, hint: 'Vehicles and aircraft never charge.' };
@@ -202,6 +224,8 @@
         }
         case 'strafe': {
           if (u.cls !== 'aircraft') return { on: false, hint: 'Only aircraft may strafe.' };
+          // a Strafing run fires at every enemy passed over; one with no Firepower cannot (p. 27)
+          if (u.fp === null) return { on: false, hint: 'This aircraft has no Firepower.' };
           return { on: true, hint: 'Strafing run: fly up to ' + u.move + '" and fire at every enemy passed over. They may fire back.' };
         }
         case 'designate':
@@ -393,15 +417,17 @@
         ui.moves = R.reachable(E.state, u, u.move + moveBonus(u, 'move')).filter(function (c) { return canStand(u, c); });
         wireNote(u);
         if (st === 'suppressed') ui.moves = ui.moves.filter(function (c) { return safeSpot(u, c.x, c.y); });
-      } else if (id === 'fire' || id === 'aux') {
+      } else if (id === 'fire' || id === 'aux' || id === 'fireconc') {
         ui.mode = id === 'aux' ? 'aux' : 'fire';
+        ui.concentrate = id === 'fireconc';
         ui.targets = targetsFor(u, { aux: id === 'aux' });
       } else if (id === 'advance') {
         ui.mode = 'advance-move';
         ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
         wireNote(u);
-      } else if (id === 'assault') {
+      } else if (id === 'assault' || id === 'plainassault') {
         ui.mode = 'assault';
+        ui.noSap = id === 'plainassault';
         var must = forcedCharge(u);
         ui.targets = must ? [must] : assaultables(u);
       } else if (id === 'wave') {
@@ -427,7 +453,8 @@
         if (!ui.moves.length) ui.moves = [{ x: u.x, y: u.y, cost: 0 }];
       } else if (id === 'strafe') {
         ui.mode = 'strafe';
-        ui.moves = R.reachable(E.state, u, u.move);
+        // the run ends where the craft could stop: not over a tall building or a hilltop (p. 38)
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
       } else if (id === 'demolish') {
         ui.mode = 'demolish';
         ui.terrain = demolishTargets(u, false);

@@ -770,15 +770,20 @@
   // the models the loss rate counts for this unit
   function manned(entry, co) { return unmanned(entry) ? 0 : strengthOf(entry, co); }
   // which count a profile's losses go in, and what each model lost is worth there
-  var POOL_NAMES = { soldiers: 'soldiers', crocks: 'Crocks', eshaven: 'Esh-Aven', biomass: 'biomass' };
+  var POOL_NAMES = { soldiers: 'soldiers', penal: 'penal troopers', crocks: 'Crocks', eshaven: 'Esh-Aven', biomass: 'biomass' };
+  /* Penal troops are a class of their own: expendable, recruited freely, and
+     killed by their own collars. Their dead are kept as a count, apart from the
+     company's loss rate (Expendable, p. 57). */
+  var COUNT_ONLY = { penal: true };
   function poolOf(p) {
     if (!p) return 'soldiers';
+    if ((p.rules || []).indexOf('Expendable') >= 0) return 'penal';
     if (p.faction === 'bugs') return 'biomass';
     if (p.faction === 'xeno') return p.eshAven || p.group === 'Epsilon Squads' ? 'eshaven' : 'crocks';
     return 'soldiers';
   }
   function poolsFor(co) {
-    return co.faction === 'bugs' ? ['biomass'] : co.faction === 'xeno' ? ['crocks', 'eshaven'] : ['soldiers'];
+    return co.faction === 'bugs' ? ['biomass'] : co.faction === 'xeno' ? ['crocks', 'eshaven'] : co.faction === 'rebel' ? ['soldiers'] : ['soldiers', 'penal'];
   }
   function weightOf(p) { return poolOf(p) === 'biomass' ? R.biomassOf(p) : 1; }
   function massOf(entry, co) { return manned(entry, co) * weightOf(profile(entry.key)); }
@@ -812,7 +817,7 @@
         return n + (poolOf(profile(e.key)) === pool ? massOf(e, co) : 0);
       }, 0);
       var served = now + lost + b.departed;
-      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0 };
+      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0, countOnly: !!COUNT_ONLY[pool] };
     });
   }
   /* How seasoned the force is: every honour held on the books against the
@@ -1074,7 +1079,7 @@
       ATTACK_DEFEND: ATTACK_DEFEND, R: R, SCENARIOS: SCENARIOS, addLoss: addLoss, biomassTally: biomassTally,
       byRid: byRid, canFieldArmy: canFieldArmy, d3: d3, d6: d6, developRival: developRival, expFor: expFor,
       hasDoctrine: hasDoctrine, hasTraumaFlag: hasTraumaFlag, isLeaderP: isLeaderP, manned: manned,
-      newCompany: newCompany, newEntry: newEntry, payment: payment, pick: pick, poolOf: poolOf,
+      newCompany: newCompany, newEntry: newEntry, payment: payment, pick: pick, poolOf: poolOf, POOL_NAMES: POOL_NAMES,
       poolsFor: poolsFor, profile: profile, recruitCost: recruitCost, rollTP: rollTP, rollTrauma: rollTrauma,
       salvage: salvage, shuffle: shuffle, tpFor: tpFor, traumaTable: traumaTable,
       traumaThreshold: traumaThreshold, weakCandidates: weakCandidates, weightOf: weightOf
@@ -1340,7 +1345,21 @@
     }));
   }
   function faceRival(campaign, i) { return (KIT_RIVALS || kitRivals()).faceRival(campaign, i); }
-  function rehydrate(campaign) { return (KIT_RIVALS || kitRivals()).rehydrate(campaign); }
+  /* A save from an older build is brought up to this one before anything reads
+     it: one step per version, keyed on `v`, each step ending with v one higher.
+     There are none yet — version 1 is the first — but a save with no `v` is
+     stamped, so the next change to the dossier's shape has something to key on.
+     Nothing is ever refused: a save that will not load is a campaign lost. */
+  var MIGRATE = {
+    // 1: function (camp) { ...; camp.v = 2; }
+  };
+  function migrate(campaign) {
+    if (!campaign) return campaign;
+    if (!campaign.v) campaign.v = 1;
+    while (campaign.v < VERSION && MIGRATE[campaign.v]) MIGRATE[campaign.v](campaign);
+    return campaign;
+  }
+  function rehydrate(campaign) { return (KIT_RIVALS || kitRivals()).rehydrate(migrate(campaign)); }
   function forSave(campaign) { return (KIT_RIVALS || kitRivals()).forSave(campaign); }
   function foundRivals(campaign, n, opts) { return (KIT_RIVALS || kitRivals()).foundRivals(campaign, n, opts); }
   function rollOffers(campaign) { return (KIT_RIVALS || kitRivals()).rollOffers(campaign); }
@@ -1434,7 +1453,7 @@
   }
 
   root.PMCCamp = {
-    VERSION: VERSION,
+    VERSION: VERSION, migrate: migrate,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,
