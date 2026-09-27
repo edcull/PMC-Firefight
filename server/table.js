@@ -100,7 +100,8 @@ class Table {
 
     let scen = s.scenario;
     if (scen === 'roll') scen = SC.ORDER[R.d6() - 1];
-    else if (scen === 'rolld3') scen = SC.ORDER[R.d3() - 1];
+    // the D3 roll only at Tier I-II and/or Priority Level 1 (p. 45)
+    else if (scen === 'rolld3') scen = SC.ORDER[((s.tier || 3) <= 2 || (s.pl || 1) === 1 ? R.d3() : R.d6()) - 1];
 
     const camp = this.campaign ? this.campaign.get(s.campaign) : null;
     if (s.campaign && !camp) throw new Error('that campaign is not on this server');

@@ -20,7 +20,10 @@
     }
     function swapOptions(side, u) {
       var up = u && R.profile(u.key);
-      if (!u || u.pickIdx == null || u.command || !up || up.leaderBug || up.turretSet) return [];
+      /* Any unit for one "of the same Unit Tier" (p. 46), a Command Unit included —
+         save in a campaign, where the company's field command is not on the bench. */
+      if (!u || u.pickIdx == null || !up || up.leaderBug || up.turretSet) return [];
+      if (u.command && E.state.cfg.dossier) return [];
       if (u.aboard || (u.cargo && u.cargo.length)) return [];      // already strapped into a drop pod, or carrying one
       var cfg = E.state.cfg, held = heldSwaps(side);
       if (held.some(function (d) { return d.outId === u.id; })) return [];   // already down to be swapped
@@ -30,8 +33,14 @@
             !held.some(function (d) { return d.entry === e; });
         }).map(function (e) { return { id: e.rid, key: R.joinPick(e.key, e.prop, e.drone), name: e.name, entry: e }; });
       }
+      // one Command Unit a Priority Level (p. 57): another comes in only in place of one, or under the cap
+      var goingOut = held.map(function (d) { return d.outId; });
+      var cmds = E.state.units.filter(function (o) {
+        return o.side === side && o.command && o.pickIdx != null && goingOut.indexOf(o.id) < 0;
+      }).length + held.filter(function (d) { var hp = R.profile(R.splitPick(d.key || '').key); return hp && hp.command; }).length;
+      var cmdRoom = u.command || cmds < (cfg.pl || 1);
       return R.listFor(u.faction).filter(function (p) {
-        return p.tier === u.tier && !p.command && !p.turretSet && !p.noSlot && p.key !== u.key && !p.leaderBug;
+        return p.tier === u.tier && (!p.command || cmdRoom) && !p.turretSet && !p.noSlot && p.key !== u.key && !p.leaderBug;
       }).map(function (p) { return { id: p.key, key: p.key, name: p.name, entry: null }; });
     }
     /* Each player's allowance, offered on the deployment card until they put their
