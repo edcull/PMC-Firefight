@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=329d713235">
-<link rel="stylesheet" href="src/css/game.css?v=3e35a41a6a">
+<link rel="stylesheet" href="src/css/game.css?v=707fa41618">
 
 <div class="wrap">
   <header>
@@ -119,6 +119,7 @@
       <!-- only offered when the page came from a game server: a game opened
            from a file has nobody to play against -->
       <button class="mcard" id="btn-multi" disabled>Multiplayer<small id="menu-multi-sub">Needs the game server — run node server.js and open the page from it</small></button>
+      <a class="mcard" href="viewer.html" id="lnk-viewer">Unit viewer<small>Every profile in all four armies, walking and firing</small></a>
     </div>
     <div class="menu-pane" id="menu-single" hidden>
       <h2 class="menu-head">Single player</h2>
@@ -134,14 +135,13 @@
       <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign<small id="menu-camphot-sub">Two dossiers, two players, one screen</small></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
-    <!-- the small things: the unit viewer from the main menu, the demo from the single-player list -->
+    <!-- the small things: the sound, and the demo on the main menu only -->
     <p class="menu-foot">
       <button class="lnk" id="btn-menu-sound">Sound on</button>
-      <a class="lnk" href="viewer.html" id="lnk-viewer">Unit viewer</a>
       <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
     </p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2609271339</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2609271343</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -564,4 +564,4 @@
 <script src="src/view/dossier-contract.js?v=34c221c5e5"></script>
 <script src="src/view/dossier-after.js?v=204cc58cd1"></script>
 <script src="src/view/dossier.js?v=ecd4f7e904"></script>
-<script src="src/view/menu.js?v=f3fb5115e6"></script>
+<script src="src/view/menu.js?v=7f1a17c678"></script>

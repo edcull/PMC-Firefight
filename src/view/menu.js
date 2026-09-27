@@ -33,10 +33,9 @@
     if (PANES.indexOf(pane) < 0) pane = 'main';
     at = pane;
     PANES.forEach(function (p) { var e = el('menu-' + p); if (e) e.hidden = p !== pane; });
-    // the foot: the unit viewer under the main menu, the demo under the single-player list
-    var v = el('lnk-viewer'), d = el('btn-menu-demo');
-    if (v) v.hidden = pane === 'single';
-    if (d) d.hidden = pane !== 'single';
+    // the foot: the demo under the main menu only
+    var d = el('btn-menu-demo');
+    if (d) d.hidden = pane !== 'main';
   }
 
   function open(pane) {

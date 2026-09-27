@@ -638,13 +638,14 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .mcard.menu-back { text-align: center; }
 .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
 .menu-foot a.lnk { text-decoration: none; }
+/* the unit viewer is a link to another page, set as the buttons around it are */
+a.mcard { text-decoration: none; line-height: normal; }
 /* the build, small under everything */
 .menu-ver { margin: 10px 0 0; text-align: center; font: 10.5px/1 var(--mono); letter-spacing: .04em; color: var(--ink-faint); opacity: .8; }
-/* the foot's second button: the unit viewer under the main menu, the demo
-   under the skirmish list (set by the stylesheet too, so a stale script
-   cannot leave the wrong one showing) */
-.menu-box:has(#menu-single:not([hidden])) #lnk-viewer { display: none !important; }
-.menu-box:has(#menu-single:not([hidden])) #btn-menu-demo { display: inline-block !important; }
+/* the foot's demo: under the main menu only (set by the stylesheet too, so a
+   stale script cannot leave it showing under a list) */
+.menu-box:has(#menu-main:not([hidden])) #btn-menu-demo { display: inline-block !important; }
+.menu-box:has(#menu-main[hidden]) #btn-menu-demo { display: none !important; }
 @media (max-width: 760px) {
   .menu-title { font-size: 28px; }
   .mcard { padding: 10px 12px; font-size: 14px; }
