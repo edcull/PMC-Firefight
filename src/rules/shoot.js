@@ -15,7 +15,7 @@
         hasLoS = E.hasLoS, hasOwn = E.hasOwn, inFireArc = E.inFireArc, isFlying = E.isFlying,
         isMachine = E.isMachine, kindsUnder = E.kindsUnder, levelOf = E.levelOf, lineClear = E.lineClear,
         mountOf = E.mountOf, pheromoneBonus = E.pheromoneBonus, pointSegDist = E.pointSegDist,
-        propOf = E.propOf, resolveDamage = E.resolveDamage, resolveShootingHits = E.resolveShootingHits,
+        propOf = E.propOf, resolveDamage = E.resolveDamage, resolveShootingHits = E.resolveShootingHits, shotRelief = E.shotRelief,
         ruleValue = E.ruleValue, sectionHigh = E.sectionHigh, sectionRect = E.sectionRect,
         shelterOf = E.shelterOf, sightRange = E.sightRange, sizeBonus = E.sizeBonus, status = E.status,
         tribeSees = E.tribeSees, undisciplined = E.undisciplined, unitDist = E.unitDist,
@@ -331,7 +331,7 @@
         if (breach) mod += 1;
         // a solitaire scenario may make the OpFor easier to hurt (Protecting the VIP, p. 151)
         mod += dmgMod(state, a, t);
-        var res = resolveShootingHits(state, t, hits, mod, a);
+        var res = resolveShootingHits(state, t, hits, mod, a, true);
         medicId = res.medic || null;
         // Incendiary doubles the suppression of the attack itself, before any
         // extra points that special rules add
@@ -358,6 +358,8 @@
         if (res.sp > 0 && !aux && bugRanged(a) && doctrine(state, a.side, 'BC4') && !campFlag(t, 'shielding')) {
           res.sp += 1; res.notes.push('Highly Irritating Venom +1 SP');
         }
+        // Brave and Courage Under Fire, off the attack's whole count (p. 88)
+        shotRelief(state, t, res);
         log.push({ t: 'hits', text: res.rolls.join(' · ') + burn + (supp ? ' · Suppressive Fire +2 SP' : '') +
           (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
         applyResult(state, t, res, log, a);
@@ -382,7 +384,7 @@
       hasLoS = L.hasLoS; hasOwn = L.hasOwn; inFireArc = L.inFireArc; isFlying = L.isFlying;
       isMachine = L.isMachine; kindsUnder = L.kindsUnder; levelOf = L.levelOf; lineClear = L.lineClear;
       mountOf = L.mountOf; pheromoneBonus = L.pheromoneBonus; pointSegDist = L.pointSegDist;
-      propOf = L.propOf; resolveDamage = L.resolveDamage; resolveShootingHits = L.resolveShootingHits;
+      propOf = L.propOf; resolveDamage = L.resolveDamage; resolveShootingHits = L.resolveShootingHits; shotRelief = L.shotRelief;
       ruleValue = L.ruleValue; sectionHigh = L.sectionHigh; sectionRect = L.sectionRect;
       shelterOf = L.shelterOf; sightRange = L.sightRange; sizeBonus = L.sizeBonus; status = L.status;
       tribeSees = L.tribeSees; undisciplined = L.undisciplined; unitDist = L.unitDist;

@@ -92,6 +92,42 @@ ok('Brave shrugs a point off every attack that lands',
   brave.sp.toFixed(2) + ' SP against ' + base.sp.toFixed(2) +
   ' — short of a full point because a shot that misses has none to shrug');
 
+/* ...and off the attack's final count (p. 88): after Suppressive Fire's +2 and
+   Incendiary's doubling, not before. The same dice, rolled once at a plain
+   squad and once at a Brave one: every attack that lands differs by a point. */
+(function () {
+  var was = Math.random, seed;
+  function volley(hon, shooter, terrain) {
+    Math.random = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    var w = world(terrain), a = mk(shooter, 'A', 20, 20), t = mk('regular', 'B', 26, 20, { honours: hon });
+    w.units = [a, t];
+    var r = R.shoot(w, a, t, 'fire', {});
+    return { sp: t.sp, hits: r.hits };
+  }
+  var off = [];
+  [['hmgteam', null, 'Suppressive Fire'], ['chem', [{ kind: 'woods', x: 22, y: 14, w: 10, h: 12 }], 'Incendiary in woods']].forEach(function (c) {
+    for (var k = 1; k <= 300; k++) {
+      seed = k * 7919; var plain = volley([], c[0], c[1]);
+      seed = k * 7919; var brv = volley([2], c[0], c[1]);
+      // (short of the 12-point cap, where there is nothing left to take off)
+      if (plain.hits > 0 && plain.sp < 12 && plain.sp - brv.sp !== 1) { off.push(c[2] + ': ' + plain.sp + ' against ' + brv.sp); break; }
+    }
+  });
+  Math.random = was;
+  ok('...once, off the whole attack: Suppressive Fire and Incendiary included', off.length, 0, off.join('; '));
+})();
+
+// Surrounded, but Steady (p. 88): a die for every enemy on the table within 18", not those still in reserve
+(function () {
+  var u = mk('regular', 'A', 3, 3, { honours: [19] }); u.sp = 5;
+  var r1 = mk('regular', 'B', -1, -1), r2 = mk('regular', 'B', -1, -1);
+  r1.reserve = true; r2.reserve = true;
+  var near = mk('regular', 'B', 12, 3);
+  var w = world(); w.units = [u, r1, r2, near];
+  var ex = (R.rally(w, u).extras || []).join('; ');
+  ok('Surrounded, but Steady counts the one enemy on the table, not two in reserve', /Surrounded, but Steady \+1 dice/.test(ex), true, ex);
+})();
+
 var style = duel({ honours: [17] }, {}, { n: 40000 });
 var styleBase = duel({}, {}, { n: 40000 });
 var perKill = (style.sp - styleBase.sp) / style.dead;

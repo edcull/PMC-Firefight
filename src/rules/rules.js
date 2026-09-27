@@ -1126,7 +1126,8 @@
   }
   function isMedic(u) { return (KIT_DAMAGE || kitDamage()).isMedic(u); }
   function medicNearby(state, target) { return (KIT_DAMAGE || kitDamage()).medicNearby(state, target); }
-  function resolveShootingHits(state, target, hits, mod, atk) { return (KIT_DAMAGE || kitDamage()).resolveShootingHits(state, target, hits, mod, atk); }
+  function resolveShootingHits(state, target, hits, mod, atk, later) { return (KIT_DAMAGE || kitDamage()).resolveShootingHits(state, target, hits, mod, atk, later); }
+  function shotRelief(state, target, out) { return (KIT_DAMAGE || kitDamage()).shotRelief(state, target, out); }
   function resolveAssaultHits(target, hits, mod, atk) { return (KIT_DAMAGE || kitDamage()).resolveAssaultHits(target, hits, mod, atk); }
   function applyResult(state, target, res, log, atk) { return (KIT_DAMAGE || kitDamage()).applyResult(state, target, res, log, atk); }
   function dmgMod(state, a, t) { return (KIT_DAMAGE || kitDamage()).dmgMod(state, a, t); }
@@ -1249,7 +1250,7 @@
       fmtPart: fmtPart, has: has, hasLoS: hasLoS, hasOwn: hasOwn, inFireArc: inFireArc, isFlying: isFlying,
       isMachine: isMachine, kindsUnder: kindsUnder, levelOf: levelOf, lineClear: lineClear, mountOf: mountOf,
       pheromoneBonus: pheromoneBonus, pointSegDist: pointSegDist, propOf: propOf,
-      resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, ruleValue: ruleValue,
+      resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief, ruleValue: ruleValue,
       sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
       sizeBonus: sizeBonus, status: status, tribeSees: tribeSees, undisciplined: undisciplined,
       unitDist: unitDist, xenoSenses: xenoSenses
@@ -1501,7 +1502,8 @@
       var near = 0;
       for (var q = 0; q < state.units.length; q++) {
         var o = state.units[q];
-        if (o.alive && o.side !== u.side && !o.aboard && unitDist(o, u) <= 18) near++;
+        // enemies on the table: a reserve waits off its corner, not within 18" of anyone
+        if (o.alive && o.side !== u.side && !o.aboard && !o.reserve && o.x >= 0 && unitDist(o, u) <= 18) near++;
       }
       if (near) { m += near; extras.push('Surrounded, but Steady +' + near + ' dice'); }
     }
@@ -1731,6 +1733,7 @@
     isMedic = KIT_DAMAGE.isMedic;
     medicNearby = KIT_DAMAGE.medicNearby;
     resolveShootingHits = KIT_DAMAGE.resolveShootingHits;
+    shotRelief = KIT_DAMAGE.shotRelief;
     resolveAssaultHits = KIT_DAMAGE.resolveAssaultHits;
     applyResult = KIT_DAMAGE.applyResult;
     dmgMod = KIT_DAMAGE.dmgMod;

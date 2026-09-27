@@ -32,7 +32,19 @@
     }
     function medicNearby(state, target) { return !!medicFor(state, target); }
 
-    function resolveShootingHits(state, target, hits, mod, atk) {
+    /* Brave "ignores 1 Suppression point from each ranged attack" (p. 88), and
+       Courage Under Fire takes one off the second and later attacks in a turn:
+       both off the attack's final count, after Incendiary, Suppressive Fire and
+       the rest have been added. */
+    function shotRelief(state, target, out) {
+      if (campFlag(target, 'brave') && out.sp > 0) { out.sp -= 1; out.notes.push('Brave -1 SP'); }
+      if (target.shotFrom && target.shotFrom.length > 1 && doctrine(state, target.side, 'T2') && out.sp > 0) {
+        out.sp -= 1; out.notes.push('Courage Under Fire -1 SP');
+      }
+      return out;
+    }
+    // `later`: the caller adds to the attack's suppression afterwards, and calls shotRelief itself
+    function resolveShootingHits(state, target, hits, mod, atk, later) {
       var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
       // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
       if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
@@ -77,13 +89,7 @@
         out.sp += out.casualties;
         out.notes.push('Style Bonus +' + out.casualties + ' SP');
       }
-      // Brave shrugs one point off every ranged attack
-      if (campFlag(target, 'brave') && out.sp > 0) { out.sp -= 1; out.notes.push('Brave -1 SP'); }
-      // Courage Under Fire: the second and later attacks on a unit in the same turn
-      if (target.shotFrom && target.shotFrom.length > 1 && doctrine(state, target.side, 'T2') && out.sp > 0) {
-        out.sp -= 1; out.notes.push('Courage Under Fire -1 SP');
-      }
-      return out;
+      return later ? out : shotRelief(state, target, out);
     }
 
     function resolveAssaultHits(target, hits, mod, atk) {
@@ -389,7 +395,7 @@
 
     return {
       relink: relink,
-      isMedic: isMedic, medicNearby: medicNearby, resolveShootingHits: resolveShootingHits,
+      isMedic: isMedic, medicNearby: medicNearby, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief,
       resolveAssaultHits: resolveAssaultHits, applyResult: applyResult, dmgMod: dmgMod,
       resolveDamage: resolveDamage, applyDamage: applyDamage, dropOff: dropOff, repair: repair,
       jammedNearby: jammedNearby, canHack: canHack, hack: hack, collars: collars, hackBurn: hackBurn,
