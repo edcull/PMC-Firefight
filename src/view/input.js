@@ -632,6 +632,8 @@
       document.addEventListener('keydown', onKey);
 
       el('viewctl').addEventListener('click', function (e) {
+        // Follow: whether the camera goes over to the other side's units as they act
+        if (e.target.closest('[data-follow]')) { B.setFollow(!B.followOn()); if (SFX) SFX.click(); return; }
         var b = e.target.closest('[data-zoom]'); if (!b || !B.state || camLocked()) return;
         var z = b.getAttribute('data-zoom');
         if (z === 'in') setZoom(1);
