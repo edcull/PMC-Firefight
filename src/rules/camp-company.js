@@ -8,7 +8,7 @@
     var COMPANY_COST = E.COMPANY_COST, R = E.R, RECRUIT_COST = E.RECRUIT_COST, addLoss = E.addLoss,
         availableHonours = E.availableHonours, availableUpgrades = E.availableUpgrades,
         byRid = E.byRid, canTakeHonour = E.canTakeHonour, canTakeUpgrade = E.canTakeUpgrade,
-        commandKey = E.commandKey, fitCommand = E.fitCommand, rerankMen = E.rerankMen, hasDoctrine = E.hasDoctrine,
+        commandKey = E.commandKey, fitCommand = E.fitCommand, hasDoctrine = E.hasDoctrine,
         honourTable = E.honourTable, isBugKey = E.isBugKey, isLeaderP = E.isLeaderP, isTurretP = E.isTurretP,
         isXenoKey = E.isXenoKey, massOf = E.massOf, money = E.money, newEntry = E.newEntry,
         poolOf = E.poolOf, profile = E.profile, promotionCost = E.promotionCost,
@@ -324,8 +324,6 @@
       // a promotion to a smaller unit leaves the extra men behind
       addLoss(co, hadPool, 'departed', hadPool === poolOf(profile(newKey)) ? Math.max(0, had - massOf(entry, co)) : had);
       if (renamed) entry.name = profile(newKey).name;
-      // its soldiers keep their names and take the ranks of the unit it now is
-      rerankMen(entry);
       entry.history.push('Promoted from ' + was + ' to ' + profile(newKey).name + '.');
       return { ok: true, cost: cost };
     }

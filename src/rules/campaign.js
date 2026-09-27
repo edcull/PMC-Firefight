@@ -921,8 +921,8 @@
     if (was) e.name = profile(e.key).name;
     if (e.key !== oldKey) rerankMen(e);
   }
-  /* A unit that goes up a grade (the free command with the force's Tier, or a
-     promotion) takes its new ranks at once: each soldier keeps his name — the
+  /* The company's own command squad, going up a grade with the force's Tier,
+     takes its new ranks at once: each soldier keeps his name — the
      one he was given, or the one a player renamed him to — and takes the rank
      of his place in the unit as it now is (a Second Lieutenant leading a Field
      command 4th grade leads the 3rd grade as a Lieutenant). */

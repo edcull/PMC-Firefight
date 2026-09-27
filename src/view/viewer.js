@@ -187,6 +187,8 @@
         return;
       }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
+      // a penal squad Broken: its collars going off, the men bolting and falling
+      if (m === u && view.collar) { drawCollared(u); return; }
       // a gun on tow is drawn hitched behind the transport vehicle towing it
       if (m === u && stationary(u) && view.stance === 'towed') {
         var tw = towing(u);
@@ -256,7 +258,6 @@
   /* What is left of it: a machine is a burning wreck, and a squad is its
      models lying where they fell, laid out the way the battle scatters them. */
   function drawDestroyed(u) {
-    if (view.collar && !R.isMachine(u)) { drawCollared(u); return; }
     if (R.isMachine(u)) {
       var dead = Object.assign({}, u, { alive: false, cargo: [], damage: 0 });
       I.drawWreck(g, dead, { x: u.x, y: u.y }, 0, Date.now());
@@ -1062,14 +1063,15 @@
     if (statesFor(profile()).indexOf(s) < 0) s = 'ready';
     var was = view.status;
     view.status = s;
-    if (s !== 'destroyed') view.collar = null;
-    if (s === 'destroyed' && was !== 'destroyed') {
+    // penal troops (Expendable): Broken is their collars going off; Destroyed is just the squad lying dead
+    var collared = !R.isMachine(unit()) && R.has(unit(), 'Expendable');
+    if (!(collared && s === 'broken')) view.collar = null;
+    if ((s === 'destroyed' && was !== 'destroyed') || (collared && s === 'broken' && was !== 'broken')) {
       // the dead stand still: whatever it was doing stops
       view.walking = false; view.walkFrame = 0; view.hop = 0; view.arc = 0;
       view.strafeAt = 0; view.at = null; view.arriveAt = 0;
       FX.clear();
-      // penal troops go the way they do in the battle: their collars
-      if (!R.isMachine(unit()) && R.has(unit(), 'Expendable')) collarsGo(unit());
+      if (collared && s === 'broken') collarsGo(unit());
     }
     drawControls(); start(); frame();
   }
