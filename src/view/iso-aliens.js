@@ -16,6 +16,7 @@
     function muzzleArt() { return B.muzzleArt.apply(this, arguments); }
     function paintFigure() { return B.paintFigure.apply(this, arguments); }
     function podArt() { return B.podArt.apply(this, arguments); }
+    function lampArt() { return B.lampArt.apply(this, arguments); }
     function roleAt() { return B.roleAt.apply(this, arguments); }
     function vividHex() { return B.vividHex.apply(this, arguments); }
 
@@ -154,6 +155,10 @@
     // a flamer's pilot light flickers through FLAME_PHASES baked states (-1: not burning)
     var FLAME_PHASES = 4;
     var WING_PHASES = 6;
+    var FLAG_PHASES = 8;
+    var CRYSTAL_PHASES = 8;
+    function alphaKit(kit) { return !!kit && !!kit.xeno && kit.rank === 'alpha'; }
+    function flagged(kit) { return !!kit && /^(flagsmall|flagbig|flaghuge|banner)$/.test(kit.gun || ''); }
     function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
     function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
     function nowT() { return root.performance ? performance.now() : 0; }
@@ -169,7 +174,7 @@
       if (u.cls === 'vehicle' && /queen/.test(u.art || '')) return true;   // the queen's brain beats too
       if (u.art === 'engflame') return true;                                // the flame gun's pilot light
       if (u.drone && (u.cls === 'vehicle' || u.cls === 'aircraft')) return true;   // a drone's aerial light blinks
-      return (B.ROLES[u.art] || []).some(function (r) { return shieldAnimated(B.KIT[r]) || cloakedKit(B.KIT[r]) || brainy(B.KIT[r]) || winged(B.KIT[r]) || (B.KIT[r] && B.KIT[r].gun === 'flamer'); });
+      return (B.ROLES[u.art] || []).some(function (r) { return (B.KIT[r] && B.KIT[r].collar) || flagged(B.KIT[r]) || alphaKit(B.KIT[r]) || shieldAnimated(B.KIT[r]) || cloakedKit(B.KIT[r]) || brainy(B.KIT[r]) || winged(B.KIT[r]) || (B.KIT[r] && B.KIT[r].gun === 'flamer'); });
     }
     function sprite(side, art, i, pose, step, scale, shade, mountKind) {
       var role = roleAt(art, i);
@@ -203,7 +208,13 @@
       // a flamer's pilot light flickers, each man's at his own beat
       var burning = kit.gun === 'flamer' && !PH.corpse;
       PH.flame = burning ? (Math.floor(nowT() / 90) + i) % FLAME_PHASES : -1;
-      var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + PH.shield : '') + (thinking ? '|bp' + PH.brain : '') + (flapping ? '|wp' + PH.wing : '') + (burning ? '|fp' + PH.flame : '') + (PH.corpse ? '|corpse' : '');
+      // a flag stirs in the wind, a ripple running out along the cloth
+      var waving = flagged(kit) && !PH.corpse;
+      PH.flag = waving ? (Math.floor(nowT() / 140) + i * 3) % FLAG_PHASES : -1;
+      // an Alpha leader's brow crystal pulses, slowly, with its mind
+      var pulsing = alphaKit(kit) && i === 0 && !PH.corpse;
+      PH.crystal = pulsing ? Math.floor(nowT() / 160) % CRYSTAL_PHASES : -1;
+      var key = side + '|' + role + '|' + pose + '|' + step + '|' + sq + '|' + shade + (mountKind ? '|' + mountKind : '') + (shieldy ? '|sp' + PH.shield : '') + (thinking ? '|bp' + PH.brain : '') + (flapping ? '|wp' + PH.wing : '') + (burning ? '|fp' + PH.flame : '') + (waving ? '|gp' + PH.flag : '') + (pulsing ? '|cp' + PH.crystal : '') + (PH.corpse ? '|corpse' : '');
       var c = B.sprites[key];
       if (c) return c;
 
@@ -293,6 +304,8 @@
       var pa = kit.bug || kit.xeno ? null : podArt(kit, pose), ea = kit.bug || kit.xeno ? null : eyeArt(kit, pose);
       c.pod = pa ? [pa[0] * B.SU * sq, pa[1] * B.SU * sq] : null;
       c.eye = ea ? [ea[0] * B.SU * sq, ea[1] * B.SU * sq] : null;
+      var la = kit.bug || kit.xeno ? null : lampArt(kit, pose);
+      c.lamp = la ? [la[0] * B.SU * sq, la[1] * B.SU * sq] : null;
       // a man whose hands hold optics, a slate or a case is not one of the guns
       c.tool = /^(optics|slate|case|console)$/.test(kit.gun || '');
       c.gun = kit.gun || null;                          // which weapon the man holds, for which shots he fires
