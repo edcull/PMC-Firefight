@@ -19,11 +19,11 @@ jobs:
   # The art fingerprints are exact, and a GitHub runner draws the edges of
   # most pictures a little differently from the machine they were taken on,
   # even in the same Chromium (1194, what the pinned Playwright 1.56.1
-  # installs): so this job reports but does not block. The pictures are
-  # checked where they were taken: node test/browser/artsnap.js
+  # installs): so this job reports the pictures that differ as a warning
+  # rather than failing. The pictures are checked where they were taken:
+  # node test/browser/artsnap.js
   art:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,5 +31,5 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: node test/browser/artsnap.js
-      - run: node test/browser/terrainsnap.js
+      - run: node test/browser/artsnap.js || echo "::warning::Unit pictures differ from their fingerprints on this runner (see the log)"
+      - run: node test/browser/terrainsnap.js || echo "::warning::Terrain pictures differ from their fingerprints on this runner (see the log)"
