@@ -11,7 +11,7 @@
     return function (M) {
       var AIM = M.AIM, GLASS = M.GLASS, GLINT = M.GLINT, HF = M.HF, S3 = M.S3, STEEL = M.STEEL, TB = M.TB,
           TC = M.TC, TS = M.TS, TT = M.TT, aerial = M.aerial, along = M.along, alongOrder = M.alongOrder,
-          barrel = M.barrel, box = M.box, cos = M.cos, crossOn = M.crossOn, dark = M.dark, dead = M.dead,
+          barrel = M.barrel, box = M.box, camoOn = M.camoOn, cos = M.cos, crossOn = M.crossOn, dark = M.dark, dead = M.dead,
           deck = M.deck, drive = M.drive, droneDue = M.droneDue, droneKit = M.droneKit,
           droneMark = M.droneMark, droneSpot = M.droneSpot, frameAt = M.frameAt, g = M.g,
           gearOut = M.gearOut, grille = M.grille, hatch = M.hatch, hexFlank = M.hexFlank,
@@ -351,9 +351,10 @@
             // the rake that faces away shows its underside through the open side
             var dF = HF(aF, bOut), dB = HF(aB, bOut), fNear = dF.x + dF.y > dB.x + dB.y;
             var far = fNear ? back : front, near = fNear ? front : back;
-            poly(g, far, mixc(TB.dark, '#0c0d0f', 0.45));
-            poly(g, top, TB.top);
-            poly(g, near, TB.mid);
+            var cFar = mixc(TB.dark, '#0c0d0f', 0.45);
+            poly(g, far, cFar); camoOn(far, cFar, (z0 + z1) / 2, false, z1 - z0);
+            poly(g, top, TB.top); camoOn(top, TB.top, z1, true);
+            poly(g, near, TB.mid); camoOn(near, TB.mid, (z0 + z1) / 2, false, z1 - z0);
             // the plate's rolled outer edge
             edge(g, near[1], near[2], 'rgba(8,9,11,.55)', 0.9);
             edge(g, top[1], top[2], 'rgba(255,240,214,.4)', 0.7);
