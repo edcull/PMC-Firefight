@@ -50,7 +50,7 @@
            left the unit "still arriving" for ever, and the whole replay with it. */
         if (l.unit) stepOff(l.unit, null);
       });
-      if (E.state.structs) { paintStructures(); ui.vis = null; ui.visKey = ''; }
+      paintStructures(); ui.vis = null; ui.visKey = '';
       pushRes({
         kind: 'Beginning phase', title: 'Turn ' + E.state.turn,
         note: E.state.scen.name + ' — the players act first, then the OpFor in a phase of its own.',

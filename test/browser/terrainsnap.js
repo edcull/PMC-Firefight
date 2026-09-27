@@ -61,6 +61,8 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
       window.PMC_NEWGAME({ tier: 3, pl: 1, scenario: scen, planet: world, terrainSetup: 'auto', mode: 'hotseat',
         armyA: ['cmd2', 'regular', 'regular', 'rookie'], armyB: ['cmd2', 'regular', 'regular', 'rookie'] });
       const s = window.PMC_STATE();
+      // Hostile takeover: the defender's position, laid by the auto button (seeded, like the rest)
+      if (s.placeAsk && s.placeAsk.kind === 'fort') window.__sendIntent({ k: 'placeauto' });
       // the table on its own, the units off it, baked afresh and drawn at a fixed view
       s.units.forEach(u => { u.x = -1; u.y = -1; });
       window.dispatchEvent(new Event('resize'));
@@ -71,10 +73,10 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
       window.PMC_SETVIEW(24, 24, 1);
     }, { world, scen, n });
     // the plates are baked a moment after the table is laid
-    await p.waitForFunction(() => { const s = window.PMC_STATE(); return !!(s && s.ground && s.structs); }, null, { timeout: 20000 });
+    await p.waitForFunction(() => { const s = window.PMC_STATE() && window.__vc(); return !!(s && s.ground && s.structs); }, null, { timeout: 20000 });
     await p.waitForTimeout(300);
     const pics = await p.evaluate((cell) => {
-      const s = window.PMC_STATE();
+      const s = window.__vc();
       window.PMC_SETVIEW(24, 24, 1);
       const out = {};
       const one = (cv) => ({ url: cv.toDataURL('image/png'), grid: window.__gridIn(cv, cell) });

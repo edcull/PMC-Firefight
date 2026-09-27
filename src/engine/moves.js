@@ -76,7 +76,7 @@
           : { text: 'Nothing here — one fewer place for it to be.', tone: 'warn' }
       });
       // the stake goes over at every searched location, and the beacon goes up at the real one
-      if (E.state.structs) { paintStructures(); ui.vis = null; ui.visKey = ''; }
+      paintStructures(); ui.vis = null; ui.visKey = '';
       render();
       endActivation(u);
     }

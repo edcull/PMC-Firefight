@@ -122,7 +122,8 @@
          needs to draw the table is in what is left. */
       function snapshot() {
         if (!E.state) return null;
-        var skip = { namesTaken: 1, scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1, animOnView: 1 };
+        // the scenario's functions are looked up again at the far end; the rest is the battle
+        var skip = { namesTaken: 1, scen: 1 };
         var out = {};
         Object.keys(E.state).forEach(function (k) {
           if (skip[k]) return;
@@ -208,19 +209,8 @@
          Links are put back, and the scenario is looked up again by its id. */
       function load(snap) {
         if (!snap) { E.state = null; return; }
-        /* The table is painted once and then scrolled over: baking the ground,
-           the structures and the props costs real time, and none of it travels
-           on the wire. Carry it across from the battle we were already holding,
-           as long as it is the same battle on the same ground — a new battle, or
-           terrain that has been blown apart, and it is painted again. */
-        var was = E.state;
-        var same = was && was.seed === snap.seed && was.terrain.length === snap.terrain.length;
+        // the table's baked plates are the view's own (game.js vc), kept by battle, not here
         E.state = snap;
-        if (same) {
-          ['scene', 'ground', 'structs', 'structsOpen', 'props', 'remains'].forEach(function (k) {
-            if (was[k] !== undefined) E.state[k] = was[k];
-          });
-        }
         E.state.scen = SC.SCENARIOS[(snap.sc && snap.sc.id) || snap.cfg.scenario] || SC.SCENARIOS.secure;
         var by = {};
         E.state.units.forEach(function (u) { by[u.id] = u; });
