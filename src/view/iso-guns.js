@@ -285,13 +285,13 @@
        the tail, the A-frame drawbar on the vehicle's hook. */
     function towedPiece(g, veh, gun, at, hs, f) {
       var P = PIECE3D[gun.art], k = P.k, fx = Math.cos(f), fy = Math.sin(f);
-      var back = hs.len * 0.5 + (P.wheeled ? 0.79 : 0.85) * k + (P.wheeled ? 0.02 : 0.1);   // a short hitch to the hook
+      var back = hs.len * 0.5 + (P.wheeled ? 0.57 : 0.85) * k + (P.wheeled ? 0.02 : 0.1);   // a short hitch to the hook
       if (P.wheeled) {                                    // on its own wheels, the trails closed into a drawbar
         var ow = { x: at.x - fx * back, y: at.y - fy * back, aim: f + Math.PI, k: k };
         var Gw = rig(g, ow);
         P.build(Gw, { pal: B.PALETTE[gun.paint || gun.side] || B.PALETTE.A, g: g, tow: true });
-        var ew = Gw.S(-0.75, 0, 0.18), hw = toScreen(at.x - fx * hs.len * 0.5, at.y - fy * hs.len * 0.5);
-        thickLine(g, ew[0], ew[1], hw.x, hw.y - 0.3 * K * 0.9, Math.max(1.5, K * 0.05), '#2b2f2a');
+        var ew = Gw.S(-0.53, 0, 0.18), hw = toScreen(at.x - fx * hs.len * 0.5, at.y - fy * hs.len * 0.5);
+        thickLine(g, ew[0], ew[1], hw.x, hw.y - 0.3 * K * 0.9, Math.max(1.5, K * 0.05), Gw.STL);
         var wasW = PH.smooth;
         PH.smooth = true;
         try { Gw.parts.sort(function (p1, p2) { return p1.d - p2.d; }).forEach(function (p1) { p1.fn(); }); }
@@ -541,7 +541,8 @@
           var C = R.base;
           // the bomb crate and rounds stood ready, beside the baseplate and clear of where the crew kneel
           C.part(0.08, 0.34, function () {
-            C.box(0.0, 0.2, 0.26, 0.42, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
+            if (o.gunGreen) C.box(0.0, 0.2, 0.26, 0.42, 0, 0.12, C.LIT, C.STL, C.DRK);   // a rebel crate, the gun's green
+            else C.box(0.0, 0.2, 0.26, 0.42, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
             for (var r = 0; r < 3; r++) C.rod([0.03 + r * 0.06, 0.2, 0], [0.03 + r * 0.06, 0.2, 0.12], 0.02, ['#6a4a22', '#8a5a2a', '#a8763c']);
           });
         } },
@@ -639,8 +640,9 @@
           });
           var C = R.base;
           C.part(-0.4, 0.4, function () {
-            C.box(-0.5, -0.3, 0.32, 0.48, 0, 0.12, o.pal.mid, o.pal.dark, o.pal.dark);
-            C.box(-0.47, -0.33, 0.35, 0.45, 0.12, 0.14, o.pal.light, o.pal.dark, o.pal.dark);
+            // the ammunition box, the same green as the gun
+            C.box(-0.5, -0.3, 0.32, 0.48, 0, 0.12, C.LIT, C.STL, C.DRK);
+            C.box(-0.47, -0.33, 0.35, 0.45, 0.12, 0.14, '#7a8470', C.STL, C.DRK);
           });
         } },
       /* The heavy autocannon: the same on a heavier mount, with a welded shield
@@ -655,11 +657,12 @@
             C.rod([-0.05, -0.235, 0.18], [-0.05, 0.235, 0.18], 0.028, [C.DEEP, C.DRK, C.STL]);    // the axle
             C.box(-0.1, 0.06, -0.08, 0.08, 0.16, 0.3, C.STL, C.DRK, C.DEEP);                    // the pedestal
             [-1, 1].forEach(function (sd) {
-              var end = o.tow ? [-0.72, sd * 0.02, 0.18] : [-0.62, sd * 0.36, 0.02];
-              C.rod([-0.08, sd * 0.09, 0.2], end, 0.028, [C.DEEP, C.DRK, C.STL]);            // a trail
+              var end = o.tow ? [-0.5, sd * 0.02, 0.18] : [-0.62, sd * 0.36, 0.02];
+              // a trail: closed into a short drawbar for the road, in the gun's green
+              C.rod([-0.08, sd * 0.09, 0.2], end, 0.028, o.tow ? [C.DRK, C.STL, C.LIT] : [C.DEEP, C.DRK, C.STL]);
               if (!o.tow) C.box(end[0] - 0.04, end[0] + 0.02, end[1] - 0.06, end[1] + 0.06, 0, 0.07, C.STL, C.DRK, C.DEEP);   // its spade
             });
-            if (o.tow) C.dot([-0.75, 0, 0.18], 0.035, C.DEEP);                                  // the towing eye
+            if (o.tow) C.dot([-0.53, 0, 0.18], 0.035, C.DRK);                                   // the towing eye
             else C.rod([0.08, 0, 0.2], [0.22, 0, 0], 0.022, [C.DEEP, C.DRK, C.STL]);          // the jack
           });
           R.part(-0.08, 0, function () {
@@ -792,7 +795,10 @@
       }
       void pts;
     }
-    PIECE3D.rebelmortar = PIECE3D.mortar;
+    // the rebels' mortar: the same tube, its bomb crate the gun's green rather than the army's colours
+    PIECE3D.rebelmortar = Object.assign({}, PIECE3D.mortar, {
+      build: function (R, o) { return PIECE3D.mortar.build(R, Object.assign({}, o, { gunGreen: true })); }
+    });
     /* Where a unit's pieces stand: in a line across its front, each turned the
        way the unit faces, its crew shared out between them. */
     function pieces3D(u, at) {

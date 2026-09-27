@@ -333,12 +333,20 @@
             /* and set in the brow, a blue crystal: the Alpha's mind made visible,
                glowing whatever colours the tribe wears */
             var cxr = HX + 5, cyr = hy - 5.2;
-            if (!dead) { E(cxr, cyr - 1.5, 6.5, 6.5, 'rgba(110,190,255,.22)'); E(cxr, cyr - 1.5, 3.8, 3.8, 'rgba(110,190,255,.35)'); }
+            // (a leader's crystal pulses: its glow swells and fades, the stone brightening with it)
+            var cpu = PH.crystal >= 0 ? 0.5 + 0.5 * Math.sin(PH.crystal / 8 * Math.PI * 2) : -1;
+            if (!dead) {
+              var gk = cpu < 0 ? 1 : 0.25 + 1.6 * cpu, gr = cpu < 0 ? 1 : 0.7 + 0.75 * cpu;
+              E(cxr, cyr - 1.5, 6.5 * gr, 6.5 * gr, 'rgba(110,190,255,' + (0.22 * gk).toFixed(3) + ')');
+              E(cxr, cyr - 1.5, 3.8 * gr, 3.8 * gr, 'rgba(110,190,255,' + Math.min(0.75, 0.35 * gk).toFixed(3) + ')');
+            }
             F([[cxr - 2.2, cyr + 0.8], [cxr + 2.2, cyr + 0.8], [cxr + 1.4, cyr + 2], [cxr - 1.4, cyr + 2]], XGOLD.dk);   // its gold setting
             F([[cxr, cyr - 6], [cxr + 2, cyr - 1.2], [cxr, cyr + 1.2], [cxr - 2, cyr - 1.2]], dead ? '#4c4a44' : '#3f9be8');
             F([[cxr, cyr - 6], [cxr + 2, cyr - 1.2], [cxr, cyr - 1]], dead ? '#5e5b54' : '#9fd6ff');
             F([[cxr, cyr - 6], [cxr - 2, cyr - 1.2], [cxr - 0.6, cyr - 1.6]], dead ? '#55524c' : '#e8f6ff');
             if (!dead) E(cxr - 0.5, cyr - 2.6, 0.5, 0.9, '#ffffff');
+            if (!dead && cpu > 0.35) F([[cxr, cyr - 6], [cxr + 2, cyr - 1.2], [cxr, cyr + 1.2], [cxr - 2, cyr - 1.2]], 'rgba(210,240,255,' + ((cpu - 0.35) * 1.2).toFixed(3) + ')');   // lit from within
+            if (!dead && cpu >= 0) E(cxr, cyr - 1.5, 10 * gr, 9 * gr, 'rgba(110,190,255,' + (0.1 * cpu).toFixed(3) + ')');     // and its light thrown wide at the height of the beat
           }
           L([[HX + 3.5, hy - 0.9], [HX + 11, hy + 0.5]], 1.4, dead ? '#2c2a26' : W0.seam);
           [[4.6, hy - 0.7], [6.6, hy - 0.3], [8.6, hy + 0.1], [10.2, hy + 0.4]].forEach(function (q) { E(q[0] + HX, q[1], 0.6, 0.5, dead ? '#3a3834' : GL.m); });

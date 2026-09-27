@@ -312,8 +312,8 @@
           var range = dist;
           var flight = Math.round((heavy ? 640 : 520) + Math.min(760, range * 16));
           var tubes = spec.n || 1;
-          // the Protectors' charges leave the leader's shoulder pod, one after another
-          var tubeFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod } : from;
+          // the charges leave the shoulder pods, one after another — the Protectors' leader's, or each drone's in turn
+          var tubeFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod, pool: from.pods } : from;
           for (var q = 0; q < tubes; q++) {
             (function (i) {
               var off = i * 130;
@@ -458,7 +458,7 @@
              `count` of them — assault troops go in with a grenade in each hand. */
           var flight = 520, thrown = count || 1;
           // a squad with a shoulder pod fires its charges from the leader's pod rather than throwing them
-          var throwFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod } : from;
+          var throwFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod, pool: from.pods } : from;
           for (var q = 0; q < thrown; q++) {
             (function (j) {
               setTimeout(function () {
@@ -468,7 +468,7 @@
                   ? { x: to.x + (j - (thrown - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up }
                   : to;
                 if (SFX) SFX.launch();
-                add({ kind: 'lob', from: from.pod ? throwFrom : spread(throwFrom, j, thrown), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
+                add({ kind: 'lob', from: from.pod ? pick(throwFrom, j) : spread(throwFrom, j, thrown), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
                   add({ kind: 'impact', x: aim.x, y: aim.y, up: aim.up, n: 4, dur: 380, blocking: true });
@@ -620,9 +620,9 @@
      the muzzle (mz), the pool, the leader's shoulder pod if it carries one,
      and poolFor(style) for a secondary. */
   function troop(from, spec, pool) {
-    // the grenades leave the leader's shoulder pod, where the squad carries one
-    var pod = pool.filter(function (m) { return m.pod; })[0];
-    if (pod) from.pod = pod.pod;
+    // the grenades leave the shoulder pods, where the squad carries them: the leader's, or every drone's
+    var pods = pool.filter(function (m) { return m.pod; }).map(function (m) { return m.pod; });
+    if (pods.length) { from.pod = pods[0]; from.pods = pods; }
     // a spotter with his optics up is not one of the guns
     var guns = pool.filter(function (m) { return !m.tool; });
     if (guns.length) pool = guns;
@@ -643,7 +643,7 @@
         var tubes = pool.filter(function (m) { return /^(rpg|atlauncher)$/.test(m.gun || ''); });
         if (tubes.length) pl = tubes;
       }
-      return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod };
+      return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod, pods: from.pods };
     };
     if (pool.length) { var pf = poolFor(spec.p); from.mz = pf.mz; from.pool = pf.pool; from.poolFor = poolFor; }
     return from;
