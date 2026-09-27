@@ -27,7 +27,8 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
 
 (async () => {
   const b = await chromium.launch({ args: (process.env.ART_ARGS || '').split(' ').filter(Boolean), executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
-  const ctx = await b.newContext({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: 1 });
+  // at 1000 wide or less the board takes exactly its box, which is pinned below (game.js sizeView)
+  const ctx = await b.newContext({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(() => {
     const T = 1700000000000;
     Date.now = () => T;
@@ -43,6 +44,13 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(800);
+  /* The board is sized to the box it sits in, and that box to the header and the
+     hint line under the table, whose heights are those of each machine's fonts:
+     a pixel taller on one machine and every board is framed a pixel apart. So
+     the box is pinned here. */
+  await p.addStyleTag({ content: '.board-wrap { width: 612px !important; height: 720px !important; min-height: 0 !important; max-height: none !important; }' +
+    ' .board-wrap .viewhint { height: 32px !important; overflow: hidden !important; }' });
+  await p.evaluate(() => window.dispatchEvent(new Event('resize')));
 
   const got = {};
   let n = 0;
@@ -55,6 +63,7 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
       const s = window.PMC_STATE();
       // the table on its own, the units off it, baked afresh and drawn at a fixed view
       s.units.forEach(u => { u.x = -1; u.y = -1; });
+      window.dispatchEvent(new Event('resize'));
       window.__rebuildScene();
       /* at zoom 1 the board is the drawn table copied pixel for pixel; any other
          zoom smooths it down, and how a machine rounds that smoothing moves the
@@ -72,9 +81,12 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
       if (s.ground && s.ground.toDataURL) out.ground = one(s.ground);
       if (s.structs && s.structs.toDataURL) out.structs = one(s.structs);
       out.board = one(document.getElementById('board'));
+      out.size = document.getElementById('board').width + 'x' + document.getElementById('board').height;
       return out;
     }, P.CELL * 2);                 // whole tables, and textured: a coarser grid keeps the baseline small
     n++;
+    if (n === 1) console.log('  the board is ' + pics.size + ' pixels');
+    delete pics.size;
     for (const k of Object.keys(pics)) {
       got[id + ':' + k] = Object.assign(P.print(pics[k].url, pics[k].grid), { url: pics[k].url });
     }
