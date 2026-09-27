@@ -68,7 +68,8 @@ is('mdestroyer', 'shellbig+rail x2');
    crew has in the hatch. */
 is('mcv', 'shellbig+pistol x2');
 is('acv', 'shellbig+rail x3');
-is('hengveh', 'shell+rail x3');
+// the heavy engineering hull's breaching gun is plasma: one big blue bolt
+is('hengveh', 'plasmabolt');
 
 head('Arcing projectiles, and how many tubes fire at once');
 // support hulls fire in batteries: two tubes, then three
@@ -193,7 +194,7 @@ all(['insertplat', 'rlifter'], 'none');
 head('Nothing falls through');
 var kinds = {};
 var bad = [];
-var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','none'];
+var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','none'];
 R.CATALOGUE.forEach(function (p) {
   var w = R.weaponSpec(p);
   if (KNOWN.indexOf(w.p) < 0) bad.push(p.name + ' \u2192 ' + w.p);

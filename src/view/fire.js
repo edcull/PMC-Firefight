@@ -132,19 +132,7 @@
             add({ kind: 'orb', from: pick(from, j), to: aim, rgb: rgb, tele: !!tele, exit: exit, big: !!big, dur: fl, blocking: true });
             setTimeout(function () {
               if (!alive()) return;
-              add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, big: !!big, dur: big ? 800 : 600, blocking: true });
-              /* A heavy round throws the ground up with it: a wider ring of blue
-                 fire and a scatter of it around the crater. */
-              if (big) {
-                add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, dur: 1000, blocking: true });
-                for (var sp = 0; sp < 5; sp++) {
-                  add({
-                    kind: 'orbburst', rgb: rgb, dur: 520 + Math.random() * 260, blocking: true,
-                    x: aim.x + (Math.random() - 0.5) * 3.2, y: aim.y + (Math.random() - 0.5) * 3.2, up: aim.up
-                  });
-                }
-              }
-              if (SFX) { SFX.impact(); if (big) SFX.impact(0.08); }
+              plasmaSplash(aim, rgb, big);
               if (land && j === n - 1) land(2, aim);
             }, fl);
             redraw();
@@ -152,6 +140,46 @@
         })(q);
       }
       return fl + (n - 1) * 200 + 600;
+    }
+
+    /* Where plasma lands: a ring of blue light and a white flash. A heavy round
+       throws the ground up with it — a wider ring of blue fire and a scatter of
+       it around the crater (the energy howitzer, the plasma breaching gun). */
+    function plasmaSplash(aim, rgb, big) {
+      add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, big: !!big, dur: big ? 800 : 600, blocking: true });
+      if (big) {
+        add({ kind: 'orbburst', x: aim.x, y: aim.y, up: aim.up, rgb: rgb, dur: 1000, blocking: true });
+        for (var sp = 0; sp < 5; sp++) {
+          add({
+            kind: 'orbburst', rgb: rgb, dur: 520 + Math.random() * 260, blocking: true,
+            x: aim.x + (Math.random() - 0.5) * 3.2, y: aim.y + (Math.random() - 0.5) * 3.2, up: aim.up
+          });
+        }
+      }
+      if (SFX) { SFX.impact(); if (big) SFX.impact(0.08); }
+    }
+    /* A plasma breaching gun: one big blue bolt, flat and fast like a shell,
+       landing in the heavy plasma splash. */
+    function playPlasmaBolts(shooter, from, to, count, land) {
+      var rgb = glowRGB(shooter), n = count || 1, fl = 420;
+      for (var q = 0; q < n; q++) {
+        (function (j) {
+          setTimeout(function () {
+            if (!alive()) return;
+            if (SFX) { SFX.shell(); if (SFX.zap) SFX.zap(0.02); }
+            var F = pick(from, j);
+            add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: F.mz, rgb: rgb, dur: 260, big: true, blocking: true });
+            add({ kind: 'plasmabolt', from: F, to: to, rgb: rgb, dur: fl, blocking: true });
+            setTimeout(function () {
+              if (!alive()) return;
+              plasmaSplash(to, rgb, true);
+              if (land && j === n - 1) land(2, to);
+            }, fl);
+            redraw();
+          }, j * 260);
+        })(q);
+      }
+      return fl + (n - 1) * 260 + 800;
     }
 
     /* Where the ground goes up when a shot lands on its mark: the more hits,
@@ -202,6 +230,10 @@
         // an energy howitzer: heavier orbs, lobbed, bursting blue on the ground
         case 'orbbig': {
           return playOrbs(shooter, from, to, spec.n, land, false, true);
+        }
+        // a plasma breaching gun: a big blue bolt, straight in, splashing blue
+        case 'plasmabolt': {
+          return playPlasmaBolts(shooter, from, to, spec.n, land);
         }
 
         /* Bug acid: a glob (or `n` of them from the squad) lobbed low, landing in
@@ -386,6 +418,7 @@
         case 'energy': playEnergy(shooter, from, to, count, null, 120); return;
         case 'orb': playOrbs(shooter, from, to, count, null, !R.isMachine(shooter)); return;
         case 'orbbig': playOrbs(shooter, from, to, count, null, false, true); return;
+        case 'plasmabolt': playPlasmaBolts(shooter, from, to, count, null); return;
         case 'spit': case 'spitbig': {
           var sn = count || 1, sfl = 480;
           for (var q0 = 0; q0 < sn; q0++) {

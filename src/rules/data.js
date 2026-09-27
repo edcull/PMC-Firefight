@@ -331,6 +331,8 @@
                bursting in a ring (Gamma squads, turrets, strike craft)
        orbbig  the same, heavier and slower, landing in a splash of blue fire
                (the advanced support vehicle's energy howitzer)
+       plasmabolt a big blue bolt of plasma, flat and fast, landing in the same
+               splash of blue fire (the heavy engineering vehicle's breaching gun)
        none    it has no gun at all */
   var WEAPONS = {
     /* ---- PMC infantry ---- */
@@ -398,9 +400,9 @@
     // a command vehicle is a staff car with an antenna farm, not a gun platform
     cmdveh: { p: 'small' },
     insertplat: { p: 'none' },
-    // engineering hulls: a flame projector over a gun, and a breaching cannon
+    // engineering hulls: a flame projector over a gun, and a plasma breaching cannon
     lengveh: { p: 'flame', s: 'chain' },
-    hengveh: { p: 'shell', n: 3, s: 'rail', sn: 3 },
+    hengveh: { p: 'plasmabolt' },
     // support hulls fire in batteries: two tubes, then three
     impsupport: { p: 'rocket' }, lsupport: { p: 'arcbig', n: 3 },
     msupport: { p: 'arcbig', n: 5, s: 'arcbig', sn: 5 },
