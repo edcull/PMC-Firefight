@@ -182,7 +182,8 @@
       'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',
     'Transport (X)':
       'Capacity {X}: carries that many infantry units, loaded within 4". Passengers are safe from fire and lose all Suppression; ' +
-      'Suppressed or Broken units cannot board, and nobody gets back on the turn they got off.',
+      'Suppressed or Broken units cannot board. No unit is loaded and unloaded in the same turn: nobody gets back on ' +
+      'the turn they got off, nor off the turn they got on.',
     'Turret':
       'A stationary drone gun: never moves or assaults, has no side or rear, and all turrets activate together. ' +
       'Command Units cannot call on it, and Hackers cannot turn it against its own side.',

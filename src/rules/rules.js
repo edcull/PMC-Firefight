@@ -1495,7 +1495,7 @@
     if (campFlag(u, 'fearless')) { need = jammed ? 3 : 2; extras.push('Rite of Fearless: ' + need + '+'); }
     if (u.cls === 'infantry' && disruptedBy(state, u)) { need = 6; extras.push('Rite of Disruption: 6 only'); }
     if (campFlag(u, 'panic')) { need = 6; extras.push('Panic-mongers: 6 only'); }
-    if (campFlag(u, 'brokenMinded')) { m = Math.floor(m / 2); extras.push('Broken-minded: half the dice'); }
+    if (campFlag(u, 'brokenMinded')) { m = Math.ceil(m / 2); extras.push('Broken-minded: half the dice'); }
     if (campFlag(u, 'ironDiscipline')) { m += 2; extras.push('Iron Discipline +2 dice'); }
     if (freedom) { m += freedom; extras.push('"…but they\'ll never take our freedom!" +' + freedom + ' dice'); }
     if (campFlag(u, 'surrounded')) {

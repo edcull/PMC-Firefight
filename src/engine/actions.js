@@ -446,7 +446,8 @@
         if (!ui.moves.length) ui.moves = [{ x: u.x, y: u.y, cost: 0 }];
       } else if (id === 'strafe') {
         ui.mode = 'strafe';
-        ui.moves = R.reachable(E.state, u, u.move);
+        // the run ends where the craft could stop: not over a tall building or a hilltop (p. 38)
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
       } else if (id === 'demolish') {
         ui.mode = 'demolish';
         ui.terrain = demolishTargets(u, false);

@@ -117,6 +117,12 @@ ok('Brave shrugs a point off every attack that lands',
   ok('...once, off the whole attack: Suppressive Fire and Incendiary included', off.length, 0, off.join('; '));
 })();
 
+// Broken-minded halves the dice, rounded up as every division is (p. 17)
+(function () {
+  var u = mk('veterans', 'A', 10, 10, { traumas: [4] }); u.sp = u.morale + 2;
+  var w = world(); w.units = [u];
+  ok('Broken-minded: Morale ' + u.morale + ' rolls ' + Math.ceil(u.morale / 2) + ' dice, rounded up', R.rally(w, u).dice.length, Math.ceil(u.morale / 2));
+})();
 // Surrounded, but Steady (p. 88): a die for every enemy on the table within 18", not those still in reserve
 (function () {
   var u = mk('regular', 'A', 3, 3, { honours: [19] }); u.sp = 5;

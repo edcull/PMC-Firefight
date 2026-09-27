@@ -391,5 +391,24 @@ ok('...even with only two left', often({ martyr: { A: true } }, 2) > 0);
 ok('a player who says no does not', often({ martyr: { A: false } }, 6) === 0);
 ok('the AI keeps its last two', often({}, 2) === 0 && often({}, 6) > 0);
 
+console.log('\nBailing out of a wreck is getting off (pp. 36, 58)');
+(function () {
+  var hull = unit('lapc', { x: 20, y: 20 }), gunners = unit('hmgteam', { x: -1, y: -1 }), other = unit('lapc', { x: 24, y: 20 });
+  var st = table([hull, gunners, other]);
+  hull.cargo = [gunners]; gunners.aboard = hull.id;
+  var was = Math.random;
+  Math.random = function () { return 0.01; };        // every die a 1: Abandoned!
+  var log = [];
+  R.applyDamage(st, hull, hull.str + 1, log);
+  Math.random = was;
+  ok('the hull is abandoned and the crew bails out', !hull.alive && gunners.alive && !gunners.aboard,
+    log.map(function (l) { return l.text; }).join(' / '));
+  gunners.sp = 0; gunners.x = other.x + 2.5; gunners.y = other.y;
+  ok('...and cannot climb into another hull the same turn', !R.canEmbark(st, other, gunners));
+  var foe = unit('regular', { side: 'B', x: gunners.x + 10, y: gunners.y });
+  st.units.push(foe);
+  ok('...nor fire its Cumbersome Weapon', !R.canShoot(st, gunners, foe, 'fire'));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

@@ -70,7 +70,7 @@
         scatterInsertion(u, function () { landUnit(u); done(); });
         return;
       }
-      u.reserve = false;                                // nowhere legal: it stays out
+      // nowhere legal: it stays in reserve, to try again next Reserve phase (as the player's does)
       logLine('note', u.label + ' could find no drop zone and stays in reserve.');
       done();
     }
@@ -329,6 +329,7 @@
       var spots = R.reachable(E.state, u, u.move), best = null;
       spots.forEach(function (c) {
         if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
+        if (!canStand(u, c)) return;                     // nowhere it could not hover (p. 38)
         var n = 0;
         activeUnits().forEach(function (t) {
           if (t.side === u.side || R.isFlying(t)) return;

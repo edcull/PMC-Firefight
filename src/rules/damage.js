@@ -251,8 +251,10 @@
     }
 
     // put a passenger back on the table, as close to the vehicle as will fit
+    // bailing out of a wreck is getting off: not back aboard this turn, and no Cumbersome shot (pp. 36, 58)
     function dropOff(state, veh, u) {
       u.aboard = null;
+      u.disembarked = true;
       for (var t = 0; t < 60; t++) {
         var ang = Math.random() * Math.PI * 2, d = 2 * UNIT_R + Math.random() * 2;
         var p = clampBoard({ x: veh.x + Math.cos(ang) * d, y: veh.y + Math.sin(ang) * d });
