@@ -166,6 +166,23 @@
     var at = view.at || FROM, f = toScreen(at.x, at.y), up = I.flyLift(unit()) * 0.6;
     var k = Math.max(0, Math.min(1, zc - 1));
     var px = mid.x + (f.x - mid.x) * k, py = (mid.y - I.K * 1.2) + ((f.y - I.K * 0.8 - up) - (mid.y - I.K * 1.2)) * k;
+    /* A penal squad scattering as its collars go: framed just wide enough to
+       hold every man from where he started to where he falls, figures and all,
+       and centred on them. The zoom eases there (view.zWant, in tick); the
+       centre slides across. */
+    if (view.collar && view.collar.plan) {
+      var cp = view.collar.plan, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      cp.pts.concat(cp.end).forEach(function (q) {
+        var sq = toScreen(q.x, q.y);
+        x0 = Math.min(x0, sq.x - I.K * 0.5); x1 = Math.max(x1, sq.x + I.K * 0.5);
+        y0 = Math.min(y0, sq.y - I.K * 1.7); y1 = Math.max(y1, sq.y + I.K * 0.4);
+      });
+      var zFit = Math.min(w / (x1 - x0), h / (y1 - y0)) * 0.9;
+      view.zWant = Math.max(1, Math.min(view.zoom, zFit / zWide));
+      var tx = (x0 + x1) / 2, ty = (y0 + y1) / 2, cc = view.collarCam || (view.collarCam = { x: px, y: py });
+      cc.x += (tx - cc.x) * 0.15; cc.y += (ty - cc.y) * 0.15;
+      px = cc.x; py = cc.y;
+    } else { view.zWant = null; view.collarCam = null; }
     g.setTransform(z, 0, 0, z, Math.round(w / 2 - px * z), Math.round(h / 2 - py * z));
 
     drawGround();
@@ -315,14 +332,14 @@
     if (view.strafeAt) { strafing(); busy = true; acting = true; }
     /* Firing pulls the camera out to the whole line; once the shots have
        finished playing it goes back in to the zoom the viewer chose. */
-    // a penal squad's collars going off: pulled out, so the men scattering stay in frame
-    if (view.collar) { view.wide = true; acting = true; }
+    // a penal squad's collars going off: the camera eases out just enough to hold them all (frame)
+    if (view.collar) { acting = true; busy = true; }
     if (view.wide) {
       if (acting) view.wideUntil = t + 700;
       else if (t > (view.wideUntil || 0)) view.wide = false;
       busy = true;
     }
-    var want = view.wide ? 1 : view.zoom;
+    var want = view.collar && view.zWant ? view.zWant : view.wide ? 1 : view.zoom;
     if (Math.abs((view.zCur || 1) - want) > 0.005) {
       view.zCur = (view.zCur || 1) + (want - (view.zCur || 1)) * Math.min(1, dt / 140);
       busy = true;
