@@ -606,8 +606,8 @@ head('Riding a machine down (p. 86)');
     saved.length > 130 && saved.length < 270, true, saved.length + ' of 400');
   ok('the troops aboard a recovered aircraft stay on the dossier',
     saved.every(function (r) { return r.kept; }), true);
-  ok('...and take the 5 Trauma Points for the ride',
-    saved.length ? saved.every(function (r) { return r.tp >= 5; }) : true, true,
+  ok('...and take the 5 Trauma Points for the ride, and no more (p. 86: they survive)',
+    saved.length ? saved.every(function (r) { return r.tp === 5; }) : true, true,
     saved.length ? saved[0].tp + ' TP' : 'none');
   ok('the troops aboard one that was not recovered are struck off',
     lost.every(function (r) { return !r.kept; }), true);

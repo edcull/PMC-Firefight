@@ -195,7 +195,8 @@
       if (line.brokenEver && !hasDoctrine(ctx.company, 'H4')) out.push({ text: 'Was broken at least once', n: 2 });
       // Stairs to Heaven: the Holy Warriors' dead are already where they wanted to go
       var martyrs = hasDoctrine(ctx.company, 'P3') && p.group === 'Holy Warriors';
-      var lost = Math.max(0, line.startSize - line.endSize);
+      // passengers of an aircraft that landed survived it, every one (p. 86)
+      var lost = line.landed ? 0 : Math.max(0, line.startSize - line.endSize);
       /* Endless Tide (p. 124): a swarm that digs its dead back up still felt them go.
          One point the first time it lost a bug, four the first time it was ever
          below half — whatever it had grown back to by the end. */

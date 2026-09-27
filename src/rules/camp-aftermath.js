@@ -40,12 +40,35 @@
         var rec = { side: side, kUC: out.payment[side], units: [], gone: [], salvaged: [],
           traumas: [], executed: null };
 
+        /* Machines first, so a passenger's fate can read whether the aircraft it
+           was riding in came home. */
+        var salvaged = {}, salvageOf = {};
+        (report.units || []).filter(function (l) {
+          return l.side === side && l.destroyed;
+        }).forEach(function (line) {
+          var e = byRid(co, line.rid);
+          if (!e || profile(e.key).cls === 'infantry') return;
+          var sv = salvage(line, e, won || report.winner === null);
+          salvageOf[e.rid] = sv;
+          if (sv.saved) salvaged[e.rid] = 1;
+        });
+
+        /* A downed aircraft that makes its emergency landing brings its passengers
+           down with it: "troops on-board survive, but get 5 TPs" (p. 86). They lost
+           nobody, so none of them is a casualty and the landing is their only TP. */
+        (report.units || []).forEach(function (l) {
+          if (l.side === side && l.aboardDowned && salvaged[l.lostAboard]) l.landed = true;
+        });
+        var casualties = (report.casualties || []).filter(function (c) {
+          return !(c.side === side && (report.units || []).some(function (l) { return l.rid === c.rid && l.side === side && l.landed; }));
+        });
+
         /* The models this side lost, unit by unit: a named soldier is one and a
            swarm's count is what it says. A drone or a turret has nobody in it,
            and is not a loss. */
         var keyOf = {}, lostBy = {};
         (report.units || []).forEach(function (l) { if (l.side === side) keyOf[l.rid] = l.key; });
-        (report.casualties || []).forEach(function (c) {
+        casualties.forEach(function (c) {
           if (c.side !== side) return;
           var n = c.count || 1, p = profile(keyOf[c.rid]);
           lostBy[c.rid] = (lostBy[c.rid] || 0) + n;
@@ -93,19 +116,6 @@
           }
         }
 
-        /* Machines first, so a passenger's fate can read whether the aircraft it
-           was riding in came home. */
-        var salvaged = {}, salvageOf = {};
-        (report.units || []).filter(function (l) {
-          return l.side === side && l.destroyed;
-        }).forEach(function (line) {
-          var e = byRid(co, line.rid);
-          if (!e || profile(e.key).cls === 'infantry') return;
-          var sv = salvage(line, e, won || report.winner === null);
-          salvageOf[e.rid] = sv;
-          if (sv.saved) salvaged[e.rid] = 1;
-        });
-
         var fielded = {};
         (report.units || []).filter(function (l) { return l.side === side; }).forEach(function (line) {
           var entry = byRid(co, line.rid);
@@ -136,7 +146,7 @@
           /* The unit's casualties go on its record by name, and the survivors
              march on with it: the gaps are filled with fresh recruits when it is
              next mustered. */
-          var cas = (report.casualties || []).filter(function (c) { return c.side === side && c.rid === line.rid; });
+          var cas = casualties.filter(function (c) { return c.side === side && c.rid === line.rid; });
           if (cas.length) {
             u.casualties = cas;
             var mass = cas.reduce(function (n, c) { return n + (c.mass != null ? c.mass : c.count); }, 0);
@@ -145,7 +155,7 @@
               : cas[0].anon ? 'Lost ' + bodies + ' Esh-Aven.'
               : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
           }
-          if (line.men) entry.men = line.men.slice();
+          if (line.men && !line.landed) entry.men = line.men.slice();   // a landing's passengers are all still there
 
           /* Losses (p. 85): survivors are replaced free, and only a unit wiped out
              — every soldier killed — comes off the dossier. A unit that scattered
@@ -292,7 +302,7 @@
         /* The memorial: every soldier the force has lost, battle by battle, kept
            for the whole campaign — including those of units that are gone. */
         co.memorial = co.memorial || [];
-        (report.casualties || []).filter(function (c) { return c.side === side; }).forEach(function (c) {
+        casualties.filter(function (c) { return c.side === side; }).forEach(function (c) {
           // the swarm keeps a tally of biomass by kind of bug instead of names
           if (c.swarm) {
             var tally = co.biomass = biomassTally(co);
