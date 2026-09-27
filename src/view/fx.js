@@ -846,7 +846,8 @@
         var blink = 0.24, pop = 0.44;
         /* A man running as it blinks: (x, y) is where he is when it fires, and
            until then the telltale is drawn back along his run, on him. */
-        var popAge = blink * (f.dur - (f.delay || 0)), back = Math.max(0, popAge - age);
+        // (`ran`: how long he has been running when it fires — before that he stood)
+        var popAge = blink * (f.dur - (f.delay || 0)), back = Math.min(Math.max(0, popAge - age), f.ran == null ? Infinity : f.ran);
         var qp = I.toScreen(f.x - (f.vx || 0) * back, f.y - (f.vy || 0) * back);
         qp.y -= liftAt(f) + I.K * (f.neck || 0.52);
         if (k < blink) {
@@ -1032,23 +1033,27 @@
        order, when his collar fires (`at`), where he falls (`end`), and his
        own velocity (`v[i]`: vx, vy), with `where(i, t)` for where he is at t. */
     SPREAD: Math.PI / 4,
+    react: 140,               // how long after the first collar goes the rest break and run, ms
+    /* The first man's collar goes off with the squad still standing; the rest
+       break and run `react` ms later, and theirs go off one after another as
+       they flee. `last` is when the last of them fires, from t0. */
     plan: function (pts, t0, ang, rand) {
       rand = rand || Math.random;
-      var at = [], end = [], v = [];
+      var at = [], end = [], v = [], last = 0;
       var clamp = function (x) { return Math.max(1, Math.min(47, x)); };
-      pts.forEach(function (p, i) {
-        var a = ang + (rand() * 2 - 1) * COLLAR.SPREAD, sp = COLLAR.run * (0.7 + rand() * 0.6);
-        v[i] = { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp };
-      });
+      var runAt = COLLAR.blink + COLLAR.react;             // the moment they bolt, from t0
       COLLAR.order(pts.length).forEach(function (idx, i) {
-        var delay = i * COLLAR.step, pop = delay + COLLAR.blink;
-        at[idx] = t0 + pop;
-        end[idx] = { x: clamp(pts[idx].x + v[idx].vx * pop), y: clamp(pts[idx].y + v[idx].vy * pop), delay: delay };
+        var a = ang + (rand() * 2 - 1) * COLLAR.SPREAD, sp = i === 0 ? 0 : COLLAR.run * (0.7 + rand() * 0.6);
+        v[idx] = { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp };
+        // the first where he stands; each of the rest a step apart once they are running
+        var pop = i === 0 ? COLLAR.blink : runAt + 60 + i * COLLAR.step, delay = pop - COLLAR.blink, ran = Math.max(0, pop - runAt);
+        at[idx] = t0 + pop; last = Math.max(last, pop);
+        end[idx] = { x: clamp(pts[idx].x + v[idx].vx * ran), y: clamp(pts[idx].y + v[idx].vy * ran), delay: delay, ran: ran };
       });
       return {
-        t0: t0, at: at, end: end, v: v, pts: pts,
+        t0: t0, at: at, end: end, v: v, pts: pts, last: last, runAt: runAt,
         where: function (i, t) {
-          var e = Math.max(0, Math.min(t, at[i]) - t0);
+          var e = Math.max(0, Math.min(t, at[i]) - t0 - runAt);
           return { x: clamp(pts[i].x + v[i].vx * e), y: clamp(pts[i].y + v[i].vy * e) };
         }
       };

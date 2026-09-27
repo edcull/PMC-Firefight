@@ -246,7 +246,7 @@
     var plan = CL.plan(pts, t0, (u.facing || 0) - Math.PI / 2);
     CL.order(n).forEach(function (idx, i) {
       var p = plan.end[idx], delay = p.delay;
-      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.v[idx].vx, vy: plan.v[idx].vy, neck: 0.68, delay: delay, dur: delay + CL.dur });
+      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.v[idx].vx, vy: plan.v[idx].vy, ran: p.ran, neck: 0.68, delay: delay, dur: delay + CL.dur });
       if (view.sound && SFX && SFX.impact) SFX.impact((delay + CL.blink) / 1000);
     });
     view.collar = { pts: pts, at: plan.at, plan: plan };
