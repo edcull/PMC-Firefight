@@ -865,7 +865,7 @@
      and the functions and fixed values it uses. */
   var PLAY = window.PMCPlay({
     get held() { return held; }, get pctx() { return pctx; }, get state() { return state; }, get vc() { return vc(); },
-    get handsOff() { return handsOff; }, get render() { return render; }, dispX: dispX, dispY: dispY,
+    get handsOff() { return handsOff; }, get followOn() { return followOn; }, get render() { return render; }, dispX: dispX, dispY: dispY,
     nowMs: nowMs, onTable: onTable, startLoop: startLoop, FX: FX, ISO: ISO, R: R, SFX: SFX,
     STANDING: STANDING, anims: anims
   });
@@ -895,7 +895,7 @@
     get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get closeDrawer() { return closeDrawer; }, get closeRes() { return closeRes; },
     get drawBoard() { return drawBoard; }, get drawerEl() { return drawerEl; }, get esc() { return esc; },
-    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; },
+    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; }, get setFollow() { return setFollow; }, get followOn() { return followOn; },
     get insertionMine() { return insertionMine; }, get panBy() { return panBy; },
     get render() { return render; }, get returnHome() { return returnHome; },
     get setHint() { return setHint; }, get setZoom() { return setZoom; }, get tip() { return tip; },
@@ -999,7 +999,8 @@
   var repaintProp = VIEW.repaintProp, returnHome = VIEW.returnHome, scheduleReturn = VIEW.scheduleReturn;
   var setHome = VIEW.setHome, setZoom = VIEW.setZoom, sideInk = VIEW.sideInk, sideRGB = VIEW.sideRGB;
   var slack = VIEW.slack, terrainMark = VIEW.terrainMark, viewRect = VIEW.viewRect, zoomAt = VIEW.zoomAt;
-  var zoomLabel = VIEW.zoomLabel;
+  var zoomLabel = VIEW.zoomLabel, followOn = VIEW.followOn, setFollow = VIEW.setFollow, showFollow = VIEW.showFollow;
+  showFollow();
 
   /* ---------- panels.js: the panels ----------
      The board it borrows from: getters for what changes as the game runs,
