@@ -206,7 +206,8 @@ class Lobby {
   /* ---- the lobby proper ---- */
   list() {
     const out = [];
-    this.rooms.forEach((r) => out.push(P.summarise(r)));
+    // a private game is not listed: only those given its code can find it
+    this.rooms.forEach((r) => { if (!r.settings.private) out.push(P.summarise(r)); });
     out.sort((a, b) => b.at - a.at);
     return out;
   }

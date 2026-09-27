@@ -83,7 +83,8 @@
       scenario: 'roll',
       terrain: 'auto',       // the table generated, or laid by hand ('manual')
       campaign: null,        // a campaign id on the server, or null for a one-off
-      contract: null         // when a campaign is attached: which job is being fought
+      contract: null,        // when a campaign is attached: which job is being fought
+      private: false         // left out of the game list: joined by its code only
     };
   }
 
@@ -100,6 +101,7 @@
     if ('terrain' in patch) s.terrain = oneOf(patch.terrain, ['auto', 'manual'], s.terrain || 'auto');
     if ('campaign' in patch) s.campaign = patch.campaign ? clampText(patch.campaign, LIMITS.name) : null;
     if ('contract' in patch) s.contract = patch.contract == null ? null : clampText(String(patch.contract), 64);
+    if ('private' in patch) s.private = patch.private === true || patch.private === 'true';
     return s;
   }
 

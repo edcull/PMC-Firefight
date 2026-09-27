@@ -1146,11 +1146,7 @@
         var back = window.PMCLobby.resumable && window.PMCLobby.resumable();
         if (el('menu-multi-sub')) el('menu-multi-sub').textContent = back
           ? 'Resume your game — code ' + back : 'Play somebody else over the network';
-        mb.addEventListener('click', function () {
-          el('setup').hidden = true;
-          if (window.PMCMenu) window.PMCMenu.close();
-          window.PMCLobby.open();
-        });
+        // the card opens the lobby (menu.js)
       }
       if (mb && online && window.fetch) {
         window.fetch('/health', { cache: 'no-store' })

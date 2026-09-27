@@ -23,6 +23,9 @@
   var fault = '';
   var campaigns = [];
   var myForce = null;           // the force this screen has built, as the lobby sees it
+  var creating = false;         // Start a game was pressed: asking what kind of game
+  var newKind = 'skirmish';     // what the create form has picked: 'skirmish', or 'camp:<name>'
+  var newPrivate = false;       // and whether the game is left out of the list
 
   function esc(t) { return root.PMC.esc(t); }   // the shared one, in the rules
   function el(id) { return document.getElementById(id); }
@@ -103,6 +106,8 @@
       '.lob-forces .lob-empty-seat{opacity:.7}',
       '.lob-forces .lob-empty-seat .lnk{margin-top:6px}',
       '.lob-wait{opacity:.6}',
+      '.lob-new{margin:4px 0 14px;padding:10px 12px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
+      '.lob-new .lob-foot{margin-top:4px}',
       '.lob-go{border-color:var(--alpha,#d8a13a)!important;color:var(--alpha,#d8a13a)!important}'
     ].join('\n');
     document.head.appendChild(s);
@@ -146,14 +151,36 @@
       '<span class="lob-status">' + esc(status) + '</span></p>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
       whoHTML() +
+      (creating ? kindsHTML() : '') +
       '<div class="field"><label for="join-code">Games</label>' +
       '<div class="lob-row">' +
-      '<button class="lnk lob-go" data-lob="create">Start a game</button>' +
+      (creating ? '' : '<button class="lnk lob-go" data-lob="create">Start a game</button>') +
       '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
       '<button class="lnk" data-lob="join">Join</button>' +
       '</div></div>' +
       '<div class="lob-list">' + list + '</div>' +
       chatHTML('lobby');
+  }
+
+  /* Start a game asks two things: what kind of game — a skirmish, co-op (not
+     yet over the network), or a battle in one of the campaigns kept on this
+     server — and whether it is listed for anyone to join or found by its code only. */
+  function kindsHTML() {
+    var opt = function (v, t, off) {
+      return '<option value="' + esc(v) + '"' + (v === newKind ? ' selected' : '') + (off ? ' disabled' : '') + '>' + esc(t) + '</option>';
+    };
+    var kinds = [opt('skirmish', 'Skirmish'), opt('coop', 'Cooperative \u2014 not available over the network yet', true)]
+      .concat(campaigns.length
+        ? campaigns.map(function (c) { return opt('camp:' + c.name, 'Campaign \u2014 ' + c.name + ', turn ' + c.turn); })
+        : [opt('camp:', 'Campaign \u2014 none kept on this server yet', true)]);
+    return '<div class="lob-new">' +
+      '<div class="field"><label for="lob-kind">Game</label><select id="lob-kind">' + kinds.join('') + '</select></div>' +
+      '<div class="field"><label for="lob-private">Who can join</label><select id="lob-private">' +
+        '<option value="public"' + (newPrivate ? '' : ' selected') + '>Public \u2014 shown in the game list</option>' +
+        '<option value="private"' + (newPrivate ? ' selected' : '') + '>Private \u2014 join by code only</option>' +
+      '</select></div>' +
+      '<div class="lob-foot"><button class="lnk" data-lob="uncreate">Not now</button>' +
+      '<button class="lnk lob-go start" data-lob="create" data-go="1">Create the game</button></div></div>';
   }
 
   function gameRow(g) {
@@ -254,6 +281,10 @@
         { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
       ], s.terrain || 'auto') +
       sel('term-campaign', 'Campaign', camps, s.campaign || '') +
+      sel('term-private', 'Who can join', [
+        { v: 'false', t: 'Public — shown in the game list' },
+        { v: 'true', t: 'Private — join by code only' }
+      ], s.private ? 'true' : 'false') +
       '</div>' +
       (isHost ? '' : '<p class="small" style="opacity:.65">The host sets the terms.</p>');
   }
@@ -303,13 +334,23 @@
         draw();
         return;
       }
-      case 'create':
+      case 'create': {
+        // the first press opens the form; Create the game starts it
+        if (!b.getAttribute('data-go')) { creating = true; draw(); return; }
+        var terms = { tier: 3, pl: 1, planet: 'random', scenario: 'roll', private: newPrivate };
+        if (newKind.indexOf('camp:') === 0) {
+          if (!newKind.slice(5)) { fault = 'There is no campaign on this server to fight under.'; draw(); return; }
+          terms.campaign = newKind.slice(5);
+        } else if (newKind !== 'skirmish') { fault = 'That kind of game cannot be played over the network yet.'; draw(); return; }
+        creating = false;
         net.send('game.create', {
           name: me.name + '’s battle',
-          settings: { tier: 3, pl: 1, planet: 'random', scenario: 'roll' },
+          settings: terms,
           force: myForce || currentForce()
         });
         return;
+      }
+      case 'uncreate': creating = false; draw(); return;
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
       case 'sit': net.send('game.seat', { seat: b.getAttribute('data-seat') }); return;
       case 'leave': keepRoom(''); net.send('game.leave'); view = 'lobby'; draw(); return;
@@ -377,6 +418,8 @@
   /* Terms are sent as they are changed rather than on a button: the other side
      should see the tier move while it is being argued about. */
   function onTermChange(e) {
+    if (e.target && e.target.id === 'lob-kind') { newKind = e.target.value; return; }
+    if (e.target && e.target.id === 'lob-private') { newPrivate = e.target.value === 'private'; return; }
     var box = e.target, k = box && box.getAttribute && box.getAttribute('data-term');
     if (!k || !net) return;
     var patch = {};
@@ -421,8 +464,10 @@
          is left in the list to join again by choice: walking into it by itself
          put a player in an old room while their opponent waited in a new one. */
       var back = lastRoom();
+      /* A private game is not in the list, so one missing from it is still
+         asked for: the server says if it has gone. */
       var was = back && games.filter(function (gm) { return gm.id === back; })[0];
-      if (back && !(was && was.phase === 'battle')) { keepRoom(''); back = ''; }
+      if (back && was && was.phase !== 'battle') { keepRoom(''); back = ''; }
       if (back) setTimeout(function () { if (!room && lastRoom() === back) net.send('game.join', { id: back }); }, 400);
     });
     net.on('lobby', function (m) { games = m.games || []; draw(); });

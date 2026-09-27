@@ -284,8 +284,19 @@ app.drain(4);
   W.PMCMenu.open();
   ok('the menu opens', W.PMCMenu.isOpen() && byId('setup').hidden === true);
   ok('with no battle on, there is no battle to go back to', byId('btn-resume').hidden === true);
-  W.PMCMenu.show('skirmish');
-  ok('Skirmish opens its own list', byId('menu-skirmish').hidden === false && byId('menu-main').hidden === true);
+  W.PMCMenu.show('single');
+  ok('Single player opens its own list', byId('menu-single').hidden === false && byId('menu-main').hidden === true);
+  /* This DOM has no selectors, so which card sits in which list is read off the page itself. */
+  const page = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const pane = (id) => { const m = page.match(new RegExp('id="menu-' + id + '"[\\s\\S]*?(data-menu="main">|id="menu-single")')); return m ? m[0] : ''; };
+  ok('...with a skirmish, solitaire and the campaign on it',
+    /data-skirmish="ai"/.test(pane('single')) && /data-skirmish="solo"/.test(pane('single')) && /id="btn-campaign"/.test(pane('single')));
+  W.PMCMenu.show('hotseat');
+  ok('Hotseat opens its own list', byId('menu-hotseat').hidden === false && byId('menu-single').hidden === true);
+  ok('...with a skirmish, co-op and the campaign on it', /data-skirmish="hotseat"/.test(pane('hotseat')) &&
+    /data-skirmish="coop"/.test(pane('hotseat')) && /data-camp="hotseat"/.test(pane('hotseat')));
+  ok('Multiplayer is on the main menu, and goes straight to the lobby', /id="btn-multi"/.test(pane('main')) && !/id="menu-multi"/.test(page));
+  W.PMCMenu.show('main');
   W.PMCMenu.close(); W.PMC_SKIRMISH('hotseat');
   ok('Hotseat opens the muster sheet, set for hotseat',
     byId('setup').hidden === false && W.__hot().kind === 'hotseat');

@@ -175,6 +175,27 @@ async function main() {
   ok('lobby chat reaches the other player',
     b.lobbyChat[0].from === 'Ash' && /anyone for a game/.test(b.lobbyChat[0].text));
 
+  /* ---- a private game: out of the list, joined by its code ---- */
+  const cole = await new Client('Cole').open(URL);
+  cole.hello(); await cole.until('welcome');
+  cole.send('game.create', { name: 'Cole’s secret', settings: { tier: 3, pl: 1, private: true } });
+  await cole.until('game');
+  const secret = cole.room.id;
+  ok('a private game is marked so', cole.room.settings.private === true);
+  await b.settle();
+  ok('...and is not in anyone’s game list', !b.games.some((g) => g.id === secret));
+  b.send('game.join', { id: secret });
+  await b.until('game');
+  ok('...but its code still joins it', b.room && b.room.id === secret && b.seat === 'B');
+  cole.send('game.settings', { patch: { private: false } });
+  await a.till('the game to be listed', (x) => x.games.some((g) => g.id === secret));
+  ok('the host can list it after all', true);
+  b.send('game.leave'); cole.send('game.leave');
+  await b.till('Brann to be back in the lobby', (x) => !x.room);
+  await a.till('the private game to close', (x) => !x.games.some((g) => g.id === secret));
+  // what came of it is behind us: the waits below start from here
+  for (const x of [a, b]) { x.seen = {}; x.inbox.forEach((m) => { x.seen[m.t] = x.inbox.length; }); }
+
   /* ---- create and join ---- */
   a.send('game.create', { name: 'Ash vs Brann', settings: { tier: 3, pl: 1, planet: 'sparse', scenario: 'secure' } });
   await a.until('game');
