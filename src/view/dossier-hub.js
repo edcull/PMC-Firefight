@@ -30,12 +30,12 @@
           '</select></div>';
         h += '<div class="field"><label for="camp-mode">How you will play</label><select id="camp-mode">' +
           '<option value="solo">Solo — against a rival force that grows battle by battle</option>' +
-          '<option value="hotseat">Hotseat — two dossiers, two players, one screen</option>' +
+          '<option value="hotseat"' + (E.wantMode === 'hotseat' ? ' selected' : '') + '>Hotseat — two dossiers, two players, one screen</option>' +
           '</select></div>';
         /* Solo: the forces on the world are always rolled, and each grows into its
            own character from the doctrines it draws. Hotseat: there are no rolled
            rivals, only the second player's force, so this asks what kind that is. */
-        h += '<div class="field" id="camp-bwrap" hidden><label for="camp-bfaction">What Player 2 is running</label>' +
+        h += '<div class="field" id="camp-bwrap"' + (E.wantMode === 'hotseat' ? '' : ' hidden') + '><label for="camp-bfaction">What Player 2 is running</label>' +
           '<select id="camp-bfaction">' +
           '<option value="pmc">A private military company</option>' +
           '<option value="rebel">An insurgent revolt</option>' +
