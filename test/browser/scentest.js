@@ -145,7 +145,7 @@ async function playOne(p, id) {
       const s = window.PMC_STATE();
       return {
         pieces: s.terrain.filter(t => t.kind === 'searchsite').length,
-        props: ((window.__vc && window.__vc().props) || []).filter(q => q.kind === 'searchsite').length,
+        props: ((window.__vc() || {}).props || []).filter(q => q.kind === 'searchsite').length,
         marked: s.terrain.filter(t => t.kind === 'searchsite' && t.checked).length,
         cold: s.terrain.filter(t => t.kind === 'searchsite' && t.cold).length
       };

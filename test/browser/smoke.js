@@ -103,7 +103,7 @@ async function dismissEarly(page) {
     return {
       turn: s.turn, logs: s.log.length, over: s.over ? s.over.text : null,
       shots: s.log.filter(l => l.t === 'shoot').length,
-      props: ((window.__vc && window.__vc().props) || []).length
+      props: ((window.__vc() || {}).props || []).length
     };
   });
   console.log(info);

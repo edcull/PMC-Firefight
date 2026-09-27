@@ -2,7 +2,7 @@
    it), index.html with every script folded into dist/game.js. The other
    browser tests play index.html from the repository, the scripts one by one;
    this one checks the bundle does the same — it loads without an error,
-   fetches no script from src/, and a battle starts and plays between two AI
+   fetches no script from src/, carries none of the test hooks, and a battle starts and plays between two AI
    sides. Without terser to build it with, it says so and passes. */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -30,6 +30,10 @@ const { ROOT, startSkirmish } = require('../where.js');
   ok('it loads the one bundle', fetched.some((u) => /\/dist\/game\.js/.test(u)));
   ok('...and nothing from src/ but the stylesheets', !fetched.some((u) => /\/src\/.*\.js/.test(u)), fetched.filter((u) => /\/src\/.*\.js/.test(u)).slice(0, 3).join(' '));
   ok('the game is there', await p.evaluate(() => !!(window.PMC && window.PMCEngine && window.PMCIso && window.PMC_NEWGAME)));
+  // the tests' hooks (src/view/testhooks.js) are not part of a player's page
+  const hooks = await p.evaluate(() => Object.keys(window).filter((k) => /^__[a-z]/i.test(k) && typeof window[k] === 'function')
+    .concat(['PMC_VIEW', 'PMC_LIFT', 'PMC_SETVIEW', 'PMCTestHooks'].filter((k) => k in window)));
+  ok('...without the test hooks', !hooks.length, hooks.slice(0, 5).join(' '));
 
   await startSkirmish(p, { tier: 3, pl: 1, mode: 'demo', scenario: 'meeting', planet: 'sparse', terrain: 'auto' });
   let turn = 0;
