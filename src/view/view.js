@@ -111,13 +111,9 @@
       centreOn(cam.home.x, cam.home.y);
       if (SFX && !quiet) SFX.click();
     }
+    // nothing is said while the camera follows the action (a tap on the table brings the view back): only the controls dim while it is locked
     function updateReturnHint() {
-      var h = el('returnhint'), locked = camLocked();
-      // while the other side's move is being followed there is nothing to say: the view comes back by itself
-      if (h) {
-        h.hidden = !cam.borrowed || locked;
-        h.textContent = 'Camera is following the action \u2014 tap the table to return to your view';
-      }
+      var locked = camLocked();
       var vc = el('viewctl');
       if (vc) vc.classList.toggle('locked', locked);
     }

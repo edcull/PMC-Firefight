@@ -90,8 +90,7 @@
           var inner = '<b>' + l.turn + '</b>' +
             '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
             (l.against ? '<small>vs ' + esc(l.against) + '</small>' : '') + '</span>' +
-            '<em>' + result(l) + '</em>' +
-            '<span class="cmoney">+' + l.kUC.A + ' ' + coin() + '</span>';
+            '<em>' + result(l) + '</em>';
           return l.after ? '<button type="button" class="crow crow-go" data-go="pastbattle" data-i="' + i + '">' + inner + '</button>'
             : '<div class="crow">' + inner + '</div>';
         };
@@ -106,8 +105,7 @@
           co.log.slice().reverse().map(function (l) {
             return '<div class="crow"><b>' + l.turn + '</b>' +
               '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
-              '<small>vs ' + esc(l.vs) + '</small></span><em>' + l.result + '</em>' +
-              '<span class="cmoney">+' + l.kUC + ' ' + esc(C.money(co)) + '</span></div>';
+              '<small>vs ' + esc(l.vs) + '</small></span><em>' + l.result + '</em></div>';
           }).join('') + '</div></div>', backRivals);
       });
       h += '<p class="camp-foot">' +

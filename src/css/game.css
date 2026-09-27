@@ -234,14 +234,6 @@ canvas#board:active { cursor: grabbing; }
   margin: 4px 0 0; text-align: center;
   font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
 }
-.returnhint {
-  position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%);
-  margin: 0; z-index: 3; pointer-events: none; white-space: nowrap;
-  background: rgba(13, 17, 23, .86); border: 1px solid color-mix(in srgb, var(--bravo) 45%, transparent);
-  color: var(--ink-dim); border-radius: 999px; padding: 4px 12px;
-  font-family: var(--mono); font-size: 10.5px;
-}
-@media (max-width: 760px) { .returnhint { font-size: 9px; padding: 3px 9px; bottom: 44px; } }
 
 .terraintip {
   position: absolute; z-index: 4; pointer-events: none; max-width: 230px;
@@ -1728,6 +1720,8 @@ button.crow-go::after { content: '\203A'; margin-left: 4px; color: var(--ink-fai
 @media (min-width: 1001px) { .camp-dock { bottom: -22px; padding-bottom: 22px; } }
 .front-dev { font-size: 11.5px; color: var(--ink-dim); margin: 2px 0 6px; line-height: 1.45; }
 .front-dev b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+/* the head of the aftermath: your own day, in the same figures */
+.front-row.after-head { border-top: 0; padding-top: 2px; margin-bottom: 6px; }
 /* elsewhere on the world: the other forces' battles, fought out and reported */
 .front-row { font-size: 12px; padding: 8px 0 0; border-top: 1px solid var(--line); }
 .front-row .cstats { margin: 6px 0 4px; }
@@ -1735,6 +1729,7 @@ button.crow-go::after { content: '\203A'; margin-left: 4px; color: var(--ink-fai
 .cs-lost b { color: var(--ink-dim); }
 .front-row i { font-style: normal; font-size: 11px; margin-left: 4px; }
 .front-row i.good { color: var(--good); }
+.front-row i.bad { color: var(--bad); }
 .front-bar { height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; margin-top: 6px; }
 .front-bar i { display: block; height: 100%; width: 30%; background: var(--accent, var(--good)); animation: frontbar 1.2s ease-in-out infinite; }
 @keyframes frontbar { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
