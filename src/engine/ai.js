@@ -223,7 +223,7 @@
         // Reasonably Offensive: on at them, as it always did
       }
       // an aircraft with a line of targets makes a run
-      if (u.cls === 'aircraft') {
+      if (u.cls === 'aircraft' && u.fp !== null) {
         var lane = bestStrafe(u);
         if (lane && lane.count) { ui.selected = u; doStrafe(lane.pt); return; }
       }

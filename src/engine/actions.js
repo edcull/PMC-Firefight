@@ -202,6 +202,8 @@
         }
         case 'strafe': {
           if (u.cls !== 'aircraft') return { on: false, hint: 'Only aircraft may strafe.' };
+          // a Strafing run fires at every enemy passed over; one with no Firepower cannot (p. 27)
+          if (u.fp === null) return { on: false, hint: 'This aircraft has no Firepower.' };
           return { on: true, hint: 'Strafing run: fly up to ' + u.move + '" and fire at every enemy passed over. They may fire back.' };
         }
         case 'designate':
