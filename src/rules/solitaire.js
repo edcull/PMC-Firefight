@@ -580,12 +580,15 @@
   });
 
   // up to 4" from a random entry point, one unit through each point a turn
-  function fromEntry(state, u) {
+  /* A unit coming on at a random entry point. In Protecting the VIP only one a
+     turn may use each point (p. 151); pass `shared` where the scenario sets no
+     such limit (Evacuation, p. 154). */
+  function fromEntry(state, u, shared) {
     var ents = shuffle((state.sc.entries || []).slice());
     state.sc.usedEntries = state.sc.usedEntries || {};
     for (var i = 0; i < ents.length; i++) {
       var e = ents[i];
-      if (state.sc.usedEntries[e.id]) continue;
+      if (!shared && state.sc.usedEntries[e.id]) continue;
       var avoid = state.scen.keepOut ? function (q) { return state.scen.keepOut(state, u, q); } : null;
       var q = spotNear(state, e.x, e.y, 4, u, avoid);
       if (!q) continue;
@@ -808,11 +811,12 @@
         });
         return out;
       }
-      state.sc.usedEntries = {};
-      return shuffle(pool(state)).filter(function () { return d6() >= 5; }).slice(0, 6);
+      // each OpFor unit in the pool on a 5+, as many as roll it (p. 154)
+      return shuffle(pool(state)).filter(function () { return d6() >= 5; });
     },
     arrivalPoint: function (state, u) {
-      if (u.side === 'B') return fromEntry(state, u);
+      // any random entry point, however many came through it this turn
+      if (u.side === 'B') return fromEntry(state, u, true);
       if (u.soloCiv) {
         var homes = shuffle(state.sc.homes.slice());
         for (var i = 0; i < homes.length; i++) {

@@ -95,6 +95,31 @@ head('Charges and the scenario\'s bounds');
   ok('...and it may charge one outside the zone', !!R.chargeRoute(st, opfor, outside, opfor.move + 2));
 })();
 
+head('Evacuation: no cap on OpFor arrivals (p. 154)');
+(function () {
+  var evac = SC.SCENARIOS.s_evac;
+  function mkB(i) { var p = R.profile('regular');
+    return { id: 'B' + i, side: 'B', key: 'regular', name: p.name, label: p.name, cls: 'infantry', tier: p.tier, size: p.size, models: p.size,
+      move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale, rules: [], x: -1, y: -1,
+      sp: 0, alive: true, reserve: true, wave: 'pool', shotFrom: [], cargo: [] }; }
+  var entries = [{ id: 1, x: 30, y: 30 }, { id: 2, x: 40, y: 12 }, { id: 3, x: 12, y: 40 }, { id: 4, x: 44, y: 44 }, { id: 5, x: 24, y: 44 }, { id: 6, x: 44, y: 24 }];
+  var most = 0;
+  for (var t = 0; t < 30; t++) {
+    var units = []; for (var i = 0; i < 24; i++) units.push(mkB(i));
+    var st = { units: units, terrain: [], objectives: [], log: [], sc: { safe: { x: 0, y: 0, r: 12 }, entries: entries }, scen: evac };
+    most = Math.max(most, evac.reserves(st, 'B').length);
+  }
+  ok('more than six may come on in one turn', most > 6, 'up to ' + most + ' of 24');
+  var units2 = []; for (var j = 0; j < 10; j++) units2.push(mkB(j));
+  var st2 = { units: units2, terrain: [], objectives: [], log: [], sc: { safe: { x: 0, y: 0, r: 12 }, entries: entries.slice(0, 2) }, scen: evac };
+  var placed = 0;
+  units2.forEach(function (u) {
+    var q = evac.arrivalPoint(st2, u);
+    if (q) { u.x = q.x; u.y = q.y; u.reserve = false; placed++; }
+  });
+  ok('two entry points take ten units in one turn', placed === 10, placed + ' placed');
+})();
+
 head('"No enemy within Range" is a distance (p. 147)');
 (function () {
   function mk(key, side, x, y) {
