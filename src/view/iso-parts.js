@@ -455,7 +455,8 @@
            3rd; the same under a peaked cap for the 2nd; a long greatcoat for the
            1st; and the greatcoat trimmed in gold for high command. */
         var lvl = kit.dress, DT = pal.dark, GOLD = '#e8c15a', GOLD_D = '#a8842c';
-        var coat = lvl >= 4, hem = coat ? -9 : -23, len = hem - (-42);
+        // the 3rd and 2nd grades' tunics hang to mid-thigh, the 4th's to the waist
+        var coat = lvl >= 4, hem = coat ? -9 : lvl >= 2 ? -16 : -23, len = hem - (-42);
         P(tx - (coat ? 1 : 0), -42 + drop, tw + (coat ? 2 : 0), len, DT);
         P(tx - (coat ? 1 : 0), -42 + drop, tw + (coat ? 2 : 0), len, 'rgba(18,20,26,.55)');   // a dress cloth, not field drab
         P(tx - (coat ? 1 : 0), -42 + drop, 3, len, 'rgba(255,255,255,.12)');
@@ -486,6 +487,7 @@
           for (var bt = 0; bt < 4; bt++) P(1, -39 + drop + bt * 4, 1.4, 1.4, GOLD);   // buttons down the tunic
           P(tx, -27 + drop, tw, 2.5, '#3a2a1a');          // the belt
           P(-1, -27 + drop, 2.5, 2.5, GOLD);              // its buckle
+          if (lvl >= 2) P(tx, hem - 2 + drop, tw, 2, 'rgba(0,0,0,.3)');   // the long tunic's hem in shadow
         }
         // ribbons from the 3rd grade, a second row from the 1st
         if (lvl >= 2) {
@@ -749,7 +751,7 @@
           P(1, -49 + drop, 4, 2, '#20262d');              // eyes in shadow
           if (kit.collar) {
             P(-4, -45 + drop, 9, 3, '#2a2f36');           // explosive collar
-            P(1, -45 + drop, 2, 2, '#e0557a');
+            P(1, -45 + drop, 2, 2, '#2d5a3a');           // its lamp, unlit (the board flashes it)
           }
           break;
         case 'wrap':                                      // a headwrap pulled over the face
@@ -963,6 +965,47 @@
     }
 
     function weapon(P, kit, pal, wy) {
+      /* A flag's cloth, stirring: a ripple runs out from the pole to the fly,
+         the fly moving most, each fold lit or shaded as it turns. Laid in
+         two-pixel columns; returns the lift of the cloth `x` out from the pole,
+         for anything sewn on it. */
+      function cloth(x0, y0, w, h, amp, mid, lit, dark) {
+        var ph = Math.max(0, B.PH.flag || 0) / 8 * Math.PI * 2;
+        function off(x) { var f = x / w; return amp * f * Math.sin(f * Math.PI * 2.2 - ph); }
+        for (var x = 0; x < w; x += 2) {
+          var cw = Math.min(2, w - x), f = (x + 1) / w, o = off(x + 1);
+          var turn = Math.cos(f * Math.PI * 2.2 - ph) * f;
+          P(x0 + x, y0 + o, cw, h, x >= w - 3 ? dark : mid);          // the fly ragged and in shadow
+          if (turn < -0.3) P(x0 + x, y0 + o + 2, cw, h - 4, 'rgba(0,0,0,.16)');
+          else if (turn > 0.3) P(x0 + x, y0 + o + 2, cw, h - 4, 'rgba(255,255,255,.1)');
+          P(x0 + x, y0 + o, cw, 2, lit);
+          P(x0 + x, y0 + o + h - 2, cw, 2, dark);
+        }
+        return off;
+      }
+      /* A five-pointed star sewn on a cloth, laid pixel by pixel (P draws only
+         rectangles), each column lifted with the cloth under it. */
+      function star(cx, cy, r, c, off) {
+        var pts = [];
+        for (var k = 0; k < 10; k++) {
+          var an = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.42 : r;
+          pts.push([cx + Math.cos(an) * rr, cy + Math.sin(an) * rr]);
+        }
+        function inside(x, y) {
+          var hit = false;
+          for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+            if ((pts[i][1] > y) !== (pts[j][1] > y) &&
+                x < (pts[j][0] - pts[i][0]) * (y - pts[i][1]) / (pts[j][1] - pts[i][1]) + pts[i][0]) hit = !hit;
+          }
+          return hit;
+        }
+        for (var x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+          var o = off ? off(x + 0.5) : 0;
+          for (var y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+            if (inside(x + 0.5, y + 0.5)) P(x, y + o, 1, 1, c);
+          }
+        }
+      }
       switch (kit.gun) {
         case 'long':
           P(-7, wy, 34, 2, GUN.dk);
@@ -1157,25 +1200,22 @@
           var poleH = huge ? 92 : big ? 74 : 56, fw2 = huge ? 48 : big ? 36 : 24, fh2 = huge ? 32 : big ? 24 : 15;
           P(-10, wy - poleH + 8, 2, poleH, '#5b4326');
           P(-10, wy - poleH + 6, 3, 3, '#c8a33a');       // finial
-          P(-8, wy - poleH + 8, fw2, fh2, fm);
-          P(-8, wy - poleH + 8, fw2, 2, fl2);
-          P(-8, wy - poleH + 6 + fh2, fw2, 2, fd);
-          P(-8 + fw2 - 3, wy - poleH + 10, 3, fh2 - 2, fd);  // the fly, ragged and in shadow
-          // plain cloth: the colour alone says whose leader this is
+          var fo = cloth(-8, wy - poleH + 8, fw2, fh2, huge ? 2.4 : big ? 2 : 1.5, fm, fl2, fd);
+          // the revolution's black star, in the middle of the cloth
+          star(-8 + fw2 * 0.45, wy - poleH + 8 + fh2 / 2 + 0.5, fh2 * 0.36, '#14161a', function (x) { return fo(x + 8); });
           P(2, wy + 2, 12, 2, GUN.dk);                   // a carbine besides
           break;
         }
         case 'banner': {                                  // the group's colours on a pole
           P(-10, wy - 40, 2, 48, '#5b4326');
           P(-10, wy - 42, 3, 3, '#c8a33a');              // finial
-          P(-8, wy - 40, 20, 15, pal.forceMid || pal.mid);   // the banner, in the company's colour
-          P(-8, wy - 40, 20, 3, pal.force || pal.light);
-          P(-8, wy - 28, 20, 2, pal.forceDark || pal.dark);
-          if (!kit.plainFlag) {                          // the star sewn on
-            P(-2, wy - 37, 8, 8, '#e0b43a');
-            P(1, wy - 39, 2, 12, '#e0b43a');
+          // the banner, in the company's colour
+          var bo = cloth(-8, wy - 40, 20, 15, 1.5, pal.forceMid || pal.mid, pal.force || pal.light, pal.forceDark || pal.dark);
+          if (!kit.plainFlag) {                          // the star sewn on, riding the cloth
+            var so = bo(10);
+            P(-2, wy - 37 + so, 8, 8, '#e0b43a');
+            P(1, wy - 39 + so, 2, 12, '#e0b43a');
           }
-          P(10, wy - 36, 3, 9, pal.forceDark || pal.dark);   // the trailing edge, ragged
           P(2, wy + 2, 12, 2, GUN.dk);                   // and a carbine besides
           break;
         }
