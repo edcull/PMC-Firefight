@@ -299,5 +299,52 @@ var clean = duel({}, {});
 ok('...and the plain duel still reads the same', Math.abs(clean.hits - base.hits) < 0.3, true,
   clean.hits.toFixed(2) + ' against ' + base.hits.toFixed(2));
 
+/* Demolisher (p. 89): +4 Firepower when shooting at destructible terrain — the
+   Demolish action's shot at a piece as well as a shot at troops sheltering in one. */
+head('Demolisher');
+(function () {
+  var seed = 9;
+  var was = Math.random;
+  function total(ups) {
+    seed = 9; Math.random = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    var w = world([]), a = mk('lcv', 'A', 10, 10, { upgrades: ups });
+    w.units = [a];
+    var wall = { kind: 'wall', x: 14, y: 8, w: 0.6, h: 6 };
+    w.terrain = [wall];
+    var r = R.shootTerrain(w, a, wall);
+    Math.random = was;
+    return r.total;
+  }
+  ok('shooting a wall down: +4 Firepower with the upgrade', total([4]) - total([]), 4);
+})();
+
+/* Superior Self-repair System (p. 89): failed repair rolls are re-rolled. */
+head('Superior Self-repair System');
+(function () {
+  function rate(ups) {
+    var fixed = 0, n = 4000;
+    for (var i = 0; i < n; i++) {
+      var w = world([]), v = mk('lcv', 'A', 10, 10, { upgrades: ups });
+      w.units = [v];
+      v.damage = v.str - 1;                 // one die left to roll
+      fixed += R.repair(w, v).fixed ? 1 : 0;
+    }
+    return fixed / n;
+  }
+  var plain = rate([]), sup = rate([9]);
+  ok('one die: half the repairs come good, three in four with the re-roll', Math.abs(plain - 0.5) < 0.04 && Math.abs(sup - 0.75) < 0.04, true, (plain * 100).toFixed(0) + '% → ' + (sup * 100).toFixed(0) + '%');
+})();
+
+/* Style Bonus (p. 88): a point of suppression per man killed, in an assault too. */
+head('Style Bonus in an assault');
+(function () {
+  var n = C.honourTable('regular').filter(function (h) { return h.flag === 'style'; })[0].n;
+  var plain = mk('regular', 'A', 10, 10), styled = mk('regular', 'A', 10, 10, { honours: [n] });
+  var t = mk('regular', 'B', 11, 10);
+  // +3 on every die: each hit is a Man down!
+  var a = R.resolveAssaultHits(t, 4, 3, plain), b = R.resolveAssaultHits(t, 4, 3, styled);
+  ok('four men down: four more SP with Style Bonus', b.sp - a.sp, 4, a.sp + ' → ' + b.sp + ' SP');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

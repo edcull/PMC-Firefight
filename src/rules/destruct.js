@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCDestruct = function (E) {
-    var TERRAIN = E.TERRAIN, UNIT_R = E.UNIT_R, applyDamage = E.applyDamage, applyResult = E.applyResult,
+    var TERRAIN = E.TERRAIN, UNIT_R = E.UNIT_R, applyDamage = E.applyDamage, applyResult = E.applyResult, campFlag = E.campFlag,
         chargeBonus = E.chargeBonus, clampBoard = E.clampBoard, d10 = E.d10,
         defenceAgainst = E.defenceAgainst, dmgMod = E.dmgMod, fallBack = E.fallBack, fmtPart = E.fmtPart,
         has = E.has, inRect = E.inRect, isFlying = E.isFlying, isMachine = E.isMachine,
@@ -132,7 +132,8 @@
       total += a.fp; parts.push({ label: 'Firepower', v: a.fp });
       var sb = sizeBonus(a.models);
       if (sb) { total += sb; parts.push({ label: a.models + ' models', v: sb }); }
-      if (has(a, 'Demolisher')) { total += 4; parts.push({ label: 'Demolisher', v: 4 }); }
+      // Demolisher, the vehicle upgrade (p. 89): +4 Firepower against destructible terrain
+      if (campFlag(a, 'demolisher')) { total += 4; parts.push({ label: 'Demolisher', v: 4 }); }
       var down = roll === 9 || total >= 15;
       log.push({
         t: 'shoot',

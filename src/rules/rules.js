@@ -1200,7 +1200,7 @@
   // what the destruct kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eDestruct() {
     return {
-      TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage, applyResult: applyResult,
+      TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage, applyResult: applyResult, campFlag: campFlag,
       chargeBonus: chargeBonus, clampBoard: clampBoard, d10: d10, defenceAgainst: defenceAgainst,
       dmgMod: dmgMod, fallBack: fallBack, fmtPart: fmtPart, has: has, inRect: inRect, isFlying: isFlying,
       isMachine: isMachine, rectPointDist: rectPointDist, resolveDamage: resolveDamage,

@@ -464,10 +464,21 @@
             : 'The hat is full. Draw, and the dice decide which of the three it is.') + '</p>';
       }
       h += '<div class="docpick">';
-      E.drawState.pool.forEach(function (x) {
+      /* The whole table, so the player sees what the unit has already: those it
+         holds, or that its profile rules out, are greyed out and cannot be put forward. */
+      var entry = E.drawState.entry;
+      var open = {};
+      E.drawState.pool.forEach(function (x) { open[x.n] = true; });
+      C.honourTable(entry.key).forEach(function (x) {
         var on = picks.indexOf(x.n) >= 0;
         var won = E.drawState.won && E.drawState.won.n === x.n;
         if (E.drawState.won && !on) return;                 // once drawn, show only the three
+        var had = entry.honours.indexOf(x.n) >= 0;
+        if (!open[x.n]) {
+          h += '<button class="doc had" disabled><b>' + esc(x.name) + '</b>' +
+            '<i>' + (had ? 'already earned' : 'not for this unit') + '</i><span>' + esc(x.text) + '</span></button>';
+          return;
+        }
         h += '<button class="doc' + (won ? ' on' : on ? ' picked' : '') + '"' +
           (E.drawState.won || (!on && picks.length >= 3) ? ' disabled' : '') +
           ' data-pickhonour="' + x.n + '">' +
@@ -517,9 +528,19 @@
       h += '<p class="lede">An Upgrade is chosen, not drawn — 10 EXP, and no more than ' +
         C.upgradeCap(E.upState) + ' on a Tier ' + ROMAN[profile(E.upState.key).tier] + ' machine.</p>';
       h += '<div class="docpick">';
-      C.availableUpgrades(E.upState).forEach(function (g) {
+      // the whole table: those already fitted, or meant for the other kind of machine, greyed out
+      var openU = {};
+      C.availableUpgrades(E.upState).forEach(function (g) { openU[g.n] = true; });
+      C.upgradeTable(E.upState.key).forEach(function (g) {
+        var kind = g.air ? 'aircraft only' : g.ground ? 'ground vehicles only' : 'any machine';
+        if (!openU[g.n]) {
+          var fitted = E.upState.upgrades.indexOf(g.n) >= 0;
+          h += '<button class="doc had" disabled><b>' + esc(g.name) + '</b>' +
+            '<i>' + (fitted ? 'already fitted' : kind) + '</i><span>' + esc(g.text) + '</span></button>';
+          return;
+        }
         h += '<button class="doc" data-fit="' + g.n + '"><b>' + esc(g.name) + '</b>' +
-          '<i>' + (g.air ? 'aircraft only' : g.ground ? 'ground vehicles only' : 'any machine') + '</i>' +
+          '<i>' + kind + '</i>' +
           '<span>' + esc(g.text) + '</span></button>';
       });
       h += '</div><p class="camp-foot"><button class="lnk" data-go="roster">Back</button></p>';

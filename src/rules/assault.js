@@ -338,7 +338,11 @@
          Fungi Symbiosis, p. 124). */
       if (!def.alive && !def.fled) {
         atk.assaultKills = (atk.assaultKills || 0) + 1;
-        if (def.faction !== 'bugs') atk.assaultKillsHuman = (atk.assaultKillsHuman || 0) + 1;
+        /* human: a PMC or rebel unit of men — not a tribe's, not a hull or a turret,
+           not a Drone unit (Fungi Symbiosis, p. 124: "every human unit") */
+        var human = (def.faction === 'pmc' || def.faction === 'rebel' || !def.faction) &&
+          !isMachine(def) && !has(def, 'Drone unit');
+        if (human) atk.assaultKillsHuman = (atk.assaultKillsHuman || 0) + 1;
       }
       return { log: log, wreck: wreck };
     }

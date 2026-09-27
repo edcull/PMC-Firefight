@@ -226,9 +226,11 @@
     setInterval(function () {
       if (!B.state || !B.state.scene || B.loop || document.hidden) return;
       ambientTick++;
-      // an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector breathes, a cloak shimmers
-      var flying = B.state.units.some(function (u) { return !u.aboard && u.x >= 0 && ISO.animates(u); });
-      if (B.state.hazeOnView || flying || (B.state.fireOnView && ambientTick % 2 === 0)) drawBoard();
+      /* an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector
+         breathes, a cloak shimmers — but only one in view (drawBoard notes it) is worth
+         redrawing the whole board for; rotors and sweeps read as well at eight frames
+         a second as a fire does */
+      if (B.state.hazeOnView || ((B.state.animOnView || B.state.fireOnView) && ambientTick % 2 === 0)) drawBoard();
     }, 60);
 
     /* ================= heat haze =================
@@ -550,6 +552,8 @@
       // a machine at half Structure trails smoke, which has to keep moving too
       if (!anyFire) anyFire = order.some(function (it) { return it.draw === 'unit' && ISO.smoking(it.unit); });
       B.state.fireOnView = anyFire;
+      // an aircraft's rotors, a deflector, a cloak: only worth redrawing for while one is in view
+      B.state.animOnView = order.some(function (it) { return it.draw === 'unit' && !it.unit.aboard && ISO.animates(it.unit); });
 
       order.concat(blockers)
         .sort(function (a, b) { return a.depth - b.depth; })

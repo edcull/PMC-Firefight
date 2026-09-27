@@ -226,8 +226,8 @@
       if (u.repairMove) { allowance = u.move; u.repairMove = false; }
       var path = R.pathTo(E.state, u, allowance, pt);
       faceAfter(u, path, pt);
-      flightTurn(u);
       u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
+      flightTurn(u);                                 // Advanced Control System: the turn "after moving" (p. 143), from where it ends
       crushAlong(u, path);
       animateMove(u, path);
       if (carryFirst) {

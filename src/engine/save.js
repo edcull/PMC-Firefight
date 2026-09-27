@@ -121,7 +121,7 @@
          needs to draw the table is in what is left. */
       function snapshot() {
         if (!E.state) return null;
-        var skip = { namesTaken: 1, scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1 };
+        var skip = { namesTaken: 1, scen: 1, scene: 1, ground: 1, structs: 1, structsOpen: 1, props: 1, remains: 1, baking: 1, fireOnView: 1, hazeOnView: 1, animOnView: 1 };
         var out = {};
         Object.keys(E.state).forEach(function (k) {
           if (skip[k]) return;
