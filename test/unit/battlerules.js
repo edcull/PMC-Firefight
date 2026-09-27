@@ -291,6 +291,8 @@ ok('...one that has already acted counts as a 3-4', fell > 30, fell + ' times');
 var pen = unit('penal', { side: 'A', x: 10, y: 10, sp: 12 });
 var cl = R.collars(table([pen]));
 ok('a penal unit broken by anything sets its collars off', !pen.alive && pen.expended && cl.length === 1);
+ok('...and every man left in it is killed, not fled', pen.models === 0 && !pen.fled);
+ok('...its losses are a count, not names, like the Esh-Aven', R.counted(pen));
 var mort = unit('mortarteam', { x: 10, y: 10 }), hid = unit('recruits', { side: 'B', x: 30, y: 30 });
 var lw = { kind: 'barricade', x: 29, y: 30.8, w: 4, h: 0.5 };
 ok('plunging fire can bring down the low wall a target shelters by', R.shelterOf(table([mort, hid], [lw]), mort, hid) === lw);

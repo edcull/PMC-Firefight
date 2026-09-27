@@ -75,7 +75,8 @@
       'In the End phase, an unbroken unit below its starting size with an unsuppressed Overmind in reach ' +
       'gets D3 lost bugs back.',
     'Expendable':
-      'Removed from play the moment it becomes Broken. It has fled rather than died, so in a campaign it comes back.',
+      'The moment it becomes Broken the collars go off: every man left is killed and the unit is removed. Penal ' +
+      'troops never count as casualties for victory, and in a campaign their dead are kept apart from the loss rate.',
     'Field Medics':
       'Friendly units within 6" (and the medics themselves) use a kinder hit table: 1-2 no effect, 3-5 one SP, ' +
       '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Only while steady.',

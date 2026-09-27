@@ -770,15 +770,20 @@
   // the models the loss rate counts for this unit
   function manned(entry, co) { return unmanned(entry) ? 0 : strengthOf(entry, co); }
   // which count a profile's losses go in, and what each model lost is worth there
-  var POOL_NAMES = { soldiers: 'soldiers', crocks: 'Crocks', eshaven: 'Esh-Aven', biomass: 'biomass' };
+  var POOL_NAMES = { soldiers: 'soldiers', penal: 'penal troopers', crocks: 'Crocks', eshaven: 'Esh-Aven', biomass: 'biomass' };
+  /* Penal troops are a class of their own: expendable, recruited freely, and
+     killed by their own collars. Their dead are kept as a count, apart from the
+     company's loss rate (Expendable, p. 57). */
+  var COUNT_ONLY = { penal: true };
   function poolOf(p) {
     if (!p) return 'soldiers';
+    if ((p.rules || []).indexOf('Expendable') >= 0) return 'penal';
     if (p.faction === 'bugs') return 'biomass';
     if (p.faction === 'xeno') return p.eshAven || p.group === 'Epsilon Squads' ? 'eshaven' : 'crocks';
     return 'soldiers';
   }
   function poolsFor(co) {
-    return co.faction === 'bugs' ? ['biomass'] : co.faction === 'xeno' ? ['crocks', 'eshaven'] : ['soldiers'];
+    return co.faction === 'bugs' ? ['biomass'] : co.faction === 'xeno' ? ['crocks', 'eshaven'] : co.faction === 'rebel' ? ['soldiers'] : ['soldiers', 'penal'];
   }
   function weightOf(p) { return poolOf(p) === 'biomass' ? R.biomassOf(p) : 1; }
   function massOf(entry, co) { return manned(entry, co) * weightOf(profile(entry.key)); }
@@ -812,7 +817,7 @@
         return n + (poolOf(profile(e.key)) === pool ? massOf(e, co) : 0);
       }, 0);
       var served = now + lost + b.departed;
-      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0 };
+      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0, countOnly: !!COUNT_ONLY[pool] };
     });
   }
   /* How seasoned the force is: every honour held on the books against the
@@ -1074,7 +1079,7 @@
       ATTACK_DEFEND: ATTACK_DEFEND, R: R, SCENARIOS: SCENARIOS, addLoss: addLoss, biomassTally: biomassTally,
       byRid: byRid, canFieldArmy: canFieldArmy, d3: d3, d6: d6, developRival: developRival, expFor: expFor,
       hasDoctrine: hasDoctrine, hasTraumaFlag: hasTraumaFlag, isLeaderP: isLeaderP, manned: manned,
-      newCompany: newCompany, newEntry: newEntry, payment: payment, pick: pick, poolOf: poolOf,
+      newCompany: newCompany, newEntry: newEntry, payment: payment, pick: pick, poolOf: poolOf, POOL_NAMES: POOL_NAMES,
       poolsFor: poolsFor, profile: profile, recruitCost: recruitCost, rollTP: rollTP, rollTrauma: rollTrauma,
       salvage: salvage, shuffle: shuffle, tpFor: tpFor, traumaTable: traumaTable,
       traumaThreshold: traumaThreshold, weakCandidates: weakCandidates, weightOf: weightOf

@@ -1598,10 +1598,12 @@
     return humanName(f === 'rebel');
   }
   // a unit whose losses are counted rather than named: the swarm, and the Esh-Aven
+  /* Units whose losses are a count, not a roll of names: the swarm, the tribe's
+     Esh-Aven, and penal troops, whose collars kill them off (Expendable, p. 57). */
   function counted(u) {
     if (!u) return false;
     var p = BY_KEY[u.key];
-    return u.faction === 'bugs' || !!u.eshAven || !!(p && p.eshAven);
+    return u.faction === 'bugs' || !!u.eshAven || !!(p && p.eshAven) || !!(p && (p.rules || []).indexOf('Expendable') >= 0);
   }
   // does this unit have anyone in it who could be named?
   function crewed(u) {

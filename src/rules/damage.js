@@ -147,10 +147,8 @@
       if (after === 'broken') { target.brokenEver = true; credit(target, atk, 'broke'); }
       if (after !== before && after !== 'ready') {
         if (after === 'broken' && has(target, 'Expendable')) {
-          target.alive = false;
-          target.fled = true;                      // run off, not killed to the last man
-          target.expended = true;                  // ...and not counted as a loss for victory (p. 57)
-          log.push({ t: 'kill', text: target.label + ' breaks — Expendable: removed from play.' });
+          collarsGo(target);
+          log.push({ t: 'kill', text: target.label + ' breaks — Expendable: the collars go off, removed from play.' });
         } else {
           log.push({ t: after, text: target.label + ' is ' + after.toUpperCase() + ' (' + target.sp + ' SP vs Morale ' + currentMorale(target) + ').' });
         }
@@ -354,11 +352,19 @@
     /* Expendable (p. 57): the collars go off the moment a penal unit is Broken,
        whatever broke it — a hit, a rite, a shout, a friend's melancholy. Returns
        the lines to log. */
+    /* The collars explode: every man left in the unit is killed and it is removed
+       from play; "penal troops do not count as a casualty for the purposes of
+       victory conditions, either during the battle or after it" (p. 57). */
+    function collarsGo(u) {
+      u.models = 0;
+      u.alive = false;
+      u.expended = true;
+    }
     function collars(state) {
       var out = [];
       state.units.forEach(function (u) {
         if (!u.alive || u.aboard || !has(u, 'Expendable') || status(u) !== 'broken') return;
-        u.alive = false; u.fled = true; u.expended = true;
+        collarsGo(u);
         out.push({ t: 'kill', text: u.label + ' breaks — Expendable: the collars go off, removed from play.' });
       });
       return out;

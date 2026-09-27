@@ -63,6 +63,8 @@
     function lossLine(co) {
       return C.lossStats(co).map(function (st) {
         if (!st.served) return '';
+        // penal troopers are counted apart, and not in the loss rate
+        if (st.countOnly) return st.lost ? '<div class="dloss"><b>' + st.lost + '</b> ' + st.unit + ' killed <span>not counted as losses</span></div>' : '';
         var pct = Math.round(st.pct * 1000) / 10;
         return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
       }).join('');
@@ -86,7 +88,7 @@
           '<span class="mk">' + ms.reduce(function (k, m) { return k + (m.count || 1); }, 0) + '</span></div><ol class="dmem-list">' +
           ms.map(function (m) {
             if (m.anon) {
-              return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' Esh-Aven</span>' +
+              return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' ' + esc(m.noun || 'Esh-Aven') + '</span>' +
                 (m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
             }
             return '<li><span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
