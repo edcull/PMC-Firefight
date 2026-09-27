@@ -9,27 +9,30 @@ jobs:
   unit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm install --no-save eslint@9 terser@5
       - run: npm test
       - run: npm run build
-  # The art fingerprints are exact, and a GitHub runner draws the edges of
-  # most pictures a little differently from the machine they were taken on,
-  # even in the same Chromium (1194, what the pinned Playwright 1.56.1
-  # installs): so this job reports but does not block. The pictures are
-  # checked where they were taken: node test/browser/artsnap.js
+  # A GitHub runner draws the edges of most pictures a level or two apart from
+  # the machine the baseline was taken on, so here the pictures are held to
+  # their grids (test/art/print.js), not pixel for pixel.
   art:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: node test/browser/artsnap.js
       - run: node test/browser/terrainsnap.js
+        if: success() || failure()
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: art-diff
+          path: test/art/diff/
