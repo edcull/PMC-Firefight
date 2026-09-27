@@ -335,5 +335,16 @@ head('Superior Self-repair System');
   ok('one die: half the repairs come good, three in four with the re-roll', Math.abs(plain - 0.5) < 0.04 && Math.abs(sup - 0.75) < 0.04, true, (plain * 100).toFixed(0) + '% → ' + (sup * 100).toFixed(0) + '%');
 })();
 
+/* Style Bonus (p. 88): a point of suppression per man killed, in an assault too. */
+head('Style Bonus in an assault');
+(function () {
+  var n = C.honourTable('regular').filter(function (h) { return h.flag === 'style'; })[0].n;
+  var plain = mk('regular', 'A', 10, 10), styled = mk('regular', 'A', 10, 10, { honours: [n] });
+  var t = mk('regular', 'B', 11, 10);
+  // +3 on every die: each hit is a Man down!
+  var a = R.resolveAssaultHits(t, 4, 3, plain), b = R.resolveAssaultHits(t, 4, 3, styled);
+  ok('four men down: four more SP with Style Bonus', b.sp - a.sp, 4, a.sp + ' → ' + b.sp + ' SP');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

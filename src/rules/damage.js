@@ -109,6 +109,13 @@
         out.rolls.push('D6 ' + raw + (mod ? '+' + mod : '') + ' → ' + tag);
       }
       if (nbk) out.notes.push('Natural Born Killers: down on a 2+');
+      /* Style Bonus (p. 88): "whenever the unit kills an enemy soldier ('Man down!'
+         or similar), the enemy unit gets 1 additional SP" — in an assault as much
+         as under fire. */
+      if (atk && campFlag(atk, 'style') && out.casualties) {
+        out.sp += out.casualties;
+        out.notes.push('Style Bonus +' + out.casualties + ' SP');
+      }
       return out;
     }
 
