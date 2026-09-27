@@ -299,5 +299,24 @@ var clean = duel({}, {});
 ok('...and the plain duel still reads the same', Math.abs(clean.hits - base.hits) < 0.3, true,
   clean.hits.toFixed(2) + ' against ' + base.hits.toFixed(2));
 
+/* Demolisher (p. 89): +4 Firepower when shooting at destructible terrain — the
+   Demolish action's shot at a piece as well as a shot at troops sheltering in one. */
+head('Demolisher');
+(function () {
+  var seed = 9;
+  var was = Math.random;
+  function total(ups) {
+    seed = 9; Math.random = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    var w = world([]), a = mk('lcv', 'A', 10, 10, { upgrades: ups });
+    w.units = [a];
+    var wall = { kind: 'wall', x: 14, y: 8, w: 0.6, h: 6 };
+    w.terrain = [wall];
+    var r = R.shootTerrain(w, a, wall);
+    Math.random = was;
+    return r.total;
+  }
+  ok('shooting a wall down: +4 Firepower with the upgrade', total([4]) - total([]), 4);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
