@@ -114,5 +114,34 @@ head('"No enemy within Range" is a distance (p. 147)');
   ok('nor one still in reserve', !R.enemyWithinRange(st, opfor));
 })();
 
+head('The Ambush! column stays on the road (p. 156)');
+(function () {
+  var W = R.BOARD.w, UR = R.UNIT_R, amb = SC.SCENARIOS.s_ambush;
+  [6, 14, 20, 30].forEach(function (n) {
+    var worst = '', ok1 = true;
+    for (var trial = 0; trial < 40; trial++) {
+      var units = [];
+      for (var i = 0; i < n; i++) units.push({ id: 'B' + i, side: 'B', key: 'regular', alive: true, x: -1, y: -1, rules: [], cargo: [] });
+      var st = { units: units, terrain: [], objectives: [], log: [], sc: {} };
+      amb.deploy(st);
+      units.forEach(function (u) {
+        if (u.x < UR - 1e-6 || u.x > W - UR + 1e-6) { ok1 = false; worst = 'off the table at x ' + u.x.toFixed(1); }
+      });
+      for (var a = 0; a < n; a++) for (var b = a + 1; b < n; b++) {
+        var d = Math.hypot(units[a].x - units[b].x, units[a].y - units[b].y) - 2 * UR;
+        if (d < 1 - 0.51) { ok1 = false; worst = 'two ' + d.toFixed(2) + '" apart'; }
+      }
+      // in each file, neighbours no further than 3" apart
+      var byFile = {};
+      units.forEach(function (u) { var k = Math.round(u.y); (byFile[k] = byFile[k] || []).push(u.x); });
+      Object.keys(byFile).forEach(function (k) {
+        var xs = byFile[k].sort(function (p, q) { return p - q; });
+        for (var j = 1; j < xs.length; j++) if (xs[j] - xs[j - 1] - 2 * UR > 3 + 1e-6) { ok1 = false; worst = 'a gap of ' + (xs[j] - xs[j - 1] - 2 * UR).toFixed(1) + '"'; }
+      });
+    }
+    ok('a column of ' + n + ' fits, 1-3" apart, none overlapping', ok1, worst);
+  });
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

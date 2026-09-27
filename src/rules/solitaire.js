@@ -946,16 +946,37 @@
       state.terrain.push({ kind: 'road', x: 0, y: y0, w: W, h: y1 - y0 });
     },
     deploy: function (state) {
-      // the column on the road, 1-3" apart, in a random order
+      /* The column on the road, "no closer than 1" and no further than 3"" apart
+         (p. 156), in a random order. A long column closes up towards 1" to stay on
+         the table; one too long even then marches two or three abreast, the files
+         an inch apart. */
       var col = shuffle(mine(state, 'B').slice());
-      var dir = Math.random() < 0.5 ? 1 : -1, x = dir > 0 ? 4 : W - 4;
-      col.forEach(function (u) {
-        u.soloFixed = true;
-        u.x = clamp(x, UR, W - UR); u.y = H / 2 + (Math.random() - 0.5);
-        u.facing = dir > 0 ? 0 : Math.PI; u.faceL = dir < 0;
-        u.reserve = false;
-        x += dir * (2 * UR + 1 + Math.random() * 2);
-      });
+      var dir = Math.random() < 0.5 ? 1 : -1;
+      var room = W - 2 * UR - 2;                       // centre to centre, an inch clear of each edge
+      var files = 1;
+      while (files < 3 && (Math.ceil(col.length / files) - 1) * (2 * UR + 1) > room) files++;
+      var per = Math.ceil(col.length / files);
+      for (var f = 0; f < files; f++) {
+        var file = col.slice(f * per, (f + 1) * per);
+        if (!file.length) continue;
+        var gaps = file.slice(1).map(function () { return 1 + Math.random() * 2; });
+        var len = function () { return gaps.reduce(function (a, g) { return a + 2 * UR + g; }, 0); };
+        // too long: every gap closes up in proportion, never below an inch
+        if (len() > room) {
+          var spare = gaps.reduce(function (a, g) { return a + g - 1; }, 0);
+          var over = len() - room, k = spare > 0 ? Math.max(0, 1 - over / spare) : 0;
+          gaps = gaps.map(function (g) { return 1 + (g - 1) * k; });
+        }
+        var fy = H / 2 + (f - (files - 1) / 2) * (2 * UR + 1);
+        var x = dir > 0 ? Math.min(4, W - UR - 1 - len()) : Math.max(W - 4, UR + 1 + len());
+        file.forEach(function (u, i) {
+          u.soloFixed = true;
+          u.x = x; u.y = fy + (files === 1 ? (Math.random() - 0.5) : 0);
+          u.facing = dir > 0 ? 0 : Math.PI; u.faceL = dir < 0;
+          u.reserve = false;
+          if (i < gaps.length) x += dir * (2 * UR + gaps[i]);
+        });
+      }
       state.sc.boxes = { A: [{ x: 0, y: H / 2 - 14, w: W, h: 12 }, { x: 0, y: H / 2 + 2, w: W, h: 12 }] };
     },
     deployOK: function (state, side, x, y) {
