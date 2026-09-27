@@ -54,6 +54,15 @@
       });
     }
 
+    /* Units offered Battlefield Insertion by Mimicry or Underground Advance, held
+       for it: no more than a quarter of the force (engine: state.mimicCap). */
+    function mimicHeld(side, except) {
+      return E.state.units.filter(function (x) { return x.side === side && x.mimic && x.reserve && x !== except; }).length;
+    }
+    function mimicFull(u) {
+      var cap = E.state.mimicCap && E.state.mimicCap[u.side];
+      return !!u.mimic && cap != null && mimicHeld(u.side, u) >= cap;
+    }
     /* No more than half the army may come in by Battlefield Insertion (p. 56), so
        the rest of the insertion troops deploy in the strip like everyone else. */
     function markReserves(side) {
@@ -61,11 +70,11 @@
       var mine = E.state.units.filter(function (u) { return u.side === side; });
       var cap = Math.ceil(mine.length / 2);             // "no more than half", rounded up (p. 27)
       var n = 0;
+      mine.forEach(function (u) { u.reserve = false; });
       mine.forEach(function (u) {
-        u.reserve = false;
         if (!R.has(u, 'Battlefield Insertion') || u.aboard) return;
         if (R.has(u, 'Stationary Artillery')) return;    // an emplaced gun is never in reserve
-        if (n >= cap) return;
+        if (n >= cap || mimicFull(u)) return;
         u.reserve = true; u.x = -1; u.y = -1; n++;
       });
       return n;
@@ -477,6 +486,7 @@
     // may this unit, being held back, come in by Battlefield Insertion?
     function canInsert(u) {
       if (!R.has(u, 'Battlefield Insertion') || R.has(u, 'Stationary Artillery') || SC.noInsertion(E.state)) return false;
+      if (mimicFull(u)) return false;
       var mine = E.state.units.filter(function (x) { return x.side === u.side && x.alive; });
       var using = mine.filter(function (x) { return x !== u && x.reserve && (x.insert || !x.wave); }).length;
       return using < Math.ceil(mine.length / 2);             // "no more than half of the army" (p. 56)
@@ -504,6 +514,7 @@
         return null;
       }
       if (ins.used >= ins.cap) return 'no more than half the army (' + ins.cap + ' units) may come in by Battlefield Insertion';
+      if (mimicFull(u)) return 'no more than a quarter of the force (' + E.state.mimicCap[u.side] + ' units) may come in by it through the doctrine';
       (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
       if (u.bld) R.exitBuilding(E.state, u, null);
       u.reserve = true; u.x = -1; u.y = -1;

@@ -137,6 +137,12 @@
             ? { on: true, hint: 'Stand and shoot: +1 to the firing roll, +2 inside ' + (u.range / 2) + '". ' + t.length + ' target' + (t.length > 1 ? 's' : '') + ' in range.' }
             : { on: false, hint: 'No enemy within ' + u.range + '" and line of sight.' };
         }
+        case 'fireconc': {
+          if (spent(u, 'concentration')) return { on: false, hint: 'Rite of Concentration: already used this battle.' };
+          var fc2 = actionState(u, 'fire');
+          if (!fc2.on) return fc2;
+          return { on: true, hint: 'Fire! with the Rite of Concentration: the D10 is doubled. Once a battle — kept if the die shows 0 or 9.' };
+        }
         case 'advance': {
           if (R.campFlag(u, 'noAdvance')) return { on: false, hint: 'Uncoordinated: this unit cannot Advance.' };
           if (sup) return { on: false, hint: 'Suppressed units cannot Advance.' };
@@ -411,8 +417,9 @@
         ui.moves = R.reachable(E.state, u, u.move + moveBonus(u, 'move')).filter(function (c) { return canStand(u, c); });
         wireNote(u);
         if (st === 'suppressed') ui.moves = ui.moves.filter(function (c) { return safeSpot(u, c.x, c.y); });
-      } else if (id === 'fire' || id === 'aux') {
+      } else if (id === 'fire' || id === 'aux' || id === 'fireconc') {
         ui.mode = id === 'aux' ? 'aux' : 'fire';
+        ui.concentrate = id === 'fireconc';
         ui.targets = targetsFor(u, { aux: id === 'aux' });
       } else if (id === 'advance') {
         ui.mode = 'advance-move';

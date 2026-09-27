@@ -380,15 +380,21 @@
     /* Mimicry (p. 124), and the tribe's Underground Advance (p. 141): up to a
        quarter of the force — rounded up, as every division is (p. 27) — may be
        held back and come in by Battlefield Insertion, on top of the units that
-       have the rule of their own. */
+       have the rule of their own. A player chooses which: every infantry unit is
+       offered the rule, and no more than the quarter may be held for it (u.mimic,
+       state.mimicCap). The AI takes the first quarter. */
+    state.mimicCap = {};
     ['A', 'B'].forEach(function (side) {
       var docs = (state.doctrines && state.doctrines[side]) || [];
       if (docs.indexOf('BB2') < 0 && docs.indexOf('XO2') < 0) return;
       var mine = state.units.filter(function (u) { return u.side === side; });
       var cap = Math.ceil(mine.length / 4);
-      mine.filter(function (u) {
+      var able = mine.filter(function (u) {
         return u.cls === 'infantry' && !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Overmind') && !R.has(u, 'Dominant Species');
-      }).slice(0, cap).forEach(function (u) { u.rules.push('Battlefield Insertion'); });
+      });
+      if (isAI(side)) { able.slice(0, cap).forEach(function (u) { u.rules.push('Battlefield Insertion'); }); return; }
+      state.mimicCap[side] = cap;
+      able.forEach(function (u) { u.rules.push('Battlefield Insertion'); u.mimic = true; });
     });
     /* A solitaire scenario can bring units of its own: a VIP and bodyguard,
        civilians and militia to protect, the enemy leaders to kill. */
@@ -1273,6 +1279,8 @@
       if (R.enterTargets(state, u).length) out.unshift({ id: 'enter', label: u.bld ? 'Next section' : 'Enter building' });
     }
     if (R.campFlag(u, 'adrenaline')) out.push({ id: 'rush', label: 'Rush' });
+    // Rite of Concentration (p. 142): a Fire! with the D10 doubled, once a battle
+    if (R.campFlag(u, 'concentration')) out.push({ id: 'fireconc', label: 'Fire! — Concentration' });
     if (R.campFlag(u, 'lastStand')) out.push({ id: 'laststand', label: 'Last Stand' });
     return out;
   }

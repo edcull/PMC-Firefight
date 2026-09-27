@@ -123,6 +123,24 @@ ok('Brave shrugs a point off every attack that lands',
   var w = world(); w.units = [u];
   ok('Broken-minded: Morale ' + u.morale + ' rolls ' + Math.ceil(u.morale / 2) + ' dice, rounded up', R.rally(w, u).dice.length, Math.ceil(u.morale / 2));
 })();
+// Rite of Concentration (p. 142): the unit "may" double its D10, once — the player's call
+(function () {
+  var was = Math.random;
+  function shot(opts, aiSides) {
+    Math.random = function () { return 0.65; };      // every die a 6 (a D10 of 6)
+    var w = world(); w.cfg = { aiSides: aiSides || [] };
+    var a = mk('regular', 'A', 20, 20), t = mk('regular', 'B', 26, 20);
+    a.camp = { flags: { concentration: true }, once: {} };
+    w.units = [a, t];
+    var r = R.shoot(w, a, t, 'fire', opts || {});
+    Math.random = was;
+    return { used: !!a.camp.once.concentration, math: (r.log.find(function (l) { return l.t === 'shoot'; }) || {}).math || '' };
+  }
+  ok('a player\'s shot does not spend the Rite unasked', shot({}).used, false);
+  var asked = shot({ concentrate: true });
+  ok('...it doubles the D10 when the player calls for it', asked.used && /Rite of Concentration/.test(asked.math), true, asked.math);
+  ok('the AI spends it on a roll worth doubling', shot({}, ['A']).used, true);
+})();
 // Surrounded, but Steady (p. 88): a die for every enemy on the table within 18", not those still in reserve
 (function () {
   var u = mk('regular', 'A', 3, 3, { honours: [19] }); u.sp = 5;

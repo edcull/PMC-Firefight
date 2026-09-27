@@ -80,5 +80,28 @@ console.log('\nIn a scenario with reserves, inserters are held back with the res
   ok('let go again, it is on the table like any other', !nm[0].reserve && !nm[0].insert);
 })();
 
+console.log('\nMimicry: the player picks up to a quarter (p. 124)');
+(function () {
+  const e2 = Engine.create();
+  // eight bug units: Mimicry lets up to two (a quarter, rounded up) come in by insertion
+  const swarm = R.rollArmy(3, 1, null, 'bugs');
+  e2.start({ tier: 3, pl: 1, scenario: 'meeting', mode: 'ai', planet: 'barren', factionA: 'bugs',
+    armyA: swarm, armyB: R.rollArmy(3, 1, null, 'pmc'), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
+    doctrines: { A: ['BB2'], B: [] } });
+  const s2 = e2.state();
+  const mine = s2.units.filter((u) => u.side === 'A');
+  const cap = Math.ceil(mine.length / 4);
+  const offered = mine.filter((u) => u.mimic);
+  ok('every infantry unit without the rule is offered it', offered.length > cap,
+    offered.length + ' offered, ' + cap + ' may use it');
+  ok('...no more than a quarter start held for it', offered.filter((u) => u.reserve).length <= cap);
+  const held = offered.filter((u) => u.reserve), free = offered.filter((u) => !u.reserve);
+  if (held.length === cap && free.length) {
+    ok('...the quarter is the limit', !e2.intent('A', { k: 'insertion', id: free[0].id }).ok);
+    ok('...but the player may swap which', e2.intent('A', { k: 'insertion', id: held[0].id }).ok &&
+      e2.intent('A', { k: 'insertion', id: free[0].id }).ok && free[0].reserve && !held[0].reserve);
+  } else ok('the quarter is taken at the start', false, held.length + ' held of ' + cap);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

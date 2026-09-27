@@ -275,10 +275,14 @@
       var roll = d10();
       var total = m.total + roll;
       parts.unshift({ label: 'D10', v: roll });
-      /* Rite of Concentration (p. 142): once a battle the D10 is doubled. It is
-         spent on the first roll where doubling is worth having; the unmodified 0
-         and 9 are still read off the die itself. */
-      if (!aux && roll >= 5 && roll < 9 && campFlag(a, 'concentration') && a.camp && a.camp.once && !a.camp.once.concentration) {
+      /* Rite of Concentration (p. 142): once a battle the unit "may double its D10".
+         A player calls for it on the shot (opts.concentrate); the AI spends it on
+         its first roll where doubling is worth having. The unmodified 0 and 9 are
+         still read off the die itself. */
+      var riteLeft = !aux && campFlag(a, 'concentration') && a.camp && a.camp.once && !a.camp.once.concentration;
+      var aiSide = state && state.cfg && (state.cfg.aiSides || []).indexOf(a.side) >= 0;
+      var wantRite = opts.concentrate != null ? !!opts.concentrate : aiSide && roll >= 5;
+      if (riteLeft && wantRite && roll > 0 && roll < 9) {
         a.camp.once.concentration = true;
         total += roll;
         parts.splice(1, 0, { label: 'Rite of Concentration — D10 doubled', v: roll });

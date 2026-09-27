@@ -166,7 +166,10 @@
 
     function doShoot(target) {
       var u = ui.selected;
-      resolveShot(u, target, ui.mode === 'advance-fire' ? 'advance' : 'fire', { aux: ui.mode === 'aux' });
+      // a player's shot spends the Rite of Concentration only when called for
+      resolveShot(u, target, ui.mode === 'advance-fire' ? 'advance' : 'fire',
+        { aux: ui.mode === 'aux', concentrate: ui.mode === 'fire' && !!ui.concentrate });
+      ui.concentrate = false;
     }
 
     function doAssault(target) {
