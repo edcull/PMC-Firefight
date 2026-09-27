@@ -167,23 +167,53 @@
       };
     }
 
-    // a freshly rolled table on the next world in the cycle, ground and all
-    function bake() {
+    /* A freshly rolled table on the next world in the cycle, ground and all,
+       handed to `done` when it is ready. It is baked a slice at a time, each in
+       a task of its own, so the menu keeps answering while the next table is
+       made (a whole table in one go held the page for a second or more). */
+    function bake(done) {
       var planet = WORLDS[world++ % WORLDS.length];
       var seed = (Math.random() * 100000) | 0;
       var terrain = GEN.generate({ width: R.BOARD.w, height: R.BOARD.h, planet: planet }).terrain;
-      var ground = ISO.bakeGround(terrain, seed, planet);
-      var props = ISO.buildProps(terrain, [], seed, planet);
-      var p = document.createElement('canvas');
-      p.width = Math.round(ISO.PIXW * SCALE); p.height = Math.round(ISO.PIXH * SCALE);
-      var pg = p.getContext('2d');
-      pg.drawImage(ground, 0, 0, p.width, p.height);
-      var s = document.createElement('canvas');
-      s.width = ISO.PIXW; s.height = ISO.PIXH;
-      var sg = s.getContext('2d'), lift = lifter(terrain);
-      props.forEach(function (pr) { ISO.drawProp(sg, pr, lift(pr.x, pr.y)); });
-      pg.drawImage(s, 0, 0, p.width, p.height);
-      return p;
+      var sn = seen();
+      // only the middle of the table is ever on screen behind the menu: that is all that is baked
+      ISO.bakeGroundSliced(terrain, seed, planet, sn, function (ground) {
+        var props = ISO.buildProps(terrain, [], seed, planet), lift = lifter(terrain);
+        var s = document.createElement('canvas');
+        s.width = ISO.PIXW; s.height = ISO.PIXH;
+        var sg = s.getContext('2d'), i = 0;
+        // the buildings and the trees, a few tens of milliseconds' worth a task
+        (function more() {
+          var t0 = root.performance.now();
+          while (i < props.length && root.performance.now() - t0 < 30) { ISO.drawProp(sg, props[i], lift(props[i].x, props[i].y)); i++; }
+          if (i < props.length) { setTimeout(more, 0); return; }
+          setTimeout(function () {
+            var p = document.createElement('canvas');
+            p.width = Math.round(ISO.PIXW * SCALE); p.height = Math.round(ISO.PIXH * SCALE);
+            var pg = p.getContext('2d');
+            pg.drawImage(ground, 0, 0, p.width, p.height);
+            pg.drawImage(s, 0, 0, p.width, p.height);
+            p.seenW = sn ? sn.w : 0; p.seenH = sn ? sn.h : 0;
+            done(p);
+          }, 0);
+        })();
+      });
+    }
+
+    /* The part of the plate lay() will put on this screen, with a margin for a
+       window made a little bigger: the menu's table is zoomed in well past the
+       whole table, so most of it is never seen. A screen grown by more than the
+       margin gets the whole of the next table. */
+    var grown = false;
+    function seen() {
+      if (!cv || !cv.width || grown) return null;
+      var pw = ISO.PIXW * SCALE, ph = ISO.PIXH * SCALE, W = cv.width, H = cv.height;
+      var dw = (ISO.W + ISO.H) * ISO.K * SCALE, dh = dw / 2, top = ISO.TOP * SCALE;
+      var zz = Math.min(Math.max(W / pw, H / ph) * 1.7, (W / dw + H / dh) * 1.02);
+      var x0 = (W - pw * zz) / 2, y0 = H / 2 - (top + dh / 2) * zz;
+      var mx = W * 0.2 / zz, my = H * 0.2 / zz;          // a fifth of the screen spare each side
+      return { x0: (-x0 / zz - mx) / SCALE, x1: ((W - x0) / zz + mx) / SCALE,
+        y0: (-y0 / zz - my) / SCALE, y1: ((H - y0) / zz + my) / SCALE, w: W, h: H };
     }
 
     // one table, scaled to cover the screen
@@ -207,6 +237,8 @@
       raf = 0;
       if (!running) return;
       fit();
+      // a window grown past what was baked: the next table is baked whole
+      if (shown && shown.seenW && (cv.width > shown.seenW * 1.3 || cv.height > shown.seenH * 1.3)) grown = true;
       var k = Math.min(1, ((now || 0) - fadeAt) / FADE);
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, cv.width, cv.height);
@@ -268,12 +300,16 @@
 
     /* Roll the next table and fade it in over the last, then do it again. The
        bake waits a tick, so the menu is up and answering before the first. */
+    var baking = false;
     function next() {
       timer = 0;
-      if (!running) return;
-      var p;
-      try { p = bake(); }
-      catch (e) { if (root.console) console.warn('the menu table could not be drawn', e); return; }
+      if (!running || baking) return;
+      baking = true;
+      try { bake(laid); }
+      catch (e) { baking = false; if (root.console) console.warn('the menu table could not be drawn', e); }
+    }
+    function laid(p) {
+      baking = false;
       if (!running) return;
       prev = shown; shown = p;
       // the pass goes over the table it was started with: a table that changed

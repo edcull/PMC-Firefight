@@ -137,27 +137,36 @@
        whenever something is knocked down. */
     function buildScene() {
       B.vc.ground = ISO.bakeGround(B.state.terrain, B.state.seed, B.state.cfg.planet);
-      B.vc.structs = document.createElement('canvas');
-      B.vc.structs.width = ISO.PIXW; B.vc.structs.height = ISO.PIXH;
+      if (!B.vc.structs || B.vc.structs.width !== ISO.PIXW) {
+        B.vc.structs = document.createElement('canvas');
+        B.vc.structs.width = ISO.PIXW; B.vc.structs.height = ISO.PIXH;
+      }
       paintStructures();
       B.vc.scene = B.vc.ground;
       if (B.state.tset && B.state.phase === 'terrain') B.vc.tsetBaked = B.state.terrain.length;
     }
 
+    // the pieces that can stand between the camera and a squad, and so open up (see drawBoard)
+    var OPENS = { building: 1, bunker: 1, highwall: 1 };
     function paintStructures() {
       B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
       var sg = B.vc.structs.getContext('2d');
       sg.clearRect(0, 0, B.vc.structs.width, B.vc.structs.height);
       B.vc.props.forEach(function (p) { ISO.drawProp(sg, p, liftOf(p.x, p.y)); });
-      /* And the same table again with every building cut away — the near walls off
-         so you can see into the room. A building with somebody inside it, or with
-         somebody behind it, is composited from this layer instead of the solid
-         one, which is what lets the player see the troops a wall would hide. */
-      B.vc.structsOpen = document.createElement('canvas');
-      B.vc.structsOpen.width = ISO.PIXW; B.vc.structsOpen.height = ISO.PIXH;
-      var og = B.vc.structsOpen.getContext('2d');
-      og.clearRect(0, 0, B.vc.structsOpen.width, B.vc.structsOpen.height);
-      B.vc.props.forEach(function (p) { ISO.drawProp(og, p, liftOf(p.x, p.y), true); });
+      /* And the buildings again cut away — the near walls off so you can see into
+         the room. A building with somebody inside it, or with somebody behind it,
+         is composited from this layer instead of the solid one, which is what lets
+         the player see the troops a wall would hide. Only the pieces that open up
+         are ever taken from it, so only they are drawn into it; and the plate is
+         kept from one repaint to the next rather than made again (24 MB a time). */
+      var op = B.vc.structsOpen;
+      if (!op || op.width !== ISO.PIXW || op.height !== ISO.PIXH) {
+        op = B.vc.structsOpen = document.createElement('canvas');
+        op.width = ISO.PIXW; op.height = ISO.PIXH;
+      }
+      var og = op.getContext('2d');
+      og.clearRect(0, 0, op.width, op.height);
+      B.vc.props.forEach(function (p) { if (OPENS[p.kind]) ISO.drawProp(og, p, liftOf(p.x, p.y), true); });
     }
 
     /* Something has come down: repaint the structures and let the player see it. */

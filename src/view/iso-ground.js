@@ -81,7 +81,8 @@
       crystal:  { r: 3, p: -0.14, d: 0.1, n: -0.08, tint: '#4a3524', tw: 0.4 },
       ravine:   { r: 2.5, p: -0.1, d: -0.04, n: 0.08, tint: '#f2f8fb', tw: 0.35 }
     };
-    function groundFit(terrain, seed) {
+    // `box`, when given: the only part of the table (inches) anything will be read from
+    function groundFit(terrain, seed, box) {
       var STEP = 0.5, cw = Math.ceil(W / STEP) + 2, ch = Math.ceil(H / STEP) + 2;
       var P = new Float32Array(cw * ch), D = new Float32Array(cw * ch), N = new Float32Array(cw * ch);
       // and a colour the ground is pulled towards, with how hard: TW the weight, TR/TG/TB the colour
@@ -91,6 +92,10 @@
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
+        if (box) {
+          i0 = Math.max(i0, Math.floor(box.x0 / STEP) - 1); i1 = Math.min(i1, Math.ceil(box.x1 / STEP) + 1);
+          j0 = Math.max(j0, Math.floor(box.y0 / STEP) - 1); j1 = Math.min(j1, Math.ceil(box.y1 / STEP) + 1);
+        }
         for (var j = j0; j <= j1; j++) {
           for (var i = i0; i <= i1; i++) {
             var x = i * STEP, y = j * STEP;
@@ -111,6 +116,9 @@
           }
         }
       });
+      /* Read at a world point into `out` (one object, reused: this is asked at
+         every point of the noise lattice, hundreds of thousands a table). */
+      var out = { p: 0, d: 0, n: 0, tw: 0, tr: 0, tg: 0, tb: 0 };
       return function (x, y) {
         var u = Math.max(0, Math.min(cw - 1.001, x / STEP)), v = Math.max(0, Math.min(ch - 1.001, y / STEP));
         var i = u | 0, j = v | 0, fu = u - i, fv = v - j, o = j * cw + i;
@@ -118,8 +126,11 @@
         var tw3 = bil(TW);
         // the colour is taken from whichever corner pulls hardest, so tints never mix into mud
         var best = o, bw = TW[o];
-        [o + 1, o + cw, o + cw + 1].forEach(function (q) { if (TW[q] > bw) { bw = TW[q]; best = q; } });
-        return { p: bil(P), d: bil(D), n: bil(N), tw: tw3, tr: TR[best], tg: TG[best], tb: TB[best] };
+        if (TW[o + 1] > bw) { bw = TW[o + 1]; best = o + 1; }
+        if (TW[o + cw] > bw) { bw = TW[o + cw]; best = o + cw; }
+        if (TW[o + cw + 1] > bw) { bw = TW[o + cw + 1]; best = o + cw + 1; }
+        out.p = bil(P); out.d = bil(D); out.n = bil(N); out.tw = tw3; out.tr = TR[best]; out.tg = TG[best]; out.tb = TB[best];
+        return out;
       };
     }
 
@@ -171,6 +182,7 @@
        hundred pixels round a handful of pieces, for a picture of them — and the
        two costly passes, the noise lattice and the soil pixel by pixel, are run
        over that patch alone. Everything else is as it always is. */
+    var CLIP = null;                                 // the patch a clipped bake is painting (paintFloor reads it)
     function bakeGround(terrain, seed, planet, clip) {
       var GP = GROUNDS[planet] || GROUNDS.sparse;
       var cx0 = 0, cy0 = 0, cx1 = PIXW, cy1 = PIXH;
@@ -178,10 +190,37 @@
         cx0 = Math.max(0, Math.floor(clip.x0)); cy0 = Math.max(0, Math.floor(clip.y0));
         cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
       }
-      HILLC = hillColours(GP);
-      var RC = rockColours(GP); ROCKF = RC.floor; ROCKTINT = RC.tint;
-      BLADES = GP.blade || BLADE;
-      HILLTUFT = GP.hillTufts != null ? GP.hillTufts : 0.65;
+      CLIP = clip ? { x0: cx0, y0: cy0, x1: cx1, y1: cy1 } : null;
+      try { return bakeIn(terrain, seed, planet, GP, cx0, cy0, cx1, cy1, null); } finally { CLIP = null; }
+    }
+    /* The same bake, a slice at a time: the costly passes are cut into pieces a
+       few tens of milliseconds long, each in a task of its own, so a page that
+       bakes a table in the background (the menu's backdrop) keeps answering.
+       `done(canvas)` has the plate when it is finished — the same pixels the
+       one-go bake paints. */
+    function bakeGroundSliced(terrain, seed, planet, clip, done) {
+      var GP = GROUNDS[planet] || GROUNDS.sparse;
+      var cx0 = 0, cy0 = 0, cx1 = PIXW, cy1 = PIXH;
+      if (clip) {
+        cx0 = Math.max(0, Math.floor(clip.x0)); cy0 = Math.max(0, Math.floor(clip.y0));
+        cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
+      }
+      CLIP = clip ? { x0: cx0, y0: cy0, x1: cx1, y1: cy1 } : null;
+      try { bakeIn(terrain, seed, planet, GP, cx0, cy0, cx1, cy1, done); } finally { CLIP = null; }
+    }
+    function bakeIn(terrain, seed, planet, GP, cx0, cy0, cx1, cy1, sliced) {
+      var clipNow = CLIP;
+      /* The world's colours, and the clip, are the module's while a table is
+         baked; a sliced bake puts its own back at every slice, since another
+         table may have been baked in between. */
+      var RC = rockColours(GP), HC = hillColours(GP);
+      function mine() {
+        HILLC = HC; ROCKF = RC.floor; ROCKTINT = RC.tint;
+        BLADES = GP.blade || BLADE;
+        HILLTUFT = GP.hillTufts != null ? GP.hillTufts : 0.65;
+        CLIP = clipNow;
+      }
+      mine();
       var cv = document.createElement('canvas');
       cv.width = PIXW; cv.height = PIXH;
       var g = cv.getContext('2d');
@@ -190,12 +229,21 @@
       /* --- noise on a coarse lattice, read back per pixel --- */
       var LAT = 4;                                   // lattice spacing, buffer px
       var gw = Math.ceil(PIXW / LAT) + 2, gh = Math.ceil(PIXH / LAT) + 2;
-      var soilFit = groundFit(terrain, seed);
+      /* a clipped bake reads the ground's fit to the terrain only under the clip:
+         the world box of its corners, and a lattice step to spare */
+      var fitBox = null;
+      if (CLIP) {
+        var cc = [toWorld(cx0 - 2 * LAT, cy0 - 2 * LAT), toWorld(cx1 + 2 * LAT, cy0 - 2 * LAT), toWorld(cx0 - 2 * LAT, cy1 + 2 * LAT), toWorld(cx1 + 2 * LAT, cy1 + 2 * LAT)];
+        fitBox = { x0: Math.min(cc[0].x, cc[1].x, cc[2].x, cc[3].x), x1: Math.max(cc[0].x, cc[1].x, cc[2].x, cc[3].x),
+          y0: Math.min(cc[0].y, cc[1].y, cc[2].y, cc[3].y), y1: Math.max(cc[0].y, cc[1].y, cc[2].y, cc[3].y) };
+      }
+      var soilFit = groundFit(terrain, seed, fitBox);
       var fN = new Float32Array(gw * gh), fP = new Float32Array(gw * gh), fD = new Float32Array(gw * gh);
       var fTW = new Float32Array(gw * gh), fTR = new Float32Array(gw * gh), fTG = new Float32Array(gw * gh), fTB = new Float32Array(gw * gh);
       var gx0 = Math.max(0, Math.floor(cx0 / LAT) - 1), gx1 = Math.min(gw, Math.ceil(cx1 / LAT) + 2);
       var gy0 = Math.max(0, Math.floor(cy0 / LAT) - 1), gy1 = Math.min(gh, Math.ceil(cy1 / LAT) + 2);
-      for (var gy = gy0; gy < gy1; gy++) {
+      function latRows(ya, yb) {
+      for (var gy = ya; gy < yb; gy++) {
         for (var gx = gx0; gx < gx1; gx++) {
           var wq = toWorld(gx * LAT, gy * LAT), o = gy * gw + gx;
           fN[o] = fbm(wq.x / 5.5, wq.y / 5.5, seed, 4) * 0.6 + fbm(wq.x / 1.4, wq.y / 1.4, seed + 300, 2) * 0.4;
@@ -206,6 +254,7 @@
           fP[o] += fit.p; fD[o] += fit.d; fN[o] += fit.n;
           fTW[o] = fit.tw; fTR[o] = fit.tr; fTG[o] = fit.tg; fTB[o] = fit.tb;
         }
+      }
       }
       function lat(f, x, y) {                        // bilinear read at a buffer pixel
         var u = x / LAT, v = y / LAT;
@@ -219,14 +268,22 @@
       var INV_K = 1 / K, INV_HK = 2 / K;
 
       /* --- soil, one pixel at a time --- */
-      for (var by = cy0; by < cy1; by++) {
+      function soilRows(ya, yb) {
+      for (var by = ya; by < yb; by++) {
         var v0 = (by - OY) * INV_HK;
         var wx = ((cx0 - OX) * INV_K + v0) / 2, wy = (v0 - (cx0 - OX) * INV_K) / 2;
         var dx = INV_K / 2, dy = -INV_K / 2;
         var row = by * PIXW * 4, br = (by & 3);
+        // the lattice row this pixel row reads between, worked out once a row
+        var lv = by / LAT, lj0 = lv | 0, lfv = lv - lj0, lrow = lj0 * gw;
         for (var bx = cx0; bx < cx1; bx++, wx += dx, wy += dy) {
           if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
-          var n = lat(fN, bx, by), patch = lat(fP, bx, by), dry = lat(fD, bx, by);
+          /* lat(), four fields at once: the same bilinear read, sharing the
+             corner it reads from (the soil pass is millions of pixels) */
+          var lu = bx / LAT, li0 = lu | 0, lfu = lu - li0, a0 = lrow + li0, a1 = a0 + gw;
+          var n = (fN[a0] * (1 - lfu) + fN[a0 + 1] * lfu) * (1 - lfv) + (fN[a1] * (1 - lfu) + fN[a1 + 1] * lfu) * lfv;
+          var patch = (fP[a0] * (1 - lfu) + fP[a0 + 1] * lfu) * (1 - lfv) + (fP[a1] * (1 - lfu) + fP[a1 + 1] * lfu) * lfv;
+          var dry = (fD[a0] * (1 - lfu) + fD[a0 + 1] * lfu) * (1 - lfv) + (fD[a1] * (1 - lfu) + fD[a1 + 1] * lfu) * lfv;
           // feather the boundaries between materials so they break up rather than
           // drawing a clean line across the table
           var pj = (BAYER[br][bx & 3] / 16 - 0.5) * 0.06 + (hash(bx, by, 19) - 0.5) * 0.03;
@@ -239,7 +296,7 @@
           if (idx >= ramp.length) idx = ramp.length - 1;
           if (idx < 0) idx = 0;
           var c = ramp[idx], o2 = row + bx * 4;
-          var tw4 = lat(fTW, bx, by);
+          var tw4 = (fTW[a0] * (1 - lfu) + fTW[a0 + 1] * lfu) * (1 - lfv) + (fTW[a1] * (1 - lfu) + fTW[a1 + 1] * lfu) * lfv;
           if (tw4 > 0.02) {
             // pulled towards the colour of what stands nearby, dithered so it breaks up at the edge
             var tk = Math.min(1, tw4 + (BAYER[br][bx & 3] / 16 - 0.5) * 0.25);
@@ -253,12 +310,39 @@
           d[o2] = c[0]; d[o2 + 1] = c[1]; d[o2 + 2] = c[2]; d[o2 + 3] = 255;
         }
       }
+      }
 
-      /* --- every terrain rectangle, painted as the rectangle it is --- */
-      terrain.forEach(function (r, ri) {
-        if (r.kind === 'hill') return;               // the plateau is painted after the slopes
+      // one piece's floor (the plateau of a hill is painted after the slopes)
+      var floorsDone = false;
+      function floorOf1(r, ri) {
+        if (r.kind === 'hill') return;
         if (FLOOR[r.kind]) paintFloor(d, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD);
-      });
+      }
+
+      if (!sliced) { latRows(gy0, gy1); soilRows(cy0, cy1); return finish(); }
+      // a slice at a time: the lattice, the soil, each piece's floor, then the rest in one go
+      var steps = [];
+      for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
+      for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
+      terrain.forEach(function (r, ri) { steps.push(function () { floorOf1(r, ri); }); });
+      steps.push(function () { floorsDone = true; });
+      (function next() {
+        mine();
+        var t0 = performance.now();
+        while (steps.length && performance.now() - t0 < 30) steps.shift()();
+        if (steps.length) { CLIP = null; setTimeout(next, 0); return; }
+        setTimeout(function () {
+          mine();
+          var out;
+          try { out = finish(); } finally { CLIP = null; }
+          sliced(out);
+        }, 0);
+      })();
+      return null;
+
+      function finish() {
+      /* --- every terrain rectangle, painted as the rectangle it is --- */
+      if (!floorsDone) terrain.forEach(floorOf1);
 
       g.putImageData(img, 0, 0);
       // lava lies at the bottom of cracks: the rock walls go in over the melt
@@ -298,10 +382,24 @@
       // hills: the rectangle, extruded, so the plateau is exactly the ground that counts
       var hills = terrain.filter(function (r) { return r.kind === 'hill'; });
       hills.forEach(function (r) { hillSlopes(g, r, seed); });
+      /* The plate's rows a set of pieces can paint, raised by `lift`: the hill
+         floors are painted into a read-back of just those rows, not the plate. */
+      function rowsOf(rs, lift2) {
+        var P = Math.ceil(K * 0.9) + 3, lo = PIXH, hi = 0;
+        rs.forEach(function (r) {
+          [toScreen(r.x, r.y), toScreen(r.x + r.w, r.y), toScreen(r.x + r.w, r.y + r.h), toScreen(r.x, r.y + r.h)].forEach(function (c) {
+            lo = Math.min(lo, Math.floor(c.y) - P - lift2); hi = Math.max(hi, Math.ceil(c.y) + P - lift2);
+          });
+        });
+        lo = Math.max(0, lo); hi = Math.min(PIXH, hi + 1);
+        return hi > lo ? { y0: lo, y1: hi } : null;
+      }
       if (hills.length) {
-        var top = g.getImageData(0, 0, PIXW, PIXH), td = top.data;
+        var onHillFloors = terrain.filter(function (r) { return r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker'; });
+        var hb = rowsOf(hills.concat(onHillFloors), ELEV);
+        var top = g.getImageData(0, hb.y0, PIXW, hb.y1 - hb.y0), td = top.data;
         hills.forEach(function (r, ri) {
-          paintFloor(td, r, HILLC.floor, seed + ri * 419, lat, fN, fD, ELEV);
+          paintFloor(td, r, HILLC.floor, seed + ri * 419, lat, fN, fD, ELEV, null, hb);
         });
         // a wood (or rubble, or a ruin) standing on a hill lies on the plateau, not under it
         function onAHill(x, y) {
@@ -309,17 +407,18 @@
           return false;
         }
         terrain.forEach(function (r, ri) {
-          if (r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker') paintFloor(td, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD, ELEV, onAHill);
+          if (r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker') paintFloor(td, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD, ELEV, onAHill, hb);
         });
-        g.putImageData(top, 0, 0);
+        g.putImageData(top, 0, hb.y0);
         hills.forEach(function (r) { hillCrest(g, r, seed); });
         // the upper step of a two-step hill, raised again off the first
         var steps = hills.filter(function (r) { return r.top; }).map(function (r) { return upperStep(r); });
         steps.forEach(function (u2) { hillSlopes(g, u2, seed + 7, ELEV); });
         if (steps.length) {
-          var top2 = g.getImageData(0, 0, PIXW, PIXH), td2 = top2.data;
-          steps.forEach(function (u2, ri) { paintFloor(td2, u2, HILLC.floor, seed + ri * 431 + 9, lat, fN, fD, ELEV * 2); });
-          g.putImageData(top2, 0, 0);
+          var sb = rowsOf(steps, ELEV * 2);
+          var top2 = g.getImageData(0, sb.y0, PIXW, sb.y1 - sb.y0), td2 = top2.data;
+          steps.forEach(function (u2, ri) { paintFloor(td2, u2, HILLC.floor, seed + ri * 431 + 9, lat, fN, fD, ELEV * 2, null, sb); });
+          g.putImageData(top2, 0, sb.y0);
           steps.forEach(function (u2) { hillCrest(g, u2, seed + 7, ELEV); });
         }
       }
@@ -362,6 +461,7 @@
         else dot(g, p2.x, p2.y, rand() > 0.5 ? GP.track[0] : GP.track[1], 1);
       }
       return cv;
+      }
     }
 
     /* A shell crater, shaded as a bowl: lit on the far (south-east) inner wall,
@@ -462,8 +562,11 @@
     }
 
     // `mask(x, y)`: paint only where it says yes — a wood's floor on the part of it that is up on a hill
-    function paintFloor(d, r, spec, seed, lat, fN, fD, lift, mask) {
+    /* `band`, when given, says `d` holds only the plate's rows band.y0 to band.y1
+       (the hills are painted into a read-back of just their own rows). */
+    function paintFloor(d, r, spec, seed, lat, fN, fD, lift, mask, band) {
       lift = lift || 0;
+      var bandY = band ? band.y0 : 0;
       var ramp = spec.ramp.map(hex3), rim = hex3(spec.rim);
       var fleck = spec.fleck.map(hex3);
       var hi = ramp[ramp.length - 1];
@@ -474,26 +577,50 @@
       var x1 = Math.min(PIXW - 1, Math.ceil(Math.max(c1.x, c2.x, c3.x, c4.x)) + pad);
       var y0 = Math.max(0, Math.floor(Math.min(c1.y, c2.y, c3.y, c4.y)) - pad - lift);
       var y1 = Math.min(PIXH - 1, Math.ceil(Math.max(c1.y, c2.y, c3.y, c4.y)) + pad - lift);
+      if (band) { y0 = Math.max(y0, band.y0); y1 = Math.min(y1, band.y1 - 1); }
+      // a clipped bake paints nothing it was not asked for
+      if (CLIP) { x0 = Math.max(x0, CLIP.x0); x1 = Math.min(x1, CLIP.x1 - 1); y0 = Math.max(y0, CLIP.y0); y1 = Math.min(y1, CLIP.y1 - 1); }
       var INV_K = 1 / K, INV_HK = 2 / K;
       var WOB = lift && !mask ? 0 : 0.09;            // how far the edge may wander, inches (a hill's own edge is crisp; a wood on it is not)
+      /* A shaped piece's depth measured exactly is the costly part of the bake, so
+         it is first measured on a half-inch grid. Depth can change no faster than
+         the distance moved, so a pixel near a grid point that is well inside (or
+         well outside) is decided by that alone: exactly the same answer, without
+         measuring. Only pixels near the edge, and the water and lava that shade
+         by depth all the way in, are measured one by one. */
+      var shaped = !!(r.poly || r.parts), GS = 0.5, SLACK = GS * 0.7072;
+      var coarse = shaped && !spec.wet && !spec.hot, gx0 = r.x - 1, gy0 = r.y - 1, gnx = 0, gny = 0, grid = null;
+      if (coarse) {
+        gnx = Math.ceil((r.w + 2) / GS) + 1; gny = Math.ceil((r.h + 2) / GS) + 1;
+        grid = new Float64Array(gnx * gny);
+        for (var gj = 0; gj < gny; gj++) for (var gi = 0; gi < gnx; gi++) grid[gj * gnx + gi] = depthIn(r, gx0 + gi * GS, gy0 + gj * GS);
+      }
+      var sure = Math.max(WOB, 0.08);                // deeper than this, nothing about the edge applies
 
       for (var by = y0; by <= y1; by++) {
         var v0 = (by + lift - OY) * INV_HK;
         var wx = ((x0 - OX) * INV_K + v0) / 2, wy = (v0 - (x0 - OX) * INV_K) / 2;
         var dx = INV_K / 2, dy = -INV_K / 2;
-        var row = by * PIXW * 4, br = by & 3;
+        var row = (by - bandY) * PIXW * 4, br = by & 3;
         for (var bx = x0; bx <= x1; bx++, wx += dx, wy += dy) {
           if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
           if (mask && !mask(wx, wy)) continue;
           // distance inside the piece — its outline, or its rectangle — in inches
-          var din = (r.poly || r.parts) ? (wx < r.x - 1 || wy < r.y - 1 || wx > r.x + r.w + 1 || wy > r.y + r.h + 1 ? -9 : depthIn(r, wx, wy))
-            : Math.min(wx - r.x, r.x + r.w - wx, wy - r.y, r.y + r.h - wy);
+          var din;
+          if (!shaped) din = Math.min(wx - r.x, r.x + r.w - wx, wy - r.y, r.y + r.h - wy);
+          else if (wx < r.x - 1 || wy < r.y - 1 || wx > r.x + r.w + 1 || wy > r.y + r.h + 1) din = -9;
+          else if (coarse) {
+            var dc = grid[Math.round((wy - gy0) / GS) * gnx + Math.round((wx - gx0) / GS)];
+            if (dc - SLACK >= sure) din = dc - SLACK;              // well inside: the floor, no edge
+            else if (dc + SLACK < -WOB) continue;                  // well outside
+            else din = depthIn(r, wx, wy);
+          } else din = depthIn(r, wx, wy);
           if (spec.hot && din < -WOB && din > -0.5) {
             /* scorched ground beyond the flow: not lava, and no part of the rule —
                just earth baked dark, thinning out with distance */
             var sc = (1 + din / 0.5) * 0.5 - BAYER[by & 3][bx & 3] / 32;
             if (hash(bx, by, 311) < sc) {
-              var o2 = by * PIXW * 4 + bx * 4;
+              var o2 = row + bx * 4;
               d[o2] = d[o2] * 0.45 + 20; d[o2 + 1] = d[o2 + 1] * 0.4 + 12; d[o2 + 2] = d[o2 + 2] * 0.4 + 8;
             }
             continue;
@@ -822,7 +949,7 @@
 
     return {
       R0: R0,
-      bakeGround: bakeGround,
+      bakeGround: bakeGround, bakeGroundSliced: bakeGroundSliced,
       depthIn: depthIn,
       hex3: hex3,
       pebble: pebble,

@@ -829,7 +829,7 @@
     get burrowStep() { return burrowStep; }, get cancelPreview() { return cancelPreview; },
     get canvasFromWorld() { return canvasFromWorld; }, get centreOn() { return centreOn; },
     get clampCam() { return clampCam; }, get commitMove() { return commitMove; },
-    get currentForce() { return currentForce; }, get drawBoard() { return drawBoard; },
+    get currentForce() { return currentForce; }, get drawBoard() { return drawBoard; }, get paintStructures() { return paintStructures; }, get pix() { return pix; },
     get drawColourPick() { return drawColourPick; }, get drawForceList() { return drawForceList; },
     get drawMuster() { return drawMuster; }, get hotBegin() { return hotBegin; },
     get hotEnd() { return hotEnd; }, get hotPaint() { return hotPaint; },
