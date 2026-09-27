@@ -1,7 +1,7 @@
 /* The terrain's safety net for the refactor, as artsnap is the units': a table
    built on every kind of world, twice over, with the clock and the dice frozen
    so the same code always paints the same pixels — the ground baked, the
-   structures painted, and the whole board drawn at a fixed view with its props
+   structures painted, and the whole board drawn at a fixed view, pixel for pixel, with its props
    and effects. Each is reduced to its fingerprints (test/art/print.js) and
    checked against the stored ones in test/art/terrain.json.
 
@@ -56,14 +56,17 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
       // the table on its own, the units off it, baked afresh and drawn at a fixed view
       s.units.forEach(u => { u.x = -1; u.y = -1; });
       window.__rebuildScene();
-      window.PMC_SETVIEW(24, 24, 0.55);
+      /* at zoom 1 the board is the drawn table copied pixel for pixel; any other
+         zoom smooths it down, and how a machine rounds that smoothing moves the
+         colours a few levels across the whole board (draw.js) */
+      window.PMC_SETVIEW(24, 24, 1);
     }, { world, scen, n });
     // the plates are baked a moment after the table is laid
     await p.waitForFunction(() => { const s = window.PMC_STATE(); return !!(s && s.ground && s.structs); }, null, { timeout: 20000 });
     await p.waitForTimeout(300);
     const pics = await p.evaluate((cell) => {
       const s = window.PMC_STATE();
-      window.PMC_SETVIEW(24, 24, 0.55);
+      window.PMC_SETVIEW(24, 24, 1);
       const out = {};
       const one = (cv) => ({ url: cv.toDataURL('image/png'), grid: window.__gridIn(cv, cell) });
       if (s.ground && s.ground.toDataURL) out.ground = one(s.ground);
