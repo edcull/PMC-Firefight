@@ -341,6 +341,10 @@
            out of character — which is how an Elite company ended up full of mortars. */
         var likedAll = all.filter(wanted);
         var targets = likedAll.length ? affordable.filter(wanted) : affordable;
+        /* ...and a promoting company's unit with nowhere it wants to go keeps its
+           experience for an honour rather than stepping out of character, which is
+           what lets its veterans pick up the odd honour from mid-campaign. */
+        if (a.spend === 'promote' && !likedAll.length) targets = [];
         function honour() {
           if (!canTakeHonour(e, co).ok) return false;
           var h = chooseHonour(drawHonours(e));
