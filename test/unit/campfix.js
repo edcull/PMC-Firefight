@@ -140,5 +140,8 @@ ok('...remembering on a 2-6', rb.remembered === (rb.roll >= 2), 'D6 ' + rb.roll)
     C.promotionCost(e, 'boversized', plain).kUC + ' kUC');
 })();
 
+// Nanobots (p. 89) is for a vehicle or an aircraft
+ok('an aircraft may be fitted with Nanobots', C.availableUpgrades(C.newEntry('fsc')).some(function (g) { return g.n === 6; }));
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

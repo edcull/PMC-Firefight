@@ -339,7 +339,8 @@
       text: '+4 Firepower when shooting at destructible terrain or troops sheltering in it.' },
     { n: 5, name: 'Redundant Crucial Systems', mod: { str: 1 },
       text: 'Adds 1 to Structure.' },
-    { n: 6, name: 'Nanobots', ground: true, flag: 'nanobots',
+    // unmarked in the book (unlike 1 and 2, marked for aircraft and ground vehicles only), so for either
+    { n: 6, name: 'Nanobots', flag: 'nanobots',
       text: 'Repairs roll dice equal to full Structure, not the current value.' },
     { n: 7, name: 'Improved Engines', flag: 'engines',
       text: 'Ground vehicles add 2 to Movement; aircraft add 4.' },
