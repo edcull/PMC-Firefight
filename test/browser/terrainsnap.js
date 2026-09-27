@@ -37,7 +37,7 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
     Math.random = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
     window.__reseed = (s) => { seed = s || 12345; };
   });
-  await ctx.addInitScript({ content: 'window.__gridIn = ' + P.gridIn.toString() });
+  await ctx.addInitScript({ content: 'window.__gridIn = ' + P.gridIn.toString() + ';' + P.NO_TEXT });
   const p = await ctx.newPage();
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
@@ -96,5 +96,6 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
     ' within ' + P.TOL + ' levels, ' + r.changed.length + ' changed, ' + r.added.length + ' new, ' + r.gone.length + ' gone' +
     (r.near.length || r.changed.length ? ' (the furthest cell moved ' + r.worst + ')' : ''));
   console.log(errs.length ? '  page errors: ' + errs.join(' | ') : '  page errors: none');
+  if (r.why) Object.keys(r.why).forEach(k => console.log('    ' + k + ': ' + JSON.stringify(r.why[k])));
   process.exit(r.changed.length || r.gone.length || errs.length ? 1 : 0);
 })();

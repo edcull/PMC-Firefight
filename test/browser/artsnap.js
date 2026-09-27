@@ -38,7 +38,7 @@ const DIFF = path.join(ROOT, 'test', 'art', 'diff');
     Math.random = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
     window.__reseed = () => { seed = 12345; };
   });
-  await ctx.addInitScript({ content: 'window.__gridIn = ' + P.gridIn.toString() });
+  await ctx.addInitScript({ content: 'window.__gridIn = ' + P.gridIn.toString() + ';' + P.NO_TEXT });
   const p = await ctx.newPage();
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
@@ -101,7 +101,8 @@ const DIFF = path.join(ROOT, 'test', 'art', 'diff');
     if (r.gone.length) console.log('    gone: ' + r.gone.slice(0, 20).join(', '));
     if (errs.length) console.log('    page errors: ' + errs.join(' | '));
     await b.close();
-    process.exit(r.changed.length || r.gone.length || errs.length ? 1 : 0);
+    if (r.why) Object.keys(r.why).forEach(k => console.log('    ' + k + ': ' + JSON.stringify(r.why[k])));
+  process.exit(r.changed.length || r.gone.length || errs.length ? 1 : 0);
   }
   if (errs.length) console.log('  page errors: ' + errs.join(' | '));
   await b.close();

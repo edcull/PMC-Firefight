@@ -15,6 +15,13 @@ const zlib = require('zlib');
 const crypto = require('crypto');
 
 const CELL = 12;
+
+/* Run in the page before anything draws: no text. The ruler's inch marks and
+   the board's labels are set in web fonts that fall back to whatever each
+   machine calls monospace or system-ui, so the same words land differently from
+   one machine to the next, and they are not the art these checks look after. */
+const NO_TEXT = 'CanvasRenderingContext2D.prototype.fillText = function () {};' +
+  'CanvasRenderingContext2D.prototype.strokeText = function () {};';
 const TOL = 3;
 
 /* Run in the page: the canvas's pixels, averaged over the grid, as a byte array
@@ -48,13 +55,21 @@ function print(url, grid) {
 }
 
 /* How far apart two grids are: the largest move of any cell in any channel
-   (Infinity if they are not the same size). */
-function apart(g1, g2) {
+   (Infinity if they are not the same size). With `where`, also the cell it was
+   in and how many cells moved more than a level, to tell noise from a change. */
+function apart(g1, g2, where) {
   const a = zlib.inflateRawSync(Buffer.from(g1, 'base64')), b = zlib.inflateRawSync(Buffer.from(g2, 'base64'));
   if (a.length !== b.length || a[0] !== b[0] || a[1] !== b[1] || a[2] !== b[2] || a[3] !== b[3]) return Infinity;
-  let worst = 0;
-  for (let i = 4; i < a.length; i++) { const dv = Math.abs(a[i] - b[i]); if (dv > worst) worst = dv; }
-  return worst;
+  const gw = a[0] + a[1] * 256;
+  let worst = 0, at = 4, moved = 0;
+  for (let i = 4; i < a.length; i++) {
+    const dv = Math.abs(a[i] - b[i]);
+    if (dv > 1 && (i - 4) % 4 === 0) moved++;
+    if (dv > worst) { worst = dv; at = i; }
+  }
+  if (!where) return worst;
+  const c = (at - 4) >> 2;
+  return { worst: worst, x: c % gw, y: Math.floor(c / gw), ch: 'rgba'[(at - 4) % 4], was: a[at], now: b[at], moved: moved, cells: (a.length - 4) >> 2 };
 }
 
 /* Sort each picture against the baseline: the same pixel for pixel, the same
@@ -70,6 +85,7 @@ function judge(want, got, exact) {
     if (wh === g.h) return out.same.push(k);
     const d = typeof w === 'string' ? Infinity : apart(w.g, g.g);
     out.by[k] = d;
+    if (d !== Infinity && d > 1 && Object.keys(out.why || (out.why = {})).length < 12) out.why[k] = apart(w.g, g.g, true);
     if (d !== Infinity && d > out.worst) out.worst = d;
     (!exact && d <= TOL ? out.near : out.changed).push(k);
   });
@@ -83,4 +99,4 @@ function stored(got) {
   return o;
 }
 
-module.exports = { CELL, TOL, gridIn, print, apart, judge, stored };
+module.exports = { CELL, TOL, NO_TEXT, gridIn, print, apart, judge, stored };
