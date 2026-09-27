@@ -428,6 +428,11 @@ var shuttle = unit('rlshuttle', { x: 10, y: 10 });
 ok('an ordinary shuttle is the other way about',
   R.canEmbark(table([shuttle, foot]), shuttle, foot) === true &&
   R.canEmbark(table([shuttle, hull]), shuttle, hull) === false);
+var fieldgun = unit('rmedart', { x: 10, y: 12 });
+ok('a Lifter cannot sling an emplaced gun: it is no vehicle', R.canEmbark(table([lift, fieldgun]), lift, fieldgun) === false);
+ok('...but no aircraft tows one', R.canEmbark(table([shuttle, fieldgun]), shuttle, fieldgun) === false);
+var lorry = unit('rltv', { x: 10, y: 12 });
+ok('...which a ground transport still can', R.canEmbark(table([lorry, fieldgun]), lorry, fieldgun) === true);
 
 /* ------------------------------------------------------------ Last Stand */
 console.log('\nLAST STAND IN COVER (p. 95)');

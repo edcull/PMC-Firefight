@@ -116,15 +116,15 @@
     { key: 'insertplat', code: 'RIP', name: 'Rapid insertion platform', group: 'Transport vehicles', cls: 'vehicle', art: 'pod', tier: 1, size: 1, move: 0, turn: 0, fp: null, range: 0, def: 13, assault: 0, str: 3, transport: 1, noSlot: true, mustLoad: true, rules: ['Ground vehicle', 'Transport (1)', 'Battlefield Insertion', 'Immobile', 'No Objectives'] },
 
     /* ---- Engineering, support, AA, EW and medical vehicles (pp. 77-79) ---- */
-    { key: 'lengveh', code: 'LEV', name: 'Light engineering vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'engflame', tier: 3, size: 1, move: 10, turn: 1, fp: 8, range: 12, def: 13, assault: 5, str: 5, rules: ['Ground vehicle', 'Specialisation (ground)', 'Incendiary Ammunition', 'Suppressive Fire', 'Always Basic Firepower'], cap: 1 },
-    { key: 'hengveh', code: 'HEV', name: 'Heavy engineering vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'enghow', tier: 4, size: 1, move: 6, turn: 2, fp: 10, range: 12, def: 15, assault: 5, str: 8, rules: ['Ground vehicle', 'Destructive Weapon', 'Specialisation (ground)', 'Advanced Protection'] },
-    { key: 'impsupport', code: 'ISV', name: 'Improvised support vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'techmrl', tier: 2, size: 1, move: 8, turn: 2, fp: 6, range: 30, def: 8, assault: 1, str: 3, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
-    { key: 'lsupport', code: 'LSV', name: 'Light support vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'calliope', tier: 3, size: 1, move: 8, turn: 2, fp: 8, range: 48, def: 10, assault: 2, str: 4, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
-    { key: 'msupport', code: 'MSV', name: 'Medium support vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'mlrs', tier: 4, size: 1, move: 6, turn: 2, fp: 9, range: 48, def: 11, assault: 3, str: 4, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
-    { key: 'asupport', code: 'ASV', name: 'Advanced support vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'plasmatank', tier: 5, size: 1, move: 6, turn: 2, fp: 10, range: 60, def: 11, assault: 4, str: 5, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
-    { key: 'aaveh', code: 'AAV', name: 'Anti-aircraft vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'aatank', tier: 3, size: 1, move: 8, turn: 2, fp: 6, range: 48, def: 10, assault: 3, str: 4, rules: ['Ground vehicle', 'Indirect Fire', 'Specialisation (air)', 'Anti-aircraft'], capPL: 1 },
-    { key: 'ewveh', code: 'EWV', name: 'EW vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'ewtank', tier: 3, size: 1, move: 10, turn: 1, fp: 3, range: 18, def: 12, assault: 2, str: 5, rules: ['Ground vehicle', 'Jammers', 'Counter-jamming', 'Hackers', 'Keen-Eyed'], cap: 1 },
-    { key: 'medveh', code: 'MDV', name: 'Medical vehicle', group: 'Engineering and support', cls: 'vehicle', art: 'medbox', tier: 3, size: 1, move: 10, turn: 1, fp: 3, range: 18, def: 12, assault: 2, str: 5, rules: ['Ground vehicle', 'Field Medics'] },
+    { key: 'impsupport', code: 'ISV', name: 'Improvised support vehicle', group: 'Support vehicles', cls: 'vehicle', art: 'techmrl', tier: 2, size: 1, move: 8, turn: 2, fp: 6, range: 30, def: 8, assault: 1, str: 3, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
+    { key: 'lsupport', code: 'LSV', name: 'Light support vehicle', group: 'Support vehicles', cls: 'vehicle', art: 'calliope', tier: 3, size: 1, move: 8, turn: 2, fp: 8, range: 48, def: 10, assault: 2, str: 4, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
+    { key: 'msupport', code: 'MSV', name: 'Medium support vehicle', group: 'Support vehicles', cls: 'vehicle', art: 'mlrs', tier: 4, size: 1, move: 6, turn: 2, fp: 9, range: 48, def: 11, assault: 3, str: 4, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
+    { key: 'asupport', code: 'ASV', name: 'Advanced support vehicle', group: 'Support vehicles', cls: 'vehicle', art: 'plasmatank', tier: 5, size: 1, move: 6, turn: 2, fp: 10, range: 60, def: 11, assault: 4, str: 5, rules: ['Ground vehicle', 'Minimum Range (12)', 'Destructive Weapon', 'Indirect Fire', 'Specialisation (ground)', 'Cumbersome Weapon'] },
+    { key: 'lengveh', code: 'LEV', name: 'Light engineering vehicle', group: 'Engineering and utility vehicles', cls: 'vehicle', art: 'engflame', tier: 3, size: 1, move: 10, turn: 1, fp: 8, range: 12, def: 13, assault: 5, str: 5, rules: ['Ground vehicle', 'Specialisation (ground)', 'Incendiary Ammunition', 'Suppressive Fire', 'Always Basic Firepower'], cap: 1 },
+    { key: 'aaveh', code: 'AAV', name: 'Anti-aircraft vehicle', group: 'Engineering and utility vehicles', cls: 'vehicle', art: 'aatank', tier: 3, size: 1, move: 8, turn: 2, fp: 6, range: 48, def: 10, assault: 3, str: 4, rules: ['Ground vehicle', 'Indirect Fire', 'Specialisation (air)', 'Anti-aircraft'], capPL: 1 },
+    { key: 'ewveh', code: 'EWV', name: 'EW vehicle', group: 'Engineering and utility vehicles', cls: 'vehicle', art: 'ewtank', tier: 3, size: 1, move: 10, turn: 1, fp: 3, range: 18, def: 12, assault: 2, str: 5, rules: ['Ground vehicle', 'Jammers', 'Counter-jamming', 'Hackers', 'Keen-Eyed'], cap: 1 },
+    { key: 'medveh', code: 'MDV', name: 'Medical vehicle', group: 'Engineering and utility vehicles', cls: 'vehicle', art: 'medbox', tier: 3, size: 1, move: 10, turn: 1, fp: 3, range: 18, def: 12, assault: 2, str: 5, rules: ['Ground vehicle', 'Field Medics'] },
+    { key: 'hengveh', code: 'HEV', name: 'Heavy engineering vehicle', group: 'Engineering and utility vehicles', cls: 'vehicle', art: 'enghow', tier: 4, size: 1, move: 6, turn: 2, fp: 10, range: 12, def: 15, assault: 5, str: 8, rules: ['Ground vehicle', 'Destructive Weapon', 'Specialisation (ground)', 'Advanced Protection'] },
 
     /* ---- Transport aircraft (p. 80) ---- */
     { key: 'adaptedcraft', code: 'ATC', name: 'Adapted transport craft', group: 'Transport aircraft', cls: 'aircraft', art: 'hawk', tier: 2, size: 1, move: 16, fp: 2, range: 18, def: 8, assault: 0, str: 3, transport: 1, rules: ['Flying unit', 'Transport (1)', 'Limited Fire Arc'] },
@@ -332,8 +332,12 @@
        energy  pulses of light in the army's colour (Xenotripod small arms)
        orb     a glowing plasma orb, lobbed or teleported onto the target,
                bursting in a ring (Gamma squads, turrets, strike craft)
+       `splash: true` on a stream weapon lands every round in its own little
+       burst of light rather than only where the hits fall (the Delta SMGs)
        orbbig  the same, heavier and slower, landing in a splash of blue fire
                (the advanced support vehicle's energy howitzer)
+       plasmabolt a big blue bolt of plasma, flat and fast, landing in the same
+               splash of blue fire (the heavy engineering vehicle's breaching gun)
        none    it has no gun at all */
   var WEAPONS = {
     /* ---- PMC infantry ---- */
@@ -401,9 +405,9 @@
     // a command vehicle is a staff car with an antenna farm, not a gun platform
     cmdveh: { p: 'small' },
     insertplat: { p: 'none' },
-    // engineering hulls: a flame projector over a gun, and a breaching cannon
+    // engineering hulls: a flame projector over a gun, and a plasma breaching cannon
     lengveh: { p: 'flame', s: 'chain' },
-    hengveh: { p: 'shell', n: 3, s: 'rail', sn: 3 },
+    hengveh: { p: 'plasmabolt' },
     // support hulls fire in batteries: two tubes, then three
     impsupport: { p: 'rocket' }, lsupport: { p: 'arcbig', n: 3 },
     msupport: { p: 'arcbig', n: 5, s: 'arcbig', sn: 5 },
@@ -482,19 +486,20 @@
 
     /* ---- the Space Bugs ----
        Nothing here fires a round. Spore bugs and the leaders spit acid in a low,
-       wet lob (`spit`); the bio-plasma thrower and the Queen hurl a glowing sac
+       wet lob (`spit`), the Queen four at a time; the bio-plasma thrower hurls a glowing sac
        of it (`spitbig`); winged and pioneer bugs loose a volley of chitin spines
        (`spine`). The fire beetle's jaws are a flame projector. Lesser,
        underground and infected have no Firepower and so no weapon at all. */
-    bspitlarva: { p: 'spit' }, bimmspit: { p: 'spit', n: 2 }, bspitters: { p: 'spit', n: 3 },
-    bsporethrow: { p: 'spit', n: 4 },
-    bbioplasma: { p: 'spitbig', n: 2 }, bfirebeetle: { p: 'flame' },
-    bsmallwing: { p: 'spine' }, blargewing: { p: 'spine', s: 'spit', sn: 2 },
-    bcarrier: { p: 'spit', n: 2 },
-    bsmallpath: { p: 'spine' }, bpathfinder: { p: 'spine' }, blurkers: { p: 'spine', s: 'spit' },
-    bshadow: { p: 'spine', s: 'spit', sn: 2 },
+    bspitlarva: { p: 'spit', n: 2 }, bimmspit: { p: 'spit', n: 2 }, bspitters: { p: 'spit', n: 3 },
+    bsporethrow: { p: 'spit', n: 3 },
+    bbioplasma: { p: 'spitbig', n: 4 }, bfirebeetle: { p: 'flame' },
+    // the winged, pioneer and shadow bugs loose their spines and nothing else
+    bsmallwing: { p: 'spine' }, blargewing: { p: 'spine' },
+    bcarrier: { p: 'spit', n: 4 },
+    bsmallpath: { p: 'spine' }, bpathfinder: { p: 'spine' }, blurkers: { p: 'spine' },
+    bshadow: { p: 'spine' },
     bwatchlarva: { p: 'spit' }, bimmwatch: { p: 'spit' }, bwatchers: { p: 'spit' },
-    bovermind: { p: 'spit', n: 2 }, bqueen: { p: 'spitbig', n: 2 },
+    bovermind: { p: 'spit', n: 4 }, bqueen: { p: 'spit', n: 4 },
     // claws and mandibles only: Firepower —
     btiny: { p: 'none' }, bsmall: { p: 'none' }, battack: { p: 'none' }, boversized: { p: 'none' },
     bunderground: { p: 'none' }, bhugeunder: { p: 'none' }, bsandworm: { p: 'none' },
@@ -504,20 +509,22 @@
        Crocks fire pulses of light in the tribe's colour; the Gamma squads'
        charges and the craft's plasma missiles are glowing orbs. The Esh-Aven
        start with blades and crude slug-throwers and work up to Gauss. */
-    xalpha1: { p: 'energy' }, xalpha2: { p: 'energy' }, xalpha3: { p: 'energy' },
+    xalpha1: { p: 'energy', n: 2 }, xalpha2: { p: 'energy', n: 2 }, xalpha3: { p: 'energy', n: 2 },
     xalpha4: { p: 'energy', n: 2 }, xalpha5: { p: 'energy', n: 2 },
-    xbeta2: { p: 'energy', n: 2 }, xbeta3: { p: 'energy', n: 2 }, xbeta4: { p: 'energy', n: 3 },
-    xgamma3: { p: 'orb', n: 2 }, xgamma4: { p: 'orb', n: 3 }, xgamma5: { p: 'orb', n: 3 },
-    xdelta1: { p: 'none' }, xdelta2: { p: 'pistol' }, xdelta3: { p: 'small' },
+    xbeta2: { p: 'energy', n: 2 }, xbeta3: { p: 'energy', n: 3 }, xbeta4: { p: 'energy', n: 4 },
+    xgamma3: { p: 'orb', n: 3 }, xgamma4: { p: 'orb', n: 3 }, xgamma5: { p: 'orb', n: 3 },
+    // the Deltas' energy SMGs: the leader's alone at Low grade, a pair at Core, every round splashing
+    xdelta1: { p: 'none' }, xdelta2: { p: 'smg', splash: true }, xdelta3: { p: 'smg', splash: true },
     // the Esh-Aven: bursts of tracer, but it is energy that crackles out of them
     xeps1: { p: 'none' }, xeps2: { p: 'pistol' }, xeps3: { p: 'small' },
-    xeps4: { p: 'rail', n: 2 }, xeps5: { p: 'rail', n: 3 },
-    xstrike2: { p: 'energy', n: 3 }, xstrike3: { p: 'orb', n: 2, s: 'energy', sn: 3 },
-    xstrike4: { p: 'orb', n: 3, s: 'energy', sn: 3 }, xstrike5: { p: 'energy', n: 5, s: 'rail', sn: 3 },
+    xeps4: { p: 'rail', n: 4 }, xeps5: { p: 'rail', n: 5 },
+    // the strike craft lob plasma orbs, the salvo growing with the grade (a turret's is three)
+    xstrike2: { p: 'orb', n: 2 }, xstrike3: { p: 'orb', n: 3 },
+    xstrike4: { p: 'orb', n: 3 }, xstrike5: { p: 'orb', n: 4 },
     xrecon: { p: 'energy' }, xtelecraft: { p: 'energy', n: 2 },
     xshieldb: { p: 'energy', n: 2 }, xshield: { p: 'energy', n: 2 }, xshieldhp: { p: 'energy', n: 2 },
-    xdturret1: { p: 'orb', n: 2 }, xdturret2: { p: 'orb', n: 2 }, xdturret3: { p: 'orb', n: 2 },
-    xdturret4: { p: 'orb', n: 2 }, xdturret5: { p: 'orb', n: 2 },
+    xdturret1: { p: 'orb', n: 3 }, xdturret2: { p: 'orb', n: 3 }, xdturret3: { p: 'orb', n: 3 },
+    xdturret4: { p: 'orb', n: 3 }, xdturret5: { p: 'orb', n: 3 },
     xtturret2: { p: 'none' }, xtturret3: { p: 'none' }, xtturret4: { p: 'none' },
     xsturret3: { p: 'none' }, xsturret4: { p: 'none' }, xsturret5: { p: 'none' }
   };

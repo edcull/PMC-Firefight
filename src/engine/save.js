@@ -80,6 +80,7 @@
       if (veh.aboard) return [];
       return E.state.units.filter(function (u) {
         if (u.side !== veh.side || !u.alive || u.aboard || u === veh) return false;
+        // a Lifter slings a ground vehicle — not a gun, which is no vehicle (ruling)
         if (lifter) return u.cls === 'vehicle' && !R.has(u, 'Lifter') && !towingGun(u);
         if (u.cls !== 'infantry') return false;
         if (R.has(u, 'Stationary Artillery')) return R.canTow(veh) && !towingGun(veh);
@@ -98,7 +99,7 @@
       u.reserve = false;                   // it rides in with the hull, not on its own
       // everything riding in a slung vehicle goes with it
       (u.cargo || []).forEach(function (c) { c.x = veh.x; c.y = veh.y; });
-      if (!quiet) logLine('note', u.label + (R.has(u, 'Stationary Artillery') ? ' is hitched behind ' : R.has(veh, 'Lifter') ? ' is slung under ' : ' loads aboard ') + veh.name + ' before the battle.');
+      if (!quiet) logLine('note', u.label + (R.has(veh, 'Lifter') ? ' is slung under ' : R.has(u, 'Stationary Artillery') ? ' is hitched behind ' : ' loads aboard ') + veh.name + ' before the battle.');
       return true;
     }
 

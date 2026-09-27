@@ -173,13 +173,16 @@ async function pickAndFire(p, key, ms) {
   const gam = await pickAndFire(p, 'xgamma4', 1800);
   ok('a Gamma squad sends plasma orbs that burst', gam.spec.p === 'orb' && !!gam.seen.orb && !!gam.seen.orbburst, gam.kinds.join(' '));
   const strike = await pickAndFire(p, 'xstrike4', 2400);
-  ok('a strike craft fires orbs and pulses together', !!strike.seen.pulse && !!strike.seen.orb, strike.kinds.join(' '));
+  ok('a high-grade strike craft lobs three orbs, nothing else', strike.spec.p === 'orb' && strike.spec.n === 3 && !strike.spec.s &&
+    !!strike.seen.orb && !strike.seen.pulse, strike.kinds.join(' '));
   const adv = await pickAndFire(p, 'xstrike5', 2400);
-  ok('an advanced strike craft fires pulses and rail lines', !!adv.seen.pulse && !!adv.seen.rail, adv.kinds.join(' '));
+  ok('an advanced strike craft lobs four orbs', adv.spec.p === 'orb' && adv.spec.n === 4 && !!adv.seen.orb && !adv.seen.rail, adv.kinds.join(' '));
+  const delta = await pickAndFire(p, 'xdelta3', 1800);
+  ok('core Deltas fire their SMGs, every round splashing', delta.spec.p === 'smg' && !!delta.seen.tracer && !!delta.seen.impact, delta.kinds.join(' '));
   const heps = await pickAndFire(p, 'xeps5', 1600);
-  ok('advanced Epsilons fire three rail lines', heps.spec.p === 'rail' && heps.spec.n === 3 && !!heps.seen.rail, heps.kinds.join(' '));
+  ok('advanced Epsilons fire five rail lines', heps.spec.p === 'rail' && heps.spec.n === 5 && !!heps.seen.rail, heps.kinds.join(' '));
   const tur = await pickAndFire(p, 'xdturret3', 1800);
-  ok('a defensive turret lobs orbs', !!tur.seen.orb, tur.kinds.join(' '));
+  ok('a defensive turret lobs three orbs', tur.spec.n === 3 && !!tur.seen.orb, tur.kinds.join(' '));
 
   head('It plays a Battlefield Insertion the way the battle does');
 

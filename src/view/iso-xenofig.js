@@ -387,15 +387,29 @@
             }
             arm([[ax, ay], [9, ay + 4], [12, by - 3], [12, by - 7]], 1.8, 1, W0);
             arm([[1, ay + 2], [2, ay + 6], [5, by - 1], [5, by - 5]], 1.6, 0.9, W0);
-          } else if (wpn2 === 'blades') {                 // Delta: an energy blade on each arm
-            arm([[ax, ay], [9, ay + 4], [12, ay + 2], [15, ay - 2]], 1.8, 1.1, W0);
-            F([[15, ay - 3.6], [29, ay - 17], [18, ay - 1.4]], dead ? '#666' : GL.m);
-            if (!dead) L([[16, ay - 3], [27, ay - 15]], 0.6, GL.l);
-            arm([[1, ay + 2], [3, ay + 7], [6, ay + 9], [8, ay + 8]], 1.6, 1, W0);
-            if (kit.bladeFire) {                          // the higher grades carry a short gun too
-              facet([[7, ay + 7.5], [18, ay + 6.8], [19, ay + 8], [8, ay + 9.6]], W0);
-              E(19.5, ay + 7.5, 0.9, 0.9, dead ? '#555' : GL.m);
+          } else if (wpn2 === 'blades' || wpn2 === 'xsmg') {   // Delta: an energy blade on each arm, or an SMG in both hands
+            if (wpn2 === 'xsmg') {
+              arm([[ax, ay], [10, ay + 3.5], [15, ay + 5], [19, ay + 6.5]], 1.8, 1.1, W0);   // the upper hand under the barrel, no blade
             } else {
+              arm([[ax, ay], [9, ay + 4], [12, ay + 2], [15, ay - 2]], 1.8, 1.1, W0);
+              F([[15, ay - 3.6], [29, ay - 17], [18, ay - 1.4]], dead ? '#666' : GL.m);
+              if (!dead) L([[16, ay - 3], [27, ay - 15]], 0.6, GL.l);
+            }
+            if (wpn2 === 'xsmg') {
+              /* An energy SMG, held in both hands: a stubby faceted receiver, a
+                 glowing power cell hung under it for a magazine, and a short
+                 shrouded barrel with the army's light at the muzzle. */
+              var SC = dead ? '#555' : GL.m;
+              facet([[4, ay + 5.6], [17, ay + 4.6], [18.6, ay + 6], [18.2, ay + 9.4], [5.5, ay + 10.2]], W0);
+              facet([[18, ay + 5.4], [24.5, ay + 5.1], [25, ay + 7.6], [18.3, ay + 8.2]], W0);
+              F([[10, ay + 9.8], [13.2, ay + 9.5], [12.6, ay + 14.6], [9.4, ay + 14.2]], dead ? '#3a3834' : W0.dk);
+              E(11.2, ay + 12, 0.9, 1.5, SC);
+              [7.5, 10.5, 13.5].forEach(function (x) { E(x, ay + 7.4, 0.65, 0.55, SC); });
+              if (!dead) E(25.6, ay + 6.4, 2.2, 1.8, GL.h);
+              E(25.4, ay + 6.4, 1, 1, SC);
+              arm([[1, ay + 2], [3, ay + 7], [6, ay + 9], [8.5, ay + 8.6]], 1.6, 1, W0);   // the hand on the grip
+            } else {
+              arm([[1, ay + 2], [3, ay + 7], [6, ay + 9], [8, ay + 8]], 1.6, 1, W0);
               F([[7, ay + 7.5], [23, ay + 5], [8, ay + 9.8]], dead ? '#666' : GL.d || GL.m);
             }
           } else if (wpn2 === 'staff') {                  // Alpha: a staff of office, and shards about it

@@ -467,7 +467,7 @@
         return null;
       }
       if (u.aboard) return 'take it out of the hull first';
-      (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
+      emptyForReserve(u);
       if (u.bld) R.exitBuilding(E.state, u, null);
       u.reserve = true; u.wave = 2; u.x = -1; u.y = -1;
       /* A unit with Battlefield Insertion held back here counts toward the
@@ -515,11 +515,19 @@
       }
       if (ins.used >= ins.cap) return 'no more than half the army (' + ins.cap + ' units) may come in by Battlefield Insertion';
       if (mimicFull(u)) return 'no more than a quarter of the force (' + E.state.mimicCap[u.side] + ' units) may come in by it through the doctrine';
-      (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
+      emptyForReserve(u);
       if (u.bld) R.exitBuilding(E.state, u, null);
       u.reserve = true; u.x = -1; u.y = -1;
       if (ui.deployPick === u.id) ui.deployPick = null;
       return null;
+    }
+
+    /* A hull held back sets its passengers down to be deployed on their own —
+       except a drop platform, which "is loaded before the battle and never
+       again" (p. 79): its squad stays aboard and comes in with it. */
+    function emptyForReserve(u) {
+      if (u.transport && R.has(u, 'Immobile')) return;
+      (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
     }
 
     function deploymentDone() {

@@ -11,7 +11,7 @@
     return function (M) {
       var AIM = M.AIM, GLASS = M.GLASS, GLINT = M.GLINT, HF = M.HF, S3 = M.S3, STEEL = M.STEEL, TB = M.TB,
           TC = M.TC, TS = M.TS, TT = M.TT, aerial = M.aerial, along = M.along, alongOrder = M.alongOrder,
-          barrel = M.barrel, box = M.box, cos = M.cos, crossOn = M.crossOn, dark = M.dark, dead = M.dead,
+          barrel = M.barrel, box = M.box, camoOn = M.camoOn, cos = M.cos, crossOn = M.crossOn, dark = M.dark, dead = M.dead,
           deck = M.deck, drive = M.drive, droneDue = M.droneDue, droneKit = M.droneKit,
           droneMark = M.droneMark, droneSpot = M.droneSpot, frameAt = M.frameAt, g = M.g,
           gearOut = M.gearOut, grille = M.grille, hatch = M.hatch, hexFlank = M.hexFlank,
@@ -47,6 +47,10 @@
         var fc = S3(HF(aT, -w * 0.3), zc + 5);
         sEllipse(fc[0], fc[1] - 1, 2, 1.3, '#23271f');
       }
+      /* A pickup's cab and bonnet, when they face the viewer: a turret stood in
+         the bed behind them is drawn first and these laid over it again, so the
+         cab hides what is behind it (styledTop). */
+      var pickupFront = null;
       function styledHull() {
         var L = spec.len, Wd = spec.wid, H = spec.hgt, z0 = deck, st = spec.style;
         var w = Wd * 0.47;
@@ -96,6 +100,7 @@
             [{ t: L * 0.33, fn: bonnet }, { t: (cA0 + cA1) / 2, fn: cab }, { t: (bedA1 - L * 0.5) / 2, fn: bed }]
               .sort(function (p, q) { return p.t * fwdP - q.t * fwdP; })
               .forEach(function (p) { p.fn(); });
+            if (st.turret && fwdP > 0.02) pickupFront = function () { cab(); bonnet(); };
             return;
           }
           case 'truck': {
@@ -322,12 +327,11 @@
         }
       }
 
-      // side skirts over the running gear, drawn after the near wheels or tracks
-      /* An armoured car's mudguards: a raked plate over each wheel, set outboard
-         over the tyre, drawn after the wheels so the arch sits over its tyre. */
-      /* An armoured car's mudguards: a raked plate over each wheel, set outboard
-         over the tyre. The far side's go down before the hull, which hides them;
-         the inner edge runs in under the hull so they meet it from any side. */
+      /* An armoured car's mudguards: over each wheel, a bent plate — raked down
+         at the front, flat over the top, raked down at the back — open at the
+         sides, so the tyre shows under it. The far side's go down before the
+         hull, which hides them; the inner edge runs in under the hull so they
+         meet it from any side. */
       function carFenders(phase) {
         var WG = wheelGeom(), rIn = WG.r / K, w = spec.wid * 0.47;
         var ns = nearSide();
@@ -336,10 +340,25 @@
           var tsF = [];
           for (var i0 = 0; i0 < WG.n; i0++) tsF.push((i0 / (WG.n - 1) - 0.5) * WG.span);
           tsF = alongOrder(tsF);                            // the far arch first, the near one over it
+          var bIn = sd * w * 0.6, bOut = sd * (spec.wid * 0.5 + gearOut() + 0.01);
+          var z0 = lift + WG.r * 1.55, z1 = z0 + WG.r * 0.55 + 1.5;
+          function P(a, b, z) { return S3(HF(a, b), z); }
           for (var i = 0; i < WG.n; i++) {
-            var t = tsF[i];
-            var z0 = lift + WG.r * 1.55, h = WG.r * 0.55 + 1.5;
-            slabF(HF, t - rIn * 1.15, t + rIn * 1.15, sd * w * 0.6, sd * (spec.wid * 0.5 + gearOut() + 0.01), z0, h, TB, rIn * 0.45, rIn * 0.45, 0);
+            var t = tsF[i], aF = t + rIn * 1.15, aB = t - rIn * 1.15, tF = t + rIn * 0.7, tB = t - rIn * 0.7;
+            var front = [P(aF, bIn, z0), P(aF, bOut, z0), P(tF, bOut, z1), P(tF, bIn, z1)];
+            var back = [P(aB, bIn, z0), P(aB, bOut, z0), P(tB, bOut, z1), P(tB, bIn, z1)];
+            var top = [P(tB, bIn, z1), P(tB, bOut, z1), P(tF, bOut, z1), P(tF, bIn, z1)];
+            // the rake that faces away shows its underside through the open side
+            var dF = HF(aF, bOut), dB = HF(aB, bOut), fNear = dF.x + dF.y > dB.x + dB.y;
+            var far = fNear ? back : front, near = fNear ? front : back;
+            var cFar = mixc(TB.dark, '#0c0d0f', 0.45);
+            poly(g, far, cFar); camoOn(far, cFar, (z0 + z1) / 2, false, z1 - z0);
+            poly(g, top, TB.top); camoOn(top, TB.top, z1, true);
+            poly(g, near, TB.mid); camoOn(near, TB.mid, (z0 + z1) / 2, false, z1 - z0);
+            // the plate's rolled outer edge
+            edge(g, near[1], near[2], 'rgba(8,9,11,.55)', 0.9);
+            edge(g, top[1], top[2], 'rgba(255,240,214,.4)', 0.7);
+            edge(g, far[1], far[2], 'rgba(8,9,11,.55)', 0.9);
           }
         });
       }
@@ -384,6 +403,11 @@
         var TR = (st.tSize || 0.9) * MACHINE;                       // turret size, inches
         var TF = frameAt(tT, st.tSide ? w * st.tSide : 0, AIM);     // the turret frame
         var tz = roof;
+        /* A gun truck's turret stands on a pedestal in the bed, up at the height
+           of the cab's roof, so its guns clear the cab. A drone's has no cab to
+           clear — only a low armoured block — so its turret sits in the bed. */
+        var pedestal = st.body === 'pickup' && st.turret && !u.drone;
+        if (pedestal) tz = deck + H * 1.25;
 
         // ---- turrets ----
         function wedgeTurret(sz, hgt, wedge) {
@@ -419,16 +443,39 @@
           return barrel(TF, sz * 0.3, sz * 0.62, b, z, 1.2, 'mg', { col: '#15181e' });
         }
         // a plasma cannon's barrel: coil rings along it, a cyan throat at the muzzle
-        function plasmaBarrel(a0, len, z, wd) {
-          barrel(TF, a0, len, 0, z, wd, 'gun', { col: '#1c2129' });
+        // `up` lays it toward the sky, the rings following it up the barrel
+        function plasmaBarrel(a0, len, z, wd, up) {
+          up = up || 0;
+          var mz = barrel(TF, a0, len, 0, z, wd, 'gun', { col: '#1c2129', up: up });
           for (var i = 1; i <= 4; i++) {
-            var rp = S3(TF(a0 + (len - a0) * i / 5, 0), z);
+            var rp = S3(TF(a0 + (len - a0) * i / 5, 0), z + up * i / 5);
             sEllipse(rp[0], rp[1], wd * 0.46, wd * 0.4, '#2a313b');
             if (!dead) sEllipse(rp[0], rp[1], wd * 0.3, wd * 0.26, 'rgba(120,230,255,.8)');
           }
-          var mz = S3(TF(len, 0), z);
           if (!dead) sEllipse(mz[0], mz[1], wd * 0.48, wd * 0.43, 'rgba(180,245,255,.95)');
           return mz;
+        }
+        /* A short fat energy barrel: three blue vents down it and a wide mouth
+           with the charge glowing in it. `rake` lays it up; 0 fires it level. */
+        function energyStub(a0b, bz, reach, rake) {
+          var bt = barrel(TF, a0b, reach, 0, bz, 7.5, 'gun', { up: rake, col: '#141b22', lit: '#2a313b' });
+          /* three vents evenly spaced down the barrel as it is drawn, from its
+             hull end to just clear of the muzzle ring */
+          var vb0 = S3(TF(a0b, 0), bz), vdx = bt[0] - vb0[0], vdy = bt[1] - vb0[1];
+          // (the barrel's rounded end reaches back half its gauge past vb0; the muzzle ring is 3.9 out)
+          var vlen = Math.hypot(vdx, vdy) || 1, vs0 = -3.4 / vlen, vs1 = 1 - 3.9 / vlen;
+          for (var vv = 0; vv < 3 && !dead; vv++) {
+            var vt = vs0 + (vs1 - vs0) * (vv + 0.5) / 3, vx = vb0[0] + vdx * vt, vy = vb0[1] + vdy * vt;
+            sEllipse(vx, vy, 1.8, 1.53, '#0c1016');
+            sEllipse(vx, vy, 1.26, 0.99, 'rgba(120,230,255,.85)');
+          }
+          // the muzzle: a wide mouth across the end of the barrel, the charge glowing in it
+          sEllipse(bt[0], bt[1], 3.9, 3.4, '#0c1016');
+          if (!dead) {
+            sEllipse(bt[0], bt[1], 3.1, 2.7, 'rgba(120,230,255,.9)');
+            sEllipse(bt[0] - 0.6, bt[1] - 0.6, 1.3, 1.1, 'rgba(225,250,255,.95)');
+          }
+          return bt;
         }
         function pintle(fr, p, q, z, shield) {
           // a post, a machine gun on it, and a shield plate in front
@@ -495,38 +542,13 @@
                 sEllipse(mt[0], mt[1], 4.2, 3.6, mixc(hull, dark, 0.3));
               };
               gun = function () {
+                /* An energy howitzer: the long ringed plasma barrel, laid up at the
+                   sky the way an artillery piece's is (the advanced support vehicle). */
+                if (st.energyGun) { plasmaBarrel(TR * 0.35, TR * (st.gunLen || 1.7), tz + 7, 4.6, 42); return; }
                 if (st.stubGun) {
-                  /* A stubby howitzer, laid up at the sky: a short fat barrel,
-                     and where it fires energy the charge burns along it in blue. */
-                  /* Half the reach of an artillery piece's barrel and much
-                     thicker, but laid at the same angle: the rise is cut with the
-                     run, so it points where the light support vehicle's points. */
-                  // out of the turret's front face, not up through its roof
-                  var a0b = TR * 0.4, bz = tz + 8, reach = a0b + TR * (st.energyGun ? 0.5 : 0.85);
-                  var rake = Math.round(42 * (reach - a0b) / (TR * 1.25));
-                  var bt = barrel(TF, a0b, reach, 0, bz, st.energyGun ? 7.5 : 5.4, 'gun',
-                    st.energyGun ? { up: rake, col: '#141b22', lit: '#2a313b' } : { up: rake, brake: true, fume: 0.4 });
-                  if (st.energyGun) {
-                    // the coils down the barrel, and the mouth of it lit
-                    // the charge burning in it, the size the Gauss arms show it
-                    // a short barrel: its vents drawn to a slimmer gauge, so they sit apart inside it
-                    /* three vents evenly spaced down the barrel as it is drawn, from its
-                       hull end to just clear of the muzzle ring */
-                    var vb0 = S3(TF(a0b, 0), bz), vdx = bt[0] - vb0[0], vdy = bt[1] - vb0[1];
-                    // (the barrel's rounded end reaches back half its gauge past vb0; the muzzle ring is 3.9 out)
-                    var vlen = Math.hypot(vdx, vdy) || 1, vs0 = -3.4 / vlen, vs1 = 1 - 3.9 / vlen;
-                    for (var vv = 0; vv < 3 && !dead; vv++) {
-                      var vt = vs0 + (vs1 - vs0) * (vv + 0.5) / 3, vx = vb0[0] + vdx * vt, vy = vb0[1] + vdy * vt;
-                      sEllipse(vx, vy, 1.8, 1.53, '#0c1016');
-                      sEllipse(vx, vy, 1.26, 0.99, 'rgba(120,230,255,.85)');
-                    }
-                    // the muzzle: a wide mouth across the end of the barrel, the charge glowing in it
-                    sEllipse(bt[0], bt[1], 3.9, 3.4, '#0c1016');
-                    if (!dead) {
-                      sEllipse(bt[0], bt[1], 3.1, 2.7, 'rgba(120,230,255,.9)');
-                      sEllipse(bt[0] - 0.6, bt[1] - 0.6, 1.3, 1.1, 'rgba(225,250,255,.95)');
-                    }
-                  }
+                  // a stubby howitzer: half the reach and much thicker, at the same angle
+                  var a0b = TR * 0.4, reach = a0b + TR * 0.85;
+                  barrel(TF, a0b, reach, 0, tz + 8, 5.4, 'gun', { up: Math.round(42 * (reach - a0b) / (TR * 1.25)), brake: true, fume: 0.4 });
                   return;
                 }
                 barrel(TF, TR * 0.35, TR * 1.6, 0, tz + 7, 3.2, 'gun', { up: 42, fume: 0.45, brake: true });
@@ -541,7 +563,8 @@
                 aerial(TF, -TR * 0.5, TR * 0.32, tz + 13, 20);
               };
               gun = function () {
-                if (st.plasma) plasmaBarrel(TR * 0.3, TR * 1.5, tz + 6, 4.6);
+                // a plasma breaching gun: short and fat, out of the turret's front and level
+                if (st.plasma) energyStub(TR * 0.4, tz + 7, TR * 0.9, 0);
                 else barrel(TF, TR * 0.3, TR * 1.35, 0, tz + 6, 4.6, 'gun', { brake: true, up: 3, fume: 0.5 });
                 coaxMG(TR, tz + 5, TR * 0.24);
               };
@@ -606,14 +629,15 @@
             case 'dish':
               body = function () {
                 roundTurret(TR, 8);
-                var mb = S3(TF(-TR * 0.1, 0), tz + 8), mt = S3(TF(-TR * 0.1, 0), tz + 20);
+                // the mast, and on it the dish sat low over the turret
+                var mb = S3(TF(-TR * 0.1, 0), tz + 8), mt = S3(TF(-TR * 0.1, 0), tz + 15);
                 line(mb, mt, 1.6, STEEL);
                 // the dish, tilted back, and its feed horn
-                var dc = S3(TF(0.02, 0), tz + 24);
+                var dc = S3(TF(0.02, 0), tz + 19);
                 sEllipse(dc[0], dc[1], 8.5, 6.5, '#8e98a4');
                 sEllipse(dc[0] + 0.6, dc[1] + 0.4, 7.4, 5.5, '#c3ccd6');
                 sEllipse(dc[0] + 1, dc[1] + 0.6, 4.5, 3.2, '#a8b2bd');
-                var fh = S3(TF(0.2, 0), tz + 24);
+                var fh = S3(TF(0.2, 0), tz + 19);
                 line(dc, fh, 0.8, STEEL); sEllipse(fh[0], fh[1], 1, 1, STEEL);
                 aerial(HF, -L * 0.42, w * 0.6, roof, 24); aerial(HF, -L * 0.42, -w * 0.6, roof, 18);
               };
@@ -669,6 +693,19 @@
                 mount('rail', ftip, ftip[0] >= fbase[0] ? 1 : -1);
               };
               break;
+          }
+          if (pedestal) {
+            var body0 = body;
+            body = function () {
+              /* the pedestal it turns on, from the bed floor up to the turret: a
+                 column as wide as the turret, in the hull's own camouflage */
+              var pr = TR * 0.36, oct = [];
+              for (var pi = 0; pi < 8; pi++) oct.push([Math.cos((pi + 0.5) * Math.PI / 4) * pr, Math.sin((pi + 0.5) * Math.PI / 4) * pr]);
+              shape(TF, oct, roof, tz - roof, TB, 1);
+              body0();
+              // the cab, where it is nearer than the turret, hides the post and the turret's foot
+              if (pickupFront) pickupFront();
+            };
           }
           part(tdepth, fwd >= 0 ? function () { body(); gun(); } : function () { gun(); body(); });
         }

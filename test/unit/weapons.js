@@ -68,7 +68,8 @@ is('mdestroyer', 'shellbig+rail x2');
    crew has in the hatch. */
 is('mcv', 'shellbig+pistol x2');
 is('acv', 'shellbig+rail x3');
-is('hengveh', 'shell+rail x3');
+// the heavy engineering hull's breaching gun is plasma: one big blue bolt
+is('hengveh', 'plasmabolt');
 
 head('Arcing projectiles, and how many tubes fire at once');
 // support hulls fire in batteries: two tubes, then three
@@ -77,6 +78,38 @@ is('lsupport', 'arcbig x3');
 is('msupport', 'arcbig+arcbig x5');
 // the advanced support hull's heavy plasma cannon: four bolts, each bursting
 is('asupport', 'orbbig x3');
+
+head('Xenotripod strike craft and Deltas');
+// the strike craft lob one orb more with each grade, and nothing else
+is('xstrike2', 'orb x2');
+is('xstrike3', 'orb x3');
+is('xstrike4', 'orb x3');
+is('xstrike5', 'orb x4');
+// the Deltas' energy SMGs, every round landing in its own splash
+is('xdelta2', 'smg');
+is('xdelta3', 'smg');
+ok('Delta SMG rounds splash', spec('xdelta2').splash === true && spec('xdelta3').splash === true);
+ok('...and nothing else does', !spec('regular').splash && !spec('xbeta3').splash);
+
+head('Xenotripod salvos');
+all(['xalpha1', 'xalpha2', 'xalpha3', 'xalpha4', 'xalpha5'], 'energy x2');
+is('xbeta3', 'energy x3');
+is('xbeta4', 'energy x4');
+all(['xgamma3', 'xgamma4', 'xgamma5'], 'orb x3');
+is('xeps2', 'pistol');
+is('xeps3', 'small');
+is('xeps4', 'rail x4');
+is('xeps5', 'rail x5');
+all(['xdturret1', 'xdturret2', 'xdturret3', 'xdturret4', 'xdturret5'], 'orb x3');
+
+head('Bug salvos');
+is('bspitlarva', 'spit x2');
+is('bsporethrow', 'spit x3');
+is('bbioplasma', 'spitbig x4');
+is('bcarrier', 'spit x4');
+is('bovermind', 'spit x4');
+is('bqueen', 'spit x4');
+all(['blargewing', 'bsmallpath', 'bpathfinder', 'blurkers', 'bshadow'], 'spine');
 is('mortarsection', 'arc');
 is('mortarteam', 'arc x2');
 is('mortarbattery', 'arc x3');
@@ -193,7 +226,7 @@ all(['insertplat', 'rlifter'], 'none');
 head('Nothing falls through');
 var kinds = {};
 var bad = [];
-var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','none'];
+var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','none'];
 R.CATALOGUE.forEach(function (p) {
   var w = R.weaponSpec(p);
   if (KNOWN.indexOf(w.p) < 0) bad.push(p.name + ' \u2192 ' + w.p);

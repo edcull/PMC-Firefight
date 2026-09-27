@@ -455,6 +455,8 @@
   function hullWithLoad(g, u, opts) {
     var atT = opts.at || u, m;
     var tg = towedGun(u);
+    // a gun under a Lifter is slung on its cables, not towed
+    if (tg && u.cls === 'aircraft') return slungGun(g, u, tg, atT, opts);
     /* The gun goes on first when it is the further of the two — and when it is
        level with the hull (a side-on tow, E or W), so the hull's near wheels
        cover the hitch rather than the trail covering them. */
@@ -489,6 +491,26 @@
     m = drawMachine(g, u, opts);
     if (tg && !tBehind) drawTowed(g, u, tg, atT);
     return m;
+  }
+
+  /* A Lifter carrying an emplaced gun (p. 94): the craft rides higher, and the
+     gun hangs under it on four cables, closed up as for the road. */
+  function slungGun(g, u, gun, atT, opts) {
+    var hang = 22, top = 26, climb = hang + top + 24, base = opts.lift || 0;
+    var f = u.facing || 0, c = Math.cos(f), sn = Math.sin(f);
+    drawSlung(g, u, gun, atT, base + hang);
+    var hook = toScreen(atT.x, atT.y);
+    hook.y -= base + climb + flyLift(u) - 2;
+    [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) {
+      var t = q[0] * 0.45, s2 = q[1] * 0.3;
+      var w = toScreen(atT.x + c * t - sn * s2, atT.y + sn * t + c * s2);
+      thickLine(g, hook.x, hook.y, w.x, w.y - base - hang - 10, Math.max(1.2, K * 0.035), '#16181a');
+    });
+    var lo = {};
+    for (var ok in opts) lo[ok] = opts[ok];
+    lo.lift = base + climb;
+    lo.ground = base;                                // raised by its load, not off the ground: the shadow stays down there
+    return drawMachine(g, u, lo);
   }
 
   var DIM_CANVAS = null;
@@ -893,7 +915,7 @@
   });
   var FIELD_GUN = ISOGUNS.FIELD_GUN, GUN_CREW = ISOGUNS.GUN_CREW, GUN_K = ISOGUNS.GUN_K;
   var PIECE3D = ISOGUNS.PIECE3D, belt = ISOGUNS.belt, drawPieces3D = ISOGUNS.drawPieces3D;
-  var drawTowed = ISOGUNS.drawTowed, fieldGun = ISOGUNS.fieldGun, fieldMuzzle = ISOGUNS.fieldMuzzle;
+  var drawTowed = ISOGUNS.drawTowed, drawSlung = ISOGUNS.drawSlung, fieldGun = ISOGUNS.fieldGun, fieldMuzzle = ISOGUNS.fieldMuzzle;
   var gunFaceL = ISOGUNS.gunFaceL, gunOpts = ISOGUNS.gunOpts, pal2 = ISOGUNS.pal2;
   var pieceAngles = ISOGUNS.pieceAngles, pieceMuzzles3D = ISOGUNS.pieceMuzzles3D;
   var pieceWreck = ISOGUNS.pieceWreck, startTurn = ISOGUNS.startTurn, towedGun = ISOGUNS.towedGun;

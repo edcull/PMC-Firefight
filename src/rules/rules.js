@@ -173,10 +173,11 @@
   function alienHull(p) { return !!p && (p.faction === 'bugs' || p.faction === 'xeno'); }
   /* Drone Control (p. 37): "Vehicles without the Transport special rule" — ground
      hulls and aircraft alike (p. 39) — "can be fielded by all armies except the
-     Bugs". A turret is Drone Controlled already, and a Teleport craft carries troops. */
+     Bugs". A turret is Drone Controlled already. The Teleport craft may be
+     flown crewed or as a drone: its gate is steered from the aerial either way. */
   function canBeDrone(p) {
     return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' && !p.mustDrone &&
-      !(p.rules || []).some(function (r) { return /^(Transport|Teleport|Turret)/.test(r); }) &&
+      !(p.rules || []).some(function (r) { return /^(Transport|Turret)/.test(r) || (/^Teleport/.test(r) && p.cls !== 'aircraft'); }) &&
       !/Turret/.test(p.group || '');
   }
   // which propulsions a profile may take: ground vehicles only
@@ -860,7 +861,9 @@
     // dug in, a field piece fires over open sights: big shells straight at the target (p. 94)
     if (DUG_WEAPONS[u.key] && dugIn(u)) w = DUG_WEAPONS[u.key];
     // `n` is how many the primary puts out at once; `sn` the same for the secondary
-    return { p: w.p, s: w.s || null, n: w.n || 1, sn: w.sn || 1 };
+    var spec = { p: w.p, s: w.s || null, n: w.n || 1, sn: w.sn || 1 };
+    if (w.splash) spec.splash = true;
+    return spec;
   }
   // the primary alone, which is what most callers want
   function weaponStyle(u) { return weaponSpec(u).p; }
@@ -1158,14 +1161,15 @@
     // a vehicle hanging under a Lifter takes nothing on, and hitches no gun (p. 94)
     if (veh.aboard) return false;
     /* A Lifter is a flying crane: it picks up a single vehicle — with whatever is
-       already riding inside it — and never infantry (p. 94). Every other hull is
-       the other way round. */
+       already riding inside it — and never infantry, nor an emplaced gun, which
+       is no vehicle (p. 94). Every other hull is the other way round. */
     if (hasOwn(veh, 'Lifter')) {
       if (u.cls !== 'vehicle') return false;
+      if (u.bld) return false;
       if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
       if (u.disembarked) return false;
       // a hull towing an emplaced gun cannot be lifted (p. 94)
-      if ((u.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); })) return false;
+      if (towedGuns(u).length) return false;
       return unitDist(veh, u) <= 4;
     }
     if (isMachine(u)) return false;

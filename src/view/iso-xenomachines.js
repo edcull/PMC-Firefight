@@ -129,13 +129,14 @@
             if (!dead) ellipse(g, pts[1][0], pts[1][1], m(0.9), m(0.8), GLO.l);
             /* A drone's aerial — and the teleport craft's, which steers its gate by it: one
                whip off the top edge of the dorsal wing, raked at the wing's own sweep, a blue
-               light at its tip that blinks about once a second. */
+               light at its tip. On a drone it blinks about once a second; a crewed teleport
+               craft's burns steady. */
             if ((u.drone || spec.ring) && w.dorsal && !dead) {
               var k8 = 0.78, at0 = le + (tp - le) * k8, r0 = rf + (w.sp - rf) * k8;
               var a0 = P3(at0, r0, w.ph), a1 = P3(at0 + (tp - le) * 0.42, r0 + (w.sp - rf) * 0.42, w.ph);
               stroke([a0, a1], 1.6, WH.dk);
               stroke([a0, a1], 0.8, WH.lt);
-              var blueOn = Math.floor(tnow / 500) % 2 === 0;
+              var blueOn = !u.drone || Math.floor(tnow / 500) % 2 === 0;
               if (blueOn) ellipse(g, a1[0], a1[1], 3.8, 3.8, 'rgba(110,190,255,.3)');
               ellipse(g, a1[0], a1[1], 1.9, 1.9, blueOn ? '#6ebeff' : '#1d3552');
               if (blueOn) ellipse(g, a1[0], a1[1], 0.9, 0.9, '#e4f4ff');

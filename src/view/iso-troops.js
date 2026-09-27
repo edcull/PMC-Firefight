@@ -208,7 +208,8 @@
       x_alpha4: ['xalpha', 'xalphaR'], x_alpha5: ['xalpha', 'xalphaR'],
       x_beta2: ['xbeta'], x_beta3: ['xbeta'], x_beta4: ['xbetacloak'],
       x_gamma3: ['xgamma'], x_gamma4: ['xgamma'], x_gamma5: ['xgammacloak'],
-      x_delta1: ['xdelta'], x_delta2: ['xdeltagun'], x_delta3: ['xdeltagun'],
+      // the Deltas' SMGs: the leader's alone at Low grade, two in the squad at Core
+      x_delta1: ['xdelta'], x_delta2: ['xdeltasmg', 'xdelta'], x_delta3: ['xdeltasmg', 'xdeltasmg', 'xdelta'],
       x_eps1: ['esh1', 'esh1b'], x_eps2: ['esh2'], x_eps3: ['esh3'], x_eps4: ['esh4'], x_eps5: ['esh5'],
       // hardened insurgents: the guard's green field kit, with helmets in the side's colour
       insurgent: ['hardlead', 'hardsaw', 'hardrifle'],
@@ -337,8 +338,9 @@
       spotter: { helm: 'hood', gun: 'optics', pack: 'std', kneel: true, pouches: '#5d6e3a' },
       spotternv: { helm: 'hood', gun: 'optics', pack: 'std', kneel: true, pouches: '#5d6e3a', nvg: true },
       armour: { helm: 'sealed', gun: 'heavy', pack: 'none', bulk: 2, armoured: true },
-      // the Protectors: battle armour with a grenade box on the shoulder and night-vision goggles
-      protector: { helm: 'sealed', gun: 'heavy', shoulderGL: true, pack: 'none', bulk: 2, armoured: true, nvg: true },
+      // the Protectors: battle armour with a grenade box on the shoulder, the sealed helm bare;
+      // the hi-mobility squad keeps its night-vision goggles
+      protector: { helm: 'sealed', gun: 'heavy', shoulderGL: true, pack: 'none', bulk: 2, armoured: true },
       protectorhm: { helm: 'sealed', gun: 'heavy', shoulderGL: true, pack: 'jetpack', bulk: 2, armoured: true, nvg: true },
       medic: { helm: 'std', gun: 'case', pack: 'medic', kneel: true, badge: '#e8f0f6' },
       corpsman: { helm: 'std', gun: 'pistol', pack: 'medic', badge: '#e8f0f6' },
@@ -422,7 +424,8 @@
       xgamma: { xeno: 'crock', rank: 'gamma', gun: 'launcher', big: 1.1, mz: [32, -43] },
       xgammacloak: { xeno: 'crock', rank: 'gamma', gun: 'launcher', cloak: true, fitAs: 'xgamma', big: 1.1, mz: [32, -43] },
       xdelta: { xeno: 'crock', rank: 'delta', gun: 'blades', big: 1.06, mz: [31, -50] },
-      xdeltagun: { xeno: 'crock', rank: 'delta', gun: 'blades', bladeFire: true, big: 1.06, mz: [22, -28] },
+      // a Delta with an energy SMG in both hands, and no blade
+      xdeltasmg: { xeno: 'crock', rank: 'delta', gun: 'xsmg', fitAs: 'xdelta', big: 1.06, mz: [27, -29] },
       esh1: { xeno: 'esh', gun: 'blade', big: 0.9, mz: [22, -40] },
       esh1b: { xeno: 'esh', gun: 'spear', big: 0.9, mz: [32, -47] },
       esh2: { xeno: 'esh', gun: 'slug', big: 0.9, mz: [27, -37] },
