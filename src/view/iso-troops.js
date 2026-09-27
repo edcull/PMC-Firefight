@@ -1144,7 +1144,7 @@
       var wy = -32 + (pose === 'kneel' ? KNEEL_DROP : 0);
       return [-7, legY(kit, wy - 15.5)];
     }
-    // a penal trooper's collar lamp, which the board lights over the figure: green, amber when suppressed
+    // a penal trooper's collar lamp, which the board lights over the figure: green, yellow when suppressed
     function lampArt(kit, pose) {
       if (!kit.collar || pose === 'prone') return null;
       var drop = pose === 'kneel' ? KNEEL_DROP : 0;
