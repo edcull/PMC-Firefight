@@ -1,8 +1,9 @@
 /* The main menu: the first screen, and the one every "back" leads to.
 
-   Skirmish, Campaign and Multiplayer each hand over to the screen that already
-   does the job — the muster sheet, the campaign dossier, the lobby — so this
-   file only decides which one to open and how it is set up.
+   Single player and Multiplayer each open a list of their own (Online has one
+   more under it), and every card on those hands over to the screen that
+   already does the job — the muster sheet, the campaign dossier, the lobby —
+   so this file only decides which one to open and how it is set up.
 
    Behind it, a table rolled from the book's generators and drawn by the
    board's own renderer. Every few seconds the next world in the list is
@@ -22,13 +23,21 @@
   function el(id) { return document.getElementById(id); }
 
   /* ================= navigation ================= */
+  var PANES = ['main', 'single', 'multi', 'online'];
+  // where Back (and Escape) goes from each list
+  var UP = { single: 'main', multi: 'main', online: 'multi' };
+  var at = 'main';
+
   function show(pane) {
-    el('menu-main').hidden = pane !== 'main';
-    el('menu-skirmish').hidden = pane !== 'skirmish';
-    // the foot: the unit viewer under the main menu, the demo under the skirmish list
+    // Online is only there with a game server behind the page
+    if (pane === 'online' && el('btn-multi') && el('btn-multi').disabled) pane = 'multi';
+    if (PANES.indexOf(pane) < 0) pane = 'main';
+    at = pane;
+    PANES.forEach(function (p) { var e = el('menu-' + p); if (e) e.hidden = p !== pane; });
+    // the foot: the unit viewer under the main menu, the demo under the single-player list
     var v = el('lnk-viewer'), d = el('btn-menu-demo');
-    if (v) v.hidden = pane === 'skirmish';
-    if (d) d.hidden = pane !== 'skirmish';
+    if (v) v.hidden = pane === 'single';
+    if (d) d.hidden = pane !== 'single';
   }
 
   function open(pane) {
@@ -60,12 +69,20 @@
       unconfirm();
     }
     var camp = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get();
-    var sub = el('menu-camp-sub');
-    if (sub) {
-      sub.textContent = camp && camp.companies && camp.companies.A
-        ? 'Continue: ' + camp.companies.A.name + ', campaign turn ' + camp.turn
-        : 'Raise a force and see it through a war';
-    }
+    /* There is one campaign at a time: the card for the way it is played says
+       Continue, and the other says which one either card will open. */
+    var on = camp && camp.companies && camp.companies.A;
+    var hot = on && camp.mode === 'hotseat';
+    campSub('menu-camp-sub', on, !hot, 'Raise a force and see it through a war', camp);
+    campSub('menu-camphot-sub', on, hot, 'Two dossiers, two players, one screen', camp);
+  }
+  function campSub(id, on, mine, fresh, camp) {
+    var sub = el(id);
+    if (!sub) return;
+    sub.textContent = !on ? fresh
+      : mine ? 'Continue: ' + camp.companies.A.name + ', campaign turn ' + camp.turn
+      : 'A ' + (camp.mode === 'hotseat' ? 'hotseat' : 'single-player') + ' campaign is under way: ' +
+        camp.companies.A.name + ', turn ' + camp.turn;
   }
 
   // the x back to an x, and the card back to saying the battle is on
@@ -88,9 +105,22 @@
       if (go) { show(go); return; }
       var kind = b.getAttribute('data-skirmish');
       if (kind) { close(); if (root.PMC_SKIRMISH) root.PMC_SKIRMISH(kind); return; }
+      // the campaign, solo or hotseat: the dossier takes it from here (dossier.js)
+      var cm = b.getAttribute('data-camp');
+      if (cm) { if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.enter) root.PMC_CAMPAIGN.enter(cm); else close(); return; }
+      // a game over the network: the lobby, set for the kind picked (lobby.js)
+      var net = b.getAttribute('data-online');
+      if (net) {
+        if (b.disabled || !root.PMCLobby) return;
+        var s = el('setup');
+        if (s) s.hidden = true;
+        close();
+        root.PMCLobby.open(net);
+        return;
+      }
       if (b.id !== 'btn-discard') unconfirm();
       switch (b.id) {
-        case 'btn-skirmish': show('skirmish'); return;
+        case 'btn-multi': show('online'); return;
         case 'btn-resume': close(); return;
         case 'btn-discard':
           if (!b.classList.contains('confirm')) {
@@ -103,15 +133,12 @@
           if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
           paint();
           return;
-        /* The campaign and multiplayer cards are wired by the screens they
-           open (dossier.js, game.js); all the menu does is get out of the way. */
-        case 'btn-campaign': case 'btn-multi': close(); return;
       }
     });
     document.addEventListener('keydown', function (e) {
       if (!isOpen()) return;
       if (e.key === 'Escape') {
-        if (!el('menu-skirmish').hidden) show('main');
+        if (UP[at]) show(UP[at]);
         else if (root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE()) close();
       }
     });

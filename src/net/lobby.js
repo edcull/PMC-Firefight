@@ -23,6 +23,8 @@
   var fault = '';
   var campaigns = [];
   var myForce = null;           // the force this screen has built, as the lobby sees it
+  var kind = 'skirmish';        // what the menu opened it for: 'skirmish' | 'campaign'
+  var campPick = '';            // the server's campaign a new game is started under
 
   function esc(t) { return root.PMC.esc(t); }   // the shared one, in the rules
   function el(id) { return document.getElementById(id); }
@@ -122,7 +124,7 @@
     if (!host || host.hidden) return;
     var inRoom = !!(view === 'room' && room);
     el('lobby-body').innerHTML = inRoom ? roomHTML() : lobbyHTML();
-    if (el('lobby-title')) el('lobby-title').textContent = inRoom ? room.name : 'Multiplayer';
+    if (el('lobby-title')) el('lobby-title').textContent = inRoom ? room.name : kind === 'campaign' ? 'Online campaign' : 'Online skirmish';
     var cd = el('lobby-code');
     if (cd) { cd.hidden = !inRoom; cd.textContent = inRoom ? room.id : ''; cd.title = 'Read this out to whoever you are playing'; }
     var sh = host.querySelector('.lobby-sheet');
@@ -140,12 +142,18 @@
   }
 
   function lobbyHTML() {
-    var list = games.length ? games.map(gameRow).join('') :
-      '<p class="lob-empty">No games open. Start one and read the code out to whoever you are playing.</p>';
-    return '<p class="lede">Play somebody else over the network. Start a game and read its code out, or join one with the code you were given. ' +
+    var camp = kind === 'campaign';
+    // the open games of the kind asked for; a code joins any of them
+    var shown = games.filter(function (g) { return !!g.campaign === camp; });
+    var list = shown.length ? shown.map(gameRow).join('') :
+      '<p class="lob-empty">No ' + (camp ? 'campaign battles' : 'games') + ' open. Start one and read the code out to whoever you are playing.</p>';
+    return '<p class="lede">' + (camp
+      ? 'A battle in a campaign kept on this server, which both players share. Pick the campaign, start a game and read its code out, or join one with the code you were given. '
+      : 'Play somebody else over the network. Start a game and read its code out, or join one with the code you were given. ') +
       '<span class="lob-status">' + esc(status) + '</span></p>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
       whoHTML() +
+      (camp ? campPickHTML() : '') +
       '<div class="field"><label for="join-code">Games</label>' +
       '<div class="lob-row">' +
       '<button class="lnk lob-go" data-lob="create">Start a game</button>' +
@@ -154,6 +162,19 @@
       '</div></div>' +
       '<div class="lob-list">' + list + '</div>' +
       chatHTML('lobby');
+  }
+
+  // Online campaign: which of the server's campaigns a new game is fought under
+  function campPickHTML() {
+    if (!campaigns.length) {
+      return '<p class="lob-empty">No campaign is kept on this server yet. Start one under Campaign, keep it on the server, and come back.</p>';
+    }
+    if (!campaigns.some(function (c) { return c.name === campPick; })) campPick = campaigns[0].name;
+    return '<div class="field"><label for="lob-camp">Campaign</label><select id="lob-camp">' +
+      campaigns.map(function (c) {
+        return '<option value="' + esc(c.name) + '"' + (c.name === campPick ? ' selected' : '') + '>' +
+          esc(c.name + ' — turn ' + c.turn) + '</option>';
+      }).join('') + '</select></div>';
   }
 
   function gameRow(g) {
@@ -303,13 +324,19 @@
         draw();
         return;
       }
-      case 'create':
+      case 'create': {
+        var terms = { tier: 3, pl: 1, planet: 'random', scenario: 'roll' };
+        if (kind === 'campaign') {
+          if (!campPick) { fault = 'There is no campaign on this server to fight under.'; draw(); return; }
+          terms.campaign = campPick;
+        }
         net.send('game.create', {
           name: me.name + '’s battle',
-          settings: { tier: 3, pl: 1, planet: 'random', scenario: 'roll' },
+          settings: terms,
           force: myForce || currentForce()
         });
         return;
+      }
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
       case 'sit': net.send('game.seat', { seat: b.getAttribute('data-seat') }); return;
       case 'leave': keepRoom(''); net.send('game.leave'); view = 'lobby'; draw(); return;
@@ -377,6 +404,7 @@
   /* Terms are sent as they are changed rather than on a button: the other side
      should see the tier move while it is being argued about. */
   function onTermChange(e) {
+    if (e.target && e.target.id === 'lob-camp') { campPick = e.target.value; return; }
     var box = e.target, k = box && box.getAttribute && box.getAttribute('data-term');
     if (!k || !net) return;
     var patch = {};
@@ -473,7 +501,9 @@
        the published single file, has none — and the button that opens this is
        only offered when there is. */
     available: function () { return NET.online(); },
-    open: function () {
+    // which: 'skirmish' or 'campaign', from the menu's Online list; left out, as it was
+    open: function (which) {
+      if (which === 'skirmish' || which === 'campaign') kind = which;
       ensure();
       connect();
       open(room ? 'room' : 'lobby');

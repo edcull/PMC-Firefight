@@ -284,8 +284,22 @@ app.drain(4);
   W.PMCMenu.open();
   ok('the menu opens', W.PMCMenu.isOpen() && byId('setup').hidden === true);
   ok('with no battle on, there is no battle to go back to', byId('btn-resume').hidden === true);
-  W.PMCMenu.show('skirmish');
-  ok('Skirmish opens its own list', byId('menu-skirmish').hidden === false && byId('menu-main').hidden === true);
+  W.PMCMenu.show('single');
+  ok('Single player opens its own list', byId('menu-single').hidden === false && byId('menu-main').hidden === true);
+  /* This DOM has no selectors, so which card sits in which list is read off the page itself. */
+  const page = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const pane = (id) => { const m = page.match(new RegExp('id="menu-' + id + '"[\\s\\S]*?data-menu="(main|multi)">')); return m ? m[0] : ''; };
+  ok('...with a skirmish, solitaire and the campaign on it',
+    /data-skirmish="ai"/.test(pane('single')) && /data-skirmish="solo"/.test(pane('single')) && /id="btn-campaign"/.test(pane('single')));
+  W.PMCMenu.show('multi');
+  ok('Multiplayer opens its own list', byId('menu-multi').hidden === false && byId('menu-single').hidden === true);
+  ok('...with Online and the three hotseats on it', /id="btn-multi"/.test(pane('multi')) &&
+    /data-skirmish="hotseat"/.test(pane('multi')) && /data-skirmish="coop"/.test(pane('multi')) && /data-camp="hotseat"/.test(pane('multi')));
+  ok('...and Online has a skirmish, a campaign and co-op under it',
+    ['skirmish', 'campaign', 'coop'].every((k) => pane('online').indexOf('data-online="' + k + '"') >= 0));
+  W.PMCMenu.show('online');
+  ok('...and Online stays shut with no server behind the page', byId('menu-online').hidden === true && byId('menu-multi').hidden === false);
+  W.PMCMenu.show('main');
   W.PMCMenu.close(); W.PMC_SKIRMISH('hotseat');
   ok('Hotseat opens the muster sheet, set for hotseat',
     byId('setup').hidden === false && W.__hot().kind === 'hotseat');
@@ -463,7 +477,10 @@ ok('the multiplayer button is wired up', ash.doc.getElementById('btn-multi').hid
 ok('...and greyed out on a page with no server behind it', app.doc.getElementById('btn-multi').disabled === true &&
   app.doc.getElementById('btn-multi').hidden === false);
 const ashBody = () => ash.doc.getElementById('lobby-body').innerHTML;
-ok('the lobby screen draws', /Start a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Multiplayer');
+ok('the lobby screen draws', /Start a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Online skirmish');
+ash.win.PMCMenu.show('online');
+ok('with a server, Online opens its own list', ash.doc.getElementById('menu-online').hidden === false);
+ash.win.PMCMenu.show('main');
 ok('it says there are no games yet', /No games open/.test(ashBody()));
 
 /* Ash starts a game. */

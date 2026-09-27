@@ -157,6 +157,8 @@
   var after = null;             // the aftermath being worked through
   // what each screen has open, kept here so the screens can live in their own files
   var secondFaction = null;       // what the hub said the second player runs, until they found it
+  var wantMode = 'solo';          // how a new campaign will be played: the menu card it was opened from
+  var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false;
   var hubPane = 'dossier';            // the hub opens on the unit cards
   var rosterTab = 'units';
@@ -325,7 +327,7 @@
       ROMAN: ROMAN, Store: Store, cmodal: cmodal, coin: coin, colourName: colourName, colourOf: colourOf,
       dossierPanel: dossierPanel, entryCard: entryCard, esc: esc, memorialList: memorialList,
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
-      get camp() { return camp; }, get colourOpen() { return colourOpen; },
+      get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses
     }));
@@ -929,7 +931,11 @@
       }
       else if (ev.target.id === 'camp-planet') contract.planet = ev.target.value;
     });
-    function enter() {
+    /* The menu's Campaign cards: single player and hotseat. There is one
+       campaign at a time, so with one under way either card opens it; with none,
+       the new-campaign form starts on the way of playing that card named. */
+    function enter(mode) {
+      if (mode === 'solo' || mode === 'hotseat') wantMode = mode;
       var setup = el('setup');
       if (setup) setup.hidden = true;                 // the muster sheet would sit on top
       /* The campaign's battle is still being fought (the page was refreshed in
@@ -942,8 +948,8 @@
       if (camp && camp.pending) { camp.pending = null; save(); }   // a battle abandoned mid-flight
       open(view === 'aftermath' ? 'aftermath' : 'hub');
     }
-    var btn = el('btn-campaign');
-    if (btn) btn.addEventListener('click', enter);
+    // the main menu's cards say which way of playing they are for (menu.js calls in)
+    enterCampaign = enter;
     // the muster sheet covers the header on a fresh load, so it needs its own way in
     var setupBtn = el('btn-setup-campaign');
     if (setupBtn) setupBtn.addEventListener('click', enter);
@@ -972,6 +978,7 @@
   };
   root.PMC_CAMPAIGN = {
     open: open, close: close, onFinish: onFinish,
+    enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
     get: function () { return camp; },
     set: function (c) { camp = c; save(); render(); },
     store: Store
