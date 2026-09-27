@@ -101,6 +101,15 @@ is('xeps3', 'small');
 is('xeps4', 'rail x4');
 is('xeps5', 'rail x5');
 all(['xdturret1', 'xdturret2', 'xdturret3', 'xdturret4', 'xdturret5'], 'orb x3');
+
+head('Bug salvos');
+is('bspitlarva', 'spit x2');
+is('bsporethrow', 'spit x3');
+is('bbioplasma', 'spitbig x4');
+is('bcarrier', 'spit x4');
+is('bovermind', 'spit x4');
+is('bqueen', 'spit x4');
+all(['blargewing', 'bsmallpath', 'bpathfinder', 'blurkers', 'bshadow'], 'spine');
 is('mortarsection', 'arc');
 is('mortarteam', 'arc x2');
 is('mortarbattery', 'arc x3');

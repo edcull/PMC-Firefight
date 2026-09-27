@@ -483,19 +483,20 @@
 
     /* ---- the Space Bugs ----
        Nothing here fires a round. Spore bugs and the leaders spit acid in a low,
-       wet lob (`spit`); the bio-plasma thrower and the Queen hurl a glowing sac
+       wet lob (`spit`), the Queen four at a time; the bio-plasma thrower hurls a glowing sac
        of it (`spitbig`); winged and pioneer bugs loose a volley of chitin spines
        (`spine`). The fire beetle's jaws are a flame projector. Lesser,
        underground and infected have no Firepower and so no weapon at all. */
-    bspitlarva: { p: 'spit' }, bimmspit: { p: 'spit', n: 2 }, bspitters: { p: 'spit', n: 3 },
-    bsporethrow: { p: 'spit', n: 4 },
-    bbioplasma: { p: 'spitbig', n: 2 }, bfirebeetle: { p: 'flame' },
-    bsmallwing: { p: 'spine' }, blargewing: { p: 'spine', s: 'spit', sn: 2 },
-    bcarrier: { p: 'spit', n: 2 },
-    bsmallpath: { p: 'spine' }, bpathfinder: { p: 'spine' }, blurkers: { p: 'spine', s: 'spit' },
-    bshadow: { p: 'spine', s: 'spit', sn: 2 },
+    bspitlarva: { p: 'spit', n: 2 }, bimmspit: { p: 'spit', n: 2 }, bspitters: { p: 'spit', n: 3 },
+    bsporethrow: { p: 'spit', n: 3 },
+    bbioplasma: { p: 'spitbig', n: 4 }, bfirebeetle: { p: 'flame' },
+    // the winged, pioneer and shadow bugs loose their spines and nothing else
+    bsmallwing: { p: 'spine' }, blargewing: { p: 'spine' },
+    bcarrier: { p: 'spit', n: 4 },
+    bsmallpath: { p: 'spine' }, bpathfinder: { p: 'spine' }, blurkers: { p: 'spine' },
+    bshadow: { p: 'spine' },
     bwatchlarva: { p: 'spit' }, bimmwatch: { p: 'spit' }, bwatchers: { p: 'spit' },
-    bovermind: { p: 'spit', n: 2 }, bqueen: { p: 'spitbig', n: 2 },
+    bovermind: { p: 'spit', n: 4 }, bqueen: { p: 'spit', n: 4 },
     // claws and mandibles only: Firepower —
     btiny: { p: 'none' }, bsmall: { p: 'none' }, battack: { p: 'none' }, boversized: { p: 'none' },
     bunderground: { p: 'none' }, bhugeunder: { p: 'none' }, bsandworm: { p: 'none' },

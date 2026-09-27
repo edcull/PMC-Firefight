@@ -387,12 +387,16 @@
             }
             arm([[ax, ay], [9, ay + 4], [12, by - 3], [12, by - 7]], 1.8, 1, W0);
             arm([[1, ay + 2], [2, ay + 6], [5, by - 1], [5, by - 5]], 1.6, 0.9, W0);
-          } else if (wpn2 === 'blades' || wpn2 === 'xsmg') {   // Delta: an energy blade on each arm, or a blade and an SMG
-            arm([[ax, ay], [9, ay + 4], [12, ay + 2], [15, ay - 2]], 1.8, 1.1, W0);
-            F([[15, ay - 3.6], [29, ay - 17], [18, ay - 1.4]], dead ? '#666' : GL.m);
-            if (!dead) L([[16, ay - 3], [27, ay - 15]], 0.6, GL.l);
+          } else if (wpn2 === 'blades' || wpn2 === 'xsmg') {   // Delta: an energy blade on each arm, or an SMG in both hands
             if (wpn2 === 'xsmg') {
-              /* An energy SMG in the lower hand: a stubby faceted receiver, a
+              arm([[ax, ay], [10, ay + 3.5], [15, ay + 5], [19, ay + 6.5]], 1.8, 1.1, W0);   // the upper hand under the barrel, no blade
+            } else {
+              arm([[ax, ay], [9, ay + 4], [12, ay + 2], [15, ay - 2]], 1.8, 1.1, W0);
+              F([[15, ay - 3.6], [29, ay - 17], [18, ay - 1.4]], dead ? '#666' : GL.m);
+              if (!dead) L([[16, ay - 3], [27, ay - 15]], 0.6, GL.l);
+            }
+            if (wpn2 === 'xsmg') {
+              /* An energy SMG, held in both hands: a stubby faceted receiver, a
                  glowing power cell hung under it for a magazine, and a short
                  shrouded barrel with the army's light at the muzzle. */
               var SC = dead ? '#555' : GL.m;

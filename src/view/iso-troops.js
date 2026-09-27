@@ -424,7 +424,7 @@
       xgamma: { xeno: 'crock', rank: 'gamma', gun: 'launcher', big: 1.1, mz: [32, -43] },
       xgammacloak: { xeno: 'crock', rank: 'gamma', gun: 'launcher', cloak: true, fitAs: 'xgamma', big: 1.1, mz: [32, -43] },
       xdelta: { xeno: 'crock', rank: 'delta', gun: 'blades', big: 1.06, mz: [31, -50] },
-      // a Delta with an energy SMG in the lower hand, the blade still on the upper arm
+      // a Delta with an energy SMG in both hands, and no blade
       xdeltasmg: { xeno: 'crock', rank: 'delta', gun: 'xsmg', fitAs: 'xdelta', big: 1.06, mz: [27, -29] },
       esh1: { xeno: 'esh', gun: 'blade', big: 0.9, mz: [22, -40] },
       esh1b: { xeno: 'esh', gun: 'spear', big: 0.9, mz: [32, -47] },
