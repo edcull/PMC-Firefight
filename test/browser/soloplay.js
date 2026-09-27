@@ -28,7 +28,7 @@ const { page: PAGE } = require('../where.js');
     await p.waitForTimeout(200);
     await p.evaluate(() => {
       window.PMC_STATE().cfg.aiSides = ['A', 'B'];
-      const b = document.querySelector('button[data-act="start"]'); if (b) b.click();
+      const b = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')); if (b) b.click();
     });
     let last = null;
     for (let i = 0; i < (+process.env.STEPS || 150); i++) {

@@ -142,7 +142,7 @@ async function askArrival(p) {
   await p.waitForTimeout(400);
   await drain(p);
   await p.evaluate(() => {
-    const b2 = document.querySelector('button[data-act="start"]');
+    const b2 = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]'));
     if (b2) b2.click();
   });
   await p.waitForTimeout(700);
@@ -248,7 +248,7 @@ async function askArrival(p) {
   await p.waitForTimeout(400);
   await drain(p);
   await p.evaluate(() => {
-    const s2 = document.querySelector('button[data-act="start"]');
+    const s2 = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]'));
     if (s2) s2.click();
   });
   await p.waitForTimeout(700);

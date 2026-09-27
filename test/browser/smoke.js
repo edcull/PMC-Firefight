@@ -35,8 +35,11 @@ async function dismissEarly(page) {
   await page.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
   await page.waitForTimeout(400);
   await dismissEarly(page);
-  await page.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await page.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await page.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await page.evaluate(() => (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')).click());
+  // an empty transport is asked about first: press through that too
+  await page.waitForTimeout(150);
+  await page.evaluate(() => { const b = document.querySelector('.cmodal button[data-act="start"]'); if (b) b.click(); });
   await page.waitForTimeout(500);
 
   const dismiss = async () => {

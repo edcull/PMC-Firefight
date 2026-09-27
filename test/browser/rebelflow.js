@@ -226,7 +226,7 @@ async function pastFronts(p) {
   const started = await p.evaluate(() => {
     const s = window.PMC_STATE();
     s.cfg.aiSides = ['A', 'B'];
-    const b = document.querySelector('button[data-act="start"]');
+    const b = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]'));
     if (b) b.click();
     return s.phase;
   });

@@ -36,8 +36,11 @@ async function drain(p) {
     const s = window.PMC_STATE();
     return { onTable: s.units.filter(u => u.x >= 0).length, reserve: s.units.filter(u => u.reserve).length };
   }));
-  await p.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await p.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await p.evaluate(() => (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')).click());
+  // an empty transport is asked about first: press through that too
+  await p.waitForTimeout(150);
+  await p.evaluate(() => { const b = document.querySelector('.cmodal button[data-act="start"]'); if (b) b.click(); });
   await p.waitForTimeout(900);
   await drain(p);
   console.log('turn 1 — reserves still out:', await p.evaluate(() => {

@@ -50,7 +50,7 @@ async function stage(p) {
   });
   await p.waitForTimeout(250);
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="start"]');
+    const b = (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]'));
     if (b) b.click();
   });
   await p.waitForTimeout(500);

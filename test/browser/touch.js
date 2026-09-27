@@ -58,8 +58,11 @@ const { ROOT, startSkirmish } = require('../where.js');
     await p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
     await p.waitForTimeout(200);
   }
-  await p.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await p.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await p.evaluate(() => (document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]')).click());
+  // an empty transport is asked about first: press through that too
+  await p.waitForTimeout(150);
+  await p.evaluate(() => { const b = document.querySelector('.cmodal button[data-act="start"]'); if (b) b.click(); });
   await p.waitForTimeout(800);
   await p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
   await p.waitForTimeout(400);
