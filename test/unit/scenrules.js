@@ -300,7 +300,7 @@ d3.turn = 2;
 ok('...an AI attacker brings them all on at turn 2', S.reserves(d3, d3.sc.attacker).length, 2);
 ok('...the defender picks nothing', S.reservePick(d3, d3.sc.attacker === 'A' ? 'B' : 'A'), null);
 var tko = setupOf('takeover');
-var works = function (t) { return t.kind === 'barricade' || t.kind === 'trench' || t.kind === 'wire'; };
+var works = function (t) { return t.kind === 'barricade' || t.kind === 'wall' || t.kind === 'trench' || t.kind === 'wire'; };
 ok('Hostile takeover digs the defender in', tko.terrain.filter(works).length >= 6, true,
   tko.terrain.filter(works).length + ' sections of wall, trench and wire');
 ok('...no section longer than 6"', tko.terrain.filter(function (t) {
