@@ -64,6 +64,25 @@ var far = world([unit('A', 20, 20)]);
 ok('the radius is measured from the token edge', S.holderOf(far, 25, 20, 4), 'A',
   '5" centre to centre is 4" edge to edge');
 
+/* An area objective (p. 49) is measured from its own edge, and "count units
+   within them first, and only if there are no units in the objective, take into
+   account units within 4"": an Invasion landing zone is an 8" circle (p. 53), a
+   Find and Secure site a piece up to 4" across (p. 52). */
+head('Area objectives (p. 49)');
+var lz = { r: 4 }, UR = R.UNIT_R;
+ok('a unit 4" from a landing zone\'s edge holds it', S.holderOf(world([unit('A', 24 + 4 + 4 + UR, 24)]), 24, 24, 4, lz), 'A',
+  'measured from the circle, not its middle');
+ok('...one further off does not', S.holderOf(world([unit('A', 24 + 4 + 4 + UR + 0.5, 24)]), 24, 24, 4, lz), 'null');
+ok('a unit inside the zone holds it against an enemy outside',
+  S.holderOf(world([unit('A', 25, 24), unit('B', 24, 24 + 4 + 2)]), 24, 24, 4, lz), 'A', 'the units inside count first');
+ok('...but an enemy inside it too contests it',
+  S.holderOf(world([unit('A', 25, 24), unit('B', 23, 24)]), 24, 24, 4, lz), 'null');
+ok('with nobody inside, the units within 4" of it count',
+  S.holderOf(world([unit('A', 24 + 6, 24), unit('B', 24, 24 + 6)]), 24, 24, 4, lz), 'null');
+var site = { rect: { x: 18, y: 18, w: 4, h: 4 } };
+ok('a unit 3.9" from a search site\'s edge holds it', S.holderOf(world([unit('A', 22 + 3.9 + UR, 20)]), 20, 20, 4, site), 'A',
+  'as it may search it from there');
+
 /* ---------------------------------------------------------------------- routing */
 head('Routing (p. 49)');
 function dead(side) { return unit(side, -1, -1, { alive: false }); }

@@ -249,21 +249,19 @@
       beginTurn();
     }
 
-    function objDist(u, o) { return Math.max(0, R.inches(u.x, u.y, o.x, o.y) - UR); }
-
+    /* Who holds each objective, by the one test the scenarios use (scenarios.js
+       holderOf, p. 49): a drop pod holds nothing, an area objective is measured
+       from its edge, and the units inside it count first. */
+    // from a token's edge to an objective's: a marker's point, or an area's own edge
+    function objDist(u, o) {
+      var a = SC.areaOf(o), d;
+      if (a && a.rect) d = R.rectPointDist(a.rect, u.x, u.y);
+      else d = Math.max(0, R.inches(u.x, u.y, o.x, o.y) - (a && a.r || 0));
+      return Math.max(0, d - UR);
+    }
     function scoreObjectives() {
       E.state.objectives.forEach(function (o) {
-        /* Held by an unsuppressed, unbroken unit within 4"; denied by any enemy
-           there that is not Broken — a Suppressed one still stands in the way
-           (p. 49). Aircraft neither hold nor deny. */
-        var claim = { A: 0, B: 0 }, deny = { A: 0, B: 0 };
-        E.state.units.forEach(function (u) {
-          if (!onTable(u) || R.isFlying(u) || objDist(u, o) > 4) return;
-          var st = R.status(u);
-          if (st === 'ready') claim[u.side]++;
-          if (st !== 'broken') deny[u.side]++;
-        });
-        o.owner = claim.A > 0 && deny.B === 0 ? 'A' : (claim.B > 0 && deny.A === 0 ? 'B' : null);
+        o.owner = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
       });
     }
 

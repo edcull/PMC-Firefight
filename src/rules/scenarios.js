@@ -203,20 +203,52 @@
   function onTable(u) { return u.alive && u.x >= 0 && !u.aboard && !u.reserve; }
   function unsuppressed(u) { return R.status(u) === 'ready'; }
 
-  /* Who holds a point: at least one steady, unbroken, non-flying unit within 4",
-     and none of the enemy's (p. 49). */
-  function holderOf(state, x, y, radius) {
-    // a Suppressed enemy cannot hold the point, but still denies it; a Broken one does neither
+  /* Who holds an objective (p. 49): "at least one unsuppressed, unbroken unit
+     within 4" from the marked objective, and no enemy units within 4" from it
+     (Broken units and flying units do not count)". Distances run from the token's
+     edge to the objective's: a marker is a point, but an area objective (`area`:
+     a circle { r }, or a piece { rect }) is measured from its own edge, and "in
+     case of area objectives, count units within them first, and only if there
+     are no units in the objective, take into account units within 4"". */
+  function holderOf(state, x, y, radius, area) {
+    var reach = radius || 4;
+    function gap(u) {
+      var d;
+      if (area && area.rect) d = R.rectPointDist(area.rect, u.x, u.y);
+      else d = Math.max(0, dist(u.x, u.y, x, y) - (area && area.r || 0));
+      return Math.max(0, d - R.UNIT_R);
+    }
+    function inside(u) {
+      if (!area) return false;
+      if (area.rect) return R.rectPointDist(area.rect, u.x, u.y) === 0;
+      return dist(u.x, u.y, x, y) <= area.r;
+    }
+    // who counts at all: on the table, on the ground, able to hold it, and not Broken
+    var near = state.units.filter(function (u) {
+      if (!onTable(u) || R.isFlying(u)) return false;
+      if (!R.holdsGround(u)) return false;         // a drop pod holds nothing (p. 79)
+      return R.status(u) !== 'broken' && gap(u) <= reach;
+    });
+    var within = near.filter(inside);
+    if (within.length) near = within;
+    // a Suppressed enemy cannot hold the point, but still denies it
     var claim = { A: 0, B: 0 }, deny = { A: 0, B: 0 };
-    state.units.forEach(function (u) {
-      if (!onTable(u) || R.isFlying(u)) return;
-      if (!R.holdsGround(u)) return;               // a drop pod holds nothing (p. 79)
-      if (Math.max(0, dist(u.x, u.y, x, y) - R.UNIT_R) > (radius || 4)) return;
+    near.forEach(function (u) {
       if (unsuppressed(u)) claim[u.side]++;
-      if (R.status(u) !== 'broken') deny[u.side]++;
+      deny[u.side]++;
     });
     return claim.A > 0 && deny.B === 0 ? 'A' : (claim.B > 0 && deny.A === 0 ? 'B' : null);
   }
+  // the area an objective covers, if it is not a marker: a landing zone's circle, a search site's piece
+  function areaOf(o) {
+    if (!o) return null;
+    if (o.r) return { r: o.r };
+    if (o.rect) return { rect: o.rect };
+    if (o.piece) return { rect: o.piece };
+    return null;
+  }
+  // a piece's outline alone, to keep with an objective without keeping the piece
+  function rectOf(p) { return p ? { x: p.x, y: p.y, w: p.w, h: p.h } : null; }
 
   /* Rout: half a side's units destroyed or fled — units, whatever their Tier
      (p. 49), so a turret set is as many units as it has turrets, and the free
@@ -407,7 +439,7 @@
       },
       check: function (state) {
         var found = state.sc.found;
-        var holder = found ? holderOf(state, found.x, found.y, 4) : null;
+        var holder = found ? holderOf(state, found.x, found.y, 4, areaOf(found)) : null;
         if (found) {
           state.sc.hold[holder === 'A' ? 'A' : 'B'] = holder ? state.sc.hold[holder] + 1 : 0;
           if (holder) {
@@ -520,7 +552,7 @@
       },
       check: function (state) {
         var atk = state.sc.attacker, def = atk === 'A' ? 'B' : 'A';
-        state.objectives.forEach(function (o) { o.owner = holderOf(state, o.x, o.y, 4); });
+        state.objectives.forEach(function (o) { o.owner = holderOf(state, o.x, o.y, 4, areaOf(o)); });
         var mineZ = state.objectives.filter(function (o) { return o.owner === atk; }).length;
         /* "Alternatively, the attacker may rout the defender's forces" (p. 53) — the
            clause is the attacker's alone. Breaking the landing does not win the
@@ -853,7 +885,7 @@
     return chosen;
   }
   function setLZs(state, pts) {
-    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null }; });
+    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, r: 4, owner: null }; });   // "a round area 8\" in diameter" (p. 53)
     state.sc.lzPending = false;
   }
   function zoneFor(state, side) {
@@ -905,7 +937,7 @@
     if (found) {
       state.sc.found = spot;
       if (spot.piece) spot.piece.found = true;
-      state.objectives = [{ x: spot.x, y: spot.y, owner: null }];
+      state.objectives = [{ x: spot.x, y: spot.y, rect: rectOf(spot.piece), owner: null }];
       /* "When the true objective location is identified, the remaining unchecked
          ones are false and cannot be checked" (p. 52). */
       state.sc.search.forEach(function (s) {
@@ -921,7 +953,7 @@
         revealed.checked = true;
         state.sc.found = revealed;
         if (revealed.piece) { revealed.piece.checked = true; revealed.piece.found = true; }
-        state.objectives = [{ x: revealed.x, y: revealed.y, owner: null }];
+        state.objectives = [{ x: revealed.x, y: revealed.y, rect: rectOf(revealed.piece), owner: null }];
         state.sc.search.forEach(function (s) { if (s !== revealed && s.piece) s.piece.cold = true; });
       }
     }
@@ -932,7 +964,7 @@
     SCENARIOS: SCENARIOS, ORDER: ORDER,
     begin: begin, deploy: deploy, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
-    holderOf: holderOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
+    holderOf: holderOf, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
     rollRoles: rollRoles, bestDefence: bestDefence,
     searchSpots: searchSpots, checkArea: checkArea
   };
