@@ -426,6 +426,29 @@
       return behaviour;
     }
 
+    /* The once-a-battle honours (p. 88), which the AI spends as a player would.
+       Last Stand: a Broken unit cannot act, and runs in the End phase, so it stands
+       as soon as its side has the go (and in the End phase, endphase.js); a
+       Suppressed one stands when it has an enemy in range to fight. Otherwise
+       the stand is kept for the rally that would see the unit flee. */
+    function aiStands(side) {
+      E.state.units.forEach(function (u) {
+        if (u.side === side && R.status(u) === 'broken' && E.standable(u)) E.makeStand(u, 'rather than stay broken');
+      });
+    }
+    function aiHonours(u) {
+      if (u.side !== E.state.activeSide || u.hijack) return;
+      if (R.status(u) === 'suppressed' && E.standable(u) && R.enemyWithinRange(E.state, u) && !R.deathOrGlory(E.state, u)) {
+        E.makeStand(u, 'to fight on');
+      }
+      /* Adrenaline Rush: two actions in a row, spent when the first is a good shot
+         (a hit or better expected), as the second will very likely be another. */
+      if (R.campFlag(u, 'adrenaline') && !E.spent(u, 'adrenaline') && E.state.rush !== u.id && R.status(u) === 'ready') {
+        var rs = bestTarget(u, 'fire');
+        if (rs.t && rs.score >= 1) E.doOnce(u, 'rush');
+      }
+    }
+
     function aiAct(u) {
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
@@ -440,6 +463,7 @@
         }
         u.activated = true; endActivation(u); return;
       }
+      aiHonours(u);
       if (R.isMachine(u)) { aiDrive(u); return; }
       /* "Death or Glory, Comrades!" (p. 94): a shaken unit with a leader shouting
          at it goes in rather than going to ground — that is the whole point of the
@@ -705,7 +729,7 @@
     return {
       aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiAct: aiAct
+      nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;

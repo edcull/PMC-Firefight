@@ -238,6 +238,7 @@
     }
     function aiStep() {
       if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk) return false;
+      K.aiStands(state.activeSide);
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
       if (state.solo && state.activeSide === 'B') {
@@ -1273,6 +1274,7 @@
       sideName: sideName,
       soundFor: soundFor,
       spent: spent,
+      standable: standable,
       stepOff: stepOff,
       terrainSide: terrainSide,
       ui: ui,
