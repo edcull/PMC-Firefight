@@ -841,8 +841,9 @@
         /* Expendable: a penal trooper's collar going off at his neck, while he is
            still on his feet — a red telltale blinking faster and faster, then a
            sharp flash, a spray of sparks and a wisp of dark smoke. */
+        // at the collar's own red light, on the neck of a man down on one knee (as the squad waits, Broken)
         var qp = I.toScreen(f.x, f.y);
-        qp.y -= liftAt(f) + I.K * (f.neck || 0.34);
+        qp.y -= liftAt(f) + I.K * (f.neck || 0.52);
         var blink = 0.24, pop = 0.44;
         if (k < blink) {
           var bk = k / blink;
