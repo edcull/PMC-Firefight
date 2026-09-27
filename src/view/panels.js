@@ -23,7 +23,7 @@
     var playerSide = B.playerSide, relocPick = B.relocPick, render = B.render, roleOf = B.roleOf;
     var roleSentence = B.roleSentence, select = B.select, send = B.send, shownAs = B.shownAs;
     var sideName = B.sideName, soloOwnerName = B.soloOwnerName, specialsFor = B.specialsFor;
-    var splitFor = B.splitFor, startBattle = B.startBattle, swapCard = B.swapCard, terrainAct = B.terrainAct;
+    var splitFor = B.splitFor, insertionFor = B.insertionFor, startBattle = B.startBattle, swapCard = B.swapCard, terrainAct = B.terrainAct;
     var terrainBits = B.terrainBits, terrainCard = B.terrainCard, terrainMark = B.terrainMark;
     var unloadBefore = B.unloadBefore, C = B.C, DIG_NAMES = B.DIG_NAMES, ICONS = B.ICONS, ISO = B.ISO;
     var PIECE_NOUN = B.PIECE_NOUN, R = B.R, SFX = B.SFX, SPECIAL_SLOTS = B.SPECIAL_SLOTS;
@@ -663,8 +663,6 @@
     function deployCard() {
       if (B.state.relocating) return relocCard();
       var next = deployNext();
-      // the units coming in by Battlefield Insertion — not the ones the scenario holds back
-      var held = inReserve().filter(function (u) { return !isAI(u.side) && u.wave == null; });
       var me = next ? next.side : (playerSide() || 'A');
       var role = roleOf(me);
       var h = '<div class="card"><h2>' + (B.state.scen ? B.state.scen.name : 'Deployment') +
@@ -672,9 +670,7 @@
           (role === 'attacker' ? 'attack' : 'defend') + '</span>' : '') + '</h2>' +
         (role ? '<p class="sub"><b>' + roleSentence() + '</b></p>' : '') +
         '<p class="sub">' + (B.state.scen ? B.state.scen.hint : '') + '</p>' +
-        '<p class="sub">' + deployWhere(me) +
-        (held.length ? ' <b>' + held.map(function (u) { return u.name; }).join(', ') +
-          '</b> stay in reserve and come in by Battlefield Insertion from the second turn on.' : '') + '</p>';
+        '<p class="sub">' + deployWhere(me) + '</p>';
       if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
         (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
       // Modifying the armies (p. 46): offered until the first unit goes down
@@ -684,6 +680,7 @@
           ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier, having seen the table and their force</small></button></div>';
       }
       h += deployList(me);
+      h += insertionList(me);
       /* The scenario's split (which units go on the table and which wait, or
          which wave each comes in) and who starts the battle aboard a hull are
          set in a modal, opened from a button, whenever there is either. */
@@ -747,6 +744,23 @@
        tapped to move it between the table and the reserve (or between the waves),
        and a count against what the rule allows. */
     var deployBox = false;           // the reserves-and-transports modal, open over the deployment card
+    /* Battlefield Insertion (p. 56) is the player's choice: the units that have
+       it start held for it, and a tap sets one down on the table instead, or
+       holds it back again, up to half the army. */
+    function insertionList(side) {
+      var ins = insertionFor && insertionFor(side);
+      if (!ins) return '';
+      var rows = ins.units.map(function (x) {
+        return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-insertion="' + x.id + '">' +
+          '<span class="dpr-mark">' + (x.held ? '\u2193' : '\u2713') + '</span>' +
+          '<span class="dpr-name">' + esc(x.name) + '</span>' +
+          '<span class="dpr-note">' + (x.held ? 'by insertion, from turn 2' : 'on the table') + '</span></button>';
+      }).join('');
+      return '<div class="dplist splitlist"><div class="dphead">Battlefield Insertion \u2014 <b>' + ins.used + '</b> of up to ' + ins.cap + '</div>' +
+        '<p class="hint small">These units can drop in from the second turn on instead of deploying. Tap one to set it down on the table, or to hold it for insertion.</p>' +
+        rows + '</div>';
+    }
+
     function splitCard(side) {
       var sp = splitFor(side);
       if (!sp) return '';
@@ -920,13 +934,14 @@
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });
-      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
+      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-act');
           if (SFX) SFX.click();
           if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
           if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
           if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
+          if (b.hasAttribute('data-insertion')) { send({ k: 'insertion', id: b.getAttribute('data-insertion') }); return; }
           if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }
           if (b.hasAttribute('data-load')) {
             var lv = byId(b.getAttribute('data-hull')), lu = byId(b.getAttribute('data-load'));

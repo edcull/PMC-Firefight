@@ -647,6 +647,8 @@
   function splitFor(side) { return (KIT_DEPLOY || kitDeploy()).splitFor(side); }
   function baselineSplits() { return (KIT_DEPLOY || kitDeploy()).baselineSplits(); }
   function toggleHold(side, id) { return (KIT_DEPLOY || kitDeploy()).toggleHold(side, id); }
+  function insertionFor(side) { return (KIT_DEPLOY || kitDeploy()).insertionFor(side); }
+  function toggleInsertion(side, id) { return (KIT_DEPLOY || kitDeploy()).toggleInsertion(side, id); }
   function clearSplits() { return (KIT_DEPLOY || kitDeploy()).clearSplits(); }
   function autoSplit(side) { return (KIT_DEPLOY || kitDeploy()).autoSplit(side); }
   function splitsOK() { return (KIT_DEPLOY || kitDeploy()).splitsOK(); }
@@ -1489,6 +1491,13 @@
           render();
           return yes;
         }
+        case 'insertion': {
+          if (state.phase !== 'deploy') return no('not deploying');
+          var whyI = toggleInsertion(side, it.id);
+          if (whyI) return no(whyI);
+          render();
+          return yes;
+        }
         case 'rpick': {
           var rp = ui.reservePick;
           if (!rp || rp.side !== side) return no('nothing to choose');
@@ -1768,6 +1777,13 @@
     function deployAt(side, it) {
       var pending = it.id ? byId(it.id) : deployNext();
       if (!pending || pending.side !== side) return no('no such unit');
+      /* A unit the scenario holds back is brought on through the split; one held
+         for Battlefield Insertion, set down on the table, deploys like the rest
+         (p. 56: it "can" come in that way, not must). */
+      if (pending.reserve) {
+        if (pending.wave === 2) return no(pending.name + ' is held back by the scenario — bring it onto the table in Reserves first');
+        if (toggleInsertion(side, pending.id)) return no(pending.name + ' is in reserve');
+      }
       if (pending.x < 0 && deployNext() !== pending) ui.deployPick = pending.id;
       var p = { x: +it.x, y: +it.y };
       var clear = deployOK(side, p.x, p.y, pending) &&
@@ -1813,7 +1829,7 @@
         deployNext: deployNext,
         deployRoster: deployRoster,
         deploymentDone: deploymentDone,
-        splitFor: splitFor,
+        splitFor: splitFor, insertionFor: insertionFor,
         placingSide: placingSide,
         zoneFor: zoneFor,
         zoneCentre: zoneCentre,

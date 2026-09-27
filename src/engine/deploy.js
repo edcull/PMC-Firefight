@@ -464,6 +464,40 @@
       return null;
     }
 
+    /* Battlefield Insertion (p. 56): units with the rule "can" come in by it —
+       a choice, not an order. They start held for it (markReserves), and the
+       player may set any of them down on the table instead, or hold one back
+       again, as long as no more than half the army comes in that way. The ones
+       a scenario holds back (`wave` 2) are the scenario's split, not this. */
+    function insertionFor(side) {
+      if (!E.state || E.state.phase !== 'deploy' || isAI(side) || SC.noInsertion(E.state)) return null;
+      var mine = E.state.units.filter(function (u) { return u.side === side && u.alive; });
+      var units = mine.filter(function (u) {
+        return R.has(u, 'Battlefield Insertion') && !R.has(u, 'Stationary Artillery') && !u.aboard && u.wave !== 2;
+      });
+      if (!units.length) return null;
+      var cap = Math.ceil(mine.length / 2);              // "no more than half of the army", rounded up (p. 27)
+      var used = units.filter(function (u) { return u.reserve; }).length;
+      return {
+        side: side, cap: cap, used: used,
+        units: units.map(function (u) { return { id: u.id, name: u.name, held: !!u.reserve }; })
+      };
+    }
+    function toggleInsertion(side, id) {
+      var ins = insertionFor(side), u = byId(id);
+      if (!ins || !u || ins.units.every(function (x) { return x.id !== id; })) return 'that unit cannot come in by Battlefield Insertion';
+      if (u.reserve) {
+        u.reserve = false; u.x = -1; u.y = -1;             // back in hand, to be set down with the rest
+        return null;
+      }
+      if (ins.used >= ins.cap) return 'no more than half the army (' + ins.cap + ' units) may come in by Battlefield Insertion';
+      (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
+      if (u.bld) R.exitBuilding(E.state, u, null);
+      u.reserve = true; u.x = -1; u.y = -1;
+      if (ui.deployPick === u.id) ui.deployPick = null;
+      return null;
+    }
+
     function deploymentDone() {
       if (emptyPlatforms().length) return false;
       if (!splitsOK()) return false;
@@ -524,7 +558,7 @@
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,
-      clearSplits: clearSplits, autoSplit: autoSplit, splitsOK: splitsOK
+      clearSplits: clearSplits, autoSplit: autoSplit, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineDeploy;
