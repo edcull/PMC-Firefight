@@ -430,6 +430,21 @@
     // the scenario, provisionally: the terrain phase wants its name and whether it has table edges
     state.scen = SC.SCENARIOS[scenId];
     state.sc = { id: scenId };
+    /* When the commandos bring hulls or aircraft the OpFor needs a unit that can
+       answer them (p. 148). Where its list has none at this Tier, say so rather
+       than let it pass unremarked. */
+    if (state.solo) {
+      var theirMachines = state.units.some(function (u) { return u.side === 'A' && R.isMachine(u); });
+      var answer = state.units.some(function (u) {
+        if (u.side !== 'B') return false;
+        if (u.rules.some(function (r) { return /^Anti-tank|^Anti-aircraft/.test(r); })) return true;
+        return R.isMachine(u) && u.tier >= cfg.tier;
+      });
+      if (theirMachines && !answer) {
+        logLine('note', 'The OpFor has nothing to answer your vehicles: its list offers no Anti-tank, Anti-aircraft ' +
+          'or Tier ' + R.ROMAN[cfg.tier] + ' machine to take (p. 148).');
+      }
+    }
     V.clearCards();
     if (manual) { startTerrainSetup(built); return; }
     afterTerrain(built);
