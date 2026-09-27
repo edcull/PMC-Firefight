@@ -658,7 +658,8 @@ console.log('  vs the OpFor AI');
   const st = e.state(), n = st.units.filter(u => u.side === 'A' && u.pickIdx != null).length;
   ok('the player may modify the list before deploying', e.intent('A', { k: 'swapopen' }).ok && !!e.state().swapAsk);
   ok('...up to half the list with Tactical Flexibility', e.state().swapAsk.total === Math.floor(n / 2), e.state().swapAsk.total + ' of ' + n);
-  const u = st.units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry');
+  // not one riding in a transport: a unit already aboard stays as it is
+  const u = st.units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry' && !x.aboard && !(x.cargo && x.cargo.length));
   const alt = R.listFor('pmc').find(p => p.tier === u.tier && p.key !== u.key && !p.command && p.cls === 'infantry');
   e.intent('A', { k: 'swappick', id: u.id });
   ok('a unit of the same Tier can be swapped in', e.intent('A', { k: 'swapin', id: alt.key }).ok && e.state().units.some(x => x.side === 'A' && x.key === alt.key));
