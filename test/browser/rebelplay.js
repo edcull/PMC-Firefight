@@ -112,6 +112,8 @@ async function run(p, label, cfg, checks) {
 (async () => {
   const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1340, height: 900 } });
+  // the battles are watched, not played: the drawing runs twenty-five times over (game.js, PMC_TIME_SCALE)
+  await p.addInitScript(() => { window.PMC_TIME_SCALE = 25; });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
@@ -157,7 +159,30 @@ async function run(p, label, cfg, checks) {
   console.log('    "Death or Glory, Comrades!" charges:                   ' + tally.glory);
   console.log('    Smoke Markers put down:                               ' + tally.smoke);
   console.log('    Guns dug in over open sights:                         ' + tally.digin);
-  ok('the leaders\' rally cry was heard at least once', tally.freedom > 0);
+  /* Whether a battle's rallies happen to fall near a leader is chance, so the
+     rule itself is staged here: a suppressed squad a few inches from one of
+     the revolt's leaders rallies, and the leader's cry adds its dice. */
+  // a fresh revolt, so its leaders are alive whatever happened to the last battle's
+  await p.evaluate(() => {
+    const R = window.PMC;
+    window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'hotseat', planet: 'sparse', scenario: 'meeting', nameA: 'A', nameB: 'B',
+      armyA: R.rollArmy(3, 1, null, 'rebel'), armyB: R.rollArmy(3, 1, null, 'rebel') });
+  });
+  await p.waitForTimeout(800);
+  const cry = await p.evaluate(() => {
+    const R = window.PMC, s = window.PMC_STATE();
+    const RULE = '\u2026but they\'ll never take our freedom!';
+    const lead = s.units.find(u => u.alive && !u.aboard && R.has(u, RULE));
+    if (lead) { lead.x = 20; lead.y = 24; lead.reserve = false; }
+    if (!lead) return { note: 'no leader on the table' };
+    const sq = s.units.find(u => u.alive && u.side === lead.side && u !== lead && !R.has(u, RULE) && !R.isMachine(u) && u.tier < lead.tier + 2);
+    if (!sq) return { note: 'no squad beside the leader' };
+    sq.bld = null; sq.aboard = null; sq.reserve = false; sq.x = lead.x + 4; sq.y = lead.y; sq.sp = 3;
+    const r = R.rally(s, sq);
+    return { extras: (r && r.extras || []).join('; ') };
+  });
+  ok('the leaders\' rally cry adds its dice to a rally within reach', /never take our freedom/.test(cry.extras || ''), cry.extras || cry.note);
+  console.log('    (and it was heard ' + tally.freedom + ' time(s) in the battles themselves)');
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   console.log('page errors: ' + (errs.length ? errs.slice(0, 4).join(' | ') : 'none'));

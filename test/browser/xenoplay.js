@@ -106,6 +106,8 @@ async function run(p, label, cfg, checks) {
 (async () => {
   const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1340, height: 900 } });
+  // the battles are watched, not played: the drawing runs twenty-five times over (game.js, PMC_TIME_SCALE)
+  await p.addInitScript(() => { window.PMC_TIME_SCALE = 25; });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));

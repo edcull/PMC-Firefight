@@ -273,9 +273,12 @@ function spendOn(archId, key, exp) {
   };
 }
 var marks = spendOn('marksmen', 'mortarsection', 12);
-ok('the marksmen train the unit rather than promote it',
-  marks.honours > 0 && marks.key === 'mortarsection', true,
-  marks.honours + ' honour(s), still a ' + R.profile(marks.key).name);
+/* The Marksmen train a unit to its honours cap before they promote it; what
+   experience is left after that depends on which honours were drawn, so it may
+   or may not stretch to a promotion too. What is certain is the order. */
+ok('the marksmen train the unit before they would promote it',
+  marks.honours > 0 && marks.did[0] === 'honour', true,
+  marks.did.join(' then ') + ' \u2014 ' + marks.honours + ' honour(s), now a ' + R.profile(marks.key).name);
 var shock = spendOn('shock', 'irregulars', 12);
 ok('the shock company promotes the same unit instead',
   shock.key !== 'irregulars', true, 'became a ' + R.profile(shock.key).name);

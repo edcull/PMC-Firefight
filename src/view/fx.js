@@ -14,7 +14,8 @@
 
   var I = root.PMCIso;
 
-  function nowMs() { return (root.performance && performance.now) ? performance.now() : Date.now(); }
+  // the board's clock, sped up with it for a test harness (see game.js)
+  function nowMs() { return ((root.performance && performance.now) ? performance.now() : Date.now()) * (+root.PMC_TIME_SCALE || 1); }
 
   /* A list of effects in flight. `opts.lift` answers how high the ground stands
      at a point — the game takes that from its terrain; the viewer is flat. */

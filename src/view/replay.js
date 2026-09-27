@@ -269,7 +269,7 @@
         stepTimer = null;
         if (!B.state || B.state.over || ui.resOpen || menuUp()) return;
         send({ k: 'step' });
-      }, 260);
+      }, 260 / (+window.PMC_TIME_SCALE || 1));
     }
 
     function evUnit(id) { return id ? B.Q.byId(id) : null; }

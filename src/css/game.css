@@ -1219,7 +1219,7 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 button.crow-go { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: inherit; font: inherit; font-size: 11.5px; text-align: left; cursor: pointer; }
 button.crow-go:last-child { border-bottom: 0; }
 button.crow-go:hover, button.crow-go:focus-visible { background: rgba(255,255,255,.04); }
-button.crow-go::after { content: '\203A'; margin-left: 4px; color: var(--ink-faint); }
+button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; color: var(--ink-faint); align-self: center; }
 /* Honours and trauma as toggles narrowing the dossier: lit while on */
 .cstat.on { border-color: currentColor; background: rgba(255,255,255,.07); }
 .cstat.cs-exp.on { color: var(--good); }

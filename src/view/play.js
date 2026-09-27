@@ -12,6 +12,8 @@
     // from modules installed after this one: looked up when called
     function handsOff() { return B.handsOff.apply(this, arguments); }
     function render() { return B.render.apply(this, arguments); }
+    // a pause in the drawing, on the board's clock (a test harness may run it faster: see game.js)
+    function later(fn, ms) { return setTimeout(fn, ms / (+root.PMC_TIME_SCALE || 1)); }
 
     /* ---- how a unit is drawn crossing the ground ----
 
@@ -164,7 +166,7 @@
           anims.push({ kind: 'turn', unit: shooter, t0: nowMs(), dur: swing });
           holdFor(swing + 80);               // no gap between the swing and the shot
           startLoop();
-          setTimeout(function () { if (B.state) playShooting(shooter, target, res, deaths, done); }, swing + 40);
+          later(function () { if (B.state) playShooting(shooter, target, res, deaths, done); }, swing + 40);
           return;
         }
       }
@@ -205,10 +207,10 @@
         }
         if (!fired) { fired = true; spawnDeaths(deaths); }
       }
-      function finish(ms) { setTimeout(function () { if (done) done(); }, ms); }
+      function finish(ms) { later(function () { if (done) done(); }, ms); }
 
       // the secondary goes off alongside the primary, a beat later
-      if (spec.s) setTimeout(function () {
+      if (spec.s) later(function () {
         if (B.state) playSecondary(spec.s, shooter, from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s), to, hits, spec.sn);
       }, 150);
 
@@ -249,7 +251,7 @@
          the run — it opens up after the approach and stops before it pulls off. */
       for (var i = 0; i < steps; i++) {
         (function (n) {
-          setTimeout(function () {
+          later(function () {
             if (!B.state) return;
             var f = 0.18 + (n / (steps - 1)) * 0.64;
             var x = from.x + (to.x - from.x) * f, y = from.y + (to.y - from.y) * f;
@@ -267,8 +269,8 @@
           }, dur * 0.18 + n * (dur * 0.64 / Math.max(1, steps - 1)));
         })(i);
       }
-      setTimeout(function () { spawnDeaths(deaths); }, dur * 0.6);
-      setTimeout(function () { if (done) done(); }, dur + 220);
+      later(function () { spawnDeaths(deaths); }, dur * 0.6);
+      later(function () { if (done) done(); }, dur + 220);
     }
 
     function playAssault(attacker, target, deaths, done) {
@@ -277,7 +279,7 @@
       holdFor(900);
       for (var i = 0; i < 4; i++) {
         (function (n) {
-          setTimeout(function () {
+          later(function () {
             if (!B.state) return;
             addFx({ kind: 'clash', x: mid.x + (Math.random() - 0.5), y: mid.y + (Math.random() - 0.5), dur: 300, blocking: true });
             // an assault goes in firing carbines from the hip — or, for bugs, all mandibles
@@ -285,8 +287,8 @@
           }, n * 170);
         })(i);
       }
-      setTimeout(function () { spawnDeaths(deaths); }, 320);
-      setTimeout(function () { if (done) done(); }, 900);
+      later(function () { spawnDeaths(deaths); }, 320);
+      later(function () { if (done) done(); }, 900);
     }
 
     function spawnDeaths(deaths) {
