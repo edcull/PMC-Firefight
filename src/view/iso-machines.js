@@ -61,7 +61,7 @@
       hlorry: { rearDoor: true, axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
       m113: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },
       ifv: { rearDoor: true, axles: 3, len: 2.35, wid: 1.30, hgt: 18, gun: 1.2, style: { body: 'ifv', turret: 'ifv', tSize: 0.72, tAt: 0.04, tSide: 0.12, skirts: 'panels' } },
-      cmdbox: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25] } },
+      cmdbox: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, dish: true, style: { body: 'box', aerials: 5, pintle: [0.06, 0.25], shield: true } },
       bigapc: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.0, style: { body: 'bigbox', rws: true, skirts: 'panels', hexNose: true, hex: true } },
       bigifv: { rearDoor: true, axles: 4, len: 2.65, wid: 1.45, hgt: 19, gun: 1.3, style: { body: 'bigbox', turret: 'ifv', tSize: 0.8, tAt: 0.06, skirts: 'panels', hexNose: true, hex: true } },
       engflame: { axles: 4, len: 2.45, wid: 1.45, hgt: 18, gun: 1.1, fat: true, drum: true, style: { body: 'mbt', turret: 'flamer', tSize: 0.95, rearTank: true, skirts: 'panels' } },
@@ -74,7 +74,7 @@
       plasmatank: { axles: 4, len: 2.55, wid: 1.50, hgt: 18, gun: 1.2, fat: true, style: { body: 'mbt', turret: 'arty', tSize: 1.05, gunLen: 1.7, energyGun: true, skirts: 'panels' } },
       aatank: { axles: 3, len: 2.30, wid: 1.30, hgt: 16, gun: 1.3, twin: true, elev: 16, dish: true, style: { body: 'ltank', turret: 'aa', tSize: 0.85, skirts: true } },
       ewtank: { axles: 3, len: 2.25, wid: 1.25, hgt: 16, gun: 0.9, dish: true, style: { body: 'ltank', turret: 'dish', tSize: 0.72, skirts: true } },
-      medbox: { rearDoor: true, axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1 } },
+      medbox: { rearDoor: true, axles: 3, len: 2.25, wid: 1.25, hgt: 20, gun: 0.8, cross: true, style: { body: 'box', cross: true, aerials: 1, pintle: [0.06, 0.25], shield: true } },
       /* Rebel gun trucks: a light, medium and heavy lorry plated up in a yard,
          slits cut in a sheet welded over the windscreen, mismatched plate round
          the bed, and a weapon bolted on behind the cab. */

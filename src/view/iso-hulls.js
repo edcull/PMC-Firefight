@@ -615,14 +615,15 @@
             case 'dish':
               body = function () {
                 roundTurret(TR, 8);
-                var mb = S3(TF(-TR * 0.1, 0), tz + 8), mt = S3(TF(-TR * 0.1, 0), tz + 20);
+                // the mast, and on it the dish sat low over the turret
+                var mb = S3(TF(-TR * 0.1, 0), tz + 8), mt = S3(TF(-TR * 0.1, 0), tz + 15);
                 line(mb, mt, 1.6, STEEL);
                 // the dish, tilted back, and its feed horn
-                var dc = S3(TF(0.02, 0), tz + 24);
+                var dc = S3(TF(0.02, 0), tz + 19);
                 sEllipse(dc[0], dc[1], 8.5, 6.5, '#8e98a4');
                 sEllipse(dc[0] + 0.6, dc[1] + 0.4, 7.4, 5.5, '#c3ccd6');
                 sEllipse(dc[0] + 1, dc[1] + 0.6, 4.5, 3.2, '#a8b2bd');
-                var fh = S3(TF(0.2, 0), tz + 24);
+                var fh = S3(TF(0.2, 0), tz + 19);
                 line(dc, fh, 0.8, STEEL); sEllipse(fh[0], fh[1], 1, 1, STEEL);
                 aerial(HF, -L * 0.42, w * 0.6, roof, 24); aerial(HF, -L * 0.42, -w * 0.6, roof, 18);
               };

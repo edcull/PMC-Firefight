@@ -564,6 +564,8 @@
         }
         function drawTop() {
           extras();
+          // the dish on its back: behind the head facing us, over it facing away
+          if (fwd >= 0) dishOn();
           /* A medium or heavy walker drone carries its sensor dome on its right
              shoulder pad and the aerial on its left (a light one's dome takes its
              head, below). */
@@ -629,17 +631,20 @@
             slabF(TF, -tL * 0.62, tL * 0.52, -tW * 0.08, tW * 0.08, shoulder - 2, Math.round(6 * sf), TT, tL * 0.3, tL * 0.18, 0);
             glow(S3(TF(tL * 0.44, 0), shoulder + Math.round(2 * sf)), 1);
           }
+          if (fwd < 0) dishOn();
         }
-        // what the hull's role puts on its back: aerials, a dish, fuel, a cross
+        // the dish on the walker's back, on a short mast
+        function dishOn() {
+          if (!(spec.dish || KITM.shoulder === 'dish')) return;
+          var bz = shoulder - 1, dr = light ? 3.2 : heavy ? 5 : 4.2;
+          var db = S3(TF(-tL * 0.7, -tW * 0.35), bz), dm = S3(TF(-tL * 0.7, -tW * 0.35), bz + (light ? 5 : 8));
+          line(db, dm, 1.2, STEEL);
+          sEllipse(dm[0], dm[1] - 1.2, dr, dr * 0.72, '#9aa4b0'); sEllipse(dm[0] + 0.5, dm[1] - 1, dr * 0.78, dr * 0.52, '#c3ccd6');
+        }
+        // what the hull's role puts on its back: aerials, fuel, a cross (the dish: dishOn)
         function extras() {
           var bz = shoulder - 1;
           if (KITM.shoulder === 'aerials') { aerial(TF, -tL * 0.7, tW * 0.5, bz, 20); aerial(TF, -tL * 0.7, -tW * 0.5, bz, 14); }
-          if (spec.dish || KITM.shoulder === 'dish') {
-            var dr = light ? 3.2 : heavy ? 5 : 4.2;
-            var db = S3(TF(-tL * 0.7, -tW * 0.35), bz), dm = S3(TF(-tL * 0.7, -tW * 0.35), bz + (light ? 5 : 8));
-            line(db, dm, 1.2, STEEL);
-            sEllipse(dm[0], dm[1] - 1.2, dr, dr * 0.72, '#9aa4b0'); sEllipse(dm[0] + 0.5, dm[1] - 1, dr * 0.78, dr * 0.52, '#c3ccd6');
-          }
           if (KITM.shoulder === 'tanks' && fwd <= 0) backTanks();   // facing away, they are in front of the chest
           if (spec.cross && !light) crossOn(TF, -tL * 0.35, 0, shoulder + (heavy ? 0.3 : -0.7), tW * 0.3);
         }
