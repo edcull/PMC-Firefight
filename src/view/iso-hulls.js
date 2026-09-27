@@ -47,6 +47,10 @@
         var fc = S3(HF(aT, -w * 0.3), zc + 5);
         sEllipse(fc[0], fc[1] - 1, 2, 1.3, '#23271f');
       }
+      /* A pickup's cab and bonnet, when they face the viewer: a turret stood in
+         the bed behind them is drawn first and these laid over it again, so the
+         cab hides what is behind it (styledTop). */
+      var pickupFront = null;
       function styledHull() {
         var L = spec.len, Wd = spec.wid, H = spec.hgt, z0 = deck, st = spec.style;
         var w = Wd * 0.47;
@@ -96,6 +100,7 @@
             [{ t: L * 0.33, fn: bonnet }, { t: (cA0 + cA1) / 2, fn: cab }, { t: (bedA1 - L * 0.5) / 2, fn: bed }]
               .sort(function (p, q) { return p.t * fwdP - q.t * fwdP; })
               .forEach(function (p) { p.fn(); });
+            if (st.turret && fwdP > 0.02) pickupFront = function () { cab(); bonnet(); };
             return;
           }
           case 'truck': {
@@ -384,6 +389,10 @@
         var TR = (st.tSize || 0.9) * MACHINE;                       // turret size, inches
         var TF = frameAt(tT, st.tSide ? w * st.tSide : 0, AIM);     // the turret frame
         var tz = roof;
+        /* A gun truck's turret stands on a pedestal in the bed, up at the height
+           of the cab's roof, so its guns clear the cab. */
+        var pedestal = st.body === 'pickup' && st.turret;
+        if (pedestal) tz = deck + H * 1.25;
 
         // ---- turrets ----
         function wedgeTurret(sz, hgt, wedge) {
@@ -668,6 +677,18 @@
                 mount('rail', ftip, ftip[0] >= fbase[0] ? 1 : -1);
               };
               break;
+          }
+          if (pedestal) {
+            var body0 = body;
+            body = function () {
+              // the post it turns on, from the bed floor up to the turret ring
+              var pb = S3(TF(0, 0), roof), pt = S3(TF(0, 0), tz);
+              line(pb, pt, 4.2, '#0c0f13'); line(pb, pt, 3.2, STEEL);
+              sEllipse(pt[0], pt[1], TR * K * 0.28, TR * K * 0.14, mixc(hull, dark, 0.4));
+              body0();
+              // the cab, where it is nearer than the turret, hides the post and the turret's foot
+              if (pickupFront) pickupFront();
+            };
           }
           part(tdepth, fwd >= 0 ? function () { body(); gun(); } : function () { gun(); body(); });
         }
