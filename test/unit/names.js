@@ -306,5 +306,25 @@ const wr = C.winStats(vc);
 ok('3 won of 5 fought is 60% — a draw is fought, not won', wr.pct === 0.6 && wr.wins === 3 && wr.battles === 5);
 ok('no battles yet is 0%', C.winStats(C.newCompany('New')).pct === 0);
 
+/* A command squad that goes up a grade with the company takes its new ranks
+   at once, and every soldier keeps his name, renamed or not. */
+{
+  const co = C.newCompany('Rankers');
+  C.found(co, ['recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'regular', 'regular'], 'T5');
+  const cmd = C.byRid(co, co.cmdRid);
+  const u0 = Object.assign({}, R.profile(cmd.key), { key: cmd.key, faction: 'pmc', models: R.profile(cmd.key).size, rules: R.profile(cmd.key).rules.slice() });
+  cmd.men = R.musterMen(u0, null, {}).map((m) => ({ name: m.name, rank: m.rank }));
+  C.renameSoldier(cmd, 0, 'Dana Voss');
+  const second = cmd.men[1].name;
+  ok('a new company\'s command squad is a Second Lieutenant and a Sergeant', cmd.men[0].rank === 'Second Lieutenant' && cmd.men[1].rank === 'Sergeant',
+    cmd.men.map((m) => m.rank).join(', '));
+  co.tier = 2; C.fitCommand(co);
+  ok('at the company\'s Tier II its command is the 3rd grade', cmd.key === 'cmd3', cmd.key);
+  ok('...its officer a Lieutenant now, still named as the player renamed him', cmd.men[0].rank === 'Lieutenant' && cmd.men[0].name === 'Dana Voss',
+    cmd.men[0].rank + ' ' + cmd.men[0].name);
+  ok('...and the Sergeant a Staff Sergeant, his name unchanged', cmd.men[1].rank === 'Staff Sergeant' && cmd.men[1].name === second,
+    cmd.men[1].rank + ' ' + cmd.men[1].name);
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
