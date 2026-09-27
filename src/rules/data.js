@@ -381,7 +381,7 @@
     // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
     // the engineer drones fire a sidearm and throw a grenade; the support drones lob three rounds, up and over
-    dengineer: { p: 'pistol', s: 'arc', sn: 1 }, dsupport: { p: 'arc', n: 3 }, dmedic: { p: 'pistol' },
+    dengineer: { p: 'pistol', s: 'arc', sn: 1 }, dsupport: { p: 'arc', n: 5 }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
