@@ -317,6 +317,8 @@
       var m = rows[r], d = (r - (rows.length - 1) / 2) * 0.56;
       for (var k = 0; k < m; k++) {
         var t = (k - (m - 1) / 2) * 0.56;
+        // a pair stands in file: the man behind steps a little to the left, so he is not hidden
+        if (n === 2 && rows.length === 2 && r === 0) t -= 0.22;
         // iso offsets inside the base, back rank first
         out.push({ sx: 2 * t * K, sy: d * K, rank: rows.length - 1 - r });
       }
@@ -397,6 +399,18 @@
   /* Suppressed and Broken are drawn alike — hunkered low. A bug that has broken
      goes low the same way (its sunk-in-the-earth pose is kept for a swarm
      tunnelling up out of the ground on a Battlefield Insertion). */
+  /* A penal trooper's collar lamp: green, flashing slowly, each man a beat
+     behind the one beside him; amber and flashing fast once the squad is
+     suppressed. It is out when the collars have gone. */
+  function collarLamp(g, x, y, mi, st) {
+    if (st === 'destroyed' || st === 'broken') return;
+    var sup = st === 'suppressed', t = root.performance ? performance.now() : 0;
+    var per = sup ? 420 : 1100, lit = ((t + mi * (sup ? 70 : 180)) % per) < per * 0.45;
+    var on = sup ? '#ffb030' : '#5cff7a', off = sup ? '#6a4414' : '#1f4a2a';
+    if (lit) ellipse(g, x, y, 2.6, 2.2, sup ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
+    g.fillStyle = lit ? on : off;
+    g.fillRect(x - 0.7, y - 0.7, 1.4, 1.4);
+  }
   function statusPose(status, art) {
     return status === 'broken' || status === 'suppressed' ? 'kneel' : 'stand';
   }
@@ -720,6 +734,7 @@
         g.restore();
       } else g.drawImage(c, bx, by, c.width / rs, c.height / rs);
       g.imageSmoothingEnabled = was; g.globalAlpha = wasA;
+      if (c.lamp) collarLamp(g, mx + (u.faceL ? -1 : 1) * c.lamp[0], my + c.lamp[1], mi, st);
     }
 
     // a garrison's markers ride over the middle of the building
@@ -933,7 +948,7 @@
     get sprites() { return sprites; }, get eyeArt() { return eyeArt; },
     get finishFigure() { return finishFigure; }, get hex3() { return hex3; },
     get muzzleArt() { return muzzleArt; }, get paintFigure() { return paintFigure; },
-    get podArt() { return podArt; }, get roleAt() { return roleAt; }, get sp2() { return sp2; },
+    get podArt() { return podArt; }, get lampArt() { return lampArt; }, get roleAt() { return roleAt; }, get sp2() { return sp2; },
     get vividHex() { return vividHex; }, a: a, dot: dot, ellipse: ellipse, fbm: fbm, hullSpec: hullSpec,
     poly: poly, rng: rng, toScreen: toScreen, A: A, ELEV: ELEV, K: K, PH: PH, W: W
   });
@@ -954,6 +969,7 @@
   var SPRITE_RES = ISOTROOPS.SPRITE_RES, SU = ISOTROOPS.SU, XENO_LOW = ISOTROOPS.XENO_LOW;
   var colour = ISOTROOPS.colour, eyeArt = ISOTROOPS.eyeArt, finishFigure = ISOTROOPS.finishFigure;
   var muzzleArt = ISOTROOPS.muzzleArt, paintFigure = ISOTROOPS.paintFigure, podArt = ISOTROOPS.podArt;
+  var lampArt = ISOTROOPS.lampArt;
   var roleAt = ISOTROOPS.roleAt, setSideColour = ISOTROOPS.setSideColour, sprites = ISOTROOPS.sprites;
   var vividHex = ISOTROOPS.vividHex;
 

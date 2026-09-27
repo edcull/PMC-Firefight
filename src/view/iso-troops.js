@@ -1144,6 +1144,12 @@
       var wy = -32 + (pose === 'kneel' ? KNEEL_DROP : 0);
       return [-7, legY(kit, wy - 15.5)];
     }
+    // a penal trooper's collar lamp, which the board lights over the figure: green, amber when suppressed
+    function lampArt(kit, pose) {
+      if (!kit.collar || pose === 'prone') return null;
+      var drop = pose === 'kneel' ? KNEEL_DROP : 0;
+      return [drop ? 2 : 1.8, legY(kit, -44 + drop)];
+    }
     function eyeArt(kit, pose) {
       if (kit.gun !== 'optics') return null;
       if (pose === 'prone') return MUZZLE_PRONE.optics;
@@ -1182,6 +1188,7 @@
       XENO_LOW: XENO_LOW,
       colour: colour,
       eyeArt: eyeArt,
+      lampArt: lampArt,
       finishFigure: finishFigure,
       muzzleArt: muzzleArt,
       paintFigure: paintFigure,
