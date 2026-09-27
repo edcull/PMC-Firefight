@@ -1218,8 +1218,8 @@
       chargeBonus: chargeBonus, clampBoard: clampBoard, d10: d10, defenceAgainst: defenceAgainst,
       dmgMod: dmgMod, fallBack: fallBack, fmtPart: fmtPart, has: has, inRect: inRect, isFlying: isFlying,
       isMachine: isMachine, rectPointDist: rectPointDist, resolveDamage: resolveDamage,
-      resolveShootingHits: resolveShootingHits, segRect: segRect, sizeBonus: sizeBonus, terrainAt: terrainAt,
-      unitNear: unitNear
+      resolveShootingHits: resolveShootingHits, segRect: segRect, shotMods: shotMods, sizeBonus: sizeBonus,
+      terrainAt: terrainAt, unitNear: unitNear
     };
   }
   function kitDestruct() {

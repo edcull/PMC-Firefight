@@ -13,7 +13,7 @@
         has = E.has, inRect = E.inRect, isFlying = E.isFlying, isMachine = E.isMachine,
         rectPointDist = E.rectPointDist, resolveDamage = E.resolveDamage,
         resolveShootingHits = E.resolveShootingHits, segRect = E.segRect, sizeBonus = E.sizeBonus,
-        terrainAt = E.terrainAt, unitNear = E.unitNear;
+        shotMods = E.shotMods, terrainAt = E.terrainAt, unitNear = E.unitNear;
     /* ---------- destructible terrain (pp. 41-43, 57-58) ----------
        Low walls, high walls and ordinary buildings can be brought down; reinforced
        walls and bunkers, woods, ruins and rocks cannot. A demolished wall leaves
@@ -124,14 +124,20 @@
       return clampBoard({ x: u.x + 2, y: u.y + 2 });
     }
 
-    /* Shooting a piece down on its own (p. 57): a final 15+, or an unmodified 9. */
+    /* Shooting a piece down on its own (p. 57): a "final D10 roll result (with
+       all modifiers applied)" of 15+, or an unmodified 9. The modifiers are the
+       shot's own, taken at the nearest point of the piece — Fire! for standing
+       still, half range, height, Basic Firepower where it applies — less what
+       only a unit can be (marked, crossfired, a vehicle's flank). */
     function shootTerrain(state, a, r) {
-      var log = [], parts = [], total = 0;
+      var log = [];
       var roll = d10();
-      total = roll; parts.push({ label: 'D10', v: roll });
-      total += a.fp; parts.push({ label: 'Firepower', v: a.fp });
-      var sb = sizeBonus(a.models);
-      if (sb) { total += sb; parts.push({ label: a.models + ' models', v: sb }); }
+      var aim = {
+        x: Math.max(r.x, Math.min(r.x + r.w, a.x)), y: Math.max(r.y, Math.min(r.y + r.h, a.y)),
+        side: null, cls: 'terrain', alive: true, models: 1, rules: [], shotFrom: [], marked: false
+      };
+      var sm = shotMods(state, a, aim, 'fire', { terrain: true });
+      var parts = [{ label: 'D10', v: roll }].concat(sm.parts), total = roll + sm.total;
       // Demolisher, the vehicle upgrade (p. 89): +4 Firepower against destructible terrain
       if (campFlag(a, 'demolisher')) { total += 4; parts.push({ label: 'Demolisher', v: 4 }); }
       var down = roll === 9 || total >= 15;
@@ -240,7 +246,7 @@
       dmgMod = L.dmgMod; fallBack = L.fallBack; fmtPart = L.fmtPart; has = L.has; inRect = L.inRect;
       isFlying = L.isFlying; isMachine = L.isMachine; rectPointDist = L.rectPointDist;
       resolveDamage = L.resolveDamage; resolveShootingHits = L.resolveShootingHits; segRect = L.segRect;
-      sizeBonus = L.sizeBonus; terrainAt = L.terrainAt; unitNear = L.unitNear;
+      shotMods = L.shotMods; sizeBonus = L.sizeBonus; terrainAt = L.terrainAt; unitNear = L.unitNear;
     }
 
     return {

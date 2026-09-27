@@ -126,6 +126,8 @@
     function shotMods(state, a, t, mode, opts) {
       opts = opts || {};
       var aux = !!opts.aux;
+      // a piece of terrain as the target (p. 57): only what the shooter brings counts
+      var atT = !!opts.terrain;
       var basic = mode === 'defensive' || mode === 'basic' ||
         (has(a, 'Always Basic Firepower') && !aux) || (has(a, 'Indirect Fire') && !aux && !dugIn(a) && !dualMode(state, a, t)) ||
         isFlying(a) || isFlying(t) ||                    // aircraft shoot, and are shot at, basic
@@ -134,7 +136,7 @@
 
       var fp = aux ? 1 : a.fp;
       total += fp; parts.push({ label: aux ? 'Auxiliary FP' : 'Firepower', v: fp });
-      var phero = aux ? 0 : pheromoneBonus(state, a, t);
+      var phero = aux || atT ? 0 : pheromoneBonus(state, a, t);
       if (phero) { total += phero; parts.push({ label: 'Pheromone Markers', v: phero }); }
       var sb = sizeBonus(a.models);
       if (sb) { total += sb; parts.push({ label: a.models + ' models', v: sb }); }
@@ -222,11 +224,11 @@
         }
       }
       // Demolisher: a machine fitted for knocking buildings down
-      if (!aux && campFlag(a, 'demolisher') && shelterOf(state, a, t)) {
+      if (!aux && !atT && campFlag(a, 'demolisher') && shelterOf(state, a, t)) {
         total += 4; parts.push({ label: 'Demolisher', v: 4 });
       }
       // a unit charging home cannot claim cover from the defensive fire it draws
-      var dres = defenceAgainst(state, aux ? auxGun(a) : a, t,
+      var dres = atT ? null : defenceAgainst(state, aux ? auxGun(a) : a, t,
         { noCover: mode === 'defensive', defensiveFire: mode === 'defensive' });
       return {
         total: total, parts: parts, basic: basic, aux: aux, pierce: pierce,

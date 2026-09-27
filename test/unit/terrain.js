@@ -48,6 +48,16 @@ for (var i = 0; i < n; i++) {
 }
 ok('a 15+ or an unmodified 9 brings a wall down', down > n * 0.1 && down < n * 0.9, true,
   Math.round(100 * down / n) + '% of shots');
+// "with all modifiers applied" (p. 57): the shot's own, as at a unit
+function mods(gx, terrain) {
+  var w = world([{ kind: 'barricade', x: 26, y: 18, w: 4, h: 4 }].concat(terrain || []));
+  var g = mk('mcv', 'A', gx, 20); w.units = [g];
+  var r = R.shootTerrain(w, g, w.terrain[0]);
+  return r.total - r.roll;
+}
+ok('within half range: Firepower 8, Fire! +1, half range +2', mods(18), 11);
+ok('beyond it: Firepower 8 and Fire! +1', mods(8), 9, '18" off');
+ok('from a hill, +2 more', mods(8, [{ kind: 'hill', x: 4, y: 16, w: 8, h: 8 }]), 11);
 var noDW = world([{ kind: 'barricade', x: 26, y: 18, w: 4, h: 4 }]);
 ok('rifles carry no Destructive Weapon',
   R.canDemolish(mk('regular', 'A', 18, 20), noDW.terrain[0]), false);
