@@ -1,7 +1,7 @@
 /* The main menu: the first screen, and the one every "back" leads to.
 
-   Single player and Multiplayer each open a list of their own (Online has one
-   more under it), and every card on those hands over to the screen that
+   Single player, Hotseat and Multiplayer each open a list of their own —
+   a skirmish, co-op or solitaire, and a campaign — and every card on those hands over to the screen that
    already does the job — the muster sheet, the campaign dossier, the lobby —
    so this file only decides which one to open and how it is set up.
 
@@ -23,14 +23,14 @@
   function el(id) { return document.getElementById(id); }
 
   /* ================= navigation ================= */
-  var PANES = ['main', 'single', 'multi', 'online'];
+  var PANES = ['main', 'single', 'hotseat', 'multi'];
   // where Back (and Escape) goes from each list
-  var UP = { single: 'main', multi: 'main', online: 'multi' };
+  var UP = { single: 'main', hotseat: 'main', multi: 'main' };
   var at = 'main';
 
   function show(pane) {
-    // Online is only there with a game server behind the page
-    if (pane === 'online' && el('btn-multi') && el('btn-multi').disabled) pane = 'multi';
+    // Multiplayer is only there with a game server behind the page
+    if (pane === 'multi' && el('btn-multi') && el('btn-multi').disabled) pane = 'main';
     if (PANES.indexOf(pane) < 0) pane = 'main';
     at = pane;
     PANES.forEach(function (p) { var e = el('menu-' + p); if (e) e.hidden = p !== pane; });
@@ -120,7 +120,7 @@
       }
       if (b.id !== 'btn-discard') unconfirm();
       switch (b.id) {
-        case 'btn-multi': show('online'); return;
+        case 'btn-multi': show('multi'); return;
         case 'btn-resume': close(); return;
         case 'btn-discard':
           if (!b.classList.contains('confirm')) {

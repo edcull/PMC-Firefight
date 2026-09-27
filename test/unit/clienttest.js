@@ -288,17 +288,17 @@ app.drain(4);
   ok('Single player opens its own list', byId('menu-single').hidden === false && byId('menu-main').hidden === true);
   /* This DOM has no selectors, so which card sits in which list is read off the page itself. */
   const page = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const pane = (id) => { const m = page.match(new RegExp('id="menu-' + id + '"[\\s\\S]*?data-menu="(main|multi)">')); return m ? m[0] : ''; };
+  const pane = (id) => { const m = page.match(new RegExp('id="menu-' + id + '"[\\s\\S]*?(data-menu="main">|id="menu-single")')); return m ? m[0] : ''; };
   ok('...with a skirmish, solitaire and the campaign on it',
     /data-skirmish="ai"/.test(pane('single')) && /data-skirmish="solo"/.test(pane('single')) && /id="btn-campaign"/.test(pane('single')));
+  W.PMCMenu.show('hotseat');
+  ok('Hotseat opens its own list', byId('menu-hotseat').hidden === false && byId('menu-single').hidden === true);
+  ok('...with a skirmish, co-op and the campaign on it', /data-skirmish="hotseat"/.test(pane('hotseat')) &&
+    /data-skirmish="coop"/.test(pane('hotseat')) && /data-camp="hotseat"/.test(pane('hotseat')));
+  ok('Multiplayer is on the main menu, with a skirmish, co-op and a campaign under it', /id="btn-multi"/.test(pane('main')) &&
+    ['skirmish', 'coop', 'campaign'].every((k) => pane('multi').indexOf('data-online="' + k + '"') >= 0));
   W.PMCMenu.show('multi');
-  ok('Multiplayer opens its own list', byId('menu-multi').hidden === false && byId('menu-single').hidden === true);
-  ok('...with Online and the three hotseats on it', /id="btn-multi"/.test(pane('multi')) &&
-    /data-skirmish="hotseat"/.test(pane('multi')) && /data-skirmish="coop"/.test(pane('multi')) && /data-camp="hotseat"/.test(pane('multi')));
-  ok('...and Online has a skirmish, a campaign and co-op under it',
-    ['skirmish', 'campaign', 'coop'].every((k) => pane('online').indexOf('data-online="' + k + '"') >= 0));
-  W.PMCMenu.show('online');
-  ok('...and Online stays shut with no server behind the page', byId('menu-online').hidden === true && byId('menu-multi').hidden === false);
+  ok('...and it stays shut with no server behind the page', byId('menu-multi').hidden === true && byId('menu-main').hidden === false);
   W.PMCMenu.show('main');
   W.PMCMenu.close(); W.PMC_SKIRMISH('hotseat');
   ok('Hotseat opens the muster sheet, set for hotseat',
@@ -478,8 +478,8 @@ ok('...and greyed out on a page with no server behind it', app.doc.getElementByI
   app.doc.getElementById('btn-multi').hidden === false);
 const ashBody = () => ash.doc.getElementById('lobby-body').innerHTML;
 ok('the lobby screen draws', /Start a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Online skirmish');
-ash.win.PMCMenu.show('online');
-ok('with a server, Online opens its own list', ash.doc.getElementById('menu-online').hidden === false);
+ash.win.PMCMenu.show('multi');
+ok('with a server, Multiplayer opens its own list', ash.doc.getElementById('menu-multi').hidden === false);
 ash.win.PMCMenu.show('main');
 ok('it says there are no games yet', /No games open/.test(ashBody()));
 

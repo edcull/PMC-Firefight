@@ -115,7 +115,10 @@
         <button class="resume-x" id="btn-discard" hidden aria-label="Discard this battle" title="Discard this battle">&times;</button>
       </div>
       <button class="mcard" data-menu="single">Single player<small>Skirmish, solitaire or a campaign, against the AI</small></button>
-      <button class="mcard" data-menu="multi">Multiplayer<small>Over the network, or two players on one screen</small></button>
+      <button class="mcard" data-menu="hotseat">Hotseat<small>Two players, one screen</small></button>
+      <!-- only offered when the page came from a game server: a game opened
+           from a file has nobody to play against -->
+      <button class="mcard" id="btn-multi" disabled>Multiplayer<small id="menu-multi-sub">Needs the game server — run node server.js and open the page from it</small></button>
     </div>
     <div class="menu-pane" id="menu-single" hidden>
       <h2 class="menu-head">Single player</h2>
@@ -124,22 +127,19 @@
       <button class="mcard" id="btn-campaign" data-camp="solo">Campaign<small id="menu-camp-sub">Raise a force and see it through a war</small></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
-    <div class="menu-pane" id="menu-multi" hidden>
-      <h2 class="menu-head">Multiplayer</h2>
-      <!-- only offered when the page came from a game server: a game opened
-           from a file has nobody to play against -->
-      <button class="mcard" id="btn-multi" disabled>Online<small id="menu-multi-sub">Needs the game server — run node server.js and open the page from it</small></button>
-      <button class="mcard" data-skirmish="hotseat">Skirmish hotseat<small>One battle, two players, one screen</small></button>
-      <button class="mcard" data-skirmish="coop">Cooperative hotseat<small>Two commandos, one each, against the OpFor</small></button>
-      <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign hotseat<small id="menu-camphot-sub">Two dossiers, two players, one screen</small></button>
+    <div class="menu-pane" id="menu-hotseat" hidden>
+      <h2 class="menu-head">Hotseat</h2>
+      <button class="mcard" data-skirmish="hotseat">Skirmish<small>One battle, two players, one screen</small></button>
+      <button class="mcard" data-skirmish="coop">Cooperative<small>Two commandos, one each, against the OpFor</small></button>
+      <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign<small id="menu-camphot-sub">Two dossiers, two players, one screen</small></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
-    <div class="menu-pane" id="menu-online" hidden>
-      <h2 class="menu-head">Online</h2>
+    <div class="menu-pane" id="menu-multi" hidden>
+      <h2 class="menu-head">Multiplayer</h2>
       <button class="mcard" data-online="skirmish">Skirmish<small id="menu-online-sub">One battle against somebody else over the network</small></button>
-      <button class="mcard" data-online="campaign">Campaign<small>A battle in a campaign kept on the server, shared by both players</small></button>
       <button class="mcard" data-online="coop" disabled>Cooperative<small>Two commandos against the OpFor, over the network — not available online yet</small></button>
-      <button class="mcard menu-back" data-menu="multi">← Back</button>
+      <button class="mcard" data-online="campaign">Campaign<small>A battle in a campaign kept on the server, shared by both players</small></button>
+      <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
     <!-- the small things: the unit viewer from the main menu, the demo from the single-player list -->
     <p class="menu-foot">
@@ -148,7 +148,7 @@
       <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
     </p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2609271314</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2609271322</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -562,7 +562,7 @@
 <script src="src/view/actions.js?v=04ba9589d5"></script>
 <script src="src/view/draw.js?v=63cd9c60d3"></script>
 <script src="src/view/view.js?v=639b313f22"></script>
-<script src="src/view/panels.js?v=b37a84abbf"></script>
+<script src="src/view/panels.js?v=abc0021f3a"></script>
 <script src="src/view/muster.js?v=c2c9e7c1dc"></script>
 <script src="src/view/game.js?v=bb6ee869b4"></script>
 <script src="src/view/dossier-hub.js?v=fa75b1cbcb"></script>
@@ -571,4 +571,4 @@
 <script src="src/view/dossier-contract.js?v=34c221c5e5"></script>
 <script src="src/view/dossier-after.js?v=204cc58cd1"></script>
 <script src="src/view/dossier.js?v=ecd4f7e904"></script>
-<script src="src/view/menu.js?v=e828c0fadd"></script>
+<script src="src/view/menu.js?v=c33e7de710"></script>
