@@ -34,20 +34,32 @@
       /* A carbine at close range: quicker than an aimed rifle line and with more
          rounds in it, but still recognisably single shots rather than a stream. */
       smg:      { n: function (h) { return clampN(h * 2 + 4, 5, 12); }, gap: 68, tracer: { spread: 0.5, short: true }, land: 300, muzzle: 460 },
-      // a machine gun, rattling
-      burst:    { n: function (h) { return clampN(h * 2 + 4, 6, 12); }, gap: 38, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
+      /* A machine gun, rattling in a double burst: the rounds split into two
+         bursts with a breath between them (`bursts`, `pause` ms). */
+      burst:    { n: function (h) { return clampN(h * 2 + 4, 6, 12); }, gap: 38, bursts: 2, pause: 220, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
       // an autocannon: heavier, slower, countable
       chain:    { n: function (h) { return clampN(h * 2 + 3, 5, 10); }, gap: 92, tracer: { spread: 0.3, fat: true }, land: 330, muzzle: 92, perShot: true },
       // a bug's volley of chitin spines: a quick dry spray, bone-pale, no flash
       spine:    { n: function (h) { return clampN(h * 2 + 4, 6, 12); }, gap: 45, tracer: { spread: 0.6, short: true, bio: true }, land: 320, muzzle: 0, noFlash: true }
     };
     function clampN(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    /* How a stream of n rounds is clumped: a fixed clump, or split evenly into
+       `bursts` with a pause after each. Null for an even stream. */
+    function clumping(f, n) {
+      if (f.bursts) { var c = Math.ceil(n / f.bursts); return { clump: c, gap: c * f.gap + f.pause }; }
+      return f.clump ? { clump: f.clump, gap: f.clumpGap } : null;
+    }
+    // when the i-th round of n goes out
+    function roundAt(f, n, i) {
+      var c = clumping(f, n);
+      return c ? Math.floor(i / c.clump) * c.gap + (i % c.clump) * f.gap : i * f.gap;
+    }
     // how long a stream of that style takes to get all its rounds away
     function streamLength(style, hits) {
       var f = FIRE[style] || FIRE.small;
       var n = f.n(hits);
-      if (!f.clump) return n * f.gap;
-      return Math.floor((n - 1) / f.clump) * f.clumpGap + ((n - 1) % f.clump) * f.gap;
+      if (!clumping(f, n)) return n * f.gap;
+      return roundAt(f, n, n - 1);
     }
 
     /* A flamethrower is not one squeeze of a trigger. The operator holds it down
@@ -548,11 +560,15 @@
       var f = FIRE[style] || FIRE.small;
       var n = f.n(hits);
       var heavy = shooter.fp >= 5;
+      // a double burst is heard as two, the second where its rounds start
+      var second = f.bursts ? roundAt(f, n, Math.ceil(n / f.bursts)) / 1000 : 0;
       // a Xenotripod unit's guns keep their rhythm but fire energy, not rounds
-      if (SFX && R.isXeno(shooter) && SFX.zaps) SFX.zaps(style, hits);
-      else if (SFX) {
+      if (SFX && R.isXeno(shooter) && SFX.zaps) {
+        if (second) { SFX.zaps(style, hits, 0, Math.ceil(n / 2)); SFX.zaps(style, hits, second, Math.floor(n / 2)); }
+        else SFX.zaps(style, hits);
+      } else if (SFX) {
         if (style === 'chain') SFX.chain(hits);
-        else if (style === 'burst') SFX.rattle(hits);
+        else if (style === 'burst') { SFX.rattle(Math.ceil(hits / 2)); SFX.rattle(Math.ceil(hits / 2), second); }
         else if (style === 'smg') SFX.smg(hits);
         else if (style === 'pistol') SFX.pistol(hits);
         else if (style === 'spine') SFX.spine(hits);
@@ -575,9 +591,7 @@
       }
       for (var i = 0; i < n; i++) {
         // a clumped weapon pauses between bursts; the rest fire evenly
-        var at = f.clump
-          ? Math.floor(i / f.clump) * f.clumpGap + (i % f.clump) * f.gap
-          : i * f.gap;
+        var at = roundAt(f, n, i);
         add({
           kind: 'tracer', from: gun(i), to: to,
           spread: f.tracer.spread, fat: f.tracer.fat, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter),
