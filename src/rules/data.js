@@ -505,22 +505,22 @@
        Crocks fire pulses of light in the tribe's colour; the Gamma squads'
        charges and the craft's plasma missiles are glowing orbs. The Esh-Aven
        start with blades and crude slug-throwers and work up to Gauss. */
-    xalpha1: { p: 'energy' }, xalpha2: { p: 'energy' }, xalpha3: { p: 'energy' },
+    xalpha1: { p: 'energy', n: 2 }, xalpha2: { p: 'energy', n: 2 }, xalpha3: { p: 'energy', n: 2 },
     xalpha4: { p: 'energy', n: 2 }, xalpha5: { p: 'energy', n: 2 },
-    xbeta2: { p: 'energy', n: 2 }, xbeta3: { p: 'energy', n: 2 }, xbeta4: { p: 'energy', n: 3 },
-    xgamma3: { p: 'orb', n: 2 }, xgamma4: { p: 'orb', n: 3 }, xgamma5: { p: 'orb', n: 3 },
+    xbeta2: { p: 'energy', n: 2 }, xbeta3: { p: 'energy', n: 3 }, xbeta4: { p: 'energy', n: 4 },
+    xgamma3: { p: 'orb', n: 3 }, xgamma4: { p: 'orb', n: 3 }, xgamma5: { p: 'orb', n: 3 },
     // the Deltas' energy SMGs: the leader's alone at Low grade, a pair at Core, every round splashing
     xdelta1: { p: 'none' }, xdelta2: { p: 'smg', splash: true }, xdelta3: { p: 'smg', splash: true },
     // the Esh-Aven: bursts of tracer, but it is energy that crackles out of them
     xeps1: { p: 'none' }, xeps2: { p: 'pistol' }, xeps3: { p: 'small' },
-    xeps4: { p: 'rail', n: 2 }, xeps5: { p: 'rail', n: 3 },
-    // the strike craft lob plasma orbs, one more to the salvo with each grade
-    xstrike2: { p: 'orb', n: 1 }, xstrike3: { p: 'orb', n: 2 },
+    xeps4: { p: 'rail', n: 4 }, xeps5: { p: 'rail', n: 5 },
+    // the strike craft lob plasma orbs, the salvo growing with the grade (a turret's is three)
+    xstrike2: { p: 'orb', n: 2 }, xstrike3: { p: 'orb', n: 3 },
     xstrike4: { p: 'orb', n: 3 }, xstrike5: { p: 'orb', n: 4 },
     xrecon: { p: 'energy' }, xtelecraft: { p: 'energy', n: 2 },
     xshieldb: { p: 'energy', n: 2 }, xshield: { p: 'energy', n: 2 }, xshieldhp: { p: 'energy', n: 2 },
-    xdturret1: { p: 'orb', n: 2 }, xdturret2: { p: 'orb', n: 2 }, xdturret3: { p: 'orb', n: 2 },
-    xdturret4: { p: 'orb', n: 2 }, xdturret5: { p: 'orb', n: 2 },
+    xdturret1: { p: 'orb', n: 3 }, xdturret2: { p: 'orb', n: 3 }, xdturret3: { p: 'orb', n: 3 },
+    xdturret4: { p: 'orb', n: 3 }, xdturret5: { p: 'orb', n: 3 },
     xtturret2: { p: 'none' }, xtturret3: { p: 'none' }, xtturret4: { p: 'none' },
     xsturret3: { p: 'none' }, xsturret4: { p: 'none' }, xsturret5: { p: 'none' }
   };

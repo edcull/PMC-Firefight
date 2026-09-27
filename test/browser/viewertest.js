@@ -180,9 +180,9 @@ async function pickAndFire(p, key, ms) {
   const delta = await pickAndFire(p, 'xdelta3', 1800);
   ok('core Deltas fire their SMGs, every round splashing', delta.spec.p === 'smg' && !!delta.seen.tracer && !!delta.seen.impact, delta.kinds.join(' '));
   const heps = await pickAndFire(p, 'xeps5', 1600);
-  ok('advanced Epsilons fire three rail lines', heps.spec.p === 'rail' && heps.spec.n === 3 && !!heps.seen.rail, heps.kinds.join(' '));
+  ok('advanced Epsilons fire five rail lines', heps.spec.p === 'rail' && heps.spec.n === 5 && !!heps.seen.rail, heps.kinds.join(' '));
   const tur = await pickAndFire(p, 'xdturret3', 1800);
-  ok('a defensive turret lobs orbs', !!tur.seen.orb, tur.kinds.join(' '));
+  ok('a defensive turret lobs three orbs', tur.spec.n === 3 && !!tur.seen.orb, tur.kinds.join(' '));
 
   head('It plays a Battlefield Insertion the way the battle does');
 

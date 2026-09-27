@@ -173,10 +173,11 @@
   function alienHull(p) { return !!p && (p.faction === 'bugs' || p.faction === 'xeno'); }
   /* Drone Control (p. 37): "Vehicles without the Transport special rule" — ground
      hulls and aircraft alike (p. 39) — "can be fielded by all armies except the
-     Bugs". A turret is Drone Controlled already, and a Teleport craft carries troops. */
+     Bugs". A turret is Drone Controlled already. The Teleport craft may be
+     flown crewed or as a drone: its gate is steered from the aerial either way. */
   function canBeDrone(p) {
     return !!p && (p.cls === 'vehicle' || p.cls === 'aircraft') && !p.transport && p.faction !== 'bugs' && !p.mustDrone &&
-      !(p.rules || []).some(function (r) { return /^(Transport|Teleport|Turret)/.test(r); }) &&
+      !(p.rules || []).some(function (r) { return /^(Transport|Turret)/.test(r) || (/^Teleport/.test(r) && p.cls !== 'aircraft'); }) &&
       !/Turret/.test(p.group || '');
   }
   // which propulsions a profile may take: ground vehicles only
