@@ -244,7 +244,11 @@
       if (p.noSlot) return { roll: null, saved: false, need: null, note: 'A drop pod is not salvaged once used.' };
       if (isTurretP(p)) return { roll: null, saved: false, need: null, note: 'A turret is not salvaged.' };
       if (p.cls === 'aircraft') {
-        need = (entry.upgrades || []).indexOf(1) >= 0 ? 2 : 4;   // Advanced Emergency Systems
+        /* Advanced Emergency Systems is upgrade 1 of the vehicle and aircraft table
+           (p. 89); a tribe's aircraft have their own table, whose 1 is Improved
+           Engines (p. 143), and no such system. */
+        var aes = !isXenoKey(entry.key) && (entry.upgrades || []).indexOf(1) >= 0;
+        need = aes ? 2 : 4;
         note = 'Aircraft make an emergency landing on a ' + need + '+' +
           (need === 2 ? ' with Advanced Emergency Systems.' : '.');
       } else if (line.catastrophic) {
