@@ -329,6 +329,8 @@
        energy  pulses of light in the army's colour (Xenotripod small arms)
        orb     a glowing plasma orb, lobbed or teleported onto the target,
                bursting in a ring (Gamma squads, turrets, strike craft)
+       `splash: true` on a stream weapon lands every round in its own little
+       burst of light rather than only where the hits fall (the Delta SMGs)
        orbbig  the same, heavier and slower, landing in a splash of blue fire
                (the advanced support vehicle's energy howitzer)
        plasmabolt a big blue bolt of plasma, flat and fast, landing in the same
@@ -507,12 +509,14 @@
     xalpha4: { p: 'energy', n: 2 }, xalpha5: { p: 'energy', n: 2 },
     xbeta2: { p: 'energy', n: 2 }, xbeta3: { p: 'energy', n: 2 }, xbeta4: { p: 'energy', n: 3 },
     xgamma3: { p: 'orb', n: 2 }, xgamma4: { p: 'orb', n: 3 }, xgamma5: { p: 'orb', n: 3 },
-    xdelta1: { p: 'none' }, xdelta2: { p: 'pistol' }, xdelta3: { p: 'small' },
+    // the Deltas' energy SMGs: the leader's alone at Low grade, a pair at Core, every round splashing
+    xdelta1: { p: 'none' }, xdelta2: { p: 'smg', splash: true }, xdelta3: { p: 'smg', splash: true },
     // the Esh-Aven: bursts of tracer, but it is energy that crackles out of them
     xeps1: { p: 'none' }, xeps2: { p: 'pistol' }, xeps3: { p: 'small' },
     xeps4: { p: 'rail', n: 2 }, xeps5: { p: 'rail', n: 3 },
-    xstrike2: { p: 'energy', n: 3 }, xstrike3: { p: 'orb', n: 2, s: 'energy', sn: 3 },
-    xstrike4: { p: 'orb', n: 3, s: 'energy', sn: 3 }, xstrike5: { p: 'energy', n: 5, s: 'rail', sn: 3 },
+    // the strike craft lob plasma orbs, one more to the salvo with each grade
+    xstrike2: { p: 'orb', n: 1 }, xstrike3: { p: 'orb', n: 2 },
+    xstrike4: { p: 'orb', n: 3 }, xstrike5: { p: 'orb', n: 4 },
     xrecon: { p: 'energy' }, xtelecraft: { p: 'energy', n: 2 },
     xshieldb: { p: 'energy', n: 2 }, xshield: { p: 'energy', n: 2 }, xshieldhp: { p: 'energy', n: 2 },
     xdturret1: { p: 'orb', n: 2 }, xdturret2: { p: 'orb', n: 2 }, xdturret3: { p: 'orb', n: 2 },

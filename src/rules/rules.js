@@ -855,7 +855,9 @@
     // dug in, a field piece fires over open sights: big shells straight at the target (p. 94)
     if (DUG_WEAPONS[u.key] && dugIn(u)) w = DUG_WEAPONS[u.key];
     // `n` is how many the primary puts out at once; `sn` the same for the secondary
-    return { p: w.p, s: w.s || null, n: w.n || 1, sn: w.sn || 1 };
+    var spec = { p: w.p, s: w.s || null, n: w.n || 1, sn: w.sn || 1 };
+    if (w.splash) spec.splash = true;
+    return spec;
   }
   // the primary alone, which is what most callers want
   function weaponStyle(u) { return weaponSpec(u).p; }

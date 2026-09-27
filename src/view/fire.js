@@ -399,7 +399,7 @@
         }
 
         default:
-          playStream(spec.p, shooter, from, to, hits, land);
+          playStream(spec.p, shooter, from, to, hits, land, spec.splash);
           return Math.max(820, streamLength(spec.p, hits) + 320);
       }
     }
@@ -542,8 +542,9 @@
     /* The four styles that put a stream of rounds down: rifles, SMGs, machine guns
        and autocannon. They differ only in how many, how fast and how they look, so
        one routine draws them all. `land` is null for a secondary, which does its
-       own noise but leaves the casualties to the primary. */
-    function playStream(style, shooter, from, to, hits, land) {
+       own noise but leaves the casualties to the primary. `splash` lands every
+       round in its own small burst of light around the mark (the Delta SMGs). */
+    function playStream(style, shooter, from, to, hits, land, splash) {
       var f = FIRE[style] || FIRE.small;
       var n = f.n(hits);
       var heavy = shooter.fp >= 5;
@@ -582,6 +583,12 @@
           spread: f.tracer.spread, fat: f.tracer.fat, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter),
           delay: at, dur: 250 + at, blocking: true
         });
+        if (splash) {
+          add({
+            kind: 'impact', n: 2, rgb: shotRGB(shooter) || XENO_BLUE, delay: at + 240, dur: 520 + at, blocking: true,
+            x: to.x + (Math.random() - 0.5) * 1.6, y: to.y + (Math.random() - 0.5) * 1.6, up: to.up
+          });
+        }
       }
       if (land) setTimeout(function () { land(style === 'chain' ? 1 : 0); }, f.land);
     }
@@ -604,6 +611,9 @@
     // a spotter with his optics up is not one of the guns
     var guns = pool.filter(function (m) { return !m.tool; });
     if (guns.length) pool = guns;
+    // a Delta with only blades in its hands leaves the shooting to the ones carrying SMGs
+    var armed = pool.filter(function (m) { return m.gun !== 'blades'; });
+    if (armed.length) pool = armed;
     /* A machine gun's burst comes off the men holding machine guns; the carbines
        and rifles off everyone else — each weapon from the hands that carry it. */
     var mgs = pool.filter(function (m) { return /^(mg|saw)$/.test(m.gun || ''); });

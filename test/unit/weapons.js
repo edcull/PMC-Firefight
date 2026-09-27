@@ -78,6 +78,18 @@ is('lsupport', 'arcbig x3');
 is('msupport', 'arcbig+arcbig x5');
 // the advanced support hull's heavy plasma cannon: four bolts, each bursting
 is('asupport', 'orbbig x3');
+
+head('Xenotripod strike craft and Deltas');
+// the strike craft lob one orb more with each grade, and nothing else
+is('xstrike2', 'orb');
+is('xstrike3', 'orb x2');
+is('xstrike4', 'orb x3');
+is('xstrike5', 'orb x4');
+// the Deltas' energy SMGs, every round landing in its own splash
+is('xdelta2', 'smg');
+is('xdelta3', 'smg');
+ok('Delta SMG rounds splash', spec('xdelta2').splash === true && spec('xdelta3').splash === true);
+ok('...and nothing else does', !spec('regular').splash && !spec('xbeta3').splash);
 is('mortarsection', 'arc');
 is('mortarteam', 'arc x2');
 is('mortarbattery', 'arc x3');
