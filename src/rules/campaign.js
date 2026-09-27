@@ -88,7 +88,7 @@
     { n: 2, name: 'Brave', flag: 'brave',
       text: 'The unit ignores 1 Suppression point from each ranged attack.' },
     { n: 3, name: 'Last Stand', flag: 'lastStand',
-      text: 'Once per battle the unit may remove all its Suppression points.' },
+      text: 'Once per battle the unit may remove all its Suppression points. It costs no action; a Broken unit makes its stand in the Rally phase instead of fleeing.' },
     { n: 4, name: 'Amazing Stamina', mod: { move: 1 },
       text: 'The unit adds 1 to its Movement.' },
     { n: 5, name: 'Into the Shadows', rule: 'Stealth',

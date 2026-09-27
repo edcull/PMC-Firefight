@@ -63,5 +63,32 @@ console.log('\nAdrenaline Rush (p. 88): "two actions in a row"');
   ok('the Rush is spent for the battle', u.camp.once.adrenaline === true);
 })();
 
+console.log('\nLast Stand (p. 88): "once per battle the unit can remove all its Suppression points"');
+(function () {
+  const { e, st, side, u } = honoured(battle(), 'lastStand');
+  u.sp = u.morale + 1;                       // Suppressed
+  e.intent(side, { k: 'select', id: u.id });
+  const ls = e.intent(side, { k: 'action', id: 'laststand' });
+  ok('a Suppressed unit makes its stand', ls.ok && u.sp === 0, ls.why);
+  ok('...and it is not an action: the unit still has its activation', !u.activated && st.activeSide === side);
+  e.intent(side, { k: 'select', id: u.id });
+  ok('...which it spends steady', step(e, side, u) && u.activated);
+  ok('once a battle', !e.query.actionState(u, 'laststand').on);
+})();
+(function () {
+  const { e, st, side, u } = honoured(battle(), 'lastStand');
+  const at = { x: u.x, y: u.y };
+  u.sp = 2 * u.morale + 1;                   // Broken: it cannot be activated
+  ok('a Broken unit cannot act to call on it', e.query.eligible(side).indexOf(u) < 0);
+  // everyone else has gone but one, whose action ends the turn's activations
+  const last = e.query.eligible(side).filter((x) => x.cls === 'infantry')[0];
+  st.units.forEach((x) => { if (x !== last && x !== u) x.activated = true; });
+  e.intent(side, { k: 'select', id: last.id });
+  step(e, side, last);
+  ok('in the Rally phase it makes its stand instead of running', u.alive && u.camp.once.lastStand === true && u.sp < u.morale,
+    u.sp + ' SP, ' + (u.x === at.x && u.y === at.y ? 'where it stood' : 'moved'));
+  ok('...where it stood', u.x === at.x && u.y === at.y);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -15,7 +15,8 @@
         paintStructures = E.paintStructures, pushRes = E.pushRes, render = E.render,
         repaintTerrain = E.repaintTerrain, setHint = E.setHint, ui = E.ui, whenIdle = E.whenIdle;
 
-    /* Adrenaline Rush and Last Stand: each once a battle, each spent from u.camp.once. */
+    /* Adrenaline Rush and Last Stand: each once a battle, each spent from u.camp.once;
+       neither is an action in itself. */
     function doOnce(u, id) {
       u.camp.once[id === 'rush' ? 'adrenaline' : 'lastStand'] = true;
       if (id === 'laststand') {
@@ -27,8 +28,11 @@
           note: u.label + ' steadies and throws off every point of suppression.',
           outcome: { text: was + ' SP cleared — the unit is ready again.', tone: 'good' }
         });
-        u.activated = true;
-        endActivation(u);
+        /* "Once per battle the unit can remove all its Suppression points" (p. 88):
+           not an action, so the unit still has its activation to spend, steady. A
+           Broken unit, which cannot be activated, makes it in the Rally phase
+           instead (endphase.js). */
+        ui.mode = 'idle'; render();
         return;
       }
       /* "Once per battle the unit can make two actions in a row" (p. 88): the unit

@@ -79,6 +79,22 @@
     function rallyPhase() {
       logLine('phase', 'Rally phase.');
       R.collars(E.state).forEach(function (l) { logLine(l.t, l.text); });
+      /* Last Stand (p. 88): "once per battle the unit can remove all its
+         Suppression points". A Broken unit cannot be activated to call on it, so
+         it makes its stand here, before the Broken flee — the moment it matters
+         most, and one no player would pass up. */
+      E.state.units.forEach(function (u) {
+        if (!onTable(u) || R.status(u) !== 'broken' || !R.campFlag(u, 'lastStand')) return;
+        u.camp.once = u.camp.once || {};
+        if (u.camp.once.lastStand) return;
+        u.camp.once.lastStand = true;
+        var was = u.sp;
+        u.sp = 0;
+        logLine('rally', u.label + ' makes a Last Stand instead of running, and shakes off all ' + was + ' SP.');
+        pushRes({ kind: 'Honour', title: 'Last Stand', side: u.side,
+          note: u.label + ' was Broken and about to flee.',
+          outcome: { text: was + ' SP cleared — it stands its ground.', tone: 'good' } });
+      });
       fleeBroken();
       // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
       E.state.units.forEach(function (c) {
