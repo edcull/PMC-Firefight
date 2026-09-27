@@ -224,8 +224,9 @@
       return {
         kind: 'Repair', side: u.side, title: u.name + ' [' + u.side + ']',
         note: 'Structure ' + u.str + ', ' + rep.before + ' damage — roll ' + rep.dice +
-          'D6, each ' + rep.need + '+ clearing a point' + (rep.need === 5 ? ' (Jammers).' : '.'),
-        dice: rep.rolls.map(function (d) { return { label: 'D6', value: d.value, tone: d.ok ? 'crit' : 'fail' }; }),
+          'D6, each ' + rep.need + '+ clearing a point' + (rep.need === 5 ? ' (Jammers)' : '') +
+          (rep.reroll ? '. Superior Self-repair re-rolls the failures.' : '.'),
+        dice: rep.rolls.map(function (d) { return { label: d.first != null ? d.first + '→' : 'D6', value: d.value, tone: d.ok ? 'crit' : 'fail' }; }),
         calc: 'Damage ' + rep.before + ' · ' + rep.fixed + ' repaired → ' + rep.after,
         outcome: rep.after === 0
           ? { text: 'Fully repaired.', tone: 'good' }

@@ -257,18 +257,21 @@
       if (!u.damage) return null;
       // Nanobots (p. 89): the repair rolls dice for the whole Structure, not for what is left of it
       var dice = campFlag(u, 'nanobots') ? u.str : Math.max(1, u.str - u.damage), need = jammedNearby(state, u) ? 5 : 4;
+      // Superior Self-repair System (p. 89): "can re-roll failed repair rolls. The second result stands."
+      var reroll = campFlag(u, 'selfRepair');
       var rolls = [], fixed = 0;
       for (var i = 0; i < dice; i++) {
-        var r = d6();
-        rolls.push({ value: r, ok: r >= need });
+        var r = d6(), first = null;
+        if (r < need && reroll) { first = r; r = d6(); }
+        rolls.push({ value: r, first: first, ok: r >= need });
         if (r >= need) fixed++;
       }
       var before = u.damage;
       u.damage = Math.max(0, u.damage - fixed);
       return {
-        dice: dice, need: need, rolls: rolls, fixed: fixed, before: before, after: u.damage,
-        text: u.label + ' repairs: ' + dice + 'D6 [' + rolls.map(function (r) { return r.value; }).join(' ') +
-          '] on ' + need + '+ — ' + fixed + ' damage cleared (' + before + ' → ' + u.damage + ').'
+        dice: dice, need: need, rolls: rolls, fixed: fixed, before: before, after: u.damage, reroll: reroll,
+        text: u.label + ' repairs: ' + dice + 'D6 [' + rolls.map(function (r) { return r.first != null ? r.first + '→' + r.value : r.value; }).join(' ') +
+          '] on ' + need + '+' + (reroll ? ' (Superior Self-repair re-rolls)' : '') + ' — ' + fixed + ' damage cleared (' + before + ' → ' + u.damage + ').'
       };
     }
     /* Jammers: enemies within 24" rally — and repair — on 5+ instead of 4+.

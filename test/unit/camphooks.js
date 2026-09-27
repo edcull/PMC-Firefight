@@ -318,5 +318,22 @@ head('Demolisher');
   ok('shooting a wall down: +4 Firepower with the upgrade', total([4]) - total([]), 4);
 })();
 
+/* Superior Self-repair System (p. 89): failed repair rolls are re-rolled. */
+head('Superior Self-repair System');
+(function () {
+  function rate(ups) {
+    var fixed = 0, n = 4000;
+    for (var i = 0; i < n; i++) {
+      var w = world([]), v = mk('lcv', 'A', 10, 10, { upgrades: ups });
+      w.units = [v];
+      v.damage = v.str - 1;                 // one die left to roll
+      fixed += R.repair(w, v).fixed ? 1 : 0;
+    }
+    return fixed / n;
+  }
+  var plain = rate([]), sup = rate([9]);
+  ok('one die: half the repairs come good, three in four with the re-roll', Math.abs(plain - 0.5) < 0.04 && Math.abs(sup - 0.75) < 0.04, true, (plain * 100).toFixed(0) + '% → ' + (sup * 100).toFixed(0) + '%');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
