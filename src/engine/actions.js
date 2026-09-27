@@ -382,7 +382,7 @@
         if (id !== 'advance') return;
         if (ui.mode === 'advance-fire') { holdFire(u); return; }     // pressed again: it holds its fire
         ui.mode = 'advance-fire'; ui.moves = []; ui.terrain = [];
-        ui.targets = targetsFor(u, {});
+        ui.targets = targetsFor(u, {}).concat(R.steadyTargets(E.state, u));
         render();
         return;
       }

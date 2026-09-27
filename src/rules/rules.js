@@ -1346,8 +1346,9 @@
         unitDist(a, t) <= a.range && hasLoS(state, a, t);
     });
   }
-  function steadyFire(state, a, t) {
-    var m = shotMods(state, a, t, 'fire', {});
+  // `mode`: 'fire' standing still, with Fire!'s +1; 'advance' after an Advance's move, without it
+  function steadyFire(state, a, t, mode) {
+    var m = shotMods(state, a, t, mode === 'advance' ? 'advance' : 'fire', {});
     var roll = d10(), total = m.total + roll, dres = m.def, parts = m.parts.slice();
     parts.unshift({ label: 'D10', v: roll });
     var hits = roll === 0 ? 0 : roll === 9 ? Math.max(1, total - dres.value) : Math.max(0, total - dres.value);

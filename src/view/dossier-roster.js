@@ -80,8 +80,21 @@
       });
       order.sort(function (a, b) { return b - a; });
       var h = lossLine(co);
+      /* The unnamed dead of one kind (penal troopers, the Esh-Aven) are one line
+         for the battle, however many squads of them fell. */
+      function mergeAnon(ms) {
+        var out = [], seen = {};
+        ms.forEach(function (m) {
+          if (!m.anon) { out.push(m); return; }
+          var key = m.type + '|' + (m.noun || '');
+          if (seen[key]) { seen[key].count += m.count || 0; seen[key].squads++; return; }
+          seen[key] = { anon: true, type: m.type, noun: m.noun, count: m.count || 0, squads: 1, unit: m.unit };
+          out.push(seen[key]);
+        });
+        return out;
+      }
       order.forEach(function (n) {
-        var ms = battles[n], first = ms[0];
+        var ms = mergeAnon(battles[n]), first = battles[n][0];
         var sc = SCx && SCx.SCENARIOS && SCx.SCENARIOS[first.scenario];
         h += '<div class="dmem"><div class="dmem-head">Campaign turn ' + n +
           (first.against ? ' · against ' + esc(first.against) : '') + (sc ? ' · ' + esc(sc.name) : '') +
@@ -89,7 +102,8 @@
           ms.map(function (m) {
             if (m.anon) {
               return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' ' + esc(m.noun || 'Esh-Aven') + '</span>' +
-                (m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
+                (m.squads > 1 ? '<span class="dmem-type">' + m.squads + ' squads</span>'
+                  : m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
             }
             return '<li><span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
               '<span class="dmem-type">' + esc(m.type) + (m.unit && m.unit !== m.type ? ' \u00b7 ' + esc(m.unit) : '') +

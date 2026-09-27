@@ -215,33 +215,40 @@
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  /* Expendable (p. 57): the collars going off, as the battle plays it — each
-     man standing until his own collar blinks and fires, then down where he
-     stood (see collarSequence in draw.js). The plan is kept on view.collar. */
+  /* Expendable (p. 57): the collars going off, as the battle plays it — the
+     squad breaks and runs, across the stage, and each man falls where he
+     has got to when his own collar fires (see collarSequence in draw.js). The
+     plan is kept on view.collar. */
   function collarsGo(u) {
     var CL = root.PMCFx.COLLAR, t0 = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
     var n = Math.max(1, Math.min(8, u.models || u.size || 1));
     var pts = I.formationTable(n).map(function (o) { return { x: u.x + o.dx, y: u.y + o.dy, rank: o.rank }; });
-    var at = [];
+    // (across the stage, not back off the table's edge where the viewer stands them)
+    var plan = CL.plan(pts, t0, (u.facing || 0) - Math.PI / 2);
     CL.order(n).forEach(function (idx, i) {
-      var delay = i * CL.step;
-      at[idx] = t0 + delay + CL.blink;
-      FX.add({ kind: 'collar', x: pts[idx].x, y: pts[idx].y, delay: delay, dur: delay + CL.dur });
+      var p = plan.end[idx], delay = p.delay;
+      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.vx, vy: plan.vy, neck: 0.68, delay: delay, dur: delay + CL.dur });
       if (view.sound && SFX && SFX.impact) SFX.impact((delay + CL.blink) / 1000);
     });
-    view.collar = { pts: pts, at: at };
+    view.collar = { pts: pts, at: plan.at, plan: plan };
   }
   function drawCollared(u) {
     var cl = view.collar, now = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
-    var standing = cl.pts.filter(function (p, i) { return cl.at[i] > now; });
+    var standing = [];
     cl.pts.forEach(function (p, i) {
-      if (cl.at[i] > now) return;
-      var q = I.toScreen(p.x, p.y);
+      if (cl.at[i] > now) { standing.push(cl.plan.where(i, now)); return; }
+      // down where he had run to
+      var q = I.toScreen(cl.plan.end[i].x, cl.plan.end[i].y);
       I.drawBody(g, q.x, q.y, { side: u.side, paint: u.paint || null, art: u.art, mi: i, flip: i % 3 === 0 });
     });
     if (standing.length) {
-      I.drawUnit(g, Object.assign({}, u, { models: standing.length }), {
-        at: { x: u.x, y: u.y }, lineAt: standing, lift: 0, status: 'broken', morale: 0
+      var cx = 0, cy = 0;
+      standing.forEach(function (p) { cx += p.x; cy += p.y; });
+      cx /= standing.length; cy /= standing.length;
+      // on their feet and running, facing the way they run
+      I.drawUnit(g, Object.assign({}, u, { models: standing.length, x: cx, y: cy, faceL: (cl.plan.vx - cl.plan.vy) < 0, facing: Math.atan2(cl.plan.vy, cl.plan.vx) }), {
+        at: { x: cx, y: cy }, lineAt: standing, lift: 0, status: 'ready', morale: 0,
+        walk: 1 + Math.floor((now - cl.plan.t0) / 110) % 2
       });
     }
   }

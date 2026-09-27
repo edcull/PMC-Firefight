@@ -176,22 +176,30 @@
       render();
     }
 
-    /* Expendable (p. 57): a penal squad whose collars go off. The men are left
-       standing where they were and the collars fire one after another: a red
-       telltale blinks at a man's neck, it goes off, and only then does he fall,
-       his body left where he stood. The squad is drawn from the plan kept on the
-       unit (u0._collar) until the last of them is down. */
+    /* Expendable (p. 57): a penal squad whose collars go off. The men break and
+       run from the enemy as the collars fire one after another: a red telltale
+       blinks at a man's neck, it goes off, and he falls where he has got to, so
+       the squad leaves a short trail of bodies. The squad is drawn from the plan
+       kept on the unit (u0._collar) until the last of them is down. */
+    // which way a squad bolts: away from the nearest enemy, or back the way it faced
+    function fleeAngle(u, seen) {
+      var best = null, bd = Infinity;
+      B.state.units.forEach(function (e) {
+        if (!e.alive || e.side === u.side || e.x < 0 || e.aboard) return;
+        var d = Math.hypot(e.x - seen.x, e.y - seen.y);
+        if (d < bd) { bd = d; best = e; }
+      });
+      return best ? Math.atan2(seen.y - best.y, seen.x - best.x) : (u.facing || 0) + Math.PI;
+    }
     var CL = window.PMCFx.COLLAR, COLLAR_STEP = CL.step, COLLAR_BLINK = CL.blink, COLLAR_FX = CL.dur;
     function collarSequence(u0, u, seen, rem) {
       var t0 = nowMs(), n = Math.max(1, Math.min(8, seen.models));
       var pts = ISO.formationTable(n).map(function (o) { return { x: seen.x + o.dx, y: seen.y + o.dy, rank: o.rank }; });
-      // the order they go in, fixed for the squad
-      var order = CL.order(pts.length);
-      var at = [];
-      order.forEach(function (idx, i) {
-        var p = pts[idx], delay = i * COLLAR_STEP, popAt = t0 + delay + COLLAR_BLINK;
-        at[idx] = popAt;
-        addFx({ kind: 'collar', x: p.x, y: p.y, delay: delay, dur: delay + COLLAR_FX });
+      // the order they go in, fixed for the squad, and where each has run to when his goes
+      var plan = CL.plan(pts, t0, fleeAngle(u, seen));
+      CL.order(pts.length).forEach(function (idx, i) {
+        var p = plan.end[idx], delay = p.delay, popAt = plan.at[idx];
+        addFx({ kind: 'collar', x: p.x, y: p.y, vx: plan.vx, vy: plan.vy, neck: 0.68, delay: delay, dur: delay + COLLAR_FX });
         if (SFX && SFX.impact) SFX.impact((delay + COLLAR_BLINK) / 1000);
         rem.push({ kind: 'body', x: p.x, y: p.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null, art: u.art,
           mi: idx, flip: (i % 3 === 0) !== !!u.faceL, showAt: popAt + 30 });
@@ -202,7 +210,7 @@
         rem.push({ kind: 'body', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
           art: u.art, mi: cs.mi, flip: extra % 2 === 0, showAt: t0 + (n - 1) * COLLAR_STEP + COLLAR_BLINK + 30 });
       }
-      u0._collar = { x: seen.x, y: seen.y, pts: pts, at: at, until: t0 + (n - 1) * COLLAR_STEP + COLLAR_BLINK + 30 };
+      u0._collar = { x: seen.x, y: seen.y, pts: pts, at: plan.at, plan: plan, until: t0 + (n - 1) * COLLAR_STEP + COLLAR_BLINK + 30 };
     }
 
     function syncRemains() {
@@ -563,8 +571,14 @@
       B.state.units.forEach(function (u) {
         var cl = u._collar;
         if (!cl || now0 >= cl.until || !onView(cl.x, cl.y)) return;
-        var standing = cl.pts.filter(function (p, i) { return cl.at[i] > now0; });
-        if (standing.length) order.push({ depth: cl.x + cl.y, draw: 'collared', u: u, cl: cl, pts: standing });
+        // the men still on their feet, where they have run to by now
+        var standing = [];
+        cl.pts.forEach(function (p, i) { if (cl.at[i] > now0) standing.push(cl.plan ? cl.plan.where(i, now0) : p); });
+        if (!standing.length) return;
+        var cx = 0, cy = 0;
+        standing.forEach(function (p) { cx += p.x; cy += p.y; });
+        cx /= standing.length; cy /= standing.length;
+        order.push({ depth: cx + cy, draw: 'collared', u: u, cl: cl, pts: standing, x: cx, y: cy, age: now0 - (cl.plan ? cl.plan.t0 : now0) });
       });
       // squads walking into a hull, drawn until they are inside it
       B.state.units.forEach(function (u) {
@@ -605,10 +619,12 @@
           if (it.draw === 'collared') {
             var cu = {};
             for (var ck in it.u) cu[ck] = it.u[ck];
-            cu.alive = true; cu.models = it.pts.length; cu.x = it.cl.x; cu.y = it.cl.y;
+            cu.alive = true; cu.models = it.pts.length; cu.x = it.x; cu.y = it.y;
+            // on their feet and running, facing the way they run
+            if (it.cl.plan) { cu.faceL = (it.cl.plan.vx - it.cl.plan.vy) < 0; cu.facing = Math.atan2(it.cl.plan.vy, it.cl.plan.vx); }
             ISO.drawUnit(B.pctx, cu, {
-              at: { x: it.cl.x, y: it.cl.y }, lineAt: it.pts, lift: liftOf(it.cl.x, it.cl.y),
-              hop: 0, walk: 0, status: 'broken', activated: false, selected: false, morale: 0
+              at: { x: it.x, y: it.y }, lineAt: it.pts, lift: liftOf(it.x, it.y),
+              hop: 0, walk: 1 + Math.floor(it.age / 110) % 2, status: 'ready', activated: false, selected: false, morale: 0
             });
             return;
           }

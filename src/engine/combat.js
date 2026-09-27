@@ -166,6 +166,8 @@
 
     function doShoot(target) {
       var u = ui.selected;
+      // an Advance's shot at a friend is NOT ONE STEP BACKWARDS! (T5), fired on the move
+      if (u && target && target.side === u.side && ui.mode === 'advance-fire') { doSteady(target, u, 'advance'); return; }
       // a player's shot spends the Rite of Concentration only when called for
       resolveShot(u, target, ui.mode === 'advance-fire' ? 'advance' : 'fire',
         { aux: ui.mode === 'aux', concentrate: ui.mode === 'fire' && !!ui.concentrate });
@@ -203,10 +205,10 @@
       render();
     }
 
-    function doSteady(target, shooter) {
+    function doSteady(target, shooter, mode) {
       var u = shooter || ui.selected;
       if (!u || !target) return;
-      var res = R.steadyFire(E.state, u, target);
+      var res = R.steadyFire(E.state, u, target, mode);
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       faceAlong(u, u.x, u.y, target.x, target.y);
       addFx({ kind: 'muzzle', x: u.x, y: u.y, dur: 180 });
