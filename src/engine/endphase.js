@@ -11,7 +11,8 @@
         abRepair = E.abRepair, activeUnits = E.activeUnits, addFx = E.addFx, animateMove = E.animateMove,
         beginTurn = E.beginTurn, canStand = E.canStand, focusUnit = E.focusUnit, logLine = E.logLine,
         nearestEnemy = E.nearestEnemy, onTable = E.onTable, pushRes = E.pushRes, render = E.render,
-        sideName = E.sideName, soloAfterMove = E.soloAfterMove, ui = E.ui;
+        sideName = E.sideName, soloAfterMove = E.soloAfterMove, ui = E.ui, isAI = E.isAI, makeStand = E.makeStand,
+        revealConsole = E.revealConsole;
 
     // The rally phase is walked unit by unit: roll, show the card, wait for Continue.
     /* The start of the Rally phase (p. 34): every Broken unit on the table flees
@@ -79,22 +80,6 @@
     function rallyPhase() {
       logLine('phase', 'Rally phase.');
       R.collars(E.state).forEach(function (l) { logLine(l.t, l.text); });
-      /* Last Stand (p. 88): "once per battle the unit can remove all its
-         Suppression points". A Broken unit cannot be activated to call on it, so
-         it makes its stand here, before the Broken flee — the moment it matters
-         most, and one no player would pass up. */
-      E.state.units.forEach(function (u) {
-        if (!onTable(u) || R.status(u) !== 'broken' || !R.campFlag(u, 'lastStand')) return;
-        u.camp.once = u.camp.once || {};
-        if (u.camp.once.lastStand) return;
-        u.camp.once.lastStand = true;
-        var was = u.sp;
-        u.sp = 0;
-        logLine('rally', u.label + ' makes a Last Stand instead of running, and shakes off all ' + was + ' SP.');
-        pushRes({ kind: 'Honour', title: 'Last Stand', side: u.side,
-          note: u.label + ' was Broken and about to flee.',
-          outcome: { text: was + ' SP cleared — it stands its ground.', tone: 'good' } });
-      });
       fleeBroken();
       // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
       E.state.units.forEach(function (c) {
@@ -155,9 +140,37 @@
       if (u.sp === 0) { rallyNext(list, i + 1); return; }
       var r = abRally(E.state, u);
       if (!r) { rallyNext(list, i + 1); return; }
+      if (r.standing) { askStand(u, r, function () { showRally(list, i, u, r); }); return; }
+      showRally(list, i, u, r);
+    }
+    function showRally(list, i, u, r) {
       logLine('rally', r.text);
       if (SFX && r.gone) SFX.broken();
       pushRes(rallyCard(u, r, i + 1, list.length, function () { rallyNext(list, i + 1); }));
+      render();
+    }
+
+    /* The rally has left the unit over three times its Morale, and it has a Last
+       Stand still to make (p. 88): it may make it now, or scatter and flee. A
+       player is asked; the AI makes its stand. */
+    function askStand(u, r, then) {
+      function answer(yes) {
+        E.state.standAsk = null; ui.standThen = null;
+        if (yes) {
+          makeStand(u, 'rather than flee');
+          r.after = 0; r.statusAfter = 'ready'; r.stood = true;
+        } else {
+          u.alive = false; u.fled = true; u.brokenEver = true;
+          r.gone = true; r.statusAfter = 'removed';
+          r.text += ' — SP exceeds 3× Morale: the unit scatters and flees the field.';
+        }
+        then();
+      }
+      if (isAI(u.side)) { answer(true); return; }
+      E.state.standAsk = { unit: u.id, side: u.side, sp: u.sp, morale: r.morale };
+      ui.standThen = answer;
+      ui.selected = u; focusUnit(u, false, true);
+      revealConsole();
       render();
     }
 
@@ -165,6 +178,8 @@
       var outcome;
       if (r.gone) {
         outcome = { text: u.name + ' flees the field — suppression over three times Morale.', tone: 'bad' };
+      } else if (r.stood) {
+        outcome = { text: u.name + ' makes its Last Stand instead of fleeing — every point of suppression is gone.', tone: 'good' };
       } else if (r.statusBefore !== r.statusAfter) {
         outcome = r.statusAfter === 'ready'
           ? { text: u.name + ' steadies — no longer ' + r.statusBefore + '.', tone: 'good' }

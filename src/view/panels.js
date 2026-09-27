@@ -384,6 +384,7 @@
       else if (ui.reservePick) html = reservePickCard();
       else if (ui.insertion) html = insertionCard();
       else if (B.state.cmdOffer) html = cmdOfferCard();
+      else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.over) html = overCard();
@@ -436,6 +437,23 @@
       if (both) wireHost(both);
     }
 
+    // Last Stand (p. 88), asked when a rally would see the unit off the table
+    function standCard() {
+      var a = B.state.standAsk, u = byId(a.unit);
+      if (!u) return '';
+      return '<div class="card"><h2>Last Stand</h2>' +
+        '<p class="sub"><b>' + esc(u.name) + '</b> is left with ' + a.sp + ' SP after its rally \u2014 over three times its Morale of ' + a.morale +
+        '. It is about to scatter and flee the field. It still has its Last Stand: once a battle, every point of suppression gone.</p>' +
+        '<div class="acts"><button class="act primary" data-act="stand"><span>Make its Last Stand</span><small>All ' + a.sp + ' SP cleared \u2014 it stays</small></button>' +
+        '<button class="act" data-act="nostand"><span>Let it flee</span><small>Keep nothing back: it counts as fled</small></button></div></div>';
+    }
+    // a player's own unit that could make its Last Stand now (p. 88: at any time)
+    function mayStand(u) {
+      return !!(u && u.alive && !isAI(u.side) && B.state.phase === 'battle' && !B.state.over && !B.state.standAsk &&
+        !u.reserve && u.x >= 0 && u.sp > 0 && R.campFlag(u, 'lastStand') && !(u.camp && u.camp.once && u.camp.once.lastStand) &&
+        (!B.seats || B.seats.indexOf(u.side) >= 0));
+    }
+
     function forceList(only) {
       var h = '<div class="forces">';
       /* A co-op game's commandos are one side, but each player's is listed on its
@@ -465,7 +483,9 @@
               ? Math.max(0, u.str - u.damage) + '/' + u.str
               : u.models + '/' + u.size) + '</span>' +
             '<span class="ru-sp">' + (u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
-              : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') + '</li>';
+              : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') +
+            (mayStand(u) ? '<button class="ru-stand" data-stand="' + u.id + '" title="Last Stand — shed all ' + u.sp + ' SP, once a battle, at any time">Last Stand</button>' : '') +
+            '</li>';
         });
         h += '</ul></div>';
       });
@@ -965,7 +985,7 @@
           else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
-          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf') { send({ k: a }); return; }
+          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();
@@ -1006,6 +1026,13 @@
           else if (ui.mode === 'steady') doSteady(t);
           else if (ui.mode === 'support') doSupport(t);
           else doShoot(t);
+        });
+      });
+      host.querySelectorAll('[data-stand]').forEach(function (b) {
+        b.addEventListener('click', function (ev) {
+          ev.stopPropagation();                       // not a pick of the unit's row
+          if (SFX) SFX.click();
+          send({ k: 'laststand', id: b.getAttribute('data-stand') });
         });
       });
       host.querySelectorAll('[data-unit]').forEach(function (b) {

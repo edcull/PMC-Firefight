@@ -77,17 +77,48 @@ console.log('\nLast Stand (p. 88): "once per battle the unit can remove all its 
 })();
 (function () {
   const { e, st, side, u } = honoured(battle(), 'lastStand');
-  const at = { x: u.x, y: u.y };
-  u.sp = 2 * u.morale + 1;                   // Broken: it cannot be activated
-  ok('a Broken unit cannot act to call on it', e.query.eligible(side).indexOf(u) < 0);
-  // everyone else has gone but one, whose action ends the turn's activations
-  const last = e.query.eligible(side).filter((x) => x.cls === 'infantry')[0];
+  const other = side === 'A' ? 'B' : 'A';
+  u.sp = u.morale + 1;
+  // it is not this unit's activation, nor even its side's: the other side is acting
+  st.activeSide = other;
+  const off = e.intent(side, { k: 'laststand', id: u.id });
+  ok('at any time: off its side\'s turn too', off.ok && u.sp === 0, off.why);
+  ok('...and only the once', !e.intent(side, { k: 'laststand', id: u.id }).ok);
+})();
+(function () {
+  const { e, st, side, u } = honoured(battle(), 'lastStand');
+  u.sp = 2 * u.morale + 1;                   // Broken
+  const last = e.query.eligible(side).filter((x) => x !== u && x.cls === 'infantry')[0];
   st.units.forEach((x) => { if (x !== last && x !== u) x.activated = true; });
   e.intent(side, { k: 'select', id: last.id });
   step(e, side, last);
-  ok('in the Rally phase it makes its stand instead of running', u.alive && u.camp.once.lastStand === true && u.sp < u.morale,
-    u.sp + ' SP, ' + (u.x === at.x && u.y === at.y ? 'where it stood' : 'moved'));
-  ok('...where it stood', u.x === at.x && u.y === at.y);
+  ok('a Broken unit is not made to stand at the start of the Rally phase', !u.camp.once.lastStand);
+})();
+(function () {
+  // pushed past three times its Morale, the rally stops to ask
+  const { e, st, side, u } = honoured(battle(), 'lastStand');
+  u.sp = 12; u.morale = 2; u.x = 24; u.y = 24;       // mid-table, where fleeing cannot take it off it
+  const last = e.query.eligible(side).filter((x) => x !== u && x.cls === 'infantry')[0];
+  st.units.forEach((x) => { if (x !== last && x !== u) x.activated = true; });
+  e.intent(side, { k: 'select', id: last.id });
+  step(e, side, last);
+  // the rally cards before it are walked on until the question comes
+  for (let i = 0; i < 40 && !st.standAsk && u.alive && !u.camp.once.lastStand; i++) e.intent(side, { k: 'step' });
+  ok('about to flee, the player is asked', !!st.standAsk && st.standAsk.unit === u.id && u.alive,
+    st.standAsk ? u.sp + ' SP against Morale ' + st.standAsk.morale : 'not asked: ' + st.log.slice(-4).map((l) => l.text).join(' / '));
+  const ans = e.intent(side, { k: 'stand' });
+  ok('...and making it keeps the unit on the table, steady', ans.ok && u.alive && u.sp === 0 && !st.standAsk, ans.why);
+})();
+(function () {
+  const { e, st, side, u } = honoured(battle(), 'lastStand');
+  u.sp = 12; u.morale = 2; u.x = 24; u.y = 24;       // mid-table, where fleeing cannot take it off it
+  const last = e.query.eligible(side).filter((x) => x !== u && x.cls === 'infantry')[0];
+  st.units.forEach((x) => { if (x !== last && x !== u) x.activated = true; });
+  e.intent(side, { k: 'select', id: last.id });
+  step(e, side, last);
+  for (let i = 0; i < 40 && !st.standAsk && u.alive; i++) e.intent(side, { k: 'step' });
+  e.intent(side, { k: 'nostand' });
+  ok('...or letting it go, it flees', !u.alive && u.fled && !u.camp.once.lastStand);
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

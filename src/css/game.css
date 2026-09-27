@@ -424,6 +424,10 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ru.done { opacity: .5; }
 .ru.suppressed .ru-sp { color: var(--warn); }
 .ru.broken, .ru.broken .ru-sp { color: var(--bad); }
+/* Last Stand (p. 88): offered in the order of battle, at any time */
+.ru-stand { grid-column: 2 / -1; justify-self: start; white-space: nowrap; padding: 1px 6px; font: 600 10px/1.4 var(--mono); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--accent, #e8c15a); background: transparent; border: 1px solid currentColor; border-radius: 3px; cursor: pointer; }
+.ru-stand:hover { background: rgba(232, 193, 90, .14); }
 .ru.dead { opacity: .45; }
 .ru.dead .ru-name { text-decoration: line-through; }
 /* what became of it, across the two columns its numbers had */

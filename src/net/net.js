@@ -286,10 +286,17 @@
 
   /* Whichever of our seats is entitled to send this. In hotseat that is simply
      whoever is up; in a solitaire game it is always seat A. */
-  Local.prototype.seatNow = function () {
+  Local.prototype.seatNow = function (it) {
     if (!this.engine) return this.seats[0];
     var st = this.engine.state();
     if (!st) return this.seats[0];
+    /* A Last Stand may be made at any time (p. 88), off its side's turn too: it
+       is the unit's side that makes it, and the side being asked that answers. */
+    if (st.standAsk && this.seats.indexOf(st.standAsk.side) >= 0) return st.standAsk.side;
+    if (it && it.k === 'laststand') {
+      var lu = st.units.filter(function (u) { return u.id === it.id; })[0];
+      if (lu && this.seats.indexOf(lu.side) >= 0) return lu.side;
+    }
     var sel = this.engine.sel();
     var want = sel.insertion
       // the side the engine is asking: the opponent, when it is shoving an insertion off its mark
@@ -303,7 +310,7 @@
   Local.prototype.intent = function (it) {
     if (!this.engine) return false;
     this.events = [];
-    var res, seat = this.seatNow();
+    var res, seat = this.seatNow(it);
     // kept whether or not it is allowed: a refusal may have rolled a die on the way
     if (this.book) this.book.intents.push([seat, clone(it)]);
     try { res = this.rolling(function () { return this.engine.intent(seat, it); }); }

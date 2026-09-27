@@ -1127,6 +1127,7 @@
       activeUnits: activeUnits, addFx: addFx, animateMove: animateMove, beginTurn: beginTurn,
       canStand: canStand, focusUnit: focusUnit, logLine: logLine, nearestEnemy: nearestEnemy,
       onTable: onTable, pushRes: pushRes, render: render, sideName: sideName, soloAfterMove: soloAfterMove,
+      isAI: isAI, makeStand: makeStand, revealConsole: revealConsole,
       ui: ui, get state() { return state; }
     }));
   }
@@ -1204,6 +1205,28 @@
 
   function spent(u, which) { return !!(u && u.camp && u.camp.once && u.camp.once[which]); }
 
+  /* Last Stand (p. 88): "once per battle the unit can remove all its Suppression
+     points" — at any time, and not as an action. A player calls on it from the
+     order of battle whenever they like, or from the unit's own action bar; the
+     rally that would see the unit off the table stops to ask first (endphase.js). */
+  function standable(u) {
+    return !!(u && u.alive && !u.reserve && u.x >= 0 && u.sp > 0 && R.campFlag(u, 'lastStand') && !spent(u, 'lastStand') &&
+      state && state.phase === 'battle' && !state.over);
+  }
+  function makeStand(u, why) {
+    u.camp.once = u.camp.once || {};
+    u.camp.once.lastStand = true;
+    var was = u.sp;
+    u.sp = 0;
+    logLine('rally', u.label + ' makes a Last Stand' + (why ? ' ' + why : '') + ' and shakes off all ' + was + ' SP.');
+    pushRes({
+      kind: 'Honour', title: 'Last Stand', side: u.side,
+      note: u.label + ' steadies and throws off every point of suppression.',
+      outcome: { text: was + ' SP cleared — the unit is ready again.', tone: 'good' }
+    });
+    return was;
+  }
+
   /* the destructible pieces this unit could shoot at, or set charges against */
   function demolishTargets(u, melee) {
     if (!state || !u) return [];
@@ -1257,7 +1280,7 @@
       endActivation: endActivation, flightTurn: flightTurn, fromLog: fromLog, isAI: isAI, logLine: logLine,
       markHint: markHint, markTargets: markTargets, moveBonus: moveBonus, onTable: onTable,
       paintStructures: paintStructures, pushRes: pushRes, render: render, repaintTerrain: repaintTerrain,
-      setHint: setHint, ui: ui, whenIdle: whenIdle, get state() { return state; }
+      setHint: setHint, ui: ui, whenIdle: whenIdle, makeStand: makeStand, get state() { return state; }
     }));
   }
   function doOnce(u, id) { return (KIT_MOVES || kitMoves()).doOnce(u, id); }
@@ -1400,7 +1423,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -1496,6 +1519,21 @@
           var whyI = toggleInsertion(side, it.id);
           if (whyI) return no(whyI);
           render();
+          return yes;
+        }
+        case 'laststand': {
+          var ls = unitOf(it.id, side);
+          if (!ls) return no('no such unit');
+          if (state.standAsk && state.standAsk.unit === ls.id && ui.standThen) { ui.standThen(true); return yes; }
+          if (!standable(ls)) return no(spent(ls, 'lastStand') ? 'Last Stand is spent' : 'nothing to make a stand against');
+          makeStand(ls);
+          render();
+          return yes;
+        }
+        case 'stand': case 'nostand': {
+          var sa = state.standAsk;
+          if (!sa || sa.side !== side || !ui.standThen) return no('nothing to answer');
+          ui.standThen(it.k === 'stand');
           return yes;
         }
         case 'rpick': {

@@ -18,23 +18,15 @@
     /* Adrenaline Rush and Last Stand: each once a battle, each spent from u.camp.once;
        neither is an action in itself. */
     function doOnce(u, id) {
-      u.camp.once[id === 'rush' ? 'adrenaline' : 'lastStand'] = true;
       if (id === 'laststand') {
-        var was = u.sp;
-        u.sp = 0;
-        logLine('note', u.label + ' makes a Last Stand and shakes off all ' + was + ' SP.');
-        pushRes({
-          kind: 'Honour', title: 'Last Stand', side: u.side,
-          note: u.label + ' steadies and throws off every point of suppression.',
-          outcome: { text: was + ' SP cleared — the unit is ready again.', tone: 'good' }
-        });
         /* "Once per battle the unit can remove all its Suppression points" (p. 88):
-           not an action, so the unit still has its activation to spend, steady. A
-           Broken unit, which cannot be activated, makes it in the Rally phase
-           instead (endphase.js). */
+           at any time, and not an action, so the unit still has its activation to
+           spend, steady (engine.js makeStand). */
+        E.makeStand(u);
         ui.mode = 'idle'; render();
         return;
       }
+      u.camp.once.adrenaline = true;
       /* "Once per battle the unit can make two actions in a row" (p. 88): the unit
          itself goes again the moment this action ends (engine.js passOn), and the
          two count as the one activation. */

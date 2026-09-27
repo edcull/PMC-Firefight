@@ -973,7 +973,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var PANELS = window.PMCPanels({
-    get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; },
+    get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get seats() { return seats; },
     get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
     cancelPreview: cancelPreview, carriersFor: carriersFor, chooseAction: chooseAction,
