@@ -62,12 +62,12 @@
      is asking to see. Everything that draws a unit takes one of these. */
   // a crew-served piece drawn in 3D: it has a facing to choose, as a machine does
   function turns(p) { return !!p && !!I.turnsLikeMachine && I.turnsLikeMachine(p.art); }
-  // what a Lifter can be shown carrying: any of the rebels' ground vehicles, or one of their guns (p. 94)
-  var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak', 'rmedart', 'rheavyart', 'rheavyac'];
+  // what a Lifter can be shown carrying: any of the rebels' ground vehicles (p. 94)
+  var SLUNG = ['rtechnical', 'rlicv', 'ricv', 'rhicv', 'rltv', 'ritv', 'rshtv', 'rlflak', 'rmflak', 'rhflak'];
   function stationary(p) { return !!p && (p.rules || []).indexOf('Stationary Artillery') >= 0; }
-  /* On tow: the piece hitched behind a technical, which is what is drawn in its place. */
+  /* On tow: the piece hitched behind a light transport vehicle, which is what is drawn in its place. */
   function towing(u) {
-    var tp = R.profile('rtechnical');
+    var tp = R.profile('rltv');
     if (!tp) return null;
     var t = Object.assign({}, tp, {
       id: 'VTOW', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0,
