@@ -965,17 +965,10 @@
     });
   }
 
-  root.__autopick = autoPick;            // test hook
-  // test hook: set the contract's scenario by hand, to look at each one's briefing
-  root.__forceScenario = function (id) {
-    if (!contract) return null;
-    contract.scenario = { roll: C.SCENARIOS.indexOf(id) + 1, id: id, name: C.SCENARIO_NAMES[id] };
-    contract.roles = root.PMCScen ? root.PMCScen.rollRoles(id, {
-      A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || []
-    }) : null;
-    render();
-    return { scenario: contract.scenario, roles: contract.roles };
-  };
+  // the tests' hooks into the dossier (testhooks.js, not in the published builds)
+  if (root.PMCTestHooks) root.PMCTestHooks.dossier({
+    get camp() { return camp; }, get contract() { return contract; }, autoPick: autoPick, render: render, C: C
+  });
   root.PMC_CAMPAIGN = {
     open: open, close: close, onFinish: onFinish,
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },

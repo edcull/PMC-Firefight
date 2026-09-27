@@ -1081,8 +1081,6 @@
       if (h && h.step > 1 && !(h.step === 3 && h.from3)) { hotBack(); return; }
       openMenu();
     }
-    window.__hot = function () { return muster.hot ? JSON.parse(JSON.stringify(muster.hot)) : null; };
-    window.__cam = function () { return { x: cam.x, y: cam.y, z: cam.z, borrowed: !!cam.borrowed, home: cam.home ? { x: cam.home.x, y: cam.home.y } : null }; };
 
     return {
       FORCE_NOUN: FORCE_NOUN,

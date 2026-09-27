@@ -37,8 +37,11 @@ function inlineStyles(page) {
 }
 
 let html = inlineStyles(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));
+// the tests' own hooks are left out of the published page (scripts/bundle.js DEV_ONLY)
+const DEV_ONLY = require('./bundle.js').DEV_ONLY;
 html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, src) => {
   src = src.split('?')[0];
+  if (DEV_ONLY.indexOf(src) >= 0) return '';
   const code = fs.readFileSync(path.join(ROOT, src), 'utf8');
   return '<script>\n/* ---- ' + src + ' ---- */\n' + code + '\n</script>';
 });
