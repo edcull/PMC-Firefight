@@ -111,7 +111,10 @@
     function keepAfter() {
       var last = E.camp.log[E.camp.log.length - 1];
       if (!E.after || !last || last.turn !== E.after.turn) return;
-      var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, loss: a.loss || null, sides: { A: a.sides.A }, fronts: a.fronts || null, elsewhere: a.elsewhere || [] };
+      /* The other fronts' battles once: grouped by front where they were fought
+         out (regroup() rebuilds that from the flat list otherwise), not twice. */
+      var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, loss: a.loss || null, sides: { A: a.sides.A },
+        fronts: a.fronts || null, elsewhere: a.fronts ? [] : (a.elsewhere || []) };
       if (E.camp.mode === 'hotseat' && a.sides.B) keep.sides.B = a.sides.B;
       last.after = JSON.parse(JSON.stringify(keep));
       last.balance = E.camp.companies.A.kUC;

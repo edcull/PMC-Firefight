@@ -16,9 +16,9 @@
    scenario needs to remember lives on `state.sc`, as it does for the others.
 
    Interpretations, where the book leaves the table-top player to decide:
-   - A player's commando does not take Command Units or Rapid insertion
-     platforms: the Command Unit and Battlefield Insertion rules are not used in
-     solitaire games (p. 149), so neither does anything here.
+   - The Command Unit and Battlefield Insertion rules are not used in solitaire
+     games (p. 149). A command squad is still fielded, without the rule; a Rapid
+     insertion platform, which exists only to be inserted, is not.
    - Counters are placed by the game on an even lattice rather than by hand.
    - "Moved D6" towards/away from the enemy" in Ambush! is towards or away from
      the road the enemy column is on.
@@ -58,8 +58,11 @@
     5: { points: 30, limits: [[0, 0], [0, 0], [1, 6], [1, 6], [1, 99]] }
   };
 
-  // what may go into a commando or an OpFor pool at all
-  function usable(p) { return p && !p.command && !p.mustLoad && !p.noSlot; }
+  /* What may go into a commando or an OpFor pool at all. The Command Unit rule
+     is not used here (p. 146), but a command squad still fights as a unit; a
+     Rapid insertion platform, which exists only for Battlefield Insertion, has no
+     place. */
+  function usable(p) { return p && !p.mustLoad && !p.noSlot; }
   function catalogue(faction) { return R.listFor(faction).filter(usable); }
 
   function limitsAt(table, bt, pl) {
@@ -83,7 +86,7 @@
       perKey[k] = (perKey[k] || 0) + 1;
       perGroup[p.group] = (perGroup[p.group] || 0) + 1;
       factions[p.faction || 'pmc'] = 1;
-      if (!usable(p)) faults.push(p.name + ' has no place in a commando — the Command Unit and Battlefield Insertion rules are not used here.');
+      if (!usable(p)) faults.push(p.name + ' has no place in a commando — Battlefield Insertion is not used here.');
       if (p.cls !== 'infantry') {
         machines++;
         if (p.tier > bt) faults.push('No vehicle or aircraft above the Battle Tier in a commando.');
@@ -225,7 +228,7 @@
     return Math.hypot(dx, dy);
   }
   function mine(state, side) { return state.units.filter(function (u) { return u.side === side; }); }
-  function onTable(u) { return u.alive && u.x >= 0 && !u.aboard; }
+  var onTable = R.onTable;
   function players(state) { return state.units.filter(function (u) { return u.side === 'A' && onTable(u); }); }
   function passable(state, x, y) {
     if (x < UR || y < UR || x > W - UR || y > H - UR) return false;
@@ -310,11 +313,18 @@
   function reveal(state, c, why, out) {
     var pl = pool(state);
     var i = state.sc.counters.indexOf(c);
-    if (i >= 0) state.sc.counters.splice(i, 1);
-    if (!pl.length) { out.push({ text: 'Counter ' + c.id + ' is revealed — a false alarm, nothing is left in the pool.' }); return null; }
+    if (!pl.length) {
+      if (i >= 0) state.sc.counters.splice(i, 1);
+      out.push({ text: 'Counter ' + c.id + ' is revealed — a false alarm, nothing is left in the pool.' });
+      return null;
+    }
     var u = pl[rnd(pl.length)];
-    var q = spotNear(state, c.x, c.y, 2, u) || spotNear(state, c.x, c.y, 5, u);
-    if (!q) return null;
+    /* Within 2" if there is room; further out if the ground is crowded. The counter
+       only goes once its unit is down: one with nowhere to stand keeps its counter,
+       to be revealed again, rather than vanishing from the game. */
+    var q = spotNear(state, c.x, c.y, 2, u) || spotNear(state, c.x, c.y, 5, u) || spotNear(state, c.x, c.y, 10, u);
+    if (!q) { out.push({ text: 'Counter ' + c.id + ' ' + why + ', but there is no room there yet.' }); return null; }
+    if (i >= 0) state.sc.counters.splice(i, 1);
     u.x = q.x; u.y = q.y; u.reserve = false; u.wave = 0;
     // it faces whoever found it
     var ps = players(state), near = null, nd = Infinity;
@@ -480,6 +490,18 @@
     }
   }, landing));
 
+  /* A faction's Command Unit of a Tier "from the appropriate army list": a swarm's
+     leaders are its Leader Bugs, and a tribe's its Alpha squads. The nearest Tier
+     where the list has none at that one. */
+  function leads(p) { return p.command || p.alpha || (p.leaderBug && p.cls === 'infantry'); }
+  function leaderOf(faction, bt) {
+    var all = R.listFor(faction).filter(leads);
+    if (!all.length) return null;
+    return all.slice().sort(function (a, b) {
+      return Math.abs(a.tier - bt) - Math.abs(b.tier - bt) || a.tier - b.tier;
+    })[0];
+  }
+
   /* ---- Protecting the VIP (p. 151) ---- */
   SOLO.s_vip = base({
     id: 's_vip', deployText: function () { return "Place the VIP within 6\" of the evacuation point, and everyone else within 12\" of it — the shaded circle."; }, name: 'Protecting the VIP', page: 151,
@@ -489,8 +511,7 @@
     extraUnits: function (state) {
       // the VIP and bodyguards: a Command Unit's statline of the Battle Tier, and no special rules
       var bt = state.cfg.tier, faction = state.solo.faction || 'pmc';
-      var cu = R.listFor(faction).filter(function (p) { return p.command && p.tier === bt; })[0] ||
-        R.listFor('pmc').filter(function (p) { return p.command && p.tier === bt; })[0];
+      var cu = leaderOf(faction, bt) || leaderOf('pmc', bt);
       var p = {};
       for (var k in cu) p[k] = cu[k];
       p.key = 'solovip'; p.code = 'VIP'; p.name = 'VIP and bodyguards'; p.rules = []; p.command = false;
@@ -580,12 +601,15 @@
   });
 
   // up to 4" from a random entry point, one unit through each point a turn
-  function fromEntry(state, u) {
+  /* A unit coming on at a random entry point. In Protecting the VIP only one a
+     turn may use each point (p. 151); pass `shared` where the scenario sets no
+     such limit (Evacuation, p. 154). */
+  function fromEntry(state, u, shared) {
     var ents = shuffle((state.sc.entries || []).slice());
     state.sc.usedEntries = state.sc.usedEntries || {};
     for (var i = 0; i < ents.length; i++) {
       var e = ents[i];
-      if (state.sc.usedEntries[e.id]) continue;
+      if (!shared && state.sc.usedEntries[e.id]) continue;
       var avoid = state.scen.keepOut ? function (q) { return state.scen.keepOut(state, u, q); } : null;
       var q = spotNear(state, e.x, e.y, 4, u, avoid);
       if (!q) continue;
@@ -604,10 +628,7 @@
     hint: 'The leaders sit tight in defensive positions and never move. Counters within 18" of your units and in sight are revealed each Beginning phase — and if none is, the closest one is.',
     extraUnits: function (state) {
       var bt = state.cfg.tier, faction = state.solo.opFaction || 'pmc';
-      // a swarm's leaders are its Leader Bugs, and a tribe's its Alpha squads
-      function leads(p) { return p.command || p.alpha || (p.leaderBug && p.cls === 'infantry'); }
-      var cu = R.listFor(faction).filter(function (p) { return leads(p) && p.tier === bt; })[0] ||
-        R.listFor(faction).filter(function (p) { return (p.leaderBug && p.cls === 'infantry') || p.alpha; }).slice(-1)[0];
+      var cu = leaderOf(faction, bt);
       return cu ? [{ profile: cu, side: 'B', leader: true }] : [];
     },
     setupTerrain: function (state) {
@@ -808,11 +829,12 @@
         });
         return out;
       }
-      state.sc.usedEntries = {};
-      return shuffle(pool(state)).filter(function () { return d6() >= 5; }).slice(0, 6);
+      // each OpFor unit in the pool on a 5+, as many as roll it (p. 154)
+      return shuffle(pool(state)).filter(function () { return d6() >= 5; });
     },
     arrivalPoint: function (state, u) {
-      if (u.side === 'B') return fromEntry(state, u);
+      // any random entry point, however many came through it this turn
+      if (u.side === 'B') return fromEntry(state, u, true);
       if (u.soloCiv) {
         var homes = shuffle(state.sc.homes.slice());
         for (var i = 0; i < homes.length; i++) {
@@ -895,8 +917,9 @@
       toPool(state);
       var n = pool(state).length, third = Math.ceil(n / 3), tg = state.sc.targets;
       state.sc.counters = placeCounters(state, n, 6, function (p, sofar) {
-        var near = tg.some(function (t) { return dist(p.x, p.y, t.x, t.y) <= 12; });
-        var nNear = sofar.filter(function (q) { return tg.some(function (t) { return dist(q.x, q.y, t.x, t.y) <= 12; }); }).length;
+        // "within 12" of at least one of the objectives": from its edge, 1" from the middle
+        var near = tg.some(function (t) { return dist(p.x, p.y, t.x, t.y) <= 13; });
+        var nNear = sofar.filter(function (q) { return tg.some(function (t) { return dist(q.x, q.y, t.x, t.y) <= 13; }); }).length;
         if (nNear < third) return near;
         return p.x >= 12 && p.y >= 12 && p.x <= W - 12 && p.y <= H - 12;
       });
@@ -916,7 +939,8 @@
       return out;
     },
     behaviour: function (state, u) {
-      var near = (state.sc.targets || []).some(function (t) { return !t.destroyed && dist(u.x, u.y, t.x, t.y) <= 12; });
+      // 12" from the objective's edge (it is 2" across) to the unit's (p. 155)
+      var near = (state.sc.targets || []).some(function (t) { return !t.destroyed && dist(u.x, u.y, t.x, t.y) <= 12 + 1 + UR; });
       return near ? { mod: 1, why: 'aggressive near an objective +1' } : { mod: 0, why: '' };
     },
     // the objectives are what the OpFor defends
@@ -946,16 +970,37 @@
       state.terrain.push({ kind: 'road', x: 0, y: y0, w: W, h: y1 - y0 });
     },
     deploy: function (state) {
-      // the column on the road, 1-3" apart, in a random order
+      /* The column on the road, "no closer than 1" and no further than 3"" apart
+         (p. 156), in a random order. A long column closes up towards 1" to stay on
+         the table; one too long even then marches two or three abreast, the files
+         an inch apart. */
       var col = shuffle(mine(state, 'B').slice());
-      var dir = Math.random() < 0.5 ? 1 : -1, x = dir > 0 ? 4 : W - 4;
-      col.forEach(function (u) {
-        u.soloFixed = true;
-        u.x = clamp(x, UR, W - UR); u.y = H / 2 + (Math.random() - 0.5);
-        u.facing = dir > 0 ? 0 : Math.PI; u.faceL = dir < 0;
-        u.reserve = false;
-        x += dir * (2 * UR + 1 + Math.random() * 2);
-      });
+      var dir = Math.random() < 0.5 ? 1 : -1;
+      var room = W - 2 * UR - 2;                       // centre to centre, an inch clear of each edge
+      var files = 1;
+      while (files < 3 && (Math.ceil(col.length / files) - 1) * (2 * UR + 1) > room) files++;
+      var per = Math.ceil(col.length / files);
+      for (var f = 0; f < files; f++) {
+        var file = col.slice(f * per, (f + 1) * per);
+        if (!file.length) continue;
+        var gaps = file.slice(1).map(function () { return 1 + Math.random() * 2; });
+        var len = function () { return gaps.reduce(function (a, g) { return a + 2 * UR + g; }, 0); };
+        // too long: every gap closes up in proportion, never below an inch
+        if (len() > room) {
+          var spare = gaps.reduce(function (a, g) { return a + g - 1; }, 0);
+          var over = len() - room, k = spare > 0 ? Math.max(0, 1 - over / spare) : 0;
+          gaps = gaps.map(function (g) { return 1 + (g - 1) * k; });
+        }
+        var fy = H / 2 + (f - (files - 1) / 2) * (2 * UR + 1);
+        var x = dir > 0 ? Math.min(4, W - UR - 1 - len()) : Math.max(W - 4, UR + 1 + len());
+        file.forEach(function (u, i) {
+          u.soloFixed = true;
+          u.x = x; u.y = fy + (files === 1 ? (Math.random() - 0.5) : 0);
+          u.facing = dir > 0 ? 0 : Math.PI; u.faceL = dir < 0;
+          u.reserve = false;
+          if (i < gaps.length) x += dir * (2 * UR + gaps[i]);
+        });
+      }
       state.sc.boxes = { A: [{ x: 0, y: H / 2 - 14, w: W, h: 12 }, { x: 0, y: H / 2 + 2, w: W, h: 12 }] };
     },
     deployOK: function (state, side, x, y) {

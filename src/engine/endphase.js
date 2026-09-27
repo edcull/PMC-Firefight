@@ -300,8 +300,8 @@
           catastrophic: !!u.catastrophic,
           brokenEver: !!u.brokenEver,
           /* Wiped out means every soldier was killed (p. 85) — that, and only that,
-             takes a unit off the dossier. A unit that scattered and ran, or that
-             Expendable removed from play, still has men left and comes back. */
+             takes a unit off the dossier. A unit that scattered and ran still has
+             men left and comes back; penal troops whose collars went off do not. */
           wiped: !R.isMachine(u) && u.models <= 0,
           fled: !!u.fled,
           aboardDowned: !!u.lostAboard,

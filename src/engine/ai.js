@@ -70,7 +70,7 @@
         scatterInsertion(u, function () { landUnit(u); done(); });
         return;
       }
-      u.reserve = false;                                // nowhere legal: it stays out
+      // nowhere legal: it stays in reserve, to try again next Reserve phase (as the player's does)
       logLine('note', u.label + ' could find no drop zone and stays in reserve.');
       done();
     }
@@ -201,7 +201,7 @@
       }
 
       if (soloB) {
-        var bh = rollBehaviour(u, shot);
+        var bh = rollBehaviour(u);
         // Run for Your Lives!: a Move as far as it can get from the player's units, no shot
         if (bh === 'flee') return aiRoll(u, nearestEnemy(u), false, { flee: true, noShoot: true });
         // Kill Them All!: charge the closest enemy — only an Overgrown bug can — or else Move at it, no shot
@@ -223,7 +223,7 @@
         // Reasonably Offensive: on at them, as it always did
       }
       // an aircraft with a line of targets makes a run
-      if (u.cls === 'aircraft') {
+      if (u.cls === 'aircraft' && u.fp !== null) {
         var lane = bestStrafe(u);
         if (lane && lane.count) { ui.selected = u; doStrafe(lane.pt); return; }
       }
@@ -329,6 +329,7 @@
       var spots = R.reachable(E.state, u, u.move), best = null;
       spots.forEach(function (c) {
         if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
+        if (!canStand(u, c)) return;                     // nowhere it could not hover (p. 38)
         var n = 0;
         activeUnits().forEach(function (t) {
           if (t.side === u.side || R.isFlying(t)) return;
@@ -405,12 +406,13 @@
 
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
-    function rollBehaviour(u, shot) {
+    function rollBehaviour(u) {
       var roll = R.d6(), mods = 0, why = [];
       var fp = u.fp || 0, as = u.assault || 0;
       if (as >= 2 * fp && as > 0) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }
       else if (as > fp) { mods += 1; why.push('Assault > Firepower +1'); }
-      if (!shot.t) { mods += 2; why.push('no enemy in range +2'); }
+      // a plain distance (p. 147): an enemy in range behind a building is still within it
+      if (!R.enemyWithinRange(E.state, u)) { mods += 2; why.push('no enemy in range +2'); }
       // the scenario's own temper: aggressive, defensive, or aggressive near the objectives
       if (E.state.solo && u.side === 'B' && E.state.scen.behaviour) {
         var bm = E.state.scen.behaviour(E.state, u) || {};
@@ -546,7 +548,7 @@
       }
 
       var shot = bestTarget(u, 'fire');
-      var behaviour = rollBehaviour(u, shot);
+      var behaviour = rollBehaviour(u);
       /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */
@@ -670,7 +672,7 @@
       s += (look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u)) * 1.6;
       if (terr.fp) s += 2;
       s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
-      var ghost = { x: c.x, y: c.y, alive: true };
+      var ghost = { x: c.x, y: c.y, alive: true, of: u };
       var exposure = 0, opportunity = 0;
       E.state.units.forEach(function (e) {
         if (!e.alive || e.side === u.side) return;

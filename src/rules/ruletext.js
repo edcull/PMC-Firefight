@@ -75,7 +75,8 @@
       'In the End phase, an unbroken unit below its starting size with an unsuppressed Overmind in reach ' +
       'gets D3 lost bugs back.',
     'Expendable':
-      'Removed from play the moment it becomes Broken. It has fled rather than died, so in a campaign it comes back.',
+      'The moment it becomes Broken the collars go off: every man left is killed and the unit is removed. Penal ' +
+      'troops never count as casualties for victory, and in a campaign their dead are kept apart from the loss rate.',
     'Field Medics':
       'Friendly units within 6" (and the medics themselves) use a kinder hit table: 1-2 no effect, 3-5 one SP, ' +
       '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Only while steady.',
@@ -167,7 +168,8 @@
     'Specialisation (ground)':
       'Its main weapon can only engage ground targets, never aircraft.',
     'Stationary Artillery':
-      'An emplaced gun: it never moves and is never held in reserve, but a ground transport can tow it, and a Lifter can sling it. It can Dig in to ' +
+      'An emplaced gun: it never moves and is never held in reserve, but a transport vehicle can tow it, the gun ' +
+      'taking one of its places (a Lifter cannot lift a hull that is towing). It can Dig in to ' +
       'fire over open sights — range 24", minimum 6", front quarter only, but with every modifier.',
     'Stealth':
       '+1 Defence for every full 6" between it and the shooter, unless the shooter is Keen-Eyed. Markerlights ' +
@@ -181,7 +183,8 @@
       'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',
     'Transport (X)':
       'Capacity {X}: carries that many infantry units, loaded within 4". Passengers are safe from fire and lose all Suppression; ' +
-      'Suppressed or Broken units cannot board, and nobody gets back on the turn they got off.',
+      'Suppressed or Broken units cannot board. No unit is loaded and unloaded in the same turn: nobody gets back on ' +
+      'the turn they got off, nor off the turn they got on.',
     'Turret':
       'A stationary drone gun: never moves or assaults, has no side or rear, and all turrets activate together. ' +
       'Command Units cannot call on it, and Hackers cannot turn it against its own side.',

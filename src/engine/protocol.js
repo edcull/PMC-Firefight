@@ -31,9 +31,11 @@
    game         { room }                        the room you are in, whole
    game.chat    { from, text, at }
    started      { seat, cfg }                   the battle has begun; the table follows
-   snapshot     { state, seq }                  the whole table as the server sees it
-   events       { events, seq }                 what just happened, in order
-   over         { report }
+   turn         { seq, events, state }          what just happened, in order, and the whole
+                                                table as the server now sees it
+   refused      { intent, why }                 an intent the engine turned down (a turn follows)
+   over         { report, over }
+   pong
 */
 (function (root) {
   'use strict';

@@ -440,10 +440,13 @@
     var comp = COMPOSITION[battleTier], budget = comp.points * pl;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
     var keys = [], counts = [0, 0, 0, 0, 0, 0], perKey = {}, perGroup = {}, commands = 0, spent = 0;
-    var machines = 0, aircraft = 0, plats = 0, riders = 0;
+    var machines = 0, aircraft = 0, plats = 0, riders = 0, drones = 0;
+    var isDrone = function (p) { return (p.rules || []).indexOf('Drone unit') >= 0; };
 
     function room(p) {
       if (spent + p.tier > budget) return false;
+      // never more Drone units than other units (p. 40)
+      if (isDrone(p) && drones + 1 > keys.length - drones) return false;
       var lim = comp.limits[p.tier - 1];
       var hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (!p.noSlot && counts[p.tier] + 1 > hi) return false;
@@ -491,6 +494,8 @@
       } else if (p.ridersUpgrade && rnd() < 0.3) {
         keys.push(joinPick(p.key, null, false, true));      // mounted, now and then
       } else keys.push(p.key);
+      if (isDrone(p)) drones++;
+      if (isDrone(p)) drones++;
       if (p.mustLoad) plats++;
       else if (p.cls === 'infantry' && !p.command) riders++;   // any infantry squad may ride one (p. 80)
       if (!p.noSlot) counts[p.tier]++;                 // a platform fills nobody's Tier row
@@ -1124,7 +1129,8 @@
   }
   function isMedic(u) { return (KIT_DAMAGE || kitDamage()).isMedic(u); }
   function medicNearby(state, target) { return (KIT_DAMAGE || kitDamage()).medicNearby(state, target); }
-  function resolveShootingHits(state, target, hits, mod, atk) { return (KIT_DAMAGE || kitDamage()).resolveShootingHits(state, target, hits, mod, atk); }
+  function resolveShootingHits(state, target, hits, mod, atk, later) { return (KIT_DAMAGE || kitDamage()).resolveShootingHits(state, target, hits, mod, atk, later); }
+  function shotRelief(state, target, out) { return (KIT_DAMAGE || kitDamage()).shotRelief(state, target, out); }
   function resolveAssaultHits(target, hits, mod, atk) { return (KIT_DAMAGE || kitDamage()).resolveAssaultHits(target, hits, mod, atk); }
   function applyResult(state, target, res, log, atk) { return (KIT_DAMAGE || kitDamage()).applyResult(state, target, res, log, atk); }
   function dmgMod(state, a, t) { return (KIT_DAMAGE || kitDamage()).dmgMod(state, a, t); }
@@ -1140,20 +1146,30 @@
   function commandAboard(veh) { return (KIT_DAMAGE || kitDamage()).commandAboard(veh); }
 
   /* ---------- transport ---------- */
+  /* Stationary Artillery is "transported (towed) by transport vehicles" (p. 95):
+     the ground transports — for the rebels the light, improved and super heavy
+     transport vehicles — and not an aircraft, a Lifter or a combat hull. The gun
+     on the hook fills one of the hull's Transport places. */
+  function canTow(veh) {
+    if (!veh || veh.cls !== 'vehicle' || !veh.transport || hasOwn(veh, 'Immobile')) return false;
+    var group = veh.group || (BY_KEY[veh.key] || {}).group || '';
+    return /transport vehicles$/i.test(group);
+  }
+  function towedGuns(veh) { return (veh.cargo || []).filter(function (c) { return hasOwn(c, 'Stationary Artillery'); }); }
   function canEmbark(state, veh, u) {
     if (!veh.transport || !u.alive || u.side !== veh.side) return false;
     // a vehicle hanging under a Lifter takes nothing on, and hitches no gun (p. 94)
     if (veh.aboard) return false;
     /* A Lifter is a flying crane: it picks up a single vehicle — with whatever is
-       already riding inside it — or an emplaced gun, and never infantry (p. 94).
-       Every other hull is the other way round. */
+       already riding inside it — and never infantry, nor an emplaced gun, which
+       is no vehicle (p. 94). Every other hull is the other way round. */
     if (hasOwn(veh, 'Lifter')) {
-      if (u.cls !== 'vehicle' && !hasOwn(u, 'Stationary Artillery')) return false;
+      if (u.cls !== 'vehicle') return false;
       if (u.bld) return false;
       if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
       if (u.disembarked) return false;
       // a hull towing an emplaced gun cannot be lifted (p. 94)
-      if ((u.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); })) return false;
+      if (towedGuns(u).length) return false;
       return unitDist(veh, u) <= 4;
     }
     if (isMachine(u)) return false;
@@ -1161,12 +1177,10 @@
     if (hasOwn(veh, 'Immobile')) return false;
     // Riders never ride in anything: the mounts do not fit (p. 94) — bar a motorbike (Appendix 3)
     if (hasOwn(u, 'Riders') && !(mountOf(u) && mountOf(u).transport)) return false;
-    /* An emplaced gun is towed rather than carried, and a hull with a gun on the
-       hook has no room for troops (p. 94). */
-    var towing = (veh.cargo || []).some(function (c) { return hasOwn(c, 'Stationary Artillery'); });
-    if (towing) return false;
-    // a gun is towed on the ground: an aircraft cannot tow one (only a Lifter slings one)
-    if (hasOwn(u, 'Stationary Artillery') && (veh.cls !== 'vehicle' || (veh.cargo || []).length)) return false;
+    // an emplaced gun goes on the hook of a transport vehicle, one to a hull
+    if (hasOwn(u, 'Stationary Artillery') && (!canTow(veh) || towedGuns(veh).length)) return false;
+    // "The gun in defensive position cannot be turned or embarked by transport vehicle" (p. 95)
+    if (dugIn(u)) return false;
     if (u.aboard || (veh.cargo || []).length >= veh.transport) return false;
     if (status(u) !== 'ready') return false;            // shaken troops will not board
     if (u.disembarked) return false;                    // not back aboard the same turn
@@ -1209,8 +1223,8 @@
       chargeBonus: chargeBonus, clampBoard: clampBoard, d10: d10, defenceAgainst: defenceAgainst,
       dmgMod: dmgMod, fallBack: fallBack, fmtPart: fmtPart, has: has, inRect: inRect, isFlying: isFlying,
       isMachine: isMachine, rectPointDist: rectPointDist, resolveDamage: resolveDamage,
-      resolveShootingHits: resolveShootingHits, segRect: segRect, sizeBonus: sizeBonus, terrainAt: terrainAt,
-      unitNear: unitNear
+      resolveShootingHits: resolveShootingHits, segRect: segRect, shotMods: shotMods, sizeBonus: sizeBonus,
+      terrainAt: terrainAt, unitNear: unitNear
     };
   }
   function kitDestruct() {
@@ -1240,7 +1254,7 @@
       fmtPart: fmtPart, has: has, hasLoS: hasLoS, hasOwn: hasOwn, inFireArc: inFireArc, isFlying: isFlying,
       isMachine: isMachine, kindsUnder: kindsUnder, levelOf: levelOf, lineClear: lineClear, mountOf: mountOf,
       pheromoneBonus: pheromoneBonus, pointSegDist: pointSegDist, propOf: propOf,
-      resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, ruleValue: ruleValue,
+      resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief, ruleValue: ruleValue,
       sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
       sizeBonus: sizeBonus, status: status, tribeSees: tribeSees, undisciplined: undisciplined,
       unitDist: unitDist, xenoSenses: xenoSenses
@@ -1258,7 +1272,6 @@
   function markCall(state, a, t, opts) { return (KIT_SHOOT || kitShoot()).markCall(state, a, t, opts); }
   function shotMods(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotMods(state, a, t, mode, opts); }
   function shotOdds(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotOdds(state, a, t, mode, opts); }
-  function assaultOdds(state, atk, def) { return (KIT_SHOOT || kitShoot()).assaultOdds(state, atk, def); }
   function shoot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shoot(state, a, t, mode, opts); }
   /* ---- the Xenotripods: in rules/xeno.js ---- */
   var KIT_XENO = null;
@@ -1305,6 +1318,22 @@
     if (hasOwn(a, 'Command Unit')) return true;
     return state.units.some(function (c) {
       return c !== a && c.alive && c.side === a.side && c.x >= 0 && !c.aboard && hasOwn(c, 'Command Unit') && unitDist(a, c) <= 12;
+    });
+  }
+  /* On the table and in the fight: alive, set down, not riding inside anything
+     and not waiting in reserve. The one reading every part of the game uses. */
+  function onTable(u) { return !!u && u.alive && u.x >= 0 && !u.aboard && !u.reserve; }
+  /* How many units may be swapped when modifying the armies: no more than a
+     quarter (p. 46), half with Tactical Flexibility (O6, p. 87). */
+  function swapAllowance(n, flexible) { return Math.floor(n * (flexible ? 0.5 : 0.25)); }
+  /* The OpFor's "+2 if there are no enemy units within the active unit's Range"
+     (p. 147): a plain distance, whatever stands in the way or wherever the gun
+     points. A unit with no Firepower has no Range, so nothing is within it. */
+  function enemyWithinRange(state, u) {
+    if (u.fp === null) return false;
+    var reach = shotRange(u);
+    return state.units.some(function (t) {
+      return t.alive && t.side !== u.side && !t.reserve && !t.aboard && t.x >= 0 && unitDist(u, t) <= reach;
     });
   }
   function steadyTargets(state, a) {
@@ -1371,6 +1400,7 @@
   function chargeRoute(state, a, t, allowance) { return (KIT_ASSAULT || kitAssault()).chargeRoute(state, a, t, allowance); }
   function canMartyr(state, u, foe) { return (KIT_ASSAULT || kitAssault()).canMartyr(state, u, foe); }
   function assault(state, a, t, opts) { return (KIT_ASSAULT || kitAssault()).assault(state, a, t, opts); }
+  function assaultOdds(state, atk, def, opts) { return (KIT_ASSAULT || kitAssault()).assaultOdds(state, atk, def, opts); }
   function chargeBonus(u, r) { return (KIT_ASSAULT || kitAssault()).chargeBonus(u, r); }
   function clampBoard(p) { return (KIT_ASSAULT || kitAssault()).clampBoard(p); }
   function fallBack(state, u, from, inch) { return (KIT_ASSAULT || kitAssault()).fallBack(state, u, from, inch); }
@@ -1475,14 +1505,15 @@
     if (campFlag(u, 'fearless')) { need = jammed ? 3 : 2; extras.push('Rite of Fearless: ' + need + '+'); }
     if (u.cls === 'infantry' && disruptedBy(state, u)) { need = 6; extras.push('Rite of Disruption: 6 only'); }
     if (campFlag(u, 'panic')) { need = 6; extras.push('Panic-mongers: 6 only'); }
-    if (campFlag(u, 'brokenMinded')) { m = Math.floor(m / 2); extras.push('Broken-minded: half the dice'); }
+    if (campFlag(u, 'brokenMinded')) { m = Math.ceil(m / 2); extras.push('Broken-minded: half the dice'); }
     if (campFlag(u, 'ironDiscipline')) { m += 2; extras.push('Iron Discipline +2 dice'); }
     if (freedom) { m += freedom; extras.push('"…but they\'ll never take our freedom!" +' + freedom + ' dice'); }
     if (campFlag(u, 'surrounded')) {
       var near = 0;
       for (var q = 0; q < state.units.length; q++) {
         var o = state.units[q];
-        if (o.alive && o.side !== u.side && !o.aboard && unitDist(o, u) <= 18) near++;
+        // enemies on the table: a reserve waits off its corner, not within 18" of anyone
+        if (o.alive && o.side !== u.side && !o.aboard && !o.reserve && o.x >= 0 && unitDist(o, u) <= 18) near++;
       }
       if (near) { m += near; extras.push('Surrounded, but Steady +' + near + ' dice'); }
     }
@@ -1571,10 +1602,12 @@
     return humanName(f === 'rebel');
   }
   // a unit whose losses are counted rather than named: the swarm, and the Esh-Aven
+  /* Units whose losses are a count, not a roll of names: the swarm, the tribe's
+     Esh-Aven, and penal troops, whose collars kill them off (Expendable, p. 57). */
   function counted(u) {
     if (!u) return false;
     var p = BY_KEY[u.key];
-    return u.faction === 'bugs' || !!u.eshAven || !!(p && p.eshAven);
+    return u.faction === 'bugs' || !!u.eshAven || !!(p && p.eshAven) || !!(p && (p.rules || []).indexOf('Expendable') >= 0);
   }
   // does this unit have anyone in it who could be named?
   function crewed(u) {
@@ -1712,6 +1745,7 @@
     isMedic = KIT_DAMAGE.isMedic;
     medicNearby = KIT_DAMAGE.medicNearby;
     resolveShootingHits = KIT_DAMAGE.resolveShootingHits;
+    shotRelief = KIT_DAMAGE.shotRelief;
     resolveAssaultHits = KIT_DAMAGE.resolveAssaultHits;
     applyResult = KIT_DAMAGE.applyResult;
     dmgMod = KIT_DAMAGE.dmgMod;
@@ -1745,7 +1779,6 @@
     markCall = KIT_SHOOT.markCall;
     shotMods = KIT_SHOOT.shotMods;
     shotOdds = KIT_SHOOT.shotOdds;
-    assaultOdds = KIT_SHOOT.assaultOdds;
     shoot = KIT_SHOOT.shoot;
     isXeno = KIT_XENO.isXeno;
     xenoSenses = KIT_XENO.xenoSenses;
@@ -1771,6 +1804,7 @@
     chargeRoute = KIT_ASSAULT.chargeRoute;
     canMartyr = KIT_ASSAULT.canMartyr;
     assault = KIT_ASSAULT.assault;
+    assaultOdds = KIT_ASSAULT.assaultOdds;
     chargeBonus = KIT_ASSAULT.chargeBonus;
     clampBoard = KIT_ASSAULT.clampBoard;
     fallBack = KIT_ASSAULT.fallBack;
@@ -1815,10 +1849,10 @@
     rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
-    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, embark: embark, disembark: disembark,
+    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
-    steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
+    enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,

@@ -648,6 +648,22 @@ console.log('  vs the OpFor AI');
     e.state().activeSide === 'A' || !!e.over() || !!e.sel().insertion);
 })();
 
+/* A Command Unit may be swapped like any other, for one of the same Tier (p. 46),
+   and another comes in only within one a Priority Level (p. 57). */
+(function () {
+  console.log('swapping a Command Unit');
+  const e = createEngine();
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['cmd2', 'regular', 'regular', 'regular', 'veterans', 'veterans', 'recon'],
+    armyB: R.rollArmy(3, 1, null, 'pmc'), nameA: 'A', nameB: 'B', mode: 'ai', planet: 'sparse' });
+  const st = e.state(), cmd = st.units.find(u => u.side === 'A' && u.key === 'cmd2');
+  const opts = e.query.swapOptions('A', cmd.id).map(o => o.key);
+  ok('a Command Unit may be swapped for another unit of its Tier', opts.length > 0 &&
+    opts.every(k => R.profile(k).tier === cmd.tier), opts.join(', '));
+  const vet = st.units.find(u => u.side === 'A' && u.key === 'veterans');
+  const vopts = e.query.swapOptions('A', vet.id).map(o => R.profile(o.key));
+  ok('...but a second Command Unit does not come in over the cap', vopts.length > 0 && vopts.every(p => !p.command));
+})();
+
 /* Modifying the armies (p. 46): a quarter of the list — half with Tactical
    Flexibility — swapped for units of the same Tier, before anyone deploys. */
 (function () {

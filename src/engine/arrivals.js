@@ -190,12 +190,14 @@
          lands after the defender's reserves are down, and a Demolish defender
          after the attacker's (pp. 53-54). Every unit is taken in that order, the
          placed ones and the asked-for ones alike. */
-      var sides = ['A', 'B'];
+      // alternating from the side with the initiative (p. 27), unless the scenario orders them
+      var sides = E.state.initiative === 'B' ? ['B', 'A'] : ['A', 'B'], inTurn = true;
       if (E.state.sc && E.state.sc.attacker) {
         var atk0 = E.state.sc.attacker, def0 = atk0 === 'A' ? 'B' : 'A';
-        if (E.state.scen.id === 'invasion') sides = [def0, atk0];
-        else if (E.state.scen.id === 'demolish') sides = [atk0, def0];
+        if (E.state.scen.id === 'invasion') { sides = [def0, atk0]; inTurn = false; }
+        else if (E.state.scen.id === 'demolish') { sides = [atk0, def0]; inTurn = false; }
       }
+      var bySide = {};
       sides.forEach(function (side) {
         var coming = E.state.sc.picked[side] ? E.state.sc.picked[side].slice() : SC.reserves(E.state, side);
         // Evacuation: the pick is only the player's own reserves; the civilians still roll to come out
@@ -213,8 +215,16 @@
             coming.push(u);
           });
         }
-        coming.forEach(function (u) { ask.push(u); });
+        bySide[side] = coming;
       });
+      /* "Apply the Alternate activation rule" to the Reserve phase (p. 26): one of
+         the first side's, one of the other's, and so on, until both are done. */
+      if (inTurn) {
+        for (var k = 0; k < Math.max(bySide[sides[0]].length, bySide[sides[1]].length); k++) {
+          if (bySide[sides[0]][k]) ask.push(bySide[sides[0]][k]);
+          if (bySide[sides[1]][k]) ask.push(bySide[sides[1]][k]);
+        }
+      } else sides.forEach(function (side) { bySide[side].forEach(function (u) { ask.push(u); }); });
       function placeAuto(u) {
         u.sfOffer = false;
         var p = arrivalPoint(u);

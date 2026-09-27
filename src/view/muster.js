@@ -407,7 +407,20 @@
       rd.readAsText(file);
     }
 
+    /* "When playing Tier I or Tier II battle and/or Priority 1 battle" the D3
+       roll among the first three scenarios is allowed (p. 45); otherwise it is off. */
+    function d3Allowed() { return musterTier() <= 2 || musterPL() === 1; }
+    function gateD3() {
+      var sel = el('sel-scen');
+      var opt = sel && sel.querySelector('option[value="rolld3"]');
+      if (!opt) return;
+      opt.disabled = !d3Allowed();
+      if (opt.disabled && sel.value === 'rolld3') sel.value = 'roll';
+    }
+
     function wireMuster() {
+      ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', gateD3); });
+      gateD3();
       ['sel-tier', 'sel-pl', 'sel-faction'].forEach(function (id) {
         if (!el(id)) return;
         el(id).addEventListener('change', function () {
@@ -1006,7 +1019,7 @@
       }
       var pickScen = el('sel-scen') ? el('sel-scen').value : 'secure';
       if (pickScen === 'roll') pickScen = SC.ORDER[R.d6() - 1];
-      else if (pickScen === 'rolld3') pickScen = SC.ORDER[R.d3() - 1];
+      else if (pickScen === 'rolld3') pickScen = SC.ORDER[(d3Allowed() ? R.d3() : R.d6()) - 1];
       var mode = h.kind === 'demo' ? 'demo' : h.kind === 'ai' ? 'ai' : 'hotseat';
       el('setup').hidden = true;
       hotEnd();

@@ -497,7 +497,7 @@
     function oddsOn(t) {
       var u = ui.selected;
       if (!u) return null;
-      if (ui.mode === 'assault') return R.assaultOdds(B.state, u, t);
+      if (ui.mode === 'assault') return R.assaultOdds(B.state, u, t, { noSap: ui.noSap });
       if (['fire', 'aux', 'advance-fire'].indexOf(ui.mode) < 0) return null;
       return R.shotOdds(B.state, u, t, ui.mode === 'aux' ? 'fire' : ui.mode,
         { aux: ui.mode === 'aux' });
@@ -561,7 +561,7 @@
       ui.targets.forEach(function (t) {
         var d = R.unitDist(u, t).toFixed(1), extra = '';
         if (ui.mode === 'assault') {
-          var ao = R.assaultOdds(B.state, u, t);
+          var ao = R.assaultOdds(B.state, u, t, { noSap: ui.noSap });
           extra = 'Assault +' + ao.mods + ' vs Def ' + ao.def + ' · hits on ' + ao.need + '+ · ' +
             Math.round(ao.chance * 100) + '% a round';
         } else if (ui.mode !== 'designate') {
@@ -877,7 +877,7 @@
               return '<button class="lnk" data-load="' + c.id + '" data-hull="' + v.id + '">+ ' +
                 esc(c.name) + '</button>';
             }).join('') + '</div>'
-            : '<div class="hint small">' + (R.has(v, 'Lifter') ? 'No vehicle left to sling under it.' : (v.cargo || []).some(function (c) { return R.has(c, 'Stationary Artillery'); }) ? 'A gun on the hook: nothing else rides.' : 'No infantry left to put aboard.') + '</div>';
+            : '<div class="hint small">' + (R.has(v, 'Lifter') ? 'No vehicle left to sling under it.' : 'No infantry left to put aboard.') + '</div>';
         }
         h += '</div>';
       });
@@ -979,6 +979,7 @@
           else if (a === 'digcancel') { ui.digHover = null; send({ k: 'cancel' }); return; }
           else if (a === 'holdarrive') { holdArrival(); return; }
           else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
+          else if (a === 'cmdact') { send({ k: a, id: b.getAttribute('data-id') }); return; }
           else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
           // whose list is being kept: in a hotseat's round of swaps the next player is up the moment it is
           else if (a === 'swapdone') { send({ k: a, who: b.getAttribute('data-who') }); return; }
@@ -1043,18 +1044,34 @@
       });
     }
 
-    function drawLog() {
-      var html = B.state.log.map(function (l) {
+    /* The log is drawn into two places (the side panel and the dock) on every
+       render, so it is only touched when it has changed: new lines are added to
+       the end, and the whole is written again only when the log was trimmed at
+       the front or started over. */
+    var logShown = { log: null, first: null, last: null, n: 0 };
+    function logHtml(list) {
+      return list.map(function (l) {
         return '<div class="le le-' + l.t + '"><p>' + l.text + '</p>' + (l.math ? '<code>' + l.math + '</code>' : '') + '</div>';
       }).join('');
+    }
+    function drawLog() {
+      var log = B.state.log, n = log.length, first = log[0] || null, last = log[n - 1] || null;
+      var was = logShown;
+      if (was.log === log && was.first === first && was.last === last && was.n === n) { logCount(n); return; }
+      var append = was.log === log && was.first === first && n > was.n && log[was.n - 1] === was.last;
+      var html = append ? logHtml(log.slice(was.n)) : logHtml(log);
       ['log', 'log-dock'].forEach(function (id) {
         var host = el(id);
         if (!host) return;
-        host.innerHTML = html;
+        if (append) host.insertAdjacentHTML('beforeend', html); else host.innerHTML = html;
         host.parentElement.scrollTop = host.parentElement.scrollHeight;
       });
-      var n = el('logdock-n');
-      if (n) n.textContent = B.state.log.length + ' entr' + (B.state.log.length === 1 ? 'y' : 'ies');
+      logShown = { log: log, first: first, last: last, n: n };
+      logCount(n);
+    }
+    function logCount(n) {
+      var c = el('logdock-n');
+      if (c) c.textContent = n + ' entr' + (n === 1 ? 'y' : 'ies');
     }
 
     // On a narrow screen the action bar sits below the board. Bring it into view,

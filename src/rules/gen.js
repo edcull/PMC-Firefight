@@ -81,7 +81,8 @@
         { text: '1-4 impassable areas (high rocks, deep canyons)', alts: [[P('rocks', 1, 4, { big: true })]] },
         { text: '1-6 hills or huge rocks', alts: [[P('hill', 1, 6)], [P('rocks', 1, 6, { big: true })]] },
         { text: '1-6 hills or woods', alts: [[P('hill', 1, 6)], [P('woods', 1, 6)]] },
-        { text: 'Mine: 1-3 buildings, may be on a hill', alts: [[P('hill', 1, 1), P('building', 1, 3, { onHill: true })]] }
+        // "may be on a hill" (p. 48): now on one, now on level ground
+        { text: 'Mine: 1-3 buildings, may be on a hill', alts: [[P('hill', 1, 1), P('building', 1, 3, { onHill: true })], [P('building', 1, 3)]] }
       ]
     },
     unstable: {

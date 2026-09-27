@@ -327,7 +327,8 @@ ok('Find and secure splits both forces in half', fs.A === 2 && fs.B === 2, true,
 var iv = reserveSplit('invasion');
 ok('Invasion holds the whole attacking force off the table',
   (iv.atk === 'A' ? iv.A : iv.B), 4, 'it arrives by drop, not by deployment');
-ok('...and two thirds of the defenders', (iv.atk === 'A' ? iv.B : iv.A), 3, 'one of four stays on the table');
+// "up to 1/3" on the table, rounded up as every division is (p. 17): two of four
+ok('...and the rest of the defenders', (iv.atk === 'A' ? iv.B : iv.A), 2, 'two of four stay on the table');
 var dm = reserveSplit('demolish');
 ok('Demolish holds half the defenders back', (dm.atk === 'A' ? dm.B : dm.A), 2);
 ok('...and none of the attackers', (dm.atk === 'A' ? dm.A : dm.B), 0);
@@ -549,8 +550,19 @@ ok('...no attacker band touches the defender\'s corner',
   dm2.sc.boxes[dAtk].filter(function (b) {
     return S.inBoxes([b], dm2.sc.corner.x, dm2.sc.corner.y);
   }).length, 0);
-ok('...every band is 12" of edge, 6" deep',
-  dm2.sc.boxes[dAtk].every(function (b) { return Math.max(b.w, b.h) === 12 && Math.min(b.w, b.h) === 6; }), true);
+// the SAM system: "closer than 12" from the objective" — its edge, a 4" piece (p. 54)
+(function () {
+  var t = dm2.sc.target, craft = unit(dAtk, t.x + t.w + 11 + R.UNIT_R, t.cy, { key: 'fsc' });
+  dm2.units.push(craft);
+  ok('the SAM fires at a craft 11" from the objective\'s edge', !!S.SCENARIOS.demolish.onMoveEnd(dm2, craft), true,
+    (craft.x - t.cx).toFixed(1) + '" from its middle');
+  craft.x = t.x + t.w + 13 + R.UNIT_R;
+  ok('...not at one 13" off', !S.SCENARIOS.demolish.onMoveEnd(dm2, craft), true);
+  dm2.units.pop();
+})();
+// reserves come on "up to 4" from the table border" (p. 27): the whole base inside it
+ok('...every band is 12" of edge, the base within 4" of it',
+  dm2.sc.boxes[dAtk].every(function (b) { return Math.max(b.w, b.h) === 12 && Math.min(b.w, b.h) === 4 - R.UNIT_R; }), true);
 ok('...and the attacker may not deploy in the middle of the table',
   S.inBoxes(dm2.sc.boxes[dAtk], 24, 24), false);
 ok('...but may at a corner that is his', S.inBoxes(dm2.sc.boxes[dAtk], 2, 2) ||

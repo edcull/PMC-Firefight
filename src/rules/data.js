@@ -222,7 +222,7 @@
     { key: 'rlshuttle', code: 'ALS', name: 'Armed light shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'apachenp', tier: 3, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 0, str: 6, transport: 1, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (1)'] },
     { key: 'rmshuttle', code: 'AMS', name: 'Armed medium shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'hindnp', tier: 4, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 0, str: 7, transport: 2, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (2)', 'Supporting Fire'] },
     { key: 'rhshuttle', code: 'AHS', name: 'Armed heavy shuttle', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'chinookwl', tier: 5, size: 1, move: 18, fp: 5, range: 18, def: 11, assault: 0, str: 8, transport: 4, rules: ['Flying unit', 'Limited Fire Arc', 'Transport (4)', 'Supporting Fire'] },
-    { key: 'rlifter', code: 'LFT', name: 'Lifter', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'chinook', tier: 3, size: 1, move: 16, fp: 0, range: 0, def: 10, assault: 0, str: 7, transport: 1, rules: ['Flying unit', 'Lifter', 'Unarmed'] },
+    { key: 'rlifter', code: 'LFT', name: 'Lifter', group: 'Rebel aviation', faction: 'rebel', cls: 'aircraft', art: 'chinook', tier: 3, size: 1, move: 16, fp: null, range: 0, def: 10, assault: 0, str: 7, transport: 1, rules: ['Flying unit', 'Lifter', 'Unarmed'] },
 
     /* ---- the Space Bugs (pp. 113-123) ----
        Overgrown bugs follow vehicle rules and Overgrown flying bugs aircraft rules,
@@ -231,6 +231,9 @@
     { key: 'bsmall', code: 'SBG', name: 'Small bugs', group: 'Lesser Bugs', faction: 'bugs', art: 'bug_small', tier: 2, size: 8, move: 9, fp: null, range: 0, def: 7, assault: 4, morale: 4, rules: ['Determined', 'Animal Behaviour', 'Aggressive', 'Endless Tide'] },
     { key: 'battack', code: 'ATF', name: 'Attack forms', group: 'Lesser Bugs', faction: 'bugs', art: 'bug_attack', tier: 3, size: 8, move: 9, fp: null, range: 0, def: 8, assault: 5, morale: 4, rules: ['Determined', 'Animal Behaviour', 'Aggressive', 'Endless Tide'] },
     { key: 'boversized', code: 'OAF', name: 'Oversized attack forms', group: 'Lesser Bugs', faction: 'bugs', art: 'bug_oversized', tier: 4, size: 8, move: 9, fp: null, range: 0, def: 9, assault: 5, morale: 5, rules: ['Determined', 'Animal Behaviour', 'Aggressive', 'Sappers', 'Endless Tide'] },
+    /* The book's Fire beetle (p. 118) does not print "Overgrown Bug", but it is
+       plainly one: a Structure 7 bug with a vehicle's profile. So it counts toward
+       the Overgrown cap, gets +4 assaulting vehicles and is worth 25 biomass. */
     { key: 'bfirebeetle', code: 'FBT', name: 'Fire beetle', group: 'Lesser Bugs', faction: 'bugs', cls: 'vehicle', art: 'bugfirebeetle', tier: 5, size: 1, move: 8, turn: 1, fp: 9, range: 12, def: 14, assault: 5, str: 7, rules: ['Ground vehicle', 'Overgrown Bug', 'Specialisation (ground)', 'Limited Fire Arc', 'Incendiary Ammunition', 'Suppressive Fire', 'Always Basic Firepower'] },
     { key: 'bunderground', code: 'SUB', name: 'Small underground bugs', group: 'Underground Bugs', faction: 'bugs', art: 'bug_under', tier: 3, size: 8, move: 5, fp: null, range: 0, def: 12, defPierced: 10, assault: 4, morale: 4, rules: ['Determined', 'Animal Behaviour', 'Aggressive', 'Battle Armour'] },
     { key: 'bhugeunder', code: 'HUB', name: 'Huge underground bugs', group: 'Underground Bugs', faction: 'bugs', art: 'bug_hugeunder', tier: 4, size: 8, move: 5, fp: null, range: 0, def: 12, defPierced: 10, assault: 5, morale: 4, rules: ['Determined', 'Animal Behaviour', 'Aggressive', 'Battlefield Insertion', 'Battle Armour'] },
