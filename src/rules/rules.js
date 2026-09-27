@@ -1585,6 +1585,10 @@
     'Brick', 'Fox', 'Deacon', 'Rook', 'Tinker', 'Viper', 'Blue', 'Ash'];
   var XENO_SYL = ['ka', 'tha', 'ir', 'zha', 'ul', 'vek', 'sa', 'ren', 'oth', 'qua', 'li', 'mar', 'es', 'dro', 'ya', 'kel', 'un', 'ssi'];
   var OFFICER = ['Lieutenant', 'Captain', 'Major', 'Lieutenant Colonel', 'Colonel'];
+  /* A PMC hull is commanded by an NCO, heavier and better hulls by more senior
+     ones; a command or EW vehicle (and a flying command post) by a junior officer. */
+  var CREW_NCO = ['Corporal', 'Corporal', 'Sergeant', 'Staff Sergeant', 'Master Sergeant'];
+  var CREW_OFFICER = ['Second Lieutenant', 'Second Lieutenant', 'Lieutenant', 'Lieutenant', 'Captain'];
   var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
 
   function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
@@ -1624,7 +1628,11 @@
      lost its sergeant closes up behind the corporal when it is mustered again. */
   function rankFor(u, i) {
     var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
-    if (isMachine(u)) return isFlying(u) ? 'Pilot' : (f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : 'Commander');
+    if (isMachine(u)) {
+      if (f === 'pmc' && (u.key === 'cmdveh' || u.key === 'ewveh' || u.key === 'flyingcp' || hasOwn(u, 'Command Vehicle'))) return CREW_OFFICER[tier - 1];
+      if (isFlying(u)) return 'Pilot';
+      return f === 'xeno' ? 'Rider' : f === 'rebel' ? 'Driver' : CREW_NCO[tier - 1];
+    }
     if (u.vip) return i === 0 ? 'VIP' : 'Bodyguard';
     if (f === 'xeno') {
       if (u.command) return i === 0 ? 'Warleader' : 'Chosen';

@@ -30,7 +30,13 @@ R.musterMen(cmd, null, taken);
 ok('a field command is led by an officer', cmd.men[0].rank === 'Major', cmd.men[0].rank);
 const lcv = unit('lcv');
 R.musterMen(lcv, null, taken);
-ok('a crewed vehicle has one named commander', lcv.men.length === 1 && lcv.men[0].rank === 'Commander');
+ok('a crewed vehicle has one named commander, an NCO', lcv.men.length === 1 && /Corporal|Sergeant/.test(lcv.men[0].rank), lcv.men[0] && lcv.men[0].rank);
+// a command or EW vehicle is in the hands of a junior officer
+['cmdveh', 'ewveh'].forEach((k) => {
+  const v = unit(k);
+  R.musterMen(v, null, taken);
+  ok('a ' + v.name + ' is commanded by a junior officer', /Lieutenant|Captain/.test(v.men[0].rank), v.men[0].rank);
+});
 const bug = unit('bsmall');
 R.musterMen(bug, null, taken);
 ok('a bug unit has no named individuals', bug.men.length === 0);
