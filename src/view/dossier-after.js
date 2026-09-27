@@ -54,6 +54,7 @@
       }
       E.camp.post = null;
       E.camp.pending = null;
+      if (!E.camp.fronts) keepAfter();
       save();
       E.view = 'aftermath';
     }
@@ -90,8 +91,25 @@
       var fr = E.camp.fronts;
       if (E.after && fr) { E.after.elsewhere = [].concat.apply([], fr.done); E.after.fronts = fr.done; }
       E.camp.fronts = null;
+      keepAfter();
       save();
     }
+    /* The aftermath, once complete, is kept on its battle's line in the log,
+       so it can be read again from Battles fought: as it was, with the money
+       the force had after it. Only what the page draws is kept. */
+    function keepAfter() {
+      var last = E.camp.log[E.camp.log.length - 1];
+      if (!E.after || !last || last.turn !== E.after.turn) return;
+      var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, sides: { A: a.sides.A }, fronts: a.fronts || null, elsewhere: a.elsewhere || [] };
+      if (E.camp.mode === 'hotseat' && a.sides.B) keep.sides.B = a.sides.B;
+      last.after = JSON.parse(JSON.stringify(keep));
+      last.balance = E.camp.companies.A.kUC;
+      // ten kilobytes or so each: the last twenty are kept in full, the rest keep their line
+      E.camp.log.slice(0, -20).forEach(function (l) { delete l.after; });
+    }
+    // a past battle's kept aftermath, opened from Battles fought (by its place in the log), or null
+    var past = null;
+    function showPast(i) { past = i == null ? null : E.camp.log[i] || null; }
     /* A battle among the other forces, in brief: Tier, Priority Level and
        scenario, then for each side whether it won, what share of its force it
        lost, and what it was paid. */
@@ -156,7 +174,7 @@
     }
     // the other forces' battles on the aftermath: those fought so far, and the one being fought now
     function frontsSection() {
-      var fr = E.camp.fronts, done = fr ? fr.done : (E.after.fronts || regroup(E.after.elsewhere || []));
+      var fr = past ? null : E.camp.fronts, done = fr ? fr.done : (E.after.fronts || regroup(E.after.elsewhere || []));
       if (!fr && !done.length) return '';
       var h = '<h3>Elsewhere on the world</h3>';
       if (fr && fr.done.length < fr.pairs.length) {
@@ -265,14 +283,22 @@
       return h + '</div>';
     }
 
+    /* A past battle's aftermath is drawn by the same page, from what was kept:
+       read only, with the way back to Battles fought at its foot. */
     function aftermathView() {
-      var h = '<h2>Aftermath</h2>';
+      if (!past) return afterPage(null);
+      var now = E.after;
+      E.after = past.after;
+      try { return afterPage(past); } finally { E.after = now; }
+    }
+    function afterPage(pastLine) {
+      var h = '<h2>Aftermath' + (pastLine ? ' \u2014 turn ' + pastLine.turn : '') + '</h2>';
       var res = E.after.winner === 'A' ? 'A victory.' : E.after.winner === 'B' ? 'A defeat.' : 'A draw.';
       h += '<p class="lede">Campaign turn ' + E.after.turn + '. ' + res + '</p>';
 
       h += '<h3>Payment</h3>';
       var p = E.after.payment;
-      var last = E.camp.log[E.camp.log.length - 1];
+      var last = pastLine || E.camp.log[E.camp.log.length - 1];
       var nd = last.tier * last.pl;
       h += '<div class="cpan"><div class="cpstat">Two rolls of ' + nd + 'D6: ' +
         '<span class="dcx">' + p.diceA.join(' ') + '</span> and <span class="dcx">' + p.diceB.join(' ') + '</span>. ' +
@@ -282,7 +308,7 @@
         (p.negA ? ' Tough Negotiators re-rolled ' + p.negA.swapped.length +
           (p.negA.swapped.length === 1 ? ' die.' : ' dice.') : '') +
         '</div><div class="cphead">' + colourFlash(E.camp.companies.A) + '<b>' + esc(E.camp.companies.A.name) + '</b>' +
-        '<span class="cmoney">+' + p.A + ' ' + coin() + ' → ' + E.camp.companies.A.kUC + '</span></div></div>';
+        '<span class="cmoney">+' + p.A + ' ' + coin() + ' → ' + (pastLine ? (pastLine.balance != null ? pastLine.balance : '?') : E.camp.companies.A.kUC) + '</span></div></div>';
 
       if (p.territory && p.territory.A) {
         var tt = p.territory.A;
@@ -295,7 +321,7 @@
           return esc(d.name) + ' (rolled ' + d.roll + ') lost ' + d.lost + ' EXP';
         }).join('; ') + '.</div></div>';
       }
-      if (rec.rebornOffer && rec.rebornOffer.length) {
+      if (rec.rebornOffer && rec.rebornOffer.length && !pastLine) {
         h += '<div class="cpan"><div class="cprom-head"><b>Enhanced Genetic Memory</b></div>' +
           '<p class="cpstat">A lost infantry unit can be recruited again, now or never: on a D6 of 2-6 the new one remembers everything the old one had before this battle.</p>' +
           rec.rebornOffer.map(function (r, i) {
@@ -378,6 +404,10 @@
 
       h += frontsSection();
 
+      if (pastLine) {
+        return h + '<div class="camp-dock"><button class="start" data-go="pastback">Back to the battles</button></div>' +
+          '<p class="camp-foot"><button class="lnk" data-go="hub">The campaign</button></p>';
+      }
       var gaps = C.rebuildNeeds(E.camp.companies.A);
       if (gaps.length) {
         h += '<div class="cpwarn">The ' + C.words(E.camp.companies.A).force + ' can no longer field a legal army at Tier ' +
@@ -531,7 +561,7 @@
     }
 
     return {
-      onFinish: onFinish, postView: postView, aftermathView: aftermathView, nextFront: nextFront, honourView: honourView,
+      onFinish: onFinish, postView: postView, aftermathView: aftermathView, nextFront: nextFront, showPast: showPast, honourView: honourView,
       intelView: intelView, upgradeView: upgradeView, doctrineView: doctrineView
     };
   };

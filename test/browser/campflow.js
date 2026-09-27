@@ -335,13 +335,19 @@ async function pastFronts(p) {
   });
   await p.waitForTimeout(400);
   // Modifying the armies (p. 46) comes first: the company can swap from its dossier, and keeps its list here
+  /* The offer is on the company's own deployment card, which comes up when it
+     is the company's turn to deploy — after the other side, in a scenario where
+     they deploy first. So it waits for that. */
+  await p.waitForFunction(() => document.querySelector('[data-act="swapopen"]') ||
+    (window.PMC_STATE && !(window.PMC_STATE().swapAvail || {}).A), null, { timeout: 20000 }).catch(() => {});
+  const swapNote = await p.evaluate(() => { const s = window.PMC_STATE(); return 'phase ' + s.phase + ', offer ' + JSON.stringify((s.swapAvail || {}).A || null); });
   check('the company may modify its army from the dossier once the table is laid', await p.evaluate(async () => {
     const b = document.querySelector('[data-act="swapopen"]'); if (!b) return false;
     b.click(); await new Promise(r => setTimeout(r, 200));
     const ok = document.querySelectorAll('[data-swappick]').length > 0;
     const d = document.querySelector('[data-act="swapdone"]'); if (d) d.click();
     return ok;
-  }));
+  }), swapNote);
   await p.waitForTimeout(300);
   await p.evaluate(() => {
     const b2 = document.querySelector('button[data-act="autodeploy"]');
