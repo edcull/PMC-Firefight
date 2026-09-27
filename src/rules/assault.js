@@ -208,7 +208,7 @@
           var pair = order[o];
           if (cowed && pair.atk === t) continue;
           if (!pair.atk.alive || !pair.def.alive) { ended = true; break; }
-          var rd = assaultRound(state, pair.atk, pair.def, pair.atk === a ? 'attacker' : 'defender', r + 1);
+          var rd = assaultRound(state, pair.atk, pair.def, pair.atk === a ? 'attacker' : 'defender', r + 1, opts);
           if (rd.wreck) wrecked = rd.wreck;
           rd.log.forEach(function (l) { log.push(l); });
           if (!pair.def.alive) { ended = true; break; }
@@ -254,6 +254,7 @@
     /* Sappers go in against a wall or a building with demolition charges: +4 on the
        first round, and a final 15+ or an unmodified 9 blows the cover in, so the
        defender loses it for that round and the hits land one step harder. */
+    // only a unit that is assaulting — never one defending (p. 58)
     function sappingAt(state, atk, def, n) {
       if (n !== 1 || !has(atk, 'Sappers') || isMachine(def)) return false;
       return !!shelterOf(state, atk, def);             // in or behind something they can blow in
@@ -265,7 +266,7 @@
       return destructibleKind(r) === 'target' ? 2 : 0;
     }
 
-    function assaultRound(state, atk, def, role, n) {
+    function assaultRound(state, atk, def, role, n, opts) {
       var log = [], parts = [], total = 0;
       var roll = d10(); total = roll;
       parts.push({ label: 'D10', v: roll });
@@ -284,7 +285,9 @@
       if (n === 1 && flyInf(atk) && doctrine(state, atk.side, 'BB4')) { total += 4; parts.push({ label: 'Fierce Attacks', v: 4 }); }
       // Metal-covered Talons: +2 against vehicles (p. 124)
       if (isMachine(def) && doctrine(state, atk.side, 'BP6')) { total += 2; parts.push({ label: 'Metal-covered Talons', v: 2 }); }
-      var sapping = sappingAt(state, atk, def, n);
+      /* The Sappers' charges go in with the attacker only, and "the player may order
+         them to perform a standard Assault action" instead (p. 59): then no +4. */
+      var sapping = role === 'attacker' && !(opts && opts.noSap) && sappingAt(state, atk, def, n);
       if (sapping) { total += 4; parts.push({ label: 'Sappers', v: 4 }); }
       var breached = sapping && (roll === 9 || total >= 15);
       var wreck = null;

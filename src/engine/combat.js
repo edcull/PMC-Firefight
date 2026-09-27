@@ -173,7 +173,8 @@
       var u = ui.selected;
       martyrFirst(u, target, function (m) {
         var snap = snapshotAlive();
-        var res = abAssault(E.state, u, target, m);
+        var res = abAssault(E.state, u, target, m, ui.noSap);
+        ui.noSap = false;
         res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
         soundFor(res.log);
         var card = fromLog('Assault', u.name + ' → ' + target.name, u.side, res.log);

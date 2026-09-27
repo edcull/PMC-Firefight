@@ -21,7 +21,7 @@
         soloOwnerName = E.soloOwnerName, spent = E.spent, stayPut = E.stayPut, targetsFor = E.targetsFor,
         ui = E.ui, wireNote = E.wireNote;
 
-    var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, laststand: 1 };
+    var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, plainassault: 1, laststand: 1 };
     function actionState(u, id) {
       if (!u) return { on: false, hint: 'Select one of your units on the table.' };
       /* Carried or towed, a unit does not activate at all: a gun on the hook is
@@ -78,7 +78,7 @@
          that can reach an enemy must charge the closest one — nothing else. */
       // "whenever possible" — and a Suppressed bug cannot charge, so it is not held to it
       var fc = sup && !R.deathOrGlory(E.state, u) ? null : forcedCharge(u);
-      if (fc && id !== 'assault') {
+      if (fc && id !== 'assault' && id !== 'plainassault') {
         if (R.campFlag(u, 'bloodlust')) return { on: false, hint: 'Bloodlust: ' + u.name + ' must charge the closest enemy it can reach, ' + fc.name + '.' };
         return { on: false, hint: 'Aggressive: ' + u.name + ' must charge the closest enemy, ' + fc.name +
           ' — no Overmind within ' + R.overmindReach(E.state, u.side) + '" to hold it back.' };
@@ -145,6 +145,17 @@
           if (R.has(u, 'Cumbersome Weapon')) return { on: false, hint: 'Cumbersome Weapon: may not Advance.' };
           if (u.fp === null) return { on: false, hint: 'This unit has no Firepower.' };
           return { on: true, hint: 'Move up to ' + u.move + '", then shoot without the Fire! bonus.' };
+        }
+        /* Sappers "do not have to attempt to destroy that terrain piece – the player
+           may order them to perform a standard Assault action" (p. 59): the charge
+           without the demolition charges, and without their +4. */
+        case 'plainassault': {
+          if (!R.has(u, 'Sappers')) return { on: false, hint: 'Only Sappers carry demolition charges to leave behind.' };
+          var pa = actionState(u, 'assault');
+          if (!pa.on) return pa;
+          var walled = (fc ? [fc] : assaultables(u, chargeAllow(u))).some(function (t) { return !R.isMachine(t) && R.shelterOf(E.state, u, t); });
+          if (!walled) return { on: false, hint: 'No enemy within reach is in or behind something to blow in: a plain Assault is all there is.' };
+          return { on: true, hint: 'A standard Assault: charge in without setting the demolition charges — no +4, and the wall or building stays.' };
         }
         case 'assault': {
           if (machine && !R.isOvergrown(u)) return { on: false, hint: 'Vehicles and aircraft never charge.' };
@@ -407,8 +418,9 @@
         ui.mode = 'advance-move';
         ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
         wireNote(u);
-      } else if (id === 'assault') {
+      } else if (id === 'assault' || id === 'plainassault') {
         ui.mode = 'assault';
+        ui.noSap = id === 'plainassault';
         var must = forcedCharge(u);
         ui.targets = must ? [must] : assaultables(u);
       } else if (id === 'wave') {

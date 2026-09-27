@@ -1207,6 +1207,8 @@
     } else if (u && R.has(u, 'Smoke Markers')) {
       if (markAnswerable(u, 'designate')) out.push({ id: 'designate', label: 'Smoke & flare' });
     }
+    // Sappers may charge without setting their demolition charges (p. 59)
+    if (u && R.has(u, 'Sappers') && !R.isMachine(u)) out.push({ id: 'plainassault', label: 'Assault, no charges' });
     // the Command Unit rule is not used in solitaire games (p. 149)
     if (u && R.has(u, 'Command Unit') && !state.solo) out.push({ id: 'coordinate', label: 'Coordinate' });
     if (u && u.transport) {
@@ -1373,7 +1375,7 @@
   function doRegain(u) { return (KIT_ABILITIES || kitAbilities()).doRegain(u); }
   function abShoot(st, a, t, mode, opts) { return (KIT_ABILITIES || kitAbilities()).abShoot(st, a, t, mode, opts); }
   function martyrFirst(a, t, go) { return (KIT_ABILITIES || kitAbilities()).martyrFirst(a, t, go); }
-  function abAssault(st, a, t, martyr) { return (KIT_ABILITIES || kitAbilities()).abAssault(st, a, t, martyr); }
+  function abAssault(st, a, t, martyr, noSap) { return (KIT_ABILITIES || kitAbilities()).abAssault(st, a, t, martyr, noSap); }
   function abRally(st, u) { return (KIT_ABILITIES || kitAbilities()).abRally(st, u); }
   function abRepair(st, u) { return (KIT_ABILITIES || kitAbilities()).abRepair(st, u); }
   function medicFx(t, medicId, delay) { return (KIT_ABILITIES || kitAbilities()).medicFx(t, medicId, delay); }

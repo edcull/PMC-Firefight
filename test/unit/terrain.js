@@ -109,6 +109,22 @@ for (var i3 = 0; i3 < k; i3++) {
 }
 ok('Sappers blow a high wall in on 15+ or a 9', sapDown > k * 0.4, true,
   Math.round(100 * sapDown / k) + '% of charges');
+/* Only Sappers who assault set charges (p. 58), and the player may order a
+   standard Assault instead, without the +4 (p. 59). */
+function sapTrial(attackerIsSapper, opts) {
+  var sapped = 0;
+  for (var i = 0; i < 60; i++) {
+    var w = world([{ kind: 'barricade', x: 26, y: 16, w: 0.5, h: 8 }]);
+    var sp = mk('engineers', 'A', 24.5, 20), foe = mk('regular', 'B', 27.5, 20);
+    w.units = [sp, foe];
+    var res = attackerIsSapper ? R.assault(w, sp, foe, opts) : R.assault(w, foe, sp, opts);
+    if (JSON.stringify(res.log).indexOf('Sappers') >= 0) sapped++;
+  }
+  return sapped;
+}
+ok('Sappers set charges when they assault a unit behind a low wall', sapTrial(true) > 0, true);
+ok('...but not when they are the ones assaulted', sapTrial(false), 0);
+ok('...nor when ordered to a standard Assault', sapTrial(true, { noSap: true }), 0);
 var fb = world([{ kind: 'wall', x: 26, y: 16, w: 1, h: 8 }]);
 var eng2 = mk('engineers', 'A', 22, 20);
 fb.units = [eng2];
