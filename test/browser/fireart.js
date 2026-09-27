@@ -47,7 +47,7 @@ async function stage(p, mine) {
   });
   await p.waitForTimeout(220);
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="start"]');
+    const b = window.__beginButton();
     if (b) b.click();
   });
   await p.waitForTimeout(450);

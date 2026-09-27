@@ -29,15 +29,15 @@ async function drain(p) {
   });
   console.log('held in reserve at setup:', held.join(', ') || 'none');
 
-  await p.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());
+  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
   await p.waitForTimeout(400);
   await drain(p);
   console.log('deployment complete with reserves out:', await p.evaluate(() => {
     const s = window.PMC_STATE();
     return { onTable: s.units.filter(u => u.x >= 0).length, reserve: s.units.filter(u => u.reserve).length };
   }));
-  await p.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await p.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await p.evaluate(() => window.__beginButton().click());
   await p.waitForTimeout(900);
   await drain(p);
   console.log('turn 1 — reserves still out:', await p.evaluate(() => {

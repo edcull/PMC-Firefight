@@ -1,11 +1,12 @@
 <!doctype html>
+<!-- The game's page, loading its scripts one by one. The site that is published is built from it in CI (scripts/bundle.js, .github/workflows/pages.yml) with the scripts folded into one minified file. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PMC 2670 Firefight</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=329d713235">
-<link rel="stylesheet" href="src/css/game.css?v=ebe3dc9ae7">
+<link rel="stylesheet" href="src/css/game.css?v=9d63d0ea21">
 
 <div class="wrap">
   <header>
@@ -135,7 +136,7 @@
       <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
     </p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2609262342</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2609270020</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -493,7 +494,7 @@
 <script src="src/rules/ruletext.js?v=116e95866c"></script>
 <script src="src/rules/camp-company.js?v=df4a77d5d6"></script>
 <script src="src/rules/camp-contract.js?v=c68cdcc935"></script>
-<script src="src/rules/camp-aftermath.js?v=0f39d66b21"></script>
+<script src="src/rules/camp-aftermath.js?v=b292e5b07a"></script>
 <script src="src/rules/camp-rivals.js?v=e2e4642a55"></script>
 <script src="src/rules/campaign.js?v=30601457c3"></script>
 <script src="src/rules/scenarios.js?v=2e02ca14b2"></script>
@@ -533,15 +534,15 @@
 <script src="src/engine/endphase.js?v=03520117f4"></script>
 <script src="src/engine/solo.js?v=04a31d2e87"></script>
 <script src="src/engine/arrivals.js?v=ed56cfcec4"></script>
-<script src="src/engine/deploy.js?v=74e78257f0"></script>
+<script src="src/engine/deploy.js?v=b773d6a00e"></script>
 <script src="src/engine/terrainsetup.js?v=9d4ff6883b"></script>
 <script src="src/engine/swaps.js?v=aee7c3734c"></script>
-<script src="src/engine/engine.js?v=409743d08f"></script>
+<script src="src/engine/engine.js?v=ef46670a1e"></script>
 <script src="src/engine/offtable.js?v=2f18261e81"></script>
 <script src="src/net/net.js?v=d781797d45"></script>
 <script src="src/net/lobby.js?v=e561ff9de3"></script>
 <script src="src/view/replay.js?v=ed976dcd45"></script>
-<script src="src/view/hooks.js?v=bacd36898d"></script>
+<script src="src/view/hooks.js?v=42e1de47da"></script>
 <script src="src/view/play.js?v=0dbdd8a979"></script>
 <script src="src/view/terrainset.js?v=739d4aab5a"></script>
 <script src="src/view/input.js?v=b8925c1406"></script>
@@ -549,13 +550,13 @@
 <script src="src/view/actions.js?v=57f515285b"></script>
 <script src="src/view/draw.js?v=63cd9c60d3"></script>
 <script src="src/view/view.js?v=4991d0341d"></script>
-<script src="src/view/panels.js?v=fd9fa8a317"></script>
+<script src="src/view/panels.js?v=2d2791c720"></script>
 <script src="src/view/muster.js?v=c2c9e7c1dc"></script>
 <script src="src/view/game.js?v=80c65caeb2"></script>
-<script src="src/view/dossier-hub.js?v=4c7c03206e"></script>
+<script src="src/view/dossier-hub.js?v=99465a97b2"></script>
 <script src="src/view/dossier-found.js?v=c0f266074b"></script>
-<script src="src/view/dossier-roster.js?v=46f9304ae9"></script>
+<script src="src/view/dossier-roster.js?v=e5f47d6173"></script>
 <script src="src/view/dossier-contract.js?v=34c221c5e5"></script>
-<script src="src/view/dossier-after.js?v=6256b45e4c"></script>
-<script src="src/view/dossier.js?v=020f11ce1a"></script>
+<script src="src/view/dossier-after.js?v=8ddc2284ae"></script>
+<script src="src/view/dossier.js?v=c66c043a17"></script>
 <script src="src/view/menu.js?v=362b5aea84"></script>

@@ -53,8 +53,8 @@ async function drain(p) {
   await p.evaluate(() => window.__autoDeployBoth());
   await p.waitForTimeout(500);
   await drain(p);
-  await p.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await p.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await p.evaluate(() => window.__beginButton().click());
   await p.waitForTimeout(700);
   await drain(p);
 

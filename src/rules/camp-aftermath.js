@@ -326,6 +326,16 @@
         against: coB.name
       });
       if (campaign.log.length > 40) campaign.log.shift();
+      /* A rival keeps its own record of the battles it fought — against the
+         player, or off the table against another force — for its dossier. */
+      [['A', coA, coB], ['B', coB, coA]].forEach(function (t) {
+        var co = t[1];
+        if (!co || !co.archetype) return;
+        co.log = co.log || [];
+        co.log.push({ turn: out.turn, scenario: report.scenario, tier: report.battleTier, pl: report.pl,
+          vs: t[2].name, result: report.winner === t[0] ? 'won' : report.winner ? 'lost' : 'drawn', kUC: out.payment[t[0]] });
+        if (co.log.length > 20) co.log.shift();
+      });
 
       /* The forces that sat this one out were fighting somebody else — each
          other, two by two, and the odd one out the locals. Their battles are

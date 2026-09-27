@@ -710,7 +710,33 @@
       if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (B.state.swapAsk.side === me || B.state.swapStage)) h += swapCard();
       // the way on stays at the foot of the card, however long the order of battle above it
       h += '<div class="acts deploy-go"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
-      if (deploymentDone()) h += '<button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button>';
+      /* Begin the battle: offered once everything is down. Where the scenario
+         wants units held back (or split into waves) and the player has not yet
+         chosen, it is there but greyed, and pressing it says why. Hulls going
+         in with nobody aboard are asked about first. */
+      // (in a hotseat, whichever player's split is still short)
+      var mySplit = ['A', 'B'].map(splitFor).filter(function (f) { return f && !f.ok; })[0] || splitFor(me), splitShort = !!mySplit && !mySplit.ok;
+      var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; }) && !emptyPlatforms(me).length;
+      if (deploymentDone() || (placed && splitShort)) {
+        var blocked = !deploymentDone();
+        var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
+        h += '<button class="act primary' + (blocked ? ' blocked' : '') + '" aria-disabled="' + blocked + '" data-act="' +
+          (blocked ? 'startwhy' : empties.length ? 'startask' : 'start') + '"><span>Begin the battle</span><small>Roll for initiative</small></button>';
+        if (blocked && ui.startWhy) {
+          var need = mySplit.min === mySplit.max ? String(mySplit.min) : mySplit.min + '\u2013' + mySplit.max;
+          h += '<div class="tipbubble" role="status">' + (mySplit.kind === 'wave'
+            ? 'Choose which units come in the second wave first: ' + need + ' of them (' + mySplit.held + ' so far).'
+            : 'Choose which units to hold in reserve first: ' + need + ' of them (' + mySplit.held + ' so far).') +
+            ' <button class="lnk" data-act="deploybox">Choose</button></div>';
+        }
+        if (!blocked && ui.startAsk && empties.length) {
+          h += '<div class="cmodal"><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="Empty transports">' +
+            '<h3>Empty transports</h3><div class="cmodal-scroll"><p class="sub">' +
+            (empties.length === 1 ? '<b>' + esc(empties[0].name) + '</b> is' : empties.map(function (v) { return '<b>' + esc(v.name) + '</b>'; }).join(', ') + ' are') +
+            ' going into the battle with nobody aboard. Begin anyway?</p></div>' +
+            '<div class="askrow"><button class="lnk" data-act="startnoask">Back</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
+        }
+      }
       else if (emptyPlatforms(me).length) {
         h += '<p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p>';
       }
@@ -928,7 +954,11 @@
           else if (a === 'rpickdone') send({ k: 'rpickdone' });
           else if (a === 'deploybox') { deployBox = true; render(); }
           else if (a === 'deployboxdone') { deployBox = false; render(); }
-          else if (a === 'start') startBattle();
+          else if (a === 'start') { ui.startAsk = false; ui.startWhy = false; startBattle(); }
+          // greyed until the reserves are chosen: say so, for a few seconds
+          else if (a === 'startwhy') { ui.startWhy = true; render(); clearTimeout(ui.startWhyT); ui.startWhyT = setTimeout(function () { ui.startWhy = false; render(); }, 5000); }
+          else if (a === 'startask') { ui.startAsk = true; render(); }
+          else if (a === 'startnoask') { ui.startAsk = false; render(); }
           else if (a === 'restart') openMenu();
         });
       });

@@ -61,3 +61,6 @@ console.log((fs.statSync(out).size / 1024).toFixed(0) + ' KB → ' + out);
   fs2.writeFileSync(p2.join(ROOT, 'build', 'viewer.html'), v);
   console.log(Math.round(v.length / 1024) + ' KB → build/viewer.html');
 })();
+
+// and the site as it is published, with the scripts folded into one minified file (scripts/bundle.js; needs terser)
+require('./bundle.js').build().catch(function (e) { console.error('bundle: ' + e.message); process.exitCode = 1; });

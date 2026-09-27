@@ -161,8 +161,14 @@ build/               the built single-file pages, made by `npm run build` (not k
 
 `index.html` carries the markup and all the CSS, and pulls the scripts in with
 `<script src>` tags. Opening `index.html` directly works too, and is the easier
-way to develop — the browser reloads each file separately. `viewer.html` is the
-unit viewer's page in the same way. The server lives in `server/` and `server.js`.
+way to develop — the browser reloads each file separately, and an error names
+the file it came from. `viewer.html` is the unit viewer's page in the same way.
+
+The published site is built from it by CI (`.github/workflows/pages.yml`, on
+every push to main): the same page with every script folded, in order, into one
+minified `dist/game.js` — one download instead of seventy-odd, and under half
+the bytes (`scripts/bundle.js`, with `terser`). Nothing built is kept in the
+repository; `node scripts/bundle.js` makes the same site in `build/site/`. The server lives in `server/` and `server.js`.
 
 ### Building
 
@@ -175,7 +181,8 @@ does the same for `viewer.html` into `build/viewer.html` (`scripts/build.js`),
 then draws `build/units.html`, a sheet of every unit (`scripts/gallery.js`).
 The two root pages are the ones to develop against; the `build/` copies are
 single self-contained files to play or publish. It
-takes no arguments and needs nothing but a Node runtime.
+takes no arguments and needs Node (and the `terser` dev dependency for the
+bundled site it also writes to `build/site/`).
 
 ### The unit viewer
 

@@ -13,6 +13,7 @@
     "test:all": "node scripts/test.js all"
   },
   "devDependencies": {
-    "playwright": "^1.40.0"
+    "playwright": "^1.40.0",
+    "terser": "^5.31.0"
   }
 }

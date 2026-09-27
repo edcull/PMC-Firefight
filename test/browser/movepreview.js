@@ -40,6 +40,7 @@ async function stage(p) {
     s.terrain.length = 0;
     s.terrain.push({ kind: 'woods', x: 16, y: 16, w: 6, h: 6 });
     s.units.forEach(u => { u.reserve = false; u.aboard = null; u.activated = false; });
+    if (s.sc) s.sc.split = null;          // everyone is on the table: nothing held back to choose
     const mine = s.units.filter(u => u.side === 'A');
     const theirs = s.units.filter(u => u.side === 'B');
     mine.forEach((u, i) => { u.x = 12; u.y = 14 + i * 3; });
@@ -49,7 +50,7 @@ async function stage(p) {
   });
   await p.waitForTimeout(250);
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="start"]');
+    const b = window.__beginButton();
     if (b) b.click();
   });
   await p.waitForTimeout(500);
@@ -185,6 +186,8 @@ async function aim(p, x, y) {
 
   /* ------------------------------------------------------- Advance shows guns */
   head('Advancing shows what it could shoot');
+  // the move just made is drawn to its end before the table is rearranged by hand
+  await p.waitForFunction(() => !window.__busy() && !window.__showQueue(), null, { timeout: 10000 }).catch(() => {});
   await p.evaluate(() => {
     const s = window.PMC_STATE();
     s.activeSide = 'A';

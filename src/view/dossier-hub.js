@@ -85,16 +85,31 @@
           : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
       // every battle fought, the latest first
       if (last) {
-        var battleRow = function (l) {
-          return '<div class="crow"><b>' + l.turn + '</b>' +
+        // a battle whose aftermath was kept opens it again, read only
+        var battleRow = function (l, i) {
+          var inner = '<b>' + l.turn + '</b>' +
             '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
             (l.against ? '<small>vs ' + esc(l.against) + '</small>' : '') + '</span>' +
             '<em>' + result(l) + '</em>' +
-            '<span class="cmoney">+' + l.kUC.A + ' ' + coin() + '</span></div>';
+            '<span class="cmoney">+' + l.kUC.A + ' ' + coin() + '</span>';
+          return l.after ? '<button type="button" class="crow crow-go" data-go="pastbattle" data-i="' + i + '">' + inner + '</button>'
+            : '<div class="crow">' + inner + '</div>';
         };
         h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll"><div class="clog">' +
-          E.camp.log.slice().reverse().map(battleRow).join('') + '</div></div>', back);
+          E.camp.log.map(battleRow).reverse().join('') + '</div></div>', back);
       }
+      // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
+      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">Back</button>';
+      rivals.forEach(function (co, i) {
+        if (!(co.log || []).length) return;
+        h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><div class="clog">' +
+          co.log.slice().reverse().map(function (l) {
+            return '<div class="crow"><b>' + l.turn + '</b>' +
+              '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
+              '<small>vs ' + esc(l.vs) + '</small></span><em>' + l.result + '</em>' +
+              '<span class="cmoney">+' + l.kUC + ' ' + esc(C.money(co)) + '</span></div>';
+          }).join('') + '</div></div>', backRivals);
+      });
       h += '<p class="camp-foot">' +
         '<button class="lnk" data-go="menu">← Main menu</button>' +
         '<input type="file" id="camp-file" accept="application/json" hidden></p>';
@@ -128,7 +143,7 @@
         h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
           '</label>' + squares(colourOf(co)) + '</div>';
       }
-      h += (bar || '') + statRow(co, false);
+      h += (bar || '') + statRow(co, false, side);
       h += '<div class="cpdoc">' + (co.doctrines.length
         ? co.doctrines.map(function (d) {
           var dd = C.doctrine(d);
@@ -232,7 +247,7 @@
       return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
     }
     /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
-    function statRow(co, rival) {
+    function statRow(co, rival, fkey) {
       var wn = C.winStats(co), ex = C.experienceStats(co), tr = C.traumaStats(co);
       function pc(x) { return Math.round(x * 1000) / 10 + '%'; }
       /* On the company's own hub the win rate opens the battles fought, and the
@@ -242,11 +257,20 @@
         return modal ? '<button type="button" class="cstat ' + cls + '" data-go="fmodal" data-kind="' + modal + '">' + inner + '</button>'
           : '<div class="cstat ' + cls + '">' + inner + '</div>';
       }
+      /* Honours and trauma narrow the force's dossier to the units that have
+         them: toggles, lit while on (fkey says whose list; none, no toggle). */
+      function toggle(cls, pct, word, kind) {
+        var f = (E.ufilter[fkey] || {})[kind];
+        return '<button type="button" class="cstat ' + cls + (f ? ' on' : '') + '" data-go="ufilter" data-fkey="' + fkey +
+          '" data-kind="' + kind + '" aria-pressed="' + !!f + '"><b>' + pct + '</b><span>' + esc(word) + '</span></button>';
+      }
       var own = !rival && co === E.camp.companies.A;
       return '<div class="cstats">' +
-        cell('cs-win', pc(wn.pct), 'win rate', own && E.camp.log.length ? 'battles' : null) +
-        cell('cs-exp', pc(ex.pct), ex.word) +
-        cell('cs-tra', pc(tr.pct), tr.word, own ? 'memorial' : null) +
+        // your own win rate opens the battles fought; a rival's, the battles it has fought
+        cell('cs-win', pc(wn.pct), 'win rate', own && E.camp.log.length ? 'battles'
+          : fkey && fkey.charAt(0) === 'r' && (co.log || []).length ? 'rbattles' + fkey.slice(1) : null) +
+        (fkey ? toggle('cs-exp', pc(ex.pct), ex.word, 'honour') : cell('cs-exp', pc(ex.pct), ex.word)) +
+        (fkey ? toggle('cs-tra', pc(tr.pct), tr.word, 'trauma') : cell('cs-tra', pc(tr.pct), tr.word)) +
         '</div>';
     }
 
@@ -254,7 +278,7 @@
       // no 'next' on any of them: the player picks the contract, and with it who they meet
       var h = '<div class="cpan cpan-B"' + stripe(co) + '><div class="cphead">' + tierBadge(co) + '<b>' +
         esc(co.name) + '</b></div>';
-      h += statRow(co, true);
+      h += statRow(co, true, 'r' + (idx == null ? 0 : idx));
       // the kind of force, and its doctrines beside it on the one line
       h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
         return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
@@ -264,10 +288,12 @@
       h += '<button class="lnk rivdos-go' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
         (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
       if (open) {
-        h += '<div class="dlist rivdos">' + co.roster.slice().sort(function (a, b) {
+        var rk = 'r' + ri, shown = co.roster.filter(function (e) { return E.unitPasses(e, rk); });
+        h += '<div class="dlist rivdos">' + shown.slice().sort(function (a, b) {
           var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
           return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
-        }).map(function (e) { return entryCard(e, co, {}); }).join('') + '</div>';
+        }).map(function (e) { return entryCard(e, co, {}); }).join('') +
+          (shown.length ? '' : '<p class="cpstat">None of their units has any.</p>') + '</div>';
       }
       h += '</div>';
       return h;

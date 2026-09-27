@@ -75,13 +75,13 @@ async function playOne(p, id) {
 
   // deploy whatever still needs placing, then let both AIs fight it out
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="autodeploy"]');
+    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
     if (b) b.click();
   });
   await p.waitForTimeout(400);
   for (let i = 0; i < 10; i++) { await drain(p); await p.waitForTimeout(120); }
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="start"]');
+    const b = window.__beginButton();
     if (b) b.click();
   });
   await p.waitForTimeout(500);

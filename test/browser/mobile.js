@@ -32,7 +32,7 @@ async function boot(p) {
   await p.evaluate(() => window.__autoDeployBoth());
   await p.waitForTimeout(300);
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="start"]');
+    const b = window.__beginButton();
     if (b) b.click();
   });
   await p.waitForTimeout(1600);

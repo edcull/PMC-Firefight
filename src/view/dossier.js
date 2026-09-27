@@ -168,6 +168,15 @@
   var intelIdx = 0;
   var upState = null;
   var docSide = 'A', docSwap = false, swapOut = null;
+  /* The dossier's unit list narrowed by the Honours and Trauma figures above
+     it: each a toggle, by force ('A', 'B', or a rival's 'r' + its place), and
+     with both on, the units that have either. */
+  var ufilter = {};
+  function unitPasses(e, key) {
+    var f = ufilter[key];
+    if (!f || (!f.honour && !f.trauma)) return true;
+    return !!((f.honour && (e.honours || []).length) || (f.trauma && (e.traumas || []).length));
+  }
   var ROMAN = R.ROMAN;
   var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
   // the memorial: a headstone
@@ -318,7 +327,7 @@
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
       get camp() { return camp; }, get colourOpen() { return colourOpen; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
-      get rivalOpen() { return rivalOpen; }
+      get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses
     }));
   }
   function hubView() { return (KIT_HUB || kitHub()).hubView(); }
@@ -355,7 +364,7 @@
     return KIT_ROSTER || (KIT_ROSTER = root.PMCDossierRoster({
       C: C, R: R, ROMAN: ROMAN, entryCard: entryCard, esc: esc, ourList: ourList, profile: profile,
       root: root, save: save, statLine: statLine, get menOpen() { return menOpen; },
-      get rosterTab() { return rosterTab; }
+      get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses
     }));
   }
   function dossierPanel(co) { return (KIT_ROSTER || kitRoster()).dossierPanel(co); }
@@ -405,6 +414,7 @@
     if (view !== 'hub') hubPane = 'dossier';                 // back at the hub, it opens on the dossier
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
+    if (view !== 'aftermath' && KIT_AFTER) KIT_AFTER.showPast(null);   // a past battle's report is only open while it is shown
     if (camp && camp.fronts && !camp.post) (KIT_AFTER || kitAfter()).nextFront();   // the other forces' battles, still being fought
     if (view === 'found') h = foundView();
     else if (view === 'offers') h = offersView();
@@ -668,6 +678,17 @@
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
+      case 'ufilter': {
+        var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');
+        var fl = ufilter[fk] || (ufilter[fk] = {});
+        fl[kind] = !fl[kind];
+        // the list it narrows is opened to show it
+        if (fk.charAt(0) === 'r') rivalOpen = +fk.slice(1);
+        else { hubPane = 'dossier'; rosterTab = 'units'; docSide = fk; }
+        render(); return;
+      }
+      case 'pastbattle': (KIT_AFTER || kitAfter()).showPast(+t.getAttribute('data-i')); openModal = null; view = 'aftermath'; render(); return;
+      case 'pastback': (KIT_AFTER || kitAfter()).showPast(null); view = 'hub'; openModal = 'battles'; render(); return;
       case 'fmodalclose': openModal = null; render(); return;
       case 'newcamp': {
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';

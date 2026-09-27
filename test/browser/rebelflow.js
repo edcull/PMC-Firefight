@@ -214,7 +214,7 @@ async function pastFronts(p) {
 
   for (let i = 0; i < 14; i++) { await drain(p); await p.waitForTimeout(120); }
   await p.evaluate(() => {
-    const b = document.querySelector('button[data-act="autodeploy"]');
+    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
     if (b) b.click();
   });
   await p.waitForTimeout(300);
@@ -226,7 +226,7 @@ async function pastFronts(p) {
   const started = await p.evaluate(() => {
     const s = window.PMC_STATE();
     s.cfg.aiSides = ['A', 'B'];
-    const b = document.querySelector('button[data-act="start"]');
+    const b = window.__beginButton();
     if (b) b.click();
     return s.phase;
   });

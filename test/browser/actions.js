@@ -35,11 +35,11 @@ async function press(p, label) {
   await startSkirmish(p, { tier: 3, mode: 'hotseat', mirror: true, keys: ['cmd2', 'regular', 'engineers', 'lifv', 'ew', 'recon:tracked:drone'] });
   await p.waitForTimeout(900);
   await drain(p);
-  await p.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());
+  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
   await p.waitForTimeout(400);
   await drain(p);
-  await p.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await p.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await p.evaluate(() => window.__beginButton().click());
   await p.waitForTimeout(800);
   await drain(p);
 

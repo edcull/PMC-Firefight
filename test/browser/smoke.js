@@ -32,11 +32,11 @@ async function dismissEarly(page) {
   await page.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
   await page.waitForTimeout(300);
   await dismissEarly(page);
-  await page.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());
+  await page.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
   await page.waitForTimeout(400);
   await dismissEarly(page);
-  await page.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await page.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await page.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await page.evaluate(() => window.__beginButton().click());
   await page.waitForTimeout(500);
 
   const dismiss = async () => {

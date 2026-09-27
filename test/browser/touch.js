@@ -50,7 +50,7 @@ const { ROOT, startSkirmish } = require('../where.js');
     await p.tap('#res-continue');
   }
   await p.waitForTimeout(400);
-  await p.evaluate(() => document.querySelector('button[data-act="autodeploy"]').click());
+  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
   await p.waitForTimeout(400);
   for (let i = 0; i < 12; i++) {
     const open = await p.evaluate(() => !document.getElementById('resolution').hidden);
@@ -58,8 +58,8 @@ const { ROOT, startSkirmish } = require('../where.js');
     await p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
     await p.waitForTimeout(200);
   }
-  await p.waitForSelector('button[data-act="start"]', { timeout: 15000 });
-  await p.evaluate(() => document.querySelector('button[data-act="start"]').click());
+  await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
+  await p.evaluate(() => window.__beginButton().click());
   await p.waitForTimeout(800);
   await p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
   await p.waitForTimeout(400);

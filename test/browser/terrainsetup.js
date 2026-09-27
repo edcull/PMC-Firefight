@@ -102,7 +102,7 @@ async function playAreas(p, record) {
   ok('no two pieces overlap', overlaps(natural) === 0, overlaps(natural) + ' overlaps');
   ok('the objectives are placed on the laid table', await p.evaluate(() => window.PMC_STATE().objectives.length === 3));
   await p.evaluate(() => window.__autoDeployBoth());
-  await p.evaluate(() => { const b = document.querySelector('button[data-act="start"]'); if (b) b.click(); });
+  await p.evaluate(() => { const b = window.__beginButton(); if (b) b.click(); });
   await p.waitForTimeout(400); await drain(p);
   ok('and the battle starts on it', await p.evaluate(() => window.PMC_STATE().phase === 'battle'));
 

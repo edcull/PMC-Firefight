@@ -17,9 +17,11 @@
         var named = false;
         co.roster.forEach(function (e) { if (C.menOf(e, co)) named = true; });
         if (named) save();
+        var fk = co === E.camp.companies.A ? 'A' : 'B', shown = co.roster.filter(function (e) { return E.unitPasses(e, fk); });
         h += '<div class="dlist">';
+        if (!shown.length) h += '<p class="cpstat">No unit has any yet.</p>';
         // the command first — it earns no experience and carries no honours or traumas — then by Tier and experience
-        co.roster.slice().sort(function (a, b) {
+        shown.slice().sort(function (a, b) {
           var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
           return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
         }).forEach(function (e) {
@@ -31,9 +33,6 @@
           acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
           if (spend) acts += spend;
           h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
-          if (e.history && e.history.length) {
-            h += '<div class="dhist">' + e.history.slice(-3).map(esc).join(' · ') + '</div>';
-          }
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {

@@ -516,6 +516,7 @@
     nextPlace();
     seatPlatforms();             // every drop pod comes down with somebody in it
     baselineSplits();
+    clearSplits();               // the players choose their own reserves
     var scen = state.scen;
     logLine('note', 'Battle Tier ' + R.ROMAN[cfg.tier] + ', Priority Level ' + cfg.pl +
       ' — ' + (R.COMPOSITION[cfg.tier].points * cfg.pl) + ' composition points a side. ' +
@@ -646,6 +647,9 @@
   function splitFor(side) { return (KIT_DEPLOY || kitDeploy()).splitFor(side); }
   function baselineSplits() { return (KIT_DEPLOY || kitDeploy()).baselineSplits(); }
   function toggleHold(side, id) { return (KIT_DEPLOY || kitDeploy()).toggleHold(side, id); }
+  function clearSplits() { return (KIT_DEPLOY || kitDeploy()).clearSplits(); }
+  function autoSplit(side) { return (KIT_DEPLOY || kitDeploy()).autoSplit(side); }
+  function splitsOK() { return (KIT_DEPLOY || kitDeploy()).splitsOK(); }
   function deploymentDone() { return (KIT_DEPLOY || kitDeploy()).deploymentDone(); }
   function startBattle() { return (KIT_DEPLOY || kitDeploy()).startBattle(); }
 
@@ -1447,6 +1451,12 @@
           if (state.swapAsk && state.swapAsk.side === side) swapsDone();   // placing a unit keeps the list
           if (!mayDeploy(side)) return no('not your turn to place');
           return deployAt(side, it);
+        }
+        case 'autosplit': {
+          if (state.phase !== 'deploy') return no('not deploying');
+          ['A', 'B'].forEach(autoSplit);          // every player's (the OpFor's already stands)
+          render();
+          return yes;
         }
         case 'holdback': {
           if (state.phase !== 'deploy') return no('not deploying');
