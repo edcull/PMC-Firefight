@@ -69,7 +69,8 @@ console.log('\nTowing in the battle (p. 95)');
   const { e, s, by } = setup(['rltv', 'rlshuttle', 'rlicv', 'rmedart', 'rinsurgents']);
   toBattle(e, s);
   const ltv = by('rltv')[0], sh = by('rlshuttle')[0], cv = by('rlicv')[0], art = by('rmedart')[0], inf = by('rinsurgents')[0];
-  [ltv, sh, cv, art, inf].forEach((u, i) => { u.aboard = null; u.cargo = u.transport ? [] : u.cargo; u.x = 20 + i; u.y = 20; u.sp = 0; u.disembarked = false; });
+  // (the deployment may have garrisoned any of them in a building: out of it, as the buildings go)
+  [ltv, sh, cv, art, inf].forEach((u, i) => { u.aboard = null; u.cargo = u.transport ? [] : u.cargo; u.x = 20 + i; u.y = 20; u.sp = 0; u.disembarked = false; u.bld = null; u.sec = null; });
   s.terrain = [];
   ok('a transport vehicle may hitch a gun beside it', R.canEmbark(s, ltv, art));
   ok('an aircraft may not', !R.canEmbark(s, sh, art));
