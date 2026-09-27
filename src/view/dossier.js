@@ -177,17 +177,6 @@
     if (!f || (!f.honour && !f.trauma)) return true;
     return !!((f.honour && (e.honours || []).length) || (f.trauma && (e.traumas || []).length));
   }
-  // what the list is narrowed to, as pills over it: tap one to let it go
-  function filterPills(key, co) {
-    var f = ufilter[key];
-    if (!f || (!f.honour && !f.trauma)) return '';
-    var w = C.words(co);
-    return '<div class="ufilt">Showing units with ' +
-      (f.honour ? '<button class="mk good" data-go="ufilter" data-fkey="' + key + '" data-kind="honour">' + esc(w.honours) + ' \u00d7</button>' : '') +
-      (f.honour && f.trauma ? ' or ' : '') +
-      (f.trauma ? '<button class="mk bad" data-go="ufilter" data-fkey="' + key + '" data-kind="trauma">' + esc(w.traumas) + ' \u00d7</button>' : '') +
-      '</div>';
-  }
   var ROMAN = R.ROMAN;
   var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
   // the memorial: a headstone
@@ -338,7 +327,7 @@
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
       get camp() { return camp; }, get colourOpen() { return colourOpen; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
-      get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses, filterPills: filterPills
+      get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses
     }));
   }
   function hubView() { return (KIT_HUB || kitHub()).hubView(); }
@@ -375,7 +364,7 @@
     return KIT_ROSTER || (KIT_ROSTER = root.PMCDossierRoster({
       C: C, R: R, ROMAN: ROMAN, entryCard: entryCard, esc: esc, ourList: ourList, profile: profile,
       root: root, save: save, statLine: statLine, get menOpen() { return menOpen; },
-      get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses, filterPills: filterPills
+      get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses
     }));
   }
   function dossierPanel(co) { return (KIT_ROSTER || kitRoster()).dossierPanel(co); }

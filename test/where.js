@@ -49,7 +49,7 @@ module.exports = {
   startSkirmish: startSkirmish,
   ROOT: ROOT,
   SHOTS: SHOTS,
-  page: path.join(ROOT, 'dev.html'),
+  page: path.join(ROOT, 'index.html'),
   viewer: path.join(ROOT, 'viewer.html'),
   shot: function (name) {
     fs.mkdirSync(SHOTS, { recursive: true });

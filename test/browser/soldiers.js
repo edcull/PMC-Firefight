@@ -42,7 +42,7 @@ async function clickText(p, re) {
   p.on('pageerror', e => errs.push(e.message));
   let nativeDialogs = 0;
   p.on('dialog', async d => { nativeDialogs++; await d.dismiss(); });
-  await p.goto('file://' + path.join(ROOT, 'dev.html'));
+  await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(700);
   await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });
 

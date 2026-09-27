@@ -102,7 +102,7 @@ async function run(p, label, scen, shotName) {
       isMobile: sc.mobile, hasTouch: sc.mobile, deviceScaleFactor: sc.mobile ? 2 : 1
     });
     p.on('pageerror', e => errs.push(sc.name + ': ' + e.message));
-    await p.goto('file://' + path.join(ROOT, 'dev.html'));
+    await p.goto('file://' + path.join(ROOT, 'index.html'));
     await p.waitForTimeout(700);
     // a hook for how much of the visible board is a legal drop right now
     await p.evaluate(() => {

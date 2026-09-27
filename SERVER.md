@@ -12,7 +12,7 @@ No dependencies. One port serves three things:
 
 | | |
 |---|---|
-| `GET /` | the game — `index.html` and its bundle, `dist/game.js` (`dev.html` for the scripts one by one) |
+| `GET /` | the game — `index.html` and the scripts beside it |
 | `GET/PUT/DELETE /campaign[/name]`, `GET /campaigns` | campaigns, kept on the server |
 | `ws:// /ws` | the lobby, and every battle in progress |
 
@@ -76,7 +76,7 @@ message names are in `protocol.js`, which both halves load so neither can drift.
 ## The files
 
 ```
-index.html           the game (dev.html loading dist/game.js; dev.html loads the scripts one by one)
+index.html           the game
 viewer.html          the unit viewer, a bench for looking at one at a time
 server.js            the entry point: static files, campaigns, the upgrade to ws
 

@@ -8,7 +8,7 @@ const { ROOT } = require('../where.js');
   const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'dev.html')); await p.waitForTimeout(500);
+  await p.goto('file://' + path.join(ROOT, 'index.html')); await p.waitForTimeout(500);
   let bad = 0, pieces = 0;
   for (const scen of ['meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover']) {
     for (const planet of ['sparse', 'dense', 'jungle', 'barren', 'mountain', 'unstable', 'industrial']) {

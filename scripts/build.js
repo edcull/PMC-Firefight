@@ -26,7 +26,7 @@ function stamp(page) {
   fs.writeFileSync(file, after.replace(/(<p class="menu-ver" id="menu-ver">)v[\d.]+(<\/p>)/, '$1' + VERSION + '.' + build + '$2'));
 }
 const VERSION = 'v0.1.0';
-stamp('dev.html');
+stamp('index.html');
 stamp('viewer.html');
 
 /* The single-file builds carry their stylesheets inline too: each of the
@@ -36,7 +36,7 @@ function inlineStyles(page) {
     '<style>\n/* ---- ' + src + ' ---- */\n' + fs.readFileSync(path.join(ROOT, src), 'utf8') + '</style>');
 }
 
-let html = inlineStyles(fs.readFileSync(path.join(ROOT, 'dev.html'), 'utf8'));
+let html = inlineStyles(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));
 html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, src) => {
   src = src.split('?')[0];
   const code = fs.readFileSync(path.join(ROOT, src), 'utf8');
@@ -62,5 +62,5 @@ console.log((fs.statSync(out).size / 1024).toFixed(0) + ' KB → ' + out);
   console.log(Math.round(v.length / 1024) + ' KB → build/viewer.html');
 })();
 
-// and the page that is served: dev.html with its scripts folded into one minified file (scripts/bundle.js)
-require('./bundle.js').build().catch(function (e) { console.error(e); process.exit(1); });
+// and the site as it is published, with the scripts folded into one minified file (scripts/bundle.js; needs terser)
+require('./bundle.js').build().catch(function (e) { console.error('bundle: ' + e.message); process.exitCode = 1; });

@@ -96,9 +96,7 @@ be the authority in a networked game; the view and the net only run in a
 browser.
 
 ```
-dev.html             the game's page as it is worked on: all the markup and CSS, loading src/ script by script
-index.html           the page that is served: dev.html loading dist/game.js instead (built, don't edit)
-dist/game.js         every script dev.html loads, in order, in one minified file (built, committed)
+index.html           the game's page: all the markup and CSS, loading src/ script by script
 viewer.html          the unit viewer's page, the same way
 server.js            starts the server (see SERVER.md)
 
@@ -161,15 +159,16 @@ test/
 build/               the built single-file pages, made by `npm run build` (not kept in git)
 ```
 
-`dev.html` carries the markup and all the CSS, and pulls the scripts in with
-`<script src>` tags: develop against it, since the browser reloads each file
-separately and an error names the file it came from. `index.html`, the page
-that is served, is made from it by the build with those scripts folded into one
+`index.html` carries the markup and all the CSS, and pulls the scripts in with
+`<script src>` tags. Opening `index.html` directly works too, and is the easier
+way to develop — the browser reloads each file separately, and an error names
+the file it came from. `viewer.html` is the unit viewer's page in the same way.
+
+The published site is built from it by CI (`.github/workflows/pages.yml`, on
+every push to main): the same page with every script folded, in order, into one
 minified `dist/game.js` — one download instead of seventy-odd, and under half
-the bytes. Both are committed (the pages are served straight from the
-repository); a unit test fails if either is out of date with the sources, so
-run `npm run build` before committing a change. `viewer.html` is the unit
-viewer's page, loading its scripts one by one. The server lives in `server/` and `server.js`.
+the bytes (`scripts/bundle.js`, with `terser`). Nothing built is kept in the
+repository; `node scripts/bundle.js` makes the same site in `build/site/`. The server lives in `server/` and `server.js`.
 
 ### Building
 
@@ -177,14 +176,13 @@ viewer's page, loading its scripts one by one. The server lives in `server/` and
 npm run build
 ```
 
-That rebuilds `dist/game.js` and `index.html` from `dev.html` when the sources
-have changed (`scripts/bundle.js`, with `terser`: `npm install` first), inlines
-every script into the page and writes `build/firefight.html`,
+That inlines every script into `index.html` and writes `build/firefight.html`,
 does the same for `viewer.html` into `build/viewer.html` (`scripts/build.js`),
 then draws `build/units.html`, a sheet of every unit (`scripts/gallery.js`).
 The two root pages are the ones to develop against; the `build/` copies are
 single self-contained files to play or publish. It
-takes no arguments and needs Node and the `terser` dev dependency.
+takes no arguments and needs Node (and the `terser` dev dependency for the
+bundled site it also writes to `build/site/`).
 
 ### The unit viewer
 

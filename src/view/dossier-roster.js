@@ -18,7 +18,7 @@
         co.roster.forEach(function (e) { if (C.menOf(e, co)) named = true; });
         if (named) save();
         var fk = co === E.camp.companies.A ? 'A' : 'B', shown = co.roster.filter(function (e) { return E.unitPasses(e, fk); });
-        h += E.filterPills(fk, co) + '<div class="dlist">';
+        h += '<div class="dlist">';
         if (!shown.length) h += '<p class="cpstat">No unit has any yet.</p>';
         // the command first — it earns no experience and carries no honours or traumas — then by Tier and experience
         shown.slice().sort(function (a, b) {

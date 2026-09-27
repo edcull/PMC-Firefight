@@ -1233,8 +1233,6 @@ button.crow-go::after { content: '\203A'; margin-left: 4px; color: var(--ink-fai
 .cstat.cs-exp.on { color: var(--good); }
 .cstat.cs-tra.on { color: var(--bad); }
 .cstat.on span { color: inherit; }
-.ufilt { font-size: 11.5px; color: var(--ink-dim); margin: 2px 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.ufilt .mk { cursor: pointer; font: inherit; }
 
 .dtabs { display: flex; gap: 6px; margin-bottom: 12px; }
 .dlist { display: flex; flex-direction: column; gap: 8px; }

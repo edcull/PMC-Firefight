@@ -147,7 +147,7 @@ function makePage(html) {
   return doc;
 }
 
-/* ---- the scripts dev.html loads, in the order it loads them ---- */
+/* ---- the scripts index.html loads, in the order it loads them ---- */
 function scriptsOf(html) {
   const out = [];
   const re = /<script src="([^"]+)"><\/script>/g;
@@ -170,7 +170,7 @@ function failed(e) {
 
 function boot(root, opts) {
   opts = opts || {};
-  const html = fs.readFileSync(path.join(root, 'dev.html'), 'utf8');
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const doc = makePage(html);
   const timers = [];
   /* A clock the test winds on. Animations are the board's way of taking time
@@ -264,7 +264,7 @@ catch (e) {
   console.log('  FAIL the scripts do not load — ' + (e && e.stack || e));
   process.exit(1);
 }
-ok('every script dev.html loads, loads', app.loaded.length >= 10, app.loaded.join(', '));
+ok('every script index.html loads, loads', app.loaded.length >= 10, app.loaded.join(', '));
 ok('the rules are there', !!app.win.PMC && !!app.win.PMC.BOARD);
 ok('the engine is there', !!app.win.PMCEngine && typeof app.win.PMCEngine.create === 'function');
 ok('the transports are there', !!app.win.PMCNet && !!app.win.PMCNet.Local && !!app.win.PMCNet.Remote);

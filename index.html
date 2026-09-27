@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Built from dev.html by `npm run build`: edit that, not this. -->
+<!-- The game's page, loading its scripts one by one. The site that is published is built from it in CI (scripts/bundle.js, .github/workflows/pages.yml) with the scripts folded into one minified file. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PMC 2670 Firefight</title>
@@ -482,4 +482,81 @@
   </div>
 </div>
 
-<script src="dist/game.js?v=037f6f8675"></script>
+<script src="src/rules/move.js?v=b54a314b85"></script>
+<script src="src/rules/assault.js?v=fc7fcb5591"></script>
+<script src="src/rules/shoot.js?v=1ec584d9a4"></script>
+<script src="src/rules/xeno.js?v=602d0df493"></script>
+<script src="src/rules/destruct.js?v=68144f08f4"></script>
+<script src="src/rules/damage.js?v=7ae634dd1c"></script>
+<script src="src/rules/space.js?v=ad57accbb8"></script>
+<script src="src/rules/data.js?v=a74a2140de"></script>
+<script src="src/rules/rules.js?v=ff7708e781"></script>
+<script src="src/rules/ruletext.js?v=116e95866c"></script>
+<script src="src/rules/camp-company.js?v=df4a77d5d6"></script>
+<script src="src/rules/camp-contract.js?v=c68cdcc935"></script>
+<script src="src/rules/camp-aftermath.js?v=b292e5b07a"></script>
+<script src="src/rules/camp-rivals.js?v=e2e4642a55"></script>
+<script src="src/rules/campaign.js?v=30601457c3"></script>
+<script src="src/rules/scenarios.js?v=2e02ca14b2"></script>
+<script src="src/rules/solitaire.js?v=0b7f43f0a3"></script>
+<script src="src/view/sfx.js?v=c576028ac3"></script>
+<script src="src/rules/gen.js?v=6f1b8fa196"></script>
+<script src="src/view/iso-ground.js?v=265ed4be22"></script>
+<script src="src/view/iso-props.js?v=54b9fe1828"></script>
+<script src="src/view/iso-troops.js?v=e6d9f3d1b1"></script>
+<script src="src/view/iso-aliens.js?v=13265fa975"></script>
+<script src="src/view/iso-guns.js?v=108e366687"></script>
+<script src="src/view/iso-machines.js?v=c861b08098"></script>
+<script src="src/view/iso-craft.js?v=404234b4d0"></script>
+<script src="src/view/iso-mechs.js?v=7cfa4e44eb"></script>
+<script src="src/view/iso-hulls.js?v=3ec92ef916"></script>
+<script src="src/view/iso-gear.js?v=8f171c0e88"></script>
+<script src="src/view/iso-rotors.js?v=fe08795141"></script>
+<script src="src/view/iso-plainhull.js?v=528b5f10d7"></script>
+<script src="src/view/iso-parts.js?v=d7654a8af2"></script>
+<script src="src/view/iso-xenofig.js?v=e35bb4db11"></script>
+<script src="src/view/iso-bugs.js?v=de43d16ad2"></script>
+<script src="src/view/iso-propkinds.js?v=f1db0ff2ff"></script>
+<script src="src/view/iso-xenomachines.js?v=37ea5f6a7a"></script>
+<script src="src/view/iso.js?v=99a634aa2b"></script>
+<script src="src/view/fx.js?v=449fedd8af"></script>
+<script src="src/view/fire.js?v=b69474ee2d"></script>
+<script src="src/view/motion.js?v=823a5c18f7"></script>
+<script src="src/view/tips.js?v=d9ad8fa292"></script>
+<script src="src/engine/protocol.js?v=3b336aa214"></script>
+<script src="src/engine/ai.js?v=13bbb42651"></script>
+<script src="src/engine/save.js?v=f7f45e76fc"></script>
+<script src="src/engine/marks.js?v=f46367ec16"></script>
+<script src="src/engine/combat.js?v=671deb7ec4"></script>
+<script src="src/engine/abilities.js?v=b293d72714"></script>
+<script src="src/engine/moves.js?v=076291e9ce"></script>
+<script src="src/engine/actions.js?v=e5bee92bd5"></script>
+<script src="src/engine/endphase.js?v=03520117f4"></script>
+<script src="src/engine/solo.js?v=04a31d2e87"></script>
+<script src="src/engine/arrivals.js?v=ed56cfcec4"></script>
+<script src="src/engine/deploy.js?v=b773d6a00e"></script>
+<script src="src/engine/terrainsetup.js?v=9d4ff6883b"></script>
+<script src="src/engine/swaps.js?v=aee7c3734c"></script>
+<script src="src/engine/engine.js?v=ef46670a1e"></script>
+<script src="src/engine/offtable.js?v=2f18261e81"></script>
+<script src="src/net/net.js?v=d781797d45"></script>
+<script src="src/net/lobby.js?v=e561ff9de3"></script>
+<script src="src/view/replay.js?v=ed976dcd45"></script>
+<script src="src/view/hooks.js?v=42e1de47da"></script>
+<script src="src/view/play.js?v=0dbdd8a979"></script>
+<script src="src/view/terrainset.js?v=739d4aab5a"></script>
+<script src="src/view/input.js?v=b8925c1406"></script>
+<script src="src/view/arrive.js?v=37e7f9557f"></script>
+<script src="src/view/actions.js?v=57f515285b"></script>
+<script src="src/view/draw.js?v=63cd9c60d3"></script>
+<script src="src/view/view.js?v=4991d0341d"></script>
+<script src="src/view/panels.js?v=2d2791c720"></script>
+<script src="src/view/muster.js?v=c2c9e7c1dc"></script>
+<script src="src/view/game.js?v=80c65caeb2"></script>
+<script src="src/view/dossier-hub.js?v=99465a97b2"></script>
+<script src="src/view/dossier-found.js?v=c0f266074b"></script>
+<script src="src/view/dossier-roster.js?v=e5f47d6173"></script>
+<script src="src/view/dossier-contract.js?v=34c221c5e5"></script>
+<script src="src/view/dossier-after.js?v=8ddc2284ae"></script>
+<script src="src/view/dossier.js?v=c66c043a17"></script>
+<script src="src/view/menu.js?v=362b5aea84"></script>

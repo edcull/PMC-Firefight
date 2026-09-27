@@ -9,7 +9,7 @@ const ROOT = path.join(__dirname, '..');
 const rules = ['src/rules/move.js', 'src/rules/assault.js', 'src/rules/shoot.js', 'src/rules/xeno.js', 'src/rules/destruct.js', 'src/rules/damage.js', 'src/rules/space.js', 'src/rules/data.js', 'src/rules/rules.js'].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 /* The renderer is iso.js and the parts it installs (iso-*.js), loaded before
    it: all of them, in the order the game's own page loads them. */
-const iso = (fs.readFileSync(path.join(ROOT, 'dev.html'), 'utf8')
+const iso = (fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
   .match(/src\/view\/iso[\w-]*\.js/g) || ['src/view/iso.js'])
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 // the atlas itself, shared with the unit viewer's Atlas mode

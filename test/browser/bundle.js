@@ -1,20 +1,24 @@
-/* The page that is served: index.html, with every script folded into
-   dist/game.js (scripts/bundle.js). The other browser tests play dev.html, the
-   scripts one by one; this one checks the bundle itself does the same — it
-   loads without an error, fetches nothing from src/, and a battle starts and
-   plays between two AI sides. */
+/* The site as it is published: built here by scripts/bundle.js (as CI builds
+   it), index.html with every script folded into dist/game.js. The other
+   browser tests play index.html from the repository, the scripts one by one;
+   this one checks the bundle does the same — it loads without an error,
+   fetches no script from src/, and a battle starts and plays between two AI
+   sides. Without terser to build it with, it says so and passes. */
 const { chromium } = require('playwright');
 const path = require('path');
 const { ROOT, startSkirmish } = require('../where.js');
 
 (async () => {
+  const bundle = require('../../scripts/bundle.js');
+  try { require.resolve('terser', { paths: [ROOT] }); } catch (e) { console.log('\n  - terser is not installed: the bundle is not built here (npm install)'); process.exit(0); }
+  await bundle.build();
   const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1100, height: 850 } });
   const errs = [], fetched = [];
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('request', (r) => fetched.push(r.url()));
   p.on('requestfailed', (r) => { if (/^file:/.test(r.url())) errs.push('failed to load ' + r.url()); });
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(bundle.SITE, 'index.html'));
   await p.waitForTimeout(900);
 
   let pass = 0, fail = 0;

@@ -289,7 +289,7 @@
         (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
       if (open) {
         var rk = 'r' + ri, shown = co.roster.filter(function (e) { return E.unitPasses(e, rk); });
-        h += E.filterPills(rk, co) + '<div class="dlist rivdos">' + shown.slice().sort(function (a, b) {
+        h += '<div class="dlist rivdos">' + shown.slice().sort(function (a, b) {
           var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
           return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
         }).map(function (e) { return entryCard(e, co, {}); }).join('') +

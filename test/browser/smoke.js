@@ -25,7 +25,7 @@ async function dismissEarly(page) {
     errors.push(m.text());
   });
 
-  await page.goto('file://' + path.join(ROOT, 'dev.html'));
+  await page.goto('file://' + path.join(ROOT, 'index.html'));
   await page.waitForTimeout(500);
   await startSkirmish(page, {});
   await page.waitForTimeout(600);
