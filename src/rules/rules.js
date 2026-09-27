@@ -1315,6 +1315,16 @@
       return c !== a && c.alive && c.side === a.side && c.x >= 0 && !c.aboard && hasOwn(c, 'Command Unit') && unitDist(a, c) <= 12;
     });
   }
+  /* The OpFor's "+2 if there are no enemy units within the active unit's Range"
+     (p. 147): a plain distance, whatever stands in the way or wherever the gun
+     points. A unit with no Firepower has no Range, so nothing is within it. */
+  function enemyWithinRange(state, u) {
+    if (u.fp === null) return false;
+    var reach = shotRange(u);
+    return state.units.some(function (t) {
+      return t.alive && t.side !== u.side && !t.reserve && !t.aboard && t.x >= 0 && unitDist(u, t) <= reach;
+    });
+  }
   function steadyTargets(state, a) {
     if (!steadyShooter(state, a)) return [];
     return state.units.filter(function (t) {
@@ -1827,7 +1837,7 @@
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
-    steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
+    enemyWithinRange: enemyWithinRange, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,

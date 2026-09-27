@@ -201,7 +201,7 @@
       }
 
       if (soloB) {
-        var bh = rollBehaviour(u, shot);
+        var bh = rollBehaviour(u);
         // Run for Your Lives!: a Move as far as it can get from the player's units, no shot
         if (bh === 'flee') return aiRoll(u, nearestEnemy(u), false, { flee: true, noShoot: true });
         // Kill Them All!: charge the closest enemy — only an Overgrown bug can — or else Move at it, no shot
@@ -405,12 +405,13 @@
 
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
-    function rollBehaviour(u, shot) {
+    function rollBehaviour(u) {
       var roll = R.d6(), mods = 0, why = [];
       var fp = u.fp || 0, as = u.assault || 0;
       if (as >= 2 * fp && as > 0) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }
       else if (as > fp) { mods += 1; why.push('Assault > Firepower +1'); }
-      if (!shot.t) { mods += 2; why.push('no enemy in range +2'); }
+      // a plain distance (p. 147): an enemy in range behind a building is still within it
+      if (!R.enemyWithinRange(E.state, u)) { mods += 2; why.push('no enemy in range +2'); }
       // the scenario's own temper: aggressive, defensive, or aggressive near the objectives
       if (E.state.solo && u.side === 'B' && E.state.scen.behaviour) {
         var bm = E.state.scen.behaviour(E.state, u) || {};
@@ -546,7 +547,7 @@
       }
 
       var shot = bestTarget(u, 'fire');
-      var behaviour = rollBehaviour(u, shot);
+      var behaviour = rollBehaviour(u);
       /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */

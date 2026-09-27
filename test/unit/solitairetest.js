@@ -95,5 +95,24 @@ head('Charges and the scenario\'s bounds');
   ok('...and it may charge one outside the zone', !!R.chargeRoute(st, opfor, outside, opfor.move + 2));
 })();
 
+head('"No enemy within Range" is a distance (p. 147)');
+(function () {
+  function mk(key, side, x, y) {
+    var p = R.profile(key);
+    return { id: side + key + x, side: side, key: key, name: p.name, label: p.name, cls: p.cls || 'infantry', tier: p.tier,
+      size: p.size, models: p.size, move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale,
+      rules: p.rules.slice(), x: x, y: y, sp: 0, alive: true, activated: false, shotFrom: [], cargo: [] };
+  }
+  var wall = { kind: 'building', x: 18, y: 14, w: 4, h: 12 };
+  var opfor = mk('regular', 'B', 12, 20), hidden = mk('regular', 'A', 26, 20);
+  var st = { units: [opfor, hidden], terrain: [wall], objectives: [], log: [] };
+  ok('an enemy 12" off behind a building cannot be shot', !R.canShoot(st, opfor, hidden, 'fire'));
+  ok('...but it is within Range: no +2', R.enemyWithinRange(st, opfor));
+  hidden.x = 40;
+  ok('one out beyond Range is not', !R.enemyWithinRange(st, opfor));
+  hidden.x = 26; hidden.reserve = true; hidden.x = -1; hidden.y = -1;
+  ok('nor one still in reserve', !R.enemyWithinRange(st, opfor));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
