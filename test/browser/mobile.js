@@ -65,7 +65,7 @@ function metrics() {
     });
     const p = await ctx.newPage();
     p.on('pageerror', e => errs.push(ph.name + ': ' + e.message));
-    await p.goto('file://' + path.join(ROOT, 'index.html'));
+    await p.goto('file://' + path.join(ROOT, 'dev.html'));
     await p.waitForTimeout(700);
     await boot(p);
 

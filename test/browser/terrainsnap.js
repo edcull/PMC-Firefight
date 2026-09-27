@@ -37,7 +37,7 @@ const SCENARIOS = ['meeting', 'takeover'];      // open ground, and one dug in w
   const p = await ctx.newPage();
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(800);
 
   const got = {};

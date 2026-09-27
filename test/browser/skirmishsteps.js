@@ -12,7 +12,7 @@ const { ROOT, SHOTS } = require('../where.js');
   const p = await b.newPage({ viewport: { width: 1340, height: 940 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(700);
 
   const problems = [];

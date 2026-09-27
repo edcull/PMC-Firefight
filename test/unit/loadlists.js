@@ -39,10 +39,10 @@ function partFiles(host) {
 }
 
 console.log('\nTHE GAME\'S PAGE');
-const index = tags('index.html'), viewer = tags('viewer.html');
+const index = tags('dev.html'), viewer = tags('viewer.html');
 ok('every file under src/ is loaded by one page or the other',
   ['src/rules', 'src/engine', 'src/view', 'src/net'].flatMap(files).filter((f) => index.indexOf(f) < 0 && viewer.indexOf(f) < 0));
-ok('every script index.html loads exists', index.filter((f) => !fs.existsSync(path.join(ROOT, f))));
+ok('every script dev.html loads exists', index.filter((f) => !fs.existsSync(path.join(ROOT, f))));
 
 console.log('\nTHE UNIT VIEWER\'S PAGE');
 const drawParts = files('src/view').filter((f) => /\/iso-[\w-]+\.js$/.test(f));
@@ -60,6 +60,19 @@ function order(list, host, parts) { const h = list.indexOf(host); return parts.f
 ok('on the game\'s page each part comes before the file made from it',
   ['src/rules/rules.js', 'src/rules/campaign.js', 'src/engine/engine.js', 'src/view/dossier.js'].flatMap((h) => order(index, h, partFiles(h)))
     .concat(order(index, 'src/view/iso.js', drawParts)));
+
+/* The page that is served is dev.html with those scripts folded into one file
+   (scripts/bundle.js). It is built and committed, so it is checked here against
+   the sources as they are: a change that was not built would ship without it. */
+console.log('\nTHE SERVED PAGE');
+const B = require('../../scripts/bundle.js');
+const built = fs.existsSync(path.join(ROOT, B.OUT)) ? read(B.OUT) : '';
+const dev = read('dev.html');
+ok('the bundle is built from the sources as they are now (npm run build)',
+  B.headerHash(built) === B.sourceHash(B.scriptsOf(dev)) ? [] : ['dist/game.js is stale or missing']);
+ok('index.html is dev.html loading that bundle (npm run build)',
+  read('index.html') === B.pageFor(dev, B.bundleRef(built)) ? [] : ['index.html differs from dev.html']);
+ok('...and loads nothing else of the source', tags('index.html').filter((f) => f !== B.OUT));
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

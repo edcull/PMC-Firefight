@@ -28,7 +28,7 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
   const p = await b.newPage({ viewport: { width: 1340, height: 950 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(500);
   await startSkirmish(p, { tier: 3, mode: 'ai', scenario: 'meeting', planet: 'desert', terrain: 'auto',
     keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'] });

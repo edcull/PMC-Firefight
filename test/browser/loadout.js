@@ -133,7 +133,7 @@ async function run(p, label) {
 
   const desk = await b.newPage({ viewport: { width: 1400, height: 1000 } });
   desk.on('pageerror', e => errs.push('desktop: ' + e.message));
-  await desk.goto('file://' + path.join(ROOT, 'index.html'));
+  await desk.goto('file://' + path.join(ROOT, 'dev.html'));
   await desk.waitForTimeout(500);
   await run(desk, 'On a desktop');
   await desk.close();
@@ -144,7 +144,7 @@ async function run(p, label) {
       '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
   });
   phone.on('pageerror', e => errs.push('phone: ' + e.message));
-  await phone.goto('file://' + path.join(ROOT, 'index.html'));
+  await phone.goto('file://' + path.join(ROOT, 'dev.html'));
   await phone.waitForTimeout(600);
   await run(phone, 'And on a phone, where it was reported');
   await phone.close();

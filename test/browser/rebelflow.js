@@ -64,7 +64,7 @@ async function pastFronts(p) {
   // native dialogs never show inside the published frame, so any use is a bug
   let dialogs = 0;
   p.on('dialog', async d => { dialogs++; await d.dismiss(); });
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(700);
   await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });
 

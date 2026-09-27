@@ -32,7 +32,7 @@ async function drain(p) {
   const p = await b.newPage({ viewport: { width: 1340, height: 950 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(500);
   // the same open battle every run, so the platforms come down on clear ground
   await startSkirmish(p, { tier: 4, mode: 'ai', scenario: 'meeting', planet: 'desert', terrain: 'auto',

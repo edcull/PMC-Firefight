@@ -26,7 +26,7 @@ function head(t) { console.log('\n  ' + t); }
     acceptDownloads: true });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(600);
   await p.evaluate(() => window.__forces.clear());
 

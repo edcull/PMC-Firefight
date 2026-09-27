@@ -24,7 +24,7 @@ async function shot(p, name) {
   const p = await b.newPage({ viewport: { width: 1340, height: 900 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(500);
   // a meeting engagement: it opens straight on deployment, whatever the dice (the stage is rebuilt below anyway)
   await startSkirmish(p, { tier: 4, mode: 'hotseat', scenario: 'meeting', keys: ['cmd1', 'veterans', 'shock', 'mcv:tracked', 'protectors', 'veterans'] });

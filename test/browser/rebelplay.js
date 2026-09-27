@@ -114,7 +114,7 @@ async function run(p, label, cfg, checks) {
   const p = await b.newPage({ viewport: { width: 1340, height: 900 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + path.join(ROOT, 'index.html'));
+  await p.goto('file://' + path.join(ROOT, 'dev.html'));
   await p.waitForTimeout(600);
 
   const tally = { freedom: 0, glory: 0, smoke: 0, digin: 0 };

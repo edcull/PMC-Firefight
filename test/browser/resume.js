@@ -50,7 +50,7 @@ async function play(p, n) {
   const p = await b.newPage({ viewport: { width: 1340, height: 900 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
-  const url = 'file://' + path.join(ROOT, 'index.html');
+  const url = 'file://' + path.join(ROOT, 'dev.html');
   await p.goto(url);
   await p.evaluate(() => { localStorage.clear(); });
   await p.reload();
