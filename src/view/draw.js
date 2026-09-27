@@ -199,6 +199,13 @@
               var cs = ISO.casualtySpot(u, n, rem.length * 7 + n);
               rem.push({ kind: 'body', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
                 art: u.art, mi: cs.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
+              /* Expendable: each man's collar goes off where he falls, one after another,
+                 each with a sharp crack. */
+              if (u.expended && !u.alive) {
+                var cd = (seen.models - n) * 90;
+                addFx({ kind: 'collar', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, delay: cd, dur: cd + 1300 });
+                if (SFX && SFX.impact) SFX.impact(cd / 1000 + 0.2);
+              }
               // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
               if (n === 1 && left === 0 && ISO.hasPiece && ISO.hasPiece(u.art)) {
                 rem.push({ kind: 'body', piece: true, x: seen.x, y: seen.y, dx: 0, dy: 0, side: u.side, paint: u.paint || null,

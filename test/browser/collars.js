@@ -62,7 +62,12 @@ async function drain(p) {
   }, before);
   await p.evaluate((a) => window.__select(window.PMC_STATE().units.find((u) => u.id === a.rifles)), before);
   await p.waitForTimeout(200);
+  await p.evaluate(() => window.PMC_SETVIEW(20, 20, 2.2));
   await p.evaluate(() => window.__pressAction('regroup'));
+  // each man's collar goes off where he falls, one after another
+  await p.waitForTimeout(260);
+  const blasts = await p.evaluate(() => window.__fxkinds().filter((k) => k === 'collar').length);
+  await p.locator('.board-wrap').screenshot({ path: path.join(SHOTS, 'collars-blast.png') });
   await p.waitForTimeout(1500);
   await drain(p);
 
@@ -80,6 +85,7 @@ async function drain(p) {
   await p.evaluate(() => window.PMC_SETVIEW(20, 20, 2.2));
   await p.waitForTimeout(400);
   await p.locator('.board-wrap').screenshot({ path: path.join(SHOTS, 'collars.png') });
+  ok('a collar went off at every man', blasts === before.models, blasts + ' blasts for ' + before.models + ' men');
   ok('no page errors', !errs.length, errs.join(' | '));
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

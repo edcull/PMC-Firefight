@@ -797,6 +797,38 @@
             }
           }
         }
+      } else if (f.kind === 'collar') {
+        /* Expendable: a penal trooper's collar going off where he falls — a sharp
+           flash and a spray of sparks, then a wisp of smoke curling up off him
+           (dx, dy: his place in the squad, as his body is drawn). */
+        var qp = I.toScreen(f.x, f.y);
+        qp.x += f.dx || 0; qp.y += (f.dy || 0) - liftAt(f) - I.K * 0.2;
+        var pop = 0.28;
+        if (k < pop) {
+          var pk = k / pop, fade = (1 - pk) * (1 - pk);
+          // a hot orange glow, quick to go, round a white-yellow core
+          I.ellipse(g, qp.x, qp.y, I.K * (0.18 + pk * 0.3), I.K * (0.14 + pk * 0.2), 'rgba(255,140,40,' + (0.75 * fade) + ')');
+          I.ellipse(g, qp.x, qp.y - I.K * 0.04, I.K * (0.16 - pk * 0.1), I.K * (0.13 - pk * 0.08), 'rgba(255,250,210,' + (1 - pk) + ')');
+          // a spike of flame up out of it
+          I.rect(g, qp.x - I.PIXEL, qp.y - I.K * (0.25 + pk * 0.35), I.PIXEL * 2, I.K * (0.25 + pk * 0.25), 'rgba(255,210,120,' + fade + ')');
+        }
+        // sparks thrown up and out, falling back
+        if (k < 0.55) {
+          var zk = k / 0.55;
+          for (var qs = 0; qs < 10; qs++) {
+            var qa = qs * 0.63 + (f.dx || 0), qd = zk * I.K * (0.55 + (qs % 3) * 0.2);
+            var zy = qp.y + Math.sin(qa) * qd * 0.5 - (zk * 1.4 - zk * zk * 1.1) * I.K;
+            I.rect(g, qp.x + Math.cos(qa) * qd, zy, I.PIXEL * (qs % 2 ? 1 : 2), I.PIXEL * (qs % 2 ? 1 : 2),
+              'rgba(255,' + (220 - qs * 12) + ',' + (qs % 3 ? 80 : 160) + ',' + (1 - zk) + ')');
+          }
+        }
+        // and a wisp of dark smoke curling up off him
+        var sk = Math.min(1, Math.max(0, (k - 0.08) / 0.92));
+        for (var qw = 0; qw < 3; qw++) {
+          var wr = I.K * (0.1 + sk * 0.24 + qw * 0.04);
+          I.ellipse(g, qp.x + Math.sin(sk * 5 + qw) * I.K * 0.12, qp.y - I.K * 0.2 - sk * I.K * (0.8 + qw * 0.3), wr, wr * 0.8,
+            'rgba(' + (qw % 2 ? '96,92,88' : '64,62,60') + ',' + (0.55 * (1 - sk)) + ')');
+        }
       } else if (f.kind === 'hold') {
         /* Nothing to draw: it exists so the frame loop keeps turning while a
            unit is coming down, and so the game waits for it. */
