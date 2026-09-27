@@ -55,7 +55,7 @@ function ok(name, cond, note) {
   // somewhere clear, 7-9" out
   const spot = await p.evaluate(() => {
     const SC = window.PMCScen, s = window.PMC_STATE();
-    for (let a = 0; a < 6.3; a += 0.2) for (const r of [7, 8, 9]) {
+    for (let a = 0; a < 6.3; a += 0.1) for (const r of [7, 8, 9, 6, 10, 5, 5.5, 6.5, 7.5, 8.5, 9.5]) {
       const x = 24 + Math.cos(a) * r, y = 24 + Math.sin(a) * r;
       if (!SC.fortWhy(s, SC.fortRect('bunker', x, y))) return { x, y };
     }
@@ -68,8 +68,8 @@ function ok(name, cond, note) {
   await p.evaluate(() => { window.__sendIntent({ k: 'placekind', kind: 'wire' }); window.__sendIntent({ k: 'placelen', len: 5 }); window.__sendIntent({ k: 'placerot' }); });
   const wspot = await p.evaluate(() => {
     const SC = window.PMCScen, s = window.PMC_STATE();
-    for (let a = 0; a < 6.3; a += 0.2) {
-      const x = 24 + Math.cos(a) * 10, y = 24 + Math.sin(a) * 10;
+    for (let a = 0; a < 6.3; a += 0.1) for (const r of [10, 9, 11, 8, 7]) {
+      const x = 24 + Math.cos(a) * r, y = 24 + Math.sin(a) * r;
       if (!SC.fortWhy(s, SC.fortRect('wire', x, y, 5, true))) return { x, y };
     }
     return null;

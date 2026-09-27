@@ -65,6 +65,13 @@ const mb = (b) => +(b / 1048576).toFixed(1);
   });
   out.frames.machinesMs = await frames();
   out.frames.machines = await p.evaluate(() => window.PMC_STATE().units.filter(u => window.PMC.isMachine(u) && u.alive).length);
+  // the ground machines alone (an aircraft's rotors turn, so it is drawn afresh every frame)
+  out.frames.groundMachines = await p.evaluate(() => {
+    const s = window.PMC_STATE(), R = window.PMC;
+    s.units.forEach(u => { if (u.cls === 'aircraft') u.x = -1; });
+    return s.units.filter(u => R.isMachine(u) && u.alive && u.x >= 0).length;
+  });
+  out.frames.groundMs = await frames();
 
   // ---- 4.7: what the table holds
   const cv = await p.evaluate(() => window.__perf.canvases());
@@ -77,7 +84,7 @@ const mb = (b) => +(b / 1048576).toFixed(1);
     console.log('menu      long tasks ' + out.menu.longTasks + ', worst ' + out.menu.worstMs + ' ms, total ' + out.menu.totalMs + ' ms');
     console.log('          ' + out.menu.list.map(e => e.ms + 'ms@' + e.at).join('  '));
     console.log('bake      table ' + out.bake.bakeMs + ' ms, structures repaint ' + out.bake.paintMs + ' ms');
-    console.log('frames    table ' + out.frames.tableMs + ' ms, ' + out.frames.machines + ' machines in view ' + out.frames.machinesMs + ' ms');
+    console.log('frames    table ' + out.frames.tableMs + ' ms, ' + out.frames.machines + ' machines in view ' + out.frames.machinesMs + ' ms, ' + out.frames.groundMachines + ' of them on the ground ' + out.frames.groundMs + ' ms');
     console.log('canvases  ' + Object.entries(out.canvases).map(([k, v]) => k + ' ' + v + ' MB').join(', '));
     console.log('errors    ' + (errs.join(' | ') || 'none'));
   }

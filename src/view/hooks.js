@@ -327,7 +327,7 @@
       },
       paint: function () { var t0 = performance.now(); B.paintStructures(); return performance.now() - t0; },
       bake: function () {
-        var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null; c.baking = false;
+        var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; c.baking = false;
         B.drawBoard();                                  // starts the bake (it runs off this frame)
         return new Promise(function (res) {
           var t0 = performance.now();
@@ -336,17 +336,17 @@
       },
       canvases: function () {
         var c = B.vc, out = {};
-        ['ground', 'structs', 'structsOpen'].forEach(function (k) { if (c[k] && c[k].width) out[k] = c[k].width * c[k].height * 4; });
+        ['ground', 'structs'].forEach(function (k) { if (c[k] && c[k].width) out[k] = c[k].width * c[k].height * 4; });
+        if (c.opened) out.opened = c.opened.reduce(function (a, o) { return a + o.cv.width * o.cv.height * 4; }, 0);
         var px = document.getElementById('board');
         if (B.pix && B.pix.width) out.pix = B.pix.width * B.pix.height * 4;
         if (px) out.board = px.width * px.height * 4;
-        if (ISO.cacheBytes) out.sprites = ISO.cacheBytes();
         return out;
       }
     };
     // the view's own caches of the table (the baked plates, the bodies): not the battle's
     window.__vc = function () { return B.vc; };
-    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null; drawBoard(); };
+    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; drawBoard(); };
     window.__tapTerrain = function (i) {
       var r = ui.terrain[i];
       if (!r) return false;
