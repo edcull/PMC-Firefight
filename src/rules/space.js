@@ -166,11 +166,45 @@
         return bd;
       }
       if (!r.poly) return Math.min(x - r.x, r.x + r.w - x, y - r.y, r.y + r.h - y);
-      var pts = r.poly, best = Infinity;
-      for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-        best = Math.min(best, pointSegDist(x, y, pts[j][0], pts[j][1], pts[i][0], pts[i][1]));
+      /* The nearest edge of the outline. This is asked for every pixel of a
+         shaped piece as the ground is baked, so rather than measure to every edge
+         it starts from the edge that was nearest last time (the pixel next door,
+         as often as not), passes over any edge whose box is already further off,
+         and measures the winner the one way it always has. */
+      var pts = r.poly, E = edgesOf(pts), n = E.length / 8;
+      var bi = lastEdge < n ? lastEdge : 0, bestSq = segSq(E, bi, x, y);
+      for (var i = 0; i < n; i++) {
+        if (i === bi) continue;
+        var o = i * 8;
+        var gx = Math.max(E[o + 4] - x, 0, x - E[o + 5]), gy = Math.max(E[o + 6] - y, 0, y - E[o + 7]);
+        if (gx * gx + gy * gy >= bestSq) continue;
+        var d2 = segSq(E, i, x, y);
+        if (d2 < bestSq) { bestSq = d2; bi = i; }
       }
+      lastEdge = bi;
+      var ob = bi * 8, best = pointSegDist(x, y, E[ob], E[ob + 1], E[ob + 2], E[ob + 3]);
       return inPoly(x, y, pts) ? best : -best;
+    }
+    // an outline's edges, each as x1, y1, x2, y2 and its box: worked out once an outline
+    var edgeCache = typeof WeakMap === 'function' ? new WeakMap() : null, lastEdge = 0;
+    function edgesOf(pts) {
+      var E = edgeCache && edgeCache.get(pts);
+      if (E) return E;
+      E = new Float64Array(pts.length * 8);
+      for (var i = 0, j = pts.length - 1, k = 0; i < pts.length; j = i++, k++) {
+        var x1 = pts[j][0], y1 = pts[j][1], x2 = pts[i][0], y2 = pts[i][1], o = k * 8;
+        E[o] = x1; E[o + 1] = y1; E[o + 2] = x2; E[o + 3] = y2;
+        E[o + 4] = Math.min(x1, x2); E[o + 5] = Math.max(x1, x2); E[o + 6] = Math.min(y1, y2); E[o + 7] = Math.max(y1, y2);
+      }
+      if (edgeCache) edgeCache.set(pts, E);
+      return E;
+    }
+    // the squared distance to edge i, as pointSegDist measures it, without the square root
+    function segSq(E, i, px, py) {
+      var o = i * 8, x1 = E[o], y1 = E[o + 1], dx = E[o + 2] - x1, dy = E[o + 3] - y1, l2 = dx * dx + dy * dy;
+      var t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2));
+      var ex = px - (x1 + t * dx), ey = py - (y1 + t * dy);
+      return ex * ex + ey * ey;
     }
     /* Move or resize a piece, taking its outline with it: the outline is stretched
        from the old rectangle onto the new one. Anything that shifts a piece after
