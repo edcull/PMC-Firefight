@@ -786,7 +786,7 @@
     window.addEventListener('focus', function () { restoreCanvases(false); });
   }
 
-  // the ways in: hooks.js (installed with the modules, below)
+  // the ways in: hooks.js and testhooks.js (installed with the modules, below)
   /* ================= the modules =================
      The parts of the board that live in files of their own, installed here —
      after everything they borrow of this closure is declared — each with the
@@ -816,10 +816,11 @@
   var replaying = REPLAY.replaying, resetShow = REPLAY.resetShow, show = REPLAY.show;
   var shownAs = REPLAY.shownAs, stepWatched = REPLAY.stepWatched;
 
-  /* ---------- hooks.js: the ways in ----------
-     The board it borrows from: getters for what changes as the game runs,
-     and the functions and fixed values it uses. */
-  window.PMCHooks({
+  /* ---------- hooks.js: the ways in, and testhooks.js: the tests' ----------
+     The board they borrow from: getters for what changes as the game runs,
+     and the functions and fixed values they use. testhooks.js is only there
+     as the page runs from the repository; the published builds leave it out. */
+  var hookBoard = {
     get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
     get held() { return held; }, get loop() { return loop; }, get muster() { return muster; },
@@ -855,7 +856,9 @@
     select: select, send: send, specialsFor: specialsFor, startBattle: startBattle, terrainAct: terrainAct,
     wireNet: wireNet, FX: FX, H: H, ISO: ISO, R: R, W: W, anims: anims, cam: cam, el: el, fx: fx,
     idleCbs: idleCbs, resQueue: resQueue, show: show, ui: ui
-  });
+  };
+  window.PMCHooks(hookBoard);
+  if (window.PMCTestHooks) window.PMCTestHooks(hookBoard);
 
   /* ---------- play.js: moves and shots played on the board ----------
      The board it borrows from: getters for what changes as the game runs,

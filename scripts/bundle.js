@@ -18,10 +18,12 @@ const ROOT = path.join(__dirname, '..');
 const SITE = path.join(ROOT, 'build', 'site');
 const OUT = 'dist/game.js';
 const TAG = /<script src="(src\/[^"?]+)(?:\?v=[0-9a-f]+)?"><\/script>\n?/g;
+// what index.html loads only for the tests, left out of every published build
+const DEV_ONLY = ['src/view/testhooks.js'];
 
 const sha = (s) => crypto.createHash('sha1').update(s).digest('hex');
-// the scripts a page loads, in order
-function scriptsOf(html) { return Array.from(html.matchAll(TAG), (m) => m[1]); }
+// the scripts a page loads, in order, less the tests' own
+function scriptsOf(html) { return Array.from(html.matchAll(TAG), (m) => m[1]).filter((f) => DEV_ONLY.indexOf(f) < 0); }
 // the published page: the page with its script tags replaced by the one bundle, where the first of them stood
 function pageFor(page, bundleRef) {
   let first = true;
@@ -46,6 +48,7 @@ async function build() {
   });
   fs.rmSync(SITE, { recursive: true, force: true });
   copyDir(path.join(ROOT, 'src'), path.join(SITE, 'src'));
+  DEV_ONLY.forEach((f) => fs.rmSync(path.join(SITE, f), { force: true }));
   fs.copyFileSync(path.join(ROOT, 'viewer.html'), path.join(SITE, 'viewer.html'));
   fs.mkdirSync(path.join(SITE, 'dist'), { recursive: true });
   fs.writeFileSync(path.join(SITE, OUT), res.code);
@@ -54,5 +57,5 @@ async function build() {
   console.log(list.length + ' scripts, ' + Math.round(raw / 1024) + ' KB → build/site/' + OUT + ' ' + Math.round(res.code.length / 1024) + ' KB');
 }
 
-module.exports = { scriptsOf, pageFor, build, SITE, OUT };
+module.exports = { scriptsOf, pageFor, build, SITE, OUT, DEV_ONLY };
 if (require.main === module) build().catch((e) => { console.error(e); process.exit(1); });
