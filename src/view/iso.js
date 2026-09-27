@@ -978,7 +978,7 @@
     CRUST: CRUST, DEEPW: DEEPW, ELEV: ELEV, GLOW: GLOW, GROUNDS: GROUNDS, H: H, K: K, LIP: LIP, OX: OX,
     OY: OY, PIXH: PIXH, PIXW: PIXW, STONE: STONE, W: W, WATER: WATER
   });
-  var R0 = ISOGROUND.R0, bakeGround = ISOGROUND.bakeGround, depthIn = ISOGROUND.depthIn;
+  var R0 = ISOGROUND.R0, bakeGround = ISOGROUND.bakeGround, bakeGroundSliced = ISOGROUND.bakeGroundSliced, depthIn = ISOGROUND.depthIn;
   var hex3 = ISOGROUND.hex3, pebble = ISOGROUND.pebble, sp2 = ISOGROUND.sp2, spotIn = ISOGROUND.spotIn;
   var vgrad = ISOGROUND.vgrad;
 
@@ -1009,7 +1009,7 @@
       [sprites, corpses, hullCache, TEX_TILE].forEach(function (c) { for (var k in c) delete c[k]; });
       DIM_CANVAS = null;
     },
-    bakeGround: bakeGround, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
+    bakeGround: bakeGround, bakeGroundSliced: bakeGroundSliced, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec,
     hasPiece: function (art) { return art === 'rebelgun' || !!PIECE3D[art]; },   // a piece left knocked out when its crew is gone
     turnsLikeMachine: function (art) { return !!(PIECE3D[art] || FIELD_GUN[art]); },

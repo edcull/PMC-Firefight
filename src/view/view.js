@@ -273,7 +273,13 @@
     /* Put one structure back on top of whatever has been drawn over it, taking the
        pixels from the layer it was baked into. */
     function repaintProp(pr, open) {
-      var src = open ? B.vc.structsOpen : B.vc.structs;
+      if (open) {
+        // its own patch of the cut-away layer (draw.js paintStructures)
+        var o = pr._open;
+        if (o && o.box.w > 0 && o.box.h > 0) B.pctx.drawImage(o.cv, 0, 0, o.box.w, o.box.h, o.box.x, o.box.y, o.box.w, o.box.h);
+        return;
+      }
+      var src = B.vc.structs;
       if (!src) return;
       var b = propBox(pr);
       if (b.w <= 0 || b.h <= 0) return;

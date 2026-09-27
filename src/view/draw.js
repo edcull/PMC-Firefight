@@ -137,27 +137,43 @@
        whenever something is knocked down. */
     function buildScene() {
       B.vc.ground = ISO.bakeGround(B.state.terrain, B.state.seed, B.state.cfg.planet);
-      B.vc.structs = document.createElement('canvas');
-      B.vc.structs.width = ISO.PIXW; B.vc.structs.height = ISO.PIXH;
+      if (!B.vc.structs || B.vc.structs.width !== ISO.PIXW) {
+        B.vc.structs = document.createElement('canvas');
+        B.vc.structs.width = ISO.PIXW; B.vc.structs.height = ISO.PIXH;
+      }
       paintStructures();
       B.vc.scene = B.vc.ground;
       if (B.state.tset && B.state.phase === 'terrain') B.vc.tsetBaked = B.state.terrain.length;
     }
 
+    // the pieces that can stand between the camera and a squad, and so open up (see drawBoard)
+    var OPENS = { building: 1, bunker: 1, highwall: 1 };
     function paintStructures() {
       B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
       var sg = B.vc.structs.getContext('2d');
       sg.clearRect(0, 0, B.vc.structs.width, B.vc.structs.height);
       B.vc.props.forEach(function (p) { ISO.drawProp(sg, p, liftOf(p.x, p.y)); });
-      /* And the same table again with every building cut away — the near walls off
-         so you can see into the room. A building with somebody inside it, or with
-         somebody behind it, is composited from this layer instead of the solid
-         one, which is what lets the player see the troops a wall would hide. */
-      B.vc.structsOpen = document.createElement('canvas');
-      B.vc.structsOpen.width = ISO.PIXW; B.vc.structsOpen.height = ISO.PIXH;
-      var og = B.vc.structsOpen.getContext('2d');
-      og.clearRect(0, 0, B.vc.structsOpen.width, B.vc.structsOpen.height);
-      B.vc.props.forEach(function (p) { ISO.drawProp(og, p, liftOf(p.x, p.y), true); });
+      /* And the buildings again cut away — the near walls off so you can see into
+         the room. A building with somebody inside it, or with somebody behind it,
+         is composited from this instead of the solid plate, which is what lets the
+         player see the troops a wall would hide. Only the pieces that open up are
+         ever taken from it, so each keeps just its own patch (propBox, the patch
+         repaintProp puts back), with whatever else opens up drawn into it in the
+         order the table has them: no plate-sized canvas (24 MB) nearly all empty. */
+      var opens = B.vc.props.filter(function (p) { return OPENS[p.kind]; });
+      var boxes = opens.map(function (p) { return propBox(p); });
+      B.vc.opened = opens.map(function (p, i) {
+        var b = boxes[i], cv = document.createElement('canvas');
+        cv.width = Math.max(1, b.w); cv.height = Math.max(1, b.h);
+        var og = cv.getContext('2d');
+        og.translate(-b.x, -b.y);
+        opens.forEach(function (q, j) {
+          var c = boxes[j];
+          if (c.x < b.x + b.w && b.x < c.x + c.w && c.y < b.y + b.h && b.y < c.y + c.h) ISO.drawProp(og, q, liftOf(q.x, q.y), true);
+        });
+        p._open = { cv: cv, box: b };
+        return p._open;
+      });
     }
 
     /* Something has come down: repaint the structures and let the player see it. */
@@ -428,6 +444,78 @@
       if (dg) { keep = { f: dg.facing, a: dg.aim }; dg.facing = digPreview(dg); dg.aim = null; }
       try { drawBoardNow(); } finally { if (dg) { dg.facing = keep.f; dg.aim = keep.a; } }
     }
+    /* ---- a machine standing still is drawn once and then copied ----
+       A hull, a gun or a walker is a hundred paths and fills a frame, and most
+       of them are standing still most of the time. One that has looked the same
+       for two frames running — same unit, same state, same place to the pixel
+       fraction — is drawn once into a patch of its own at this frame's scale
+       and copied from it after that, at whole pixels, so it lands exactly where
+       it would have been drawn. Anything that moves from moment to moment (an
+       aircraft, a drone's light, smoke, a turn, a hop) is drawn as ever. */
+    var mScratch = null;       // the patches themselves are the view cache's (vc.mcache), one set a battle
+    function unitSig(u) {
+      return JSON.stringify(u, function (k, val) {
+        if (k === 'x' || k === 'y' || k === 'ax' || k === 'ay' || k === '_drawnX' || k === '_drawnY' || k === 'shotFrom' || k === 'boarding' || k === '_collar') return undefined;
+        if (k === 'cargo') return (val || []).map(function (c) { return c && (c.id + ':' + c.art + ':' + c.models + ':' + c.alive); });
+        if (k === 'bld') return val ? [val.x, val.y] : null;
+        return val;
+      });
+    }
+    function drawUnitOn(u, opts) {
+      var g = B.pctx;
+      if (!R.isMachine(u) || opts.hop || opts.walk || opts.arc || u.aboard || ISO.animates(u) || ISO.smoking(u) ||
+          (ISO.turning && ISO.turning(u)) || g.globalAlpha !== 1 || !g.getTransform || window.__noMachineCache) { ISO.drawUnit(g, u, opts); return; }
+      var tr = g.getTransform(), p = ISO.toScreen(opts.at.x, opts.at.y);
+      var dx = tr.a * p.x + tr.e, dy = tr.d * p.y + tr.f, ix = Math.floor(dx), iy = Math.floor(dy);
+      var key = unitSig(u) + '|' + JSON.stringify(opts) + '|' + tr.a + '|' + (dx - ix).toFixed(3) + ',' + (dy - iy).toFixed(3) + '|' + g.imageSmoothingEnabled;
+      var MC = B.vc.mcache || (B.vc.mcache = {}), c = MC[u.id];
+      if (!c || c.key !== key) {
+        // seen once like this: drawn as ever; seen twice, it is put in a patch
+        if (!c || c.seen !== key) { MC[u.id] = { seen: key }; ISO.drawUnit(g, u, opts); return; }
+        c = MC[u.id] = patchOf(u, opts, tr.a, dx - ix, dy - iy, key, g.imageSmoothingEnabled);
+      }
+      if (!c.cv) { ISO.drawUnit(g, u, opts); return; }
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+      g.drawImage(c.cv, ix + c.ox, iy + c.oy);
+      g.restore();
+    }
+    var mProbe = null, PROBE = 4;
+    function patchOf(u, opts, sc, fx, fy, key, smooth) {
+      var S = Math.ceil(K * 22 * sc / PROBE) * PROBE, ax = Math.floor(S / 2), ay = Math.floor(S * 0.7);
+      if (!mScratch) mScratch = document.createElement('canvas');
+      if (mScratch.width !== S) { mScratch.width = S; mScratch.height = S; }
+      var sg = mScratch.getContext('2d');
+      sg.setTransform(1, 0, 0, 1, 0, 0); sg.clearRect(0, 0, S, S);
+      var p = ISO.toScreen(opts.at.x, opts.at.y);
+      sg.setTransform(sc, 0, 0, sc, ax + fx - sc * p.x, ay + fy - sc * p.y);
+      sg.imageSmoothingEnabled = smooth;
+      ISO.drawUnit(sg, u, opts);
+      sg.setTransform(1, 0, 0, 1, 0, 0);
+      /* Where it was drawn, read off a quarter-size copy: the patch itself is
+         never read back, which would have the browser draw it a different way
+         (on the processor rather than the graphics card) from the frame it goes
+         into, and a machine would change its look as it stopped and started. */
+      var n = S / PROBE;
+      if (!mProbe) { mProbe = document.createElement('canvas'); }
+      if (mProbe.width !== n) { mProbe.width = n; mProbe.height = n; }
+      var pg = mProbe.getContext('2d', { willReadFrequently: true });
+      pg.clearRect(0, 0, n, n); pg.imageSmoothingEnabled = true;
+      pg.drawImage(mScratch, 0, 0, S, S, 0, 0, n, n);
+      var d = pg.getImageData(0, 0, n, n).data, x0 = n, y0 = n, x1 = -1, y1 = -1;
+      for (var y = 0; y < n; y++) {
+        var row = y * n * 4;
+        for (var x = 0; x < n; x++) if (d[row + x * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      // nothing drawn, or it runs off the patch: not kept, drawn as ever
+      if (x1 < 0 || x0 <= 1 || y0 <= 1 || x1 >= n - 2 || y1 >= n - 2) return { key: key, cv: null };
+      // a probe pixel either side to spare, for anything too faint to show at a quarter size
+      var cx0 = (x0 - 1) * PROBE, cy0 = (y0 - 1) * PROBE, cx1 = (x1 + 2) * PROBE, cy1 = (y1 + 2) * PROBE;
+      var cv = document.createElement('canvas');
+      cv.width = cx1 - cx0; cv.height = cy1 - cy0;
+      cv.getContext('2d').drawImage(mScratch, cx0, cy0, cv.width, cv.height, 0, 0, cv.width, cv.height);
+      return { key: key, cv: cv, ox: cx0 - ax, oy: cy0 - ay };
+    }
+
     function drawBoardNow() {
       // everything drawn on the board itself is in CSS pixels, scaled to its density
       B.ctx.setTransform(B.DPR, 0, 0, B.DPR, 0, 0);
@@ -474,14 +562,21 @@
          the plate: the terrain is scaled up into it pixel for pixel, and the units,
          rings and effects are drawn straight in at that resolution. Its size is
          bounded by the screen, never by the plate, so a phone's memory is safe. */
-      SS = Math.min(2, Math.max(1, v.z * B.DPR));
+      /* Zoomed out, the window is drawn straight at the screen's own size rather
+         than at the plate's and shrunk afterwards: the terrain is smoothed down
+         into it as the final step used to smooth the whole window, and the buffer
+         is never bigger than the screen (it was the size of the plate, 23 MB). */
+      SS = Math.min(2, Math.max(0.1, v.z * B.DPR));
       var pw = Math.ceil(v.sw * SS), ph = Math.ceil(v.sh * SS);
       if (B.pix.width < pw || B.pix.height < ph) {
         B.pix.width = Math.max(B.pix.width, pw);
         B.pix.height = Math.max(B.pix.height, ph);
+      } else if (B.pix.width * B.pix.height > pw * ph * 3) {
+        // zoomed back in (or a smaller window): give the memory back
+        B.pix.width = pw; B.pix.height = ph;
       }
       B.pctx.setTransform(SS, 0, 0, SS, -v.sx * SS, -v.sy * SS);
-      B.pctx.imageSmoothingEnabled = false;
+      B.pctx.imageSmoothingEnabled = SS < 1;
       // the plate is transparent outside the table's diamond, so the window has to be
       // cleared first — otherwise sprites drawn over that void smear as the camera moves
       B.pctx.fillStyle = '#080b10';
@@ -648,7 +743,7 @@
           if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
           if (arr.hidden) return;                       // teleporting in, or under the ground: not here yet
           if (arr.alpha != null) { B.pctx.save(); B.pctx.globalAlpha = arr.alpha; }
-          ISO.drawUnit(B.pctx, u, {
+          drawUnitOn(u, {
             at: { x: ax, y: ay },
             around: u.bld ? R.sectionRect(u) : null,
             lineAt: u.bld ? null : lineUp(u, ax, ay),

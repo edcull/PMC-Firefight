@@ -456,6 +456,10 @@
       return g.__tex[kind];
     }
 
+    /* Things every frame asked again of every machine and always got the same
+       answer to: a kind's camouflage cells, which cells of a side plate's grid are
+       filled, and colour blends. Kept once worked out (drawing is unchanged). */
+    var CAMO_OF = {}, BLOCK_ON = {}, MIX_OF = {};
     function drawMachine(g, u, opts) {
       var was = PH.smooth;
       PH.smooth = true;
@@ -623,10 +627,12 @@
         return [+m[0], +m[1], +m[2]];
       }
       function mixc(c1, c2, k) {
+        var key = c1 + '|' + c2 + '|' + k, m = MIX_OF[key];
+        if (m) return m;
         var A1 = col3(c1), B1 = col3(c2);
         k = clamp01(k);
-        return 'rgb(' + Math.round(A1[0] + (B1[0] - A1[0]) * k) + ',' + Math.round(A1[1] + (B1[1] - A1[1]) * k) +
-          ',' + Math.round(A1[2] + (B1[2] - A1[2]) * k) + ')';
+        return (MIX_OF[key] = 'rgb(' + Math.round(A1[0] + (B1[0] - A1[0]) * k) + ',' + Math.round(A1[1] + (B1[1] - A1[1]) * k) +
+          ',' + Math.round(A1[2] + (B1[2] - A1[2]) * k) + ')');
       }
       // set up before any styled drawing (these sit below the early returns)
       var P0, HF, AIM, TB, TT, TS, TC;
@@ -655,6 +661,11 @@
       function camoFor() {
         if (dead || (u.cls !== 'vehicle' && u.cls !== 'aircraft')) return null;
         if (u.faction && u.faction !== 'pmc') return null;
+        // the same for every machine of a kind, so worked out once a kind
+        var ck = u.art + '|' + spec.len + '|' + spec.wid + '|' + spec.craft + '|' + spec.heli;
+        return CAMO_OF[ck] || (CAMO_OF[ck] = camoCells());
+      }
+      function camoCells() {
         var len = spec.len || 2, wid = spec.wid || 1.2, out = [], seen = {};
         /* A craft is painted to its wingtips, not to the width of its fuselage,
            and a rotorcraft out to its stub wings: the pattern is laid over
@@ -710,6 +721,11 @@
              filled, picked at random, so no stretch of plate three cells across
              is ever left bare, yet the cells still clump and scatter */
           var inBlock = function (gi2, gj2) {
+            var bk = gi2 + ',' + gj2, known = BLOCK_ON[bk];
+            if (known !== undefined) return known;
+            return (BLOCK_ON[bk] = inBlock0(gi2, gj2));
+          };
+          var inBlock0 = function (gi2, gj2) {
             var bx = Math.floor(gi2 / 3), by = Math.floor(gj2 / 3);
             var me = hash(gi2, gj2, 772 + bx * 7 + by * 13), below = 0;
             for (var ci2 = 0; ci2 < 3; ci2++) for (var cj2 = 0; cj2 < 3; cj2++) {

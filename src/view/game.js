@@ -14,10 +14,10 @@
      DPR is how many backing pixels the board gets per CSS pixel: the screen's
      own density, capped at 2, which is the resolution asked for and keeps a
      phone's canvas to a sensible size. SS is how finely the working window is
-     drawn this frame, in buffer pixels per plate pixel: never less than the
-     plate (1), never more than the screen can show (z * DPR), and no more than
-     2. Units, effects and rings are drawn at SS; the terrain plate is scaled up
-     into it, so it looks exactly as it did. */
+     drawn this frame, in buffer pixels per plate pixel: what the screen can show
+     (z * DPR), and no more than 2. Units, effects and rings are drawn at SS; the
+     terrain plate is scaled up into it, or smoothed down into it when the table
+     is zoomed out, so the buffer is never bigger than the screen. */
   var DPR = 1;
   /* The zoom ladder. ZOOMS[0] is replaced at boot with "the whole table"; these
      are the real magnifications above it, and sizeView() drops any that would
@@ -453,7 +453,7 @@
      set-up asks for the whole table, since all four areas are about to be laid;
      otherwise it opens on the ground the first side deploys into. */
   function newTable(whole) {
-    var c = vc(); c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null;
+    var c = vc(); c.scene = null; c.ground = null; c.structs = null; c.opened = null;
     sizeView(false);
     if (whole) {
       cam.z = ZOOMS[0];
@@ -671,8 +671,9 @@
         });
       }).observe(bwrap);
     }
+    // the working window: grown to what the first frame needs (draw.js), never the plate
     pix = document.createElement('canvas');
-    pix.width = ISO.PIXW; pix.height = ISO.PIXH;
+    pix.width = 1; pix.height = 1;
     pctx = pix.getContext('2d');
     cam.x = cam.tx = ISO.PIXW / 2; cam.y = cam.ty = ISO.PIXH / 2;
 
@@ -776,7 +777,7 @@
     ISO.flush();
     if (pix.getContext) pctx = pix.getContext('2d');
     dropHaze();
-    var c = vc(); c.scene = null; c.ground = null; c.structs = null; c.structsOpen = null;
+    var c = vc(); c.scene = null; c.ground = null; c.structs = null; c.opened = null;
     drawBoard();
   }
   if (typeof document !== 'undefined' && document.addEventListener) {
@@ -829,7 +830,7 @@
     get burrowStep() { return burrowStep; }, get cancelPreview() { return cancelPreview; },
     get canvasFromWorld() { return canvasFromWorld; }, get centreOn() { return centreOn; },
     get clampCam() { return clampCam; }, get commitMove() { return commitMove; },
-    get currentForce() { return currentForce; }, get drawBoard() { return drawBoard; },
+    get currentForce() { return currentForce; }, get drawBoard() { return drawBoard; }, get paintStructures() { return paintStructures; }, get pix() { return pix; },
     get drawColourPick() { return drawColourPick; }, get drawForceList() { return drawForceList; },
     get drawMuster() { return drawMuster; }, get hotBegin() { return hotBegin; },
     get hotEnd() { return hotEnd; }, get hotPaint() { return hotPaint; },
