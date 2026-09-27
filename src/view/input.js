@@ -107,7 +107,7 @@
       // a ghost standing there, so the engine can be asked the same questions
       var ghost = {};
       for (var k in u) if (Object.prototype.hasOwnProperty.call(u, k)) ghost[k] = u[k];
-      ghost.x = spot.x; ghost.y = spot.y;
+      ghost.x = spot.x; ghost.y = spot.y; ghost.of = u;
       var seen = [], shots = [], watchers = [];
       B.state.units.forEach(function (o) {
         if (!onTable(o) || o.side === u.side) return;

@@ -519,6 +519,8 @@
       for (var j = 0; j < state.units.length; j++) {
         var u = state.units[j];
         if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
+        // a ghost (where a unit might stand) is not hidden by the unit itself, where it stands now
+        if (u === a.of || u === b.of) continue;
         if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
         if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
         if (aLv < 0) { aLv = a.side ? levelOf(state, a) : 0; bLv = b.side ? levelOf(state, b) : 0; }

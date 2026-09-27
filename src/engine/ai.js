@@ -670,7 +670,7 @@
       s += (look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u)) * 1.6;
       if (terr.fp) s += 2;
       s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
-      var ghost = { x: c.x, y: c.y, alive: true };
+      var ghost = { x: c.x, y: c.y, alive: true, of: u };
       var exposure = 0, opportunity = 0;
       E.state.units.forEach(function (e) {
         if (!e.alive || e.side === u.side) return;
