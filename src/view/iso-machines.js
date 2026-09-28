@@ -784,7 +784,8 @@
         if (!PH.mounts) return;
         (PH.mounts[kind] = PH.mounts[kind] || []).push({ dx: pt[0] - P0.x, dy: pt[1] - P0.y, dir: dir || 1 });
       }
-      function S3(q, z) { var s2 = toScreen(q.x, q.y); return [s2.x, s2.y - z]; }
+      // (a point may carry `dz`, pixels it sits below where it would: a drooped nose)
+      function S3(q, z) { var s2 = toScreen(q.x, q.y); return [s2.x, s2.y - z + (q.dz || 0)]; }
       // a frame: local (a forward, b across) about a pivot, turned to an angle
       function frameAt(t0, s0, ang) {
         var c0 = along(t0, s0), ca = Math.cos(ang), sa = Math.sin(ang);

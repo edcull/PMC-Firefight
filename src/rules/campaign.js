@@ -712,6 +712,8 @@
     var p = profile(key);
     return {
       rid: opts.rid || rid(), key: key, prop: opts.prop || null,
+      // what it rides: the Riders upgrade where it may take it, and on what (p. 93, Appendix 3)
+      riders: !!opts.riders, mount: opts.mount || null,
       // a Drone unit, or a craft only ever flown as a drone, is one from the start (pp. 40, 82)
       drone: !!opts.drone || !!(p && (p.mustDrone || (p.rules || []).indexOf('Drone unit') >= 0)),
       name: opts.name || p.name, exp: 0, tp: 0,
@@ -731,6 +733,7 @@
     var p = profile(entry.key);
     if (!p) return 0;
     var size = p.cls === 'infantry' ? p.size : 1;
+    if (entry.riders && R.canRide(p)) size = Math.max(1, Math.round(size / 2));   // Riders: half the models, mounted
     if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
     return size;
   }
@@ -965,7 +968,7 @@
     co.cmdRid = cmd.rid;
     keys.forEach(function (k) {
       var s = R.splitPick(k);
-      co.roster.push(newEntry(s.key, { prop: s.prop, drone: s.drone }));
+      co.roster.push(newEntry(s.key, { prop: s.prop, drone: s.drone, riders: s.riders, mount: s.mount }));
     });
     co.doctrines = doctrineId ? [doctrineId] : [];
     return foundingCheck(co);
@@ -1399,7 +1402,7 @@
     function blocking(faults) {
       return (faults || []).filter(function (f) { return !/Needs at least/.test(f) && !/No units chosen/.test(f); });
     }
-    function keyOf(e) { return R.joinPick(e.key, e.prop, e.drone); }
+    function keyOf(e) { return R.entryPick(e); }
     function take(test) {
       for (var i = 0; i < avail.length; i++) {
         var e = avail[i];

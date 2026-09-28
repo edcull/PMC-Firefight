@@ -466,6 +466,7 @@
     // put an arriving unit down and tell the player what the scenario makes of it
     function landArrival(u, p, log) {
       u.x = p.x; u.y = p.y; u.reserve = false; u.wave = 0;
+      if (E.faces(u)) u.facing = E.faceDefault(u);
       var note = E.state.scen.onArrive ? E.state.scen.onArrive(E.state, u) : null;
       var line = u.label + ' arrives' + (p.why ? ' ' + p.why : '') + (note ? ' — ' + note.text : '') + '.';
       if (log) log.push(line);
@@ -601,7 +602,7 @@
         showArrival(u);
         ui.insertion = null; ui.mode = 'idle';
         var doneA = ins.done;
-        whenIdle(function () { doneA(); });
+        E.askFacing(u.side, [u], function () { whenIdle(function () { doneA(); }); });
         return;
       }
       if (!insertionLegal(p) || R.unitNear(E.state, p.x, p.y, u, 1)) {
@@ -616,7 +617,10 @@
       logLine('note', u.label + ' comes in by Battlefield Insertion.');
       ui.insertion = null; ui.mode = 'idle';
       var done = ins.done;
-      scatterInsertion(u, function () { landUnit(u); render(); whenIdle(function () { done(); }); });
+      scatterInsertion(u, function () {
+        landUnit(u); render();
+        E.askFacing(u.side, [u], function () { whenIdle(function () { done(); }); });
+      });
     }
 
     return {

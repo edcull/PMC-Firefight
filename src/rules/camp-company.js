@@ -48,7 +48,7 @@
         for (var i = 0; i < order.length; i++) {
           var e = order[i];
           if (!test(profile(e.key), e)) continue;
-          used[e.rid] = 1; picked.push(R.joinPick(e.key, e.prop, e.drone)); pickedE.push(e);
+          used[e.rid] = 1; picked.push(R.entryPick(e)); pickedE.push(e);
           return true;
         }
         return false;
@@ -70,7 +70,7 @@
           });
           if (!alike) return true;
           if (capsAt !== picked.length) { capsAt = picked.length; capsNow = capFaults(picked); }
-          return capFaults(picked.concat([R.joinPick(e.key, e.prop, e.drone)])) <= capsNow;
+          return capFaults(picked.concat([R.entryPick(e)])) <= capsNow;
         };
       }
       var missing = [];
@@ -87,7 +87,7 @@
         })[0];
         leaders.forEach(function (e) { used[e.rid] = 1; });
         if (!lead) return { ok: false, missing: [], fault: 'Needs a Leader Bug of Tier ' + R.ROMAN[battleTier] + ' to lead a Tier ' + R.ROMAN[battleTier] + ' army.' };
-        picked.push(R.joinPick(lead.key, lead.prop, lead.drone));
+        picked.push(R.entryPick(lead));
         var lt = profile(lead.key).tier;
         // the leader counts against its own Tier's minimum
         var credit = {}; credit[lt] = 1;
@@ -119,7 +119,7 @@
         var res = R.checkArmy(picked, battleTier, pl, docs);
         if (res.ok) return { ok: true, missing: [], fault: null };
         var added = take(function (p, e) {
-          var trial = picked.concat([R.joinPick(e.key, e.prop, e.drone)]);
+          var trial = picked.concat([R.entryPick(e)]);
           var tr = R.checkArmy(trial, battleTier, pl, docs);
           // within the points, and breaking nothing the list did not already break
           return tr.spent <= comp.points * pl && tr.faults.length <= res.faults.length;
@@ -137,7 +137,7 @@
           for (var ai = 0; ai < avail.length; ai++) {
             var inn = avail[ai];
             if (used[inn.rid] || profile(inn.key).tier !== ot || inn.key === out.key) continue;
-            var trial = picked.slice(); trial[pi] = R.joinPick(inn.key, inn.prop, inn.drone);
+            var trial = picked.slice(); trial[pi] = R.entryPick(inn);
             var tr = R.checkArmy(trial, battleTier, pl, docs);
             if (tr.ok || tr.faults.length < last.faults.length) { better = { pi: pi, e: inn, pick: trial, res: tr }; break; }
           }

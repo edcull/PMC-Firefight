@@ -23,6 +23,7 @@
        into the board's working window at its full density, it now does. */
     var SPRITE_RES = 2;
     var SPR = { w: 96, h: 150, ox: 40, oy: 136 };          // cache canvas and its origin
+    var RIDE_UP = { horse: 7 };                              // how much higher than on a bike a rider sits on each mount
     var MODEL = 0.6;                                     // how large a trooper stands on its base
 
     /* Company colours. A PMC picks its own; so did every mercenary outfit that ever
@@ -362,8 +363,8 @@
       irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
       irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
       irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
-      nomad: { helm: 'std', gun: 'battlerifle', pack: 'std', cloak: true },
-      nomadlead: { helm: 'std', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
+      nomad: { helm: 'nomadhood', gun: 'battlerifle', pack: 'std', cloak: true },
+      nomadlead: { helm: 'nomadhood', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
       // penal troops: orange coveralls, a collar, and the company's armband
       convict: { helm: 'bare', gun: 'carbine', pack: 'none', collar: true, light: true, armband: 'force',
         tint: { light: '#dd8f43', mid: '#bd6c2c', dark: '#6b3a15', helm: '#a05520', cloth: '#8a5a2a' } },
@@ -570,6 +571,7 @@
        would only make them longer on the ground. */
     var LEG = 1.32;                 // how much longer the legs are drawn
     var HEAD_W = 0.86;              // and how much narrower the head
+    var NVG_LENS = '#b8f8ff', NVG_GLOW = '120,236,255';   // night-vision lenses, and the light they throw
     var HIP = -20;                  // where the legs meet the body, in art units
     var KNEEL_DROP = 11;            // how far a man down on one knee sinks, in art units
     var XENO_LOW = 13;              // how far a hunkered Xenotripod lets its body down
@@ -578,6 +580,15 @@
     function PALETTE_FORCE(pal) { return pal.force || pal.light; }
     function paintFigure(g, ox, oy, pal, kit, pose, step, s) {
       var tall = pose !== 'prone' && !kit.mount;
+      /* Lights that glow past the figure's outline (night-vision lenses), in
+         canvas pixels: handed back, for sprite() to lay on after the outline
+         and shading. */
+      var glows = [];
+      function glowAt(dx, dy, r, c) {
+        var x = dx;
+        if (tall && dy <= COLLAR && dy >= -61 && dx >= -11 && dx <= 12) x = 0.5 + (x - 0.5) * HEAD_W;
+        glows.push({ x: ox + x * s, y: oy + mapY(dy) * s, r: r * s, c: c });
+      }
       function mapY(y) {
         if (!tall) return y;
         return y >= HIP ? y * LEG : y + HIP * (LEG - 1);
@@ -628,7 +639,7 @@
          helmet up at the front over the weapon, arms out to it. Chunky, and
          ringed dark, so a squad that has hit the dirt still reads as men. */
       if (pose === 'prone') {
-        var hood = kit.helm === 'hood' || kit.helm === 'cowl' || kit.helm === 'turban' || kit.helm === 'wrap';
+        var hood = kit.helm === 'hood' || kit.helm === 'nomadhood' || kit.helm === 'cowl' || kit.helm === 'turban' || kit.helm === 'wrap';
         var bk = kit.armoured ? 2 : 0;
         P(-19, -7, 5, 4, BOOT); P(-19, -7, 5, 1, '#454b54');        // boots, one leg drawn up
         P(-18, -2, 5, 3, BOOT);
@@ -663,8 +674,9 @@
         }
         P(15, -13, 3, 3, '#8d6f4e');                                  // the face at the sight
         P(16, -12, 2, 1, '#20262d');
-        if (kit.nvg) {                                                // night-vision goggles
-          P(14, -15, 5, 3, '#1b1f24'); P(15.5, -14.2, 2.4, 1.6, '#8fd0e8');
+        if (kit.nvg) {                                                // night-vision goggles, lit
+          P(14, -15, 5, 3, '#1b1f24'); P(15.5, -14.2, 2.4, 1.6, NVG_LENS);
+          glowAt(16.7, -13.4, 4.2, NVG_GLOW);
         }
         if (kit.gun === 'long') {
           P(12, -10, 28, 2.5, GUN.dk); P(12, -10, 28, 0.8, GUN.lt);   // the rifle, on its bipod
@@ -684,11 +696,13 @@
           P(28, -9, 3, 2, GUN.lt);
           P(16, -7, 4, 3, GUN.md);                                     // its magazine
         }
-        return;
+        return glows;
       }
 
       /* ---- the mount, under everything ---- */
       PARTS.mount(P, g, kit, ox, oy, pal, pose, s, step);
+      // a horse stands taller than a bike: its rider sits up in the saddle, above its back
+      if (kit.mount === 'horse') oy -= RIDE_UP.horse * s;
 
       PARTS.legs(P, kit, pal, pose, step);
 
@@ -729,8 +743,11 @@
         P(-6, -52 + drop, 13, 1.2, '#1b1f24');           // the strap
         P(-3, -49 + drop, 10, 4, '#1b1f24');             // goggles
         P(-3, -49 + drop, 10, 1, '#4b545d');
-        P(0, -48 + drop, 3, 2, '#8fd0e8');               // lens glare
-        P(5, -48 + drop, 3, 2, '#8fd0e8');
+        P(-0.5, -48.2 + drop, 3.6, 2.6, NVG_LENS);        // the lenses, lit from within
+        P(4.5, -48.2 + drop, 3.6, 2.6, NVG_LENS);
+        P(0, -48 + drop, 1.2, 1, '#ffffff'); P(5, -48 + drop, 1.2, 1, '#ffffff');
+        P(3.1, -48.4 + drop, 1.4, 3, '#1b1f24');         // the bridge between them, dark, so they read as a pair
+        glowAt(1.3, -47 + drop, 2.7, NVG_GLOW); glowAt(6.3, -47 + drop, 2.7, NVG_GLOW);   // two eyes, each its own glow
       }
 
       /* ---- weapon, over everything ---- */
@@ -758,6 +775,7 @@
         P(-16, -36 + drop, 8, 1, '#6a8496');
         P(-19, -13 + drop, 13, 2, '#242931');
       }
+      return glows;
     }
 
 
@@ -1161,7 +1179,7 @@
       var drop = pose === 'kneel' ? KNEEL_DROP : 0, wy = -32 + drop;
       var m = MUZZLE[kit.gun] || (kit.gun === 'slate' || kit.gun === 'optics' || kit.gun === 'case' ||
         kit.gun === 'console' || kit.gun === 'shell' || kit.gun === 'none' ? [10, 4] : MUZZLE.rifle);
-      var y = wy + m[1];
+      var y = wy + m[1] - (RIDE_UP[kit.mount] || 0);
       if (!kit.mount) y = y >= HIP ? y * LEG : y + HIP * (LEG - 1);
       return [m[0], y];
     }

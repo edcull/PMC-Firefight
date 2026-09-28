@@ -399,6 +399,12 @@
                short swept stubs carrying the lift fans and no pods at all (its
                weapons ride in bays in the flanks), and a fan in the fin. */
             var cw = w * 0.86;
+            /* The front of the fuselage angles down: ahead of a hinge just
+               forward of the stub wings every point sinks, more the further
+               forward, so the nose, the glass and the chin gun all droop. */
+            var AF0 = AF, hingeC = L * 0.08, sagC = 4.5 / (L * 0.52 - hingeC);
+            var sagAt = function (p) { return p > hingeC ? (p - hingeC) * sagC : 0; };
+            AF = function (p, q) { var c = AF0(p, q); c.dz = sagAt(p); return c; };
             var cbody = [[L * 0.52, 0.001], [L * 0.36, cw * 0.62], [L * 0.16, cw], [-L * 0.2, cw], [-L * 0.32, cw * 0.55],
               [-L * 0.32, -cw * 0.55], [-L * 0.2, -cw], [L * 0.16, -cw], [L * 0.36, -cw * 0.62]];
             // the top is much narrower than the chines: the sides slope in, as a faceted hull does
@@ -431,6 +437,10 @@
               parts.push({ d: bodyD.x + bodyD.y + (sd === stubNear ? 0.001 : -0.001), fn: function () {
                 var wz = z + H * 0.42;
                 plate(AF, [[L * 0.08, sd * cw * 0.95], [-L * 0.06, sd * tipQ * 0.86], [-L * 0.16, sd * tipQ * 0.86], [-L * 0.14, sd * cw * 0.95]], wz, 1.6);
+                /* A small swept wingtip on the outside of the fan housing: a short
+                   plate, its tip raked back. Laid before the fan, so the housing
+                   covers its root. */
+                plate(AF, [[-L * 0.03, sd * (tipQ + 0.02)], [-L * 0.15, sd * (tipQ + 0.4)], [-L * 0.21, sd * (tipQ + 0.4)], [-L * 0.17, sd * (tipQ + 0.02)]], wz, 1.4);
                 fan(AF, -L * 0.1, sd * tipQ, wz + 1, 0.36, false, false, 0.3);
               } });
             });
@@ -444,7 +454,11 @@
               canopy(L * 0.04, L * 0.4, cw * 0.46, z + H * 0.78, H * 0.28);
             });
             // the chin gun, and the Gauss rails fire from it too
-            part(L * 0.45, 0, function () { noseGun(L * 0.34, 0, z + 1, 0.3, 'gun', { rail: true, also: ['rail', 'auto', 'mg'] }); });
+            part(L * 0.45, 0, function () {
+              var keep = AF; AF = AF0;                    // the gun's own frame knows nothing of the droop: it is lowered with it
+              noseGun(L * 0.34, 0, z + 1 - sagAt(L * 0.34), 0.3, 'gun', { rail: true, also: ['rail', 'auto', 'mg'] });
+              AF = keep;
+            });
             break;
           }
           case 'jet': case 'hybrid': {
