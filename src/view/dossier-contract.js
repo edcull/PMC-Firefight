@@ -183,7 +183,7 @@
     }
     function contractView() {
       var A = E.camp.companies.A, B = E.camp.companies.B;
-      var keys = E.contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
+      var keys = E.contract.picks.map(function (e) { return R.entryPick(e); });
       var chk = R.checkArmy(keys, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null);
       var roll = E.contract.tierRoll;
       var h = '<h2>Contract</h2>';
@@ -301,7 +301,7 @@
       if (!avail.length) h += '<p class="dnote">Every unit on the books is already in the list.</p>';
       avail.forEach(function (e) {
         var p = profile(e.key);
-        var trial = keys.concat([R.joinPick(e.key, e.prop, e.drone)]);
+        var trial = keys.concat([R.entryPick(e)]);
         var bad = blocking(R.checkArmy(trial, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
         h += '<button class="cu" data-pick="' + e.rid + '"' +
           (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
@@ -379,7 +379,7 @@
       // a rebel rival picks a tactic of its own, the way a player would (p. 95)
       var theirTactic = B.faction === 'rebel' ? [null, 'laststand', 'wave', 'guerillas'][Math.floor(Math.random() * 4)] : null;
       var theirs = autoPick(B, E.contract.tier, E.contract.pl, theirTactic);
-      if (!R.checkArmy(theirs.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
+      if (!R.checkArmy(theirs.map(function (e) { return R.entryPick(e); }),
         E.contract.tier, E.contract.pl, B.doctrines, theirTactic).ok) {
         // the rival cannot field a legal list — let it hire in for this battle
         C.developRival(B);
@@ -406,8 +406,8 @@
         scenario: E.contract.scenario.id,
         // the attacker and defender were settled when the contract was taken
         roles: E.contract.roles || null,
-        armyA: E.contract.picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
-        armyB: theirs.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); }),
+        armyA: E.contract.picks.map(function (e) { return R.entryPick(e); }),
+        armyB: theirs.map(function (e) { return R.entryPick(e); }),
         nameA: A.name, nameB: B.name,
         colourA: colourOf(A), colourB: colourOf(B),
         dossier: { A: E.contract.picks, B: theirs },

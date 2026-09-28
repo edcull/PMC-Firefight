@@ -314,6 +314,12 @@ async function main() {
     const st = a.state;
     if (!st) break;
     const sel = st.ui;
+    // a vehicle just come on: it keeps the way it was offered
+    if (st.faceAsk) {
+      both[st.faceAsk.side].send('intent', { intent: { k: 'vfaceall' } });
+      await both[st.faceAsk.side].answered();
+      continue;
+    }
     if (sel.insertion) {
       const side = sel.insertion.side;
       const spot = (sel.insertion.spots || [])[0];

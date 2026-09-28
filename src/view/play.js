@@ -119,7 +119,7 @@
       if (R.isMachine(u)) u.aim = null;
       var dig = burrows(u);
       anims.push({
-        kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
+        kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff() && B.followOn(),
         dur: dig ? MOTION.burrowMs(total) : moveMs(u, total),
         t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0, done: done || null
       });

@@ -125,6 +125,7 @@
        otherwise be shown getting up off the ground — falls out of the sky the
        way a hull does. */
     function landUnit(u) {
+      if (K.faces(u)) u.facing = K.faceDefault(u);
       var orbit = state.scen.id === 'invasion' && state.sc && u.side === state.sc.attacker;
       V.arrive(u, orbit ? 'orbital' : 'drop');
       greet(u);
@@ -226,7 +227,7 @@
     var draining = false, paced = false;
     function canAI() {
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.kyfAsk && isAI(state.activeSide);          // a player's Martyrdom answer holds the AI's charge
+        !state.martyrAsk && !state.kyfAsk && !state.faceAsk && isAI(state.activeSide);          // a player's Martyrdom answer holds the AI's charge
     }
     function maybeAI() {
       if (draining || !canAI()) return;
@@ -660,7 +661,11 @@
     ui.deployPick = null;
     if (SFX) SFX.step();
     var left = rl.cap - rl.moved.length;
-    setHint(null, left > 0 ? 'Rapid Relocation: ' + left + ' more unit' + (left === 1 ? '' : 's') + ' may move.' : 'Rapid Relocation: that is half the force. Begin the battle.');
+    function relocHint() {
+      setHint(null, left > 0 ? 'Rapid Relocation: ' + left + ' more unit' + (left === 1 ? '' : 's') + ' may move.' : 'Rapid Relocation: that is half the force. Begin the battle.');
+    }
+    if (K.askFacing(rl.side, [pick], function () { relocHint(); render(); })) return;
+    relocHint();
     render();
   }
 
@@ -1309,6 +1314,11 @@
        send it and when; anything else comes back as a refusal rather than a
        silent no-op, so a client that is out of step is told so. */
     function no(why) { return { ok: false, why: why }; }
+    /* Getting on with the deployment (placing the next unit, beginning the
+       battle) with a vehicle's facing still unanswered keeps the way offered. */
+    function settleFacing() {
+      for (var n = 0; state.faceAsk && state.phase === 'deploy' && n < 99; n++) K.answerFacing(null);
+    }
     var yes = { ok: true };
 
     function mayDeploy(side) {
@@ -1328,7 +1338,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk || state.faceAsk) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -1410,6 +1420,7 @@
       if (state.swapStage) return no('the armies are still being modified');
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();   // placing a unit keeps the list
       if (!mayDeploy(side)) return no('not your turn to place');
+      settleFacing();
       return deployAt(side, it);
     });
     on('autosplit', null, function (side, it) {
@@ -1471,8 +1482,10 @@
       if (state.swapStage) return no('the armies are still being modified');
       // deploying straight away means keeping the list as it is
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();
+      var hand = state.units.filter(function (u) { return u.side === side && u.x < 0; });
       K.autoDeploy(side);
-      render();
+      // placed for the player, but which way each hull faces is still theirs to say
+      if (!K.askFacing(side, hand.filter(function (u) { return u.x >= 0; }), null, true)) render();
       return yes;
     });
     on('load', null, function (side, it) {
@@ -1568,6 +1581,7 @@
       if (state.phase !== 'deploy') return no('already under way');
       if (state.minePick) return no('the mined piece has not been chosen');
       if (state.placeAsk) return no('there are pieces still to place');
+      settleFacing();
       if (state.swapStage) return no('the armies are still being modified');
       if (state.swapAsk) K.swapsDone();
       if (!K.deploymentDone()) return no('there are still units to place');
@@ -1706,6 +1720,14 @@
       K.finishStance(ui.selected, R.nearestFacing(it.dir));
       return yes;
     });
+    on('vface vfaceall', null, function (side, it) {
+      // which way a vehicle just put down faces; 'vfaceall' keeps the one offered for it and any still to ask about
+      var fa = state.faceAsk;
+      if (!fa || fa.side !== side) return no('nothing to face');
+      if (it.k === 'vface' && (typeof it.dir !== 'number' || !isFinite(it.dir))) return no('which way?');
+      K.answerFacing(it.k === 'vface' ? it.dir : null);
+      return yes;
+    });
     on('cancel', 'act', function (side, it) {
       // a marker's second call, let go
       if (state.remark && state.remark.side === side) { K.declineSecondMark(); return yes; }
@@ -1767,7 +1789,7 @@
       pending.bld = null; pending.sec = null;
       pending.x = p.x; pending.y = p.y;
       ui.deployPick = null;
-      render();
+      if (!K.askFacing(side, [pending])) render();
       return yes;
     }
 

@@ -470,20 +470,30 @@
     var f = (co && co.faction) || 'pmc';
     if (f === 'xeno') return { tier: 'Tribe', force: 'tribe', Force: 'Tribe', side: 'Xenotripods', money: 'TP',
       moneyLong: 'Territorial Points', cmd: 'Alpha squad', recruit: 'Recruit', recruited: 'recruited',
-      honour: 'Rite', honours: 'Rites', trauma: 'Infamy', traumas: 'Infamies', unitWord: 'unit' };
+      honour: 'Rite', honours: 'Rites', trauma: 'Infamy', traumas: 'Infamies', unitWord: 'unit',
+      memorial: 'Temple', memorialSub: 'Every warrior gone to the ancestors or carried off scarred, battle by battle',
+      kia: 'ascended', wia: 'scarred', kiaLong: 'Ascended to the ancestors', wiaLong: 'Scarred, and gone from the hunt', kiaTag: 'Ascended', wiaTag: 'Scarred' };
     if (f === 'bugs') return { tier: 'Swarm', force: 'swarm', Force: 'Swarm', side: 'Space Bugs', money: 'RP',
       moneyLong: 'Resource Points', cmd: 'Leader Bug', recruit: 'Spawn', recruited: 'spawned',
-      honour: 'Adaptation', honours: 'Adaptations', trauma: 'Genetic Flaw', traumas: 'Genetic Flaws', unitWord: 'bug unit' };
+      honour: 'Adaptation', honours: 'Adaptations', trauma: 'Genetic Flaw', traumas: 'Genetic Flaws', unitWord: 'bug unit',
+      memorial: 'Biomass', memorialSub: 'The biomass spent over the campaign' };
     if (f === 'rebel') return { tier: 'Revolt', force: 'revolt', Force: 'Revolt', side: 'Insurgents', money: 'IP',
       moneyLong: 'Influence Points', cmd: 'First Among Equals', recruit: 'Recruit', recruited: 'recruited',
-      honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit' };
+      honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit',
+      memorial: 'Field hospital', memorialSub: 'Everyone killed or wounded, battle by battle',
+      kia: 'killed', wia: 'wounded', kiaLong: 'Killed in action', wiaLong: 'Wounded, out for the campaign', kiaTag: 'KIA', wiaTag: 'WIA' };
     return { tier: 'Company', force: 'company', Force: 'Company', side: 'Mercenaries', money: 'kUC',
       moneyLong: 'thousand Universal Credits', cmd: 'field command', recruit: 'Recruit', recruited: 'recruited',
-      honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit' };
+      honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit',
+      memorial: 'Field hospital', memorialSub: 'Everyone killed or wounded, battle by battle',
+      kia: 'killed', wia: 'wounded', kiaLong: 'Killed in action', wiaLong: 'Wounded, out for the campaign', kiaTag: 'KIA', wiaTag: 'WIA' };
   }
   /* Influence Points and thousand Universal Credits are the same number with
      different names (p. 110), so the roster keeps one field and this names it. */
   function money(co) { return words(co).money; }
+  /* What a casualty is called: the tribe's Crocks ascend or are scarred, but
+     its Esh-Aven are only killed or wounded, as anyone else's soldiers are. */
+  function fateWords(co, pool) { return words(pool === 'eshaven' ? null : co); }
 
   function profile(key) { return R.profile(key); }
 
@@ -712,6 +722,8 @@
     var p = profile(key);
     return {
       rid: opts.rid || rid(), key: key, prop: opts.prop || null,
+      // what it rides: the Riders upgrade where it may take it, and on what (p. 93, Appendix 3)
+      riders: !!opts.riders, mount: opts.mount || null,
       // a Drone unit, or a craft only ever flown as a drone, is one from the start (pp. 40, 82)
       drone: !!opts.drone || !!(p && (p.mustDrone || (p.rules || []).indexOf('Drone unit') >= 0)),
       name: opts.name || p.name, exp: 0, tp: 0,
@@ -731,6 +743,7 @@
     var p = profile(entry.key);
     if (!p) return 0;
     var size = p.cls === 'infantry' ? p.size : 1;
+    if (entry.riders && R.canRide(p)) size = Math.max(1, Math.round(size / 2));   // Riders: half the models, mounted
     if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
     return size;
   }
@@ -802,7 +815,7 @@
   }
   function addLoss(co, pool, key, n) {
     var L = losses(co), b = L[pool] || (L[pool] = { lost: 0, departed: 0 });
-    b[key] += n;
+    b[key] = (b[key] || 0) + n;
   }
   function lossStats(co) {
     var L = losses(co);
@@ -816,8 +829,12 @@
       var now = (co.roster || []).reduce(function (n, e) {
         return n + (poolOf(profile(e.key)) === pool ? massOf(e, co) : 0);
       }, 0);
-      var served = now + lost + b.departed;
-      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0, countOnly: !!COUNT_ONLY[pool] };
+      var served = now + lost + (pool === 'biomass' ? 0 : b.wounded || 0) + b.departed;
+      /* `lost` is the dead, and the wounded are out of the campaign too:
+         both were replaced, so both are counted as having served. */
+      var wounded = pool === 'biomass' ? 0 : b.wounded || 0;
+      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, wounded: wounded, served: served,
+        pct: served ? lost / served : 0, wpct: served ? wounded / served : 0, countOnly: !!COUNT_ONLY[pool] };
     });
   }
   /* How seasoned the force is: every honour held on the books against the
@@ -965,7 +982,7 @@
     co.cmdRid = cmd.rid;
     keys.forEach(function (k) {
       var s = R.splitPick(k);
-      co.roster.push(newEntry(s.key, { prop: s.prop, drone: s.drone }));
+      co.roster.push(newEntry(s.key, { prop: s.prop, drone: s.drone, riders: s.riders, mount: s.mount }));
     });
     co.doctrines = doctrineId ? [doctrineId] : [];
     return foundingCheck(co);
@@ -1090,7 +1107,7 @@
   var KIT_AFTERMATH = null;
   function kitAftermath() {
     return KIT_AFTERMATH || (KIT_AFTERMATH = (root.PMCCampAftermath || require('./camp-aftermath.js'))({
-      ATTACK_DEFEND: ATTACK_DEFEND, R: R, SCENARIOS: SCENARIOS, addLoss: addLoss, biomassTally: biomassTally,
+      ATTACK_DEFEND: ATTACK_DEFEND, R: R, SCENARIOS: SCENARIOS, addLoss: addLoss, words: words, fateWords: fateWords, biomassTally: biomassTally,
       byRid: byRid, canFieldArmy: canFieldArmy, d3: d3, d6: d6, developRival: developRival, expFor: expFor,
       hasDoctrine: hasDoctrine, hasTraumaFlag: hasTraumaFlag, isLeaderP: isLeaderP, manned: manned,
       newCompany: newCompany, newEntry: newEntry, payment: payment, pick: pick, poolOf: poolOf, POOL_NAMES: POOL_NAMES,
@@ -1399,7 +1416,7 @@
     function blocking(faults) {
       return (faults || []).filter(function (f) { return !/Needs at least/.test(f) && !/No units chosen/.test(f); });
     }
-    function keyOf(e) { return R.joinPick(e.key, e.prop, e.drone); }
+    function keyOf(e) { return R.entryPick(e); }
     function take(test) {
       for (var i = 0; i < avail.length; i++) {
         var e = avail[i];
@@ -1489,7 +1506,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, fateWords: fateWords, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand, rerankMen: rerankMen,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,

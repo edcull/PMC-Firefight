@@ -32,7 +32,7 @@
           var dis = C.canDisband(co, e);
           acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
           if (spend) acts += spend;
-          h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
+          h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true, portrait: open });
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {
@@ -65,14 +65,31 @@
         if (!st.served) return '';
         // penal troopers are counted apart, and not in the loss rate
         if (st.countOnly) return st.lost ? '<div class="dloss"><b>' + st.lost + '</b> ' + st.unit + ' killed <span>not counted as losses</span></div>' : '';
-        var pct = Math.round(st.pct * 1000) / 10;
-        return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
+        var pct = Math.round(st.pct * 1000) / 10, wpct = Math.round(st.wpct * 1000) / 10, W = C.fateWords(co, st.pool);
+        // the swarm's is biomass, and a bug is not wounded: it is lost or it is not
+        if (st.pool === 'biomass') return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
+        return '<div class="dloss"><b>' + pct + '%</b> ' + W.kia + ' <b class="wia">' + wpct + '%</b> ' + W.wia + ' <span>' + st.lost + ' ' + W.kia + ', ' +
+          st.wounded + ' ' + W.wia + ', of ' + st.served + ' ' + st.unit + '</span></div>';
       }).join('');
     }
     function memorialList(co) {
       if (co.faction === 'bugs') return biomassList(co);
-      var list = co.memorial || [];
-      if (!list.length) return lossLine(co) + '<p class="dnote">No one has been lost yet.</p>';
+      // (a drone squad's losses were put on it by older saves: they were never anyone)
+      var list = (co.memorial || []).filter(function (m) {
+        var p = R.CATALOGUE.filter(function (q) { return q.name === m.type; })[0];
+        return !p || !(p.group === 'Drones' || (p.rules || []).indexOf('Drone unit') >= 0);
+      });
+      if (!list.length) return lossLine(co) + '<p class="dnote">No one has been ' + (co.faction === 'xeno' ? 'lost to the hunt' : 'killed or wounded') + ' yet.</p>';
+      var W = C.words(co);
+      // killed or wounded; an entry from before the roll was made is one of the dead
+      function tag(kia, w) { w = w || W; return '<span class="dfate ' + (kia ? 'kia' : 'wia') + '">' + (kia ? w.kiaTag : w.wiaTag) + '</span>'; }
+      // the Tier an entry was lost at; one from before it was kept is read off the profile by name
+      function tierOf(m) {
+        if (m.tier) return m.tier;
+        var p = R.CATALOGUE.filter(function (q) { return q.name === m.type; })[0];
+        return p && p.tier;
+      }
+      var WA = C.fateWords(co, 'eshaven');     // the unnamed are the Esh-Aven, or penal troopers: killed or wounded
       var SCx = root.PMCScen, battles = {}, order = [];
       list.forEach(function (m) {
         if (!battles[m.battle]) { battles[m.battle] = []; order.push(m.battle); }
@@ -87,8 +104,9 @@
         ms.forEach(function (m) {
           if (!m.anon) { out.push(m); return; }
           var key = m.type + '|' + (m.noun || '');
-          if (seen[key]) { seen[key].count += m.count || 0; seen[key].squads++; return; }
-          seen[key] = { anon: true, type: m.type, noun: m.noun, count: m.count || 0, squads: 1, unit: m.unit };
+          var k = m.kia != null ? m.kia : m.count || 0, w = m.wounded || 0;
+          if (seen[key]) { seen[key].count += m.count || 0; seen[key].kia += k; seen[key].wounded += w; seen[key].squads++; return; }
+          seen[key] = { anon: true, type: m.type, noun: m.noun, count: m.count || 0, kia: k, wounded: w, squads: 1, unit: m.unit, tier: m.tier };
           out.push(seen[key]);
         });
         return out;
@@ -100,14 +118,17 @@
           (first.against ? ' · against ' + esc(first.against) : '') + (sc ? ' · ' + esc(sc.name) : '') +
           '<span class="mk">' + ms.reduce(function (k, m) { return k + (m.count || 1); }, 0) + '</span></div><ol class="dmem-list">' +
           ms.map(function (m) {
+            /* One line each: killed or wounded, rank, name, Tier and the unit.
+               The unnamed are a count of each fate for the kind of trooper. */
+            var tier = tierOf(m), dot = '<i class="dmem-dot"> \u00b7 </i>';
+            var tail = (tier ? dot + '<span class="dmem-tier">Tier ' + ROMAN[tier] + '</span>' : '') +
+              dot + '<span class="dmem-unit">' + (m.squads > 1 ? m.squads + ' squads' : esc(m.unit || m.type)) + '</span>';
             if (m.anon) {
-              return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' ' + esc(m.noun || 'Esh-Aven') + '</span>' +
-                (m.squads > 1 ? '<span class="dmem-type">' + m.squads + ' squads</span>'
-                  : m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
+              return '<li>' + (m.kia ? tag(true, WA) + ' ' + m.kia : '') + (m.kia && m.wounded ? ' ' : '') +
+                (m.wounded ? tag(false, WA) + ' ' + m.wounded : '') + dot + '<b>' + esc(m.noun || 'Esh-Aven') + '</b>' + tail + '</li>';
             }
-            return '<li><span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
-              '<span class="dmem-type">' + esc(m.type) + (m.unit && m.unit !== m.type ? ' \u00b7 ' + esc(m.unit) : '') +
-              ' \u00b7 turn ' + (m.turn || 1) + ' of the battle</span></li>';
+            return '<li>' + tag(m.fate !== 'wounded') + dot + '<span class="dmem-rank">' + esc(m.rank) + '</span>' + dot +
+              '<b>' + esc(m.name) + '</b>' + tail + '</li>';
           }).join('') + '</ol></div>';
       });
       return h;
@@ -137,6 +158,9 @@
       if (!p) return '';
       var base = Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size, side: 'A', cargo: [] });
       base = R.applyDrone(R.applyPropulsion(base, e.prop || R.defaultDrive(p)), !!e.drone);
+      var riding = !!e.riders && R.canRide(p);
+      base = R.applyRiders(base, riding);
+      if (R.canMount(p, riding)) R.applyMount(base, e.mount || 'none');
       var was = Object.assign({}, base, { rules: base.rules.slice() });
       var u = C.applyEntry(Object.assign({}, base, { rules: base.rules.slice() }), e, co.doctrines || []);
       var mach = p.cls !== 'infantry';
@@ -157,6 +181,18 @@
             (c.d ? '<sup>' + (c.d > 0 ? '+' : '') + c.d + '</sup>' : '') + '</td>';
         }).join('') + '</tr></table>';
       if (u.defPierced != null) h += '<p class="ddet-note">Defence ' + u.defPierced + ' against Anti-tank and Gauss weapons.</p>';
+      /* What it rides, changed here between battles: the Riders upgrade where
+         the unit may take it, and a motorbike, grav bike or horse once it rides. */
+      if (R.canRide(p) || R.canMount(p, riding)) {
+        h += '<h5>Mounted</h5><div class="ddet-ride">';
+        if (R.canRide(p)) h += '<button class="lnk' + (riding ? ' on' : '') + '" data-eriders="' + e.rid + '">' +
+          (riding ? 'Mounted (Riders) \u2014 dismount' : 'On foot \u2014 take the Riders upgrade') + '</button>';
+        if (R.canMount(p, riding)) h += R.MOUNT_ORDER.map(function (m) {
+          return '<button class="lnk' + ((e.mount || 'none') === m ? ' on' : '') + '" data-emount="' + e.rid + '" data-m="' + m + '" title="' +
+            esc(R.MOUNTS[m].note) + '">' + esc(R.MOUNTS[m].name) + '</button>';
+        }).join('');
+        h += '</div>';
+      }
 
       var TXT = root.PMCRuleText;
       h += '<h5>Special rules</h5>';

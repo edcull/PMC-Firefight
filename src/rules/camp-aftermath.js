@@ -13,7 +13,7 @@
         poolOf = E.poolOf, POOL_NAMES = E.POOL_NAMES, poolsFor = E.poolsFor, profile = E.profile, recruitCost = E.recruitCost,
         rollTP = E.rollTP, rollTrauma = E.rollTrauma, salvage = E.salvage, shuffle = E.shuffle,
         tpFor = E.tpFor, traumaTable = E.traumaTable, traumaThreshold = E.traumaThreshold,
-        weakCandidates = E.weakCandidates, weightOf = E.weightOf;
+        weakCandidates = E.weakCandidates, weightOf = E.weightOf, words = E.words, fateWords = E.fateWords;
 
     /* ================= the aftermath =================
        Takes a battle report and applies every book step in order, returning a
@@ -68,11 +68,39 @@
            and is not a loss. */
         var keyOf = {}, lostBy = {};
         (report.units || []).forEach(function (l) { if (l.side === side) keyOf[l.rid] = l.key; });
+        /* A drone squad's models are machines, however they are named on the
+           table: they are not the force's losses, and nobody mourns them. Worked
+           out now, while every unit that fought is still on the books. */
+        var noMen = {};
         casualties.forEach(function (c) {
           if (c.side !== side) return;
-          var n = c.count || 1, p = profile(keyOf[c.rid]);
+          var e = byRid(co, c.rid);
+          if (e && manned(e, co) === 0) noMen[c.rid] = 1;
+        });
+        /* Killed or wounded: a D6 for every soldier lost, a vehicle's crew
+           included, a 1 killed in action and 2-6 wounded. Either way they are
+           out of the campaign, replaced free like any casualty, and both go on
+           the field hospital's list. Penal troopers die by their collars:
+           those are all killed. Rolled once, and kept on the report. */
+        casualties.forEach(function (c) {
+          if (c.side !== side || noMen[c.rid] || c.swarm || c.kia != null) return;
+          var p = profile(keyOf[c.rid]), n = c.count || 1;
+          if (!p || poolOf(p) === 'penal') { c.kia = n; c.wounded = 0; return; }
+          c.rolls = [];
+          for (var i = 0; i < n; i++) c.rolls.push(d6());
+          c.kia = c.rolls.filter(function (r) { return r === 1; }).length;
+          c.wounded = n - c.kia;
+          if (!c.anon) { c.roll = c.rolls[0]; c.fate = c.kia ? 'kia' : 'wounded'; }
+        });
+        casualties.forEach(function (c) {
+          if (c.side !== side) return;
+          if (noMen[c.rid]) return;
+          var n = c.count || 1, p = profile(keyOf[c.rid]), w = p ? weightOf(p) : 1, pool = p ? poolOf(p) : poolsFor(co)[0];
+          // the swarm's is its biomass tally
           lostBy[c.rid] = (lostBy[c.rid] || 0) + n;
-          if (!c.swarm) addLoss(co, p ? poolOf(p) : poolsFor(co)[0], 'lost', n * (p ? weightOf(p) : 1));   // the swarm's is its biomass tally
+          if (c.swarm) return;
+          if (c.kia) addLoss(co, pool, 'lost', c.kia * w);
+          if (c.wounded) addLoss(co, pool, 'wounded', c.wounded * w);
         });
         // a unit that leaves the books takes its survivors with it
         function leaves(e) {
@@ -151,9 +179,14 @@
             u.casualties = cas;
             var mass = cas.reduce(function (n, c) { return n + (c.mass != null ? c.mass : c.count); }, 0);
             var bodies = cas.reduce(function (n, c) { return n + (c.count || 0); }, 0);
+            var named = function (f) {
+              return cas.filter(function (c) { return c.fate === f; }).map(function (c) { return c.rank + ' ' + c.name; }).join(', ');
+            };
+            var W = words(co), WA = fateWords(co, poolOf(profile(entry.key))), kiaN = cas.reduce(function (n, c) { return n + (c.kia || 0); }, 0);
+            var wiaN = cas.reduce(function (n, c) { return n + (c.wounded || 0); }, 0);
             entry.history.push(cas[0].swarm ? (mass ? 'Biomass lost: ' + mass + '.' : 'Lost ' + bodies + '.')
-              : cas[0].anon ? 'Lost ' + bodies + ' ' + POOL_NAMES[poolOf(profile(entry.key))] + '.'
-              : 'Casualties: ' + cas.map(function (c) { return c.rank + ' ' + c.name; }).join(', ') + '.');
+              : cas[0].anon ? 'Lost ' + bodies + ' ' + POOL_NAMES[poolOf(profile(entry.key))] + ' (' + kiaN + ' ' + WA.kia + ', ' + wiaN + ' ' + WA.wia + ').'
+              : [kiaN ? W.kiaLong + ': ' + (named('kia') || kiaN) + '.' : '', wiaN ? W.wiaLong + ': ' + named('wounded') + '.' : ''].filter(Boolean).join(' '));
           }
           if (line.men && !line.landed) entry.men = line.men.slice();   // a landing's passengers are all still there
 
@@ -302,7 +335,7 @@
         /* The memorial: every soldier the force has lost, battle by battle, kept
            for the whole campaign — including those of units that are gone. */
         co.memorial = co.memorial || [];
-        casualties.filter(function (c) { return c.side === side; }).forEach(function (c) {
+        casualties.filter(function (c) { return c.side === side && !noMen[c.rid]; }).forEach(function (c) {
           // the swarm keeps a tally of biomass by kind of bug instead of names
           if (c.swarm) {
             var tally = co.biomass = biomassTally(co);
@@ -313,12 +346,15 @@
           // the Esh-Aven and penal troopers go on it unnamed, as a count for the unit
           if (c.anon) {
             var cp = R.CATALOGUE.filter(function (q) { return q.name === c.type; })[0];
-            co.memorial.push({ anon: true, count: c.count, type: c.type, unit: c.unit, noun: POOL_NAMES[poolOf(cp)],
+            co.memorial.push({ anon: true, count: c.count, kia: c.kia, wounded: c.wounded, type: c.type, unit: c.unit, noun: POOL_NAMES[poolOf(cp)],
+              tier: cp && cp.tier,
               battle: out.turn, against: foe.name, scenario: report.scenario });
             return;
           }
           co.memorial.push({
+            fate: c.kia ? 'kia' : 'wounded', roll: c.roll,
             name: c.name, rank: c.rank, type: c.type, unit: c.unit, turn: c.turn,
+            tier: (profile(keyOf[c.rid]) || {}).tier,
             battle: out.turn, against: foe.name, scenario: report.scenario
           });
         });

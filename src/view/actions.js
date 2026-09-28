@@ -88,7 +88,21 @@
         if (B.state && B.state.cfg.mode === 'demo') feedToNewest(host);   // a demo is watched as it happens
       });
       ui.feedUnread = (ui.feedUnread || 0) + 1;
-      markFeedTab();
+      /* On a phone, a result that lands in the battle brings the Results tab to
+         the front — unless the Actions tab is asking this screen's player
+         something, which would be hidden. (Setting up, the deployment list
+         stays where it is.) Picking a unit brings the actions back. */
+      if (window.innerWidth <= 1000 && B.state && B.state.phase === 'battle' && !askingHere()) setMTab('res');
+      else markFeedTab();
+    }
+    // a question on the Actions tab waiting on a player at this screen
+    function askingHere() {
+      var s = B.state || {};
+      if (ui.insertion || ui.reservePick || ui.preview) return true;
+      return ['faceAsk', 'cmdOffer', 'standAsk', 'martyrAsk', 'kyfAsk', 'placeAsk', 'minePick', 'swapAsk'].some(function (k) {
+        var a = s[k];
+        return !!a && (a.side == null || !B.isAI(a.side));
+      });
     }
     /* The feed stacks newest first, at the top, but a scrolled list stays where
        it is as cards land: this brings the newest back into view. (A reversed

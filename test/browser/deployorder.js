@@ -111,6 +111,8 @@ async function newGame(p, cfg) {
 
   const shifted = await p.evaluate(() => {
     const s = window.PMC_STATE();
+    // a vehicle put down is asked which way it faces first: it keeps the way offered
+    if (s.faceAsk) window.__sendIntent({ k: 'vfaceall' });
     const down = s.units.find(u => u.side === 'A' && u.x >= 0 && !u.reserve);
     const was = { x: down.x, y: down.y };
     // tap the model already on the table: it should be picked up, not overwritten

@@ -181,12 +181,21 @@
   }
   var ROMAN = R.ROMAN;
   var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
-  // the memorial: a headstone
   // the other forces: two banners
   var ICON_FORCES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h9l-2 3.5 2 3.5H5"/><path d="M19 21V9"/><path d="M19 9h-6"/><path d="M13 9l1.5 2.5L13 14h6"/></svg>';
   // the battles fought: crossed swords
   var ICON_BATTLES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M9.5 17.5L21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6"/><path d="M8 16l-4 4"/><path d="M5 21l-2-2"/></svg>';
-  var ICON_MEMORIAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V9a5 5 0 0 1 10 0v12"/><path d="M4 21h16"/><path d="M12 9v6"/><path d="M9.5 11.5h5"/></svg>';
+  /* Where the force keeps its casualties: a company's or a revolt's field
+     hospital (a tent with a red cross), the tribe's temple (a stepped shrine
+     with its fire), and the swarm's biomass (a cluster of cells). */
+  var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+  var ICON_HOSPITAL = SVG_OPEN + '<path d="M2.5 20.5L12 4l9.5 16.5"/><path d="M1.5 20.5h21"/><path d="M12 11v6.5M8.75 14.25h6.5"/></svg>';
+  var ICON_TEMPLE = SVG_OPEN + '<path d="M2.5 21h19"/><path d="M4.5 21v-4h15v4"/><path d="M7 17v-4h10v4"/><path d="M9.5 13V9.5h5V13"/><path d="M12 9.5c-1.6-1.3-1.6-3.2 0-5.5 1.6 2.3 1.6 4.2 0 5.5z"/></svg>';
+  var ICON_BIOMASS = SVG_OPEN + '<circle cx="9" cy="9.5" r="5.5"/><circle cx="16.8" cy="15.8" r="4"/><circle cx="7.2" cy="18.8" r="2.2"/><circle cx="8" cy="8.5" r="1.2"/><circle cx="17.3" cy="15.2" r="0.9"/></svg>';
+  function memorialIcon(co) {
+    var f = (co && co.faction) || 'pmc';
+    return f === 'bugs' ? ICON_BIOMASS : f === 'xeno' ? ICON_TEMPLE : ICON_HOSPITAL;
+  }
   // managing the campaign's file: a folder with a gear
   var ICON_MANAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3"/><path d="M3 7v10a2 2 0 0 0 2 2h7"/><circle cx="18" cy="17" r="2.2"/><path d="M18 12.8v1.6M18 19.6v1.6M13.8 17h1.6M20.6 17h1.6M15 14l1.1 1.1M19.9 18.9L21 20M15 20l1.1-1.1M19.9 15.1L21 14"/></svg>';
   // recruiting: a plus
@@ -288,6 +297,10 @@
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     h += '</div>';
+    /* Opened, the card's own facts sit in a column on the left — experience and
+       trauma, its honours and traumas, what can be done with it — and the unit
+       as it stands on the table on the right; its full sheet follows below. */
+    if (opts.portrait) h += '<div class="dsplit"><div class="dleft">';
     if (!C.isLeaderP(p) && !(co.faction === 'xeno' && (p.rules || []).indexOf('Turret') >= 0)) {
       h += '<div class="dbars">' +
         '<span class="dexp">' + e.exp + ' EXP</span>';
@@ -313,6 +326,12 @@
     });
     if (marks.length) h += '<div class="dmarks">' + marks.join('') + '</div>';
     if (opts.actions) h += '<div class="dacts">' + opts.actions + '</div>';
+    if (opts.portrait) {
+      h += '</div><canvas class="dportrait" data-key="' + esc(e.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +
+        ' data-colour="' + esc(colourOf(co)) + '"' + (e.prop ? ' data-prop="' + esc(e.prop) + '"' : '') + (e.drone ? ' data-drone="1"' : '') +
+        (e.riders ? ' data-riders="1"' : '') + (e.mount ? ' data-mount="' + esc(e.mount) + '"' : '') +
+        ' role="img" aria-label="' + esc(p.name) + '"></canvas></div>';
+    }
     if (opts.men) h += opts.men;
     h += '</div>';
     return h;
@@ -323,7 +342,7 @@
   function kitHub() {
     return KIT_HUB || (KIT_HUB = root.PMCDossierHub({
       C: C, ICON_ABANDON: ICON_ABANDON, ICON_BATTLES: ICON_BATTLES, ICON_FORCES: ICON_FORCES,
-      ICON_LOAD: ICON_LOAD, ICON_MANAGE: ICON_MANAGE, ICON_MEMORIAL: ICON_MEMORIAL, ICON_SAVE: ICON_SAVE,
+      ICON_LOAD: ICON_LOAD, ICON_MANAGE: ICON_MANAGE, memorialIcon: memorialIcon, ICON_SAVE: ICON_SAVE,
       ROMAN: ROMAN, Store: Store, cmodal: cmodal, coin: coin, colourName: colourName, colourOf: colourOf,
       dossierPanel: dossierPanel, entryCard: entryCard, esc: esc, memorialList: memorialList,
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
@@ -454,6 +473,7 @@
       }
     }
     showCard = null;
+    paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
     var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
@@ -463,6 +483,46 @@
   }
 
   function findEntry(co, rid) { return C.byRid(co, rid); }
+
+  /* A unit opened on the roster, drawn by the game's own renderer as the unit
+     atlas draws it: a squad ready, a machine facing south-east on its running
+     gear, in the force's colours, and riding whatever it rides. */
+  function paintPortraits(body) {
+    var I = root.PMCIso;
+    if (!I || !I.drawUnit) return;
+    Array.prototype.forEach.call(body.querySelectorAll('canvas.dportrait'), function (cv) {
+      var p = profile(cv.dataset.key);
+      if (!p || !cv.getContext) return;
+      var dpr = Math.min(2, root.devicePixelRatio || 1);
+      var W = cv.clientWidth || 150, H = cv.clientHeight || 130;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      var g = cv.getContext('2d');
+      if (!g) return;
+      var side = cv.dataset.side || 'A';
+      if (I.PALETTE[side] !== I.COLOURS[cv.dataset.colour]) I.setSideColour(side, cv.dataset.colour);
+      var th = Math.PI / 4, fu = Math.cos(th), fv = 2 * Math.sin(th);             // south-east on the screen
+      var u = Object.assign({}, p, { id: 'P' + p.key, side: side, facing: Math.atan2(fv - fu, fu + fv), alive: true, damage: 0, sp: 0,
+        cargo: [], rules: (p.rules || []).slice(), models: p.size, x: 10, y: 10, drone: !!cv.dataset.drone });
+      var mach = p.cls === 'vehicle' || p.cls === 'aircraft';
+      if (p.cls === 'vehicle' && p.faction !== 'bugs' && p.faction !== 'xeno') R.applyPropulsion(u, cv.dataset.prop || (R.lookDrive && R.lookDrive(p)) || 'wheeled');
+      if (cv.dataset.riders) R.applyRiders(u, true);
+      if (cv.dataset.mount) u.mount = cv.dataset.mount;
+      var walker = u.prop === 'walker';
+      var mag = mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55;
+      var ground = H - (mach ? (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : 16);
+      var up = I.flyLift ? I.flyLift(u) : 0;
+      if (up) {
+        var hs = I.hullSpec && I.hullSpec(u.art);
+        ground = H * 0.56 + (up + ((hs && hs.hgt) || 14) * 0.5) * mag;
+      }
+      var s0 = I.toScreen(10, 10);
+      try {
+        g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (ground - s0.y * mag) * dpr);
+        I.drawUnit(g, u, { at: { x: 10, y: 10 }, lift: 0, status: 'ready', morale: 0 });
+      } catch (err) { if (root.console) console.error(p.key, err); }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+    });
+  }
 
   /* The founding screen redraws whenever a unit, a doctrine or a colour is
      picked, which would wipe a half-typed name. Read it back first, every time. */
@@ -503,11 +563,20 @@
       var di = +t.getAttribute('data-fdrone'), ds = R.splitPick(draft.keys[di]);
       draft.keys[di] = R.joinPick(ds.key, ds.prop, !ds.drone); render(); return;
     }
+    // what a unit picked for the founding rides: the Riders upgrade, and the mount
+    if (t.hasAttribute('data-friders')) {
+      var fr = R.splitPick(draft.keys[+t.getAttribute('data-friders')]);
+      draft.keys[+t.getAttribute('data-friders')] = R.joinPick(fr.key, fr.prop, fr.drone, !fr.riders, fr.mount); render(); return;
+    }
+    if (t.hasAttribute('data-fmount')) {
+      var fm = R.splitPick(draft.keys[+t.getAttribute('data-fmount')]), mo = R.MOUNT_ORDER;
+      draft.keys[+t.getAttribute('data-fmount')] = R.joinPick(fm.key, fm.prop, fm.drone, fm.riders, mo[(mo.indexOf(fm.mount || 'none') + 1) % mo.length]); render(); return;
+    }
     if (t.hasAttribute('data-cycle')) {
       var i = +t.getAttribute('data-cycle'), s = R.splitPick(draft.keys[i]);
       var order = R.propsFor(profile(s.key));
       var nx = order[(order.indexOf(s.prop || 'none') + 1) % order.length];
-      draft.keys[i] = R.joinPick(s.key, nx, s.drone); render(); return;
+      draft.keys[i] = R.joinPick(s.key, nx, s.drone, s.riders, s.mount); render(); return;
     }
     if (t.hasAttribute('data-doc')) {
       draft.doctrine = t.getAttribute('data-doc');
@@ -597,6 +666,15 @@
     }
     if (t.hasAttribute('data-rivdos')) { var rv = +t.getAttribute('data-rivdos'); rivalOpen = rivalOpen === rv ? null : rv; render(); return; }
     if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
+    // a unit on the roster takes the Riders upgrade or lays it down, or changes what it rides
+    if (t.hasAttribute('data-eriders')) {
+      var re = findEntry(co, t.getAttribute('data-eriders'));
+      re.riders = !re.riders; C.menOf(re, co); save(); render(); return;
+    }
+    if (t.hasAttribute('data-emount')) {
+      var me = findEntry(co, t.getAttribute('data-emount'));
+      me.mount = t.getAttribute('data-m'); save(); render(); return;
+    }
     if (t.hasAttribute('data-promote')) {
       var pe = findEntry(co, t.getAttribute('data-promote'));
       C.promoteUnit(co, pe, t.getAttribute('data-to')); openModal = null; promoRid = null; save(); render(); return;

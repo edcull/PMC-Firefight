@@ -36,7 +36,7 @@
     var LINE_REACH = { trench: 0, barricade: 1.0, wall: 1.3 };
     function lineUp(u, x, y) {
       if (!B.state || R.isMachine(u) || u.aboard || x < 0 || u.walk || u.hop || u.arc) return null;
-      var n = Math.max(1, Math.min(8, u.models || 1));
+      var n = Math.max(1, Math.min(ISO.MAX_FIGS, u.models || 1));
       if (n < 2) return null;
       // the terrain the rules count it in (half its rim or more): a trench it only half fills still holds it
       var kind = R.kindsUnder(B.state, null, x, y)[0];
@@ -210,7 +210,7 @@
     }
     var CL = window.PMCFx.COLLAR, COLLAR_BLINK = CL.blink, COLLAR_FX = CL.dur;
     function collarSequence(u0, u, seen, rem) {
-      var t0 = nowMs(), n = Math.max(1, Math.min(8, seen.models));
+      var t0 = nowMs(), n = Math.max(1, Math.min(ISO.MAX_FIGS, seen.models));
       var pts = ISO.formationTable(n).map(function (o) { return { x: seen.x + o.dx, y: seen.y + o.dy, rank: o.rank }; });
       // the order they go in, fixed for the squad, and where each has run to when his goes
       var plan = CL.plan(pts, t0, fleeAngle(u, seen));
@@ -400,13 +400,20 @@
         var dx = ui.hover.x - dispX(u), dy = ui.hover.y - dispY(u);
         if (Math.hypot(dx, dy) > 0.4) return R.nearestFacing(Math.atan2(dy, dx));
       }
+      var fa = faceAsked();
+      if (fa === u) return B.state.faceAsk.dir;
       return ui.digDir != null ? ui.digDir : (u.facing || 0);
+    }
+    // a vehicle of this screen's player just put down, waiting to be told which way it faces
+    function faceAsked() {
+      var fa = B.state && B.state.faceAsk;
+      return fa && fa.ids.length && !isAI(fa.side) && !B.watching && B.seats.indexOf(fa.side) >= 0 ? unitById(fa.ids[0]) : null;
     }
     function isTouch() { return !!(window.matchMedia && window.matchMedia('(hover: none)').matches); }
     /* The overlay round the gun: an octagon of eight wedges, one to a facing,
        the one pointed at lit; and that facing's fire arc (the front 90°) laid out
        on the ground from its 6" minimum to its 24" dug-in range. */
-    function drawDigFacing(g, u) {
+    function drawDigFacing(g, u, noArc) {
       var cx = dispX(u), cy = dispY(u), lift = liftOf(cx, cy), F = digFacings(), pick = digPreview(u);
       function P(ang, r) { var q = ISO.toScreen(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r); return [q.x, q.y - lift]; }
       function fan(a0, a1, r0, r1, n) {
@@ -416,8 +423,8 @@
         g.beginPath(); pts.forEach(function (q, j) { if (j) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath();
       }
       g.save();
-      // the fire arc for the facing pointed at
-      fan(pick - Math.PI / 4, pick + Math.PI / 4, 6, 24, 24);
+      // the fire arc for the facing pointed at (a vehicle has just its front quarter marked, close in)
+      fan(pick - Math.PI / 4, pick + Math.PI / 4, noArc ? 2.9 : 6, noArc ? 5 : 24, 24);
       g.fillStyle = 'rgba(232,193,90,.20)'; g.fill();
       g.strokeStyle = 'rgba(12,10,6,.5)'; g.lineWidth = 3.5; g.stroke();              // a dark edge, so it reads on pale ground
       g.strokeStyle = '#f0cf72'; g.lineWidth = 1.8; g.setLineDash([7, 5]); g.stroke(); g.setLineDash([]);
@@ -440,7 +447,7 @@
       if (!B.state) return;
       /* Choosing a facing to dig in on: the gun is shown turned to it while the
          player looks round, and put back after. */
-      var dg = ui.mode === 'digface' && ui.selected && B.state && B.state.phase === 'battle' ? ui.selected : null, keep = null;
+      var dg = faceAsked() || (ui.mode === 'digface' && ui.selected && B.state && B.state.phase === 'battle' ? ui.selected : null), keep = null;
       if (dg) { keep = { f: dg.facing, a: dg.aim }; dg.facing = digPreview(dg); dg.aim = null; }
       try { drawBoardNow(); } finally { if (dg) { dg.facing = keep.f; dg.aim = keep.a; } }
     }
@@ -636,7 +643,8 @@
         });
       }
 
-      if (ui.mode === 'digface' && ui.selected && !aiSel) drawDigFacing(B.pctx, ui.selected);
+      if (faceAsked()) drawDigFacing(B.pctx, faceAsked(), true);
+      else if (ui.mode === 'digface' && ui.selected && !aiSel) drawDigFacing(B.pctx, ui.selected);
 
       /* ---- units and the buildings that hide them ----
          The structures are one baked layer under everything, so a unit used to be
@@ -719,7 +727,9 @@
             if (mv) { cu.faceL = (mv.vx - mv.vy) < 0; cu.facing = Math.atan2(mv.vy, mv.vx); }
             ISO.drawUnit(B.pctx, cu, {
               at: { x: it.x, y: it.y }, lift: liftOf(it.x, it.y), noRing: true,
-              hop: 0, walk: 1 + Math.floor((it.age + it.i * 53) / 110) % 2, status: 'ready', activated: false, selected: false, morale: 0
+              hop: 0, walk: 1 + Math.floor((it.age + it.i * 53) / 110) % 2, status: 'ready', activated: false, selected: false, morale: 0,
+              // his collar lamp: amber as the squad breaks, red once his own collar is counting down
+              lamp: nowMs() < it.cl.at[it.i] - COLLAR_BLINK ? 'broken' : 'red'
             });
             return;
           }
@@ -1408,7 +1418,7 @@
     return {
       DIG_NAMES: DIG_NAMES,
       buildScene: buildScene,
-      digFacings: digFacings,
+      digFacings: digFacings, faceAsked: faceAsked,
       digPreview: digPreview,
       drawBoard: drawBoard,
       dropHaze: dropHaze,

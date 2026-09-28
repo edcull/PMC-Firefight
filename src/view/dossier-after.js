@@ -113,9 +113,9 @@
       if (!E.after || !last || last.turn !== E.after.turn) return;
       /* The other fronts' battles once: grouped by front where they were fought
          out (regroup() rebuilds that from the flat list otherwise), not twice. */
-      var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, loss: a.loss || null, sides: { A: a.sides.A },
-        fronts: a.fronts || null, elsewhere: a.fronts ? [] : (a.elsewhere || []) };
-      if (E.camp.mode === 'hotseat' && a.sides.B) keep.sides.B = a.sides.B;
+      // both sides, and what the AI force did afterwards, for the battle's own card at the head
+      var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, loss: a.loss || null, sides: { A: a.sides.A, B: a.sides.B || null },
+        rival: a.rival || null, fronts: a.fronts || null, elsewhere: a.fronts ? [] : (a.elsewhere || []) };
       last.after = JSON.parse(JSON.stringify(keep));
       last.balance = E.camp.companies.A.kUC;
       // ten kilobytes or so each: the last twenty are kept in full, the rest keep their line
@@ -183,6 +183,61 @@
           '<div class="cstats four">' + r.cells.map(function (c) {
             return '<div class="cstat ' + c.cls + '"><b>' + c.v + '</b><span>' + esc(c.w) + '</span></div>';
           }).join('') + '</div>' + devList(sm) + '</div>';
+      });
+      return h + '</div>';
+    }
+    /* Who the unit lost, and what the D6 made of each: a 1 killed in action,
+       2-6 wounded. Either way they are out of the campaign, and replaced. */
+    function casualtyLedger(u) {
+      var cas = (u.casualties || []).filter(function (c) { return !c.swarm && c.kia != null; });
+      if (!cas.length) return '';
+      function who(c) {
+        if (c.anon) {
+          var Wa = C.fateWords(E.camp.companies.A, 'eshaven');   // the unnamed: killed or wounded, whoever's
+          return (c.kia ? c.kia + ' ' + Wa.kia : '') + (c.kia && c.wounded ? ', ' : '') + (c.wounded ? c.wounded + ' ' + Wa.wia : '') +
+            (c.rolls ? ' <span class="dmen-rank">D6 ' + c.rolls.join(' ') + '</span>' : '');
+        }
+        return esc(c.rank) + ' ' + esc(c.name) + (c.roll ? ' <span class="dmen-rank">D6 ' + c.roll + '</span>' : '');
+      }
+      var W = C.words(E.camp.companies.A);
+      var dead = cas.filter(function (c) { return c.kia; }), hurt = cas.filter(function (c) { return !c.anon && !c.kia; });
+      var anon = cas.filter(function (c) { return c.anon; });
+      if (anon.length) return '<div class="dledger">Casualties: ' + anon.map(who).join('; ') + '</div>';
+      return (dead.length ? '<div class="dledger bad">' + W.kiaLong + ': ' + dead.map(who).join(', ') + '</div>' : '') +
+        (hurt.length ? '<div class="dledger">' + W.wiaLong + ': ' + hurt.map(who).join(', ') + '</div>' : '');
+    }
+    /* The player's own battle, as a card like the ones for the battles elsewhere. */
+    function ownCard(last) {
+      var coA = E.camp.companies.A, foeName = (last && last.against) || (E.camp.companies.B || {}).name || 'the enemy';
+      var foe = (E.camp.rivals || []).filter(function (r) { return r.name === foeName; })[0] ||
+        (E.camp.companies.B && E.camp.companies.B.name === foeName ? E.camp.companies.B : null);
+      function side(sd, co, name) {
+        var rec = E.after.sides[sd] || { units: [], traumas: [] };
+        var sum = function (k) { return (rec.units || []).reduce(function (n, u) { return n + (u[k] ? u[k].total : 0); }, 0); };
+        var loss = E.after.loss ? E.after.loss[sd] : null;
+        return {
+          name: name, sd: sd, co: co,
+          result: E.after.winner === sd ? 'Won' : E.after.winner ? 'Lost' : 'Drew',
+          cells: [
+            { cls: 'cs-lost', v: loss == null ? '\u2014' : loss + '%', w: 'losses' },
+            { cls: 'cs-win', v: '+' + (E.after.payment[sd] || 0), w: C.money(co) },
+            { cls: 'cs-exp', v: '+' + sum('exp'), w: 'EXP' },
+            { cls: 'cs-tra', v: '+' + sum('tp'), w: 'Trauma' }
+          ],
+          // what the AI force did with it afterwards; the player's own choices come on the hub
+          dev: sd === 'B' && E.after.rival ? devList({ name: name, did: E.after.rival,
+            traumaList: (rec.traumas || []).map(function (t) { return { unit: t.name, name: t.trauma && t.trauma.name }; }) }) : ''
+        };
+      }
+      var sides = [side('A', coA, coA.name), side('B', foe, foeName)];
+      if (E.after.winner === 'B') sides.reverse();
+      var h = '<div class="cpan front own"><div class="cprom-head"><b>' + esc(coA.name) + ' v ' + esc(foeName) + '</b></div>' +
+        (last ? '<p class="cpstat">' + esc(frontFacts({ tier: last.tier, pl: last.pl, scenario: last.scenario })) + '</p>' : '');
+      sides.forEach(function (r) {
+        h += '<div class="front-row"><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') +
+          '<div class="cstats four">' + r.cells.map(function (c) {
+            return '<div class="cstat ' + c.cls + '"><b>' + c.v + '</b><span>' + esc(c.w) + '</span></div>';
+          }).join('') + '</div>' + r.dev + '</div>';
       });
       return h + '</div>';
     }
@@ -307,24 +362,14 @@
     }
     function afterPage(pastLine) {
       var h = '<h2>Aftermath' + (pastLine ? ' \u2014 turn ' + pastLine.turn : '') + '</h2>';
-      /* The day at a glance, as the other forces' battles are shown: whether it
-         was won, then what the force lost, was paid, and took away in
-         experience and trauma. */
-      var coA = E.camp.companies.A, recA = E.after.sides.A, lossA = E.after.loss ? E.after.loss.A : null;
-      var sum = function (k) { return recA.units.reduce(function (n, u) { return n + (u[k] ? u[k].total : 0); }, 0); };
-      var won = E.after.winner === 'A' ? 'Won' : E.after.winner ? '' : 'Draw';
-      h += '<div class="front-row after-head"><b>' + esc(coA.name) + '</b>' + (won ? ' <i class="good">' + won + '</i>' : ' <i class="bad">Lost</i>') +
-        '<div class="cstats four">' + [
-          { cls: 'cs-lost', v: lossA == null ? '\u2014' : lossA + '%', w: 'losses' },
-          { cls: 'cs-win', v: '+' + E.after.payment.A, w: C.money(coA) },
-          { cls: 'cs-exp', v: '+' + sum('exp'), w: 'EXP' },
-          { cls: 'cs-tra', v: '+' + sum('tp'), w: 'Trauma' }
-        ].map(function (c) { return '<div class="cstat ' + c.cls + '"><b>' + c.v + '</b><span>' + esc(c.w) + '</span></div>'; }).join('') +
-        '</div></div>';
-
+      /* The day at a glance, drawn as the other forces' battles are: who it was
+         against and where, then each side — the winner first — with what it
+         lost, was paid and took away in experience and trauma, and what an AI
+         force made of it afterwards (who it recruited, who it promoted). */
+      var last = pastLine || E.camp.log[E.camp.log.length - 1];
+      h += ownCard(last);
       h += '<h3>Payment</h3>';
       var p = E.after.payment;
-      var last = pastLine || E.camp.log[E.camp.log.length - 1];
       var nd = last.tier * last.pl;
       h += '<div class="cpan"><div class="cpstat">Two rolls of ' + nd + 'D6: ' +
         '<span class="dcx">' + p.diceA.join(' ') + '</span> and <span class="dcx">' + p.diceB.join(' ') + '</span>. ' +
@@ -400,10 +445,11 @@
         /* A unit that is off the dossier has no use for the day's experience or
            trauma, and showing a ledger it can never spend only raises the question
            of why it was struck off in the first place. Say that instead. */
+        h += casualtyLedger(u);
         if (u.wiped && !u.disbanded) {
           h += '<div class="dledger bad">' + (u.aboardDowned
             ? 'They were aboard when it came down, and it was not recovered — so neither were they.'
-            : 'Every soldier was killed. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
+            : 'Every soldier was put out of action. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
             '</div>';
         } else {
           if (u.fled) {

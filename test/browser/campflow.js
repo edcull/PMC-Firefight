@@ -459,6 +459,20 @@ async function pastFronts(p) {
   const now = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('the new unit is on the books', now === before + 1, now + ' units');
   await shot(p, 'camp-roster.png');
+  // a unit opened on the roster: its facts on the left, its picture drawn on the right, its sheet below
+  await p.evaluate(() => { const c = document.querySelector('#camp-body .dcard.dclick'); if (c) c.click(); });
+  await p.waitForTimeout(300);
+  const unitOpen = await p.evaluate(() => {
+    const card = document.querySelector('#camp-body .dcard.open'), cv = card && card.querySelector('canvas.dportrait');
+    if (!cv) return { card: !!card };
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let ink = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) ink++;
+    const left = card.querySelector('.dsplit .dleft'), det = card.querySelector('.ddet');
+    return { card: true, ink, left: !!left && !!left.querySelector('.dacts'), below: !!det && !!(cv.compareDocumentPosition(det) & 4) };
+  });
+  check('an opened unit shows its picture beside its facts', unitOpen.ink > 200 && unitOpen.left, JSON.stringify(unitOpen));
+  check('...with its stats and special rules underneath', unitOpen.below, JSON.stringify(unitOpen));
+  await shot(p, 'camp-unit.png');
 
   /* Battle Honours (p. 88): the player puts three forward, the dice pick one */
   console.log('\nA Battle Honour');

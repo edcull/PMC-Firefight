@@ -158,8 +158,29 @@
     /* In a demo the camera is the watcher's: nothing the AI does moves it, not
        a unit activating, landing or on the move — only the watcher pans and zooms. */
     function handsOff() { return !!(B.state && B.state.cfg && B.state.cfg.mode === 'demo'); }
+    /* Follow (the toggle by the zoom level): whether the camera goes over to the
+       other side's units as they act. The player's choice, kept between battles. */
+    var FOLLOW_KEY = 'pmc.followOther', follow = true;
+    try { follow = localStorage.getItem(FOLLOW_KEY) !== 'off'; } catch (e) { /* no storage: on */ }
+    function followOn() { return follow; }
+    function showFollow() {
+      var b = el('follow-toggle');
+      if (!b) return;
+      b.classList.toggle('on', follow);
+      b.setAttribute('aria-pressed', follow ? 'true' : 'false');
+      b.title = follow ? 'Following the other side\u2019s moves — tap to keep the camera where you leave it'
+        : 'The camera stays where you leave it — tap to follow the other side\u2019s moves';
+    }
+    function setFollow(on) {
+      follow = !!on;
+      try { localStorage.setItem(FOLLOW_KEY, follow ? 'on' : 'off'); } catch (e) { /* not kept */ }
+      showFollow();
+      // switched off mid-move: the camera comes straight back to where it was left
+      if (!follow) { dropFollow(); if (cam.borrowed) returnHome(true); }
+    }
     function focusUnit(u, instant, borrowed) {
       if (!u || u.x < 0 || handsOff()) return;
+      if (borrowed && !follow) return;                 // Follow is off: the other side's units are not chased
       var p = ISO.toScreen(dispX(u), dispY(u));
       centreOn(p.x, p.y - ISO.ELEV, instant);
       if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
@@ -491,6 +512,7 @@
       focusUnit: focusUnit,
       foeColour: foeColour,
       handsOff: handsOff,
+      followOn: followOn, setFollow: setFollow, showFollow: showFollow,
       hud: hud,
       labelIcons: labelIcons,
       nearestZoom: nearestZoom,

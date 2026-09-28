@@ -42,6 +42,7 @@ for (let guard = 0; !e.over() && guard < 20000; guard++) {
   const r = e.intent(s.activeSide || 'A', { k: 'step' });
   if (!r.ok) {
     const sel = e.sel();
+    if (e.state().faceAsk) { e.intent(e.state().faceAsk.side, { k: 'vfaceall' }); continue; }
     if (sel.insertion) { const sp = (sel.insertion.spots || [])[0]; e.intent(sel.insertion.by || 'A', sp ? { k: 'insert', x: sp.x, y: sp.y } : { k: 'holdinsert' }); continue; }
     break;
   }

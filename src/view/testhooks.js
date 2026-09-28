@@ -67,6 +67,8 @@
        it goes through the question about empty transports, as a player
        answering "Begin" would. Null while it is not on offer. */
     window.__beginButton = function () {
+      // a vehicle's facing still asked about: beginning keeps the way offered (the engine settles it)
+      if (B.state && B.state.faceAsk && B.state.phase === 'deploy' && deploymentDone()) return { click: function () { startBattle(); } };
       var b = document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]');
       if (!b) return null;
       return { click: function () { if (b.getAttribute('data-act') === 'startask') { ui.startAsk = false; startBattle(); } else b.click(); } };
@@ -124,6 +126,8 @@
       var pa = B.state && B.state.placeAsk;
       if (pa && pa.kind === 'fort') send({ k: 'placeauto' });
       send({ k: 'autosplit' }); autoDeployMine();
+      // every hull keeps the way it was offered
+      for (var n = 0; n < 12 && B.state && B.state.faceAsk; n++) send({ k: 'vfaceall' });
     };
     window.__deployOK = function (x, y, side) {
       side = side || placingSide();
@@ -377,7 +381,7 @@
     };
     // the skirmish set-up in progress, and where the camera is
     window.__hot = function () { return B.muster.hot ? JSON.parse(JSON.stringify(B.muster.hot)) : null; };
-    window.__cam = function () { return { x: cam.x, y: cam.y, z: cam.z, borrowed: !!cam.borrowed, home: cam.home ? { x: cam.home.x, y: cam.home.y } : null }; };
+    window.__cam = function () { return { x: cam.x, y: cam.y, tx: cam.tx, ty: cam.ty, z: cam.z, borrowed: !!cam.borrowed, home: cam.home ? { x: cam.home.x, y: cam.home.y } : null }; };
   };
   /* The campaign dossier's, installed by dossier.js (D): its own choice of
      contract, and a contract's scenario set by hand, to look at each one's
