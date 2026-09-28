@@ -769,6 +769,19 @@
           P(0, -49 + drop, 7, 3, GLASS);
           P(0, -49 + drop, 2, 1, '#4e5c6a');
           break;
+        case 'nomadhood':
+          /* A wanderer's hood: cloth drawn up over a bare head, the face
+             showing in its opening, shadowed at the brow. No helmet, no goggles. */
+          P(-7, -55 + drop, 14, 11, pal.cloth);
+          P(-7, -55 + drop, 5, 11, pal.dark);             // the back of the hood, in shadow
+          P(-8, -45 + drop, 6, 6, pal.cloth);             // falling to the shoulders
+          P(0, -52 + drop, 7, 8, '#8d6f4e');              // the face
+          P(0, -52 + drop, 7, 1.6, 'rgba(20,14,8,.45)');  // the hood's shadow over the brow
+          P(4.2, -49.5 + drop, 1.5, 1.3, '#20262d');      // an eye
+          P(6, -48.5 + drop, 1, 2, '#6b5238');            // the nose
+          P(1, -45.6 + drop, 6, 1.4, '#5a4530');          // a stubbled jaw
+          P(-1, -53 + drop, 1.4, 10, pal.cloth);          // the hood's edge round the face
+          break;
         case 'cap':
           P(-6, -50 + drop, 13, 4, pal.helm);
           P(-9, -49 + drop, 4, 2, pal.dark);              // peak

@@ -226,6 +226,7 @@
       // paint the figure, then ring it in near-black so it reads against the rank behind
       var body = document.createElement('canvas');
       body.width = w; body.height = h;
+      var glows = [];                                    // lights that shine past the outline
       var pal = B.PALETTE[side] || B.PALETTE.A;
       if (kit.tint) {                                    // penal coveralls and the like
         var mixed = {};
@@ -268,7 +269,7 @@
         paintXeno(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
         finishFigure(body, ox, oy, s, pose);
       } else {
-        paintFigure(body.getContext('2d'), ox, oy, pal, kit, pose, step, s);
+        glows = paintFigure(body.getContext('2d'), ox, oy, pal, kit, pose, step, s) || [];
         finishFigure(body, ox, oy, s, pose);
         if (kit.camo) applyCamo(body, kit.tint, s);
         if (kit.fungus) paintFungus(body.getContext('2d'), ox, oy, pal, kit, pose, s);
@@ -299,6 +300,15 @@
         g.fillRect(0, 0, w, h);
         g.globalCompositeOperation = 'source-over';
       }
+      // lights that shine past the outline, laid over everything, shade included
+      if (!PH.corpse) glows.forEach(function (L) {   // (a dead man's goggles are dark)
+        var gr = g.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
+        gr.addColorStop(0, 'rgba(' + L.c + ',1)');
+        gr.addColorStop(0.3, 'rgba(' + L.c + ',.55)');
+        gr.addColorStop(1, 'rgba(' + L.c + ',0)');
+        g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr;
+        g.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2); g.restore();
+      });
       c.ox = ox; c.oy = oy; c.res = B.SPRITE_RES;
       c.muz = [ma[0] * B.SU * sq, ma[1] * B.SU * sq];      // the muzzle, in board pixels from the feet
       var pa = kit.bug || kit.xeno ? null : podArt(kit, pose), ea = kit.bug || kit.xeno ? null : eyeArt(kit, pose);

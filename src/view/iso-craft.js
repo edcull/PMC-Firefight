@@ -399,6 +399,12 @@
                short swept stubs carrying the lift fans and no pods at all (its
                weapons ride in bays in the flanks), and a fan in the fin. */
             var cw = w * 0.86;
+            /* The front of the fuselage angles down: ahead of a hinge just
+               forward of the stub wings every point sinks, more the further
+               forward, so the nose, the glass and the chin gun all droop. */
+            var AF0 = AF, hingeC = L * 0.08, sagC = 4.5 / (L * 0.52 - hingeC);
+            var sagAt = function (p) { return p > hingeC ? (p - hingeC) * sagC : 0; };
+            AF = function (p, q) { var c = AF0(p, q); c.dz = sagAt(p); return c; };
             var cbody = [[L * 0.52, 0.001], [L * 0.36, cw * 0.62], [L * 0.16, cw], [-L * 0.2, cw], [-L * 0.32, cw * 0.55],
               [-L * 0.32, -cw * 0.55], [-L * 0.2, -cw], [L * 0.16, -cw], [L * 0.36, -cw * 0.62]];
             // the top is much narrower than the chines: the sides slope in, as a faceted hull does
@@ -444,7 +450,11 @@
               canopy(L * 0.04, L * 0.4, cw * 0.46, z + H * 0.78, H * 0.28);
             });
             // the chin gun, and the Gauss rails fire from it too
-            part(L * 0.45, 0, function () { noseGun(L * 0.34, 0, z + 1, 0.3, 'gun', { rail: true, also: ['rail', 'auto', 'mg'] }); });
+            part(L * 0.45, 0, function () {
+              var keep = AF; AF = AF0;                    // the gun's own frame knows nothing of the droop: it is lowered with it
+              noseGun(L * 0.34, 0, z + 1 - sagAt(L * 0.34), 0.3, 'gun', { rail: true, also: ['rail', 'auto', 'mg'] });
+              AF = keep;
+            });
             break;
           }
           case 'jet': case 'hybrid': {
