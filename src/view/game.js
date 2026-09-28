@@ -386,11 +386,15 @@
     send({ k: 'select', id: u.id });
     revealConsole();
   }
-  function doShoot(t) { send({ k: 'target', id: t.id }); }
-  function doAssault(t) { send({ k: 'target', id: t.id }); }
-  function doDesignate(t) { send({ k: 'target', id: t.id }); }
-  function doHack(t) { send({ k: 'target', id: t.id }); }
-  function doSupport(t) { send({ k: 'target', id: t.id }); }
+  /* A target picked: the odds come off the board at once, not after the shots
+     have been drawn (the targets are only read back from the rules once the
+     replay is over, and read back as they were if the pick was refused). */
+  function aimAt(t) { ui.targets = []; drawBoard(); send({ k: 'target', id: t.id }); }
+  function doShoot(t) { aimAt(t); }
+  function doAssault(t) { aimAt(t); }
+  function doDesignate(t) { aimAt(t); }
+  function doHack(t) { aimAt(t); }
+  function doSupport(t) { aimAt(t); }
   function doEmbark(t) { send({ k: 'target', id: t.id }); }
   function doTeleport(tp, t) { send({ k: 'target', id: t.id }); }
   function finishTeleport(tp, t) { send({ k: 'target', id: t.id }); }
@@ -421,7 +425,7 @@
   function unloadBefore(veh, u) { send({ k: 'unload', hull: veh.id, unit: u.id }); }
   function holdInsertion() { send({ k: 'holdinsert' }); }
   function holdArrival() { send({ k: 'holdarrive' }); }
-  function doSteady(t) { send({ k: 'target', id: t.id }); }
+  function doSteady(t) { aimAt(t); }
   // a building, and which section of it
   function doEnter(u, s) { send({ k: 'enter', piece: state.terrain.indexOf(s.piece), sec: s.sec || 0 }); }
   function doExitBld(u, spot) { send({ k: 'exitbld', x: spot.x, y: spot.y }); }
