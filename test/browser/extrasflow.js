@@ -25,6 +25,15 @@ async function drain(p) {
 async function settle(p) {
   await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
 }
+// the End phase asks the player at this screen to withdraw or surrender: carry on
+async function carryOn(p) {
+  for (let i = 0; i < 30; i++) {
+    const asked = await p.evaluate(() => { const s = window.PMC_STATE(); if (s.endAsk) window.__sendIntent({ k: 'enddone' }); return !!s.endAsk; });
+    if (!asked && i > 3) return;
+    await p.waitForTimeout(100);
+  }
+}
+
 /* Play the rest of the turn out. There is no hook to run the reserve phase on
    its own any more: it opens the next turn, inside the engine, so the turn is
    brought to an end the way a player would end it. Everyone but one of ours
@@ -33,7 +42,7 @@ async function settle(p) {
    counter back first, so the turn that begins is the one the check is about. */
 async function endTurn(p, from) {
   await settle(p);
-  return await p.evaluate((from) => {
+  const r = await p.evaluate((from) => {
     const s = window.PMC_STATE();
     const last = s.units.find(u => u.side === 'A' && u.alive && u.x >= 0 && !u.reserve && !u.aboard &&
       window.PMC.status(u) !== 'broken');
@@ -45,6 +54,8 @@ async function endTurn(p, from) {
     const acted = window.__select(last) && window.__pressAction('regroup');
     return { from: was, acted: acted };
   }, from || 0);
+  if (!r.none) await carryOn(p);
+  return r;
 }
 // the new turn's cards read, and the table still, before looking at what it asks
 async function afterTurn(p) {

@@ -33,7 +33,9 @@
     { id: 'advance', label: 'Advance' },
     { id: 'assault', label: 'Assault' },
     { id: 'aux', label: 'Auxiliary' },
-    { id: 'regroup', label: 'Regroup' }
+    { id: 'regroup', label: 'Regroup' },
+    // doing nothing at all: the activation spent, play passing on
+    { id: 'skip', label: 'Skip' }
   ];
   var SPECIAL_SLOTS = 4;
   /* How far off a legal spot a tap may land and still be taken to mean it. The
@@ -1338,7 +1340,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk || state.faceAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
       return state.activeSide === side;
     }
     function selected(side) {
@@ -1457,6 +1459,15 @@
       if (!sa || sa.side !== side || !ui.standThen) return no('nothing to answer');
       ui.standThen(it.k === 'stand');
       return yes;
+    });
+    /* ---- the End phase: withdraw units off the table, carry on, or surrender ---- */
+    on('endflee', null, function (side, it) {
+      var why = K.endFlee(side, it.id);
+      return why ? no(why) : yes;
+    });
+    on('enddone surrender', null, function (side, it) {
+      var why = K.endAnswer(side, it.k === 'surrender' ? 'surrender' : 'done');
+      return why ? no(why) : yes;
     });
     on('rpick', null, function (side, it) {
       var rp = ui.reservePick;

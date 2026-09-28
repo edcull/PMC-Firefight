@@ -103,7 +103,7 @@ console.log('\nLast Stand (p. 88): "once per battle the unit can remove all its 
   e.intent(side, { k: 'select', id: last.id });
   step(e, side, last);
   // the rally cards before it are walked on until the question comes
-  for (let i = 0; i < 40 && !st.standAsk && u.alive && !u.camp.once.lastStand; i++) e.intent(side, { k: 'step' });
+  for (let i = 0; i < 40 && !st.standAsk && u.alive && !u.camp.once.lastStand; i++) e.intent(st.endAsk ? st.endAsk.side : side, { k: st.endAsk ? 'enddone' : 'step' });
   ok('about to flee, the player is asked', !!st.standAsk && st.standAsk.unit === u.id && u.alive,
     st.standAsk ? u.sp + ' SP against Morale ' + st.standAsk.morale : 'not asked: ' + st.log.slice(-4).map((l) => l.text).join(' / '));
   const ans = e.intent(side, { k: 'stand' });
@@ -116,7 +116,7 @@ console.log('\nLast Stand (p. 88): "once per battle the unit can remove all its 
   st.units.forEach((x) => { if (x !== last && x !== u) x.activated = true; });
   e.intent(side, { k: 'select', id: last.id });
   step(e, side, last);
-  for (let i = 0; i < 40 && !st.standAsk && u.alive; i++) e.intent(side, { k: 'step' });
+  for (let i = 0; i < 40 && !st.standAsk && u.alive; i++) e.intent(st.endAsk ? st.endAsk.side : side, { k: st.endAsk ? 'enddone' : 'step' });
   e.intent(side, { k: 'nostand' });
   ok('...or letting it go, it flees', !u.alive && u.fled && !u.camp.once.lastStand);
 })();

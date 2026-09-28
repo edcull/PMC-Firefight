@@ -385,6 +385,7 @@ if (begun) {
     const s = W.PMC_STATE();
     // a vehicle just come on: it keeps the way it was offered
     if (s.faceAsk) { W.__sendIntent({ k: 'vfaceall' }); continue; }
+    if (s.endAsk) { W.__sendIntent({ k: 'enddone' }); continue; }
     const ins = W.__insertionState();
     if (ins) {
       const spots = W.__insertionSpotsNow();

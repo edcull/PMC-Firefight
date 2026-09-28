@@ -391,6 +391,7 @@
       else if (ui.insertion) html = insertionCard();
       else if (B.state.cmdOffer) html = cmdOfferCard();
       else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
+      else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over) html = endCard();
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.over) html = overCard();
@@ -452,6 +453,30 @@
         '. It is about to scatter and flee the field. It still has its Last Stand: once a battle, every point of suppression gone.</p>' +
         '<div class="acts"><button class="act primary" data-act="stand"><span>Make its Last Stand</span><small>All ' + a.sp + ' SP cleared \u2014 it stays</small></button>' +
         '<button class="act" data-act="nostand"><span>Let it flee</span><small>Keep nothing back: it counts as fled</small></button></div></div>';
+    }
+    /* The End phase: a side may send units within a move of a table edge off
+       the table (they count as fled), carry on to the Rally phase, or surrender
+       the battle, which asks twice. */
+    function endCard() {
+      var a = B.state.endAsk, mine = !B.seats || B.seats.indexOf(a.side) >= 0;
+      if (!mine) {
+        return '<div class="card"><h2>End phase</h2><p class="sub">' + esc(sideName(a.side)) +
+          ' is deciding whether to withdraw units or surrender.</p></div>';
+      }
+      var h = '<div class="card endcard"><h2>End phase — ' + esc(sideName(a.side)) + '</h2>' +
+        '<p class="sub">Before the Rally phase you may order units within a move of a table edge to leave the table (they count as fled, not destroyed), or surrender the battle.</p>';
+      if (a.ids.length) {
+        h += '<div class="tgts">' + a.ids.map(function (id) {
+          var u = byId(id), on = a.pick.indexOf(id) >= 0;
+          return u ? '<button class="tgt' + (on ? ' on' : '') + '" data-endflee="' + id + '" aria-pressed="' + on + '"><b>' + esc(u.name) + '</b>' +
+            '<span>' + (on ? 'Leaves the table' : 'Stays') + '</span></button>' : '';
+        }).join('') + '</div>';
+      } else h += '<p class="sub">No unit is near enough to a table edge to leave it this turn.</p>';
+      h += '<div class="acts"><button class="act primary" data-act="enddone"><span>' +
+        (a.pick.length ? 'Withdraw ' + a.pick.length + ' and carry on' : 'Carry on') + '</span><small>To the Rally phase</small></button>' +
+        '<button class="act' + (a.sure ? ' danger' : '') + '" data-act="surrender"><span>' + (a.sure ? 'Tap again to surrender' : 'Surrender') + '</span>' +
+        '<small>' + (a.sure ? 'The battle goes to ' + esc(sideName(a.side === 'A' ? 'B' : 'A')) : 'Give up the battle') + '</small></button></div></div>';
+      return h;
     }
     // a player's own unit that could make its Last Stand now (p. 88: at any time)
     function mayStand(u) {
@@ -988,6 +1013,9 @@
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });
+      host.querySelectorAll('[data-endflee]').forEach(function (b) {
+        b.addEventListener('click', function () { if (SFX) SFX.click(); send({ k: 'endflee', id: b.getAttribute('data-endflee') }); });
+      });
       host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-act');
@@ -1025,6 +1053,7 @@
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();

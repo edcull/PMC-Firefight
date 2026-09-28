@@ -31,6 +31,15 @@ async function drain(p) {
   await p.waitForTimeout(120);
 }
 
+// the End phase asks the player at this screen to withdraw or surrender: carry on
+async function carryOn(p) {
+  for (let i = 0; i < 30; i++) {
+    const asked = await p.evaluate(() => { const s = window.PMC_STATE(); if (s.endAsk) window.__sendIntent({ k: 'enddone' }); return !!s.endAsk; });
+    if (!asked && i > 3) return;
+    await p.waitForTimeout(100);
+  }
+}
+
 /* There is no hook to run the reserve phase on its own any more: it opens
    each turn, inside the engine. So the turn is brought to an end the way a
    player would end it. Everyone but one of ours has already acted; that one is
@@ -61,7 +70,8 @@ async function lastToAct(p) {
 }
 async function regroupLast(p) {
   const acted = await p.evaluate(() => window.__pressAction('regroup'));
-  await p.waitForTimeout(500);
+  await p.waitForTimeout(200);
+  await carryOn(p);
   return acted;
 }
 async function endTurn(p) {
