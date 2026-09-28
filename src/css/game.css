@@ -523,8 +523,6 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .tgt span { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .tgt:hover { border-color: var(--warn); }
 /* the End phase: a unit picked to leave the table */
-.tgt.on { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--panel-2)); }
-.tgt.on span { color: var(--warn); }
 .act.danger { border-color: var(--bad, #d1476b); background: color-mix(in srgb, var(--bad, #d1476b) 18%, transparent); }
 
 /* ---------- overlays ---------- */

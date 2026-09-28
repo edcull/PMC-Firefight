@@ -79,48 +79,27 @@
       });
     }
 
-    /* ---- the End phase's own choices ----
-       Before the Rally phase each player at the table (not the AI) may give up
-       the battle — it goes to the other side — or order any of their units that
-       could reach a table edge with a move to leave the table: they are gone,
-       and count as fled (l.568), not destroyed. Asked in turn, a side at a time,
-       and kept on the battle's state (endAsk) so a reload or the other end of a
-       network game sees the same question. */
-    function fleeable(side) {
-      return E.state.units.filter(function (u) {
-        if (u.side !== side || !onTable(u) || u.aboard || !u.move) return false;
-        if (R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile') || R.has(u, 'Turret') || /Turret/.test(u.group || '')) return false;
-        return Math.min(u.x, W - u.x, u.y, H - u.y) <= u.move;
-      }).map(function (u) { return u.id; });
-    }
+    /* ---- surrender, in the End phase ----
+       Once the scenario's victory conditions have been checked and nobody has
+       won, each player at the table (not the AI) may surrender the battle: the
+       opponent wins at once. Asked in turn, a side at a time, and kept on the
+       battle's state (endAsk) so a reload or the other end of a network game
+       sees the same question. */
     function askEnd(sides) {
       var side = sides[0];
-      if (!side) { E.state.endAsk = null; rallyPhaseNow(); return; }
-      E.state.endAsk = { side: side, ids: fleeable(side), pick: [], rest: sides.slice(1), sure: false };
-      logLine('phase', 'End phase — ' + sideName(side) + ' may withdraw units or surrender.');
+      if (!side) { E.state.endAsk = null; beginTurn(); return; }
+      E.state.endAsk = { side: side, rest: sides.slice(1), sure: false };
+      logLine('phase', 'End phase — ' + sideName(side) + ' may surrender, or carry on to the next turn.');
       revealConsole();
       render();
     }
-    function rallyPhase() {
-      if (E.state.over) return;
-      var sides = ['A', 'B'].filter(function (s) {
+    function endAsks() {
+      askEnd(['A', 'B'].filter(function (s) {
         return !isAI(s) && E.state.units.some(function (u) { return u.side === s && onTable(u); });
-      });
-      askEnd(sides);
+      }));
     }
-    // a unit picked, or unpicked, to leave the table
-    function endFlee(side, id) {
-      var ea = E.state.endAsk;
-      if (!ea || ea.side !== side) return 'nothing to answer';
-      if (ea.ids.indexOf(id) < 0) return 'that unit cannot reach the table edge';
-      var at = ea.pick.indexOf(id);
-      if (at >= 0) ea.pick.splice(at, 1); else ea.pick.push(id);
-      ea.sure = false;
-      render();
-      return null;
-    }
-    /* Carry on (the picked units leave), or surrender: a first press asks for a
-       second, so a battle is not thrown away by one stray tap. */
+    /* Carry on, or surrender: a first press asks for a second, so a battle is
+       not thrown away by one stray tap. */
     function endAnswer(side, what) {
       var ea = E.state.endAsk;
       if (!ea || ea.side !== side) return 'nothing to answer';
@@ -132,25 +111,11 @@
         render();
         return null;
       }
-      var gone = [];
-      ea.pick.forEach(function (id) {
-        var u = E.state.units.filter(function (x) { return x.id === id; })[0];
-        if (!u || !onTable(u)) return;
-        // and all it carries, a slung vehicle's own passengers too
-        (function off(x) { x.alive = false; x.fled = true; (x.cargo || []).forEach(off); })(u);
-        gone.push(u);
-        logLine('kill', u.label + ' withdraws off the table — fled.');
-      });
-      if (gone.length) {
-        pushRes({ kind: 'End phase', title: sideName(side) + ' withdraws', side: side,
-          note: 'Leaving the table voluntarily counts as fleeing: gone from the battle, not destroyed.',
-          list: gone.map(function (u) { return { text: u.name + ' leaves the table.', side: side }; }) });
-      }
       askEnd(ea.rest || []);
       return null;
     }
 
-    function rallyPhaseNow() {
+    function rallyPhase() {
       logLine('phase', 'Rally phase.');
       R.collars(E.state).forEach(function (l) { logLine(l.t, l.text); });
       fleeBroken();
@@ -335,7 +300,7 @@
         finish(res.winner, text);
       }
       if (E.state.over) { render(); return; }
-      beginTurn();
+      endAsks();
     }
 
     /* Who holds each objective, by the one test the scenarios use (scenarios.js
@@ -449,7 +414,7 @@
     }
 
     return {
-      rallyPhase: rallyPhase, endFlee: endFlee, endAnswer: endAnswer, fleeable: fleeable, repairCard: repairCard, objDist: objDist, scoreObjectives: scoreObjectives,
+      rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, objDist: objDist, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };

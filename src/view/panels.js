@@ -461,22 +461,13 @@
       var a = B.state.endAsk, mine = !B.seats || B.seats.indexOf(a.side) >= 0;
       if (!mine) {
         return '<div class="card"><h2>End phase</h2><p class="sub">' + esc(sideName(a.side)) +
-          ' is deciding whether to withdraw units or surrender.</p></div>';
+          ' is deciding whether to surrender.</p></div>';
       }
-      var h = '<div class="card endcard"><h2>End phase — ' + esc(sideName(a.side)) + '</h2>' +
-        '<p class="sub">Before the Rally phase you may order units within a move of a table edge to leave the table (they count as fled, not destroyed), or surrender the battle.</p>';
-      if (a.ids.length) {
-        h += '<div class="tgts">' + a.ids.map(function (id) {
-          var u = byId(id), on = a.pick.indexOf(id) >= 0;
-          return u ? '<button class="tgt' + (on ? ' on' : '') + '" data-endflee="' + id + '" aria-pressed="' + on + '"><b>' + esc(u.name) + '</b>' +
-            '<span>' + (on ? 'Leaves the table' : 'Stays') + '</span></button>' : '';
-        }).join('') + '</div>';
-      } else h += '<p class="sub">No unit is near enough to a table edge to leave it this turn.</p>';
-      h += '<div class="acts"><button class="act primary" data-act="enddone"><span>' +
-        (a.pick.length ? 'Withdraw ' + a.pick.length + ' and carry on' : 'Carry on') + '</span><small>To the Rally phase</small></button>' +
+      return '<div class="card endcard"><h2>End phase \u2014 ' + esc(sideName(a.side)) + '</h2>' +
+        '<p class="sub">Nobody has won yet. Carry on to turn ' + (B.state.turn + 1) + ', or surrender: the opponent wins the battle.</p>' +
+        '<div class="acts"><button class="act primary" data-act="enddone"><span>Carry on</span><small>To turn ' + (B.state.turn + 1) + '</small></button>' +
         '<button class="act' + (a.sure ? ' danger' : '') + '" data-act="surrender"><span>' + (a.sure ? 'Tap again to surrender' : 'Surrender') + '</span>' +
         '<small>' + (a.sure ? 'The battle goes to ' + esc(sideName(a.side === 'A' ? 'B' : 'A')) : 'Give up the battle') + '</small></button></div></div>';
-      return h;
     }
     // a player's own unit that could make its Last Stand now (p. 88: at any time)
     function mayStand(u) {
@@ -1012,9 +1003,6 @@
         b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'digface', dir: digFacings()[i] }); });
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
-      });
-      host.querySelectorAll('[data-endflee]').forEach(function (b) {
-        b.addEventListener('click', function () { if (SFX) SFX.click(); send({ k: 'endflee', id: b.getAttribute('data-endflee') }); });
       });
       host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
         b.addEventListener('click', function () {

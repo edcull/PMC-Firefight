@@ -1460,11 +1460,7 @@
       ui.standThen(it.k === 'stand');
       return yes;
     });
-    /* ---- the End phase: withdraw units off the table, carry on, or surrender ---- */
-    on('endflee', null, function (side, it) {
-      var why = K.endFlee(side, it.id);
-      return why ? no(why) : yes;
-    });
+    /* ---- the End phase: carry on to the next turn, or surrender ---- */
     on('enddone surrender', null, function (side, it) {
       var why = K.endAnswer(side, it.k === 'surrender' ? 'surrender' : 'done');
       return why ? no(why) : yes;

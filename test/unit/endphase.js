@@ -1,5 +1,5 @@
-/* A unit that does nothing (Skip), and the End phase's own choices: order
-   units near an edge off the table, or surrender the battle. */
+/* A unit that does nothing (Skip), and the End phase's one choice: surrender
+   the battle. */
 'use strict';
 const { R, Engine } = require('../../server/rules.js');
 let seed = 4411;
@@ -46,26 +46,17 @@ console.log('\nSkip');
   ok('...and play passes on', st.activeSide !== side || e.query.eligible(side).indexOf(u) < 0);
 })();
 
-console.log('\nEnd phase');
+console.log('\nEnd phase: victory checked, then either side may surrender');
 (function () {
   const e = battle(), st = e.state();
   const ask = skipToEnd(e);
   ok('each player is asked at the end of the turn', !!ask && ask.side === 'A', ask ? '' : st.log.slice(-3).map((l) => l.text).join(' / '));
+  ok('...after the Rally phase', st.log.some((l) => /^Rally phase/.test(l.text)));
   ok('...and nothing else can be done meanwhile', !e.intent(st.activeSide, { k: 'action', id: 'skip' }).ok);
   ok('the other player cannot answer for them', !e.intent('B', { k: 'enddone' }).ok);
-  const far = st.units.find((u) => u.side === 'A' && u.alive && ask.ids.indexOf(u.id) < 0 && !u.aboard && !u.reserve);
-  if (far) ok('a unit out of reach of an edge cannot withdraw', !e.intent('A', { k: 'endflee', id: far.id }).ok);
-  ok('some unit can reach an edge', ask.ids.length > 0);
-  const id = ask.ids[0];
-  e.intent('A', { k: 'endflee', id: id });
-  ok('picked to withdraw', st.endAsk.pick.indexOf(id) >= 0);
-  e.intent('A', { k: 'endflee', id: id });
-  ok('...and tapped again, dropped', st.endAsk.pick.indexOf(id) < 0);
-  e.intent('A', { k: 'endflee', id: id });
+  ok('there is no withdrawing units', !e.intent('A', { k: 'endflee', id: st.units[0].id }).ok);
   const r = e.intent('A', { k: 'enddone' });
-  const u = st.units.find((x) => x.id === id);
-  ok('carrying on, the unit leaves the table, fled', r.ok && !u.alive && u.fled, r.why);
-  ok('then the other player is asked', st.endAsk && st.endAsk.side === 'B');
+  ok('carrying on, the other player is asked', r.ok && st.endAsk && st.endAsk.side === 'B', r.why);
   e.intent('B', { k: 'enddone' });
   ok('and with both answered the next turn starts', !st.endAsk && st.turn === 2 && !st.over);
 })();

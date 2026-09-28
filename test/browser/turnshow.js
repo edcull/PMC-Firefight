@@ -1,7 +1,7 @@
 /* Whose go it is, at a glance: the phone's header always carries the turn pill
    and a bar of the side's colour; each new turn is announced across the table;
-   a unit may Skip; and the End phase asks each player to withdraw units or
-   surrender before the next turn. */
+   a unit may Skip; and the End phase asks each player whether to surrender
+   before the next turn. */
 const { chromium } = require('playwright');
 const { page: PAGE } = require('../where.js');
 
