@@ -35,12 +35,14 @@ async function press(p, label) {
   await startSkirmish(p, { tier: 3, mode: 'hotseat', mirror: true, keys: ['cmd2', 'regular', 'engineers', 'lifv', 'ew', 'recon:tracked:drone'] });
   await p.waitForTimeout(900);
   await drain(p);
-  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
-  await p.waitForTimeout(400);
-  await drain(p);
-  // the vehicles just put down are asked which way they face: they keep the way offered
-  await p.evaluate(() => { for (let n = 0; n < 12 && window.PMC_STATE().faceAsk; n++) window.__sendIntent({ k: 'vfaceall' }); });
-  await p.waitForTimeout(300);
+  /* A hotseat deploys both sides at this screen, a side at a time: each goes
+     down, and its vehicles keep the facing they were offered. */
+  for (let k = 0; k < 6; k++) {
+    if (await p.evaluate(() => !!document.querySelector('button[data-act="start"], button[data-act="startask"]'))) break;
+    await p.evaluate(() => window.__autoDeployBoth());
+    await p.waitForTimeout(400);
+    await drain(p);
+  }
   await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
   await p.evaluate(() => window.__beginButton().click());
   await p.waitForTimeout(800);

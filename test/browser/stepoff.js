@@ -67,6 +67,7 @@ async function drain(p) {
   async function passOne() {
     await p.evaluate(() => {
       const s = window.PMC_STATE();
+      if (s.endAsk) { window.__sendIntent({ k: 'enddone' }); return; }   // the End phase: carry on
       if (s.activeSide !== 'A' || s.over) return;
       const u = s.units.find(x => x.side === 'A' && x.alive && !x.activated && !x.reserve && !x.aboard &&
         x.key !== 'insertplat' && window.PMC.status(x) !== 'broken');

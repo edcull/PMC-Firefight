@@ -294,6 +294,10 @@
     /* A Last Stand may be made at any time (p. 88), off its side's turn too: it
        is the unit's side that makes it, and the side being asked that answers. */
     if (st.standAsk && this.seats.indexOf(st.standAsk.side) >= 0) return st.standAsk.side;
+    var k = it && it.k;
+    if (st.endAsk && /^(enddone|surrender)$/.test(k) && this.seats.indexOf(st.endAsk.side) >= 0) return st.endAsk.side;
+    // a hull just put down is faced by its own side, whoever deployed last
+    if (st.faceAsk && /^vface/.test(k) && this.seats.indexOf(st.faceAsk.side) >= 0) return st.faceAsk.side;
     if (it && it.k === 'laststand') {
       var lu = st.units.filter(function (u) { return u.id === it.id; })[0];
       if (lu && this.seats.indexOf(lu.side) >= 0) return lu.side;

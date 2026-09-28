@@ -391,6 +391,7 @@
       else if (ui.insertion) html = insertionCard();
       else if (B.state.cmdOffer) html = cmdOfferCard();
       else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
+      else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over) html = endCard();
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.over) html = overCard();
@@ -452,6 +453,21 @@
         '. It is about to scatter and flee the field. It still has its Last Stand: once a battle, every point of suppression gone.</p>' +
         '<div class="acts"><button class="act primary" data-act="stand"><span>Make its Last Stand</span><small>All ' + a.sp + ' SP cleared \u2014 it stays</small></button>' +
         '<button class="act" data-act="nostand"><span>Let it flee</span><small>Keep nothing back: it counts as fled</small></button></div></div>';
+    }
+    /* The End phase: a side may send units within a move of a table edge off
+       the table (they count as fled), carry on to the Rally phase, or surrender
+       the battle, which asks twice. */
+    function endCard() {
+      var a = B.state.endAsk, mine = !B.seats || B.seats.indexOf(a.side) >= 0;
+      if (!mine) {
+        return '<div class="card"><h2>End phase</h2><p class="sub">' + esc(sideName(a.side)) +
+          ' is deciding whether to surrender.</p></div>';
+      }
+      return '<div class="card endcard"><h2>End phase \u2014 ' + esc(sideName(a.side)) + '</h2>' +
+        '<p class="sub">Nobody has won yet. Carry on to turn ' + (B.state.turn + 1) + ', or surrender: the opponent wins the battle.</p>' +
+        '<div class="acts"><button class="act primary" data-act="enddone"><span>Carry on</span><small>To turn ' + (B.state.turn + 1) + '</small></button>' +
+        '<button class="act' + (a.sure ? ' danger' : '') + '" data-act="surrender"><span>' + (a.sure ? 'Tap again to surrender' : 'Surrender') + '</span>' +
+        '<small>' + (a.sure ? 'The battle goes to ' + esc(sideName(a.side === 'A' ? 'B' : 'A')) : 'Give up the battle') + '</small></button></div></div>';
     }
     // a player's own unit that could make its Last Stand now (p. 88: at any time)
     function mayStand(u) {
@@ -1025,6 +1041,7 @@
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();

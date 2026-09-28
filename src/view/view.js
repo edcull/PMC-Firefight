@@ -401,6 +401,38 @@
       });
     }
 
+    function isAI(side) { return B.state.cfg.aiSides.indexOf(side) >= 0; }
+    // is this side played at this screen? (in a network game only the seat's own)
+    function mineToPlay(side) { return !B.seats || B.seats.indexOf(side) >= 0; }
+    function plainName(side) { return (side === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB) || sideName(side); }
+    // the pill's words for whose activation it is: yours, or the other side's by name
+    function turnWords(side) {
+      var humans = ['A', 'B'].filter(function (s) { return !isAI(s) && mineToPlay(s); });
+      if (humans.length === 1 && humans[0] === side) return 'Your turn';
+      var nm = plainName(side);
+      return nm + (/s$/i.test(nm) ? '\u2019' : '\u2019s') + ' turn';
+    }
+    /* A new turn is announced across the board: its number, and who has the
+       initiative. It fades by itself and never takes a tap. */
+    function turnBanner() {
+      var tb = el('turnbanner');
+      if (!tb || B.state.phase !== 'battle' || B.state.over || !B.state.turn) return;
+      if (ui.bannerTurn === B.state.turn) return;
+      var first = ui.bannerTurn == null;
+      ui.bannerTurn = B.state.turn;
+      if (first && B.state.turn > 1) return;      // a game opened part-way does not announce the turn it is in
+      var who = B.state.solo ? (B.state.activeSide === 'B' ? 'The OpFor acts' : 'Your commando acts first')
+        : B.state.initiative ? (turnWords(B.state.initiative) === 'Your turn' ? 'You have the initiative' : plainName(B.state.initiative) + ' has the initiative')
+          : '';
+      var side = B.state.solo ? B.state.activeSide : B.state.initiative;
+      tb.innerHTML = '<b>Turn ' + B.state.turn + '</b>' + (who ? '<span>' + esc(who) + '</span>' : '');
+      tb.className = 'turnbanner' + (side ? ' tb-' + side : '');
+      tb.hidden = false;
+      void tb.offsetWidth;                 // restart the animation
+      tb.classList.add('show');
+      clearTimeout(ui.bannerTimer);
+      ui.bannerTimer = setTimeout(function () { tb.classList.remove('show'); tb.hidden = true; }, 2600);
+    }
     function drawHeader() {
       // two players at one screen: the phone's one-row header shows whose turn it is too
       var hdrEl = document.querySelector('header');
@@ -439,10 +471,24 @@
           act.textContent = B.state.solo.coop ? soloOwnerName(B.state.activeOwner) + ' to act' : 'Your commando';
           act.className = 'pill pill-' + (B.state.solo.coop ? (B.state.activeOwner === 2 ? 'C' : 'P1') : 'A');
         }
+      } else if (B.state.endAsk) {
+        var ew = turnWords(B.state.endAsk.side);
+        act.textContent = 'End phase: ' + (ew === 'Your turn' ? 'your call' : plainName(B.state.endAsk.side));
+        act.className = 'pill pill-' + B.state.endAsk.side;
       } else {
-        act.textContent = 'Activating: ' + sideName(B.state.activeSide);
+        act.textContent = turnWords(B.state.activeSide);
         act.className = 'pill pill-' + B.state.activeSide;
       }
+      /* Whose go it is, on the header itself: a bar of that side's colour along
+         its foot (the phone shows the pill too, whatever the kind of game). */
+      if (hdrEl) {
+        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
+          ? (B.state.activeOwner === 2 ? 'C' : 'P1') : B.state.activeSide) : null;
+        ['A', 'B', 'C', 'P1'].forEach(function (k) { hdrEl.classList.toggle('turn-' + k, going === k); });
+        var goer = B.state.endAsk ? B.state.endAsk.side : B.state.activeSide;
+        hdrEl.classList.toggle('your-turn', !!going && !isAI(goer) && mineToPlay(goer));
+      }
+      turnBanner();
       if (B.state.solo && B.state.phase !== 'deploy' && B.state.phase !== 'terrain') {
         el('hdr-phase').textContent = 'Turn ' + B.state.turn + ' · ' + (B.state.activeSide === 'B' ? 'OpFor phase' : 'Action phase');
         el('hdr-init').textContent = B.state.scen.name;

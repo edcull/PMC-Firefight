@@ -80,9 +80,9 @@
     window.__eligibleUnits = function () { return eligible(B.state.activeSide); };
     window.__actionIds = function (u) {
       return B.STANDARD.map(function (a) { return a.id; })
-        .filter(function (id) { return id !== 'regroup'; })
+        .filter(function (id) { return id !== 'regroup' && id !== 'skip'; })
         .concat(specialsFor(u).map(function (a) { return a.id; }))
-        .concat(['regroup']);
+        .concat(['regroup', 'skip']);
     };
     window.__commitWhatever = function () {
       if (ui.targets.length) { doShoot(ui.targets[0]); return true; }

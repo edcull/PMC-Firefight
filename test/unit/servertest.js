@@ -320,6 +320,12 @@ async function main() {
       await both[st.faceAsk.side].answered();
       continue;
     }
+    // the End phase: each seat carries on, nobody withdrawing or giving up
+    if (st.endAsk) {
+      both[st.endAsk.side].send('intent', { intent: { k: 'enddone' } });
+      await both[st.endAsk.side].answered();
+      continue;
+    }
     if (sel.insertion) {
       const side = sel.insertion.side;
       const spot = (sel.insertion.spots || [])[0];

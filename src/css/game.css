@@ -239,6 +239,32 @@ canvas#board:active { cursor: grabbing; }
   font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint);
 }
 
+/* A new turn, announced across the board; it fades by itself and takes no taps. */
+.turnbanner {
+  position: absolute; z-index: 6; left: 50%; top: 38%; pointer-events: none;
+  transform: translate(-50%, -50%) scale(.92); opacity: 0;
+  background: rgba(13, 17, 23, .92); border: 1px solid var(--line); border-top: 3px solid var(--ink-dim);
+  border-radius: 8px; padding: 12px 26px 11px; text-align: center; box-shadow: 0 14px 34px rgba(0, 0, 0, .55);
+}
+.turnbanner.show { animation: turnbanner 2.6s ease both; }
+.turnbanner b { display: block; font-family: var(--display); font-size: 26px; letter-spacing: .06em; color: var(--ink); text-transform: uppercase; }
+.turnbanner span { display: block; font-family: var(--mono); font-size: 11.5px; margin-top: 3px; }
+.turnbanner.tb-A { border-top-color: var(--alpha); } .turnbanner.tb-A span { color: var(--alpha); }
+.turnbanner.tb-B { border-top-color: var(--bravo); } .turnbanner.tb-B span { color: var(--bravo); }
+@keyframes turnbanner {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.92); }
+  12%, 78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+/* whose go it is: a bar of that side's colour along the header's foot */
+header.turn-A { box-shadow: inset 0 -3px 0 var(--alpha); }
+header.turn-B { box-shadow: inset 0 -3px 0 var(--bravo); }
+header.turn-P1 { box-shadow: inset 0 -3px 0 var(--own-A); }
+header.turn-C { box-shadow: inset 0 -3px 0 var(--own-C); }
+header.your-turn #hdr-active { font-weight: 700; }
+header.your-turn #hdr-active.pill-A { background: var(--alpha); color: #0d1117; }
+header.your-turn #hdr-active.pill-B { background: var(--bravo); color: #0d1117; }
+
 .terraintip {
   position: absolute; z-index: 4; pointer-events: none; max-width: 230px;
   background: rgba(13, 17, 23, .94); border: 1px solid var(--line);
@@ -261,7 +287,7 @@ canvas#board:active { cursor: grabbing; }
 /* ---------- action bar ---------- */
 .console { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
 .bar {
-  display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px;
+  display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 6px;
   padding: 10px 10px 8px;
 }
 @media (max-width: 760px) {
@@ -496,6 +522,8 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .tgt b { font-size: 13px; display: block; }
 .tgt span { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .tgt:hover { border-color: var(--warn); }
+/* the End phase: a unit picked to leave the table */
+.act.danger { border-color: var(--bad, #d1476b); background: color-mix(in srgb, var(--bad, #d1476b) 18%, transparent); }
 
 /* ---------- overlays ---------- */
 .overlay {
@@ -1546,8 +1574,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   #btn-menu { order: 0; }
   #btn-obj { order: 1; margin-left: auto; }
   #hdr-turn { display: inline-block; order: 2; width: 58px; text-align: center; font-size: 10px; }
-  /* hotseat and co-op: whose turn it is, between Menu and Objectives, as the desktop header shows it */
-  header.two-seat #hdr-active { display: inline-block !important; order: 1; margin-left: 8px; min-width: 0; max-width: 46vw;
+  /* whose turn it is, between Menu and Objectives, in every kind of game */
+  header #hdr-active.pill { display: inline-block !important; order: 1; margin-left: 8px; min-width: 0; max-width: 46vw;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; padding: 3px 8px; }
   header .lnk#btn-menu, header .lnk#btn-obj { font-size: 10px; padding: 4px 9px; }
   main { display: block; padding-top: 0; height: calc(100% - var(--hdr, 52px)); }

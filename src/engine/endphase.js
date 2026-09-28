@@ -79,6 +79,42 @@
       });
     }
 
+    /* ---- surrender, in the End phase ----
+       Once the scenario's victory conditions have been checked and nobody has
+       won, each player at the table (not the AI) may surrender the battle: the
+       opponent wins at once. Asked in turn, a side at a time, and kept on the
+       battle's state (endAsk) so a reload or the other end of a network game
+       sees the same question. */
+    function askEnd(sides) {
+      var side = sides[0];
+      if (!side) { E.state.endAsk = null; beginTurn(); return; }
+      E.state.endAsk = { side: side, rest: sides.slice(1), sure: false };
+      logLine('phase', 'End phase — ' + sideName(side) + ' may surrender, or carry on to the next turn.');
+      revealConsole();
+      render();
+    }
+    function endAsks() {
+      askEnd(['A', 'B'].filter(function (s) {
+        return !isAI(s) && E.state.units.some(function (u) { return u.side === s && onTable(u); });
+      }));
+    }
+    /* Carry on, or surrender: a first press asks for a second, so a battle is
+       not thrown away by one stray tap. */
+    function endAnswer(side, what) {
+      var ea = E.state.endAsk;
+      if (!ea || ea.side !== side) return 'nothing to answer';
+      if (what === 'surrender') {
+        if (!ea.sure) { ea.sure = true; render(); return null; }
+        var winner = side === 'A' ? 'B' : 'A';
+        E.state.endAsk = null;
+        finish(winner, sideName(side) + ' surrenders — ' + sideName(winner) + ' wins the battle.');
+        render();
+        return null;
+      }
+      askEnd(ea.rest || []);
+      return null;
+    }
+
     function rallyPhase() {
       logLine('phase', 'Rally phase.');
       R.collars(E.state).forEach(function (l) { logLine(l.t, l.text); });
@@ -264,7 +300,7 @@
         finish(res.winner, text);
       }
       if (E.state.over) { render(); return; }
-      beginTurn();
+      endAsks();
     }
 
     /* Who holds each objective, by the one test the scenarios use (scenarios.js
@@ -378,7 +414,7 @@
     }
 
     return {
-      rallyPhase: rallyPhase, repairCard: repairCard, objDist: objDist, scoreObjectives: scoreObjectives,
+      rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, objDist: objDist, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };
