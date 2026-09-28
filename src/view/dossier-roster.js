@@ -65,8 +65,11 @@
         if (!st.served) return '';
         // penal troopers are counted apart, and not in the loss rate
         if (st.countOnly) return st.lost ? '<div class="dloss"><b>' + st.lost + '</b> ' + st.unit + ' killed <span>not counted as losses</span></div>' : '';
-        var pct = Math.round(st.pct * 1000) / 10;
-        return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
+        var pct = Math.round(st.pct * 1000) / 10, wpct = Math.round(st.wpct * 1000) / 10;
+        // the swarm's is biomass, and a bug is not wounded: it is lost or it is not
+        if (st.pool === 'biomass') return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
+        return '<div class="dloss"><b>' + pct + '%</b> killed <b>' + wpct + '%</b> wounded <span>' + st.lost + ' killed, ' +
+          st.wounded + ' wounded, of ' + st.served + ' ' + st.unit + '</span></div>';
       }).join('');
     }
     function memorialList(co) {

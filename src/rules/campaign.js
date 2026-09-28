@@ -805,7 +805,7 @@
   }
   function addLoss(co, pool, key, n) {
     var L = losses(co), b = L[pool] || (L[pool] = { lost: 0, departed: 0 });
-    b[key] += n;
+    b[key] = (b[key] || 0) + n;
   }
   function lossStats(co) {
     var L = losses(co);
@@ -820,7 +820,11 @@
         return n + (poolOf(profile(e.key)) === pool ? massOf(e, co) : 0);
       }, 0);
       var served = now + lost + b.departed;
-      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, served: served, pct: served ? lost / served : 0, countOnly: !!COUNT_ONLY[pool] };
+      /* `lost` is the dead; the wounded came back and are on the books still,
+         so they are counted against those who served but not added to them. */
+      var wounded = b.wounded || 0;
+      return { pool: pool, unit: POOL_NAMES[pool], lost: lost, wounded: wounded, served: served,
+        pct: served ? lost / served : 0, wpct: served ? wounded / served : 0, countOnly: !!COUNT_ONLY[pool] };
     });
   }
   /* How seasoned the force is: every honour held on the books against the

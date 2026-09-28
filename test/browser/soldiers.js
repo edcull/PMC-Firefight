@@ -175,7 +175,7 @@ async function clickText(p, re) {
   }));
   check('the memorial has no separate casualty count line', !/casualties in \d+ battle/.test(mem.text));
   const lossText = await p.evaluate(() => { const d = document.querySelector('#camp-body .dloss:not(.dexpr)'); return d ? d.textContent : ''; });
-  check('...and shows the loss rate against everyone who has served', /^[\d.]+% lost 3 of \d+ soldiers$/.test(lossText), lossText);
+  check('...and shows the loss rate against everyone who has served', /^[\d.]+% killed [\d.]+% wounded \d+ killed, \d+ wounded, of \d+ soldiers$/.test(lossText), lossText);
   check('...most recent battle first, with the enemy and the scenario',
     mem.heads.length === 2 && /Campaign turn 2 · against Salvage Rights · Secure and control/.test(mem.heads[0]), mem.heads[0]);
   check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
@@ -216,7 +216,7 @@ async function clickText(p, re) {
   await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
   const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss:not(.dexpr)')].map(d => d.textContent));
   check('the tribe shows a loss rate for its Crocks and one for its Esh-Aven',
-    tribe.length === 2 && /lost 1 of 4 Crocks$/.test(tribe[0]) && /lost 6 of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
+    tribe.length === 2 && /killed, \d+ wounded, of 4 Crocks$/.test(tribe[0]) && /killed, \d+ wounded, of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
   await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-tribe.png') });
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;

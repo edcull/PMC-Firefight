@@ -16,7 +16,9 @@ const A = camp.companies.A;
 const drones = A.roster.find(e => e.key === 'dcombat'), men = A.roster.find(e => e.key === 'recruits');
 ok('the drone squad is on the books', !!drones && !!men);
 C.menOf(drones, A); C.menOf(men, A);
-const cas = (e, n) => (e.men || []).slice(0, n).map(m => ({ side: 'A', name: m.name, rank: m.rank, turn: 2, type: R.profile(e.key).name, unit: e.name, rid: e.rid }));
+// the drones are named here as an older version named them; they still count for nothing
+const cas = (e, n) => (e.men && e.men.length ? e.men : [1, 2, 3, 4].map(i => ({ name: 'Drone ' + i, rank: 'Private' })))
+  .slice(0, n).map(m => ({ side: 'A', name: m.name, rank: m.rank, turn: 2, type: R.profile(e.key).name, unit: e.name, rid: e.rid }));
 const report = {
   winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: true },
   casualties: cas(drones, 2).concat(cas(men, 3)),
@@ -27,7 +29,9 @@ const report = {
   })
 };
 const before = C.lossStats(A)[0].lost;
+const d6 = R.d6; R.d6 = () => 1;          // every man lost is killed
 C.aftermath(camp, report);
+R.d6 = d6;
 const types = (A.memorial || []).map(m => m.type);
 ok('the men lost go on the memorial', types.filter(t => t === R.profile('recruits').name).length === 3, types.join(', '));
 ok('...and the drones do not', !types.some(t => t === R.profile('dcombat').name));
