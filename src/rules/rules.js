@@ -1397,7 +1397,7 @@
       drives: drives, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
       fmtPart: fmtPart, has: has, hasOwn: hasOwn, isDestructible: isDestructible, isFlying: isFlying,
       isMachine: isMachine, isOvergrown: isOvergrown, jumps: jumps, leaveAway: leaveAway, occupant: occupant,
-      pathTo: pathTo, pheromoneBonus: pheromoneBonus, rectPointDist: rectPointDist,
+      pathTo: pathTo, pheromoneBonus: pheromoneBonus, reachable: reachable, rectPointDist: rectPointDist,
       resolveAssaultHits: resolveAssaultHits, resolveDamage: resolveDamage, sectionRect: sectionRect,
       shelterOf: shelterOf, shoot: shoot, sizeBonus: sizeBonus, status: status, terrainAt: terrainAt,
       unitDist: unitDist, unitNear: unitNear
