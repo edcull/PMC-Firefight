@@ -95,6 +95,10 @@
         box.innerHTML = 'Which way does <b>' + esc(fau.name) + '</b> face? Tap a direction around it, or choose on the octagon.';
         return;
       }
+      if (B.state.phase === 'deploy' && B.state.deployReady) {
+        box.innerHTML = 'Look over the table and the other force, then modify your army or continue to the deployment.';
+        return;
+      }
       if (B.state.phase === 'deploy') {
         var next = deployNext(), dside = placingSide();
         // somebody else's deployment is watched, not played
@@ -392,7 +396,7 @@
       else if (B.state.cmdOffer) html = cmdOfferCard();
       else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
       // the End phase is asked once the other side's last activations have been drawn, not while they play
-      else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over && !B.replaying()) {
+      else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over && !B.replaying() && !B.cardsPending()) {
         html = endCard();
         // on a phone the question comes to the front the once, when it is first asked
         var ek = B.state.turn + B.state.endAsk.side;
@@ -710,8 +714,32 @@
         '<div class="acts"><button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button></div></div>';
     }
 
+    /* Before anyone deploys, each player with a swap to make looks over the
+       table and the other force, and modifies their army or goes on: Modify
+       your army, or Continue to deployment. The deployment itself (units,
+       reserves, transports) comes once every such player has gone on. */
+    function readyCard() {
+      var r = B.state.deployReady;
+      if (!r) return null;
+      var here = ['A', 'B'].filter(function (s) { return !isAI(s) && (!B.seats || B.seats.indexOf(s) >= 0); });
+      var mine = here.filter(function (s) { return r[s] === false; })[0];
+      if (!mine) {
+        var who = ['A', 'B'].filter(function (s) { return r[s] === false; }).map(sideName).join(' and ');
+        return '<div class="card"><h2>Deployment</h2><p class="sub">Waiting for ' + esc(who) + ' to finish modifying their army.</p></div>';
+      }
+      var sv = B.state.swapAvail[mine] || { left: 0 };
+      var h = '<div class="card"><h2>Before deploying</h2><p class="sub">Look over the table and the other force. You may swap up to ' + sv.left +
+        ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
+      if (B.state.swapAsk && B.state.swapAsk.side === mine) h += swapCard();
+      else if (B.Q.canSwapNow(mine)) h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's') + '</small></button></div>';
+      return h + '<div class="acts"><button class="act primary" data-act="deployready"><span>Continue to deployment</span><small>' +
+        (sv.left > 0 ? 'The list stands as it is' : 'Units, reserves and transports') + '</small></button></div></div>';
+    }
+
     function deployCard() {
       if (B.state.relocating) return relocCard();
+      var rc = readyCard();
+      if (rc) return rc;
       var next = deployNext();
       var me = next ? next.side : (playerSide() || 'A');
       var h = '<div class="card">';
@@ -1034,6 +1062,7 @@
           else if (a === 'placelen') { send({ k: a, len: +b.getAttribute('data-len') }); return; }
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
+          else if (a === 'deployready') { send({ k: 'deployready' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
@@ -1196,7 +1225,6 @@
       if (el('btn-obj')) el('btn-obj').addEventListener('click', openObjectives);
       if (el('obj-modal')) el('obj-modal').addEventListener('click', function (e) {
         if (e.target === el('obj-modal') || e.target.id === 'obj-done') el('obj-modal').hidden = true;
-        if (e.target.id === 'obj-swap') { el('obj-modal').hidden = true; send({ k: 'swapopen' }); }
       });
 
       /* Multiplayer only works when this page came from a game server. A game

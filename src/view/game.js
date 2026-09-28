@@ -97,6 +97,8 @@
       try { cfg.terrainSetup = localStorage.getItem('pmc-terrainsetup') || undefined; } catch (e) { }
     }
     loadAutoAdvance(cfg.mode);
+    // against the AI, the player looks over the table and modifies the army, or goes on, before deploying
+    if (cfg.mode === 'ai' && cfg.readyUp == null) cfg.readyUp = true;
     resetShow();
     // a demo is for watching: there is nothing to act with, so no Actions tab, and it opens on the results
     document.body.setAttribute('data-battle', cfg.mode || '');
@@ -982,6 +984,8 @@
   var VIEW = window.PMCView({
     get Q() { return Q; },
     replaying: function () { return replaying(); },
+    // result cards still to be read (a rally's rolls, say), or one open now
+    cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
     deployWhere: deployWhere, roleSentence: roleSentence,
     get FORCE_NOUN() { return FORCE_NOUN; }, get ID_NOUN() { return ID_NOUN; },
     get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; }, get anims() { return anims; },
@@ -1017,6 +1021,8 @@
     get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get vc() { return vc(); }, get seats() { return seats; },
     get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
     replaying: function () { return replaying(); },
+    // result cards still to be read (a rally's rolls, say), or one open now
+    cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
     cancelPreview: cancelPreview, carriersFor: carriersFor, chooseAction: chooseAction,
     cmdOfferCard: cmdOfferCard, commitMove: commitMove, curArea: curArea, deployNext: deployNext,

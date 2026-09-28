@@ -77,6 +77,9 @@ async function newGame(p, cfg) {
   }, cfg || {}));
   await p.waitForTimeout(900);
   await drain(p);
+  // the list stands: on to the deployment itself
+  await p.evaluate(() => { if (window.PMC_STATE().deployReady) window.__sendIntent({ k: 'deployready' }); });
+  await p.waitForTimeout(200);
 }
 
 (async () => {

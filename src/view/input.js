@@ -334,6 +334,9 @@
       if (B.state.phase === 'deploy') {
         var pending = deployNext();
         if (!pending) return;
+        // before continuing to the deployment, the table is looked over, not placed on
+        var rdy = B.state.deployReady;
+        if (rdy && (rdy[pending.side] === false || Object.keys(rdy).some(function (s) { return rdy[s] === false; }))) return;
         /* Tapping a model already on the table picks that one up instead — the
            natural way to shuffle a line before the first turn. */
         var under = deployRoster(pending.side).filter(function (u) {

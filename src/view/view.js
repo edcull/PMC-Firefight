@@ -471,7 +471,7 @@
           act.textContent = B.state.solo.coop ? soloOwnerName(B.state.activeOwner) + ' to act' : 'Your commando';
           act.className = 'pill pill-' + (B.state.solo.coop ? (B.state.activeOwner === 2 ? 'C' : 'P1') : 'A');
         }
-      } else if (B.state.endAsk && !B.replaying()) {
+      } else if (B.state.endAsk && !B.replaying() && !B.cardsPending()) {
         var ew = turnWords(B.state.endAsk.side);
         act.textContent = 'End phase: ' + (ew === 'Your turn' ? 'your call' : plainName(B.state.endAsk.side));
         act.className = 'pill pill-' + B.state.endAsk.side;
@@ -482,10 +482,10 @@
       /* Whose go it is, on the header itself: a bar of that side's colour along
          its foot (the phone shows the pill too, whatever the kind of game). */
       if (hdrEl) {
-        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
+        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
           ? (B.state.activeOwner === 2 ? 'C' : 'P1') : B.state.activeSide) : null;
         ['A', 'B', 'C', 'P1'].forEach(function (k) { hdrEl.classList.toggle('turn-' + k, going === k); });
-        var goer = B.state.endAsk && !B.replaying() ? B.state.endAsk.side : B.state.activeSide;
+        var goer = B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : B.state.activeSide;
         hdrEl.classList.toggle('your-turn', !!going && !isAI(goer) && mineToPlay(goer));
       }
       turnBanner();
@@ -543,17 +543,6 @@
       }
       if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';
       if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
-      /* Modifying the armies (p. 46), offered here until the first unit goes
-         down: the one question before deploying, not a button on the card. */
-      var swapper = swapperHere();
-      if (swapper) {
-        var sv = B.state.swapAvail[swapper];
-        h += '<p class="hint small">You may swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's') +
-          ' for others of the same Tier, having seen the table and their force \u2014 until your first unit goes down.</p>' +
-          '<div class="askrow"><button type="button" class="lnk" id="obj-swap">Modify your army</button>' +
-          '<button type="button" class="start" id="obj-done">Deploy</button></div>';
-        return h;
-      }
       return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
     }
     function openObjectives(quiet) {
@@ -567,20 +556,12 @@
        begins: the scenario, what wins it, and where the forces go down. After
        that it is the header's Objectives button. A demo is watched, not
        briefed. */
-    function swapperHere() {
-      if (!B.state || B.state.phase !== 'deploy') return null;
-      return ['A', 'B'].filter(function (s) { return !isAI(s) && mineToPlay(s) && B.Q.canSwapNow(s); })[0] || null;
-    }
-    /* ...and again if the chance to modify the army comes only later, when it
-       is this side's turn to deploy after the other has. */
     function briefOnce() {
       // opened by itself for the deployment, it goes with the deployment
       if (ui.briefAuto && (!B.state || B.state.phase !== 'deploy')) { ui.briefAuto = false; el('obj-modal').hidden = true; }
       if (!B.state || B.state.phase !== 'deploy' || B.state.cfg.aiSides.length === 2) return;
-      var swap = !!swapperHere();
-      if (ui.briefed === B.state.cfg && (!swap || ui.swapOffered === B.state.cfg)) return;
+      if (ui.briefed === B.state.cfg) return;
       ui.briefed = B.state.cfg;
-      if (swap) ui.swapOffered = B.state.cfg;
       openObjectives(true);
       ui.briefAuto = true;
     }

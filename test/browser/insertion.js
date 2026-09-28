@@ -29,7 +29,7 @@ async function drain(p) {
   });
   console.log('held in reserve at setup:', held.join(', ') || 'none');
 
-  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')).click());
+  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]'))).click());
   await p.waitForTimeout(400);
   await drain(p);
   console.log('deployment complete with reserves out:', await p.evaluate(() => {
