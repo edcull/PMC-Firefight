@@ -1630,6 +1630,8 @@
   // does this unit have anyone in it who could be named?
   function crewed(u) {
     if (counted(u)) return false;
+    // a squad of drones is machines, however many of them there are: nobody to name
+    if (u.drone || hasOwn(u, 'Drone unit')) return false;
     if (!isMachine(u)) return true;
     return !u.drone && !has(u, 'Turret') && !/Turret/.test(u.group || '');
   }

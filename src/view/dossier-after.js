@@ -186,6 +186,26 @@
       });
       return h + '</div>';
     }
+    /* Who the unit lost, and what the D6 made of each: a 1 killed in action,
+       2-6 wounded. Either way they are out of the campaign, and replaced. */
+    function casualtyLedger(u) {
+      var cas = (u.casualties || []).filter(function (c) { return !c.swarm && c.kia != null; });
+      if (!cas.length) return '';
+      function who(c) {
+        if (c.anon) {
+          var Wa = C.fateWords(E.camp.companies.A, 'eshaven');   // the unnamed: killed or wounded, whoever's
+          return (c.kia ? c.kia + ' ' + Wa.kia : '') + (c.kia && c.wounded ? ', ' : '') + (c.wounded ? c.wounded + ' ' + Wa.wia : '') +
+            (c.rolls ? ' <span class="dmen-rank">D6 ' + c.rolls.join(' ') + '</span>' : '');
+        }
+        return esc(c.rank) + ' ' + esc(c.name) + (c.roll ? ' <span class="dmen-rank">D6 ' + c.roll + '</span>' : '');
+      }
+      var W = C.words(E.camp.companies.A);
+      var dead = cas.filter(function (c) { return c.kia; }), hurt = cas.filter(function (c) { return !c.anon && !c.kia; });
+      var anon = cas.filter(function (c) { return c.anon; });
+      if (anon.length) return '<div class="dledger">Casualties: ' + anon.map(who).join('; ') + '</div>';
+      return (dead.length ? '<div class="dledger bad">' + W.kiaLong + ': ' + dead.map(who).join(', ') + '</div>' : '') +
+        (hurt.length ? '<div class="dledger">' + W.wiaLong + ': ' + hurt.map(who).join(', ') + '</div>' : '');
+    }
     /* The player's own battle, as a card like the ones for the battles elsewhere. */
     function ownCard(last) {
       var coA = E.camp.companies.A, foeName = (last && last.against) || (E.camp.companies.B || {}).name || 'the enemy';
@@ -425,10 +445,11 @@
         /* A unit that is off the dossier has no use for the day's experience or
            trauma, and showing a ledger it can never spend only raises the question
            of why it was struck off in the first place. Say that instead. */
+        h += casualtyLedger(u);
         if (u.wiped && !u.disbanded) {
           h += '<div class="dledger bad">' + (u.aboardDowned
             ? 'They were aboard when it came down, and it was not recovered — so neither were they.'
-            : 'Every soldier was killed. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
+            : 'Every soldier was put out of action. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
             '</div>';
         } else {
           if (u.fled) {
