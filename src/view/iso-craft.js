@@ -437,6 +437,15 @@
               parts.push({ d: bodyD.x + bodyD.y + (sd === stubNear ? 0.001 : -0.001), fn: function () {
                 var wz = z + H * 0.42;
                 plate(AF, [[L * 0.08, sd * cw * 0.95], [-L * 0.06, sd * tipQ * 0.86], [-L * 0.16, sd * tipQ * 0.86], [-L * 0.14, sd * cw * 0.95]], wz, 1.6);
+                /* A wingtip outboard of the fan housing, on the stub's own lines:
+                   its leading and trailing edges carry straight on past the fan,
+                   swept back the same, and it narrows a little to a clipped tip.
+                   Laid before the fan, so the housing covers its root. */
+                var q0 = cw * 0.95, q1 = tipQ * 0.86;
+                var le = function (q) { return L * 0.08 + (q - q0) * (-L * 0.14) / (q1 - q0); };
+                var te = function (q) { return -L * 0.14 + (q - q0) * (-L * 0.02) / (q1 - q0); };
+                var r0 = tipQ - 0.05, r1 = tipQ + 0.5, mid = (le(r1) + te(r1)) / 2;
+                plate(AF, [[le(r0), sd * r0], [le(r1) - (le(r1) - mid) * 0.25, sd * r1], [te(r1) - L * 0.02 + (mid - te(r1)) * 0.25, sd * r1], [te(r0) - L * 0.05, sd * r0]], wz, 1.6);
                 fan(AF, -L * 0.1, sd * tipQ, wz + 1, 0.36, false, false, 0.3);
               } });
             });
