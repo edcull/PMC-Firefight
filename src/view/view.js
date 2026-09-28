@@ -543,10 +543,22 @@
       }
       if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';
       if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
+      /* Modifying the armies (p. 46), offered here until the first unit goes
+         down: the one question before deploying, not a button on the card. */
+      var swapper = swapperHere();
+      if (swapper) {
+        var sv = B.state.swapAvail[swapper];
+        h += '<p class="hint small">You may swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's') +
+          ' for others of the same Tier, having seen the table and their force \u2014 until your first unit goes down.</p>' +
+          '<div class="askrow"><button type="button" class="lnk" id="obj-swap">Modify your army</button>' +
+          '<button type="button" class="start" id="obj-done">Deploy</button></div>';
+        return h;
+      }
       return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
     }
     function openObjectives(quiet) {
       if (!B.state) return;
+      ui.briefAuto = false;                // opened by hand: it stays until closed
       el('obj-box').innerHTML = objectivesHTML();
       el('obj-modal').hidden = false;
       if (SFX && !quiet) SFX.click();
@@ -555,11 +567,22 @@
        begins: the scenario, what wins it, and where the forces go down. After
        that it is the header's Objectives button. A demo is watched, not
        briefed. */
+    function swapperHere() {
+      if (!B.state || B.state.phase !== 'deploy') return null;
+      return ['A', 'B'].filter(function (s) { return !isAI(s) && mineToPlay(s) && B.Q.canSwapNow(s); })[0] || null;
+    }
+    /* ...and again if the chance to modify the army comes only later, when it
+       is this side's turn to deploy after the other has. */
     function briefOnce() {
-      if (!B.state || B.state.phase !== 'deploy' || ui.briefed === B.state.cfg) return;
+      // opened by itself for the deployment, it goes with the deployment
+      if (ui.briefAuto && (!B.state || B.state.phase !== 'deploy')) { ui.briefAuto = false; el('obj-modal').hidden = true; }
+      if (!B.state || B.state.phase !== 'deploy' || B.state.cfg.aiSides.length === 2) return;
+      var swap = !!swapperHere();
+      if (ui.briefed === B.state.cfg && (!swap || ui.swapOffered === B.state.cfg)) return;
       ui.briefed = B.state.cfg;
-      if (B.state.cfg.aiSides.length === 2) return;
+      if (swap) ui.swapOffered = B.state.cfg;
       openObjectives(true);
+      ui.briefAuto = true;
     }
 
     return {

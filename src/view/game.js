@@ -980,6 +980,7 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var VIEW = window.PMCView({
+    get Q() { return Q; },
     replaying: function () { return replaying(); },
     deployWhere: deployWhere, roleSentence: roleSentence,
     get FORCE_NOUN() { return FORCE_NOUN; }, get ID_NOUN() { return ID_NOUN; },

@@ -122,6 +122,8 @@
     };
     // the test harness's way through deployment: the scenario's own reserves, then everyone down
     window.__autoDeployBoth = function () {
+      // the briefing read and put away, as a player would before deploying
+      if (el('obj-modal')) el('obj-modal').hidden = true;
       // a Hostile takeover defender's position first: nothing deploys until it is dug in
       var pa = B.state && B.state.placeAsk;
       if (pa && pa.kind === 'fort') send({ k: 'placeauto' });

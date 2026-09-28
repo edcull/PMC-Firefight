@@ -40,6 +40,23 @@ const look = () => {
   p.on('pageerror', (e) => errs.push(e.message));
   await p.goto('file://' + PAGE); await p.waitForTimeout(600);
 
+  console.log('\n  the briefing, as deployment begins');
+  await p.evaluate(() => window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'ai', aiSides: ['B'], planet: 'industrial', scenario: 'meeting',
+    nameA: 'Ours', nameB: 'Theirs', armyA: ['cmd3', 'regular', 'veterans', 'shock'], armyB: ['cmd3', 'regular', 'veterans', 'shock'] }));
+  await p.waitForTimeout(1200);
+  const bf = await p.evaluate(() => {
+    const m = document.getElementById('obj-modal');
+    return { open: !m.hidden, text: m.textContent, swap: !!document.getElementById('obj-swap'),
+      card: (document.getElementById('panel-m') || document.body).textContent, cardSwap: !!document.querySelector('[data-act="swapopen"]') };
+  });
+  ok('the scenario briefing opens by itself', bf.open && /Meeting engagement/.test(bf.text) && /To win/.test(bf.text));
+  ok('...saying where the force goes down', /strip|shaded/.test(bf.text));
+  ok('...and offering the army swap', bf.swap);
+  ok('the Actions panel carries no scenario text nor swap button', !/Two companies meet/.test(bf.card) && !bf.cardSwap);
+  await p.evaluate(() => document.getElementById('obj-swap').click());
+  await p.waitForTimeout(300);
+  ok('Modify your army opens the swap', await p.evaluate(() => document.getElementById('obj-modal').hidden && document.querySelectorAll('[data-swappick]').length > 0));
+
   console.log('\n  hotseat, on a phone');
   await boot(p, 'hotseat');
   let s = await p.evaluate(look);

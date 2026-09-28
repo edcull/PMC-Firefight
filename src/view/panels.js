@@ -714,19 +714,9 @@
       if (B.state.relocating) return relocCard();
       var next = deployNext();
       var me = next ? next.side : (playerSide() || 'A');
-      var role = roleOf(me);
-      var h = '<div class="card"><h2>' + (B.state.scen ? B.state.scen.name : 'Deployment') +
-        (role ? ' <span class="role role-' + role + '">You ' +
-          (role === 'attacker' ? 'attack' : 'defend') + '</span>' : '') +
-        ' <button class="lnk" data-act="briefing">Briefing</button></h2>';
+      var h = '<div class="card">';
       if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
         (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
-      // Modifying the armies (p. 46): offered until the first unit goes down
-      if (!isAI(me) && B.Q.canSwapNow(me)) {
-        var sv = B.state.swapAvail[me];
-        h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left +
-          ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier, having seen the table and their force</small></button></div>';
-      }
       h += deployList(me);
       h += insertionList(me);
       /* The scenario's split (which units go on the table and which wait, or
@@ -1206,6 +1196,7 @@
       if (el('btn-obj')) el('btn-obj').addEventListener('click', openObjectives);
       if (el('obj-modal')) el('obj-modal').addEventListener('click', function (e) {
         if (e.target === el('obj-modal') || e.target.id === 'obj-done') el('obj-modal').hidden = true;
+        if (e.target.id === 'obj-swap') { el('obj-modal').hidden = true; send({ k: 'swapopen' }); }
       });
 
       /* Multiplayer only works when this page came from a game server. A game
