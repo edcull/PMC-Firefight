@@ -400,13 +400,20 @@
         var dx = ui.hover.x - dispX(u), dy = ui.hover.y - dispY(u);
         if (Math.hypot(dx, dy) > 0.4) return R.nearestFacing(Math.atan2(dy, dx));
       }
+      var fa = faceAsked();
+      if (fa === u) return B.state.faceAsk.dir;
       return ui.digDir != null ? ui.digDir : (u.facing || 0);
+    }
+    // a vehicle of this screen's player just put down, waiting to be told which way it faces
+    function faceAsked() {
+      var fa = B.state && B.state.faceAsk;
+      return fa && fa.ids.length && !isAI(fa.side) && !B.watching && B.seats.indexOf(fa.side) >= 0 ? unitById(fa.ids[0]) : null;
     }
     function isTouch() { return !!(window.matchMedia && window.matchMedia('(hover: none)').matches); }
     /* The overlay round the gun: an octagon of eight wedges, one to a facing,
        the one pointed at lit; and that facing's fire arc (the front 90°) laid out
        on the ground from its 6" minimum to its 24" dug-in range. */
-    function drawDigFacing(g, u) {
+    function drawDigFacing(g, u, noArc) {
       var cx = dispX(u), cy = dispY(u), lift = liftOf(cx, cy), F = digFacings(), pick = digPreview(u);
       function P(ang, r) { var q = ISO.toScreen(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r); return [q.x, q.y - lift]; }
       function fan(a0, a1, r0, r1, n) {
@@ -416,8 +423,8 @@
         g.beginPath(); pts.forEach(function (q, j) { if (j) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath();
       }
       g.save();
-      // the fire arc for the facing pointed at
-      fan(pick - Math.PI / 4, pick + Math.PI / 4, 6, 24, 24);
+      // the fire arc for the facing pointed at (a vehicle has just its front quarter marked, close in)
+      fan(pick - Math.PI / 4, pick + Math.PI / 4, noArc ? 2.9 : 6, noArc ? 5 : 24, 24);
       g.fillStyle = 'rgba(232,193,90,.20)'; g.fill();
       g.strokeStyle = 'rgba(12,10,6,.5)'; g.lineWidth = 3.5; g.stroke();              // a dark edge, so it reads on pale ground
       g.strokeStyle = '#f0cf72'; g.lineWidth = 1.8; g.setLineDash([7, 5]); g.stroke(); g.setLineDash([]);
@@ -440,7 +447,7 @@
       if (!B.state) return;
       /* Choosing a facing to dig in on: the gun is shown turned to it while the
          player looks round, and put back after. */
-      var dg = ui.mode === 'digface' && ui.selected && B.state && B.state.phase === 'battle' ? ui.selected : null, keep = null;
+      var dg = faceAsked() || (ui.mode === 'digface' && ui.selected && B.state && B.state.phase === 'battle' ? ui.selected : null), keep = null;
       if (dg) { keep = { f: dg.facing, a: dg.aim }; dg.facing = digPreview(dg); dg.aim = null; }
       try { drawBoardNow(); } finally { if (dg) { dg.facing = keep.f; dg.aim = keep.a; } }
     }
@@ -636,7 +643,8 @@
         });
       }
 
-      if (ui.mode === 'digface' && ui.selected && !aiSel) drawDigFacing(B.pctx, ui.selected);
+      if (faceAsked()) drawDigFacing(B.pctx, faceAsked(), true);
+      else if (ui.mode === 'digface' && ui.selected && !aiSel) drawDigFacing(B.pctx, ui.selected);
 
       /* ---- units and the buildings that hide them ----
          The structures are one baked layer under everything, so a unit used to be
@@ -1410,7 +1418,7 @@
     return {
       DIG_NAMES: DIG_NAMES,
       buildScene: buildScene,
-      digFacings: digFacings,
+      digFacings: digFacings, faceAsked: faceAsked,
       digPreview: digPreview,
       drawBoard: drawBoard,
       dropHaze: dropHaze,

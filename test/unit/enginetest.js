@@ -101,6 +101,8 @@ function play(seed, opts) {
     const st = e.state();
     const sel = e.sel();
 
+    // a vehicle just come on: it keeps the way it was offered
+    if (st.faceAsk) { const r = e.intent(st.faceAsk.side, { k: 'vfaceall' }); if (!r.ok) { ok('facing answered', false, r.why); break; } continue; }
     // a unit is coming in: drop it on the first legal spot offered
     if (sel.insertion) {
       const ins = sel.insertion;
@@ -441,6 +443,7 @@ function arrivals() {
     // bring every arrival down: the attacker chooses where in its zone each one lands
     for (let g = 0; g < 200 && !e.over(); g++) {
       const sel = e.sel();
+      if (e.state().faceAsk) { e.intent(e.state().faceAsk.side, { k: 'vfaceall' }); continue; }
       if (sel.insertion) {
         const side = sel.insertion.by || (sel.insertion.unit ? sel.insertion.unit.side : 'A');
         const spot = (sel.insertion.spots || [])[0];
@@ -535,6 +538,7 @@ function advanceIsOneAction() {
     if (!e.intent(e.query.placingSide() || 'A', { k: 'start' }).ok) e.intent('B', { k: 'start' });
     for (let g = 0; g < 160 && !e.over() && found < 4; g++) {
       const sel = e.sel(), st = e.state();
+      if (st.faceAsk) { e.intent(st.faceAsk.side, { k: 'vfaceall' }); continue; }
       if (sel.insertion) {
         const sd = sel.insertion.by || (sel.insertion.unit ? sel.insertion.unit.side : 'A'), sp = (sel.insertion.spots || [])[0];
         e.intent(sd, sp ? { k: 'insert', x: sp.x, y: sp.y } : { k: 'holdinsert' }); continue;

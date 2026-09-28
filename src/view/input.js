@@ -309,6 +309,13 @@
       var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 
       if (B.state.phase === 'terrain') { terrainTap(p); return; }
+      // a vehicle just put down: a tap round it chooses the way it faces
+      var fu = B.faceAsked();
+      if (fu) {
+        var fx = p.x - dispX(fu), fy = p.y - dispY(fu);
+        if (Math.hypot(fx, fy) > 0.4) send({ k: 'vface', dir: Math.atan2(fy, fx) });
+        return;
+      }
       // Dig in!: a tap round the gun chooses the way it faces
       if (ui.mode === 'digface' && ui.selected) {
         var dgx = p.x - dispX(ui.selected), dgy = p.y - dispY(ui.selected);

@@ -90,6 +90,11 @@
               : 'Tap inside the lit <b>' + ta.name + '</b> area to put down the ' + (PIECE_NOUN[tg.kind] || [tg.kind])[0] + ' outlined under the pointer.';
         return;
       }
+      var fau = B.faceAsked();
+      if (fau) {
+        box.innerHTML = 'Which way does <b>' + esc(fau.name) + '</b> face? Tap a direction around it, or choose on the octagon.';
+        return;
+      }
       if (B.state.phase === 'deploy') {
         var next = deployNext(), dside = placingSide();
         // somebody else's deployment is watched, not played
@@ -380,6 +385,7 @@
       if (B.state.phase === 'terrain') html = terrainCard();
       else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = placeCard();
       else if (B.state.minePick && !isAI(B.state.minePick.side)) html = mineCard();
+      else if (B.faceAsked()) html = faceCard(B.faceAsked());
       else if (B.state.phase === 'deploy') html = deployCard();
       else if (ui.reservePick) html = reservePickCard();
       else if (ui.insertion) html = insertionCard();
@@ -831,6 +837,26 @@
         '<div class="dig-oct">' + cells + '</div>' +
         '<div class="acts"><button class="act" data-act="digcancel"><span>Cancel</span><small>Keep its normal stance</small></button></div></div>';
     }
+    /* A vehicle just put down: the same octagon, asking which way it faces.
+       More to ask about (after an auto-deploy) can all keep the way offered. */
+    function faceCard(u) {
+      var F = digFacings(), pick = digPreview(u), left = B.state.faceAsk.ids.length;
+      var grid = [[5, 6, 7], [4, -1, 0], [3, 2, 1]];
+      var cells = grid.map(function (row) {
+        return row.map(function (i) {
+          if (i < 0) return '<span class="dig-mid">' + esc(u.code || '') + '</span>';
+          var on = Math.abs(R.angleWrap(F[i] - pick)) < 0.01;
+          return '<button class="dig-dir' + (on ? ' on' : '') + '" data-vface="' + i + '">' + DIG_NAMES[i] + '</button>';
+        }).join('');
+      }).join('');
+      var offered = DIG_NAMES[F.map(function (f) { return Math.abs(R.angleWrap(f - B.state.faceAsk.dir)); }).reduce(function (b, d, i, a) { return d < a[b] ? i : b; }, 0)];
+      return '<div class="card"><h2>' + esc(u.name) + ' — which way?</h2>' +
+        '<p class="sub">Choose the way it faces. Shots on its side or rear hit more easily, and a limited fire arc bears only ahead. ' +
+        'Tap a direction around it on the table, or here.' + (left > 1 ? ' ' + (left - 1) + ' more vehicle' + (left > 2 ? 's' : '') + ' to face after this.' : '') + '</p>' +
+        '<div class="dig-oct">' + cells + '</div>' +
+        '<div class="acts"><button class="act" data-act="vfaceall"><span>' + (left > 1 ? 'Face them all at the enemy' : 'Keep it facing ' + offered) + '</span>' +
+        '<small>' + (left > 1 ? 'Each keeps the way offered' : 'The way offered') + '</small></button></div></div>';
+    }
     function reservePickCard() {
       var rp = ui.reservePick;
       var mine = !isAI(rp.side);
@@ -950,6 +976,12 @@
          `data-act`, so selecting on `[data-act]` alone never bound them and
          nothing happened when they were pressed: troops could not be put aboard
          a hull, or taken off one, during deployment. All three are selected. */
+      host.querySelectorAll('[data-vface]').forEach(function (b) {
+        var i = +b.getAttribute('data-vface');
+        b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'vface', dir: digFacings()[i] }); });
+        b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
+        b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
+      });
       host.querySelectorAll('[data-digface]').forEach(function (b) {
         var i = +b.getAttribute('data-digface');
         b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'digface', dir: digFacings()[i] }); });
@@ -979,6 +1011,7 @@
           else if (a === 'holdinsert') { holdInsertion(); return; }
           else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
           else if (a === 'digcancel') { ui.digHover = null; send({ k: 'cancel' }); return; }
+          else if (a === 'vfaceall') { ui.digHover = null; send({ k: 'vfaceall' }); return; }
           else if (a === 'holdarrive') { holdArrival(); return; }
           else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
           else if (a === 'cmdact') { send({ k: a, id: b.getAttribute('data-id') }); return; }

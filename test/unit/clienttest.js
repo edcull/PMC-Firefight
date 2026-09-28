@@ -383,6 +383,8 @@ if (begun) {
   while (!W.PMC_STATE().over && guard++ < 2000) {
     settle();
     const s = W.PMC_STATE();
+    // a vehicle just come on: it keeps the way it was offered
+    if (s.faceAsk) { W.__sendIntent({ k: 'vfaceall' }); continue; }
     const ins = W.__insertionState();
     if (ins) {
       const spots = W.__insertionSpotsNow();

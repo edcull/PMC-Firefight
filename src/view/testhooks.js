@@ -124,6 +124,8 @@
       var pa = B.state && B.state.placeAsk;
       if (pa && pa.kind === 'fort') send({ k: 'placeauto' });
       send({ k: 'autosplit' }); autoDeployMine();
+      // every hull keeps the way it was offered
+      for (var n = 0; n < 12 && B.state && B.state.faceAsk; n++) send({ k: 'vfaceall' });
     };
     window.__deployOK = function (x, y, side) {
       side = side || placingSide();
