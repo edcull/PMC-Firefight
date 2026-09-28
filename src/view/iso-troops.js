@@ -555,9 +555,10 @@
       ROLES[art + 'mounted'] = ROLES[art].map(mounted);
     });
     /* The Militia (Tier II Freedom Warriors) are the insurgents' figures with
-       their sleeves rolled up short; the Rider warriors (Tier II Mounted
+       their sleeves rolled up short, and the rookie-rifle Deserters the
+       deserters' figures the same way; the Rider warriors (Tier II Mounted
        Warriors) are the Militia on a mount. */
-    ROLES.militia = ROLES.rebel.map(function (r) {
+    function rolled(r) {
       var k = r + 'rs';
       if (!KIT[k]) {
         var m = {};
@@ -566,7 +567,9 @@
         KIT[k] = m;
       }
       return k;
-    });
+    }
+    ROLES.militia = ROLES.rebel.map(rolled);
+    ROLES.deserterrk = ROLES.deserter.map(rolled);
     ROLES.rider = ROLES.militia.map(mounted);
 
     /* ---------- one trooper, drawn into a cache canvas ----------

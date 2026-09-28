@@ -191,7 +191,7 @@
     /* Deserters and POWs (p. 103) — four to an army, and outside the army rules */
     { key: 'rdesconscript', code: 'DSC', name: 'Deserter team (conscripts)', group: 'Deserters and POWs', faction: 'rebel', art: 'conscript', tier: 1, size: 8, move: 4, fp: 1, range: 18, def: 8, assault: 1, morale: 2, rules: ['No Army Rules'], groupCap: 4 },
     { key: 'rpow', code: 'POW', name: 'POWs', group: 'Deserters and POWs', faction: 'rebel', art: 'pow', tier: 2, size: 8, move: 6, fp: 3, range: 12, def: 8, assault: 3, morale: 3, rules: ['No Army Rules'], groupCap: 4 },
-    { key: 'rdesrookie', code: 'DSR', name: 'Deserters team (rookie rifle)', group: 'Deserters and POWs', faction: 'rebel', art: 'deserter', tier: 2, size: 8, move: 4, fp: 2, range: 18, def: 9, assault: 2, morale: 3, rules: ['No Army Rules'], groupCap: 4 },
+    { key: 'rdesrookie', code: 'DSR', name: 'Deserters team (rookie rifle)', group: 'Deserters and POWs', faction: 'rebel', art: 'deserterrk', tier: 2, size: 8, move: 4, fp: 2, range: 18, def: 9, assault: 2, morale: 3, rules: ['No Army Rules'], groupCap: 4 },
     { key: 'rdesrifle', code: 'DSF', name: 'Deserters team (rifle)', group: 'Deserters and POWs', faction: 'rebel', art: 'deserter', tier: 3, size: 8, move: 5, fp: 3, range: 18, def: 10, assault: 3, morale: 4, rules: ['No Army Rules'], groupCap: 4 },
 
     /* First Among Equals (p. 104) — one per Priority Level, leading from the front */
