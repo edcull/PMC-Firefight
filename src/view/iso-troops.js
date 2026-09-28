@@ -554,8 +554,20 @@
     ['holy', 'holy1', 'holy2', 'holy3', 'holy4', 'leader', 'leadersmall', 'leadermid', 'leaderbig', 'leaderhuge'].forEach(function (art) {
       ROLES[art + 'mounted'] = ROLES[art].map(mounted);
     });
-    // the Rider warriors (Tier II Mounted Warriors) are the Militia (Tier II Freedom Warriors) on a mount
-    ROLES.rider = ROLES.rebel.map(mounted);
+    /* The Militia (Tier II Freedom Warriors) are the insurgents' figures with
+       their sleeves rolled up short; the Rider warriors (Tier II Mounted
+       Warriors) are the Militia on a mount. */
+    ROLES.militia = ROLES.rebel.map(function (r) {
+      var k = r + 'rs';
+      if (!KIT[k]) {
+        var m = {};
+        for (var f in KIT[r]) m[f] = KIT[r][f];
+        m.sleeves = 'rolled';
+        KIT[k] = m;
+      }
+      return k;
+    });
+    ROLES.rider = ROLES.militia.map(mounted);
 
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a
