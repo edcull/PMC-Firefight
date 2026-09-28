@@ -67,6 +67,8 @@
        it goes through the question about empty transports, as a player
        answering "Begin" would. Null while it is not on offer. */
     window.__beginButton = function () {
+      // a vehicle's facing still asked about: beginning keeps the way offered (the engine settles it)
+      if (B.state && B.state.faceAsk && B.state.phase === 'deploy' && deploymentDone()) return { click: function () { startBattle(); } };
       var b = document.querySelector('.cmodal button[data-act="start"]') || document.querySelector('button[data-act="start"], button[data-act="startask"]');
       if (!b) return null;
       return { click: function () { if (b.getAttribute('data-act') === 'startask') { ui.startAsk = false; startBattle(); } else b.click(); } };
