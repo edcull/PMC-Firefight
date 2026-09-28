@@ -16,8 +16,7 @@
     var PLATE = { lt: '#565c66', md: '#30343b', dk: '#1b1d22', sh: '#0e0f12' };
     var WHITE = { lt: '#f1efe8', md: '#c9c5bb', dk: '#8c887f' };
     var DEAD = { lt: '#8c887c', md: '#6f6b62', dk: '#4c4943', sh: '#34322e', belly: '#9a958a', soft: '#77736a', eye: '#2a2826' };
-    var GUNM = { lt: '#6b6e73', md: '#44474c', dk: '#26282c', sh: '#141518' };
-    // a giant shrimp: paler and pinker than the prawns who ride it
+        // a giant shrimp: paler and pinker than the prawns who ride it
     var SHRIMP = { lt: '#e2a57a', md: '#bf7a52', dk: '#7c4a30', sh: '#4c2c1c', belly: '#efc7a2', eye: '#140c08' };
 
     // the army's colour as the prawns burn it in their weapons and armour: bright
@@ -264,90 +263,7 @@
       // the near leg, over the body
       leg(true);
 
-      /* the weapon, in the aliens' own make: dark metal, a housing of ribbed
-         coils burning in the army's colour, the charge glowing at the muzzle */
-      function coils(x0, x1, y, n, r) {
-        for (var c = 0; c < n; c++) {
-          var cx = x0 + (x1 - x0) * (n === 1 ? 0.5 : c / (n - 1));
-          El(cx, y, r * 0.55, r, GUNM.sh);
-          El(cx, y, r * 0.38, r * 0.82, GW);
-          if (!dead) El(cx - r * 0.1, y - r * 0.3, r * 0.14, r * 0.3, GWL);
-        }
-      }
-      function arcGun(x0, x1, y, t, nCoil) {
-        L([[x0, y + t * 0.2], [x1, y]], t + 0.8, GUNM.sh);
-        L([[x0, y + t * 0.2], [x1, y]], t, GUNM.md);
-        L([[x0 + 1, y - t * 0.3], [x1 - 1, y - t * 0.45]], t * 0.3, GUNM.lt);
-        L([[x0 + 2, y + t * 0.3], [x0 - 1.5, y + t + 1.6]], t * 0.8, GUNM.dk);     // the butt, to the shoulder
-        L([[x0 + (x1 - x0) * 0.35, y + t * 0.4], [x0 + (x1 - x0) * 0.37, y + t + 2.4]], 1.5, GUNM.dk);   // the grip
-        coils(x0 + (x1 - x0) * 0.45, x0 + (x1 - x0) * 0.8, y - 0.1, nCoil, t * 0.7);
-        L([[x1, y], [x1 + 2, y - 0.1]], t * 0.55, GUNM.dk);                        // the emitter
-        glow(x1 + 2.4, y - 0.1, t * 0.28);
-      }
-      if (wpn === 'rifle') arcGun(4, 31, gy, 2.6, 3);
-      else if (wpn === 'carbine') arcGun(5, 26, gy, 2.4, 2);
-      else if (wpn === 'long') {
-        arcGun(3, 38, gy, 2.2, 4);
-        L([[12, gy - 2.6], [20, gy - 2.6]], 1.8, GUNM.dk); El(20.4, gy - 2.6, 0.8, 0.9, GW);   // the sight
-      } else if (wpn === 'pistol') {
-        L([[16, gy + 1], [23, gy]], 2.2, GUNM.md); L([[17, gy + 1], [16.6, gy + 3.6]], 1.4, GUNM.dk);
-        coils(20, 20, gy - 0.1, 1, 1.4); glow(24, gy - 0.1, 0.6);
-      } else if (wpn === 'mg') {
-        // a heavy arc-thrower at the hip: a fat housing, a cell hung under it, twin emitters
-        L([[3, gy + 3.6], [30, gy + 3]], 4.2, GUNM.sh);
-        L([[3, gy + 3.6], [30, gy + 3]], 3.4, GUNM.md);
-        L([[4, gy + 2.3], [29, gy + 1.7]], 0.9, GUNM.lt);
-        El(12, gy + 7, 3, 2.4, GUNM.dk); El(12, gy + 7, 2, 1.6, GW);
-        coils(16, 26, gy + 3.2, 3, 2.2);
-        L([[30, gy + 2.2], [32.5, gy + 2.1]], 1, GUNM.dk); L([[30, gy + 4], [32.5, gy + 3.9]], 1, GUNM.dk);
-        glow(33, gy + 3, 0.8);
-      } else if (wpn === 'launcher') {
-        // a fat tube on the shoulder, a glowing round in its mouth
-        L([[-6, gy - 7], [27, gy - 11]], 4.4, GUNM.sh);
-        L([[-6, gy - 7], [27, gy - 11]], 3.6, GUNM.md);
-        L([[-5, gy - 8.5], [26, gy - 12.4]], 1, GUNM.lt);
-        coils(4, 12, gy - 8.5, 2, 2.4);
-        El(27.4, gy - 11, 1.6, 2.3, GUNM.sh); glow(28, gy - 11.1, 1.2);
-        L([[9, gy - 8], [9.5, gy - 4]], 1.4, GUNM.dk);
-      } else if (wpn === 'orb') {
-        glow(grip[0] + 1.6, grip[1] - 1.8, 1.8);                      // a charge, held up to throw
-      } else if (wpn === 'cutter') {
-        // a mining cutter: a squat housing, an emitter ring, the cutting light
-        F([[4, gy - 1.5], [20, gy - 3], [21, gy + 4], [5, gy + 4.5]], dead ? '#4c4a44' : '#7a5a2a');
-        F([[5, gy - 1.2], [19, gy - 2.6], [19.4, gy - 1.2], [5.3, gy]], dead ? '#5e5b54' : '#b8863a');
-        El(22, gy + 0.6, 1.8, 3.6, GUNM.dk); El(22.4, gy + 0.6, 1, 2.4, dead ? '#555' : '#ff9a3a');
-        if (!dead) El(24, gy + 0.6, 3, 2.4, 'rgba(255,150,60,.35)');
-      } else if (/^flag/.test(wpn)) {
-        var top = wpn === 'flaghuge' ? -50 : wpn === 'flagbig' ? -42 : -32;
-        var fw = wpn === 'flaghuge' ? 18 : wpn === 'flagbig' ? 14 : 10, fh = wpn === 'flaghuge' ? 12 : wpn === 'flagbig' ? 9.5 : 7;
-        L([[13.5, gy + 12], [14, gy + top]], 1, dead ? '#3a3027' : '#5a4632');
-        var wv = step ? 1 : 0;
-        F([[14, gy + top], [14 + fw * 0.5, gy + top + 1.4 + wv], [14 + fw, gy + top - 0.4], [14 + fw, gy + top + fh - 0.4], [14 + fw * 0.5, gy + top + fh + 1.4 + wv], [14, gy + top + fh]], FORCE);
-        L([[14, gy + top + 0.4], [14 + fw * 0.5, gy + top + 1.8 + wv], [14 + fw, gy + top]], 0.6, FORCE_L);
-        El(14, gy + top - 0.6, 0.9, 0.9, dead ? '#555' : '#d8c07a');
-      } else if (wpn === 'shell') {
-        L([[9, gy + 1], [19, gy - 1]], 3.4, dead ? '#5e5b54' : '#b08a3a'); El(19.5, gy - 1.1, 1.8, 1.7, dead ? '#555' : '#8a3a24');
-      } else if (wpn === 'optics') {
-        L([[hx + 3, hy - 1.5], [hx + 8, hy - 2]], 2.6, GUNM.md); El(hx + 8.4, hy - 2, 1, 1.3, dead ? '#555' : GW);
-      }
-
-      // the near arm: shoulder to elbow, the forearm to the grip, three hooked fingers
-      var nearT = armoured ? AR : SK;
-      var nearEl = [shx + 2, shy + 9];
-      limb([[shx, shy], nearEl, grip], 2.6, 1.6, nearT);
-      if (armoured) {                                    // a white shoulder plate, edged in the army's colour
-        plate(shx, shy - 0.5, 3.6, 2.8, -0.3, WH);
-        L([[shx - 3.2, shy + 1], [shx + 3.2, shy - 0.6]], 0.8, FORCE);
-      } else if (!kit.mark) {                            // a rag of the army's colour round the upper arm
-        L([[shx + 0.2, shy + 3.6], [shx + 2.6, shy + 3.2]], 2.2, FORCE);
-        L([[shx + 1.4, shy + 3.8], [shx + 0.6, shy + 6.2]], 0.8, FORCE);
-      }
-      [[1.4, 1.6], [0.2, 2], [-0.9, 1.5]].forEach(function (f) {
-        L([[grip[0], grip[1]], [grip[0] + f[0], grip[1] + f[1]]], 0.6, nearT.dk);
-      });
-      El(grip[0], grip[1], 1.2, 1, nearT.dk);
-
-      /* the head, over everything: a long crested skull thrust forward and
+      /* the head, before the weapon held up in front of it: a long crested skull thrust forward and
          down from the shoulders, two dark eyes set in its side, and under it
          the beard of mouth-feelers that hangs where a jaw would be */
       limb([[shx, shy + 1], [hx - 3, hy + 3]], 3, 2.4, SK, false);        // the neck, thrust forward
@@ -379,6 +295,118 @@
         Q([[hx + f[0], hy + 3.4], [hx + f[0] + f[2] * 0.3, hy + 3.4 + f[1] * 0.55], [hx + f[0] + f[2] * 0.2 + sway, hy + 3.4 + f[1]]], 0.75, i % 2 ? FT.b : FT.a);
       });
 
+
+      /* the weapon, in the aliens' own make: a white shell, black grips,
+         prongs and mouths, and the army's colour burning in its cells and
+         its charge. Arc rifles, sonic guns, missile pods. */
+      var WG = dead ? { lt: '#8c887c', md: '#77736a', dk: '#5a574f', sh: '#3a3834' }
+        : { lt: '#fbfaf6', md: '#e2ded4', dk: '#aaa59a', sh: '#5e5a53' };
+      var BK = dead ? { lt: '#4c4a44', md: '#3a3834', dk: '#2a2826' } : { lt: '#4a4e55', md: '#23262b', dk: '#111215' };
+      // a white housing from x0 to x1 along y, t thick: outlined, lit along the top, shaded under
+      function housing(x0, x1, y, t, y1) {
+        y1 = y1 == null ? y : y1;
+        L([[x0, y], [x1, y1]], t + 0.9, WG.sh);
+        L([[x0, y], [x1, y1]], t, WG.md);
+        L([[x0 + 0.6, y + t * 0.3], [x1 - 0.6, y1 + t * 0.3]], t * 0.35, WG.dk);
+        L([[x0 + 0.8, y - t * 0.28], [x1 - 0.8, y1 - t * 0.28]], t * 0.3, WG.lt);
+      }
+      function cell(x, y, r) {                                     // a glowing charge cell, set in black
+        El(x, y, r * 1.35, r * 1.1, BK.dk);
+        glow(x, y, r * 0.8);
+      }
+      function stock(x0, y, t) {                                   // the black butt to the shoulder, and a grip
+        L([[x0 + 2, y + t * 0.3], [x0 - 1.5, y + t + 1.6]], t * 0.8, BK.md);
+        L([[x0 + 7, y + t * 0.4], [x0 + 7.4, y + t + 2.4]], 1.5, BK.md);
+      }
+      // an arc rifle: the white body, a strip of the army's colour, and two black prongs with the arc between
+      function arcRifle(x0, x1, y, t, cells) {
+        stock(x0, y, t);
+        housing(x0, x1, y, t);
+        L([[x0 + 3, y + t * 0.05], [x1 - 3, y + t * 0.05]], 0.5, FORCE);
+        for (var c = 0; c < cells; c++) cell(x0 + (x1 - x0) * (0.4 + 0.18 * c), y - 0.1, t * 0.34);
+        L([[x1 - 1, y - t * 0.45], [x1 + 3.5, y - t * 0.55]], 0.9, BK.md);     // the prongs
+        L([[x1 - 1, y + t * 0.45], [x1 + 3.5, y + t * 0.55]], 0.9, BK.md);
+        if (!dead) L([[x1 + 3.4, y - t * 0.5], [x1 + 2.4, y - 0.1], [x1 + 3.6, y + 0.2], [x1 + 2.6, y + t * 0.5]], 0.45, GWL);
+        glow(x1 + 3.8, y, t * 0.26);
+      }
+      if (wpn === 'rifle') arcRifle(4, 30, gy, 3.4, 2);
+      else if (wpn === 'carbine') arcRifle(6, 25, gy, 3.1, 1);
+      else if (wpn === 'long') {
+        arcRifle(3, 37, gy, 2.8, 3);
+        L([[11, gy - 2.8], [20, gy - 2.8]], 1.9, BK.md); El(20.6, gy - 2.8, 0.8, 1, GW);   // the sight
+      } else if (wpn === 'pistol') {
+        housing(15, 22, gy + 0.6, 2.4, gy);
+        L([[16.5, gy + 1.2], [16, gy + 3.8]], 1.5, BK.md);
+        L([[22, gy - 0.5], [24, gy - 0.6]], 0.7, BK.md); L([[22, gy + 0.6], [24, gy + 0.7]], 0.7, BK.md);
+        glow(24.4, gy, 0.6);
+      } else if (wpn === 'mg') {
+        /* a sonic gun, at the hip: a fat white housing, a black carrying
+           handle, and a flared black horn with the army's colour ringing in it */
+        L([[8, gy - 1], [11, gy - 2.6], [19, gy - 2.6], [21, gy - 0.6]], 1.1, BK.md);
+        housing(3, 25, gy + 3.4, 4.6, gy + 3);
+        L([[6, gy + 4], [22, gy + 3.6]], 0.6, FORCE);
+        cell(10, gy + 7.2, 1.4);
+        F([[24, gy + 0.6], [31.5, gy - 1.6], [31.5, gy + 7.8], [24, gy + 5.6]], BK.md);      // the horn
+        F([[24, gy + 0.6], [31.5, gy - 1.6], [31.5, gy - 0.4], [24, gy + 1.6]], BK.lt);
+        g.strokeStyle = dead ? '#555' : GW; g.lineWidth = Math.max(1, 0.55 * s);
+        [0.9, 1.9, 2.9].forEach(function (r) {
+          g.beginPath(); g.ellipse(X(31.4), Y(gy + 3.1), Math.max(0.5, r * 0.45 * s), Math.max(0.5, r * s), 0, 0, Math.PI * 2); g.stroke();
+        });
+        if (!dead) El(33, gy + 3.1, 3, 4.8, hexA(GW, 0.2));
+      } else if (wpn === 'launcher') {
+        /* a missile pod on the shoulder: a white box, black mouths at the front
+           with the warheads tipped in the army's colour, and a sighting arm */
+        F([[-5, gy - 5], [23, gy - 9.6], [23, gy - 15.8], [-5, gy - 11.2]], WG.sh);
+        F([[-4.4, gy - 5.6], [22.4, gy - 10], [22.4, gy - 15.2], [-4.4, gy - 10.6]], WG.md);
+        F([[-4.4, gy - 10], [22.4, gy - 14.4], [22.4, gy - 15.2], [-4.4, gy - 10.6]], WG.lt);
+        L([[-4, gy - 6.1], [22, gy - 10.5]], 0.6, WG.dk);
+        L([[2, gy - 8.2], [18, gy - 10.9]], 0.6, FORCE);
+        F([[22.4, gy - 9.6], [26, gy - 10.4], [26, gy - 16.4], [22.4, gy - 15.6]], BK.md);   // the front face
+        [[23.6, -12], [25, -12.3], [23.6, -14.3], [25, -14.6]].forEach(function (m) {
+          El(m[0], gy + m[1], 0.62, 0.8, BK.dk);
+          El(m[0] + 0.3, gy + m[1], 0.38, 0.5, dead ? '#555' : GW);
+        });
+        L([[8, gy - 6], [8.5, gy - 2.5]], 1.5, BK.md);                                         // the grip
+        L([[16, gy - 15], [18, gy - 18], [21, gy - 18]], 0.8, BK.md); El(21.4, gy - 18, 0.7, 0.8, GW);   // the sight arm
+      } else if (wpn === 'orb') {
+        El(grip[0] + 1.6, grip[1] - 1.8, 2, 2, WG.md);
+        glow(grip[0] + 1.6, grip[1] - 1.8, 1.3);                      // a charge, held up to throw
+      } else if (wpn === 'cutter') {
+        // a mining cutter: a squat white housing, a black emitter ring, the cutting light
+        stock(4, gy, 3);
+        housing(4, 19, gy + 1.2, 5, gy + 0.6);
+        L([[6, gy + 1.6], [17, gy + 1]], 0.6, FORCE);
+        El(21, gy + 0.8, 1.9, 3.8, BK.md); El(21.4, gy + 0.8, 1.1, 2.6, dead ? '#555' : GW);
+        if (!dead) El(23, gy + 0.8, 3, 2.6, hexA(GW, 0.35));
+      } else if (/^flag/.test(wpn)) {
+        var top = wpn === 'flaghuge' ? -50 : wpn === 'flagbig' ? -42 : -32;
+        var fw = wpn === 'flaghuge' ? 18 : wpn === 'flagbig' ? 14 : 10, fh = wpn === 'flaghuge' ? 12 : wpn === 'flagbig' ? 9.5 : 7;
+        L([[13.5, gy + 12], [14, gy + top]], 1, dead ? '#3a3027' : '#5a4632');
+        var wv = step ? 1 : 0;
+        F([[14, gy + top], [14 + fw * 0.5, gy + top + 1.4 + wv], [14 + fw, gy + top - 0.4], [14 + fw, gy + top + fh - 0.4], [14 + fw * 0.5, gy + top + fh + 1.4 + wv], [14, gy + top + fh]], FORCE);
+        L([[14, gy + top + 0.4], [14 + fw * 0.5, gy + top + 1.8 + wv], [14 + fw, gy + top]], 0.6, FORCE_L);
+        El(14, gy + top - 0.6, 0.9, 0.9, dead ? '#555' : '#d8c07a');
+      } else if (wpn === 'shell') {
+        L([[9, gy + 1], [19, gy - 1]], 3.4, dead ? '#5e5b54' : '#b08a3a'); El(19.5, gy - 1.1, 1.8, 1.7, dead ? '#555' : '#8a3a24');
+      } else if (wpn === 'optics') {
+        L([[hx + 3, hy - 1.5], [hx + 8, hy - 2]], 2.6, WG.md); L([[hx + 3, hy - 0.6], [hx + 8, hy - 1.1]], 0.8, BK.md); El(hx + 8.4, hy - 2, 1, 1.3, dead ? '#555' : GW);
+      }
+
+      // the near arm: shoulder to elbow, the forearm to the grip, three hooked fingers
+      var nearT = armoured ? AR : SK;
+      var nearEl = [shx + 2, shy + 9];
+      limb([[shx, shy], nearEl, grip], 2.6, 1.6, nearT);
+      if (armoured) {                                    // a white shoulder plate, edged in the army's colour
+        plate(shx, shy - 0.5, 3.6, 2.8, -0.3, WH);
+        L([[shx - 3.2, shy + 1], [shx + 3.2, shy - 0.6]], 0.8, FORCE);
+      } else if (!kit.mark) {                            // a rag of the army's colour round the upper arm
+        L([[shx + 0.2, shy + 3.6], [shx + 2.6, shy + 3.2]], 2.2, FORCE);
+        L([[shx + 1.4, shy + 3.8], [shx + 0.6, shy + 6.2]], 0.8, FORCE);
+      }
+      [[1.4, 1.6], [0.2, 2], [-0.9, 1.5]].forEach(function (f) {
+        L([[grip[0], grip[1]], [grip[0] + f[0], grip[1] + f[1]]], 0.6, nearT.dk);
+      });
+      El(grip[0], grip[1], 1.2, 1, nearT.dk);
 
       g.restore();
     }
