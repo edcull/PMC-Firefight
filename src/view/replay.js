@@ -83,8 +83,12 @@
        land. `shown` is the table as it was last drawn at rest; `held` is what is
        kept back from the new state until its event plays. */
     var shown = {}, held = {};
+    /* A unit is let go at the last event of the batch that names it, not the
+       first: the player's own unit, moved and then shot at by the other side's
+       answer, keeps its old suppression through its move, until the shot lands. */
+    var heldTill = {};
     // `held` is one object for the battle: the drawing reads it, so it is emptied, never replaced
-    function clearHeld() { Object.keys(held).forEach(function (k) { delete held[k]; }); }
+    function clearHeld() { Object.keys(held).forEach(function (k) { delete held[k]; }); heldTill = {}; }
     function snapshotShown() {
       shown = {};
       if (!B.state) return;
@@ -114,6 +118,7 @@
         su.ax = su._drawnX; su.ay = su._drawnY; slideAfter[su.id] = true;
       });
       events.forEach(function (ev) {
+        evIds(ev).forEach(function (id) { heldTill[id] = ev; });
         if (ev.e === 'move' && ev.id && !moved[ev.id]) {
           moved[ev.id] = true;
           var mu = evUnit(ev.id), p0 = ev.path && ev.path[0];
@@ -140,21 +145,24 @@
         });
       });
     }
+    // the units an event names: who acts, who is hit, who dies
+    function evIds(ev) {
+      return [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
+        .filter(function (id) { return !!id; });
+    }
     function releaseFor(ev) {
       if (!ev) return;
-      [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
-        .forEach(function (id) {
-          if (!id) return;
-          delete held[id];
-          if (!slideAfter[id]) return;
-          delete slideAfter[id];
-          var u = evUnit(id);
-          if (!u) return;
-          var from = { x: u.ax, y: u.ay };
-          u.ax = null; u.ay = null;
-          // off to where it now stands, if it still stands anywhere on the table
-          if (u.alive && u.x >= 0 && from.x != null) animateMove(u, [from, { x: u.x, y: u.y }]);
-        });
+      evIds(ev).forEach(function (id) {
+        if (!heldTill[id] || heldTill[id] === ev) { delete held[id]; delete heldTill[id]; }
+        if (!slideAfter[id]) return;
+        delete slideAfter[id];
+        var u = evUnit(id);
+        if (!u) return;
+        var from = { x: u.ax, y: u.ay };
+        u.ax = null; u.ay = null;
+        // off to where it now stands, if it still stands anywhere on the table
+        if (u.alive && u.x >= 0 && from.x != null) animateMove(u, [from, { x: u.x, y: u.y }]);
+      });
     }
     // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
     function shownAs(u) {
