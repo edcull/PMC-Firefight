@@ -303,8 +303,8 @@
       // lights that shine past the outline, laid over everything, shade included
       if (!PH.corpse) glows.forEach(function (L) {   // (a dead man's goggles are dark)
         var gr = g.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
-        gr.addColorStop(0, 'rgba(' + L.c + ',1)');
-        gr.addColorStop(0.3, 'rgba(' + L.c + ',.55)');
+        gr.addColorStop(0, 'rgba(' + L.c + ',.75)');
+        gr.addColorStop(0.3, 'rgba(' + L.c + ',.35)');
         gr.addColorStop(1, 'rgba(' + L.c + ',0)');
         g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr;
         g.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2); g.restore();

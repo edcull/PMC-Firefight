@@ -36,7 +36,7 @@
     var LINE_REACH = { trench: 0, barricade: 1.0, wall: 1.3 };
     function lineUp(u, x, y) {
       if (!B.state || R.isMachine(u) || u.aboard || x < 0 || u.walk || u.hop || u.arc) return null;
-      var n = Math.max(1, Math.min(8, u.models || 1));
+      var n = Math.max(1, Math.min(ISO.MAX_FIGS, u.models || 1));
       if (n < 2) return null;
       // the terrain the rules count it in (half its rim or more): a trench it only half fills still holds it
       var kind = R.kindsUnder(B.state, null, x, y)[0];
@@ -210,7 +210,7 @@
     }
     var CL = window.PMCFx.COLLAR, COLLAR_BLINK = CL.blink, COLLAR_FX = CL.dur;
     function collarSequence(u0, u, seen, rem) {
-      var t0 = nowMs(), n = Math.max(1, Math.min(8, seen.models));
+      var t0 = nowMs(), n = Math.max(1, Math.min(ISO.MAX_FIGS, seen.models));
       var pts = ISO.formationTable(n).map(function (o) { return { x: seen.x + o.dx, y: seen.y + o.dy, rank: o.rank }; });
       // the order they go in, fixed for the squad, and where each has run to when his goes
       var plan = CL.plan(pts, t0, fleeAngle(u, seen));
