@@ -742,9 +742,6 @@
           });
         } }
     };
-    // the prawns work the same pieces, under their own names (iso-troops.js: prawnRole)
-    Object.keys(PIECE3D).forEach(function (k) { PIECE3D['pr_' + k] = PIECE3D[k]; });
-    FIELD_GUN.pr_rebelgun = true;
     var SAM_ELEV = 0.8;                                   // the SAM tubes' lay: the missiles leave up this line
     function pal2(o) { return o.pal.mid; }
     /* The heavy autocannon knocked out: the carriage down on its axle where a
@@ -856,6 +853,9 @@
     }
 
 
+    // the prawns work the same pieces, under their own names (iso-troops.js: prawnRole)
+    Object.keys(PIECE3D).forEach(function (k) { PIECE3D['pr_' + k] = PIECE3D[k]; });
+    FIELD_GUN.pr_rebelgun = true;
     return {
       FIELD_GUN: FIELD_GUN,
       GUN_CREW: GUN_CREW,
