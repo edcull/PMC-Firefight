@@ -100,42 +100,43 @@
         P(-19, -34 + mb, 7, 7, '#4a3a22'); P(-19, -34 + mb, 7, 1.5, '#6b5232'); P(-16, -31 + mb, 1.2, 2, '#b89a5a');   // a saddle bag and its buckle
       }
 
-      /* A grav bike: no wheels, a long faired hull on two lift pads a hand's
-         breadth over the ground. The nose is swept to a point, the tail kicks
-         up into a fin, and the pads throw a blue glow on the ground under it.
-         It bobs a little on the step frame. */
+      /* A grav bike, built like a speeder bike: a slim hull under the rider
+         riding a hand's breadth over the ground, a chunky engine at the back,
+         and out in front, on two long thin booms, the steering vanes — a pair
+         of upright flaps that bite the air. It bobs on the step frame, and its
+         repulsors throw a blue glow on the ground under it. */
       function gravbike() {
-        var hv = step ? -1 : 0, GL = '#7fe0ff';
-        disc(0, 0.5 - mb, 24, 3.2, 'rgba(90,200,255,.20)');              // the glow on the ground
-        disc(0, 0.5 - mb, 14, 1.8, 'rgba(160,235,255,.22)');
-        // the lift pads, glowing underneath
-        shape([[-22, -13 + hv], [-8, -13 + hv], [-9, -9.5 + hv], [-21, -9.5 + hv]], '#1a1d22');
-        shape([[8, -13 + hv], [22, -13 + hv], [21, -9.5 + hv], [9, -9.5 + hv]], '#1a1d22');
-        disc(-15, -9.3 + hv, 6, 1.1, GL); disc(15, -9.3 + hv, 6, 1.1, GL);
-        disc(-15, -8.4 + hv, 4, 0.8, 'rgba(220,250,255,.8)'); disc(15, -8.4 + hv, 4, 0.8, 'rgba(220,250,255,.8)');
-        // the hull: a low wedge from the tail fin to the pointed nose
-        shape([[-28, -25 + hv], [-24, -17 + hv], [-18, -12.5 + hv], [18, -12.5 + hv], [31, -16 + hv], [33, -18 + hv],
-          [20, -24 + hv], [10, -24 + hv], [4, -21 + hv], [-10, -21 + hv], [-18, -22 + hv]], '#262b32');
-        shape([[-28, -25 + hv], [-18, -22 + hv], [-10, -21 + hv], [4, -21 + hv], [10, -24 + hv], [20, -24 + hv], [33, -18 + hv],
-          [30, -17.5 + hv], [19, -22.5 + hv], [10, -22.5 + hv], [4, -19.5 + hv], [-10, -19.5 + hv], [-19, -20.5 + hv], [-26, -23 + hv]], '#4a5561');   // light along the top
-        shape([[-18, -12.5 + hv], [18, -12.5 + hv], [26, -14.5 + hv], [-22, -14.5 + hv]], '#15181c');    // the shadowed belly
-        // the side panel in the group's colours, a stripe through it
-        shape([[-17, -19.5 + hv], [4, -18.5 + hv], [12, -21 + hv], [22, -20 + hv], [26, -16 + hv], [14, -15 + hv], [-15, -15 + hv]], pal.mid);
-        shape([[-17, -19.5 + hv], [4, -18.5 + hv], [12, -21 + hv], [22, -20 + hv], [23, -19 + hv], [12, -19.5 + hv], [4, -17.4 + hv], [-16, -18.4 + hv]], pal.light);
-        shape([[-14, -16.5 + hv], [20, -17 + hv], [21, -16 + hv], [-14, -15.5 + hv]], pal.dark);
-        if (kit.flames) { shape([[-2, -18 + hv], [16, -19 + hv], [10, -17 + hv], [20, -16.5 + hv], [4, -16 + hv]], '#c9452a'); shape([[2, -17.6 + hv], [12, -18.3 + hv], [8, -17 + hv]], '#e0802a'); }
-        // the tail fin and the thruster in it, burning
-        shape([[-28, -25 + hv], [-31, -30 + hv], [-27, -30 + hv], [-22, -22 + hv]], '#323941');
-        disc(-27, -19 + hv, 2.4, 2.6, '#1a1d22'); disc(-28, -19 + hv, 1.6, 1.8, step ? '#d8f7ff' : GL);
-        if (step) disc(-31, -19 + hv, 2.4, 1.2, 'rgba(127,224,255,.45)');
-        // the cowl, bars and screen up front, and the lamp in the nose
-        shape([[10, -24 + hv], [14, -31 + hv], [19, -31 + hv], [20, -24 + hv]], '#303740');
-        shape([[14, -31 + hv], [19, -35 + hv], [22, -34 + hv], [19, -31 + hv]], 'rgba(130,210,240,.55)');
-        rod(11, -33 + hv, 17, -31 + hv, 1.6, '#59626d');
-        shape([[29, -18.5 + hv], [33, -18 + hv], [31, -16.5 + hv], [28, -17 + hv]], '#f2d27a');
-        disc(35, -17.5 + hv, 3, 1.4, 'rgba(242,210,122,.35)');
-        // the seat, where the rider sits
-        shape([[-14, -22 + hv], [2, -22 + hv], [4, -20 + hv], [-14, -20 + hv]], '#1f1a14');
+        var hv = step ? -1 : 0, GL = '#7fe0ff', HULL = '#2a3038', HD = '#1a1e24', HL = '#4a5561';
+        disc(2, 0.5 - mb, 26, 3, 'rgba(90,200,255,.18)');               // the glow on the ground
+        disc(-6, 0.5 - mb, 12, 1.6, 'rgba(160,235,255,.22)');
+        // the far boom and vane first, a shade darker and a touch higher
+        rod(8, -21.5 + hv, 38, -23 + hv, 1.4, HD);
+        shape([[34, -29 + hv], [38, -29 + hv], [39.5, -19 + hv], [35.5, -19 + hv]], HD);
+        // the engine, a fat drum at the back, its exhaust burning
+        shape([[-27, -24 + hv], [-12, -25 + hv], [-10, -14 + hv], [-26, -13 + hv]], HULL);
+        shape([[-27, -24 + hv], [-12, -25 + hv], [-12, -23 + hv], [-27, -22 + hv]], HL);
+        P(-24, -21 + hv + mb, 10, 1, HD); P(-24, -18 + hv + mb, 10, 1, HD);         // its cooling ribs
+        disc(-27.5, -18.5 + hv, 2, 4.2, HD);
+        disc(-28.2, -18.5 + hv, 1.3, 3.2, step ? '#d8f7ff' : GL);                   // the exhaust
+        if (step) disc(-31.5, -18.5 + hv, 3, 2, 'rgba(127,224,255,.4)');
+        // the hull, slim, from the engine forward under the rider to a nose
+        shape([[-12, -23 + hv], [6, -22 + hv], [14, -20.5 + hv], [16, -18 + hv], [8, -15 + hv], [-11, -15 + hv]], HULL);
+        shape([[-12, -23 + hv], [6, -22 + hv], [14, -20.5 + hv], [13, -19.4 + hv], [5, -20.6 + hv], [-12, -21.4 + hv]], HL);
+        shape([[-10, -19.5 + hv], [9, -19 + hv], [12, -17.4 + hv], [-10, -17.2 + hv]], pal.mid);   // a panel in the group's colours
+        P(-10, -19.5 + hv + mb, 19, 0.8, pal.light);
+        if (kit.flames) shape([[-2, -19.3 + hv], [8, -19 + hv], [4, -18 + hv], [10, -17.6 + hv], [0, -17.4 + hv]], '#c9452a');
+        disc(-2, -14 + hv, 7, 1.1, GL);                                              // the repulsor underneath
+        disc(-2, -13.6 + hv, 4.5, 0.7, 'rgba(220,250,255,.8)');
+        // the near boom out to its vane, and the vane
+        rod(12, -19.5 + hv, 40, -21 + hv, 1.6, '#3a424c');
+        rod(12, -20.2 + hv, 40, -21.7 + hv, 0.6, '#6a7480');
+        shape([[35, -27 + hv], [40, -27 + hv], [41.5, -16 + hv], [36.5, -16 + hv]], HULL);
+        shape([[35, -27 + hv], [40, -27 + hv], [40.3, -25.4 + hv], [35.3, -25.4 + hv]], HL);
+        P(37, -22 + hv + mb, 3, 1, pal.light);                                       // a stripe on the vane
+        // the steering column back to the rider's hands, and the seat
+        rod(10, -21 + hv, 8, -31 + hv, 1.6, '#3a424c');
+        rod(6, -32 + hv, 11, -30.6 + hv, 1.5, '#59626d');
+        shape([[-11, -24 + hv], [2, -23.5 + hv], [3, -21.5 + hv], [-11, -22 + hv]], '#1f1a14');
       }
 
       /* A raider's motorbike, a desert scrambler: spoked wheels on knobbly
@@ -741,7 +742,7 @@
            shoulders and a cape down the back to the knee, broken up with
            blotches of green and brown, the hood hanging behind the helmet.
            The chest and rifle stay clear, so they read as soldiers. */
-        var CM = '#5a6438', CL = '#76804c', CD = '#3a4226', CB = '#6e5a3a';
+        var CM = NOMAD.m, CL = NOMAD.l, CD = NOMAD.d, CB = NOMAD.b;
         P(tx - 3, -44 + drop, tw + 5, 5, CM);             // the mantle across the shoulders
         P(tx - 3, -44 + drop, tw + 5, 1.5, CL);
         P(tx + 4, -42 + drop, 5, 3, CB); P(tx + tw - 5, -43 + drop, 4, 3, CD);
@@ -760,6 +761,7 @@
 
     }
 
+    var NOMAD = { m: '#5a6438', l: '#76804c', d: '#3a4226', b: '#6e5a3a' };   // the nomads' camouflage cloth
     function helmet(P, drop, kit, pal) {
       switch (kit.helm) {
         case 'hood':
@@ -770,17 +772,19 @@
           P(0, -49 + drop, 2, 1, '#4e5c6a');
           break;
         case 'nomadhood':
-          /* A wanderer's hood: cloth drawn up over a bare head, the face
-             showing in its opening, shadowed at the brow. No helmet, no goggles. */
-          P(-7, -55 + drop, 14, 11, pal.cloth);
-          P(-7, -55 + drop, 5, 11, pal.dark);             // the back of the hood, in shadow
-          P(-8, -45 + drop, 6, 6, pal.cloth);             // falling to the shoulders
-          P(0, -52 + drop, 7, 8, '#8d6f4e');              // the face
-          P(0, -52 + drop, 7, 1.6, 'rgba(20,14,8,.45)');  // the hood's shadow over the brow
-          P(4.2, -49.5 + drop, 1.5, 1.3, '#20262d');      // an eye
-          P(6, -48.5 + drop, 1, 2, '#6b5238');            // the nose
-          P(1, -45.6 + drop, 6, 1.4, '#5a4530');          // a stubbled jaw
-          P(-1, -53 + drop, 1.4, 10, pal.cloth);          // the hood's edge round the face
+          /* A wanderer's hood, cut from the same camouflage as the cloak and
+             drawn up over a bare head: the face is sunk in its shadow, only the
+             line of a cheek and the chin catching any light. No helmet, no goggles. */
+          P(-7, -55 + drop, 14, 11, NOMAD.m);
+          P(-7, -55 + drop, 5, 11, NOMAD.d);              // the back of the hood, in shadow
+          P(-6, -55 + drop, 10, 1.5, NOMAD.l);            // light along its crown
+          P(-3, -52 + drop, 3, 3, NOMAD.b);               // a blotch of the camouflage
+          P(-8, -45 + drop, 6, 6, NOMAD.m);               // falling to the shoulders
+          P(0, -52 + drop, 7, 8, '#16140f');              // the face, lost in the hood's shadow
+          P(4.5, -47 + drop, 2.5, 2.5, '#2c241a');        // a cheek, just caught
+          P(1.5, -45.2 + drop, 5, 1.2, '#3a2f22');        // and the chin
+          P(-0.5, -53 + drop, 1.6, 10, NOMAD.l);          // the hood's edge round the face
+          P(-0.5, -54 + drop, 8, 1.6, NOMAD.m);           // its brim, pulled forward
           break;
         case 'cap':
           P(-6, -50 + drop, 13, 4, pal.helm);

@@ -144,7 +144,7 @@
             R.PROPULSION[s.prop || 'none'].short + '</button>' : '') +
           (R.canBeDrone(p) ? '<button class="drive' + (s.drone ? ' on' : '') + '" data-fdrone="' + i +
             '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' +
-            (s.drone ? 'DRN' : 'crew') + '</button>' : '') + '</span>';
+            (s.drone ? 'DRN' : 'crew') + '</button>' : '') + rideButtons(p, s, i) + '</span>';
       }).join('');
       /* On the page, each unit picked is a card: its name and kind, its Tier, its
          numbers and its special rules, with its drive and its remove button. The
@@ -153,6 +153,8 @@
       var cards = E.draft.keys.map(function (k, i) {
         var sp = R.splitPick(k), p0 = profile(sp.key);
         var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p0, { rules: (p0.rules || []).slice(), models: p0.size }), sp.prop || R.defaultDrive(p0)), !!sp.drone);
+        u0 = R.applyRiders(u0, sp.riders);
+        if (R.canMount(p0, sp.riders)) R.applyMount(u0, sp.mount || 'none');
         var mach = p0.cls !== 'infantry';
         var st = [['Move', u0.move + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
           ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
@@ -162,6 +164,7 @@
           (R.propsFor(p0).length ? '<button class="drive" data-cycle="' + i + '">' + R.PROPULSION[sp.prop || 'none'].short + '</button>' : '') +
           (R.canBeDrone(p0) ? '<button class="drive' + (sp.drone ? ' on' : '') + '" data-fdrone="' + i +
             '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' + (sp.drone ? 'DRN' : 'crew') + '</button>' : '') +
+          rideButtons(p0, sp, i) +
           '<button class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
           '<div class="fcard-stats">' + st.map(function (c) { return '<span><i>' + c[0] + '</i>' + esc(c[1]) + '</span>'; }).join('') + '</div>' +
           ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
@@ -223,6 +226,20 @@
       if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
       return h;
     }
+
+    /* What a unit rides: the Riders upgrade where it may take it (Holy Warriors,
+       First Among Equals), and a motorbike, grav bike or horse for anyone who
+       rides — the Mounted Warriors always, the others once mounted. */
+    function rideButtons(p, s, i) {
+      var h = '';
+      if (R.canRide(p)) h += '<button class="drive' + (s.riders ? ' on' : '') + '" data-friders="' + i +
+        '" title="Riders upgrade: half the models, Movement 10, and the Riders rule">' + (s.riders ? 'RDR' : 'foot') + '</button>';
+      if (R.canMount(p, s.riders)) h += '<button class="drive" data-fmount="' + i +
+        '" title="What they ride: a motorbike, a grav bike (no terrain penalties, \u22121 Defence) or a horse (crosses walls, +1 SP when shot at)">' +
+        esc(MOUNT_SHORT[s.mount || 'none']) + '</button>';
+      return h;
+    }
+    var MOUNT_SHORT = { none: 'No mount', bike: 'Motorbike', gravbike: 'Grav bike', horse: 'Horse' };
 
     // which list a force recruits from — a company only ever hires its own kind
     function ourList(co) {

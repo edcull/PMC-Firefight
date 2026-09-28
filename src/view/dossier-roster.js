@@ -137,6 +137,9 @@
       if (!p) return '';
       var base = Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size, side: 'A', cargo: [] });
       base = R.applyDrone(R.applyPropulsion(base, e.prop || R.defaultDrive(p)), !!e.drone);
+      var riding = !!e.riders && R.canRide(p);
+      base = R.applyRiders(base, riding);
+      if (R.canMount(p, riding)) R.applyMount(base, e.mount || 'none');
       var was = Object.assign({}, base, { rules: base.rules.slice() });
       var u = C.applyEntry(Object.assign({}, base, { rules: base.rules.slice() }), e, co.doctrines || []);
       var mach = p.cls !== 'infantry';
@@ -157,6 +160,18 @@
             (c.d ? '<sup>' + (c.d > 0 ? '+' : '') + c.d + '</sup>' : '') + '</td>';
         }).join('') + '</tr></table>';
       if (u.defPierced != null) h += '<p class="ddet-note">Defence ' + u.defPierced + ' against Anti-tank and Gauss weapons.</p>';
+      /* What it rides, changed here between battles: the Riders upgrade where
+         the unit may take it, and a motorbike, grav bike or horse once it rides. */
+      if (R.canRide(p) || R.canMount(p, riding)) {
+        h += '<h5>Mounted</h5><div class="ddet-ride">';
+        if (R.canRide(p)) h += '<button class="lnk' + (riding ? ' on' : '') + '" data-eriders="' + e.rid + '">' +
+          (riding ? 'Mounted (Riders) \u2014 dismount' : 'On foot \u2014 take the Riders upgrade') + '</button>';
+        if (R.canMount(p, riding)) h += R.MOUNT_ORDER.map(function (m) {
+          return '<button class="lnk' + ((e.mount || 'none') === m ? ' on' : '') + '" data-emount="' + e.rid + '" data-m="' + m + '" title="' +
+            esc(R.MOUNTS[m].note) + '">' + esc(R.MOUNTS[m].name) + '</button>';
+        }).join('');
+        h += '</div>';
+      }
 
       var TXT = root.PMCRuleText;
       h += '<h5>Special rules</h5>';

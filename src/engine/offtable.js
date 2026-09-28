@@ -16,7 +16,7 @@
 
   function pickArmy(co, tier, pl, tactic) {
     var picks = C.pickForce(co, tier, pl, tactic);
-    var keys = picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
+    var keys = picks.map(function (e) { return R.entryPick(e); });
     return R.checkArmy(keys, tier, pl, co.doctrines || [], tactic).ok ? { picks: picks, keys: keys } : null;
   }
 

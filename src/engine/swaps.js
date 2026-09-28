@@ -31,7 +31,7 @@
         return ((cfg.bench && cfg.bench[side]) || []).filter(function (e) {
           var p = R.profile(e.key); return p && p.tier === u.tier && !p.command && !p.turretSet &&
             !held.some(function (d) { return d.entry === e; });
-        }).map(function (e) { return { id: e.rid, key: R.joinPick(e.key, e.prop, e.drone), name: e.name, entry: e }; });
+        }).map(function (e) { return { id: e.rid, key: R.entryPick(e), name: e.name, entry: e }; });
       }
       // one Command Unit a Priority Level (p. 57): another comes in only in place of one, or under the cap
       var goingOut = held.map(function (d) { return d.outId; });

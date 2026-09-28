@@ -168,6 +168,13 @@
     return u;
   }
   function canRide(p) { return !!(p && p.ridersUpgrade); }
+  /* A campaign dossier entry as an army pick: its drive and drone, and what it
+     rides — the Riders upgrade only where the unit may take it, and a mount
+     only where it rides. */
+  function entryPick(e) {
+    var p = BY_KEY[e.key], riders = !!e.riders && canRide(p);
+    return joinPick(e.key, e.prop, e.drone, riders, canMount(p, riders) ? e.mount : null);
+  }
   // a vehicle with no Transport rule may be flown as a drone (p. 37)
   // the alien armies' hulls are what they are: no propulsion to pick, no drone option
   function alienHull(p) { return !!p && (p.faction === 'bugs' || p.faction === 'xeno'); }
@@ -1843,7 +1850,7 @@
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
     COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, FACTIONS: FACTIONS, TACTICS: TACTICS,
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,
-    applyRiders: applyRiders, canRide: canRide, freedomDice: freedomDice,
+    applyRiders: applyRiders, canRide: canRide, entryPick: entryPick, freedomDice: freedomDice,
     undisciplined: undisciplined, freeLosses: freeLosses, deathOrGlory: deathOrGlory,
     dugIn: dugIn, nearestFacing: nearestFacing, shotRange: shotRange, shotMinRange: shotMinRange,
     profile: function (k) { return BY_KEY[k]; },

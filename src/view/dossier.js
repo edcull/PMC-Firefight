@@ -503,11 +503,20 @@
       var di = +t.getAttribute('data-fdrone'), ds = R.splitPick(draft.keys[di]);
       draft.keys[di] = R.joinPick(ds.key, ds.prop, !ds.drone); render(); return;
     }
+    // what a unit picked for the founding rides: the Riders upgrade, and the mount
+    if (t.hasAttribute('data-friders')) {
+      var fr = R.splitPick(draft.keys[+t.getAttribute('data-friders')]);
+      draft.keys[+t.getAttribute('data-friders')] = R.joinPick(fr.key, fr.prop, fr.drone, !fr.riders, fr.mount); render(); return;
+    }
+    if (t.hasAttribute('data-fmount')) {
+      var fm = R.splitPick(draft.keys[+t.getAttribute('data-fmount')]), mo = R.MOUNT_ORDER;
+      draft.keys[+t.getAttribute('data-fmount')] = R.joinPick(fm.key, fm.prop, fm.drone, fm.riders, mo[(mo.indexOf(fm.mount || 'none') + 1) % mo.length]); render(); return;
+    }
     if (t.hasAttribute('data-cycle')) {
       var i = +t.getAttribute('data-cycle'), s = R.splitPick(draft.keys[i]);
       var order = R.propsFor(profile(s.key));
       var nx = order[(order.indexOf(s.prop || 'none') + 1) % order.length];
-      draft.keys[i] = R.joinPick(s.key, nx, s.drone); render(); return;
+      draft.keys[i] = R.joinPick(s.key, nx, s.drone, s.riders, s.mount); render(); return;
     }
     if (t.hasAttribute('data-doc')) {
       draft.doctrine = t.getAttribute('data-doc');
@@ -597,6 +606,15 @@
     }
     if (t.hasAttribute('data-rivdos')) { var rv = +t.getAttribute('data-rivdos'); rivalOpen = rivalOpen === rv ? null : rv; render(); return; }
     if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
+    // a unit on the roster takes the Riders upgrade or lays it down, or changes what it rides
+    if (t.hasAttribute('data-eriders')) {
+      var re = findEntry(co, t.getAttribute('data-eriders'));
+      re.riders = !re.riders; C.menOf(re, co); save(); render(); return;
+    }
+    if (t.hasAttribute('data-emount')) {
+      var me = findEntry(co, t.getAttribute('data-emount'));
+      me.mount = t.getAttribute('data-m'); save(); render(); return;
+    }
     if (t.hasAttribute('data-promote')) {
       var pe = findEntry(co, t.getAttribute('data-promote'));
       C.promoteUnit(co, pe, t.getAttribute('data-to')); openModal = null; promoRid = null; save(); render(); return;

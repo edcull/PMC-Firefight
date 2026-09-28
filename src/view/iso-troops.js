@@ -746,7 +746,8 @@
         P(-0.5, -48.2 + drop, 3.6, 2.6, NVG_LENS);        // the lenses, lit from within
         P(4.5, -48.2 + drop, 3.6, 2.6, NVG_LENS);
         P(0, -48 + drop, 1.2, 1, '#ffffff'); P(5, -48 + drop, 1.2, 1, '#ffffff');
-        glowAt(1.3, -47 + drop, 4.6, NVG_GLOW); glowAt(6.3, -47 + drop, 4.6, NVG_GLOW);
+        P(3.1, -48.4 + drop, 1.4, 3, '#1b1f24');         // the bridge between them, dark, so they read as a pair
+        glowAt(1.3, -47 + drop, 2.7, NVG_GLOW); glowAt(6.3, -47 + drop, 2.7, NVG_GLOW);   // two eyes, each its own glow
       }
 
       /* ---- weapon, over everything ---- */
