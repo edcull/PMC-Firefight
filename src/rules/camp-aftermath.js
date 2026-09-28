@@ -353,7 +353,7 @@
           }
           co.memorial.push({
             fate: c.kia ? 'kia' : 'wounded', roll: c.roll,
-            name: c.name, rank: c.rank, type: c.type, unit: c.unit, turn: c.turn,
+            name: c.name, rank: c.rank, type: c.type, unit: c.unit, rid: c.rid, turn: c.turn,
             tier: (profile(keyOf[c.rid]) || {}).tier,
             battle: out.turn, against: foe.name, scenario: report.scenario
           });

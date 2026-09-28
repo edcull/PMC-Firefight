@@ -165,8 +165,8 @@ async function clickText(p, re) {
     co.losses = { soldiers: { lost: 3, wounded: 1, departed: 0 } };
     co.memorial = [
       { name: 'Rhys Walsh', rank: 'Sergeant', type: 'Rookie rifle team', unit: 'Second Section', turn: 3, battle: 1, against: 'Red Dawn', scenario: 'meeting' },
-      { name: 'Ana Silva', rank: 'Private', type: 'Recruits', unit: 'Recruits', turn: 2, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
-      { fate: 'wounded', roll: 4, name: 'Jae Novak', rank: 'Private', type: 'Recruits', unit: 'Recruits', turn: 4, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
+      { name: 'Ana Silva', rank: 'Private', type: 'Recruits', unit: 'Recruits', rid: 'r1', turn: 2, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
+      { fate: 'wounded', roll: 4, name: 'Jae Novak', rank: 'Private', type: 'Recruits', unit: 'Recruits', rid: 'r2', turn: 4, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
       { name: 'Kofi Park', rank: 'Commander', type: 'Light patrol vehicle', unit: 'Light patrol vehicle', turn: 5, battle: 2, against: 'Salvage Rights', scenario: 'secure' }
     ];
   });
@@ -192,8 +192,10 @@ async function clickText(p, re) {
     let head = null;
     for (let i = at - 1; i >= 0 && !head; i--) if (rows[i].classList.contains('dmem-grp')) head = rows[i];
     return !!li && /^KIA · Sergeant · Rhys Walsh$/.test(li.textContent) && li.getClientRects().length === 1 &&
-      li.getBoundingClientRect().height < 30 && !!head && /^Second Section · Tier [IVX]+$/.test(head.textContent);
+      li.getBoundingClientRect().height < 30 && !!head && /^Second Section · Rookie rifle team · Tier [IVX]+$/.test(head.textContent);
   }), await p.evaluate(() => [...document.querySelectorAll('#camp-body .dmem-list li')].map((r) => r.textContent).join(' | ')));
+  check('two units of the same kind are two groups, not one', await p.evaluate(() =>
+    [...document.querySelectorAll('#camp-body .dmem-list li.dmem-grp')].filter((h) => /^Recruits/.test(h.textContent)).length === 2));
   check('...with no turn of the battle', !/turn \d+ of the battle/.test(mem.text));
   await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
 

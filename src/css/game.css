@@ -1334,7 +1334,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 /* a casualty on one line: fate · rank · name · Tier · unit */
 .dmem-list li:not(.dmem-bio) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .dmem-dot { font-style: normal; color: var(--ink-faint); }
-.dmem-rank, .dmem-tier { color: var(--ink-dim); }
+.dmem-rank, .dmem-tier, .dmem-type { color: var(--ink-dim); }
 .dmem-unit { color: var(--ink-faint); }
 /* the named dead and wounded, gathered under their unit */
 .dmem-list li.dmem-grp { padding-top: 9px; border-bottom: 0; font-family: var(--display); letter-spacing: .02em; }

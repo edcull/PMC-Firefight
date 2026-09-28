@@ -118,8 +118,13 @@
         var dot = '<i class="dmem-dot"> \u00b7 </i>', groups = [], byUnit = {};
         ms.forEach(function (m) {
           if (m.anon) { groups.push({ anon: m }); return; }
-          var key = m.unit || m.type;
-          if (!byUnit[key]) { byUnit[key] = { unit: key, tier: tierOf(m), list: [] }; groups.push(byUnit[key]); }
+          // one group a unit — by which roster unit it was, where that was kept — named as it was: its own name and its type, or the type
+          var key = m.rid || (m.unit || m.type);
+          if (!byUnit[key]) {
+            var own = m.unit && m.type && m.unit !== m.type;
+            byUnit[key] = { unit: m.unit || m.type, type: own ? m.type : null, tier: tierOf(m), list: [] };
+            groups.push(byUnit[key]);
+          }
           byUnit[key].list.push(m);
         });
         return groups.map(function (g) {
@@ -131,6 +136,7 @@
               (m.wounded ? tag(false, WA) + ' ' + m.wounded : '') + dot + '<b>' + esc(m.noun || 'Esh-Aven') + '</b>' + tail + '</li>';
           }
           return '<li class="dmem-grp"><span class="dmem-unit">' + esc(g.unit) + '</span>' +
+            (g.type ? dot + '<span class="dmem-type">' + esc(g.type) + '</span>' : '') +
             (g.tier ? dot + '<span class="dmem-tier">Tier ' + ROMAN[g.tier] + '</span>' : '') + '</li>' +
             g.list.map(function (m) {
               return '<li class="dmem-in">' + tag(m.fate !== 'wounded') + dot + '<span class="dmem-rank">' + esc(m.rank) + '</span>' + dot +
