@@ -224,7 +224,7 @@ async function clickText(p, re) {
   await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
   const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss:not(.dexpr)')].map(d => d.textContent));
   check('the tribe shows a loss rate for its Crocks and one for its Esh-Aven',
-    tribe.length === 2 && /ascended, \d+ scarred, of 4 Crocks$/.test(tribe[0]) && /ascended, \d+ scarred, of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
+    tribe.length === 2 && /ascended, \d+ scarred, of 4 Crocks$/.test(tribe[0]) && / killed, \d+ wounded, of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
   await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-tribe.png') });
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;

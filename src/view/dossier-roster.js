@@ -65,7 +65,7 @@
         if (!st.served) return '';
         // penal troopers are counted apart, and not in the loss rate
         if (st.countOnly) return st.lost ? '<div class="dloss"><b>' + st.lost + '</b> ' + st.unit + ' killed <span>not counted as losses</span></div>' : '';
-        var pct = Math.round(st.pct * 1000) / 10, wpct = Math.round(st.wpct * 1000) / 10, W = C.words(co);
+        var pct = Math.round(st.pct * 1000) / 10, wpct = Math.round(st.wpct * 1000) / 10, W = C.fateWords(co, st.pool);
         // the swarm's is biomass, and a bug is not wounded: it is lost or it is not
         if (st.pool === 'biomass') return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
         return '<div class="dloss"><b>' + pct + '%</b> ' + W.kia + ' <b class="wia">' + wpct + '%</b> ' + W.wia + ' <span>' + st.lost + ' ' + W.kia + ', ' +
@@ -82,7 +82,8 @@
       if (!list.length) return lossLine(co) + '<p class="dnote">No one has been ' + (co.faction === 'xeno' ? 'lost to the hunt' : 'killed or wounded') + ' yet.</p>';
       var W = C.words(co);
       // killed or wounded; an entry from before the roll was made is one of the dead
-      function tag(kia) { return '<span class="dfate ' + (kia ? 'kia' : 'wia') + '">' + (kia ? W.kiaTag : W.wiaTag) + '</span>'; }
+      function tag(kia, w) { w = w || W; return '<span class="dfate ' + (kia ? 'kia' : 'wia') + '">' + (kia ? w.kiaTag : w.wiaTag) + '</span>'; }
+      var WA = C.fateWords(co, 'eshaven');     // the unnamed are the Esh-Aven, or penal troopers: killed or wounded
       var SCx = root.PMCScen, battles = {}, order = [];
       list.forEach(function (m) {
         if (!battles[m.battle]) { battles[m.battle] = []; order.push(m.battle); }
@@ -113,7 +114,7 @@
           ms.map(function (m) {
             if (m.anon) {
               return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' ' + esc(m.noun || 'Esh-Aven') + '</span>' +
-                (m.kia ? ' ' + tag(true) + ' ' + m.kia : '') + (m.wounded ? ' ' + tag(false) + ' ' + m.wounded : '') +
+                (m.kia ? ' ' + tag(true, WA) + ' ' + m.kia : '') + (m.wounded ? ' ' + tag(false, WA) + ' ' + m.wounded : '') +
                 (m.squads > 1 ? '<span class="dmem-type">' + m.squads + ' squads</span>'
                   : m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
             }

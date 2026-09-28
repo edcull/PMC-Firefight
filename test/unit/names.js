@@ -344,7 +344,9 @@ console.log('killed or wounded');
   const xl = C.lossStats(xk.companies.A)[1];
   ok('a counted unit rolls for each of its casualties', xl.lost === 0 && xl.wounded === 4 && xl.served === R.profile('xeps3').size + 4 &&
     xk.companies.A.memorial.length === 1 && xk.companies.A.memorial[0].wounded === 4, JSON.stringify(xl));
-  ok('...and the tribe calls them ascended and scarred', C.words(xk.companies.A).kia === 'ascended' && C.words(xk.companies.A).wia === 'scarred' &&
+  ok('...the Esh-Aven are killed or wounded, not ascended', ek.history.some((h) => /Lost 4 Esh-Aven \(0 killed, 4 wounded\)/.test(h)) &&
+    C.fateWords(xk.companies.A, 'eshaven').kia === 'killed' && C.fateWords(xk.companies.A, 'crocks').kia === 'ascended', ek.history.join(' | '));
+  ok('...and the tribe calls its Crocks ascended and scarred', C.words(xk.companies.A).kia === 'ascended' && C.words(xk.companies.A).wia === 'scarred' &&
     C.words(xk.companies.A).memorial === 'Temple');
   ok('a company keeps a field hospital, the swarm its biomass', C.words(kc.companies.A).memorial === 'Field hospital' &&
     C.words({ faction: 'rebel' }).memorial === 'Field hospital' && C.words({ faction: 'bugs' }).memorial === 'Biomass');

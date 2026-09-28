@@ -491,6 +491,9 @@
   /* Influence Points and thousand Universal Credits are the same number with
      different names (p. 110), so the roster keeps one field and this names it. */
   function money(co) { return words(co).money; }
+  /* What a casualty is called: the tribe's Crocks ascend or are scarred, but
+     its Esh-Aven are only killed or wounded, as anyone else's soldiers are. */
+  function fateWords(co, pool) { return words(pool === 'eshaven' ? null : co); }
 
   function profile(key) { return R.profile(key); }
 
@@ -1104,7 +1107,7 @@
   var KIT_AFTERMATH = null;
   function kitAftermath() {
     return KIT_AFTERMATH || (KIT_AFTERMATH = (root.PMCCampAftermath || require('./camp-aftermath.js'))({
-      ATTACK_DEFEND: ATTACK_DEFEND, R: R, SCENARIOS: SCENARIOS, addLoss: addLoss, words: words, biomassTally: biomassTally,
+      ATTACK_DEFEND: ATTACK_DEFEND, R: R, SCENARIOS: SCENARIOS, addLoss: addLoss, words: words, fateWords: fateWords, biomassTally: biomassTally,
       byRid: byRid, canFieldArmy: canFieldArmy, d3: d3, d6: d6, developRival: developRival, expFor: expFor,
       hasDoctrine: hasDoctrine, hasTraumaFlag: hasTraumaFlag, isLeaderP: isLeaderP, manned: manned,
       newCompany: newCompany, newEntry: newEntry, payment: payment, pick: pick, poolOf: poolOf, POOL_NAMES: POOL_NAMES,
@@ -1503,7 +1506,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, fateWords: fateWords, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand, rerankMen: rerankMen,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,

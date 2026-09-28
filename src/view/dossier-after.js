@@ -193,7 +193,7 @@
       if (!cas.length) return '';
       function who(c) {
         if (c.anon) {
-          var Wa = C.words(E.camp.companies.A);
+          var Wa = C.fateWords(E.camp.companies.A, 'eshaven');   // the unnamed: killed or wounded, whoever's
           return (c.kia ? c.kia + ' ' + Wa.kia : '') + (c.kia && c.wounded ? ', ' : '') + (c.wounded ? c.wounded + ' ' + Wa.wia : '') +
             (c.rolls ? ' <span class="dmen-rank">D6 ' + c.rolls.join(' ') + '</span>' : '');
         }

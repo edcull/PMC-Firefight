@@ -13,7 +13,7 @@
         poolOf = E.poolOf, POOL_NAMES = E.POOL_NAMES, poolsFor = E.poolsFor, profile = E.profile, recruitCost = E.recruitCost,
         rollTP = E.rollTP, rollTrauma = E.rollTrauma, salvage = E.salvage, shuffle = E.shuffle,
         tpFor = E.tpFor, traumaTable = E.traumaTable, traumaThreshold = E.traumaThreshold,
-        weakCandidates = E.weakCandidates, weightOf = E.weightOf, words = E.words;
+        weakCandidates = E.weakCandidates, weightOf = E.weightOf, words = E.words, fateWords = E.fateWords;
 
     /* ================= the aftermath =================
        Takes a battle report and applies every book step in order, returning a
@@ -183,10 +183,10 @@
             var named = function (f) {
               return cas.filter(function (c) { return c.fate === f; }).map(function (c) { return c.rank + ' ' + c.name; }).join(', ');
             };
-            var W = words(co), kiaN = cas.reduce(function (n, c) { return n + (c.kia || 0); }, 0);
+            var W = words(co), WA = fateWords(co, poolOf(profile(entry.key))), kiaN = cas.reduce(function (n, c) { return n + (c.kia || 0); }, 0);
             var wiaN = cas.reduce(function (n, c) { return n + (c.wounded || 0); }, 0);
             entry.history.push(cas[0].swarm ? (mass ? 'Biomass lost: ' + mass + '.' : 'Lost ' + bodies + '.')
-              : cas[0].anon ? 'Lost ' + bodies + ' ' + POOL_NAMES[poolOf(profile(entry.key))] + ' (' + kiaN + ' ' + W.kia + ', ' + wiaN + ' ' + W.wia + ').'
+              : cas[0].anon ? 'Lost ' + bodies + ' ' + POOL_NAMES[poolOf(profile(entry.key))] + ' (' + kiaN + ' ' + WA.kia + ', ' + wiaN + ' ' + WA.wia + ').'
               : [kiaN ? W.kiaLong + ': ' + (named('kia') || kiaN) + '.' : '', wiaN ? W.wiaLong + ': ' + named('wounded') + '.' : ''].filter(Boolean).join(' '));
           }
           if (line.men && !line.landed) entry.men = line.men.slice();   // a landing's passengers are all still there
