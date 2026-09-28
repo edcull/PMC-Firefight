@@ -181,12 +181,21 @@
   }
   var ROMAN = R.ROMAN;
   var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>';
-  // the memorial: a headstone
   // the other forces: two banners
   var ICON_FORCES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h9l-2 3.5 2 3.5H5"/><path d="M19 21V9"/><path d="M19 9h-6"/><path d="M13 9l1.5 2.5L13 14h6"/></svg>';
   // the battles fought: crossed swords
   var ICON_BATTLES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M9.5 17.5L21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6"/><path d="M8 16l-4 4"/><path d="M5 21l-2-2"/></svg>';
-  var ICON_MEMORIAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V9a5 5 0 0 1 10 0v12"/><path d="M4 21h16"/><path d="M12 9v6"/><path d="M9.5 11.5h5"/></svg>';
+  /* Where the force keeps its casualties: a company's or a revolt's field
+     hospital (a tent with a red cross), the tribe's temple (a stepped shrine
+     with its fire), and the swarm's biomass (a cluster of cells). */
+  var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+  var ICON_HOSPITAL = SVG_OPEN + '<path d="M2.5 20.5L12 4l9.5 16.5"/><path d="M1.5 20.5h21"/><path d="M12 11v6.5M8.75 14.25h6.5"/></svg>';
+  var ICON_TEMPLE = SVG_OPEN + '<path d="M2.5 21h19"/><path d="M4.5 21v-4h15v4"/><path d="M7 17v-4h10v4"/><path d="M9.5 13V9.5h5V13"/><path d="M12 9.5c-1.6-1.3-1.6-3.2 0-5.5 1.6 2.3 1.6 4.2 0 5.5z"/></svg>';
+  var ICON_BIOMASS = SVG_OPEN + '<circle cx="9" cy="9.5" r="5.5"/><circle cx="16.8" cy="15.8" r="4"/><circle cx="7.2" cy="18.8" r="2.2"/><circle cx="8" cy="8.5" r="1.2"/><circle cx="17.3" cy="15.2" r="0.9"/></svg>';
+  function memorialIcon(co) {
+    var f = (co && co.faction) || 'pmc';
+    return f === 'bugs' ? ICON_BIOMASS : f === 'xeno' ? ICON_TEMPLE : ICON_HOSPITAL;
+  }
   // managing the campaign's file: a folder with a gear
   var ICON_MANAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3"/><path d="M3 7v10a2 2 0 0 0 2 2h7"/><circle cx="18" cy="17" r="2.2"/><path d="M18 12.8v1.6M18 19.6v1.6M13.8 17h1.6M20.6 17h1.6M15 14l1.1 1.1M19.9 18.9L21 20M15 20l1.1-1.1M19.9 15.1L21 14"/></svg>';
   // recruiting: a plus
@@ -333,7 +342,7 @@
   function kitHub() {
     return KIT_HUB || (KIT_HUB = root.PMCDossierHub({
       C: C, ICON_ABANDON: ICON_ABANDON, ICON_BATTLES: ICON_BATTLES, ICON_FORCES: ICON_FORCES,
-      ICON_LOAD: ICON_LOAD, ICON_MANAGE: ICON_MANAGE, ICON_MEMORIAL: ICON_MEMORIAL, ICON_SAVE: ICON_SAVE,
+      ICON_LOAD: ICON_LOAD, ICON_MANAGE: ICON_MANAGE, memorialIcon: memorialIcon, ICON_SAVE: ICON_SAVE,
       ROMAN: ROMAN, Store: Store, cmodal: cmodal, coin: coin, colourName: colourName, colourOf: colourOf,
       dossierPanel: dossierPanel, entryCard: entryCard, esc: esc, memorialList: memorialList,
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,

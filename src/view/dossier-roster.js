@@ -65,11 +65,11 @@
         if (!st.served) return '';
         // penal troopers are counted apart, and not in the loss rate
         if (st.countOnly) return st.lost ? '<div class="dloss"><b>' + st.lost + '</b> ' + st.unit + ' killed <span>not counted as losses</span></div>' : '';
-        var pct = Math.round(st.pct * 1000) / 10, wpct = Math.round(st.wpct * 1000) / 10;
+        var pct = Math.round(st.pct * 1000) / 10, wpct = Math.round(st.wpct * 1000) / 10, W = C.words(co);
         // the swarm's is biomass, and a bug is not wounded: it is lost or it is not
         if (st.pool === 'biomass') return '<div class="dloss"><b>' + pct + '%</b> lost <span>' + st.lost + ' of ' + st.served + ' ' + st.unit + '</span></div>';
-        return '<div class="dloss"><b>' + pct + '%</b> killed <b>' + wpct + '%</b> wounded <span>' + st.lost + ' killed, ' +
-          st.wounded + ' wounded, of ' + st.served + ' ' + st.unit + '</span></div>';
+        return '<div class="dloss"><b>' + pct + '%</b> ' + W.kia + ' <b class="wia">' + wpct + '%</b> ' + W.wia + ' <span>' + st.lost + ' ' + W.kia + ', ' +
+          st.wounded + ' ' + W.wia + ', of ' + st.served + ' ' + st.unit + '</span></div>';
       }).join('');
     }
     function memorialList(co) {
@@ -79,7 +79,10 @@
         var p = R.CATALOGUE.filter(function (q) { return q.name === m.type; })[0];
         return !p || !(p.group === 'Drones' || (p.rules || []).indexOf('Drone unit') >= 0);
       });
-      if (!list.length) return lossLine(co) + '<p class="dnote">No one has been lost yet.</p>';
+      if (!list.length) return lossLine(co) + '<p class="dnote">No one has been ' + (co.faction === 'xeno' ? 'lost to the hunt' : 'killed or wounded') + ' yet.</p>';
+      var W = C.words(co);
+      // killed or wounded; an entry from before the roll was made is one of the dead
+      function tag(kia) { return '<span class="dfate ' + (kia ? 'kia' : 'wia') + '">' + (kia ? W.kiaTag : W.wiaTag) + '</span>'; }
       var SCx = root.PMCScen, battles = {}, order = [];
       list.forEach(function (m) {
         if (!battles[m.battle]) { battles[m.battle] = []; order.push(m.battle); }
@@ -94,8 +97,9 @@
         ms.forEach(function (m) {
           if (!m.anon) { out.push(m); return; }
           var key = m.type + '|' + (m.noun || '');
-          if (seen[key]) { seen[key].count += m.count || 0; seen[key].squads++; return; }
-          seen[key] = { anon: true, type: m.type, noun: m.noun, count: m.count || 0, squads: 1, unit: m.unit };
+          var k = m.kia != null ? m.kia : m.count || 0, w = m.wounded || 0;
+          if (seen[key]) { seen[key].count += m.count || 0; seen[key].kia += k; seen[key].wounded += w; seen[key].squads++; return; }
+          seen[key] = { anon: true, type: m.type, noun: m.noun, count: m.count || 0, kia: k, wounded: w, squads: 1, unit: m.unit };
           out.push(seen[key]);
         });
         return out;
@@ -109,10 +113,11 @@
           ms.map(function (m) {
             if (m.anon) {
               return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' ' + esc(m.noun || 'Esh-Aven') + '</span>' +
+                (m.kia ? ' ' + tag(true) + ' ' + m.kia : '') + (m.wounded ? ' ' + tag(false) + ' ' + m.wounded : '') +
                 (m.squads > 1 ? '<span class="dmem-type">' + m.squads + ' squads</span>'
                   : m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
             }
-            return '<li><span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
+            return '<li>' + tag(m.fate !== 'wounded') + ' <span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
               '<span class="dmem-type">' + esc(m.type) + (m.unit && m.unit !== m.type ? ' \u00b7 ' + esc(m.unit) : '') +
               ' \u00b7 turn ' + (m.turn || 1) + ' of the battle</span></li>';
           }).join('') + '</ol></div>';

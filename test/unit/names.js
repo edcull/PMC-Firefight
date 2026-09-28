@@ -117,7 +117,7 @@ for (const [fa, fb] of [['pmc', 'rebel'], ['xeno', 'bugs']]) {
   ok('...and the survivors are on each line', rep.units.every((l) => Array.isArray(l.men)));
 }
 
-/* Each infantry casualty rolls a D6 after the battle: 1-2 killed, 3-6
+/* Each infantry casualty rolls a D6 after the battle: a 1 killed, 2-6
    wounded. Where a check wants one or the other, the dice are loaded. */
 function dice(v, fn) { const d = R.d6; R.d6 = () => v; try { return fn(); } finally { R.d6 = d; } }
 
@@ -284,10 +284,10 @@ console.log('killed or wounded');
   kc.companies.A.roster = [sq];
   C.menOf(sq, kc.companies.A);
   const [sgt, cpl, p1, p2] = sq.men;
-  /* The sergeant rolled a 2 and was killed; the corporal and a private rolled
-     3 and 6 and come back. Rolled once and kept on the report, so a report
+  /* The sergeant rolled a 1 and was killed; the corporal and a private rolled
+     3 and 6 and were wounded. Rolled once and kept on the report, so a report
      that already carries its rolls is taken as it stands. */
-  const fates = [[2, 'kia'], [3, 'wounded'], [6, 'wounded']];
+  const fates = [[1, 'kia'], [3, 'wounded'], [6, 'wounded']];
   const kAfter = C.aftermath(kc, {
     winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
     units: [{ rid: sq.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 5, destroyed: false, brokenEver: false, wiped: false,
@@ -306,17 +306,19 @@ console.log('killed or wounded');
       casualties: [{ side: 'A', rid: e1.rid, name: 'Una Marsh', rank: 'Private', turn: 1, type: 'Rookie rifle team' }]
     })).sides.A.units[0].casualties[0];
   };
-  ok('a D6 of 1-2 is killed in action', [1, 2].every((v) => { const c = rollOne(v); return c.fate === 'kia' && c.roll === v; }));
-  ok('...and 3-6 wounded', [3, 4, 5, 6].every((v) => { const c = rollOne(v); return c.fate === 'wounded' && c.roll === v; }));
-  ok('only the dead go on the memorial', kc.companies.A.memorial.length === 1 && kc.companies.A.memorial[0].name === sgt.name);
-  ok('the wounded are back in the ranks, in their places', sq.men.length === 7 && sq.men[0].name === cpl.name &&
-    sq.men.some((m) => m.name === p1.name) && !sq.men.some((m) => m.name === sgt.name) && sq.men[2].name === p2.name,
+  ok('a D6 of 1 is killed in action', [1].every((v) => { const c = rollOne(v); return c.fate === 'kia' && c.roll === v; }));
+  ok('...and 2-6 wounded', [2, 3, 4, 5, 6].every((v) => { const c = rollOne(v); return c.fate === 'wounded' && c.roll === v; }));
+  const mem = kc.companies.A.memorial;
+  ok('the killed and the wounded both go on the field hospital\'s list', mem.length === 3 &&
+    mem[0].name === sgt.name && mem[0].fate === 'kia' && mem[1].fate === 'wounded' && mem[2].fate === 'wounded', JSON.stringify(mem.map((m) => m.fate)));
+  ok('the wounded are out for the campaign, not back in the ranks', sq.men.length === 5 &&
+    !sq.men.some((m) => m.name === cpl.name || m.name === p1.name || m.name === sgt.name) && sq.men[0].name === p2.name,
     sq.men.map((m) => m.name).join(', '));
   ok('...and the history says who was which', sq.history.some((h) => h.indexOf('Killed in action: ' + sgt.rank + ' ' + sgt.name) >= 0 &&
-    h.indexOf('Wounded: ' + cpl.rank + ' ' + cpl.name) >= 0));
+    h.indexOf('Wounded, out for the campaign: ' + cpl.rank + ' ' + cpl.name) >= 0));
   const ks = C.lossStats(kc.companies.A)[0];
-  ok('the loss rate splits killed from wounded: 1 and 2 of 9', ks.lost === 1 && ks.wounded === 2 && ks.served === 9 &&
-    Math.round(ks.wpct * 1000) === 222, JSON.stringify(ks));
+  ok('the loss rate splits killed from wounded: 1 and 2 of 11', ks.lost === 1 && ks.wounded === 2 && ks.served === 11 &&
+    Math.round(ks.wpct * 1000) === 182, JSON.stringify(ks));
 
   // a vehicle's crewman is not rolled for: he went down with it
   const vc2 = C.newCampaign({ mode: 'solo' });
@@ -340,7 +342,12 @@ console.log('killed or wounded');
     casualties: [{ side: 'A', rid: ek.rid, anon: true, count: 4, turn: 0, type: 'Core Epsilon troopers', unit: 'Core Epsilon troopers' }]
   }));
   const xl = C.lossStats(xk.companies.A)[1];
-  ok('a counted unit rolls for each of its casualties', xl.lost === 0 && xl.wounded === 4 && xk.companies.A.memorial.length === 0, JSON.stringify(xl));
+  ok('a counted unit rolls for each of its casualties', xl.lost === 0 && xl.wounded === 4 && xl.served === R.profile('xeps3').size + 4 &&
+    xk.companies.A.memorial.length === 1 && xk.companies.A.memorial[0].wounded === 4, JSON.stringify(xl));
+  ok('...and the tribe calls them ascended and scarred', C.words(xk.companies.A).kia === 'ascended' && C.words(xk.companies.A).wia === 'scarred' &&
+    C.words(xk.companies.A).memorial === 'Temple');
+  ok('a company keeps a field hospital, the swarm its biomass', C.words(kc.companies.A).memorial === 'Field hospital' &&
+    C.words({ faction: 'rebel' }).memorial === 'Field hospital' && C.words({ faction: 'bugs' }).memorial === 'Biomass');
 }
 
 console.log('drones go unnamed');

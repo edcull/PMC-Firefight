@@ -1296,8 +1296,14 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dmem-list { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; }
 .dmem-list li { padding: 3px 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
 .dmem-list li:last-child { border-bottom: 0; }
+/* killed or wounded, on the field hospital's list (the tribe's ascended or scarred) */
+.dfate { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 0 5px; border-radius: 3px; border: 1px solid currentColor; line-height: 1.5; vertical-align: 1px; }
+.dfate.kia { color: var(--bad); }
+.dfate.wia { color: var(--warn); }
 .dloss { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; font-size: 12.5px; }
 .dloss b { font-family: var(--display); font-size: 18px; color: var(--bad); }
+.dloss b.wia { color: var(--warn); margin-left: 6px; }
 .dloss span { color: var(--ink-dim); }
 .dloss.dexpr b { color: var(--good); }
 .dloss.dtrau { margin-bottom: 10px; }

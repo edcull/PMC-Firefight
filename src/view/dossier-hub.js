@@ -8,7 +8,7 @@
   'use strict';
   root.PMCDossierHub = function (E) {
     var C = E.C, ICON_ABANDON = E.ICON_ABANDON, ICON_BATTLES = E.ICON_BATTLES, ICON_FORCES = E.ICON_FORCES,
-        ICON_LOAD = E.ICON_LOAD, ICON_MANAGE = E.ICON_MANAGE, ICON_MEMORIAL = E.ICON_MEMORIAL,
+        ICON_LOAD = E.ICON_LOAD, ICON_MANAGE = E.ICON_MANAGE, memorialIcon = E.memorialIcon,
         ICON_SAVE = E.ICON_SAVE, ROMAN = E.ROMAN, Store = E.Store, cmodal = E.cmodal, coin = E.coin,
         colourName = E.colourName, colourOf = E.colourOf, dossierPanel = E.dossierPanel,
         entryCard = E.entryCard, esc = E.esc, memorialList = E.memorialList, profile = E.profile,
@@ -72,14 +72,14 @@
           (E.camp.log.length > 1 ? E.camp.log.length + ' battles \u2014 the last: ' : '') +
           esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl + ', ' + result(last) +
           '</small></span></button>' : '') +
-        '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + ICON_MEMORIAL + '<span>Memorial<small>' +
-        (A.faction === 'bugs' ? 'The biomass spent over the campaign' : 'Everyone lost, battle by battle') + '</small></span></button>' +
+        '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(A) + '<span>' + esc(C.words(A).memorial) + '<small>' +
+        esc(C.words(A).memorialSub) + '</small></span></button>' +
         '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
         '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
         '<button type="button" class="archline warn" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
-      h += cmodal('memorial', 'Memorial', '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);
+      h += cmodal('memorial', C.words(A).memorial, '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);
       h += cmodal('rivals', E.camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? companyPanel(B, 'B')
           : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
