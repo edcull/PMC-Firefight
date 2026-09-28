@@ -234,7 +234,7 @@
       /* the riders, a step up the list each: armed civilians on their own bikes,
          then the young bikers, then the turbaned riders, and the Legendary
          Hellriders in what the Hellriders wore, a rocket launcher among them */
-      rider: ['biker', 'biker2'],
+      // rider: the Militia's figures, mounted — built under KIT
       ridergang: ['civrider1', 'civrider2', 'civrider3', 'civrider4'],
       hellrider: ['rider', 'rider', 'riderblack', 'rider'],
       // the legendary hellriders are the mujahideen in the saddle, man for man
@@ -477,8 +477,6 @@
       riderblack: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#26262a', vest: '#4a3a2a', armband: 'force', tint: HOLY_C },
       // the gang: open-face biker helmets and black leathers
       // a rider gang: the acolytes' long tan shirts, a round cap or nothing on the head
-      biker: { helm: 'pakol', gun: 'smg', pack: 'none', mount: true, tunic: true, vest: HOLY_A.mid, armband: 'force', young: true, tint: HOLY_A },
-      biker2: { helm: 'bare', gun: 'carbine', pack: 'none', mount: true, tunic: true, vest: HOLY_C.mid, armband: 'force', young: true, tint: HOLY_C },
       // hellriders: spiked helmets, spiked shoulders, flames on the tank and a heavy gun
       // hellriders: the enlightened's tan and olive and green sash, turbans tan, the leader's white, one black
       hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
@@ -542,19 +540,22 @@
        in the dress of their own tier: each mounted figure is the unmounted
        one — its turban, wrap, vest, sash, flag and colours — put on a mount,
        its pack left behind, and sized as the other riders are. */
+    function mounted(r) {
+      var k = r + 'mtd';
+      if (!KIT[k]) {
+        var m = {};
+        for (var f in KIT[r]) m[f] = KIT[r][f];
+        m.mount = true; m.pack = 'none'; m.fitAs = 'rider';
+        delete m.kneel; delete m.prone;
+        KIT[k] = m;
+      }
+      return k;
+    }
     ['holy', 'holy1', 'holy2', 'holy3', 'holy4', 'leader', 'leadersmall', 'leadermid', 'leaderbig', 'leaderhuge'].forEach(function (art) {
-      ROLES[art + 'mounted'] = ROLES[art].map(function (r) {
-        var k = r + 'mtd';
-        if (!KIT[k]) {
-          var m = {};
-          for (var f in KIT[r]) m[f] = KIT[r][f];
-          m.mount = true; m.pack = 'none'; m.fitAs = 'rider';
-          delete m.kneel; delete m.prone;
-          KIT[k] = m;
-        }
-        return k;
-      });
+      ROLES[art + 'mounted'] = ROLES[art].map(mounted);
     });
+    // the Rider warriors (Tier II Mounted Warriors) are the Militia (Tier II Freedom Warriors) on a mount
+    ROLES.rider = ROLES.rebel.map(mounted);
 
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a
