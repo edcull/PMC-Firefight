@@ -30,7 +30,11 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-save terser@5
-      - run: node scripts/bundle.js
+      # stamp the pages (the menu's version, and each script's fingerprint in
+      # the unit viewer) as of this deploy, then fold them into the site
+      - run: node scripts/build.js
+        env:
+          STAMP_ALWAYS: '1'
       - uses: actions/upload-pages-artifact@v5
         with:
           path: build/site
