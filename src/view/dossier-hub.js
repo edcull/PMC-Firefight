@@ -253,9 +253,14 @@
     /* An army's own rules: how it fights its campaign, and the special rules
        only its units carry (read off the unit profiles, so it stays in step
        with them), each with the rule's text. */
-    var NOT_ARMY = ['Immobile', 'No Objectives', 'Drone unit', 'Unarmed', 'Lifter', 'Stationary Artillery', 'No Army Rules'];
-    // rules the whole army carries that no unit profile prints (the Xenotripods', pp. 128-129)
-    var ARMY_WIDE = { xeno: ['Limited Senses', 'Mental Projection', 'Psychic Bond'] };
+    var NOT_ARMY = ['Immobile', 'No Objectives', 'Drone unit', 'Unarmed'];
+    // rules the whole army carries that no unit profile prints (the Rebels', pp. 94-95; the Xenotripods', pp. 128-129)
+    var ARMY_WIDE = {
+      rebel: ['Hasta la Victoria Siempre!', 'Undisciplined', 'Riders upgrade'],
+      xeno: ['Limited Senses', 'Mental Projection', 'Psychic Bond']
+    };
+    // what an army chooses for each battle (the Rebels' tactics, p. 95)
+    var ARMY_CHOICES = { rebel: { title: 'Tactics \u2014 one chosen for each battle', list: ['Last Stand', 'Human Wave Attacks', 'Guerillas'] } };
     function armyRules(co) {
       var f = co.faction || 'pmc', W = C.words(co), cr = C.creedOf(co), R = root.PMC, T = root.PMCRuleText;
       var base = function (r) { return r.replace(/\s*\(.*\)$/, ''); };
@@ -297,6 +302,12 @@
       }
       if (own.length) {
         h += '<h4>Special rules of the army</h4><dl class="armyrl">' + own.map(function (k) {
+          return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';
+        }).join('') + '</dl>';
+      }
+      var ch = ARMY_CHOICES[f];
+      if (ch) {
+        h += '<h4>' + esc(ch.title) + '</h4><dl class="armyrl">' + ch.list.map(function (k) {
           return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';
         }).join('') + '</dl>';
       }

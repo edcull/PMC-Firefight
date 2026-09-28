@@ -22,7 +22,7 @@
       'Its main weapon always fires at Basic Firepower: no +1 for a stationary Fire!, no half-range, ' +
       'Crossfire, height or Markerlight bonuses.',
     'Animal Behaviour':
-      'Bugs shrug off hits: on the hit table 1-3 is ignored and 4+ kills one bug (2 SP). They re-roll failed ' +
+      'Bugs shrug off hits: on the hit table 1-3 is ignored and 4-6 loses one bug and takes 2 Suppression. They re-roll failed ' +
       'rally dice, but take no cover from terrain unless an Overmind is in reach.',
     'Anti-aircraft':
       '+4 to hit aircraft, and a critical hit on an aircraft does D6 Damage instead of D3. ' +
@@ -147,6 +147,25 @@
     'Psychic Support':
       'Counts as Field Medics: friendly units within 6" use the kinder medic hit table. The Psychic Bond ' +
       'penalty still applies to it as normal.',
+    // the Rebels' army rules, carried by every unit of theirs but printed on none (pp. 94-95)
+    'Hasta la Victoria Siempre!':
+      'Army rule: a Rebel infantry unit loses no Morale for its first two soldiers killed (three under Last ' +
+      'Stand); further losses reduce it as normal.',
+    'Undisciplined':
+      'Army rule: shooting at a Broken Rebel unit, or one caught in a crossfire, adds +2 to the hit-effect rolls ' +
+      'instead of +1.',
+    'Riders upgrade':
+      'Some Rebel units may be fielded as Riders: Size halved, Movement 10 and the Riders rule. In a campaign it ' +
+      'is chosen when the unit is recruited, and cannot be changed.',
+    'Last Stand':
+      'Tactic: Rebel infantry get +4 Defence in terrain that gives a Defence bonus; up to 4 barricades (low walls) ' +
+      'per Priority Level go down anywhere but the enemy deployment zone; and the first three soldiers killed cost ' +
+      'no Morale, not two.',
+    'Human Wave Attacks':
+      'Tactic: 2 more infantry units per Priority Level, of the Battle Tier; infantry move M+4" on Move and ' +
+      'Assault; "...but they\'ll never take our freedom!" and "Death or Glory, Comrades!" reach 18".',
+    'Guerillas':
+      'Tactic: every infantry unit without Riders gains Stealth and Battlefield Insertion.',
     // the Xenotripods' army rules, carried by every unit of theirs but printed on none (pp. 128-129)
     'Limited Senses':
       'Army rule (not drones): every Xenotripod unit sees only 12", except through Mental Projection.',
@@ -180,8 +199,10 @@
       'Its main weapon can only engage ground targets, never aircraft.',
     'Stationary Artillery':
       'An emplaced gun: it never moves and is never held in reserve, but a transport vehicle can tow it, the gun ' +
-      'taking one of its places (a Lifter cannot lift a hull that is towing). It can Dig in to ' +
-      'fire over open sights — range 24", minimum 6", front quarter only, but with every modifier.',
+      'taking one of its places (a Lifter cannot lift a hull that is towing). Broken, it stays where it is ' +
+      '(removed only if its rally still leaves it over three times its Morale), and it never goes into a building. ' +
+      'It can Dig in to fire over open sights — range 24", minimum 6", front quarter only, but with every modifier ' +
+      '— and cannot then be turned or towed until Normal stance! puts it back.',
     'Stealth':
       '+1 Defence for every full 6" between it and the shooter, unless the shooter is Keen-Eyed. Markerlights ' +
       'can only pick it out within 12".',
