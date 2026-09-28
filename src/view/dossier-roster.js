@@ -111,25 +111,40 @@
         });
         return out;
       }
+      /* The named are gathered under their unit, a line each for killed or
+         wounded, rank and name; the unit's line carries its Tier. The unnamed
+         (penal troopers, the Esh-Aven) stay one line of counts for the kind. */
+      function rows(ms) {
+        var dot = '<i class="dmem-dot"> \u00b7 </i>', groups = [], byUnit = {};
+        ms.forEach(function (m) {
+          if (m.anon) { groups.push({ anon: m }); return; }
+          var key = m.unit || m.type;
+          if (!byUnit[key]) { byUnit[key] = { unit: key, tier: tierOf(m), list: [] }; groups.push(byUnit[key]); }
+          byUnit[key].list.push(m);
+        });
+        return groups.map(function (g) {
+          if (g.anon) {
+            var m = g.anon, tier = tierOf(m);
+            var tail = (tier ? dot + '<span class="dmem-tier">Tier ' + ROMAN[tier] + '</span>' : '') +
+              dot + '<span class="dmem-unit">' + (m.squads > 1 ? m.squads + ' squads' : esc(m.unit || m.type)) + '</span>';
+            return '<li>' + (m.kia ? tag(true, WA) + ' ' + m.kia : '') + (m.kia && m.wounded ? ' ' : '') +
+              (m.wounded ? tag(false, WA) + ' ' + m.wounded : '') + dot + '<b>' + esc(m.noun || 'Esh-Aven') + '</b>' + tail + '</li>';
+          }
+          return '<li class="dmem-grp"><span class="dmem-unit">' + esc(g.unit) + '</span>' +
+            (g.tier ? dot + '<span class="dmem-tier">Tier ' + ROMAN[g.tier] + '</span>' : '') + '</li>' +
+            g.list.map(function (m) {
+              return '<li class="dmem-in">' + tag(m.fate !== 'wounded') + dot + '<span class="dmem-rank">' + esc(m.rank) + '</span>' + dot +
+                '<b>' + esc(m.name) + '</b></li>';
+            }).join('');
+        }).join('');
+      }
       order.forEach(function (n) {
         var ms = mergeAnon(battles[n]), first = battles[n][0];
         var sc = SCx && SCx.SCENARIOS && SCx.SCENARIOS[first.scenario];
         h += '<div class="dmem"><div class="dmem-head">Campaign turn ' + n +
           (first.against ? ' · against ' + esc(first.against) : '') + (sc ? ' · ' + esc(sc.name) : '') +
           '<span class="mk">' + ms.reduce(function (k, m) { return k + (m.count || 1); }, 0) + '</span></div><ol class="dmem-list">' +
-          ms.map(function (m) {
-            /* One line each: killed or wounded, rank, name, Tier and the unit.
-               The unnamed are a count of each fate for the kind of trooper. */
-            var tier = tierOf(m), dot = '<i class="dmem-dot"> \u00b7 </i>';
-            var tail = (tier ? dot + '<span class="dmem-tier">Tier ' + ROMAN[tier] + '</span>' : '') +
-              dot + '<span class="dmem-unit">' + (m.squads > 1 ? m.squads + ' squads' : esc(m.unit || m.type)) + '</span>';
-            if (m.anon) {
-              return '<li>' + (m.kia ? tag(true, WA) + ' ' + m.kia : '') + (m.kia && m.wounded ? ' ' : '') +
-                (m.wounded ? tag(false, WA) + ' ' + m.wounded : '') + dot + '<b>' + esc(m.noun || 'Esh-Aven') + '</b>' + tail + '</li>';
-            }
-            return '<li>' + tag(m.fate !== 'wounded') + dot + '<span class="dmem-rank">' + esc(m.rank) + '</span>' + dot +
-              '<b>' + esc(m.name) + '</b>' + tail + '</li>';
-          }).join('') + '</ol></div>';
+          rows(ms) + '</ol></div>';
       });
       return h;
     }

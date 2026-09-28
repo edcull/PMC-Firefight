@@ -102,6 +102,7 @@
       if (ui.insertion || ui.reservePick || ui.preview) return true;
       return ['faceAsk', 'cmdOffer', 'standAsk', 'endAsk', 'martyrAsk', 'kyfAsk', 'placeAsk', 'minePick', 'swapAsk'].some(function (k) {
         var a = s[k];
+        if (k === 'endAsk' && (show.queue.length || show.waiting || ui.resOpen || resQueue.length)) return false;   // not asked until the replay and the rally's cards are done
         return !!a && (a.side == null || !B.isAI(a.side));
       });
     }
@@ -192,6 +193,14 @@
       ui.resTimer = setTimeout(closeRes, wait / (+window.PMC_TIME_SCALE || 1));
     }
 
+    /* A campaign's aftermath waits for the battle's result to be read: the
+       winner, and what won it, on its own card before the screen changes. */
+    function resultKey() { var s = B.state; return s && s.over ? s.seed + '|' + s.turn + '|' + s.over.text : null; }
+    window.PMC_AFTER_RESULT = function (fn) {
+      // (with nobody at the table to read it, as when both sides are the AI's, it does not wait)
+      if (!resultKey() || ui.resultRead === resultKey() || B.state.cfg.aiSides.length === 2) fn();
+      else ui.afterResult = fn;
+    };
     function closeRes() {
       clearTimeout(ui.resTimer);
       el('resolution').hidden = true;
@@ -199,6 +208,12 @@
       var res = ui.currentRes;
       ui.currentRes = null;
       if (res && res.onClose) res.onClose();     // may queue the next step
+      // the battle's result read: what was waiting on it (a campaign's aftermath) goes on
+      if (res && res.kind === 'Result') {
+        ui.resultRead = resultKey();
+        var then = ui.afterResult; ui.afterResult = null;
+        if (then) { then(); return; }
+      }
       if (resQueue.length) showNextRes();
       else { render(); show.pump(); }
       scheduleReturn();
@@ -245,7 +260,7 @@
       if (res.outcome) h += '<div class="outcome ' + (res.outcome.tone || '') + '">' + res.outcome.text + '</div>';
       if (feed) return h + '</div>';
       var count = res.progress || (resQueue.length ? resQueue.length + ' more' : '');
-      h += '</div><div class="res-foot"><button class="start" id="res-continue">Continue</button>' +
+      h += '</div><div class="res-foot"><button class="start" id="res-continue">' + (res.cont || 'Continue') + '</button>' +
         (count ? '<span class="res-count">' + count + '</span>' : '') + '</div>';
       if (B.state.cfg.aiSides.length) {
         h += '<label class="autochk" for="res-auto"><input type="checkbox" id="res-auto"' +

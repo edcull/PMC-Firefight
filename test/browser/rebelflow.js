@@ -214,7 +214,7 @@ async function pastFronts(p) {
 
   for (let i = 0; i < 14; i++) { await drain(p); await p.waitForTimeout(120); }
   await p.evaluate(() => {
-    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
+    const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]')));
     if (b) b.click();
   });
   await p.waitForTimeout(300);

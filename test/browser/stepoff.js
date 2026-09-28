@@ -39,6 +39,7 @@ async function drain(p) {
     keys: ['cmd1', 'veterans', 'shock', 'insertplat', 'insertplat', 'protectors'] });
   await p.waitForTimeout(1200);
   await drain(p);
+  await p.evaluate(() => { if (window.PMC_STATE().deployReady) window.__sendIntent({ k: 'deployready' }); });   // the list stands: on to the deployment
 
   head('A drop platform comes down with somebody in it');
   const seated = await p.evaluate(() => {

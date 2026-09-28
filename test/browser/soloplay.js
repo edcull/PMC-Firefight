@@ -26,7 +26,7 @@ const { page: PAGE } = require('../where.js');
         solo: { coop: coop, faction: 'pmc', opFaction: 'rebel' } });
     }, sc);
     await p.waitForTimeout(300);
-    await p.evaluate(() => { const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]')); if (b) b.click(); });
+    await p.evaluate(() => { const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]'))); if (b) b.click(); });
     await p.waitForTimeout(200);
     await p.evaluate(() => {
       window.PMC_STATE().cfg.aiSides = ['A', 'B'];

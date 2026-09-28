@@ -100,6 +100,8 @@
     };
     window.__showQueue = function () { return show.queue.length; };
     window.__held = function () { return Object.keys(B.held).length; };
+    // a unit's suppression and models as the table draws them: what is held back of it, else the rules' own
+    window.__shownAs = function (id) { var u = byId(id), h = u && (B.held[id] || u); return h ? h.sp + ' SP, ' + h.models + ' models' : null; };
     window.__busy = function () { return busy(); };
     window.__busyWhy = function () { return { anims: anims.map(function (a) { return a.kind + ':' + Math.round(nowMs() - a.t0) + '/' + a.dur; }), arriving: anyArriving(), fx: FX.busy(), fxk: FX.kinds ? FX.kinds() : null, idle: idleCbs.length, loop: !!B.loop }; };
     window.__uiCounts = function () { return { targets: ui.targets.length, moves: ui.moves.length, terrain: ui.terrain.length }; };
@@ -122,6 +124,8 @@
     };
     // the test harness's way through deployment: the scenario's own reserves, then everyone down
     window.__autoDeployBoth = function () {
+      // the briefing read and put away, as a player would before deploying
+      if (el('obj-modal')) el('obj-modal').hidden = true;
       // a Hostile takeover defender's position first: nothing deploys until it is dug in
       var pa = B.state && B.state.placeAsk;
       if (pa && pa.kind === 'fort') send({ k: 'placeauto' });

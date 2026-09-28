@@ -97,6 +97,8 @@
       try { cfg.terrainSetup = localStorage.getItem('pmc-terrainsetup') || undefined; } catch (e) { }
     }
     loadAutoAdvance(cfg.mode);
+    // against the AI, the player looks over the table and modifies the army, or goes on, before deploying
+    if (cfg.mode === 'ai' && cfg.readyUp == null) cfg.readyUp = true;
     resetShow();
     // a demo is for watching: there is nothing to act with, so no Actions tab, and it opens on the results
     document.body.setAttribute('data-battle', cfg.mode || '');
@@ -386,11 +388,15 @@
     send({ k: 'select', id: u.id });
     revealConsole();
   }
-  function doShoot(t) { send({ k: 'target', id: t.id }); }
-  function doAssault(t) { send({ k: 'target', id: t.id }); }
-  function doDesignate(t) { send({ k: 'target', id: t.id }); }
-  function doHack(t) { send({ k: 'target', id: t.id }); }
-  function doSupport(t) { send({ k: 'target', id: t.id }); }
+  /* A target picked: the odds come off the board at once, not after the shots
+     have been drawn (the targets are only read back from the rules once the
+     replay is over, and read back as they were if the pick was refused). */
+  function aimAt(t) { ui.targets = []; drawBoard(); send({ k: 'target', id: t.id }); }
+  function doShoot(t) { aimAt(t); }
+  function doAssault(t) { aimAt(t); }
+  function doDesignate(t) { aimAt(t); }
+  function doHack(t) { aimAt(t); }
+  function doSupport(t) { aimAt(t); }
   function doEmbark(t) { send({ k: 'target', id: t.id }); }
   function doTeleport(tp, t) { send({ k: 'target', id: t.id }); }
   function finishTeleport(tp, t) { send({ k: 'target', id: t.id }); }
@@ -421,7 +427,7 @@
   function unloadBefore(veh, u) { send({ k: 'unload', hull: veh.id, unit: u.id }); }
   function holdInsertion() { send({ k: 'holdinsert' }); }
   function holdArrival() { send({ k: 'holdarrive' }); }
-  function doSteady(t) { send({ k: 'target', id: t.id }); }
+  function doSteady(t) { aimAt(t); }
   // a building, and which section of it
   function doEnter(u, s) { send({ k: 'enter', piece: state.terrain.indexOf(s.piece), sec: s.sec || 0 }); }
   function doExitBld(u, spot) { send({ k: 'exitbld', x: spot.x, y: spot.y }); }
@@ -976,6 +982,11 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var VIEW = window.PMCView({
+    get Q() { return Q; },
+    replaying: function () { return replaying(); },
+    // result cards still to be read (a rally's rolls, say), or one open now
+    cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
+    deployWhere: deployWhere, roleSentence: roleSentence,
     get FORCE_NOUN() { return FORCE_NOUN; }, get ID_NOUN() { return ID_NOUN; },
     get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; }, get anims() { return anims; },
     get ctx() { return ctx; }, get muster() { return muster; }, get pctx() { return pctx; },
@@ -1009,6 +1020,9 @@
   var PANELS = window.PMCPanels({
     get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get vc() { return vc(); }, get seats() { return seats; },
     get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
+    replaying: function () { return replaying(); },
+    // result cards still to be read (a rally's rolls, say), or one open now
+    cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
     cancelPreview: cancelPreview, carriersFor: carriersFor, chooseAction: chooseAction,
     cmdOfferCard: cmdOfferCard, commitMove: commitMove, curArea: curArea, deployNext: deployNext,

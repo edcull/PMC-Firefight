@@ -1324,8 +1324,10 @@
     var yes = { ok: true };
 
     function mayDeploy(side) {
-      return state.phase === 'deploy' && K.placingSide() === side && !state.placeAsk && !state.minePick && !state.swapStage;
+      return state.phase === 'deploy' && K.placingSide() === side && !state.placeAsk && !state.minePick && !modifying();
     }
+    // the armies still being modified: a hotseat's secret round, or a player yet to continue to deployment
+    function modifying() { return !!state.swapStage || K.stillChoosing().length > 0; }
     /* The terrain set-up goes an area at a time, and each area is one side's
        to lay (p. 47). Nobody else may touch it while it is being laid. */
     function terrainSide() {
@@ -1419,7 +1421,8 @@
       return yes;
     });
     on('deploy', null, function (side, it) {
-      if (state.swapStage) return no('the armies are still being modified');
+      K.readyToDeploy(side);                // putting a unit down is getting on with the deployment
+      if (modifying()) return no('the other side is still modifying its army');
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();   // placing a unit keeps the list
       if (!mayDeploy(side)) return no('not your turn to place');
       settleFacing();
@@ -1486,7 +1489,8 @@
     });
     on('autodeploy', null, function (side, it) {
       if (state.phase !== 'deploy') return no('not deploying');
-      if (state.swapStage) return no('the armies are still being modified');
+      K.readyToDeploy(side);
+      if (modifying()) return no('the other side is still modifying its army');
       // deploying straight away means keeping the list as it is
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();
       var hand = state.units.filter(function (u) { return u.side === side && u.x < 0; });
@@ -1534,6 +1538,11 @@
     on('step', null, function (side, it) {
       if (state.phase !== 'battle' || !canAI()) return no('nothing to step');
       maybeAI();
+      return yes;
+    });
+    on('deployready', null, function (side, it) {
+      if (state.phase !== 'deploy' || !state.deployReady || state.deployReady[side] !== false) return no('nothing to continue from');
+      K.readyToDeploy(side);
       return yes;
     });
     on('swapopen', null, function (side, it) {
@@ -1589,7 +1598,7 @@
       if (state.minePick) return no('the mined piece has not been chosen');
       if (state.placeAsk) return no('there are pieces still to place');
       settleFacing();
-      if (state.swapStage) return no('the armies are still being modified');
+      if (modifying()) return no('the armies are still being modified');
       if (state.swapAsk) K.swapsDone();
       if (!K.deploymentDone()) return no('there are still units to place');
       // Rapid Relocation is one side's to finish, and it starts the battle when it does

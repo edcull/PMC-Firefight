@@ -58,7 +58,7 @@ async function run(p, label, cfg, checks) {
   await p.evaluate(() => {
     // a piece put down by hand first (a field fortification) is put down for them
     for (let n = 0; n < 12 && window.PMC_STATE().placeAsk; n++) window.__sendIntent({ k: 'placeauto' });
-    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
+    const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]')));
     if (b) b.click();
   });
   await p.waitForTimeout(300);

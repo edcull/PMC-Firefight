@@ -416,7 +416,7 @@
        initiative. It fades by itself and never takes a tap. */
     function turnBanner() {
       var tb = el('turnbanner');
-      if (!tb || B.state.phase !== 'battle' || B.state.over || !B.state.turn) return;
+      if (!tb || B.state.phase !== 'battle' || B.state.over || !B.state.turn || B.replaying()) return;   // announced once the last turn has been drawn
       if (ui.bannerTurn === B.state.turn) return;
       var first = ui.bannerTurn == null;
       ui.bannerTurn = B.state.turn;
@@ -471,7 +471,7 @@
           act.textContent = B.state.solo.coop ? soloOwnerName(B.state.activeOwner) + ' to act' : 'Your commando';
           act.className = 'pill pill-' + (B.state.solo.coop ? (B.state.activeOwner === 2 ? 'C' : 'P1') : 'A');
         }
-      } else if (B.state.endAsk) {
+      } else if (B.state.endAsk && !B.replaying() && !B.cardsPending()) {
         var ew = turnWords(B.state.endAsk.side);
         act.textContent = 'End phase: ' + (ew === 'Your turn' ? 'your call' : plainName(B.state.endAsk.side));
         act.className = 'pill pill-' + B.state.endAsk.side;
@@ -482,13 +482,14 @@
       /* Whose go it is, on the header itself: a bar of that side's colour along
          its foot (the phone shows the pill too, whatever the kind of game). */
       if (hdrEl) {
-        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
+        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
           ? (B.state.activeOwner === 2 ? 'C' : 'P1') : B.state.activeSide) : null;
         ['A', 'B', 'C', 'P1'].forEach(function (k) { hdrEl.classList.toggle('turn-' + k, going === k); });
-        var goer = B.state.endAsk ? B.state.endAsk.side : B.state.activeSide;
+        var goer = B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : B.state.activeSide;
         hdrEl.classList.toggle('your-turn', !!going && !isAI(goer) && mineToPlay(goer));
       }
       turnBanner();
+      briefOnce();
       if (B.state.solo && B.state.phase !== 'deploy' && B.state.phase !== 'terrain') {
         el('hdr-phase').textContent = 'Turn ' + B.state.turn + ' · ' + (B.state.activeSide === 'B' ? 'OpFor phase' : 'Action phase');
         el('hdr-init').textContent = B.state.scen.name;
@@ -527,6 +528,14 @@
         ? side(att, 'Attacker') + side(other(att), 'Defender')
         : side('A', B.state.solo ? 'Your side' : 'Side A') + side('B', B.state.solo ? 'OpFor' : 'Side B')) + '</div>';
       if (sc.win) h += '<p><b>To win:</b> ' + esc(sc.win) + '</p>';
+      // while the forces go down, the briefing says where, and what this side is there to do
+      if (B.state.phase === 'deploy') {
+        var here = ['A', 'B'].filter(function (s) { return !isAI(s) && mineToPlay(s); });
+        if (here.length === 1 && B.roleOf(here[0])) h += '<p><b>' + B.roleSentence() + '</b></p>';
+        here.forEach(function (s) {
+          h += '<p>' + (here.length > 1 ? '<b>' + esc(plainName(s)) + ':</b> ' : '') + B.deployWhere(s) + '</p>';
+        });
+      }
       if (B.state.objectives.length) {
         h += '<ul>' + B.state.objectives.map(function (o, i) {
           return '<li>Objective ' + (i + 1) + ' — ' + (o.owner ? 'held by <b>' + esc(sideName(o.owner)) + '</b>' : 'nobody holds it') + '</li>';
@@ -536,11 +545,25 @@
       if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
       return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
     }
-    function openObjectives() {
+    function openObjectives(quiet) {
       if (!B.state) return;
+      ui.briefAuto = false;                // opened by hand: it stays until closed
       el('obj-box').innerHTML = objectivesHTML();
       el('obj-modal').hidden = false;
-      if (SFX) SFX.click();
+      if (SFX && !quiet) SFX.click();
+    }
+    /* The briefing comes up by itself the once, as a battle's deployment
+       begins: the scenario, what wins it, and where the forces go down. After
+       that it is the header's Objectives button. A demo is watched, not
+       briefed. */
+    function briefOnce() {
+      // opened by itself for the deployment, it goes with the deployment
+      if (ui.briefAuto && (!B.state || B.state.phase !== 'deploy')) { ui.briefAuto = false; el('obj-modal').hidden = true; }
+      if (!B.state || B.state.phase !== 'deploy' || B.state.cfg.aiSides.length === 2) return;
+      if (ui.briefed === B.state.cfg) return;
+      ui.briefed = B.state.cfg;
+      openObjectives(true);
+      ui.briefAuto = true;
     }
 
     return {

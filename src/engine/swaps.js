@@ -66,7 +66,30 @@
           E.state.swapAsk = E.state.swapAvail[order[0]];
           E.state.swapAsk.pick = null;
         }
+        return;
       }
+      /* Otherwise each player with a swap to make says when they are done with
+         it (Continue to deployment), and nobody deploys until every one has:
+         a unit going down is not something the other player may see while
+         still choosing their list. */
+      var wait = {}, any = false;
+      if (!E.state.cfg.readyUp) { E.state.deployReady = null; return; }   // asked for by the screen or the server that runs the game
+      ['A', 'B'].forEach(function (sd) { if (E.state.swapAvail[sd]) { wait[sd] = false; any = true; } });
+      E.state.deployReady = any ? wait : null;
+    }
+    // the sides still choosing whether to modify their armies, before anyone deploys
+    function stillChoosing() {
+      var r = E.state.deployReady;
+      return r ? ['A', 'B'].filter(function (sd) { return r[sd] === false; }) : [];
+    }
+    // done with it: the list stands (any swap left is given up)
+    function readyToDeploy(side) {
+      var r = E.state.deployReady;
+      if (!r || r[side] !== false) return;
+      r[side] = true;
+      if (E.state.swapAsk && E.state.swapAsk.side === side) swapsDone();
+      if (!stillChoosing().length) E.state.deployReady = null;
+      render();
     }
     // the swaps a side has made but not yet revealed, in a hotseat's secret round
     function heldSwaps(side) {
@@ -175,7 +198,7 @@
 
     return {
       swapOptions: swapOptions, beginSwaps: beginSwaps, canSwapNow: canSwapNow, doSwap: doSwap,
-      swapsDone: swapsDone
+      swapsDone: swapsDone, stillChoosing: stillChoosing, readyToDeploy: readyToDeploy
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineSwaps;

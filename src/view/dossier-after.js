@@ -34,10 +34,12 @@
       });
       var askReborn = {}; players.forEach(function (sd) { askReborn[sd] = true; });
       E.camp.post = { report: report, pre: { dice: {}, plunder: {}, neg: {}, tp: {}, weak: {}, askReborn: askReborn }, steps: steps };
-      if (!steps.length) { finishPost(); setTimeout(function () { open(E.view); }, 900); return; }
+      // the aftermath comes up once the battle's result card has been read
+      var after = (typeof window !== 'undefined' && window.PMC_AFTER_RESULT) || function (fn) { setTimeout(fn, 900); };
+      if (!steps.length) { finishPost(); after(function () { open(E.view); }); return; }
       save();
       E.view = 'post';
-      setTimeout(function () { open('post'); }, 900);
+      after(function () { open('post'); });
     }
     function finishPost() {
       var post = E.camp.post;

@@ -71,7 +71,7 @@ async function run(p, label, cfg, checks) {
     for (let n = 0; n < 4 && window.PMC_STATE().placeAsk; n++) {
       window.__sendIntent({ k: window.PMC_STATE().placeAsk.kind === 'fort' ? 'placeauto' : 'placedone' });
     }
-    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
+    const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]')));
     if (b) b.click();
   });
   await p.waitForTimeout(300);
