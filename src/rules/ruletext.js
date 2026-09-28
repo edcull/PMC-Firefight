@@ -145,7 +145,18 @@
       'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',
     'Psychic Support':
-      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table.',
+      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table. The Psychic Bond ' +
+      'penalty still applies to it as normal.',
+    // the Xenotripods' army rules, carried by every unit of theirs but printed on none (pp. 128-129)
+    'Limited Senses':
+      'Army rule (not drones): every Xenotripod unit sees only 12", except through Mental Projection.',
+    'Mental Projection':
+      'Army rule (not drones): an enemy seen by at least one unbroken Xenotripod unit is seen by the whole army. ' +
+      'Indirect Fire units may also shoot through LoS-blocking terrain without Markerlights (which still give ' +
+      'their other bonuses).',
+    'Psychic Bond':
+      'Army rule: a Xenotripod unit rallying may use the Morale of any friendly unit within 6". When a Xenotripod ' +
+      'unit loses a model, each friendly unit within 6" takes a Suppression point.',
     'Psychic Wave':
       'Psychic Wave: move up to its Movement (or stay), then every enemy within 12" — no line of sight needed, ' +
       'drones excepted — takes D6-1 Suppression. Not while Suppressed.',
@@ -159,7 +170,7 @@
       'same roll blows the cover in.',
     'Shield Generator (X)':
       'Friendly units wholly within 12" get +{X} Defence against shots fired from more than 12" away from the ' +
-      'generator. Only the best shield counts.',
+      'generator. Only the best shield counts; it adds to terrain bonuses.',
     'Smoke Markers':
       'Works like Markerlights, but designates only, out to 12" in sight: a smoke grenade and a flare on one or ' +
       'two enemies in turn, each answered at once by a friendly Indirect Fire unit that needs no sight — two calls even if this unit moved first.',
@@ -186,8 +197,11 @@
       'Suppressed or Broken units cannot board. No unit is loaded and unloaded in the same turn: nobody gets back on ' +
       'the turn they got off, nor off the turn they got on.',
     'Turret':
-      'A stationary drone gun: never moves or assaults, has no side or rear, and all turrets activate together. ' +
-      'Command Units cannot call on it, and Hackers cannot turn it against its own side.',
+      'A stationary, Drone Controlled ground vehicle with no sides or rear: it never moves or assaults. All ' +
+      'turrets activate at once; they do not count for Overwhelming Numbers and no rule that changes the ' +
+      'activation order (Command Units and the like) touches them. It may be hacked as normal, but a 5-6 counts ' +
+      'as 3-4. Defensive and teleport turrets are bought in groups; each is its own unit in the game, and a Tier I ' +
+      'unit for victory and scenario purposes.',
     'Unarmed':
       'Carries no weapons and cannot shoot.',
     '…but they\'ll never take our freedom!':
