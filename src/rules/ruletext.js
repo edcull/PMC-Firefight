@@ -22,7 +22,7 @@
       'Its main weapon always fires at Basic Firepower: no +1 for a stationary Fire!, no half-range, ' +
       'Crossfire, height or Markerlight bonuses.',
     'Animal Behaviour':
-      'Bugs shrug off hits: on the hit table 1-3 is ignored and 4+ kills one bug (2 SP). They re-roll failed ' +
+      'Bugs shrug off hits: on the hit table 1-3 is ignored and 4-6 loses one bug and takes 2 Suppression. They re-roll failed ' +
       'rally dice, but take no cover from terrain unless an Overmind is in reach.',
     'Anti-aircraft':
       '+4 to hit aircraft, and a critical hit on an aircraft does D6 Damage instead of D3. ' +
@@ -145,7 +145,37 @@
       'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',
     'Psychic Support':
-      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table.',
+      'Counts as Field Medics: friendly units within 6" use the kinder medic hit table. The Psychic Bond ' +
+      'penalty still applies to it as normal.',
+    // the Rebels' army rules, carried by every unit of theirs but printed on none (pp. 94-95)
+    'Hasta la Victoria Siempre!':
+      'Army rule: a Rebel infantry unit loses no Morale for its first two soldiers killed (three under Last ' +
+      'Stand); further losses reduce it as normal.',
+    'Undisciplined':
+      'Army rule: shooting at a Broken Rebel unit, or one caught in a crossfire, adds +2 to the hit-effect rolls ' +
+      'instead of +1.',
+    'Riders upgrade':
+      'Some Rebel units may be fielded as Riders: Size halved, Movement 10 and the Riders rule. In a campaign it ' +
+      'is chosen when the unit is recruited, and cannot be changed.',
+    'Last Stand':
+      'Tactic: Rebel infantry get +4 Defence in terrain that gives a Defence bonus; up to 4 barricades (low walls) ' +
+      'per Priority Level go down anywhere but the enemy deployment zone; and the first three soldiers killed cost ' +
+      'no Morale, not two.',
+    'Human Wave Attacks':
+      'Tactic: 2 more infantry units per Priority Level, of the Battle Tier; infantry move M+4" on Move and ' +
+      'Assault; "...but they\'ll never take our freedom!" and "Death or Glory, Comrades!" reach 18".',
+    'Guerillas':
+      'Tactic: every infantry unit without Riders gains Stealth and Battlefield Insertion.',
+    // the Xenotripods' army rules, carried by every unit of theirs but printed on none (pp. 128-129)
+    'Limited Senses':
+      'Army rule (not drones): every Xenotripod unit sees only 12", except through Mental Projection.',
+    'Mental Projection':
+      'Army rule (not drones): an enemy seen by at least one unbroken Xenotripod unit is seen by the whole army. ' +
+      'Indirect Fire units may also shoot through LoS-blocking terrain without Markerlights (which still give ' +
+      'their other bonuses).',
+    'Psychic Bond':
+      'Army rule: a Xenotripod unit rallying may use the Morale of any friendly unit within 6". When a Xenotripod ' +
+      'unit loses a model, each friendly unit within 6" takes a Suppression point.',
     'Psychic Wave':
       'Psychic Wave: move up to its Movement (or stay), then every enemy within 12" — no line of sight needed, ' +
       'drones excepted — takes D6-1 Suppression. Not while Suppressed.',
@@ -159,7 +189,7 @@
       'same roll blows the cover in.',
     'Shield Generator (X)':
       'Friendly units wholly within 12" get +{X} Defence against shots fired from more than 12" away from the ' +
-      'generator. Only the best shield counts.',
+      'generator. Only the best shield counts; it adds to terrain bonuses.',
     'Smoke Markers':
       'Works like Markerlights, but designates only, out to 12" in sight: a smoke grenade and a flare on one or ' +
       'two enemies in turn, each answered at once by a friendly Indirect Fire unit that needs no sight — two calls even if this unit moved first.',
@@ -169,8 +199,11 @@
       'Its main weapon can only engage ground targets, never aircraft.',
     'Stationary Artillery':
       'An emplaced gun: it never moves and is never held in reserve, but a transport vehicle can tow it, the gun ' +
-      'taking one of its places (a Lifter cannot lift a hull that is towing). It can Dig in to ' +
-      'fire over open sights — range 24", minimum 6", front quarter only, but with every modifier.',
+      'taking one of its places (a Lifter cannot lift a hull that is towing). Broken, it stays where it is ' +
+      '(removed only if its rally still leaves it over three times its Morale); it never goes into a building, ' +
+      'and counts shallow water as impassable. ' +
+      'It can Dig in to fire over open sights — range 24", minimum 6", front quarter only, but with every modifier ' +
+      '— and cannot then be turned or towed until Normal stance! puts it back.',
     'Stealth':
       '+1 Defence for every full 6" between it and the shooter, unless the shooter is Keen-Eyed. Markerlights ' +
       'can only pick it out within 12".',
@@ -186,8 +219,11 @@
       'Suppressed or Broken units cannot board. No unit is loaded and unloaded in the same turn: nobody gets back on ' +
       'the turn they got off, nor off the turn they got on.',
     'Turret':
-      'A stationary drone gun: never moves or assaults, has no side or rear, and all turrets activate together. ' +
-      'Command Units cannot call on it, and Hackers cannot turn it against its own side.',
+      'A stationary, Drone Controlled ground vehicle with no sides or rear: it never moves or assaults. All ' +
+      'turrets activate at once; they do not count for Overwhelming Numbers and no rule that changes the ' +
+      'activation order (Command Units and the like) touches them. It may be hacked as normal, but a 5-6 counts ' +
+      'as 3-4. Defensive and teleport turrets are bought in groups; each is its own unit in the game, and a Tier I ' +
+      'unit for victory and scenario purposes.',
     'Unarmed':
       'Carries no weapons and cannot shoot.',
     '…but they\'ll never take our freedom!':

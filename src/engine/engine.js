@@ -641,7 +641,7 @@
 
   // a legal new place for a unit inside its own side's deployment ground
   function relocSpotOK(u, x, y) {
-    return K.deployOK(u.side, x, y, u) && !R.TERRAIN[R.terrainAt(state, x, y)].impassable && !R.unitNear(state, x, y, u, 1);
+    return K.deployOK(u.side, x, y, u) && !R.barredAt(state, u, x, y) && !R.unitNear(state, x, y, u, 1);
   }
 
   /* ---- the OpFor: in engine/ai.js ---- */
@@ -1794,7 +1794,7 @@
       if (pending.x < 0 && K.deployNext() !== pending) ui.deployPick = pending.id;
       var p = { x: +it.x, y: +it.y };
       var clear = K.deployOK(side, p.x, p.y, pending) &&
-        !R.TERRAIN[R.terrainAt(state, p.x, p.y)].impassable &&
+        !R.barredAt(state, pending, p.x, p.y) &&
         !R.unitNear(state, p.x, p.y, pending, 1);
       if (!clear) {
         var near = K.nearestDeploySpot(pending, p.x, p.y, 9);

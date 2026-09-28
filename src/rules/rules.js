@@ -723,6 +723,12 @@
   function turnPiece(t, k) { return (KIT_SPACE || kitSpace()).turnPiece(t, k); }
   function shapePiece(r, rand, family) { return (KIT_SPACE || kitSpace()).shapePiece(r, rand, family); }
   function terrainAt(state, x, y) { return (KIT_SPACE || kitSpace()).terrainAt(state, x, y); }
+  /* Ground this unit may not be put down on: anything impassable, and for a
+     Stationary Artillery gun shallow water too (p. 95). */
+  function barredAt(state, u, x, y) {
+    var t = TERRAIN[terrainAt(state, x, y)];
+    return !!t.impassable || (!!u && hasOwn(u, 'Stationary Artillery') && !!t.shallow);
+  }
   function terrainOf(state, u) { return (KIT_SPACE || kitSpace()).terrainOf(state, u); }
   function footprint(x, y) { return (KIT_SPACE || kitSpace()).footprint(x, y); }
   function kindsUnder(state, u, x, y) { return (KIT_SPACE || kitSpace()).kindsUnder(state, u, x, y); }
@@ -1212,7 +1218,7 @@
     u.disembarked = true;
     // a gun unhitched is left pointing the way it trailed: back from the vehicle
     if (has(u, 'Stationary Artillery')) u.facing = (veh.facing || 0) + Math.PI;
-    if (pos && !TERRAIN[terrainAt(state, pos.x, pos.y)].impassable
+    if (pos && !barredAt(state, u, pos.x, pos.y)
       && !unitNear(state, pos.x, pos.y, u, 0.2) && unitDist({ x: pos.x, y: pos.y }, veh) <= 4) {
       u.x = pos.x; u.y = pos.y;
     } else {
@@ -1876,6 +1882,7 @@
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
+    barredAt: barredAt,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
     enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
