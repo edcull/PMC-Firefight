@@ -71,7 +71,11 @@
     }
     function memorialList(co) {
       if (co.faction === 'bugs') return biomassList(co);
-      var list = co.memorial || [];
+      // (a drone squad's losses were put on it by older saves: they were never anyone)
+      var list = (co.memorial || []).filter(function (m) {
+        var p = R.CATALOGUE.filter(function (q) { return q.name === m.type; })[0];
+        return !p || !(p.group === 'Drones' || (p.rules || []).indexOf('Drone unit') >= 0);
+      });
       if (!list.length) return lossLine(co) + '<p class="dnote">No one has been lost yet.</p>';
       var SCx = root.PMCScen, battles = {}, order = [];
       list.forEach(function (m) {

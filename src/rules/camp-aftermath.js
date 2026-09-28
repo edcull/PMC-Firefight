@@ -68,8 +68,18 @@
            and is not a loss. */
         var keyOf = {}, lostBy = {};
         (report.units || []).forEach(function (l) { if (l.side === side) keyOf[l.rid] = l.key; });
+        /* A drone squad's models are machines, however they are named on the
+           table: they are not the force's losses, and nobody mourns them. Worked
+           out now, while every unit that fought is still on the books. */
+        var noMen = {};
         casualties.forEach(function (c) {
           if (c.side !== side) return;
+          var e = byRid(co, c.rid);
+          if (e && manned(e, co) === 0) noMen[c.rid] = 1;
+        });
+        casualties.forEach(function (c) {
+          if (c.side !== side) return;
+          if (noMen[c.rid]) return;
           var n = c.count || 1, p = profile(keyOf[c.rid]);
           lostBy[c.rid] = (lostBy[c.rid] || 0) + n;
           if (!c.swarm) addLoss(co, p ? poolOf(p) : poolsFor(co)[0], 'lost', n * (p ? weightOf(p) : 1));   // the swarm's is its biomass tally
@@ -302,7 +312,7 @@
         /* The memorial: every soldier the force has lost, battle by battle, kept
            for the whole campaign — including those of units that are gone. */
         co.memorial = co.memorial || [];
-        casualties.filter(function (c) { return c.side === side; }).forEach(function (c) {
+        casualties.filter(function (c) { return c.side === side && !noMen[c.rid]; }).forEach(function (c) {
           // the swarm keeps a tally of biomass by kind of bug instead of names
           if (c.swarm) {
             var tally = co.biomass = biomassTally(co);
