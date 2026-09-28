@@ -253,7 +253,7 @@
       partisansniper: ['partmarksman', 'partspotter'],
       miner: ['cutter', 'blaster'],
       hardsuit: ['hardsuit'],
-      deserter: ['deserter', 'desrifle'],
+      deserter: ['deserter', 'dessaw', 'desrifle'],
       // conscripts, still with the old wooden-furnitured rifles they were issued
       conscript: ['conscript', 'conscript2'],
       pow: ['pow', 'pow2'],
@@ -514,6 +514,7 @@
       // deserters, still in the uniform they walked out of
       deserter: { helm: 'std', gun: 'smg', armband: 'force', pack: 'none', mark: true, tint: REBEL_WORN, fitAs: 'desrifle' },   // the ex-sergeant, at the front right
       desrifle: { helm: 'std', gun: 'battlerifle', armband: 'force', pack: 'std', tint: REBEL_WORN },
+      dessaw: { helm: 'std', gun: 'saw', armband: 'force', pack: 'ammo', tint: REBEL_WORN, fitAs: 'desrifle' },   // the squad automatic weapon they walked out with
       conscript: { helm: 'std', gun: 'rifle', armband: 'force', pack: 'none', wood: true, tint: REBEL_WORN },
       conscript2: { helm: 'cap', gun: 'battlerifle', armband: 'force', pack: 'std', wood: true, tint: REBEL_WORN },
       // POWs broke out with what their guards carried
@@ -555,8 +556,8 @@
       ROLES[art + 'mounted'] = ROLES[art].map(mounted);
     });
     /* The Militia (Tier II Freedom Warriors) are the insurgents' figures with
-       their sleeves rolled up short, and the rookie-rifle Deserters the
-       deserters' figures the same way; the Rider warriors (Tier II Mounted
+       their sleeves rolled up short, and the rookie-rifle Deserters and the
+       conscript Deserters their own figures the same way; the Rider warriors (Tier II Mounted
        Warriors) are the Militia on a mount. */
     function rolled(r) {
       var k = r + 'rs';
@@ -570,6 +571,7 @@
     }
     ROLES.militia = ROLES.rebel.map(rolled);
     ROLES.deserterrk = ROLES.deserter.map(rolled);
+    ROLES.conscript = ROLES.conscript.map(rolled);
     ROLES.rider = ROLES.militia.map(mounted);
 
     /* ---------- one trooper, drawn into a cache canvas ----------
