@@ -10,116 +10,195 @@
         ellipse = S.ellipse, vividHex = S.vividHex;
 
     function mount(P, g, kit, ox, oy, pal, pose, s, step) {
-      if (kit.mount && pose !== 'prone') {
-        var mb = pose === 'kneel' ? 6 : 0;               // a shot rider slumps forward
-        if (step) mb -= 1;
-        if (kit.mount === 'horse') {
-          /* A beast: a horse in the colony's breeding, its saddle cloth in the
-             group's colours. The legs stride on the step frame. */
-          var HB = kit.facewrap ? '#2c2622' : '#6e4a2c', HL = kit.facewrap ? '#48403a' : '#8e6640',
-            HD = kit.facewrap ? '#161311' : '#48301c', MANE = kit.facewrap ? '#0e0c0b' : '#2a1c12';
-          var fa = step ? 5 : 0, ra = step ? -4 : 1;
-          // the far legs, darker, a stride out of step with the near ones
-          P(10 - fa, -22 + mb, 4, 20 - mb, HD); P(9 - fa, -3, 5, 3, '#141210');
-          P(-19 + ra, -22 + mb, 4, 20 - mb, HD); P(-20 + ra, -3, 5, 3, '#141210');
-          P(-31, -31 + mb, 5, 3, MANE); P(-33, -29 + mb, 4, 14, MANE);   // the tail
-          ellipse(g, ox - 5 * s, oy + (-26 + mb) * s, 23 * s, 8.5 * s, HB);   // the barrel of the body
-          ellipse(g, ox - 6 * s, oy + (-30 + mb) * s, 19 * s, 3.8 * s, HL);
-          ellipse(g, ox - 5 * s, oy + (-20 + mb) * s, 18 * s, 2.8 * s, HD);
-          ellipse(g, ox - 20 * s, oy + (-26 + mb) * s, 8 * s, 8 * s, HB);    // the haunch
-          // the neck, up and forward, and the head at the end of it
-          g.fillStyle = HB; g.beginPath();
-          g.moveTo(ox + 8 * s, oy + (-31 + mb) * s); g.lineTo(ox + 20 * s, oy + (-45 + mb) * s);
-          g.lineTo(ox + 27 * s, oy + (-43 + mb) * s); g.lineTo(ox + 20 * s, oy + (-22 + mb) * s); g.closePath(); g.fill();
-          g.fillStyle = MANE; g.beginPath();
-          g.moveTo(ox + 8 * s, oy + (-32 + mb) * s); g.lineTo(ox + 19 * s, oy + (-47 + mb) * s);
-          g.lineTo(ox + 21 * s, oy + (-45 + mb) * s); g.lineTo(ox + 11 * s, oy + (-31 + mb) * s); g.closePath(); g.fill();
-          g.fillStyle = HB; g.beginPath();               // the head, long, nose down and forward
-          g.moveTo(ox + 19 * s, oy + (-47 + mb) * s); g.lineTo(ox + 27 * s, oy + (-47 + mb) * s);
-          g.lineTo(ox + 36 * s, oy + (-38 + mb) * s); g.lineTo(ox + 33 * s, oy + (-35 + mb) * s);
-          g.lineTo(ox + 22 * s, oy + (-40 + mb) * s); g.closePath(); g.fill();
-          P(31, -40 + mb, 5, 4, HD);                     // the muzzle
-          P(20, -50 + mb, 2.5, 4, HB);                   // an ear
-          P(25, -45 + mb, 1.6, 1.6, '#0c0a08');          // an eye
-          P(24, -42 + mb, 10, 0.8, '#1a1410');           // the bridle
-          // the near legs
-          P(13 + fa, -22 + mb, 4.5, 20 - mb, HB); P(13 + fa, -22 + mb, 1.5, 13, HL); P(12 + fa, -3, 6, 3, '#141210');
-          P(-16 - ra, -22 + mb, 4.5, 20 - mb, HB); P(-16 - ra, -22 + mb, 1.5, 13, HL); P(-17 - ra, -3, 6, 3, '#141210');
-          // the saddle and its cloth in the group's colours
-          P(-11, -35 + mb, 18, 9, pal.mid);
-          P(-11, -35 + mb, 18, 2, pal.light);
-          P(-11, -27 + mb, 18, 1, pal.dark);
-          P(-7, -37 + mb, 10, 3, '#3a2a1a');
-          P(-17, -30 + mb, 6, 7, '#4a3a22');             // a saddle bag
-        } else if (kit.mount === 'gravbike') {
-          /* A grav bike: no wheels, a long faired hull riding on its lift plates
-             a hand's breadth over the ground, the plates glowing under it. */
-          var hv = step ? 1 : 0;
-          ellipse(g, ox + 0 * s, oy - 1 * s, 22 * s, 3 * s, 'rgba(120,220,255,' + (0.22 + hv * 0.1) + ')');
-          P(-22, -13 + mb, 12, 3, '#1c1f24'); P(-21, -10.5 + mb, 10, 1.5, '#7fe0ff');   // rear lift plate
-          P(10, -13 + mb, 12, 3, '#1c1f24'); P(11, -10.5 + mb, 10, 1.5, '#7fe0ff');     // front lift plate
-          if (hv) { P(-20, -9 + mb, 8, 1, 'rgba(190,245,255,.7)'); P(12, -9 + mb, 8, 1, 'rgba(190,245,255,.7)'); }
-          P(-24, -19 + mb, 48, 7, '#23282f');            // the hull, long and low
-          P(-24, -19 + mb, 48, 2, '#3c444e');
-          P(18, -22 + mb, 10, 8, '#2a2f36');             // the nose fairing, swept forward
-          P(24, -20 + mb, 5, 5, '#3a424c');
-          P(26, -19 + mb, 3, 2, '#e8c15a');              // its lamp
-          P(-6, -26 + mb, 18, 8, pal.mid);               // the body panels in the group's colours
-          P(-6, -26 + mb, 18, 2, pal.light);
-          P(-6, -26 + mb, 5, 8, pal.light);
-          P(-2, -23 + mb, 8, 3, pal.dark);               // a painted stripe
-          P(12, -32 + mb, 4, 8, '#3a424c');              // the steering column
-          P(10, -34 + mb, 10, 2.5, '#4a535d');           // the bars
-          P(14, -30 + mb, 7, 4, 'rgba(120,200,230,.45)');  // a windscreen
-          P(-26, -20 + mb, 4, 6, '#2a2f36');             // the thruster at the tail
-          P(-28, -19 + mb, 2, 4, step ? '#bff3ff' : '#7fe0ff');
-          if (kit.flames) { P(-4, -22 + mb, 14, 2.5, '#c9452a'); P(0, -24 + mb, 8, 2, '#e0802a'); }
-        } else {
-          /* A bike does not take a stride. What says it is moving is the machine
-             working under the rider: the frame bouncing a pixel on the suspension,
-             the front wheel turning and the exhaust smoking. */
-          P(-20, -14 + mb, 40, 5, '#1c1f24');              // the frame, low and long
-          P(-20, -14 + mb, 40, 2, '#333a42');
-          P(-6, -24 + mb, 16, 11, pal.mid);                // fuel tank in the group's colours
-          P(-6, -24 + mb, 5, 11, pal.light);
-          P(-6, -24 + mb, 16, 2, pal.light);
-          P(-4, -21 + mb, 6, 4, pal.dark);                 // a hand-painted stripe
-          if (kit.flames) {                                 // flames painted down the tank
-            P(-5, -20 + mb, 14, 3, '#c9452a');
-            P(-2, -22 + mb, 9, 2, '#e0802a');
-            P(2, -23 + mb, 5, 1.5, '#f2c050');
-            P(-24, -20 + mb, 3, 2, '#e0802a');              // and out of the exhaust
-            P(-27, -19.5 + mb, 3, 1.5, '#f2c050');
-          }
-          P(10, -26 + mb, 7, 6, '#2a2f36');                // cowling over the front
-          P(14, -30 + mb, 4, 8, '#3a424c');                // forks
-          P(12, -33 + mb, 12, 3, '#4a535d');               // bars
-          P(20, -32 + mb, 3, 3, '#e8c15a');                // headlamp
-          P(-14, -22 + mb, 7, 8, '#2a2419');               // saddle bags and a bedroll
-          P(-14, -22 + mb, 7, 2, '#4a3a22');
-          P(-18, -20 + mb, 5, 5, '#6b4a26');
-          ellipse(g, ox + 18 * s, oy + (-9 + mb) * s, 9 * s, 9 * s, '#15181d');
-          ellipse(g, ox + 18 * s, oy + (-9 + mb) * s, 4 * s, 4 * s, '#39414a');
-          ellipse(g, ox - 16 * s, oy + (-9 + mb) * s, 10 * s, 10 * s, '#15181d');
-          ellipse(g, ox - 16 * s, oy + (-9 + mb) * s, 4 * s, 4 * s, '#39414a');
-          // the spokes, caught at a different angle on each frame
-          if (step) {
-            P(16, -12 + mb, 5, 2, '#5a636d');
-            P(-18, -12 + mb, 5, 2, '#5a636d');
-          } else {
-            P(17, -14 + mb, 2, 6, '#5a636d');
-            P(-17, -14 + mb, 2, 6, '#5a636d');
-          }
-          P(-24, -18 + mb, 6, 3, '#2a2f36');               // exhaust
-          P(-28, -17 + mb, 5, 2, '#4a535d');
-          if (step) P(-33, -19 + mb, 4, 3, 'rgba(150,146,140,.55)');   // and its smoke
+      if (!kit.mount || pose === 'prone') return;
+      var mb = pose === 'kneel' ? 6 : 0;                 // a shot rider slumps forward
+      if (step) mb -= 1;
+      // a shape through points in the figure's own units, and a round one
+      function shape(pts, c) {
+        g.fillStyle = c; g.beginPath();
+        pts.forEach(function (q, i) {
+          var X = ox + q[0] * s, Y = oy + (q[1] + mb) * s;
+          if (i) g.lineTo(X, Y); else g.moveTo(X, Y);
+        });
+        g.closePath(); g.fill();
+      }
+      function disc(x, y, rx, ry, c) { ellipse(g, ox + x * s, oy + (y + mb) * s, rx * s, (ry == null ? rx : ry) * s, c); }
+      function rod(x0, y0, x1, y1, w, c) {
+        var dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy) || 1, nx = -dy / l * w / 2, ny = dx / l * w / 2;
+        shape([[x0 + nx, y0 + ny], [x1 + nx, y1 + ny], [x1 - nx, y1 - ny], [x0 - nx, y0 - ny]], c);
+      }
+      if (kit.mount === 'horse') horse();
+      else if (kit.mount === 'gravbike') gravbike();
+      else bike();
+      if (kit.trophy) {                                   // a skull on a pole behind the saddle
+        P(-19, -52 + mb, 1.5, 34, '#4a3a26');
+        P(-21, -56 + mb, 6, 5, '#d8d0bc');
+        P(-20, -54 + mb, 1.2, 1.2, '#1a1510'); P(-17.5, -54 + mb, 1.2, 1.2, '#1a1510');
+        P(-24, -50 + mb, 5, 8, pal.cloth);
+      }
+
+      /* A horse in the colony's breeding, drawn from its parts: a deep chest
+         and a round haunch joined by the barrel, the neck arched up to a long
+         head, and four legs that bend at the knee and the hock and end in
+         hooves. On the step frame it is mid-stride, a fore and a hind leg
+         reaching out while the others push back. The saddle cloth is in the
+         group's colours, and the reins run back to the rider's hands. */
+      function horse() {
+        var dark = !!kit.facewrap;                       // the Legends ride black horses
+        var HB = dark ? '#2f2925' : '#76502f', HL = dark ? '#4c433c' : '#9a6d44', HD = dark ? '#171412' : '#4c321d',
+          MANE = dark ? '#0d0b0a' : '#2a1b10', HOOF = '#1a1714', SOCK = dark ? '#5a524a' : '#d9cdb4';
+        var st = step ? 1 : 0;
+        // a leg: from the body down to the joint, then to the hoof, tapering
+        function leg(x, top, jx, jy, fx, c, sock) {
+          rod(x, top, jx, jy, 4.6, c);
+          rod(jx, jy, fx, -2.2, 3.2, c);
+          disc(jx, jy, 2.3, 2.3, c);                     // the knee (or hock), knobbly
+          if (sock) rod(jx + (fx - jx) * 0.55, jy + (-2.2 - jy) * 0.55, fx, -2.2, 3.3, SOCK);
+          shape([[fx - 2.2, -2.6], [fx + 2.6, -2.6], [fx + 3.2, 0], [fx - 2.4, 0]], HOOF);
         }
-        if (kit.trophy) {                                 // a skull on a pole behind the saddle
-          P(-19, -52 + mb, 1.5, 34, '#4a3a26');
-          P(-21, -56 + mb, 6, 5, '#d8d0bc');
-          P(-20, -54 + mb, 1.2, 1.2, '#1a1510'); P(-17.5, -54 + mb, 1.2, 1.2, '#1a1510');
-          P(-24, -50 + mb, 5, 8, pal.cloth);
+        // the far legs first, in shadow
+        leg(12, -24, st ? 18 : 13, -13, st ? 22 : 12, HD);
+        leg(-18, -25, st ? -22 : -15, -13, st ? -25 : -18, HD);
+        // the tail, swept back from the croup and flicking on the stride
+        shape([[-24, -33], [-29, -31], [-33 - st * 2, -20], [-31 - st * 2, -12], [-28, -15], [-27, -24], [-23, -29]], MANE);
+        shape([[-25, -32], [-28, -30], [-30 - st * 2, -21], [-29, -22], [-26, -29]], dark ? '#262220' : '#3d2a1a');
+        // the body: chest to haunch, a round belly, the topline dipping at the back
+        shape([[16, -30], [15, -24], [9, -19], [-6, -18], [-16, -20], [-24, -24], [-26, -30], [-23, -35],
+          [-14, -36], [-2, -35], [7, -37], [13, -36]], HB);
+        disc(-19, -28, 7.5, 7, HB);                      // the haunch
+        disc(12, -28, 6, 6.5, HB);                       // the chest
+        shape([[-24, -33], [-14, -35.6], [-2, -34.6], [7, -36.6], [12, -35.8], [11, -33.5], [-2, -32.4], [-14, -33.5], [-23, -31]], HL);   // the lit back
+        shape([[13, -22], [8, -18.8], [-6, -18], [-16, -20], [-12, -22], [0, -21], [9, -22]], HD);     // the belly in shadow
+        disc(-20, -30, 3.5, 3, HL);                      // light on the round of the haunch
+        // the neck, arched up from the withers, and the head at the end of it
+        shape([[7, -36], [13, -41], [19, -48], [23, -52], [27, -50], [26, -44], [21, -36], [17, -28], [11, -30]], HB);
+        shape([[8, -36], [14, -42], [20, -49], [22, -48], [15, -40], [10, -35]], HL);               // the crest caught by the light
+        shape([[22, -53], [27, -54], [31, -50], [38, -42], [37, -39.5], [34, -38.5], [29, -41], [24, -46]], HB);   // the head, long, nose down
+        shape([[34, -44], [38, -42], [37, -39.5], [34, -38.5], [32, -41]], HD);                       // the muzzle
+        shape([[23, -52], [24, -57], [26, -53]], HB); shape([[23.8, -53], [24.4, -55.6], [25.2, -53]], HD);   // an ear
+        P(29.5, -48 + mb, 1.8, 1.6, '#0b0908'); P(30, -48 + mb, 0.7, 0.6, 'rgba(255,255,255,.55)');   // an eye with its glint
+        P(36, -41 + mb, 1.2, 1, '#0b0908');              // a nostril
+        // the mane down the crest, and the forelock
+        shape([[7, -37], [11, -41], [16, -46], [20, -51], [23, -54], [21, -49], [17, -43], [12, -37], [9, -34]], MANE);
+        shape([[23, -54], [27, -52], [25, -50]], MANE);
+        // the bridle, and the reins back to the rider's hands
+        rod(26, -52, 30, -44, 0.9, '#1c1510'); rod(30, -44, 36, -41, 0.9, '#1c1510');
+        rod(33, -41, 12, -37, 0.8, '#241a12');
+        // the near legs over the body, one of each pair with a white sock
+        leg(14, -25, st ? 9 : 15, -13, st ? 5 : 15, HB, !dark);
+        leg(-15, -26, st ? -10 : -13, -13, st ? -8 : -15, HB);
+        rod(14, -24, st ? 9 : 15, -14, 1.3, HL); rod(-15, -26, st ? -10 : -13, -14, 1.3, HL);   // light down their fronts
+        // the saddle cloth in the group's colours, the saddle on it, and a bag behind
+        shape([[-12, -36], [7, -37], [8, -27], [-12, -26]], pal.mid);
+        shape([[-12, -36], [7, -37], [7, -35], [-12, -34]], pal.light);
+        shape([[-12, -27.5], [8, -28.5], [8, -27], [-12, -26]], pal.dark);
+        P(-11, -34 + mb, 1.2, 7, pal.light); P(6, -35 + mb, 1.2, 7, pal.light);                      // its trim
+        shape([[-9, -38], [-6, -36], [4, -36], [6, -39], [7, -36], [5, -34], [-8, -34], [-10, -36]], '#3a2918');   // the saddle, cantle and pommel
+        P(-7, -37 + mb, 10, 1, '#5a4128');
+        rod(-1, -34, -1, -17, 0.9, '#2a1d12');           // the stirrup leather
+        shape([[-3, -17.5], [1, -17.5], [1.5, -15], [-3.5, -15]], '#8a8f94');   // and its iron
+        P(-19, -34 + mb, 7, 7, '#4a3a22'); P(-19, -34 + mb, 7, 1.5, '#6b5232'); P(-16, -31 + mb, 1.2, 2, '#b89a5a');   // a saddle bag and its buckle
+      }
+
+      /* A grav bike: no wheels, a long faired hull on two lift pads a hand's
+         breadth over the ground. The nose is swept to a point, the tail kicks
+         up into a fin, and the pads throw a blue glow on the ground under it.
+         It bobs a little on the step frame. */
+      function gravbike() {
+        var hv = step ? -1 : 0, GL = '#7fe0ff';
+        disc(0, 0.5 - mb, 24, 3.2, 'rgba(90,200,255,.20)');              // the glow on the ground
+        disc(0, 0.5 - mb, 14, 1.8, 'rgba(160,235,255,.22)');
+        // the lift pads, glowing underneath
+        shape([[-22, -13 + hv], [-8, -13 + hv], [-9, -9.5 + hv], [-21, -9.5 + hv]], '#1a1d22');
+        shape([[8, -13 + hv], [22, -13 + hv], [21, -9.5 + hv], [9, -9.5 + hv]], '#1a1d22');
+        disc(-15, -9.3 + hv, 6, 1.1, GL); disc(15, -9.3 + hv, 6, 1.1, GL);
+        disc(-15, -8.4 + hv, 4, 0.8, 'rgba(220,250,255,.8)'); disc(15, -8.4 + hv, 4, 0.8, 'rgba(220,250,255,.8)');
+        // the hull: a low wedge from the tail fin to the pointed nose
+        shape([[-28, -25 + hv], [-24, -17 + hv], [-18, -12.5 + hv], [18, -12.5 + hv], [31, -16 + hv], [33, -18 + hv],
+          [20, -24 + hv], [10, -24 + hv], [4, -21 + hv], [-10, -21 + hv], [-18, -22 + hv]], '#262b32');
+        shape([[-28, -25 + hv], [-18, -22 + hv], [-10, -21 + hv], [4, -21 + hv], [10, -24 + hv], [20, -24 + hv], [33, -18 + hv],
+          [30, -17.5 + hv], [19, -22.5 + hv], [10, -22.5 + hv], [4, -19.5 + hv], [-10, -19.5 + hv], [-19, -20.5 + hv], [-26, -23 + hv]], '#4a5561');   // light along the top
+        shape([[-18, -12.5 + hv], [18, -12.5 + hv], [26, -14.5 + hv], [-22, -14.5 + hv]], '#15181c');    // the shadowed belly
+        // the side panel in the group's colours, a stripe through it
+        shape([[-17, -19.5 + hv], [4, -18.5 + hv], [12, -21 + hv], [22, -20 + hv], [26, -16 + hv], [14, -15 + hv], [-15, -15 + hv]], pal.mid);
+        shape([[-17, -19.5 + hv], [4, -18.5 + hv], [12, -21 + hv], [22, -20 + hv], [23, -19 + hv], [12, -19.5 + hv], [4, -17.4 + hv], [-16, -18.4 + hv]], pal.light);
+        shape([[-14, -16.5 + hv], [20, -17 + hv], [21, -16 + hv], [-14, -15.5 + hv]], pal.dark);
+        if (kit.flames) { shape([[-2, -18 + hv], [16, -19 + hv], [10, -17 + hv], [20, -16.5 + hv], [4, -16 + hv]], '#c9452a'); shape([[2, -17.6 + hv], [12, -18.3 + hv], [8, -17 + hv]], '#e0802a'); }
+        // the tail fin and the thruster in it, burning
+        shape([[-28, -25 + hv], [-31, -30 + hv], [-27, -30 + hv], [-22, -22 + hv]], '#323941');
+        disc(-27, -19 + hv, 2.4, 2.6, '#1a1d22'); disc(-28, -19 + hv, 1.6, 1.8, step ? '#d8f7ff' : GL);
+        if (step) disc(-31, -19 + hv, 2.4, 1.2, 'rgba(127,224,255,.45)');
+        // the cowl, bars and screen up front, and the lamp in the nose
+        shape([[10, -24 + hv], [14, -31 + hv], [19, -31 + hv], [20, -24 + hv]], '#303740');
+        shape([[14, -31 + hv], [19, -35 + hv], [22, -34 + hv], [19, -31 + hv]], 'rgba(130,210,240,.55)');
+        rod(11, -33 + hv, 17, -31 + hv, 1.6, '#59626d');
+        shape([[29, -18.5 + hv], [33, -18 + hv], [31, -16.5 + hv], [28, -17 + hv]], '#f2d27a');
+        disc(35, -17.5 + hv, 3, 1.4, 'rgba(242,210,122,.35)');
+        // the seat, where the rider sits
+        shape([[-14, -22 + hv], [2, -22 + hv], [4, -20 + hv], [-14, -20 + hv]], '#1f1a14');
+      }
+
+      /* A raider's motorbike, a desert scrambler: spoked wheels on knobbly
+         tyres, the front one out on a raked fork, the engine slung low with
+         its pipe swept up past the rear wheel, the tank in the group's
+         colours under the rider. It does not stride: what says it is moving
+         is the spokes turning, the frame bouncing on its springs and the
+         exhaust smoking. */
+      function bike() {
+        var ST = '#15181d', RIM = '#59626d', CH = '#9aa3ac';
+        function wheel(x) {
+          disc(x, -7, 7.5, 7.5, ST);                     // the tyre, knobbly
+          for (var k = 0; k < 10; k++) {
+            var a = k / 10 * Math.PI * 2;
+            disc(x + Math.cos(a) * 7.3, -7 + Math.sin(a) * 7.3, 1.1, 1.1, ST);
+          }
+          disc(x, -7, 5.4, 5.4, '#262b31');
+          disc(x, -7, 4.8, 4.8, RIM); disc(x, -7, 4, 4, '#1f2328');
+          for (var j = 0; j < 4; j++) {                  // the spokes, on the turn when it moves
+            var b = j / 4 * Math.PI + (step ? Math.PI / 8 : 0);
+            rod(x - Math.cos(b) * 4, -7 - Math.sin(b) * 4, x + Math.cos(b) * 4, -7 + Math.sin(b) * 4, 0.7, '#7b848e');
+          }
+          disc(x, -7, 1.6, 1.6, CH);
         }
+        var bo = step ? -0.6 : 0;                        // the frame on its springs
+        wheel(-17); wheel(19);
+        // the swing arm back to the rear wheel, and the rear shock
+        rod(-17, -7, -3, -12 + bo, 2.4, '#2a2f36');
+        rod(-11, -9 + bo, -8, -20 + bo, 1.6, '#c9a642');
+        // the engine, low between the wheels, its cooling fins lit
+        shape([[-6, -18 + bo], [7, -18 + bo], [8, -9 + bo], [-5, -8 + bo]], '#2c3138');
+        for (var f = 0; f < 4; f++) P(-4, -16.5 + f * 2 + bo + mb, 10, 0.8, '#4d5560');
+        disc(2, -10 + bo, 2.4, 2.2, '#3d444d');
+        // the exhaust, down from the engine and swept up past the back wheel
+        rod(-4, -10 + bo, -12, -12 + bo, 2, '#6f757c');
+        rod(-12, -12 + bo, -26, -18 + bo, 2.2, '#80868d');
+        shape([[-27, -19.8 + bo], [-24, -19.8 + bo], [-24, -16.4 + bo], [-27, -16.8 + bo]], '#2a2d31');
+        if (kit.flames) { disc(-29, -18 + bo, 2.6, 1.4, '#e0802a'); disc(-31, -18.5 + bo, 1.6, 1, '#f2c050'); }
+        else if (step) disc(-31, -20 + bo, 3, 2.2, 'rgba(150,146,140,.55)');   // and its smoke
+        // the rear mudguard over the back wheel, and the seat
+        shape([[-26, -13 + bo], [-22, -17 + bo], [-14, -19 + bo], [-8, -18 + bo], [-10, -16 + bo], [-20, -14.5 + bo]], pal.dark);
+        shape([[-16, -21 + bo], [-3, -21.5 + bo], [-2, -18.5 + bo], [-16, -18.5 + bo]], '#231d15');
+        P(-16, -21.5 + bo + mb, 13, 1, '#3d3226');
+        // the saddle bags and a bedroll
+        P(-24, -21 + bo + mb, 7, 6, '#4a3a22'); P(-24, -21 + bo + mb, 7, 1.4, '#6b5232');
+        P(-23, -24 + bo + mb, 6, 3, '#6b4a26');
+        // the tank in the group's colours, a stripe down it
+        shape([[-4, -21 + bo], [3, -25 + bo], [11, -25 + bo], [13, -20 + bo], [-3, -18 + bo]], pal.mid);
+        shape([[-3, -21.5 + bo], [3, -25 + bo], [11, -25 + bo], [11.5, -23.6 + bo], [3, -23.4 + bo]], pal.light);
+        shape([[0, -20.5 + bo], [10, -21.5 + bo], [10.6, -20.3 + bo], [0, -19.4 + bo]], pal.dark);
+        if (kit.flames) {                                 // flames painted down the tank
+          shape([[-1, -20 + bo], [4, -23 + bo], [3, -21.5 + bo], [8, -23.5 + bo], [7, -21.5 + bo], [12, -22 + bo], [11, -20 + bo]], '#c9452a');
+          shape([[1, -20.6 + bo], [4, -22 + bo], [7, -22.4 + bo], [10, -21 + bo]], '#f2c050');
+        }
+        // the fork, raked out to the front wheel, and the mudguard over it
+        rod(13, -25 + bo, 19, -7, 2.2, CH);
+        rod(12.4, -25 + bo, 18.4, -7, 0.8, '#d8dde2');
+        shape([[13, -15], [18, -16.5], [25, -14], [24, -12.5], [18, -14.8], [14, -13.5]], pal.dark);
+        // the headlamp and its number board, the bars back to the rider
+        shape([[12, -30 + bo], [16, -30 + bo], [17, -24 + bo], [12, -24 + bo]], '#2a2f36');
+        disc(16.5, -27 + bo, 2, 2.2, '#e8c15a'); disc(17, -27.5 + bo, 0.8, 0.8, '#fff3c4');
+        rod(8, -32 + bo, 14, -30 + bo, 1.6, '#4a535d');
+        P(7, -33 + bo + mb, 2.4, 2.4, '#1c1f24');          // the grip
       }
     }
 
