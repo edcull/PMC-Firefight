@@ -99,6 +99,10 @@
       }
       // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
       var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">Back</button>';
+      // each army's rules, opened from its pill
+      h += cmodal('armyA', C.words(A).side + ' \u2014 army rules', armyRules(A));
+      if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B), backRivals);
+      rivals.forEach(function (co, i) { h += cmodal('armyr' + i, co.name + ' \u2014 ' + C.words(co).side, armyRules(co), backRivals); });
       rivals.forEach(function (co, i) {
         if (!(co.log || []).length) return;
         h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><div class="clog">' +
@@ -142,7 +146,7 @@
           '</label>' + squares(colourOf(co)) + '</div>';
       }
       h += (bar || '') + statRow(co, false, side);
-      h += '<div class="cpdoc">' + (co.doctrines.length
+      h += '<div class="cpdoc carch">' + armyPill(co, 'army' + side) + (co.doctrines.length
         ? co.doctrines.map(function (d) {
           var dd = C.doctrine(d);
           return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
@@ -239,10 +243,45 @@
     /* The kind of force, as a pill in that army's colour: ochre mercenaries,
        crimson insurgents, olive bugs, steel Xenotripods. */
     var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
-    function armyPill(co) {
+    // the kind of force; given a modal to open, a button to its army's rules
+    function armyPill(co, kind) {
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[ARMY_COLOUR[co.faction || 'pmc']];
       var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+      if (kind) return '<button type="button" class="mk armypill"' + st + ' data-go="fmodal" data-kind="' + kind + '" title="Army rules">' + esc(C.words(co).side) + '</button>';
       return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
+    }
+    /* An army's own rules: how it fights its campaign, and the special rules
+       only its units carry (read off the unit profiles, so it stays in step
+       with them), each with the rule's text. */
+    var NOT_ARMY = ['Immobile', 'No Objectives', 'Drone unit', 'Unarmed', 'Lifter', 'Turret', 'Stationary Artillery', 'No Army Rules'];
+    function armyRules(co) {
+      var f = co.faction || 'pmc', W = C.words(co), cr = C.creedOf(co), R = root.PMC, T = root.PMCRuleText;
+      var base = function (r) { return r.replace(/\s*\(.*\)$/, ''); };
+      var owners = {}, first = {};
+      ((R && R.CATALOGUE) || []).forEach(function (p) {
+        (p.rules || []).forEach(function (r) {
+          var k = base(r);
+          (owners[k] = owners[k] || {})[p.faction || 'pmc'] = true;
+          if (!first[k]) first[k] = r;
+        });
+      });
+      var own = Object.keys(owners).filter(function (k) {
+        return owners[k][f] && Object.keys(owners[k]).length === 1 && NOT_ARMY.indexOf(k) < 0;
+      }).sort();
+      var h = '<div class="cmodal-scroll armyrules"><p class="dnote">A ' + esc(W.force) + ' of ' + esc(W.side) + '.</p><ul class="armycamp">' +
+        '<li>Paid in <b>' + esc(W.moneyLong) + '</b> (' + esc(W.money) + ').</li>' +
+        '<li>Grows through <b>' + esc(cr.many) + '</b>; its units earn ' + esc(W.honours) + ' and suffer ' + esc(W.traumas) + '.</li>' +
+        (f === 'bugs' ? '<li>Its losses are <b>biomass</b>: a bug is lost or it is not, never wounded.</li>'
+          : '<li>Its casualties go to the <b>' + esc(W.memorial) + '</b>: ' + esc(W.kiaLong.toLowerCase()) + ', or ' + esc(W.wiaLong.toLowerCase()) + '.</li>') +
+        '</ul>';
+      if (own.length) {
+        h += '<h4>Special rules of the army</h4><dl class="armyrl">' + own.map(function (k) {
+          var d = T ? T.describe(first[k]) : { text: '' };
+          if (!d.text && T) d = T.describe(k);
+          return '<dt>' + esc(k) + '</dt><dd>' + esc(d.text || '') + '</dd>';
+        }).join('') + '</dl>';
+      }
+      return h + '</div>';
     }
     /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
     function statRow(co, rival, fkey) {
@@ -278,7 +317,7 @@
         esc(co.name) + '</b></div>';
       h += statRow(co, true, 'r' + (idx == null ? 0 : idx));
       // the kind of force, and its doctrines beside it on the one line
-      h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
+      h += '<div class="cpdoc carch">' + armyPill(co, 'armyr' + (idx == null ? 0 : idx)) + co.doctrines.map(function (d) {
         return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
       }).join('') + '</div>';
       // their dossier opens in the card: their units, as your own are listed
