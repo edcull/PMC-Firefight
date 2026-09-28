@@ -95,8 +95,8 @@
         P(-11, -34 + mb, 1.2, 7, pal.light); P(6, -35 + mb, 1.2, 7, pal.light);                      // its trim
         shape([[-9, -38], [-6, -36], [4, -36], [6, -39], [7, -36], [5, -34], [-8, -34], [-10, -36]], '#3a2918');   // the saddle, cantle and pommel
         P(-7, -37 + mb, 10, 1, '#5a4128');
-        rod(-1, -34, -1, -17, 0.9, '#2a1d12');           // the stirrup leather
-        shape([[-3, -17.5], [1, -17.5], [1.5, -15], [-3.5, -15]], '#8a8f94');   // and its iron
+        rod(-1, -34, -1, -23, 0.9, '#2a1d12');           // the stirrup leather, up to where the raised rider's boot is
+        shape([[-3, -23.5], [1, -23.5], [1.5, -21], [-3.5, -21]], '#8a8f94');   // and its iron
         P(-19, -34 + mb, 7, 7, '#4a3a22'); P(-19, -34 + mb, 7, 1.5, '#6b5232'); P(-16, -31 + mb, 1.2, 2, '#b89a5a');   // a saddle bag and its buckle
       }
 

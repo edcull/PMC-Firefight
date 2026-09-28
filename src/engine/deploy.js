@@ -318,6 +318,8 @@
     function askFacing(side, units, then, look) {
       var hulls = (units || []).filter(faces);
       hulls.forEach(function (u) { u.facing = faceDefault(u); u.aim = null; });
+      // a pod that can never move lands however it lands: it keeps the default, and nobody is asked
+      hulls = hulls.filter(function (u) { return !R.has(u, 'Immobile'); });
       if (!hulls.length || isAI(side)) { if (then) then(); return false; }
       var ids = hulls.map(function (u) { return u.id; });
       // a question already open (the other seat's, in hotseat) is answered first; this one waits its turn

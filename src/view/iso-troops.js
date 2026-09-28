@@ -23,6 +23,7 @@
        into the board's working window at its full density, it now does. */
     var SPRITE_RES = 2;
     var SPR = { w: 96, h: 150, ox: 40, oy: 136 };          // cache canvas and its origin
+    var RIDE_UP = { horse: 7 };                              // how much higher than on a bike a rider sits on each mount
     var MODEL = 0.6;                                     // how large a trooper stands on its base
 
     /* Company colours. A PMC picks its own; so did every mercenary outfit that ever
@@ -689,6 +690,8 @@
 
       /* ---- the mount, under everything ---- */
       PARTS.mount(P, g, kit, ox, oy, pal, pose, s, step);
+      // a horse stands taller than a bike: its rider sits up in the saddle, above its back
+      if (kit.mount === 'horse') oy -= RIDE_UP.horse * s;
 
       PARTS.legs(P, kit, pal, pose, step);
 
@@ -1161,7 +1164,7 @@
       var drop = pose === 'kneel' ? KNEEL_DROP : 0, wy = -32 + drop;
       var m = MUZZLE[kit.gun] || (kit.gun === 'slate' || kit.gun === 'optics' || kit.gun === 'case' ||
         kit.gun === 'console' || kit.gun === 'shell' || kit.gun === 'none' ? [10, 4] : MUZZLE.rifle);
-      var y = wy + m[1];
+      var y = wy + m[1] - (RIDE_UP[kit.mount] || 0);
       if (!kit.mount) y = y >= HIP ? y * LEG : y + HIP * (LEG - 1);
       return [m[0], y];
     }
