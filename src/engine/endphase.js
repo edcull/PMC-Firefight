@@ -410,7 +410,9 @@
       logLine('turn', text);
       // a campaign battle hands its report back to the dossier
       if (E.state.cfg.campaign) V.finished(E.state.report);
-      pushRes({ kind: 'Result', title: winner ? sideName(winner) + ' wins' : 'Draw', outcome: { text: text, tone: 'good' } });
+      // what ended it, on its own card: a campaign goes on to the aftermath from there
+      pushRes({ kind: 'Result', title: winner ? sideName(winner) + ' wins' : 'Draw', outcome: { text: text, tone: 'good' },
+        cont: E.state.cfg.campaign ? 'To the aftermath' : null });
     }
 
     return {
