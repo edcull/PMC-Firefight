@@ -102,6 +102,7 @@
       if (ui.insertion || ui.reservePick || ui.preview) return true;
       return ['faceAsk', 'cmdOffer', 'standAsk', 'endAsk', 'martyrAsk', 'kyfAsk', 'placeAsk', 'minePick', 'swapAsk'].some(function (k) {
         var a = s[k];
+        if (k === 'endAsk' && (show.queue.length || show.waiting)) return false;   // not asked until the replay is done
         return !!a && (a.side == null || !B.isAI(a.side));
       });
     }

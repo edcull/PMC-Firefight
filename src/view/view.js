@@ -416,7 +416,7 @@
        initiative. It fades by itself and never takes a tap. */
     function turnBanner() {
       var tb = el('turnbanner');
-      if (!tb || B.state.phase !== 'battle' || B.state.over || !B.state.turn) return;
+      if (!tb || B.state.phase !== 'battle' || B.state.over || !B.state.turn || B.replaying()) return;   // announced once the last turn has been drawn
       if (ui.bannerTurn === B.state.turn) return;
       var first = ui.bannerTurn == null;
       ui.bannerTurn = B.state.turn;
@@ -471,7 +471,7 @@
           act.textContent = B.state.solo.coop ? soloOwnerName(B.state.activeOwner) + ' to act' : 'Your commando';
           act.className = 'pill pill-' + (B.state.solo.coop ? (B.state.activeOwner === 2 ? 'C' : 'P1') : 'A');
         }
-      } else if (B.state.endAsk) {
+      } else if (B.state.endAsk && !B.replaying()) {
         var ew = turnWords(B.state.endAsk.side);
         act.textContent = 'End phase: ' + (ew === 'Your turn' ? 'your call' : plainName(B.state.endAsk.side));
         act.className = 'pill pill-' + B.state.endAsk.side;
@@ -482,10 +482,10 @@
       /* Whose go it is, on the header itself: a bar of that side's colour along
          its foot (the phone shows the pill too, whatever the kind of game). */
       if (hdrEl) {
-        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
+        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
           ? (B.state.activeOwner === 2 ? 'C' : 'P1') : B.state.activeSide) : null;
         ['A', 'B', 'C', 'P1'].forEach(function (k) { hdrEl.classList.toggle('turn-' + k, going === k); });
-        var goer = B.state.endAsk ? B.state.endAsk.side : B.state.activeSide;
+        var goer = B.state.endAsk && !B.replaying() ? B.state.endAsk.side : B.state.activeSide;
         hdrEl.classList.toggle('your-turn', !!going && !isAI(goer) && mineToPlay(goer));
       }
       turnBanner();

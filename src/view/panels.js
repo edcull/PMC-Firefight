@@ -391,7 +391,13 @@
       else if (ui.insertion) html = insertionCard();
       else if (B.state.cmdOffer) html = cmdOfferCard();
       else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
-      else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over) html = endCard();
+      // the End phase is asked once the other side's last activations have been drawn, not while they play
+      else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over && !B.replaying()) {
+        html = endCard();
+        // on a phone the question comes to the front the once, when it is first asked
+        var ek = B.state.turn + B.state.endAsk.side;
+        if (ui.endShown !== ek) { ui.endShown = ek; if (window.innerWidth <= 1000 && B.setMTab) B.setMTab('act'); }
+      }
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.over) html = overCard();

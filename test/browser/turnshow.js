@@ -81,6 +81,27 @@ const look = () => {
   ok('the player\'s own go reads "Your turn"', s.pill === 'Your turn', s.pill);
   ok('...marked as theirs', /your-turn/.test(s.cls), s.cls);
 
+  /* Our units skip; the AI plays its own. The End phase is not put to us while
+     the AI's last activations are still being drawn, only once they have been. */
+  let early = 0, asked = false, seenReplay = false;
+  for (let i = 0; i < 400 && !asked; i++) {
+    const r = await p.evaluate(() => {
+      const st = window.PMC_STATE(), drawing = window.__showQueue() > 0;
+      const card = !!document.querySelector('[data-act="enddone"]');
+      if (!drawing && !card && st.activeSide === 'A' && !st.endAsk) {
+        const m = st.units.filter((x) => x.side === 'A' && x.alive && !x.activated && x.x >= 0 && !x.aboard)[0];
+        if (m) { window.__sendIntent({ k: 'select', id: m.id }); window.__sendIntent({ k: 'action', id: 'skip' }); }
+      }
+      return { endAsk: !!st.endAsk, drawing: drawing, card: card };
+    });
+    if (r.endAsk && r.drawing) seenReplay = true;
+    if (r.card && r.drawing) early++;
+    if (r.card && !r.drawing) asked = true;
+    await p.waitForTimeout(100);
+  }
+  ok('against the AI the End phase is asked', asked);
+  ok('...never while the AI\'s activations are still being drawn', early === 0, early + ' times' + (seenReplay ? '' : ' (the replay was already over when it came)'));
+
   console.log('\n  errors: ' + (errs.join(' | ') || 'none'));
   console.log('  ' + pass + ' checks passed' + (fail ? ', ' + fail + ' failed.' : '.'));
   process.exitCode = fail || errs.length ? 1 : 0;
