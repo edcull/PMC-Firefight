@@ -288,6 +288,10 @@
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     h += '</div>';
+    /* Opened, the card's own facts sit in a column on the left — experience and
+       trauma, its honours and traumas, what can be done with it — and the unit
+       as it stands on the table on the right; its full sheet follows below. */
+    if (opts.portrait) h += '<div class="dsplit"><div class="dleft">';
     if (!C.isLeaderP(p) && !(co.faction === 'xeno' && (p.rules || []).indexOf('Turret') >= 0)) {
       h += '<div class="dbars">' +
         '<span class="dexp">' + e.exp + ' EXP</span>';
@@ -313,6 +317,12 @@
     });
     if (marks.length) h += '<div class="dmarks">' + marks.join('') + '</div>';
     if (opts.actions) h += '<div class="dacts">' + opts.actions + '</div>';
+    if (opts.portrait) {
+      h += '</div><canvas class="dportrait" data-key="' + esc(e.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +
+        ' data-colour="' + esc(colourOf(co)) + '"' + (e.prop ? ' data-prop="' + esc(e.prop) + '"' : '') + (e.drone ? ' data-drone="1"' : '') +
+        (e.riders ? ' data-riders="1"' : '') + (e.mount ? ' data-mount="' + esc(e.mount) + '"' : '') +
+        ' role="img" aria-label="' + esc(p.name) + '"></canvas></div>';
+    }
     if (opts.men) h += opts.men;
     h += '</div>';
     return h;
@@ -454,6 +464,7 @@
       }
     }
     showCard = null;
+    paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
     var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
@@ -463,6 +474,46 @@
   }
 
   function findEntry(co, rid) { return C.byRid(co, rid); }
+
+  /* A unit opened on the roster, drawn by the game's own renderer as the unit
+     atlas draws it: a squad ready, a machine facing south-east on its running
+     gear, in the force's colours, and riding whatever it rides. */
+  function paintPortraits(body) {
+    var I = root.PMCIso;
+    if (!I || !I.drawUnit) return;
+    Array.prototype.forEach.call(body.querySelectorAll('canvas.dportrait'), function (cv) {
+      var p = profile(cv.dataset.key);
+      if (!p || !cv.getContext) return;
+      var dpr = Math.min(2, root.devicePixelRatio || 1);
+      var W = cv.clientWidth || 150, H = cv.clientHeight || 130;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      var g = cv.getContext('2d');
+      if (!g) return;
+      var side = cv.dataset.side || 'A';
+      if (I.PALETTE[side] !== I.COLOURS[cv.dataset.colour]) I.setSideColour(side, cv.dataset.colour);
+      var th = Math.PI / 4, fu = Math.cos(th), fv = 2 * Math.sin(th);             // south-east on the screen
+      var u = Object.assign({}, p, { id: 'P' + p.key, side: side, facing: Math.atan2(fv - fu, fu + fv), alive: true, damage: 0, sp: 0,
+        cargo: [], rules: (p.rules || []).slice(), models: p.size, x: 10, y: 10, drone: !!cv.dataset.drone });
+      var mach = p.cls === 'vehicle' || p.cls === 'aircraft';
+      if (p.cls === 'vehicle' && p.faction !== 'bugs' && p.faction !== 'xeno') R.applyPropulsion(u, cv.dataset.prop || (R.lookDrive && R.lookDrive(p)) || 'wheeled');
+      if (cv.dataset.riders) R.applyRiders(u, true);
+      if (cv.dataset.mount) u.mount = cv.dataset.mount;
+      var walker = u.prop === 'walker';
+      var mag = mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55;
+      var ground = H - (mach ? (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : 16);
+      var up = I.flyLift ? I.flyLift(u) : 0;
+      if (up) {
+        var hs = I.hullSpec && I.hullSpec(u.art);
+        ground = H * 0.56 + (up + ((hs && hs.hgt) || 14) * 0.5) * mag;
+      }
+      var s0 = I.toScreen(10, 10);
+      try {
+        g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (ground - s0.y * mag) * dpr);
+        I.drawUnit(g, u, { at: { x: 10, y: 10 }, lift: 0, status: 'ready', morale: 0 });
+      } catch (err) { if (root.console) console.error(p.key, err); }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+    });
+  }
 
   /* The founding screen redraws whenever a unit, a doctrine or a colour is
      picked, which would wipe a half-typed name. Read it back first, every time. */

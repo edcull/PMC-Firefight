@@ -32,7 +32,7 @@
           var dis = C.canDisband(co, e);
           acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
           if (spend) acts += spend;
-          h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true });
+          h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true, portrait: open });
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {
