@@ -366,7 +366,7 @@
            a hopeless tap is answered here, where the camera is, rather than
            coming back as a refusal with nothing to look at. */
         var clear = deployOK(pending.side, p.x, p.y, pending) &&
-          !R.TERRAIN[R.terrainAt(B.state, p.x, p.y)].impassable &&
+          !R.barredAt(B.state, pending, p.x, p.y) &&
           !R.unitNear(B.state, p.x, p.y, pending, 1);
         var nudged = false;
         if (!clear) {

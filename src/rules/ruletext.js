@@ -200,7 +200,8 @@
     'Stationary Artillery':
       'An emplaced gun: it never moves and is never held in reserve, but a transport vehicle can tow it, the gun ' +
       'taking one of its places (a Lifter cannot lift a hull that is towing). Broken, it stays where it is ' +
-      '(removed only if its rally still leaves it over three times its Morale), and it never goes into a building. ' +
+      '(removed only if its rally still leaves it over three times its Morale); it never goes into a building, ' +
+      'and counts shallow water as impassable. ' +
       'It can Dig in to fire over open sights — range 24", minimum 6", front quarter only, but with every modifier ' +
       '— and cannot then be turned or towed until Normal stance! puts it back.',
     'Stealth':

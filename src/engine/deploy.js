@@ -220,7 +220,7 @@
             break;                                   // nothing deploys: it arrives by drop
           }
           if (!deployOK(side, x, y, u)) continue;
-          if (R.TERRAIN[R.terrainAt(E.state, x, y)].impassable) continue;
+          if (R.barredAt(E.state, u, x, y)) continue;
           if (R.unitNear(E.state, x, y, u, 1)) continue;
           u.x = x; u.y = y; return;
         }
@@ -234,7 +234,7 @@
             var px = mid.x + Math.cos(ang) * rad, py = mid.y + Math.sin(ang) * rad;
             if (px < UR || py < UR || px > W - UR || py > H - UR) continue;
             if (!deployOK(side, px, py, u)) continue;
-            if (R.TERRAIN[R.terrainAt(E.state, px, py)].impassable) continue;
+            if (R.barredAt(E.state, u, px, py)) continue;
             if (R.unitNear(E.state, px, py, u, 0.6)) continue;
             best = { x: px, y: py }; break;
           }
@@ -437,7 +437,7 @@
           var ang = a / 16 * Math.PI * 2;
           var px = from.x + Math.cos(ang) * r, py = from.y + Math.sin(ang) * r;
           if (!deployOK(u.side, px, py, u)) continue;
-          if (R.TERRAIN[R.terrainAt(E.state, px, py)].impassable) continue;
+          if (R.barredAt(E.state, u, px, py)) continue;
           if (R.unitNear(E.state, px, py, u, 1)) continue;
           var dd = Math.hypot(px - x, py - y);
           if (dd < bd) { bd = dd; best = { x: px, y: py }; }
