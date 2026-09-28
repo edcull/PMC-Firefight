@@ -1329,6 +1329,10 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dmem-dot { font-style: normal; color: var(--ink-faint); }
 .dmem-rank, .dmem-tier { color: var(--ink-dim); }
 .dmem-unit { color: var(--ink-faint); }
+/* the named dead and wounded, gathered under their unit */
+.dmem-list li.dmem-grp { padding-top: 9px; border-bottom: 0; font-family: var(--display); letter-spacing: .02em; }
+.dmem-list li.dmem-grp .dmem-unit { color: var(--ink); font-weight: 600; }
+.dmem-list li.dmem-in { padding-left: 12px; }
 /* killed or wounded, on the field hospital's list (the tribe's ascended or scarred) */
 .dfate { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
   padding: 0 5px; border-radius: 3px; border: 1px solid currentColor; line-height: 1.5; vertical-align: 1px; }

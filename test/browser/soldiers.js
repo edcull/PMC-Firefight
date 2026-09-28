@@ -186,10 +186,13 @@ async function clickText(p, re) {
     const of = (n) => rows.find((r) => r.textContent.includes(n)).querySelector('.dfate').textContent;
     return of('Jae Novak') === 'WIA' && of('Ana Silva') === 'KIA' && of('Rhys Walsh') === 'KIA';
   }));
-  check('...each on one line: fate, rank, name, Tier and unit', await p.evaluate(() => {
-    const li = [...document.querySelectorAll('#camp-body .dmem-list li')].find((r) => r.textContent.includes('Rhys Walsh'));
-    return !!li && /^KIA · Sergeant · Rhys Walsh · Tier [IVX]+ · Second Section$/.test(li.textContent) && li.getClientRects().length === 1 &&
-      li.getBoundingClientRect().height < 30;
+  check('...grouped under their unit (with its Tier), each on one line: fate, rank, name', await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#camp-body .dmem-list li')];
+    const at = rows.findIndex((r) => r.textContent.includes('Rhys Walsh')), li = rows[at];
+    let head = null;
+    for (let i = at - 1; i >= 0 && !head; i--) if (rows[i].classList.contains('dmem-grp')) head = rows[i];
+    return !!li && /^KIA · Sergeant · Rhys Walsh$/.test(li.textContent) && li.getClientRects().length === 1 &&
+      li.getBoundingClientRect().height < 30 && !!head && /^Second Section · Tier [IVX]+$/.test(head.textContent);
   }), await p.evaluate(() => [...document.querySelectorAll('#camp-body .dmem-list li')].map((r) => r.textContent).join(' | ')));
   check('...with no turn of the battle', !/turn \d+ of the battle/.test(mem.text));
   await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
