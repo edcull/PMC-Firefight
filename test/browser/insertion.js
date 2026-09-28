@@ -22,6 +22,7 @@ async function drain(p) {
   await startSkirmish(p, { tier: 4, mode: 'ai', keys: ['cmd1', 'veterans', 'veterans', 'lrrp', 'shock', 'protectors'] });
   await p.waitForTimeout(1300);
   await drain(p);
+  await p.evaluate(() => { if (window.PMC_STATE().deployReady) window.__sendIntent({ k: 'deployready' }); });   // the list stands: on to the deployment
 
   const held = await p.evaluate(() => {
     const s = window.PMC_STATE();
