@@ -272,14 +272,7 @@
       // the Rebellion's leader has a second at his side: the Insurgent leader's figure
       leaderhuge: ['lead5', 'flaghuge', 'lead3black', 'guardrifle'],
       // the Riders upgrade (p. 93) puts the same troops on bikes and beasts
-      holymounted: ['zealotrider'],
-      holy1mounted: ['zealotrider'], holy2mounted: ['zealotrider'], holy3mounted: ['zealotrider'], holy4mounted: ['zealotrider'],
-      // mounted, only the leader's own bike carries the colours
-      leadermounted: ['leaderrider', 'leaderescort'],
-      leadersmallmounted: ['leaderrider', 'leaderescort'],
-      leaderbigmounted: ['leaderrider', 'leaderescort'],
-      leadermidmounted: ['leaderrider', 'leaderescort'],
-      leaderhugemounted: ['leaderrider', 'leaderescort']
+      // holymounted … holy4mounted and leadermounted … leaderhugemounted: built from the tier's own figures, under KIT
     };
     function roleAt(art, i) {
       var r = ROLES[art] || ROLES.rifle;
@@ -544,10 +537,24 @@
       flagsmall: { helm: 'beret', gun: 'flagsmall', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
       flagbig: { helm: 'beret', gun: 'flagbig', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
       flaghuge: { helm: 'beret', gun: 'flaghuge', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
-      zealotrider: { helm: 'turban', gun: 'carbine', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', mount: true, tint: HOLY_A },
-      leaderrider: { helm: 'goggles', gun: 'banner', plainFlag: true, pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
-      leaderescort: { helm: 'goggles', gun: 'carbine', pack: 'none', mount: true, tint: FIELD_OCHRE, fitAs: 'rider' }
     };
+    /* Holy Warriors and First Among Equals who take the Riders upgrade ride
+       in the dress of their own tier: each mounted figure is the unmounted
+       one — its turban, wrap, vest, sash, flag and colours — put on a mount,
+       its pack left behind, and sized as the other riders are. */
+    ['holy', 'holy1', 'holy2', 'holy3', 'holy4', 'leader', 'leadersmall', 'leadermid', 'leaderbig', 'leaderhuge'].forEach(function (art) {
+      ROLES[art + 'mounted'] = ROLES[art].map(function (r) {
+        var k = r + 'mtd';
+        if (!KIT[k]) {
+          var m = {};
+          for (var f in KIT[r]) m[f] = KIT[r][f];
+          m.mount = true; m.pack = 'none'; m.fitAs = 'rider';
+          delete m.kneel; delete m.prone;
+          KIT[k] = m;
+        }
+        return k;
+      });
+    });
 
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a
