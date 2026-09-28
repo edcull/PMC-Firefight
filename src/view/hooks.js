@@ -51,6 +51,7 @@
       if (have && have.keys && have.keys.length) {
         el('sel-faction').value = have.faction || 'pmc';
         if (el('sel-tactic')) el('sel-tactic').value = have.tactic || '';
+        if (el('sel-skin')) el('sel-skin').value = have.skin || '';
         B.muster.keys = have.keys.slice();
         B.muster.colour = have.colour || B.muster.colour;
         B.muster.name = have.name || B.muster.name;
@@ -63,6 +64,7 @@
     window.PMC_MUSTER_NOW = function () {
       return {
         faction: musterFaction(), tactic: musterTactic() || '',
+        skin: musterFaction() === 'rebel' ? (el('sel-skin') && el('sel-skin').value) || '' : '',
         keys: B.muster.keys.slice(), colour: B.muster.colour || 'ochre',
         name: B.muster.name || ''
       };

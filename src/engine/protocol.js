@@ -126,6 +126,8 @@
     f.faction = oneOf(force.faction, FACTIONS, f.faction);
     f.tactic = f.faction === 'rebel' ? oneOf(force.tactic || '', TACTICS, '') : '';
     f.colour = oneOf(force.colour, COLOURS, f.colour);
+    // a rebel force's look: its own people, or the prawns (rules.js SKINS)
+    f.skin = f.faction === 'rebel' ? oneOf(force.skin || '', ['', 'prawn'], '') : '';
     f.name = clampText(force.name, LIMITS.force);
     if (Array.isArray(force.keys)) {
       f.keys = force.keys.slice(0, LIMITS.units)

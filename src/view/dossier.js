@@ -329,7 +329,7 @@
     if (opts.portrait) {
       h += '</div><canvas class="dportrait" data-key="' + esc(e.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +
         ' data-colour="' + esc(colourOf(co)) + '"' + (e.prop ? ' data-prop="' + esc(e.prop) + '"' : '') + (e.drone ? ' data-drone="1"' : '') +
-        (e.riders ? ' data-riders="1"' : '') + (e.mount ? ' data-mount="' + esc(e.mount) + '"' : '') +
+        (e.riders ? ' data-riders="1"' : '') + (e.mount ? ' data-mount="' + esc(e.mount) + '"' : '') + (co && co.faction === 'rebel' && co.skin ? ' data-skin="' + esc(co.skin) + '"' : '') +
         ' role="img" aria-label="' + esc(p.name) + '"></canvas></div>';
     }
     if (opts.men) h += opts.men;
@@ -507,7 +507,8 @@
       if (p.cls === 'vehicle' && p.faction !== 'bugs' && p.faction !== 'xeno') R.applyPropulsion(u, cv.dataset.prop || (R.lookDrive && R.lookDrive(p)) || 'wheeled');
       if (cv.dataset.riders) R.applyRiders(u, true);
       if (cv.dataset.mount) u.mount = cv.dataset.mount;
-      var walker = u.prop === 'walker';
+      if (cv.dataset.skin) { u.skin = cv.dataset.skin; u.art = R.skinArt(u, u.skin); }
+      var walker = u.prop === 'walker' || (u.skin === 'prawn' && p.cls === 'vehicle');
       var mag = mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55;
       var ground = H - (mach ? (p.faction === 'bugs' ? 18 : walker || p.cls === 'aircraft' ? 14 : 26) : 16);
       var up = I.flyLift ? I.flyLift(u) : 0;
@@ -741,6 +742,13 @@
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       render(); return;
     }
+    if (t.hasAttribute('data-bskin')) {
+      keepFoundName();
+      draft.skin = t.getAttribute('data-bskin') || null;
+      // the prawns come in rust orange, unless a colour has been chosen
+      if (!draft.colourChosen && (draft.colour === 'ochre' || draft.colour === 'rust')) draft.colour = draft.skin === 'prawn' ? 'rust' : 'ochre';
+      render(); return;
+    }
     if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
       camp.companies.A.colour = t.getAttribute('data-campcolour');
       try { localStorage.setItem('pmc-colour', camp.companies.A.colour); } catch (e) { }
@@ -795,6 +803,7 @@
         if (!res.ok) { note('Not a legal starting company', res.faults.join(' ')); return; }
         fco.name = nm;
         fco.colour = draft.colour || 'ochre';
+        if (fco.faction === 'rebel' && draft.skin) fco.skin = draft.skin; else delete fco.skin;
         if (fs === 'A') {
           try { localStorage.setItem('pmc-colour', fco.colour); } catch (e6) { }
           // hotseat: the second player founds their own force next; solo: the rivals are raised

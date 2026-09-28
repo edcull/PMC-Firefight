@@ -133,6 +133,14 @@
         (E.colourOpen ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
           ' \u2014 ' + esc(colourName(E.draft.colour)) + '</label>' + squares(E.draft.colour) + '</div>' : '') +
         '</div>';
+      /* A revolt can be the colony's own people or the prawns: the same units
+         and rules, only drawn differently (rules.js SKINS). */
+      if (reb) {
+        h += '<div class="field"><label>Look</label><div class="docpick facpick">' +
+          [['', 'Humans', 'Insurgents of the colony'], ['prawn', 'Prawns', 'Tall crustacean aliens, on giant shrimp and in walkers']].map(function (k) {
+            return '<button type="button" class="doc' + ((E.draft.skin || '') === k[0] ? ' on' : '') + '" data-bskin="' + k[0] + '"><b>' + esc(k[1]) + '</b><span>' + esc(k[2]) + '</span></button>';
+          }).join('') + '</div></div>';
+      }
       var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
         '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
         t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + ' vehicle' + (machines === 1 ? '' : 's') + ' (max 2)</span></div>';

@@ -86,6 +86,13 @@
   function xenoGlow(pal) { return (KIT_XENOFIG || kitXenoFig()).xenoGlow(pal); }
   function hexA(hex, al) { return (KIT_XENOFIG || kitXenoFig()).hexA(hex, al); }
   function paintXeno(g, ox, oy, pal, kit, pose, step, s, dead) { return (KIT_XENOFIG || kitXenoFig()).paintXeno(g, ox, oy, pal, kit, pose, step, s, dead); }
+  /* ---- the prawns: in view/iso-prawnfig.js ---- */
+  var KIT_PRAWNFIG = null;
+  function kitPrawnFig() {
+    return KIT_PRAWNFIG || (KIT_PRAWNFIG = root.PMCIsoPrawnFig({ hexMix: hexMix, vividHex: vividHex }));
+  }
+  function paintPrawn(g, ox, oy, pal, kit, pose, step, s, dead, corpse) { return kitPrawnFig().paintPrawn(g, ox, oy, pal, kit, pose, step, s, dead, corpse); }
+  function prawnMuzzle(kit, pose) { return kitPrawnFig().prawnMuzzle(kit, pose); }
 
     var BIGBUG = {
       bugfirebeetle: { kind: 'firebeetle', h: 44 },
@@ -220,7 +227,7 @@
 
       var s = B.SU * sq * B.SPRITE_RES;
       var w = Math.ceil(B.SPR.w * s), h = Math.ceil(B.SPR.h * s);
-      var ma = kit.bug || kit.xeno ? bugMuzzle(kit, pose) : muzzleArt(kit, pose);
+      var ma = kit.prawn ? prawnMuzzle(kit, pose) : kit.bug || kit.xeno ? bugMuzzle(kit, pose) : muzzleArt(kit, pose);
       var ox = Math.round(B.SPR.ox * s), oy = Math.round(B.SPR.oy * s);
 
       // paint the figure, then ring it in near-black so it reads against the rank behind
@@ -268,6 +275,9 @@
       else if (kit.xeno) {
         paintXeno(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false);
         finishFigure(body, ox, oy, s, pose);
+      } else if (kit.prawn) {
+        paintPrawn(body.getContext('2d'), ox, oy, pal, kit, pose, step, s, false, !!PH.corpse);
+        finishFigure(body, ox, oy, s, pose);
       } else {
         glows = paintFigure(body.getContext('2d'), ox, oy, pal, kit, pose, step, s) || [];
         finishFigure(body, ox, oy, s, pose);
@@ -311,10 +321,11 @@
       });
       c.ox = ox; c.oy = oy; c.res = B.SPRITE_RES;
       c.muz = [ma[0] * B.SU * sq, ma[1] * B.SU * sq];      // the muzzle, in board pixels from the feet
-      var pa = kit.bug || kit.xeno ? null : podArt(kit, pose), ea = kit.bug || kit.xeno ? null : eyeArt(kit, pose);
+      var alien = kit.bug || kit.xeno || kit.prawn;
+      var pa = alien ? null : podArt(kit, pose), ea = alien ? null : eyeArt(kit, pose);
       c.pod = pa ? [pa[0] * B.SU * sq, pa[1] * B.SU * sq] : null;
       c.eye = ea ? [ea[0] * B.SU * sq, ea[1] * B.SU * sq] : null;
-      var la = kit.bug || kit.xeno ? null : lampArt(kit, pose);
+      var la = alien ? null : lampArt(kit, pose);
       c.lamp = la ? [la[0] * B.SU * sq, la[1] * B.SU * sq] : null;
       // a man whose hands hold optics, a slate or a case is not one of the guns
       c.tool = /^(optics|slate|case|console)$/.test(kit.gun || '');

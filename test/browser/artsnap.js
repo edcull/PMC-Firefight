@@ -60,6 +60,14 @@ const DIFF = path.join(ROOT, 'test', 'art', 'diff');
     ['SE', 'SW'].forEach(f => cases.push({ id: 'rlifter+' + v + '@' + f, key: 'rlifter', face: f, set: { sling: v, slingProp: d } }));
   });
 
+  // the rebels as the prawns (a Look, rules.js SKINS): each unit once each way round, and wrecked
+  const rebels = await p.evaluate(() => window.PMC.CATALOGUE.filter(u => u.faction === 'rebel').map(u => u.key));
+  rebels.forEach(k => {
+    cases.push({ id: k + '@prawn@SE', key: k, face: 'SE', set: { skin: 'prawn' } });
+    cases.push({ id: k + '@prawn@NW', key: k, face: 'NW', set: { skin: 'prawn' } });
+    cases.push({ id: k + '@prawn@destroyed', key: k, face: 'SE', destroyed: true, set: { skin: 'prawn' } });
+  });
+
   const got = {};
   let n = 0;
   for (const c of cases) {
@@ -69,7 +77,7 @@ const DIFF = path.join(ROOT, 'test', 'art', 'diff');
       V.pick(c.key);
       V.destroy(!!c.destroyed);
       V.settle();
-      V.set('stance', 'ready'); V.set('sling', 'none');
+      V.set('stance', 'ready'); V.set('sling', 'none'); V.set('skin', 'human');
       for (const k in (c.set || {})) V.set(k, c.set[k]);
       V.set('face', c.face);
       V.set('zCur', V.zoom().zoom);                    // no easing: straight to the zoom it will settle at

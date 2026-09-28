@@ -415,6 +415,7 @@
         bench: { A: A.roster.filter(function (e) { return E.contract.picks.indexOf(e) < 0 && !(e.restUntil > 0); }), B: [] },
         doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
         tactics: { A: A.faction === 'rebel' ? E.contract.tactic || null : null, B: theirTactic },
+        skinA: A.skin || null, skinB: B.skin || null,
         campaign: true,
         mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
         planet: E.contract.planet

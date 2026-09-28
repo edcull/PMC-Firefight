@@ -186,7 +186,7 @@
       if (io) io.disconnect();
       var tiles = Array.prototype.slice.call(main.querySelectorAll('canvas.tile'));
       io = 'IntersectionObserver' in root ? new IntersectionObserver(function (es) {
-        es.forEach(function (e) { if (e.isIntersecting && e.target.dataset.drawn !== colour) draw(e.target); });
+        es.forEach(function (e) { if (e.isIntersecting && e.target.dataset.drawn !== colour + (o.skin && o.skin() ? '|' + o.skin() : '')) draw(e.target); });
       }, { root: o.scroller || null, rootMargin: '400px 0px' }) : null;
       if (io) tiles.forEach(function (c) { io.observe(c); }); else tiles.forEach(draw);
       filter();
@@ -208,8 +208,11 @@
       if (p.cls === 'vehicle' && p.faction !== 'bugs' && p.faction !== 'xeno') R.applyPropulsion(u, cv.dataset.prop || defaultProp(p));
       if (cv.dataset.riders) R.applyRiders(u, true);
       if (cv.dataset.mount) u.mount = cv.dataset.mount;
+      // the rebels in another look (o.skin: 'prawn'), when the page shows them that way
+      var skin = o.skin && p.faction === 'rebel' ? o.skin() : null;
+      if (skin === 'prawn') { u.skin = skin; u.art = R.skinArt(u, skin); }
       var mach = machine(p);
-      var walker = cv.dataset.prop === 'walker';
+      var walker = cv.dataset.prop === 'walker' || (skin === 'prawn' && p.cls === 'vehicle');
       // a tile drawn narrower than the width it was framed for (o.fit) shrinks its figure to match, rather than cropping it
       var ref = o.fit && (cv.classList.contains('inf') ? o.fit.inf : o.fit.other), k = ref ? Math.min(1, W / ref) : 1;
       var mag = k * (mach ? (p.faction === 'bugs' ? 0.72 : p.faction === 'xeno' && p.cls === 'vehicle' ? 1.3 : p.cls === 'aircraft' ? 1.0 : walker ? 1.05 : 1.15) : 1.55);
@@ -237,7 +240,7 @@
         }
       } catch (e) { if (root.console) console.error(p.key, e); }
       g.setTransform(1, 0, 0, 1, 0, 0);
-      cv.dataset.drawn = colour;
+      cv.dataset.drawn = colour + (skin ? '|' + skin : '');
     }
 
     // ---- colours: every company colour the game offers ----
@@ -319,7 +322,9 @@
     }
 
     render();
-    return { render: render, filter: filter, setColour: setColour, scrollTo: scrollTo };
+    // everything shown drawn again: a different look (o.skin) for the same units
+    function redraw() { setColour(colour); }
+    return { render: render, filter: filter, setColour: setColour, scrollTo: scrollTo, redraw: redraw };
   }
 
   root.PMCAtlas = { mount: mount };

@@ -123,6 +123,7 @@ class Table {
           name: co.name,
           faction: f.faction,
           tactic: f.tactic || null,
+          skin: co.skin || null,
           colour: f.colour
         };
       }
@@ -136,7 +137,7 @@ class Table {
       return {
         keys: keys, dossier: null, doctrines: null,
         name: f.name || (p.name + '’s company'),
-        faction: f.faction, tactic: f.tactic || null, colour: f.colour
+        faction: f.faction, tactic: f.tactic || null, skin: f.skin || null, colour: f.colour
       };
     };
 
@@ -151,6 +152,7 @@ class Table {
       nameA: fa.name, nameB: fb.name,
       colourA: fa.colour, colourB: colourB,
       tactics: { A: fa.tactic, B: fb.tactic },
+      skinA: fa.skin, skinB: fb.skin,
       dossier: camp ? { A: fa.dossier, B: fb.dossier } : null,
       doctrines: camp ? { A: fa.doctrines, B: fb.doctrines } : null,
       campaign: !!camp,

@@ -218,6 +218,23 @@
   }
   function propOf(u) { return PROPULSION[u && u.prop] || null; }
 
+  /* ---------- skins ----------
+     A look an army can take the field in without a rule of it changing. The
+     rebels have one: the prawns, tall crustacean aliens, riding giant shrimp
+     and going to war in walkers. A skinned figure is drawn from its own art,
+     the rebel art with `pr_` before it; a hull keeps its own and is drawn on
+     legs (the view reads u.skin). */
+  var SKINS = { rebel: ['human', 'prawn'] };
+  function skinOf(cfg, side, faction) {
+    var sk = cfg && cfg['skin' + side];
+    return sk && (SKINS[faction] || []).indexOf(sk) > 0 ? sk : null;
+  }
+  function skinArt(u, skin) {
+    var art = u.art || 'rifle';
+    if (skin !== 'prawn' || (u.cls && u.cls !== 'infantry') || /^pr_/.test(art)) return art;
+    return 'pr_' + art;
+  }
+
   /* Fold a propulsion into a freshly built machine. Movement is kept exact rather
      than rounded, since the table is measured in real inches. */
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
@@ -1889,7 +1906,7 @@
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
-    defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
+    defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE, SKINS: SKINS, skinOf: skinOf, skinArt: skinArt,
     soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);

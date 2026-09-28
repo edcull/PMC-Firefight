@@ -574,6 +574,50 @@
     ROLES.conscript = ROLES.conscript.map(rolled);
     ROLES.rider = ROLES.militia.map(mounted);
 
+    /* ---------- the prawns: a revolt of the other kind ----------
+       The same rebel army, the same squads man for man, painted as tall,
+       hunched crustacean aliens (iso-prawnfig.js). Each rebel figure has a
+       prawn of its own, `pr_` before its name, carrying the same kind of
+       weapon in the aliens' own make, and every rebel squad a `pr_` squad of
+       them. Most go in their bare shells; the miners, the partisans, the
+       revolutionary guard and the great leaders go armoured, in black plate
+       picked out in white and the army's colour. Riders sit a giant shrimp. */
+    var PRAWN_GUN = {
+      pistol: 'pistol', smg: 'carbine', carbine: 'carbine', shotgun: 'carbine',
+      battlerifle: 'rifle', rifle: 'rifle', huntingrifle: 'rifle', long: 'long',
+      saw: 'mg', mg: 'mg', rpg: 'launcher', molotov: 'orb', lascutter: 'cutter',
+      flagsmall: 'flagsmall', flagbig: 'flagbig', flaghuge: 'flaghuge', banner: 'flagsmall',
+      shell: 'shell', optics: 'optics', none: 'none'
+    };
+    var PRAWN_ARMOUR = /^(cutter|blaster|hardsuit|part|guard|flag|standard|lead4|lead5|lead3black)/;
+    function prawnRole(r) {
+      var k = 'pr_' + r;
+      if (!KIT[k]) {
+        var h = KIT[r] || KIT.rebrifle, m = {
+          prawn: PRAWN_ARMOUR.test(r) ? 'armour' : 'shell',
+          gun: PRAWN_GUN[h.gun] || 'rifle',
+          big: 1.12
+        };
+        // a carapace of one of three browns, as the figure's name falls
+        var n = 0;
+        for (var i = 0; i < r.length; i++) n = (n * 31 + r.charCodeAt(i)) | 0;
+        m.shell = Math.abs(n) % 3;
+        ['mount', 'kneel', 'prone', 'mark', 'pack'].forEach(function (f) { if (h[f] != null) m[f] = h[f]; });
+        if (h.plates || r === 'hardsuit') m.plates = true;
+        if (m.mount) { if (r !== 'rider') m.fitAs = 'pr_rider'; delete m.kneel; delete m.prone; }
+        else if (h.fitAs && /^flag|banner/.test(h.gun || '')) m.fitAs = 'pr_' + h.fitAs;
+        KIT[k] = m;
+      }
+      return k;
+    }
+    ['civilian', 'militia', 'rebel', 'insurgent', 'guard', 'holy1', 'holy2', 'holy3', 'holy4',
+      'ridergang', 'rider', 'hellrider', 'legendrider', 'rebelmg', 'rebac', 'rebelat', 'rebelmortar',
+      'rebelgun', 'rebhac', 'partassault', 'partsabotage', 'partisansniper', 'miner', 'hardsuit',
+      'conscript', 'pow', 'deserterrk', 'deserter', 'leader', 'leadersmall', 'leadermid', 'leaderbig', 'leaderhuge',
+      'holy1mounted', 'holy2mounted', 'holy3mounted', 'holy4mounted', 'leadermounted', 'leadersmallmounted',
+      'leadermidmounted', 'leaderbigmounted', 'leaderhugemounted'
+    ].forEach(function (art) { if (ROLES[art]) ROLES['pr_' + art] = ROLES[art].map(prawnRole); });
+
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a
        little under a third of the height, and no pauldrons to speak of. */

@@ -72,7 +72,7 @@
     if (!tp) return null;
     var t = Object.assign({}, tp, {
       id: 'VTOW', side: u.side, paint: u.paint, rules: tp.rules.slice(), alive: true, damage: 0, sp: 0,
-      x: u.x, y: u.y, facing: faceAngle(view.face), cargo: [u]
+      x: u.x, y: u.y, facing: faceAngle(view.face), cargo: [u], skin: u.skin
     });
     if (R.propsFor(tp).length) R.applyPropulsion(t, R.defaultDrive(tp));
     return t;
@@ -111,6 +111,11 @@
     var riding = R.canRide(p) && view.ride === 'mounted';
     if (riding) { R.applyRiders(u, true); if (view.models != null) u.models = Math.min(view.models, u.size); }
     if (R.canMount(p, riding)) u.mount = view.mount || 'none';
+    // a rebel unit in the prawns' look (rules.js SKINS): its figures by their own names, its hulls on legs
+    if ((p.faction || 'pmc') === 'rebel' && view.skin === 'prawn') {
+      u.skin = 'prawn'; u.art = R.skinArt(u, 'prawn');
+      u.cargo.forEach(function (c) { if (c.faction === 'rebel') c.skin = 'prawn'; });
+    }
     /* A machine shows wear as Damage — half its Structure gone is enough to set
        it smoking — and a squad shows it as Suppression. Destroyed is drawn by
        drawDestroyed rather than by any number here. */
@@ -878,6 +883,7 @@
       picker = root.PMCAtlas.mount({
         main: el('vlist'), scroller: el('vside').querySelector('.vlistscroll'), search: el('vsearch'),
         faction: pickerFaction, colour: view.colour.A, prefix: 'vp-',
+        skin: function () { return view.skin === 'prawn' ? 'prawn' : null; },
         fit: { inf: 120, other: 112 },     // the list's own tile sizes; the desktop's three-to-a-row tiles come smaller
         nameOnly: true                     // the search box looks for a unit by its name
       });
@@ -954,6 +960,11 @@
       '</div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
+    // a rebel force can take the field as the prawns: the same unit, drawn as the aliens
+    if ((p.faction || 'pmc') === 'rebel') {
+      h += '<div class="vgrp"><label>Look</label><div class="vseg">' +
+        segL('skin', [['human', 'Humans'], ['prawn', 'Prawns']], view.skin || 'human') + '</div></div>';
+    }
     // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
     if (R.canRide(p)) {
       h += '<div class="vgrp"><label>Riders</label><div class="vseg">' +
@@ -1221,6 +1232,7 @@
       if (s) {
         if (s.getAttribute('data-set') === 'status') { setStatus(s.getAttribute('data-val')); return; }
         view[s.getAttribute('data-set')] = s.getAttribute('data-val');
+        if (s.getAttribute('data-set') === 'skin' && picker && picker.redraw) picker.redraw();
         drawControls(); frame(); return;
       }
       var d = e.target.closest('[data-do]');

@@ -173,6 +173,8 @@
     // no optional propulsion ('none'): the hull is drawn on the running gear it usually goes to war on
     function driveOf(u) {
       var d = u && u.prop;
+      // the prawns go to war in walkers, whatever their hulls would otherwise run on
+      if (u && u.skin === 'prawn' && u.cls === 'vehicle') return 'walker';
       if ((!d || d === 'none') && u && u.cls === 'vehicle' && window.PMC && window.PMC.lookDrive) d = window.PMC.lookDrive(u);
       return DRIVE[d] ? d : (u && u.cls === 'vehicle' ? 'wheeled' : null);
     }
@@ -478,7 +480,8 @@
       /* A tank or carrier hull on wheels sits down on them like an 8x8 does,
          rather than riding high on monster-truck tyres. */
       if (spec.style && drive === 'wheeled' && !/^(pickup|truck|car|guntruck)$/.test(spec.style.body)) ride = 9;
-      if (spec.style && drive === 'walker' && u.transport) ride = 16;
+      var prawn = u.skin === 'prawn';
+      if (spec.style && drive === 'walker' && u.transport && !prawn) ride = 16;
       // a flier that is shot down is a wreck on the ground, not one hanging in the air
       var downed = opts.status === 'wrecked' || u.alive === false;
       var lift = (opts.lift || 0) + (spec.fly && !downed ? ELEV * spec.fly : 0) - (opts.hop || 0);
@@ -488,6 +491,9 @@
 
       var hull = pal.mid, lit = pal.light, dark = pal.dark, trim = pal.helm;
       // a rebel hull's company colour is laid on bright, like their armbands
+      /* The prawns' walkers are black, their plates picked out in white; the
+         army's colour is in their lights (iso-mechs.js). */
+      if (prawn && !dead) { hull = '#25282e'; lit = '#4c525b'; dark = '#111216'; trim = '#d8d4ca'; }
       if (dead) { hull = '#3a352d'; lit = '#4a443a'; dark = '#241f19'; trim = '#2e2822'; }
       var STEEL = dead ? '#23201b' : '#232830', STEEL_LIT = dead ? '#3a352d' : '#454d58';
       var GLASS = dead ? '#1a1712' : '#1b2732', GLINT = dead ? '#2e2822' : '#7f9cb0';
@@ -509,7 +515,7 @@
       /* ---- shadow, and the mast a flier hangs from ---- */
       /* A mech stands on two feet: it casts the shadow of its feet, which
          drawMech lays down itself, not the slab of the hull it stands in for. */
-      var onLegs = drive === 'walker' && !(u.transport && spec.style);
+      var onLegs = drive === 'walker' && (prawn || !(u.transport && spec.style));
       if (!onLegs) {
         var shCol = spec.fly ? 'rgba(12,10,8,.34)' : 'rgba(14,11,8,.42)';
         /* What a flier throws on the ground is its own outline, not the box of a
@@ -545,7 +551,7 @@
       if (spec.heli) { drawRotorcraft(); return { lift: lift, hgt: spec.hgt + 26 }; }
       /* A transport on legs is a walking tank, not a mech: its own hull, ramp
          and turret carried on four legs (six on the heavies), riding high. */
-      var walkingTank = drive === 'walker' && !!u.transport && !!spec.style;
+      var walkingTank = drive === 'walker' && !!u.transport && !!spec.style && !prawn;
       if (walkingTank) {
         drawGlow();
         walkLegs('far');
@@ -639,7 +645,7 @@
       var REBELP = false;
       var CAMO = null;                 // a PMC hull's blotches, in the hull's own frame
       function styleInit() {
-        REBELP = u.faction === 'rebel' && !dead;
+        REBELP = u.faction === 'rebel' && !dead && u.skin !== 'prawn';
         CAMO = camoFor();
         PATCH_FACE = !!(spec.craft || spec.heli);
         PATCH_GREY = tone('#8a8f96', '#62676e', '#3a3e44', '#747980'); PATCH_GREY.tex = 'steel';
@@ -1191,7 +1197,9 @@
           TT: TT, aerial: aerial, barrel: barrel, box: box, cos: cos, crossOn: crossOn, dead: dead,
           drawDamage: drawDamage, droneLamp: droneLamp, f: f, frameAt: frameAt, g: g, ground: ground,
           hexPanel: hexPanel, launcher: launcher, lift: lift, line: line, opts: opts, rectPts: rectPts,
-          sEllipse: sEllipse, shape: shape, sin: sin, slabF: slabF, spec: spec, u: u, vents: vents
+          sEllipse: sEllipse, shape: shape, sin: sin, slabF: slabF, spec: spec, u: u, vents: vents,
+          // a prawn walker's lights and bands are the army's colour
+          pal: pal, TA: u.skin !== 'prawn' ? null : dead ? TT : tone(pal.light, pal.mid, pal.dark, mixc(pal.mid, pal.light, 0.5))
         }));
       }
       function mechHeights() { return (KIT_MECHS || kitMechs()).mechHeights(); }
@@ -1222,7 +1230,7 @@
       }
       // where the dome goes, as a point on the hull (for sorting it among the parts)
       function droneSpot() {
-        var body = spec.style && spec.style.body, legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+        var body = spec.style && spec.style.body, legs = driveOf(u) === 'walker' && (u.skin === 'prawn' || !(u.transport && spec.style));
         if (body === 'pickup') return along(spec.len * (driveOf(u) !== 'wheeled' ? 0.35 : 0.05), -spec.wid * 0.22);
         if (body === 'guntruck') {
           var c = spec.style.flatCab ? 0.24 : spec.style.heavy ? 0.28 : 0.3;
@@ -1237,7 +1245,7 @@
       // `only`: 'dome' or 'aerial', when a styled hull sorts the two among its parts
       function droneKit(only) {
         var y5 = spec.heli ? lift + spec.hgt : top + (spec.deck ? spec.dHgt : 0);
-        var legs = driveOf(u) === 'walker' && !(u.transport && spec.style);
+        var legs = driveOf(u) === 'walker' && (u.skin === 'prawn' || !(u.transport && spec.style));
         if (legs) return;                                      // a walker carries its own, on its shoulders
         var body = spec.style && spec.style.body;
         /* The dome: on a hull's roof off to one side, clear of a turret; on a

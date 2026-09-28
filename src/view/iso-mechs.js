@@ -15,6 +15,10 @@
           frameAt = M.frameAt, g = M.g, ground = M.ground, hexPanel = M.hexPanel, launcher = M.launcher,
           lift = M.lift, line = M.line, opts = M.opts, rectPts = M.rectPts, sEllipse = M.sEllipse,
           shape = M.shape, sin = M.sin, slabF = M.slabF, spec = M.spec, u = M.u, vents = M.vents;
+      /* The prawns' walkers (u.skin 'prawn'): black, plated in white, their
+         cockpits, lights and forearm bands in the army's colour, and a pair of
+         feelers raked back off the head like the aliens who drive them. */
+      var PRAWN = u.skin === 'prawn', TA = M.TA || M.TT, PAL = M.pal;
       /* ================= bipedal walkers ================= */
       /* A walker is not a tank on legs: it is an upright machine that stands on two
          of them, with the crew in a cockpit head and the guns on its shoulders. */
@@ -203,11 +207,12 @@
         var byNear = function (p, q) { return nearOf(p) - nearOf(q); };
         armsBack.sort(byNear); armsFront.sort(byNear);
 
+        var PW = PRAWN ? { hunch: tL * 0.5 } : null;       // how far a prawn walker's body leans out over its hips
         armsBack.forEach(drawArm);
-        drawLeg(legs2[0]);
-        drawLeg(legs2[1]);
+        (PRAWN ? prawnLeg : drawLeg)(legs2[0]);
+        (PRAWN ? prawnLeg : drawLeg)(legs2[1]);
         if (KITM.shoulder === 'tanks' && fwd > 0) backTanks();   // behind the chest
-        drawTorso();
+        if (PRAWN) prawnTorso(); else drawTorso();
         armsFront.forEach(drawArm);
         drawTop();
         drawDamage();
@@ -215,6 +220,13 @@
         // a sensor light or a hot muzzle: a small orange dot, out when dead
         function glow(p, r) {
           if (dead || !p || typeof p[0] !== 'number') return;
+          if (PRAWN) {
+            sEllipse(p[0], p[1], r * 2.2, r * 1.9, PAL.light);
+            sEllipse(p[0], p[1], r * 2.2, r * 1.9, 'rgba(255,255,255,.12)');
+            sEllipse(p[0], p[1], r, r * 0.85, PAL.light);
+            sEllipse(p[0] - r * 0.2, p[1] - r * 0.2, r * 0.45, r * 0.4, '#fff4d8');
+            return;
+          }
           sEllipse(p[0], p[1], r * 2, r * 1.7, 'rgba(255,138,42,.28)');
           sEllipse(p[0], p[1], r, r * 0.85, '#ff8a2a');
           sEllipse(p[0] - r * 0.2, p[1] - r * 0.2, r * 0.45, r * 0.4, '#ffd68a');
@@ -228,7 +240,10 @@
           var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
           var gl;
           if (dead) gl = GLASS;
-          else {
+          else if (PRAWN) {                              // lit from inside, in the army's colour
+            gl = g.createLinearGradient(0, y0, 0, y1 + 0.01);
+            gl.addColorStop(0, '#fff2d2'); gl.addColorStop(0.3, PAL.light); gl.addColorStop(0.75, PAL.mid); gl.addColorStop(1, PAL.dark);
+          } else {
             gl = g.createLinearGradient(0, y0, 0, y1 + 0.01);
             gl.addColorStop(0, '#c8f2ff'); gl.addColorStop(0.35, '#5cc0ec'); gl.addColorStop(0.75, '#1f6ea8'); gl.addColorStop(1, '#0f3456');
           }
@@ -240,6 +255,7 @@
           if (!p || typeof p[0] !== 'number') return;
           sEllipse(p[0], p[1], r * 1.25, r * 1.1, '#0b0e12');
           if (dead) { sEllipse(p[0], p[1], r, r * 0.85, GLASS); return; }
+          if (PRAWN) { glow(p, r); return; }
           sEllipse(p[0], p[1], r * 2, r * 1.7, 'rgba(92,192,236,.22)');
           sEllipse(p[0], p[1], r, r * 0.85, '#2b86c4');
           sEllipse(p[0] + r * 0.1, p[1] + r * 0.15, r * 0.6, r * 0.5, '#1a5a8c');
@@ -326,6 +342,103 @@
           if (front) { var kj = J(kneeT, kneeY); sEllipse(kj[0], kj[1], sw * K * 0.8, sw * K * 0.6, STEEL); }
           thigh();
           if (front) knee();
+        }
+
+        /* ---- the prawns' exosuit ----
+           Not a box on stilts but a hunched alien biped: legs that bend back
+           at a hock over long clawed feet, a segmented belly under a carapace
+           that leans forward over it, and a low cockpit head thrust out in
+           front, faced with a cluster of small eyes over two mandible plates.
+           The arms and their guns are the walker's own (drawArm). */
+        function jointAt(p, r) {
+          sEllipse(p[0], p[1], r * 1.15, r * 0.95, TB.dark);
+          sEllipse(p[0] - r * 0.2, p[1] - r * 0.25, r * 0.55, r * 0.45, TB.lit);
+        }
+        function strut(p0, p1, w, T) {
+          line(p0, p1, w + 1.2, '#08090b');
+          line(p0, p1, w, T.dark);
+          line([p0[0] - w * 0.18, p0[1] - w * 0.2], [p1[0] - w * 0.18, p1[1] - w * 0.2], Math.max(0.8, w * 0.45), T.mid);
+          line([p0[0] - w * 0.3, p0[1] - w * 0.32], [p1[0] - w * 0.3, p1[1] - w * 0.32], Math.max(0.5, w * 0.15), T.lit);
+        }
+        function prawnLeg(L) {
+          var s = L.s * legSpread, fo = L.fore, LF = frameAt(0, 0, f), len = MS.len;
+          var hipT = fo * len * 0.04, kneeT = hipT + len * 0.2 + fo * len * 0.03;
+          var hockT = hipT - len * 0.08 + fo * len * 0.06, footT = hockT + len * 0.03;
+          var zKnee = lift + Math.round(hm.legH * 0.52), zHock = lift + Math.round(hm.legH * 0.22);
+          var w = Math.max(3, (heavy ? 9 : light ? 4.6 : 7) * sf);
+          function J(t, z, b) { return S3(LF(t, b == null ? s : b), z); }
+          var H = J(hipT, hipY - 2), Kn = J(kneeT, zKnee), Hk = J(hockT, zHock), Ft = J(footT, lift + Math.round(2 * sf));
+          // the long foot: three clawed toes splayed forward, and a spur behind
+          var fl = len * (heavy ? 0.16 : 0.14), fw = MS.wid * (heavy ? 0.09 : 0.07);
+          [-1, 0, 1].forEach(function (k) {
+            var t0 = footT, t1 = footT + fl * (k ? 0.85 : 1), b1 = s + k * fw;
+            strut(J(t0, lift + Math.round(2 * sf)), J(t1, lift, b1), Math.max(1.4, w * 0.36), TS);
+            line(J(t1, lift, b1), J(t1 + fl * 0.18, lift - 1, b1), Math.max(0.9, w * 0.2), TB.lit);
+          });
+          strut(J(footT, lift + Math.round(2 * sf)), J(footT - fl * 0.45, lift), Math.max(1.2, w * 0.3), TS);
+          // the shin, raked back from the knee to the hock, and the hock down to the foot
+          strut(Hk, Ft, w * 0.6, TS);
+          strut(Kn, Hk, w * 0.8, TB);
+          jointAt(Hk, w * 0.45);
+          // the thigh, forward and down to the knee, armoured
+          strut(H, Kn, w, TB);
+          // a knee cap, plated in white
+          jointAt(Kn, w * 0.62);
+          sEllipse(Kn[0] + w * 0.15, Kn[1] - w * 0.25, w * 0.5, w * 0.34, TT.mid);
+          sEllipse(Kn[0], Kn[1] - w * 0.36, w * 0.3, w * 0.18, TT.lit);
+        }
+        function prawnTorso() {
+          var hu = PW.hunch, H = shoulder - waistY;
+          shape(TF, oct(-tL * 0.45, tL * 0.45, -tW * 0.42, tW * 0.42, 0.3), hipY - 4, Math.round(6 * sf), TS);
+          // the belly: three ribbed segments, each a little wider and further forward
+          var segs = 3, zb = waistY, hb = Math.round(H * 0.42);
+          for (var i = 0; i < segs; i++) {
+            var k0 = i / segs, k1 = (i + 1) / segs;
+            var ring = function (k) { var sh = hu * 0.45 * k, wa = 0.5 + 0.4 * k, wb = 0.46 + 0.4 * k;
+              return oct(-tL * wa + sh, tL * wa + sh, -tW * wb, tW * wb, 0.35); };
+            shape(TF, ring(k0 * 0.92), zb + Math.round(hb * k0), Math.round(hb / segs) + 1, TB, null, ring(k1));
+          }
+          var zc = zb + hb, hc = shoulder - zc;
+          // the carapace: a dome leaning out over the belly, a hump behind it
+          var R1 = oct(-tL * 1.0 + hu * 0.45, tL * 0.9 + hu * 0.45, -tW, tW, 0.32);
+          var R2 = oct(-tL * 0.55 + hu, tL * 0.5 + hu, -tW * 0.62, tW * 0.62, 0.35);
+          var hump = function () {
+            shape(TF, oct(-tL * 1.2, -tL * 0.1, -tW * 0.7, tW * 0.7, 0.35), zc + Math.round(hc * 0.1), Math.round(hc * 0.8), TB, null,
+              oct(-tL * 0.95, -tL * 0.25, -tW * 0.42, tW * 0.42, 0.35));
+            // a white stripe down the spine
+            slabF(TF, -tL * 0.95, -tL * 0.25, -tW * 0.08, tW * 0.08, zc + Math.round(hc * 0.9) - 1, Math.round(2 * sf), TT);
+          };
+          if (fwd > 0) hump();
+          // a band of the army's colour round the carapace's rim, where it meets the belly
+          shape(TF, oct(-tL * 1.02 + hu * 0.45, tL * 0.92 + hu * 0.45, -tW * 1.03, tW * 1.03, 0.32), zc - Math.round(2 * sf), Math.round(3 * sf), TA);
+          shape(TF, R1, zc, hc, TB, null, R2);
+          if (fwd <= 0) hump();
+          // the head: a low wedge thrust out from the top of the chest, its face raked back
+          var head = function () {
+            var hz = zc + Math.round(hc * 0.28), hh = Math.round(hc * 0.52);
+            var a0 = tL * 0.35 + hu, a1 = tL * 1.35 + hu, b = tW * 0.44;
+            var lo = oct(a0, a1, -b, b, 0.3), hi = oct(a0, a1 - tL * 0.42, -b * 0.7, b * 0.7, 0.3);
+            // the mandibles: two plates hung under the front of the head
+            var jaw = function () {
+              [-1, 1].sort(byNear).forEach(function (sd) {
+                shape(TF, rectPts(a1 - tL * 0.4, a1 - tL * 0.02, sd * b * 0.12, sd * b * 0.62), hz - Math.round(6 * sf), Math.round(6 * sf), TS, null,
+                  rectPts(a1 - tL * 0.35, a1 - tL * 0.16, sd * b * 0.2, sd * b * 0.55));
+              });
+            };
+            if (fwd > 0) jaw();
+            shape(TF, lo, hz, hh, TB, null, hi);
+            if (fwd <= 0) jaw();
+            if (fwd > -0.15) {
+              // the face: a white brow plate and a cluster of small eyes under it
+              var fp = function (k, v) { return S3(TF(a1 - tL * 0.42 * k + 0.01, v * b * (1 - 0.3 * k)), hz + hh * k); };
+              poly(g, [fp(0.68, -0.8), fp(0.68, 0.8), fp(0.95, 0.55), fp(0.95, -0.55)], TT.mid);
+              edge(g, fp(0.95, -0.55), fp(0.95, 0.55), TT.lit, 0.8);
+              [[0.42, -0.5, 1], [0.42, 0.5, 1], [0.3, -0.2, 0.8], [0.3, 0.2, 0.8], [0.52, -0.15, 0.6], [0.52, 0.15, 0.6]].forEach(function (e) {
+                glow(fp(e[0], e[1]), e[2] * Math.max(0.8, sf * 0.9));
+              });
+            }
+          };
+          head();
         }
 
         /* ---- the body ---- */
@@ -523,7 +636,7 @@
             // accent bands round the forearm
             var bands = heavy ? [[0.78, 0.94]] : light ? [] : [[0.42, 0.56], [0.82, 0.96]];
             bands.forEach(function (bd) {
-              slabF(TF, fa0 + (fa1 - fa0) * bd[0], fa0 + (fa1 - fa0) * bd[1], off - fwid * 1.08, off + fwid * 1.08, fz - 0.5, fh + 1, TT);
+              slabF(TF, fa0 + (fa1 - fa0) * bd[0], fa0 + (fa1 - fa0) * bd[1], off - fwid * 1.08, off + fwid * 1.08, fz - 0.5, fh + 1, TA);
             });
           }
           function weapon() {
@@ -562,6 +675,20 @@
             line(t1, t2, 8, '#3a3f38'); line([t1[0] - 2, t1[1]], [t2[0] - 2, t2[1]], 1.8, '#6a7064');
           });
         }
+        // the feelers: two long whips from the head, raked up and back, their tips lit
+        function feelers() {
+          if (!PRAWN) return;
+          var hz = shoulder + Math.round((heavy ? 2 : light ? 8 : 4) * sf), ha = heavy ? tL * 0.3 : light ? tL * 0.35 : tL * 0.4;
+          [-1, 1].sort(byNear).forEach(function (s) {
+            var b = s * tW * (heavy ? 0.22 : 0.16);
+            var p0 = S3(TF(ha, b), hz), c = S3(TF(ha + tL * 0.2, b * 1.6), hz + Math.round(13 * sf)), p1 = S3(TF(-tL * 2, b * 2.6), hz + Math.round(15 * sf));
+            g.strokeStyle = '#0c0d10'; g.lineWidth = Math.max(1.4, 1.6 * sf); g.lineCap = 'round';
+            g.beginPath(); g.moveTo(p0[0], p0[1]); g.quadraticCurveTo(c[0], c[1], p1[0], p1[1]); g.stroke();
+            g.strokeStyle = '#4c525b'; g.lineWidth = Math.max(0.7, 0.6 * sf);
+            g.beginPath(); g.moveTo(p0[0] - 0.4, p0[1] - 0.4); g.quadraticCurveTo(c[0] - 0.4, c[1] - 0.4, p1[0], p1[1]); g.stroke();
+            glow(p1, 0.55);
+          });
+        }
         function drawTop() {
           extras();
           // the dish on its back: behind the head facing us, over it facing away
@@ -588,7 +715,15 @@
             // the far one first, so the near one is drawn over it
             if (nearOf(1) > 0) { mast(); kit(); } else { kit(); mast(); }
           }
-          if (heavy) {
+          if (PRAWN) {
+            // the missile boxes stay on a heavy one's shoulders; the head is its own (prawnTorso)
+            if (heavy && (KITM.shoulder === 'missile' || KITM.shoulder === 'rocket')) {
+              [-1, 1].sort(byNear).forEach(function (s) {
+                var b0 = s * tW * 0.5, b1 = s * tW * 1.05;
+                launcher(TF, -tL * 0.5, tL * 0.35, Math.min(b0, b1), Math.max(b0, b1), shoulder - 1, Math.round(8 * sf), 2, 3, KITM.shoulder, { tone: TB, warheads: RED });
+              });
+            }
+          } else if (heavy) {
             // a low cowl where the head is sunk into the chest
             slabF(TF, -tL * 0.1, tL * 0.46, -tW * 0.3, tW * 0.3, shoulder - 1, Math.round(3 * sf), TB, tL * 0.2, tL * 0.05, tW * 0.06);
             // a squat box on each front shoulder corner, its tubes facing forward
@@ -632,6 +767,7 @@
             glow(S3(TF(tL * 0.44, 0), shoulder + Math.round(2 * sf)), 1);
           }
           if (fwd < 0) dishOn();
+          feelers();
         }
         // the dish on the walker's back, on a short mast
         function dishOn() {

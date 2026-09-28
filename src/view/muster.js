@@ -38,6 +38,12 @@
     function musterTier() { return parseInt(el('sel-tier').value, 10) || 3; }
     function musterPL() { return parseInt(el('sel-pl').value, 10) || 1; }
     function musterFaction() { return el('sel-faction') ? el('sel-faction').value : 'pmc'; }
+    /* A rebel force's look (R.SKINS): its own people, or the prawns. Nothing
+       about the rules changes, only how the units are drawn. */
+    function musterSkin() {
+      if (musterFaction() !== 'rebel') return null;
+      return (el('sel-skin') && el('sel-skin').value) || null;
+    }
     function musterTactic() {
       // "Rebel forces cannot use tactics" in a solitaire or cooperative game (p. 145)
       if (musterFaction() !== 'rebel' || muster.solo) return null;
@@ -99,6 +105,7 @@
       var tf = el('tactic-field');
       // Rebels cannot use Tactics in a solitaire game; they get the extra points instead (p. 145)
       if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
+      if (el('skin-field')) el('skin-field').hidden = faction !== 'rebel';
       var mh = document.querySelector('.muster-head b');
       if (mh) mh.textContent = muster.hot && muster.hot.step < 3
         ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' || muster.hot.kind === 'net' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
@@ -271,6 +278,7 @@
         tier: musterTier(),
         pl: musterPL(),
         tactic: musterTactic(),
+        skin: musterSkin(),
         colour: muster.colour || 'ochre',
         keys: muster.keys.slice(),
         saved: new Date().toISOString().slice(0, 10)
@@ -296,6 +304,7 @@
       if (el('sel-tier') && f.tier && !demo) el('sel-tier').value = String(f.tier);
       if (el('sel-pl') && f.pl && !demo) el('sel-pl').value = String(f.pl);
       if (el('sel-tactic')) el('sel-tactic').value = f.tactic || '';
+      if (el('sel-skin')) el('sel-skin').value = f.skin || '';
       if (f.colour && ISO.COLOURS[f.colour] && !demo) {
         muster.colour = f.colour;
         try { localStorage.setItem('pmc-colour', f.colour); } catch (e) { }
@@ -461,6 +470,15 @@
         });
       });
       if (el('sel-tactic')) el('sel-tactic').addEventListener('change', drawMuster);
+      /* The prawns come in rust orange unless a colour has been chosen: a look
+         changed from an untouched default swaps the default over. */
+      if (el('sel-skin')) el('sel-skin').addEventListener('change', function () {
+        if (!muster.colourChosen && (muster.colour === 'ochre' || muster.colour === 'rust')) {
+          muster.colour = musterSkin() === 'prawn' ? 'rust' : 'ochre';
+          if (typeof drawColourPick === 'function') drawColourPick();
+        }
+        drawMuster();
+      });
       el('chosen').addEventListener('click', function (e) {
         var dr = e.target.closest('[data-drone]');
         if (dr) {
@@ -610,9 +628,10 @@
       if (el('btn-army-done')) el('btn-army-done').addEventListener('click', function () { armyModal(false); });
       if (el('army-modal')) el('army-modal').addEventListener('click', function (ev) {
         if (ev.target === el('army-modal')) { armyModal(false); return; }
-        var a = ev.target.closest('[data-army-pick]'), t = ev.target.closest('[data-tactic-pick]');
+        var a = ev.target.closest('[data-army-pick]'), t = ev.target.closest('[data-tactic-pick]'), sk = ev.target.closest('[data-skin-pick]');
         if (a) pickInto('sel-faction', a.getAttribute('data-army-pick'));
         else if (t) pickInto('sel-tactic', t.getAttribute('data-tactic-pick'));
+        else if (sk) pickInto('sel-skin', sk.getAttribute('data-skin-pick'));
         else return;
         if (SFX) SFX.click();
         drawArmyModal();
@@ -774,7 +793,7 @@
     function hotSaveSide() {
       var i = muster.hot.step - 1;
       muster.hot.sides[i] = {
-        keys: muster.keys.slice(), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(),
+        keys: muster.keys.slice(), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(), skin: musterSkin(),
         name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
         colour: muster.colour || 'ochre', noun: muster.demoNoun || null
       };
@@ -785,6 +804,7 @@
         muster.keys = sd.keys.slice(); muster.name = sd.name; muster.colour = sd.colour; muster.demoNoun = sd.noun || null;
         el('sel-faction').value = sd.faction;
         if (el('sel-tactic')) el('sel-tactic').value = sd.tactic || '';
+        if (el('sel-skin')) el('sel-skin').value = sd.skin || '';
         if (el('hot-name')) el('hot-name').value = sd.name;
       } else if (hotRolled(i + 1)) {
         if (el('hot-name')) el('hot-name').value = '';   // a fresh force: the other one's name is not its own
@@ -827,7 +847,7 @@
       var tx = el('army-line-text');
       if (!tx) return;
       var f = musterFaction(), a = armyText(f), td = f === 'rebel' && musterTactic() ? R.tacticById(musterTactic()) : null;
-      tx.textContent = a.name + ' \u2014 ' + (td ? td.name : a.what);
+      tx.textContent = a.name + (musterSkin() === 'prawn' ? ' (prawns)' : '') + ' \u2014 ' + (td ? td.name : a.what);
     }
     function armyModal(on) {
       var m = el('army-modal');
@@ -842,13 +862,20 @@
         return '<button type="button" class="doc' + (v === f ? ' on' : '') + '" data-army-pick="' + v + '"><b>' + escHtml(a.name) + '</b>' +
           '<span>' + escHtml(a.what) + '</span></button>';
       }).join('');
-      el('army-tactics').innerHTML = f !== 'rebel' ? '' : muster.solo
+      var skin = musterSkin() || '';
+      var looks = f !== 'rebel' ? '' : '<h4>Look</h4><div class="docpick">' +
+        Array.prototype.map.call(el('sel-skin').options, function (o) {
+          var cut = o.textContent.indexOf(' \u2014 ');
+          return '<button type="button" class="doc' + (o.value === skin ? ' on' : '') + '" data-skin-pick="' + o.value + '"><b>' +
+            escHtml(o.textContent.slice(0, cut)) + '</b><span>' + escHtml(o.textContent.slice(cut + 3)) + '</span></button>';
+        }).join('') + '</div>';
+      el('army-tactics').innerHTML = looks + (f !== 'rebel' ? '' : muster.solo
         ? '<p class="docnote">Rebel forces cannot use tactics in a solitaire or cooperative game: they get more composition points instead.</p>' :
         '<h4>Rebel tactic \u2014 chosen before the terrain goes down</h4><div class="docpick">' +
         [{ id: '', name: 'No tactic', text: 'A rebel force may take one tactic, or none.' }].concat(R.TACTICS).map(function (t) {
           return '<button type="button" class="doc' + (t.id === tac ? ' on' : '') + '" data-tactic-pick="' + t.id + '"><b>' + escHtml(t.name) + '</b>' +
             (t.short ? '<i>' + escHtml(t.short) + '</i>' : '') + '<span>' + escHtml(t.text) + '</span></button>';
-        }).join('') + '</div>';
+        }).join('') + '</div>');
     }
     function pickInto(id, v) {
       var sel = el(id);
@@ -1013,6 +1040,7 @@
           // each commando in its own colour; the OpFor in one neither is wearing
           colourA: a.colour, colourC: coop ? b.colour : null, colourB: foeColour(coop ? [a.colour, b.colour] : [a.colour]),
           tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup,
+          skinA: a.faction === 'rebel' ? a.skin || null : null,
           solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name] }
         });
         return;
@@ -1028,6 +1056,7 @@
         armyA: a.keys, armyB: b.keys, nameA: a.name, nameB: b.name,
         colourA: a.colour, colourB: b.colour,
         tactics: { A: a.tactic, B: b.tactic },
+        skinA: a.faction === 'rebel' ? a.skin || null : null, skinB: b.faction === 'rebel' ? b.skin || null : null,
         mode: mode, planet: planet, terrainSetup: terrainSetup,
         secretSwaps: mode === 'hotseat'           // two players at one screen swap in turn, unseen
       });

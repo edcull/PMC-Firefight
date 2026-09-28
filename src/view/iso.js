@@ -1034,10 +1034,11 @@
     },
     bakeGround: bakeGround, bakeGroundSliced: bakeGroundSliced, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec,
-    hasPiece: function (art) { return art === 'rebelgun' || !!PIECE3D[art]; },   // a piece left knocked out when its crew is gone
+    hasPiece: function (art) { return !!FIELD_GUN[art] || !!PIECE3D[art]; },   // a piece left knocked out when its crew is gone
     turnsLikeMachine: function (art) { return !!(PIECE3D[art] || FIELD_GUN[art]); },
     startTurn: startTurn,                     // a crew-served piece's swing onto its target, in ms
-    turning: function (u) { return !!(u && u._turn && Date.now() - u._turn.t0 < u._turn.d1 + u._turn.d2); },   // a crew-served piece drawn in 3D, with a facing   // a piece with a knocked-out drawing of its own figureHeight: figureHeight, ROLES: ROLES,
+    turning: function (u) { return !!(u && u._turn && Date.now() - u._turn.t0 < u._turn.d1 + u._turn.d2); },   // a crew-served piece drawn in 3D, with a facing
+    figureHeight: figureHeight, ROLES: ROLES,
     // a baked figure, for inspecting the art: the canvas and its resolution
     figure: function (side, art, i, pose, step, mount) {
       return sprite(side || 'A', art, i || 0, pose || 'stand', step || 0, MODEL * fitScale(art, i || 0), 0, mount);

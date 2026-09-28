@@ -270,6 +270,13 @@
       marked: false, shotFrom: [], coordUsed: false, hackUsed: false, drone: false,
       supportUsed: false
     }, prop), drone), riders);
+    /* A rebel army can take the field as the prawns (cfg.skinA / skinB): the
+       same units and rules, painted as the aliens — its figures by their own
+       names, its hulls as walkers. Only the look changes. */
+    if (state && state.cfg && R.skinOf(state.cfg, side, u.faction) === 'prawn') {
+      u.skin = 'prawn';
+      u.art = R.skinArt(u, 'prawn');
+    }
     /* Guerillas (p. 95): every insurgent on foot knows the tunnels. Riders do not
        fit down them, so they are left out. */
     if (u.tactic === 'guerillas' && u.cls === 'infantry' && !R.has(u, 'Riders')) {
