@@ -83,6 +83,12 @@
       var W = C.words(co);
       // killed or wounded; an entry from before the roll was made is one of the dead
       function tag(kia, w) { w = w || W; return '<span class="dfate ' + (kia ? 'kia' : 'wia') + '">' + (kia ? w.kiaTag : w.wiaTag) + '</span>'; }
+      // the Tier an entry was lost at; one from before it was kept is read off the profile by name
+      function tierOf(m) {
+        if (m.tier) return m.tier;
+        var p = R.CATALOGUE.filter(function (q) { return q.name === m.type; })[0];
+        return p && p.tier;
+      }
       var WA = C.fateWords(co, 'eshaven');     // the unnamed are the Esh-Aven, or penal troopers: killed or wounded
       var SCx = root.PMCScen, battles = {}, order = [];
       list.forEach(function (m) {
@@ -100,7 +106,7 @@
           var key = m.type + '|' + (m.noun || '');
           var k = m.kia != null ? m.kia : m.count || 0, w = m.wounded || 0;
           if (seen[key]) { seen[key].count += m.count || 0; seen[key].kia += k; seen[key].wounded += w; seen[key].squads++; return; }
-          seen[key] = { anon: true, type: m.type, noun: m.noun, count: m.count || 0, kia: k, wounded: w, squads: 1, unit: m.unit };
+          seen[key] = { anon: true, type: m.type, noun: m.noun, count: m.count || 0, kia: k, wounded: w, squads: 1, unit: m.unit, tier: m.tier };
           out.push(seen[key]);
         });
         return out;
@@ -112,15 +118,17 @@
           (first.against ? ' · against ' + esc(first.against) : '') + (sc ? ' · ' + esc(sc.name) : '') +
           '<span class="mk">' + ms.reduce(function (k, m) { return k + (m.count || 1); }, 0) + '</span></div><ol class="dmem-list">' +
           ms.map(function (m) {
+            /* One line each: killed or wounded, rank, name, Tier and the unit.
+               The unnamed are a count of each fate for the kind of trooper. */
+            var tier = tierOf(m), dot = '<i class="dmem-dot"> \u00b7 </i>';
+            var tail = (tier ? dot + '<span class="dmem-tier">Tier ' + ROMAN[tier] + '</span>' : '') +
+              dot + '<span class="dmem-unit">' + (m.squads > 1 ? m.squads + ' squads' : esc(m.unit || m.type)) + '</span>';
             if (m.anon) {
-              return '<li><b>' + esc(m.type) + '</b> <span class="dmen-rank">\u00d7 ' + m.count + ' ' + esc(m.noun || 'Esh-Aven') + '</span>' +
-                (m.kia ? ' ' + tag(true, WA) + ' ' + m.kia : '') + (m.wounded ? ' ' + tag(false, WA) + ' ' + m.wounded : '') +
-                (m.squads > 1 ? '<span class="dmem-type">' + m.squads + ' squads</span>'
-                  : m.unit && m.unit !== m.type ? '<span class="dmem-type">' + esc(m.unit) + '</span>' : '') + '</li>';
+              return '<li>' + (m.kia ? tag(true, WA) + ' ' + m.kia : '') + (m.kia && m.wounded ? ' ' : '') +
+                (m.wounded ? tag(false, WA) + ' ' + m.wounded : '') + dot + '<b>' + esc(m.noun || 'Esh-Aven') + '</b>' + tail + '</li>';
             }
-            return '<li>' + tag(m.fate !== 'wounded') + ' <span class="dmen-rank">' + esc(m.rank) + '</span> <b>' + esc(m.name) + '</b>' +
-              '<span class="dmem-type">' + esc(m.type) + (m.unit && m.unit !== m.type ? ' \u00b7 ' + esc(m.unit) : '') +
-              ' \u00b7 turn ' + (m.turn || 1) + ' of the battle</span></li>';
+            return '<li>' + tag(m.fate !== 'wounded') + dot + '<span class="dmem-rank">' + esc(m.rank) + '</span>' + dot +
+              '<b>' + esc(m.name) + '</b>' + tail + '</li>';
           }).join('') + '</ol></div>';
       });
       return h;

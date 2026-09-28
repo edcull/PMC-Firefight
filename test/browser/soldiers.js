@@ -186,7 +186,12 @@ async function clickText(p, re) {
     const of = (n) => rows.find((r) => r.textContent.includes(n)).querySelector('.dfate').textContent;
     return of('Jae Novak') === 'WIA' && of('Ana Silva') === 'KIA' && of('Rhys Walsh') === 'KIA';
   }));
-  check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
+  check('...each on one line: fate, rank, name, Tier and unit', await p.evaluate(() => {
+    const li = [...document.querySelectorAll('#camp-body .dmem-list li')].find((r) => r.textContent.includes('Rhys Walsh'));
+    return !!li && /^KIA · Sergeant · Rhys Walsh · Tier [IVX]+ · Second Section$/.test(li.textContent) && li.getClientRects().length === 1 &&
+      li.getBoundingClientRect().height < 30;
+  }), await p.evaluate(() => [...document.querySelectorAll('#camp-body .dmem-list li')].map((r) => r.textContent).join(' | ')));
+  check('...with no turn of the battle', !/turn \d+ of the battle/.test(mem.text));
   await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
 
   // the swarm's memorial is biomass by kind of bug, not names

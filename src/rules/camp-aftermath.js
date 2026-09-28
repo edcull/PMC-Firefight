@@ -347,12 +347,14 @@
           if (c.anon) {
             var cp = R.CATALOGUE.filter(function (q) { return q.name === c.type; })[0];
             co.memorial.push({ anon: true, count: c.count, kia: c.kia, wounded: c.wounded, type: c.type, unit: c.unit, noun: POOL_NAMES[poolOf(cp)],
+              tier: cp && cp.tier,
               battle: out.turn, against: foe.name, scenario: report.scenario });
             return;
           }
           co.memorial.push({
             fate: c.kia ? 'kia' : 'wounded', roll: c.roll,
             name: c.name, rank: c.rank, type: c.type, unit: c.unit, turn: c.turn,
+            tier: (profile(keyOf[c.rid]) || {}).tier,
             battle: out.turn, against: foe.name, scenario: report.scenario
           });
         });
