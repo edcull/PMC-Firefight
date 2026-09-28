@@ -227,11 +227,11 @@ const cc = C.newCampaign({ mode: 'solo' });
 const hull = C.newEntry('lcv');
 cc.companies.A.roster = [hull];
 ok('a crewed vehicle counts its one crewman as having served', C.lossStats(cc.companies.A)[0].served === 1);
-C.aftermath(cc, {
+dice(1, () => C.aftermath(cc, {
   winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
   units: [{ rid: hull.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
   casualties: [{ side: 'A', rid: hull.rid, name: 'Ivo Crane', rank: 'Commander', turn: 3, type: 'Light combat vehicle' }]
-});
+}));
 const hc = C.lossStats(cc.companies.A)[0];
 ok('...and when the hull is lost, its crewman is the one loss', hc.lost === 1, hc.lost + ' of ' + hc.served);
 
@@ -320,7 +320,7 @@ console.log('killed or wounded');
   ok('the loss rate splits killed from wounded: 1 and 2 of 11', ks.lost === 1 && ks.wounded === 2 && ks.served === 11 &&
     Math.round(ks.wpct * 1000) === 182, JSON.stringify(ks));
 
-  // a vehicle's crewman is not rolled for: he went down with it
+  // a vehicle's crewman rolls as a soldier does
   const vc2 = C.newCampaign({ mode: 'solo' });
   const hv = C.newEntry('lcv');
   vc2.companies.A.roster = [hv];
@@ -329,7 +329,8 @@ console.log('killed or wounded');
     units: [{ rid: hv.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
     casualties: [{ side: 'A', rid: hv.rid, name: 'Ivo Crane', rank: 'Corporal', turn: 3, type: 'Light combat vehicle' }]
   }));
-  ok('a crewman lost with the hull is killed, not rolled for', C.lossStats(vc2.companies.A)[0].lost === 1 && vc2.companies.A.memorial.length === 1);
+  ok('a crewman lost with the hull rolls too: a 6 is wounded', C.lossStats(vc2.companies.A)[0].lost === 0 && C.lossStats(vc2.companies.A)[0].wounded === 1 &&
+    vc2.companies.A.memorial.length === 1 && vc2.companies.A.memorial[0].fate === 'wounded');
 
   // the Esh-Aven roll one by one, and only the dead are counted on the memorial
   const xk = C.newCampaign({ mode: 'solo', factionA: 'xeno' });

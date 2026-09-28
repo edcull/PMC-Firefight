@@ -77,16 +77,15 @@
           var e = byRid(co, c.rid);
           if (e && manned(e, co) === 0) noMen[c.rid] = 1;
         });
-        /* Killed or wounded: a D6 for every soldier an infantry unit lost, a 1
-           killed in action and 2-6 wounded. Either way they are out of the
-           campaign, replaced free like any casualty, and both go on the field
-           hospital's list. A machine's crew went down with it, and penal
-           troopers with their collars: those are all killed. Rolled once, and
-           kept on the report. */
+        /* Killed or wounded: a D6 for every soldier lost, a vehicle's crew
+           included, a 1 killed in action and 2-6 wounded. Either way they are
+           out of the campaign, replaced free like any casualty, and both go on
+           the field hospital's list. Penal troopers die by their collars:
+           those are all killed. Rolled once, and kept on the report. */
         casualties.forEach(function (c) {
           if (c.side !== side || noMen[c.rid] || c.swarm || c.kia != null) return;
           var p = profile(keyOf[c.rid]), n = c.count || 1;
-          if (!p || p.cls !== 'infantry' || poolOf(p) === 'penal') { c.kia = n; c.wounded = 0; return; }
+          if (!p || poolOf(p) === 'penal') { c.kia = n; c.wounded = 0; return; }
           c.rolls = [];
           for (var i = 0; i < n; i++) c.rolls.push(d6());
           c.kia = c.rolls.filter(function (r) { return r === 1; }).length;
