@@ -286,7 +286,8 @@
         return d.text || '';
       }
       var wide = ARMY_WIDE[f] || [];
-      var own = Object.keys(owners).filter(function (k) {
+      // the mercenaries are the standard: no rule of theirs is an army rule
+      var own = f === 'pmc' ? [] : Object.keys(owners).filter(function (k) {
         return owners[k][f] && Object.keys(owners[k]).length === 1 && NOT_ARMY.indexOf(k) < 0;
       }).sort();
       var h = '<div class="cmodal-scroll armyrules"><p class="dnote">A ' + esc(W.force) + ' of ' + esc(W.side) + '.</p><ul class="armycamp">' +
@@ -295,6 +296,7 @@
         (f === 'bugs' ? '<li>Its losses are <b>biomass</b>: a bug is lost or it is not, never wounded.</li>'
           : '<li>Its casualties go to the <b>' + esc(W.memorial) + '</b>: ' + esc(W.kiaLong.toLowerCase()) + ', or ' + esc(W.wiaLong.toLowerCase()) + '.</li>') +
         '</ul>';
+      if (f === 'pmc') h += '<p class="dnote">Mercenary companies have no army-specific special rules: their units follow the standard rules.</p>';
       if (wide.length) {
         h += '<h4>Army rules</h4><dl class="armyrl">' + wide.map(function (k) {
           return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';
