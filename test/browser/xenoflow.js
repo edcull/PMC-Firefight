@@ -239,8 +239,10 @@ async function pastFronts(p) {
   // the revolt is paid in IP; a mercenary company fighting elsewhere is still paid in kUC
   check('...and pays the tribe in Territorial Points', /\+\d+ TP/.test(txt),
     (txt.match(/\+\d+ (TP|IP|kUC)/) || [])[0]);
+  // the scenario of the tribe's own battle, from its card (the battles elsewhere name theirs too)
+  const ownScen = await p.evaluate(() => (document.querySelector('.front.own .cpstat') || {}).textContent || '');
   check('...recalculating territory when the scenario calls for it',
-    !/Invasion|Demolish|Hostile takeover/.test(txt) || /Territorial recalculation/.test(txt) || !/won|lost/i.test(txt),
+    !/Invasion|Demolish|Hostile takeover/.test(ownScen) || /Territorial recalculation/.test(txt) || !/won|lost/i.test(txt),
     (txt.split('\n').filter(l => /Territorial/.test(l))[0] || 'no line'));
   check('...and says where the other two forces were', /elsewhere on the world/i.test(txt),
     (txt.split('\n').filter(l => / beat | lost to | draw with /.test(l))[0] || 'no line'));

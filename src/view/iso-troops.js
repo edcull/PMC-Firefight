@@ -234,7 +234,7 @@
       /* the riders, a step up the list each: armed civilians on their own bikes,
          then the young bikers, then the turbaned riders, and the Legendary
          Hellriders in what the Hellriders wore, a rocket launcher among them */
-      rider: ['biker', 'biker2'],
+      // rider: the Militia's figures, mounted — built under KIT
       ridergang: ['civrider1', 'civrider2', 'civrider3', 'civrider4'],
       hellrider: ['rider', 'rider', 'riderblack', 'rider'],
       // the legendary hellriders are the mujahideen in the saddle, man for man
@@ -253,7 +253,7 @@
       partisansniper: ['partmarksman', 'partspotter'],
       miner: ['cutter', 'blaster'],
       hardsuit: ['hardsuit'],
-      deserter: ['deserter', 'desrifle'],
+      deserter: ['deserter', 'dessaw', 'desrifle'],
       // conscripts, still with the old wooden-furnitured rifles they were issued
       conscript: ['conscript', 'conscript2'],
       pow: ['pow', 'pow2'],
@@ -477,8 +477,6 @@
       riderblack: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#26262a', vest: '#4a3a2a', armband: 'force', tint: HOLY_C },
       // the gang: open-face biker helmets and black leathers
       // a rider gang: the acolytes' long tan shirts, a round cap or nothing on the head
-      biker: { helm: 'pakol', gun: 'smg', pack: 'none', mount: true, tunic: true, vest: HOLY_A.mid, armband: 'force', young: true, tint: HOLY_A },
-      biker2: { helm: 'bare', gun: 'carbine', pack: 'none', mount: true, tunic: true, vest: HOLY_C.mid, armband: 'force', young: true, tint: HOLY_C },
       // hellriders: spiked helmets, spiked shoulders, flames on the tank and a heavy gun
       // hellriders: the enlightened's tan and olive and green sash, turbans tan, the leader's white, one black
       hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
@@ -516,6 +514,7 @@
       // deserters, still in the uniform they walked out of
       deserter: { helm: 'std', gun: 'smg', armband: 'force', pack: 'none', mark: true, tint: REBEL_WORN, fitAs: 'desrifle' },   // the ex-sergeant, at the front right
       desrifle: { helm: 'std', gun: 'battlerifle', armband: 'force', pack: 'std', tint: REBEL_WORN },
+      dessaw: { helm: 'std', gun: 'saw', armband: 'force', pack: 'ammo', tint: REBEL_WORN, fitAs: 'desrifle' },   // the squad automatic weapon they walked out with
       conscript: { helm: 'std', gun: 'rifle', armband: 'force', pack: 'none', wood: true, tint: REBEL_WORN },
       conscript2: { helm: 'cap', gun: 'battlerifle', armband: 'force', pack: 'std', wood: true, tint: REBEL_WORN },
       // POWs broke out with what their guards carried
@@ -542,19 +541,38 @@
        in the dress of their own tier: each mounted figure is the unmounted
        one — its turban, wrap, vest, sash, flag and colours — put on a mount,
        its pack left behind, and sized as the other riders are. */
+    function mounted(r) {
+      var k = r + 'mtd';
+      if (!KIT[k]) {
+        var m = {};
+        for (var f in KIT[r]) m[f] = KIT[r][f];
+        m.mount = true; m.pack = 'none'; m.fitAs = 'rider';
+        delete m.kneel; delete m.prone;
+        KIT[k] = m;
+      }
+      return k;
+    }
     ['holy', 'holy1', 'holy2', 'holy3', 'holy4', 'leader', 'leadersmall', 'leadermid', 'leaderbig', 'leaderhuge'].forEach(function (art) {
-      ROLES[art + 'mounted'] = ROLES[art].map(function (r) {
-        var k = r + 'mtd';
-        if (!KIT[k]) {
-          var m = {};
-          for (var f in KIT[r]) m[f] = KIT[r][f];
-          m.mount = true; m.pack = 'none'; m.fitAs = 'rider';
-          delete m.kneel; delete m.prone;
-          KIT[k] = m;
-        }
-        return k;
-      });
+      ROLES[art + 'mounted'] = ROLES[art].map(mounted);
     });
+    /* The Militia (Tier II Freedom Warriors) are the insurgents' figures with
+       their sleeves rolled up short, and the rookie-rifle Deserters and the
+       conscript Deserters their own figures the same way; the Rider warriors (Tier II Mounted
+       Warriors) are the Militia on a mount. */
+    function rolled(r) {
+      var k = r + 'rs';
+      if (!KIT[k]) {
+        var m = {};
+        for (var f in KIT[r]) m[f] = KIT[r][f];
+        m.sleeves = 'rolled';
+        KIT[k] = m;
+      }
+      return k;
+    }
+    ROLES.militia = ROLES.rebel.map(rolled);
+    ROLES.deserterrk = ROLES.deserter.map(rolled);
+    ROLES.conscript = ROLES.conscript.map(rolled);
+    ROLES.rider = ROLES.militia.map(mounted);
 
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a

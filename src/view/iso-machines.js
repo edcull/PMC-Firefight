@@ -104,8 +104,8 @@
       apacherk: { len: 2.30, wid: 0.64, hgt: 14, fly: 2.2, craft: 'apacherk', gun: 1.0 },
       hindrk: { len: 2.50, wid: 0.74, hgt: 17, fly: 2.3, craft: 'hindrk', gun: 1.0 },
       // armed shuttles: the same airframes, with the pods left off
-      apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0 },
-      hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0 },
+      apachenp: { len: 2.20, wid: 0.62, hgt: 13, fly: 2.6, craft: 'apache', noPods: true, gun: 1.0, singleCab: true },
+      hindnp: { len: 2.40, wid: 0.72, hgt: 16, fly: 2.4, craft: 'hind', noPods: true, gun: 1.0, singleCab: true },
       jet: { len: 2.70, wid: 0.72, hgt: 9, fly: 3.2, craft: 'jet', gun: 1.0 },
       // the Light VTOL drone: a small flying disc with swept winglets and a scanner pod under its lip
       vtoldrone: { len: 1.1, wid: 1.1, hgt: 8, fly: 2.8, craft: 'disc', gun: 0.6 },
