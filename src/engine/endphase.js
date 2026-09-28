@@ -25,6 +25,8 @@
     function fleeBroken() {
       E.state.units.forEach(function (u) {
         if (!onTable(u) || R.status(u) !== 'broken' || R.isMachine(u)) return;
+        // the AI makes a Last Stand it still has rather than run (p. 88)
+        if (isAI(u.side) && E.standable(u)) { makeStand(u, 'rather than run'); return; }
         // what cannot move stays put: emplaced guns, platforms (p. 94)
         if (!u.move || R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile')) return;
         var allow = u.move + 2;
