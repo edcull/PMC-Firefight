@@ -44,6 +44,12 @@
     function paintPrawn(g, ox, oy, pal, kit, pose, step, s, dead, corpse) {
       var SK = dead ? DEAD : SHELLS[kit.shell || 0];
       var armoured = kit.prawn === 'armour';
+      /* How well kitted, from the squad's numbers (iso-troops.js prawnRole):
+         armour 0 the bare shell, 1 a harness, 2 a chest plate and pauldron,
+         3 full black plate, 4 heavy battle armour; arms 0-4, the weapon's
+         cells, then an underslung launcher, then a scope. */
+      var ARM = kit.armour != null ? kit.armour : armoured ? 3 : 0, ARMS = kit.arms != null ? kit.arms : 2;
+      var HARN = dead ? { md: '#3a3834', lt: '#4c4a44' } : { md: '#1d1f23', lt: '#454a52' };
       var AR = dead ? { lt: '#6a6862', md: '#4e4c47', dk: '#383632', sh: '#262522' } : PLATE;
       var WH = dead ? { lt: '#8c887c', md: '#77736a', dk: '#5a574f' } : WHITE;
       var GW = dead ? '#4c4a44' : glowOf(pal), GWL = dead ? '#5e5b54' : hexMix(GW, '#ffffff', 0.55);
@@ -186,6 +192,10 @@
         limb([hip, knee, hock, foot], 3.6, 1.5, T);
         L([foot, toe], 1.3, T.dk);                        // the long foot and its claw
         L([[foot[0] + 1, foot[1]], [toe[0] - 2, toe[1] - 1.2], toe], 0.6, T.sh || T.dk);
+        if (ARM === 2 && near) {                          // a black thigh plate
+          L([hip, [(hip[0] + knee[0] * 2) / 3, (hip[1] + knee[1] * 2) / 3]], 3.6, AR.md);
+          L([[hip[0] + 0.3, hip[1] - 0.4], [(hip[0] + knee[0] * 2) / 3 + 0.3, (hip[1] + knee[1] * 2) / 3 - 0.4]], 0.6, WH.lt);
+        }
         if (armoured) {                                   // a shin guard and a knee plate
           L([knee, [(knee[0] + hock[0]) / 2, (knee[1] + hock[1]) / 2]], 3.2, T.md);
           plate(knee[0], knee[1], 2.3, 2, 0, near ? AR : { lt: AR.md, md: AR.dk, dk: AR.sh, sh: AR.sh });
@@ -241,6 +251,23 @@
           glow(-7.5, by + 3.6, 0.7);
         } else glow(-5.6, by - 1.2, 0.8);
       }
+      if (ARM === 1) {
+        // a harness: straps over the shoulder and a belt, a pouch on it
+        L([[-1, by - 7], [7.5, hipY - 3 + bob]], 1.9, HARN.md);
+        L([[-1, by - 7.4], [7.5, hipY - 3.4 + bob]], 0.5, HARN.lt);
+        L([[-5, by - 3], [6, by + 5]], 1.5, HARN.md);
+        L([[0, hipY - 1 + bob], [8.5, hipY - 2.5 + bob]], 1.8, HARN.md);
+        El(7, hipY - 2.4 + bob, 1.9, 1.5, HARN.lt);
+        El(-6, by + 1, 2.4, 3.2, HARN.md); El(-6.5, by, 1, 1.6, HARN.lt);   // a small pack
+      } else if (ARM === 2) {
+        // a black chest plate strapped over the belly, edged in white
+        plate(5, hipY - 8 + bob, 4.4, 7.4, -0.35, AR);
+        plate(0.5, by - 2, 7, 6, -0.5, AR);                           // and a black back plate
+        L([[-3, by - 7.5], [4, by - 8.6]], 0.8, WH.lt);
+        L([[3.4, hipY - 14 + bob], [7.8, hipY - 15.4 + bob]], 0.7, WH.lt);
+        L([[1.5, hipY - 1 + bob], [8, hipY - 2.5 + bob]], 1.2, HARN.md);
+        glow(6.4, hipY - 6.5 + bob, 0.55);
+      }
       // a leader wears a sash of the army's colour across the body
       if (kit.mark) {
         L([[-2, by - 7], [6, hipY - 4 + bob]], 2.2, dead ? '#44423e' : hexMix(FORCE, '#000000', 0.25));
@@ -278,6 +305,10 @@
       El(hx - 1.8, hy - 2, 4.6, 2, HD.lt, 0.12);
       F([[hx + 5, hy - 1.2], [hx + 11.5, hy + 3.4], [hx + 9, hy + 4.4], [hx + 4.5, hy + 3]], HD.md);   // the snout, drooping
       L([[hx + 5, hy - 1.1], [hx + 11.3, hy + 3.3]], 0.5, HD.lt);
+      if (ARM === 2) {                                   // a black band over the crown
+        L([[hx - 7, hy - 0.6], [hx - 1.5, hy - 3.6], [hx + 3.5, hy - 2.6]], 1.4, AR.md);
+        L([[hx - 1.5, hy - 3.8], [hx + 3.5, hy - 2.9]], 0.4, WH.lt);
+      }
       if (armoured) {                                    // a white stripe over the crown, a visor of the army's light
         L([[hx - 6.5, hy - 1.6], [hx - 1, hy - 4], [hx + 4.5, hy - 2.4]], 0.9, WH.lt);
         L([[hx + 0.8, hy + 0.2], [hx + 5.2, hy + 0.4]], 1.3, GW);
@@ -324,13 +355,23 @@
         housing(x0, x1, y, t);
         L([[x0 + 3, y + t * 0.05], [x1 - 3, y + t * 0.05]], 0.5, FORCE);
         for (var c = 0; c < cells; c++) cell(x0 + (x1 - x0) * (0.4 + 0.18 * c), y - 0.1, t * 0.34);
+        if (ARMS >= 3) {                                          // an underslung launcher
+          L([[x0 + (x1 - x0) * 0.5, y + t * 0.95], [x1 - 2, y + t * 0.95]], t * 0.55, BK.md);
+          L([[x0 + (x1 - x0) * 0.5, y + t * 0.8], [x1 - 2, y + t * 0.8]], t * 0.15, BK.lt);
+          El(x1 - 1.6, y + t * 0.95, t * 0.2, t * 0.26, dead ? '#555' : GW);
+        }
+        if (ARMS >= 4) {                                          // and a scope
+          L([[x0 + (x1 - x0) * 0.25, y - t * 0.95], [x0 + (x1 - x0) * 0.5, y - t * 0.95]], t * 0.5, BK.md);
+          El(x0 + (x1 - x0) * 0.5 + 0.4, y - t * 0.95, t * 0.16, t * 0.24, dead ? '#555' : GW);
+        }
         L([[x1 - 1, y - t * 0.45], [x1 + 3.5, y - t * 0.55]], 0.9, BK.md);     // the prongs
         L([[x1 - 1, y + t * 0.45], [x1 + 3.5, y + t * 0.55]], 0.9, BK.md);
         if (!dead) L([[x1 + 3.4, y - t * 0.5], [x1 + 2.4, y - 0.1], [x1 + 3.6, y + 0.2], [x1 + 2.6, y + t * 0.5]], 0.45, GWL);
         glow(x1 + 3.8, y, t * 0.26);
       }
-      if (wpn === 'rifle') arcRifle(4, 30, gy, 3.4, 2);
-      else if (wpn === 'carbine') arcRifle(6, 25, gy, 3.1, 1);
+      // a charge cell for each step of Firepower, as many as the weapon has room for
+      if (wpn === 'rifle') arcRifle(4, 30, gy, 3.4, Math.min(3, ARMS));
+      else if (wpn === 'carbine') arcRifle(6, 25, gy, 3.1, Math.min(2, ARMS));
       else if (wpn === 'long') {
         arcRifle(3, 37, gy, 2.8, 3);
         L([[11, gy - 2.8], [20, gy - 2.8]], 1.9, BK.md); El(20.6, gy - 2.8, 0.8, 1, GW);   // the sight
@@ -346,6 +387,11 @@
         housing(3, 25, gy + 3.4, 4.6, gy + 3);
         L([[6, gy + 4], [22, gy + 3.6]], 0.6, FORCE);
         cell(10, gy + 7.2, 1.4);
+        if (ARMS >= 3) cell(15, gy + 7.2, 1.4);                   // a second power cell
+        if (ARMS >= 4) {                                          // and a stabiliser fin over the horn
+          F([[20, gy - 0.4], [26, gy - 4], [27, gy - 0.8]], BK.md);
+          L([[21, gy - 0.6], [26, gy - 3.6]], 0.4, WG.lt);
+        }
         F([[24, gy + 0.6], [31.5, gy - 1.6], [31.5, gy + 7.8], [24, gy + 5.6]], BK.md);      // the horn
         F([[24, gy + 0.6], [31.5, gy - 1.6], [31.5, gy - 0.4], [24, gy + 1.6]], BK.lt);
         g.strokeStyle = dead ? '#555' : GW; g.lineWidth = Math.max(1, 0.55 * s);
@@ -362,7 +408,8 @@
         L([[-4, gy - 6.1], [22, gy - 10.5]], 0.6, WG.dk);
         L([[2, gy - 8.2], [18, gy - 10.9]], 0.6, FORCE);
         F([[22.4, gy - 9.6], [26, gy - 10.4], [26, gy - 16.4], [22.4, gy - 15.6]], BK.md);   // the front face
-        [[23.6, -12], [25, -12.3], [23.6, -14.3], [25, -14.6]].forEach(function (m) {
+        (ARMS >= 4 ? [[23.4, -11.7], [24.6, -11.9], [25.6, -12.1], [23.4, -14], [24.6, -14.2], [25.6, -14.5]]
+          : [[23.6, -12], [25, -12.3], [23.6, -14.3], [25, -14.6]]).forEach(function (m) {
           El(m[0], gy + m[1], 0.62, 0.8, BK.dk);
           El(m[0] + 0.3, gy + m[1], 0.38, 0.5, dead ? '#555' : GW);
         });
@@ -397,8 +444,13 @@
       var nearEl = [shx + 2, shy + 9];
       limb([[shx, shy], nearEl, grip], 2.6, 1.6, nearT);
       if (armoured) {                                    // a white shoulder plate, edged in the army's colour
-        plate(shx, shy - 0.5, 3.6, 2.8, -0.3, WH);
-        L([[shx - 3.2, shy + 1], [shx + 3.2, shy - 0.6]], 0.8, FORCE);
+        var pr = ARM >= 4 ? 1.3 : 1;
+        plate(shx, shy - 0.5, 3.6 * pr, 2.8 * pr, -0.3, WH);
+        L([[shx - 3.2 * pr, shy + 1], [shx + 3.2 * pr, shy - 0.6]], 0.8, FORCE);
+        if (ARM >= 4) plate(shx + 0.5, shy + 3.2, 2.4, 1.6, -0.3, AR);    // a second plate under it
+      } else if (ARM === 2) {                            // a black pauldron with a white edge
+        plate(shx, shy - 0.3, 3, 2.3, -0.3, AR);
+        L([[shx - 2.6, shy + 0.8], [shx + 2.6, shy - 0.5]], 0.6, WH.lt);
       } else if (!kit.mark) {                            // a rag of the army's colour round the upper arm
         L([[shx + 0.2, shy + 3.6], [shx + 2.6, shy + 3.2]], 2.2, FORCE);
         L([[shx + 1.4, shy + 3.8], [shx + 0.6, shy + 6.2]], 0.8, FORCE);

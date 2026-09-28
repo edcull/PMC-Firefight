@@ -576,12 +576,17 @@
 
     /* ---------- the prawns: a revolt of the other kind ----------
        The same rebel army, the same squads man for man, painted as tall,
-       hunched crustacean aliens (iso-prawnfig.js). Each rebel figure has a
-       prawn of its own, `pr_` before its name, carrying the same kind of
-       weapon in the aliens' own make, and every rebel squad a `pr_` squad of
-       them. Most go in their bare shells; the miners, the partisans, the
-       revolutionary guard and the great leaders go armoured, in black plate
-       picked out in white and the army's colour. Riders sit a giant shrimp. */
+       hunched crustacean aliens (iso-prawnfig.js). Each rebel squad has a
+       squad of prawns of its own, `pr_` before its name, each figure carrying
+       the same kind of weapon as the man it stands for, in the aliens' own
+       make. Riders sit a giant shrimp.
+       Up a group the prawns are better kitted, as their numbers say: the
+       squad's Defence buys its armour (`armour` 0-4: the bare shell, a
+       harness, a chest plate and pauldron, full black plate, heavy battle
+       armour) and its Firepower its weapons (`arms` 0-4: more charge cells,
+       then an underslung launcher, then a scope). The miners, the partisans,
+       the revolutionary guard and the great leaders are armoured whatever
+       their numbers. */
     var PRAWN_GUN = {
       pistol: 'pistol', smg: 'carbine', carbine: 'carbine', shotgun: 'carbine',
       battlerifle: 'rifle', rifle: 'rifle', huntingrifle: 'rifle', long: 'long',
@@ -590,22 +595,40 @@
       shell: 'shell', optics: 'optics', none: 'none'
     };
     var PRAWN_ARMOUR = /^(cutter|blaster|hardsuit|part|guard|flag|standard|lead4|lead5|lead3black)/;
-    function prawnRole(r) {
-      var k = 'pr_' + r;
+    // the best Defence and Firepower among the rebel profiles drawn from an art (mounted: its foot art)
+    function prawnStats(art) {
+      var base = art.replace(/mounted$/, ''), st = { def: 7, fp: 2 };
+      var cat = (root.PMC && root.PMC.CATALOGUE) || [];
+      cat.forEach(function (p) {
+        if (p.faction !== 'rebel' || p.art !== base) return;
+        st.def = Math.max(st.def, p.def || 0); st.fp = Math.max(st.fp, p.fp || 0);
+      });
+      return st;
+    }
+    function prawnRole(art, r) {
+      var k = 'pr_' + art + '_' + r;
       if (!KIT[k]) {
-        var h = KIT[r] || KIT.rebrifle, m = {
-          prawn: PRAWN_ARMOUR.test(r) ? 'armour' : 'shell',
+        var h = KIT[r] || KIT.rebrifle, st = prawnStats(art);
+        var armour = Math.max(0, Math.min(4, st.def - 7));
+        if (PRAWN_ARMOUR.test(r)) armour = Math.max(armour, 3);
+        if (h.plates || r === 'hardsuit') armour = 4;
+        var m = {
+          prawn: armour >= 3 ? 'armour' : 'shell', armour: armour,
+          arms: Math.max(0, Math.min(4, (st.fp || 1) - 1)),
           gun: PRAWN_GUN[h.gun] || 'rifle',
           big: 1.12
         };
+        // the poorly armed carry the short arc carbine; the full rifle comes with Firepower 3
+        if (m.gun === 'rifle' && m.arms <= 1) m.gun = 'carbine';
         // a carapace of one of three browns, as the figure's name falls
         var n = 0;
         for (var i = 0; i < r.length; i++) n = (n * 31 + r.charCodeAt(i)) | 0;
         m.shell = Math.abs(n) % 3;
         ['mount', 'kneel', 'prone', 'mark', 'pack'].forEach(function (f) { if (h[f] != null) m[f] = h[f]; });
-        if (h.plates || r === 'hardsuit') m.plates = true;
-        if (m.mount) { if (r !== 'rider') m.fitAs = 'pr_rider'; delete m.kneel; delete m.prone; }
-        else if (h.fitAs && /^flag|banner/.test(h.gun || '')) m.fitAs = 'pr_' + h.fitAs;
+        if (armour >= 4) m.plates = true;
+        // sized as a rider is, or as the man beside a flag: figures of the same squad
+        if (m.mount) { if (!(art === 'hellrider' && r === 'rider')) m.fitAs = 'pr_hellrider_rider'; delete m.kneel; delete m.prone; }
+        else if (h.fitAs && /^flag|banner/.test(h.gun || '')) m.fitAs = 'pr_' + art + '_' + h.fitAs;
         KIT[k] = m;
       }
       return k;
@@ -616,7 +639,9 @@
       'conscript', 'pow', 'deserterrk', 'deserter', 'leader', 'leadersmall', 'leadermid', 'leaderbig', 'leaderhuge',
       'holy1mounted', 'holy2mounted', 'holy3mounted', 'holy4mounted', 'leadermounted', 'leadersmallmounted',
       'leadermidmounted', 'leaderbigmounted', 'leaderhugemounted'
-    ].forEach(function (art) { if (ROLES[art]) ROLES['pr_' + art] = ROLES[art].map(prawnRole); });
+    ].forEach(function (art) {
+      if (ROLES[art]) ROLES['pr_' + art] = ROLES[art].map(function (r) { return prawnRole(art, r); });
+    });
 
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a
