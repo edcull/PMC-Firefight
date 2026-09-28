@@ -717,10 +717,8 @@
       var role = roleOf(me);
       var h = '<div class="card"><h2>' + (B.state.scen ? B.state.scen.name : 'Deployment') +
         (role ? ' <span class="role role-' + role + '">You ' +
-          (role === 'attacker' ? 'attack' : 'defend') + '</span>' : '') + '</h2>' +
-        (role ? '<p class="sub"><b>' + roleSentence() + '</b></p>' : '') +
-        '<p class="sub">' + (B.state.scen ? B.state.scen.hint : '') + '</p>' +
-        '<p class="sub">' + deployWhere(me) + '</p>';
+          (role === 'attacker' ? 'attack' : 'defend') + '</span>' : '') +
+        ' <button class="lnk" data-act="briefing">Briefing</button></h2>';
       if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
         (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
       // Modifying the armies (p. 46): offered until the first unit goes down
@@ -1053,6 +1051,7 @@
           else if (a === 'autodeploy') autoDeployMine();
           else if (a === 'rpickdone') send({ k: 'rpickdone' });
           else if (a === 'deploybox') { deployBox = true; render(); }
+          else if (a === 'briefing') openObjectives();
           else if (a === 'autosplit') send({ k: 'autosplit' });
           else if (a === 'deployboxdone') { deployBox = false; render(); }
           else if (a === 'start') { ui.startAsk = false; ui.startWhy = false; startBattle(); }

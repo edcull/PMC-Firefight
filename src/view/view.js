@@ -489,6 +489,7 @@
         hdrEl.classList.toggle('your-turn', !!going && !isAI(goer) && mineToPlay(goer));
       }
       turnBanner();
+      briefOnce();
       if (B.state.solo && B.state.phase !== 'deploy' && B.state.phase !== 'terrain') {
         el('hdr-phase').textContent = 'Turn ' + B.state.turn + ' · ' + (B.state.activeSide === 'B' ? 'OpFor phase' : 'Action phase');
         el('hdr-init').textContent = B.state.scen.name;
@@ -527,6 +528,14 @@
         ? side(att, 'Attacker') + side(other(att), 'Defender')
         : side('A', B.state.solo ? 'Your side' : 'Side A') + side('B', B.state.solo ? 'OpFor' : 'Side B')) + '</div>';
       if (sc.win) h += '<p><b>To win:</b> ' + esc(sc.win) + '</p>';
+      // while the forces go down, the briefing says where, and what this side is there to do
+      if (B.state.phase === 'deploy') {
+        var here = ['A', 'B'].filter(function (s) { return !isAI(s) && mineToPlay(s); });
+        if (here.length === 1 && B.roleOf(here[0])) h += '<p><b>' + B.roleSentence() + '</b></p>';
+        here.forEach(function (s) {
+          h += '<p>' + (here.length > 1 ? '<b>' + esc(plainName(s)) + ':</b> ' : '') + B.deployWhere(s) + '</p>';
+        });
+      }
       if (B.state.objectives.length) {
         h += '<ul>' + B.state.objectives.map(function (o, i) {
           return '<li>Objective ' + (i + 1) + ' — ' + (o.owner ? 'held by <b>' + esc(sideName(o.owner)) + '</b>' : 'nobody holds it') + '</li>';
@@ -536,11 +545,21 @@
       if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
       return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
     }
-    function openObjectives() {
+    function openObjectives(quiet) {
       if (!B.state) return;
       el('obj-box').innerHTML = objectivesHTML();
       el('obj-modal').hidden = false;
-      if (SFX) SFX.click();
+      if (SFX && !quiet) SFX.click();
+    }
+    /* The briefing comes up by itself the once, as a battle's deployment
+       begins: the scenario, what wins it, and where the forces go down. After
+       that it is the header's Objectives button. A demo is watched, not
+       briefed. */
+    function briefOnce() {
+      if (!B.state || B.state.phase !== 'deploy' || ui.briefed === B.state.cfg) return;
+      ui.briefed = B.state.cfg;
+      if (B.state.cfg.aiSides.length === 2) return;
+      openObjectives(true);
     }
 
     return {

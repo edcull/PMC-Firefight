@@ -981,6 +981,7 @@
      and the functions and fixed values it uses. */
   var VIEW = window.PMCView({
     replaying: function () { return replaying(); },
+    deployWhere: deployWhere, roleSentence: roleSentence,
     get FORCE_NOUN() { return FORCE_NOUN; }, get ID_NOUN() { return ID_NOUN; },
     get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; }, get anims() { return anims; },
     get ctx() { return ctx; }, get muster() { return muster; }, get pctx() { return pctx; },
