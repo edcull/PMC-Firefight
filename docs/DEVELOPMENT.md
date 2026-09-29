@@ -174,6 +174,7 @@ gunwater.js        Stationary Artillery treats shallow water as impassable
 suppressedcover.js where a Suppressed unit may move
 insertion.js       Battlefield Insertion is the player's choice
 markcalls.js       Markerlights, one call at a time
+turretchain.js     the turrets act as one: the others go first, and the bar names them
 weapons.js         what each unit shoots with, and how it sounds and looks
 rebels.js          the Rebel army list and its army rules
 bugs.js            the Space Bugs
@@ -271,7 +272,7 @@ regroup.js         the Regroup card, and the regroup effect in the action and th
 turnshow.js        whose go it is, at a glance
 discard.js         throwing a skirmish away from the main menu
 resume.js          a battle outlives a refresh
-netplay.js         two browsers at a real game server: whose turn, seat names, a drop, abandoning
+netplay.js         two browsers at a real game server: whose turn, seat names, the camera following the opponent, a drop, abandoning
 ```
 
 **What the table shows**

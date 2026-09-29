@@ -56,10 +56,15 @@
       /* In the middle of a chain — a marker's call, a Command Unit's, the turrets
          acting as one — only the units the chain calls on may act. */
       if (E.state.chain && E.state.chain.side === u.side && eligible(u.side).indexOf(u) < 0) {
+        // say which units the chain is waiting on, so it is plain what to pick
+        var waiting = eligible(u.side).map(function (w) { return w.code || w.name; }).join(', ');
+        var cmdBy = E.state.chain.by && byId(E.state.chain.by);
         return { on: false, hint: E.state.chain.kind === 'mark'
           ? 'Answering the ' + (E.state.mark && E.state.mark.kind === 'mark' ? 'mark' : 'designation') + ': only a unit that can fire at ' +
             (E.state.mark && E.state.mark.targets[0] ? E.state.mark.targets[0].name : 'the target') + ' may act.'
-          : 'Only the units in this chain may act now.' };
+          : E.state.chain.kind === 'turrets'
+            ? 'The turrets act as one (p. 130): ' + waiting + ' must act (or Skip) first.'
+            : 'Only the units in ' + (cmdBy ? cmdBy.name + '’s' : 'this') + ' chain may act now' + (waiting ? ': ' + waiting + '.' : '.') };
       }
       /* An Advance is one action: the move, then the shot (p. 27). Half-way
          through it, Fire!, Assault, another move — none of them is on; the unit

@@ -227,6 +227,8 @@
       return got[Math.min(got.length - 1, n || 0)] || null;
     };
     // a board tap at a table point, bypassing the pixel maths
+    // a table point on the board's own picture, where the camera would centre on it
+    window.__toScreen = function (x, y) { var q = ISO.toScreen(x, y); return { x: q.x, y: q.y - ISO.ELEV }; };
     window.__boardTapAt = function (x, y) {
       var s = ISO.toScreen(x, y), v = viewRect();
       onBoardTap({
