@@ -482,6 +482,10 @@
       // a flier that is shot down is a wreck on the ground, not one hanging in the air
       var downed = opts.status === 'wrecked' || u.alive === false;
       var lift = (opts.lift || 0) + (spec.fly && !downed ? ELEV * spec.fly : 0) - (opts.hop || 0);
+      /* A grav or hover hull that is knocked out comes down: the grav pods on the
+         ground under it, the hover's skirt slumped flat. */
+      if (downed && drive === 'grav') ride = 7;
+      if (downed && drive === 'hover') ride = 4;
       // the ground it stands on (up a hill, the hill's top): where its shadow falls, whatever height it rides at
       var ground = opts.ground != null ? opts.ground : (opts.lift || 0);
       var dead = opts.status === 'wrecked' || u.alive === false;
@@ -587,8 +591,8 @@
         return KIT_GEAR || (KIT_GEAR = MAKE_GEAR({
           HF: HF, S3: S3, STEEL: STEEL, STEEL_LIT: STEEL_LIT, TB: TB, TS: TS, at: at, box: box, cos: cos,
           dark: dark, dead: dead, deck: deck, drive: drive, f: f, frameAt: frameAt, g: g, hull: hull,
-          lift: lift, line: line, lit: lit, mixc: mixc, opts: opts, rectPts: rectPts, ride: ride,
-          sEllipse: sEllipse, scr: scr, sin: sin, slabF: slabF, spec: spec, trim: trim
+          lift: lift, line: line, lit: lit, mixc: mixc, opts: opts, rebel: u.faction === 'rebel', rectPts: rectPts, ride: ride,
+          sEllipse: sEllipse, scr: scr, shape: shape, sin: sin, slabF: slabF, spec: spec, trim: trim
         }));
       }
       function want(phase, s, nearest) { return (KIT_GEAR || kitGear()).want(phase, s, nearest); }
@@ -1017,7 +1021,11 @@
         sEllipse(b0[0], b0[1], 1.4, 0.8, STEEL);
         sEllipse(b1[0], b1[1], 0.9, 0.9, dead ? STEEL : '#9aa6b4');
       }
-      function lights(fr, p, q, z) {
+      /* A headlamp on the nose. Out of sight once the nose turns away; `see`
+         says how far round it stays in view: a raked glacis faces up as well as
+         forward, so its lamps are seen from further behind than an upright face's. */
+      function lights(fr, p, q, z, see) {
+        if (fr.ang != null && Math.cos(fr.ang) + Math.sin(fr.ang) < -(see || 0)) return;
         var lp = S3(fr(p, q), z);
         sEllipse(lp[0], lp[1], 1.4, 1.1, dead ? STEEL : '#f0e2b4');
       }
@@ -1066,17 +1074,19 @@
       /* The same tiles across the nose: laid on the (raked) front plate, which runs
          from aBot at the foot up and back to aTop, across b0..b1. Only drawn when
          the nose is towards the eye. */
-      function hexNose(fr, aBot, aTop, b0, b1, z0, h, cols) {
+      function hexNose(fr, aBot, aTop, b0, b1, z0, h, cols, rows) {
         if ((cos + sin) <= 0) return;
         cols = cols || 5;                                  // the upper row; the lower, set between, has one fewer
-        var rows = 2, cw = (b1 - b0) / cols;
+        // two rows, or three (the middle one set between the others), each tile shorter to fit
+        rows = rows || 2;
+        var cw = (b1 - b0) / cols, cus = rows === 3 ? [0.82, 0.5, 0.18] : [0.72, 0.3], ru = rows === 3 ? 0.16 : 0.24;
         for (var r = 0; r < rows; r++) {
           for (var i = 0; i < cols; i++) {
-            var cb = b0 + cw * (i + 0.5 + (r ? 0.5 : 0)), cu = r ? 0.3 : 0.72;
+            var cb = b0 + cw * (i + 0.5 + (r % 2 ? 0.5 : 0)), cu = cus[r];
             if (cb > b1 - cw * 0.3) continue;
             var pts = [];
             for (var k = 0; k < 6; k++) {
-              var ang = k * Math.PI / 3, u = cu + Math.sin(ang) * 0.24;
+              var ang = k * Math.PI / 3, u = cu + Math.sin(ang) * ru;
               pts.push(S3(fr(aBot + (aTop - aBot) * u, cb + Math.cos(ang) * cw * 0.46), z0 + h * u));
             }
             poly(g, pts, 'rgba(255,248,232,.07)');
