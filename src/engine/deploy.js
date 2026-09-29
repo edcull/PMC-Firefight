@@ -454,8 +454,8 @@
       });
     }
 
-    /* Every platform starts the battle with a squad aboard. This seats them as the
-       table is laid out, so the rule holds even when nobody touches the card. */
+    /* A platform need not carry anyone, but one usually does: a squad is put in
+       each as the table is laid out, and the player may take it out again. */
     function seatPlatforms() {
       emptyPlatforms().forEach(function (v) {
         /* A line squad rather than the colonel: a command unit is the last thing
@@ -611,7 +611,6 @@
     }
 
     function deploymentDone() {
-      if (emptyPlatforms().length) return false;
       if (!splitsOK()) return false;
       return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
     }

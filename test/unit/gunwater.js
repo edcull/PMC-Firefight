@@ -2,6 +2,9 @@
    never put down in it — deployed, relocated, or unhitched from its tow. */
 'use strict';
 const { R, Engine } = require('../../server/rules.js');
+// the same armies and table every run
+let seed = 7331;
+Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
   cond ? pass++ : fail++;

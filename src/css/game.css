@@ -222,6 +222,10 @@ canvas#board:active { cursor: grabbing; }
 .viewctl.locked [data-zoom], .viewctl.locked span { opacity: .45; pointer-events: none; }
 /* Follow: the camera going over to the other side's units as they act */
 .vbtn.follow { color: var(--ink-dim); }
+/* Pause: a demo only, holding the battle after the activation being drawn */
+.vbtn.pause { display: none; }
+body[data-battle="demo"] .vbtn.pause { display: inline-block; }
+.vbtn.pause.on { color: var(--ink); border-color: color-mix(in srgb, var(--warn, #d9a441) 60%, var(--line)); background: color-mix(in srgb, var(--warn, #d9a441) 16%, var(--panel-2)); }
 .vbtn.follow.on { color: var(--ink); border-color: color-mix(in srgb, var(--alpha) 60%, var(--line)); background: color-mix(in srgb, var(--alpha) 16%, var(--panel-2)); }
 .viewctl span {
   font-family: var(--mono); font-size: 11px; color: var(--ink-dim);
@@ -753,6 +757,11 @@ a.mcard { text-decoration: none; line-height: normal; }
 #camp.overlay > #camp-body.sheet.fit { display: flex; flex-direction: column; }
 #camp-body.fit > * { flex: none; }
 #camp-body.fit > .found-units { flex: 1 1 auto; min-height: 96px; display: flex; flex-direction: column; margin-bottom: 12px; }
+/* the contract's force: the list of units takes what height is left, and scrolls itself */
+#camp-body.fit > .muster { flex: 1 1 auto; min-height: 140px; display: flex; flex-direction: column; margin-bottom: 12px; }
+#camp-body.fit > .muster > * { flex: none; }
+#camp-body.fit > .muster > .chosen { max-height: 30%; overflow-y: auto; }
+#camp-body.fit > .muster > .cat.tall { flex: 1 1 auto; min-height: 60px; max-height: none; overflow-y: auto; overscroll-behavior: contain; }
 .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
 .found-units .chosen:empty::before { content: 'No units yet.'; }
 .found-add { align-self: flex-start; margin-top: 8px; }
@@ -885,6 +894,10 @@ button.tierbadge.tierpick:hover, button.tierbadge.tierpick:focus-visible { outli
 .found-pop.tierpop { right: auto; top: 44px; left: 8px; width: min(380px, calc(100% - 16px)); }
 .armypill { font-weight: 600; }
 button.armypill { cursor: pointer; font: inherit; font-weight: 600; }
+.newarch { margin-top: 8px; }
+/* the world a contract is fought on, rolled with the job */
+.planetpill { border-color: color-mix(in srgb, var(--alpha) 45%, var(--line)); color: var(--ink); font-weight: 600; }
+.muster-head .armypill { white-space: nowrap; font-size: 12px; padding: 2px 8px; align-self: center; }
 /* an army's rules: how its campaign goes, and the special rules only it carries */
 .armyrules .armycamp { margin: 4px 0 12px; padding-left: 18px; color: var(--ink-dim); line-height: 1.5; }
 .armyrules h4 { margin: 8px 0 6px; font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; font-size: 12px; color: var(--ink-faint); }
@@ -1704,7 +1717,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 @media (max-width: 1000px) and (pointer: coarse) {
   .viewctl [data-zoom] { display: none !important; }
   .viewctl { top: 8px; right: 8px; }
-  .vbtn.follow { height: 32px; padding: 0 12px; font-size: 11px; }
+  .vbtn.follow, .vbtn.pause { height: 32px; padding: 0 12px; font-size: 11px; }
 }
 /* On a phone every sheet (muster, campaign, rules, lobby) takes the whole
    screen and is the one thing that scrolls, rather than a card floating in

@@ -332,7 +332,7 @@
         if (!canStand(u, c)) return;                     // nowhere it could not hover (p. 38)
         var n = 0;
         activeUnits().forEach(function (t) {
-          if (t.side === u.side || R.isFlying(t)) return;
+          if (t.side === u.side || R.isFlying(t) || husk(t)) return;
           if (R.pointSegDist(t.x, t.y, u.x, u.y, c.x, c.y) <= 2.2) n++;
         });
         if (n && (!best || n > best.count)) best = { pt: c, count: n };
@@ -373,6 +373,12 @@
       return e;
     }
 
+    /* An empty Rapid insertion platform is scenery with a Defence value: it counts
+       for no victory condition (p. 79) and carries nobody, so shooting it, charging
+       it or walking towards it gains nothing. One with a squad still inside is
+       another matter. */
+    function husk(t) { return !R.countsForVictory(t) && !(t.cargo || []).length; }
+
     function bestTarget(u, mode, opts) {
       var best = { t: null, score: -1 };
       /* Protecting the VIP: "whenever an OpFor unit can attack the VIP unit, it
@@ -386,7 +392,7 @@
       }
       E.state.units.forEach(function (t) {
         // an enemy in reserve or riding in a hull is not on the table to be shot at
-        if (!t.alive || t.side === u.side || !onTable(t)) return;
+        if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var e = expectedHits(u, t, mode || 'fire', opts);
         if (e > best.score) best = { t: t, score: e };
       });
@@ -397,7 +403,7 @@
       var best = null, bd = Infinity;
       E.state.units.forEach(function (t) {
         // only enemies on the table: one waiting in reserve sits off its corner, and chasing it walks nowhere
-        if (!t.alive || t.side === u.side || !onTable(t)) return;
+        if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var d = R.unitDist(u, t);
         if (d < bd) { bd = d; best = t; }
       });
@@ -538,7 +544,7 @@
          Basic Firepower does (p. 94). */
       if (R.has(u, 'Stationary Artillery')) {
         var close = E.state.units.filter(function (e) {
-          return e.alive && !e.aboard && e.side !== u.side && R.unitDist(u, e) <= 24 &&
+          return e.alive && !e.aboard && e.side !== u.side && !husk(e) && R.unitDist(u, e) <= 24 &&
             R.unitDist(u, e) >= 6 && R.hasLoS(E.state, u, e);
         });
         if ((close.length > 0) !== !!u.dugIn) { doStance(u); return; }
@@ -699,7 +705,7 @@
       var ghost = { x: c.x, y: c.y, alive: true, of: u };
       var exposure = 0, opportunity = 0;
       E.state.units.forEach(function (e) {
-        if (!e.alive || e.side === u.side) return;
+        if (!e.alive || e.side === u.side || husk(e)) return;
         var d = Math.max(0, R.inches(c.x, c.y, e.x, e.y) - 2 * UR);
         if (d > u.range && d > e.range) return;          // out of reach either way: no need to look
         if (!R.hasLoS(E.state, e, ghost)) return;

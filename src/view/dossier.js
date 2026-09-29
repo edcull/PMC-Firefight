@@ -158,6 +158,7 @@
   // what each screen has open, kept here so the screens can live in their own files
   var secondFaction = null;       // what the hub said the second player runs, until they found it
   var wantMode = 'solo';          // how a new campaign will be played: the menu card it was opened from
+  var wantFaction = 'pmc', wantB = 'pmc';   // what the new campaign's forces will be, as picked so far
   var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false;
   var hubPane = 'dossier';            // the hub opens on the unit cards
@@ -347,19 +348,22 @@
       dossierPanel: dossierPanel, entryCard: entryCard, esc: esc, memorialList: memorialList,
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
+      get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses
     }));
   }
   function hubView() { return (KIT_HUB || kitHub()).hubView(); }
   function stripe(co) { return (KIT_HUB || kitHub()).stripe(co); }
-  function armyPill(co) { return (KIT_HUB || kitHub()).armyPill(co); }
+  function armyPill(co, kind) { return (KIT_HUB || kitHub()).armyPill(co, kind); }
+  function armyRules(co) { return (KIT_HUB || kitHub()).armyRules(co); }
   function statRow(co, rival) { return (KIT_HUB || kitHub()).statRow(co, rival); }
   /* ---- founding a force: in view/dossier-found.js ---- */
   var KIT_FOUND = null;
   function kitFound() {
     return KIT_FOUND || (KIT_FOUND = root.PMCDossierFound({
       C: C, R: R, ROMAN: ROMAN, esc: esc, profile: profile, root: root, tierChip: tierChip, tip: tip,
+      armyPill: armyPill, armyRules: armyRules,
       get camp() { return camp; }, set camp(v) { camp = v; }, get colourOpen() { return colourOpen; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get openModal() { return openModal; },
       get view() { return view; }, set view(v) { view = v; }
@@ -457,7 +461,7 @@
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
-    body.classList.toggle('fit', view === 'found');
+    body.classList.toggle('fit', view === 'found' || view === 'contract');
     body.classList.toggle('hubfit', view === 'hub' && !!camp);
     var dl = body.querySelector('.cdos-body'), dlTop = dl ? dl.scrollTop : 0;
     body.innerHTML = h;
@@ -476,7 +480,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -700,6 +704,12 @@
       if (pk) contract.picks.push(pk); render(); return;
     }
     if (t.hasAttribute('data-unpick')) { contract.picks.splice(+t.getAttribute('data-unpick'), 1); render(); return; }
+    // a turret or insertion platform put in the force for this battle alone: never on the books
+    if (t.hasAttribute('data-field') && contract) {
+      var fe = C.newEntry(t.getAttribute('data-field'));
+      fe.fielded = true;
+      contract.picks.push(fe); render(); return;
+    }
     if (t.hasAttribute('data-tactic') && contract) {
       contract.tactic = t.getAttribute('data-tactic') || null;
       render(); return;
@@ -860,7 +870,9 @@
         contract.tierRoll = { roll: 3, cap: 3, tier: 3, standing: 3, thin: false };
         contract.adjusted = true; contract.picks = [];
         render(); return;
-      case 'fight': fight(); return;
+      case 'fight':
+        if (t.getAttribute('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return; }
+        fight(); return;
       case 'drawnow': {
         if ((drawState.picked || []).length !== 3) return;
         var won = C.chooseHonour(drawState.picked.map(function (n) { return C.honourTable(drawState.entry.key)[n - 1]; }));
@@ -868,6 +880,14 @@
         drawState.won = won; save(); render(); return;
       }
       case 'hub': view = 'hub'; render(); return;
+      /* Back from founding the first force: the campaign it was for goes (nothing
+         in it yet), and the choice of what to run comes back as it was picked. */
+      case 'foundback':
+        if (camp) { wantFaction = camp.companies.A.faction || 'pmc'; wantMode = camp.mode || 'solo'; }
+        if (secondFaction) wantB = secondFaction;
+        draft = null; openModal = null;
+        Store.clear().then(function () { camp = null; view = 'hub'; render(); });
+        return;
       case 'menu': toMenu(); return;
       case 'export': if (openModal === 'manage') { openModal = null; render(); } doExport(); return;
       case 'import': if (openModal === 'manage') { openModal = null; render(); } el('camp-file').click(); return;
@@ -1000,8 +1020,12 @@
       // a hotseat campaign has no rival to choose: the second player founds their own
       else if (ev.target.id === 'camp-mode') {
         var hs = ev.target.value === 'hotseat', bw = el('camp-bwrap');
+        wantMode = ev.target.value;
         if (bw) bw.hidden = !hs;
       }
+      // the army picked: its pill (and the rules behind it) follows
+      else if (ev.target.id === 'camp-faction') { wantFaction = ev.target.value; render(); }
+      else if (ev.target.id === 'camp-bfaction') { wantB = ev.target.value; render(); }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
         if ((contract.levels || [1, 2]).indexOf(want) >= 0) contract.pl = want;
@@ -1052,6 +1076,12 @@
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
     get: function () { return camp; },
     set: function (c) { camp = c; save(); render(); },
+    // the test harness's way to fill a contract's list (as the rival picks its own)
+    autopick: function () {
+      if (!contract || !camp) return false;
+      contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl, contract.tactic || null);
+      render(); return true;
+    },
     store: Store
   };
   root.PMC_ONFINISH = onFinish;

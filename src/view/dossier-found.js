@@ -133,7 +133,8 @@
         (E.colourOpen ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
           ' \u2014 ' + esc(colourName(E.draft.colour)) + '</label>' + squares(E.draft.colour) + '</div>' : '') +
         '</div>';
-      var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
+      // the kind of force leads the list: its pill, which opens the army's rules
+      var head = '<div class="muster-head">' + E.armyPill(co, 'armyfound') +
         '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
         t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + ' vehicle' + (machines === 1 ? '' : 's') + ' (max 2)</span></div>';
       var chosen = E.draft.keys.map(function (k, i) {
@@ -183,6 +184,8 @@
         (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</button></div></div>';
 
       // the three pickers, each a modal over the page
+      // the army's rules, from its pill
+      h += cmodal('armyfound', C.words(co).side + ' \u2014 army rules', E.armyRules(co));
       h += cmodal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
         head + '<div class="chosen">' + chosen + '</div>' +
         '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) {
@@ -223,7 +226,8 @@
         ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '" aria-disabled="' + !chk.ok + '">' +
         say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
       // the second player cannot step back out: the campaign needs their force
-      if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+      // back to choosing what to run: the force is not founded yet, so there is nothing to keep
+      if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="foundback">Back</button></p>';
       return h;
     }
 
@@ -253,6 +257,8 @@
       ourList(co).forEach(function (p) {
         if (p.tier < minTier || p.tier > maxTier) return;
         if (p.command) return;                       // the field command is free and fixed
+        // turrets and insertion platforms are never bought: they are fielded with a contract's force
+        if (C.isTurretP(p) || p.noSlot) return;
         if (filter && !filter(p)) return;
         if (!groups[p.group]) { groups[p.group] = []; order.push(p.group); }
         groups[p.group].push(p);

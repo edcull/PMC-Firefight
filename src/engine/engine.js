@@ -552,7 +552,7 @@
       heldIns[sd].forEach(function (u) { if (!u.reserve) { u.reserve = true; u.x = -1; u.y = -1; } });
     });
     K.nextPlace();
-    K.seatPlatforms();             // every drop pod comes down with somebody in it
+    K.seatPlatforms();             // each drop pod starts with a squad in it, which the player may change
     K.baselineSplits();
     K.clearSplits();               // the players choose their own reserves
     var scen = state.scen;
