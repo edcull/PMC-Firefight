@@ -1020,7 +1020,11 @@
         sEllipse(b0[0], b0[1], 1.4, 0.8, STEEL);
         sEllipse(b1[0], b1[1], 0.9, 0.9, dead ? STEEL : '#9aa6b4');
       }
-      function lights(fr, p, q, z) {
+      /* A headlamp on the nose. Out of sight once the nose turns away; `see`
+         says how far round it stays in view: a raked glacis faces up as well as
+         forward, so its lamps are seen from further behind than an upright face's. */
+      function lights(fr, p, q, z, see) {
+        if (fr.ang != null && Math.cos(fr.ang) + Math.sin(fr.ang) < -(see || 0)) return;
         var lp = S3(fr(p, q), z);
         sEllipse(lp[0], lp[1], 1.4, 1.1, dead ? STEEL : '#f0e2b4');
       }

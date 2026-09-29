@@ -259,7 +259,8 @@
           case 'car': {
             // an armoured car: a raked hull high over big wheels, fenders over each
             slabF(HF, -L * 0.46, L * 0.46, -w * 0.82, w * 0.82, z0 - 2, H, TB, L * 0.2, L * 0.12, w * 0.12);
-            lights(HF, L * 0.44, -w * 0.5, z0 + H * 0.4); lights(HF, L * 0.44, w * 0.5, z0 + H * 0.4);
+            // on the sloping bonnet's face, at their height
+            lights(HF, L * (0.46 - 0.2 * 0.45), -w * 0.5, z0 + H * 0.4, 0.45); lights(HF, L * (0.46 - 0.2 * 0.45), w * 0.5, z0 + H * 0.4, 0.45);
             hatch(HF, L * 0.2, 0, z0 - 2 + H, 0.12);
             return;
           }
@@ -283,7 +284,9 @@
               if ((cos + sin) < 0) poly(g, [ra[0], ra[1], rb[1], rb[0]], mixc(hull, dark, 0.5));
             }
             bandOnSides(g, box(0, 0, L, Wd * 0.94), z0 + 1, 2, 2, 'rgba(10,9,7,.45)');
-            lights(HF, L * 0.49, -w * 0.62, z0 + hh * 0.45); lights(HF, L * 0.49, w * 0.62, z0 + hh * 0.45);
+            // the headlamps set in the raked nose, where it has sloped back at their height
+            var blt = L * (0.5 - (ifv ? 0.3 : 0.24) * 0.45);
+            lights(HF, blt, -w * 0.62, z0 + hh * 0.45, 0.45); lights(HF, blt, w * 0.62, z0 + hh * 0.45, 0.45);
             grille(HF, L * 0.18, L * 0.3, w * 0.15, w * 0.75, z0 + hh + 0.3, 4);
             if (!st.turret) hatch(HF, -L * 0.18, -w * 0.4, z0 + hh + (big ? H * 0.3 : 0), 0.13);
             hatch(HF, -L * 0.34, w * 0.38, z0 + hh + (big ? H * 0.3 : 0), 0.12);
@@ -317,7 +320,9 @@
             if (st.hexNose) hexNose(HF, L * 0.5, L * 0.5 - L * (mbt ? 0.26 : 0.2), -w * 0.86, w * 0.86, z0, hh2);
             // lower glacis wedge under the nose
             grille(HF, -L * 0.44, -L * 0.24, -w * 0.6, w * 0.6, z0 + hh2 + 0.2, mbt ? 6 : 4);
-            lights(HF, L * 0.49, -w * 0.72, z0 + hh2 * 0.35); lights(HF, L * 0.49, w * 0.72, z0 + hh2 * 0.35);
+            // the headlamps set in the glacis, where it has sloped back at their height
+            var gIn = mbt ? 0.26 : 0.2, lt = L * (0.5 - gIn * 0.35);
+            lights(HF, lt, -w * 0.72, z0 + hh2 * 0.35, 0.45); lights(HF, lt, w * 0.72, z0 + hh2 * 0.35, 0.45);
             // tools and a tow cable along the deck
             edge(g, S3(HF(-L * 0.2, -w * 0.8), z0 + hh2 + 0.5), S3(HF(L * 0.1, -w * 0.8), z0 + hh2 + 0.5), '#3a2f22', 1.2);
             // the Tier V hulls carry the same hexagonal active armour as the advanced combat vehicle
@@ -543,8 +548,6 @@
                 slabF(TF, -TR * 0.55, TR * 0.45, -TR * 0.5, TR * 0.5, tz, 12, TB, TR * 0.18, 0, TR * 0.04);
                 cupola(-TR * 0.3, -TR * 0.28, tz + 12);
                 aerial(TF, -TR * 0.5, TR * 0.34, tz + 12, 20);
-                var mt = S3(TF(TR * 0.4, 0), tz + 7);
-                sEllipse(mt[0], mt[1], 4.2, 3.6, mixc(hull, dark, 0.3));
               };
               gun = function () {
                 /* An energy howitzer: the long ringed plasma barrel, laid up at the

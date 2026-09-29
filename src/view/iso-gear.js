@@ -428,6 +428,25 @@
         });
       }
 
+      /* The lower box of each hull body, as iso-hulls builds it: its ends along
+         the hull (a0, a1, of the length), its half-width (of w, 0.47 of the
+         width), its height (of spec.hgt), and how far its top is pulled in at the
+         front, the back (of the length) and the sides (of w). A body built of
+         several parts (the pickup, the trucks) gives its bed, the long low box
+         the rest stands on; the faceted 'future' hull gives its widest flanks. */
+      function lowerHull(st) {
+        var b = st.body;
+        if (b === 'box' || b === 'bigbox' || b === 'ifv')
+          return { a0: -0.5, a1: 0.5, half: 1, h: b === 'bigbox' ? 1.08 : b === 'ifv' ? 0.85 : 1, frontIn: b === 'ifv' ? 0.3 : 0.24, backIn: 0.004, sideIn: 0.04 };
+        if (b === 'mlrs') return { a0: -0.5, a1: 0.5, half: 1, h: 0.55, frontIn: 0.04, backIn: 0, sideIn: 0.03 };
+        if (b === 'future') return { a0: -0.44, a1: 0.36, half: 1, h: 0.9, topA1: 0.06, topA0: -0.42, topHalf: 0.86 };
+        if (b === 'car') return { a0: -0.46, a1: 0.46, half: 0.82, h: 1, dz: -2, frontIn: 0.2, backIn: 0.12, sideIn: 0.12 };
+        if (b === 'pickup') return { a0: -0.5, a1: 0.5, half: 1, h: 0.45, frontIn: 0, backIn: 0, sideIn: 0 };
+        if (b === 'truck' || b === 'guntruck') return { a0: -0.5, a1: 0.5, half: 1, h: 0.4, frontIn: 0, backIn: 0, sideIn: 0 };
+        var mbt = b === 'mbt';                            // a tank: the low hull with its sloped glacis
+        return { a0: -0.5, a1: 0.5, half: 0.94, h: mbt ? 0.8 : 0.88, frontIn: mbt ? 0.26 : 0.2, backIn: 0.05, sideIn: 0.03 };
+      }
+
       /* Anti-grav pods under the hull, laid along the hull's own axis so they
          turn with it: an armoured housing, and under it the emitter plate
          glowing blue onto the ground. */
@@ -455,17 +474,17 @@
         if (!spec.style) return;
         [-1, 1].forEach(function (sd) {
           if (!want(phase, sd)) return;
-          var L = spec.len, W = spec.wid, mbt = spec.style.body === 'mbt';
-          /* Pinned to the hull's own box (iso-hulls: a slab ±w*0.94 across, w = 0.47
-             of the width, its top pulled in at the glacis, the tail and the sides):
-             the plate's top edge is the hull's top edge, corner to corner, and its
-             inner foot the hull's bottom edge, so the corners meet the hull's. */
-          var zBot = deck, zTop = deck + spec.hgt * (mbt ? 0.8 : 0.88);
-          var sFoot = sd * W * 0.47 * 0.94, sTop = sd * W * 0.47 * 0.91;
-          var tNose = L * (0.5 - (mbt ? 0.26 : 0.2)), tTail = -L * 0.45;
-          var sOut = sd * (W * 0.5 + gearOut() * 1.1);
+          var L = spec.len, W = spec.wid, w = W * 0.47, hb = lowerHull(spec.style);
+          /* Pinned to the hull's own lower box (lowerHull): the plate's top edge is
+             the hull's top edge, corner to corner, and its inner foot the hull's
+             bottom edge, so the corners meet the hull's whatever its body. */
+          var zBot = deck + (hb.dz || 0), zTop = zBot + spec.hgt * hb.h;
+          var sFoot = sd * w * hb.half, sTop = sd * w * (hb.topHalf != null ? hb.topHalf : hb.half - hb.sideIn);
+          var fFoot = L * hb.a1, bFoot = L * hb.a0;
+          var tNose = L * (hb.topA1 != null ? hb.topA1 : hb.a1 - hb.frontIn), tTail = L * (hb.topA0 != null ? hb.topA0 : hb.a0 + hb.backIn);
+          var sOut = sd * Math.max(w * hb.half + W * 0.05, W * 0.5 + gearOut() * 1.1);
           // the foot: the hull's bottom edge inside, the plate's lower edge outside, its front angled back
-          var base = [[L * 0.5, sFoot], [L * 0.3, sOut], [-L * 0.42, sOut], [-L * 0.5, sFoot]];
+          var base = [[fFoot, sFoot], [fFoot - L * 0.2, sOut], [bFoot + L * 0.08, sOut], [bFoot, sFoot]];
           // the top closes to the hull's top edge, so each end is a triangle to the hull's corners
           var top = [[tNose, sTop], [tNose, sTop], [tTail, sTop], [tTail, sTop]];
           shape(HF, base, zBot, zTop - zBot, TB, null, top, true);
