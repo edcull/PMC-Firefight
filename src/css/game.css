@@ -1325,6 +1325,14 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dnote { font-size: 11px; color: var(--ink-faint); }
 .dmarks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .dacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+/* a unit's Rename, Disband and Promote: worded on a desktop, their icons alone on a phone */
+.dacts .dact svg { display: none; width: 18px; height: 18px; }
+@media (max-width: 700px) {
+  .dacts { flex-wrap: nowrap; }
+  .dacts .dact { display: inline-grid; place-items: center; padding: 7px 12px; }
+  .dacts .dact svg { display: block; }
+  .dacts .dact span { display: none; }
+}
 /* an opened card: its own facts on the left, the unit as it stands on the table on the right */
 .dsplit { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 10px; align-items: start; }
 .dleft { min-width: 0; }

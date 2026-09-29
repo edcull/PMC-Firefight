@@ -556,6 +556,19 @@ async function pastFronts(p) {
   check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier \d · \S/.test(t)), promo.join(' | '));
   const vp = p.viewportSize();
   await p.setViewportSize({ width: 412, height: 780 });
+  await p.waitForTimeout(150);
+  // on a phone a unit's Rename, Disband and Promote are icons, on one row
+  const row = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body button[data-promo]')][0], acts = b && b.closest('.dacts');
+    const bs = acts ? [...acts.querySelectorAll('.dact')] : [];
+    return { n: bs.length, tops: [...new Set(bs.map(x => Math.round(x.getBoundingClientRect().top)))].length,
+      icons: bs.every(x => getComputedStyle(x.querySelector('svg')).display !== 'none' && getComputedStyle(x.querySelector('span')).display === 'none'),
+      named: bs.every(x => x.getAttribute('aria-label')) };
+  });
+  check('on a phone a unit\u2019s Rename, Disband and Promote are icons on one row', row.n === 3 && row.tops === 1 && row.icons && row.named, JSON.stringify(row));
+  await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); if (m) m.hidden = true; });
+  await shot(p, 'camp-dossier-phone.png');
+  await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal[data-modal="promote"]'); if (m) m.hidden = false; });
   const opened = await p.evaluate(() => {
     const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([disabled])');
     if (!b) return false;
