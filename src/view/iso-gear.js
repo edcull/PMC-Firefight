@@ -14,7 +14,7 @@
           box = M.box, cos = M.cos, dark = M.dark, dead = M.dead, deck = M.deck, drive = M.drive, f = M.f,
           frameAt = M.frameAt, g = M.g, hull = M.hull, lift = M.lift, line = M.line, lit = M.lit,
           mixc = M.mixc, opts = M.opts, rectPts = M.rectPts, ride = M.ride, sEllipse = M.sEllipse,
-          scr = M.scr, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
+          scr = M.scr, shape = M.shape, rebel = M.rebel, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
       /* ================= running gear ================= */
       // a flank is nearer the eye when moving that way increases screen depth
       function sideNear(s) { return (cos - sin) * s > 0; }
@@ -428,6 +428,56 @@
         });
       }
 
+      /* The lower box of each hull body, as iso-hulls builds it: its ends along
+         the hull (a0, a1, of the length), its half-width (of w, 0.47 of the
+         width), its height (of spec.hgt), and how far its top is pulled in at the
+         front, the back (of the length) and the sides (of w). A body built of
+         several parts (the pickup) gives its bed, the long low box
+         the rest stands on; the faceted 'future' hull gives its widest flanks. */
+      function lowerHull(st) {
+        var b = st.body;
+        if (b === 'box' || b === 'bigbox' || b === 'ifv')
+          return { a0: -0.5, a1: 0.5, half: 1, h: b === 'bigbox' ? 1.08 : b === 'ifv' ? 0.85 : 1, frontIn: b === 'ifv' ? 0.3 : 0.24, backIn: 0.004, sideIn: 0.04 };
+        if (b === 'mlrs') return { a0: -0.5, a1: 0.5, half: 1, h: 0.55, frontIn: 0.04, backIn: 0, sideIn: 0.03 };
+        /* the faceted hull's front corners are chamfered: its sponson's front face
+           runs from the nose corner and the chamfer's top edge down to the plate */
+        if (b === 'future') return { a0: -0.44, a1: 0.36, half: 1, h: 0.9, topA1: 0.06, topA0: -0.42, topHalf: 0.86,
+          noseFoot: [0.5, 0.5], noseTop: [0.14, 0.46], outFront: 0.3 };
+        /* the car body slopes in all round from a low waist: its sponson comes up
+           only half its height, to where the sloping sides have come in by then */
+        if (b === 'car') return { a0: -0.46, a1: 0.46, half: 0.82, h: 0.45, dz: -2, frontIn: 0.2 * 0.45, backIn: 0.12 * 0.45, sideIn: 0.12 * 0.45 };
+        if (b === 'pickup') return { a0: -0.5, a1: 0.5, half: 1, h: 0.45, frontIn: 0, backIn: 0, sideIn: 0 };
+        var mbt = b === 'mbt';                            // a tank: the low hull with its sloped glacis
+        return { a0: -0.5, a1: 0.5, half: 0.94, h: mbt ? 0.8 : 0.88, frontIn: mbt ? 0.26 : 0.2, backIn: 0.05, sideIn: 0.03 };
+      }
+
+      /* Hex tiles on a sponson's sloping face, laid as the hull's flank lays them
+         (hexFlank): tiles a step of 0.12 of the length apart, two rows set half a
+         step between each other, each tile's side points just meeting the next.
+         Each tile is square to the hull, not stretched to the plate's tapered ends
+         (its foot runs bR..bF, its top tR..tF), and only a tile wholly on the plate
+         is laid. */
+      function sponsonHex(bR, bF, tR, tF, sOut, sTop, zBot, zTop) {
+        var step = spec.len * 0.12, lo = Math.min(bR, tR), hi = Math.max(bF, tF);
+        var n = Math.floor((hi - lo) / step), a0 = lo + ((hi - lo) - n * step) / 2;
+        function P(a, u) { return S3(HF(a, sOut + (sTop - sOut) * u), zBot + (zTop - zBot) * u); }
+        function onPlate(a, u) { return a >= bR + (tR - bR) * u - 1e-6 && a <= bF + (tF - bF) * u + 1e-6; }
+        for (var r = 0; r < 2; r++) {
+          for (var i = -1; i <= n; i++) {
+            var ca = a0 + step * (i + 0.5 + (r ? 0.5 : 0)), cu = r ? 0.3 : 0.72;
+            var pts = [], fits = true;
+            for (var k = 0; k < 6; k++) {
+              var ang = k * Math.PI / 3, va = ca + Math.cos(ang) * step * 0.46, vu = cu + Math.sin(ang) * 0.24;
+              if (!onPlate(va, vu)) fits = false;
+              pts.push(P(va, vu));
+            }
+            if (!fits) continue;
+            poly(g, pts, 'rgba(255,248,232,.07)');
+            for (var e2 = 0; e2 < 6; e2++) line(pts[e2], pts[(e2 + 1) % 6], 0.6, 'rgba(10,12,16,.35)', 'butt');
+          }
+        }
+      }
+
       /* Anti-grav pods under the hull, laid along the hull's own axis so they
          turn with it: an armoured housing, and under it the emitter plate
          glowing blue onto the ground. */
@@ -448,6 +498,36 @@
             slabF(HF, t - pl, t + pl, q - pw, q + pw, deck - 7, 7, TS, pl * 0.15, pl * 0.15, pw * 0.1);
           });
         }
+        /* A sponson over each row of pods: a sloping side plate from the hull's
+           top edge down and out over the housings, its front end raked back with
+           the glacis and its tail closed, in the hull's own paint. It stops at the
+           top of the pods, so the housings and their light show under it. */
+        // (not on the trucks, whose pods ride under a bare chassis, nor on the rebels' patched-up machines)
+        if (!spec.style || rebel || /^(truck|guntruck)$/.test(spec.style.body)) return;
+        [-1, 1].forEach(function (sd) {
+          if (!want(phase, sd)) return;
+          var L = spec.len, W = spec.wid, w = W * 0.47, hb = lowerHull(spec.style);
+          /* Pinned to the hull's own lower box (lowerHull): the plate's top edge is
+             the hull's top edge, corner to corner, and its inner foot the hull's
+             bottom edge, so the corners meet the hull's whatever its body. */
+          var zBot = deck + (hb.dz || 0), zTop = zBot + spec.hgt * hb.h;
+          var sFoot = sd * w * hb.half, sTop = sd * w * (hb.topHalf != null ? hb.topHalf : hb.half - hb.sideIn);
+          var fFoot = L * hb.a1, bFoot = L * hb.a0;
+          var tNose = L * (hb.topA1 != null ? hb.topA1 : hb.a1 - hb.frontIn), tTail = L * (hb.topA0 != null ? hb.topA0 : hb.a0 + hb.backIn);
+          var sOut = sd * Math.max(w * hb.half + W * 0.05, W * 0.5 + gearOut() * 1.1);
+          // the foot: the hull's bottom edge inside, the plate's lower edge outside, its front angled back
+          var base = [[fFoot, sFoot], [hb.outFront != null ? L * hb.outFront : fFoot - L * 0.2, sOut], [bFoot + L * 0.08, sOut], [bFoot, sFoot]];
+          // the top closes to the hull's top edge, so each end is a triangle to the hull's corners
+          var top = [[tNose, sTop], [tNose, sTop], [tTail, sTop], [tTail, sTop]];
+          if (hb.noseFoot) {                              // a chamfered nose: the front face meets the chamfer
+            base[0] = [L * hb.noseFoot[0], sd * w * hb.noseFoot[1]];
+            top[0] = [L * hb.noseTop[0], sd * w * hb.noseTop[1]];
+          }
+          shape(HF, base, zBot, zTop - zBot, TB, null, top, true);
+          // a hull armoured in hex tiles carries them on across its sponsons' outer faces
+          if ((spec.style.hex || spec.style.body === 'future') && (sideNear(sd) || Math.abs(cos - sin) < 0.2))
+            sponsonHex(base[2][0], base[1][0], top[2][0], top[1][0], sOut, sTop, zBot, zTop);
+        });
       }
 
 
