@@ -480,7 +480,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -872,6 +872,14 @@
         drawState.won = won; save(); render(); return;
       }
       case 'hub': view = 'hub'; render(); return;
+      /* Back from founding the first force: the campaign it was for goes (nothing
+         in it yet), and the choice of what to run comes back as it was picked. */
+      case 'foundback':
+        if (camp) { wantFaction = camp.companies.A.faction || 'pmc'; wantMode = camp.mode || 'solo'; }
+        if (secondFaction) wantB = secondFaction;
+        draft = null; openModal = null;
+        Store.clear().then(function () { camp = null; view = 'hub'; render(); });
+        return;
       case 'menu': toMenu(); return;
       case 'export': if (openModal === 'manage') { openModal = null; render(); } doExport(); return;
       case 'import': if (openModal === 'manage') { openModal = null; render(); } el('camp-file').click(); return;

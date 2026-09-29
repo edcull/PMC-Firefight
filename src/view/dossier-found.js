@@ -226,7 +226,8 @@
         ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '" aria-disabled="' + !chk.ok + '">' +
         say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
       // the second player cannot step back out: the campaign needs their force
-      if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+      // back to choosing what to run: the force is not founded yet, so there is nothing to keep
+      if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="foundback">Back</button></p>';
       return h;
     }
 
