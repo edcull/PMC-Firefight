@@ -244,17 +244,19 @@
     };
     // is anything that has already happened still to be drawn, or being drawn?
     function replaying() { return show.queue.length > 0 || show.waiting; }
-    /* The other side's attack: the camera, already on the unit acting, goes on
-       to what it is shooting at or charging, so the result is seen where it
-       lands. It is borrowed, and handed back as it is after their activation. */
-    function lookAtTarget(fromId, target) {
-      if (!target || !otherSides(fromId)) return;
-      focusUnit(target, false, true);
-    }
+    /* The AI's attack or targeted ability: the camera following it pulls back to
+       hold the unit and what it is aiming at together, so both ends are seen, and
+       goes back to how it was once the table has settled. (fitShot does nothing
+       unless the camera is following the AI.) */
     // is this event's unit the other side's — not one this screen plays?
     function otherSides(id) {
       var u = evUnit(id);
       return !!u && B.seats.indexOf(u.side) < 0;
+    }
+    function lookAtShot(from, target) {
+      if (!from || !target) return;
+      B.fitShot(from, target);
+      whenIdle(B.unfitShot);
     }
     // which events start something that takes time, and which land at once
     var SHOWN = {
@@ -279,10 +281,11 @@
     function stepWatched() {
       if (stepTimer || !B.net || !B.state || B.state.over) return;
       if (!B.state.cfg || B.state.cfg.aiSides.length !== 2) return;
+      if (ui.paused) return;                     // the watcher has paused it: the next activation waits
       if (B.state.phase !== 'battle' || ui.resOpen || menuUp()) return;
       stepTimer = setTimeout(function () {
         stepTimer = null;
-        if (!B.state || B.state.over || ui.resOpen || menuUp()) return;
+        if (!B.state || B.state.over || ui.resOpen || menuUp() || ui.paused) return;
         send({ k: 'step' });
       }, 260 / (+window.PMC_TIME_SCALE || 1));
     }
@@ -298,7 +301,14 @@
       switch (ev.e) {
         case 'log': logLine(ev.t, ev.text, ev.math); return;
         case 'card': pushRes(ev.card); return;
-        case 'fx': addFx(reLift(ev.f)); return;
+        case 'fx': {
+          var f = reLift(ev.f);
+          addFx(f);
+          // an ability aimed at something — a beam or a lobbed grenade — is framed as a shot is
+          if (f && f.kind === 'beam' && f.tx != null) lookAtShot({ x: f.x, y: f.y }, { x: f.tx, y: f.ty });
+          else if (f && f.kind === 'lob' && f.from && f.to) lookAtShot(f.from, f.to);
+          return;
+        }
         case 'sound': {
           // a sound the rules asked for, by name; 'suppressed' is an older word for it
           if (!SFX) return;
@@ -315,15 +325,15 @@
         case 'shoot': {
           var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
           if (!(sa && sb)) return false;
-          lookAtTarget(ev.from, sb);
           playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null);
+          lookAtShot(sa, sb);                          // once the shot is playing, so it waits for it
           return !!done;
         }
         case 'assault': {
           var aa = evUnit(ev.from), ab = evUnit(ev.to);
           if (!(aa && ab)) return false;
-          lookAtTarget(ev.from, ab);
           playAssault(aa, ab, deathsOf(ev.deaths), done || null);
+          lookAtShot(aa, ab);
           return !!done;
         }
         case 'strafe': {

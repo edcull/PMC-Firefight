@@ -81,7 +81,7 @@ async function pastFronts(p) {
   await clickText(p, '(?:RAISE|Raise) THE FORCE|Raise the force');
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Ghadon Third'; });
   let txt = await body(p);
-  check('the founding screen speaks for a tribe', await p.evaluate(() => /the tribe/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
+  check('the founding screen speaks for a tribe', await p.evaluate(() => /Xenotripods/.test(document.querySelector('#camp-body .found-units .muster-head .armypill').textContent)));
   check('...offers Tribe Advancements', /choose a tribe advancement/i.test(txt), (txt.match(/Choose [^\n]+/i) || [])[0]);
   check('...eighteen of them', await p.evaluate(() =>
     document.querySelectorAll('#camp-body [data-doc]').length) === 18);
@@ -162,20 +162,35 @@ async function pastFronts(p) {
   await p.evaluate(() => { document.querySelector('#camp-body [data-take-offer]').click(); });
   await p.waitForTimeout(250);
   txt = await body(p);
-  check('a Battle Tier was rolled', /Battle Tier/.test(txt), txt.split('\n')[1]);
-  check('a scenario was rolled',
-    /Meeting engagement|Secure and control|Find and secure|Invasion|Demolish|Hostile takeover/.test(txt),
-    (txt.match(/Meeting engagement|Secure and control|Find and secure|Invasion|Demolish|Hostile takeover/) || [])[0]);
+  // the scenario and the opponent were read on the offer: the force screen does not repeat them
+  check('the force screen does not repeat the scenario or the opponent', !/Against |Scenario D6|As the attacker|As the defender|Needs at least/.test(txt),
+    txt.split('\n').slice(0, 3).join(' / '));
   check('Foresighted Command offers a second scenario', /Foresighted Command/.test(txt),
     (txt.split('\n').filter(l => /Foresighted/.test(l))[0] || 'no line'));
-  const before = await p.evaluate(() => document.getElementById('camp-body').innerText.match(/Scenario D6 \d — ([^.]+)\./)[1]);
+  const scen = () => p.evaluate(() => (document.getElementById('camp-body').innerText.split('\n').filter(l => /Foresighted/.test(l))[0] || ''));
+  const before = await scen();
   await click(p, '#camp-body [data-foresee]');
-  const afterSwap = await p.evaluate(() => document.getElementById('camp-body').innerText.match(/Scenario D6 \d — ([^.]+)\./)[1]);
+  const afterSwap = await scen();
   check('...and the tribe can take it instead', /agreed/.test(txt) || before !== afterSwap,
     before + ' → ' + afterSwap);
-  await clickText(p, '[Ff][Ii][Ll][Ll] [Tt][Hh][Ee] [Ll][Ii][Ss][Tt]');
+  /* turrets are never bought: the force screen offers them for the battle alone,
+     and taking one puts it in the list without touching the books */
+  const turret = await p.evaluate(() => {
+    const rosterBefore = window.PMC_CAMPAIGN.get().companies.A.roster.length;
+    const b = [...document.querySelectorAll('#camp-body [data-field]')].find(x => !x.disabled);
+    const offered = document.querySelectorAll('#camp-body [data-field]').length;
+    if (b) b.click();
+    const picked = [...document.querySelectorAll('#camp-body [data-unpick]')].length;
+    return { offered, took: !!b, picked, sameBooks: window.PMC_CAMPAIGN.get().companies.A.roster.length === rosterBefore,
+      heading: /Fielded for this battle/.test(document.getElementById('camp-body').textContent),
+      noFill: !/Fill the list for me/.test(document.getElementById('camp-body').textContent) };
+  });
+  check('turrets are fielded for the battle, not bought', turret.offered > 0 && turret.heading && turret.took && turret.picked === 1 && turret.sameBooks, JSON.stringify(turret));
+  check('...and there is no filling the list for you', turret.noFill);
+  await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
+  await p.waitForTimeout(200);
   txt = await body(p);
-  check('the list filled legally', /A legal Battle Tier/.test(txt), (txt.match(/\d+ \/ \d+/) || [])[0]);
+  check('the list filled legally', await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button.start')][0]; return !!b && b.getAttribute('aria-disabled') !== 'true'; }), (txt.match(/\d+ \/ \d+/) || [])[0]);
   await shot(p, 'xeno-contract.png');
   check('the field can be taken', await clickText(p, '[Tt][Aa][Kk][Ee] [Tt][Hh][Ee] [Ff][Ii][Ee][Ll][Dd]'));
   await p.waitForTimeout(900);

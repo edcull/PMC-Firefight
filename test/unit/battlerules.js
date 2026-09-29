@@ -225,6 +225,11 @@ var bad = R.checkArmy(['dcombat', 'dassault', 'recruits'], 3, 1);
 ok('more Drone units than others is a fault', bad.faults.some(function (f) { return /Drone units/.test(f); }));
 var fine = R.checkArmy(['dcombat', 'recruits'], 3, 1);
 ok('...an even split is not', !fine.faults.some(function (f) { return /Drone units/.test(f); }));
+// a platform costs its point, fills no Tier row, and need carry nobody
+var pods = R.checkArmy(['recruits', 'recruits', 'recruits', 'insertplat', 'insertplat', 'insertplat'], 1, 1);
+ok('Rapid insertion platforms need no squad to ride them', pods.ok, pods.faults.join(' '));
+var podsT4 = R.checkArmy(['veterans', 'veterans', 'veterans', 'insertplat'], 4, 1);
+ok('...and fill no Tier I slot', !podsT4.faults.some(function (f) { return /Tier I units/.test(f); }), podsT4.faults.join(' '));
 
 /* ------------------------------------------------------ the charge */
 console.log('\nTHE CHARGE (p. 33)');

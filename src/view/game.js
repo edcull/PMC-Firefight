@@ -110,6 +110,9 @@
     wireNet(net);
     net.connect();
     net.begin(cfg, seats);
+    // a demo starts with the camera left alone; Follow can be turned on to watch the action
+    VIEW.startDemoCam();
+    setPaused(false);
     return state;
   }
 
@@ -132,6 +135,7 @@
     watching = false;
     loadAutoAdvance(cfg.mode);
     resetShow();
+    setPaused(false);
     net = new window.PMCNet.Local();
     wireNet(net);
     net.connect();
@@ -282,6 +286,19 @@
     return ['setup', 'camp'].some(function (id) { var x = el(id); return !!x && !x.hidden; });
   }
   window.addEventListener('pmc-menu-closed', function () { stepWatched(); });
+  /* Pause, beside the zoom level in a demo: the activation being drawn plays
+     out, and the next one waits until it is pressed again. */
+  function setPaused(on) {
+    ui.paused = !!on;
+    var b = document.getElementById('demo-pause');
+    if (b) {
+      b.classList.toggle('on', ui.paused);
+      b.setAttribute('aria-pressed', ui.paused ? 'true' : 'false');
+      b.textContent = ui.paused ? 'Play' : 'Pause';
+      b.title = ui.paused ? 'Carry on with the battle' : 'Pause the battle';
+    }
+    if (!ui.paused && state) stepWatched();
+  }
 
   // what happened, played out: replay.js (installed with the modules, below)
 
@@ -326,7 +343,6 @@
   function arrivalLegal(u, p) { return Q.arrivalLegal(u, p); }
   function arrivalWhere(u) { return Q.arrivalWhere(u); }
   function inReserve(side) { return Q.inReserve(side); }
-  function emptyPlatforms(side) { return Q.emptyPlatforms(side); }
   function carriersFor(side) { return Q.carriersFor(side); }
   function boardableFor(v) { return Q.boardableFor(v); }
   function moveBonus(u, a) { return Q.moveBonus(u, a); }
@@ -642,7 +658,8 @@
     ZOOMS.push(fit);
     ZOOM_STEPS.forEach(function (z) { if (z > fit + 0.02) ZOOMS.push(z); });
     if (cam.z <= fit) cam.z = fit;
-    if (ZOOMS.indexOf(cam.z) < 0) cam.z = nearestZoom(cam.z);
+    // (a zoom still easing to a step, framing a shot, is left to get there)
+    if (ZOOMS.indexOf(cam.z) < 0 && cam.zGoal == null) cam.z = nearestZoom(cam.z);
     return true;
   }
 
@@ -807,6 +824,7 @@
     get drawPanel() { return drawPanel; }, get drawStats() { return drawStats; },
     get feedHosts() { return feedHosts; }, get fitView() { return fitView; },
     get focusUnit() { return focusUnit; }, get handsOff() { return handsOff; },
+    get fitShot() { return VIEW.fitShot; }, get unfitShot() { return VIEW.unfitShot; },
     get landUnit() { return landUnit; }, get lookAtDeployment() { return lookAtDeployment; },
     get paintStructures() { return paintStructures; }, get playAssault() { return playAssault; },
     get playShooting() { return playShooting; }, get playStrafe() { return playStrafe; },
@@ -871,7 +889,7 @@
      and the functions and fixed values it uses. */
   var PLAY = window.PMCPlay({
     get held() { return held; }, get pctx() { return pctx; }, get state() { return state; }, get vc() { return vc(); },
-    get handsOff() { return handsOff; }, get followOn() { return followOn; }, get render() { return render; }, dispX: dispX, dispY: dispY,
+    get handsOff() { return handsOff; }, get camOff() { return VIEW.camOff; }, get followOn() { return followOn; }, get render() { return render; }, dispX: dispX, dispY: dispY,
     nowMs: nowMs, onTable: onTable, startLoop: startLoop, FX: FX, ISO: ISO, R: R, SFX: SFX,
     STANDING: STANDING, anims: anims
   });
@@ -901,7 +919,7 @@
     get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get closeDrawer() { return closeDrawer; }, get closeRes() { return closeRes; },
     get drawBoard() { return drawBoard; }, get drawerEl() { return drawerEl; }, get esc() { return esc; },
-    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; }, get setFollow() { return setFollow; }, get followOn() { return followOn; },
+    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; }, get setFollow() { return setFollow; }, get followOn() { return followOn; }, setPaused: setPaused,
     get insertionMine() { return insertionMine; }, get panBy() { return panBy; }, get faceAsked() { return DRAW.faceAsked; },
     get render() { return render; }, get returnHome() { return returnHome; },
     get setHint() { return setHint; }, get setZoom() { return setZoom; }, get tip() { return tip; },
@@ -1029,7 +1047,7 @@
     deployRoster: deployRoster, deployWhere: deployWhere, deploymentDone: deploymentDone,
     digFacings: digFacings, digPreview: digPreview, faceAsked: DRAW.faceAsked, doAssault: doAssault, doBreach: doBreach,
     doDemolish: doDemolish, doDesignate: doDesignate, doEnter: doEnter, doHack: doHack, doShoot: doShoot,
-    doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard, emptyPlatforms: emptyPlatforms,
+    doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard,
     holdArrival: holdArrival, holdInsertion: holdInsertion, hud: hud, inReserve: inReserve,
     insertionCard: insertionCard, isAI: isAI, kyfCard: kyfCard, liftOf: liftOf, loadBefore: loadBefore,
     martyrCard: martyrCard, mineCard: mineCard, movePreviewCard: movePreviewCard, mySide: mySide,

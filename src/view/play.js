@@ -10,7 +10,6 @@
     var dispX = B.dispX, dispY = B.dispY, nowMs = B.nowMs, onTable = B.onTable, startLoop = B.startLoop;
     var FX = B.FX, ISO = B.ISO, R = B.R, SFX = B.SFX, STANDING = B.STANDING, anims = B.anims;
     // from modules installed after this one: looked up when called
-    function handsOff() { return B.handsOff.apply(this, arguments); }
     function render() { return B.render.apply(this, arguments); }
     // a pause in the drawing, on the board's clock (a test harness may run it faster: see game.js)
     function later(fn, ms) { return setTimeout(fn, ms / (+root.PMC_TIME_SCALE || 1)); }
@@ -119,7 +118,7 @@
       if (R.isMachine(u)) u.aim = null;
       var dig = burrows(u);
       anims.push({
-        kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff() && B.followOn(),
+        kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !B.camOff() && B.followOn(),
         dur: dig ? MOTION.burrowMs(total) : moveMs(u, total),
         t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0, done: done || null
       });

@@ -332,21 +332,6 @@
     }
     // machines: three per Priority Level, aircraft only from Battle Tier II,
     // and at PL1 nothing above the Battle Tier and only one aircraft
-    /* "Platforms ... have to start the battle with a single infantry unit onboard"
-       (p. 79). A list may therefore hold no more platforms than it has infantry
-       units free to ride in them — a Command Unit will not be strapped into one. */
-    var plats = 0, riders = 0;
-    keys.forEach(function (k) {
-      var p = BY_KEY[k];
-      if (!p) return;
-      if (p.mustLoad) plats++;
-      else if (p.cls === 'infantry' && !p.command) riders++;   // any infantry squad may ride one (p. 80)
-    });
-    if (plats > riders) {
-      faults.push('Every Rapid insertion platform starts the battle with an infantry unit aboard — ' +
-        plats + ' platform' + (plats > 1 ? 's' : '') + ' but only ' + riders + ' squad' +
-        (riders === 1 ? '' : 's') + ' free to ride.');
-    }
     var machines = 0, aircraft = 0, overTier = 0;
     keys.forEach(function (k) {
       var p = BY_KEY[k];
@@ -462,7 +447,7 @@
       if (p.capPL && (perKey[p.key] || 0) + 1 > p.capPL * pl) return false;
       if (p.groupCap && (perGroup[p.group] || 0) + 1 > p.groupCap) return false;
       if (p.groupCapPL && (perGroup[p.group] || 0) + 1 > p.groupCapPL * pl) return false;
-      // a platform is only worth rolling once there is a squad spare to ride in it
+      // a platform need not carry anyone, but a rolled list only takes one it can fill
       if (p.mustLoad && plats + 1 > riders) return false;
       if (p.cls !== 'infantry') {
         if (machines + 1 > 3 * pl) return false;

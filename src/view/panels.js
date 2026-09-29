@@ -15,7 +15,7 @@
     var digPreview = B.digPreview, doAssault = B.doAssault, doBreach = B.doBreach, doDemolish = B.doDemolish;
     var doDesignate = B.doDesignate, doEnter = B.doEnter, doHack = B.doHack, doShoot = B.doShoot;
     var doSteady = B.doSteady, doSupport = B.doSupport, drawBoard = B.drawBoard;
-    var emptyPlatforms = B.emptyPlatforms, holdArrival = B.holdArrival, holdInsertion = B.holdInsertion;
+    var holdArrival = B.holdArrival, holdInsertion = B.holdInsertion;
     var hud = B.hud, inReserve = B.inReserve, insertionCard = B.insertionCard, isAI = B.isAI;
     var kyfCard = B.kyfCard, liftOf = B.liftOf, loadBefore = B.loadBefore, martyrCard = B.martyrCard;
     var mineCard = B.mineCard, movePreviewCard = B.movePreviewCard, mySide = B.mySide, openMenu = B.openMenu;
@@ -755,13 +755,13 @@
       var extra = splits.map(splitCard).join('') + loadingCard(me);
       if (extra) {
         var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
-        var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; }), emptyPod = emptyPlatforms(me).length > 0;
+        var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; });
         var aboard = hulls.reduce(function (n, v) { return n + (v.cargo || []).length; }, 0);
         var held = splits.reduce(function (n, sd) { return n + splitFor(sd).held; }, 0);
         var sub = [splits.length ? held + (splitFor(splits[0]).kind === 'wave' ? ' in the second wave' : ' held back') : '',
           hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
-        h += '<div class="acts"><button class="act' + (badSplit || emptyPod ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
-          '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : emptyPod ? 'A drop pod needs a squad \u2014 ' : '') + sub + '</small></button></div>';
+        h += '<div class="acts"><button class="act' + (badSplit ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
+          '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : '') + sub + '</small></button></div>';
         h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
           '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
           '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
@@ -779,7 +779,7 @@
          in with nobody aboard are asked about first. */
       // (in a hotseat, whichever player's split is still short)
       var mySplit = ['A', 'B'].map(splitFor).filter(function (f) { return f && !f.ok; })[0] || splitFor(me), splitShort = !!mySplit && !mySplit.ok;
-      var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; }) && !emptyPlatforms(me).length;
+      var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
       if (deploymentDone() || (placed && splitShort)) {
         var blocked = !deploymentDone();
         var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
@@ -799,9 +799,6 @@
             ' going into the battle with nobody aboard. Begin anyway?</p></div>' +
             '<div class="askrow"><button class="lnk" data-act="startnoask">Back</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
         }
-      }
-      else if (emptyPlatforms(me).length) {
-        h += '<p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p>';
       }
       return h + '</div></div>';
     }
@@ -922,7 +919,7 @@
       if (!hulls.length) return '';
       var h = '<div class="loadbox"><h3>Aboard before the battle</h3>' +
         '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired. ' +
-        'A Rapid insertion platform has to. A Lifter can start with a vehicle slung under it, and a hull with a gun on tow.</p>';
+        'A Lifter can start with a vehicle slung under it, and a hull with a gun on tow.</p>';
       hulls.forEach(function (v) {
         var cargo = v.cargo || [], room = v.transport - cargo.length;
         var must = R.has(v, 'Immobile');
