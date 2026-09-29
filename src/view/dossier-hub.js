@@ -150,19 +150,25 @@
         h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
           '</label>' + squares(colourOf(co)) + '</div>';
       }
-      h += (bar || '') + statRow(co, false, side);
-      h += '<div class="cpdoc carch">' + armyPill(co, 'army' + side) + (co.doctrines.length
-        ? co.doctrines.map(function (d) {
-          var dd = C.doctrine(d);
-          return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
-        }).join('')
-        : '<span class="dnote">No ' + C.creedOf(co).one + ' chosen.</span>') + '</div>';
-      var open = C.doctrineSlots(co) - co.doctrines.length;
-      if (open > 0) {
-        h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
-          C.creedOf(co).one + ' (' + open + ' free)</button> ';
+      h += bar || '';
+      // the dossier is the units, sorted and filtered; the figures, the army and its creed are the company's
+      if (bar && side === 'A' && E.hubPane === 'dossier') {
+        h += (E.rosterTab === 'units' ? sortLine(co) : '') + dossierPanel(co);
+      } else {
+        h += statRow(co, false, side);
+        h += '<div class="cpdoc carch">' + armyPill(co, 'army' + side) + (co.doctrines.length
+          ? co.doctrines.map(function (d) {
+            var dd = C.doctrine(d);
+            return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
+          }).join('')
+          : '<span class="dnote">No ' + C.creedOf(co).one + ' chosen.</span>') + '</div>';
+        var open = C.doctrineSlots(co) - co.doctrines.length;
+        if (open > 0) {
+          h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
+            C.creedOf(co).one + ' (' + open + ' free)</button> ';
+        }
+        h += promotionPanel(co, side, !!bar);
       }
-      h += bar && side === 'A' && E.hubPane === 'dossier' ? dossierPanel(co) : promotionPanel(co, side, !!bar);
       if (!co.aspiring && C.canAspire(co)) {
         h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
       }
@@ -173,6 +179,43 @@
           ' — recruit or promote from the lowest Tier up.</div>';
       }
       h += '</div>';
+      return h;
+    }
+    /* The dossier's one line: Sort and Filter, each opening its choices in a
+       popup. Sorted by one thing at a time; filtered by as many types and
+       Tiers as are ticked (none ticked, all of them). */
+    var SORTS = [['type', 'Type'], ['name', 'Name'], ['tier', 'Tier'], ['xp', 'EXP'], ['tp', 'TP']];
+    function sortLine(co) {
+      var by = SORTS.filter(function (x) { return x[0] === E.dsort; })[0] || SORTS[0];
+      var types = {}, tiers = {};
+      co.roster.forEach(function (e) {
+        var p = profile(e.key);
+        if (!p) return;
+        types[p.group || ''] = true; tiers[p.tier] = true;
+      });
+      var on = function (kind) { return Object.keys(E.dfilt[kind]).filter(function (k) { return E.dfilt[kind][k]; }); };
+      // the company's Honours and Trauma figures narrow it too: said here, and undone here
+      var uf = E.ufilter.A || {}, W = { honour: C.experienceStats(co).word, trauma: C.traumaStats(co).word };
+      var picked = on('type').concat(on('tier').map(function (t) { return 'Tier ' + ROMAN[t]; }))
+        .concat(['honour', 'trauma'].filter(function (k) { return uf[k]; }).map(function (k) { return W[k]; }));
+      var h = '<div class="dsortline">' +
+        '<button type="button" class="lnk" data-go="fmodal" data-kind="dsort">Sort: ' + by[1] + ' \u25be</button>' +
+        '<button type="button" class="lnk' + (picked.length ? ' on' : '') + '" data-go="fmodal" data-kind="dfilter">Filter: ' +
+        (picked.length ? esc(picked.length > 2 ? picked.length + ' chosen' : picked.join(', ')) : 'All') + ' \u25be</button></div>';
+      h += cmodal('dsort', 'Sort the dossier', '<div class="cmodal-scroll dpick-list">' + SORTS.map(function (x) {
+        return '<button type="button" class="lnk' + (x[0] === E.dsort ? ' on' : '') + '" data-go="dsort" data-by="' + x[0] + '" aria-pressed="' + (x[0] === E.dsort) + '">' + x[1] + '</button>';
+      }).join('') + '</div>');
+      var chip = function (kind, val, label) {
+        var is = !!E.dfilt[kind][val];
+        return '<button type="button" class="lnk' + (is ? ' on' : '') + '" data-go="dfilt" data-kind="' + kind + '" data-val="' + esc(val) + '" aria-pressed="' + is + '">' + esc(label) + '</button>';
+      };
+      h += cmodal('dfilter', 'Filter the dossier', '<div class="cmodal-scroll dpick-list">' +
+        '<h4>Type</h4>' + Object.keys(types).sort().map(function (g) { return chip('type', g, g || 'Other'); }).join('') +
+        '<h4>Tier</h4>' + Object.keys(tiers).sort().map(function (t) { return chip('tier', t, 'Tier ' + ROMAN[t]); }).join('') +
+        '<h4>Has</h4>' + ['honour', 'trauma'].map(function (k) {
+          return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="A" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
+        }).join('') +
+        '</div>', picked.length ? '<button type="button" class="lnk" data-go="dfiltclear">Clear</button>' : '');
       return h;
     }
     /* Promotion to the next Company Tier (pp. 83-84) is a handful of conditions,

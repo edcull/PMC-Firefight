@@ -161,7 +161,7 @@
   var wantFaction = 'pmc', wantB = 'pmc';   // what the new campaign's forces will be, as picked so far
   var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false;
-  var hubPane = 'dossier';            // the hub opens on the unit cards
+  var hubPane = 'tier';               // the hub opens on the company
   var rosterTab = 'units';
   var menOpen = {};               // which unit has its details open, by rid (one at a time)
   var showCard = null;            // a card just opened, to be scrolled fully into view
@@ -175,6 +175,29 @@
      it: each a toggle, by force ('A', 'B', or a rival's 'r' + its place), and
      with both on, the units that have either. */
   var ufilter = {};
+  /* The dossier's own sort and filter (the line above its list): sorted by one
+     thing, and narrowed to the types and Tiers ticked (none ticked, all shown). */
+  var dsort = 'type', dfilt = { type: {}, tier: {} };
+  function dossierOrder(list) {
+    function p(e) { return profile(e.key) || {}; }
+    function lead(e) { return C.isLeaderP(p(e)) ? 1 : 0; }
+    var anyType = Object.keys(dfilt.type).some(function (k) { return dfilt.type[k]; });
+    var anyTier = Object.keys(dfilt.tier).some(function (k) { return dfilt.tier[k]; });
+    return list.filter(function (e) {
+      return (!anyType || dfilt.type[p(e).group || '']) && (!anyTier || dfilt.tier[p(e).tier]);
+    }).sort(function (a, b) {
+      var byName = String(a.name).localeCompare(String(b.name));
+      switch (dsort) {
+        case 'name': return byName;
+        case 'tier': return p(b).tier - p(a).tier || byName;
+        case 'xp': return (b.exp || 0) - (a.exp || 0) || byName;
+        case 'tp': return (b.tp || 0) - (a.tp || 0) || byName;
+        // by type: the command first, then each group together, the higher Tier first
+        default: return lead(b) - lead(a) || String(p(a).group || '').localeCompare(String(p(b).group || '')) ||
+          p(b).tier - p(a).tier || (b.exp || 0) - (a.exp || 0);
+      }
+    });
+  }
   function unitPasses(e, key) {
     var f = ufilter[key];
     if (!f || (!f.honour && !f.trauma)) return true;
@@ -355,7 +378,8 @@
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
-      get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses
+      get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
+      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get rosterTab() { return rosterTab; }
     }));
   }
   function hubView() { return (KIT_HUB || kitHub()).hubView(); }
@@ -394,7 +418,8 @@
     return KIT_ROSTER || (KIT_ROSTER = root.PMCDossierRoster({
       C: C, R: R, ROMAN: ROMAN, entryCard: entryCard, esc: esc, ourList: ourList, profile: profile,
       root: root, save: save, statLine: statLine, get menOpen() { return menOpen; },
-      get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses
+      get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses,
+      dossierOrder: dossierOrder
     }));
   }
   function dossierPanel(co) { return (KIT_ROSTER || kitRoster()).dossierPanel(co); }
@@ -441,7 +466,7 @@
     var body = el('camp-body');
     if (!body) return;
     var h = '';
-    if (view !== 'hub') hubPane = 'dossier';                 // back at the hub, it opens on the dossier
+    if (view !== 'hub') hubPane = 'tier';                    // back at the hub, it opens on the company
     if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view !== 'aftermath' && KIT_AFTER) KIT_AFTER.showPast(null);   // a past battle's report is only open while it is shown
@@ -466,7 +491,7 @@
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
-    body.classList.toggle('fit', view === 'found' || view === 'contract');
+    body.classList.toggle('fit', view === 'found' || view === 'contract' || view === 'honour');
     body.classList.toggle('hubfit', view === 'hub' && !!camp);
     var dl = body.querySelector('.cdos-body'), dlTop = dl ? dl.scrollTop : 0;
     body.innerHTML = h;
@@ -485,7 +510,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -773,6 +798,14 @@
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
+      // the dossier's sort (one at a time) and filter (as many as ticked), from their popups
+      case 'dsort': dsort = t.getAttribute('data-by') || 'type'; render(); return;
+      case 'dfilt': {
+        var dk = t.getAttribute('data-kind'), dv = t.getAttribute('data-val');
+        dfilt[dk][dv] = !dfilt[dk][dv];
+        render(); return;
+      }
+      case 'dfiltclear': dfilt = { type: {}, tier: {} }; ufilter.A = {}; render(); return;
       case 'ufilter': {
         var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');
         var fl = ufilter[fk] || (ufilter[fk] = {});

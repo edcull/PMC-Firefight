@@ -112,7 +112,36 @@ async function pastFronts(p) {
 
   /* the road to the next Company Tier, laid out step by step (pp. 83-84) —
      behind the Company button, the hub opening on the dossier */
-  check('the hub opens on the dossier', await p.evaluate(() => !!document.querySelector('#camp-body .cdos')));
+  check('the hub opens on the company', await p.evaluate(() => !document.querySelector('#camp-body .cdos') && !!document.querySelector('#camp-body .cpan-A .cstats')));
+  // the dossier: the units alone, under one line of sort and filter
+  await p.evaluate(() => document.querySelector('#camp-body .hubbar [data-go="roster"]').click());
+  await p.waitForTimeout(200);
+  const dos = await p.evaluate(() => ({ cdos: !!document.querySelector('#camp-body .cdos'), stats: !!document.querySelector('#camp-body .cpan-A .cstats'),
+    creed: !!document.querySelector('#camp-body .cpan-A .cpdoc'), line: [...document.querySelectorAll('#camp-body .dsortline button')].map(b => b.textContent) }));
+  check('the dossier shows the units, without the figures, army and creed', dos.cdos && !dos.stats && !dos.creed, JSON.stringify(dos));
+  check('...under a line to sort and filter them', dos.line.length === 2 && /Sort: Type/.test(dos.line[0]) && /Filter: All/.test(dos.line[1]), dos.line.join(' | '));
+  await p.evaluate(() => { document.querySelector('#camp-body .dsortline [data-kind="dsort"]').click(); });
+  await p.waitForTimeout(150);
+  await p.evaluate(() => { document.querySelector('#camp-body .cmodal:not([hidden]) [data-by="name"]').click(); });
+  await p.waitForTimeout(150);
+  const sortedNames = await p.evaluate(() => {
+    const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos [data-rename]')].map(b => b.getAttribute('data-rename'));
+    return rids.map(r => camp.companies.A.roster.find(e => String(e.rid) === r).name);
+  });
+  check('Sort by name puts them in order of name', sortedNames.length > 3 && sortedNames.every((n, i) => !i || sortedNames[i - 1].localeCompare(n) <= 0), sortedNames.join(', '));
+  await p.evaluate(() => { const d = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (d) d.click(); });
+  await p.evaluate(() => { document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').click(); });
+  await p.waitForTimeout(150);
+  const filt = await p.evaluate(() => {
+    const b = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="dfilt"][data-kind="tier"]');
+    const tier = +b.getAttribute('data-val'); b.click();
+    const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos [data-rename]')].map(x => x.getAttribute('data-rename'));
+    const tiers = rids.map(r => window.PMC.profile(camp.companies.A.roster.find(e => String(e.rid) === r).key).tier);
+    return { tier, tiers, label: document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').textContent };
+  });
+  check('Filter by Tier narrows it to that Tier', filt.tiers.length > 0 && filt.tiers.every(t => t === filt.tier) && /Tier/.test(filt.label), JSON.stringify(filt));
+  await p.evaluate(() => { document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="dfiltclear"]').click(); });
+  await p.evaluate(() => { const d = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (d) d.click(); });
   await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
   await p.waitForTimeout(200);
   const prom = await p.evaluate(() => {
@@ -522,6 +551,11 @@ async function pastFronts(p) {
     b.click(); return true;
   }));
   await p.waitForTimeout(250);
+  // each promotion says what the unit becomes: its Tier and group
+  const promo = await p.evaluate(() => [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].map(b => b.textContent));
+  check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier \d · \S/.test(t)), promo.join(' | '));
+  const vp = p.viewportSize();
+  await p.setViewportSize({ width: 412, height: 780 });
   const opened = await p.evaluate(() => {
     const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([disabled])');
     if (!b) return false;
@@ -535,6 +569,18 @@ async function pastFronts(p) {
   }));
   check('...offering every honour the unit has not earned', pool.all > 3, pool.all + ' on the table');
   check('...with the draw held back until three are chosen', pool.draw === true);
+  // on a phone the list scrolls and the draw stays on the screen, at its foot
+  const foot = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body button')].find(x => /Choose three|Draw one/.test(x.textContent));
+    const list = document.querySelector('#camp-body .docpick');
+    return { bottom: b ? Math.round(b.getBoundingClientRect().bottom) : null, h: innerHeight,
+      scrolls: list.scrollHeight > list.clientHeight + 2 && getComputedStyle(list).overflowY === 'auto',
+      back: !document.getElementById('camp-back').hidden && document.getElementById('camp-back').getAttribute('data-go') === 'roster' };
+  });
+  check('...the draw button pinned to the foot of the screen, the list scrolling', foot.bottom != null && foot.bottom <= foot.h && foot.scrolls, JSON.stringify(foot));
+  check('...and Back in the title bar', foot.back, JSON.stringify(foot));
+  await shot(p, 'camp-honour-phone.png');
+  await p.setViewportSize(vp);
   for (let i = 0; i < 3; i++) {
     await p.evaluate(() => {
       const b = [...document.querySelectorAll('#camp-body .doc')]

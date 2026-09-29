@@ -508,11 +508,8 @@
     function honourView() {
       var picks = E.drawState.picked || [];
       var h = '<h2>' + esc(E.drawState.entry.name) + '</h2>';
-      var hw = C.words(E.camp.companies.A).honours;
-      h += '<p class="lede">Put three ' + hw + ' forward, then one of the three is taken at ' +
-        'random (p. ' + (hw === 'Adaptations' ? 125 : 88) + '). ' + E.drawState.cost + ' EXP.</p>';
       if (!E.drawState.won) {
-        h += '<p class="dnote"><b>' + picks.length + ' of 3 chosen.</b> ' +
+        h += '<p class="dnote"><b>' + picks.length + ' of 3 chosen \u00b7 ' + E.drawState.cost + ' EXP.</b> ' +
           (picks.length < 3
             ? 'Pick ' + (3 - picks.length) + ' more from the ' + E.drawState.pool.length +
               ' this unit has not earned — tap one again to take it back out.'
@@ -540,6 +537,8 @@
           '<b>' + esc(x.name) + (won ? ' — drawn' : '') + '</b><span>' + esc(x.text) + '</span></button>';
       });
       h += '</div>';
+      // the way on stays at the foot of the screen, however long the list above it scrolls
+      h += '<div class="honour-foot">';
       if (E.drawState.won) {
         h += '<p class="faults ok">' + esc(E.drawState.entry.name) + ' earns <b>' + esc(E.drawState.won.name) + '</b>.</p>';
         h += '<button class="start" data-go="roster">Back to the dossier</button>';
@@ -547,7 +546,7 @@
         h += '<button class="start" data-go="drawnow"' + (picks.length === 3 ? '' : ' disabled') + '>' +
           (picks.length === 3 ? 'Draw one of the three' : 'Choose three first') + '</button>';
       }
-      h += '<p class="camp-foot"><button class="lnk" data-go="roster">Back</button></p>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="roster">Back</button></p></div>';
       return h;
     }
 
