@@ -20,11 +20,14 @@
         var fk = co === E.camp.companies.A ? 'A' : 'B', shown = co.roster.filter(function (e) { return E.unitPasses(e, fk); });
         h += '<div class="dlist">';
         if (!shown.length) h += '<p class="cpstat">No unit has any yet.</p>';
-        // the command first — it earns no experience and carries no honours or traumas — then by Tier and experience
-        shown.slice().sort(function (a, b) {
+        // your own force: as the sort and filter line above the list says
+        var ordered = fk === 'A' ? E.dossierOrder(shown) : shown.slice().sort(function (a, b) {
+          // the command first — it earns no experience and carries no honours or traumas — then by Tier and experience
           var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
           return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
-        }).forEach(function (e) {
+        });
+        if (shown.length && !ordered.length) h += '<p class="cpstat">No unit matches the filter.</p>';
+        ordered.forEach(function (e) {
           var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
           var open = !!E.menOpen[e.rid];
           // enough experience for something: a Promote button, opening the choices in a window

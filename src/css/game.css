@@ -742,7 +742,7 @@ a.mcard { text-decoration: none; line-height: normal; }
   padding: 18px max(16px, calc((100% - 720px) / 2)) calc(22px + env(safe-area-inset-bottom, 0px));
 }
 /* the top bar is the way back: the footer's own Back and Main menu are not needed twice */
-#camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"] { display: none; }
+#camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"], #camp-body .camp-foot [data-go="roster"] { display: none; }
 /* who a solo campaign is up against: one line, and a list behind it */
 .archline {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
@@ -862,6 +862,14 @@ a.mcard { text-decoration: none; line-height: normal; }
 .rivdos-go { display: block; width: 100%; min-height: 33px; padding-block: 0; margin: 10px 0 0; text-align: center; }
 /* a unit's promotion choices, one to a line */
 .promo-list { display: flex; flex-direction: column; gap: 6px; }
+/* the dossier's one line of sort and filter, and the choices in their popups */
+.dsortline { display: flex; gap: 8px; margin: 2px 0 10px; }
+.dsortline .lnk { flex: 1 1 0; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 8px 10px; }
+.dpick-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.dpick-list h4 { flex: 0 0 100%; margin: 8px 0 0; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+.dpick-list h4:first-child { margin-top: 0; }
+.dpick-list .lnk { padding: 8px 12px; }
+.dpick-list .lnk.on, .dsortline .lnk.on { border-color: var(--alpha); color: var(--ink); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
 .promo-list .lnk { width: 100%; text-align: left; padding: 9px 12px; }
 .lnk .promo-to { display: block; margin-top: 3px; font-size: .92em; opacity: .75; }
 /* a unit's card opens where it is tapped */

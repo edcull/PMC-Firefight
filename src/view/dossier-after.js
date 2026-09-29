@@ -508,11 +508,8 @@
     function honourView() {
       var picks = E.drawState.picked || [];
       var h = '<h2>' + esc(E.drawState.entry.name) + '</h2>';
-      var hw = C.words(E.camp.companies.A).honours;
-      h += '<p class="lede">Put three ' + hw + ' forward, then one of the three is taken at ' +
-        'random (p. ' + (hw === 'Adaptations' ? 125 : 88) + '). ' + E.drawState.cost + ' EXP.</p>';
       if (!E.drawState.won) {
-        h += '<p class="dnote"><b>' + picks.length + ' of 3 chosen.</b> ' +
+        h += '<p class="dnote"><b>' + picks.length + ' of 3 chosen \u00b7 ' + E.drawState.cost + ' EXP.</b> ' +
           (picks.length < 3
             ? 'Pick ' + (3 - picks.length) + ' more from the ' + E.drawState.pool.length +
               ' this unit has not earned — tap one again to take it back out.'
