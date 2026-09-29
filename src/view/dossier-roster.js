@@ -230,8 +230,7 @@
       else {
         h += '<ul class="ddet-rules">' + u.rules.map(function (r) {
           var d = TXT ? TXT.describe(r) : { name: r, text: '' };
-          var gained = was.rules.indexOf(r) < 0;
-          return '<li><b>' + esc(d.name) + '</b>' + (gained ? ' <span class="mk good">earned</span>' : '') +
+          return '<li><b>' + esc(d.name) + '</b>' +
             (d.text ? '<span>' + esc(d.text) + '</span>' : '') + '</li>';
         }).join('') + '</ul>';
       }
