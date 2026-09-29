@@ -158,6 +158,7 @@
   // what each screen has open, kept here so the screens can live in their own files
   var secondFaction = null;       // what the hub said the second player runs, until they found it
   var wantMode = 'solo';          // how a new campaign will be played: the menu card it was opened from
+  var wantFaction = 'pmc', wantB = 'pmc';   // what the new campaign's forces will be, as picked so far
   var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false;
   var hubPane = 'dossier';            // the hub opens on the unit cards
@@ -347,19 +348,22 @@
       dossierPanel: dossierPanel, entryCard: entryCard, esc: esc, memorialList: memorialList,
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
+      get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses
     }));
   }
   function hubView() { return (KIT_HUB || kitHub()).hubView(); }
   function stripe(co) { return (KIT_HUB || kitHub()).stripe(co); }
-  function armyPill(co) { return (KIT_HUB || kitHub()).armyPill(co); }
+  function armyPill(co, kind) { return (KIT_HUB || kitHub()).armyPill(co, kind); }
+  function armyRules(co) { return (KIT_HUB || kitHub()).armyRules(co); }
   function statRow(co, rival) { return (KIT_HUB || kitHub()).statRow(co, rival); }
   /* ---- founding a force: in view/dossier-found.js ---- */
   var KIT_FOUND = null;
   function kitFound() {
     return KIT_FOUND || (KIT_FOUND = root.PMCDossierFound({
       C: C, R: R, ROMAN: ROMAN, esc: esc, profile: profile, root: root, tierChip: tierChip, tip: tip,
+      armyPill: armyPill, armyRules: armyRules,
       get camp() { return camp; }, set camp(v) { camp = v; }, get colourOpen() { return colourOpen; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get openModal() { return openModal; },
       get view() { return view; }, set view(v) { view = v; }
@@ -1000,8 +1004,12 @@
       // a hotseat campaign has no rival to choose: the second player founds their own
       else if (ev.target.id === 'camp-mode') {
         var hs = ev.target.value === 'hotseat', bw = el('camp-bwrap');
+        wantMode = ev.target.value;
         if (bw) bw.hidden = !hs;
       }
+      // the army picked: its pill (and the rules behind it) follows
+      else if (ev.target.id === 'camp-faction') { wantFaction = ev.target.value; render(); }
+      else if (ev.target.id === 'camp-bfaction') { wantB = ev.target.value; render(); }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
         if ((contract.levels || [1, 2]).indexOf(want) >= 0) contract.pl = want;

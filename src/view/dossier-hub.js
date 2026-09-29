@@ -21,27 +21,32 @@
           'scar over and occasionally fall apart. ' +
           'Units earn experience, take promotions and Battle Honours, collect trauma, and are ' +
           'sometimes struck off the dossier for good.</p>';
+        function opt(v, t, want) { return '<option value="' + v + '"' + (want === v ? ' selected' : '') + '>' + t + '</option>'; }
+        // beside each choice, its army's pill: tapped, the army's rules
+        var pa = { faction: E.wantFaction, doctrines: [] }, pb = { faction: E.wantB, doctrines: [] };
         h += '<div class="field"><label for="camp-faction">What you are running</label>' +
           '<select id="camp-faction">' +
-          '<option value="pmc">A private military company — paid in credits, built around doctrines</option>' +
-          '<option value="rebel">An insurgent revolt — paid in Influence Points, built around Paths</option>' +
-          '<option value="bugs">A Space Bug swarm — paid in Resource Points, built around Evolutionary Pathways</option>' +
-          '<option value="xeno">A Xenotripod tribe — paid in Territorial Points, built around Tribe Advancements</option>' +
-          '</select></div>';
+          opt('pmc', 'A private military company \u2014 paid in credits, built around doctrines', E.wantFaction) +
+          opt('rebel', 'An insurgent revolt \u2014 paid in Influence Points, built around Paths', E.wantFaction) +
+          opt('bugs', 'A Space Bug swarm \u2014 paid in Resource Points, built around Evolutionary Pathways', E.wantFaction) +
+          opt('xeno', 'A Xenotripod tribe \u2014 paid in Territorial Points, built around Tribe Advancements', E.wantFaction) +
+          '</select><div class="carch newarch">' + armyPill(pa, 'armynew') + '</div></div>';
         h += '<div class="field"><label for="camp-mode">How you will play</label><select id="camp-mode">' +
-          '<option value="solo">Solo — against a rival force that grows battle by battle</option>' +
-          '<option value="hotseat"' + (E.wantMode === 'hotseat' ? ' selected' : '') + '>Hotseat — two dossiers, two players, one screen</option>' +
+          opt('solo', 'Solo \u2014 against a rival force that grows battle by battle', E.wantMode) +
+          opt('hotseat', 'Hotseat \u2014 two dossiers, two players, one screen', E.wantMode) +
           '</select></div>';
         /* Solo: the forces on the world are always rolled, and each grows into its
            own character from the doctrines it draws. Hotseat: there are no rolled
            rivals, only the second player's force, so this asks what kind that is. */
         h += '<div class="field" id="camp-bwrap"' + (E.wantMode === 'hotseat' ? '' : ' hidden') + '><label for="camp-bfaction">What Player 2 is running</label>' +
           '<select id="camp-bfaction">' +
-          '<option value="pmc">A private military company</option>' +
-          '<option value="rebel">An insurgent revolt</option>' +
-          '<option value="bugs">A Space Bug swarm</option>' +
-          '<option value="xeno">A Xenotripod tribe</option>' +
-          '</select></div>';
+          opt('pmc', 'A private military company', E.wantB) +
+          opt('rebel', 'An insurgent revolt', E.wantB) +
+          opt('bugs', 'A Space Bug swarm', E.wantB) +
+          opt('xeno', 'A Xenotripod tribe', E.wantB) +
+          '</select><div class="carch newarch">' + armyPill(pb, 'armynewb') + '</div></div>';
+        h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
+        h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));
         h += '<button class="start" data-go="newcamp">Raise the force</button>';
         h += '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button>' +
           '<button class="lnk" data-go="import">Load a save file</button>' +
@@ -369,7 +374,7 @@
     }
 
     return {
-      hubView: hubView, stripe: stripe, armyPill: armyPill, statRow: statRow
+      hubView: hubView, stripe: stripe, armyPill: armyPill, armyRules: armyRules, statRow: statRow
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierHub;

@@ -134,6 +134,7 @@
           ' \u2014 ' + esc(colourName(E.draft.colour)) + '</label>' + squares(E.draft.colour) + '</div>' : '') +
         '</div>';
       var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
+        E.armyPill(co, 'armyfound') +
         '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
         t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + ' vehicle' + (machines === 1 ? '' : 's') + ' (max 2)</span></div>';
       var chosen = E.draft.keys.map(function (k, i) {
@@ -183,6 +184,8 @@
         (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</button></div></div>';
 
       // the three pickers, each a modal over the page
+      // the army's rules, from its pill
+      h += cmodal('armyfound', C.words(co).side + ' \u2014 army rules', E.armyRules(co));
       h += cmodal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
         head + '<div class="chosen">' + chosen + '</div>' +
         '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) {
