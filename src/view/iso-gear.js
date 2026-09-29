@@ -439,7 +439,10 @@
         if (b === 'box' || b === 'bigbox' || b === 'ifv')
           return { a0: -0.5, a1: 0.5, half: 1, h: b === 'bigbox' ? 1.08 : b === 'ifv' ? 0.85 : 1, frontIn: b === 'ifv' ? 0.3 : 0.24, backIn: 0.004, sideIn: 0.04 };
         if (b === 'mlrs') return { a0: -0.5, a1: 0.5, half: 1, h: 0.55, frontIn: 0.04, backIn: 0, sideIn: 0.03 };
-        if (b === 'future') return { a0: -0.44, a1: 0.36, half: 1, h: 0.9, topA1: 0.06, topA0: -0.42, topHalf: 0.86 };
+        /* the faceted hull's front corners are chamfered: its sponson's front face
+           runs from the nose corner and the chamfer's top edge down to the plate */
+        if (b === 'future') return { a0: -0.44, a1: 0.36, half: 1, h: 0.9, topA1: 0.06, topA0: -0.42, topHalf: 0.86,
+          noseFoot: [0.5, 0.5], noseTop: [0.14, 0.46], outFront: 0.3 };
         if (b === 'car') return { a0: -0.46, a1: 0.46, half: 0.82, h: 1, dz: -2, frontIn: 0.2, backIn: 0.12, sideIn: 0.12 };
         if (b === 'pickup') return { a0: -0.5, a1: 0.5, half: 1, h: 0.45, frontIn: 0, backIn: 0, sideIn: 0 };
         if (b === 'truck' || b === 'guntruck') return { a0: -0.5, a1: 0.5, half: 1, h: 0.4, frontIn: 0, backIn: 0, sideIn: 0 };
@@ -484,9 +487,13 @@
           var tNose = L * (hb.topA1 != null ? hb.topA1 : hb.a1 - hb.frontIn), tTail = L * (hb.topA0 != null ? hb.topA0 : hb.a0 + hb.backIn);
           var sOut = sd * Math.max(w * hb.half + W * 0.05, W * 0.5 + gearOut() * 1.1);
           // the foot: the hull's bottom edge inside, the plate's lower edge outside, its front angled back
-          var base = [[fFoot, sFoot], [fFoot - L * 0.2, sOut], [bFoot + L * 0.08, sOut], [bFoot, sFoot]];
+          var base = [[fFoot, sFoot], [hb.outFront != null ? L * hb.outFront : fFoot - L * 0.2, sOut], [bFoot + L * 0.08, sOut], [bFoot, sFoot]];
           // the top closes to the hull's top edge, so each end is a triangle to the hull's corners
           var top = [[tNose, sTop], [tNose, sTop], [tTail, sTop], [tTail, sTop]];
+          if (hb.noseFoot) {                              // a chamfered nose: the front face meets the chamfer
+            base[0] = [L * hb.noseFoot[0], sd * w * hb.noseFoot[1]];
+            top[0] = [L * hb.noseTop[0], sd * w * hb.noseTop[1]];
+          }
           shape(HF, base, zBot, zTop - zBot, TB, null, top, true);
         });
       }
