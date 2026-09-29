@@ -28,34 +28,50 @@
     function terrainMark() { return B.terrainMark.apply(this, arguments); }
     function viewRect() { return B.viewRect.apply(this, arguments); }
 
-    /* ---------- a squad lining a trench or a wall ----------
-       A squad standing in a trench, or behind a wall or a line of sandbags,
-       is drawn spread along it rather than bunched on its base: in the trench,
-       down its middle; at a wall, tight in behind it, on the side away from
-       the enemy. Only the men are drawn there — the unit stays where it is. */
-    var LINE_REACH = { trench: 0, barricade: 1.0, wall: 1.3 };
+    /* ---------- a squad lining a trench or a line of sandbags ----------
+       A squad the rules count in a trench or at a low wall (the terrain it is
+       tagged with: half its rim or more on it, see R.kindsUnder) is drawn spread
+       along it rather than bunched on its base: in the trench, down its middle;
+       at the wall, tight in behind it, on the side away from the enemy. A squad
+       that is only near one is not in it, and keeps its ranks. Only the men are
+       drawn there — the unit stays where it is, so they keep to the stretch its
+       base is against. */
+    var LINE_IN = { trench: 1, barricade: 1 };
+    // how far along the piece, either way of the unit's middle, its men may stand: its base and a little
+    var LINE_ALONG = 1.3;
     function lineUp(u, x, y) {
       if (!B.state || R.isMachine(u) || u.aboard || x < 0 || u.walk || u.hop || u.arc) return null;
       var n = Math.max(1, Math.min(ISO.MAX_FIGS, u.models || 1));
       if (n < 2) return null;
-      // the terrain the rules count it in (half its rim or more): a trench it only half fills still holds it
+      // the terrain the rules count it in, and nothing else: the men only answer to that
       var kind = R.kindsUnder(B.state, null, x, y)[0];
-      var best = null, bd = Infinity;
+      if (!LINE_IN[kind]) return intoArea(u, x, y, n, kind);
+      // the piece of that kind most of the token is on
+      var best = null, most = 0, fp = R.footprint(x, y);
       B.state.terrain.forEach(function (r) {
-        var reach = r.kind === 'trench' && kind === 'trench' ? R.UNIT_R : LINE_REACH[r.kind];
-        if (reach == null || r.poly) return;
-        var d = R.rectPointDist(r, x, y);
-        if (d <= reach + 1e-6 && d < bd) { bd = d; best = r; }
+        if (r.kind !== kind || r.poly) return;
+        var c = fp.filter(function (q) { return R.inRect(q.x, q.y, r); }).length;
+        if (c > most) { most = c; best = r; }
       });
-      if (!best) return intoArea(u, x, y, n, kind);
+      if (!best) return null;
       var alongX = best.w >= best.h;
       var lo = alongX ? best.x : best.y, len = alongX ? best.w : best.h;
       var thick = alongX ? best.h : best.w, mid = (alongX ? best.y : best.x) + thick / 2;
-      // a man every 0.6" or so, the squad no wider than about three inches, and all of it on the piece
-      var gap = Math.min(0.6, 3.2 / (n - 1), Math.max(0.2, len - 0.4) / (n - 1)), span = gap * (n - 1);
       var at = alongX ? x : y;
-      var c = Math.max(lo + span / 2 + 0.2, Math.min(lo + len - span / 2 - 0.2, at));
-      if (span + 0.4 > len) c = lo + len / 2;
+      /* The men line the stretch of the piece the unit's own base is against —
+         never slid along it away from the unit, as they would be at a wall's end.
+         A stretch too short for a file of them takes them two or three deep. */
+      var s0 = Math.max(lo + 0.2, at - LINE_ALONG), s1 = Math.min(lo + len - 0.2, at + LINE_ALONG);
+      var avail = s1 - s0;
+      if (avail < 0.5) return null;
+      // a man every 0.6" or so, at least 0.3" apart, the squad no wider than about three inches
+      var perRow = Math.min(n, Math.floor(Math.min(avail, 3.2) / 0.3) + 1);
+      var rows = Math.min(3, Math.ceil(n / perRow));
+      perRow = Math.ceil(n / rows);
+      // the ranks behind stand half a step along, so the whole block is that much wider
+      var steps = perRow - 1 + (rows > 1 ? 0.5 : 0);
+      var gap = steps > 0 ? Math.min(0.6, Math.min(avail, 3.2) / steps) : 0, span = gap * steps;
+      var c = Math.max(s0 + span / 2, Math.min(s1 - span / 2, at));
       var cross = mid;
       if (best.kind !== 'trench') {
         // behind it: the side the unit is on, or if it is standing on the line, the side away from the nearest enemy
@@ -71,10 +87,15 @@
         }
         cross = mid + side * (thick / 2 + 0.35);
       }
+      /* a second or third rank, half a step along: behind the first at a wall, and
+         in a trench side by side down it, all within its width */
+      var trench = best.kind === 'trench', deep = trench ? Math.min(0.45, thick / rows) : 0.45;
       var out = [];
       for (var i = 0; i < n; i++) {
-        var t = c - span / 2 + i * gap;
-        out.push(alongX ? { x: t, y: cross } : { x: cross, y: t });
+        var row = Math.floor(i / perRow), k = i % perRow, inRow = Math.min(perRow, n - row * perRow);
+        var t = c - span / 2 + (k + (perRow - inRow) / 2 + (row % 2 ? 0.5 : 0)) * gap;
+        var q = trench ? cross + (row - (rows - 1) / 2) * deep : cross + side * row * deep;
+        out.push(alongX ? { x: t, y: q, rank: row } : { x: q, y: t, rank: row });
       }
       return out;
     }
@@ -1422,6 +1443,7 @@
       digPreview: digPreview,
       drawBoard: drawBoard,
       dropHaze: dropHaze,
+      lineUp: lineUp,
       hull: hull,
       paintStructures: paintStructures,
       repaintTerrain: repaintTerrain

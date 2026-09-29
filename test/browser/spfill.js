@@ -50,7 +50,9 @@ function ok(name, cond, note) {
         await new Promise(r => setTimeout(r, 15));
         if (i > 30 && !window.__busy() && !window.__showQueue()) break;
       }
-      return { before, after: e.sp, alive: e.alive, seen };
+      // what it is drawn with once all of it has played, taken fresh rather than the last sample in flight
+      await new Promise(r => setTimeout(r, 400));
+      return { before, after: e.sp, alive: e.alive, seen, settled: window.__shownSp(e.id) };
     });
     if (got.none) break;
   }
@@ -61,7 +63,7 @@ function ok(name, cond, note) {
       between.length + ' frames between ' + got.before + ' and ' + got.after);
     const rises = got.seen.every((v, i) => i === 0 || v >= got.seen[i - 1] - 1e-9);
     ok('...never going back down on the way', rises);
-    ok('...and ends on what the rules gave it', Math.abs(got.seen[got.seen.length - 1] - got.after) < 1e-9, String(got.seen[got.seen.length - 1]));
+    ok('...and ends on what the rules gave it', got.settled === got.after, String(got.settled));
     ok('...having shown what it had until the rounds landed', got.seen[0] === got.before, String(got.seen[0]));
   }
   ok('no page errors', errs.length === 0, errs.join(' | '));
