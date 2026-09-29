@@ -131,8 +131,10 @@ async function clickText(p, re) {
   check('...and the details close again', await p.evaluate(() => !document.querySelector('#camp-body .ddet')));
 
   console.log('\nExperience');
-  // the rates sit in the hub's stat row, above the dossier
-  const cell = (c) => p.evaluate((c) => { const d = document.querySelector('#camp-body .cstat.' + c); return d ? d.querySelector('b').textContent + ' ' + d.querySelector('span').textContent : ''; }, c);
+  // the rates sit in the company's stat row, on the hub's Company view (the dossier shows the units alone)
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
+  await p.waitForTimeout(220);
+  const cell = (c) => p.evaluate((c) => { const d = document.querySelector('#camp-body .cpan-A .cstat.' + c); return d ? d.querySelector('b').textContent + ' ' + d.querySelector('span').textContent : ''; }, c);
   check('no battles yet: no wins', (await cell('cs-win')) === '0% win rate', await cell('cs-win'));
   check('the hub shows honours', (await cell('cs-exp')) === '0% honours', await cell('cs-exp'));
   await p.evaluate(() => {
@@ -140,14 +142,13 @@ async function clickText(p, re) {
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];
     window.PMC_CAMPAIGN.get().companies.A.record = { battles: 4, wins: 3, draws: 0, losses: 1 };
   });
-  await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
-  await toUnits(p);
+  await p.evaluate(() => window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get())); await p.waitForTimeout(220);
   check('...as honours held over units on the books', (await cell('cs-exp')) === '33.3% honours', await cell('cs-exp'));
   check('...with the win rate first', (await cell('cs-win')) === '75% win rate', await cell('cs-win'));
   check('...and trauma beside it', (await cell('cs-tra')) === '11.1% trauma', await cell('cs-tra'));
-  // the head of the dossier, down to its tabs
+  // the head of the company, down to its figures
   const top = await p.evaluate(() => {
-    const a = document.getElementById('camp-body').getBoundingClientRect(), t = document.querySelector('#camp-body .dosbar').getBoundingClientRect();
+    const a = document.getElementById('camp-body').getBoundingClientRect(), t = document.querySelector('#camp-body .cpan-A .cstats').getBoundingClientRect();
     return { x: a.x, y: a.y, width: a.width, height: t.bottom - a.y + 12 };
   });
   await p.screenshot({ path: path.join(SHOTS, 'camp-veterancy.png'), clip: top });
