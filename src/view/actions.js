@@ -226,7 +226,8 @@
     }
 
     function resHTML(res, feed) {
-      var h = '<div class="res-top"><span class="res-kind">' + res.kind + '</span><h3>' + res.title + '</h3></div><div class="res-body">';
+      // a long tag ("Modifying the armies") takes a line of its own, with the title under it
+      var h = '<div class="res-top' + (String(res.kind || '').length > 14 ? ' stacked' : '') + '"><span class="res-kind">' + res.kind + '</span><h3>' + res.title + '</h3></div><div class="res-body">';
       if (res.dice) {
         h += '<div class="dice">' + res.dice.map(function (d) {
           return '<div class="die ' + (d.tone || '') + '">' + d.value + '<small>' + d.label + '</small></div>';

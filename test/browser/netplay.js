@@ -66,17 +66,31 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const tb = document.getElementById('turnbanner');
     new MutationObserver(() => { if (!tb.hidden && tb.textContent) window.__banners.push(tb.textContent); }).observe(tb, { childList: true, subtree: true, attributes: true });
   });
-  // both deploy and begin
+  // both deploy; only the first says it is ready to begin
   for (let k = 0; k < 14; k++) {
-    for (const p of [p1, p2]) await p.evaluate(() => {
+    for (const p of [p1, p2]) await p.evaluate((first) => {
       const st = window.PMC_STATE(); if (!st || st.phase === 'battle') return;
       const me = window.__seats()[0];
       if (st.deployReady && !st.deployReady[me]) window.__sendIntent({ k: 'deployready' });
-      window.__sendIntent({ k: 'autosplit' }); window.__sendIntent({ k: 'autodeploy' }); window.__sendIntent({ k: 'start' });
-    });
+      window.__sendIntent({ k: 'autosplit' }); window.__sendIntent({ k: 'autodeploy' });
+      if (first) window.__sendIntent({ k: 'start' });
+    }, p === p1);
     await wait(400);
-    if (await p1.evaluate(() => window.PMC_STATE() && window.PMC_STATE().phase === 'battle')) break;
+    if (await p1.evaluate(() => { const r = window.PMC_STATE().startReady; return !!(r && r[window.__seats()[0]]); })) break;
   }
+  await wait(600);
+  const half = await p1.evaluate(() => ({ phase: window.PMC_STATE().phase, ready: window.PMC_STATE().startReady,
+    btn: (document.querySelector('.deploy-go .act.primary') || {}).textContent || '' }));
+  ok('one player pressing Begin does not start the battle', half.phase === 'deploy' && half.ready, JSON.stringify(half));
+  ok('...their button says they are waiting for the other', /Ready/.test(half.btn) && /Waiting for/.test(half.btn), half.btn);
+  const other = await p2.evaluate(() => (document.querySelector('.deploy-go [data-act="start"], .deploy-go [data-act="startask"]') || {}).textContent || '');
+  ok('...and the other is told they are ready', /is ready/.test(other), other);
+  await p2.evaluate(() => window.__sendIntent({ k: 'start' }));
+  for (let k = 0; k < 10; k++) {
+    await wait(300);
+    if (await p1.evaluate(() => window.PMC_STATE().phase === 'battle')) break;
+  }
+  ok('...the battle begins once both have', await p1.evaluate(() => window.PMC_STATE().phase === 'battle'));
   await wait(1200);
   const look = (p) => p.evaluate(() => ({
     seat: window.__seats()[0], active: window.PMC_STATE().activeSide, pill: document.getElementById('hdr-active').textContent,
@@ -108,6 +122,11 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   });
   await wait(2200);
   const camFocus = await pTheirs.evaluate(() => window.__cam());
+  // meanwhile the waiting player picks one of their own units to look at, out of turn
+  const looked = await pTheirs.evaluate(() => {
+    const me = window.__seats()[0], u = window.PMC_STATE().units.find(x => x.side === me && x.alive && x.x >= 0);
+    return u && window.__select(u) ? u.id : null;
+  });
   // ...and the move is what has to be followed: the camera rides along to where the unit ends up
   const moved = await pMine.evaluate(async (id) => {
     const u = window.PMC_STATE().units.find(x => x.id === id);
@@ -120,7 +139,8 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     if (!spots.length) return { id, spots: 0, mode: window.__uiMode(), hint: (document.getElementById('hint') || {}).textContent };
     // the reachable spot nearest the middle of the table, so the camera is not held at an edge
     const mid = (c) => Math.hypot(c.x - 24, c.y - 24);
-    const far = spots.reduce((a, c) => mid(c) < mid(a) ? c : a);
+    const long = spots.filter(c => Math.hypot(c.x - u.x, c.y - u.y) >= 4);
+    const far = (long.length ? long : spots).reduce((a, c) => mid(c) < mid(a) ? c : a);
     window.__sendIntent({ k: 'move', x: far.x, y: far.y });
     return { id, spots: spots.length, dist: Math.hypot(far.x - u.x, far.y - u.y) };
   }, picked);
@@ -128,8 +148,10 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   // while the unit is on its way, the camera goes with it (it has long settled on where it set out from)
   const start = await pMine.evaluate((id) => window.PMC_STATE().units.find(x => x.id === id), picked);
   const way = [];
+  let ownCam = null;
   for (let k = 0; k < 60; k++) {
     await wait(60);
+    if (k === 3) ownCam = await pMine.evaluate(() => window.__cam());
     const q = await pTheirs.evaluate(({ id, sx, sy }) => {
       const d = window.__drawnAt(id), c = window.__cam();
       return d ? { gone: Math.hypot(d.x - sx, d.y - sy), x: c.x, y: c.y, borrowed: c.borrowed } : null;
@@ -139,8 +161,18 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const rode = way.length ? Math.hypot(way[way.length - 1].x - way[0].x, way[way.length - 1].y - way[0].y) : 0;
   ok('the other screen\u2019s camera follows the opponent\u2019s unit as it moves', camFocus.borrowed && way.length > 1 && way.every(q => q.borrowed) && rode > 30,
     JSON.stringify({ focusBorrowed: camFocus.borrowed, samples: way.length, rode: Math.round(rode) }));
-  const ownCam = await pMine.evaluate(() => window.__cam());
   ok('...while the mover\u2019s own camera is not borrowed', !ownCam.borrowed, JSON.stringify(ownCam));
+  // the go passes to them: the unit they were looking at is theirs to act with, without picking it again
+  let live = null;
+  for (let k = 0; k < 30; k++) {
+    await wait(300);
+    live = await pTheirs.evaluate(() => {
+      const st = window.PMC_STATE(), b = document.querySelector('#bar [data-action="move"]');
+      return { mine: st.activeSide === window.__seats()[0], sel: window.__uiMode().sel, move: !!b && !b.disabled };
+    });
+    if (live.mine && live.move) break;
+  }
+  ok('a unit picked out of turn can act as soon as the go passes over', !!looked && live.mine && live.sel === looked && live.move, JSON.stringify({ looked, live }));
   await wait(2500);
 
   // the second player's browser goes away, then comes back

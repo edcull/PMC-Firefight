@@ -505,6 +505,19 @@
       ui.preview = null;
       /* In a demo the watcher's pick is the selection, and it stays picked
          while the AI activates one unit after another — until it is gone. */
+      /* A unit of this screen's picked to look at while it was the other side's
+         go: now the go is ours and it may act, it is picked for real, so its
+         actions come live without picking it again. */
+      if (!handsOff() && ui.inspect && ui.watch && B.state.phase === 'battle') {
+        var own = byId(ui.watch), act = B.state.activeSide;
+        if (own && own.alive && own.side === act && B.seats.indexOf(act) >= 0 && !(s.selected && s.selected.side === act) &&
+          B.Q.eligible(act).indexOf(own) >= 0) {
+          ui.inspect = false; ui.watch = null;
+          // (after this show is put away: the pick comes back as a show of its own)
+          setTimeout(function () { if (B.state && B.state.activeSide === act) send({ k: 'select', id: own.id }); }, 0);
+          return;
+        }
+      }
       if ((handsOff() || ui.inspect) && ui.watch) {
         var w = byId(ui.watch);
         if (w && w.alive) { ui.selected = w; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = []; }

@@ -785,8 +785,16 @@
       if (deploymentDone() || (placed && splitShort)) {
         var blocked = !deploymentDone();
         var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
-        h += '<button class="act primary' + (blocked ? ' blocked' : '') + '" aria-disabled="' + blocked + '" data-act="' +
-          (blocked ? 'startwhy' : empties.length ? 'startask' : 'start') + '"><span>Begin the battle</span><small>Roll for initiative</small></button>';
+        // online, both players say they are ready: the battle begins once both have
+        var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
+        if (sr && sr[me]) {
+          h += '<button class="act primary blocked" aria-disabled="true" disabled><span>Ready</span><small>Waiting for ' +
+            esc(sideName(foe)) + ' to begin the battle</small></button>';
+        } else {
+          h += '<button class="act primary' + (blocked ? ' blocked' : '') + '" aria-disabled="' + blocked + '" data-act="' +
+            (blocked ? 'startwhy' : empties.length ? 'startask' : 'start') + '"><span>Begin the battle</span><small>' +
+            (sr && sr[foe] ? esc(sideName(foe)) + ' is ready — roll for initiative' : 'Roll for initiative') + '</small></button>';
+        }
         if (blocked && ui.startWhy) {
           var need = mySplit.min === mySplit.max ? String(mySplit.min) : mySplit.min + '\u2013' + mySplit.max;
           h += '<div class="tipbubble" role="status">' + (mySplit.kind === 'wave'

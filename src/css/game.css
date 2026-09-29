@@ -151,6 +151,7 @@ main {
 .feedcard.fresh { animation: feedin .28s ease; }
 @keyframes feedin { from { opacity: 0; transform: translateY(-6px); } }
 .feedcard .res-top { display: flex; gap: 7px; align-items: baseline; margin-bottom: 5px; }
+.res-top.stacked { flex-direction: column; align-items: flex-start; gap: 4px; }
 .feedcard .res-kind {
   font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--ink-faint); border: 1px solid var(--line); border-radius: 3px; padding: 1px 4px;
