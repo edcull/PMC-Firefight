@@ -169,7 +169,8 @@
     // how far off a tap may be and still count, at the zoom in use
     window.__snapReach = function () { return snapReach(); };
     window.__setZoom = function (z) { cam.z = z; };
-    window.__landUnit = function (u) { landUnit(u); };
+    // `orbit`: as an Invasion's attacker comes down
+    window.__landUnit = function (u, orbit) { landUnit(u, orbit); };
     window.__setMTab = function (which) { setMTab(which); };
     // saved skirmish forces, for the harness
     window.__forces = {
