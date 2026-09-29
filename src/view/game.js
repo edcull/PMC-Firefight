@@ -112,6 +112,7 @@
     net.begin(cfg, seats);
     // a demo starts with the camera left alone; Follow can be turned on to watch the action
     VIEW.startDemoCam();
+    setPaused(false);
     return state;
   }
 
@@ -134,6 +135,7 @@
     watching = false;
     loadAutoAdvance(cfg.mode);
     resetShow();
+    setPaused(false);
     net = new window.PMCNet.Local();
     wireNet(net);
     net.connect();
@@ -284,6 +286,19 @@
     return ['setup', 'camp'].some(function (id) { var x = el(id); return !!x && !x.hidden; });
   }
   window.addEventListener('pmc-menu-closed', function () { stepWatched(); });
+  /* Pause, beside the zoom level in a demo: the activation being drawn plays
+     out, and the next one waits until it is pressed again. */
+  function setPaused(on) {
+    ui.paused = !!on;
+    var b = document.getElementById('demo-pause');
+    if (b) {
+      b.classList.toggle('on', ui.paused);
+      b.setAttribute('aria-pressed', ui.paused ? 'true' : 'false');
+      b.textContent = ui.paused ? 'Play' : 'Pause';
+      b.title = ui.paused ? 'Carry on with the battle' : 'Pause the battle';
+    }
+    if (!ui.paused && state) stepWatched();
+  }
 
   // what happened, played out: replay.js (installed with the modules, below)
 
@@ -904,7 +919,7 @@
     get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get closeDrawer() { return closeDrawer; }, get closeRes() { return closeRes; },
     get drawBoard() { return drawBoard; }, get drawerEl() { return drawerEl; }, get esc() { return esc; },
-    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; }, get setFollow() { return setFollow; }, get followOn() { return followOn; },
+    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; }, get setFollow() { return setFollow; }, get followOn() { return followOn; }, setPaused: setPaused,
     get insertionMine() { return insertionMine; }, get panBy() { return panBy; }, get faceAsked() { return DRAW.faceAsked; },
     get render() { return render; }, get returnHome() { return returnHome; },
     get setHint() { return setHint; }, get setZoom() { return setZoom; }, get tip() { return tip; },

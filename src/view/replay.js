@@ -281,10 +281,11 @@
     function stepWatched() {
       if (stepTimer || !B.net || !B.state || B.state.over) return;
       if (!B.state.cfg || B.state.cfg.aiSides.length !== 2) return;
+      if (ui.paused) return;                     // the watcher has paused it: the next activation waits
       if (B.state.phase !== 'battle' || ui.resOpen || menuUp()) return;
       stepTimer = setTimeout(function () {
         stepTimer = null;
-        if (!B.state || B.state.over || ui.resOpen || menuUp()) return;
+        if (!B.state || B.state.over || ui.resOpen || menuUp() || ui.paused) return;
         send({ k: 'step' });
       }, 260 / (+window.PMC_TIME_SCALE || 1));
     }

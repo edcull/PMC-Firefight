@@ -100,6 +100,7 @@ async function watch(p, ms) {
   });
   ok('Follow is by the zoom level, top right of the table', d.shown && d.besideZoom && d.topRight, JSON.stringify(d));
   ok('...and on to begin with', d.on);
+  ok('there is no Pause outside a demo', await p.evaluate(() => getComputedStyle(document.getElementById('demo-pause')).display === 'none'));
   await p.click('#follow-toggle');
   ok('a click turns it off', !(await p.evaluate(() => document.getElementById('follow-toggle').classList.contains('on'))));
   await p.evaluate(() => window.__startBattle());
@@ -177,6 +178,26 @@ async function watch(p, ms) {
   const roamed = await roam(4000, true);
   ok('...and then the camera follows the battle', roamed.far > 40, JSON.stringify(roamed));
   ok('...pulling back for the shots', roamed.minZ < roamed.z0, JSON.stringify(roamed));
+
+  // Pause: beside the zoom level, holding the battle after the activation being drawn
+  const pb = await dp.evaluate(() => {
+    const b = document.getElementById('demo-pause'), r = b.getBoundingClientRect(), f = document.getElementById('follow-toggle').getBoundingClientRect();
+    return { shown: r.width > 0 && getComputedStyle(b).display !== 'none', beside: Math.abs(r.top - f.top) < 20, text: b.textContent };
+  });
+  ok('a demo has a Pause button by the zoom controls', pb.shown && pb.beside && pb.text === 'Pause', JSON.stringify(pb));
+  await dp.evaluate(() => document.getElementById('demo-pause').click());
+  const acts = () => dp.evaluate(() => window.PMC_STATE().units.filter(u => u.activated).length + ':' + window.PMC_STATE().turn + ':' + (window.PMC_STATE().log || []).length);
+  await dp.waitForTimeout(3000);              // whatever was being drawn finishes
+  await drain(dp);
+  const held = await acts();
+  await dp.waitForTimeout(4000);
+  await drain(dp);
+  const still2 = await acts();
+  ok('...pressed, the battle stops', held === still2 && await dp.evaluate(() => document.getElementById('demo-pause').textContent === 'Play'), held + ' → ' + still2);
+  await dp.evaluate(() => document.getElementById('demo-pause').click());
+  let moved = false;
+  for (let i = 0; i < 40 && !moved; i++) { await drain(dp); await dp.waitForTimeout(250); moved = (await acts()) !== still2; }
+  ok('...and Play carries it on', moved);
   await dctx.close();
 
   console.log('\n  PHONE');
