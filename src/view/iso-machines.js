@@ -591,7 +591,7 @@
         return KIT_GEAR || (KIT_GEAR = MAKE_GEAR({
           HF: HF, S3: S3, STEEL: STEEL, STEEL_LIT: STEEL_LIT, TB: TB, TS: TS, at: at, box: box, cos: cos,
           dark: dark, dead: dead, deck: deck, drive: drive, f: f, frameAt: frameAt, g: g, hull: hull,
-          lift: lift, line: line, lit: lit, mixc: mixc, opts: opts, rectPts: rectPts, ride: ride,
+          lift: lift, line: line, lit: lit, mixc: mixc, opts: opts, rebel: u.faction === 'rebel', rectPts: rectPts, ride: ride,
           sEllipse: sEllipse, scr: scr, shape: shape, sin: sin, slabF: slabF, spec: spec, trim: trim
         }));
       }

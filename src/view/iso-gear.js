@@ -14,7 +14,7 @@
           box = M.box, cos = M.cos, dark = M.dark, dead = M.dead, deck = M.deck, drive = M.drive, f = M.f,
           frameAt = M.frameAt, g = M.g, hull = M.hull, lift = M.lift, line = M.line, lit = M.lit,
           mixc = M.mixc, opts = M.opts, rectPts = M.rectPts, ride = M.ride, sEllipse = M.sEllipse,
-          scr = M.scr, shape = M.shape, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
+          scr = M.scr, shape = M.shape, rebel = M.rebel, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
       /* ================= running gear ================= */
       // a flank is nearer the eye when moving that way increases screen depth
       function sideNear(s) { return (cos - sin) * s > 0; }
@@ -432,7 +432,7 @@
          the hull (a0, a1, of the length), its half-width (of w, 0.47 of the
          width), its height (of spec.hgt), and how far its top is pulled in at the
          front, the back (of the length) and the sides (of w). A body built of
-         several parts (the pickup, the trucks) gives its bed, the long low box
+         several parts (the pickup) gives its bed, the long low box
          the rest stands on; the faceted 'future' hull gives its widest flanks. */
       function lowerHull(st) {
         var b = st.body;
@@ -447,7 +447,6 @@
            only half its height, to where the sloping sides have come in by then */
         if (b === 'car') return { a0: -0.46, a1: 0.46, half: 0.82, h: 0.45, dz: -2, frontIn: 0.2 * 0.45, backIn: 0.12 * 0.45, sideIn: 0.12 * 0.45 };
         if (b === 'pickup') return { a0: -0.5, a1: 0.5, half: 1, h: 0.45, frontIn: 0, backIn: 0, sideIn: 0 };
-        if (b === 'truck' || b === 'guntruck') return { a0: -0.5, a1: 0.5, half: 1, h: 0.4, frontIn: 0, backIn: 0, sideIn: 0 };
         var mbt = b === 'mbt';                            // a tank: the low hull with its sloped glacis
         return { a0: -0.5, a1: 0.5, half: 0.94, h: mbt ? 0.8 : 0.88, frontIn: mbt ? 0.26 : 0.2, backIn: 0.05, sideIn: 0.03 };
       }
@@ -503,7 +502,8 @@
            top edge down and out over the housings, its front end raked back with
            the glacis and its tail closed, in the hull's own paint. It stops at the
            top of the pods, so the housings and their light show under it. */
-        if (!spec.style) return;
+        // (not on the trucks, whose pods ride under a bare chassis, nor on the rebels' patched-up machines)
+        if (!spec.style || rebel || /^(truck|guntruck)$/.test(spec.style.body)) return;
         [-1, 1].forEach(function (sd) {
           if (!want(phase, sd)) return;
           var L = spec.len, W = spec.wid, w = W * 0.47, hb = lowerHull(spec.style);
