@@ -45,17 +45,13 @@
           (st.on ? '' : ' disabled') + ' title="' + a.label + ' — ' + st.hint.replace(/"/g, '&quot;') + '">' +
           '<kbd>' + (n + 1) + '</kbd>' + ICONS[a.id] + '<span>' + a.label + '</span></button>';
       });
-      for (var s = 0; s < SPECIAL_SLOTS; s++) {
-        var sp = specials[s];
-        if (!sp) {
-          html += '<button class="slot special empty" disabled title="Special action slot"><span style="opacity:.6">' + ICONS.empty + '</span><span>—</span></button>';
-        } else {
-          var st2 = actionState(u, sp.id);
-          html += '<button class="slot special' + (ui.mode === sp.id ? ' active' : '') + '" data-action="' + sp.id + '"' +
-            (st2.on ? '' : ' disabled') + ' title="' + sp.label + ' — ' + st2.hint.replace(/"/g, '&quot;') + '">' +
-            (ICONS[sp.id] || '') + '<span>' + sp.label + '</span></button>';
-        }
-      }
+      // the unit's special actions, as many as it has: no empty slots held open for them
+      specials.forEach(function (sp) {
+        var st2 = actionState(u, sp.id);
+        html += '<button class="slot special' + (ui.mode === sp.id ? ' active' : '') + '" data-action="' + sp.id + '"' +
+          (st2.on ? '' : ' disabled') + ' title="' + sp.label + ' — ' + st2.hint.replace(/"/g, '&quot;') + '">' +
+          (ICONS[sp.id] || '') + '<span>' + sp.label + '</span></button>';
+      });
       bar.innerHTML = html;
 
       bar.querySelectorAll('[data-action]').forEach(function (b) {

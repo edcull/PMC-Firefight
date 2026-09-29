@@ -293,8 +293,10 @@ header.your-turn #hdr-active.pill-B { background: var(--side-B); color: #0d1117;
 
 /* ---------- action bar ---------- */
 .console { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+/* as many buttons to a line as fit, none narrower than its label needs; the rest
+   go on to a second line (a phone scrolls the row sideways instead, below) */
 .bar {
-  display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 6px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px;
   padding: 10px 10px 8px;
 }
 @media (max-width: 760px) {
@@ -309,7 +311,6 @@ header.your-turn #hdr-active.pill-B { background: var(--side-B); color: #0d1117;
   .viewhint { font-size: 9.5px; }
 }
 @media (max-width: 720px) {
-  .bar { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; padding: 8px 8px 6px; }
   .slot { min-height: 50px; padding: 5px 2px 4px; font-size: 8.5px; }
   .slot svg { width: 19px; height: 19px; }
   .slot kbd { display: none; }
@@ -332,7 +333,6 @@ header.your-turn #hdr-active.pill-B { background: var(--side-B); color: #0d1117;
 .slot:disabled { opacity: .3; cursor: not-allowed; }
 .slot.special { border-style: dashed; }
 .slot.active { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 16%, transparent); }
-.slot.empty { opacity: .18; cursor: default; }
 .slot kbd {
   position: absolute; top: 2px; right: 4px; font-family: var(--mono); font-size: 8px;
   color: var(--ink-faint); background: none;
@@ -1691,7 +1691,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
     gap: 5px; padding: 6px 6px 4px;
   }
   .console .bar::-webkit-scrollbar { display: none; }
-  .console .bar .slot:disabled, .console .bar .slot.empty { display: none; }
+  .console .bar .slot:disabled { display: none; }
   .console .bar .slot {
     flex: 0 0 auto; min-width: 62px; min-height: 44px; padding: 4px 9px 3px;
   }

@@ -260,6 +260,7 @@ takeover.js        Hostile takeover: the defender digs in, the attacker picks an
 
 ```
 actions.js         the special actions, through the real interface
+actionbar.js       the action bar: button widths, no empty slots, wrapping and scrolling
 movepreview.js     the move and advance preview, and its confirmation
 insertion.js       Battlefield Insertion
 markerlight.js     Markerlights, end to end
