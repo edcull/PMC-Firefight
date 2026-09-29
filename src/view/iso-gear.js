@@ -443,7 +443,9 @@
            runs from the nose corner and the chamfer's top edge down to the plate */
         if (b === 'future') return { a0: -0.44, a1: 0.36, half: 1, h: 0.9, topA1: 0.06, topA0: -0.42, topHalf: 0.86,
           noseFoot: [0.5, 0.5], noseTop: [0.14, 0.46], outFront: 0.3 };
-        if (b === 'car') return { a0: -0.46, a1: 0.46, half: 0.82, h: 1, dz: -2, frontIn: 0.2, backIn: 0.12, sideIn: 0.12 };
+        /* the car body slopes in all round from a low waist: its sponson comes up
+           only half its height, to where the sloping sides have come in by then */
+        if (b === 'car') return { a0: -0.46, a1: 0.46, half: 0.82, h: 0.45, dz: -2, frontIn: 0.2 * 0.45, backIn: 0.12 * 0.45, sideIn: 0.12 * 0.45 };
         if (b === 'pickup') return { a0: -0.5, a1: 0.5, half: 1, h: 0.45, frontIn: 0, backIn: 0, sideIn: 0 };
         if (b === 'truck' || b === 'guntruck') return { a0: -0.5, a1: 0.5, half: 1, h: 0.4, frontIn: 0, backIn: 0, sideIn: 0 };
         var mbt = b === 'mbt';                            // a tank: the low hull with its sloped glacis

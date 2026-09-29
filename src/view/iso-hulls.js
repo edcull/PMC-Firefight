@@ -308,7 +308,7 @@
             shape(HF, fpts, z0, H * 0.9, TB, null, ftop);
             var ns4 = nearSide();
             hexFlank(HF, -L * 0.42, L * 0.3, ns4 * w * 1.0, z0 + 1, H * 0.8);
-            hexNose(HF, L * 0.5, L * 0.14, -w * 0.45, w * 0.45, z0, H * 0.9, 3, 3);   // and across the nose: three rows, three, two and three
+            hexNose(HF, L * 0.5, L * 0.14, -w * 0.45, w * 0.45, z0, H * 0.9, 3);   // and across the nose: a row of three over a row of two
             grille(HF, -L * 0.42, -L * 0.24, -w * 0.5, w * 0.5, z0 + H * 0.9 + 0.2, 5);
             return;
           }
