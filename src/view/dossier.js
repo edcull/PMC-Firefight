@@ -340,14 +340,14 @@
       }
       bars += '</div>';
     }                                                // a command unit or a turret: no experience bars, and nothing said about it
-    /* The unit's own buttons (icons) share a line with its experience and trauma,
-       across the whole card, open or not: on one line on a desktop, the icons
-       dropping to a second on a phone. */
-    if (opts.rowActs) {
+    /* The unit's own buttons (icons) sit at the right end of the line with its
+       experience and trauma, across the whole card, open or closed; opened, the
+       unit's picture is centred under it (stack) rather than beside it (split). */
+    var stack = !!opts.rowActs;
+    if (stack) {
       bars = bars || opts.actions ? '<div class="drow' + (opts.men ? '' : ' shut') + '">' + bars + (opts.actions ? '<div class="dacts">' + opts.actions + '</div>' : '') + '</div>' : '';
     }
-    // opened, the line sits in the column beside the unit's picture, shrinking to fit it
-    if (opts.portrait) h += '<div class="dsplit"><div class="dleft">';
+    if (opts.portrait && !stack) h += '<div class="dsplit"><div class="dleft">';
     h += bars;
     var marks = [];
     (e.honours || []).forEach(function (n) {
@@ -365,7 +365,7 @@
     if (marks.length) h += '<div class="dmarks">' + marks.join('') + '</div>';
     if (opts.actions && !opts.rowActs) h += '<div class="dacts">' + opts.actions + '</div>';
     if (opts.portrait) {
-      h += '</div><canvas class="dportrait" data-key="' + esc(e.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +
+      h += (stack ? '<div class="dpic">' : '</div>') + '<canvas class="dportrait" data-key="' + esc(e.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +
         ' data-colour="' + esc(colourOf(co)) + '"' + (e.prop ? ' data-prop="' + esc(e.prop) + '"' : '') + (e.drone ? ' data-drone="1"' : '') +
         (e.riders ? ' data-riders="1"' : '') + (e.mount ? ' data-mount="' + esc(e.mount) + '"' : '') +
         ' role="img" aria-label="' + esc(p.name) + '"></canvas></div>';

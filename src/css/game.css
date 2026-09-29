@@ -1329,21 +1329,16 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dact { display: inline-grid; place-items: center; padding: 5px 9px; }
 .dact svg { display: block; width: 16px; height: 16px; }
 .dact span { display: none; }
-/* the unit's line: experience and trauma, then its buttons. Opened, they follow
-   the TP on a desktop and take a second line on a phone; closed, the one button
-   (Promote) sits at the right end of the line. */
-.drow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 5px; }
-.drow .dbars { flex: 0 1 auto; min-width: 0; margin-top: 0; }
+/* the unit's line: experience and trauma, then its buttons at the right end, open
+   or closed. The TP bar (at most 140px) gives way rather than the buttons wrapping. */
+.drow { display: flex; align-items: center; flex-wrap: nowrap; gap: 10px; margin-top: 5px; }
+.drow .dbars { flex: 1 1 auto; min-width: 0; margin-top: 0; }
 .drow .dbars .dtp { flex: 0 1 140px; width: 140px; min-width: 24px; }
 .drow .dexp, .drow .dtpn { white-space: nowrap; }
-.drow .dacts { margin: 0; flex-wrap: nowrap; gap: 5px; }
-/* closed, Promote stays on the line: the TP bar gives way (down to a sliver) rather than the button wrapping */
-.drow.shut { flex-wrap: nowrap; }
-.drow.shut .dbars { flex: 1 1 auto; }
-.drow.shut .dacts { flex: none; }
-.drow.shut .dacts { margin-left: auto; }
+.drow .dacts { flex: none; margin: 0 0 0 auto; flex-wrap: nowrap; gap: 5px; }
+/* opened: the unit's picture centred under the line */
+.dpic { display: flex; justify-content: center; margin: 8px 0 4px; }
 @media (max-width: 700px) {
-  .drow:not(.shut) .dacts { flex: 0 0 100%; margin: 2px 0 0; }
   .dact { padding: 7px 12px; }
   .dact svg { width: 18px; height: 18px; }
 }
