@@ -592,7 +592,7 @@
           HF: HF, S3: S3, STEEL: STEEL, STEEL_LIT: STEEL_LIT, TB: TB, TS: TS, at: at, box: box, cos: cos,
           dark: dark, dead: dead, deck: deck, drive: drive, f: f, frameAt: frameAt, g: g, hull: hull,
           lift: lift, line: line, lit: lit, mixc: mixc, opts: opts, rectPts: rectPts, ride: ride,
-          sEllipse: sEllipse, scr: scr, shape: shape, sin: sin, slabF: slabF, spec: spec, trim: trim
+          hexPanel: hexPanel, sEllipse: sEllipse, scr: scr, shape: shape, sin: sin, slabF: slabF, spec: spec, trim: trim
         }));
       }
       function want(phase, s, nearest) { return (KIT_GEAR || kitGear()).want(phase, s, nearest); }

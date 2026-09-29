@@ -14,7 +14,7 @@
           box = M.box, cos = M.cos, dark = M.dark, dead = M.dead, deck = M.deck, drive = M.drive, f = M.f,
           frameAt = M.frameAt, g = M.g, hull = M.hull, lift = M.lift, line = M.line, lit = M.lit,
           mixc = M.mixc, opts = M.opts, rectPts = M.rectPts, ride = M.ride, sEllipse = M.sEllipse,
-          scr = M.scr, shape = M.shape, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
+          scr = M.scr, shape = M.shape, hexPanel = M.hexPanel, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
       /* ================= running gear ================= */
       // a flank is nearer the eye when moving that way increases screen depth
       function sideNear(s) { return (cos - sin) * s > 0; }
@@ -495,6 +495,9 @@
             top[0] = [L * hb.noseTop[0], sd * w * hb.noseTop[1]];
           }
           shape(HF, base, zBot, zTop - zBot, TB, null, top, true);
+          // a hull armoured in hex tiles carries them on across its sponsons' outer faces
+          if ((spec.style.hex || spec.style.body === 'future') && (sideNear(sd) || Math.abs(cos - sin) < 0.2))
+            hexPanel(HF, base[2], base[1], top[2], top[1], zBot, zTop - zBot, [6, 5]);
         });
       }
 

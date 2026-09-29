@@ -689,9 +689,6 @@
                 var sn = S3(TF(-TR * 0.3, -TR * 0.25), tz + 9);
                 sEllipse(sn[0], sn[1] - 1.2, 2.2, 1.8, '#c9ced6'); sEllipse(sn[0], sn[1] - 1.8, 1.2, 0.9, '#eef2f6');
                 aerial(TF, -TR * 0.6, -TR * 0.32, tz + 9, 26, 0.04); aerial(TF, -TR * 0.62, -TR * 0.18, tz + 9, 18, 0.04);
-                // the dark sensor slit across the turret's face, one end of it lit
-                edge(g, S3(TF(TR * 0.5, -TR * 0.3), tz + 5), S3(TF(TR * 0.5, TR * 0.3), tz + 5), '#0b0d11', 1.6);
-                if (!dead) edge(g, S3(TF(TR * 0.5, -TR * 0.22), tz + 5), S3(TF(TR * 0.5, -TR * 0.06), tz + 5), '#7fd8e8', 0.9);
               };
               gun = function () {
                 var ftip = st.plasma ? plasmaBarrel(TR * 0.4, TR * (st.gunLen || 2.3), tz + 5, 3.4)
