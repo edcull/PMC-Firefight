@@ -524,16 +524,17 @@
           pushRes(repairCard(u, rep));
         } else {
           // Meditation (p. 142): a Xenotripod regrouping sheds two more points outright
+          var pre = '';
           if (R.isXeno(u) && u.sp && R.doctrine(E.state, u.side, 'XT2')) {
             var med = Math.min(2, u.sp); u.sp -= med;
-            logLine('rally', u.label + ' — Meditation: ' + med + ' SP gone before the dice.');
+            pre = 'Meditation: ' + med + ' SP gone before the dice.';
+            logLine('rally', u.label + ' — ' + pre);
           }
           var r = abRally(E.state, u);
           logLine('rally', r ? r.text : u.label + ' regroups — no suppression to shake off.');
-          pushRes({
-            kind: 'Regroup', title: u.name + ' regroups', side: u.side,
-            list: [{ text: r ? r.text : 'No suppression to shake off.', side: u.side }]
-          });
+          // the End phase's rally card and the unit seen to regroup (endphase.js)
+          pushRes(E.regroupCard(u, r, pre));
+          E.regroupFx(u, r);
         }
         endActivation(); return;
       }

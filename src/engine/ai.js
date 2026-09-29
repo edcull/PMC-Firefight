@@ -465,7 +465,7 @@
         if (still.t) { fire(u, still.t, 'fire'); return; }
         if (u.sp) {
           var rr0 = abRally(E.state, u);
-          if (rr0) { logLine('rally', rr0.text); pushRes({ kind: 'Regroup', title: u.name + ' regroups', side: u.side, list: [{ text: rr0.text, side: u.side }] }); }
+          if (rr0) { logLine('rally', rr0.text); pushRes(E.regroupCard(u, rr0)); E.regroupFx(u, rr0); }
         }
         u.activated = true; endActivation(u); return;
       }
@@ -509,7 +509,7 @@
         } else {
           var rr = abRally(E.state, u);
           logLine('rally', rr ? rr.text : u.label + ' regroups.');
-          if (rr) pushRes({ kind: 'Regroup', title: u.name + ' regroups', side: u.side, list: [{ text: rr.text, side: u.side }] });
+          if (rr) { pushRes(E.regroupCard(u, rr)); E.regroupFx(u, rr); }
         }
         u.activated = true; endActivation(u); return;
       }
