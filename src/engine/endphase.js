@@ -195,7 +195,7 @@
     function regroupCard(u, r, pre) {
       if (!r) {
         return {
-          kind: 'Regroup', side: u.side, title: u.name + ' [' + u.side + ']',
+          kind: 'Regroup', side: u.side, title: cardName(u),
           note: (pre ? pre + ' ' : '') + 'No suppression to shake off.', outcome: { text: 'Steady.', tone: 'good' }
         };
       }
@@ -235,6 +235,13 @@
       render();
     }
 
+    /* A card's name for a unit: its name and side — and its code as well, when its
+       side has more than one of that name (three squads of Instigators are three
+       cards, not one squad rallying three times). */
+    function cardName(u) {
+      var twins = E.state.units.some(function (o) { return o !== u && o.side === u.side && o.name === u.name; });
+      return u.name + (twins ? ' ' + u.code : '') + ' [' + u.side + ']';
+    }
     function rallyCard(u, r, n, total, done) {
       var outcome;
       if (r.gone) {
@@ -255,7 +262,7 @@
       }
       return {
         kind: 'Rally', side: u.side,
-        title: u.name + ' [' + u.side + ']',
+        title: cardName(u),
         note: 'Morale ' + r.morale + ' — roll ' + r.morale + 'D6, each 4+ clears 1 SP' +
           (r.reroll ? '. Inspiring Presence re-rolls the failures.' : '.'),
         dice: r.dice.map(function (d) {
@@ -278,12 +285,12 @@
     function repairCard(u, rep) {
       if (!rep) {
         return {
-          kind: 'Repair', title: u.name + ' [' + u.side + ']', side: u.side,
+          kind: 'Repair', title: cardName(u), side: u.side,
           note: 'Nothing to repair.', outcome: { text: 'The hull is sound.', tone: 'good' }
         };
       }
       return {
-        kind: 'Repair', side: u.side, title: u.name + ' [' + u.side + ']',
+        kind: 'Repair', side: u.side, title: cardName(u),
         note: 'Structure ' + u.str + ', ' + rep.before + ' damage — roll ' + rep.dice +
           'D6, each ' + rep.need + '+ clearing a point' + (rep.need === 5 ? ' (Jammers)' : '') +
           (rep.reroll ? '. Superior Self-repair re-rolls the failures.' : '.'),

@@ -241,5 +241,36 @@ console.log('\nThe AI and Adrenaline Rush');
   ok('...and the battle still plays out', e.over(), steps + ' steps, turn ' + st.turn + '; ' + stood + ' Last Stands made');
 })();
 
+/* ---- rally cards name the unit ----
+   Two squads of the same name on one side rally on two cards that say which is
+   which: their codes, where one squad's name alone would read as one unit
+   rallying twice. */
+console.log('\nRally cards, two squads of one name');
+(function () {
+  const cards = [];
+  const e = Engine.create({ card: (c) => cards.push(c) });
+  e.start({
+    tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren',
+    armyA: ['cmd2', 'regular', 'regular', 'veterans'], armyB: ['cmd2', 'regular', 'regular', 'regular'],
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
+  });
+  ['A', 'B'].forEach((sd) => { e.intent(sd, { k: 'autosplit' }); e.intent(sd, { k: 'autodeploy' }); });
+  ['A', 'B'].forEach((sd) => e.intent(sd, { k: 'start' }));
+  const st = e.state(), side = st.activeSide;
+  const twins = st.units.filter((x) => x.side === side && x.key === 'regular').slice(0, 2);
+  const vet = st.units.find((x) => x.side === 'A' && x.key === 'veterans');
+  twins.forEach((x) => { x.sp = 2; });
+  vet.sp = 2;
+  const last = e.query.eligible(side).filter((x) => twins.indexOf(x) < 0 && x.cls === 'infantry')[0];
+  st.units.forEach((x) => { if (x !== last) x.activated = true; });
+  e.intent(side, { k: 'select', id: last.id });
+  step(e, side, last);
+  for (let i = 0; i < 20 && cards.filter((c) => c.kind === 'Rally').length < 3; i++) e.intent(side, { k: 'step' });
+  const titles = cards.filter((c) => c.kind === 'Rally').map((c) => c.title);
+  const tw = twins.map((x) => titles.find((t) => t.indexOf(x.code) >= 0));
+  ok('each of the two carries its code', tw.every(Boolean) && tw[0] !== tw[1], titles.join(' / '));
+  ok('...and a unit with no twin its name alone', titles.indexOf(vet.name + ' [A]') >= 0);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
