@@ -43,7 +43,10 @@ function ok(name, cond, note) {
       const u = window.PMC_STATE().units.find((x) => x.id === id);
       u.sp = sp; window.__clearSel(); window.__select(u);
       const m = document.querySelector('.moralebar .mb-max');
-      return { morale: window.PMC.currentMorale(u), shown: !!m, title: m ? m.title : '' };
+      const segs = [...(document.querySelector('.moralebar') || document).querySelectorAll('.sp-seg')];
+      return { morale: window.PMC.currentMorale(u), shown: !!m, title: m ? m.title : '',
+        segs: segs.length, lit: segs.filter((q) => q.classList.contains('lit')).length,
+        bands: segs.map((q) => ({ good: 'g', warn: 'a', bad: 'r', flee: '.' })[q.classList[1]]).join('') };
     }, { id, sp });
   }
   console.log('\nA squad at Morale 3');
@@ -56,6 +59,8 @@ function ok(name, cond, note) {
   ok('12 SP: still the !', at12.shown);
   const at5 = await mark(5);
   ok('5 SP: none', !at5.shown);
+  ok('the panel\'s bar is the board\'s: twelve segments, in bands of the Morale', at5.segs === 12 && at5.bands === 'gggaaarrr...', at5.bands);
+  ok('...lit one an SP', at5.lit === 5 && at10.lit === 10 && at12.lit === 12, [at5.lit, at10.lit, at12.lit].join(' / '));
   // a Morale lowered by losses lowers the line with it: 2 lost of a 6-man squad at Morale 3 is Morale 1 or so
   const lost = await p.evaluate((id) => {
     const u = window.PMC_STATE().units.find((x) => x.id === id);
@@ -73,6 +78,12 @@ function ok(name, cond, note) {
   await p.waitForTimeout(800);
   const box = await p.evaluate(() => { const r = document.getElementById('board').getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height }; });
   await p.screenshot({ path: shot('fleemark.png'), clip: { x: box.x + box.width / 2 - 200, y: box.y + box.height / 2 - 200, width: 400, height: 300 } });
+  // and the unit's panel beside it
+  const panel = await p.evaluate(() => {
+    const r = document.querySelector('.moralebar').parentElement.getBoundingClientRect();
+    return { x: r.left, y: r.top, width: r.width, height: Math.min(r.height, 260) };
+  });
+  await p.screenshot({ path: shot('fleemark-panel.png'), clip: panel });
 
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

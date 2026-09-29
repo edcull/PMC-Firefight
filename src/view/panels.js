@@ -205,13 +205,15 @@
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
         '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
         '</div>';
-      /* Suppression against Morale in three equal bands — steady, suppressed,
-         broken — each as wide as the Morale, with the unit's SP laid over them
-         in the colour of the band it has reached. */
-      var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
-      h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
-        '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
-        '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
+      /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
+         the 12 a unit can carry, in bands as wide as the Morale — steady,
+         suppressed, broken, and past three times it — lit up to the unit's SP. */
+      var cap = 3 * Math.max(1, m), BANDS = ['good', 'warn', 'bad', 'flee'];
+      var fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';   // the SP figure below, in the colour of its state
+      h += '<div class="moralebar" title="Steady · Suppressed · Broken · Flees — ' + u.sp + ' SP against Morale ' + m + '">' +
+        '<div class="sp-segs">' + ISO.spSegments(u.sp, m).map(function (q) {
+          return '<span class="sp-seg ' + BANDS[q.band] + (q.lit ? ' lit' : '') + '"></span>';
+        }).join('') + '</div>' +
         // past three times its Morale it flees at the Rally unless it sheds enough first (p. 34)
         (u.sp > cap && !u.noFlee && !u.noBreak ? '<b class="mb-max" title="' + u.sp + ' SP, over three times its Morale (' + cap +
           '): it flees the field at the Rally unless it sheds enough first">!</b>' : '') + '</div>';

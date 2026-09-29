@@ -378,21 +378,25 @@ header.your-turn #hdr-active.pill-B { background: var(--bravo); color: #0d1117; 
 .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
 .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* suppression against Morale: three bands, the SP laid over them */
+/* suppression against Morale: a segment an SP, in bands as wide as the Morale, lit up to the unit's SP (as on the board) */
 .moralebar { margin: 8px 0; display: flex; align-items: center; gap: 7px; }
 .moralebar .mb-track { flex: 1; }
-/* at the most Suppression a unit can carry */
+.sp-segs { flex: 1; display: flex; gap: 2px; height: 10px; }
+.sp-seg { flex: 1; border-radius: 1px; }
+.sp-seg.good { background: #2f4a2b; } .sp-seg.good.lit { background: #6fbf5a; }
+.sp-seg.warn { background: #5a4420; } .sp-seg.warn.lit { background: #e0a23a; }
+.sp-seg.bad { background: #552231; }  .sp-seg.bad.lit { background: #d1476b; }
+.sp-seg.flee { background: #07080a; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); } .sp-seg.flee.lit { background: #d1476b; box-shadow: none; }
+/* past three times its Morale: it flees at the Rally */
 .moralebar .mb-max { flex: none; color: var(--bad); font: 800 17px/1 var(--mono); margin: -2px 2px 0 0; }
 /* the Suppression on the unit, in the colour of the band it has reached */
 .st b.sp-warn { color: var(--warn); } .st b.sp-bad { color: var(--bad); }
 .st b .mmod { color: var(--bad); font-size: 11px; margin-left: 3px; }
 .st b.hurt { color: var(--bad); }
 .mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
-.mb-band { flex: 1; opacity: .18; }
-.mb-band + .mb-band { border-left: 1px solid rgba(255,255,255,.25); }
-.mb-band.good, .mb-fill.good { background: var(--good); }
-.mb-band.warn, .mb-fill.warn { background: var(--warn); }
-.mb-band.bad, .mb-fill.bad { background: var(--bad); }
+.mb-fill.good { background: var(--good); }
+.mb-fill.warn { background: var(--warn); }
+.mb-fill.bad { background: var(--bad); }
 .mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
 .hintbar:empty { display: none; }
 /* the ground a unit stands on, with the letter the map marks it by */
