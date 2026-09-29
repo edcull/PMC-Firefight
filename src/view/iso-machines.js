@@ -482,6 +482,10 @@
       // a flier that is shot down is a wreck on the ground, not one hanging in the air
       var downed = opts.status === 'wrecked' || u.alive === false;
       var lift = (opts.lift || 0) + (spec.fly && !downed ? ELEV * spec.fly : 0) - (opts.hop || 0);
+      /* A grav or hover hull that is knocked out comes down: the grav pods on the
+         ground under it, the hover's skirt slumped flat. */
+      if (downed && drive === 'grav') ride = 7;
+      if (downed && drive === 'hover') ride = 4;
       // the ground it stands on (up a hill, the hill's top): where its shadow falls, whatever height it rides at
       var ground = opts.ground != null ? opts.ground : (opts.lift || 0);
       var dead = opts.status === 'wrecked' || u.alive === false;
@@ -588,7 +592,7 @@
           HF: HF, S3: S3, STEEL: STEEL, STEEL_LIT: STEEL_LIT, TB: TB, TS: TS, at: at, box: box, cos: cos,
           dark: dark, dead: dead, deck: deck, drive: drive, f: f, frameAt: frameAt, g: g, hull: hull,
           lift: lift, line: line, lit: lit, mixc: mixc, opts: opts, rectPts: rectPts, ride: ride,
-          sEllipse: sEllipse, scr: scr, sin: sin, slabF: slabF, spec: spec, trim: trim
+          sEllipse: sEllipse, scr: scr, shape: shape, sin: sin, slabF: slabF, spec: spec, trim: trim
         }));
       }
       function want(phase, s, nearest) { return (KIT_GEAR || kitGear()).want(phase, s, nearest); }
