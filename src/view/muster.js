@@ -229,11 +229,6 @@
         }).join('');
       }).join('');
 
-      var sel = el('sel-preset');
-      var want = muster.solo ? [] : R.presetsFor(tier, faction);
-      sel.innerHTML = '<option value="">Ready-made…</option>' + want.map(function (pr) {
-        return '<option value="' + pr.id + '">' + pr.name + '</option>';
-      }).join('');
     }
 
     /* ================= saved skirmish forces =================
@@ -510,13 +505,6 @@
         muster.name = '';
         drawMuster();
       });
-      el('sel-preset').addEventListener('change', function () {
-        var pr = R.presetsFor(musterTier(), musterFaction()).filter(function (x) { return x.id === el('sel-preset').value; })[0];
-        if (!pr) return;
-        muster.keys = pr.keys.slice();
-        muster.name = pr.name;
-        drawMuster();
-      });
       document.querySelector('.muster-btns').addEventListener('click', function (e) {
         var b = e.target.closest('[data-army]');
         if (!b) return;
@@ -622,6 +610,7 @@
       if (el('cat-back')) el('cat-back').addEventListener('click', function () { catModal(false); });
       var saves = el('forcebar-wrap');
       if (el('btn-demo-saves')) el('btn-demo-saves').addEventListener('click', function () { saves.classList.add('open'); });
+      if (el('btn-saves')) el('btn-saves').addEventListener('click', function () { saves.classList.add('open'); });
       if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
       if (saves) saves.addEventListener('click', function (ev) { if (ev.target === saves) saves.classList.remove('open'); });
       if (el('hot-sum')) el('hot-sum').addEventListener('click', function (ev) {
