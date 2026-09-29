@@ -406,7 +406,7 @@
       root.PMC_MUSTER_FOR(room.settings, function (force) {
         if (force) { myForce = force; net.send('game.force', { force: force }); }
         open('room');
-      }, had, room.name);
+      }, had, room.name, mine);
       return;
     }
     open('room');
@@ -501,6 +501,21 @@
       if (root.PMC_JOIN_BATTLE) root.PMC_JOIN_BATTLE(net, m.seat, m.cfg);
     });
     net.on('over', function () { keepRoom(''); /* the board shows the result; the room reopens by itself */ });
+    /* The other player dropping out, coming back or walking away, said on the
+       board while the battle is on (the room's chat is not on screen then). */
+    net.on('game.presence', function (m) {
+      if (!m || m.id === me.id || !root.PMC_BATTLE_LIVE || !root.PMC_BATTLE_LIVE()) return;
+      var who = m.name || 'Your opponent';
+      if (m.kind === 'dropped') say2(who + ' has lost connection. Their seat is being held for them.', 'warn');
+      else if (m.kind === 'back') say2(who + ' is back.', 'good');
+      else if (m.kind === 'left') {
+        keepRoom('');
+        say2(who + ' has left the battle. It cannot go on without them.', 'bad', 7000);
+        // the battle on the screen is over: back to the room, where another can be arranged
+        if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE();
+        setTimeout(function () { open(room ? 'room' : 'lobby'); }, 2500);
+      }
+    });
 
     net.connect(me.name || 'Commander');
     return net;
@@ -513,7 +528,16 @@
       .catch(function () { campaigns = []; });
   }
 
+  function say2(text, kind, ms) { if (root.PMC_TOAST) root.PMC_TOAST(text, kind, ms); }
+
   root.PMCLobby = {
+    /* Walk away from the battle under way: the seat is given up, which ends it
+       for the other player too, and this browser forgets it was ever in it. */
+    abandon: function () {
+      keepRoom('');
+      if (net) net.send('game.leave');
+      if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE();
+    },
     /* Is there a server to play against at all? A page opened from a file, or
        the published single file, has none — and the button that opens this is
        only offered when there is. */

@@ -773,14 +773,29 @@
   window.PMC_BATTLE_DISCARDABLE = discardable;
   window.PMC_DISCARD_BATTLE = function () {
     if (!discardable()) return false;
-    resetShow();
     try { net.forget(); net.disconnect(); } catch (e) { }
+    clearBoard();
+    return true;
+  };
+  /* A battle on a game server that this screen has a seat in can be abandoned
+     from the menu: the seat is given up and the battle ends for both. */
+  window.PMC_BATTLE_ABANDONABLE = function () {
+    return !!(state && state.phase && !state.over && net && window.PMCNet && !(net instanceof window.PMCNet.Local) && seats.length);
+  };
+  // the battle on the server is over for this screen (abandoned here, or the other player left)
+  window.PMC_BATTLE_GONE = function () {
+    if (!state || (net && window.PMCNet && net instanceof window.PMCNet.Local)) return;
+    net = null;                                // the lobby keeps the connection itself
+    clearBoard();
+    if (window.PMCMenu && window.PMCMenu.paint) window.PMCMenu.paint();
+  };
+  function clearBoard() {
+    resetShow();
     net = null; mirror = null; Q = null; state = null;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
     ui.preview = null; ui.hover = null; ui.insertion = null; ui.reservePick = null; ui.digHover = null;
     document.body.removeAttribute('data-battle');
-    return true;
-  };
+  }
 
   /* A phone that puts the tab in the background may throw away every canvas
      it holds and hand them back blank — the table, the troops, the lot. Coming
@@ -1001,6 +1016,8 @@
      and the functions and fixed values it uses. */
   var VIEW = window.PMCView({
     get Q() { return Q; },
+    // the sides this screen plays: without them every side reads as this screen's, and a networked game never says "Your turn"
+    get seats() { return seats; },
     replaying: function () { return replaying(); },
     // result cards still to be read (a rally's rolls, say), or one open now
     cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },

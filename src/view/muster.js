@@ -697,7 +697,8 @@
         el('sel-faction').value = 'pmc';             // a mercenary company, until they pick another kind
         drawColourPick();
         if (el('sel-tactic')) el('sel-tactic').value = '';
-        muster.name = kind === 'hotseat' || kind === 'coop' ? 'Player 1' : kind === 'solo' ? 'Your commando' : 'Your Force';
+        muster.name = kind === 'hotseat' ? 'Player 1 Force' : kind === 'coop' ? 'Player 1' : kind === 'solo' ? 'Your commando'
+          : kind === 'net' ? (muster.forLobby && muster.forLobby.seat === 'B' ? 'Player 2 Force' : 'Player 1 Force') : 'Your Force';
         if (el('hot-name')) el('hot-name').value = muster.name;
       }
       hotPaint();
@@ -792,7 +793,7 @@
       } else {
         // a fresh force for the second player, in a colour the first is not wearing
         var two = i === 1 && (muster.hot.kind === 'hotseat' || muster.hot.kind === 'coop');
-        muster.keys = []; muster.name = two ? 'Player 2' : '';
+        muster.keys = []; muster.name = two ? (muster.hot.kind === 'coop' ? 'Player 2' : 'Player 2 Force') : '';
         if (two) muster.colour = foeColour([muster.hot.sides[0].colour]);
         if (el('hot-name')) el('hot-name').value = muster.name;
       }

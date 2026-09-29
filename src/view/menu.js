@@ -60,11 +60,16 @@
   function paint() {
     var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE();
     el('btn-resume').hidden = !live;
-    // a skirmish in this browser can be thrown away; asked twice, since it cannot be had back
+    /* a skirmish in this browser can be thrown away, and a battle over the
+       network abandoned; asked twice, since neither can be had back */
     var dis = el('btn-discard');
     if (dis) {
-      dis.hidden = !live || !(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE());
+      dis.hidden = !live || !(discardable() || abandonable());
       unconfirm();
+    }
+    var ms = el('menu-multi-sub');
+    if (ms && !live && root.PMCLobby && root.PMCLobby.resumable && !root.PMCLobby.resumable() && /^Resume/.test(ms.textContent)) {
+      ms.textContent = 'Play somebody else over the network';
     }
     var camp = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get();
     /* There is one campaign at a time: the card for the way it is played says
@@ -83,12 +88,15 @@
         camp.companies.A.name + ', turn ' + camp.turn;
   }
 
+  function discardable() { return !!(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE()); }
+  function abandonable() { return !!(root.PMC_BATTLE_ABANDONABLE && root.PMC_BATTLE_ABANDONABLE()); }
   // the x back to an x, and the card back to saying the battle is on
   function unconfirm() {
     var dis = el('btn-discard'), res = el('btn-resume'), sub = el('menu-resume-sub');
     if (!dis) return;
     dis.classList.remove('confirm'); dis.textContent = '\u00d7';
-    dis.setAttribute('aria-label', 'Discard this battle');
+    var what = abandonable() ? 'Abandon this battle' : 'Discard this battle';
+    dis.setAttribute('aria-label', what); dis.title = what;
     if (res) res.classList.remove('discarding');
     if (sub) sub.textContent = 'The battle is still on';
   }
@@ -117,14 +125,18 @@
           return;
         case 'btn-resume': close(); return;
         case 'btn-discard':
+          var net = abandonable();
           if (!b.classList.contains('confirm')) {
-            b.classList.add('confirm'); b.textContent = 'Discard?';
-            b.setAttribute('aria-label', 'Discard this battle: tap again to confirm');
+            b.classList.add('confirm'); b.textContent = net ? 'Abandon?' : 'Discard?';
+            b.setAttribute('aria-label', (net ? 'Abandon' : 'Discard') + ' this battle: tap again to confirm');
             el('btn-resume').classList.add('discarding');
-            el('menu-resume-sub').textContent = 'Tap Discard? to end it — it cannot be undone';
+            el('menu-resume-sub').textContent = net
+              ? 'Tap Abandon? to walk away — the battle ends for your opponent too'
+              : 'Tap Discard? to end it — it cannot be undone';
             return;
           }
-          if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
+          if (net) { if (root.PMCLobby && root.PMCLobby.abandon) root.PMCLobby.abandon(); }
+          else if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
           paint();
           return;
       }
@@ -351,7 +363,7 @@
       on: function () { return running ? cv : null; } };
   })();
 
-  root.PMCMenu = { open: open, close: close, isOpen: isOpen, show: show, table: Table };
+  root.PMCMenu = { open: open, close: close, isOpen: isOpen, show: show, paint: paint, table: Table };
 
   function boot() {
     wire();
