@@ -66,8 +66,13 @@
       for (var i = 0; i < B.anims.length; i++) B.anims[i].follow = false;
     }
 
+    // the zoom the camera is settling at: pulled back for a shot, it is the zoom it will go back to
+    function restingZoom() {
+      if (cam.shotPre) return cam.shotPre.z;
+      return cam.zGoal != null && cam.z === cam.zLast ? cam.zGoal : cam.z;
+    }
     function setHome(x, y) {
-      cam.home = { x: x, y: y, z: cam.z };
+      cam.home = { x: x, y: y, z: restingZoom() };
       cam.borrowed = false;
       dropFollow();
       updateReturnHint();
@@ -104,6 +109,7 @@
     }
     function returnHome(quiet) {
       if (!cam.home) return;
+      cam.shotPre = null;
       if (cam.home.z !== cam.z) { cam.z = cam.home.z; zoomLabel(); }
       cam.borrowed = false;
       dropFollow();
@@ -141,47 +147,103 @@
 
     function centreOn(bx, by, instant) {
       cam.tx = bx; cam.ty = by;
-      if (instant) { cam.x = bx; cam.y = by; drawBoard(); return; }
+      if (instant) {
+        cam.x = bx; cam.y = by;
+        if (cam.zGoal != null) { if (cam.z === cam.zLast) { cam.z = cam.zGoal; zoomLabel(); } cam.zGoal = null; }
+        drawBoard(); return;
+      }
       if (cam.anim) return;
       cam.anim = requestAnimationFrame(stepCam);
     }
     function stepCam() {
       hideTerrainTip();
+      // a zoom on its way (fitting a shot) is dropped the moment anything else sets the zoom
+      if (cam.zGoal != null && cam.z !== cam.zLast) cam.zGoal = null;
+      var dz = cam.zGoal != null ? cam.zGoal - cam.z : 0;
       var dx = cam.tx - cam.x, dy = cam.ty - cam.y;
-      if (Math.abs(dx) < 0.7 && Math.abs(dy) < 0.7) {
-        cam.x = cam.tx; cam.y = cam.ty; cam.anim = null; drawBoard(); return;
+      if (Math.abs(dx) < 0.7 && Math.abs(dy) < 0.7 && Math.abs(dz) < 0.01) {
+        cam.x = cam.tx; cam.y = cam.ty;
+        if (cam.zGoal != null) { cam.z = cam.zGoal; cam.zGoal = null; zoomLabel(); }
+        cam.anim = null; drawBoard(); return;
       }
       cam.x += dx * 0.24; cam.y += dy * 0.24;
+      if (dz) { cam.z += dz * 0.24; cam.zLast = cam.z; }
       drawBoard();
       cam.anim = requestAnimationFrame(stepCam);
     }
-    /* In a demo the camera is the watcher's: nothing the AI does moves it, not
-       a unit activating, landing or on the move — only the watcher pans and zooms. */
-    function handsOff() { return !!(B.state && B.state.cfg && B.state.cfg.mode === 'demo'); }
+    function isDemo() { return !!(B.state && B.state.cfg && B.state.cfg.mode === 'demo'); }
+    /* In a demo the camera is the watcher's unless they turn Follow on: every demo
+       starts with it off, and until then nothing the AI does moves the camera. */
+    var demoFollow = false;
+    function startDemoCam() { demoFollow = false; showFollow(); }
+    // a demo is watched, never played: taps look at units and act for nobody
+    function handsOff() { return isDemo(); }
+    // ...and the camera stays the watcher's, unless they have turned Follow on
+    function camOff() { return isDemo() && !demoFollow; }
     /* Follow (the toggle by the zoom level): whether the camera goes over to the
-       other side's units as they act. The player's choice, kept between battles. */
+       other side's units as they act. The player's choice, kept between battles
+       (a demo's is its own, and not kept). */
     var FOLLOW_KEY = 'pmc.followOther', follow = true;
     try { follow = localStorage.getItem(FOLLOW_KEY) !== 'off'; } catch (e) { /* no storage: on */ }
-    function followOn() { return follow; }
+    function followOn() { return isDemo() ? demoFollow : follow; }
     function showFollow() {
       var b = el('follow-toggle');
       if (!b) return;
-      b.classList.toggle('on', follow);
-      b.setAttribute('aria-pressed', follow ? 'true' : 'false');
-      b.title = follow ? 'Following the other side\u2019s moves — tap to keep the camera where you leave it'
-        : 'The camera stays where you leave it — tap to follow the other side\u2019s moves';
+      var on = followOn();
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = isDemo()
+        ? (on ? 'Following the battle — tap to keep the camera where you leave it' : 'The camera stays where you leave it — tap to follow the battle')
+        : on ? 'Following the other side\u2019s moves — tap to keep the camera where you leave it'
+          : 'The camera stays where you leave it — tap to follow the other side\u2019s moves';
     }
     function setFollow(on) {
+      if (isDemo()) {
+        demoFollow = !!on;
+        showFollow();
+        if (!demoFollow) { dropFollow(); cam.shotPre = null; }
+        return;
+      }
       follow = !!on;
       try { localStorage.setItem(FOLLOW_KEY, follow ? 'on' : 'off'); } catch (e) { /* not kept */ }
       showFollow();
       // switched off mid-move: the camera comes straight back to where it was left
       if (!follow) { dropFollow(); if (cam.borrowed) returnHome(true); }
     }
+    /* The AI shooting, or turning an ability on something: while the camera is
+       following it, it pulls back just far enough to hold both the unit and what
+       it is aiming at (never closer than it already is), then goes back to how it
+       was once the shot has played (unfitShot). `a` and `b` are table points. */
+    function fitShot(a, b) {
+      if (!a || !b || a.x < 0 || b.x < 0 || camOff()) return;
+      if (isDemo() ? !demoFollow : !(follow && cam.borrowed)) return;
+      var pa = ISO.toScreen(a.x, a.y), pb = ISO.toScreen(b.x, b.y);
+      var lift = ISO.ELEV, pad = 90;                  // room for the figures and their labels
+      var w = Math.abs(pa.x - pb.x) + pad * 2, h = Math.abs(pa.y - pb.y) + pad * 2;
+      var need = Math.min(B.VIEW_W * 0.9 / w, B.VIEW_H * 0.8 / h);
+      var from = cam.zGoal != null ? cam.zGoal : cam.z;
+      var z = ZOOMS[0];
+      ZOOMS.forEach(function (q) { if (q <= Math.min(from, need) && q > z) z = q; });
+      if (!cam.shotPre) cam.shotPre = { x: cam.tx, y: cam.ty, z: from };
+      if (z !== cam.z) { cam.zGoal = z; cam.zLast = cam.z; }
+      centreOn((pa.x + pb.x) / 2, (pa.y + pb.y) / 2 - lift);
+    }
+    function unfitShot() {
+      var pre = cam.shotPre;
+      if (!pre) return;
+      cam.shotPre = null;
+      if (pre.z !== cam.z) { cam.zGoal = pre.z; cam.zLast = cam.z; }
+      centreOn(pre.x, pre.y);
+    }
     function focusUnit(u, instant, borrowed) {
-      if (!u || u.x < 0 || handsOff()) return;
-      if (borrowed && !follow) return;                 // Follow is off: the other side's units are not chased
+      if (!u || u.x < 0 || camOff()) return;
+      if (borrowed && !followOn()) return;             // Follow is off: the other side's units are not chased
       var p = ISO.toScreen(dispX(u), dispY(u));
+      // a unit of the player's own, picked while the camera is pulled back for a shot: back to the zoom it had
+      if (!borrowed && cam.shotPre) {
+        if (cam.shotPre.z !== cam.z) { cam.zGoal = cam.shotPre.z; cam.zLast = cam.z; }
+        cam.shotPre = null;
+      }
       centreOn(p.x, p.y - ISO.ELEV, instant);
       if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
     }
@@ -207,6 +269,7 @@
       if (i < 0) i = ZOOMS.indexOf(nearestZoom(cam.z));
       i = Math.max(0, Math.min(ZOOMS.length - 1, i + dir));
       cam.z = ZOOMS[i];
+      cam.shotPre = null; cam.zGoal = null;
       cam.tx = cam.x; cam.ty = cam.y;
       zoomLabel();
       setHome(cam.x, cam.y);
@@ -229,6 +292,7 @@
     function fitView() {
       hideTerrainTip();
       cam.z = ZOOMS[0];
+      cam.shotPre = null; cam.zGoal = null;
       cam.ox = 0; cam.oy = 0;
       cam.x = cam.tx = ISO.PIXW / 2; cam.y = cam.ty = ISO.PIXH / 2;
       zoomLabel();
@@ -580,8 +644,8 @@
       fitView: fitView,
       focusUnit: focusUnit,
       foeColour: foeColour,
-      handsOff: handsOff,
-      followOn: followOn, setFollow: setFollow, showFollow: showFollow,
+      handsOff: handsOff, camOff: camOff,
+      followOn: followOn, setFollow: setFollow, showFollow: showFollow, fitShot: fitShot, unfitShot: unfitShot, startDemoCam: startDemoCam,
       hud: hud,
       labelIcons: labelIcons,
       nearestZoom: nearestZoom,

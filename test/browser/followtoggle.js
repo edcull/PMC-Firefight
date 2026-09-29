@@ -31,7 +31,7 @@ async function battle(p) {
 async function watch(p, ms) {
   await p.evaluate(() => {
     const c0 = window.__cam();
-    window.__watch = { borrowed: false, moved: 0, aiTime: 0, last: null };
+    window.__watch = { borrowed: false, moved: 0, aiTime: 0, last: null, z0: c0.z, minZ: c0.z };
     window.__watchT = setInterval(() => {
       const c = window.__cam(), w = window.__watch, s = window.PMC_STATE();
       if (c.borrowed) w.borrowed = true;
@@ -41,6 +41,7 @@ async function watch(p, ms) {
       const theirs = s && s.phase === 'battle' && !window.__mySide();
       if (theirs) {
         w.aiTime++;
+        w.minZ = Math.min(w.minZ, c.z);
         if (w.last && Math.hypot(c.tx - w.last.x, c.ty - w.last.y) > 1) {
           // aimed somewhere new: at one of theirs (chasing), or at one of the player's own (its own action replayed)?
           const me = s.cfg.aiSides.indexOf('A') < 0 ? 'A' : 'B', I = window.PMCIso;
@@ -57,7 +58,13 @@ async function watch(p, ms) {
     }, 40);
   });
   const t0 = Date.now();
-  while (Date.now() - t0 < ms || (Date.now() - t0 < ms * 3 && (await p.evaluate(() => window.__watch.aiTime)) < 150)) {
+  await p.evaluate(() => { window.__traceShow = []; });
+  // long enough to see the AI's turns, and (up to a limit) until it has fired at somebody
+  const shot = () => p.evaluate(() => window.__traceShow.some(t => t.e === 'shoot' && t.id && window.PMC_STATE().units.some(u => u.id === t.id && u.side === 'B')));
+  let firedAt = 0;
+  while (Date.now() - t0 < ms || (Date.now() - t0 < ms * 3 && (await p.evaluate(() => window.__watch.aiTime)) < 150) ||
+    (Date.now() - t0 < 90000 && (!firedAt || Date.now() - firedAt < 1500))) {
+    if (!firedAt && await shot()) firedAt = Date.now();
     await drain(p);
     // the player acts once the other side's move has been drawn, as a player would: a unit regroups
     await p.evaluate(() => {
@@ -105,12 +112,72 @@ async function watch(p, ms) {
   // a fresh battle for it (the first may be over): Follow, back on, carries into it
   await battle(p);
   ok('...and it carries into the next battle', await p.evaluate(() => document.getElementById('follow-toggle').classList.contains('on')));
-  await p.evaluate(() => window.__startBattle());
+  // closer in, so an AI shot has room to pull the camera back
+  for (let i = 0; i < 6; i++) await p.evaluate(() => document.querySelector('#viewctl [data-zoom="in"]').click());
+  // the two sides brought within a shot of each other as the battle starts, so the AI fires on its first go
+  await p.evaluate(() => {
+    window.__startBattle();
+    const s = window.PMC_STATE(), mine = s.units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard);
+    s.units.filter(u => u.side === 'B' && u.x >= 0 && !u.aboard).forEach((u, i) => {
+      const m = mine[i % mine.length];
+      u.x = m.x + (i % 2 ? 3 : -3); u.y = m.y + (u.y > m.y ? 14 : -14);   // towards where they came from
+    });
+  });
   await p.waitForTimeout(600);
   const on = await watch(p, 9000);
   ok('on again, the camera goes over to the AI\'s units', on.borrowed, JSON.stringify(on));
+  ok('...pulls back to take in the shooter and its target', on.minZ < on.z0, 'zoom ' + on.z0 + ' → ' + on.minZ.toFixed(2));
+  // once it is the player's go again and the table is still, the camera is back as it was left
+  let back = null;
+  for (let i = 0; i < 80; i++) {
+    back = await p.evaluate(() => ({ mine: window.__mySide(), idle: !window.__busy() && window.__showQueue() === 0, c: window.__cam() }));
+    if (back.mine && back.idle && !back.c.borrowed) break;
+    await drain(p);
+    await p.waitForTimeout(150);
+  }
+  ok('...and is put back as it was afterwards', back && !back.c.borrowed && Math.abs(back.c.z - on.z0) < 0.01, JSON.stringify(back && back.c));
   ok('the choice is kept', await p.evaluate(() => localStorage.getItem('pmc.followOther')) === 'on');
   await ctx.close();
+
+  console.log('\n  DEMO');
+  const dctx = await b.newContext({ viewport: { width: 1340, height: 950 } });
+  const dp = await dctx.newPage();
+  dp.on('pageerror', e => errs.push(e.message));
+  await dp.goto('file://' + path.join(ROOT, 'index.html'));
+  await dp.waitForTimeout(500);
+  await startSkirmish(dp, { tier: 3, mode: 'demo', scenario: 'meeting', planet: 'desert', terrain: 'auto',
+    keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'] });
+  await dp.waitForTimeout(1200);
+  await drain(dp);
+  await dp.evaluate(() => { if (window.__autoDeployBoth) window.__autoDeployBoth(); });
+  await dp.waitForTimeout(300);
+  await dp.evaluate(() => { if (window.PMC_STATE().phase !== 'battle' && window.__startBattle) window.__startBattle(); });
+  ok('a demo starts with Follow off', !(await dp.evaluate(() => document.getElementById('follow-toggle').classList.contains('on'))));
+  for (let i = 0; i < 6; i++) await dp.evaluate(() => document.querySelector('#viewctl [data-zoom="in"]').click());
+  // how far the camera is aimed from where it was, and how far out it goes, over a stretch of the battle
+  async function roam(ms, tillShot) {
+    const c0 = await dp.evaluate(() => window.__cam());
+    let far = 0, minZ = c0.z, firedAt = 0;
+    const t0 = Date.now();
+    await dp.evaluate(() => { window.__traceShow = []; });
+    while (Date.now() - t0 < ms || (tillShot && Date.now() - t0 < 90000 && (!firedAt || Date.now() - firedAt < 1500))) {
+      if (!firedAt && await dp.evaluate(() => window.__traceShow.some(t => t.e === 'shoot'))) firedAt = Date.now();
+      await drain(dp);
+      const c = await dp.evaluate(() => window.__cam());
+      far = Math.max(far, Math.hypot(c.tx - c0.tx, c.ty - c0.ty));
+      minZ = Math.min(minZ, c.z);
+      await dp.waitForTimeout(60);
+    }
+    return { far: Math.round(far), z0: c0.z, minZ: +minZ.toFixed(2) };
+  }
+  const still = await roam(5000);
+  ok('...so the camera stays where the watcher left it', still.far < 1 && still.minZ === still.z0, JSON.stringify(still));
+  await dp.click('#follow-toggle');
+  ok('Follow can be turned on in a demo', await dp.evaluate(() => document.getElementById('follow-toggle').classList.contains('on')));
+  const roamed = await roam(4000, true);
+  ok('...and then the camera follows the battle', roamed.far > 40, JSON.stringify(roamed));
+  ok('...pulling back for the shots', roamed.minZ < roamed.z0, JSON.stringify(roamed));
+  await dctx.close();
 
   console.log('\n  PHONE');
   const mctx = await b.newContext({ viewport: { width: 400, height: 860 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });

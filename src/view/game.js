@@ -110,6 +110,8 @@
     wireNet(net);
     net.connect();
     net.begin(cfg, seats);
+    // a demo starts with the camera left alone; Follow can be turned on to watch the action
+    VIEW.startDemoCam();
     return state;
   }
 
@@ -641,7 +643,8 @@
     ZOOMS.push(fit);
     ZOOM_STEPS.forEach(function (z) { if (z > fit + 0.02) ZOOMS.push(z); });
     if (cam.z <= fit) cam.z = fit;
-    if (ZOOMS.indexOf(cam.z) < 0) cam.z = nearestZoom(cam.z);
+    // (a zoom still easing to a step, framing a shot, is left to get there)
+    if (ZOOMS.indexOf(cam.z) < 0 && cam.zGoal == null) cam.z = nearestZoom(cam.z);
     return true;
   }
 
@@ -806,6 +809,7 @@
     get drawPanel() { return drawPanel; }, get drawStats() { return drawStats; },
     get feedHosts() { return feedHosts; }, get fitView() { return fitView; },
     get focusUnit() { return focusUnit; }, get handsOff() { return handsOff; },
+    get fitShot() { return VIEW.fitShot; }, get unfitShot() { return VIEW.unfitShot; },
     get landUnit() { return landUnit; }, get lookAtDeployment() { return lookAtDeployment; },
     get paintStructures() { return paintStructures; }, get playAssault() { return playAssault; },
     get playShooting() { return playShooting; }, get playStrafe() { return playStrafe; },
@@ -870,7 +874,7 @@
      and the functions and fixed values it uses. */
   var PLAY = window.PMCPlay({
     get held() { return held; }, get pctx() { return pctx; }, get state() { return state; }, get vc() { return vc(); },
-    get handsOff() { return handsOff; }, get followOn() { return followOn; }, get render() { return render; }, dispX: dispX, dispY: dispY,
+    get handsOff() { return handsOff; }, get camOff() { return VIEW.camOff; }, get followOn() { return followOn; }, get render() { return render; }, dispX: dispX, dispY: dispY,
     nowMs: nowMs, onTable: onTable, startLoop: startLoop, FX: FX, ISO: ISO, R: R, SFX: SFX,
     STANDING: STANDING, anims: anims
   });
