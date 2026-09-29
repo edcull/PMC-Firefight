@@ -313,6 +313,8 @@
     window.__testShoot = function (a, b, res) { playShooting(a, b, res || { hits: 2 }, [], null); };
     window.__shootAt = function (id) { doShoot(byId(id)); };
     // where a unit is drawn this moment, which a replay may hold back from where the rules have it
+    // where a squad's men are drawn when it lines a wall or a trench (table inches), or null
+    window.__lineUp = function (id, x, y) { var u = byId(id); return u ? B.lineUp(u, x == null ? u.x : x, y == null ? u.y : y) : null; };
     window.__drawnAt = function (id) { var u = byId(id); return u ? { x: u.ax == null ? u.x : u.ax, y: u.ay == null ? u.y : u.ay, rx: u.x, ry: u.y } : null; };
     window.__fxkinds = function () { return fx.map(function (f) { return f.kind; }); };
     /* What the effects layer was told, not just what kind it was: the harness uses
