@@ -228,8 +228,12 @@
        nobody is playing. */
     var draining = false, paced = false;
     function canAI() {
+      /* An answer owed holds the AI: a player's Martyrdom answer holds its charge,
+         and a Last Stand asked for, or the End phase asking a player to carry on
+         or surrender, hold it as well — with nothing left to act, a step taken
+         then would end the turn again and run the whole Rally phase once more. */
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.kyfAsk && !state.faceAsk && isAI(state.activeSide);          // a player's Martyrdom answer holds the AI's charge
+        !state.martyrAsk && !state.kyfAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
     }
     function maybeAI() {
       if (draining || !canAI()) return;
