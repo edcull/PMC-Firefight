@@ -1,6 +1,7 @@
 /* A unit's Suppression bar fills while the shot at it plays: from the moment
    the rounds land it climbs from what it had towards what it now has, rather
-   than jumping once the shot is over. */
+   than jumping once the shot is over — its segments, one an SP, lighting one
+   after another. */
 const { chromium } = require('playwright');
 const path = require('path');
 const { ROOT } = require('../where.js');
@@ -42,17 +43,20 @@ function ok(name, cond, note) {
       if (!window.__pressAction('fire')) return { none: 'no fire' };
       const e = s.units.find(x => x.side === 'B' && x.alive && x.key === 'rookie' && window.PMC.canShoot(s, vets, x, 'fire', {}));
       if (!e) return { none: 'nothing in sight' };
-      const before = e.sp;
+      e.def = 2;                                  // a soft target, so men fall and its Morale with them
+      const before = e.sp, moraleBefore = window.PMC.currentMorale(e);
       window.__shootAt(e.id);
-      const seen = [];
+      const seen = [], lit = [], mor = [];
+      const litNow = () => window.PMCIso.spSegments(window.__shownSp(e.id), window.__shownMorale(e.id)).filter(q => q.lit).length;
       for (let i = 0; i < 200; i++) {
-        seen.push(window.__shownSp(e.id));
+        seen.push(window.__shownSp(e.id)); lit.push(litNow()); mor.push(window.__shownMorale(e.id));
         await new Promise(r => setTimeout(r, 15));
         if (i > 30 && !window.__busy() && !window.__showQueue()) break;
       }
       // what it is drawn with once all of it has played, taken fresh rather than the last sample in flight
       await new Promise(r => setTimeout(r, 400));
-      return { before, after: e.sp, alive: e.alive, seen, settled: window.__shownSp(e.id) };
+      return { before, after: e.sp, alive: e.alive, seen, lit, mor, moraleBefore, moraleAfter: e.alive ? window.PMC.currentMorale(e) : null,
+        settled: window.__shownSp(e.id), litSettled: litNow() };
     });
     if (got.none) break;
   }
@@ -65,7 +69,28 @@ function ok(name, cond, note) {
     ok('...never going back down on the way', rises);
     ok('...and ends on what the rules gave it', got.settled === got.after, String(got.settled));
     ok('...having shown what it had until the rounds landed', got.seen[0] === got.before, String(got.seen[0]));
+    // the bar's segments: from what it had lit, each one in turn, to one an SP it now has
+    const steps = got.lit.filter((v, i) => i === 0 || v !== got.lit[i - 1]);
+    ok('its segments lit one after another', steps[0] === got.before && steps.every((v, i) => i === 0 || v === steps[i - 1] + 1),
+      steps.join(' → '));
+    ok('...each for a while, not all at once', got.after - got.before < 2 || new Set(got.lit).size >= 3, new Set(got.lit).size + ' counts seen');
+    ok('...ending with one lit an SP', got.litSettled === got.after, got.litSettled + ' lit');
+    // the bands are as wide as its Morale as it stands: men lost bring them in, as they fall
+    if (got.moraleAfter != null && got.moraleAfter !== got.moraleBefore) {
+      const turn = got.mor.findIndex(v => v === got.moraleAfter), last = got.mor.length - 1;
+      ok('its losses narrowed the bands while the shot played, not after', turn > 0 && turn < last && got.mor[0] === got.moraleBefore,
+        'Morale ' + got.moraleBefore + ' → ' + got.moraleAfter + ' at frame ' + turn + ' of ' + last);
+    } else console.log('    - (no Morale lost to this shot: the bands stayed as they were)');
   }
+  // the segments themselves, at Morale 3: the bands and what is lit (your examples)
+  const bands = await p.evaluate(() => [0, 1, 4, 7, 10].map(sp => window.PMCIso.spSegments(sp, 3)
+    .map(q => (q.lit ? 'GAR!' : 'gar.')[q.band]).join('')));
+  // lit capitals, dull lower case: g green, a amber, r red; black dull '.', lit '!'
+  ok('Morale 3: 0 SP, every segment dull', bands[0] === 'gggaaarrr...', bands[0]);
+  ok('...1 SP', bands[1] === 'Gggaaarrr...', bands[1]);
+  ok('...4 SP', bands[2] === 'GGGAaarrr...', bands[2]);
+  ok('...7 SP', bands[3] === 'GGGAAARrr...', bands[3]);
+  ok('...10 SP: past three times its Morale, lit red against black', bands[4] === 'GGGAAARRR!..', bands[4]);
   ok('no page errors', errs.length === 0, errs.join(' | '));
   console.log('\n  ' + pass + ' checks passed, ' + fail + ' failed.');
   await b.close();

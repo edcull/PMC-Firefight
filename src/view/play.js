@@ -309,7 +309,8 @@
       });
       (deaths || []).forEach(function (d) {
         addFx({
-          kind: 'ghost', x: d.x, y: d.y, side: d.u.side, code: d.u.code,
+          // the unit itself, so what fades into the ground is what was there: its kind, its colours, its men
+          kind: 'ghost', x: d.x, y: d.y, unit: d.u, side: d.u.side, code: d.u.code,
           models: Math.max(1, d.u.size), dur: 700, blocking: true
         });
       });
@@ -322,7 +323,8 @@
       STANDING.clear();
       if (B.state) B.state.units.forEach(function (u) {
         if (!u.alive || u.aboard || u.x < 0 || u.reserve || !R.ruleValue(u, 'Shield Generator')) return;
-        STANDING.add({ kind: 'dome', x: u.x, y: u.y, r: 12, steady: true, a: 0.4, dur: 1e9 });
+        // where the unit is drawn this moment: the dome goes with it as it moves
+        STANDING.add({ kind: 'dome', x: dispX(u), y: dispY(u), r: 12, steady: true, a: 0.4, dur: 1e9 });
       });
       /* Counter-jamming, while it is doing something: its 6" marked out on the ground round a
          counter-jammer that has a friend (itself included) inside it who stands
@@ -336,7 +338,7 @@
             return onTable(f) && f.side === c.side && R.unitDist(c, f) <= 6 &&
               jammers.some(function (e) { return e.side !== f.side && R.unitDist(e, f) <= 24; });
           });
-          if (covering) STANDING.add({ kind: 'cjam', x: c.x, y: c.y, r: 6, a: 1, dur: 1e9 });
+          if (covering) STANDING.add({ kind: 'cjam', x: dispX(c), y: dispY(c), r: 6, a: 1, dur: 1e9 });
         });
       }
       STANDING.draw(B.pctx);

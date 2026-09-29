@@ -205,15 +205,18 @@
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
         '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
         '</div>';
-      /* Suppression against Morale in three equal bands — steady, suppressed,
-         broken — each as wide as the Morale, with the unit's SP laid over them
-         in the colour of the band it has reached. */
-      var cap = 3 * Math.max(1, m), fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';
-      h += '<div class="moralebar" title="Steady · Suppressed · Broken — ' + u.sp + ' SP against Morale ' + m + '">' +
-        '<div class="mb-track"><span class="mb-band good"></span><span class="mb-band warn"></span><span class="mb-band bad"></span>' +
-        '<span class="mb-fill ' + fillC + '" style="width:' + Math.min(100, (u.sp / cap) * 100) + '%"></span></div>' +
-        // at 12 SP, the most a unit can carry: it cannot be suppressed any further
-        (u.sp >= R.SP_MAX ? '<b class="mb-max" title="' + R.SP_MAX + ' SP — the most Suppression a unit can carry">!</b>' : '') + '</div>';
+      /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
+         the 12 a unit can carry, in bands as wide as the Morale — steady,
+         suppressed, broken, and past three times it — lit up to the unit's SP. */
+      var cap = 3 * Math.max(1, m), BANDS = ['good', 'warn', 'bad', 'flee'];
+      var fillC = st === 'broken' ? 'bad' : st === 'suppressed' ? 'warn' : 'good';   // the SP figure below, in the colour of its state
+      h += '<div class="moralebar" title="Steady · Suppressed · Broken · Flees — ' + u.sp + ' SP against Morale ' + m + '">' +
+        '<div class="sp-segs">' + ISO.spSegments(u.sp, m).map(function (q) {
+          return '<span class="sp-seg ' + BANDS[q.band] + (q.lit ? ' lit' : '') + '"></span>';
+        }).join('') + '</div>' +
+        // past three times its Morale it flees at the Rally unless it sheds enough first (p. 34)
+        (u.sp > cap && !u.noFlee && !u.noBreak ? '<b class="mb-max" title="' + u.sp + ' SP, over three times its Morale (' + cap +
+          '): it flees the field at the Rally unless it sheds enough first">!</b>' : '') + '</div>';
       h += '<div class="stats">' +
         stat('Models', u.models + '/' + u.size) + stat('Move', Math.floor(u.move) + '"') +
         stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
@@ -323,10 +326,13 @@
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
         '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
         '</div>';
-      // its health: the Structure it has left — green untouched, amber down to half, red below
-      var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
+      /* its health as the board draws it (ISO.strSegments): a segment a point of
+         Structure, what is left green over two thirds, amber down to a third, red
+         below, and what it has lost black */
       h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
-        '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div></div>';
+        '<div class="sp-segs">' + ISO.strSegments(u.str, u.damage).map(function (q) {
+          return '<span class="sp-seg ' + (q === 'lost' ? 'flee' : q + ' lit') + '"></span>';
+        }).join('') + '</div></div>';
       /* What its drive (and a drone's missing crew) did to the printed profile:
          a changed stat shows its new value, green if it went up and red if it
          went down, with a tip saying what it was and why. */

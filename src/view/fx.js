@@ -713,6 +713,28 @@
           I.ellipse(g, bb.x, bb.y, I.PIXEL * 1.6, I.PIXEL * 1.6, 'rgba(255,255,255,' + (0.9 * bon) + ')');
         }
         g.restore();
+      } else if (f.kind === 'regroup') {
+        /* A unit regrouping: its men closing up — a ring drawing in round it — and
+           a chevron lifting away for each point of Suppression it shook off. */
+        var gp = I.toScreen(f.x, f.y); gp.y -= liftAt(f);
+        var grgb = f.rgb || '150,215,120', gk = Math.min(1, k / 0.55), gr = I.K * (2.6 - 1.3 * gk * (2 - gk));
+        g.save();
+        g.strokeStyle = 'rgba(' + grgb + ',' + (0.85 * (1 - k)) + ')'; g.lineWidth = I.PIXEL * 2;
+        g.beginPath(); g.ellipse(gp.x, gp.y, gr, gr * 0.5, 0, 0, Math.PI * 2); g.stroke();
+        I.ellipse(g, gp.x, gp.y, gr, gr * 0.5, 'rgba(' + grgb + ',' + (0.12 * (1 - k)) + ')');
+        var gn = Math.min(10, f.n || 0);
+        g.lineCap = 'square'; g.lineWidth = I.PIXEL * 1.6;
+        for (var gi = 0; gi < gn; gi++) {
+          // each one leaves a little after the last, from round the unit, and rises away as it fades
+          var gph = Math.max(0, Math.min(1, (k - gi * 0.06) / 0.6));
+          if (gph <= 0 || gph >= 1) continue;
+          var gang = gi / Math.max(1, gn) * Math.PI * 2 + 0.4;
+          var gx = gp.x + Math.cos(gang) * I.K * 1.1, gy = gp.y + Math.sin(gang) * I.K * 0.55 - I.K * (0.6 + gph * 3);
+          var gs = I.PIXEL * 3;
+          g.strokeStyle = 'rgba(' + grgb + ',' + Math.sin(gph * Math.PI) + ')';
+          g.beginPath(); g.moveTo(gx - gs, gy + gs * 0.7); g.lineTo(gx, gy); g.lineTo(gx + gs, gy + gs * 0.7); g.stroke();
+        }
+        g.restore();
       } else if (f.kind === 'rise') {
         /* Signs rising off a unit: green crosses for field medics, sparks for a
            machine rebuilding itself — over a glow on the ground at its feet. */
@@ -1005,7 +1027,12 @@
       } else if (f.kind === 'ghost') {
         g.save();
         g.globalAlpha = Math.max(0, 1 - k);
-        I.drawUnit(g, { side: f.side, code: f.code, models: f.models, sp: 0, marked: false, rules: [] }, {
+        /* the unit as it stood, whole and unshaken, sinking where it fell (a bare
+           squad of the side's colour only when no unit came with it) */
+        var gu = f.unit ? Object.create(f.unit) : { side: f.side, code: f.code, rules: [] };
+        gu.models = f.models; gu.sp = 0; gu.marked = false; gu.alive = true;
+        gu.aboard = null; gu.bld = null; gu.ax = null; gu.ay = null; gu.walk = 0; gu.hop = 0;
+        I.drawUnit(g, gu, {
           at: { x: f.x, y: f.y }, lift: liftAt(f) - k * 3, status: 'broken', morale: 1
         });
         g.restore();

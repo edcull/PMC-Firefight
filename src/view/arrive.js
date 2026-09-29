@@ -116,8 +116,9 @@
       if (u.faction === 'bugs') craft = R.isFlying(u) || R.flyInf(u);
       u.arriveAt = nowMs();
       /* The Xenotripods teleport in rather than land, hulls and craft as well as
-         squads — all but the Esh-Aven, who come up out of the ground as men do. */
-      if (!fromOrbit && teleportsIn(u)) {
+         squads — all but the Esh-Aven, who come up out of the ground as men do.
+         Out of orbit too: an Invasion's Crocks are beamed down, not dropped. */
+      if (teleportsIn(u)) {
         u.arriveKind = 'teleport';
         addFx({ kind: 'teleportin', x: u.x, y: u.y, r: teleportR(u), dur: TELE_MS + 200, blocking: true });
         if (SFX && SFX.shimmer) SFX.shimmer();

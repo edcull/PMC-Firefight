@@ -68,6 +68,13 @@
       B: COLOURS.steel,
       C: COLOURS.steel
     };
+    /* The page's own side colours (--side-A, --side-B: the army pills, titles and
+       marks round the board) follow the armies' colours. */
+    function paintPage(side) {
+      if (typeof document === 'undefined' || !document.documentElement || side === 'C') return;
+      document.documentElement.style.setProperty('--side-' + side, PALETTE[side].ink);
+    }
+    paintPage('A'); paintPage('B');
     /* Repaint a side. Everything that draws a unit reads PALETTE at draw time, so
        this takes effect on the next frame with nothing else to update — but the
        baked props hold no side colour, so nothing needs rebuilding either. */
@@ -75,6 +82,7 @@
       // C is a cooperative game's second player, on the same side as A
       if (side !== 'A' && side !== 'B' && side !== 'C') return;
       PALETTE[side] = colour(key);
+      paintPage(side);
       // the baked figures carry the old colours: throw them away
       for (var k in sprites) if (k.charAt(0) === side) delete sprites[k];
       for (var k2 in corpses) if (k2.charAt(0) === side) delete corpses[k2];

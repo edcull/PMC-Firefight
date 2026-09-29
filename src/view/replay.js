@@ -169,7 +169,11 @@
        towards what the rules now say, over the rest of the attack. */
     function fillSp(id, ms) {
       var h = id && held[id], u = evUnit(id);
-      if (!h || !u || !u.alive || h.sp === u.sp) return;
+      if (!h || !u || !u.alive) return;
+      /* ...and the men it lost (a machine, its damage) show from the same moment:
+         its Morale, and with it the bands of its bar, go down as they fall. */
+      h.models = u.models; h.damage = u.damage;
+      if (h.sp === u.sp) return;
       h.spFill = { from: h.sp, to: u.sp, t0: nowMs(), dur: Math.max(200, ms) };
     }
     function spNow(h) {

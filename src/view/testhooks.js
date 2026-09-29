@@ -103,6 +103,8 @@
     // a unit's suppression and models as the table draws them: what is held back of it, else the rules' own
     // the Suppression a unit is drawn with this instant (it fills as an attack lands)
     window.__shownSp = function (id) { var u = byId(id); return u ? B.shownAs(u).sp : null; };
+    // the Morale its bar's bands are drawn to this instant: its men fall as the rounds land
+    window.__shownMorale = function (id) { var u = byId(id); return u ? R.currentMorale(B.shownAs(u)) : null; };
     window.__shownAs = function (id) { var u = byId(id), h = u && (B.held[id] || u); return h ? h.sp + ' SP, ' + h.models + ' models' : null; };
     window.__busy = function () { return busy(); };
     window.__busyWhy = function () { return { anims: anims.map(function (a) { return a.kind + ':' + Math.round(nowMs() - a.t0) + '/' + a.dur; }), arriving: anyArriving(), fx: FX.busy(), fxk: FX.kinds ? FX.kinds() : null, idle: idleCbs.length, loop: !!B.loop }; };
@@ -167,7 +169,8 @@
     // how far off a tap may be and still count, at the zoom in use
     window.__snapReach = function () { return snapReach(); };
     window.__setZoom = function (z) { cam.z = z; };
-    window.__landUnit = function (u) { landUnit(u); };
+    // `orbit`: as an Invasion's attacker comes down
+    window.__landUnit = function (u, orbit) { landUnit(u, orbit); };
     window.__setMTab = function (which) { setMTab(which); };
     // saved skirmish forces, for the harness
     window.__forces = {
@@ -318,6 +321,8 @@
     // where a squad's men are drawn when it lines a wall or a trench (table inches), or null
     window.__lineUp = function (id, x, y) { var u = byId(id); return u ? B.lineUp(u, x == null ? u.x : x, y == null ? u.y : y) : null; };
     window.__drawnAt = function (id) { var u = byId(id); return u ? { x: u.ax == null ? u.x : u.ax, y: u.ay == null ? u.y : u.ay, rx: u.x, ry: u.y } : null; };
+    // the effects that stand on the table while a unit is there (a Shield Generator's dome...), and where
+    window.__standing = function () { return B.STANDING.list.map(function (f) { return { kind: f.kind, x: f.x, y: f.y }; }); };
     window.__fxkinds = function () { return fx.map(function (f) { return f.kind; }); };
     /* What the effects layer was told, not just what kind it was: the harness uses
        this to check that a shot to or from a flier leaves the airframe. */
@@ -325,6 +330,8 @@
       return fx.map(function (f) {
         return {
           kind: f.kind,
+          // a ghost's unit: what fades into the ground where a unit was wiped out
+          unit: f.unit ? { key: f.unit.key, art: f.unit.art, side: f.unit.side } : null,
           // how high the effect starts: its lift plus, when it leaves a barrel,
           // how far that barrel sits above the ground
           up: (f.up || 0) + (f.mz ? -f.mz.dy : 0),

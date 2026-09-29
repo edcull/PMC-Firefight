@@ -185,7 +185,30 @@
       logLine('rally', r.text);
       if (SFX && r.gone) SFX.broken();
       pushRes(rallyCard(u, r, i + 1, list.length, function () { rallyNext(list, i + 1); }));
+      regroupFx(u, r);
       render();
+    }
+
+    /* The Regroup action (p. 33) is the rally made in the unit's own activation:
+       the same card, the dice and what they cleared, under its own name. `pre`
+       is anything that happened first (Meditation). */
+    function regroupCard(u, r, pre) {
+      if (!r) {
+        return {
+          kind: 'Regroup', side: u.side, title: u.name + ' [' + u.side + ']',
+          note: (pre ? pre + ' ' : '') + 'No suppression to shake off.', outcome: { text: 'Steady.', tone: 'good' }
+        };
+      }
+      var c = rallyCard(u, r);
+      c.kind = 'Regroup';
+      if (pre) c.note = pre + ' ' + c.note;
+      return c;
+    }
+    /* A unit regrouping, on the table: its men closing up round it, and a
+       chevron lifting away for each point of Suppression it shakes off. */
+    function regroupFx(u, r) {
+      if (!u.alive || u.x < 0 || u.aboard) return;
+      addFx({ kind: 'regroup', x: u.x, y: u.y, n: r ? (r.stood ? r.before : r.removed) : 0, delay: 150, dur: 1400, blocking: true });
     }
 
     /* The rally has left the unit over three times its Morale, and it has a Last
@@ -241,7 +264,7 @@
         calc: 'Suppression ' + r.before + ' SP · ' + r.removed + ' success' + (r.removed === 1 ? '' : 'es') +
           ' → ' + r.after + ' SP',
         outcome: outcome,
-        progress: 'Unit ' + n + ' of ' + total,
+        progress: n ? 'Unit ' + n + ' of ' + total : undefined,
         onShow: function () {
           ui.selected = u.alive ? u : null;
           ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
@@ -416,7 +439,8 @@
     }
 
     return {
-      rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, objDist: objDist, scoreObjectives: scoreObjectives,
+      rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, regroupCard: regroupCard, regroupFx: regroupFx,
+      objDist: objDist, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };
