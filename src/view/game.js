@@ -847,7 +847,7 @@
   var hookBoard = {
     get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
-    get held() { return held; }, get loop() { return loop; }, get muster() { return muster; },
+    get held() { return held; }, get loop() { return loop; }, get muster() { return muster; }, get shownAs() { return shownAs; },
     get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get streamLength() { return streamLength; }, get addFx() { return addFx; },
     get anyArriving() { return anyArriving; }, get applyForce() { return applyForce; },
