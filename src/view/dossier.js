@@ -345,7 +345,10 @@
        unit's picture is centred under it (stack) rather than beside it (split). */
     var stack = !!opts.rowActs;
     if (stack) {
-      bars = bars || opts.actions ? '<div class="drow' + (opts.men ? '' : ' shut') + '">' + bars + (opts.actions ? '<div class="dacts">' + opts.actions + '</div>' : '') + '</div>' : '';
+      /* Closed with nothing to press, a card keeps the button's room (unseen),
+         so every TP bar in the list is cut to the same width. */
+      var acts = opts.actions || (bars && !opts.men ? '<span class="lnk dact dact-ph" aria-hidden="true"><svg viewBox="0 0 24 24"></svg></span>' : '');
+      bars = bars || acts ? '<div class="drow' + (opts.men ? '' : ' shut') + '">' + bars + (acts ? '<div class="dacts">' + acts + '</div>' : '') + '</div>' : '';
     }
     if (opts.portrait && !stack) h += '<div class="dsplit"><div class="dleft">';
     h += bars;

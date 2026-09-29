@@ -1329,12 +1329,16 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dact { display: inline-grid; place-items: center; padding: 5px 9px; }
 .dact svg { display: block; width: 16px; height: 16px; }
 .dact span { display: none; }
+.dact-ph { visibility: hidden; }
 /* the unit's line: experience and trauma, then its buttons at the right end, open
    or closed. The TP bar (at most 140px) gives way rather than the buttons wrapping. */
 .drow { display: flex; align-items: center; flex-wrap: nowrap; gap: 10px; margin-top: 5px; }
 .drow .dbars { flex: 1 1 auto; min-width: 0; margin-top: 0; }
 .drow .dbars .dtp { flex: 0 1 140px; width: 140px; min-width: 24px; }
 .drow .dexp, .drow .dtpn { white-space: nowrap; }
+/* room for the longest figures, so a card's digits do not move its bar */
+.drow .dexp { min-width: 7ch; }
+.drow .dtpn { min-width: 8ch; }
 .drow .dacts { flex: none; margin: 0 0 0 auto; flex-wrap: nowrap; gap: 5px; }
 /* opened: the unit's picture centred under the line */
 .dpic { display: flex; justify-content: center; margin: 8px 0 4px; }

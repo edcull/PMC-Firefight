@@ -582,6 +582,19 @@ async function pastFronts(p) {
     return { one: b.top < bars.bottom && b.bottom > bars.top, tp: tp ? Math.round(tp.getBoundingClientRect().width) : null };
   }));
   check('...and on a narrow phone it stays on that line, the TP bar shrinking', narrow.length > 0 && narrow.every(x => x.one && (x.tp == null || x.tp > 10)), JSON.stringify(narrow));
+  // ...and every closed card's TP bar is cut the same, whether it has Promote or not
+  const widths = await p.evaluate(async () => {
+    // one unit with no experience to spend, for the moment
+    const camp = window.PMC_CAMPAIGN.get(), e = camp.companies.A.roster.find(x => window.PMC.profile(x.key).cls === 'infantry' && x.exp > 0 && !window.PMCCamp.isLeaderP(window.PMC.profile(x.key)));
+    const was = e.exp; e.exp = 0; window.PMC_CAMPAIGN.set(camp);
+    await new Promise(r => setTimeout(r, 200));
+    document.querySelectorAll('#camp-body .cmodal').forEach(m => { m.hidden = true; });
+    const ws = [...document.querySelectorAll('#camp-body .dcard:not(.open) .drow .dtp')].map(t => Math.round(t.getBoundingClientRect().width));
+    const bare = document.querySelector('#camp-body .dcard[data-rid="' + e.rid + '"] .dacts button') === null;
+    e.exp = was; window.PMC_CAMPAIGN.set(camp);
+    return { widths: [...new Set(ws)], bare };
+  });
+  check('...every closed card\u2019s TP bar the same width, Promote or not', widths.bare && widths.widths.length === 1, JSON.stringify(widths));
   await p.setViewportSize(vp0);
   await p.waitForTimeout(200);
   const vp = p.viewportSize();
