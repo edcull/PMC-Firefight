@@ -233,7 +233,7 @@
       }
       var sides = [side('A', coA, coA.name), side('B', foe, foeName)];
       if (E.after.winner === 'B') sides.reverse();
-      var h = '<div class="cpan front own"><div class="cprom-head"><b>' + esc(coA.name) + ' v ' + esc(foeName) + '</b></div>' +
+      var h = '<div class="cpan front"><div class="cprom-head"><b>' + esc(coA.name) + ' v ' + esc(foeName) + '</b></div>' +
         (last ? '<p class="cpstat">' + esc(frontFacts({ tier: last.tier, pl: last.pl, scenario: last.scenario })) + '</p>' : '');
       sides.forEach(function (r) {
         h += '<div class="front-row"><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') +

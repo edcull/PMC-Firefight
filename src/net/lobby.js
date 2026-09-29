@@ -81,7 +81,7 @@
       '.lob-list{display:flex;flex-direction:column;gap:8px;margin:10px 0 16px}',
       '.lob-game{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
       '.lob-game b{font-family:var(--display);font-size:13.5px}',
-      '.lob-game .code{font-family:var(--mono);color:var(--ink-dim);font-size:12px;margin-left:6px}',
+      '.lob-game .lob-code{font-family:var(--mono);color:var(--ink-dim);font-size:12px;letter-spacing:.08em}',
       '.lob-game .f{color:var(--ink-dim);font-size:12px}',
       '.lob-game .seats{margin-left:auto;font-size:12px;color:var(--ink-dim);text-align:right}',
       '.lob-empty{color:var(--ink-dim);padding:10px 2px;font-size:13px;margin:0}',
@@ -98,6 +98,8 @@
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:#8d8}',
       '.lob-status{font-size:12px;color:var(--ink-faint,#8a93a3)}',
+      // the second player's word on the start, where the host has the button: text, not a button
+      '.lob-startnote{flex:1 1 100%;text-align:center;padding:10px 0}',
       '.lob-code{font-family:var(--mono);font-size:14px;letter-spacing:.18em;padding:2px 8px;border:1px solid var(--line);border-radius:5px;color:var(--ink)}',
       '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
       '@media (max-width:620px){.lob-forces{grid-template-columns:1fr}}',
@@ -180,13 +182,13 @@
         '<option value="private"' + (newPrivate ? ' selected' : '') + '>Private \u2014 join by code only</option>' +
       '</select></div>' +
       '<div class="lob-foot"><button class="lnk" data-lob="uncreate">Not now</button>' +
-      '<button class="lnk lob-go start" data-lob="create" data-go="1">Create the game</button></div></div>';
+      '<button class="start" data-lob="create" data-go="1">Create the game</button></div></div>';
   }
 
   function gameRow(g) {
     var seated = g.players.filter(function (p) { return p.name; });
     return '<div class="lob-game">' +
-      '<div><b>' + esc(g.name) + '</b> <span class="code">' + esc(g.id) + '</span><br>' +
+      '<div><b>' + esc(g.name) + '</b> <span class="lob-code">' + esc(g.id) + '</span><br>' +
       '<span class="f small">Tier ' + esc(g.settings.tier) + ', PL ' + esc(g.settings.pl) + ' — ' +
       esc(g.settings.scenario) + (g.campaign ? ' — campaign “' + esc(g.campaign) + '”' : '') + '</span></div>' +
       '<div class="seats">' + seated.map(function (p) {
@@ -237,7 +239,7 @@
       (mine ? '<button class="lnk' + (ready ? '' : ' lob-go') + '" data-lob="ready">' +
         (ready ? 'Not ready after all' : 'I am ready') + '</button>' : '') +
       (host_ ? '<button class="start" data-lob="start"' + (room.canStart ? '' : ' disabled') +
-        '>Take the field</button>' : '<span class="lob-status start">' +
+        '>Take the field</button>' : '<span class="lob-status lob-startnote">' +
         (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
       '</div>' +
       chatHTML('room');
