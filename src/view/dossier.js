@@ -271,7 +271,11 @@
     var input = el('ask-input');
     if (input) { input.focus(); input.select(); }
   }
-  function closeAsk() { asking = null; el('camp-ask').hidden = true; }
+  function closeAsk() {
+    var spec = asking;
+    asking = null; el('camp-ask').hidden = true;
+    if (spec && spec.kind === 'note' && spec.then) spec.then();
+  }
   function answerAsk() {
     var spec = asking;
     if (!spec) return;
@@ -280,7 +284,8 @@
     closeAsk();
     if (spec.onOk) spec.onOk(value);
   }
-  function note(title, text) { ask({ kind: 'note', title: title, text: text }); }
+  // `then`: what waits on the note being read — however it is closed
+  function note(title, text, then) { ask({ kind: 'note', title: title, text: text, then: then }); }
 
   /* ================= small pieces ================= */
   function profile(key) { return R.profile(key); }

@@ -389,31 +389,36 @@
         drugged: E.contract.picks.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; })
           .concat(theirs.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; }))
       };
+      save();
+      /* Drug Dealer: who was sent in Determined is said before the battle, and the
+         battle waits for it to be read — said and left, the note sat behind the
+         battle and came up over the aftermath. */
       if (druggedA.length) {
         note('Drug Dealer',
           druggedA.map(function (e) { return e.name; }).join(', ') +
-          ' go in Determined. They will each take D6+1 extra Trauma Points afterwards.');
+          ' go in Determined. They will each take D6+1 extra Trauma Points afterwards.', launch);
+      } else launch();
+      function launch() {
+        close();
+        root.PMC_NEWGAME({
+          tier: E.contract.tier, pl: E.contract.pl,
+          scenario: E.contract.scenario.id,
+          // the attacker and defender were settled when the contract was taken
+          roles: E.contract.roles || null,
+          armyA: E.contract.picks.map(function (e) { return R.entryPick(e); }),
+          armyB: theirs.map(function (e) { return R.entryPick(e); }),
+          nameA: A.name, nameB: B.name,
+          colourA: colourOf(A), colourB: colourOf(B),
+          dossier: { A: E.contract.picks, B: theirs },
+          // Modifying the armies (p. 46): what is left on the books, to swap in once the table is laid
+          bench: { A: A.roster.filter(function (e) { return E.contract.picks.indexOf(e) < 0 && !(e.restUntil > 0); }), B: [] },
+          doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
+          tactics: { A: A.faction === 'rebel' ? E.contract.tactic || null : null, B: theirTactic },
+          campaign: true,
+          mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
+          planet: E.contract.planet
+        });
       }
-      save();
-      close();
-      root.PMC_NEWGAME({
-        tier: E.contract.tier, pl: E.contract.pl,
-        scenario: E.contract.scenario.id,
-        // the attacker and defender were settled when the contract was taken
-        roles: E.contract.roles || null,
-        armyA: E.contract.picks.map(function (e) { return R.entryPick(e); }),
-        armyB: theirs.map(function (e) { return R.entryPick(e); }),
-        nameA: A.name, nameB: B.name,
-        colourA: colourOf(A), colourB: colourOf(B),
-        dossier: { A: E.contract.picks, B: theirs },
-        // Modifying the armies (p. 46): what is left on the books, to swap in once the table is laid
-        bench: { A: A.roster.filter(function (e) { return E.contract.picks.indexOf(e) < 0 && !(e.restUntil > 0); }), B: [] },
-        doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
-        tactics: { A: A.faction === 'rebel' ? E.contract.tactic || null : null, B: theirTactic },
-        campaign: true,
-        mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
-        planet: E.contract.planet
-      });
     }
 
     return {

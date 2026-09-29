@@ -326,8 +326,28 @@ async function pastFronts(p) {
 
   /* ----------------------------------------------------------- the battle */
   console.log('\nFighting');
+  /* Drug Dealer: the units sent in Determined are said before the battle, and the
+     battle waits for it to be read (it used to sit behind the battle and come up
+     over the aftermath) */
+  await p.evaluate(() => {
+    const c = window.PMC_CAMPAIGN.get();
+    if (c.companies.A.doctrines.indexOf('V4') < 0) c.companies.A.doctrines.push('V4');
+    window.PMC_CAMPAIGN.set(c);
+  });
+  await p.waitForTimeout(200);
+  const drug = await p.evaluate(() => { const b = document.querySelector('#camp-body [data-drug]:not([disabled])'); if (b) b.click(); return !!b; });
+  await p.waitForTimeout(150);
   await clickText(p, 'Take the field');
+  await p.waitForTimeout(600);
+  const said = await p.evaluate(() => ({
+    note: !document.getElementById('camp-ask').hidden && /Drug Dealer/.test(document.getElementById('camp-askbox').textContent),
+    waiting: !document.getElementById('camp').hidden
+  }));
+  check('Drug Dealer: who goes in Determined is said before the battle', drug && said.note, JSON.stringify(said));
+  check('...and the battle waits for it to be read', said.waiting);
+  await p.evaluate(() => document.querySelector('#camp-askbox [data-ask="close"]').click());
   await p.waitForTimeout(1200);
+  check('...then starts, the note gone with the campaign screen', await p.evaluate(() => document.getElementById('camp-ask').hidden));
   const inBattle = await p.evaluate(() => !!window.PMC_STATE() && document.getElementById('camp').hidden);
   check('the battle started with the campaign screen closed', inBattle);
   const built = await p.evaluate(() => window.PMC_STATE().units.filter(u => u.side === 'A')
