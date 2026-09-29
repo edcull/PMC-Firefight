@@ -522,6 +522,11 @@ async function pastFronts(p) {
     b.click(); return true;
   }));
   await p.waitForTimeout(250);
+  // each promotion says what the unit becomes: its Tier and group
+  const promo = await p.evaluate(() => [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].map(b => b.textContent));
+  check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier \d · \S/.test(t)), promo.join(' | '));
+  const vp = p.viewportSize();
+  await p.setViewportSize({ width: 412, height: 780 });
   const opened = await p.evaluate(() => {
     const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([disabled])');
     if (!b) return false;
@@ -535,6 +540,16 @@ async function pastFronts(p) {
   }));
   check('...offering every honour the unit has not earned', pool.all > 3, pool.all + ' on the table');
   check('...with the draw held back until three are chosen', pool.draw === true);
+  // on a phone the list scrolls and the draw stays on the screen, at its foot
+  const foot = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body button')].find(x => /Choose three|Draw one/.test(x.textContent));
+    const list = document.querySelector('#camp-body .docpick');
+    return { bottom: b ? Math.round(b.getBoundingClientRect().bottom) : null, h: innerHeight,
+      scrolls: list.scrollHeight > list.clientHeight + 2 && getComputedStyle(list).overflowY === 'auto' };
+  });
+  check('...the draw button pinned to the foot of the screen, the list scrolling', foot.bottom != null && foot.bottom <= foot.h && foot.scrolls, JSON.stringify(foot));
+  await shot(p, 'camp-honour-phone.png');
+  await p.setViewportSize(vp);
   for (let i = 0; i < 3; i++) {
     await p.evaluate(() => {
       const b = [...document.querySelectorAll('#camp-body .doc')]

@@ -760,6 +760,9 @@ a.mcard { text-decoration: none; line-height: normal; }
    takes up the slack (and scrolls, if it has to); the pickers are modals. */
 #camp.overlay > #camp-body.sheet.fit { display: flex; flex-direction: column; }
 #camp-body.fit > * { flex: none; }
+/* the honour draw: the table scrolls, and the draw stays at the foot */
+#camp-body.fit > .docpick { flex: 1 1 auto; min-height: 96px; overflow-y: auto; overscroll-behavior: contain; align-content: start; margin-bottom: 10px; }
+#camp-body .honour-foot .camp-foot { margin-top: 8px; }
 #camp-body.fit > .found-units { flex: 1 1 auto; min-height: 96px; display: flex; flex-direction: column; margin-bottom: 12px; }
 /* the contract's force: the list of units takes what height is left, and scrolls itself */
 #camp-body.fit > .muster { flex: 1 1 auto; min-height: 140px; display: flex; flex-direction: column; margin-bottom: 12px; }
@@ -860,6 +863,7 @@ a.mcard { text-decoration: none; line-height: normal; }
 /* a unit's promotion choices, one to a line */
 .promo-list { display: flex; flex-direction: column; gap: 6px; }
 .promo-list .lnk { width: 100%; text-align: left; padding: 9px 12px; }
+.lnk .promo-to { display: block; margin-top: 3px; font-size: .92em; opacity: .75; }
 /* a unit's card opens where it is tapped */
 .dcard.dclick { cursor: pointer; }
 .dcard.dclick:hover { border-color: color-mix(in srgb, var(--alpha) 40%, var(--line)); }

@@ -265,7 +265,9 @@
           var can = e.exp >= c.exp && co.kUC >= c.kUC;
           acts += '<button class="lnk" data-promote="' + e.rid + '" data-to="' + q.key + '"' +
             (can ? '' : ' disabled') + '>→ ' + esc(q.name) + ' · ' + c.exp + ' EXP' +
-            (c.kUC ? ' + ' + c.kUC + ' ' + C.money(co) : '') + '</button>';
+            (c.kUC ? ' + ' + c.kUC + ' ' + C.money(co) : '') +
+            // what it becomes: its Tier and the group it joins
+            '<small class="promo-to">Tier ' + q.tier + (q.group ? ' · ' + esc(q.group) : '') + '</small></button>';
         });
         if (C.takesHonours(p)) {
           var hc = C.canTakeHonour(e, co);

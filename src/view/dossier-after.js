@@ -540,6 +540,8 @@
           '<b>' + esc(x.name) + (won ? ' — drawn' : '') + '</b><span>' + esc(x.text) + '</span></button>';
       });
       h += '</div>';
+      // the way on stays at the foot of the screen, however long the list above it scrolls
+      h += '<div class="honour-foot">';
       if (E.drawState.won) {
         h += '<p class="faults ok">' + esc(E.drawState.entry.name) + ' earns <b>' + esc(E.drawState.won.name) + '</b>.</p>';
         h += '<button class="start" data-go="roster">Back to the dossier</button>';
@@ -547,7 +549,7 @@
         h += '<button class="start" data-go="drawnow"' + (picks.length === 3 ? '' : ' disabled') + '>' +
           (picks.length === 3 ? 'Draw one of the three' : 'Choose three first') + '</button>';
       }
-      h += '<p class="camp-foot"><button class="lnk" data-go="roster">Back</button></p>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="roster">Back</button></p></div>';
       return h;
     }
 
