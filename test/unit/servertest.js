@@ -304,7 +304,11 @@ async function main() {
   }
   ok('both forces are on the table', a.state.ui.deployDone === true);
 
+  // both players say they are ready: one alone does not start it
   a.send('intent', { intent: { k: 'start' } });
+  await a.settle(200);
+  ok('one player alone cannot begin the battle', a.state.phase === 'deploy' && !!a.state.startReady);
+  b.send('intent', { intent: { k: 'start' } });
   await a.settle(200);
   ok('the battle is under way', a.state.phase === 'battle');
   ok('initiative was rolled on the server', !!a.state.initiative);

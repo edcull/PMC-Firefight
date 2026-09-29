@@ -1375,6 +1375,9 @@
       act: function (side) { return mayAct(side) ? null : 'not your activation'; },
       deploy: function (side) { return mayDeploy(side) ? null : 'not your turn to place'; }
     };
+    // what changes a side's deployment once it has said it is ready to begin
+    var UNREADY = { deploy: 1, autodeploy: 1, holdback: 1, insertion: 1, load: 1, unload: 1, garrison: 1,
+      vface: 1, vfaceall: 1, digface: 1, holdinsert: 1, insert: 1, mine: 1 };
     function on(names, guard, run) {
       names.split(' ').forEach(function (n) { INTENTS[n] = { guard: guard && GUARD[guard], run: run }; });
     }
@@ -1607,9 +1610,26 @@
       if (!K.deploymentDone()) return no('there are still units to place');
       // Rapid Relocation is one side's to finish, and it starts the battle when it does
       if (state.relocating && state.relocating.side !== side) return no('the other side is still relocating');
+      /* Two players at two screens: each says they are ready, and the battle
+         begins once both have — neither can start it on the other. */
+      if (bothConfirm() && !state.relocating) {
+        state.startReady = state.startReady || { A: false, B: false };
+        state.startReady[side] = true;
+        if (!(state.startReady.A && state.startReady.B)) {
+          logLine('note', sideName(side) + ' is ready to begin the battle.');
+          render();
+          return yes;
+        }
+        state.startReady = null;
+      }
       K.startBattle();
       return yes;
     });
+    // an online battle: two people at two screens, and neither may start it alone
+    function bothConfirm() {
+      var c = state.cfg || {};
+      return !!c.readyUp && c.mode === 'hotseat' && !(c.aiSides || []).length && !state.solo;
+    }
     /* ---- Rapid Relocation (O3, p. 87) ---- */
     on('relocpick', null, function (side, it) {
       if (!relocating(side)) return no('you are not relocating');
@@ -1772,7 +1792,14 @@
       var h = Object.prototype.hasOwnProperty.call(INTENTS, it.k) ? INTENTS[it.k] : null;
       if (!h) return no('unknown intent: ' + it.k);
       var why = h.guard && h.guard(side, it);
-      return why ? no(why) : h.run(side, it);
+      if (why) return no(why);
+      var res = h.run(side, it);
+      // a player who was ready and then changes their deployment has to say so again
+      if (res && res.ok && state && state.startReady && state.startReady[side] && UNREADY[it.k]) {
+        state.startReady[side] = false;
+        render();
+      }
+      return res;
     }
 
     function insertionSide() {
