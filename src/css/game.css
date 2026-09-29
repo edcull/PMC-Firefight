@@ -763,6 +763,8 @@ a.mcard { text-decoration: none; line-height: normal; }
 #camp-body.fit > .muster > * { flex: none; }
 #camp-body.fit > .muster > .chosen { max-height: 30%; overflow-y: auto; }
 #camp-body.fit > .muster > .cat.tall { flex: 1 1 auto; min-height: 60px; max-height: none; overflow-y: auto; overscroll-behavior: contain; }
+/* the name and colours on the founding screen take only what they need: the units under them take the rest */
+#camp-body.fit > .found-id { flex: none; min-height: 0; }
 .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
 .found-units .chosen:empty::before { content: 'No units yet.'; }
 .found-add { align-self: flex-start; margin-top: 8px; }
