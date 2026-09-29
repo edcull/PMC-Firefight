@@ -568,11 +568,11 @@
         if (r) {
           rl.hidden = false;
           rl.textContent = r === 'attacker' ? 'You attack' : 'You defend';
-          rl.className = 'meta role role-' + r;
+          rl.className = 'meta role role-' + r + ' side-' + you;
         } else if (B.state.sc && B.state.sc.attacker) {
           rl.hidden = false;
-          rl.textContent = (B.state.cfg[B.state.sc.attacker === 'A' ? 'nameA' : 'nameB']) + ' attacks';
-          rl.className = 'meta role role-attacker';
+          rl.textContent = (B.state.cfg[B.state.sc.attacker === 'A' ? 'nameA' : 'nameB']) + ' attack';
+          rl.className = 'meta role role-attacker side-' + B.state.sc.attacker;
         } else { rl.hidden = true; }
       }
     }

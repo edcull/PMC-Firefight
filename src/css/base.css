@@ -12,6 +12,9 @@
   --ink-faint: #64728a;
   --alpha: #d8a13a;
   --bravo: #5aa9c8;
+  /* the two armies' own colours, set from their chosen colours (iso-troops.js paintPage) */
+  --side-A: var(--alpha);
+  --side-B: var(--bravo);
   /* a co-op game's two players, in the colours their commandos are painted in */
   --own-A: #d8a13a; --own-C: #7ecfc0;
   --warn: #e08a3a;
