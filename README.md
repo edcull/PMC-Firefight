@@ -1,342 +1,152 @@
 # PMC 2670 — Firefight
 
 A browser-based digital skirmish of **PMC 2670**, the sci-fi miniatures wargame by
-Marcin Gerkowicz (Assault Publishing). It runs the book's rules on a 4′ × 4′ table
-drawn in isometric: movement, range and line of sight are all measured in real
-inches, edge to edge, the way you would with a tape.
+Marcin Gerkowicz (Assault Publishing). It plays the book's rules on a 4′ × 4′
+isometric table, with movement, range and line of sight measured in real inches,
+edge to edge. All four armies (PMC, Rebels, Space Bugs, Xenotripods), the six
+scenarios, solitaire and co-op, and the campaign are in.
 
-No build step is required to play, and there are no dependencies to install.
+## Running it
 
----
+- **Play:** open `index.html` in any modern browser. No server, build or install
+  is needed. GitHub Pages serves the same page.
+- **One file:** `npm run build` writes `build/firefight.html`, the whole game in a
+  single self-contained page.
+- **Online against someone else (not finished):** `node server.js`, then open
+  http://localhost:8787 and choose **Multiplayer**. See [SERVER.md](SERVER.md).
 
-## Playing it
+Games are saved in the browser (a battle in progress, forces and campaigns). A
+campaign can also be exported to a file and read back.
 
-Open **`index.html`** in any modern browser — straight from the folder, no
-server needed. Double-click it, or drag it onto a browser window. It is also
-what GitHub Pages serves.
+## User guide
 
-For a single self-contained file to carry around or publish, run
-`npm run build` and use **`build/firefight.html`**: the whole game, every script
-inlined, nothing else needed.
+### Starting a game
 
-The game opens on a main menu — Skirmish, Campaign and, when a server served
-the page, Multiplayer — over a battlefield rolled fresh every few seconds.
-Skirmish covers a battle against the AI, a hotseat game on one screen,
-solitaire or co-op against the OpFor, and a demo between two AI forces.
+The main menu offers:
 
-Every kind of skirmish opens on **the battlefield**: the Battle Tier and
-Priority Level, the scenario, the world and the table, with a card for each
-force. Tap a card to muster that force — against the AI the opposition starts
-as a random kind of force with a rolled build, to keep or change. In a hotseat
-game the two players then modify their armies in turn before anyone deploys,
-each in secret: neither sees the other's swaps until both are done.
+| | |
+|---|---|
+| **Single player** | A skirmish against the AI, solitaire (your commando against the OpFor), or a campaign |
+| **Hotseat** | Two players on one screen: a skirmish, co-op against the OpFor, or a campaign |
+| **Multiplayer** | Two players online (needs the server; not finished yet) |
+| **Unit viewer** | Every profile in all four armies, walking and firing |
 
-Every game, even a solitaire one, is played through the same engine. The screen
-draws the table and sends what you asked for ("shoot that", "go there"), and
-the engine decides what happens and rolls the dice. With no server it runs in
-the tab. With a server it runs on the server, so neither player's browser can
-decide anything.
+A skirmish opens on **the battlefield**: pick the Battle Tier, Priority Level,
+scenario and world, then tap each force's card to muster it. Mustering spends
+composition points, with the book's limits checked as you go. A force can be
+named, saved, and saved to or loaded from a file (`.pmcforce.json`).
 
-### Against somebody else
+### Setting up
 
-```
-node server.js        # then open http://localhost:8787
-```
+- **Terrain** is rolled from the book's generators, or laid by hand: tap to place
+  a piece, and turn it with **Turn it**, <kbd>R</kbd> or a right-click.
+- **Modifying the armies:** once the table is known, each side may swap units,
+  in secret in a hotseat game.
+- **Deployment:** tap a unit in the order of battle, then tap inside your zone.
+  **Auto-deploy** places the rest. Units with Battlefield Insertion may be held
+  back to arrive later.
 
-The server hands the game out and runs every networked battle itself: it rolls
-the terrain, the scenario, the initiative and every die after that, and each
-player's screen only draws what it is told. Press **Multiplayer**, start a game,
-and read the five-letter code out to your opponent. How that is put together is
-in [SERVER.md](SERVER.md).
+### Playing a turn
 
-Played without a server, everything is saved in the browser's local storage, so
-a campaign survives a reload. The campaign screen can also export a save to a
-file and read it back. A campaign played through the server is shared by both
-players and stored on the server, in `campaigns/`. `PORT=9000 node server.js`
-runs the server on another port.
+Tap one of your units to select it. Its actions appear in the action bar:
 
-### The table
+| Key | Action |
+|---|---|
+| <kbd>1</kbd> | **Move** — tap a spot to preview it, then confirm |
+| <kbd>2</kbd> | **Fire!** — stand and shoot, tap a target |
+| <kbd>3</kbd> | **Advance** — move, then shoot (or hold fire) |
+| <kbd>4</kbd> | **Assault** — charge into close combat |
+| <kbd>5</kbd> | **Auxiliary** — fire an auxiliary weapon |
+| <kbd>6</kbd> | **Regroup** — roll to shed Suppression |
+| <kbd>7</kbd> | **Skip** — spend the activation doing nothing |
 
-The terrain is rolled from the book's generators, one 2′ × 2′ area at a time,
-for any of the book's worlds. The barren or arctic world comes in two looks,
-**desert** and **arctic**. Walls go up round the buildings as walled compounds
-with a way in, and are not scattered loose. A "1–X" roll always gives at least
-two pieces. Lava shimmers with heat haze. Hills can stand on hills: the upper step
-blocks line of sight, and firing down from it earns the height bonus.
+Special rules (Designate, Hack, Teleport, Rush, Last Stand…) add their own buttons.
+<kbd>Esc</kbd> cancels an aimed action.
 
-You can lay the terrain by hand instead. The set-up panel shows every piece still
-to come for the area, drawn together. Turn a piece with **Turn it**, the
-<kbd>R</kbd> key, or a right-click, then tap where it goes.
+Sides alternate activations. When everyone has acted, the **End phase** runs:
+broken units flee, every suppressed unit rallies, and each player chooses to
+carry on or surrender.
 
-On an Invasion the attacker arrives from orbit, infantry included: every unit
-drops from the sky to its landing zone.
+### Reading the table
 
-An **Advance** is a single action. Once the unit has moved, the only choice left
-is the Advance's own shot, or holding its fire. Fire! and Assault are not on offer,
-and you can't leave the unit half-done to move another one.
+- **Suppression bar:** 12 segments, one per SP, in bands as wide as the unit's
+  current Morale: steady (green), suppressed (amber), broken (red), then black.
+  Segments light as SP builds up, and fill while an attack plays.
+- **A red !** means the unit is over three times its Morale: it flees at the
+  Rally unless it sheds enough first.
+- **Vehicle health:** the same bar, one segment per point of Structure, shown
+  once the vehicle is damaged.
+- **The tag** beside a unit's code (W, R, C, L, B, F, H, ~) names the terrain it
+  counts as being in.
+- **Combat results**, on the right, keeps a card for every roll: shots,
+  assaults, rallies and initiative.
+- **Objectives**, in the header, shows the scenario, who attacks, and what wins it.
 
-### Keeping a skirmish force
+### Camera
 
-Mustering a force spends composition points on units, with the rulebook's
-limits enforced as you go. A force built that way can be **named and saved** — the
-units and their propulsions and upgrades, and also the Tier, the Level, the
-faction, the rebel tactic and the colour, because a list of units without the
-Tier it was legal at is not a force. Saved forces are kept in the browser and
-offered from a list on the setup screen; **Save to a file** writes one out as
-`.pmcforce.json` to carry to another device or hand to an opponent, and **Load
-from a file** reads it back. A force built against an older army list loads
-anyway: anything no longer in the list is dropped and reported rather than
-breaking the muster.
+Drag or scroll to pan, pinch or <kbd>+</kbd> / <kbd>−</kbd> to zoom, <kbd>F</kbd>
+or <kbd>0</kbd> to see the whole table, and the arrow keys to nudge. **Follow**
+keeps the camera on the action; demos can be paused.
 
-## The source
+### The campaign
 
-The scripts are grouped by what each one is. The rulebook and the engine draw
-nothing and run under Node as well as in a browser, which is what lets a server
-be the authority in a networked game; the view and the net only run in a
-browser.
-
-```
-index.html           the game's page: all the markup and CSS, loading src/ script by script
-viewer.html          the unit viewer's page, the same way
-server.js            starts the server (see SERVER.md)
-
-src/
-  rules/             the rulebook — draws nothing, runs in Node as well as a browser
-    rules.js         profiles and composition, unit state, transport, rally, special rules;
-                     loads the files below as it starts and links them to each other
-    data.js          the tables: every unit a force can field, and what each one shoots with
-    space.js         the table: geometry, buildings and sections, piece shapes, terrain
-                     underfoot, hills, line of sight
-    move.js          movement: paths, costs, reach, turning, a ground vehicle's drive
-    shoot.js         shooting: facings, range, modifiers, odds, the shot itself
-    assault.js       charges, close combat, falling back
-    damage.js        hit tables, medics, vehicle damage, wrecks, repairs, hacking
-    destruct.js      destructible terrain: shelter, demolition, crushing
-    xeno.js          the Xenotripods' own rules: senses, shields, bonds, teleports
-    campaign.js      the campaign (pp. 83–91): the dossier, doctrines, honours, traumas
-    camp-company.js  fielding an army, promotion, recruiting, upgrades
-    camp-contract.js the contract: Battle Tier, scenario, payment, experience, salvage
-    camp-aftermath.js  the aftermath, and the battles fought elsewhere
-    camp-rivals.js   the other forces on the world and how they grow
-    scenarios.js     the six scenarios (pp. 48–55): objectives, deployment, reserves, victory
-    solitaire.js     solitaire and co-op against the OpFor (pp. 146–156)
-    gen.js           the terrain generators (pp. 46–48), a D6 for each 2′ × 2′ area
-    ruletext.js      each special rule in a sentence, for the tooltips
-  engine/            the game — every decision and every die roll
-    engine.js        the battle's state, setup, and intent(): answers intents ("shoot that",
-                     "go there") with events and the table they left
-    swaps.js, terrainsetup.js, deploy.js, arrivals.js, solo.js, endphase.js,
-    actions.js, moves.js, abilities.js, combat.js, marks.js, save.js
-                     each part of the turn, made by engine.js when first wanted
-    ai.js            the OpFor: its moves, targets and ground
-    offtable.js      the other forces' battles, fought AI v AI on a table nobody sees
-    protocol.js      message names and legal settings, shared by browser and server
-  view/              the browser
-    game.js          the board and every panel: camera, animation, taps into intents
-                     (with view.js, input.js, draw.js, panels.js, play.js, replay.js, ...)
-    iso.js           the isometric renderer: camera, projection, shared drawing state;
-                     its parts are the iso-*.js files — ground, props and prop kinds,
-                     troops and their parts, bugs, xeno figures, guns, machines and
-                     their hulls, gear, craft, rotors and mechs, xeno machines
-    fx.js            battlefield effects: tracers, bolts, flame, missiles, impacts
-    sfx.js           synthesised sound (Web Audio, no audio files)
-    atlas.js         the unit cards, drawn by the game's own renderer
-    tips.js          the shared tooltip layer
-    menu.js          the main menu and the table rolling behind it
-    muster.js        mustering a force for a skirmish, solitaire or co-op
-    dossier.js       the campaign screens: storage, rendering, the clicks; the screens
-                     themselves in dossier-hub/found/roster/contract/after.js
-    viewer.js        the unit viewer
-  net/               playing somebody else
-    net.js           the two transports: a socket to a server, or the engine in this tab
-    lobby.js         the multiplayer lobby, room and chat
-
-server/              the multiplayer server (see SERVER.md)
-scripts/             build.js, gallery.js (the unit sheet), test.js (the test runner)
-test/
-  unit/              plain Node: `npm test`
-  browser/           through a real browser with Playwright
-build/               the built single-file pages, made by `npm run build` (not kept in git)
-```
-
-`index.html` carries the markup and all the CSS, and pulls the scripts in with
-`<script src>` tags. Opening `index.html` directly works too, and is the easier
-way to develop — the browser reloads each file separately, and an error names
-the file it came from. `viewer.html` is the unit viewer's page in the same way.
-
-The published site is built from it by CI (`.github/workflows/pages.yml`, on
-every push to main): the same page with every script folded, in order, into one
-minified `dist/game.js` — one download instead of seventy-odd, and under half
-the bytes (`scripts/bundle.js`, with `terser`). Nothing built is kept in the
-repository; `node scripts/bundle.js` makes the same site in `build/site/`. The server lives in `server/` and `server.js`.
-
-### Building
-
-```
-npm run build
-```
-
-That inlines every script into `index.html` and writes `build/firefight.html`,
-does the same for `viewer.html` into `build/viewer.html` (`scripts/build.js`),
-then draws `build/units.html`, a sheet of every unit (`scripts/gallery.js`).
-The two root pages are the ones to develop against; the `build/` copies are
-single self-contained files to play or publish. It
-takes no arguments and needs Node (and the `terser` dev dependency for the
-bundled site it also writes to `build/site/`).
+Found a force (company, revolt, swarm or tribe), then take contracts on the hub.
+Each contract fixes the scenario, the Battle Tier and the pay. Choose who fights,
+play the battle, and read the aftermath: pay, experience, trauma, casualties by
+name, promotions and upgrades. The other forces on the world fight their own
+battles between yours.
 
 ### The unit viewer
 
-Open **`viewer.html`** (or, after a build, the self-contained `build/viewer.html`) for a bench that shows one unit at a time: every profile
-in all four lists, in each of its states, at any strength, walking at its own
-Movement, coming in off a Battlefield Insertion, and firing whatever the weapon
-table says it carries. It loads the rules (`rules.js` and its files), `ruletext.js`, `sfx.js`, the
-renderer (`iso.js` and its parts), `fx.js` and `tips.js` and nothing else — no game — so what it draws and sounds is
-the real code rather than a mock-up of it. The panel gives the whole profile:
-the statistics as the book prints them, and every special rule the unit carries
-with what that rule does, on the page and on a tooltip. Any of the army colours
-can be painted on. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts,
-<kbd>S</kbd> steps through its states, <kbd>A</kbd> through its abilities,
-<kbd>D</kbd> toggles a drone crew and <kbd>P</kbd> steps its propulsion. Swipe left or right on the stage (or press <kbd>←</kbd>
-<kbd>→</kbd>) for the next or previous unit in the list, and up or down (<kbd>↑</kbd>
-<kbd>↓</kbd>) for the next or previous group.
+Open `viewer.html`, or **Unit viewer** from the menu. Browse with the arrow keys
+or a swipe. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts,
+<kbd>S</kbd> steps through the unit's states, <kbd>A</kbd> through its abilities,
+<kbd>D</kbd> toggles a drone crew and <kbd>P</kbd> changes its propulsion.
 
----
-
-## The tests
-
-The rules are held to the book by harnesses that re-type the printed data and
-check the engine against it. They are the reason a rule can be changed without
-quietly breaking three others.
-
-All of it runs through one runner, a few files at a time, carrying on past a
-failure and saying at the end which failed and how long each took:
+## Development
 
 ```
-npm test                      # test/unit/ — plain Node, seconds
-npm run test:quick            # the unit tests and the quicker browser tests
-npm run test:slow             # the browser tests that play whole battles or campaigns
-npm run test:all              # everything
-node scripts/test.js camp     # any test whose name contains "camp"
+index.html, viewer.html   the game's and the unit viewer's pages
+src/rules/    the rulebook: profiles, movement, shooting, scenarios, campaign (no drawing; runs in Node too)
+src/engine/   the battle: every decision and die roll, and the AI
+src/view/     the browser: renderer, board, panels, campaign screens, unit viewer
+src/net/      the two transports (server socket, or the engine in the tab) and the lobby
+src/css/      the stylesheets
+server/       the multiplayer server (started by server.js)
+scripts/      the build, the unit sheet and the test runner
+test/         unit tests (Node) and browser tests (Playwright)
+docs/         the v0.1 review
+build/        what the build and the tests write (not kept in git)
 ```
 
-Every test's output is kept in `build/test-logs/<name>.log`, and a failing
-test's is printed after the summary.
-
-**Rules, campaign, engine and server** — `test/unit/`:
+`index.html` loads each script separately, so develop against it directly. CI
+builds the published site into one minified bundle (`scripts/bundle.js`).
 
 ```
-test.js          # the engine end to end, plus a duel fuzzer
-roster.js        # every printed profile and the composition table
-battlerules.js   # Suppressive Fire, the auxiliary weapon, assault rounds, vehicle turns
-vehicles.js      # armour, damage, destruction, repairs, transport
-carrymove.js     # a transport's half move with loading and unloading
-propulsion.js    # the five ground propulsions, over 600 rolled armies
-specialrules.js  # the General special rules list (pp. 56–59)
-ruletext.js      # every special rule on every profile has its tooltip line
-terrain.js       # terrain effects, cover, and bringing pieces down
-terrainrules.js  # movement penalties, hills and stepped hills, low walls, buildings, jump troops
-walls.js         # walled compounds round buildings, and lengths of wall
-terraincount.js  # how many pieces a rolled result puts down
-worlds.js        # the desert and arctic looks of the barren world
-shapes.js        # terrain piece shapes
-weapons.js       # how each unit's weapon sounds and looks
-names.js         # every soldier a name and a rank, and the casualties by name
-scenrules.js     # objectives, deployment and victory conditions
-camp.js          # the campaign: experience, trauma, honours, promotion
-campfix.js       # salvage, promotion caps, doctrine changes at Tier V
-camphooks.js     # what a campaign unit carries onto the table
-campextras.js    # the campaign extras
-solo.js          # the solitaire rival archetypes
-rebels.js        # the Rebel army list and its army rules
-rebelcamp.js     # the Rebel campaign
-solitairetest.js # solitaire and co-op against the OpFor
-bugs.js          # the Bug army list; bugcamp.js its campaign
-xeno.js          # the Xeno army list; xenocamp.js its campaign
-enginetest.js    # whole battles driven by intent; terrain set-up; garrisons; arrivals;
-                 # modifying the armies, and the hotseat's secret round of swaps
-clienttest.js    # the page booted without a browser, and the lobby against a real one
-servertest.js    # two players on two sockets against the real server
+npm test              # unit tests, plain Node
+npm run test:quick    # plus the quicker browser tests (Playwright + Chromium)
+npm run test:all      # everything, including whole battles and campaigns
+npm run build         # build/firefight.html, build/viewer.html, build/units.html
 ```
 
-**Interface** — `test/browser/`, each driving a real browser through Playwright:
+Test logs go to `build/test-logs/`, and screenshots to `build/shots/`. The
+browser tests look for Chromium at `/opt/pw-browsers/chromium`.
 
-```
-skirmishsteps.js # every kind of skirmish set up from the battlefield step
-mobile.js        # the phone shell, at three screen sizes
-deployorder.js   # choosing the deployment order; insertion escapes
-movepreview.js   # the move/advance preview and its confirmation
-fireart.js       # the firing styles, animation and sound
-viewertest.js    # the unit viewer: every weapon style, states, insertion
-gait.js          # how a unit is drawn crossing the ground
-stepoff.js       # troops coming off a hull
-loadout.js       # putting troops aboard a hull before the battle
-dropzone.js      # being asked for a landing zone, on a phone
-forces.js        # building a skirmish force, saving it and loading it back
-founding.js      # founding a company: its name, colours, roster and charter
-hotseatfound.js  # a hotseat campaign founding both players' forces
-soldiers.js      # the soldiers on a campaign dossier, renamed and remembered
-markerlight.js   # Markerlights, end to end
-deployzones.js   # every scenario's deployment zone
-deploytap.js     # placing units by tapping
-touch.js         # touch input on a phone
-smoke.js         # a battle from start to finish
-actions.js       # every action button in every state
-insertion.js     # Battlefield Insertion
-demolition.js    # bringing terrain and the Demolish objective down
-terrainsetup.js  # laying the terrain by hand, area by area
-bldflow.js       # going into buildings, holding them and coming out
-shapeflow.js     # terrain shapes on the table
-extrasflow.js    # the campaign extras, through the interface
-campflow.js      # the campaign screens
-rebelflow.js     # a Rebel campaign, through the interface
-xenoflow.js      # a Xenotripod campaign, through the interface
-bugplay.js       # a bug swarm against every army, AI against AI
-xenoplay.js      # a Xenotripod tribe against every army            (slow)
-rebelplay.js     # an insurgent group with each Tactic              (slow)
-soloplay.js      # every solitaire scenario, solitaire and co-op    (slow)
-scentest.js      # all six scenarios played out                     (slow)
-report.js        # a long unattended run, checking invariants       (slow)
-```
+The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-Screenshots the browser harnesses take go to `build/shots/`.
+## Not implemented
 
-The browser harnesses need Playwright and a Chromium build:
+- Online multiplayer is not fully implemented or tested yet
+- Appendix 1, Close Encounters (corridors, doors, hidden movement, opportunity fire)
+- Appendix 2, Other Worlds (gravity, atmosphere, anomalies); worlds only choose the terrain
+- From Appendix 3: "There can be only two!" and bookkeeper rout counting
+- The co-op campaign
 
-```
-npm install playwright
-npx playwright install chromium
-```
-
-They look for Chromium at `/opt/pw-browsers/chromium`. If yours is elsewhere,
-change the `executablePath` at the top of each file, or drop the option entirely
-and let Playwright find its own.
-
-Each harness prints a `✓` or `✗` per check and a tally at the end, and exits
-non-zero on a failure, so they drop straight into CI.
-
----
-
-## What is not implemented
-
-The core rulebook is in: all four army lists (PMC, Rebel, Bug and Xeno) with every
-printed profile, the composition table, the six scenarios, the terrain
-generators, the special rules, vehicles and aircraft, solitaire and co-op, and
-the campaign for all four armies. What is not:
-
-- **Appendix 1, Close Encounters** — compounds, corridors, doors, hidden
-  movement, opportunity fire, and its three scenarios.
-- **Appendix 2, Other Worlds** — gravity, atmosphere, radiation and anomalies.
-  Only the terrain generators' world types are used.
-- **Appendix 3, Optional Rules** — "There can be only two!" and bookkeeper-style
-  rout counting. The propulsions and mounts from this appendix are in.
-- **The co-op campaign** — halving money and experience between two players.
-
-Where the book leaves something to the players, or where a tabletop convention
-has no digital equivalent, the reading taken is noted in the code beside the
-rule, with the page it comes from.
+Where the book leaves a choice open, the reading taken is noted in the code
+beside the rule, with its page.
 
 ## Credits
 
 PMC 2670 is by **Marcin Gerkowicz**, published by **Assault Publishing**. This is
-an unofficial digital implementation of those rules; the rulebook is the
-authority, and you should own it.
+an unofficial implementation of its rules: the rulebook is the authority, and
+you should own it.
