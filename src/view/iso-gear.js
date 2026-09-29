@@ -450,22 +450,19 @@
         }
         /* A sponson over each row of pods: a sloping side plate from the hull's
            top edge down and out over the housings, its front end raked back with
-           the glacis and its tail closed, in the hull's own paint. The emitters'
-           light shows under its lower edge. */
+           the glacis and its tail closed, in the hull's own paint. It stops at the
+           top of the pods, so the housings and their light show under it. */
         if (!spec.style) return;
         [-1, 1].forEach(function (sd) {
           if (!want(phase, sd)) return;
           var L = spec.len, W = spec.wid, mbt = spec.style.body === 'mbt';
-          var zBot = deck - 6, zTop = deck + spec.hgt * (mbt ? 0.8 : 0.88) - 1;
+          var zBot = deck - 0.5, zTop = deck + spec.hgt * (mbt ? 0.8 : 0.88) - 1;
           var nose = L * (0.5 - (mbt ? 0.26 : 0.2)) + L * 0.02;           // where the glacis meets the hull's top
-          var sIn = sd * W * 0.36, sOut = sd * (W * 0.53 + gearOut() * 1.1), sTop = sd * W * 0.42;
-          var base = [[L * 0.47, sIn], [L * 0.47, sOut], [-L * 0.47, sOut], [-L * 0.47, sIn]];
-          var top = [[nose, sIn], [nose, sTop], [-L * 0.45, sTop], [-L * 0.45, sIn]];
+          var sIn = sd * W * 0.36, sOut = sd * (W * 0.5 + gearOut() * 1.1), sTop = sd * W * 0.42;
+          // its front angled back from the hull's corner to the outer edge, the tail a little
+          var base = [[L * 0.47, sIn], [L * 0.3, sOut], [-L * 0.42, sOut], [-L * 0.47, sIn]];
+          var top = [[nose, sIn], [nose - L * 0.03, sTop], [-L * 0.44, sTop], [-L * 0.45, sIn]];
           shape(HF, base, zBot, zTop - zBot, TB, null, top, true);
-          if (!dead) {
-            var e0 = S3(HF(-L * 0.47, sOut), zBot), e1 = S3(HF(L * 0.47, sOut), zBot);
-            line([e0[0], e0[1] + 1.2], [e1[0], e1[1] + 1.2], 1, 'rgba(127,216,232,.55)');
-          }
         });
       }
 
