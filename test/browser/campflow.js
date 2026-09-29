@@ -436,6 +436,13 @@ async function pastFronts(p) {
   check('...with a payment', /kUC/.test(txt), txt.match(/Two rolls of[^\n]*/)?.[0]);
   check('...and an experience ledger', /EXP/.test(txt),
     (txt.match(/\+\d+ EXP[^\n]*/g) || []).slice(0, 2).join(' | '));
+  // a unit wiped out says so, and nothing more: no list of who fell in it
+  const gone = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard.gone')].map((c) => ({
+    name: (c.querySelector('.dname') || {}).textContent,
+    lines: [...c.querySelectorAll('.dledger')].map((l) => l.textContent.trim().slice(0, 60))
+  })));
+  check('a unit wiped out says it is struck off, with no list of who fell', gone.every((g) => g.lines.length >= 1 && !g.lines.some((l) => /Wounded|Killed|Casualties|out for the campaign/i.test(l))),
+    gone.length ? JSON.stringify(gone) : '(no unit wiped out this time)');
   await shot(p, 'camp-aftermath.png');
 
   const afterState = await p.evaluate(() => {
