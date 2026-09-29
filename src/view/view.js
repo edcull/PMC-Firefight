@@ -624,8 +624,12 @@
       // opened by itself for the deployment, it goes with the deployment
       if (ui.briefAuto && (!B.state || B.state.phase !== 'deploy')) { ui.briefAuto = false; el('obj-modal').hidden = true; }
       if (!B.state || B.state.phase !== 'deploy' || B.state.cfg.aiSides.length === 2) return;
-      if (ui.briefed === B.state.cfg) return;
-      ui.briefed = B.state.cfg;
+      /* Which battle it is, by what does not change: on a game server the state is
+         rebuilt from every snapshot, so the objects themselves are new each time,
+         and the other player opening their swaps brought the briefing back up. */
+      var key = [B.state.seed, B.state.scen && (B.state.scen.id || B.state.scen.name), B.state.cfg.nameA, B.state.cfg.nameB].join('|');
+      if (ui.briefed === key) return;
+      ui.briefed = key;
       openObjectives(true);
       ui.briefAuto = true;
     }
