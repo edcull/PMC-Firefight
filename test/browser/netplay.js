@@ -52,6 +52,14 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   await p1.waitForTimeout(400);
   await p1.evaluate(() => window.PMCLobby.net().send('game.start'));
   await p1.waitForTimeout(2000);
+  // the briefing comes up the once for each; one side looking at its swaps does not bring it back for the other
+  const briefUp = (p) => p.evaluate(() => !document.getElementById('obj-modal').hidden);
+  ok('each player is briefed as the deployment begins', await briefUp(p1) && await briefUp(p2));
+  await p2.evaluate(() => document.getElementById('obj-done').click());
+  await p1.evaluate(() => window.__sendIntent({ k: 'swapopen' }));
+  await wait(1200);
+  ok('...and the other opening their swaps does not bring it back up', !(await briefUp(p2)));
+  await p1.evaluate(() => { const d = document.getElementById('obj-done'); if (d) d.click(); });
   // both deploy and begin
   for (let k = 0; k < 14; k++) {
     for (const p of [p1, p2]) await p.evaluate(() => {
