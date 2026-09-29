@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=428c909834">
-<link rel="stylesheet" href="src/css/game.css?v=4f2a0e193f">
+<link rel="stylesheet" href="src/css/game.css?v=9697bdf758">
 
 <div class="wrap">
   <header>
@@ -145,7 +145,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2609291331</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2609291400</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -254,12 +254,13 @@
       <div class="chosen" id="chosen"></div>
       <p class="faults" id="faults"></p>
       <!-- in a stepped skirmish the units to pick from come up in a modal, as founding a company does -->
-      <button type="button" class="lnk found-add cat-add" id="btn-cat-open">+ Add units</button>
+      <!-- one row: add, roll, a random kind, clear, and the saves in a modal -->
       <div class="muster-btns">
-        <button type="button" class="lnk" data-army="roll">Roll a force</button>
-        <button type="button" class="lnk" data-army="random" title="A random kind of force, with a rolled build">Random army</button>
+        <button type="button" class="lnk found-add cat-add" id="btn-cat-open" title="Add units">+ Add</button>
+        <button type="button" class="lnk" data-army="roll" title="Roll a force of this kind">Roll</button>
+        <button type="button" class="lnk" data-army="random" title="A random kind of force, with a rolled build">Random</button>
         <button type="button" class="lnk" data-army="clear">Clear</button>
-        <select id="sel-preset"><option value="">Ready-made…</option></select>
+        <button type="button" class="lnk" id="btn-saves" title="Save this force, or load one saved before">Save / load</button>
       </div>
       <!-- a demo force: rolled again, or loaded and saved from a list of its own -->
       <div class="demo-btns">
@@ -561,7 +562,7 @@
 <script src="src/view/draw.js?v=e7384f51d8"></script>
 <script src="src/view/view.js?v=8594bdc568"></script>
 <script src="src/view/panels.js?v=f9c7813b06"></script>
-<script src="src/view/muster.js?v=4a49fbbc55"></script>
+<script src="src/view/muster.js?v=c609da79d3"></script>
 <script src="src/view/game.js?v=4992961c87"></script>
 <script src="src/view/dossier-hub.js?v=c57d4b9537"></script>
 <script src="src/view/dossier-found.js?v=5927df5b8d"></script>
