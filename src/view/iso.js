@@ -589,13 +589,8 @@
           opts.t != null ? opts.t : (root.performance ? performance.now() : 0), Math.abs(sseed));
       }
       var top = p.y - m.lift - m.hgt - a(4);
-      if (u.damage && u.str) {                       // damage bar, in place of suppression
-        var dw = a(6.5), dh = a(0.8);
-        var fill = Math.max(PIXEL, Math.round(Math.min(1, u.damage / u.str) * dw));
-        rect(g, p.x - dw / 2 - 1, top - 1, dw + 2, dh + 2, 'rgba(8,10,14,.7)');
-        rect(g, p.x - dw / 2, top, dw, dh, '#15181d');
-        rect(g, p.x - dw / 2, top, fill, dh, '#d1476b');
-      }
+      // its Structure, in place of suppression: a segment a point, once it has taken damage
+      if (u.damage && u.str) segBar(g, p.x, top, strSegments(u.str, u.damage).map(function (q) { return STR_COL[q]; }));
       if (u.marked) {
         dot(g, p.x + a(5), top - a(2), '#e8c15a');
         dot(g, p.x + a(6.5), top - a(3.5), '#e8c15a');
@@ -751,13 +746,7 @@
 
     if (u.sp > 0 && opts.morale) {
       // one segment an SP, up to the most a unit can carry, lit up to what it has
-      var segs = spSegments(u.sp, opts.morale), SEG = segs.length;
-      var sg = Math.max(1, PIXEL), sw = Math.max(PIXEL, Math.floor((a(6.5) - sg * (SEG - 1)) / SEG));
-      var w = sw * SEG + sg * (SEG - 1), bh = a(0.8);
-      rect(g, p.x - w / 2 - 1, head - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
-      segs.forEach(function (sgm, si) {
-        rect(g, p.x - w / 2 + si * (sw + sg), head, sw, bh, (sgm.lit ? SEG_LIT : SEG_DULL)[sgm.band]);
-      });
+      var w = segBar(g, p.x, head, spSegments(u.sp, opts.morale).map(function (q) { return (q.lit ? SEG_LIT : SEG_DULL)[q.band]; }));
       /* a red ! to the right past three times its Morale: at the Rally the unit
          flees the field unless it sheds enough first (p. 34). Evacuation's
          civilians and Decapitation's leaders never flee, so never get one. */
@@ -789,6 +778,24 @@
     var m = Math.max(1, morale || 1), lit = Math.floor((sp || 0) + 1e-6), out = [];
     for (var i = 0; i < SP_SEGS; i++) out.push({ band: Math.min(3, Math.floor(i / m)), lit: i < lit });
     return out;
+  }
+  /* A machine's health in the same bar: a segment a point of Structure, the
+     points it has left lit green while over two thirds of it, amber down to a
+     third, red below, and the points it has lost black at the end. */
+  var STR_COL = { good: '#6fbf5a', warn: '#e0a23a', bad: '#d1476b', lost: '#07080a' };
+  function strSegments(str, damage) {
+    var n = Math.max(1, str || 1), left = Math.max(0, n - (damage || 0));
+    var state = left * 3 > n * 2 ? 'good' : left * 3 > n ? 'warn' : 'bad', out = [];
+    for (var i = 0; i < n; i++) out.push(i < left ? state : 'lost');
+    return out;
+  }
+  // a bar of segments over a unit, centred on x: always the same width, however many; gives back its width
+  function segBar(g, x, top, cols) {
+    var n = cols.length, sg = Math.max(1, PIXEL), sw = Math.max(PIXEL, Math.floor((a(6.5) - sg * (n - 1)) / n));
+    var w = sw * n + sg * (n - 1), bh = a(0.8);
+    rect(g, x - w / 2 - 1, top - 1, w + 2, bh + 2, 'rgba(8,10,14,.7)');
+    cols.forEach(function (c, i) { rect(g, x - w / 2 + i * (sw + sg), top, sw, bh, c); });
+    return w;
   }
 
   /* The standing height of one figure, in plate pixels: how tall the opaque
@@ -1030,7 +1037,7 @@
   root.PMCIso = {
     MAX_FIGS: MAX_FIGS,
     formationTable: formationTable,
-    spSegments: spSegments,
+    spSegments: spSegments, strSegments: strSegments,
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
     animates: animates,

@@ -43,18 +43,20 @@ function ok(name, cond, note) {
       if (!window.__pressAction('fire')) return { none: 'no fire' };
       const e = s.units.find(x => x.side === 'B' && x.alive && x.key === 'rookie' && window.PMC.canShoot(s, vets, x, 'fire', {}));
       if (!e) return { none: 'nothing in sight' };
-      const before = e.sp;
+      e.def = 2;                                  // a soft target, so men fall and its Morale with them
+      const before = e.sp, moraleBefore = window.PMC.currentMorale(e);
       window.__shootAt(e.id);
-      const seen = [], lit = [];
-      const litNow = () => window.PMCIso.spSegments(window.__shownSp(e.id), window.PMC.currentMorale(e)).filter(q => q.lit).length;
+      const seen = [], lit = [], mor = [];
+      const litNow = () => window.PMCIso.spSegments(window.__shownSp(e.id), window.__shownMorale(e.id)).filter(q => q.lit).length;
       for (let i = 0; i < 200; i++) {
-        seen.push(window.__shownSp(e.id)); lit.push(litNow());
+        seen.push(window.__shownSp(e.id)); lit.push(litNow()); mor.push(window.__shownMorale(e.id));
         await new Promise(r => setTimeout(r, 15));
         if (i > 30 && !window.__busy() && !window.__showQueue()) break;
       }
       // what it is drawn with once all of it has played, taken fresh rather than the last sample in flight
       await new Promise(r => setTimeout(r, 400));
-      return { before, after: e.sp, alive: e.alive, seen, lit, settled: window.__shownSp(e.id), litSettled: litNow() };
+      return { before, after: e.sp, alive: e.alive, seen, lit, mor, moraleBefore, moraleAfter: e.alive ? window.PMC.currentMorale(e) : null,
+        settled: window.__shownSp(e.id), litSettled: litNow() };
     });
     if (got.none) break;
   }
@@ -73,6 +75,12 @@ function ok(name, cond, note) {
       steps.join(' → '));
     ok('...each for a while, not all at once', got.after - got.before < 2 || new Set(got.lit).size >= 3, new Set(got.lit).size + ' counts seen');
     ok('...ending with one lit an SP', got.litSettled === got.after, got.litSettled + ' lit');
+    // the bands are as wide as its Morale as it stands: men lost bring them in, as they fall
+    if (got.moraleAfter != null && got.moraleAfter !== got.moraleBefore) {
+      const turn = got.mor.findIndex(v => v === got.moraleAfter), last = got.mor.length - 1;
+      ok('its losses narrowed the bands while the shot played, not after', turn > 0 && turn < last && got.mor[0] === got.moraleBefore,
+        'Morale ' + got.moraleBefore + ' → ' + got.moraleAfter + ' at frame ' + turn + ' of ' + last);
+    } else console.log('    - (no Morale lost to this shot: the bands stayed as they were)');
   }
   // the segments themselves, at Morale 3: the bands and what is lit (your examples)
   const bands = await p.evaluate(() => [0, 1, 4, 7, 10].map(sp => window.PMCIso.spSegments(sp, 3)

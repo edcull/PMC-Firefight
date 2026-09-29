@@ -69,6 +69,9 @@ function ok(name, cond, note) {
     return { m: window.PMC.currentMorale(u), sp: u.sp, shown: !!document.querySelector('.moralebar .mb-max') };
   }, id);
   ok('the line is three times the current Morale, after losses', lost.m < 3 && lost.shown, 'Morale ' + lost.m + ', ' + lost.sp + ' SP');
+  const lostBands = await p.evaluate(() => [...document.querySelector('.moralebar').querySelectorAll('.sp-seg')]
+    .map((q) => ({ good: 'g', warn: 'a', bad: 'r', flee: '.' })[q.classList[1]]).join(''));
+  ok('...and the bands narrow with it', lostBands === 'g'.repeat(lost.m) + 'a'.repeat(lost.m) + 'r'.repeat(lost.m) + '.'.repeat(12 - 3 * lost.m), lostBands);
 
   // to look at: 10 SP on the board
   await p.evaluate((id) => {

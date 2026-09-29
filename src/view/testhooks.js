@@ -103,6 +103,8 @@
     // a unit's suppression and models as the table draws them: what is held back of it, else the rules' own
     // the Suppression a unit is drawn with this instant (it fills as an attack lands)
     window.__shownSp = function (id) { var u = byId(id); return u ? B.shownAs(u).sp : null; };
+    // the Morale its bar's bands are drawn to this instant: its men fall as the rounds land
+    window.__shownMorale = function (id) { var u = byId(id); return u ? R.currentMorale(B.shownAs(u)) : null; };
     window.__shownAs = function (id) { var u = byId(id), h = u && (B.held[id] || u); return h ? h.sp + ' SP, ' + h.models + ' models' : null; };
     window.__busy = function () { return busy(); };
     window.__busyWhy = function () { return { anims: anims.map(function (a) { return a.kind + ':' + Math.round(nowMs() - a.t0) + '/' + a.dur; }), arriving: anyArriving(), fx: FX.busy(), fxk: FX.kinds ? FX.kinds() : null, idle: idleCbs.length, loop: !!B.loop }; };

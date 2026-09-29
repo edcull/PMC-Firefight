@@ -378,9 +378,8 @@ header.your-turn #hdr-active.pill-B { background: var(--bravo); color: #0d1117; 
 .st span { display: block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
 .st b { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* suppression against Morale: a segment an SP, in bands as wide as the Morale, lit up to the unit's SP (as on the board) */
+/* suppression against Morale (a segment an SP, in bands as wide as the Morale, lit up to the unit's SP) and a machine's Structure (a segment a point): as on the board */
 .moralebar { margin: 8px 0; display: flex; align-items: center; gap: 7px; }
-.moralebar .mb-track { flex: 1; }
 .sp-segs { flex: 1; display: flex; gap: 2px; height: 10px; }
 .sp-seg { flex: 1; border-radius: 1px; }
 .sp-seg.good { background: #2f4a2b; } .sp-seg.good.lit { background: #6fbf5a; }
@@ -393,11 +392,6 @@ header.your-turn #hdr-active.pill-B { background: var(--bravo); color: #0d1117; 
 .st b.sp-warn { color: var(--warn); } .st b.sp-bad { color: var(--bad); }
 .st b .mmod { color: var(--bad); font-size: 11px; margin-left: 3px; }
 .st b.hurt { color: var(--bad); }
-.mb-track { position: relative; display: flex; height: 10px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
-.mb-fill.good { background: var(--good); }
-.mb-fill.warn { background: var(--warn); }
-.mb-fill.bad { background: var(--bad); }
-.mb-fill { position: absolute; left: 0; top: 0; bottom: 0; opacity: .95; }
 .hintbar:empty { display: none; }
 /* the ground a unit stands on, with the letter the map marks it by */
 /* a stat its drive changed: its new value in green or red, a tip saying why */

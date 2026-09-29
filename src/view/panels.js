@@ -326,10 +326,13 @@
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
         '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
         '</div>';
-      // its health: the Structure it has left — green untouched, amber down to half, red below
-      var frac = left / Math.max(1, u.str), hc = frac >= 1 ? 'good' : frac >= 0.5 ? 'warn' : 'bad';
+      /* its health as the board draws it (ISO.strSegments): a segment a point of
+         Structure, what is left green over two thirds, amber down to a third, red
+         below, and what it has lost black */
       h += '<div class="moralebar healthbar" title="' + left + ' of ' + u.str + ' Structure left">' +
-        '<div class="mb-track"><span class="mb-fill ' + hc + '" style="width:' + Math.round(frac * 100) + '%"></span></div></div>';
+        '<div class="sp-segs">' + ISO.strSegments(u.str, u.damage).map(function (q) {
+          return '<span class="sp-seg ' + (q === 'lost' ? 'flee' : q + ' lit') + '"></span>';
+        }).join('') + '</div></div>';
       /* What its drive (and a drone's missing crew) did to the printed profile:
          a changed stat shows its new value, green if it went up and red if it
          went down, with a tip saying what it was and why. */
