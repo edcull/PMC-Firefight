@@ -511,9 +511,13 @@
       else if (m.kind === 'left') {
         keepRoom('');
         say2(who + ' has left the battle. It cannot go on without them.', 'bad', 7000);
-        // the battle on the screen is over: back to the room, where another can be arranged
+        /* The battle on the screen is over, and so is the game: this player
+           leaves its room too (it would only hold them in a game with nobody
+           to play), and is put back in the list of games to start another. */
         if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE();
-        setTimeout(function () { open(room ? 'room' : 'lobby'); }, 2500);
+        net.send('game.leave');
+        room = null;
+        setTimeout(function () { open('lobby'); }, 2500);
       }
     });
 

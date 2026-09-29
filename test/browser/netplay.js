@@ -210,6 +210,11 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const gone2 = await p2.evaluate(() => window.PMC_BATTLE_LIVE());
   ok('the other player is told it is over', left.some(t => /has left the battle/.test(t)), left.join(' | ') || 'no toast');
   ok('...and their board lets it go', !gone2);
+  // not held in the old game's room, with nobody to play: back to the list of games
+  await wait(3000);
+  const after = await p2.evaluate(() => ({ room: !!window.PMCLobby.net() && !!document.querySelector('#lobby [data-lob="leave"]'),
+    list: !!document.querySelector('#lobby [data-lob="create"]'), resume: window.PMCLobby.resumable() }));
+  ok('...and they are out of its room, at the list of games', !after.room && after.list && !after.resume, JSON.stringify(after));
 
   // the network muster: one row of buttons, the saves in a modal, only the units scrolling
   await p1.setViewportSize({ width: 390, height: 844 });
