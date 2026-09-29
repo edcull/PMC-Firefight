@@ -554,7 +554,7 @@ async function pastFronts(p) {
   await p.waitForTimeout(250);
   // each promotion says what the unit becomes: its Tier and group
   const promo = await p.evaluate(() => [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].map(b => b.textContent));
-  check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier \d · \S/.test(t)), promo.join(' | '));
+  check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier [IV]+ · \S/.test(t)), promo.join(' | '));
   // opened: the unit's buttons in a column down the right, its picture centred on the card and clear of them
   const rowAt = () => p.evaluate(() => {
     const card = document.querySelector('#camp-body .dcard.open'), top = card.querySelector('.dopen').getBoundingClientRect();

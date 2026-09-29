@@ -202,7 +202,7 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
 .vrule p { margin: 2px 0 0; }
 .vtable { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; margin-bottom: 10px; }
 .vtable th, .vtable td { padding: 3px 4px; text-align: center; border: 1px solid var(--line); }
-.vtable th { color: var(--ink-faint); font-weight: 500; font-size: 9.5px; letter-spacing: .05em; }
+.vtable th { color: var(--ink-faint); font-weight: 500; font-size: 9.5px; letter-spacing: 0; padding-inline: 2px; }   /* room for the full names */
 .vtable td { color: var(--ink); }
 .vtable td.vmod { color: var(--alpha); font-weight: 600; }
 

@@ -157,8 +157,9 @@
         u0 = R.applyRiders(u0, sp.riders);
         if (R.canMount(p0, sp.riders)) R.applyMount(u0, sp.mount || 'none');
         var mach = p0.cls !== 'infantry';
-        var st = [['Move', u0.move + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
-          ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+        // the same names and order everywhere: Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
+        var st = [mach ? ['Str', u0.str] : ['Men', u0.size], ['Move', u0.move + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp],
+          ['Range', u0.range ? u0.range + '"' : '\u2014'], ['Def', u0.def], ['Asslt', u0.assault], mach ? null : ['Mor', u0.morale]].filter(Boolean);
         return '<div class="fcard">' +
           '<div class="fcard-top">' + tierChip(p0.tier) + '<b>' + esc(p0.name) + '</b>' +
           '<span class="fcard-kind">' + esc(p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +

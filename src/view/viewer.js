@@ -1046,12 +1046,13 @@
     }
     // the turn cost rides with Movement, as the book prints it: 8 (1)
     var mv = u.move + '"' + (u.turn != null ? ' (' + u.turn + ')' : '');
-    var cols = [['Tier', R.ROMAN[p.tier]], ['Size', mod(u.size, p.size, u.size)],
+    // the battle panel's names and the order used everywhere: Tier, Models (a machine's Structure), Move, FP, Range, Def, Assault, Morale
+    var cols = [['Tier', R.ROMAN[p.tier]], mach ? ['Structure', mod(u.str, p.str, u.str)] : ['Models', mod(u.size, p.size, u.size)],
       ['Move', u.move === p.move && u.turn === p.turn ? mv
         : { t: mv, mod: true, was: p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') }],
       ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
-      ['Def', mod(u.def, p.def, u.def + (p.defPierced ? '/' + p.defPierced : ''))], ['Asslt', p.assault],
-      mach ? ['Str', mod(u.str, p.str, u.str)] : ['Mor', p.morale]];
+      ['Def', mod(u.def, p.def, u.def + (p.defPierced ? '/' + p.defPierced : ''))], ['Assault', p.assault]];
+    if (!mach) cols.push(['Morale', p.morale]);
     var h = '<div class="vrules"><label>' + esc(FACTION_NAME[p.faction || 'pmc'] || '') + ' · ' +
       esc(p.group) + ' · ' + esc(p.code) + '</label>';
     h += '<table class="vtable"><tr>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') +

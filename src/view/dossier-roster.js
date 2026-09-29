@@ -199,10 +199,11 @@
         return { label: label, v: v, d: d };
       }
       var inch = function (n) { return n + '"'; };
-      var cols = [cell('Tier', u.tier, u.tier), cell(mach ? 'Size' : 'Men', mach ? 1 : u.size, mach ? 1 : was.size),
+      // the same names and order as the muster's line: Tier, Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
+      var cols = [{ label: 'Tier', v: ROMAN[u.tier], d: 0 }, mach ? cell('Str', u.str, was.str) : cell('Men', u.size, was.size),
         cell('Move', u.move, was.move, inch), cell('FP', u.fp, was.fp), cell('Range', u.range || null, was.range || null, inch),
-        cell('Def', u.def, was.def), cell('Asslt', u.assault, was.assault),
-        mach ? cell('Str', u.str, was.str) : cell('Mor', u.morale, was.morale)];
+        cell('Def', u.def, was.def), cell('Asslt', u.assault, was.assault)];
+      if (!mach) cols.push(cell('Mor', u.morale, was.morale));
       if (u.turn != null) cols.push(cell('Turn', u.turn, was.turn));
       var h = '<div class="ddet">';
       h += '<table class="ddet-stats"><tr>' + cols.map(function (c) { return '<th>' + c.label + '</th>'; }).join('') +
@@ -275,7 +276,7 @@
             (can ? '' : ' disabled') + '>→ ' + esc(q.name) + ' · ' + c.exp + ' EXP' +
             (c.kUC ? ' + ' + c.kUC + ' ' + C.money(co) : '') +
             // what it becomes: its Tier and the group it joins
-            '<small class="promo-to">Tier ' + q.tier + (q.group ? ' · ' + esc(q.group) : '') + '</small></button>';
+            '<small class="promo-to">Tier ' + ROMAN[q.tier] + (q.group ? ' · ' + esc(q.group) : '') + '</small></button>';
         });
         if (C.takesHonours(p)) {
           var hc = C.canTakeHonour(e, co);

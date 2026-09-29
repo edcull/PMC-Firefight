@@ -189,7 +189,7 @@
     var seated = g.players.filter(function (p) { return p.name; });
     return '<div class="lob-game">' +
       '<div><b>' + esc(g.name) + '</b> <span class="lob-code">' + esc(g.id) + '</span><br>' +
-      '<span class="f small">Tier ' + esc(g.settings.tier) + ', PL ' + esc(g.settings.pl) + ' — ' +
+      '<span class="f small">Tier ' + esc(root.PMC.ROMAN[g.settings.tier] || g.settings.tier) + ' · PL ' + esc(g.settings.pl) + ' — ' +
       esc(g.settings.scenario) + (g.campaign ? ' — campaign “' + esc(g.campaign) + '”' : '') + '</span></div>' +
       '<div class="seats">' + seated.map(function (p) {
         return esc(p.name) + (p.ready ? ' ✓' : '');

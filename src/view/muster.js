@@ -182,8 +182,10 @@
         var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size }),
           pick.prop || R.defaultDrive(p)), !!pick.drone);
         var mach = p.cls !== 'infantry';
-        var st = [['Move', Math.floor(u0.move) + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
-          ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', pick.riders ? Math.ceil(u0.size / 2) : u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+        // the same names and order everywhere: Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
+        var st = [mach ? ['Str', u0.str] : ['Men', pick.riders ? Math.ceil(u0.size / 2) : u0.size], ['Move', Math.floor(u0.move) + '"'],
+          ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
+          ['Def', u0.def], ['Asslt', u0.assault], mach ? null : ['Mor', u0.morale]].filter(Boolean);
         var TXT = window.PMCRuleText;
         return '<div class="fcard' + (freeIdx[i] ? ' free' : '') + '">' +
           '<div class="fcard-top"><span class="ct">' + R.ROMAN[p.tier] + '</span><b>' + esc(p.name) + (pick.riders ? ' (mounted)' : '') + '</b>' +

@@ -199,7 +199,7 @@
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
          the 12 a unit can carry, in bands as wide as the Morale — steady,
@@ -320,7 +320,7 @@
       var left = Math.max(0, u.str - u.damage);
       var pr = R.propOf(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* its health as the board draws it (ISO.strSegments): a segment a point of
          Structure, what is left green over two thirds, amber down to a third, red
