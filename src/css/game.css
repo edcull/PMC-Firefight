@@ -1340,8 +1340,13 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .drow .dexp { min-width: 7ch; }
 .drow .dtpn { min-width: 8ch; }
 .drow .dacts { flex: none; margin: 0 0 0 auto; flex-wrap: nowrap; gap: 5px; }
-/* opened: the unit's picture centred under the line */
-.dpic { display: flex; justify-content: center; margin: 8px 0 4px; }
+/* opened: the buttons in a column down the right; the EXP/TP clear of it, and
+   the unit's picture centred on the card under the name */
+.dopen { position: relative; min-height: 96px; }
+.dopen .dvert { position: absolute; top: 4px; right: 0; margin: 0; flex-direction: column; gap: 6px; z-index: 1; }
+.dopen .drow { padding-right: 56px; }
+.dopen .drow .dbars { flex: 0 1 auto; }
+.dpic { display: flex; justify-content: center; margin: 4px 0 4px; }
 @media (max-width: 700px) {
   .dact { padding: 7px 12px; }
   .dact svg { width: 18px; height: 18px; }

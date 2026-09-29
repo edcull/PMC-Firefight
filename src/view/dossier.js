@@ -347,8 +347,16 @@
     if (stack) {
       /* Closed with nothing to press, a card keeps the button's room (unseen),
          so every TP bar in the list is cut to the same width. */
-      var acts = opts.actions || (bars && !opts.men ? '<span class="lnk dact dact-ph" aria-hidden="true"><svg viewBox="0 0 24 24"></svg></span>' : '');
-      bars = bars || acts ? '<div class="drow' + (opts.men ? '' : ' shut') + '">' + bars + (acts ? '<div class="dacts">' + acts + '</div>' : '') + '</div>' : '';
+      if (opts.men) {
+        /* Opened: its buttons in a column down the right, and under the name
+           its EXP/TP (clear of the column) and the unit's picture, centred on
+           the card. */
+        h += '<div class="dopen">' + (opts.actions ? '<div class="dacts dvert">' + opts.actions + '</div>' : '');
+        bars = bars ? '<div class="drow">' + bars + '</div>' : '';
+      } else {
+        var acts = opts.actions || (bars ? '<span class="lnk dact dact-ph" aria-hidden="true"><svg viewBox="0 0 24 24"></svg></span>' : '');
+        bars = bars || acts ? '<div class="drow shut">' + bars + (acts ? '<div class="dacts">' + acts + '</div>' : '') + '</div>' : '';
+      }
     }
     if (opts.portrait && !stack) h += '<div class="dsplit"><div class="dleft">';
     h += bars;
@@ -374,6 +382,7 @@
         (e.riders ? ' data-riders="1"' : '') + (e.mount ? ' data-mount="' + esc(e.mount) + '"' : '') +
         ' role="img" aria-label="' + esc(p.name) + '"></canvas></div>';
     }
+    if (stack && opts.men) h += '</div>';                // the opened card's top (dopen)
     if (opts.men) h += opts.men;
     h += '</div>';
     return h;
