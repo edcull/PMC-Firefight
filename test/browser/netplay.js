@@ -60,6 +60,12 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   await wait(1200);
   ok('...and the other opening their swaps does not bring it back up', !(await briefUp(p2)));
   await p1.evaluate(() => { const d = document.getElementById('obj-done'); if (d) d.click(); });
+  // the turn banner, as each screen shows it
+  for (const p of [p1, p2]) await p.evaluate(() => {
+    window.__banners = [];
+    const tb = document.getElementById('turnbanner');
+    new MutationObserver(() => { if (!tb.hidden && tb.textContent) window.__banners.push(tb.textContent); }).observe(tb, { childList: true, subtree: true, attributes: true });
+  });
   // both deploy and begin
   for (let k = 0; k < 14; k++) {
     for (const p of [p1, p2]) await p.evaluate(() => {
@@ -81,6 +87,11 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const mine = s1.active === s1.seat ? s1 : s2, theirs = mine === s1 ? s2 : s1;
   ok('the screen whose go it is says so', mine.pill === 'Your turn', mine.pill);
   ok('...and the other says whose it is, by name', /Player [12] Force’s turn/.test(theirs.pill), theirs.pill);
+  const b1 = await p1.evaluate(() => window.__banners[0] || ''), b2 = await p2.evaluate(() => window.__banners[0] || '');
+  const init = await p1.evaluate(() => window.PMC_STATE().initiative);
+  const bMine = init === 'A' ? b1 : b2, bTheirs = init === 'A' ? b2 : b1;
+  ok('the turn banner tells the player with the initiative they have it', /You have the initiative/.test(bMine), bMine);
+  ok('...and the other that their opponent has it', !/You have/.test(bTheirs) && /Player [12] Force has the initiative/.test(bTheirs), bTheirs);
   ok('forces left unnamed are named for their seats', s1.names[0] === 'Player 1 Force' && s1.names[1] === 'Player 2 Force', s1.names.join(' / '));
 
   // the second player's browser goes away, then comes back
