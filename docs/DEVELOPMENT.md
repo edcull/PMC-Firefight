@@ -271,8 +271,8 @@ collars.js         penal collars (Expendable)
 regroup.js         the Regroup card, and the regroup effect in the action and the Rally
 turnshow.js        whose go it is, at a glance
 discard.js         throwing a skirmish away from the main menu
+resume.js          a battle outlives a refresh
 netplay.js         two browsers at a real game server: whose turn, seat names, the camera following the opponent, a drop, abandoning
-netplay.js         two browsers at a real game server: whose turn, seat names, a drop, abandoning
 ```
 
 **What the table shows**
