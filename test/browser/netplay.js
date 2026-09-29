@@ -60,6 +60,12 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   await wait(1200);
   ok('...and the other opening their swaps does not bring it back up', !(await briefUp(p2)));
   await p1.evaluate(() => { const d = document.getElementById('obj-done'); if (d) d.click(); });
+  // the turn banner, as each screen shows it
+  for (const p of [p1, p2]) await p.evaluate(() => {
+    window.__banners = [];
+    const tb = document.getElementById('turnbanner');
+    new MutationObserver(() => { if (!tb.hidden && tb.textContent) window.__banners.push(tb.textContent); }).observe(tb, { childList: true, subtree: true, attributes: true });
+  });
   // both deploy and begin
   for (let k = 0; k < 14; k++) {
     for (const p of [p1, p2]) await p.evaluate(() => {
@@ -81,6 +87,11 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const mine = s1.active === s1.seat ? s1 : s2, theirs = mine === s1 ? s2 : s1;
   ok('the screen whose go it is says so', mine.pill === 'Your turn', mine.pill);
   ok('...and the other says whose it is, by name', /Player [12] Force’s turn/.test(theirs.pill), theirs.pill);
+  const b1 = await p1.evaluate(() => window.__banners[0] || ''), b2 = await p2.evaluate(() => window.__banners[0] || '');
+  const init = await p1.evaluate(() => window.PMC_STATE().initiative);
+  const bMine = init === 'A' ? b1 : b2, bTheirs = init === 'A' ? b2 : b1;
+  ok('the turn banner tells the player with the initiative they have it', /You have the initiative/.test(bMine), bMine);
+  ok('...and the other that their opponent has it', !/You have/.test(bTheirs) && /Player [12] Force has the initiative/.test(bTheirs), bTheirs);
   ok('forces left unnamed are named for their seats', s1.names[0] === 'Player 1 Force' && s1.names[1] === 'Player 2 Force', s1.names.join(' / '));
 
   // the second player's browser goes away, then comes back
@@ -118,6 +129,29 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const gone2 = await p2.evaluate(() => window.PMC_BATTLE_LIVE());
   ok('the other player is told it is over', left.some(t => /has left the battle/.test(t)), left.join(' | ') || 'no toast');
   ok('...and their board lets it go', !gone2);
+
+  // the network muster: one row of buttons, the saves in a modal, only the units scrolling
+  await p1.setViewportSize({ width: 390, height: 844 });
+  const nm = await p1.evaluate(async () => {
+    window.PMCLobby.close(); window.PMCMenu.close();
+    window.PMC_MUSTER_FOR({ tier: 3, pl: 1 }, function () {}, null, 'Test', 'B');
+    const f = document.getElementById('sel-faction'); f.value = 'bugs'; f.dispatchEvent(new Event('change'));
+    document.querySelector('.muster-btns [data-army="roll"]').click();
+    await new Promise(r => setTimeout(r, 300));
+    const sh = document.querySelector('#setup > .sheet'), ch = document.getElementById('chosen'), row = document.querySelector('.muster-btns');
+    const tops = [...row.children].filter(x => x.offsetParent).map(x => x.getBoundingClientRect().top);
+    const cut = [...row.children].filter(x => x.offsetParent && x.scrollWidth > x.clientWidth + 1).map(x => x.textContent);
+    document.getElementById('btn-saves').click();
+    const modal = getComputedStyle(document.getElementById('forcebar-wrap')).position === 'fixed' || getComputedStyle(document.getElementById('forcebar-wrap')).display === 'grid';
+    return { name: document.getElementById('hot-name').value, buttons: tops.length, oneLine: Math.max(...tops) - Math.min(...tops) < 4, cut,
+      page: sh.scrollHeight <= sh.clientHeight + 2, units: ch.scrollHeight > ch.clientHeight, intro: getComputedStyle(document.getElementById('hot-intro')).display,
+      preset: !!document.getElementById('sel-preset'), modal };
+  });
+  ok('the network muster names the force for its seat', nm.name === 'Player 2 Force', nm.name);
+  ok('...its five buttons sit on one line on a phone, none cut short', nm.buttons === 5 && nm.oneLine && !nm.cut.length, JSON.stringify(nm));
+  ok('...the page stays put and only the units scroll', nm.page && nm.units, JSON.stringify(nm));
+  ok('...no intro and no ready-made list', nm.intro === 'none' && !nm.preset);
+  ok('...and Save / load opens the saves in a modal', nm.modal);
   ok('no page errors', errs.length === 0, errs.join(' | '));
   console.log('\n  ' + pass + ' checks passed, ' + fail + ' failed.');
   await b.close();

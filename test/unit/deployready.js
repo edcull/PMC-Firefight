@@ -35,6 +35,36 @@ console.log('\nTwo players, each with a swap to make');
   ok('going on twice is refused', !e.intent('B', { k: 'deployready' }).ok);
 })();
 
+console.log('\nThe swaps are secret until both have gone on');
+(function () {
+  const cards = [], logs = [];
+  const e = Engine.create({ card: (c) => cards.push(c), log: (t, text) => logs.push(text) });
+  e.start({
+    tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren', readyUp: true,
+    armyA: ['cmd3', 'regular', 'veterans', 'shock'], armyB: ['cmd3', 'regular', 'veterans', 'shock'],
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
+  });
+  const st = e.state();
+  e.intent('A', { k: 'swapopen' });
+  const out = st.units.find((u) => u.side === 'A' && u.key === 'regular');
+  const opt = e.query.swapOptions ? e.query.swapOptions('A', out)[0] : null;
+  e.intent('A', { k: 'swappick', id: out.id });
+  const pickable = st.swapAsk && st.swapAsk.pick === out.id;
+  // what can come in for it: whatever the swap card offers
+  const choice = opt ? opt.id : (require('../../server/rules.js').R.listFor('pmc').filter((p) => p.tier === out.tier && p.key !== out.key && !p.command)[0] || {}).key;
+  const sw = e.intent('A', { k: 'swapin', id: choice });
+  ok('A swaps a unit', pickable && sw.ok, sw.why);
+  e.intent('A', { k: 'deployready' });
+  const stillOld = st.units.find((u) => u.id === out.id);
+  ok('...but until B goes on, the unit on the table is the one mustered', stillOld && stillOld.key === 'regular', stillOld && stillOld.key);
+  ok('...no card says so', !cards.some((c) => c.kind === 'Modifying the armies'));
+  ok('...and nothing in the log gives it away', !logs.some((t) => /swaps/.test(t)), logs.filter((t) => /swaps/.test(t)).join(' | '));
+  e.intent('B', { k: 'deployready' });
+  const now = st.units.find((u) => u.id === out.id);
+  ok('once both have gone on, the swap is made', now && now.key !== 'regular', now && now.key);
+  ok('...and said, in a card', cards.some((c) => c.kind === 'Modifying the armies' && c.side === 'A'));
+})();
+
 console.log('\nWithout it (a hotseat\'s own secret round, or an older save)');
 (function () {
   const e = game(false), st = e.state();

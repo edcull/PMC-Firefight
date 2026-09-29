@@ -73,10 +73,16 @@
          a unit going down is not something the other player may see while
          still choosing their list. */
       var wait = {}, any = false;
+      E.state.swapHold = false;
       if (!E.state.cfg.readyUp) { E.state.deployReady = null; return; }   // asked for by the screen or the server that runs the game
       ['A', 'B'].forEach(function (sd) { if (E.state.swapAvail[sd]) { wait[sd] = false; any = true; } });
       E.state.deployReady = any ? wait : null;
+      /* The swaps are made in secret here too: noted as they are chosen, and made,
+         and said, only once every player has gone on to the deployment. */
+      E.state.swapHold = any;
     }
+    // swaps noted but not yet made: a hotseat's secret round, or until every player is ready
+    function holding() { return !!(E.state.swapStage || E.state.swapHold); }
     // the sides still choosing whether to modify their armies, before anyone deploys
     function stillChoosing() {
       var r = E.state.deployReady;
@@ -88,17 +94,35 @@
       if (!r || r[side] !== false) return;
       r[side] = true;
       if (E.state.swapAsk && E.state.swapAsk.side === side) swapsDone();
-      if (!stillChoosing().length) E.state.deployReady = null;
+      if (!stillChoosing().length) {
+        E.state.deployReady = null;
+        if (E.state.swapHold) { E.state.swapHold = false; revealSwaps(['A', 'B'], 'Swapped in secret for units of the same Tier before deployment (p. 46).'); }
+      }
       render();
+    }
+    /* Every swap held back, made at once, and each side's said in a card of its own. */
+    function revealSwaps(order, note) {
+      order.forEach(function (sd) {
+        var s2 = E.state.swapAvail && E.state.swapAvail[sd];
+        if (!s2) return;
+        s2.done.filter(function (x) { return x.held; }).forEach(function (x) {
+          var old = byId(x.outId);
+          applySwap(sd, old, { id: x.entry ? x.entry.rid : x.key, key: x.key, name: x.in, entry: x.entry }, s2);
+        });
+        E.state.swapAvail[sd] = null;
+        if (s2.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sd), side: sd,
+          note: note, list: s2.done.map(function (x) { return { text: x.out + ' \u2192 ' + x.in, side: sd }; }) });
+      });
     }
     // the swaps a side has made but not yet revealed, in a hotseat's secret round
     function heldSwaps(side) {
-      var sa = E.state.swapStage && E.state.swapAvail && E.state.swapAvail[side];
+      var sa = holding() && E.state.swapAvail && E.state.swapAvail[side];
       return sa ? sa.done.filter(function (d) { return d.held; }) : [];
     }
     function canSwapNow(side) {
       if (E.state.swapStage) return false;             // the secret round asks each player in turn
       var sa = E.state.swapAvail && E.state.swapAvail[side];
+      if (E.state.deployReady && E.state.deployReady[side] === true) return false;   // gone on: the list stands
       return !!sa && sa.left > 0 && E.state.phase === 'deploy' &&
         !E.state.units.some(function (u) { return u.side === side && u.x >= 0; });
     }
@@ -120,8 +144,8 @@
       keys[i] = opt.key;
       var chk = legalList(side, keys);
       if (before && !chk.ok) return chk.faults[0] || 'That would make the list illegal.';
-      if (E.state.swapStage) {
-        // a secret round: noted now, made when both players are done
+      if (holding()) {
+        // in secret: noted now, made when both players are done
         sa.left--; sa.pick = null;
         sa.done.push({ out: old.name, in: opt.name, outId: old.id, key: opt.key, entry: opt.entry, held: true });
         if (sa.left < 1) { swapsDone(); return null; }
@@ -172,21 +196,13 @@
           return;
         }
         E.state.swapStage = null;
-        stg.order.forEach(function (sd) {
-          var s2 = E.state.swapAvail[sd];
-          s2.done.filter(function (x) { return x.held; }).forEach(function (x) {
-            var old = byId(x.outId);
-            applySwap(sd, old, { id: x.entry ? x.entry.rid : x.key, key: x.key, name: x.in, entry: x.entry }, s2);
-          });
-          E.state.swapAvail[sd] = null;
-          if (s2.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sd), side: sd,
-            note: 'Swapped in secret for units of the same Tier before deployment (p. 46).',
-            list: s2.done.map(function (x) { return { text: x.out + ' → ' + x.in, side: sd }; }) });
-        });
+        revealSwaps(stg.order, 'Swapped in secret for units of the same Tier before deployment (p. 46).');
         lookAtDeployment();
         render();
         return;
       }
+      // held until every player is ready: the swaps are made, and said, then (readyToDeploy)
+      if (sa && E.state.swapHold) { render(); return; }
       if (sa) {
         E.state.swapAvail[sa.side] = null;
         if (sa.done.length) pushRes({ kind: 'Modifying the armies', title: sideName(sa.side), side: sa.side,
