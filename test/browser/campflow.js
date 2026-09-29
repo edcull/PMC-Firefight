@@ -576,9 +576,11 @@ async function pastFronts(p) {
   await p.waitForTimeout(200);
   const narrow = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard:not(.open)')].filter(c => c.querySelector('.drow .dbars') && c.querySelector('.dacts button')).map(c => {
     const bars = c.querySelector('.drow .dbars').getBoundingClientRect(), b = c.querySelector('.dacts button').getBoundingClientRect();
-    return { one: b.top < bars.bottom && b.bottom > bars.top, tp: Math.round(c.querySelector('.drow .dtp').getBoundingClientRect().width) };
+    // (a vehicle has EXP but no TP bar)
+    const tp = c.querySelector('.drow .dtp');
+    return { one: b.top < bars.bottom && b.bottom > bars.top, tp: tp ? Math.round(tp.getBoundingClientRect().width) : null };
   }));
-  check('...and on a narrow phone it stays on that line, the TP bar shrinking', narrow.length > 0 && narrow.every(x => x.one && x.tp > 10), JSON.stringify(narrow));
+  check('...and on a narrow phone it stays on that line, the TP bar shrinking', narrow.length > 0 && narrow.every(x => x.one && (x.tp == null || x.tp > 10)), JSON.stringify(narrow));
   await p.setViewportSize(vp0);
   await p.waitForTimeout(200);
   const vp = p.viewportSize();
