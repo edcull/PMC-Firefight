@@ -570,6 +570,17 @@ async function pastFronts(p) {
     return { n: bs.length, promo: bs.every(x => x.hasAttribute('data-promo')), right: !b || r.right - b.right < 4 };
   }));
   check('a closed card shows only Promote, at the right', shut.length > 0 && shut.every(x => x.n <= 1 && x.promo && x.right) && shut.some(x => x.n === 1), JSON.stringify(shut));
+  // on a narrow phone too, the closed card's Promote stays on the EXP/TP line: the TP bar shrinks for it
+  const vp0 = p.viewportSize();
+  await p.setViewportSize({ width: 340, height: 780 });
+  await p.waitForTimeout(200);
+  const narrow = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard:not(.open)')].filter(c => c.querySelector('.drow .dbars') && c.querySelector('.dacts button')).map(c => {
+    const bars = c.querySelector('.drow .dbars').getBoundingClientRect(), b = c.querySelector('.dacts button').getBoundingClientRect();
+    return { one: b.top < bars.bottom && b.bottom > bars.top, tp: Math.round(c.querySelector('.drow .dtp').getBoundingClientRect().width) };
+  }));
+  check('...and on a narrow phone it stays on that line, the TP bar shrinking', narrow.length > 0 && narrow.every(x => x.one && x.tp > 10), JSON.stringify(narrow));
+  await p.setViewportSize(vp0);
+  await p.waitForTimeout(200);
   const vp = p.viewportSize();
   await p.setViewportSize({ width: 412, height: 780 });
   await p.waitForTimeout(150);

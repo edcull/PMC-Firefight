@@ -1337,7 +1337,10 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .drow .dbars .dtp { flex: 0 1 140px; width: 140px; min-width: 24px; }
 .drow .dexp, .drow .dtpn { white-space: nowrap; }
 .drow .dacts { margin: 0; flex-wrap: nowrap; gap: 5px; }
+/* closed, Promote stays on the line: the TP bar gives way (down to a sliver) rather than the button wrapping */
+.drow.shut { flex-wrap: nowrap; }
 .drow.shut .dbars { flex: 1 1 auto; }
+.drow.shut .dacts { flex: none; }
 .drow.shut .dacts { margin-left: auto; }
 @media (max-width: 700px) {
   .drow:not(.shut) .dacts { flex: 0 0 100%; margin: 2px 0 0; }
