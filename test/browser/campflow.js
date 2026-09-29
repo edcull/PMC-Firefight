@@ -257,7 +257,8 @@ async function pastFronts(p) {
   check('every unit shows its Trauma Points (or what it is) down the right when picking the list', wear.rows > 0 && wear.tp === wear.rows,
     wear.tp + ' of ' + wear.rows + ' — ' + wear.sample);
 
-  await clickText(p, 'Fill the list for me');
+  await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
+  await p.waitForTimeout(200);
   txt = await body(p);
   check('the list filled legally', await p.evaluate(() => {
     const b = [...document.querySelectorAll('#camp-body button.start')][0];
@@ -294,7 +295,8 @@ async function pastFronts(p) {
   check('...and visibly dead, with the reason as its tip, on an illegal one',
     off.disabled && off.opacity < 0.6 && off.cursor === 'not-allowed' && !!off.why && !off.line,
     off.why ? off.why.slice(0, 80) : JSON.stringify(off));
-  await clickText(p, 'Fill the list for me');
+  await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
+  await p.waitForTimeout(200);
   await p.waitForTimeout(250);
   await shot(p, 'camp-contract.png');
 

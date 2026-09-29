@@ -257,6 +257,8 @@
       ourList(co).forEach(function (p) {
         if (p.tier < minTier || p.tier > maxTier) return;
         if (p.command) return;                       // the field command is free and fixed
+        // turrets and insertion platforms are never bought: they are fielded with a contract's force
+        if (C.isTurretP(p) || p.noSlot) return;
         if (filter && !filter(p)) return;
         if (!groups[p.group]) { groups[p.group] = []; order.push(p.group); }
         groups[p.group].push(p);

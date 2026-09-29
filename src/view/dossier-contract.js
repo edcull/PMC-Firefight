@@ -294,6 +294,19 @@
           // down the right: the Trauma Points it carries, or what kind of machine it is (machines take none)
           '</small></span><span class="st">' + (p.cls !== 'infantry' ? p.cls : C.isLeaderP(p) ? 'command' : tpBadge(e)) + '</span></button>';
       });
+      /* A tribe's turrets and a company's rapid insertion platforms are not bought
+         (pp. 86, 140): they are put in the force for the battle, as many as the
+         composition allows, and are gone again after it. */
+      var fieldable = R.listFor(A.faction || 'pmc').filter(function (p) { return (C.isTurretP(p) || p.noSlot) && p.tier <= E.contract.tier; });
+      if (fieldable.length) {
+        h += '<h4>Fielded for this battle</h4>';
+        fieldable.forEach(function (p) {
+          var bad = blocking(R.checkArmy(keys.concat([p.key]), E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
+          h += '<button class="cu" data-field="' + p.key + '"' + (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
+            '<span class="t">' + ROMAN[p.tier] + '</span><span><b>' + esc(p.name) + '</b><small>not bought \u2014 for this battle only</small></span>' +
+            '<span class="st">' + p.cls + '</span></button>';
+        });
+      }
       var resting = A.roster.filter(function (e) { return e.restUntil > 0; });
       if (resting.length) {
         h += '<h4>In the workshop — sitting this one out</h4>';
@@ -321,8 +334,7 @@
          is greyed out (aria-disabled, so the press arrives), not a line of its own. */
       h += '<button class="start" data-go="fight"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') +
         '>Take the field</button>';
-      h += '<p class="camp-foot"><button class="lnk" data-go="autopick">Fill the list for me</button>' +
-        '<button class="lnk" data-go="hub">Back</button></p>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
       return h;
     }
 

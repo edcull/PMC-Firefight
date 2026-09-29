@@ -189,7 +189,8 @@ async function pastFronts(p) {
   // the scenario and the opponent were read on the offer: the force screen does not repeat them
   check('the force screen does not repeat the scenario or the opponent', !/Against |Scenario D6|As the attacker|As the defender|Needs at least/.test(txt),
     txt.split('\n').slice(0, 3).join(' / '));
-  await clickText(p, '[Ff][Ii][Ll][Ll] [Tt][Hh][Ee] [Ll][Ii][Ss][Tt]');
+  await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
+  await p.waitForTimeout(200);
   txt = await body(p);
   check('the list filled legally', await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button.start')][0]; return !!b && b.getAttribute('aria-disabled') !== 'true'; }), (txt.match(/\d+ \/ \d+/) || [])[0]);
   await shot(p, 'rebel-contract.png');

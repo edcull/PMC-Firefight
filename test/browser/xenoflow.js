@@ -173,7 +173,22 @@ async function pastFronts(p) {
   const afterSwap = await scen();
   check('...and the tribe can take it instead', /agreed/.test(txt) || before !== afterSwap,
     before + ' → ' + afterSwap);
-  await clickText(p, '[Ff][Ii][Ll][Ll] [Tt][Hh][Ee] [Ll][Ii][Ss][Tt]');
+  /* turrets are never bought: the force screen offers them for the battle alone,
+     and taking one puts it in the list without touching the books */
+  const turret = await p.evaluate(() => {
+    const rosterBefore = window.PMC_CAMPAIGN.get().companies.A.roster.length;
+    const b = [...document.querySelectorAll('#camp-body [data-field]')].find(x => !x.disabled);
+    const offered = document.querySelectorAll('#camp-body [data-field]').length;
+    if (b) b.click();
+    const picked = [...document.querySelectorAll('#camp-body [data-unpick]')].length;
+    return { offered, took: !!b, picked, sameBooks: window.PMC_CAMPAIGN.get().companies.A.roster.length === rosterBefore,
+      heading: /Fielded for this battle/.test(document.getElementById('camp-body').textContent),
+      noFill: !/Fill the list for me/.test(document.getElementById('camp-body').textContent) };
+  });
+  check('turrets are fielded for the battle, not bought', turret.offered > 0 && turret.heading && turret.took && turret.picked === 1 && turret.sameBooks, JSON.stringify(turret));
+  check('...and there is no filling the list for you', turret.noFill);
+  await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
+  await p.waitForTimeout(200);
   txt = await body(p);
   check('the list filled legally', await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button.start')][0]; return !!b && b.getAttribute('aria-disabled') !== 'true'; }), (txt.match(/\d+ \/ \d+/) || [])[0]);
   await shot(p, 'xeno-contract.png');

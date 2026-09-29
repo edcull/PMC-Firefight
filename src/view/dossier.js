@@ -704,6 +704,12 @@
       if (pk) contract.picks.push(pk); render(); return;
     }
     if (t.hasAttribute('data-unpick')) { contract.picks.splice(+t.getAttribute('data-unpick'), 1); render(); return; }
+    // a turret or insertion platform put in the force for this battle alone: never on the books
+    if (t.hasAttribute('data-field') && contract) {
+      var fe = C.newEntry(t.getAttribute('data-field'));
+      fe.fielded = true;
+      contract.picks.push(fe); render(); return;
+    }
     if (t.hasAttribute('data-tactic') && contract) {
       contract.tactic = t.getAttribute('data-tactic') || null;
       render(); return;
@@ -1070,6 +1076,12 @@
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
     get: function () { return camp; },
     set: function (c) { camp = c; save(); render(); },
+    // the test harness's way to fill a contract's list (as the rival picks its own)
+    autopick: function () {
+      if (!contract || !camp) return false;
+      contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl, contract.tactic || null);
+      render(); return true;
+    },
     store: Store
   };
   root.PMC_ONFINISH = onFinish;

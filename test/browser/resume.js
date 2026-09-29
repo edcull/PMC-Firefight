@@ -109,7 +109,7 @@ async function play(p, n) {
   await clickText('^Contract$');
   await p.evaluate(() => { const t = document.querySelector('#camp-body [data-take-offer]'); if (t) t.click(); });
   await p.waitForTimeout(250);
-  await clickText('Fill the list for me');
+  await p.evaluate(() => window.PMC_CAMPAIGN.autopick());
   await p.evaluate(() => window.__forceScenario('meeting'));
   await p.waitForTimeout(150);
   await clickText('Take the field');

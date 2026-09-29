@@ -300,6 +300,7 @@
       var groups = {}, order = [];
       ourList().forEach(function (p) {
         if (p.tier > top) return;
+        if (C.isTurretP(p) || p.noSlot) return;      // fielded with a contract's force, never recruited
         if (!groups[p.group]) { groups[p.group] = []; order.push(p.group); }
         groups[p.group].push(p);
       });

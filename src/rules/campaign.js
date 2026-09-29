@@ -1492,7 +1492,7 @@
     ADAPTATIONS: ADAPTATIONS, FLAWS: FLAWS, BUG_ARCHETYPES: BUG_ARCHETYPES,
     ADVANCEMENTS: ADVANCEMENTS, ADVANCEMENT_GROUPS: ADVANCEMENT_GROUPS, BY_ADVANCEMENT: BY_ADVANCEMENT,
     RITES: RITES, INFAMIES: INFAMIES, XENO_AIR_UPGRADES: XENO_AIR_UPGRADES, XENO_ARCHETYPES: XENO_ARCHETYPES,
-    ALPHA_BY_TIER: ALPHA_BY_TIER, upgradeTable: upgradeTable, isLeaderP: isLeaderP, territorial: territorial, ATTACK_DEFEND: ATTACK_DEFEND,
+    ALPHA_BY_TIER: ALPHA_BY_TIER, upgradeTable: upgradeTable, isLeaderP: isLeaderP, isTurretP: isTurretP, territorial: territorial, ATTACK_DEFEND: ATTACK_DEFEND,
     honourTable: honourTable, traumaTable: traumaTable, isLeaderKey: isLeaderKey, words: words,
     LEADERBUG_BY_TIER: LEADERBUG_BY_TIER, takesHonours: takesHonours,
     creedOf: creedOf, creedById: creedById, money: money, commandKey: commandKey,
