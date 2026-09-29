@@ -14,7 +14,7 @@
           box = M.box, cos = M.cos, dark = M.dark, dead = M.dead, deck = M.deck, drive = M.drive, f = M.f,
           frameAt = M.frameAt, g = M.g, hull = M.hull, lift = M.lift, line = M.line, lit = M.lit,
           mixc = M.mixc, opts = M.opts, rectPts = M.rectPts, ride = M.ride, sEllipse = M.sEllipse,
-          scr = M.scr, shape = M.shape, hexPanel = M.hexPanel, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
+          scr = M.scr, shape = M.shape, sin = M.sin, slabF = M.slabF, spec = M.spec, trim = M.trim;
       /* ================= running gear ================= */
       // a flank is nearer the eye when moving that way increases screen depth
       function sideNear(s) { return (cos - sin) * s > 0; }
@@ -450,6 +450,33 @@
         return { a0: -0.5, a1: 0.5, half: 0.94, h: mbt ? 0.8 : 0.88, frontIn: mbt ? 0.26 : 0.2, backIn: 0.05, sideIn: 0.03 };
       }
 
+      /* Hex tiles on a sponson's sloping face, laid as the hull's flank lays them
+         (hexFlank): tiles a step of 0.12 of the length apart, two rows set half a
+         step between each other, each tile's side points just meeting the next.
+         Each tile is square to the hull, not stretched to the plate's tapered ends
+         (its foot runs bR..bF, its top tR..tF), and only a tile wholly on the plate
+         is laid. */
+      function sponsonHex(bR, bF, tR, tF, sOut, sTop, zBot, zTop) {
+        var step = spec.len * 0.12, lo = Math.min(bR, tR), hi = Math.max(bF, tF);
+        var n = Math.floor((hi - lo) / step), a0 = lo + ((hi - lo) - n * step) / 2;
+        function P(a, u) { return S3(HF(a, sOut + (sTop - sOut) * u), zBot + (zTop - zBot) * u); }
+        function onPlate(a, u) { return a >= bR + (tR - bR) * u - 1e-6 && a <= bF + (tF - bF) * u + 1e-6; }
+        for (var r = 0; r < 2; r++) {
+          for (var i = -1; i <= n; i++) {
+            var ca = a0 + step * (i + 0.5 + (r ? 0.5 : 0)), cu = r ? 0.3 : 0.72;
+            var pts = [], fits = true;
+            for (var k = 0; k < 6; k++) {
+              var ang = k * Math.PI / 3, va = ca + Math.cos(ang) * step * 0.46, vu = cu + Math.sin(ang) * 0.24;
+              if (!onPlate(va, vu)) fits = false;
+              pts.push(P(va, vu));
+            }
+            if (!fits) continue;
+            poly(g, pts, 'rgba(255,248,232,.07)');
+            for (var e2 = 0; e2 < 6; e2++) line(pts[e2], pts[(e2 + 1) % 6], 0.6, 'rgba(10,12,16,.35)', 'butt');
+          }
+        }
+      }
+
       /* Anti-grav pods under the hull, laid along the hull's own axis so they
          turn with it: an armoured housing, and under it the emitter plate
          glowing blue onto the ground. */
@@ -497,7 +524,7 @@
           shape(HF, base, zBot, zTop - zBot, TB, null, top, true);
           // a hull armoured in hex tiles carries them on across its sponsons' outer faces
           if ((spec.style.hex || spec.style.body === 'future') && (sideNear(sd) || Math.abs(cos - sin) < 0.2))
-            hexPanel(HF, base[2], base[1], top[2], top[1], zBot, zTop - zBot, [6, 5]);
+            sponsonHex(base[2][0], base[1][0], top[2][0], top[1][0], sOut, sTop, zBot, zTop);
         });
       }
 

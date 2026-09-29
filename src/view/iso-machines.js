@@ -592,7 +592,7 @@
           HF: HF, S3: S3, STEEL: STEEL, STEEL_LIT: STEEL_LIT, TB: TB, TS: TS, at: at, box: box, cos: cos,
           dark: dark, dead: dead, deck: deck, drive: drive, f: f, frameAt: frameAt, g: g, hull: hull,
           lift: lift, line: line, lit: lit, mixc: mixc, opts: opts, rectPts: rectPts, ride: ride,
-          hexPanel: hexPanel, sEllipse: sEllipse, scr: scr, shape: shape, sin: sin, slabF: slabF, spec: spec, trim: trim
+          sEllipse: sEllipse, scr: scr, shape: shape, sin: sin, slabF: slabF, spec: spec, trim: trim
         }));
       }
       function want(phase, s, nearest) { return (KIT_GEAR || kitGear()).want(phase, s, nearest); }
@@ -1073,17 +1073,19 @@
       /* The same tiles across the nose: laid on the (raked) front plate, which runs
          from aBot at the foot up and back to aTop, across b0..b1. Only drawn when
          the nose is towards the eye. */
-      function hexNose(fr, aBot, aTop, b0, b1, z0, h, cols) {
+      function hexNose(fr, aBot, aTop, b0, b1, z0, h, cols, rows) {
         if ((cos + sin) <= 0) return;
         cols = cols || 5;                                  // the upper row; the lower, set between, has one fewer
-        var rows = 2, cw = (b1 - b0) / cols;
+        // two rows, or three (the middle one set between the others), each tile shorter to fit
+        rows = rows || 2;
+        var cw = (b1 - b0) / cols, cus = rows === 3 ? [0.82, 0.5, 0.18] : [0.72, 0.3], ru = rows === 3 ? 0.16 : 0.24;
         for (var r = 0; r < rows; r++) {
           for (var i = 0; i < cols; i++) {
-            var cb = b0 + cw * (i + 0.5 + (r ? 0.5 : 0)), cu = r ? 0.3 : 0.72;
+            var cb = b0 + cw * (i + 0.5 + (r % 2 ? 0.5 : 0)), cu = cus[r];
             if (cb > b1 - cw * 0.3) continue;
             var pts = [];
             for (var k = 0; k < 6; k++) {
-              var ang = k * Math.PI / 3, u = cu + Math.sin(ang) * 0.24;
+              var ang = k * Math.PI / 3, u = cu + Math.sin(ang) * ru;
               pts.push(S3(fr(aBot + (aTop - aBot) * u, cb + Math.cos(ang) * cw * 0.46), z0 + h * u));
             }
             poly(g, pts, 'rgba(255,248,232,.07)');
