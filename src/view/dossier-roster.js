@@ -40,7 +40,7 @@
           var dis = C.canDisband(co, e);
           acts += '<button class="lnk warn dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : ' disabled title="' + esc(dis.why) + '"') + '>' + ICON_DISBAND + '<span>Disband</span></button>';
           if (spend) acts += spend;
-          h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true, portrait: open });
+          h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true });
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {
@@ -257,7 +257,7 @@
       return '<ol class="dmen">' + (e.men || []).map(function (m, i) {
         return '<li><span class="dmen-rank">' + esc(m.rank) + '</span>' +
           '<b class="dmen-name">' + esc(m.name) + '</b>' +
-          '<button class="lnk" data-rsoldier="' + e.rid + '" data-i="' + i + '">Rename</button></li>';
+          '<button class="lnk dact" data-rsoldier="' + e.rid + '" data-i="' + i + '" title="Rename" aria-label="Rename">' + ICON_RENAME + '<span>Rename</span></button></li>';
       }).join('') + '</ol>';
     }
 

@@ -329,17 +329,26 @@
     /* Opened, the card's own facts sit in a column on the left — experience and
        trauma, its honours and traumas, what can be done with it — and the unit
        as it stands on the table on the right; its full sheet follows below. */
-    if (opts.portrait) h += '<div class="dsplit"><div class="dleft">';
+    var bars = '';
     if (!C.isLeaderP(p) && !(co.faction === 'xeno' && (p.rules || []).indexOf('Turret') >= 0)) {
-      h += '<div class="dbars">' +
+      bars += '<div class="dbars">' +
         '<span class="dexp">' + e.exp + ' EXP</span>';
       if (!machine || C.takesHonours(p)) {
         var pct = Math.min(100, Math.round(100 * e.tp / threshold));
-        h += '<span class="dtp" title="' + e.tp + ' of ' + threshold + ' Trauma Points">' +
+        bars += '<span class="dtp" title="' + e.tp + ' of ' + threshold + ' Trauma Points">' +
           '<i style="width:' + pct + '%"></i></span><span class="dtpn">' + e.tp + '/' + threshold + ' TP</span>';
       }
-      h += '</div>';
+      bars += '</div>';
     }                                                // a command unit or a turret: no experience bars, and nothing said about it
+    /* The unit's own buttons (icons) share a line with its experience and trauma,
+       across the whole card, open or not: on one line on a desktop, the icons
+       dropping to a second on a phone. */
+    if (opts.rowActs) {
+      h += '<div class="drow">' + bars + (opts.actions ? '<div class="dacts">' + opts.actions + '</div>' : '') + '</div>';
+      bars = '';
+    }
+    if (opts.portrait) h += '<div class="dsplit"><div class="dleft">';
+    h += bars;
     var marks = [];
     (e.honours || []).forEach(function (n) {
       var hx = C.honourTable(e.key)[n - 1];
@@ -354,7 +363,7 @@
       marks.push('<span class="mk bad" ' + tip(tx.name, tx.text) + '>' + esc(tx.name) + '</span>');
     });
     if (marks.length) h += '<div class="dmarks">' + marks.join('') + '</div>';
-    if (opts.actions) h += '<div class="dacts">' + opts.actions + '</div>';
+    if (opts.actions && !opts.rowActs) h += '<div class="dacts">' + opts.actions + '</div>';
     if (opts.portrait) {
       h += '</div><canvas class="dportrait" data-key="' + esc(e.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +
         ' data-colour="' + esc(colourOf(co)) + '"' + (e.prop ? ' data-prop="' + esc(e.prop) + '"' : '') + (e.drone ? ' data-drone="1"' : '') +
