@@ -461,7 +461,7 @@
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
-    body.classList.toggle('fit', view === 'found');
+    body.classList.toggle('fit', view === 'found' || view === 'contract');
     body.classList.toggle('hubfit', view === 'hub' && !!camp);
     var dl = body.querySelector('.cdos-body'), dlTop = dl ? dl.scrollTop : 0;
     body.innerHTML = h;
@@ -864,7 +864,9 @@
         contract.tierRoll = { roll: 3, cap: 3, tier: 3, standing: 3, thin: false };
         contract.adjusted = true; contract.picks = [];
         render(); return;
-      case 'fight': fight(); return;
+      case 'fight':
+        if (t.getAttribute('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return; }
+        fight(); return;
       case 'drawnow': {
         if ((drawState.picked || []).length !== 3) return;
         var won = C.chooseHonour(drawState.picked.map(function (n) { return C.honourTable(drawState.entry.key)[n - 1]; }));

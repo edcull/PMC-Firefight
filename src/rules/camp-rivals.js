@@ -129,6 +129,8 @@
         order = shuffle(order);
       }
 
+      // each job is on a world of its own, rolled with it and shown on the offer
+      var PLANETS = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
       campaign.offers = deal.map(function (idx) {
         var co = rivals[idx];
         var scen = rollScenario(false);
@@ -138,6 +140,7 @@
         var alt = hasDoctrine(A, 'XO3') ? rollScenario(false) : null;
         return {
           alt: alt,
+          planet: pick(PLANETS),
           altRoles: alt && SC ? SC.rollRoles(alt.id, docs, null, ['A']) : null,
           rival: idx,
           scenario: scen,

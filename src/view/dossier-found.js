@@ -133,8 +133,8 @@
         (E.colourOpen ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
           ' \u2014 ' + esc(colourName(E.draft.colour)) + '</label>' + squares(E.draft.colour) + '</div>' : '') +
         '</div>';
-      var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
-        E.armyPill(co, 'armyfound') +
+      // the kind of force leads the list: its pill, which opens the army's rules
+      var head = '<div class="muster-head">' + E.armyPill(co, 'armyfound') +
         '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
         t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + ' vehicle' + (machines === 1 ? '' : 's') + ' (max 2)</span></div>';
       var chosen = E.draft.keys.map(function (k, i) {

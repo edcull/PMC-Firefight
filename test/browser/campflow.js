@@ -74,7 +74,7 @@ async function pastFronts(p) {
   console.log('\nFounding a company');
   await click(p, '#btn-campaign');
   await clickText(p, 'Raise the force');
-  check('the founding screen opened', await p.evaluate(() => !!document.getElementById('found-name') && /the company/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
+  check('the founding screen opened', await p.evaluate(() => !!document.getElementById('found-name') && /Mercenaries/.test(document.querySelector('#camp-body .found-units .muster-head .armypill').textContent)));
   // the name and the colours are settled here now, with the units
   await p.evaluate(() => { document.getElementById('found-name').value = 'Task Force Ironhold'; });
   check('...and asks for the company name there',
@@ -198,7 +198,8 @@ async function pastFronts(p) {
       cards: cards.length,
       rivals: c.rivals.length,
       names: c.rivals.filter(r => cards.some(k => k.textContent.includes(r.name))).length,
-      scenarios: cards.filter(k => /Scenario D6/.test(k.textContent)).length,
+      scenarios: cards.filter(k => !!k.querySelector('.offer-scen b') && !/Scenario D6/.test(k.textContent)).length,
+      planets: cards.filter(k => !!k.querySelector('.offer-scen .planetpill')).length,
       doctrines: cards.filter(k => !!k.querySelector('.cpdoc .mk, .cpdoc .dnote')).length,
       // their record against you, the way your own company's row shows it
       styles: cards.filter(k => k.querySelectorAll('.cstats .cstat').length === 3 && k.querySelector('.cpdoc .armypill')).length,
@@ -217,7 +218,8 @@ async function pastFronts(p) {
   check('...with their record and the kind of force they are', offers.styles === offers.cards, offers.styles + ' of ' + offers.cards);
   check('...and how big a fight they can meet you at', offers.sizes === offers.cards);
   check('...and what they are built around', offers.doctrines === offers.cards);
-  check('...a rolled scenario', offers.scenarios === offers.cards);
+  check('...a scenario, without its die roll', offers.scenarios === offers.cards);
+  check('...and the world it is fought on', offers.planets === offers.cards);
   check('...and which side of it you would be on', offers.roles === offers.cards);
   check('none of them shows their force composition', offers.composition === 0,
     offers.composition ? offers.composition + ' cards leak the list' : 'no unit counts, no dossier');
@@ -237,34 +239,35 @@ async function pastFronts(p) {
   });
   await p.waitForTimeout(250);
   txt = await body(p);
-  check('a Battle Tier was rolled and capped', /Battle Tier I/.test(txt), txt.split('\n')[1]);
-  // a D6 across all six now, at every Tier — not the D3 that only ever reached three
-  check('the contract names who you are fighting', /against/i.test(txt) || /Battle Tier/i.test(txt),
-    (txt.match(/Against [^\n—]+/i) || [])[0]);
-  check('a scenario was rolled',
-    /Meeting engagement|Secure and control|Find and secure|Invasion|Demolish|Hostile takeover/.test(txt),
-    (txt.match(/Meeting engagement|Secure and control|Find and secure|Invasion|Demolish|Hostile takeover/) || [])[0]);
+  // the scenario and the opponent were read on the offer: the force screen does not repeat them
+  check('the force screen does not repeat the scenario or the opponent', !/Against |Scenario D6|As the attacker|As the defender/.test(txt),
+    txt.split('\n').slice(0, 3).join(' / '));
+  check('...nor a list of what the force still needs', !/Needs at least/.test(txt));
   /* what each unit is carrying, on the button that puts it in the list */
   const wear = await p.evaluate(() => {
     const rows = [...document.querySelectorAll('#camp-body .cu')];
     return {
       rows: rows.length,
-      tp: rows.filter(r => /\d+\/\d+ TP/.test(r.textContent)).length,
+      // down the right: TP for troops, 'command' for command units (they take none), the kind of machine for the rest
+      tp: rows.filter(r => /\d+\/\d+ TP|command|vehicle|aircraft/.test((r.querySelector('.st') || {}).textContent || '')).length,
       exp: rows.filter(r => /\d+ EXP/.test(r.textContent)).length,
       sample: rows[0] ? rows[0].textContent.replace(/\s+/g, ' ').slice(0, 70) : ''
     };
   });
-  check('every unit shows its Trauma Points when picking the list', wear.rows > 0 && wear.tp === wear.rows,
+  check('every unit shows its Trauma Points (or what it is) down the right when picking the list', wear.rows > 0 && wear.tp === wear.rows,
     wear.tp + ' of ' + wear.rows + ' — ' + wear.sample);
 
   await clickText(p, 'Fill the list for me');
   txt = await body(p);
-  check('the list filled legally', /A legal Battle Tier/.test(txt), txt.match(/\d+ \/ \d+/)?.[0]);
+  check('the list filled legally', await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body button.start')][0];
+    return b.getAttribute('aria-disabled') !== 'true';
+  }), txt.match(/\d+ \/ \d+/)?.[0]);
   // a disabled primary button used to look exactly like a live one
   const btn = await p.evaluate(() => {
     const b = [...document.querySelectorAll('#camp-body button.start')][0];
     const cs = getComputedStyle(b);
-    return { disabled: b.disabled, opacity: +cs.opacity, cursor: cs.cursor };
+    return { disabled: b.getAttribute('aria-disabled') === 'true', opacity: +cs.opacity, cursor: cs.cursor };
   });
   check('the Take the field button is live on a legal list',
     !btn.disabled && btn.opacity === 1, JSON.stringify(btn));
@@ -272,7 +275,7 @@ async function pastFronts(p) {
   for (let i = 0; i < 8; i++) {
     const stillLegal = await p.evaluate(() => {
       const b = [...document.querySelectorAll('#camp-body button.start')][0];
-      return !b.disabled;
+      return b.getAttribute('aria-disabled') !== 'true';
     });
     if (!stillLegal) break;
     await p.evaluate(() => {
@@ -284,18 +287,19 @@ async function pastFronts(p) {
   const off = await p.evaluate(() => {
     const b = [...document.querySelectorAll('#camp-body button.start')][0];
     const cs = getComputedStyle(b);
-    const why = document.querySelector('#camp-body .blockwhy');
-    return { disabled: b.disabled, opacity: +cs.opacity, cursor: cs.cursor, why: why ? why.textContent.trim() : null };
+    // the reason is the button's tip now, shown on a press, not a line of its own
+    return { disabled: b.getAttribute('aria-disabled') === 'true', opacity: +cs.opacity, cursor: cs.cursor,
+      why: b.getAttribute('data-tip'), line: !!document.querySelector('#camp-body .blockwhy, #camp-body p.faults') };
   });
-  check('...and visibly dead, with a reason, on an illegal one',
-    off.disabled && off.opacity < 0.6 && off.cursor === 'not-allowed' && !!off.why,
+  check('...and visibly dead, with the reason as its tip, on an illegal one',
+    off.disabled && off.opacity < 0.6 && off.cursor === 'not-allowed' && !!off.why && !off.line,
     off.why ? off.why.slice(0, 80) : JSON.stringify(off));
   await clickText(p, 'Fill the list for me');
   await p.waitForTimeout(250);
   await shot(p, 'camp-contract.png');
 
-  /* the three asymmetric scenarios tell the player, on this screen, that the
-     roles are randomised when the battle opens and what each one would mean */
+  /* the three asymmetric scenarios settle who attacks with the offer, which says
+     so; the screen for choosing the force leaves it there */
   for (const id of ['invasion', 'demolish', 'takeover', 'meeting']) {
     const seen = await p.evaluate((id) => {
       const got = window.__forceScenario(id);
@@ -310,8 +314,9 @@ async function pastFronts(p) {
       };
     }, id);
     const want = id !== 'meeting';
-    check(id + ': the contract screen states your role',
-      (!!seen.mine === want) && seen.badge === want && seen.said === want && !seen.other,
+    // the role is given with the offer (and read there); the force screen does not repeat it
+    check(id + ': the role is settled, and not repeated on the force screen',
+      (!!seen.mine === want) && !seen.badge && !seen.said && !seen.other,
       want ? 'you are the ' + seen.mine : 'no roles to state');
   }
   await p.evaluate(() => window.__forceScenario('meeting'));
