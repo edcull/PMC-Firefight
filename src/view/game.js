@@ -326,7 +326,6 @@
   function arrivalLegal(u, p) { return Q.arrivalLegal(u, p); }
   function arrivalWhere(u) { return Q.arrivalWhere(u); }
   function inReserve(side) { return Q.inReserve(side); }
-  function emptyPlatforms(side) { return Q.emptyPlatforms(side); }
   function carriersFor(side) { return Q.carriersFor(side); }
   function boardableFor(v) { return Q.boardableFor(v); }
   function moveBonus(u, a) { return Q.moveBonus(u, a); }
@@ -1029,7 +1028,7 @@
     deployRoster: deployRoster, deployWhere: deployWhere, deploymentDone: deploymentDone,
     digFacings: digFacings, digPreview: digPreview, faceAsked: DRAW.faceAsked, doAssault: doAssault, doBreach: doBreach,
     doDemolish: doDemolish, doDesignate: doDesignate, doEnter: doEnter, doHack: doHack, doShoot: doShoot,
-    doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard, emptyPlatforms: emptyPlatforms,
+    doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard,
     holdArrival: holdArrival, holdInsertion: holdInsertion, hud: hud, inReserve: inReserve,
     insertionCard: insertionCard, isAI: isAI, kyfCard: kyfCard, liftOf: liftOf, loadBefore: loadBefore,
     martyrCard: martyrCard, mineCard: mineCard, movePreviewCard: movePreviewCard, mySide: mySide,
