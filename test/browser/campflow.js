@@ -529,11 +529,11 @@ async function pastFronts(p) {
     if (!cv) return { card: !!card };
     const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
     let ink = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) ink++;
-    const left = card.querySelector('.dsplit .dleft'), det = card.querySelector('.ddet');
+    const det = card.querySelector('.ddet');
     // (its buttons ride the experience line across the top of the card, above the split)
-    return { card: true, ink, left: !!left && !!card.querySelector('.dsplit canvas.dportrait') && !!card.querySelector('.drow .dacts'), below: !!det && !!(cv.compareDocumentPosition(det) & 4) };
+    return { card: true, ink, left: !!card.querySelector('.dpic canvas.dportrait') && !!card.querySelector('.drow .dacts'), below: !!det && !!(cv.compareDocumentPosition(det) & 4) };
   });
-  check('an opened unit shows its picture beside its facts', unitOpen.ink > 200 && unitOpen.left, JSON.stringify(unitOpen));
+  check('an opened unit shows its picture under its facts', unitOpen.ink > 200 && unitOpen.left, JSON.stringify(unitOpen));
   check('...with its stats and special rules underneath', unitOpen.below, JSON.stringify(unitOpen));
   await shot(p, 'camp-unit.png');
 
@@ -559,27 +559,36 @@ async function pastFronts(p) {
   const rowAt = () => p.evaluate(() => {
     const card = document.querySelector('#camp-body .dcard.open');
     const bars = card.querySelector('.drow .dbars').getBoundingClientRect(), acts = card.querySelector('.drow .dacts').getBoundingClientRect();
-    return { same: Math.abs((bars.top + bars.bottom) / 2 - (acts.top + acts.bottom) / 2) < 6, below: acts.top >= bars.bottom - 1,
-      next: acts.left - bars.right < 30 };
+    const row = card.querySelector('.drow').getBoundingClientRect(), pic = card.querySelector('.dpic .dportrait').getBoundingClientRect();
+    return { same: Math.abs((bars.top + bars.bottom) / 2 - (acts.top + acts.bottom) / 2) < 6, right: row.right - acts.right < 4,
+      picBelow: pic.top >= row.bottom - 1, picCentred: Math.abs((pic.left + pic.right) / 2 - (row.left + row.right) / 2) < 6 };
   });
   const deskRow = await rowAt();
-  check('on a desktop an opened unit\u2019s buttons follow its EXP/TP, on the same line', deskRow.same && deskRow.next, JSON.stringify(deskRow));
+  check('an opened unit\u2019s buttons sit at the right of its EXP/TP line, its picture centred under it', deskRow.same && deskRow.right && deskRow.picBelow && deskRow.picCentred, JSON.stringify(deskRow));
   // closed, a card shows only Promote, and only with the experience for it, at the right of its line
   const shut = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard:not(.open)')].map(c => {
     const bs = [...c.querySelectorAll('.dacts button')], row = c.querySelector('.drow'), r = row && row.getBoundingClientRect(), b = bs[0] && bs[0].getBoundingClientRect();
     return { n: bs.length, promo: bs.every(x => x.hasAttribute('data-promo')), right: !b || r.right - b.right < 4 };
   }));
   check('a closed card shows only Promote, at the right', shut.length > 0 && shut.every(x => x.n <= 1 && x.promo && x.right) && shut.some(x => x.n === 1), JSON.stringify(shut));
+  // on a narrow phone too, the closed card's Promote stays on the EXP/TP line: the TP bar shrinks for it
+  const vp0 = p.viewportSize();
+  await p.setViewportSize({ width: 340, height: 780 });
+  await p.waitForTimeout(200);
+  const narrow = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard:not(.open)')].filter(c => c.querySelector('.drow .dbars') && c.querySelector('.dacts button')).map(c => {
+    const bars = c.querySelector('.drow .dbars').getBoundingClientRect(), b = c.querySelector('.dacts button').getBoundingClientRect();
+    // (a vehicle has EXP but no TP bar)
+    const tp = c.querySelector('.drow .dtp');
+    return { one: b.top < bars.bottom && b.bottom > bars.top, tp: tp ? Math.round(tp.getBoundingClientRect().width) : null };
+  }));
+  check('...and on a narrow phone it stays on that line, the TP bar shrinking', narrow.length > 0 && narrow.every(x => x.one && (x.tp == null || x.tp > 10)), JSON.stringify(narrow));
+  await p.setViewportSize(vp0);
+  await p.waitForTimeout(200);
   const vp = p.viewportSize();
   await p.setViewportSize({ width: 412, height: 780 });
   await p.waitForTimeout(150);
   const phoneRow = await rowAt();
-  check('...and on a phone take a second line under it', phoneRow.below && !phoneRow.same, JSON.stringify(phoneRow));
-  const beside = await p.evaluate(() => {
-    const card = document.querySelector('#camp-body .dcard.open'), row = card.querySelector('.drow').getBoundingClientRect(), pic = card.querySelector('.dportrait').getBoundingClientRect();
-    return { beside: row.right <= pic.left + 1 && row.top < pic.bottom, tp: card.querySelector('.drow .dtp').getBoundingClientRect().width };
-  });
-  check('...beside the unit\u2019s picture, the EXP/TP shrinking to fit', beside.beside && beside.tp > 10, JSON.stringify(beside));
+  check('...on a phone too', phoneRow.same && phoneRow.right && phoneRow.picBelow && phoneRow.picCentred, JSON.stringify(phoneRow));
   // on a phone a unit's Rename, Disband and Promote are icons, on one row
   const row = await p.evaluate(() => {
     const acts = document.querySelector('#camp-body .dcard.open .dacts');
