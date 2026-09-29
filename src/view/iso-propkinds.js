@@ -543,7 +543,7 @@
             roof: pr.kind === 'bunker' ? '#3a3a35' : pr.kind === 'highwall' ? STONE[4] : bst === 'brick' ? '#3e3a36' : bst === 'prefab' ? '#4a4f47' : ROOF[2],
             roofEdge: pr.kind === 'bunker' ? '#4c4c45' : pr.kind === 'highwall' ? STONE[5] : bst === 'brick' ? '#56504a' : bst === 'prefab' ? '#5e645a' : ROOF[3],
             windows: pr.kind === 'building' ? 'lit' : pr.kind === 'bunker' ? 'slit' : null,
-            lift: lift || 0,
+            lift: lift || 0, bunker: pr.kind === 'bunker',
             cutaway: !!cutaway
           });
           break;

@@ -443,6 +443,39 @@
          streaks; the pair facing away is behind them and gets nothing. */
       skin(c2, c3, pal[1], pal[1]);
       skin(c4, c3, pal[3], pal[2]);
+      if (opts.bunker) buttresses();
+
+      /* A reinforced building is cast, not built: raking buttresses stand out from
+         the two faces the viewer sees, between the firing slits, each a wedge
+         of concrete thick at the foot and running back into the wall. */
+      function buttresses() {
+        var bw = 0.6, d = 0.42, hb = hgt * 0.55;
+        function wedge(q0, q1, o0, o1, side0, side1, top, sideCol, faceCol) {
+          // its side, then the raking face over it, then the arris catching the light
+          poly(g, [side0, side1, top], sideCol);
+          poly(g, [o0, o1, q1, q0], faceCol);
+          edgeLine(g, o1, q1, pal[5], 1);
+        }
+        // along the front: x across, pushing out towards +y
+        var Y = pr.y + pr.h, nF = Math.max(1, Math.round(Math.hypot(c3[0] - c4[0], c3[1] - c4[1]) / (K * 1.2)));
+        // one at every other gap between the slits: enough to read, not a fence of them
+        for (var i = 1; i < nF; i++) {
+          if (nF > 3 && i % 2) continue;
+          var x0 = pr.x + pr.w * i / nF - bw / 2, x1 = x0 + bw;
+          wedge(pt(x0, Y, hb), pt(x1, Y, hb), pt(x0, Y + d), pt(x1, Y + d),
+            pt(x1, Y), pt(x1, Y + d), pt(x1, Y, hb), pal[2],
+            vgrad(g, pt(x0, Y, hb)[1], pt(x0, Y + d)[1], [pal[4], pal[4], pal[3]]));
+        }
+        // along the right: y across, pushing out towards +x
+        var X = pr.x + pr.w, nR = Math.max(1, Math.round(Math.hypot(c3[0] - c2[0], c3[1] - c2[1]) / (K * 1.2)));
+        for (var j = 1; j < nR; j++) {
+          if (nR > 3 && j % 2) continue;
+          var y0 = pr.y + pr.h * j / nR - bw / 2, y1 = y0 + bw;
+          wedge(pt(X, y0, hb), pt(X, y1, hb), pt(X + d, y0), pt(X + d, y1),
+            pt(X, y1), pt(X + d, y1), pt(X, y1, hb), pal[4],
+            vgrad(g, pt(X, y0, hb)[1], pt(X + d, y0)[1], [pal[3], pal[2], pal[1]]));
+        }
+      }
 
       poly(g, [t1, t2, t3, t4], opts.roof);          // roof
       // roof panels
@@ -459,11 +492,63 @@
         var rq = lerp2(lerp2(t1, t2, ru), lerp2(t4, t3, ru), rv);
         dot(g, rq[0], rq[1], rand() > 0.5 ? 'rgba(20,24,30,.5)' : 'rgba(120,128,140,.25)', 1);
       }
-      // a parapet all the way round, lit on the near edges
-      edgeLine(g, t1, t2, opts.roofEdge, 2); edgeLine(g, t1, t4, opts.roofEdge, 2);
-      edgeLine(g, t2, t3, opts.roofEdge, 2); edgeLine(g, t4, t3, opts.roofEdge, 2);
-      edgeLine(g, [t2[0], t2[1] - 2], [t3[0], t3[1] - 2], pal[5], 1);
-      edgeLine(g, [t4[0], t4[1] - 2], [t3[0], t3[1] - 2], pal[5], 1);
+      if (opts.bunker) coping();
+      else {
+        // a parapet all the way round, lit on the near edges
+        edgeLine(g, t1, t2, opts.roofEdge, 2); edgeLine(g, t1, t4, opts.roofEdge, 2);
+        edgeLine(g, t2, t3, opts.roofEdge, 2); edgeLine(g, t4, t3, opts.roofEdge, 2);
+        edgeLine(g, [t2[0], t2[1] - 2], [t3[0], t3[1] - 2], pal[5], 1);
+        edgeLine(g, [t4[0], t4[1] - 2], [t3[0], t3[1] - 2], pal[5], 1);
+      }
+
+      /* The reinforced building's roof edge: a heavy cast coping that stands proud
+         of the walls and up above the roof slab, so the roof sits down inside it,
+         and an armoured hatch with a raised collar. */
+      function coping() {
+        var e = 0.14, tk = 0.4, z0 = hgt - a(1.6), z1 = hgt + a(1.4);
+        var X0 = pr.x - e, X1 = pr.x + pr.w + e, Y0 = pr.y - e, Y1 = pr.y + pr.h + e;
+        var I0 = pr.x + tk, I1 = pr.x + pr.w - tk, J0 = pr.y + tk, J1 = pr.y + pr.h - tk;
+        // the inside of the far lip, facing the viewer across the roof
+        poly(g, [pt(I0, J0, hgt), pt(I1, J0, hgt), pt(I1, J0, z1), pt(I0, J0, z1)], pal[2]);
+        poly(g, [pt(I0, J0, hgt), pt(I0, J1, hgt), pt(I0, J1, z1), pt(I0, J0, z1)], pal[3]);
+        // a dark line where the slab meets the lip, holding water
+        edgeLine(g, pt(I0, J0, hgt), pt(I1, J0, hgt), 'rgba(14,16,18,.55)', 1);
+        edgeLine(g, pt(I0, J0, hgt), pt(I0, J1, hgt), 'rgba(14,16,18,.55)', 1);
+        // the band round the outside of the walls, with the shadow it throws under it
+        edgeLine(g, pt(pr.x, Y1 - e, z0 - 1), pt(X1 - e, Y1 - e, z0 - 1), 'rgba(12,12,10,.45)', 2);
+        edgeLine(g, pt(X1 - e, pr.y, z0 - 1), pt(X1 - e, Y1 - e, z0 - 1), 'rgba(12,12,10,.45)', 2);
+        poly(g, [pt(X0, Y1, z0), pt(X1, Y1, z0), pt(X1, Y1, z1), pt(X0, Y1, z1)], vgrad(g, pt(X0, Y1, z1)[1], pt(X0, Y1, z0)[1], [pal[5], pal[4]]));
+        poly(g, [pt(X1, Y0, z0), pt(X1, Y1, z0), pt(X1, Y1, z1), pt(X1, Y0, z1)], vgrad(g, pt(X1, Y0, z1)[1], pt(X1, Y0, z0)[1], [pal[3], pal[2]]));
+        // its top, all the way round
+        var cap = pal[4];
+        poly(g, [pt(X0, Y0, z1), pt(X1, Y0, z1), pt(I1, J0, z1), pt(I0, J0, z1)], cap);
+        poly(g, [pt(X0, Y0, z1), pt(I0, J0, z1), pt(I0, J1, z1), pt(X0, Y1, z1)], cap);
+        poly(g, [pt(I1, J0, z1), pt(X1, Y0, z1), pt(X1, Y1, z1), pt(I1, J1, z1)], cap);
+        poly(g, [pt(I0, J1, z1), pt(I1, J1, z1), pt(X1, Y1, z1), pt(X0, Y1, z1)], cap);
+        edgeLine(g, pt(X0, Y1, z1), pt(X1, Y1, z1), pal[5], 1);
+        edgeLine(g, pt(X1, Y0, z1), pt(X1, Y1, z1), pal[5], 1);
+        edgeLine(g, pt(X1, Y1, z0), pt(X1, Y1, z1), pal[5], 1);          // the corner of the band
+        // the joints in the cast coping, every few feet
+        for (var cj = 1; cj < Math.round(pr.w / 1.6); cj++) {
+          var cx = pr.x + pr.w * cj / Math.round(pr.w / 1.6);
+          edgeLine(g, pt(cx, Y1, z0), pt(cx, Y1, z1), pal[3], 1);
+        }
+        for (var ck = 1; ck < Math.round(pr.h / 1.6); ck++) {
+          var cy = pr.y + pr.h * ck / Math.round(pr.h / 1.6);
+          edgeLine(g, pt(X1, cy, z0), pt(X1, cy, z1), pal[1], 1);
+        }
+        // an armoured hatch in the slab, square to the walls, with a raised collar
+        var hx = pr.x + pr.w * 0.3, hy = pr.y + pr.h * 0.35, hs = 0.7, hc = a(0.7);
+        poly(g, [pt(hx, hy + hs, hgt), pt(hx + hs, hy + hs, hgt), pt(hx + hs, hy + hs, hgt + hc), pt(hx, hy + hs, hgt + hc)], pal[4]);
+        poly(g, [pt(hx + hs, hy, hgt), pt(hx + hs, hy + hs, hgt), pt(hx + hs, hy + hs, hgt + hc), pt(hx + hs, hy, hgt + hc)], pal[2]);
+        poly(g, [pt(hx, hy, hgt + hc), pt(hx + hs, hy, hgt + hc), pt(hx + hs, hy + hs, hgt + hc), pt(hx, hy + hs, hgt + hc)], '#4a4a44');
+        edgeLine(g, pt(hx + hs * 0.15, hy + hs * 0.5, hgt + hc), pt(hx + hs * 0.85, hy + hs * 0.5, hgt + hc), '#2c2c28', 1);
+        // and a ventilator, a squat cowl on a stub
+        var vx = pr.x + pr.w * 0.72, vy = pr.y + pr.h * 0.6, vp = pt(vx, vy, hgt);
+        rect(g, vp[0] - a(0.5), vp[1] - a(2.2), a(1), a(2.2), pal[2]);
+        rect(g, vp[0] - a(0.9), vp[1] - a(2.9), a(1.8), a(0.8), pal[4]);
+        rect(g, vp[0] - a(0.9), vp[1] - a(2.2), a(1.8), 1, '#1e1f1c');
+      }
 
       if (!opts.windows) return;
       var lit = opts.windows === 'lit';
@@ -510,6 +595,11 @@
               para(A, B, tt - dt, tt + dt, upY, PIXEL, '#fbe6a8');
               para(A, B, tt - 0.5 / L, tt + 0.5 / L, upY, wh, '#b8923e');                       // the glazing bar
             } else para(A, B, tt - dt + 1 / L, tt - dt / 3, upY - 1, Math.max(1, wh / 3), 'rgba(140,160,180,.35)');   // a glint
+            if (opts.bunker) {
+              // a cast hood over the slit, throwing a shadow down across it
+              para(A, B, tt - ft - 2 / L, tt + ft + 2 / L, upY + PIXEL * 2 + a(0.5), a(0.5), front ? pal[5] : pal[3]);
+              para(A, B, tt - ft, tt + ft, upY + PIXEL, 1, 'rgba(10,10,10,.5)');
+            }
             if (lit) {
               para(A, B, tt - ft, tt + ft, upY - wh - PIXEL, 1, pal[5]);                          // the sill
               if (style === 'brick') para(A, B, tt - ft - 1 / L, tt + ft + 1 / L, upY + PIXEL * 2, PIXEL, pal[1]);   // a lintel
