@@ -309,7 +309,8 @@
       });
       (deaths || []).forEach(function (d) {
         addFx({
-          kind: 'ghost', x: d.x, y: d.y, side: d.u.side, code: d.u.code,
+          // the unit itself, so what fades into the ground is what was there: its kind, its colours, its men
+          kind: 'ghost', x: d.x, y: d.y, unit: d.u, side: d.u.side, code: d.u.code,
           models: Math.max(1, d.u.size), dur: 700, blocking: true
         });
       });

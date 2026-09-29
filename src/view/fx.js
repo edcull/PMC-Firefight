@@ -1027,7 +1027,12 @@
       } else if (f.kind === 'ghost') {
         g.save();
         g.globalAlpha = Math.max(0, 1 - k);
-        I.drawUnit(g, { side: f.side, code: f.code, models: f.models, sp: 0, marked: false, rules: [] }, {
+        /* the unit as it stood, whole and unshaken, sinking where it fell (a bare
+           squad of the side's colour only when no unit came with it) */
+        var gu = f.unit ? Object.create(f.unit) : { side: f.side, code: f.code, rules: [] };
+        gu.models = f.models; gu.sp = 0; gu.marked = false; gu.alive = true;
+        gu.aboard = null; gu.bld = null; gu.ax = null; gu.ay = null; gu.walk = 0; gu.hop = 0;
+        I.drawUnit(g, gu, {
           at: { x: f.x, y: f.y }, lift: liftAt(f) - k * 3, status: 'broken', morale: 1
         });
         g.restore();
