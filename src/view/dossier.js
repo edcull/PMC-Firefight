@@ -344,9 +344,9 @@
        across the whole card, open or not: on one line on a desktop, the icons
        dropping to a second on a phone. */
     if (opts.rowActs) {
-      h += '<div class="drow">' + bars + (opts.actions ? '<div class="dacts">' + opts.actions + '</div>' : '') + '</div>';
-      bars = '';
+      bars = bars || opts.actions ? '<div class="drow' + (opts.men ? '' : ' shut') + '">' + bars + (opts.actions ? '<div class="dacts">' + opts.actions + '</div>' : '') + '</div>' : '';
     }
+    // opened, the line sits in the column beside the unit's picture, shrinking to fit it
     if (opts.portrait) h += '<div class="dsplit"><div class="dleft">';
     h += bars;
     var marks = [];

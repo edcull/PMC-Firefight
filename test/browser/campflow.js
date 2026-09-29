@@ -125,7 +125,7 @@ async function pastFronts(p) {
   await p.evaluate(() => { document.querySelector('#camp-body .cmodal:not([hidden]) [data-by="name"]').click(); });
   await p.waitForTimeout(150);
   const sortedNames = await p.evaluate(() => {
-    const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos [data-rename]')].map(b => b.getAttribute('data-rename'));
+    const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos .dcard[data-rid]')].map(b => b.getAttribute('data-rid'));
     return rids.map(r => camp.companies.A.roster.find(e => String(e.rid) === r).name);
   });
   check('Sort by name puts them in order of name', sortedNames.length > 3 && sortedNames.every((n, i) => !i || sortedNames[i - 1].localeCompare(n) <= 0), sortedNames.join(', '));
@@ -135,7 +135,7 @@ async function pastFronts(p) {
   const filt = await p.evaluate(() => {
     const b = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="dfilt"][data-kind="tier"]');
     const tier = +b.getAttribute('data-val'); b.click();
-    const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos [data-rename]')].map(x => x.getAttribute('data-rename'));
+    const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos .dcard[data-rid]')].map(x => x.getAttribute('data-rid'));
     const tiers = rids.map(r => window.PMC.profile(camp.companies.A.roster.find(e => String(e.rid) === r).key).tier);
     return { tier, tiers, label: document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').textContent };
   });
@@ -557,20 +557,32 @@ async function pastFronts(p) {
   check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier \d · \S/.test(t)), promo.join(' | '));
   // the unit's buttons: on a desktop, icons on the line with its experience and trauma
   const rowAt = () => p.evaluate(() => {
-    const b = [...document.querySelectorAll('#camp-body button[data-promo]')][0], card = b && b.closest('.dcard');
+    const card = document.querySelector('#camp-body .dcard.open');
     const bars = card.querySelector('.drow .dbars').getBoundingClientRect(), acts = card.querySelector('.drow .dacts').getBoundingClientRect();
-    return { same: Math.abs((bars.top + bars.bottom) / 2 - (acts.top + acts.bottom) / 2) < 6, below: acts.top >= bars.bottom - 1 };
+    return { same: Math.abs((bars.top + bars.bottom) / 2 - (acts.top + acts.bottom) / 2) < 6, below: acts.top >= bars.bottom - 1,
+      next: acts.left - bars.right < 30 };
   });
   const deskRow = await rowAt();
-  check('on a desktop a unit\u2019s buttons share the EXP/TP line', deskRow.same, JSON.stringify(deskRow));
+  check('on a desktop an opened unit\u2019s buttons follow its EXP/TP, on the same line', deskRow.same && deskRow.next, JSON.stringify(deskRow));
+  // closed, a card shows only Promote, and only with the experience for it, at the right of its line
+  const shut = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard:not(.open)')].map(c => {
+    const bs = [...c.querySelectorAll('.dacts button')], row = c.querySelector('.drow'), r = row && row.getBoundingClientRect(), b = bs[0] && bs[0].getBoundingClientRect();
+    return { n: bs.length, promo: bs.every(x => x.hasAttribute('data-promo')), right: !b || r.right - b.right < 4 };
+  }));
+  check('a closed card shows only Promote, at the right', shut.length > 0 && shut.every(x => x.n <= 1 && x.promo && x.right) && shut.some(x => x.n === 1), JSON.stringify(shut));
   const vp = p.viewportSize();
   await p.setViewportSize({ width: 412, height: 780 });
   await p.waitForTimeout(150);
   const phoneRow = await rowAt();
   check('...and on a phone take a second line under it', phoneRow.below && !phoneRow.same, JSON.stringify(phoneRow));
+  const beside = await p.evaluate(() => {
+    const card = document.querySelector('#camp-body .dcard.open'), row = card.querySelector('.drow').getBoundingClientRect(), pic = card.querySelector('.dportrait').getBoundingClientRect();
+    return { beside: row.right <= pic.left + 1 && row.top < pic.bottom, tp: card.querySelector('.drow .dtp').getBoundingClientRect().width };
+  });
+  check('...beside the unit\u2019s picture, the EXP/TP shrinking to fit', beside.beside && beside.tp > 10, JSON.stringify(beside));
   // on a phone a unit's Rename, Disband and Promote are icons, on one row
   const row = await p.evaluate(() => {
-    const b = [...document.querySelectorAll('#camp-body button[data-promo]')][0], acts = b && b.closest('.dacts');
+    const acts = document.querySelector('#camp-body .dcard.open .dacts');
     const bs = acts ? [...acts.querySelectorAll('.dact')] : [];
     return { n: bs.length, tops: [...new Set(bs.map(x => Math.round(x.getBoundingClientRect().top)))].length,
       icons: bs.every(x => getComputedStyle(x.querySelector('svg')).display !== 'none' && getComputedStyle(x.querySelector('span')).display === 'none'),
@@ -580,6 +592,12 @@ async function pastFronts(p) {
   check('on a phone a unit\u2019s Rename, Disband and Promote are icons on one row', row.n === 3 && row.tops === 1 && row.icons && row.named && row.soldiers, JSON.stringify(row));
   await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); if (m) m.hidden = true; });
   await shot(p, 'camp-dossier-phone.png');
+  await p.evaluate(() => { const c = document.querySelector('#camp-body .dcard.open'); if (c) c.click(); });
+  await p.waitForTimeout(250);
+  await p.evaluate(() => document.querySelectorAll('#camp-body .cmodal').forEach(m => { m.hidden = true; }));
+  await shot(p, 'camp-dossier-phone-closed.png');
+  await p.evaluate(() => { const c = document.querySelector('#camp-body .dcard.dclick'); if (c) c.click(); });
+  await p.waitForTimeout(250);
   await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal[data-modal="promote"]'); if (m) m.hidden = false; });
   const opened = await p.evaluate(() => {
     const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([disabled])');
@@ -650,6 +668,9 @@ async function pastFronts(p) {
 
   // the dossier is already open in the hub's Tier panel
   if (!(await p.evaluate(() => !!document.querySelector('#camp-body .cdos')))) await clickText(p, '^Dossier$');
+  await p.waitForTimeout(250);
+  // (Rename is on an opened card)
+  await p.evaluate(() => { if (!document.querySelector('#camp-body button[data-rename]')) { const c = document.querySelector('#camp-body .dcard.dclick'); if (c) c.click(); } });
   await p.waitForTimeout(250);
   const renamed = await p.evaluate(() => {
     const b = document.querySelector('#camp-body button[data-rename]');

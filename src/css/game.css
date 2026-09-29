@@ -1329,12 +1329,18 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dact { display: inline-grid; place-items: center; padding: 5px 9px; }
 .dact svg { display: block; width: 16px; height: 16px; }
 .dact span { display: none; }
-/* the unit's line: experience and trauma, then its buttons at the right; on a phone the buttons take a second line */
-.drow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 5px; }
-.drow .dbars { flex: 1 1 auto; min-width: 0; margin-top: 0; }
-.drow .dacts { margin: 0 0 0 auto; flex-wrap: nowrap; gap: 5px; }
+/* the unit's line: experience and trauma, then its buttons. Opened, they follow
+   the TP on a desktop and take a second line on a phone; closed, the one button
+   (Promote) sits at the right end of the line. */
+.drow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 5px; }
+.drow .dbars { flex: 0 1 auto; min-width: 0; margin-top: 0; }
+.drow .dbars .dtp { flex: 0 1 140px; width: 140px; min-width: 24px; }
+.drow .dexp, .drow .dtpn { white-space: nowrap; }
+.drow .dacts { margin: 0; flex-wrap: nowrap; gap: 5px; }
+.drow.shut .dbars { flex: 1 1 auto; }
+.drow.shut .dacts { margin-left: auto; }
 @media (max-width: 700px) {
-  .drow .dacts { flex: 0 0 100%; margin: 2px 0 0; }
+  .drow:not(.shut) .dacts { flex: 0 0 100%; margin: 2px 0 0; }
   .dact { padding: 7px 12px; }
   .dact svg { width: 18px; height: 18px; }
 }
