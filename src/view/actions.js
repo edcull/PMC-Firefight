@@ -22,6 +22,7 @@
       advance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h7l4-9"/><path d="M14 8h6v6"/><circle cx="18.5" cy="17" r="2.2"/></svg>',
       assault: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L15 9M9 4l11 11"/><path d="M4 20l1-4 3 3zM20 20l-4-1 3-3z"/></svg>',
       aux: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="6.5" stroke-dasharray="3 3"/><path d="M12 6v3M12 15v3M6 12h3M15 12h3"/></svg>',
+      skip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l9 7-9 7z"/><path d="M18 5v14"/></svg>',
       regroup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg>',
       designate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l7 8-7 8-7-8z"/><circle cx="12" cy="12" r="2"/><path d="M12 1v2M12 21v2"/></svg>',
       coordinate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.4"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="20" r="2"/><path d="M10.4 10.4L6.4 7.4M13.6 10.4l4-3M12 14.4V18"/></svg>',
@@ -85,18 +86,37 @@
         setTimeout(function () { card.classList.remove('fresh'); }, 300);
         // a rail is not a log: keep the last thirty and let the dock hold the rest
         while (host.children.length > 30) host.removeChild(host.firstChild);
-        if (B.state && B.state.cfg.mode === 'demo') feedToNewest(host);   // a demo is watched as it happens
+        feedToNewest(host);                // the newest card, at the top, is the one to read
       });
       ui.feedUnread = (ui.feedUnread || 0) + 1;
-      markFeedTab();
+      /* On a phone, a result that lands in the battle brings the Results tab to
+         the front — unless the Actions tab is asking this screen's player
+         something, which would be hidden. (Setting up, the deployment list
+         stays where it is.) Picking a unit brings the actions back. */
+      if (window.innerWidth <= 1000 && B.state && B.state.phase === 'battle' && !askingHere()) setMTab('res');
+      else markFeedTab();
+    }
+    // a question on the Actions tab waiting on a player at this screen
+    function askingHere() {
+      var s = B.state || {};
+      if (ui.insertion || ui.reservePick || ui.preview) return true;
+      return ['faceAsk', 'cmdOffer', 'standAsk', 'endAsk', 'martyrAsk', 'kyfAsk', 'placeAsk', 'minePick', 'swapAsk'].some(function (k) {
+        var a = s[k];
+        if (k === 'endAsk' && (show.queue.length || show.waiting || ui.resOpen || resQueue.length)) return false;   // not asked until the replay and the rally's cards are done
+        return !!a && (a.side == null || !B.isAI(a.side));
+      });
     }
     /* The feed stacks newest first, at the top, but a scrolled list stays where
        it is as cards land: this brings the newest back into view. (A reversed
        column scrolls with negative offsets; a plain one clamps to its top.) */
     function feedToNewest(host) {
-      [host, host && host.parentElement].forEach(function (s) {
-        if (s && s.scrollHeight > s.clientHeight) s.scrollTop = -s.scrollHeight;
-      });
+      var go = function () {
+        [host, host && host.parentElement].forEach(function (s) {
+          if (s && s.scrollHeight > s.clientHeight) s.scrollTop = -s.scrollHeight;
+        });
+      };
+      go();
+      requestAnimationFrame(go);           // and again once the new card has its height
     }
     /* On a phone the results share the panel with everything else, so the tab
        carries a count of what has landed since it was last looked at. */
@@ -116,7 +136,7 @@
       document.querySelectorAll('#mtabs .mtab').forEach(function (b) {
         b.classList.toggle('on', b.getAttribute('data-mtab') === which);
       });
-      if (which === 'res') { ui.feedUnread = 0; if (B.state && B.state.cfg.mode === 'demo' && el('resfeed-m')) feedToNewest(el('resfeed-m')); }
+      if (which === 'res') { ui.feedUnread = 0; if (el('resfeed-m')) feedToNewest(el('resfeed-m')); }
       markFeedTab();
     }
 
@@ -173,6 +193,14 @@
       ui.resTimer = setTimeout(closeRes, wait / (+window.PMC_TIME_SCALE || 1));
     }
 
+    /* A campaign's aftermath waits for the battle's result to be read: the
+       winner, and what won it, on its own card before the screen changes. */
+    function resultKey() { var s = B.state; return s && s.over ? s.seed + '|' + s.turn + '|' + s.over.text : null; }
+    window.PMC_AFTER_RESULT = function (fn) {
+      // (with nobody at the table to read it, as when both sides are the AI's, it does not wait)
+      if (!resultKey() || ui.resultRead === resultKey() || B.state.cfg.aiSides.length === 2) fn();
+      else ui.afterResult = fn;
+    };
     function closeRes() {
       clearTimeout(ui.resTimer);
       el('resolution').hidden = true;
@@ -180,6 +208,12 @@
       var res = ui.currentRes;
       ui.currentRes = null;
       if (res && res.onClose) res.onClose();     // may queue the next step
+      // the battle's result read: what was waiting on it (a campaign's aftermath) goes on
+      if (res && res.kind === 'Result') {
+        ui.resultRead = resultKey();
+        var then = ui.afterResult; ui.afterResult = null;
+        if (then) { then(); return; }
+      }
       if (resQueue.length) showNextRes();
       else { render(); show.pump(); }
       scheduleReturn();
@@ -226,7 +260,7 @@
       if (res.outcome) h += '<div class="outcome ' + (res.outcome.tone || '') + '">' + res.outcome.text + '</div>';
       if (feed) return h + '</div>';
       var count = res.progress || (resQueue.length ? resQueue.length + ' more' : '');
-      h += '</div><div class="res-foot"><button class="start" id="res-continue">Continue</button>' +
+      h += '</div><div class="res-foot"><button class="start" id="res-continue">' + (res.cont || 'Continue') + '</button>' +
         (count ? '<span class="res-count">' + count + '</span>' : '') + '</div>';
       if (B.state.cfg.aiSides.length) {
         h += '<label class="autochk" for="res-auto"><input type="checkbox" id="res-auto"' +

@@ -18,9 +18,11 @@ function stamp(page) {
     // the page's own stylesheets (not the fonts, which come from outside)
     .replace(/<link rel="stylesheet" href="(src\/[^"?]+)(?:\?v=[0-9a-f]+)?">/g, (m, src) =>
       '<link rel="stylesheet" href="' + src + '?v=' + v(src) + '">');
-  if (after === before) return;
   /* Something the page loads has changed, so this is a new build: the menu
-     says which, as v0.1.0 and the moment it was built (UTC, YYMMDDHHmm). */
+     says which, as v0.1.0 and the moment it was built (UTC, YYMMDDHHmm).
+     The published site (.github/workflows/pages.yml) sets STAMP_ALWAYS, so
+     what it shows is always the moment it was deployed. */
+  if (after === before && !process.env.STAMP_ALWAYS) return;
   const d = new Date(), p2 = (n) => String(n).padStart(2, '0');
   const build = String(d.getUTCFullYear()).slice(2) + p2(d.getUTCMonth() + 1) + p2(d.getUTCDate()) + p2(d.getUTCHours()) + p2(d.getUTCMinutes());
   fs.writeFileSync(file, after.replace(/(<p class="menu-ver" id="menu-ver">)v[\d.]+(<\/p>)/, '$1' + VERSION + '.' + build + '$2'));
@@ -37,8 +39,11 @@ function inlineStyles(page) {
 }
 
 let html = inlineStyles(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));
+// the tests' own hooks are left out of the published page (scripts/bundle.js DEV_ONLY)
+const DEV_ONLY = require('./bundle.js').DEV_ONLY;
 html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, src) => {
   src = src.split('?')[0];
+  if (DEV_ONLY.indexOf(src) >= 0) return '';
   const code = fs.readFileSync(path.join(ROOT, src), 'utf8');
   return '<script>\n/* ---- ' + src + ' ---- */\n' + code + '\n</script>';
 });

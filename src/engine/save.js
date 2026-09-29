@@ -54,9 +54,9 @@
     /* ================= loading transports before the battle =================
        "If the ground troops and transport vehicle are in reserve, the troops can
        enter the table on-board the vehicle, but this has to be declared before the
-       game" (p. 36) — and a Rapid insertion platform "has to start the battle with
-       a single infantry unit onboard" (p. 79). Both want the same thing: a way to
-       put a squad inside a hull during deployment, before a shot is fired. */
+       game" (p. 36), and a Rapid insertion platform comes down with its squad
+       inside. Both want the same thing: a way to put a squad inside a hull during
+       deployment, before a shot is fired. */
     function byId(id) {
       for (var i = 0; i < E.state.units.length; i++) if (E.state.units[i].id === id) return E.state.units[i];
       return null;

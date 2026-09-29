@@ -83,8 +83,12 @@
        land. `shown` is the table as it was last drawn at rest; `held` is what is
        kept back from the new state until its event plays. */
     var shown = {}, held = {};
+    /* A unit is let go at the last event of the batch that names it, not the
+       first: the player's own unit, moved and then shot at by the other side's
+       answer, keeps its old suppression through its move, until the shot lands. */
+    var heldTill = {};
     // `held` is one object for the battle: the drawing reads it, so it is emptied, never replaced
-    function clearHeld() { Object.keys(held).forEach(function (k) { delete held[k]; }); }
+    function clearHeld() { Object.keys(held).forEach(function (k) { delete held[k]; }); heldTill = {}; }
     function snapshotShown() {
       shown = {};
       if (!B.state) return;
@@ -114,6 +118,7 @@
         su.ax = su._drawnX; su.ay = su._drawnY; slideAfter[su.id] = true;
       });
       events.forEach(function (ev) {
+        evIds(ev).forEach(function (id) { heldTill[id] = ev; });
         if (ev.e === 'move' && ev.id && !moved[ev.id]) {
           moved[ev.id] = true;
           var mu = evUnit(ev.id), p0 = ev.path && ev.path[0];
@@ -140,28 +145,46 @@
         });
       });
     }
+    // the units an event names: who acts, who is hit, who dies
+    function evIds(ev) {
+      return [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
+        .filter(function (id) { return !!id; });
+    }
     function releaseFor(ev) {
       if (!ev) return;
-      [ev.to, ev.from, ev.id].concat((ev.deaths || []).map(function (d) { return d.id; }))
-        .forEach(function (id) {
-          if (!id) return;
-          delete held[id];
-          if (!slideAfter[id]) return;
-          delete slideAfter[id];
-          var u = evUnit(id);
-          if (!u) return;
-          var from = { x: u.ax, y: u.ay };
-          u.ax = null; u.ay = null;
-          // off to where it now stands, if it still stands anywhere on the table
-          if (u.alive && u.x >= 0 && from.x != null) animateMove(u, [from, { x: u.x, y: u.y }]);
-        });
+      evIds(ev).forEach(function (id) {
+        if (!heldTill[id] || heldTill[id] === ev) { delete held[id]; delete heldTill[id]; }
+        if (!slideAfter[id]) return;
+        delete slideAfter[id];
+        var u = evUnit(id);
+        if (!u) return;
+        var from = { x: u.ax, y: u.ay };
+        u.ax = null; u.ay = null;
+        // off to where it now stands, if it still stands anywhere on the table
+        if (u.alive && u.x >= 0 && from.x != null) animateMove(u, [from, { x: u.x, y: u.y }]);
+      });
+    }
+    /* The Suppression a shot or an assault puts on a unit is not simply there once
+       it has played: from the moment it lands the unit's bar fills (or empties)
+       towards what the rules now say, over the rest of the attack. */
+    function fillSp(id, ms) {
+      var h = id && held[id], u = evUnit(id);
+      if (!h || !u || !u.alive || h.sp === u.sp) return;
+      h.spFill = { from: h.sp, to: u.sp, t0: nowMs(), dur: Math.max(200, ms) };
+    }
+    function spNow(h) {
+      var f = h.spFill;
+      if (!f) return h.sp;
+      var k = Math.max(0, Math.min(1, (nowMs() - f.t0) / f.dur));
+      k = 1 - Math.pow(1 - k, 2);              // quick to rise, settling into place
+      return f.from + (f.to - f.from) * k;
     }
     // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
     function shownAs(u) {
       var h = u && held[u.id];
       if (!h) return u;
       var o = Object.create(u);
-      o.models = h.models; o.sp = h.sp; o.alive = h.alive; o.damage = h.damage; o.fled = h.fled;
+      o.models = h.models; o.sp = spNow(h); o.alive = h.alive; o.damage = h.damage; o.fled = h.fled;
       if (!u.alive) { o.x = h.x; o.y = h.y; o.aboard = h.aboard; o.reserve = h.reserve; }
       return o;
     }
@@ -177,6 +200,10 @@
         this.pump();
       },
       pump: function () {
+        /* An event still being drawn is finished first: its end pumps again. Going
+           on through a batch that arrived meanwhile would reach the end of the
+           queue and let go of units the attack in flight is still holding. */
+        if (show.waiting) return;
         while (show.queue.length) {
           var ev = show.queue[0];
           var waits = SHOWN[ev.e] === 'wait';
@@ -236,17 +263,19 @@
     };
     // is anything that has already happened still to be drawn, or being drawn?
     function replaying() { return show.queue.length > 0 || show.waiting; }
-    /* The other side's attack: the camera, already on the unit acting, goes on
-       to what it is shooting at or charging, so the result is seen where it
-       lands. It is borrowed, and handed back as it is after their activation. */
-    function lookAtTarget(fromId, target) {
-      if (!target || !otherSides(fromId)) return;
-      focusUnit(target, false, true);
-    }
+    /* The AI's attack or targeted ability: the camera following it pulls back to
+       hold the unit and what it is aiming at together, so both ends are seen, and
+       goes back to how it was once the table has settled. (fitShot does nothing
+       unless the camera is following the AI.) */
     // is this event's unit the other side's — not one this screen plays?
     function otherSides(id) {
       var u = evUnit(id);
       return !!u && B.seats.indexOf(u.side) < 0;
+    }
+    function lookAtShot(from, target) {
+      if (!from || !target) return;
+      B.fitShot(from, target);
+      whenIdle(B.unfitShot);
     }
     // which events start something that takes time, and which land at once
     var SHOWN = {
@@ -271,10 +300,11 @@
     function stepWatched() {
       if (stepTimer || !B.net || !B.state || B.state.over) return;
       if (!B.state.cfg || B.state.cfg.aiSides.length !== 2) return;
+      if (ui.paused) return;                     // the watcher has paused it: the next activation waits
       if (B.state.phase !== 'battle' || ui.resOpen || menuUp()) return;
       stepTimer = setTimeout(function () {
         stepTimer = null;
-        if (!B.state || B.state.over || ui.resOpen || menuUp()) return;
+        if (!B.state || B.state.over || ui.resOpen || menuUp() || ui.paused) return;
         send({ k: 'step' });
       }, 260 / (+window.PMC_TIME_SCALE || 1));
     }
@@ -290,7 +320,14 @@
       switch (ev.e) {
         case 'log': logLine(ev.t, ev.text, ev.math); return;
         case 'card': pushRes(ev.card); return;
-        case 'fx': addFx(reLift(ev.f)); return;
+        case 'fx': {
+          var f = reLift(ev.f);
+          addFx(f);
+          // an ability aimed at something — a beam or a lobbed grenade — is framed as a shot is
+          if (f && f.kind === 'beam' && f.tx != null) lookAtShot({ x: f.x, y: f.y }, { x: f.tx, y: f.ty });
+          else if (f && f.kind === 'lob' && f.from && f.to) lookAtShot(f.from, f.to);
+          return;
+        }
         case 'sound': {
           // a sound the rules asked for, by name; 'suppressed' is an older word for it
           if (!SFX) return;
@@ -307,15 +344,17 @@
         case 'shoot': {
           var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
           if (!(sa && sb)) return false;
-          lookAtTarget(ev.from, sb);
-          playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null);
+          playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null,
+            function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
+          lookAtShot(sa, sb);                          // once the shot is playing, so it waits for it
           return !!done;
         }
         case 'assault': {
           var aa = evUnit(ev.from), ab = evUnit(ev.to);
           if (!(aa && ab)) return false;
-          lookAtTarget(ev.from, ab);
-          playAssault(aa, ab, deathsOf(ev.deaths), done || null);
+          playAssault(aa, ab, deathsOf(ev.deaths), done || null,
+            function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
+          lookAtShot(aa, ab);
           return !!done;
         }
         case 'strafe': {

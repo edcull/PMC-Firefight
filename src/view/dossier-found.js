@@ -133,7 +133,8 @@
         (E.colourOpen ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
           ' \u2014 ' + esc(colourName(E.draft.colour)) + '</label>' + squares(E.draft.colour) + '</div>' : '') +
         '</div>';
-      var head = '<div class="muster-head"><b>' + say('The company', 'The revolt', 'The swarm', 'The tribe') + '</b>' +
+      // the kind of force leads the list: its pill, which opens the army's rules
+      var head = '<div class="muster-head">' + E.armyPill(co, 'armyfound') +
         '<span class="pts' + (t1 === 6 && t2 === 2 ? '' : ' over') + '">' +
         t1 + '/6 Tier I · ' + t2 + '/2 Tier II · ' + machines + ' vehicle' + (machines === 1 ? '' : 's') + ' (max 2)</span></div>';
       var chosen = E.draft.keys.map(function (k, i) {
@@ -144,7 +145,7 @@
             R.PROPULSION[s.prop || 'none'].short + '</button>' : '') +
           (R.canBeDrone(p) ? '<button class="drive' + (s.drone ? ' on' : '') + '" data-fdrone="' + i +
             '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' +
-            (s.drone ? 'DRN' : 'crew') + '</button>' : '') + '</span>';
+            (s.drone ? 'DRN' : 'crew') + '</button>' : '') + rideButtons(p, s, i) + '</span>';
       }).join('');
       /* On the page, each unit picked is a card: its name and kind, its Tier, its
          numbers and its special rules, with its drive and its remove button. The
@@ -153,6 +154,8 @@
       var cards = E.draft.keys.map(function (k, i) {
         var sp = R.splitPick(k), p0 = profile(sp.key);
         var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p0, { rules: (p0.rules || []).slice(), models: p0.size }), sp.prop || R.defaultDrive(p0)), !!sp.drone);
+        u0 = R.applyRiders(u0, sp.riders);
+        if (R.canMount(p0, sp.riders)) R.applyMount(u0, sp.mount || 'none');
         var mach = p0.cls !== 'infantry';
         var st = [['Move', u0.move + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
           ['Def', u0.def], ['Asslt', u0.assault], mach ? ['Str', u0.str] : ['Men', u0.size], mach ? null : ['Mor', u0.morale]].filter(Boolean);
@@ -162,6 +165,7 @@
           (R.propsFor(p0).length ? '<button class="drive" data-cycle="' + i + '">' + R.PROPULSION[sp.prop || 'none'].short + '</button>' : '') +
           (R.canBeDrone(p0) ? '<button class="drive' + (sp.drone ? ' on' : '') + '" data-fdrone="' + i +
             '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' + (sp.drone ? 'DRN' : 'crew') + '</button>' : '') +
+          rideButtons(p0, sp, i) +
           '<button class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
           '<div class="fcard-stats">' + st.map(function (c) { return '<span><i>' + c[0] + '</i>' + esc(c[1]) + '</span>'; }).join('') + '</div>' +
           ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
@@ -180,6 +184,8 @@
         (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</button></div></div>';
 
       // the three pickers, each a modal over the page
+      // the army's rules, from its pill
+      h += cmodal('armyfound', C.words(co).side + ' \u2014 army rules', E.armyRules(co));
       h += cmodal('units', say('The company', 'The revolt', 'The swarm', 'The tribe'),
         head + '<div class="chosen">' + chosen + '</div>' +
         '<div class="cat cmodal-scroll" id="found-cat">' + catalogueFor(1, 2, function (p) {
@@ -220,9 +226,24 @@
         ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '" aria-disabled="' + !chk.ok + '">' +
         say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
       // the second player cannot step back out: the campaign needs their force
-      if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+      // back to choosing what to run: the force is not founded yet, so there is nothing to keep
+      if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="foundback">Back</button></p>';
       return h;
     }
+
+    /* What a unit rides: the Riders upgrade where it may take it (Holy Warriors,
+       First Among Equals), and a motorbike, grav bike or horse for anyone who
+       rides — the Mounted Warriors always, the others once mounted. */
+    function rideButtons(p, s, i) {
+      var h = '';
+      if (R.canRide(p)) h += '<button class="drive' + (s.riders ? ' on' : '') + '" data-friders="' + i +
+        '" title="Riders upgrade: half the models, Movement 10, and the Riders rule">' + (s.riders ? 'RDR' : 'foot') + '</button>';
+      if (R.canMount(p, s.riders)) h += '<button class="drive" data-fmount="' + i +
+        '" title="What they ride: a motorbike, a grav bike (no terrain penalties, \u22121 Defence) or a horse (crosses walls, +1 SP when shot at)">' +
+        esc(MOUNT_SHORT[s.mount || 'none']) + '</button>';
+      return h;
+    }
+    var MOUNT_SHORT = { none: 'No mount', bike: 'Motorbike', gravbike: 'Grav bike', horse: 'Horse' };
 
     // which list a force recruits from — a company only ever hires its own kind
     function ourList(co) {
@@ -236,6 +257,8 @@
       ourList(co).forEach(function (p) {
         if (p.tier < minTier || p.tier > maxTier) return;
         if (p.command) return;                       // the field command is free and fixed
+        // turrets and insertion platforms are never bought: they are fielded with a contract's force
+        if (C.isTurretP(p) || p.noSlot) return;
         if (filter && !filter(p)) return;
         if (!groups[p.group]) { groups[p.group] = []; order.push(p.group); }
         groups[p.group].push(p);

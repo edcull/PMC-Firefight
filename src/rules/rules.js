@@ -168,6 +168,13 @@
     return u;
   }
   function canRide(p) { return !!(p && p.ridersUpgrade); }
+  /* A campaign dossier entry as an army pick: its drive and drone, and what it
+     rides — the Riders upgrade only where the unit may take it, and a mount
+     only where it rides. */
+  function entryPick(e) {
+    var p = BY_KEY[e.key], riders = !!e.riders && canRide(p);
+    return joinPick(e.key, e.prop, e.drone, riders, canMount(p, riders) ? e.mount : null);
+  }
   // a vehicle with no Transport rule may be flown as a drone (p. 37)
   // the alien armies' hulls are what they are: no propulsion to pick, no drone option
   function alienHull(p) { return !!p && (p.faction === 'bugs' || p.faction === 'xeno'); }
@@ -325,21 +332,6 @@
     }
     // machines: three per Priority Level, aircraft only from Battle Tier II,
     // and at PL1 nothing above the Battle Tier and only one aircraft
-    /* "Platforms ... have to start the battle with a single infantry unit onboard"
-       (p. 79). A list may therefore hold no more platforms than it has infantry
-       units free to ride in them — a Command Unit will not be strapped into one. */
-    var plats = 0, riders = 0;
-    keys.forEach(function (k) {
-      var p = BY_KEY[k];
-      if (!p) return;
-      if (p.mustLoad) plats++;
-      else if (p.cls === 'infantry' && !p.command) riders++;   // any infantry squad may ride one (p. 80)
-    });
-    if (plats > riders) {
-      faults.push('Every Rapid insertion platform starts the battle with an infantry unit aboard — ' +
-        plats + ' platform' + (plats > 1 ? 's' : '') + ' but only ' + riders + ' squad' +
-        (riders === 1 ? '' : 's') + ' free to ride.');
-    }
     var machines = 0, aircraft = 0, overTier = 0;
     keys.forEach(function (k) {
       var p = BY_KEY[k];
@@ -455,7 +447,7 @@
       if (p.capPL && (perKey[p.key] || 0) + 1 > p.capPL * pl) return false;
       if (p.groupCap && (perGroup[p.group] || 0) + 1 > p.groupCap) return false;
       if (p.groupCapPL && (perGroup[p.group] || 0) + 1 > p.groupCapPL * pl) return false;
-      // a platform is only worth rolling once there is a squad spare to ride in it
+      // a platform need not carry anyone, but a rolled list only takes one it can fill
       if (p.mustLoad && plats + 1 > riders) return false;
       if (p.cls !== 'infantry') {
         if (machines + 1 > 3 * pl) return false;
@@ -716,6 +708,12 @@
   function turnPiece(t, k) { return (KIT_SPACE || kitSpace()).turnPiece(t, k); }
   function shapePiece(r, rand, family) { return (KIT_SPACE || kitSpace()).shapePiece(r, rand, family); }
   function terrainAt(state, x, y) { return (KIT_SPACE || kitSpace()).terrainAt(state, x, y); }
+  /* Ground this unit may not be put down on: anything impassable, and for a
+     Stationary Artillery gun shallow water too (p. 95). */
+  function barredAt(state, u, x, y) {
+    var t = TERRAIN[terrainAt(state, x, y)];
+    return !!t.impassable || (!!u && hasOwn(u, 'Stationary Artillery') && !!t.shallow);
+  }
   function terrainOf(state, u) { return (KIT_SPACE || kitSpace()).terrainOf(state, u); }
   function footprint(x, y) { return (KIT_SPACE || kitSpace()).footprint(x, y); }
   function kindsUnder(state, u, x, y) { return (KIT_SPACE || kitSpace()).kindsUnder(state, u, x, y); }
@@ -1205,7 +1203,7 @@
     u.disembarked = true;
     // a gun unhitched is left pointing the way it trailed: back from the vehicle
     if (has(u, 'Stationary Artillery')) u.facing = (veh.facing || 0) + Math.PI;
-    if (pos && !TERRAIN[terrainAt(state, pos.x, pos.y)].impassable
+    if (pos && !barredAt(state, u, pos.x, pos.y)
       && !unitNear(state, pos.x, pos.y, u, 0.2) && unitDist({ x: pos.x, y: pos.y }, veh) <= 4) {
       u.x = pos.x; u.y = pos.y;
     } else {
@@ -1390,7 +1388,7 @@
       drives: drives, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
       fmtPart: fmtPart, has: has, hasOwn: hasOwn, isDestructible: isDestructible, isFlying: isFlying,
       isMachine: isMachine, isOvergrown: isOvergrown, jumps: jumps, leaveAway: leaveAway, occupant: occupant,
-      pathTo: pathTo, pheromoneBonus: pheromoneBonus, rectPointDist: rectPointDist,
+      pathTo: pathTo, pheromoneBonus: pheromoneBonus, reachable: reachable, rectPointDist: rectPointDist,
       resolveAssaultHits: resolveAssaultHits, resolveDamage: resolveDamage, sectionRect: sectionRect,
       shelterOf: shelterOf, shoot: shoot, sizeBonus: sizeBonus, status: status, terrainAt: terrainAt,
       unitDist: unitDist, unitNear: unitNear
@@ -1623,6 +1621,8 @@
   // does this unit have anyone in it who could be named?
   function crewed(u) {
     if (counted(u)) return false;
+    // a squad of drones is machines, however many of them there are: nobody to name
+    if (u.drone || hasOwn(u, 'Drone unit')) return false;
     if (!isMachine(u)) return true;
     return !u.drone && !has(u, 'Turret') && !/Turret/.test(u.group || '');
   }
@@ -1843,7 +1843,7 @@
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
     COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, FACTIONS: FACTIONS, TACTICS: TACTICS,
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,
-    applyRiders: applyRiders, canRide: canRide, freedomDice: freedomDice,
+    applyRiders: applyRiders, canRide: canRide, entryPick: entryPick, freedomDice: freedomDice,
     undisciplined: undisciplined, freeLosses: freeLosses, deathOrGlory: deathOrGlory,
     dugIn: dugIn, nearestFacing: nearestFacing, shotRange: shotRange, shotMinRange: shotMinRange,
     profile: function (k) { return BY_KEY[k]; },
@@ -1867,6 +1867,7 @@
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
+    barredAt: barredAt,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,
     enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,

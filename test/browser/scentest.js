@@ -75,7 +75,7 @@ async function playOne(p, id) {
 
   // deploy whatever still needs placing, then let both AIs fight it out
   await p.evaluate(() => {
-    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
+    const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]')));
     if (b) b.click();
   });
   await p.waitForTimeout(400);
@@ -145,7 +145,7 @@ async function playOne(p, id) {
       const s = window.PMC_STATE();
       return {
         pieces: s.terrain.filter(t => t.kind === 'searchsite').length,
-        props: (s.props || []).filter(q => q.kind === 'searchsite').length,
+        props: ((window.__vc() || {}).props || []).filter(q => q.kind === 'searchsite').length,
         marked: s.terrain.filter(t => t.kind === 'searchsite' && t.checked).length,
         cold: s.terrain.filter(t => t.kind === 'searchsite' && t.cold).length
       };

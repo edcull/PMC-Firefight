@@ -97,6 +97,8 @@
       try { cfg.terrainSetup = localStorage.getItem('pmc-terrainsetup') || undefined; } catch (e) { }
     }
     loadAutoAdvance(cfg.mode);
+    // against the AI, the player looks over the table and modifies the army, or goes on, before deploying
+    if (cfg.mode === 'ai' && cfg.readyUp == null) cfg.readyUp = true;
     resetShow();
     // a demo is for watching: there is nothing to act with, so no Actions tab, and it opens on the results
     document.body.setAttribute('data-battle', cfg.mode || '');
@@ -108,6 +110,9 @@
     wireNet(net);
     net.connect();
     net.begin(cfg, seats);
+    // a demo starts with the camera left alone; Follow can be turned on to watch the action
+    VIEW.startDemoCam();
+    setPaused(false);
     return state;
   }
 
@@ -130,6 +135,7 @@
     watching = false;
     loadAutoAdvance(cfg.mode);
     resetShow();
+    setPaused(false);
     net = new window.PMCNet.Local();
     wireNet(net);
     net.connect();
@@ -280,6 +286,19 @@
     return ['setup', 'camp'].some(function (id) { var x = el(id); return !!x && !x.hidden; });
   }
   window.addEventListener('pmc-menu-closed', function () { stepWatched(); });
+  /* Pause, beside the zoom level in a demo: the activation being drawn plays
+     out, and the next one waits until it is pressed again. */
+  function setPaused(on) {
+    ui.paused = !!on;
+    var b = document.getElementById('demo-pause');
+    if (b) {
+      b.classList.toggle('on', ui.paused);
+      b.setAttribute('aria-pressed', ui.paused ? 'true' : 'false');
+      b.textContent = ui.paused ? 'Play' : 'Pause';
+      b.title = ui.paused ? 'Carry on with the battle' : 'Pause the battle';
+    }
+    if (!ui.paused && state) stepWatched();
+  }
 
   // what happened, played out: replay.js (installed with the modules, below)
 
@@ -324,7 +343,6 @@
   function arrivalLegal(u, p) { return Q.arrivalLegal(u, p); }
   function arrivalWhere(u) { return Q.arrivalWhere(u); }
   function inReserve(side) { return Q.inReserve(side); }
-  function emptyPlatforms(side) { return Q.emptyPlatforms(side); }
   function carriersFor(side) { return Q.carriersFor(side); }
   function boardableFor(v) { return Q.boardableFor(v); }
   function moveBonus(u, a) { return Q.moveBonus(u, a); }
@@ -386,11 +404,15 @@
     send({ k: 'select', id: u.id });
     revealConsole();
   }
-  function doShoot(t) { send({ k: 'target', id: t.id }); }
-  function doAssault(t) { send({ k: 'target', id: t.id }); }
-  function doDesignate(t) { send({ k: 'target', id: t.id }); }
-  function doHack(t) { send({ k: 'target', id: t.id }); }
-  function doSupport(t) { send({ k: 'target', id: t.id }); }
+  /* A target picked: the odds come off the board at once, not after the shots
+     have been drawn (the targets are only read back from the rules once the
+     replay is over, and read back as they were if the pick was refused). */
+  function aimAt(t) { ui.targets = []; drawBoard(); send({ k: 'target', id: t.id }); }
+  function doShoot(t) { aimAt(t); }
+  function doAssault(t) { aimAt(t); }
+  function doDesignate(t) { aimAt(t); }
+  function doHack(t) { aimAt(t); }
+  function doSupport(t) { aimAt(t); }
   function doEmbark(t) { send({ k: 'target', id: t.id }); }
   function doTeleport(tp, t) { send({ k: 'target', id: t.id }); }
   function finishTeleport(tp, t) { send({ k: 'target', id: t.id }); }
@@ -421,7 +443,7 @@
   function unloadBefore(veh, u) { send({ k: 'unload', hull: veh.id, unit: u.id }); }
   function holdInsertion() { send({ k: 'holdinsert' }); }
   function holdArrival() { send({ k: 'holdarrive' }); }
-  function doSteady(t) { send({ k: 'target', id: t.id }); }
+  function doSteady(t) { aimAt(t); }
   // a building, and which section of it
   function doEnter(u, s) { send({ k: 'enter', piece: state.terrain.indexOf(s.piece), sec: s.sec || 0 }); }
   function doExitBld(u, spot) { send({ k: 'exitbld', x: spot.x, y: spot.y }); }
@@ -636,7 +658,8 @@
     ZOOMS.push(fit);
     ZOOM_STEPS.forEach(function (z) { if (z > fit + 0.02) ZOOMS.push(z); });
     if (cam.z <= fit) cam.z = fit;
-    if (ZOOMS.indexOf(cam.z) < 0) cam.z = nearestZoom(cam.z);
+    // (a zoom still easing to a step, framing a shot, is left to get there)
+    if (ZOOMS.indexOf(cam.z) < 0 && cam.zGoal == null) cam.z = nearestZoom(cam.z);
     return true;
   }
 
@@ -786,7 +809,7 @@
     window.addEventListener('focus', function () { restoreCanvases(false); });
   }
 
-  // the ways in: hooks.js (installed with the modules, below)
+  // the ways in: hooks.js and testhooks.js (installed with the modules, below)
   /* ================= the modules =================
      The parts of the board that live in files of their own, installed here —
      after everything they borrow of this closure is declared — each with the
@@ -801,6 +824,7 @@
     get drawPanel() { return drawPanel; }, get drawStats() { return drawStats; },
     get feedHosts() { return feedHosts; }, get fitView() { return fitView; },
     get focusUnit() { return focusUnit; }, get handsOff() { return handsOff; },
+    get fitShot() { return VIEW.fitShot; }, get unfitShot() { return VIEW.unfitShot; },
     get landUnit() { return landUnit; }, get lookAtDeployment() { return lookAtDeployment; },
     get paintStructures() { return paintStructures; }, get playAssault() { return playAssault; },
     get playShooting() { return playShooting; }, get playStrafe() { return playStrafe; },
@@ -816,15 +840,16 @@
   var replaying = REPLAY.replaying, resetShow = REPLAY.resetShow, show = REPLAY.show;
   var shownAs = REPLAY.shownAs, stepWatched = REPLAY.stepWatched;
 
-  /* ---------- hooks.js: the ways in ----------
-     The board it borrows from: getters for what changes as the game runs,
-     and the functions and fixed values it uses. */
-  window.PMCHooks({
+  /* ---------- hooks.js: the ways in, and testhooks.js: the tests' ----------
+     The board they borrow from: getters for what changes as the game runs,
+     and the functions and fixed values they use. testhooks.js is only there
+     as the page runs from the repository; the published builds leave it out. */
+  var hookBoard = {
     get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
-    get held() { return held; }, get loop() { return loop; }, get muster() { return muster; },
+    get held() { return held; }, get loop() { return loop; }, get muster() { return muster; }, get shownAs() { return shownAs; },
     get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
-    get streamLength() { return streamLength; }, get addFx() { return addFx; },
+    get streamLength() { return streamLength; }, get addFx() { return addFx; }, get lineUp() { return DRAW.lineUp; },
     get anyArriving() { return anyArriving; }, get applyForce() { return applyForce; },
     get arriving() { return arriving; }, get bufferFromCanvas() { return bufferFromCanvas; },
     get burrowStep() { return burrowStep; }, get cancelPreview() { return cancelPreview; },
@@ -855,14 +880,16 @@
     select: select, send: send, specialsFor: specialsFor, startBattle: startBattle, terrainAct: terrainAct,
     wireNet: wireNet, FX: FX, H: H, ISO: ISO, R: R, W: W, anims: anims, cam: cam, el: el, fx: fx,
     idleCbs: idleCbs, resQueue: resQueue, show: show, ui: ui
-  });
+  };
+  window.PMCHooks(hookBoard);
+  if (window.PMCTestHooks) window.PMCTestHooks(hookBoard);
 
   /* ---------- play.js: moves and shots played on the board ----------
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var PLAY = window.PMCPlay({
     get held() { return held; }, get pctx() { return pctx; }, get state() { return state; }, get vc() { return vc(); },
-    get handsOff() { return handsOff; }, get render() { return render; }, dispX: dispX, dispY: dispY,
+    get handsOff() { return handsOff; }, get camOff() { return VIEW.camOff; }, get followOn() { return followOn; }, get render() { return render; }, dispX: dispX, dispY: dispY,
     nowMs: nowMs, onTable: onTable, startLoop: startLoop, FX: FX, ISO: ISO, R: R, SFX: SFX,
     STANDING: STANDING, anims: anims
   });
@@ -892,8 +919,8 @@
     get canvas() { return canvas; }, get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get closeDrawer() { return closeDrawer; }, get closeRes() { return closeRes; },
     get drawBoard() { return drawBoard; }, get drawerEl() { return drawerEl; }, get esc() { return esc; },
-    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; },
-    get insertionMine() { return insertionMine; }, get panBy() { return panBy; },
+    get camLocked() { return camLocked; }, get fitView() { return fitView; }, get handsOff() { return handsOff; }, get setFollow() { return setFollow; }, get followOn() { return followOn; }, setPaused: setPaused,
+    get insertionMine() { return insertionMine; }, get panBy() { return panBy; }, get faceAsked() { return DRAW.faceAsked; },
     get render() { return render; }, get returnHome() { return returnHome; },
     get setHint() { return setHint; }, get setZoom() { return setZoom; }, get tip() { return tip; },
     get viewRect() { return viewRect; }, get slack() { return slack; }, get zoomAt() { return zoomAt; },
@@ -958,6 +985,7 @@
     get repaintProp() { return repaintProp; }, get roundRect() { return roundRect; },
     get sideInk() { return sideInk; }, get sideRGB() { return sideRGB; },
     get terrainMark() { return terrainMark; }, get viewRect() { return viewRect; }, activeUnits: activeUnits,
+    get seats() { return seats; }, get watching() { return watching; },
     addFx: addFx, arrivalQueued: arrivalQueued, arriving: arriving, boxesFor: boxesFor,
     clonePiece: clonePiece, curArea: curArea, dispX: dispX, dispY: dispY, drawFx: drawFx, fitGhost: fitGhost,
     insertionMine: insertionMine, isAI: isAI, liftOf: liftOf, nowMs: nowMs, onTable: onTable,
@@ -972,6 +1000,11 @@
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
   var VIEW = window.PMCView({
+    get Q() { return Q; },
+    replaying: function () { return replaying(); },
+    // result cards still to be read (a rally's rolls, say), or one open now
+    cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
+    deployWhere: deployWhere, roleSentence: roleSentence,
     get FORCE_NOUN() { return FORCE_NOUN; }, get ID_NOUN() { return ID_NOUN; },
     get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; }, get anims() { return anims; },
     get ctx() { return ctx; }, get muster() { return muster; }, get pctx() { return pctx; },
@@ -996,7 +1029,8 @@
   var repaintProp = VIEW.repaintProp, returnHome = VIEW.returnHome, scheduleReturn = VIEW.scheduleReturn;
   var setHome = VIEW.setHome, setZoom = VIEW.setZoom, sideInk = VIEW.sideInk, sideRGB = VIEW.sideRGB;
   var slack = VIEW.slack, terrainMark = VIEW.terrainMark, viewRect = VIEW.viewRect, zoomAt = VIEW.zoomAt;
-  var zoomLabel = VIEW.zoomLabel;
+  var zoomLabel = VIEW.zoomLabel, followOn = VIEW.followOn, setFollow = VIEW.setFollow, showFollow = VIEW.showFollow;
+  showFollow();
 
   /* ---------- panels.js: the panels ----------
      The board it borrows from: getters for what changes as the game runs,
@@ -1004,13 +1038,16 @@
   var PANELS = window.PMCPanels({
     get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get vc() { return vc(); }, get seats() { return seats; },
     get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
+    replaying: function () { return replaying(); },
+    // result cards still to be read (a rally's rolls, say), or one open now
+    cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
     cancelPreview: cancelPreview, carriersFor: carriersFor, chooseAction: chooseAction,
     cmdOfferCard: cmdOfferCard, commitMove: commitMove, curArea: curArea, deployNext: deployNext,
     deployRoster: deployRoster, deployWhere: deployWhere, deploymentDone: deploymentDone,
-    digFacings: digFacings, digPreview: digPreview, doAssault: doAssault, doBreach: doBreach,
+    digFacings: digFacings, digPreview: digPreview, faceAsked: DRAW.faceAsked, doAssault: doAssault, doBreach: doBreach,
     doDemolish: doDemolish, doDesignate: doDesignate, doEnter: doEnter, doHack: doHack, doShoot: doShoot,
-    doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard, emptyPlatforms: emptyPlatforms,
+    doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard,
     holdArrival: holdArrival, holdInsertion: holdInsertion, hud: hud, inReserve: inReserve,
     insertionCard: insertionCard, isAI: isAI, kyfCard: kyfCard, liftOf: liftOf, loadBefore: loadBefore,
     martyrCard: martyrCard, mineCard: mineCard, movePreviewCard: movePreviewCard, mySide: mySide,

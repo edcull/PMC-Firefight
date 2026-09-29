@@ -103,7 +103,7 @@ console.log('\nLast Stand (p. 88): "once per battle the unit can remove all its 
   e.intent(side, { k: 'select', id: last.id });
   step(e, side, last);
   // the rally cards before it are walked on until the question comes
-  for (let i = 0; i < 40 && !st.standAsk && u.alive && !u.camp.once.lastStand; i++) e.intent(side, { k: 'step' });
+  for (let i = 0; i < 40 && !st.standAsk && u.alive && !u.camp.once.lastStand; i++) e.intent(st.endAsk ? st.endAsk.side : side, { k: st.endAsk ? 'enddone' : 'step' });
   ok('about to flee, the player is asked', !!st.standAsk && st.standAsk.unit === u.id && u.alive,
     st.standAsk ? u.sp + ' SP against Morale ' + st.standAsk.morale : 'not asked: ' + st.log.slice(-4).map((l) => l.text).join(' / '));
   const ans = e.intent(side, { k: 'stand' });
@@ -116,9 +116,129 @@ console.log('\nLast Stand (p. 88): "once per battle the unit can remove all its 
   st.units.forEach((x) => { if (x !== last && x !== u) x.activated = true; });
   e.intent(side, { k: 'select', id: last.id });
   step(e, side, last);
-  for (let i = 0; i < 40 && !st.standAsk && u.alive; i++) e.intent(side, { k: 'step' });
+  for (let i = 0; i < 40 && !st.standAsk && u.alive; i++) e.intent(st.endAsk ? st.endAsk.side : side, { k: st.endAsk ? 'enddone' : 'step' });
   e.intent(side, { k: 'nostand' });
   ok('...or letting it go, it flees', !u.alive && u.fled && !u.camp.once.lastStand);
+})();
+
+/* ---- the AI spends them too ----
+   A demo (both sides the AI), stepped one activation at a time, between two
+   fixed forces so the squads and their shots are the same whatever the dice. */
+const FORCE = ['cmd2', 'regular', 'regular', 'regular', 'veterans', 'veterans', 'recon'];
+function aiBattle() {
+  const e = Engine.create();
+  e.start({
+    tier: 3, pl: 1, scenario: 'meeting', mode: 'demo', planet: 'barren',
+    armyA: FORCE.slice(), armyB: FORCE.slice(),
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
+  });
+  return e;
+}
+// out of everyone's way, on the table: far corners, apart
+function aside(st, units) { units.forEach((x, i) => { x.x = 2 + (i % 4) * 2; x.y = 2 + Math.floor(i / 4) * 2; }); }
+// a squad of veterans of the side whose go it is, the only one left to act, given an honour
+function aiLast(e, flag) {
+  const st = e.state(), side = st.activeSide;
+  const u = st.units.find((x) => x.side === side && x.key === 'veterans' && x.alive);
+  u.activated = false; u.reserve = false; u.aboard = null;
+  st.units.forEach((x) => { if (x.side === side && x !== u) x.activated = true; });
+  u.camp = { flags: {}, once: {} };
+  u.camp.flags[flag] = true;
+  return { st, side, u };
+}
+const aiStep = (e) => e.intent('A', { k: 'step' });
+
+console.log('\nThe AI and Last Stand');
+(function () {
+  const e = aiBattle();
+  const { st, u } = aiLast(e, 'lastStand');
+  u.sp = 2 * u.morale + 1;                   // Broken: it cannot act at all
+  ok('a Broken unit is not eligible to act', !e.query.eligible(st.activeSide).includes(u));
+  aiStep(e);
+  ok('...so the AI makes its stand when its side has the go', u.camp.once.lastStand === true && u.alive,
+    u.sp + ' SP; ' + st.log.slice(-3).map((l) => l.text).join(' / '));
+  ok('...and the unit then acts', u.activated);
+})();
+(function () {
+  const e = aiBattle();
+  const { st, u } = aiLast(e, 'lastStand');
+  u.sp = u.morale + 1;                       // Suppressed
+  // one enemy squad a few inches off, in the open: in range
+  const foe = st.units.find((x) => x.side !== u.side && x.key === 'regular');
+  foe.reserve = false; foe.aboard = null;
+  st.terrain.length = 0;
+  u.x = 30; u.y = 18; foe.x = 36; foe.y = 18; u.bld = foe.bld = u.sec = foe.sec = null;
+  const ready = R.enemyWithinRange(st, u) && !R.deathOrGlory(st, u);
+  aiStep(e);
+  ok('a Suppressed unit with an enemy in range stands to fight on', ready && u.camp.once.lastStand === true,
+    ready ? st.log.slice(-3).map((l) => l.text).join(' / ') : 'the enemy was not in range');
+})();
+(function () {
+  // Broken on the other side's go: in the End phase it stands rather than run
+  const e = aiBattle();
+  const st = e.state(), side = st.activeSide, other = side === 'A' ? 'B' : 'A';
+  const u = st.units.find((x) => x.side === other && x.cls === 'infantry' && x.alive && x.x >= 0);
+  u.camp = { flags: { lastStand: true }, once: {} };
+  u.sp = 2 * u.morale + 1;
+  // the other side has nothing left to do this turn, and this side one unit
+  const last = e.query.eligible(side)[0];
+  st.units.forEach((x) => { if (x !== last) x.activated = true; });
+  const turn = st.turn;
+  for (let i = 0; i < 20 && st.turn === turn && !st.over; i++) aiStep(e);
+  ok('a Broken unit stands in the End phase rather than run', u.alive && u.camp.once.lastStand === true &&
+    st.log.some((l) => /Last Stand rather than run/.test(l.text)), st.log.filter((l) => l.text.indexOf(u.label) >= 0).slice(-2).map((l) => l.text).join(' / '));
+})();
+(function () {
+  const e = aiBattle();
+  const { st, u } = aiLast(e, 'lastStand');
+  u.sp = u.morale + 1;
+  // every enemy far out of range: nothing to fight
+  aside(st, st.units.filter((x) => x.side !== u.side && x.alive && x.x >= 0));
+  u.x = 46; u.y = 34; u.bld = u.sec = null;
+  const far = !R.enemyWithinRange(st, u);
+  aiStep(e);
+  ok('a Suppressed unit with no enemy in range keeps its stand for later', far && !u.camp.once.lastStand,
+    far ? '' : 'the enemy was still in range');
+})();
+
+console.log('\nThe AI and Adrenaline Rush');
+(function () {
+  const e = aiBattle();
+  const { st, side, u } = aiLast(e, 'adrenaline');
+  // an enemy squad in the open, well inside half range: a good shot
+  const foe = st.units.find((x) => x.side !== side && x.key === 'regular');
+  foe.reserve = false; foe.aboard = null;
+  aside(st, st.units.filter((x) => x.side !== side && x !== foe && x.alive && x.x >= 0));
+  st.terrain.length = 0;
+  u.x = 30; u.y = 18; foe.x = 35; foe.y = 18; foe.sp = 0; u.bld = foe.bld = u.sec = foe.sec = null;
+  aiStep(e);
+  ok('with a good shot, the AI declares its Rush', u.camp.once.adrenaline === true,
+    st.log.slice(-4).map((l) => l.text).join(' / '));
+  ok('...and after its first action the unit goes again', st.over || (st.rush === u.id && !u.activated && st.activeSide === side));
+  if (!st.over) aiStep(e);
+  ok('...its second action ends the activation', st.over || (u.activated && st.rush === null));
+  ok('the log says so', st.log.some((l) => /goes again — Adrenaline Rush/.test(l.text)));
+})();
+(function () {
+  const e = aiBattle();
+  const { st, side, u } = aiLast(e, 'adrenaline');
+  // nothing on the table to shoot at: the Rush is kept
+  aside(st, st.units.filter((x) => x.side !== side && x.alive && x.x >= 0));
+  u.x = 46; u.y = 34; u.bld = u.sec = null;
+  aiStep(e);
+  ok('with no good shot, the Rush is kept', u.activated && !u.camp.once.adrenaline);
+})();
+(function () {
+  // a whole battle with every unit honoured: the AI spends both, and it still ends
+  const e = aiBattle();
+  e.state().units.forEach((x) => { x.camp = { flags: { adrenaline: true, lastStand: true }, once: {} }; });
+  let steps = 0;
+  while (!e.over() && steps < 4000 && aiStep(e).ok) steps++;
+  const st = e.state();
+  const rushed = st.units.filter((x) => x.camp.once.adrenaline).length;
+  const stood = st.units.filter((x) => x.camp.once.lastStand).length;
+  ok('a whole battle: the AI spends Rushes', rushed > 0, rushed + ' of ' + st.units.length);
+  ok('...and the battle still plays out', e.over(), steps + ' steps, turn ' + st.turn + '; ' + stood + ' Last Stands made');
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

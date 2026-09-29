@@ -253,10 +253,12 @@
     function dropOff(state, veh, u) {
       u.aboard = null;
       u.disembarked = true;
-      for (var t = 0; t < 60; t++) {
-        var ang = Math.random() * Math.PI * 2, d = 2 * UNIT_R + Math.random() * 2;
+      for (var t = 0; t < 120; t++) {
+        // close by first, and further out while nothing near will do (a pool, a crowd)
+        var ang = Math.random() * Math.PI * 2, d = 2 * UNIT_R + Math.random() * (2 + Math.max(0, t - 40) * 0.1);
         var p = clampBoard({ x: veh.x + Math.cos(ang) * d, y: veh.y + Math.sin(ang) * d });
-        if (TERRAIN[terrainAt(state, p.x, p.y)].impassable) continue;
+        var tk = TERRAIN[terrainAt(state, p.x, p.y)];
+        if (tk.impassable || (tk.shallow && hasOwn(u, 'Stationary Artillery'))) continue;   // a gun is not left in water
         if (unitNear(state, p.x, p.y, u, 0.2)) continue;
         u.x = p.x; u.y = p.y;
         return true;

@@ -57,6 +57,8 @@
     function terrainBars(u, kind) {
       var t = TERRAIN[kind];
       if (isFlying(u) || flyInf(u) || jumps(u)) return false;
+      // Stationary Artillery counts shallow water as impassable (p. 95)
+      if (t.shallow && hasOwn(u, 'Stationary Artillery')) return true;
       /* Riders (p. 94) cannot cross a linear obstacle nor occupy a building: bikes,
          beasts and grav sleds go around. */
       if (hasOwn(u, 'Riders')) {

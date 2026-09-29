@@ -36,7 +36,7 @@
       if (u.carryMoved && id !== 'embark' && id !== 'disembark') {
         return { on: false, hint: 'Driven first — now Embark or Disembark (or press any action to stop there).' };
       }
-      if (u.supportUsed && ['embark', 'disembark', 'regroup'].indexOf(id) < 0) {
+      if (u.supportUsed && ['embark', 'disembark', 'regroup', 'skip'].indexOf(id) < 0) {
         return { on: false, hint: 'Supporting Fire given — load or unload, or pass.' };
       }
       if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
@@ -189,6 +189,8 @@
           if (!ta.length) return { on: false, hint: 'Auxiliary weapons reach 12" — nothing in range.' };
           return { on: true, hint: 'Auxiliary weapons: FP 1, Range 12", no special rules. The only shot a suppressed unit may take.' };
         }
+        case 'skip':
+          return { on: true, hint: 'Skip: ' + u.name + ' does nothing this turn — it stays where it is, its activation is spent, and play passes on.' };
         case 'regroup':
           if (machine) {
             return u.damage
@@ -394,6 +396,14 @@
       u.vortexNow = false;                               // only the Time Vortex actions switch it on
 
       if (id === 'rush' || id === 'laststand') { doOnce(u, id); return; }
+      // Skip: nothing done, nothing rolled (not even Unreliable's D6), the activation spent
+      if (id === 'skip') {
+        u.activated = true;
+        closeDrawer();
+        logLine('note', u.label + ' holds where it is and skips its action.');
+        endActivation(u);
+        return;
+      }
       if (id === 'checkarea') { doCheckArea(u); return; }
       if (id === 'sabotage') { doSabotage(u); return; }
       // Unreliable: a D6 before any action, and on a 1 the unit simply stands there

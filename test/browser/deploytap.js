@@ -34,6 +34,8 @@ async function run(p, label, scen, shotName) {
   for (let i = 0; i < 8; i++) { await drain(p); await p.waitForTimeout(100); }
   // a Hostile takeover defender digs in first: the auto button, as a player in a hurry would
   if (await p.evaluate(() => { const b = document.querySelector('[data-act="placeauto"]'); if (b) b.click(); return !!b; })) await p.waitForTimeout(400);
+  await p.evaluate(() => { if (window.PMC_STATE().deployReady) window.__sendIntent({ k: 'deployready' }); });   // the list stands: on to the deployment
+  await p.waitForTimeout(200);
 
   const start = await p.evaluate(() => {
     const s = window.PMC_STATE();

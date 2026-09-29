@@ -16,7 +16,7 @@
         fmtPart = E.fmtPart, has = E.has, hasOwn = E.hasOwn, isDestructible = E.isDestructible,
         isFlying = E.isFlying, isMachine = E.isMachine, isOvergrown = E.isOvergrown, jumps = E.jumps,
         leaveAway = E.leaveAway, occupant = E.occupant, pathTo = E.pathTo, pheromoneBonus = E.pheromoneBonus,
-        rectPointDist = E.rectPointDist, resolveAssaultHits = E.resolveAssaultHits,
+        reachable = E.reachable, rectPointDist = E.rectPointDist, resolveAssaultHits = E.resolveAssaultHits,
         resolveDamage = E.resolveDamage, sectionRect = E.sectionRect, shelterOf = E.shelterOf,
         shoot = E.shoot, sizeBonus = E.sizeBonus, status = E.status, terrainAt = E.terrainAt,
         unitDist = E.unitDist, unitNear = E.unitNear;
@@ -41,13 +41,17 @@
        what slows it, not measured through a wall. The walk stops 1" short of the
        enemy like any move; the last step into contact is the straight gap left.
        Flyers, jump troops and anything fighting from inside a building keep the
-       straight line. Returns a function giving, for a target, { cost, path } — or
-       null when the charge cannot reach it. */
+       straight line. An Overgrown bug on the ground drives there as a hull does
+       (p. 116), round the buildings it cannot enter and paying for its turns.
+       Returns a function giving, for a target, { cost, path } — or null when
+       the charge cannot reach it. */
     function chargeReach(state, a, allowance) {
       // a unit not on the table (in reserve, or aboard a transport) cannot charge anything from there
       if (a.x < 0 || a.y < 0 || a.aboard) return function () { return null; };
-      var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a) || drives(a);
-      var f = straight ? null : field(state, a, allowance);
+      var straight = a.bld || isFlying(a) || flyInf(a) || jumps(a);
+      var f = straight ? null : drives(a) ? { seen: reachable(state, a, allowance).map(function (p) {
+        return { i: Math.round(p.x / STEP), j: Math.round(p.y / STEP), c: p.spent };
+      }) } : field(state, a, allowance);
       /* A scenario's bounds on where a unit may go hold for a charge as for any
          move (pp. 151, 154): the OpFor may not charge into Evacuation's safe zone,
          nor the commando out past Protecting the VIP's 12". Judged where the charge
@@ -173,6 +177,10 @@
       /* Into base-to-base contact — against a garrison, up against its wall. A unit
          going at the next section of its own building stays where it is. */
       var held = t.bld ? { piece: t.bld, sec: t.sec || 0 } : null;
+      /* ...from the end of the route it took, not along the straight line from
+         where it began: that line may run through the building it went round. */
+      var went = opts.path && opts.path.length ? opts.path[opts.path.length - 1] : null;
+      if (went && !a.bld) { a.x = went.x; a.y = went.y; }
       if (a.bld) { /* already in contact, wall to wall */ }
       else if (held) {
         var q0 = sectionRect(t);
@@ -403,7 +411,7 @@
       fmtPart = L.fmtPart; has = L.has; hasOwn = L.hasOwn; isDestructible = L.isDestructible;
       isFlying = L.isFlying; isMachine = L.isMachine; isOvergrown = L.isOvergrown; jumps = L.jumps;
       leaveAway = L.leaveAway; occupant = L.occupant; pathTo = L.pathTo; pheromoneBonus = L.pheromoneBonus;
-      rectPointDist = L.rectPointDist; resolveAssaultHits = L.resolveAssaultHits;
+      reachable = L.reachable; rectPointDist = L.rectPointDist; resolveAssaultHits = L.resolveAssaultHits;
       resolveDamage = L.resolveDamage; sectionRect = L.sectionRect; shelterOf = L.shelterOf; shoot = L.shoot;
       sizeBonus = L.sizeBonus; status = L.status; terrainAt = L.terrainAt; unitDist = L.unitDist;
       unitNear = L.unitNear;

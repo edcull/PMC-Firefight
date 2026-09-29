@@ -278,6 +278,23 @@ async function main() {
 
   /* ---- deploy and fight ---- */
   const both = { A: a, B: b };
+  /* Each player looks over the table and modifies their army, or goes on;
+     nobody deploys while the other is still choosing. */
+  const choosing = a.state.deployReady && Object.keys(a.state.deployReady).filter((s) => a.state.deployReady[s] === false);
+  if (choosing && choosing.length === 2) {
+    a.send('intent', { intent: { k: 'deployready' } });
+    await a.settle(60);
+    a.send('intent', { intent: { k: 'autodeploy' } });
+    await a.settle(60);
+    ok('a player cannot deploy while the other is still modifying their army',
+      a.refusals.some((r) => r.intent.k === 'autodeploy') && !a.state.units.some((u) => u.side === 'A' && u.x >= 0));
+    b.send('intent', { intent: { k: 'deployready' } });
+    await a.settle(60);
+    ok('...and may once both have gone on', !a.state.deployReady);
+  } else {
+    ['A', 'B'].forEach((sd) => { if (choosing && choosing.includes(sd)) both[sd].send('intent', { intent: { k: 'deployready' } }); });
+    await a.settle(60);
+  }
   let guard = 0;
   while (a.state && a.state.phase === 'deploy' && guard++ < 400) {
     const side = a.state.ui.placing;
@@ -314,6 +331,18 @@ async function main() {
     const st = a.state;
     if (!st) break;
     const sel = st.ui;
+    // a vehicle just come on: it keeps the way it was offered
+    if (st.faceAsk) {
+      both[st.faceAsk.side].send('intent', { intent: { k: 'vfaceall' } });
+      await both[st.faceAsk.side].answered();
+      continue;
+    }
+    // the End phase: each seat carries on, nobody withdrawing or giving up
+    if (st.endAsk) {
+      both[st.endAsk.side].send('intent', { intent: { k: 'enddone' } });
+      await both[st.endAsk.side].answered();
+      continue;
+    }
     if (sel.insertion) {
       const side = sel.insertion.side;
       const spot = (sel.insertion.spots || [])[0];

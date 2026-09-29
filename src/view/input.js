@@ -309,6 +309,13 @@
       var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 
       if (B.state.phase === 'terrain') { terrainTap(p); return; }
+      // a vehicle just put down: a tap round it chooses the way it faces
+      var fu = B.faceAsked();
+      if (fu) {
+        var fx = p.x - dispX(fu), fy = p.y - dispY(fu);
+        if (Math.hypot(fx, fy) > 0.4) send({ k: 'vface', dir: Math.atan2(fy, fx) });
+        return;
+      }
       // Dig in!: a tap round the gun chooses the way it faces
       if (ui.mode === 'digface' && ui.selected) {
         var dgx = p.x - dispX(ui.selected), dgy = p.y - dispY(ui.selected);
@@ -327,6 +334,9 @@
       if (B.state.phase === 'deploy') {
         var pending = deployNext();
         if (!pending) return;
+        // before continuing to the deployment, the table is looked over, not placed on
+        var rdy = B.state.deployReady;
+        if (rdy && (rdy[pending.side] === false || Object.keys(rdy).some(function (s) { return rdy[s] === false; }))) return;
         /* Tapping a model already on the table picks that one up instead — the
            natural way to shuffle a line before the first turn. */
         var under = deployRoster(pending.side).filter(function (u) {
@@ -356,7 +366,7 @@
            a hopeless tap is answered here, where the camera is, rather than
            coming back as a refusal with nothing to look at. */
         var clear = deployOK(pending.side, p.x, p.y, pending) &&
-          !R.TERRAIN[R.terrainAt(B.state, p.x, p.y)].impassable &&
+          !R.barredAt(B.state, pending, p.x, p.y) &&
           !R.unitNear(B.state, p.x, p.y, pending, 1);
         var nudged = false;
         if (!clear) {
@@ -632,6 +642,10 @@
       document.addEventListener('keydown', onKey);
 
       el('viewctl').addEventListener('click', function (e) {
+        // Follow: whether the camera goes over to the other side's units as they act
+        if (e.target.closest('[data-follow]')) { B.setFollow(!B.followOn()); if (SFX) SFX.click(); return; }
+        // Pause (a demo only): hold the battle after the activation being drawn
+        if (e.target.closest('[data-pause]')) { B.setPaused(!B.ui.paused); if (SFX) SFX.click(); return; }
         var b = e.target.closest('[data-zoom]'); if (!b || !B.state || camLocked()) return;
         var z = b.getAttribute('data-zoom');
         if (z === 'in') setZoom(1);

@@ -84,7 +84,7 @@ async function pastFronts(p) {
   // the revolt is named on the founding screen now, beside its colours
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Free Colonies'; });
   let txt = await body(p);
-  check('the founding screen speaks for a revolt', await p.evaluate(() => /the revolt/i.test(document.querySelector('#camp-body .found-units .muster-head').textContent)));
+  check('the founding screen speaks for a revolt', await p.evaluate(() => /Insurgents/.test(document.querySelector('#camp-body .found-units .muster-head .armypill').textContent)));
   check('...and asks what the revolt calls itself',
     await p.evaluate(() => !!document.getElementById('found-name')));
   check('...and for the colours it fights in',
@@ -186,13 +186,13 @@ async function pastFronts(p) {
   await p.evaluate(() => { document.querySelector('#camp-body [data-take-offer]').click(); });
   await p.waitForTimeout(250);
   txt = await body(p);
-  check('a Battle Tier was rolled', /Battle Tier/.test(txt), txt.split('\n')[1]);
-  check('a scenario was rolled',
-    /Meeting engagement|Secure and control|Find and secure|Invasion|Demolish|Hostile takeover/.test(txt),
-    (txt.match(/Meeting engagement|Secure and control|Find and secure|Invasion|Demolish|Hostile takeover/) || [])[0]);
-  await clickText(p, '[Ff][Ii][Ll][Ll] [Tt][Hh][Ee] [Ll][Ii][Ss][Tt]');
+  // the scenario and the opponent were read on the offer: the force screen does not repeat them
+  check('the force screen does not repeat the scenario or the opponent', !/Against |Scenario D6|As the attacker|As the defender|Needs at least/.test(txt),
+    txt.split('\n').slice(0, 3).join(' / '));
+  await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
+  await p.waitForTimeout(200);
   txt = await body(p);
-  check('the list filled legally', /A legal Battle Tier/.test(txt), (txt.match(/\d+ \/ \d+/) || [])[0]);
+  check('the list filled legally', await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button.start')][0]; return !!b && b.getAttribute('aria-disabled') !== 'true'; }), (txt.match(/\d+ \/ \d+/) || [])[0]);
   await shot(p, 'rebel-contract.png');
   check('the field can be taken', await clickText(p, '[Tt][Aa][Kk][Ee] [Tt][Hh][Ee] [Ff][Ii][Ee][Ll][Dd]'));
   await p.waitForTimeout(900);
@@ -214,7 +214,7 @@ async function pastFronts(p) {
 
   for (let i = 0; i < 14; i++) { await drain(p); await p.waitForTimeout(120); }
   await p.evaluate(() => {
-    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
+    const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]')));
     if (b) b.click();
   });
   await p.waitForTimeout(300);

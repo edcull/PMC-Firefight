@@ -8,7 +8,7 @@
   'use strict';
   root.PMCDossierHub = function (E) {
     var C = E.C, ICON_ABANDON = E.ICON_ABANDON, ICON_BATTLES = E.ICON_BATTLES, ICON_FORCES = E.ICON_FORCES,
-        ICON_LOAD = E.ICON_LOAD, ICON_MANAGE = E.ICON_MANAGE, ICON_MEMORIAL = E.ICON_MEMORIAL,
+        ICON_LOAD = E.ICON_LOAD, ICON_MANAGE = E.ICON_MANAGE, memorialIcon = E.memorialIcon,
         ICON_SAVE = E.ICON_SAVE, ROMAN = E.ROMAN, Store = E.Store, cmodal = E.cmodal, coin = E.coin,
         colourName = E.colourName, colourOf = E.colourOf, dossierPanel = E.dossierPanel,
         entryCard = E.entryCard, esc = E.esc, memorialList = E.memorialList, profile = E.profile,
@@ -21,27 +21,32 @@
           'scar over and occasionally fall apart. ' +
           'Units earn experience, take promotions and Battle Honours, collect trauma, and are ' +
           'sometimes struck off the dossier for good.</p>';
+        function opt(v, t, want) { return '<option value="' + v + '"' + (want === v ? ' selected' : '') + '>' + t + '</option>'; }
+        // beside each choice, its army's pill: tapped, the army's rules
+        var pa = { faction: E.wantFaction, doctrines: [] }, pb = { faction: E.wantB, doctrines: [] };
         h += '<div class="field"><label for="camp-faction">What you are running</label>' +
           '<select id="camp-faction">' +
-          '<option value="pmc">A private military company — paid in credits, built around doctrines</option>' +
-          '<option value="rebel">An insurgent revolt — paid in Influence Points, built around Paths</option>' +
-          '<option value="bugs">A Space Bug swarm — paid in Resource Points, built around Evolutionary Pathways</option>' +
-          '<option value="xeno">A Xenotripod tribe — paid in Territorial Points, built around Tribe Advancements</option>' +
-          '</select></div>';
+          opt('pmc', 'A private military company \u2014 paid in credits, built around doctrines', E.wantFaction) +
+          opt('rebel', 'An insurgent revolt \u2014 paid in Influence Points, built around Paths', E.wantFaction) +
+          opt('bugs', 'A Space Bug swarm \u2014 paid in Resource Points, built around Evolutionary Pathways', E.wantFaction) +
+          opt('xeno', 'A Xenotripod tribe \u2014 paid in Territorial Points, built around Tribe Advancements', E.wantFaction) +
+          '</select><div class="carch newarch">' + armyPill(pa, 'armynew') + '</div></div>';
         h += '<div class="field"><label for="camp-mode">How you will play</label><select id="camp-mode">' +
-          '<option value="solo">Solo — against a rival force that grows battle by battle</option>' +
-          '<option value="hotseat"' + (E.wantMode === 'hotseat' ? ' selected' : '') + '>Hotseat — two dossiers, two players, one screen</option>' +
+          opt('solo', 'Solo \u2014 against a rival force that grows battle by battle', E.wantMode) +
+          opt('hotseat', 'Hotseat \u2014 two dossiers, two players, one screen', E.wantMode) +
           '</select></div>';
         /* Solo: the forces on the world are always rolled, and each grows into its
            own character from the doctrines it draws. Hotseat: there are no rolled
            rivals, only the second player's force, so this asks what kind that is. */
         h += '<div class="field" id="camp-bwrap"' + (E.wantMode === 'hotseat' ? '' : ' hidden') + '><label for="camp-bfaction">What Player 2 is running</label>' +
           '<select id="camp-bfaction">' +
-          '<option value="pmc">A private military company</option>' +
-          '<option value="rebel">An insurgent revolt</option>' +
-          '<option value="bugs">A Space Bug swarm</option>' +
-          '<option value="xeno">A Xenotripod tribe</option>' +
-          '</select></div>';
+          opt('pmc', 'A private military company', E.wantB) +
+          opt('rebel', 'An insurgent revolt', E.wantB) +
+          opt('bugs', 'A Space Bug swarm', E.wantB) +
+          opt('xeno', 'A Xenotripod tribe', E.wantB) +
+          '</select><div class="carch newarch">' + armyPill(pb, 'armynewb') + '</div></div>';
+        h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
+        h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));
         h += '<button class="start" data-go="newcamp">Raise the force</button>';
         h += '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button>' +
           '<button class="lnk" data-go="import">Load a save file</button>' +
@@ -72,14 +77,14 @@
           (E.camp.log.length > 1 ? E.camp.log.length + ' battles \u2014 the last: ' : '') +
           esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl + ', ' + result(last) +
           '</small></span></button>' : '') +
-        '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + ICON_MEMORIAL + '<span>Memorial<small>' +
-        (A.faction === 'bugs' ? 'The biomass spent over the campaign' : 'Everyone lost, battle by battle') + '</small></span></button>' +
+        '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(A) + '<span>' + esc(C.words(A).memorial) + '<small>' +
+        esc(C.words(A).memorialSub) + '</small></span></button>' +
         '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
         '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
         '<button type="button" class="archline warn" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
-      h += cmodal('memorial', 'Memorial', '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);
+      h += cmodal('memorial', C.words(A).memorial, '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);
       h += cmodal('rivals', E.camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? companyPanel(B, 'B')
           : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
@@ -99,6 +104,10 @@
       }
       // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
       var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">Back</button>';
+      // each army's rules, opened from its pill
+      h += cmodal('armyA', C.words(A).side + ' \u2014 army rules', armyRules(A));
+      if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B), backRivals);
+      rivals.forEach(function (co, i) { h += cmodal('armyr' + i, co.name + ' \u2014 ' + C.words(co).side, armyRules(co), backRivals); });
       rivals.forEach(function (co, i) {
         if (!(co.log || []).length) return;
         h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><div class="clog">' +
@@ -142,7 +151,7 @@
           '</label>' + squares(colourOf(co)) + '</div>';
       }
       h += (bar || '') + statRow(co, false, side);
-      h += '<div class="cpdoc">' + (co.doctrines.length
+      h += '<div class="cpdoc carch">' + armyPill(co, 'army' + side) + (co.doctrines.length
         ? co.doctrines.map(function (d) {
           var dd = C.doctrine(d);
           return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
@@ -239,10 +248,77 @@
     /* The kind of force, as a pill in that army's colour: ochre mercenaries,
        crimson insurgents, olive bugs, steel Xenotripods. */
     var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
-    function armyPill(co) {
+    // the kind of force; given a modal to open, a button to its army's rules
+    function armyPill(co, kind) {
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[ARMY_COLOUR[co.faction || 'pmc']];
       var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+      if (kind) return '<button type="button" class="mk armypill"' + st + ' data-go="fmodal" data-kind="' + kind + '" title="Army rules">' + esc(C.words(co).side) + '</button>';
       return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
+    }
+    /* An army's own rules: how it fights its campaign, and the special rules
+       only its units carry (read off the unit profiles, so it stays in step
+       with them), each with the rule's text. */
+    var NOT_ARMY = ['Immobile', 'No Objectives', 'Drone unit', 'Unarmed'];
+    // rules the whole army carries that no unit profile prints (the Rebels', pp. 94-95; the Xenotripods', pp. 128-129)
+    var ARMY_WIDE = {
+      rebel: ['Hasta la Victoria Siempre!', 'Undisciplined', 'Riders upgrade'],
+      xeno: ['Limited Senses', 'Mental Projection', 'Psychic Bond']
+    };
+    // what an army chooses for each battle (the Rebels' tactics, p. 95)
+    var ARMY_CHOICES = { rebel: { title: 'Tactics \u2014 one chosen for each battle', list: ['Last Stand', 'Human Wave Attacks', 'Guerillas'] } };
+    function armyRules(co) {
+      var f = co.faction || 'pmc', W = C.words(co), cr = C.creedOf(co), R = root.PMC, T = root.PMCRuleText;
+      var base = function (r) { return r.replace(/\s*\(.*\)$/, ''); };
+      var owners = {}, first = {}, nums = {};
+      ((R && R.CATALOGUE) || []).forEach(function (p) {
+        (p.rules || []).forEach(function (r) {
+          var k = base(r), m = r.match(/\((\d+)\)\s*$/);
+          (owners[k] = owners[k] || {})[p.faction || 'pmc'] = true;
+          if (!first[k]) first[k] = r;
+          // a rule whose number differs from unit to unit (Shield Generator 1 or 2): which units carry which
+          if (m) { nums[k] = nums[k] || {}; (nums[k][m[1]] = nums[k][m[1]] || []).indexOf(p.group) < 0 && nums[k][m[1]].push(p.group); }
+        });
+      });
+      function text(k) {
+        var n = nums[k] ? Object.keys(nums[k]).sort() : [];
+        if (n.length > 1 && T && T.TEXT[k + ' (X)']) {
+          return T.TEXT[k + ' (X)'].replace(/\{X\}/g, n.join(' or ')) + ' (' + n.map(function (v) {
+            return v + ': ' + nums[k][v].join(', ');
+          }).join('; ') + ')';
+        }
+        var d = T ? T.describe(first[k] || k) : { text: '' };
+        if (!d.text && T) d = T.describe(k);
+        return d.text || '';
+      }
+      var wide = ARMY_WIDE[f] || [];
+      // the mercenaries are the standard: no rule of theirs is an army rule
+      var own = f === 'pmc' ? [] : Object.keys(owners).filter(function (k) {
+        return owners[k][f] && Object.keys(owners[k]).length === 1 && NOT_ARMY.indexOf(k) < 0;
+      }).sort();
+      var h = '<div class="cmodal-scroll armyrules"><p class="dnote">A ' + esc(W.force) + ' of ' + esc(W.side) + '.</p><ul class="armycamp">' +
+        '<li>Paid in <b>' + esc(W.moneyLong) + '</b> (' + esc(W.money) + ').</li>' +
+        '<li>Grows through <b>' + esc(cr.many) + '</b>; its units earn ' + esc(W.honours) + ' and suffer ' + esc(W.traumas) + '.</li>' +
+        (f === 'bugs' ? '<li>Its losses are <b>biomass</b>: a bug is lost or it is not, never wounded.</li>'
+          : '<li>Its casualties go to the <b>' + esc(W.memorial) + '</b>: ' + esc(W.kiaLong.toLowerCase()) + ', or ' + esc(W.wiaLong.toLowerCase()) + '.</li>') +
+        '</ul>';
+      if (f === 'pmc') h += '<p class="dnote">Mercenary companies have no army-specific special rules: their units follow the standard rules.</p>';
+      if (wide.length) {
+        h += '<h4>Army rules</h4><dl class="armyrl">' + wide.map(function (k) {
+          return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';
+        }).join('') + '</dl>';
+      }
+      if (own.length) {
+        h += '<h4>Special rules of the army</h4><dl class="armyrl">' + own.map(function (k) {
+          return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';
+        }).join('') + '</dl>';
+      }
+      var ch = ARMY_CHOICES[f];
+      if (ch) {
+        h += '<h4>' + esc(ch.title) + '</h4><dl class="armyrl">' + ch.list.map(function (k) {
+          return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';
+        }).join('') + '</dl>';
+      }
+      return h + '</div>';
     }
     /* Won, veterancy and trauma (or the swarm's and the tribe's words for them), one row. */
     function statRow(co, rival, fkey) {
@@ -278,7 +354,7 @@
         esc(co.name) + '</b></div>';
       h += statRow(co, true, 'r' + (idx == null ? 0 : idx));
       // the kind of force, and its doctrines beside it on the one line
-      h += '<div class="cpdoc carch">' + armyPill(co) + co.doctrines.map(function (d) {
+      h += '<div class="cpdoc carch">' + armyPill(co, 'armyr' + (idx == null ? 0 : idx)) + co.doctrines.map(function (d) {
         return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
       }).join('') + '</div>';
       // their dossier opens in the card: their units, as your own are listed
@@ -298,7 +374,7 @@
     }
 
     return {
-      hubView: hubView, stripe: stripe, armyPill: armyPill, statRow: statRow
+      hubView: hubView, stripe: stripe, armyPill: armyPill, armyRules: armyRules, statRow: statRow
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierHub;

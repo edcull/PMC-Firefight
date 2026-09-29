@@ -157,13 +157,16 @@ async function clickText(p, re) {
   console.log('\nThe memorial');
   // opened from the campaign's window (the folder on the company's row), in a window of its own
   await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
-  check('an empty memorial says so', /No one has been lost yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
+  check('a company\'s is its field hospital', await p.evaluate(() => /Field hospital/.test(document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').textContent) &&
+    /Field hospital/.test(document.querySelector('#camp-body .cmodal[data-modal="memorial"]').textContent)));
+  check('an empty field hospital says so', /No one has been killed or wounded yet/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;
-    co.losses = { soldiers: { lost: 3, departed: 0 } };
+    co.losses = { soldiers: { lost: 3, wounded: 1, departed: 0 } };
     co.memorial = [
       { name: 'Rhys Walsh', rank: 'Sergeant', type: 'Rookie rifle team', unit: 'Second Section', turn: 3, battle: 1, against: 'Red Dawn', scenario: 'meeting' },
-      { name: 'Ana Silva', rank: 'Private', type: 'Recruits', unit: 'Recruits', turn: 2, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
+      { name: 'Ana Silva', rank: 'Private', type: 'Recruits', unit: 'Recruits', rid: 'r1', turn: 2, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
+      { fate: 'wounded', roll: 4, name: 'Jae Novak', rank: 'Private', type: 'Recruits', unit: 'Recruits', rid: 'r2', turn: 4, battle: 2, against: 'Salvage Rights', scenario: 'secure' },
       { name: 'Kofi Park', rank: 'Commander', type: 'Light patrol vehicle', unit: 'Light patrol vehicle', turn: 5, battle: 2, against: 'Salvage Rights', scenario: 'secure' }
     ];
   });
@@ -175,10 +178,25 @@ async function clickText(p, re) {
   }));
   check('the memorial has no separate casualty count line', !/casualties in \d+ battle/.test(mem.text));
   const lossText = await p.evaluate(() => { const d = document.querySelector('#camp-body .dloss:not(.dexpr)'); return d ? d.textContent : ''; });
-  check('...and shows the loss rate against everyone who has served', /^[\d.]+% lost 3 of \d+ soldiers$/.test(lossText), lossText);
+  check('...and shows the loss rate against everyone who has served', /^[\d.]+% killed [\d.]+% wounded \d+ killed, \d+ wounded, of \d+ soldiers$/.test(lossText), lossText);
   check('...most recent battle first, with the enemy and the scenario',
     mem.heads.length === 2 && /Campaign turn 2 · against Salvage Rights · Secure and control/.test(mem.heads[0]), mem.heads[0]);
-  check('...each by rank, name and unit', /Sergeant\s+Rhys Walsh/.test(mem.text) && /Rookie rifle team · Second Section · turn 3 of the battle/.test(mem.text));
+  check('...the killed and the wounded marked', await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#camp-body .dmem-list li')];
+    const of = (n) => rows.find((r) => r.textContent.includes(n)).querySelector('.dfate').textContent;
+    return of('Jae Novak') === 'WIA' && of('Ana Silva') === 'KIA' && of('Rhys Walsh') === 'KIA';
+  }));
+  check('...grouped under their unit (with its Tier), each on one line: fate, rank, name', await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#camp-body .dmem-list li')];
+    const at = rows.findIndex((r) => r.textContent.includes('Rhys Walsh')), li = rows[at];
+    let head = null;
+    for (let i = at - 1; i >= 0 && !head; i--) if (rows[i].classList.contains('dmem-grp')) head = rows[i];
+    return !!li && /^KIA · Sergeant · Rhys Walsh$/.test(li.textContent) && li.getClientRects().length === 1 &&
+      li.getBoundingClientRect().height < 30 && !!head && /^Second Section · Rookie rifle team · Tier [IVX]+$/.test(head.textContent);
+  }), await p.evaluate(() => [...document.querySelectorAll('#camp-body .dmem-list li')].map((r) => r.textContent).join(' | ')));
+  check('two units of the same kind are two groups, not one', await p.evaluate(() =>
+    [...document.querySelectorAll('#camp-body .dmem-list li.dmem-grp')].filter((h) => /^Recruits/.test(h.textContent)).length === 2));
+  check('...with no turn of the battle', !/turn \d+ of the battle/.test(mem.text));
   await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-memorial.png') });
 
   // the swarm's memorial is biomass by kind of bug, not names
@@ -216,7 +234,7 @@ async function clickText(p, re) {
   await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="memorial"]').click()); await p.waitForTimeout(220);
   const tribe = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dloss:not(.dexpr)')].map(d => d.textContent));
   check('the tribe shows a loss rate for its Crocks and one for its Esh-Aven',
-    tribe.length === 2 && /lost 1 of 4 Crocks$/.test(tribe[0]) && /lost 6 of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
+    tribe.length === 2 && /ascended, \d+ scarred, of 4 Crocks$/.test(tribe[0]) && / killed, \d+ wounded, of \d+ Esh-Aven$/.test(tribe[1]), tribe.join(' | '));
   await p.locator('#camp-body .cmodal[data-modal="memorial"] .cmodal-box').screenshot({ path: path.join(SHOTS, 'camp-tribe.png') });
   await p.evaluate(() => {
     const co = window.PMC_CAMPAIGN.get().companies.A;

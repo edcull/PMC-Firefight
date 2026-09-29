@@ -23,6 +23,7 @@
        into the board's working window at its full density, it now does. */
     var SPRITE_RES = 2;
     var SPR = { w: 96, h: 150, ox: 40, oy: 136 };          // cache canvas and its origin
+    var RIDE_UP = { horse: 7 };                              // how much higher than on a bike a rider sits on each mount
     var MODEL = 0.6;                                     // how large a trooper stands on its base
 
     /* Company colours. A PMC picks its own; so did every mercenary outfit that ever
@@ -233,7 +234,7 @@
       /* the riders, a step up the list each: armed civilians on their own bikes,
          then the young bikers, then the turbaned riders, and the Legendary
          Hellriders in what the Hellriders wore, a rocket launcher among them */
-      rider: ['biker', 'biker2'],
+      // rider: the Militia's figures, mounted — built under KIT
       ridergang: ['civrider1', 'civrider2', 'civrider3', 'civrider4'],
       hellrider: ['rider', 'rider', 'riderblack', 'rider'],
       // the legendary hellriders are the mujahideen in the saddle, man for man
@@ -252,7 +253,7 @@
       partisansniper: ['partmarksman', 'partspotter'],
       miner: ['cutter', 'blaster'],
       hardsuit: ['hardsuit'],
-      deserter: ['deserter', 'desrifle'],
+      deserter: ['deserter', 'dessaw', 'desrifle'],
       // conscripts, still with the old wooden-furnitured rifles they were issued
       conscript: ['conscript', 'conscript2'],
       pow: ['pow', 'pow2'],
@@ -271,14 +272,7 @@
       // the Rebellion's leader has a second at his side: the Insurgent leader's figure
       leaderhuge: ['lead5', 'flaghuge', 'lead3black', 'guardrifle'],
       // the Riders upgrade (p. 93) puts the same troops on bikes and beasts
-      holymounted: ['zealotrider'],
-      holy1mounted: ['zealotrider'], holy2mounted: ['zealotrider'], holy3mounted: ['zealotrider'], holy4mounted: ['zealotrider'],
-      // mounted, only the leader's own bike carries the colours
-      leadermounted: ['leaderrider', 'leaderescort'],
-      leadersmallmounted: ['leaderrider', 'leaderescort'],
-      leaderbigmounted: ['leaderrider', 'leaderescort'],
-      leadermidmounted: ['leaderrider', 'leaderescort'],
-      leaderhugemounted: ['leaderrider', 'leaderescort']
+      // holymounted … holy4mounted and leadermounted … leaderhugemounted: built from the tier's own figures, under KIT
     };
     function roleAt(art, i) {
       var r = ROLES[art] || ROLES.rifle;
@@ -362,8 +356,8 @@
       irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
       irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
       irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
-      nomad: { helm: 'std', gun: 'battlerifle', pack: 'std', cloak: true },
-      nomadlead: { helm: 'std', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
+      nomad: { helm: 'nomadhood', gun: 'battlerifle', pack: 'std', cloak: true },
+      nomadlead: { helm: 'nomadhood', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
       // penal troops: orange coveralls, a collar, and the company's armband
       convict: { helm: 'bare', gun: 'carbine', pack: 'none', collar: true, light: true, armband: 'force',
         tint: { light: '#dd8f43', mid: '#bd6c2c', dark: '#6b3a15', helm: '#a05520', cloth: '#8a5a2a' } },
@@ -483,8 +477,6 @@
       riderblack: { helm: 'turban', gun: 'carbine', pack: 'none', mount: true, tunic: true, wrap: '#26262a', vest: '#4a3a2a', armband: 'force', tint: HOLY_C },
       // the gang: open-face biker helmets and black leathers
       // a rider gang: the acolytes' long tan shirts, a round cap or nothing on the head
-      biker: { helm: 'pakol', gun: 'smg', pack: 'none', mount: true, tunic: true, vest: HOLY_A.mid, armband: 'force', young: true, tint: HOLY_A },
-      biker2: { helm: 'bare', gun: 'carbine', pack: 'none', mount: true, tunic: true, vest: HOLY_C.mid, armband: 'force', young: true, tint: HOLY_C },
       // hellriders: spiked helmets, spiked shoulders, flames on the tank and a heavy gun
       // hellriders: the enlightened's tan and olive and green sash, turbans tan, the leader's white, one black
       hellrider: { helm: 'turban', gun: 'mg', pack: 'none', mount: true, bulk: 1, tunic: true, wrap: '#d6ceb8', vest: '#22241e', sash: '#2e7a3a', bandolier: true, armband: 'force', tint: HOLY_B },
@@ -522,6 +514,7 @@
       // deserters, still in the uniform they walked out of
       deserter: { helm: 'std', gun: 'smg', armband: 'force', pack: 'none', mark: true, tint: REBEL_WORN, fitAs: 'desrifle' },   // the ex-sergeant, at the front right
       desrifle: { helm: 'std', gun: 'battlerifle', armband: 'force', pack: 'std', tint: REBEL_WORN },
+      dessaw: { helm: 'std', gun: 'saw', armband: 'force', pack: 'ammo', tint: REBEL_WORN, fitAs: 'desrifle' },   // the squad automatic weapon they walked out with
       conscript: { helm: 'std', gun: 'rifle', armband: 'force', pack: 'none', wood: true, tint: REBEL_WORN },
       conscript2: { helm: 'cap', gun: 'battlerifle', armband: 'force', pack: 'std', wood: true, tint: REBEL_WORN },
       // POWs broke out with what their guards carried
@@ -543,10 +536,43 @@
       flagsmall: { helm: 'beret', gun: 'flagsmall', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
       flagbig: { helm: 'beret', gun: 'flagbig', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
       flaghuge: { helm: 'beret', gun: 'flaghuge', pack: 'none', tint: FIELD_OCHRE, fitAs: 'guardrifle' },
-      zealotrider: { helm: 'turban', gun: 'carbine', pack: 'none', tunic: true, wrap: '#d6ceb8', vest: '#3b3a30', mount: true, tint: HOLY_A },
-      leaderrider: { helm: 'goggles', gun: 'banner', plainFlag: true, pack: 'none', mount: true, mark: true, tint: FIELD_OCHRE, fitAs: 'rider' },
-      leaderescort: { helm: 'goggles', gun: 'carbine', pack: 'none', mount: true, tint: FIELD_OCHRE, fitAs: 'rider' }
     };
+    /* Holy Warriors and First Among Equals who take the Riders upgrade ride
+       in the dress of their own tier: each mounted figure is the unmounted
+       one — its turban, wrap, vest, sash, flag and colours — put on a mount,
+       its pack left behind, and sized as the other riders are. */
+    function mounted(r) {
+      var k = r + 'mtd';
+      if (!KIT[k]) {
+        var m = {};
+        for (var f in KIT[r]) m[f] = KIT[r][f];
+        m.mount = true; m.pack = 'none'; m.fitAs = 'rider';
+        delete m.kneel; delete m.prone;
+        KIT[k] = m;
+      }
+      return k;
+    }
+    ['holy', 'holy1', 'holy2', 'holy3', 'holy4', 'leader', 'leadersmall', 'leadermid', 'leaderbig', 'leaderhuge'].forEach(function (art) {
+      ROLES[art + 'mounted'] = ROLES[art].map(mounted);
+    });
+    /* The Militia (Tier II Freedom Warriors) are the insurgents' figures with
+       their sleeves rolled up short, and the rookie-rifle Deserters and the
+       conscript Deserters their own figures the same way; the Rider warriors (Tier II Mounted
+       Warriors) are the Militia on a mount. */
+    function rolled(r) {
+      var k = r + 'rs';
+      if (!KIT[k]) {
+        var m = {};
+        for (var f in KIT[r]) m[f] = KIT[r][f];
+        m.sleeves = 'rolled';
+        KIT[k] = m;
+      }
+      return k;
+    }
+    ROLES.militia = ROLES.rebel.map(rolled);
+    ROLES.deserterrk = ROLES.deserter.map(rolled);
+    ROLES.conscript = ROLES.conscript.map(rolled);
+    ROLES.rider = ROLES.militia.map(mounted);
 
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a
@@ -570,6 +596,7 @@
        would only make them longer on the ground. */
     var LEG = 1.32;                 // how much longer the legs are drawn
     var HEAD_W = 0.86;              // and how much narrower the head
+    var NVG_LENS = '#b8f8ff', NVG_GLOW = '120,236,255';   // night-vision lenses, and the light they throw
     var HIP = -20;                  // where the legs meet the body, in art units
     var KNEEL_DROP = 11;            // how far a man down on one knee sinks, in art units
     var XENO_LOW = 13;              // how far a hunkered Xenotripod lets its body down
@@ -578,6 +605,15 @@
     function PALETTE_FORCE(pal) { return pal.force || pal.light; }
     function paintFigure(g, ox, oy, pal, kit, pose, step, s) {
       var tall = pose !== 'prone' && !kit.mount;
+      /* Lights that glow past the figure's outline (night-vision lenses), in
+         canvas pixels: handed back, for sprite() to lay on after the outline
+         and shading. */
+      var glows = [];
+      function glowAt(dx, dy, r, c) {
+        var x = dx;
+        if (tall && dy <= COLLAR && dy >= -61 && dx >= -11 && dx <= 12) x = 0.5 + (x - 0.5) * HEAD_W;
+        glows.push({ x: ox + x * s, y: oy + mapY(dy) * s, r: r * s, c: c });
+      }
       function mapY(y) {
         if (!tall) return y;
         return y >= HIP ? y * LEG : y + HIP * (LEG - 1);
@@ -628,7 +664,7 @@
          helmet up at the front over the weapon, arms out to it. Chunky, and
          ringed dark, so a squad that has hit the dirt still reads as men. */
       if (pose === 'prone') {
-        var hood = kit.helm === 'hood' || kit.helm === 'cowl' || kit.helm === 'turban' || kit.helm === 'wrap';
+        var hood = kit.helm === 'hood' || kit.helm === 'nomadhood' || kit.helm === 'cowl' || kit.helm === 'turban' || kit.helm === 'wrap';
         var bk = kit.armoured ? 2 : 0;
         P(-19, -7, 5, 4, BOOT); P(-19, -7, 5, 1, '#454b54');        // boots, one leg drawn up
         P(-18, -2, 5, 3, BOOT);
@@ -663,8 +699,9 @@
         }
         P(15, -13, 3, 3, '#8d6f4e');                                  // the face at the sight
         P(16, -12, 2, 1, '#20262d');
-        if (kit.nvg) {                                                // night-vision goggles
-          P(14, -15, 5, 3, '#1b1f24'); P(15.5, -14.2, 2.4, 1.6, '#8fd0e8');
+        if (kit.nvg) {                                                // night-vision goggles, lit
+          P(14, -15, 5, 3, '#1b1f24'); P(15.5, -14.2, 2.4, 1.6, NVG_LENS);
+          glowAt(16.7, -13.4, 4.2, NVG_GLOW);
         }
         if (kit.gun === 'long') {
           P(12, -10, 28, 2.5, GUN.dk); P(12, -10, 28, 0.8, GUN.lt);   // the rifle, on its bipod
@@ -684,11 +721,13 @@
           P(28, -9, 3, 2, GUN.lt);
           P(16, -7, 4, 3, GUN.md);                                     // its magazine
         }
-        return;
+        return glows;
       }
 
       /* ---- the mount, under everything ---- */
       PARTS.mount(P, g, kit, ox, oy, pal, pose, s, step);
+      // a horse stands taller than a bike: its rider sits up in the saddle, above its back
+      if (kit.mount === 'horse') oy -= RIDE_UP.horse * s;
 
       PARTS.legs(P, kit, pal, pose, step);
 
@@ -729,8 +768,11 @@
         P(-6, -52 + drop, 13, 1.2, '#1b1f24');           // the strap
         P(-3, -49 + drop, 10, 4, '#1b1f24');             // goggles
         P(-3, -49 + drop, 10, 1, '#4b545d');
-        P(0, -48 + drop, 3, 2, '#8fd0e8');               // lens glare
-        P(5, -48 + drop, 3, 2, '#8fd0e8');
+        P(-0.5, -48.2 + drop, 3.6, 2.6, NVG_LENS);        // the lenses, lit from within
+        P(4.5, -48.2 + drop, 3.6, 2.6, NVG_LENS);
+        P(0, -48 + drop, 1.2, 1, '#ffffff'); P(5, -48 + drop, 1.2, 1, '#ffffff');
+        P(3.1, -48.4 + drop, 1.4, 3, '#1b1f24');         // the bridge between them, dark, so they read as a pair
+        glowAt(1.3, -47 + drop, 2.7, NVG_GLOW); glowAt(6.3, -47 + drop, 2.7, NVG_GLOW);   // two eyes, each its own glow
       }
 
       /* ---- weapon, over everything ---- */
@@ -758,6 +800,7 @@
         P(-16, -36 + drop, 8, 1, '#6a8496');
         P(-19, -13 + drop, 13, 2, '#242931');
       }
+      return glows;
     }
 
 
@@ -1161,7 +1204,7 @@
       var drop = pose === 'kneel' ? KNEEL_DROP : 0, wy = -32 + drop;
       var m = MUZZLE[kit.gun] || (kit.gun === 'slate' || kit.gun === 'optics' || kit.gun === 'case' ||
         kit.gun === 'console' || kit.gun === 'shell' || kit.gun === 'none' ? [10, 4] : MUZZLE.rifle);
-      var y = wy + m[1];
+      var y = wy + m[1] - (RIDE_UP[kit.mount] || 0);
       if (!kit.mount) y = y >= HIP ? y * LEG : y + HIP * (LEG - 1);
       return [m[0], y];
     }

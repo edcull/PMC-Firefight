@@ -15,7 +15,7 @@
     var digPreview = B.digPreview, doAssault = B.doAssault, doBreach = B.doBreach, doDemolish = B.doDemolish;
     var doDesignate = B.doDesignate, doEnter = B.doEnter, doHack = B.doHack, doShoot = B.doShoot;
     var doSteady = B.doSteady, doSupport = B.doSupport, drawBoard = B.drawBoard;
-    var emptyPlatforms = B.emptyPlatforms, holdArrival = B.holdArrival, holdInsertion = B.holdInsertion;
+    var holdArrival = B.holdArrival, holdInsertion = B.holdInsertion;
     var hud = B.hud, inReserve = B.inReserve, insertionCard = B.insertionCard, isAI = B.isAI;
     var kyfCard = B.kyfCard, liftOf = B.liftOf, loadBefore = B.loadBefore, martyrCard = B.martyrCard;
     var mineCard = B.mineCard, movePreviewCard = B.movePreviewCard, mySide = B.mySide, openMenu = B.openMenu;
@@ -88,6 +88,15 @@
           : isAI(ta.side) ? esc(sideName(ta.side)) + ' is laying the ' + ta.name + ' area.'
             : !tg ? 'Choose what the ' + ta.name + ' roll gives, in the panel.'
               : 'Tap inside the lit <b>' + ta.name + '</b> area to put down the ' + (PIECE_NOUN[tg.kind] || [tg.kind])[0] + ' outlined under the pointer.';
+        return;
+      }
+      var fau = B.faceAsked();
+      if (fau) {
+        box.innerHTML = 'Which way does <b>' + esc(fau.name) + '</b> face? Tap a direction around it, or choose on the octagon.';
+        return;
+      }
+      if (B.state.phase === 'deploy' && B.state.deployReady) {
+        box.innerHTML = 'Look over the table and the other force, then modify your army or continue to the deployment.';
         return;
       }
       if (B.state.phase === 'deploy') {
@@ -380,11 +389,19 @@
       if (B.state.phase === 'terrain') html = terrainCard();
       else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = placeCard();
       else if (B.state.minePick && !isAI(B.state.minePick.side)) html = mineCard();
+      else if (B.faceAsked()) html = faceCard(B.faceAsked());
       else if (B.state.phase === 'deploy') html = deployCard();
       else if (ui.reservePick) html = reservePickCard();
       else if (ui.insertion) html = insertionCard();
       else if (B.state.cmdOffer) html = cmdOfferCard();
       else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
+      // the End phase is asked once the other side's last activations have been drawn, not while they play
+      else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over && !B.replaying() && !B.cardsPending()) {
+        html = endCard();
+        // on a phone the question comes to the front the once, when it is first asked
+        var ek = B.state.turn + B.state.endAsk.side;
+        if (ui.endShown !== ek) { ui.endShown = ek; if (window.innerWidth <= 1000 && B.setMTab) B.setMTab('act'); }
+      }
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.over) html = overCard();
@@ -446,6 +463,21 @@
         '. It is about to scatter and flee the field. It still has its Last Stand: once a battle, every point of suppression gone.</p>' +
         '<div class="acts"><button class="act primary" data-act="stand"><span>Make its Last Stand</span><small>All ' + a.sp + ' SP cleared \u2014 it stays</small></button>' +
         '<button class="act" data-act="nostand"><span>Let it flee</span><small>Keep nothing back: it counts as fled</small></button></div></div>';
+    }
+    /* The End phase: a side may send units within a move of a table edge off
+       the table (they count as fled), carry on to the Rally phase, or surrender
+       the battle, which asks twice. */
+    function endCard() {
+      var a = B.state.endAsk, mine = !B.seats || B.seats.indexOf(a.side) >= 0;
+      if (!mine) {
+        return '<div class="card"><h2>End phase</h2><p class="sub">' + esc(sideName(a.side)) +
+          ' is deciding whether to surrender.</p></div>';
+      }
+      return '<div class="card endcard"><h2>End phase \u2014 ' + esc(sideName(a.side)) + '</h2>' +
+        '<p class="sub">Nobody has won yet. Carry on to turn ' + (B.state.turn + 1) + ', or surrender: the opponent wins the battle.</p>' +
+        '<div class="acts"><button class="act primary" data-act="enddone"><span>Carry on</span><small>To turn ' + (B.state.turn + 1) + '</small></button>' +
+        '<button class="act' + (a.sure ? ' danger' : '') + '" data-act="surrender"><span>' + (a.sure ? 'Tap again to surrender' : 'Surrender') + '</span>' +
+        '<small>' + (a.sure ? 'The battle goes to ' + esc(sideName(a.side === 'A' ? 'B' : 'A')) : 'Give up the battle') + '</small></button></div></div>';
     }
     // a player's own unit that could make its Last Stand now (p. 88: at any time)
     function mayStand(u) {
@@ -682,25 +714,37 @@
         '<div class="acts"><button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button></div></div>';
     }
 
+    /* Before anyone deploys, each player with a swap to make looks over the
+       table and the other force, and modifies their army or goes on: Modify
+       your army, or Continue to deployment. The deployment itself (units,
+       reserves, transports) comes once every such player has gone on. */
+    function readyCard() {
+      var r = B.state.deployReady;
+      if (!r) return null;
+      var here = ['A', 'B'].filter(function (s) { return !isAI(s) && (!B.seats || B.seats.indexOf(s) >= 0); });
+      var mine = here.filter(function (s) { return r[s] === false; })[0];
+      if (!mine) {
+        var who = ['A', 'B'].filter(function (s) { return r[s] === false; }).map(sideName).join(' and ');
+        return '<div class="card"><h2>Deployment</h2><p class="sub">Waiting for ' + esc(who) + ' to finish modifying their army.</p></div>';
+      }
+      var sv = B.state.swapAvail[mine] || { left: 0 };
+      var h = '<div class="card"><h2>Before deploying</h2><p class="sub">Look over the table and the other force. You may swap up to ' + sv.left +
+        ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
+      if (B.state.swapAsk && B.state.swapAsk.side === mine) h += swapCard();
+      else if (B.Q.canSwapNow(mine)) h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's') + '</small></button></div>';
+      return h + '<div class="acts"><button class="act primary" data-act="deployready"><span>Continue to deployment</span><small>' +
+        (sv.left > 0 ? 'The list stands as it is' : 'Units, reserves and transports') + '</small></button></div></div>';
+    }
+
     function deployCard() {
       if (B.state.relocating) return relocCard();
+      var rc = readyCard();
+      if (rc) return rc;
       var next = deployNext();
       var me = next ? next.side : (playerSide() || 'A');
-      var role = roleOf(me);
-      var h = '<div class="card"><h2>' + (B.state.scen ? B.state.scen.name : 'Deployment') +
-        (role ? ' <span class="role role-' + role + '">You ' +
-          (role === 'attacker' ? 'attack' : 'defend') + '</span>' : '') + '</h2>' +
-        (role ? '<p class="sub"><b>' + roleSentence() + '</b></p>' : '') +
-        '<p class="sub">' + (B.state.scen ? B.state.scen.hint : '') + '</p>' +
-        '<p class="sub">' + deployWhere(me) + '</p>';
+      var h = '<div class="card">';
       if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
         (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
-      // Modifying the armies (p. 46): offered until the first unit goes down
-      if (!isAI(me) && B.Q.canSwapNow(me)) {
-        var sv = B.state.swapAvail[me];
-        h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left +
-          ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier, having seen the table and their force</small></button></div>';
-      }
       h += deployList(me);
       h += insertionList(me);
       /* The scenario's split (which units go on the table and which wait, or
@@ -711,13 +755,13 @@
       var extra = splits.map(splitCard).join('') + loadingCard(me);
       if (extra) {
         var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
-        var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; }), emptyPod = emptyPlatforms(me).length > 0;
+        var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; });
         var aboard = hulls.reduce(function (n, v) { return n + (v.cargo || []).length; }, 0);
         var held = splits.reduce(function (n, sd) { return n + splitFor(sd).held; }, 0);
         var sub = [splits.length ? held + (splitFor(splits[0]).kind === 'wave' ? ' in the second wave' : ' held back') : '',
           hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
-        h += '<div class="acts"><button class="act' + (badSplit || emptyPod ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
-          '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : emptyPod ? 'A drop pod needs a squad \u2014 ' : '') + sub + '</small></button></div>';
+        h += '<div class="acts"><button class="act' + (badSplit ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
+          '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : '') + sub + '</small></button></div>';
         h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
           '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
           '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
@@ -735,7 +779,7 @@
          in with nobody aboard are asked about first. */
       // (in a hotseat, whichever player's split is still short)
       var mySplit = ['A', 'B'].map(splitFor).filter(function (f) { return f && !f.ok; })[0] || splitFor(me), splitShort = !!mySplit && !mySplit.ok;
-      var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; }) && !emptyPlatforms(me).length;
+      var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
       if (deploymentDone() || (placed && splitShort)) {
         var blocked = !deploymentDone();
         var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
@@ -755,9 +799,6 @@
             ' going into the battle with nobody aboard. Begin anyway?</p></div>' +
             '<div class="askrow"><button class="lnk" data-act="startnoask">Back</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
         }
-      }
-      else if (emptyPlatforms(me).length) {
-        h += '<p class="cpwarn">A Rapid insertion platform has to start the battle with a squad aboard. Put one in, or the battle cannot begin.</p>';
       }
       return h + '</div></div>';
     }
@@ -831,6 +872,26 @@
         '<div class="dig-oct">' + cells + '</div>' +
         '<div class="acts"><button class="act" data-act="digcancel"><span>Cancel</span><small>Keep its normal stance</small></button></div></div>';
     }
+    /* A vehicle just put down: the same octagon, asking which way it faces.
+       More to ask about (after an auto-deploy) can all keep the way offered. */
+    function faceCard(u) {
+      var F = digFacings(), pick = digPreview(u), left = B.state.faceAsk.ids.length;
+      var grid = [[5, 6, 7], [4, -1, 0], [3, 2, 1]];
+      var cells = grid.map(function (row) {
+        return row.map(function (i) {
+          if (i < 0) return '<span class="dig-mid">' + esc(u.code || '') + '</span>';
+          var on = Math.abs(R.angleWrap(F[i] - pick)) < 0.01;
+          return '<button class="dig-dir' + (on ? ' on' : '') + '" data-vface="' + i + '">' + DIG_NAMES[i] + '</button>';
+        }).join('');
+      }).join('');
+      var offered = DIG_NAMES[F.map(function (f) { return Math.abs(R.angleWrap(f - B.state.faceAsk.dir)); }).reduce(function (b, d, i, a) { return d < a[b] ? i : b; }, 0)];
+      return '<div class="card"><h2>' + esc(u.name) + ' — which way?</h2>' +
+        '<p class="sub">Choose the way it faces. Shots on its side or rear hit more easily, and a limited fire arc bears only ahead. ' +
+        'Tap a direction around it on the table, or here.' + (left > 1 ? ' ' + (left - 1) + ' more vehicle' + (left > 2 ? 's' : '') + ' to face after this.' : '') + '</p>' +
+        '<div class="dig-oct">' + cells + '</div>' +
+        '<div class="acts"><button class="act" data-act="vfaceall"><span>' + (left > 1 ? 'Face them all at the enemy' : 'Keep it facing ' + offered) + '</span>' +
+        '<small>' + (left > 1 ? 'Each keeps the way offered' : 'The way offered') + '</small></button></div></div>';
+    }
     function reservePickCard() {
       var rp = ui.reservePick;
       var mine = !isAI(rp.side);
@@ -858,7 +919,7 @@
       if (!hulls.length) return '';
       var h = '<div class="loadbox"><h3>Aboard before the battle</h3>' +
         '<p class="hint small">Troops can start the game inside a hull, declared before a shot is fired. ' +
-        'A Rapid insertion platform has to. A Lifter can start with a vehicle slung under it, and a hull with a gun on tow.</p>';
+        'A Lifter can start with a vehicle slung under it, and a hull with a gun on tow.</p>';
       hulls.forEach(function (v) {
         var cargo = v.cargo || [], room = v.transport - cargo.length;
         var must = R.has(v, 'Immobile');
@@ -950,6 +1011,12 @@
          `data-act`, so selecting on `[data-act]` alone never bound them and
          nothing happened when they were pressed: troops could not be put aboard
          a hull, or taken off one, during deployment. All three are selected. */
+      host.querySelectorAll('[data-vface]').forEach(function (b) {
+        var i = +b.getAttribute('data-vface');
+        b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'vface', dir: digFacings()[i] }); });
+        b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
+        b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
+      });
       host.querySelectorAll('[data-digface]').forEach(function (b) {
         var i = +b.getAttribute('data-digface');
         b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'digface', dir: digFacings()[i] }); });
@@ -979,6 +1046,7 @@
           else if (a === 'holdinsert') { holdInsertion(); return; }
           else if (a === 'holdfire') { send({ k: 'cancel' }); return; }
           else if (a === 'digcancel') { ui.digHover = null; send({ k: 'cancel' }); return; }
+          else if (a === 'vfaceall') { ui.digHover = null; send({ k: 'vfaceall' }); return; }
           else if (a === 'holdarrive') { holdArrival(); return; }
           else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
           else if (a === 'cmdact') { send({ k: a, id: b.getAttribute('data-id') }); return; }
@@ -991,12 +1059,15 @@
           else if (a === 'placelen') { send({ k: a, len: +b.getAttribute('data-len') }); return; }
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
+          else if (a === 'deployready') { send({ k: 'deployready' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();
           else if (a === 'rpickdone') send({ k: 'rpickdone' });
           else if (a === 'deploybox') { deployBox = true; render(); }
+          else if (a === 'briefing') openObjectives();
           else if (a === 'autosplit') send({ k: 'autosplit' });
           else if (a === 'deployboxdone') { deployBox = false; render(); }
           else if (a === 'start') { ui.startAsk = false; ui.startWhy = false; startBattle(); }

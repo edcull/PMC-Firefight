@@ -305,7 +305,19 @@
       if (avoid && avoid(q)) continue;
       return q;
     }
-    return null;
+    /* A crowded circle can defeat the random tries while there is still room
+       in it: sweep it on a quarter-inch lattice, nearest the point first. */
+    var best = null, bd = Infinity;
+    for (var gx = -r; gx <= r; gx += 0.25) {
+      for (var gy = -r; gy <= r; gy += 0.25) {
+        var dd = gx * gx + gy * gy;
+        if (dd > r * r || dd >= bd) continue;
+        var g = { x: clamp(x + gx, UR, W - UR), y: clamp(y + gy, UR, H - UR) };
+        if (!passable(state, g.x, g.y) || R.unitNear(state, g.x, g.y, u, 1) || (avoid && avoid(g))) continue;
+        best = g; bd = dd;
+      }
+    }
+    return best;
   }
 
   /* Reveal a counter: a random unit from the pool is placed within 2" of it

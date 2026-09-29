@@ -240,7 +240,7 @@
      plan is kept on view.collar. */
   function collarsGo(u) {
     var CL = root.PMCFx.COLLAR, t0 = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
-    var n = Math.max(1, Math.min(8, u.models || u.size || 1));
+    var n = Math.max(1, Math.min(I.MAX_FIGS, u.models || u.size || 1));
     var pts = I.formationTable(n).map(function (o) { return { x: u.x + o.dx, y: u.y + o.dy, rank: o.rank }; });
     // (across the stage, not back off the table's edge where the viewer stands them)
     var plan = CL.plan(pts, t0, (u.facing || 0) - Math.PI / 2);
@@ -268,7 +268,9 @@
       var mv = cl.plan.v[it.i];
       I.drawUnit(g, Object.assign({}, u, { models: 1, x: it.x, y: it.y, faceL: (mv.vx - mv.vy) < 0, facing: Math.atan2(mv.vy, mv.vx) }), {
         at: { x: it.x, y: it.y }, lift: 0, status: 'ready', morale: 0, noRing: true,
-        walk: 1 + Math.floor((now - cl.plan.t0 + it.i * 53) / 110) % 2
+        walk: 1 + Math.floor((now - cl.plan.t0 + it.i * 53) / 110) % 2,
+        // his collar lamp: amber as the squad breaks, red once his own collar is counting down
+        lamp: now < cl.at[it.i] - root.PMCFx.COLLAR.blink ? 'broken' : 'red'
       });
     });
   }

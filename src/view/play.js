@@ -10,7 +10,6 @@
     var dispX = B.dispX, dispY = B.dispY, nowMs = B.nowMs, onTable = B.onTable, startLoop = B.startLoop;
     var FX = B.FX, ISO = B.ISO, R = B.R, SFX = B.SFX, STANDING = B.STANDING, anims = B.anims;
     // from modules installed after this one: looked up when called
-    function handsOff() { return B.handsOff.apply(this, arguments); }
     function render() { return B.render.apply(this, arguments); }
     // a pause in the drawing, on the board's clock (a test harness may run it faster: see game.js)
     function later(fn, ms) { return setTimeout(fn, ms / (+root.PMC_TIME_SCALE || 1)); }
@@ -119,7 +118,7 @@
       if (R.isMachine(u)) u.aim = null;
       var dig = burrows(u);
       anims.push({
-        kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !handsOff(),
+        kind: 'move', unit: u, segs: segs, total: total, follow: !!follow && !B.camOff() && B.followOn(),
         dur: dig ? MOTION.burrowMs(total) : moveMs(u, total),
         t0: nowMs(), lastStep: 0, lastPace: -1, burrow: dig, lastDirt: -1, phase: 0, done: done || null
       });
@@ -157,7 +156,9 @@
     }
 
 
-    function playShooting(shooter, target, res, deaths, done) {
+    /* `impact`, if given, is called as the first round lands, with how long the
+       shot still has to play: the target's Suppression bar fills over that time. */
+    function playShooting(shooter, target, res, deaths, done, impact) {
       /* A crew-served piece swings onto its target before it fires: the carriage
          round to its new facing, then the gun traversing onto the bearing. */
       if (shooter && ISO.startTurn && ISO.turnsLikeMachine(shooter.art)) {
@@ -166,7 +167,7 @@
           anims.push({ kind: 'turn', unit: shooter, t0: nowMs(), dur: swing });
           holdFor(swing + 80);               // no gap between the swing and the shot
           startLoop();
-          later(function () { if (B.state) playShooting(shooter, target, res, deaths, done); }, swing + 40);
+          later(function () { if (B.state) playShooting(shooter, target, res, deaths, done, impact); }, swing + 40);
           return;
         }
       }
@@ -205,8 +206,12 @@
         } else {
           addFx({ kind: 'miss', x: p.x, y: p.y, up: p.up, dur: 320, blocking: true });
         }
-        if (!fired) { fired = true; spawnDeaths(deaths); }
+        if (!fired) {
+          fired = true; spawnDeaths(deaths);
+          if (impact) impact(Math.max(250, endsAt - nowMs()));
+        }
       }
+      var endsAt = nowMs() + 600;           // until the length of the shot is known
       function finish(ms) { later(function () { if (done) done(); }, ms); }
 
       // the secondary goes off alongside the primary, a beat later
@@ -217,6 +222,7 @@
       var tail = spec.s ? 320 + ((spec.sn || 1) - 1) * 260 : 0;
 
       var ms = SHOTS.primary(spec, shooter, from, to, { hits: hits, dist: R.unitDist(shooter, target), land: land }) + tail;
+      endsAt = nowMs() + ms;
       holdFor(ms);
       finish(ms);
     }
@@ -273,7 +279,7 @@
       later(function () { if (done) done(); }, dur + 220);
     }
 
-    function playAssault(attacker, target, deaths, done) {
+    function playAssault(attacker, target, deaths, done, impact) {
       // where the two are drawn: a defender driven back is still where it was charged
       var mid = { x: (dispX(attacker) + dispX(target)) / 2, y: (dispY(attacker) + dispY(target)) / 2 };
       holdFor(900);
@@ -287,12 +293,20 @@
           }, n * 170);
         })(i);
       }
-      later(function () { spawnDeaths(deaths); }, 320);
+      later(function () { spawnDeaths(deaths); if (impact) impact(580); }, 320);
       later(function () { if (done) done(); }, 900);
     }
 
     function spawnDeaths(deaths) {
-      (deaths || []).forEach(function (d) { if (d.u) delete B.held[d.u.id]; });
+      /* The fallen go as the rounds land: a unit shows its losses from here. Only a
+         unit still standing keeps what it is drawn with otherwise, so its
+         Suppression can fill over the rest of the attack. */
+      (deaths || []).forEach(function (d) {
+        var h = d.u && B.held[d.u.id];
+        if (!h) return;
+        if (!d.u.alive) { delete B.held[d.u.id]; return; }
+        h.models = d.u.models; h.damage = d.u.damage;
+      });
       (deaths || []).forEach(function (d) {
         addFx({
           kind: 'ghost', x: d.x, y: d.y, side: d.u.side, code: d.u.code,

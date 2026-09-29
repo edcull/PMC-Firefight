@@ -25,6 +25,8 @@
     function fleeBroken() {
       E.state.units.forEach(function (u) {
         if (!onTable(u) || R.status(u) !== 'broken' || R.isMachine(u)) return;
+        // the AI makes a Last Stand it still has rather than run (p. 88)
+        if (isAI(u.side) && E.standable(u)) { makeStand(u, 'rather than run'); return; }
         // what cannot move stays put: emplaced guns, platforms (p. 94)
         if (!u.move || R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile')) return;
         var allow = u.move + 2;
@@ -75,6 +77,42 @@
           (to && to.flee ? ' towards the safe zone.' : to ? '.' : ' from the enemy.'));
         soloAfterMove(u);
       });
+    }
+
+    /* ---- surrender, in the End phase ----
+       Once the scenario's victory conditions have been checked and nobody has
+       won, each player at the table (not the AI) may surrender the battle: the
+       opponent wins at once. Asked in turn, a side at a time, and kept on the
+       battle's state (endAsk) so a reload or the other end of a network game
+       sees the same question. */
+    function askEnd(sides) {
+      var side = sides[0];
+      if (!side) { E.state.endAsk = null; beginTurn(); return; }
+      E.state.endAsk = { side: side, rest: sides.slice(1), sure: false };
+      logLine('phase', 'End phase — ' + sideName(side) + ' may surrender, or carry on to the next turn.');
+      revealConsole();
+      render();
+    }
+    function endAsks() {
+      askEnd(['A', 'B'].filter(function (s) {
+        return !isAI(s) && E.state.units.some(function (u) { return u.side === s && onTable(u); });
+      }));
+    }
+    /* Carry on, or surrender: a first press asks for a second, so a battle is
+       not thrown away by one stray tap. */
+    function endAnswer(side, what) {
+      var ea = E.state.endAsk;
+      if (!ea || ea.side !== side) return 'nothing to answer';
+      if (what === 'surrender') {
+        if (!ea.sure) { ea.sure = true; render(); return null; }
+        var winner = side === 'A' ? 'B' : 'A';
+        E.state.endAsk = null;
+        finish(winner, sideName(side) + ' surrenders — ' + sideName(winner) + ' wins the battle.');
+        render();
+        return null;
+      }
+      askEnd(ea.rest || []);
+      return null;
     }
 
     function rallyPhase() {
@@ -262,7 +300,7 @@
         finish(res.winner, text);
       }
       if (E.state.over) { render(); return; }
-      beginTurn();
+      endAsks();
     }
 
     /* Who holds each objective, by the one test the scenarios use (scenarios.js
@@ -372,11 +410,13 @@
       logLine('turn', text);
       // a campaign battle hands its report back to the dossier
       if (E.state.cfg.campaign) V.finished(E.state.report);
-      pushRes({ kind: 'Result', title: winner ? sideName(winner) + ' wins' : 'Draw', outcome: { text: text, tone: 'good' } });
+      // what ended it, on its own card: a campaign goes on to the aftermath from there
+      pushRes({ kind: 'Result', title: winner ? sideName(winner) + ' wins' : 'Draw', outcome: { text: text, tone: 'good' },
+        cont: E.state.cfg.campaign ? 'To the aftermath' : null });
     }
 
     return {
-      rallyPhase: rallyPhase, repairCard: repairCard, objDist: objDist, scoreObjectives: scoreObjectives,
+      rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, objDist: objDist, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };

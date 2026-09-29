@@ -66,8 +66,13 @@
       for (var i = 0; i < B.anims.length; i++) B.anims[i].follow = false;
     }
 
+    // the zoom the camera is settling at: pulled back for a shot, it is the zoom it will go back to
+    function restingZoom() {
+      if (cam.shotPre) return cam.shotPre.z;
+      return cam.zGoal != null && cam.z === cam.zLast ? cam.zGoal : cam.z;
+    }
     function setHome(x, y) {
-      cam.home = { x: x, y: y, z: cam.z };
+      cam.home = { x: x, y: y, z: restingZoom() };
       cam.borrowed = false;
       dropFollow();
       updateReturnHint();
@@ -104,6 +109,7 @@
     }
     function returnHome(quiet) {
       if (!cam.home) return;
+      cam.shotPre = null;
       if (cam.home.z !== cam.z) { cam.z = cam.home.z; zoomLabel(); }
       cam.borrowed = false;
       dropFollow();
@@ -141,26 +147,103 @@
 
     function centreOn(bx, by, instant) {
       cam.tx = bx; cam.ty = by;
-      if (instant) { cam.x = bx; cam.y = by; drawBoard(); return; }
+      if (instant) {
+        cam.x = bx; cam.y = by;
+        if (cam.zGoal != null) { if (cam.z === cam.zLast) { cam.z = cam.zGoal; zoomLabel(); } cam.zGoal = null; }
+        drawBoard(); return;
+      }
       if (cam.anim) return;
       cam.anim = requestAnimationFrame(stepCam);
     }
     function stepCam() {
       hideTerrainTip();
+      // a zoom on its way (fitting a shot) is dropped the moment anything else sets the zoom
+      if (cam.zGoal != null && cam.z !== cam.zLast) cam.zGoal = null;
+      var dz = cam.zGoal != null ? cam.zGoal - cam.z : 0;
       var dx = cam.tx - cam.x, dy = cam.ty - cam.y;
-      if (Math.abs(dx) < 0.7 && Math.abs(dy) < 0.7) {
-        cam.x = cam.tx; cam.y = cam.ty; cam.anim = null; drawBoard(); return;
+      if (Math.abs(dx) < 0.7 && Math.abs(dy) < 0.7 && Math.abs(dz) < 0.01) {
+        cam.x = cam.tx; cam.y = cam.ty;
+        if (cam.zGoal != null) { cam.z = cam.zGoal; cam.zGoal = null; zoomLabel(); }
+        cam.anim = null; drawBoard(); return;
       }
       cam.x += dx * 0.24; cam.y += dy * 0.24;
+      if (dz) { cam.z += dz * 0.24; cam.zLast = cam.z; }
       drawBoard();
       cam.anim = requestAnimationFrame(stepCam);
     }
-    /* In a demo the camera is the watcher's: nothing the AI does moves it, not
-       a unit activating, landing or on the move — only the watcher pans and zooms. */
-    function handsOff() { return !!(B.state && B.state.cfg && B.state.cfg.mode === 'demo'); }
+    function isDemo() { return !!(B.state && B.state.cfg && B.state.cfg.mode === 'demo'); }
+    /* In a demo the camera is the watcher's unless they turn Follow on: every demo
+       starts with it off, and until then nothing the AI does moves the camera. */
+    var demoFollow = false;
+    function startDemoCam() { demoFollow = false; showFollow(); }
+    // a demo is watched, never played: taps look at units and act for nobody
+    function handsOff() { return isDemo(); }
+    // ...and the camera stays the watcher's, unless they have turned Follow on
+    function camOff() { return isDemo() && !demoFollow; }
+    /* Follow (the toggle by the zoom level): whether the camera goes over to the
+       other side's units as they act. The player's choice, kept between battles
+       (a demo's is its own, and not kept). */
+    var FOLLOW_KEY = 'pmc.followOther', follow = true;
+    try { follow = localStorage.getItem(FOLLOW_KEY) !== 'off'; } catch (e) { /* no storage: on */ }
+    function followOn() { return isDemo() ? demoFollow : follow; }
+    function showFollow() {
+      var b = el('follow-toggle');
+      if (!b) return;
+      var on = followOn();
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = isDemo()
+        ? (on ? 'Following the battle — tap to keep the camera where you leave it' : 'The camera stays where you leave it — tap to follow the battle')
+        : on ? 'Following the other side\u2019s moves — tap to keep the camera where you leave it'
+          : 'The camera stays where you leave it — tap to follow the other side\u2019s moves';
+    }
+    function setFollow(on) {
+      if (isDemo()) {
+        demoFollow = !!on;
+        showFollow();
+        if (!demoFollow) { dropFollow(); cam.shotPre = null; }
+        return;
+      }
+      follow = !!on;
+      try { localStorage.setItem(FOLLOW_KEY, follow ? 'on' : 'off'); } catch (e) { /* not kept */ }
+      showFollow();
+      // switched off mid-move: the camera comes straight back to where it was left
+      if (!follow) { dropFollow(); if (cam.borrowed) returnHome(true); }
+    }
+    /* The AI shooting, or turning an ability on something: while the camera is
+       following it, it pulls back just far enough to hold both the unit and what
+       it is aiming at (never closer than it already is), then goes back to how it
+       was once the shot has played (unfitShot). `a` and `b` are table points. */
+    function fitShot(a, b) {
+      if (!a || !b || a.x < 0 || b.x < 0 || camOff()) return;
+      if (isDemo() ? !demoFollow : !(follow && cam.borrowed)) return;
+      var pa = ISO.toScreen(a.x, a.y), pb = ISO.toScreen(b.x, b.y);
+      var lift = ISO.ELEV, pad = 90;                  // room for the figures and their labels
+      var w = Math.abs(pa.x - pb.x) + pad * 2, h = Math.abs(pa.y - pb.y) + pad * 2;
+      var need = Math.min(B.VIEW_W * 0.9 / w, B.VIEW_H * 0.8 / h);
+      var from = cam.zGoal != null ? cam.zGoal : cam.z;
+      var z = ZOOMS[0];
+      ZOOMS.forEach(function (q) { if (q <= Math.min(from, need) && q > z) z = q; });
+      if (!cam.shotPre) cam.shotPre = { x: cam.tx, y: cam.ty, z: from };
+      if (z !== cam.z) { cam.zGoal = z; cam.zLast = cam.z; }
+      centreOn((pa.x + pb.x) / 2, (pa.y + pb.y) / 2 - lift);
+    }
+    function unfitShot() {
+      var pre = cam.shotPre;
+      if (!pre) return;
+      cam.shotPre = null;
+      if (pre.z !== cam.z) { cam.zGoal = pre.z; cam.zLast = cam.z; }
+      centreOn(pre.x, pre.y);
+    }
     function focusUnit(u, instant, borrowed) {
-      if (!u || u.x < 0 || handsOff()) return;
+      if (!u || u.x < 0 || camOff()) return;
+      if (borrowed && !followOn()) return;             // Follow is off: the other side's units are not chased
       var p = ISO.toScreen(dispX(u), dispY(u));
+      // a unit of the player's own, picked while the camera is pulled back for a shot: back to the zoom it had
+      if (!borrowed && cam.shotPre) {
+        if (cam.shotPre.z !== cam.z) { cam.zGoal = cam.shotPre.z; cam.zLast = cam.z; }
+        cam.shotPre = null;
+      }
       centreOn(p.x, p.y - ISO.ELEV, instant);
       if (borrowed) borrowCamera(); else setHome(p.x, p.y - ISO.ELEV);
     }
@@ -186,6 +269,7 @@
       if (i < 0) i = ZOOMS.indexOf(nearestZoom(cam.z));
       i = Math.max(0, Math.min(ZOOMS.length - 1, i + dir));
       cam.z = ZOOMS[i];
+      cam.shotPre = null; cam.zGoal = null;
       cam.tx = cam.x; cam.ty = cam.y;
       zoomLabel();
       setHome(cam.x, cam.y);
@@ -208,6 +292,7 @@
     function fitView() {
       hideTerrainTip();
       cam.z = ZOOMS[0];
+      cam.shotPre = null; cam.zGoal = null;
       cam.ox = 0; cam.oy = 0;
       cam.x = cam.tx = ISO.PIXW / 2; cam.y = cam.ty = ISO.PIXH / 2;
       zoomLabel();
@@ -380,6 +465,38 @@
       });
     }
 
+    function isAI(side) { return B.state.cfg.aiSides.indexOf(side) >= 0; }
+    // is this side played at this screen? (in a network game only the seat's own)
+    function mineToPlay(side) { return !B.seats || B.seats.indexOf(side) >= 0; }
+    function plainName(side) { return (side === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB) || sideName(side); }
+    // the pill's words for whose activation it is: yours, or the other side's by name
+    function turnWords(side) {
+      var humans = ['A', 'B'].filter(function (s) { return !isAI(s) && mineToPlay(s); });
+      if (humans.length === 1 && humans[0] === side) return 'Your turn';
+      var nm = plainName(side);
+      return nm + (/s$/i.test(nm) ? '\u2019' : '\u2019s') + ' turn';
+    }
+    /* A new turn is announced across the board: its number, and who has the
+       initiative. It fades by itself and never takes a tap. */
+    function turnBanner() {
+      var tb = el('turnbanner');
+      if (!tb || B.state.phase !== 'battle' || B.state.over || !B.state.turn || B.replaying()) return;   // announced once the last turn has been drawn
+      if (ui.bannerTurn === B.state.turn) return;
+      var first = ui.bannerTurn == null;
+      ui.bannerTurn = B.state.turn;
+      if (first && B.state.turn > 1) return;      // a game opened part-way does not announce the turn it is in
+      var who = B.state.solo ? (B.state.activeSide === 'B' ? 'The OpFor acts' : 'Your commando acts first')
+        : B.state.initiative ? (turnWords(B.state.initiative) === 'Your turn' ? 'You have the initiative' : plainName(B.state.initiative) + ' has the initiative')
+          : '';
+      var side = B.state.solo ? B.state.activeSide : B.state.initiative;
+      tb.innerHTML = '<b>Turn ' + B.state.turn + '</b>' + (who ? '<span>' + esc(who) + '</span>' : '');
+      tb.className = 'turnbanner' + (side ? ' tb-' + side : '');
+      tb.hidden = false;
+      void tb.offsetWidth;                 // restart the animation
+      tb.classList.add('show');
+      clearTimeout(ui.bannerTimer);
+      ui.bannerTimer = setTimeout(function () { tb.classList.remove('show'); tb.hidden = true; }, 2600);
+    }
     function drawHeader() {
       // two players at one screen: the phone's one-row header shows whose turn it is too
       var hdrEl = document.querySelector('header');
@@ -418,10 +535,25 @@
           act.textContent = B.state.solo.coop ? soloOwnerName(B.state.activeOwner) + ' to act' : 'Your commando';
           act.className = 'pill pill-' + (B.state.solo.coop ? (B.state.activeOwner === 2 ? 'C' : 'P1') : 'A');
         }
+      } else if (B.state.endAsk && !B.replaying() && !B.cardsPending()) {
+        var ew = turnWords(B.state.endAsk.side);
+        act.textContent = 'End phase: ' + (ew === 'Your turn' ? 'your call' : plainName(B.state.endAsk.side));
+        act.className = 'pill pill-' + B.state.endAsk.side;
       } else {
-        act.textContent = 'Activating: ' + sideName(B.state.activeSide);
+        act.textContent = turnWords(B.state.activeSide);
         act.className = 'pill pill-' + B.state.activeSide;
       }
+      /* Whose go it is, on the header itself: a bar of that side's colour along
+         its foot (the phone shows the pill too, whatever the kind of game). */
+      if (hdrEl) {
+        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
+          ? (B.state.activeOwner === 2 ? 'C' : 'P1') : B.state.activeSide) : null;
+        ['A', 'B', 'C', 'P1'].forEach(function (k) { hdrEl.classList.toggle('turn-' + k, going === k); });
+        var goer = B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : B.state.activeSide;
+        hdrEl.classList.toggle('your-turn', !!going && !isAI(goer) && mineToPlay(goer));
+      }
+      turnBanner();
+      briefOnce();
       if (B.state.solo && B.state.phase !== 'deploy' && B.state.phase !== 'terrain') {
         el('hdr-phase').textContent = 'Turn ' + B.state.turn + ' · ' + (B.state.activeSide === 'B' ? 'OpFor phase' : 'Action phase');
         el('hdr-init').textContent = B.state.scen.name;
@@ -460,6 +592,14 @@
         ? side(att, 'Attacker') + side(other(att), 'Defender')
         : side('A', B.state.solo ? 'Your side' : 'Side A') + side('B', B.state.solo ? 'OpFor' : 'Side B')) + '</div>';
       if (sc.win) h += '<p><b>To win:</b> ' + esc(sc.win) + '</p>';
+      // while the forces go down, the briefing says where, and what this side is there to do
+      if (B.state.phase === 'deploy') {
+        var here = ['A', 'B'].filter(function (s) { return !isAI(s) && mineToPlay(s); });
+        if (here.length === 1 && B.roleOf(here[0])) h += '<p><b>' + B.roleSentence() + '</b></p>';
+        here.forEach(function (s) {
+          h += '<p>' + (here.length > 1 ? '<b>' + esc(plainName(s)) + ':</b> ' : '') + B.deployWhere(s) + '</p>';
+        });
+      }
       if (B.state.objectives.length) {
         h += '<ul>' + B.state.objectives.map(function (o, i) {
           return '<li>Objective ' + (i + 1) + ' — ' + (o.owner ? 'held by <b>' + esc(sideName(o.owner)) + '</b>' : 'nobody holds it') + '</li>';
@@ -469,11 +609,25 @@
       if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
       return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
     }
-    function openObjectives() {
+    function openObjectives(quiet) {
       if (!B.state) return;
+      ui.briefAuto = false;                // opened by hand: it stays until closed
       el('obj-box').innerHTML = objectivesHTML();
       el('obj-modal').hidden = false;
-      if (SFX) SFX.click();
+      if (SFX && !quiet) SFX.click();
+    }
+    /* The briefing comes up by itself the once, as a battle's deployment
+       begins: the scenario, what wins it, and where the forces go down. After
+       that it is the header's Objectives button. A demo is watched, not
+       briefed. */
+    function briefOnce() {
+      // opened by itself for the deployment, it goes with the deployment
+      if (ui.briefAuto && (!B.state || B.state.phase !== 'deploy')) { ui.briefAuto = false; el('obj-modal').hidden = true; }
+      if (!B.state || B.state.phase !== 'deploy' || B.state.cfg.aiSides.length === 2) return;
+      if (ui.briefed === B.state.cfg) return;
+      ui.briefed = B.state.cfg;
+      openObjectives(true);
+      ui.briefAuto = true;
     }
 
     return {
@@ -490,7 +644,8 @@
       fitView: fitView,
       focusUnit: focusUnit,
       foeColour: foeColour,
-      handsOff: handsOff,
+      handsOff: handsOff, camOff: camOff,
+      followOn: followOn, setFollow: setFollow, showFollow: showFollow, fitShot: fitShot, unfitShot: unfitShot, startDemoCam: startDemoCam,
       hud: hud,
       labelIcons: labelIcons,
       nearestZoom: nearestZoom,

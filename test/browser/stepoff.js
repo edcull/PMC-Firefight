@@ -39,6 +39,7 @@ async function drain(p) {
     keys: ['cmd1', 'veterans', 'shock', 'insertplat', 'insertplat', 'protectors'] });
   await p.waitForTimeout(1200);
   await drain(p);
+  await p.evaluate(() => { if (window.PMC_STATE().deployReady) window.__sendIntent({ k: 'deployready' }); });   // the list stands: on to the deployment
 
   head('A drop platform comes down with somebody in it');
   const seated = await p.evaluate(() => {
@@ -67,6 +68,7 @@ async function drain(p) {
   async function passOne() {
     await p.evaluate(() => {
       const s = window.PMC_STATE();
+      if (s.endAsk) { window.__sendIntent({ k: 'enddone' }); return; }   // the End phase: carry on
       if (s.activeSide !== 'A' || s.over) return;
       const u = s.units.find(x => x.side === 'A' && x.alive && !x.activated && !x.reserve && !x.aboard &&
         x.key !== 'insertplat' && window.PMC.status(x) !== 'broken');

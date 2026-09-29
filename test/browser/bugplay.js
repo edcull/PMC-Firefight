@@ -56,7 +56,9 @@ async function run(p, label, cfg, checks) {
   if (checks) checks(set);
 
   await p.evaluate(() => {
-    const b = (window.__sendIntent({ k: 'autosplit' }), document.querySelector('button[data-act="autodeploy"]'));
+    // a piece put down by hand first (a field fortification) is put down for them
+    for (let n = 0; n < 12 && window.PMC_STATE().placeAsk; n++) window.__sendIntent({ k: 'placeauto' });
+    const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]')));
     if (b) b.click();
   });
   await p.waitForTimeout(300);
@@ -64,6 +66,7 @@ async function run(p, label, cfg, checks) {
   const started = await p.evaluate(() => {
     const s = window.PMC_STATE();
     s.cfg.aiSides = ['A', 'B'];                  // AI against AI, unpaced
+    for (let n = 0; n < 12 && s.placeAsk; n++) window.__sendIntent({ k: 'placeauto' });
     const b = window.__beginButton();
     if (b) b.click();
     return s.phase;

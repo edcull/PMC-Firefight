@@ -268,9 +268,11 @@
   // the alien races: iso-aliens.js (installed with the modules, below)
   // the crew-served guns: iso-guns.js (installed with the modules, below)
   /* ---------- formation ---------- */
+  // the most models a squad is drawn with (the Freedom Warriors field ten)
+  var MAX_FIGS = 10;
   var ROWS = {
     1: [1], 2: [1, 1], 3: [1, 2], 4: [2, 2],
-    5: [2, 3], 6: [3, 3], 7: [2, 3, 2], 8: [3, 3, 2]
+    5: [2, 3], 6: [3, 3], 7: [2, 3, 2], 8: [3, 3, 2], 9: [3, 3, 3], 10: [3, 4, 3]
   };
   /* The models of a garrison (p. 41), inside the building: spread round the
      inside of its walls, a man at each window, all the way round — as screen
@@ -312,11 +314,12 @@
     });
   }
   function formation(n) {
-    var rows = ROWS[Math.max(1, Math.min(8, n))] || [3, 3, 2], out = [];
+    var rows = ROWS[Math.max(1, Math.min(MAX_FIGS, n))] || [3, 3, 2], out = [];
+    var gap = n > 8 ? 0.47 : 0.56;                 // nine or ten stand a little closer, to keep on the base
     for (var r = 0; r < rows.length; r++) {
-      var m = rows[r], d = (r - (rows.length - 1) / 2) * 0.56;
+      var m = rows[r], d = (r - (rows.length - 1) / 2) * gap;
       for (var k = 0; k < m; k++) {
-        var t = (k - (m - 1) / 2) * 0.56;
+        var t = (k - (m - 1) / 2) * gap;
         // a pair stands in file: the man behind steps a little to the left, so he is not hidden
         if (n === 2 && rows.length === 2 && r === 0) t -= 0.22;
         // iso offsets inside the base, back rank first
@@ -377,7 +380,7 @@
   function headroom(n, pose, armoured) {
     var tall = STAND_H * (armoured ? ARMOUR_H : 1) *
       (pose === 'prone' ? 0.32 : pose === 'kneel' ? 0.8 : 1);
-    var ranks = (ROWS[Math.max(1, Math.min(8, n))] || [3, 3, 2]).length;
+    var ranks = (ROWS[Math.max(1, Math.min(MAX_FIGS, n))] || [3, 3, 2]).length;
     return tall + (ranks - 1) / 2 * 0.56 * K + a(3.5);
   }
 
@@ -401,13 +404,16 @@
      tunnelling up out of the ground on a Battlefield Insertion). */
   /* A penal trooper's collar lamp: green, flashing slowly, each man a beat
      behind the one beside him; amber and flashing fast once the squad is
-     suppressed. It is out when the collars have gone. */
+     suppressed or broken; red, flashing faster still, once his own collar has
+     started to count down (`st` 'red', from the collars' sequence), until it
+     goes off. It is out when he is dead. */
   function collarLamp(g, x, y, mi, st) {
-    if (st === 'destroyed' || st === 'broken') return;
-    var sup = st === 'suppressed', t = root.performance ? performance.now() : 0;
-    var per = sup ? 420 : 1100, lit = ((t + mi * (sup ? 70 : 180)) % per) < per * 0.45;
-    var on = sup ? '#ffb030' : '#5cff7a', off = sup ? '#6a4414' : '#1f4a2a';
-    if (lit) ellipse(g, x, y, 2.6, 2.2, sup ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
+    if (st === 'destroyed') return;
+    var t = root.performance ? performance.now() : 0;
+    var red = st === 'red', warn = st === 'suppressed' || st === 'broken';
+    var per = red ? 180 : warn ? 420 : 1100, lit = ((t + mi * (red ? 30 : warn ? 70 : 180)) % per) < per * 0.5;
+    var on = red ? '#ff3b2e' : warn ? '#ffb030' : '#5cff7a', off = red ? '#5a1410' : warn ? '#6a4414' : '#1f4a2a';
+    if (lit) ellipse(g, x, y, 2.6, 2.2, red ? 'rgba(255,60,40,.38)' : warn ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
     g.fillStyle = lit ? on : off;
     g.fillRect(x - 0.7, y - 0.7, 1.4, 1.4);
   }
@@ -418,7 +424,7 @@
     if (!u || u.cls === 'vehicle' || u.cls === 'aircraft') return [];
     var art = u.art || 'rifle';
     if (u.riders && ROLES[art + 'mounted']) art = art + 'mounted';
-    var n = Math.max(1, Math.min(8, u.models || 1));
+    var n = Math.max(1, Math.min(MAX_FIGS, u.models || 1));
     var pose = statusPose(status, art);
     var spots = formation(n), out = [];
     var seed = 0, sid = String(u.id || u.code || '');
@@ -650,7 +656,7 @@
     }
 
     // every surviving model, in ranks, drawn from the back of the base forwards
-    var n = Math.max(1, Math.min(8, u.models || 1));
+    var n = Math.max(1, Math.min(MAX_FIGS, u.models || 1));
     // one height for a man, whatever squad he is in — see fitScale
     var scale = MODEL;
     var pose = opts.pose || statusPose(st, art);
@@ -734,7 +740,7 @@
         g.restore();
       } else g.drawImage(c, bx, by, c.width / rs, c.height / rs);
       g.imageSmoothingEnabled = was; g.globalAlpha = wasA;
-      if (c.lamp) collarLamp(g, mx + (u.faceL ? -1 : 1) * c.lamp[0], my + c.lamp[1], mi, st);
+      if (c.lamp) collarLamp(g, mx + (u.faceL ? -1 : 1) * c.lamp[0], my + c.lamp[1], mi, opts.lamp || st);
     }
 
     // a garrison's markers ride over the middle of the building
@@ -804,7 +810,7 @@
   }
   // where the model a squad loses was standing: the last one, in its old formation
   function casualtySpot(u, nBefore, salt) {
-    var n = Math.max(1, Math.min(8, nBefore || 1)), sp = formation(n)[0];
+    var n = Math.max(1, Math.min(MAX_FIGS, nBefore || 1)), sp = formation(n)[0];
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
     // flung out toward the edge of the base, so the fallen are not lost under the living
@@ -929,7 +935,7 @@
   var ISOGUNS = window.PMCIsoGuns({
     get PALETTE() { return PALETTE; }, get R0() { return R0; }, get box() { return box; }, a: a,
     ellipse: ellipse, hullSpec: hullSpec, poly: poly, thickLine: thickLine, toScreen: toScreen, K: K, PH: PH,
-    W: W
+    W: W, MAX_FIGS: MAX_FIGS
   });
   var FIELD_GUN = ISOGUNS.FIELD_GUN, GUN_CREW = ISOGUNS.GUN_CREW, GUN_K = ISOGUNS.GUN_K;
   var PIECE3D = ISOGUNS.PIECE3D, belt = ISOGUNS.belt, drawPieces3D = ISOGUNS.drawPieces3D;
@@ -1000,6 +1006,7 @@
 
 
   root.PMCIso = {
+    MAX_FIGS: MAX_FIGS,
     formationTable: formationTable,
     K: K, ART: A, PIXEL: PIXEL, ELEV: ELEV, PIXW: PIXW, PIXH: PIXH, W: W, H: H, TOP: TOP,
     toScreen: toScreen, toWorld: toWorld,
@@ -1046,7 +1053,7 @@
     headroom: function (models, status, unit) {
       // a machine's clearance is its own hull, not a rank of troopers
       if (unit && unit.cls && unit.cls !== 'infantry') return machineTop(unit);
-      var n = Math.max(1, Math.min(8, models || 1));
+      var n = Math.max(1, Math.min(MAX_FIGS, models || 1));
       return headroom(n, statusPose(status, unit && unit.art),
         isArmoured(unit && unit.art));
     },

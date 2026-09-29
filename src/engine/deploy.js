@@ -220,7 +220,7 @@
             break;                                   // nothing deploys: it arrives by drop
           }
           if (!deployOK(side, x, y, u)) continue;
-          if (R.TERRAIN[R.terrainAt(E.state, x, y)].impassable) continue;
+          if (R.barredAt(E.state, u, x, y)) continue;
           if (R.unitNear(E.state, x, y, u, 1)) continue;
           u.x = x; u.y = y; return;
         }
@@ -234,7 +234,7 @@
             var px = mid.x + Math.cos(ang) * rad, py = mid.y + Math.sin(ang) * rad;
             if (px < UR || py < UR || px > W - UR || py > H - UR) continue;
             if (!deployOK(side, px, py, u)) continue;
-            if (R.TERRAIN[R.terrainAt(E.state, px, py)].impassable) continue;
+            if (R.barredAt(E.state, u, px, py)) continue;
             if (R.unitNear(E.state, px, py, u, 0.6)) continue;
             best = { x: px, y: py }; break;
           }
@@ -290,6 +290,81 @@
       var z = zoneFor(side);
       if (!z) return { x: W / 2, y: H / 2 };
       return { x: (z[0] + z[1]) / 2, y: H / 2 };
+    }
+
+    /* ---- which way a vehicle faces ----
+       A hull set down on the table faces one of the eight ways, and that
+       matters from the first shot: side and rear hits come in easier, and a
+       limited fire arc bears only ahead. A player is asked for it wherever a
+       vehicle of theirs is put down (placed by hand or for them, arriving from
+       reserve, inserted, relocated) the same way a gun is laid when it digs
+       in; left alone, it faces the nearest enemy, else the enemy's ground. */
+    function faces(u) { return !!u && u.cls === 'vehicle' && !u.aboard && u.x >= 0; }
+    function faceDefault(u) {
+      var foe = null, best = Infinity;
+      E.state.units.forEach(function (o) {
+        if (!o.alive || o.aboard || o.side === u.side || o.x < 0) return;
+        var d = R.unitDist(u, o);
+        if (d < best) { best = d; foe = o; }
+      });
+      var to = foe || zoneCentre(other(u.side));
+      if (Math.hypot(to.x - u.x, to.y - u.y) < 0.1) return R.nearestFacing(u.facing == null ? (u.side === 'A' ? 0 : Math.PI) : u.facing);
+      return R.nearestFacing(Math.atan2(to.y - u.y, to.x - u.x));
+    }
+    /* Each vehicle gets the default at once, so the game never waits on one it
+       did not need to ask about; a player is then asked about theirs, one at a
+       time, and `then` goes on once the last has been answered. Hands back
+       whether it is asking. */
+    function askFacing(side, units, then, look) {
+      var hulls = (units || []).filter(faces);
+      hulls.forEach(function (u) { u.facing = faceDefault(u); u.aim = null; });
+      // a pod that can never move lands however it lands: it keeps the default, and nobody is asked
+      hulls = hulls.filter(function (u) { return !R.has(u, 'Immobile'); });
+      if (!hulls.length || isAI(side)) { if (then) then(); return false; }
+      var ids = hulls.map(function (u) { return u.id; });
+      // a question already open (the other seat's, in hotseat) is answered first; this one waits its turn
+      if (E.state.faceAsk) {
+        E.state.faceMore = (E.state.faceMore || []).concat([{ side: side, ids: ids, look: !!look }]);
+        ui.faceThens = (ui.faceThens || []).concat([then || null]);
+        render();
+        return true;
+      }
+      E.state.faceAsk = { side: side, ids: ids, dir: hulls[0].facing, look: !!look };
+      ui.faceThen = then || null;
+      faceHint();
+      render();
+      return true;
+    }
+    // placed by hand, the hull is where the player is looking; put down for them, the camera goes to each in turn
+    function faceHint() {
+      var fa = E.state.faceAsk, u = fa && byId(fa.ids[0]);
+      if (u && fa.look) focusUnit(u);
+      if (u) setHint(null, 'Which way does ' + u.name + ' face? Tap a direction around it, or on the octagon. Its sides and rear are easier to hit.');
+    }
+    // the facing chosen for the vehicle being asked about; with no bearing, it and any after it keep the one offered
+    function answerFacing(dir) {
+      var fa = E.state.faceAsk;
+      if (!fa) return;
+      if (dir == null) fa.ids = [];
+      else {
+        var u = byId(fa.ids.shift());
+        if (u) { u.facing = R.nearestFacing(dir); u.aim = null; }
+      }
+      var next = fa.ids.length ? byId(fa.ids[0]) : null;
+      if (next) { fa.dir = next.facing; faceHint(); render(); return; }
+      var then = ui.faceThen, more = (E.state.faceMore || []).shift();
+      if (more) {
+        var mu = byId(more.ids[0]);
+        E.state.faceAsk = { side: more.side, ids: more.ids, dir: mu ? mu.facing : 0, look: more.look };
+        ui.faceThen = (ui.faceThens || []).shift() || null;
+        faceHint();
+      } else {
+        E.state.faceAsk = null; E.state.faceMore = null;
+        ui.faceThen = null; ui.faceThens = null;
+        setHint(null, null);
+      }
+      render();
+      if (then) then();
     }
 
     // whichever side still has units in hand, and is not the OpFor
@@ -362,7 +437,7 @@
           var ang = a / 16 * Math.PI * 2;
           var px = from.x + Math.cos(ang) * r, py = from.y + Math.sin(ang) * r;
           if (!deployOK(u.side, px, py, u)) continue;
-          if (R.TERRAIN[R.terrainAt(E.state, px, py)].impassable) continue;
+          if (R.barredAt(E.state, u, px, py)) continue;
           if (R.unitNear(E.state, px, py, u, 1)) continue;
           var dd = Math.hypot(px - x, py - y);
           if (dd < bd) { bd = dd; best = { x: px, y: py }; }
@@ -379,8 +454,8 @@
       });
     }
 
-    /* Every platform starts the battle with a squad aboard. This seats them as the
-       table is laid out, so the rule holds even when nobody touches the card. */
+    /* A platform need not carry anyone, but one usually does: a squad is put in
+       each as the table is laid out, and the player may take it out again. */
     function seatPlatforms() {
       emptyPlatforms().forEach(function (v) {
         /* A line squad rather than the colonel: a command unit is the last thing
@@ -536,7 +611,6 @@
     }
 
     function deploymentDone() {
-      if (emptyPlatforms().length) return false;
       if (!splitsOK()) return false;
       return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
     }
@@ -575,6 +649,8 @@
         nextPlace();
         return;
       }
+      // a hull nobody was asked about faces the enemy
+      E.state.units.forEach(function (u) { if (faces(u) && u.facing == null) u.facing = faceDefault(u); });
       E.state.phase = 'battle';
       ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO5') >= 0 && isAI(side)) fortify(side); });
       // Ambush!: each unit settles into its hide before the first turn (p. 156)
@@ -595,7 +671,8 @@
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,
-      clearSplits: clearSplits, autoSplit: autoSplit, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion
+      clearSplits: clearSplits, autoSplit: autoSplit, faces: faces, faceDefault: faceDefault,
+      askFacing: askFacing, answerFacing: answerFacing, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineDeploy;

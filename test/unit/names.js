@@ -92,9 +92,9 @@ for (const [fa, fb] of [['pmc', 'rebel'], ['xeno', 'bugs']]) {
   let steps = 0;
   while (!e.over() && steps < 4000) { if (!e.intent('A', { k: 'step' }).ok) break; steps++; }
   const rep = e.report(), st = e.state();
-  ok('...the living match the models', st.units.every((u) => R.isMachine(u) || R.counted(u) || live(u).length === u.models));
+  ok('...the living match the models', st.units.every((u) => R.isMachine(u) || !R.crewed(u) || live(u).length === u.models));
   const infantryLost = rep.casualties.filter((c) => !c.swarm && !c.anon && !R.isMachine(R.profile(st.units.find((u) => (u.rid || u.id) === c.rid).key))).length;
-  const byCount = st.units.filter((u) => !R.isMachine(u) && !R.counted(u)).reduce((a, u) => a + u.men.length - live(u).length, 0);
+  const byCount = st.units.filter((u) => !R.isMachine(u) && R.crewed(u)).reduce((a, u) => a + u.men.length - live(u).length, 0);
   ok('...the report names every man lost', rep.casualties.length > 0 && infantryLost === byCount, rep.casualties.length + ' casualties');
   ok('...each by name, rank and type', rep.casualties.every((c) => c.swarm || c.anon || (c.name && c.rank && c.type && c.turn >= 0)));
   if (fa === 'xeno') {
@@ -117,6 +117,10 @@ for (const [fa, fb] of [['pmc', 'rebel'], ['xeno', 'bugs']]) {
   ok('...and the survivors are on each line', rep.units.every((l) => Array.isArray(l.men)));
 }
 
+/* Each infantry casualty rolls a D6 after the battle: a 1 killed, 2-6
+   wounded. Where a check wants one or the other, the dice are loaded. */
+function dice(v, fn) { const d = R.d6; R.d6 = () => v; try { return fn(); } finally { R.d6 = d; } }
+
 console.log('the dossier');
 const camp = C.newCampaign({ mode: 'solo' });
 C.found(camp.companies.A, ['recruits', 'rookie', 'lighteng'], 'S2');
@@ -128,7 +132,7 @@ const report = {
   units: [{ rid: entry.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 2, destroyed: false, brokenEver: false, wiped: false, men: men, kills: [] }],
   casualties: [{ side: 'A', rid: entry.rid, name: 'Rhys Walsh', rank: 'Sergeant', turn: 3, type: 'Rookie rifle team' }]
 };
-const after = C.aftermath(camp, report);
+const after = dice(1, () => C.aftermath(camp, report));
 ok('the survivors are written on the entry', entry.men && entry.men.length === 2 && entry.men[0].name === 'Ana Silva');
 ok('...the casualties go on its history', entry.history.some((h) => /Sergeant Rhys Walsh/.test(h)));
 ok('...and on the aftermath', after.sides.A.units.some((u) => (u.casualties || []).length === 1));
@@ -192,11 +196,11 @@ const lc = C.newCampaign({ mode: 'solo' });
 const squad = C.newEntry('rookie');
 lc.companies.A.roster = [squad];
 ok('nothing lost is 0%', C.lossStats(lc.companies.A)[0].pct === 0 && C.lossStats(lc.companies.A)[0].served === 8);
-C.aftermath(lc, {
+dice(1, () => C.aftermath(lc, {
   winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
   units: [{ rid: squad.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 6, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }],
   casualties: [0, 1].map((i) => ({ side: 'A', rid: squad.rid, name: 'Man ' + i, rank: 'Private', turn: 2, type: 'Rookie rifle team' }))
-});
+}));
 const ls = C.lossStats(lc.companies.A)[0];
 ok('a squad of 8 that loses 2 is 2 of 10 soldiers — 20%, not 25%', ls.lost === 2 && ls.served === 10 && ls.pct === 0.2 && ls.unit === 'soldiers',
   ls.lost + ' of ' + ls.served);
@@ -223,11 +227,11 @@ const cc = C.newCampaign({ mode: 'solo' });
 const hull = C.newEntry('lcv');
 cc.companies.A.roster = [hull];
 ok('a crewed vehicle counts its one crewman as having served', C.lossStats(cc.companies.A)[0].served === 1);
-C.aftermath(cc, {
+dice(1, () => C.aftermath(cc, {
   winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
   units: [{ rid: hull.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
   casualties: [{ side: 'A', rid: hull.rid, name: 'Ivo Crane', rank: 'Commander', turn: 3, type: 'Light combat vehicle' }]
-});
+}));
 const hc = C.lossStats(cc.companies.A)[0];
 ok('...and when the hull is lost, its crewman is the one loss', hc.lost === 1, hc.lost + ' of ' + hc.served);
 
@@ -239,7 +243,7 @@ XA.roster = [crocks, esh];
 const xs0 = C.lossStats(XA);
 ok('the tribe keeps two counts, Crocks and Esh-Aven', xs0.map((l) => l.unit).join() === 'Crocks,Esh-Aven',
   xs0.map((l) => l.served + ' ' + l.unit).join(', '));
-C.aftermath(xc, {
+dice(1, () => C.aftermath(xc, {
   winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
   units: [
     { rid: crocks.rid, side: 'A', key: 'xalpha3', startSize: 3, endSize: 2, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] },
@@ -247,7 +251,7 @@ C.aftermath(xc, {
   ],
   casualties: [{ side: 'A', rid: crocks.rid, name: 'Kavek', rank: 'Hunt-leader', turn: 1, type: 'Core Alpha troopers' }]
     .concat([{ side: 'A', rid: esh.rid, anon: true, count: 3, turn: 0, type: 'Core Epsilon troopers', unit: 'Core Epsilon troopers' }])
-});
+}));
 const xs = C.lossStats(XA);
 ok('...a Crock lost goes on the Crocks', xs[0].lost === 1 && xs[0].served === 4, xs[0].lost + ' of ' + xs[0].served);
 ok('...and the Esh-Aven on their own', xs[1].lost === 3 && xs[1].served === R.profile('xeps3').size + 3, xs[1].lost + ' of ' + xs[1].served);
@@ -272,6 +276,95 @@ ok('...nor as biomass lost', ihs.lost === 0 && ihs.served === 16, ihs.lost + ' o
 ok('...though the memorial still shows the bodies', C.biomassTally(ih.companies.A)['Infected humans'].models === 5 &&
   C.biomassTally(ih.companies.A)['Infected humans'].mass === 0);
 ok('...and its history says how many, not biomass', inf.history.some((h) => /^Lost 5\./.test(h)));
+
+console.log('killed or wounded');
+{
+  const kc = C.newCampaign({ mode: 'solo' });
+  const sq = C.newEntry('rookie');
+  kc.companies.A.roster = [sq];
+  C.menOf(sq, kc.companies.A);
+  const [sgt, cpl, p1, p2] = sq.men;
+  /* The sergeant rolled a 1 and was killed; the corporal and a private rolled
+     3 and 6 and were wounded. Rolled once and kept on the report, so a report
+     that already carries its rolls is taken as it stands. */
+  const fates = [[1, 'kia'], [3, 'wounded'], [6, 'wounded']];
+  const kAfter = C.aftermath(kc, {
+    winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+    units: [{ rid: sq.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 5, destroyed: false, brokenEver: false, wiped: false,
+      men: sq.men.filter((m) => m !== sgt && m !== cpl && m !== p1).map((m) => ({ name: m.name, rank: m.rank })), kills: [] }],
+    casualties: [sgt, cpl, p1].map((m, i) => ({ side: 'A', rid: sq.rid, name: m.name, rank: m.rank, turn: 2, type: 'Rookie rifle team',
+      roll: fates[i][0], rolls: [fates[i][0]], fate: fates[i][1], kia: fates[i][1] === 'kia' ? 1 : 0, wounded: fates[i][1] === 'kia' ? 0 : 1 }))
+  });
+  const cs = kAfter.sides.A.units[0].casualties;
+  ok('the report\'s rolls are kept', cs[0].fate === 'kia' && cs[1].fate === 'wounded' && cs[2].roll === 6);
+  const rollOne = (v) => {
+    const c1 = C.newCampaign({ mode: 'solo' }), e1 = C.newEntry('rookie');
+    c1.companies.A.roster = [e1];
+    return dice(v, () => C.aftermath(c1, {
+      winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+      units: [{ rid: e1.rid, side: 'A', key: 'rookie', startSize: 8, endSize: 7, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }],
+      casualties: [{ side: 'A', rid: e1.rid, name: 'Una Marsh', rank: 'Private', turn: 1, type: 'Rookie rifle team' }]
+    })).sides.A.units[0].casualties[0];
+  };
+  ok('a D6 of 1 is killed in action', [1].every((v) => { const c = rollOne(v); return c.fate === 'kia' && c.roll === v; }));
+  ok('...and 2-6 wounded', [2, 3, 4, 5, 6].every((v) => { const c = rollOne(v); return c.fate === 'wounded' && c.roll === v; }));
+  const mem = kc.companies.A.memorial;
+  ok('the killed and the wounded both go on the field hospital\'s list', mem.length === 3 &&
+    mem[0].name === sgt.name && mem[0].fate === 'kia' && mem[1].fate === 'wounded' && mem[2].fate === 'wounded', JSON.stringify(mem.map((m) => m.fate)));
+  ok('the wounded are out for the campaign, not back in the ranks', sq.men.length === 5 &&
+    !sq.men.some((m) => m.name === cpl.name || m.name === p1.name || m.name === sgt.name) && sq.men[0].name === p2.name,
+    sq.men.map((m) => m.name).join(', '));
+  ok('...and the history says who was which', sq.history.some((h) => h.indexOf('Killed in action: ' + sgt.rank + ' ' + sgt.name) >= 0 &&
+    h.indexOf('Wounded, out for the campaign: ' + cpl.rank + ' ' + cpl.name) >= 0));
+  const ks = C.lossStats(kc.companies.A)[0];
+  ok('the loss rate splits killed from wounded: 1 and 2 of 11', ks.lost === 1 && ks.wounded === 2 && ks.served === 11 &&
+    Math.round(ks.wpct * 1000) === 182, JSON.stringify(ks));
+
+  // a vehicle's crewman rolls as a soldier does
+  const vc2 = C.newCampaign({ mode: 'solo' });
+  const hv = C.newEntry('lcv');
+  vc2.companies.A.roster = [hv];
+  dice(6, () => C.aftermath(vc2, {
+    winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+    units: [{ rid: hv.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
+    casualties: [{ side: 'A', rid: hv.rid, name: 'Ivo Crane', rank: 'Corporal', turn: 3, type: 'Light combat vehicle' }]
+  }));
+  ok('a crewman lost with the hull rolls too: a 6 is wounded', C.lossStats(vc2.companies.A)[0].lost === 0 && C.lossStats(vc2.companies.A)[0].wounded === 1 &&
+    vc2.companies.A.memorial.length === 1 && vc2.companies.A.memorial[0].fate === 'wounded');
+
+  // the Esh-Aven roll one by one, and only the dead are counted on the memorial
+  const xk = C.newCampaign({ mode: 'solo', factionA: 'xeno' });
+  xk.companies.A.faction = 'xeno';
+  const ek = C.newEntry('xeps3');
+  xk.companies.A.roster = [ek];
+  dice(4, () => C.aftermath(xk, {
+    winner: 'A', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+    units: [{ rid: ek.rid, side: 'A', key: 'xeps3', startSize: R.profile('xeps3').size, endSize: 2, destroyed: false, brokenEver: false, wiped: false, men: [], kills: [] }],
+    casualties: [{ side: 'A', rid: ek.rid, anon: true, count: 4, turn: 0, type: 'Core Epsilon troopers', unit: 'Core Epsilon troopers' }]
+  }));
+  const xl = C.lossStats(xk.companies.A)[1];
+  ok('a counted unit rolls for each of its casualties', xl.lost === 0 && xl.wounded === 4 && xl.served === R.profile('xeps3').size + 4 &&
+    xk.companies.A.memorial.length === 1 && xk.companies.A.memorial[0].wounded === 4, JSON.stringify(xl));
+  ok('...the Esh-Aven are killed or wounded, not ascended', ek.history.some((h) => /Lost 4 Esh-Aven \(0 killed, 4 wounded\)/.test(h)) &&
+    C.fateWords(xk.companies.A, 'eshaven').kia === 'killed' && C.fateWords(xk.companies.A, 'crocks').kia === 'ascended', ek.history.join(' | '));
+  ok('...and the tribe calls its Crocks ascended and scarred', C.words(xk.companies.A).kia === 'ascended' && C.words(xk.companies.A).wia === 'scarred' &&
+    C.words(xk.companies.A).memorial === 'Temple');
+  ok('a company keeps a field hospital, the swarm its biomass', C.words(kc.companies.A).memorial === 'Field hospital' &&
+    C.words({ faction: 'rebel' }).memorial === 'Field hospital' && C.words({ faction: 'bugs' }).memorial === 'Biomass');
+}
+
+console.log('drones go unnamed');
+{
+  const dc = C.newCampaign({ mode: 'solo' });
+  const ds = C.newEntry('dcombat');
+  ds.men = [{ name: 'Old Name', rank: 'Private' }];     // named by an older version
+  dc.companies.A.roster = [ds];
+  C.menOf(ds, dc.companies.A);
+  ok('a drone squad has no soldiers to show', ds.men.length === 0);
+  const du = unit('dcombat');
+  R.musterMen(du, [], {});
+  ok('...nor any on the table', du.men.length === 0);
+}
 
 console.log('experience');
 const vc = C.newCompany('Vets');

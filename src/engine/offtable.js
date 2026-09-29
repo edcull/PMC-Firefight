@@ -16,7 +16,7 @@
 
   function pickArmy(co, tier, pl, tactic) {
     var picks = C.pickForce(co, tier, pl, tactic);
-    var keys = picks.map(function (e) { return R.joinPick(e.key, e.prop, e.drone); });
+    var keys = picks.map(function (e) { return R.entryPick(e); });
     return R.checkArmy(keys, tier, pl, co.doctrines || [], tactic).ok ? { picks: picks, keys: keys } : null;
   }
 
@@ -57,6 +57,7 @@
       if (e.over()) return false;
       var s = e.state();
       if (s.swapAsk) { e.intent(s.swapAsk.side, { k: 'swapdone' }); return true; }
+      if (s.faceAsk) { e.intent(s.faceAsk.side, { k: 'vfaceall' }); return true; }
       if (s.phase === 'deploy' || s.phase === 'terrain') {
         e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' });
         e.intent('A', { k: 'start' });

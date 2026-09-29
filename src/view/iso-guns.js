@@ -816,7 +816,7 @@
     }
     function drawPieces3D(g, u, art, at, opts, drawMan) {
       var ps = pieces3D(u, at), all = [];
-      var pal = B.PALETTE[u.paint || u.side] || B.PALETTE.A, n = Math.max(1, Math.min(8, u.models || 1));
+      var pal = B.PALETTE[u.paint || u.side] || B.PALETTE.A, n = Math.max(1, Math.min(B.MAX_FIGS, u.models || 1));
       ps.forEach(function (pc, i) {
         var R = rig(g, { x: pc.x, y: pc.y, aim: pc.aim, top: pc.top, k: pc.k, lift: opts.lift || 0 });
         pc.P.build(R, { pal: pal, g: g });
