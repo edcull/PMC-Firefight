@@ -167,7 +167,7 @@
           (R.canBeDrone(p0) ? '<button class="drive' + (sp.drone ? ' on' : '') + '" data-fdrone="' + i +
             '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' + (sp.drone ? 'DRN' : 'crew') + '</button>' : '') +
           rideButtons(p0, sp, i) +
-          '<button class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
+          '<button class="lnk danger fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
           '<div class="fcard-stats">' + st.map(function (c) { return '<span><i>' + c[0] + '</i>' + esc(c[1]) + '</span>'; }).join('') + '</div>' +
           ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
             var d = TXT ? TXT.describe(r) : { name: r, text: '' };

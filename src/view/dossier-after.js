@@ -323,7 +323,7 @@
         pre.tp[st.side][cand[0].rid].total + '. The revolt may execute ' + (cand.length > 1 ? 'one of them' : 'it') +
         ': it is struck off, and every other unit’s Trauma Points from this battle are halved.</p>' +
         '<div class="segs">' + cand.map(function (e) {
-          return '<button class="lnk warn" data-weak="' + e.rid + '">Execute ' + esc(e.name) + '</button>';
+          return '<button class="lnk danger" data-weak="' + e.rid + '">Execute ' + esc(e.name) + '</button>';
         }).join('') + '<button class="lnk" data-weak="">Spare them</button></div></div>';
       return h;
     }

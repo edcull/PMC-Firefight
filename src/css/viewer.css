@@ -81,7 +81,7 @@ main {
   font-family: var(--body); font-size: 12px;
 }
 .vu:hover { background: var(--panel-2); border-color: var(--line); }
-.vu.on { background: color-mix(in srgb, var(--alpha) 14%, transparent); border-color: var(--alpha); }
+.vu.on { background: var(--on-bg); border-color: var(--alpha); }
 .vu-code { font-family: var(--display); font-size: 10px; font-weight: 600; color: var(--ink-dim); }
 .vu.on .vu-code { color: var(--alpha); }
 .vu-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -100,7 +100,7 @@ main {
 }
 .vzoom button {
   background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
-  font-family: var(--display); font-size: 12px; min-width: 28px; height: 26px; padding: 0 7px; cursor: pointer;
+  font-family: var(--display); font-size: 15px; line-height: 1; min-width: 28px; height: 26px; padding: 0 7px; cursor: pointer;
 }
 .vzoom button:hover { border-color: var(--alpha); }
 .vcolbtn { position: absolute; top: 8px; left: 8px; z-index: 3; }
@@ -116,7 +116,7 @@ main {
   box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
 }
 .vcolpop label { display: block; font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 7px; }
-.vzoom button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
+.vzoom button:disabled { opacity: var(--off-opacity); cursor: default; border-color: var(--line); }
 /* the stage takes every drag itself: a swipe steps through the units (see viewer.js), a pinch zooms */
 #vboard { touch-action: none; }
 /* a tap on the stage fires; it does not flash the browser's tap highlight or select anything */
@@ -163,7 +163,7 @@ main {
   flex: 1 1 auto; min-width: 0; white-space: nowrap; text-align: center;
 }
 .vsg:hover { color: var(--ink); }
-.vsg.on { color: var(--ink); border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
+.vsg.on { color: var(--ink); border-color: var(--alpha); background: var(--on-bg); }
 input[type=range] { width: 100%; accent-color: var(--alpha); }
 /* as many buttons as fit to a row, the rest wrapping onto a second, each row sharing out its width */
 .vacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -175,7 +175,7 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
 .vbtn:hover { border-color: var(--alpha); }
 .vbtn.primary { border-color: color-mix(in srgb, var(--alpha) 60%, transparent); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
 
-.vbtn[disabled] { opacity: .4; cursor: default; }
+.vbtn[disabled] { opacity: var(--off-opacity); cursor: default; }
 .vbtn[disabled]:hover { border-color: var(--line); }
 
 /* the army's colours, one swatch each */

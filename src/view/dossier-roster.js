@@ -38,7 +38,7 @@
           // enough experience for something: a Promote button, opening the choices in a window
           var spend = canSpend(e, co) ? '<button class="lnk good dact" data-promo="' + e.rid + '" title="Promote" aria-label="Promote">' + ICON_PROMOTE + '<span>Promote</span></button>' : '';
           var dis = C.canDisband(co, e);
-          acts += '<button class="lnk warn dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : ' disabled title="' + esc(dis.why) + '"') + '>' + ICON_DISBAND + '<span>Disband</span></button>';
+          acts += '<button class="lnk danger dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : ' disabled title="' + esc(dis.why) + '"') + '>' + ICON_DISBAND + '<span>Disband</span></button>';
           if (spend) acts += spend;
           // closed, a card offers only Promote (when there is the experience for it); opened, all of them
           h += entryCard(e, co, { actions: open ? acts : spend, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true });

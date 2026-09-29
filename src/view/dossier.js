@@ -276,7 +276,7 @@
     asking = spec;
     var box = el('camp-askbox');
     var h = '<h3>' + esc(spec.title) + '</h3>';
-    if (spec.text) h += '<p' + (spec.danger ? ' class="warn"' : '') + '>' + esc(spec.text) + '</p>';
+    if (spec.text) h += '<p' + (spec.danger ? ' class="danger"' : '') + '>' + esc(spec.text) + '</p>';
     if (spec.kind === 'text') {
       h += '<input class="tin" id="ask-input" maxlength="' + (spec.max || 28) + '" value="' +
         esc(spec.value || '') + '">';
@@ -284,10 +284,11 @@
     if (spec.kind === 'note') {
       h += '<div class="askrow"><button class="start" data-ask="close">Close</button></div>';
     } else {
+      // Cancel on the left, the main action filling the rest (as every question has it)
       h += '<div class="askrow">' +
+        '<button class="lnk" data-ask="close">Cancel</button>' +
         '<button class="start' + (spec.danger ? ' danger' : '') + '" data-ask="ok">' +
-        esc(spec.okLabel || 'Confirm') + '</button>' +
-        '<button class="lnk" data-ask="close">Cancel</button></div>';
+        esc(spec.okLabel || 'Confirm') + '</button></div>';
     }
     box.innerHTML = h;
     el('camp-ask').hidden = false;

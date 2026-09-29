@@ -93,7 +93,7 @@
       '.lob-lines .note{color:var(--ink-dim);font-style:italic}',
       '.lob-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px}',
       '.lob-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}',
-      '.lob-foot .start{margin-left:auto}',
+      '.lob-foot .start{margin:0;flex:1 1 auto}',
       '.lob-bad{color:var(--warn,#e88);font-size:13px;margin:0}',
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:#8d8}',

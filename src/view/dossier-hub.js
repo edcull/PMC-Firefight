@@ -81,7 +81,7 @@
         esc(C.words(A).memorialSub) + '</small></span></button>' +
         '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
         '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
-        '<button type="button" class="archline warn" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
+        '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
       h += cmodal('memorial', C.words(A).memorial, '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);

@@ -2,6 +2,11 @@
    named here once; game.css (the game) and viewer.css (the Unit Viewer) are
    written in them. */
 :root {
+  /* one height for a row of small buttons (hub bar, sort line, muster buttons…), a finger's worth on a touch screen */
+  --row-h: 34px;
+  /* the gold tint of a selected toggle, and how far a disabled control fades */
+  --on-bg: color-mix(in srgb, var(--alpha) 14%, transparent);
+  --off-opacity: .4;
   --ground: #0d1117;
   --panel: #141a24;
   --panel-2: #1a2230;
@@ -48,3 +53,5 @@
   font-size: 14px; line-height: 1; cursor: pointer;
 }
 .xclose:hover, .xclose:focus-visible { color: var(--ink); border-color: var(--alpha); }
+
+@media (pointer: coarse) { :root { --row-h: 44px; } }

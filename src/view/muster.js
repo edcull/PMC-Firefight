@@ -192,7 +192,7 @@
           '<span class="fcard-kind">' + esc(p.group || '') + '</span>' +
           (freeIdx[i] ? '<i class="freetag" title="Free: an extra unit from Human Wave Attacks">FREE</i>' : '') +
           drive + drone + ride + mnt +
-          '<button type="button" class="lnk warn fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p.name) + '">\u2715</button></div>' +
+          '<button type="button" class="lnk danger fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p.name) + '">\u2715</button></div>' +
           '<div class="fcard-stats">' + st.map(function (c2) { return '<span><i>' + c2[0] + '</i>' + esc(String(c2[1])) + '</span>'; }).join('') + '</div>' +
           ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
             var d = TXT ? TXT.describe(r) : { name: r, text: '' };
