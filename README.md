@@ -12,7 +12,7 @@ scenarios, solitaire and co-op, and the campaign are in.
   is needed. GitHub Pages serves the same page.
 - **One file:** `npm run build` writes `build/firefight.html`, the whole game in a
   single self-contained page.
-- **Online against someone else:** `node server.js`, then open
+- **Online against someone else (not finished):** `node server.js`, then open
   http://localhost:8787 and choose **Multiplayer**. See [SERVER.md](SERVER.md).
 
 Games are saved in the browser (a battle in progress, forces and campaigns). A
@@ -28,7 +28,7 @@ The main menu offers:
 |---|---|
 | **Single player** | A skirmish against the AI, solitaire (your commando against the OpFor), or a campaign |
 | **Hotseat** | Two players on one screen: a skirmish, co-op against the OpFor, or a campaign |
-| **Multiplayer** | Two players online (needs the server) |
+| **Multiplayer** | Two players online (needs the server; not finished yet) |
 | **Unit viewer** | Every profile in all four armies, walking and firing |
 
 A skirmish opens on **the battlefield**: pick the Battle Tier, Priority Level,
@@ -134,6 +134,7 @@ browser tests look for Chromium at `/opt/pw-browsers/chromium`.
 
 ## Not implemented
 
+- Online multiplayer is not fully implemented or tested yet
 - Appendix 1, Close Encounters (corridors, doors, hidden movement, opportunity fire)
 - Appendix 2, Other Worlds (gravity, atmosphere, anomalies); worlds only choose the terrain
 - From Appendix 3: "There can be only two!" and bookkeeper rout counting
