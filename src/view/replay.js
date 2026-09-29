@@ -164,12 +164,27 @@
         if (u.alive && u.x >= 0 && from.x != null) animateMove(u, [from, { x: u.x, y: u.y }]);
       });
     }
+    /* The Suppression a shot or an assault puts on a unit is not simply there once
+       it has played: from the moment it lands the unit's bar fills (or empties)
+       towards what the rules now say, over the rest of the attack. */
+    function fillSp(id, ms) {
+      var h = id && held[id], u = evUnit(id);
+      if (!h || !u || !u.alive || h.sp === u.sp) return;
+      h.spFill = { from: h.sp, to: u.sp, t0: nowMs(), dur: Math.max(200, ms) };
+    }
+    function spNow(h) {
+      var f = h.spFill;
+      if (!f) return h.sp;
+      var k = Math.max(0, Math.min(1, (nowMs() - f.t0) / f.dur));
+      k = 1 - Math.pow(1 - k, 2);              // quick to rise, settling into place
+      return f.from + (f.to - f.from) * k;
+    }
     // the unit as it should be drawn: itself, or itself as it stood before what is still to be played
     function shownAs(u) {
       var h = u && held[u.id];
       if (!h) return u;
       var o = Object.create(u);
-      o.models = h.models; o.sp = h.sp; o.alive = h.alive; o.damage = h.damage; o.fled = h.fled;
+      o.models = h.models; o.sp = spNow(h); o.alive = h.alive; o.damage = h.damage; o.fled = h.fled;
       if (!u.alive) { o.x = h.x; o.y = h.y; o.aboard = h.aboard; o.reserve = h.reserve; }
       return o;
     }
@@ -185,6 +200,10 @@
         this.pump();
       },
       pump: function () {
+        /* An event still being drawn is finished first: its end pumps again. Going
+           on through a batch that arrived meanwhile would reach the end of the
+           queue and let go of units the attack in flight is still holding. */
+        if (show.waiting) return;
         while (show.queue.length) {
           var ev = show.queue[0];
           var waits = SHOWN[ev.e] === 'wait';
@@ -325,14 +344,16 @@
         case 'shoot': {
           var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
           if (!(sa && sb)) return false;
-          playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null);
+          playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null,
+            function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
           lookAtShot(sa, sb);                          // once the shot is playing, so it waits for it
           return !!done;
         }
         case 'assault': {
           var aa = evUnit(ev.from), ab = evUnit(ev.to);
           if (!(aa && ab)) return false;
-          playAssault(aa, ab, deathsOf(ev.deaths), done || null);
+          playAssault(aa, ab, deathsOf(ev.deaths), done || null,
+            function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
           lookAtShot(aa, ab);
           return !!done;
         }
