@@ -94,6 +94,55 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('...and the other that their opponent has it', !/You have/.test(bTheirs) && /Player [12] Force has the initiative/.test(bTheirs), bTheirs);
   ok('forces left unnamed are named for their seats', s1.names[0] === 'Player 1 Force' && s1.names[1] === 'Player 2 Force', s1.names.join(' / '));
 
+  // the player whose go it is moves a unit: the other screen's camera follows it there
+  const pMine = mine === s1 ? p1 : p2, pTheirs = pMine === p1 ? p2 : p1;
+  // close in, so the camera has room to go with it rather than sitting against the table's edge
+  await pTheirs.evaluate(() => window.PMC_SETVIEW(24, 24, 1.4));
+  // (Follow is on in a fresh browser.) Picking the unit already brings the other camera over to it...
+  const picked = await pMine.evaluate(() => {
+    const st = window.PMC_STATE(), me = window.__seats()[0];
+    if (st.faceAsk) window.__sendIntent({ k: 'vfaceall' });
+    const u = st.units.find(x => x.side === me && x.x >= 0 && !x.dead && !x.activated && x.models > 0);
+    if (u) window.__sendIntent({ k: 'select', id: u.id });
+    return u ? u.id : null;
+  });
+  await wait(2200);
+  const camFocus = await pTheirs.evaluate(() => window.__cam());
+  // ...and the move is what has to be followed: the camera rides along to where the unit ends up
+  const moved = await pMine.evaluate(async (id) => {
+    const u = window.PMC_STATE().units.find(x => x.id === id);
+    let spots = [];
+    for (let k = 0; k < 20 && !spots.length; k++) {
+      // (asked again until the server has it: the pick may still be on its way)
+      if (k % 4 === 0) window.__sendIntent({ k: 'action', id: 'move' });
+      await new Promise(r => setTimeout(r, 150)); spots = window.__moveSpots();
+    }
+    if (!spots.length) return { id, spots: 0, mode: window.__uiMode(), hint: (document.getElementById('hint') || {}).textContent };
+    // the reachable spot nearest the middle of the table, so the camera is not held at an edge
+    const mid = (c) => Math.hypot(c.x - 24, c.y - 24);
+    const far = spots.reduce((a, c) => mid(c) < mid(a) ? c : a);
+    window.__sendIntent({ k: 'move', x: far.x, y: far.y });
+    return { id, spots: spots.length, dist: Math.hypot(far.x - u.x, far.y - u.y) };
+  }, picked);
+  ok('the player whose go it is can move a unit', moved && moved.spots > 0 && moved.dist > 3, JSON.stringify(moved));
+  // while the unit is on its way, the camera goes with it (it has long settled on where it set out from)
+  const start = await pMine.evaluate((id) => window.PMC_STATE().units.find(x => x.id === id), picked);
+  const way = [];
+  for (let k = 0; k < 60; k++) {
+    await wait(60);
+    const q = await pTheirs.evaluate(({ id, sx, sy }) => {
+      const d = window.__drawnAt(id), c = window.__cam();
+      return d ? { gone: Math.hypot(d.x - sx, d.y - sy), x: c.x, y: c.y, borrowed: c.borrowed } : null;
+    }, { id: picked, sx: start.x, sy: start.y });
+    if (q && q.gone > 0.3 && q.gone < moved.dist - 0.3) way.push(q);
+  }
+  const rode = way.length ? Math.hypot(way[way.length - 1].x - way[0].x, way[way.length - 1].y - way[0].y) : 0;
+  ok('the other screen\u2019s camera follows the opponent\u2019s unit as it moves', camFocus.borrowed && way.length > 1 && way.every(q => q.borrowed) && rode > 30,
+    JSON.stringify({ focusBorrowed: camFocus.borrowed, samples: way.length, rode: Math.round(rode) }));
+  const ownCam = await pMine.evaluate(() => window.__cam());
+  ok('...while the mover\u2019s own camera is not borrowed', !ownCam.borrowed, JSON.stringify(ownCam));
+  await wait(2500);
+
   // the second player's browser goes away, then comes back
   const toasts = (p) => p.evaluate(() => [...document.querySelectorAll('#toasts .toast')].map(t => t.textContent));
   await ctx2.close();

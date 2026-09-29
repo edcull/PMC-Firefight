@@ -849,7 +849,7 @@
     get setMTab() { return setMTab; }, get sideInk() { return sideInk; }, get stepOff() { return stepOff; },
     get walkOn() { return walkOn; }, busy: busy, byId: byId, logLine: logLine, menuUp: menuUp,
     newTable: newTable, nowMs: nowMs, send: send, startLoop: startLoop, whenIdle: whenIdle, C: C, FX: FX,
-    ISO: ISO, R: R, SFX: SFX, anims: anims, el: el, resQueue: resQueue, ui: ui
+    ISO: ISO, R: R, SFX: SFX, anims: anims, cam: cam, el: el, resQueue: resQueue, ui: ui
   });
   var arrivalQueued = REPLAY.arrivalQueued, held = REPLAY.held, moveQueued = REPLAY.moveQueued;
   var replaying = REPLAY.replaying, resetShow = REPLAY.resetShow, show = REPLAY.show;

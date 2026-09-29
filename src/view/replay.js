@@ -13,7 +13,7 @@
   root.PMCReplay = function (B) {
     var busy = B.busy, byId = B.byId, logLine = B.logLine, menuUp = B.menuUp, newTable = B.newTable;
     var nowMs = B.nowMs, send = B.send, startLoop = B.startLoop, whenIdle = B.whenIdle, C = B.C, FX = B.FX;
-    var ISO = B.ISO, R = B.R, SFX = B.SFX, anims = B.anims, el = B.el, resQueue = B.resQueue, ui = B.ui;
+    var ISO = B.ISO, R = B.R, SFX = B.SFX, anims = B.anims, cam = B.cam, el = B.el, resQueue = B.resQueue, ui = B.ui;
     // from modules installed after this one: looked up when called
     function addFx() { return B.addFx.apply(this, arguments); }
     function animateMove() { return B.animateMove.apply(this, arguments); }
@@ -276,6 +276,13 @@
       var u = evUnit(id);
       return !!u && B.seats.indexOf(u.side) < 0;
     }
+    /* The other side's unit acting: the camera goes over to it (if Follow is on), so
+       an online opponent's attack is framed as the AI's is. Already borrowed — the
+       AI's focus, or a move just followed — it is left where it is. */
+    function lookAtOther(id) {
+      if (!otherSides(id) || cam.borrowed) return;
+      focusUnit(evUnit(id), false, true);
+    }
     function lookAtShot(from, target) {
       if (!from || !target) return;
       B.fitShot(from, target);
@@ -342,12 +349,14 @@
         case 'move': {
           var mu = evUnit(ev.id);
           if (!mu) return false;
-          animateMove(mu, ev.path, ev.follow, done);
+          // the other side's move is followed — the AI's, and an online opponent's too
+          animateMove(mu, ev.path, ev.follow || otherSides(ev.id), done);
           return !!done;
         }
         case 'shoot': {
           var sa = evUnit(ev.from), sb = ev.at ? { x: ev.at.x, y: ev.at.y } : evUnit(ev.to);
           if (!(sa && sb)) return false;
+          lookAtOther(ev.from);
           playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null,
             function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
           lookAtShot(sa, sb);                          // once the shot is playing, so it waits for it
@@ -356,6 +365,7 @@
         case 'assault': {
           var aa = evUnit(ev.from), ab = evUnit(ev.to);
           if (!(aa && ab)) return false;
+          lookAtOther(ev.from);
           playAssault(aa, ab, deathsOf(ev.deaths), done || null,
             function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
           lookAtShot(aa, ab);
@@ -364,6 +374,7 @@
         case 'strafe': {
           var su = evUnit(ev.id);
           if (!su) return false;
+          lookAtOther(ev.id);
           playStrafe(su, ev.from, ev.to, deathsOf(ev.deaths), done || null);
           return !!done;
         }
