@@ -849,7 +849,7 @@
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
     get held() { return held; }, get loop() { return loop; }, get muster() { return muster; },
     get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
-    get streamLength() { return streamLength; }, get addFx() { return addFx; },
+    get streamLength() { return streamLength; }, get addFx() { return addFx; }, get lineUp() { return DRAW.lineUp; },
     get anyArriving() { return anyArriving; }, get applyForce() { return applyForce; },
     get arriving() { return arriving; }, get bufferFromCanvas() { return bufferFromCanvas; },
     get burrowStep() { return burrowStep; }, get cancelPreview() { return cancelPreview; },
