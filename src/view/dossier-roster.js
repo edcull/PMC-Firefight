@@ -10,6 +10,10 @@
     var C = E.C, R = E.R, ROMAN = E.ROMAN, entryCard = E.entryCard, esc = E.esc, ourList = E.ourList,
         profile = E.profile, root = E.root, save = E.save, statLine = E.statLine;
     /* ================= the dossier ================= */
+    var SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+    var ICON_RENAME = SVG + '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';          // a pencil
+    var ICON_DISBAND = SVG + '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>';   // a bin
+    var ICON_PROMOTE = SVG + '<path d="M6 14l6-6 6 6"/><path d="M6 20l6-6 6 6"/></svg>';                    // chevrons up
     function rosterBody(co) {
       var h = '';
       if (E.rosterTab === 'units') {
@@ -28,14 +32,16 @@
         });
         if (shown.length && !ordered.length) h += '<p class="cpstat">No unit matches the filter.</p>';
         ordered.forEach(function (e) {
-          var acts = '<button class="lnk" data-rename="' + e.rid + '">Rename</button>';
+          // on a phone each is its icon alone, so the three sit on one row
+          var acts = '<button class="lnk dact" data-rename="' + e.rid + '" title="Rename" aria-label="Rename">' + ICON_RENAME + '<span>Rename</span></button>';
           var open = !!E.menOpen[e.rid];
           // enough experience for something: a Promote button, opening the choices in a window
-          var spend = canSpend(e, co) ? '<button class="lnk good" data-promo="' + e.rid + '">Promote</button>' : '';
+          var spend = canSpend(e, co) ? '<button class="lnk good dact" data-promo="' + e.rid + '" title="Promote" aria-label="Promote">' + ICON_PROMOTE + '<span>Promote</span></button>' : '';
           var dis = C.canDisband(co, e);
-          acts += '<button class="lnk warn" data-disband="' + e.rid + '"' + (dis.ok ? '' : ' disabled title="' + esc(dis.why) + '"') + '>Disband</button>';
+          acts += '<button class="lnk warn dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : ' disabled title="' + esc(dis.why) + '"') + '>' + ICON_DISBAND + '<span>Disband</span></button>';
           if (spend) acts += spend;
-          h += entryCard(e, co, { actions: acts, men: open ? detailPanel(e, co) : '', expand: true, portrait: open });
+          // closed, a card offers only Promote (when there is the experience for it); opened, all of them
+          h += entryCard(e, co, { actions: open ? acts : spend, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true });
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {
@@ -252,7 +258,7 @@
       return '<ol class="dmen">' + (e.men || []).map(function (m, i) {
         return '<li><span class="dmen-rank">' + esc(m.rank) + '</span>' +
           '<b class="dmen-name">' + esc(m.name) + '</b>' +
-          '<button class="lnk" data-rsoldier="' + e.rid + '" data-i="' + i + '">Rename</button></li>';
+          '<button class="lnk dact" data-rsoldier="' + e.rid + '" data-i="' + i + '" title="Rename" aria-label="Rename">' + ICON_RENAME + '<span>Rename</span></button></li>';
       }).join('') + '</ol>';
     }
 
