@@ -362,7 +362,8 @@
       var tx = C.traumaTable(e.key)[n - 1];
       marks.push('<span class="mk bad" ' + tip(tx.name, tx.text) + '>' + esc(tx.name) + '</span>');
     });
-    if (marks.length) h += '<div class="dmarks">' + marks.join('') + '</div>';
+    // (opened, they are written out in full on the sheet below instead)
+    if (marks.length && !opts.men) h += '<div class="dmarks">' + marks.join('') + '</div>';
     if (opts.actions && !opts.rowActs) h += '<div class="dacts">' + opts.actions + '</div>';
     if (opts.portrait) {
       h += (stack ? '<div class="dpic">' : '</div>') + '<canvas class="dportrait" data-key="' + esc(e.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +

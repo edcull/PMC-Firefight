@@ -667,6 +667,17 @@ async function pastFronts(p) {
   await p.waitForTimeout(200);
   await toUnits(p);
   await p.waitForTimeout(200);
+  // the honour as a pill on the unit's closed card; opened, only written out in full on its sheet
+  const pills = await p.evaluate(async () => {
+    const rid = window.PMC_CAMPAIGN.get().companies.A.roster.find(e => (e.honours || []).length).rid;
+    const card = () => document.querySelector('#camp-body .dcard[data-rid="' + rid + '"]');
+    const o = document.querySelector('#camp-body .dcard.open'); if (o) { o.click(); await new Promise(r => setTimeout(r, 200)); }
+    const closed = !!card().querySelector('.dmarks');
+    card().click(); await new Promise(r => setTimeout(r, 250));
+    const c = card();
+    return { closed, open: !!c.querySelector('.dmarks'), sheet: !!c.querySelector('.ddet .ddet-rules li.good') };
+  });
+  check('an honour shows as a pill on a closed card, and only in full on the open one', pills.closed && !pills.open && pills.sheet, JSON.stringify(pills));
 
   /* ---------------------------------------------- asking, without native dialogs */
   console.log('\nAsking the player something');
