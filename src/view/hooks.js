@@ -24,6 +24,27 @@
        contract and a room in the lobby — and all four arrive here. The first
        three run the engine in this tab; the fourth is already running on a
        server and only hands over the seat. */
+    /* A toast: a line across the top of the board that goes by itself — the
+       other player dropping out, coming back, or leaving. Never takes a tap. */
+    window.PMC_TOAST = function (text, kind, ms) {
+      var host = document.getElementById('toasts');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'toasts'; host.className = 'toasts';
+        host.setAttribute('role', 'status'); host.setAttribute('aria-live', 'polite');
+        document.body.appendChild(host);
+      }
+      var t = document.createElement('div');
+      t.className = 'toast toast-' + (kind || 'info');
+      t.textContent = text;
+      host.appendChild(t);
+      void t.offsetWidth;                 // so the fade in runs
+      t.classList.add('show');
+      setTimeout(function () {
+        t.classList.remove('show');
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 400);
+      }, ms || 4500);
+    };
     window.PMC_JOIN_BATTLE = function (transport, seat, cfg) {
       var setup = el('setup');
       if (setup) setup.hidden = true;
@@ -37,10 +58,10 @@
     };
     /* The lobby borrows the muster screen to build a force: it is the one place
        that knows the composition table and the unit cards. */
-    window.PMC_MUSTER_FOR = function (terms, done, have, room) {
+    window.PMC_MUSTER_FOR = function (terms, done, have, room, seat) {
       hotEnd();
       el('setup').hidden = false;
-      B.muster.forLobby = { terms: terms, done: done, room: room || '' };
+      B.muster.forLobby = { terms: terms, done: done, room: room || '', seat: seat || null };
       setSoloMode(false);
       if (terms) {
         if (el('sel-tier')) el('sel-tier').value = terms.tier;

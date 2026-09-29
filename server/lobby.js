@@ -133,6 +133,7 @@ class Lobby {
     if (room.phase === P.PHASE.BATTLE && p.seat) {
       p.sock = null;
       room.broadcast('game.chat', { from: null, text: p.name + ' has dropped out — the seat is being held.', at: now() });
+      room.broadcast('game.presence', { kind: 'dropped', id: p.id, name: p.name, seat: p.seat });
       room.push();
       this.pushLobby();
       return;
@@ -198,6 +199,7 @@ class Lobby {
     });
     if (!rejoined) return;
     rejoined.broadcast('game.chat', { from: null, text: p.name + ' is back.', at: now() });
+    if (rejoined.phase === P.PHASE.BATTLE) rejoined.broadcast('game.presence', { kind: 'back', id: p.id, name: p.name, seat: p.seat });
     rejoined.push();
     if (rejoined.table) rejoined.table.rejoin(p);
     this.pushLobby();
@@ -270,7 +272,8 @@ class Lobby {
   leave(p) {
     const room = p.room;
     if (!room) return;
-    if (p.seat && room.seats[p.seat] === p) room.seats[p.seat] = null;
+    const seat = p.seat && room.seats[p.seat] === p ? p.seat : null;
+    if (seat) room.seats[seat] = null;
     const w = room.watchers.indexOf(p);
     if (w >= 0) room.watchers.splice(w, 1);
     p.room = null; p.seat = null; p.ready = false;
@@ -288,9 +291,11 @@ class Lobby {
       /* A player leaving a live battle for good ends it: there is no third
          party to take the seat over, and the room goes back to setup so the
          rest can arrange another one. */
-      if (room.phase === P.PHASE.BATTLE) {
+      if (room.phase === P.PHASE.BATTLE && seat) {
         if (room.table) { room.table.stop(); room.table = null; }
         room.phase = P.PHASE.SETUP;
+        // said to the board as well as the chat: the battle on the screen is over
+        room.broadcast('game.presence', { kind: 'left', id: p.id, name: p.name, seat: seat });
       }
       room.players().forEach((q) => { q.ready = false; });
       room.broadcast('game.chat', { from: null, text: p.name + ' has left.', at: now() });

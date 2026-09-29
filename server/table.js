@@ -18,6 +18,13 @@ const { R, SC, C, Engine } = require('./rules.js');
    turn is a handful; a rally phase across thirty units with a Psychic Wave in
    it is a few hundred. Well past that and something has gone wrong. */
 const MAX_EVENTS = 4000;
+/* The names a force carries until its player gives it one: nothing at all, the
+   muster screen's own fallback, or the seat name it was given for the other
+   seat before its player moved. */
+function placeholderName(n) {
+  n = String(n || '').trim();
+  return !n || /^(your force|player [12] force)$/i.test(n);
+}
 
 class Table {
   constructor(room, lobby, opts) {
@@ -135,7 +142,8 @@ class Table {
       }
       return {
         keys: keys, dossier: null, doctrines: null,
-        name: f.name || (p.name + '’s company'),
+        // a force left with its placeholder is named for the seat it sits in
+        name: placeholderName(f.name) ? (side === 'A' ? 'Player 1 Force' : 'Player 2 Force') : f.name,
         faction: f.faction, tactic: f.tactic || null, colour: f.colour
       };
     };
