@@ -132,6 +132,8 @@ npm run build         # build/firefight.html, build/viewer.html, build/units.htm
 Test logs go to `build/test-logs/`, and screenshots to `build/shots/`. The
 browser tests look for Chromium at `/opt/pw-browsers/chromium`.
 
+The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
 ## Not implemented
 
 - Online multiplayer is not fully implemented or tested yet
