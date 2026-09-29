@@ -21,6 +21,14 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
 
   await p.evaluate(() => document.querySelector('[data-go="newcamp"]').click());
   await p.waitForTimeout(400);
+  // the name and its colour chip sit in a box no taller than they are; the units take the rest of the page
+  const box = await p.evaluate(() => {
+    const id = document.querySelector('#camp-body .found-id'), row = id && id.querySelector('.name-row'), un = document.querySelector('#camp-body .found-units');
+    const h = (e) => e ? Math.round(e.getBoundingClientRect().height) : 0;
+    return { id: h(id), row: h(row), units: h(un) };
+  });
+  ok('the name box is only as tall as the name', box.id > 0 && box.id <= box.row + 40, box.id + 'px for a ' + box.row + 'px row');
+  ok('...and the units take the rest', box.units > box.id * 2, 'units ' + box.units + 'px');
   await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); });   // the colours drop down from the chip beside the name
   const found = await p.evaluate(() => ({
     name: !!document.getElementById('found-name'),

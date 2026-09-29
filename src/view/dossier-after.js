@@ -447,12 +447,16 @@
         /* A unit that is off the dossier has no use for the day's experience or
            trauma, and showing a ledger it can never spend only raises the question
            of why it was struck off in the first place. Say that instead. */
-        h += casualtyLedger(u);
+        // who fell, man by man — not for a unit wiped out: it is gone, and that is all the card says
+        if (!(u.wiped && !u.disbanded)) h += casualtyLedger(u);
         if (u.wiped && !u.disbanded) {
-          h += '<div class="dledger bad">' + (u.aboardDowned
-            ? 'They were aboard when it came down, and it was not recovered — so neither were they.'
-            : 'Every soldier was put out of action. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
-            '</div>';
+          // (a machine's own lines, below, say how it was lost and whether it came back)
+          if (profile(u.key).cls === 'infantry' || u.aboardDowned) {
+            h += '<div class="dledger bad">' + (u.aboardDowned
+              ? 'They were aboard when it came down, and it was not recovered — so neither were they.'
+              : 'Every soldier was put out of action. Losses in a surviving unit are replaced free, but a unit wiped out to the last model leaves the dossier.') +
+              '</div>';
+          }
         } else {
           if (u.fled) {
             h += '<div class="dledger">Scattered and ran rather than died: the survivors are back, ' +
