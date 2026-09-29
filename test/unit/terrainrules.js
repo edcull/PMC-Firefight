@@ -107,6 +107,25 @@ ok('...but on the slope it cannot shoot over a friend on the same slope',
   R.lineClear(world([onSlope, mate2, past], [big]), onSlope, past), false);
 ok('(with that friend out of the way it can)', R.lineClear(world([onSlope, past], [big]), onSlope, past), true);
 
+head('Firing over friends from a high building');
+// a squad up in a building, a friend on the ground in front of it, an enemy beyond
+function inBld(u, b) { u.bld = b; u.sec = 0; u.x = b.x + b.w / 2; u.y = b.y + b.h / 2; return u; }
+var tall = { kind: 'building', x: 6, y: 20, w: 7, h: 5 }, low = { kind: 'building', x: 6, y: 20, w: 4, h: 4 };
+var bunk = { kind: 'bunker', x: 6, y: 20, w: 4, h: 4 };
+ok('a wide, full-height building is a high one', R.sectionHigh(tall), true);
+ok('...a small one is not', R.sectionHigh(low), false);
+[['a high building', tall, true], ['a reinforced building', bunk, true], ['a low building', low, false]].forEach(function (c) {
+  var mg = inBld(mk('regular', 'A', 0, 0), c[1]);
+  var friend = mk('regular', 'A', mg.x + 8, mg.y), foe = mk('regular', 'B', mg.x + 18, mg.y);
+  ok('from ' + c[0] + ', a squad ' + (c[2] ? 'shoots' : 'does not shoot') + ' over a friend on the ground',
+    R.lineClear(world([mg, friend, foe], [c[1]]), mg, foe), c[2]);
+});
+var mgT = inBld(mk('regular', 'A', 0, 0), tall);
+ok('...but never over an enemy', R.lineClear(world([mgT, mk('regular', 'B', mgT.x + 8, mgT.y), mk('regular', 'B', mgT.x + 18, mgT.y)], [tall]), mgT, mk('regular', 'B', mgT.x + 18, mgT.y)), false);
+var hi = R.shotMods(world([mgT, mk('regular', 'B', mgT.x + 12, mgT.y)], [tall]), mgT, mk('regular', 'B', mgT.x + 12, mgT.y), 'fire', {});
+ok('...and the high building gives +2 Firepower once, not a hill\'s as well',
+  hi.parts.filter(function (p) { return /building|hill|crown/.test(p.label); }).map(function (p) { return p.label + ' +' + p.v; }).join(), 'firing from a high building +2');
+
 head('Low walls and rubble (p. 42)');
 var wall = { kind: 'barricade', x: 23, y: 18, w: 1, h: 12 };
 var shooter = mk('regular', 'A', 10, 24);

@@ -514,7 +514,8 @@
       /* "Units on hills can shoot/be shot at over friendly units below them (but
          not over enemy ones)" — the friends of whichever end is up on the hill,
          taken a step at a time: from the crown, over friends on the slope below
-         it as well as on the level ground. */
+         it as well as on the level ground. A squad up in a high building (or a
+         reinforced one) looks down over its friends as one on the crown does. */
       var aLv = -1, bLv = -1;                            // how high each end stands: asked only if someone is in the way
       for (var j = 0; j < state.units.length; j++) {
         var u = state.units[j];
@@ -523,9 +524,9 @@
         if (u === a.of || u === b.of) continue;
         if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
         if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
-        if (aLv < 0) { aLv = a.side ? levelOf(state, a) : 0; bLv = b.side ? levelOf(state, b) : 0; }
+        if (aLv < 0) { aLv = a.side ? sightLevel(state, a) : 0; bLv = b.side ? sightLevel(state, b) : 0; }
         if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
-          var uLv = levelOf(state, u);
+          var uLv = sightLevel(state, u);
           if ((u.side === a.side && aLv > uLv) || (u.side === b.side && bLv > uLv)) continue;
         }
         return false;
@@ -543,6 +544,13 @@
         lv = Math.max(lv, r.top && inPoly(x, y, r.top) ? 2 : 1);
       }
       return lv;
+    }
+    /* How high a unit stands for seeing over its friends: its level on a hill, or
+       up in a high or reinforced building section, as high as a hill's crown. The
+       Firepower for height is levelOf's and the building's own (shoot.js). */
+    function sightLevel(state, u) {
+      if (u && u.bld) return sectionHigh(u.bld, sectionRect(u)) ? 2 : 0;
+      return levelOf(state, u);
     }
     /* A unit in a wood (or anything else) standing on a hill counts as being in
        that piece only, and takes none of the hill's rules (p. 42). */
