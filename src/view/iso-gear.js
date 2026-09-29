@@ -456,12 +456,18 @@
         [-1, 1].forEach(function (sd) {
           if (!want(phase, sd)) return;
           var L = spec.len, W = spec.wid, mbt = spec.style.body === 'mbt';
-          var zBot = deck - 0.5, zTop = deck + spec.hgt * (mbt ? 0.8 : 0.88) - 1;
-          var nose = L * (0.5 - (mbt ? 0.26 : 0.2)) + L * 0.02;           // where the glacis meets the hull's top
-          var sIn = sd * W * 0.36, sOut = sd * (W * 0.5 + gearOut() * 1.1), sTop = sd * W * 0.42;
-          // its front angled back from the hull's corner to the outer edge, the tail a little
-          var base = [[L * 0.47, sIn], [L * 0.3, sOut], [-L * 0.42, sOut], [-L * 0.47, sIn]];
-          var top = [[nose, sIn], [nose - L * 0.03, sTop], [-L * 0.44, sTop], [-L * 0.45, sIn]];
+          /* Pinned to the hull's own box (iso-hulls: a slab ±w*0.94 across, w = 0.47
+             of the width, its top pulled in at the glacis, the tail and the sides):
+             the plate's top edge is the hull's top edge, corner to corner, and its
+             inner foot the hull's bottom edge, so the corners meet the hull's. */
+          var zBot = deck, zTop = deck + spec.hgt * (mbt ? 0.8 : 0.88);
+          var sFoot = sd * W * 0.47 * 0.94, sTop = sd * W * 0.47 * 0.91;
+          var tNose = L * (0.5 - (mbt ? 0.26 : 0.2)), tTail = -L * 0.45;
+          var sOut = sd * (W * 0.5 + gearOut() * 1.1);
+          // the foot: the hull's bottom edge inside, the plate's lower edge outside, its front angled back
+          var base = [[L * 0.5, sFoot], [L * 0.3, sOut], [-L * 0.42, sOut], [-L * 0.5, sFoot]];
+          // the top closes to the hull's top edge, so each end is a triangle to the hull's corners
+          var top = [[tNose, sTop], [tNose, sTop], [tTail, sTop], [tTail, sTop]];
           shape(HF, base, zBot, zTop - zBot, TB, null, top, true);
         });
       }
