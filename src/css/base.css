@@ -27,3 +27,24 @@
 }
 
 * { box-sizing: border-box; }
+
+/* The title bar's way back: "← Back" up a level, or a house icon to the main
+   menu. One button for the game's screens and the unit viewer alike. */
+.camp-back {
+  flex: none; cursor: pointer; white-space: nowrap; text-decoration: none;
+  font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
+}
+.camp-back:hover, .camp-back:focus-visible { color: var(--ink); border-color: var(--alpha); }
+@media (pointer: coarse) { .camp-back { padding: 9px 12px; font-size: 12px; } }
+/* where it goes to the main menu, the button is a home icon */
+.camp-back.home { display: inline-grid; place-items: center; padding: 5px 9px; }
+.camp-back.home svg { width: 17px; height: 17px; display: block; }
+@media (pointer: coarse) { .camp-back.home { padding: 8px 12px; } .camp-back.home svg { width: 19px; height: 19px; } }
+/* A close ✕: a panel or list put away (a destructive remove is .fcard-drop's red ✕) */
+.xclose {
+  width: 34px; height: 34px; flex: none; display: inline-grid; place-items: center; padding: 0;
+  border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+.xclose:hover, .xclose:focus-visible { color: var(--ink); border-color: var(--alpha); }

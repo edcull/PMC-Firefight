@@ -673,7 +673,7 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .resume-x {
   position: absolute; top: 8px; right: 8px; min-width: 32px; height: 32px; padding: 0 9px; border-radius: 16px;
   border: 1px solid var(--line); background: color-mix(in srgb, var(--ground) 80%, transparent); color: var(--ink-dim);
-  font: 600 20px/1 var(--display); cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+  font: 600 14px/1 var(--display); cursor: pointer; transition: background .12s, border-color .12s, color .12s;
 }
 .resume-x:hover, .resume-x:focus-visible { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 60%, transparent); outline: none; }
 .resume-x.confirm {
@@ -725,24 +725,15 @@ a.mcard { text-decoration: none; line-height: normal; }
   font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .07em; text-transform: uppercase;
   margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink);
 }
-.camp-back {
-  flex: none; cursor: pointer; white-space: nowrap;
-  font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
-}
-.camp-back:hover, .camp-back:focus-visible { color: var(--ink); border-color: var(--alpha); }
-@media (pointer: coarse) { .camp-back { padding: 9px 12px; font-size: 12px; } }
-/* where it goes to the main menu, the button is a home icon */
-.camp-back.home { display: inline-grid; place-items: center; padding: 5px 9px; }
-.camp-back.home svg { width: 17px; height: 17px; display: block; }
-@media (pointer: coarse) { .camp-back.home { padding: 8px 12px; } .camp-back.home svg { width: 19px; height: 19px; } }
+/* .camp-back (the title bar's ← Back, or its home icon) is in base.css, shared with the unit viewer */
 #camp.overlay > #camp-body.sheet {
   flex: 1; min-height: 0; width: 100%; max-width: none; max-height: none; overflow-y: auto; overscroll-behavior: contain;
   border: 0; border-radius: 0; background: transparent; -webkit-overflow-scrolling: touch;
   padding: 18px max(16px, calc((100% - 720px) / 2)) calc(22px + env(safe-area-inset-bottom, 0px));
 }
 /* the top bar is the way back: the footer's own Back and Main menu are not needed twice */
-#camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"], #camp-body .camp-foot [data-go="roster"] { display: none; }
+#camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"], #camp-body .camp-foot [data-go="roster"],
+#camp-body .camp-foot [data-go="pastback"] { display: none; }
 /* who a solo campaign is up against: one line, and a list behind it */
 .archline {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
@@ -1583,11 +1574,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
     padding: 8px 6px; border-radius: 5px; cursor: pointer;
   }
   .dtab.on { color: var(--ink); border-color: color-mix(in srgb, var(--alpha) 55%, transparent); background: color-mix(in srgb, var(--alpha) 14%, transparent); }
-  .dclose {
-    width: 34px; height: 34px; flex: none; border-radius: 5px;
-    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
-    font-size: 14px; cursor: pointer;
-  }
+  /* .dclose is an .xclose (base.css) */
   /* nothing to act with until the forces are on the table */
   .console.deploying .bar { display: none; }
   .tset { list-style: none; margin: 6px 0 8px; padding: 0; font-size: 12.5px; line-height: 1.5; }

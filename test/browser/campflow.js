@@ -678,7 +678,7 @@ async function pastFronts(p) {
   await p.waitForTimeout(200);
   check('one of the three is taken at random', drew.gained === 1, drew.said);
   check('...and only the three are left on the screen', drew.shown === 3, drew.shown + ' shown');
-  await clickText(p, 'Back to the dossier');
+  await p.evaluate(() => document.getElementById('camp-back').click());   // the title bar's Back: to the dossier
   await p.waitForTimeout(200);
   await toUnits(p);
   await p.waitForTimeout(200);

@@ -483,8 +483,8 @@
       h += frontsSection();
 
       if (pastLine) {
-        return h + '<div class="camp-dock"><button class="start" data-go="pastback">Back to the battles</button></div>' +
-          '<p class="camp-foot"><button class="lnk" data-go="hub">The campaign</button></p>';
+        // the title bar's Back goes back to the list of battles it was opened from
+        return h + '<p class="camp-foot"><button class="lnk" data-go="pastback">Back</button></p>';
       }
       var gaps = C.rebuildNeeds(E.camp.companies.A);
       if (gaps.length) {
@@ -540,8 +540,8 @@
       // the way on stays at the foot of the screen, however long the list above it scrolls
       h += '<div class="honour-foot">';
       if (E.drawState.won) {
+        // (the title bar's Back goes back to the dossier)
         h += '<p class="faults ok">' + esc(E.drawState.entry.name) + ' earns <b>' + esc(E.drawState.won.name) + '</b>.</p>';
-        h += '<button class="start" data-go="roster">Back to the dossier</button>';
       } else {
         h += '<button class="start" data-go="drawnow"' + (picks.length === 3 ? '' : ' disabled') + '>' +
           (picks.length === 3 ? 'Draw one of the three' : 'Choose three first') + '</button>';

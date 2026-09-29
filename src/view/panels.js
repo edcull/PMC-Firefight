@@ -807,7 +807,7 @@
             '<h3>Empty transports</h3><div class="cmodal-scroll"><p class="sub">' +
             (empties.length === 1 ? '<b>' + esc(empties[0].name) + '</b> is' : empties.map(function (v) { return '<b>' + esc(v.name) + '</b>'; }).join(', ') + ' are') +
             ' going into the battle with nobody aboard. Begin anyway?</p></div>' +
-            '<div class="askrow"><button class="lnk" data-act="startnoask">Back</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
+            '<div class="askrow"><button class="lnk" data-act="startnoask">Cancel</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
         }
       }
       return h + '</div></div>';

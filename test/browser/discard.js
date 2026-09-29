@@ -40,7 +40,7 @@ async function skirmish(p, extra) {
   await p.evaluate(() => window.PMCMenu.open());
   await p.waitForTimeout(200);
   let m = await menu(p);
-  ok('the menu offers the battle back, with an x on it to discard it', m.open && m.resume && m.discard && m.live && m.x === '\u00d7', m.x);
+  ok('the menu offers the battle back, with an x on it to discard it', m.open && m.resume && m.discard && m.live && m.x === '\u2715', m.x);
   await p.evaluate(() => document.getElementById('btn-discard').click());
   await p.waitForTimeout(150);
   m = await menu(p);

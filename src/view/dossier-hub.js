@@ -67,7 +67,7 @@
          player's force), the battles fought, the fallen, and the campaign's
          file: out to a file, back in from one, or given up. */
       var last = E.camp.log.length ? E.camp.log[E.camp.log.length - 1] : null;
-      var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">Back</button>';
+      var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">\u2190 Back</button>';
       var result = function (l) { return l.winner === 'A' ? 'won' : l.winner === 'B' ? 'lost' : 'drawn'; };
       h += cmodal('manage', 'The campaign', '<div class="cmodal-scroll manage-list">' +
         '<button type="button" class="archline" data-go="fmodal" data-kind="rivals">' + ICON_FORCES + '<span>' +
@@ -103,7 +103,7 @@
           E.camp.log.map(battleRow).reverse().join('') + '</div></div>', back);
       }
       // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
-      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">Back</button>';
+      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">\u2190 Back</button>';
       // each army's rules, opened from its pill
       h += cmodal('armyA', C.words(A).side + ' \u2014 army rules', armyRules(A));
       if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B), backRivals);

@@ -94,7 +94,7 @@
   function unconfirm() {
     var dis = el('btn-discard'), res = el('btn-resume'), sub = el('menu-resume-sub');
     if (!dis) return;
-    dis.classList.remove('confirm'); dis.textContent = '\u00d7';
+    dis.classList.remove('confirm'); dis.textContent = '\u2715';
     var what = abandonable() ? 'Abandon this battle' : 'Discard this battle';
     dis.setAttribute('aria-label', what); dis.title = what;
     if (res) res.classList.remove('discarding');

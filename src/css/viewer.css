@@ -19,15 +19,7 @@ h1 span { color: var(--alpha); }
 header p { margin: 0; font-size: 12px; color: var(--ink-faint); }
 header .keys { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
 /* the way back to the game, which opens on its main menu */
-.vhome {
-  align-self: center; flex: none; text-decoration: none; white-space: nowrap;
-  font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
-}
-.vhome:hover, .vhome:focus-visible { color: var(--ink); border-color: var(--alpha); }
-.vhome svg { width: 17px; height: 17px; display: block; }
-@media (pointer: coarse) { .vhome svg { width: 19px; height: 19px; } }
-@media (pointer: coarse) { .vhome { padding: 9px 12px; font-size: 12px; } }
+.vhome { align-self: center; }                   /* the title bar's home button (.camp-back.home, base.css) */
 /* a phone's way into the unit list, which there is a sidebar */
 .vunits, .vclose, .vscrim { display: none; }
 .vunits {
@@ -35,11 +27,7 @@ header .keys { margin-left: auto; font-family: var(--mono); font-size: 11px; col
   font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
   color: var(--ink); border: 1px solid var(--alpha); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
 }
-.vclose {
-  align-items: center; justify-content: center; cursor: pointer;
-  width: 36px; height: 36px; margin: -8px -6px -6px 0; font-size: 20px; line-height: 1;
-  background: none; border: none; color: var(--ink-dim);
-}
+.vclose { margin: -6px 0 -4px auto; }              /* the unit list's close (.xclose, base.css) */
 @media (pointer: coarse) { .vunits { padding: 9px 12px; font-size: 12px; } }
 header kbd {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px;
@@ -282,7 +270,8 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
     opacity: 0; pointer-events: none; transition: opacity .22s;
   }
   body.vside-open .vscrim { opacity: 1; pointer-events: auto; }
-  .vunits, .vclose { display: inline-flex; }
+  .vunits { display: inline-flex; }
+  .vclose { display: inline-grid; }
   /* the way back on the left, the title, and the unit list's button at the right */
   header > .vhome { order: 1; }
   header > h1 { order: 2; }
