@@ -91,6 +91,10 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const acts2 = await p1.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts button')].map(x => x.className + ':' + x.textContent + (x.disabled ? ':off' : '')));
   ok('...once both are ready, the host is given Take the field', acts2.join('|') === 'lnk:Leave this game|lnk:Not ready after all|start:Take the field', acts2.join('|'));
   await p1.screenshot({ path: require('path').join(SHOTS, 'lobby-room-ready-desktop.png') }).catch(() => {});
+  const tall = (p) => p.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts > *')].map(x => Math.round(x.getBoundingClientRect().height)));
+  const h1 = await tall(p1), h2 = await tall(p2);
+  ok('...and the other player\'s row is the same height, its wait said where the button is', h2.length === 3 && Math.max(...h1, ...h2) - Math.min(...h1, ...h2) <= 1, JSON.stringify([h1, h2]));
+  await p2.screenshot({ path: require('path').join(SHOTS, 'lobby-room-ready-guest.png') }).catch(() => {});
   await p1.evaluate(() => window.PMCLobby.net().send('game.start'));
   await p1.waitForTimeout(2000);
   // the briefing comes up the once for each; one side looking at its swaps does not bring it back for the other

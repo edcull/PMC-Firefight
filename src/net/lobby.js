@@ -99,7 +99,6 @@
       '.lobby-sheet > #lobby-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}',
       '.lob-sheet-room .lob-acts{margin-top:0;align-items:stretch;flex-wrap:nowrap}',
       '.lob-acts .lnk{flex:none;white-space:nowrap}',
-      '.lob-sheet-room .lob-startnote{flex:1 1 auto;align-self:center;text-align:right;padding:0}',
       '.lob-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}',
       '.lob-watch{opacity:.7;margin:-4px 0 8px}',
       '.lob-pub{display:flex;align-items:flex-end}',
@@ -111,8 +110,6 @@
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:var(--good)}',
       '.lob-status{font-size:12px;color:var(--ink-faint)}',
-      // the second player's word on the start, where the host has the button: text, not a button
-      '.lob-startnote{flex:1 1 100%;text-align:center;padding:10px 0}',
       '.lob-code{font-family:var(--mono);font-size:14px;letter-spacing:.18em;padding:2px 8px;border:1px solid var(--line);border-radius:5px;color:var(--ink)}',
       '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
       '.lob-forces .hot-side{margin:0}',
@@ -245,8 +242,9 @@
       (mine && ready ? '<button class="lnk" data-lob="ready">Not ready after all</button>' : '') +
       (mine && !ready ? '<button class="start" data-lob="ready">I am ready</button>'
         : host_ ? '<button class="start" data-lob="start"' + (room.canStart ? '' : ' disabled') + '>Take the field</button>'
-        : '<span class="lob-status lob-startnote">' +
-          (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
+        // the other player's word on the start sits where the host's button does, and as tall
+        : '<button class="start" disabled>' +
+          (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</button>') +
       '</div>' +
       '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
       (room.watchers.length
