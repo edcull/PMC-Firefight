@@ -157,9 +157,8 @@
         u0 = R.applyRiders(u0, sp.riders);
         if (R.canMount(p0, sp.riders)) R.applyMount(u0, sp.mount || 'none');
         var mach = p0.cls !== 'infantry';
-        // the same names and order everywhere: Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
-        var st = [mach ? ['Str', u0.str] : ['Men', u0.size], ['Move', u0.move + '"'], ['FP', u0.fp == null ? '\u2014' : u0.fp],
-          ['Range', u0.range ? u0.range + '"' : '\u2014'], ['Def', u0.def], ['Asslt', u0.assault], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+        // the muster's shorthand, with the numbers as fielded
+        var line = root.PMC_STAT_SHORT ? root.PMC_STAT_SHORT(u0) : '';
         return '<div class="fcard">' +
           '<div class="fcard-top">' + tierChip(p0.tier) + '<b>' + esc(p0.name) + '</b>' +
           '<span class="fcard-kind">' + esc(p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +
@@ -168,7 +167,7 @@
             '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' + (sp.drone ? 'DRN' : 'crew') + '</button>' : '') +
           rideButtons(p0, sp, i) +
           '<button class="lnk danger fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
-          '<div class="fcard-stats">' + st.map(function (c) { return '<span><i>' + c[0] + '</i>' + esc(c[1]) + '</span>'; }).join('') + '</div>' +
+          '<div class="fcard-line">' + esc(line) + '</div>' +
           ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
             var d = TXT ? TXT.describe(r) : { name: r, text: '' };
             return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
@@ -270,13 +269,16 @@
         groups[g].forEach(function (p) {
           h += '<button class="cu" data-add="' + p.key + '">' +
             '<span class="t">' + ROMAN[p.tier] + '</span>' +
-            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p)) + '</small></span>' +
-            '<span class="st">' + (p.cls === 'infantry' ? p.size + ' men' : p.cls) + '</span></button>';
+            // its numbers and special rules, as the skirmish muster's list gives them
+            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')) + '</small></span>' +
+            '</button>';
         });
       });
       return h;
     }
+    // the skirmish muster's shorthand (8 models · M5 · FP4 · 18" · Def 11 · A4 · Mor 5), the one card format everywhere
     function statLine(p) {
+      if (root.PMC_STAT_SHORT) return root.PMC_STAT_SHORT(p);
       if (p.cls === 'infantry') {
         return 'Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
           ' · Assault ' + p.assault + ' · Morale ' + p.morale;

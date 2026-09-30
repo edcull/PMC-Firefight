@@ -57,6 +57,8 @@
       return true;
     }
 
+    // a unit's numbers in one short line, as the add list and the chosen cards show them (the campaign's founding too)
+    window.PMC_STAT_SHORT = function (p) { return statLine(p); };
     function statLine(p) {
       if (p.cls && p.cls !== 'infantry') {
         return (p.cls === 'aircraft' ? 'aircraft' : 'vehicle') +
@@ -181,11 +183,8 @@
            options and the way to take it off the list */
         var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p, { rules: (p.rules || []).slice(), models: p.size }),
           pick.prop || R.defaultDrive(p)), !!pick.drone);
-        var mach = p.cls !== 'infantry';
-        // the same names and order everywhere: Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
-        var st = [mach ? ['Str', u0.str] : ['Men', pick.riders ? Math.ceil(u0.size / 2) : u0.size], ['Move', Math.floor(u0.move) + '"'],
-          ['FP', u0.fp == null ? '\u2014' : u0.fp], ['Range', u0.range ? u0.range + '"' : '\u2014'],
-          ['Def', u0.def], ['Asslt', u0.assault], mach ? null : ['Mor', u0.morale]].filter(Boolean);
+        // the add list's shorthand, with the numbers as fielded (drive, drone and riders worked in)
+        var line = statLine(Object.assign({}, u0, { size: pick.riders ? Math.ceil(u0.size / 2) : u0.size, move: Math.floor(u0.move) }));
         var TXT = window.PMCRuleText;
         return '<div class="fcard' + (freeIdx[i] ? ' free' : '') + '">' +
           '<div class="fcard-top"><span class="ct">' + R.ROMAN[p.tier] + '</span><b>' + esc(p.name) + (pick.riders ? ' (mounted)' : '') + '</b>' +
@@ -193,7 +192,7 @@
           (freeIdx[i] ? '<i class="freetag" title="Free: an extra unit from Human Wave Attacks">FREE</i>' : '') +
           drive + drone + ride + mnt +
           '<button type="button" class="lnk danger fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p.name) + '">\u2715</button></div>' +
-          '<div class="fcard-stats">' + st.map(function (c2) { return '<span><i>' + c2[0] + '</i>' + esc(String(c2[1])) + '</span>'; }).join('') + '</div>' +
+          '<div class="fcard-line">' + esc(line) + '</div>' +
           ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
             var d = TXT ? TXT.describe(r) : { name: r, text: '' };
             return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
@@ -226,8 +225,7 @@
           return '<button type="button" class="cu" data-add="' + p.key + '"' + (ok ? '' : ' disabled') +
             ' title="' + why + '">' +
             '<span class="t">' + R.ROMAN[p.tier] + '</span>' +
-            '<span>' + p.name + '<small>' + statLine(p) + (p.rules.length ? ' · ' + p.rules.join(', ') : '') + '</small></span>' +
-            '<span class="st">+' + p.tier + '</span></button>';
+            '<span>' + p.name + '<small>' + statLine(p) + (p.rules.length ? ' · ' + p.rules.join(', ') : '') + '</small></span></button>';
         }).join('');
       }).join('');
 

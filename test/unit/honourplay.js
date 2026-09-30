@@ -192,8 +192,8 @@ console.log('\nThe AI and Last Stand');
   const e = aiBattle();
   const { st, u } = aiLast(e, 'lastStand');
   u.sp = u.morale + 1;
-  // every enemy far out of range: nothing to fight
-  aside(st, st.units.filter((x) => x.side !== u.side && x.alive && x.x >= 0));
+  // every enemy out of range: nothing to fight (off the table — a long-ranged gun reaches any corner of it)
+  st.units.filter((x) => x.side !== u.side && x.alive && x.x >= 0).forEach((x) => { x.x = -1; x.y = -1; });
   u.x = 46; u.y = 34; u.bld = u.sec = null;
   const far = !R.enemyWithinRange(st, u);
   aiStep(e);

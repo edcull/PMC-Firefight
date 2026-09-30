@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=132896f8d3">
+<link rel="stylesheet" href="src/css/game.css?v=0aa322a886">
 
 <div class="wrap">
   <header>
@@ -117,6 +117,8 @@
         <!-- a skirmish can be thrown away: the x on the card, asked twice -->
         <button class="resume-x" id="btn-discard" hidden aria-label="Discard this battle" title="Discard this battle">✕</button>
       </div>
+      <!-- a campaign under way (and no battle on): the way back into it, first -->
+      <button class="mcard" id="btn-camp-resume" hidden>Continue the campaign<small id="menu-camp-resume-sub"></small></button>
       <button class="mcard" data-menu="single">Single player<small>Skirmish, solitaire or a campaign, against the AI</small></button>
       <button class="mcard" data-menu="hotseat">Hotseat<small>Two players, one screen</small></button>
       <!-- only offered when the page came from a game server: a game opened
@@ -145,7 +147,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2609300939</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2609301007</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -500,7 +502,7 @@
 <script src="src/rules/damage.js?v=1ab661aa6e"></script>
 <script src="src/rules/space.js?v=928fc7fe11"></script>
 <script src="src/rules/data.js?v=8c0c1b75a3"></script>
-<script src="src/rules/rules.js?v=368e069380"></script>
+<script src="src/rules/rules.js?v=92e3e71b65"></script>
 <script src="src/rules/ruletext.js?v=9febc60052"></script>
 <script src="src/rules/camp-company.js?v=702ca8e216"></script>
 <script src="src/rules/camp-contract.js?v=caec47fd7b"></script>
@@ -562,12 +564,12 @@
 <script src="src/view/draw.js?v=e7384f51d8"></script>
 <script src="src/view/view.js?v=8594bdc568"></script>
 <script src="src/view/panels.js?v=cd3e748e0a"></script>
-<script src="src/view/muster.js?v=727e44bdfe"></script>
+<script src="src/view/muster.js?v=bba5701bb7"></script>
 <script src="src/view/game.js?v=6c87f4ce15"></script>
 <script src="src/view/dossier-hub.js?v=1145b6ac42"></script>
-<script src="src/view/dossier-found.js?v=d41fb0eef8"></script>
-<script src="src/view/dossier-roster.js?v=2e2c95281e"></script>
-<script src="src/view/dossier-contract.js?v=e8a57270d0"></script>
+<script src="src/view/dossier-found.js?v=90280cc71a"></script>
+<script src="src/view/dossier-roster.js?v=f566c053db"></script>
+<script src="src/view/dossier-contract.js?v=c389e82d2d"></script>
 <script src="src/view/dossier-after.js?v=9232c87e07"></script>
 <script src="src/view/dossier.js?v=5963e0249b"></script>
-<script src="src/view/menu.js?v=8d36f0255e"></script>
+<script src="src/view/menu.js?v=c81afb7b84"></script>

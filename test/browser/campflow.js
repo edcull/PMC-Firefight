@@ -110,6 +110,15 @@ async function pastFronts(p) {
   check('...whose panel the hub lists', await p.evaluate((n) => [...document.querySelectorAll('#camp-body .cpan-B .cphead b')].some(b => b.textContent === n), rival.name), rival.name);
   await shot(p, 'camp-hub.png');
 
+  // with a campaign under way (and no battle on), the menu's first card goes back into it
+  await p.reload(); await p.waitForTimeout(1200);
+  await p.evaluate(() => window.PMCMenu.open()); await p.waitForTimeout(300);
+  const resume = await p.evaluate(() => ({ shown: !document.getElementById('btn-camp-resume').hidden,
+    first: document.querySelector('#menu-main .mcard:not([hidden])').id, sub: document.getElementById('menu-camp-resume-sub').textContent }));
+  check('the menu opens on Continue the campaign', resume.shown && resume.first === 'btn-camp-resume' && /Task Force|campaign turn/.test(resume.sub), JSON.stringify(resume));
+  await p.evaluate(() => document.getElementById('btn-camp-resume').click()); await p.waitForTimeout(800);
+  check('...which goes back to its hub', await p.evaluate(() => !document.getElementById('camp').hidden && !!document.querySelector('#camp-body .cpan-A')));
+
   /* the road to the next Company Tier, laid out step by step (pp. 83-84) —
      behind the Company button, the hub opening on the dossier */
   check('the hub opens on the company', await p.evaluate(() => !document.querySelector('#camp-body .cdos') && !!document.querySelector('#camp-body .cpan-A .cstats')));

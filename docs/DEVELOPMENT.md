@@ -175,6 +175,7 @@ suppressedcover.js where a Suppressed unit may move
 insertion.js       Battlefield Insertion is the player's choice
 markcalls.js       Markerlights, one call at a time
 turretchain.js     the turrets act as one: the others go first, and the bar names them
+rolllimits.js      a rolled force: no PMC drones, one anti-air, one EW and one medic unit at most
 startready.js      online, both players press Begin before the battle starts
 weapons.js         what each unit shoots with, and how it sounds and looks
 rebels.js          the Rebel army list and its army rules

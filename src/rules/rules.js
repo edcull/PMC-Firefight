@@ -434,9 +434,16 @@
     var keys = [], counts = [0, 0, 0, 0, 0, 0], perKey = {}, perGroup = {}, commands = 0, spent = 0;
     var machines = 0, aircraft = 0, plats = 0, riders = 0, drones = 0;
     var isDrone = function (p) { return (p.rules || []).indexOf('Drone unit') >= 0; };
+    /* A rolled force is kept to a sensible mix, not a list of specialists: at
+       most one anti-air unit, one electronic-warfare unit and one medic unit,
+       and no PMC drone units at all. */
+    var ROLE_CAP = { 'Anti-aircraft': 1, 'Jammers': 1, 'Field Medics': 1 }, roles = {};
+    var rolesOf = function (p) { return (p.rules || []).filter(function (r) { return ROLE_CAP[r]; }); };
 
     function room(p) {
       if (spent + p.tier > budget) return false;
+      if (faction === 'pmc' && isDrone(p)) return false;
+      if (rolesOf(p).some(function (r) { return (roles[r] || 0) + 1 > ROLE_CAP[r]; })) return false;
       // never more Drone units than other units (p. 40)
       if (isDrone(p) && drones + 1 > keys.length - drones) return false;
       var lim = comp.limits[p.tier - 1];
@@ -487,7 +494,7 @@
         keys.push(joinPick(p.key, null, false, true));      // mounted, now and then
       } else keys.push(p.key);
       if (isDrone(p)) drones++;
-      if (isDrone(p)) drones++;
+      rolesOf(p).forEach(function (r) { roles[r] = (roles[r] || 0) + 1; });
       if (p.mustLoad) plats++;
       else if (p.cls === 'infantry' && !p.command) riders++;   // any infantry squad may ride one (p. 80)
       if (!p.noSlot) counts[p.tier]++;                 // a platform fills nobody's Tier row

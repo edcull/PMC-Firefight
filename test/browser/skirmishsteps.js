@@ -151,18 +151,19 @@ const { ROOT, SHOTS } = require('../where.js');
       /legal/i.test(document.getElementById('faults').textContent), was);
   }
   check('...or Random force to roll it again', changed);
-  // on a phone each unit's stats are one row
+  // a chosen unit's numbers are the add list's shorthand, on one line on a phone; the add list has no points badge
   const vpm = p.viewportSize();
   await p.setViewportSize({ width: 380, height: 800 });
   await p.waitForTimeout(250);
-  const oneLine = () => p.evaluate(() => [...document.querySelectorAll('#chosen .fcard-stats')].map(st => new Set([...st.children].map(c => Math.round(c.getBoundingClientRect().top))).size === 1 && st.scrollWidth <= st.clientWidth + 1));
-  const rows = await oneLine();
-  check('on a phone a unit\u2019s stats sit on one line, and fit', rows.length > 0 && rows.every(Boolean), JSON.stringify(rows));
+  const lines = await p.evaluate(() => [...document.querySelectorAll('#chosen .fcard')].map(c => {
+    const l = c.querySelector('.fcard-line'), r = l && l.getBoundingClientRect(), lh = l && parseFloat(getComputedStyle(l).lineHeight);
+    return { text: l ? l.textContent : '', one: !!l && r.height < (lh || 16) * 1.6 };
+  }));
+  check('each chosen unit shows the add list\u2019s shorthand, on one line on a phone', lines.length > 0 &&
+    lines.every(x => /^(\d+ models|vehicle|aircraft) · M\d/.test(x.text) && x.one), JSON.stringify(lines.slice(0, 3)));
   await p.locator('#chosen').screenshot({ path: path.join(SHOTS, 'muster-stats-phone.png') });
-  await p.setViewportSize({ width: 330, height: 800 });
-  await p.waitForTimeout(250);
-  const narrowRows = await oneLine();
-  check('...even on a narrow phone', narrowRows.length > 0 && narrowRows.every(Boolean), JSON.stringify(narrowRows));
+  const badges = await p.evaluate(() => document.querySelectorAll('#setup .cu .st').length);
+  check('...and the add list has no composition-point badge', badges === 0, badges + ' badges');
   await p.setViewportSize(vpm);
   await p.waitForTimeout(200);
   await next();
