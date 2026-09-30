@@ -391,7 +391,20 @@
         if (p && p.alive && !isAI(p.side) && !p.reserve && !p.aboard) return p;
         ui.deployPick = null;
       }
-      return deployRoster().filter(function (u) { return u.x < 0; })[0] || null;
+      var hand = deployRoster().filter(function (u) { return u.x < 0; });
+      var order = sideOrder();
+      for (var i = 0; i < order.length; i++) {
+        var first = hand.filter(function (u) { return u.side === order[i]; })[0];
+        if (first) return first;
+      }
+      return null;
+    }
+    /* Who sets up first. Where the scenario has a defender (Hostile takeover,
+       Demolish, Invasion: pp. 53-55) it is the defender's set-up that comes before
+       the battle, and the attacker's after it; otherwise Player 1, then Player 2. */
+    function sideOrder() {
+      var d = !E.state.solo && E.state.sc && E.state.sc.defender;
+      return d ? [d, other(d)] : ['A', 'B'];
     }
 
     function pickToDeploy(id) {

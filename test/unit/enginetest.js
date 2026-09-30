@@ -65,7 +65,10 @@ function play(seed, opts) {
   let guard = 0;
 
   /* ---- deployment: put every unit down, wherever the engine will take it ---- */
-  e.intent('A', { k: 'autosplit' });      // the reserves the scenario would hold back
+  // the reserves the scenario would hold back: each side sets its own, on its turn to place
+  const split = {};
+  // a side with nothing to put down before the battle (an Invasion's attacker, all in its waves) sorts them at once
+  ['A', 'B'].forEach((sd) => { if (e.state().phase === 'deploy' && e.state().units.filter(u => u.side === sd).every(u => u.reserve || u.aboard) && e.intent(seatOf(sd), { k: 'autosplit' }).ok) split[sd] = true; });
   while (e.state().phase === 'deploy' && guard++ < 4000) {
     // Modifying the armies (p. 46): keep the lists as they are
     if (e.state().swapAsk) { e.intent(e.state().swapAsk.side, { k: 'swapdone' }); continue; }
@@ -73,6 +76,7 @@ function play(seed, opts) {
     if (e.state().placeAsk) { e.intent(e.state().placeAsk.side, { k: e.state().placeAsk.kind === 'fort' ? 'placeauto' : 'placedone' }); continue; }
     const side = e.query.placingSide();
     if (!side) break;
+    if (!split[side]) { split[side] = true; e.intent(seatOf(side), { k: 'autosplit' }); continue; }
     const u = e.query.deployNext();
     if (!u) break;
     const mid = e.query.zoneCentre(side);

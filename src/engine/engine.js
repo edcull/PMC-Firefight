@@ -1330,6 +1330,19 @@
     function mayDeploy(side) {
       return state.phase === 'deploy' && K.placingSide() === side && !state.placeAsk && !state.minePick && !modifying();
     }
+    /* Arranging a side's own force before it goes down — who is held back, who
+       rides in what, Battlefield Insertion — is that side's to do on its turn to
+       place; or once everyone is down, before the battle begins; or while it has
+       nothing to put on the table at all (an Invasion's attacker, all in its
+       waves, sorting them while the defender sets up). Not while the other side
+       is placing, once it has had its turn: that could hand it back a unit to place. */
+    function mayArrange(side) {
+      // (the swaps still open is no bar: sorting a side's own reserves puts nothing on the table)
+      if (state.phase !== 'deploy' || state.placeAsk || state.minePick) return false;
+      var ps = K.placingSide();
+      if (ps === side || ps === null) return true;
+      return !state.units.some(function (u) { return u.side === side && u.alive && (u.x >= 0 || (!u.reserve && !u.aboard)); });
+    }
     // the armies still being modified: a hotseat's secret round, or a player yet to continue to deployment
     function modifying() { return !!state.swapStage || K.stillChoosing().length > 0; }
     /* The terrain set-up goes an area at a time, and each area is one side's
@@ -1437,12 +1450,14 @@
     });
     on('autosplit', null, function (side, it) {
       if (state.phase !== 'deploy') return no('not deploying');
-      ['A', 'B'].forEach(K.autoSplit);          // every player's (the OpFor's already stands)
+      if (!mayArrange(side)) return no('not your turn to set up');
+      K.autoSplit(side);                        // the sender's own (the OpFor's already stands)
       render();
       return yes;
     });
     on('holdback', null, function (side, it) {
       if (state.phase !== 'deploy') return no('not deploying');
+      if (!mayArrange(side)) return no('not your turn to set up');
       var why = K.toggleHold(side, it.id);
       if (why) return no(why);
       render();
@@ -1450,6 +1465,7 @@
     });
     on('insertion', null, function (side, it) {
       if (state.phase !== 'deploy') return no('not deploying');
+      if (!mayArrange(side)) return no('not your turn to set up');
       var whyI = K.toggleInsertion(side, it.id);
       if (whyI) return no(whyI);
       render();
@@ -1500,6 +1516,8 @@
       if (modifying()) return no('the other side is still modifying its army');
       // deploying straight away means keeping the list as it is
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();
+      // the side whose turn it is to place, and no other: the other side waits for it (with everyone down, nothing to do)
+      if (K.placingSide() !== null && !mayDeploy(side)) return no('not your turn to place');
       var hand = state.units.filter(function (u) { return u.side === side && u.x < 0; });
       K.autoDeploy(side);
       // placed for the player, but which way each hull faces is still theirs to say
@@ -1508,6 +1526,7 @@
     });
     on('load', null, function (side, it) {
       if (state.phase !== 'deploy') return no('not deploying');
+      if (!mayArrange(side)) return no('not your turn to set up');
       var hull = unitOf(it.hull, side), rider = unitOf(it.unit, side);
       if (!hull || !rider) return no('no such unit');
       if (!K.loadBefore(hull, rider)) return no('there is no room aboard');
@@ -1516,6 +1535,7 @@
     });
     on('unload', null, function (side, it) {
       if (state.phase !== 'deploy') return no('not deploying');
+      if (!mayArrange(side)) return no('not your turn to set up');
       var uh = unitOf(it.hull, side), ur = unitOf(it.unit, side);
       if (!uh || !ur) return no('no such unit');
       K.unloadBefore(uh, ur);

@@ -302,6 +302,14 @@
       var lu = st.units.filter(function (u) { return u.id === it.id; })[0];
       if (lu && this.seats.indexOf(lu.side) >= 0) return lu.side;
     }
+    /* Setting up at one screen: a tap on one of a side's own units (holding it
+       back, loading it, picking it to place) is that side's, whoever's turn to
+       place it is — an Invasion's attacker sorts its waves while the defender sets up. */
+    if (st.phase === 'deploy' && it && /^(holdback|insertion|load|unload|deploypick)$/.test(k)) {
+      var ref = it.unit || it.id || it.hull;
+      var ru = st.units.filter(function (u) { return u.id === ref; })[0];
+      if (ru && this.seats.indexOf(ru.side) >= 0) return ru.side;
+    }
     var sel = this.engine.sel();
     var want = sel.insertion
       // the side the engine is asking: the opponent, when it is shoving an insertion off its mark
