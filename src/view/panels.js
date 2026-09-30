@@ -92,7 +92,7 @@
         return;
       }
       if (B.state.phase === 'deploy' && B.state.deployReady) {
-        box.innerHTML = 'Look over the table and the other force, then modify your army or continue to the deployment.';
+        box.textContent = '';           // the Before deploying card says it, and the bar would only repeat it
         return;
       }
       if (B.state.phase === 'deploy') {
@@ -106,6 +106,8 @@
           ? 'Placing <b>' + esc(next.name) + '</b> — click inside your shaded strip, or pick a different unit from the order of battle. ' +
           'Tapping a model already down picks it up to shift.'
           : 'All units are on the table. Begin the battle from the panel.';
+        // the deployment card says which unit goes next and where: a phone keeps the room for it
+        box.classList.add('idle');
         return;
       }
       if (!u && B.state.solo && B.state.activeSide === 'B') { box.textContent = 'OpFor phase — the enemy acts, furthest from your forces first.'; return; }
@@ -730,10 +732,15 @@
         return '<div class="card"><h2>Deployment</h2><p class="sub">Waiting for ' + esc(who) + ' to finish modifying their army.</p></div>';
       }
       var sv = B.state.swapAvail[mine] || { left: 0 };
-      var h = '<div class="card"><h2>Before deploying</h2><p class="sub">Look over the table and the other force. You may swap up to ' + sv.left +
-        ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
+      var h = '<div class="card"><h2>Before deploying</h2><p class="sub">Look over the table and the other force. You may swap up to ' + (sv.total || sv.left) +
+        ' unit' + ((sv.total || sv.left) === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
       if (B.state.swapAsk && B.state.swapAsk.side === mine) h += swapCard();
-      else if (B.Q.canSwapNow(mine)) h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's') + '</small></button></div>';
+      else if (B.Q.canSwapNow(mine)) {
+        var made = (sv.done || []).filter(function (d) { return d.held; }).length;
+        h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>' +
+          (made ? made + ' swap' + (made === 1 ? '' : 's') + ' made' + (sv.left ? ', ' + sv.left + ' left' : '') + ' — change ' + (made === 1 ? 'it' : 'them')
+            : 'Swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's')) + '</small></button></div>';
+      }
       return h + '<div class="acts"><button class="act primary" data-act="deployready"><span>Continue to deployment</span><small>' +
         (sv.left > 0 ? 'The list stands as it is' : 'Units, reserves and transports') + '</small></button></div></div>';
     }
@@ -746,7 +753,7 @@
       var me = next ? next.side : (playerSide() || 'A');
       var h = '<div class="card">';
       if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
-        (next.x >= 0 ? ' — already down; tap the table to shift it' : '') + '</p>';
+        (next.x >= 0 ? ' — already down; tap the table to shift it' : ' — tap your shaded strip to put it down') + '</p>';
       h += deployList(me);
       h += insertionList(me);
       /* The scenario's split (which units go on the table and which wait, or
@@ -773,8 +780,8 @@
         h += '<div class="acts"><button class="act" disabled title="Nothing in this force can carry troops"><span>Transports</span><small>No transports in this force</small></button></div>';
       }
       if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (B.state.swapAsk.side === me || B.state.swapStage)) h += swapCard();
-      // the way on stays at the foot of the card, however long the order of battle above it
-      h += '<div class="acts deploy-go"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button>';
+      // auto-deploy scrolls with the order of battle; only the way on, once there is one, keeps the foot
+      h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button></div>';
       /* Begin the battle: offered once everything is down. Where the scenario
          wants units held back (or split into waves) and the player has not yet
          chosen, it is there but greyed, and pressing it says why. Hulls going
@@ -783,6 +790,7 @@
       var mySplit = ['A', 'B'].map(splitFor).filter(function (f) { return f && !f.ok; })[0] || splitFor(me), splitShort = !!mySplit && !mySplit.ok;
       var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
       if (deploymentDone() || (placed && splitShort)) {
+        h += '<div class="acts deploy-go">';
         var blocked = !deploymentDone();
         var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
         // online, both players say they are ready: the battle begins once both have
@@ -809,8 +817,9 @@
             ' going into the battle with nobody aboard. Begin anyway?</p></div>' +
             '<div class="askrow"><button class="lnk" data-act="startnoask">Cancel</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
         }
+        h += '</div>';
       }
-      return h + '</div></div>';
+      return h + '</div>';
     }
 
     /* The split the scenario made, for the player to change: a row for each unit,
@@ -1033,12 +1042,13 @@
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });
-      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
+      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin], [data-swapundo]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-act');
           if (SFX) SFX.click();
           if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
           if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
+          if (b.hasAttribute('data-swapundo')) { send({ k: 'swapundo', id: b.getAttribute('data-swapundo') }); return; }
           if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
           if (b.hasAttribute('data-insertion')) { send({ k: 'insertion', id: b.getAttribute('data-insertion') }); return; }
           if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }

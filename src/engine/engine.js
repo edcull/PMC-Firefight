@@ -1559,12 +1559,17 @@
       render();
       return yes;
     });
-    on('swappick swapin swapdone', null, function (side, it) {
+    on('swappick swapin swapdone swapundo', null, function (side, it) {
       var sa2 = state.swapAsk;
       if (!sa2 || sa2.side !== side) return no('nothing to swap');
       if (it.who && it.who !== side) return no('that was the other player\u2019s list');
       if (it.k === 'swapdone') { K.swapsDone(); return yes; }
       if (it.k === 'swappick') { sa2.pick = it.id || null; render(); return yes; }
+      if (it.k === 'swapundo') {
+        var un = K.undoSwap(side, it.id);
+        if (un) { setHint(null, un); render(); return no(un); }
+        return yes;
+      }
       var sw = K.doSwap(side, sa2.pick, it.id);
       if (sw) { setHint(null, sw); render(); return no(sw); }
       return yes;

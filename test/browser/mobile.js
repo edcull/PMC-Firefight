@@ -108,7 +108,7 @@ function metrics() {
       const barOn = [...document.querySelectorAll('#bar .slot')].filter(b => !b.disabled).length;
       return { tab: con.getAttribute('data-mtab'), name: u.name, actions: barOn };
     });
-    ok('picking a unit brings the panel back to the actions', picked.tab === 'act', picked.name);
+    ok('picking a unit of your own brings up its card', picked.tab === 'unit', picked.name);
     ok('...with something to do', picked.actions > 0, picked.actions + ' actions live');
 
     const stats = await p.evaluate(() => {

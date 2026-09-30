@@ -95,24 +95,21 @@
       '.lob-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}',
       '.lob-foot .start{margin:0;flex:1 1 auto}',
       // in a game, the actions and the forces stay put; the terms scroll; the talk keeps the foot
-      '#lobby > .sheet.lob-sheet-room{display:flex;flex-direction:column;overflow:hidden}',
-      '.lob-sheet-room > #lobby-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}',
+      '#lobby > .sheet.lobby-sheet{display:flex;flex-direction:column;overflow:hidden}',
+      '.lobby-sheet > #lobby-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}',
       '.lob-sheet-room .lob-acts{margin-top:0;align-items:stretch;flex-wrap:nowrap}',
       '.lob-acts .lnk{flex:none;white-space:nowrap}',
-      '.lob-sheet-room .lob-startnote{flex:1 1 auto;align-self:center;text-align:right;padding:0}',
       '.lob-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}',
       '.lob-watch{opacity:.7;margin:-4px 0 8px}',
       '.lob-pub{display:flex;align-items:flex-end}',
       '.lob-pub label{display:flex;align-items:center;gap:8px;min-height:var(--row-h);margin:0;padding:0;cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:13px;color:var(--ink)}',
       '.lob-pub input{accent-color:var(--alpha);width:16px;height:16px;margin:0}',
-      '.lob-sheet-room .lob-chat{flex:none;margin-top:10px}',
-      '@media (max-width:1000px){.lob-sheet-room .lob-lines{height:calc(3 * 1.45em + 26px);min-height:0}}',
+      '.lobby-sheet .lob-chat{flex:none;margin-top:10px}',
+      '@media (max-width:1000px){.lobby-sheet .lob-lines{height:calc(3 * 1.45em + 26px);min-height:0}}',
       '.lob-bad{color:var(--warn);font-size:13px;margin:0}',
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:var(--good)}',
       '.lob-status{font-size:12px;color:var(--ink-faint)}',
-      // the second player's word on the start, where the host has the button: text, not a button
-      '.lob-startnote{flex:1 1 100%;text-align:center;padding:10px 0}',
       '.lob-code{font-family:var(--mono);font-size:14px;letter-spacing:.18em;padding:2px 8px;border:1px solid var(--line);border-radius:5px;color:var(--ink)}',
       '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
       '.lob-forces .hot-side{margin:0}',
@@ -123,7 +120,8 @@
       '.lob-forces .lob-empty-seat .lnk{margin-top:6px}',
       '.lob-wait{opacity:.6}',
       '.lob-new{margin:4px 0 14px;padding:10px 12px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
-      '.lob-new .lob-foot{margin-top:4px}',
+      '.lob-new .lob-foot{margin-top:4px;flex-wrap:nowrap;align-items:stretch}',
+      '.lob-new .lob-foot .lnk{flex:none}',
       '.lob-go{border-color:var(--alpha)!important;color:var(--alpha)!important}'
     ].join('\n');
     document.head.appendChild(s);
@@ -163,18 +161,20 @@
   function lobbyHTML() {
     var list = games.length ? games.map(gameRow).join('') :
       '<p class="lob-empty">No games open. Start one and read the code out to whoever you are playing.</p>';
-    return '<p class="lede">Play somebody else over the network. Start a game and read its code out, or join one with the code you were given. ' +
+    return '<div class="lob-scroll"><p class="lede">Play somebody else over the network. Start a game and read its code out, or join one with the code you were given. ' +
       '<span class="lob-status">' + esc(status) + '</span></p>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
       whoHTML() +
-      (creating ? kindsHTML() : '') +
-      '<div class="field"><label for="join-code">Games</label>' +
-      '<div class="lob-row">' +
-      (creating ? '' : '<button class="lnk lob-go" data-lob="create">Start a game</button>') +
-      '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
-      '<button class="lnk" data-lob="join">Join</button>' +
-      '</div></div>' +
-      '<div class="lob-list">' + list + '</div>' +
+      // while a game is being started, the list of games to join stays out of the way
+      (creating ? kindsHTML() :
+        '<div class="field"><label for="join-code">Games</label>' +
+        '<div class="lob-row">' +
+        '<button class="lnk lob-go" data-lob="create">Start a game</button>' +
+        '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
+        '<button class="lnk" data-lob="join">Join</button>' +
+        '</div></div>' +
+        '<div class="lob-list">' + list + '</div>') +
+      '</div>' +
       chatHTML('lobby');
   }
 
@@ -192,7 +192,7 @@
     return '<div class="lob-new">' +
       '<div class="field"><label for="lob-kind">Game</label><select id="lob-kind">' + kinds.join('') + '</select></div>' +
       publicBox('lob-private', !newPrivate, '') +
-      '<div class="lob-foot"><button class="lnk" data-lob="uncreate">Not now</button>' +
+      '<div class="lob-foot"><button class="lnk" data-lob="uncreate">Cancel</button>' +
       '<button class="start" data-lob="create" data-go="1">Create the game</button></div></div>';
   }
 
@@ -242,8 +242,9 @@
       (mine && ready ? '<button class="lnk" data-lob="ready">Not ready after all</button>' : '') +
       (mine && !ready ? '<button class="start" data-lob="ready">I am ready</button>'
         : host_ ? '<button class="start" data-lob="start"' + (room.canStart ? '' : ' disabled') + '>Take the field</button>'
-        : '<span class="lob-status lob-startnote">' +
-          (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
+        // the other player's word on the start sits where the host's button does, and as tall
+        : '<button class="start" disabled>' +
+          (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</button>') +
       '</div>' +
       '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
       (room.watchers.length

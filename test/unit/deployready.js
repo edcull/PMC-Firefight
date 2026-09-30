@@ -65,6 +65,28 @@ console.log('\nThe swaps are secret until both have gone on');
   ok('...and said, in a card', cards.some((c) => c.kind === 'Modifying the armies' && c.side === 'A'));
 })();
 
+console.log('\nA look at the table and back, and a swap changed, before going on');
+(function () {
+  const e = game(true), st = e.state();
+  e.intent('A', { k: 'swapopen' });
+  const out = st.units.find((u) => u.side === 'A' && u.key === 'regular');
+  e.intent('A', { k: 'swappick', id: out.id });
+  const opts = e.query.swapOptions('A', out.id);
+  ok('A swaps their one unit', e.intent('A', { k: 'swapin', id: opts[0].id }).ok && st.swapAvail.A.left === 0);
+  ok('...and the swaps stay open, to be changed', !!st.swapAsk && st.swapAsk.side === 'A');
+  ok('closing them is a look at the table', e.intent('A', { k: 'swapdone' }).ok && !st.swapAsk && st.deployReady.A === false);
+  ok('...and they open again, with no swaps left', e.intent('A', { k: 'swapopen' }).ok && !!st.swapAsk);
+  ok('the swap is taken back', e.intent('A', { k: 'swapundo', id: out.id }).ok && st.swapAvail.A.left === 1 && !st.swapAvail.A.done.length);
+  e.intent('A', { k: 'swappick', id: out.id });
+  const other = opts[1] || opts[0];
+  ok('...and another made in its place', e.intent('A', { k: 'swapin', id: other.id }).ok);
+  e.intent('A', { k: 'deployready' });
+  ok('once gone on, the list stands', !e.intent('A', { k: 'swapopen' }).ok);
+  e.intent('B', { k: 'deployready' });
+  const now = st.units.find((u) => u.id === out.id);
+  ok('...and the swap chosen last is the one made', now && now.key === other.key, now && now.key);
+})();
+
 console.log('\nWithout it (a hotseat\'s own secret round, or an older save)');
 (function () {
   const e = game(false), st = e.state();

@@ -41,6 +41,21 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const force = { faction: 'pmc', tactic: '', keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'], colour: 'ochre', name: '' };
   const p1 = await page(ctx1);
   let p2 = await page(ctx2);
+  // the list of games on a phone: the talk keeps the foot; starting a game puts Cancel beside Create and the list away
+  await p2.setViewportSize({ width: 390, height: 700 });
+  await p2.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
+  await p2.waitForTimeout(200);
+  const lb = await p2.evaluate(() => {
+    const q = (s) => document.querySelector('#lobby ' + s);
+    const foot = [...document.querySelectorAll('#lobby .lob-new .lob-foot button')];
+    return { btns: foot.map(x => x.textContent).join('|'), oneLine: foot.length === 2 && Math.abs(foot[0].getBoundingClientRect().top - foot[1].getBoundingClientRect().top) < 2,
+      list: !!q('.lob-list'), foot: Math.round(innerHeight - q('.lob-chat').getBoundingClientRect().bottom), lines: Math.round(q('.lob-lines').getBoundingClientRect().height) };
+  });
+  await p2.screenshot({ path: require('path').join(SHOTS, 'lobby-new-phone.png') }).catch(() => {});
+  ok('starting a game: Cancel beside Create the game, and no list of games', lb.btns === 'Cancel|Create the game' && lb.oneLine && !lb.list, JSON.stringify(lb));
+  ok('...the lobby talk keeps the foot, three lines tall', lb.foot < 40 && lb.lines < 90, JSON.stringify(lb));
+  await p2.evaluate(() => document.querySelector('#lobby [data-lob="uncreate"]').click());
+  await p2.setViewportSize({ width: 1340, height: 900 });
   await p1.evaluate((f) => window.PMCLobby.net().send('game.create', { name: 'Test', settings: { tier: 3, pl: 1, planet: 'desert', scenario: 'meeting', private: false }, force: f }), force);
   await p1.waitForTimeout(600);
   const code = await p1.evaluate(() => window.__room && window.__room.id);
@@ -76,6 +91,10 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const acts2 = await p1.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts button')].map(x => x.className + ':' + x.textContent + (x.disabled ? ':off' : '')));
   ok('...once both are ready, the host is given Take the field', acts2.join('|') === 'lnk:Leave this game|lnk:Not ready after all|start:Take the field', acts2.join('|'));
   await p1.screenshot({ path: require('path').join(SHOTS, 'lobby-room-ready-desktop.png') }).catch(() => {});
+  const tall = (p) => p.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts > *')].map(x => Math.round(x.getBoundingClientRect().height)));
+  const h1 = await tall(p1), h2 = await tall(p2);
+  ok('...and the other player\'s row is the same height, its wait said where the button is', h2.length === 3 && Math.max(...h1, ...h2) - Math.min(...h1, ...h2) <= 1, JSON.stringify([h1, h2]));
+  await p2.screenshot({ path: require('path').join(SHOTS, 'lobby-room-ready-guest.png') }).catch(() => {});
   await p1.evaluate(() => window.PMCLobby.net().send('game.start'));
   await p1.waitForTimeout(2000);
   // the briefing comes up the once for each; one side looking at its swaps does not bring it back for the other
