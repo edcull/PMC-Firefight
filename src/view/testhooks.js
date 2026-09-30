@@ -119,6 +119,7 @@
     window.__viewRect = function () { return viewRect(); };
     window.__seats = function () { return B.seats.slice(); };
     window.__mySide = function () { return mySide(); };
+    window.__placingSide = function () { return placingSide(); };
 
     /* Test hooks: where a canvas pixel lands on the table, and whether the side
        still placing units may deploy there. */

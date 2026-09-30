@@ -84,6 +84,24 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   for (let k = 0; k < 20 && !gone; k++) { await wait(300); gone = await att.evaluate(() => !window.PMC_STATE().placeAsk && !/Setting up/.test(document.getElementById('context').textContent)); }
   ok('once the defender is done, the attacker goes on by itself', gone,
     await att.evaluate(() => document.getElementById('context').textContent.slice(0, 80)));
+
+  // on to the deployment: each goes on from Before deploying, then one side deploys while the other watches
+  for (const p of [p1, p2]) await p.evaluate(() => { if (window.PMC_STATE().deployReady) window.__sendIntent({ k: 'deployready' }); });
+  let ps = null;
+  for (let k = 0; k < 20 && !ps; k++) { await wait(300); ps = await p1.evaluate(() => { const s = window.PMC_STATE(); return !s.deployReady && s.phase === 'deploy' ? window.__placingSide() : null; }); }
+  const placer = (await seatOf(p1)) === ps ? p1 : p2, watcher = placer === p1 ? p2 : p1;
+  await wait(600);
+  const w = await watcher.evaluate(() => ({
+    card: document.getElementById('context').textContent,
+    auto: !!document.querySelector('#context [data-act="autodeploy"]'),
+    list: !!document.querySelector('#context [data-deploypick], #context .deploylist'),
+    stats: (document.getElementById('statstrip-side') || {}).textContent || ''
+  }));
+  const pl = await placer.evaluate(() => !!document.querySelector('#context [data-act="autodeploy"]'));
+  await watcher.screenshot({ path: require('path').join(SHOTS, 'deploy-watcher.png') }).catch(() => {});
+  ok('while the other side deploys, this screen says so', /is deploying/.test(w.card), w.card.slice(0, 100));
+  ok('...with no auto-deploy, no order of battle, and no prompt to pick a unit', !w.auto && !w.list && !/No unit selected/.test(w.stats), JSON.stringify(w));
+  ok('...while the side deploying has its own card', pl);
   ok('no page errors', errs.length === 0, errs.join(' | '));
   console.log('\n  ' + pass + ' checks passed, ' + fail + ' failed.');
   await b.close();

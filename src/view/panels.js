@@ -106,6 +106,7 @@
         // somebody else's deployment is watched, not played
         if (next && dside && !mySide()) {
           box.innerHTML = '<b>' + esc(sideName(dside)) + '</b> is putting its force down.';
+          box.classList.add('idle');       // the panel's card says so; a phone keeps the room
           return;
         }
         box.innerHTML = next
@@ -201,7 +202,9 @@
       box.className = (keep ? keep + ' ' : '') + 'statstrip';   // always in full: no Details to tap for it
       if (!u) {
         box._html = null;
-        box.innerHTML = '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
+        // while the other player is deploying there is nothing here to pick: no prompt to pick one
+        box.innerHTML = othersDeploying() ? ''
+          : '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
         return;
       }
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
@@ -392,6 +395,18 @@
 
     // a side played at this screen (a hotseat's both; online, this player's own)
     function atThisScreen(side) { return !B.seats || B.seats.indexOf(side) >= 0; }
+    // the deployment is the other player's, at another screen: theirs to set out, this one's to watch
+    function othersDeploying() {
+      if (!B.state || B.state.phase !== 'deploy' || B.state.relocating || B.state.deployReady) return false;
+      var ps = placingSide();
+      return !!ps && !isAI(ps) && !atThisScreen(ps);
+    }
+    function deployWaitCard() {
+      var ps = placingSide();
+      return '<div class="card"><h2>Deployment</h2><p class="sub"><b>' + esc(sideName(ps)) + '</b> is deploying \u2014 ' +
+        'setting its reserves and transports and putting its units down.</p>' +
+        '<p class="hint">Your deployment follows once theirs is done.</p></div>';
+    }
     /* The other player, at another screen, putting the scenario's pieces down (or
        choosing a mine, which is theirs to keep quiet): this screen is told they are
        at it, and goes on by itself once they are done. */
@@ -770,6 +785,7 @@
       if (B.state.relocating) return relocCard();
       var rc = readyCard();
       if (rc) return rc;
+      if (othersDeploying()) return deployWaitCard();
       var next = deployNext();
       var me = next ? next.side : (playerSide() || 'A');
       var h = '<div class="card">';
