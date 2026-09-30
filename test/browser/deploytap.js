@@ -36,11 +36,28 @@ async function run(p, label, scen, shotName) {
   if (await p.evaluate(() => { const b = document.querySelector('[data-act="placeauto"]'); if (b) b.click(); return !!b; })) await p.waitForTimeout(400);
   await p.evaluate(() => { if (window.PMC_STATE().deployReady) window.__sendIntent({ k: 'deployready' }); });   // the list stands: on to the deployment
   await p.waitForTimeout(200);
+  /* Meeting engagement, Secure and control, Find and secure: nothing is placed
+     before the battle. The units are tapped onto the table as they come on in
+     turn 1's Reserve phase, a unit each in turn with the OpFor (pp. 50-52). */
+  // (and the attacker in Hostile takeover and Demolish, whose defender sets up first: pp. 54-55)
+  const entry = await p.evaluate(() => { const s = window.PMC_STATE(); return !!s.scen.entersTurn1 || (!!s.scen.attackerEnters && s.sc.attacker === 'A'); });
+  if (entry) {
+    // (Find and secure: the half held back is chosen first — for us, by the button)
+    await p.evaluate(() => { window.__sendIntent({ k: 'autosplit' }); window.__beginButton().click(); });
+    await p.waitForFunction(() => !!window.__insertionState() || !!window.PMC_STATE().phaseCount, null, { timeout: 20000 }).catch(() => {});
+    for (let i = 0; i < 6; i++) { await drain(p); await p.waitForTimeout(100); }
+    await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
+  }
+  // what is still to go down: in hand, or (entering in turn 1) held to come on
+  await p.evaluate((entry) => {
+    window.__leftA = () => window.PMC_STATE().units.filter(u => u.side === 'A' && u.x < 0 &&
+      (entry ? (u.reserve && u.wave === 1) : (!u.reserve && !u.aboard))).length;
+  }, entry);
 
   const start = await p.evaluate(() => {
     const s = window.PMC_STATE();
     return {
-      waiting: s.units.filter(u => u.side === 'A' && u.x < 0 && !u.reserve && !u.aboard).length,
+      waiting: window.__leftA(),
       onScreen: window.__deployShare ? window.__deployShare() : null
     };
   });
@@ -61,14 +78,15 @@ async function run(p, label, scen, shotName) {
   for (let round = 0; round < 3; round++) {
     for (let gy = 1; gy <= 7; gy++) {
       for (let gx = 1; gx <= 5; gx++) {
-        const before = await p.evaluate(() =>
-          window.PMC_STATE().units.filter(u => u.side === 'A' && u.x < 0 && !u.reserve && !u.aboard).length);
+        const before = await p.evaluate(() => window.__leftA());
         if (!before) break outer;
+        // the OpFor's unit walks on between ours: a tap waits for the table to be still, as a player's would
+        if (entry) await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
         await p.mouse.click(box.x + box.w * gx / 6, box.y + box.h * gy / 8);
         await p.waitForTimeout(80);
         taps++;
         const after = await p.evaluate(() => ({
-          left: window.PMC_STATE().units.filter(u => u.side === 'A' && u.x < 0 && !u.reserve && !u.aboard).length,
+          left: window.__leftA(),
           hint: (document.getElementById('hintbar') || {}).textContent || ''
         }));
         if (after.left < before) landed++;
@@ -79,7 +97,7 @@ async function run(p, label, scen, shotName) {
   const end = await p.evaluate(() => {
     const s = window.PMC_STATE();
     return {
-      left: s.units.filter(u => u.side === 'A' && u.x < 0 && !u.reserve && !u.aboard).length,
+      left: window.__leftA(),
       illegal: s.units.filter(u => u.side === 'A' && u.x >= 0 && !window.__deployOK(u.x, u.y, 'A')).length,
       placed: s.units.filter(u => u.side === 'A' && u.x >= 0).length
     };
@@ -88,7 +106,10 @@ async function run(p, label, scen, shotName) {
     start.waiting + ' units in ' + taps + ' taps (' + landed + ' landed, ' + panned + ' panned back)');
   ok('...and every unit ended up somewhere legal', end.illegal === 0,
     end.placed + ' placed, ' + end.illegal + ' outside the zone');
-  ok('...without needing more taps than units', taps <= start.waiting * 4,
+  /* (a blind grid of taps; a Demolish attacker's ground is three small corners, which a player
+     taps straight at, but the grid finds only now and then) */
+  const per = entry && scen === 'demolish' ? 6 : 4;
+  ok('...without needing more taps than units', taps <= start.waiting * per,
     taps + ' taps for ' + start.waiting + ' units');
 }
 

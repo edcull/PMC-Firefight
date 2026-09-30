@@ -19,11 +19,11 @@ function ok(name, got, want) {
 function stub(st, sel) {
   return { state: function () { return st; }, sel: function () { return sel; }, query: { placingSide: function () { return 'A'; }, terrainSide: function () { return 'A'; } } };
 }
-function seat(seats, st, sel) {
+function seat(seats, st, sel, it) {
   var l = new Local();
   l.seats = seats;
   l.engine = stub(st, sel);
-  return l.seatNow();
+  return l.seatNow(it);
 }
 
 console.log('\nWho answers, in a hotseat game');
@@ -34,6 +34,13 @@ ok('a shove is answered by the side shoving it, not the side that is up',
   seat(['A', 'B'], { phase: 'battle', activeSide: 'B' }, { insertion: { kind: 'shove', by: 'A', unit: { side: 'B' } } }), 'A');
 ok('...either way round',
   seat(['A', 'B'], { phase: 'battle', activeSide: 'A' }, { insertion: { kind: 'shove', by: 'B', unit: { side: 'A' } } }), 'B');
+
+console.log('\nSetting up, at one screen');
+var setUp = { phase: 'deploy', units: [{ id: 'a1', side: 'A' }, { id: 'b1', side: 'B' }] };
+ok('placing goes out as the side whose turn it is', seat(['A', 'B'], setUp, {}, { k: 'autodeploy' }), 'A');
+ok('holding back one of Player 2\'s units goes out as Player 2 (an Invasion attacker sorting its waves)',
+  seat(['A', 'B'], setUp, {}, { k: 'holdback', id: 'b1' }), 'B');
+ok('...and loading one of its units', seat(['A', 'B'], setUp, {}, { k: 'load', hull: 'b1', unit: 'b1' }), 'B');
 
 console.log('\nA solitaire game has one seat');
 ok('an OpFor shove still goes out as the one seat there is',

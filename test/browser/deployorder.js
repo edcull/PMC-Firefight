@@ -73,7 +73,8 @@ async function settle(p) {
    who never comes. */
 async function newGame(p, cfg) {
   await p.evaluate((c) => window.PMC_NEWGAME(c), Object.assign({
-    tier: 3, pl: 1, mode: 'ai', planet: 'barren', scenario: 'meeting',
+    // Demolish with the player defending: a defender places its force before the battle (p. 54)
+    tier: 3, pl: 1, mode: 'ai', planet: 'barren', scenario: 'demolish', roles: { attacker: 'B', defender: 'A' },
     nameA: 'Ours', nameB: 'Theirs',
     armyA: ['cmd3', 'regular', 'veterans', 'hmgteam', 'engineers', 'lcv'],
     armyB: ['cmd3', 'regular', 'veterans', 'hmgteam', 'engineers', 'lcv']

@@ -421,7 +421,7 @@
       }
       if (pa.kind === 'barricade' && n) logLine('terrain', sideName(pa.side) + ' — ' + (pa.why === 'fortify' ? 'Fortify and Strike!: ' + n + ' field fortifications thrown up.' : 'Last Stand: ' + n + ' barricades put up.'));
       E.state.placeAsk = null;
-      if (pa.then === 'battle') { startBattle(); return; }
+      if (pa.then === 'entry') { E.entryFortify(); return; }     // Fortify and Strike!, in turn 1: then the Action phase
       nextPlace();
     }
 

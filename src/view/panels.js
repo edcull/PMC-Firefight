@@ -86,6 +86,19 @@
               : 'Tap inside the lit <b>' + ta.name + '</b> area to put down the ' + (PIECE_NOUN[tg.kind] || [tg.kind])[0] + ' outlined under the pointer.';
         return;
       }
+      var set = B.state.placeAsk || B.state.minePick || B.state.relocating;
+      if (set && !isAI(set.side) && !atThisScreen(set.side)) {
+        box.innerHTML = '<b>' + esc(sideName(set.side)) + '</b> is setting up.';
+        box.classList.add('idle');
+        return;
+      }
+      // turn 1's Rapid Relocation, this screen's own
+      if (B.state.relocating && atThisScreen(B.state.relocating.side)) {
+        var rl = B.state.relocating, left = rl.cap - rl.moved.length;
+        box.innerHTML = 'Rapid Relocation: tap one of your units, then where it goes' + (left > 0 ? ' — ' + left + ' more may move' : '') + '. <b>Done relocating</b> when you have finished.';
+        box.classList.add('idle');
+        return;
+      }
       var fau = B.faceAsked();
       if (fau) {
         box.innerHTML = 'Which way does <b>' + esc(fau.name) + '</b> face? Tap a direction around it, or choose on the octagon.';
@@ -100,12 +113,15 @@
         // somebody else's deployment is watched, not played
         if (next && dside && !mySide()) {
           box.innerHTML = '<b>' + esc(sideName(dside)) + '</b> is putting its force down.';
+          box.classList.add('idle');       // the panel's card says so; a phone keeps the room
           return;
         }
         box.innerHTML = next
           ? 'Placing <b>' + esc(next.name) + '</b> — click inside your shaded strip, or pick a different unit from the order of battle. ' +
           'Tapping a model already down picks it up to shift.'
-          : 'All units are on the table. Begin the battle from the panel.';
+          : B.Q.entering && (B.Q.entering() || ['A', 'B'].some(function (sd) { return !isAI(sd) && atThisScreen(sd) && B.Q.entering(sd); }))
+            ? 'Nothing more to place before the battle: sort your reserves and transports, then begin — your units come on in turn 1.'
+            : 'All units are on the table. Begin the battle from the panel.';
         // the deployment card says which unit goes next and where: a phone keeps the room for it
         box.classList.add('idle');
         return;
@@ -195,7 +211,9 @@
       box.className = (keep ? keep + ' ' : '') + 'statstrip';   // always in full: no Details to tap for it
       if (!u) {
         box._html = null;
-        box.innerHTML = '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
+        // while the other player is deploying there is nothing here to pick: no prompt to pick one
+        box.innerHTML = othersDeploying() ? ''
+          : '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
         return;
       }
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
@@ -384,6 +402,124 @@
       return out.length ? '<div class="chips">' + out.join('') + '</div>' : '';
     }
 
+    // a side played at this screen (a hotseat's both; online, this player's own)
+    function atThisScreen(side) { return !B.seats || B.seats.indexOf(side) >= 0; }
+    // the deployment is the other player's, at another screen: theirs to set out, this one's to watch
+    function othersDeploying() {
+      if (!B.state || B.state.phase !== 'deploy' || B.state.relocating || B.state.deployReady) return false;
+      var ps = placingSide();
+      return !!ps && !isAI(ps) && !atThisScreen(ps);
+    }
+    function deployWaitCard() {
+      var ps = placingSide();
+      // their units as they stand, to look at: what is still to go down, what is held back, who is aboard what
+      var units = B.state.units.filter(function (u) { return u.side === ps && u.alive; });
+      var rows = units.map(function (u) {
+        var hull = u.aboard ? byId(u.aboard) : null;
+        var note = hull ? 'aboard ' + hull.name
+          : u.reserve && u.insert ? 'held for insertion'
+            : u.wave === 2 ? (u.reserve ? 'in reserve' : 'second wave')
+              : u.reserve ? 'in reserve'
+                : u.x >= 0 ? 'on the table' : 'to deploy';
+        var cls = u.x >= 0 && !hull ? ' dpr-set' : hull || u.reserve || u.wave === 2 ? ' dpr-held' : '';
+        return '<div class="dpr dpr-view' + cls + '"><span class="dpr-mark">' + (cls === ' dpr-set' ? '\u2713' : '\u00b7') + '</span>' +
+          '<span class="dpr-name">' + esc(u.name) + '</span><span class="dpr-note">' + esc(note) + '</span></div>';
+      }).join('');
+      var left = units.filter(function (u) { return u.x < 0 && !u.aboard && !u.reserve && u.wave !== 2; }).length;
+      return '<div class="card"><h2>Deployment</h2><p class="sub"><b>' + esc(sideName(ps)) + '</b> is deploying \u2014 ' +
+        'setting its reserves and transports and putting its units down.</p>' +
+        '<p class="hint">' + (['A', 'B'].some(function (sd) { return !isAI(sd) && atThisScreen(sd) && B.Q.entering && B.Q.entering(sd); })
+          ? 'You place nothing before the battle: your force enters in turn 1. Sort it below meanwhile.'
+          : 'Your deployment follows once theirs is done.') + '</p>' +
+        '<div class="dplist"><div class="dphead">Their order of battle \u2014 ' + (left ? left + ' still to deploy' : 'all set down') + '</div>' +
+        rows + '</div></div>';
+    }
+    /* The other player, at another screen, putting the scenario's pieces down (or
+       choosing a mine, which is theirs to keep quiet): this screen is told they are
+       at it, and goes on by itself once they are done. */
+    function setUpWaitCard(ask) {
+      var what = ask.why === 'takeover' ? 'digging in around the objective — trenches, walls, wire and a bunker'
+        : ask.why === 'laststand' ? 'putting up their Last Stand barricades'
+          : ask.why === 'fortify' ? 'throwing up their field fortifications'
+            : ask.why === 'terrain' ? 'moving terrain (Detailed Terrain Knowledge)'
+              : 'making their preparations';
+      return '<div class="card"><h2>Setting up</h2><p class="sub"><b>' + esc(sideName(ask.side)) + '</b> is ' + what +
+        '.</p><p class="hint">The deployment goes on once they are done.</p></div>';
+    }
+
+    /* Meeting engagement, Secure and control, Find and secure (pp. 50-52): nobody
+       is placed before the battle. Each side at this screen sorts its own force —
+       who is held back, who rides in what, who comes in by insertion — and says
+       whether its units are to be brought on for it; then the battle begins, and
+       they come on in turn 1's Reserve phase, a unit each in turn. */
+    function entryCard(mine) {
+      var me = mine[0] || 'A', auto = B.state.autoEnter || {};
+      var all = B.Q.entering && B.Q.entering();
+      var h = '<div class="card"><h2>Entering the table</h2><p class="sub ready-help">' + (all
+        ? 'Nobody deploys before the battle. Once it begins and the initiative is rolled, the companies come on from their own table edges in turn 1\u2019s Reserve phase, a unit each in turn from the side with the initiative'
+        : esc(B.deployWhere ? B.deployWhere(me) : 'You place nothing before the battle: your force comes on in the Reserve phase of turn 1').replace(/\.$/, '')) +
+        (all ? ': within 4\u2033 of the edge, and 12\u2033 clear of the enemy where the ground allows.' : '.') + '</p>';
+      mine.forEach(function (sd) {
+        var units = B.state.units.filter(function (u) { return u.side === sd && u.alive; });
+        var rows = units.map(function (u) {
+          var hull = u.aboard ? byId(u.aboard) : null;
+          // (the scenario's reserve is wave 2; a unit held back without a wave comes in by Battlefield Insertion)
+          var note = hull ? 'aboard ' + hull.name : u.reserve && (u.insert || u.wave == null) ? 'held for insertion'
+            : u.reserve ? 'in reserve' : 'enters in turn 1';
+          var cls = note === 'enters in turn 1' ? '' : ' dpr-held';
+          return '<div class="dpr dpr-view' + cls + '"><span class="dpr-mark">\u00b7</span><span class="dpr-name">' + esc(u.name) + '</span><span class="dpr-note">' + esc(note) + '</span></div>';
+        }).join('');
+        var n = units.filter(function (u) { return !u.reserve && !u.aboard; }).length;
+        h += '<div class="dplist"><div class="dphead">' + (mine.length > 1 ? esc(sideName(sd)) : 'Your force') + ' \u2014 ' + n + ' enter' + (n === 1 ? 's' : '') + ' in turn 1</div>' + rows + '</div>';
+        h += insertionList(sd);
+      });
+      var splits = mine.filter(function (sd) { return splitFor(sd); });
+      var hulls = [].concat.apply([], mine.map(function (sd) { return carriersFor(sd); })).filter(function (u) { return !isAI(u.side); });
+      var extra = splits.map(splitCard).join('') + mine.map(loadingCard).join('');
+      if (extra) {
+        var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
+        var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; });
+        var aboard = hulls.reduce(function (k, v) { return k + (v.cargo || []).length; }, 0);
+        var held = splits.reduce(function (k, sd) { return k + splitFor(sd).held; }, 0);
+        var sub = [splits.length ? held + ' held back' : '', hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
+        h += '<div class="acts"><button class="act' + (badSplit ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
+          '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : '') + sub + '</small></button></div>';
+        h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
+          '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
+          '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
+      }
+      // each side's units, brought on for it when its turn to enter comes — or placed one by one
+      mine.forEach(function (sd) {
+        // (one side at this screen: the same button, and the same act, as Auto-deploy the rest)
+        h += '<div class="acts"><button class="act' + (auto[sd] ? ' on' : '') + '" data-act="' + (mine.length > 1 ? 'autoenter' : 'autodeploy') + '" data-side="' + sd + '"' + (auto[sd] ? ' disabled' : '') + '><span>' +
+          (auto[sd] ? 'Brought on for you' : 'Bring my units on for me') + (mine.length > 1 ? ' \u2014 ' + esc(sideName(sd)) : '') + '</span><small>' +
+          (auto[sd] ? 'Each unit is placed along your edge as its turn comes' : 'Or place each one yourself, in turn 1') + '</small></button></div>';
+      });
+      if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (mine.indexOf(B.state.swapAsk.side) >= 0 || B.state.swapStage)) h += swapCard();
+      var mySplit = mine.map(splitFor).filter(function (f) { return f && !f.ok; })[0], blocked = !deploymentDone();
+      var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
+      h += '<div class="acts deploy-go">';
+      if (sr && sr[me]) {
+        h += '<button class="act primary blocked" aria-disabled="true" disabled><span>Ready</span><small>Waiting for ' + esc(sideName(foe)) + ' to begin the battle</small></button>';
+      } else {
+        h += '<button class="act primary' + (blocked ? ' blocked' : '') + '" aria-disabled="' + blocked + '" data-act="' + (blocked ? 'startwhy' : 'start') +
+          '"><span>Begin the battle</span><small>' + (sr && sr[foe] ? esc(sideName(foe)) + ' is ready — roll for initiative' : 'Roll for initiative, then enter the table') + '</small></button>';
+      }
+      if (blocked && ui.startWhy && mySplit) {
+        var need = mySplit.min === mySplit.max ? String(mySplit.min) : mySplit.min + '\u2013' + mySplit.max;
+        h += '<div class="tipbubble" role="status">Choose which units to hold in reserve first: ' + need + ' of them (' + mySplit.held + ' so far).' +
+          ' <button class="lnk" data-act="deploybox">Choose</button></div>';
+      }
+      return h + '</div></div>';
+    }
+
+    function relocWaitCard() {
+      var rl = B.state.relocating;
+      return '<div class="card"><h2>Rapid Relocation</h2><p class="sub"><b>' + esc(sideName(rl.side)) + '</b> is moving up to ' + rl.cap +
+        ' of its units to other places its deployment allows (' + rl.moved.length + ' so far).</p>' +
+        '<p class="hint">The Action phase follows once the relocations are done.</p></div>';
+    }
+
     /* ---------- side panel ---------- */
     // What you act with lives under the board; the roster and log live in the panel
     // (a slide-out drawer on a narrow screen).
@@ -391,9 +527,11 @@
       var ctxBox = el('context'), html = '';
       if (B.state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
       if (B.state.phase === 'terrain') html = terrainCard();
-      else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = placeCard();
-      else if (B.state.minePick && !isAI(B.state.minePick.side)) html = mineCard();
+      else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = atThisScreen(B.state.placeAsk.side) ? placeCard() : setUpWaitCard(B.state.placeAsk);
+      else if (B.state.minePick && !isAI(B.state.minePick.side)) html = atThisScreen(B.state.minePick.side) ? mineCard() : setUpWaitCard(B.state.minePick);
       else if (B.faceAsked()) html = faceCard(B.faceAsked());
+      // turn 1's Rapid Relocation, after the Reserve phase: a player's own, or the other's watched
+      else if (B.state.relocating) html = atThisScreen(B.state.relocating.side) ? relocCard() : relocWaitCard();
       else if (B.state.phase === 'deploy') html = deployCard();
       else if (ui.reservePick) html = reservePickCard();
       else if (ui.insertion) html = insertionCard();
@@ -711,11 +849,15 @@
           '<span class="dpr-mark">' + (moved ? '✓' : '·') + '</span><span class="dpr-name">' + esc(u.name) + '</span>' +
           '<span class="dpr-note">' + (moved ? 'relocated' : 'tap to move') + '</span></button>';
       }).join('');
+      // with both sides holding it, they take a unit each in turn
+      var both = B.state.relocs && Object.keys(B.state.relocs).length > 1;
       return '<div class="card"><h2>Rapid Relocation</h2>' +
-        '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows. No unit moves twice.</p>' +
+        '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows. No unit moves twice' +
+        (both ? '; the two sides take it in turns, a unit each' : '') + '.</p>' +
         '<p class="hint">' + rl.moved.length + ' of ' + rl.cap + ' moved' + (pick ? ' — tap the table where <b>' + esc(pick.name) + '</b> should go' : '') + '.</p>' +
         '<div class="dplist"><div class="dphead">Your units</div>' + rows + '</div>' +
-        '<div class="acts"><button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button></div></div>';
+        '<div class="acts"><button class="act primary" data-act="relocdone"><span>Done relocating</span><small>' +
+        (both ? 'Leave the rest where they are' : 'On to the Action phase') + '</small></button></div></div>';
     }
 
     /* Before anyone deploys, each player with a swap to make looks over the
@@ -749,6 +891,16 @@
       if (B.state.relocating) return relocCard();
       var rc = readyCard();
       if (rc) return rc;
+      /* The sides at this screen that enter in turn 1 (everyone in three scenarios;
+         the attacker in Hostile takeover and Demolish) place nothing now: they sort
+         their entry on its own card — once there is nothing else to place here, or
+         while the other side, at another screen, sets up (their units shown too). */
+      var here = ['A', 'B'].filter(function (sd) { return !isAI(sd) && atThisScreen(sd); });
+      var ent = here.filter(function (sd) { return B.Q.entering && B.Q.entering(sd); });
+      if (ent.length && (ent.length === here.length || !placingSide())) {
+        return (othersDeploying() ? deployWaitCard() : '') + entryCard(ent);
+      }
+      if (othersDeploying()) return deployWaitCard();
       var next = deployNext();
       var me = next ? next.side : (playerSide() || 'A');
       var h = '<div class="card">';
@@ -863,7 +1015,7 @@
         '<b class="' + (sp.ok ? 'ok' : 'short') + '">' + sp.held + '</b> of ' + range + (wave ? ' in the second wave' : ' to hold back') + '</div>' +
         '<p class="hint small">' + esc(sp.rule) + ' Tap a unit to ' + (wave ? 'switch its wave' : 'hold it back or bring it onto the table') + '.</p>' +
         // or let the scenario's own split stand: every other unit, the biggest first
-        '<div class="acts"><button class="act" data-act="autosplit"><span>' + (wave ? 'Split the waves for me' : 'Choose reserves for me') + '</span>' +
+        '<div class="acts"><button class="act" data-act="autosplit" data-side="' + side + '"><span>' + (wave ? 'Split the waves for me' : 'Choose reserves for me') + '</span>' +
         '<small>' + (wave ? 'Every other unit in the second wave' : 'Every other unit held back, the biggest first') + '</small></button></div>' +
         rows +
         (sp.ok ? '' : '<p class="cpwarn">' + (wave ? 'Put ' : 'Hold back ') + (sp.held < sp.min ? (sp.min === sp.max ? 'exactly ' + sp.min : 'at least ' + sp.min) : (sp.min === sp.max ? 'exactly ' + sp.max : 'no more than ' + sp.max)) +
@@ -1088,9 +1240,11 @@
           else if (a === 'rpickdone') send({ k: 'rpickdone' });
           else if (a === 'deploybox') { deployBox = true; render(); }
           else if (a === 'briefing') openObjectives();
-          else if (a === 'autosplit') send({ k: 'autosplit' });
+          else if (a === 'autosplit') send({ k: 'autosplit', side: b.getAttribute('data-side') || undefined });
           else if (a === 'deployboxdone') { deployBox = false; render(); }
           else if (a === 'start') { ui.startAsk = false; ui.startWhy = false; startBattle(); }
+          else if (a === 'relocdone') send({ k: 'relocdone' });
+          else if (a === 'autoenter') send({ k: 'autodeploy', side: b.getAttribute('data-side') });
           // greyed until the reserves are chosen: say so, for a few seconds
           else if (a === 'startwhy') { ui.startWhy = true; render(); clearTimeout(ui.startWhyT); ui.startWhyT = setTimeout(function () { ui.startWhy = false; render(); }, 5000); }
           else if (a === 'startask') { ui.startAsk = true; render(); }

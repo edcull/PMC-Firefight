@@ -504,7 +504,9 @@
       syncHeaderHeight();
       // the phone's turn counter, a fixed width at the right of its one-row header
       if (el('hdr-turn')) el('hdr-turn').textContent = B.state.phase === 'terrain' ? 'Setup' : B.state.phase === 'deploy' ? 'Deploy' : 'Turn ' + B.state.turn;
-      el('hdr-phase').textContent = B.state.phase === 'terrain' ? 'Terrain set-up' : B.state.phase === 'deploy' ? 'Deployment' : 'Turn ' + B.state.turn + ' · Action phase';
+      el('hdr-phase').textContent = B.state.phase === 'terrain' ? 'Terrain set-up' : B.state.phase === 'deploy' ? 'Deployment'
+        // (until the Action phase opens, the turn is still in its Reserve phase: units coming on, turn 1's relocations)
+        : 'Turn ' + B.state.turn + ' · ' + (B.state.phaseCount ? 'Action phase' : 'Reserve phase');
       el('hdr-init').textContent = B.state.initiative ? 'Initiative ' + B.state.initiative : '—';
       var act = el('hdr-active');
       if (B.state.over) {
@@ -514,19 +516,33 @@
         var ta = curArea();
         act.textContent = ta ? 'Terrain: ' + ta.name : 'Terrain';
         act.className = 'pill pill-' + (ta ? ta.side : 'A');
+      } else if (B.state.relocating) {
+        act.textContent = 'Relocating: ' + (B.state.relocating.side === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
+        act.className = 'pill pill-' + B.state.relocating.side;
+      } else if ((B.state.placeAsk || B.state.minePick) && !isAI((B.state.placeAsk || B.state.minePick).side)) {
+        // a side putting the scenario's pieces down (or choosing a mine) before anyone deploys
+        var su = (B.state.placeAsk || B.state.minePick).side;
+        act.textContent = 'Setting up: ' + (su === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
+        act.className = 'pill pill-' + su;
       } else if (B.state.phase === 'deploy') {
         // in a hotseat the header says whose turn it is to place a unit
         var dn = B.state.cfg.mode === 'hotseat' ? deployNext() : null;
         var nm = function (sd) { return sd === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB; };
         if (B.state.swapStage && B.state.swapAsk) { act.textContent = 'Modifying: ' + nm(B.state.swapAsk.side); act.className = 'pill pill-' + B.state.swapAsk.side; }
         else if (dn) { act.textContent = 'Deploying: ' + nm(dn.side); act.className = 'pill pill-' + dn.side; }
-        else { act.textContent = 'Deploy your force'; act.className = 'pill pill-A'; }
+        else {
+          // nothing to place at this screen: its sides enter in turn 1 (everyone, or an attacker whose defender sets up)
+          var entryHere = B.Q && B.Q.entering && (B.Q.entering() || (!deployNext() && (B.seats || ['A', 'B']).some(function (sd) { return B.Q.entering(sd); })));
+          act.textContent = entryHere ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A';
+        }
       } else if (ui.insertion) {
         /* The game is waiting for a place on the table and nothing else. That has
            to be legible from the header, because the prompt itself sits in a panel
            that a phone can have scrolled past or hidden behind another tab. */
-        act.textContent = ui.insertion.kind === 'arrive'
-          ? 'Place your reinforcements' : ui.insertion.kind === 'shove' ? 'Shove the enemy drop'
+        var insBy = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
+        act.textContent = B.seats && B.seats.indexOf(insBy) < 0 ? 'Waiting: ' + (insBy === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB)
+          : ui.insertion.kind === 'arrive' ? (B.state.turn === 1 && (B.state.scen.entersTurn1 || (B.state.scen.attackerEnters && B.state.sc && insBy === B.state.sc.attacker)) ? 'Bring a unit on' : 'Place your reinforcements')
+          : ui.insertion.kind === 'shove' ? 'Shove the enemy drop'
             : ui.insertion.kind === 'ilz' ? 'Nominate landing zone ' + ui.insertion.n + ' of 3' : 'Pick a landing zone';
         act.className = 'pill pill-wait';
       } else if (B.state.solo) {

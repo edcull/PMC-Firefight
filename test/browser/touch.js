@@ -51,6 +51,8 @@ const { ROOT, startSkirmish } = require('../where.js');
   }
   await p.waitForTimeout(400);
   await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]'))).click());
+  // a vehicle put down is asked which way it faces: the way offered
+  await p.evaluate(() => { for (let n = 0; n < 12 && window.PMC_STATE().faceAsk; n++) window.__sendIntent({ k: 'vfaceall' }); });
   await p.waitForTimeout(400);
   for (let i = 0; i < 12; i++) {
     const open = await p.evaluate(() => !document.getElementById('resolution').hidden);
@@ -60,6 +62,8 @@ const { ROOT, startSkirmish } = require('../where.js');
   }
   await p.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });
   await p.evaluate(() => window.__beginButton().click());
+  // the companies walk on in turn 1's Reserve phase (p. 50): let the table show it before tapping
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0 && !!window.PMC_STATE().phaseCount, null, { timeout: 30000 }).catch(() => {});
   await p.waitForTimeout(800);
   await p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
   await p.waitForTimeout(400);

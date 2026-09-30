@@ -435,12 +435,16 @@
   /* "Put the rest down for me". In hotseat this screen holds both sides, so
      it asks once for each in turn; across a network it can only ever fill its
      own half of the table, and the engine says so if it tries otherwise. */
-  function autoDeployMine() { seats.forEach(function () { autoDeploy(); }); }
+  /* Each side at this screen, in its turn to place; where both companies enter in
+     turn 1 there is nothing to place now, so each is named, and its units will be
+     brought on for it then. */
+  function autoDeployMine() { seats.forEach(function (s) { autoDeploy(s); }); }
   /* Deployment done and the battle begun: what comes first is read, not
      tapped — the initiative roll and the first activations — so on a phone the
-     Results tab comes to the front. */
+     Results tab comes to the front — unless the first thing is a question for
+     this screen (a unit of its own to bring on in turn 1), which is on Actions. */
   function startBattle() {
-    if (send({ k: 'start' }) !== false && window.innerWidth <= 1000) setMTab('res');
+    if (send({ k: 'start' }) !== false && window.innerWidth <= 1000) setMTab(ui.insertion && insertionMine() ? 'act' : 'res');
   }
   function loadBefore(veh, u) { send({ k: 'load', hull: veh.id, unit: u.id }); }
   function unloadBefore(veh, u) { send({ k: 'unload', hull: veh.id, unit: u.id }); }

@@ -23,6 +23,8 @@ async function boot(p, mode) {
   await p.waitForTimeout(300);
   await p.evaluate(() => { const b = window.__beginButton(); if (b) b.click(); });
   await p.waitForTimeout(600);
+  // the companies walk on in turn 1's Reserve phase: let the table show it before driving it
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0 && !!window.PMC_STATE().phaseCount, null, { timeout: 30000 }).catch(() => {});
 }
 const look = () => {
   const s = window.PMC_STATE(), h = document.querySelector('header'), pill = document.getElementById('hdr-active');
@@ -49,7 +51,7 @@ const look = () => {
     return { open: !m.hidden, text: m.textContent };
   });
   ok('the scenario briefing opens by itself', bf.open && /Meeting engagement/.test(bf.text) && /To win/.test(bf.text));
-  ok('...saying where the force goes down', /strip|shaded/.test(bf.text));
+  ok('...saying where the force goes down', /strip|shaded|table edge/.test(bf.text));
   await p.evaluate(() => document.getElementById('obj-done').click());
   await p.waitForTimeout(200);
   const st1 = await p.evaluate(() => ({ swap: !!document.querySelector('[data-act="swapopen"]'), go: !!document.querySelector('[data-act="deployready"]'),

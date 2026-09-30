@@ -32,13 +32,24 @@ async function stage(p) {
   await p.evaluate(() => {
     if (window.PMCMenu) window.PMCMenu.close();
     window.PMC_NEWGAME({
-      tier: 3, pl: 1, mode: 'ai', planet: 'barren', scenario: 'meeting', nameA: 'Ours', nameB: 'Theirs',
-      armyA: ['cmd3', 'regular', 'lcv', 'lcv'], armyB: ['regular', 'regular'], terrainSetup: 'auto'
+      // Demolish with the player defending, who places before the battle (p. 54)
+      tier: 3, pl: 1, mode: 'ai', planet: 'barren', scenario: 'demolish', roles: { attacker: 'B', defender: 'A' }, nameA: 'Ours', nameB: 'Theirs',
+      armyA: ['cmd3', 'regular', 'lcv', 'lcv', 'regular', 'regular'], armyB: ['regular', 'regular'], terrainSetup: 'auto'
     });
   });
   await p.waitForTimeout(900);
   await drain(p);
-  await p.evaluate(() => { window.__sendIntent({ k: 'autosplit' }); });
+  /* the defender holds half back (p. 54): both vehicles go down now, so a rifle
+     team waits in place of any vehicle the split held back */
+  await p.evaluate(() => {
+    window.__sendIntent({ k: 'autosplit' });
+    const s = window.PMC_STATE();
+    s.units.filter(u => u.side === 'A' && u.key === 'lcv' && u.reserve).forEach((v) => {
+      const r = s.units.find(u => u.side === 'A' && u.key === 'regular' && !u.reserve);
+      window.__sendIntent({ k: 'holdback', id: v.id });
+      if (r) window.__sendIntent({ k: 'holdback', id: r.id });
+    });
+  });
   await p.waitForTimeout(200);
 }
 

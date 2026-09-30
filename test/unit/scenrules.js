@@ -743,8 +743,13 @@ ok('Hostile takeover: the attacker\'s second part from any table edge',
 var dmE = setupOf('demolish');
 ok('Demolish: each side comes on around the corners it owns',
   (dmE.sc.entry[dmE.sc.attacker] || []).length + '/' + (dmE.sc.entry[dmE.sc.defender] || []).length, '6/2');
-ok('Find and secure: reinforcements come from the side\'s own edge',
-  !(setupOf('find').sc.entry), true, 'no override, so the default edge applies');
+var fsE = setupOf('find');
+ok('Find and secure: each side comes on within 4" of its own edge (p. 30) — A the west, B the east',
+  JSON.stringify([fsE.sc.entry.A, fsE.sc.entry.B].map(b => b.map(q => [q.x, q.w]))), JSON.stringify([[[0, 4]], [[S.BOARD ? S.BOARD.w - 4 : 44, 4]]]));
+['meeting', 'secure', 'find'].forEach(function (id) {
+  var st = setupOf(id);
+  ok(id + ': nobody deploys before the battle — both companies enter in turn 1 (pp. 50-52)', !!st.scen.entersTurn1, true);
+});
 
 head('Attacker and defender are named to the player');
 ok('the three asymmetric scenarios each describe both roles',

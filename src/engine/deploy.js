@@ -7,11 +7,11 @@
 (function (root) {
   'use strict';
   root.PMCEngineDeploy = function (E) {
-    var H = E.H, R = E.R, SC = E.SC, UR = E.UR, W = E.W, abShoot = E.abShoot, aiRelocate = E.aiRelocate,
-        beginTurn = E.beginTurn, boardableFor = E.boardableFor, byId = E.byId, docsOf = E.docsOf,
-        finishRelocation = E.finishRelocation, focusUnit = E.focusUnit, fortify = E.fortify, isAI = E.isAI,
+    var H = E.H, R = E.R, SC = E.SC, UR = E.UR, W = E.W, abShoot = E.abShoot,
+        beginTurn = E.beginTurn, boardableFor = E.boardableFor, byId = E.byId,
+        focusUnit = E.focusUnit, isAI = E.isAI,
         loadBefore = E.loadBefore, logLine = E.logLine, lookAtDeployment = E.lookAtDeployment,
-        nextPlace = E.nextPlace, other = E.other, pushRes = E.pushRes, relocCap = E.relocCap,
+        other = E.other, pushRes = E.pushRes,
         render = E.render, revealBoard = E.revealBoard, revealConsole = E.revealConsole, setHint = E.setHint,
         sideName = E.sideName, ui = E.ui, unloadBefore = E.unloadBefore;
 
@@ -378,10 +378,22 @@
        A commander sets his line down in the order he likes, so the player picks:
        any unit still in hand, or one already placed, to shift it. Until he picks,
        it is simply the next one still in hand. */
+    /* Meeting engagement, Secure and control, Find and secure: both companies
+       enter in turn 1's Reserve phase (pp. 50-52), so nothing is placed before
+       the battle — each side only says who is held back and who rides in what. */
+    /* With a side: whether that side enters in turn 1 — every side in those three,
+       and the attacker in Hostile takeover and Demolish (pp. 54-55), whose defender
+       sets up before the battle. Without one: whether every side does. */
+    function entering(side) {
+      var sc = E.state.scen;
+      if (E.state.solo || !sc) return false;
+      if (sc.entersTurn1) return true;
+      return !!side && !!sc.attackerEnters && !!E.state.sc && E.state.sc.attacker === side;
+    }
     function deployRoster(side) {
       return E.state.units.filter(function (u) {
         return u.alive && !isAI(u.side) && !u.reserve && !u.aboard &&
-          (side ? u.side === side : true);
+          (side ? u.side === side : true) && !entering(u.side);
       });
     }
 
@@ -391,7 +403,20 @@
         if (p && p.alive && !isAI(p.side) && !p.reserve && !p.aboard) return p;
         ui.deployPick = null;
       }
-      return deployRoster().filter(function (u) { return u.x < 0; })[0] || null;
+      var hand = deployRoster().filter(function (u) { return u.x < 0; });
+      var order = sideOrder();
+      for (var i = 0; i < order.length; i++) {
+        var first = hand.filter(function (u) { return u.side === order[i]; })[0];
+        if (first) return first;
+      }
+      return null;
+    }
+    /* Who sets up first. Where the scenario has a defender (Hostile takeover,
+       Demolish, Invasion: pp. 53-55) it is the defender's set-up that comes before
+       the battle, and the attacker's after it; otherwise Player 1, then Player 2. */
+    function sideOrder() {
+      var d = !E.state.solo && E.state.sc && E.state.sc.defender;
+      return d ? [d, other(d)] : ['A', 'B'];
     }
 
     function pickToDeploy(id) {
@@ -612,47 +637,26 @@
 
     function deploymentDone() {
       if (!splitsOK()) return false;
-      return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
+      // (a side entering in turn 1 has nothing to place now)
+      return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve || entering(u.side); });
     }
 
+    /* Rapid Relocation and Fortify and Strike! are turn 1's, after its Reserve
+       phase (engine.js afterEntry), not the deployment's. */
     function startBattle() {
-      /* Rapid Relocation (O3, p. 87): once everyone is down, a side holding the
-         doctrine may pick up to half the units it put on the table and set them
-         down again, anywhere its deployment allows. No unit moves twice. */
-      if (E.state.relocating) { finishRelocation(); return; }
-      E.state.relocDone = E.state.relocDone || {};
-      var rs = ['A', 'B'].filter(function (sd) {
-        return !E.state.relocDone[sd] && docsOf(sd).indexOf('O3') >= 0 && relocCap(sd) > 0;
-      });
-      // the OpFor makes its choice at once; a player (or two, in hotseat) is asked in turn
-      rs.sort(function (a, b) { return (isAI(b) ? 1 : 0) - (isAI(a) ? 1 : 0); });
-      for (var ri = 0; ri < rs.length; ri++) {
-        var sd = rs[ri];
-        E.state.relocDone[sd] = true;
-        if (isAI(sd)) { aiRelocate(sd); continue; }
-        E.state.relocating = { side: sd, cap: relocCap(sd), moved: [] };
-        ui.deployPick = null;
-        logLine('note', sideName(sd) + ' — Rapid Relocation: up to ' + E.state.relocating.cap + ' units may be moved.');
-        lookAtDeployment(sd);
-        setHint(null, 'Rapid Relocation: tap one of your units, then tap where it should go — up to ' +
-          E.state.relocating.cap + ' of them. Begin the battle when you are done.');
-        render();
-        return;
-      }
-      /* Fortify and Strike! (p. 141): once the tribe is deployed, a player puts
-         down its four field fortifications by hand before the first turn. */
-      E.state.fortAsked = E.state.fortAsked || {};
-      var fs = ['A', 'B'].filter(function (sd) { return docsOf(sd).indexOf('XO5') >= 0 && !isAI(sd) && !E.state.fortAsked[sd]; })[0];
-      if (fs) {
-        E.state.fortAsked[fs] = true;
-        E.state.placeQueue = [{ side: fs, kind: 'barricade', why: 'fortify', left: 4, total: 4, len: 3, then: 'battle' }];
-        nextPlace();
-        return;
+      /* Everything still in hand is held to come on in turn 1's Reserve phase, a
+         hull with whoever is aboard it; units already held back (the scenario's
+         second half, Battlefield Insertion) keep their own schedule. */
+      if (E.state.phase === 'deploy' && ['A', 'B'].some(entering)) {
+        E.state.units.forEach(function (u) {
+          if (entering(u.side) && u.alive && u.x < 0 && !u.reserve && !u.aboard) { u.reserve = true; u.wave = 1; }
+        });
+        logLine('note', entering() ? 'Both companies enter from their own table edges in the Reserve phase of turn 1, a unit each in turn from the side with the initiative.'
+          : sideName(E.state.sc.attacker) + ' enters in the Reserve phase of turn 1.');
       }
       // a hull nobody was asked about faces the enemy
       E.state.units.forEach(function (u) { if (faces(u) && u.facing == null) u.facing = faceDefault(u); });
       E.state.phase = 'battle';
-      ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO5') >= 0 && isAI(side)) fortify(side); });
       // Ambush!: each unit settles into its hide before the first turn (p. 156)
       if (E.state.scen.beforeBattle) {
         var moved = E.state.scen.beforeBattle(E.state) || [];
@@ -667,7 +671,7 @@
       inReserve: inReserve, markReserves: markReserves, insertionLegal: insertionLegal,
       scatterInsertion: scatterInsertion, greetArrival: greetArrival, autoDeploy: autoDeploy,
       garrisonAt: garrisonAt, garrisonable: garrisonable, garrisonSpots: garrisonSpots,
-      zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext,
+      zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext, entering: entering,
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,

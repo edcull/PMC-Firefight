@@ -399,7 +399,12 @@
           if (B.seats.indexOf(fu.side) < 0 || handsOff()) beat(OPPONENT_BEAT);
           return;
         }
-        case 'hint': setHint(null, ev.text || undefined); return;
+        case 'hint': {
+          // the other player's prompt to put their pieces down is theirs, not this screen's
+          var ask = B.state.placeAsk || B.state.minePick || B.state.relocating;
+          if (ask && B.seats.indexOf(ask.side) < 0) return;
+          setHint(null, ev.text || undefined); return;
+        }
         case 'colour': {
           ISO.setSideColour(ev.side, ev.key);
           // the panels, pills and P1/P2 tags wear the colours the forces are painted in

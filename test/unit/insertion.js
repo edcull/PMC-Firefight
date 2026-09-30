@@ -28,18 +28,15 @@ ok('the player is offered the choice', !!ins && ins.units.length === 4, ins && i
 ok('...and the units start held for insertion', nomads.every((u) => u.reserve));
 const n0 = nomads[0];
 ok('one can be set down on the table instead', e.intent('A', { k: 'insertion', id: n0.id }).ok && !n0.reserve && n0.x < 0);
-ok('...and is then deployed with the rest', e.query.deployRoster('A').indexOf(n0) >= 0);
 ok('...or held for insertion again', e.intent('A', { k: 'insertion', id: n0.id }).ok && n0.reserve);
-// placing one held for insertion straight on the table releases it
-const n1 = nomads[1], spot = e.query.nearestDeploySpot(n1, 24, 2, 20);
-const put = spot && e.intent('A', { k: 'deploy', id: n1.id, x: spot.x, y: spot.y });
-ok('an inserter set down on the table leaves the reserve', put && put.ok && !n1.reserve && n1.x >= 0,
-  put && put.ok ? 'at ' + n1.x.toFixed(1) + ',' + n1.y.toFixed(1) : put && put.why);
-ok('...and counts as on the table', e.query.onTable(n1));
-// no more than half: with the four held and eight units, the cap is four
-e.intent('A', { k: 'insertion', id: n1.id });
+e.intent('A', { k: 'insertion', id: n0.id });
 const cmd = st.units.find((u) => u.side === 'A' && u.key === 'cmd2');
 ok('a unit without the rule is not offered it', !e.intent('A', { k: 'insertion', id: cmd.id }).ok);
+// both companies enter in turn 1 (p. 50): the one let go comes on with the rest; insertion never in turn 1 (p. 56)
+e.intent('A', { k: 'autodeploy' });
+e.intent('A', { k: 'start' });
+ok('...and enters with the rest in turn 1', st.phase === 'battle' && st.turn === 1 && n0.x >= 0 && !n0.reserve, n0.x + ',' + n0.reserve);
+ok('...while those held for insertion wait: never in turn 1', nomads.slice(1).every((u) => u.reserve && u.x < 0));
 
 // six with the rule among eight: four held, and a fifth is refused
 const e2 = Engine.create();

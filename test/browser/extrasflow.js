@@ -96,45 +96,58 @@ async function start(p) {
   await newGame(p, { doctrines: { A: ['O3'], B: ['O3'] } });
   await start(p);
   const rl = await p.evaluate(() => window.__relocating());
-  ok('after deployment the player is asked to relocate', !!rl && rl.side === 'A', rl ? 'up to ' + rl.cap : 'not asked');
+  const when = await p.evaluate(() => { const s = window.PMC_STATE(); return { phase: s.phase, turn: s.turn, init: s.initiative }; });
+  ok('in turn 1, once the forces are down, the player is asked to relocate', !!rl && rl.side === 'A' && when.phase === 'battle' && when.turn === 1 && !!when.init,
+    (rl ? 'up to ' + rl.cap : 'not asked') + ' ' + JSON.stringify(when));
   ok('...up to half the units on the table', rl && rl.cap === 3, rl && rl.cap);
   const card = await p.evaluate(() => document.getElementById('context').innerText);
   ok('...with a card that says so', /Rapid Relocation/.test(card));
   ok('...and the OpFor has already had its turn at it', await p.evaluate(() => !!window.PMC_STATE().relocDone.B));
-  const moved = await p.evaluate(() => {
+  // (the relocation is in turn 1 now: each tap waits for the table to be still, as a player's would)
+  const moved = await p.evaluate(async () => {
     const s = window.PMC_STATE();
     const out = [];
+    const still = async () => { for (let k = 0; k < 300 && (window.__busy() || window.__showQueue() > 0); k++) await new Promise(r => setTimeout(r, 50)); await new Promise(r => setTimeout(r, 60)); };
     const mine = s.units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard);
+    // the nearest legal spot at least 5" off — near enough to be on screen where the camera is
     function spotFor(u) {
+      let best = null, bd = Infinity;
       for (let x = 1; x < 60; x += 1.3) for (let y = 1; y < 44; y += 1.3) {
         if (!window.__deployOK(x, y, 'A')) continue;
-        if (Math.hypot(x - u.x, y - u.y) < 5) continue;
+        const d = Math.hypot(x - u.x, y - u.y);
+        if (d < 5 || d >= bd) continue;
         if (s.units.some(o => o !== u && o.alive && o.x >= 0 && Math.hypot(o.x - x, o.y - y) < 2.2)) continue;
-        return { x, y };
+        best = { x, y }; bd = d;
       }
-      return null;
+      return best;
     }
     for (let i = 0; i < 4; i++) {
       const u = mine[i];
       const was = { x: u.x, y: u.y };
+      await still();
       document.querySelector('#context [data-deploy="' + u.id + '"]').click();
+      await still();
       const q = spotFor(u);
       window.__boardTapAt(q.x, q.y);
+      await still();
       out.push(Math.hypot(u.x - was.x, u.y - was.y) > 1);
     }
     // and the first one again
     const u0 = mine[0], w0 = { x: u0.x, y: u0.y };
+    await still();
     document.querySelector('#context [data-deploy="' + u0.id + '"]').click();
+    await still();
     const q0 = spotFor(u0); window.__boardTapAt(q0.x, q0.y);
+    await still();
     return { moved: out, again: Math.hypot(u0.x - w0.x, u0.y - w0.y) > 1, state: window.__relocating() };
   });
   ok('three units can be picked up and set down elsewhere', moved.moved.slice(0, 3).every(Boolean), moved.moved.join(' '));
   ok('...but not a fourth', moved.moved[3] === false);
   ok('...and no unit moves twice', moved.again === false);
-  const clicked = await p.evaluate(() => { const b = window.__beginButton(); if (b) { b.click(); return true; } return false; });
+  await p.evaluate(() => { const b = document.querySelector('#context [data-act="relocdone"]'); if (b) b.click(); });
   await p.waitForTimeout(500);
   await drain(p);
-  ok('beginning the battle ends the relocation', await p.evaluate(() => !window.__relocating() && window.PMC_STATE().phase === 'battle'));
+  ok('Done relocating ends it, and the Action phase follows', await p.evaluate(() => !window.__relocating() && window.PMC_STATE().phase === 'battle' && !!window.PMC_STATE().phaseCount));
 
   /* ------------------------------------------------ NOT ONE STEP BACKWARDS! */
   head('NOT ONE STEP BACKWARDS! (T5)');

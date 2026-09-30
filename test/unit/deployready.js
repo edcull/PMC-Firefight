@@ -13,7 +13,8 @@ function ok(name, cond, note) {
 function game(readyUp) {
   const e = Engine.create();
   e.start({
-    tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren', readyUp: readyUp,
+    // Demolish, with Player 1 defending: its defender sets up before the battle (p. 54)
+    tier: 3, pl: 1, scenario: 'demolish', attacker: 'B', mode: 'hotseat', planet: 'barren', readyUp: readyUp,
     armyA: ['cmd3', 'regular', 'veterans', 'shock'], armyB: ['cmd3', 'regular', 'veterans', 'shock'],
     nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
   });
@@ -40,7 +41,7 @@ console.log('\nThe swaps are secret until both have gone on');
   const cards = [], logs = [];
   const e = Engine.create({ card: (c) => cards.push(c), log: (t, text) => logs.push(text) });
   e.start({
-    tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren', readyUp: true,
+    tier: 3, pl: 1, scenario: 'demolish', attacker: 'B', mode: 'hotseat', planet: 'barren', readyUp: true,
     armyA: ['cmd3', 'regular', 'veterans', 'shock'], armyB: ['cmd3', 'regular', 'veterans', 'shock'],
     nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
   });

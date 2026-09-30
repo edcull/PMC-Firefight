@@ -88,23 +88,19 @@ function ok(name, cond, note) {
   const logged = await p.evaluate(() => window.PMC_STATE().log.some(l => /Hostile takeover: digs in/.test(l.text || l)));
   ok('...and the log says what went up', logged);
 
-  console.log('\n  the attacker chooses one edge');
-  const edge = await p.evaluate(() => {
-    const s = window.PMC_STATE();
-    const bands = () => window.__deployOK ? [[24, 3], [24, 45], [3, 24], [45, 24]].map(q => window.__deployOK(q[0], q[1], 'A')) : [];
-    const pre = bands();
-    const u = s.units.find(x => x.side === 'A' && !x.reserve && x.x < 0);
-    u.x = 3; u.y = 20;
-    const post = bands();
-    return { pre: pre.join(','), post: post.join(',') };
-  });
-  ok('before a unit is down, any edge', edge.pre === 'true,true,true,true', edge.pre);
-  ok('after, only that edge', edge.post === 'false,false,true,false', edge.post);
+  /* The attacker places nothing before the battle: its first part comes on in turn 1's
+     Reserve phase, along one table edge the first unit on chooses (p. 55). */
+  console.log('\n  the attacker comes on along one edge, in turn 1');
+  const pre = await p.evaluate(() => window.PMC_STATE().units.filter(u => u.side === 'A' && u.x >= 0).length);
+  ok('nothing of the attacker\'s is placed before the battle', pre === 0, pre + ' down');
   await p.evaluate(() => window.__autoDeployBoth());
   await p.waitForTimeout(300);
+  await p.evaluate(() => { const bb = window.__beginButton(); if (bb) bb.click(); });
+  await p.waitForFunction(() => !!window.PMC_STATE().phaseCount, null, { timeout: 20000 }).catch(() => {});
   const lined = await p.evaluate(() => window.PMC_STATE().units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard).map(u => u.x.toFixed(1) + ',' + u.y.toFixed(1)));
   const on = (f) => lined.every(q => f(+q.split(',')[0], +q.split(',')[1]));
-  ok('the whole first part comes on along one edge', lined.length > 0 && (on((x) => x <= 6.5) || on((x) => x >= 41.5) || on((x, y) => y <= 6.5) || on((x, y) => y >= 41.5)), lined.join(' '));
+  ok('the whole first part comes on along one edge, within 4" of it', lined.length > 0 && (on((x) => x <= 4.6) || on((x) => x >= 43.4) || on((x, y) => y <= 4.6) || on((x, y) => y >= 43.4)), lined.join(' '));
+  ok('...and the second part waits for turn 3', await p.evaluate(() => window.PMC_STATE().units.some(u => u.side === 'A' && u.reserve && u.wave === 2)));
 
   console.log('\n  a machine defender');
   await p.evaluate(() => {

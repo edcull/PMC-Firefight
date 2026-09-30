@@ -19,6 +19,8 @@ function battle() {
     const side = e.query.placingSide(); if (!side) break;
     e.intent(side, { k: 'autodeploy' });
   }
+  // both companies enter in turn 1 (p. 50): each has its units brought on for it
+  e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' });
   e.intent('A', { k: 'start' });
   // walk forward until side A has the activation, passing B's units with Regroup
   for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });

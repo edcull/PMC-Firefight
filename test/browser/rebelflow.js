@@ -214,6 +214,9 @@ async function pastFronts(p) {
 
   for (let i = 0; i < 14; i++) { await drain(p); await p.waitForTimeout(120); }
   await p.evaluate(() => {
+    // a Hostile takeover defender digs in first, by the auto button
+    const pa = window.PMC_STATE().placeAsk;
+    if (pa && pa.kind === 'fort') window.__sendIntent({ k: 'placeauto' });
     const b = (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]')));
     if (b) b.click();
   });

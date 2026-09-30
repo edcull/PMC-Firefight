@@ -16,7 +16,8 @@ function ok(what, cond, detail) {
 function deployed(readyUp) {
   const e = Engine.create({});
   e.start({
-    tier: 3, pl: 2, scenario: 'meeting', armyA: ['cmd3', 'regular'], armyB: ['cmd3', 'regular'],
+    // Demolish: a defender who sets up before the battle
+    tier: 3, pl: 2, scenario: 'demolish', attacker: 'B', armyA: ['cmd3', 'regular'], armyB: ['cmd3', 'regular'],
     nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', readyUp
   });
   for (let g = 0; g < 20 && e.state().phase === 'deploy' && e.state().units.some(u => u.x < 0 && !u.reserve && !u.aboard); g++) {
@@ -30,7 +31,8 @@ function deployed(readyUp) {
 }
 
 let e = deployed(true);
-ok('online: everyone is down', e.state().phase === 'deploy' && e.state().units.every(u => u.x >= 0 || u.reserve || u.aboard));
+// (the defender is down; the attacker places nothing now — it enters in turn 1)
+ok('online: everyone is down', e.state().phase === 'deploy' && e.query.deploymentDone());
 e.intent('A', { k: 'start' });
 ok('one player pressing Begin does not start the battle', e.state().phase === 'deploy' && e.state().startReady && e.state().startReady.A === true);
 // a deployment intent after pressing (here Auto-deploy) takes the ready back

@@ -302,13 +302,25 @@
       var lu = st.units.filter(function (u) { return u.id === it.id; })[0];
       if (lu && this.seats.indexOf(lu.side) >= 0) return lu.side;
     }
+    /* Setting up at one screen: a tap on one of a side's own units (holding it
+       back, loading it, picking it to place) is that side's, whoever's turn to
+       place it is — an Invasion's attacker sorts its waves while the defender sets up. */
+    // "bring these units on for me", named for its side
+    if (st.phase === 'deploy' && (k === 'autodeploy' || k === 'autosplit') && it.side && this.seats.indexOf(it.side) >= 0) return it.side;
+    if (st.phase === 'deploy' && it && /^(holdback|insertion|load|unload|deploypick)$/.test(k)) {
+      var ref = it.unit || it.id || it.hull;
+      var ru = st.units.filter(function (u) { return u.id === ref; })[0];
+      if (ru && this.seats.indexOf(ru.side) >= 0) return ru.side;
+    }
     var sel = this.engine.sel();
     var want = sel.insertion
       // the side the engine is asking: the opponent, when it is shoving an insertion off its mark
       ? (sel.insertion.by || (sel.insertion.unit ? sel.insertion.unit.side : 'A'))
       : st.phase === 'deploy' && st.swapAsk ? st.swapAsk.side           // a hotseat's secret round of swaps
-        // pieces put down by hand (Hostile takeover, Last Stand, Fortify), and the Terrorist's mine: whoever is asked
-        : st.phase === 'deploy' && st.placeAsk ? st.placeAsk.side
+        // turn 1's Rapid Relocation, whoever has the initiative: the side relocating
+        : st.relocating ? st.relocating.side
+        // pieces put down by hand (Hostile takeover, Last Stand; Fortify and Strike! in turn 1), and the Terrorist's mine: whoever is asked
+        : st.placeAsk ? st.placeAsk.side
         : st.phase === 'deploy' && st.minePick ? st.minePick.side
         : st.phase === 'deploy' ? this.engine.query.placingSide()
         : st.phase === 'terrain' ? this.engine.query.terrainSide() : st.activeSide;
