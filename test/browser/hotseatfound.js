@@ -112,7 +112,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   await p.locator('#camp-body').screenshot({ path: path.join(SHOTS, 'camp-hotseat-p2.png') });
   await clickText(p, 'Wake the hive');
   check('player 2 cannot wear player 1\'s colour', await p.evaluate(() => !document.getElementById('camp-ask').hidden &&
-    /colour is taken/.test(document.getElementById('camp-askbox').innerText)));
+    /colour is taken/i.test(document.getElementById('camp-askbox').innerText)));
   await p.evaluate(() => document.querySelector('[data-ask="close"]').click());
   await p.waitForTimeout(200);
   await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); });
