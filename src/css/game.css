@@ -720,7 +720,7 @@ a.mcard { text-decoration: none; line-height: normal; }
 }
 /* the top bar is the way back: the footer's own Back and Main menu are not needed twice */
 #camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"], #camp-body .camp-foot [data-go="roster"],
-#camp-body .camp-foot [data-go="pastback"] { display: none; }
+#camp-body .camp-foot [data-go="pastback"], #camp-body .camp-foot [data-go="foundback"] { display: none; }
 /* who a solo campaign is up against: one line, and a list behind it */
 .archline {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
@@ -746,6 +746,8 @@ a.mcard { text-decoration: none; line-height: normal; }
 /* the name and colours on the founding screen take only what they need: the units under them take the rest */
 #camp-body.fit > .found-id { flex: none; min-height: 0; }
 .found-units .chosen { flex: 1; min-height: 0; overflow-y: auto; align-content: flex-start; }
+/* (the founding's list is a .muster too, but its units fill the room left, not the contract's 30%) */
+#camp-body.fit > .muster.found-units > .chosen { flex: 1 1 auto; min-height: 0; max-height: none; }
 .found-units .chosen:empty::before { content: 'No units yet.'; }
 .found-add { align-self: flex-start; margin-top: 8px; }
 .found-row { display: flex; gap: 6px; margin-top: 8px; }
