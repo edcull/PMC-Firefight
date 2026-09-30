@@ -530,7 +530,11 @@
         var nm = function (sd) { return sd === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB; };
         if (B.state.swapStage && B.state.swapAsk) { act.textContent = 'Modifying: ' + nm(B.state.swapAsk.side); act.className = 'pill pill-' + B.state.swapAsk.side; }
         else if (dn) { act.textContent = 'Deploying: ' + nm(dn.side); act.className = 'pill pill-' + dn.side; }
-        else { act.textContent = B.Q && B.Q.entering && B.Q.entering() ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A'; }
+        else {
+          // nothing to place at this screen: its sides enter in turn 1 (everyone, or an attacker whose defender sets up)
+          var entryHere = B.Q && B.Q.entering && (B.Q.entering() || (!deployNext() && (B.seats || ['A', 'B']).some(function (sd) { return B.Q.entering(sd); })));
+          act.textContent = entryHere ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A';
+        }
       } else if (ui.insertion) {
         /* The game is waiting for a place on the table and nothing else. That has
            to be legible from the header, because the prompt itself sits in a panel

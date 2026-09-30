@@ -261,6 +261,8 @@ function refusals() {
     const sd = e.query.placingSide();
     (e.intent(sd, { k: 'autosplit' }), e.intent(sd, { k: 'autodeploy' }));
   }
+  // the attacker enters in turn 1 (p. 54): its units brought on for it, so the Action phase follows at once
+  ['A', 'B'].forEach((sd) => e.intent(sd, { k: 'autodeploy' }));
   const started = e.intent('A', { k: 'start' });
   ok('auto-deploy fills both sides', started.ok, started.why);
 
