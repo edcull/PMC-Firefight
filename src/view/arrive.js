@@ -290,7 +290,11 @@
     }
     // is the insertion being asked for this screen's to answer? (on a network, the other player may be the one asked)
     // turn 1's entry, in the scenarios where both companies come on then (pp. 50-52)
-    function entryTurn() { return B.state && B.state.turn === 1 && B.state.scen && !!B.state.scen.entersTurn1; }
+    // (and the attacker's, in Hostile takeover and Demolish, whose defender set up before the battle)
+    function entryTurn() {
+      var st = B.state, ins = ui.insertion, side = ins && ins.unit ? ins.unit.side : null;
+      return !!st && st.turn === 1 && !!st.scen && (!!st.scen.entersTurn1 || (!!st.scen.attackerEnters && !!st.sc && side === st.sc.attacker));
+    }
     function insertionMine() {
       var ins = ui.insertion;
       if (!ins) return false;

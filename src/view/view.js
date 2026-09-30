@@ -541,7 +541,7 @@
            that a phone can have scrolled past or hidden behind another tab. */
         var insBy = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
         act.textContent = B.seats && B.seats.indexOf(insBy) < 0 ? 'Waiting: ' + (insBy === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB)
-          : ui.insertion.kind === 'arrive' ? (B.state.turn === 1 && B.state.scen.entersTurn1 ? 'Bring a unit on' : 'Place your reinforcements')
+          : ui.insertion.kind === 'arrive' ? (B.state.turn === 1 && (B.state.scen.entersTurn1 || (B.state.scen.attackerEnters && B.state.sc && insBy === B.state.sc.attacker)) ? 'Bring a unit on' : 'Place your reinforcements')
           : ui.insertion.kind === 'shove' ? 'Shove the enemy drop'
             : ui.insertion.kind === 'ilz' ? 'Nominate landing zone ' + ui.insertion.n + ' of 3' : 'Pick a landing zone';
         act.className = 'pill pill-wait';
