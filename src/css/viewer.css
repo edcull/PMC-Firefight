@@ -387,3 +387,8 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
 .atl canvas.tile.tall { height: 150px; }
 .atl canvas.tile.inf { width: 150px; height: 118px; }
 .atl .empty { color: var(--ink-faint); padding: 24px 0; }
+
+/* the game's two small-capitals headings: the list's group labels and the panel's are field labels (11px grey) */
+#vlist h4, #vlist h3.group, .vpanel h3 {
+  font-family: var(--display); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim);
+}
