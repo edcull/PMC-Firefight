@@ -730,10 +730,15 @@
         return '<div class="card"><h2>Deployment</h2><p class="sub">Waiting for ' + esc(who) + ' to finish modifying their army.</p></div>';
       }
       var sv = B.state.swapAvail[mine] || { left: 0 };
-      var h = '<div class="card"><h2>Before deploying</h2><p class="sub">Look over the table and the other force. You may swap up to ' + sv.left +
-        ' unit' + (sv.left === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
+      var h = '<div class="card"><h2>Before deploying</h2><p class="sub">Look over the table and the other force. You may swap up to ' + (sv.total || sv.left) +
+        ' unit' + ((sv.total || sv.left) === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
       if (B.state.swapAsk && B.state.swapAsk.side === mine) h += swapCard();
-      else if (B.Q.canSwapNow(mine)) h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>Swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's') + '</small></button></div>';
+      else if (B.Q.canSwapNow(mine)) {
+        var made = (sv.done || []).filter(function (d) { return d.held; }).length;
+        h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>' +
+          (made ? made + ' swap' + (made === 1 ? '' : 's') + ' made' + (sv.left ? ', ' + sv.left + ' left' : '') + ' — change ' + (made === 1 ? 'it' : 'them')
+            : 'Swap up to ' + sv.left + ' unit' + (sv.left === 1 ? '' : 's')) + '</small></button></div>';
+      }
       return h + '<div class="acts"><button class="act primary" data-act="deployready"><span>Continue to deployment</span><small>' +
         (sv.left > 0 ? 'The list stands as it is' : 'Units, reserves and transports') + '</small></button></div></div>';
     }
@@ -1033,12 +1038,13 @@
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });
-      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin]').forEach(function (b) {
+      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin], [data-swapundo]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-act');
           if (SFX) SFX.click();
           if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
           if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
+          if (b.hasAttribute('data-swapundo')) { send({ k: 'swapundo', id: b.getAttribute('data-swapundo') }); return; }
           if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
           if (b.hasAttribute('data-insertion')) { send({ k: 'insertion', id: b.getAttribute('data-insertion') }); return; }
           if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }

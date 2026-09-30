@@ -123,7 +123,10 @@
       if (E.state.swapStage) return false;             // the secret round asks each player in turn
       var sa = E.state.swapAvail && E.state.swapAvail[side];
       if (E.state.deployReady && E.state.deployReady[side] === true) return false;   // gone on: the list stands
-      return !!sa && sa.left > 0 && E.state.phase === 'deploy' &&
+      /* Until they go on, a player may close the swaps to look at the table and
+         come back, and change a swap already noted: nothing is made until then. */
+      var more = sa && (sa.left > 0 || (E.state.swapHold && heldSwaps(side).length));
+      return !!more && E.state.phase === 'deploy' &&
         !E.state.units.some(function (u) { return u.side === side && u.x >= 0; });
     }
     function legalList(side, keys) {
@@ -148,13 +151,26 @@
         // in secret: noted now, made when both players are done
         sa.left--; sa.pick = null;
         sa.done.push({ out: old.name, in: opt.name, outId: old.id, key: opt.key, entry: opt.entry, held: true });
-        if (sa.left < 1) { swapsDone(); return null; }
+        // a hotseat's secret round moves on to the next player; otherwise the swaps stay open, to be changed
+        if (sa.left < 1 && E.state.swapStage) { swapsDone(); return null; }
         render();
         return null;
       }
       applySwap(side, old, opt, sa);
       sa.left--; sa.pick = null;
       if (sa.left < 1) { swapsDone(); return null; }
+      render();
+      return null;
+    }
+    // a swap noted but not yet made, taken back: the unit stays, and the swap is free again
+    function undoSwap(side, outId) {
+      var sa = E.state.swapAsk;
+      if (!sa || sa.side !== side || !holding()) return 'That swap has already been made.';
+      var i = -1;
+      sa.done.forEach(function (d, k) { if (d.held && d.outId === outId) i = k; });
+      if (i < 0) return 'That unit is not down to be swapped.';
+      sa.done.splice(i, 1);
+      sa.left++; sa.pick = null;
       render();
       return null;
     }
@@ -213,7 +229,7 @@
     }
 
     return {
-      swapOptions: swapOptions, beginSwaps: beginSwaps, canSwapNow: canSwapNow, doSwap: doSwap,
+      swapOptions: swapOptions, beginSwaps: beginSwaps, canSwapNow: canSwapNow, doSwap: doSwap, undoSwap: undoSwap,
       swapsDone: swapsDone, stillChoosing: stillChoosing, readyToDeploy: readyToDeploy
     };
   };

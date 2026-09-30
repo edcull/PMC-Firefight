@@ -192,7 +192,11 @@
       // your list, the unit being swapped marked
       h += '<div class="swapcol"><h4>Your force</h4>' + mine.map(function (m) {
         var n = B.Q.swapOptions(sa.side, m.id).length, on = sa.pick === m.id;
-        if (held[m.id]) return '<button class="act on" disabled><span>' + esc(m.name) + ' → ' + esc(held[m.id]) + '</span><small>Tier ' + R.ROMAN[m.tier] + ' — swapped</small></button>';
+        /* noted, not yet made: before everyone goes on (not a hotseat's secret round,
+           which moves on as each player finishes) it can be taken back */
+        if (held[m.id]) return B.state.swapStage
+          ? '<button class="act on" disabled><span>' + esc(m.name) + ' → ' + esc(held[m.id]) + '</span><small>Tier ' + R.ROMAN[m.tier] + ' — swapped</small></button>'
+          : '<button class="act on" data-swapundo="' + m.id + '"><span>' + esc(m.name) + ' → ' + esc(held[m.id]) + '</span><small>Tier ' + R.ROMAN[m.tier] + ' — swapped · tap to undo</small></button>';
         return '<button class="act' + (on ? ' on' : '') + '" data-swappick="' + (on ? '' : m.id) + '"' + (n ? '' : ' disabled') + '><span>' + esc(m.name) +
           '</span><small>Tier ' + R.ROMAN[m.tier] + (n ? (on ? ' — swapping' : '') : ' — nothing to swap in') + '</small></button>';
       }).join('') + '</div>';
@@ -211,7 +215,11 @@
       h += '<div class="swapcol theirs"><h4>' + esc(sideName(foeSide)) + '</h4>' + theirs.map(function (t) {
         return '<div class="swapfoe"><b>' + esc(t.name) + '</b><small>Tier ' + R.ROMAN[t.tier] + ' · ' + (t.cls === 'infantry' ? t.models + ' models' : t.cls) + '</small></div>';
       }).join('') + '</div>';
-      h += '</div></div><div class="askrow"><button class="start" data-act="swapdone" data-who="' + sa.side + '">' + (sa.left === sa.total ? 'Keep the list' : 'Done') + '</button></div></div></div>';
+      /* Before going on to the deployment, closing this is only a look at the table:
+         the swaps stay open to come back to from the panel. */
+      var back = !!(B.state.deployReady && !stg);
+      h += '</div></div><div class="askrow"><button class="start" data-act="swapdone" data-who="' + sa.side + '">' +
+        (back ? 'Back to the table' : sa.left === sa.total ? 'Keep the list' : 'Done') + '</button></div></div></div>';
       return h;
     }
     // placing pieces by hand: Last Stand, Fortify and Strike!, Detailed Terrain Knowledge
