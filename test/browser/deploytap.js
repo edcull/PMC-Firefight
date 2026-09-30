@@ -39,7 +39,8 @@ async function run(p, label, scen, shotName) {
   /* Meeting engagement, Secure and control, Find and secure: nothing is placed
      before the battle. The units are tapped onto the table as they come on in
      turn 1's Reserve phase, a unit each in turn with the OpFor (pp. 50-52). */
-  const entry = await p.evaluate(() => !!window.PMC_STATE().scen.entersTurn1);
+  // (and the attacker in Hostile takeover and Demolish, whose defender sets up first: pp. 54-55)
+  const entry = await p.evaluate(() => { const s = window.PMC_STATE(); return !!s.scen.entersTurn1 || (!!s.scen.attackerEnters && s.sc.attacker === 'A'); });
   if (entry) {
     // (Find and secure: the half held back is chosen first — for us, by the button)
     await p.evaluate(() => { window.__sendIntent({ k: 'autosplit' }); window.__beginButton().click(); });
@@ -105,7 +106,10 @@ async function run(p, label, scen, shotName) {
     start.waiting + ' units in ' + taps + ' taps (' + landed + ' landed, ' + panned + ' panned back)');
   ok('...and every unit ended up somewhere legal', end.illegal === 0,
     end.placed + ' placed, ' + end.illegal + ' outside the zone');
-  ok('...without needing more taps than units', taps <= start.waiting * 4,
+  /* (a blind grid of taps; a Demolish attacker's ground is three small corners, which a player
+     taps straight at, but the grid finds only now and then) */
+  const per = entry && scen === 'demolish' ? 6 : 4;
+  ok('...without needing more taps than units', taps <= start.waiting * per,
     taps + ' taps for ' + start.waiting + ' units');
 }
 

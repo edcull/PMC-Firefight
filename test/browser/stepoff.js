@@ -88,7 +88,8 @@ async function drain(p) {
 
   head('It falls out of the sky onto its landing point');
   let drop = { none: true };
-  for (let k = 0; k < 200 && drop.none; k++) {
+  // (turn 1 now opens with both companies walking on, a unit each in turn: allow for it)
+  for (let k = 0; k < 400 && drop.none; k++) {
     await drain(p);
     const st = await p.evaluate(() => ({ asking: window.__insertionAsking(), over: !!window.PMC_STATE().over }));
     if (st.over) break;

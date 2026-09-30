@@ -589,14 +589,14 @@
        readable; on a desktop it is a step above that again. */
     V.newTable();
     // (where both companies enter in turn 1, nobody is placed now: the OpFor comes on then, like everyone)
-    if (!K.entering()) state.cfg.aiSides.forEach(function (s2) { K.autoDeploy(s2); });
+    state.cfg.aiSides.forEach(function (s2) { if (!K.entering(s2)) K.autoDeploy(s2); });
     /* Hero of the People (p. 111): the locals have already told the revolt where
        the enemy is putting everyone. Against the OpFor that is how the game
        always worked — it deploys first. In hotseat, half the other side goes
        down before the rebel player places a single unit. */
     ['A', 'B'].forEach(function (side) {
       var docs = (state.doctrines && state.doctrines[side]) || [];
-      if (docs.indexOf('H2') < 0 || K.entering()) return;
+      if (docs.indexOf('H2') < 0 || K.entering(side === 'A' ? 'B' : 'A')) return;
       var foe = side === 'A' ? 'B' : 'A';
       if (isAI(foe)) return;                     // already on the table
       var n = state.units.filter(function (u) { return u.side === foe && !u.reserve; }).length;
@@ -1409,6 +1409,8 @@
     function mayArrange(side) {
       // (the swaps still open is no bar: sorting a side's own reserves puts nothing on the table)
       if (state.phase !== 'deploy' || state.placeAsk || state.minePick) return false;
+      // a side entering in turn 1 places nothing now: its own force is its to sort at any time
+      if (K.entering(side)) return true;
       var ps = K.placingSide();
       if (ps === side || ps === null) return true;
       return !state.units.some(function (u) { return u.side === side && u.alive && (u.x >= 0 || (!u.reserve && !u.aboard)); });
@@ -1589,7 +1591,7 @@
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();
       /* Where both companies enter in turn 1 there is nothing to place now: Auto-deploy
          means "bring my units on for me" when their turn to enter comes. */
-      if (K.entering()) {
+      if (K.entering(side)) {
         state.autoEnter = state.autoEnter || {};
         state.autoEnter[side] = true;
         render();
@@ -2015,7 +2017,7 @@
         insertionSpots: K.insertionSpots,
         arrivalSpots: K.arrivalSpots,
         // both companies enter in turn 1's Reserve phase: nothing is placed before the battle
-        entering: function () { return K.entering(); },
+        entering: function (side) { return K.entering(side); },
         markTargets: K.markTargets,
         inReserve: K.inReserve,
         unitById: K.unitById,

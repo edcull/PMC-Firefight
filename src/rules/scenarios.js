@@ -663,6 +663,9 @@
       win: 'Attacker: destroy the objective. Defender: keep it standing to the end of turn 12. Neither side wins by routing the other.',
       turns: 12,
       attacker: true,
+      /* "The attacker's forces enter the table from his/her table edges in the
+         Reserve phase of the 1st turn" (p. 54): only the defender sets up before the battle. */
+      attackerEnters: true,
       roles: {
         attacker: 'As the attacker you come on around the three corners that are yours and have twelve turns to bring the objective down.',
         defender: 'As the defender you set up half your force within 18" of the objective and hold the fourth corner; the other half arrives on a 5+ from turn 2.'
@@ -728,6 +731,10 @@
         var c = state.sc.defCircle;
         return dist(x, y, c.x, c.y) <= c.r;
       },
+      deployText: function (state, side) {
+        if (side === state.sc.defender) return 'Place each unit inside the shaded circle — within 18" of the objective.';
+        return 'You place nothing before the battle: your force comes on in the Reserve phase of turn 1 around the three corners that are yours — within 4" of the edge, and 12" clear of the enemy where the ground allows.';
+      },
       hint: 'The objective at the centre has to come down. Any attacking infantry may Demolish it — Sappers at +4, everyone else at +2. The attacker comes in around three corners; the defender owns the fourth. Breaking the enemy wins nothing here.',
       /* The attacker's held units come on in turns 2 to the Priority Level, as
          many as the player likes each turn; what is still waiting on the last of
@@ -743,6 +750,7 @@
       },
       reserves: function (state, side) {
         if (side === state.sc.attacker) {
+          if (state.turn === 1) return entering(state, side);      // everything not held back, in turn 1
           // an AI attacker that held anything back brings it all on at turn 2
           if (state.turn < 2) return [];
           return state.units.filter(function (u) { return u.side === side && u.alive && u.reserve && u.wave === 2; });
@@ -781,6 +789,9 @@
       win: 'Attacker: control the objective at the End phase of turn 20. Defender: keep them off it. Neither side wins by routing the other.',
       turns: 20,
       attacker: true,
+      /* "The first part enters the table in the Reserve phase of the 1st turn from any
+         table edge chosen by the attacker" (p. 55): only the defender sets up before the battle. */
+      attackerEnters: true,
       roles: {
         attacker: 'As the attacker you come on along a table edge you choose with half your force, the other half from any edge from turn 3, and have to be standing on the objective at the end of turn 20.',
         defender: 'As the defender you put up to ten trench, wall and wire sections and a bunker within 12" of the objective, then set up within 12" of it.'
@@ -815,12 +826,13 @@
            any table edge chosen by the attacker… The second part may enter in any
            turn starting from the 3rd from any table edge" (p. 55). Every edge is the
            attacker's, which is what makes this attack hard to face. */
-        var bands = edgeBands(6);
+        // every edge, 4" deep: where the attacker comes on (p. 30), and the ground Last Stand keeps off
+        var bands = edgeBands(4);
         for (var i = bands.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = bands[i]; bands[i] = bands[j]; bands[j] = t; }
         state.sc.boxes = {};
         state.sc.boxes[atk] = bands;
         state.sc.entry = {};
-        state.sc.entry[atk] = edgeBands(2);
+        state.sc.entry[atk] = edgeBands(4);
       },
       /* The first part comes on "from any table edge chosen by the attacker" —
          one edge (p. 55): the first unit down chooses it, and the rest of the
@@ -838,7 +850,16 @@
       },
       deployText: function (state, side) {
         if (side === state.sc.defender) return 'Place each unit inside the shaded circle — within ' + state.sc.defCircle.r + '" of the objective.';
-        return 'Place each unit inside a shaded band. The first unit down chooses the table edge; the rest of the first part comes on along the same edge.';
+        return 'You place nothing before the battle: the first part of your force comes on in the Reserve phase of turn 1 along one table edge — the first unit on chooses it, and the rest of the part follows along the same edge — within 4" of it, and 12" clear of the enemy where the ground allows.';
+      },
+      /* The first part comes on along the one edge its first unit chose (p. 55);
+         the second part, from turn 3, along any. */
+      entryFor: function (state, u, entry) {
+        if (state.turn !== 1 || u.side !== state.sc.attacker) return entry;
+        var down = state.units.filter(function (x) { return x.side === u.side && x !== u && x.alive && x.x >= 0 && !x.aboard; });
+        if (!down.length) return entry;
+        var fit = entry.filter(function (b) { return down.every(function (x) { return inBoxes([b], x.x, x.y); }); });
+        return fit.length ? fit : entry;
       },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       deployOK: function (state, side, x, y) {
@@ -858,6 +879,7 @@
           text: 'The second part of the force may come on this turn — as many of it as you like, or none yet.' } : null;
       },
       reserves: function (state, side) {
+        if (side === state.sc.attacker && state.turn === 1) return entering(state, side);     // the first part, in turn 1
         if (side !== state.sc.attacker || state.turn < 3) return [];
         return state.units.filter(function (u) {
           return u.side === side && u.alive && u.reserve && u.wave === 2;

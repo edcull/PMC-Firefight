@@ -71,7 +71,8 @@ function ok(name, cond, note) {
             placed: on.length,
             illegal: on.filter(u => !window.__deployOK(u.x, u.y, u.side))
               .map(u => u.side + u.code + '@' + Math.round(u.x) + ',' + Math.round(u.y)),
-            unplaced: s.units.filter(u => u.x < 0 && !u.reserve && !u.aboard).length,
+            // (an attacker that enters in turn 1 — Hostile takeover, Demolish — places nothing now)
+            unplaced: s.units.filter(u => u.x < 0 && !u.reserve && !u.aboard && !(s.scen.attackerEnters && u.side === s.sc.attacker)).length,
             // the defender of a circle scenario belongs inside its circle
             outside: (s.sc.defCircle
               ? on.filter(u => u.side === s.sc.defender &&
@@ -86,6 +87,19 @@ function ok(name, cond, note) {
         if (r.atk && r.scen !== 'invasion') {
           ok(label + 'the defender is round its objective', r.outside === 0,
             r.outside ? r.outside + ' outside the circle' : 'all inside');
+        }
+        // Hostile takeover, Demolish: the attacker comes on in turn 1, within 4" of a table edge it may use
+        if (await p.evaluate(() => !!window.PMC_STATE().scen.attackerEnters)) {
+          const pre = await p.evaluate(() => window.PMC_STATE().units.filter(u => u.side === window.PMC_STATE().sc.attacker && u.x >= 0).length);
+          await p.evaluate(() => { const bb = window.__beginButton(); if (bb) bb.click(); });
+          await p.waitForFunction(() => !!window.PMC_STATE().phaseCount, null, { timeout: 20000 }).catch(() => {});
+          const a = await p.evaluate(() => {
+            const s = window.PMC_STATE(), W = window.PMC.BOARD.w, H = window.PMC.BOARD.h, atk = s.sc.attacker;
+            const on = s.units.filter(u => u.side === atk && u.x >= 0 && !u.aboard);
+            return { on: on.length, far: on.filter(u => Math.min(u.x, u.y, W - u.x, H - u.y) > 4.6).map(u => u.code + '@' + u.x.toFixed(1) + ',' + u.y.toFixed(1)) };
+          });
+          ok(label + 'the attacker places nothing now, and comes on at a table edge in turn 1', pre === 0 && a.on > 0 && !a.far.length,
+            pre + ' before, ' + a.on + ' on' + (a.far.length ? ', too far in: ' + a.far.join(' ') : ''));
         }
       }
     }

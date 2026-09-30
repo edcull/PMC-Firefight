@@ -119,7 +119,8 @@
         box.innerHTML = next
           ? 'Placing <b>' + esc(next.name) + '</b> — click inside your shaded strip, or pick a different unit from the order of battle. ' +
           'Tapping a model already down picks it up to shift.'
-          : B.Q.entering && B.Q.entering() ? 'Nobody deploys before the battle: sort your reserves and transports, then begin — your units come on in turn 1.'
+          : B.Q.entering && (B.Q.entering() || ['A', 'B'].some(function (sd) { return !isAI(sd) && atThisScreen(sd) && B.Q.entering(sd); }))
+            ? 'Nothing more to place before the battle: sort your reserves and transports, then begin — your units come on in turn 1.'
             : 'All units are on the table. Begin the battle from the panel.';
         // the deployment card says which unit goes next and where: a phone keeps the room for it
         box.classList.add('idle');
@@ -427,7 +428,9 @@
       var left = units.filter(function (u) { return u.x < 0 && !u.aboard && !u.reserve && u.wave !== 2; }).length;
       return '<div class="card"><h2>Deployment</h2><p class="sub"><b>' + esc(sideName(ps)) + '</b> is deploying \u2014 ' +
         'setting its reserves and transports and putting its units down.</p>' +
-        '<p class="hint">Your deployment follows once theirs is done.</p>' +
+        '<p class="hint">' + (['A', 'B'].some(function (sd) { return !isAI(sd) && atThisScreen(sd) && B.Q.entering && B.Q.entering(sd); })
+          ? 'You place nothing before the battle: your force enters in turn 1. Sort it below meanwhile.'
+          : 'Your deployment follows once theirs is done.') + '</p>' +
         '<div class="dplist"><div class="dphead">Their order of battle \u2014 ' + (left ? left + ' still to deploy' : 'all set down') + '</div>' +
         rows + '</div></div>';
     }
@@ -449,11 +452,13 @@
        who is held back, who rides in what, who comes in by insertion — and says
        whether its units are to be brought on for it; then the battle begins, and
        they come on in turn 1's Reserve phase, a unit each in turn. */
-    function entryCard() {
-      var mine = ['A', 'B'].filter(function (sd) { return !isAI(sd) && atThisScreen(sd); });
+    function entryCard(mine) {
       var me = mine[0] || 'A', auto = B.state.autoEnter || {};
-      var h = '<div class="card"><h2>Entering the table</h2><p class="sub ready-help">Nobody deploys before the battle. Once it begins and the initiative is rolled, ' +
-        'the companies come on from their own table edges in turn 1\u2019s Reserve phase, a unit each in turn from the side with the initiative: within 4\u2033 of the edge, and 12\u2033 clear of the enemy where the ground allows.</p>';
+      var all = B.Q.entering && B.Q.entering();
+      var h = '<div class="card"><h2>Entering the table</h2><p class="sub ready-help">' + (all
+        ? 'Nobody deploys before the battle. Once it begins and the initiative is rolled, the companies come on from their own table edges in turn 1\u2019s Reserve phase, a unit each in turn from the side with the initiative'
+        : esc(B.deployWhere ? B.deployWhere(me) : 'You place nothing before the battle: your force comes on in the Reserve phase of turn 1').replace(/\.$/, '')) +
+        (all ? ': within 4\u2033 of the edge, and 12\u2033 clear of the enemy where the ground allows.' : '.') + '</p>';
       mine.forEach(function (sd) {
         var units = B.state.units.filter(function (u) { return u.side === sd && u.alive; });
         var rows = units.map(function (u) {
@@ -886,8 +891,16 @@
       if (B.state.relocating) return relocCard();
       var rc = readyCard();
       if (rc) return rc;
+      /* The sides at this screen that enter in turn 1 (everyone in three scenarios;
+         the attacker in Hostile takeover and Demolish) place nothing now: they sort
+         their entry on its own card — once there is nothing else to place here, or
+         while the other side, at another screen, sets up (their units shown too). */
+      var here = ['A', 'B'].filter(function (sd) { return !isAI(sd) && atThisScreen(sd); });
+      var ent = here.filter(function (sd) { return B.Q.entering && B.Q.entering(sd); });
+      if (ent.length && (ent.length === here.length || !placingSide())) {
+        return (othersDeploying() ? deployWaitCard() : '') + entryCard(ent);
+      }
       if (othersDeploying()) return deployWaitCard();
-      if (B.Q.entering && B.Q.entering()) return entryCard();
       var next = deployNext();
       var me = next ? next.side : (playerSide() || 'A');
       var h = '<div class="card">';

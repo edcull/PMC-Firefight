@@ -36,12 +36,21 @@ console.log('\nHostile takeover: the defender sets up first');
   const def = e.state().sc.defender;
   ok('the defender is Player 2 here', def === 'B', def);
   ok('...and it is the defender\'s turn to set up', e.query.placingSide() === 'B', e.query.placingSide());
-  const r = e.intent('A', { k: 'autodeploy' });
-  ok('the attacker\'s Auto-deploy is refused meanwhile', !r.ok && down(e, 'A') === 0, r.why);
   const a = e.state().units.find(u => u.side === 'A');
-  ok('...as is placing one of its units', !e.intent('A', { k: 'deploy', id: a.id, x: 3, y: 20 }).ok && down(e, 'A') === 0);
+  ok('the attacker places nothing before the battle: it enters in turn 1 (p. 55)', !e.intent('A', { k: 'deploy', id: a.id, x: 3, y: 20 }).ok && down(e, 'A') === 0);
+  const r = e.intent('A', { k: 'autodeploy' });
+  ok('...its Auto-deploy means "bring my units on for me"', r.ok && down(e, 'A') === 0 && e.state().autoEnter.A, r.why);
+  ok('...and it sorts its two parts while the defender sets up', e.intent('A', { k: 'autosplit' }).ok);
   ok('the defender sets up', e.intent('B', { k: 'autodeploy' }).ok && down(e, 'B') > 0);
-  ok('...then it is the attacker\'s turn', e.query.placingSide() === 'A', e.query.placingSide());
+  ok('...and then there is nothing left to place', e.query.placingSide() === null && e.query.deploymentDone());
+  e.intent('A', { k: 'start' });
+  const st = e.state(), W = 48, H = 48;
+  const first = st.units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard);
+  ok('in turn 1 the attacker\'s first part comes on', st.phase === 'battle' && first.length > 0 && st.units.some(u => u.side === 'A' && u.reserve && u.wave === 2), first.length + ' on');
+  // one edge every unit of the part is within 4" of (a unit in a corner is near two)
+  const near = { W: u => u.x <= 4.6, E: u => u.x >= W - 4.6, N: u => u.y <= 4.6, S: u => u.y >= H - 4.6 };
+  const shared = Object.keys(near).filter(g => first.every(near[g]));
+  ok('...along the one table edge its first unit chose, within 4"', shared.length > 0, shared.join(',') || first.map(u => u.x.toFixed(0) + ',' + u.y.toFixed(0)).join(' '));
 })();
 
 console.log('\nInvasion: the defender first, while the attacker sorts its waves');

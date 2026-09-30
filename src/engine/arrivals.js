@@ -346,6 +346,8 @@
     function entryFor(u) {
       var sc = E.state.sc, entry = sc && sc.entry && sc.entry[u.side];
       if (!entry || !entry.length) return entry;
+      // a scenario that narrows it as the side comes on (Hostile takeover's one edge)
+      if (E.state.scen.entryFor) entry = E.state.scen.entryFor(E.state, u, entry);
       if (!(sc.randomEdge && sc.randomEdge[u.side]) || entry.length !== 4) return entry;
       if (u.entryEdge == null) {
         u.entryEdge = Math.floor(Math.random() * 4);

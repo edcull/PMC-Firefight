@@ -438,7 +438,7 @@
   /* Each side at this screen, in its turn to place; where both companies enter in
      turn 1 there is nothing to place now, so each is named, and its units will be
      brought on for it then. */
-  function autoDeployMine() { seats.forEach(function (s) { autoDeploy(Q.entering && Q.entering() ? s : undefined); }); }
+  function autoDeployMine() { seats.forEach(function (s) { autoDeploy(s); }); }
   /* Deployment done and the battle begun: what comes first is read, not
      tapped — the initiative roll and the first activations — so on a phone the
      Results tab comes to the front — unless the first thing is a question for

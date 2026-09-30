@@ -92,11 +92,14 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   for (let k = 0; k < 20 && !ps; k++) { await wait(300); ps = await p1.evaluate(() => { const s = window.PMC_STATE(); return !s.deployReady && s.phase === 'deploy' ? window.__placingSide() : null; }); }
   const placer = (await seatOf(p1)) === ps ? p1 : p2, watcher = placer === p1 ? p2 : p1;
   await wait(600);
+  /* The attacker places nothing before the battle (p. 55): its screen shows the
+     defender setting up — their card, first — and under it its own entry to sort. */
   const w = await watcher.evaluate(() => ({
-    card: document.getElementById('context').textContent,
-    auto: !!document.querySelector('#context [data-act="autodeploy"]'),
+    card: document.querySelector('#context .card').textContent,
+    auto: !!document.querySelector('#context .card:first-child [data-act="autodeploy"]'),
     list: !!document.querySelector('#context [data-deploy]'),
-    theirs: [...document.querySelectorAll('#context .dpr-view')].map(r => r.textContent),
+    entry: /Entering the table/.test(document.getElementById('context').textContent),
+    theirs: [...document.querySelectorAll('#context .card:first-child .dpr-view')].map(r => r.textContent),
     stats: (document.getElementById('statstrip-side') || {}).textContent || ''
   }));
   const pl = await placer.evaluate(() => !!document.querySelector('#context [data-act="autodeploy"]'));
@@ -104,6 +107,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('while the other side deploys, this screen says so', /is deploying/.test(w.card), w.card.slice(0, 100));
   ok('...with none of their controls (auto-deploy, picking a unit to place) and no prompt to pick one', !w.auto && !w.list && !/No unit selected/.test(w.stats), JSON.stringify(w));
   ok('...while the side deploying has its own card', pl);
+  ok('...and the attacker, entering in turn 1, sorts its own entry meanwhile', w.entry);
   ok('...but their units are listed, to look at: which are still to deploy, held back or aboard', w.theirs.length === 6 && w.theirs.every(t => /to deploy|on the table|in reserve|second wave|aboard|insertion/.test(t)), w.theirs.join(' | '));
   // the one deploying puts a rookie aboard the APC and splits off its reserves: the other screen shows it
   await placer.evaluate(() => {
@@ -113,7 +117,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     if (hull && rk) window.__sendIntent({ k: 'load', hull: hull.id, unit: rk.id });
   });
   await wait(800);
-  const rows = await watcher.evaluate(() => [...document.querySelectorAll('#context .dpr-view .dpr-note')].map(n => n.textContent));
+  const rows = await watcher.evaluate(() => [...document.querySelectorAll('#context .card:first-child .dpr-view .dpr-note')].map(n => n.textContent));
   ok('...and who is aboard what, as it is set', rows.some(t => /^aboard /.test(t)), rows.join(' | '));
   await watcher.screenshot({ path: require('path').join(SHOTS, 'deploy-watcher.png') }).catch(() => {});
   await watcher.setViewportSize({ width: 390, height: 844 });

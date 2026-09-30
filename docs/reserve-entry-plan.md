@@ -230,8 +230,16 @@ In every mode:
      since there is no pre-battle placing to hand an advantage in. To revisit.
    - Saved battles in these scenarios, made before the change, won't resume:
      the game says so and puts them away, as for other old saves.
-4. **Hostile takeover and Demolish.** The attacker's entry goes through the
+4. **Hostile takeover and Demolish.** *(Done.)* The attacker's entry goes through the
    Reserve phase; the defender's set-up stays before the battle.
+   - Only the defender places before the battle. The attacker sorts its own
+     entry (its two parts, transports, "bring my units on") on the Entering the
+     table card, even while the defender, at another screen, sets up.
+   - Turn 1: Hostile takeover's first part comes on along the one edge its
+     first unit chooses; Demolish's attacker comes on around its three corners.
+     All within 4" of the edge.
+   - The attacker's edge bands are 4" deep (they were 6"), which is also the
+     ground Last Stand keeps off.
 5. **Tests and a browser run of every scenario:**
    - online (two browsers), on one screen, and against the computer;
    - replays and saved games made before the change (either load them, or

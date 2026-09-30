@@ -381,14 +381,19 @@
     /* Meeting engagement, Secure and control, Find and secure: both companies
        enter in turn 1's Reserve phase (pp. 50-52), so nothing is placed before
        the battle — each side only says who is held back and who rides in what. */
-    function entering() {
-      return !E.state.solo && !!(E.state.scen && E.state.scen.entersTurn1);
+    /* With a side: whether that side enters in turn 1 — every side in those three,
+       and the attacker in Hostile takeover and Demolish (pp. 54-55), whose defender
+       sets up before the battle. Without one: whether every side does. */
+    function entering(side) {
+      var sc = E.state.scen;
+      if (E.state.solo || !sc) return false;
+      if (sc.entersTurn1) return true;
+      return !!side && !!sc.attackerEnters && !!E.state.sc && E.state.sc.attacker === side;
     }
     function deployRoster(side) {
-      if (entering()) return [];
       return E.state.units.filter(function (u) {
         return u.alive && !isAI(u.side) && !u.reserve && !u.aboard &&
-          (side ? u.side === side : true);
+          (side ? u.side === side : true) && !entering(u.side);
       });
     }
 
@@ -632,8 +637,8 @@
 
     function deploymentDone() {
       if (!splitsOK()) return false;
-      if (entering()) return true;
-      return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
+      // (a side entering in turn 1 has nothing to place now)
+      return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve || entering(u.side); });
     }
 
     /* Rapid Relocation and Fortify and Strike! are turn 1's, after its Reserve
@@ -642,11 +647,12 @@
       /* Everything still in hand is held to come on in turn 1's Reserve phase, a
          hull with whoever is aboard it; units already held back (the scenario's
          second half, Battlefield Insertion) keep their own schedule. */
-      if (entering() && E.state.phase === 'deploy') {
+      if (E.state.phase === 'deploy' && ['A', 'B'].some(entering)) {
         E.state.units.forEach(function (u) {
-          if (u.alive && u.x < 0 && !u.reserve && !u.aboard) { u.reserve = true; u.wave = 1; }
+          if (entering(u.side) && u.alive && u.x < 0 && !u.reserve && !u.aboard) { u.reserve = true; u.wave = 1; }
         });
-        logLine('note', 'Both companies enter from their own table edges in the Reserve phase of turn 1, a unit each in turn from the side with the initiative.');
+        logLine('note', entering() ? 'Both companies enter from their own table edges in the Reserve phase of turn 1, a unit each in turn from the side with the initiative.'
+          : sideName(E.state.sc.attacker) + ' enters in the Reserve phase of turn 1.');
       }
       // a hull nobody was asked about faces the enemy
       E.state.units.forEach(function (u) { if (faces(u) && u.facing == null) u.facing = faceDefault(u); });
