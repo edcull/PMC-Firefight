@@ -1240,6 +1240,8 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .dpr-held .dpr-mark { color: var(--warn); }
 .dpr-held .dpr-name { color: var(--ink); }
 .dpr:disabled { opacity: var(--off-opacity); cursor: default; }
+/* the other player's order of battle, while they deploy: to look at, not to tap */
+.dpr-view, .dpr-view:hover { cursor: default; border-color: var(--line); }
 .splitlist .dphead b.ok { color: var(--good); }
 .splitlist .dphead b.short { color: var(--warn); }
 .splitlist .hint.small { margin: 0 0 6px; }

@@ -403,9 +403,25 @@
     }
     function deployWaitCard() {
       var ps = placingSide();
+      // their units as they stand, to look at: what is still to go down, what is held back, who is aboard what
+      var units = B.state.units.filter(function (u) { return u.side === ps && u.alive; });
+      var rows = units.map(function (u) {
+        var hull = u.aboard ? byId(u.aboard) : null;
+        var note = hull ? 'aboard ' + hull.name
+          : u.reserve && u.insert ? 'held for insertion'
+            : u.wave === 2 ? (u.reserve ? 'in reserve' : 'second wave')
+              : u.reserve ? 'in reserve'
+                : u.x >= 0 ? 'on the table' : 'to deploy';
+        var cls = u.x >= 0 && !hull ? ' dpr-set' : hull || u.reserve || u.wave === 2 ? ' dpr-held' : '';
+        return '<div class="dpr dpr-view' + cls + '"><span class="dpr-mark">' + (cls === ' dpr-set' ? '\u2713' : '\u00b7') + '</span>' +
+          '<span class="dpr-name">' + esc(u.name) + '</span><span class="dpr-note">' + esc(note) + '</span></div>';
+      }).join('');
+      var left = units.filter(function (u) { return u.x < 0 && !u.aboard && !u.reserve && u.wave !== 2; }).length;
       return '<div class="card"><h2>Deployment</h2><p class="sub"><b>' + esc(sideName(ps)) + '</b> is deploying \u2014 ' +
         'setting its reserves and transports and putting its units down.</p>' +
-        '<p class="hint">Your deployment follows once theirs is done.</p></div>';
+        '<p class="hint">Your deployment follows once theirs is done.</p>' +
+        '<div class="dplist"><div class="dphead">Their order of battle \u2014 ' + (left ? left + ' still to deploy' : 'all set down') + '</div>' +
+        rows + '</div></div>';
     }
     /* The other player, at another screen, putting the scenario's pieces down (or
        choosing a mine, which is theirs to keep quiet): this screen is told they are
