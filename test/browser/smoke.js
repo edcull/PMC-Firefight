@@ -33,6 +33,8 @@ async function dismissEarly(page) {
   await page.waitForTimeout(300);
   await dismissEarly(page);
   await page.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]'))).click());
+  // a vehicle put down is asked which way it faces: the way offered
+  await page.evaluate(() => { for (let n = 0; n < 12 && window.PMC_STATE().faceAsk; n++) window.__sendIntent({ k: 'vfaceall' }); });
   await page.waitForTimeout(400);
   await dismissEarly(page);
   await page.waitForSelector('button[data-act="start"], button[data-act="startask"]', { timeout: 15000 });

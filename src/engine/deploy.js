@@ -7,11 +7,11 @@
 (function (root) {
   'use strict';
   root.PMCEngineDeploy = function (E) {
-    var H = E.H, R = E.R, SC = E.SC, UR = E.UR, W = E.W, abShoot = E.abShoot, aiRelocate = E.aiRelocate,
-        beginTurn = E.beginTurn, boardableFor = E.boardableFor, byId = E.byId, docsOf = E.docsOf,
-        finishRelocation = E.finishRelocation, focusUnit = E.focusUnit, fortify = E.fortify, isAI = E.isAI,
+    var H = E.H, R = E.R, SC = E.SC, UR = E.UR, W = E.W, abShoot = E.abShoot,
+        beginTurn = E.beginTurn, boardableFor = E.boardableFor, byId = E.byId,
+        focusUnit = E.focusUnit, isAI = E.isAI,
         loadBefore = E.loadBefore, logLine = E.logLine, lookAtDeployment = E.lookAtDeployment,
-        nextPlace = E.nextPlace, other = E.other, pushRes = E.pushRes, relocCap = E.relocCap,
+        other = E.other, pushRes = E.pushRes,
         render = E.render, revealBoard = E.revealBoard, revealConsole = E.revealConsole, setHint = E.setHint,
         sideName = E.sideName, ui = E.ui, unloadBefore = E.unloadBefore;
 
@@ -628,44 +628,12 @@
       return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
     }
 
+    /* Rapid Relocation and Fortify and Strike! are turn 1's, after its Reserve
+       phase (engine.js afterEntry), not the deployment's. */
     function startBattle() {
-      /* Rapid Relocation (O3, p. 87): once everyone is down, a side holding the
-         doctrine may pick up to half the units it put on the table and set them
-         down again, anywhere its deployment allows. No unit moves twice. */
-      if (E.state.relocating) { finishRelocation(); return; }
-      E.state.relocDone = E.state.relocDone || {};
-      var rs = ['A', 'B'].filter(function (sd) {
-        return !E.state.relocDone[sd] && docsOf(sd).indexOf('O3') >= 0 && relocCap(sd) > 0;
-      });
-      // the OpFor makes its choice at once; a player (or two, in hotseat) is asked in turn
-      rs.sort(function (a, b) { return (isAI(b) ? 1 : 0) - (isAI(a) ? 1 : 0); });
-      for (var ri = 0; ri < rs.length; ri++) {
-        var sd = rs[ri];
-        E.state.relocDone[sd] = true;
-        if (isAI(sd)) { aiRelocate(sd); continue; }
-        E.state.relocating = { side: sd, cap: relocCap(sd), moved: [] };
-        ui.deployPick = null;
-        logLine('note', sideName(sd) + ' — Rapid Relocation: up to ' + E.state.relocating.cap + ' units may be moved.');
-        lookAtDeployment(sd);
-        setHint(null, 'Rapid Relocation: tap one of your units, then tap where it should go — up to ' +
-          E.state.relocating.cap + ' of them. Begin the battle when you are done.');
-        render();
-        return;
-      }
-      /* Fortify and Strike! (p. 141): once the tribe is deployed, a player puts
-         down its four field fortifications by hand before the first turn. */
-      E.state.fortAsked = E.state.fortAsked || {};
-      var fs = ['A', 'B'].filter(function (sd) { return docsOf(sd).indexOf('XO5') >= 0 && !isAI(sd) && !E.state.fortAsked[sd]; })[0];
-      if (fs) {
-        E.state.fortAsked[fs] = true;
-        E.state.placeQueue = [{ side: fs, kind: 'barricade', why: 'fortify', left: 4, total: 4, len: 3, then: 'battle' }];
-        nextPlace();
-        return;
-      }
       // a hull nobody was asked about faces the enemy
       E.state.units.forEach(function (u) { if (faces(u) && u.facing == null) u.facing = faceDefault(u); });
       E.state.phase = 'battle';
-      ['A', 'B'].forEach(function (side) { if (docsOf(side).indexOf('XO5') >= 0 && isAI(side)) fortify(side); });
       // Ambush!: each unit settles into its hide before the first turn (p. 156)
       if (E.state.scen.beforeBattle) {
         var moved = E.state.scen.beforeBattle(E.state) || [];

@@ -514,6 +514,9 @@
         var ta = curArea();
         act.textContent = ta ? 'Terrain: ' + ta.name : 'Terrain';
         act.className = 'pill pill-' + (ta ? ta.side : 'A');
+      } else if (B.state.relocating) {
+        act.textContent = 'Relocating: ' + (B.state.relocating.side === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
+        act.className = 'pill pill-' + B.state.relocating.side;
       } else if ((B.state.placeAsk || B.state.minePick) && !isAI((B.state.placeAsk || B.state.minePick).side)) {
         // a side putting the scenario's pieces down (or choosing a mine) before anyone deploys
         var su = (B.state.placeAsk || B.state.minePick).side;

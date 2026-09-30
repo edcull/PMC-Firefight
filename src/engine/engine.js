@@ -636,11 +636,77 @@
     }).length / 2);
   }
 
+  /* ---- turn 1, once the forces are on the table ----
+     Rapid Relocation (O3): "after deployment in the Reserve phase of the 1st
+     turn", up to half the units that start the battle on the table move to
+     another place the scenario allows; no unit moves twice; with both sides
+     holding it, they take it in turns, from the initiative. Then Fortify and
+     Strike! (XO5): "in the first turn … after the Xenotripod force is
+     deployed", four field fortifications in its deployment zone. Only then the
+     Action phase. `then` goes on to it; it is kept off the state (ui), as a
+     function would not survive a copy of the state. */
+  function afterEntry(then) {
+    ui.entryThen = then;
+    state.relocDone = state.relocDone || {};
+    var order = state.initiative === 'B' ? ['B', 'A'] : ['A', 'B'];
+    state.relocs = {};
+    order.forEach(function (sd) {
+      if (state.relocDone[sd] || docsOf(sd).indexOf('O3') < 0 || relocCap(sd) < 1) return;
+      state.relocDone[sd] = true;
+      // the OpFor makes all its moves at once, in its turn
+      if (isAI(sd)) { K.aiRelocate(sd); return; }
+      state.relocs[sd] = { side: sd, cap: relocCap(sd), moved: [], done: false };
+      logLine('note', sideName(sd) + ' — Rapid Relocation: up to ' + state.relocs[sd].cap + ' units may be moved.');
+    });
+    relocTurn(order[0]);
+  }
+  /* The next side to relocate a unit: `want` if it still may, otherwise the
+     other. A side at its half keeps the card until it says Done (it may look it
+     over first); with neither side left to say so, on to the fortifications. */
+  function relocTurn(want) {
+    var rs = state.relocs || {}, other2 = want === 'A' ? 'B' : 'A';
+    var canMove = function (sd) { var r = rs[sd]; return r && !r.done && r.moved.length < r.cap; };
+    var waiting = function (sd) { var r = rs[sd]; return r && !r.done; };
+    var sd = canMove(want) ? want : canMove(other2) ? other2 : waiting(want) ? want : waiting(other2) ? other2 : null;
+    ui.deployPick = null;
+    if (!sd) {
+      Object.keys(rs).forEach(function (k) {
+        var r = rs[k];
+        logLine('note', sideName(k) + ' — Rapid Relocation: ' + r.moved.length + ' unit' + (r.moved.length === 1 ? '' : 's') + ' moved.');
+      });
+      state.relocs = null; state.relocating = null;
+      entryFortify();
+      return;
+    }
+    state.relocating = rs[sd];
+    lookAtDeployment(sd);
+    var left = rs[sd].cap - rs[sd].moved.length;
+    setHint(null, 'Rapid Relocation: tap one of your units, then where it should go — ' + left + ' more may move. Done when you have finished.');
+    render();
+  }
+  // a side done relocating (by choice, or at half its force): the other takes over, or the turn goes on
   function finishRelocation() {
     var rl = state.relocating;
-    state.relocating = null; ui.deployPick = null;
-    if (rl) logLine('note', sideName(rl.side) + ' — Rapid Relocation: ' + rl.moved.length + ' unit' + (rl.moved.length === 1 ? '' : 's') + ' moved.');
-    K.startBattle();
+    if (!rl) return;
+    rl.done = true;
+    relocTurn(rl.side === 'A' ? 'B' : 'A');
+  }
+  function entryFortify() {
+    state.fortAsked = state.fortAsked || {};
+    ['A', 'B'].forEach(function (sd) {
+      if (docsOf(sd).indexOf('XO5') >= 0 && isAI(sd) && !state.fortAsked[sd]) { state.fortAsked[sd] = true; fortify(sd); }
+    });
+    var fs = ['A', 'B'].filter(function (sd) { return docsOf(sd).indexOf('XO5') >= 0 && !isAI(sd) && !state.fortAsked[sd]; })[0];
+    if (fs) {
+      state.fortAsked[fs] = true;
+      state.placeQueue = [{ side: fs, kind: 'barricade', why: 'fortify', left: 4, total: 4, len: 3, then: 'entry' }];
+      K.nextPlace();
+      return;
+    }
+    var then = ui.entryThen;
+    ui.entryThen = null;
+    render();
+    if (then) then();
   }
 
   // a legal new place for a unit inside its own side's deployment ground
@@ -666,17 +732,15 @@
     rl.moved.push(pick.id);
     ui.deployPick = null;
     if (SFX) SFX.step();
-    var left = rl.cap - rl.moved.length;
-    function relocHint() {
-      setHint(null, left > 0 ? 'Rapid Relocation: ' + left + ' more unit' + (left === 1 ? '' : 's') + ' may move.' : 'Rapid Relocation: that is half the force. Begin the battle.');
-    }
-    if (K.askFacing(rl.side, [pick], function () { relocHint(); render(); })) return;
-    relocHint();
-    render();
+    // each unit moved hands the relocation to the other side, if it has any left to make (alternating)
+    function next() { relocTurn(rl.side === 'A' ? 'B' : 'A'); }
+    if (K.askFacing(rl.side, [pick], next)) return;
+    next();
   }
 
   function relocPick(id) {
     var rl = state.relocating, u = K.byId(id);
+    if (!rl) return;
     if (!u || u.side !== rl.side || u.x < 0) return;
     if (rl.moved.indexOf(u.id) >= 0) { setHint(null, u.name + ' has already been relocated — no unit moves twice.'); render(); return; }
     if (rl.moved.length >= rl.cap) { setHint(null, 'Rapid Relocation: half the force has already moved.'); render(); return; }
@@ -743,10 +807,13 @@
     revealBoard();
     whenIdle(function () {
       K.reservePhase(function () {
-        state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
-        state.streak = streakFor(state.activeSide);
-        render();
-        maybeAI();
+        function action() {
+          state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
+          state.streak = streakFor(state.activeSide);
+          render();
+          maybeAI();
+        }
+        if (state.turn === 1) afterEntry(action); else action();
       });
     });
   }
@@ -1254,6 +1321,8 @@
       docsOf: docsOf,
       eligible: eligible,
       endActivation: endActivation,
+      afterEntry: afterEntry,
+      entryFortify: entryFortify,
       finishRelocation: finishRelocation,
       fitView: fitView,
       focusUnit: focusUnit,
@@ -1355,11 +1424,12 @@
       return state.phase === 'terrain' && terrainSide() === side && !isAI(side);
     }
     function relocating(side) {
-      return state.phase === 'deploy' && !!state.relocating && state.relocating.side === side;
+      return !!state.relocating && state.relocating.side === side;
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
       if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
+      if (state.relocating || state.placeAsk) return false;      // turn 1's relocations and fortifications come before the Action phase
       return state.activeSide === side;
     }
     function selected(side) {
@@ -1633,11 +1703,9 @@
       if (modifying()) return no('the armies are still being modified');
       if (state.swapAsk) K.swapsDone();
       if (!K.deploymentDone()) return no('there are still units to place');
-      // Rapid Relocation is one side's to finish, and it starts the battle when it does
-      if (state.relocating && state.relocating.side !== side) return no('the other side is still relocating');
       /* Two players at two screens: each says they are ready, and the battle
          begins once both have — neither can start it on the other. */
-      if (bothConfirm() && !state.relocating) {
+      if (bothConfirm()) {
         state.startReady = state.startReady || { A: false, B: false };
         state.startReady[side] = true;
         if (!(state.startReady.A && state.startReady.B)) {
@@ -1659,6 +1727,11 @@
     on('relocpick', null, function (side, it) {
       if (!relocating(side)) return no('you are not relocating');
       relocPick(it.id);
+      return yes;
+    });
+    on('relocdone', null, function (side, it) {
+      if (!relocating(side)) return no('you are not relocating');
+      finishRelocation();
       return yes;
     });
     on('reloctap', null, function (side, it) {

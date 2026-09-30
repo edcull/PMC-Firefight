@@ -51,6 +51,8 @@ const { ROOT, startSkirmish } = require('../where.js');
   }
   await p.waitForTimeout(400);
   await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]'))).click());
+  // a vehicle put down is asked which way it faces: the way offered
+  await p.evaluate(() => { for (let n = 0; n < 12 && window.PMC_STATE().faceAsk; n++) window.__sendIntent({ k: 'vfaceall' }); });
   await p.waitForTimeout(400);
   for (let i = 0; i < 12; i++) {
     const open = await p.evaluate(() => !document.getElementById('resolution').hidden);

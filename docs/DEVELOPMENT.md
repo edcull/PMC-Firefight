@@ -206,6 +206,7 @@ enginetest.js      whole battles driven by intent; terrain set-up; garrisons; ar
                    modifying the armies, and the hotseat's secret round of swaps
 deployready.js     nobody deploys until every swap is made
 deployturns.js     whose turn it is to set up: the defender first, and nothing out of turn
+turnone.js         turn 1 after the Reserve phase: Rapid Relocation in turns from the initiative, Fortify and Strike!
 endphase.js        Skip, and the End phase's one choice
 honourplay.js      Adrenaline Rush and Last Stand, for the player and the AI; the End
                    phase waits for the player's answer; rally cards name same-named units

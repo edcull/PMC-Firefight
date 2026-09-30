@@ -334,7 +334,11 @@
         if (mpk != null) send({ k: 'mine', i: mpk });
         return;
       }
-      if (B.state.phase === 'deploy' && B.state.relocating) { relocTap(p); return; }
+      // turn 1's Rapid Relocation: this screen's own, or the other player's to watch
+      if (B.state.relocating) {
+        if (!B.seats || B.seats.indexOf(B.state.relocating.side) >= 0) relocTap(p);
+        return;
+      }
       if (B.state.phase === 'deploy') {
         var pending = deployNext();
         if (!pending) return;

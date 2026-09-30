@@ -86,7 +86,7 @@
               : 'Tap inside the lit <b>' + ta.name + '</b> area to put down the ' + (PIECE_NOUN[tg.kind] || [tg.kind])[0] + ' outlined under the pointer.';
         return;
       }
-      var set = B.state.placeAsk || B.state.minePick;
+      var set = B.state.placeAsk || B.state.minePick || B.state.relocating;
       if (set && !isAI(set.side) && !atThisScreen(set.side)) {
         box.innerHTML = '<b>' + esc(sideName(set.side)) + '</b> is setting up.';
         box.classList.add('idle');
@@ -436,6 +436,13 @@
         '.</p><p class="hint">The deployment goes on once they are done.</p></div>';
     }
 
+    function relocWaitCard() {
+      var rl = B.state.relocating;
+      return '<div class="card"><h2>Rapid Relocation</h2><p class="sub"><b>' + esc(sideName(rl.side)) + '</b> is moving up to ' + rl.cap +
+        ' of its units to other places its deployment allows (' + rl.moved.length + ' so far).</p>' +
+        '<p class="hint">The Action phase follows once the relocations are done.</p></div>';
+    }
+
     /* ---------- side panel ---------- */
     // What you act with lives under the board; the roster and log live in the panel
     // (a slide-out drawer on a narrow screen).
@@ -446,6 +453,8 @@
       else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = atThisScreen(B.state.placeAsk.side) ? placeCard() : setUpWaitCard(B.state.placeAsk);
       else if (B.state.minePick && !isAI(B.state.minePick.side)) html = atThisScreen(B.state.minePick.side) ? mineCard() : setUpWaitCard(B.state.minePick);
       else if (B.faceAsked()) html = faceCard(B.faceAsked());
+      // turn 1's Rapid Relocation, after the Reserve phase: a player's own, or the other's watched
+      else if (B.state.relocating) html = atThisScreen(B.state.relocating.side) ? relocCard() : relocWaitCard();
       else if (B.state.phase === 'deploy') html = deployCard();
       else if (ui.reservePick) html = reservePickCard();
       else if (ui.insertion) html = insertionCard();
@@ -763,11 +772,15 @@
           '<span class="dpr-mark">' + (moved ? '✓' : '·') + '</span><span class="dpr-name">' + esc(u.name) + '</span>' +
           '<span class="dpr-note">' + (moved ? 'relocated' : 'tap to move') + '</span></button>';
       }).join('');
+      // with both sides holding it, they take a unit each in turn
+      var both = B.state.relocs && Object.keys(B.state.relocs).length > 1;
       return '<div class="card"><h2>Rapid Relocation</h2>' +
-        '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows. No unit moves twice.</p>' +
+        '<p class="sub">Everyone is down. You may pick up to <b>' + rl.cap + '</b> of your units and set them down again anywhere your deployment allows. No unit moves twice' +
+        (both ? '; the two sides take it in turns, a unit each' : '') + '.</p>' +
         '<p class="hint">' + rl.moved.length + ' of ' + rl.cap + ' moved' + (pick ? ' — tap the table where <b>' + esc(pick.name) + '</b> should go' : '') + '.</p>' +
         '<div class="dplist"><div class="dphead">Your units</div>' + rows + '</div>' +
-        '<div class="acts"><button class="act primary" data-act="start"><span>Begin the battle</span><small>Roll for initiative</small></button></div></div>';
+        '<div class="acts"><button class="act primary" data-act="relocdone"><span>Done relocating</span><small>' +
+        (both ? 'Leave the rest where they are' : 'On to the Action phase') + '</small></button></div></div>';
     }
 
     /* Before anyone deploys, each player with a swap to make looks over the
@@ -1144,6 +1157,7 @@
           else if (a === 'autosplit') send({ k: 'autosplit' });
           else if (a === 'deployboxdone') { deployBox = false; render(); }
           else if (a === 'start') { ui.startAsk = false; ui.startWhy = false; startBattle(); }
+          else if (a === 'relocdone') send({ k: 'relocdone' });
           // greyed until the reserves are chosen: say so, for a few seconds
           else if (a === 'startwhy') { ui.startWhy = true; render(); clearTimeout(ui.startWhyT); ui.startWhyT = setTimeout(function () { ui.startWhy = false; render(); }, 5000); }
           else if (a === 'startask') { ui.startAsk = true; render(); }

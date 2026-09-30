@@ -200,14 +200,17 @@ In every mode:
 
 ## The work, in shippable steps
 
-1. **Whose-turn checks and defender first.** A small change on its own:
+1. **Whose-turn checks and defender first.** *(Done.)* A small change on its own:
    - gate the deployment actions;
    - make `autosplit` change only the sender's side;
    - order the pre-battle placing defender first in the defender scenarios;
    - tests.
-2. **Turn 1 starts with initiative.** Move the roll to before the Reserve
-   phase and stop Begin the battle from rolling it. Rapid Relocation and
-   Fortify and Strike! move to after turn-1 entry.
+2. **Turn 1, after the Reserve phase.** *(Done.)* Begin the battle already
+   opened turn 1 with its initiative roll, then its Reserve phase. What moved
+   is Rapid Relocation and Fortify and Strike!: they run in turn 1, after the
+   Reserve phase and before the Action phase. With both sides holding Rapid
+   Relocation, they take a unit each from the initiative (the computer makes
+   all its moves at once, on its turn). Each side ends with **Done relocating**.
 3. **Entry through the Reserve phase** for Meeting engagement, Secure and
    control, and Find and secure:
    - hold every entering unit in reserve;

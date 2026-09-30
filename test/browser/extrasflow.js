@@ -96,7 +96,9 @@ async function start(p) {
   await newGame(p, { doctrines: { A: ['O3'], B: ['O3'] } });
   await start(p);
   const rl = await p.evaluate(() => window.__relocating());
-  ok('after deployment the player is asked to relocate', !!rl && rl.side === 'A', rl ? 'up to ' + rl.cap : 'not asked');
+  const when = await p.evaluate(() => { const s = window.PMC_STATE(); return { phase: s.phase, turn: s.turn, init: s.initiative }; });
+  ok('in turn 1, once the forces are down, the player is asked to relocate', !!rl && rl.side === 'A' && when.phase === 'battle' && when.turn === 1 && !!when.init,
+    (rl ? 'up to ' + rl.cap : 'not asked') + ' ' + JSON.stringify(when));
   ok('...up to half the units on the table', rl && rl.cap === 3, rl && rl.cap);
   const card = await p.evaluate(() => document.getElementById('context').innerText);
   ok('...with a card that says so', /Rapid Relocation/.test(card));
@@ -131,10 +133,10 @@ async function start(p) {
   ok('three units can be picked up and set down elsewhere', moved.moved.slice(0, 3).every(Boolean), moved.moved.join(' '));
   ok('...but not a fourth', moved.moved[3] === false);
   ok('...and no unit moves twice', moved.again === false);
-  const clicked = await p.evaluate(() => { const b = window.__beginButton(); if (b) { b.click(); return true; } return false; });
+  await p.evaluate(() => { const b = document.querySelector('#context [data-act="relocdone"]'); if (b) b.click(); });
   await p.waitForTimeout(500);
   await drain(p);
-  ok('beginning the battle ends the relocation', await p.evaluate(() => !window.__relocating() && window.PMC_STATE().phase === 'battle'));
+  ok('Done relocating ends it, and the Action phase follows', await p.evaluate(() => !window.__relocating() && window.PMC_STATE().phase === 'battle' && !!window.PMC_STATE().phaseCount));
 
   /* ------------------------------------------------ NOT ONE STEP BACKWARDS! */
   head('NOT ONE STEP BACKWARDS! (T5)');
