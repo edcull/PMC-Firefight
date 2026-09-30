@@ -160,21 +160,36 @@ already exists.
 Know Your Foe! is not offered in turn 1, so it can't stop the turn-1 entry. From
 turn 2 it works as now.
 
-### 3. Whose turn it is
+### 3. Every mode gets it
 
+The rules engine is shared: the server runs it online, and the browser runs
+it for everything else. So the new turn 1 applies to every game played in one
+of the six scenarios.
+
+A naming clash: in the code, `state.solo` means the **solitaire and co-operative
+scenarios** (pp. 150–156), not a game against the computer. Those keep their
+own rules (section 4). A game against the computer is `mode: 'ai'`, and it
+changes like the rest.
+
+| Mode | Before the battle | Turn-1 entry | Who says what |
+|---|---|---|---|
+| **Against the computer** (`ai`, and a campaign played solo) | The player sets up if they defend; the computer's set-up is done for it | When its turn comes, the computer brings a unit on at once, as the Reserve phase already does from turn 2, then it's the player's turn again | The header pill says **Your unit** or **Enemy arriving**; the computer's entries are animated one by one, as its later reinforcements are |
+| **Same screen** (`hotseat`, and a campaign played hotseat) | The defender sets up; the swaps stay secret, as now | The two players take turns at the one screen; each entry is that player's | The header says whose unit is next (**Player 2: bring a unit on**), and the panel shows that player's order of battle |
+| **Online** | As same screen, but each at their own screen | Each player places only on their own turn | **Your turn to bring a unit on** or **Their turn**, the waiting card, and the other side's order of battle |
+| **Demo** (`demo`, computer against computer) | Automatic | Automatic, alternating | Watched, as now |
+
+In every mode:
 - Every set-up and entry action is refused unless it's that side's turn:
   - placing, auto-placing, loading and unloading;
   - holding units back, and the automatic split, which will only change the
     sender's own side;
   - Rapid Relocation.
-- **Online,** the waiting screen says **Your turn to bring a unit on** or **Their
-  turn**, shows the header pill, and lists the other side's units and where
-  each stands.
-- **Auto-deploy** becomes "bring my units on for me as my turns come round".
-- **The computer opponent** brings its units on as its turns come, placed as
-  the Reserve phase already places them.
-- **Same-screen games** hand over between the two players, and the header says
-  whose unit is next.
+
+  Online, this stops the other player acting early. On one screen or against
+  the computer, it keeps a stray tap from placing the wrong side's unit.
+- **Auto-deploy** becomes "bring my units on for me as my turns come round". On
+  one screen, each player can ask for it for their own units.
+- The browser tests cover all four modes (step 5).
 
 ### 4. What stays as it is
 
