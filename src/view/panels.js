@@ -732,7 +732,7 @@
         return '<div class="card"><h2>Deployment</h2><p class="sub">Waiting for ' + esc(who) + ' to finish modifying their army.</p></div>';
       }
       var sv = B.state.swapAvail[mine] || { left: 0 };
-      var h = '<div class="card"><h2>Before deploying</h2><p class="sub">Look over the table and the other force. You may swap up to ' + (sv.total || sv.left) +
+      var h = '<div class="card"><h2 class="ready-help">Before deploying</h2><p class="sub ready-help">Look over the table and the other force. You may swap up to ' + (sv.total || sv.left) +
         ' unit' + ((sv.total || sv.left) === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
       if (B.state.swapAsk && B.state.swapAsk.side === mine) h += swapCard();
       else if (B.Q.canSwapNow(mine)) {
