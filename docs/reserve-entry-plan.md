@@ -230,22 +230,20 @@ Each step leaves the game playable and can be merged on its own.
    from turn 1's initiative.
 2. **Find and secure's halves:** as now. The player chooses which units go in
    each half, within the count the book allows.
+3. **Last Stand's "enemy deployment zone"** when the enemy doesn't deploy before
+   the battle: the ground where the enemy will be placed.
 
-## Open question
+   | Rebels are… | Enemy's "deployment zone" |
+   |---|---|
+   | Either side in Meeting engagement, Secure and control, Find and secure | The enemy's 4" entry band along their own edge |
+   | Defending Hostile takeover | All four edges' 4" bands, because the attacker picks its edge later |
+   | Attacking Hostile takeover | The defender's 12" circle around the objective |
+   | Defending Demolish | The attacker's entry bands: 4" deep, along the table edges within 12" of the three corners that are not the defender's |
+   | Attacking Demolish | The defender's 18" circle around the objective |
+   | Defending Invasion | Nothing forbidden, because the landing zones are nominated later |
+   | Attacking Invasion | The ground the defender may deploy on: anywhere at least 6" from the edges. This leaves only the outer 6" |
 
-**Last Stand's "enemy deployment zone"** when the enemy doesn't deploy before
-the battle. The barricades go down before anyone is placed. Proposal: forbid
-the ground where the enemy will be placed.
+   Attacking Invasion is read literally, so Rebel attackers can barricade only
+   the outer 6". An invader shouldn't get much say in the defences.
 
-| Rebels are… | Enemy's "deployment zone" |
-|---|---|
-| Either side in Meeting engagement, Secure and control, Find and secure | The enemy's 4" entry band along their own edge |
-| Defending Hostile takeover | All four edges' 4" bands, because the attacker picks its edge later |
-| Attacking Hostile takeover | The defender's 12" circle around the objective |
-| Defending Demolish | The attacker's entry bands: 4" deep, along the table edges within 12" of the three corners that are not the defender's |
-| Attacking Demolish | The defender's 18" circle around the objective |
-| Defending Invasion | Nothing forbidden, because the landing zones are nominated later |
-| Attacking Invasion | The ground the defender may deploy on: anywhere at least 6" from the edges. This leaves only the outer 6" |
-
-Attacking Invasion is the awkward case, because the book's defender zone is
-almost the whole table.
+All questions are settled.
