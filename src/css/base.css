@@ -25,6 +25,9 @@
   --warn: #e08a3a;
   --bad: #e0557a;
   --good: #7ed6a0;
+  /* two more with a meaning of their own: the attacker (and an honour) amber, the defender (and an upgrade) sky blue */
+  --amber: #f0b64a;
+  --sky: #6fc4e2;
   --display: 'Oxanium', system-ui, sans-serif;
   --body: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
