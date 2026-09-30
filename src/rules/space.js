@@ -514,8 +514,9 @@
       /* "Units on hills can shoot/be shot at over friendly units below them (but
          not over enemy ones)" — the friends of whichever end is up on the hill,
          taken a step at a time: from the crown, over friends on the slope below
-         it as well as on the level ground. A squad up in a high building (or a
-         reinforced one) looks down over its friends as one on the crown does. */
+         it as well as on the level ground. A squad up in a high building looks
+         down over its friends as one on the crown does (a reinforced building,
+         squat and slit-windowed, does not). */
       var aLv = -1, bLv = -1;                            // how high each end stands: asked only if someone is in the way
       for (var j = 0; j < state.units.length; j++) {
         var u = state.units[j];
@@ -546,10 +547,11 @@
       return lv;
     }
     /* How high a unit stands for seeing over its friends: its level on a hill, or
-       up in a high or reinforced building section, as high as a hill's crown. The
-       Firepower for height is levelOf's and the building's own (shoot.js). */
+       up in a high building section, as high as a hill's crown. A reinforced
+       building gives Firepower but no height to see over anyone. The Firepower
+       for height is levelOf's and the building's own (shoot.js). */
     function sightLevel(state, u) {
-      if (u && u.bld) return sectionHigh(u.bld, sectionRect(u)) ? 2 : 0;
+      if (u && u.bld) return u.bld.kind !== 'bunker' && sectionHigh(u.bld, sectionRect(u)) ? 2 : 0;
       return levelOf(state, u);
     }
     /* A unit in a wood (or anything else) standing on a hill counts as being in

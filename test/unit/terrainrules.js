@@ -114,7 +114,7 @@ var tall = { kind: 'building', x: 6, y: 20, w: 7, h: 5 }, low = { kind: 'buildin
 var bunk = { kind: 'bunker', x: 6, y: 20, w: 4, h: 4 };
 ok('a wide, full-height building is a high one', R.sectionHigh(tall), true);
 ok('...a small one is not', R.sectionHigh(low), false);
-[['a high building', tall, true], ['a reinforced building', bunk, true], ['a low building', low, false]].forEach(function (c) {
+[['a high building', tall, true], ['a reinforced building', bunk, false], ['a low building', low, false]].forEach(function (c) {
   var mg = inBld(mk('regular', 'A', 0, 0), c[1]);
   var friend = mk('regular', 'A', mg.x + 8, mg.y), foe = mk('regular', 'B', mg.x + 18, mg.y);
   ok('from ' + c[0] + ', a squad ' + (c[2] ? 'shoots' : 'does not shoot') + ' over a friend on the ground',
@@ -125,6 +125,9 @@ ok('...but never over an enemy', R.lineClear(world([mgT, mk('regular', 'B', mgT.
 var hi = R.shotMods(world([mgT, mk('regular', 'B', mgT.x + 12, mgT.y)], [tall]), mgT, mk('regular', 'B', mgT.x + 12, mgT.y), 'fire', {});
 ok('...and the high building gives +2 Firepower once, not a hill\'s as well',
   hi.parts.filter(function (p) { return /building|hill|crown/.test(p.label); }).map(function (p) { return p.label + ' +' + p.v; }).join(), 'firing from a high building +2');
+var mgB = inBld(mk('regular', 'A', 0, 0), bunk), foeB = mk('regular', 'B', mgB.x + 12, mgB.y);
+ok('a reinforced building still gives its +2 Firepower, though it sees over nobody',
+  R.shotMods(world([mgB, foeB], [bunk]), mgB, foeB, 'fire', {}).parts.filter(function (p) { return /building/.test(p.label); }).map(function (p) { return p.label + ' +' + p.v; }).join(), 'firing from a reinforced building +2');
 
 head('Low walls and rubble (p. 42)');
 var wall = { kind: 'barricade', x: 23, y: 18, w: 1, h: 12 };
