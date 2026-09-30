@@ -323,9 +323,13 @@
         return;
       }
       // a piece being put down or moved by hand
-      if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) { send({ k: 'placeat', x: p.x, y: p.y }); return; }
+      if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) {
+        if (!B.seats || B.seats.indexOf(B.state.placeAsk.side) >= 0) send({ k: 'placeat', x: p.x, y: p.y });
+        return;               // the other player's to place: the table is looked at meanwhile
+      }
       // Terrorist: the tap nominates the piece to mine
       if (B.state.minePick && !isAI(B.state.minePick.side)) {
+        if (B.seats && B.seats.indexOf(B.state.minePick.side) < 0) return;
         var mpk = B.state.minePick.pool.filter(function (i) { return R.inRect(p.x, p.y, B.state.terrain[i]); })[0];
         if (mpk != null) send({ k: 'mine', i: mpk });
         return;

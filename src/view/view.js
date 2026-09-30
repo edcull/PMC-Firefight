@@ -514,6 +514,11 @@
         var ta = curArea();
         act.textContent = ta ? 'Terrain: ' + ta.name : 'Terrain';
         act.className = 'pill pill-' + (ta ? ta.side : 'A');
+      } else if ((B.state.placeAsk || B.state.minePick) && !isAI((B.state.placeAsk || B.state.minePick).side)) {
+        // a side putting the scenario's pieces down (or choosing a mine) before anyone deploys
+        var su = (B.state.placeAsk || B.state.minePick).side;
+        act.textContent = 'Setting up: ' + (su === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
+        act.className = 'pill pill-' + su;
       } else if (B.state.phase === 'deploy') {
         // in a hotseat the header says whose turn it is to place a unit
         var dn = B.state.cfg.mode === 'hotseat' ? deployNext() : null;

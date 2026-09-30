@@ -86,6 +86,12 @@
               : 'Tap inside the lit <b>' + ta.name + '</b> area to put down the ' + (PIECE_NOUN[tg.kind] || [tg.kind])[0] + ' outlined under the pointer.';
         return;
       }
+      var set = B.state.placeAsk || B.state.minePick;
+      if (set && !isAI(set.side) && !atThisScreen(set.side)) {
+        box.innerHTML = '<b>' + esc(sideName(set.side)) + '</b> is setting up.';
+        box.classList.add('idle');
+        return;
+      }
       var fau = B.faceAsked();
       if (fau) {
         box.innerHTML = 'Which way does <b>' + esc(fau.name) + '</b> face? Tap a direction around it, or choose on the octagon.';
@@ -384,6 +390,21 @@
       return out.length ? '<div class="chips">' + out.join('') + '</div>' : '';
     }
 
+    // a side played at this screen (a hotseat's both; online, this player's own)
+    function atThisScreen(side) { return !B.seats || B.seats.indexOf(side) >= 0; }
+    /* The other player, at another screen, putting the scenario's pieces down (or
+       choosing a mine, which is theirs to keep quiet): this screen is told they are
+       at it, and goes on by itself once they are done. */
+    function setUpWaitCard(ask) {
+      var what = ask.why === 'takeover' ? 'digging in around the objective — trenches, walls, wire and a bunker'
+        : ask.why === 'laststand' ? 'putting up their Last Stand barricades'
+          : ask.why === 'fortify' ? 'throwing up their field fortifications'
+            : ask.why === 'terrain' ? 'moving terrain (Detailed Terrain Knowledge)'
+              : 'making their preparations';
+      return '<div class="card"><h2>Setting up</h2><p class="sub"><b>' + esc(sideName(ask.side)) + '</b> is ' + what +
+        '.</p><p class="hint">The deployment goes on once they are done.</p></div>';
+    }
+
     /* ---------- side panel ---------- */
     // What you act with lives under the board; the roster and log live in the panel
     // (a slide-out drawer on a narrow screen).
@@ -391,8 +412,8 @@
       var ctxBox = el('context'), html = '';
       if (B.state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
       if (B.state.phase === 'terrain') html = terrainCard();
-      else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = placeCard();
-      else if (B.state.minePick && !isAI(B.state.minePick.side)) html = mineCard();
+      else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = atThisScreen(B.state.placeAsk.side) ? placeCard() : setUpWaitCard(B.state.placeAsk);
+      else if (B.state.minePick && !isAI(B.state.minePick.side)) html = atThisScreen(B.state.minePick.side) ? mineCard() : setUpWaitCard(B.state.minePick);
       else if (B.faceAsked()) html = faceCard(B.faceAsked());
       else if (B.state.phase === 'deploy') html = deployCard();
       else if (ui.reservePick) html = reservePickCard();
