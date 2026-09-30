@@ -44,7 +44,6 @@ header h1 span { color: var(--alpha); }
 }
 .pill-A { color: var(--side-A); border-color: color-mix(in srgb, var(--side-A) 45%, transparent); background: color-mix(in srgb, var(--side-A) 10%, transparent); }
 .pill-B { color: var(--side-B); border-color: color-mix(in srgb, var(--side-B) 45%, transparent); background: color-mix(in srgb, var(--side-B) 10%, transparent); }
-.pill-none { color: var(--ink-dim); }
 /* The game is waiting for something from the player and will not move on
    until it gets it — it pulses so it cannot be read as ordinary status. */
 .pill-wait {
@@ -176,7 +175,6 @@ main {
 .feedcard .outcome { font-size: 11px; padding: 4px 6px; border-radius: 4px; background: var(--panel-3); }
 .feedcard .outcome.good { color: var(--good); }
 .feedcard .outcome.bad { color: var(--bad); }
-.feedempty { font-size: 11px; color: var(--ink-faint); }
 
 /* the log, docked along the bottom and shut by default */
 .logdock { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -360,13 +358,6 @@ header.your-turn #hdr-active.pill-B { background: var(--side-B); color: #0d1117;
 .code-B { color: var(--side-B); border-color: color-mix(in srgb, var(--side-B) 50%, transparent); background: color-mix(in srgb, var(--side-B) 9%, transparent); }
 .stat-head h2 { font-family: var(--display); font-size: 15px; margin: 0; }
 .stat-head .sub { margin: 0; font-size: 12px; color: var(--ink-dim); }
-.status-tag {
-  margin-left: auto; font-family: var(--display); font-size: 10px; letter-spacing: .08em;
-  text-transform: uppercase; padding: 3px 9px; border-radius: 3px; border: 1px solid var(--line);
-}
-.status-ready { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
-.status-suppressed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
-.status-broken { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 
 /* as many to a row as fit, so a narrow panel wraps them rather than cutting the last ones off,
    and the last row stretched across so it leaves no empty cells */
@@ -407,9 +398,6 @@ header.your-turn #hdr-active.pill-B { background: var(--side-B); color: #0d1117;
 .chip.tpill i { font-style: normal; font-family: var(--mono); font-weight: 700; font-size: 9px; color: rgba(8,11,16,.85);
   width: 12px; height: 13px; display: inline-grid; place-items: center; border-radius: 2px; }
 body[data-battle="demo"] #hintbar { display: none; }
-.spbar { position: relative; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); }
-.spbar-fill { height: 100%; background: linear-gradient(90deg, var(--warn), var(--bad)); }
-.spmark { position: absolute; top: 0; width: 1px; height: 100%; background: rgba(255,255,255,.35); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .chip {
@@ -701,10 +689,6 @@ a.mcard { text-decoration: none; line-height: normal; }
   .menu-title { font-size: 28px; }
   .mcard { padding: 10px 12px; font-size: 14px; }
 }
-.blockwhy {
-  margin: 8px 0 0; font-size: 12px; color: var(--warn);
-  border-left: 2px solid var(--warn); padding-left: 9px;
-}
 .sheet h3 { font-family: var(--display); font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--alpha); margin: 18px 0 6px; }
 .sheet ul { margin: 0; padding-left: 18px; color: var(--ink-dim); font-size: 13px; }
 .sheet li { margin-bottom: 4px; }
@@ -746,10 +730,6 @@ a.mcard { text-decoration: none; line-height: normal; }
 .archline:hover, .archline:focus-visible { border-color: var(--alpha); }
 .archline span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .archline em { flex: none; font-style: normal; color: var(--ink-faint); font-size: 12px; }
-.askbox.archbox { width: min(560px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; padding: 16px; }
-.archbox .archpick { flex: 1; min-height: 0; max-height: none; }
-.archbox .askrow { flex: none; }
-.archline .line-chip { flex: none; width: 34px; height: 18px; }
 /* Founding: the page fits the screen, and only the list of units picked
    takes up the slack (and scrolls, if it has to); the pickers are modals. */
 #camp.overlay > #camp-body.sheet.fit { display: flex; flex-direction: column; }
@@ -839,9 +819,8 @@ a.mcard { text-decoration: none; line-height: normal; }
 .cmodal-box {
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
   width: min(620px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px);
-  display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); min-width: 0;
 }
-.cmodal-box { min-width: 0; }
 .cmodal-box h3 { font-family: var(--display); font-size: 15px; margin: 0 0 8px; color: var(--ink); letter-spacing: .02em; }
 .cmodal-box > * { flex: none; }
 .cmodal-box > .cmodal-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -850,8 +829,8 @@ a.mcard { text-decoration: none; line-height: normal; }
 .cmodal-box .docpick { margin-bottom: 0; }
 .cmodal-box .askrow { flex: none; }
 /* the hub: the dossier and the save file, one row under the campaign turn */
-.hubbar { display: flex; gap: 6px; margin: 0 0 12px; align-items: stretch; }
-.hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; }
+.hubbar { display: flex; gap: 6px; margin: 0 0 12px; align-items: stretch; min-height: var(--row-h); }
+.hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; min-height: 0; padding-block: 0; }
 .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
 .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
 .hubbar .start.hubgo { flex: 0 0 auto; width: auto; margin: 0 0 0 auto; padding: 0 12px; font-size: 11px; letter-spacing: .08em; }
@@ -884,8 +863,6 @@ a.mcard { text-decoration: none; line-height: normal; }
 .dcard.dclick.open .dtop::after { content: '\25be'; }
 .dcard.dclick .ddet { cursor: default; }
 /* the dossier's tabs in the same row, at the same height as the buttons they replace */
-.hubbar .lnk { min-height: 0; padding-block: 0; }
-.hubbar { min-height: var(--row-h); }
 .cpan .hubbar { margin: 10px 0 0; }
 /* the hub fits the screen: only the promotion checklist scrolls */
 #camp.overlay > #camp-body.sheet.hubfit { display: flex; flex-direction: column; }
@@ -994,7 +971,6 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 #setup.solo-mode .std-only { display: none !important; }
 /* a hotseat skirmish is mustered in three steps: each player's force, then the battlefield */
 #setup .hot-only { display: none; }
-#setup[data-hot] .hot-hide { display: none !important; }
 #setup[data-hot="1"] .hot-field, #setup[data-hot="2"] .hot-field { display: none !important; }
 #setup[data-hot="3"] .hot-force { display: none !important; }
 #setup[data-hot="1"] .hot-name, #setup[data-hot="2"] .hot-name { display: grid; }
@@ -1108,7 +1084,6 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .cpan { border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); padding: 11px; margin-bottom: 12px; }
 .cpan-A { border-left: 3px solid var(--alpha); }
 .cpan-B { border-left: 3px solid var(--bravo); }
-.cpan-next { border-left-color: var(--good); background: color-mix(in srgb, var(--good) 6%, var(--panel-2)); }
 /* a contract on offer: who they are above, the job itself below */
 .cpan-offer { padding-bottom: 12px; }
 .cpan-offer .start { margin-top: 10px; }
@@ -1118,7 +1093,6 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .offer-size { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline;
   font-family: var(--mono); font-size: 12px; color: var(--ink-dim); margin: 4px 0 7px; }
 .offer-size b { color: var(--ink); }
-.offer-cap { opacity: .75; font-size: 11px; }
 .offer-role { display: inline-block; margin: 2px 0 6px; padding: 3px 10px; border-radius: 999px;
   font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
   border: 1px solid transparent; }
@@ -1155,7 +1129,6 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .cprom-go { margin-top: 2px; }
 .cprom-row { display: flex; gap: 6px; align-items: stretch; }
 .cprom-row .cprom-go { flex: 1 1 auto; width: auto; margin: 0; }
-.cprom-row .cprom-quit { flex: none; margin: 0; }
 .cprom.done .cprom-row { margin-top: auto; padding-top: 10px; }
 
 /* what a unit is carrying, on the button that puts it in the list */
@@ -1251,9 +1224,6 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 }
 .sw:hover { border-color: var(--ink-faint); }
 .sw.on { border-color: var(--alpha); background: var(--on-bg); }
-.sw-chip { width: 100%; height: 16px; border-radius: 3px; border: 1px solid rgba(0,0,0,.4); }
-.sw-name { font-family: var(--mono); font-size: 8px; letter-spacing: .02em; color: var(--ink-dim); text-align: center; line-height: 1.2; }
-.sw.on .sw-name { color: var(--ink); }
 
 /* the order of battle during deployment: pick who goes down next */
 .dplist { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
@@ -1420,13 +1390,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dloss b { font-family: var(--display); font-size: 18px; color: var(--bad); }
 .dloss b.wia { color: var(--warn); margin-left: 6px; }
 .dloss span { color: var(--ink-dim); }
-.dloss.dexpr b { color: var(--good); }
-.dloss.dtrau { margin-bottom: 10px; }
-.dloss.dwin b { color: var(--ink); }
-.dloss.dtrau b { color: var(--bad); }
 .dmem-bio { display: flex; justify-content: space-between; gap: 8px; }
 .dmem-type { display: block; color: var(--ink-faint); font-size: 11px; }
-.dhist { font-size: 11px; color: var(--ink-faint); padding: 0 11px 2px; font-style: italic; }
 .dledger { font-size: 11px; color: var(--ink-dim); margin-top: 5px; }
 .dledger b { color: var(--good); font-family: var(--mono); }
 .dledger.bad b { color: var(--bad); }
@@ -1455,18 +1420,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 }
 .askrow .start.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--bad) 28%, transparent); }
 .askrow .lnk { padding: 10px 14px; }
-
-.srvrow { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
-.srvrow .tin { flex: 1; font-family: var(--mono); font-size: 12px; padding: 6px 8px; }
 .cpstat code { font-family: var(--mono); font-size: 11px; color: var(--ink); background: var(--panel-3); padding: 0 3px; border-radius: 3px; }
 
-/* the rivals a solo campaign may be asked to meet: any number, by kind */
-.archpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 14px; max-height: 320px; overflow-y: auto;
-  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
-.archgrp h4 { margin: 4px 0; font-family: var(--display); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-dim); }
-.archopt { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; cursor: pointer; font-size: 13px; }
-.archopt input { margin-top: 3px; accent-color: var(--alpha); }
-.archopt small { display: block; color: var(--ink-faint); font-size: 11px; }
 .docpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 7px; margin-bottom: 14px; }
 .doc {
   text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
@@ -1540,10 +1495,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 /* ---------- contextual cards inside the console ---------- */
 #context:empty { display: none; }
 #context .targets, #context .card { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
-.stat-sum { display: none; font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
 
 @media (max-width: 700px) {
-  .status-tag { margin-left: 0; }
 
   .statstrip { padding: 8px 10px 10px; }
 }
@@ -1718,7 +1671,6 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   .mpane-unit { padding: 0 2px 8px; }
 
   /* the deploy card wants the room, so the action row goes away for it */
-  .console.deploying .bar { display: none; }
 
   /* The header is one short row: the turn, whose move it is, and the menu.
      The activation pill is kept to a line (it used to wrap into a tall
@@ -1745,9 +1697,6 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
     flex: 0 0 auto; min-width: 62px; min-height: 44px; padding: 4px 9px 3px;
   }
   .console .bar:not(:has(.slot:not(:disabled))) { display: none; }
-}
-@media (max-width: 420px) {
-  header h1 { display: none; }
 }
 @media (max-width: 1000px) {
   /* The table is square on a phone: as wide as the screen and as tall as it
