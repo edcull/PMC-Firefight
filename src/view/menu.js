@@ -60,6 +60,17 @@
   function paint() {
     var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE();
     el('btn-resume').hidden = !live;
+    /* No battle on, but a campaign under way: the first card goes back into it
+       (the battle's own card does, while one of its battles is being fought). */
+    var cr = el('btn-camp-resume'), cg = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get();
+    var going = !!(cg && cg.companies && cg.companies.A);
+    if (cr) {
+      cr.hidden = live || !going;
+      if (going) {
+        cr.setAttribute('data-camp', cg.mode === 'hotseat' ? 'hotseat' : 'solo');
+        el('menu-camp-resume-sub').textContent = cg.companies.A.name + ' \u00b7 campaign turn ' + cg.turn;
+      }
+    }
     /* a skirmish in this browser can be thrown away, and a battle over the
        network abandoned; asked twice, since neither can be had back */
     var dis = el('btn-discard');

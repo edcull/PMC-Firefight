@@ -655,7 +655,7 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   border-color: color-mix(in srgb, var(--alpha) 60%, transparent);
   background: color-mix(in srgb, var(--alpha) 12%, transparent); outline: none;
 }
-#btn-resume { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+#btn-resume, #btn-camp-resume { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
 /* throwing the battle away: a small x in the corner of Back to the battle,
    which turns into a red Discard? once, and asks the card to say so */
 .resume-wrap { position: relative; display: flex; flex-direction: column; }
