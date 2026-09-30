@@ -544,6 +544,19 @@
   /* A unit opened on the roster, drawn by the game's own renderer as the unit
      atlas draws it: a squad ready, a machine facing south-east on its running
      gear, in the force's colours, and riding whatever it rides. */
+  // the box round everything drawn on a canvas (any pixel not all but transparent), or null
+  function inked(g, w, h) {
+    var d = g.getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (d[(y * w + x) * 4 + 3] > 12) {
+          if (x < x0) x0 = x; if (x > x1) x1 = x;
+          if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+      }
+    }
+    return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
   function paintPortraits(body) {
     var I = root.PMCIso;
     if (!I || !I.drawUnit) return;
@@ -573,10 +586,27 @@
         ground = H * 0.56 + (up + ((hs && hs.hgt) || 14) * 0.5) * mag;
       }
       var s0 = I.toScreen(10, 10);
+      /* Drawn first off the card, with room all round, and then centred on the
+         card by what was actually drawn (the figures, their ring, a flier high
+         over its shadow), made smaller only if it would not fit. Where the
+         pixels cannot be read back, it is placed by its ground line as before. */
       try {
-        g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (ground - s0.y * mag) * dpr);
-        I.drawUnit(g, u, { at: { x: 10, y: 10 }, lift: 0, status: 'ready', morale: 0 });
-      } catch (err) { if (root.console) console.error(p.key, err); }
+        var off = document.createElement('canvas');
+        off.width = Math.round(W * 3 * dpr); off.height = Math.round(H * 4 * dpr);
+        var og = off.getContext('2d');
+        og.setTransform(mag * dpr, 0, 0, mag * dpr, (W * 1.5 - s0.x * mag) * dpr, (H * 2.4 - s0.y * mag) * dpr);
+        I.drawUnit(og, u, { at: { x: 10, y: 10 }, lift: 0, status: 'ready', morale: 0 });
+        var box = inked(og, off.width, off.height);
+        if (!box) throw new Error('nothing drawn');
+        var pad = 6 * dpr, k = Math.min(1, (cv.width - 2 * pad) / box.w, (cv.height - 2 * pad) / box.h);
+        var dw = box.w * k, dh = box.h * k;
+        g.drawImage(off, box.x, box.y, box.w, box.h, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+      } catch (err) {
+        try {
+          g.setTransform(mag * dpr, 0, 0, mag * dpr, (W / 2 - s0.x * mag) * dpr, (ground - s0.y * mag) * dpr);
+          I.drawUnit(g, u, { at: { x: 10, y: 10 }, lift: 0, status: 'ready', morale: 0 });
+        } catch (err2) { if (root.console) console.error(p.key, err2); }
+      }
       g.setTransform(1, 0, 0, 1, 0, 0);
     });
   }
