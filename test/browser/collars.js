@@ -37,6 +37,8 @@ async function drain(p) {
   await p.evaluate(() => window.__startBattle());
   await p.waitForTimeout(800);
   await drain(p);
+  // the companies walk on in turn 1's Reserve phase: let the table show it before driving it
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0 && !!window.PMC_STATE().phaseCount, null, { timeout: 30000 }).catch(() => {});
 
   // the penal squad on open ground, one Suppression point short of breaking; a rifle squad beside it to act
   const before = await p.evaluate(() => {

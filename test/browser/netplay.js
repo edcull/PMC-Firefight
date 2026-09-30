@@ -136,6 +136,8 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     if (await p1.evaluate(() => window.PMC_STATE().phase === 'battle')) break;
   }
   ok('...the battle begins once both have', await p1.evaluate(() => window.PMC_STATE().phase === 'battle'));
+  // both companies walk on in turn 1's Reserve phase: each screen shows it before the Action phase is driven
+  for (const p of [p1, p2]) await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0 && !!window.PMC_STATE().phaseCount, null, { timeout: 30000 }).catch(() => {});
   await wait(1200);
   const look = (p) => p.evaluate(() => ({
     seat: window.__seats()[0], active: window.PMC_STATE().activeSide, pill: document.getElementById('hdr-active').textContent,

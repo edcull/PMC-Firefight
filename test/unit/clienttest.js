@@ -545,9 +545,9 @@ ok('both screens have the same table',
   ash.win.PMC_STATE().seed === brann.win.PMC_STATE().seed);
 ok('the lobby got out of the way', ash.doc.getElementById('lobby').hidden === true);
 ok('each screen knows which side it is', ash.win.__seats().join() === 'A' && brann.win.__seats().join() === 'B');
-ok('and only that side may act',
-  ash.win.PMC_STATE().phase === 'deploy' &&
-  (ash.win.__mySide() === 'A' || brann.win.__mySide() === 'B'));
+// Secure and control: both companies enter in turn 1, so the set-up has nobody placing — each only sorts its own force
+ok('it opens on the set-up, with nothing to place before the battle',
+  ash.win.PMC_STATE().phase === 'deploy' && ash.win.__placingSide() === null && brann.win.__placingSide() === null);
 
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'all ') + checks + ' checks' + (bad ? '' : ' passed'));
 process.exit(bad ? 1 : 0);

@@ -134,7 +134,9 @@
       // a Hostile takeover defender's position first: nothing deploys until it is dug in
       var pa = B.state && B.state.placeAsk;
       if (pa && pa.kind === 'fort') send({ k: 'placeauto' });
-      send({ k: 'autosplit' }); autoDeployMine();
+      // each side at this screen sorts its own reserves (where nobody is placing, it has to say which side)
+      if (B.seats.length > 1) B.seats.forEach(function (s) { send({ k: 'autosplit', side: s }); }); else send({ k: 'autosplit' });
+      autoDeployMine();
       // every hull keeps the way it was offered
       for (var n = 0; n < 12 && B.state && B.state.faceAsk; n++) send({ k: 'vfaceall' });
     };

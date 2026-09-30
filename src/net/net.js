@@ -305,6 +305,8 @@
     /* Setting up at one screen: a tap on one of a side's own units (holding it
        back, loading it, picking it to place) is that side's, whoever's turn to
        place it is — an Invasion's attacker sorts its waves while the defender sets up. */
+    // "bring these units on for me", named for its side
+    if (st.phase === 'deploy' && (k === 'autodeploy' || k === 'autosplit') && it.side && this.seats.indexOf(it.side) >= 0) return it.side;
     if (st.phase === 'deploy' && it && /^(holdback|insertion|load|unload|deploypick)$/.test(k)) {
       var ref = it.unit || it.id || it.hull;
       var ru = st.units.filter(function (u) { return u.id === ref; })[0];

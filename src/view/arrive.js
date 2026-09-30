@@ -289,6 +289,8 @@
         '<div class="acts"><button class="act" data-act="nomine"><span>No mine</span><small>Leave the charges in the crates</small></button></div></div>';
     }
     // is the insertion being asked for this screen's to answer? (on a network, the other player may be the one asked)
+    // turn 1's entry, in the scenarios where both companies come on then (pp. 50-52)
+    function entryTurn() { return B.state && B.state.turn === 1 && B.state.scen && !!B.state.scen.entersTurn1; }
     function insertionMine() {
       var ins = ui.insertion;
       if (!ins) return false;
@@ -307,8 +309,10 @@
           '<p class="sub">' + (ins.kind === 'shove' && u
             ? '<b>' + esc(u.name) + '</b> rolled a ' + ins.die + ' coming in: ' + esc(sideName(byS)) +
               ' may move its arrival point up to <b>' + ins.drift + '″</b>.'
-            : esc(sideName(byS)) + ' is placing ' + (u ? '<b>' + esc(u.name) + '</b>' : 'a landing zone') + '.') + '</p>' +
-          '<p class="hint">Waiting for ' + esc(sideName(byS)) + '. Battlefield Insertion, p. 56.</p></div>';
+            : esc(sideName(byS)) + (ins.kind === 'arrive' ? ' is bringing ' : ' is placing ') + (u ? '<b>' + esc(u.name) + '</b>' : 'a landing zone') + (ins.kind === 'arrive' ? ' on' : '') + '.') + '</p>' +
+          '<p class="hint">Waiting for ' + esc(sideName(byS)) + '. ' + (ins.kind === 'arrive'
+            ? (entryTurn() ? 'The companies come on a unit each in turn, from the side with the initiative (p. 30).' : 'Reserves, p. 30.')
+            : 'Battlefield Insertion, p. 56.') + '</p></div>';
       }
       if (ins.kind === 'ilz') {
         return '<div class="card"><h2>Landing zone ' + ins.n + ' of 3</h2>' +
@@ -341,6 +345,12 @@
           '<p class="hint">' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p>' +
           '<div class="acts"><button class="act" data-act="holdarrive">' +
           '<span>Keep it in reserve</span><small>Call it in on a later turn</small></button></div></div>';
+      }
+      if (ins.kind === 'arrive' && entryTurn()) {
+        return '<div class="card"><h2>Entering the table</h2>' +
+          '<p class="sub"><b>' + esc(u.name) + '</b> comes on now' + ((u.cargo || []).length ? ', with ' + u.cargo.map(function (c) { return esc(c.name); }).join(' and ') + ' aboard' : '') +
+          '. Tap the shaded ground: within 4″ of your own table edge, and 12″ clear of the enemy where the ground allows.</p>' +
+          '<p class="hint">A unit each in turn, from the side with the initiative. ' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p></div>';
       }
       if (ins.kind === 'arrive') {
         return '<div class="card"><h2>Reinforcements</h2>' +

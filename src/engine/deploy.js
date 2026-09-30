@@ -378,7 +378,14 @@
        A commander sets his line down in the order he likes, so the player picks:
        any unit still in hand, or one already placed, to shift it. Until he picks,
        it is simply the next one still in hand. */
+    /* Meeting engagement, Secure and control, Find and secure: both companies
+       enter in turn 1's Reserve phase (pp. 50-52), so nothing is placed before
+       the battle — each side only says who is held back and who rides in what. */
+    function entering() {
+      return !E.state.solo && !!(E.state.scen && E.state.scen.entersTurn1);
+    }
     function deployRoster(side) {
+      if (entering()) return [];
       return E.state.units.filter(function (u) {
         return u.alive && !isAI(u.side) && !u.reserve && !u.aboard &&
           (side ? u.side === side : true);
@@ -625,12 +632,22 @@
 
     function deploymentDone() {
       if (!splitsOK()) return false;
+      if (entering()) return true;
       return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
     }
 
     /* Rapid Relocation and Fortify and Strike! are turn 1's, after its Reserve
        phase (engine.js afterEntry), not the deployment's. */
     function startBattle() {
+      /* Everything still in hand is held to come on in turn 1's Reserve phase, a
+         hull with whoever is aboard it; units already held back (the scenario's
+         second half, Battlefield Insertion) keep their own schedule. */
+      if (entering() && E.state.phase === 'deploy') {
+        E.state.units.forEach(function (u) {
+          if (u.alive && u.x < 0 && !u.reserve && !u.aboard) { u.reserve = true; u.wave = 1; }
+        });
+        logLine('note', 'Both companies enter from their own table edges in the Reserve phase of turn 1, a unit each in turn from the side with the initiative.');
+      }
       // a hull nobody was asked about faces the enemy
       E.state.units.forEach(function (u) { if (faces(u) && u.facing == null) u.facing = faceDefault(u); });
       E.state.phase = 'battle';
@@ -648,7 +665,7 @@
       inReserve: inReserve, markReserves: markReserves, insertionLegal: insertionLegal,
       scatterInsertion: scatterInsertion, greetArrival: greetArrival, autoDeploy: autoDeploy,
       garrisonAt: garrisonAt, garrisonable: garrisonable, garrisonSpots: garrisonSpots,
-      zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext,
+      zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext, entering: entering,
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,

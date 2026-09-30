@@ -249,9 +249,11 @@
       }
       function report() {
         if (log.length) {
+          var entry = E.state.turn === 1 && E.state.scen.entersTurn1;
           pushRes({
-            kind: 'Reserves', title: 'Turn ' + E.state.turn + ' — reinforcements',
-            note: E.state.scen.name + ': units held back come onto the table.',
+            kind: 'Reserves', title: 'Turn ' + E.state.turn + (entry ? ' — entering the table' : ' — reinforcements'),
+            note: entry ? E.state.scen.name + ': the companies come on from their own table edges, a unit each in turn from the initiative.'
+              : E.state.scen.name + ': units held back come onto the table.',
             list: log.map(function (t) { return { text: t }; })
           });
           render();
@@ -266,7 +268,9 @@
           var u = ask[i++];
           if (!u.alive || !u.reserve) continue;
           // a solitaire scenario says exactly where its units come on
-          if (isAI(u.side) || E.state.scen.autoArrive) { placeAuto(u); continue; }
+          // (turn 1's entry, for a player who asked to have their units brought on for them)
+          var auto = E.state.turn === 1 && E.state.autoEnter && E.state.autoEnter[u.side];
+          if (isAI(u.side) || E.state.scen.autoArrive || auto) { placeAuto(u); continue; }
           askArrival(u, log, next);
           return;
         }
@@ -457,7 +461,8 @@
       }
       ui.insertion = { unit: u, done: done, spots: spots, kind: 'arrive', log: log };
       ui.selected = null; ui.mode = 'insert'; ui.targets = []; ui.moves = []; ui.terrain = [];
-      focusUnit(u, false, true);
+      // a unit not yet on the table has nowhere to be looked at: the ground it may come on is shown instead
+      if (u.x < 0 && E.lookAtDeployment) E.lookAtDeployment(u.side); else focusUnit(u, false, true);
       setHint(null, u.name + ' is arriving: tap the shaded ground to choose where it comes on.');
       revealConsole();
       render();
@@ -525,10 +530,10 @@
       return 'along your own table edge';
     }
 
-    function snapToSpot(ins, p) {
+    function snapToSpot(ins, p, reach) {
       var spots = ins.spots || [];
       if (!spots.length) return null;
-      var reach = SNAP_NEAR;
+      reach = reach || SNAP_NEAR;
       var best = null, bd = Infinity;
       for (var i = 0; i < spots.length; i++) {
         var d = R.inches(p.x, p.y, spots[i].x, spots[i].y);
@@ -589,7 +594,8 @@
         // with ground 12" clear of the enemy on offer, it has to come on there
         var mustClear = edgeArrival(u) && (ins.spots || []).some(function (q) { return clearOfEnemy(u, q); });
         if (!arrivalLegal(u, p) || (mustClear && !clearOfEnemy(u, p))) {
-          var near = snapToSpot(ins, p);
+          // walking on from its own edge forgives a miss as far as deploying on it does (9")
+          var near = snapToSpot(ins, p, edgeArrival(u) ? 9 : null);
           if (!near) {
             setHint(null, 'Not there — ' + arrivalWhere(u) + (mustClear ? ', 12" clear of the enemy' : '') + ', and off impassable ground.');
             return;

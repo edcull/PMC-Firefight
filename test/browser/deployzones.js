@@ -43,6 +43,23 @@ function ok(name, cond, note) {
         }
         await p.evaluate(() => window.__autoDeployBoth());
         await p.waitForTimeout(250);
+        /* Meeting engagement, Secure and control, Find and secure: nobody is placed before
+           the battle — both companies enter in turn 1's Reserve phase (pp. 50-52). Begin,
+           let them come on, and they belong within 4" of their own table edge. */
+        if (await p.evaluate(() => window.PMC_STATE().scen.entersTurn1)) {
+          const before = await p.evaluate(() => window.PMC_STATE().units.filter(u => u.x >= 0).length);
+          await p.evaluate(() => { const bb = window.__beginButton(); if (bb) bb.click(); });
+          await p.waitForFunction(() => !!window.PMC_STATE().phaseCount, null, { timeout: 20000 }).catch(() => {});
+          const e = await p.evaluate(() => {
+            const s = window.PMC_STATE(), W = window.PMC.BOARD.w;
+            const on = s.units.filter(u => u.x >= 0 && !u.aboard);
+            return { scen: s.scen.id, on: on.length, waiting: s.units.filter(u => u.x < 0 && !u.reserve && !u.aboard).length,
+              far: on.filter(u => u.side === 'A' ? u.x > 4.6 : u.x < W - 4.6).map(u => u.side + u.code + '@' + u.x.toFixed(1)) };
+          });
+          ok((e.scen + ' · pl ' + pl).padEnd(24) + 'nothing placed before the battle; everyone enters within 4" of its edge in turn 1',
+            before === 0 && e.on > 0 && !e.waiting && !e.far.length, before + ' before, ' + e.on + ' on' + (e.far.length ? ', too far in: ' + e.far.join(' ') : ''));
+          continue;
+        }
 
         const r = await p.evaluate(() => {
           const s = window.PMC_STATE();

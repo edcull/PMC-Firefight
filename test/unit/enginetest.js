@@ -75,7 +75,13 @@ function play(seed, opts) {
     // Hostile takeover (p. 55): the defender's position goes down by the auto button
     if (e.state().placeAsk) { e.intent(e.state().placeAsk.side, { k: e.state().placeAsk.kind === 'fort' ? 'placeauto' : 'placedone' }); continue; }
     const side = e.query.placingSide();
-    if (!side) break;
+    if (!side) {
+      /* nobody placing: everyone is down, or nobody is placed before the battle at all
+         (both companies enter in turn 1) — each side sorts its reserves and has its
+         units brought on for it when the time comes */
+      ['A', 'B'].forEach((sd) => { if (!split[sd]) { split[sd] = true; e.intent(seatOf(sd), { k: 'autosplit' }); } e.intent(seatOf(sd), { k: 'autodeploy' }); });
+      break;
+    }
     if (!split[side]) { split[side] = true; e.intent(seatOf(side), { k: 'autosplit' }); continue; }
     const u = e.query.deployNext();
     if (!u) break;
@@ -234,8 +240,9 @@ function commit(e, side) {
 function refusals() {
   console.log('refusals');
   const e = Engine.create();
+  // (a scenario with a defender, who sets up before the battle: in the others everyone enters in turn 1)
   e.start({
-    tier: 2, pl: 1, scenario: 'secure',
+    tier: 2, pl: 1, scenario: 'demolish',
     armyA: R.rollArmy(2, 1, null, 'pmc'), armyB: R.rollArmy(2, 1, null, 'pmc'),
     nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'barren'
   });
@@ -249,8 +256,11 @@ function refusals() {
     !e.intent(placing, { k: 'nonsense' }).ok);
   ok('a malformed intent is refused', !e.intent(placing, null).ok);
 
-  (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' }));
-  (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' }));
+  // each side on its turn to place: the defender first
+  for (let g = 0; g < 6 && e.query.placingSide(); g++) {
+    const sd = e.query.placingSide();
+    (e.intent(sd, { k: 'autosplit' }), e.intent(sd, { k: 'autodeploy' }));
+  }
   const started = e.intent('A', { k: 'start' });
   ok('auto-deploy fills both sides', started.ok, started.why);
 
@@ -380,7 +390,8 @@ function garrisons() {
   for (let attempt = 0; attempt < 30; attempt++) {
     const e = Engine.create();
     e.start({
-      tier: 3, pl: 1, scenario: 'meeting',
+      // a defender sets up before the battle, and may set up inside a building
+      tier: 3, pl: 1, scenario: 'demolish',
       armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
       nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'dense'
     });

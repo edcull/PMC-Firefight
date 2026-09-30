@@ -58,6 +58,8 @@ async function drain(p) {
   await p.evaluate(() => window.__beginButton().click());
   await p.waitForTimeout(700);
   await drain(p);
+  // the companies walk on in turn 1's Reserve phase (p. 50): let the table show it
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0 && !!window.PMC_STATE().phaseCount, null, { timeout: 30000 }).catch(() => {});
 
   /* The battle is played as it runs: the engine decides whose turn it is, so
      the harness passes with its other units until the Reserve phase asks

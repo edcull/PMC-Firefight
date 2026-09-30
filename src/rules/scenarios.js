@@ -299,6 +299,23 @@
     return side === 'A' ? [R.UNIT_R, depth] : [W - depth, W - R.UNIT_R];
   }
 
+  /* The scenarios where both companies enter in turn 1's Reserve phase (pp. 50-52):
+     nothing is placed before the battle, and each unit comes on "up to 4\" from the
+     table border and at least 12\" from the enemy" (p. 30) along its own edge — the
+     west for A, the east for B, the table having been turned to the edges rolled. */
+  var ENTRY_TEXT = 'Nobody deploys before the battle: your units enter from your own table edge in the Reserve phase of turn 1, a unit at a time in turn with the enemy, from the side with the initiative — within 4\" of the edge and 12\" clear of the enemy where the ground allows.';
+  function entryEdges(state) {
+    state.sc.zones = { A: strip('A', 4), B: strip('B', 4) };
+    state.sc.entry = { A: [{ x: 0, y: 0, w: 4, h: H }], B: [{ x: W - 4, y: 0, w: 4, h: H }] };
+  }
+  // the units held to enter in turn 1 (wave 1): a hull brings whoever is aboard it
+  function entering(state, side) {
+    if (state.turn !== 1) return [];
+    return state.units.filter(function (u) {
+      return u.side === side && u.alive && u.reserve && u.wave === 1 && !u.aboard;
+    });
+  }
+
   /* Demolish divides the table edges by corner (p. 54): the `run` inches of edge
      running away from a corner in each direction belong to whoever owns it. That
      is two rectangles a corner, `depth` inches deep. */
@@ -391,9 +408,10 @@
       win: 'Rout the enemy — destroy or drive off half their units.',
       turns: 20,
       objectives: function () { return []; },
-      deploy: function (state) {
-        state.sc.zones = { A: strip('A', 6), B: strip('B', 6) };
-      },
+      entersTurn1: true,       // "All player's units enter the table from his/her table edge in the Reserve phase of the 1st turn"
+      deploy: function (state) { entryEdges(state); },
+      reserves: function (state, side) { return entering(state, side); },
+      deployText: function () { return ENTRY_TEXT; },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       hint: 'No objectives: the only way to win is to break the other company.',
       check: function (state) {
@@ -413,10 +431,13 @@
       win: 'Hold more objectives at the end; hold all three at any End phase; or hold the same two for three End phases running.',
       turns: 20,
       objectives: function (state) { return spread3(state); },
+      entersTurn1: true,       // as Meeting engagement: everyone enters in turn 1's Reserve phase (p. 51)
       deploy: function (state) {
-        state.sc.zones = { A: strip('A', 6), B: strip('B', 6) };
+        entryEdges(state);
         state.sc.streak = { A: { key: '', n: 0 }, B: { key: '', n: 0 } };
       },
+      reserves: function (state, side) { return entering(state, side); },
+      deployText: function () { return ENTRY_TEXT; },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       hint: 'Three objectives. Hold all three at once, or the same two for three turns running, and it ends early. Breaking the enemy is not a win here — only ground is.',
       check: function (state) {
@@ -469,8 +490,12 @@
         state.sc.order = 0;                      // how many have been checked
         return [];                               // nothing is an objective until it is found
       },
+      /* "In the first Reserve phase, each player deploys their first half from their
+         table edge using standard rules for reserves" (p. 52) */
+      entersTurn1: true,
+      deployText: function () { return ENTRY_TEXT.replace('your units enter', 'the first half of your force enters'); },
       deploy: function (state) {
-        state.sc.zones = { A: strip('A', 6), B: strip('B', 6) };
+        entryEdges(state);
         // half the force enters at once; the rest waits in reserve
         ['A', 'B'].forEach(function (side) {
           var all = mine(state, side).filter(function (u) { return !u.reserve; });
@@ -495,8 +520,9 @@
         return pool.length ? { pool: pool, min: 0, max: n,
           text: 'Up to ' + n + ' unit' + (n === 1 ? '' : 's') + ' (the Priority Level) may come on from reserve this turn. You choose which — or none.' } : null;
       },
-      // from turn 3, every second turn, a number equal to the Priority Level comes on
+      // the first half in turn 1; from turn 3, every second turn, a number equal to the Priority Level comes on
       reserves: function (state, side) {
+        if (state.turn === 1) return entering(state, side);
         if (state.turn < 3 || state.turn % 2 === 0) return [];
         return state.units.filter(function (u) {
           return u.side === side && u.alive && u.reserve && u.wave === 2;

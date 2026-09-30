@@ -588,14 +588,15 @@
        phone the board now fills the screen, so a step above "the whole table" is
        readable; on a desktop it is a step above that again. */
     V.newTable();
-    state.cfg.aiSides.forEach(function (s2) { K.autoDeploy(s2); });
+    // (where both companies enter in turn 1, nobody is placed now: the OpFor comes on then, like everyone)
+    if (!K.entering()) state.cfg.aiSides.forEach(function (s2) { K.autoDeploy(s2); });
     /* Hero of the People (p. 111): the locals have already told the revolt where
        the enemy is putting everyone. Against the OpFor that is how the game
        always worked — it deploys first. In hotseat, half the other side goes
        down before the rebel player places a single unit. */
     ['A', 'B'].forEach(function (side) {
       var docs = (state.doctrines && state.doctrines[side]) || [];
-      if (docs.indexOf('H2') < 0) return;
+      if (docs.indexOf('H2') < 0 || K.entering()) return;
       var foe = side === 'A' ? 'B' : 'A';
       if (isAI(foe)) return;                     // already on the table
       var n = state.units.filter(function (u) { return u.side === foe && !u.reserve; }).length;
@@ -1586,6 +1587,14 @@
       if (modifying()) return no('the other side is still modifying its army');
       // deploying straight away means keeping the list as it is
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();
+      /* Where both companies enter in turn 1 there is nothing to place now: Auto-deploy
+         means "bring my units on for me" when their turn to enter comes. */
+      if (K.entering()) {
+        state.autoEnter = state.autoEnter || {};
+        state.autoEnter[side] = true;
+        render();
+        return yes;
+      }
       // the side whose turn it is to place, and no other: the other side waits for it (with everyone down, nothing to do)
       if (K.placingSide() !== null && !mayDeploy(side)) return no('not your turn to place');
       var hand = state.units.filter(function (u) { return u.side === side && u.x < 0; });
@@ -2005,6 +2014,8 @@
         scoreObjectives: K.scoreObjectives,
         insertionSpots: K.insertionSpots,
         arrivalSpots: K.arrivalSpots,
+        // both companies enter in turn 1's Reserve phase: nothing is placed before the battle
+        entering: function () { return K.entering(); },
         markTargets: K.markTargets,
         inReserve: K.inReserve,
         unitById: K.unitById,

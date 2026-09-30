@@ -211,12 +211,25 @@ In every mode:
    Reserve phase and before the Action phase. With both sides holding Rapid
    Relocation, they take a unit each from the initiative (the computer makes
    all its moves at once, on its turn). Each side ends with **Done relocating**.
-3. **Entry through the Reserve phase** for Meeting engagement, Secure and
+3. **Entry through the Reserve phase** *(done)* for Meeting engagement, Secure and
    control, and Find and secure:
    - hold every entering unit in reserve;
    - the declaring step (held back, and who rides what);
    - 4" entry bands in place of the 6" strips;
    - the waiting UI and the computer opponent.
+
+   How it came out:
+   - At Begin the battle, every unit still in hand is held to enter in turn 1
+     (wave 1). A hull brings whoever is aboard, as one unit.
+   - Units come on through the existing Reserve phase code: alternating from
+     the initiative, 4" entry bands, 12" from the enemy where possible, and
+     the free shot otherwise.
+   - Auto-deploy now means "bring my units on for me" in turn 1, per side.
+   - The set-up card is **Entering the table**.
+   - Hero of the People (H2) is not applied in these three scenarios yet,
+     since there is no pre-battle placing to hand an advantage in. To revisit.
+   - Saved battles in these scenarios, made before the change, won't resume:
+     the game says so and puts them away, as for other old saves.
 4. **Hostile takeover and Demolish.** The attacker's entry goes through the
    Reserve phase; the defender's set-up stays before the battle.
 5. **Tests and a browser run of every scenario:**
