@@ -92,7 +92,7 @@
         return;
       }
       if (B.state.phase === 'deploy' && B.state.deployReady) {
-        box.innerHTML = 'Look over the table and the other force, then modify your army or continue to the deployment.';
+        box.textContent = '';           // the Before deploying card says it, and the bar would only repeat it
         return;
       }
       if (B.state.phase === 'deploy') {
