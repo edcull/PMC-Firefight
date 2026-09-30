@@ -270,12 +270,14 @@
           h += '<button class="cu" data-add="' + p.key + '">' +
             '<span class="t">' + ROMAN[p.tier] + '</span>' +
             '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p)) + '</small></span>' +
-            '<span class="st">' + (p.cls === 'infantry' ? p.size + ' men' : p.cls) + '</span></button>';
+            '</button>';
         });
       });
       return h;
     }
+    // the skirmish muster's shorthand (8 models · M5 · FP4 · 18" · Def 11 · A4 · Mor 5), the one card format everywhere
     function statLine(p) {
+      if (root.PMC_STAT_SHORT) return root.PMC_STAT_SHORT(p);
       if (p.cls === 'infantry') {
         return 'Move ' + p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') + ' · ' + (p.fp == null ? 'Assault only' : 'FP ' + p.fp + ' · Range ' + p.range + '"') + ' · Def ' + p.def +
           ' · Assault ' + p.assault + ' · Morale ' + p.morale;
