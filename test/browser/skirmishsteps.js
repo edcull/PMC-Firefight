@@ -151,6 +151,20 @@ const { ROOT, SHOTS } = require('../where.js');
       /legal/i.test(document.getElementById('faults').textContent), was);
   }
   check('...or Random force to roll it again', changed);
+  // on a phone each unit's stats are one row
+  const vpm = p.viewportSize();
+  await p.setViewportSize({ width: 380, height: 800 });
+  await p.waitForTimeout(250);
+  const oneLine = () => p.evaluate(() => [...document.querySelectorAll('#chosen .fcard-stats')].map(st => new Set([...st.children].map(c => Math.round(c.getBoundingClientRect().top))).size === 1 && st.scrollWidth <= st.clientWidth + 1));
+  const rows = await oneLine();
+  check('on a phone a unit\u2019s stats sit on one line, and fit', rows.length > 0 && rows.every(Boolean), JSON.stringify(rows));
+  await p.locator('#chosen').screenshot({ path: path.join(SHOTS, 'muster-stats-phone.png') });
+  await p.setViewportSize({ width: 330, height: 800 });
+  await p.waitForTimeout(250);
+  const narrowRows = await oneLine();
+  check('...even on a narrow phone', narrowRows.length > 0 && narrowRows.every(Boolean), JSON.stringify(narrowRows));
+  await p.setViewportSize(vpm);
+  await p.waitForTimeout(200);
   await next();
   check('then the battlefield', /^The battlefield$/.test(await title()) && await shown('sel-scen'),
     await title() + ' · ' + await p.evaluate(() => document.getElementById('faults').textContent + ' · hot ' + JSON.stringify(window.__hot() && { step: window.__hot().step, edit: window.__hot().edit })));

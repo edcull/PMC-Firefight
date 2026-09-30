@@ -5,8 +5,8 @@
 <title>PMC 2670 Firefight</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="src/css/base.css?v=428c909834">
-<link rel="stylesheet" href="src/css/game.css?v=47c1797a77">
+<link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
+<link rel="stylesheet" href="src/css/game.css?v=132896f8d3">
 
 <div class="wrap">
   <header>
@@ -93,7 +93,7 @@
       <div class="drawer-head">
         <button class="dtab" data-tab="forces">Forces</button>
         <button class="dtab" data-tab="log">Combat log</button>
-        <button class="dclose" id="btn-drawer-close" aria-label="Close">✕</button>
+        <button class="dclose xclose" id="btn-drawer-close" aria-label="Close">✕</button>
       </div>
       <div id="panel"></div>
       <div class="logbox"><h4>Combat log</h4><div id="log"></div></div>
@@ -115,7 +115,7 @@
       <div class="resume-wrap" id="resume-wrap">
         <button class="mcard" id="btn-resume" hidden>Back to the battle<small id="menu-resume-sub">The battle is still on</small></button>
         <!-- a skirmish can be thrown away: the x on the card, asked twice -->
-        <button class="resume-x" id="btn-discard" hidden aria-label="Discard this battle" title="Discard this battle">&times;</button>
+        <button class="resume-x" id="btn-discard" hidden aria-label="Discard this battle" title="Discard this battle">✕</button>
       </div>
       <button class="mcard" data-menu="single">Single player<small>Skirmish, solitaire or a campaign, against the AI</small></button>
       <button class="mcard" data-menu="hotseat">Hotseat<small>Two players, one screen</small></button>
@@ -145,7 +145,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2609292154</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2609300939</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -498,7 +498,7 @@
 <script src="src/rules/xeno.js?v=47c35c6e0b"></script>
 <script src="src/rules/destruct.js?v=591c52e103"></script>
 <script src="src/rules/damage.js?v=1ab661aa6e"></script>
-<script src="src/rules/space.js?v=0f09488355"></script>
+<script src="src/rules/space.js?v=928fc7fe11"></script>
 <script src="src/rules/data.js?v=8c0c1b75a3"></script>
 <script src="src/rules/rules.js?v=368e069380"></script>
 <script src="src/rules/ruletext.js?v=9febc60052"></script>
@@ -528,7 +528,7 @@
 <script src="src/view/iso-bugs.js?v=de43d16ad2"></script>
 <script src="src/view/iso-propkinds.js?v=7c4cddd7f2"></script>
 <script src="src/view/iso-xenomachines.js?v=46a06a96cc"></script>
-<script src="src/view/iso.js?v=3618779fb0"></script>
+<script src="src/view/iso.js?v=674022ec5a"></script>
 <script src="src/view/fx.js?v=180accc1fb"></script>
 <script src="src/view/fire.js?v=365f6f43cf"></script>
 <script src="src/view/motion.js?v=823a5c18f7"></script>
@@ -550,7 +550,7 @@
 <script src="src/engine/engine.js?v=8a1a1359ac"></script>
 <script src="src/engine/offtable.js?v=ef8edae603"></script>
 <script src="src/net/net.js?v=799dd48842"></script>
-<script src="src/net/lobby.js?v=804659b959"></script>
+<script src="src/net/lobby.js?v=3351f89caa"></script>
 <script src="src/view/replay.js?v=9e45ac4a61"></script>
 <script src="src/view/hooks.js?v=7ad383bd12"></script>
 <script src="src/view/testhooks.js?v=15ab579770"></script>
@@ -561,13 +561,13 @@
 <script src="src/view/actions.js?v=7f32957cfd"></script>
 <script src="src/view/draw.js?v=e7384f51d8"></script>
 <script src="src/view/view.js?v=8594bdc568"></script>
-<script src="src/view/panels.js?v=d972f6c480"></script>
-<script src="src/view/muster.js?v=c609da79d3"></script>
+<script src="src/view/panels.js?v=cd3e748e0a"></script>
+<script src="src/view/muster.js?v=727e44bdfe"></script>
 <script src="src/view/game.js?v=6c87f4ce15"></script>
-<script src="src/view/dossier-hub.js?v=578642eadc"></script>
-<script src="src/view/dossier-found.js?v=5927df5b8d"></script>
-<script src="src/view/dossier-roster.js?v=753d2ebdf9"></script>
+<script src="src/view/dossier-hub.js?v=1145b6ac42"></script>
+<script src="src/view/dossier-found.js?v=d41fb0eef8"></script>
+<script src="src/view/dossier-roster.js?v=2e2c95281e"></script>
 <script src="src/view/dossier-contract.js?v=e8a57270d0"></script>
-<script src="src/view/dossier-after.js?v=db0f316abe"></script>
-<script src="src/view/dossier.js?v=01b9fc5b18"></script>
-<script src="src/view/menu.js?v=32df1bbaa0"></script>
+<script src="src/view/dossier-after.js?v=9232c87e07"></script>
+<script src="src/view/dossier.js?v=5963e0249b"></script>
+<script src="src/view/menu.js?v=8d36f0255e"></script>

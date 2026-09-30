@@ -276,7 +276,7 @@
     asking = spec;
     var box = el('camp-askbox');
     var h = '<h3>' + esc(spec.title) + '</h3>';
-    if (spec.text) h += '<p' + (spec.danger ? ' class="warn"' : '') + '>' + esc(spec.text) + '</p>';
+    if (spec.text) h += '<p' + (spec.danger ? ' class="danger"' : '') + '>' + esc(spec.text) + '</p>';
     if (spec.kind === 'text') {
       h += '<input class="tin" id="ask-input" maxlength="' + (spec.max || 28) + '" value="' +
         esc(spec.value || '') + '">';
@@ -284,10 +284,11 @@
     if (spec.kind === 'note') {
       h += '<div class="askrow"><button class="start" data-ask="close">Close</button></div>';
     } else {
+      // Cancel on the left, the main action filling the rest (as every question has it)
       h += '<div class="askrow">' +
+        '<button class="lnk" data-ask="close">Cancel</button>' +
         '<button class="start' + (spec.danger ? ' danger' : '') + '" data-ask="ok">' +
-        esc(spec.okLabel || 'Confirm') + '</button>' +
-        '<button class="lnk" data-ask="close">Cancel</button></div>';
+        esc(spec.okLabel || 'Confirm') + '</button></div>';
     }
     box.innerHTML = h;
     el('camp-ask').hidden = false;
@@ -345,7 +346,18 @@
        unit's picture is centred under it (stack) rather than beside it (split). */
     var stack = !!opts.rowActs;
     if (stack) {
-      bars = bars || opts.actions ? '<div class="drow' + (opts.men ? '' : ' shut') + '">' + bars + (opts.actions ? '<div class="dacts">' + opts.actions + '</div>' : '') + '</div>' : '';
+      /* Closed with nothing to press, a card keeps the button's room (unseen),
+         so every TP bar in the list is cut to the same width. */
+      if (opts.men) {
+        /* Opened: its buttons in a column down the right, and under the name
+           its EXP/TP (clear of the column) and the unit's picture, centred on
+           the card. */
+        h += '<div class="dopen">' + (opts.actions ? '<div class="dacts dvert">' + opts.actions + '</div>' : '');
+        bars = bars ? '<div class="drow">' + bars + '</div>' : '';
+      } else {
+        var acts = opts.actions || (bars ? '<span class="lnk dact dact-ph" aria-hidden="true"><svg viewBox="0 0 24 24"></svg></span>' : '');
+        bars = bars || acts ? '<div class="drow shut">' + bars + (acts ? '<div class="dacts">' + acts + '</div>' : '') + '</div>' : '';
+      }
     }
     if (opts.portrait && !stack) h += '<div class="dsplit"><div class="dleft">';
     h += bars;
@@ -371,6 +383,7 @@
         (e.riders ? ' data-riders="1"' : '') + (e.mount ? ' data-mount="' + esc(e.mount) + '"' : '') +
         ' role="img" aria-label="' + esc(p.name) + '"></canvas></div>';
     }
+    if (stack && opts.men) h += '</div>';                // the opened card's top (dopen)
     if (opts.men) h += opts.men;
     h += '</div>';
     return h;
@@ -520,7 +533,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');

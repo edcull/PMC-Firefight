@@ -199,7 +199,7 @@
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
          the 12 a unit can carry, in bands as wide as the Morale — steady,
@@ -320,7 +320,7 @@
       var left = Math.max(0, u.str - u.damage);
       var pr = R.propOf(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + u.tier + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* its health as the board draws it (ISO.strSegments): a segment a point of
          Structure, what is left green over two thirds, amber down to a third, red
@@ -807,7 +807,7 @@
             '<h3>Empty transports</h3><div class="cmodal-scroll"><p class="sub">' +
             (empties.length === 1 ? '<b>' + esc(empties[0].name) + '</b> is' : empties.map(function (v) { return '<b>' + esc(v.name) + '</b>'; }).join(', ') + ' are') +
             ' going into the battle with nobody aboard. Begin anyway?</p></div>' +
-            '<div class="askrow"><button class="lnk" data-act="startnoask">Back</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
+            '<div class="askrow"><button class="lnk" data-act="startnoask">Cancel</button><button class="start" data-act="start">Begin the battle</button></div></div></div>';
         }
       }
       return h + '</div></div>';

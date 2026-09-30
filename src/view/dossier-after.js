@@ -233,7 +233,7 @@
       }
       var sides = [side('A', coA, coA.name), side('B', foe, foeName)];
       if (E.after.winner === 'B') sides.reverse();
-      var h = '<div class="cpan front own"><div class="cprom-head"><b>' + esc(coA.name) + ' v ' + esc(foeName) + '</b></div>' +
+      var h = '<div class="cpan front"><div class="cprom-head"><b>' + esc(coA.name) + ' v ' + esc(foeName) + '</b></div>' +
         (last ? '<p class="cpstat">' + esc(frontFacts({ tier: last.tier, pl: last.pl, scenario: last.scenario })) + '</p>' : '');
       sides.forEach(function (r) {
         h += '<div class="front-row"><b>' + esc(r.name) + '</b>' + (r.result === 'Lost' ? '' : ' <i class="good">' + (r.result === 'Won' ? 'Won' : 'Draw') + '</i>') +
@@ -323,7 +323,7 @@
         pre.tp[st.side][cand[0].rid].total + '. The revolt may execute ' + (cand.length > 1 ? 'one of them' : 'it') +
         ': it is struck off, and every other unit’s Trauma Points from this battle are halved.</p>' +
         '<div class="segs">' + cand.map(function (e) {
-          return '<button class="lnk warn" data-weak="' + e.rid + '">Execute ' + esc(e.name) + '</button>';
+          return '<button class="lnk danger" data-weak="' + e.rid + '">Execute ' + esc(e.name) + '</button>';
         }).join('') + '<button class="lnk" data-weak="">Spare them</button></div></div>';
       return h;
     }
@@ -483,8 +483,8 @@
       h += frontsSection();
 
       if (pastLine) {
-        return h + '<div class="camp-dock"><button class="start" data-go="pastback">Back to the battles</button></div>' +
-          '<p class="camp-foot"><button class="lnk" data-go="hub">The campaign</button></p>';
+        // the title bar's Back goes back to the list of battles it was opened from
+        return h + '<p class="camp-foot"><button class="lnk" data-go="pastback">Back</button></p>';
       }
       var gaps = C.rebuildNeeds(E.camp.companies.A);
       if (gaps.length) {
@@ -540,8 +540,8 @@
       // the way on stays at the foot of the screen, however long the list above it scrolls
       h += '<div class="honour-foot">';
       if (E.drawState.won) {
+        // (the title bar's Back goes back to the dossier)
         h += '<p class="faults ok">' + esc(E.drawState.entry.name) + ' earns <b>' + esc(E.drawState.won.name) + '</b>.</p>';
-        h += '<button class="start" data-go="roster">Back to the dossier</button>';
       } else {
         h += '<button class="start" data-go="drawnow"' + (picks.length === 3 ? '' : ' disabled') + '>' +
           (picks.length === 3 ? 'Draw one of the three' : 'Choose three first') + '</button>';

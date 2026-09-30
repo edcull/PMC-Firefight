@@ -70,7 +70,9 @@ async function lastToAct(p) {
 }
 async function regroupLast(p) {
   const acted = await p.evaluate(() => window.__pressAction('regroup'));
+  // (the unit is seen to regroup before the turn ends)
   await p.waitForTimeout(200);
+  await settle(p);
   await carryOn(p);
   return acted;
 }

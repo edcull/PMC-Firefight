@@ -531,7 +531,7 @@ async function pastFronts(p) {
     let ink = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) ink++;
     const det = card.querySelector('.ddet');
     // (its buttons ride the experience line across the top of the card, above the split)
-    return { card: true, ink, left: !!card.querySelector('.dpic canvas.dportrait') && !!card.querySelector('.drow .dacts'), below: !!det && !!(cv.compareDocumentPosition(det) & 4) };
+    return { card: true, ink, left: !!card.querySelector('.dpic canvas.dportrait') && !!card.querySelector('.dopen .dvert'), below: !!det && !!(cv.compareDocumentPosition(det) & 4) };
   });
   check('an opened unit shows its picture under its facts', unitOpen.ink > 200 && unitOpen.left, JSON.stringify(unitOpen));
   check('...with its stats and special rules underneath', unitOpen.below, JSON.stringify(unitOpen));
@@ -554,17 +554,19 @@ async function pastFronts(p) {
   await p.waitForTimeout(250);
   // each promotion says what the unit becomes: its Tier and group
   const promo = await p.evaluate(() => [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].map(b => b.textContent));
-  check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier \d · \S/.test(t)), promo.join(' | '));
-  // the unit's buttons: on a desktop, icons on the line with its experience and trauma
+  check('each promotion names the new unit\u2019s Tier and group', promo.length > 0 && promo.every(t => /Tier [IV]+ · \S/.test(t)), promo.join(' | '));
+  // opened: the unit's buttons in a column down the right, its picture centred on the card and clear of them
   const rowAt = () => p.evaluate(() => {
-    const card = document.querySelector('#camp-body .dcard.open');
-    const bars = card.querySelector('.drow .dbars').getBoundingClientRect(), acts = card.querySelector('.drow .dacts').getBoundingClientRect();
-    const row = card.querySelector('.drow').getBoundingClientRect(), pic = card.querySelector('.dpic .dportrait').getBoundingClientRect();
-    return { same: Math.abs((bars.top + bars.bottom) / 2 - (acts.top + acts.bottom) / 2) < 6, right: row.right - acts.right < 4,
-      picBelow: pic.top >= row.bottom - 1, picCentred: Math.abs((pic.left + pic.right) / 2 - (row.left + row.right) / 2) < 6 };
+    const card = document.querySelector('#camp-body .dcard.open'), top = card.querySelector('.dopen').getBoundingClientRect();
+    const bs = [...card.querySelectorAll('.dopen .dvert button')].map(b => b.getBoundingClientRect());
+    const col = card.querySelector('.dopen .dvert').getBoundingClientRect(), pic = card.querySelector('.dpic .dportrait').getBoundingClientRect();
+    const bars = card.querySelector('.dopen .drow .dbars') && card.querySelector('.dopen .drow .dbars').getBoundingClientRect();
+    return { n: bs.length, column: bs.every((b, i) => !i || b.top >= bs[i - 1].bottom - 1) && new Set(bs.map(b => Math.round(b.left))).size === 1,
+      right: top.right - col.right < 4, picCentred: Math.abs((pic.left + pic.right) / 2 - (top.left + top.right) / 2) < 6,
+      clear: pic.right <= col.left + 1, barsClear: !bars || bars.right <= col.left + 1 };
   });
   const deskRow = await rowAt();
-  check('an opened unit\u2019s buttons sit at the right of its EXP/TP line, its picture centred under it', deskRow.same && deskRow.right && deskRow.picBelow && deskRow.picCentred, JSON.stringify(deskRow));
+  check('an opened unit\u2019s buttons run down the right, its picture centred on the card, clear of them', deskRow.n === 3 && deskRow.column && deskRow.right && deskRow.picCentred && deskRow.clear && deskRow.barsClear, JSON.stringify(deskRow));
   // closed, a card shows only Promote, and only with the experience for it, at the right of its line
   const shut = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard:not(.open)')].map(c => {
     const bs = [...c.querySelectorAll('.dacts button')], row = c.querySelector('.drow'), r = row && row.getBoundingClientRect(), b = bs[0] && bs[0].getBoundingClientRect();
@@ -582,13 +584,26 @@ async function pastFronts(p) {
     return { one: b.top < bars.bottom && b.bottom > bars.top, tp: tp ? Math.round(tp.getBoundingClientRect().width) : null };
   }));
   check('...and on a narrow phone it stays on that line, the TP bar shrinking', narrow.length > 0 && narrow.every(x => x.one && (x.tp == null || x.tp > 10)), JSON.stringify(narrow));
+  // ...and every closed card's TP bar is cut the same, whether it has Promote or not
+  const widths = await p.evaluate(async () => {
+    // one unit with no experience to spend, for the moment
+    const camp = window.PMC_CAMPAIGN.get(), e = camp.companies.A.roster.find(x => window.PMC.profile(x.key).cls === 'infantry' && x.exp > 0 && !window.PMCCamp.isLeaderP(window.PMC.profile(x.key)));
+    const was = e.exp; e.exp = 0; window.PMC_CAMPAIGN.set(camp);
+    await new Promise(r => setTimeout(r, 200));
+    document.querySelectorAll('#camp-body .cmodal').forEach(m => { m.hidden = true; });
+    const ws = [...document.querySelectorAll('#camp-body .dcard:not(.open) .drow .dtp')].map(t => Math.round(t.getBoundingClientRect().width));
+    const bare = document.querySelector('#camp-body .dcard[data-rid="' + e.rid + '"] .dacts button') === null;
+    e.exp = was; window.PMC_CAMPAIGN.set(camp);
+    return { widths: [...new Set(ws)], bare };
+  });
+  check('...every closed card\u2019s TP bar the same width, Promote or not', widths.bare && widths.widths.length === 1, JSON.stringify(widths));
   await p.setViewportSize(vp0);
   await p.waitForTimeout(200);
   const vp = p.viewportSize();
   await p.setViewportSize({ width: 412, height: 780 });
   await p.waitForTimeout(150);
   const phoneRow = await rowAt();
-  check('...on a phone too', phoneRow.same && phoneRow.right && phoneRow.picBelow && phoneRow.picCentred, JSON.stringify(phoneRow));
+  check('...on a phone too', phoneRow.n === 3 && phoneRow.column && phoneRow.right && phoneRow.picCentred && phoneRow.clear && phoneRow.barsClear, JSON.stringify(phoneRow));
   // on a phone a unit's Rename, Disband and Promote are icons, on one row
   const row = await p.evaluate(() => {
     const acts = document.querySelector('#camp-body .dcard.open .dacts');
@@ -598,7 +613,7 @@ async function pastFronts(p) {
       named: bs.every(x => x.getAttribute('aria-label')),
       soldiers: [...document.querySelectorAll('#camp-body [data-rsoldier]')].every(x => getComputedStyle(x.querySelector('svg')).display !== 'none' && getComputedStyle(x.querySelector('span')).display === 'none') };
   });
-  check('on a phone a unit\u2019s Rename, Disband and Promote are icons on one row', row.n === 3 && row.tops === 1 && row.icons && row.named && row.soldiers, JSON.stringify(row));
+  check('on a phone a unit\u2019s Rename, Disband and Promote are icons, one above another', row.n === 3 && row.tops === 3 && row.icons && row.named && row.soldiers, JSON.stringify(row));
   await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); if (m) m.hidden = true; });
   await shot(p, 'camp-dossier-phone.png');
   await p.evaluate(() => { const c = document.querySelector('#camp-body .dcard.open'); if (c) c.click(); });
@@ -663,7 +678,7 @@ async function pastFronts(p) {
   await p.waitForTimeout(200);
   check('one of the three is taken at random', drew.gained === 1, drew.said);
   check('...and only the three are left on the screen', drew.shown === 3, drew.shown + ' shown');
-  await clickText(p, 'Back to the dossier');
+  await p.evaluate(() => document.getElementById('camp-back').click());   // the title bar's Back: to the dossier
   await p.waitForTimeout(200);
   await toUnits(p);
   await p.waitForTimeout(200);

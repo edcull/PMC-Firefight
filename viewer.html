@@ -4,11 +4,11 @@
 <title>PMC 2670 — Unit viewer</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="src/css/base.css?v=428c909834">
-<link rel="stylesheet" href="src/css/viewer.css?v=7d49901f8f">
+<link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
+<link rel="stylesheet" href="src/css/viewer.css?v=90d240f0e5">
 
 <header>
-  <a class="vhome" id="vhome" href="index.html" title="The game's main menu" aria-label="The game's main menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg></a>
+  <a class="camp-back home vhome" id="vhome" href="index.html" title="The game's main menu" aria-label="The game's main menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg></a>
   <button type="button" class="vunits" id="vunits" aria-controls="vside" aria-expanded="false">☰ Units</button>
   <h1>Unit viewer</h1>
   <p>Every profile in all four armies, in each state, walking and firing — drawn and sounded by the game's own code.</p>
@@ -18,7 +18,7 @@
 <div class="vscrim" id="vscrim"></div>
 <main>
   <div class="vpanel vside" id="vside">
-    <h3>Units <button type="button" class="vclose" id="vclose" aria-label="Close the unit list">×</button></h3>
+    <h3>Units <button type="button" class="vclose xclose" id="vclose" aria-label="Close the unit list">✕</button></h3>
     <div class="vfacs" id="vfacs" role="tablist" aria-label="Army"></div>
     <div class="vsearchbar"><input id="vsearch" placeholder="Search by unit name — e.g. rangers, hunter…" autocomplete="off"></div>
     <div class="vscroll vlistscroll">
@@ -30,8 +30,8 @@
     <!-- the colours the unit wears: a swatch, and the whole set dropped down from it -->
     <div class="vcolbtn" id="vcolbtn"></div>
     <div class="vzoom" id="vzoom" aria-label="Zoom">
-      <button type="button" data-vzoom="wide" title="Zoom out, to the whole firing line (−)">Wide</button>
-      <button type="button" data-vzoom="close" title="Zoom in, close on the unit (+)">Close</button>
+      <button type="button" data-vzoom="wide" title="Zoom out, to the whole firing line (−)" aria-label="Zoom out">−</button>
+      <button type="button" data-vzoom="close" title="Zoom in, close on the unit (+)" aria-label="Zoom in">+</button>
     </div>
     <canvas id="vboard"></canvas>
   </div>
@@ -47,7 +47,7 @@
 <script src="src/rules/xeno.js?v=47c35c6e0b"></script>
 <script src="src/rules/destruct.js?v=591c52e103"></script>
 <script src="src/rules/damage.js?v=1ab661aa6e"></script>
-<script src="src/rules/space.js?v=0f09488355"></script>
+<script src="src/rules/space.js?v=928fc7fe11"></script>
 <script src="src/rules/data.js?v=8c0c1b75a3"></script>
 <script src="src/rules/rules.js?v=368e069380"></script>
 <script src="src/rules/ruletext.js?v=9febc60052"></script>
@@ -69,10 +69,10 @@
 <script src="src/view/iso-bugs.js?v=de43d16ad2"></script>
 <script src="src/view/iso-propkinds.js?v=7c4cddd7f2"></script>
 <script src="src/view/iso-xenomachines.js?v=46a06a96cc"></script>
-<script src="src/view/iso.js?v=3618779fb0"></script>
+<script src="src/view/iso.js?v=674022ec5a"></script>
 <script src="src/view/fx.js?v=180accc1fb"></script>
 <script src="src/view/fire.js?v=365f6f43cf"></script>
 <script src="src/view/motion.js?v=823a5c18f7"></script>
 <script src="src/view/tips.js?v=d9ad8fa292"></script>
 <script src="src/view/atlas.js?v=b73604aa54"></script>
-<script src="src/view/viewer.js?v=40729aad95"></script>
+<script src="src/view/viewer.js?v=e74e4df42e"></script>

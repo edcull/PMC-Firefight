@@ -67,7 +67,7 @@
          player's force), the battles fought, the fallen, and the campaign's
          file: out to a file, back in from one, or given up. */
       var last = E.camp.log.length ? E.camp.log[E.camp.log.length - 1] : null;
-      var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">Back</button>';
+      var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">\u2190 Back</button>';
       var result = function (l) { return l.winner === 'A' ? 'won' : l.winner === 'B' ? 'lost' : 'drawn'; };
       h += cmodal('manage', 'The campaign', '<div class="cmodal-scroll manage-list">' +
         '<button type="button" class="archline" data-go="fmodal" data-kind="rivals">' + ICON_FORCES + '<span>' +
@@ -81,7 +81,7 @@
         esc(C.words(A).memorialSub) + '</small></span></button>' +
         '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
         '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
-        '<button type="button" class="archline warn" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
+        '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
       h += cmodal('memorial', C.words(A).memorial, '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);
@@ -103,7 +103,7 @@
           E.camp.log.map(battleRow).reverse().join('') + '</div></div>', back);
       }
       // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
-      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">Back</button>';
+      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">\u2190 Back</button>';
       // each army's rules, opened from its pill
       h += cmodal('armyA', C.words(A).side + ' \u2014 army rules', armyRules(A));
       if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B), backRivals);

@@ -772,7 +772,7 @@
      plays, the SP drawn climbs (replay.js fillSp) and the segments light one by
      one. */
   var SP_SEGS = 12;
-  var SEG_LIT = ['#6fbf5a', '#e0a23a', '#d1476b', '#d1476b'];
+  var SEG_LIT = ['#7ed6a0', '#e08a3a', '#e0557a', '#e0557a'];   // the page's --good, --warn, --bad
   var SEG_DULL = ['#2f4a2b', '#5a4420', '#552231', '#07080a'];
   function spSegments(sp, morale) {
     var m = Math.max(1, morale || 1), lit = Math.floor((sp || 0) + 1e-6), out = [];
@@ -782,7 +782,7 @@
   /* A machine's health in the same bar: a segment a point of Structure, the
      points it has left lit green while over two thirds of it, amber down to a
      third, red below, and the points it has lost black at the end. */
-  var STR_COL = { good: '#6fbf5a', warn: '#e0a23a', bad: '#d1476b', lost: '#07080a' };
+  var STR_COL = { good: '#7ed6a0', warn: '#e08a3a', bad: '#e0557a', lost: '#07080a' };   // as the suppression bar
   function strSegments(str, damage) {
     var n = Math.max(1, str || 1), left = Math.max(0, n - (damage || 0));
     var state = left * 3 > n * 2 ? 'good' : left * 3 > n ? 'warn' : 'bad', out = [];

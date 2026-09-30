@@ -74,14 +74,14 @@
         '#lobby > .camp-top{position:relative;width:min(760px,100%);border:1px solid var(--line);border-radius:8px 8px 0 0;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
         '#lobby.overlay > .sheet{position:relative;flex:0 1 auto;width:min(760px,100%);padding:18px 22px 22px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
       '}',
-      '#lobby input[type=text]{flex:1;min-width:0;min-height:34px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:6px 9px;font-family:var(--body);font-size:12.5px}',
+      '#lobby input[type=text]{flex:1;min-width:0;min-height:34px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:6px 9px;font-family:var(--body);font-size:13px}',
       '#lobby input[type=text]:focus{outline:none;border-color:var(--alpha)}',
       '.lob-row{display:flex;gap:6px;align-items:stretch}',
       '.lob-row .lnk{flex:none;white-space:nowrap}',
       '.lob-list{display:flex;flex-direction:column;gap:8px;margin:10px 0 16px}',
       '.lob-game{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
-      '.lob-game b{font-family:var(--display);font-size:13.5px}',
-      '.lob-game .code{font-family:var(--mono);color:var(--ink-dim);font-size:12px;margin-left:6px}',
+      '.lob-game b{font-family:var(--display);font-size:13px}',
+      '.lob-game .lob-code{font-family:var(--mono);color:var(--ink-dim);font-size:12px;letter-spacing:.08em}',
       '.lob-game .f{color:var(--ink-dim);font-size:12px}',
       '.lob-game .seats{margin-left:auto;font-size:12px;color:var(--ink-dim);text-align:right}',
       '.lob-empty{color:var(--ink-dim);padding:10px 2px;font-size:13px;margin:0}',
@@ -93,22 +93,24 @@
       '.lob-lines .note{color:var(--ink-dim);font-style:italic}',
       '.lob-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px}',
       '.lob-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}',
-      '.lob-foot .start{margin-left:auto}',
-      '.lob-bad{color:var(--warn,#e88);font-size:13px;margin:0}',
+      '.lob-foot .start{margin:0;flex:1 1 auto}',
+      '.lob-bad{color:var(--warn);font-size:13px;margin:0}',
       '.lob-bad:empty{display:none}',
-      '.lob-ok{color:#8d8}',
-      '.lob-status{font-size:12px;color:var(--ink-faint,#8a93a3)}',
+      '.lob-ok{color:var(--good)}',
+      '.lob-status{font-size:12px;color:var(--ink-faint)}',
+      // the second player's word on the start, where the host has the button: text, not a button
+      '.lob-startnote{flex:1 1 100%;text-align:center;padding:10px 0}',
       '.lob-code{font-family:var(--mono);font-size:14px;letter-spacing:.18em;padding:2px 8px;border:1px solid var(--line);border-radius:5px;color:var(--ink)}',
       '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
-      '@media (max-width:620px){.lob-forces{grid-template-columns:1fr}}',
+      '@media (max-width:700px){.lob-forces{grid-template-columns:1fr}}',
       '.lob-forces .hot-side{margin:0}',
-      '.lob-forces .hot-side.ready{border-color:rgba(120,210,140,.55)}',
+      '.lob-forces .hot-side.ready{border-color:color-mix(in srgb,var(--good) 55%,transparent)}',
       '.lob-forces .lob-empty-seat{opacity:.7}',
       '.lob-forces .lob-empty-seat .lnk{margin-top:6px}',
       '.lob-wait{opacity:.6}',
       '.lob-new{margin:4px 0 14px;padding:10px 12px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
       '.lob-new .lob-foot{margin-top:4px}',
-      '.lob-go{border-color:var(--alpha,#d8a13a)!important;color:var(--alpha,#d8a13a)!important}'
+      '.lob-go{border-color:var(--alpha)!important;color:var(--alpha)!important}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -180,14 +182,14 @@
         '<option value="private"' + (newPrivate ? ' selected' : '') + '>Private \u2014 join by code only</option>' +
       '</select></div>' +
       '<div class="lob-foot"><button class="lnk" data-lob="uncreate">Not now</button>' +
-      '<button class="lnk lob-go start" data-lob="create" data-go="1">Create the game</button></div></div>';
+      '<button class="start" data-lob="create" data-go="1">Create the game</button></div></div>';
   }
 
   function gameRow(g) {
     var seated = g.players.filter(function (p) { return p.name; });
     return '<div class="lob-game">' +
-      '<div><b>' + esc(g.name) + '</b> <span class="code">' + esc(g.id) + '</span><br>' +
-      '<span class="f small">Tier ' + esc(g.settings.tier) + ', PL ' + esc(g.settings.pl) + ' — ' +
+      '<div><b>' + esc(g.name) + '</b> <span class="lob-code">' + esc(g.id) + '</span><br>' +
+      '<span class="f small">Tier ' + esc(root.PMC.ROMAN[g.settings.tier] || g.settings.tier) + ' · PL ' + esc(g.settings.pl) + ' — ' +
       esc(g.settings.scenario) + (g.campaign ? ' — campaign “' + esc(g.campaign) + '”' : '') + '</span></div>' +
       '<div class="seats">' + seated.map(function (p) {
         return esc(p.name) + (p.ready ? ' ✓' : '');
@@ -237,7 +239,7 @@
       (mine ? '<button class="lnk' + (ready ? '' : ' lob-go') + '" data-lob="ready">' +
         (ready ? 'Not ready after all' : 'I am ready') + '</button>' : '') +
       (host_ ? '<button class="start" data-lob="start"' + (room.canStart ? '' : ' disabled') +
-        '>Take the field</button>' : '<span class="lob-status start">' +
+        '>Take the field</button>' : '<span class="lob-status lob-startnote">' +
         (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
       '</div>' +
       chatHTML('room');

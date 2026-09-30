@@ -2,6 +2,11 @@
    named here once; game.css (the game) and viewer.css (the Unit Viewer) are
    written in them. */
 :root {
+  /* one height for a row of small buttons (hub bar, sort line, muster buttons…), a finger's worth on a touch screen */
+  --row-h: 34px;
+  /* the gold tint of a selected toggle, and how far a disabled control fades */
+  --on-bg: color-mix(in srgb, var(--alpha) 14%, transparent);
+  --off-opacity: .4;
   --ground: #0d1117;
   --panel: #141a24;
   --panel-2: #1a2230;
@@ -20,6 +25,9 @@
   --warn: #e08a3a;
   --bad: #e0557a;
   --good: #7ed6a0;
+  /* two more with a meaning of their own: the attacker (and an honour) amber, the defender (and an upgrade) sky blue */
+  --amber: #f0b64a;
+  --sky: #6fc4e2;
   --display: 'Oxanium', system-ui, sans-serif;
   --body: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -27,3 +35,26 @@
 }
 
 * { box-sizing: border-box; }
+
+/* The title bar's way back: "← Back" up a level, or a house icon to the main
+   menu. One button for the game's screens and the unit viewer alike. */
+.camp-back {
+  flex: none; cursor: pointer; white-space: nowrap; text-decoration: none;
+  font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
+}
+.camp-back:hover, .camp-back:focus-visible { color: var(--ink); border-color: var(--alpha); }
+@media (pointer: coarse) { .camp-back { padding: 9px 12px; font-size: 12px; } }
+/* where it goes to the main menu, the button is a home icon */
+.camp-back.home { display: inline-grid; place-items: center; padding: 5px 9px; }
+.camp-back.home svg { width: 17px; height: 17px; display: block; }
+@media (pointer: coarse) { .camp-back.home { padding: 8px 12px; } .camp-back.home svg { width: 19px; height: 19px; } }
+/* A close ✕: a panel or list put away (a destructive remove is .fcard-drop's red ✕) */
+.xclose {
+  width: 34px; height: 34px; flex: none; display: inline-grid; place-items: center; padding: 0;
+  border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+.xclose:hover, .xclose:focus-visible { color: var(--ink); border-color: var(--alpha); }
+
+@media (pointer: coarse) { :root { --row-h: 44px; } }

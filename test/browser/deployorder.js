@@ -53,6 +53,9 @@ async function endTurn(p) {
   // the board takes the selection up once it has finished drawing what came before
   await settle(p);
   const acted = await p.evaluate(() => window.__pressAction('regroup'));
+  // (the unit is seen to regroup before the turn ends)
+  await p.waitForTimeout(200);
+  await settle(p);
   await carryOn(p);
   return { from: set.from, acted: !set.none && acted };
 }
