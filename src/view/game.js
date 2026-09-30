@@ -370,6 +370,8 @@
     if (ui.mode === id || (ui.mode === 'advance-move' && id === 'advance')) {
       send({ k: 'cancel' }); return;          // pressing it again puts it away
     }
+    // what the action asks (a target, a piece to charge) is on the Actions tab
+    if (window.innerWidth <= 1000) setMTab('act');
     send({ k: 'action', id: id });
   }
   // the watcher's own pick in a demo: shown, kept, and never sent to the engine
@@ -392,9 +394,10 @@
        screens are shown it — so a look is kept here and nothing is sent. */
     if (!myTurn() || seats.indexOf(u.side) < 0) { inspectUnit(u); return; }
     ui.inspect = false; ui.watch = null;
-    /* On a phone the panel is one slice of screen: picking a unit is a request
-       to act with it, so the panel comes back to the actions. */
-    if (window.innerWidth <= 1000) setMTab('act');
+    /* On a phone the panel is one slice of screen: picking a unit of your own
+       brings up its card — its actions are on the bar above the tabs, and
+       pressing one brings the Actions tab back (chooseAction). */
+    if (window.innerWidth <= 1000) setMTab(state && state.phase === 'battle' ? 'unit' : 'act');   // deploying, the order of battle stays
     // while the other side's move is still being drawn the camera stays with it (camLocked)
     if (!camLocked()) {
       dropFollow();
