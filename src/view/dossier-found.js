@@ -269,7 +269,8 @@
         groups[g].forEach(function (p) {
           h += '<button class="cu" data-add="' + p.key + '">' +
             '<span class="t">' + ROMAN[p.tier] + '</span>' +
-            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p)) + '</small></span>' +
+            // its numbers and special rules, as the skirmish muster's list gives them
+            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')) + '</small></span>' +
             '</button>';
         });
       });

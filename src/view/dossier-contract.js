@@ -102,18 +102,15 @@
       if (!noTp) h += '<span class="w-tp' + (near ? ' hot' : '') + '" ' + tip('Trauma Points',
         tp + ' of ' + cap + '. A unit that reaches ' + cap + ' rolls on the ' + wd.trauma + ' ' +
         'table and the count starts again.') + '>' + tp + '/' + cap + ' TP</span>';
-      if ((e.traumas || []).length) {
-        h += '<span class="w-tr" ' + tip(
-          e.traumas.length === 1 ? wd.trauma : e.traumas.length + ' ' + wd.traumas,
-          spellOut(e.traumas, C.traumaTable(e.key))) + '>' +
-          e.traumas.length + ' trauma' + (e.traumas.length > 1 ? 's' : '') + '</span>';
-      }
-      if ((e.honours || []).length) {
-        h += '<span class="w-hon" ' + tip(
-          e.honours.length === 1 ? wd.honour : e.honours.length + ' ' + wd.honours,
-          spellOut(e.honours, C.honourTable(e.key))) + '>' +
-          e.honours.length + ' honour' + (e.honours.length > 1 ? 's' : '') + '</span>';
-      }
+      // each honour and trauma a tag of its own, as the dossier shows them, with its rule on hover
+      (e.honours || []).forEach(function (n) {
+        var x = C.honourTable(e.key)[n - 1];
+        if (x) h += '<span class="mk good" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>';
+      });
+      (e.traumas || []).forEach(function (n) {
+        var x = C.traumaTable(e.key)[n - 1];
+        if (x) h += '<span class="mk bad" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>';
+      });
       return h + '</span>';
     }
 
@@ -287,10 +284,6 @@
           (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
           '<span class="t">' + ROMAN[p.tier] + '</span>' +
           '<span><b>' + esc(e.name) + '</b>' + wear(e, true) + '<small>' + esc(p.name) +
-          ((e.honours || []).length ? ' · <span ' + quietTip(C.words(A).honours, spellOut(e.honours, C.honourTable(e.key))) +
-            '>' + esc(e.honours.map(function (n) { return C.honourTable(e.key)[n - 1].name; }).join(', ')) + '</span>' : '') +
-          ((e.traumas || []).length ? ' · <span ' + quietTip(C.words(A).traumas, spellOut(e.traumas, C.traumaTable(e.key))) +
-            '>' + esc(e.traumas.map(function (n) { return C.traumaTable(e.key)[n - 1].name; }).join(', ')) + '</span>' : '') +
           // down the right: the Trauma Points it carries, or what kind of machine it is (machines take none)
           '</small></span><span class="st">' + (p.cls !== 'infantry' ? p.cls : C.isLeaderP(p) ? 'command' : tpBadge(e)) + '</span></button>';
       });

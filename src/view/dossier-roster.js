@@ -323,7 +323,7 @@
           h += '<button class="cu" data-recruit="' + p.key + '"' +
             (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"') + '>' +
             '<span class="t">' + ROMAN[p.tier] + '</span>' +
-            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p)) + '</small></span>' +
+            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')) + '</small></span>' +
             '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
           // the same hull or craft, flown remotely (p. 37)
           if (R.canBeDrone(p)) h += '<button class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' +
