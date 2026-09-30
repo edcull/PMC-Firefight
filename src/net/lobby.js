@@ -94,6 +94,18 @@
       '.lob-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px}',
       '.lob-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}',
       '.lob-foot .start{margin:0;flex:1 1 auto}',
+      // in a game, the actions and the forces stay put; the terms scroll; the talk keeps the foot
+      '#lobby > .sheet.lob-sheet-room{display:flex;flex-direction:column;overflow:hidden}',
+      '.lob-sheet-room > #lobby-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}',
+      '.lob-sheet-room .lob-acts{margin-top:0}',
+      '.lob-sheet-room .lob-startnote{flex:1 1 auto;text-align:right;padding:0}',
+      '.lob-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}',
+      '.lob-watch{opacity:.7;margin:-4px 0 8px}',
+      '.lob-pub{display:flex;align-items:flex-end}',
+      '.lob-pub label{display:flex;align-items:center;gap:8px;min-height:var(--row-h);margin:0;padding:0;cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:13px;color:var(--ink)}',
+      '.lob-pub input{accent-color:var(--alpha);width:16px;height:16px;margin:0}',
+      '.lob-sheet-room .lob-chat{flex:none;margin-top:10px}',
+      '@media (max-width:1000px){.lob-sheet-room .lob-lines{height:calc(3 * 1.45em + 26px);min-height:0}}',
       '.lob-bad{color:var(--warn);font-size:13px;margin:0}',
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:var(--good)}',
@@ -102,8 +114,9 @@
       '.lob-startnote{flex:1 1 100%;text-align:center;padding:10px 0}',
       '.lob-code{font-family:var(--mono);font-size:14px;letter-spacing:.18em;padding:2px 8px;border:1px solid var(--line);border-radius:5px;color:var(--ink)}',
       '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
-      '@media (max-width:700px){.lob-forces{grid-template-columns:1fr}}',
       '.lob-forces .hot-side{margin:0}',
+      // on a narrow card the word that opens the muster keeps the corner under the name, clear of it
+      '@media (max-width:700px){.lob-forces .hot-side{position:relative}.lob-forces .hot-side em{position:absolute;right:10px;bottom:8px}}',
       '.lob-forces .hot-side.ready{border-color:color-mix(in srgb,var(--good) 55%,transparent)}',
       '.lob-forces .lob-empty-seat{opacity:.7}',
       '.lob-forces .lob-empty-seat .lnk{margin-top:6px}',
@@ -177,10 +190,7 @@
         : [opt('camp:', 'Campaign \u2014 none kept on this server yet', true)]);
     return '<div class="lob-new">' +
       '<div class="field"><label for="lob-kind">Game</label><select id="lob-kind">' + kinds.join('') + '</select></div>' +
-      '<div class="field"><label for="lob-private">Who can join</label><select id="lob-private">' +
-        '<option value="public"' + (newPrivate ? '' : ' selected') + '>Public \u2014 shown in the game list</option>' +
-        '<option value="private"' + (newPrivate ? ' selected' : '') + '>Private \u2014 join by code only</option>' +
-      '</select></div>' +
+      publicBox('lob-private', !newPrivate, '') +
       '<div class="lob-foot"><button class="lnk" data-lob="uncreate">Not now</button>' +
       '<button class="start" data-lob="create" data-go="1">Create the game</button></div></div>';
   }
@@ -203,8 +213,7 @@
   function chatHTML(where) {
     var lines = chat[where] || [];
     var id = where === 'lobby' ? 'lobby-say' : 'room-say';
-    return '<div class="lob-chat"><h4>' +
-      (where === 'lobby' ? 'Lobby' : 'Table talk') + '</h4>' +
+    return '<div class="lob-chat">' + (where === 'lobby' ? '<h4>Lobby</h4>' : '') +
       '<div class="lob-lines" id="' + id + '-lines">' +
       (lines.length ? lines.map(function (l) {
         return l.from
@@ -217,24 +226,15 @@
       '<button class="lnk" data-lob="say" data-where="' + where + '">Send</button></div></div>';
   }
 
-  /* The room is laid out as a skirmish's battlefield step is: the terms above,
-     then a card for each force — in its own colour, tap your own to muster it —
-     and the table talk below. */
+  /* The room, top to bottom: what to do next (leave, ready, start), a card
+     for each force side by side — tap your own to muster it — then the terms,
+     which scroll, and the table talk kept at the foot. */
   function roomHTML() {
     var host_ = room.hostId === me.id;
     var mine = mySeat();
     var ready = mine && room.seats[mine] && room.seats[mine].ready;
     return '<p class="lob-bad">' + esc(fault) + '</p>' +
-      '<p class="lede">' + (host_
-        ? 'A game over the network. Set the terms, muster your force, and read the code out to your opponent; take the field once you are both ready.'
-        : 'A game over the network. The host sets the terms; muster your force and say when you are ready.') +
-      ' <span class="lob-status">' + esc(status) + '</span></p>' +
-      termsHTML(host_) +
-      '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
-      (room.watchers.length
-        ? '<p class="small" style="opacity:.7">Watching: ' +
-          room.watchers.map(function (w) { return esc(w.name); }).join(', ') + '</p>' : '') +
-      '<div class="lob-foot">' +
+      '<div class="lob-foot lob-acts">' +
       '<button class="lnk" data-lob="leave">Leave this game</button>' +
       (mine ? '<button class="lnk' + (ready ? '' : ' lob-go') + '" data-lob="ready">' +
         (ready ? 'Not ready after all' : 'I am ready') + '</button>' : '') +
@@ -242,7 +242,18 @@
         '>Take the field</button>' : '<span class="lob-status lob-startnote">' +
         (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
       '</div>' +
+      '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
+      (room.watchers.length
+        ? '<p class="small lob-watch">Watching: ' +
+          room.watchers.map(function (w) { return esc(w.name); }).join(', ') + '</p>' : '') +
+      '<div class="lob-scroll">' + termsHTML(host_) + '</div>' +
       chatHTML('room');
+  }
+
+  // a game's one yes-or-no term: whether it is shown in the game list
+  function publicBox(id, on, attrs) {
+    return '<div class="field lob-pub"><label for="' + id + '"><input type="checkbox" id="' + id + '"' +
+      (on ? ' checked' : '') + attrs + '> Public</label></div>';
   }
 
   // the setup screen's own wording for a scenario or a world, where it has one
@@ -283,12 +294,8 @@
         { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
       ], s.terrain || 'auto') +
       sel('term-campaign', 'Campaign', camps, s.campaign || '') +
-      sel('term-private', 'Who can join', [
-        { v: 'false', t: 'Public — shown in the game list' },
-        { v: 'true', t: 'Private — join by code only' }
-      ], s.private ? 'true' : 'false') +
-      '</div>' +
-      (isHost ? '' : '<p class="small" style="opacity:.65">The host sets the terms.</p>');
+      publicBox('term-private', !s.private, ' data-term="private"' + d) +
+      '</div>';
   }
 
   // a force's card, as on the battlefield step: its name in its colour; your own opens the muster
@@ -421,11 +428,11 @@
      should see the tier move while it is being argued about. */
   function onTermChange(e) {
     if (e.target && e.target.id === 'lob-kind') { newKind = e.target.value; return; }
-    if (e.target && e.target.id === 'lob-private') { newPrivate = e.target.value === 'private'; return; }
+    if (e.target && e.target.id === 'lob-private') { newPrivate = !e.target.checked; return; }
     var box = e.target, k = box && box.getAttribute && box.getAttribute('data-term');
     if (!k || !net) return;
     var patch = {};
-    patch[k] = k === 'tier' || k === 'pl' ? +box.value : box.value;
+    patch[k] = k === 'tier' || k === 'pl' ? +box.value : k === 'private' ? !box.checked : box.value;
     if (k === 'campaign' && !box.value) patch.campaign = null;
     net.send('game.settings', { patch: patch });
   }

@@ -4,7 +4,7 @@
    and abandoning from the menu ends the battle for both. */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
-const { ROOT } = require('../where.js');
+const { ROOT, SHOTS } = require('../where.js');
 const PORT = 9300 + Math.floor(Math.random() * 400);
 
 let pass = 0, fail = 0;
@@ -48,6 +48,25 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   await p2.waitForTimeout(600);
   await p2.evaluate((f) => window.PMCLobby.net().send('game.force', { force: Object.assign({}, f, { colour: 'rose' }) }), force);
   await p2.waitForTimeout(300);
+  // the room on a phone: the actions, then both forces side by side, then the terms scrolling, the talk at the foot
+  await p2.setViewportSize({ width: 390, height: 700 });
+  await p2.waitForTimeout(200);
+  const rm = await p2.evaluate(() => {
+    const q = (s) => document.querySelector('#lobby ' + s), r = (s) => q(s).getBoundingClientRect();
+    const seats = document.querySelectorAll('#lobby .lob-forces .hot-side');
+    const sc = q('.lob-scroll'), chat = q('.lob-chat');
+    return { order: r('.lob-acts').bottom <= r('.lob-forces').top && r('.lob-forces').bottom <= r('.lob-scroll').top && r('.lob-scroll').bottom <= chat.getBoundingClientRect().top,
+      sideBySide: seats.length === 2 && Math.abs(seats[0].getBoundingClientRect().top - seats[1].getBoundingClientRect().top) < 2,
+      scrolls: getComputedStyle(sc).overflowY === 'auto', foot: Math.round(innerHeight - chat.getBoundingClientRect().bottom),
+      lines: Math.round(q('.lob-lines').getBoundingClientRect().height),
+      talk: /Table talk|host sets the terms|A game over the network/.test(q('#lobby-body').textContent),
+      pub: !!q('#term-private[type=checkbox]') && q('#term-private').disabled };
+  });
+  await p2.screenshot({ path: require('path').join(SHOTS, 'lobby-room-phone.png') }).catch(() => {});
+  ok('the room on a phone: actions, then the forces side by side, then the terms', rm.order && rm.sideBySide, JSON.stringify(rm));
+  ok('...the terms scroll and the talk keeps the foot, three lines tall', rm.scrolls && rm.foot < 40 && rm.lines < 90, JSON.stringify(rm));
+  ok('...no helper text, and Public is a box only the host can tick', !rm.talk && rm.pub, JSON.stringify(rm));
+  await p2.setViewportSize({ width: 1340, height: 900 });
   for (const p of [p1, p2]) await p.evaluate(() => window.PMCLobby.net().send('game.ready', { ready: true }));
   await p1.waitForTimeout(400);
   await p1.evaluate(() => window.PMCLobby.net().send('game.start'));
