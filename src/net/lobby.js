@@ -97,8 +97,9 @@
       // in a game, the actions and the forces stay put; the terms scroll; the talk keeps the foot
       '#lobby > .sheet.lob-sheet-room{display:flex;flex-direction:column;overflow:hidden}',
       '.lob-sheet-room > #lobby-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}',
-      '.lob-sheet-room .lob-acts{margin-top:0}',
-      '.lob-sheet-room .lob-startnote{flex:1 1 auto;text-align:right;padding:0}',
+      '.lob-sheet-room .lob-acts{margin-top:0;align-items:stretch;flex-wrap:nowrap}',
+      '.lob-acts .lnk{flex:none;white-space:nowrap}',
+      '.lob-sheet-room .lob-startnote{flex:1 1 auto;align-self:center;text-align:right;padding:0}',
       '.lob-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}',
       '.lob-watch{opacity:.7;margin:-4px 0 8px}',
       '.lob-pub{display:flex;align-items:flex-end}',
@@ -234,13 +235,15 @@
     var mine = mySeat();
     var ready = mine && room.seats[mine] && room.seats[mine].ready;
     return '<p class="lob-bad">' + esc(fault) + '</p>' +
+      /* as every other screen has it: the way out a quiet link, the one thing to
+         do next the full-width button — say you are ready, then (the host) take the field */
       '<div class="lob-foot lob-acts">' +
       '<button class="lnk" data-lob="leave">Leave this game</button>' +
-      (mine ? '<button class="lnk' + (ready ? '' : ' lob-go') + '" data-lob="ready">' +
-        (ready ? 'Not ready after all' : 'I am ready') + '</button>' : '') +
-      (host_ ? '<button class="start" data-lob="start"' + (room.canStart ? '' : ' disabled') +
-        '>Take the field</button>' : '<span class="lob-status lob-startnote">' +
-        (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
+      (mine && ready ? '<button class="lnk" data-lob="ready">Not ready after all</button>' : '') +
+      (mine && !ready ? '<button class="start" data-lob="ready">I am ready</button>'
+        : host_ ? '<button class="start" data-lob="start"' + (room.canStart ? '' : ' disabled') + '>Take the field</button>'
+        : '<span class="lob-status lob-startnote">' +
+          (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</span>') +
       '</div>' +
       '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
       (room.watchers.length

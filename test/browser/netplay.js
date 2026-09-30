@@ -48,6 +48,10 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   await p2.waitForTimeout(600);
   await p2.evaluate((f) => window.PMCLobby.net().send('game.force', { force: Object.assign({}, f, { colour: 'rose' }) }), force);
   await p2.waitForTimeout(300);
+  // the actions look as every other screen's do: the way out a link, the next step the full-width button
+  const acts = await p1.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts button')].map(x => x.className + ':' + x.textContent));
+  ok('the room: Leave this game a link, I am ready the main button', acts.join('|') === 'lnk:Leave this game|start:I am ready', acts.join('|'));
+  await p1.screenshot({ path: require('path').join(SHOTS, 'lobby-room-desktop.png') }).catch(() => {});
   // the room on a phone: the actions, then both forces side by side, then the terms scrolling, the talk at the foot
   await p2.setViewportSize({ width: 390, height: 700 });
   await p2.waitForTimeout(200);
@@ -69,6 +73,9 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   await p2.setViewportSize({ width: 1340, height: 900 });
   for (const p of [p1, p2]) await p.evaluate(() => window.PMCLobby.net().send('game.ready', { ready: true }));
   await p1.waitForTimeout(400);
+  const acts2 = await p1.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts button')].map(x => x.className + ':' + x.textContent + (x.disabled ? ':off' : '')));
+  ok('...once both are ready, the host is given Take the field', acts2.join('|') === 'lnk:Leave this game|lnk:Not ready after all|start:Take the field', acts2.join('|'));
+  await p1.screenshot({ path: require('path').join(SHOTS, 'lobby-room-ready-desktop.png') }).catch(() => {});
   await p1.evaluate(() => window.PMCLobby.net().send('game.start'));
   await p1.waitForTimeout(2000);
   // the briefing comes up the once for each; one side looking at its swaps does not bring it back for the other
