@@ -1003,13 +1003,27 @@
       B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(235,110,90,.85)';
       B.ctx.beginPath(); B.ctx.moveTo(a.x, a.y); B.ctx.lineTo(b.x, b.y); B.ctx.stroke();
       B.ctx.setLineDash([]);
-      strafeUnder(u, to).forEach(function (t) {
+      B.ctx.restore();
+      strafeRings(u, strafeUnder(u, to));
+    }
+    // the run being flown (playStrafe): what is under it stays ringed until the craft has passed
+    function drawStrafeRuns() {
+      var now = nowMs();
+      (B.anims || []).forEach(function (an) {
+        if (an.kind !== 'strafe' || !an.under || !an.under.length || now > an.t0 + an.dur) return;
+        strafeRings(an.unit, an.under.filter(function (t) { return t.alive; }));
+      });
+    }
+    // a target ring with its cross-hairs round each unit under a run: the enemy red, the craft's own side amber
+    function strafeRings(u, list) {
+      B.ctx.save();
+      list.forEach(function (t) {
         var col = t.side === u.side ? 'rgba(240,190,80,.95)' : 'rgba(235,90,70,.95)';
-        var lift = liftOf(t.x, t.y);
+        var tx = dispX(t), ty = dispY(t), lift = liftOf(tx, ty);
         B.ctx.lineWidth = 2.2; B.ctx.strokeStyle = col;
-        isoRing(t.x, t.y, UR * 1.6, lift); B.ctx.stroke();
+        isoRing(tx, ty, UR * 1.6, lift); B.ctx.stroke();
         // the cross-hairs' four ticks
-        var c = hud(t.x, t.y, lift), r = Math.SQRT2 * UR * 1.6 * K * cam.z;
+        var c = hud(tx, ty, lift), r = Math.SQRT2 * UR * 1.6 * K * cam.z;
         B.ctx.beginPath();
         B.ctx.moveTo(c.x - r - 4, c.y); B.ctx.lineTo(c.x - r + 3, c.y);
         B.ctx.moveTo(c.x + r - 3, c.y); B.ctx.lineTo(c.x + r + 4, c.y);
@@ -1243,6 +1257,7 @@
 
       if (ui.mode !== 'strafe') ui.strafeAim = null;   // an aim is only kept while the run is being chosen
       if (ui.mode === 'strafe' && ui.selected && !aiSel) drawStrafeAim(ui.selected);
+      drawStrafeRuns();
       if (B.sightOn && B.sightOn()) drawSight(B.sightSide(), ui.selected && !aiSel && B.seats.indexOf(ui.selected.side) >= 0 ? ui.selected : null);
 
       var u = ui.selected;

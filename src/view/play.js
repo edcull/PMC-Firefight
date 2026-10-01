@@ -250,7 +250,11 @@
         u.facing = Math.atan2(to.y - from.y, to.x - from.x);
         u.aim = null;
         u.ax = from.x; u.ay = from.y;
-        anims.push({ kind: 'strafe', unit: u, from: from, to: to, dur: dur, t0: nowMs() });
+        // what is under the run, ringed while it is flown (draw.js): the ground units within 2.2" of the line
+        var under = B.state.units.filter(function (t) {
+          return t !== u && onTable(t) && !R.isFlying(t) && R.pointSegDist(dispX(t), dispY(t), from.x, from.y, to.x, to.y) <= 2.2;
+        });
+        anims.push({ kind: 'strafe', unit: u, from: from, to: to, dur: dur, t0: nowMs(), under: under });
         startLoop();
       }
       /* The bursts go down where the craft is as it passes, over the middle of

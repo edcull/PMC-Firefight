@@ -1008,7 +1008,7 @@
     get sideInk() { return sideInk; }, get sideRGB() { return sideRGB; },
     get terrainMark() { return terrainMark; }, get viewRect() { return viewRect; }, activeUnits: activeUnits,
     get seats() { return seats; }, get watching() { return watching; },
-    get sightOn() { return VIEW.sightOn; }, get sightSide() { return VIEW.sightSide; },
+    get sightOn() { return VIEW.sightOn; }, get sightSide() { return VIEW.sightSide; }, anims: anims,
     addFx: addFx, arrivalQueued: arrivalQueued, arriving: arriving, boxesFor: boxesFor,
     clonePiece: clonePiece, curArea: curArea, dispX: dispX, dispY: dispY, drawFx: drawFx, fitGhost: fitGhost,
     insertionMine: insertionMine, isAI: isAI, liftOf: liftOf, nowMs: nowMs, onTable: onTable,
