@@ -32,7 +32,10 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   ['rangers', 'Staff Sergeant', 'Sergeant', 'Specialist'],
   // the assault troops the same
   ['lighteng', 'Corporal', 'Lance Corporal', 'Private'], ['engineers', 'Sergeant', 'Corporal', 'Private'],
-  ['shock', 'Sergeant', 'Corporal', 'Private'], ['commandos', 'Staff Sergeant', 'Sergeant', 'Specialist']].forEach(([key, lead, second, rest]) => {
+  ['shock', 'Sergeant', 'Corporal', 'Private'], ['commandos', 'Staff Sergeant', 'Sergeant', 'Specialist'],
+  // light infantry: tier 2 a corporal and a lance corporal, tier 3-5 a sergeant and a corporal
+  ['observers', 'Corporal', 'Lance Corporal', 'Private'], ['sharpshooters', 'Sergeant', 'Corporal', 'Private'],
+  ['lrrp', 'Sergeant', 'Corporal', 'Private'], ['snipers', 'Sergeant', 'Corporal', 'Private']].forEach(([key, lead, second, rest]) => {
   const u = unit(key);
   R.musterMen(u, null, {});
   ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',

@@ -195,6 +195,9 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
   text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
 }
 .vrule { margin: 0 0 8px; font-size: 12px; line-height: 1.45; color: var(--ink-dim); }
+/* who is in the unit, by rank */
+.vranks { margin: 0 0 10px; font-size: 12px; line-height: 1.45; color: var(--ink-dim); }
+.vranks b { color: var(--ink); margin-right: 4px; }
 .vrule b {
   display: inline-block; color: var(--ink); font-weight: 600;
   border-bottom: 1px dotted var(--ink-faint);
@@ -285,7 +288,7 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
   #vboard { cursor: pointer; }
   .vtable { font-size: 12px; }
   .vtable th { font-size: 11px; }
-  .vrule { font-size: 13px; }
+  .vrule, .vranks { font-size: 13px; }
   .vweap { font-size: 13px; }
 }
 @media (max-width: 1000px) and (min-width: 701px) {

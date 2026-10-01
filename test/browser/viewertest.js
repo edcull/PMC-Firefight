@@ -76,6 +76,21 @@ async function pickAndFire(p, key, ms) {
   });
   ok('a search looks through every army by unit name', found.n > 3 && found.armies > 1 && found.rule === 0,
     found.n + ' named rifle across ' + found.armies + ' armies, ' + found.rule + ' for a rule');
+  // who is in it, by rank: a squad's line-up, a hull's commander, nobody in a swarm
+  const ranks = await p.evaluate(async () => {
+    const out = {};
+    for (const k of ['rangers', 'snipers', 'mcv', 'battack']) {
+      window.__viewer.pick(k);
+      await new Promise(r => setTimeout(r, 60));
+      const e = document.querySelector('.vranks');
+      out[k] = e ? e.textContent : null;
+    }
+    return out;
+  });
+  ok('the stats show the ranks: Rangers a Staff Sergeant, a Sergeant and specialists', /Staff Sergeant, Sergeant, 6 Specialists/.test(ranks.rangers || ''), ranks.rangers);
+  ok('...a sniper team a Sergeant and a Corporal', /Sergeant, Corporal$/.test(ranks.snipers || ''), ranks.snipers);
+  ok('...a hull its commander', /Crew/.test(ranks.mcv || '') && /commander/.test(ranks.mcv || ''), ranks.mcv);
+  ok('...and a swarm nobody named', /counted/.test(ranks.battack || ''), ranks.battack);
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,
     loaded.w + '×' + loaded.h);
