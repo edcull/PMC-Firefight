@@ -379,7 +379,7 @@
          breathes, a cloak shimmers — but only one in view (drawBoard notes it) is worth
          redrawing the whole board for; rotors and sweeps read as well at eight frames
          a second as a fire does */
-      if (B.vc.hazeOnView || ((B.vc.animOnView || B.vc.fireOnView) && ambientTick % 2 === 0)) drawBoard();
+      if (B.vc.hazeOnView || ((B.vc.animOnView || B.vc.fireOnView || B.vc.flagOnView) && ambientTick % 2 === 0)) drawBoard();
     }, 60);
 
     /* ================= heat haze =================
@@ -552,6 +552,46 @@
        and copied from it after that, at whole pixels, so it lands exactly where
        it would have been drawn. Anything that moves from moment to moment (an
        aircraft, a drone's light, smoke, a turn, a hop) is drawn as ever. */
+    /* A building held by a side flies its colours: a short mast on the roof of
+       the wing its squad is in, the cloth in the side's colour stirring in
+       the wind as a rebel flag does — a ripple running out from the mast to
+       the fly, each fold lit or shaded as it turns. In world pixels, laid in
+       the art's two-pixel columns. */
+    function roofFlag(g, pr, pal, t, seed) {
+      var px = pr.x + pr.w * 0.3, py = pr.y + pr.h * 0.3, q = ISO.toScreen(px, py);
+      var bx = Math.round(q.x), by = Math.round(q.y - liftOf(px, py) - (pr.height || 0));
+      var poleH = 40, fw = 26, fh = 16, amp = 2.4, P2 = ISO.PIXEL;
+      function box(x, y, w, h, c) { g.fillStyle = c; g.fillRect(bx + x, by + y, w, h); }
+      box(-1, -poleH, 2, poleH, '#3c4148');                       // the mast
+      box(1, -poleH, 1, poleH, '#6a717a');
+      box(-1, -poleH - 2, 3, 2, '#c8a33a');                       // its cap
+      var ph = (t / 1100 + seed) * Math.PI * 2;
+      for (var x = 0; x < fw; x += P2) {
+        var f = (x + 1) / fw, o = Math.round(amp * f * Math.sin(f * Math.PI * 2.2 - ph) * 2) / 2;
+        var turn = Math.cos(f * Math.PI * 2.2 - ph) * f, cw = Math.min(P2, fw - x), y0 = -poleH + 1 + o;
+        // the side's own bright colour, a dark band at the hoist (so a pale company's is never a white flag), the fly in shadow
+        box(1 + x, y0, cw, fh, x < 6 ? pal.dark : x >= fw - 3 ? pal.mid : pal.ink || pal.light);
+        if (turn < -0.3) box(1 + x, y0 + 2, cw, fh - 4, 'rgba(0,0,0,.2)');
+        else if (turn > 0.3) box(1 + x, y0 + 2, cw, fh - 4, 'rgba(255,255,255,.16)');
+        box(1 + x, y0 + fh - 2, cw, 2, pal.dark);
+      }
+    }
+    // the sides holding each wing of a building on view: { wing, sides }
+    function heldWings(blockers) {
+      var out = [];
+      blockers.forEach(function (b) {
+        if (b.pr.kind !== 'building' && b.pr.kind !== 'bunker') return;
+        var sides = [], paint = null;
+        B.state.units.forEach(function (u) {
+          if (!u.alive || !onTable(u) || u.aboard || !R.inRect(dispX(u), dispY(u), b.pr)) return;
+          if (sides.indexOf(u.side) < 0) sides.push(u.side);
+          paint = paint || u.paint || u.side;               // the colours of the first squad in
+        });
+        if (sides.length) out.push({ b: b, sides: sides, paint: paint });
+      });
+      return out;
+    }
+
     /* A unit behind a building, or inside it, is outlined through it: its
        outline in its side's colour, with a faint wash of the same inside,
        drawn only where the building covers it — what can be seen of it is left
@@ -559,8 +599,9 @@
     var xrUnit = null, xrMask = null;
     function seeThrough(order, blockers) {
       var g = B.pctx;
-      if (!blockers.length || !g.getTransform) return;
-      var sc = g.getTransform().a;
+      var tr = blockers.length && g.getTransform && g.getTransform();
+      if (!tr) return;
+      var sc = tr.a;
       order.forEach(function (it) {
         if (it.draw !== 'unit' || !it.drawn || it.unit.aboard) return;
         var u = shownAs(it.unit), x = dispX(u), y = dispY(u);
@@ -845,9 +886,18 @@
       // an aircraft's rotors, a deflector, a cloak: only worth redrawing for while one is in view
       B.vc.animOnView = order.some(function (it) { return it.draw === 'unit' && !it.unit.aboard && ISO.animates(it.unit); });
 
+      var held = heldWings(blockers), tNow = nowMs();
+      B.vc.flagOnView = held.length > 0;
+      blockers.forEach(function (b) { b.flag = null; });
+      // a contested wing flies no flag
+      held.forEach(function (h) { if (h.sides.length === 1) h.b.flag = h.paint; });
       paintOrder(order, blockers, spotOf)
         .forEach(function (it) {
-          if (it.draw === 'block') { repaintProp(it.pr); return; }
+          if (it.draw === 'block') {
+            repaintProp(it.pr);
+            if (it.flag) roofFlag(B.pctx, it.pr, ISO.PALETTE[it.flag] || ISO.PALETTE.A, tNow, (it.pr.x * 7 + it.pr.y * 3) % 1);
+            return;
+          }
           if (it.draw === 'body') {
             var bp = ISO.toScreen(it.r.x, it.r.y);
             ISO.drawBody(B.pctx, bp.x + it.r.dx, bp.y + it.r.dy - liftOf(it.r.x, it.r.y), it.r);
