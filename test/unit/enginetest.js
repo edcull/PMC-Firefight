@@ -572,6 +572,8 @@ function advanceIsOneAction() {
         // move towards the enemy, the shortest step there is, so a target stays in reach
         const c = e.sel().moves[0];
         e.intent(side, { k: 'move', x: c.x, y: c.y });
+        // a hull with Movement left is asked which way it ends facing first (p. 35): it keeps its facing
+        if (e.state().faceAsk) e.intent(side, { k: 'vface', dir: u.facing });
         if (!u.activated && u.advancing && e.sel().mode === 'advance-fire') {
           found++;
           if (!e.query.actionState(u, 'fire').on) checks.fireOff++;
