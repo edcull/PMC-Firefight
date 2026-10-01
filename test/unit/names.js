@@ -72,7 +72,10 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   // the Xenotripods' Alpha squads: Hunt-leader, Pack-leader, Clan-leader, War-chief, Tribe-lord
   ['xalpha1', 'Hunt-leader', 'Warrior', 'Warrior'], ['xalpha2', 'Pack-leader', 'Warrior', 'Warrior'],
   ['xalpha3', 'Clan-leader', 'Warrior', 'Warrior'], ['xalpha4', 'War-chief', 'Warrior', 'Warrior'],
-  ['xalpha5', 'Tribe-lord', 'Warrior', 'Warrior']].forEach(([key, lead, second, rest]) => {
+  ['xalpha5', 'Tribe-lord', 'Warrior', 'Warrior'],
+  // the miners: a Foreman at tier 2, a Pit Boss at 3-4, and their Miners
+  ['rminers', 'Foreman', 'Miner', 'Miner'], ['rfaceminers', 'Pit Boss', 'Miner', 'Miner'],
+  ['rharshminers', 'Pit Boss', 'Miner', 'Miner']].forEach(([key, lead, second, rest]) => {
   const u = unit(key);
   R.musterMen(u, null, {});
   ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',
