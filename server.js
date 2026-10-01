@@ -13,6 +13,7 @@
      node server.js                 then open http://localhost:8787
      PORT=9000 node server.js       somewhere else
      HOST=0.0.0.0 node server.js    so the rest of the house can join in
+     CAMPAIGNS_DIR=/var/lib/pmc     the campaigns kept outside the code, so a deploy leaves them be
 */
 'use strict';
 const http = require('http');
@@ -34,7 +35,7 @@ function log() {
 }
 
 /* ---- the pieces ---- */
-const campaigns = new Campaigns(path.join(ROOT, 'campaigns'), { log: log });
+const campaigns = new Campaigns(process.env.CAMPAIGNS_DIR || path.join(ROOT, 'campaigns'), { log: log });
 const serve = statics.create(ROOT);
 const lobby = new Lobby({
   log: log,
