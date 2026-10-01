@@ -345,7 +345,7 @@ front armour to a threat.
   act or skip, which spends its activation (`engine.js:1112-1114`).
 - **L-13 — fixed:** The Incendiary ×2 includes Style Bonus and Overreact SP, which the book excludes (l.1557;
   `shoot.js:350`). Campaign only.
-- **L-14:** Markerlights can target reserve or embarked units at (-1,-1) (`marks.js:20-27`). Choosing one wastes
+- **L-14 — fixed (with M-12):** Markerlights can target reserve or embarked units at (-1,-1) (`marks.js:20-27`). Choosing one wastes
   the marker's activation.
 - **L-15 — fixed:** "Command Unit" means different things in army building and in play. `checkArmy` counts the
   `command` flag, so Field command 4th grade uses up the one-per-PL slot (`rules.js:280, 336`). In play, a
@@ -444,7 +444,7 @@ reading; they are listed so the choice is visible.
 - **"Markerlights ignores Stealth":** read only as the 12" marking limit. The answering shot still adds Stealth.
 - **Destructive breach:** removes terrain cover only; Stealth and Shield Generator stay. **Sappers breach:** the
   +1 applies to the attacker's half of the round only.
-- **Rebel tactic:** chosen at muster, before the scenario (l.2961).
+- **Rebel tactic:** chosen at muster, before the scenario (l.2961). When two people play two Rebel forces, each confirms or changes it in turn before the table is laid (L-29).
 - **Medical drone:** carries "Drone unit"; the book's profile omits it (`data.js:80-81`). The Light engineering
   vehicle and EW vehicle carry "Ground vehicle".
 - **SAM:** fires on any aircraft, the defender's own included.
@@ -514,16 +514,12 @@ Almost every rules finding from `docs/v0.1-review.md` is fixed at `7dd7306`.
 - **Campaign:** 3.31–3.35 (every campaign item); 3.26 is kept as a ruling.
 - **Not implemented then, done now:** surrender, and the AI's use of Adrenaline Rush and Last Stand.
 
-**Partial:** 3.4 (passengers of a downed aircraft). Fixed on the aftermath path, but broken again for a Rebel
-player with No Place for the Weak! (L-42).
+**Partial at `7dd7306`, fixed since:** 3.4 (passengers of a downed aircraft), now right on the No Place for the
+Weak! path too (L-42).
 
-**Still open:**
-
-- the Field Medics item (L-16)
-- the Destructive Weapon high-wall half (M-9)
-- leaving the table (L-1)
-- the alternating terrain changes (L-25)
-- the Secure objective nomination (L-19)
+**Open at `7dd7306`, settled since:** the Field Medics item (L-16, the tooltip), the Destructive Weapon high-wall
+half (M-9), leaving the table (L-1), the alternating terrain changes (L-25). The Secure objective nomination
+(L-19) is kept as it is, by the owner's decision.
 
 The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as defects under l.465 (M-6).
 
