@@ -345,11 +345,7 @@
         }
         // a sideways step inside its own group (recruits to irregulars) gains a simulated company nothing
         var all = promotionTargets(e, co).filter(function (q) { return q.tier > p.tier || q.group !== p.group; });
-        var affordable = all.filter(function (q) {
-          // what it costs this company: Smuggler's point off, Hermetic Society's half price (p. 141)
-          var c = promotionCost(e, q.key, co);
-          return e.exp >= c.exp && co.kUC >= c.kUC;
-        });
+        var affordable = all.filter(function (q) { return rivalCanAfford(co, e, q.key); });
         /* If this unit could ever promote into one of the company's own groups, it
            waits until it can afford that rather than taking the first cheap step
            out of character — which is how an Elite company ended up full of mortars. */
@@ -465,7 +461,14 @@
       return did;
     }
 
+    // what a promotion costs this company, Smuggler's point off and Hermetic Society's half price (p. 141) included
+    function rivalCanAfford(co, e, key) {
+      var c = promotionCost(e, key, co);
+      return e.exp >= c.exp && co.kUC >= c.kUC;
+    }
+
     return {
+      rivalCanAfford: rivalCanAfford,
       faceRival: faceRival, rehydrate: rehydrate, forSave: forSave, foundRivals: foundRivals,
       rollOffers: rollOffers, clearOffers: clearOffers, drawRival: drawRival, catchUpTarget: catchUpTarget,
       deepen: deepen, catchUp: catchUp, idleTurn: idleTurn, foundRival: foundRival, developRival: developRival

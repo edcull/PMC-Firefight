@@ -1381,6 +1381,7 @@
     }));
   }
   function faceRival(campaign, i) { return (KIT_RIVALS || kitRivals()).faceRival(campaign, i); }
+  function rivalCanAfford(co, e, key) { return (KIT_RIVALS || kitRivals()).rivalCanAfford(co, e, key); }
   /* A save from an older build is brought up to this one before anything reads
      it: one step per version, keyed on `v`, each step ending with v one higher.
      There are none yet — version 1 is the first — but a save with no `v` is
@@ -1505,6 +1506,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
+    rivalCanAfford: rivalCanAfford,
     salvageRolls: salvageRolls,
     idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, rebirth: rebirth, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,

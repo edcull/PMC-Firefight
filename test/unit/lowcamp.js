@@ -61,5 +61,39 @@ console.log('\nL-43 A rival swarm grows Adaptations on its Overgrown bugs (p. 12
   ok('an Overgrown bug with the experience for it grows an Adaptation', grew === n, grew + ' of ' + n);
 })();
 
+console.log('\nL-43 A rival prices its promotions with its own doctrines (pp. 112, 141)');
+(function () {
+  function rival(doc) {
+    var camp = C.newCampaign({ mode: 'solo' });
+    C.foundRival(camp.companies.B);
+    var co = camp.companies.B;
+    co.doctrines = [doc];
+    return co;
+  }
+  // a promotion this company's doctrine makes cheaper, and its price with and without the company
+  function cheaper(co, field) {
+    for (var i = 0; i < co.roster.length; i++) {
+      var e = co.roster[i], qs = C.promotionTargets(e, co);
+      for (var j = 0; j < qs.length; j++) {
+        var mine = C.promotionCost(e, qs[j].key, co), list = C.promotionCost(e, qs[j].key);
+        if (mine[field] < list[field]) return { e: e, key: qs[j].key, mine: mine, list: list };
+      }
+    }
+    return null;
+  }
+  var her = rival('XS4'), h = cheaper(her, 'exp');
+  ok('Hermetic Society: a promotion at half the EXP is found', !!h);
+  if (h) {
+    h.e.exp = h.mine.exp; her.kUC = 999;
+    ok('...and the rival takes it with only the half', C.rivalCanAfford(her, h.e, h.key), h.mine.exp + ' of ' + h.list.exp + ' EXP');
+  }
+  var smu = rival('V1'), m = cheaper(smu, 'kUC');
+  ok('Smuggler: a promotion a point cheaper is found', !!m);
+  if (m) {
+    m.e.exp = 99; smu.kUC = m.mine.kUC;
+    ok('...and the rival takes it with only the cheaper price in hand', C.rivalCanAfford(smu, m.e, m.key), m.mine.kUC + ' of ' + m.list.kUC);
+  }
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
