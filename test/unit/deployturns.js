@@ -84,6 +84,37 @@ console.log('\nInvasion: the first wave may come down in any of its three landin
   ok('...and each of the three zones is still open to it', st.objectives.every(near), st.objectives.map(near).join(','));
 })();
 
+console.log('\nInvasion: no Battlefield Insertion; turrets dig in first; hulls land unshaken');
+(function () {
+  const e = Engine.create();
+  e.start({
+    tier: 3, pl: 1, scenario: 'invasion', mode: 'hotseat', planet: 'barren', attacker: 'A',
+    armyA: ['cmd3', 'regular', 'lapc', 'xdturret2', 'veterans', 'regular'],
+    armyB: ['xalpha3', 'xeps3', 'xeps3', 'xdturret2', 'xtturret2', 'xsturret3'], factionB: 'xeno',
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
+  });
+  const st = e.state();
+  const turretsB = st.units.filter(u => u.side === 'B' && R.has(u, 'Turret'));
+  ok('the defender\'s automatic split puts its turrets on the table first', e.intent('B', { k: 'autosplit' }).ok &&
+    turretsB.filter(u => !u.reserve).length === Math.min(turretsB.length, st.units.filter(u => u.side === 'B' && !u.reserve).length),
+    turretsB.map(u => u.code + (u.reserve ? ':held' : ':down')).join(' '));
+  ok('neither side may hold a unit for Battlefield Insertion', ['A', 'B'].every(s => !e.intent(s, { k: 'insertion', id: st.units.find(u => u.side === s && R.has(u, 'Turret')).id }).ok) &&
+    st.units.every(u => !u.insert));
+  e.intent('B', { k: 'autodeploy' });
+  e.intent('A', { k: 'autosplit' });
+  e.intent(e.query.placingSide() || 'A', { k: 'start' });
+  for (let k = 0; k < 40 && e.sel().insertion; k++) {
+    const ins = e.sel().insertion, spot = ins.spots[[0, Math.floor(ins.spots.length / 2), ins.spots.length - 1][k % 3]];
+    e.intent(ins.by || ins.unit.side, { k: 'insert', x: spot.x, y: spot.y });
+    for (let f = 0; f < 5 && st.faceAsk; f++) e.intent(st.faceAsk.side, { k: 'vfaceall' });
+  }
+  const landed = st.units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard);
+  const hulls = landed.filter(u => R.isMachine(u)), men = landed.filter(u => !R.isMachine(u));
+  ok('the first wave is down, hulls and turrets among it or in the second wave', landed.length > 0, landed.map(u => u.code).join(' '));
+  ok('...no hull or turret takes Suppression for the landing', hulls.every(u => !st.log.some(l => l.text.indexOf(u.label + ' takes') === 0 && /coming down/.test(l.text))));
+  ok('...every squad does (D3)', men.length > 0 && men.every(u => st.log.some(l => l.text.indexOf(u.label + ' takes') === 0 && /coming down/.test(l.text))));
+})();
+
 console.log('\nMeeting engagement: nobody is placed before the battle; both enter in turn 1');
 (function () {
   const e = game('meeting');

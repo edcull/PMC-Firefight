@@ -572,10 +572,12 @@
         var atk = state.sc.attacker, def = state.sc.attacker === 'A' ? 'B' : 'A';
         // the defender puts no more than a third on the table, 6" in from the edges
         var defs = mine(state, def).filter(function (u) { return !u.reserve; });
-        // an emplaced gun is already dug in, so it is never among those held back
-        defs.sort(function (a, b) {
-          return (R.has(b, 'Stationary Artillery') ? 1 : 0) - (R.has(a, 'Stationary Artillery') ? 1 : 0);
-        });
+        /* an emplaced gun is already dug in, so it is never among those held back;
+           and a turret goes on the table before anything that can walk — held
+           back, it would come on at a table edge it can never move from (with
+           Battlefield Insertion barred here, p. 53). The player may still swap. */
+        function firstDown(u) { return R.has(u, 'Stationary Artillery') ? 2 : R.has(u, 'Turret') ? 1 : 0; }
+        defs.sort(function (a, b) { return firstDown(b) - firstDown(a); });
         var keep = Math.max(1, Math.ceil(defs.length / 3));          // divisions round up (p. 17)
         defs.slice(keep).forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
         noteSplit(state, def, 'hold', defs, defs.length - keep, defs.length - 1,
