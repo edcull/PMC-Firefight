@@ -45,5 +45,21 @@ console.log('\nL-42 No Place for the Weak! counts a safe landing’s 5 TP (p. 86
   ok('...and the aftermath uses the same landing roll', agree === seenSaved, agree + ' of ' + seenSaved);
 })();
 
+console.log('\nL-43 A rival swarm grows Adaptations on its Overgrown bugs (p. 124)');
+(function () {
+  var grew = 0, n = 0;
+  var og = R.listFor('bugs').filter(function (p) { return p.cls !== 'infantry' && (p.rules || []).indexOf('Overgrown Bug') >= 0; })[0];
+  for (var i = 0; i < 20; i++) {
+    var camp = C.newCampaign({ mode: 'solo' });
+    C.foundRival(camp.companies.B, 'swarm');
+    var co = camp.companies.B, e = C.newEntry(og.key);
+    co.tier = 5; co.kUC = 500; e.exp = 40; co.roster.push(e);
+    C.developRival(co);
+    n++;
+    if ((e.honours || []).length) grew++;
+  }
+  ok('an Overgrown bug with the experience for it grows an Adaptation', grew === n, grew + ' of ' + n);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

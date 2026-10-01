@@ -323,6 +323,16 @@
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {
         var p = profile(e.key), was = e.name;
+        /* An Overgrown bug is a beast, not a hull: it grows Adaptations as the infantry
+           earns honours (p. 124), and has no Upgrades to buy. */
+        if (p.cls !== 'infantry' && p.faction === 'bugs') {
+          for (var ad = 0; ad < 6 && canTakeHonour(e, co).ok; ad++) {
+            var h0 = chooseHonour(drawHonours(e));
+            if (!h0 || !takeHonour(co, e, h0.n).ok) break;
+            did.push({ what: 'honour', text: e.name + ' grew ' + h0.name });
+          }
+          return;
+        }
         if (p.cls !== 'infantry') {
           if (canTakeUpgrade(e).ok) {
             var pool = availableUpgrades(e);
@@ -336,7 +346,8 @@
         // a sideways step inside its own group (recruits to irregulars) gains a simulated company nothing
         var all = promotionTargets(e, co).filter(function (q) { return q.tier > p.tier || q.group !== p.group; });
         var affordable = all.filter(function (q) {
-          var c = promotionCost(e, q.key);
+          // what it costs this company: Smuggler's point off, Hermetic Society's half price (p. 141)
+          var c = promotionCost(e, q.key, co);
           return e.exp >= c.exp && co.kUC >= c.kUC;
         });
         /* If this unit could ever promote into one of the company's own groups, it
