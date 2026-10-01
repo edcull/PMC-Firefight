@@ -73,7 +73,18 @@ async function run(p, label, scen, shotName) {
     const c = document.getElementById('board').getBoundingClientRect();
     return { x: c.x, y: c.y, w: c.width, h: c.height };
   });
-  let taps = 0, landed = 0, panned = 0;
+  let taps = 0, landed = 0, panned = 0, miss = 0;
+  /* A blind grid finds a Demolish attacker's three small corners only now and
+     then — more so with the camera where a slow machine leaves it. A player who
+     has missed a few times taps straight at the shaded ground, so after five
+     misses in a row the test does too: the first legal spot, tapped on the board. */
+  const aimed = () => p.evaluate(() => {
+    // (coming on in turn 1, the arrival in hand takes only its own spots)
+    const open = window.__insertionSpotsNow() || [];
+    if (open.length) return { x: open[0].x, y: open[0].y };
+    for (let y = 1.5; y < 47; y += 1) for (let x = 1.5; x < 47; x += 1) if (window.__deployOK(x, y, 'A')) return { x, y };
+    return null;
+  });
   outer:
   for (let round = 0; round < 3; round++) {
     for (let gy = 1; gy <= 7; gy++) {
@@ -82,34 +93,18 @@ async function run(p, label, scen, shotName) {
         if (!before) break outer;
         // the OpFor's unit walks on between ours: a tap waits for the table to be still, as a player's would
         if (entry) await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
-        await p.mouse.click(box.x + box.w * gx / 6, box.y + box.h * gy / 8);
+        const spot = miss >= 5 ? await aimed() : null;
+        if (spot) await p.evaluate((q) => window.__boardTapAt(q.x, q.y), spot);
+        else await p.mouse.click(box.x + box.w * gx / 6, box.y + box.h * gy / 8);
         await p.waitForTimeout(80);
         taps++;
         const after = await p.evaluate(() => ({
           left: window.__leftA(),
           hint: (document.getElementById('hintbar') || {}).textContent || ''
         }));
-        if (after.left < before) landed++;
-        else if (/camera has gone back/.test(after.hint)) panned++;
+        if (after.left < before) { landed++; miss = 0; }
+        else { miss++; if (/camera has gone back/.test(after.hint)) panned++; }
       }
-    }
-    /* A blind grid finds a Demolish attacker's three small corners only now and
-       then — more so with the camera where a slow machine leaves it. A player taps
-       straight at the shaded ground, so after each sweep the test does too: the
-       first legal spot it can find, tapped on the board. */
-    for (let k = 0; k < 6; k++) {
-      const before = await p.evaluate(() => window.__leftA());
-      if (!before) break outer;
-      if (entry) await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
-      const spot = await p.evaluate(() => {
-        for (let y = 1.5; y < 47; y += 1) for (let x = 1.5; x < 47; x += 1) if (window.__deployOK(x, y, 'A')) return { x, y };
-        return null;
-      });
-      if (!spot) break;
-      await p.evaluate((q) => window.__boardTapAt(q.x, q.y), spot);
-      await p.waitForTimeout(80);
-      taps++;
-      if (await p.evaluate(() => window.__leftA()) < before) landed++;
     }
   }
   const end = await p.evaluate(() => {
