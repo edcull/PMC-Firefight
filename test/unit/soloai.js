@@ -155,5 +155,33 @@ console.log('\nRun for Your Lives! gets a garrison out of its building (p. 147)'
   ok('...on the side away from the enemy', g.x > bld.x + bld.w / 2, g.x.toFixed(1));
 })();
 
+console.log('\nThe VIP draws the OpFor\u2019s attack, Kill Them All! or not (p. 152)');
+(function () {
+  let fired = 0, charged = 0, runs = 0;
+  for (let k = 0; k < 6; k++) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_vip', armyA: ['cmd3', 'regular', 'regular'], armyB: ['regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+      colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+    const b = st.units.filter((x) => x.side === 'B'), a = st.units.filter((x) => x.side === 'A');
+    st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; x.x = 44; x.y = 44; });
+    const u = b[0], vip = st.scen.mustTarget(st, u);
+    if (!vip) continue;
+    // the VIP 14" off, in range but beyond a charge; another squad 4" off, easily charged
+    u.x = 20; u.y = 24; vip.x = 34; vip.y = 24;
+    const near = a.find((x) => x !== vip); near.x = 20; near.y = 30;
+    b[1].x = 2; b[1].y = 2;
+    st.scen.behaviour = () => ({ mod: 9, why: 'test' });          // Kill Them All!
+    const n0 = st.log.length;
+    e.query.aiAct(u);
+    runs++;
+    const said = st.log.slice(n0).map((l) => l.text || '').join(' | ');
+    if (said.indexOf(u.label + ' fires at ' + vip.label) >= 0) fired++;
+    if (said.indexOf(u.label + ' charges') >= 0 || said.indexOf(u.label + ' assaults') >= 0) charged++;
+  }
+  ok('a squad on Kill Them All! that cannot reach the VIP to charge shoots it instead', runs > 0 && fired === runs && charged === 0, fired + ' of ' + runs + ' shot it, ' + charged + ' charged');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

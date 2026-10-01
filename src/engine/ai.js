@@ -631,6 +631,10 @@
       if (behaviour === 'assault' && E.state.scen.mustTarget && u.side === 'B') {
         var vipA = E.state.scen.mustTarget(E.state, u);
         if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
+        /* "Whenever an OpFor unit can attack the VIP unit, it will do so" (p. 152): one
+           that cannot charge it but can shoot it does that, rather than charging
+           someone else or only moving (a hull on 7+ included). */
+        else if (shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
       }
       if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
         var nt = ne.unit;
