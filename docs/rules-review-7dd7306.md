@@ -689,4 +689,4 @@ Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` an
 - `terrainsetup`'s "inside its own area": the test read the OpFor's next piece, or a piece after the table was turned to its edges; it now reads the tapped piece from its area, while the set-up is on.
 - `insertion`: the test clicked the deploy button before the card was drawn; it waits for it now.
 - `offtable`: the Complex Teleport Network's battle-only turrets are marked `free` in the report, and the test expects them on no roster.
-- `campflow`, `camfollow`, `followtoggle`: their checks rode on how a random battle went; the page's dice are now seeded (`test/where.js` `seedDice`).
+- `campflow`, `camfollow`, `followtoggle`, `deploytap`, `stepoff`: their checks rode on how a random battle (or which side attacks) went; the page's dice are now seeded (`test/where.js` `seedDice`).

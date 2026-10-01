@@ -6,7 +6,7 @@
    because in this projection a 5" band is a narrow diagonal across the view. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, SHOTS } = require('../where.js');
+const { ROOT, SHOTS, seedDice } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -127,6 +127,7 @@ async function run(p, label, scen, shotName) {
       isMobile: sc.mobile, hasTouch: sc.mobile, deviceScaleFactor: sc.mobile ? 2 : 1
     });
     p.on('pageerror', e => errs.push(sc.name + ': ' + e.message));
+    await seedDice(p, 2670);          // the same armies and roles every run: a blind grid of taps is then a fair measure
     await p.goto('file://' + path.join(ROOT, 'index.html'));
     await p.waitForTimeout(700);
     // a hook for how much of the visible board is a legal drop right now
