@@ -195,7 +195,7 @@ Foresighted Command and Drug Dealer are offered to A only.
 This was read in the code but not run, because it is view code. In a hotseat campaign the second player never
 picks an army.
 
-### M-8 · Two different tests for "behind a low wall" — *reproduced*
+### M-8 · Two different tests for "behind a low wall" — *reproduced* — **fixed**
 
 `coverFor` (`rules.js:1062-1068`, loosened in 8fff720) counts the unit's **centre** within 2" of the wall, with a
 ½" allowance past the wall's ends. `shelterOf` (`destruct.js:50-51`) needs the **whole token** within 2" and the
@@ -209,7 +209,7 @@ wall:
 
 **Fix:** have `shelterOf` use `coverFor`'s geometry.
 
-### M-9 · Destructive Weapon never brings down a high wall that shelters its target — *reproduced*
+### M-9 · Destructive Weapon never brings down a high wall that shelters its target — *reproduced* — **fixed**
 
 > l.1533: "behind a small/high wall …".
 
@@ -614,7 +614,9 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 
 | M-6 Divisions round down | **Fixed.** Every division now rounds up (p. 27): the Trauma "more than half" and Endless Tide thresholds; the ¼ swap allowance and Tactical Flexibility's ½; Rapid Relocation's ½; No Place for the Weak!'s halving; Rob the Rich's 75%; and Drug Dealer's ⅓. The sweep also found three more: tracked (¾) and anti-grav (+¼) Movement left a half inch (Move 10 became 7.5 and 12.5, now 8 and 13); the half-Movement drive when loading or unloading; and the Riders "Size halved". Half range is rounded up too, in case a range is ever odd. | `camp-contract.js`, `rules.js` (`swapAllowance`, `applyPropulsion`, `applyRiders`), `engine.js` (`relocCap`), `camp-aftermath.js`, `campaign.js`, `dossier-contract.js`, `shoot.js`, `moves.js`, `actions.js` |
 
+| M-8 Two tests for "behind a low wall" | **Fixed.** One test, `behindWall`, now decides it everywhere. The wall that gives a unit its +2 cover is the wall a Destructive Weapon's 9 or 15+ brings down, the one Sappers' +4 is against, and the one the Demolisher's +4 applies to. | `rules.js` (`behindWall`, `coverFor`), `destruct.js` (`shelterOf`) |
+| M-9 Destructive Weapon never brings down a high wall | **Fixed.** "Behind a small/high wall" (p. 57) and "behind a low/high wall" (p. 59) now take high walls too, by the same test. Against Indirect Fire, the wall counts on any side (p. 58). Reinforced walls still cannot be brought down. | `destruct.js` (`shelterOf`) |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`.
-
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`.

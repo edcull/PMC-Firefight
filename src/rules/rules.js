@@ -1060,17 +1060,26 @@
     var plunging = has(attacker, 'Indirect Fire');
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
-      if (r.kind !== 'barricade') continue;
-      if (inRect(attacker.x, attacker.y, r)) continue;
-      if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) continue;
+      if (r.kind !== 'barricade' || !behindWall(state, attacker, target, r)) continue;
       // Indirect Fire falls from above, so the wall shelters them whichever way it comes
-      if (plunging) return held(t.cover, 'low wall against plunging fire');
-      // half an inch more at each end of the wall, along its length (not its thickness:
-      // a wall just behind the target is still behind it)
-      var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
-      if (segRect(attacker.x, attacker.y, target.x, target.y, grown)) return held(t.cover, 'behind a low wall');
+      return held(t.cover, plunging ? 'low wall against plunging fire' : 'behind a low wall');
     }
     return { v: 0, why: '' };
+  }
+  /* Whether a unit is behind wall r as this attacker sees it — the one test for
+     everything that asks: the low wall's cover (p. 42), a Destructive Weapon or
+     Sappers bringing a low or high wall down on the men behind it (pp. 57, 59).
+     Its middle within 2" of the wall, and the wall between it and the attacker:
+     the line crossing it, or slipping past one of its ends by less than half an
+     inch (along its length, not its thickness: a wall just behind the target is
+     still behind it). Against Indirect Fire, from above, any side will do (p. 58).
+     A wall the attacker stands in is nobody's shelter from it. */
+  function behindWall(state, attacker, target, r) {
+    if (!attacker || inRect(attacker.x, attacker.y, r)) return false;
+    if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) return false;
+    if (has(attacker, 'Indirect Fire')) return true;
+    var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
+    return segRect(attacker.x, attacker.y, target.x, target.y, grown);
   }
   function clampTo(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -1276,7 +1285,7 @@
       dmgMod: dmgMod, fallBack: fallBack, fmtPart: fmtPart, has: has, inRect: inRect, isFlying: isFlying,
       isMachine: isMachine, rectPointDist: rectPointDist, resolveDamage: resolveDamage,
       resolveShootingHits: resolveShootingHits, segRect: segRect, shotMods: shotMods, sizeBonus: sizeBonus,
-      terrainAt: terrainAt, unitNear: unitNear
+      terrainAt: terrainAt, unitNear: unitNear, behindWall: behindWall
     };
   }
   function kitDestruct() {
