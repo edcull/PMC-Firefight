@@ -1655,8 +1655,9 @@
   // does this unit have anyone in it who could be named?
   function crewed(u) {
     if (counted(u)) return false;
-    // a squad of drones is machines, however many of them there are: nobody to name
-    if (u.drone || hasOwn(u, 'Drone unit')) return false;
+    // a squad of drones is machines, however many of them there are: nobody to name — and
+    // a Drone Controlled hull or craft (the Light VTOL drone always is) has no crew aboard
+    if (u.drone || hasOwn(u, 'Drone unit') || hasOwn(u, 'Drone Control') || (BY_KEY[u.key] && BY_KEY[u.key].mustDrone)) return false;
     if (!isMachine(u)) return true;
     if (crewOf(u) && !crewOf(u).length) return false;    // the Rapid insertion platform: nobody aboard
     return !u.drone && !has(u, 'Turret') && !/Turret/.test(u.group || '');

@@ -105,6 +105,13 @@ ok('a light combat vehicle has a commander, a driver and a gunner', lcv.men.map(
   const got = v.men.map((m) => m.role + ' ' + m.rank).join(', ');
   ok(v.name + ': ' + want, got === want, got);
 });
+// nobody aboard a drone: the Light VTOL drone, always one, and any hull or craft fielded under Drone Control
+const vtol = unit('vtoldrone'); R.musterMen(vtol, null, {});
+ok('the Light VTOL drone has no crew', vtol.men.length === 0 && !R.crewed(vtol));
+const droneLcv = R.applyDrone(unit('lcv', { str: R.profile('lcv').str }), true); R.musterMen(droneLcv, null, {});
+ok('...nor a light combat vehicle fielded as a drone', droneLcv.men.length === 0 && !R.crewed(droneLcv));
+const shield = unit('xshieldb'); R.musterMen(shield, null, {});
+ok('a Xenotripod shield generator craft is flown by a Hunter', shield.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Pilot Hunter');
 const rip = unit('insertplat'); R.musterMen(rip, null, {});
 ok('a Rapid insertion platform has nobody aboard', rip.men.length === 0);
 // a hull keeps all its crew while it runs, and loses them all when it is destroyed
