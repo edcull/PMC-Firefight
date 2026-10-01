@@ -134,5 +134,26 @@ console.log('\nReasonably Offensive takes Firepower ground over cover (p. 147)')
   ok('...where a defensive unit prefers the ruins', def(ruin) > def(hill), def(ruin).toFixed(1) + ' vs ' + def(hill).toFixed(1));
 })();
 
+console.log('\nRun for Your Lives! gets a garrison out of its building (p. 147)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular'], armyB: ['regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+    colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+  const bld = { kind: 'building', x: 22, y: 22, w: 4, h: 4 };
+  st.terrain.push(bld);
+  const foe = st.units.find((x) => x.side === 'A'), [g, other] = st.units.filter((x) => x.side === 'B');
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; });
+  foe.x = 14; foe.y = 24; other.x = 44; other.y = 44;
+  R.enterBuilding(st, g, bld, 0);
+  st.scen.behaviour = () => ({ mod: -9, why: 'test' });           // whatever the die, Run for Your Lives!
+  const n0 = st.log.length;
+  e.query.aiAct(g);
+  const said = st.log.slice(n0).map((l) => l.text).join(' | ');
+  ok('the garrison comes out rather than firing', !g.bld && said.indexOf(g.label + ' fires at') < 0, (g.bld ? 'still inside; ' : '') + said.slice(-200));
+  ok('...on the side away from the enemy', g.x > bld.x + bld.w / 2, g.x.toFixed(1));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

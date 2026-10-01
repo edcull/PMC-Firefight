@@ -597,6 +597,19 @@
          next section, and comes out when it wants to press on and has nothing to
          shoot at. Otherwise it holds the building. */
       if (u.bld) {
+        /* Run for Your Lives! (p. 147): a garrison gets out, through the wall away
+           from the nearest enemy, and does not stop to shoot. With no way out it
+           keeps its head down. */
+        if (behaviour === 'flee') {
+          var nf = nearestEnemy(u), outF = R.exitSpots(E.state, u);
+          if (outF.length && nf) {
+            outF.sort(function (a, b) { return R.inches(b.x, b.y, nf.unit.x, nf.unit.y) - R.inches(a.x, a.y, nf.unit.x, nf.unit.y); });
+            logLine('ai', u.label + ' bolts out of the building, away from the enemy.');
+            doExitBld(u, outF[0]); return;
+          }
+          logLine('ai', u.label + ' keeps its head down in the building.');
+          u.activated = true; endActivation(u); return;
+        }
         if (behaviour === 'assault' && !R.has(u, 'Cumbersome Weapon')) {
           var adj = assaultables(u, 0)[0];
           if (adj) { aiCharge(u, adj); return; }
