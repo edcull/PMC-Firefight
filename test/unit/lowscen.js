@@ -146,5 +146,29 @@ console.log('\nCampaign battles stay at Priority Level 1 or 2, the 4\'x4\' table
   ok('a contract offers no Priority Level above 2, whatever the companies could field', lv.length > 0 && lv.every((n) => n <= 2), lv.join(','));
 })();
 
+console.log('\nA landing zone is held only by a token over its circle (house rule, SCN-1)');
+(function () {
+  const e = game('invasion', ['regular', 'regular', 'regular'], ['regular', 'regular', 'regular'], 'A');
+  toBattle(e);
+  const st = e.state();
+  st.terrain.length = 0;
+  // three zones 12" apart centre to centre, the closest the book allows
+  st.objectives = [{ x: 18, y: 24 }, { x: 30, y: 24 }, { x: 24, y: 34.4 }].map((p) => ({ x: p.x, y: p.y, r: 4, lz: true, owner: null }));
+  const as = st.units.filter((u) => u.side === 'A'), bs = st.units.filter((u) => u.side === 'B');
+  st.units.forEach((u) => { u.reserve = false; u.sp = 0; u.x = u.side === 'A' ? 4 : 44; u.y = 4 + st.units.indexOf(u) * 3; u.cargo = u.cargo || []; });
+  const owners = () => st.objectives.map((o) => SC.holderOf(st, o.x, o.y, 4, SC.areaOf(o)));
+  // one attacker between the first two zones, 2" from each circle's edge
+  as[0].x = 24; as[0].y = 24;
+  ok('a unit between two zones holds neither', owners().every((w) => w === null), owners().join(','));
+  as[0].x = 22.8; as[0].y = 24;
+  ok('...one with its token just over a zone\'s edge holds that one', owners()[0] === 'A' && owners()[1] === null, owners().join(','));
+  // one defender at the middle of the triangle used to keep all three hot
+  as[0].x = 4; as[0].y = 4;
+  bs[0].x = 24; bs[0].y = 27.5;
+  ok('a lone defender in the middle no longer holds all three', !owners().every((w) => w === 'B'), owners().join(','));
+  bs[1].x = 18; bs[1].y = 24; bs[2].x = 30; bs[2].y = 24; bs[0].x = 24; bs[0].y = 34.4;
+  ok('...a defender in each one does', owners().every((w) => w === 'B'), owners().join(','));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

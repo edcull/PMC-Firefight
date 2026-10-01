@@ -18,7 +18,7 @@
         endActivation = E.endActivation, faceAfter = E.faceAfter, forcedCharge = E.forcedCharge,
         fromLog = E.fromLog, insertionLegal = E.insertionLegal, landUnit = E.landUnit, logLine = E.logLine,
         markTargets = E.markTargets, martyrFirst = E.martyrFirst, moveBonus = E.moveBonus,
-        nearestDeploySpot = E.nearestDeploySpot, objDist = E.objDist, onTable = E.onTable,
+        nearestDeploySpot = E.nearestDeploySpot, objDist = E.objDist, objReach = E.objReach, onTable = E.onTable,
         playAssault = E.playAssault, pushRes = E.pushRes, relocCap = E.relocCap, relocSpotOK = E.relocSpotOK,
         repaintTerrain = E.repaintTerrain, repairCard = E.repairCard, resolveShot = E.resolveShot,
         samCheck = E.samCheck, scatterInsertion = E.scatterInsertion, sideName = E.sideName,
@@ -770,12 +770,12 @@
         if (t) return { x: t.unit.x, y: t.unit.y };
       }
       var goals = goalPoints();
-      var standing = goals.filter(function (o) { return objDist(u, o) <= 4; })[0];
+      var standing = goals.filter(function (o) { return objDist(u, o) <= objReach(o); })[0];
       if (standing && behaviour !== 'offensive') return standing;
       var best = null, bd = Infinity;
       goals.forEach(function (o) {
         var crowd = E.state.units.filter(function (f) {
-          return f.alive && f !== u && f.side === u.side && objDist(f, o) <= 6;
+          return f.alive && f !== u && f.side === u.side && objDist(f, o) <= objReach(o) + 2;
         }).length;
         var d = R.inches(u.x, u.y, o.x, o.y) + crowd * 14 + (o.owner === u.side ? 8 : 0);
         if (d < bd) { bd = d; best = o; }

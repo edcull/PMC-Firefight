@@ -369,10 +369,14 @@
     // from a token's edge to an objective's: a marker's point, or an area's own edge
     function objDist(u, o) {
       var a = SC.areaOf(o), d;
+      // held only from inside (a landing zone): how far the token is from touching it
+      if (a && a.strict) return Math.max(0, R.inches(u.x, u.y, o.x, o.y) - a.r - UR);
       if (a && a.rect) d = R.rectPointDist(a.rect, u.x, u.y);
       else d = Math.max(0, R.inches(u.x, u.y, o.x, o.y) - (a && a.r || 0));
       return Math.max(0, d - UR);
     }
+    // how close a unit has to be (objDist) to hold or contest an objective
+    function objReach(o) { var a = SC.areaOf(o); return a && a.strict ? 0 : 4; }
     function scoreObjectives() {
       E.state.objectives.forEach(function (o) {
         o.owner = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
@@ -479,7 +483,7 @@
 
     return {
       rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, regroupCard: regroupCard, regroupFx: regroupFx,
-      objDist: objDist, scoreObjectives: scoreObjectives,
+      objDist: objDist, objReach: objReach, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };

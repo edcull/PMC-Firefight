@@ -2164,6 +2164,7 @@
         docsOf: docsOf,
         spent: spent,
         objDist: K.objDist,
+        objReach: K.objReach,
         unbroken: unbroken,
         isAI: isAI,
         fromLog: K.fromLog,
