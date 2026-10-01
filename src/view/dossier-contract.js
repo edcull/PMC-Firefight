@@ -193,13 +193,25 @@
       }
       return rows.length ? '<div class="cpan orders">' + rows.join('') + '</div>' : '';
     }
+    /* Whose list is being picked. In a hotseat campaign each player picks their
+       own force (pp. 84-85): Player 1 first, then the screen is handed over and
+       Player 2 picks theirs, on the terms Player 1 has already settled. */
+    function seat() { return E.contract && E.contract.side === 'B' ? 'B' : 'A'; }
+    function hotseat() { return E.camp && E.camp.mode === 'hotseat'; }
     function contractView() {
-      var A = E.camp.companies.A, B = E.camp.companies.B;
+      var second = seat() === 'B';
+      var A = E.camp.companies[seat()], B = E.camp.companies[second ? 'A' : 'B'];
       var keys = E.contract.picks.map(function (e) { return R.entryPick(e); });
       var chk = R.checkArmy(keys, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null);
       var roll = E.contract.tierRoll;
       var h = '<h2>Contract</h2>';
-      if (E.contract.alt && E.contract.alt.id === E.contract.scenario.id) {
+      if (hotseat()) {
+        h += '<p class="lede">' + (second ? 'Player 2' : 'Player 1') + ' \u2014 ' + esc(A.name) + '</p>';
+        if (second) h += '<div class="cpdoc"><span class="mk">' + esc(B.name) + ' has picked its force: Battle Tier ' +
+          ROMAN[E.contract.tier] + ', Priority Level ' + E.contract.pl + '. Pick yours.</span></div>';
+      }
+      if (second) { /* the terms are settled: the scenario, the Tier and the level */ }
+      else if (E.contract.alt && E.contract.alt.id === E.contract.scenario.id) {
         h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die agreed: ' +
           esc(E.contract.alt.name) + ' it is.</div></div>';
       } else if (E.contract.alt) {
@@ -211,7 +223,7 @@
          the force. What is left to decide here stays — The Best Defence is Good
          Offence's roll, when it is waiting to be made. */
       var bd = E.contract.roles && E.contract.roles.bestDefence;
-      if (bd && bd.pending && bd.side === 'A') {
+      if (bd && bd.pending && bd.side === seat()) {
         h += '<div class="cpdoc"><button class="lnk" data-go="bestdef">The Best Defence is Good Offence \u2014 roll to attack (2+)</button></div>';
       }
       /* Rebel Tactics (p. 95): chosen once the scenario and who attacks are known,
@@ -231,7 +243,7 @@
           ROMAN[E.contract.caught.to] + ' since you last met.</span></div>';
       }
 
-      if (C.hasDoctrine(A, 'S4') && !E.contract.adjusted) {
+      if (!second && C.hasDoctrine(A, 'S4') && !E.contract.adjusted) {
         h += '<div class="cpdoc"><b>On Our Terms…</b> lets you shift the Battle Tier by one. ' +
           '<button class="lnk" data-tier="-1"' + (E.contract.tier <= 1 ? ' disabled' : '') + '>Down to ' + ROMAN[Math.max(1, E.contract.tier - 1)] + '</button> ' +
           '<button class="lnk" data-tier="1"' + (E.contract.tier >= E.contract.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, E.contract.tier + 1)] + '</button></div>';
@@ -239,7 +251,8 @@
 
       /* The standard contract (p. 84): Tier III, Priority Level 2, the Tier not
          rolled at all — when both forces can field it. */
-      if (!E.contract.standard && C.canStandard(A, B) && !(E.contract.tier === 3 && E.contract.pl === 2)) {
+      if (second) { /* nothing to change */ }
+      else if (!E.contract.standard && C.canStandard(A, B) && !(E.contract.tier === 3 && E.contract.pl === 2)) {
         h += '<div class="cpdoc"><span class="mk">Both forces can field a Tier III army at Priority Level 2.</span> ' +
           '<button class="lnk" data-go="standard">Take a standard contract instead</button></div>';
       } else if (E.contract.standard) {
@@ -249,7 +262,7 @@
       var lv = E.contract.levels || [1, 2];
       var PLN = { 1: 'skirmish', 2: 'full battle', 3: 'large battle', 4: 'major battle' };
       h += '<div class="field"><div><label for="camp-pl">Priority Level</label>' +
-        '<select id="camp-pl"' + (E.contract.standard ? ' disabled' : '') + '>' + [1, 2, 3, 4].map(function (n) {
+        '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2, 3, 4].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           if (!can && n > 2) return '';                 // the big ones only when someone can fill them
           return '<option value="' + n + '"' + (E.contract.pl === n ? ' selected' : '') +
@@ -326,8 +339,9 @@
       /* What still stands in the way is the button's tip, shown on a press while it
          is greyed out (aria-disabled, so the press arrives), not a line of its own. */
       h += '<button class="start" data-go="fight"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') +
-        '>Take the field</button>';
-      h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+        '>' + (hotseat() && !second ? 'Hand over to Player 2' : 'Take the field') + '</button>';
+      h += '<p class="camp-foot">' + (second ? '<button class="lnk" data-go="seatback">Back to ' + esc(B.name) + '\'s list</button>'
+        : '<button class="lnk" data-go="hub">Back</button>') + '</p>';
       return h;
     }
 
@@ -362,33 +376,58 @@
     }
 
     /* ================= starting the battle ================= */
+    /* Player 1's list is down: in a hotseat campaign, the screen goes to
+       Player 2 to pick theirs. Returns true when it has handed over. */
+    function handOver() {
+      E.contract.first = { picks: E.contract.picks, tactic: E.contract.tactic || null, drugs: E.contract.drugs || [] };
+      E.contract.side = 'B'; E.contract.picks = []; E.contract.tactic = null; E.contract.drugs = [];
+      return true;
+    }
+    // Player 2 goes back to Player 1's list (and picks again after)
+    function seatBack() {
+      var f = E.contract && E.contract.first;
+      if (!f) return false;
+      E.contract.side = 'A'; E.contract.picks = f.picks; E.contract.tactic = f.tactic; E.contract.drugs = f.drugs;
+      delete E.contract.first;
+      return true;
+    }
     function fight() {
+      if (hotseat() && seat() === 'A') return handOver();
       var A = E.camp.companies.A, B = E.camp.companies.B;
-      // a rebel rival picks a tactic of its own, the way a player would (p. 95)
-      var theirTactic = B.faction === 'rebel' ? [null, 'laststand', 'wave', 'guerillas'][Math.floor(Math.random() * 4)] : null;
-      var theirs = autoPick(B, E.contract.tier, E.contract.pl, theirTactic);
-      if (!R.checkArmy(theirs.map(function (e) { return R.entryPick(e); }),
-        E.contract.tier, E.contract.pl, B.doctrines, theirTactic).ok) {
-        // the rival cannot field a legal list — let it hire in for this battle
-        C.developRival(B);
+      var mine = E.contract.first || E.contract, theirTactic, theirs, theirDrugs;
+      if (E.contract.first) {
+        // hotseat: Player 2 has picked their own force, tactic and drugs
+        theirs = E.contract.picks; theirTactic = E.contract.tactic || null; theirDrugs = E.contract.drugs || [];
+        if (B.faction !== 'rebel') theirTactic = null;
+      } else {
+        // a rebel rival picks a tactic of its own, the way a player would (p. 95)
+        theirTactic = B.faction === 'rebel' ? [null, 'laststand', 'wave', 'guerillas'][Math.floor(Math.random() * 4)] : null;
         theirs = autoPick(B, E.contract.tier, E.contract.pl, theirTactic);
+        if (!R.checkArmy(theirs.map(function (e) { return R.entryPick(e); }),
+          E.contract.tier, E.contract.pl, B.doctrines, theirTactic).ok) {
+          // the rival cannot field a legal list — let it hire in for this battle
+          C.developRival(B);
+          theirs = autoPick(B, E.contract.tier, E.contract.pl, theirTactic);
+        }
       }
-      var druggedA = drugThem(A, E.contract.picks, E.contract.drugs || []);
-      drugThem(B, theirs);
+      var picksA = mine.picks, tacticA = mine.tactic || null;
+      var druggedA = drugThem(A, picksA, mine.drugs || []);
+      var druggedB = drugThem(B, theirs, theirDrugs);
       E.camp.pending = {
         tier: E.contract.tier, pl: E.contract.pl, scenario: E.contract.scenario.id,
-        A: E.contract.picks.map(function (e) { return e.rid; }),
+        A: picksA.map(function (e) { return e.rid; }),
         B: theirs.map(function (e) { return e.rid; }),
-        drugged: E.contract.picks.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; })
+        drugged: picksA.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; })
           .concat(theirs.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; }))
       };
       save();
       /* Drug Dealer: who was sent in Determined is said before the battle, and the
          battle waits for it to be read — said and left, the note sat behind the
          battle and came up over the aftermath. */
-      if (druggedA.length) {
+      var told = druggedA.concat(theirDrugs ? druggedB : []);
+      if (told.length) {
         note('Drug Dealer',
-          druggedA.map(function (e) { return e.name; }).join(', ') +
+          told.map(function (e) { return e.name; }).join(', ') +
           ' go in Determined. They will each take D6+1 extra Trauma Points afterwards.', launch);
       } else launch();
       function launch() {
@@ -398,15 +437,19 @@
           scenario: E.contract.scenario.id,
           // the attacker and defender were settled when the contract was taken
           roles: E.contract.roles || null,
-          armyA: E.contract.picks.map(function (e) { return R.entryPick(e); }),
+          armyA: picksA.map(function (e) { return R.entryPick(e); }),
           armyB: theirs.map(function (e) { return R.entryPick(e); }),
           nameA: A.name, nameB: B.name,
           colourA: colourOf(A), colourB: colourOf(B),
-          dossier: { A: E.contract.picks, B: theirs },
+          dossier: { A: picksA, B: theirs },
           // Modifying the armies (p. 46): what is left on the books, to swap in once the table is laid
-          bench: { A: A.roster.filter(function (e) { return E.contract.picks.indexOf(e) < 0 && !(e.restUntil > 0); }), B: [] },
+          bench: {
+            A: A.roster.filter(function (e) { return picksA.indexOf(e) < 0 && !(e.restUntil > 0); }),
+            // a rival's spare units are not offered; a second player's are theirs to swap in
+            B: theirDrugs ? B.roster.filter(function (e) { return theirs.indexOf(e) < 0 && !(e.restUntil > 0); }) : []
+          },
           doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
-          tactics: { A: A.faction === 'rebel' ? E.contract.tactic || null : null, B: theirTactic },
+          tactics: { A: A.faction === 'rebel' ? tacticA : null, B: theirTactic },
           campaign: true,
           mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
           planet: E.contract.planet
@@ -416,7 +459,7 @@
 
     return {
       offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, contractView: contractView,
-      autoPick: autoPick, fight: fight
+      autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierContract;
