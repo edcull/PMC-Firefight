@@ -268,7 +268,8 @@
       move: p.move, fp: p.fp, range: p.range, def: p.def, defPierced: p.defPierced,
       assault: p.assault, morale: p.morale, group: p.group, key: p.key,
       faction: p.faction || 'pmc',
-      tactic: (state && state.tactics && state.tactics[side]) || null,
+      // Deserters and POWs "do not follow army special rule" (p. 103): no tactic of the army's
+      tactic: ((p.rules || []).indexOf('No Army Rules') < 0 && state && state.tactics && state.tactics[side]) || null,
       cls: p.cls || 'infantry', str: p.str, turn: p.turn, transport: p.transport, command: !!p.command,
       jets: !!p.jets,
       cargo: [], damage: 0, aboard: null, disembarked: false,
