@@ -183,5 +183,28 @@ console.log('\nThe VIP draws the OpFor\u2019s attack, Kill Them All! or not (p. 
   ok('a squad on Kill Them All! that cannot reach the VIP to charge shoots it instead', runs > 0 && fired === runs && charged === 0, fired + ' of ' + runs + ' shot it, ' + charged + ' charged');
 })();
 
+console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6 (p. 147)');
+(function () {
+  function trial(mod) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular', 'regular'], armyB: ['snipers', 'regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+      colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+    st.units.forEach((x, i) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; x.x = x.side === 'A' ? 10 : 22; x.y = 14 + i * 3; });
+    const sn = st.units.find((x) => x.key === 'snipers');
+    st.scen.behaviour = () => ({ mod, why: 'test' });
+    const keep = R.d6; R.d6 = () => 3;                            // 3 + mod on the table
+    const n0 = st.log.length;
+    try { e.query.aiAct(sn); } finally { R.d6 = keep; }
+    const said = st.log.slice(n0).map((l) => l.text || '').join(' | ');
+    return { said, marked: /designates|marks/i.test(said) };
+  }
+  const calm = trial(0), run = trial(-9), wild = trial(9);
+  ok('on a 1-6 (here Neutral) the marker designates', /neutral/.test(calm.said) && calm.marked, calm.said.slice(0, 120));
+  ok('...on Run for Your Lives! it does not', /flee/.test(run.said) && !run.marked, run.said.slice(0, 120));
+  ok('...nor on Kill Them All!', /assault/.test(wild.said) && !wild.marked, wild.said.slice(0, 120));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
