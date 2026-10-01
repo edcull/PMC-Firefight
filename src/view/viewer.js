@@ -134,8 +134,8 @@
     return -Math.PI / 4 + (i < 0 ? 1 : i) * Math.PI / 4;
   }
   /* The thing being shot at: the unit picked in the Target list (a plain rifle
-     team to begin with), as the shots so far have left it — its men, its
-     Suppression, a hull's Damage. Any change to either unit puts it back fresh. */
+     team to begin with), as the last shot left it — its men, its Suppression,
+     a hull's Damage. Every shot, and any change to either unit, starts it fresh. */
   function mark() {
     var p = R.profile(view.target) || R.profile('regular'), side = view.side === 'A' ? 'B' : 'A';
     // built as the battle builds a unit (engine.js makeUnit): its drive and what that does to it,
@@ -168,9 +168,8 @@
      is hit with, what that does to it. The shots are drawn landing as many as
      hit, and the target shows what is left of it once they have. */
   function rollShot() {
-    // a target already gone is set up again; one still standing shakes off its Suppression first
-    if (view.tgt && targetGone(mark())) freshTarget();
-    else if (view.tgt) { view.tgt.sp = 0; drawControls(); }
+    // every shot is at a fresh target: no Suppression, no losses, no Damage from the last one
+    freshTarget(); drawControls();
     var a = Object.assign({}, unit(), { shotFrom: [] }), t = mark();
     t.before = t.models;
     var st = { units: [a, t], terrain: [], objectives: [], cfg: { aiSides: [], tier: a.tier, pl: 1 }, turn: 1, sc: {}, scen: {}, phase: 'battle' };
