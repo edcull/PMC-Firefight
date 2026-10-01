@@ -232,8 +232,10 @@
         total += 4; parts.push({ label: 'Demolisher', v: 4 });
       }
       // a unit charging home cannot claim cover from the defensive fire it draws
+      /* A shot called in by Markerlights, marked or designated, ignores the target's
+         Stealth (pp. 58-59): the price is that a Stealth unit is marked only within 12". */
       var dres = atT ? null : defenceAgainst(state, aux ? auxGun(a) : a, t,
-        { noCover: mode === 'defensive', defensiveFire: mode === 'defensive' });
+        { noCover: mode === 'defensive', defensiveFire: mode === 'defensive', marked: !aux && !!markCall(state, a, t, opts) });
       return {
         total: total, parts: parts, basic: basic, aux: aux, pierce: pierce,
         crossfire: crossfire, arc: arc, dist: dist, def: dres

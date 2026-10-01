@@ -184,5 +184,22 @@ console.log('\nAn emptied drop platform does nothing more, and touches no object
   ok('...nor hold an objective it stands on', SC.holderOf(st, 20, 20, 4) === null);
 })();
 
+console.log('\nA shot called in by Markerlights ignores Stealth (pp. 58-59)');
+(function () {
+  const fo = unit('observers', 'B', 40, 10), rif = unit('regular', 'A', 10, 10), mor = unit('mortarteam', 'A', 10, 14);
+  const st = world([fo, rif, mor]);
+  const def = (a, opts) => R.shotMods(st, a, fo, 'fire', opts || {}).def;
+  const plain = def(rif);
+  ok('unmarked, a Stealth unit 30" off gets its Stealth bonus', plain.parts.some((p) => p.label === 'Stealth' && p.v === 4), 'Defence ' + plain.value);
+  st.mark = { side: 'A', kind: 'mark', targets: [fo] };
+  const marked = def(rif);
+  ok('marked, the shot it calls in ignores it', marked.value === plain.value - 4 && marked.parts.some((p) => /ignored/.test(p.label)),
+    'Defence ' + marked.value + ' (' + marked.parts.map((p) => p.label + ' ' + p.v).join(', ') + ')');
+  st.mark = { side: 'A', kind: 'designate', targets: [fo] };
+  ok('...and so does an Indirect Fire shot at a designated target', def(mor).value === R.shotMods(world([fo, mor]), mor, fo, 'fire', {}).def.value - 4);
+  st.mark = { side: 'B', kind: 'mark', targets: [fo] };
+  ok('a mark by the other side does nothing for this shooter', def(rif).value === plain.value);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

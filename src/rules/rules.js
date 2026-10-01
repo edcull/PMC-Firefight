@@ -1141,7 +1141,9 @@
     if (!opts.assault && has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
       // +1 above 6", +2 above 12"...: exactly 6" away is not yet out of the first band
       var st = Math.max(0, Math.ceil(unitDist(attacker, target) / 6) - 1);
-      if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
+      // a shot called in by Markerlights ignores it (pp. 58-59)
+      if (st > 0 && opts.marked) parts.push({ label: 'Stealth — ignored, the target is marked', v: 0 });
+      else if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
     }
     // Shield Generator (p. 130): a dome against fire from outside it
     if (!opts.assault && attacker) {
