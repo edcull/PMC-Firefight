@@ -35,6 +35,7 @@
       // a trench: the dug slot, dark and trodden, with spoil flecked along it
       trench: { ramp: ['#1c1710', '#241d14', '#2c2419', '#352b1e', '#3e3223'], fleck: ['#4a3d2a', '#15110b', '#5a4a33'], rim: '#120e09' },
       wire: { ramp: CHURN, fleck: ['#5a4c38', '#2a2219'], rim: '#2a2219' },
+      cutwire: { ramp: CHURN, fleck: ['#5a4c38', '#2a2219'], rim: '#2a2219' },
       rocks: { ramp: SCREE, fleck: ['#6f6b62', '#22211d', '#8a857a'], rim: '#1e1d1a' },
       building: { ramp: SLAB, fleck: ['#6a6459', '#211f1b'], rim: '#1d1c18' },
       bunker: { ramp: SLAB, fleck: ['#5f5b54', '#211f1b'], rim: '#1d1c18' },

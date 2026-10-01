@@ -115,6 +115,11 @@
             : 'Go into an empty building within 4" — one unit to a building. Inside: +2 Defence, no Crossfire, range measured from the wall' +
               ' — but no moving until you come out.' };
         }
+        case 'leave': {
+          var lv = E.leaveSpots(u);
+          return lv.length ? { on: true, hint: 'A Move off the table edge: the unit leaves the battle and counts as fled (p. 31). Pick the ground it goes off from.' }
+            : { on: false, hint: 'It cannot reach the table edge with a Move.' };
+        }
         case 'exitbld': {
           if (sup) return { on: false, hint: 'Suppressed: it keeps the cover of the building (p. 34).' };
           var outs = R.exitSpots(E.state, u);
@@ -453,6 +458,10 @@
         ui.mode = 'enter';
         ui.sections = R.enterTargets(E.state, u);
         setHint(null, u.bld ? 'Tap the section to move into.' : 'Tap the lit building to go in.');
+      } else if (id === 'leave') {
+        ui.mode = 'leave';
+        ui.moves = E.leaveSpots(u);
+        setHint(null, 'Tap the lit ground at the edge it goes off from. It leaves the battle and counts as fled.');
       } else if (id === 'exitbld') {
         ui.mode = 'exitbld';
         ui.moves = R.exitSpots(E.state, u);

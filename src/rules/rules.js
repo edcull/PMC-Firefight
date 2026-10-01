@@ -667,8 +667,9 @@
        the men in them are immune to Crossfire. */
     trench:    { name: 'Trench',      blocks: false, impassable: false, movePenalty: 1, cover: 2, fp: 0, noCrossfire: true },
     /* Barbed wire (p. 42): crossing a section costs an extra D6", rolled before
-       the move — and nothing else. */
-    wire:      { name: 'Barbed wire', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, wire: true },
+       the move — and nothing else. Only Sappers can bring it down (the summary
+       table, p. 43: "Special — Sapper rule only"), by cutting a gap in it. */
+    wire:      { name: 'Barbed wire', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, wire: true, destructible: 'wire' },
     water:     { name: 'Shallow water', blocks: false, impassable: false, movePenalty: 1, cover: 0, fp: 0, shallow: true },
     deep:      { name: 'Deep water',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     lava:      { name: 'Lava field',  blocks: false, impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
@@ -688,6 +689,7 @@
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // what a demolished piece leaves behind (p. 41-43)
     razed:     { name: 'Rubble of a wall', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
+    cutwire:   { name: 'Cut wire', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
     burning:   { name: 'Burning building', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0, wreck: true }
   };
 
@@ -1498,7 +1500,7 @@
     return {
       BOARD: BOARD, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap, d6: d6,
       flyInf: flyInf, hasOwn: hasOwn, isFlying: isFlying, kindsUnder: kindsUnder, mountOf: mountOf,
-      propOf: propOf, rectPointDist: rectPointDist, sectionRect: sectionRect, terrainAt: terrainAt,
+      propOf: propOf, rectPointDist: rectPointDist, inRect: inRect, sectionRect: sectionRect, terrainAt: terrainAt,
       unitNear: unitNear
     };
   }

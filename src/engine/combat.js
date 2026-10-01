@@ -64,6 +64,37 @@
       endActivation(u);
     }
 
+    /* Leaving the table (p. 31): "Units can move out voluntarily of the table but
+       in such case they are counted as fled". A Move that takes every model past
+       an edge: the spots it could reach with enough of the move left over to
+       carry its base off. Not from a building, and not while Suppressed, when a
+       Move may only make for safety (p. 34). */
+    function edgeGap(c) { return Math.min(c.x, R.BOARD.w - c.x, c.y, R.BOARD.h - c.y) + R.UNIT_R; }
+    function leaveSpots(u) {
+      if (!u || !u.alive || u.x < 0 || u.aboard || u.bld || u.cls === 'aircraft' || !u.move) return [];
+      if (R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile') || R.status(u) !== 'ready') return [];
+      var allow = u.move + moveBonus(u, 'move');
+      return R.reachable(E.state, u, allow).filter(function (c) {
+        return E.canStand(u, c) && allow - (c.spent || 0) >= edgeGap(c) - 1e-6;
+      });
+    }
+    function doLeave(u, spot) {
+      var was = { x: u.x, y: u.y };
+      E.faceAlong(u, u.x, u.y, spot.x, spot.y);
+      u.x = spot.x; u.y = spot.y;
+      E.animateMove(u, [was, { x: spot.x, y: spot.y }]);
+      u.alive = false; u.fled = true; u.activated = true;
+      logLine('kill', u.label + ' moves off the table — counted as fled.');
+      // whoever is aboard goes with it
+      (u.cargo || []).forEach(function (c) {
+        if (!c.alive) return;
+        c.alive = false; c.fled = true;
+        logLine('kill', c.label + ' goes with it — fled.');
+      });
+      ui.moves = [];
+      endActivation(u);
+    }
+
     /* Disembark (p. 36): "one or more" of those aboard. A player puts them down a
        squad a tap, and may stop there and drive on (Cancel); the AI empties the hull. */
     function doDisembark(pt, all) {
@@ -375,7 +406,7 @@
 
     return {
       wireNote: wireNote, chargeAllow: chargeAllow, assaultables: assaultables,
-      canReachCharge: canReachCharge, doEnter: doEnter, doExitBld: doExitBld, doDisembark: doDisembark,
+      canReachCharge: canReachCharge, doEnter: doEnter, doExitBld: doExitBld, leaveSpots: leaveSpots, doLeave: doLeave, doDisembark: doDisembark,
       doStrafe: doStrafe, resolveShot: resolveShot, doShoot: doShoot, doAssault: doAssault,
       doSupport: doSupport, doSteady: doSteady, doHack: doHack, hijacked: hijacked, endHijack: endHijack,
       doDemolish: doDemolish, doBreach: doBreach, minedFor: minedFor, doDetonate: doDetonate,

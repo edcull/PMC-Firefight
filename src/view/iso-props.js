@@ -150,14 +150,16 @@
               tone: rand(), seed: (rand() * 9999) | 0
             });
           }
-        } else if (r.kind === 'trench' || r.kind === 'wire') {
+        } else if (r.kind === 'trench' || r.kind === 'wire' || r.kind === 'cutwire') {
           /* A trench: a single course of bags along each lip of the slot. Barbed
              wire: pickets along the line with the coils strung between them. */
           var hz2 = r.w > r.h, ln2 = hz2 ? r.w : r.h, SG = 1.5;
           var ns2 = Math.max(1, Math.round(ln2 / SG)), sl2 = ln2 / ns2;
           for (var s3 = 0; s3 < ns2; s3++) {
             var md = (s3 + 0.5) * sl2;
-            if (r.kind === 'wire') {
+            // cut wire: the coils left at each end, the gap Sappers blew between them
+            if (r.kind === 'cutwire' && (ns2 < 3 ? s3 > 0 : s3 > 0 && s3 < ns2 - 1)) continue;
+            if (r.kind === 'wire' || r.kind === 'cutwire') {
               props.push({
                 kind: 'wire', x: hz2 ? r.x + md : r.x + r.w / 2, y: hz2 ? r.y + r.h / 2 : r.y + md,
                 horiz: hz2, len: sl2, seed: (rand() * 9999) | 0

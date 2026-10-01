@@ -312,21 +312,21 @@ front armour to a threat.
 
 **Battle and movement**
 
-- **L-1:** Units cannot leave the table voluntarily (l.568). The movement lattice stops at the edge.
-- **L-2:** A unit can end a move astride a low wall, getting the wall's +2 against fire from both sides. Tokens
+- **L-1 — fixed:** Units cannot leave the table voluntarily (l.568). The movement lattice stops at the edge.
+- **L-2 — fixed:** A unit can end a move astride a low wall, getting the wall's +2 against fire from both sides. Tokens
   can also overlap high walls and rocks by up to 0.5". `reachable` and `blockedAt` test only the centre
   (`move.js:600-609`, about `:243`). *Reproduced:* 69 end points sit on a wall and 47 overlap. Book l.984.
-- **L-3:** A unit counted as in a wood cannot always see out of it. Cover uses the half-rim test
+- **L-3 — fixed:** A unit counted as in a wood cannot always see out of it. Cover uses the half-rim test
   (`space.js:442`); sight uses the centre (`:496-511`). This follows from the v0.1 ruling 3.26. *Reproduced.*
-- **L-4:** Entering and leaving a building use different 4" measures: base edge to enter (`space.js:75`), token
+- **L-4 — fixed:** Entering and leaving a building use different 4" measures: base edge to enter (`space.js:75`), token
   centre to leave (`:97`).
-- **L-5:** Low walls run up to 7.95", against the book's "normally up to 6"" (l.980). Only the loose walls
+- **L-5 — fixed:** Low walls run up to 7.95", against the book's "normally up to 6"" (l.980). Only the loose walls
   placed by `place()` exceed it (`gen.js:115`).
-- **L-6:** Riders can cross barbed wire (l.2926: "cannot cross linear obstacles"). `move.js:64-69` bars only
+- **L-6 — fixed:** Riders can cross barbed wire (l.2926: "cannot cross linear obstacles"). `move.js:64-69` bars only
   destructible linear terrain. *Reproduced.*
-- **L-7:** A gravbike still pays the barbed wire D6" (l.5470: "do not suffer movement penalties"). `move.js:48`
+- **L-7 — fixed:** A gravbike still pays the barbed wire D6" (l.5470: "do not suffer movement penalties"). `move.js:48`
   returns `wireRoll` before the gravbike branch.
-- **L-8:** Barbed wire cannot be destroyed by Sappers (summary table, l.1087). `wire` has no `destructible`
+- **L-8 — fixed:** Barbed wire cannot be destroyed by Sappers (summary table, l.1087). `wire` has no `destructible`
   value (`rules.js:668`).
 
 **Vehicles and aircraft**
@@ -637,6 +637,15 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 
 | M-7 Hotseat campaign: the AI picks Player 2's force | **Fixed.** Player 1 picks their list and hands over. Player 2 then picks theirs from their own dossier, with their own rebel tactic and Drug Dealer choice, on the scenario, Battle Tier and Priority Level Player 1 settled. Player 2 can go back to Player 1's list. The rival AI never hires into Player 2's company, and Player 2's unpicked units are on the bench to swap in. On Our Terms and Foresighted Command stay with Player 1, who settles the terms. | `dossier-contract.js` (`contractView`, `fight`, `handOver`, `seatBack`), `dossier.js` (`pickCo`, `seatback`) |
 
+| L-1 Units cannot leave the table on purpose | **Fixed.** A unit that could Move over an edge is offered Leave the table. It picks the lit ground it goes off from, leaves the battle and counts as fled (p. 31). Whoever is aboard goes with it. Not from a building, not while Suppressed, and not for aircraft. | `combat.js` (`leaveSpots`, `doLeave`), `engine.js` (`leave`), `actions.js`, `input.js`, `game.js` |
+| L-2 A base ends astride a wall, or over rocks | **Fixed.** A move ends only where the whole base fits: none of it on ground the unit could not stand on, and none of it on a wall or barbed wire ("a unit cannot be split by linear terrain", p. 42). A Tier III-V hull may still stop on a wall it flattens. Aircraft fly over all of it. | `move.js` (`roomFor`, `reachable`) |
+| L-3 A unit in a wood cannot always see out | **Fixed.** A unit that counts as in a sight-blocking piece by the cover rule (most of its rim in it) sees out of it and is seen, even where its middle stands just outside. | `space.js` (`countsIn`, `lineClearAt`) |
+| L-4 In and out of a building measure 4" differently | **Fixed.** Coming out is measured as going in: the base within 4" of the wall. The beaten garrison's 2" (M-4) is unchanged. | `space.js` (`exitSpots`, `leaveAway`) |
+| L-5 Low walls up to 7.95" | **Fixed.** Low walls are laid 3-6" like high walls ("normally up to 6"", p. 42). The terrain snapshots were retaken. | `gen.js` (`SIZES`) |
+| L-6 Riders cross barbed wire | **Fixed.** Riders cross no linear obstacle, wire included, unless they ride horses. | `move.js` (`terrainBars`) |
+| L-7 A grav bike pays the wire's D6" | **Fixed.** A grav bike pays no movement penalty at all. After L-6 it only matters if a grav bike is ever allowed over wire. | `move.js` (`terrainCost`) |
+| L-8 Sappers cannot cut barbed wire | **Fixed.** Wire is destructible by the Sapper rule only (p. 43). Sappers may set charges against it; no gun shoots it down, and the Terrorist's mine is not laid in it. Cut, it becomes a gap that costs nothing to cross. | `rules.js` (`TERRAIN.wire`, `cutwire`), `destruct.js`, `engine.js`, `iso-props.js`, `iso-ground.js` |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.

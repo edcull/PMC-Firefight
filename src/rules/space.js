@@ -85,12 +85,13 @@
       return q;
     }
     /* Where a unit coming out may be put: within 4" of the wall, on ground it
-       can stand on, clear of every other unit. */
-    // `reach`: how far out the unit's middle may end, 4" from the wall unless said otherwise
+       can stand on, clear of every other unit. The 4" is measured as going in is,
+       from the wall to the near edge of the base (p. 41). */
+    // `reach`: how far out the unit's middle may end, its base within 4" of the wall unless said otherwise
     function exitSpots(state, u, reach) {
       var q = sectionRect(u);
       if (!q) return [];
-      reach = reach || 4;
+      reach = reach || UNIT_R + 4;
       var out = [];
       for (var x = Math.floor(q.x - reach - 1); x <= q.x + q.w + reach + 1; x += STEP) {
         for (var y = Math.floor(q.y - reach - 1); y <= q.y + q.h + reach + 1; y += STEP) {
@@ -112,7 +113,7 @@
        building does: its base ends no further than `back` inches from the wall
        (the 2" it falls back, p. 41) — 4" if not said. */
     function leaveAway(state, u, from, back) {
-      var spots = exitSpots(state, u, back != null ? UNIT_R + back : 4);
+      var spots = exitSpots(state, u, UNIT_R + (back != null ? back : 4));
       var q = sectionRect(u);
       exitBuilding(state, u, null);
       if (!spots.length) { var p0 = nearestClear(state, u, q); u.x = p0.x; u.y = p0.y; return; }
@@ -462,6 +463,18 @@
       for (var kk in n) if (n[kk] > RIM / 2) return [kk];
       return [kc];
     }
+    // whether a unit counts as in this piece, as kindsUnder judges it: most of its rim in it
+    function countsIn(state, u, r) {
+      if (!u || !u.side || u.x < 0) return false;
+      if (u.bld) return u.bld === r;
+      if (kindsUnder(state, u)[0] !== r.kind) return false;
+      var n = 0;
+      for (var k = 0; k < RIM; k++) {
+        var an = k / RIM * Math.PI * 2;
+        if (inRect(u.x + Math.cos(an) * UNIT_R, u.y + Math.sin(an) * UNIT_R, r)) n++;
+      }
+      return n >= RIM / 2;
+    }
     // the Defence bonus the ground gives a unit (or a token) standing at x, y
     function coverAt(state, x, y, u) {
       return Math.min.apply(null, kindsUnder(state, null, x, y).map(function (k) { return TERRAIN[k].cover || 0; }));
@@ -541,7 +554,13 @@
         }
         // a hill blocks sight across it, but not for a unit standing on it (p. 42)
         if (aIn || bIn) continue;
-        if (segRect(ax, ay, bx, by, r)) return false;
+        if (segRect(ax, ay, bx, by, r)) {
+          /* "Any units within that LoS-blocking terrain piece can see other units
+             inside that piece as well as units outside it" (p. 42): in it as the
+             cover rule counts it, by the most of its base, not only its middle. */
+          if (!t.hill && (countsIn(state, a, r) || countsIn(state, b, r))) continue;
+          return false;
+        }
       }
       /* "Units on hills can shoot/be shot at over friendly units below them (but
          not over enemy ones)" — the friends of whichever end is up on the hill,

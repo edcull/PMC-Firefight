@@ -9,7 +9,7 @@
   root.PMCMove = function (E) {
     var BOARD = E.BOARD, STEP = E.STEP, TERRAIN = E.TERRAIN, UNIT_R = E.UNIT_R, angleWrap = E.angleWrap,
         d6 = E.d6, flyInf = E.flyInf, hasOwn = E.hasOwn, isFlying = E.isFlying, kindsUnder = E.kindsUnder,
-        mountOf = E.mountOf, propOf = E.propOf, rectPointDist = E.rectPointDist, sectionRect = E.sectionRect,
+        mountOf = E.mountOf, propOf = E.propOf, rectPointDist = E.rectPointDist, inRectOf = E.inRect, sectionRect = E.sectionRect,
         terrainAt = E.terrainAt, unitNear = E.unitNear;
     /* ---------- movement ---------- */
     // 16 directions, so lattice distance tracks a tape measure to about 1%
@@ -43,12 +43,13 @@
       if (pr && pr.water && (t.shallow || kind === 'deep')) return 0;   // a hovercraft skims
       // a walker steps through difficult area terrain as infantry does — but a wall or a fence costs it what it costs any hull (p. 180)
       var heavy = u.cls === 'vehicle' && !(pr && pr.footed && !t.linear);
-      // Riders (p. 94) lose 2" to rough going where a man on foot loses 1"
-      // barbed wire: the extra D6" rolled before the move (p. 42), whatever is crossing
+      // a grav bike "does not suffer movement penalties" (Appendix 3), barbed wire's included
+      var mt = !heavy && hasOwn(u, 'Riders') ? mountOf(u) : null;
+      if (mt && mt.smooth) return 0;
+      // barbed wire: the extra D6" rolled before the move (p. 42), whatever else is crossing
       if (t.wire) return u.wireRoll || 6;
+      // Riders (p. 94) lose 2" to rough going where a man on foot loses 1"
       if (!heavy && hasOwn(u, 'Riders')) {
-        var mt = mountOf(u);
-        if (mt && mt.smooth) return 0;                         // a grav bike skims it
         if (mt && mt.rough && t.movePenalty && !t.linear) return mt.rough;   // a motorbike bogs down in rough ground
         return t.movePenalty * 2;
       }
@@ -63,9 +64,9 @@
          beasts and grav sleds go around. */
       if (hasOwn(u, 'Riders')) {
         if (kind === 'building' || kind === 'bunker' || kind === 'burning') return true;
-        // ...nor cross a wall, unless it rides a horse, which jumps it (Appendix 3)
+        // ...nor cross a wall or barbed wire, unless it rides a horse, which jumps it (Appendix 3)
         var mtL = mountOf(u);
-        if (TERRAIN[kind].destructible === 'linear' && !(mtL && mtL.linear)) return true;
+        if (TERRAIN[kind].linear && !(mtL && mtL.linear)) return true;
       }
       // a vehicle cannot enter a building or cross a high wall either
       if (u.cls === 'vehicle' && (kind === 'building' || kind === 'bunker' || kind === 'burning')) return true;
@@ -584,12 +585,44 @@
       return f;
     }
 
+    /* Where a unit may end a move, its whole base and not just its middle: no
+       part of it on ground it could not stand on, and never astride a wall or a
+       stretch of wire — "a unit cannot be split by linear terrain, with models on
+       both sides" (p. 42). A Tier III-V hull flattens a wall it stops on (p. 35).
+       Aircraft fly over all of it. Returns a test of a point. */
+    var RIM = (function () {
+      var out = [];
+      for (var a = 0; a < 16; a++) out.push([Math.cos(a * Math.PI / 8), Math.sin(a * Math.PI / 8)]);
+      return out;
+    })();
+    function roomFor(state, u) {
+      if (isFlying(u)) return function () { return true; };
+      var lands = flyInf(u) || jumps(u), crush = u.cls === 'vehicle' && u.tier >= 3, rr = UNIT_R - 1e-6;
+      var bars = state.terrain.filter(function (r) {
+        var t = TERRAIN[r.kind];
+        if (!t) return false;
+        if (t.linear) return !(crush && t.destructible === 'linear' && !r.reinforced);
+        return lands ? t.impassable : terrainBars(u, r.kind);
+      });
+      if (!bars.length) return function () { return true; };
+      return function (x, y) {
+        for (var i = 0; i < bars.length; i++) {
+          var r = bars[i];
+          if (x < r.x - rr || x > r.x + r.w + rr || y < r.y - rr || y > r.y + r.h + rr) continue;
+          if (!r.poly && !r.parts) { if (rectPointDist(r, x, y) < rr) return false; continue; }
+          for (var k = 0; k < RIM.length; k++) if (inRectOf(x + RIM[k][0] * rr, y + RIM[k][1] * rr, r)) return false;
+        }
+        return true;
+      };
+    }
     function reachable(state, u, allowance) {
+      var room = roomFor(state, u);
       if (drives(u)) {
         var df = driveField(state, u, allowance), dout = [];
         df.seen.forEach(function (n) {
           var x = n.i * STEP, y = n.j * STEP;
           if (unitNear(state, x, y, u, 1)) return;
+          if (!room(x, y)) return;
           var at = df.at(n.i, n.j);
           if (!at || at.spent > allowance + 1e-6) return;
           dout.push({ x: x, y: y, cost: at.ground, spent: at.spent, turns: at.turns, reverse: at.reverse });
@@ -602,6 +635,7 @@
         if (unitNear(state, x, y, u, 1)) return;      // must finish at least 1" from other units
         // Flying Infantry and jump troops go over impassable ground but cannot land on it
         if ((flyInf(u) || jumps(u)) && TERRAIN[terrainAt(state, x, y)].impassable) return;
+        if (!room(x, y)) return;
         var ground = f.cost[f.idx(n.i, n.j)];
         var real = driveCost(u, x, y, ground);
         if (real > allowance) return;
@@ -655,7 +689,7 @@
     function relink(L) {
       BOARD = L.BOARD; STEP = L.STEP; TERRAIN = L.TERRAIN; UNIT_R = L.UNIT_R; angleWrap = L.angleWrap;
       d6 = L.d6; flyInf = L.flyInf; hasOwn = L.hasOwn; isFlying = L.isFlying; kindsUnder = L.kindsUnder;
-      mountOf = L.mountOf; propOf = L.propOf; rectPointDist = L.rectPointDist; sectionRect = L.sectionRect;
+      mountOf = L.mountOf; propOf = L.propOf; rectPointDist = L.rectPointDist; inRectOf = L.inRect; sectionRect = L.sectionRect;
       terrainAt = L.terrainAt; unitNear = L.unitNear;
     }
 

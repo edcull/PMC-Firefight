@@ -112,7 +112,8 @@
     lava: [5, 12, 4, 10],
     crystal: [5, 12, 4, 10],
     ravine: [6, 14, 2.5, 5],
-    barricade: [3, 8, 1, 1],
+    // linear terrain is "normally up to 6\" long" (p. 42), low walls as much as high ones
+    barricade: [3, 6, 1, 1],
     // the book destroys high walls in sections up to 6", so none is laid longer
     wall: [3, 6, 1, 1]
   };

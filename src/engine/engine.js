@@ -479,7 +479,7 @@
         if ((docs[side] || []).indexOf('V3') < 0) return;
         var pool = state.terrain.filter(function (r) {
           var t = R.TERRAIN[r.kind];
-          return t.destructible && t.destructible !== 'target';
+          return t.destructible && t.destructible !== 'target' && t.destructible !== 'wire';
         });
         if (!pool.length) return;
         state.mined = { side: side, piece: pool[Math.floor(Math.random() * pool.length)] };
@@ -495,7 +495,7 @@
     if (state.mined && state.terrain.indexOf(state.mined.piece) < 0) {
       var pool2 = state.terrain.filter(function (r) {
         var t = R.TERRAIN[r.kind];
-        return t && t.destructible && t.destructible !== 'target';
+        return t && t.destructible && t.destructible !== 'target' && t.destructible !== 'wire';
       });
       state.mined = pool2.length ? { side: state.mined.side, piece: pool2[Math.floor(Math.random() * pool2.length)] } : null;
     }
@@ -504,7 +504,7 @@
     if (state.mined && !isAI(state.mined.side)) {
       var mpool = state.terrain.map(function (r, i) {
         var t = R.TERRAIN[r.kind];
-        return t && t.destructible && t.destructible !== 'target' ? i : -1;
+        return t && t.destructible && t.destructible !== 'target' && t.destructible !== 'wire' ? i : -1;
       }).filter(function (i) { return i >= 0; });
       state.minePick = { side: state.mined.side, pool: mpool };
       state.mined = null;
@@ -1209,6 +1209,8 @@
       if (u.bld) out.unshift({ id: 'exitbld', label: 'Exit building' });
       if (R.enterTargets(state, u).length) out.unshift({ id: 'enter', label: u.bld ? 'Next section' : 'Enter building' });
     }
+    // off the table on purpose (p. 31): offered when a Move would take it over an edge
+    if (u && state.phase === 'battle' && K.leaveSpots(u).length) out.push({ id: 'leave', label: 'Leave the table' });
     if (R.campFlag(u, 'adrenaline')) out.push({ id: 'rush', label: 'Rush' });
     // Rite of Concentration (p. 142): a Fire! with the D10 doubled, once a battle
     if (R.campFlag(u, 'concentration')) out.push({ id: 'fireconc', label: 'Fire! — Concentration' });
@@ -1863,6 +1865,14 @@
       var xs = spotFrom(it);
       if (!xs) return no('come out within 4" of the wall');
       K.doExitBld(ui.selected, xs);
+      return yes;
+    });
+    on('leave', null, function (side, it) {
+      if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (ui.mode !== 'leave') return no('not leaving the table');
+      var ls = spotFrom(it);
+      if (!ls) return no('go off from the lit ground at the edge');
+      K.doLeave(ui.selected, ls);
       return yes;
     });
     on('piece', null, function (side, it) {

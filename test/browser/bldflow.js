@@ -87,11 +87,12 @@ async function newGame(p, cfg) {
     const spot = window.__moves[0];
     window.__tapMove ? null : null;
     window.__boardTapAt(spot.x, spot.y);
-    return { st, sp, spots, out: !u.bld, x: u.x, y: u.y, wall: window.PMC.rectPointDist({ x: 20, y: 20, w: 4, h: 4 }, u.x, u.y) };
+    return { st, sp, spots, out: !u.bld, x: u.x, y: u.y, wall: window.PMC.rectPointDist({ x: 20, y: 20, w: 4, h: 4 }, u.x, u.y) - window.PMC.UNIT_R };
   }, r1.id);
   ok('inside, it cannot Move or Advance', !r2.st.move && !r2.st.advance);
   ok('...but is offered Exit', r2.sp.indexOf('exitbld') >= 0, r2.sp.join(' '));
   ok('Exit shows ground within 4" of the wall to come out onto', r2.spots > 0, r2.spots + ' spots');
+  // within 4" as going in is measured: from the wall to the near edge of its base (p. 41)
   ok('...and a tap there brings it out', r2.out && r2.wall <= 4.01, r2.x + ',' + r2.y);
   await drain(p);
   const r3 = await p.evaluate((id) => {
