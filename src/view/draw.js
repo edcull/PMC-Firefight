@@ -6,6 +6,69 @@
    now. It hands back what the rest of the game uses of it. */
 (function (root) {
   'use strict';
+
+  /* The order the units and the buildings standing among them are painted in.
+     The camera looks in from the far +x, +y corner, so a building shows its
+     +x and +y faces. Something on the ground is in front of a building — drawn
+     after it — when it stands past one of those faces (x at or beyond its far
+     x edge, or y at or beyond its far y edge), or is inside it (its garrison);
+     otherwise it is behind it. Two buildings that do not overlap are ordered
+     the same way, by the face that separates them. A single depth per building
+     (its far corner) got this wrong all along a long building: a squad in
+     front of its end wall still had less depth than the far corner, and the
+     building was painted over it.
+
+     items: things standing at a point — spot(it) gives {x, y}, it.depth the
+       order among themselves, it.inside the building it is in, if any.
+     blocks: { pr: {x, y, w, h}, depth }.
+     Only pairs that can overlap on screen are ordered against each other; the
+     rest keep to depth. Returns one list, back to front. */
+  function paintOrder(items, blocks, spot) {
+    var all = items.map(function (it) {
+      var q = spot(it);
+      // a squad's men and a machine's hull spread either side of its middle
+      return { it: it, depth: it.depth, x: q.x, y: q.y, lo: q.x - q.y - 2, hi: q.x - q.y + 2 };
+    });
+    blocks.forEach(function (b) {
+      var r = b.pr;
+      all.push({ it: b, depth: b.depth, r: r, lo: r.x - (r.y + r.h), hi: r.x + r.w - r.y });
+    });
+    all.sort(function (a, b) { return a.depth - b.depth; });
+    var n = all.length, after = [], need = new Array(n);
+    for (var i = 0; i < n; i++) { after.push([]); need[i] = 0; }
+    // a in front of the building b?
+    function past(a, r) {
+      if (a.r) return a.r.x >= r.x + r.w || a.r.y >= r.y + r.h;
+      return a.x >= r.x + r.w || a.y >= r.y + r.h || a.it.inside === r;
+    }
+    for (i = 0; i < n; i++) {
+      var A = all[i];
+      if (!A.r) continue;
+      for (var j = 0; j < n; j++) {
+        var C = all[j];
+        if (j === i || C.hi <= A.lo || C.lo >= A.hi) continue;      // apart on screen
+        if (C.r && j < i) continue;                                   // each pair of buildings once
+        var front = past(C, A.r), back = C.r ? past(A, C.r) : !front;
+        if (front && !back) { after[i].push(j); need[j]++; }         // C over A
+        else if (back && !front) { after[j].push(i); need[i]++; }    // A over C
+      }
+    }
+    /* back to front, never before what it must follow; among what is free to go
+       next, the least depth first. Should the rules ever tie themselves in a
+       knot, the least depth left goes anyway. */
+    var out = [], done = new Array(n);
+    for (var k = 0; k < n; k++) {
+      var pick = -1;
+      for (i = 0; i < n; i++) if (!done[i] && need[i] === 0) { pick = i; break; }
+      if (pick < 0) for (i = 0; i < n; i++) if (!done[i]) { pick = i; break; }
+      done[pick] = true;
+      out.push(all[pick].it);
+      after[pick].forEach(function (j2) { need[j2]--; });
+    }
+    return out;
+  }
+  root.PMCPaintOrder = paintOrder;
+
   root.PMCDraw = function (B) {
     var activeUnits = B.activeUnits, addFx = B.addFx, arrivalQueued = B.arrivalQueued, arriving = B.arriving;
     var boxesFor = B.boxesFor, clonePiece = B.clonePiece, curArea = B.curArea, dispX = B.dispX;
@@ -174,26 +237,43 @@
       var sg = B.vc.structs.getContext('2d');
       sg.clearRect(0, 0, B.vc.structs.width, B.vc.structs.height);
       B.vc.props.forEach(function (p) { ISO.drawProp(sg, p, liftOf(p.x, p.y)); });
-      /* And the buildings again cut away — the near walls off so you can see into
-         the room. A building with somebody inside it, or with somebody behind it,
-         is composited from this instead of the solid plate, which is what lets the
-         player see the troops a wall would hide. Only the pieces that open up are
-         ever taken from it, so each keeps just its own patch (propBox, the patch
-         repaintProp puts back), with whatever else opens up drawn into it in the
-         order the table has them: no plate-sized canvas (24 MB) nearly all empty. */
+      /* Each building that can stand in front of a squad also keeps its own
+         patch (propBox) twice over: as it stands, and cut away — the near walls
+         off so you can see into the room. drawBoard puts a patch back over the
+         units the depth sort has behind it: the cut-away one when somebody is
+         inside. The patch is the building's own outline and nothing outside
+         it: a rectangle cut from the plate also carried the other buildings
+         inside it, which were then painted over troops standing in front of
+         them. Inside the outline the standing patch is the plate, so a wall or
+         a line of sandbags in front of the building stays in front of it.
+         Small canvases, one per building: no plate-sized one (24 MB) nearly all
+         empty. */
       var opens = B.vc.props.filter(function (p) { return OPENS[p.kind]; });
-      var boxes = opens.map(function (p) { return propBox(p); });
-      B.vc.opened = opens.map(function (p, i) {
-        var b = boxes[i], cv = document.createElement('canvas');
-        cv.width = Math.max(1, b.w); cv.height = Math.max(1, b.h);
-        var og = cv.getContext('2d');
-        og.translate(-b.x, -b.y);
-        opens.forEach(function (q, j) {
-          var c = boxes[j];
-          if (c.x < b.x + b.w && b.x < c.x + c.w && c.y < b.y + b.h && b.y < c.y + c.h) ISO.drawProp(og, q, liftOf(q.x, q.y), true);
-        });
-        p._open = { cv: cv, box: b };
-        return p._open;
+      B.vc.opened = [];
+      opens.forEach(function (p) {
+        var b = propBox(p);
+        function patch(cut) {
+          var cv = document.createElement('canvas');
+          cv.width = Math.max(1, b.w); cv.height = Math.max(1, b.h);
+          var og = cv.getContext('2d');
+          og.translate(-b.x, -b.y);
+          ISO.drawProp(og, p, liftOf(p.x, p.y), cut);
+          if (!cut) {
+            /* the plate's pixels, inside the building's outline — taken whole,
+               so its soft edges (the shadow at its foot) are the plate's own
+               colour, not that colour thinned and laid over itself again */
+            og.setTransform(1, 0, 0, 1, 0, 0);
+            var im = og.getImageData(0, 0, cv.width, cv.height), d = im.data;
+            for (var i = 3; i < d.length; i += 4) if (d[i]) d[i] = 255;
+            og.putImageData(im, 0, 0);
+            og.globalCompositeOperation = 'source-in';
+            og.drawImage(B.vc.structs, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+          }
+          return { cv: cv, box: b };
+        }
+        p._solid = patch(false);
+        p._open = patch(true);
+        B.vc.opened.push(p._solid, p._open);
       });
     }
 
@@ -621,6 +701,12 @@
       }
 
       function propDepth(pr) { return pr.x + pr.w + pr.y + pr.h; }
+      // where on the table a thing to be drawn stands
+      function spotOf(it) {
+        if (it.draw === 'unit') return { x: dispX(it.unit), y: dispY(it.unit) };
+        if (it.r) return { x: it.r.x, y: it.r.y };
+        return { x: it.x, y: it.y };
+      }
       /* A building opens up — drawn with its near walls off — when there is a
          unit inside it, so the garrison is seen through the cut-away walls. A
          unit behind it is hidden by it, as it would be on the table. Every other
@@ -674,14 +760,14 @@
       var now0 = nowMs();
       var order = B.state.units.filter(function (u) { return (onTable(u) || (B.held[u.id] && onTable(shownAs(u)))) && onView(dispX(u), dispY(u)); })
         .map(function (u) {
-          var d = dispX(u) + dispY(u);
+          var d = dispX(u) + dispY(u), inside = null;
           /* A unit inside a building belongs just in front of it, so it is drawn
              over the near wall rather than being buried by it. */
           (B.vc.props || []).forEach(function (pr) {
             if (pr.kind !== 'building' && pr.kind !== 'bunker') return;
-            if (R.inRect(dispX(u), dispY(u), pr)) d = Math.max(d, propDepth(pr) + 0.01);
+            if (R.inRect(dispX(u), dispY(u), pr)) { d = Math.max(d, propDepth(pr) + 0.01); inside = pr; }
           });
-          return { unit: u, depth: d, draw: 'unit' };
+          return { unit: u, depth: d, draw: 'unit', inside: inside };
         });
 
       // a penal squad whose collars are going off, the men still standing until each one's fires
@@ -722,10 +808,9 @@
       // an aircraft's rotors, a deflector, a cloak: only worth redrawing for while one is in view
       B.vc.animOnView = order.some(function (it) { return it.draw === 'unit' && !it.unit.aboard && ISO.animates(it.unit); });
 
-      order.concat(blockers)
-        .sort(function (a, b) { return a.depth - b.depth; })
+      paintOrder(order, blockers, spotOf)
         .forEach(function (it) {
-          if (it.draw === 'block') { if (!it.open) repaintProp(it.pr); return; }
+          if (it.draw === 'block') { repaintProp(it.pr, it.open); return; }
           if (it.draw === 'body') {
             var bp = ISO.toScreen(it.r.x, it.r.y);
             ISO.drawBody(B.pctx, bp.x + it.r.dx, bp.y + it.r.dy - liftOf(it.r.x, it.r.y), it.r);
