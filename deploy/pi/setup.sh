@@ -39,6 +39,9 @@ apt-get install -y rsync curl >/dev/null
 mkdir -p "$BASE/app" "$DATA/campaigns"
 chown -R "$RUN_AS:" "$BASE" "$DATA"
 
+# Node installed under a home folder (nvm, say) still has to be readable by the service
+case "$(readlink -f "$NODE")" in /home/*|/root/*) PROTECT_HOME=read-only ;; *) PROTECT_HOME=yes ;; esac
+
 SYSTEMCTL="$(command -v systemctl)"
 JOURNALCTL="$(command -v journalctl)"
 
@@ -57,6 +60,15 @@ Environment=HOST=$HOST
 Environment=CAMPAIGNS_DIR=$DATA/campaigns
 Restart=on-failure
 RestartSec=2
+# Kept on a short leash: it can write only its own data folder (the campaigns,
+# and anything else it keeps, such as a database file), sees the rest of the
+# system read-only and no home folders, gets a private /tmp, and can never gain
+# privileges.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=$PROTECT_HOME
+PrivateTmp=yes
+ReadWritePaths=$DATA
 
 [Install]
 WantedBy=multi-user.target
