@@ -79,7 +79,8 @@
       'troops never count as casualties for victory, and in a campaign their dead are kept apart from the loss rate.',
     'Field Medics':
       'Friendly units within 6" (and the medics themselves) use a kinder hit table: 1-2 no effect, 3-5 one SP, ' +
-      '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Only while steady.',
+      '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Suppressed or Broken, ' +
+      'the medics treat only their own wounded (p. 29).',
     'Flying Infantry':
       'Flies over terrain (but cannot land on impassable ground), takes no cover, and always shoots and is ' +
       'shot at with Basic Firepower. Only Flying Infantry can assault it, and it may assault aircraft.',
@@ -120,8 +121,8 @@
       'Sees through Stealth: targets get no Stealth bonus against its shots, and it can mark Stealth units ' +
       'at full range.',
     'Lifter':
-      'A flying crane: it picks up a single vehicle within 4" — along with anyone riding in it — or an ' +
-      'emplaced gun, and never carries infantry.',
+      'A flying crane: it picks up a single ground vehicle within 4", along with anyone riding in it. It never ' +
+      'carries infantry or an emplaced gun, nor a vehicle towing one (p. 94).',
     'Limited Fire Arc':
       'Its main weapon can only fire at targets in its front quarter.',
     'Markerlights':

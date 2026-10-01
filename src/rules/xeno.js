@@ -78,6 +78,8 @@
         var o = state.units[i];
         if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0) continue;
         if (!xenoSenses(o) || isMachine(o) || unitDist(o, u) > 6) continue;
+        // a Suppressed or Broken friend lends nothing: no passive bonus to another unit (p. 29)
+        if (status(o) !== 'ready') continue;
         var m = currentMorale(o);
         if (!best || m > best.m) best = { m: m, from: o };
       }
@@ -141,12 +143,16 @@
       return { log: [{ t: 'rally', text: u.label + ' rebuilds itself — Molecular Reconstruction clears ' + was + ' Damage.' }], cleared: was };
     }
     /* Teleport (p. 130): a Teleport unit takes in one infantry unit that could board
-       it, and on a D6 of 1-2 it comes out at a random Teleport unit — perhaps the
-       same one — and on 3-6 at the one its owner picks. It is not an activation. */
+       it, "following standard embarking rules" (p. 36), and on a D6 of 1-2 it comes
+       out at a random Teleport unit — perhaps the same one — and on 3-6 at the one
+       its owner picks. It is not an activation. As with any boarding, the unit
+       taken in may have acted already this turn, must come out of a building
+       first, and loses its Suppression on the way through. */
     function teleportFrom(state, tp) {
       return state.units.filter(function (u) {
         if (!u.alive || u.side !== tp.side || u.aboard || u.reserve || u.x < 0) return false;
-        if (u.cls !== 'infantry' || u.activated || u.disembarked || hasOwn(u, 'Riders')) return false;
+        if (u.cls !== 'infantry' || u.disembarked || u.bld || hasOwn(u, 'Riders')) return false;
+        if (hasOwn(u, 'Stationary Artillery')) return false;      // a gun goes on a hook, not through a gate
         if (campFlag(u, 'backward')) return false;              // Infamy of Backwardness
         if (status(u) !== 'ready') return false;
         return unitDist(u, tp) <= 4;
@@ -195,6 +201,7 @@
       var was = { x: u.x, y: u.y };
       u.bld = null; u.sec = null;
       u.x = best.x; u.y = best.y;
+      u.sp = 0;                                               // "loaded troops automatically lose all their Suppression points" (p. 36)
       u.disembarked = true;                                   // "embarked" — not back through the same turn
       return { ok: true, from: was, text: u.label + ' vanishes at ' + from.label + ' and steps out beside ' + to.label + '.' };
     }

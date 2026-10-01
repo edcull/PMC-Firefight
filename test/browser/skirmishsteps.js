@@ -5,13 +5,14 @@
    server behind it, the Multiplayer card is there but greyed out. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, SHOTS } = require('../where.js');
+const { ROOT, SHOTS, seedDice } = require('../where.js');
 
 (async () => {
   const b = await chromium.launch({ executablePath: require('fs').existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
   const p = await b.newPage({ viewport: { width: 1340, height: 940 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
+  await seedDice(p, 2670);          // the same rolled armies every run
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(700);
 

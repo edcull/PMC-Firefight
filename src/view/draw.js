@@ -1032,16 +1032,20 @@
       if (sc.safe) {
         B.ctx.setLineDash([8, 6]); B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(122,206,144,.8)';
         B.ctx.fillStyle = 'rgba(122,206,144,.08)';
+        B.ctx.save(); clipTable();
         isoRing(sc.safe.x, sc.safe.y, sc.safe.r, 0); B.ctx.fill(); B.ctx.stroke();
+        B.ctx.restore();
         var b = sc.safeBuilding;
         if (b) label(b.x + b.w / 2, b.y + b.h / 2 + 3.2, 'SAFE ZONE', 'rgb(150,226,170)');
         (sc.homes || []).forEach(function (h) { label(h.x + h.w / 2, h.y + h.h / 2 + 2.8, 'CIVILIANS', 'rgb(236,228,200)'); });
       }
       if (sc.evac) {
+        B.ctx.save(); clipTable();
         B.ctx.setLineDash([6, 6]); B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(122,206,144,.85)';
         isoRing(sc.evac.x, sc.evac.y, 6, liftOf(sc.evac.x, sc.evac.y)); B.ctx.stroke();
         B.ctx.lineWidth = 1; B.ctx.strokeStyle = 'rgba(122,206,144,.4)';
         isoRing(sc.evac.x, sc.evac.y, 12, liftOf(sc.evac.x, sc.evac.y)); B.ctx.stroke();
+        B.ctx.restore();
         label(sc.evac.x, sc.evac.y, 'EVAC', 'rgb(150,226,170)');
       }
       // the landing zones
@@ -1049,7 +1053,9 @@
         var l = sc.lz[o];
         B.ctx.setLineDash([5, 5]); B.ctx.lineWidth = 2;
         B.ctx.strokeStyle = o === '2' ? sideInk('C') : inkA;
+        B.ctx.save(); clipTable();
         isoRing(l.x, l.y, 4, liftOf(l.x, l.y)); B.ctx.stroke();
+        B.ctx.restore();
         if (B.state.turn <= 2) label(l.x, l.y, B.state.solo.coop ? 'LZ ' + o : 'LZ', o === '2' ? sideInk('C') : inkA);
       });
       B.ctx.setLineDash([]);
@@ -1086,6 +1092,15 @@
       B.ctx.restore();
     }
 
+    /* An area that runs off the table is drawn only where it is on it: the
+       quarter of a circle in a corner, not the rest hanging in the air. Call
+       inside a save()/restore(). */
+    function clipTable() {
+      var c = [hud(0, 0), hud(W, 0), hud(W, H), hud(0, H)];
+      B.ctx.beginPath();
+      c.forEach(function (q, n) { if (n === 0) B.ctx.moveTo(q.x, q.y); else B.ctx.lineTo(q.x, q.y); });
+      B.ctx.closePath(); B.ctx.clip();
+    }
     function isoRing(cx, cy, rad, lift) {
       var p = hud(cx, cy, lift), z = cam.z;
       B.ctx.beginPath();
@@ -1332,6 +1347,8 @@
           });
         }
       }
+      // the zones and areas below are drawn on the table only
+      B.ctx.save(); clipTable();
       if (B.state.phase === 'deploy') {
         var placing = placingSide();
         ['A', 'B'].forEach(function (side) {
@@ -1407,9 +1424,11 @@
         B.ctx.setLineDash([]);
       }
 
+      B.ctx.restore();
       if (B.state.solo) drawSoloMarks();
 
       // objective control radius
+      B.ctx.save(); clipTable();
       B.state.objectives.forEach(function (o) {
         var col = o.owner ? sideInk(o.owner) : 'rgba(235,240,248,.6)';
         B.ctx.setLineDash([6, 6]);
@@ -1419,6 +1438,7 @@
         isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); B.ctx.stroke();
         B.ctx.setLineDash([]);
       });
+      B.ctx.restore();
 
       if (ui.mode !== 'strafe') ui.strafeAim = null;   // an aim is only kept while the run is being chosen
       if (ui.mode === 'strafe' && ui.selected && !aiSel) drawStrafeAim(ui.selected);
@@ -1553,7 +1573,7 @@
       if (B.state.placeAsk && B.state.placeAsk.kind === 'move' && !isAI(B.state.placeAsk.side) && B.state.placeAsk.pick != null) {
         var mp = B.state.terrain[B.state.placeAsk.pick];
         if (mp) {
-          B.ctx.save(); B.ctx.setLineDash([6, 5]); B.ctx.strokeStyle = '#e8c15a'; B.ctx.lineWidth = 2;
+          B.ctx.save(); clipTable(); B.ctx.setLineDash([6, 5]); B.ctx.strokeStyle = '#e8c15a'; B.ctx.lineWidth = 2;
           isoRing(mp.x + mp.w / 2, mp.y + mp.h / 2, 12, liftOf(mp.x + mp.w / 2, mp.y + mp.h / 2)); B.ctx.stroke();
           B.ctx.restore();
         }
@@ -1569,7 +1589,9 @@
           var cc = B.state.sc.centre;
           B.ctx.setLineDash([8, 6]); B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(232,193,90,.85)';
           B.ctx.fillStyle = 'rgba(232,193,90,.08)';
+          B.ctx.save(); clipTable();
           isoRing(cc.x, cc.y, 12, liftOf(cc.x, cc.y)); B.ctx.fill(); B.ctx.stroke();
+          B.ctx.restore();
         }
         if (ui.hover) {
           var gq = pk.kind === 'fort' ? SCN.fortRect(pk.piece, ui.hover.x, ui.hover.y, pk.len, pk.vertical)

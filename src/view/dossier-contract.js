@@ -147,9 +147,11 @@
       var o = offers[Math.max(0, Math.min(offers.length - 1, i | 0))];
       if (!o) return;
       C.faceRival(E.camp, o.rival);
+      // an offer saved before Priority Level was capped at 2 may still carry a 3 or 4
+      var lvls = o.levels.filter(function (n) { return n <= 2; });
       E.contract = {
-        pl: o.levels.length ? o.levels[o.levels.length - 1] : 1,
-        levels: o.levels,
+        pl: lvls.length ? lvls[lvls.length - 1] : 1,
+        levels: lvls,
         tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: o.planet || 'random',
         roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null,
         picks: [], adjusted: false, caught: o.caught
@@ -260,11 +262,10 @@
       }
       // only offer a Priority Level both forces could actually fill
       var lv = E.contract.levels || [1, 2];
-      var PLN = { 1: 'skirmish', 2: 'full battle', 3: 'large battle', 4: 'major battle' };
+      var PLN = { 1: 'skirmish', 2: 'full battle' };
       h += '<div class="field"><div><label for="camp-pl">Priority Level</label>' +
-        '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2, 3, 4].map(function (n) {
+        '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
-          if (!can && n > 2) return '';                 // the big ones only when someone can fill them
           return '<option value="' + n + '"' + (E.contract.pl === n ? ' selected' : '') +
             (can ? '' : ' disabled') + '>' + n + ' — ' + PLN[n] +
             (can ? '' : ' (neither force can fill it)') + '</option>';

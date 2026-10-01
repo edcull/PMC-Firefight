@@ -268,7 +268,8 @@
       move: p.move, fp: p.fp, range: p.range, def: p.def, defPierced: p.defPierced,
       assault: p.assault, morale: p.morale, group: p.group, key: p.key,
       faction: p.faction || 'pmc',
-      tactic: (state && state.tactics && state.tactics[side]) || null,
+      // Deserters and POWs "do not follow army special rule" (p. 103): no tactic of the army's
+      tactic: ((p.rules || []).indexOf('No Army Rules') < 0 && state && state.tactics && state.tactics[side]) || null,
       cls: p.cls || 'infantry', str: p.str, turn: p.turn, transport: p.transport, command: !!p.command,
       jets: !!p.jets,
       cargo: [], damage: 0, aboard: null, disembarked: false,
@@ -280,9 +281,9 @@
     /* Guerillas (p. 95): every insurgent on foot knows the tunnels. Riders do not
        fit down them, so they are left out. */
     if (u.tactic === 'guerillas' && u.cls === 'infantry' && !R.has(u, 'Riders')) {
-      ['Stealth', 'Battlefield Insertion'].forEach(function (r) {
-        if (u.rules.indexOf(r) < 0) u.rules.push(r);
-      });
+      // what the tactic gave it, so a tactic changed at the dice-off can take it back (setTactic)
+      u.guerilla = ['Stealth', 'Battlefield Insertion'].filter(function (r) { return u.rules.indexOf(r) < 0; });
+      u.rules = u.rules.concat(u.guerilla);
     }
     // a campaign unit carries its dossier on its back: name, honours, traumas, upgrades
     if (entry && C) C.applyEntry(u, entry, state && state.doctrines ? state.doctrines[side] : null);
@@ -462,8 +463,60 @@
       }
     }
     V.clearCards();
-    if (manual) { K.startTerrainSetup(built); return; }
-    afterTerrain(built);
+    if (tacticDiceOff(built, manual)) return;
+    if (manual) K.startTerrainSetup(built); else afterTerrain(built);
+  }
+
+  /* "If both players command Rebel forces, roll a dice; the player with the
+     higher result can choose their tactic first" (p. 96). Two people playing
+     two rebel forces roll off before the table is laid: the winner confirms or
+     changes the tactic they mustered with, and the other is shown it before
+     settling their own. Only a tactic their list is still legal under is
+     offered (Human Wave changes what a list may hold). Against the AI there is
+     no one to keep it from, and nothing is asked. */
+  var TACTIC_IDS = [null, 'laststand', 'wave', 'guerillas'];
+  function tacticDiceOff(built, manual) {
+    var cfg = state.cfg;
+    if (state.solo || isAI('A') || isAI('B')) return false;
+    var rebel = function (sd) { return state.units.some(function (u) { return u.side === sd && u.faction === 'rebel'; }); };
+    if (!rebel('A') || !rebel('B')) return false;
+    var ra, rb;
+    do { ra = R.d6(); rb = R.d6(); } while (ra === rb);       // a tie is rolled again
+    var first = ra > rb ? 'A' : 'B';
+    var legal = {};
+    ['A', 'B'].forEach(function (sd) {
+      var keys = sd === 'A' ? cfg.armyA : cfg.armyB, cur = state.tactics[sd] || null;
+      var faults = function (t) { return R.checkArmy(keys || [], cfg.tier, cfg.pl, docsOf(sd), t, 'rebel').faults; };
+      var had = faults(cur);
+      // a tactic is offered unless it would make the list break a rule it kept under the one mustered
+      legal[sd] = TACTIC_IDS.filter(function (t) {
+        return t === cur || faults(t).every(function (f) { return had.indexOf(f) >= 0; });
+      });
+    });
+    /* what the set-up goes on with once both have chosen, kept on the state (a save
+       taken mid-choice carries it): the table as rolled, and whether it is laid by hand */
+    state.phase = 'tactics';                     // before the table and the deployment: nothing else goes on
+    state.tacticAsk = { order: [first, other(first)], step: 0, legal: legal, chosen: {}, manual: !!manual,
+      built: { rolls: built.rolls, generator: built.generator, manual: built.manual } };
+    // the roll itself is not shown: the winner is simply asked first
+    logLine('note', 'Both forces are Rebels: ' + sideName(first) + ' chooses a tactic first.');
+    render();
+    return true;
+  }
+  // a side's tactic, as chosen now: every unit of the side that follows the army's rules takes it
+  function setTactic(side, tac) {
+    state.tactics = state.tactics || { A: null, B: null };
+    state.tactics[side] = tac || null;
+    state.units.forEach(function (u) {
+      if (u.side !== side || u.rules.indexOf('No Army Rules') >= 0) return;
+      // the Guerillas' tunnels go with the tactic (makeUnit)
+      if (u.guerilla) { u.rules = u.rules.filter(function (r) { return u.guerilla.indexOf(r) < 0; }); u.guerilla = null; }
+      u.tactic = tac || null;
+      if (tac === 'guerillas' && u.cls === 'infantry' && !R.has(u, 'Riders')) {
+        u.guerilla = ['Stealth', 'Battlefield Insertion'].filter(function (r) { return u.rules.indexOf(r) < 0; });
+        u.rules = u.rules.concat(u.guerilla);
+      }
+    });
   }
 
   /* Everything that needs the table laid: the scenario's own terrain changes,
@@ -479,23 +532,27 @@
         if ((docs[side] || []).indexOf('V3') < 0) return;
         var pool = state.terrain.filter(function (r) {
           var t = R.TERRAIN[r.kind];
-          return t.destructible && t.destructible !== 'target';
+          return t.destructible && t.destructible !== 'target' && t.destructible !== 'wire';
         });
         if (!pool.length) return;
         state.mined = { side: side, piece: pool[Math.floor(Math.random() * pool.length)] };
       });
     })();
+    /* A player modifies the terrain by hand only when the table is being set up
+       by hand: with it generated, their changes are made for them as the AI's
+       are, and they are not asked (p. 45). */
+    function byHand(sd) { return !isAI(sd) && K.wantsManualTerrain(cfg); }
     // a player's Last Stand barricades are placed by hand, once the deployment zones are known
     state.manualLaststand = {};
-    ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && !isAI(sd)) state.manualLaststand[sd] = true; });
+    ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && byHand(sd)) state.manualLaststand[sd] = true; });
     // and so is a player's own position in Hostile takeover (p. 55)
-    state.manualForts = { A: !isAI('A'), B: !isAI('B') };
+    state.manualForts = { A: byHand('A'), B: byHand('B') };
     SC.begin(state, scenId, { attacker: cfg.attacker, roles: cfg.roles });
     // the scenario may have moved or dropped pieces to keep them apart; a mined one must still be there
     if (state.mined && state.terrain.indexOf(state.mined.piece) < 0) {
       var pool2 = state.terrain.filter(function (r) {
         var t = R.TERRAIN[r.kind];
-        return t && t.destructible && t.destructible !== 'target';
+        return t && t.destructible && t.destructible !== 'target' && t.destructible !== 'wire';
       });
       state.mined = pool2.length ? { side: state.mined.side, piece: pool2[Math.floor(Math.random() * pool2.length)] } : null;
     }
@@ -504,7 +561,7 @@
     if (state.mined && !isAI(state.mined.side)) {
       var mpool = state.terrain.map(function (r, i) {
         var t = R.TERRAIN[r.kind];
-        return t && t.destructible && t.destructible !== 'target' ? i : -1;
+        return t && t.destructible && t.destructible !== 'target' && t.destructible !== 'wire' ? i : -1;
       }).filter(function (i) { return i >= 0; });
       state.minePick = { side: state.mined.side, pool: mpool };
       state.mined = null;
@@ -513,7 +570,7 @@
     state.placeQueue = [];
     ['A', 'B'].forEach(function (side) {
       if (docsOf(side).indexOf('XO4') < 0) return;
-      if (isAI(side)) K.terrainKnowledge(side);
+      if (!byHand(side)) K.terrainKnowledge(side);
       else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: 2, total: 2 });
     });
     /* Hostile takeover (p. 55): up to ten sections and a bunker within 12" of
@@ -529,6 +586,16 @@
         state.placeQueue.push({ side: side, kind: 'barricade', why: 'laststand', left: nls, total: nls, len: 4 });
       }
     });
+    /* "If there is some freedom in modifying the terrain, the players should do
+       it alternately, starting from a random player" (p. 45): with both sides
+       placing, a random one starts, and they take a piece each (placeAt). */
+    var sidesQ = {};
+    state.placeQueue.forEach(function (q) { sidesQ[q.side] = 1; });
+    if (sidesQ.A && sidesQ.B) {
+      var first = Math.random() < 0.5 ? 'A' : 'B';
+      state.placeQueue.sort(function (p, q) { return (p.side === first ? 0 : 1) - (q.side === first ? 0 : 1); });
+      logLine('note', 'Both sides change the terrain: a piece each in turn, ' + sideName(first) + ' first.');
+    }
     /* Modifying the armies (p. 46): with the table laid and both lists known, a
        player may swap some of their units before anyone deploys. The set-up
        waits here, and finishSetup carries on once they are done. */
@@ -964,6 +1031,9 @@
     return state.units.filter(function (u) {
       if (!u.alive || u.side !== side || u.activated || u.aboard || u.reserve) return false;
       if (R.status(u) === 'broken') return false;
+      /* A Rapid insertion platform "may only disembark troops" (p. 79): once its
+         squad is off, there is nothing left for it to do, and it is not activated. */
+      if (R.has(u, 'Immobile') && u.transport && !(u.cargo || []).length) return false;
       // a cooperative game's players take their turns with their own commandos
       if (state.solo && state.solo.coop && side === 'A' && state.activeSide === 'A' &&
         state.activeOwner && (u.owner || 1) !== state.activeOwner && !ui.soloAll) return false;
@@ -979,7 +1049,8 @@
         // 12" between the closest models of the two units, not their middles
         var cmdU = state.chain.by && K.byId(state.chain.by);
         if ((cmdU ? R.unitDist(u, cmdU) : R.inches(u.x, u.y, state.chain.x, state.chain.y)) > 12) return false;
-        if (R.has(u, 'Command Unit')) return false;
+        // "other Command Units" (p. 59): any of the list's command units, the 4th grade too
+        if (R.commandUnit(u) || R.has(u, 'Command Unit')) return false;
         if (R.has(u, 'Turret')) return false;              // untouched by Command Units
         if (u.tier >= state.chain.tier + 2) return false;
         if (R.campFlag(u, 'insubordinate')) return false;      // Insubordinate
@@ -1109,8 +1180,10 @@
       }
     }
     /* All turrets are activated at once (p. 130): the first to act brings every
-       other one of its side along before the activation passes. */
-    if (just && R.has(just, 'Turret') && !state.chain && !state.solo) {
+       other one of its side along before the activation passes. In a solitaire
+       or cooperative game the same goes for the players' turrets (each player's
+       own, in co-op); the OpFor acts in its own phase, in its script's order. */
+    if (just && R.has(just, 'Turret') && !state.chain && (!state.solo || just.side === 'A')) {
       var restT = eligible(just.side).filter(function (t) { return R.has(t, 'Turret'); });
       if (restT.length) {
         state.chain = { kind: 'turrets', side: just.side, remaining: restT.length + 1 };
@@ -1163,6 +1236,8 @@
     if (u && R.has(u, 'Sappers') && !R.isMachine(u)) out.push({ id: 'plainassault', label: 'Assault, no charges' });
     // the Command Unit rule is not used in solitaire games (p. 149)
     if (u && R.has(u, 'Command Unit') && !state.solo) out.push({ id: 'coordinate', label: 'Coordinate' });
+    // a Coordinate chain activates "up to" so many (p. 59): it may be ended with units still to go
+    if (u && state.chain && !state.chain.kind && state.chain.side === u.side) out.unshift({ id: 'endchain', label: 'End the chain' });
     if (u && u.transport) {
       /* A gun is towed rather than carried (Stationary Artillery, p. 94): where
          what it would take on, or has on, is a gun, the actions say Tow and Deploy. */
@@ -1209,6 +1284,8 @@
       if (u.bld) out.unshift({ id: 'exitbld', label: 'Exit building' });
       if (R.enterTargets(state, u).length) out.unshift({ id: 'enter', label: u.bld ? 'Next section' : 'Enter building' });
     }
+    // off the table on purpose (p. 31): offered when a Move would take it over an edge
+    if (u && state.phase === 'battle' && K.leaveSpots(u).length) out.push({ id: 'leave', label: 'Leave the table' });
     if (R.campFlag(u, 'adrenaline')) out.push({ id: 'rush', label: 'Rush' });
     // Rite of Concentration (p. 142): a Fire! with the D10 doubled, once a battle
     if (R.campFlag(u, 'concentration')) out.push({ id: 'fireconc', label: 'Fire! — Concentration' });
@@ -1612,7 +1689,11 @@
       if (!mayArrange(side)) return no('not your turn to set up');
       var hull = unitOf(it.hull, side), rider = unitOf(it.unit, side);
       if (!hull || !rider) return no('no such unit');
-      if (!K.loadBefore(hull, rider)) return no('there is no room aboard');
+      /* A drop platform "has to start the battle with a single infantry unit
+         onboard" (p. 79): a full one swaps its squad for this one. */
+      var pod = R.has(hull, 'Immobile') && hull.transport, was = pod && (hull.cargo || []).length >= hull.transport ? hull.cargo[0] : null;
+      if (was) K.unloadBefore(hull, was);
+      if (!K.loadBefore(hull, rider)) { if (was) K.loadBefore(hull, was, true); return no('there is no room aboard'); }
       render();
       return yes;
     });
@@ -1621,6 +1702,7 @@
       if (!mayArrange(side)) return no('not your turn to set up');
       var uh = unitOf(it.hull, side), ur = unitOf(it.unit, side);
       if (!uh || !ur) return no('no such unit');
+      if (R.has(uh, 'Immobile') && uh.transport) return no('a drop platform starts the battle with a squad aboard (p. 79): put another in instead');
       K.unloadBefore(uh, ur);
       render();
       return yes;
@@ -1711,6 +1793,7 @@
     on('start', null, function (side, it) {
       if (state.phase !== 'deploy') return no('already under way');
       if (state.minePick) return no('the mined piece has not been chosen');
+      if (state.tacticAsk) return no('the tactics are still being chosen');
       if (state.placeAsk) return no('there are pieces still to place');
       settleFacing();
       if (modifying()) return no('the armies are still being modified');
@@ -1865,6 +1948,41 @@
       K.doExitBld(ui.selected, xs);
       return yes;
     });
+    on('checkarea', null, function (side, it) {
+      if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (ui.mode !== 'checkarea') return no('not choosing a location');
+      var cs = spotFrom(it);
+      if (!cs) return no('tap one of the locations in reach');
+      K.doCheckArea(ui.selected, cs.site);
+      return yes;
+    });
+    on('tactic', null, function (side, it) {
+      var ta = state.tacticAsk;
+      if (!ta) return no('no tactic to choose');
+      if (ta.order[ta.step] !== side) return no(ta.step ? 'the other side chooses first' : 'not yet: the other side won the dice');
+      var tac = it.tactic || null;
+      if (ta.legal[side].indexOf(tac) < 0) return no('your list is not legal under that tactic');
+      setTactic(side, tac);
+      ta.chosen[side] = tac;
+      logLine('note', sideName(side) + ' ' + (tac ? 'takes ' + R.tacticById(tac).name : 'takes no tactic') + '.');
+      ta.step++;
+      if (ta.step >= ta.order.length) {
+        state.tacticAsk = null;
+        state.phase = 'deploy';
+        var bt = Object.assign({ terrain: state.terrain }, ta.built);
+        if (ta.manual) K.startTerrainSetup(bt); else afterTerrain(bt);
+      }
+      render();
+      return yes;
+    });
+    on('leave', null, function (side, it) {
+      if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (ui.mode !== 'leave') return no('not leaving the table');
+      var ls = spotFrom(it);
+      if (!ls) return no('go off from the lit ground at the edge');
+      K.doLeave(ui.selected, ls);
+      return yes;
+    });
     on('piece', null, function (side, it) {
       if (!mayAct(side) || !selected(side)) return no('not your activation');
       var r = state.terrain[it.i];
@@ -1987,6 +2105,10 @@
          change anything, so both sides can ask freely. */
       query: {
         actionState: function (u, id) { return K.actionState(u, id); },
+        // how much the AI likes a spot, for a behaviour (the tests ask)
+        scoreSpot: function (u, c, goal, behaviour) { return K.scoreSpot(u, c, goal, behaviour); },
+        // one AI unit's activation, as runAI does it (the tests force a behaviour roll)
+        aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
         eligible: function (s) { return eligible(s); },

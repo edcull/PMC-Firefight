@@ -188,7 +188,8 @@ R.enterBuilding(bk, sqB, bunker, 0);
 ok('a reinforced building: +2 Defence', R.coverFor(bk, far, sqB).v, 2);
 ok('...and +2 Firepower', R.shotMods(bk, sqB, far, 'fire', {}).parts.some(function (p) { return /reinforced/.test(p.label) && p.v === 2; }), true);
 var outs = R.exitSpots(bw, sq);
-ok('it comes out within 4" of the wall', outs.length > 0 && outs.every(function (p) { return R.rectPointDist(house, p.x, p.y) <= 4; }), true);
+// measured as going in is, wall to the near edge of the base (p. 41)
+ok('it comes out within 4" of the wall', outs.length > 0 && outs.every(function (p) { return R.rectPointDist(house, p.x, p.y) - R.UNIT_R <= 4 + 1e-6; }), true);
 R.exitBuilding(bw, sq, outs[0]);
 ok('...and then it is outside again', !sq.bld && !R.inRect(sq.x, sq.y, house), true);
 

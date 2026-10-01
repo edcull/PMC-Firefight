@@ -25,6 +25,8 @@
     function canAssault(a, t) {
       // Overgrown bugs follow vehicle and aircraft rules, but may still assault (p. 116)
       if (isMachine(a) && !isOvergrown(a)) return false;
+      // an Assault of "-" (the Carrier bug's, p. 123) is no Assault at all, as a "-" Firepower is no shooting
+      if (!a.assault) return false;
       // only Flying Infantry may assault aircraft, or other Flying Infantry
       if ((isFlying(t) || flyInf(t)) && !flyInf(a)) return false;
       // Cloaking System: charged only from 12" or closer

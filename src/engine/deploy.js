@@ -376,6 +376,7 @@
 
     // whichever side still has units in hand, and is not the OpFor
     function placingSide() {
+      if (E.state.tacticAsk) return null;               // the rebels' tactics come first (engine.js tacticDiceOff)
       if (E.state.relocating) return E.state.relocating.side;
       var u = deployNext();
       return u ? u.side : null;

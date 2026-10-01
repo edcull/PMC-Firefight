@@ -60,6 +60,8 @@
       if (!isDestructible(r)) return false;
       // the Demolish objective "can be destroyed only with the Demolish special action" (p. 54): not by fire
       if (destructibleKind(r) === 'target') return false;
+      // barbed wire is cut by Sappers' hands, not shot down (p. 43)
+      if (destructibleKind(r) === 'wire') return false;
       if (has(u, 'Destructive Weapon')) return true;
       return destructibleKind(r) === 'building' && has(u, 'Incendiary Ammunition');
     }
@@ -83,13 +85,13 @@
       var kind = destructibleKind(r);
       if (!kind) return null;
       var was = TERRAIN[r.kind].name;
-      r.kind = kind === 'building' ? 'burning' : 'razed';
+      r.kind = kind === 'building' ? 'burning' : kind === 'wire' ? 'cutwire' : 'razed';
       r.wrecked = true;
       var out = { piece: r, was: was, kind: r.kind, evicted: [] };
       log.push({
         t: 'kill',
         text: (by ? by.label + ' brings down ' : 'Down comes ') + was.toLowerCase() +
-          (kind === 'building' ? ' — it goes up in flames.' : ' — only rubble is left.')
+          (kind === 'building' ? ' — it goes up in flames.' : kind === 'wire' ? ' — a gap is cut through it.' : ' — only rubble is left.')
       });
       if (kind === 'building') {
         // the burning shell is impassable, so anyone inside must leave at once
@@ -216,7 +218,7 @@
       var res = down ? destroyTerrain(state, r, log, a) : null;
       if (!down) {
         fallBack(state, a, { x: r.x + r.w / 2, y: r.y + r.h / 2 }, 2);
-        log.push({ t: 'note', text: a.label + ' falls back 2" from the wall.' });
+        log.push({ t: 'note', text: a.label + ' falls back 2" from the ' + (destructibleKind(r) === 'wire' ? 'wire' : 'wall') + '.' });
       }
       a.activated = true;
       return { log: log, down: down, result: res, total: total, roll: roll };

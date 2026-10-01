@@ -439,6 +439,29 @@
     /* The other player, at another screen, putting the scenario's pieces down (or
        choosing a mine, which is theirs to keep quiet): this screen is told they are
        at it, and goes on by itself once they are done. */
+    /* Two rebel forces choose their tactics in turn, the dice-off's winner first
+       (p. 96): the one choosing sees what the other has already taken. */
+    function tacticCard() {
+      var ta = B.state.tacticAsk, side = ta.order[ta.step], other = ta.order[1 - ta.step];
+      if (!atThisScreen(side)) {
+        return '<div class="card"><h2>Tactics</h2><p class="sub"><b>' + esc(sideName(side)) + '</b> is choosing a tactic' +
+          (ta.step ? ', knowing yours' : ' first') + '.</p></div>';
+      }
+      var cur = (B.state.tactics && B.state.tactics[side]) || null;
+      var theirs = ta.step ? (ta.chosen[other] || null) : undefined;
+      var h = '<div class="card"><h2>Tactics \u2014 ' + esc(sideName(side)) + '</h2>' +
+        '<p class="sub">' + (ta.step
+          ? esc(sideName(other)) + ' has chosen: <b>' + esc(theirs ? R.tacticById(theirs).name : 'no tactic') + '</b>. Now yours.'
+          : 'Both forces are Rebels, and you choose your tactic first. ' + esc(sideName(other)) + ' will know it before choosing theirs.') + '</p>' +
+        '<div class="acts">';
+      [null, 'laststand', 'wave', 'guerillas'].forEach(function (t) {
+        var td = t ? R.tacticById(t) : null, can = ta.legal[side].indexOf(t) >= 0;
+        h += '<button class="act' + (t === cur ? ' primary' : '') + '" data-act="tactic" data-alt="' + (t || '') + '"' + (can ? '' : ' disabled') + '>' +
+          '<span>' + esc(td ? td.name : 'No tactic') + (t === cur ? ' (as mustered)' : '') + '</span>' +
+          '<small>' + esc(can ? (td ? td.text : 'Fight without one') : 'Your list is not legal under it') + '</small></button>';
+      });
+      return h + '</div></div>';
+    }
     function setUpWaitCard(ask) {
       var what = ask.why === 'takeover' ? 'digging in around the objective — trenches, walls, wire and a bunker'
         : ask.why === 'laststand' ? 'putting up their Last Stand barricades'
@@ -528,7 +551,8 @@
     function drawPanel() {
       var ctxBox = el('context'), html = '';
       if (B.state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
-      if (B.state.phase === 'terrain') html = terrainCard();
+      if (B.state.tacticAsk) html = tacticCard();
+      else if (B.state.phase === 'terrain') html = terrainCard();
       else if (B.state.placeAsk && !isAI(B.state.placeAsk.side)) html = atThisScreen(B.state.placeAsk.side) ? placeCard() : setUpWaitCard(B.state.placeAsk);
       else if (B.state.minePick && !isAI(B.state.minePick.side)) html = atThisScreen(B.state.minePick.side) ? mineCard() : setUpWaitCard(B.state.minePick);
       else if (B.faceAsked()) html = faceCard(B.faceAsked());
@@ -1254,6 +1278,7 @@
           else if (a === 'deployready') { send({ k: 'deployready' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
+          else if (a === 'tactic') { send({ k: 'tactic', tactic: b.getAttribute('data-alt') || null }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();

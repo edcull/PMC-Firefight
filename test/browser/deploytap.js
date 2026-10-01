@@ -6,7 +6,7 @@
    because in this projection a 5" band is a narrow diagonal across the view. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, SHOTS } = require('../where.js');
+const { ROOT, SHOTS, seedDice } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -73,7 +73,18 @@ async function run(p, label, scen, shotName) {
     const c = document.getElementById('board').getBoundingClientRect();
     return { x: c.x, y: c.y, w: c.width, h: c.height };
   });
-  let taps = 0, landed = 0, panned = 0;
+  let taps = 0, landed = 0, panned = 0, miss = 0;
+  /* A blind grid finds a Demolish attacker's three small corners only now and
+     then — more so with the camera where a slow machine leaves it. A player who
+     has missed a few times taps straight at the shaded ground, so after five
+     misses in a row the test does too: the first legal spot, tapped on the board. */
+  const aimed = () => p.evaluate(() => {
+    // (coming on in turn 1, the arrival in hand takes only its own spots)
+    const open = window.__insertionSpotsNow() || [];
+    if (open.length) return { x: open[0].x, y: open[0].y };
+    for (let y = 1.5; y < 47; y += 1) for (let x = 1.5; x < 47; x += 1) if (window.__deployOK(x, y, 'A')) return { x, y };
+    return null;
+  });
   outer:
   for (let round = 0; round < 3; round++) {
     for (let gy = 1; gy <= 7; gy++) {
@@ -82,15 +93,17 @@ async function run(p, label, scen, shotName) {
         if (!before) break outer;
         // the OpFor's unit walks on between ours: a tap waits for the table to be still, as a player's would
         if (entry) await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
-        await p.mouse.click(box.x + box.w * gx / 6, box.y + box.h * gy / 8);
+        const spot = miss >= 5 ? await aimed() : null;
+        if (spot) await p.evaluate((q) => window.__boardTapAt(q.x, q.y), spot);
+        else await p.mouse.click(box.x + box.w * gx / 6, box.y + box.h * gy / 8);
         await p.waitForTimeout(80);
         taps++;
         const after = await p.evaluate(() => ({
           left: window.__leftA(),
           hint: (document.getElementById('hintbar') || {}).textContent || ''
         }));
-        if (after.left < before) landed++;
-        else if (/camera has gone back/.test(after.hint)) panned++;
+        if (after.left < before) { landed++; miss = 0; }
+        else { miss++; if (/camera has gone back/.test(after.hint)) panned++; }
       }
     }
   }
@@ -127,6 +140,7 @@ async function run(p, label, scen, shotName) {
       isMobile: sc.mobile, hasTouch: sc.mobile, deviceScaleFactor: sc.mobile ? 2 : 1
     });
     p.on('pageerror', e => errs.push(sc.name + ': ' + e.message));
+    await seedDice(p, 2670);          // the same armies and roles every run: a blind grid of taps is then a fair measure
     await p.goto('file://' + path.join(ROOT, 'index.html'));
     await p.waitForTimeout(700);
     // a hook for how much of the visible board is a legal drop right now

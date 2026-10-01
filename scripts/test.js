@@ -86,7 +86,9 @@ function start(t) {
   running++; if (t.browser) runningBrowser++;
   const began = Date.now();
   const out = [];
-  const child = spawn(process.execPath, [t.file], { cwd: ROOT, env: env });
+  // unit tests roll seeded dice (test/seed.js); browser tests seed their pages themselves (where.js seedDice)
+  const args = t.browser ? [t.file] : ['-r', path.join(ROOT, 'test', 'seed.js'), t.file];
+  const child = spawn(process.execPath, args, { cwd: ROOT, env: env });
   const limit = (t.slow ? 20 : t.browser ? 6 : 5) * 60 * 1000;
   const timer = setTimeout(() => { out.push('\n[timed out after ' + limit / 60000 + ' min]\n'); child.kill('SIGKILL'); }, limit);
   child.stdout.on('data', (d) => { out.push(d); if (verbose) process.stdout.write(d); });

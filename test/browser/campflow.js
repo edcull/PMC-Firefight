@@ -3,7 +3,7 @@
    check the dossier remembers everything in between. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, SHOTS } = require('../where.js');
+const { ROOT, SHOTS, seedDice } = require('../where.js');
 
 const shots = [];
 async function shot(p, name) {
@@ -60,6 +60,7 @@ async function pastFronts(p) {
   const p = await b.newPage({ viewport: { width: 1340, height: 940 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
+  await seedDice(p, 2670);          // the same battles, and the same experience from them, every run
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(700);
   await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });

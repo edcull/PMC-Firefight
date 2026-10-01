@@ -30,8 +30,11 @@
     }
     /* Which Priority Levels this pairing could actually fight at the given Tier. */
     // "players can choose to play bigger ones as long as they can compose legal armies" (p. 84)
+    /* Priority Levels 1 and 2 only: the table is the book's 4'x4', its size for
+       those two (p. 45); a 3 or 4 wants a 6'x4' table and a bigger battle than
+       the game is made for. */
     function levelsFor(coA, coB, tier) {
-      return [1, 2, 3, 4].filter(function (pl) {
+      return [1, 2].filter(function (pl) {
         return canFieldArmy(coA, tier, pl, true) && canFieldArmy(coB, tier, pl, true);
       });
     }

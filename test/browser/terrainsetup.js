@@ -51,12 +51,17 @@ async function playAreas(p, record) {
     }
     const spots = [[.5, .5], [.25, .25], [.75, .75], [.25, .75], [.75, .25], [.5, .2], [.5, .8], [.2, .5], [.8, .5]];
     const q = spots[guard % spots.length];
-    const before = await p.evaluate(() => window.PMC_STATE().terrain.length);
+    const before = await p.evaluate((i) => window.PMC_STATE().tset.areas[i].placed.length, t.i);
     await p.evaluate(([x, y]) => window.__boardTapAt(x, y), [a.x + a.w * q[0], a.y + a.h * q[1]]);
-    // the piece this tap put down (the OpFor may lay a whole area straight after it)
-    const after = await p.evaluate((k) => window.PMC_STATE().terrain[k], before);
-    const n = await p.evaluate(() => window.PMC_STATE().terrain.length);
-    if (n > before) {
+    /* the piece this tap put down, read from this area's own list: the OpFor may lay
+       its whole area straight after it, and the table's list then runs on past it */
+    const after = await p.evaluate(([i, k]) => window.PMC_STATE().tset.areas[i].placed[k] || null, [t.i, before]);
+    const n = await p.evaluate((i) => window.PMC_STATE().tset.areas[i].placed.length, t.i);
+    /* once the last area is laid the table is turned to its rolled edges (finishTerrain),
+       every piece with it: the area's own frame only holds while the set-up is on */
+    const still = await p.evaluate(() => window.PMC_STATE().phase === 'terrain' && !window.PMC_STATE().edges);
+    if (n > before && after && !still) record.taps++;
+    if (n > before && after && still) {
       record.taps++;
       if (!(after.x >= a.x - 1e-6 && after.y >= a.y - 1e-6 && after.x + after.w <= a.x + a.w + 1e-6 && after.y + after.h <= a.y + a.h + 1e-6)) { record.outside++; record.why = JSON.stringify({ a, p: [after.x, after.y, after.w, after.h, after.kind], before, n }); }
     }

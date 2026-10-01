@@ -8,7 +8,7 @@
    platform it steps out of got its own drop first. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, startSkirmish } = require('../where.js');
+const { ROOT, startSkirmish, seedDice } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -32,6 +32,7 @@ async function drain(p) {
   const p = await b.newPage({ viewport: { width: 1340, height: 950 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
+  await seedDice(p, 2670);          // the same armies and battle every run
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
   // the same open battle every run, so the platforms come down on clear ground

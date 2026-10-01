@@ -51,8 +51,9 @@ async function run(p, label, cfg, checks) {
       factions: [...new Set(s.units.map(u => u.faction))].sort().join('+'),
       barricades: s.terrain.filter(t => t.kind === 'barricade').length,
       stealthy: a.filter(u => u.rules.indexOf('Stealth') >= 0).length,
-      infantry: a.filter(u => u.cls === 'infantry').length,
-      riders: a.filter(u => u.rules.indexOf('Riders') >= 0).length,
+      // Deserters and POWs follow no army rule, a tactic included (p. 103)
+      infantry: a.filter(u => u.cls === 'infantry' && u.rules.indexOf('No Army Rules') < 0).length,
+      riders: a.filter(u => u.rules.indexOf('Riders') >= 0 && u.rules.indexOf('No Army Rules') < 0).length,
       emplaced: a.filter(u => u.rules.indexOf('Stationary Artillery') >= 0).length,
       emplacedInReserve: a.filter(u => u.rules.indexOf('Stationary Artillery') >= 0 && u.reserve).length,
       arts: [...new Set(a.map(u => u.art))].join(' ')

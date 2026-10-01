@@ -130,9 +130,6 @@
         var tj = aiTeleportPick(u);
         if (tj) { ui.teleportPick = tj.pad; doTeleport(u, tj.unit); return; }
       }
-      if (R.has(u, 'Molecular Reconstruction') && u.damage && (u.damage >= u.str - 1 || !shot.t)) {
-        doSelfRepair(u); return;
-      }
       if (R.has(u, 'Turret')) {
         if (shot.t) { fire(u, shot.t, 'fire'); return; }
         u.activated = true; endActivation(u); return;
@@ -140,6 +137,14 @@
 
       // a solitaire OpFor hull rolls on the behaviour table like everything else (p. 147)
       var soloB = !!E.state.solo && u.side === 'B';
+      /* ...and it rolls first: its special actions (self-repair, a transport's
+         loading and unloading) are taken on a 1-6, not on Run for Your Lives! or
+         Kill Them All! (a reading: the book does not place them on the table). */
+      var bhV = soloB ? rollBehaviour(u) : null;
+      var specialsV = !soloB || ['defensive', 'neutral', 'offensive'].indexOf(bhV) >= 0;
+      if (specialsV && R.has(u, 'Molecular Reconstruction') && u.damage && (u.damage >= u.str - 1 || !shot.t)) {
+        doSelfRepair(u); return;
+      }
       /* An Overgrown bug is a beast, not a hull: the Queen sends out her wave when
          it catches two or more, and anything with more bite than spit charges. */
       if (R.isOvergrown(u) && R.status(u) !== 'broken' && !soloB) {
@@ -164,7 +169,7 @@
       }
 
       // a transport with troops aboard heads for the nearest objective and unloads
-      if (carrying) {
+      if (carrying && specialsV) {
         var obj = nearestObjective(u);
         if (obj && R.inches(u.x, u.y, obj.x, obj.y) < 9) {
           // each squad put down where it may be (R.dropSpots), as near the hull's front as it can
@@ -184,7 +189,7 @@
       }
 
       // an empty transport picks up the nearest squad that will fit
-      if (u.transport && !carrying) {
+      if (u.transport && !carrying && specialsV) {
         var pax = activeUnits(u.side).filter(function (t) { return R.canEmbark(E.state, u, t); });
         if (pax.length) {
           var was2 = { x: pax[0].x, y: pax[0].y };
@@ -198,11 +203,13 @@
       }
 
       if (soloB) {
-        var bh = rollBehaviour(u);
+        var bh = bhV;
         // Run for Your Lives!: a Move as far as it can get from the player's units, no shot
         if (bh === 'flee') return aiRoll(u, nearestEnemy(u), false, { flee: true, noShoot: true });
         // Kill Them All!: charge the closest enemy — only an Overgrown bug can — or else Move at it, no shot
         if (bh === 'assault') {
+          // "Whenever an OpFor unit can attack the VIP unit, it will do so" (p. 152): a hull shoots it
+          if (E.state.scen.mustTarget && shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
           var prey2 = nearestEnemy(u);
           if (R.isOvergrown(u) && prey2 && R.status(u) === 'ready' && R.canAssault(u, prey2.unit) &&
             prey2.dist <= chargeAllow(u) && canReachCharge(u, prey2.unit)) { aiCharge(u, prey2.unit); return; }
@@ -473,7 +480,7 @@
         logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
         if (still.t) { fire(u, still.t, 'fire'); return; }
         if (u.sp) {
-          var rr0 = abRally(E.state, u);
+          var rr0 = abRally(E.state, u, { regroup: true });
           if (rr0) { logLine('rally', rr0.text); pushRes(E.regroupCard(u, rr0)); E.regroupFx(u, rr0); }
         }
         u.activated = true; endActivation(u); return;
@@ -516,15 +523,23 @@
           animateMove(u, spath, true);
           logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.kindsUnder(E.state, u)[0]].name.toLowerCase() + '.');
         } else {
-          var rr = abRally(E.state, u);
+          var rr = abRally(E.state, u, { regroup: true });
           logLine('rally', rr ? rr.text : u.label + ' regroups.');
           if (rr) { pushRes(E.regroupCard(u, rr)); E.regroupFx(u, rr); }
         }
         u.activated = true; endActivation(u); return;
       }
 
+      /* A solitaire OpFor unit rolls its behaviour as it activates (p. 147), before
+         anything else; its special actions are taken on a 1-6 — not on Run for
+         Your Lives! or Kill Them All! (a reading: the book does not place them on
+         the table). Everyone else keeps the AI's own order. */
+      var soloI = !!E.state.solo && u.side === 'B';
+      var preB = soloI ? rollBehaviour(u) : null;
+      var specials = !soloI || ['defensive', 'neutral', 'offensive'].indexOf(preB) >= 0;
+
       // a Crock steadies its Esh-Aven when enough of them are shaken
-      if (R.has(u, 'Dominant Species') && R.status(u) === 'ready') {
+      if (specials && R.has(u, 'Dominant Species') && R.status(u) === 'ready') {
         var rgt = R.regainTargets(E.state, u);
         var shaken = rgt.reduce(function (n, o) { return n + o.sp; }, 0);
         if (rgt.some(function (o) { return R.status(o) !== 'ready'; }) || shaken >= 4) { doRegain(u); return; }
@@ -534,24 +549,24 @@
       if (mustC) { logLine('ai', u.label + (R.campFlag(u, 'bloodlust') ? ' — Bloodlust' : ' — Aggressive') + ': charges the closest enemy.'); aiCharge(u, mustC); return; }
       /* NOT ONE STEP BACKWARDS! (T5): a commander, or a unit beside one, puts a burst
          over the heads of a broken friend — or one badly shaken — to get it moving */
-      if (R.steadyShooter(E.state, u)) {
+      if (specials && R.steadyShooter(E.state, u)) {
         var shaken2 = R.steadyTargets(E.state, u).filter(function (t) { return R.status(t) === 'broken' || (t.sp || 0) >= 4; })
           .sort(function (a, b) { return (b.sp || 0) - (a.sp || 0); })[0];
         if (shaken2) { logLine('ai', u.label + ' — NOT ONE STEP BACKWARDS!: steadies ' + shaken2.label + '.'); doSteady(shaken2, u); return; }
       }
       // a Psychic Wave that catches two or more is worth more than a shot
-      if (R.has(u, 'Psychic Wave') && R.status(u) === 'ready') {
+      if (specials && R.has(u, 'Psychic Wave') && R.status(u) === 'ready') {
         var wv = bestWaveSpot(u);
         if (wv && wv.n >= 2) { doWave(u, wv.pt); return; }
       }
 
       // standing over an unchecked location is worth more than any other action
-      if (SC.searchSpots(E.state, u).length) { doCheckArea(u); return; }
+      if (specials && SC.searchSpots(E.state, u).length) { doCheckArea(u); return; }
 
       /* An emplaced gun cannot manoeuvre, so its only decision is its stance: with
          an enemy inside 24" and in front of it, direct fire hits far harder than
          Basic Firepower does (p. 94). */
-      if (R.has(u, 'Stationary Artillery')) {
+      if (specials && R.has(u, 'Stationary Artillery')) {
         var close = E.state.units.filter(function (e) {
           return e.alive && !e.aboard && e.side !== u.side && !husk(e) && R.unitDist(u, e) <= 24 &&
             R.unitDist(u, e) >= 6 && R.hasLoS(E.state, u, e);
@@ -561,7 +576,7 @@
 
       /* A marker is worth more than the shot the unit could take itself: it puts two
          friendly guns onto the target at once (p. 58, and Smoke Markers on p. 94). */
-      if (R.has(u, 'Markerlights') || R.has(u, 'Smoke Markers')) {
+      if (specials && (R.has(u, 'Markerlights') || R.has(u, 'Smoke Markers'))) {
         /* Designating is worth more than the shot this unit could take itself, so
            it is tried first — and the kind that brings the most guns wins. */
         var kinds = R.has(u, 'Markerlights') ? ['designate', 'mark'] : ['designate'];
@@ -587,7 +602,7 @@
       }
 
       var shot = bestTarget(u, 'fire');
-      var behaviour = rollBehaviour(u);
+      var behaviour = preB || rollBehaviour(u);
       /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */
@@ -597,6 +612,19 @@
          next section, and comes out when it wants to press on and has nothing to
          shoot at. Otherwise it holds the building. */
       if (u.bld) {
+        /* Run for Your Lives! (p. 147): a garrison gets out, through the wall away
+           from the nearest enemy, and does not stop to shoot. With no way out it
+           keeps its head down. */
+        if (behaviour === 'flee') {
+          var nf = nearestEnemy(u), outF = R.exitSpots(E.state, u);
+          if (outF.length && nf) {
+            outF.sort(function (a, b) { return R.inches(b.x, b.y, nf.unit.x, nf.unit.y) - R.inches(a.x, a.y, nf.unit.x, nf.unit.y); });
+            logLine('ai', u.label + ' bolts out of the building, away from the enemy.');
+            doExitBld(u, outF[0]); return;
+          }
+          logLine('ai', u.label + ' keeps its head down in the building.');
+          u.activated = true; endActivation(u); return;
+        }
         if (behaviour === 'assault' && !R.has(u, 'Cumbersome Weapon')) {
           var adj = assaultables(u, 0)[0];
           if (adj) { aiCharge(u, adj); return; }
@@ -618,6 +646,10 @@
       if (behaviour === 'assault' && E.state.scen.mustTarget && u.side === 'B') {
         var vipA = E.state.scen.mustTarget(E.state, u);
         if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
+        /* "Whenever an OpFor unit can attack the VIP unit, it will do so" (p. 152): one
+           that cannot charge it but can shoot it does that, rather than charging
+           someone else or only moving (a hull on 7+ included). */
+        else if (shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
       }
       if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
         var nt = ne.unit;
@@ -757,8 +789,12 @@
     function scoreSpot(u, c, goal, behaviour, look) {
       var s = 0;
       var terr = R.TERRAIN[look ? look.at(c.x, c.y) : R.terrainAt(E.state, c.x, c.y)];
-      s += (look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u)) * 1.6;
-      if (terr.fp) s += 2;
+      var cover = look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u);
+      /* Reasonably Offensive "will choose terrain pieces granting a Firepower bonus
+         over those that give a Defence bonus" (p. 147): there, the Firepower ground
+         outweighs the best cover; everyone else values cover first. */
+      if (behaviour === 'offensive') { s += cover * 1.0; if (terr.fp) s += 4.5; }
+      else { s += cover * 1.6; if (terr.fp) s += 2; }
       s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
       var ghost = { x: c.x, y: c.y, alive: true, of: u };
       var exposure = 0, opportunity = 0;
@@ -793,7 +829,7 @@
     return {
       aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands
+      nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;

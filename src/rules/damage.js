@@ -12,7 +12,7 @@
         doctrine = E.doctrine, droneUnit = E.droneUnit, has = E.has, hasOwn = E.hasOwn,
         infamyPanic = E.infamyPanic, isFlying = E.isFlying, isMachine = E.isMachine, projects = E.projects,
         psychicBond = E.psychicBond, shoot = E.shoot, status = E.status, terrainAt = E.terrainAt,
-        unitDist = E.unitDist, unitNear = E.unitNear;
+        unitDist = E.unitDist, unitNear = E.unitNear, dropSpots = E.dropSpots, coverAt = E.coverAt;
     /* ---------- hit tables ---------- */
     /* Psychic Support (p. 130) counts as Field Medics — to 12" with Mind
        Amplifiers (p. 142). */
@@ -45,7 +45,8 @@
     }
     // `later`: the caller adds to the attack's suppression afterwards, and calls shotRelief itself
     function resolveShootingHits(state, target, hits, mod, atk, later) {
-      var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
+      // `ruleSp`: the points special rules added on top of the table's own (Incendiary leaves them undoubled)
+      var out = { casualties: 0, sp: 0, ruleSp: 0, rolls: [], notes: [] };
       // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
       if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
       var medic = medicFor(state, target), medics = !!medic;
@@ -80,13 +81,16 @@
           var shell = !saved && campFlag(target, 'adamantium') && d6() >= 5;
           if (saved) { tag = 'Man down! — Combat Drugs: he gets back up (1 SP)'; out.sp += 1; }
           else if (shell) { tag += ' — Adamantium Exoskeletons: ignored'; }
-          else { out.casualties += 1; out.sp += campFlag(target, 'overreact') ? 4 : 2; }
+          else {
+            out.casualties += 1; out.sp += 2;
+            if (campFlag(target, 'overreact')) { out.sp += 2; out.ruleSp += 2; }
+          }
         }
         out.rolls.push('D6 ' + raw + (mod ? '+' + mod : '') + ' → ' + tag);
       }
       // Style Bonus on the firer: one more point of suppression per man killed
       if (atk && campFlag(atk, 'style') && out.casualties) {
-        out.sp += out.casualties;
+        out.sp += out.casualties; out.ruleSp += out.casualties;
         out.notes.push('Style Bonus +' + out.casualties + ' SP');
       }
       return later ? out : shotRelief(state, target, out);
@@ -215,8 +219,10 @@
         how = 'Abandoned! The crew is out of the game';
         crew.forEach(function (u) {
           dropOff(state, t, u);
-          addSP(u, d6());
-          log.push({ t: 'note', text: u.label + ' bails out — ' + u.sp + ' SP.' });
+          var bail = d6();
+          log.push({ t: 'note', text: u.label + ' bails out — ' + bail + ' SP.' });
+          // through the same door as any other Suppression, so a squad it breaks is said to break
+          applyResult(state, u, { casualties: 0, sp: bail, rolls: [], notes: [] }, log, from);
         });
       } else if (total <= 5) {
         how = 'Vehicle on fire! The crew is lost';
@@ -253,6 +259,21 @@
     function dropOff(state, veh, u) {
       u.aboard = null;
       u.disembarked = true;
+      /* They "immediately disembark" (p. 36): within 4" of the hull and 1" clear
+         of everyone, where their side would put them — the best cover going, and
+         then as far from the nearest enemy as it gets. */
+      var spots = dropSpots ? dropSpots(state, veh, u) : [];
+      if (spots.length) {
+        var foes = state.units.filter(function (o) { return o.alive && o.side !== u.side && !o.aboard && o.x >= 0; });
+        var far = function (p) { return foes.length ? Math.min.apply(null, foes.map(function (o) { return Math.hypot(o.x - p.x, o.y - p.y); })) : 0; };
+        var best = null, bs = -Infinity;
+        spots.forEach(function (p) {
+          var s = coverAt(state, p.x, p.y, u) * 100 + far(p);
+          if (s > bs) { bs = s; best = p; }
+        });
+        u.x = best.x; u.y = best.y;
+        return true;
+      }
       for (var t = 0; t < 120; t++) {
         // close by first, and further out while nothing near will do (a pool, a crowd)
         var ang = Math.random() * Math.PI * 2, d = 2 * UNIT_R + Math.random() * (2 + Math.max(0, t - 40) * 0.1);
@@ -392,7 +413,10 @@
     function commandAboard(veh) {
       var cargo = veh && veh.cargo;
       if (!cargo || !has(veh, 'Command Vehicle')) return null;
-      for (var i = 0; i < cargo.length; i++) if (has(cargo[i], 'Command Unit')) return cargo[i];
+      /* "If a Command Unit is in a Command Vehicle, it grants the vehicle all of its
+         special rules" (p. 59) — any unit of the list's command units, the Field
+         command 4th grade and its Inspiring Presence too. */
+      for (var i = 0; i < cargo.length; i++) if (cargo[i].command || has(cargo[i], 'Command Unit')) return cargo[i];
       return null;
     }
 
@@ -403,7 +427,7 @@
       doctrine = L.doctrine; droneUnit = L.droneUnit; has = L.has; hasOwn = L.hasOwn;
       infamyPanic = L.infamyPanic; isFlying = L.isFlying; isMachine = L.isMachine; projects = L.projects;
       psychicBond = L.psychicBond; shoot = L.shoot; status = L.status; terrainAt = L.terrainAt;
-      unitDist = L.unitDist; unitNear = L.unitNear;
+      unitDist = L.unitDist; unitNear = L.unitNear; dropSpots = L.dropSpots; coverAt = L.coverAt;
     }
 
     return {

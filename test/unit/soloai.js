@@ -65,6 +65,8 @@ console.log('\nReasonably Neutral holds its position (p. 147)');
         const u = st.units.find((v) => v.label === m[1] && v.side === 'B');
         if (!u || !pos[u.id] || pos[u.id].x < 0 || u.x < 0) continue;
         if (R.inches(u.x, u.y, pos[u.id].x, pos[u.id].y) < 0.5) continue;
+        // a step can run on into the Rally phase: a unit that broke and fled there made no Neutral move
+        if (st.log.slice(j).some((l) => (l.text || '').indexOf(u.label + ' is broken and flees') === 0 || (l.text || '').indexOf(u.label + ' falls back') === 0)) continue;
         moves++;
         if (R.coverAt(st, u.x, u.y, u) > R.coverAt(st, pos[u.id].x, pos[u.id].y, u)) intoCover++;
         else {
@@ -99,6 +101,109 @@ console.log('\nDecapitation: every OpFor Command Unit is a leader (p. 152)');
   pooled.alive = false;
   const r2 = st.scen.check(st);
   ok('...killing every one wins', !!r2 && r2.winner === 'A', r2 && r2.text);
+})();
+
+console.log('\nThe OpFor answers the commando\u2019s machines, threat by threat (p. 148)');
+(function () {
+  const aa = (p) => (p.rules || []).some((r) => r === 'Anti-aircraft' || r === 'Specialisation (air)');
+  const at = (p) => (p.rules || []).some((r) => /^Anti-tank/.test(r));
+  let airMiss = 0, groundMiss = 0, n = 0;
+  for (const f of ['rebel', 'pmc', 'bugs', 'xeno']) for (const bt of [2, 3, 4, 5]) for (let i = 0; i < 10; i++) {
+    n++;
+    const ps = SOLO.rollOpFor(bt, 1, f, { air: true, ground: true }).map((k) => R.profile(R.splitPick(k).key));
+    if (!ps.some((p) => aa(p) || (p.cls === 'aircraft' && p.tier >= bt))) airMiss++;
+    // a swarm has no anti-tank bugs, and its only machines are Tier V: below Battle Tier V it cannot (p. 114)
+    if (f === 'bugs' && bt < 5) continue;
+    if (!ps.some((p) => at(p) || (p.cls !== 'infantry' && p.tier >= bt))) groundMiss++;
+  }
+  ok('against an aircraft, it always has an anti-air unit or an aircraft of the Battle Tier', airMiss === 0, airMiss + ' of ' + n + ' without');
+  ok('...and against a hull, an anti-tank unit or a machine of the Battle Tier', groundMiss === 0, groundMiss + ' of ' + n + ' without');
+})();
+
+console.log('\nReasonably Offensive takes Firepower ground over cover (p. 147)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['regular'], armyB: ['regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse' });
+  const st = e.state(), u = st.units.find((x) => x.side === 'B'), foe = st.units.find((x) => x.side === 'A');
+  st.terrain.length = 0;
+  st.terrain.push({ kind: 'hill', x: 18, y: 8, w: 6, h: 6 }, { kind: 'ruins', x: 18, y: 34, w: 6, h: 6 });
+  u.x = 30; u.y = 24; foe.x = 4; foe.y = 24;
+  const goal = { x: 10, y: 24 }, hill = { x: 21, y: 11 }, ruin = { x: 21, y: 37 };
+  const off = (c) => e.query.scoreSpot(u, c, goal, 'offensive'), def = (c) => e.query.scoreSpot(u, c, goal, 'defensive');
+  ok('Reasonably Offensive prefers the hill (Firepower) to the ruins (cover)', off(hill) > off(ruin), off(hill).toFixed(1) + ' vs ' + off(ruin).toFixed(1));
+  ok('...where a defensive unit prefers the ruins', def(ruin) > def(hill), def(ruin).toFixed(1) + ' vs ' + def(hill).toFixed(1));
+})();
+
+console.log('\nRun for Your Lives! gets a garrison out of its building (p. 147)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular'], armyB: ['regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+    colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+  const bld = { kind: 'building', x: 22, y: 22, w: 4, h: 4 };
+  st.terrain.push(bld);
+  const foe = st.units.find((x) => x.side === 'A'), [g, other] = st.units.filter((x) => x.side === 'B');
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; });
+  foe.x = 14; foe.y = 24; other.x = 44; other.y = 44;
+  R.enterBuilding(st, g, bld, 0);
+  st.scen.behaviour = () => ({ mod: -9, why: 'test' });           // whatever the die, Run for Your Lives!
+  const n0 = st.log.length;
+  e.query.aiAct(g);
+  const said = st.log.slice(n0).map((l) => l.text).join(' | ');
+  ok('the garrison comes out rather than firing', !g.bld && said.indexOf(g.label + ' fires at') < 0, (g.bld ? 'still inside; ' : '') + said.slice(-200));
+  ok('...on the side away from the enemy', g.x > bld.x + bld.w / 2, g.x.toFixed(1));
+})();
+
+console.log('\nThe VIP draws the OpFor\u2019s attack, Kill Them All! or not (p. 152)');
+(function () {
+  let fired = 0, charged = 0, runs = 0;
+  for (let k = 0; k < 6; k++) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_vip', armyA: ['cmd3', 'regular', 'regular'], armyB: ['regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+      colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+    const b = st.units.filter((x) => x.side === 'B'), a = st.units.filter((x) => x.side === 'A');
+    st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; x.x = 44; x.y = 44; });
+    const u = b[0], vip = st.scen.mustTarget(st, u);
+    if (!vip) continue;
+    // the VIP 14" off, in range but beyond a charge; another squad 4" off, easily charged
+    u.x = 20; u.y = 24; vip.x = 34; vip.y = 24;
+    const near = a.find((x) => x !== vip); near.x = 20; near.y = 30;
+    b[1].x = 2; b[1].y = 2;
+    st.scen.behaviour = () => ({ mod: 9, why: 'test' });          // Kill Them All!
+    const n0 = st.log.length;
+    e.query.aiAct(u);
+    runs++;
+    const said = st.log.slice(n0).map((l) => l.text || '').join(' | ');
+    if (said.indexOf(u.label + ' fires at ' + vip.label) >= 0) fired++;
+    if (said.indexOf(u.label + ' charges') >= 0 || said.indexOf(u.label + ' assaults') >= 0) charged++;
+  }
+  ok('a squad on Kill Them All! that cannot reach the VIP to charge shoots it instead', runs > 0 && fired === runs && charged === 0, fired + ' of ' + runs + ' shot it, ' + charged + ' charged');
+})();
+
+console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6 (p. 147)');
+(function () {
+  function trial(mod) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular', 'regular'], armyB: ['snipers', 'regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+      colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+    st.units.forEach((x, i) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; x.x = x.side === 'A' ? 10 : 22; x.y = 14 + i * 3; });
+    const sn = st.units.find((x) => x.key === 'snipers');
+    st.scen.behaviour = () => ({ mod, why: 'test' });
+    const keep = R.d6; R.d6 = () => 3;                            // 3 + mod on the table
+    const n0 = st.log.length;
+    try { e.query.aiAct(sn); } finally { R.d6 = keep; }
+    const said = st.log.slice(n0).map((l) => l.text || '').join(' | ');
+    return { said, marked: /designates|marks/i.test(said) };
+  }
+  const calm = trial(0), run = trial(-9), wild = trial(9);
+  ok('on a 1-6 (here Neutral) the marker designates', /neutral/.test(calm.said) && calm.marked, calm.said.slice(0, 120));
+  ok('...on Run for Your Lives! it does not', /flee/.test(run.said) && !run.marked, run.said.slice(0, 120));
+  ok('...nor on Kill Them All!', /assault/.test(wild.said) && !wild.marked, wild.said.slice(0, 120));
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

@@ -82,7 +82,7 @@
       if (res.wreck) whenIdle(function () { repaintTerrain([res.wreck]); });
       return res;
     }
-    function abRally(st, u) { jamFx(u); leaderFx(u); return R.rally(st, u); }
+    function abRally(st, u, opts) { jamFx(u); leaderFx(u); return R.rally(st, u, opts); }
     /* A rally helped along by a leader: "…but they'll never take our freedom!"
        (three more dice) or Inspiring Presence (failures re-rolled) — the call
        from the leader, and the unit steadying under it. */

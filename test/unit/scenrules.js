@@ -4,6 +4,9 @@
 global.window = global;
 require('../../src/rules/rules.js');
 require('../../src/rules/scenarios.js');
+// seeded dice: the scenario set-ups are rolled, and a rare roll must not decide whether the checks pass
+var DICE = 2670;
+Math.random = function () { DICE = (Math.imul(DICE, 1664525) + 1013904223) >>> 0; return DICE / 4294967296; };
 var R = global.PMC, S = global.PMCScen;
 
 var pass = 0, fail = 0;
@@ -654,7 +657,8 @@ ok('...while the defender sets up within 12" of the objective',
 var dmA = setupOf('demolish'), dmDef = dmA.sc.defender;
 ok('Demolish: the defender sets up within 18" of the objective', (function () {
   var t = dmA.sc.target, f = S.SCENARIOS.demolish.deployOK;
-  return [f(dmA, dmDef, t.cx, t.cy), f(dmA, dmDef, t.cx, t.cy + 17), f(dmA, dmDef, t.cx, t.cy + 19)].join(',');
+  // measured from the objective's edge, 2" out from its middle
+  return [f(dmA, dmDef, t.cx, t.cy), f(dmA, dmDef, t.cx, t.cy + 19), f(dmA, dmDef, t.cx, t.cy + 21)].join(',');
 })(), 'true,true,false');
 
 /* ------------------------------------------------------- reinforcements, turn by turn */

@@ -312,119 +312,119 @@ front armour to a threat.
 
 **Battle and movement**
 
-- **L-1:** Units cannot leave the table voluntarily (l.568). The movement lattice stops at the edge.
-- **L-2:** A unit can end a move astride a low wall, getting the wall's +2 against fire from both sides. Tokens
+- **L-1 — fixed:** Units cannot leave the table voluntarily (l.568). The movement lattice stops at the edge.
+- **L-2 — fixed:** A unit can end a move astride a low wall, getting the wall's +2 against fire from both sides. Tokens
   can also overlap high walls and rocks by up to 0.5". `reachable` and `blockedAt` test only the centre
   (`move.js:600-609`, about `:243`). *Reproduced:* 69 end points sit on a wall and 47 overlap. Book l.984.
-- **L-3:** A unit counted as in a wood cannot always see out of it. Cover uses the half-rim test
+- **L-3 — fixed:** A unit counted as in a wood cannot always see out of it. Cover uses the half-rim test
   (`space.js:442`); sight uses the centre (`:496-511`). This follows from the v0.1 ruling 3.26. *Reproduced.*
-- **L-4:** Entering and leaving a building use different 4" measures: base edge to enter (`space.js:75`), token
+- **L-4 — fixed:** Entering and leaving a building use different 4" measures: base edge to enter (`space.js:75`), token
   centre to leave (`:97`).
-- **L-5:** Low walls run up to 7.95", against the book's "normally up to 6"" (l.980). Only the loose walls
+- **L-5 — fixed:** Low walls run up to 7.95", against the book's "normally up to 6"" (l.980). Only the loose walls
   placed by `place()` exceed it (`gen.js:115`).
-- **L-6:** Riders can cross barbed wire (l.2926: "cannot cross linear obstacles"). `move.js:64-69` bars only
+- **L-6 — fixed:** Riders can cross barbed wire (l.2926: "cannot cross linear obstacles"). `move.js:64-69` bars only
   destructible linear terrain. *Reproduced.*
-- **L-7:** A gravbike still pays the barbed wire D6" (l.5470: "do not suffer movement penalties"). `move.js:48`
+- **L-7 — fixed:** A gravbike still pays the barbed wire D6" (l.5470: "do not suffer movement penalties"). `move.js:48`
   returns `wireRoll` before the gravbike branch.
-- **L-8:** Barbed wire cannot be destroyed by Sappers (summary table, l.1087). `wire` has no `destructible`
+- **L-8 — fixed:** Barbed wire cannot be destroyed by Sappers (summary table, l.1087). `wire` has no `destructible`
   value (`rules.js:668`).
 
 **Vehicles and aircraft**
 
-- **L-9:** The AI's unloading ignores the 1" distance from enemies (`ai.js:174-178`; `R.disembark` checks only
+- **L-9 — fixed:** The AI's unloading ignores the 1" distance from enemies (`ai.js:174-178`; `R.disembark` checks only
   0.2"). Crews bailing out are placed at random, not by the owner (`damage.js:254-268`). The Suppression taken
   on an Abandoned result is added without `applyResult`, so a resulting Broken status is not announced
   (`damage.js:205-209`).
-- **L-10:** Strafing return fire excludes units that were already Suppressed before the run, and measures range
+- **L-10 — fixed:** Strafing return fire excludes units that were already Suppressed before the run, and measures range
   from where the aircraft ends (`combat.js:131`). The book's "as a result of" (l.906) allows them to fire back.
-- **L-11:** Drones clear all Suppression on a Regroup, not only in the Rally phase (l.952; `rules.js:1512-1516`).
+- **L-11 — fixed:** Drones clear all Suppression on a Regroup, not only in the Rally phase (l.952; `rules.js:1512-1516`).
 
 **Special rules**
 
-- **L-12:** A Command Unit's Coordinate chain cannot be ended early ("up to X", l.1513). Each eligible unit must
+- **L-12 — fixed:** A Command Unit's Coordinate chain cannot be ended early ("up to X", l.1513). Each eligible unit must
   act or skip, which spends its activation (`engine.js:1112-1114`).
-- **L-13:** The Incendiary ×2 includes Style Bonus and Overreact SP, which the book excludes (l.1557;
+- **L-13 — fixed:** The Incendiary ×2 includes Style Bonus and Overreact SP, which the book excludes (l.1557;
   `shoot.js:350`). Campaign only.
-- **L-14:** Markerlights can target reserve or embarked units at (-1,-1) (`marks.js:20-27`). Choosing one wastes
+- **L-14 — fixed (with M-12):** Markerlights can target reserve or embarked units at (-1,-1) (`marks.js:20-27`). Choosing one wastes
   the marker's activation.
-- **L-15:** "Command Unit" means different things in army building and in play. `checkArmy` counts the
+- **L-15 — fixed:** "Command Unit" means different things in army building and in play. `checkArmy` counts the
   `command` flag, so Field command 4th grade uses up the one-per-PL slot (`rules.js:280, 336`). In play, a
   Command Vehicle gains nothing from a 4th-grade passenger, which lacks the "Command Unit" rule
   (`rules.js:757-803`, `damage.js:389-393`).
-- **L-16:** Field Medics still treat their own wounded while Suppressed or Broken (`damage.js:22-24`). The
+- **L-16 — fixed:** Field Medics still treat their own wounded while Suppressed or Broken (`damage.js:22-24`). The
   tooltip says "Only while steady" (`ruletext.js:80`).
-- **L-17:** Rapid insertion platforms can go into battle empty (l.2418: "have to start the battle with a single
+- **L-17 — fixed:** Rapid insertion platforms can go into battle empty (l.2418: "have to start the battle with a single
   infantry unit"). `mustLoad` is read only by the army roller. `deploy.js:482-483` lets the player unload, and
   `deploymentDone` does not check.
 
 **Scenarios**
 
-- **L-18:** Secure and control and Hostile takeover objectives are points, not 8" pieces, so holding is measured
+- **L-18 — by design:** Secure and control and Hostile takeover objectives are points, not 8" pieces, so holding is measured
   from the centre (`scenarios.js:43-59, 801-805, 893`). A unit 6" from the takeover centre, 2" from the edge of
   an 8" object, does not hold it. *Reproduced.*
-- **L-19:** The players do not place or nominate the Secure objectives (l.1345). The Demolish defender does not
+- **L-19 — by design:** The players do not place or nominate the Secure objectives (l.1345). The Demolish defender does not
   place its objective (l.1435). Both are random.
-- **L-20:** "Check the area!" always searches the first site in reach (`moves.js:61`). The player cannot choose
+- **L-20 — fixed:** "Check the area!" always searches the first site in reach (`moves.js:61`). The player cannot choose
   between two sites.
-- **L-21:** Landing zones are checked at the centre only: open terrain, and 8" from the edges (l.1411;
+- **L-21 — fixed:** Landing zones are checked at the centre only: open terrain, and 8" from the edges (l.1411;
   `scenarios.js:969-973`).
-- **L-22:** Infantry landing inside a transport take no landing Suppression (l.1411, l.1421;
+- **L-22 — withdrawn (the finding was wrong; see §9):** Infantry landing inside a transport take no landing Suppression (l.1411, l.1421;
   `scenarios.js:640-645`).
-- **L-23:** The Demolish defender's 18" circle is measured from the objective's centre (`scenarios.js:715,
+- **L-23 — fixed:** The Demolish defender's 18" circle is measured from the objective's centre (`scenarios.js:715,
   731-735`).
-- **L-24:** The Invasion defender must put at least one unit on the table (l.1407: "up to ⅓";
+- **L-24 — fixed:** The Invasion defender must put at least one unit on the table (l.1407: "up to ⅓";
   `scenarios.js:582`).
 
 **Terrain set-up**
 
-- **L-25:** Terrain changes are not made alternately from a random player. Side A's whole allowance goes first
+- **L-25 — fixed:** Terrain changes are not made alternately from a random player. Side A's whole allowance goes first
   (l.1156; `engine.js:513-531`).
-- **L-26:** The table is 4'×4' at every Priority Level. Campaign contracts allow PL 3–4, for which the book
+- **L-26 — fixed:** The table is 4'×4' at every Priority Level. Campaign contracts allow PL 3–4, for which the book
   recommends 6'×4' (l.1140; `rules.js:11`).
-- **L-27:** Unstable row 6's "1-3 reinforced buildings surrounded by reinforced walls" lays 2–6 wall sections,
+- **L-27 — fixed:** Unstable row 6's "1-3 reinforced buildings surrounded by reinforced walls" lays 2–6 wall sections,
   often too few to enclose the compound (`gen.js:96`).
 
 **Armies**
 
-- **L-28:** Deserters and POWs follow some army Tactics and not others. Hasta, Undisciplined, Freedom and Death
+- **L-28 — fixed:** Deserters and POWs follow some army Tactics and not others. Hasta, Undisciplined, Freedom and Death
   or Glory are excluded. Last Stand's +4, the Guerillas' Stealth and Insertion, and Human Wave's M+4 are not
   (l.3264; `rules.js:1035`, `engine.js:282, 618`). *Reproduced.*
-- **L-29:** There is no dice-off for who picks a tactic first when both sides are Rebels (l.2978).
-- **L-30:** Teleport does not clear Suppression as standard embarking does (l.4166, l.823; `xeno.js:194-213`).
+- **L-29 — fixed:** There is no dice-off for who picks a tactic first when both sides are Rebels (l.2978).
+- **L-30 — fixed:** Teleport does not clear Suppression as standard embarking does (l.4166, l.823; `xeno.js:194-213`).
   It refuses already-activated units and allows units in buildings, the reverse of `canEmbark`. *Reproduced.*
-- **L-31:** Mental Projection is not applied to Markerlight targeting. `markTargets` uses the 12" Xenotripod
+- **L-31 — fixed:** Mental Projection is not applied to Markerlight targeting. `markTargets` uses the 12" Xenotripod
   sight, not `tribeSees` (l.4150; `marks.js:20-26`). *Reproduced.*
-- **L-32:** Psychic Bond lends the Morale of a Broken or Suppressed friend (`xeno.js:73-84` has no `projects`
+- **L-32 — fixed:** Psychic Bond lends the Morale of a Broken or Suppressed friend (`xeno.js:73-84` has no `projects`
   check; l.521). *Reproduced.*
-- **L-33:** Turrets do not act as one in solitaire or co-op (`engine.js:1103`, `!state.solo`). This is not
+- **L-33 — fixed:** Turrets do not act as one in solitaire or co-op (`engine.js:1103`, `!state.solo`). This is not
   documented.
-- **L-34:** Psychic Wave adds Suppression to vehicles and aircraft (l.778). The only effect is cosmetic: a
+- **L-34 — fixed:** Psychic Wave adds Suppression to vehicles and aircraft (l.778). The only effect is cosmetic: a
   misleading log line. *Reproduced.*
-- **L-35:** The Carrier bug (Assault "-") can charge (`data.js:248` `assault: 0`; `assault.js:27`). Treat "-"
+- **L-35 — fixed:** The Carrier bug (Assault "-") can charge (`data.js:248` `assault: 0`; `assault.js:27`). Treat "-"
   Assault like "-" Firepower. *Reproduced.*
-- **L-36:** Psychic Wave cannot be used from inside a building, although the move is "up to"
+- **L-36 — fixed:** Psychic Wave cannot be used from inside a building, although the move is "up to"
   (`actions.js:111-113`).
-- **L-37:** The rules tooltip says the Lifter can lift an emplaced gun (`ruletext.js:122-124`). The code
+- **L-37 — fixed:** The rules tooltip says the Lifter can lift an emplaced gun (`ruletext.js:122-124`). The code
   correctly refuses it.
 
 **Solitaire**
 
-- **L-38:** Reasonably Offensive prefers cover to Firepower terrain, the reverse of l.4791-4796. `scoreSpot`
+- **L-38 — fixed:** Reasonably Offensive prefers cover to Firepower terrain, the reverse of l.4791-4796. `scoreSpot`
   gives cover ×1.6 (×3.2 for hard cover) but only +2 for a hill (`ai.js:705-707`).
-- **L-39:** A garrisoned OpFor unit that rolls Run for Your Lives! fires instead of moving away
+- **L-39 — fixed:** A garrisoned OpFor unit that rolls Run for Your Lives! fires instead of moving away
   (`ai.js:594-611`; l.4772).
-- **L-40:** The VIP's priority (l.4959) loses to Kill Them All!: the 7+ charge at another enemy comes before the
+- **L-40 — fixed:** The VIP's priority (l.4959) loses to Kill Them All!: the 7+ charge at another enemy comes before the
   forced VIP shot (`ai.js:617` before `:630`). Vehicles on 7+ do not shoot.
-- **L-41:** Several OpFor actions skip the behaviour roll (l.4762): designation, Psychic Wave, Regain Control,
+- **L-41 — fixed:** Several OpFor actions skip the behaviour roll (l.4762): designation, Psychic Wave, Regain Control,
   Check the area, NOT ONE STEP BACKWARDS, the Stationary Artillery stance, and transports (`ai.js:122-200,
   535-560`).
 
 **Campaign**
 
-- **L-42:** No Place for the Weak! brings back v0.1 finding 3.4 for a Rebel player. TP are rolled before
+- **L-42 — fixed:** No Place for the Weak! brings back v0.1 finding 3.4 for a Rebel player. TP are rolled before
   `l.landed` is set (`dossier-after.js:318`), so the passengers of an aircraft that landed safely get 9 TP, not
   5 (l.2702). *Reproduced.*
-- **L-43:** The rival AI never buys Adaptations for Overgrown bugs (`camp-rivals.js:326`). Its affordability
+- **L-43 — fixed:** The rival AI never buys Adaptations for Overgrown bugs (`camp-rivals.js:326`). Its affordability
   check ignores Smuggler and Hermetic Society (`:339`). This affects the AI only.
 
 ---
@@ -444,7 +444,7 @@ reading; they are listed so the choice is visible.
 - **"Markerlights ignores Stealth":** read only as the 12" marking limit. The answering shot still adds Stealth.
 - **Destructive breach:** removes terrain cover only; Stealth and Shield Generator stay. **Sappers breach:** the
   +1 applies to the attacker's half of the round only.
-- **Rebel tactic:** chosen at muster, before the scenario (l.2961).
+- **Rebel tactic:** chosen at muster, before the scenario (l.2961). When two people play two Rebel forces, each confirms or changes it in turn before the table is laid (L-29).
 - **Medical drone:** carries "Drone unit"; the book's profile omits it (`data.js:80-81`). The Light engineering
   vehicle and EW vehicle carry "Ground vehicle".
 - **SAM:** fires on any aircraft, the defender's own included.
@@ -514,16 +514,12 @@ Almost every rules finding from `docs/v0.1-review.md` is fixed at `7dd7306`.
 - **Campaign:** 3.31–3.35 (every campaign item); 3.26 is kept as a ruling.
 - **Not implemented then, done now:** surrender, and the AI's use of Adrenaline Rush and Last Stand.
 
-**Partial:** 3.4 (passengers of a downed aircraft). Fixed on the aftermath path, but broken again for a Rebel
-player with No Place for the Weak! (L-42).
+**Partial at `7dd7306`, fixed since:** 3.4 (passengers of a downed aircraft), now right on the No Place for the
+Weak! path too (L-42).
 
-**Still open:**
-
-- the Field Medics item (L-16)
-- the Destructive Weapon high-wall half (M-9)
-- leaving the table (L-1)
-- the alternating terrain changes (L-25)
-- the Secure objective nomination (L-19)
+**Open at `7dd7306`, settled since:** the Field Medics item (L-16, the tooltip), the Destructive Weapon high-wall
+half (M-9), leaving the table (L-1), the alternating terrain changes (L-25). The Secure objective nomination
+(L-19) is kept as it is, by the owner's decision.
 
 The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as defects under l.465 (M-6).
 
@@ -637,6 +633,61 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 
 | M-7 Hotseat campaign: the AI picks Player 2's force | **Fixed.** Player 1 picks their list and hands over. Player 2 then picks theirs from their own dossier, with their own rebel tactic and Drug Dealer choice, on the scenario, Battle Tier and Priority Level Player 1 settled. Player 2 can go back to Player 1's list. The rival AI never hires into Player 2's company, and Player 2's unpicked units are on the bench to swap in. On Our Terms and Foresighted Command stay with Player 1, who settles the terms. | `dossier-contract.js` (`contractView`, `fight`, `handOver`, `seatBack`), `dossier.js` (`pickCo`, `seatback`) |
 
+| L-1 Units cannot leave the table on purpose | **Fixed.** A unit that could Move over an edge is offered Leave the table. It picks the lit ground it goes off from, leaves the battle and counts as fled (p. 31). Whoever is aboard goes with it. Not from a building, not while Suppressed, and not for aircraft. | `combat.js` (`leaveSpots`, `doLeave`), `engine.js` (`leave`), `actions.js`, `input.js`, `game.js` |
+| L-2 A base ends astride a wall, or over rocks | **Fixed.** A move ends only where the whole base fits: none of it on ground the unit could not stand on, and none of it on a wall or barbed wire ("a unit cannot be split by linear terrain", p. 42). A Tier III-V hull may still stop on a wall it flattens. Aircraft fly over all of it. | `move.js` (`roomFor`, `reachable`) |
+| L-3 A unit in a wood cannot always see out | **Fixed.** A unit that counts as in a sight-blocking piece by the cover rule (most of its rim in it) sees out of it and is seen, even where its middle stands just outside. | `space.js` (`countsIn`, `lineClearAt`) |
+| L-4 In and out of a building measure 4" differently | **Fixed.** Coming out is measured as going in: the base within 4" of the wall. The beaten garrison's 2" (M-4) is unchanged. | `space.js` (`exitSpots`, `leaveAway`) |
+| L-5 Low walls up to 7.95" | **Fixed.** Low walls are laid 3-6" like high walls ("normally up to 6"", p. 42). The terrain snapshots were retaken. | `gen.js` (`SIZES`) |
+| L-6 Riders cross barbed wire | **Fixed.** Riders cross no linear obstacle, wire included, unless they ride horses. | `move.js` (`terrainBars`) |
+| L-7 A grav bike pays the wire's D6" | **Fixed.** A grav bike pays no movement penalty at all. After L-6 it only matters if a grav bike is ever allowed over wire. | `move.js` (`terrainCost`) |
+| L-8 Sappers cannot cut barbed wire | **Fixed.** Wire is destructible by the Sapper rule only (p. 43). Sappers may set charges against it; no gun shoots it down, and the Terrorist's mine is not laid in it. Cut, it becomes a gap that costs nothing to cross. | `rules.js` (`TERRAIN.wire`, `cutwire`), `destruct.js`, `engine.js`, `iso-props.js`, `iso-ground.js` |
+
+| L-9 Bailing crews, the rest | **Fixed.** The AI half went with H-2. A crew bailing out of an Abandoned hull now disembarks as any squad does: within 4" of the hull and 1" clear of everyone, on the spot its side would choose (the best cover, then furthest from the enemy). Its D6 Suppression goes through `applyResult`, so a crew it breaks is said to break. | `damage.js` (`dropOff`, `applyDamage`) |
+| L-10 Strafing return fire | **Fixed.** A target fires back unless the run itself left it Suppressed or Broken, so a squad already Suppressed and no worse for the run fires too (p. 39). Range is measured to the nearest point of the run, not to where the craft ends it. | `combat.js` (`doStrafe`) |
+| L-11 Drones clear all Suppression on a Regroup | **Fixed.** Drones, and the bugs an Overmind controls, shed every point only in the Rally phase (pp. 40, 116). On a Regroup they roll like anyone else. | `rules.js` (`rally`), `abilities.js`, `actions.js`, `ai.js` |
+| L-12 A Coordinate chain cannot be ended early | **Fixed.** A unit in a Command Unit's chain is offered End the chain: the chain stops there, the units left keep their activations, and play passes on. The turrets' and a marker's chains are not Coordinate and stay as they are. | `engine.js` (`specialsFor`), `actions.js` (`endchain`) |
+| L-13 Incendiary doubles the extras | **Fixed.** Only the hit table's own Suppression is doubled. Overreact's extra 2 a casualty and Style Bonus are added after (p. 58). | `damage.js` (`ruleSp`), `shoot.js` |
+| L-15 "Command Unit" means two things | **Fixed** the other way from the finding's first suggestion. The army list puts Field command 4th grade among the Command units (p. 70), so it still takes the one-per-Priority-Level slot, as NOT ONE STEP BACKWARDS! already counted it. What changes is in play: a Command Vehicle now carries the rules of any command unit aboard, a 4th grade's Inspiring Presence included, and a Coordinate chain never activates another command unit. | `damage.js` (`commandAboard`), `rules.js` (`has`, `hasExact`, `ruleValue`), `engine.js` (`eligible`) |
+| L-16 Field Medics while Suppressed | **Fixed** in the tooltip. The book bars Suppressed and Broken units from passive bonuses "to another units" (p. 29), so the medics still treat their own wounded, as the code did. The tooltip no longer says "only while steady". | `ruletext.js` |
+| L-17 Insertion platforms go in empty | **Fixed.** A list with more platforms than infantry squads to fill them is refused. At deployment a platform's squad can be swapped for another but not taken out. | `rules.js` (`checkArmy`), `engine.js` (`load`, `unload`) |
+
+| L-18 Objectives are points | **No change, by design.** The book's objectives are ordinary terrain pieces with no bonuses of their own (p. 52); as points they behave as a small objective marker would. Holding is measured 4" from the point. |  |
+| L-19 Players do not place the objectives | **No change, by design.** The computer places the Secure objectives and the Demolish objective for the players. |  |
+| L-20 Check the area! takes the first site | **Fixed.** With two locations in reach, the player taps the one to search. | `actions.js`, `moves.js` (`doCheckArea`), `engine.js` (`checkarea`), `input.js`, `game.js` |
+| L-21 Landing zones checked at the centre | **Fixed.** A zone is an 8" circle: all of it must be open ground, and its edge 8" from the table's. Zones stay 12" apart, centre to centre, so three still fit on most tables. | `scenarios.js` (`lzOK`, `lzSpots`) |
+| L-22 No landing Suppression inside a hull | **Withdrawn: the finding was wrong.** Transported units "cannot be Suppressed" (p. 36) until they disembark, so squads riding down inside a vehicle take no landing D3, as the code had it. A short-lived change that gave them the D3 aboard was reverted after it showed up in play: an Abandoned hull's crew could come out with the landing's D3 on top of the bail-out's D6. | `scenarios.js` (`invasion.onArrive`) |
+| L-23 Demolish's 18" from the centre | **Fixed.** The defender's circle reaches 18" past the objective's edge. | `scenarios.js` (`demolish.deploy`) |
+| L-24 The Invasion defender must put a unit down | **Fixed.** "Up to 1/3": the defender may hold its whole force back. | `scenarios.js` (`invasion.deploy`) |
+| L-25 Terrain changes not alternated | **Fixed.** With the table set up by hand, both sides' changes (Last Stand barricades, Detailed Terrain Knowledge moves) go a piece each in turn, from a random side (p. 45). With the table generated, a player's changes, the Hostile takeover fortifications included, are made for them as the AI's are, and nobody is asked. | `engine.js` (`afterTerrain`), `terrainsetup.js` (`alternate`) |
+| L-26 The table at Priority Level 3-4 | **Fixed** by capping campaign contracts at Priority Level 2, as skirmishes already were: the 4'x4' table is the book's size for both. Older saved offers are clamped too. | `camp-contract.js` (`levelsFor`), `dossier-contract.js` |
+| L-27 The Unstable outpost's walls | **Fixed.** "Surrounded by reinforced walls": one ring round all the outpost's buildings, as many sections as it takes, with a gate front and back. The count is still rolled, so the rest of the table's dice are unchanged. The terrain snapshots were retaken. | `gen.js` (`ring`, `enclose`, `compound`) |
+| (play report) The OpFor did not answer a commando's aircraft | **Fixed.** Found in play, not in the review. The OpFor's "Anti-tank/Anti-air unit or a ground vehicle/aircraft of the Battle Tier" (p. 148) is now read threat by threat. Against the players' aircraft it needs an Anti-aircraft unit, one with Specialisation (air), or an aircraft of the Battle Tier. Against their ground vehicles it needs an Anti-tank unit or a machine of the Battle Tier. Before, any Anti-tank (limited) squad passed for both. When no rolled list has the answer, one is taken first and the rest is rolled round it. A swarm cannot answer a hull below Battle Tier V: it has no anti-tank bugs, and its machines are all Tier V. | `solitaire.js` (`rollOpFor`, `answersMachines`, `rollFrom`), `muster.js` |
+| L-28 Deserters and POWs follow army Tactics | **Fixed.** A unit with No Army Rules takes no tactic of its army (p. 103), so no Last Stand +4, no Guerillas' Stealth or Battlefield Insertion and no Human Wave M+4". | `engine.js` (`makeUnit`) |
+| L-29 No dice-off for the first tactic | **Fixed.** When two people play two Rebel forces (hotseat, a hotseat campaign or online), a hidden roll-off before the table is laid decides who chooses first. The winner confirms or changes the tactic they mustered with; the other is shown it, then chooses (p. 96). Only tactics the list stays legal under are offered. Against the AI nothing is asked. | `engine.js` (`tacticDiceOff`, `setTactic`, `tactic`), `panels.js` (`tacticCard`), `view.js`, `game.js`, `net.js` (`seatNow`), `deploy.js` |
+| L-30 Teleport is not standard embarking | **Fixed.** As with any boarding (p. 36): a unit that has already acted may be taken in, a garrison must come out first, an emplaced gun cannot go, and the unit loses its Suppression on the way through. | `xeno.js` (`teleportFrom`, `teleport`) |
+| L-31 Mental Projection and Markerlights | **Fixed.** A Xenotripod marker may designate or mark an enemy in its 24" that any unbroken Xenotripod sees, as it may shoot one (p. 129). | `marks.js` (`markTargets`) |
+| L-32 Psychic Bond from a Suppressed friend | **Fixed.** Only a steady friend lends its Morale: a Suppressed or Broken unit grants no passive bonus to another (p. 29). | `xeno.js` (`bondMorale`) |
+| L-33 Turrets in solitaire and co-op | **Fixed.** The players' turrets act as one there too (each player's own in co-op): the next activation after one goes to the rest (p. 130). The OpFor's act in its own phase, in the script's order. | `engine.js` (`passOn`) |
+| L-34 Psychic Wave suppresses machines | **Fixed.** Vehicles and aircraft are passed by: they take Damage, not Suppression, and Morale effects never touch them (p. 35). | `rules.js` (`psychicWave`) |
+| L-35 The Carrier bug can charge | **Fixed.** An Assault of "-" (stored as 0) charges nobody, as a "-" Firepower shoots at nothing. | `assault.js` (`canAssault`) |
+| L-36 No Psychic Wave from a building | **Fixed.** The move is "up to": a garrison sends the wave out from where it stands, staying inside. | `actions.js` |
+| L-37 The Lifter tooltip | **Fixed.** It now says what the code does: a ground vehicle, with whoever rides in it, never infantry, an emplaced gun or a vehicle towing one. | `ruletext.js` |
+| (play report) Emptied drop platforms | **Fixed.** Found in play. A Rapid insertion platform "may only disembark troops" (p. 79): once its squad is off it is no longer activated, and its action bar says why. With No Objectives it cannot search a Find and secure location or blow a Sabotage objective, as it already could not hold or deny an objective. | `engine.js` (`eligible`), `actions.js`, `scenarios.js` (`searchSpots`), `solitaire.js` (`sabotageSpots`) |
+| L-38 Reasonably Offensive prefers cover | **Fixed.** For a Reasonably Offensive unit, ground with a Firepower bonus now outweighs the best cover (cover counts second); everyone else still values cover first (p. 147). | `ai.js` (`scoreSpot`) |
+| L-39 A garrison that rolls Run for Your Lives! fires | **Fixed.** It comes out through the wall away from the nearest enemy, without firing; with no way out it keeps its head down. | `ai.js` (`aiAct`) |
+| L-40 The VIP loses to Kill Them All! | **Fixed.** A unit on 7+ charges the VIP if it can reach it; failing that, if it can shoot the VIP it does, rather than charging someone else or only moving (vehicles included) (p. 152). | `ai.js` (`aiAct`) |
+| L-41 OpFor special actions skip the behaviour roll | **Fixed, by a reading agreed with the owner.** The book does not place special actions on the behaviour table. A solitaire OpFor unit now rolls first as it activates, and takes its special actions (designating, Psychic Wave, Regain Control, digging a gun in or out, self-repair, a transport's loading and unloading) only on a 1-6. On Run for Your Lives! it runs; on Kill Them All! it charges or moves. A hull on 7+ also shoots the VIP when it can. The ordinary AI opponent keeps its own order. | `ai.js` (`aiAct`, `aiDrive`) |
+| L-42 No Place for the Weak! and a safe landing | **Fixed.** The salvage dice for the side's lost machines are rolled before the Trauma Points the step needs, so the passengers of an aircraft that landed take its 5 TP, not 9 (p. 86). The aftermath then uses the same dice. | `camp-aftermath.js` (`salvageRolls`), `dossier-after.js` |
+| L-43 The rival AI and Overgrown bugs | **Fixed.** A rival swarm's Overgrown bugs grow Adaptations as its infantry earns them (p. 124), rather than being offered Upgrades they cannot take. The rival's promotion check now prices with its own doctrines: Smuggler's point off, Hermetic Society's half price. | `camp-rivals.js` |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `test/unit/lowcombat.js` (20 checks) fails 11 on `7dd7306`. `test/unit/lowscen.js` (15 checks) fails 11 on `7dd7306`. `test/unit/lowfaction.js` (30 checks). `test/unit/lowcamp.js` (3 checks); its L-43 check fails 0 of 20 on the old code fails on `7dd7306`. `terrainsetup.js`'s "every one lands inside its own area" fails about 3 runs in 8 on the unchanged code too. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.
+
+**Flaky tests, settled.**
+- `solitairetest`'s two entry points: a rare game fault, not the test's. Arrivals were scattered at random within the circle and could leave no room for the last of a crowd; they now fill it from the middle out (`solitaire.js` `spotNear`).
+- `terrainsetup`'s "inside its own area": the test read the OpFor's next piece, or a piece after the table was turned to its edges; it now reads the tapped piece from its area, while the set-up is on.
+- `insertion`: the test clicked the deploy button before the card was drawn; it waits for it now.
+- `offtable`: the Complex Teleport Network's battle-only turrets are marked `free` in the report, and the test expects them on no roster.
+- Every unit test now rolls seeded dice (`test/seed.js`, loaded by `scripts/test.js`; `PMC_TEST_DICE=random` rolls free), which settled a rare `scenrules` failure too.
+- `campflow`, `camfollow`, `followtoggle`, `deploytap`, `stepoff`, `skirmishsteps`: their checks rode on how a random battle (or which side attacks) went; the page's dice are now seeded (`test/where.js` `seedDice`).

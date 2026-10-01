@@ -93,7 +93,10 @@
         { text: 'High impassable terrain (a volcano)', alts: [[P('rocks', 1, 1, { big: true })]] },
         { text: '1-4 rubble-covered areas', alts: [[P('crater', 1, 4)]] },
         { text: '1-4 hills or rocks', alts: [[P('hill', 1, 4)], [P('rocks', 1, 4)]] },
-        { text: 'Outpost: 1-3 reinforced buildings behind reinforced walls', alts: [[P('bunker', 1, 3), P('wall', 2, 6, { reinforced: true })]], once: true }
+        /* "1-3 reinforced buildings surrounded by reinforced walls": as many sections
+           as it takes to go round them (the count still rolled, so the dice for the
+           rest of the table are the same) */
+        { text: 'Outpost: 1-3 reinforced buildings behind reinforced walls', alts: [[P('bunker', 1, 3), P('wall', 2, 6, { reinforced: true, ring: true })]], once: true }
       ]
     }
   };
@@ -112,7 +115,8 @@
     lava: [5, 12, 4, 10],
     crystal: [5, 12, 4, 10],
     ravine: [6, 14, 2.5, 5],
-    barricade: [3, 8, 1, 1],
+    // linear terrain is "normally up to 6\" long" (p. 42), low walls as much as high ones
+    barricade: [3, 6, 1, 1],
     // the book destroys high walls in sections up to 6", so none is laid longer
     wall: [3, 6, 1, 1]
   };
@@ -208,7 +212,9 @@
     }
     walls.forEach(function (wl) {
       var left = wl.n, from = placed.length;
-      if (built.length) left -= enclose(wl.spec, left, built, area, existing, placed, objectives, rand, W, H);
+      // a ring: every section the compound needs, and no loose ones
+      if (wl.spec.ring && built.length) { enclose(wl.spec, 99, built, area, existing, placed, objectives, rand, W, H); left = 0; }
+      if (built.length && left > 0) left -= enclose(wl.spec, left, built, area, existing, placed, objectives, rand, W, H);
       if (left > 0) runOfWall(wl.spec, left, area, existing, placed, objectives, rand, W, H, inset);
       // reinforced walls (p. 41): a high wall that nothing brings down
       if (wl.spec.reinforced) for (var ri2 = from; ri2 < placed.length; ri2++) placed[ri2].reinforced = true;
@@ -319,7 +325,8 @@
   /* Wall in the buildings of one roll. Returns how many sections went down. */
   function enclose(spec, budget, built, area, existing, placed, objectives, rand, W, H) {
     var laid = 0;
-    groupsOf(built).forEach(function (group) {
+    // an outpost is one compound, its walls round all of its buildings together
+    (spec.ring ? [built] : groupsOf(built)).forEach(function (group) {
       if (laid >= budget) return;
       laid += compound(spec, budget - laid, group, existing, placed, objectives, rand, W, H);
     });
@@ -355,9 +362,11 @@
        joint's width short at each end so no two sections touch. */
     function sectionsOf(side) {
       var horiz = side === 'N' || side === 'S';
+      // a full ring has a back gate as well, so something standing in front of the one gate cannot seal it
+      var gated = side === front || (spec.ring && side === back);
       var spans = horiz
-        ? cutSide(x0, x1, side === front)
-        : cutSide(y0 + (open.N ? 0 : THICK + JOINT), y1 - (open.S ? 0 : THICK + JOINT), side === front);
+        ? cutSide(x0, x1, gated)
+        : cutSide(y0 + (open.N ? 0 : THICK + JOINT), y1 - (open.S ? 0 : THICK + JOINT), gated);
       return spans.map(function (s) {
         return horiz
           ? { kind: spec.kind, x: s[0], y: side === 'N' ? y0 : y1 - THICK, w: s[1] - s[0], h: THICK }

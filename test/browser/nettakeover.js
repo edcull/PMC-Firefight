@@ -41,7 +41,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const force = { faction: 'pmc', tactic: '', keys: ['cmd2', 'regular', 'regular', 'lapc', 'rookie', 'rookie'], colour: 'ochre', name: '' };
   const p1 = await page(ctx1);
   const p2 = await page(ctx2);
-  await p1.evaluate((f) => window.PMCLobby.net().send('game.create', { name: 'Takeover', settings: { tier: 3, pl: 1, planet: 'barren', scenario: 'takeover', private: true }, force: f }), force);
+  await p1.evaluate((f) => window.PMCLobby.net().send('game.create', { name: 'Takeover', settings: { tier: 3, pl: 1, planet: 'barren', scenario: 'takeover', terrain: 'manual', private: true }, force: f }), force);
   await p1.waitForTimeout(600);
   const code = await p1.evaluate(() => window.__room && window.__room.id);
   await p2.evaluate((c) => window.PMCLobby.net().send('game.join', { id: c }), code);
@@ -56,6 +56,8 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   for (let k = 0; k < 30 && !pa; k++) {
     await wait(300);
     for (const p of [p1, p2]) await p.evaluate(() => { const d = document.getElementById('obj-done'); if (d && d.offsetParent) d.click(); });
+    // the table is laid by hand: whoever is rolling has the rest placed, and the fortifications stay the defender's
+    for (const p of [p1, p2]) await p.evaluate(() => { const s = window.PMC_STATE(); if (s && s.phase === 'terrain' && window.__terrainAct) window.__terrainAct('tautoall'); });
     pa = await p1.evaluate(() => { const s = window.PMC_STATE(); return s && s.placeAsk ? { side: s.placeAsk.side, why: s.placeAsk.why } : null; });
   }
   ok('the defender is asked to dig in', pa && pa.why === 'takeover', JSON.stringify(pa));

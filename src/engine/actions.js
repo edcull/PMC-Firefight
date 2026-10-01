@@ -42,6 +42,10 @@
       if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
       if (u.side !== E.state.activeSide) return { on: false, hint: E.state.solo ? 'The OpFor is acting.' : 'It is ' + sideName(E.state.activeSide) + '’s activation.' };
       if (u.activated) return { on: false, hint: u.name + ' has already acted this turn.' };
+      // an emptied drop platform is done: it is not activated again (p. 79)
+      if (R.has(u, 'Immobile') && u.transport && !(u.cargo || []).length) {
+        return { on: false, hint: u.name + ' has put its troops down: it does nothing more this battle.' };
+      }
       // the Command Unit aboard has one action of its own to take from the vehicle (p. 57)
       var ca = E.state.cmdAct;
       if (ca && ca.veh === u.id && id !== ca.id) {
@@ -101,7 +105,8 @@
 
       /* A unit inside a building "may only exit it or make actions which do not
          require any movement (so it cannot Move, Advance, Assault, etc.)" (p. 41). */
-      if (u.bld && ['move', 'advance', 'wave', 'vortex', 'vortexadv', 'rush'].indexOf(id) >= 0) {
+      // (a Psychic Wave moves "up to" its Movement: from a building it goes out from where it stands)
+      if (u.bld && ['move', 'advance', 'vortex', 'vortexadv', 'rush'].indexOf(id) >= 0) {
         return { on: false, hint: 'Inside a building — only actions that need no movement. Exit the building first.' };
       }
 
@@ -114,6 +119,11 @@
             ? 'Move through to an empty section of the building in contact with this one. Counts as the action.'
             : 'Go into an empty building within 4" — one unit to a building. Inside: +2 Defence, no Crossfire, range measured from the wall' +
               ' — but no moving until you come out.' };
+        }
+        case 'leave': {
+          var lv = E.leaveSpots(u);
+          return lv.length ? { on: true, hint: 'A Move off the table edge: the unit leaves the battle and counts as fled (p. 31). Pick the ground it goes off from.' }
+            : { on: false, hint: 'It cannot reach the table edge with a Move.' };
         }
         case 'exitbld': {
           if (sup) return { on: false, hint: 'Suppressed: it keeps the cover of the building (p. 34).' };
@@ -194,6 +204,8 @@
           if (!ta.length) return { on: false, hint: 'Auxiliary weapons reach 12" — nothing in range.' };
           return { on: true, hint: 'Auxiliary weapons: FP 1, Range 12", no special rules. The only shot a suppressed unit may take.' };
         }
+        case 'endchain':
+          return { on: true, hint: 'End the Command Unit\u2019s chain here: ' + u.name + ' and the rest keep their activations for later, and play passes on.' };
         case 'skip':
           return { on: true, hint: 'Skip: ' + u.name + ' does nothing this turn — it stays where it is, its activation is spent, and play passes on.' };
         case 'regroup':
@@ -330,7 +342,8 @@
         }
         case 'wave': {
           if (sup) return { on: false, hint: 'Suppressed units cannot send out a Psychic Wave.' };
-          return { on: true, hint: 'Psychic Wave: move up to ' + u.move + '" (or stay), then every enemy within 12" — no sight needed, Drones excepted — takes D6−1 Suppression.' };
+          return { on: true, hint: (u.bld ? 'Psychic Wave, from the building: ' : 'Psychic Wave: move up to ' + u.move + '" (or stay), then ') +
+            'every enemy within 12" — no sight needed, Drones excepted — takes D6−1 Suppression.' };
         }
         case 'regain': {
           if (sup) return { on: false, hint: 'Suppressed units cannot reach out to the Esh-Aven.' };
@@ -402,6 +415,15 @@
 
       if (id === 'rush' || id === 'laststand') { doOnce(u, id); return; }
       // Skip: nothing done, nothing rolled (not even Unreliable's D6), the activation spent
+      if (id === 'endchain') {
+        if (!E.state.chain || E.state.chain.kind) return;
+        E.state.chain = null;
+        closeDrawer();
+        logLine('note', 'The chain ends there; the rest keep their activations.');
+        ui.selected = null; ui.mode = null; ui.moves = []; ui.targets = [];
+        E.afterChain();
+        return;
+      }
       if (id === 'skip') {
         u.activated = true;
         closeDrawer();
@@ -409,7 +431,18 @@
         endActivation(u);
         return;
       }
-      if (id === 'checkarea') { doCheckArea(u); return; }
+      if (id === 'checkarea') {
+        // two locations in reach: the player says which one is searched
+        var sites = SC.searchSpots(E.state, u);
+        if (sites.length > 1 && !isAI(u.side)) {
+          ui.mode = 'checkarea';
+          ui.moves = sites.map(function (s) { return { x: s.x, y: s.y, cost: 0, spent: 0, site: s }; });
+          setHint(null, 'Two locations in reach: tap the one to search.');
+          render();
+          return;
+        }
+        doCheckArea(u); return;
+      }
       if (id === 'sabotage') { doSabotage(u); return; }
       // Unreliable: a D6 before any action, and on a 1 the unit simply stands there
       if (R.campFlag(u, 'unreliable') && ['embark', 'disembark'].indexOf(id) < 0) {
@@ -447,12 +480,17 @@
         ui.targets = must ? [must] : assaultables(u);
       } else if (id === 'wave') {
         ui.mode = 'wave';
-        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        // a garrison sends it out from the building, with no move
+        ui.moves = u.bld ? [] : R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
         ui.moves.push({ x: u.x, y: u.y, cost: 0, spent: 0, turns: 0 });
       } else if (id === 'enter') {
         ui.mode = 'enter';
         ui.sections = R.enterTargets(E.state, u);
         setHint(null, u.bld ? 'Tap the section to move into.' : 'Tap the lit building to go in.');
+      } else if (id === 'leave') {
+        ui.mode = 'leave';
+        ui.moves = E.leaveSpots(u);
+        setHint(null, 'Tap the lit ground at the edge it goes off from. It leaves the battle and counts as fled.');
       } else if (id === 'exitbld') {
         ui.mode = 'exitbld';
         ui.moves = R.exitSpots(E.state, u);
@@ -534,7 +572,7 @@
             pre = 'Meditation: ' + med + ' SP gone before the dice.';
             logLine('rally', u.label + ' — ' + pre);
           }
-          var r = abRally(E.state, u);
+          var r = abRally(E.state, u, { regroup: true });
           logLine('rally', r ? r.text : u.label + ' regroups — no suppression to shake off.');
           // the End phase's rally card and the unit seen to regroup (endphase.js)
           pushRes(E.regroupCard(u, r, pre));

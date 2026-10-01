@@ -351,7 +351,8 @@
           // part of it being, the worst for it (p. 42)
           var tk = kindsUnder(state, t).filter(function (k) { return k !== 'open' && !TERRAIN[k].shallow && !TERRAIN[k].linear; })[0];
           if (tk) {
-            res.sp *= 2;
+            // "with exception of additional Suppression Points caused by special rules" (p. 58)
+            res.sp += res.sp - (res.ruleSp || 0);
             burn = ' · Incendiary Ammunition: suppression doubled in ' + TERRAIN[tk].name.toLowerCase();
           }
         }
