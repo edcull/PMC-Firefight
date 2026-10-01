@@ -425,7 +425,7 @@
         (u.men || []).forEach(function (m) {
           if (m.lost == null) return;
           out.push({
-            side: u.side, name: m.name, rank: m.rank, turn: m.lost,
+            side: u.side, name: m.name, rank: m.rank, role: m.role || null, turn: m.lost,
             type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id
           });
         });

@@ -467,7 +467,7 @@
           } else {
             (u.men || []).forEach(function (m) {
               if (m.lost == null) return;
-              report.casualties.push({ side: side, name: m.name, rank: m.rank, turn: m.lost, type: p.name, unit: e.name, rid: e.rid });
+              report.casualties.push({ side: side, name: m.name, rank: m.rank, role: m.role || null, turn: m.lost, type: p.name, unit: e.name, rid: e.rid });
             });
           }
         });

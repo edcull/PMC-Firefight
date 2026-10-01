@@ -760,7 +760,7 @@
       if (x !== entry) (x.men || []).forEach(function (m) { taken[m.name] = 1; });
     });
     var before = JSON.stringify(entry.men || null);
-    entry.men = R.musterMen(u, entry.men, taken).map(function (m) { return { name: m.name, rank: m.rank }; });
+    entry.men = R.musterMen(u, entry.men, taken).map(function (m) { return m.role ? { name: m.name, rank: m.rank, role: m.role } : { name: m.name, rank: m.rank }; });
     return JSON.stringify(entry.men) !== before;
   }
   /* The force's losses against everyone who has ever served in it. Everyone
@@ -949,7 +949,7 @@
     var u = {};
     for (var k in p) u[k] = p[k];
     u.key = entry.key; u.faction = p.faction || 'pmc'; u.rules = (p.rules || []).slice();
-    entry.men.forEach(function (m, i) { m.rank = R.rankFor(u, i); });
+    entry.men.forEach(function (m, i) { m.rank = R.rankFor(u, i); var r = R.roleFor(u, i); if (r) m.role = r; else delete m.role; });
   }
   function byRid(co, id) {
     for (var i = 0; i < co.roster.length; i++) if (co.roster[i].rid === id) return co.roster[i];

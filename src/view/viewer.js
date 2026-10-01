@@ -1095,13 +1095,18 @@
     if (!R.crewed(who)) {
       return '<p class="vranks"><b>Ranks</b> ' + (R.counted(who) ? 'Nobody named: its losses are counted' : 'Nobody aboard: a machine') + '</p>';
     }
-    var n = R.isMachine(who) ? 1 : Math.max(1, who.size || 1), groups = [];
+    var mach = R.isMachine(who), n = mach ? R.crewSize(who) : Math.max(1, who.size || 1), groups = [];
     for (var i = 0; i < n; i++) {
-      var r = R.rankFor(who, i), last = groups[groups.length - 1];
-      if (last && last.r === r) last.n++; else groups.push({ r: r, n: 1 });
+      // a hull's crew by job and rank — "Driver (Corporal)"; a squad's by rank alone
+      var role = mach ? R.roleFor(who, i) : null, rk = R.rankFor(who, i);
+      var r = role ? role + ' (' + rk + ')' : rk, last = groups[groups.length - 1];
+      if (last && last.r === r) last.n++; else groups.push({ r: r, n: 1, role: role, rk: rk });
     }
-    var line = groups.map(function (g) { return (g.n > 1 ? g.n + ' ' : '') + plural(g.r, g.n); }).join(', ');
-    return '<p class="vranks"><b>' + (R.isMachine(who) ? 'Crew' : 'Ranks') + '</b> ' + esc(line) + (R.isMachine(who) ? ' (commander)' : '') + '</p>';
+    var line = groups.map(function (g) {
+      if (g.role) return (g.n > 1 ? g.n + ' ' + plural(g.role, g.n) + ' (' + plural(g.rk, g.n) + ')' : g.r);
+      return (g.n > 1 ? g.n + ' ' + plural(g.r, g.n) : g.r) + (mach ? ' (commander)' : '');
+    }).join(', ');
+    return '<p class="vranks"><b>' + (mach ? 'Crew' : 'Ranks') + '</b> ' + esc(line) + '</p>';
   }
 
   /* The states a unit can be shown in. A machine is never suppressed or

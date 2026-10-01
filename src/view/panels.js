@@ -1169,7 +1169,7 @@
                 (c.unit && c.unit !== c.type ? '<span class="cas-type">' + esc(c.unit) + '</span>' : '') + '</li>';
             }
             return '<li><span class="cas-rank">' + esc(c.rank) + '</span> <b>' + esc(c.name) + '</b>' +
-              '<span class="cas-type">' + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
+              '<span class="cas-type">' + (c.role ? esc(c.role) + ', ' : '') + esc(c.type) + (c.unit && c.unit !== c.type ? ' \u00b7 ' + esc(c.unit) : '') +
               ' \u00b7 turn ' + (c.turn || 1) + '</span></li>';
           }).join('') + '</ol>';
         }

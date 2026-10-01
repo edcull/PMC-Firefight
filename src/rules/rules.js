@@ -1658,7 +1658,41 @@
     // a squad of drones is machines, however many of them there are: nobody to name
     if (u.drone || hasOwn(u, 'Drone unit')) return false;
     if (!isMachine(u)) return true;
+    if (crewOf(u) && !crewOf(u).length) return false;    // the Rapid insertion platform: nobody aboard
     return !u.drone && !has(u, 'Turret') && !/Turret/.test(u.group || '');
+  }
+  /* Who crews each PMC hull and craft, in order — the job each man does, and
+     his rank. A hull not listed has one crewman (rankFor); the Rapid insertion
+     platform has nobody aboard at all. */
+  var C_ = function (role, rank) { return [role, rank]; };
+  var DRV_PTE = [C_('Driver', 'Private')];
+  var DRV_GUN = [C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var SGT_CREW = [C_('Commander', 'Sergeant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var SGT_CREW4 = SGT_CREW.concat([C_('Loader', 'Private')]);
+  var SSGT_CREW = [C_('Commander', 'Staff Sergeant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var LT_CREW = [C_('Commander', 'Lieutenant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var STRIKE = [C_('Pilot', 'Flight Lieutenant'), C_('Gunner', 'Pilot Officer')];
+  var CREW = {
+    insertplat: [],
+    unarmoured: DRV_PTE, ltransport: DRV_PTE,
+    lpv: DRV_GUN, hpv: DRV_GUN, lhunter: DRV_GUN, lapc: DRV_GUN, impsupport: DRV_GUN,
+    recon: SGT_CREW, lcv: SGT_CREW, hunter: SGT_CREW, lifv: SGT_CREW, hapc: SGT_CREW, hifv: SGT_CREW, lengveh: SGT_CREW, aaveh: SGT_CREW,
+    mcv: SGT_CREW4, ldestroyer: SGT_CREW4, lsupport: SGT_CREW4, msupport: SGT_CREW4, hengveh: SGT_CREW4,
+    acv: SSGT_CREW, mdestroyer: SSGT_CREW, asupport: SSGT_CREW,
+    cmdveh: LT_CREW, ewveh: LT_CREW, medveh: LT_CREW,
+    adaptedcraft: [C_('Pilot', 'Pilot Officer')],
+    lightcraft: [C_('Pilot', 'Flying Officer')],
+    heavycraft: [C_('Pilot', 'Flying Officer')],
+    flyingcp: [C_('Commander', 'Squadron Leader'), C_('Pilot', 'Flying Officer'), C_('Crew', 'Specialist'), C_('Crew', 'Specialist')],
+    fsc: STRIKE, tsc: STRIKE, gunboat: STRIKE, interceptor: STRIKE, hsc: STRIKE, asc: STRIKE
+  };
+  function crewOf(u) { return (u && (u.faction || 'pmc') === 'pmc' && CREW[u.key]) || null; }
+  // how many named men a hull or craft carries
+  function crewSize(u) { var c = crewOf(u); return c ? c.length : 1; }
+  // the job a crewman does aboard (a squad's men have none)
+  function roleFor(u, i) {
+    var c = crewOf(u);
+    return c && c[i] ? c[i][0] : null;
   }
   /* The rank of the i-th man in the unit. The first leads it, the second is
      second-in-command, the rest are the rank and file — so a squad that has
@@ -1666,6 +1700,7 @@
   function rankFor(u, i) {
     var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
     if (isMachine(u)) {
+      if (crewOf(u) && crewOf(u)[i]) return crewOf(u)[i][1];
       if (f === 'pmc' && u.key === 'flyingcp') return 'Major';
       if (f === 'pmc' && (u.key === 'cmdveh' || u.key === 'ewveh' || hasOwn(u, 'Command Vehicle'))) return CREW_OFFICER[tier - 1];
       if (isFlying(u)) return 'Pilot';
@@ -1740,12 +1775,12 @@
       if (overgrown(u) && !u.beast) u.beast = beastName(u, taken);
       return u.men;
     }
-    var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
+    var want = crewed(u) ? (isMachine(u) ? crewSize(u) : Math.max(0, u.models || 0)) : 0;
     u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
       .slice(0, want).map(function (m) { return { name: m.name }; });
     u.men.forEach(function (m) { if (taken) taken[m.name] = 1; });
     while (u.men.length < want) u.men.push(freshMan(u, taken));
-    u.men.forEach(function (m, i) { m.rank = rankFor(u, i); });
+    u.men.forEach(function (m, i) { m.rank = rankFor(u, i); var r = roleFor(u, i); if (r) m.role = r; else delete m.role; });
     return u.men;
   }
   /* Bring the named men into line with the model count: one picked at random
@@ -1756,7 +1791,8 @@
     if (!u.men) return [];
     var live = u.men.filter(function (m) { return m.lost == null; });
     var want = crewed(u) ? standing(u) : 0, out = [];
-    if (isMachine(u)) want = Math.min(want, u.men.length);
+    // a hull keeps its whole crew while it runs, and loses all of it when it is gone
+    if (isMachine(u)) want = want ? live.length : 0;
     while (live.length > want) {
       var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
       m.lost = turn || 0;
@@ -1784,7 +1820,7 @@
   }
   // who comes back for the next battle: everyone who was not a casualty
   function survivors(u) {
-    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });
+    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return m.role ? { name: m.name, rank: m.rank, role: m.role } : { name: m.name, rank: m.rank }; });
   }
 
   /* The kits, made now that everything they are handed exists, and linked:
@@ -1952,6 +1988,6 @@
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
     defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
-    soldierName: soldierName, rankFor: rankFor, crewed: crewed, overgrown: overgrown, beastName: beastName, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
+    soldierName: soldierName, rankFor: rankFor, roleFor: roleFor, crewSize: crewSize, crewed: crewed, overgrown: overgrown, beastName: beastName, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);

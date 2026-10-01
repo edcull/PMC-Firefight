@@ -89,10 +89,27 @@ ok('a field command is led by an officer, a senior NCO beside him', cmd.men[0].r
   cmd.men.slice(0, 2).map((m) => m.rank).join(', '));
 const fcp = unit('flyingcp');
 R.musterMen(fcp, null, taken);
-ok('a flying command post is commanded by a field officer', fcp.men[0].rank === 'Major', fcp.men[0].rank);
+ok('a flying command post is commanded by a Squadron Leader, with a pilot and two crew', fcp.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Commander Squadron Leader, Pilot Flying Officer, Crew Specialist, Crew Specialist', fcp.men.map((m) => m.role + ' ' + m.rank).join(', '));
 const lcv = unit('lcv');
 R.musterMen(lcv, null, taken);
-ok('a crewed vehicle has one named commander, an NCO', lcv.men.length === 1 && /Corporal|Sergeant/.test(lcv.men[0].rank), lcv.men[0] && lcv.men[0].rank);
+ok('a light combat vehicle has a commander, a driver and a gunner', lcv.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Commander Sergeant, Driver Corporal, Gunner Private', lcv.men.map((m) => m.role + ' ' + m.rank).join(', '));
+// every crew by its job and rank, as the company's motor pool and squadron have them
+[['unarmoured', 'Driver Private'], ['lpv', 'Driver Corporal, Gunner Private'],
+  ['mcv', 'Commander Sergeant, Driver Corporal, Gunner Private, Loader Private'],
+  ['acv', 'Commander Staff Sergeant, Driver Corporal, Gunner Private'], ['medveh', 'Commander Lieutenant, Driver Corporal, Gunner Private'],
+  ['adaptedcraft', 'Pilot Pilot Officer'], ['lightcraft', 'Pilot Flying Officer'], ['heavycraft', 'Pilot Flying Officer'],
+  ['gunboat', 'Pilot Flight Lieutenant, Gunner Pilot Officer']].forEach(([k, want]) => {
+  const v = unit(k); R.musterMen(v, null, {});
+  const got = v.men.map((m) => m.role + ' ' + m.rank).join(', ');
+  ok(v.name + ': ' + want, got === want, got);
+});
+const rip = unit('insertplat'); R.musterMen(rip, null, {});
+ok('a Rapid insertion platform has nobody aboard', rip.men.length === 0);
+// a hull keeps all its crew while it runs, and loses them all when it is destroyed
+const mcvL = unit('mcv'); R.musterMen(mcvL, null, {});
+ok('...a hull still running loses none of its crew', R.syncMen(mcvL, 2, {}).length === 0 && mcvL.men.every((m) => m.lost == null));
+mcvL.alive = false;
+ok('...and a destroyed one all of it', R.syncMen(mcvL, 3, {}).length === 4 && mcvL.men.every((m) => m.lost === 3));
 // a command or EW vehicle is in the hands of a junior officer
 ['cmdveh', 'ewveh'].forEach((k) => {
   const v = unit(k);
