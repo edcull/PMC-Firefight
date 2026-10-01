@@ -2,7 +2,8 @@
 
 A Pi runs the game server behind nginx, and GitHub deploys to it:
 
-- every push to `main` deploys `main`;
+- every push to `main` deploys `main`, once the tests have passed on it (a
+  push whose tests fail is not deployed);
 - to try a branch before merging it, open the **pi** workflow in the Actions
   tab, press **Run workflow**, and pick the branch.
 
@@ -46,7 +47,21 @@ This:
   deploy never touches;
 - installs the `pmc-firefight` service, listening on `127.0.0.1:8787`, so it
   is reached only through nginx;
-- lets `pi` restart that one service, and read its log, without a password.
+- lets `pi` restart that one service, and read its log, without a password;
+- keeps the server sandboxed: it can write only its data folder,
+  `/var/lib/pmc-firefight` (the campaigns, and a database file should it keep
+  one), sees the rest of the system read-only and no home folders, and can
+  never gain privileges (`NoNewPrivileges`, `ProtectSystem=strict`,
+  `ProtectHome`, `PrivateTmp`).
+
+Running `setup.sh` again is safe. It rewrites the service the same way, which
+is also how a Pi set up before a change to the script picks the change up:
+
+```
+curl -fsSL https://raw.githubusercontent.com/edcull/PMC-Firefight/main/deploy/pi/setup.sh -o /tmp/pmc-setup.sh
+sudo bash /tmp/pmc-setup.sh pi
+sudo systemctl restart pmc-firefight
+```
 
 `~/pmc-setup` can be deleted afterwards.
 
@@ -119,8 +134,9 @@ so any sub-path works. The server pings every 25 seconds, well inside nginx's
 
 ## Keeping the Pi safe
 
-The workflow runs only on a push to `main` or when started by hand, never for
-a pull request, so only code already in the repository runs on the Pi.
+The workflow deploys only after the tests pass on a push to `main`, or when
+started by hand, never for a pull request, so only code already in the
+repository runs on the Pi.
 
 If the repository is **public**, also go to **Settings → Actions → General →
 Fork pull request workflows** and choose **Require approval for all external

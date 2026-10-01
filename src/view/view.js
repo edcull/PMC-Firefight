@@ -391,15 +391,11 @@
       var y1 = Math.ceil(Math.max(c[0].y, c[1].y, c[2].y, c[3].y)) + 3;
       return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
     }
-    /* Put one structure back on top of whatever has been drawn over it, taking the
-       pixels from the layer it was baked into. */
-    function repaintProp(pr, open) {
-      if (open) {
-        // its own patch of the cut-away layer (draw.js paintStructures)
-        var o = pr._open;
-        if (o && o.box.w > 0 && o.box.h > 0) B.pctx.drawImage(o.cv, 0, 0, o.box.w, o.box.h, o.box.x, o.box.y, o.box.w, o.box.h);
-        return;
-      }
+    /* Put one structure back on top of whatever has been drawn over it, from its
+       own patch (or, for a structure that has none, the layer it was baked into). */
+    function repaintProp(pr) {
+      var o = pr._solid;                 // its own patch (draw.js paintStructures)
+      if (o && o.box.w > 0 && o.box.h > 0) { B.pctx.drawImage(o.cv, 0, 0, o.box.w, o.box.h, o.box.x, o.box.y, o.box.w, o.box.h); return; }
       var src = B.vc.structs;
       if (!src) return;
       var b = propBox(pr);
