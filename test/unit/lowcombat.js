@@ -7,7 +7,7 @@
    Suppression (p. 58); a Command Vehicle carries the rules of any command unit
    aboard (p. 59); and a drop platform never goes in empty (p. 79). */
 'use strict';
-const { R, Engine } = require('../../server/rules.js');
+const { R, Engine, SC } = require('../../server/rules.js');
 let seed = 41;
 Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 
@@ -161,6 +161,27 @@ console.log('\nA drop platform never goes in empty (p. 79)');
   const other = st.units.find((u) => u.side === 'A' && u.cls === 'infantry' && !u.aboard && u !== rider && !u.command && u.x < 0);
   const ld = other ? e.intent('A', { k: 'load', hull: pod.id, unit: other.id }) : { ok: false, why: 'no other squad' };
   ok('...but may be swapped for another', ld.ok && pod.cargo[0] === other && !rider.aboard, ld.why || '');
+})();
+
+console.log('\nAn emptied drop platform does nothing more, and touches no objective (p. 79)');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 2, pl: 1, scenario: 'meeting', armyA: ['cmd3', 'insertplat', 'recruits', 'recruits', 'enforcers'], armyB: ['regular'],
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto' });
+  const st = e.state(), pod = st.units.find((u) => u.key === 'insertplat');
+  st.phase = 'battle'; st.turn = 1; st.phaseCount = 1; st.activeSide = 'A'; st.chain = null; st.streak = 9; st.terrain.length = 0;
+  st.units.forEach((u, i) => { u.reserve = false; u.activated = false; if (!u.aboard) { u.x = 6 + i * 3; u.y = 10 + i * 3; } });
+  pod.x = 20; pod.y = 20;
+  ok('a platform with its squad aboard may act, to put them down', e.query.eligible('A').indexOf(pod) >= 0);
+  const rider = pod.cargo[0];
+  pod.cargo = []; rider.aboard = null; rider.x = 24; rider.y = 20;
+  ok('...once empty, it is not activated again', e.query.eligible('A').indexOf(pod) < 0 && !e.query.actionState(pod, 'skip').on);
+  // the Find and secure locations and a Secure objective at its feet
+  st.sc.search = [{ x: 20, y: 24, i: 0, checked: false, piece: { kind: 'searchsite', x: 18, y: 22, w: 4, h: 4 } }];
+  st.sc.found = null; st.sc.order = 0;
+  ok('...it cannot search a location', SC.searchSpots(st, pod).length === 0 && SC.searchSpots(st, rider).length === 1);
+  st.units.forEach((u, i) => { if (u !== pod && u.x >= 0) { u.x = 40; u.y = 4 + i * 3; } });
+  ok('...nor hold an objective it stands on', SC.holderOf(st, 20, 20, 4) === null);
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

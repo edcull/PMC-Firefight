@@ -991,7 +991,7 @@
     // the objectives are what the OpFor defends
     goals: function (state) { return (state.sc.targets || []).filter(function (t) { return !t.destroyed; }); },
     sabotageSpots: function (state, u) {
-      if (u.side !== 'A') return [];
+      if (u.side !== 'A' || !R.holdsGround(u)) return [];      // a drop pod touches no objective (p. 79)
       return (state.sc.targets || []).filter(function (t) { return !t.destroyed && dist(u.x, u.y, t.x, t.y) <= UR + 1 + 1; });
     },
     check: function (state) {

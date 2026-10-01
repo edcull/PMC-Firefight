@@ -42,6 +42,10 @@
       if (isAI(u.side)) return { on: false, hint: u.label + ' is under OpFor control.' };
       if (u.side !== E.state.activeSide) return { on: false, hint: E.state.solo ? 'The OpFor is acting.' : 'It is ' + sideName(E.state.activeSide) + '’s activation.' };
       if (u.activated) return { on: false, hint: u.name + ' has already acted this turn.' };
+      // an emptied drop platform is done: it is not activated again (p. 79)
+      if (R.has(u, 'Immobile') && u.transport && !(u.cargo || []).length) {
+        return { on: false, hint: u.name + ' has put its troops down: it does nothing more this battle.' };
+      }
       // the Command Unit aboard has one action of its own to take from the vehicle (p. 57)
       var ca = E.state.cmdAct;
       if (ca && ca.veh === u.id && id !== ca.id) {

@@ -1031,6 +1031,9 @@
     return state.units.filter(function (u) {
       if (!u.alive || u.side !== side || u.activated || u.aboard || u.reserve) return false;
       if (R.status(u) === 'broken') return false;
+      /* A Rapid insertion platform "may only disembark troops" (p. 79): once its
+         squad is off, there is nothing left for it to do, and it is not activated. */
+      if (R.has(u, 'Immobile') && u.transport && !(u.cargo || []).length) return false;
       // a cooperative game's players take their turns with their own commandos
       if (state.solo && state.solo.coop && side === 'A' && state.activeSide === 'A' &&
         state.activeOwner && (u.owner || 1) !== state.activeOwner && !ui.soloAll) return false;

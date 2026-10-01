@@ -1075,6 +1075,7 @@
      D6 — the first needs a 5+, the second a 4+; miss both and the third is it. */
   function searchSpots(state, u) {
     if (!state.sc || !state.sc.search || state.sc.found) return [];
+    if (!R.holdsGround(u)) return [];                  // a drop pod touches no objective (No Objectives, p. 79)
     return state.sc.search.filter(function (s) {
       // within 4" of the location itself — its edge, not its middle
       var edge = s.piece ? R.rectPointDist(s.piece, u.x, u.y) : Math.max(0, dist(u.x, u.y, s.x, s.y) - 2);
