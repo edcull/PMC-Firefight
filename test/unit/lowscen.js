@@ -110,6 +110,8 @@ console.log('\nTerrain changes by hand alternate, a piece each (p. 45)');
     e.start({ tier: 2, pl: 1, scenario: 'meeting', armyA: ['rsecondary', 'rmilitia', 'rmilitia', 'rciv', 'rciv'], armyB: ['rsecondary', 'rmilitia', 'rmilitia', 'rciv', 'rciv'],
       nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: setup,
       tactics: { A: 'laststand', B: 'laststand' } });
+    // two rebel forces first choose their tactics in turn (p. 96): each keeps the one it mustered with
+    for (let g = 0; g < 2 && e.state().tacticAsk; g++) { const sd = e.state().tacticAsk.order[e.state().tacticAsk.step]; e.intent(sd, { k: 'tactic', tactic: 'laststand' }); }
     for (let g = 0; g < 10 && e.state().phase === 'terrain'; g++) ['A', 'B'].forEach((sd) => e.intent(sd, { k: 'terrain', act: 'tautoall' }));
     return e;
   }

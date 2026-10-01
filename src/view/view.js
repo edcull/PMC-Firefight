@@ -540,8 +540,8 @@
       if (hdrEl) hdrEl.classList.toggle('two-seat', B.state.cfg.mode === 'hotseat' || !!(B.state.solo && B.state.solo.coop));
       syncHeaderHeight();
       // the phone's turn counter, a fixed width at the right of its one-row header
-      if (el('hdr-turn')) el('hdr-turn').textContent = B.state.phase === 'terrain' ? 'Setup' : B.state.phase === 'deploy' ? 'Deploy' : 'Turn ' + B.state.turn;
-      el('hdr-phase').textContent = B.state.phase === 'terrain' ? 'Terrain set-up' : B.state.phase === 'deploy' ? 'Deployment'
+      if (el('hdr-turn')) el('hdr-turn').textContent = B.state.phase === 'terrain' || B.state.phase === 'tactics' ? 'Setup' : B.state.phase === 'deploy' ? 'Deploy' : 'Turn ' + B.state.turn;
+      el('hdr-phase').textContent = B.state.phase === 'tactics' ? 'Tactics' : B.state.phase === 'terrain' ? 'Terrain set-up' : B.state.phase === 'deploy' ? 'Deployment'
         // (until the Action phase opens, the turn is still in its Reserve phase: units coming on, turn 1's relocations)
         : 'Turn ' + B.state.turn + ' · ' + (B.state.phaseCount ? 'Action phase' : 'Reserve phase');
       el('hdr-init').textContent = B.state.initiative ? 'Initiative ' + B.state.initiative : '—';
@@ -549,6 +549,10 @@
       if (B.state.over) {
         act.textContent = B.state.over.winner ? 'Victory: ' + B.state.over.winner : 'Draw';
         act.className = 'pill pill-' + (B.state.over.winner || 'none');
+      } else if (B.state.tacticAsk) {
+        var tk = B.state.tacticAsk.order[B.state.tacticAsk.step];
+        act.textContent = 'Choosing tactic: ' + (tk === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
+        act.className = 'pill pill-' + tk;
       } else if (B.state.phase === 'terrain') {
         var ta = curArea();
         act.textContent = ta ? 'Terrain: ' + ta.name : 'Terrain';

@@ -189,7 +189,8 @@
       var s = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
       return seats.indexOf(s) >= 0 ? s : null;
     }
-    var want = state.phase === 'deploy' ? Q.placingSide()
+    var want = state.tacticAsk ? state.tacticAsk.order[state.tacticAsk.step]
+      : state.phase === 'deploy' ? Q.placingSide()
       : state.phase === 'terrain' ? Q.terrainSide() : state.activeSide;
     return seats.indexOf(want) >= 0 ? want : null;
   }

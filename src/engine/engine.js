@@ -281,9 +281,9 @@
     /* Guerillas (p. 95): every insurgent on foot knows the tunnels. Riders do not
        fit down them, so they are left out. */
     if (u.tactic === 'guerillas' && u.cls === 'infantry' && !R.has(u, 'Riders')) {
-      ['Stealth', 'Battlefield Insertion'].forEach(function (r) {
-        if (u.rules.indexOf(r) < 0) u.rules.push(r);
-      });
+      // what the tactic gave it, so a tactic changed at the dice-off can take it back (setTactic)
+      u.guerilla = ['Stealth', 'Battlefield Insertion'].filter(function (r) { return u.rules.indexOf(r) < 0; });
+      u.rules = u.rules.concat(u.guerilla);
     }
     // a campaign unit carries its dossier on its back: name, honours, traumas, upgrades
     if (entry && C) C.applyEntry(u, entry, state && state.doctrines ? state.doctrines[side] : null);
@@ -463,8 +463,60 @@
       }
     }
     V.clearCards();
-    if (manual) { K.startTerrainSetup(built); return; }
-    afterTerrain(built);
+    if (tacticDiceOff(built, manual)) return;
+    if (manual) K.startTerrainSetup(built); else afterTerrain(built);
+  }
+
+  /* "If both players command Rebel forces, roll a dice; the player with the
+     higher result can choose their tactic first" (p. 96). Two people playing
+     two rebel forces roll off before the table is laid: the winner confirms or
+     changes the tactic they mustered with, and the other is shown it before
+     settling their own. Only a tactic their list is still legal under is
+     offered (Human Wave changes what a list may hold). Against the AI there is
+     no one to keep it from, and nothing is asked. */
+  var TACTIC_IDS = [null, 'laststand', 'wave', 'guerillas'];
+  function tacticDiceOff(built, manual) {
+    var cfg = state.cfg;
+    if (state.solo || isAI('A') || isAI('B')) return false;
+    var rebel = function (sd) { return state.units.some(function (u) { return u.side === sd && u.faction === 'rebel'; }); };
+    if (!rebel('A') || !rebel('B')) return false;
+    var ra, rb;
+    do { ra = R.d6(); rb = R.d6(); } while (ra === rb);       // a tie is rolled again
+    var first = ra > rb ? 'A' : 'B';
+    var legal = {};
+    ['A', 'B'].forEach(function (sd) {
+      var keys = sd === 'A' ? cfg.armyA : cfg.armyB, cur = state.tactics[sd] || null;
+      var faults = function (t) { return R.checkArmy(keys || [], cfg.tier, cfg.pl, docsOf(sd), t, 'rebel').faults; };
+      var had = faults(cur);
+      // a tactic is offered unless it would make the list break a rule it kept under the one mustered
+      legal[sd] = TACTIC_IDS.filter(function (t) {
+        return t === cur || faults(t).every(function (f) { return had.indexOf(f) >= 0; });
+      });
+    });
+    /* what the set-up goes on with once both have chosen, kept on the state (a save
+       taken mid-choice carries it): the table as rolled, and whether it is laid by hand */
+    state.phase = 'tactics';                     // before the table and the deployment: nothing else goes on
+    state.tacticAsk = { order: [first, other(first)], step: 0, legal: legal, chosen: {}, manual: !!manual,
+      built: { rolls: built.rolls, generator: built.generator, manual: built.manual } };
+    // the roll itself is not shown: the winner is simply asked first
+    logLine('note', 'Both forces are Rebels: ' + sideName(first) + ' chooses a tactic first.');
+    render();
+    return true;
+  }
+  // a side's tactic, as chosen now: every unit of the side that follows the army's rules takes it
+  function setTactic(side, tac) {
+    state.tactics = state.tactics || { A: null, B: null };
+    state.tactics[side] = tac || null;
+    state.units.forEach(function (u) {
+      if (u.side !== side || u.rules.indexOf('No Army Rules') >= 0) return;
+      // the Guerillas' tunnels go with the tactic (makeUnit)
+      if (u.guerilla) { u.rules = u.rules.filter(function (r) { return u.guerilla.indexOf(r) < 0; }); u.guerilla = null; }
+      u.tactic = tac || null;
+      if (tac === 'guerillas' && u.cls === 'infantry' && !R.has(u, 'Riders')) {
+        u.guerilla = ['Stealth', 'Battlefield Insertion'].filter(function (r) { return u.rules.indexOf(r) < 0; });
+        u.rules = u.rules.concat(u.guerilla);
+      }
+    });
   }
 
   /* Everything that needs the table laid: the scenario's own terrain changes,
@@ -1736,6 +1788,7 @@
     on('start', null, function (side, it) {
       if (state.phase !== 'deploy') return no('already under way');
       if (state.minePick) return no('the mined piece has not been chosen');
+      if (state.tacticAsk) return no('the tactics are still being chosen');
       if (state.placeAsk) return no('there are pieces still to place');
       settleFacing();
       if (modifying()) return no('the armies are still being modified');
@@ -1896,6 +1949,25 @@
       var cs = spotFrom(it);
       if (!cs) return no('tap one of the locations in reach');
       K.doCheckArea(ui.selected, cs.site);
+      return yes;
+    });
+    on('tactic', null, function (side, it) {
+      var ta = state.tacticAsk;
+      if (!ta) return no('no tactic to choose');
+      if (ta.order[ta.step] !== side) return no(ta.step ? 'the other side chooses first' : 'not yet: the other side won the dice');
+      var tac = it.tactic || null;
+      if (ta.legal[side].indexOf(tac) < 0) return no('your list is not legal under that tactic');
+      setTactic(side, tac);
+      ta.chosen[side] = tac;
+      logLine('note', sideName(side) + ' ' + (tac ? 'takes ' + R.tacticById(tac).name : 'takes no tactic') + '.');
+      ta.step++;
+      if (ta.step >= ta.order.length) {
+        state.tacticAsk = null;
+        state.phase = 'deploy';
+        var bt = Object.assign({ terrain: state.terrain }, ta.built);
+        if (ta.manual) K.startTerrainSetup(bt); else afterTerrain(bt);
+      }
+      render();
       return yes;
     });
     on('leave', null, function (side, it) {
