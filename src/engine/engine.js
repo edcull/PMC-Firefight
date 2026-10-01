@@ -623,7 +623,8 @@
   /* ---- deployment: in engine/deploy.js ---- */
 
   function relocCap(side) {
-    return Math.floor(state.units.filter(function (u) {
+    // "up to ½ of their units" (p. 89), rounded up (p. 27)
+    return Math.ceil(state.units.filter(function (u) {
       return u.side === side && u.alive && u.x >= 0 && !u.reserve && !u.aboard;
     }).length / 2);
   }
@@ -801,6 +802,15 @@
       K.reservePhase(function () {
         function action() {
           state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
+          /* A side that wins the initiative with nothing it can activate (all Broken,
+             say) hands the phase to the other, which then goes on freely (p. 27);
+             with nothing to activate on either side, the Rally phase comes at once. */
+          if (!state.solo && !eligible(state.activeSide).length) {
+            var next = other(state.activeSide);
+            if (!eligible(next).length) { K.rallyPhase(); return; }
+            logLine('note', sideName(state.activeSide) + ' has no unit that can act — ' + sideName(next) + ' goes on.');
+            state.activeSide = next;
+          }
           state.streak = streakFor(state.activeSide);
           render();
           maybeAI();
@@ -1238,10 +1248,11 @@
       var mid = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
       var d = R.inches(u.x, u.y, mid.x, mid.y) - Math.max(r.w, r.h) / 2;
       if (melee) return d <= u.move + 2;
+      if (!R.canShootTerrain(state, u, mid)) return false;
       if (d > u.range) return false;
       var minR = R.ruleValue(u, 'Minimum Range');
       if (minR && d < minR) return false;
-      return R.hasLoS(state, u, mid) || R.has(u, 'Indirect Fire');
+      return R.hasLoS(state, u, mid);
     });
   }
 
@@ -1874,6 +1885,11 @@
       var fa = state.faceAsk;
       if (!fa || fa.side !== side) return no('nothing to face');
       if (it.k === 'vface' && (typeof it.dir !== 'number' || !isFinite(it.dir))) return no('which way?');
+      // turning on the spot at the end of a move: only as far as what is left of the move pays for
+      if (it.k === 'vface' && fa.pivot) {
+        var pu = K.byId(fa.ids[0]);
+        if (pu && R.turnCost(pu, fa.pivot.from, R.nearestFacing(it.dir)) > fa.pivot.left + 1e-6) return no('not enough of its move left to turn that far');
+      }
       K.answerFacing(it.k === 'vface' ? it.dir : null);
       return yes;
     });

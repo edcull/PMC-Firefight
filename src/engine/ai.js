@@ -155,14 +155,9 @@
       /* A Rapid insertion platform does one thing and then it is scenery (p. 79). */
       if (R.has(u, 'Immobile')) {
         if (carrying) {
-          var spot = null;
-          for (var a2 = 0; a2 < 16 && !spot; a2++) {
-            var ang = a2 / 16 * Math.PI * 2;
-            var q = R.clampBoard({ x: u.x + Math.cos(ang) * 3, y: u.y + Math.sin(ang) * 3 });
-            if (R.TERRAIN[R.terrainAt(E.state, q.x, q.y)].impassable) continue;
-            if (R.unitNear(E.state, q.x, q.y, u, 0.6)) continue;
-            spot = q;
-          }
+          // the squad steps off towards the nearest enemy, wherever it may be put down
+          var foeP = nearestEnemy(u), want = foeP ? foeP.unit : { x: u.x, y: u.y };
+          var spot = nearestTo(E.dropFor(u), want);
           ui.selected = u; doDisembark(spot || { x: u.x, y: u.y }, true); return;
         }
         u.activated = true; endActivation(u); return;
@@ -172,10 +167,12 @@
       if (carrying) {
         var obj = nearestObjective(u);
         if (obj && R.inches(u.x, u.y, obj.x, obj.y) < 9) {
+          // each squad put down where it may be (R.dropSpots), as near the hull's front as it can
           var spot = { x: u.x + Math.cos(u.facing || 0) * 2.5, y: u.y + Math.sin(u.facing || 0) * 2.5 };
           var lines = [];
-          (u.cargo || []).slice().forEach(function (rider, i) {
-            var r = R.disembark(E.state, u, rider, { x: spot.x + (i % 2 ? 1.6 : -1.6), y: spot.y });
+          (u.cargo || []).slice().forEach(function (rider) {
+            var at = nearestTo(R.dropSpots(E.state, u, rider).filter(function (c) { return canStand(rider, c); }), spot);
+            var r = R.disembark(E.state, u, rider, at);
             if (r) { logLine('note', r.text); lines.push({ text: r.text }); stepOff(rider, u); }
           });
           if (SFX) { SFX.step(); SFX.step(0.22); }
@@ -214,11 +211,9 @@
         // Reasonably Defensive or Neutral: engage from where it stands, or keep its distance
         if (bh === 'defensive' || bh === 'neutral') {
           if (shot.t) { fire(u, shot.t, 'fire'); return; }
-          if (bh === 'defensive') {
-            logLine('ai', u.label + ' holds back.');
-            u.activated = true; endActivation(u); return;
-          }
-          return aiRoll(u, nearestObjective(u) || nearestEnemy(u), true);
+          // Neutral "holds its position" (p. 147) as Defensive does: a hull has no cover to make for
+          logLine('ai', u.label + (bh === 'defensive' ? ' holds back.' : ' holds its position.'));
+          u.activated = true; endActivation(u); return;
         }
         // Reasonably Offensive: on at them, as it always did
       }
@@ -277,7 +272,11 @@
       o = o || {};
       var goal = goalUnit && goalUnit.unit ? { x: goalUnit.unit.x, y: goalUnit.unit.y }
         : goalUnit ? { x: goalUnit.x, y: goalUnit.y } : pickGoal(u, 'offensive');
-      var allowance = u.move + moveBonus(u);
+      /* Either an Advance — its Movement, then a shot — or a Move: Movement and the
+         +4" (p. 36), with no shot after it. A hull told not to shoot, carrying a
+         Cumbersome Weapon (which may not advance, p. 57) or with no gun takes the Move. */
+      var advance = !o.noShoot && u.fp != null && !R.has(u, 'Cumbersome Weapon');
+      var allowance = advance ? u.move : u.move + moveBonus(u, 'move');
       var spots = R.reachable(E.state, u, allowance).filter(function (c) { return canStand(u, c); }), best = null, bestD = Infinity;
       var want = cautious ? 6 : Math.max(4, u.range * 0.45);
       spots.forEach(function (c) {
@@ -297,7 +296,7 @@
         samCheck(u);
         if (!u.alive) { u.activated = true; whenIdle(function () { if (E.state && !E.state.over) endActivation(u); }); return; }
       }
-      var t2 = o.noShoot ? {} : bestTarget(u, 'advance');
+      var t2 = advance ? bestTarget(u, 'advance') : {};
       if (t2.t && t2.score > 0.2) {
         whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, t2.t, 'advance'); });
         return;
@@ -352,6 +351,12 @@
     }
 
     // a scenario may put ground off limits: the VIP's leash, the safe zone the OpFor cannot enter
+    // of the spots given, the one nearest p (null if there are none)
+    function nearestTo(spots, p) {
+      var best = null, bd = Infinity;
+      (spots || []).forEach(function (c) { var d = R.inches(c.x, c.y, p.x, p.y); if (d < bd) { bd = d; best = c; } });
+      return best;
+    }
     function canStand(u, c) {
       // an aircraft keeps low: never over a tall building or a hilltop (p. 38)
       if (R.isFlying(u) && R.tooHighToHover(E.state, c.x, c.y)) return false;
@@ -627,6 +632,14 @@
         });
         return;
       }
+      /* Reasonably Neutral, in a solitaire game (p. 147): "Unit holds its position,
+         engaging the enemy. If there is suitable cover within its Movement distance,
+         the unit will make an Advance action towards that terrain piece, but only if
+         it won't reduce the effectiveness of the unit's attack" — it does not leave
+         cover for a better shot. So: a spot within Movement with better cover than
+         here, from which its best shot is at least as good as the one it has; else
+         it fires from where it is, or holds. */
+      if (E.state.solo && u.side === 'B' && behaviour === 'neutral') { neutralHold(u, shot); return; }
       if ((behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
         fire(u, shot.t, 'fire'); return;
       }
@@ -641,7 +654,10 @@
         }
       }
       var goal = pickGoal(u, behaviour);
-      var allowance = behaviour === 'flee' || killAll ? u.move + moveBonus(u, 'move') : u.move;
+      /* An Advance (Movement, then a shot) unless it is running, charging in, or
+         carries a Cumbersome Weapon, which may not advance (p. 57): that is a Move. */
+      var noAdv = R.has(u, 'Cumbersome Weapon');
+      var allowance = behaviour === 'flee' || killAll || noAdv ? u.move + moveBonus(u, 'move') : u.move;
       var look = R.groundLookup(E.state);             // the ground under every spot, read off the shared grid
       var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
       var best = null, bestScore = here + 0.6;
@@ -656,7 +672,7 @@
         var path = R.pathTo(E.state, u, allowance, best);
         faceAfter(u, path, best);
         u.x = best.x; u.y = best.y;
-        logLine('move', u.label + (behaviour === 'flee' ? ' withdraws ' : ' advances ') + d.toFixed(1) + '".');
+        logLine('move', u.label + (behaviour === 'flee' ? ' withdraws ' : noAdv ? ' moves ' : ' advances ') + d.toFixed(1) + '".');
         crushAlong(u, path);
         animateMove(u, path, true);
         soloAfterMove(u);
@@ -673,6 +689,44 @@
     }
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
+
+    // the solitaire OpFor's Reasonably Neutral infantry (see actInfantry)
+    function neutralHold(u, shot) {
+      var here = R.coverAt(E.state, u.x, u.y, u), hereScore = shot.t ? shot.score : 0;
+      var cands = R.reachable(E.state, u, u.move).filter(function (c) {
+        if (!canStand(u, c)) return false;
+        c.cv = R.coverAt(E.state, c.x, c.y, u);
+        return c.cv > here;
+      });
+      // the best cover first, the nearest of it first
+      cands.sort(function (a, b) { return (b.cv - a.cv) || ((a.cost || 0) - (b.cost || 0)); });
+      var pick = null, pickShot = null, ox = u.x, oy = u.y;
+      for (var i = 0; i < cands.length && i < 16 && !pick; i++) {
+        u.x = cands[i].x; u.y = cands[i].y;
+        var s2 = bestTarget(u, 'advance');
+        u.x = ox; u.y = oy;
+        if ((s2.t ? s2.score : 0) >= hereScore - 1e-9) { pick = cands[i]; pickShot = s2; }
+      }
+      if (pick) {
+        var path = R.pathTo(E.state, u, u.move, pick);
+        faceAfter(u, path, pick);
+        var d = R.inches(u.x, u.y, pick.x, pick.y);
+        u.x = pick.x; u.y = pick.y;
+        logLine('move', u.label + ' advances ' + d.toFixed(1) + '" into cover.');
+        crushAlong(u, path);
+        animateMove(u, path, true);
+        soloAfterMove(u);
+        if (u.x < 0) { u.activated = true; endActivation(u); return; }
+        if (pickShot.t && pickShot.score > 0.2) {
+          whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, pickShot.t, 'advance'); });
+          return;
+        }
+        u.activated = true; endActivation(u); return;
+      }
+      if (shot.t && shot.score > 0) { fire(u, shot.t, 'fire'); return; }
+      logLine('ai', u.label + ' holds its position.');
+      u.activated = true; endActivation(u);
+    }
 
     function pickGoal(u, behaviour) {
       if (behaviour === 'flee') {

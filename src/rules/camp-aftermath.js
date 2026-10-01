@@ -161,7 +161,7 @@
           var tp = rolled[entry.rid] || tpFor(line, ctx);
           delete entry.drugged;                       // spent — chosen again next battle
           if (halveTP && tp.total > 0) {
-            var half = Math.floor(tp.total / 2);
+            var half = Math.ceil(tp.total / 2);        // halved, rounded up (p. 27)
             tp = {
               total: half,
               lines: tp.lines.concat([{ text: 'No Place for the Weak! — halved, ' + tp.total + ' to ' + half, n: half - tp.total }])

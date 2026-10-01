@@ -732,6 +732,10 @@
     };
   }
 
+  /* The Riders upgrade "has to [be decided] when that unit is recruited. The decision
+     is final; it cannot be changed later" (p. 97): open until the unit first fights. */
+  function ridersOpen(e) { return !!e && !(e.history && e.history.length) && !e.lastBattle; }
+
   /* The soldiers on a dossier entry, by name and rank, filled up to the
      strength the unit takes the field at and ranked by where each stands. The
      survivors of its last battle keep their places; a new unit, or the gaps
@@ -743,7 +747,7 @@
     var p = profile(entry.key);
     if (!p) return 0;
     var size = p.cls === 'infantry' ? p.size : 1;
-    if (entry.riders && R.canRide(p)) size = Math.max(1, Math.round(size / 2));   // Riders: half the models, mounted
+    if (entry.riders && R.canRide(p)) size = Math.max(1, Math.ceil(size / 2));   // Riders: half the models, mounted
     if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
     return size;
   }
@@ -1506,7 +1510,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, fateWords: fateWords, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, ridersOpen: ridersOpen, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, fateWords: fateWords, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand, rerankMen: rerankMen,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,

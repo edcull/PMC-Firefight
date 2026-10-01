@@ -212,12 +212,15 @@
             (c.d ? '<sup>' + (c.d > 0 ? '+' : '') + c.d + '</sup>' : '') + '</td>';
         }).join('') + '</tr></table>';
       if (u.defPierced != null) h += '<p class="ddet-note">Defence ' + u.defPierced + ' against Anti-tank and Gauss weapons.</p>';
-      /* What it rides, changed here between battles: the Riders upgrade where
-         the unit may take it, and a motorbike, grav bike or horse once it rides. */
+      /* What it rides: the Riders upgrade, "decided when that unit is recruited. The
+         decision is final" (p. 97) — so offered only to a unit that has yet to fight,
+         and shown fixed after that; and a motorbike, grav bike or horse once it rides. */
       if (R.canRide(p) || R.canMount(p, riding)) {
         h += '<h5>Mounted</h5><div class="ddet-ride">';
-        if (R.canRide(p)) h += '<button class="lnk' + (riding ? ' on' : '') + '" data-eriders="' + e.rid + '">' +
+        if (R.canRide(p) && C.ridersOpen(e)) h += '<button class="lnk' + (riding ? ' on' : '') + '" data-eriders="' + e.rid + '">' +
           (riding ? 'Mounted (Riders) \u2014 dismount' : 'On foot \u2014 take the Riders upgrade') + '</button>';
+        else if (R.canRide(p)) h += '<span class="ddet-fixed" title="Chosen when the unit was recruited, and final (p. 97)">' +
+          (riding ? 'Mounted (Riders)' : 'On foot') + ' \u2014 fixed</span>';
         if (R.canMount(p, riding)) h += R.MOUNT_ORDER.map(function (m) {
           return '<button class="lnk' + ((e.mount || 'none') === m ? ' on' : '') + '" data-emount="' + e.rid + '" data-m="' + m + '" title="' +
             esc(R.MOUNTS[m].note) + '">' + esc(R.MOUNTS[m].name) + '</button>';
