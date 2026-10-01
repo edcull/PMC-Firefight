@@ -323,25 +323,21 @@
     return out.map(function (p, i) { return { x: p.x, y: p.y, id: 'C' + (i + 1) }; });
   }
   // a free spot within `r` of a point
+  /* A free spot for a unit within r of a point. Units are put down nearest the
+     point first, give or take a little, so a circle fills from the middle out and
+     holds as many as fit: picked at random, the first few left gaps too narrow
+     for the next, and the last of a crowd sometimes found nowhere to stand. */
   function spotNear(state, x, y, r, u, avoid) {
-    for (var t = 0; t < 300; t++) {
-      var a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * r;
-      var q = { x: clamp(x + Math.cos(a) * d, UR, W - UR), y: clamp(y + Math.sin(a) * d, UR, H - UR) };
-      if (!passable(state, q.x, q.y)) continue;
-      if (R.unitNear(state, q.x, q.y, u, 1)) continue;
-      if (avoid && avoid(q)) continue;
-      return q;
-    }
-    /* A crowded circle can defeat the random tries while there is still room
-       in it: sweep it on a quarter-inch lattice, nearest the point first. */
-    var best = null, bd = Infinity;
-    for (var gx = -r; gx <= r; gx += 0.25) {
-      for (var gy = -r; gy <= r; gy += 0.25) {
+    var best = null, bs = Infinity, step = 0.5;
+    for (var gx = -r; gx <= r + 1e-9; gx += step) {
+      for (var gy = -r; gy <= r + 1e-9; gy += step) {
         var dd = gx * gx + gy * gy;
-        if (dd > r * r || dd >= bd) continue;
+        if (dd > r * r) continue;
+        var score = Math.sqrt(dd) + Math.random() * 1.2;     // the jitter keeps them from lining up
+        if (score >= bs) continue;
         var g = { x: clamp(x + gx, UR, W - UR), y: clamp(y + gy, UR, H - UR) };
         if (!passable(state, g.x, g.y) || R.unitNear(state, g.x, g.y, u, 1) || (avoid && avoid(g))) continue;
-        best = g; bd = dd;
+        best = g; bs = score;
       }
     }
     return best;
