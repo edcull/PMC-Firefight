@@ -1039,19 +1039,26 @@
     // Indirect Fire falls from above, so a low wall shelters the target whichever
     // way the shot comes from
     /* Low walls (p. 42): "When a whole unit is behind a low wall (up to 2" from
-       it), it gets a Defence bonus" — so every model within 2", which for a
-       token of radius 1" means its middle within an inch of the wall, and the
-       wall between it and the shooter. Rubble and the like shelter only the
-       men standing in them, which the lines above already give. */
+       it), it gets a Defence bonus". The squad's token stands for men spread
+       along the wall, so it counts with its middle within 2" of the wall, and
+       the wall between it and the shooter — the line of fire crossing it, or
+       slipping past one of its ends by less than half an inch. It used to want the whole
+       token within 2" — the middle within an inch — and the line dead through
+       the wall, which left a squad standing just back from a wall in the open.
+       Rubble and the like shelter only the men standing in them, which the
+       lines above already give. */
     var plunging = has(attacker, 'Indirect Fire');
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
       if (r.kind !== 'barricade') continue;
       if (inRect(attacker.x, attacker.y, r)) continue;
-      if (rectPointDist(r, target.x, target.y) + UNIT_R > 2 + 1e-6) continue;
+      if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) continue;
       // Indirect Fire falls from above, so the wall shelters them whichever way it comes
       if (plunging) return held(t.cover, 'low wall against plunging fire');
-      if (segRect(attacker.x, attacker.y, target.x, target.y, r)) return held(t.cover, 'behind a low wall');
+      // half an inch more at each end of the wall, along its length (not its thickness:
+      // a wall just behind the target is still behind it)
+      var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
+      if (segRect(attacker.x, attacker.y, target.x, target.y, grown)) return held(t.cover, 'behind a low wall');
     }
     return { v: 0, why: '' };
   }
