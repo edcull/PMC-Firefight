@@ -1662,6 +1662,10 @@
       if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       if (u.key === 'rguard') return i === 0 ? 'Guard Captain' : 'Guard';
+      // the partisan commandos, each by its trade
+      if (u.key === 'rassaultcdo') return i === 0 ? 'Commando Leader' : 'Partisan';
+      if (u.key === 'rsabcdo') return i === 0 ? 'Saboteur Chief' : 'Saboteur';
+      if (u.key === 'rsnipercdo') return i === 0 ? 'Marksman Chief' : 'Marksman';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
     // then a corporal, and the rest privates: the staff's signallers, runners and guards

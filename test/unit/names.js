@@ -40,7 +40,10 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   ['rguard', 'Guard Captain', 'Guard', 'Guard'],
   // the Holy Warriors: a Preacher (1-2), an Elder (3-4), a Prophet and Holy Warriors (5)
   ['racolytes', 'Preacher', 'Zealot', 'Zealot'], ['rfanatics', 'Elder', 'Zealot', 'Zealot'],
-  ['renlightened', 'Elder', 'Zealot', 'Zealot'], ['rmujahideen', 'Prophet', 'Holy Warrior', 'Holy Warrior']].forEach(([key, lead, second, rest]) => {
+  ['renlightened', 'Elder', 'Zealot', 'Zealot'], ['rmujahideen', 'Prophet', 'Holy Warrior', 'Holy Warrior'],
+  // the partisan commandos, each by its trade
+  ['rassaultcdo', 'Commando Leader', 'Partisan', 'Partisan'], ['rsabcdo', 'Saboteur Chief', 'Saboteur', 'Saboteur'],
+  ['rsnipercdo', 'Marksman Chief', 'Marksman', 'Marksman']].forEach(([key, lead, second, rest]) => {
   const u = unit(key);
   R.musterMen(u, null, {});
   ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',
