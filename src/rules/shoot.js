@@ -59,6 +59,10 @@
          not there at all; neither is a target, however close the numbers say. */
       if (t.reserve || t.aboard || t.x < 0 || t.y < 0) return false;
       if (!opts.aux) {
+        /* "Units with Cumbersome Weapons may not advance" (p. 57): nothing fires one
+           on the move, whoever is choosing — the player's bar offers no Advance, and
+           this keeps every other path (the AI's move-then-shoot) to the same rule. */
+        if (mode === 'advance' && has(a, 'Cumbersome Weapon')) return false;
         // a main weapon set up for one kind of target cannot engage the other
         if (has(a, 'Specialisation (air)') && !isFlying(t)) return false;
         if (has(a, 'Specialisation (ground)') && isFlying(t)) return false;
@@ -184,9 +188,9 @@
         if (mode === 'fire') { total += fireB; parts.push({ label: fireB === 2 ? (perfect ? 'Fire! — Rite of Perfection' : 'Fire! — Effective Toxin Glands') : 'Fire! (stationary)', v: fireB }); }
         // Chaotic Ranged Attacks (a Genetic Flaw): no bonus inside half range
         var rng = aux ? AUX_RANGE : shotRange(a);
-        if (dist <= rng / 2 && !aux && campFlag(a, 'chaotic')) {
+        if (dist <= Math.ceil(rng / 2) && !aux && campFlag(a, 'chaotic')) {
           parts.push({ label: 'Chaotic Ranged Attacks — no half-range bonus', v: 0 });
-        } else if (dist <= rng / 2) {
+        } else if (dist <= Math.ceil(rng / 2)) {
           // Rain of Fire doubles the close-range bonus
           var close = !aux && campFlag(a, 'rainOfFire') ? 4 : 2;
           total += close;

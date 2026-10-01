@@ -86,15 +86,17 @@
     }
     /* Where a unit coming out may be put: within 4" of the wall, on ground it
        can stand on, clear of every other unit. */
-    function exitSpots(state, u) {
+    // `reach`: how far out the unit's middle may end, 4" from the wall unless said otherwise
+    function exitSpots(state, u, reach) {
       var q = sectionRect(u);
       if (!q) return [];
+      reach = reach || 4;
       var out = [];
-      for (var x = Math.floor(q.x - 5); x <= q.x + q.w + 5; x += STEP) {
-        for (var y = Math.floor(q.y - 5); y <= q.y + q.h + 5; y += STEP) {
+      for (var x = Math.floor(q.x - reach - 1); x <= q.x + q.w + reach + 1; x += STEP) {
+        for (var y = Math.floor(q.y - reach - 1); y <= q.y + q.h + reach + 1; y += STEP) {
           if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) continue;
           var d = rectPointDist(q, x, y);
-          if (d < UNIT_R || d > 4) continue;
+          if (d < UNIT_R || d > reach) continue;
           if (TERRAIN[terrainAt(state, x, y)].impassable) continue;
           if (unitNear(state, x, y, u, 1)) continue;
           out.push({ x: x, y: y, cost: d, spent: d, turns: 0 });
@@ -106,9 +108,11 @@
       u.bld = null; u.sec = null;
       if (p) { u.x = p.x; u.y = p.y; }
     }
-    // out through the wall facing away from `from`, as the garrison of a lost building does
-    function leaveAway(state, u, from) {
-      var spots = exitSpots(state, u);
+    /* Out through the wall facing away from `from`, as the garrison of a lost
+       building does: its base ends no further than `back` inches from the wall
+       (the 2" it falls back, p. 41) — 4" if not said. */
+    function leaveAway(state, u, from, back) {
+      var spots = exitSpots(state, u, back != null ? UNIT_R + back : 4);
       var q = sectionRect(u);
       exitBuilding(state, u, null);
       if (!spots.length) { var p0 = nearestClear(state, u, q); u.x = p0.x; u.y = p0.y; return; }
@@ -280,9 +284,15 @@
        rectangles that share edges and never overlap; together they are the
        building — cover, sight, all of it — and the ground between them is open. */
     var PLANS = ['block', 'L', 'L', 'T', 'U', 'annex', 'tower'];
+    /* "Each building can be occupied by only one unit at a time" (p. 41): that is the
+       small structure, "approximately up to 4"x4"" (p. 42). Only a bigger one is
+       built of sections a unit each — so a building no longer than SMALL_BLD on
+       its longer side stays one block, whatever plan the dice gave it. */
+    var SMALL_BLD = 5.5;
     function planBuilding(r, rand, plan) {
       if (r.parts || r.w < 4 || r.h < 4) return r;
-      plan = plan || PLANS[Math.floor(rand() * PLANS.length)];
+      var rolled = PLANS[Math.floor(rand() * PLANS.length)];   // (rolled either way: the dice that follow stay the same)
+      plan = plan || (Math.max(r.w, r.h) <= SMALL_BLD ? 'block' : rolled);
       var x = r.x, y = r.y, w = r.w, h = r.h, parts;
       function P(px, py, pw, ph, hf) { return { x: px, y: py, w: pw, h: ph, hf: hf || 1 }; }
       var fx = rand() < 0.5, fy = rand() < 0.5, swap = rand() < 0.5 && plan !== 'block';
@@ -492,8 +502,30 @@
       if (unitDist(a, b) > sightRange(a)) return false;
       return lineClear(state, a, b);
     }
-    // the line itself, however far: terrain that blocks and units standing in the way
+    /* The line itself, however far: terrain that blocks and units standing in the way.
+       "When something can be seen by one soldier, it can be seen by the whole unit"
+       (p. 29) — a squad's men stand across its base, so it sees if any of them sees
+       any of the other's: the line between the middles, and failing that, lines
+       from either side of one base to either side of the other (UNIT_R * 0.8 out,
+       across the line). A point at either end — a piece of terrain, a spot on the
+       ground — is just itself. Which ground each end stands on (on a hill, in a
+       wood) is judged from its middle, whichever line is drawn. */
     function lineClear(state, a, b) {
+      if (lineClearAt(state, a, b, a.x, a.y, b.x, b.y)) return true;
+      var ra = a && a.side ? UNIT_R * 0.8 : 0, rb = b && b.side ? UNIT_R * 0.8 : 0;
+      if (!ra && !rb) return false;
+      var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+      if (len < 1e-6) return false;
+      var nx = -dy / len, ny = dx / len;
+      var sides = [[1, 1], [-1, -1], [1, -1], [-1, 1]];
+      for (var k = 0; k < sides.length; k++) {
+        var sa = sides[k][0] * ra, sb = sides[k][1] * rb;
+        if (lineClearAt(state, a, b, a.x + nx * sa, a.y + ny * sa, b.x + nx * sb, b.y + ny * sb)) return true;
+      }
+      return false;
+    }
+    // one line of sight, from (ax, ay) by a to (bx, by) by b
+    function lineClearAt(state, a, b, ax, ay, bx, by) {
       for (var i = 0; i < state.terrain.length; i++) {
         var r = state.terrain[i], t = TERRAIN[r.kind];
         if (!t.blocks && !t.hill) continue;
@@ -505,11 +537,11 @@
            crown to the ground beyond. */
         if (t.hill && r.top) {
           var aTop = aIn && inPoly(a.x, a.y, r.top), bTop = bIn && inPoly(b.x, b.y, r.top);
-          if (!aTop && !bTop && segRect(a.x, a.y, b.x, b.y, upperStep(r))) return false;
+          if (!aTop && !bTop && segRect(ax, ay, bx, by, upperStep(r))) return false;
         }
         // a hill blocks sight across it, but not for a unit standing on it (p. 42)
         if (aIn || bIn) continue;
-        if (segRect(a.x, a.y, b.x, b.y, r)) return false;
+        if (segRect(ax, ay, bx, by, r)) return false;
       }
       /* "Units on hills can shoot/be shot at over friendly units below them (but
          not over enemy ones)" — the friends of whichever end is up on the hill,
@@ -523,7 +555,7 @@
         if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
         // a ghost (where a unit might stand) is not hidden by the unit itself, where it stands now
         if (u === a.of || u === b.of) continue;
-        if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
+        if (pointSegDist(u.x, u.y, ax, ay, bx, by) >= UNIT_R * 0.9) continue;
         if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
         if (aLv < 0) { aLv = a.side ? sightLevel(state, a) : 0; bLv = b.side ? sightLevel(state, b) : 0; }
         if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {

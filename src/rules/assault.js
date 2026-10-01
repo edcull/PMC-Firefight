@@ -222,15 +222,15 @@
           if (!pair.def.alive) { ended = true; break; }
           if (cowed) continue;                                  // it is already running: the blows keep coming
           if (status(pair.def) === 'broken') {
-            fallBack(state, pair.def, pair.atk, 2);
-            log.push({ t: 'note', text: pair.def.label + ' breaks and falls back 2" — the assault ends.' });
+            log.push({ t: 'note', text: fallBack(state, pair.def, pair.atk, 2)
+              ? pair.def.label + ' breaks and falls back 2" — the assault ends.'
+              : pair.def.label + ' breaks, but stays where it is — the assault ends.' });
             ended = true; break;
           }
         }
       }
       if (cowed && !ended && t.alive) {
-        fallBack(state, t, a, 2);
-        log.push({ t: 'note', text: t.label + ' gives ground and falls back 2".' });
+        log.push({ t: 'note', text: fallBack(state, t, a, 2) ? t.label + ' gives ground and falls back 2".' : t.label + ' cannot give ground, and stays where it is.' });
         ended = true;
       }
       if (!ended && a.alive && t.alive) {
@@ -387,9 +387,14 @@
       return p;
     }
 
+    /* Falling back `inch` inches straight away from `from`. Returns whether it moved.
+       Broken artillery "do not retreat (they stay in place instead)" (p. 97), and
+       nothing Immobile moves at all. A garrison "leave[s] it and fall[s] back 2""
+       (p. 41): out through the far wall, its base ending no further than that from
+       the building — the 2" is from the wall, not added to the way out. */
     function fallBack(state, u, from, inch) {
-      // "the defenders leave it and fall back 2"" (p. 41): out through the far wall first
-      if (u.bld) leaveAway(state, u, from);
+      if (hasOwn(u, 'Stationary Artillery') || hasOwn(u, 'Immobile')) return false;
+      if (u.bld) { leaveAway(state, u, from, inch); return true; }
       var vx = u.x - from.x, vy = u.y - from.y, len = Math.hypot(vx, vy) || 1;
       for (var s = inch; s >= 0.5; s -= 0.5) {
         var p = clampBoard({ x: u.x + vx / len * s, y: u.y + vy / len * s });

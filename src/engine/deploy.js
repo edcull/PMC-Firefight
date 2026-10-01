@@ -348,7 +348,14 @@
       if (dir == null) fa.ids = [];
       else {
         var u = byId(fa.ids.shift());
-        if (u) { u.facing = R.nearestFacing(dir); u.aim = null; }
+        if (u) {
+          var to = R.nearestFacing(dir);
+          // a hull turning where it stands at the end of a move pays for it (p. 35)
+          if (fa.pivot && Math.abs(R.angleWrap(to - fa.pivot.from)) > 0.01) {
+            logLine('move', u.label + ' turns where it stands (' + R.turnCost(u, fa.pivot.from, to) + '" of its move).');
+          }
+          u.facing = to; u.aim = null;
+        }
       }
       var next = fa.ids.length ? byId(fa.ids[0]) : null;
       if (next) { fa.dir = next.facing; faceHint(); render(); return; }

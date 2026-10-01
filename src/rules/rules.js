@@ -161,7 +161,7 @@
     var p = BY_KEY[u.key];
     if (!p || !p.ridersUpgrade) return u;
     u.riders = true;
-    u.size = Math.max(1, Math.round(u.size / 2));
+    u.size = Math.max(1, Math.ceil(u.size / 2));            // "Size halved" (p. 97), rounded up (p. 27)
     u.models = Math.min(u.models, u.size);
     u.move = 10;
     if (u.rules.indexOf('Riders') < 0) u.rules = u.rules.concat(['Riders']);
@@ -247,7 +247,10 @@
     var pr = PROPULSION[prop];
     if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'none' : null; return u; }
     u.prop = pr.key;
-    if (pr.move) u.move = Math.round(u.move * pr.move * 100) / 100;
+    /* "reduced to ¾ of the basic value" (tracked) and "increased by ¼ of the basic
+       value" (anti-grav), Appendix 3: each a division, so rounded up (p. 27) —
+       a tracked Move 10 is 8, an anti-grav one 13. */
+    if (pr.move) u.move = pr.move < 1 ? Math.ceil(u.move * pr.move) : u.move + Math.ceil(u.move * (pr.move - 1));
     if (pr.turn) u.turn = Math.max(0, (u.turn || 0) + pr.turn);
     if (pr.str) u.str = Math.max(1, u.str + pr.str);
     if (pr.def) u.def = Math.max(1, u.def + pr.def);
@@ -711,9 +714,9 @@
   function canGarrison(u) { return (KIT_SPACE || kitSpace()).canGarrison(u); }
   function enterTargets(state, u) { return (KIT_SPACE || kitSpace()).enterTargets(state, u); }
   function enterBuilding(state, u, r, sec) { return (KIT_SPACE || kitSpace()).enterBuilding(state, u, r, sec); }
-  function exitSpots(state, u) { return (KIT_SPACE || kitSpace()).exitSpots(state, u); }
+  function exitSpots(state, u, reach) { return (KIT_SPACE || kitSpace()).exitSpots(state, u, reach); }
   function exitBuilding(state, u, p) { return (KIT_SPACE || kitSpace()).exitBuilding(state, u, p); }
-  function leaveAway(state, u, from) { return (KIT_SPACE || kitSpace()).leaveAway(state, u, from); }
+  function leaveAway(state, u, from, back) { return (KIT_SPACE || kitSpace()).leaveAway(state, u, from, back); }
   function inches(ax, ay, bx, by) { return (KIT_SPACE || kitSpace()).inches(ax, ay, bx, by); }
   function inRect(x, y, r) { return (KIT_SPACE || kitSpace()).inRect(x, y, r); }
   function inPoly(x, y, pts) { return (KIT_SPACE || kitSpace()).inPoly(x, y, pts); }
@@ -928,6 +931,26 @@
     return 'rear';
   }
   // Limited Fire Arc: the target has to sit in the shooter's front quarter.
+  /* Shooting a piece of terrain down (pp. 57-58) is shooting: what keeps a gun from
+     firing at a unit keeps it from firing at a wall. A Cumbersome Weapon not from
+     shallow water nor on the turn it was unloaded; an anti-aircraft-only weapon not
+     at the ground at all; a fixed mount or a dug-in gun only at what is in its front
+     quarter. (And it must see the piece: Indirect Fire reaches out of sight only to
+     a target a Markerlight or Smoke Marker calls, and those call units, p. 58.) */
+  function canShootTerrain(state, u, at) {
+    if (!u.alive || u.fp == null) return false;
+    if (has(u, 'Specialisation (air)')) return false;
+    if (has(u, 'Cumbersome Weapon') &&
+      (u.disembarked || kindsUnder(state, u).some(function (k) { return !!TERRAIN[k].shallow; }))) return false;
+    if ((has(u, 'Limited Fire Arc') || dugIn(u)) && !inFireArc(u, at)) return false;
+    return true;
+  }
+  /* What it costs a hull to turn from one facing to another where it stands (p. 35):
+     its turn cost for every turn of up to 90°. */
+  function turnCost(u, from, to) {
+    var turns = Math.ceil(Math.abs(angleWrap(to - from)) / (Math.PI / 2) - 1e-9);
+    return turns * (u.turn || 0);
+  }
   function inFireArc(shooter, target) {
     if (shooter.facing == null) return true;
     var a = angleWrap(Math.atan2(target.y - shooter.y, target.x - shooter.x) - shooter.facing);
@@ -1057,17 +1080,26 @@
     var plunging = has(attacker, 'Indirect Fire');
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
-      if (r.kind !== 'barricade') continue;
-      if (inRect(attacker.x, attacker.y, r)) continue;
-      if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) continue;
+      if (r.kind !== 'barricade' || !behindWall(state, attacker, target, r)) continue;
       // Indirect Fire falls from above, so the wall shelters them whichever way it comes
-      if (plunging) return held(t.cover, 'low wall against plunging fire');
-      // half an inch more at each end of the wall, along its length (not its thickness:
-      // a wall just behind the target is still behind it)
-      var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
-      if (segRect(attacker.x, attacker.y, target.x, target.y, grown)) return held(t.cover, 'behind a low wall');
+      return held(t.cover, plunging ? 'low wall against plunging fire' : 'behind a low wall');
     }
     return { v: 0, why: '' };
+  }
+  /* Whether a unit is behind wall r as this attacker sees it — the one test for
+     everything that asks: the low wall's cover (p. 42), a Destructive Weapon or
+     Sappers bringing a low or high wall down on the men behind it (pp. 57, 59).
+     Its middle within 2" of the wall, and the wall between it and the attacker:
+     the line crossing it, or slipping past one of its ends by less than half an
+     inch (along its length, not its thickness: a wall just behind the target is
+     still behind it). Against Indirect Fire, from above, any side will do (p. 58).
+     A wall the attacker stands in is nobody's shelter from it. */
+  function behindWall(state, attacker, target, r) {
+    if (!attacker || inRect(attacker.x, attacker.y, r)) return false;
+    if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) return false;
+    if (has(attacker, 'Indirect Fire')) return true;
+    var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
+    return segRect(attacker.x, attacker.y, target.x, target.y, grown);
   }
   function clampTo(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -1224,6 +1256,28 @@
     u.x = -1; u.y = -1;
     return { text: u.label + ' embarks aboard ' + veh.name + '.' };
   }
+  /* Where a squad may be put down from a hull (p. 36): "placed up to 4" from the
+     vehicle (ALL models … no further than 4" away)" — so anywhere its base is within
+     4" of the hull's, on ground it may stand on. It may be closer than the usual 1"
+     to the vehicle it leaves, but not on it, and keeps 1" from everyone else. A
+     placement, not a drive: the hull's turning and its terrain bans have no say. */
+  function dropSpots(state, veh, u) {
+    var out = [], reach = 4 + 2 * UNIT_R;
+    for (var x = veh.x - reach; x <= veh.x + reach + 1e-6; x += STEP) {
+      for (var y = veh.y - reach; y <= veh.y + reach + 1e-6; y += STEP) {
+        var px = Math.round(x / STEP) * STEP, py = Math.round(y / STEP) * STEP;
+        var d = Math.hypot(px - veh.x, py - veh.y);
+        if (d > reach || d < 2 * UNIT_R + 0.2) continue;
+        if (px < UNIT_R || py < UNIT_R || px > BOARD.w - UNIT_R || py > BOARD.h - UNIT_R) continue;
+        if (barredAt(state, u, px, py)) continue;
+        var clear = state.units.every(function (o) {
+          return !o.alive || o === u || o === veh || o.aboard || Math.hypot(o.x - px, o.y - py) >= 2 * UNIT_R + 1;
+        });
+        if (clear) out.push({ x: px, y: py, cost: 0 });
+      }
+    }
+    return out;
+  }
   function disembark(state, veh, u, pos) {
     var i = (veh.cargo || []).indexOf(u);
     if (i < 0 || u.boarded) return null;               // loaded this turn: it stays aboard until the next
@@ -1251,7 +1305,7 @@
       dmgMod: dmgMod, fallBack: fallBack, fmtPart: fmtPart, has: has, inRect: inRect, isFlying: isFlying,
       isMachine: isMachine, rectPointDist: rectPointDist, resolveDamage: resolveDamage,
       resolveShootingHits: resolveShootingHits, segRect: segRect, shotMods: shotMods, sizeBonus: sizeBonus,
-      terrainAt: terrainAt, unitNear: unitNear
+      terrainAt: terrainAt, unitNear: unitNear, behindWall: behindWall
     };
   }
   function kitDestruct() {
@@ -1355,7 +1409,8 @@
   function onTable(u) { return !!u && u.alive && u.x >= 0 && !u.aboard && !u.reserve; }
   /* How many units may be swapped when modifying the armies: no more than a
      quarter (p. 46), half with Tactical Flexibility (O6, p. 87). */
-  function swapAllowance(n, flexible) { return Math.floor(n * (flexible ? 0.5 : 0.25)); }
+  // "no more than ¼" (p. 47), "up to ½" with Tactical Flexibility (p. 89): rounded up, as every division is (p. 27)
+  function swapAllowance(n, flexible) { return Math.ceil(n * (flexible ? 0.5 : 0.25)); }
   /* The OpFor's "+2 if there are no enemy units within the active unit's Range"
      (p. 147): a plain distance, whatever stands in the way or wherever the gun
      points. A unit with no Firepower has no Range, so nothing is within it. */
@@ -2022,12 +2077,12 @@
     has: has, ruleValue: ruleValue, currentMorale: currentMorale, status: status,
     projects: projects, markCall: markCall, holdsGround: holdsGround, countsForVictory: countsForVictory,
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
-    canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
+    canShoot: canShoot, canShootTerrain: canShootTerrain, turnCost: turnCost, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
     rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
-    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
+    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark, dropSpots: dropSpots,
     barredAt: barredAt,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,

@@ -1353,6 +1353,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .ddet-stats td.down { color: var(--bad); }
 .ddet-stats sup { font-size: 9px; margin-left: 1px; }
 .ddet-note { margin: 4px 0; color: var(--ink-faint); font-size: 12px; }
+.ddet-fixed { display: inline-block; margin-right: 8px; color: var(--ink-faint); font-size: 12px; }
 .ddet .ddet-rules { list-style: none; margin: 0; padding: 0; color: var(--ink); font-size: 12px; }
 .ddet-rules li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
 .ddet-rules li:last-child { border-bottom: 0; }

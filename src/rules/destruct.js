@@ -13,7 +13,7 @@
         has = E.has, inRect = E.inRect, isFlying = E.isFlying, isMachine = E.isMachine,
         rectPointDist = E.rectPointDist, resolveDamage = E.resolveDamage,
         resolveShootingHits = E.resolveShootingHits, segRect = E.segRect, sizeBonus = E.sizeBonus,
-        shotMods = E.shotMods, terrainAt = E.terrainAt, unitNear = E.unitNear;
+        shotMods = E.shotMods, terrainAt = E.terrainAt, unitNear = E.unitNear, behindWall = E.behindWall;
     /* ---------- destructible terrain (pp. 41-43, 57-58) ----------
        Low walls, high walls and ordinary buildings can be brought down; reinforced
        walls and bunkers, woods, ruins and rocks cannot. A demolished wall leaves
@@ -36,19 +36,17 @@
         if (inRect(target.x, target.y, r)) return r;
       }
       if (!attacker) return null;
-      /* The low wall it shelters behind — the one that gives it its cover (see
-         coverFor, p. 42): within 2" of the whole unit, and between it and the
-         shooter, or on any side of it against plunging fire (p. 58). A wall
-         further off on the line of fire is not the target's shelter, and is not
-         what a shot at the target brings down. The nearest such wall, if two. */
-      var plunging = has(attacker, 'Indirect Fire'), best = null, bd = Infinity;
+      /* The wall it shelters behind: "behind a small/high wall" (Destructive Weapon,
+         p. 57), "behind a low/high wall" (Sappers, p. 59). Low or high, judged as
+         the low wall's cover is (behindWall, p. 42) so the wall that gives a unit
+         its +2 is the one these bring down; against plunging fire, any wall near
+         it (p. 58). A wall further off on the line of fire is not the target's
+         shelter. The nearest such wall, if two. */
+      var best = null, bd = Infinity;
       for (var j = 0; j < state.terrain.length; j++) {
         var r2 = state.terrain[j];
-        if (!isDestructible(r2) || TERRAIN[r2.kind].blocks) continue;
-        if (inRect(attacker.x, attacker.y, r2)) continue;
+        if (!isDestructible(r2) || destructibleKind(r2) !== 'linear' || !behindWall(state, attacker, target, r2)) continue;
         var d = rectPointDist(r2, target.x, target.y);
-        if (d + UNIT_R > 2 + 1e-6) continue;
-        if (!plunging && !segRect(attacker.x, attacker.y, target.x, target.y, r2)) continue;
         if (d < bd) { bd = d; best = r2; }
       }
       return best;
@@ -247,6 +245,7 @@
       isFlying = L.isFlying; isMachine = L.isMachine; rectPointDist = L.rectPointDist;
       resolveDamage = L.resolveDamage; resolveShootingHits = L.resolveShootingHits; segRect = L.segRect;
       shotMods = L.shotMods; sizeBonus = L.sizeBonus; terrainAt = L.terrainAt; unitNear = L.unitNear;
+      behindWall = L.behindWall;
     }
 
     return {

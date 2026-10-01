@@ -1,0 +1,105 @@
+/* The AI against the book (the rules review at 7dd7306, M-10, M-14, M-15):
+   nothing fires a Cumbersome Weapon on the move (p. 57); a Reasonably Neutral
+   OpFor unit holds its position, moving only into better cover (p. 147); and
+   in Decapitation every OpFor Command Unit is a leader to be killed (p. 152). */
+'use strict';
+const { R, Engine, SOLO } = require('../../server/rules.js');
+let seed = 21;
+Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+
+let pass = 0, fail = 0;
+function ok(name, cond, note) {
+  cond ? pass++ : fail++;
+  console.log('  ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
+}
+function steps(e, max) {
+  let n = 0;
+  while (!e.over() && n < max) { if (!e.intent('A', { k: 'step' }).ok) break; n++; }
+}
+
+console.log('\nCumbersome Weapons may not advance (p. 57)');
+(function () {
+  const hmg = Object.assign(JSON.parse(JSON.stringify(R.profile('hmgteam'))), { id: 'A1', side: 'A', x: 10, y: 10, alive: true, models: 3, sp: 0, shotFrom: [] });
+  const foe = Object.assign(JSON.parse(JSON.stringify(R.profile('regular'))), { id: 'B1', side: 'B', x: 20, y: 10, alive: true, models: 5, sp: 0, shotFrom: [] });
+  const st = { units: [hmg, foe], terrain: [], objectives: [], log: [] };
+  ok('a Heavy MG team may Fire! at a squad in range', R.canShoot(st, hmg, foe, 'fire'));
+  ok('...but not take an Advance shot at it', !R.canShoot(st, hmg, foe, 'advance'));
+})();
+(function () {
+  // whole AI battles: no Cumbersome main weapon is ever fired in Advance mode
+  const orig = R.shoot;
+  let cumb = 0, adv = 0;
+  R.shoot = function (st, a, t, mode, opts) {
+    if (R.has(a, 'Cumbersome Weapon') && !(opts && opts.aux)) { cumb++; if (mode === 'advance') adv++; }
+    return orig.apply(this, arguments);
+  };
+  try {
+    for (let n = 0; n < 4; n++) {
+      const e = Engine.create();
+      e.start({ tier: 4, pl: 1, scenario: 'meeting', armyA: R.rollArmy(4, 1, null, 'pmc'), armyB: R.rollArmy(4, 1, null, 'rebel'),
+        nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse' });
+      for (let g = 0; g < 4 && e.state() && e.state().swapAsk; g++) e.intent(e.state().swapAsk.side, { k: 'swapdone' });
+      steps(e, 4000);
+    }
+  } finally { R.shoot = orig; }
+  ok('in AI battles, no Cumbersome Weapon fires on the move', cumb > 0 && adv === 0, cumb + ' Cumbersome shots, ' + adv + ' of them Advance shots');
+})();
+
+console.log('\nReasonably Neutral holds its position (p. 147)');
+(function () {
+  let moves = 0, intoCover = 0, closer = 0;
+  for (let i = 0; i < 6; i++) for (const scen of ['s_crush', 's_sabotage', 's_decap']) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: scen, armyA: SOLO.rollCommando(3, 1, 'pmc'), armyB: SOLO.rollOpFor(3, 1, 'rebel', false),
+      nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse',
+      solo: { coop: false, faction: 'pmc', opFaction: 'rebel', names: ['A'] } });
+    let n = 0;
+    while (!e.over() && n < 3000) {
+      const st = e.state(), n0 = st.log.length, pos = {};
+      st.units.forEach((u) => { pos[u.id] = { x: u.x, y: u.y }; });
+      if (!e.intent('A', { k: 'step' }).ok) break;
+      n++;
+      for (let j = n0; j < st.log.length; j++) {
+        const m = /^(.*) — behaviour D6 .* = (-?\d+): (\w+)\./.exec(st.log[j].text || '');
+        if (!m || m[3] !== 'neutral') continue;
+        const u = st.units.find((v) => v.label === m[1] && v.side === 'B');
+        if (!u || !pos[u.id] || pos[u.id].x < 0 || u.x < 0) continue;
+        if (R.inches(u.x, u.y, pos[u.id].x, pos[u.id].y) < 0.5) continue;
+        moves++;
+        if (R.coverAt(st, u.x, u.y, u) > R.coverAt(st, pos[u.id].x, pos[u.id].y, u)) intoCover++;
+        else {
+          const foes = st.units.filter((v) => v.side === 'A' && v.alive && v.x >= 0);
+          const nd = (p) => Math.min.apply(null, foes.map((f) => R.inches(f.x, f.y, p.x, p.y)));
+          if (nd(u) < nd(pos[u.id]) - 2) closer++;
+        }
+      }
+    }
+  }
+  ok('a Neutral unit that moves goes into better cover', moves >= 3 && intoCover === moves, intoCover + ' of ' + moves + ' moves into cover');
+  ok('...and never closes on the players in the open', closer === 0, closer + '');
+})();
+
+console.log('\nDecapitation: every OpFor Command Unit is a leader (p. 152)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_decap', armyA: SOLO.rollCommando(3, 1, 'pmc'),
+    armyB: ['cmd3', 'regular', 'regular', 'rookie', 'recruits'],
+    nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'dense',
+    solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  const cmd = st.units.filter((u) => u.side === 'B' && (u.command || R.has(u, 'Command Unit')));
+  ok('the pool\'s Command Unit and the scenario\'s own are both on the field', cmd.length >= 2, cmd.map((u) => u.name).join(', '));
+  ok('...both are leaders: placed, fixed and unbreakable', cmd.every((u) => u.soloLeader && u.soloFixed && u.noBreak && u.x >= 0));
+  ok('...in place from the start, not under a counter', cmd.every((u) => !u.reserve));
+  // kill the scenario's leader only: the game is not won while the pool's one lives
+  const extra = cmd.find((u) => u.key !== 'cmd3') || cmd[0], pooled = cmd.find((u) => u !== extra);
+  extra.alive = false;
+  const r1 = st.scen.check(st);
+  ok('killing one leader is not enough', !r1 || r1.winner !== 'A');
+  pooled.alive = false;
+  const r2 = st.scen.check(st);
+  ok('...killing every one wins', !!r2 && r2.winner === 'A', r2 && r2.text);
+})();
+
+console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
+process.exit(fail ? 1 : 0);

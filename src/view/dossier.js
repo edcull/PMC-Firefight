@@ -465,6 +465,8 @@
   function contractView() { return (KIT_CONTRACT || kitContract()).contractView(); }
   function autoPick(co, tier, pl, tactic) { return (KIT_CONTRACT || kitContract()).autoPick(co, tier, pl, tactic); }
   function fight() { return (KIT_CONTRACT || kitContract()).fight(); }
+  // whose list the contract screen is filling: Player 2's, once a hotseat hands over
+  function pickCo() { return camp.companies[contract && contract.side === 'B' ? 'B' : 'A']; }
   /* ---- the campaign after a battle: in view/dossier-after.js ---- */
   var KIT_AFTER = null;
   function kitAfter() {
@@ -533,7 +535,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -756,7 +758,8 @@
     // a unit on the roster takes the Riders upgrade or lays it down, or changes what it rides
     if (t.hasAttribute('data-eriders')) {
       var re = findEntry(co, t.getAttribute('data-eriders'));
-      re.riders = !re.riders; C.menOf(re, co); save(); render(); return;
+      if (re && C.ridersOpen(re)) { re.riders = !re.riders; C.menOf(re, co); save(); render(); }
+      return;
     }
     if (t.hasAttribute('data-emount')) {
       var me = findEntry(co, t.getAttribute('data-emount'));
@@ -783,7 +786,7 @@
       save(); view = 'hub'; hubPane = 'dossier'; rosterTab = 'units'; render(); return;
     }
     if (t.hasAttribute('data-pick')) {
-      var pk = findEntry(co, t.getAttribute('data-pick'));
+      var pk = findEntry(pickCo(), t.getAttribute('data-pick'));
       if (pk) contract.picks.push(pk); render(); return;
     }
     if (t.hasAttribute('data-unpick')) { contract.picks.splice(+t.getAttribute('data-unpick'), 1); render(); return; }
@@ -954,7 +957,7 @@
       case 'postnext':
         if (camp.post) { camp.post.steps.shift(); save(); render(); }
         return;
-      case 'autopick': contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl, contract.tactic || null); render(); return;
+      case 'autopick': contract.picks = autoPick(pickCo(), contract.tier, contract.pl, contract.tactic || null); render(); return;
       case 'standard':
         if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;
         contract.standard = true; contract.tier = 3; contract.pl = 2; contract.levels = [2];
@@ -963,7 +966,11 @@
         render(); return;
       case 'fight':
         if (t.getAttribute('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return; }
-        fight(); return;
+        if (fight()) { save(); render(); }
+        return;
+      case 'seatback':
+        if ((KIT_CONTRACT || kitContract()).seatBack()) render();
+        return;
       case 'drawnow': {
         if ((drawState.picked || []).length !== 3) return;
         var won = C.chooseHonour(drawState.picked.map(function (n) { return C.honourTable(drawState.entry.key)[n - 1]; }));
@@ -1170,7 +1177,7 @@
     // the test harness's way to fill a contract's list (as the rival picks its own)
     autopick: function () {
       if (!contract || !camp) return false;
-      contract.picks = autoPick(camp.companies.A, contract.tier, contract.pl, contract.tactic || null);
+      contract.picks = autoPick(pickCo(), contract.tier, contract.pl, contract.tactic || null);
       render(); return true;
     },
     store: Store

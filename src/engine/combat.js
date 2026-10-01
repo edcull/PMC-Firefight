@@ -72,7 +72,17 @@
       if (!all) out = out.slice(0, 1);
       var lines = [];
       out.forEach(function (rider, i) {
-        var spot = { x: pt.x + (i % 2 ? 1.6 : -1.6), y: pt.y + (i > 1 ? 1.6 : 0) };
+        /* The first squad goes where it was put; any more (the AI empties the hull)
+           to the free spot nearest that, each placed before the next is chosen. */
+        var spot = pt;
+        if (i > 0) {
+          var near = null, nd = Infinity;
+          R.dropSpots(E.state, u, rider).forEach(function (c) {
+            var d = R.inches(c.x, c.y, pt.x, pt.y);
+            if (d < nd) { nd = d; near = c; }
+          });
+          spot = near;
+        }
         var r = R.disembark(E.state, u, rider, spot);
         if (r) { logLine('note', r.text); lines.push({ text: r.text }); stepOff(rider, u); }
       });
@@ -85,8 +95,7 @@
       // more still aboard: another tap puts the next squad down, Cancel keeps them in and drives on
       if (!all && !isAI(u.side) && (u.cargo || []).some(function (c) { return !c.boarded; })) {
         u.unloading = true; u.activated = false;
-        ui.moves = R.reachable(E.state, u, 4).filter(function (c) { return R.inches(c.x, c.y, u.x, u.y) <= 4; });
-        if (!ui.moves.length) ui.moves = [{ x: u.x, y: u.y, cost: 0 }];
+        ui.moves = E.dropFor(u);
         setHint(null, 'Tap where the next squad gets off — or Cancel to keep the rest aboard.');
         render();
         return;
