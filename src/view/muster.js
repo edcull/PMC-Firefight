@@ -38,11 +38,10 @@
     function musterTier() { return parseInt(el('sel-tier').value, 10) || 3; }
     function musterPL() { return parseInt(el('sel-pl').value, 10) || 1; }
     function musterFaction() { return el('sel-faction') ? el('sel-faction').value : 'pmc'; }
-    function musterTactic() {
-      // "Rebel forces cannot use tactics" in a solitaire or cooperative game (p. 145)
-      if (musterFaction() !== 'rebel' || muster.solo) return null;
-      return (el('sel-tactic') && el('sel-tactic').value) || null;
-    }
+    /* A rebel force's tactic is not mustered: it is chosen at the start of the
+       battle, once the attacker and defender are known and before the terrain
+       goes down (p. 95; engine.js tacticStep). The list is built without one. */
+    function musterTactic() { return null; }
 
     // would this unit still be legal if one more were added?
     function hasRoom(p) {
@@ -100,7 +99,7 @@
 
       var tf = el('tactic-field');
       // Rebels cannot use Tactics in a solitaire game; they get the extra points instead (p. 145)
-      if (tf) tf.hidden = faction !== 'rebel' || muster.solo;
+      if (tf) tf.hidden = true;
       var mh = document.querySelector('.muster-head b');
       if (mh) mh.textContent = muster.hot && muster.hot.step < 3
         ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' || muster.hot.kind === 'net' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
@@ -826,7 +825,7 @@
       if (on) drawArmyModal();
     }
     function drawArmyModal() {
-      var f = musterFaction(), tac = musterTactic() || '';
+      var f = musterFaction();
       el('army-pick').innerHTML = HOT_FACTIONS.map(function (v) {
         var a = armyText(v);
         return '<button type="button" class="doc' + (v === f ? ' on' : '') + '" data-army-pick="' + v + '"><b>' + escHtml(a.name) + '</b>' +
@@ -834,11 +833,9 @@
       }).join('');
       el('army-tactics').innerHTML = f !== 'rebel' ? '' : muster.solo
         ? '<p class="docnote">Rebel forces cannot use tactics in a solitaire or cooperative game: they get more composition points instead.</p>' :
-        '<h4>Rebel tactic \u2014 chosen before the terrain goes down</h4><div class="docpick">' +
-        [{ id: '', name: 'No tactic', text: 'A rebel force may take one tactic, or none.' }].concat(R.TACTICS).map(function (t) {
-          return '<button type="button" class="doc' + (t.id === tac ? ' on' : '') + '" data-tactic-pick="' + t.id + '"><b>' + escHtml(t.name) + '</b>' +
-            (t.short ? '<i>' + escHtml(t.short) + '</i>' : '') + '<span>' + escHtml(t.text) + '</span></button>';
-        }).join('') + '</div>';
+        '<p class="docnote">A rebel force takes its tactic \u2014 Last Stand, Human Wave Attacks, Guerillas, or none \u2014 at the start of the ' +
+        'battle, once the attacker and defender are known and before the terrain goes down. Build the list without it: ' +
+        'Human Wave\u2019s extra infantry are called up then.</p>';
     }
     function pickInto(id, v) {
       var sel = el(id);

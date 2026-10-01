@@ -341,6 +341,8 @@ ok('a battle can be started from the board', !!begun, 'window.__begin did not an
 
 if (begun) {
   app.drain(4);
+  // the rebels' tactic comes first (p. 95): none
+  for (let g = 0; g < 4 && app.win.PMC_STATE().tacticAsk; g++) { app.win.__sendIntent({ k: 'tactic', tactic: null }); app.drain(2); }
   const st = app.win.PMC_STATE();
   ok('the board is holding a table', !!st && st.units.length > 0);
   ok('it is the engine’s table', !!st && st.phase === 'deploy');
@@ -545,6 +547,11 @@ ok('both screens have the same table',
   ash.win.PMC_STATE().seed === brann.win.PMC_STATE().seed);
 ok('the lobby got out of the way', ash.doc.getElementById('lobby').hidden === true);
 ok('each screen knows which side it is', ash.win.__seats().join() === 'A' && brann.win.__seats().join() === 'B');
+// the rebel player is asked a tactic first (p. 95), on their own screen; the other only waits
+ok('the rebel screen is asked its tactic, the other waits', !!brann.win.PMC_STATE().tacticAsk &&
+  /data-act="tactic"/.test(brann.doc.getElementById('context').innerHTML) && !/data-act="tactic"/.test(ash.doc.getElementById('context').innerHTML));
+brann.win.__sendIntent({ k: 'tactic', tactic: null });
+ash.drain(10); brann.drain(10);
 // Secure and control: both companies enter in turn 1, so the set-up has nobody placing — each only sorts its own force
 ok('it opens on the set-up, with nothing to place before the battle',
   ash.win.PMC_STATE().phase === 'deploy' && ash.win.__placingSide() === null && brann.win.__placingSide() === null);

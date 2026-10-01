@@ -442,25 +442,55 @@
     /* Two rebel forces choose their tactics in turn, the dice-off's winner first
        (p. 96): the one choosing sees what the other has already taken. */
     function tacticCard() {
-      var ta = B.state.tacticAsk, side = ta.order[ta.step], other = ta.order[1 - ta.step];
+      var ta = B.state.tacticAsk, side = ta.order[ta.step], other = ta.order.length > 1 ? ta.order[1 - ta.step] : null;
+      var ro = B.state.cfg.roles, role = ro ? (ro.attacker === side ? 'attacker' : 'defender') : null;
       if (!atThisScreen(side)) {
-        return '<div class="card"><h2>Tactics</h2><p class="sub"><b>' + esc(sideName(side)) + '</b> is choosing a tactic' +
-          (ta.step ? ', knowing yours' : ' first') + '.</p></div>';
+        return '<div class="card"><h2>Tactics</h2><p class="sub"><b>' + esc(sideName(side)) + '</b> is ' +
+          (ta.wave ? 'calling up the human wave' : 'choosing a tactic' + (other ? (ta.step ? ', knowing yours' : ' first') : '')) + '.</p></div>';
       }
+      if (ta.wave) return waveCard(side, ta.wave);
       var cur = (B.state.tactics && B.state.tactics[side]) || null;
       var theirs = ta.step ? (ta.chosen[other] || null) : undefined;
+      var why = (role ? 'You are the <b>' + role + '</b>. ' : 'This scenario has no attacker or defender. ') +
+        'Your tactic holds for the whole battle, and is chosen before the terrain goes down (p. 95).';
       var h = '<div class="card"><h2>Tactics \u2014 ' + esc(sideName(side)) + '</h2>' +
-        '<p class="sub">' + (ta.step
+        '<p class="sub">' + why + '</p>' + (other ? '<p class="sub">' + (ta.step
           ? esc(sideName(other)) + ' has chosen: <b>' + esc(theirs ? R.tacticById(theirs).name : 'no tactic') + '</b>. Now yours.'
-          : 'Both forces are Rebels, and you choose your tactic first. ' + esc(sideName(other)) + ' will know it before choosing theirs.') + '</p>' +
+          : 'Both forces are Rebels, and you choose first. ' + esc(sideName(other)) + ' will know it before choosing theirs.') + '</p>' : '') +
         '<div class="acts">';
       [null, 'laststand', 'wave', 'guerillas'].forEach(function (t) {
         var td = t ? R.tacticById(t) : null, can = ta.legal[side].indexOf(t) >= 0;
         h += '<button class="act' + (t === cur ? ' primary' : '') + '" data-act="tactic" data-alt="' + (t || '') + '"' + (can ? '' : ' disabled') + '>' +
-          '<span>' + esc(td ? td.name : 'No tactic') + (t === cur ? ' (as mustered)' : '') + '</span>' +
+          '<span>' + esc(td ? td.name : 'No tactic') + '</span>' +
           '<small>' + esc(can ? (td ? td.text : 'Fight without one') : 'Your list is not legal under it') + '</small></button>';
       });
       return h + '</div></div>';
+    }
+    /* Human Wave Attacks (p. 95): the extra infantry, picked from the Battle Tier's,
+       off the bill — up to two a Priority Level, or fewer. */
+    function waveCard(side, w) {
+      var bt = B.state.cfg.tier;
+      var called = B.state.units.filter(function (u) { return u.side === side && u.waveExtra; });
+      var pool = R.listFor('rebel').filter(function (p) {
+        return p.cls === 'infantry' && p.tier === bt && !p.command && !p.noSlot && !p.turretSet;
+      });
+      var h = '<div class="card"><h2>Human Wave \u2014 call up the wave</h2>' +
+        '<p class="sub">Up to ' + (called.length + w.left) + ' more infantry units of Tier ' + R.ROMAN[bt] +
+        ', off the bill. ' + (w.left ? w.left + ' still to call.' : 'The wave is full.') + '</p>';
+      if (called.length) {
+        h += '<p class="hint small">Called up: ' + called.map(function (u) { return esc(u.name); }).join(', ') + '</p>';
+      }
+      h += '<div class="targets">';
+      pool.forEach(function (p) {
+        h += '<button class="tgt" data-act="waveadd" data-key="' + esc(p.key) + '"' + (w.left ? '' : ' disabled') + '><b>' + esc(p.name) +
+          '</b><span>' + p.size + ' models \u00b7 Move ' + p.move + ' \u00b7 FP ' + p.fp + ' \u00b7 Def ' + p.def + ' \u00b7 Morale ' + p.morale + '</span></button>';
+      });
+      h += '</div><div class="acts">' +
+        (w.left ? '<button class="act" data-act="waveauto"><span>Call them up for me</span><small>Fills the wave at random</small></button>' : '') +
+        (called.length ? '<button class="act" data-act="waveundo"><span>Take the last back</span></button>' : '') +
+        '<button class="act primary" data-act="wavedone"><span>' + (w.left ? 'Go with ' + called.length : 'Done') + '</span><small>On to the terrain</small></button>' +
+        '</div></div>';
+      return h;
     }
     function setUpWaitCard(ask) {
       var what = ask.why === 'takeover' ? 'digging in around the objective — trenches, walls, wire and a bunker'
@@ -1293,6 +1323,8 @@
           else if (a === 'deployready') { send({ k: 'deployready' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
+          else if (a === 'waveadd') { send({ k: 'waveadd', key: b.getAttribute('data-key') }); return; }
+          else if (a === 'waveundo' || a === 'waveauto' || a === 'wavedone') { send({ k: a }); return; }
           else if (a === 'tactic') { send({ k: 'tactic', tactic: b.getAttribute('data-alt') || null }); return; }
           else if (a === 'droppick') { send({ k: 'droppick', id: b.getAttribute('data-id') }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }

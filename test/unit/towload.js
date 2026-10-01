@@ -17,6 +17,8 @@ function setup(armyA) {
   const e = Engine.create({});
   e.start({ tier: 4, pl: 2, scenario: 'secure', armyA: armyA, armyB: ['regular', 'regular'],
     nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse' });
+  // a rebel list is asked its tactic first (p. 95): none
+  for (let g = 0; g < 4 && e.state().tacticAsk; g++) e.intent(e.state().tacticAsk.order[e.state().tacticAsk.step], { k: 'tactic', tactic: null });
   for (let g = 0; g < 4 && e.state().swapAsk; g++) e.intent(e.state().swapAsk.side, { k: 'swapdone' });
   const s = e.state();
   return { e, s, by: k => s.units.filter(u => u.key === k) };

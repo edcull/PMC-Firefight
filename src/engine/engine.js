@@ -463,45 +463,134 @@
       }
     }
     V.clearCards();
-    if (tacticDiceOff(built, manual)) return;
+    /* The roles come before the tactics (p. 95): rolled now, where a scenario has
+       them and a contract has not settled them already. */
+    if (state.scen.attacker && !cfg.roles && !state.solo) {
+      cfg.roles = SC.rollRoles(scenId, state.doctrines, cfg.attacker);
+      logLine('note', sideName(cfg.roles.attacker) + ' attacks; ' + sideName(cfg.roles.defender) + ' defends.');
+    }
+    if (tacticStep(built, manual)) return;
     if (manual) K.startTerrainSetup(built); else afterTerrain(built);
   }
 
-  /* "If both players command Rebel forces, roll a dice; the player with the
-     higher result can choose their tactic first" (p. 96). Two people playing
-     two rebel forces roll off before the table is laid: the winner confirms or
-     changes the tactic they mustered with, and the other is shown it before
-     settling their own. Only a tactic their list is still legal under is
-     offered (Human Wave changes what a list may hold). Against the AI there is
-     no one to keep it from, and nothing is asked. */
+  /* Rebel tactics (p. 95): "After choosing the scenario and the attacker/defender,
+     but before the terrain is set up, the Rebel player may choose one of the
+     following tactics." So the roles are rolled first (newGame), and then every
+     Rebel player at the table chooses, knowing them — or keeps none. "If both
+     players command Rebel forces, roll a dice; the player with the higher result
+     can choose their tactic first" (p. 96): the winner is simply asked first, and
+     the other is shown it before choosing. Only a tactic their list is still legal
+     under is offered. A player who takes Human Wave Attacks then calls up the
+     wave: two infantry units of the Battle Tier a Priority Level, free (waveAdd).
+     The AI chooses for itself, by its role. A campaign keeps the tactic its
+     contract was taken with, and asks only when two Rebel players meet. */
   var TACTIC_IDS = [null, 'laststand', 'wave', 'guerillas'];
-  function tacticDiceOff(built, manual) {
-    var cfg = state.cfg;
-    if (state.solo || isAI('A') || isAI('B')) return false;
-    var rebel = function (sd) { return state.units.some(function (u) { return u.side === sd && u.faction === 'rebel'; }); };
-    if (!rebel('A') || !rebel('B')) return false;
-    var ra, rb;
-    do { ra = R.d6(); rb = R.d6(); } while (ra === rb);       // a tie is rolled again
-    var first = ra > rb ? 'A' : 'B';
-    var legal = {};
-    ['A', 'B'].forEach(function (sd) {
-      var keys = sd === 'A' ? cfg.armyA : cfg.armyB, cur = state.tactics[sd] || null;
-      var faults = function (t) { return R.checkArmy(keys || [], cfg.tier, cfg.pl, docsOf(sd), t, 'rebel').faults; };
-      var had = faults(cur);
-      // a tactic is offered unless it would make the list break a rule it kept under the one mustered
-      legal[sd] = TACTIC_IDS.filter(function (t) {
-        return t === cur || faults(t).every(function (f) { return had.indexOf(f) >= 0; });
-      });
+  function isRebel(sd) {
+    return state.units.some(function (u) { return u.side === sd && u.faction === 'rebel' && u.rules.indexOf('No Army Rules') < 0; });
+  }
+  function legalTactics(sd) {
+    var cfg = state.cfg, keys = sd === 'A' ? cfg.armyA : cfg.armyB, cur = state.tactics[sd] || null;
+    var faults = function (t) { return R.checkArmy(keys || [], cfg.tier, cfg.pl, docsOf(sd), t, 'rebel').faults; };
+    var had = faults(cur);
+    // a tactic is offered unless it would make the list break a rule it kept under the one it came with
+    return TACTIC_IDS.filter(function (t) {
+      return t === cur || faults(t).every(function (f) { return had.indexOf(f) >= 0; });
     });
+  }
+  // a side's role as rolled before the tactics (cfg.roles), the scenario not yet begun
+  function rolledRole(sd) {
+    var ro = state.cfg.roles;
+    return ro ? (ro.attacker === sd ? 'attacker' : 'defender') : null;
+  }
+  // the AI's tactic: Last Stand to hold, Human Wave to take, and the dice where there is neither
+  function aiTactic(sd) {
+    var legal = legalTactics(sd), role = rolledRole(sd), want;
+    if (state.cfg.mode === 'demo' || !role) want = TACTIC_IDS[1 + Math.floor(Math.random() * 3)];
+    else want = role === 'defender' ? 'laststand' : 'wave';
+    if (legal.indexOf(want) < 0) want = state.tactics[sd] || null;
+    setTactic(sd, want);
+    if (want === 'wave') autoWave(sd, waveRoom(sd));
+    if (want) logLine('note', sideName(sd) + ' takes ' + R.tacticById(want).name + '.');
+  }
+  function tacticStep(built, manual) {
+    var cfg = state.cfg;
+    if (state.solo) return false;               // "Rebel forces cannot use tactics" there (p. 145)
+    var rebels = ['A', 'B'].filter(isRebel);
+    if (!rebels.length) return false;
+    var people = rebels.filter(function (sd) { return !isAI(sd); });
+    if (!cfg.campaign) rebels.forEach(function (sd) { if (isAI(sd)) aiTactic(sd); });
+    // a campaign's contract has settled the tactic already, unless two players' rebels meet
+    if (cfg.campaign && people.length < 2) people = [];
+    if (!people.length) return false;
+    var first = people[0];
+    if (people.length > 1) {
+      var ra, rb;
+      do { ra = R.d6(); rb = R.d6(); } while (ra === rb);       // a tie is rolled again
+      first = ra > rb ? 'A' : 'B';
+    }
+    var legal = {};
+    people.forEach(function (sd) { legal[sd] = legalTactics(sd); });
     /* what the set-up goes on with once both have chosen, kept on the state (a save
        taken mid-choice carries it): the table as rolled, and whether it is laid by hand */
     state.phase = 'tactics';                     // before the table and the deployment: nothing else goes on
-    state.tacticAsk = { order: [first, other(first)], step: 0, legal: legal, chosen: {}, manual: !!manual,
-      built: { rolls: built.rolls, generator: built.generator, manual: built.manual } };
+    /* the table is not laid until the tactics are chosen (p. 95): a generated one
+       is held back, off the board, and put down once they are */
+    state.tacticAsk = { order: people.length > 1 ? [first, other(first)] : [first], step: 0, legal: legal, chosen: {}, manual: !!manual,
+      built: { rolls: built.rolls, generator: built.generator, manual: built.manual, terrain: state.terrain, objectives: state.objectives }, wave: null };
+    state.terrain = []; state.objectives = [];
     // the roll itself is not shown: the winner is simply asked first
-    logLine('note', 'Both forces are Rebels: ' + sideName(first) + ' chooses a tactic first.');
+    if (people.length > 1) logLine('note', 'Both forces are Rebels: ' + sideName(first) + ' chooses a tactic first.');
     render();
     return true;
+  }
+  /* Human Wave Attacks (p. 95): "the Rebel player may field 2 additional infantry
+     units per Priority Level ... any infantry units with Unit Tier equal to the
+     Battle Tier". They join the list as it stands, off the bill. */
+  function waveChoices(sd) {
+    var bt = state.cfg.tier;
+    return R.listFor('rebel').filter(function (p) {
+      return p.cls === 'infantry' && p.tier === bt && !p.command && !p.noSlot && !p.turretSet;
+    });
+  }
+  function waveRoom(sd) { return 2 * (state.cfg.pl || 1); }
+  function waveAdd(sd, key) {
+    var cfg = state.cfg, armyKey = sd === 'A' ? 'armyA' : 'armyB';
+    var prof = R.profile(key);
+    cfg[armyKey] = (cfg[armyKey] || []).concat([key]);
+    var i = cfg[armyKey].length - 1;
+    var u = makeUnit(prof, sd, i, R.defaultDrive(prof), false, null, false);
+    u.pickIdx = i; u.startSize = u.models; u.waveExtra = true;
+    state.units.push(u);
+    dedupeCodes();
+    R.musterMen(u, null, state.namesTaken);
+    return u;
+  }
+  function waveUndo(sd) {
+    var cfg = state.cfg, armyKey = sd === 'A' ? 'armyA' : 'armyB';
+    var last = state.units.filter(function (u) { return u.side === sd && u.waveExtra; }).pop();
+    if (!last) return false;
+    state.units.splice(state.units.indexOf(last), 1);
+    cfg[armyKey] = cfg[armyKey].slice(0, -1);
+    return true;
+  }
+  function autoWave(sd, n) {
+    var pool = waveChoices(sd);
+    for (var k = 0; k < n && pool.length; k++) waveAdd(sd, pool[Math.floor(Math.random() * pool.length)].key);
+    if (n && pool.length) logLine('note', sideName(sd) + ' calls up the human wave: ' + n + ' more infantry units.');
+  }
+  // the next player's tactic, or, with everyone done, the table
+  function tacticsOn() {
+    var ta = state.tacticAsk;
+    ta.step++;
+    if (ta.step < ta.order.length) { render(); return; }
+    state.tacticAsk = null;
+    state.phase = 'deploy';
+    state.terrain = ta.built.terrain || []; state.objectives = ta.built.objectives || [];
+    V.scenery(); V.structures();                 // the table, laid at last
+    var bt = Object.assign({}, ta.built, { terrain: state.terrain });
+    delete bt.objectives;
+    if (ta.manual) K.startTerrainSetup(bt); else afterTerrain(bt);
+    render();
   }
   // a side's tactic, as chosen now: every unit of the side that follows the army's rules takes it
   function setTactic(side, tac) {
@@ -1972,17 +2061,36 @@
       var ta = state.tacticAsk;
       if (!ta) return no('no tactic to choose');
       if (ta.order[ta.step] !== side) return no(ta.step ? 'the other side chooses first' : 'not yet: the other side won the dice');
+      if (ta.wave) return no('the wave is being called up');
       var tac = it.tactic || null;
       if (ta.legal[side].indexOf(tac) < 0) return no('your list is not legal under that tactic');
       setTactic(side, tac);
       ta.chosen[side] = tac;
       logLine('note', sideName(side) + ' ' + (tac ? 'takes ' + R.tacticById(tac).name : 'takes no tactic') + '.');
-      ta.step++;
-      if (ta.step >= ta.order.length) {
-        state.tacticAsk = null;
-        state.phase = 'deploy';
-        var bt = Object.assign({ terrain: state.terrain }, ta.built);
-        if (ta.manual) K.startTerrainSetup(bt); else afterTerrain(bt);
+      // Human Wave: the extra units are called up before anyone goes on
+      if (tac === 'wave' && waveChoices(side).length) { ta.wave = { side: side, left: waveRoom(side) }; render(); return yes; }
+      tacticsOn();
+      return yes;
+    });
+    on('waveadd waveundo waveauto wavedone', null, function (side, it) {
+      var ta = state.tacticAsk, w = ta && ta.wave;
+      if (!w || w.side !== side) return no('no wave to call up');
+      if (it.k === 'waveadd') {
+        if (w.left < 1) return no('the wave is full');
+        if (!waveChoices(side).some(function (p) { return p.key === it.key; })) return no('only infantry of the Battle Tier');
+        waveAdd(side, it.key); w.left--;
+      } else if (it.k === 'waveundo') {
+        if (!waveUndo(side)) return no('nothing to take back');
+        w.left++;
+      } else if (it.k === 'waveauto') {
+        autoWave(side, w.left); w.left = 0;
+      }
+      if (it.k === 'wavedone' || w.left < 1 && it.k === 'waveauto') {
+        var n = state.units.filter(function (u) { return u.side === side && u.waveExtra; }).length;
+        if (it.k === 'wavedone' && n) logLine('note', sideName(side) + ' calls up the human wave: ' + n + ' more infantry unit' + (n === 1 ? '' : 's') + '.');
+        ta.wave = null;
+        tacticsOn();
+        return yes;
       }
       render();
       return yes;

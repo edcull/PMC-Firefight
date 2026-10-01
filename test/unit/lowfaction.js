@@ -50,12 +50,43 @@ console.log('\nL-29 Two rebel forces choose their tactics in turn, the dice-off 
     ok('...and the set-up goes on', !st.tacticAsk && st.tactics[second] === null && (st.units.every((u) => u.tactic === st.tactics[u.side] || R.has(u, 'No Army Rules'))));
   }
   ok('either side may win the dice', firsts.A > 0 && firsts.B > 0, JSON.stringify(firsts));
-  const vsAI = Engine.create({});
-  vsAI.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['rleaders', 'rmilitia'], armyB: ['rleaders', 'rmilitia'], nameA: 'A', nameB: 'B',
-    colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto', tactics: { A: 'wave', B: null } });
-  ok('against the AI nobody is asked', !vsAI.state().tacticAsk);
-  const mixed = game(['rleaders', 'rmilitia'], ['regular', 'regular'], { A: 'wave', B: null });
-  ok('...nor when only one side is rebel', !mixed.state().tacticAsk);
+  const mixed = game(['rleaders', 'rmilitia'], ['regular', 'regular'], { A: null, B: null });
+  ok('one rebel player alone is asked too, with no dice', !!mixed.state().tacticAsk && mixed.state().tacticAsk.order.join() === 'A');
+})();
+
+console.log('\nREB-2 The tactic is chosen once attacker and defender are known, before the terrain (p. 95)');
+(function () {
+  function takeover(mode, armyB) {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'takeover', armyA: ['rleaders', 'rmilitia', 'rmilitia'], armyB: armyB || ['regular', 'regular'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode, planet: 'sparse', terrainSetup: 'auto' });
+    return e;
+  }
+  const e = takeover('hotseat'), st = e.state();
+  ok('the rebel player is asked', !!st.tacticAsk && st.tacticAsk.order.join() === 'A');
+  ok('...with the roles already rolled', !!st.cfg.roles && ['A', 'B'].indexOf(st.cfg.roles.attacker) >= 0, JSON.stringify(st.cfg.roles && st.cfg.roles.attacker));
+  ok('...and no terrain laid', st.phase === 'tactics' && !st.sc.attacker);
+  const n0 = st.units.filter((u) => u.side === 'A').length;
+  ok('Human Wave calls up the wave before going on', e.intent('A', { k: 'tactic', tactic: 'wave' }).ok && !!st.tacticAsk && !!st.tacticAsk.wave);
+  ok('...only infantry of the Battle Tier', !e.intent('A', { k: 'waveadd', key: 'rleaders' }).ok);
+  const inf = R.listFor('rebel').filter((p) => p.cls === 'infantry' && p.tier === 3 && !p.command && !p.noSlot)[0];
+  ok('...one added', e.intent('A', { k: 'waveadd', key: inf.key }).ok && st.units.filter((u) => u.side === 'A').length === n0 + 1);
+  ok('...and taken back', e.intent('A', { k: 'waveundo' }).ok && st.units.filter((u) => u.side === 'A').length === n0);
+  ok('...two, the most at PL 1', e.intent('A', { k: 'waveadd', key: inf.key }).ok && e.intent('A', { k: 'waveadd', key: inf.key }).ok &&
+    !e.intent('A', { k: 'waveadd', key: inf.key }).ok);
+  ok('...then on to the table', e.intent('A', { k: 'wavedone' }).ok && !st.tacticAsk && st.sc.attacker === st.cfg.roles.attacker);
+  const keys = st.cfg.armyA;
+  ok('the list with its wave is legal under Human Wave', R.checkArmy(keys, 3, 1, [], 'wave', 'rebel').ok, R.checkArmy(keys, 3, 1, [], 'wave', 'rebel').faults.join('; '));
+  ok('...and every unit of it fights under the tactic', st.units.filter((u) => u.side === 'A').every((u) => u.tactic === 'wave'));
+  // the AI chooses by its role: Last Stand to hold, Human Wave (and its wave) to take
+  const seen = {};
+  for (let k = 0; k < 10; k++) {
+    const ai = takeover('ai', ['rleaders', 'rmilitia', 'rmilitia']), as = ai.state();
+    const role = as.cfg.roles.attacker === 'B' ? 'attacker' : 'defender';
+    seen[role + ':' + as.tactics.B + ':' + as.units.filter((u) => u.side === 'B' && u.waveExtra).length] = 1;
+  }
+  const keysSeen = Object.keys(seen);
+  ok('the AI defending takes Last Stand; attacking, Human Wave with its wave', keysSeen.every((k) => k === 'defender:laststand:0' || k === 'attacker:wave:2'), keysSeen.join(' '));
 })();
 
 console.log('\nL-30 Teleport takes a unit in by the standard embarking rules (pp. 36, 130)');

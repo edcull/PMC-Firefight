@@ -547,7 +547,7 @@
         act.className = 'pill pill-' + (B.state.over.winner || 'none');
       } else if (B.state.tacticAsk) {
         var tk = B.state.tacticAsk.order[B.state.tacticAsk.step];
-        act.textContent = 'Choosing tactic: ' + (tk === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
+        act.textContent = (B.state.tacticAsk.wave ? 'Calling up the wave: ' : 'Choosing tactic: ') + (tk === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
         act.className = 'pill pill-' + tk;
       } else if (B.state.phase === 'terrain') {
         var ta = curArea();
