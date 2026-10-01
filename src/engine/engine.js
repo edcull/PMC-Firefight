@@ -623,7 +623,8 @@
   /* ---- deployment: in engine/deploy.js ---- */
 
   function relocCap(side) {
-    return Math.floor(state.units.filter(function (u) {
+    // "up to ½ of their units" (p. 89), rounded up (p. 27)
+    return Math.ceil(state.units.filter(function (u) {
       return u.side === side && u.alive && u.x >= 0 && !u.reserve && !u.aboard;
     }).length / 2);
   }

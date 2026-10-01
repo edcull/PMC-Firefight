@@ -715,7 +715,7 @@ console.log('  vs the OpFor AI');
   e2.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
     nameA: 'A', nameB: 'B', mode: 'ai', planet: 'sparse' });
   const n2 = e2.state().units.filter(u => u.side === 'A' && u.pickIdx != null).length;
-  ok('a quarter without it', !e2.state().swapAvail.A || e2.state().swapAvail.A.total === Math.floor(n2 / 4));
+  ok('a quarter without it', !e2.state().swapAvail.A || e2.state().swapAvail.A.total === Math.ceil(n2 / 4));   // a quarter, rounded up (p. 27)
 })();
 
 /* A hotseat's round of swaps: each player in turn, in secret, before anyone deploys. */

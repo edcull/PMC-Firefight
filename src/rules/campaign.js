@@ -743,7 +743,7 @@
     var p = profile(entry.key);
     if (!p) return 0;
     var size = p.cls === 'infantry' ? p.size : 1;
-    if (entry.riders && R.canRide(p)) size = Math.max(1, Math.round(size / 2));   // Riders: half the models, mounted
+    if (entry.riders && R.canRide(p)) size = Math.max(1, Math.ceil(size / 2));   // Riders: half the models, mounted
     if (co && hasDoctrine(co, 'O4') && p.group === 'Light support') size += 2;   // Reinforced Light Support
     return size;
   }

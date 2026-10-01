@@ -227,7 +227,7 @@
           if (u.carryMoved) return { on: false, hint: 'Already driven: now load or unload.' };
           var roomF = u.transport - (u.cargo || []).length;
           if (!(u.cargo || []).length && roomF <= 0) return { on: false, hint: 'Nothing to load or unload.' };
-          return { on: true, hint: 'Drive up to half its Movement (' + (u.move / 2) + '"), then Embark or Disembark (p. 36).' };
+          return { on: true, hint: 'Drive up to half its Movement (' + (Math.ceil(u.move / 2)) + '"), then Embark or Disembark (p. 36).' };
         }
         case 'strafe': {
           if (u.cls !== 'aircraft') return { on: false, hint: 'Only aircraft may strafe.' };
@@ -458,7 +458,7 @@
         ui.moves = R.exitSpots(E.state, u);
       } else if (id === 'drivefirst') {
         ui.mode = 'carry-first';
-        ui.moves = R.reachable(E.state, u, u.move / 2).filter(function (c) { return canStand(u, c); });
+        ui.moves = R.reachable(E.state, u, Math.ceil(u.move / 2)).filter(function (c) { return canStand(u, c); });
       } else if (id === 'embark') {
         ui.mode = 'embark';
         ui.targets = activeUnits(u.side).filter(function (t) { return R.canEmbark(E.state, u, t); });

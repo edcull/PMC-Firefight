@@ -140,7 +140,7 @@
         var side = pair[0], co = pair[1];
         if (hasDoctrine(co, 'H5')) {
           var full = out[side];
-          out[side] = Math.floor(full * 0.75);
+          out[side] = Math.ceil(full * 0.75);           // 75%, rounded up (p. 27)
           out.thin[side] = { was: full, now: out[side] };
         }
         if (hasDoctrine(co, 'V6')) {
@@ -195,6 +195,8 @@
       if (line.brokenEver && !hasDoctrine(ctx.company, 'H4')) out.push({ text: 'Was broken at least once', n: 2 });
       // Stairs to Heaven: the Holy Warriors' dead are already where they wanted to go
       var martyrs = hasDoctrine(ctx.company, 'P3') && p.group === 'Holy Warriors';
+      /* "From one to half" and "more than half" (p. 86): half of an odd unit rounds
+         up (p. 27), so three men who lose two have lost half, not more. */
       // passengers of an aircraft that landed survived it, every one (p. 86)
       var lost = line.landed ? 0 : Math.max(0, line.startSize - line.endSize);
       /* Endless Tide (p. 124): a swarm that digs its dead back up still felt them go.
@@ -202,12 +204,12 @@
          below half — whatever it had grown back to by the end. */
       if (R.has({ rules: p.rules }, 'Endless Tide') && line.minSize != null) {
         var low = Math.max(0, line.startSize - line.minSize);
-        if (low > line.startSize / 2) out.push({ text: 'Endless Tide — was cut below half', n: 4 });
+        if (low > Math.ceil(line.startSize / 2)) out.push({ text: 'Endless Tide — was cut below half', n: 4 });
         else if (low >= 1) out.push({ text: 'Endless Tide — lost bugs', n: 1 });
         lost = 0;
       }
       if (martyrs && lost) out.push({ text: 'Stairs to Heaven — their losses cost them nothing', n: 0 });
-      else if (lost > line.startSize / 2) out.push({ text: 'Lost more than half its soldiers', n: 4 });
+      else if (lost > Math.ceil(line.startSize / 2)) out.push({ text: 'Lost more than half its soldiers', n: 4 });
       else if (lost >= 1) out.push({ text: 'Lost ' + lost + ' soldier' + (lost > 1 ? 's' : ''), n: 1 });
       if (ctx.lost) out.push({ text: 'The company lost the battle', n: 1 });
       if (ctx.routed && !hasDoctrine(ctx.company, 'S5')) out.push({ text: 'The army was routed', n: 1 });

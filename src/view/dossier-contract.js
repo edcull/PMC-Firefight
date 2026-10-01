@@ -181,7 +181,7 @@
     function ordersPanel(co) {
       var rows = [];
       if (C.hasDoctrine(co, 'V4')) {
-        var able = drugAble(E.contract.picks), cap = Math.floor(able.length / 3);
+        var able = drugAble(E.contract.picks), cap = Math.ceil(able.length / 3);    // "up to 1/3" (p. 98), rounded up (p. 27)
         E.contract.drugs = (E.contract.drugs || []).filter(function (id) { return able.some(function (e) { return e.rid === id; }); }).slice(0, cap);
         rows.push('<div class="orow"><b>Drug Dealer</b><em>Up to ' + cap + ' of the infantry go in Determined, and take D6+1 Trauma Points after (' +
           E.contract.drugs.length + ' of ' + cap + ')</em><span class="segs wrap">' +
@@ -352,7 +352,7 @@
       picks.forEach(function (e) { delete e.drugged; });
       if (!C.hasDoctrine(co, 'V4')) return [];
       var able = drugAble(picks);
-      var n = Math.floor(able.length / 3);
+      var n = Math.ceil(able.length / 3);
       if (n < 1) return [];
       var taken;
       if (chosen) taken = able.filter(function (e) { return chosen.indexOf(e.rid) >= 0; }).slice(0, n);

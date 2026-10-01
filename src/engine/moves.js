@@ -216,7 +216,7 @@
       var u = ui.selected;
       var d = R.inches(u.x, u.y, pt.x, pt.y);
       var carryFirst = ui.mode === 'carry-first';
-      var allowance = ui.mode === 'advance-move' ? u.move : (ui.mode === 'carry-move' || carryFirst) ? u.move / 2 : u.move + moveBonus(u);
+      var allowance = ui.mode === 'advance-move' ? u.move : (ui.mode === 'carry-move' || carryFirst) ? Math.ceil(u.move / 2) : u.move + moveBonus(u);
       u.carrying = false;
       if (u.vortexNow) {
         // the Movement parameter doubled, the move bonus on top of it as usual
@@ -317,7 +317,7 @@
       // it drove before it loaded or unloaded: that was its half move
       if (u.carryMoved) { u.carryMoved = false; ui.moves = []; ui.mode = 'idle'; endActivation(); return; }
       if (!movesToCarry(u) || isAI(u.side) || !u.alive) { endActivation(); return; }
-      ui.moves = R.reachable(E.state, u, u.move / 2).filter(function (c) { return canStand(u, c); });
+      ui.moves = R.reachable(E.state, u, Math.ceil(u.move / 2)).filter(function (c) { return canStand(u, c); });
       if (!ui.moves.length) { ui.moves = []; endActivation(); return; }
       u.carrying = true; u.activated = false;         // not done yet: the drive is still to come
       ui.mode = 'carry-move';

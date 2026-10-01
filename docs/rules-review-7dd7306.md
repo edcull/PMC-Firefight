@@ -165,7 +165,7 @@ out, then adds the 2" fall-back. In 300 of 300 runs the garrison's base ended 4.
 2–3 sections, and each section takes its own unit (`space.js:50-80`). On 400 generated tables, 988 of 1,154
 buildings had more than one section, including 147 of the 176 small ones (≤ 5.5" × 5.5").
 
-### M-6 · Divisions round down where the book always rounds up
+### M-6 · Divisions round down where the book always rounds up — **fixed**
 
 > l.465: "If any number should be divided, it is always rounded up to a whole number."
 
@@ -612,5 +612,9 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | H-2 Disembark placement | **Fixed.** `R.dropSpots` offers every free spot whose base is within 4" of the hull's, on ground the squad may stand on, not on the hull, and 1" clear of everyone else. The hull's drive, turns and terrain bans no longer apply. The squad goes down where it is put. The AI's two unloading paths use the same spots, which also closes the AI half of L-9. | `src/rules/rules.js` (`dropSpots`), `src/engine/actions.js` (`dropFor`), `src/engine/combat.js` (`doDisembark`), `src/engine/ai.js` |
 | H-3 The turn freezes when the initiative side has nothing to activate | **Fixed.** When the Action phase opens, a side with nothing eligible hands the phase to the other; if neither has anything, the Rally phase follows at once. The review's reproduction was itself waiting on a Battlefield Insertion choice; a clean reproduction confirms the freeze on the old code. | `src/engine/engine.js` (`beginTurn → action`) |
 
-Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass.
+| M-6 Divisions round down | **Fixed.** Every division now rounds up (p. 27): the Trauma "more than half" and Endless Tide thresholds; the ¼ swap allowance and Tactical Flexibility's ½; Rapid Relocation's ½; No Place for the Weak!'s halving; Rob the Rich's 75%; and Drug Dealer's ⅓. The sweep also found three more: tracked (¾) and anti-grav (+¼) Movement left a half inch (Move 10 became 7.5 and 12.5, now 8 and 13); the half-Movement drive when loading or unloading; and the Riders "Size halved". Half range is rounded up too, in case a range is ever odd. | `camp-contract.js`, `rules.js` (`swapAllowance`, `applyPropulsion`, `applyRiders`), `engine.js` (`relocCap`), `camp-aftermath.js`, `campaign.js`, `dossier-contract.js`, `shoot.js`, `moves.js`, `actions.js` |
+
+Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
+
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`.
 

@@ -168,7 +168,7 @@ ok('...and takes a quarter of the money', (function () {
   var a = C.newCompany('a', { faction: 'rebel' }); a.doctrines = ['H5'];
   var b = C.newCompany('b', { faction: 'rebel' });
   var p = C.payment(3, 1, a, b, 'A');
-  return p.thin.A && p.A === Math.floor(p.thin.A.was * 0.75);
+  return p.thin.A && p.A === Math.ceil(p.thin.A.was * 0.75);           // 75%, rounded up (p. 27)
 })(), true);
 hero.doctrines = ['H4'];
 ok('To Hell and Back! forgives being broken',

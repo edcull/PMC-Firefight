@@ -161,7 +161,7 @@
     var p = BY_KEY[u.key];
     if (!p || !p.ridersUpgrade) return u;
     u.riders = true;
-    u.size = Math.max(1, Math.round(u.size / 2));
+    u.size = Math.max(1, Math.ceil(u.size / 2));            // "Size halved" (p. 97), rounded up (p. 27)
     u.models = Math.min(u.models, u.size);
     u.move = 10;
     if (u.rules.indexOf('Riders') < 0) u.rules = u.rules.concat(['Riders']);
@@ -247,7 +247,10 @@
     var pr = PROPULSION[prop];
     if (!pr || u.cls !== 'vehicle') { u.prop = u.cls === 'vehicle' ? 'none' : null; return u; }
     u.prop = pr.key;
-    if (pr.move) u.move = Math.round(u.move * pr.move * 100) / 100;
+    /* "reduced to ¾ of the basic value" (tracked) and "increased by ¼ of the basic
+       value" (anti-grav), Appendix 3: each a division, so rounded up (p. 27) —
+       a tracked Move 10 is 8, an anti-grav one 13. */
+    if (pr.move) u.move = pr.move < 1 ? Math.ceil(u.move * pr.move) : u.move + Math.ceil(u.move * (pr.move - 1));
     if (pr.turn) u.turn = Math.max(0, (u.turn || 0) + pr.turn);
     if (pr.str) u.str = Math.max(1, u.str + pr.str);
     if (pr.def) u.def = Math.max(1, u.def + pr.def);
@@ -1377,7 +1380,8 @@
   function onTable(u) { return !!u && u.alive && u.x >= 0 && !u.aboard && !u.reserve; }
   /* How many units may be swapped when modifying the armies: no more than a
      quarter (p. 46), half with Tactical Flexibility (O6, p. 87). */
-  function swapAllowance(n, flexible) { return Math.floor(n * (flexible ? 0.5 : 0.25)); }
+  // "no more than ¼" (p. 47), "up to ½" with Tactical Flexibility (p. 89): rounded up, as every division is (p. 27)
+  function swapAllowance(n, flexible) { return Math.ceil(n * (flexible ? 0.5 : 0.25)); }
   /* The OpFor's "+2 if there are no enemy units within the active unit's Range"
      (p. 147): a plain distance, whatever stands in the way or wherever the gun
      points. A unit with no Firepower has no Range, so nothing is within it. */
