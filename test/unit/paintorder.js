@@ -1,9 +1,8 @@
 /* The order units and buildings are painted in (draw.js paintOrder). The
    camera looks in from the far +x, +y corner, so a building shows its +x and
    +y faces: a squad standing past either of them is in front of it and painted
-   after it, wherever it is along that face; a squad on the other side is
-   behind it and painted first; a squad inside it (its garrison) is painted
-   over it. A single depth per building got the squad in front of the end wall
+   after it, wherever it is along that face; a squad on the other side, or
+   inside it, is painted first and the building over it. A single depth per building got the squad in front of the end wall
    of a long building wrong. */
 'use strict';
 global.window = {};
@@ -17,7 +16,7 @@ function ok(name, cond, note) {
 }
 
 const spot = (it) => ({ x: it.x, y: it.y });
-const unit = (name, x, y, inside) => ({ name, x, y, depth: x + y, inside: inside || null });
+const unit = (name, x, y) => ({ name, x, y, depth: x + y });
 const block = (name, x, y, w, h) => { const pr = { x, y, w, h }; return { name, pr, depth: x + w + y + h }; };
 const names = (list) => list.map((it) => it.name);
 const before = (list, a, b) => names(list).indexOf(a) < names(list).indexOf(b);
@@ -37,11 +36,10 @@ const big = block('big', 20, 20, 8, 4);
     before(out, 'backx', 'big') && before(out, 'backy', 'big'), names(out).join(' '));
 }
 {
-  // the garrison is over the building, a squad behind it still under it
-  const g = unit('garrison', 22, 22, big.pr);
-  const out = paintOrder([g, unit('behind', 24, 19)], [big], spot);
-  ok('the squad inside a building is painted over it', before(out, 'big', 'garrison'));
-  ok('...and a squad behind it under it', before(out, 'behind', 'big'), names(out).join(' '));
+  // the garrison is under the building's walls, like a squad behind it
+  const out = paintOrder([unit('garrison', 22, 22), unit('behind', 24, 19)], [big], spot);
+  ok('the squad inside a building is painted under it', before(out, 'garrison', 'big'), names(out).join(' '));
+  ok('...and a squad behind it too', before(out, 'behind', 'big'));
 }
 {
   // a small building in front of the long one's side; a squad between them

@@ -393,11 +393,9 @@
     }
     /* Put one structure back on top of whatever has been drawn over it, from its
        own patch (or, for a structure that has none, the layer it was baked into). */
-    function repaintProp(pr, open) {
-      // its own patch, cut away or whole (draw.js paintStructures)
-      var o = open ? pr._open : pr._solid;
+    function repaintProp(pr) {
+      var o = pr._solid;                 // its own patch (draw.js paintStructures)
       if (o && o.box.w > 0 && o.box.h > 0) { B.pctx.drawImage(o.cv, 0, 0, o.box.w, o.box.h, o.box.x, o.box.y, o.box.w, o.box.h); return; }
-      if (open) return;
       var src = B.vc.structs;
       if (!src) return;
       var b = propBox(pr);
