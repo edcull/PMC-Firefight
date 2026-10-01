@@ -197,6 +197,38 @@
         : on ? 'Following the other side\u2019s moves — tap to keep the camera where you leave it'
           : 'The camera stays where you leave it — tap to follow the other side\u2019s moves';
     }
+    /* Tribe sight: with Xenotripods on a side this screen plays, an eye button
+       shows the whole tribe's sight on the table — every unbroken member's 12"
+       of Limited Senses, and each enemy that Mental Projection lets all of them
+       see (p. 129). It is kept like Follow. */
+    var SIGHT_KEY = 'pmc.tribeSight', sight = false;
+    try { sight = localStorage.getItem(SIGHT_KEY) === 'on'; } catch (e) { /* no storage: off */ }
+    // the side whose sight is shown: the one acting if it is ours, else the first of ours with Xenotripods
+    function sightSide() {
+      if (!B.state || !B.state.units) return null;
+      var seats = (B.seats && B.seats.length ? B.seats : ['A', 'B']).filter(function (sd) { return B.state.cfg.aiSides.indexOf(sd) < 0; });
+      if (seats.indexOf(B.state.activeSide) > 0) seats = [B.state.activeSide].concat(seats);
+      for (var i = 0; i < seats.length; i++) {
+        var sd = seats[i];
+        if (B.state.units.some(function (u) { return u.side === sd && u.alive && R.xenoSenses(u); })) return sd;
+      }
+      return null;
+    }
+    function sightOn() { return sight && !!sightSide(); }
+    function showSight() {
+      var b = el('sight-toggle');
+      if (!b) return;
+      b.hidden = !sightSide();
+      b.classList.toggle('on', sight);
+      b.setAttribute('aria-pressed', sight ? 'true' : 'false');
+      b.title = sight ? 'Showing what your Xenotripods can see — tap to hide it' : 'Tribe sight: show what your Xenotripods can see';
+    }
+    function setSight(on) {
+      sight = !!on;
+      try { localStorage.setItem(SIGHT_KEY, sight ? 'on' : 'off'); } catch (e) { /* not kept */ }
+      showSight();
+      drawBoard();
+    }
     function setFollow(on) {
       if (isDemo()) {
         demoFollow = !!on;
@@ -498,6 +530,7 @@
       ui.bannerTimer = setTimeout(function () { tb.classList.remove('show'); tb.hidden = true; }, 2600);
     }
     function drawHeader() {
+      showSight();
       // two players at one screen: the phone's one-row header shows whose turn it is too
       var hdrEl = document.querySelector('header');
       if (hdrEl) hdrEl.classList.toggle('two-seat', B.state.cfg.mode === 'hotseat' || !!(B.state.solo && B.state.solo.coop));
@@ -667,7 +700,7 @@
       focusUnit: focusUnit,
       foeColour: foeColour,
       handsOff: handsOff, camOff: camOff,
-      followOn: followOn, setFollow: setFollow, showFollow: showFollow, fitShot: fitShot, unfitShot: unfitShot, startDemoCam: startDemoCam,
+      followOn: followOn, setFollow: setFollow, showFollow: showFollow, sightOn: sightOn, sightSide: sightSide, setSight: setSight, showSight: showSight, fitShot: fitShot, unfitShot: unfitShot, startDemoCam: startDemoCam,
       hud: hud,
       labelIcons: labelIcons,
       nearestZoom: nearestZoom,

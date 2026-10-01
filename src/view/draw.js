@@ -964,6 +964,67 @@
       return pts;
     }
 
+    /* Tribe sight (the eye button): the ground every unbroken Xenotripod of the
+       side can see — 12" of Limited Senses, cut off by terrain that blocks sight,
+       an aircraft seeing over it — as one shaded area, and each enemy the tribe
+       sees ringed, since Mental Projection shows it to all of them (p. 129).
+       Worked out again only when something on the table has changed. */
+    function drawTribeSight(side) {
+      if (!side) return;
+      var seers = activeUnits(side).filter(function (o) {
+        return R.xenoSenses(o) && !R.campFlag(o, 'banished') && R.status(o) !== 'broken';
+      });
+      var key = side + ':' + B.state.turn + ':' + B.state.log.length + ':' + seers.map(function (o) { return o.id + '@' + o.x.toFixed(1) + ',' + o.y.toFixed(1); }).join(';');
+      if (ui.sightKey !== key) {
+        ui.sightKey = key;
+        ui.sight = {
+          areas: seers.map(function (o) {
+            if (R.isFlying(o)) return { ring: o };
+            return { pts: visibility(o) };
+          }),
+          seen: activeUnits().filter(function (e) { return e.side !== side && R.tribeSees(B.state, side, e); })
+        };
+      }
+      var rgb = sideRGB(side);
+      B.ctx.save();
+      // kept on the table
+      var corners = [hud(0, 0), hud(W, 0), hud(W, H), hud(0, H)];
+      B.ctx.beginPath();
+      corners.forEach(function (c, n) { if (n === 0) B.ctx.moveTo(c.x, c.y); else B.ctx.lineTo(c.x, c.y); });
+      B.ctx.closePath(); B.ctx.clip();
+      // one path for the lot, so where two members see the same ground it is not shaded twice
+      B.ctx.beginPath();
+      ui.sight.areas.forEach(function (a) {
+        if (a.ring) {
+          for (var k = 0; k <= 64; k++) {
+            var t = k / 64 * Math.PI * 2, r = R.sightRange(a.ring);
+            var s = hud(a.ring.x + Math.cos(t) * r, a.ring.y + Math.sin(t) * r, 0);
+            if (k === 0) B.ctx.moveTo(s.x, s.y); else B.ctx.lineTo(s.x, s.y);
+          }
+          B.ctx.closePath();
+          return;
+        }
+        a.pts.forEach(function (p, n) {
+          var s = hud(p.x, p.y, 0);
+          if (n === 0) B.ctx.moveTo(s.x, s.y); else B.ctx.lineTo(s.x, s.y);
+        });
+        B.ctx.closePath();
+      });
+      B.ctx.fillStyle = 'rgba(' + rgb + ',.24)';
+      B.ctx.fill('nonzero');
+      B.ctx.setLineDash([3, 4]);
+      B.ctx.lineWidth = 1.3; B.ctx.strokeStyle = 'rgba(' + rgb + ',.7)';
+      B.ctx.stroke();
+      B.ctx.setLineDash([]);
+      // the enemy the whole tribe can see
+      B.ctx.lineWidth = 2;
+      ui.sight.seen.forEach(function (e) {
+        B.ctx.strokeStyle = 'rgba(' + rgb + ',.9)';
+        isoRing(e.x, e.y, UR * 1.6, liftOf(e.x, e.y) + ISO.flyLift(e)); B.ctx.stroke();
+      });
+      B.ctx.restore();
+    }
+
     function drawHUD() {
       var i;
       // the AI's own choices are not drawn (see drawBoard)
@@ -1122,6 +1183,8 @@
         isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); B.ctx.stroke();
         B.ctx.setLineDash([]);
       });
+
+      if (B.sightOn && B.sightOn()) drawTribeSight(B.sightSide());
 
       var u = ui.selected;
       if (u && u.alive && !aiSel) {

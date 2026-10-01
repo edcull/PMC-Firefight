@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=442600ea7e">
+<link rel="stylesheet" href="src/css/game.css?v=4315bf2c86">
 
 <div class="wrap">
   <header>
@@ -44,6 +44,7 @@
           <span id="zoomlabel">×1</span>
           <button class="vbtn" data-zoom="in" title="Zoom in (+)">+</button>
           <button class="vbtn wide" data-zoom="fit" title="Whole table (F)">Fit</button>
+          <button class="vbtn sight" id="sight-toggle" data-sight aria-pressed="false" hidden title="Tribe sight: what your Xenotripods can see"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg></button>
           <button class="vbtn wide pause" id="demo-pause" data-pause aria-pressed="false" title="Pause the battle">Pause</button>
           <button class="vbtn wide follow on" id="follow-toggle" data-follow aria-pressed="true" title="Follow the other side's moves with the camera">Follow</button>
         </div>
@@ -147,7 +148,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2610010018</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2610010034</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -555,17 +556,17 @@
 <script src="src/net/lobby.js?v=8d160b2c53"></script>
 <script src="src/view/replay.js?v=a172d6a816"></script>
 <script src="src/view/hooks.js?v=7ad383bd12"></script>
-<script src="src/view/testhooks.js?v=74fe1ebf4f"></script>
+<script src="src/view/testhooks.js?v=2d9d2e7e9e"></script>
 <script src="src/view/play.js?v=bcc81675c4"></script>
 <script src="src/view/terrainset.js?v=bb0ea483d0"></script>
-<script src="src/view/input.js?v=ec61a2b53b"></script>
+<script src="src/view/input.js?v=45d08e9373"></script>
 <script src="src/view/arrive.js?v=69b010e479"></script>
 <script src="src/view/actions.js?v=7f32957cfd"></script>
-<script src="src/view/draw.js?v=e7384f51d8"></script>
-<script src="src/view/view.js?v=6dfa6a63a8"></script>
+<script src="src/view/draw.js?v=bc126bc561"></script>
+<script src="src/view/view.js?v=ad331979cf"></script>
 <script src="src/view/panels.js?v=c1eb28223e"></script>
 <script src="src/view/muster.js?v=bba5701bb7"></script>
-<script src="src/view/game.js?v=50b8512e2a"></script>
+<script src="src/view/game.js?v=f0a3c03da1"></script>
 <script src="src/view/dossier-hub.js?v=1145b6ac42"></script>
 <script src="src/view/dossier-found.js?v=90280cc71a"></script>
 <script src="src/view/dossier-roster.js?v=f566c053db"></script>
