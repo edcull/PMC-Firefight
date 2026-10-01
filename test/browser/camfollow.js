@@ -4,7 +4,7 @@
    where the player left it once the AI has finished. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, startSkirmish } = require('../where.js');
+const { ROOT, startSkirmish, seedDice } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -28,6 +28,7 @@ const cam = (p) => p.evaluate(() => Object.assign(window.__cam(), { mine: !!wind
   const p = await b.newPage({ viewport: { width: 1340, height: 950 } });
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
+  await seedDice(p, 2670);          // the same armies and the same battle every run
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(500);
   await startSkirmish(p, { tier: 3, mode: 'ai', scenario: 'meeting', planet: 'desert', terrain: 'auto',

@@ -4,7 +4,7 @@
    ever; the choice is kept for the next battle. */
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, startSkirmish, SHOTS } = require('../where.js');
+const { ROOT, startSkirmish, SHOTS, seedDice } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -87,6 +87,7 @@ async function watch(p, ms) {
   console.log('\n  DESKTOP');
   const ctx = await b.newContext({ viewport: { width: 1340, height: 950 } });
   const p = await ctx.newPage();
+  await seedDice(p, 2670);          // the same armies, and who fires first, every run
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.evaluate(() => { try { localStorage.removeItem('pmc.followOther'); } catch (e) { } });
@@ -143,6 +144,7 @@ async function watch(p, ms) {
   console.log('\n  DEMO');
   const dctx = await b.newContext({ viewport: { width: 1340, height: 950 } });
   const dp = await dctx.newPage();
+  await seedDice(dp, 2670);          // the same armies, and who fires first, every run
   dp.on('pageerror', e => errs.push(e.message));
   await dp.goto('file://' + path.join(ROOT, 'index.html'));
   await dp.waitForTimeout(500);
@@ -203,6 +205,7 @@ async function watch(p, ms) {
   console.log('\n  PHONE');
   const mctx = await b.newContext({ viewport: { width: 400, height: 860 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const m = await mctx.newPage();
+  await seedDice(m, 2670);          // the same armies, and who fires first, every run
   m.on('pageerror', e => errs.push(e.message));
   await m.goto('file://' + path.join(ROOT, 'index.html'));
   await m.waitForTimeout(500);

@@ -45,8 +45,19 @@ async function startSkirmish(page, o) {
   }, o || {});
 }
 
+/* Seeded dice for a page, before anything on it loads: a test whose checks ride on
+   how a random battle goes (who fires first, how much experience is earned) is
+   then the same battle every run. The clock is left alone; only the dice are fixed. */
+async function seedDice(page, seed) {
+  await page.addInitScript((s0) => {
+    let s = s0 >>> 0 || 1;
+    Math.random = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+  }, seed);
+}
+
 module.exports = {
   startSkirmish: startSkirmish,
+  seedDice: seedDice,
   ROOT: ROOT,
   SHOTS: SHOTS,
   page: path.join(ROOT, 'index.html'),
