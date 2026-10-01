@@ -125,6 +125,25 @@ console.log('\nTroops are put down anywhere within 4" of their hull (p. 36)');
     mv.length + ' spots, the enemy 3" from the hull');
 })();
 
+console.log('\nThe player chooses which squad gets off (p. 36: "one or more" of those aboard)');
+(function () {
+  const { e, st } = battle(['lapc', 'regular', 'veterans'], ['regular']);
+  const apc = st.units.find((u) => u.key === 'lapc');
+  const first = st.units.find((u) => u.key === 'regular' && u.side === 'A'), second = st.units.find((u) => u.key === 'veterans');
+  apc.x = 24; apc.y = 24; apc.facing = 0;
+  first.x = 22; first.y = 27; second.x = 26; second.y = 27;
+  R.embark(st, apc, first); R.embark(st, apc, second); first.boarded = false; second.boarded = false;
+  e.intent('A', { k: 'select', id: apc.id }); e.intent('A', { k: 'action', id: 'disembark' });
+  ok('the second squad aboard may be picked to go first', e.intent('A', { k: 'droppick', id: second.id }).ok);
+  const spot = e.sel().moves.find((c) => R.unitDist(c, apc) > 2);
+  e.intent('A', { k: 'disembark', x: spot.x, y: spot.y });
+  ok('...and it is the one that gets off', !second.aboard && second.x >= 0 && first.aboard === apc.id,
+    'second ' + (second.aboard ? 'aboard' : 'out') + ', first ' + (first.aboard ? 'aboard' : 'out'));
+  const stop = e.intent('A', { k: 'cancel' });
+  ok('...while the first stays aboard when the hull stops unloading', first.aboard === apc.id && stop.ok);
+  ok('a squad not aboard cannot be picked', !e.intent('A', { k: 'droppick', id: st.units.find((u) => u.side === 'B').id }).ok);
+})();
+
 console.log('\nA side with the initiative and nothing to activate hands the phase on (p. 27)');
 (function () {
   // a battle into turn 2 with every A unit Broken; the dice decide who has the initiative

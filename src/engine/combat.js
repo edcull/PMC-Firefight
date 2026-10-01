@@ -95,12 +95,14 @@
       endActivation(u);
     }
 
-    /* Disembark (p. 36): "one or more" of those aboard. A player puts them down a
-       squad a tap, and may stop there and drive on (Cancel); the AI empties the hull. */
+    /* Disembark (p. 36): "one or more" of those aboard, whichever the player
+       chooses (dropNext). A player puts them down a squad a tap, and may stop
+       there and drive on (Cancel); the AI empties the hull. */
     function doDisembark(pt, all) {
       var u = ui.selected;
       var out = (u.cargo || []).filter(function (c) { return !c.boarded; });
-      if (!all) out = out.slice(0, 1);
+      if (!all) { var nx = E.nextOff(u); out = nx ? [nx] : []; }
+      u.dropNext = null;
       var lines = [];
       out.forEach(function (rider, i) {
         /* The first squad goes where it was put; any more (the AI empties the hull)

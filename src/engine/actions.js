@@ -584,16 +584,22 @@
       if (ui.targets.length || ui.moves.length) revealConsole();
     }
 
+    /* Which squad aboard u gets off next: the one the player picked (dropNext),
+       if it is still aboard and may get off, else the first loaded. */
+    function nextOff(u) {
+      var free = (u.cargo || []).filter(function (c) { return !c.boarded; });
+      return free.filter(function (c) { return c.id === u.dropNext; })[0] || free[0] || null;
+    }
     /* Where the next squad aboard u may be put down (R.dropSpots), inside the
        scenario's bounds; the hull's own spot if nowhere will do. */
     function dropFor(u) {
-      var rider = (u.cargo || []).filter(function (c) { return !c.boarded; })[0];
+      var rider = nextOff(u);
       var spots = rider ? R.dropSpots(E.state, u, rider).filter(function (c) { return canStand(rider, c); }) : [];
       return spots.length ? spots : [{ x: u.x, y: u.y, cost: 0 }];
     }
 
     return {
-      actionState: actionState, chooseAction: chooseAction, dropFor: dropFor
+      actionState: actionState, chooseAction: chooseAction, dropFor: dropFor, nextOff: nextOff
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineActions;

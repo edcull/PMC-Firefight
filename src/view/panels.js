@@ -576,6 +576,7 @@
       else if (ui.terrain.length && ui.selected &&
         (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
       else if (ui.mode === 'enter' && ui.sections.length && ui.selected) html = sectionPanel(ui.selected);
+      else if (ui.mode === 'disembark' && ui.selected && !isAI(ui.selected.side) && offBoard(ui.selected).length > 1) html = dropPanel(ui.selected);
       else if (ui.mode === 'digface' && ui.selected && !isAI(ui.selected.side)) html = digFaceCard(ui.selected);
       else if (ui.preview) html = movePreviewCard();
       else if (ui.targets.length && ui.selected && ['fire', 'aux', 'advance-fire', 'assault', 'designate'].indexOf(ui.mode) >= 0) {
@@ -740,6 +741,20 @@
       c.closePath();
     }
 
+    /* Unloading (p. 36: "one or more" of those aboard): the squads that may get
+       off now, and which goes next — the player's pick, else the first loaded. */
+    function offBoard(u) { return (u.cargo || []).filter(function (c) { return !c.boarded; }); }
+    function dropPanel(u) {
+      var free = offBoard(u);
+      var next = free.filter(function (c) { return c.id === u.dropNext; })[0] || free[0];
+      var h = '<div class="targets"><h4>Which squad gets off?</h4>';
+      free.forEach(function (c) {
+        h += '<button class="tgt' + (c === next ? ' active' : '') + '" data-act="droppick" data-id="' + c.id + '"' +
+          (c === next ? ' aria-pressed="true"' : '') + '><b>' + esc(c.name) + '</b><span>' +
+          (c === next ? 'next off — tap the table where it gets down' : 'tap to put this squad out instead') + '</span></button>';
+      });
+      return h + '<p class="hint small">Cancel keeps the rest aboard.</p></div>';
+    }
     function sectionPanel(u) {
       var h = '<div class="targets"><h4>' + (u.bld ? 'Move into which section?' : 'Go into which building?') + '</h4>';
       ui.sections.forEach(function (q, n) {
@@ -1279,6 +1294,7 @@
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'tactic') { send({ k: 'tactic', tactic: b.getAttribute('data-alt') || null }); return; }
+          else if (a === 'droppick') { send({ k: 'droppick', id: b.getAttribute('data-id') }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();

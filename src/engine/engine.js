@@ -1948,6 +1948,18 @@
       K.doExitBld(ui.selected, xs);
       return yes;
     });
+    // which squad aboard gets off next, while unloading (p. 36: "one or more")
+    on('droppick', null, function (side, it) {
+      if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (ui.mode !== 'disembark') return no('not unloading');
+      var u = ui.selected;
+      var rider = (u.cargo || []).filter(function (c) { return c.id === it.id && !c.boarded; })[0];
+      if (!rider) return no('that squad cannot get off this turn');
+      u.dropNext = rider.id;
+      ui.moves = K.dropFor(u);
+      render();
+      return yes;
+    });
     on('checkarea', null, function (side, it) {
       if (!mayAct(side) || !selected(side)) return no('not your activation');
       if (ui.mode !== 'checkarea') return no('not choosing a location');
