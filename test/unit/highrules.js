@@ -66,6 +66,21 @@ console.log('\nA Broken unit by its own edge runs off the table (p. 34)');
     R.inches(vic.x, vic.y, foe.x, foe.y).toFixed(1) + '" from the enemy, was ' + d0.toFixed(1) + '"');
 })();
 
+/* ...but the flight is away from the enemy first: one by a flank edge, the enemy
+   in front, falls back and stays rather than running off sideways (p. 34) */
+[3, 5].forEach((y0) => {
+  const { e, st } = battle(['regular', 'regular'], ['regular']);
+  const [vic, mate] = st.units.filter((u) => u.side === 'A');
+  const foe = st.units.find((u) => u.side === 'B');
+  vic.x = 20; vic.y = y0; vic.sp = 3 * R.currentMorale(vic);
+  foe.x = 30; foe.y = y0; mate.x = 30; mate.y = 40;
+  const d0 = R.inches(vic.x, vic.y, foe.x, foe.y);
+  playOut(e, st);
+  ok('from ' + y0 + '" off a flank edge, the enemy in front, it falls back and stays',
+    vic.alive && !vic.fled && R.inches(vic.x, vic.y, foe.x, foe.y) > d0 + 4,
+    'at ' + vic.x.toFixed(1) + ',' + vic.y.toFixed(1));
+});
+
 console.log('\nTroops are put down anywhere within 4" of their hull (p. 36)');
 (function () {
   const { e, st } = battle(['lapc:hover', 'regular', 'regular'], ['regular']);

@@ -22,8 +22,20 @@
        A solitaire game has no "own lines" either way: its scenarios may send a
        broken unit somewhere instead — to the safe zone in the Evacuation, back
        towards the evacuation point in Protecting the VIP. */
-    // how far a unit at c has still to go for every model to be past the nearest edge
-    function edgeGap(c) { return Math.min(c.x, W - c.x, c.y, H - c.y) + UR; }
+    /* How far a unit at c has still to go, straight on away from the enemy at f,
+       for every model to be past the edge that way. Fleeing is away from the
+       enemy first (p. 34); the table edge is only where that flight may end. */
+    function outAway(c, f) {
+      var dx = c.x - f.x, dy = c.y - f.y, n = Math.hypot(dx, dy);
+      if (n < 1e-6) return Infinity;
+      dx /= n; dy /= n;
+      var t = Infinity;
+      if (dx > 1e-6) t = Math.min(t, (W - c.x + UR) / dx);
+      if (dx < -1e-6) t = Math.min(t, (c.x + UR) / -dx);
+      if (dy > 1e-6) t = Math.min(t, (H - c.y + UR) / dy);
+      if (dy < -1e-6) t = Math.min(t, (c.y + UR) / -dy);
+      return t;
+    }
     function runOff(u) {
       u.alive = false; u.fled = true; u.brokenEver = true;
       logLine('kill', u.label + ' is broken and runs off the table — fled.');
@@ -47,41 +59,50 @@
           if (R.fallBack(E.state, u, away, allow)) {
             animateMove(u, [was, { x: u.x, y: u.y }]);
             // and if what it has left of its flight takes it past the edge, it is gone
-            if (!to && !u.noFlee && allow - R.inches(was.x, was.y, u.x, u.y) >= edgeGap(u)) { runOff(u); return; }
+            if (!to && !u.noFlee && allow - R.inches(was.x, was.y, u.x, u.y) >= outAway(u, foe.unit)) { runOff(u); return; }
             logLine('note', u.label + ' is broken and flees the building.');
           }
           return;
         }
         var foes = E.state.units.filter(function (t) { return t.alive && t.side !== u.side && onTable(t); });
-        function gap(c) {
-          var m = Infinity;
-          foes.forEach(function (t) { m = Math.min(m, R.inches(c.x, c.y, t.x, t.y)); });
-          return m;
+        function closest(c) {
+          var m = Infinity, f = null;
+          foes.forEach(function (t) { var d = R.inches(c.x, c.y, t.x, t.y); if (d < m) { m = d; f = t; } });
+          return { d: m, f: f };
         }
         var spots = R.reachable(E.state, u, allow).filter(function (c) { return canStand(u, c); });
         spots.push({ x: u.x, y: u.y, spent: 0 });
-        /* A spot from which what is left of the flight carries it past the edge is
-           the way out, and better than any spot on the table: a unit by its own edge
-           runs off rather than sliding along it to stay that little further from
-           the enemy (p. 34). Of the ways out, the one furthest from the enemy. */
-        function offFrom(c) { return !to && !u.noFlee && allow - (c.spent || 0) >= edgeGap(c); }
+        /* The flight is straight away from the closest enemy (p. 34). If, along that
+           line (within 30° of it), the unit can reach a spot from which what is left
+           of its flight carries every model past the edge, it runs off and is gone:
+           so one with its back to its own edge leaves, while one by a flank edge, the
+           enemy in front, falls back and stays. Otherwise it goes to the spot it can
+           reach furthest from the enemy. */
+        var ax = foe ? u.x - foe.unit.x : 0, ay = foe ? u.y - foe.unit.y : 0, an = Math.hypot(ax, ay);
+        function offFrom(c) {
+          if (to || u.noFlee || !foe || an < 1e-6) return false;
+          var dx = c.x - u.x, dy = c.y - u.y, dn = Math.hypot(dx, dy);
+          if (dn > 1e-6 && (dx * ax + dy * ay) / (dn * an) < Math.cos(Math.PI / 6)) return false;
+          return allow - (c.spent || 0) >= outAway(c, foe.unit);
+        }
+        if (spots.some(offFrom)) {
+          var out = spots.filter(offFrom).sort(function (p, q) { return (p.spent || 0) - (q.spent || 0); })[0];
+          if (out.x !== u.x || out.y !== u.y) animateMove(u, [{ x: u.x, y: u.y }, { x: out.x, y: out.y }]);
+          runOff(u); return;
+        }
         var best = null, bv = -Infinity;
         spots.forEach(function (c) {
           var v;
           if (to) {
             if (to.limit != null && R.inches(c.x, c.y, to.x, to.y) > to.limit) return;
             v = -R.inches(c.x, c.y, to.x, to.y);
-          } else v = gap(c) + (offFrom(c) ? 1e6 : 0);
+          } else v = closest(c).d;
           if (v > bv + 1e-6) { bv = v; best = c; }
         });
-        if (best && best.x === u.x && best.y === u.y && offFrom(best)) { runOff(u); return; }
         if (!best || (best.x === u.x && best.y === u.y)) return;
         var path = R.pathTo(E.state, u, allow, best);
         u.x = best.x; u.y = best.y; ui.vis = null; ui.visKey = '';
         animateMove(u, path && path.length > 1 ? path : [was, { x: best.x, y: best.y }]);
-        /* Off the edge: what it has left of its flight carries it clear of the table
-           (every model past the edge), and it does not come back. */
-        if (offFrom(best)) { runOff(u); return; }
         logLine('note', u.label + ' is broken and flees ' + R.inches(was.x, was.y, u.x, u.y).toFixed(1) + '"' +
           (to && to.flee ? ' towards the safe zone.' : to ? '.' : ' from the enemy.'));
         soloAfterMove(u);

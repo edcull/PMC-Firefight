@@ -633,3 +633,9 @@ Documented as not implemented in `README.md:137-143`:
 
 Consistent with owner decisions: one token per unit (multi-figure bases have no effect); PL cap is not affected by anything in this range.
 
+
+## 6. Progress
+
+| Finding | Outcome | Where |
+|---|---|---|
+| BAT-1 Broken units run off any edge | **Fixed.** The flight is away from the closest enemy first. A unit runs off only if, along the line straight away from that enemy (within 30°), it can reach a spot from which the rest of its flight carries it past the edge. Otherwise it falls back to the reachable spot furthest from the enemy and stays. | `endphase.js` (`fleeBroken`, `outAway`); test `highrules.js` |
