@@ -171,6 +171,11 @@
     /* A swarm without a Leader Bug has nothing to hold its Aggressive bugs back
        or bring its dead back up: an OpFor swarm takes one first, of the Battle
        Tier where it can. */
+    // what has to be in the force, taken before anything else (rollOpFor's answers to the players' machines)
+    (opts.firsts || []).forEach(function (want) {
+      var c = pool.filter(function (p) { return want(p) && room(p); });
+      if (c.length) take(c[Math.floor(Math.random() * c.length)]);
+    });
     if (faction === 'bugs' && opts.leader) {
       var lead = pool.filter(function (p) { return p.leaderBug && p.tier === bt && room(p); });
       if (!lead.length) lead = pool.filter(function (p) { return p.leaderBug && p.tier <= bt && room(p); });
@@ -199,25 +204,47 @@
     return rollFrom(COMMANDO, bt, pl, faction, { machineCap: pl, overTier: false });
   }
 
-  function answersMachines(keys, bt) {
-    return keys.some(function (k) {
-      var p = R.profile(R.splitPick(k).key);
-      if (!p) return false;
-      if ((p.rules || []).some(function (r) { return /^Anti-tank|^Anti-aircraft/.test(r); })) return true;
-      return p.cls !== 'infantry' && p.tier >= bt;
-    });
+  /* "If there are any ground vehicles and/or aircraft in the player-controlled
+     force, the OpFor should have at least one Anti-tank/Anti-air unit or a
+     ground vehicle/aircraft of Tier at least equal to the Battle Tier" (p. 148),
+     read threat by threat: an answer to the players' hulls is an Anti-tank unit
+     or a machine of the Battle Tier; to their aircraft, an Anti-aircraft unit
+     (or one specialised against aircraft) or an aircraft of the Battle Tier. */
+  function rulesOf(p) { return p.rules || []; }
+  function answersGround(p, bt) {
+    return rulesOf(p).some(function (r) { return /^Anti-tank/.test(r); }) || (p.cls !== 'infantry' && p.tier >= bt);
+  }
+  function answersAir(p, bt) {
+    return rulesOf(p).some(function (r) { return r === 'Anti-aircraft' || r === 'Specialisation (air)'; }) ||
+      (p.cls === 'aircraft' && p.tier >= bt);
+  }
+  // what the players bring: a boolean (older callers: hulls of some kind) or { ground, air }
+  function threatOf(t) { return t === true ? { ground: true, air: false } : t || {}; }
+  function answersMachines(keys, bt, threat) {
+    var need = threatOf(threat === undefined ? true : threat);
+    var ps = keys.map(function (k) { return R.profile(R.splitPick(k).key); }).filter(Boolean);
+    return (!need.ground || ps.some(function (p) { return answersGround(p, bt); })) &&
+      (!need.air || ps.some(function (p) { return answersAir(p, bt); }));
   }
   /* The OpFor pool (p. 148): the OpFor table, three machines a Priority Level,
      and — when the players bring hulls or aircraft — at least one unit that
-     can answer them. */
+     can answer each. Rolled as it comes while one does; failing that, an
+     answer is taken first and the rest rolled round it. */
   function rollOpFor(bt, pl, faction, playersHaveMachines) {
-    var best = null;
+    var need = threatOf(playersHaveMachines), opts = { machineCap: 3 * pl, overTier: 'pl1', leader: true };
+    var k;
     for (var i = 0; i < 60; i++) {
-      var k = rollFrom(OPFOR, bt, pl, faction, { machineCap: 3 * pl, overTier: 'pl1', leader: true });
-      if (!playersHaveMachines || answersMachines(k, bt)) return k;
-      best = k;
+      k = rollFrom(OPFOR, bt, pl, faction, opts);
+      if (answersMachines(k, bt, need)) return k;
     }
-    return best || [];
+    var firsts = [];
+    if (need.air) firsts.push(function (p) { return answersAir(p, bt); });
+    if (need.ground) firsts.push(function (p) { return answersGround(p, bt); });
+    for (var j = 0; j < 60; j++) {
+      k = rollFrom(OPFOR, bt, pl, faction, Object.assign({ firsts: firsts }, opts));
+      if (answersMachines(k, bt, need)) return k;
+    }
+    return k || [];
   }
 
   /* ---------------------------------------------------------- scenario kit */

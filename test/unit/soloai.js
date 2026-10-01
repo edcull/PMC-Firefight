@@ -101,5 +101,22 @@ console.log('\nDecapitation: every OpFor Command Unit is a leader (p. 152)');
   ok('...killing every one wins', !!r2 && r2.winner === 'A', r2 && r2.text);
 })();
 
+console.log('\nThe OpFor answers the commando\u2019s machines, threat by threat (p. 148)');
+(function () {
+  const aa = (p) => (p.rules || []).some((r) => r === 'Anti-aircraft' || r === 'Specialisation (air)');
+  const at = (p) => (p.rules || []).some((r) => /^Anti-tank/.test(r));
+  let airMiss = 0, groundMiss = 0, n = 0;
+  for (const f of ['rebel', 'pmc', 'bugs', 'xeno']) for (const bt of [2, 3, 4, 5]) for (let i = 0; i < 10; i++) {
+    n++;
+    const ps = SOLO.rollOpFor(bt, 1, f, { air: true, ground: true }).map((k) => R.profile(R.splitPick(k).key));
+    if (!ps.some((p) => aa(p) || (p.cls === 'aircraft' && p.tier >= bt))) airMiss++;
+    // a swarm has no anti-tank bugs, and its only machines are Tier V: below Battle Tier V it cannot (p. 114)
+    if (f === 'bugs' && bt < 5) continue;
+    if (!ps.some((p) => at(p) || (p.cls !== 'infantry' && p.tier >= bt))) groundMiss++;
+  }
+  ok('against an aircraft, it always has an anti-air unit or an aircraft of the Battle Tier', airMiss === 0, airMiss + ' of ' + n + ' without');
+  ok('...and against a hull, an anti-tank unit or a machine of the Battle Tier', groundMiss === 0, groundMiss + ' of ' + n + ' without');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

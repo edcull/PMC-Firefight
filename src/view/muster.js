@@ -991,7 +991,9 @@
         var coop = h.kind === 'coop', armyA = [], ownersA = [];
         h.sides.forEach(function (sd, i) { sd.keys.forEach(function (k) { armyA.push(k); ownersA.push(i + 1); }); });
         var gamePL = pl + (coop ? 1 : 0), opFaction = el('sel-solo-op').value;
-        var machines = armyA.some(function (k) { var p = R.profile(R.splitPick(k).key); return p && p.cls !== 'infantry'; });
+        // what the OpFor must be able to answer: the players' hulls, and their aircraft
+        var machines = { ground: false, air: false };
+        armyA.forEach(function (k) { var p = R.profile(R.splitPick(k).key); if (!p || p.cls === 'infantry') return; if (p.cls === 'aircraft') machines.air = true; else machines.ground = true; });
         var scen = el('sel-solo-scen').value;
         if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
         el('setup').hidden = true;
