@@ -251,16 +251,10 @@
       };
     };
     window.__terrainAct = function (act, arg) { terrainAct(act, arg); };
-    // the tribe's sight as last drawn (the eye button): how many members' areas, how many enemies ringed
+    // the sight as last drawn (the eye button): how many eyes, how far each sees, how many enemies ringed
     window.__tribeSight = function () {
       if (!ui.sight) return null;
-      // how far each member's sight reaches, at its furthest
-      var reach = ui.sight.areas.map(function (a) {
-        if (a.ring) return 12;
-        var c = a.pts.reduce(function (m, p) { return { x: m.x + p.x / a.pts.length, y: m.y + p.y / a.pts.length }; }, { x: 0, y: 0 });
-        return Math.max.apply(null, a.pts.map(function (p) { return Math.hypot(p.x - c.x, p.y - c.y); }));
-      });
-      return { areas: ui.sight.areas.length, seen: ui.sight.seen.length, reach: reach };
+      return { eyes: ui.sight.eyes.length, seen: ui.sight.seen.length, reach: ui.sight.eyes.map(function (o) { return R.sightRange(o); }) };
     };
     window.__uiMode = function () { return { mode: ui.mode, sections: (ui.sections || []).length, sel: ui.selected ? ui.selected.id : null, moves: ui.moves.length }; };
     window.__resOpen = function () { return ui.resOpen ? (ui.currentRes ? ui.currentRes.kind + ':' + ui.currentRes.title : 'open') + ' q' + resQueue.length : false; };

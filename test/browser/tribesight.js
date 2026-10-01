@@ -1,7 +1,7 @@
-/* Tribe sight: playing the Xenotripods, an eye button by the zoom shows what
-   the whole tribe can see — every unbroken member's 12" of Limited Senses as
-   one shaded area, and each enemy that Mental Projection shows to all of them
-   ringed (p. 129). Playing anyone else, the button is not there. */
+/* Sight: an eye button by the zoom darkens what is out of sight. Playing the
+   Xenotripods, the whole tribe's 12" of Limited Senses is lit — every unbroken
+   member but the drones — and each enemy Mental Projection shows to all of
+   them is ringed (p. 129). Playing anyone else, the 36" of the unit selected. */
 const { chromium } = require('playwright');
 const { page: PAGE, shot } = require('../where.js');
 
@@ -48,7 +48,7 @@ const eye = () => { const b = document.getElementById('sight-toggle'); return { 
   await p.waitForTimeout(300);
   const e1 = await p.evaluate(() => {
     const b = document.getElementById('sight-toggle'), t = window.__tribeSight();
-    return { on: b.getAttribute('aria-pressed') === 'true', areas: t ? t.areas : -1, seen: t ? t.seen : -1 };
+    return { on: b.getAttribute('aria-pressed') === 'true', areas: t ? t.eyes : -1, seen: t ? t.seen : -1, reach: t ? t.reach : [] };
   });
   ok('a tap turns it on', e1.on);
   const want = await p.evaluate(() => {
@@ -57,7 +57,7 @@ const eye = () => { const b = document.getElementById('sight-toggle'); return { 
     const seen = s.units.filter(u => u.side === 'B' && u.alive && u.x >= 0 && !u.aboard && R.tribeSees(s, 'A', u)).length;
     return { seers, seen };
   });
-  ok('...drawing the sight of every unbroken Xenotripod (not the drones)', e1.areas === want.seers && want.seers > 0, e1.areas + ' of ' + want.seers);
+  ok('...lighting 12" round every unbroken Xenotripod (not the drones)', e1.areas === want.seers && want.seers > 0 && e1.reach.every(r => r === 12), e1.areas + ' of ' + want.seers + ', ' + e1.reach.join(','));
   ok('...and ringing each enemy the tribe can see', e1.seen === want.seen, e1.seen + ' of ' + want.seen);
   await p.screenshot({ path: shot('tribesight-on.png') });
   await p.evaluate(() => document.getElementById('sight-toggle').click());
@@ -66,7 +66,13 @@ const eye = () => { const b = document.getElementById('sight-toggle'); return { 
 
   console.log('\n  playing a company of mercenaries');
   await battle(p, 'pmc');
-  ok('no eye: nobody of ours is a Xenotripod', !(await p.evaluate(eye)).shown);
+  ok('the eye is there too', (await p.evaluate(eye)).shown);
+  await p.evaluate(() => document.getElementById('sight-toggle').click());
+  await p.evaluate(() => { const s = window.PMC_STATE(); window.__select(s.units.find(u => u.side === 'A' && u.alive && u.x >= 0 && !u.aboard)); });
+  await p.waitForTimeout(300);
+  const m = await p.evaluate(() => window.__tribeSight());
+  ok('...lighting the 36" the selected unit sees', !!m && m.eyes === 1 && m.reach[0] === 36, JSON.stringify(m));
+  await p.screenshot({ path: shot('sight-pmc.png') });
 
   console.log('\n  page errors: ' + (errs.join(' | ') || 'none'));
   if (errs.length) fail++;
