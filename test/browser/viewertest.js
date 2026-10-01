@@ -146,6 +146,9 @@ async function pickAndFire(p, key, ms) {
   const fill = await p.evaluate(async () => {
     window.__viewer.pick('hmgteam');
     await new Promise(r => setTimeout(r, 60));
+    // a squad to shoot at: a hull takes Damage, not Suppression
+    const sel = document.getElementById('vtarget');
+    sel.value = 'regular'; sel.dispatchEvent(new Event('change', { bubbles: true }));
     for (let i = 0; i < 12; i++) {
       document.querySelector('[data-do="fire"]').click();
       const seen = [];
