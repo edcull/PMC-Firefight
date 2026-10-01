@@ -945,6 +945,12 @@
     if ((has(u, 'Limited Fire Arc') || dugIn(u)) && !inFireArc(u, at)) return false;
     return true;
   }
+  /* What it costs a hull to turn from one facing to another where it stands (p. 35):
+     its turn cost for every turn of up to 90°. */
+  function turnCost(u, from, to) {
+    var turns = Math.ceil(Math.abs(angleWrap(to - from)) / (Math.PI / 2) - 1e-9);
+    return turns * (u.turn || 0);
+  }
   function inFireArc(shooter, target) {
     if (shooter.facing == null) return true;
     var a = angleWrap(Math.atan2(target.y - shooter.y, target.x - shooter.x) - shooter.facing);
@@ -2071,7 +2077,7 @@
     has: has, ruleValue: ruleValue, currentMorale: currentMorale, status: status,
     projects: projects, markCall: markCall, holdsGround: holdsGround, countsForVictory: countsForVictory,
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
-    canShoot: canShoot, canShootTerrain: canShootTerrain, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
+    canShoot: canShoot, canShootTerrain: canShootTerrain, turnCost: turnCost, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
     rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,

@@ -98,5 +98,40 @@ console.log('\nThe Riders upgrade is final once chosen (p. 97)');
   ok('...once it has fought, it may not', !C.ridersOpen(e));
 })();
 
+console.log('\nA hull may turn where it stands at the end of its move (p. 35)');
+(function () {
+  const { e, st } = battle(['lcv', 'regular'], ['regular']);
+  const v = st.units.find((u) => u.key === 'lcv');
+  v.x = 10; v.y = 24; v.facing = 0;
+  e.intent('A', { k: 'select', id: v.id }); e.intent('A', { k: 'action', id: 'move' });
+  const spot = e.sel().moves.filter((c) => Math.abs(c.y - 24) < 0.01 && Math.abs(c.x - 12) < 0.01)[0];
+  ok('it drives 2" ahead', !!spot && e.intent('A', { k: 'move', x: spot.x, y: spot.y }).ok);
+  const fa = st.faceAsk;
+  ok('...and is asked which way it ends facing, with most of its move in hand', !!fa && !!fa.pivot && fa.pivot.left > 8,
+    fa && fa.pivot ? fa.pivot.left.toFixed(1) + '" left' : 'not asked');
+  ok('...turns to face north for its turn cost', e.intent('A', { k: 'vface', dir: -Math.PI / 2 }).ok && Math.abs(R.angleWrap(v.facing + Math.PI / 2)) < 0.01);
+  ok('...and its activation is over', v.activated && !st.faceAsk);
+})();
+(function () {
+  const { e, st } = battle(['lcv', 'regular'], ['regular']);
+  const v = st.units.find((u) => u.key === 'lcv');
+  v.x = 6; v.y = 24; v.facing = 0;
+  e.intent('A', { k: 'select', id: v.id }); e.intent('A', { k: 'action', id: 'move' });
+  // as far as it can go straight ahead, with 1" or so left over
+  const ahead = e.sel().moves.filter((c) => Math.abs(c.y - 24) < 0.01 && c.x > 6).sort((a, b) => b.x - a.x);
+  const spot = ahead.find((c) => (v.move + 4) - c.spent >= v.turn && (v.move + 4) - c.spent < 2 * v.turn);
+  ok('a long drive leaves too little to turn far', !!spot && e.intent('A', { k: 'move', x: spot.x, y: spot.y }).ok && !!st.faceAsk);
+  ok('...so turning about is refused', !e.intent('A', { k: 'vface', dir: Math.PI }).ok);
+  ok('...but a quarter turn is not', e.intent('A', { k: 'vface', dir: Math.PI / 2 }).ok);
+})();
+(function () {
+  const { e, st } = battle(['lcv', 'regular'], ['regular']);
+  const v = st.units.find((u) => u.key === 'lcv');
+  v.x = 6; v.y = 24; v.facing = 0;
+  e.intent('A', { k: 'select', id: v.id }); e.intent('A', { k: 'action', id: 'move' });
+  const last = e.sel().moves.filter((c) => Math.abs(c.y - 24) < 0.01 && c.x > 6 && (v.move + 4) - c.spent < v.turn - 1e-6)[0];
+  ok('with nothing left to turn with, it is not asked', !!last && e.intent('A', { k: 'move', x: last.x, y: last.y }).ok && !st.faceAsk && v.activated);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -295,7 +295,7 @@ The roster panel offers "dismount" and "take the Riders upgrade" on existing ent
 rule text says it cannot be changed (`ruletext.js:161-163`). Toggling is right at founding only
 (`dossier.js:654-656`).
 
-### M-17 · Vehicles cannot pivot or choose their final facing
+### M-17 · Vehicles cannot pivot or choose their final facing — **fixed**
 
 > l.758, l.766: vehicles "may make turns by reducing the range of their movement…". Facing matters for side and
 > rear shots (l.587-588) and for Limited Fire Arc (l.1581).
@@ -633,6 +633,8 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 
 | M-1 Line of sight is one centre-to-centre line | **Fixed.** "Seen by one soldier, seen by the whole unit" (p. 29): a squad sees if the line between the middles is clear, or any line from either side of its base to either side of the other's (0.8" out). Something square across the line still hides it; something over part of the line does not. Which ground each end stands on is still judged from its middle. | `space.js` (`lineClear`, `lineClearAt`) |
 
+| M-17 Vehicles cannot pivot or choose their final facing | **Fixed.** A player's ground vehicle with Movement left at the end of a Move or Advance is asked which way it ends facing. Each 90° costs its turn cost from what is left, and directions it cannot afford are greyed out and refused. An Advance asks before the shot, so the new arc counts. AI vehicles still face the way they went. | `rules.js` (`turnCost`), `moves.js` (`pivotThen`), `deploy.js` (`answerFacing`), `engine.js` (`vface`), `panels.js` (`faceCard`) |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks).
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.

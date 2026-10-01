@@ -1885,6 +1885,11 @@
       var fa = state.faceAsk;
       if (!fa || fa.side !== side) return no('nothing to face');
       if (it.k === 'vface' && (typeof it.dir !== 'number' || !isFinite(it.dir))) return no('which way?');
+      // turning on the spot at the end of a move: only as far as what is left of the move pays for
+      if (it.k === 'vface' && fa.pivot) {
+        var pu = K.byId(fa.ids[0]);
+        if (pu && R.turnCost(pu, fa.pivot.from, R.nearestFacing(it.dir)) > fa.pivot.left + 1e-6) return no('not enough of its move left to turn that far');
+      }
       K.answerFacing(it.k === 'vface' ? it.dir : null);
       return yes;
     });

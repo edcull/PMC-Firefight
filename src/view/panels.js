@@ -1053,15 +1053,25 @@
     /* A vehicle just put down: the same octagon, asking which way it faces.
        More to ask about (after an auto-deploy) can all keep the way offered. */
     function faceCard(u) {
-      var F = digFacings(), pick = digPreview(u), left = B.state.faceAsk.ids.length;
+      var F = digFacings(), pick = digPreview(u), left = B.state.faceAsk.ids.length, pv = B.state.faceAsk.pivot;
       var grid = [[5, 6, 7], [4, -1, 0], [3, 2, 1]];
       var cells = grid.map(function (row) {
         return row.map(function (i) {
           if (i < 0) return '<span class="dig-mid">' + esc(u.code || '') + '</span>';
           var on = Math.abs(R.angleWrap(F[i] - pick)) < 0.01;
-          return '<button class="dig-dir' + (on ? ' on' : '') + '" data-vface="' + i + '">' + DIG_NAMES[i] + '</button>';
+          // turning on the spot after a move: only as far as what is left of it pays for (p. 35)
+          var cost = pv ? R.turnCost(u, pv.from, F[i]) : 0, cant = pv && cost > pv.left + 1e-6;
+          return '<button class="dig-dir' + (on ? ' on' : '') + '" data-vface="' + i + '"' + (cant ? ' disabled' : '') +
+            (pv && cost ? ' title="' + cost + '\" of its move"' : '') + '>' + DIG_NAMES[i] + '</button>';
         }).join('');
       }).join('');
+      if (pv) {
+        return '<div class="card"><h2>' + esc(u.name) + ' — end facing?</h2>' +
+          '<p class="sub">It has ' + pv.left.toFixed(1) + '" of its move left. It may turn where it stands, ' + (u.turn || 0) +
+          '" for every 90°. Shots on its side or rear hit more easily, and a limited fire arc bears only ahead.</p>' +
+          '<div class="dig-oct">' + cells + '</div>' +
+          '<div class="acts"><button class="act" data-act="vfaceall"><span>Keep its facing</span><small>No turn</small></button></div></div>';
+      }
       var offered = DIG_NAMES[F.map(function (f) { return Math.abs(R.angleWrap(f - B.state.faceAsk.dir)); }).reduce(function (b, d, i, a) { return d < a[b] ? i : b; }, 0)];
       return '<div class="card"><h2>' + esc(u.name) + ' — which way?</h2>' +
         '<p class="sub">Choose the way it faces. Shots on its side or rear hit more easily, and a limited fire arc bears only ahead. ' +

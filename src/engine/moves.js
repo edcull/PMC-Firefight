@@ -224,6 +224,9 @@
         logLine('note', u.label + ' — Time Vortex Generator: double Movement for this ' + (ui.mode === 'advance-move' ? 'Advance' : 'Move') + '.');
       }
       if (u.repairMove) { allowance = u.move; u.repairMove = false; }
+      // what the drive there costs, for what is left over to turn with at the end
+      var spot = (ui.moves || []).filter(function (c) { return Math.abs(c.x - pt.x) < 0.01 && Math.abs(c.y - pt.y) < 0.01; })[0];
+      var left = spot && spot.spent != null ? Math.max(0, allowance - spot.spent) : 0;
       var path = R.pathTo(E.state, u, allowance, pt);
       faceAfter(u, path, pt);
       u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
@@ -254,14 +257,33 @@
         soloAfterMove(u);
         samCheck(u);
         if (!u.alive || u.x < 0) { u.activated = true; endActivation(); return; }
-        if (!ui.targets.length) { u.activated = true; endActivation(); } else render();
+        pivotThen(u, left, function () {
+          ui.targets = targetsFor(u, {}).concat(R.steadyTargets(E.state, u));   // its arc may have swung
+          if (!ui.targets.length) { u.activated = true; endActivation(); } else render();
+        });
         return;
       }
       var terr = R.TERRAIN[R.kindsUnder(E.state, u)[0]];
       logLine('move', u.label + ' moves ' + d.toFixed(1) + '"' + (terr.cover ? ' into ' + terr.name.toLowerCase() + '.' : '.'));
       u.activated = true;
       scenarioMoveEnd(u);
-      endActivation();
+      if (!u.alive || u.x < 0) { endActivation(); return; }
+      pivotThen(u, left, function () { endActivation(); });
+    }
+
+    /* "Vehicles may make turns by reducing the range of their movement" (p. 35) —
+       a turn on the spot as well as on the way. A player's hull with Movement left
+       at the end of its drive is asked which way it ends facing, paying its turn
+       cost for every 90° out of what is left (R.turnCost). The AI's hulls face the
+       way they went. */
+    function pivotThen(u, left, then) {
+      if (!R.drives(u) || R.isFlying(u) || isAI(u.side) || !u.alive || u.x < 0 || R.has(u, 'Immobile') ||
+        ((u.turn || 0) > 0 && left + 1e-6 < u.turn)) { then(); return; }
+      E.state.faceAsk = { side: u.side, ids: [u.id], dir: u.facing, pivot: { from: u.facing, left: left } };
+      ui.faceThen = then;
+      setHint(null, 'Which way does ' + u.name + ' end facing? Each 90\u00b0 turn costs ' + (u.turn || 0) +
+        '" of the ' + left.toFixed(1) + '" it has left. Keep its facing if it need not turn.');
+      render();
     }
 
     /* The marker walks, then calls. "The unit may move up to its standard Movement
