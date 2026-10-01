@@ -120,5 +120,49 @@ console.log('\nL-33 In a co-op game, a player\u2019s turrets still act as one (p
   ok('...and the other is the only one that may go next', next.length === 1 && next[0] === turrets[1], next.map((u) => u.name).join(', '));
 })();
 
+console.log('\nL-34 A Psychic Wave passes the machines by (pp. 35, 116)');
+(function () {
+  let n = 0;
+  const mk = (key, side, x, y) => Object.assign(JSON.parse(JSON.stringify(R.profile(key))), { id: side + (n++), side, x, y, alive: true,
+    models: R.profile(key).size, sp: 0, damage: 0, shotFrom: [], cargo: [], facing: 0, label: key });
+  const bug = mk(R.listFor('bugs').find((p) => (p.rules || []).includes('Psychic Wave')).key, 'A', 10, 10);
+  const squad = mk('regular', 'B', 16, 10), hull = mk('lcv', 'B', 10, 16);
+  const res = R.psychicWave({ units: [bug, squad, hull], terrain: [], objectives: [], log: [] }, bug);
+  ok('the squad is caught in it, the hull is not', res.hit.indexOf(squad) >= 0 && res.hit.indexOf(hull) < 0 &&
+    !res.log.some((l) => (l.text || '').indexOf(hull.label) === 0));
+})();
+
+console.log('\nL-35 An Assault of "-" charges nobody (p. 123)');
+(function () {
+  let n = 0;
+  const mk = (key, side, x, y) => Object.assign(JSON.parse(JSON.stringify(R.profile(key))), { id: side + (n++), side, x, y, alive: true,
+    models: R.profile(key).size, sp: 0, damage: 0, shotFrom: [], cargo: [], facing: 0, label: key });
+  const carrier = mk('bcarrier', 'A', 10, 10), squad = mk('regular', 'B', 13, 10);
+  ok('the Carrier bug cannot charge', !R.canAssault(carrier, squad));
+  const brood = mk(R.listFor('bugs').find((p) => (p.rules || []).includes('Overgrown Bug') && p.assault > 0 && p.cls !== 'aircraft').key, 'A', 10, 10);
+  ok('...another Overgrown bug still can', R.canAssault(brood, squad), brood.key);
+})();
+
+console.log('\nL-36 A Psychic Wave goes out from a building too (p. 116)');
+(function () {
+  const waver = R.listFor('bugs').find((p) => (p.rules || []).includes('Psychic Wave') && p.cls === 'infantry');
+  const e = game([waver.key, 'bwatchlarva'], ['regular'], null);
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 1; st.phaseCount = 1; st.activeSide = 'A'; st.chain = null; st.streak = 9;
+  st.terrain.length = 0;
+  const bld = { kind: 'building', x: 18, y: 18, w: 4, h: 4 };
+  st.terrain.push(bld);
+  const u = st.units.find((x) => x.key === waver.key), foe = st.units.find((x) => x.side === 'B');
+  st.units.forEach((x, i) => { x.reserve = false; x.aboard = null; x.activated = false; x.x = 6 + i; x.y = 6 + i * 3; });
+  R.enterBuilding(st, u, bld, 0);
+  foe.x = 28; foe.y = 20; foe.sp = 0;
+  e.intent('A', { k: 'select', id: u.id });
+  ok('a garrison is offered the wave', e.query.actionState(u, 'wave').on, e.query.actionState(u, 'wave').hint);
+  const r = e.intent('A', { k: 'action', id: 'wave' });
+  ok('...with no move: only where it stands', r.ok && e.sel().moves.length === 1);
+  const spot = e.sel().moves[0];
+  ok('...and sends it out, staying inside', e.intent('A', { k: 'wave', x: spot.x, y: spot.y }).ok && u.bld === bld && u.activated);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

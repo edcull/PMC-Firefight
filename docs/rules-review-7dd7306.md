@@ -398,13 +398,13 @@ front armour to a threat.
   check; l.521). *Reproduced.*
 - **L-33 — fixed:** Turrets do not act as one in solitaire or co-op (`engine.js:1103`, `!state.solo`). This is not
   documented.
-- **L-34:** Psychic Wave adds Suppression to vehicles and aircraft (l.778). The only effect is cosmetic: a
+- **L-34 — fixed:** Psychic Wave adds Suppression to vehicles and aircraft (l.778). The only effect is cosmetic: a
   misleading log line. *Reproduced.*
-- **L-35:** The Carrier bug (Assault "-") can charge (`data.js:248` `assault: 0`; `assault.js:27`). Treat "-"
+- **L-35 — fixed:** The Carrier bug (Assault "-") can charge (`data.js:248` `assault: 0`; `assault.js:27`). Treat "-"
   Assault like "-" Firepower. *Reproduced.*
-- **L-36:** Psychic Wave cannot be used from inside a building, although the move is "up to"
+- **L-36 — fixed:** Psychic Wave cannot be used from inside a building, although the move is "up to"
   (`actions.js:111-113`).
-- **L-37:** The rules tooltip says the Lifter can lift an emplaced gun (`ruletext.js:122-124`). The code
+- **L-37 — fixed:** The rules tooltip says the Lifter can lift an emplaced gun (`ruletext.js:122-124`). The code
   correctly refuses it.
 
 **Solitaire**
@@ -672,7 +672,11 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | L-31 Mental Projection and Markerlights | **Fixed.** A Xenotripod marker may designate or mark an enemy in its 24" that any unbroken Xenotripod sees, as it may shoot one (p. 129). | `marks.js` (`markTargets`) |
 | L-32 Psychic Bond from a Suppressed friend | **Fixed.** Only a steady friend lends its Morale: a Suppressed or Broken unit grants no passive bonus to another (p. 29). | `xeno.js` (`bondMorale`) |
 | L-33 Turrets in solitaire and co-op | **Fixed.** The players' turrets act as one there too (each player's own in co-op): the next activation after one goes to the rest (p. 130). The OpFor's act in its own phase, in the script's order. | `engine.js` (`passOn`) |
+| L-34 Psychic Wave suppresses machines | **Fixed.** Vehicles and aircraft are passed by: they take Damage, not Suppression, and Morale effects never touch them (p. 35). | `rules.js` (`psychicWave`) |
+| L-35 The Carrier bug can charge | **Fixed.** An Assault of "-" (stored as 0) charges nobody, as a "-" Firepower shoots at nothing. | `assault.js` (`canAssault`) |
+| L-36 No Psychic Wave from a building | **Fixed.** The move is "up to": a garrison sends the wave out from where it stands, staying inside. | `actions.js` |
+| L-37 The Lifter tooltip | **Fixed.** It now says what the code does: a ground vehicle, with whoever rides in it, never infantry, an emplaced gun or a vehicle towing one. | `ruletext.js` |
 
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `test/unit/lowcombat.js` (20 checks) fails 11 on `7dd7306`. `test/unit/lowscen.js` (15 checks) fails 11 on `7dd7306`. `test/unit/lowfaction.js` (24 checks so far) fails on `7dd7306`. `terrainsetup.js`'s "every one lands inside its own area" fails about 3 runs in 8 on the unchanged code too. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `test/unit/lowcombat.js` (20 checks) fails 11 on `7dd7306`. `test/unit/lowscen.js` (15 checks) fails 11 on `7dd7306`. `test/unit/lowfaction.js` (30 checks) fails on `7dd7306`. `terrainsetup.js`'s "every one lands inside its own area" fails about 3 runs in 8 on the unchanged code too. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.

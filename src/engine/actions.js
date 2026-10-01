@@ -101,7 +101,8 @@
 
       /* A unit inside a building "may only exit it or make actions which do not
          require any movement (so it cannot Move, Advance, Assault, etc.)" (p. 41). */
-      if (u.bld && ['move', 'advance', 'wave', 'vortex', 'vortexadv', 'rush'].indexOf(id) >= 0) {
+      // (a Psychic Wave moves "up to" its Movement: from a building it goes out from where it stands)
+      if (u.bld && ['move', 'advance', 'vortex', 'vortexadv', 'rush'].indexOf(id) >= 0) {
         return { on: false, hint: 'Inside a building — only actions that need no movement. Exit the building first.' };
       }
 
@@ -337,7 +338,8 @@
         }
         case 'wave': {
           if (sup) return { on: false, hint: 'Suppressed units cannot send out a Psychic Wave.' };
-          return { on: true, hint: 'Psychic Wave: move up to ' + u.move + '" (or stay), then every enemy within 12" — no sight needed, Drones excepted — takes D6−1 Suppression.' };
+          return { on: true, hint: (u.bld ? 'Psychic Wave, from the building: ' : 'Psychic Wave: move up to ' + u.move + '" (or stay), then ') +
+            'every enemy within 12" — no sight needed, Drones excepted — takes D6−1 Suppression.' };
         }
         case 'regain': {
           if (sup) return { on: false, hint: 'Suppressed units cannot reach out to the Esh-Aven.' };
@@ -474,7 +476,8 @@
         ui.targets = must ? [must] : assaultables(u);
       } else if (id === 'wave') {
         ui.mode = 'wave';
-        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        // a garrison sends it out from the building, with no move
+        ui.moves = u.bld ? [] : R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
         ui.moves.push({ x: u.x, y: u.y, cost: 0, spent: 0, turns: 0 });
       } else if (id === 'enter') {
         ui.mode = 'enter';

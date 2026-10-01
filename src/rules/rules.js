@@ -1046,6 +1046,8 @@
     log.push({ t: 'assault', text: u.label + ' sends out a Psychic Wave.' });
     state.units.forEach(function (e) {
       if (!onBoard(e) || e.side === u.side || e.drone || has(e, 'Drone Control')) return;
+      // vehicles and aircraft take Damage, not Suppression, and "are never affected by any effects on Morale" (p. 35)
+      if (isMachine(e)) return;
       if (unitDist(u, e) > 12) return;
       if (campFlag(e, 'shielding')) { log.push({ t: 'note', text: e.label + ' — Rite of Shielding: untouched.' }); return; }
       var n = Math.max(0, d6() - 1);

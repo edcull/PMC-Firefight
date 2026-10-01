@@ -121,8 +121,8 @@
       'Sees through Stealth: targets get no Stealth bonus against its shots, and it can mark Stealth units ' +
       'at full range.',
     'Lifter':
-      'A flying crane: it picks up a single vehicle within 4" — along with anyone riding in it — or an ' +
-      'emplaced gun, and never carries infantry.',
+      'A flying crane: it picks up a single ground vehicle within 4", along with anyone riding in it. It never ' +
+      'carries infantry or an emplaced gun, nor a vehicle towing one (p. 94).',
     'Limited Fire Arc':
       'Its main weapon can only fire at targets in its front quarter.',
     'Markerlights':
