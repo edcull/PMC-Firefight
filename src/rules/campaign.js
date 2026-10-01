@@ -1121,6 +1121,7 @@
     }));
   }
   function aftermath(campaign, report, opts) { return (KIT_AFTERMATH || kitAftermath()).aftermath(campaign, report, opts); }
+  function salvageRolls(campaign, report, side, preset) { return (KIT_AFTERMATH || kitAftermath()).salvageRolls(campaign, report, side, preset); }
   function rebuildNeeds(co) { return (KIT_AFTERMATH || kitAftermath()).rebuildNeeds(co); }
   function battleElsewhere(campaign, x, y, played) { return (KIT_AFTERMATH || kitAftermath()).battleElsewhere(campaign, x, y, played); }
   function elsewherePairs(campaign, coB) { return (KIT_AFTERMATH || kitAftermath()).elsewherePairs(campaign, coB); }
@@ -1504,6 +1505,7 @@
     RIVAL_COUNT: RIVAL_COUNT, foundRivals: foundRivals, drawRival: drawRival, faceRival: faceRival,
     rollOffers: rollOffers, clearOffers: clearOffers,
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
+    salvageRolls: salvageRolls,
     idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, rebirth: rebirth, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,

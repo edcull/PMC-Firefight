@@ -315,7 +315,13 @@
         return h + '</div>';
       }
       // No Place for the Weak!
-      if (!pre.tp[st.side]) { pre.tp[st.side] = C.rollTP(E.camp, rep, st.side); save(); }
+      if (!pre.tp[st.side]) {
+        /* the salvage dice first: passengers of an aircraft that came down safely
+           take the landing's 5 TP, not a casualty's (p. 86) — the same dice the aftermath uses */
+        pre.salvage = pre.salvage || {};
+        pre.salvage[st.side] = C.salvageRolls(E.camp, rep, st.side, pre.salvage[st.side]);
+        pre.tp[st.side] = C.rollTP(E.camp, rep, st.side); save();
+      }
       var cand = C.weakCandidates(E.camp, st.side, pre.tp[st.side]);
       if (!cand.length) { post.steps.shift(); save(); return postView(); }
       h += '<div class="cpan"><div class="cprom-head"><b>No Place for the Weak!</b></div>' +

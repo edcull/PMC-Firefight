@@ -421,7 +421,7 @@ front armour to a threat.
 
 **Campaign**
 
-- **L-42:** No Place for the Weak! brings back v0.1 finding 3.4 for a Rebel player. TP are rolled before
+- **L-42 — fixed:** No Place for the Weak! brings back v0.1 finding 3.4 for a Rebel player. TP are rolled before
   `l.landed` is set (`dossier-after.js:318`), so the passengers of an aircraft that landed safely get 9 TP, not
   5 (l.2702). *Reproduced.*
 - **L-43:** The rival AI never buys Adaptations for Overgrown bugs (`camp-rivals.js:326`). Its affordability
@@ -681,6 +681,7 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | L-39 A garrison that rolls Run for Your Lives! fires | **Fixed.** It comes out through the wall away from the nearest enemy, without firing; with no way out it keeps its head down. | `ai.js` (`aiAct`) |
 | L-40 The VIP loses to Kill Them All! | **Fixed.** A unit on 7+ charges the VIP if it can reach it; failing that, if it can shoot the VIP it does, rather than charging someone else or only moving (vehicles included) (p. 152). | `ai.js` (`aiAct`) |
 | L-41 OpFor special actions skip the behaviour roll | **Fixed, by a reading agreed with the owner.** The book does not place special actions on the behaviour table. A solitaire OpFor unit now rolls first as it activates, and takes its special actions (designating, Psychic Wave, Regain Control, digging a gun in or out, self-repair, a transport's loading and unloading) only on a 1-6. On Run for Your Lives! it runs; on Kill Them All! it charges or moves. A hull on 7+ also shoots the VIP when it can. The ordinary AI opponent keeps its own order. | `ai.js` (`aiAct`, `aiDrive`) |
+| L-42 No Place for the Weak! and a safe landing | **Fixed.** The salvage dice for the side's lost machines are rolled before the Trauma Points the step needs, so the passengers of an aircraft that landed take its 5 TP, not 9 (p. 86). The aftermath then uses the same dice. | `camp-aftermath.js` (`salvageRolls`), `dossier-after.js` |
 
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 

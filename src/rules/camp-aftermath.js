@@ -22,6 +22,26 @@
        their pay roll under Plunderer (dice, plunder), and under No Place for the
        Weak! the Trauma Points already rolled (tp) and who, if anyone, was
        executed (weak: a rid, or false). A side with nothing in it is decided here. */
+    /* The salvage dice for one side's lost machines (p. 86), keyed by rid — or the
+       ones already rolled (`preset`). A downed aircraft that makes its emergency
+       landing brings its passengers down with it: "troops on-board survive, but
+       get 5 TPs" (p. 86), so their lines are marked as landed. No Place for the
+       Weak! rolls these before the Trauma Points it needs, so a landing counts there
+       too, and the aftermath uses the same dice. */
+    function salvageRolls(campaign, report, side, preset) {
+      var co = campaign.companies[side];
+      var won = report.winner === side || (report.winner === null && hasDoctrine(co, 'S5'));
+      var out = {};
+      (report.units || []).filter(function (l) { return l.side === side && l.destroyed; }).forEach(function (line) {
+        var e = byRid(co, line.rid);
+        if (!e || profile(e.key).cls === 'infantry') return;
+        out[e.rid] = preset && preset[e.rid] ? preset[e.rid] : salvage(line, e, won || report.winner === null);
+      });
+      (report.units || []).forEach(function (l) {
+        if (l.side === side && l.aboardDowned && out[l.lostAboard] && out[l.lostAboard].saved) l.landed = true;
+      });
+      return out;
+    }
     function aftermath(campaign, report, opts) {
       opts = opts || {};
       var out = { turn: campaign.turn + 1, winner: report.winner, sides: {}, payment: null };
@@ -42,23 +62,9 @@
 
         /* Machines first, so a passenger's fate can read whether the aircraft it
            was riding in came home. */
-        var salvaged = {}, salvageOf = {};
-        (report.units || []).filter(function (l) {
-          return l.side === side && l.destroyed;
-        }).forEach(function (line) {
-          var e = byRid(co, line.rid);
-          if (!e || profile(e.key).cls === 'infantry') return;
-          var sv = salvage(line, e, won || report.winner === null);
-          salvageOf[e.rid] = sv;
-          if (sv.saved) salvaged[e.rid] = 1;
-        });
-
-        /* A downed aircraft that makes its emergency landing brings its passengers
-           down with it: "troops on-board survive, but get 5 TPs" (p. 86). They lost
-           nobody, so none of them is a casualty and the landing is their only TP. */
-        (report.units || []).forEach(function (l) {
-          if (l.side === side && l.aboardDowned && salvaged[l.lostAboard]) l.landed = true;
-        });
+        // the salvage dice, rolled here unless No Place for the Weak! has rolled them already
+        var salvageOf = salvageRolls(campaign, report, side, opts.salvage && opts.salvage[side]), salvaged = {};
+        Object.keys(salvageOf).forEach(function (rid) { if (salvageOf[rid].saved) salvaged[rid] = 1; });
         var casualties = (report.casualties || []).filter(function (c) {
           return !(c.side === side && (report.units || []).some(function (l) { return l.rid === c.rid && l.side === side && l.landed; }));
         });
@@ -551,7 +557,7 @@
     }
 
     return {
-      aftermath: aftermath, rebuildNeeds: rebuildNeeds, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs
+      aftermath: aftermath, salvageRolls: salvageRolls, rebuildNeeds: rebuildNeeds, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCCampAftermath;
