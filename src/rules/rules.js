@@ -1656,6 +1656,7 @@
       if (g === 'Holy Warriors') return i === 0 ? 'Preacher' : 'Zealot';
       if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
+      if (u.key === 'rguard') return i === 0 ? 'Guard Captain' : 'Guard';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
     // then a corporal, and the rest privates: the staff's signallers, runners and guards
