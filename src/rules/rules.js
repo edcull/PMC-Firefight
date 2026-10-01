@@ -1618,6 +1618,22 @@
     if (f === 'xeno') return syllables(XENO_SYL, 2, 3) + ' ' + syllables(XENO_SYL, 2, 3);
     return humanName(f === 'rebel');
   }
+  /* An Overgrown Bug is one beast, big enough that the troops facing it give it
+     a name of its own — "Old Gristle", "the Widowmaker". Its losses still go
+     down as biomass with the rest of the swarm (counted); the name rides along. */
+  var BEAST_A = ['Old', 'Big', 'Black', 'Red', 'Grey', 'Iron', 'Bone', 'Night', 'Mad', 'Mother', 'Granny', 'Uncle', 'Lady', 'Long', 'Fat'];
+  var BEAST_B = ['Gristle', 'Scratch', 'Tusk', 'Maw', 'Widow', 'Jaw', 'Bertha', 'Grinder', 'Molly', 'Sally', 'Shuck',
+    'Ripper', 'Chomper', 'Nails', 'Gutsy', 'Crusher', 'Dolly', 'Shiver', 'Rattles', 'Mags'];
+  var BEAST_THE = ['Widowmaker', 'Grinder', 'Big Ugly', 'Landlord', 'Mangler', 'Hungry One', 'Sexton', 'Furnace', 'Undertaker', 'Old Man'];
+  function overgrown(u) { return !!u && (hasOwn(u, 'Overgrown Bug') || hasOwn(u, 'Overgrown Flying Bug')); }
+  function beastName(taken) {
+    var n, tries = 0;
+    do {
+      n = Math.random() < 0.3 ? 'the ' + pickOf(BEAST_THE) : pickOf(BEAST_A) + ' ' + pickOf(BEAST_B);
+    } while (taken && taken[n] && ++tries < 20);
+    if (taken) taken[n] = 1;
+    return n;
+  }
   // a unit whose losses are counted rather than named: the swarm, and the Esh-Aven
   /* Units whose losses are a count, not a roll of names: the swarm, the tribe's
      Esh-Aven, and penal troops, whose collars kill them off (Expendable, p. 57). */
@@ -1700,7 +1716,11 @@
      campaign unit's own men, in the order they stand), trimmed or filled up to
      the strength it takes the field at, then ranked by where each man stands. */
   function musterMen(u, carried, taken) {
-    if (counted(u)) { u.men = []; u.seenModels = standing(u); u.lostModels = 0; return u.men; }
+    if (counted(u)) {
+      u.men = []; u.seenModels = standing(u); u.lostModels = 0;
+      if (overgrown(u) && !u.beast) u.beast = beastName(taken);
+      return u.men;
+    }
     var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
     u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
       .slice(0, want).map(function (m) { return { name: m.name }; });
@@ -1913,6 +1933,6 @@
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
     defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
-    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
+    soldierName: soldierName, rankFor: rankFor, crewed: crewed, overgrown: overgrown, beastName: beastName, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);

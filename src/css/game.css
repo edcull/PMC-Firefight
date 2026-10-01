@@ -426,6 +426,8 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cas-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 220px; overflow-y: auto; font-size: 12px; }
 .cas-list li { padding: 3px 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
 .cas-rank { color: var(--ink-dim); }
+/* an Overgrown Bug's name, after its kind */
+.stat-head .beast { font-weight: 400; font-style: italic; color: var(--ink-dim); }
 .cas-type { display: block; color: var(--ink-faint); font-size: 11px; }
 
 .forces { padding: 10px 12px 12px; }

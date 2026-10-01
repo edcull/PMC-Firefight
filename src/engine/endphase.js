@@ -416,7 +416,7 @@
         if (R.counted(u)) {
           if (u.lostModels) {
             var line = { side: u.side, count: u.lostModels, type: (p && p.name) || u.name, unit: u.name, rid: u.rid || u.id, turn: 0 };
-            if (u.faction === 'bugs') { line.swarm = true; line.mass = u.lostModels * R.biomassOf(p); }
+            if (u.faction === 'bugs') { line.swarm = true; line.mass = u.lostModels * R.biomassOf(p); if (u.beast) line.beast = u.beast; }
             else line.anon = true;
             out.push(line);
           }

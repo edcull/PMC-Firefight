@@ -219,7 +219,7 @@
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
          the 12 a unit can carry, in bands as wide as the Morale — steady,
@@ -260,6 +260,8 @@
       wireHost(box);
     }
     // what the army list calls the unit's kind — Combat vehicles, Assault troops
+    // an Overgrown Bug's own name, the one the troops facing it gave it
+    function beastTag(u) { return u.beast ? ' <span class="beast">\u201c' + esc(u.beast) + '\u201d</span>' : ''; }
     function groupOf(u) {
       var g = u.group || (R.profile(u.key) || {}).group;
       return g ? ' · ' + esc(g) : '';
@@ -340,7 +342,7 @@
       var left = Math.max(0, u.str - u.damage);
       var pr = R.propOf(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* its health as the board draws it (ISO.strSegments): a segment a point of
          Structure, what is left green over two thirds, amber down to a third, red
@@ -1141,7 +1143,8 @@
         var bio = {}, bioOrder = [], bioTotal = 0;
         all.forEach(function (c) {
           if (!c.swarm) return;
-          if (!bio[c.type]) { bio[c.type] = { n: 0, mass: 0 }; bioOrder.push(c.type); }
+          if (!bio[c.type]) { bio[c.type] = { n: 0, mass: 0, beasts: [] }; bioOrder.push(c.type); }
+          if (c.beast) bio[c.type].beasts.push(c.beast);       // an Overgrown Bug goes by its name
           var m = c.mass != null ? c.mass : c.count;
           bio[c.type].n += c.count; bio[c.type].mass += m; bioTotal += m;
         });
@@ -1153,7 +1156,8 @@
         if (bioOrder.length) {
           bioOrder.sort(function (a, b) { return bio[b].mass - bio[a].mass || bio[b].n - bio[a].n; });
           h += '<ol class="cas-list">' + bioOrder.map(function (t) {
-            return '<li><b>' + esc(t) + '</b> <span class="cas-rank">\u00d7 ' + bio[t].n +
+            var named = bio[t].beasts.length ? ' ' + bio[t].beasts.map(function (b) { return '\u201c' + esc(b) + '\u201d'; }).join(', ') : '';
+            return '<li><b>' + esc(t) + '</b>' + named + ' <span class="cas-rank">\u00d7 ' + bio[t].n +
               (bio[t].mass ? ' \u00b7 ' + bio[t].mass + ' biomass' : ' \u00b7 not biomass') + '</span></li>';
           }).join('') + '</ol>';
         }

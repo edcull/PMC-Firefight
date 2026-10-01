@@ -25,6 +25,19 @@ ok('a squad of eight gets eight names', rifles.men.length === 8);
 ok('...none repeated', new Set(rifles.men.map((m) => m.name)).size === 8);
 ok('...led by a sergeant, then a corporal', rifles.men[0].rank === 'Sergeant' && rifles.men[1].rank === 'Corporal');
 ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Private'));
+// an Overgrown Bug is one beast, and the troops facing it give it a name; the swarm has none
+(function () {
+  const seen = {};
+  const beasts = ['bfirebeetle', 'bsandworm', 'bbioplasma', 'bcarrier', 'bshadow', 'bqueen'].map((k) => {
+    const u = unit(k); R.musterMen(u, null, seen); return u;
+  });
+  ok('every Overgrown Bug is given a name of its own', beasts.every((u) => typeof u.beast === 'string' && u.beast.length > 2),
+    beasts.map((u) => u.name + ' \u201c' + u.beast + '\u201d').join(', '));
+  ok('...no two the same', new Set(beasts.map((u) => u.beast)).size === beasts.length);
+  ok('...while its losses still go down as biomass, with the swarm\'s', beasts.every((u) => R.counted(u) && u.men.length === 0));
+  const swarm = unit('battack'); R.musterMen(swarm, null, seen);
+  ok('the swarm itself has no name', !swarm.beast);
+})();
 // the rifle teams (and assault troops) by tier: 1-2 a corporal, a lance corporal and privates; 3-4 a
 // sergeant, a corporal and privates; 5 a staff sergeant, a sergeant and specialists
 [['recruits', 'Corporal', 'Lance Corporal', 'Private'], ['rookie', 'Corporal', 'Lance Corporal', 'Private'],
