@@ -590,20 +590,11 @@
     V.newTable();
     // (where both companies enter in turn 1, nobody is placed now: the OpFor comes on then, like everyone)
     state.cfg.aiSides.forEach(function (s2) { if (!K.entering(s2)) K.autoDeploy(s2); });
-    /* Hero of the People (p. 111): the locals have already told the revolt where
-       the enemy is putting everyone. Against the OpFor that is how the game
-       always worked — it deploys first. In hotseat, half the other side goes
-       down before the rebel player places a single unit. */
-    ['A', 'B'].forEach(function (side) {
-      var docs = (state.doctrines && state.doctrines[side]) || [];
-      if (docs.indexOf('H2') < 0 || K.entering(side === 'A' ? 'B' : 'A')) return;
-      var foe = side === 'A' ? 'B' : 'A';
-      if (isAI(foe)) return;                     // already on the table
-      var n = state.units.filter(function (u) { return u.side === foe && !u.reserve; }).length;
-      K.autoDeploy(foe, Math.ceil(n / 2));
-      logLine('note', 'Hero of the People — the locals have talked. Half of ' + sideName(foe) +
-        '\u2019s force is already placed.');
-    });
+    /* Hero of the People (p. 111): "in scenarios using the alternating deployment
+       sequence, the opponent has to set up half of their units first before the
+       Rebel player deploys any" — that is turn 1's entry in the scenarios where both
+       companies come on in turn (arrivals.js). Where a defender sets up first, the
+       deployment is one side after the other, not alternating: it does not apply. */
     /* Look at the ground the player is being asked to fill. Zoomed in on a phone
        the middle of the table is nowhere near their own edge, and every tap used
        to land outside the strip with nothing on screen to say where it was. */

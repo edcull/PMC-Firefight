@@ -80,6 +80,26 @@ console.log('\nFortify and Strike!');
   ok('then the Action phase begins', !e.state().placeAsk && !!e.state().phaseCount);
 })();
 
+console.log('\nHero of the People (H2): half the enemy first, then alternating');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren', doctrines: { A: ['H2'], B: [] },
+    armyA: ARMY, armyB: ARMY, nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel' });
+  for (const sd of ['A', 'B']) { e.intent(sd, { k: 'autosplit' }); e.intent(sd, { k: 'autodeploy' }); }
+  e.intent('A', { k: 'start' });
+  const st = e.state(), labels = {};
+  st.units.forEach(u => { labels[u.label] = u.side; });
+  const seq = st.log.filter(l => / arrives/.test(l.text)).map(l => labels[Object.keys(labels).find(k => l.text.indexOf(k + ' arrives') === 0)]).join('');
+  ok('the enemy brings on half its force before the first insurgent, then they alternate, the revolt first', seq === 'BBB' + 'ABABAB' + 'AAA', seq);
+  ok('...and the log says why', st.log.some(l => /Hero of the People/.test(l.text)));
+})();
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 'demolish', attacker: 'B', mode: 'hotseat', planet: 'barren', doctrines: { A: ['H2'], B: [] },
+    armyA: ARMY, armyB: ARMY, nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel' });
+  ok('where a defender sets up first (no alternating deployment), nothing of the enemy is placed for it', e.state().units.filter(u => u.side === 'B' && u.x >= 0).length === 0);
+})();
+
 console.log('\nWithout either');
 (function () {
   const e = battle(null);

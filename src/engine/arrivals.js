@@ -219,7 +219,26 @@
       });
       /* "Apply the Alternate activation rule" to the Reserve phase (p. 26): one of
          the first side's, one of the other's, and so on, until both are done. */
-      if (inTurn) {
+      /* Hero of the People (H2, a Rebel Path): "in a scenario with alternating
+         deployment the enemy sets up half their force before a single insurgent is
+         placed" — turn 1's entry where both companies come on in turn (pp. 50-52).
+         Then the two alternate, the revolt first. (Both sides with it: neither gains.) */
+      var heroes = E.state.turn === 1 && E.state.scen.entersTurn1 && inTurn
+        ? ['A', 'B'].filter(function (sd) { return docsOf(sd).indexOf('H2') >= 0; }) : [];
+      if (heroes.length === 1) {
+        var reb = heroes[0], foeS = other(reb), fs = bySide[foeS], half = Math.ceil(fs.length / 2);
+        fs.slice(0, half).forEach(function (u) { ask.push(u); });
+        var restF = fs.slice(half), restR = bySide[reb];
+        for (var h = 0; h < Math.max(restR.length, restF.length); h++) {
+          if (restR[h]) ask.push(restR[h]);
+          if (restF[h]) ask.push(restF[h]);
+        }
+        if (half) {
+          var hl = 'Hero of the People — the locals have talked: ' + sideName(foeS) + ' brings on half its force (' + half +
+            ') before the first of ' + sideName(reb) + '\u2019s is placed.';
+          logLine('note', hl); log.push(hl);
+        }
+      } else if (inTurn) {
         for (var k = 0; k < Math.max(bySide[sides[0]].length, bySide[sides[1]].length); k++) {
           if (bySide[sides[0]][k]) ask.push(bySide[sides[0]][k]);
           if (bySide[sides[1]][k]) ask.push(bySide[sides[1]][k]);
