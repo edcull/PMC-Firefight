@@ -621,26 +621,18 @@
       }
 
       function propDepth(pr) { return pr.x + pr.w + pr.y + pr.h; }
-      /* A building opens up — drawn with its near walls off — when it would
-         otherwise hide somebody: a squad standing inside it, or one behind it that
-         its silhouette covers. Every other building stays solid, and is put back
-         over the units the depth sort says are behind it. */
+      /* A building opens up — drawn with its near walls off — when there is a
+         unit inside it, so the garrison is seen through the cut-away walls. A
+         unit behind it is hidden by it, as it would be on the table. Every other
+         building stays solid, and is put back over the units the depth sort says
+         are behind it. */
       var blockers = [];
       (B.vc.props || []).forEach(function (pr) {
         if (pr.kind !== 'building' && pr.kind !== 'bunker' && pr.kind !== 'highwall') return;
         if (!onView(pr.x + pr.w / 2, pr.y + pr.h / 2)) return;
-        var depth = propDepth(pr), b = null;
+        var depth = propDepth(pr);
         var open = B.state.units.some(function (u) {
-          if (!onTable(u)) return false;
-          var ux = dispX(u), uy = dispY(u);
-          if (R.inRect(ux, uy, pr)) return true;                 // inside it — a garrison is seen through the cut-away walls
-          if (ux + uy >= depth) return false;                    // in front: nothing to hide
-          if (!b) b = propBox(pr);
-          // behind it, and under its outline
-          var sp = ISO.toScreen(ux, uy), l = liftOf(ux, uy);
-          var head = ISO.headroom(u.models, R.status(u), u);
-          return sp.x > b.x - K * 0.6 && sp.x < b.x + b.w + K * 0.6 &&
-            sp.y - l > b.y && sp.y - l - head < b.y + b.h;
+          return onTable(u) && R.inRect(dispX(u), dispY(u), pr);
         });
         blockers.push({ pr: pr, depth: depth, draw: 'block', open: open });
       });

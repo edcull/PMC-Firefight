@@ -76,7 +76,7 @@ async function clickText(p, re) {
   const lpv = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.find(x => x.key === 'lpv').rid);
   await click(p, `#camp-body .dcard[data-rid=\"${lpv}\"] .dtop`);
   const hullDet = await p.evaluate(() => document.querySelector('#camp-body .ddet').innerText);
-  check('a vehicle shows its Structure and its crew', /Str/.test(hullDet) && /Crew \(1\)/i.test(hullDet), hullDet.split('\n').slice(0, 3).join(' '));
+  check('a vehicle shows its Structure and its crew', /Str/.test(hullDet) && /Crew \(2\)/i.test(hullDet), hullDet.split('\n').slice(0, 3).join(' '));
   await click(p, `#camp-body .dcard[data-rid=\"${lpv}\"] .dtop`);
 
   // an honour and a trauma, to see them spelled out and worked into the numbers
