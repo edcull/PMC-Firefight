@@ -2,7 +2,8 @@
 
 A Pi runs the game server behind nginx, and GitHub deploys to it:
 
-- every push to `main` deploys `main`;
+- every push to `main` deploys `main`, once the tests have passed on it (a
+  push whose tests fail is not deployed);
 - to try a branch before merging it, open the **pi** workflow in the Actions
   tab, press **Run workflow**, and pick the branch.
 
@@ -119,8 +120,9 @@ so any sub-path works. The server pings every 25 seconds, well inside nginx's
 
 ## Keeping the Pi safe
 
-The workflow runs only on a push to `main` or when started by hand, never for
-a pull request, so only code already in the repository runs on the Pi.
+The workflow deploys only after the tests pass on a push to `main`, or when
+started by hand, never for a pull request, so only code already in the
+repository runs on the Pi.
 
 If the repository is **public**, also go to **Settings → Actions → General →
 Fork pull request workflows** and choose **Require approval for all external
