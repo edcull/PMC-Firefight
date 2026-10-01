@@ -1696,8 +1696,8 @@
         if (u.key === 'rlegendary' || (u.tier || 1) >= 4) return i === 0 ? 'Hellrider Captain' : 'Hellrider';
         return i === 0 ? 'Rider Leader' : 'Rider';
       }
-      // the miners: a Foreman's crew at tier 2, a Pit Boss's at 3-4
-      if (g === 'Miners') return i === 0 ? ((u.tier || 1) >= 3 ? 'Pit Boss' : 'Foreman') : 'Miner';
+      // the miners: a Supervisor's crew at tier 2, a Foreman's at 3-4
+      if (g === 'Miners') return i === 0 ? ((u.tier || 1) >= 3 ? 'Foreman' : 'Supervisor') : 'Miner';
       // the partisan commandos, each by its trade
       if (u.key === 'rassaultcdo') return i === 0 ? 'Commando Leader' : 'Partisan';
       if (u.key === 'rsabcdo') return i === 0 ? 'Saboteur Chief' : 'Saboteur';
