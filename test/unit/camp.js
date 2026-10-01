@@ -649,7 +649,8 @@ ok('a battle fought clears them', ow.offers, 'null');
 
 // how many jobs there are: one a force most weeks, sometimes fewer or more
 (function () {
-  var tally = {}, both = 0, runs = 600;
+  // enough turns that the share lands well inside its bounds every time (about 66%, give or take 1%)
+  var tally = {}, both = 0, runs = 2400;
   for (var i = 0; i < runs; i++) {
     var w = offerWorld();
     var o = C.rollOffers(w);

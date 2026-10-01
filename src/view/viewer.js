@@ -1063,6 +1063,7 @@
         }
         return '<td>' + esc(v) + '</td>';
       }).join('') + '</tr></table>';
+    h += ranksHtml(u);
     var TXT = root.PMCRuleText;
     if (!u.rules.length && !pr) h += '<p class="vrule">No special rules.</p>';
     if (pr && pr.key !== 'none') h += '<div class="vrule"><b>Propulsion: ' + esc(pr.name) + '</b><p>' + esc(pr.note) + '</p></div>';
@@ -1074,6 +1075,29 @@
         (d.text ? '<p>' + esc(d.text) + '</p>' : '') + '</div>';
     });
     return h + '</div>';
+  }
+
+  /* Who is in the unit, by rank, as the battle musters it (rules.js rankFor):
+     a squad's line-up, a hull's commander, or nobody named at all — a drone,
+     a turret, and the units whose losses are only counted. */
+  function plural(r, n) {
+    if (n === 1) return r;
+    if (/man$/.test(r)) return r.replace(/man$/, 'men');
+    if (/(s|Chosen)$/.test(r)) return r;
+    return r + 's';
+  }
+  function ranksHtml(u) {
+    var who = Object.assign({ faction: 'pmc' }, u, { alive: true });
+    if (!R.crewed(who)) {
+      return '<p class="vranks"><b>Ranks</b> ' + (R.counted(who) ? 'Nobody named: its losses are counted' : 'Nobody aboard: a machine') + '</p>';
+    }
+    var n = R.isMachine(who) ? 1 : Math.max(1, who.size || 1), groups = [];
+    for (var i = 0; i < n; i++) {
+      var r = R.rankFor(who, i), last = groups[groups.length - 1];
+      if (last && last.r === r) last.n++; else groups.push({ r: r, n: 1 });
+    }
+    var line = groups.map(function (g) { return (g.n > 1 ? g.n + ' ' : '') + plural(g.r, g.n); }).join(', ');
+    return '<p class="vranks"><b>' + (R.isMachine(who) ? 'Crew' : 'Ranks') + '</b> ' + esc(line) + (R.isMachine(who) ? ' (commander)' : '') + '</p>';
   }
 
   /* The states a unit can be shown in. A machine is never suppressed or

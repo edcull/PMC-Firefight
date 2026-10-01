@@ -1661,9 +1661,17 @@
     // then a corporal, and the rest privates: the staff's signallers, runners and guards
     if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? COMMAND_SECOND[tier - 1] : i === 2 ? 'Corporal' : 'Private';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
-    if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
-    if (i === 1 && (u.size || 1) >= 4) return tier >= 3 ? 'Corporal' : 'Lance Corporal';
-    return tier >= 4 ? 'Specialist' : 'Private';
+    // light infantry, small teams: tier 2 a corporal and a lance corporal, tier 3-5 a sergeant and a corporal
+    if (g === 'Light infantry') {
+      if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
+      if (i === 1) return tier >= 3 ? 'Corporal' : 'Lance Corporal';
+      return 'Private';
+    }
+    // tiers 1-2: a corporal, a lance corporal and privates; 3-4: a sergeant, a corporal
+    // and privates; 5: a staff sergeant, a sergeant and specialists
+    if (i === 0) return tier >= 5 ? 'Staff Sergeant' : tier >= 3 ? 'Sergeant' : 'Corporal';
+    if (i === 1 && (u.size || 1) >= 4) return tier >= 5 ? 'Sergeant' : tier >= 3 ? 'Corporal' : 'Lance Corporal';
+    return tier >= 5 ? 'Specialist' : 'Private';
   }
   function standing(u) { return isMachine(u) ? (u.alive || u.fled ? 1 : 0) : Math.max(0, u.models || 0); }
   function freshMan(u, taken) {
