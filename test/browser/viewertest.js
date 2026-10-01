@@ -132,6 +132,16 @@ async function pickAndFire(p, key, ms) {
   });
   ok('the Target list offers every unit', shot.options > 100, shot.options + ' units');
   ok('Fire! rolls a real shot at the target and says what it did', /hits? —|No hits —/.test(shot.after) && shot.after !== shot.fresh, shot.after);
+  // a mortar must not shoot that close (Minimum Range 12"): it is rolled where it could shoot, and says so
+  const mortarLine = await p.evaluate(async () => {
+    window.__viewer.pick('mortarbattery');
+    await new Promise(r => setTimeout(r, 60));
+    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
+    document.querySelector('[data-do="fire"]').click();
+    await new Promise(r => setTimeout(r, 1100));
+    return (document.getElementById('vtgtline') || {}).textContent || '';
+  });
+  ok('a mortar too close for its Minimum Range is rolled as if at a range it could shoot', /rolled at 13"/.test(mortarLine), mortarLine);
   ok('...and a different target starts fresh', /6 of 6 Structure left/.test(shot.picked) && !/hit/.test(shot.picked), shot.picked);
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,

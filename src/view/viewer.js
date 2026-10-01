@@ -137,17 +137,23 @@
      team to begin with), as the shots so far have left it — its men, its
      Suppression, a hull's Damage. Any change to either unit puts it back fresh. */
   function mark() {
-    var p = R.profile(view.target) || R.profile('regular');
-    var t = Object.assign({}, p, {
-      id: 'VTGT', side: view.side === 'A' ? 'B' : 'A', label: p.name, faction: p.faction || 'pmc',
-      models: p.cls === 'infantry' ? p.size : 1, rules: p.rules.slice(), sp: 0, alive: true,
-      damage: 0, cargo: [], x: TO.x, y: TO.y, facing: Math.PI, shotFrom: []
-    });
-    if (R.isMachine(t)) t.prop = R.defaultDrive(p);
-    if (view.tgt) { t.models = view.tgt.models; t.sp = view.tgt.sp; t.damage = view.tgt.damage; t.alive = view.tgt.alive; }
+    var p = R.profile(view.target) || R.profile('regular'), side = view.side === 'A' ? 'B' : 'A';
+    // built as the battle builds a unit (engine.js makeUnit): its drive and what that does to it,
+    // a drone if it is only ever one — so every rule of its own is there to be read
+    var t = R.applyDrone(R.applyPropulsion(Object.assign({}, p, {
+      id: 'VTGT', side: side, code: p.code, art: p.art || 'rifle', name: p.name, label: p.name,
+      faction: p.faction || 'pmc', cls: p.cls || 'infantry', models: p.size, rules: p.rules.slice(),
+      sp: 0, alive: true, damage: 0, cargo: [], aboard: null, x: TO.x, y: TO.y, facing: Math.PI,
+      shotFrom: [], activated: false, drone: false
+    }), R.propsFor(p).length ? R.defaultDrive(p) : 'none'), false);
+    if (view.tgt) {
+      t.models = view.tgt.models; t.sp = view.tgt.sp; t.damage = view.tgt.damage;
+      t.alive = view.tgt.alive; t.expended = view.tgt.expended;
+    }
     return t;
   }
-  function freshTarget() { view.tgt = null; view.lastShot = ''; }
+  function freshTarget() { view.tgt = null; view.lastShot = ''; view.tbodies = []; view.tcollar = null; }
+  function targetGone(t) { return !t.alive || (!R.isMachine(t) && t.models <= 0); }
   // every unit, by army, to pick a target from
   function targetOptions() {
     return ['pmc', 'rebel', 'bugs', 'xeno'].map(function (f) {
@@ -162,19 +168,41 @@
      is hit with, what that does to it. The shots are drawn landing as many as
      hit, and the target shows what is left of it once they have. */
   function rollShot() {
+    // a target already gone is set up again; one still standing shakes off its Suppression first
+    if (view.tgt && targetGone(mark())) freshTarget();
+    else if (view.tgt) { view.tgt.sp = 0; drawControls(); }
     var a = Object.assign({}, unit(), { shotFrom: [] }), t = mark();
-    if (!t.alive || (!R.isMachine(t) && t.models <= 0)) return null;
+    t.before = t.models;
     var st = { units: [a, t], terrain: [], objectives: [], cfg: { aiSides: [], tier: a.tier, pl: 1 }, turn: 1, sc: {}, scen: {}, phase: 'battle' };
-    if (!R.canShoot(st, a, t, 'fire', {})) { view.lastShot = 'Out of reach: ' + Math.round(R.unitDist(a, t)) + '" against a range of ' + (a.range || 0) + '".'; return { hits: 0, t: t, missed: true }; }
+    /* The stage stands the two 11" apart. A weapon that cannot shoot that far,
+       or must not shoot that close (a mortar's Minimum Range), is rolled as if
+       the target stood where it could be shot — the readout says where. */
+    var at = '';
+    if (!R.canShoot(st, a, t, 'fire', {})) {
+      var d = R.unitDist(a, t), minR = R.ruleValue(a, 'Minimum Range') || 0, want = null;
+      if (minR && d < minR) want = minR + 1;
+      else if (a.range && d > a.range) want = Math.max(1, a.range - 1);
+      if (want != null) { t.x = a.x + want + 2 * R.UNIT_R; at = ' (rolled at ' + want + '")'; }
+      if (!R.canShoot(st, a, t, 'fire', {})) {
+        t.x = TO.x;
+        view.lastShot = a.fp === null || a.fp === undefined ? 'No Firepower' : 'Cannot shoot it';
+        return { hits: 0, t: t, missed: true };
+      }
+    }
     var res;
-    try { res = R.shoot(st, a, t, 'fire', {}); } catch (e) { return null; }
+    try {
+      res = R.shoot(st, a, t, 'fire', {});
+      // penal troops broken by it: the collars go off (Expendable, p. 57)
+      R.collars(st);
+    } catch (e) { return null; }
     var hits = res.hits || 0;
-    view.lastShot = hits ? hits + (hits === 1 ? ' hit' : ' hits') : 'No hits';
+    t.x = TO.x;                                    // back on its spot on the stage
+    view.lastShot = (hits ? hits + (hits === 1 ? ' hit' : ' hits') : 'No hits') + at;
     return { hits: hits, t: t };
   }
   function targetLine() {
     var t = mark(), p = R.profile(view.target) || {};
-    var left = !t.alive || (!R.isMachine(t) && t.models <= 0) ? 'destroyed'
+    var left = t.expended ? 'broken — the collars went off' : targetGone(t) ? 'destroyed'
       : R.isMachine(t) ? (t.str - t.damage) + ' of ' + t.str + ' Structure left'
       : t.models + ' of ' + p.size + ' models · ' + (t.sp || 0) + ' SP' + (R.status(t) !== 'ready' ? ' (' + R.status(t) + ')' : '');
     return (view.lastShot ? view.lastShot + ' — ' : '') + left;
@@ -185,7 +213,7 @@
 
   function frame() {
     // a unit that moves by itself (rotors, scanners, a deflector, a cloak, a brain) keeps the bench running
-    if (!loop && I.animates(unit()) && view.status !== 'destroyed') start();
+    if (!loop && ((I.animates(unit()) && view.status !== 'destroyed') || I.animates(mark()))) start();
     var w = cv.width, h = cv.height;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#0c1014';
@@ -233,6 +261,11 @@
     // far to near, so the nearer of the two covers the other
     var tv = traveller();
     FX.drawGround(g);                                    // the ground broken open under what comes up through it
+    // the target's fallen, on the ground under everything
+    if (view.tbodies && view.tbodies.length) {
+      var tp = I.toScreen(t.x, t.y);
+      view.tbodies.forEach(function (b) { I.drawBody(g, tp.x + b.dx, tp.y + b.dy, b); });
+    }
     var order = [u, t].concat(tv ? [tv.u, tv.pad] : []).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     order.forEach(function (m) {
       if (tv && (m === tv.u || m === tv.pad)) {
@@ -244,8 +277,9 @@
         return;
       }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
-      // the target, shot to pieces: a hull's wreck, a squad gone
-      if (m !== u && m.id === 'VTGT' && (!m.alive || (!R.isMachine(m) && m.models <= 0))) {
+      // the target: its collars going off, or shot to pieces (a hull's wreck, a squad gone)
+      if (m !== u && m.id === 'VTGT' && view.tcollar) { drawCollared(m, view.tcollar); return; }
+      if (m !== u && m.id === 'VTGT' && targetGone(m)) {
         if (R.isMachine(m)) I.drawWreck(g, m, { x: m.x, y: m.y }, 0, 0);
         return;
       }
@@ -296,8 +330,21 @@
     });
     view.collar = { pts: pts, at: plan.at, plan: plan };
   }
-  function drawCollared(u) {
-    var cl = view.collar, now = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
+  // the target's collars going off: the same sequence, on the far side of the stage
+  function targetCollars(t) {
+    var CL = root.PMCFx.COLLAR, t0 = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
+    var n = Math.max(1, Math.min(I.MAX_FIGS, t.models || 1));
+    var pts = I.formationTable(n).map(function (o) { return { x: t.x + o.dx, y: t.y + o.dy, rank: o.rank }; });
+    var plan = CL.plan(pts, t0, Math.PI / 2);
+    CL.order(n).forEach(function (idx) {
+      var p = plan.end[idx], delay = p.delay;
+      FX.add({ kind: 'collar', x: p.x, y: p.y, vx: plan.v[idx].vx, vy: plan.v[idx].vy, ran: p.ran, neck: 0.68, delay: delay, dur: delay + CL.dur });
+      if (view.sound && SFX && SFX.impact) SFX.impact((delay + CL.blink) / 1000);
+    });
+    view.tcollar = { pts: pts, at: plan.at, plan: plan };
+  }
+  function drawCollared(u, cl0) {
+    var cl = cl0 || view.collar, now = root.performance.now() * (+root.PMC_TIME_SCALE || 1);
     // the dead where each had run to, and the living running, far to near
     var items = cl.pts.map(function (p, i) {
       var q = cl.at[i] > now ? cl.plan.where(i, now) : cl.plan.end[i];
@@ -399,6 +446,10 @@
     if (view.turn && Date.now() - view.turn.t0 < view.turn.d1 + view.turn.d2) busy = true;
     // an aircraft's rotors turn and its scanners sweep, even hanging still
     if (I.animates(unit()) && view.status !== 'destroyed') busy = true;
+    // ...and the target's: its idle movement, its men pinned or breaking, its collars going off
+    var tg = mark();
+    if (!targetGone(tg) && (I.animates(tg) || R.status(tg) !== 'ready')) busy = true;
+    if (view.tcollar) busy = true;
     frame();
     if (busy) start(); else last = 0;
   }
@@ -866,7 +917,17 @@
     if (shot && !shot.missed) {
       var t = shot.t;
       setTimeout(function () {
-        view.tgt = { models: t.models, sp: t.sp, damage: t.damage, alive: t.alive };
+        view.tgt = { models: t.models, sp: t.sp, damage: t.damage, alive: t.alive, expended: !!t.expended };
+        // the fallen, where the battle lays them; penal troops broken run, and their collars go off
+        if (t.expended) targetCollars(Object.assign({}, t, { models: t.before }));
+        else if (!R.isMachine(t)) {
+          view.tbodies = view.tbodies || [];
+          for (var n = t.before; n > Math.max(0, t.models); n--) {
+            var cs = I.casualtySpot(t, n, view.tbodies.length * 7 + n);
+            view.tbodies.push({ dx: cs.dx, dy: cs.dy, side: t.side, art: t.art, mi: cs.mi, flip: view.tbodies.length % 3 === 0 });
+          }
+          if (t.before > t.models && view.sound && SFX && SFX.casualty) SFX.casualty();
+        }
         drawControls(); start();
       }, 900);
     } else drawControls();
