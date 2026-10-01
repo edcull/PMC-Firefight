@@ -89,5 +89,18 @@ console.log('\nL-31 A Xenotripod Markerlight marks what the tribe sees (p. 129)'
   ok('...with a squad of the tribe in sight of the enemy, it can', e.query.markTargets(beta).indexOf(foe) >= 0);
 })();
 
+console.log('\nL-32 Psychic Bond lends no Morale from a Suppressed or Broken friend (pp. 29, 129)');
+(function () {
+  let n = 0;
+  const mk = (key, x, y, extra) => Object.assign(JSON.parse(JSON.stringify(R.profile(key))), { id: 'A' + (n++), side: 'A', faction: 'xeno', x, y, alive: true,
+    models: R.profile(key).size, sp: 0, shotFrom: [], cargo: [], facing: 0, label: key }, extra || {});
+  const low = mk('xdelta1', 10, 10), high = mk('xalpha3', 13, 10);
+  const st = { units: [low, high], terrain: [], objectives: [], log: [], doctrines: { A: [], B: [] } };
+  const lent = R.bondMorale(st, low);
+  ok('a steady friend within 6" lends its Morale', !!lent && lent.from === high, lent ? lent.m + '' : 'none');
+  high.sp = R.currentMorale(high) + 1;
+  ok('...a Suppressed one does not', !R.bondMorale(st, low));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

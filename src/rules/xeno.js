@@ -78,6 +78,8 @@
         var o = state.units[i];
         if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0) continue;
         if (!xenoSenses(o) || isMachine(o) || unitDist(o, u) > 6) continue;
+        // a Suppressed or Broken friend lends nothing: no passive bonus to another unit (p. 29)
+        if (status(o) !== 'ready') continue;
         var m = currentMorale(o);
         if (!best || m > best.m) best = { m: m, from: o };
       }
