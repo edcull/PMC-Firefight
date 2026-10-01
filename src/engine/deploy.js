@@ -505,13 +505,20 @@
       var sp = E.state && E.state.sc && E.state.sc.split && E.state.sc.split[side];
       if (!sp || isAI(side) || E.state.phase !== 'deploy') return null;
       var units = sp.ids.map(byId).filter(function (u) { return u && u.alive; });
-      function held(u) { return sp.kind === 'wave' ? u.wave === 2 : !!(u.reserve && u.wave === 2); }
+      /* A unit aboard a hull goes where the hull goes: held back with it, or in
+         its wave (p. 36: troops in reserve may enter aboard their transport). */
+      function held(u) {
+        var hull = u.aboard ? byId(u.aboard) : null;
+        if (hull) return held(hull);
+        return sp.kind === 'wave' ? u.wave === 2 : !!(u.reserve && u.wave === 2);
+      }
       var n = units.filter(held).length;
       return {
         side: side, kind: sp.kind, rule: sp.rule, min: sp.min, max: sp.max, held: n,
         ok: n >= sp.min && n <= sp.max,
         units: units.map(function (u) {
-          return { id: u.id, name: u.name, held: held(u), locked: R.has(u, 'Stationary Artillery'), aboard: !!u.aboard,
+          var hull = u.aboard ? byId(u.aboard) : null;
+          return { id: u.id, name: u.name, held: held(u), locked: R.has(u, 'Stationary Artillery'), aboard: !!u.aboard, hull: hull ? hull.name : null,
             insert: !!u.insert, inserter: sp.kind !== 'wave' && R.has(u, 'Battlefield Insertion') && !SC.noInsertion(E.state) };
         })
       };
@@ -524,7 +531,10 @@
       Object.keys(all).forEach(function (side) {
         var sp = all[side];
         sp.ids = sp.ids.filter(function (id) { var u = byId(id); return u && u.alive && !u.aboard; });
-        var n = sp.ids.map(byId).filter(function (u) { return sp.kind === 'wave' ? u.wave === 2 : (u.reserve && u.wave === 2); }).length;
+        var n = sp.ids.map(byId).filter(function (u) {
+          var w = u.aboard ? byId(u.aboard) || u : u;
+          return sp.kind === 'wave' ? w.wave === 2 : (w.reserve && w.wave === 2);
+        }).length;
         sp.min = Math.min(sp.min, n); sp.max = Math.max(sp.max, n);
       });
     }
@@ -566,19 +576,24 @@
       var sp = splitFor(side), u = byId(id);
       if (!sp || !u || sp.units.every(function (x) { return x.id !== id; })) return 'that unit is not part of the split';
       if (R.has(u, 'Stationary Artillery')) return 'an emplaced gun is never held back';
+      // a passenger goes where its hull goes
+      if (u.aboard) { var hv = byId(u.aboard); return 'it rides with ' + (hv ? hv.name : 'its hull') + ' \u2014 take it off first, or hold the hull back'; }
       if (sp.kind === 'wave') { u.wave = u.wave === 2 ? 1 : 2; return null; }
       if (u.reserve && u.wave === 2) {
         u.reserve = false; delete u.wave; delete u.insert; u.x = -1; u.y = -1;      // back in hand, to be set down
         return null;
       }
-      if (u.aboard) return 'take it out of the hull first';
-      emptyForReserve(u);
       if (u.bld) R.exitBuilding(E.state, u, null);
-      u.reserve = true; u.wave = 2; u.x = -1; u.y = -1;
       /* A unit with Battlefield Insertion held back here counts toward the
          scenario's reserves and comes in by insertion (p. 56) — while no more
-         than half the army does; past that, it waits with the rest. */
-      if (canInsert(u)) u.insert = true;
+         than half the army does; past that, it waits with the rest. A hull
+         coming in that way sets its passengers down; any other held back keeps
+         them aboard, to come on with it (p. 36). */
+      var inserts = canInsert(u);
+      if (inserts) emptyForReserve(u);
+      u.reserve = true; u.wave = 2; u.x = -1; u.y = -1;
+      (u.cargo || []).forEach(function (c) { c.x = -1; c.y = -1; });
+      if (inserts) u.insert = true;
       if (ui.deployPick === u.id) ui.deployPick = null;
       return null;
     }
@@ -627,9 +642,10 @@
       return null;
     }
 
-    /* A hull held back sets its passengers down to be deployed on their own —
-       except a drop platform, which "is loaded before the battle and never
-       again" (p. 79): its squad stays aboard and comes in with it. */
+    /* A hull coming in by Battlefield Insertion sets its passengers down to be
+       deployed on their own — except a drop platform, which "is loaded before
+       the battle and never again" (p. 79): its squad stays aboard and comes in
+       with it. (One held back for the scenario keeps its passengers: toggleHold.) */
     function emptyForReserve(u) {
       if (u.transport && R.has(u, 'Immobile')) return;
       (u.cargo || []).slice().forEach(function (c) { unloadBefore(u, c); });
