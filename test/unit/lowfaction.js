@@ -58,5 +58,22 @@ console.log('\nL-29 Two rebel forces choose their tactics in turn, the dice-off 
   ok('...nor when only one side is rebel', !mixed.state().tacticAsk);
 })();
 
+console.log('\nL-30 Teleport takes a unit in by the standard embarking rules (pp. 36, 130)');
+(function () {
+  let n = 0;
+  const mk = (key, x, y, extra) => Object.assign(JSON.parse(JSON.stringify(R.profile(key))), { id: 'A' + (n++), side: 'A', x, y, alive: true,
+    models: R.profile(key).size, sp: 0, shotFrom: [], cargo: [], facing: 0, label: key }, extra || {});
+  const tp = mk('xtturret2', 10, 10), tp2 = mk('xtturret2', 30, 30);
+  const acted = mk('xeps1', 12, 10, { activated: true, sp: 1 });
+  const bld = { kind: 'building', x: 6, y: 12, w: 4, h: 4 };
+  const garrison = mk('xeps1', 8, 14, { bld: bld, sec: 0 });
+  const st = { units: [tp, tp2, acted, garrison], terrain: [bld], objectives: [], log: [], doctrines: { A: [], B: [] } };
+  const from = R.teleportFrom(st, tp);
+  ok('a squad that has already acted may still be taken in', from.indexOf(acted) >= 0);
+  ok('...a garrison may not, until it comes out', from.indexOf(garrison) < 0);
+  const res = R.teleport(st, acted, tp, tp2);
+  ok('...and it comes out with no Suppression', res.ok && acted.sp === 0, acted.sp + ' SP');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
