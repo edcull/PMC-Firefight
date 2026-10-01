@@ -1890,6 +1890,9 @@
       if (modifying()) return no('the armies are still being modified');
       if (state.swapAsk) K.swapsDone();
       if (!K.deploymentDone()) return no('there are still units to place');
+      // a scenario's own condition on how the force stands (Ambush!'s even split)
+      var sblk = state.scen.startBlock && state.scen.startBlock(state);
+      if (sblk) { setHint(null, sblk); render(); return no(sblk); }
       /* Two players at two screens: each says they are ready, and the battle
          begins once both have — neither can start it on the other. */
       if (bothConfirm()) {

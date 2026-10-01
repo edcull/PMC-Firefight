@@ -1029,7 +1029,9 @@
       var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
       if (deploymentDone() || (placed && splitShort)) {
         h += '<div class="acts deploy-go">';
-        var blocked = !deploymentDone();
+        // the scenario's own condition on how the force stands (Ambush!'s even split)
+        var sblk = B.state.scen && B.state.scen.startBlock ? B.state.scen.startBlock(B.state) : null;
+        var blocked = !deploymentDone() || !!sblk;
         var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
         // online, both players say they are ready: the battle begins once both have
         var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
@@ -1041,7 +1043,9 @@
             (blocked ? 'startwhy' : empties.length ? 'startask' : 'start') + '"><span>Begin the battle</span><small>' +
             (sr && sr[foe] ? esc(sideName(foe)) + ' is ready — roll for initiative' : 'Roll for initiative') + '</small></button>';
         }
-        if (blocked && ui.startWhy) {
+        if (blocked && sblk) {
+          h += '<div class="tipbubble" role="status">' + esc(sblk) + '</div>';
+        } else if (blocked && ui.startWhy && mySplit) {
           var need = mySplit.min === mySplit.max ? String(mySplit.min) : mySplit.min + '\u2013' + mySplit.max;
           h += '<div class="tipbubble" role="status">' + (mySplit.kind === 'wave'
             ? 'Choose which units come in the second wave first: ' + need + ' of them (' + mySplit.held + ' so far).'

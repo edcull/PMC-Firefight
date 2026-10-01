@@ -246,6 +246,38 @@ console.log('\nEvacuation: the entry points keep their distances (p. 153)');
   ok('...and 12" from the safe zone', safe === 0, safe + ' too close');
 })();
 
+console.log('\nAmbush!: two even halves either side of the road, 6" apart (p. 156)');
+(function () {
+  function ambush() {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_ambush', armyA: ['cmd3', 'regular', 'regular', 'rookie', 'rookie'], armyB: ['regular', 'regular'],
+      nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    return e;
+  }
+  const H = R.BOARD.h, UR = R.UNIT_R;
+  let worst = 0, close = 0;
+  for (let k = 0; k < 20; k++) {
+    const e = ambush(), st = e.state();
+    e.intent('A', { k: 'autodeploy' });
+    const a = st.units.filter((u) => u.side === 'A' && u.x >= 0 && !u.aboard);
+    const n = a.filter((u) => u.y < H / 2).length;
+    worst = Math.max(worst, Math.abs(n - (a.length - n)));
+    a.forEach((u) => a.forEach((o) => { if ((u.y < H / 2) !== (o.y < H / 2) && R.inches(u.x, u.y, o.x, o.y) - 2 * UR < 6 - 1e-6) close++; }));
+  }
+  ok('auto-deploy splits the force evenly', worst <= 1, 'worst difference ' + worst);
+  ok('...with the halves at least 6" apart', close === 0, close + ' pairs closer');
+  const e = ambush(), st = e.state();
+  const a = st.units.filter((u) => u.side === 'A');
+  a.forEach((u, i) => { u.x = 6 + i * 4; u.y = H / 2 - 6; });         // everyone on the north side
+  ok('all on one side, the battle will not begin', !e.intent('A', { k: 'start' }).ok && st.phase === 'deploy');
+  a.forEach((u, i) => { if (i % 2) u.y = H / 2 + 8; });
+  const res = e.intent('A', { k: 'start' });
+  ok('...split, it does', res.ok || st.phase !== 'deploy', res.why || '');
+  const e2 = ambush(), s2 = e2.state(), u0 = s2.units.find((u) => u.side === 'A'), u1 = s2.units.filter((u) => u.side === 'A')[1];
+  u0.x = 20; u0.y = H / 2 - 4;
+  ok('a unit may not stand within 6" of the other half across the road', !s2.scen.deployOK(s2, 'A', 20, H / 2 + 3.5, u1) && s2.scen.deployOK(s2, 'A', 30, H / 2 + 4, u1));
+})();
+
 console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6 (p. 147)');
 (function () {
   function trial(mod) {

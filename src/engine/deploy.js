@@ -210,7 +210,16 @@
           } else if (boxes) {
             // the side's ground as it stands now: one edge, once the first of it is down
             var now = boxesFor(side, u) || boxes;
-            var pb = pointInBox(now[(i + attempt) % now.length]);
+            var bi = (i + attempt) % now.length;
+            /* a scenario that wants its force split evenly (Ambush!): the box with the
+               fewest down so far, for the first tries */
+            if (E.state.scen.evenBoxes && attempt < 200) {
+              var cnt = now.map(function (bx) {
+                return E.state.units.filter(function (o) { return o.side === side && o.alive && o.x >= 0 && !o.aboard && R.inRect(o.x, o.y, bx); }).length;
+              });
+              bi = cnt.indexOf(Math.min.apply(null, cnt));
+            }
+            var pb = pointInBox(now[bi]);
             x = pb.x; y = pb.y;
           } else if (z) {
             y = 3 + ((i * 5.2 + attempt * 0.7) % (H - 6));

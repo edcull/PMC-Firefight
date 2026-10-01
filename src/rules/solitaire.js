@@ -1049,10 +1049,28 @@
       }
       state.sc.boxes = { A: [{ x: 0, y: H / 2 - 14, w: W, h: 12 }, { x: 0, y: H / 2 + 2, w: W, h: 12 }] };
     },
-    deployOK: function (state, side, x, y) {
+    /* "The player splits his army into two more or less equal forces, which are
+       deployed on each side of the road, within 12" of it and at least 6" from each
+       other" (p. 156): a unit is put down no nearer than 6" to the other half's,
+       the halves may differ by one unit at most (startBlock), and an automatic
+       deployment fills the emptier side first (evenBoxes). In a cooperative game
+       the commando is split as one. */
+    evenBoxes: true,
+    deployOK: function (state, side, x, y, u) {
       if (side !== 'A') return false;
       var d = Math.abs(y - H / 2);
-      return d >= 2 + UR && d <= 14;
+      if (d < 2 + UR || d > 14) return false;
+      var north = y < H / 2;
+      return !state.units.some(function (o) {
+        return o !== u && o.side === 'A' && o.alive && o.x >= 0 && !o.aboard && (o.y < H / 2) !== north &&
+          dist(o.x, o.y, x, y) - 2 * UR < 6;
+      });
+    },
+    startBlock: function (state) {
+      var placed = state.units.filter(function (u) { return u.side === 'A' && u.alive && u.x >= 0 && !u.aboard && !u.reserve; });
+      var n = placed.filter(function (u) { return u.y < H / 2; }).length, s2 = placed.length - n;
+      if (Math.abs(n - s2) <= 1) return null;
+      return 'Split the force more or less equally either side of the road: ' + n + ' to the north, ' + s2 + ' to the south.';
     },
     /* The units settle into their hides: on 1-2 a unit is D6" nearer the road,
        on 5-6 D6" further from it. */
