@@ -316,9 +316,7 @@
       if (E.state.scen.arrivalPoint) return E.state.scen.arrivalPoint(E.state, u);
       var sc = E.state.sc;
       if (E.state.scen.id === 'invasion' && u.side === sc.attacker) {
-        // into a zone the attacker holds, or a neutral one
-        var zones = E.state.objectives.filter(function (o) { return o.owner !== sc.defender; });
-        if (!zones.length) zones = E.state.objectives.slice();
+        var zones = landingZones(u);
         for (var t = 0; t < 400; t++) {
           var z = zones[Math.floor(Math.random() * zones.length)];
           var a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 4;
@@ -387,6 +385,17 @@
       }
       return [entry[u.entryEdge]];
     }
+    /* The landing zones an Invasion attacker may come down in. The first wave
+       "is dropped on one, two or three landing zones (attacker's choice)" (p. 53),
+       so any of the three it nominated, whoever stands near them — a zone does not
+       close because the first unit down stirred up who holds it. Later units come
+       down in a zone the attacker holds or one still neutral. */
+    function landingZones(u) {
+      var sc = E.state.sc, all = E.state.objectives.slice();
+      if (u.wave === 1 && E.state.turn <= 1) return all;
+      var zones = all.filter(function (o) { return o.owner !== sc.defender; });
+      return zones.length ? zones : all;
+    }
     function arrivalLegal(u, p) {
       if (p.x < UR || p.y < UR || p.x > W - UR || p.y > H - UR) return false;
       if (E.state.scen.arrivalLegal) return E.state.scen.arrivalLegal(E.state, u, p) && !R.unitNear(E.state, p.x, p.y, u, 1);
@@ -395,8 +404,7 @@
       var sc = E.state.sc;
       // Invasion: the attacker comes down in a zone the defender does not hold
       if (E.state.scen.id === 'invasion' && sc && u.side === sc.attacker) {
-        var zones = E.state.objectives.filter(function (o) { return o.owner !== sc.defender; });
-        if (!zones.length) zones = E.state.objectives;
+        var zones = landingZones(u);
         return zones.some(function (z) { return R.inches(p.x, p.y, z.x, z.y) <= 4; });
       }
       // everyone else walks on from their own edge, or the corners they own
@@ -570,6 +578,7 @@
     function arrivalWhere(u) {
       var sc = E.state.sc;
       if (E.state.scen.id === 'invasion' && sc && u.side === sc.attacker) {
+        if (u.wave === 1 && E.state.turn <= 1) return 'within 4" of any of your three landing zones';
         return 'within 4" of a landing zone you hold or that is still neutral';
       }
       var entry = entryFor(u);

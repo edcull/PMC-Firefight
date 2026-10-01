@@ -62,6 +62,28 @@ console.log('\nInvasion: the defender first, while the attacker sorts its waves'
   ok('the attacker, with nothing to put down, may move a unit between its waves meanwhile', !!w && r.ok, r.why);
 })();
 
+console.log('\nInvasion: the first wave may come down in any of its three landing zones');
+(function () {
+  const e = game('invasion', 'A');
+  ['A', 'B'].forEach(s => { e.intent(s, { k: 'autosplit' }); e.intent(s, { k: 'autodeploy' }); });
+  e.intent(e.query.placingSide() || 'A', { k: 'start' });
+  const st = e.state();
+  // the zones are nominated, then the first unit of the wave is asked where it lands
+  for (let k = 0; k < 20 && !(e.sel().insertion && e.sel().insertion.kind === 'arrive'); k++) {
+    const ins = e.sel().insertion;
+    if (!ins) break;
+    // nominate zones well apart: the corners of the open middle
+    const spot = ins.spots[[0, Math.floor(ins.spots.length / 2), ins.spots.length - 1][k % 3]];
+    e.intent('A', { k: 'insert', x: spot.x, y: spot.y });
+  }
+  const ins = e.sel().insertion, u = ins && ins.unit;
+  ok('the first wave is asked where to land', !!u && u.side === 'A' && st.objectives.length === 3, u && u.side);
+  // a defender standing by two of the zones (as the first unit down rechecks who holds them)
+  st.objectives.forEach((o, i) => { if (i) o.owner = 'B'; });
+  const near = (z) => e.query.arrivalSpots(u).some(p => Math.hypot(p.x - z.x, p.y - z.y) <= 4);
+  ok('...and each of the three zones is still open to it', st.objectives.every(near), st.objectives.map(near).join(','));
+})();
+
 console.log('\nMeeting engagement: nobody is placed before the battle; both enter in turn 1');
 (function () {
   const e = game('meeting');

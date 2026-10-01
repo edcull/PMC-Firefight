@@ -362,7 +362,6 @@
         return '<div class="card"><h2>Semper Fidelis</h2>' +
           '<p class="sub"><b>' + esc(sfName(u)) + '</b> may come on now without waiting for its roll. Tap the shaded ground ' +
           'to bring it on — ' + esc(arrivalWhere(u)) + ' — or keep it back for a later turn.</p>' +
-          '<p class="hint">' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p>' +
           '<div class="acts"><button class="act" data-act="holdarrive">' +
           '<span>Keep it in reserve</span><small>Call it in on a later turn</small></button></div></div>';
       }
@@ -370,21 +369,19 @@
         return '<div class="card"><h2>Entering the table</h2>' +
           '<p class="sub"><b>' + esc(u.name) + '</b> comes on now' + ((u.cargo || []).length ? ', with ' + u.cargo.map(function (c) { return esc(c.name); }).join(' and ') + ' aboard' : '') +
           '. Tap the shaded ground: within 4″ of your own table edge, and 12″ clear of the enemy where the ground allows.</p>' +
-          '<p class="hint">A unit each in turn, from the side with the initiative. ' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p>' +
+          '<p class="hint">A unit each in turn, from the side with the initiative.</p>' +
           arrivalChoices(ins) + '</div>';
       }
       if (ins.kind === 'arrive') {
         return '<div class="card"><h2>Reinforcements</h2>' +
           '<p class="sub"><b>' + esc(u.name) + '</b> is arriving this turn. Tap the shaded ground ' +
           'to choose where it comes on — ' + esc(arrivalWhere(u)) + '.</p>' +
-          '<p class="hint">' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') +
-          ' it can come on.</p>' + arrivalChoices(ins) + '</div>';
+          arrivalChoices(ins) + '</div>';
       }
       return '<div class="card"><h2>Battlefield Insertion</h2>' +
         '<p class="sub"><b>' + esc(u.name) + '</b> is coming in. Tap anywhere in the shaded ground: ' +
         'at least 12" from every objective and 4" in from the table edge. On a D6 of 4+ your opponent ' +
         'will shove the arrival point up to 2D6".</p>' +
-        '<p class="hint">' + ins.spots.length + ' legal drop point' + (ins.spots.length === 1 ? '' : 's') + ' on the table.</p>' +
         '<div class="acts"><button class="act" data-act="holdinsert">' +
         '<span>Keep it in reserve</span><small>Try again next turn</small></button></div></div>';
     }
