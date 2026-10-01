@@ -35,6 +35,8 @@ async function stage(p, mine) {
     });
   }, mine);
   await p.waitForTimeout(950);
+  await p.evaluate(() => window.__noTactics && window.__noTactics());   // a rebel list: no tactic (p. 95)
+  await p.waitForTimeout(300);
   await drain(p);
   await p.evaluate(() => {
     const s = window.PMC_STATE();

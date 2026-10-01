@@ -504,6 +504,8 @@
   }
   // the AI's tactic: Last Stand to hold, Human Wave to take, and the dice where there is neither
   function aiTactic(sd) {
+    // one set for it in the game's settings stands (a scripted battle's); otherwise it chooses
+    if (state.tactics[sd]) { if (state.tactics[sd] === 'wave') autoWave(sd, waveRoom(sd)); return; }
     var legal = legalTactics(sd), role = rolledRole(sd), want;
     if (state.cfg.mode === 'demo' || !role) want = TACTIC_IDS[1 + Math.floor(Math.random() * 3)];
     else want = role === 'defender' ? 'laststand' : 'wave';
