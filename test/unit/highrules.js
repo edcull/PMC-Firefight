@@ -1,4 +1,4 @@
-/* The three High findings of the rules review at 7dd7306 (docs/rules-review-7dd7306.md):
+/* The three High findings of the rules review at 7dd7306:
    a Broken unit by its own edge runs off the table (p. 34); troops are put down
    anywhere within 4" of their hull (p. 36); and a side that wins the initiative
    with nothing it can activate hands the phase to the other (p. 27). */
