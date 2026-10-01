@@ -1597,7 +1597,8 @@
      post by a Major. */
   var CREW_NCO = ['Corporal', 'Corporal', 'Sergeant', 'Staff Sergeant', 'Master Sergeant'];
   var CREW_OFFICER = ['Second Lieutenant', 'Second Lieutenant', 'Lieutenant', 'Lieutenant', 'Captain'];
-  var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
+  // the revolt's own titles, none of them the PMCs': a Ringleader of cells, a Sector Chief, then Commandant, Commander, General
+  var REBEL_CHIEF = ['Ringleader', 'Sector Chief', 'Commandant', 'Commander', 'General'];
 
   function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
   function syllables(list, a, b) {

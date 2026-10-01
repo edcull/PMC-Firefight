@@ -46,7 +46,11 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   ['rsnipercdo', 'Marksman Chief', 'Marksman', 'Marksman'],
   // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
   ['rridergang', 'Rider Leader', 'Rider', 'Rider'], ['rriderwar', 'Rider Leader', 'Rider', 'Rider'],
-  ['rhellriders', 'Rider Leader', 'Rider', 'Rider'], ['rlegendary', 'Hellrider Captain', 'Hellrider', 'Hellrider']].forEach(([key, lead, second, rest]) => {
+  ['rhellriders', 'Rider Leader', 'Rider', 'Rider'], ['rlegendary', 'Hellrider Captain', 'Hellrider', 'Hellrider'],
+  // the revolt's leaders: Ringleader, Sector Chief, Commandant, Commander, General
+  ['rinstigators', 'Ringleader', 'Lieutenant', 'Lieutenant'], ['rsecondary', 'Sector Chief', 'Lieutenant', 'Lieutenant'],
+  ['rleaders', 'Commandant', 'Lieutenant', 'Lieutenant'], ['rinfluential', 'Commander', 'Lieutenant', 'Lieutenant'],
+  ['rrebellion', 'General', 'Lieutenant', 'Lieutenant']].forEach(([key, lead, second, rest]) => {
   const u = unit(key);
   R.musterMen(u, null, {});
   ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',
