@@ -64,9 +64,9 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   // the partisan commandos, each by its trade
   ['rassaultcdo', 'Commando Leader', 'Partisan', 'Partisan'], ['rsabcdo', 'Saboteur Chief', 'Saboteur', 'Saboteur'],
   ['rsnipercdo', 'Marksman Chief', 'Marksman', 'Marksman'],
-  // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
+  // the riders: a Rider Leader (tiers 1-2), a Hellrider Leader (3), a Hellrider Captain (4)
   ['rridergang', 'Rider Leader', 'Rider', 'Rider'], ['rriderwar', 'Rider Leader', 'Rider', 'Rider'],
-  ['rhellriders', 'Rider Leader', 'Rider', 'Rider'], ['rlegendary', 'Hellrider Captain', 'Hellrider', 'Hellrider'],
+  ['rhellriders', 'Hellrider Leader', 'Hellrider', 'Hellrider'], ['rlegendary', 'Hellrider Captain', 'Hellrider', 'Hellrider'],
   // the revolt's leaders: Chief, Sector Chief, Commandant, Commander, General
   ['rinstigators', 'Chief', 'Lieutenant', 'Lieutenant'], ['rsecondary', 'Sector Chief', 'Lieutenant', 'Lieutenant'],
   ['rleaders', 'Commandant', 'Lieutenant', 'Lieutenant'], ['rinfluential', 'Commander', 'Lieutenant', 'Lieutenant'],

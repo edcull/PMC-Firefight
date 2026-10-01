@@ -100,6 +100,8 @@
     };
     window.__showQueue = function () { return show.queue.length; };
     window.__held = function () { return Object.keys(B.held).length; };
+    // a unit whose arrival is queued but not yet drawn (the table leaves it off until then)
+    window.__arrivalQueued = function (id) { var u = byId(id); return !!(u && B.arrivalQueued(u)); };
     // a unit's suppression and models as the table draws them: what is held back of it, else the rules' own
     // the Suppression a unit is drawn with this instant (it fills as an attack lands)
     window.__shownSp = function (id) { var u = byId(id); return u ? B.shownAs(u).sp : null; };

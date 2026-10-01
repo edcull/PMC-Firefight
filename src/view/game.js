@@ -869,7 +869,7 @@
   var hookBoard = {
     get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
-    get held() { return held; }, get loop() { return loop; }, get muster() { return muster; }, get shownAs() { return shownAs; }, get STANDING() { return STANDING; },
+    get held() { return held; }, get arrivalQueued() { return arrivalQueued; }, get loop() { return loop; }, get muster() { return muster; }, get shownAs() { return shownAs; }, get STANDING() { return STANDING; },
     get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); },
     get streamLength() { return streamLength; }, get addFx() { return addFx; }, get lineUp() { return DRAW.lineUp; },
     get anyArriving() { return anyArriving; }, get applyForce() { return applyForce; },
@@ -1008,7 +1008,7 @@
     get sideInk() { return sideInk; }, get sideRGB() { return sideRGB; },
     get terrainMark() { return terrainMark; }, get viewRect() { return viewRect; }, activeUnits: activeUnits,
     get seats() { return seats; }, get watching() { return watching; },
-    get sightOn() { return VIEW.sightOn; }, get sightSide() { return VIEW.sightSide; },
+    get sightOn() { return VIEW.sightOn; }, get sightSide() { return VIEW.sightSide; }, anims: anims,
     addFx: addFx, arrivalQueued: arrivalQueued, arriving: arriving, boxesFor: boxesFor,
     clonePiece: clonePiece, curArea: curArea, dispX: dispX, dispY: dispY, drawFx: drawFx, fitGhost: fitGhost,
     insertionMine: insertionMine, isAI: isAI, liftOf: liftOf, nowMs: nowMs, onTable: onTable,

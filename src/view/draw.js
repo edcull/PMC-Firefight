@@ -621,26 +621,18 @@
       }
 
       function propDepth(pr) { return pr.x + pr.w + pr.y + pr.h; }
-      /* A building opens up — drawn with its near walls off — when it would
-         otherwise hide somebody: a squad standing inside it, or one behind it that
-         its silhouette covers. Every other building stays solid, and is put back
-         over the units the depth sort says are behind it. */
+      /* A building opens up — drawn with its near walls off — when there is a
+         unit inside it, so the garrison is seen through the cut-away walls. A
+         unit behind it is hidden by it, as it would be on the table. Every other
+         building stays solid, and is put back over the units the depth sort says
+         are behind it. */
       var blockers = [];
       (B.vc.props || []).forEach(function (pr) {
         if (pr.kind !== 'building' && pr.kind !== 'bunker' && pr.kind !== 'highwall') return;
         if (!onView(pr.x + pr.w / 2, pr.y + pr.h / 2)) return;
-        var depth = propDepth(pr), b = null;
+        var depth = propDepth(pr);
         var open = B.state.units.some(function (u) {
-          if (!onTable(u)) return false;
-          var ux = dispX(u), uy = dispY(u);
-          if (R.inRect(ux, uy, pr)) return true;                 // inside it — a garrison is seen through the cut-away walls
-          if (ux + uy >= depth) return false;                    // in front: nothing to hide
-          if (!b) b = propBox(pr);
-          // behind it, and under its outline
-          var sp = ISO.toScreen(ux, uy), l = liftOf(ux, uy);
-          var head = ISO.headroom(u.models, R.status(u), u);
-          return sp.x > b.x - K * 0.6 && sp.x < b.x + b.w + K * 0.6 &&
-            sp.y - l > b.y && sp.y - l - head < b.y + b.h;
+          return onTable(u) && R.inRect(dispX(u), dispY(u), pr);
         });
         blockers.push({ pr: pr, depth: depth, draw: 'block', open: open });
       });
@@ -973,6 +965,66 @@
        A circle is the sight range from the unit's base edge to the target's,
        so an enemy whose base reaches into the light is in range — terrain can
        still block the line itself. Worked out again only when the table changes. */
+    /* A strafing run being chosen: the line from the craft to the end of the run
+       — the end tapped (ui.strafeAim), or on a mouse the reachable spot under
+       the pointer — and a target ring round every unit under it, as the run
+       picks them (combat.js doStrafe: within 2.2" of the line, ground units
+       only). The enemy in red; the craft's own side in amber, at risk of
+       friendly fire. */
+    function strafeAimSpot() {
+      if (ui.strafeAim) return ui.strafeAim;
+      if (!ui.hover || isTouch()) return null;
+      var best = null, bd = 1.2;
+      ui.moves.forEach(function (m) {
+        var d = Math.hypot(m.x - ui.hover.x, m.y - ui.hover.y);
+        if (d < bd) { bd = d; best = m; }
+      });
+      return best;
+    }
+    function strafeUnder(u, to) {
+      return activeUnits().filter(function (t) {
+        return t !== u && !R.isFlying(t) && R.pointSegDist(t.x, t.y, u.x, u.y, to.x, to.y) <= 2.2;
+      });
+    }
+    function drawStrafeAim(u) {
+      var to = strafeAimSpot();
+      if (!to) return;
+      var a = hud(u.x, u.y, liftOf(u.x, u.y) + ISO.flyLift(u)), b = hud(to.x, to.y, liftOf(to.x, to.y));
+      B.ctx.save();
+      B.ctx.setLineDash([6, 5]);
+      B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(235,110,90,.85)';
+      B.ctx.beginPath(); B.ctx.moveTo(a.x, a.y); B.ctx.lineTo(b.x, b.y); B.ctx.stroke();
+      B.ctx.setLineDash([]);
+      B.ctx.restore();
+      strafeRings(u, strafeUnder(u, to));
+    }
+    // the run being flown (playStrafe): what is under it stays ringed until the craft has passed
+    function drawStrafeRuns() {
+      var now = nowMs();
+      (B.anims || []).forEach(function (an) {
+        if (an.kind !== 'strafe' || !an.under || !an.under.length || now > an.t0 + an.dur) return;
+        strafeRings(an.unit, an.under.filter(function (t) { return t.alive; }));
+      });
+    }
+    // a target ring with its cross-hairs round each unit under a run: the enemy red, the craft's own side amber
+    function strafeRings(u, list) {
+      B.ctx.save();
+      list.forEach(function (t) {
+        var col = t.side === u.side ? 'rgba(240,190,80,.95)' : 'rgba(235,90,70,.95)';
+        var tx = dispX(t), ty = dispY(t), lift = liftOf(tx, ty);
+        B.ctx.lineWidth = 2.2; B.ctx.strokeStyle = col;
+        isoRing(tx, ty, UR * 1.6, lift); B.ctx.stroke();
+        // the cross-hairs' four ticks
+        var c = hud(tx, ty, lift), r = Math.SQRT2 * UR * 1.6 * K * cam.z;
+        B.ctx.beginPath();
+        B.ctx.moveTo(c.x - r - 4, c.y); B.ctx.lineTo(c.x - r + 3, c.y);
+        B.ctx.moveTo(c.x + r - 3, c.y); B.ctx.lineTo(c.x + r + 4, c.y);
+        B.ctx.moveTo(c.x, c.y - r / 2 - 4); B.ctx.lineTo(c.x, c.y - r / 2 + 3);
+        B.ctx.moveTo(c.x, c.y + r / 2 - 3); B.ctx.lineTo(c.x, c.y + r / 2 + 4);
+        B.ctx.stroke();
+      });
+      B.ctx.restore();
+    }
     var darkCanvas = null;
     function drawSight(side, sel) {
       var eyes, seen = [];
@@ -1195,6 +1247,9 @@
         B.ctx.setLineDash([]);
       });
 
+      if (ui.mode !== 'strafe') ui.strafeAim = null;   // an aim is only kept while the run is being chosen
+      if (ui.mode === 'strafe' && ui.selected && !aiSel) drawStrafeAim(ui.selected);
+      drawStrafeRuns();
       if (B.sightOn && B.sightOn()) drawSight(B.sightSide(), ui.selected && !aiSel && B.seats.indexOf(ui.selected.side) >= 0 ? ui.selected : null);
 
       var u = ui.selected;
@@ -1458,6 +1513,7 @@
       B.ctx.textAlign = 'center'; B.ctx.textBaseline = 'alphabetic';
       B.state.units.forEach(function (u2) {
         if (!u2.alive || u2.x < 0) return;
+        if (arrivalQueued(u2)) return;                 // its arrival has not played yet: no label either
         // the label rides with the model as it is shown — mid-move, where the move has got to — not where the rules have put it
         var lx = dispX(u2), ly = dispY(u2);
         var p = hud(lx, ly, liftOf(lx, ly) + ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5);

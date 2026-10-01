@@ -83,6 +83,10 @@
     'Flying Infantry':
       'Flies over terrain (but cannot land on impassable ground), takes no cover, and always shoots and is ' +
       'shot at with Basic Firepower. Only Flying Infantry can assault it, and it may assault aircraft.',
+    // not printed on any profile: every aircraft with Firepower may make one (p. 27)
+    'Strafing Run':
+      'An aircraft with Firepower may fly up to its full Movement in a straight run and fire at every enemy ground unit ' +
+      'within 2" of its path. Its own side\'s units under the run are caught on a D6 of 1-3, and every enemy still able may fire back.',
     'Flying unit':
       'An aircraft: flies over everything, never takes cover, shoots and is shot at with Basic Firepower, and is ' +
       'destroyed outright once Damage passes Structure. Cannot assault, be assaulted or hold objectives; may Strafe.',
@@ -245,8 +249,55 @@
     return { name: name, text: text };
   }
 
+  /* An army's own rules: the ones the whole army carries that no unit profile
+     prints (the Rebels', pp. 94-95; the Xenotripods', pp. 128-129), and the
+     special rules only its units carry — read off the profiles, so the list
+     stays in step with them. The campaign's army card and the unit viewer both
+     show it. */
+  var ARMY_WIDE = {
+    rebel: ['Hasta la Victoria Siempre!', 'Undisciplined', 'Riders upgrade'],
+    xeno: ['Limited Senses', 'Mental Projection', 'Psychic Bond']
+  };
+  var NOT_ARMY = ['Immobile', 'No Objectives', 'Drone unit', 'Unarmed'];
+  // what an army chooses for each battle (the Rebels' tactics, p. 95)
+  var ARMY_CHOICES = { rebel: { title: 'Tactics \u2014 one chosen for each battle', list: ['Last Stand', 'Human Wave Attacks', 'Guerillas'] } };
+  function armyRules(faction, catalogue) {
+    var f = faction || 'pmc';
+    var base = function (r) { return r.replace(/\s*\(.*\)$/, ''); };
+    var owners = {}, first = {}, nums = {};
+    (catalogue || []).forEach(function (p) {
+      (p.rules || []).forEach(function (r) {
+        var k = base(r), m = r.match(/\((\d+)\)\s*$/);
+        (owners[k] = owners[k] || {})[p.faction || 'pmc'] = true;
+        if (!first[k]) first[k] = r;
+        // a rule whose number differs from unit to unit (Shield Generator 1 or 2): which units carry which
+        if (m) { nums[k] = nums[k] || {}; (nums[k][m[1]] = nums[k][m[1]] || []).indexOf(p.group) < 0 && nums[k][m[1]].push(p.group); }
+      });
+    });
+    function text(k) {
+      var n = nums[k] ? Object.keys(nums[k]).sort() : [];
+      if (n.length > 1 && TEXT[k + ' (X)']) {
+        return TEXT[k + ' (X)'].replace(/\{X\}/g, n.join(' or ')) + ' (' + n.map(function (v) {
+          return v + ': ' + nums[k][v].join(', ');
+        }).join('; ') + ')';
+      }
+      var d = describe(first[k] || k);
+      if (!d.text) d = describe(k);
+      return d.text || '';
+    }
+    // the mercenaries are the standard: no rule of theirs is an army rule
+    var own = f === 'pmc' ? [] : Object.keys(owners).filter(function (k) {
+      return owners[k][f] && Object.keys(owners[k]).length === 1 && NOT_ARMY.indexOf(k) < 0;
+    }).sort();
+    var pair = function (k) { return { name: k, text: text(k) }; };
+    return { wide: (ARMY_WIDE[f] || []).map(pair), own: own.map(pair), text: text };
+  }
+
   root.PMCRuleText = {
     TEXT: TEXT,
-    describe: describe
+    describe: describe,
+    ARMY_WIDE: ARMY_WIDE,
+    ARMY_CHOICES: ARMY_CHOICES,
+    armyRules: armyRules
   };
 })(typeof window !== 'undefined' ? window : global);

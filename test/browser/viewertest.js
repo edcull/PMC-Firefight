@@ -89,8 +89,77 @@ async function pickAndFire(p, key, ms) {
   });
   ok('the stats show the ranks: Rangers a Staff Sergeant, a Sergeant and specialists', /Staff Sergeant, Sergeant, 6 Specialists/.test(ranks.rangers || ''), ranks.rangers);
   ok('...a sniper team a Staff Sergeant and a Sergeant', /Staff Sergeant, Sergeant$/.test(ranks.snipers || ''), ranks.snipers);
-  ok('...a hull its crew, each by job and rank', /Crew Commander \(Sergeant\), Driver \(Corporal\), Gunner \(Private\), Loader \(Private\)/.test(ranks.mcv || ''), ranks.mcv);
+  ok('...a hull its crew, each by job and rank', /Crew Sergeant \(Commander\), Corporal \(Driver\), Private \(Gunner\), Private \(Loader\)/.test(ranks.mcv || ''), ranks.mcv);
   ok('...and a swarm nobody named', /counted/.test(ranks.battack || ''), ranks.battack);
+  // the army under the unit's name, its rules a tap away; an aircraft with Firepower shows the Strafing Run
+  const army = await p.evaluate(async () => {
+    window.__viewer.pick('xalpha3');
+    await new Promise(r => setTimeout(r, 60));
+    const pill = document.querySelector('.varmy');
+    const name = pill && pill.textContent;
+    if (pill) pill.click();
+    await new Promise(r => setTimeout(r, 60));
+    const m = document.getElementById('varmymodal');
+    const txt = m && !m.hidden ? m.textContent : '';
+    if (m) m.hidden = true;
+    window.__viewer.pick('fsc');
+    await new Promise(r => setTimeout(r, 60));
+    const strafe = /Strafing Run/.test((document.querySelector('.vstatsbody') || {}).textContent || '');
+    return { name, rules: /Limited Senses/.test(txt) && /Mental Projection/.test(txt) && /Cloaking System/.test(txt), strafe };
+  });
+  ok('the unit\'s army is a pill under its name', army.name === 'Xenotripods', army.name);
+  ok('...a tap opens the army\'s own rules', army.rules);
+  ok('an aircraft with Firepower shows the Strafing Run among its rules', army.strafe);
+  // Fire! rolls a real shot at the target picked in the list, and the target shows what it left
+  const shot = await p.evaluate(async () => {
+    window.__viewer.pick('hmgteam');
+    await new Promise(r => setTimeout(r, 60));
+    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
+    const line = () => (document.getElementById('vtgtline') || {}).textContent || '';
+    const fresh = line();
+    let after = fresh;
+    // a shot can miss: fire until one hits (a dozen goes is plenty)
+    for (let i = 0; i < 12; i++) {
+      document.querySelector('[data-do="fire"]').click();
+      await new Promise(r => setTimeout(r, 1100));
+      after = line();
+      if (/[1-9]\d* hits?/.test(after)) break;
+    }
+    const sel = document.getElementById('vtarget');
+    sel.value = 'lcv'; sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 60));
+    return { fresh, after, picked: line(), options: sel.querySelectorAll('option').length };
+  });
+  ok('the Target list offers every unit', shot.options > 100, shot.options + ' units');
+  ok('Fire! rolls a real shot at the target and says what it did', /hits? —|No hits —/.test(shot.after) && shot.after !== shot.fresh, shot.after);
+  // a mortar must not shoot that close (Minimum Range 12"): it is rolled where it could shoot, and says so
+  const mortarLine = await p.evaluate(async () => {
+    window.__viewer.pick('mortarbattery');
+    await new Promise(r => setTimeout(r, 60));
+    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
+    document.querySelector('[data-do="fire"]').click();
+    await new Promise(r => setTimeout(r, 1100));
+    return (document.getElementById('vtgtline') || {}).textContent || '';
+  });
+  ok('a mortar too close for its Minimum Range is rolled as if at a range it could shoot', /rolled at 13"/.test(mortarLine), mortarLine);
+  // the target's Suppression bar fills once the shot lands, as in the battle
+  const fill = await p.evaluate(async () => {
+    window.__viewer.pick('hmgteam');
+    await new Promise(r => setTimeout(r, 60));
+    // a squad to shoot at: a hull takes Damage, not Suppression
+    const sel = document.getElementById('vtarget');
+    sel.value = 'regular'; sel.dispatchEvent(new Event('change', { bubbles: true }));
+    for (let i = 0; i < 12; i++) {
+      document.querySelector('[data-do="fire"]').click();
+      const seen = [];
+      for (let k = 0; k < 24; k++) { seen.push(window.__viewer.targetSp()); await new Promise(r => setTimeout(r, 70)); }
+      const top = Math.max.apply(null, seen);
+      if (top > 1) return { seen, rising: seen.some((v, j) => j && v > seen[j - 1] && v < top) };
+    }
+    return { seen: [], rising: false };
+  });
+  ok('the target\'s Suppression bar fills up once the shot lands, not all at once', fill.rising, fill.seen.join(' '));
+  ok('...and a different target starts fresh', /6 of 6 Structure left/.test(shot.picked) && !/hit/.test(shot.picked), shot.picked);
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,
     loaded.w + '×' + loaded.h);

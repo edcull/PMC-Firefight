@@ -217,6 +217,14 @@
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
   function propOf(u) { return PROPULSION[u && u.prop] || null; }
+  /* The special rules a unit is shown with: its own, and the Strafing Run every
+     aircraft with Firepower may make — a rule of the game (p. 27), not printed
+     on any profile, but the thing such a craft is for. */
+  function shownRules(u) {
+    var rules = (u && u.rules) || [];
+    if (u && u.cls === 'aircraft' && u.fp !== null && u.fp !== undefined && rules.indexOf('Strafing Run') < 0) rules = rules.concat(['Strafing Run']);
+    return rules;
+  }
 
   /* Fold a propulsion into a freshly built machine. Movement is kept exact rather
      than rounded, since the table is measured in real inches. */
@@ -870,6 +878,13 @@
     if (w.splash) spec.splash = true;
     return spec;
   }
+  /* Auxiliary fire is a sidearm, whatever the unit's main weapon: a pistol
+     shot for the mercenaries and the revolt, a single energy bolt for the
+     Xenotripods, a gob of spit for the Bugs. */
+  function auxSpec(u) {
+    var f = (u && u.faction) || 'pmc';
+    return { p: f === 'bugs' ? 'spit' : f === 'xeno' ? 'energy' : 'pistol', s: null, n: 1, sn: 1 };
+  }
   // the primary alone, which is what most callers want
   function weaponStyle(u) { return weaponSpec(u).p; }
 
@@ -1031,19 +1046,26 @@
     // Indirect Fire falls from above, so a low wall shelters the target whichever
     // way the shot comes from
     /* Low walls (p. 42): "When a whole unit is behind a low wall (up to 2" from
-       it), it gets a Defence bonus" — so every model within 2", which for a
-       token of radius 1" means its middle within an inch of the wall, and the
-       wall between it and the shooter. Rubble and the like shelter only the
-       men standing in them, which the lines above already give. */
+       it), it gets a Defence bonus". The squad's token stands for men spread
+       along the wall, so it counts with its middle within 2" of the wall, and
+       the wall between it and the shooter — the line of fire crossing it, or
+       slipping past one of its ends by less than half an inch. It used to want the whole
+       token within 2" — the middle within an inch — and the line dead through
+       the wall, which left a squad standing just back from a wall in the open.
+       Rubble and the like shelter only the men standing in them, which the
+       lines above already give. */
     var plunging = has(attacker, 'Indirect Fire');
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
       if (r.kind !== 'barricade') continue;
       if (inRect(attacker.x, attacker.y, r)) continue;
-      if (rectPointDist(r, target.x, target.y) + UNIT_R > 2 + 1e-6) continue;
+      if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) continue;
       // Indirect Fire falls from above, so the wall shelters them whichever way it comes
       if (plunging) return held(t.cover, 'low wall against plunging fire');
-      if (segRect(attacker.x, attacker.y, target.x, target.y, r)) return held(t.cover, 'behind a low wall');
+      // half an inch more at each end of the wall, along its length (not its thickness:
+      // a wall just behind the target is still behind it)
+      var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
+      if (segRect(attacker.x, attacker.y, target.x, target.y, grown)) return held(t.cover, 'behind a low wall');
     }
     return { v: 0, why: '' };
   }
@@ -1748,9 +1770,10 @@
       if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       if (u.key === 'rguard') return i === 0 ? 'Guard Captain' : 'Guard';
-      // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
+      // the riders: a Rider Leader (tiers 1-2), a Hellrider Leader (3), a Hellrider Captain (4)
       if (g === 'Mounted Warriors') {
         if (u.key === 'rlegendary' || (u.tier || 1) >= 4) return i === 0 ? 'Hellrider Captain' : 'Hellrider';
+        if (u.key === 'rhellriders' || (u.tier || 1) >= 3) return i === 0 ? 'Hellrider Leader' : 'Hellrider';
         return i === 0 ? 'Rider Leader' : 'Rider';
       }
       // the miners: a Supervisor's crew at tier 2, a Foreman's at 3-4
@@ -2015,7 +2038,7 @@
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
-    applyDrone: applyDrone, canBeDrone: canBeDrone, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
+    applyDrone: applyDrone, canBeDrone: canBeDrone, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,

@@ -463,9 +463,19 @@
         if (spot) { doDisembark(spot); return; }
         if (!hit) { setHint(null, 'Put them down inside the shaded ground, within 4" of the hull.'); return; }
       }
+      /* A strafing run is aimed, then flown: the first tap sets the end of the
+         run and rings what is under it; a second tap on that end makes the run,
+         and a tap anywhere else in the shaded ground moves the aim there. */
       if (ui.moves.length && ui.mode === 'strafe') {
         var lane = moveSpotUnder(c);
-        if (lane) { doStrafe(lane); return; }
+        if (lane) {
+          var aim = ui.strafeAim;
+          if (aim && Math.hypot(aim.x - lane.x, aim.y - lane.y) < 1.5) { ui.strafeAim = null; doStrafe(lane); return; }
+          ui.strafeAim = { x: lane.x, y: lane.y };
+          setHint(null, 'The run is marked, and what is under it ringed. Tap the end again to fly it, or tap elsewhere to aim again.');
+          render();
+          return;
+        }
         if (!hit) { setHint(null, 'Pick the far end of the run inside the shaded ground.'); return; }
       }
       // Psychic Wave: move, then the wave goes out from wherever it stops
