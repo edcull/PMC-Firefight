@@ -140,7 +140,7 @@ touches the segment, or any unit whose centre is within 0.9" of it, blocks all s
   out.
 - **Fix:** collect every condition met this End phase before deciding.
 
-### M-3 · Broken Stationary Artillery is pushed 2" after an assault — *reproduced*
+### M-3 · Broken Stationary Artillery is pushed 2" after an assault — *reproduced* — **fixed**
 
 > l.2952: "Broken artillery units do not retreat (they stay in place instead)."
 
@@ -149,14 +149,14 @@ the "cowed" branch at `:231-232` call `fallBack` on any Broken defender. `fallBa
 Artillery or Immobile check, and tests only `TERRAIN.impassable`, so a gun can also be pushed into shallow water.
 In 300 charges on a medium gun, all 225 guns that broke were moved, and kept their dug-in status.
 
-### M-4 · A garrison that loses an assault ends about 5" from its building, not 2" — *reproduced*
+### M-4 · A garrison that loses an assault ends about 5" from its building, not 2" — *reproduced* — **fixed**
 
 > l.1002: "If the attackers win, they occupy the building and the defenders leave it and fall back 2"."
 
 `fallBack` (`assault.js:390-392`) first calls `leaveAway` (`space.js:110`), which picks an exit spot up to 4"
 out, then adds the 2" fall-back. In 300 of 300 runs the garrison's base ended 4.98" from the wall.
 
-### M-5 · Most generated buildings hold two or three units — *reproduced*
+### M-5 · Most generated buildings hold two or three units — *reproduced* — **fixed**
 
 > l.1002: "Each building can be occupied by only one unit at a time." l.1006: only huge buildings are split into
 > sections. Small ones are "approximately up to 4"x4"", and bigger ones should be built from other terrain types.
@@ -617,6 +617,10 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | M-8 Two tests for "behind a low wall" | **Fixed.** One test, `behindWall`, now decides it everywhere. The wall that gives a unit its +2 cover is the wall a Destructive Weapon's 9 or 15+ brings down, the one Sappers' +4 is against, and the one the Demolisher's +4 applies to. | `rules.js` (`behindWall`, `coverFor`), `destruct.js` (`shelterOf`) |
 | M-9 Destructive Weapon never brings down a high wall | **Fixed.** "Behind a small/high wall" (p. 57) and "behind a low/high wall" (p. 59) now take high walls too, by the same test. Against Indirect Fire, the wall counts on any side (p. 58). Reinforced walls still cannot be brought down. | `destruct.js` (`shelterOf`) |
 
+| M-3 Broken Stationary Artillery pushed 2" after an assault | **Fixed.** `fallBack` leaves Stationary Artillery and Immobile units where they are; the assault log says it stays put. | `assault.js` (`fallBack`) |
+| M-4 A beaten garrison ends about 5" from its building | **Fixed.** It leaves through the far wall and its base ends no more than 2" from the building: the 2" counts from the wall and is no longer added to a 4" exit. A Broken garrison fleeing in the Rally phase ends within its M+2" the same way. | `space.js` (`exitSpots`, `leaveAway`), `assault.js` (`fallBack`) |
+| M-5 Small buildings split into sections | **Fixed.** A building no longer than 5.5" on its longer side (the book's "approximately up to 4"x4"" small structure) stays a single block, so it holds one unit. Bigger buildings keep their wings, as the huge-building rule allows. The dice for the rest of the table are unchanged. The terrain snapshots were retaken. | `space.js` (`planBuilding`) |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one.

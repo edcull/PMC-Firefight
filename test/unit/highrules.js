@@ -112,25 +112,35 @@ console.log('\nTroops are put down anywhere within 4" of their hull (p. 36)');
 
 console.log('\nA side with the initiative and nothing to activate hands the phase on (p. 27)');
 (function () {
-  seed = 3;
-  const e = Engine.create();
-  e.start({ tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren',
-    armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
-    nameA: 'Alpha', nameB: 'Bravo', colourA: 'ochre', colourB: 'steel' });
-  ['A', 'B'].forEach((sd) => { e.intent(sd, { k: 'autosplit' }); e.intent(sd, { k: 'autodeploy' }); });
-  ['A', 'B'].forEach((sd) => e.intent(sd, { k: 'start' }));
-  const st = e.state();
-  playOut(e, st);
-  // A: everything on the table Broken (but short of 3x, so they stay), everything off it gone
-  st.units.forEach((u) => {
-    if (u.side !== 'A') return;
-    if (u.x < 0 || R.isMachine(u)) u.alive = false; else u.sp = 2 * R.currentMorale(u) + 1;
-  });
-  let y = 10;
-  st.units.forEach((u) => { if (u.side === 'A' && u.alive) { u.x = 24; u.y = y; y += 3; } });
-  // turn 2 until A wins the initiative with nothing it can activate (the seed's own draw does it)
-  e.intent('A', { k: 'enddone' }); e.intent('B', { k: 'enddone' });
-  if (st.initiative !== 'A') { ok('the case comes up (A has the initiative)', false, 'initiative went to ' + st.initiative); return; }
+  // a battle into turn 2 with every A unit Broken; the dice decide who has the initiative
+  function turnTwo(sd) {
+    seed = sd;
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren',
+      armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
+      nameA: 'Alpha', nameB: 'Bravo', colourA: 'ochre', colourB: 'steel' });
+    ['A', 'B'].forEach((x) => { e.intent(x, { k: 'autosplit' }); e.intent(x, { k: 'autodeploy' }); });
+    ['A', 'B'].forEach((x) => e.intent(x, { k: 'start' }));
+    const st = e.state();
+    playOut(e, st);
+    // A: everything on the table Broken (but short of 3x, so they stay), everything off it gone
+    st.units.forEach((u) => {
+      if (u.side !== 'A') return;
+      if (u.x < 0 || R.isMachine(u)) u.alive = false; else u.sp = 2 * R.currentMorale(u) + 1;
+    });
+    let y = 10;
+    st.units.forEach((u) => { if (u.side === 'A' && u.alive) { u.x = 24; u.y = y; y += 3; } });
+    e.intent('A', { k: 'enddone' }); e.intent('B', { k: 'enddone' });
+    return { e, st };
+  }
+  // the case wanted: A wins the initiative with nothing it can activate
+  let g = null;
+  for (let sd = 1; sd < 60 && !g; sd++) {
+    const t = turnTwo(sd);
+    if (t.st.initiative === 'A' && t.st.turn === 2) g = t;
+  }
+  if (!g) { ok('the case comes up (A has the initiative)', false); return; }
+  const { e, st } = g;
   ok('A has the initiative and nothing to activate', e.query.eligible('A').length === 0 && e.query.eligible('B').length > 0);
   ok('...so the phase goes to B', st.activeSide === 'B');
   const b = e.query.eligible('B')[0];

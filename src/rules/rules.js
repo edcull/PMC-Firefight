@@ -714,9 +714,9 @@
   function canGarrison(u) { return (KIT_SPACE || kitSpace()).canGarrison(u); }
   function enterTargets(state, u) { return (KIT_SPACE || kitSpace()).enterTargets(state, u); }
   function enterBuilding(state, u, r, sec) { return (KIT_SPACE || kitSpace()).enterBuilding(state, u, r, sec); }
-  function exitSpots(state, u) { return (KIT_SPACE || kitSpace()).exitSpots(state, u); }
+  function exitSpots(state, u, reach) { return (KIT_SPACE || kitSpace()).exitSpots(state, u, reach); }
   function exitBuilding(state, u, p) { return (KIT_SPACE || kitSpace()).exitBuilding(state, u, p); }
-  function leaveAway(state, u, from) { return (KIT_SPACE || kitSpace()).leaveAway(state, u, from); }
+  function leaveAway(state, u, from, back) { return (KIT_SPACE || kitSpace()).leaveAway(state, u, from, back); }
   function inches(ax, ay, bx, by) { return (KIT_SPACE || kitSpace()).inches(ax, ay, bx, by); }
   function inRect(x, y, r) { return (KIT_SPACE || kitSpace()).inRect(x, y, r); }
   function inPoly(x, y, pts) { return (KIT_SPACE || kitSpace()).inPoly(x, y, pts); }

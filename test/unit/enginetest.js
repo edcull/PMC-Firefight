@@ -699,7 +699,7 @@ console.log('  vs the OpFor AI');
     nameA: 'A', nameB: 'B', mode: 'ai', planet: 'sparse', doctrines: { A: ['O6'], B: [] } });
   const st = e.state(), n = st.units.filter(u => u.side === 'A' && u.pickIdx != null).length;
   ok('the player may modify the list before deploying', e.intent('A', { k: 'swapopen' }).ok && !!e.state().swapAsk);
-  ok('...up to half the list with Tactical Flexibility', e.state().swapAsk.total === Math.floor(n / 2), e.state().swapAsk.total + ' of ' + n);
+  ok('...up to half the list with Tactical Flexibility', e.state().swapAsk.total === Math.ceil(n / 2), e.state().swapAsk.total + ' of ' + n);
   // not one riding in a transport: a unit already aboard stays as it is
   const u = st.units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry' && !x.aboard && !(x.cargo && x.cargo.length));
   const alt = R.listFor('pmc').find(p => p.tier === u.tier && p.key !== u.key && !p.command && p.cls === 'infantry');

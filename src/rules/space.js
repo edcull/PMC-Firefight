@@ -86,15 +86,17 @@
     }
     /* Where a unit coming out may be put: within 4" of the wall, on ground it
        can stand on, clear of every other unit. */
-    function exitSpots(state, u) {
+    // `reach`: how far out the unit's middle may end, 4" from the wall unless said otherwise
+    function exitSpots(state, u, reach) {
       var q = sectionRect(u);
       if (!q) return [];
+      reach = reach || 4;
       var out = [];
-      for (var x = Math.floor(q.x - 5); x <= q.x + q.w + 5; x += STEP) {
-        for (var y = Math.floor(q.y - 5); y <= q.y + q.h + 5; y += STEP) {
+      for (var x = Math.floor(q.x - reach - 1); x <= q.x + q.w + reach + 1; x += STEP) {
+        for (var y = Math.floor(q.y - reach - 1); y <= q.y + q.h + reach + 1; y += STEP) {
           if (x < UNIT_R || y < UNIT_R || x > BOARD.w - UNIT_R || y > BOARD.h - UNIT_R) continue;
           var d = rectPointDist(q, x, y);
-          if (d < UNIT_R || d > 4) continue;
+          if (d < UNIT_R || d > reach) continue;
           if (TERRAIN[terrainAt(state, x, y)].impassable) continue;
           if (unitNear(state, x, y, u, 1)) continue;
           out.push({ x: x, y: y, cost: d, spent: d, turns: 0 });
@@ -106,9 +108,11 @@
       u.bld = null; u.sec = null;
       if (p) { u.x = p.x; u.y = p.y; }
     }
-    // out through the wall facing away from `from`, as the garrison of a lost building does
-    function leaveAway(state, u, from) {
-      var spots = exitSpots(state, u);
+    /* Out through the wall facing away from `from`, as the garrison of a lost
+       building does: its base ends no further than `back` inches from the wall
+       (the 2" it falls back, p. 41) — 4" if not said. */
+    function leaveAway(state, u, from, back) {
+      var spots = exitSpots(state, u, back != null ? UNIT_R + back : 4);
       var q = sectionRect(u);
       exitBuilding(state, u, null);
       if (!spots.length) { var p0 = nearestClear(state, u, q); u.x = p0.x; u.y = p0.y; return; }
@@ -280,9 +284,15 @@
        rectangles that share edges and never overlap; together they are the
        building — cover, sight, all of it — and the ground between them is open. */
     var PLANS = ['block', 'L', 'L', 'T', 'U', 'annex', 'tower'];
+    /* "Each building can be occupied by only one unit at a time" (p. 41): that is the
+       small structure, "approximately up to 4"x4"" (p. 42). Only a bigger one is
+       built of sections a unit each — so a building no longer than SMALL_BLD on
+       its longer side stays one block, whatever plan the dice gave it. */
+    var SMALL_BLD = 5.5;
     function planBuilding(r, rand, plan) {
       if (r.parts || r.w < 4 || r.h < 4) return r;
-      plan = plan || PLANS[Math.floor(rand() * PLANS.length)];
+      var rolled = PLANS[Math.floor(rand() * PLANS.length)];   // (rolled either way: the dice that follow stay the same)
+      plan = plan || (Math.max(r.w, r.h) <= SMALL_BLD ? 'block' : rolled);
       var x = r.x, y = r.y, w = r.w, h = r.h, parts;
       function P(px, py, pw, ph, hf) { return { x: px, y: py, w: pw, h: ph, hf: hf || 1 }; }
       var fx = rand() < 0.5, fy = rand() < 0.5, swap = rand() < 0.5 && plan !== 'block';
