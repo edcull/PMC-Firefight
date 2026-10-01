@@ -47,7 +47,7 @@
   var ARMY_COLOUR = { pmc: 'ochre', rebel: 'crimson', bugs: 'olive', xeno: 'steel' };
   function choose(k) {
     var wasFac = view.pickFac;
-    view.key = k; view.models = null; view.tele = null; view.abNext = 0;
+    view.key = k; view.beast = null; view.models = null; view.tele = null; view.abNext = 0;
     view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
@@ -1088,16 +1088,25 @@
   }
   function ranksHtml(u) {
     var who = Object.assign({ faction: 'pmc' }, u, { alive: true });
+    // an Overgrown Bug: one beast, named by the troops who face it (a fresh name each battle)
+    if (R.overgrown && R.overgrown(who)) {
+      return '<p class="vranks"><b>Name</b> one of its own, given by the troops facing it \u2014 this one \u201c' + esc(view.beast || (view.beast = R.beastName(who))) + '\u201d</p>';
+    }
     if (!R.crewed(who)) {
       return '<p class="vranks"><b>Ranks</b> ' + (R.counted(who) ? 'Nobody named: its losses are counted' : 'Nobody aboard: a machine') + '</p>';
     }
-    var n = R.isMachine(who) ? 1 : Math.max(1, who.size || 1), groups = [];
+    var mach = R.isMachine(who), n = mach ? R.crewSize(who) : Math.max(1, who.size || 1), groups = [];
     for (var i = 0; i < n; i++) {
-      var r = R.rankFor(who, i), last = groups[groups.length - 1];
-      if (last && last.r === r) last.n++; else groups.push({ r: r, n: 1 });
+      // a hull's crew by job and rank — "Driver (Corporal)"; a squad's by rank alone
+      var role = mach ? R.roleFor(who, i) : null, rk = R.rankFor(who, i);
+      var r = role ? role + ' (' + rk + ')' : rk, last = groups[groups.length - 1];
+      if (last && last.r === r) last.n++; else groups.push({ r: r, n: 1, role: role, rk: rk });
     }
-    var line = groups.map(function (g) { return (g.n > 1 ? g.n + ' ' : '') + plural(g.r, g.n); }).join(', ');
-    return '<p class="vranks"><b>' + (R.isMachine(who) ? 'Crew' : 'Ranks') + '</b> ' + esc(line) + (R.isMachine(who) ? ' (commander)' : '') + '</p>';
+    var line = groups.map(function (g) {
+      if (g.role) return (g.n > 1 ? g.n + ' ' + plural(g.role, g.n) + ' (' + plural(g.rk, g.n) + ')' : g.r);
+      return (g.n > 1 ? g.n + ' ' + plural(g.r, g.n) : g.r) + (mach ? ' (commander)' : '');
+    }).join(', ');
+    return '<p class="vranks"><b>' + (mach ? 'Crew' : 'Ranks') + '</b> ' + esc(line) + '</p>';
   }
 
   /* The states a unit can be shown in. A machine is never suppressed or

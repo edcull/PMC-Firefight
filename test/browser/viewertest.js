@@ -88,8 +88,8 @@ async function pickAndFire(p, key, ms) {
     return out;
   });
   ok('the stats show the ranks: Rangers a Staff Sergeant, a Sergeant and specialists', /Staff Sergeant, Sergeant, 6 Specialists/.test(ranks.rangers || ''), ranks.rangers);
-  ok('...a sniper team a Sergeant and a Corporal', /Sergeant, Corporal$/.test(ranks.snipers || ''), ranks.snipers);
-  ok('...a hull its commander', /Crew/.test(ranks.mcv || '') && /commander/.test(ranks.mcv || ''), ranks.mcv);
+  ok('...a sniper team a Staff Sergeant and a Sergeant', /Staff Sergeant, Sergeant$/.test(ranks.snipers || ''), ranks.snipers);
+  ok('...a hull its crew, each by job and rank', /Crew Commander \(Sergeant\), Driver \(Corporal\), Gunner \(Private\), Loader \(Private\)/.test(ranks.mcv || ''), ranks.mcv);
   ok('...and a swarm nobody named', /counted/.test(ranks.battack || ''), ranks.battack);
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,

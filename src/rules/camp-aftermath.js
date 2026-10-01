@@ -77,8 +77,9 @@
           var e = byRid(co, c.rid);
           if (e && manned(e, co) === 0) noMen[c.rid] = 1;
         });
-        /* Killed or wounded: a D6 for every soldier lost, a vehicle's crew
-           included, a 1 killed in action and 2-6 wounded. Either way they are
+        /* Killed or wounded: a D6 for every soldier lost, a 1 killed in action
+           and 2-6 wounded — a vehicle's crew caught in their hull 1-2 killed,
+           3-6 wounded. Either way they are
            out of the campaign, replaced free like any casualty, and both go on
            the field hospital's list. Penal troopers die by their collars:
            those are all killed. Rolled once, and kept on the report. */
@@ -88,7 +89,8 @@
           if (!p || poolOf(p) === 'penal') { c.kia = n; c.wounded = 0; return; }
           c.rolls = [];
           for (var i = 0; i < n; i++) c.rolls.push(d6());
-          c.kia = c.rolls.filter(function (r) { return r === 1; }).length;
+          var killedOn = (p.cls === 'vehicle' || p.cls === 'aircraft') ? 2 : 1;
+          c.kia = c.rolls.filter(function (r) { return r <= killedOn; }).length;
           c.wounded = n - c.kia;
           if (!c.anon) { c.roll = c.rolls[0]; c.fate = c.kia ? 'kia' : 'wounded'; }
         });
@@ -467,7 +469,7 @@
           } else {
             (u.men || []).forEach(function (m) {
               if (m.lost == null) return;
-              report.casualties.push({ side: side, name: m.name, rank: m.rank, turn: m.lost, type: p.name, unit: e.name, rid: e.rid });
+              report.casualties.push({ side: side, name: m.name, rank: m.rank, role: m.role || null, turn: m.lost, type: p.name, unit: e.name, rid: e.rid });
             });
           }
         });

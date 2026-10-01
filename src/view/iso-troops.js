@@ -146,8 +146,10 @@
       command3: ['cmdr3', 'signals', 'cmdsmg'],
       // the larger command groups carry a spotter: their marks and hacks are called from his eyes
       command2: ['cmdr2', 'signals', 'cmdspotter', 'cmdsmg'],
-      command1: ['cmdr1', 'signals', 'cmdspotter', 'cmdsmg'],
-      commandhi: ['cmdrhi', 'signals', 'cmdspotter', 'cmdsmg'],
+      // the 1st grade and the high command have a warrant officer at the commander's side,
+      // in the 4th grade commander's uniform (one of the SMG men makes way for him)
+      command1: ['cmdr1', 'cmdr4', 'signals', 'cmdspotter', 'cmdsmg'],
+      commandhi: ['cmdrhi', 'cmdr4', 'signals', 'cmdspotter', 'cmdsmg'],
       // rifle teams: the leader at the front right with an SMG, the SAW at the front left, riflemen behind
       rifle: ['riflelead', 'saw', 'rifleman'],
       veteran: ['vetlead', 'vetsaw', 'vet'],
@@ -356,14 +358,16 @@
       recruit: { helm: 'cap', gun: 'rifle', pack: 'none', sleeves: 'rolled' },
       riot: { helm: 'riot', gun: 'shotgun', pack: 'none', bulk: 1, shield: true },
       // gangers and free companies: rifles, a bandolier, and not much else
-      irregular: { helm: 'scarf', gun: 'smg', pack: 'none', light: true, bandolier: true },
-      irregular2: { helm: 'boonie', gun: 'saw', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
-      irregular3: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-      irregular4: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-      irregular5: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-      irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
-      irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
-      irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
+      // the leader dressed as the bandana men, in khaki, with an SMG and more webbing than the
+      // rest; every man of them with the company's armband
+      irregular: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', webbing: true, armband: 'force', tint: IRR_KHAKI },
+      irregular2: { helm: 'boonie', gun: 'saw', pack: 'none', light: true, bandolier: true, armband: 'force', tint: IRR_OLIVE },
+      irregular3: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', armband: 'force', tint: IRR_KHAKI },
+      irregular4: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', armband: 'force', tint: IRR_KHAKI },
+      irregular5: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', armband: 'force', tint: IRR_KHAKI },
+      irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, armband: 'force', tint: IRR_OLIVE },
+      irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, armband: 'force', tint: IRR_OLIVE },
+      irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, armband: 'force', tint: IRR_OLIVE },
       nomad: { helm: 'nomadhood', gun: 'battlerifle', pack: 'std', cloak: true },
       nomadlead: { helm: 'nomadhood', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
       // penal troops: orange coveralls, a collar, and the company's armband

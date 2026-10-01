@@ -25,6 +25,24 @@ ok('a squad of eight gets eight names', rifles.men.length === 8);
 ok('...none repeated', new Set(rifles.men.map((m) => m.name)).size === 8);
 ok('...led by a sergeant, then a corporal', rifles.men[0].rank === 'Sergeant' && rifles.men[1].rank === 'Corporal');
 ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Private'));
+// an Overgrown Bug is one beast, and the troops facing it give it a name; the swarm has none
+(function () {
+  const seen = {};
+  const beasts = ['bfirebeetle', 'bsandworm', 'bbioplasma', 'bcarrier', 'bshadow', 'bqueen'].map((k) => {
+    const u = unit(k); R.musterMen(u, null, seen); return u;
+  });
+  ok('every Overgrown Bug is given a name of its own', beasts.every((u) => typeof u.beast === 'string' && u.beast.length > 2),
+    beasts.map((u) => u.name + ' \u201c' + u.beast + '\u201d').join(', '));
+  ok('...no two the same', new Set(beasts.map((u) => u.beast)).size === beasts.length);
+  // a name of legend, after the beast: a Queen is never "the Shadow of" anywhere
+  const q = unit('bqueen'), names = {};
+  for (let k = 0; k < 200; k++) names[R.beastName(q)] = 1;
+  ok('...a legend fitting what it is (a Queen, say)', Object.keys(names).some((n) => /Swarmlord|Empress|Mother/.test(n)) &&
+    !Object.keys(names).some((n) => /Shadow|Worm|Furnace/.test(n)), Object.keys(names).slice(0, 6).join(', '));
+  ok('...while its losses still go down as biomass, with the swarm\'s', beasts.every((u) => R.counted(u) && u.men.length === 0));
+  const swarm = unit('battack'); R.musterMen(swarm, null, seen);
+  ok('the swarm itself has no name', !swarm.beast);
+})();
 // the rifle teams (and assault troops) by tier: 1-2 a corporal, a lance corporal and privates; 3-4 a
 // sergeant, a corporal and privates; 5 a staff sergeant, a sergeant and specialists
 [['recruits', 'Corporal', 'Lance Corporal', 'Private'], ['rookie', 'Corporal', 'Lance Corporal', 'Private'],
@@ -35,7 +53,33 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   ['shock', 'Sergeant', 'Corporal', 'Private'], ['commandos', 'Staff Sergeant', 'Sergeant', 'Specialist'],
   // light infantry: tier 2 a corporal and a lance corporal, tier 3-5 a sergeant and a corporal
   ['observers', 'Corporal', 'Lance Corporal', 'Private'], ['sharpshooters', 'Sergeant', 'Corporal', 'Private'],
-  ['lrrp', 'Sergeant', 'Corporal', 'Private'], ['snipers', 'Sergeant', 'Corporal', 'Private']].forEach(([key, lead, second, rest]) => {
+  ['lrrp', 'Sergeant', 'Corporal', 'Private'], ['snipers', 'Staff Sergeant', 'Sergeant', 'Sergeant'],
+  // the support teams: EW a Sergeant and a Specialist; medics a Sergeant, a Corporal and Medics
+  ['ew', 'Sergeant', 'Specialist', 'Specialist'], ['medics', 'Sergeant', 'Corporal', 'Medic'],
+  // the rebels' Revolutionary guard: a Guard Captain and his guards
+  ['rguard', 'Guard Captain', 'Guard', 'Guard'],
+  // the Holy Warriors: a Preacher (1-2), an Elder (3-4), a Prophet and Holy Warriors (5)
+  ['racolytes', 'Preacher', 'Zealot', 'Zealot'], ['rfanatics', 'Elder', 'Zealot', 'Zealot'],
+  ['renlightened', 'Elder', 'Zealot', 'Zealot'], ['rmujahideen', 'Prophet', 'Holy Warrior', 'Holy Warrior'],
+  // the partisan commandos, each by its trade
+  ['rassaultcdo', 'Commando Leader', 'Partisan', 'Partisan'], ['rsabcdo', 'Saboteur Chief', 'Saboteur', 'Saboteur'],
+  ['rsnipercdo', 'Marksman Chief', 'Marksman', 'Marksman'],
+  // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
+  ['rridergang', 'Rider Leader', 'Rider', 'Rider'], ['rriderwar', 'Rider Leader', 'Rider', 'Rider'],
+  ['rhellriders', 'Rider Leader', 'Rider', 'Rider'], ['rlegendary', 'Hellrider Captain', 'Hellrider', 'Hellrider'],
+  // the revolt's leaders: Chief, Sector Chief, Commandant, Commander, General
+  ['rinstigators', 'Chief', 'Lieutenant', 'Lieutenant'], ['rsecondary', 'Sector Chief', 'Lieutenant', 'Lieutenant'],
+  ['rleaders', 'Commandant', 'Lieutenant', 'Lieutenant'], ['rinfluential', 'Commander', 'Lieutenant', 'Lieutenant'],
+  ['rrebellion', 'General', 'Lieutenant', 'Lieutenant'],
+  // the Xenotripods' Alpha squads: Hunt-leader, Pack-leader, Clan-leader, War-chief, Tribe-lord
+  ['xalpha1', 'Hunt-leader', 'Warrior', 'Warrior'], ['xalpha2', 'Pack-leader', 'Warrior', 'Warrior'],
+  ['xalpha3', 'Clan-leader', 'Warrior', 'Warrior'], ['xalpha4', 'War-chief', 'Warrior', 'Warrior'],
+  ['xalpha5', 'Tribe-lord', 'Warrior', 'Warrior'],
+  // the miners: a Supervisor at tier 2, a Foreman at 3-4, and their Miners
+  ['rminers', 'Supervisor', 'Miner', 'Miner'], ['rfaceminers', 'Foreman', 'Miner', 'Miner'],
+  ['rharshminers', 'Foreman', 'Miner', 'Miner'],
+  // armed civilians: an Agitator and Civilians
+  ['rciv', 'Agitator', 'Civilian', 'Civilian']].forEach(([key, lead, second, rest]) => {
   const u = unit(key);
   R.musterMen(u, null, {});
   ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',
@@ -47,10 +91,59 @@ ok('a field command is led by an officer, a senior NCO beside him', cmd.men[0].r
   cmd.men.slice(0, 2).map((m) => m.rank).join(', '));
 const fcp = unit('flyingcp');
 R.musterMen(fcp, null, taken);
-ok('a flying command post is commanded by a field officer', fcp.men[0].rank === 'Major', fcp.men[0].rank);
+ok('a flying command post is commanded by a Squadron Leader, with a pilot and two crew', fcp.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Commander Squadron Leader, Pilot Flying Officer, Crew Specialist, Crew Specialist', fcp.men.map((m) => m.role + ' ' + m.rank).join(', '));
 const lcv = unit('lcv');
 R.musterMen(lcv, null, taken);
-ok('a crewed vehicle has one named commander, an NCO', lcv.men.length === 1 && /Corporal|Sergeant/.test(lcv.men[0].rank), lcv.men[0] && lcv.men[0].rank);
+ok('a light combat vehicle has a commander, a driver and a gunner', lcv.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Commander Sergeant, Driver Corporal, Gunner Private', lcv.men.map((m) => m.role + ' ' + m.rank).join(', '));
+// every crew by its job and rank, as the company's motor pool and squadron have them
+[['unarmoured', 'Driver Private'], ['lpv', 'Driver Corporal, Gunner Private'],
+  ['mcv', 'Commander Sergeant, Driver Corporal, Gunner Private, Loader Private'],
+  ['acv', 'Commander Staff Sergeant, Driver Corporal, Gunner Private'], ['medveh', 'Commander Lieutenant, Driver Corporal, Gunner Private'],
+  ['adaptedcraft', 'Pilot Pilot Officer'], ['lightcraft', 'Pilot Flying Officer'], ['heavycraft', 'Pilot Flying Officer'],
+  ['gunboat', 'Pilot Flight Lieutenant, Gunner Pilot Officer']].forEach(([k, want]) => {
+  const v = unit(k); R.musterMen(v, null, {});
+  const got = v.men.map((m) => m.role + ' ' + m.rank).join(', ');
+  ok(v.name + ': ' + want, got === want, got);
+});
+// nobody aboard a drone: the Light VTOL drone, always one, and any hull or craft fielded under Drone Control
+const vtol = unit('vtoldrone'); R.musterMen(vtol, null, {});
+ok('the Light VTOL drone has no crew', vtol.men.length === 0 && !R.crewed(vtol));
+const droneLcv = R.applyDrone(unit('lcv', { str: R.profile('lcv').str }), true); R.musterMen(droneLcv, null, {});
+ok('...nor a light combat vehicle fielded as a drone', droneLcv.men.length === 0 && !R.crewed(droneLcv));
+const shield = unit('xshieldb'); R.musterMen(shield, null, {});
+ok('a Xenotripod shield generator craft is flown by a Hunter', shield.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Pilot Hunter');
+const rip = unit('insertplat'); R.musterMen(rip, null, {});
+ok('a Rapid insertion platform has nobody aboard', rip.men.length === 0);
+// a hull keeps all its crew while it runs, and loses them all when it is destroyed
+const mcvL = unit('mcv'); R.musterMen(mcvL, null, {});
+ok('...a hull still running loses none of its crew', R.syncMen(mcvL, 2, {}).length === 0 && mcvL.men.every((m) => m.lost == null));
+mcvL.alive = false;
+// destroyed, each man aboard has an even chance of getting out, rolled once
+const lostOut = R.syncMen(mcvL, 3, {});
+ok('...a destroyed one: each man aboard either lost or out, decided there and then',
+  lostOut.length === mcvL.men.filter((m) => m.lost === 3).length && mcvL.men.every((m) => m.lost === 3 || m.out) && R.syncMen(mcvL, 4, {}).length === 0,
+  lostOut.length + ' of 4 lost');
+(function () {
+  let lost = 0, men = 0;
+  for (let k = 0; k < 400; k++) {
+    const h = unit('mcv'); R.musterMen(h, null, {}); h.alive = false;
+    lost += R.syncMen(h, 3, {}).length; men += h.men.length;
+  }
+  ok('...about half of them', lost / men > 0.42 && lost / men < 0.58, Math.round(100 * lost / men) + '% lost');
+})();
+// the revolt's crews are fighters; the tribe's craft each a Hunter at the controls
+[['rtechnical', 'Driver Fighter, Gunner Fighter'], ['rmflak', 'Driver Fighter, Gunner Fighter, Loader Fighter'],
+  ['rhicv', 'Driver Fighter, Gunner Fighter, Gunner Fighter, Loader Fighter'], ['rlifter', 'Pilot Fighter'],
+  ['rhshuttle', 'Pilot Fighter, Gunner Fighter'], ['xstrike3', 'Pilot Hunter'], ['xtelecraft', 'Pilot Hunter']].forEach(([k, want]) => {
+  const v = unit(k); R.musterMen(v, null, {});
+  const got = v.men.map((m) => m.role + ' ' + m.rank).join(', ');
+  ok(v.name + ': ' + want, got === want, got);
+});
+// a walker has one pilot, of the highest rank its crew would have had — a transport walker keeps its crew
+const wk = unit('acv', { prop: 'walker' }); R.musterMen(wk, null, {});
+ok('a walker combat vehicle has one pilot, a Staff Sergeant', wk.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Pilot Staff Sergeant', wk.men.map((m) => m.role + ' ' + m.rank).join(', '));
+const wt = unit('hapc', { prop: 'walker', transport: 4 }); R.musterMen(wt, null, {});
+ok('...a walker transport its usual crew', wt.men.length === 3, wt.men.map((m) => m.role + ' ' + m.rank).join(', '));
 // a command or EW vehicle is in the hands of a junior officer
 ['cmdveh', 'ewveh'].forEach((k) => {
   const v = unit(k);
@@ -83,7 +176,7 @@ R.syncMen(rifles, 3, taken);
 ok('models given back are fresh men', live(rifles).length === 7 && rifles.men.length === 10);
 lcv.alive = false; lcv.catastrophic = true;
 R.syncMen(lcv, 4, taken);
-ok('the commander of a destroyed hull is a casualty', lcv.men[0].lost === 4);
+ok('each man of a destroyed hull is a casualty or got out', lcv.men.every((m) => m.lost === 4 || m.out), lcv.men.map((m) => m.role + (m.out ? ' out' : ' lost')).join(', '));
 const fled = unit('rookie');
 R.musterMen(fled, null, taken);
 fled.alive = false; fled.fled = true;
@@ -347,6 +440,17 @@ console.log('killed or wounded');
   }));
   ok('a crewman lost with the hull rolls too: a 6 is wounded', C.lossStats(vc2.companies.A)[0].lost === 0 && C.lossStats(vc2.companies.A)[0].wounded === 1 &&
     vc2.companies.A.memorial.length === 1 && vc2.companies.A.memorial[0].fate === 'wounded');
+  // a vehicle's crew caught in the hull die on a 1-2, not just a 1
+  const vc3 = C.newCampaign({ mode: 'solo' });
+  const hv3 = C.newEntry('lcv');
+  vc3.companies.A.roster = [hv3];
+  dice(2, () => C.aftermath(vc3, {
+    winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+    units: [{ rid: hv3.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
+    casualties: [{ side: 'A', rid: hv3.rid, name: 'Ivo Crane', rank: 'Corporal', role: 'Driver', turn: 3, type: 'Light combat vehicle' }]
+  }));
+  ok('...a 2 kills him (crew: 1-2 killed, 3-6 wounded)', vc3.companies.A.memorial.length === 1 && vc3.companies.A.memorial[0].fate === 'kia',
+    vc3.companies.A.memorial.map((m) => m.fate).join(','));
 
   // the Esh-Aven roll one by one, and only the dead are counted on the memorial
   const xk = C.newCampaign({ mode: 'solo', factionA: 'xeno' });

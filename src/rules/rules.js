@@ -1597,7 +1597,10 @@
      post by a Major. */
   var CREW_NCO = ['Corporal', 'Corporal', 'Sergeant', 'Staff Sergeant', 'Master Sergeant'];
   var CREW_OFFICER = ['Second Lieutenant', 'Second Lieutenant', 'Lieutenant', 'Lieutenant', 'Captain'];
-  var REBEL_CHIEF = ['Cell Leader', 'Captain', 'Commandant', 'Commander', 'General'];
+  // the revolt's own titles, none of them the PMCs': a Chief, a Sector Chief, then Commandant, Commander, General
+  var REBEL_CHIEF = ['Chief', 'Sector Chief', 'Commandant', 'Commander', 'General'];
+  // the Xenotripods' Alpha squads, led by a higher officer the higher the grade
+  var ALPHA_LEAD = ['Hunt-leader', 'Pack-leader', 'Clan-leader', 'War-chief', 'Tribe-lord'];
 
   function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
   function syllables(list, a, b) {
@@ -1617,6 +1620,30 @@
     if (f === 'xeno') return syllables(XENO_SYL, 2, 3) + ' ' + syllables(XENO_SYL, 2, 3);
     return humanName(f === 'rebel');
   }
+  /* An Overgrown Bug is one beast, big enough that the troops facing it give it
+     a name of legend, after what it is and where it made its name: a Shadow bug
+     is "the Shadow of Karak", a Queen "the Swarmlord". Its losses still go down
+     as biomass with the rest of the swarm (counted); the name rides along. */
+  var BEAST_PLACES = ['Karak', 'Duene', 'Veth', 'Orsa', 'Kell Ridge', 'Tarsis', 'Hollow Nine', 'Ishra', 'Ghelt',
+    'the Marrow Flats', 'Sabine Deep', 'New Corvo', 'Amaranth', 'Dust Point', 'Halvard', 'the Red Wastes'];
+  var BEAST_NAMES = {
+    bfirebeetle: ['the Furnace', 'Cinderback', 'the Burning One', 'Ashmaker', 'the Flame of {P}', 'the Pyre of {P}'],
+    bsandworm: ['the Devourer', 'Earthshaker', 'the Deep One', 'Dune Leviathan', 'the Maw of {P}', 'the Worm of {P}'],
+    bbioplasma: ['the Melter', 'Acid Rain', 'the Spitting Death', 'the Bane of {P}', 'the Plague of {P}'],
+    bcarrier: ['Skyhive', 'the Black Cloud', 'the Broodmother', 'the Dread of {P}', 'Wings over {P}'],
+    bshadow: ['the Unseen', 'Nightstalker', 'the Whisper', 'the Shadow of {P}', 'the Ghost of {P}'],
+    bqueen: ['the Swarmlord', 'the Brood Empress', 'the Hive Mother', 'the Mother of {P}', 'the Empress of {P}']
+  };
+  var BEAST_ANY = ['the Terror of {P}', 'the Horror of {P}', 'the Doom of {P}', 'the Butcher of {P}'];
+  function overgrown(u) { return !!u && (hasOwn(u, 'Overgrown Bug') || hasOwn(u, 'Overgrown Flying Bug')); }
+  function beastName(u, taken) {
+    var own = (u && BEAST_NAMES[u.key]) || [], n, tries = 0;
+    do {
+      n = (own.length && Math.random() < 0.75 ? pickOf(own) : pickOf(BEAST_ANY)).replace('{P}', pickOf(BEAST_PLACES));
+    } while (taken && taken[n] && ++tries < 20);
+    if (taken) taken[n] = 1;
+    return n;
+  }
   // a unit whose losses are counted rather than named: the swarm, and the Esh-Aven
   /* Units whose losses are a count, not a roll of names: the swarm, the tribe's
      Esh-Aven, and penal troops, whose collars kill them off (Expendable, p. 57). */
@@ -1628,10 +1655,64 @@
   // does this unit have anyone in it who could be named?
   function crewed(u) {
     if (counted(u)) return false;
-    // a squad of drones is machines, however many of them there are: nobody to name
-    if (u.drone || hasOwn(u, 'Drone unit')) return false;
+    // a squad of drones is machines, however many of them there are: nobody to name — and
+    // a Drone Controlled hull or craft (the Light VTOL drone always is) has no crew aboard
+    if (u.drone || hasOwn(u, 'Drone unit') || hasOwn(u, 'Drone Control') || (BY_KEY[u.key] && BY_KEY[u.key].mustDrone)) return false;
     if (!isMachine(u)) return true;
+    if (crewOf(u) && !crewOf(u).length) return false;    // the Rapid insertion platform: nobody aboard
     return !u.drone && !has(u, 'Turret') && !/Turret/.test(u.group || '');
+  }
+  /* Who crews each PMC hull and craft, in order — the job each man does, and
+     his rank. A hull not listed has one crewman (rankFor); the Rapid insertion
+     platform has nobody aboard at all. */
+  var C_ = function (role, rank) { return [role, rank]; };
+  var DRV_PTE = [C_('Driver', 'Private')];
+  var DRV_GUN = [C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var SGT_CREW = [C_('Commander', 'Sergeant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var SGT_CREW4 = SGT_CREW.concat([C_('Loader', 'Private')]);
+  var SSGT_CREW = [C_('Commander', 'Staff Sergeant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var LT_CREW = [C_('Commander', 'Lieutenant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
+  var STRIKE = [C_('Pilot', 'Flight Lieutenant'), C_('Gunner', 'Pilot Officer')];
+  var FTR2 = [C_('Driver', 'Fighter'), C_('Gunner', 'Fighter')];
+  var FTR3 = FTR2.concat([C_('Loader', 'Fighter')]);
+  var FTR4 = [C_('Driver', 'Fighter'), C_('Gunner', 'Fighter'), C_('Gunner', 'Fighter'), C_('Loader', 'Fighter')];
+  var CREW = {
+    insertplat: [],
+    unarmoured: DRV_PTE, ltransport: DRV_PTE,
+    lpv: DRV_GUN, hpv: DRV_GUN, lhunter: DRV_GUN, lapc: DRV_GUN, impsupport: DRV_GUN,
+    recon: SGT_CREW, lcv: SGT_CREW, hunter: SGT_CREW, lifv: SGT_CREW, hapc: SGT_CREW, hifv: SGT_CREW, lengveh: SGT_CREW, aaveh: SGT_CREW,
+    mcv: SGT_CREW4, ldestroyer: SGT_CREW4, lsupport: SGT_CREW4, msupport: SGT_CREW4, hengveh: SGT_CREW4,
+    acv: SSGT_CREW, mdestroyer: SSGT_CREW, asupport: SSGT_CREW,
+    cmdveh: LT_CREW, ewveh: LT_CREW, medveh: LT_CREW,
+    adaptedcraft: [C_('Pilot', 'Pilot Officer')],
+    lightcraft: [C_('Pilot', 'Flying Officer')],
+    heavycraft: [C_('Pilot', 'Flying Officer')],
+    flyingcp: [C_('Commander', 'Squadron Leader'), C_('Pilot', 'Flying Officer'), C_('Crew', 'Specialist'), C_('Crew', 'Specialist')],
+    fsc: STRIKE, tsc: STRIKE, gunboat: STRIKE, interceptor: STRIKE, hsc: STRIKE, asc: STRIKE,
+    // the revolt's: fighters at the wheel, the guns and the controls
+    rtechnical: FTR2, rltv: FTR2, ritv: FTR2, rlflak: FTR2,
+    rlicv: FTR3, rshtv: FTR3, rmflak: FTR3, rhflak: FTR3,
+    ricv: FTR4, rhicv: FTR4,
+    rpatrol: [C_('Pilot', 'Fighter')], rlifter: [C_('Pilot', 'Fighter')],
+    rlshuttle: [C_('Pilot', 'Fighter'), C_('Gunner', 'Fighter')], rmshuttle: [C_('Pilot', 'Fighter'), C_('Gunner', 'Fighter')],
+    rhshuttle: [C_('Pilot', 'Fighter'), C_('Gunner', 'Fighter')]
+  };
+  // every Xenotripod craft is flown by one Hunter
+  var XENO_PILOT = [C_('Pilot', 'Hunter')];
+  function crewOf(u) {
+    if (!u) return null;
+    var f = u.faction || 'pmc';
+    var c = f === 'xeno' ? (u.cls === 'aircraft' ? XENO_PILOT : null) : (f === 'pmc' || f === 'rebel') ? CREW[u.key] || null : null;
+    // a walker is driven by one pilot, the highest rank its crew would have had — a transport walker keeps its crew
+    if (c && c.length && u.prop === 'walker' && !u.transport) return [C_('Pilot', c[0][1])];
+    return c;
+  }
+  // how many named men a hull or craft carries
+  function crewSize(u) { var c = crewOf(u); return c ? c.length : 1; }
+  // the job a crewman does aboard (a squad's men have none)
+  function roleFor(u, i) {
+    var c = crewOf(u);
+    return c && c[i] ? c[i][0] : null;
   }
   /* The rank of the i-th man in the unit. The first leads it, the second is
      second-in-command, the rest are the rank and file — so a squad that has
@@ -1639,6 +1720,7 @@
   function rankFor(u, i) {
     var f = u.faction || 'pmc', tier = Math.max(1, Math.min(5, u.tier || 1)), g = u.group || '';
     if (isMachine(u)) {
+      if (crewOf(u) && crewOf(u)[i]) return crewOf(u)[i][1];
       if (f === 'pmc' && u.key === 'flyingcp') return 'Major';
       if (f === 'pmc' && (u.key === 'cmdveh' || u.key === 'ewveh' || hasOwn(u, 'Command Vehicle'))) return CREW_OFFICER[tier - 1];
       if (isFlying(u)) return 'Pilot';
@@ -1648,19 +1730,45 @@
     if (f === 'xeno') {
       if (u.command) return i === 0 ? 'Warleader' : 'Chosen';
       if (g === 'Chosen Warriors') return 'Chosen';
+      // an Alpha squad's leader rises with its grade, from Hunt-leader to Tribe-lord
+      if (g === 'Alpha Squads' && i === 0) return ALPHA_LEAD[tier - 1];
       return i === 0 ? 'Hunt-leader' : 'Warrior';
     }
     if (f === 'rebel') {
-      if (u.key === 'rciv' || u.soloCiv) return 'Civilian';
+      // armed civilians follow an Agitator; the civilians of a solitaire scenario are just civilians
+      if (u.key === 'rciv') return i === 0 ? 'Agitator' : 'Civilian';
+      if (u.soloCiv) return 'Civilian';
       if (u.command) return i === 0 ? REBEL_CHIEF[tier - 1] : 'Lieutenant';
-      if (g === 'Holy Warriors') return i === 0 ? 'Preacher' : 'Zealot';
+      // the faithful by tier: a Preacher (1-2), an Elder (3-4), a Prophet and his Holy Warriors (5)
+      if (g === 'Holy Warriors') {
+        var tierHW = Math.max(1, Math.min(5, u.tier || 1));
+        if (i === 0) return tierHW >= 5 ? 'Prophet' : tierHW >= 3 ? 'Elder' : 'Preacher';
+        return tierHW >= 5 ? 'Holy Warrior' : 'Zealot';
+      }
       if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
+      if (u.key === 'rguard') return i === 0 ? 'Guard Captain' : 'Guard';
+      // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
+      if (g === 'Mounted Warriors') {
+        if (u.key === 'rlegendary' || (u.tier || 1) >= 4) return i === 0 ? 'Hellrider Captain' : 'Hellrider';
+        return i === 0 ? 'Rider Leader' : 'Rider';
+      }
+      // the miners: a Supervisor's crew at tier 2, a Foreman's at 3-4
+      if (g === 'Miners') return i === 0 ? ((u.tier || 1) >= 3 ? 'Foreman' : 'Supervisor') : 'Miner';
+      // the partisan commandos, each by its trade
+      if (u.key === 'rassaultcdo') return i === 0 ? 'Commando Leader' : 'Partisan';
+      if (u.key === 'rsabcdo') return i === 0 ? 'Saboteur Chief' : 'Saboteur';
+      if (u.key === 'rsnipercdo') return i === 0 ? 'Marksman Chief' : 'Marksman';
       return i === 0 ? 'Cell Leader' : 'Fighter';
     }
     // then a corporal, and the rest privates: the staff's signallers, runners and guards
     if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? COMMAND_SECOND[tier - 1] : i === 2 ? 'Corporal' : 'Private';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
+    // the support teams: an EW Sergeant and his Specialist; a medic team's Sergeant, Corporal and Medics
+    if (u.key === 'ew') return i === 0 ? 'Sergeant' : 'Specialist';
+    if (u.key === 'medics') return i === 0 ? 'Sergeant' : i === 1 ? 'Corporal' : 'Medic';
+    // the sniper team, two men: a Staff Sergeant and his Sergeant
+    if (u.key === 'snipers') return i === 0 ? 'Staff Sergeant' : 'Sergeant';
     // light infantry, small teams: tier 2 a corporal and a lance corporal, tier 3-5 a sergeant and a corporal
     if (g === 'Light infantry') {
       if (i === 0) return tier >= 3 ? 'Sergeant' : 'Corporal';
@@ -1684,13 +1792,17 @@
      campaign unit's own men, in the order they stand), trimmed or filled up to
      the strength it takes the field at, then ranked by where each man stands. */
   function musterMen(u, carried, taken) {
-    if (counted(u)) { u.men = []; u.seenModels = standing(u); u.lostModels = 0; return u.men; }
-    var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;
+    if (counted(u)) {
+      u.men = []; u.seenModels = standing(u); u.lostModels = 0;
+      if (overgrown(u) && !u.beast) u.beast = beastName(u, taken);
+      return u.men;
+    }
+    var want = crewed(u) ? (isMachine(u) ? crewSize(u) : Math.max(0, u.models || 0)) : 0;
     u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
       .slice(0, want).map(function (m) { return { name: m.name }; });
     u.men.forEach(function (m) { if (taken) taken[m.name] = 1; });
     while (u.men.length < want) u.men.push(freshMan(u, taken));
-    u.men.forEach(function (m, i) { m.rank = rankFor(u, i); });
+    u.men.forEach(function (m, i) { m.rank = rankFor(u, i); var r = roleFor(u, i); if (r) m.role = r; else delete m.role; });
     return u.men;
   }
   /* Bring the named men into line with the model count: one picked at random
@@ -1701,7 +1813,18 @@
     if (!u.men) return [];
     var live = u.men.filter(function (m) { return m.lost == null; });
     var want = crewed(u) ? standing(u) : 0, out = [];
-    if (isMachine(u)) want = Math.min(want, u.men.length);
+    /* A hull keeps its whole crew while it runs. When it is destroyed each man
+       aboard has an even chance of getting out (rolled once, there and then);
+       the rest are casualties, killed or wounded as the aftermath rolls it. */
+    if (isMachine(u)) {
+      if (want) return out;
+      if (!u.crewOut) {
+        u.crewOut = true;
+        live.forEach(function (m) { if (Math.random() < 0.5) m.out = true; });
+      }
+      live.forEach(function (m) { if (!m.out) { m.lost = turn || 0; out.push(m); } });
+      return out;
+    }
     while (live.length > want) {
       var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
       m.lost = turn || 0;
@@ -1729,7 +1852,7 @@
   }
   // who comes back for the next battle: everyone who was not a casualty
   function survivors(u) {
-    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return { name: m.name, rank: m.rank }; });
+    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return m.role ? { name: m.name, rank: m.rank, role: m.role } : { name: m.name, rank: m.rank }; });
   }
 
   /* The kits, made now that everything they are handed exists, and linked:
@@ -1897,6 +2020,6 @@
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
     defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
-    soldierName: soldierName, rankFor: rankFor, crewed: crewed, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
+    soldierName: soldierName, rankFor: rankFor, roleFor: roleFor, crewSize: crewSize, crewed: crewed, overgrown: overgrown, beastName: beastName, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);
