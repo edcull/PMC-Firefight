@@ -639,15 +639,10 @@
       },
       // landing infantry are shaken by the drop
       onArrive: function (state, u) {
-        if (u.side !== state.sc.attacker) return null;
-        /* "Each landing infantry unit suffers D3 Suppression points" (p. 53): the
-           vehicles are unaffected, but the squads riding down inside one land too. */
-        if (R.isMachine(u)) {
-          var rode = (u.cargo || []).filter(function (c) { return c.alive && !R.isMachine(c); });
-          if (!rode.length) return null;
-          var bits = rode.map(function (c) { var m = d3(); R.addSP(c, m); return c.label + ' ' + m; });
-          return { text: 'Aboard ' + u.label + ', the drop shakes them too: ' + bits.join(', ') + ' SP (D3 each).', sp: 0 };
-        }
+        /* "Each landing infantry unit suffers D3 Suppression points" (p. 53); vehicles
+           are unaffected, and so is anyone inside one: transported units "cannot be
+           Suppressed" (p. 36) until they get off. */
+        if (u.side !== state.sc.attacker || R.isMachine(u)) return null;
         var n = d3();
         R.addSP(u, n);
         return { text: u.label + ' takes ' + n + ' SP coming down (D3).', sp: n };

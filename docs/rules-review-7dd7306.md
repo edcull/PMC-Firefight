@@ -368,7 +368,7 @@ front armour to a threat.
   between two sites.
 - **L-21 — fixed:** Landing zones are checked at the centre only: open terrain, and 8" from the edges (l.1411;
   `scenarios.js:969-973`).
-- **L-22 — fixed:** Infantry landing inside a transport take no landing Suppression (l.1411, l.1421;
+- **L-22 — withdrawn (the finding was wrong; see §9):** Infantry landing inside a transport take no landing Suppression (l.1411, l.1421;
   `scenarios.js:640-645`).
 - **L-23 — fixed:** The Demolish defender's 18" circle is measured from the objective's centre (`scenarios.js:715,
   731-735`).
@@ -659,7 +659,7 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | L-19 Players do not place the objectives | **No change, by design.** The computer places the Secure objectives and the Demolish objective for the players. |  |
 | L-20 Check the area! takes the first site | **Fixed.** With two locations in reach, the player taps the one to search. | `actions.js`, `moves.js` (`doCheckArea`), `engine.js` (`checkarea`), `input.js`, `game.js` |
 | L-21 Landing zones checked at the centre | **Fixed.** A zone is an 8" circle: all of it must be open ground, and its edge 8" from the table's. Zones stay 12" apart, centre to centre, so three still fit on most tables. | `scenarios.js` (`lzOK`, `lzSpots`) |
-| L-22 No landing Suppression inside a hull | **Fixed.** Infantry riding down in an attacker's vehicle take their D3 as it lands. | `scenarios.js` (`invasion.onArrive`) |
+| L-22 No landing Suppression inside a hull | **Withdrawn: the finding was wrong.** Transported units "cannot be Suppressed" (p. 36) until they disembark, so squads riding down inside a vehicle take no landing D3, as the code had it. A short-lived change that gave them the D3 aboard was reverted after it showed up in play: an Abandoned hull's crew could come out with the landing's D3 on top of the bail-out's D6. | `scenarios.js` (`invasion.onArrive`) |
 | L-23 Demolish's 18" from the centre | **Fixed.** The defender's circle reaches 18" past the objective's edge. | `scenarios.js` (`demolish.deploy`) |
 | L-24 The Invasion defender must put a unit down | **Fixed.** "Up to 1/3": the defender may hold its whole force back. | `scenarios.js` (`invasion.deploy`) |
 | L-25 Terrain changes not alternated | **Fixed.** With the table set up by hand, both sides' changes (Last Stand barricades, Detailed Terrain Knowledge moves) go a piece each in turn, from a random side (p. 45). With the table generated, a player's changes, the Hostile takeover fortifications included, are made for them as the AI's are, and nobody is asked. | `engine.js` (`afterTerrain`), `terrainsetup.js` (`alternate`) |

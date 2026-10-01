@@ -62,7 +62,7 @@ console.log('\nA landing zone is an 8" circle in the open (p. 53)');
   ok('...nearer: refused', !SC.lzOK({ terrain: [], units: [] }, { x: 10, y: 24 }, []));
 })();
 
-console.log('\nSquads riding down in a hull are shaken by the landing too (p. 53)');
+console.log('\nSquads riding down in a hull are not shaken: troops aboard cannot be Suppressed (pp. 36, 53)');
 (function () {
   const e = game('invasion', ['regular', 'regular'], ['lapc', 'regular', 'regular'], 'B');
   const st = e.state();
@@ -70,7 +70,11 @@ console.log('\nSquads riding down in a hull are shaken by the landing too (p. 53
   ok('the scenario is Invasion with B attacking', st.sc.attacker === 'B' && !!hull);
   hull.cargo = [rider]; rider.aboard = hull.id; rider.sp = 0;
   const note = st.scen.onArrive(st, hull);
-  ok('the hull lands and the squad aboard takes D3', !!note && rider.sp >= 1 && rider.sp <= 3, note && note.text);
+  ok('the hull lands, and the squad aboard takes no Suppression', !note && rider.sp === 0);
+  const foot = st.units.find((u) => u.side === 'B' && u.cls === 'infantry' && u !== rider);
+  foot.sp = 0;
+  const n2 = st.scen.onArrive(st, foot);
+  ok('...a squad landing on its own takes its D3', !!n2 && foot.sp >= 1 && foot.sp <= 3);
 })();
 
 console.log('\nDemolish: the defender’s 18" runs from the objective’s edge (p. 54)');
