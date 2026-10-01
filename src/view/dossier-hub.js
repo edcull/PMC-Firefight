@@ -301,43 +301,11 @@
     /* An army's own rules: how it fights its campaign, and the special rules
        only its units carry (read off the unit profiles, so it stays in step
        with them), each with the rule's text. */
-    var NOT_ARMY = ['Immobile', 'No Objectives', 'Drone unit', 'Unarmed'];
-    // rules the whole army carries that no unit profile prints (the Rebels', pp. 94-95; the Xenotripods', pp. 128-129)
-    var ARMY_WIDE = {
-      rebel: ['Hasta la Victoria Siempre!', 'Undisciplined', 'Riders upgrade'],
-      xeno: ['Limited Senses', 'Mental Projection', 'Psychic Bond']
-    };
-    // what an army chooses for each battle (the Rebels' tactics, p. 95)
-    var ARMY_CHOICES = { rebel: { title: 'Tactics \u2014 one chosen for each battle', list: ['Last Stand', 'Human Wave Attacks', 'Guerillas'] } };
     function armyRules(co) {
       var f = co.faction || 'pmc', W = C.words(co), cr = C.creedOf(co), R = root.PMC, T = root.PMCRuleText;
-      var base = function (r) { return r.replace(/\s*\(.*\)$/, ''); };
-      var owners = {}, first = {}, nums = {};
-      ((R && R.CATALOGUE) || []).forEach(function (p) {
-        (p.rules || []).forEach(function (r) {
-          var k = base(r), m = r.match(/\((\d+)\)\s*$/);
-          (owners[k] = owners[k] || {})[p.faction || 'pmc'] = true;
-          if (!first[k]) first[k] = r;
-          // a rule whose number differs from unit to unit (Shield Generator 1 or 2): which units carry which
-          if (m) { nums[k] = nums[k] || {}; (nums[k][m[1]] = nums[k][m[1]] || []).indexOf(p.group) < 0 && nums[k][m[1]].push(p.group); }
-        });
-      });
-      function text(k) {
-        var n = nums[k] ? Object.keys(nums[k]).sort() : [];
-        if (n.length > 1 && T && T.TEXT[k + ' (X)']) {
-          return T.TEXT[k + ' (X)'].replace(/\{X\}/g, n.join(' or ')) + ' (' + n.map(function (v) {
-            return v + ': ' + nums[k][v].join(', ');
-          }).join('; ') + ')';
-        }
-        var d = T ? T.describe(first[k] || k) : { text: '' };
-        if (!d.text && T) d = T.describe(k);
-        return d.text || '';
-      }
-      var wide = ARMY_WIDE[f] || [];
-      // the mercenaries are the standard: no rule of theirs is an army rule
-      var own = f === 'pmc' ? [] : Object.keys(owners).filter(function (k) {
-        return owners[k][f] && Object.keys(owners[k]).length === 1 && NOT_ARMY.indexOf(k) < 0;
-      }).sort();
+      // the army's own rules, shared with the unit viewer (ruletext.js armyRules)
+      var AR = T.armyRules(f, (R && R.CATALOGUE) || []), text = AR.text;
+      var wide = AR.wide.map(function (x) { return x.name; }), own = AR.own.map(function (x) { return x.name; });
       var h = '<div class="cmodal-scroll armyrules"><p class="dnote">A ' + esc(W.force) + ' of ' + esc(W.side) + '.</p><ul class="armycamp">' +
         '<li>Paid in <b>' + esc(W.moneyLong) + '</b> (' + esc(W.money) + ').</li>' +
         '<li>Grows through <b>' + esc(cr.many) + '</b>; its units earn ' + esc(W.honours) + ' and suffer ' + esc(W.traumas) + '.</li>' +
@@ -355,7 +323,7 @@
           return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';
         }).join('') + '</dl>';
       }
-      var ch = ARMY_CHOICES[f];
+      var ch = T.ARMY_CHOICES[f];
       if (ch) {
         h += '<h4>' + esc(ch.title) + '</h4><dl class="armyrl">' + ch.list.map(function (k) {
           return '<dt>' + esc(k) + '</dt><dd>' + esc(text(k)) + '</dd>';

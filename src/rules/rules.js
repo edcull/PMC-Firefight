@@ -217,6 +217,14 @@
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
   function propOf(u) { return PROPULSION[u && u.prop] || null; }
+  /* The special rules a unit is shown with: its own, and the Strafing Run every
+     aircraft with Firepower may make — a rule of the game (p. 27), not printed
+     on any profile, but the thing such a craft is for. */
+  function shownRules(u) {
+    var rules = (u && u.rules) || [];
+    if (u && u.cls === 'aircraft' && u.fp !== null && u.fp !== undefined && rules.indexOf('Strafing Run') < 0) rules = rules.concat(['Strafing Run']);
+    return rules;
+  }
 
   /* Fold a propulsion into a freshly built machine. Movement is kept exact rather
      than rounded, since the table is measured in real inches. */
@@ -2016,7 +2024,7 @@
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
-    applyDrone: applyDrone, canBeDrone: canBeDrone, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
+    applyDrone: applyDrone, canBeDrone: canBeDrone, shownRules: shownRules, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,

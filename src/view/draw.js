@@ -973,6 +973,52 @@
        A circle is the sight range from the unit's base edge to the target's,
        so an enemy whose base reaches into the light is in range — terrain can
        still block the line itself. Worked out again only when the table changes. */
+    /* A strafing run being chosen: the line from the craft to the end of the run
+       — the end tapped (ui.strafeAim), or on a mouse the reachable spot under
+       the pointer — and a target ring round every unit under it, as the run
+       picks them (combat.js doStrafe: within 2.2" of the line, ground units
+       only). The enemy in red; the craft's own side in amber, at risk of
+       friendly fire. */
+    function strafeAimSpot() {
+      if (ui.strafeAim) return ui.strafeAim;
+      if (!ui.hover || isTouch()) return null;
+      var best = null, bd = 1.2;
+      ui.moves.forEach(function (m) {
+        var d = Math.hypot(m.x - ui.hover.x, m.y - ui.hover.y);
+        if (d < bd) { bd = d; best = m; }
+      });
+      return best;
+    }
+    function strafeUnder(u, to) {
+      return activeUnits().filter(function (t) {
+        return t !== u && !R.isFlying(t) && R.pointSegDist(t.x, t.y, u.x, u.y, to.x, to.y) <= 2.2;
+      });
+    }
+    function drawStrafeAim(u) {
+      var to = strafeAimSpot();
+      if (!to) return;
+      var a = hud(u.x, u.y, liftOf(u.x, u.y) + ISO.flyLift(u)), b = hud(to.x, to.y, liftOf(to.x, to.y));
+      B.ctx.save();
+      B.ctx.setLineDash([6, 5]);
+      B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(235,110,90,.85)';
+      B.ctx.beginPath(); B.ctx.moveTo(a.x, a.y); B.ctx.lineTo(b.x, b.y); B.ctx.stroke();
+      B.ctx.setLineDash([]);
+      strafeUnder(u, to).forEach(function (t) {
+        var col = t.side === u.side ? 'rgba(240,190,80,.95)' : 'rgba(235,90,70,.95)';
+        var lift = liftOf(t.x, t.y);
+        B.ctx.lineWidth = 2.2; B.ctx.strokeStyle = col;
+        isoRing(t.x, t.y, UR * 1.6, lift); B.ctx.stroke();
+        // the cross-hairs' four ticks
+        var c = hud(t.x, t.y, lift), r = Math.SQRT2 * UR * 1.6 * K * cam.z;
+        B.ctx.beginPath();
+        B.ctx.moveTo(c.x - r - 4, c.y); B.ctx.lineTo(c.x - r + 3, c.y);
+        B.ctx.moveTo(c.x + r - 3, c.y); B.ctx.lineTo(c.x + r + 4, c.y);
+        B.ctx.moveTo(c.x, c.y - r / 2 - 4); B.ctx.lineTo(c.x, c.y - r / 2 + 3);
+        B.ctx.moveTo(c.x, c.y + r / 2 - 3); B.ctx.lineTo(c.x, c.y + r / 2 + 4);
+        B.ctx.stroke();
+      });
+      B.ctx.restore();
+    }
     var darkCanvas = null;
     function drawSight(side, sel) {
       var eyes, seen = [];
@@ -1195,6 +1241,8 @@
         B.ctx.setLineDash([]);
       });
 
+      if (ui.mode !== 'strafe') ui.strafeAim = null;   // an aim is only kept while the run is being chosen
+      if (ui.mode === 'strafe' && ui.selected && !aiSel) drawStrafeAim(ui.selected);
       if (B.sightOn && B.sightOn()) drawSight(B.sightSide(), ui.selected && !aiSel && B.seats.indexOf(ui.selected.side) >= 0 ? ui.selected : null);
 
       var u = ui.selected;

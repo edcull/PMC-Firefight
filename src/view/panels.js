@@ -397,7 +397,7 @@
           (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(R.TERRAIN[tk].name) + '</span>');
       }
       var TXT = window.PMCRuleText;
-      (u.rules || []).forEach(function (r) {
+      R.shownRules(u).forEach(function (r) {
         var d = TXT ? TXT.describe(r) : { text: '' };
         out.push('<span class="chip"' + (d.text ? ' ' + tip(r, d.text) : '') + '>' + esc(r) + '</span>');
       });

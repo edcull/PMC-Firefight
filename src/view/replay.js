@@ -107,7 +107,8 @@
     function holdForShow(events) {
       if (!B.state) return;
       var walks = {};
-      events.forEach(function (ev) { if (ev.e === 'move' && ev.id) walks[ev.id] = true; });
+      // a strafing run is the craft's move: it flies it itself (playStrafe), so it is not slid there first
+      events.forEach(function (ev) { if ((ev.e === 'move' || ev.e === 'strafe') && ev.id) walks[ev.id] = true; });
       var moved = {};
       /* Anyone the rules have put somewhere new with no move of theirs in this
          batch, and nothing already drawing them, stays where the table last
@@ -122,9 +123,9 @@
       });
       events.forEach(function (ev) {
         evIds(ev).forEach(function (id) { heldTill[id] = ev; });
-        if (ev.e === 'move' && ev.id && !moved[ev.id]) {
+        if ((ev.e === 'move' || ev.e === 'strafe') && ev.id && !moved[ev.id]) {
           moved[ev.id] = true;
-          var mu = evUnit(ev.id), p0 = ev.path && ev.path[0];
+          var mu = evUnit(ev.id), p0 = ev.e === 'strafe' ? ev.from : ev.path && ev.path[0];
           // it stands where it started until its move is drawn
           if (mu && p0 && (mu.ax === null || mu.ax === undefined) && !anims.some(function (an) { return an.unit === mu; })) {
             mu.ax = p0.x; mu.ay = p0.y;

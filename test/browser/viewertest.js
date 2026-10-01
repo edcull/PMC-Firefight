@@ -91,6 +91,25 @@ async function pickAndFire(p, key, ms) {
   ok('...a sniper team a Staff Sergeant and a Sergeant', /Staff Sergeant, Sergeant$/.test(ranks.snipers || ''), ranks.snipers);
   ok('...a hull its crew, each by job and rank', /Crew Sergeant \(Commander\), Corporal \(Driver\), Private \(Gunner\), Private \(Loader\)/.test(ranks.mcv || ''), ranks.mcv);
   ok('...and a swarm nobody named', /counted/.test(ranks.battack || ''), ranks.battack);
+  // the army under the unit's name, its rules a tap away; an aircraft with Firepower shows the Strafing Run
+  const army = await p.evaluate(async () => {
+    window.__viewer.pick('xalpha3');
+    await new Promise(r => setTimeout(r, 60));
+    const pill = document.querySelector('.varmy');
+    const name = pill && pill.textContent;
+    if (pill) pill.click();
+    await new Promise(r => setTimeout(r, 60));
+    const m = document.getElementById('varmymodal');
+    const txt = m && !m.hidden ? m.textContent : '';
+    if (m) m.hidden = true;
+    window.__viewer.pick('fsc');
+    await new Promise(r => setTimeout(r, 60));
+    const strafe = /Strafing Run/.test((document.querySelector('.vstatsbody') || {}).textContent || '');
+    return { name, rules: /Limited Senses/.test(txt) && /Mental Projection/.test(txt) && /Cloaking System/.test(txt), strafe };
+  });
+  ok('the unit\'s army is a pill under its name', army.name === 'Xenotripods', army.name);
+  ok('...a tap opens the army\'s own rules', army.rules);
+  ok('an aircraft with Firepower shows the Strafing Run among its rules', army.strafe);
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,
     loaded.w + '×' + loaded.h);

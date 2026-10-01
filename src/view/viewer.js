@@ -927,13 +927,50 @@
     if (c) c.classList.add('on');
   }
 
+  /* The army a unit belongs to, as a pill in the army's colours, and its own
+     rules in a popup: what the whole army carries, the special rules only its
+     units have, and (the Rebels) the tactics chosen for each battle. The same
+     list the campaign's army card shows (ruletext.js armyRules). */
+  function armyPill(fac) {
+    var c = I.COLOURS && I.COLOURS[ARMY_COLOUR[fac]];
+    var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
+    return '<button type="button" class="varmy"' + st + ' data-army="' + fac + '" title="Army rules">' + esc(FACTION_NAME[fac] || fac) + '</button>';
+  }
+  function armyRulesHtml(fac) {
+    var T = root.PMCRuleText, AR = T.armyRules(fac, R.CATALOGUE || []), h = '';
+    function list(title, rows) {
+      return rows.length ? '<h4>' + esc(title) + '</h4><dl>' + rows.map(function (x) {
+        return '<dt>' + esc(x.name) + '</dt><dd>' + esc(x.text) + '</dd>';
+      }).join('') + '</dl>' : '';
+    }
+    if (fac === 'pmc') h += '<p>Mercenary companies have no army-specific special rules: their units follow the standard rules.</p>';
+    h += list('Army rules', AR.wide) + list('Special rules of the army', AR.own);
+    var ch = T.ARMY_CHOICES[fac];
+    if (ch) h += list(ch.title, ch.list.map(function (k) { return { name: k, text: AR.text(k) }; }));
+    return h;
+  }
+  function openArmy(fac) {
+    var m = el('varmymodal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'varmymodal'; m.className = 'varmymodal';
+      m.addEventListener('click', function (e) { if (e.target === m || e.target.closest('[data-armyclose]')) m.hidden = true; });
+      document.body.appendChild(m);
+    }
+    m.innerHTML = '<div class="varmybox" role="dialog" aria-modal="true" aria-label="Army rules"><div class="varmyhead">' +
+      armyPill(fac) + '<span>Army rules</span><button type="button" class="vbtn" data-armyclose>Close</button></div>' +
+      '<div class="varmybody">' + armyRulesHtml(fac) + '</div></div>';
+    m.hidden = false;
+  }
   function drawControls() {
     drawColourButton();
     var p = profile();
     var riding = R.canRide(p) && view.ride === 'mounted';
     var maxModels = p.cls === 'infantry' ? (riding ? Math.max(1, Math.round(p.size / 2)) : p.size) : 1;
     var h = '<div class="vrow"><b>' + esc(p.name) + '</b>' +
-      '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>';
+      '<span class="vtier">Tier ' + R.ROMAN[p.tier] + ' · ' + esc(p.group) + '</span></div>' +
+      // the army it belongs to, in the army's colours: tap for the army's own rules
+      '<div class="vrow vrow-army">' + armyPill(p.faction || 'pmc') + '</div>';
     // two tabs under the name: what to do with the unit, and what the book says of it
     // the profile first: the options are a tab away
     var tab = view.tab === 'opts' ? 'opts' : 'stats';
@@ -1068,7 +1105,7 @@
     if (!u.rules.length && !pr) h += '<p class="vrule">No special rules.</p>';
     if (pr && pr.key !== 'none') h += '<div class="vrule"><b>Propulsion: ' + esc(pr.name) + '</b><p>' + esc(pr.note) + '</p></div>';
     if (mt && mt !== R.MOUNTS.none) h += '<div class="vrule"><b>Mount: ' + esc(mt.name) + '</b><p>' + esc(mt.note) + '</p></div>';
-    u.rules.forEach(function (r) {
+    R.shownRules(u).forEach(function (r) {
       var d = TXT ? TXT.describe(r) : { name: r, text: '' };
       var tip = d.text && root.PMCTips ? ' ' + root.PMCTips.attr(d.name, d.text) : '';
       h += '<div class="vrule"><b' + tip + '>' + esc(d.name) + '</b>' +
@@ -1242,6 +1279,8 @@
         paint(view.side, sw.getAttribute('data-colour'));
         drawControls(); frame(); return;
       }
+      var ab = e.target.closest('[data-army]');
+      if (ab) { openArmy(ab.getAttribute('data-army')); return; }
       var tb = e.target.closest('[data-tab]');
       if (tb) {
         if (view.tab !== tb.getAttribute('data-tab')) {
