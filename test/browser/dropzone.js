@@ -295,8 +295,8 @@ async function askArrival(p) {
     wave.who + ' is still off the table');
   ok('...offering only the ground the scenario allows', wave.spots > 0,
     wave.spots + ' places it may come on');
-  ok('...saying so in the card', /Reinforcements/.test(wave.card || ''));
-  ok('...and in the header', /reinforcements/i.test(wave.pill), '"' + wave.pill.trim() + '"');
+  ok('...saying so in the card', /wave landing/.test(wave.card || ''));
+  ok('...and in the header', /land a unit/i.test(wave.pill), '"' + wave.pill.trim() + '"');
   ok('...and it is an arrival, not a Battlefield Insertion', wave.kind === 'arrive',
     'kind: ' + wave.kind);
 

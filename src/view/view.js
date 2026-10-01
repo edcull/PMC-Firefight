@@ -533,7 +533,9 @@
         else {
           // nothing to place at this screen: its sides enter in turn 1 (everyone, or an attacker whose defender sets up)
           var entryHere = B.Q && B.Q.entering && (B.Q.entering() || (!deployNext() && (B.seats || ['A', 'B']).some(function (sd) { return B.Q.entering(sd); })));
-          act.textContent = entryHere ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A';
+          // an Invasion attacker places nothing: it lands in turn 1 once the defender is down
+          var landHere = B.state.scen.id === 'invasion' && B.state.sc && (B.seats || ['A', 'B']).indexOf(B.state.sc.attacker) >= 0 && !deployNext();
+          act.textContent = landHere ? 'Prepare to land' : entryHere ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A';
         }
       } else if (ui.insertion) {
         /* The game is waiting for a place on the table and nothing else. That has
@@ -541,7 +543,7 @@
            that a phone can have scrolled past or hidden behind another tab. */
         var insBy = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
         act.textContent = B.seats && B.seats.indexOf(insBy) < 0 ? 'Waiting: ' + (insBy === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB)
-          : ui.insertion.kind === 'arrive' ? (B.state.turn === 1 && (B.state.scen.entersTurn1 || (B.state.scen.attackerEnters && B.state.sc && insBy === B.state.sc.attacker)) ? 'Bring a unit on' : 'Place your reinforcements')
+          : ui.insertion.kind === 'arrive' ? (B.state.turn === 1 && (B.state.scen.entersTurn1 || (B.state.scen.attackerEnters && B.state.sc && insBy === B.state.sc.attacker)) ? 'Bring a unit on' : B.state.scen.id === 'invasion' && B.state.sc && insBy === B.state.sc.attacker ? 'Land a unit' : 'Place your reinforcements')
           : ui.insertion.kind === 'shove' ? 'Shove the enemy drop'
             : ui.insertion.kind === 'ilz' ? 'Nominate landing zone ' + ui.insertion.n + ' of 3' : 'Pick a landing zone';
         act.className = 'pill pill-wait';

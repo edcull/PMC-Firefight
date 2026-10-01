@@ -908,7 +908,7 @@
     }
     var z = K.zoneFor(side);
     if (!z || (sc.zones && sc.zones[side] === null && sc.attacker === side)) {
-      return 'Nothing deploys: your whole force comes down into the landing zones in the first Reserve phase.';
+      return 'Nothing deploys before the battle. Split your force into two waves; once the defender is down you nominate three landing zones, and the first wave comes down into them in the Reserve phase of turn 1. The second wave follows from turn 4, on a roll.';
     }
     if (sc.inset && sc.defender === side) {
       return 'Place each unit inside the shaded box — anywhere at least ' + sc.inset +

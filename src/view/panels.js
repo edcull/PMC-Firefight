@@ -933,7 +933,10 @@
       }
       if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (B.state.swapAsk.side === me || B.state.swapStage)) h += swapCard();
       // auto-deploy scrolls with the order of battle; only the way on, once there is one, keeps the foot
-      h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button></div>';
+      // an Invasion attacker has nothing to put down: it lands in turn 1, so there is nothing to auto-deploy
+      var landsLater = B.state.scen.id === 'invasion' && B.state.sc && B.state.sc.attacker === me;
+      if (landsLater) h += '<p class="hint">Nothing to place: once the battle begins you nominate three landing zones and your first wave comes down into them. Choose which units go in which wave with the button above.</p>';
+      else h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button></div>';
       /* Begin the battle: offered once everything is down. Where the scenario
          wants units held back (or split into waves) and the player has not yet
          chosen, it is there but greyed, and pressing it says why. Hulls going

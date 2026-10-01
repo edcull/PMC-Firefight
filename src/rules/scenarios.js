@@ -562,7 +562,7 @@
       attacker: true,
       noInsertion: true,
       roles: {
-        attacker: 'As the attacker your whole force comes down from orbit into the landing zones — nothing deploys on the table, and the infantry take D3 SP as they land.',
+        attacker: 'As the attacker nothing deploys on the table: your force comes down from orbit into three landing zones in two waves — the first in turn 1, the second from turn 4 on a roll. Infantry take D3 SP as they land; vehicles do not.',
         defender: 'As the defender you set up to a third of your force anywhere 6" in from the table edges; the rest walks on from a random edge, on a 5+ a unit from turn 2.'
       },
       /* The landing zones are the objectives, and the attacker only nominates
@@ -607,7 +607,7 @@
         if (side === state.sc.attacker) return false;   // the attacker lands, it never deploys
         return x >= 6 && y >= 6 && x <= W - 6 && y <= H - 6;
       },
-      hint: 'Three landing zones. The attacker has to hold two of the three at the end, or rout the defender; the defender only has to stop them. Hold all three and the second wave cannot land.',
+      hint: 'Three landing zones. The attacker has to hold two of the three at the end, or rout the defender; the defender only has to stop them. While the defender holds all three, the second wave cannot land.',
       reserves: function (state, side) {
         var atk = state.sc.attacker;
         var pool = state.units.filter(function (u) {

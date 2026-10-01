@@ -295,6 +295,11 @@
       var st = B.state, ins = ui.insertion, side = ins && ins.unit ? ins.unit.side : null;
       return !!st && st.turn === 1 && !!st.scen && (!!st.scen.entersTurn1 || (!!st.scen.attackerEnters && !!st.sc && side === st.sc.attacker));
     }
+    // an Invasion attacker's arrival: the first or second wave coming down from orbit (p. 53)
+    function landing() {
+      var st = B.state, ins = ui.insertion, u = ins && ins.unit;
+      return !!st && !!st.scen && st.scen.id === 'invasion' && !!st.sc && !!u && u.side === st.sc.attacker;
+    }
     function insertionMine() {
       var ins = ui.insertion;
       if (!ins) return false;
@@ -331,7 +336,7 @@
               ' may move its arrival point up to <b>' + ins.drift + '″</b>.'
             : esc(sideName(byS)) + (ins.kind === 'arrive' ? ' is bringing ' : ' is placing ') + (u ? '<b>' + esc(u.name) + '</b>' : 'a landing zone') + (ins.kind === 'arrive' ? ' on' : '') + '.') + '</p>' +
           '<p class="hint">Waiting for ' + esc(sideName(byS)) + '. ' + (ins.kind === 'arrive'
-            ? (entryTurn() ? 'The companies come on a unit each in turn, from the side with the initiative (p. 30).' : 'Reserves, p. 30.')
+            ? (entryTurn() ? 'The companies come on a unit each in turn, from the side with the initiative (p. 30).' : landing() ? 'The invasion is landing (Invasion, p. 53).' : 'Reserves, p. 30.')
             : 'Battlefield Insertion, p. 56.') + '</p></div>';
       }
       if (ins.kind === 'ilz') {
@@ -370,6 +375,12 @@
           '<p class="sub"><b>' + esc(u.name) + '</b> comes on now' + ((u.cargo || []).length ? ', with ' + u.cargo.map(function (c) { return esc(c.name); }).join(' and ') + ' aboard' : '') +
           '. Tap the shaded ground: within 4″ of your own table edge, and 12″ clear of the enemy where the ground allows.</p>' +
           '<p class="hint">A unit each in turn, from the side with the initiative.</p>' +
+          arrivalChoices(ins) + '</div>';
+      }
+      if (ins.kind === 'arrive' && landing()) {
+        return '<div class="card"><h2>' + (B.state.turn === 1 ? 'First wave landing' : 'Second wave landing') + '</h2>' +
+          '<p class="sub"><b>' + esc(u.name) + '</b> comes down now. Tap the shaded ground — ' + esc(arrivalWhere(u)) + '.</p>' +
+          '<p class="hint">' + (u.cls === 'vehicle' || u.cls === 'aircraft' ? 'A vehicle takes no SP for the landing' : 'It takes D3 SP as it lands') + '. Invasion, p. 53.</p>' +
           arrivalChoices(ins) + '</div>';
       }
       if (ins.kind === 'arrive') {
