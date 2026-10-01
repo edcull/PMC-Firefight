@@ -1662,6 +1662,11 @@
       if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       if (u.key === 'rguard') return i === 0 ? 'Guard Captain' : 'Guard';
+      // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
+      if (g === 'Mounted Warriors') {
+        if (u.key === 'rlegendary' || (u.tier || 1) >= 4) return i === 0 ? 'Hellrider Captain' : 'Hellrider';
+        return i === 0 ? 'Rider Leader' : 'Rider';
+      }
       // the partisan commandos, each by its trade
       if (u.key === 'rassaultcdo') return i === 0 ? 'Commando Leader' : 'Partisan';
       if (u.key === 'rsabcdo') return i === 0 ? 'Saboteur Chief' : 'Saboteur';
