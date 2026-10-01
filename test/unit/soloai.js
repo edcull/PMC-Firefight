@@ -223,6 +223,29 @@ console.log('\nIn a solitaire battle a Broken unit by the table edge runs off (p
   ok('its flight away from the enemy carries it off the table — fled', !vic.alive && vic.fled, 'at ' + vic.x.toFixed(1) + ',' + vic.y.toFixed(1));
 })();
 
+console.log('\nEvacuation: the entry points keep their distances (p. 153)');
+(function () {
+  const gap = (b, x, y) => Math.hypot(Math.max(b.x - x, 0, x - (b.x + b.w)), Math.max(b.y - y, 0, y - (b.y + b.h)));
+  let tables = 0, short = 0, close = 0, home = 0, safe = 0;
+  for (let i = 0; i < 120; i++) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_evac', armyA: ['regular', 'regular'], armyB: ['regular'], nameA: 'A', nameB: 'OpFor',
+      colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const sc = e.state().sc, en = sc.entries;
+    tables++;
+    if (en.length < 6) short++;
+    en.forEach((p, k) => en.slice(k + 1).forEach((q) => { if (Math.hypot(p.x - q.x, p.y - q.y) < 12) close++; }));
+    en.forEach((p) => {
+      if (sc.homes.some((b) => gap(b, p.x, p.y) < 6)) home++;
+      if (Math.hypot(p.x - sc.safe.x, p.y - sc.safe.y) < sc.safe.r + 12) safe++;
+    });
+  }
+  ok('six entry points on every table', short === 0, tables + ' tables, ' + short + ' short');
+  ok('...at least 12" from each other', close === 0, close + ' pairs closer');
+  ok('...6" from every reinforced building\'s walls', home === 0, home + ' too close');
+  ok('...and 12" from the safe zone', safe === 0, safe + ' too close');
+})();
+
 console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6 (p. 147)');
 (function () {
   function trial(mod) {

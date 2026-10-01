@@ -803,18 +803,27 @@
         state.terrain.push(b);
         return b;
       });
-      // six entry points, 12" from the safe zone and each other, 6" from the homes
+      /* Six entry points (p. 153): at least 12" from the safe zone and from each
+         other, and 6" from the reinforced buildings' walls. Every test is on the
+         point as it is finally placed, after any move onto a table edge. Should
+         the table leave no room for six, the spacing between the points gives a
+         little at a time, and nothing else. */
       state.sc.entries = [];
-      for (var g = 0; g < 6000 && state.sc.entries.length < 6; g++) {
-        var e = { x: 2 + Math.random() * (W - 4), y: 2 + Math.random() * (H - 4) };
-        if (dist(e.x, e.y, state.sc.safe.x, state.sc.safe.y) < 24) continue;
-        if (state.sc.entries.some(function (q) { return dist(q.x, q.y, e.x, e.y) < 12; })) continue;
-        if (state.sc.homes.some(function (b) { return dist(b.x + 2, b.y + 2, e.x, e.y) < 8; })) continue;
-        // entry points on the edges read as roads in; inland ones as tunnels
-        if (Math.random() < 0.6) { if (Math.random() < 0.5) e.x = e.x < W / 2 ? 1.5 : W - 1.5; else e.y = e.y < H / 2 ? 1.5 : H - 1.5; }
-        if (dist(e.x, e.y, state.sc.safe.x, state.sc.safe.y) < 24) continue;
-        state.sc.entries.push({ x: e.x, y: e.y, id: 'E' + (state.sc.entries.length + 1) });
+      var homes = state.sc.homes, safe = state.sc.safe;
+      function fits(e, sep) {
+        if (dist(e.x, e.y, safe.x, safe.y) < safe.r + 12) return false;
+        if (homes.some(function (b) { return rectGap(b, e.x, e.y) < 6; })) return false;
+        return state.sc.entries.every(function (q) { return dist(q.x, q.y, e.x, e.y) >= sep; });
       }
+      [12, 10, 8, 6].forEach(function (sep) {
+        for (var g = 0; g < 3000 && state.sc.entries.length < 6; g++) {
+          var e = { x: 2 + Math.random() * (W - 4), y: 2 + Math.random() * (H - 4) };
+          // entry points on the edges read as roads in; inland ones as tunnels
+          if (Math.random() < 0.6) { if (Math.random() < 0.5) e.x = e.x < W / 2 ? 1.5 : W - 1.5; else e.y = e.y < H / 2 ? 1.5 : H - 1.5; }
+          if (!fits(e, sep)) continue;
+          state.sc.entries.push({ x: e.x, y: e.y, id: 'E' + (state.sc.entries.length + 1) });
+        }
+      });
     },
     deploy: function (state) {
       toPool(state);
