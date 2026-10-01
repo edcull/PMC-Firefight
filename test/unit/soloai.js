@@ -65,6 +65,8 @@ console.log('\nReasonably Neutral holds its position (p. 147)');
         const u = st.units.find((v) => v.label === m[1] && v.side === 'B');
         if (!u || !pos[u.id] || pos[u.id].x < 0 || u.x < 0) continue;
         if (R.inches(u.x, u.y, pos[u.id].x, pos[u.id].y) < 0.5) continue;
+        // a step can run on into the Rally phase: a unit that broke and fled there made no Neutral move
+        if (st.log.slice(j).some((l) => (l.text || '').indexOf(u.label + ' is broken and flees') === 0 || (l.text || '').indexOf(u.label + ' falls back') === 0)) continue;
         moves++;
         if (R.coverAt(st, u.x, u.y, u) > R.coverAt(st, pos[u.id].x, pos[u.id].y, u)) intoCover++;
         else {
@@ -116,6 +118,20 @@ console.log('\nThe OpFor answers the commando\u2019s machines, threat by threat 
   }
   ok('against an aircraft, it always has an anti-air unit or an aircraft of the Battle Tier', airMiss === 0, airMiss + ' of ' + n + ' without');
   ok('...and against a hull, an anti-tank unit or a machine of the Battle Tier', groundMiss === 0, groundMiss + ' of ' + n + ' without');
+})();
+
+console.log('\nReasonably Offensive takes Firepower ground over cover (p. 147)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['regular'], armyB: ['regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse' });
+  const st = e.state(), u = st.units.find((x) => x.side === 'B'), foe = st.units.find((x) => x.side === 'A');
+  st.terrain.length = 0;
+  st.terrain.push({ kind: 'hill', x: 18, y: 8, w: 6, h: 6 }, { kind: 'ruins', x: 18, y: 34, w: 6, h: 6 });
+  u.x = 30; u.y = 24; foe.x = 4; foe.y = 24;
+  const goal = { x: 10, y: 24 }, hill = { x: 21, y: 11 }, ruin = { x: 21, y: 37 };
+  const off = (c) => e.query.scoreSpot(u, c, goal, 'offensive'), def = (c) => e.query.scoreSpot(u, c, goal, 'defensive');
+  ok('Reasonably Offensive prefers the hill (Firepower) to the ruins (cover)', off(hill) > off(ruin), off(hill).toFixed(1) + ' vs ' + off(ruin).toFixed(1));
+  ok('...where a defensive unit prefers the ruins', def(ruin) > def(hill), def(ruin).toFixed(1) + ' vs ' + def(hill).toFixed(1));
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

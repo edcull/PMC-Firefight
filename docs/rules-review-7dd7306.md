@@ -409,7 +409,7 @@ front armour to a threat.
 
 **Solitaire**
 
-- **L-38:** Reasonably Offensive prefers cover to Firepower terrain, the reverse of l.4791-4796. `scoreSpot`
+- **L-38 — fixed:** Reasonably Offensive prefers cover to Firepower terrain, the reverse of l.4791-4796. `scoreSpot`
   gives cover ×1.6 (×3.2 for hard cover) but only +2 for a hill (`ai.js:705-707`).
 - **L-39:** A garrisoned OpFor unit that rolls Run for Your Lives! fires instead of moving away
   (`ai.js:594-611`; l.4772).
@@ -677,6 +677,7 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | L-36 No Psychic Wave from a building | **Fixed.** The move is "up to": a garrison sends the wave out from where it stands, staying inside. | `actions.js` |
 | L-37 The Lifter tooltip | **Fixed.** It now says what the code does: a ground vehicle, with whoever rides in it, never infantry, an emplaced gun or a vehicle towing one. | `ruletext.js` |
 | (play report) Emptied drop platforms | **Fixed.** Found in play. A Rapid insertion platform "may only disembark troops" (p. 79): once its squad is off it is no longer activated, and its action bar says why. With No Objectives it cannot search a Find and secure location or blow a Sabotage objective, as it already could not hold or deny an objective. | `engine.js` (`eligible`), `actions.js`, `scenarios.js` (`searchSpots`), `solitaire.js` (`sabotageSpots`) |
+| L-38 Reasonably Offensive prefers cover | **Fixed.** For a Reasonably Offensive unit, ground with a Firepower bonus now outweighs the best cover (cover counts second); everyone else still values cover first (p. 147). | `ai.js` (`scoreSpot`) |
 
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 

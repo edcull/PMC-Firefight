@@ -2105,6 +2105,8 @@
          change anything, so both sides can ask freely. */
       query: {
         actionState: function (u, id) { return K.actionState(u, id); },
+        // how much the AI likes a spot, for a behaviour (the tests ask)
+        scoreSpot: function (u, c, goal, behaviour) { return K.scoreSpot(u, c, goal, behaviour); },
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
         eligible: function (s) { return eligible(s); },

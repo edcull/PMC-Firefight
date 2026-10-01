@@ -757,8 +757,12 @@
     function scoreSpot(u, c, goal, behaviour, look) {
       var s = 0;
       var terr = R.TERRAIN[look ? look.at(c.x, c.y) : R.terrainAt(E.state, c.x, c.y)];
-      s += (look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u)) * 1.6;
-      if (terr.fp) s += 2;
+      var cover = look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u);
+      /* Reasonably Offensive "will choose terrain pieces granting a Firepower bonus
+         over those that give a Defence bonus" (p. 147): there, the Firepower ground
+         outweighs the best cover; everyone else values cover first. */
+      if (behaviour === 'offensive') { s += cover * 1.0; if (terr.fp) s += 4.5; }
+      else { s += cover * 1.6; if (terr.fp) s += 2; }
       s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
       var ghost = { x: c.x, y: c.y, alive: true, of: u };
       var exposure = 0, opportunity = 0;
@@ -793,7 +797,7 @@
     return {
       aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands
+      nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;
