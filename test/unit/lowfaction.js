@@ -75,5 +75,19 @@ console.log('\nL-30 Teleport takes a unit in by the standard embarking rules (pp
   ok('...and it comes out with no Suppression', res.ok && acted.sp === 0, acted.sp + ' SP');
 })();
 
+console.log('\nL-31 A Xenotripod Markerlight marks what the tribe sees (p. 129)');
+(function () {
+  const e = game(['xalpha3', 'xbeta3', 'xgamma3'], ['regular'], null);
+  const st = e.state();
+  st.terrain.length = 0;
+  const beta = st.units.find((u) => u.key === 'xbeta3'), spot = st.units.find((u) => u.key === 'xgamma3');
+  const alpha = st.units.find((u) => u.key === 'xalpha3'), foe = st.units.find((u) => u.side === 'B');
+  st.units.forEach((u) => { u.reserve = false; u.aboard = null; });
+  beta.x = 6; beta.y = 24; alpha.x = 4; alpha.y = 4; foe.x = 26; foe.y = 24; spot.x = 6; spot.y = 44;
+  ok('beyond its own 12" sight, with nobody else looking, it cannot mark', e.query.markTargets(beta).indexOf(foe) < 0);
+  spot.x = 20; spot.y = 30;
+  ok('...with a squad of the tribe in sight of the enemy, it can', e.query.markTargets(beta).indexOf(foe) >= 0);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

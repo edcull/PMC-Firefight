@@ -23,7 +23,10 @@
         // only what is on the table: a reserve or a passenger is parked at (-1, -1)
         if (!R.onTable(t) || t.side === u.side) return false;
         var lim = R.has(t, 'Stealth') && !R.has(u, 'Keen-Eyed') ? Math.min(12, far) : far;
-        return R.unitDist(u, t) <= lim && R.hasLoS(E.state, u, t);
+        if (R.unitDist(u, t) > lim) return false;
+        if (R.hasLoS(E.state, u, t)) return true;
+        // Mental Projection (p. 129): what one of the tribe sees, every Xenotripod sees — a marker included
+        return R.xenoSenses(u) && !R.campFlag(u, 'banished') && R.tribeSees(E.state, u.side, t);
       });
     }
 
