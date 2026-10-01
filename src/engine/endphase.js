@@ -12,7 +12,7 @@
         beginTurn = E.beginTurn, canStand = E.canStand, focusUnit = E.focusUnit, logLine = E.logLine,
         nearestEnemy = E.nearestEnemy, onTable = E.onTable, pushRes = E.pushRes, render = E.render,
         sideName = E.sideName, soloAfterMove = E.soloAfterMove, ui = E.ui, isAI = E.isAI, makeStand = E.makeStand,
-        revealConsole = E.revealConsole;
+        revealConsole = E.revealConsole, setHint = E.setHint;
 
     // The rally phase is walked unit by unit: roll, show the card, wait for Continue.
     /* The start of the Rally phase (p. 34): every Broken unit on the table flees
@@ -149,6 +149,63 @@
     function rallyPhase() {
       logLine('phase', 'Rally phase.');
       R.collars(E.state).forEach(function (l) { logLine(l.t, l.text); });
+      E.state.nervousAsked = {};
+      nervousThen();
+    }
+    /* Strong Nervous System (p. 124): "Once per battle in the Rally phase, the Bug
+       player may remove all Suppression points from all their units." Offered at
+       the start of the phase, before the Broken flee: a player is asked whether
+       this is the turn; the AI spends it the first time a real share of its swarm
+       is pinned down — two units or a third of it, whichever is more. */
+    function nervousPinned(side) {
+      return E.state.units.filter(function (u) { return u.side === side && onTable(u) && !R.isMachine(u) && u.sp > 0; });
+    }
+    function nervousReady(side) {
+      var docs = (E.state.doctrines && E.state.doctrines[side]) || [];
+      E.state.nervous = E.state.nervous || {};
+      return docs.indexOf('BP3') >= 0 && !E.state.nervous[side] && nervousPinned(side).length > 0;
+    }
+    function useNervous(side) {
+      E.state.nervous[side] = true;
+      var cleared = nervousPinned(side);
+      cleared.forEach(function (u) { u.sp = 0; });
+      logLine('rally', 'Strong Nervous System — the hive-mind steadies ' + sideName(side) + ': every Suppression point on ' +
+        cleared.length + ' unit' + (cleared.length === 1 ? '' : 's') + ' is gone.');
+      pushRes({ kind: 'Rally', title: 'Strong Nervous System', side: side,
+        note: 'Once a battle, in the Rally phase, the swarm sheds all its Suppression.',
+        outcome: { text: cleared.length + ' unit' + (cleared.length === 1 ? '' : 's') + ' steady at once.', tone: 'good' } });
+    }
+    function nervousThen() {
+      var asked = E.state.nervousAsked = E.state.nervousAsked || {};
+      var sides = ['A', 'B'].filter(function (sd) { return !asked[sd] && nervousReady(sd); });
+      for (var k = 0; k < sides.length; k++) {
+        var sd = sides[k];
+        asked[sd] = true;
+        if (isAI(sd)) {
+          var mine = E.state.units.filter(function (u) { return u.side === sd && onTable(u) && !R.isMachine(u); });
+          var pinned = mine.filter(function (u) { return u.sp > 0 && R.status(u) !== 'ready'; });
+          if (pinned.length >= Math.max(2, Math.ceil(mine.length / 3))) useNervous(sd);
+          continue;
+        }
+        var pl = nervousPinned(sd);
+        E.state.nervousAsk = { side: sd, n: pl.length, broken: pl.filter(function (u) { return R.status(u) === 'broken'; }).length };
+        setHint(null, 'Strong Nervous System — clear every Suppression point on the swarm now?');
+        revealConsole();
+        render();
+        return;
+      }
+      rallyRest();
+    }
+    // a player's answer: spent now, or kept for a later Rally phase
+    function answerNervous(side, yes) {
+      var na = E.state.nervousAsk;
+      if (!na || na.side !== side) return 'nothing to answer';
+      E.state.nervousAsk = null;
+      if (yes) useNervous(side);
+      nervousThen();
+      return null;
+    }
+    function rallyRest() {
       fleeBroken();
       // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
       E.state.units.forEach(function (c) {
@@ -156,25 +213,6 @@
         var calm = activeUnits(c.side).filter(function (f) { return f.cls === 'infantry' && f.sp > 0 && R.unitDist(f, c) <= 6; });
         calm.forEach(function (f) { f.sp -= 1; });
         if (calm.length) logLine('rally', 'Psychic Amplifier — ' + c.label + ' steadies ' + calm.map(function (f) { return f.label; }).join(', ') + ': 1 SP each.');
-      });
-      /* Strong Nervous System (p. 124): once a battle, every Suppression point on
-         every bug is wiped away. It is spent the first time a real share of the
-         swarm is pinned down — two units or a third of it, whichever is more. */
-      ['A', 'B'].forEach(function (side) {
-        var docs = (E.state.doctrines && E.state.doctrines[side]) || [];
-        E.state.nervous = E.state.nervous || {};
-        if (docs.indexOf('BP3') < 0 || E.state.nervous[side]) return;
-        var mine = E.state.units.filter(function (u) { return u.side === side && onTable(u) && !R.isMachine(u); });
-        var pinned = mine.filter(function (u) { return u.sp > 0 && R.status(u) !== 'ready'; });
-        if (pinned.length < Math.max(2, Math.ceil(mine.length / 3))) return;
-        E.state.nervous[side] = true;
-        var cleared = mine.filter(function (u) { return u.sp > 0; });
-        cleared.forEach(function (u) { u.sp = 0; });
-        logLine('rally', 'Strong Nervous System — the hive-mind steadies ' + sideName(side) + ': every Suppression point on ' +
-          cleared.length + ' units is gone.');
-        pushRes({ kind: 'Rally', title: 'Strong Nervous System', side: side,
-          note: 'Once a battle, in the Rally phase, the swarm sheds all its Suppression.',
-          outcome: { text: cleared.length + ' units steady at once.', tone: 'good' } });
       });
       // Evacuation: everyone inside the safe zone is rallied without a roll (p. 154)
       if (E.state.scen.rallyFree) {
@@ -484,7 +522,7 @@
 
     return {
       rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, regroupCard: regroupCard, regroupFx: regroupFx,
-      objDist: objDist, objReach: objReach, fleeBroken: fleeBroken, scoreObjectives: scoreObjectives,
+      objDist: objDist, objReach: objReach, fleeBroken: fleeBroken, answerNervous: answerNervous, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };

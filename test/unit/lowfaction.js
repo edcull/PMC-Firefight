@@ -89,6 +89,43 @@ console.log('\nREB-2 The tactic is chosen once attacker and defender are known, 
   ok('the AI defending takes Last Stand; attacking, Human Wave with its wave', keysSeen.every((k) => k === 'defender:laststand:0' || k === 'attacker:wave:2'), keysSeen.join(' '));
 })();
 
+console.log('\nBUG-1 Strong Nervous System is the Bug player\u2019s to call, before anyone flees (p. 124)');
+(function () {
+  function swarm() {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'bugs'), armyB: ['regular', 'regular'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto',
+      doctrines: { A: ['BP3'], B: [] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+    st.units.forEach((u, i) => { u.reserve = false; u.aboard = null; u.sp = 0; u.x = u.side === 'A' ? 10 + (i % 5) * 4 : 40; u.y = 10 + Math.floor(i / 5) * 4 + (u.side === 'B' ? i * 3 : 0); });
+    return { e, st };
+  }
+  const { e, st } = swarm();
+  const bugs = st.units.filter((u) => u.side === 'A' && !R.isMachine(u));
+  const brk = bugs[0], shaken = bugs[1];
+  brk.sp = 2 * R.currentMorale(brk) + 1; shaken.sp = 1;
+  const at = { x: brk.x, y: brk.y };
+  e.query.rallyPhase();
+  ok('a Bug player is asked at the start of the Rally phase', !!st.nervousAsk && st.nervousAsk.side === 'A' && st.nervousAsk.broken === 1);
+  ok('...before the Broken unit flees', brk.x === at.x && brk.y === at.y);
+  ok('...and the other side cannot answer', !e.intent('B', { k: 'nervous' }).ok);
+  ok('steadied, every Suppression point on the swarm is gone', e.intent('A', { k: 'nervous' }).ok && brk.sp === 0 && shaken.sp === 0 && !st.nervousAsk);
+  ok('...so the Broken unit never ran', brk.alive && brk.x === at.x && brk.y === at.y);
+  shaken.sp = 2;
+  st.nervousAsk = null;
+  e.query.rallyPhase();
+  ok('once a battle: the next Rally phase does not ask again', !st.nervousAsk);
+  const two = swarm();
+  const b2 = two.st.units.find((u) => u.side === 'A' && !R.isMachine(u));
+  b2.sp = 1;
+  two.e.query.rallyPhase();
+  ok('kept for later, nothing is cleared', two.e.intent('A', { k: 'nonervous' }).ok && !two.st.nervous.A);
+  b2.sp = 1;
+  two.e.query.rallyPhase();
+  ok('...and it is offered again the next Rally phase', !!two.st.nervousAsk);
+})();
+
 console.log('\nL-30 Teleport takes a unit in by the standard embarking rules (pp. 36, 130)');
 (function () {
   let n = 0;

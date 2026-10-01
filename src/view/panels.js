@@ -492,6 +492,16 @@
         '</div></div>';
       return h;
     }
+    // Strong Nervous System (p. 124): once a battle, at the start of a Rally phase
+    function nervousCard() {
+      var na = B.state.nervousAsk;
+      return '<div class="card"><h2>Strong Nervous System</h2>' +
+        '<p class="sub">' + na.n + ' unit' + (na.n === 1 ? '' : 's') + ' of the swarm carry Suppression' +
+        (na.broken ? ', ' + na.broken + ' of them Broken and about to flee' : '') +
+        '. Once a battle, the hive-mind may wipe away every Suppression point on every bug \u2014 before anyone flees.</p>' +
+        '<div class="acts"><button class="act primary" data-act="nervous"><span>Steady the swarm</span><small>Now \u2014 it cannot be used again</small></button>' +
+        '<button class="act" data-act="nonervous"><span>Not this turn</span><small>Keep it for a later Rally phase</small></button></div></div>';
+    }
     function setUpWaitCard(ask) {
       var what = ask.why === 'takeover' ? 'digging in around the objective — trenches, walls, wire and a bunker'
         : ask.why === 'laststand' ? 'putting up their Last Stand barricades'
@@ -602,6 +612,8 @@
       }
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
+      else if (B.state.nervousAsk && !isAI(B.state.nervousAsk.side)) html = atThisScreen(B.state.nervousAsk.side) ? nervousCard()
+        : '<div class="card"><h2>Rally phase</h2><p class="sub"><b>' + esc(sideName(B.state.nervousAsk.side)) + '</b> is deciding whether the hive-mind steadies the swarm.</p></div>';
       else if (B.state.over) html = overCard();
       else if (ui.terrain.length && ui.selected &&
         (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
@@ -1321,7 +1333,7 @@
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'deployready') { send({ k: 'deployready' }); return; }
-          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'waveadd') { send({ k: 'waveadd', key: b.getAttribute('data-key') }); return; }
           else if (a === 'waveundo' || a === 'waveauto' || a === 'wavedone') { send({ k: a }); return; }

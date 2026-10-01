@@ -233,7 +233,7 @@
          or surrender, hold it as well — with nothing left to act, a step taken
          then would end the turn again and run the whole Rally phase once more. */
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.kyfAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
+        !state.martyrAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
     }
     function maybeAI() {
       if (draining || !canAI()) return;
@@ -1599,7 +1599,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
       if (state.relocating || state.placeAsk) return false;      // turn 1's relocations and fortifications come before the Action phase
       return state.activeSide === side;
     }
@@ -1954,6 +1954,10 @@
       ui.kyfThen(it.k === 'kyf');
       return yes;
     });
+    on('nervous nonervous', null, function (side, it) {
+      var why = K.answerNervous(side, it.k === 'nervous');
+      return why ? no(why) : yes;
+    });
     on('martyr nomartyr', null, function (side, it) {
       var ma = state.martyrAsk;
       if (!ma || ma.side !== side || !ui.martyrThen) return no('nothing to answer');
@@ -2230,6 +2234,7 @@
         // one AI unit's activation, as runAI does it (the tests force a behaviour roll)
         // the Rally phase's flight on its own, for the tests
         fleeBroken: function () { K.fleeBroken(); },
+        rallyPhase: function () { K.rallyPhase(); },
         aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
