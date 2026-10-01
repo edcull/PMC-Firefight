@@ -464,8 +464,7 @@
         ui.targets = activeUnits(u.side).filter(function (t) { return R.canEmbark(E.state, u, t); });
       } else if (id === 'disembark') {
         ui.mode = 'disembark';
-        ui.moves = R.reachable(E.state, u, 4).filter(function (c) { return R.inches(c.x, c.y, u.x, u.y) <= 4; });
-        if (!ui.moves.length) ui.moves = [{ x: u.x, y: u.y, cost: 0 }];
+        ui.moves = dropFor(u);
       } else if (id === 'strafe') {
         ui.mode = 'strafe';
         // the run ends where the craft could stop: not over a tall building or a hilltop (p. 38)
@@ -547,8 +546,16 @@
       if (ui.targets.length || ui.moves.length) revealConsole();
     }
 
+    /* Where the next squad aboard u may be put down (R.dropSpots), inside the
+       scenario's bounds; the hull's own spot if nowhere will do. */
+    function dropFor(u) {
+      var rider = (u.cargo || []).filter(function (c) { return !c.boarded; })[0];
+      var spots = rider ? R.dropSpots(E.state, u, rider).filter(function (c) { return canStand(rider, c); }) : [];
+      return spots.length ? spots : [{ x: u.x, y: u.y, cost: 0 }];
+    }
+
     return {
-      actionState: actionState, chooseAction: chooseAction
+      actionState: actionState, chooseAction: chooseAction, dropFor: dropFor
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineActions;

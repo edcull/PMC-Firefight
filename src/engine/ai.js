@@ -155,14 +155,9 @@
       /* A Rapid insertion platform does one thing and then it is scenery (p. 79). */
       if (R.has(u, 'Immobile')) {
         if (carrying) {
-          var spot = null;
-          for (var a2 = 0; a2 < 16 && !spot; a2++) {
-            var ang = a2 / 16 * Math.PI * 2;
-            var q = R.clampBoard({ x: u.x + Math.cos(ang) * 3, y: u.y + Math.sin(ang) * 3 });
-            if (R.TERRAIN[R.terrainAt(E.state, q.x, q.y)].impassable) continue;
-            if (R.unitNear(E.state, q.x, q.y, u, 0.6)) continue;
-            spot = q;
-          }
+          // the squad steps off towards the nearest enemy, wherever it may be put down
+          var foeP = nearestEnemy(u), want = foeP ? foeP.unit : { x: u.x, y: u.y };
+          var spot = nearestTo(E.dropFor(u), want);
           ui.selected = u; doDisembark(spot || { x: u.x, y: u.y }, true); return;
         }
         u.activated = true; endActivation(u); return;
@@ -172,10 +167,12 @@
       if (carrying) {
         var obj = nearestObjective(u);
         if (obj && R.inches(u.x, u.y, obj.x, obj.y) < 9) {
+          // each squad put down where it may be (R.dropSpots), as near the hull's front as it can
           var spot = { x: u.x + Math.cos(u.facing || 0) * 2.5, y: u.y + Math.sin(u.facing || 0) * 2.5 };
           var lines = [];
-          (u.cargo || []).slice().forEach(function (rider, i) {
-            var r = R.disembark(E.state, u, rider, { x: spot.x + (i % 2 ? 1.6 : -1.6), y: spot.y });
+          (u.cargo || []).slice().forEach(function (rider) {
+            var at = nearestTo(R.dropSpots(E.state, u, rider).filter(function (c) { return canStand(rider, c); }), spot);
+            var r = R.disembark(E.state, u, rider, at);
             if (r) { logLine('note', r.text); lines.push({ text: r.text }); stepOff(rider, u); }
           });
           if (SFX) { SFX.step(); SFX.step(0.22); }
@@ -352,6 +349,12 @@
     }
 
     // a scenario may put ground off limits: the VIP's leash, the safe zone the OpFor cannot enter
+    // of the spots given, the one nearest p (null if there are none)
+    function nearestTo(spots, p) {
+      var best = null, bd = Infinity;
+      (spots || []).forEach(function (c) { var d = R.inches(c.x, c.y, p.x, p.y); if (d < bd) { bd = d; best = c; } });
+      return best;
+    }
     function canStand(u, c) {
       // an aircraft keeps low: never over a tall building or a hilltop (p. 38)
       if (R.isFlying(u) && R.tooHighToHover(E.state, c.x, c.y)) return false;

@@ -17,6 +17,7 @@ Book references are rulebook line numbers (`l.`); code references are at `7dd730
 6. [Not implemented](#6-not-implemented)
 7. [The v0.1 review: what has been fixed](#7-the-v01-review-what-has-been-fixed)
 8. [Coverage: what was checked and found correct](#8-coverage-what-was-checked-and-found-correct)
+9. [Progress](#9-progress)
 
 ---
 
@@ -55,7 +56,7 @@ The problems that remain are in procedures rather than numbers:
 
 ## 2. High
 
-### H-1 · A Broken unit near its own table edge never flees off the table — *reproduced*
+### H-1 · A Broken unit near its own table edge never flees off the table — *reproduced* — **fixed**
 
 > l.709–712: "All Broken units have to flee Movement + 2" away from the closest enemy … They move in such a way as
 > to avoid enemy units for as long as possible … If the unit moves off of the table, it does not return and is
@@ -74,7 +75,7 @@ allowance going sideways. It never leaves the table, never counts towards a rout
 - **Fix:** allow off-table end points. A flight whose straight line away from the enemy crosses the edge should
   leave the table, whatever the lattice offers.
 
-### H-2 · Disembarking: the drop zone is the vehicle's own 4" drive, measured from its centre — *reproduced*
+### H-2 · Disembarking: the drop zone is the vehicle's own 4" drive, measured from its centre — *reproduced* — **fixed**
 
 > l.809–811: "The unloaded troops are placed up to 4" from the vehicle (ALL models must be placed no further than
 > 4" away)." l.817: "the transported unit and the vehicle may be closer than the usual 1"."
@@ -92,7 +93,7 @@ right 4" base to base (`rules.js:1227-1242`), but the interface never offers any
 - **Fix:** offer the infantry's own placement: every free spot whose base is within 4" of the hull's base, on
   ground the infantry may stand on. Place the squad at the tapped point.
 
-### H-3 · The turn freezes when the side with the initiative has nothing it can activate — *reproduced*
+### H-3 · The turn freezes when the side with the initiative has nothing it can activate — *reproduced* — **fixed**
 
 > l.457: "When one player activates their last unit, the opponent can finish their activations freely."
 
@@ -600,3 +601,16 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 - Recruiting costs; company promotion; disbanding; losses and salvage.
 - The Rebel, Space Bug and Xenotripod campaign rules.
 - All six campaign test files pass.
+
+---
+
+## 9. Progress
+
+| Finding | State | Where |
+|---|---|---|
+| H-1 Broken units by their edge never flee off | **Fixed.** A spot from which the rest of the flight carries the unit past the edge now beats every spot on the table, so it runs off and is counted as fled. A unit fleeing a building that ends with flight to spare is fled as well. | `src/engine/endphase.js` (`fleeBroken`, `edgeGap`, `runOff`) |
+| H-2 Disembark placement | **Fixed.** `R.dropSpots` offers every free spot whose base is within 4" of the hull's, on ground the squad may stand on, not on the hull, and 1" clear of everyone else. The hull's drive, turns and terrain bans no longer apply. The squad goes down where it is put. The AI's two unloading paths use the same spots, which also closes the AI half of L-9. | `src/rules/rules.js` (`dropSpots`), `src/engine/actions.js` (`dropFor`), `src/engine/combat.js` (`doDisembark`), `src/engine/ai.js` |
+| H-3 The turn freezes when the initiative side has nothing to activate | **Fixed.** When the Action phase opens, a side with nothing eligible hands the phase to the other; if neither has anything, the Rally phase follows at once. The review's reproduction was itself waiting on a Battlefield Insertion choice; a clean reproduction confirms the freeze on the old code. | `src/engine/engine.js` (`beginTurn → action`) |
+
+Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass.
+

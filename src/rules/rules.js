@@ -1224,6 +1224,28 @@
     u.x = -1; u.y = -1;
     return { text: u.label + ' embarks aboard ' + veh.name + '.' };
   }
+  /* Where a squad may be put down from a hull (p. 36): "placed up to 4" from the
+     vehicle (ALL models … no further than 4" away)" — so anywhere its base is within
+     4" of the hull's, on ground it may stand on. It may be closer than the usual 1"
+     to the vehicle it leaves, but not on it, and keeps 1" from everyone else. A
+     placement, not a drive: the hull's turning and its terrain bans have no say. */
+  function dropSpots(state, veh, u) {
+    var out = [], reach = 4 + 2 * UNIT_R;
+    for (var x = veh.x - reach; x <= veh.x + reach + 1e-6; x += STEP) {
+      for (var y = veh.y - reach; y <= veh.y + reach + 1e-6; y += STEP) {
+        var px = Math.round(x / STEP) * STEP, py = Math.round(y / STEP) * STEP;
+        var d = Math.hypot(px - veh.x, py - veh.y);
+        if (d > reach || d < 2 * UNIT_R + 0.2) continue;
+        if (px < UNIT_R || py < UNIT_R || px > BOARD.w - UNIT_R || py > BOARD.h - UNIT_R) continue;
+        if (barredAt(state, u, px, py)) continue;
+        var clear = state.units.every(function (o) {
+          return !o.alive || o === u || o === veh || o.aboard || Math.hypot(o.x - px, o.y - py) >= 2 * UNIT_R + 1;
+        });
+        if (clear) out.push({ x: px, y: py, cost: 0 });
+      }
+    }
+    return out;
+  }
   function disembark(state, veh, u, pos) {
     var i = (veh.cargo || []).indexOf(u);
     if (i < 0 || u.boarded) return null;               // loaded this turn: it stays aboard until the next
@@ -2027,7 +2049,7 @@
     rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
-    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark,
+    canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark, dropSpots: dropSpots,
     barredAt: barredAt,
     terrainCost: terrainCost, terrainBars: terrainBars,
     canHack: canHack, hack: hack, commandAboard: commandAboard,

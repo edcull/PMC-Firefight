@@ -801,6 +801,15 @@
       K.reservePhase(function () {
         function action() {
           state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
+          /* A side that wins the initiative with nothing it can activate (all Broken,
+             say) hands the phase to the other, which then goes on freely (p. 27);
+             with nothing to activate on either side, the Rally phase comes at once. */
+          if (!state.solo && !eligible(state.activeSide).length) {
+            var next = other(state.activeSide);
+            if (!eligible(next).length) { K.rallyPhase(); return; }
+            logLine('note', sideName(state.activeSide) + ' has no unit that can act — ' + sideName(next) + ' goes on.');
+            state.activeSide = next;
+          }
           state.streak = streakFor(state.activeSide);
           render();
           maybeAI();
