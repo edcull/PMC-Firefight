@@ -1653,7 +1653,12 @@
     if (f === 'rebel') {
       if (u.key === 'rciv' || u.soloCiv) return 'Civilian';
       if (u.command) return i === 0 ? REBEL_CHIEF[tier - 1] : 'Lieutenant';
-      if (g === 'Holy Warriors') return i === 0 ? 'Preacher' : 'Zealot';
+      // the faithful by tier: a Preacher (1-2), an Elder (3-4), a Prophet and his Holy Warriors (5)
+      if (g === 'Holy Warriors') {
+        var tierHW = Math.max(1, Math.min(5, u.tier || 1));
+        if (i === 0) return tierHW >= 5 ? 'Prophet' : tierHW >= 3 ? 'Elder' : 'Preacher';
+        return tierHW >= 5 ? 'Holy Warrior' : 'Zealot';
+      }
       if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       if (u.key === 'rguard') return i === 0 ? 'Guard Captain' : 'Guard';
