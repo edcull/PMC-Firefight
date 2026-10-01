@@ -53,7 +53,7 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   ['shock', 'Sergeant', 'Corporal', 'Private'], ['commandos', 'Staff Sergeant', 'Sergeant', 'Specialist'],
   // light infantry: tier 2 a corporal and a lance corporal, tier 3-5 a sergeant and a corporal
   ['observers', 'Corporal', 'Lance Corporal', 'Private'], ['sharpshooters', 'Sergeant', 'Corporal', 'Private'],
-  ['lrrp', 'Sergeant', 'Corporal', 'Private'], ['snipers', 'Sergeant', 'Corporal', 'Private'],
+  ['lrrp', 'Sergeant', 'Corporal', 'Private'], ['snipers', 'Staff Sergeant', 'Sergeant', 'Sergeant'],
   // the rebels' Revolutionary guard: a Guard Captain and his guards
   ['rguard', 'Guard Captain', 'Guard', 'Guard'],
   // the Holy Warriors: a Preacher (1-2), an Elder (3-4), a Prophet and Holy Warriors (5)
