@@ -30,7 +30,18 @@ async function drain(p) {
   });
   console.log('held in reserve at setup:', held.join(', ') || 'none');
 
-  await p.evaluate(() => (window.__sendIntent({ k: 'autosplit' }), ((document.querySelector('[data-act="deployready"]') && window.__sendIntent({ k: 'deployready' })), document.querySelector('button[data-act="autodeploy"]'))).click());
+  // the deployment card is drawn after the split and the ready step: wait for its button rather than racing it
+  for (let i = 0; i < 40; i++) {
+    const clicked = await p.evaluate(() => {
+      window.__sendIntent({ k: 'autosplit' });
+      if (document.querySelector('[data-act="deployready"]')) window.__sendIntent({ k: 'deployready' });
+      const b = document.querySelector('button[data-act="autodeploy"]');
+      if (b) { b.click(); return true; }
+      return false;
+    });
+    if (clicked) break;
+    await p.waitForTimeout(150);
+  }
   // a vehicle put down is asked which way it faces: the way offered
   await p.evaluate(() => { for (let n = 0; n < 12 && window.PMC_STATE().faceAsk; n++) window.__sendIntent({ k: 'vfaceall' }); });
   await p.waitForTimeout(400);
