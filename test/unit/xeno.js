@@ -66,6 +66,19 @@ st2.units.push(gam);
 ok('a Gamma (Indirect Fire) lobs over the rocks at it', R.canShoot(st2, gam, st2.units[2], 'fire'), true);
 var tur = mk('xdturret1', 'A', 5, 5, { drone: true });
 ok('a turret is a drone: normal 36" sight', R.sightRange(tur), 36);
+// Mental Projection reaches the whole army, drones and turrets included
+var st4 = world([mk('xbeta3', 'A', 10, 22), mk('regular', 'B', 5, 20)], [wall]);
+var tur2 = mk('xdturret1', 'A', 5, 4, { drone: true });
+st4.units.push(tur2);
+ok('a turret (Indirect Fire) lobs over the rocks at what the tribe sees', R.canShoot(st4, tur2, st4.units[1], 'fire'), true);
+st4.units[0].sp = 99;
+ok('...but not once the Beta that sees it is broken', R.canShoot(st4, tur2, st4.units[1], 'fire'), false);
+st4.units[0].sp = 0;
+st4.units[0].x = 30;
+ok('...nor when no Xenotripod sees it', R.canShoot(st4, tur2, st4.units[1], 'fire'), false);
+var tur3 = mk('xdturret1', 'A', 10, 22, { drone: true });
+var st5 = world([tur3, mk('xgamma3', 'A', 5, 4), mk('regular', 'B', 5, 20)], [wall]);
+ok('a turret spots nothing for the tribe itself', R.canShoot(st5, st5.units[1], st5.units[2], 'fire'), false);
 var strike = mk('xstrike3', 'A', 5, 5);
 ok('a Strike craft sees 12" too', R.canShoot(world([strike, mk('regular', 'B', 5, 25)]), strike, mk('regular', 'B', 5, 25), 'fire'), false);
 

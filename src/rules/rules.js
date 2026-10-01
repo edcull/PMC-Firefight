@@ -1337,7 +1337,7 @@
       pheromoneBonus: pheromoneBonus, pointSegDist: pointSegDist, propOf: propOf,
       resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief, ruleValue: ruleValue,
       sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
-      sizeBonus: sizeBonus, status: status, tribeSees: tribeSees, undisciplined: undisciplined,
+      sizeBonus: sizeBonus, status: status, isXeno: isXeno, tribeSees: tribeSees, undisciplined: undisciplined,
       unitDist: unitDist, xenoSenses: xenoSenses
     };
   }

@@ -18,7 +18,7 @@
         propOf = E.propOf, resolveDamage = E.resolveDamage, resolveShootingHits = E.resolveShootingHits, shotRelief = E.shotRelief,
         ruleValue = E.ruleValue, sectionHigh = E.sectionHigh, sectionRect = E.sectionRect,
         shelterOf = E.shelterOf, sightRange = E.sightRange, sizeBonus = E.sizeBonus, status = E.status,
-        tribeSees = E.tribeSees, undisciplined = E.undisciplined, unitDist = E.unitDist,
+        isXeno = E.isXeno, tribeSees = E.tribeSees, undisciplined = E.undisciplined, unitDist = E.unitDist,
         xenoSenses = E.xenoSenses;
     /* ---------- shooting ---------- */
     /* "Dig in!" (p. 94): the crew drag the trails round and shoot over open sights.
@@ -83,9 +83,11 @@
       // a dug-in gun is laying over its sights, so it needs to see what it hits
       if (!opts.aux && markCall(state, a, t, opts) === 'designate') return true;
       /* Limited Senses and Mental Projection (p. 129): a Xenotripod sees 12", but
-         whatever one of the tribe sees, all of them see. An aircraft is over
-         everything; Indirect Fire lobs over whatever is in the way. */
-      var senses = xenoSenses(a) && !campFlag(a, 'banished');
+         whatever one of the tribe sees, the whole army sees — its drones and
+         turrets included, though they spot nothing for it themselves (tribeSeers).
+         An aircraft is over everything; Indirect Fire lobs over whatever is in
+         the way. */
+      var senses = isXeno(a) && !campFlag(a, 'banished');
       if (isFlying(a) || isFlying(t)) {                  // aircraft shoot and are shot over everything
         return !xenoSenses(a) || unitDist(a, t) <= sightRange(a) || (senses && tribeSees(state, a.side, t));
       }
@@ -395,7 +397,7 @@
       propOf = L.propOf; resolveDamage = L.resolveDamage; resolveShootingHits = L.resolveShootingHits; shotRelief = L.shotRelief;
       ruleValue = L.ruleValue; sectionHigh = L.sectionHigh; sectionRect = L.sectionRect;
       shelterOf = L.shelterOf; sightRange = L.sightRange; sizeBonus = L.sizeBonus; status = L.status;
-      tribeSees = L.tribeSees; undisciplined = L.undisciplined; unitDist = L.unitDist;
+      isXeno = L.isXeno; tribeSees = L.tribeSees; undisciplined = L.undisciplined; unitDist = L.unitDist;
       xenoSenses = L.xenoSenses;
     }
 
