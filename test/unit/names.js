@@ -34,6 +34,11 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   ok('every Overgrown Bug is given a name of its own', beasts.every((u) => typeof u.beast === 'string' && u.beast.length > 2),
     beasts.map((u) => u.name + ' \u201c' + u.beast + '\u201d').join(', '));
   ok('...no two the same', new Set(beasts.map((u) => u.beast)).size === beasts.length);
+  // a name of legend, after the beast: a Queen is never "the Shadow of" anywhere
+  const q = unit('bqueen'), names = {};
+  for (let k = 0; k < 200; k++) names[R.beastName(q)] = 1;
+  ok('...a legend fitting what it is (a Queen, say)', Object.keys(names).some((n) => /Swarmlord|Empress|Mother/.test(n)) &&
+    !Object.keys(names).some((n) => /Shadow|Worm|Furnace/.test(n)), Object.keys(names).slice(0, 6).join(', '));
   ok('...while its losses still go down as biomass, with the swarm\'s', beasts.every((u) => R.counted(u) && u.men.length === 0));
   const swarm = unit('battack'); R.musterMen(swarm, null, seen);
   ok('the swarm itself has no name', !swarm.beast);
@@ -60,10 +65,14 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
   ['rridergang', 'Rider Leader', 'Rider', 'Rider'], ['rriderwar', 'Rider Leader', 'Rider', 'Rider'],
   ['rhellriders', 'Rider Leader', 'Rider', 'Rider'], ['rlegendary', 'Hellrider Captain', 'Hellrider', 'Hellrider'],
-  // the revolt's leaders: Ringleader, Sector Chief, Commandant, Commander, General
-  ['rinstigators', 'Ringleader', 'Lieutenant', 'Lieutenant'], ['rsecondary', 'Sector Chief', 'Lieutenant', 'Lieutenant'],
+  // the revolt's leaders: Chief, Sector Chief, Commandant, Commander, General
+  ['rinstigators', 'Chief', 'Lieutenant', 'Lieutenant'], ['rsecondary', 'Sector Chief', 'Lieutenant', 'Lieutenant'],
   ['rleaders', 'Commandant', 'Lieutenant', 'Lieutenant'], ['rinfluential', 'Commander', 'Lieutenant', 'Lieutenant'],
-  ['rrebellion', 'General', 'Lieutenant', 'Lieutenant']].forEach(([key, lead, second, rest]) => {
+  ['rrebellion', 'General', 'Lieutenant', 'Lieutenant'],
+  // the Xenotripods' Alpha squads: Hunt-leader, Pack-leader, Clan-leader, War-chief, Tribe-lord
+  ['xalpha1', 'Hunt-leader', 'Warrior', 'Warrior'], ['xalpha2', 'Pack-leader', 'Warrior', 'Warrior'],
+  ['xalpha3', 'Clan-leader', 'Warrior', 'Warrior'], ['xalpha4', 'War-chief', 'Warrior', 'Warrior'],
+  ['xalpha5', 'Tribe-lord', 'Warrior', 'Warrior']].forEach(([key, lead, second, rest]) => {
   const u = unit(key);
   R.musterMen(u, null, {});
   ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',

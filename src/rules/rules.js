@@ -1597,8 +1597,10 @@
      post by a Major. */
   var CREW_NCO = ['Corporal', 'Corporal', 'Sergeant', 'Staff Sergeant', 'Master Sergeant'];
   var CREW_OFFICER = ['Second Lieutenant', 'Second Lieutenant', 'Lieutenant', 'Lieutenant', 'Captain'];
-  // the revolt's own titles, none of them the PMCs': a Ringleader of cells, a Sector Chief, then Commandant, Commander, General
-  var REBEL_CHIEF = ['Ringleader', 'Sector Chief', 'Commandant', 'Commander', 'General'];
+  // the revolt's own titles, none of them the PMCs': a Chief, a Sector Chief, then Commandant, Commander, General
+  var REBEL_CHIEF = ['Chief', 'Sector Chief', 'Commandant', 'Commander', 'General'];
+  // the Xenotripods' Alpha squads, led by a higher officer the higher the grade
+  var ALPHA_LEAD = ['Hunt-leader', 'Pack-leader', 'Clan-leader', 'War-chief', 'Tribe-lord'];
 
   function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
   function syllables(list, a, b) {
@@ -1619,17 +1621,25 @@
     return humanName(f === 'rebel');
   }
   /* An Overgrown Bug is one beast, big enough that the troops facing it give it
-     a name of its own — "Old Gristle", "the Widowmaker". Its losses still go
-     down as biomass with the rest of the swarm (counted); the name rides along. */
-  var BEAST_A = ['Old', 'Big', 'Black', 'Red', 'Grey', 'Iron', 'Bone', 'Night', 'Mad', 'Mother', 'Granny', 'Uncle', 'Lady', 'Long', 'Fat'];
-  var BEAST_B = ['Gristle', 'Scratch', 'Tusk', 'Maw', 'Widow', 'Jaw', 'Bertha', 'Grinder', 'Molly', 'Sally', 'Shuck',
-    'Ripper', 'Chomper', 'Nails', 'Gutsy', 'Crusher', 'Dolly', 'Shiver', 'Rattles', 'Mags'];
-  var BEAST_THE = ['Widowmaker', 'Grinder', 'Big Ugly', 'Landlord', 'Mangler', 'Hungry One', 'Sexton', 'Furnace', 'Undertaker', 'Old Man'];
+     a name of legend, after what it is and where it made its name: a Shadow bug
+     is "the Shadow of Karak", a Queen "the Swarmlord". Its losses still go down
+     as biomass with the rest of the swarm (counted); the name rides along. */
+  var BEAST_PLACES = ['Karak', 'Duene', 'Veth', 'Orsa', 'Kell Ridge', 'Tarsis', 'Hollow Nine', 'Ishra', 'Ghelt',
+    'the Marrow Flats', 'Sabine Deep', 'New Corvo', 'Amaranth', 'Dust Point', 'Halvard', 'the Red Wastes'];
+  var BEAST_NAMES = {
+    bfirebeetle: ['the Furnace', 'Cinderback', 'the Burning One', 'Ashmaker', 'the Flame of {P}', 'the Pyre of {P}'],
+    bsandworm: ['the Devourer', 'Earthshaker', 'the Deep One', 'Dune Leviathan', 'the Maw of {P}', 'the Worm of {P}'],
+    bbioplasma: ['the Melter', 'Acid Rain', 'the Spitting Death', 'the Bane of {P}', 'the Plague of {P}'],
+    bcarrier: ['Skyhive', 'the Black Cloud', 'the Broodmother', 'the Dread of {P}', 'Wings over {P}'],
+    bshadow: ['the Unseen', 'Nightstalker', 'the Whisper', 'the Shadow of {P}', 'the Ghost of {P}'],
+    bqueen: ['the Swarmlord', 'the Brood Empress', 'the Hive Mother', 'the Mother of {P}', 'the Empress of {P}']
+  };
+  var BEAST_ANY = ['the Terror of {P}', 'the Horror of {P}', 'the Doom of {P}', 'the Butcher of {P}'];
   function overgrown(u) { return !!u && (hasOwn(u, 'Overgrown Bug') || hasOwn(u, 'Overgrown Flying Bug')); }
-  function beastName(taken) {
-    var n, tries = 0;
+  function beastName(u, taken) {
+    var own = (u && BEAST_NAMES[u.key]) || [], n, tries = 0;
     do {
-      n = Math.random() < 0.3 ? 'the ' + pickOf(BEAST_THE) : pickOf(BEAST_A) + ' ' + pickOf(BEAST_B);
+      n = (own.length && Math.random() < 0.75 ? pickOf(own) : pickOf(BEAST_ANY)).replace('{P}', pickOf(BEAST_PLACES));
     } while (taken && taken[n] && ++tries < 20);
     if (taken) taken[n] = 1;
     return n;
@@ -1665,6 +1675,8 @@
     if (f === 'xeno') {
       if (u.command) return i === 0 ? 'Warleader' : 'Chosen';
       if (g === 'Chosen Warriors') return 'Chosen';
+      // an Alpha squad's leader rises with its grade, from Hunt-leader to Tribe-lord
+      if (g === 'Alpha Squads' && i === 0) return ALPHA_LEAD[tier - 1];
       return i === 0 ? 'Hunt-leader' : 'Warrior';
     }
     if (f === 'rebel') {
@@ -1718,7 +1730,7 @@
   function musterMen(u, carried, taken) {
     if (counted(u)) {
       u.men = []; u.seenModels = standing(u); u.lostModels = 0;
-      if (overgrown(u) && !u.beast) u.beast = beastName(taken);
+      if (overgrown(u) && !u.beast) u.beast = beastName(u, taken);
       return u.men;
     }
     var want = crewed(u) ? (isMachine(u) ? 1 : Math.max(0, u.models || 0)) : 0;

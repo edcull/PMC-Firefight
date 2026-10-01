@@ -1090,7 +1090,7 @@
     var who = Object.assign({ faction: 'pmc' }, u, { alive: true });
     // an Overgrown Bug: one beast, named by the troops who face it (a fresh name each battle)
     if (R.overgrown && R.overgrown(who)) {
-      return '<p class="vranks"><b>Name</b> one of its own, given by the troops facing it \u2014 this one \u201c' + esc(view.beast || (view.beast = R.beastName())) + '\u201d</p>';
+      return '<p class="vranks"><b>Name</b> one of its own, given by the troops facing it \u2014 this one \u201c' + esc(view.beast || (view.beast = R.beastName(who))) + '\u201d</p>';
     }
     if (!R.crewed(who)) {
       return '<p class="vranks"><b>Ranks</b> ' + (R.counted(who) ? 'Nobody named: its losses are counted' : 'Nobody aboard: a machine') + '</p>';
