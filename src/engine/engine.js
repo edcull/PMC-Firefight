@@ -1177,8 +1177,10 @@
       }
     }
     /* All turrets are activated at once (p. 130): the first to act brings every
-       other one of its side along before the activation passes. */
-    if (just && R.has(just, 'Turret') && !state.chain && !state.solo) {
+       other one of its side along before the activation passes. In a solitaire
+       or cooperative game the same goes for the players' turrets (each player's
+       own, in co-op); the OpFor acts in its own phase, in its script's order. */
+    if (just && R.has(just, 'Turret') && !state.chain && (!state.solo || just.side === 'A')) {
       var restT = eligible(just.side).filter(function (t) { return R.has(t, 'Turret'); });
       if (restT.length) {
         state.chain = { kind: 'turrets', side: just.side, remaining: restT.length + 1 };

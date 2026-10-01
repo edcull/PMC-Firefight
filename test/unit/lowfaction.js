@@ -102,5 +102,23 @@ console.log('\nL-32 Psychic Bond lends no Morale from a Suppressed or Broken fri
   ok('...a Suppressed one does not', !R.bondMorale(st, low));
 })();
 
+console.log('\nL-33 In a co-op game, a player\u2019s turrets still act as one (p. 130)');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 3, pl: 2, scenario: 's_crush', armyA: ['xbeta3', 'xdturret2', 'xgamma3', 'xalpha3'], ownersA: [1, 1, 2, 2],
+    armyB: ['regular', 'regular', 'regular'], nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse',
+    terrainSetup: 'auto', solo: { coop: true, faction: 'xeno', opFaction: 'pmc', names: ['P1', 'P2'] } });
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 1; st.phaseCount = 1; st.activeSide = 'A'; st.activeOwner = 1; st.chain = null;
+  st.units.forEach((u, i) => { u.reserve = false; u.aboard = null; u.activated = false; u.x = u.side === 'A' ? 6 + i * 3 : 40; u.y = 10 + i * 4; u.wave = 0; });
+  const turrets = st.units.filter((u) => u.side === 'A' && R.has(u, 'Turret'));
+  turrets.forEach((t) => { t.owner = 1; });
+  ok('the first player has two turrets', turrets.length === 2);
+  e.intent('A', { k: 'select', id: turrets[0].id });
+  ok('one turret acts', e.intent('A', { k: 'action', id: 'skip' }).ok && turrets[0].activated);
+  const next = e.query.eligible('A');
+  ok('...and the other is the only one that may go next', next.length === 1 && next[0] === turrets[1], next.map((u) => u.name).join(', '));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
