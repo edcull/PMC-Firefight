@@ -47,7 +47,21 @@ This:
   deploy never touches;
 - installs the `pmc-firefight` service, listening on `127.0.0.1:8787`, so it
   is reached only through nginx;
-- lets `pi` restart that one service, and read its log, without a password.
+- lets `pi` restart that one service, and read its log, without a password;
+- keeps the server sandboxed: it can write only its data folder,
+  `/var/lib/pmc-firefight` (the campaigns, and a database file should it keep
+  one), sees the rest of the system read-only and no home folders, and can
+  never gain privileges (`NoNewPrivileges`, `ProtectSystem=strict`,
+  `ProtectHome`, `PrivateTmp`).
+
+Running `setup.sh` again is safe. It rewrites the service the same way, which
+is also how a Pi set up before a change to the script picks the change up:
+
+```
+curl -fsSL https://raw.githubusercontent.com/edcull/PMC-Firefight/main/deploy/pi/setup.sh -o /tmp/pmc-setup.sh
+sudo bash /tmp/pmc-setup.sh pi
+sudo systemctl restart pmc-firefight
+```
 
 `~/pmc-setup` can be deleted afterwards.
 

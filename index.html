@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=883d361b6c">
+<link rel="stylesheet" href="src/css/game.css?v=263945dac8">
 
 <div class="wrap">
   <header>
@@ -136,9 +136,9 @@
     </div>
     <div class="menu-pane" id="menu-hotseat" hidden>
       <h2 class="menu-head">Hotseat</h2>
-      <button class="mcard" data-skirmish="hotseat">Skirmish<small>One battle, two players, one screen</small></button>
-      <button class="mcard" data-skirmish="coop">Cooperative<small>Two commandos, one each, against the OpFor</small></button>
-      <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign<small id="menu-camphot-sub">Two dossiers, two players, one screen</small></button>
+      <button class="mcard" data-skirmish="hotseat">Skirmish<small>One battle, two players, one screen</small><span class="mcard-warn">Not fully tested</span></button>
+      <button class="mcard" data-skirmish="coop">Cooperative<small>Two commandos, one each, against the OpFor</small><span class="mcard-warn">Not fully tested</span></button>
+      <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign<small id="menu-camphot-sub">Two dossiers, two players, one screen</small><span class="mcard-warn">Not fully tested</span></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
     <!-- the small things: the sound, and the demo on the main menu only -->
@@ -148,7 +148,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2610011236</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2610011446</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
