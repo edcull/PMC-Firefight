@@ -1008,7 +1008,9 @@
         var note = x.locked ? 'emplaced \u2014 never held back'
           : wave ? (x.held ? 'second wave' : 'first wave')
           : x.held ? (x.insert ? 'held back \u2014 by insertion' : 'held back') : x.inserter ? 'on the table \u2014 can insert' : 'on the table';
-        return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-holdback="' + x.id + '"' + (x.locked ? ' disabled' : '') + '>' +
+        // a passenger goes with its hull: held back with it, or in its wave
+        if (x.hull) note += ' \u2014 aboard ' + esc(x.hull);
+        return '<button class="dpr' + (x.held ? ' dpr-held' : ' dpr-set') + '" data-holdback="' + x.id + '"' + (x.locked || x.hull ? ' disabled' : '') + '>' +
           '<span class="dpr-mark">' + (x.held ? (wave ? '2' : '\u21a9') : (wave ? '1' : '\u2713')) + '</span>' +
           '<span class="dpr-name">' + esc(x.name) + '</span>' +
           '<span class="dpr-note">' + note + '</span></button>';

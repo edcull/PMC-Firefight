@@ -97,6 +97,7 @@
       u.x = veh.x; u.y = veh.y;
       u.sp = 0;
       u.reserve = false;                   // it rides in with the hull, not on its own
+      delete u.insert;
       // everything riding in a slung vehicle goes with it
       (u.cargo || []).forEach(function (c) { c.x = veh.x; c.y = veh.y; });
       if (!quiet) logLine('note', u.label + (R.has(veh, 'Lifter') ? ' is slung under ' : R.has(u, 'Stationary Artillery') ? ' is hitched behind ' : ' loads aboard ') + veh.name + ' before the battle.');
@@ -108,6 +109,10 @@
       veh.cargo = (veh.cargo || []).filter(function (c) { return c !== u; });
       u.aboard = null;
       u.x = -1; u.y = -1;                  // back in hand, to be put down again
+      /* An Invasion attacker has no hand to go back to: everything it has comes
+         down from orbit, so the squad rejoins the waves, in its hull's. */
+      var sc = E.state.sc;
+      if (sc && sc.attacker === u.side && sc.zones && sc.zones[u.side] === null) { u.reserve = true; u.wave = veh.wave || 1; }
       logLine('note', u.label + ' steps back off ' + veh.name + '.');
       return true;
     }

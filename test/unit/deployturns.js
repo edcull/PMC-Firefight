@@ -115,6 +115,34 @@ console.log('\nInvasion: no Battlefield Insertion; turrets dig in first; hulls l
   ok('...every squad does (D3)', men.length > 0 && men.every(u => st.log.some(l => l.text.indexOf(u.label + ' takes') === 0 && /coming down/.test(l.text))));
 })();
 
+console.log('\nA hull held back takes its passengers with it (p. 36)');
+(function () {
+  const e = Engine.create();
+  e.start({
+    tier: 3, pl: 1, scenario: 'demolish', mode: 'hotseat', planet: 'barren', attacker: 'B',
+    armyA: ['cmd3', 'regular', 'veterans', 'lapc', 'regular', 'shock'],
+    armyB: ['cmd3', 'regular', 'veterans', 'shock', 'regular', 'veterans'],
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
+  });
+  for (let k = 0; k < 10 && e.state().placeAsk; k++) {
+    const pa = e.state().placeAsk;
+    e.intent(pa.side, { k: pa.kind === 'fort' ? 'placeauto' : 'placedone' });
+  }
+  const st = e.state(), sp = () => e.query.splitFor('A');
+  if (!sp()) { ok('Player 1 (defending Demolish) has a split to make', false); return; }
+  const apc = st.units.find(u => u.side === 'A' && u.code === 'APC');
+  const [r1, r2] = st.units.filter(u => u.side === 'A' && u.name === 'Regular rifle team');
+  const row = (u) => sp().units.find(x => x.id === u.id);
+  ok('a squad loads aboard the APC', e.intent('A', { k: 'load', hull: apc.id, unit: r1.id }).ok && r1.aboard === apc.id);
+  const before = sp().held;
+  ok('holding the APC back keeps the squad aboard', e.intent('A', { k: 'holdback', id: apc.id }).ok && r1.aboard === apc.id && apc.reserve);
+  ok('...and counts the squad as held back with it', sp().held === before + 2 && row(r1).held && row(r1).hull === apc.name, sp().held + ' held');
+  ok('...the squad cannot be held or brought on apart from it', !e.intent('A', { k: 'holdback', id: r1.id }).ok);
+  ok('a squad loaded into the held APC is held back too', e.intent('A', { k: 'load', hull: apc.id, unit: r2.id }).ok && row(r2).held && sp().held === before + 3, sp().held + ' held');
+  ok('taking it off again puts it back in hand, not held', e.intent('A', { k: 'unload', hull: apc.id, unit: r2.id }).ok && !r2.aboard && !row(r2).held && sp().held === before + 2);
+  ok('bringing the APC back onto the table brings its squad with it', e.intent('A', { k: 'holdback', id: apc.id }).ok && !apc.reserve && r1.aboard === apc.id && !row(r1).held && sp().held === before);
+})();
+
 console.log('\nMeeting engagement: nobody is placed before the battle; both enter in turn 1');
 (function () {
   const e = game('meeting');
