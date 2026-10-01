@@ -147,10 +147,21 @@
       shotFrom: [], activated: false, drone: false
     }), R.propsFor(p).length ? R.defaultDrive(p) : 'none'), false);
     if (view.tgt) {
-      t.models = view.tgt.models; t.sp = view.tgt.sp; t.damage = view.tgt.damage;
+      t.models = view.tgt.models; t.sp = tgtSp(view.tgt); t.damage = view.tgt.damage;
       t.alive = view.tgt.alive; t.expended = view.tgt.expended;
     }
     return t;
+  }
+  /* The target's Suppression as it is drawn: from the moment the shot lands its
+     bar fills toward what the rules now say, as the battle's does (replay.js
+     fillSp) — and its pinned or broken pose with it. */
+  var SP_FILL_MS = 700;
+  function tgtSp(tg) {
+    var f = tg.spFill;
+    if (!f) return tg.sp;
+    var k = Math.max(0, Math.min(1, (Date.now() - f.t0) / f.dur));
+    if (k >= 1) { tg.spFill = null; return tg.sp; }
+    return Math.round(f.from + (tg.sp - f.from) * k);
   }
   function freshTarget() { view.tgt = null; view.lastShot = ''; view.tbodies = []; view.tcollar = null; }
   function targetGone(t) { return !t.alive || (!R.isMachine(t) && t.models <= 0); }
@@ -449,6 +460,7 @@
     var tg = mark();
     if (!targetGone(tg) && (I.animates(tg) || R.status(tg) !== 'ready')) busy = true;
     if (view.tcollar) busy = true;
+    if (view.tgt && view.tgt.spFill) busy = true;      // its Suppression bar still filling
     frame();
     if (busy) start(); else last = 0;
   }
@@ -916,7 +928,9 @@
     if (shot && !shot.missed) {
       var t = shot.t;
       setTimeout(function () {
-        view.tgt = { models: t.models, sp: t.sp, damage: t.damage, alive: t.alive, expended: !!t.expended };
+        view.tgt = { models: t.models, sp: t.sp, damage: t.damage, alive: t.alive, expended: !!t.expended,
+          spFill: t.sp ? { from: 0, t0: Date.now(), dur: SP_FILL_MS } : null };
+        setTimeout(drawControls, SP_FILL_MS + 30);       // the readout once the bar has filled
         // the fallen, where the battle lays them; penal troops broken run, and their collars go off
         if (t.expended) targetCollars(Object.assign({}, t, { models: t.before }));
         else if (!R.isMachine(t)) {
@@ -1526,6 +1540,8 @@
 
   /* test hooks: the harness drives the bench the way a player would */
   root.__viewer = {
+    // the target's Suppression as it is drawn this moment (filling after a shot lands)
+    targetSp: function () { return mark().sp; },
     pick: function (k) {
       choose(k);
       drawPicker(); drawControls(); frame();
