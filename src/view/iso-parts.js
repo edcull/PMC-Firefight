@@ -516,6 +516,24 @@
           P(tx + 1.8 + bd * (tw - 4) / 6, -40.4 + drop + bd * 2.6, 1.2, 1, '#b8923a');
         }
       }
+      if (kit.webbing) {
+        /* A leader's extra webbing, olive drab so it reads on any colour of
+           shirt: shoulder straps, a second row of pouches under the chest rig,
+           a pouch belt at the waist with a pouch on each hip, and a grenade
+           hung on the strap. */
+        var WB = '#3c4326', WBL = '#5a6438';
+        P(tx + 2, -41 + drop, 2, 15, WB); P(tx + tw - 4, -41 + drop, 2, 15, WB);   // shoulder straps
+        P(tx + 2, -41 + drop, 0.75, 15, WBL);
+        P(-5, -33 + drop, 10, 3.5, WB);
+        P(-5, -33 + drop, 10, 0.8, WBL);
+        P(-1.6, -33 + drop, 0.75, 3.5, 'rgba(0,0,0,.45)'); P(1.6, -33 + drop, 0.75, 3.5, 'rgba(0,0,0,.45)');
+        P(tx + 1, -25.5 + drop, tw - 2, 2.4, WB);         // the pouch belt
+        P(tx + 1, -25.5 + drop, tw - 2, 0.7, WBL);
+        P(tx + 1.5, -28.5 + drop, 3, 3, WB); P(tx + tw - 4.5, -28.5 + drop, 3, 3, WB);
+        P(tx + 1.5, -28.5 + drop, 3, 0.75, WBL); P(tx + tw - 4.5, -28.5 + drop, 3, 0.75, WBL);
+        P(-7.5, -38 + drop, 2, 3, '#55603a');             // a grenade on the strap
+        P(-7.5, -38.6 + drop, 2, 0.8, '#8a8f98');
+      }
       if (kit.pouches && !kit.armoured && !kit.robot) {                 // light infantry: a green smock and chest rig
         var GS = '#4c5c30', GSL = '#6a7a44', GSD = '#37431f';
         P(tx + 1, -41 + drop, tw - 2, 17, GS);            // the smock over the torso

@@ -356,14 +356,16 @@
       recruit: { helm: 'cap', gun: 'rifle', pack: 'none', sleeves: 'rolled' },
       riot: { helm: 'riot', gun: 'shotgun', pack: 'none', bulk: 1, shield: true },
       // gangers and free companies: rifles, a bandolier, and not much else
-      irregular: { helm: 'scarf', gun: 'smg', pack: 'none', light: true, bandolier: true },
-      irregular2: { helm: 'boonie', gun: 'saw', pack: 'none', light: true, bandolier: true, tint: IRR_OLIVE },
-      irregular3: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-      irregular4: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-      irregular5: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', tint: IRR_KHAKI },
-      irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
-      irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
-      irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, tint: IRR_OLIVE },
+      // the leader in the company's colours: a bandana, an SMG and more webbing than the rest;
+      // every man of them with the company's armband
+      irregular: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', webbing: true, armband: 'force' },
+      irregular2: { helm: 'boonie', gun: 'saw', pack: 'none', light: true, bandolier: true, armband: 'force', tint: IRR_OLIVE },
+      irregular3: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', armband: 'force', tint: IRR_KHAKI },
+      irregular4: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', armband: 'force', tint: IRR_KHAKI },
+      irregular5: { helm: 'bandana', gun: 'smg', pack: 'none', light: true, band: '#7a2e28', armband: 'force', tint: IRR_KHAKI },
+      irregular6: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, armband: 'force', tint: IRR_OLIVE },
+      irregular7: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, armband: 'force', tint: IRR_OLIVE },
+      irregular8: { helm: 'boonie', gun: 'smg', pack: 'none', light: true, armband: 'force', tint: IRR_OLIVE },
       nomad: { helm: 'nomadhood', gun: 'battlerifle', pack: 'std', cloak: true },
       nomadlead: { helm: 'nomadhood', gun: 'smg', pack: 'std', cloak: true, fitAs: 'nomad' },
       // penal troops: orange coveralls, a collar, and the company's armband
