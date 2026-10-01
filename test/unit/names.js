@@ -25,6 +25,16 @@ ok('a squad of eight gets eight names', rifles.men.length === 8);
 ok('...none repeated', new Set(rifles.men.map((m) => m.name)).size === 8);
 ok('...led by a sergeant, then a corporal', rifles.men[0].rank === 'Sergeant' && rifles.men[1].rank === 'Corporal');
 ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Private'));
+// the rifle teams by tier: 1-2 a corporal, a lance corporal and privates; 3-4 a
+// sergeant, a corporal and privates; 5 a staff sergeant, a sergeant and specialists
+[['recruits', 'Corporal', 'Lance Corporal', 'Private'], ['rookie', 'Corporal', 'Lance Corporal', 'Private'],
+  ['regular', 'Sergeant', 'Corporal', 'Private'], ['veterans', 'Sergeant', 'Corporal', 'Private'],
+  ['rangers', 'Staff Sergeant', 'Sergeant', 'Specialist']].forEach(([key, lead, second, rest]) => {
+  const u = unit(key);
+  R.musterMen(u, null, {});
+  ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',
+    u.men[0].rank === lead && u.men[1].rank === second && u.men.slice(2).every((m) => m.rank === rest), u.men.map((m) => m.rank).join(', '));
+});
 const cmd = unit('cmd2');
 R.musterMen(cmd, null, taken);
 ok('a field command is led by an officer, a senior NCO beside him', cmd.men[0].rank === 'Captain' && cmd.men[1].rank === 'Master Sergeant',
