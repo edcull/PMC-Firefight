@@ -878,6 +878,13 @@
     if (w.splash) spec.splash = true;
     return spec;
   }
+  /* Auxiliary fire is a sidearm, whatever the unit's main weapon: a pistol
+     shot for the mercenaries and the revolt, a single energy bolt for the
+     Xenotripods, a gob of spit for the Bugs. */
+  function auxSpec(u) {
+    var f = (u && u.faction) || 'pmc';
+    return { p: f === 'bugs' ? 'spit' : f === 'xeno' ? 'energy' : 'pistol', s: null, n: 1, sn: 1 };
+  }
   // the primary alone, which is what most callers want
   function weaponStyle(u) { return weaponSpec(u).p; }
 
@@ -2031,7 +2038,7 @@
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
-    applyDrone: applyDrone, canBeDrone: canBeDrone, shownRules: shownRules, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
+    applyDrone: applyDrone, canBeDrone: canBeDrone, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,

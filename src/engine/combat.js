@@ -151,6 +151,7 @@
     function resolveShot(u, target, mode, opts) {
       var snap = snapshotAlive();
       var res = abShoot(E.state, u, target, mode, opts || {});
+      if (opts && opts.aux) res.aux = true;          // the view draws a sidearm, not the unit's main weapon
       // Ambush!: the column caught off guard in the first turn (p. 156)
       if (E.state.scen.afterShot) {
         var extra = E.state.scen.afterShot(E.state, u, target);

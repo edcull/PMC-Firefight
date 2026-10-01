@@ -171,7 +171,8 @@
           return;
         }
       }
-      var spec = R.weaponSpec(shooter);
+      // auxiliary fire is a sidearm: a pistol, an energy bolt or spit, never the main weapon
+      var spec = res && res.aux ? R.auxSpec(shooter) : R.weaponSpec(shooter);
       /* A gunship fires from its airframe and is hit on its airframe, not on the
          ground it happens to be over. Every point a shot is drawn between carries
          how high above its own ground it sits. */
