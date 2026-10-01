@@ -146,8 +146,10 @@
       command3: ['cmdr3', 'signals', 'cmdsmg'],
       // the larger command groups carry a spotter: their marks and hacks are called from his eyes
       command2: ['cmdr2', 'signals', 'cmdspotter', 'cmdsmg'],
-      command1: ['cmdr1', 'signals', 'cmdspotter', 'cmdsmg'],
-      commandhi: ['cmdrhi', 'signals', 'cmdspotter', 'cmdsmg'],
+      // the 1st grade and the high command have a warrant officer at the commander's side,
+      // in the 4th grade commander's uniform (one of the SMG men makes way for him)
+      command1: ['cmdr1', 'cmdr4', 'signals', 'cmdspotter', 'cmdsmg'],
+      commandhi: ['cmdrhi', 'cmdr4', 'signals', 'cmdspotter', 'cmdsmg'],
       // rifle teams: the leader at the front right with an SMG, the SAW at the front left, riflemen behind
       rifle: ['riflelead', 'saw', 'rifleman'],
       veteran: ['vetlead', 'vetsaw', 'vet'],

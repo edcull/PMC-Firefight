@@ -1707,6 +1707,9 @@
     // then a corporal, and the rest privates: the staff's signallers, runners and guards
     if (u.command) return i === 0 ? OFFICER[tier - 1] : i === 1 ? COMMAND_SECOND[tier - 1] : i === 2 ? 'Corporal' : 'Private';
     if (u.key === 'penal') return i === 0 ? 'Warden' : 'Convict';
+    // the support teams: an EW Sergeant and his Specialist; a medic team's Sergeant, Corporal and Medics
+    if (u.key === 'ew') return i === 0 ? 'Sergeant' : 'Specialist';
+    if (u.key === 'medics') return i === 0 ? 'Sergeant' : i === 1 ? 'Corporal' : 'Medic';
     // the sniper team, two men: a Staff Sergeant and his Sergeant
     if (u.key === 'snipers') return i === 0 ? 'Staff Sergeant' : 'Sergeant';
     // light infantry, small teams: tier 2 a corporal and a lance corporal, tier 3-5 a sergeant and a corporal
