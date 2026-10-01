@@ -23,11 +23,14 @@ function ok(name, cond, note) {
   async function fresh() {
     await p.evaluate(() => {
       window.PMC_NEWGAME({
-        tier: 3, pl: 1, mode: 'hotseat', planet: 'sparse', scenario: 'takeover', attacker: 'A',
+        tier: 3, pl: 1, mode: 'hotseat', planet: 'sparse', scenario: 'takeover', attacker: 'A', terrainSetup: 'manual',
         nameA: 'Ironhold', nameB: 'Kessler', armyA: window.PMC.rollArmy(3, 1), armyB: window.PMC.rollArmy(3, 1)
       });
     });
     await p.waitForTimeout(700);
+    // the table laid by hand is done for us; the fortifications are the defender's to place
+    await p.evaluate(() => { if (window.PMC_STATE().phase === 'terrain') window.__terrainAct('tautoall'); });
+    await p.waitForTimeout(400);
     for (let i = 0; i < 8; i++) {
       const more = await p.evaluate(() => {
         if (window.PMC_STATE().placeAsk) return false;

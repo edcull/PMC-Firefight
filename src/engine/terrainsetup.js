@@ -389,8 +389,21 @@
         pa.left--;
       }
       if (pa.left <= 0) placeDone();
-      else { setHint(null, pa.left + ' more to ' + (pa.kind === 'move' ? 'move' : 'place') + '.'); render(); }
+      else if (!alternate(pa)) { setHint(null, pa.left + ' more to ' + (pa.kind === 'move' ? 'move' : 'place') + '.'); render(); }
       return null;
+    }
+    /* Both sides changing the terrain take a piece each in turn (p. 45): with the
+       other side still to place, it goes next, and this side's allowance waits
+       behind it. */
+    function alternate(pa) {
+      var q = E.state.placeQueue || [], at = -1;
+      for (var k = 0; k < q.length; k++) if (q[k].side !== pa.side) { at = k; break; }
+      if (at < 0) return false;
+      var next = q.splice(at, 1)[0];
+      q.unshift(pa); q.unshift(next);
+      E.state.placeAsk = null;
+      nextPlace();
+      return true;
     }
     // a Hostile takeover piece is down: count it off, and change the tool once the kind runs out
     function fortLaid(pa, r) {

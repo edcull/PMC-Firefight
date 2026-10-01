@@ -485,11 +485,15 @@
         state.mined = { side: side, piece: pool[Math.floor(Math.random() * pool.length)] };
       });
     })();
+    /* A player modifies the terrain by hand only when the table is being set up
+       by hand: with it generated, their changes are made for them as the AI's
+       are, and they are not asked (p. 45). */
+    function byHand(sd) { return !isAI(sd) && K.wantsManualTerrain(cfg); }
     // a player's Last Stand barricades are placed by hand, once the deployment zones are known
     state.manualLaststand = {};
-    ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && !isAI(sd)) state.manualLaststand[sd] = true; });
+    ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && byHand(sd)) state.manualLaststand[sd] = true; });
     // and so is a player's own position in Hostile takeover (p. 55)
-    state.manualForts = { A: !isAI('A'), B: !isAI('B') };
+    state.manualForts = { A: byHand('A'), B: byHand('B') };
     SC.begin(state, scenId, { attacker: cfg.attacker, roles: cfg.roles });
     // the scenario may have moved or dropped pieces to keep them apart; a mined one must still be there
     if (state.mined && state.terrain.indexOf(state.mined.piece) < 0) {
@@ -513,7 +517,7 @@
     state.placeQueue = [];
     ['A', 'B'].forEach(function (side) {
       if (docsOf(side).indexOf('XO4') < 0) return;
-      if (isAI(side)) K.terrainKnowledge(side);
+      if (!byHand(side)) K.terrainKnowledge(side);
       else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: 2, total: 2 });
     });
     /* Hostile takeover (p. 55): up to ten sections and a bunker within 12" of
@@ -529,6 +533,16 @@
         state.placeQueue.push({ side: side, kind: 'barricade', why: 'laststand', left: nls, total: nls, len: 4 });
       }
     });
+    /* "If there is some freedom in modifying the terrain, the players should do
+       it alternately, starting from a random player" (p. 45): with both sides
+       placing, a random one starts, and they take a piece each (placeAt). */
+    var sidesQ = {};
+    state.placeQueue.forEach(function (q) { sidesQ[q.side] = 1; });
+    if (sidesQ.A && sidesQ.B) {
+      var first = Math.random() < 0.5 ? 'A' : 'B';
+      state.placeQueue.sort(function (p, q) { return (p.side === first ? 0 : 1) - (q.side === first ? 0 : 1); });
+      logLine('note', 'Both sides change the terrain: a piece each in turn, ' + sideName(first) + ' first.');
+    }
     /* Modifying the armies (p. 46): with the table laid and both lists known, a
        player may swap some of their units before anyone deploys. The set-up
        waits here, and finishSetup carries on once they are done. */

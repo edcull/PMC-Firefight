@@ -103,6 +103,33 @@ console.log('\nAn Unstable world’s outpost is walled all round (p. 48)');
   ok('...hardly ever fewer than four', few <= outposts * 0.1, few + ' of ' + outposts);
 })();
 
+console.log('\nTerrain changes by hand alternate, a piece each (p. 45)');
+(function () {
+  function start(setup) {
+    const e = Engine.create({});
+    e.start({ tier: 2, pl: 1, scenario: 'meeting', armyA: ['rsecondary', 'rmilitia', 'rmilitia', 'rciv', 'rciv'], armyB: ['rsecondary', 'rmilitia', 'rmilitia', 'rciv', 'rciv'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: setup,
+      tactics: { A: 'laststand', B: 'laststand' } });
+    for (let g = 0; g < 10 && e.state().phase === 'terrain'; g++) ['A', 'B'].forEach((sd) => e.intent(sd, { k: 'terrain', act: 'tautoall' }));
+    return e;
+  }
+  const e = start('manual'), st = e.state(), order = [];
+  for (let n = 0; n < 6 && st.placeAsk; n++) {
+    const side = st.placeAsk.side;
+    let done = false;
+    for (let x = 3; x < 46 && !done; x += 3) for (let y = 3; y < 46 && !done; y += 3) {
+      if (e.intent(side, { k: 'placeat', x, y }).ok) { order.push(side); done = true; }
+    }
+    if (!done) break;
+  }
+  const alt = order.length >= 4 && order.every((sd, i) => !i || sd !== order[i - 1]);
+  ok('set up by hand, both sides put their barricades down a piece each in turn', alt, order.join(''));
+  const auto = start('auto').state();
+  ok('generated, nobody is asked: the barricades are put down for both', !auto.placeAsk &&
+    ['A', 'B'].every((sd) => auto.terrain.filter((t) => t.kind === 'barricade' && t.laststand === sd).length > 0 || auto.terrain.some((t) => t.kind === 'barricade')),
+    auto.placeAsk ? 'asked ' + auto.placeAsk.side : '');
+})();
+
 console.log('\nCampaign battles stay at Priority Level 1 or 2, the 4\'x4\' table\'s (p. 45)');
 (function () {
   const a = C.newCompany('A'), b = C.newCompany('B');
