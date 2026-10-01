@@ -76,6 +76,9 @@
       return !!u && show.queue.some(function (ev) { return ev.e === 'move' && ev.id === u.id; });
     }
     function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
+    function markArrivals(events) {
+      events.forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
+    }
     /* The battle arrives already resolved, and what happened is played out after
        it. Until each part plays, the table should show things as they stood: a
        unit that is about to move stands where it started, and a unit about to be
@@ -104,7 +107,8 @@
     function holdForShow(events) {
       if (!B.state) return;
       var walks = {};
-      events.forEach(function (ev) { if (ev.e === 'move' && ev.id) walks[ev.id] = true; });
+      // a strafing run is the craft's move: it flies it itself (playStrafe), so it is not slid there first
+      events.forEach(function (ev) { if ((ev.e === 'move' || ev.e === 'strafe') && ev.id) walks[ev.id] = true; });
       var moved = {};
       /* Anyone the rules have put somewhere new with no move of theirs in this
          batch, and nothing already drawing them, stays where the table last
@@ -119,9 +123,9 @@
       });
       events.forEach(function (ev) {
         evIds(ev).forEach(function (id) { heldTill[id] = ev; });
-        if (ev.e === 'move' && ev.id && !moved[ev.id]) {
+        if ((ev.e === 'move' || ev.e === 'strafe') && ev.id && !moved[ev.id]) {
           moved[ev.id] = true;
-          var mu = evUnit(ev.id), p0 = ev.path && ev.path[0];
+          var mu = evUnit(ev.id), p0 = ev.e === 'strafe' ? ev.from : ev.path && ev.path[0];
           // it stands where it started until its move is drawn
           if (mu && p0 && (mu.ax === null || mu.ax === undefined) && !anims.some(function (an) { return an.unit === mu; })) {
             mu.ax = p0.x; mu.ay = p0.y;
@@ -198,7 +202,7 @@
       waiting: false,           // an event that takes time is being drawn
       gen: 0,                   // which battle's show this is (resetShow moves it on)
       play: function (events) {
-        (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
+        markArrivals(events || []);
         holdForShow(events || []);
         this.queue = this.queue.concat(events || []);
         this.pump();
@@ -429,6 +433,8 @@
           var rest = show.queue.slice();
           resetShow();
           Array.prototype.push.apply(show.queue, rest);
+          // ...and a unit whose arrival is still to come in it stays off the table until then
+          markArrivals(rest);
           return;
         }
         case 'look': lookAtDeployment(ev.side); return;

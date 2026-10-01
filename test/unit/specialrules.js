@@ -553,5 +553,10 @@ head('Leaving the field without dying (pp. 29, 34)');
   }
 })();
 
+// auxiliary fire is a sidearm, whatever the main weapon: a pistol, an energy bolt, a gob of spit
+ok('auxiliary fire draws a pistol for the mercenaries and the revolt', ['pmc', 'rebel'].map(function (f) { return R.auxSpec({ faction: f }).p; }).join(), 'pistol,pistol');
+ok('...a single energy bolt for the Xenotripods', R.auxSpec({ faction: 'xeno' }).p + ' x' + R.auxSpec({ faction: 'xeno' }).n, 'energy x1');
+ok('...and spit for the Bugs', R.auxSpec({ faction: 'bugs' }).p, 'spit');
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -222,10 +222,12 @@
         }
         // Reasonably Offensive: on at them, as it always did
       }
-      // an aircraft with a line of targets makes a run
+      /* An aircraft makes a run when there is a line of targets: two or more under
+         it — every one of them gets a free shot back — or one when there is no
+         ordinary shot to take instead. */
       if (u.cls === 'aircraft' && u.fp !== null) {
         var lane = bestStrafe(u);
-        if (lane && lane.count) { ui.selected = u; doStrafe(lane.pt); return; }
+        if (lane && (lane.count >= 2 || (lane.count === 1 && !shot.t))) { ui.selected = u; doStrafe(lane.pt); return; }
       }
 
       // badly damaged and nothing worth shooting: pull back and patch up
@@ -330,12 +332,14 @@
       spots.forEach(function (c) {
         if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
         if (!canStand(u, c)) return;                     // nowhere it could not hover (p. 38)
-        var n = 0;
+        var n = 0, own = 0;
         activeUnits().forEach(function (t) {
-          if (t.side === u.side || R.isFlying(t) || husk(t)) return;
-          if (R.pointSegDist(t.x, t.y, u.x, u.y, c.x, c.y) <= 2.2) n++;
+          if (t === u || R.isFlying(t) || husk(t)) return;
+          if (R.pointSegDist(t.x, t.y, u.x, u.y, c.x, c.y) > 2.2) return;
+          if (t.side === u.side) own++; else n++;
         });
-        if (n && (!best || n > best.count)) best = { pt: c, count: n };
+        // never a run over its own side's ground units: they would be caught on a 1-3
+        if (n && !own && (!best || n > best.count)) best = { pt: c, count: n };
       });
       return best;
     }
