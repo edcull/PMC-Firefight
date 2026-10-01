@@ -368,6 +368,8 @@
       E.state.units.forEach(function (u) {
         lines[u.rid || u.id] = {
           rid: u.rid || u.id, side: u.side, key: u.key, tier: u.tier,
+          // a free unit for this battle alone (the Complex Teleport Network's turrets): on no roster
+          free: !!u.free && !u.rid,
           startSize: u.startSize != null ? u.startSize : u.size,
           /* The men still standing when it ended, which is not the same as the men
              still on the table: a unit that scattered and ran took its survivors

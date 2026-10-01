@@ -37,7 +37,8 @@ for (let i = 0; i < 3 && !rep; i++) rep = OT.playNow(x, y, {});
 ok('it is played to the end and hands back a report', !!rep && Array.isArray(rep.units) && rep.units.length > 0,
   rep ? rep.scenario + ', ' + rep.turns + ' turns, winner ' + (rep.winner || 'none') : 'no report');
 ok('...with each unit known by its place on the roster',
-  !!rep && rep.units.every(u => (u.side === 'A' ? x : y).roster.some(e => e.rid === u.rid)));
+  // (a free unit for the battle alone, such as the Complex Teleport Network's turrets, is on no roster, and says so)
+  !!rep && rep.units.every(u => u.free || (u.side === 'A' ? x : y).roster.some(e => e.rid === u.rid)));
 const sums = C.battleElsewhere(solo, x, y, rep);
 ok('both forces come out of it with a summary', sums.length === 2 && sums[0].name === x.name && sums[1].name === y.name);
 ok('...which tells the battle unit by unit', sums[0].battle && !sums[0].battle.paper && sums[0].battle.sides.every(s => s.units.length > 0));
