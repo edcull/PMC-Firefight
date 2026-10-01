@@ -560,6 +560,68 @@
        and copied from it after that, at whole pixels, so it lands exactly where
        it would have been drawn. Anything that moves from moment to moment (an
        aircraft, a drone's light, smoke, a turn, a hop) is drawn as ever. */
+    /* A unit behind a building is outlined through it: its outline in its
+       side's colour, with a faint wash of the same inside, drawn only where
+       the building covers it — what can be seen of it is left as it is. */
+    var xrUnit = null, xrMask = null;
+    function seeThrough(order, blockers) {
+      if (!blockers.length) return;
+      var g = B.pctx, tr = g.getTransform(), sc = tr.a;
+      order.forEach(function (it) {
+        if (it.draw !== 'unit' || !it.drawn || it.unit.aboard) return;
+        var u = shownAs(it.unit), x = dispX(u), y = dispY(u);
+        var over = blockers.filter(function (b) {
+          var r = b.pr;
+          if (it.inside === r || x >= r.x + r.w || y >= r.y + r.h) return false;      // in front of it, or in it
+          return x - y + 2 > r.x - (r.y + r.h) && x - y - 2 < r.x + r.w - r.y;      // and the two overlap on screen
+        });
+        if (!over.length) return;
+        // the unit's own patch of the frame, in buffer pixels
+        var p = ISO.toScreen(x, y), lift = it.drawn.lift || 0;
+        var bx = p.x - K * 11, by = p.y - lift - K * 15, bw = K * 22, bh = K * 18;
+        var W2 = Math.ceil(bw * sc), H2 = Math.ceil(bh * sc);
+        if (W2 < 2 || H2 < 2) return;
+        if (!xrUnit) { xrUnit = document.createElement('canvas'); xrMask = document.createElement('canvas'); }
+        [xrUnit, xrMask].forEach(function (c) { if (c.width < W2 || c.height < H2) { c.width = Math.max(c.width, W2); c.height = Math.max(c.height, H2); } });
+        var ug = xrUnit.getContext('2d'), mg = xrMask.getContext('2d');
+        ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, xrUnit.width, xrUnit.height);
+        mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, xrMask.width, xrMask.height);
+        // the figures alone, as they were drawn: no base ring, no selection
+        var o = {};
+        for (var k in it.drawn) o[k] = it.drawn[k];
+        o.noRing = true; o.selected = false;
+        ug.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
+        ug.imageSmoothingEnabled = g.imageSmoothingEnabled;
+        ISO.drawUnit(ug, u, o);
+        // the outline: the figures spread a pixel each way, less the figures themselves
+        var d = Math.max(1, Math.round(sc * 0.75));
+        mg.drawImage(xrUnit, -d, 0); mg.drawImage(xrUnit, d, 0); mg.drawImage(xrUnit, 0, -d); mg.drawImage(xrUnit, 0, d);
+        mg.globalCompositeOperation = 'destination-out';
+        mg.drawImage(xrUnit, 0, 0);
+        // with the wash inside
+        mg.globalCompositeOperation = 'source-over';
+        mg.globalAlpha = 0.22;
+        mg.drawImage(xrUnit, 0, 0);
+        mg.globalAlpha = 1;
+        mg.globalCompositeOperation = 'source-in';
+        mg.fillStyle = sideInk(u.side);
+        mg.fillRect(0, 0, W2, H2);
+        // only where a building in front of it is drawn
+        ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, xrUnit.width, xrUnit.height);
+        ug.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
+        over.forEach(function (b) {
+          var pa = b.open ? b.pr._open : b.pr._solid;
+          if (pa) ug.drawImage(pa.cv, 0, 0, pa.box.w, pa.box.h, pa.box.x, pa.box.y, pa.box.w, pa.box.h);
+        });
+        mg.globalCompositeOperation = 'destination-in';
+        mg.drawImage(xrUnit, 0, 0);
+        mg.globalCompositeOperation = 'source-over';
+        g.save();
+        g.globalAlpha = 0.85;
+        g.drawImage(xrMask, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
+        g.restore();
+      });
+    }
     var mScratch = null;       // the patches themselves are the view cache's (vc.mcache), one set a battle
     function unitSig(u) {
       return JSON.stringify(u, function (k, val) {
@@ -851,7 +913,7 @@
           if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
           if (arr.hidden) return;                       // teleporting in, or under the ground: not here yet
           if (arr.alpha != null) { B.pctx.save(); B.pctx.globalAlpha = arr.alpha; }
-          drawUnitOn(u, {
+          drawUnitOn(u, it.drawn = {
             at: { x: ax, y: ay },
             around: u.bld ? R.sectionRect(u) : null,
             lineAt: u.bld ? null : lineUp(u, ax, ay),
@@ -869,6 +931,7 @@
           });
           if (arr.alpha != null) B.pctx.restore();
         });
+      seeThrough(order, blockers);
 
       /* The ghost: where the unit would stand if the move went ahead. Drawn over
          everything at half weight, with the path it would walk. */
