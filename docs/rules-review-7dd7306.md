@@ -112,7 +112,7 @@ side has an eligible unit. Only the AI path copes with an empty list (`aiStep`, 
 
 ## 3. Medium
 
-### M-1 · Line of sight is a single centre-to-centre line, not "one soldier sees" — *reproduced*
+### M-1 · Line of sight is a single centre-to-centre line, not "one soldier sees" — *reproduced* — **fixed**
 
 > l.527–529: "We assume that when something can be seen by one soldier, it can be seen by the whole unit."
 
@@ -631,6 +631,8 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | M-13 Markerlights call a turret out of turn | **Fixed.** A turret never answers a call, as it is "not affected by any other rule which changes activation order". | `marks.js` (`canAnswerMark`) |
 | M-16 Riders switched after recruitment | **Fixed.** The roster offers the Riders upgrade only until the unit first fights, then shows it as fixed. Recruiting stays the moment to choose, since recruitment itself has no separate option for it. | `campaign.js` (`ridersOpen`), `dossier-roster.js`, `dossier.js` |
 
+| M-1 Line of sight is one centre-to-centre line | **Fixed.** "Seen by one soldier, seen by the whole unit" (p. 29): a squad sees if the line between the middles is clear, or any line from either side of its base to either side of the other's (0.8" out). Something square across the line still hides it; something over part of the line does not. Which ground each end stands on is still judged from its middle. | `space.js` (`lineClear`, `lineClearAt`) |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks).

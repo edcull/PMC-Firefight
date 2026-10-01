@@ -502,8 +502,30 @@
       if (unitDist(a, b) > sightRange(a)) return false;
       return lineClear(state, a, b);
     }
-    // the line itself, however far: terrain that blocks and units standing in the way
+    /* The line itself, however far: terrain that blocks and units standing in the way.
+       "When something can be seen by one soldier, it can be seen by the whole unit"
+       (p. 29) — a squad's men stand across its base, so it sees if any of them sees
+       any of the other's: the line between the middles, and failing that, lines
+       from either side of one base to either side of the other (UNIT_R * 0.8 out,
+       across the line). A point at either end — a piece of terrain, a spot on the
+       ground — is just itself. Which ground each end stands on (on a hill, in a
+       wood) is judged from its middle, whichever line is drawn. */
     function lineClear(state, a, b) {
+      if (lineClearAt(state, a, b, a.x, a.y, b.x, b.y)) return true;
+      var ra = a && a.side ? UNIT_R * 0.8 : 0, rb = b && b.side ? UNIT_R * 0.8 : 0;
+      if (!ra && !rb) return false;
+      var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+      if (len < 1e-6) return false;
+      var nx = -dy / len, ny = dx / len;
+      var sides = [[1, 1], [-1, -1], [1, -1], [-1, 1]];
+      for (var k = 0; k < sides.length; k++) {
+        var sa = sides[k][0] * ra, sb = sides[k][1] * rb;
+        if (lineClearAt(state, a, b, a.x + nx * sa, a.y + ny * sa, b.x + nx * sb, b.y + ny * sb)) return true;
+      }
+      return false;
+    }
+    // one line of sight, from (ax, ay) by a to (bx, by) by b
+    function lineClearAt(state, a, b, ax, ay, bx, by) {
       for (var i = 0; i < state.terrain.length; i++) {
         var r = state.terrain[i], t = TERRAIN[r.kind];
         if (!t.blocks && !t.hill) continue;
@@ -515,11 +537,11 @@
            crown to the ground beyond. */
         if (t.hill && r.top) {
           var aTop = aIn && inPoly(a.x, a.y, r.top), bTop = bIn && inPoly(b.x, b.y, r.top);
-          if (!aTop && !bTop && segRect(a.x, a.y, b.x, b.y, upperStep(r))) return false;
+          if (!aTop && !bTop && segRect(ax, ay, bx, by, upperStep(r))) return false;
         }
         // a hill blocks sight across it, but not for a unit standing on it (p. 42)
         if (aIn || bIn) continue;
-        if (segRect(a.x, a.y, b.x, b.y, r)) return false;
+        if (segRect(ax, ay, bx, by, r)) return false;
       }
       /* "Units on hills can shoot/be shot at over friendly units below them (but
          not over enemy ones)" — the friends of whichever end is up on the hill,
@@ -533,7 +555,7 @@
         if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
         // a ghost (where a unit might stand) is not hidden by the unit itself, where it stands now
         if (u === a.of || u === b.of) continue;
-        if (pointSegDist(u.x, u.y, a.x, a.y, b.x, b.y) >= UNIT_R * 0.9) continue;
+        if (pointSegDist(u.x, u.y, ax, ay, bx, by) >= UNIT_R * 0.9) continue;
         if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
         if (aLv < 0) { aLv = a.side ? sightLevel(state, a) : 0; bLv = b.side ? sightLevel(state, b) : 0; }
         if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
