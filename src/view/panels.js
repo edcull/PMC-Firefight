@@ -1194,13 +1194,14 @@
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });
-      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin], [data-swapundo]').forEach(function (b) {
+      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin], [data-swapundo], [data-arrivepick]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-act');
           if (SFX) SFX.click();
           if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
           if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
           if (b.hasAttribute('data-swapundo')) { send({ k: 'swapundo', id: b.getAttribute('data-swapundo') }); return; }
+          if (b.hasAttribute('data-arrivepick')) { send({ k: 'arrivepick', id: b.getAttribute('data-arrivepick') }); return; }
           if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
           if (b.hasAttribute('data-insertion')) { send({ k: 'insertion', id: b.getAttribute('data-insertion') }); return; }
           if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }

@@ -290,7 +290,20 @@
           // (turn 1's entry, for a player who asked to have their units brought on for them)
           var auto = E.state.turn === 1 && E.state.autoEnter && E.state.autoEnter[u.side];
           if (isAI(u.side) || E.state.scen.autoArrive || auto) { placeAuto(u); continue; }
-          askArrival(u, log, next);
+          /* Which of the side's units comes on in its turn is the player's to say: any
+             still to come this phase may take this one's place, and this one its. */
+          var mineLeft = function (side) {
+            return ask.slice(i).filter(function (x) { return x.side === side && x.alive && x.reserve && !x.sfOffer; });
+          };
+          var swap = function (id) {
+            var cur = ask[i - 1];
+            for (var j = i; j < ask.length; j++) {
+              var w = ask[j];
+              if (w.id === id && w.side === cur.side && w.alive && w.reserve && !w.sfOffer) { ask[j] = cur; ask[i - 1] = w; return w; }
+            }
+            return null;
+          };
+          askArrival(u, log, next, u.sfOffer ? null : { left: mineLeft, swap: swap });
           return;
         }
         report();
@@ -471,7 +484,7 @@
     /* A scenario reinforcement: the scenario says it is coming on this turn, so
        there is no holding it back — but where inside the legal ground it arrives
        is the player's call, not a dice roll. */
-    function askArrival(u, log, done) {
+    function askArrival(u, log, done, order, again) {
       var spots = arrivalSpots(u);
       if (!spots.length) {
         // no legal ground: fall back to the old random point rather than stalling
@@ -481,9 +494,12 @@
         return;
       }
       ui.insertion = { unit: u, done: done, spots: spots, kind: 'arrive', log: log };
+      // the others of this side still to come this phase, any of which may come on instead
+      if (order) { ui.insertion.order = order; ui.insertion.choices = order.left(u.side).map(function (x) { return x.id; }); }
       ui.selected = null; ui.mode = 'insert'; ui.targets = []; ui.moves = []; ui.terrain = [];
       // a unit not yet on the table has nowhere to be looked at: the ground it may come on is shown instead
-      if (u.x < 0 && E.lookAtDeployment) E.lookAtDeployment(u.side); else focusUnit(u, false, true);
+      // (asked again for another unit of the side's choosing: the camera stays where the player is looking)
+      if (again) { /* as it was */ } else if (u.x < 0 && E.lookAtDeployment) E.lookAtDeployment(u.side); else focusUnit(u, false, true);
       setHint(null, u.name + ' is arriving: tap the shaded ground to choose where it comes on.');
       revealConsole();
       render();
@@ -500,6 +516,17 @@
       if (note) logLine('note', note.text);
       samCheck(u);
       return line;
+    }
+
+    /* Another of the side's units to come on in this turn instead: it takes this
+       turn, and the one asked about takes its place later in the phase. */
+    function pickArrival(id) {
+      var ins = ui.insertion;
+      if (!ins || ins.kind !== 'arrive' || !ins.order || id === ins.unit.id) return 'nothing to choose';
+      var w = ins.order.swap(id);
+      if (!w) return 'that unit is not waiting to come on';
+      askArrival(w, ins.log, ins.done, ins.order, true);
+      return null;
     }
 
     // the player would rather keep it back for a turn (p. 56: coming in is optional)
@@ -654,7 +681,7 @@
       reservePhase: reservePhase, arrivalLegal: arrivalLegal, arrivalSpots: arrivalSpots,
       insertionSpots: insertionSpots, holdInsertion: holdInsertion, semperFidelis: semperFidelis,
       sfName: sfName, holdArrival: holdArrival, arrivalWhere: arrivalWhere, snapToSpot: snapToSpot,
-      placeInsertion: placeInsertion
+      placeInsertion: placeInsertion, pickArrival: pickArrival
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineArrivals;

@@ -1242,6 +1242,8 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .dpr:disabled { opacity: var(--off-opacity); cursor: default; }
 /* the other player's order of battle, while they deploy: to look at, not to tap */
 .dpr-view, .dpr-view:hover { cursor: default; border-color: var(--line); }
+/* the unit coming on now, among those to choose from */
+.dpr-view.dpr-now, .dpr-view.dpr-now:hover { border-color: var(--alpha); }
 .splitlist .dphead b.ok { color: var(--good); }
 .splitlist .dphead b.short { color: var(--warn); }
 .splitlist .hint.small { margin: 0 0 6px; }

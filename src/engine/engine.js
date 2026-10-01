@@ -1793,6 +1793,15 @@
       answerCmdOffer(it.id);
       return yes;
     });
+    // which of the side's waiting units comes on in this turn
+    on('arrivepick', null, function (side, it) {
+      if (!ui.insertion || ui.insertion.kind !== 'arrive') return no('nothing is coming on');
+      if (insertionSide() !== side) return no('that is not your unit');
+      var why = K.pickArrival(it.id);
+      if (why) return no(why);
+      render();
+      return yes;
+    });
     on('holdarrive', null, function (side, it) {
       // Semper Fidelis: a unit offered an early arrival may wait for its roll instead
       if (!ui.insertion || !ui.insertion.unit) return no('nothing to hold back');

@@ -90,6 +90,30 @@ console.log('\nMeeting engagement: nobody is placed before the battle; both ente
   ok('...each within 4" of its own edge', st.units.every(u => u.side === 'A' ? u.x <= 4.6 : u.x >= 48 - 4.6), st.units.map(u => u.side + u.x.toFixed(1)).join(' '));
 })();
 
+console.log('\nChoosing which unit comes on in each turn');
+(function () {
+  const e = game('secure');
+  e.intent('B', { k: 'autodeploy' });            // Player 2's brought on for it
+  e.intent('A', { k: 'start' });
+  const st = e.state(), ins = () => e.sel().insertion;
+  const first = ins() && ins().unit;
+  const choices = (ins() && ins().choices) || [];
+  ok('Player 1 is offered every unit of its own still to come on', !!first && first.side === 'A' && choices.length === 5, choices.length + ' others');
+  const want = choices[choices.length - 1];
+  const r = e.intent('A', { k: 'arrivepick', id: want });
+  ok('...and may bring another on in this turn instead', r.ok && ins().unit.id === want && ins().choices.indexOf(first.id) >= 0, r.why);
+  ok('...not one of the enemy\'s', !e.intent('A', { k: 'arrivepick', id: st.units.find(u => u.side === 'B').id }).ok);
+  const order = [];
+  for (let k = 0; k < 40 && ins(); k++) {
+    const u = ins().unit; order.push(u.id);
+    const spots = e.query.arrivalSpots(u);
+    e.intent('A', { k: 'insert', x: spots[0].x, y: spots[0].y });
+    for (let f = 0; f < 5 && st.faceAsk; f++) e.intent(st.faceAsk.side, { k: 'vfaceall' });
+  }
+  ok('the one chosen came on first, and the one it replaced later', order[0] === want && order.indexOf(first.id) > 0, order.join(' '));
+  ok('...every unit is on, still a unit each in turn', st.units.every(u => u.x >= 0 || u.aboard));
+})();
+
 console.log('\nFind and secure: each side sorts its own halves, both at once');
 (function () {
   const e = game('find');

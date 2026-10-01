@@ -301,6 +301,22 @@
       var by = ins.by || (ins.unit ? ins.unit.side : 'A');
       return !B.watching && B.seats.indexOf(by) >= 0;
     }
+    /* The side's units still to come on this phase: the one asked about first, and
+       any other tapped to come on in this turn instead. */
+    function arrivalChoices(ins) {
+      var others = (ins.choices || []).map(function (id) { return byId(id); }).filter(function (x) { return x && x.reserve; });
+      if (!others.length) return '';
+      var row = function (x, now) {
+        var aboard = (x.cargo || []).length ? ' \u00b7 ' + x.cargo.length + ' aboard' : '';
+        // (the one coming on is marked, not a button to press)
+        var tag = now ? 'div' : 'button';
+        return '<' + tag + ' class="dpr' + (now ? ' dpr-now dpr-view' : '') + '"' + (now ? '' : ' data-arrivepick="' + x.id + '"') + '>' +
+          '<span class="dpr-mark">' + (now ? '\u25b8' : '\u00b7') + '</span><span class="dpr-name">' + esc(x.name) + '</span>' +
+          '<span class="dpr-note">' + (now ? 'coming on now' : 'tap to bring on instead') + aboard + '</span></' + tag + '>';
+      };
+      return '<div class="dplist"><div class="dphead">Still to come on \u2014 ' + (others.length + 1) + '</div>' +
+        row(ins.unit, true) + others.map(function (x) { return row(x, false); }).join('') + '</div>';
+    }
     function insertionCard() {
       var ins = ui.insertion;
       if (!ins) return '';
@@ -354,14 +370,15 @@
         return '<div class="card"><h2>Entering the table</h2>' +
           '<p class="sub"><b>' + esc(u.name) + '</b> comes on now' + ((u.cargo || []).length ? ', with ' + u.cargo.map(function (c) { return esc(c.name); }).join(' and ') + ' aboard' : '') +
           '. Tap the shaded ground: within 4″ of your own table edge, and 12″ clear of the enemy where the ground allows.</p>' +
-          '<p class="hint">A unit each in turn, from the side with the initiative. ' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p></div>';
+          '<p class="hint">A unit each in turn, from the side with the initiative. ' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p>' +
+          arrivalChoices(ins) + '</div>';
       }
       if (ins.kind === 'arrive') {
         return '<div class="card"><h2>Reinforcements</h2>' +
           '<p class="sub"><b>' + esc(u.name) + '</b> is arriving this turn. Tap the shaded ground ' +
           'to choose where it comes on — ' + esc(arrivalWhere(u)) + '.</p>' +
           '<p class="hint">' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') +
-          ' it can come on.</p></div>';
+          ' it can come on.</p>' + arrivalChoices(ins) + '</div>';
       }
       return '<div class="card"><h2>Battlefield Insertion</h2>' +
         '<p class="sub"><b>' + esc(u.name) + '</b> is coming in. Tap anywhere in the shaded ground: ' +
