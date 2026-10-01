@@ -109,7 +109,32 @@ ok('a Rapid insertion platform has nobody aboard', rip.men.length === 0);
 const mcvL = unit('mcv'); R.musterMen(mcvL, null, {});
 ok('...a hull still running loses none of its crew', R.syncMen(mcvL, 2, {}).length === 0 && mcvL.men.every((m) => m.lost == null));
 mcvL.alive = false;
-ok('...and a destroyed one all of it', R.syncMen(mcvL, 3, {}).length === 4 && mcvL.men.every((m) => m.lost === 3));
+// destroyed, each man aboard has an even chance of getting out, rolled once
+const lostOut = R.syncMen(mcvL, 3, {});
+ok('...a destroyed one: each man aboard either lost or out, decided there and then',
+  lostOut.length === mcvL.men.filter((m) => m.lost === 3).length && mcvL.men.every((m) => m.lost === 3 || m.out) && R.syncMen(mcvL, 4, {}).length === 0,
+  lostOut.length + ' of 4 lost');
+(function () {
+  let lost = 0, men = 0;
+  for (let k = 0; k < 400; k++) {
+    const h = unit('mcv'); R.musterMen(h, null, {}); h.alive = false;
+    lost += R.syncMen(h, 3, {}).length; men += h.men.length;
+  }
+  ok('...about half of them', lost / men > 0.42 && lost / men < 0.58, Math.round(100 * lost / men) + '% lost');
+})();
+// the revolt's crews are fighters; the tribe's craft each a Hunter at the controls
+[['rtechnical', 'Driver Fighter, Gunner Fighter'], ['rmflak', 'Driver Fighter, Gunner Fighter, Loader Fighter'],
+  ['rhicv', 'Driver Fighter, Gunner Fighter, Gunner Fighter, Loader Fighter'], ['rlifter', 'Pilot Fighter'],
+  ['rhshuttle', 'Pilot Fighter, Gunner Fighter'], ['xstrike3', 'Pilot Hunter'], ['xtelecraft', 'Pilot Hunter']].forEach(([k, want]) => {
+  const v = unit(k); R.musterMen(v, null, {});
+  const got = v.men.map((m) => m.role + ' ' + m.rank).join(', ');
+  ok(v.name + ': ' + want, got === want, got);
+});
+// a walker has one pilot, of the highest rank its crew would have had — a transport walker keeps its crew
+const wk = unit('acv', { prop: 'walker' }); R.musterMen(wk, null, {});
+ok('a walker combat vehicle has one pilot, a Staff Sergeant', wk.men.map((m) => m.role + ' ' + m.rank).join(', ') === 'Pilot Staff Sergeant', wk.men.map((m) => m.role + ' ' + m.rank).join(', '));
+const wt = unit('hapc', { prop: 'walker', transport: 4 }); R.musterMen(wt, null, {});
+ok('...a walker transport its usual crew', wt.men.length === 3, wt.men.map((m) => m.role + ' ' + m.rank).join(', '));
 // a command or EW vehicle is in the hands of a junior officer
 ['cmdveh', 'ewveh'].forEach((k) => {
   const v = unit(k);
@@ -142,7 +167,7 @@ R.syncMen(rifles, 3, taken);
 ok('models given back are fresh men', live(rifles).length === 7 && rifles.men.length === 10);
 lcv.alive = false; lcv.catastrophic = true;
 R.syncMen(lcv, 4, taken);
-ok('the commander of a destroyed hull is a casualty', lcv.men[0].lost === 4);
+ok('each man of a destroyed hull is a casualty or got out', lcv.men.every((m) => m.lost === 4 || m.out), lcv.men.map((m) => m.role + (m.out ? ' out' : ' lost')).join(', '));
 const fled = unit('rookie');
 R.musterMen(fled, null, taken);
 fled.alive = false; fled.fled = true;
@@ -406,6 +431,17 @@ console.log('killed or wounded');
   }));
   ok('a crewman lost with the hull rolls too: a 6 is wounded', C.lossStats(vc2.companies.A)[0].lost === 0 && C.lossStats(vc2.companies.A)[0].wounded === 1 &&
     vc2.companies.A.memorial.length === 1 && vc2.companies.A.memorial[0].fate === 'wounded');
+  // a vehicle's crew caught in the hull die on a 1-2, not just a 1
+  const vc3 = C.newCampaign({ mode: 'solo' });
+  const hv3 = C.newEntry('lcv');
+  vc3.companies.A.roster = [hv3];
+  dice(2, () => C.aftermath(vc3, {
+    winner: 'B', battleTier: 1, pl: 1, scenario: 'secure', routed: { A: false, B: false },
+    units: [{ rid: hv3.rid, side: 'A', key: 'lcv', startSize: 1, endSize: 0, destroyed: true, catastrophic: true, brokenEver: false, wiped: false, men: [], kills: [] }],
+    casualties: [{ side: 'A', rid: hv3.rid, name: 'Ivo Crane', rank: 'Corporal', role: 'Driver', turn: 3, type: 'Light combat vehicle' }]
+  }));
+  ok('...a 2 kills him (crew: 1-2 killed, 3-6 wounded)', vc3.companies.A.memorial.length === 1 && vc3.companies.A.memorial[0].fate === 'kia',
+    vc3.companies.A.memorial.map((m) => m.fate).join(','));
 
   // the Esh-Aven roll one by one, and only the dead are counted on the memorial
   const xk = C.newCampaign({ mode: 'solo', factionA: 'xeno' });

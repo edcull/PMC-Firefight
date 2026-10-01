@@ -1672,6 +1672,9 @@
   var SSGT_CREW = [C_('Commander', 'Staff Sergeant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
   var LT_CREW = [C_('Commander', 'Lieutenant'), C_('Driver', 'Corporal'), C_('Gunner', 'Private')];
   var STRIKE = [C_('Pilot', 'Flight Lieutenant'), C_('Gunner', 'Pilot Officer')];
+  var FTR2 = [C_('Driver', 'Fighter'), C_('Gunner', 'Fighter')];
+  var FTR3 = FTR2.concat([C_('Loader', 'Fighter')]);
+  var FTR4 = [C_('Driver', 'Fighter'), C_('Gunner', 'Fighter'), C_('Gunner', 'Fighter'), C_('Loader', 'Fighter')];
   var CREW = {
     insertplat: [],
     unarmoured: DRV_PTE, ltransport: DRV_PTE,
@@ -1684,9 +1687,25 @@
     lightcraft: [C_('Pilot', 'Flying Officer')],
     heavycraft: [C_('Pilot', 'Flying Officer')],
     flyingcp: [C_('Commander', 'Squadron Leader'), C_('Pilot', 'Flying Officer'), C_('Crew', 'Specialist'), C_('Crew', 'Specialist')],
-    fsc: STRIKE, tsc: STRIKE, gunboat: STRIKE, interceptor: STRIKE, hsc: STRIKE, asc: STRIKE
+    fsc: STRIKE, tsc: STRIKE, gunboat: STRIKE, interceptor: STRIKE, hsc: STRIKE, asc: STRIKE,
+    // the revolt's: fighters at the wheel, the guns and the controls
+    rtechnical: FTR2, rltv: FTR2, ritv: FTR2, rlflak: FTR2,
+    rlicv: FTR3, rshtv: FTR3, rmflak: FTR3, rhflak: FTR3,
+    ricv: FTR4, rhicv: FTR4,
+    rpatrol: [C_('Pilot', 'Fighter')], rlifter: [C_('Pilot', 'Fighter')],
+    rlshuttle: [C_('Pilot', 'Fighter'), C_('Gunner', 'Fighter')], rmshuttle: [C_('Pilot', 'Fighter'), C_('Gunner', 'Fighter')],
+    rhshuttle: [C_('Pilot', 'Fighter'), C_('Gunner', 'Fighter')]
   };
-  function crewOf(u) { return (u && (u.faction || 'pmc') === 'pmc' && CREW[u.key]) || null; }
+  // every Xenotripod craft is flown by one Hunter
+  var XENO_PILOT = [C_('Pilot', 'Hunter')];
+  function crewOf(u) {
+    if (!u) return null;
+    var f = u.faction || 'pmc';
+    var c = f === 'xeno' ? (u.cls === 'aircraft' ? XENO_PILOT : null) : (f === 'pmc' || f === 'rebel') ? CREW[u.key] || null : null;
+    // a walker is driven by one pilot, the highest rank its crew would have had — a transport walker keeps its crew
+    if (c && c.length && u.prop === 'walker' && !u.transport) return [C_('Pilot', c[0][1])];
+    return c;
+  }
   // how many named men a hull or craft carries
   function crewSize(u) { var c = crewOf(u); return c ? c.length : 1; }
   // the job a crewman does aboard (a squad's men have none)
@@ -1791,8 +1810,18 @@
     if (!u.men) return [];
     var live = u.men.filter(function (m) { return m.lost == null; });
     var want = crewed(u) ? standing(u) : 0, out = [];
-    // a hull keeps its whole crew while it runs, and loses all of it when it is gone
-    if (isMachine(u)) want = want ? live.length : 0;
+    /* A hull keeps its whole crew while it runs. When it is destroyed each man
+       aboard has an even chance of getting out (rolled once, there and then);
+       the rest are casualties, killed or wounded as the aftermath rolls it. */
+    if (isMachine(u)) {
+      if (want) return out;
+      if (!u.crewOut) {
+        u.crewOut = true;
+        live.forEach(function (m) { if (Math.random() < 0.5) m.out = true; });
+      }
+      live.forEach(function (m) { if (!m.out) { m.lost = turn || 0; out.push(m); } });
+      return out;
+    }
     while (live.length > want) {
       var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
       m.lost = turn || 0;
