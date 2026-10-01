@@ -126,6 +126,39 @@ console.log('\nBUG-1 Strong Nervous System is the Bug player\u2019s to call, bef
   ok('...and it is offered again the next Rally phase', !!two.st.nervousAsk);
 })();
 
+console.log('\nXEN-1 Know Your Foe! holds back every enemy reinforcement, decided at the start of the turn (p. 141)');
+(function () {
+  function invasion() {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'invasion', attacker: 'B', armyA: ['regular', 'regular'], armyB: ['regular', 'regular', 'regular', 'regular'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto',
+      doctrines: { A: ['XO6'], B: [] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 8; st.initiative = 'A';
+    st.objectives = st.objectives.length ? st.objectives : [{ x: 24, y: 24, r: 4, lz: true }];
+    // two of the attacker's units still to come down in the second wave, which is certain by turn 8
+    const atk = st.units.filter((u) => u.side === 'B');
+    atk.forEach((u, i) => { if (i < 2) { u.reserve = false; u.x = 20 + i * 3; u.y = 20; } else { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; } });
+    st.units.filter((u) => u.side === 'A').forEach((u, i) => { u.reserve = false; u.x = 10 + i * 3; u.y = 40; });
+    return { e, st, wave: atk.slice(2) };
+  }
+  const { e, st, wave } = invasion();
+  let finished = false;
+  e.query.reservePhase(() => { finished = true; });
+  ok('asked before anything arrives, with no Battlefield Insertion unit in sight', !!st.kyfAsk && st.kyfAsk.side === 'A' && st.kyfAsk.n === 2 && wave.every((u) => u.reserve));
+  ok('...and the other side cannot answer', !e.intent('B', { k: 'kyf' }).ok);
+  e.intent('A', { k: 'kyf' });
+  ok('used, the second wave does not come down this turn', wave.every((u) => u.reserve && u.x < 0), wave.map((u) => u.reserve ? 'held' : 'down').join(','));
+  ok('...and the turn goes on', finished && !st.kyfAsk);
+  st.turn = 9;
+  e.query.reservePhase(() => {});
+  ok('once a battle: next turn it is not asked, and the wave lands', !st.kyfAsk && wave.every((u) => !u.reserve), wave.map((u) => u.reserve ? 'held' : 'down').join(','));
+  const two = invasion();
+  two.e.query.reservePhase(() => {});
+  two.e.intent('A', { k: 'nokyf' });
+  ok('kept for later, the wave comes down as normal', two.wave.every((u) => !u.reserve) && !two.st.kyf.A);
+})();
+
 console.log('\nL-30 Teleport takes a unit in by the standard embarking rules (pp. 36, 130)');
 (function () {
   let n = 0;

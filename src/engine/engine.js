@@ -2237,6 +2237,7 @@
         // the Rally phase's flight on its own, for the tests
         fleeBroken: function () { K.fleeBroken(); },
         rallyPhase: function () { K.rallyPhase(); },
+        reservePhase: function (done) { K.reservePhase(done || function () {}); },
         aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
