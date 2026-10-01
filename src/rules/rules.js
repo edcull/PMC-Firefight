@@ -1748,9 +1748,10 @@
       if (g === 'Deserters and POWs') return i === 0 ? 'Ex-Sergeant' : 'Deserter';
       if (u.key === 'rmilitia' || u.soloMilitia) return i === 0 ? 'Militia Captain' : 'Militiaman';
       if (u.key === 'rguard') return i === 0 ? 'Guard Captain' : 'Guard';
-      // the riders: a Rider Leader up to tier 3, a Hellrider Captain at tier 4
+      // the riders: a Rider Leader (tiers 1-2), a Hellrider Leader (3), a Hellrider Captain (4)
       if (g === 'Mounted Warriors') {
         if (u.key === 'rlegendary' || (u.tier || 1) >= 4) return i === 0 ? 'Hellrider Captain' : 'Hellrider';
+        if (u.key === 'rhellriders' || (u.tier || 1) >= 3) return i === 0 ? 'Hellrider Leader' : 'Hellrider';
         return i === 0 ? 'Rider Leader' : 'Rider';
       }
       // the miners: a Supervisor's crew at tier 2, a Foreman's at 3-4

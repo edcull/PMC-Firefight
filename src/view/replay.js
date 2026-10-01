@@ -76,6 +76,9 @@
       return !!u && show.queue.some(function (ev) { return ev.e === 'move' && ev.id === u.id; });
     }
     function arrivalQueued(u) { return !!(u && pendingArrive[u.id]); }
+    function markArrivals(events) {
+      events.forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
+    }
     /* The battle arrives already resolved, and what happened is played out after
        it. Until each part plays, the table should show things as they stood: a
        unit that is about to move stands where it started, and a unit about to be
@@ -198,7 +201,7 @@
       waiting: false,           // an event that takes time is being drawn
       gen: 0,                   // which battle's show this is (resetShow moves it on)
       play: function (events) {
-        (events || []).forEach(function (ev) { if (ev.e === 'arrive' && ev.id && ev.how !== 'board') pendingArrive[ev.id] = true; });
+        markArrivals(events || []);
         holdForShow(events || []);
         this.queue = this.queue.concat(events || []);
         this.pump();
@@ -429,6 +432,8 @@
           var rest = show.queue.slice();
           resetShow();
           Array.prototype.push.apply(show.queue, rest);
+          // ...and a unit whose arrival is still to come in it stays off the table until then
+          markArrivals(rest);
           return;
         }
         case 'look': lookAtDeployment(ev.side); return;

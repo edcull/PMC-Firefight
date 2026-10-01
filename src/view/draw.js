@@ -1458,6 +1458,7 @@
       B.ctx.textAlign = 'center'; B.ctx.textBaseline = 'alphabetic';
       B.state.units.forEach(function (u2) {
         if (!u2.alive || u2.x < 0) return;
+        if (arrivalQueued(u2)) return;                 // its arrival has not played yet: no label either
         // the label rides with the model as it is shown — mid-move, where the move has got to — not where the rules have put it
         var lx = dispX(u2), ly = dispY(u2);
         var p = hud(lx, ly, liftOf(lx, ly) + ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5);
