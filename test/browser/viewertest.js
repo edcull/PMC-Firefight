@@ -142,6 +142,20 @@ async function pickAndFire(p, key, ms) {
     return (document.getElementById('vtgtline') || {}).textContent || '';
   });
   ok('a mortar too close for its Minimum Range is rolled as if at a range it could shoot', /rolled at 13"/.test(mortarLine), mortarLine);
+  // the target's Suppression bar fills once the shot lands, as in the battle
+  const fill = await p.evaluate(async () => {
+    window.__viewer.pick('hmgteam');
+    await new Promise(r => setTimeout(r, 60));
+    for (let i = 0; i < 12; i++) {
+      document.querySelector('[data-do="fire"]').click();
+      const seen = [];
+      for (let k = 0; k < 24; k++) { seen.push(window.__viewer.targetSp()); await new Promise(r => setTimeout(r, 70)); }
+      const top = Math.max.apply(null, seen);
+      if (top > 1) return { seen, rising: seen.some((v, j) => j && v > seen[j - 1] && v < top) };
+    }
+    return { seen: [], rising: false };
+  });
+  ok('the target\'s Suppression bar fills up once the shot lands, not all at once', fill.rising, fill.seen.join(' '));
   ok('...and a different target starts fresh', /6 of 6 Structure left/.test(shot.picked) && !/hit/.test(shot.picked), shot.picked);
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,
