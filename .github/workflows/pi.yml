@@ -19,10 +19,12 @@ on:
 permissions:
   contents: read
 
-# one deploy at a time; a newer one supersedes one still waiting
+# one deploy at a time; a newer one supersedes one still waiting, but one
+# already copying files is let finish (cut off half-way, it would leave the
+# Pi with half of one build and half of another)
 concurrency:
   group: pi
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:

@@ -8,8 +8,9 @@ PORT=9000 node server.js       # somewhere else
 HOST=0.0.0.0 node server.js    # so the rest of the house can join in
 ```
 
-To keep one running on a Raspberry Pi at home, deployed to by GitHub on every
-push to `main` (or any branch, by hand), see [deploy/pi/README.md](deploy/pi/README.md).
+To keep one running on a Raspberry Pi behind nginx (at `https://<domain>/pmc/`),
+deployed to by GitHub on every push to `main` (or any branch, by hand), see
+[deploy/pi/README.md](deploy/pi/README.md).
 
 No dependencies. One port serves three things:
 
