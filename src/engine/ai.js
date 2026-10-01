@@ -473,7 +473,7 @@
         logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
         if (still.t) { fire(u, still.t, 'fire'); return; }
         if (u.sp) {
-          var rr0 = abRally(E.state, u);
+          var rr0 = abRally(E.state, u, { regroup: true });
           if (rr0) { logLine('rally', rr0.text); pushRes(E.regroupCard(u, rr0)); E.regroupFx(u, rr0); }
         }
         u.activated = true; endActivation(u); return;
@@ -516,7 +516,7 @@
           animateMove(u, spath, true);
           logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.kindsUnder(E.state, u)[0]].name.toLowerCase() + '.');
         } else {
-          var rr = abRally(E.state, u);
+          var rr = abRally(E.state, u, { regroup: true });
           logLine('rally', rr ? rr.text : u.label + ' regroups.');
           if (rr) { pushRes(E.regroupCard(u, rr)); E.regroupFx(u, rr); }
         }

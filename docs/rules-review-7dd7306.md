@@ -331,29 +331,29 @@ front armour to a threat.
 
 **Vehicles and aircraft**
 
-- **L-9:** The AI's unloading ignores the 1" distance from enemies (`ai.js:174-178`; `R.disembark` checks only
+- **L-9 — fixed:** The AI's unloading ignores the 1" distance from enemies (`ai.js:174-178`; `R.disembark` checks only
   0.2"). Crews bailing out are placed at random, not by the owner (`damage.js:254-268`). The Suppression taken
   on an Abandoned result is added without `applyResult`, so a resulting Broken status is not announced
   (`damage.js:205-209`).
-- **L-10:** Strafing return fire excludes units that were already Suppressed before the run, and measures range
+- **L-10 — fixed:** Strafing return fire excludes units that were already Suppressed before the run, and measures range
   from where the aircraft ends (`combat.js:131`). The book's "as a result of" (l.906) allows them to fire back.
-- **L-11:** Drones clear all Suppression on a Regroup, not only in the Rally phase (l.952; `rules.js:1512-1516`).
+- **L-11 — fixed:** Drones clear all Suppression on a Regroup, not only in the Rally phase (l.952; `rules.js:1512-1516`).
 
 **Special rules**
 
-- **L-12:** A Command Unit's Coordinate chain cannot be ended early ("up to X", l.1513). Each eligible unit must
+- **L-12 — fixed:** A Command Unit's Coordinate chain cannot be ended early ("up to X", l.1513). Each eligible unit must
   act or skip, which spends its activation (`engine.js:1112-1114`).
-- **L-13:** The Incendiary ×2 includes Style Bonus and Overreact SP, which the book excludes (l.1557;
+- **L-13 — fixed:** The Incendiary ×2 includes Style Bonus and Overreact SP, which the book excludes (l.1557;
   `shoot.js:350`). Campaign only.
 - **L-14:** Markerlights can target reserve or embarked units at (-1,-1) (`marks.js:20-27`). Choosing one wastes
   the marker's activation.
-- **L-15:** "Command Unit" means different things in army building and in play. `checkArmy` counts the
+- **L-15 — fixed:** "Command Unit" means different things in army building and in play. `checkArmy` counts the
   `command` flag, so Field command 4th grade uses up the one-per-PL slot (`rules.js:280, 336`). In play, a
   Command Vehicle gains nothing from a 4th-grade passenger, which lacks the "Command Unit" rule
   (`rules.js:757-803`, `damage.js:389-393`).
-- **L-16:** Field Medics still treat their own wounded while Suppressed or Broken (`damage.js:22-24`). The
+- **L-16 — fixed:** Field Medics still treat their own wounded while Suppressed or Broken (`damage.js:22-24`). The
   tooltip says "Only while steady" (`ruletext.js:80`).
-- **L-17:** Rapid insertion platforms can go into battle empty (l.2418: "have to start the battle with a single
+- **L-17 — fixed:** Rapid insertion platforms can go into battle empty (l.2418: "have to start the battle with a single
   infantry unit"). `mustLoad` is read only by the army roller. `deploy.js:482-483` lets the player unload, and
   `deploymentDone` does not check.
 
@@ -646,6 +646,15 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | L-7 A grav bike pays the wire's D6" | **Fixed.** A grav bike pays no movement penalty at all. After L-6 it only matters if a grav bike is ever allowed over wire. | `move.js` (`terrainCost`) |
 | L-8 Sappers cannot cut barbed wire | **Fixed.** Wire is destructible by the Sapper rule only (p. 43). Sappers may set charges against it; no gun shoots it down, and the Terrorist's mine is not laid in it. Cut, it becomes a gap that costs nothing to cross. | `rules.js` (`TERRAIN.wire`, `cutwire`), `destruct.js`, `engine.js`, `iso-props.js`, `iso-ground.js` |
 
+| L-9 Bailing crews, the rest | **Fixed.** The AI half went with H-2. A crew bailing out of an Abandoned hull now disembarks as any squad does: within 4" of the hull and 1" clear of everyone, on the spot its side would choose (the best cover, then furthest from the enemy). Its D6 Suppression goes through `applyResult`, so a crew it breaks is said to break. | `damage.js` (`dropOff`, `applyDamage`) |
+| L-10 Strafing return fire | **Fixed.** A target fires back unless the run itself left it Suppressed or Broken, so a squad already Suppressed and no worse for the run fires too (p. 39). Range is measured to the nearest point of the run, not to where the craft ends it. | `combat.js` (`doStrafe`) |
+| L-11 Drones clear all Suppression on a Regroup | **Fixed.** Drones, and the bugs an Overmind controls, shed every point only in the Rally phase (pp. 40, 116). On a Regroup they roll like anyone else. | `rules.js` (`rally`), `abilities.js`, `actions.js`, `ai.js` |
+| L-12 A Coordinate chain cannot be ended early | **Fixed.** A unit in a Command Unit's chain is offered End the chain: the chain stops there, the units left keep their activations, and play passes on. The turrets' and a marker's chains are not Coordinate and stay as they are. | `engine.js` (`specialsFor`), `actions.js` (`endchain`) |
+| L-13 Incendiary doubles the extras | **Fixed.** Only the hit table's own Suppression is doubled. Overreact's extra 2 a casualty and Style Bonus are added after (p. 58). | `damage.js` (`ruleSp`), `shoot.js` |
+| L-15 "Command Unit" means two things | **Fixed** the other way from the finding's first suggestion. The army list puts Field command 4th grade among the Command units (p. 70), so it still takes the one-per-Priority-Level slot, as NOT ONE STEP BACKWARDS! already counted it. What changes is in play: a Command Vehicle now carries the rules of any command unit aboard, a 4th grade's Inspiring Presence included, and a Coordinate chain never activates another command unit. | `damage.js` (`commandAboard`), `rules.js` (`has`, `hasExact`, `ruleValue`), `engine.js` (`eligible`) |
+| L-16 Field Medics while Suppressed | **Fixed** in the tooltip. The book bars Suppressed and Broken units from passive bonuses "to another units" (p. 29), so the medics still treat their own wounded, as the code did. The tooltip no longer says "only while steady". | `ruletext.js` |
+| L-17 Insertion platforms go in empty | **Fixed.** A list with more platforms than infantry squads to fill them is refused. At deployment a platform's squad can be swapped for another but not taken out. | `rules.js` (`checkArmy`), `engine.js` (`load`, `unload`) |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `test/unit/lowcombat.js` (20 checks) fails 11 on `7dd7306`. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.

@@ -79,7 +79,8 @@
       'troops never count as casualties for victory, and in a campaign their dead are kept apart from the loss rate.',
     'Field Medics':
       'Friendly units within 6" (and the medics themselves) use a kinder hit table: 1-2 no effect, 3-5 one SP, ' +
-      '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Only while steady.',
+      '6 a MEDIC! roll — 1 SP and a casualty, unless a further D6 rolls a 6 and saves him. Suppressed or Broken, ' +
+      'the medics treat only their own wounded (p. 29).',
     'Flying Infantry':
       'Flies over terrain (but cannot land on impassable ground), takes no cover, and always shoots and is ' +
       'shot at with Basic Firepower. Only Flying Infantry can assault it, and it may assault aircraft.',

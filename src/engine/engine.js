@@ -979,7 +979,8 @@
         // 12" between the closest models of the two units, not their middles
         var cmdU = state.chain.by && K.byId(state.chain.by);
         if ((cmdU ? R.unitDist(u, cmdU) : R.inches(u.x, u.y, state.chain.x, state.chain.y)) > 12) return false;
-        if (R.has(u, 'Command Unit')) return false;
+        // "other Command Units" (p. 59): any of the list's command units, the 4th grade too
+        if (R.commandUnit(u) || R.has(u, 'Command Unit')) return false;
         if (R.has(u, 'Turret')) return false;              // untouched by Command Units
         if (u.tier >= state.chain.tier + 2) return false;
         if (R.campFlag(u, 'insubordinate')) return false;      // Insubordinate
@@ -1163,6 +1164,8 @@
     if (u && R.has(u, 'Sappers') && !R.isMachine(u)) out.push({ id: 'plainassault', label: 'Assault, no charges' });
     // the Command Unit rule is not used in solitaire games (p. 149)
     if (u && R.has(u, 'Command Unit') && !state.solo) out.push({ id: 'coordinate', label: 'Coordinate' });
+    // a Coordinate chain activates "up to" so many (p. 59): it may be ended with units still to go
+    if (u && state.chain && !state.chain.kind && state.chain.side === u.side) out.unshift({ id: 'endchain', label: 'End the chain' });
     if (u && u.transport) {
       /* A gun is towed rather than carried (Stationary Artillery, p. 94): where
          what it would take on, or has on, is a gun, the actions say Tow and Deploy. */
@@ -1614,7 +1617,11 @@
       if (!mayArrange(side)) return no('not your turn to set up');
       var hull = unitOf(it.hull, side), rider = unitOf(it.unit, side);
       if (!hull || !rider) return no('no such unit');
-      if (!K.loadBefore(hull, rider)) return no('there is no room aboard');
+      /* A drop platform "has to start the battle with a single infantry unit
+         onboard" (p. 79): a full one swaps its squad for this one. */
+      var pod = R.has(hull, 'Immobile') && hull.transport, was = pod && (hull.cargo || []).length >= hull.transport ? hull.cargo[0] : null;
+      if (was) K.unloadBefore(hull, was);
+      if (!K.loadBefore(hull, rider)) { if (was) K.loadBefore(hull, was, true); return no('there is no room aboard'); }
       render();
       return yes;
     });
@@ -1623,6 +1630,7 @@
       if (!mayArrange(side)) return no('not your turn to set up');
       var uh = unitOf(it.hull, side), ur = unitOf(it.unit, side);
       if (!uh || !ur) return no('no such unit');
+      if (R.has(uh, 'Immobile') && uh.transport) return no('a drop platform starts the battle with a squad aboard (p. 79): put another in instead');
       K.unloadBefore(uh, ur);
       render();
       return yes;

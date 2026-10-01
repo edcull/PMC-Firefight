@@ -151,6 +151,9 @@
       });
       u.x = pt.x; u.y = pt.y;
       var log = [];
+      // how each target stood before the run: it fires back unless the run itself put it down (p. 39)
+      var before = {};
+      hitList.forEach(function (t) { before[t.id] = R.status(t); });
       logLine('move', u.label + ' makes a strafing run.');
       hitList.forEach(function (t) {
         var res = abShoot(E.state, u, t, 'basic', {});
@@ -166,12 +169,21 @@
         var res2 = abShoot(E.state, u, t, 'basic', {});
         res2.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
       });
-      // everything still standing may shoot back, free of charge
+      /* "All targeted units that are not destroyed, Suppressed or Broken as a result
+         of a Strafing Run may shoot back" (p. 39), free of charge: a squad that was
+         already Suppressed and is no worse for the run fires too. It fires at the
+         aircraft as it passed over, so range is to the nearest point of the run. */
       hitList.forEach(function (t) {
-        if (!t.alive || R.status(t) !== 'ready' || t.fp === null) return;
-        if (!R.canShoot(E.state, t, u, 'basic', {})) return;
-        var back = abShoot(E.state, t, u, 'basic', {});
-        back.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
+        var now = R.status(t), was = before[t.id];
+        if (!t.alive || now === 'broken' || t.fp === null) return;
+        if (now === 'suppressed' && was !== 'suppressed') return;
+        var end = { x: u.x, y: u.y }, dx = end.x - from.x, dy = end.y - from.y, l2 = dx * dx + dy * dy;
+        var f = l2 ? Math.max(0, Math.min(1, ((t.x - from.x) * dx + (t.y - from.y) * dy) / l2)) : 1;
+        u.x = from.x + f * dx; u.y = from.y + f * dy;
+        var can = R.canShoot(E.state, t, u, 'basic', {});
+        var back = can ? abShoot(E.state, t, u, 'basic', {}) : null;
+        u.x = end.x; u.y = end.y;
+        if (back) back.log.forEach(function (l) { logLine(l.t, l.text, l.math); log.push(l); });
       });
       soundFor(log);
       var card = fromLog('Strafing run', u.name + ' over the line', u.side, log);

@@ -336,6 +336,16 @@
       if (ogFly.length && battleTier < 3) faults.push('Overgrown flying bugs only from Battle Tier III.');
       if (pl === 1 && ogFly.length > 1) faults.push('Only one Overgrown flying bug at Priority Level 1.');
     }
+    /* Rapid insertion platforms "have to start the battle with a single infantry
+       unit onboard" (p. 79): a squad for every one of them. */
+    var pods = keys.filter(function (k) { return BY_KEY[k] && BY_KEY[k].mustLoad; }).length;
+    if (pods) {
+      var riders = keys.filter(function (k) {
+        var q = BY_KEY[k];
+        return q && q.cls === 'infantry' && (q.rules || []).indexOf('Stationary Artillery') < 0 && (q.rules || []).indexOf('Riders') < 0;
+      }).length;
+      if (pods > riders) faults.push('Each Rapid insertion platform starts the battle with an infantry squad aboard: ' + pods + ' platforms, ' + riders + ' squads to fill them.');
+    }
     if (commands > pl) {
       faults.push(rebel
         ? 'Max ' + pl + ' First Among Equals unit' + (pl > 1 ? 's' : '') + ' — one per Priority Level.'
@@ -762,7 +772,7 @@
     if (!u.cargo || !u.cargo.length || !hasOwn(u, 'Command Vehicle')) return false;
     for (var c = 0; c < u.cargo.length; c++) {
       var p = u.cargo[c];
-      if (p && p.rules && hasOwn(p, 'Command Unit') && p.rules.indexOf(rule) >= 0) return true;
+      if (p && p.rules && commandUnit(p) && p.rules.indexOf(rule) >= 0) return true;
     }
     return false;
   }
@@ -805,7 +815,7 @@
     if (!u.cargo || !u.cargo.length || !hasOwn(u, 'Command Vehicle')) return false;
     for (var c = 0; c < u.cargo.length; c++) {
       var p = u.cargo[c];
-      if (p && p.rules && hasOwn(p, 'Command Unit') && hasOwn(p, rule)) return true;
+      if (p && p.rules && commandUnit(p) && hasOwn(p, rule)) return true;
     }
     return false;
   }
@@ -815,7 +825,7 @@
     if (u.cargo && u.cargo.length && hasOwn(u, 'Command Vehicle')) {
       for (var c = 0; c < u.cargo.length; c++) {
         var p = u.cargo[c];
-        if (!p || !p.rules || !hasOwn(p, 'Command Unit')) continue;
+        if (!p || !p.rules || !commandUnit(p)) continue;
         var pv = ownValue(p, rule);
         if (pv !== null) return pv;
       }
@@ -1182,7 +1192,7 @@
       credit: credit, currentMorale: currentMorale, d3: d3, d6: d6, doctrine: doctrine, droneUnit: droneUnit,
       has: has, hasOwn: hasOwn, infamyPanic: infamyPanic, isFlying: isFlying, isMachine: isMachine,
       projects: projects, psychicBond: psychicBond, shoot: shoot, status: status, terrainAt: terrainAt,
-      unitDist: unitDist, unitNear: unitNear
+      unitDist: unitDist, unitNear: unitNear, dropSpots: dropSpots, coverAt: coverAt
     };
   }
   function kitDamage() {
@@ -1563,17 +1573,19 @@
   }
 
   function droneUnit(u) { return !!u && hasOwn(u, 'Drone unit'); }
-  function rally(state, u) {
+  // `opts.regroup`: a Regroup in the Action phase, not the Rally phase
+  function rally(state, u, opts) {
     if (u.sp === 0) return null;
-    // Drone units "automatically remove all Suppression points in the Rally phase" (p. 40)
-    if (droneUnit(u)) {
+    var inRally = !(opts && opts.regroup);
+    // Drone units "automatically remove all Suppression points in the Rally phase" (p. 40) — in it only
+    if (inRally && droneUnit(u)) {
       var sbD = status(u), wasD = u.sp;
       u.sp = 0;
       return { morale: currentMorale(u), dice: [], removed: wasD, before: wasD, after: 0, reroll: false, gone: false,
         need: 4, jammed: false, extras: ['Drone unit: all SP removed'], statusBefore: sbD, statusAfter: 'ready', overmind: true };
     }
-    // Overmind (p. 116): bugs it controls lose every Suppression point in the Rally phase
-    if (has(u, 'Animal Behaviour') && overmindFor(state, u, false)) {
+    // Overmind (p. 116): bugs it controls lose every Suppression point "in each Rally phase"
+    if (inRally && has(u, 'Animal Behaviour') && overmindFor(state, u, false)) {
       var sb0 = status(u), was = u.sp, om = overmindFor(state, u, false);
       u.sp = 0;
       return { morale: currentMorale(u), dice: [], removed: was, before: was, after: 0, reroll: false, gone: false,
@@ -2081,7 +2093,7 @@
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
     canShoot: canShoot, canShootTerrain: canShootTerrain, turnCost: turnCost, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
-    rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
+    commandUnit: commandUnit, rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark, dropSpots: dropSpots,

@@ -199,6 +199,8 @@
           if (!ta.length) return { on: false, hint: 'Auxiliary weapons reach 12" — nothing in range.' };
           return { on: true, hint: 'Auxiliary weapons: FP 1, Range 12", no special rules. The only shot a suppressed unit may take.' };
         }
+        case 'endchain':
+          return { on: true, hint: 'End the Command Unit\u2019s chain here: ' + u.name + ' and the rest keep their activations for later, and play passes on.' };
         case 'skip':
           return { on: true, hint: 'Skip: ' + u.name + ' does nothing this turn — it stays where it is, its activation is spent, and play passes on.' };
         case 'regroup':
@@ -407,6 +409,15 @@
 
       if (id === 'rush' || id === 'laststand') { doOnce(u, id); return; }
       // Skip: nothing done, nothing rolled (not even Unreliable's D6), the activation spent
+      if (id === 'endchain') {
+        if (!E.state.chain || E.state.chain.kind) return;
+        E.state.chain = null;
+        closeDrawer();
+        logLine('note', 'The chain ends there; the rest keep their activations.');
+        ui.selected = null; ui.mode = null; ui.moves = []; ui.targets = [];
+        E.afterChain();
+        return;
+      }
       if (id === 'skip') {
         u.activated = true;
         closeDrawer();
@@ -543,7 +554,7 @@
             pre = 'Meditation: ' + med + ' SP gone before the dice.';
             logLine('rally', u.label + ' — ' + pre);
           }
-          var r = abRally(E.state, u);
+          var r = abRally(E.state, u, { regroup: true });
           logLine('rally', r ? r.text : u.label + ' regroups — no suppression to shake off.');
           // the End phase's rally card and the unit seen to regroup (endphase.js)
           pushRes(E.regroupCard(u, r, pre));
