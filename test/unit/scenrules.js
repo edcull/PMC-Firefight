@@ -4,6 +4,9 @@
 global.window = global;
 require('../../src/rules/rules.js');
 require('../../src/rules/scenarios.js');
+// seeded dice: the scenario set-ups are rolled, and a rare roll must not decide whether the checks pass
+var DICE = 2670;
+Math.random = function () { DICE = (Math.imul(DICE, 1664525) + 1013904223) >>> 0; return DICE / 4294967296; };
 var R = global.PMC, S = global.PMCScen;
 
 var pass = 0, fail = 0;
