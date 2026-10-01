@@ -756,7 +756,8 @@
     // a unit on the roster takes the Riders upgrade or lays it down, or changes what it rides
     if (t.hasAttribute('data-eriders')) {
       var re = findEntry(co, t.getAttribute('data-eriders'));
-      re.riders = !re.riders; C.menOf(re, co); save(); render(); return;
+      if (re && C.ridersOpen(re)) { re.riders = !re.riders; C.menOf(re, co); save(); render(); }
+      return;
     }
     if (t.hasAttribute('data-emount')) {
       var me = findEntry(co, t.getAttribute('data-emount'));

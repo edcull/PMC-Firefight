@@ -20,7 +20,8 @@
     function markTargets(u) {
       var far = markReach(u);
       return E.state.units.filter(function (t) {
-        if (!t.alive || t.aboard || t.side === u.side) return false;
+        // only what is on the table: a reserve or a passenger is parked at (-1, -1)
+        if (!R.onTable(t) || t.side === u.side) return false;
         var lim = R.has(t, 'Stealth') && !R.has(u, 'Keen-Eyed') ? Math.min(12, far) : far;
         return R.unitDist(u, t) <= lim && R.hasLoS(E.state, u, t);
       });
@@ -166,6 +167,9 @@
     function canAnswerMark(o, target, kind) {
       if (!target || !target.alive || target.aboard) return false;
       if (o.fp == null || !o.fp || !o.range) return false;
+      /* Turrets "are not affected by any other rule which changes activation order"
+         (p. 130): a call fetches no turret out of its turn, which is all of them at once. */
+      if (R.has(o, 'Turret')) return false;
       /* Designate target calls up a unit WITH Indirect Fire; Mark the target calls
          up one WITHOUT it. Neither will do for the other's call (p. 58). */
       var indirect = R.has(o, 'Indirect Fire') && !R.dugIn(o);

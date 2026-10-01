@@ -374,6 +374,11 @@ function board(id, opts) {
 function winnerOf(st) { var r = S.check(st); return r ? (r.winner || 'draw') : 'play on'; }
 
 ok('Meeting engagement: routing the enemy wins', winnerOf(board('meeting', { liveB: 2 })), 'A');
+/* Each side meeting a condition in the same End phase is a draw (p. 49) — even
+   when one of them is wiping the other out. */
+ok('Wiped out the turn the enemy is routed: a draw, not a win', winnerOf(board('meeting', { liveA: 0, liveB: 2 })), 'draw');
+ok('...wiped out while the enemy stands: the enemy wins', winnerOf(board('meeting', { liveA: 0, liveB: 3 })), 'B');
+ok('...and the other way round', winnerOf(board('meeting', { liveA: 2, liveB: 0 })), 'draw');
 ok('Secure and control: routing the enemy wins nothing (p. 51)',
   winnerOf(board('secure', { liveB: 2 })), 'play on');
 ok('Demolish: routing the defender wins nothing (p. 54)',

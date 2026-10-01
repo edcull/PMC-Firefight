@@ -1248,10 +1248,11 @@
       var mid = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
       var d = R.inches(u.x, u.y, mid.x, mid.y) - Math.max(r.w, r.h) / 2;
       if (melee) return d <= u.move + 2;
+      if (!R.canShootTerrain(state, u, mid)) return false;
       if (d > u.range) return false;
       var minR = R.ruleValue(u, 'Minimum Range');
       if (minR && d < minR) return false;
-      return R.hasLoS(state, u, mid) || R.has(u, 'Indirect Fire');
+      return R.hasLoS(state, u, mid);
     });
   }
 

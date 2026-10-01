@@ -931,6 +931,20 @@
     return 'rear';
   }
   // Limited Fire Arc: the target has to sit in the shooter's front quarter.
+  /* Shooting a piece of terrain down (pp. 57-58) is shooting: what keeps a gun from
+     firing at a unit keeps it from firing at a wall. A Cumbersome Weapon not from
+     shallow water nor on the turn it was unloaded; an anti-aircraft-only weapon not
+     at the ground at all; a fixed mount or a dug-in gun only at what is in its front
+     quarter. (And it must see the piece: Indirect Fire reaches out of sight only to
+     a target a Markerlight or Smoke Marker calls, and those call units, p. 58.) */
+  function canShootTerrain(state, u, at) {
+    if (!u.alive || u.fp == null) return false;
+    if (has(u, 'Specialisation (air)')) return false;
+    if (has(u, 'Cumbersome Weapon') &&
+      (u.disembarked || kindsUnder(state, u).some(function (k) { return !!TERRAIN[k].shallow; }))) return false;
+    if ((has(u, 'Limited Fire Arc') || dugIn(u)) && !inFireArc(u, at)) return false;
+    return true;
+  }
   function inFireArc(shooter, target) {
     if (shooter.facing == null) return true;
     var a = angleWrap(Math.atan2(target.y - shooter.y, target.x - shooter.x) - shooter.facing);
@@ -2057,7 +2071,7 @@
     has: has, ruleValue: ruleValue, currentMorale: currentMorale, status: status,
     projects: projects, markCall: markCall, holdsGround: holdsGround, countsForVictory: countsForVictory,
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
-    canShoot: canShoot, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
+    canShoot: canShoot, canShootTerrain: canShootTerrain, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
     rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,

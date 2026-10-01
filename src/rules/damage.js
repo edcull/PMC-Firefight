@@ -311,6 +311,9 @@
       if (!a.alive || !t.alive || a.side === t.side) return false;
       if (!has(a, 'Hackers') || !t.drone) return false;
       if (a.hackUsed) return false;
+      /* "an enemy Drone unit … within 24"" (p. 58): one on the table. A unit held in
+         reserve or riding in a hull is parked at (-1, -1), and is in nobody's reach. */
+      if (t.reserve || t.aboard || t.x < 0 || t.y < 0 || a.x < 0 || a.y < 0) return false;
       return unitDist(a, t) <= 24;
     }
 

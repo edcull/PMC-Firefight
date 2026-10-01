@@ -1035,9 +1035,19 @@
   function check(state) {
     var ga = annihilated(state, 'A'), gb = annihilated(state, 'B');
     if (ga && gb) return { winner: null, text: 'Neither company has anything left on the table — a draw.' };
-    if (gb) return { winner: 'A', text: 'B is destroyed to the last unit — an automatic victory for A.' };
-    if (ga) return { winner: 'B', text: 'A is destroyed to the last unit — an automatic victory for B.' };
-    return state.scen.check(state);
+    if (!ga && !gb) return state.scen.check(state);
+    /* Wiping out the enemy is an automatic victory (p. 49) — but "when a scenario has
+       several different victory conditions and each player meets at least one of them
+       in the same turn, the game ends with a draw" (p. 49). So the scenario is still
+       asked: if the side that was wiped out met one of its conditions this End phase
+       too (or the scenario itself calls it level), neither wins. */
+    var won = ga ? 'B' : 'A', lost = ga ? 'A' : 'B';
+    var own = state.scen.check(state);
+    if (own && (own.winner === lost || (own.winner == null && own.text))) {
+      return { winner: null, text: lost + ' is destroyed to the last unit, but ' +
+        (own.winner === lost ? 'met a victory condition the same turn' : 'the scenario ends level') + ' — a draw. (' + own.text + ')' };
+    }
+    return { winner: won, text: lost + ' is destroyed to the last unit — an automatic victory for ' + won + '.' };
   }
   function noInsertion(state) { return !!state.scen.noInsertion; }
 

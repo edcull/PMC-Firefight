@@ -127,7 +127,7 @@ touches the segment, or any unit whose centre is within 0.9" of it, blocks all s
 - **Fix:** test several lines between the two tokens' rims, and count the target as seen if any one of them is
   clear.
 
-### M-2 · An automatic victory overrides a same-turn draw — *reproduced*
+### M-2 · An automatic victory overrides a same-turn draw — *reproduced* — **fixed**
 
 > l.1271: "When a scenario has several different victory conditions and each player meets at least one of them in
 > the same turn, the game ends with a draw."
@@ -226,7 +226,7 @@ The player's action bar blocks it (`actions.js:156`). The AI's move-then-shoot p
 shots were Advance shots, by Heavy MG teams, Gauss cannons, missile teams, sniper teams and support/FlaK
 vehicles.
 
-### M-11 · Shooting at terrain skips shooting restrictions — *reproduced*
+### M-11 · Shooting at terrain skips shooting restrictions — *reproduced* — **fixed**
 
 The Demolish action checks only Suppression (`actions.js:281-285`). `demolishTargets` (`engine.js:1234-1246`)
 checks range, minimum range and `hasLoS || Indirect Fire`. Neither checks Cumbersome (shallow water, the turn it
@@ -236,7 +236,7 @@ disembarked), Specialisation, Limited Fire Arc, or that Indirect Fire out of sig
 - A Gauss cannon that has just disembarked cannot Fire!, but can still Demolish a building 8" away.
 - A mortar with no sight and no Designate call can Demolish.
 
-### M-12 · Hackers can hack drones that are not on the table — *reproduced*
+### M-12 · Hackers can hack drones that are not on the table — *reproduced* — **fixed**
 
 > l.1553: an "enemy Drone unit … within 24"".
 
@@ -244,7 +244,7 @@ disembarked), Specialisation, Limited Fire Arc, or that Indirect Fire out of sig
 a transport, sit at (-1,-1). An EW team at (6,6) hacked a drone held in reserve, which was locked out and took
 2 hits. `canShoot` correctly refuses such targets (`shoot.js:60`). Markerlights have the same gap (L-14).
 
-### M-13 · Markerlights can call one turret out of turn — *reproduced*
+### M-13 · Markerlights can call one turret out of turn — *reproduced* — **fixed**
 
 > l.4170: "All turrets are activated at once … and they are not affected by any other rule which changes
 > activation order (e.g. Command units etc.)."
@@ -285,7 +285,7 @@ Only the one placed leader is fixed in place, made unbreakable and counted for t
 Such a unit plays as an ordinary unit and need not be killed. **Fix:** either exclude Command Unit profiles from
 these pools, or treat them as leaders.
 
-### M-16 · Campaign Riders upgrade can be switched after recruitment
+### M-16 · Campaign Riders upgrade can be switched after recruitment — **fixed**
 
 > l.2934: "the player has to decide whether to upgrade a unit or not when that unit is recruited. The decision is
 > final; it cannot be changed later."
@@ -625,6 +625,12 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | M-14 Solitaire: Reasonably Neutral does not hold its position | **Fixed.** A Neutral OpFor unit holds its position and fires. It Advances only to a spot within its Movement with better cover than it has, and only if its best shot from there is at least as good as from where it stands, so it never leaves cover for a better shot. A Neutral vehicle holds and fires. | `ai.js` (`neutralHold`, the vehicle branch) |
 | M-15 Solitaire Decapitation ignores pool Command Units | **Fixed** by the book's plural, "the OpFor Command Units": every Command Unit the pool rolled becomes a leader alongside the scenario's own. It is placed in a defensive position, cannot be Broken, never moves, and must be destroyed to win. | `solitaire.js` (`s_decap.deploy`) |
 
+| M-2 An automatic victory overrides a same-turn draw | **Fixed.** When one side is wiped out, the scenario is still asked. If the wiped-out side met a condition that End phase, or the scenario calls it level, the result is a draw. | `scenarios.js` (`check`) |
+| M-11 Shooting at terrain skips shooting restrictions | **Fixed.** `R.canShootTerrain` applies the same limits as shooting a unit: Cumbersome Weapons not from shallow water or on the turn they disembarked, no Specialisation (air), and the front arc for Limited Fire Arc and dug-in guns. A piece must also be in sight, since Indirect Fire is called onto units, never onto walls. | `rules.js` (`canShootTerrain`), `engine.js` (`demolishTargets`) |
+| M-12 Hackers can hack drones off the table (and L-14, Markerlights) | **Fixed.** Neither may pick a unit in reserve or aboard a hull. | `damage.js` (`canHack`), `marks.js` (`markTargets`) |
+| M-13 Markerlights call a turret out of turn | **Fixed.** A turret never answers a call, as it is "not affected by any other rule which changes activation order". | `marks.js` (`canAnswerMark`) |
+| M-16 Riders switched after recruitment | **Fixed.** The roster offers the Riders upgrade only until the unit first fights, then shows it as fixed. Recruiting stays the moment to choose, since recruitment itself has no separate option for it. | `campaign.js` (`ridersOpen`), `dossier-roster.js`, `dossier.js` |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`.
