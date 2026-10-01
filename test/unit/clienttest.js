@@ -472,8 +472,8 @@ function openScreen(name) {
   const app2 = boot(root, {
     location: { protocol: 'http:', host: 'localhost:8787', href: 'http://localhost:8787/' },
     WebSocket: function () { return link.client; },
-    // the server answers /health, which is what lights the Multiplayer card
-    fetch: (url) => answered(url === '/health' ? { ok: true, json: () => ({ ok: true, rooms: 0, players: 0 }) } : { ok: false })
+    // the server answers health (asked for relative to the page), which is what lights the Multiplayer card
+    fetch: (url) => answered(/^\/?health$/.test(url) ? { ok: true, json: () => ({ ok: true, rooms: 0, players: 0 }) } : { ok: false })
   });
   served.connect(link.server);
   app2.win.localStorage.setItem('pmc-player-name', name);

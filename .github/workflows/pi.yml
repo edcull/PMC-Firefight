@@ -1,0 +1,61 @@
+# Deploy the game server to the Raspberry Pi at home, for trying multiplayer
+# games on it. Runs on the Pi itself, on a self-hosted runner labelled "pi"
+# (deploy/pi/README.md sets one up): the code is copied into place and the
+# service restarted. The campaigns saved on the Pi are kept elsewhere and
+# are left alone.
+#
+# Every push to main deploys main. To try a branch before it is merged, run
+# this from the Actions tab ("Run workflow") and pick the branch there.
+#
+# Only pushes and manual runs start it, never a pull request, so nobody
+# else's code runs on the Pi.
+name: pi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# one deploy at a time; a newer one supersedes one still waiting, but one
+# already copying files is let finish (cut off half-way, it would leave the
+# Pi with half of one build and half of another)
+concurrency:
+  group: pi
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, pi]
+    env:
+      APP_DIR: /opt/pmc-firefight/app
+      PORT: 8787
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Copy the code into place
+        run: |
+          rsync -a --delete \
+            --exclude .git --exclude .github --exclude node_modules \
+            --exclude /campaigns --exclude /build --exclude /test \
+            ./ "$APP_DIR/"
+          echo "$GITHUB_REF_NAME @ ${GITHUB_SHA::7}" > "$APP_DIR/deployed.txt"
+
+      - name: Restart the server
+        run: sudo -n systemctl restart pmc-firefight
+
+      - name: Check it answers
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "http://localhost:$PORT/health"; then
+              echo
+              echo "Up: $GITHUB_REF_NAME @ ${GITHUB_SHA::7} on port $PORT"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The server did not come up. Last lines of its log:"
+          sudo -n journalctl -u pmc-firefight -n 40 --no-pager || true
+          exit 1

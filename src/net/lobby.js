@@ -540,7 +540,8 @@
 
   function loadCampaigns() {
     if (!root.fetch) return;
-    root.fetch('/campaigns').then(function (r) { return r.json(); })
+    // relative to the page, as the WebSocket is (net.js): the server may sit on a sub-path
+    root.fetch('campaigns').then(function (r) { return r.json(); })
       .then(function (j) { campaigns = j.campaigns || []; draw(); })
       .catch(function () { campaigns = []; });
   }
