@@ -4,15 +4,20 @@
 # service restarted. The campaigns saved on the Pi are kept elsewhere and
 # are left alone.
 #
-# Every push to main deploys main. To try a branch before it is merged, run
-# this from the Actions tab ("Run workflow") and pick the branch there.
+# Every push to main deploys main, once the tests (test.yml) have passed on
+# it. To try a branch before it is merged, run this from the Actions tab
+# ("Run workflow") and pick the branch there; that skips the wait for tests.
 #
-# Only pushes and manual runs start it, never a pull request, so nobody
-# else's code runs on the Pi.
+# Only a push to main or a manual run deploys, never a pull request, so
+# nobody else's code runs on the Pi. (The test workflow also runs for pull
+# requests, forks' included; the job's `if` lets only its runs for a push to
+# this repository's main through.)
 name: pi
 
 on:
-  push:
+  workflow_run:
+    workflows: [test]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -28,12 +33,22 @@ concurrency:
 
 jobs:
   deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: [self-hosted, pi]
     env:
       APP_DIR: /opt/pmc-firefight/app
       PORT: 8787
+      # the commit deployed: the one the tests passed on, or the branch picked
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SHA }}
 
       - name: Copy the code into place
         run: |
@@ -41,7 +56,7 @@ jobs:
             --exclude .git --exclude .github --exclude node_modules \
             --exclude /campaigns --exclude /build --exclude /test \
             ./ "$APP_DIR/"
-          echo "$GITHUB_REF_NAME @ ${GITHUB_SHA::7}" > "$APP_DIR/deployed.txt"
+          echo "$BRANCH @ ${SHA::7}" > "$APP_DIR/deployed.txt"
 
       - name: Restart the server
         run: sudo -n systemctl restart pmc-firefight
@@ -51,7 +66,7 @@ jobs:
           for i in $(seq 1 30); do
             if curl -fsS "http://localhost:$PORT/health"; then
               echo
-              echo "Up: $GITHUB_REF_NAME @ ${GITHUB_SHA::7} on port $PORT"
+              echo "Up: $BRANCH @ ${SHA::7} on port $PORT"
               exit 0
             fi
             sleep 1
