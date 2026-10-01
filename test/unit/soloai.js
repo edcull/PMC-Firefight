@@ -183,6 +183,46 @@ console.log('\nThe VIP draws the OpFor\u2019s attack, Kill Them All! or not (p. 
   ok('a squad on Kill Them All! that cannot reach the VIP to charge shoots it instead', runs > 0 && fired === runs && charged === 0, fired + ' of ' + runs + ' shot it, ' + charged + ' charged');
 })();
 
+console.log('\nProtecting the VIP: a Broken unit flees from the enemy, not to the evacuation point (p. 151)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_vip', armyA: ['cmd3', 'regular', 'regular'], armyB: ['regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+    colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; x.x = 44; x.y = 44; });
+  const ev = st.sc.evac, a = st.units.filter((x) => x.side === 'A'), b = st.units.filter((x) => x.side === 'B');
+  const vip = a.find((x) => x.vip), sq = a.find((x) => !x.vip);
+  a.filter((x) => x !== vip && x !== sq).forEach((x) => { x.x = 4; x.y = 44; });
+  // the enemy on the far side of the evacuation point from each: fleeing away takes them outwards
+  vip.x = ev.x + 4; vip.y = ev.y; b[0].x = ev.x - 3; b[0].y = ev.y;
+  sq.x = ev.x; sq.y = ev.y + 10; b[1].x = ev.x; b[1].y = ev.y + 4;
+  [vip, sq].forEach((x) => { x.sp = 3 * R.currentMorale(x); });
+  const d0 = R.inches(vip.x, vip.y, b[0].x, b[0].y), s0 = R.inches(sq.x, sq.y, b[1].x, b[1].y);
+  e.query.fleeBroken();
+  ok('the Broken VIP falls back away from the enemy', R.inches(vip.x, vip.y, b[0].x, b[0].y) > d0 + 0.5,
+    R.inches(vip.x, vip.y, b[0].x, b[0].y).toFixed(1) + '" from it, was ' + d0.toFixed(1) + '"');
+  ok('...but stays within 6" of the evacuation point', R.inches(vip.x, vip.y, ev.x, ev.y) <= 6 + 1e-6, R.inches(vip.x, vip.y, ev.x, ev.y).toFixed(1) + '"');
+  ok('another Broken unit flees away from the enemy, past the 12" ring', sq.fled || R.inches(sq.x, sq.y, ev.x, ev.y) > 12,
+    sq.fled ? 'fled' : R.inches(sq.x, sq.y, ev.x, ev.y).toFixed(1) + '" from the point, was 10"');
+  ok('...not back towards the evacuation point', sq.fled || R.inches(sq.x, sq.y, b[1].x, b[1].y) > s0 + 4);
+})();
+
+console.log('\nIn a solitaire battle a Broken unit by the table edge runs off (p. 34)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular', 'regular'], armyB: ['regular'], nameA: 'A', nameB: 'OpFor',
+    colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; });
+  const [vic, mate] = st.units.filter((x) => x.side === 'A'), foe = st.units.find((x) => x.side === 'B');
+  vic.x = 3; vic.y = 24; foe.x = 16; foe.y = 24; mate.x = 30; mate.y = 44;
+  vic.sp = 3 * R.currentMorale(vic);
+  e.query.fleeBroken();
+  ok('its flight away from the enemy carries it off the table — fled', !vic.alive && vic.fled, 'at ' + vic.x.toFixed(1) + ',' + vic.y.toFixed(1));
+})();
+
 console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6 (p. 147)');
 (function () {
   function trial(mod) {

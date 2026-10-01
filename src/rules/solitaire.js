@@ -429,19 +429,6 @@
 
   function owners(state) { return (state.solo && state.solo.owners) || [1]; }
 
-  /* Broken player units in the Evacuation flee towards the safe zone; in the
-     other scenarios they fall back away from the nearest enemy. */
-  function awayFromEnemy(state, u) {
-    var near = null, nd = Infinity;
-    state.units.forEach(function (e) {
-      if (!onTable(e) || e.side === u.side) return;
-      var d = dist(e.x, e.y, u.x, u.y);
-      if (d < nd) { nd = d; near = e; }
-    });
-    if (!near) return null;
-    return { x: u.x + (u.x - near.x) * 3, y: u.y + (u.y - near.y) * 3 };
-  }
-
   // the parts every solitaire scenario shares
   function base(o) {
     var s = {
@@ -457,7 +444,10 @@
         return [];
       },
       behaviour: function () { return { mod: 0, why: '' }; },
-      fallTo: function (state, u) { return u.side === 'A' ? awayFromEnemy(state, u) : null; },
+      /* Broken units flee as in any battle (p. 34): away from the closest enemy,
+         and off the table if that is where the flight takes them. The Evacuation
+         and Protecting the VIP say otherwise for their own units. */
+      fallTo: function () { return null; },
       hint: ''
     };
     for (var k in o) s[k] = o[k];
@@ -611,14 +601,20 @@
     mustTarget: function (state, u) {
       return state.units.filter(function (v) { return v.vip && v.alive; })[0] || null;
     },
+    /* "The VIP unit cannot move further than 6" from the evacuation point (even
+       when Broken), and other player's units cannot voluntarily move more than
+       12" away" (p. 151): a Broken unit's flight is not voluntary, so only the
+       VIP is held to its ring then. */
     moveOK: function (state, u, c) {
       if (u.side !== 'A') return true;
+      if (!u.vip && R.status(u) === 'broken') return true;
       var e = state.sc.evac;
       return dist(c.x, c.y, e.x, e.y) <= (u.vip ? 6 : 12);
     },
+    // a Broken VIP flees away from the enemy like anyone else, inside its 6"; the rest flee as normal
     fallTo: function (state, u) {
-      if (u.side !== 'A') return null;
-      return { x: state.sc.evac.x, y: state.sc.evac.y, limit: u.vip ? 6 : 12 };
+      if (u.side !== 'A' || !u.vip) return null;
+      return { x: state.sc.evac.x, y: state.sc.evac.y, limit: 6, away: true };
     },
     /* "If the VIP unit is destroyed, the game automatically ends and the
        player is defeated" (p. 151) — then and there, not at the End phase. */

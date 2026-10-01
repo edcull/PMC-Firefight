@@ -17,11 +17,11 @@
     // The rally phase is walked unit by unit: roll, show the card, wait for Continue.
     /* The start of the Rally phase (p. 34): every Broken unit on the table flees
        Movement + 2" away from the closest enemy, paying for terrain as usual and
-       keeping away from the enemy as long as it can. One that can run off the
-       table does, and is gone — fled. Only then do the rally rolls come.
-       A solitaire game has no "own lines" either way: its scenarios may send a
-       broken unit somewhere instead — to the safe zone in the Evacuation, back
-       towards the evacuation point in Protecting the VIP. */
+       keeping away from the enemy as long as it can. One whose flight carries it
+       off the table is gone — fled. Only then do the rally rolls come.
+       A solitaire scenario may say otherwise: in the Evacuation broken units make
+       for the safe zone, and in Protecting the VIP the VIP flees inside its 6"
+       ring round the evacuation point. */
     /* How far a unit at c has still to go, straight on away from the enemy at f,
        for every model to be past the edge that way. Fleeing is away from the
        enemy first (p. 34); the table edge is only where that flight may end. */
@@ -50,12 +50,12 @@
         var allow = u.move + 2;
         var to = E.state.solo && E.state.scen.fallTo ? E.state.scen.fallTo(E.state, u) : null;
         var foe = nearestEnemy(u);
-        if (!to && !foe) return;                                   // no one to run from
+        if (!foe && (!to || to.away)) return;                     // no one to run from
         if (to && to.flee === undefined && to.limit == null && R.inches(u.x, u.y, to.x, to.y) < 0.5) return;
         var was = { x: u.x, y: u.y };
         if (u.bld) {
           // out of a building the old way: through the far wall and straight on
-          var away = to ? { x: u.x - (to.x - u.x), y: u.y - (to.y - u.y) } : foe.unit;
+          var away = to && !to.away ? { x: u.x - (to.x - u.x), y: u.y - (to.y - u.y) } : foe.unit;
           if (R.fallBack(E.state, u, away, allow)) {
             animateMove(u, [was, { x: u.x, y: u.y }]);
             // and if what it has left of its flight takes it past the edge, it is gone
@@ -95,7 +95,8 @@
           var v;
           if (to) {
             if (to.limit != null && R.inches(c.x, c.y, to.x, to.y) > to.limit) return;
-            v = -R.inches(c.x, c.y, to.x, to.y);
+            // held to a ring (the VIP) but fleeing the enemy inside it, or making for a place (the safe zone)
+            v = to.away ? closest(c).d : -R.inches(c.x, c.y, to.x, to.y);
           } else v = closest(c).d;
           if (v > bv + 1e-6) { bv = v; best = c; }
         });
@@ -483,7 +484,7 @@
 
     return {
       rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, regroupCard: regroupCard, regroupFx: regroupFx,
-      objDist: objDist, objReach: objReach, scoreObjectives: scoreObjectives,
+      objDist: objDist, objReach: objReach, fleeBroken: fleeBroken, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };

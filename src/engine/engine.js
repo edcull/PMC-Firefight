@@ -2120,6 +2120,8 @@
         // how much the AI likes a spot, for a behaviour (the tests ask)
         scoreSpot: function (u, c, goal, behaviour) { return K.scoreSpot(u, c, goal, behaviour); },
         // one AI unit's activation, as runAI does it (the tests force a behaviour roll)
+        // the Rally phase's flight on its own, for the tests
+        fleeBroken: function () { K.fleeBroken(); },
         aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
