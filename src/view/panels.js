@@ -933,7 +933,10 @@
       }
       if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (B.state.swapAsk.side === me || B.state.swapStage)) h += swapCard();
       // auto-deploy scrolls with the order of battle; only the way on, once there is one, keeps the foot
-      h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button></div>';
+      // an Invasion attacker has nothing to put down: it lands in turn 1, so there is nothing to auto-deploy
+      var landsLater = B.state.scen.id === 'invasion' && B.state.sc && B.state.sc.attacker === me;
+      if (landsLater) h += '<p class="hint">Nothing to place: once the battle begins you nominate three landing zones and your first wave comes down into them. Choose which units go in which wave with the button above.</p>';
+      else h += '<div class="acts"><button class="act" data-act="autodeploy"><span>Auto-deploy the rest</span></button></div>';
       /* Begin the battle: offered once everything is down. Where the scenario
          wants units held back (or split into waves) and the player has not yet
          chosen, it is there but greyed, and pressing it says why. Hulls going
@@ -1194,13 +1197,14 @@
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });
-      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin], [data-swapundo]').forEach(function (b) {
+      host.querySelectorAll('[data-act], [data-load], [data-unload], [data-holdback], [data-insertion], [data-rpick], [data-swappick], [data-swapin], [data-swapundo], [data-arrivepick]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-act');
           if (SFX) SFX.click();
           if (b.hasAttribute('data-swappick')) { send({ k: 'swappick', id: b.getAttribute('data-swappick') }); return; }
           if (b.hasAttribute('data-swapin')) { send({ k: 'swapin', id: b.getAttribute('data-swapin') }); return; }
           if (b.hasAttribute('data-swapundo')) { send({ k: 'swapundo', id: b.getAttribute('data-swapundo') }); return; }
+          if (b.hasAttribute('data-arrivepick')) { send({ k: 'arrivepick', id: b.getAttribute('data-arrivepick') }); return; }
           if (b.hasAttribute('data-holdback')) { send({ k: 'holdback', id: b.getAttribute('data-holdback') }); return; }
           if (b.hasAttribute('data-insertion')) { send({ k: 'insertion', id: b.getAttribute('data-insertion') }); return; }
           if (b.hasAttribute('data-rpick')) { send({ k: 'rpick', id: b.getAttribute('data-rpick') }); return; }

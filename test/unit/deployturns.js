@@ -62,6 +62,59 @@ console.log('\nInvasion: the defender first, while the attacker sorts its waves'
   ok('the attacker, with nothing to put down, may move a unit between its waves meanwhile', !!w && r.ok, r.why);
 })();
 
+console.log('\nInvasion: the first wave may come down in any of its three landing zones');
+(function () {
+  const e = game('invasion', 'A');
+  ['A', 'B'].forEach(s => { e.intent(s, { k: 'autosplit' }); e.intent(s, { k: 'autodeploy' }); });
+  e.intent(e.query.placingSide() || 'A', { k: 'start' });
+  const st = e.state();
+  // the zones are nominated, then the first unit of the wave is asked where it lands
+  for (let k = 0; k < 20 && !(e.sel().insertion && e.sel().insertion.kind === 'arrive'); k++) {
+    const ins = e.sel().insertion;
+    if (!ins) break;
+    // nominate zones well apart: the corners of the open middle
+    const spot = ins.spots[[0, Math.floor(ins.spots.length / 2), ins.spots.length - 1][k % 3]];
+    e.intent('A', { k: 'insert', x: spot.x, y: spot.y });
+  }
+  const ins = e.sel().insertion, u = ins && ins.unit;
+  ok('the first wave is asked where to land', !!u && u.side === 'A' && st.objectives.length === 3, u && u.side);
+  // a defender standing by two of the zones (as the first unit down rechecks who holds them)
+  st.objectives.forEach((o, i) => { if (i) o.owner = 'B'; });
+  const near = (z) => e.query.arrivalSpots(u).some(p => Math.hypot(p.x - z.x, p.y - z.y) <= 4);
+  ok('...and each of the three zones is still open to it', st.objectives.every(near), st.objectives.map(near).join(','));
+})();
+
+console.log('\nInvasion: no Battlefield Insertion; turrets dig in first; hulls land unshaken');
+(function () {
+  const e = Engine.create();
+  e.start({
+    tier: 3, pl: 1, scenario: 'invasion', mode: 'hotseat', planet: 'barren', attacker: 'A',
+    armyA: ['cmd3', 'regular', 'lapc', 'xdturret2', 'veterans', 'regular'],
+    armyB: ['xalpha3', 'xeps3', 'xeps3', 'xdturret2', 'xtturret2', 'xsturret3'], factionB: 'xeno',
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
+  });
+  const st = e.state();
+  const turretsB = st.units.filter(u => u.side === 'B' && R.has(u, 'Turret'));
+  ok('the defender\'s automatic split puts its turrets on the table first', e.intent('B', { k: 'autosplit' }).ok &&
+    turretsB.filter(u => !u.reserve).length === Math.min(turretsB.length, st.units.filter(u => u.side === 'B' && !u.reserve).length),
+    turretsB.map(u => u.code + (u.reserve ? ':held' : ':down')).join(' '));
+  ok('neither side may hold a unit for Battlefield Insertion', ['A', 'B'].every(s => !e.intent(s, { k: 'insertion', id: st.units.find(u => u.side === s && R.has(u, 'Turret')).id }).ok) &&
+    st.units.every(u => !u.insert));
+  e.intent('B', { k: 'autodeploy' });
+  e.intent('A', { k: 'autosplit' });
+  e.intent(e.query.placingSide() || 'A', { k: 'start' });
+  for (let k = 0; k < 40 && e.sel().insertion; k++) {
+    const ins = e.sel().insertion, spot = ins.spots[[0, Math.floor(ins.spots.length / 2), ins.spots.length - 1][k % 3]];
+    e.intent(ins.by || ins.unit.side, { k: 'insert', x: spot.x, y: spot.y });
+    for (let f = 0; f < 5 && st.faceAsk; f++) e.intent(st.faceAsk.side, { k: 'vfaceall' });
+  }
+  const landed = st.units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard);
+  const hulls = landed.filter(u => R.isMachine(u)), men = landed.filter(u => !R.isMachine(u));
+  ok('the first wave is down, hulls and turrets among it or in the second wave', landed.length > 0, landed.map(u => u.code).join(' '));
+  ok('...no hull or turret takes Suppression for the landing', hulls.every(u => !st.log.some(l => l.text.indexOf(u.label + ' takes') === 0 && /coming down/.test(l.text))));
+  ok('...every squad does (D3)', men.length > 0 && men.every(u => st.log.some(l => l.text.indexOf(u.label + ' takes') === 0 && /coming down/.test(l.text))));
+})();
+
 console.log('\nMeeting engagement: nobody is placed before the battle; both enter in turn 1');
 (function () {
   const e = game('meeting');
@@ -88,6 +141,30 @@ console.log('\nMeeting engagement: nobody is placed before the battle; both ente
   const other = st.initiative === 'A' ? 'B' : 'A';
   ok('...a unit each in turn, from the side with the initiative', seq === (st.initiative + other).repeat(6), seq + ' (initiative ' + st.initiative + ')');
   ok('...each within 4" of its own edge', st.units.every(u => u.side === 'A' ? u.x <= 4.6 : u.x >= 48 - 4.6), st.units.map(u => u.side + u.x.toFixed(1)).join(' '));
+})();
+
+console.log('\nChoosing which unit comes on in each turn');
+(function () {
+  const e = game('secure');
+  e.intent('B', { k: 'autodeploy' });            // Player 2's brought on for it
+  e.intent('A', { k: 'start' });
+  const st = e.state(), ins = () => e.sel().insertion;
+  const first = ins() && ins().unit;
+  const choices = (ins() && ins().choices) || [];
+  ok('Player 1 is offered every unit of its own still to come on', !!first && first.side === 'A' && choices.length === 5, choices.length + ' others');
+  const want = choices[choices.length - 1];
+  const r = e.intent('A', { k: 'arrivepick', id: want });
+  ok('...and may bring another on in this turn instead', r.ok && ins().unit.id === want && ins().choices.indexOf(first.id) >= 0, r.why);
+  ok('...not one of the enemy\'s', !e.intent('A', { k: 'arrivepick', id: st.units.find(u => u.side === 'B').id }).ok);
+  const order = [];
+  for (let k = 0; k < 40 && ins(); k++) {
+    const u = ins().unit; order.push(u.id);
+    const spots = e.query.arrivalSpots(u);
+    e.intent('A', { k: 'insert', x: spots[0].x, y: spots[0].y });
+    for (let f = 0; f < 5 && st.faceAsk; f++) e.intent(st.faceAsk.side, { k: 'vfaceall' });
+  }
+  ok('the one chosen came on first, and the one it replaced later', order[0] === want && order.indexOf(first.id) > 0, order.join(' '));
+  ok('...every unit is on, still a unit each in turn', st.units.every(u => u.x >= 0 || u.aboard));
 })();
 
 console.log('\nFind and secure: each side sorts its own halves, both at once');

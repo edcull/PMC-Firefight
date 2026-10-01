@@ -295,11 +295,32 @@
       var st = B.state, ins = ui.insertion, side = ins && ins.unit ? ins.unit.side : null;
       return !!st && st.turn === 1 && !!st.scen && (!!st.scen.entersTurn1 || (!!st.scen.attackerEnters && !!st.sc && side === st.sc.attacker));
     }
+    // an Invasion attacker's arrival: the first or second wave coming down from orbit (p. 53)
+    function landing() {
+      var st = B.state, ins = ui.insertion, u = ins && ins.unit;
+      return !!st && !!st.scen && st.scen.id === 'invasion' && !!st.sc && !!u && u.side === st.sc.attacker;
+    }
     function insertionMine() {
       var ins = ui.insertion;
       if (!ins) return false;
       var by = ins.by || (ins.unit ? ins.unit.side : 'A');
       return !B.watching && B.seats.indexOf(by) >= 0;
+    }
+    /* The side's units still to come on this phase: the one asked about first, and
+       any other tapped to come on in this turn instead. */
+    function arrivalChoices(ins) {
+      var others = (ins.choices || []).map(function (id) { return byId(id); }).filter(function (x) { return x && x.reserve; });
+      if (!others.length) return '';
+      var row = function (x, now) {
+        var aboard = (x.cargo || []).length ? ' \u00b7 ' + x.cargo.length + ' aboard' : '';
+        // (the one coming on is marked, not a button to press)
+        var tag = now ? 'div' : 'button';
+        return '<' + tag + ' class="dpr' + (now ? ' dpr-now dpr-view' : '') + '"' + (now ? '' : ' data-arrivepick="' + x.id + '"') + '>' +
+          '<span class="dpr-mark">' + (now ? '\u25b8' : '\u00b7') + '</span><span class="dpr-name">' + esc(x.name) + '</span>' +
+          '<span class="dpr-note">' + (now ? 'coming on now' : 'tap to bring on instead') + aboard + '</span></' + tag + '>';
+      };
+      return '<div class="dplist"><div class="dphead">Still to come on \u2014 ' + (others.length + 1) + '</div>' +
+        row(ins.unit, true) + others.map(function (x) { return row(x, false); }).join('') + '</div>';
     }
     function insertionCard() {
       var ins = ui.insertion;
@@ -315,7 +336,7 @@
               ' may move its arrival point up to <b>' + ins.drift + '″</b>.'
             : esc(sideName(byS)) + (ins.kind === 'arrive' ? ' is bringing ' : ' is placing ') + (u ? '<b>' + esc(u.name) + '</b>' : 'a landing zone') + (ins.kind === 'arrive' ? ' on' : '') + '.') + '</p>' +
           '<p class="hint">Waiting for ' + esc(sideName(byS)) + '. ' + (ins.kind === 'arrive'
-            ? (entryTurn() ? 'The companies come on a unit each in turn, from the side with the initiative (p. 30).' : 'Reserves, p. 30.')
+            ? (entryTurn() ? 'The companies come on a unit each in turn, from the side with the initiative (p. 30).' : landing() ? 'The invasion is landing (Invasion, p. 53).' : 'Reserves, p. 30.')
             : 'Battlefield Insertion, p. 56.') + '</p></div>';
       }
       if (ins.kind === 'ilz') {
@@ -346,7 +367,6 @@
         return '<div class="card"><h2>Semper Fidelis</h2>' +
           '<p class="sub"><b>' + esc(sfName(u)) + '</b> may come on now without waiting for its roll. Tap the shaded ground ' +
           'to bring it on — ' + esc(arrivalWhere(u)) + ' — or keep it back for a later turn.</p>' +
-          '<p class="hint">' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p>' +
           '<div class="acts"><button class="act" data-act="holdarrive">' +
           '<span>Keep it in reserve</span><small>Call it in on a later turn</small></button></div></div>';
       }
@@ -354,20 +374,25 @@
         return '<div class="card"><h2>Entering the table</h2>' +
           '<p class="sub"><b>' + esc(u.name) + '</b> comes on now' + ((u.cargo || []).length ? ', with ' + u.cargo.map(function (c) { return esc(c.name); }).join(' and ') + ' aboard' : '') +
           '. Tap the shaded ground: within 4″ of your own table edge, and 12″ clear of the enemy where the ground allows.</p>' +
-          '<p class="hint">A unit each in turn, from the side with the initiative. ' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') + ' it can come on.</p></div>';
+          '<p class="hint">A unit each in turn, from the side with the initiative.</p>' +
+          arrivalChoices(ins) + '</div>';
+      }
+      if (ins.kind === 'arrive' && landing()) {
+        return '<div class="card"><h2>' + (B.state.turn === 1 ? 'First wave landing' : 'Second wave landing') + '</h2>' +
+          '<p class="sub"><b>' + esc(u.name) + '</b> comes down now. Tap the shaded ground — ' + esc(arrivalWhere(u)) + '.</p>' +
+          '<p class="hint">' + (u.cls === 'vehicle' || u.cls === 'aircraft' ? 'A vehicle takes no SP for the landing' : 'It takes D3 SP as it lands') + '. Invasion, p. 53.</p>' +
+          arrivalChoices(ins) + '</div>';
       }
       if (ins.kind === 'arrive') {
         return '<div class="card"><h2>Reinforcements</h2>' +
           '<p class="sub"><b>' + esc(u.name) + '</b> is arriving this turn. Tap the shaded ground ' +
           'to choose where it comes on — ' + esc(arrivalWhere(u)) + '.</p>' +
-          '<p class="hint">' + ins.spots.length + ' place' + (ins.spots.length === 1 ? '' : 's') +
-          ' it can come on.</p></div>';
+          arrivalChoices(ins) + '</div>';
       }
       return '<div class="card"><h2>Battlefield Insertion</h2>' +
         '<p class="sub"><b>' + esc(u.name) + '</b> is coming in. Tap anywhere in the shaded ground: ' +
         'at least 12" from every objective and 4" in from the table edge. On a D6 of 4+ your opponent ' +
         'will shove the arrival point up to 2D6".</p>' +
-        '<p class="hint">' + ins.spots.length + ' legal drop point' + (ins.spots.length === 1 ? '' : 's') + ' on the table.</p>' +
         '<div class="acts"><button class="act" data-act="holdinsert">' +
         '<span>Keep it in reserve</span><small>Try again next turn</small></button></div></div>';
     }

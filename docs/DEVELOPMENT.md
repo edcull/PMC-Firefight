@@ -274,6 +274,7 @@ demolition.js      bringing terrain and the Demolish objective down
 bldflow.js         going into buildings, holding them and coming out
 collars.js         penal collars (Expendable)
 regroup.js         the Regroup card, and the regroup effect in the action and the Rally
+tribesight.js      the eye button: out of sight darkened (a tribe's 12", a unit's 36")
 turnshow.js        whose go it is, at a glance
 discard.js         throwing a skirmish away from the main menu
 resume.js          a battle outlives a refresh

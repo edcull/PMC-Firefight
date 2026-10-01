@@ -964,6 +964,78 @@
       return pts;
     }
 
+    /* Sight (the eye button). Everything out of sight is darkened and the
+       reach of each eye drawn as a circle on the table:
+       - playing the Xenotripods, every unbroken member's 12" of Limited Senses
+         (drones see as everyone else does, so are not among them), and each
+         enemy Mental Projection shows to the whole tribe ringed (p. 129);
+       - anyone else, the 36" a unit sees, from the unit selected.
+       A circle is the sight range from the unit's base edge to the target's,
+       so an enemy whose base reaches into the light is in range — terrain can
+       still block the line itself. Worked out again only when the table changes. */
+    var darkCanvas = null;
+    function drawSight(side, sel) {
+      var eyes, seen = [];
+      if (side) {
+        eyes = activeUnits(side).filter(function (o) {
+          return R.xenoSenses(o) && !R.campFlag(o, 'banished') && R.status(o) !== 'broken';
+        });
+        var key = side + ':' + B.state.turn + ':' + B.state.log.length + ':' + eyes.map(function (o) { return o.id + '@' + o.x.toFixed(1) + ',' + o.y.toFixed(1); }).join(';');
+        if (ui.sightKey !== key) {
+          ui.sightKey = key;
+          ui.sight = { eyes: eyes, seen: activeUnits().filter(function (e) { return e.side !== side && R.tribeSees(B.state, side, e); }) };
+        }
+        eyes = ui.sight.eyes; seen = ui.sight.seen;
+      } else {
+        if (!sel || !sel.alive || sel.x < 0 || sel.aboard) return;
+        eyes = [sel];
+        ui.sight = { eyes: eyes, seen: [] };
+      }
+      var cv = B.canvas, rgb = sideRGB(side || sel.side), z = cam.z;
+      if (!darkCanvas) darkCanvas = document.createElement('canvas');
+      if (darkCanvas.width !== cv.width || darkCanvas.height !== cv.height) { darkCanvas.width = cv.width; darkCanvas.height = cv.height; }
+      var g = darkCanvas.getContext('2d');
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, darkCanvas.width, darkCanvas.height);
+      g.setTransform(B.DPR, 0, 0, B.DPR, 0, 0);
+      // the table, darkened...
+      var corners = [hud(0, 0), hud(W, 0), hud(W, H), hud(0, H)];
+      g.beginPath();
+      corners.forEach(function (c, n) { if (n === 0) g.moveTo(c.x, c.y); else g.lineTo(c.x, c.y); });
+      g.closePath();
+      g.fillStyle = 'rgba(4,6,10,.55)';
+      g.fill();
+      // ...but for what is in sight
+      g.globalCompositeOperation = 'destination-out';
+      g.fillStyle = '#000';
+      function ring(c, o) {
+        var p = hud(o.x, o.y, liftOf(o.x, o.y)), r = R.sightRange(o) + UR;
+        c.beginPath();
+        c.ellipse(p.x, p.y, Math.SQRT2 * r * K * z, Math.SQRT2 * r * K * z / 2, 0, 0, Math.PI * 2);
+      }
+      eyes.forEach(function (o) { ring(g, o); g.fill(); });
+      g.globalCompositeOperation = 'source-over';
+      B.ctx.save();
+      B.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      B.ctx.drawImage(darkCanvas, 0, 0);
+      B.ctx.restore();
+      // the reach of each eye, on the table only
+      B.ctx.save();
+      B.ctx.beginPath();
+      corners.forEach(function (c, n) { if (n === 0) B.ctx.moveTo(c.x, c.y); else B.ctx.lineTo(c.x, c.y); });
+      B.ctx.closePath(); B.ctx.clip();
+      B.ctx.setLineDash([5, 4]);
+      B.ctx.lineWidth = 1.4; B.ctx.strokeStyle = 'rgba(' + rgb + ',.75)';
+      eyes.forEach(function (o) { ring(B.ctx, o); B.ctx.stroke(); });
+      B.ctx.setLineDash([]);
+      // the enemy the whole tribe can see
+      B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(' + rgb + ',.95)';
+      seen.forEach(function (e) {
+        isoRing(e.x, e.y, UR * 1.6, liftOf(e.x, e.y) + ISO.flyLift(e)); B.ctx.stroke();
+      });
+      B.ctx.restore();
+    }
+
     function drawHUD() {
       var i;
       // the AI's own choices are not drawn (see drawBoard)
@@ -1122,6 +1194,8 @@
         isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); B.ctx.stroke();
         B.ctx.setLineDash([]);
       });
+
+      if (B.sightOn && B.sightOn()) drawSight(B.sightSide(), ui.selected && !aiSel && B.seats.indexOf(ui.selected.side) >= 0 ? ui.selected : null);
 
       var u = ui.selected;
       if (u && u.alive && !aiSel) {

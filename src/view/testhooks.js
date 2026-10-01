@@ -251,6 +251,11 @@
       };
     };
     window.__terrainAct = function (act, arg) { terrainAct(act, arg); };
+    // the sight as last drawn (the eye button): how many eyes, how far each sees, how many enemies ringed
+    window.__tribeSight = function () {
+      if (!ui.sight) return null;
+      return { eyes: ui.sight.eyes.length, seen: ui.sight.seen.length, reach: ui.sight.eyes.map(function (o) { return R.sightRange(o); }) };
+    };
     window.__uiMode = function () { return { mode: ui.mode, sections: (ui.sections || []).length, sel: ui.selected ? ui.selected.id : null, moves: ui.moves.length }; };
     window.__resOpen = function () { return ui.resOpen ? (ui.currentRes ? ui.currentRes.kind + ':' + ui.currentRes.title : 'open') + ' q' + resQueue.length : false; };
     window.__insertionLegal = function (p) { return insertionLegal(p) && !R.unitNear(B.state, p.x, p.y, ui.insertion ? ui.insertion.unit : null, 1); };

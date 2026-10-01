@@ -194,7 +194,9 @@
             by: ui.insertion.by || null, drift: ui.insertion.drift || null, die: ui.insertion.die || null,
             kind: ui.insertion.kind,
             spots: ui.insertion.spots,
-            n: ui.insertion.n || null, chosen: ui.insertion.chosen || null
+            n: ui.insertion.n || null, chosen: ui.insertion.chosen || null,
+            // the side's other units still to come on this phase, any of which may come on instead
+            choices: ui.insertion.choices ? ui.insertion.choices.slice() : null
           } : null,
           // which reserves come on this turn, being chosen
           reservePick: ui.reservePick ? {
@@ -258,7 +260,8 @@
         ui.insertion = us.insertion ? {
           unit: by[us.insertion.unit] || null, owner: us.insertion.owner,
           by: us.insertion.by || null, drift: us.insertion.drift || null, die: us.insertion.die || null,
-          kind: us.insertion.kind, spots: us.insertion.spots, done: null
+          kind: us.insertion.kind, spots: us.insertion.spots, done: null,
+          choices: us.insertion.choices || null
         } : null;
         return E.state;
       }

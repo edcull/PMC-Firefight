@@ -219,7 +219,26 @@
       });
       /* "Apply the Alternate activation rule" to the Reserve phase (p. 26): one of
          the first side's, one of the other's, and so on, until both are done. */
-      if (inTurn) {
+      /* Hero of the People (H2, a Rebel Path): "in a scenario with alternating
+         deployment the enemy sets up half their force before a single insurgent is
+         placed" — turn 1's entry where both companies come on in turn (pp. 50-52).
+         Then the two alternate, the revolt first. (Both sides with it: neither gains.) */
+      var heroes = E.state.turn === 1 && E.state.scen.entersTurn1 && inTurn
+        ? ['A', 'B'].filter(function (sd) { return docsOf(sd).indexOf('H2') >= 0; }) : [];
+      if (heroes.length === 1) {
+        var reb = heroes[0], foeS = other(reb), fs = bySide[foeS], half = Math.ceil(fs.length / 2);
+        fs.slice(0, half).forEach(function (u) { ask.push(u); });
+        var restF = fs.slice(half), restR = bySide[reb];
+        for (var h = 0; h < Math.max(restR.length, restF.length); h++) {
+          if (restR[h]) ask.push(restR[h]);
+          if (restF[h]) ask.push(restF[h]);
+        }
+        if (half) {
+          var hl = 'Hero of the People — the locals have talked: ' + sideName(foeS) + ' brings on half its force (' + half +
+            ') before the first of ' + sideName(reb) + '\u2019s is placed.';
+          logLine('note', hl); log.push(hl);
+        }
+      } else if (inTurn) {
         for (var k = 0; k < Math.max(bySide[sides[0]].length, bySide[sides[1]].length); k++) {
           if (bySide[sides[0]][k]) ask.push(bySide[sides[0]][k]);
           if (bySide[sides[1]][k]) ask.push(bySide[sides[1]][k]);
@@ -271,7 +290,20 @@
           // (turn 1's entry, for a player who asked to have their units brought on for them)
           var auto = E.state.turn === 1 && E.state.autoEnter && E.state.autoEnter[u.side];
           if (isAI(u.side) || E.state.scen.autoArrive || auto) { placeAuto(u); continue; }
-          askArrival(u, log, next);
+          /* Which of the side's units comes on in its turn is the player's to say: any
+             still to come this phase may take this one's place, and this one its. */
+          var mineLeft = function (side) {
+            return ask.slice(i).filter(function (x) { return x.side === side && x.alive && x.reserve && !x.sfOffer; });
+          };
+          var swap = function (id) {
+            var cur = ask[i - 1];
+            for (var j = i; j < ask.length; j++) {
+              var w = ask[j];
+              if (w.id === id && w.side === cur.side && w.alive && w.reserve && !w.sfOffer) { ask[j] = cur; ask[i - 1] = w; return w; }
+            }
+            return null;
+          };
+          askArrival(u, log, next, u.sfOffer ? null : { left: mineLeft, swap: swap });
           return;
         }
         report();
@@ -284,9 +316,7 @@
       if (E.state.scen.arrivalPoint) return E.state.scen.arrivalPoint(E.state, u);
       var sc = E.state.sc;
       if (E.state.scen.id === 'invasion' && u.side === sc.attacker) {
-        // into a zone the attacker holds, or a neutral one
-        var zones = E.state.objectives.filter(function (o) { return o.owner !== sc.defender; });
-        if (!zones.length) zones = E.state.objectives.slice();
+        var zones = landingZones(u);
         for (var t = 0; t < 400; t++) {
           var z = zones[Math.floor(Math.random() * zones.length)];
           var a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 4;
@@ -355,6 +385,17 @@
       }
       return [entry[u.entryEdge]];
     }
+    /* The landing zones an Invasion attacker may come down in. The first wave
+       "is dropped on one, two or three landing zones (attacker's choice)" (p. 53),
+       so any of the three it nominated, whoever stands near them — a zone does not
+       close because the first unit down stirred up who holds it. Later units come
+       down in a zone the attacker holds or one still neutral. */
+    function landingZones(u) {
+      var sc = E.state.sc, all = E.state.objectives.slice();
+      if (u.wave === 1 && E.state.turn <= 1) return all;
+      var zones = all.filter(function (o) { return o.owner !== sc.defender; });
+      return zones.length ? zones : all;
+    }
     function arrivalLegal(u, p) {
       if (p.x < UR || p.y < UR || p.x > W - UR || p.y > H - UR) return false;
       if (E.state.scen.arrivalLegal) return E.state.scen.arrivalLegal(E.state, u, p) && !R.unitNear(E.state, p.x, p.y, u, 1);
@@ -363,8 +404,7 @@
       var sc = E.state.sc;
       // Invasion: the attacker comes down in a zone the defender does not hold
       if (E.state.scen.id === 'invasion' && sc && u.side === sc.attacker) {
-        var zones = E.state.objectives.filter(function (o) { return o.owner !== sc.defender; });
-        if (!zones.length) zones = E.state.objectives;
+        var zones = landingZones(u);
         return zones.some(function (z) { return R.inches(p.x, p.y, z.x, z.y) <= 4; });
       }
       // everyone else walks on from their own edge, or the corners they own
@@ -452,7 +492,7 @@
     /* A scenario reinforcement: the scenario says it is coming on this turn, so
        there is no holding it back — but where inside the legal ground it arrives
        is the player's call, not a dice roll. */
-    function askArrival(u, log, done) {
+    function askArrival(u, log, done, order, again) {
       var spots = arrivalSpots(u);
       if (!spots.length) {
         // no legal ground: fall back to the old random point rather than stalling
@@ -462,9 +502,12 @@
         return;
       }
       ui.insertion = { unit: u, done: done, spots: spots, kind: 'arrive', log: log };
+      // the others of this side still to come this phase, any of which may come on instead
+      if (order) { ui.insertion.order = order; ui.insertion.choices = order.left(u.side).map(function (x) { return x.id; }); }
       ui.selected = null; ui.mode = 'insert'; ui.targets = []; ui.moves = []; ui.terrain = [];
       // a unit not yet on the table has nowhere to be looked at: the ground it may come on is shown instead
-      if (u.x < 0 && E.lookAtDeployment) E.lookAtDeployment(u.side); else focusUnit(u, false, true);
+      // (asked again for another unit of the side's choosing: the camera stays where the player is looking)
+      if (again) { /* as it was */ } else if (u.x < 0 && E.lookAtDeployment) E.lookAtDeployment(u.side); else focusUnit(u, false, true);
       setHint(null, u.name + ' is arriving: tap the shaded ground to choose where it comes on.');
       revealConsole();
       render();
@@ -481,6 +524,17 @@
       if (note) logLine('note', note.text);
       samCheck(u);
       return line;
+    }
+
+    /* Another of the side's units to come on in this turn instead: it takes this
+       turn, and the one asked about takes its place later in the phase. */
+    function pickArrival(id) {
+      var ins = ui.insertion;
+      if (!ins || ins.kind !== 'arrive' || !ins.order || id === ins.unit.id) return 'nothing to choose';
+      var w = ins.order.swap(id);
+      if (!w) return 'that unit is not waiting to come on';
+      askArrival(w, ins.log, ins.done, ins.order, true);
+      return null;
     }
 
     // the player would rather keep it back for a turn (p. 56: coming in is optional)
@@ -524,6 +578,7 @@
     function arrivalWhere(u) {
       var sc = E.state.sc;
       if (E.state.scen.id === 'invasion' && sc && u.side === sc.attacker) {
+        if (u.wave === 1 && E.state.turn <= 1) return 'within 4" of any of your three landing zones';
         return 'within 4" of a landing zone you hold or that is still neutral';
       }
       var entry = entryFor(u);
@@ -635,7 +690,7 @@
       reservePhase: reservePhase, arrivalLegal: arrivalLegal, arrivalSpots: arrivalSpots,
       insertionSpots: insertionSpots, holdInsertion: holdInsertion, semperFidelis: semperFidelis,
       sfName: sfName, holdArrival: holdArrival, arrivalWhere: arrivalWhere, snapToSpot: snapToSpot,
-      placeInsertion: placeInsertion
+      placeInsertion: placeInsertion, pickArrival: pickArrival
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineArrivals;

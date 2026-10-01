@@ -197,6 +197,42 @@
         : on ? 'Following the other side\u2019s moves — tap to keep the camera where you leave it'
           : 'The camera stays where you leave it — tap to follow the other side\u2019s moves';
     }
+    /* Sight: an eye button by the zoom darkens what is out of sight. Playing
+       the Xenotripods it shows the whole tribe's 12" of Limited Senses (and the
+       enemy Mental Projection shows them, p. 129); anyone else, the 36" the
+       selected unit sees. It is kept like Follow. */
+    var SIGHT_KEY = 'pmc.tribeSight', sight = false;
+    try { sight = localStorage.getItem(SIGHT_KEY) === 'on'; } catch (e) { /* no storage: off */ }
+    function ourSeats() {
+      if (!B.state || !B.state.units || !B.state.cfg) return [];
+      return (B.seats && B.seats.length ? B.seats : ['A', 'B']).filter(function (sd) { return (B.state.cfg.aiSides || []).indexOf(sd) < 0; });
+    }
+    // the Xenotripod side whose sight is shown: the one acting if it is ours, else the first of ours with them
+    function sightSide() {
+      var seats = ourSeats();
+      if (seats.indexOf(B.state && B.state.activeSide) > 0) seats = [B.state.activeSide].concat(seats);
+      for (var i = 0; i < seats.length; i++) {
+        var sd = seats[i];
+        if (B.state.units.some(function (u) { return u.side === sd && u.alive && R.xenoSenses(u); })) return sd;
+      }
+      return null;
+    }
+    function sightOn() { return sight && ourSeats().length > 0; }
+    function showSight() {
+      var b = el('sight-toggle');
+      if (!b) return;
+      b.hidden = !ourSeats().length || !B.state || B.state.phase === 'terrain';
+      b.classList.toggle('on', sight);
+      b.setAttribute('aria-pressed', sight ? 'true' : 'false');
+      var what = sightSide() ? 'what your Xenotripods can see (12")' : 'what the selected unit can see (36")';
+      b.title = sight ? 'Showing ' + what + ' — tap to hide it' : 'Sight: show ' + what;
+    }
+    function setSight(on) {
+      sight = !!on;
+      try { localStorage.setItem(SIGHT_KEY, sight ? 'on' : 'off'); } catch (e) { /* not kept */ }
+      showSight();
+      drawBoard();
+    }
     function setFollow(on) {
       if (isDemo()) {
         demoFollow = !!on;
@@ -498,6 +534,7 @@
       ui.bannerTimer = setTimeout(function () { tb.classList.remove('show'); tb.hidden = true; }, 2600);
     }
     function drawHeader() {
+      showSight();
       // two players at one screen: the phone's one-row header shows whose turn it is too
       var hdrEl = document.querySelector('header');
       if (hdrEl) hdrEl.classList.toggle('two-seat', B.state.cfg.mode === 'hotseat' || !!(B.state.solo && B.state.solo.coop));
@@ -533,7 +570,9 @@
         else {
           // nothing to place at this screen: its sides enter in turn 1 (everyone, or an attacker whose defender sets up)
           var entryHere = B.Q && B.Q.entering && (B.Q.entering() || (!deployNext() && (B.seats || ['A', 'B']).some(function (sd) { return B.Q.entering(sd); })));
-          act.textContent = entryHere ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A';
+          // an Invasion attacker places nothing: it lands in turn 1 once the defender is down
+          var landHere = B.state.scen.id === 'invasion' && B.state.sc && (B.seats || ['A', 'B']).indexOf(B.state.sc.attacker) >= 0 && !deployNext();
+          act.textContent = landHere ? 'Prepare to land' : entryHere ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A';
         }
       } else if (ui.insertion) {
         /* The game is waiting for a place on the table and nothing else. That has
@@ -541,7 +580,7 @@
            that a phone can have scrolled past or hidden behind another tab. */
         var insBy = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
         act.textContent = B.seats && B.seats.indexOf(insBy) < 0 ? 'Waiting: ' + (insBy === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB)
-          : ui.insertion.kind === 'arrive' ? (B.state.turn === 1 && (B.state.scen.entersTurn1 || (B.state.scen.attackerEnters && B.state.sc && insBy === B.state.sc.attacker)) ? 'Bring a unit on' : 'Place your reinforcements')
+          : ui.insertion.kind === 'arrive' ? (B.state.turn === 1 && (B.state.scen.entersTurn1 || (B.state.scen.attackerEnters && B.state.sc && insBy === B.state.sc.attacker)) ? 'Bring a unit on' : B.state.scen.id === 'invasion' && B.state.sc && insBy === B.state.sc.attacker ? 'Land a unit' : 'Place your reinforcements')
           : ui.insertion.kind === 'shove' ? 'Shove the enemy drop'
             : ui.insertion.kind === 'ilz' ? 'Nominate landing zone ' + ui.insertion.n + ' of 3' : 'Pick a landing zone';
         act.className = 'pill pill-wait';
@@ -665,7 +704,7 @@
       focusUnit: focusUnit,
       foeColour: foeColour,
       handsOff: handsOff, camOff: camOff,
-      followOn: followOn, setFollow: setFollow, showFollow: showFollow, fitShot: fitShot, unfitShot: unfitShot, startDemoCam: startDemoCam,
+      followOn: followOn, setFollow: setFollow, showFollow: showFollow, sightOn: sightOn, sightSide: sightSide, setSight: setSight, showSight: showSight, fitShot: fitShot, unfitShot: unfitShot, startDemoCam: startDemoCam,
       hud: hud,
       labelIcons: labelIcons,
       nearestZoom: nearestZoom,
