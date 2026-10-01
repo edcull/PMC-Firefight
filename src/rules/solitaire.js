@@ -649,6 +649,12 @@
       scatterBarricades(state, n);
     },
     deploy: function (state) {
+      /* "The OpFor Command Units are placed in defensive positions… cannot be Broken…
+         never Move nor Advance", and "the player must destroy all OpFor Command
+         Units" (p. 152): the one it is given, and any the pool rolled up besides. */
+      state.units.forEach(function (u) {
+        if (u.side === 'B' && (u.command || R.has(u, 'Command Unit'))) u.soloLeader = true;
+      });
       var cus = state.units.filter(function (u) { return u.side === 'B' && u.soloLeader; });
       var placed = [];
       cus.forEach(function (u) {

@@ -59,6 +59,10 @@
          not there at all; neither is a target, however close the numbers say. */
       if (t.reserve || t.aboard || t.x < 0 || t.y < 0) return false;
       if (!opts.aux) {
+        /* "Units with Cumbersome Weapons may not advance" (p. 57): nothing fires one
+           on the move, whoever is choosing — the player's bar offers no Advance, and
+           this keeps every other path (the AI's move-then-shoot) to the same rule. */
+        if (mode === 'advance' && has(a, 'Cumbersome Weapon')) return false;
         // a main weapon set up for one kind of target cannot engage the other
         if (has(a, 'Specialisation (air)') && !isFlying(t)) return false;
         if (has(a, 'Specialisation (ground)') && isFlying(t)) return false;

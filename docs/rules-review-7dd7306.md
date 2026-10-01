@@ -217,7 +217,7 @@ wall:
 behind a high wall rolled an unmodified 9; the wall stayed up and no +1 was applied. The "Indirect Fire +
 Destructive always destroys if near" clause (l.1565) therefore works for low walls only.
 
-### M-10 · The AI advances with Cumbersome Weapons — *reproduced*
+### M-10 · The AI advances with Cumbersome Weapons — *reproduced* — **fixed**
 
 > l.1527: "Units with Cumbersome Weapons may not advance or assault."
 
@@ -255,7 +255,7 @@ turret answering a mark acts alone.
 
 **Reproduced:** a Beta designates a squad; one Defensive turret fires and the other is left unactivated.
 
-### M-14 · Solitaire: a Reasonably Neutral unit does not hold its position — *reproduced*
+### M-14 · Solitaire: a Reasonably Neutral unit does not hold its position — *reproduced* — **fixed**
 
 > l.4785–4790: "Unit holds its position, engaging the enemy… the OpFor unit will not leave cover to shoot at half
 > range."
@@ -269,7 +269,7 @@ turret answering a mark acts alone.
 The "+2 no enemy in range" modifier sends exactly these no-shot units into the Neutral band, so Neutral plays
 like Offensive.
 
-### M-15 · Solitaire Decapitation ignores Command Units in the OpFor pool — *reproduced*
+### M-15 · Solitaire Decapitation ignores Command Units in the OpFor pool — *reproduced* — **fixed**
 
 > l.4983: "To win, the player must destroy all OpFor Command Units." l.4991, l.5003: they are "placed in
 > defensive positions… cannot be Broken… never Move nor Advance".
@@ -621,6 +621,10 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | M-4 A beaten garrison ends about 5" from its building | **Fixed.** It leaves through the far wall and its base ends no more than 2" from the building: the 2" counts from the wall and is no longer added to a 4" exit. A Broken garrison fleeing in the Rally phase ends within its M+2" the same way. | `space.js` (`exitSpots`, `leaveAway`), `assault.js` (`fallBack`) |
 | M-5 Small buildings split into sections | **Fixed.** A building no longer than 5.5" on its longer side (the book's "approximately up to 4"x4"" small structure) stays a single block, so it holds one unit. Bigger buildings keep their wings, as the huge-building rule allows. The dice for the rest of the table are unchanged. The terrain snapshots were retaken. | `space.js` (`planBuilding`) |
 
+| M-10 The AI advances with Cumbersome Weapons | **Fixed.** `canShoot` refuses an Advance shot from a Cumbersome main weapon, so no path can take one. An AI squad carrying one takes a Move (M+2") instead. The fix also turned up a broader AI fault: every AI vehicle drove Movement +4" and then fired an Advance shot. Now an AI vehicle either Advances (Movement, then a shot) or Moves (Movement +4", no shot). | `shoot.js` (`canShoot`), `ai.js` (`aiRoll`, infantry move) |
+| M-14 Solitaire: Reasonably Neutral does not hold its position | **Fixed.** A Neutral OpFor unit holds its position and fires. It Advances only to a spot within its Movement with better cover than it has, and only if its best shot from there is at least as good as from where it stands, so it never leaves cover for a better shot. A Neutral vehicle holds and fires. | `ai.js` (`neutralHold`, the vehicle branch) |
+| M-15 Solitaire Decapitation ignores pool Command Units | **Fixed** by the book's plural, "the OpFor Command Units": every Command Unit the pool rolled becomes a leader alongside the scenario's own. It is placed in a defensive position, cannot be Broken, never moves, and must be destroyed to win. | `solitaire.js` (`s_decap.deploy`) |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`.
