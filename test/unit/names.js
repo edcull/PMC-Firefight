@@ -77,7 +77,9 @@ ok('...and the rest privates', rifles.men.slice(2).every((m) => m.rank === 'Priv
   ['xalpha5', 'Tribe-lord', 'Warrior', 'Warrior'],
   // the miners: a Supervisor at tier 2, a Foreman at 3-4, and their Miners
   ['rminers', 'Supervisor', 'Miner', 'Miner'], ['rfaceminers', 'Foreman', 'Miner', 'Miner'],
-  ['rharshminers', 'Foreman', 'Miner', 'Miner']].forEach(([key, lead, second, rest]) => {
+  ['rharshminers', 'Foreman', 'Miner', 'Miner'],
+  // armed civilians: an Agitator and Civilians
+  ['rciv', 'Agitator', 'Civilian', 'Civilian']].forEach(([key, lead, second, rest]) => {
   const u = unit(key);
   R.musterMen(u, null, {});
   ok(u.name + ' (tier ' + u.tier + '): a ' + lead + ', a ' + second + ' and ' + rest + 's',

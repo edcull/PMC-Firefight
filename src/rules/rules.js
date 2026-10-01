@@ -1734,7 +1734,9 @@
       return i === 0 ? 'Hunt-leader' : 'Warrior';
     }
     if (f === 'rebel') {
-      if (u.key === 'rciv' || u.soloCiv) return 'Civilian';
+      // armed civilians follow an Agitator; the civilians of a solitaire scenario are just civilians
+      if (u.key === 'rciv') return i === 0 ? 'Agitator' : 'Civilian';
+      if (u.soloCiv) return 'Civilian';
       if (u.command) return i === 0 ? REBEL_CHIEF[tier - 1] : 'Lieutenant';
       // the faithful by tier: a Preacher (1-2), an Elder (3-4), a Prophet and his Holy Warriors (5)
       if (g === 'Holy Warriors') {
