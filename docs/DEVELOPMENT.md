@@ -280,6 +280,7 @@ turnshow.js        whose go it is, at a glance
 discard.js         throwing a skirmish away from the main menu
 resume.js          a battle outlives a refresh
 netplay.js         two browsers at a real game server: both press Begin, whose turn, the camera following the opponent, a drop, abandoning
+subpath.js         the server behind a reverse proxy on a sub-path (/pmc/), as nginx serves it
 ```
 
 **What the table shows**

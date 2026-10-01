@@ -1436,7 +1436,8 @@
         // the card opens the lobby (menu.js)
       }
       if (mb && online && window.fetch) {
-        window.fetch('/health', { cache: 'no-store' })
+        // relative to the page, as the WebSocket is (net.js): the server may sit on a sub-path
+        window.fetch('health', { cache: 'no-store' })
           .then(function (r) { return r.ok ? r.json() : null; })
           .then(function (h) { if (h && h.ok === true && h.rooms != null) serverUp(); })
           .catch(function () { });

@@ -35,11 +35,14 @@
 
   /* The address of the server this page came from, as a WebSocket. A page
      opened from a file, or the single-file build, has none — that is what the
-     local transport is for. */
+     local transport is for. It is taken relative to the page, so a server
+     behind a reverse proxy on a sub-path (https://host/pmc/) is found at
+     wss://host/pmc/ws, as one at the root is at ws://host/ws. */
   function defaultURL() {
     try {
       if (!root.location || !/^https?:$/.test(root.location.protocol)) return null;
-      return (root.location.protocol === 'https:' ? 'wss://' : 'ws://') + root.location.host + '/ws';
+      var dir = String(root.location.pathname || '/').replace(/[^/]*$/, '');
+      return (root.location.protocol === 'https:' ? 'wss://' : 'ws://') + root.location.host + dir + 'ws';
     } catch (e) { return null; }
   }
 
