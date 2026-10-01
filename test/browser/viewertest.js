@@ -110,6 +110,29 @@ async function pickAndFire(p, key, ms) {
   ok('the unit\'s army is a pill under its name', army.name === 'Xenotripods', army.name);
   ok('...a tap opens the army\'s own rules', army.rules);
   ok('an aircraft with Firepower shows the Strafing Run among its rules', army.strafe);
+  // Fire! rolls a real shot at the target picked in the list, and the target shows what it left
+  const shot = await p.evaluate(async () => {
+    window.__viewer.pick('hmgteam');
+    await new Promise(r => setTimeout(r, 60));
+    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
+    const line = () => (document.getElementById('vtgtline') || {}).textContent || '';
+    const fresh = line();
+    let after = fresh;
+    // a shot can miss: fire until one hits (a dozen goes is plenty)
+    for (let i = 0; i < 12; i++) {
+      document.querySelector('[data-do="fire"]').click();
+      await new Promise(r => setTimeout(r, 1100));
+      after = line();
+      if (/[1-9]\d* hits?/.test(after)) break;
+    }
+    const sel = document.getElementById('vtarget');
+    sel.value = 'lcv'; sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 60));
+    return { fresh, after, picked: line(), options: sel.querySelectorAll('option').length };
+  });
+  ok('the Target list offers every unit', shot.options > 100, shot.options + ' units');
+  ok('Fire! rolls a real shot at the target and says what it did', /hits? —|No hits —/.test(shot.after) && shot.after !== shot.fresh, shot.after);
+  ok('...and a different target starts fresh', /6 of 6 Structure left/.test(shot.picked) && !/hit/.test(shot.picked), shot.picked);
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('...and the stage has a canvas to draw on', loaded.w > 300 && loaded.h > 200,
     loaded.w + '×' + loaded.h);

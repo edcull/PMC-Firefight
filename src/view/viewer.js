@@ -32,6 +32,8 @@
   var view = {
     zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
     key: 'regular', prop: 'none', side: 'A', status: 'ready',
+    // what is shot at (a profile key), and what the shots have left of it — fresh again on any change
+    target: 'regular', tgt: null, lastShot: '',
     models: null, walking: false, walkT: 0, at: null, facing: 0, face: 'SE',
     sound: true,
     // each side's paint, from every colour an army can take
@@ -48,6 +50,7 @@
   function choose(k) {
     var wasFac = view.pickFac;
     view.key = k; view.beast = null; view.models = null; view.tele = null; view.abNext = 0;
+    freshTarget();
     view.ride = 'foot';                       // a new unit starts on foot, its upgrade a tap away
     var p = profile();
     view.pickFac = p.faction || 'pmc';
@@ -130,14 +133,51 @@
     var i = FACES.indexOf(name || 'SE');
     return -Math.PI / 4 + (i < 0 ? 1 : i) * Math.PI / 4;
   }
-  // the thing being shot at: a plain rifle team, so the eye is on the shooter
+  /* The thing being shot at: the unit picked in the Target list (a plain rifle
+     team to begin with), as the shots so far have left it — its men, its
+     Suppression, a hull's Damage. Any change to either unit puts it back fresh. */
   function mark() {
-    var p = R.profile('regular');
-    return Object.assign({}, p, {
-      id: 'VTGT', side: view.side === 'A' ? 'B' : 'A', label: 'target',
-      models: p.size, rules: p.rules.slice(), sp: 0, alive: true,
-      damage: 0, cargo: [], x: TO.x, y: TO.y, facing: Math.PI
+    var p = R.profile(view.target) || R.profile('regular');
+    var t = Object.assign({}, p, {
+      id: 'VTGT', side: view.side === 'A' ? 'B' : 'A', label: p.name, faction: p.faction || 'pmc',
+      models: p.cls === 'infantry' ? p.size : 1, rules: p.rules.slice(), sp: 0, alive: true,
+      damage: 0, cargo: [], x: TO.x, y: TO.y, facing: Math.PI, shotFrom: []
     });
+    if (R.isMachine(t)) t.prop = R.defaultDrive(p);
+    if (view.tgt) { t.models = view.tgt.models; t.sp = view.tgt.sp; t.damage = view.tgt.damage; t.alive = view.tgt.alive; }
+    return t;
+  }
+  function freshTarget() { view.tgt = null; view.lastShot = ''; }
+  // every unit, by army, to pick a target from
+  function targetOptions() {
+    return ['pmc', 'rebel', 'bugs', 'xeno'].map(function (f) {
+      var list = (R.CATALOGUE || []).filter(function (q) { return (q.faction || 'pmc') === f && q.key; });
+      if (!list.length) return '';
+      return '<optgroup label="' + esc(FACTION_NAME[f] || f) + '">' + list.map(function (q) {
+        return '<option value="' + q.key + '"' + (q.key === view.target ? ' selected' : '') + '>' + esc(q.name) + '</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+  }
+  /* Fire! rolls a real shot at the target, the battle's own (R.shoot): what it
+     is hit with, what that does to it. The shots are drawn landing as many as
+     hit, and the target shows what is left of it once they have. */
+  function rollShot() {
+    var a = Object.assign({}, unit(), { shotFrom: [] }), t = mark();
+    if (!t.alive || (!R.isMachine(t) && t.models <= 0)) return null;
+    var st = { units: [a, t], terrain: [], objectives: [], cfg: { aiSides: [], tier: a.tier, pl: 1 }, turn: 1, sc: {}, scen: {}, phase: 'battle' };
+    if (!R.canShoot(st, a, t, 'fire', {})) { view.lastShot = 'Out of reach: ' + Math.round(R.unitDist(a, t)) + '" against a range of ' + (a.range || 0) + '".'; return { hits: 0, t: t, missed: true }; }
+    var res;
+    try { res = R.shoot(st, a, t, 'fire', {}); } catch (e) { return null; }
+    var hits = res.hits || 0;
+    view.lastShot = hits ? hits + (hits === 1 ? ' hit' : ' hits') : 'No hits';
+    return { hits: hits, t: t };
+  }
+  function targetLine() {
+    var t = mark(), p = R.profile(view.target) || {};
+    var left = !t.alive || (!R.isMachine(t) && t.models <= 0) ? 'destroyed'
+      : R.isMachine(t) ? (t.str - t.damage) + ' of ' + t.str + ' Structure left'
+      : t.models + ' of ' + p.size + ' models · ' + (t.sp || 0) + ' SP' + (R.status(t) !== 'ready' ? ' (' + R.status(t) + ')' : '');
+    return (view.lastShot ? view.lastShot + ' — ' : '') + left;
   }
 
   /* ---------- drawing ---------- */
@@ -204,6 +244,11 @@
         return;
       }
       if (m === u && view.status === 'destroyed') { drawDestroyed(u); return; }
+      // the target, shot to pieces: a hull's wreck, a squad gone
+      if (m !== u && m.id === 'VTGT' && (!m.alive || (!R.isMachine(m) && m.models <= 0))) {
+        if (R.isMachine(m)) I.drawWreck(g, m, { x: m.x, y: m.y }, 0, 0);
+        return;
+      }
       // a penal squad Broken: its collars going off, the men bolting and falling
       if (m === u && view.collar) { drawCollared(u); return; }
       // a gun on tow is drawn hitched behind the transport vehicle towing it
@@ -219,7 +264,7 @@
         hop: m === u ? (view.hop || 0) : 0,
         walk: m === u ? view.walkFrame : 0,
         arc: m === u && view.walking ? (view.arc || 0) : 0,
-        status: m === u && !R.isMachine(m) ? view.status : 'ready',
+        status: m === u && !R.isMachine(m) ? view.status : (m !== u && !R.isMachine(m) ? R.status(m) : 'ready'),
         // getting up as it arrives is a pose, not a state
         pose: m === u && !R.isMachine(m) && arr.pose || undefined,
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
@@ -813,10 +858,18 @@
       from = mountFrom(spec.p);
     }
     from.second = from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s);
-    var hits = 3;
+    var shot = rollShot(), hits = shot ? shot.hits : 0;
     syncSound();
     play(spec, from, to, hits, u);
     start();
+    // what the shot left is shown once it has landed
+    if (shot && !shot.missed) {
+      var t = shot.t;
+      setTimeout(function () {
+        view.tgt = { models: t.models, sp: t.sp, damage: t.damage, alive: t.alive };
+        drawControls(); start();
+      }, 900);
+    } else drawControls();
   }
 
   /* The shots themselves are fire.js's, the battle's own: the same cadence,
@@ -989,6 +1042,9 @@
       abilitiesOf(unit()).map(function (a, i) { return '<button class="vbtn" data-do="ability" data-ab="' + i + '">' + esc(a.name) + '</button>'; }).join('') +
       '<button class="vbtn" data-do="sound">Sound ' + (view.sound ? 'on' : 'off') + '</button>' +
       '</div>';
+    // what Fire shoots at, chosen from every unit; what the shots have left of it
+    h += '<div class="vgrp"><label for="vtarget">Target</label><select id="vtarget" class="vselect">' + targetOptions() + '</select>' +
+      '<p class="vtgtline" id="vtgtline">' + esc(targetLine()) + '</p></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
     // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
@@ -1292,6 +1348,7 @@
       }
       var s = e.target.closest('[data-set]');
       if (s) {
+        freshTarget();
         if (s.getAttribute('data-set') === 'status') { setStatus(s.getAttribute('data-val')); return; }
         view[s.getAttribute('data-set')] = s.getAttribute('data-val');
         drawControls(); frame(); return;
@@ -1319,9 +1376,16 @@
     document.addEventListener('click', function (e) {
       if (colOpen && !e.target.closest('#vcolbtn')) { colOpen = false; drawColourButton(); }
     });
+    // the Target list: a different unit to shoot at, fresh
+    el('vctl').addEventListener('change', function (e) {
+      if (e.target.id !== 'vtarget') return;
+      view.target = e.target.value; freshTarget();
+      drawControls(); frame();
+    });
     el('vctl').addEventListener('input', function (e) {
       if (e.target.id === 'vmodels') {
         view.models = +e.target.value;
+        freshTarget();
         drawControls(); frame();
       }
     });
