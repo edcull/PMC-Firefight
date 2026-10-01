@@ -580,7 +580,8 @@
         defs.sort(function (a, b) { return firstDown(b) - firstDown(a); });
         var keep = Math.max(1, Math.ceil(defs.length / 3));          // divisions round up (p. 17)
         defs.slice(keep).forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
-        noteSplit(state, def, 'hold', defs, defs.length - keep, defs.length - 1,
+        // "up to 1/3" (p. 53): the defender may put fewer down, or none at all
+        noteSplit(state, def, 'hold', defs, defs.length - keep, defs.length,
           'Up to a third of the force sets up on the table; the rest walks on later, on a 5+ a unit from turn 2.');
         // the attacker comes in two waves; the first lands in the Reserve phase of turn 1
         var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
@@ -638,7 +639,15 @@
       },
       // landing infantry are shaken by the drop
       onArrive: function (state, u) {
-        if (u.side !== state.sc.attacker || R.isMachine(u)) return null;
+        if (u.side !== state.sc.attacker) return null;
+        /* "Each landing infantry unit suffers D3 Suppression points" (p. 53): the
+           vehicles are unaffected, but the squads riding down inside one land too. */
+        if (R.isMachine(u)) {
+          var rode = (u.cargo || []).filter(function (c) { return c.alive && !R.isMachine(c); });
+          if (!rode.length) return null;
+          var bits = rode.map(function (c) { var m = d3(); R.addSP(c, m); return c.label + ' ' + m; });
+          return { text: 'Aboard ' + u.label + ', the drop shakes them too: ' + bits.join(', ') + ' SP (D3 each).', sp: 0 };
+        }
         var n = d3();
         R.addSP(u, n);
         return { text: u.label + ' takes ' + n + ' SP coming down (D3).', sp: n };
@@ -712,7 +721,8 @@
         state.sc.zones = {};
         state.sc.zones[def] = null;               // a circle, not a strip
         state.sc.zones[atk] = null;               // corner bands, not a strip
-        state.sc.defCircle = { x: t.cx, y: t.cy, r: 18 };
+        // 18" from the objective itself (p. 54): from its edge, so from its middle 18" and its half-width
+        state.sc.defCircle = { x: t.cx, y: t.cy, r: 18 + t.w / 2 };
         /* The table edges within 12" of the corner nearest the objective are the
            defender's; the edges around every other corner are the attacker's. */
         var atkBands = [];
@@ -965,15 +975,25 @@
 
   /* Invasion's landing zones (p. 53): three 8" circles in open ground, at least
      12" from each other and 8" from every table edge, nominated by the attacker
-     after the defender has deployed. */
+     after the defender has deployed. Each is a round area, so the whole circle
+     counts: all of it in the open, its edge 8" from the table's and 12" from
+     the other zones' edges. */
+  var LZ_R = 4;
   function lzOK(state, p, chosen) {
-    if (p.x < 8 || p.y < 8 || p.x > W - 8 || p.y > H - 8) return false;
+    var m = 8 + LZ_R;
+    if (p.x < m || p.y < m || p.x > W - m || p.y > H - m) return false;
     if (R.terrainAt(state, p.x, p.y) !== 'open') return false;
+    for (var ring = 1; ring <= 2; ring++) {
+      for (var k = 0; k < 12; k++) {
+        var a = k * Math.PI / 6, rr = LZ_R * ring / 2;
+        if (R.terrainAt(state, p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr) !== 'open') return false;
+      }
+    }
     return (chosen || []).every(function (q) { return dist(p.x, p.y, q.x, q.y) >= 12; });
   }
   function lzSpots(state, chosen) {
     var out = [];
-    for (var x = 8; x <= W - 8; x += 1) for (var y = 8; y <= H - 8; y += 1) {
+    for (var x = 8 + LZ_R; x <= W - 8 - LZ_R; x += 1) for (var y = 8 + LZ_R; y <= H - 8 - LZ_R; y += 1) {
       if (lzOK(state, { x: x, y: y }, chosen)) out.push({ x: x, y: y });
     }
     return out;

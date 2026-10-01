@@ -654,7 +654,8 @@ ok('...while the defender sets up within 12" of the objective',
 var dmA = setupOf('demolish'), dmDef = dmA.sc.defender;
 ok('Demolish: the defender sets up within 18" of the objective', (function () {
   var t = dmA.sc.target, f = S.SCENARIOS.demolish.deployOK;
-  return [f(dmA, dmDef, t.cx, t.cy), f(dmA, dmDef, t.cx, t.cy + 17), f(dmA, dmDef, t.cx, t.cy + 19)].join(',');
+  // measured from the objective's edge, 2" out from its middle
+  return [f(dmA, dmDef, t.cx, t.cy), f(dmA, dmDef, t.cx, t.cy + 19), f(dmA, dmDef, t.cx, t.cy + 21)].join(',');
 })(), 'true,true,false');
 
 /* ------------------------------------------------------- reinforcements, turn by turn */

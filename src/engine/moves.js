@@ -57,9 +57,12 @@
       endActivation(u);
     }
 
-    function doCheckArea(u) {
-      var spot = SC.searchSpots(E.state, u)[0];
+    // `spot`: the location the player picked, when more than one is in reach; else the only one
+    function doCheckArea(u, spot) {
+      var spots = SC.searchSpots(E.state, u);
+      spot = spot && spots.indexOf(spot) >= 0 ? spot : spots[0];
       if (!spot) return;
+      ui.mode = null; ui.moves = [];
       var res = SC.checkArea(E.state, u, spot);
       u.activated = true;
       logLine('note', u.label + ' checks the area — D6 ' + res.roll + ' on ' + res.need + '+: ' +

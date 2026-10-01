@@ -10,7 +10,7 @@
     var chooseAction = B.chooseAction, curArea = B.curArea, deployNext = B.deployNext, deployOK = B.deployOK;
     var deployRoster = B.deployRoster, dispX = B.dispX, dispY = B.dispY, doAssault = B.doAssault;
     var doBreach = B.doBreach, doDemolish = B.doDemolish, doDesignate = B.doDesignate;
-    var doDisembark = B.doDisembark, doEmbark = B.doEmbark, doEnter = B.doEnter, doExitBld = B.doExitBld, doLeave = B.doLeave;
+    var doDisembark = B.doDisembark, doEmbark = B.doEmbark, doEnter = B.doEnter, doExitBld = B.doExitBld, doLeave = B.doLeave, doCheckSite = B.doCheckSite;
     var doHack = B.doHack, doMarkMove = B.doMarkMove, doMove = B.doMove, doShoot = B.doShoot;
     var doSteady = B.doSteady, doStrafe = B.doStrafe, doSupport = B.doSupport, doTeleport = B.doTeleport;
     var doWave = B.doWave, finishTeleport = B.finishTeleport, garrisonAt = B.garrisonAt;
@@ -439,6 +439,11 @@
         })[0];
         if (sct) { doEnter(ui.selected, sct); return; }
         if (!hit || hit === ui.selected) { setHint(null, 'Tap one of the lit buildings.'); return; }
+      }
+      if (ui.moves.length && ui.mode === 'checkarea') {
+        var site = moveSpotUnder(c);
+        if (site) { doCheckSite(site); return; }
+        if (!hit) { setHint(null, 'Tap one of the lit locations to search it.'); return; }
       }
       if (ui.moves.length && ui.mode === 'leave') {
         var ls = moveSpotUnder(c);

@@ -455,6 +455,7 @@
   function doEnter(u, s) { send({ k: 'enter', piece: state.terrain.indexOf(s.piece), sec: s.sec || 0 }); }
   function doExitBld(u, spot) { send({ k: 'exitbld', x: spot.x, y: spot.y }); }
   function doLeave(u, spot) { send({ k: 'leave', x: spot.x, y: spot.y }); }
+  function doCheckSite(spot) { send({ k: 'checkarea', x: spot.x, y: spot.y }); }
   // laying the terrain: a piece put down where the tap was, or a step on the card
   function terrainTap(p) { send({ k: 'terraintap', x: p.x, y: p.y }); }
   function terrainAct(act, arg) { send({ k: 'terrain', act: act, arg: arg }); }
@@ -950,7 +951,7 @@
     nowMs: nowMs, chooseAction: chooseAction, curArea: curArea,
     deployNext: deployNext, deployOK: deployOK, deployRoster: deployRoster, dispX: dispX, dispY: dispY,
     doAssault: doAssault, doBreach: doBreach, doDemolish: doDemolish, doDesignate: doDesignate,
-    doDisembark: doDisembark, doEmbark: doEmbark, doEnter: doEnter, doExitBld: doExitBld, doLeave: doLeave, doHack: doHack,
+    doDisembark: doDisembark, doEmbark: doEmbark, doEnter: doEnter, doExitBld: doExitBld, doLeave: doLeave, doCheckSite: doCheckSite, doHack: doHack,
     doMarkMove: doMarkMove, doMove: doMove, doShoot: doShoot, doSteady: doSteady, doStrafe: doStrafe,
     doSupport: doSupport, doTeleport: doTeleport, doWave: doWave, finishTeleport: finishTeleport,
     garrisonAt: garrisonAt, garrisonable: garrisonable, isAI: isAI, liftOf: liftOf,

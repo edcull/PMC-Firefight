@@ -425,7 +425,18 @@
         endActivation(u);
         return;
       }
-      if (id === 'checkarea') { doCheckArea(u); return; }
+      if (id === 'checkarea') {
+        // two locations in reach: the player says which one is searched
+        var sites = SC.searchSpots(E.state, u);
+        if (sites.length > 1 && !isAI(u.side)) {
+          ui.mode = 'checkarea';
+          ui.moves = sites.map(function (s) { return { x: s.x, y: s.y, cost: 0, spent: 0, site: s }; });
+          setHint(null, 'Two locations in reach: tap the one to search.');
+          render();
+          return;
+        }
+        doCheckArea(u); return;
+      }
       if (id === 'sabotage') { doSabotage(u); return; }
       // Unreliable: a D6 before any action, and on a 1 the unit simply stands there
       if (R.campFlag(u, 'unreliable') && ['embark', 'disembark'].indexOf(id) < 0) {

@@ -1875,6 +1875,14 @@
       K.doExitBld(ui.selected, xs);
       return yes;
     });
+    on('checkarea', null, function (side, it) {
+      if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (ui.mode !== 'checkarea') return no('not choosing a location');
+      var cs = spotFrom(it);
+      if (!cs) return no('tap one of the locations in reach');
+      K.doCheckArea(ui.selected, cs.site);
+      return yes;
+    });
     on('leave', null, function (side, it) {
       if (!mayAct(side) || !selected(side)) return no('not your activation');
       if (ui.mode !== 'leave') return no('not leaving the table');

@@ -359,29 +359,29 @@ front armour to a threat.
 
 **Scenarios**
 
-- **L-18:** Secure and control and Hostile takeover objectives are points, not 8" pieces, so holding is measured
+- **L-18 — by design:** Secure and control and Hostile takeover objectives are points, not 8" pieces, so holding is measured
   from the centre (`scenarios.js:43-59, 801-805, 893`). A unit 6" from the takeover centre, 2" from the edge of
   an 8" object, does not hold it. *Reproduced.*
-- **L-19:** The players do not place or nominate the Secure objectives (l.1345). The Demolish defender does not
+- **L-19 — by design:** The players do not place or nominate the Secure objectives (l.1345). The Demolish defender does not
   place its objective (l.1435). Both are random.
-- **L-20:** "Check the area!" always searches the first site in reach (`moves.js:61`). The player cannot choose
+- **L-20 — fixed:** "Check the area!" always searches the first site in reach (`moves.js:61`). The player cannot choose
   between two sites.
-- **L-21:** Landing zones are checked at the centre only: open terrain, and 8" from the edges (l.1411;
+- **L-21 — fixed:** Landing zones are checked at the centre only: open terrain, and 8" from the edges (l.1411;
   `scenarios.js:969-973`).
-- **L-22:** Infantry landing inside a transport take no landing Suppression (l.1411, l.1421;
+- **L-22 — fixed:** Infantry landing inside a transport take no landing Suppression (l.1411, l.1421;
   `scenarios.js:640-645`).
-- **L-23:** The Demolish defender's 18" circle is measured from the objective's centre (`scenarios.js:715,
+- **L-23 — fixed:** The Demolish defender's 18" circle is measured from the objective's centre (`scenarios.js:715,
   731-735`).
-- **L-24:** The Invasion defender must put at least one unit on the table (l.1407: "up to ⅓";
+- **L-24 — fixed:** The Invasion defender must put at least one unit on the table (l.1407: "up to ⅓";
   `scenarios.js:582`).
 
 **Terrain set-up**
 
 - **L-25:** Terrain changes are not made alternately from a random player. Side A's whole allowance goes first
   (l.1156; `engine.js:513-531`).
-- **L-26:** The table is 4'×4' at every Priority Level. Campaign contracts allow PL 3–4, for which the book
+- **L-26 — fixed:** The table is 4'×4' at every Priority Level. Campaign contracts allow PL 3–4, for which the book
   recommends 6'×4' (l.1140; `rules.js:11`).
-- **L-27:** Unstable row 6's "1-3 reinforced buildings surrounded by reinforced walls" lays 2–6 wall sections,
+- **L-27 — fixed:** Unstable row 6's "1-3 reinforced buildings surrounded by reinforced walls" lays 2–6 wall sections,
   often too few to enclose the compound (`gen.js:96`).
 
 **Armies**
@@ -655,6 +655,17 @@ The v0.1 "ambiguous" readings of Rob the Rich and Drug Dealer are now classed as
 | L-16 Field Medics while Suppressed | **Fixed** in the tooltip. The book bars Suppressed and Broken units from passive bonuses "to another units" (p. 29), so the medics still treat their own wounded, as the code did. The tooltip no longer says "only while steady". | `ruletext.js` |
 | L-17 Insertion platforms go in empty | **Fixed.** A list with more platforms than infantry squads to fill them is refused. At deployment a platform's squad can be swapped for another but not taken out. | `rules.js` (`checkArmy`), `engine.js` (`load`, `unload`) |
 
+| L-18 Objectives are points | **No change, by design.** The book's objectives are ordinary terrain pieces with no bonuses of their own (p. 52); as points they behave as a small objective marker would. Holding is measured 4" from the point. |  |
+| L-19 Players do not place the objectives | **No change, by design.** The computer places the Secure objectives and the Demolish objective for the players. |  |
+| L-20 Check the area! takes the first site | **Fixed.** With two locations in reach, the player taps the one to search. | `actions.js`, `moves.js` (`doCheckArea`), `engine.js` (`checkarea`), `input.js`, `game.js` |
+| L-21 Landing zones checked at the centre | **Fixed.** A zone is an 8" circle: all of it must be open ground, and its edge 8" from the table's. Zones stay 12" apart, centre to centre, so three still fit on most tables. | `scenarios.js` (`lzOK`, `lzSpots`) |
+| L-22 No landing Suppression inside a hull | **Fixed.** Infantry riding down in an attacker's vehicle take their D3 as it lands. | `scenarios.js` (`invasion.onArrive`) |
+| L-23 Demolish's 18" from the centre | **Fixed.** The defender's circle reaches 18" past the objective's edge. | `scenarios.js` (`demolish.deploy`) |
+| L-24 The Invasion defender must put a unit down | **Fixed.** "Up to 1/3": the defender may hold its whole force back. | `scenarios.js` (`invasion.deploy`) |
+| L-25 Terrain changes not alternated | **Open.** When both sides have changes to make (Last Stand barricades, Detailed Terrain Knowledge), A makes all of its own first. |  |
+| L-26 The table at Priority Level 3-4 | **Fixed** by capping campaign contracts at Priority Level 2, as skirmishes already were: the 4'x4' table is the book's size for both. Older saved offers are clamped too. | `camp-contract.js` (`levelsFor`), `dossier-contract.js` |
+| L-27 The Unstable outpost's walls | **Fixed.** "Surrounded by reinforced walls": one ring round all the outpost's buildings, as many sections as it takes, with a gate front and back. The count is still rolled, so the rest of the table's dice are unchanged. The terrain snapshots were retaken. | `gen.js` (`ring`, `enclose`, `compound`) |
+
 Tests: `test/unit/highrules.js` (15 checks). It fails 10 of them on `7dd7306` and passes on the fix. The full unit suite (62 files) and the transport, flight, AI and scenario browser tests pass. `test/unit/roundup.js` (16 checks) pins each rounding to the book; `propulsion.js`, `rebelcamp.js` and `enginetest.js` were updated where they asserted the rounded-down values.
 
-`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `test/unit/lowcombat.js` (20 checks) fails 11 on `7dd7306`. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.
+`solitairetest.js`'s "two entry points take ten units in one turn" fails about 1 run in 60, before and after these changes. It places arrivals with an unseeded `Math.random`. `test/unit/wallshelter.js` (16 checks) fails 7 on `7dd7306`. `test/unit/buildings.js` (6 checks) fails 5 on `7dd7306`. The `highrules.js` freeze case now finds its own seed for A's initiative rather than relying on one. `test/unit/soloai.js` (10 checks) fails 7 on `7dd7306`. `test/unit/midfixes.js` (13 checks) and the new draw checks in `scenrules.js` fail on `7dd7306`. `test/unit/sightlines.js` (9 checks). `test/browser/hotseatpick.js` (20 checks) fails 9 on `7dd7306`. `test/unit/lowmove.js` (24 checks) fails 14 on `7dd7306`. `test/unit/lowcombat.js` (20 checks) fails 11 on `7dd7306`. `test/unit/lowscen.js` (13 checks) fails 10 on `7dd7306`. `followtoggle.js`'s "pulls back to take in the shooter and its target" waits on a random AI army firing early; it failed twice and then passed three times in a row after these changes, so it wants a fixed army or seed.
