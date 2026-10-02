@@ -120,6 +120,23 @@ console.log('\nA Coordinate chain may stop short (p. 59)');
   ok('...and play passes on', st.activeSide === 'B', st.activeSide);
 })();
 
+console.log('\nREB-3 (review a119ac2): "other Command Units" are units with the Command Unit rule (p. 59)');
+(function () {
+  const { e, st } = battle(['cmd2', 'cmd4', 'cmd3', 'regular'], ['regular']);
+  const cmd = st.units.find((u) => u.key === 'cmd2'), c4 = st.units.find((u) => u.key === 'cmd4'), c3 = st.units.find((u) => u.key === 'cmd3');
+  cmd.x = 10; cmd.y = 20; c4.x = 14; c4.y = 16; c3.x = 14; c3.y = 24;
+  st.streak = 1;
+  e.intent('A', { k: 'select', id: cmd.id });
+  ok('the Command Unit coordinates', e.intent('A', { k: 'action', id: 'coordinate' }).ok && !!st.chain);
+  const called = e.query.eligible('A');
+  ok('...a Field command 4th grade, no Command Unit, may be activated in the chain', called.indexOf(c4) >= 0);
+  ok('...a Field command 3rd grade, a Command Unit, may not', called.indexOf(c3) < 0);
+  // the one-a-Priority-Level cap counts Command Units in a PMC list, every First Among Equals unit in a Rebel one
+  ok('a Field command 4th grade beside a Command Unit is within the cap', !R.checkArmy(['cmd2', 'cmd4'], 3, 1).faults.some((f) => /Command Unit/.test(f)));
+  ok('...two Command Units are not', R.checkArmy(['cmd2', 'cmd3'], 3, 1).faults.some((f) => /Command Unit/.test(f)));
+  ok('...nor are two First Among Equals units, Command Unit or not', R.checkArmy(['rleaders', 'rinstigators'], 3, 1).faults.some((f) => /First Among Equals/.test(f)));
+})();
+
 console.log('\nIncendiary doubles the hit table\u2019s Suppression only (p. 58)');
 (function () {
   // every die high: a 9 on the D10, so one hit at least, and a 6 on the table, a Man down!
@@ -137,12 +154,16 @@ console.log('\nIncendiary doubles the hit table\u2019s Suppression only (p. 58)'
   ok('...and Overreact\u2019s 2 more are added after, not doubled', over.lost >= 1 && over.sp === Math.min(12, 6 * over.lost) && 8 * over.lost > over.sp, JSON.stringify(over));
 })();
 
-console.log('\nA Command Vehicle carries the rules of any command unit aboard (p. 59)');
+console.log('\nA Command Vehicle carries the rules of a Command Unit aboard (p. 59)');
 (function () {
-  const cv = unit('cmdveh', 'A', 10, 10), c4 = unit('cmd4', 'A', 10, 10);
-  cv.cargo = [c4]; c4.aboard = cv.id;
-  ok('a Field command 4th grade aboard lends it Inspiring Presence', R.has(cv, 'Inspiring Presence'));
-  ok('...and is the command unit aboard', R.commandAboard(cv) === c4);
+  const cv = unit('cmdveh', 'A', 10, 10), c3 = unit('cmd3', 'A', 10, 10);
+  cv.cargo = [c3]; c3.aboard = cv.id;
+  ok('a Field command 3rd grade aboard lends it Inspiring Presence', R.has(cv, 'Inspiring Presence'));
+  ok('...and is the Command Unit aboard', R.commandAboard(cv) === c3);
+  // REB-3 (review a119ac2): only a unit with the Command Unit rule is "a Command Unit"
+  const cv4 = unit('cmdveh', 'A', 10, 10), c4 = unit('cmd4', 'A', 10, 10);
+  cv4.cargo = [c4]; c4.aboard = cv4.id;
+  ok('a Field command 4th grade, no Command Unit, lends it nothing', !R.has(cv4, 'Inspiring Presence') && !R.commandAboard(cv4));
 })();
 
 console.log('\nA drop platform never goes in empty (p. 79)');
