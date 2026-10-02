@@ -128,3 +128,15 @@ Each phase ends with its tests green (`npm test`, the browser set) and is merged
 3. **Campaign end:** when a force can no longer field a legal army (and cannot recruit back to one), the campaign ends.
 4. **End-phase surrender:** one card for both players.
 5. **Order:** phases 1 and 2 first.
+
+## 7. Progress
+
+| Item | Outcome | Where |
+|---|---|---|
+| HB-1, HB-2 | **Fixed.** The reserve pick, Know Your Foe! and Martyrdom are answered by the side asked, whoever is up; the board's "whose screen" check follows any open question too. | `net.js` (`seatNow`), `game.js` (`mySide`); test `seatnow.js` (with a real engine) |
+| HB-3 | **Fixed.** "Auto-deploy the rest" places only the side whose turn it is (only defenders place before a battle now: Invasion, Demolish, Hostile takeover). | `game.js` (`autoDeployMine`), `testhooks.js`; test `hotseatdeploy.js` |
+| HB-6 | **Fixed.** With everything down, the deploy card switches between the two players, so Player 2 reaches their transports and insertions; the header reads "Ready to begin". | `panels.js`, `view.js`; test `hotseatdeploy.js` |
+| HB-13 | **Fixed.** Force and unit names are escaped on the game-over card and the board's unit panels. (A full audit is in the multiplayer plan, phase 0.) | `panels.js` |
+| HC-2, HC-3 | **Fixed.** Player 2's company stays in `rivals` only as the save's storage: no AI catch-up on it, no phantom AI force (`evenWorld`), nobody fights "elsewhere"; a save that already gained a phantom loses it on loading. | `campaign.js`, `camp-rivals.js`, `camp-aftermath.js`, `dossier-contract.js`; tests `offtable.js`, `hotseathub.js` |
+| HC-1 | **Fixed.** The hub has a Player 1 / Player 2 switch; the dossier, recruiting (from that player's own list), promotions, honours, upgrades, colours and memorial work on the player shown. | `dossier.js`, `dossier-hub.js`, `dossier-roster.js`; test `hotseathub.js` |
+| HC-14 | **Fixed.** A force that cannot field a Tier I army and cannot recruit back to one (rare: Penal troops and civilians cost nothing) is named on the hub; ending the campaign records who outlasted whom and closes the contract. | `campaign.js` (`cannotFight`), `dossier-hub.js`, `dossier.js`; tests `lowcamp.js`, `hotseathub.js` |

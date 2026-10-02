@@ -304,6 +304,12 @@
       if (this.seats.indexOf(ts) >= 0) return ts;
     }
     if (st.nervousAsk && /^(nervous|nonervous)$/.test(k) && this.seats.indexOf(st.nervousAsk.side) >= 0) return st.nervousAsk.side;
+    /* Questions put to the side that is not acting (hotseat review HB-1, HB-2): which of
+       its reserves come on, Know Your Foe!, Martyrdom — the side asked answers. */
+    var asked = this.engine.sel().reservePick;
+    if (asked && /^rpick/.test(k) && this.seats.indexOf(asked.side) >= 0) return asked.side;
+    if (st.kyfAsk && /^(kyf|nokyf)$/.test(k) && this.seats.indexOf(st.kyfAsk.side) >= 0) return st.kyfAsk.side;
+    if (st.martyrAsk && /^(martyr|nomartyr)$/.test(k) && this.seats.indexOf(st.martyrAsk.side) >= 0) return st.martyrAsk.side;
     if (st.endAsk && /^(enddone|surrender)$/.test(k) && this.seats.indexOf(st.endAsk.side) >= 0) return st.endAsk.side;
     // a hull just put down is faced by its own side, whoever deployed last
     if (st.faceAsk && /^vface/.test(k) && this.seats.indexOf(st.faceAsk.side) >= 0) return st.faceAsk.side;

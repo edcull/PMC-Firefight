@@ -42,6 +42,33 @@ ok('holding back one of Player 2\'s units goes out as Player 2 (an Invasion atta
   seat(['A', 'B'], setUp, {}, { k: 'holdback', id: 'b1' }), 'B');
 ok('...and loading one of its units', seat(['A', 'B'], setUp, {}, { k: 'load', hull: 'b1', unit: 'b1' }), 'B');
 
+console.log('\nQuestions put to the side that is not up (hotseat review HB-1, HB-2)');
+var up = { phase: 'battle', activeSide: 'A' };
+ok('which of its reserves come on: the side choosing',
+  seat(['A', 'B'], up, { reservePick: { side: 'B' } }, { k: 'rpick', id: 'x' }), 'B');
+ok('...and its "done"', seat(['A', 'B'], up, { reservePick: { side: 'B' } }, { k: 'rpickdone' }), 'B');
+ok('Know Your Foe!: the side holding it', seat(['A', 'B'], { phase: 'battle', activeSide: 'A', kyfAsk: { side: 'B' } }, {}, { k: 'kyf' }), 'B');
+ok('Martyrdom: the side whose Holy Warriors are charged',
+  seat(['A', 'B'], { phase: 'battle', activeSide: 'A', martyrAsk: { side: 'B' } }, {}, { k: 'nomartyr' }), 'B');
+ok('...anything else still goes out as the side that is up',
+  seat(['A', 'B'], { phase: 'battle', activeSide: 'A', kyfAsk: { side: 'B' } }, {}, { k: 'select', id: 'x' }), 'A');
+
+// the real engine behind a Local transport: the reserve pick no longer leaves the game stuck
+(function () {
+  var Engine = require('../../server/rules.js').Engine;
+  var e = Engine.create({});
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['regular', 'regular'], armyB: ['regular', 'regular'],
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse' });
+  var l = new Local(); l.seats = ['A', 'B']; l.engine = e; l.rolling = function (f) { return f.call(this); }; l.flush = function () { }; l.keep = function () { };
+  var st = e.state(), b = st.units.filter(function (u) { return u.side === 'B'; })[0], done = false;
+  st.phase = 'battle'; st.activeSide = 'A';
+  e.sel().reservePick = { side: 'B', ids: [b.id], chosen: [], min: 0, max: 1, finish: function () { done = true; e.sel().reservePick = null; } };
+  l.intent({ k: 'rpick', id: b.id });
+  ok('a real hotseat game: Player 2 picks its reserve while Player 1 is up', e.sel().reservePick && e.sel().reservePick.chosen[0], b.id);
+  l.intent({ k: 'rpickdone' });
+  ok('...and is done, nothing left stuck', done, true);
+})();
+
 console.log('\nA solitaire game has one seat');
 ok('an OpFor shove still goes out as the one seat there is',
   seat(['A'], { phase: 'battle', activeSide: 'A' }, { insertion: { kind: 'shove', by: 'B', unit: { side: 'A' } } }), 'A');

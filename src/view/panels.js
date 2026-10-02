@@ -137,11 +137,11 @@
         return;
       }
       if (ui.mode === 'carry-first') {
-        box.innerHTML = '<b>' + u.name + '</b> drives up to half its Movement first — tap the shaded ground; then Embark or Disembark.';
+        box.innerHTML = '<b>' + esc(u.name) + '</b> drives up to half its Movement first — tap the shaded ground; then Embark or Disembark.';
       } else if (ui.mode === 'carry-move') {
-        box.innerHTML = '<b>' + u.name + '</b> may now drive up to half its Movement — tap the shaded ground, or press any action to stay put.';
+        box.innerHTML = '<b>' + esc(u.name) + '</b> may now drive up to half its Movement — tap the shaded ground, or press any action to stay put.';
       } else if (ui.mode === 'move' || ui.mode === 'advance-move') {
-        box.innerHTML = 'Click anywhere in the shaded ground to move <b>' + u.name + '</b> there.';
+        box.innerHTML = 'Click anywhere in the shaded ground to move <b>' + esc(u.name) + '</b> there.';
       } else if (ui.mode === 'fire' || ui.mode === 'aux' || ui.mode === 'advance-fire') {
         box.innerHTML = 'Pick a target — ringed units are in range and sight.';
       } else if (ui.mode === 'assault') {
@@ -158,7 +158,7 @@
       } else if (isAI(u.side)) {
         box.innerHTML = '';                              // the OpFor's own: nothing to say about it here
       } else {
-        box.innerHTML = '<b>' + u.name + '</b> — ' + (u.activated ? 'already acted this turn.' :
+        box.innerHTML = '<b>' + esc(u.name) + '</b> — ' + (u.activated ? 'already acted this turn.' :
           u.side === B.state.activeSide ? 'choose an action.' : 'waiting for its activation.');
       }
     }
@@ -219,7 +219,7 @@
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + esc(u.name) + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
          the 12 a unit can carry, in bands as wide as the Morale — steady,
@@ -342,7 +342,7 @@
       var left = Math.max(0, u.str - u.damage);
       var pr = R.propOf(u);
       var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + u.name + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
+        '<div class="sh-text"><h2>' + esc(u.name) + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* its health as the board draws it (ISO.strSegments): a segment a point of
          Structure, what is left green over two thirds, amber down to a third, red
@@ -729,7 +729,7 @@
           var gone = u.alive ? '' : u.fled ? 'fled' : R.isMachine(u) ? 'destroyed' : 'wiped out';
           h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected && ui.selected.id === u.id ? ' sel' : '') +
             '" data-unit="' + u.id + '"><span class="ru-code">' + u.code + '</span>' +
-            '<span class="ru-name">' + u.name + honourMarks(u) +
+            '<span class="ru-name">' + esc(u.name) + honourMarks(u) +
             '</span>' +
             (gone ? '<span class="ru-gone">' + gone + '</span>' :
             '<span class="ru-num">' + (R.isMachine(u)
@@ -841,7 +841,7 @@
           // a friend on the list is steadied, not shot (NOT ONE STEP BACKWARDS!)
           if (t.side === u.side) extra = 'Not one step back! · ' + t.sp + ' SP · ' + extra;
         }
-        h += '<button class="tgt" data-target="' + t.id + '"><b>' + t.name + '</b><span>' + d + '" · ' + t.models + ' models · ' + extra + '</span></button>';
+        h += '<button class="tgt" data-target="' + t.id + '"><b>' + esc(t.name) + '</b><span>' + d + '" · ' + t.models + ' models · ' + extra + '</span></button>';
       });
       // having moved, an Advance may still decline its shot — and that ends the activation
       if (ui.mode === 'advance-fire') {
@@ -995,8 +995,17 @@
       }
       if (othersDeploying()) return deployWaitCard();
       var next = deployNext();
-      var me = next ? next.side : (playerSide() || 'A');
+      /* With everything down and both sides at this screen (hotseat), either player may
+         still change their transports and insertions: a switch picks whose (HB-6). */
+      var bothHere = here.length > 1 && !next && !playerSide();
+      if (bothHere && here.indexOf(deployFor) < 0) deployFor = here[0];
+      var me = next ? next.side : (playerSide() || (bothHere ? deployFor : here[0] || 'A'));
       var h = '<div class="card">';
+      if (bothHere) {
+        h += '<div class="segs deployfor">' + here.map(function (sd) {
+          return '<button class="lnk' + (sd === me ? ' on' : '') + '" data-act="deployfor" data-side="' + sd + '">' + esc(sideName(sd)) + '</button>';
+        }).join('') + '</div>';
+      }
       if (next) h += '<p class="hint"><b>' + esc(next.name) + '</b> · ' + next.models + ' models · Move ' + next.move + '" · FP ' + next.fp + ' · Range ' + next.range + '" · Def ' + next.def +
         (next.x >= 0 ? ' — already down; tap the table to shift it' : ' — tap your shaded strip to put it down') + '</p>';
       h += deployList(me);
@@ -1042,7 +1051,9 @@
         // the scenario's own condition on how the force stands (Ambush!'s even split)
         var sblk = B.state.scen && B.state.scen.startBlock ? B.state.scen.startBlock(B.state) : null;
         var blocked = !deploymentDone() || !!sblk;
-        var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
+        // empty hulls of every side at this screen, not only the one shown
+        var empties = (bothHere ? here : [me]).reduce(function (all, sd) { return all.concat(carriersFor(sd)); }, [])
+          .filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
         // online, both players say they are ready: the battle begins once both have
         var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
         if (sr && sr[me]) {
@@ -1078,6 +1089,7 @@
        tapped to move it between the table and the reserve (or between the waves),
        and a count against what the rule allows. */
     var deployBox = false;           // the reserves-and-transports modal, open over the deployment card
+    var deployFor = 'A';             // in hotseat, once all is down: whose transports and insertions the card shows
     /* Battlefield Insertion (p. 56) is the player's choice: the units that have
        it start held for it, and a tap sets one down on the table instead, or
        holds it back again, up to half the army. */
@@ -1239,8 +1251,9 @@
     }
 
     function overCard() {
-      return '<div class="card"><h2>' + (B.state.over.winner ? sideName(B.state.over.winner) + ' wins' : 'Draw') + '</h2>' +
-        '<p class="sub">' + B.state.over.text + '</p>' + casualtyList() +
+      // force names are typed by the players (online, by the opponent): escaped (HB-13)
+      return '<div class="card"><h2>' + (B.state.over.winner ? esc(sideName(B.state.over.winner)) + ' wins' : 'Draw') + '</h2>' +
+        '<p class="sub">' + esc(B.state.over.text) + '</p>' + casualtyList() +
         '<div class="acts"><button class="act primary" data-act="restart"><span>Main menu</span></button></div></div>';
     }
 
@@ -1366,6 +1379,7 @@
           else if (a === 'autodeploy') autoDeployMine();
           else if (a === 'rpickdone') send({ k: 'rpickdone' });
           else if (a === 'deploybox') { deployBox = true; render(); }
+          else if (a === 'deployfor') { deployFor = b.getAttribute('data-side') || 'A'; render(); }
           else if (a === 'briefing') openObjectives();
           else if (a === 'autosplit') send({ k: 'autosplit', side: b.getAttribute('data-side') || undefined });
           else if (a === 'deployboxdone') { deployBox = false; render(); }

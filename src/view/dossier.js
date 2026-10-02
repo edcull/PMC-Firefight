@@ -171,6 +171,10 @@
   var intelIdx = 0;
   var upState = null;
   var docSide = 'A', docSwap = false, swapOut = null;
+  /* In a hotseat campaign, whose force the hub shows and works on: each player runs
+     their own roster (hotseat review HC-1). Always 'A' in a solo campaign. */
+  var hubSide = 'A';
+  function hubCo() { return camp ? camp.companies[camp.mode === 'hotseat' ? hubSide : 'A'] || camp.companies.A : null; }
   /* The dossier's unit list narrowed by the Honours and Trauma figures above
      it: each a toggle, by force ('A', 'B', or a rival's 'r' + its place), and
      with both on, the units that have either. */
@@ -401,6 +405,7 @@
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
+      get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
       get dsort() { return dsort; }, get dfilt() { return dfilt; }, get rosterTab() { return rosterTab; }
     }));
@@ -441,6 +446,7 @@
     return KIT_ROSTER || (KIT_ROSTER = root.PMCDossierRoster({
       C: C, R: R, ROMAN: ROMAN, entryCard: entryCard, esc: esc, ourList: ourList, profile: profile,
       root: root, save: save, statLine: statLine, get menOpen() { return menOpen; },
+      get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses,
       dossierOrder: dossierOrder
     }));
@@ -639,7 +645,7 @@
     }
     if (!t) return;
     if (view === 'found') keepFoundName();
-    var co = camp ? camp.companies.A : null;
+    var co = hubCo();
     var go = t.getAttribute('data-go');
 
     if (t.hasAttribute('data-add')) {
@@ -871,8 +877,11 @@
       render(); return;
     }
     if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
-      camp.companies.A.colour = t.getAttribute('data-campcolour');
-      try { localStorage.setItem('pmc-colour', camp.companies.A.colour); } catch (e) { }
+      var cc0 = hubCo(), other0 = camp.mode === 'hotseat' ? camp.companies[cc0 === camp.companies.A ? 'B' : 'A'] : null;
+      var want0 = t.getAttribute('data-campcolour');
+      if (other0 && other0.colour === want0) { note('That colour is taken', other0.name + ' already wears it. Pick another, so the two sides can be told apart.'); return; }
+      cc0.colour = want0;
+      if (cc0 === camp.companies.A) { try { localStorage.setItem('pmc-colour', cc0.colour); } catch (e) { } }
       save(); colourOpen = false; render(); return;
     }
     if (t.hasAttribute('data-campcolour')) {
@@ -886,6 +895,8 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
+      // hotseat: the hub turns to the other player's force (HC-1)
+      case 'hubside': hubSide = t.getAttribute('data-hs') === 'B' ? 'B' : 'A'; colourOpen = false; promoRid = null; openModal = null; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
       // the dossier's sort (one at a time) and filter (as many as ticked), from their popups
       case 'dsort': dsort = t.getAttribute('data-by') || 'type'; render(); return;
@@ -953,8 +964,17 @@
         else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
         view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
-      case 'offers': view = 'offers'; render(); return;
-      case 'contract': beginContract(); render(); return;
+      case 'offers': if (camp.over) return; view = 'offers'; render(); return;
+      case 'contract': if (camp.over) return; beginContract(); render(); return;
+      // a force finished: the campaign is over, and says who outlasted whom (HC-14)
+      case 'campend': {
+        var ls = t.getAttribute('data-side') === 'B' ? 'B' : 'A', lco = camp.companies[ls];
+        if (!C.cannotFight(lco)) return;
+        var wco = camp.mode === 'hotseat' ? camp.companies[ls === 'A' ? 'B' : 'A'] : null;
+        camp.over = { loser: ls, winner: wco ? (ls === 'A' ? 'B' : 'A') : null, turn: camp.turn,
+          text: lco.name + ' could no longer field an army' + (wco ? ': ' + wco.name + ' outlasted them' : '') + ', after ' + (camp.log || []).length + ' battles.' };
+        save(); render(); return;
+      }
       case 'plunder': {
         var pst = camp.post && camp.post.steps[0];
         if (!pst || pst.kind !== 'plunder') return;
@@ -1007,7 +1027,7 @@
       case 'drawnow': {
         if ((drawState.picked || []).length !== 3) return;
         var won = C.chooseHonour(drawState.picked.map(function (n) { return C.honourTable(drawState.entry.key)[n - 1]; }));
-        C.takeHonour(camp.companies.A, drawState.entry, won.n);
+        C.takeHonour(hubCo(), drawState.entry, won.n);
         drawState.won = won; save(); render(); return;
       }
       case 'hub': view = 'hub'; render(); return;
