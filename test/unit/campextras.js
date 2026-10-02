@@ -47,12 +47,11 @@ var w = world([cmd, line, far, shaken], { A: ['T5'], B: [] });
 ok('a Command Unit may steady a friend', R.steadyShooter(w, cmd), true);
 ok('...and so may a unit within 12" of one', R.steadyShooter(w, line), true);
 ok('...but not one out beyond 12"', R.steadyShooter(w, far), false);
-// "a Command Unit" is a unit with the Command Unit rule (the owner's ruling, review a119ac2 REB-3):
-// a Field command 4th grade has none, so it neither steadies a friend nor lends the reach to one
+// a Field command 4th grade is a Command Unit of the list though it has no "Command Unit (X)" activations
 var cmd4 = mk('cmd4', 'A', 10, 10), line4 = mk('regular', 'A', 14, 16), shaken4 = mk('regular', 'A', 18, 10); shaken4.sp = 4;
 var w4 = world([cmd4, line4, shaken4], { A: ['T5'], B: [] });
-ok('a Field command 4th grade may not steady a friend', R.steadyShooter(w4, cmd4), false);
-ok('...nor may a unit within 12" of it', R.steadyShooter(w4, line4), false);
+ok('a Field command 4th grade may steady a friend', R.steadyShooter(w4, cmd4) && R.steadyTargets(w4, cmd4).indexOf(shaken4) >= 0, true);
+ok('...and so may a unit within 12" of it', R.steadyShooter(w4, line4), true);
 ok('without the doctrine nobody may', R.steadyShooter(world([cmd, shaken], { A: [], B: [] }), cmd), false);
 ok('only friends carrying Suppression are targets', R.steadyTargets(w, cmd).map(function (t) { return t.id; }).join(),
   shaken.id);

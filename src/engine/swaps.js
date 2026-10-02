@@ -36,11 +36,11 @@
       // one Command Unit a Priority Level (p. 57): another comes in only in place of one, or under the cap
       var goingOut = held.map(function (d) { return d.outId; });
       var cmds = E.state.units.filter(function (o) {
-        return o.side === side && R.capsAsCommand(R.profile(o.key)) && o.pickIdx != null && goingOut.indexOf(o.id) < 0;
-      }).length + held.filter(function (d) { return R.capsAsCommand(R.profile(R.splitPick(d.key || '').key)); }).length;
-      var cmdRoom = R.capsAsCommand(up) || cmds < (cfg.pl || 1);
+        return o.side === side && o.command && o.pickIdx != null && goingOut.indexOf(o.id) < 0;
+      }).length + held.filter(function (d) { var hp = R.profile(R.splitPick(d.key || '').key); return hp && hp.command; }).length;
+      var cmdRoom = u.command || cmds < (cfg.pl || 1);
       return R.listFor(u.faction).filter(function (p) {
-        return p.tier === u.tier && (!R.capsAsCommand(p) || cmdRoom) && !p.turretSet && !p.noSlot && p.key !== u.key && !p.leaderBug;
+        return p.tier === u.tier && (!p.command || cmdRoom) && !p.turretSet && !p.noSlot && p.key !== u.key && !p.leaderBug;
       }).map(function (p) { return { id: p.key, key: p.key, name: p.name, entry: null }; });
     }
     /* Each player's allowance, offered on the deployment card until they put their

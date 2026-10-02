@@ -1140,7 +1140,7 @@
         // 12" between the closest models of the two units, not their middles
         var cmdU = state.chain.by && K.byId(state.chain.by);
         if ((cmdU ? R.unitDist(u, cmdU) : R.inches(u.x, u.y, state.chain.x, state.chain.y)) > 12) return false;
-        // "other Command Units" (p. 59): units with the Command Unit rule, or a vehicle carrying one
+        // "other Command Units" (p. 59): any of the list's command units, the 4th grade too
         if (R.commandUnit(u) || R.has(u, 'Command Unit')) return false;
         if (R.has(u, 'Turret')) return false;              // untouched by Command Units
         if (u.tier >= state.chain.tier + 2) return false;

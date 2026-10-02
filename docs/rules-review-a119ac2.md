@@ -158,7 +158,7 @@ These were set by the owner and are not reported as findings:
 - Secure and Takeover objectives are points, held from 4" away, with no terrain bonuses.
 - The computer places the Secure objectives and the Demolish objective.
 - Troops inside a transport take no landing Suppression, since transported units cannot be Suppressed (p. 36).
-- ~~"Command Units" means the units in the book's *Command units* group~~ **Reversed by the owner (REB-3):** wherever a rule says "a Command Unit", it means only a unit with the Command Unit (X) special rule, whatever its group. Field command 4th grade, Instigators and Secondary insurgent leaders are not Command Units: a Coordinate chain may activate them, a Command Vehicle borrows nothing from them, they do not enable NOT ONE STEP BACKWARDS!, and the PMC one-per-Priority-Level cap does not count them. The Rebel cap is on First Among Equals units (p. 95), so it still counts all of them.
+- "Command Units" means the units in the book's *Command units* group, not only those with the Command Unit (X) rule. So Field command 4th grade counts towards the one-per-Priority-Level cap, and a Coordinate chain cannot activate it. The reviewers raised this twice (SPR-3, PMC-3), and it is kept as decided. REB-3 is the Rebel counterpart (the First Among Equals units) and is listed for the owner to confirm the same reading.
 
 ## 5. Coverage
 
@@ -692,9 +692,8 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | CMP-5 Courage Under Fire: 1 SP off each later attack | Keep |
 | CMP-6 Strength in Numbers | **Changed.** Owner's ruling: the free unit may be of any Tier lower than the Battle Tier. Free places go first to a lower Tier over its ceiling, then to the highest Tiers (the most points off). | `rules.js` (`checkArmy`), `campaign.js` text; test `solo.js` |
 | REB-3 First Among Equals without Command Unit (X) | **Kept.** The owner tried the strict reading (only units with the Command Unit rule) and went back to the group reading: it sits better with the campaign (the free starting command at Company Tier I, no EXP/TP for command units, the lower-Tier rule for extra ones). Every unit of the Command units / First Among Equals group is a Command Unit. | — |
-| REB-3 "a Command Unit" | **Changed (owner reverses the SPR-3/PMC-3 reading).** Only units with the Command Unit rule are Command Units: the Coordinate exclusion, Command Vehicle, NOT ONE STEP BACKWARDS!, the PMC cap (and the swap cap), and the OpFor leaders of Decapitation all use the rule. Rebel lists still cap First Among Equals at one per Priority Level. | `rules.js` (`commandUnit`, `capsAsCommand`), `engine.js`, `swaps.js`, `damage.js`, `solitaire.js`; tests `lowcombat.js`, `campextras.js` |
 | CMP-6 Strength in Numbers: exactly one Tier below | Keep |
-| REB-3 First Among Equals without Command Unit (X) count as Command Units | Owner to say (Command Units decision) |
+| REB-3 First Among Equals without Command Unit (X) count as Command Units | Kept (group reading) |
 | REB-5 Hostile takeover may put guns in reserve | Change: guns always deploy |
 | BUG-5 Pheromone Markers boost a defending bug | Change: the charger only |
 | BUG-6 Effective Toxin Glands never help Flying Bugs | Change: the +2 applies to them |

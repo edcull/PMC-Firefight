@@ -279,7 +279,7 @@
       perKey[k] = (perKey[k] || 0) + 1;
       perGroup[p.group] = (perGroup[p.group] || 0) + 1;
       factions[p.faction] = 1;
-      if (capsAsCommand(p)) commands++;
+      if (p.command) commands++;
     });
     if (Object.keys(factions).length > 1) {
       faults.push('An army is drawn from one faction: mercenaries and insurgents do not muster together.');
@@ -478,7 +478,7 @@
       var lim = comp.limits[p.tier - 1];
       var hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (!p.noSlot && counts[p.tier] + 1 > hi) return false;
-      if (capsAsCommand(p) && commands + 1 > pl) return false;
+      if (p.command && commands + 1 > pl) return false;
       if (p.cap && (perKey[p.key] || 0) + 1 > p.cap) return false;
       if (p.capPL && (perKey[p.key] || 0) + 1 > p.capPL * pl) return false;
       if (p.groupCap && (perGroup[p.group] || 0) + 1 > p.groupCap) return false;
@@ -530,7 +530,7 @@
       spent += p.tier;
       perKey[p.key] = (perKey[p.key] || 0) + 1;
       perGroup[p.group] = (perGroup[p.group] || 0) + 1;
-      if (capsAsCommand(p)) commands++;
+      if (p.command) commands++;
       if (p.cls !== 'infantry') { machines++; if (p.cls === 'aircraft') aircraft++; }
     }
     // a command unit first, at or below the battle tier
@@ -1431,16 +1431,9 @@
      carrying Suppression. The shot is resolved as normal — a 'Man down!' still
      kills — but every Suppression point the result would have given is taken
      away instead (two 'Get down!' and one 'Man down!' remove 4). */
-  /* "a Command Unit", wherever a rule says it, is a unit with the Command Unit (X)
-     special rule of its own — whatever its group (the owner's ruling, rules review
-     a119ac2 REB-3). Field command 4th grade, Instigators and Secondary insurgent
-     leaders are their lists' command picks, but no Command Units. */
-  function commandUnit(u) { return !!u && !!u.rules && hasOwn(u, 'Command Unit'); }
-  /* What the one-a-Priority-Level cap counts: Command Units in a PMC list (p. 57),
-     every First Among Equals unit in a Rebel one (p. 95). */
-  function capsAsCommand(p) {
-    return !!p && (p.group === 'First Among Equals' ? true : commandUnit(p));
-  }
+  /* A command unit of the army's list — every Field command grade, the 4th
+     too, which has no "Command Unit (X)" activations of its own. */
+  function commandUnit(u) { return !!u && (!!u.command || hasOwn(u, 'Command Unit')); }
   function steadyShooter(state, a) {
     if (!doctrine(state, a.side, 'T5') || a.fp === null || isMachine(a) || !a.alive || a.x < 0) return false;
     if (status(a) !== 'ready') return false;
@@ -2129,7 +2122,7 @@
     sizeBonus: sizeBonus, addSP: addSP, coverFor: coverFor, defenceAgainst: defenceAgainst,
     canShoot: canShoot, canShootTerrain: canShootTerrain, turnCost: turnCost, shoot: shoot, assault: assault, reachable: reachable, pathTo: pathTo, groundLookup: groundLookup,
     turnToll: turnToll, turnsTo: turnsTo, driveCost: driveCost,
-    commandUnit: commandUnit, capsAsCommand: capsAsCommand, rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
+    commandUnit: commandUnit, rally: rally, fallBack: fallBack, hackBurn: hackBurn, collars: collars, medicNearby: medicNearby,
     isMachine: isMachine, isFlying: isFlying, flyInf: flyInf, overmindFor: overmindFor, overmindReach: overmindReach, bugRanged: bugRanged, bugGround: bugGround, pheromoneBonus: pheromoneBonus, aggressiveNow: aggressiveNow, endlessTide: endlessTide, psychicWave: psychicWave, weaponStyle: weaponStyle, weaponSpec: weaponSpec, WEAPONS: WEAPONS, arcOf: arcOf, inFireArc: inFireArc,
     resolveDamage: resolveDamage, applyDamage: applyDamage, repair: repair,
     canAssault: canAssault, chargeReach: chargeReach, chargeRoute: chargeRoute, canEmbark: canEmbark, canTow: canTow, towedGuns: towedGuns, embark: embark, disembark: disembark, dropSpots: dropSpots,

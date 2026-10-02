@@ -418,9 +418,9 @@
       var cargo = veh && veh.cargo;
       if (!cargo || !has(veh, 'Command Vehicle')) return null;
       /* "If a Command Unit is in a Command Vehicle, it grants the vehicle all of its
-         special rules" (p. 59) — a unit with the Command Unit rule of its own; the
-         Field command 4th grade is no Command Unit, and grants it nothing. */
-      for (var i = 0; i < cargo.length; i++) if (has(cargo[i], 'Command Unit')) return cargo[i];
+         special rules" (p. 59) — any unit of the list's command units, the Field
+         command 4th grade and its Inspiring Presence too. */
+      for (var i = 0; i < cargo.length; i++) if (cargo[i].command || has(cargo[i], 'Command Unit')) return cargo[i];
       return null;
     }
 
