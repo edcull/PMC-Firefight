@@ -120,6 +120,25 @@ console.log('\nA Coordinate chain may stop short (p. 59)');
   ok('...and play passes on', st.activeSide === 'B', st.activeSide);
 })();
 
+console.log('\nREB-3 (review a119ac2): every unit of a list\u2019s command group is a Command Unit');
+(function () {
+  ['cmd4', 'cmd3', 'cmd2', 'cmd1', 'highcmd', 'rinstigators', 'rsecondary', 'rleaders', 'rinfluential', 'rrebellion',
+    'xalpha1', 'xalpha2', 'xalpha5', 'bwatchlarva', 'bovermind', 'bqueen'].forEach((k) => {
+    ok(R.profile(k).name + ' is a Command Unit', R.commandUnit(unit(k, 'A', 10, 10)));
+  });
+  ok('...a line squad is not', !R.commandUnit(unit('regular', 'A', 10, 10)));
+  // Primitive Alpha troopers have no Command Unit (X) of their own, but are "other Command Units" all the same
+  const { e, st } = battle(['xalpha3', 'xalpha1', 'xbeta3'], ['regular']);
+  const cmd = st.units.find((u) => u.key === 'xalpha3'), a1 = st.units.find((u) => u.key === 'xalpha1');
+  const other = st.units.find((u) => u.side === 'A' && u !== cmd && u !== a1);
+  cmd.x = 10; cmd.y = 20; a1.x = 14; a1.y = 16; if (other) { other.x = 14; other.y = 24; }
+  st.streak = 1;
+  e.intent('A', { k: 'select', id: cmd.id });
+  ok('an Alpha squad coordinates', e.intent('A', { k: 'action', id: 'coordinate' }).ok && !!st.chain);
+  ok('...and cannot call on Primitive Alpha troopers', e.query.eligible('A').indexOf(a1) < 0);
+  if (other) ok('...but can on a line unit', e.query.eligible('A').indexOf(other) >= 0);
+})();
+
 console.log('\nIncendiary doubles the hit table\u2019s Suppression only (p. 58)');
 (function () {
   // every die high: a 9 on the D10, so one hit at least, and a 6 on the table, a Man down!

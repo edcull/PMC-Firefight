@@ -12,7 +12,7 @@
         doctrine = E.doctrine, droneUnit = E.droneUnit, has = E.has, hasOwn = E.hasOwn,
         infamyPanic = E.infamyPanic, isFlying = E.isFlying, isMachine = E.isMachine, projects = E.projects,
         psychicBond = E.psychicBond, shoot = E.shoot, status = E.status, terrainAt = E.terrainAt,
-        unitDist = E.unitDist, unitNear = E.unitNear, dropSpots = E.dropSpots, coverAt = E.coverAt;
+        unitDist = E.unitDist, unitNear = E.unitNear, dropSpots = E.dropSpots, coverAt = E.coverAt, commandUnit = E.commandUnit;
     /* ---------- hit tables ---------- */
     /* Psychic Support (p. 130) counts as Field Medics — to 12" with Mind
        Amplifiers (p. 142). */
@@ -420,7 +420,7 @@
       /* "If a Command Unit is in a Command Vehicle, it grants the vehicle all of its
          special rules" (p. 59) — any unit of the list's command units, the Field
          command 4th grade and its Inspiring Presence too. */
-      for (var i = 0; i < cargo.length; i++) if (cargo[i].command || has(cargo[i], 'Command Unit')) return cargo[i];
+      for (var i = 0; i < cargo.length; i++) if (commandUnit(cargo[i]) || has(cargo[i], 'Command Unit')) return cargo[i];
       return null;
     }
 
@@ -431,7 +431,7 @@
       doctrine = L.doctrine; droneUnit = L.droneUnit; has = L.has; hasOwn = L.hasOwn;
       infamyPanic = L.infamyPanic; isFlying = L.isFlying; isMachine = L.isMachine; projects = L.projects;
       psychicBond = L.psychicBond; shoot = L.shoot; status = L.status; terrainAt = L.terrainAt;
-      unitDist = L.unitDist; unitNear = L.unitNear; dropSpots = L.dropSpots; coverAt = L.coverAt;
+      unitDist = L.unitDist; unitNear = L.unitNear; dropSpots = L.dropSpots; coverAt = L.coverAt; commandUnit = L.commandUnit;
     }
 
     return {

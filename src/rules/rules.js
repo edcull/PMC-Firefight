@@ -1218,7 +1218,7 @@
       credit: credit, currentMorale: currentMorale, d3: d3, d6: d6, doctrine: doctrine, droneUnit: droneUnit,
       has: has, hasOwn: hasOwn, infamyPanic: infamyPanic, isFlying: isFlying, isMachine: isMachine,
       projects: projects, psychicBond: psychicBond, shoot: shoot, status: status, terrainAt: terrainAt,
-      unitDist: unitDist, unitNear: unitNear, dropSpots: dropSpots, coverAt: coverAt
+      unitDist: unitDist, unitNear: unitNear, dropSpots: dropSpots, coverAt: coverAt, commandUnit: commandUnit
     };
   }
   function kitDamage() {
@@ -1431,9 +1431,17 @@
      carrying Suppression. The shot is resolved as normal — a 'Man down!' still
      kills — but every Suppression point the result would have given is taken
      away instead (two 'Get down!' and one 'Man down!' remove 4). */
-  /* A command unit of the army's list — every Field command grade, the 4th
-     too, which has no "Command Unit (X)" activations of its own. */
-  function commandUnit(u) { return !!u && (!!u.command || hasOwn(u, 'Command Unit')); }
+  /* "a Command Unit", wherever a rule says it (the owner's ruling, rules review
+     a119ac2 REB-3): every unit of a list's command group, whether or not it has
+     Command Unit (X) activations of its own — Field command 4th grade to High
+     command, every First Among Equals unit, every Alpha squad and every Leader Bug
+     unit — and anything else carrying the rule. */
+  function commandUnit(u) {
+    if (!u) return false;
+    if (u.command || (u.rules && hasOwn(u, 'Command Unit'))) return true;
+    var p = u.key && BY_KEY[u.key];
+    return !!p && (!!p.command || !!p.alpha || !!p.leaderBug);
+  }
   function steadyShooter(state, a) {
     if (!doctrine(state, a.side, 'T5') || a.fp === null || isMachine(a) || !a.alive || a.x < 0) return false;
     if (status(a) !== 'ready') return false;
