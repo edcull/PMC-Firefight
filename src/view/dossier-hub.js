@@ -47,14 +47,36 @@
               return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + n + (n === 1 ? ' force' : ' forces') + (n === 3 ? ' (the usual)' : '') + '</option>';
             }).join('') + '</select>' +
             '<p class="dnote">An odd number: with yours, the forces on the world pair off for each round of battles.</p></div>';
-          h += '<div class="field rivarmies"><label>Their armies</label>';
+          /* Each force's army, and its colours beside it: a swatch, rolled unless one
+             is picked from the popup (a colour another force has is not offered) */
+          var CO = (E.root.PMCIso && E.root.PMCIso.COLOURS) || {}, KEYS = (E.root.PMCIso && E.root.PMCIso.COLOUR_KEYS) || [];
+          var rc = E.wantRivalColours;
+          var swatch = function (k) {
+            var c = CO[k];
+            return c ? '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '<span class="rivrand">?</span>';
+          };
+          h += '<div class="field rivarmies"><label>Their armies and colours</label>';
           for (var ri = 0; ri < nr; ri++) {
-            h += '<select class="rivarmy" data-i="' + ri + '" aria-label="Opposing force ' + (ri + 1) + '">' +
+            h += '<div class="rivrow"><select class="rivarmy" data-i="' + ri + '" aria-label="Opposing force ' + (ri + 1) + '">' +
               opt('', 'Force ' + (ri + 1) + ' \u2014 rolled at random', ra[ri] || '') +
               ARMIES.map(function (a) { return opt(a[0], 'Force ' + (ri + 1) + ' \u2014 ' + a[1].replace(/^An? /, '').replace(/^./, function (c) { return c.toUpperCase(); }), ra[ri] || ''); }).join('') +
-              '</select>';
+              '</select><button type="button" class="rivcol" data-go="rivcolour" data-i="' + ri + '" title="' +
+              esc(rc[ri] && CO[rc[ri]] ? CO[rc[ri]].name : 'Colours rolled at random \u2014 tap to pick') + '" aria-label="Force ' + (ri + 1) + ' colours">' +
+              swatch(rc[ri]) + '</button></div>';
           }
           h += '</div>';
+          // the colour picker for the force whose swatch was tapped
+          var ci = E.rivColourFor;
+          if (ci !== null && ci < nr) {
+            var others = rc.filter(function (k, j) { return k && j !== ci && j < nr; });
+            h += cmodal('rivcol', 'Force ' + (ci + 1) + ' \u2014 colours', '<div class="csw">' +
+              '<button type="button" class="rivpick-rand' + (!rc[ci] ? ' on' : '') + '" data-rivpick="" title="Rolled at random"><span class="rivrand">?</span></button>' +
+              KEYS.map(function (k) {
+                var taken = others.indexOf(k) >= 0;
+                return '<button type="button"' + (k === rc[ci] ? ' class="on"' : '') + ' data-rivpick="' + k + '"' + (taken ? ' disabled' : '') +
+                  ' title="' + esc(CO[k].name + (taken ? ' \u2014 another force wears it' : '')) + '">' + swatch(k) + '</button>';
+              }).join('') + '</div><p class="dnote">If your own force takes the same colours, this one is given others.</p>');
+          }
         }
         h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
         h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));

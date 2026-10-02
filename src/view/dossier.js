@@ -279,6 +279,7 @@
   var wantFaction = 'pmc', wantB = 'pmc';   // what the new campaign's forces will be, as picked so far
   // solo: how many forces share the world with the player's, and what each runs ('' rolled)
   var wantRivals = 3, wantRivalArmies = [];
+  var wantRivalColours = [], rivColourFor = null;   // ...their colours ('' rolled), and the one whose picker is open
   var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false;
   var hubPane = 'tier';               // the hub opens on the company
@@ -527,6 +528,7 @@
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; },
+      get wantRivalColours() { return wantRivalColours; }, get rivColourFor() { return rivColourFor; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
@@ -922,6 +924,11 @@
       }
       render(); return;
     }
+    // a new campaign's opposing force: its colours picked (or left to be rolled)
+    if (t.hasAttribute('data-rivpick') && rivColourFor !== null) {
+      wantRivalColours[rivColourFor] = t.getAttribute('data-rivpick') || '';
+      rivColourFor = null; openModal = null; render(); return;
+    }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
       // recruiting spends the money: say what it costs, and what there is, before it is spent
@@ -1099,6 +1106,7 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
+      case 'rivcolour': rivColourFor = +t.getAttribute('data-i') || 0; openModal = 'rivcol'; render(); return;
       // hotseat: Player 1's aftermath read, the device goes to Player 2 for theirs (HC-4)
       case 'afternext': case 'afterpass': case 'postpass': (KIT_AFTER || kitAfter()).afterTurn(go, t.getAttribute('data-seat')); render(); return;
       case 'passok': contractSeen = t.getAttribute('data-seat') === 'B' ? 'B' : 'A'; render(); return;
@@ -1132,7 +1140,7 @@
         // no name to start from: the player gives one on the founding screen (the box suggests one)
         beginFounding('', wantMode === 'hotseat' ? 'hotseat' : 'solo', fac);
         draft.archs = [];                          // the world is always rolled
-        draft.rivals = { n: wantRivals, factions: wantRivalArmies.slice(0, wantRivals) };
+        draft.rivals = { n: wantRivals, factions: wantRivalArmies.slice(0, wantRivals), colours: wantRivalColours.slice(0, wantRivals) };
         render(); return;
       }
       case 'dofound': {
@@ -1293,6 +1301,18 @@
       camp.rivals[i] = co;
     });
     if (archIds && archIds.length) C.faceRival(camp, 0);
+    /* The colours picked for them on the new-campaign form: theirs, unless the
+       player's own force has taken them (or another force has); the rest are
+       given what is still free (ensureColours, below). */
+    var picked = (want && want.colours) || [], taken = [camp.companies.A.colour];
+    camp.rivals.forEach(function (r, i) {
+      var k = picked[i];
+      if (k && taken.indexOf(k) < 0) { r.colour = k; taken.push(k); }
+    });
+    camp.rivals.forEach(function (r, i) {
+      if (picked[i] && r.colour === picked[i]) return;
+      r.colour = freeColour(taken); taken.push(r.colour);
+    });
     ensureColours();
   }
 
