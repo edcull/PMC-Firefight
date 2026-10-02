@@ -265,5 +265,19 @@ console.log('\nL-36 A Psychic Wave goes out from a building too (p. 116)');
   ok('...and sends it out, staying inside', e.intent('A', { k: 'wave', x: spot.x, y: spot.y }).ok && u.bld === bld && u.activated);
 })();
 
+console.log('\nXEN-5 Rite of Unrest works for its own side, so it lapses while its unit is Suppressed or Broken (p. 28)');
+(function () {
+  const e = game(['xbeta3', 'xbeta3'], ['regular', 'regular']);
+  const st = e.state();
+  const u = st.units.find((x) => x.side === 'A'), foe = st.units.find((x) => x.side === 'B');
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.x = x.side === 'A' ? 40 : 4; x.y = 40; });
+  u.x = 20; u.y = 20; foe.x = 26; foe.y = 20;
+  u.camp = { flags: { unrest: true } };
+  const spAfter = (sp) => { u.sp = sp; foe.sp = 0; e.query.beginningRites(); return foe.sp; };
+  ok('steady, it puts a Suppression point on the enemy within 12"', spAfter(0) === 1);
+  ok('...Suppressed, it does not', spAfter(u.morale + 1) === 0, R.status(u));
+  ok('...nor Broken', spAfter(u.morale * 2 + 1) === 0, R.status(u));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

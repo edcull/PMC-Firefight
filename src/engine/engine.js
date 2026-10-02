@@ -987,7 +987,10 @@
      a unit with a friend in 12" and sight rolls a D6, and on a 1 fires on it. */
   function beginningRites() {
     state.units.forEach(function (u) {
-      if (!K.onTable(u) || !R.campFlag(u, 'unrest') || R.status(u) === 'broken') return;
+      /* a passive skill working for its own side, so — like the bonuses of p. 28 — it
+         lapses while the unit is Suppressed or Broken (the owner's ruling, rules
+         review a119ac2 XEN-5) */
+      if (!K.onTable(u) || !R.campFlag(u, 'unrest') || R.status(u) !== 'ready') return;
       var hit = K.activeUnits().filter(function (e) {
         return e.side !== u.side && e.cls === 'infantry' && !e.drone && !R.campFlag(e, 'shielding') && R.unitDist(u, e) <= 12;
       });
@@ -2248,6 +2251,7 @@
         // the Rally phase's flight on its own, for the tests
         fleeBroken: function () { K.fleeBroken(); },
         rallyPhase: function () { K.rallyPhase(); },
+        beginningRites: function () { beginningRites(); },
         greetArrival: function (u) { return K.greetArrival(u); },
         reservePhase: function (done) { K.reservePhase(done || function () {}); },
         aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },
