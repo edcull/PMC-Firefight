@@ -206,5 +206,19 @@ console.log('\nA force whose guns cannot fill the scenario\'s held-back half mus
   ok('...and holds that wave back', wave2 >= sp3.want, wave2 + ' in the second wave');
 })();
 
+console.log('\nSCN-2 Wiping the enemy out on the last turn wins, even with the objectives level (p. 49)');
+(function () {
+  const e = game('secure', ['regular', 'regular'], ['regular', 'regular']);
+  toBattle(e);
+  const st = e.state();
+  st.turn = 20;
+  st.units.forEach((u) => { u.x = 2 + (u.side === 'A' ? 0 : 40); u.y = 2; });     // nobody near any objective: level
+  const level = SC.check(st);
+  ok('with both forces standing and the objectives level, turn 20 is a draw', level && level.winner == null && !!level.text, level && level.text);
+  st.units.filter((u) => u.side === 'B').forEach((u) => { u.alive = false; });
+  const r = SC.check(st);
+  ok('...but with B wiped out in that End phase, A wins', r && r.winner === 'A', r && r.text);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

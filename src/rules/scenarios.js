@@ -1066,12 +1066,12 @@
        several different victory conditions and each player meets at least one of them
        in the same turn, the game ends with a draw" (p. 49). So the scenario is still
        asked: if the side that was wiped out met one of its conditions this End phase
-       too (or the scenario itself calls it level), neither wins. */
+       too, neither wins. A scenario merely running out of time level is no condition
+       met: the wiped-out side has lost. */
     var won = ga ? 'B' : 'A', lost = ga ? 'A' : 'B';
     var own = state.scen.check(state);
-    if (own && (own.winner === lost || (own.winner == null && own.text))) {
-      return { winner: null, text: lost + ' is destroyed to the last unit, but ' +
-        (own.winner === lost ? 'met a victory condition the same turn' : 'the scenario ends level') + ' — a draw. (' + own.text + ')' };
+    if (own && own.winner === lost) {
+      return { winner: null, text: lost + ' is destroyed to the last unit, but met a victory condition the same turn — a draw. (' + own.text + ')' };
     }
     return { winner: won, text: lost + ' is destroyed to the last unit — an automatic victory for ' + won + '.' };
   }
