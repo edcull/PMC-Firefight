@@ -123,6 +123,12 @@ main {
   position: sticky; bottom: 0; z-index: 2; margin: 12px -14px -14px; padding: 10px 14px 14px;
   background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -8px 12px -8px rgba(0,0,0,.6);
 }
+/* A question asked from inside the side columns (Empty transports, the reserves
+   and transports, a swap) is a full-window modal, but the column and the pinned
+   foot it sits in are each their own stacking layer, so it was painted under
+   the board: only its backdrop showed, over the column, and the game looked
+   stuck. While one is open, the column and that foot are lifted over the rest. */
+.flank:has(.cmodal:not([hidden])), .flank .acts.deploy-go:has(.cmodal:not([hidden])) { z-index: 80; }
 
 /* the running feed of rolls, in place of a card to dismiss */
 .resfeed {

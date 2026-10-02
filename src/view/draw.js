@@ -263,7 +263,7 @@
         var b = propBox(p);
         var cv = document.createElement('canvas');
         cv.width = Math.max(1, b.w); cv.height = Math.max(1, b.h);
-        var og = cv.getContext('2d');
+        var og = cv.getContext('2d', { willReadFrequently: true });   // read back once, for its outline
         og.translate(-b.x, -b.y);
         ISO.drawProp(og, p, liftOf(p.x, p.y));
         /* the plate's pixels, inside the building's outline — taken whole, so
@@ -390,7 +390,7 @@
          breathes, a cloak shimmers — but only one in view (drawBoard notes it) is worth
          redrawing the whole board for; rotors and sweeps read as well at eight frames
          a second as a fire does */
-      if (B.vc.hazeOnView || ((B.vc.animOnView || B.vc.fireOnView || B.vc.flagOnView) && ambientTick % 2 === 0)) drawBoard();
+      if (B.vc.hazeOnView || ((B.vc.animOnView || B.vc.fireOnView || B.vc.flagOnView || B.vc.liveOnView) && ambientTick % 2 === 0)) drawBoard();
     }, 60);
 
     /* ================= heat haze =================
@@ -427,18 +427,61 @@
       return lo.slice(0, -1).concat(up.slice(0, -1));
     }
 
+    /* On a desert world the sun does it too: a few stretches of open sand, well
+       clear of any piece of terrain, shimmer gently — the same ripple, weaker and
+       lower than over a melt. Chosen once a table, from its seed, so every redraw
+       (and every screen) has the same ones. */
+    function desertPatches() {
+      var st = B.state;
+      if (!st || !st.cfg || st.cfg.planet !== 'desert') return [];
+      var key = st.seed + '|' + st.terrain.length;
+      if (B.vc.sandHaze && B.vc.sandHaze.key === key) return B.vc.sandHaze.list;
+      var seed = (st.seed || 1) >>> 0;
+      function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+      // open ground: nothing of the table's terrain within a few inches
+      function clear(x, y, m) {
+        return st.terrain.every(function (r) {
+          if (r.kind === 'lava' || r.wrecked) return true;
+          var bx = r.poly ? Math.min.apply(null, r.poly.map(function (q) { return q[0]; })) : r.x;
+          var by = r.poly ? Math.min.apply(null, r.poly.map(function (q) { return q[1]; })) : r.y;
+          var bw = r.poly ? Math.max.apply(null, r.poly.map(function (q) { return q[0]; })) - bx : r.w;
+          var bh = r.poly ? Math.max.apply(null, r.poly.map(function (q) { return q[1]; })) - by : r.h;
+          return x < bx - m || x > bx + bw + m || y < by - m || y > by + bh + m;
+        });
+      }
+      var spots = [];
+      for (var gx = 5; gx <= W - 5; gx += 5) for (var gy = 5; gy <= H - 5; gy += 5) {
+        var x = gx + (rnd() - 0.5) * 3, y = gy + (rnd() - 0.5) * 3, rad = 3 + rnd() * 2.5;
+        if (clear(x, y, rad + 1) && spots.every(function (q) { return Math.hypot(q.x - x, q.y - y) > q.rad + rad + 3; })) spots.push({ x: x, y: y, rad: rad });
+      }
+      // a handful, not a carpet
+      spots.sort(function () { return rnd() - 0.5; });
+      var list = spots.slice(0, 9).map(function (q) {
+        var foot = [];
+        for (var i = 0; i < 14; i++) {
+          var an = i / 14 * Math.PI * 2, rr = q.rad * (0.8 + 0.2 * Math.sin(an * 3 + q.x));
+          foot.push([q.x + Math.cos(an) * rr, q.y + Math.sin(an) * rr * 0.8]);
+        }
+        return { foot: foot, rise: K * 1.2, amp: 1.3, k: 0.75 };
+      });
+      B.vc.sandHaze = { key: key, list: list };
+      return list;
+    }
+
     function heatHaze(v) {
       B.vc.hazeOnView = false;
       if (calmMotion || !B.state.terrain) return;
-      var lavas = B.state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; });
-      if (!lavas.length) return;
+      // the fields of hot air: over every melt, and the desert's sun-baked stretches
+      var fields = B.state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; }).map(function (r) {
+        return { foot: r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]], rise: K * 2.2, amp: 1.3, k: 1 };
+      }).concat(desertPatches());
+      if (!fields.length) return;
       var t = nowMs() / 1000;
-      var rise = K * 2.2;                 // how high over the melt the air still wavers, in plate pixels
-      var AMP = 1.3;                      // the widest sway, in plate pixels: heat haze, not an earthquake
 
-      lavas.forEach(function (r, li) {
-        var foot = (r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]])
-          .map(function (q) { return ISO.toScreen(q[0], q[1]); });
+      fields.forEach(function (fd, li) {
+        var rise = fd.rise;                 // how high over the ground the air still wavers, in plate pixels
+        var AMP = fd.amp;                   // the widest sway, in plate pixels: heat haze, not an earthquake
+        var foot = fd.foot.map(function (q) { var sp = ISO.toScreen(q[0], q[1]); sp.y -= liftOf(q[0], q[1]); return sp; });
         // the melt, and the same outline lifted: the column of hot air standing over it
         var shape = hull(foot.concat(foot.map(function (p) { return { x: p.x, y: p.y - rise }; })));
         var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
@@ -475,7 +518,7 @@
         for (var yy = 0; yy < phei; yy += band) {
           var plateY = by0 + yy / SS;
           // full strength over the melt and just above it, dying away to the top of the column
-          var k = plateY >= meltTop ? 0.75 : Math.max(0, 1 - (meltTop - plateY) / rise);
+          var k = (plateY >= meltTop ? 0.75 : Math.max(0, 1 - (meltTop - plateY) / rise)) * fd.k;
           if (k <= 0.02) continue;
           // two ripples of different lengths, both drifting up, so it never looks like a pattern
           var sway = Math.sin(plateY * 0.9 + t * 5.2 + seed) + 0.45 * Math.sin(plateY * 0.37 - t * 2.3 + seed * 2);
@@ -880,6 +923,15 @@
         if (!onView(bx, by)) return;
         order.push({ depth: bx + by, draw: 'boarding', u: u, x: bx, y: by, k: k, age: age, up: bd.up });
       });
+      // the pieces of scenery that move: an objective's pennant and lamp, a search site's tag
+      var lives = (B.vc.props || []).filter(function (pr) {
+        return ISO.propLives(pr) && onView(pr.x + (pr.w || 0) / 2, pr.y + (pr.h || 0) / 2);
+      });
+      lives.forEach(function (pr) {
+        var lx = pr.x + (pr.w || 0) / 2, ly = pr.y + (pr.h || 0) / 2;
+        order.push({ depth: lx + ly, draw: 'live', pr: pr, x: lx, y: ly });
+      });
+      B.vc.liveOnView = lives.length > 0;
       // the dead and the wrecks stay where they fell
       var now = now0, anyFire = false;
       (B.vc.remains || []).forEach(function (r) {
@@ -909,6 +961,7 @@
             if (it.flag) roofFlag(B.pctx, it.pr, ISO.PALETTE[it.flag] || ISO.PALETTE.A, tNow, (it.pr.x * 7 + it.pr.y * 3) % 1);
             return;
           }
+          if (it.draw === 'live') { ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0); return; }
           if (it.draw === 'body') {
             var bp = ISO.toScreen(it.r.x, it.r.y);
             ISO.drawBody(B.pctx, bp.x + it.r.dx, bp.y + it.r.dy - liftOf(it.r.x, it.r.y), it.r);
