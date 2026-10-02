@@ -220,7 +220,7 @@
         dice: [{ label: 'D6', value: roll.roll, tone: roll.random && roll.reroll == null ? 'fail' : '' }]
           .concat(roll.reroll != null ? [{ label: 'Knowledge', value: roll.reroll, tone: roll.random ? 'fail' : '' }] : []),
         note: roll.random ? '1-2: the unit comes out at a random Teleport unit.' : '3-6: the unit comes out where its owner chose.',
-        outcome: { text: res.text + (res.ok ? ' It may still act this turn.' : ''), tone: res.ok ? 'good' : 'warn' } });
+        outcome: { text: res.text + (res.ok && !u.activated ? ' It may still act this turn.' : ''), tone: res.ok ? 'good' : 'warn' } });
       render();
       endActivation(tp);
     }

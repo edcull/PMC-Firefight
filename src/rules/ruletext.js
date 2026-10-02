@@ -218,8 +218,8 @@
     'Suppressive Fire':
       'Any shooting attack that scores hits — Basic Firepower and Indirect Fire included — adds +2 Suppression on top of the hit table. Not with the auxiliary weapon.',
     'Teleport':
-      'Takes in a steady infantry unit within 4" that has not acted; on a D6 of 1-2 it comes out beside a random ' +
-      'Teleport unit, on 3-6 beside the one you pick. The unit may still act this turn.',
+      'Takes in a steady infantry unit within 4", as boarding any transport (it may have acted already this turn); on a D6 of 1-2 it comes out ' +
+      'beside a random Teleport unit, on 3-6 beside the one you pick, put down within 4" of it. A unit that had not yet acted may still act this turn.',
     'Transport (X)':
       'Capacity {X}: carries that many infantry units, loaded within 4". Passengers are safe from fire and lose all Suppression; ' +
       'Suppressed or Broken units cannot board. No unit is loaded and unloaded in the same turn: nobody gets back on ' +
