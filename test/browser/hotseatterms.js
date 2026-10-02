@@ -23,6 +23,9 @@ const { ROOT } = require('../where.js');
   async function click(sel) {
     const hit = await p.evaluate((s) => { const x = document.querySelector(s); if (!x || x.disabled) return false; x.click(); return true; }, sel);
     await p.waitForTimeout(220);
+    // the contract changing hands asks for the device to be passed: tapped through here
+    await p.evaluate(() => { const x = document.querySelector('#camp-body [data-go="passok"]'); if (x) x.click(); });
+    await p.waitForTimeout(120);
     return hit;
   }
   const text = () => p.evaluate(() => document.getElementById('camp-body').innerText);
@@ -48,7 +51,7 @@ const { ROOT } = require('../where.js');
       k.levels = C.levelsFor(camp.companies.A, camp.companies.B, 2); k.pl = k.levels[0] || 1;
     });
     await click('#camp-body [data-go="contract"]');   // re-render (a no-op click on the open contract)
-    await p.evaluate(() => window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get()));
+    await p.evaluate(() => { window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get()); const x = document.querySelector('#camp-body [data-go="passok"]'); if (x) x.click(); });
   }
   // hand over as Player 1's start button does (dossier-contract.js) — the forces these
   // companies were founded with cannot fill Tier II, and what they field is not the point
@@ -57,7 +60,7 @@ const { ROOT } = require('../where.js');
       const k = window.PMC_CAMPAIGN.contract();
       k.first = { picks: k.picks, tactic: k.tactic || null, drugs: k.drugs || [] };
       k.picks = []; k.side = 'B'; k.tactic = null;
-      window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get());
+      window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get()); { const x = document.querySelector('#camp-body [data-go="passok"]'); if (x) x.click(); }
     });
     await p.waitForTimeout(200);
   }
@@ -96,6 +99,24 @@ const { ROOT } = require('../where.js');
   check('Player 1\'s shift moves it at once', await tier() === 1);
   await handOver();
   check('...and Player 2 is not offered it', await seat() === 'B' && await p.evaluate(() => !document.querySelector('#camp-body [data-tier]')));
+
+  console.log('\nPlayer 2\'s Foresighted Command, after Player 1 has picked (HC-10)');
+  await setup([]);
+  await p.evaluate(() => {
+    const k = window.PMC_CAMPAIGN.contract();
+    k.scenario = { id: 'meeting', name: 'Meeting engagement', roll: 1 };
+    k.alt = { id: 'secure', name: 'Secure and control', roll: 2 }; k.altBy = 'B'; k.altUsed = false; k.foreBack = null;
+    window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get()); { const x = document.querySelector('#camp-body [data-go="passok"]'); if (x) x.click(); }
+  });
+  check('Player 1 is told Player 2 holds the choice', /Player 2 chooses which to fight/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
+  await handOver();
+  check('Player 2 is offered the other scenario', await p.evaluate(() => !!document.querySelector('#camp-body [data-foresee]')));
+  await click('#camp-body [data-foresee]');
+  const fb = await p.evaluate(() => { const k = window.PMC_CAMPAIGN.contract(); return { side: k.side, scen: k.scenario.id }; });
+  check('...taking it sends the screen back to Player 1, on the new scenario', fb.side === 'A' && fb.scen === 'secure', JSON.stringify(fb));
+  check('...who is told why', /used Foresighted Command: the scenario is now Secure and control/.test(await p.evaluate(() => document.getElementById('camp-body').innerText)));
+  await handOver();
+  check('...and Player 2 cannot switch it again', await p.evaluate(() => !document.querySelector('#camp-body [data-foresee]')));
 
   check('no page errors', errs.length === 0, errs.join(' | '));
   await b.close();

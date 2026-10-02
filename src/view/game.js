@@ -192,7 +192,12 @@
     // a question put to one side, whoever's turn it is: that side answers it (HB-1, HB-2)
     var ask = ui.reservePick || state.kyfAsk || state.martyrAsk || state.nervousAsk || state.standAsk || state.endAsk || state.faceAsk;
     if (ask && ask.side) return seats.indexOf(ask.side) >= 0 ? ask.side : null;
+    // before the battle, as the transport decides who answers (net.js seatNow): the secret swaps, relocating, pieces placed, the mine
     var want = state.tacticAsk ? state.tacticAsk.order[state.tacticAsk.step]
+      : state.phase === 'deploy' && state.swapAsk ? state.swapAsk.side
+      : state.relocating ? state.relocating.side
+      : state.placeAsk ? state.placeAsk.side
+      : state.phase === 'deploy' && state.minePick ? state.minePick.side
       : state.phase === 'deploy' ? Q.placingSide()
       : state.phase === 'terrain' ? Q.terrainSide() : state.activeSide;
     return seats.indexOf(want) >= 0 ? want : null;
@@ -1054,7 +1059,7 @@
     get isDemoName() { return isDemoName; }, get isMadeUpName() { return isMadeUpName; },
     get musterFaction() { return musterFaction; }, bufferFromCanvas: bufferFromCanvas, busy: busy,
     curArea: curArea, deployNext: deployNext, dispX: dispX, dispY: dispY, drawBoard: drawBoard,
-    hideTerrainTip: hideTerrainTip, liftOf: liftOf, myTurn: myTurn, other: other, playerSide: playerSide,
+    hideTerrainTip: hideTerrainTip, liftOf: liftOf, myTurn: myTurn, mySide: mySide, other: other, playerSide: playerSide,
     roleOf: roleOf, scoreObjectives: scoreObjectives, sideName: sideName, sizeView: sizeView,
     soloOwnerName: soloOwnerName, whenIdle: whenIdle, ISO: ISO, K: K, R: R, SFX: SFX, ZOOMS: ZOOMS, cam: cam,
     el: el, resQueue: resQueue, show: show, ui: ui

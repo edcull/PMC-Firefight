@@ -192,11 +192,8 @@
       // your list, the unit being swapped marked
       h += '<div class="swapcol"><h4>Your force</h4>' + mine.map(function (m) {
         var n = B.Q.swapOptions(sa.side, m.id).length, on = sa.pick === m.id;
-        /* noted, not yet made: before everyone goes on (not a hotseat's secret round,
-           which moves on as each player finishes) it can be taken back */
-        if (held[m.id]) return B.state.swapStage
-          ? '<button class="act on" disabled><span>' + esc(m.name) + ' → ' + esc(held[m.id]) + '</span><small>Tier ' + R.ROMAN[m.tier] + ' — swapped</small></button>'
-          : '<button class="act on" data-swapundo="' + m.id + '"><span>' + esc(m.name) + ' → ' + esc(held[m.id]) + '</span><small>Tier ' + R.ROMAN[m.tier] + ' — swapped · tap to undo</small></button>';
+        // noted, not yet made: it can be taken back until the player is done (HB-5)
+        if (held[m.id]) return '<button class="act on" data-swapundo="' + m.id + '"><span>' + esc(m.name) + ' → ' + esc(held[m.id]) + '</span><small>Tier ' + R.ROMAN[m.tier] + ' — swapped · tap to undo</small></button>';
         return '<button class="act' + (on ? ' on' : '') + '" data-swappick="' + (on ? '' : m.id) + '"' + (n ? '' : ' disabled') + '><span>' + esc(m.name) +
           '</span><small>Tier ' + R.ROMAN[m.tier] + (n ? (on ? ' — swapping' : '') : ' — nothing to swap in') + '</small></button>';
       }).join('') + '</div>';
@@ -243,6 +240,10 @@
         '<button class="act" data-act="placedone"><span>' + (pa.left === pa.total ? 'Skip' : 'Done') + '</span><small>' +
         (pa.left === pa.total ? 'No fortifications' : 'That will do') + '</small></button></div></div>';
     }
+    // at one screen, a question names the player it is put to (HB-7)
+    function askWho(sd) {
+      return B.seats && B.seats.length > 1 && sd ? '<p class="askwho pill pill-' + sd + '">' + esc(sideName(sd)) + '</p>' : '';
+    }
     function placeCard() {
       var pa = B.state.placeAsk;
       if (pa.kind === 'fort') return fortCard(pa);
@@ -250,7 +251,7 @@
         fortify: ['Fortify and Strike!', 'Put up to ' + pa.total + ' field fortifications (low walls) in your deployment zone.'],
         terrain: ['Detailed Terrain Knowledge', 'Move up to ' + pa.total + ' pieces of terrain up to 12" each. Tap a piece, then where it goes.'] }[pa.why];
       var picked = pa.kind === 'move' && pa.pick != null ? B.state.terrain[pa.pick] : null;
-      return '<div class="card"><h2>' + T[0] + '</h2><p class="sub">' + T[1] + '</p>' +
+      return '<div class="card">' + askWho(pa.side) + '<h2>' + T[0] + '</h2><p class="sub">' + T[1] + '</p>' +
         '<p class="hint">' + (picked ? 'Moving the ' + esc(R.TERRAIN[picked.kind].name.toLowerCase()) + ' — tap where it goes, or tap it again to put it back down.'
           : pa.left + ' of ' + pa.total + ' left.') + '</p>' +
         '<div class="acts">' +
@@ -263,7 +264,7 @@
     // Know Your Foe! (p. 141): once a battle, at the start of a turn the enemy has reinforcements coming
     function kyfCard() {
       var k = B.state.kyfAsk;
-      return '<div class="card"><h2>Know Your Foe!</h2>' +
+      return '<div class="card">' + askWho(k.side) + '<h2>Know Your Foe!</h2>' +
         '<p class="sub">The enemy has ' + k.n + ' unit' + (k.n === 1 ? '' : 's') + ' waiting to come on. Once a battle, the tribe may stop every enemy reinforcement arriving this turn.</p>' +
         '<div class="acts"><button class="act" data-act="kyf"><span>Hold them back</span><small>This turn — it cannot be used again</small></button>' +
         '<button class="act" data-act="nokyf"><span>Not now</span><small>Keep it for a later turn</small></button></div></div>';
@@ -272,7 +273,7 @@
     function martyrCard() {
       var m = B.state.martyrAsk, u = byId(m.unit), foe = byId(m.foe);
       if (!u || !foe) return '';
-      return '<div class="card"><h2>Martyrdom</h2>' +
+      return '<div class="card">' + askWho(m.side) + '<h2>Martyrdom</h2>' +
         '<p class="sub">' + (m.charging ? '<b>' + esc(u.name) + '</b> is charging <b>' + esc(foe.name) + '</b>'
           : '<b>' + esc(foe.name) + '</b> is charging <b>' + esc(u.name) + '</b>') +
         '. Before the first round, one of the Holy Warriors may walk into the enemy alone: ' +
@@ -282,7 +283,7 @@
     }
     function mineCard() {
       var mp = B.state.minePick;
-      return '<div class="card"><h2>Terrorist</h2>' +
+      return '<div class="card">' + askWho(mp.side) + '<h2>Terrorist</h2>' +
         '<p class="sub">Before anyone deploys, you may secretly mine one destructible piece of terrain other than the objective. ' +
         'Any First Among Equals unit can set it off during the battle — Firepower 10, Destructive Weapon.</p>' +
         '<p class="hint">Tap one of the ' + mp.pool.length + ' outlined pieces.</p>' +

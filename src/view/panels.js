@@ -503,9 +503,13 @@
       return h;
     }
     // Strong Nervous System (p. 124): once a battle, at the start of a Rally phase
+    /* At one screen, a question names the player it is put to (hotseat review HB-7). */
+    function askWho(sd) {
+      return B.seats && B.seats.length > 1 && sd ? '<p class="askwho pill pill-' + sd + '">' + esc(sideName(sd)) + '</p>' : '';
+    }
     function nervousCard() {
       var na = B.state.nervousAsk;
-      return '<div class="card"><h2>Strong Nervous System</h2>' +
+      return '<div class="card">' + askWho(na.side) + '<h2>Strong Nervous System</h2>' +
         '<p class="sub">' + na.n + ' unit' + (na.n === 1 ? '' : 's') + ' of the swarm carry Suppression' +
         (na.broken ? ', ' + na.broken + ' of them Broken and about to flee' : '') +
         '. Once a battle, the hive-mind may wipe away every Suppression point on every bug \u2014 before anyone flees.</p>' +
@@ -679,7 +683,7 @@
     function standCard() {
       var a = B.state.standAsk, u = byId(a.unit);
       if (!u) return '';
-      return '<div class="card"><h2>Last Stand</h2>' +
+      return '<div class="card">' + askWho(a.side || u.side) + '<h2>Last Stand</h2>' +
         '<p class="sub"><b>' + esc(u.name) + '</b> is left with ' + a.sp + ' SP after its rally \u2014 over three times its Morale of ' + a.morale +
         '. It is about to scatter and flee the field. It still has its Last Stand: once a battle, every point of suppression gone.</p>' +
         '<div class="acts"><button class="act primary" data-act="stand"><span>Make its Last Stand</span><small>All ' + a.sp + ' SP cleared \u2014 it stays</small></button>' +
@@ -1175,20 +1179,20 @@
         }).join('');
       }).join('');
       if (sw) {
-        return '<div class="card"><h2>' + esc(u.name) + ' — turn?</h2>' +
+        return '<div class="card">' + askWho(u.side) + '<h2>' + esc(u.name) + ' — turn?</h2>' +
           '<p class="sub">Advanced Control System: after a Move action the aircraft may turn up to 90\u00b0 either way.</p>' +
           '<div class="dig-oct">' + cells + '</div>' +
           '<div class="acts"><button class="act" data-act="vfaceall"><span>Keep its facing</span><small>No turn</small></button></div></div>';
       }
       if (pv) {
-        return '<div class="card"><h2>' + esc(u.name) + ' — end facing?</h2>' +
+        return '<div class="card">' + askWho(u.side) + '<h2>' + esc(u.name) + ' — end facing?</h2>' +
           '<p class="sub">It has ' + pv.left.toFixed(1) + '" of its move left. It may turn where it stands, ' + (u.turn || 0) +
           '" for every 90°. Shots on its side or rear hit more easily, and a limited fire arc bears only ahead.</p>' +
           '<div class="dig-oct">' + cells + '</div>' +
           '<div class="acts"><button class="act" data-act="vfaceall"><span>Keep its facing</span><small>No turn</small></button></div></div>';
       }
       var offered = DIG_NAMES[F.map(function (f) { return Math.abs(R.angleWrap(f - B.state.faceAsk.dir)); }).reduce(function (b, d, i, a) { return d < a[b] ? i : b; }, 0)];
-      return '<div class="card"><h2>' + esc(u.name) + ' — which way?</h2>' +
+      return '<div class="card">' + askWho(u.side) + '<h2>' + esc(u.name) + ' — which way?</h2>' +
         '<p class="sub">Choose the way it faces. Shots on its side or rear hit more easily, and a limited fire arc bears only ahead. ' +
         'Tap a direction around it on the table, or here.' + (left > 1 ? ' ' + (left - 1) + ' more vehicle' + (left > 2 ? 's' : '') + ' to face after this.' : '') + '</p>' +
         '<div class="dig-oct">' + cells + '</div>' +
@@ -1208,7 +1212,7 @@
           '<span class="dpr-note">' + (on ? 'coming on' : 'stays in reserve') + '</span></button>';
       }).join('');
       var want = rp.min === rp.max ? rp.min : (rp.min ? rp.min + '\u2013' : 'up to ') + rp.max;
-      return '<div class="card"><h2>Reserves</h2>' +
+      return '<div class="card">' + askWho(rp.side) + '<h2>Reserves</h2>' +
         '<p class="sub">' + esc(rp.text) + '</p>' +
         '<div class="dplist"><div class="dphead">' + n + ' of ' + want + ' chosen</div>' + rows + '</div>' +
         (mine ? '<div class="acts"><button class="act primary" data-act="rpickdone"' + (ok ? '' : ' disabled') + '>' +

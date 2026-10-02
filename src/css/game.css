@@ -1882,3 +1882,24 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink);
 }
 .cmodal-box h3, .sheet .cmodal-box h3, .askbox h3, #setup[data-hot] .forcebar-wrap.open h3.demo-only { margin: 0 0 10px; }
+
+/* Passing the device in a hotseat game (view.js drawHandover): the whole screen,
+   in the colours of the player whose turn it is, until they tap it. */
+.handover {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ho-dark, #222); color: var(--ho-light, #ddd);
+  cursor: pointer; padding: 16px;
+}
+.handover[hidden] { display: none; }
+.handover-box { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; max-width: 34em; }
+.handover-box small { text-transform: uppercase; letter-spacing: .12em; opacity: .8; }
+.handover-box b { font-size: clamp(1.8rem, 6vw, 3rem); line-height: 1.1; }
+.handover-box span { opacity: .85; }
+/* the player a question is put to, at one screen (HB-7) */
+.askwho { display: inline-block; margin: 0 0 6px; }
+/* the campaign's contract, passed between two players at one device */
+.passcard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  min-height: 60vh; border: 2px solid; border-radius: 10px; cursor: pointer; font: inherit; padding: 24px 16px; }
+.passcard small { text-transform: uppercase; letter-spacing: .12em; opacity: .8; }
+.passcard b { font-size: clamp(1.6rem, 5vw, 2.6rem); line-height: 1.1; }

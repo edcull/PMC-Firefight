@@ -493,8 +493,26 @@
   function upgradeView() { return (KIT_AFTER || kitAfter()).upgradeView(); }
   function doctrineView() { return (KIT_AFTER || kitAfter()).doctrineView(); }
   /* ================= render and wiring ================= */
+  /* Two players at one device: the contract changes hands between them (Player 1
+     picks, hands over, perhaps gets it back), and each time the screen asks for the
+     device to be passed before it shows the next player's (hotseat review, phase 3). */
+  var contractSeen = null;
+  function passOwed() {
+    if (!camp || camp.mode !== 'hotseat' || !contract || root.PMC_HANDOVER_OFF) return false;
+    return (contract.side === 'B' ? 'B' : 'A') !== contractSeen;
+  }
+  function passCard() {
+    var sd = contract.side === 'B' ? 'B' : 'A', co = camp.companies[sd];
+    return '<h2>Contract</h2><button type="button" class="passcard" data-go="passok" data-seat="' + sd + '"' + stripeOf(co) + '>' +
+      '<small>Pass the device to</small><b>' + esc(co.name) + '</b><span>Player ' + (sd === 'A' ? 1 : 2) + ' \u2014 tap when ready.</span></button>';
+  }
+  function stripeOf(co) {
+    var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[co && co.colour];
+    return c ? ' style="background:' + c.dark + ';color:' + c.light + ';border-color:' + c.light + '"' : '';
+  }
   function render() {
     var body = el('camp-body');
+    if (view !== 'contract') contractSeen = null;          // the next contract asks for the device again
     if (!body) return;
     var h = '';
     if (view !== 'hub') hubPane = 'tier';                    // back at the hub, it opens on the company
@@ -504,7 +522,7 @@
     if (camp && camp.fronts && !camp.post) (KIT_AFTER || kitAfter()).nextFront();   // the other forces' battles, still being fought
     if (view === 'found') h = foundView();
     else if (view === 'offers') h = offersView();
-    else if (view === 'contract') h = contractView();
+    else if (view === 'contract') h = passOwed() ? passCard() : contractView();
     else if (view === 'aftermath') h = aftermathView();
     else if (view === 'post') h = postView();
     else if (view === 'honour') h = honourView();
@@ -716,6 +734,16 @@
       contract.roles = !wasRoles ? null : contract.altRoles || (SCx && SCx.rollRoles ? SCx.rollRoles(contract.scenario.id,
         { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, ['A']) : null);
       contract.altRoles = wasRoles;
+      /* Player 2's own Foresighted Command, after Player 1 has picked their force for
+         the other scenario: the screen goes back to Player 1 to look again (HC-10),
+         and the choice is made once. */
+      if (contract.side === 'B' && contract.first && (contract.altBy || 'A') === 'B') {
+        contract.altUsed = true;
+        contract.foreBack = camp.companies.B.name + ' used Foresighted Command: the scenario is now ' + contract.scenario.name +
+          ' (was ' + was.name + '). Check your force, then hand over again.';
+        (KIT_CONTRACT || kitContract()).seatBack();
+        save();
+      }
       render(); return;
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
@@ -895,6 +923,7 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
+      case 'passok': contractSeen = t.getAttribute('data-seat') === 'B' ? 'B' : 'A'; render(); return;
       // hotseat: the hub turns to the other player's force (HC-1)
       case 'hubside': hubSide = t.getAttribute('data-hs') === 'B' ? 'B' : 'A'; colourOpen = false; promoRid = null; openModal = null; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
