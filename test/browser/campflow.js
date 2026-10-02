@@ -75,7 +75,7 @@ async function pastFronts(p) {
   console.log('\nFounding a company');
   await click(p, '#btn-campaign');
   await clickText(p, 'Raise the force');
-  check('the founding screen opened', await p.evaluate(() => !!document.getElementById('found-name') && /Mercenaries/.test(document.querySelector('#camp-body .found-units .muster-head .armypill').textContent)));
+  check('the founding screen opened', await p.evaluate(() => !!document.getElementById('found-name') && /PMC/.test(document.querySelector('#camp-body .found-units .muster-head .armypill').textContent)));
   // the name and the colours are settled here now, with the units
   await p.evaluate(() => { document.getElementById('found-name').value = 'Task Force Ironhold'; });
   check('...and asks for the company name there',

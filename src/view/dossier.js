@@ -273,6 +273,8 @@
   var secondFaction = null;       // what the hub said the second player runs, until they found it
   var wantMode = 'solo';          // how a new campaign will be played: the menu card it was opened from
   var wantFaction = 'pmc', wantB = 'pmc';   // what the new campaign's forces will be, as picked so far
+  // solo: how many forces share the world with the player's, and what each runs ('' rolled)
+  var wantRivals = 3, wantRivalArmies = [];
   var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false;
   var hubPane = 'tier';               // the hub opens on the company
@@ -519,6 +521,7 @@
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
+      get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
@@ -1094,8 +1097,9 @@
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
         // a name to start from; the player settles it on the founding screen
         // no name to start from: the player gives one on the founding screen (the box suggests one)
-        beginFounding('', el('camp-mode').value, fac);
+        beginFounding('', wantMode === 'hotseat' ? 'hotseat' : 'solo', fac);
         draft.archs = [];                          // the world is always rolled
+        draft.rivals = { n: wantRivals, factions: wantRivalArmies.slice(0, wantRivals) };
         render(); return;
       }
       case 'dofound': {
@@ -1118,7 +1122,7 @@
           try { localStorage.setItem('pmc-colour', fco.colour); } catch (e6) { }
           // hotseat: the second player founds their own force next; solo: the rivals are raised
           if (camp.mode === 'hotseat') { save(); beginSecond(secondFaction); render(); return; }
-          foundRival(draft.archs);
+          foundRival(draft.archs, draft.rivals);
         } else ensureColours();
         save(); view = 'hub'; render(); return;
       }
@@ -1244,8 +1248,8 @@
   /* The world's forces: rolled as usual, then every one the player asked to
      meet put in place of a rolled one (and added, if they asked for more than
      the world had). The first of theirs is the one they face first. */
-  function foundRival(archIds) {
-    C.foundRivals(camp);
+  function foundRival(archIds, want) {
+    C.foundRivals(camp, want && want.n, want ? { factions: want.factions } : null);
     C.evenWorld(camp);                  // the world's forces pair off: an even number of them
     (archIds || []).forEach(function (archId, i) {
       var a = C.archetype(archId);
@@ -1345,15 +1349,12 @@
     });
     host.addEventListener('change', function (ev) {
       if (ev.target.id === 'camp-file') onFile(ev);
-      // a hotseat campaign has no rival to choose: the second player founds their own
-      else if (ev.target.id === 'camp-mode') {
-        var hs = ev.target.value === 'hotseat', bw = el('camp-bwrap');
-        wantMode = ev.target.value;
-        if (bw) bw.hidden = !hs;
-      }
       // the army picked: its pill (and the rules behind it) follows
       else if (ev.target.id === 'camp-faction') { wantFaction = ev.target.value; render(); }
       else if (ev.target.id === 'camp-bfaction') { wantB = ev.target.value; render(); }
+      // solo: how many opposing forces, and what each of them runs
+      else if (ev.target.id === 'camp-rivals') { wantRivals = +ev.target.value || 3; render(); }
+      else if (ev.target.classList && ev.target.classList.contains('rivarmy')) { wantRivalArmies[+ev.target.getAttribute('data-i')] = ev.target.value; }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
         if ((contract.levels || [1, 2]).indexOf(want) >= 0) contract.pl = want;

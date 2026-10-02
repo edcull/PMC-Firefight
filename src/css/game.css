@@ -1343,6 +1343,9 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dtp i { display: block; height: 100%; background: var(--bad); }
 .dtpn { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
 .dnote { font-size: 11px; color: var(--ink-faint); }
+/* the new campaign's opposing forces: one choice of army each */
+.rivarmies select + select { margin-top: 6px; }
+.field .dnote { margin: 5px 0 0; }
 .dmarks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .dacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 /* a unit's Rename, Disband and Promote, and a soldier's Rename: icons (the word is the tooltip) */

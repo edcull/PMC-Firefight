@@ -58,7 +58,8 @@
       var factions = [];
       for (var i = 0; i < n; i++) factions.push(Math.random() < 0.5 ? 'pmc' : 'rebel');
       if (factions.indexOf('pmc') < 0) factions[Math.floor(Math.random() * n)] = 'pmc';
-      if (factions.indexOf('rebel') < 0) {
+      // (one force alone is whatever it rolled: there is nobody else to make a revolt of)
+      if (n >= 2 && factions.indexOf('rebel') < 0) {
         var at = Math.floor(Math.random() * n);
         while (factions[at] === 'pmc' && factions.filter(function (f) { return f === 'pmc'; }).length < 2) {
           at = Math.floor(Math.random() * n);
@@ -78,6 +79,10 @@
         factions.forEach(function (f, i) { if (factions.filter(function (g) { return g === f; }).length > 1) spare2.push(i); });
         if (spare2.length) factions[pick(spare2)] = 'xeno';
       }
+      // one force alone: any of the four armies, as likely as each other
+      if (n === 1) factions[0] = pick(['pmc', 'rebel', 'bugs', 'xeno']);
+      // the armies the player asked for, where they asked (the rest stay as rolled)
+      if (opts && opts.factions) opts.factions.slice(0, n).forEach(function (f, i) { if (f && archetypesFor(f).length) factions[i] = f; });
       var usedArch = {}, usedNames = [];
       campaign.rivals = factions.map(function (f, k) {
         var pool = archetypesFor(f).filter(function (a) { return !usedArch[a.id]; });
