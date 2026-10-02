@@ -752,6 +752,7 @@
   function lineClear(state, a, b) { return (KIT_SPACE || kitSpace()).lineClear(state, a, b); }
   function groundLevel(state, x, y) { return (KIT_SPACE || kitSpace()).groundLevel(state, x, y); }
   function levelOf(state, u) { return (KIT_SPACE || kitSpace()).levelOf(state, u); }
+  function heightUnder(state, u) { return (KIT_SPACE || kitSpace()).heightUnder(state, u); }
   function tooHighToHover(state, x, y) { return (KIT_SPACE || kitSpace()).tooHighToHover(state, x, y); }
   function onHill(state, p) { return (KIT_SPACE || kitSpace()).onHill(state, p); }
   function unitNear(state, x, y, ignore, pad) { return (KIT_SPACE || kitSpace()).unitNear(state, x, y, ignore, pad); }
@@ -1360,7 +1361,7 @@
       canDemolish: canDemolish, centreDist: centreDist, d10: d10, defenceAgainst: defenceAgainst,
       destroyTerrain: destroyTerrain, dmgMod: dmgMod, doctrine: doctrine, dualMode: dualMode, flyInf: flyInf,
       fmtPart: fmtPart, has: has, hasLoS: hasLoS, hasOwn: hasOwn, inFireArc: inFireArc, isFlying: isFlying,
-      isMachine: isMachine, kindsUnder: kindsUnder, levelOf: levelOf, lineClear: lineClear, mountOf: mountOf,
+      isMachine: isMachine, kindsUnder: kindsUnder, levelOf: levelOf, heightUnder: heightUnder, lineClear: lineClear, mountOf: mountOf,
       pheromoneBonus: pheromoneBonus, pointSegDist: pointSegDist, propOf: propOf,
       resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief, ruleValue: ruleValue,
       sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
@@ -2097,7 +2098,7 @@
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
-    groundLevel: groundLevel, levelOf: levelOf,
+    groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
     canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding, exitSpots: exitSpots,

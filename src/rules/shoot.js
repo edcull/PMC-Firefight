@@ -13,7 +13,7 @@
         defenceAgainst = E.defenceAgainst, destroyTerrain = E.destroyTerrain, dmgMod = E.dmgMod,
         doctrine = E.doctrine, dualMode = E.dualMode, flyInf = E.flyInf, fmtPart = E.fmtPart, has = E.has,
         hasLoS = E.hasLoS, hasOwn = E.hasOwn, inFireArc = E.inFireArc, isFlying = E.isFlying,
-        isMachine = E.isMachine, kindsUnder = E.kindsUnder, levelOf = E.levelOf, lineClear = E.lineClear,
+        isMachine = E.isMachine, kindsUnder = E.kindsUnder, levelOf = E.levelOf, heightUnder = E.heightUnder, lineClear = E.lineClear,
         mountOf = E.mountOf, pheromoneBonus = E.pheromoneBonus, pointSegDist = E.pointSegDist,
         propOf = E.propOf, resolveDamage = E.resolveDamage, resolveShootingHits = E.resolveShootingHits, shotRelief = E.shotRelief,
         ruleValue = E.ruleValue, sectionHigh = E.sectionHigh, sectionRect = E.sectionRect,
@@ -202,7 +202,8 @@
         /* Height: +2 for firing down on a target standing lower — from a hill on
            to the level ground, and from the crown of a stepped hill on to its
            lower slope as well. Once, however many steps down it is. */
-        var la = levelOf(state, a), lt = levelOf(state, t);
+        // (the target's ground: one in a wood or building on the same hill is not below it)
+        var la = levelOf(state, a), lt = heightUnder(state, t);
         if (la > lt) {
           total += 2;
           parts.push({ label: la === 2 && lt === 1 ? 'firing down from the crown of the hill' : 'firing from a hill', v: 2 });

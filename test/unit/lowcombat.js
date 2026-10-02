@@ -285,5 +285,18 @@ console.log('\nCrossfire needs the target between the two shooters (p. 31)');
   ok('an attack from the far side is', x({ x: 12, y: 20 }));
 })();
 
+console.log('\nTER-4 A unit in a wood or building on the same hill is not below the shooter (p. 42)');
+(function () {
+  const hill = { kind: 'hill', x: 10, y: 10, w: 12, h: 12 };
+  const woods = { kind: 'woods', x: 17, y: 12, w: 4, h: 6 };
+  const shooter = unit('regular', 'A', 13, 16);
+  const hillFP = (t, terrain) => R.shotMods(world([shooter, t], terrain), shooter, t, 'fire', {}).parts.some((p) => /hill/.test(p.label));
+  ok('in a wood on the same hill: no +2 from the hill', !hillFP(unit('regular', 'B', 19, 15), [hill, woods]));
+  const bld = { kind: 'building', x: 17, y: 12, w: 4, h: 4 };
+  ok('...nor in a building on it', !hillFP(unit('regular', 'B', 19, 14, { bld, sec: 0 }), [hill, bld]));
+  ok('on the level ground below, the +2 stands', hillFP(unit('regular', 'B', 30, 16), [hill]));
+  ok('...and in a wood down there too', hillFP(unit('regular', 'B', 30, 16), [hill, { kind: 'woods', x: 28, y: 13, w: 4, h: 6 }]));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
