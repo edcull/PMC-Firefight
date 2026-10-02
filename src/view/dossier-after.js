@@ -25,11 +25,11 @@
         var co = E.camp.companies[sd];
         if (report.winner === sd && C.hasDoctrine(co, 'V2')) steps.push({ kind: 'plunder', side: sd });
       });
-      // Tough Negotiators (p. 87): after both sides have rolled — and after any Plunderer re-roll
+      /* Tough Negotiators (p. 87): after both sides have rolled — and after any
+         Plunderer re-roll. Then each player's own questions together, Player 1's
+         first (hotseat review HC-13), so the device is passed once between them. */
       players.forEach(function (sd) {
         if (C.hasDoctrine(E.camp.companies[sd], 'S2')) steps.push({ kind: 'negotiate', side: sd });
-      });
-      players.forEach(function (sd) {
         if (C.hasDoctrine(E.camp.companies[sd], 'V5')) steps.push({ kind: 'weak', side: sd });
       });
       var askReborn = {}; players.forEach(function (sd) { askReborn[sd] = true; });
@@ -50,6 +50,7 @@
       var opts = {}; for (var k in post.pre) opts[k] = post.pre[k];
       opts.defer = true;                // the other forces' battles are fought out below, not rolled
       E.after = C.aftermath(E.camp, post.report, opts);
+      afterTurn('reset');
       // the share of each force lost, from the report (for the figures at the head of the aftermath)
       E.after.loss = {};
       ['A', 'B'].forEach(function (sd) {
@@ -124,6 +125,7 @@
         rival: a.rival || null, fronts: a.fronts || null, elsewhere: a.fronts ? [] : (a.elsewhere || []) };
       last.after = JSON.parse(JSON.stringify(keep));
       last.balance = E.camp.companies.A.kUC;
+      if (E.camp.mode === 'hotseat') last.balances = { A: E.camp.companies.A.kUC, B: E.camp.companies.B.kUC };
       // ten kilobytes or so each: the last twenty are kept in full, the rest keep their line
       E.camp.log.slice(0, -20).forEach(function (l) { delete l.after; });
     }
@@ -199,13 +201,13 @@
       if (!cas.length) return '';
       function who(c) {
         if (c.anon) {
-          var Wa = C.fateWords(E.camp.companies.A, 'eshaven');   // the unnamed: killed or wounded, whoever's
+          var Wa = C.fateWords(E.camp.companies[me], 'eshaven');   // the unnamed: killed or wounded, whoever's
           return (c.kia ? c.kia + ' ' + Wa.kia : '') + (c.kia && c.wounded ? ', ' : '') + (c.wounded ? c.wounded + ' ' + Wa.wia : '') +
             (c.rolls ? ' <span class="dmen-rank">D6 ' + c.rolls.join(' ') + '</span>' : '');
         }
         return esc(c.rank) + ' ' + esc(c.name) + (c.roll ? ' <span class="dmen-rank">D6 ' + c.roll + '</span>' : '');
       }
-      var W = C.words(E.camp.companies.A);
+      var W = C.words(E.camp.companies[me]);
       var dead = cas.filter(function (c) { return c.kia; }), hurt = cas.filter(function (c) { return !c.anon && !c.kia; });
       var anon = cas.filter(function (c) { return c.anon; });
       if (anon.length) return '<div class="dledger">Casualties: ' + anon.map(who).join('; ') + '</div>';
@@ -214,8 +216,9 @@
     }
     /* The player's own battle, as a card like the ones for the battles elsewhere. */
     function ownCard(last) {
-      var coA = E.camp.companies.A, foeName = (last && last.against) || (E.camp.companies.B || {}).name || 'the enemy';
-      var foe = (E.camp.rivals || []).filter(function (r) { return r.name === foeName; })[0] ||
+      var you = them(me), coA = E.camp.companies[me];
+      var foeName = E.camp.mode === 'hotseat' ? E.camp.companies[you].name : (last && last.against) || (E.camp.companies.B || {}).name || 'the enemy';
+      var foe = E.camp.mode === 'hotseat' ? E.camp.companies[you] : (E.camp.rivals || []).filter(function (r) { return r.name === foeName; })[0] ||
         (E.camp.companies.B && E.camp.companies.B.name === foeName ? E.camp.companies.B : null);
       function side(sd, co, name) {
         var rec = E.after.sides[sd] || { units: [], traumas: [] };
@@ -231,12 +234,12 @@
             { cls: 'cs-tra', v: '+' + sum('tp'), w: 'Trauma' }
           ],
           // what the AI force did with it afterwards; the player's own choices come on the hub
-          dev: sd === 'B' && E.after.rival ? devList({ name: name, did: E.after.rival,
+          dev: sd !== me && E.after.rival ? devList({ name: name, did: E.after.rival,
             traumaList: (rec.traumas || []).map(function (t) { return { unit: t.name, name: t.trauma && t.trauma.name }; }) }) : ''
         };
       }
-      var sides = [side('A', coA, coA.name), side('B', foe, foeName)];
-      if (E.after.winner === 'B') sides.reverse();
+      var sides = [side(me, coA, coA.name), side(you, foe, foeName)];
+      if (E.after.winner === you) sides.reverse();
       var h = '<div class="cpan front"><div class="cprom-head"><b>' + esc(coA.name) + ' v ' + esc(foeName) + '</b></div>' +
         (last ? '<p class="cpstat">' + esc(frontFacts({ tier: last.tier, pl: last.pl, scenario: last.scenario })) + '</p>' : '');
       sides.forEach(function (r) {
@@ -287,6 +290,7 @@
     function postView() {
       var post = E.camp.post, st = post && post.steps[0];
       if (!st) { finishPost(); return aftermathView(); }
+      if (hot() && st.side !== postSeen && !root.PMC_HANDOVER_OFF) return passCard(st.side, 'postpass', 'After the battle');
       var co = E.camp.companies[st.side], rep = post.report, pre = post.pre;
       var h = '<h2>After the battle</h2>';
       if (E.camp.mode === 'hotseat') h += '<p class="lede">' + esc(co.name) + '</p>';
@@ -378,6 +382,28 @@
       return h + '</div>';
     }
 
+    /* Whose aftermath is on screen: Player 1's, then in a hotseat campaign Player 2's,
+       each after the device is passed (the same card as the contract's). */
+    var me = 'A', afterSide = 'A', afterSeen = null, postSeen = null;
+    function hot() { return !!E.camp && E.camp.mode === 'hotseat'; }
+    function them(sd) { return sd === 'B' ? 'A' : 'B'; }
+    function pastBalance(l) {
+      var b = l.balances ? l.balances[me] : me === 'A' ? l.balance : null;
+      return b != null ? b : '?';
+    }
+    function passCard(sd, go, title) {
+      var co = E.camp.companies[sd];
+      return '<h2>' + title + '</h2><button type="button" class="passcard" data-go="' + go + '" data-seat="' + sd + '"' + E.stripeOf(co) + '>' +
+        '<small>Pass the device to</small><b>' + esc(co.name) + '</b><span>Player ' + (sd === 'A' ? 1 : 2) + ' \u2014 tap when ready.</span></button>';
+    }
+    function afterTurn(go, sd) {
+      if (go === 'postpass') postSeen = sd;
+      else if (go === 'afterpass') afterSeen = afterSide;
+      else if (go === 'afternext') afterSide = 'B';
+      // a fresh aftermath starts with Player 1, who holds the device already if their questions came last
+      else { afterSide = 'A'; afterSeen = postSeen === 'A' ? 'A' : null; postSeen = null; }
+    }
+
     /* A past battle's aftermath is drawn by the same page, from what was kept:
        read only, with the way back to Battles fought at its foot. */
     function aftermathView() {
@@ -387,7 +413,10 @@
       try { return afterPage(past); } finally { E.after = now; }
     }
     function afterPage(pastLine) {
-      var h = '<h2>Aftermath' + (pastLine ? ' \u2014 turn ' + pastLine.turn : '') + '</h2>';
+      me = hot() ? (pastLine ? E.hubSide : afterSide) : 'A';
+      if (!pastLine && hot() && afterSide !== afterSeen && !root.PMC_HANDOVER_OFF) return passCard(afterSide, 'afterpass', 'Aftermath');
+      var co = E.camp.companies[me];
+      var h = '<h2>Aftermath' + (pastLine ? ' \u2014 turn ' + pastLine.turn : '') + (hot() ? ' \u2014 ' + esc(co.name) : '') + '</h2>';
       /* The day at a glance, drawn as the other forces' battles are: who it was
          against and where, then each side — the winner first — with what it
          lost, was paid and took away in experience and trauma, and what an AI
@@ -402,17 +431,17 @@
         (E.after.winner
           ? 'The winner takes the higher, ' + p.high + '; the loser the lower, ' + p.low + '.'
           : 'A draw, so both companies take the lower, ' + p.low + '.') +
-        (p.negA ? ' Tough Negotiators re-rolled ' + p.negA.swapped.length +
-          (p.negA.swapped.length === 1 ? ' die.' : ' dice.') : '') +
-        '</div><div class="cphead">' + colourFlash(E.camp.companies.A) + '<b>' + esc(E.camp.companies.A.name) + '</b>' +
-        '<span class="cmoney">+' + p.A + ' ' + coin() + ' → ' + (pastLine ? (pastLine.balance != null ? pastLine.balance : '?') : E.camp.companies.A.kUC) + '</span></div></div>';
+        (p['neg' + me] ? ' Tough Negotiators re-rolled ' + p['neg' + me].swapped.length +
+          (p['neg' + me].swapped.length === 1 ? ' die.' : ' dice.') : '') +
+        '</div><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
+        '<span class="cmoney">+' + p[me] + ' ' + coin() + ' → ' + (pastLine ? pastBalance(pastLine) : co.kUC) + '</span></div></div>';
 
-      if (p.territory && p.territory.A) {
-        var tt = p.territory.A;
+      if (p.territory && p.territory[me]) {
+        var tt = p.territory[me];
         h += '<div class="cpan"><div class="cpstat">Territorial recalculation (' + (tt.won ? 'the tribe claimed ground' : 'the tribe gave ground') + '): ' +
           '<span class="dcx">' + tt.was.join(' ') + '</span> → <span class="dcx">' + tt.now.join(' ') + '</span> = ' + tt.total + ' TP.</div></div>';
       }
-      var rec = E.after.sides.A;
+      var rec = E.after.sides[me] || { units: [] };
       if (rec.degenerated && rec.degenerated.length) {
         h += '<div class="cpan"><div class="cpstat">Infamy of Degeneration — ' + rec.degenerated.map(function (d) {
           return esc(d.name) + ' (rolled ' + d.roll + ') lost ' + d.lost + ' EXP';
@@ -425,7 +454,7 @@
             if (r.done) return '<div class="orow"><b>' + esc(r.name) + '</b><em>Regrown (D6 ' + r.done.roll + ') — ' +
               (r.done.remembered ? 'it remembers.' : 'the memory did not carry.') + '</em></div>';
             return '<div class="orow"><b>' + esc(r.name) + '</b><span class="segs"><button class="lnk" data-go="reborn" data-i="' + i + '"' +
-              (E.camp.companies.A.kUC < r.cost ? ' disabled' : '') + '>Recruit again — ' + r.cost + ' ' + coin() + '</button></span></div>';
+              (co.kUC < r.cost ? ' disabled' : '') + '>Recruit again — ' + r.cost + ' ' + coin() + '</button></span></div>';
           }).join('') + '</div>';
       }
       if (rec.reborn && rec.reborn.length) {
@@ -446,7 +475,7 @@
           (rec.infected.length === 1 ? '' : 's') + ' destroyed in assaults rise again: ' + rec.infected.length +
           ' free unit' + (rec.infected.length === 1 ? '' : 's') + ' of Infected Humans join the swarm.</div></div>';
       }
-      h += '<h3>The ' + C.words(E.camp.companies.A).force + '</h3><div class="dlist">';
+      h += '<h3>The ' + C.words(co).force + '</h3><div class="dlist">';
       rec.units.forEach(function (u) {
         if (u.rested != null) {
           h += '<div class="dcard rested"><div class="dtop"><b class="dname">' + esc(u.name) + '</b>' +
@@ -459,7 +488,7 @@
           h += '</div>';
           return;
         }
-        var tag = u.disbanded ? 'disbanded — ten ' + (E.camp.companies.A.faction === 'bugs' ? 'flaws' : E.camp.companies.A.faction === 'xeno' ? 'infamies' : 'traumas')
+        var tag = u.disbanded ? 'disbanded — ten ' + (co.faction === 'bugs' ? 'flaws' : co.faction === 'xeno' ? 'infamies' : 'traumas')
           : u.aboardDowned && u.wiped ? 'lost with the aircraft'
             : u.wiped ? 'wiped out — struck off' : '';
         h += '<div class="dcard' + (u.wiped ? ' gone' : '') + '"><div class="dtop">' +
@@ -510,14 +539,20 @@
         // the title bar's Back goes back to the list of battles it was opened from
         return h + '<p class="camp-foot"><button class="lnk" data-go="pastback">Back</button></p>';
       }
-      var gaps = C.rebuildNeeds(E.camp.companies.A);
+      var gaps = C.rebuildNeeds(co);
       if (gaps.length) {
-        h += '<div class="cpwarn">The ' + C.words(E.camp.companies.A).force + ' can no longer field a legal army at Tier ' +
+        h += '<div class="cpwarn">The ' + C.words(co).force + ' can no longer field a legal army at Tier ' +
           gaps.map(function (t) { return ROMAN[t]; }).join(', ') +
           '. Recruit or promote from the lowest Tier up before the next contract.</div>';
       }
       // on to the dossier, pinned at the foot; not until the other forces' battles are done
       var busy = !!E.camp.fronts;
+      /* Hotseat (HC-4, HC-5): Player 1 reads their aftermath, then the device goes
+         to Player 2 for theirs — and only then on, to Player 2's own dossier. */
+      if (hot() && me === 'A') {
+        var nx = E.camp.companies.B;
+        return h + '<div class="camp-dock"><button class="start" data-go="afternext">Next: ' + esc(nx.name) + '\u2019s aftermath</button></div>';
+      }
       h += '<div class="camp-dock"><button class="start" data-go="roster"' + (busy ? ' disabled' : '') + '>' +
         (busy ? 'The other forces are fighting…' : 'Dossier') + '</button></div>';
       h += '<p class="camp-foot"><button class="lnk" data-go="hub">The campaign</button></p>';
@@ -684,7 +719,8 @@
 
     return {
       onFinish: onFinish, postView: postView, aftermathView: aftermathView, nextFront: nextFront, showPast: showPast, honourView: honourView,
-      intelView: intelView, upgradeView: upgradeView, doctrineView: doctrineView
+      intelView: intelView, upgradeView: upgradeView, doctrineView: doctrineView,
+      afterTurn: afterTurn, get afterSide() { return hot() ? afterSide : 'A'; }
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierAfter;

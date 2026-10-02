@@ -483,7 +483,8 @@
       get camp() { return camp; }, get docSide() { return docSide; }, get docSwap() { return docSwap; },
       get drawState() { return drawState; }, get intelIdx() { return intelIdx; },
       get swapOut() { return swapOut; }, get upState() { return upState; },
-      get view() { return view; }, set view(v) { view = v; }, render: function () { render(); }
+      get view() { return view; }, set view(v) { view = v; }, render: function () { render(); },
+      get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; }, stripeOf: stripeOf
     }));
   }
   // the battle fought: its contract is done with (a kept one included)
@@ -927,7 +928,7 @@
       // an unchosen colour follows the kind of force (a swarm defaults to olive); a chosen one is kept
       draft.name = keepName;
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
-      render(); return;
+      save(); render(); return;                            // kept across a reload (HC-13)
     }
     if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
       var cc0 = hubCo(), other0 = camp.mode === 'hotseat' ? camp.companies[cc0 === camp.companies.A ? 'B' : 'A'] : null;
@@ -948,6 +949,8 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
+      // hotseat: Player 1's aftermath read, the device goes to Player 2 for theirs (HC-4)
+      case 'afternext': case 'afterpass': case 'postpass': (KIT_AFTER || kitAfter()).afterTurn(go, t.getAttribute('data-seat')); render(); return;
       case 'passok': contractSeen = t.getAttribute('data-seat') === 'B' ? 'B' : 'A'; render(); return;
       // hotseat: the hub turns to the other player's force (HC-1)
       case 'hubside': hubSide = t.getAttribute('data-hs') === 'B' ? 'B' : 'A'; colourOpen = false; promoRid = null; openModal = null; render(); return;
@@ -959,7 +962,7 @@
         dfilt[dk][dv] = !dfilt[dk][dv];
         render(); return;
       }
-      case 'dfiltclear': dfilt = { type: {}, tier: {} }; ufilter.A = {}; render(); return;
+      case 'dfiltclear': dfilt = { type: {}, tier: {} }; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
       case 'ufilter': {
         var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');
         var fl = ufilter[fk] || (ufilter[fk] = {});
@@ -1013,6 +1016,8 @@
       }
       case 'aspire': camp.companies[docSide].aspiring = true; save(); render(); return;
       case 'roster':
+        // from a hotseat aftermath, the dossier is that of the player who just read it
+        if (view === 'aftermath' && camp.mode === 'hotseat') hubSide = (KIT_AFTER || kitAfter()).afterSide;
         // from the hub, the Dossier button swaps the Tier panel for the dossier and back again
         if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
         else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
@@ -1055,9 +1060,10 @@
         save(); render(); return;
       }
       case 'reborn': {
-        var ro = after && after.sides.A && after.sides.A.rebornOffer, oi = +t.getAttribute('data-i');
+        var rbs = (KIT_AFTER || kitAfter()).afterSide;     // whoever's aftermath is on screen (hotseat: either player)
+        var ro = after && after.sides[rbs] && after.sides[rbs].rebornOffer, oi = +t.getAttribute('data-i');
         if (!ro || !ro[oi]) return;
-        var rr = C.rebirth(camp.companies.A, ro[oi]);
+        var rr = C.rebirth(camp.companies[rbs], ro[oi]);
         if (!rr.ok) { note('Enhanced Genetic Memory', rr.why); return; }
         save(); render(); return;
       }
@@ -1157,7 +1163,7 @@
 
   function doExport() {
     var blob = JSON.stringify(C.forSave(camp), null, 1);
-    var name = 'pmc-campaign-' + (camp.companies.A.name || 'company').replace(/\W+/g, '-').toLowerCase() + '.json';
+    var name = 'pmc-campaign-' + ((camp.companies.A.name || 'company') + (camp.mode === 'hotseat' && camp.companies.B ? '-v-' + (camp.companies.B.name || '') : '')).replace(/\W+/g, '-').toLowerCase() + '.json';
     (async function () {
       try {
         if (root.claude && root.claude.use) {

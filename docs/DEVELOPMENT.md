@@ -273,6 +273,8 @@ terrainsetup.js    laying the terrain by hand, area by area
 deployorder.js     choosing the deployment order; insertion escapes
 deployzones.js     every scenario's deployment zone, both ways round
 deploytap.js       placing units by tapping, on a phone and a desktop
+hotseatdeploy.js   at one screen, auto-deploy places only the side setting up, and the deploy card follows it
+hotseathandover.js the pass-the-device card at every change of player in a battle
 vehface.js         a vehicle put down is asked which way it faces
 digface.js         digging a gun in
 loadout.js         putting troops aboard a hull before the battle
@@ -340,6 +342,9 @@ founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
 hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts
 hotseatterms.js    On Our Terms… in a hotseat contract, held by one player or both
+hotseatcontract.js a hotseat contract kept across the hub and a reload, roles settled on it
+hotseatloop.js     a hotseat campaign turn: both contracts, the battle, each player's questions and aftermath
+hotseathub.js      a hotseat hub: each player's own dossier, and the campaign's end
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract

@@ -68,7 +68,7 @@
       cr.hidden = live || !going;
       if (going) {
         cr.setAttribute('data-camp', cg.mode === 'hotseat' ? 'hotseat' : 'solo');
-        el('menu-camp-resume-sub').textContent = cg.companies.A.name + ' \u00b7 campaign turn ' + cg.turn;
+        el('menu-camp-resume-sub').textContent = campName(cg) + ' \u00b7 campaign turn ' + cg.turn;
       }
     }
     /* a skirmish in this browser can be thrown away, and a battle over the
@@ -90,13 +90,18 @@
     campSub('menu-camp-sub', on, !hot, 'Raise a force and see it through a war', camp);
     campSub('menu-camphot-sub', on, hot, 'Two dossiers, two players, one screen', camp);
   }
+  // a hotseat campaign is both players': named by both forces (HC-13)
+  function campName(camp) {
+    var B = camp.mode === 'hotseat' && camp.companies.B;
+    return camp.companies.A.name + (B && B.name ? ' v ' + B.name : '');
+  }
   function campSub(id, on, mine, fresh, camp) {
     var sub = el(id);
     if (!sub) return;
     sub.textContent = !on ? fresh
-      : mine ? 'Continue: ' + camp.companies.A.name + ', campaign turn ' + camp.turn
+      : mine ? 'Continue: ' + campName(camp) + ', campaign turn ' + camp.turn
       : 'A ' + (camp.mode === 'hotseat' ? 'hotseat' : 'single-player') + ' campaign is under way: ' +
-        camp.companies.A.name + ', turn ' + camp.turn;
+        campName(camp) + ', turn ' + camp.turn;
   }
 
   function discardable() { return !!(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE()); }
