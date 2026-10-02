@@ -731,3 +731,4 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | SCN-3 Invasion edge distances to the token's centre | **No change (owner's decision).** A unit is many models on the tabletop but a single token here; measuring to its middle is fine. | `scenarios.js` |
 | SPR-2 Anti-tank and Gauss strip Battle Armour in assault | **No change (owner's decision).** Battle Armour's "negated by Anti-Tank or Gauss Weapons" is read without a shooting qualifier. | `rules.js` (`defenceAgainst`) |
 | SPR-4 Sappers' breach +1 only to the Sappers | **Changed.** When Sappers blow the cover in, "players add +1 to all rolls when resolving hits in that round": the defenders' answer that round gets the +1 too. | `assault.js` (`assault`, `assaultRound`); test `lowcombat.js` |
+| PMC-1 Medical drone counts as a Drone unit | **No change (owner's decision).** The missing "Drone unit" note is treated as a misprint in the book. | `data.js` |
