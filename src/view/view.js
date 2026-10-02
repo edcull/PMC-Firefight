@@ -497,24 +497,25 @@
        the screen is covered by a card naming them, until they tap it. Only where
        both seats are at this screen (or a co-op's two commandos); never online. */
     var handed = null;                 // who the device was last handed to
+    /* Two players at one screen pass the device only where the other must not see:
+       the secret round of swaps, and a mine chosen out of sight. Everything else —
+       deploying, each activation, a question put to the other side, the End phase —
+       is played in the open, the top bar saying whose turn it is. */
     function handoverKey() {
       var st = B.state;
       if (!st || st.over || window.PMC_HANDOVER_OFF) return null;
-      // a co-op's two players share side A and take it in turns, one activation each
-      if (st.solo && st.solo.coop && st.phase === 'battle') return st.activeSide === 'A' && st.activeOwner ? 'P' + st.activeOwner : null;
       if (!B.seats || B.seats.length < 2) return null;
       if (B.replaying && B.replaying()) return undefined;          // what just happened is still being shown
-      // the End phase put to both players at once is one card for the two: nobody to hand to (HB-8)
-      var ea = st.endAsk;
-      if (ea && [ea.side].concat(ea.rest || []).length > 1 && [ea.side].concat(ea.rest || []).every(function (x) { return B.seats.indexOf(x) >= 0; })) return null;
-      var sd = B.mySide ? B.mySide() : null;
+      var sd = st.phase === 'deploy' && st.swapStage && st.swapAsk ? st.swapAsk.side
+        : st.phase === 'deploy' && st.minePick ? st.minePick.side : null;
       // only a person is handed the device: an AI side (a demo's both) never is
-      if (sd && isAI(sd)) return null;
-      return sd || undefined;
+      return sd && !isAI(sd) ? sd : null;
     }
     function drawHandover() {
       var k = handoverKey(), box = el('handover');
       if (k === undefined) return;
+      // played in the open meanwhile: the next secret step asks for the device again
+      if (!k) handed = null;
       if (!k || k === handed) { if (box) box.hidden = true; return; }
       if (!box) {
         box = document.createElement('div');
@@ -526,9 +527,8 @@
           ev.preventDefault(); box.click();
         });
       }
-      var st = B.state, owner = k.charAt(0) === 'P' ? +k.slice(1) : 0;
-      var name = owner ? soloOwnerName(owner) : plainName(k);
-      var CO = (ISO && ISO.COLOURS) || {}, c = CO[owner ? st.cfg.colourA : (k === 'A' ? st.cfg.colourA : st.cfg.colourB)];
+      var st = B.state, name = plainName(k);
+      var CO = (ISO && ISO.COLOURS) || {}, c = CO[k === 'A' ? st.cfg.colourA : st.cfg.colourB];
       box.setAttribute('data-who', k);
       if (box.style && box.style.setProperty) {
         box.style.setProperty('--ho-dark', c ? c.dark : '#222');
