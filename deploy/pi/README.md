@@ -17,7 +17,9 @@ is opened on the router.
 ## What it needs
 
 - Raspberry Pi OS **64-bit** (Bookworm or later). `uname -m` says `aarch64`.
-- Node.js 20 or later (`node -v`). If it is missing or older:
+- Node.js 22 or later (`node -v`): the database package has ready-made builds
+  for it on a Pi, but none for Node 20, and building it on a Pi 3 can bring the Pi
+  down. If it is missing or older:
 
   ```
   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
@@ -135,7 +137,7 @@ sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js reset-password "
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js backup     # a copy beside it, safe while the server runs
 ```
 
-`create <name> <password> [admin]` and `admin <name> on|off` are there too.
+`create <name> <password> [admin]`, `admin <name> on|off` and `delete <name> [--yes]` (says what goes with the account; `--yes` removes it) are there too.
 
 ## If it goes wrong
 

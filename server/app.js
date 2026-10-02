@@ -181,11 +181,56 @@ function create(opts) {
     return true;
   }
 
+  /* Online campaigns (phase 3b): made, joined with a code, read by their two
+     players, and changed only by commands the server runs (online.js). */
+  function onlineApi(req, res, url) {
+    const m = /^\/api\/online(?:\/(join|\d+)(?:\/(cmd))?)?$/.exec(url);
+    if (!m) return false;
+    const send = (code, body) => {
+      res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(body));
+    };
+    const online = opts.online;
+    if (!online || !auth) return send(503, { error: 'this server has no online campaigns' }), true;
+    const me = auth.session(Auth.tokenFrom(req));
+    if (!me || me.guest) return send(401, { error: 'sign in to play a campaign online' }), true;
+    if (req.method !== 'GET' && req.headers.origin && !allowOrigin(req.headers.origin, req)) return send(403, { error: 'not from here' }), true;
+    const answer = (r) => r.ok ? send(200, r) : send(r.code || 400, { error: r.why });
+    if (!m[1]) {
+      if (req.method === 'GET') return send(200, { campaigns: online.list(me) }), true;
+      if (req.method === 'POST') return answer(online.make(me)), true;
+      return send(405, { error: 'method not allowed' }), true;
+    }
+    if (m[1] === 'join') {
+      if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
+      readBody(req, (body) => {
+        let b = {};
+        try { b = JSON.parse(body || '{}'); } catch (e) { return send(400, { error: 'that is not JSON' }); }
+        answer(online.join(me, b.code));
+      });
+      return true;
+    }
+    const id = +m[1];
+    if (!m[2]) {
+      if (req.method !== 'GET') return send(405, { error: 'method not allowed' }), true;
+      return answer(online.view(me, id)), true;
+    }
+    if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
+    readBody(req, (body) => {
+      if (body === null) return send(413, { error: 'too large' });
+      let b = {};
+      try { b = JSON.parse(body || '{}'); } catch (e) { return send(400, { error: 'that is not JSON' }); }
+      answer(online.command(me, id, String(b.cmd || ''), b.args || {}));
+    });
+    return true;
+  }
+
   return function handle(req, res) {
     const url = (req.url || '/').split('?')[0];
     if (req.method === 'OPTIONS') return json(res, 204);
     if (api(req, res, url)) return;
     if (campaignsApi(req, res, url)) return;
+    if (onlineApi(req, res, url)) return;
     if (url === '/campaigns') return json(res, 200, { campaigns: campaigns.list() });
     if (campaignRoute(req, res, url)) return;
     if (url === '/health') return json(res, 200, { ok: true, rooms: lobby.rooms.size, players: lobby.players.size });

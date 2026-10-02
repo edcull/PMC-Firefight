@@ -2268,6 +2268,12 @@
       sel: function () { return ui; },
       over: function () { return state && state.over; },
       report: function () { return state && state.report; },
+      /* A side walking away from the battle (a forfeit, online): it ends there, the
+         other side the winner, with the report the engine makes of any end. */
+      concede: function (side, text) {
+        if (!state || state.over) return;
+        K.finish(side === 'A' ? 'B' : 'A', text || (sideName(side) + ' walks away: ' + sideName(side === 'A' ? 'B' : 'A') + ' wins by forfeit.'));
+      },
       /* Queries a client runs over a battle it is only watching: what a unit may
          do, where it may go, what it may shoot. None of them roll a die or
          change anything, so both sides can ask freely. */
