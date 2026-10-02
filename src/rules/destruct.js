@@ -89,6 +89,7 @@
       if (!kind) return null;
       if (kind === 'building' && sec != null && r.parts && r.parts.length > 1 && r.parts[sec]) return burnSection(state, r, sec, log, by);
       var was = TERRAIN[r.kind].name;
+      r.was = r.kind;                                    // what it was, so the wreck is drawn as the right kind of rubble
       r.kind = kind === 'building' ? 'burning' : kind === 'wire' ? 'cutwire' : 'razed';
       r.wrecked = true;
       var out = { piece: r, was: was, kind: r.kind, evicted: [] };
