@@ -581,7 +581,10 @@
           var entryHere = B.Q && B.Q.entering && (B.Q.entering() || (!deployNext() && (B.seats || ['A', 'B']).some(function (sd) { return B.Q.entering(sd); })));
           // an Invasion attacker places nothing: it lands in turn 1 once the defender is down
           var landHere = B.state.scen.id === 'invasion' && B.state.sc && (B.seats || ['A', 'B']).indexOf(B.state.sc.attacker) >= 0 && !deployNext();
-          act.textContent = landHere ? 'Prepare to land' : entryHere ? 'Prepare to enter' : 'Deploy your force'; act.className = 'pill pill-A';
+          // both players at this screen with everything down: nobody's turn in particular (HB-6)
+          var hotDone = B.state.cfg.mode === 'hotseat' && (B.seats || []).length > 1 && !landHere && !entryHere;
+          act.textContent = landHere ? 'Prepare to land' : entryHere ? 'Prepare to enter' : hotDone ? 'Ready to begin' : 'Deploy your force';
+          act.className = 'pill ' + (hotDone ? '' : 'pill-A');
         }
       } else if (ui.insertion) {
         /* The game is waiting for a place on the table and nothing else. That has

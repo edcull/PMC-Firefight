@@ -34,6 +34,12 @@
         campaign.rivals = campaign.companies.B ? [campaign.companies.B] : [];
         campaign.facing = 0;
       }
+      /* A hotseat campaign holds Player 2 there and nothing else. A save made before
+         that was kept may have picked up an AI force on a reload: it goes (HC-3). */
+      if (campaign.mode === 'hotseat' && campaign.rivals.length > 1) {
+        campaign.rivals = [campaign.rivals[campaign.facing || 0] || campaign.rivals[0]];
+        campaign.facing = 0;
+      }
       if (campaign.rivals.length) faceRival(campaign, campaign.facing || 0);
       return campaign;
     }

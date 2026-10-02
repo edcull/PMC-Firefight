@@ -1,0 +1,127 @@
+# Multiplayer: review and plan
+
+Two players on two devices: one-off online battles, and online campaigns, with a database for games and campaigns and simple user accounts. This reviews the server as it stands on `main` (a214171 plus the docs since) and plans the work. It builds on the hotseat plan (`docs/hotseat-review.md`): the two-player campaign model is done there first, and reused here.
+
+## 1. Where it stands
+
+**Works today**
+- A zero-dependency Node server (`server.js`): static files, a hand-rolled WebSocket (`server/ws.js`), a lobby with public and private rooms, chat, host-set terms, forces, ready/start (`server/lobby.js`).
+- Server-authoritative battles: one engine per table, the server rolls every die, every intent checked against the seat (`server/table.js`, `engine.js` handlers); events and a snapshot go to both players and to watchers.
+- A dropped player's seat is held (in battle, indefinitely; in setup, 3 minutes); a reload rejoins by the id in localStorage. Abandon ends it for both.
+- Sub-path deployment behind nginx; the Pi deploy (systemd, sandboxed data dir) and CI.
+- Tests: `servertest.js` (a whole battle over real sockets, reconnect), `clienttest.js` (lobby), browser `netplay.js`, `nettakeover.js`, `subpath.js`.
+
+**Not there**
+- **Nothing is stored but campaign JSON files.** Rooms and battles live in memory: a restart loses every game.
+- **No identity.** A player is whatever `playerId` their browser sends.
+- **Online campaigns do not work.** A battle can be fought "under" a server campaign, but its report is only filed; the aftermath is never applied, the turn never moves, there is no contract, both companies live in one document that anyone may overwrite, and the dossier knows only an unnamed `default` campaign through a hand-set URL.
+
+## 2. Findings
+
+| ID | Sev | Finding | Where |
+|---|---|---|---|
+| MP-1 | Critical | A malformed percent-encoding in a URL crashes the server process (`decodeURIComponent` unguarded; no `uncaughtException` handler). One request takes the server down. | `server.js:69`, `server/static.js:46` |
+| MP-2 | Critical | Identity spoofing: `playerId` comes from the client, every id in a room is broadcast to everyone in it, and a second `hello` rewrites the id on a live connection. A watcher can become host (kick, change terms, start) or take a dropped player's seat. | `server/lobby.js:76-84, 181-205` |
+| MP-3 | Critical | Campaign `PUT`/`DELETE` with no auth and CORS `*`: any web page a player visits can overwrite or delete campaigns. A crafted campaign can also put unescaped names on the board (possible stored XSS; `panels.js:140-161`, `input.js:281`, the game-over card). | `server.js:47-86` |
+| MP-4 | High | No persistence of rooms or battles; a restart loses all play. | `server/lobby.js`, `server/table.js` |
+| MP-5 | High | The online campaign loop is missing: no contract, no per-player company ownership, aftermath never applied, faction and colour taken from the client, composition unchecked for campaign picks. | `server/table.js:113-135`, `server/campaigns.js:77-85` |
+| MP-6 | High | Campaign writes are whole-document, last-writer-wins, synchronous and non-atomic. | `server/campaigns.js` |
+| MP-7 | Medium | Room lifecycle: a finished room can never be played again; a failed start leaves a room stuck in battle; rooms with both players gone are never cleared and count against the 64-room cap. | `server/lobby.js:281-284, 379-418` |
+| MP-8 | Medium | No rate limits, no WebSocket `Origin` check, no per-IP caps: chat floods, refused-intent resync amplification, filling the room cap, brute-forcing private codes. | `server/ws.js:187-210`, `server/table.js:220` |
+| MP-9 | Medium | Every snapshot carries the whole state to both players and watchers: no hidden information is possible (secret swaps, hidden lists). | `src/engine/save.js:129-214` |
+| MP-10 | Low | Skirmish lists that fail the composition check are silently re-rolled rather than refused; sync fs on the hot path; protocol comment and log drift; campaign name clamped to 24 in the lobby but 40 on disk. | `server/table.js:139-142`, `protocol.js` |
+
+## 3. Design
+
+### Database
+- **SQLite, through Node's built-in `node:sqlite`** (no new dependency; one file in the existing data dir, `/var/lib/pmc-firefight`). It needs Node 22.5 or later (the Pi deploy says 20: raise it). It is marked experimental in Node 22; a thin data layer (`server/db.js`) keeps the queries in one place, so `better-sqlite3` (one dependency) can stand in if that is preferred.
+- Schema, migrated by a numbered list in `server/db.js` (`user_version` pragma):
+
+| Table | Holds |
+|---|---|
+| `users` | id, name (unique, case-insensitive), password hash, created, last seen, admin flag |
+| `sessions` | token hash, user id, created, expires, last used |
+| `games` | id, code, kind (skirmish / campaign), campaign id, status (setup / battle / over / abandoned), settings, seat A user, seat B user, engine config, dice seed, result, created, updated |
+| `game_intents` | game id, sequence, seat, intent, time — the battle replayed from these after a restart |
+| `campaigns` | id, name, owner, invite code, status, turn, version, shared state (the world: turn, records, reports), created, updated |
+| `campaign_members` | campaign id, user id, side (A / B) |
+| `companies` | campaign id, side, the company (the dossier), version |
+| `contracts` | campaign id, turn, terms (Tier, scenario, Priority Level, roles), each side's pick, status (picking / ready / fought) |
+| `battle_reports` | campaign id, turn, game id, report, applied flag |
+
+- Battles are stored the way the hotseat save already works (`net.js` `Local`): the config, a dice seed and every accepted intent. On restart, each unfinished game is rebuilt by replaying its intents with the same seeded dice — no engine snapshot format to keep stable. This needs the server's dice seeded per game (they use `Math.random` today).
+
+### Accounts
+- **Name and password**, nothing else (no email). Passwords hashed with `crypto.scrypt` (built in), a per-user salt; login attempts rate-limited per name and per IP.
+- **Sessions:** a random 32-byte token, stored hashed, sent as an `HttpOnly`, `SameSite=Lax`, `Secure` (behind TLS) cookie; 30 days, renewed on use; logout deletes it.
+- **The WebSocket is authenticated at the upgrade** from the same cookie, with an `Origin` check (the cookie makes cross-site socket hijacking possible otherwise). The player's identity is the user id from the session — never anything the client sends. Ids are not broadcast: rooms show names and seats.
+- Routes: `POST /api/register`, `POST /api/login`, `POST /api/logout`, `GET /api/me`. Password change for a logged-in user; a reset by an admin from the command line (`node server/admin.js reset-password <name>`), as there is no email.
+- Guests (decision 2): either everyone registers, or one-off battles may be played as a guest (a session with no account, lost when the browser forgets it); campaigns always need an account.
+
+### Online battles
+- A game row is made when a room is created; the seats are user ids. Starting writes the config and seed; each accepted intent is appended (in a transaction, before the result is sent out). A restart rebuilds every open game; players reconnect into it from any device once logged in.
+- "My games": a list of the player's open games (resume, abandon), and finished ones with their result.
+- Room lifecycle: a finished room offers a rematch or closes; a failed start goes back to setup with the reason; rooms with nobody connected are closed after a time (setup) or kept as stored games (battle) without holding a room slot.
+- Abandoning records a forfeit (the other side wins) — decision 5.
+
+### Online campaigns
+- Built on the two-player campaign model from the hotseat plan (Player 2 a player, a dossier per player, an aftermath per player, a saved contract).
+- **The server owns the campaign rules.** The campaign code already runs under Node (`server/rules.js` loads `campaign.js`). Clients send commands — recruit, disband, promote, take an honour or upgrade, choose a doctrine, pick a force, answer an aftermath question — and the server checks each with the same functions the dossier uses, writes the result and tells both players. No client uploads a whole campaign again.
+- Each player can change only their own company; a company has a version number, and a stale write is refused (and the screen refreshed).
+- **The loop:**
+  1. Between battles, each player manages their own company, whenever they like (asynchronous).
+  2. Either player calls for a contract: the server rolls the terms (Tier, scenario, Priority Level, roles), runs On Our Terms…, Foresighted Command and The Best Defence as questions to the player who holds them, and saves the contract.
+  3. Each player picks their force on their own device (hidden from the other until both are ready — decision 4).
+  4. The battle is created from the contract and played as an online battle (both online at once).
+  5. When it ends, the server applies the aftermath once (by game id, so a retry cannot apply it twice), asks each player their own post-battle questions, and moves the turn on.
+- Inviting: a campaign has an invite code; the second player joins with it and founds their company. An existing campaign (a local one, or a server JSON file) can be imported by its owner.
+
+### Hidden information (decision 4)
+- Per-seat snapshots: the server sends each player a copy of the state with the other side's secrets left out (held swaps, a hidden list before both are ready, a secret mine). Watchers see only what both players see. Needed for the secret parts of the rules to mean anything online.
+
+## 4. Plan
+
+Phases 0–2 can run alongside the hotseat work; phase 3 waits for the hotseat campaign model (hotseat phases 2 and 4).
+
+### Phase 0 — harden what is there
+- MP-1: guard every `decodeURIComponent`; a top-level error handler that logs and keeps serving; clean shutdown on SIGTERM/SIGINT.
+- MP-2 (interim, until accounts): the server issues the player id with a secret at `welcome`; `hello` must present both; ids are never broadcast; an id cannot change on a live connection.
+- MP-3: campaign `PUT`/`DELETE` refused without the owner's secret (interim) and CORS removed for them; escape every name the board writes as HTML (`panels.js`, `input.js`, the game-over card).
+- MP-7: room lifecycle fixes (rematch or close, failed start back to setup, idle rooms closed).
+- MP-8: `Origin` check; per-connection rate limits (chat, intents, create/join); a refused intent sends a short refusal, with a full resync at most once a second.
+- Tests: `servertest.js` for each (bad URL, spoofed hello, bad origin, floods, a room played twice).
+
+### Phase 1 — database and accounts
+- `server/db.js` (open, migrate, queries), data dir from `DATA_DIR` (and the old `CAMPAIGNS_DIR`).
+- `server/auth.js`: register, login, logout, me, password change, sessions, rate limits; `server/admin.js`: create user, reset password, list users, make admin, back up the database.
+- The lobby and rooms use the session's user; the client gains a sign-in / register screen, and the menu shows who is signed in.
+- Tests: unit tests on an in-memory database (migrations, hashing, sessions, expiry, rate limits); `servertest.js` (register, log in, socket refused without a session, two users play a battle).
+
+### Phase 2 — stored battles
+- Seeded server dice per game; game rows and the intent log; rebuild on restart; "My games"; resume from another device; forfeits.
+- Tests: start a battle, play some turns, restart the server, both players reconnect and the battle continues to the same result as an unbroken one; abandon records a forfeit.
+
+### Phase 3 — online campaigns
+- Tables for campaigns, members, companies, contracts and reports; the command API on the socket (`camp.*` messages) using the campaign rules; versioned company writes.
+- The dossier gains an online mode: the campaign list (mine), invite and join, each player's own dossier, the contract questions and force pick on each device, the battle from the contract, each player's aftermath.
+- Import of an existing campaign; the old `/campaign` JSON routes retired (or read-only for import).
+- Tests: two users found an online campaign, each manages their company, call a contract, pick, fight (auto-played), see their own aftermath, and the turn moves on; a stale write is refused; the aftermath is applied once.
+
+### Phase 4 — hidden information
+- Per-seat snapshots and events; watcher view; the secret swap round, hidden forces before both are ready, the secret mine.
+- Tests: a player's socket never receives the other side's secrets.
+
+### Phase 5 — operations
+- Deploy: Node 22, `DATA_DIR`, database backups (a nightly copy with `VACUUM INTO`), the admin tool on the Pi, logs.
+- `SERVER.md` and the Pi README brought up to date; the startup log fixed.
+- Browser tests: sign in on two browsers, an online battle with a restart part-way, an online campaign loop.
+
+## 5. Decisions for the owner
+
+1. **Database:** SQLite through the built-in `node:sqlite` (no dependency; Node 22.5+, still marked experimental), or `better-sqlite3` (one dependency, stable), or a server database such as PostgreSQL (more to run on a Pi)?
+2. **Accounts:** must everyone register, or may one-off battles be played as a guest?
+3. **Registration:** open to anyone who can reach the server, or by invitation (an admin creates accounts, or an invite code)?
+4. **Hidden information online:** hide each side's secrets (forces before both are ready, swaps, the mine), or keep everything visible as now?
+5. **Abandoning a battle:** a forfeit (the other side wins, and in a campaign the aftermath is applied), or no result?
+6. **Campaign pace:** between battles each player acts whenever they like (asynchronous), with only the battle itself needing both online — or both online for the whole turn?
+7. **The other campaign stores** (the browser's own copy and the artifact database): keep them for solo and hotseat, and use the server only for online campaigns?

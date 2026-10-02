@@ -121,7 +121,8 @@
          than one above you. */
       var B = E.camp.companies.B;
       var caught = null;
-      if (E.camp.rivals && E.camp.rivals.length) {
+      // an AI force is brought up to strength — never Player 2's company, which is theirs to run (HC-2)
+      if (!hotseat() && E.camp.rivals && E.camp.rivals.length) {
         B = E.camp.companies.B;
         var want = C.catchUpTarget(A.tier);
         if (B.tier < want) caught = C.catchUp(B, want);

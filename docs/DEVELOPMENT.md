@@ -113,7 +113,7 @@ test/
   perf/board.js      the drawing performance harness
   where.js           shared paths and helpers for the tests
 
-docs/                the v0.1 review, and this file
+docs/                this file, and the hotseat and multiplayer plans
 build/               what the build and the tests write (not kept in git)
 ```
 
@@ -182,6 +182,16 @@ rebels.js          the Rebel army list and its army rules
 bugs.js            the Space Bugs
 overgrowncharge.js an Overgrown bug on the ground may still charge
 xeno.js            the Xenotripods
+highrules.js       Broken units off their own edge, troops put down within 4" of their hull,
+                   initiative handed over by a side with nothing to activate
+midfixes.js        nobody hacks or marks a unit off the table, calls fetch no turret out of turn,
+                   shooting a wall is shooting, the Riders upgrade is final
+lowcombat.js       combat and special-rule fixes: bailing crews, strafing return fire, Overmind
+                   rallies, Command Vehicles, Incendiary, defensive and arrival fire, crossfire
+lowmove.js         movement fixes: moving off the table, no base astride a wall, reversing
+lowfaction.js      faction-rule fixes: Rebel tactics, Strong Nervous System, Know Your Foe, the
+                   Xenotripod Rites and Infamies, teleport placement, Advanced Control System
+roundup.js         where the game divides, and which way each share rounds
 ```
 
 **Terrain and scenarios**
@@ -196,6 +206,11 @@ worlds.js          the desert and arctic looks of the barren world
 scenrules.js       objectives, deployment and victory conditions
 reserves.js        held-back units: where they come on is the player's choice
 podtarget.js       an empty insertion platform is no rout and no target
+buildings.js       one unit to a small building, a beaten garrison 2" from it, Broken guns stay put
+sightlines.js      seen by one soldier, seen by the whole unit: lines past part of a base
+wallshelter.js     behind a wall: the cover, the Destructive Weapon and the Sappers, one test
+lowscen.js         scenario fixes: picking the search site, landing zones, Invasion's guns and tows,
+                   the last-turn wipe-out, the forced swap for guns a split cannot carry
 ```
 
 **The battle, the engine and the AI**
@@ -214,6 +229,8 @@ seatnow.js         in a hotseat game, the side being asked is the one that answe
 solitairetest.js   solitaire and co-op against the OpFor
 opfor.js           the OpFor brings an answer to the commandos' machines
 perf.js            how fast the rules run, held to a ceiling
+soloai.js          the AI against the book: no Cumbersome Weapon on the move, Neutral holds,
+                   Decapitation's leaders, threat targeting, Suppressed OpFor choices
 ```
 
 **The campaign**
@@ -232,6 +249,7 @@ solo.js            the solo campaign, simulated
 rebelcamp.js       the Rebel campaign
 bugcamp.js         the Space Bug campaign
 xenocamp.js        the Xenotripod campaign
+lowcamp.js         campaign fixes: income dice, Surrounded but Steady, the Rite of Rage
 ```
 
 **The code itself**
@@ -241,6 +259,7 @@ lint.js            the source, linted with eslint (when it is installed)
 loadlists.js       every file is loaded by the pages and lists that need it
 clienttest.js      the page booted without a browser, and the lobby against a real one
 servertest.js      two players on two sockets against the real server
+paintorder.js      the order the board paints units and buildings in
 ```
 
 ### Browser tests — `test/browser/`
@@ -301,6 +320,7 @@ ghost.js           a unit wiped out fades into the ground as itself
 shapeflow.js       every shaped piece's outline stays inside its rectangle
 camfollow.js       the camera stays with the AI's unit until that side is done
 followtoggle.js    Follow, the toggle beside the zoom level
+_xsheet.js         a contact sheet of unit pictures to look over (WHICH=, Z=, KEYS= choose them)
 ```
 
 **Screens and devices**
@@ -317,6 +337,9 @@ bundle.js          the published site: one bundle, no test hooks, and a battle p
 ```
 founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
+hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts
+hotseatterms.js    On Our Terms… in a hotseat contract, held by one player or both
+ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract
 extrasflow.js      the campaign extras, through the interface

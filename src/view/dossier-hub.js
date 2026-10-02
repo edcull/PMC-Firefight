@@ -56,12 +56,27 @@
       var A = E.camp.companies.A, B = E.camp.companies.B;
       var rivals = E.camp.mode === 'hotseat' ? [] : (E.camp.rivals || [B]), n = rivals.length;
       if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) + '</p>';
-      h += companyPanel(A, 'A', hubBar());
+      // in hotseat, the player whose force the hub shows and works on (HC-1)
+      var hs = E.hubSide, cur = E.camp.companies[hs] || A;
+      /* A force that can no longer field an army, and cannot recruit back to one, ends
+         the campaign (HC-14): said here, and the contract is closed. */
+      var done = E.camp.over;
+      var finished = done ? null : ['A', E.camp.mode === 'hotseat' ? 'B' : null].filter(function (sd) {
+        return sd && C.cannotFight(E.camp.companies[sd]);
+      })[0];
+      if (done) {
+        h += '<div class="cpan"><div class="cpstat"><b>The campaign is over.</b> ' + esc(done.text) + '</div></div>';
+      } else if (finished) {
+        var fco = E.camp.companies[finished];
+        h += '<div class="cpan"><div class="cpstat"><b>' + esc(fco.name) + ' can no longer field an army</b>, and cannot recruit back to one. ' +
+          'The campaign ends here.</div><button class="start" data-go="campend" data-side="' + finished + '">End the campaign</button></div>';
+      }
+      h += companyPanel(cur, hs, hubBar());
       // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
-      var promoE = E.promoRid && C.byRid(A, E.promoRid);
+      var promoE = E.promoRid && C.byRid(cur, E.promoRid);
       if (promoE) {
         h += cmodal('promote', 'Promote ' + promoE.name + ' \u2014 ' + promoE.exp + ' EXP',
-          '<div class="cmodal-scroll promo-list">' + spendActs(promoE, A) + '</div>');
+          '<div class="cmodal-scroll promo-list">' + spendActs(promoE, cur) + '</div>');
       }
       /* The campaign's window: who else is on the world (in hotseat, the second
          player's force), the battles fought, the fallen, and the campaign's
@@ -71,22 +86,22 @@
       var result = function (l) { return l.winner === 'A' ? 'won' : l.winner === 'B' ? 'lost' : 'drawn'; };
       h += cmodal('manage', 'The campaign', '<div class="cmodal-scroll manage-list">' +
         '<button type="button" class="archline" data-go="fmodal" data-kind="rivals">' + ICON_FORCES + '<span>' +
-        (E.camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world') + '<small>' +
-        (E.camp.mode === 'hotseat' ? esc(B.name) : n > 1 ? n + ' forces' : esc(B.name)) + '</small></span></button>' +
+        (E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world') + '<small>' +
+        (E.camp.mode === 'hotseat' ? esc((hs === 'B' ? A : B).name) : n > 1 ? n + ' forces' : esc(B.name)) + '</small></span></button>' +
         (last ? '<button type="button" class="archline" data-go="fmodal" data-kind="battles">' + ICON_BATTLES + '<span>Battles fought<small>' +
           (E.camp.log.length > 1 ? E.camp.log.length + ' battles \u2014 the last: ' : '') +
           esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl + ', ' + result(last) +
           '</small></span></button>' : '') +
-        '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(A) + '<span>' + esc(C.words(A).memorial) + '<small>' +
-        esc(C.words(A).memorialSub) + '</small></span></button>' +
+        '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(cur) + '<span>' + esc(C.words(cur).memorial) + '<small>' +
+        esc(C.words(cur).memorialSub) + '</small></span></button>' +
         '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
         '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
         '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
-      h += cmodal('memorial', C.words(A).memorial, '<div class="cmodal-scroll">' + memorialList(A) + '</div>', back);
-      h += cmodal('rivals', E.camp.mode === 'hotseat' ? 'Player 2' : 'The other forces on this world',
-        '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? companyPanel(B, 'B')
+      h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>', back);
+      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world',
+        '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? companyPanel(hs === 'B' ? A : B, hs === 'B' ? 'A' : 'B')
           : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
       // every battle fought, the latest first
       if (last) {
@@ -126,33 +141,38 @@
     /* One row under the name: the dossier, the save file out and in, and the
        contract, which is what the screen is for. */
     function hubBar() {
-      var co = E.camp.companies.A;
-      var go = '<button class="start hubgo" data-go="' + (E.camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
+      var co = E.camp.companies[E.hubSide] || E.camp.companies.A;
+      // hotseat: which player's force this is, and the way to the other's
+      var seat = E.camp.mode !== 'hotseat' ? '' : '<span class="segs hubseat">' + ['A', 'B'].map(function (sd) {
+        return '<button class="lnk' + (sd === E.hubSide ? ' on' : '') + '" data-go="hubside" data-hs="' + sd + '">Player ' + (sd === 'A' ? 1 : 2) + '</button>';
+      }).join('') + '</span>';
+      var go = E.camp.over ? '<button class="start hubgo" disabled title="The campaign is over">Contract</button>'
+        : '<button class="start hubgo" data-go="' + (E.camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
       // the other forces, the battles, the memorial, saving, loading and abandoning, together behind the one button
       var manage = '<button class="lnk hubicon" data-go="fmodal" data-kind="manage" title="The campaign" aria-label="The campaign">' + ICON_MANAGE + '</button>';
       if (E.hubPane === 'dossier') {
         // in the dossier: back to the company, the campaign's window, and the contract (recruiting is at the foot of the dossier)
-        return '<div class="hubbar dosbar">' +
+        return '<div class="hubbar dosbar">' + seat +
           '<button class="lnk" data-go="roster">' + esc(C.words(co).Force) + '</button>' + manage +
           go + '</div>';
       }
-      return '<div class="hubbar">' +
+      return '<div class="hubbar">' + seat +
         '<button class="lnk" data-go="roster">Dossier</button>' +
         manage + go + '</div>';
     }
     function companyPanel(co, side, bar) {
       var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
-      h += '<div class="cphead">' + tierBadge(co, !!bar && side === 'A') + '<b>' + esc(co.name) + '</b>' +
+      h += '<div class="cphead">' + tierBadge(co, !!bar) + '<b>' + esc(co.name) + '</b>' +
         (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
         '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
       // the colours, dropped down under your own badge
-      if (bar && side === 'A' && E.colourOpen) {
+      if (bar && E.colourOpen) {
         h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
           '</label>' + squares(colourOf(co)) + '</div>';
       }
       h += bar || '';
       // the dossier is the units, sorted and filtered; the figures, the army and its creed are the company's
-      if (bar && side === 'A' && E.hubPane === 'dossier') {
+      if (bar && E.hubPane === 'dossier') {
         h += (E.rosterTab === 'units' ? sortLine(co) : '') + dossierPanel(co);
       } else {
         h += statRow(co, false, side);
@@ -349,7 +369,7 @@
         return '<button type="button" class="cstat ' + cls + (f ? ' on' : '') + '" data-go="ufilter" data-fkey="' + fkey +
           '" data-kind="' + kind + '" aria-pressed="' + !!f + '"><b>' + pct + '</b><span>' + esc(word) + '</span></button>';
       }
-      var own = !rival && co === E.camp.companies.A;
+      var own = !rival && co === (E.camp.companies[E.hubSide] || E.camp.companies.A);
       return '<div class="cstats">' +
         // your own win rate opens the battles fought; a rival's, the battles it has fought
         cell('cs-win', pc(wn.pct), 'win rate', own && E.camp.log.length ? 'battles'
