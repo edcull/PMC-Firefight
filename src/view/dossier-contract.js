@@ -235,15 +235,16 @@
       }
       if (E.contract.foreNote && !second) h += '<div class="cpan"><div class="cpstat">' + esc(E.contract.foreNote) + '</div></div>';
       var altBy = E.contract.altBy || 'A', altMine = altBy === seat();
+      if (E.contract.foreBack && !second) h += '<div class="cpdoc"><span class="mk">' + esc(E.contract.foreBack) + '</span></div>';
       if (second && !(E.contract.alt && altBy === 'B')) { /* the terms are settled: the scenario, the Tier and the level */ }
       else if (E.contract.alt && E.contract.alt.id === E.contract.scenario.id) {
         if (!second) h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die agreed: ' +
           esc(E.contract.alt.name) + ' it is.</div></div>';
-      } else if (E.contract.alt && altMine) {
+      } else if (E.contract.alt && altMine && !E.contract.altUsed) {
         h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die showed ' +
           E.contract.alt.roll + ', <b>' + esc(E.contract.alt.name) + '</b>. ' + (altBy === 'B' ? 'You' : 'The tribe') + ' may keep either.</div>' +
           '<button class="lnk" data-foresee="1">Fight ' + esc(E.contract.alt.name) + ' instead</button></div>';
-      } else if (E.contract.alt && !second) {
+      } else if (E.contract.alt && !second && !E.contract.altUsed) {
         h += '<div class="cpan"><div class="cpstat">' + esc(E.camp.companies[altBy].name) + '\u2019s Foresighted Command — a second scenario die showed ' +
           esc(E.contract.alt.name) + '; Player 2 chooses which to fight once you hand over.</div></div>';
       }
@@ -503,6 +504,8 @@
           tactics: { A: A.faction === 'rebel' ? tacticA : null, B: theirTactic },
           campaign: true,
           mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
+          // two players at one screen swap from their benches in turn, unseen, as a hotseat skirmish does (HC-8)
+          secretSwaps: E.camp.mode === 'hotseat',
           planet: E.contract.planet
         });
       }

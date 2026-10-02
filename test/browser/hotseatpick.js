@@ -25,6 +25,12 @@ const { ROOT } = require('../where.js');
     await p.waitForTimeout(220);
     return hit;
   }
+  // the contract asks for the device to be passed each time it changes hands: whose card is up, then tap it
+  async function pass() {
+    const who = await p.evaluate(() => { const x = document.querySelector('#camp-body [data-go="passok"]'); return x ? x.getAttribute('data-seat') : null; });
+    if (who) await click('#camp-body [data-go="passok"]');
+    return who;
+  }
   const text = () => p.evaluate(() => document.getElementById('camp-body').innerText);
 
   console.log('\nEach player picks their own force');
@@ -43,6 +49,7 @@ const { ROOT } = require('../where.js');
   const rosterB = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.B.roster.map(e => e.rid));
   check('Player 2 has founded a force', rosterB.length > 3, rosterB.length + ' units');
   check('the contract opens', await click('#camp-body [data-go="contract"]'));
+  check('...asking for the device to be passed to Player 1', await pass() === 'A');
   let t = await text();
   check('...on Player 1\'s list', /Player 1/.test(t) && /Task Force Ironhold/.test(t));
   await p.evaluate(() => window.PMC_CAMPAIGN.autopick());
@@ -51,6 +58,7 @@ const { ROOT } = require('../where.js');
   check('Player 1\'s button hands over, not starts the battle', !!startA && startA.live && /Player 2/.test(startA.txt), startA && startA.txt);
   const picksA = await p.evaluate(() => window.PMC_CAMPAIGN.get() && [...document.querySelectorAll('#camp-body [data-unpick]')].length);
   await click('#camp-body button.start[data-go="fight"]');
+  check('handing over asks for the device to be passed to Player 2', await pass() === 'B');
   t = await text();
   check('no battle has started yet', await p.evaluate(() => window.__cfg === null));
   check('Player 2 picks next, from The Red Dawn', /Player 2/.test(t) && /The Red Dawn/.test(t));
@@ -60,8 +68,10 @@ const { ROOT } = require('../where.js');
   check('...and a rebel tactic of their own to choose', await click('#camp-body [data-tactic="wave"]'));
   // back to Player 1's list keeps it, and handing over again starts Player 2 afresh
   check('Player 2 can go back to Player 1\'s list', await click('#camp-body [data-go="seatback"]'));
+  await pass();
   check('...which is still picked', await p.evaluate((n) => document.querySelectorAll('#camp-body [data-unpick]').length === n, picksA));
   await click('#camp-body button.start[data-go="fight"]');
+  await pass();
   await click('#camp-body [data-tactic="wave"]');
   await p.evaluate(() => window.PMC_CAMPAIGN.autopick());
   await p.waitForTimeout(200);
@@ -76,7 +86,7 @@ const { ROOT } = require('../where.js');
   const cfg = await p.evaluate(() => {
     const c = window.__cfg; if (!c) return null;
     return { a: c.dossier.A.map(e => e.rid), b: c.dossier.B.map(e => e.rid), bench: c.bench.B.map(e => e.rid), tac: c.tactics.B,
-      mode: c.mode, rosterB: window.PMC_CAMPAIGN.get().companies.B.roster.map(e => e.rid) };
+      mode: c.mode, secret: !!c.secretSwaps, rosterB: window.PMC_CAMPAIGN.get().companies.B.roster.map(e => e.rid) };
   });
   check('the battle starts', !!cfg);
   if (cfg) {
@@ -86,6 +96,7 @@ const { ROOT } = require('../where.js');
     check('...the rest of Player 2\'s units on the bench to swap in', cfg.bench.length > 0 && cfg.bench.length === rosterB.length - cfg.b.length, cfg.bench.length + '');
     check('...nobody hired into Player 2\'s company behind their back', cfg.rosterB.length === rosterB.length);
     check('...a hotseat battle', cfg.mode === 'hotseat');
+    check('...with the secret round of swaps from the benches (HC-8)', cfg.secret);
   }
   check('no page errors', errs.length === 0, errs.join(' | '));
   await b.close();

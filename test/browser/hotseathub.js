@@ -23,6 +23,9 @@ const { ROOT } = require('../where.js');
   async function click(sel) {
     const hit = await p.evaluate((s) => { const x = document.querySelector(s); if (!x || x.disabled) return false; x.click(); return true; }, sel);
     await p.waitForTimeout(220);
+    // the contract changing hands asks for the device to be passed: tapped through here
+    await p.evaluate(() => { const x = document.querySelector('#camp-body [data-go="passok"]'); if (x) x.click(); });
+    await p.waitForTimeout(120);
     return hit;
   }
 

@@ -743,6 +743,15 @@ console.log('  vs the OpFor AI');
   ok('A swaps a unit', e.intent('A', { k: 'swapin', id: o.id }).ok);
   ok('...which is not made yet, so B sees the list as it was mustered', e.state().units.find(x => x.id === u.id).name === u.name);
   ok('B cannot end A\'s turn', !e.intent('B', { k: 'swapdone', who: 'A' }).ok);
+  // HB-5 (hotseat review): every swap used, A is still asked, and may take one back until Done
+  for (let g = 0; g < 8 && e.state().swapAsk.left > 0; g++) {
+    const c = e.state().units.find(x => x.side === 'A' && x.id !== u.id && e.query.swapOptions('A', x.id).length);
+    if (!c) break;
+    e.intent('A', { k: 'swappick', id: c.id }); e.intent('A', { k: 'swapin', id: e.query.swapOptions('A', c.id)[0].id });
+  }
+  ok('...with every swap used, it is still A\'s turn', e.state().swapAsk && e.state().swapAsk.side === 'A' && e.state().swapAsk.left === 0);
+  const back = e.state().swapAsk.done.filter(d => d.held && d.outId !== u.id)[0];
+  ok('...and A may take one back', !back || (e.intent('A', { k: 'swapundo', id: back.outId }).ok && e.state().swapAsk.left === 1));
   e.intent('A', { k: 'swapdone', who: 'A' });
   ok('then B is asked', e.state().swapAsk && e.state().swapAsk.side === 'B');
   ok('...and a second tap of A\'s Done does not end B\'s turn', !e.intent('B', { k: 'swapdone', who: 'A' }).ok && e.state().swapAsk.side === 'B');

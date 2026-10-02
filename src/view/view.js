@@ -488,6 +488,52 @@
       drawStats();
       drawPanel();
       drawLog();
+      drawHandover();
+    }
+
+    /* ---- passing the device (hotseat review, phase 3) ----
+       Two players at one screen: whenever the player who has to act next changes —
+       setting up, a swap, an activation, a question put to the other side, a reload —
+       the screen is covered by a card naming them, until they tap it. Only where
+       both seats are at this screen (or a co-op's two commandos); never online. */
+    var handed = null;                 // who the device was last handed to
+    function handoverKey() {
+      var st = B.state;
+      if (!st || st.over || window.PMC_HANDOVER_OFF) return null;
+      // a co-op's two players share side A and take it in turns, one activation each
+      if (st.solo && st.solo.coop && st.phase === 'battle') return st.activeSide === 'A' && st.activeOwner ? 'P' + st.activeOwner : null;
+      if (!B.seats || B.seats.length < 2) return null;
+      if (B.replaying && B.replaying()) return undefined;          // what just happened is still being shown
+      var sd = B.mySide ? B.mySide() : null;
+      // only a person is handed the device: an AI side (a demo's both) never is
+      if (sd && isAI(sd)) return null;
+      return sd || undefined;
+    }
+    function drawHandover() {
+      var k = handoverKey(), box = el('handover');
+      if (k === undefined) return;
+      if (!k || k === handed) { if (box) box.hidden = true; return; }
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'handover'; box.className = 'handover'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
+        document.body.appendChild(box);
+        box.addEventListener('click', function () { handed = box.getAttribute('data-who'); box.hidden = true; render(); });
+        document.addEventListener('keydown', function (ev) {
+          if (box.hidden || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+          ev.preventDefault(); box.click();
+        });
+      }
+      var st = B.state, owner = k.charAt(0) === 'P' ? +k.slice(1) : 0;
+      var name = owner ? soloOwnerName(owner) : plainName(k);
+      var CO = (ISO && ISO.COLOURS) || {}, c = CO[owner ? st.cfg.colourA : (k === 'A' ? st.cfg.colourA : st.cfg.colourB)];
+      box.setAttribute('data-who', k);
+      if (box.style && box.style.setProperty) {
+        box.style.setProperty('--ho-dark', c ? c.dark : '#222');
+        box.style.setProperty('--ho-light', c ? c.light : '#ddd');
+      }
+      box.innerHTML = '<div class="handover-box"><small>Pass the device to</small><b>' + esc(name) + '</b>' +
+        '<span>Tap when ' + esc(name) + ' is ready.</span></div>';
+      box.hidden = false;
     }
 
     /* The header's height is what the board is pinned under, and it changes when
@@ -586,6 +632,11 @@
           act.textContent = landHere ? 'Prepare to land' : entryHere ? 'Prepare to enter' : hotDone ? 'Ready to begin' : 'Deploy your force';
           act.className = 'pill ' + (hotDone ? '' : 'pill-A');
         }
+      } else if (B.state.phase === 'battle' && !B.replaying() && (ui.reservePick || B.state.kyfAsk || B.state.martyrAsk || B.state.nervousAsk || B.state.standAsk)) {
+        // a question put to one side, whoever's turn it is: the header names who is being asked (HB-7)
+        var qa = ui.reservePick || B.state.kyfAsk || B.state.martyrAsk || B.state.nervousAsk || B.state.standAsk;
+        act.textContent = 'Asking: ' + plainName(qa.side);
+        act.className = 'pill pill-' + qa.side;
       } else if (ui.insertion) {
         /* The game is waiting for a place on the table and nothing else. That has
            to be legible from the header, because the prompt itself sits in a panel

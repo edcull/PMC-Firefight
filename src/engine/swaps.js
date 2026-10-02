@@ -253,8 +253,8 @@
         // in secret: noted now, made when both players are done
         sa.left--; sa.pick = null;
         sa.done.push({ out: old.name, in: opt.name, outId: old.id, key: opt.key, entry: opt.entry, held: true });
-        // a hotseat's secret round moves on to the next player; otherwise the swaps stay open, to be changed
-        if (sa.left < 1 && E.state.swapStage) { swapsDone(); return null; }
+        /* the swaps stay open to be taken back until the player says they are done —
+           in a hotseat's secret round too (hotseat review HB-5) */
         render();
         return null;
       }
