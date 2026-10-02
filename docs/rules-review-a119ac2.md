@@ -653,3 +653,54 @@ Consistent with owner decisions: one token per unit (multi-figure bases have no 
 | SOL-2 Ambush! split not enforced | **Fixed.** A unit cannot be put down within 6" of a unit on the other side of the road. The battle will not begin until the two halves differ by one unit at most; the deployment card says why. Auto-deploy fills the emptier side first. In co-op the commando is split as one. | `solitaire.js` (`s_ambush.deployOK`, `startBlock`, `evenBoxes`), `deploy.js` (`autoDeploy`), `engine.js` (`start`), `panels.js`; test `soloai.js` |
 | CMP-1 Tough Negotiators decided before the other side rolls | **Fixed (owner's design).** Every payment die is rolled together as the aftermath opens, in every mode. A rival's own Plunderer and Tough Negotiators re-rolls are made then. Only after that are players asked, and the Plunderer and Tough Negotiators cards show the other side's roll and what the pay is as the dice stand. | `camp-contract.js` (`rollIncome`), `dossier-after.js` (`onFinish`, `rollsLine`); test `lowcamp.js` |
 | TER-1 Units that cannot garrison take buildings by assault | **Fixed.** Only a winner that may garrison moves in. A Rider unit or an Overgrown bug that beats a garrison clears the building and stays outside, and the building stands empty. | `assault.js` (`assault`), `rules.js`; test `lowcombat.js` |
+
+## 7. Low findings sorted
+
+SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command Units decision. The other 52 fall into two groups.
+
+### Clear bugs (24): the code does something the book does not allow, with no fair reading for it
+
+| Area | Findings |
+|---|---|
+| Battle | BAT-2 no Auxiliary defensive fire when the main weapon cannot engage; BAT-3 the free shot at an arrival ignores Minimum Range and Specialisation; TER-5 a high building's garrison sees over friends |
+| Scenarios | SCN-2 annihilation in the last End phase scored as a draw in Secure and control |
+| Campaign | CMP-2 Surrounded, but Steady adds dice to a Regroup; CMP-3 On Our Terms never offered to Player 2 in hotseat; CMP-4(c) a concession still charges the rout Trauma Point; REB-4 the Riders upgrade can be toggled after recruitment |
+| Space Bugs | BUG-2 Mimicry leaves out Leader and Overgrown bugs; BUG-3 the Aggressive flaw does nothing on an Overgrown bug; BUG-4 Extensive Feeding misses the Sandworm's pierced Defence |
+| Xenotripods | XEN-3 Rite of Knowledge forces a re-roll on a 3; XEN-4 Rite of Rage also fires on a Regroup; XEN-5 Rite of Unrest stops while its unit is Broken; XEN-6 Infamy of Panic misses many triggers; XEN-7 Teleport places the unit itself; XEN-8 Teleport tooltip says the unit must not have acted; XEN-10 Detailed Terrain Knowledge can move one piece twice; XEN-11 a rival's Foresighted Command does nothing; XEN-12 PL2 turret list capped at the Battle Tier; XEN-13 Advanced Control System turns automatically, also after an Advance |
+| Solitaire | SOL-6 Defensive and Neutral OpFor shoot the easiest target, not the biggest threat; SOL-8 a Suppressed Decapitation leader never fires |
+
+### Readings (28): the book can fairly be read either way
+
+| Finding | Recommendation |
+|---|---|
+| VEH-2 vehicle explosion fired as Basic Firepower | Keep |
+| VEH-3 reversing not rounded up at fractional Movement | Keep |
+| TER-2 low-wall cover measured to the token's centre | Keep (single token) |
+| TER-3 "one foot in grave" by majority of the base | Keep (single token) |
+| TER-4 +2 from a hill against a unit in a wood or building on the same hill | Change: not "below" |
+| TER-6 destroying one section burns the whole building | Change: only the section |
+| TER-7 swap allowance rounds a quarter up | Change: round down, at least 1 |
+| TER-8 manual terrain must place the low end of the range | Change: any number up to the top |
+| TER-9 Industrial "medium walls" are high walls | Keep |
+| TER-10 co-op auras help the other player's units | Change: passive rules do not cross players |
+| SCN-3 Invasion edge distances to the token's centre | Change: the whole base, as Demolish does |
+| SPR-2 Anti-tank and Gauss strip Battle Armour in assault | Keep |
+| SPR-4 Sappers' breach +1 only to the Sappers' hits | Change: both sides' rolls that round |
+| PMC-1 Medical drone counts as a Drone unit | Keep (likely misprint) |
+| PMC-2 Inspiring Presence in a Command Vehicle uses the vehicle's Tier | Change: the commander's Tier |
+| CMP-4(a,b) rout Trauma Point from the plain half-the-units test | Change: the scenario's own rout |
+| CMP-5 Courage Under Fire: 1 SP off each later attack | Keep |
+| CMP-6 Strength in Numbers: exactly one Tier below | Keep |
+| REB-3 First Among Equals without Command Unit (X) count as Command Units | Owner to say (Command Units decision) |
+| REB-5 Hostile takeover may put guns in reserve | Change: guns always deploy |
+| BUG-5 Pheromone Markers boost a defending bug | Change: the charger only |
+| BUG-6 Effective Toxin Glands never help Flying Bugs | Change: the +2 applies to them |
+| BUG-7 PL1 Battle Tier cap not applied to Overgrown bugs | Keep |
+| BUG-8 Fire beetle given "Overgrown Bug" | Keep (likely misprint) |
+| BUG-9 Overgrown bugs: no salvage roll, no Upgrades | Owner to say |
+| XEN-9 Underground Advance: infantry only, no Alpha squads | Change: Alpha squads too (aircraft stay out) |
+| XEN-14 Rite of Knowledge and Backwardness apply to the Teleport craft | Change: Teleport turrets only |
+| XEN-15 turrets get no +1 Structure for Drone Control | Owner to say |
+| SOL-5 Sabotage: 3 objectives at PL1 | Owner to say |
+| SOL-7 Decapitation: rolled Command Units become extra leaders | Change: only the scenario's leaders |
+| APX-1 hovercraft cross shallow water free | Keep |
