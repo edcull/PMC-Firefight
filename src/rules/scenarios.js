@@ -98,10 +98,12 @@
        can hold back more than the units that are free to be held. */
     var held = units.filter(function (u) { return u.wave === 2; }).length;
     var free = units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); }).length;
+    // what the scenario asks for, before the guns cut it down (swaps.js holds a list to it)
+    var want = min, wantMax = max;
     min = Math.min(min, held);
     max = Math.max(Math.min(max, free), held);
     state.sc.split = state.sc.split || {};
-    state.sc.split[side] = { kind: kind, ids: units.map(function (u) { return u.id; }), min: min, max: max, rule: rule };
+    state.sc.split[side] = { kind: kind, ids: units.map(function (u) { return u.id; }), min: min, max: max, rule: rule, want: want, wantMax: wantMax };
   }
   function halve(units) {
     var emplaced = units.filter(function (u) { return R.has(u, 'Stationary Artillery'); });

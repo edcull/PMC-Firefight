@@ -46,15 +46,94 @@
     /* Each player's allowance, offered on the deployment card until they put their
        first unit down: opening it (swapopen) brings up the swap card, and placing
        a unit means the list stands as it is. */
+    /* A scenario that holds part of a force back — Invasion's second wave, the
+       defenders' reserves — can only hold units free to be held: an emplaced gun
+       "cannot be held in reserve" (p. 94). How many more such units a side's list
+       needs than it has (counting the swaps it has noted), so that the split can
+       be made as the scenario asks. */
+    function gun(key) { var p = R.profile(R.splitPick(key || '').key); return !!(p && (p.rules || []).indexOf('Stationary Artillery') >= 0); }
+    function splitShort(side) {
+      var sp = E.state.sc && E.state.sc.split && E.state.sc.split[side];
+      if (!sp || !sp.want) return 0;
+      var pend = {};
+      heldSwaps(side).forEach(function (d) { pend[d.outId] = d.key; });
+      var free = sp.ids.filter(function (id) {
+        var u = byId(id);
+        if (!u || !u.alive) return false;
+        return pend[id] ? !gun(pend[id]) : !R.has(u, 'Stationary Artillery');
+      }).length;
+      return Math.max(0, sp.want - free);
+    }
+    // a gun in the split that could be swapped for a unit free to be held
+    function gunsOut(side) {
+      var sp = E.state.sc && E.state.sc.split && E.state.sc.split[side];
+      if (!sp) return [];
+      var pend = {};
+      heldSwaps(side).forEach(function (d) { pend[d.outId] = true; });
+      return sp.ids.map(byId).filter(function (u) {
+        return u && u.alive && !pend[u.id] && R.has(u, 'Stationary Artillery') &&
+          swapOptions(side, u).some(function (o) { return !gun(o.key); });
+      });
+    }
+    // why a player may not go on yet, or null: the guns their split cannot carry
+    function swapBlock(side) {
+      if (isAI(side) || !E.state.swapAvail || !E.state.swapAvail[side]) return null;
+      var n = splitShort(side);
+      if (!n || !gunsOut(side).length) return null;
+      return 'Emplaced guns cannot be held back, and the scenario holds back part of the force: swap ' + n +
+        ' more gun' + (n === 1 ? '' : 's') + ' for unit' + (n === 1 ? '' : 's') + ' of the same Tier first.';
+    }
+    // the AI makes its own swaps for the split: a gun out for the first unit of its Tier that is not one
+    function aiSplitSwaps(sd) {
+      var made = [], guard = 0;
+      while (splitShort(sd) > 0 && guard++ < 20) {
+        var g = gunsOut(sd)[0];
+        if (!g) break;
+        var opt = swapOptions(sd, g).filter(function (o) { return !gun(o.key); })[0];
+        var sa = { side: sd, left: 1, total: 1, pick: null, done: [] };
+        applySwap(sd, g, opt, sa);
+        made.push(sa.done[0]);
+      }
+      /* the units swapped in took the guns' places, in the first wave: the split is
+         made up again, units free to be held put into the held-back part until it
+         has the scenario's share */
+      if (made.length) {
+        var sp = E.state.sc.split[sd], us = sp.ids.map(byId).filter(function (u) { return u && u.alive; });
+        var heldN = us.filter(function (u) { return u.wave === 2; }).length;
+        us.forEach(function (u) {
+          if (heldN >= sp.want || u.wave === 2 || R.has(u, 'Stationary Artillery') || u.aboard) return;
+          u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; heldN++;
+        });
+      }
+      if (made.length) pushRes({ kind: 'Modifying the armies', title: sideName(sd), side: sd,
+        note: 'Emplaced guns cannot be held back, and the scenario holds back part of the force (p. 94).',
+        list: made.map(function (d) { return { text: d.out + ' \u2192 ' + d.in, side: sd }; }) });
+      refreshSplit(sd);
+    }
+    // the split's own limits, once its units have changed
+    function refreshSplit(side) {
+      var sp = E.state.sc && E.state.sc.split && E.state.sc.split[side];
+      if (!sp || sp.want == null) return;
+      var us = sp.ids.map(byId).filter(function (u) { return u && u.alive; });
+      var held = us.filter(function (u) { return u.wave === 2 || u.reserve; }).length;
+      var free = us.filter(function (u) { return !R.has(u, 'Stationary Artillery'); }).length;
+      sp.min = Math.min(sp.want, Math.max(held, Math.min(sp.want, free)));
+      sp.max = Math.max(Math.min(sp.wantMax, free), held);
+    }
     function beginSwaps() {
       E.state.swapAvail = {};
       E.state.swapStage = null;
-      if (E.state.solo || E.state.cfg.noSwap) return;
+      if (E.state.solo) return;
+      ['A', 'B'].forEach(function (sd) { if (isAI(sd)) aiSplitSwaps(sd); });
+      if (E.state.cfg.noSwap) return;
       ['A', 'B'].forEach(function (sd) {
-        if (isAI(sd) || swapAllowance(sd) < 1) return;
+        if (isAI(sd)) return;
+        // as many swaps as the guns the split cannot carry, if that is more than the usual share
+        var need = gunsOut(sd).length ? Math.min(splitShort(sd), gunsOut(sd).length) : 0;
+        var n = Math.max(swapAllowance(sd), need);
+        if (n < 1) return;
         if (!E.state.units.some(function (u) { return u.side === sd && swapOptions(sd, u).length; })) return;
-        var n = swapAllowance(sd);
-        E.state.swapAvail[sd] = { side: sd, left: n, total: n, pick: null, done: [] };
+        E.state.swapAvail[sd] = { side: sd, left: n, total: n, pick: null, done: [], forced: need };
       });
       /* In a hotseat both players modify their armies in secret, one after the
          other, before anyone deploys: each swap is held back until both are done,
@@ -140,6 +219,10 @@
       if (!old || old.side !== side) return 'Not one of yours.';
       var opt = swapOptions(side, old).filter(function (o) { return o.id === inId; })[0];
       if (!opt) return 'That cannot be swapped in for it.';
+      var short = splitShort(side);
+      if (short && sa.left <= short && gunsOut(side).length && (!R.has(old, 'Stationary Artillery') || gun(opt.key))) {
+        return 'The swaps left are wanted for the guns: an emplaced gun out, for a unit that can be held back.';
+      }
       var cfg = E.state.cfg, armyKey = side === 'A' ? 'armyA' : 'armyB';
       var keys = cfg[armyKey].slice(), i = old.pickIdx;
       heldSwaps(side).forEach(function (d) { keys[byId(d.outId).pickIdx] = d.key; });
@@ -198,6 +281,7 @@
       if (d) { d.held = false; d.in = nu.name; }
       else sa.done.push({ out: old.name, in: nu.name });
       logLine('note', sideName(side) + ' swaps ' + old.name + ' for ' + nu.name + '.');
+      refreshSplit(side);
     }
     function swapsDone() {
       var sa = E.state.swapAsk;
@@ -230,7 +314,8 @@
 
     return {
       swapOptions: swapOptions, beginSwaps: beginSwaps, canSwapNow: canSwapNow, doSwap: doSwap, undoSwap: undoSwap,
-      swapsDone: swapsDone, stillChoosing: stillChoosing, readyToDeploy: readyToDeploy
+      swapsDone: swapsDone, stillChoosing: stillChoosing, readyToDeploy: readyToDeploy,
+      swapBlock: swapBlock, splitShort: splitShort
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineSwaps;
