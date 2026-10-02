@@ -2156,6 +2156,8 @@
         var pu = K.byId(fa.ids[0]);
         if (pu && R.turnCost(pu, fa.pivot.from, R.nearestFacing(it.dir)) > fa.pivot.left + 1e-6) return no('not enough of its move left to turn that far');
       }
+      // Advanced Control System: up to 90° from the way it flew in (XEN-13)
+      if (it.k === 'vface' && fa.swing && Math.abs(R.angleWrap(R.nearestFacing(it.dir) - fa.swing.from)) > Math.PI / 2 + 1e-6) return no('it may turn up to 90\u00b0');
       K.answerFacing(it.k === 'vface' ? it.dir : null);
       return yes;
     });

@@ -219,6 +219,8 @@
       var u = ui.selected;
       var d = R.inches(u.x, u.y, pt.x, pt.y);
       var carryFirst = ui.mode === 'carry-first';
+      // a Move action proper: not an Advance's move, a transport's, or Emergency Batteries' repair move
+      var plainMove = ui.mode !== 'advance-move' && ui.mode !== 'carry-move' && !carryFirst && !u.repairMove;
       var allowance = ui.mode === 'advance-move' ? u.move : (ui.mode === 'carry-move' || carryFirst) ? Math.ceil(u.move / 2) : u.move + moveBonus(u);
       u.carrying = false;
       if (u.vortexNow) {
@@ -233,7 +235,6 @@
       var path = R.pathTo(E.state, u, allowance, pt);
       faceAfter(u, path, pt);
       u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
-      flightTurn(u);                                 // Advanced Control System: the turn "after moving" (p. 143), from where it ends
       crushAlong(u, path);
       animateMove(u, path);
       if (carryFirst) {
@@ -271,6 +272,17 @@
       u.activated = true;
       scenarioMoveEnd(u);
       if (!u.alive || u.x < 0) { endActivation(); return; }
+      /* Advanced Control System (p. 143): "When making a Move action, the aircraft can
+         turn up to 90° after moving" — a player is asked, the AI swings at the nearest
+         enemy (rules review a119ac2 XEN-13). */
+      if (plainMove && u.cls === 'aircraft' && R.campFlag(u, 'advControl')) {
+        if (isAI(u.side)) { flightTurn(u); endActivation(); return; }
+        E.state.faceAsk = { side: u.side, ids: [u.id], dir: u.facing, swing: { from: u.facing } };
+        ui.faceThen = function () { endActivation(); };
+        setHint(null, 'Advanced Control System: ' + u.name + ' may turn up to 90\u00b0 after its move. Keep its facing if it need not turn.');
+        render();
+        return;
+      }
       pivotThen(u, left, function () { endActivation(); });
     }
 

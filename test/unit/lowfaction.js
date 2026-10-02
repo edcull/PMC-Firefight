@@ -369,5 +369,41 @@ console.log('\nXEN-7 A teleported unit is put down where its owner chooses, with
   ok('...the pad\'s activation spent', pads[0].activated && ui.mode === 'idle');
 })();
 
+console.log('\nXEN-13 Advanced Control System: a player turns the aircraft up to 90\u00b0, after a Move action only (p. 143)');
+(function () {
+  const setup = () => {
+    const e = game(['xstrike2', 'xbeta3'], ['regular', 'regular']);
+    let g = 0;
+    while (e.state().phase === 'deploy' && g++ < 200) { const side = e.query.placingSide(); if (!side) break; e.intent(side, { k: 'autodeploy' }); }
+    e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+    for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });
+    const st = e.state();
+    while (st.faceAsk) e.intent(st.faceAsk.side, { k: 'vfaceall' });
+    const ac = st.units.find((u) => u.key === 'xstrike2');
+    st.terrain.length = 0;
+    ac.camp = { flags: { advControl: true } }; ac.activated = false; ac.x = 10; ac.y = 24; ac.facing = 0;
+    st.units.filter((u) => u.side === 'B').forEach((u, i) => { u.x = 44; u.y = 6 + i * 4; });
+    st.activeSide = 'A'; st.streak = 1;
+    return { e, st, ac };
+  };
+  const { e, st, ac } = setup();
+  e.intent('A', { k: 'select', id: ac.id });
+  e.intent('A', { k: 'action', id: 'move' });
+  const to = e.sel().moves.filter((c) => Math.abs(c.y - 24) < 1 && c.x > 16).sort((a, b) => b.x - a.x)[0];
+  ok('the aircraft moves', !!to && e.intent('A', { k: 'move', x: to.x, y: to.y }).ok);
+  ok('...and is asked whether to turn', !!st.faceAsk && !!st.faceAsk.swing);
+  ok('...not as far as about face', !e.intent('A', { k: 'vface', dir: Math.PI }).ok);
+  ok('...but 90\u00b0 it may', e.intent('A', { k: 'vface', dir: Math.PI / 2 }).ok && Math.abs(R.angleWrap(ac.facing - Math.PI / 2)) < 0.01 && !st.faceAsk, ac.facing.toFixed(2));
+  // an Advance: no turn after it
+  const s2 = setup();
+  s2.e.intent('A', { k: 'select', id: s2.ac.id });
+  if (s2.e.query.actionState(s2.ac, 'advance').on) {
+    s2.e.intent('A', { k: 'action', id: 'advance' });
+    const t2 = s2.e.sel().moves.filter((c) => c.x > 12).sort((a, b) => b.x - a.x)[0];
+    s2.e.intent('A', { k: 'advance', x: t2.x, y: t2.y });
+    ok('an Advance gives no turn', !s2.st.faceAsk && Math.abs(R.angleWrap(s2.ac.facing)) < Math.PI / 4 + 0.01, s2.ac.facing.toFixed(2));
+  }
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

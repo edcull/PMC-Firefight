@@ -298,7 +298,7 @@
         faceAfter(u, path, best);
         var dist = R.inches(u.x, u.y, best.x, best.y);
         u.x = best.x; u.y = best.y;
-        flightTurn(u);
+        if (!advance) flightTurn(u);                // Advanced Control System: on a Move action only (p. 143)
         logLine('move', u.label + ' drives ' + dist.toFixed(1) + '".');
         crushAlong(u, path);
         animateMove(u, path, true);
