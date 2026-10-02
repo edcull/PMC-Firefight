@@ -520,9 +520,12 @@
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
       if (E.state.scen.noMove && E.state.scen.noMove(E.state, u)) {
-        var still = R.status(u) === 'ready' ? bestTarget(u, 'fire') : {};
+        /* Reasonably Defensive: the biggest threat (SOL-6); Suppressed, its Auxiliary
+           weapons — the one shot a pinned unit has (p. 34; rules review a119ac2 SOL-8) */
+        var pinned = R.status(u) !== 'ready';
+        var still = threatTarget(u, 'fire', pinned ? { aux: true } : undefined);
         logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
-        if (still.t) { fire(u, still.t, 'fire'); return; }
+        if (still.t) { resolveShot(u, still.t, 'fire', pinned ? { aux: true } : {}); return; }
         if (u.sp) {
           var rr0 = abRally(E.state, u, { regroup: true });
           if (rr0) { logLine('rally', rr0.text); pushRes(E.regroupCard(u, rr0)); E.regroupFx(u, rr0); }
@@ -549,6 +552,11 @@
           return;
         }
       }
+      /* A Suppressed solitaire OpFor unit still rolls its behaviour (p. 147), and takes
+         from what a Suppressed unit may do (p. 34) — a Move into cover or out of sight,
+         a Fire! with its Auxiliary weapons, or Pass/Regroup — the one that answers the
+         roll (the owner's ruling, rules review a119ac2 SOL-8). */
+      if (R.status(u) === 'suppressed' && E.state.solo && u.side === 'B') { pinnedOpFor(u); return; }
       // a pinned squad beside an empty building gets inside it
       if (R.status(u) === 'suppressed' && !alreadySafe(u)) {
         var sin = R.enterTargets(E.state, u);
@@ -766,6 +774,52 @@
     }
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
+
+    // the Suppressed unit's Move: into the nearest cover (or a building), nearest the `toward` point if given
+    function scrambleToCover(u, toward) {
+      if (alreadySafe(u)) return false;
+      var sin = R.enterTargets(E.state, u);
+      if (sin.length && !toward) {
+        sin.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
+        logLine('ai', u.label + ' is suppressed and gets into the nearest building.');
+        doEnter(u, sin[0]); return true;
+      }
+      var spots = R.reachable(E.state, u, u.move + 2).filter(function (c) { return R.coverAt(E.state, c.x, c.y, u) > 0 && canStand(u, c); });
+      if (!spots.length) return false;
+      spots.sort(toward ? function (a, b) { return R.inches(a.x, a.y, toward.x, toward.y) - R.inches(b.x, b.y, toward.x, toward.y); }
+        : function (a, b) { return a.cost - b.cost; });
+      var spath = R.pathTo(E.state, u, u.move + 2, spots[0]);
+      u.x = spots[0].x; u.y = spots[0].y;
+      animateMove(u, spath, true);
+      logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.kindsUnder(E.state, u)[0]].name.toLowerCase() + '.');
+      u.activated = true; endActivation(u);
+      return true;
+    }
+    function regroupNow(u) {
+      var rr = abRally(E.state, u, { regroup: true });
+      logLine('rally', rr ? rr.text : u.label + ' regroups.');
+      if (rr) { pushRes(E.regroupCard(u, rr)); E.regroupFx(u, rr); }
+      u.activated = true; endActivation(u);
+    }
+    function pinnedOpFor(u) {
+      var bh = rollBehaviour(u), AUX = { aux: true };
+      if (bh === 'flee') { if (!scrambleToCover(u)) regroupNow(u); return; }
+      if (bh === 'defensive' || bh === 'neutral') {
+        var th = threatTarget(u, 'fire', AUX);
+        if (th.t) { resolveShot(u, th.t, 'fire', AUX); return; }
+        regroupNow(u); return;
+      }
+      if (bh === 'offensive') {
+        var bt = bestTarget(u, 'fire', AUX);
+        if (bt.t) { resolveShot(u, bt.t, 'fire', AUX); return; }
+        if (!scrambleToCover(u)) regroupNow(u);
+        return;
+      }
+      // Kill Them All!: no charge while pinned — its sidearms at the closest enemy, or cover on the way to it
+      var ne = nearestEnemy(u);
+      if (ne && R.canShoot(E.state, u, ne.unit, 'fire', AUX)) { resolveShot(u, ne.unit, 'fire', AUX); return; }
+      if (!scrambleToCover(u, ne ? ne.unit : null)) regroupNow(u);
+    }
 
     // the solitaire OpFor's Reasonably Neutral infantry (see actInfantry)
     function neutralHold(u, shot) {
