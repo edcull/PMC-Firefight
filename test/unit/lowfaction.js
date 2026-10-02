@@ -405,5 +405,16 @@ console.log('\nXEN-13 Advanced Control System: a player turns the aircraft up to
   }
 })();
 
+console.log('\nHC-11 Two players\' rebels in a campaign battle: the contract\'s tactics stand');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['rleaders', 'rmilitia', 'rmilitia', 'rmilitia'], armyB: ['rleaders', 'rmilitia', 'rmilitia', 'rmilitia'],
+    factionA: 'rebel', factionB: 'rebel', nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse',
+    terrainSetup: 'auto', campaign: true, tactics: { A: 'guerillas', B: 'laststand' } });
+  const st = e.state();
+  ok('nobody is asked for a tactic again', !st.tacticAsk && st.phase !== 'tactics', st.phase);
+  ok('...each side fights with the one chosen on the contract', st.tactics && st.tactics.A === 'guerillas' && st.tactics.B === 'laststand', JSON.stringify(st.tactics));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

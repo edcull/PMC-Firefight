@@ -86,14 +86,15 @@
        another fight is what pushes it over. */
     // the Trauma Points a unit carries, and how near it is to its next trauma
     function tpBadge(e) {
-      var co = E.camp.companies.A, wd = C.words(co);
+      // the picker's own company: Player 2's Mental Training counts on Player 2's screen (HC-12)
+      var co = E.camp.companies[seat()] || E.camp.companies.A, wd = C.words(co);
       var cap = C.traumaThreshold(co), tp = e.tp || 0;
       return '<span class="w-tp' + (tp >= cap - 2 ? ' hot' : '') + '" ' + tip('Trauma Points',
         tp + ' of ' + cap + '. A unit that reaches ' + cap + ' rolls on the ' + wd.trauma + ' ' +
         'table and the count starts again.') + '>' + tp + '/' + cap + ' TP</span>';
     }
     function wear(e, noTp) {
-      var co = E.camp.companies.A, wd = C.words(co);
+      var co = E.camp.companies[seat()] || E.camp.companies.A, wd = C.words(co);
       var cap = C.traumaThreshold(co);
       var tp = e.tp || 0;
       var near = tp >= cap - 2;
@@ -115,6 +116,8 @@
     }
 
     function beginContract() {
+      // a hotseat contract already being drawn up is taken up again, not rolled afresh (HC-6)
+      if (hotseat() && E.contract && !E.camp.pending && E.contract.hot) { E.view = 'contract'; return; }
       var A = E.camp.companies.A;
       /* Whichever force is drawn has been fighting elsewhere, and comes to meet you
          at something like your own standing — give or take a Tier, and never more
@@ -136,8 +139,14 @@
         levels: levels,
         tierRoll: tier, tier: tier.tier, scenario: fs.scenario || fs.fore.dice[0], planet: 'random',
         alt: fs.alt || null, altBy: fs.altBy || (fs.alt ? 'A' : null), fore: fs.fore || null, foreNote: fs.note || null,
-        picks: [], terms: {}, caught: caught
+        picks: [], terms: {}, caught: caught, hot: hotseat()
       };
+      /* At one screen the attacker and defender are settled here, before either player
+         picks (HC-7) — The Best Defence is Good Offence asked of whichever of them holds it. */
+      var SCr = root.PMCScen;
+      if (hotseat() && SCr && SCr.rollRoles && E.contract.scenario && !(fs.fore && !fs.fore.done)) {
+        E.contract.roles = SCr.rollRoles(E.contract.scenario.id, { A: A.doctrines || [], B: B.doctrines || [] }, null, ['A', 'B']);
+      }
       E.view = 'contract';
     }
 
@@ -251,6 +260,16 @@
       /* The scenario, the opponent and who attacks were read on the offer: here is
          the force. What is left to decide here stays — The Best Defence is Good
          Offence's roll, when it is waiting to be made. */
+      // at one screen, who attacks — settled on the contract, the same for both players (HC-7)
+      if (hotseat() && E.contract.roles) {
+        var ro = E.contract.roles, SCv = root.PMCScen && root.PMCScen.SCENARIOS[E.contract.scenario.id];
+        h += '<div class="cpan"><div class="cpstat"><b>' + esc(E.camp.companies[ro.attacker].name) + '</b> attacks; <b>' +
+          esc(E.camp.companies[ro.defender].name) + '</b> defends' +
+          (ro.bestDefence && ro.bestDefence.swapped ? ' (The Best Defence is Good Offence turned it round: D6 ' + ro.bestDefence.roll + ')' : '') +
+          '.' + (SCv && SCv.roles ? ' <span class="dnote">' + esc(SCv.roles[ro.attacker === seat() ? 'attacker' : 'defender'] || '') + '</span>' : '') + '</div></div>';
+      } else if (hotseat() && root.PMCScen && root.PMCScen.SCENARIOS[E.contract.scenario.id] && !root.PMCScen.SCENARIOS[E.contract.scenario.id].attacker) {
+        h += '<div class="cpan"><div class="cpstat">Neither side has the initiative here \u2014 you meet on even terms.</div></div>';
+      }
       var bd = E.contract.roles && E.contract.roles.bestDefence;
       if (bd && bd.pending && bd.side === seat()) {
         h += '<div class="cpdoc"><button class="lnk" data-go="bestdef">The Best Defence is Good Offence \u2014 roll to attack (2+)</button></div>';

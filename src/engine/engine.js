@@ -531,8 +531,10 @@
     if (!rebels.length) return false;
     var people = rebels.filter(function (sd) { return !isAI(sd); });
     if (!cfg.campaign) rebels.forEach(function (sd) { if (isAI(sd)) aiTactic(sd); });
-    // a campaign's contract has settled the tactic already, unless two players' rebels meet
-    if (cfg.campaign && people.length < 2) people = [];
+    /* A campaign's contract has settled the tactic already — two players' rebels too:
+       each chose on the contract, the second with the first's choice in front of them
+       (hotseat review HC-11), so the battle does not ask again. */
+    if (cfg.campaign) people = [];
     if (!people.length) return false;
     var first = people[0];
     if (people.length > 1) {
