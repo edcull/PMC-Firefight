@@ -389,19 +389,23 @@
       logLine('note', sideName(side) + ' — Complex Teleport Network: a free set of ' + tprof.turretSet + ' Teleport turrets' + ((cfg.pl || 1) > 1 ? ' a Priority Level' : '') + '.');
     });
     /* Mimicry (p. 124), and the tribe's Underground Advance (p. 141): up to a
-       quarter of the force — rounded up, as every division is (p. 27) — may be
-       held back and come in by Battlefield Insertion, on top of the units that
-       have the rule of their own. A player chooses which: every infantry unit is
-       offered the rule, and no more than the quarter may be held for it (u.mimic,
+       quarter of the force — rounded down, never more than a quarter (the owner's
+       ruling, rules review a119ac2 BUG-2) — may be held back and come in by
+       Battlefield Insertion, on top of the units that have the rule of their own.
+       A player chooses which: every unit is offered the rule — Leader Bugs,
+       Overgrown bugs and Alpha squads too — bar an emplaced gun, a turret, and an
+       aircraft under Underground Advance; and no more than the quarter may be held for it (u.mimic,
        state.mimicCap). The AI takes the first quarter. */
     state.mimicCap = {};
     ['A', 'B'].forEach(function (side) {
       var docs = (state.doctrines && state.doctrines[side]) || [];
       if (docs.indexOf('BB2') < 0 && docs.indexOf('XO2') < 0) return;
       var mine = state.units.filter(function (u) { return u.side === side; });
-      var cap = Math.ceil(mine.length / 4);
+      var cap = Math.floor(mine.length / 4);
+      if (cap < 1) return;
       var able = mine.filter(function (u) {
-        return u.cls === 'infantry' && !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Overmind') && !R.has(u, 'Dominant Species');
+        // Underground Advance stays on the ground (XEN-9): a Carrier bug may still come in by Mimicry
+        return (u.cls !== 'aircraft' || docs.indexOf('BB2') >= 0) && !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Stationary Artillery') && !R.has(u, 'Turret');
       });
       if (isAI(side)) { able.slice(0, cap).forEach(function (u) { u.rules.push('Battlefield Insertion'); }); return; }
       state.mimicCap[side] = cap;
