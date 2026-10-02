@@ -95,8 +95,9 @@
        A squad the rules count in a trench or at a low wall (the terrain it is
        tagged with: half its rim or more on it, see R.kindsUnder) is drawn spread
        along it rather than bunched on its base: in the trench, down its middle;
-       at the wall, tight in behind it, on the side away from the enemy. A squad
-       that is only near one is not in it, and keeps its ranks. Only the men are
+       at the wall, tight in behind it, on the side away from the enemy. A squad in
+       the open with its middle within 2" of a low wall is in its cover, and lines
+       it too, on its own side; one further off keeps its ranks. Only the men are
        drawn there — the unit stays where it is, so they keep to the stretch its
        base is against. */
     var LINE_IN = { trench: 1, barricade: 1 };
@@ -108,15 +109,28 @@
       if (n < 2) return null;
       // the terrain the rules count it in, and nothing else: the men only answer to that
       var kind = R.kindsUnder(B.state, null, x, y)[0];
-      if (!LINE_IN[kind]) return intoArea(u, x, y, n, kind);
-      // the piece of that kind most of the token is on
-      var best = null, most = 0, fp = R.footprint(x, y);
-      B.state.terrain.forEach(function (r) {
-        if (r.kind !== kind || r.poly) return;
-        var c = fp.filter(function (q) { return R.inRect(q.x, q.y, r); }).length;
-        if (c > most) { most = c; best = r; }
-      });
-      if (!best) return null;
+      var best = null;
+      if (LINE_IN[kind]) {
+        // the piece of that kind most of the token is on
+        var most = 0, fp = R.footprint(x, y);
+        B.state.terrain.forEach(function (r) {
+          if (r.kind !== kind || r.poly) return;
+          var c = fp.filter(function (q) { return R.inRect(q.x, q.y, r); }).length;
+          if (c > most) { most = c; best = r; }
+        });
+      } else if (!(R.TERRAIN[kind] && R.TERRAIN[kind].cover)) {
+        /* In the open with its middle within 2" of a low wall, the unit is in that
+           wall's cover from fire across it (p. 42; rules.js behindWall): its men
+           line the wall, on the side its middle is. (In a wood or ruins, that
+           cover counts first, and the men stand in it.) */
+        var bd = 2 + 1e-6;
+        B.state.terrain.forEach(function (r) {
+          if (r.kind !== 'barricade' || r.poly) return;
+          var d = R.rectPointDist(r, x, y);
+          if (d <= bd) { bd = d; best = r; }
+        });
+      }
+      if (!best) return intoArea(u, x, y, n, kind);
       var alongX = best.w >= best.h;
       var lo = alongX ? best.x : best.y, len = alongX ? best.w : best.h;
       var thick = alongX ? best.h : best.w, mid = (alongX ? best.y : best.x) + thick / 2;
