@@ -380,6 +380,7 @@
       }
       var m = TERRAIN_MARK[kind];
       if (!m) return null;
+      m = { ch: m.ch, col: m.col, kind: kind };
       // a hull gets no cover, so only the ground that still costs or helps it shows
       if (R.isMachine(u) && kind !== 'hill' && kind !== 'water') return null;
       return m;

@@ -235,7 +235,7 @@
           '): it flees the field at the Rally unless it sheds enough first">!</b>' : '') + '</div>';
       h += '<div class="stats">' +
         stat('Models', u.models + '/' + u.size) + stat('Move', Math.floor(u.move) + '"') +
-        stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
+        stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', R.shotRange(u) + '"') +
         stat('Def', u.def + (R.has(u, 'Battle Armour') ? '/' + (u.def - 2) : '')) +
         stat('Assault', u.assault) +
         /* Morale as it stands: less a point for each model lost beyond the free
@@ -247,7 +247,7 @@
       h += honourChips(u);
       // a rider's mount, before its rules, the way a hull's drive is shown
       var mt = R.mountOf(u);
-      h += ruleChips(u, R.kindsUnder(B.state, u)[0] !== 'open', mt && mt !== R.MOUNTS.none ? [{ name: mt.name, text: mt.note }] : null);
+      h += ruleChips(u, !!terrainMark(u) || R.kindsUnder(B.state, u)[0] !== 'open', mt && mt !== R.MOUNTS.none ? [{ name: mt.name, text: mt.note }] : null);
       fillStats(box, h);
     }
     /* The stats are redrawn with every render, and in a demo that is every
@@ -371,7 +371,7 @@
           (base.str != null && base.str !== u.str && why('str') ? ' ' + tip('Printed ' + base.str, why('str')) : '') + '>' + left + '/' + u.str + '</b></div>' +
         // a half inch of Movement is kept, but shown rounded down
         stat('Move', changed(Math.floor(u.move) + '"', u.move, base.move, 'move') + (u.turn ? ' (' + u.turn + ')' : '')) +
-        stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', u.range + '"') +
+        stat('FP', u.fp === null ? '—' : u.fp) + stat('Range', R.shotRange(u) + '"') +
         stat('Def', changed(String(u.def), u.def, base.def, 'def')) + stat('Assault', u.cls === 'aircraft' ? '—' : u.assault) +   // aircraft have none (a '–' in the book)
         stat('Damage', u.damage) + '</div>';
       if ((u.cargo || []).length) {
@@ -392,9 +392,19 @@
         out.push('<span class="chip chip-drive" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>');
       });
       if (showGround) {
-        var tk = R.kindsUnder(B.state, u)[0], mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
-        out.push('<span class="chip tpill" ' + tip(R.TERRAIN[tk].name, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +
-          (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(R.TERRAIN[tk].name) + '</span>');
+        // the ground as the label marks it: a gun dug in, a unit in a low wall's cover, or what it stands on
+        var tm = terrainMark(u), under = R.kindsUnder(B.state, u)[0];
+        if (tm && tm.kind === 'dugin') {
+          out.push('<span class="chip tpill" ' + tip('Dug in', '+2 Defence behind its sandbags against fire from its 90° front arc, and against plunging fire from any side. Range 24", Minimum Range 6", fires over its front arc only; cannot be turned or carried.') + '>' +
+            '<i style="background:' + tm.col + '">' + tm.ch + '</i>Dug in</span>');
+        } else if (tm && tm.kind === 'barricade' && under !== 'barricade') {
+          out.push('<span class="chip tpill" ' + tip('Behind a low wall', '+2 Defence against fire that crosses the wall (from any side against plunging fire). Its middle is within ' + R.WALL_REACH + '" of the wall.') + '>' +
+            '<i style="background:' + tm.col + '">' + tm.ch + '</i>Behind a low wall</span>');
+        } else {
+          var tk = under, mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
+          out.push('<span class="chip tpill" ' + tip(R.TERRAIN[tk].name, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +
+            (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(R.TERRAIN[tk].name) + '</span>');
+        }
       }
       var TXT = window.PMCRuleText;
       R.shownRules(u).forEach(function (r) {
