@@ -228,6 +228,7 @@ honourplay.js      Adrenaline Rush and Last Stand, for the player and the AI; th
                    phase waits for the player's answer; rally cards name same-named units
 seatnow.js         in a hotseat game, the side being asked is the one that answers
 battlesave.js      the battle kept in the browser: a run of picks kept as one, a failed save said once
+auth.js            accounts and sessions on a database in memory: hashing, renewal, guests, limits
 solitairetest.js   solitaire and co-op against the OpFor
 opfor.js           the OpFor brings an answer to the commandos' machines
 perf.js            how fast the rules run, held to a ceiling

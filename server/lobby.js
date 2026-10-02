@@ -180,8 +180,11 @@ class Lobby {
   }
 
   /* ---- connections ---- */
-  connect(sock) {
+  /* `who`: the signed-in player behind this connection (auth.js), when the server
+     has accounts. Their identity is that, never anything the connection says. */
+  connect(sock, who) {
     const p = new Player(sock, this.limits);
+    if (who) { p.who = who; p.id = who.id; p.pub = who.pub; p.name = who.name; }
     this.players.add(p);
     sock.on('message', (text) => {
       let msg;
@@ -259,8 +262,11 @@ class Lobby {
   }
 
   hello(p, msg) {
-    // once a connection has said who it is, that stands: a second hello only changes the name
+    // signed in: who it is comes from the session; the hello only asks to be welcomed (and rejoined)
+    if (p.who && !p.greeted) { p.greeted = true; return this.greet(p, null); }
+    // once a connection has said who it is, that stands: a second hello only changes the name (not a signed-in one's)
     if (p.id) {
+      if (p.who) { p.send('welcome', { you: { id: p.pub, name: p.name, guest: p.who.guest }, games: this.list(), chat: this.chat.slice(-40) }); return; }
       p.name = P.clampText(msg.name, P.LIMITS.name) || p.name;
       p.send('welcome', { you: { id: p.pub, name: p.name }, games: this.list(), chat: this.chat.slice(-40) });
       if (p.room) p.room.push();
@@ -277,6 +283,10 @@ class Lobby {
       if (this.known.size > KEEP_IDS) this.known.delete(this.known.keys().next().value);
     }
     p.name = P.clampText(msg.name, P.LIMITS.name) || 'Commander';
+    this.greet(p, key);
+  }
+
+  greet(p, key) {
     /* A reconnect: the same browser coming back to a seat still being held for
        it. Find that room and put them back in it. */
     let rejoined = null;
@@ -290,7 +300,7 @@ class Lobby {
       });
     });
     p.send('welcome', {
-      you: { id: p.pub, name: p.name },
+      you: { id: p.pub, name: p.name, guest: !!(p.who && p.who.guest) },
       key: key,                  // only to a browser just given one: kept, and presented next time
       games: this.list(),
       chat: this.chat.slice(-40)

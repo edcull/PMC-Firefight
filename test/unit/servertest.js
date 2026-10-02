@@ -13,6 +13,8 @@ const ws = require('../../server/ws.js');
 const statics = require('../../server/static.js');
 const { Lobby, Player, LIMITS } = require('../../server/lobby.js');
 const app = require('../../server/app.js');
+const DB = require('../../server/db.js');
+const Auth = require('../../server/auth.js');
 const { Campaigns } = require('../../server/campaigns.js');
 const tables = require('../../server/table.js');
 const { R, Engine } = require('../../server/rules.js');
@@ -45,6 +47,8 @@ class Client {
     this.games = [];
   }
   open(url, opts) {
+    // signed in (a session's cookie), unless told otherwise
+    opts = Object.assign({ cookie: this.cookie }, opts || {});
     return new Promise((resolve, reject) => {
       ws.connect(url, (err, sock) => {
         if (err) return reject(err);
@@ -135,8 +139,18 @@ async function main() {
   // the battle below is played by a script as fast as the server answers: far past what a player's hands send
   const quick = { all: { per: 1000, n: 100000 }, chat: LIMITS.chat, rooms: LIMITS.rooms };
   const lobby = new Lobby({ log: () => { }, limits: quick, sweep: false, makeTable: tables.make({ campaign: campaigns, log: () => { } }) });
-  const server = http.createServer(app.create({ campaigns: campaigns, lobby: lobby, serve: serve }));
-  ws.attach(server, '/ws', (sock) => lobby.connect(sock));
+  // accounts on a database in memory, as the real server keeps them in a file; signing up as often as the test likes
+  const many = { per: 1000, n: 1000 };
+  const auth = Auth.create({ db: DB.open(':memory:'), limits: { loginName: { per: 900000, n: 10 }, loginIp: many, register: many, guest: many } });
+  const server = http.createServer(app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: ws.sameHost }));
+  ws.attach(server, '/ws', (sock, req, who) => lobby.connect(sock, who), { authorize: (req) => auth.session(Auth.tokenFrom(req)) });
+  // a player signed up, their session's cookie kept to open sockets with
+  async function signed(name) {
+    const r = await auth.register(name, 'password ' + name, '127.0.0.1');
+    const c = new Client(name);
+    c.cookie = Auth.COOKIE + '=' + r.token;
+    return c;
+  }
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const port = server.address().port;
   const URL = 'ws://127.0.0.1:' + port + '/ws';
@@ -163,8 +177,8 @@ async function main() {
   ok('hidden files are not handed out', closed['/.git/config'] !== 200);
 
   /* ---- two players arrive ---- */
-  const a = await new Client('Ash').open(URL);
-  const b = await new Client('Brann').open(URL);
+  const a = await (await signed('Ash')).open(URL);
+  const b = await (await signed('Brann')).open(URL);
   a.hello(); b.hello();
   await a.until('welcome'); await b.until('welcome');
   ok('both are welcomed', a.me.name === 'Ash' && b.me.name === 'Brann');
@@ -176,7 +190,7 @@ async function main() {
     b.lobbyChat[0].from === 'Ash' && /anyone for a game/.test(b.lobbyChat[0].text));
 
   /* ---- a private game: out of the list, joined by its code ---- */
-  const cole = await new Client('Cole').open(URL);
+  const cole = await (await signed('Cole')).open(URL);
   cole.hello(); await cole.until('welcome');
   cole.send('game.create', { name: 'Cole’s secret', settings: { tier: 3, pl: 1, private: true } });
   await cole.until('game');
@@ -324,8 +338,9 @@ async function main() {
   ok('initiative was rolled on the server', !!a.state.initiative);
 
   /* ---- reconnecting mid-battle ---- */
-  const c = await new Client('Brann').open(URL);
-  c.key = b.key;                     // the same browser, coming back with what the server gave it
+  const c = new Client('Brann');
+  c.cookie = b.cookie;               // the same browser, coming back signed in as before
+  await c.open(URL);
   b.close();
   await wait(120);
   c.hello();
@@ -421,7 +436,7 @@ async function main() {
   console.log('server — hardening');
   const req = (method, p, headers, body) => new Promise((r) => {
     const q = http.request({ host: '127.0.0.1', port: port, path: p, method: method, headers: headers || {} }, (res) => {
-      let t = ''; res.on('data', (c) => t += c); res.on('end', () => r({ code: res.statusCode, body: t }));
+      let t = ''; res.on('data', (c) => t += c); res.on('end', () => r({ code: res.statusCode, body: t, headers: res.headers }));
     });
     q.on('error', (e) => r({ code: 0, body: e.message }));
     if (body) q.write(body);
@@ -456,29 +471,36 @@ async function main() {
   const rematch = await a.until('started');
   ok('...and the same two can play a rematch in it', !!rematch && !!rematch.cfg);
 
-  // MP-2: what the room shows is a public id, never the private one or its secret
-  const shown = JSON.stringify(a.room);
-  ok('a room never shows anyone\'s private id', shown.indexOf(a.key.id) < 0 && shown.indexOf(both.B.key.id) < 0 && shown.indexOf(a.key.secret) < 0);
-  const m = await new Client('Mallory').open(URL);
-  m.key = { id: a.room.seats.A.id, secret: '' };          // the public id, read off the room
-  m.hello();
+  // phase 1: who a connection is comes from its session, and what a room shows of anyone is a public id
+  const ashUser = auth.session(a.cookie.split('=')[1]);
+  ok('a room shows the public id, never the account\'s own', a.room.seats.A.id === ashUser.pub && JSON.stringify(a.room).indexOf('"' + ashUser.id + '"') < 0);
+  const m = await (await signed('Mallory')).open(URL);
+  m.hello({ playerId: ashUser.id, name: 'Ash' });         // says it is Ash
   await m.until('welcome');
-  ok('a hello with someone else\'s public id is a new player', m.me.id !== a.me.id && !!m.key && m.key.id !== a.key.id);
-  const m2 = await new Client('Mallory').open(URL);
-  m2.key = { id: a.key.id, secret: 'guessed' };           // the private id, without its secret
-  m2.hello();
-  await m2.until('welcome');
-  ok('...and so is one with a private id but the wrong secret', m2.me.id !== a.me.id);
-  m.hello({ playerId: a.key.id, secret: a.key.secret });   // a second hello on the same connection
-  await m.until('welcome');
-  ok('a connection cannot become someone else by saying hello again', m.me.id !== a.me.id);
-  m.close(); m2.close();
+  ok('a signed-in connection is who its session says, whatever its hello claims', m.me.name === 'Mallory' && m.me.id !== a.me.id);
+  let none = null, forged = null;
+  try { const o = await new Client('Nobody').open(URL, { cookie: '' }); o.close(); none = false; } catch (e) { none = /401/.test(e.message); }
+  try { const o = await new Client('Forger').open(URL, { cookie: Auth.COOKIE + '=made-up' }); o.close(); forged = false; } catch (e) { forged = /401/.test(e.message); }
+  ok('a socket without a session is refused, as is one with a made-up session', none === true && forged === true, none + ' ' + forged);
+  m.close();
+  // the account routes over HTTP: made, signed in, asked who, signed out
+  const reg = await req('POST', '/api/register', json, JSON.stringify({ name: 'Webster', password: 'long enough' }));
+  const ck = String((reg.headers || {})['set-cookie'] || '');
+  ok('registering over HTTP signs in with an HttpOnly, SameSite cookie', reg.code === 200 && /pmc_session=/.test(ck) && /HttpOnly/.test(ck) && /SameSite=Lax/.test(ck), reg.code + ' ' + ck);
+  const sess = ck.split(';')[0];
+  const who = await req('GET', '/api/me', { cookie: sess });
+  ok('...and the page is told who it is, by its public id only', who.code === 200 && JSON.parse(who.body).who.name === 'Webster' && !('userId' in JSON.parse(who.body).who), who.body);
+  const out = await req('POST', '/api/logout', { cookie: sess });
+  const after = await req('GET', '/api/me', { cookie: sess });
+  ok('...signing out ends the session', out.code === 200 && after.code === 401);
+  const offsite = await req('POST', '/api/login', Object.assign({ origin: 'http://evil.example' }, json), JSON.stringify({ name: 'Webster', password: 'long enough' }));
+  ok('a sign-in posted from another site\'s page is refused', offsite.code === 403, offsite.code);
 
   // MP-8: a page on another site may not open a socket here
   let refused = null;
   try { const o = await new Client('Elsewhere').open(URL, { origin: 'http://evil.example' }); o.close(); refused = false; }
   catch (e) { refused = true; }
-  const home = await new Client('Here').open(URL, { origin: 'http://127.0.0.1:' + port });
+  const home = await (await signed('Here')).open(URL, { origin: 'http://127.0.0.1:' + port });
   ok('a socket from another site is refused; one from this one is not', refused === true && !!home.sock);
   home.close();
   // MP-8: a flood of chat, at the real limits, is cut short and the sender told
@@ -491,7 +513,7 @@ async function main() {
   ok('...as is a flood of anything', msgs <= LIMITS.all.n, msgs + ' let through');
 
   // MP-7: a room nobody is connected to is put away after a while
-  const idle = await new Client('Idle').open(URL);
+  const idle = await (await signed('Idle')).open(URL);
   idle.hello(); await idle.until('welcome');
   idle.send('game.create', { name: 'Nobody home', settings: {}, force: force('pmc', 3, 1, 'ochre', 'Idle') });
   await idle.till('a room', (x) => !!x.room);

@@ -43,8 +43,11 @@ sudo ~/pmc-setup/deploy/pi/setup.sh pi
 This:
 
 - makes `/opt/pmc-firefight/app` for the code;
-- makes `/var/lib/pmc-firefight/campaigns` for the saved campaigns, which a
-  deploy never touches;
+- makes `/var/lib/pmc-firefight/campaigns` for the saved campaigns, and keeps
+  the database of accounts (`/var/lib/pmc-firefight/pmc.db`) beside them; a
+  deploy touches neither;
+- installs the build tools the database package falls back on, should it have
+  no ready-made build for this Pi;
 - installs the `pmc-firefight` service, listening on `127.0.0.1:8787`, so it
   is reached only through nginx;
 - lets `pi` restart that one service, and read its log, without a password;
@@ -119,6 +122,21 @@ so any sub-path works. The server pings every 25 seconds, well inside nginx's
 - **The Pi is off.** A deploy waits in the queue and runs when the Pi comes
   back. GitHub gives up after a day.
 
+## Accounts
+
+Players sign up for themselves on the Multiplayer screen (a name and a
+password, no email), or play a one-off battle as a guest. There is no email to
+send a forgotten password to, so it is reset on the Pi:
+
+```
+cd /opt/pmc-firefight/app
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js users
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js reset-password "Their Name" "a new password"
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js backup     # a copy beside it, safe while the server runs
+```
+
+`create <name> <password> [admin]` and `admin <name> on|off` are there too.
+
 ## If it goes wrong
 
 - **The deploy waits forever on "Waiting for a runner".** The runner is not
@@ -128,6 +146,9 @@ so any sub-path works. The server pings every 25 seconds, well inside nginx's
   the one `setup.sh` was given. Re-run `setup.sh` with the runner's user.
 - **"The server did not come up".** The step prints the last lines of the
   service's log. `node -v` must be 20 or later.
+- **"Install its packages" fails.** The Pi needs to reach the npm registry,
+  and, where the database package has no ready-made build, `build-essential`
+  and `python3` (re-run `setup.sh`, which installs them).
 - **The page loads but Multiplayer stays greyed out.** nginx is not passing
   `/pmc/health`, or the `Upgrade`/`Connection` lines are missing from the
   `location /pmc/` block.

@@ -32,7 +32,7 @@ const TYPES = {
    source, the saved campaigns and anything hidden are not part of the app and
    are not handed out — the campaigns have a route of their own, which says
    what a client may see of them. */
-const CLOSED = [/^server[\\/]/, /^campaigns[\\/]/, /^node_modules[\\/]/, /(^|[\\/])\./];
+const CLOSED = [/^server[\\/]/, /^campaigns[\\/]/, /^data[\\/]/, /^node_modules[\\/]/, /(^|[\\/])\./];
 
 function create(rootDir, opts) {
   opts = opts || {};

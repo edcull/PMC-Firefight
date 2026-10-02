@@ -6,6 +6,7 @@
 node server.js                 # then open http://localhost:8787
 PORT=9000 node server.js       # somewhere else
 HOST=0.0.0.0 node server.js    # so the rest of the house can join in
+DATA_DIR=/var/lib/pmc node server.js           # the database (accounts) kept outside the code
 CAMPAIGNS_DIR=/var/lib/pmc node server.js      # the campaigns kept outside the code
 ALLOWED_ORIGINS=https://example.org node server.js   # pages elsewhere allowed to open the socket
 ```
@@ -14,13 +15,14 @@ To keep one running on a Raspberry Pi behind nginx (at `https://<domain>/pmc/`),
 deployed to by GitHub on every push to `main` (or any branch, by hand), see
 [deploy/pi/README.md](deploy/pi/README.md).
 
-No dependencies. One port serves three things:
+One dependency, `better-sqlite3`, for the database (`npm ci --omit=dev`). One port serves:
 
 | | |
 |---|---|
 | `GET /` | the game — `index.html` and the scripts beside it |
 | `GET/PUT/DELETE /campaign[/name]`, `GET /campaigns` | campaigns, kept on the server |
-| `ws:// /ws` | the lobby, and every battle in progress |
+| `POST /api/register`, `/api/login`, `/api/guest`, `/api/logout`, `/api/password`; `GET /api/me` | accounts, and a guest's name for a battle |
+| `ws:// /ws` | the lobby, and every battle in progress (signed in, or as a guest) |
 
 The server's own source, the saved campaigns and anything hidden are not served.
 
@@ -29,10 +31,13 @@ The server's own source, the saved campaigns and anything hidden are not served.
 - **A bad request does not take it down.** A malformed URL is refused; anything
   thrown and not caught is logged and the server carries on; SIGTERM and SIGINT
   close it cleanly.
-- **Nobody can take another player's seat.** The server gives each browser a
-  private id and a secret at its first `hello`, kept in the browser's storage;
-  coming back means presenting both. Rooms show only a public id. Once a
-  connection has said who it is, a second `hello` only changes the name.
+- **Who a player is comes from their session.** Accounts are a name and a
+  password (scrypt, salted); a session is a random token in an `HttpOnly`,
+  `SameSite=Lax` cookie (`Secure` behind TLS), kept only as a hash, 30 days and
+  renewed as it is used. The socket is opened only with a session (an account's,
+  or a guest's for a one-off battle): its identity is the session's, never what
+  the connection says. Rooms show only a public id. Wrong passwords are limited
+  per name and per address. Accounts are looked after with `server/admin.js`.
 - **Campaign writes need the campaign's key.** The first `PUT` of a campaign is
   answered with a key (`{ ok, key }`); every later `PUT` or `DELETE` must send it
   in an `x-campaign-key` header, or is refused (403). The key is kept hashed
@@ -110,7 +115,10 @@ message names are in `protocol.js`, which both halves load so neither can drift.
 index.html           the game
 viewer.html          the unit viewer, a bench for looking at one at a time
 server.js            the entry point: the HTTP server, the socket, shutting down
-server/app.js        what it answers over HTTP: the app, the campaign routes, /health
+server/app.js        what it answers over HTTP: the app, the accounts, the campaign routes, /health
+server/db.js         the database (better-sqlite3): its migrations and every query
+server/auth.js       accounts, sessions and guests
+server/admin.js      the accounts from the command line: users, reset a password, back up
 
 src/rules/           the rulebook: profiles, scenarios, campaigns, terrain
 src/engine/          the game, and the words it answers in

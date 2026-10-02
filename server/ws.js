@@ -205,6 +205,13 @@ function attach(server, path, onOpen, opts) {
       sock.end('HTTP/1.1 403 Forbidden\r\n\r\n');
       return;
     }
+    /* Who is asking (multiplayer plan, phase 1): the session behind the request's
+       cookie. Without one, nobody is let in. */
+    let who = null;
+    if (opts.authorize) {
+      try { who = opts.authorize(req); } catch (e) { who = null; }
+      if (!who) { sock.end('HTTP/1.1 401 Unauthorized\r\n\r\n'); return; }
+    }
     const key = req.headers['sec-websocket-key'];
     if ((req.headers.upgrade || '').toLowerCase() !== 'websocket' || !key) {
       sock.end('HTTP/1.1 400 Bad Request\r\n\r\n');
@@ -220,7 +227,7 @@ function attach(server, path, onOpen, opts) {
     sockets.add(s);
     s.on('close', () => sockets.delete(s));
     if (head && head.length) s._feed(head);
-    try { onOpen(s, req); }
+    try { onOpen(s, req, who); }
     catch (e) { s.close(1011, 'server error'); }
   });
 
@@ -259,7 +266,8 @@ function connect(url, done, opts) {
       'Connection: Upgrade\r\n' +
       'Sec-WebSocket-Key: ' + key + '\r\n' +
       'Sec-WebSocket-Version: 13\r\n' +
-      (opts.origin ? 'Origin: ' + opts.origin + '\r\n' : '') + '\r\n');
+      (opts.origin ? 'Origin: ' + opts.origin + '\r\n' : '') +
+      (opts.cookie ? 'Cookie: ' + opts.cookie + '\r\n' : '') + '\r\n');
   });
 
   function onHead(chunk) {

@@ -474,12 +474,17 @@ function openScreen(name) {
   const app2 = boot(root, {
     location: { protocol: 'http:', host: 'localhost:8787', href: 'http://localhost:8787/' },
     WebSocket: function () { return link.client; },
-    // the server answers health (asked for relative to the page), which is what lights the Multiplayer card
-    fetch: (url) => answered(/^\/?health$/.test(url) ? { ok: true, json: () => ({ ok: true, rooms: 0, players: 0 }) } : { ok: false })
+    // the server answers health (asked for relative to the page), which is what lights the Multiplayer card,
+    // and who this browser is signed in as (multiplayer plan, phase 1)
+    fetch: (url) => answered(/^\/?health$/.test(url) ? { ok: true, status: 200, json: () => ({ ok: true, rooms: 0, players: 0 }) }
+      : /^\/?api\/me$/.test(url) ? { ok: true, status: 200, json: () => ({ who: { id: 'pub-' + name, name: name, guest: false } }) }
+        : { ok: false, status: 404 })
   });
-  served.connect(link.server);
+  // the session behind the socket: who the lobby takes this connection to be
+  served.connect(link.server, { id: 'u-' + name, pub: 'pub-' + name, name: name, guest: false });
   app2.win.localStorage.setItem('pmc-player-name', name);
   app2.win.PMCLobby.open();
+  app2.drain(6);                     // asked who it is, then wired up the socket
   // the socket is open the moment the screen has finished wiring it up
   if (link.client.onopen) link.client.onopen();
   app2.drain(6);

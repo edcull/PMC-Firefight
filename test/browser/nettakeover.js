@@ -3,7 +3,7 @@
    table) and goes on by itself once the defender is done. */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
-const { ROOT, SHOTS } = require('../where.js');
+const { ROOT, SHOTS , signInLobby, tmpData } = require('../where.js');
 const PORT = 9300 + Math.floor(Math.random() * 400);
 
 let pass = 0, fail = 0;
@@ -14,7 +14,7 @@ function ok(name, cond, note) {
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 (async () => {
-  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: String(PORT) }), stdio: 'ignore' });
+  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { DATA_DIR: tmpData(), CAMPAIGNS_DIR: tmpData(), PORT: String(PORT) }), stdio: 'ignore' });
   let up = false;
   for (let i = 0; i < 40 && !up; i++) {
     await wait(150);
@@ -24,13 +24,13 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const errs = [];
   const ctx1 = await b.newContext({ viewport: { width: 1340, height: 900 } });
   let ctx2 = await b.newContext({ viewport: { width: 1340, height: 900 } });
-  async function page(ctx) {
+  async function page(ctx, name) {
     const p = await ctx.newPage();
     p.on('pageerror', e => errs.push(e.message));
     await p.goto('http://localhost:' + PORT + '/');
     await p.waitForTimeout(700);
+    await signInLobby(p, name, 'guest');
     await p.evaluate(() => {
-      window.PMCLobby.open();
       window.__room = null;
       window.PMCLobby.net().on('game', m => { window.__room = m.room; });
     });
@@ -39,8 +39,8 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   }
   // a Light APC in each, so a unit can be aboard one
   const force = { faction: 'pmc', tactic: '', keys: ['cmd2', 'regular', 'regular', 'lapc', 'rookie', 'rookie'], colour: 'ochre', name: '' };
-  const p1 = await page(ctx1);
-  const p2 = await page(ctx2);
+  const p1 = await page(ctx1, 'Holder');
+  const p2 = await page(ctx2, 'Taker');
   await p1.evaluate((f) => window.PMCLobby.net().send('game.create', { name: 'Takeover', settings: { tier: 3, pl: 1, planet: 'barren', scenario: 'takeover', terrain: 'manual', private: true }, force: f }), force);
   await p1.waitForTimeout(600);
   const code = await p1.evaluate(() => window.__room && window.__room.id);

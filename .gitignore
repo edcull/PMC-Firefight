@@ -1,6 +1,8 @@
 node_modules/
 # campaigns saved by a running server: players' data, not source
 campaigns/
+# the server's database (accounts, games): players' data, not source
+data/
 # screenshots a few older harnesses drop in the project root
 /shot-*.png
 

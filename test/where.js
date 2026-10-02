@@ -55,7 +55,27 @@ async function seedDice(page, seed) {
   }, seed);
 }
 
+/* Into the multiplayer lobby the way a player goes: open it, and through the
+   sign-in screen — a new account ('register', the default), an existing one
+   ('signin'), or a guest. Resolves once the lobby has welcomed them. */
+async function signInLobby(page, name, mode, password) {
+  mode = mode || 'register';
+  await page.evaluate(() => window.PMCLobby.open());
+  await page.waitForFunction(() => !!document.getElementById('sign-name') || !!(window.PMCLobby.net() && window.PMCLobby.net().live), null, { timeout: 8000 });
+  if (await page.evaluate(() => !!document.getElementById('sign-name'))) {
+    await page.evaluate((m) => document.querySelector('#lobby [data-lob="signmode"][data-mode="' + m + '"]').click(), mode);
+    await page.fill('#sign-name', name);
+    if (mode !== 'guest') await page.fill('#sign-pass', password || 'password for ' + name);
+    await page.evaluate(() => document.querySelector('#lobby [data-lob="signgo"]').click());
+  }
+  await page.waitForFunction(() => !!(window.PMCLobby.net() && window.PMCLobby.net().live) && !document.getElementById('sign-name'), null, { timeout: 8000 });
+}
+// a data directory of its own for a test's server: a fresh database every run
+function tmpData() { return fs.mkdtempSync(path.join(require('os').tmpdir(), 'pmc-data-')); }
+
 module.exports = {
+  signInLobby: signInLobby,
+  tmpData: tmpData,
   startSkirmish: startSkirmish,
   seedDice: seedDice,
   ROOT: ROOT,

@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const http = require('http');
 const net = require('net');
-const { ROOT } = require('../where.js');
+const { ROOT , signInLobby, tmpData } = require('../where.js');
 
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -17,7 +17,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
   const PORT = 9700 + Math.floor(Math.random() * 200), PROXY = PORT + 300;
-  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: String(PORT), HOST: '127.0.0.1' }), stdio: 'ignore' });
+  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { DATA_DIR: tmpData(), CAMPAIGNS_DIR: tmpData(), PORT: String(PORT), HOST: '127.0.0.1' }), stdio: 'ignore' });
   /* What nginx does with `location /pmc/ { proxy_pass http://127.0.0.1:PORT/; }`:
      /pmc/... goes to the server as /..., WebSocket upgrades included; anything
      else is somebody else's (here, a 404 that says so). */
@@ -55,12 +55,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await p.waitForTimeout(1200);
   ok('the page loads under /pmc/', await p.evaluate(() => !!window.PMC && !!document.getElementById('menu')));
   ok('...finds the game server (the Multiplayer card is live)', await p.evaluate(() => !document.getElementById('btn-multi').disabled));
-  const welcomed = await p.evaluate(() => new Promise((res) => {
-    window.PMCLobby.open();
-    const n = window.PMCLobby.net();
-    n.on('welcome', () => res(n.url || true));
-    setTimeout(() => res(false), 5000);
-  }));
+  // signed in under /pmc/ (the account routes are relative too), then the socket
+  let welcomed = false;
+  try { await signInLobby(p, 'Subpath Sam', 'register'); welcomed = await p.evaluate(() => window.PMCLobby.net().url || true); } catch (e) { welcomed = false; }
   ok('...and the lobby connects over the WebSocket under /pmc/', !!welcomed, String(welcomed));
   await p.waitForTimeout(500);
   // (bar the browser's own favicon lookup, which every page gets)
