@@ -700,6 +700,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | BUG-5 Pheromone Markers in an assault | **Fixed (owner's reading).** Only an Animal Behaviour bug that charges gets the bonus to its Assault; a bug being charged does not. Shooting is unchanged. | `assault.js` (`assaultMods`); test `bugs.js` |
 | BUG-6 Effective Toxin Glands | **Changed (owner's ruling).** Reworded: "Spore Bugs and Flying Bugs get an additional +1 Firepower when taking the Fire! action." Spore Bugs: Fire! is worth +2 instead of +1. Flying Bugs still fire at Basic Firepower, but a Fire! action adds +1. | `shoot.js` (`shotMods`), `campaign.js` text; test `bugcamp.js` |
 | BUG-7 PL1 Tier cap and Overgrown bugs | **Kept (owner's ruling).** Overgrown bugs follow the vehicle rules on the table, but they are not vehicles for the army list: the swarm's own Overgrown limits apply, not the general vehicle/aircraft caps. | — |
+| BUG-8 Fire beetle as Overgrown | **Kept (book misprint).** The Fire beetle is an Overgrown Bug like the other Tier V Structure bugs. | — |
 | CMP-6 Strength in Numbers: exactly one Tier below | Keep |
 | REB-3 First Among Equals without Command Unit (X) count as Command Units | Kept (group reading) |
 | REB-5 Hostile takeover may put guns in reserve | Change: guns always deploy |
