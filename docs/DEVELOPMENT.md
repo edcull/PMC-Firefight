@@ -226,6 +226,7 @@ endphase.js        Skip, and the End phase's one choice
 honourplay.js      Adrenaline Rush and Last Stand, for the player and the AI; the End
                    phase waits for the player's answer; rally cards name same-named units
 seatnow.js         in a hotseat game, the side being asked is the one that answers
+battlesave.js      the battle kept in the browser: a run of picks kept as one, a failed save said once
 solitairetest.js   solitaire and co-op against the OpFor
 opfor.js           the OpFor brings an answer to the commandos' machines
 perf.js            how fast the rules run, held to a ceiling

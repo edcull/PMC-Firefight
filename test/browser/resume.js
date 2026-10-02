@@ -85,6 +85,17 @@ async function play(p, n) {
   const logLater = await p.evaluate(() => document.querySelectorAll('#log > *').length);
   ok('...and it plays on', logLater > logAfter, logAfter + ' → ' + logLater);
 
+  console.log('\n  A new skirmish while this one is on (HB-12)');
+  await p.evaluate(() => window.PMCMenu.open());
+  const fresh = () => p.evaluate(() => { document.querySelector('[data-skirmish="ai"]').click();
+    const n = document.getElementById('menu-note');
+    return { menu: !document.getElementById('menu').hidden, note: n.hidden ? '' : n.textContent, live: window.PMC_BATTLE_LIVE() }; });
+  const f1 = await fresh();
+  ok('the first tap only warns that this battle would be lost', f1.menu && f1.live && /Tap again/.test(f1.note), JSON.stringify(f1));
+  const f2 = await fresh();
+  ok('...a second goes on to the new one', !f2.menu && !f2.note, JSON.stringify(f2));
+  await p.evaluate(() => { document.getElementById('setup').hidden = true; });
+
   console.log('\n  Thrown away');
   await p.evaluate(() => window.PMCMenu.open());
   await p.click('#btn-discard'); await p.click('#btn-discard');
@@ -133,6 +144,10 @@ async function play(p, n) {
   ok('after a refresh, Campaign goes back to the battle', !back.menu && !back.camp && back.live && back.campaign, JSON.stringify(back));
   ok('...the same battle', campBefore === await table(p));
   ok('...and the campaign is still waiting on its result', back.pending);
+  const camp2 = await p.evaluate(() => { window.PMCMenu.open(); document.querySelector('[data-skirmish="ai"]').click(); document.querySelector('[data-skirmish="ai"]').click();
+    const n = document.getElementById('menu-note');
+    return { menu: !document.getElementById('menu').hidden, note: n.hidden ? '' : n.textContent, campaign: !!window.PMC_STATE().cfg.campaign }; });
+  ok('a new skirmish cannot take the place of the campaign\'s battle', camp2.menu && camp2.campaign && /for the campaign/.test(camp2.note), JSON.stringify(camp2));
 
   ok('no page errors', errs.length === 0, errs.join(' | '));
   console.log('\n  ' + pass + ' checks passed, ' + fail + ' failed.');

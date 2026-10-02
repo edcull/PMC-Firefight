@@ -74,31 +74,48 @@ const look = () => {
   ok('the first turn is announced', !!s.banner && /Turn 1/.test(s.banner), s.banner);
 
   // every unit skips until the End phase asks
-  for (let i = 0; i < 40; i++) {
+  const toEnd = async () => {
+    for (let i = 0; i < 40; i++) {
+      s = await p.evaluate(look);
+      if (s.endAsk || s.over) break;
+      await p.evaluate(() => {
+        const st = window.PMC_STATE();
+        if (st.faceAsk) return window.__sendIntent({ k: 'vfaceall' });
+        const mine = st.units.filter((x) => x.side === st.activeSide && x.alive && !x.activated && x.x >= 0 && !x.aboard)[0];
+        if (!mine) return;
+        window.__sendIntent({ k: 'select', id: mine.id });
+        window.__sendIntent({ k: 'action', id: 'skip' });
+      });
+      await p.waitForTimeout(120);
+    }
+    await p.waitForFunction(() => !!document.querySelector('[data-act="enddone"]'), null, { timeout: 8000 }).catch(() => {});
     s = await p.evaluate(look);
-    if (s.endAsk || s.over) break;
-    await p.evaluate(() => {
-      const st = window.PMC_STATE();
-      if (st.faceAsk) return window.__sendIntent({ k: 'vfaceall' });
-      const mine = st.units.filter((x) => x.side === st.activeSide && x.alive && !x.activated && x.x >= 0 && !x.aboard)[0];
-      if (!mine) return;
-      window.__sendIntent({ k: 'select', id: mine.id });
-      window.__sendIntent({ k: 'action', id: 'skip' });
-    });
-    await p.waitForTimeout(120);
-  }
+  };
+  await toEnd();
   const skipped = await p.evaluate(() => window.PMC_STATE().log.some((l) => /skips its action/.test(l.text)));
   ok('units skip their action', skipped);
-  ok('the End phase asks the first player', s.endAsk === 'A', JSON.stringify(s));
-  ok('...with Carry on and Surrender on its card', s.endCard && s.surrender);
-  await p.evaluate(() => document.querySelector('[data-act="enddone"]').click());
-  await p.waitForTimeout(200);
-  s = await p.evaluate(look);
-  ok('then the second', s.endAsk === 'B');
+  /* At one screen the End phase is one card for both players (hotseat review HB-8):
+     one Carry on, and a Surrender for each. */
+  const card = await p.evaluate(() => ({ surr: [...document.querySelectorAll('[data-act="surrender"]')].map(b => b.getAttribute('data-side')).join(),
+    handover: !!(document.getElementById('handover') && !document.getElementById('handover').hidden) }));
+  ok('the End phase is one card for both players', s.endAsk === 'A' && s.endCard && card.surr === 'A,B', JSON.stringify(card));
+  ok('...with nobody to pass the device to', !card.handover);
+  ok('...and the header says both are asked', /both players/.test(s.pill || ''), s.pill);
   await p.evaluate(() => document.querySelector('[data-act="enddone"]').click());
   await p.waitForTimeout(400);
   s = await p.evaluate(look);
-  ok('and the next turn is announced', s.turn === 2 && !!s.banner && /Turn 2/.test(s.banner), s.banner);
+  ok('one Carry on takes both to the next turn, announced', s.turn === 2 && !s.endAsk && !!s.banner && /Turn 2/.test(s.banner), JSON.stringify(s));
+  await toEnd();
+  await p.evaluate(() => document.querySelector('[data-act="surrender"][data-side="B"]').click());
+  await p.waitForTimeout(200);
+  const asks = await p.evaluate(() => ({ text: document.querySelector('[data-act="surrender"][data-side="B"]').textContent, over: !!window.PMC_STATE().over }));
+  ok('a player\'s Surrender asks again first', /Tap again/.test(asks.text) && !asks.over, asks.text);
+  await p.evaluate(() => document.querySelector('[data-act="surrender"][data-side="B"]').click());
+  await p.waitForTimeout(400);
+  const fin = await p.evaluate(() => { const s = window.PMC_STATE(); return { over: !!s.over, winner: s.over && s.over.winner }; });
+  ok('...then the second player surrenders and the first wins', fin.over && fin.winner === 'A', JSON.stringify(fin));
+  const pillNow = await p.evaluate(() => document.getElementById('hdr-active').textContent);
+  ok('the header names the winner (HB-9)', pillNow === 'Victory: Ours', pillNow);
 
   console.log('\n  against the AI');
   await boot(p, 'ai');
