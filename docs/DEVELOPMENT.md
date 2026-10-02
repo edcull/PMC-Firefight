@@ -112,6 +112,7 @@ test/
   art/               the art snapshots' baselines (baseline.json, terrain.json)
   perf/board.js      the drawing performance harness
   where.js           shared paths and helpers for the tests
+  hotseat.js         a hotseat battle played to the end through the board, as two players
 
 docs/                this file, and the hotseat and multiplayer plans
 build/               what the build and the tests write (not kept in git)
@@ -226,6 +227,7 @@ endphase.js        Skip, and the End phase's one choice
 honourplay.js      Adrenaline Rush and Last Stand, for the player and the AI; the End
                    phase waits for the player's answer; rally cards name same-named units
 seatnow.js         in a hotseat game, the side being asked is the one that answers
+battlesave.js      the battle kept in the browser: a run of picks kept as one, a failed save said once
 solitairetest.js   solitaire and co-op against the OpFor
 opfor.js           the OpFor brings an answer to the commandos' machines
 perf.js            how fast the rules run, held to a ceiling
@@ -273,6 +275,8 @@ terrainsetup.js    laying the terrain by hand, area by area
 deployorder.js     choosing the deployment order; insertion escapes
 deployzones.js     every scenario's deployment zone, both ways round
 deploytap.js       placing units by tapping, on a phone and a desktop
+hotseatdeploy.js   at one screen, auto-deploy places only the side setting up, and the deploy card follows it
+hotseathandover.js the pass-the-device card at every change of player in a battle
 vehface.js         a vehicle put down is asked which way it faces
 digface.js         digging a gun in
 loadout.js         putting troops aboard a hull before the battle
@@ -340,6 +344,9 @@ founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
 hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts
 hotseatterms.js    On Our Terms… in a hotseat contract, held by one player or both
+hotseatcontract.js a hotseat contract kept across the hub and a reload, roles settled on it
+hotseatloop.js     a hotseat campaign turn: both contracts, the battle, each player's questions and aftermath
+hotseathub.js      a hotseat hub: each player's own dossier, and the campaign's end
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract
@@ -365,6 +372,7 @@ rebelplay.js       an insurgent group with each Tactic                (slow)
 soloplay.js        every solitaire scenario, solitaire and co-op      (slow)
 scentest.js        all six scenarios played out                       (slow)
 report.js          a long unattended run, checking invariants         (slow)
+hotseatsweep.js    hotseat battles at one screen, every scenario, to the end (slow)
 ```
 
 ### Art snapshots

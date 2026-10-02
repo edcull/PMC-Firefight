@@ -68,7 +68,7 @@
       cr.hidden = live || !going;
       if (going) {
         cr.setAttribute('data-camp', cg.mode === 'hotseat' ? 'hotseat' : 'solo');
-        el('menu-camp-resume-sub').textContent = cg.companies.A.name + ' \u00b7 campaign turn ' + cg.turn;
+        el('menu-camp-resume-sub').textContent = campName(cg) + ' \u00b7 campaign turn ' + cg.turn;
       }
     }
     /* a skirmish in this browser can be thrown away, and a battle over the
@@ -90,15 +90,38 @@
     campSub('menu-camp-sub', on, !hot, 'Raise a force and see it through a war', camp);
     campSub('menu-camphot-sub', on, hot, 'Two dossiers, two players, one screen', camp);
   }
+  // a hotseat campaign is both players': named by both forces (HC-13)
+  function campName(camp) {
+    var B = camp.mode === 'hotseat' && camp.companies.B;
+    return camp.companies.A.name + (B && B.name ? ' v ' + B.name : '');
+  }
   function campSub(id, on, mine, fresh, camp) {
     var sub = el(id);
     if (!sub) return;
     sub.textContent = !on ? fresh
-      : mine ? 'Continue: ' + camp.companies.A.name + ', campaign turn ' + camp.turn
+      : mine ? 'Continue: ' + campName(camp) + ', campaign turn ' + camp.turn
       : 'A ' + (camp.mode === 'hotseat' ? 'hotseat' : 'single-player') + ' campaign is under way: ' +
-        camp.companies.A.name + ', turn ' + camp.turn;
+        campName(camp) + ', turn ' + camp.turn;
   }
 
+  /* A new skirmish while a battle is still on would take the place of the one kept
+     in this browser (hotseat review HB-12). A campaign's battle, or one on a game
+     server, is not given up that way: it is said, and nothing starts. A skirmish
+     of this browser's own may be, on a second tap. */
+  var freshAsked = null;
+  function freshOk(b) {
+    var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE(), n = el('menu-note');
+    if (!live) return true;
+    if (!discardable()) {
+      if (n) { n.textContent = 'A battle is still being fought' + (abandonable() ? ' online' : ' for the campaign') +
+        '. Go back to it from the first card and see it through' + (abandonable() ? ', or abandon it there,' : '') + ' before starting another.'; n.hidden = false; }
+      return false;
+    }
+    if (freshAsked === b) { freshAsked = null; if (n) n.hidden = true; return true; }
+    freshAsked = b;
+    if (n) { n.textContent = 'A battle is still on. Tap again to start a new one — the one in progress will be lost.'; n.hidden = false; }
+    return false;
+  }
   function discardable() { return !!(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE()); }
   function abandonable() { return !!(root.PMC_BATTLE_ABANDONABLE && root.PMC_BATTLE_ABANDONABLE()); }
   // the x back to an x, and the card back to saying the battle is on
@@ -121,6 +144,8 @@
       var go = b.getAttribute('data-menu');
       if (go) { show(go); return; }
       var kind = b.getAttribute('data-skirmish');
+      if (!kind) freshAsked = null;
+      if (kind && !freshOk(b)) return;
       if (kind) { close(); if (root.PMC_SKIRMISH) root.PMC_SKIRMISH(kind); return; }
       // the campaign, solo or hotseat: the dossier takes it from here (dossier.js)
       var cm = b.getAttribute('data-camp');

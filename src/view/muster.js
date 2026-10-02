@@ -912,7 +912,15 @@
         net: ['A game over the network: your force for ' + ((muster.forLobby && muster.forLobby.room) || 'the game') +
           ', at Battle Tier {T}, Priority Level {P}, as the host has set them. Name it, paint it and pick its units, then take it back to the table.', '', '']
       }[kind];
-      el('hot-intro').textContent = (step === 2 ? h.sides[0].name + intro[1] : intro[step - 1])
+      /* Hotseat and co-op open on the battlefield with both forces rolled; a force is
+         only ever opened from there, to change it (hotseat review HB-10). */
+      if ((kind === 'hotseat' || kind === 'coop') && step < 3) {
+        intro = intro.slice();
+        intro[step - 1] = hotWho(step) + '\u2019s ' + (kind === 'coop' ? 'commando' : force) +
+          ' for this battle, at Battle Tier {T}, Priority Level {P} (set on the battlefield). Pick its units, name it and paint it, then go back to the battlefield.' +
+          (kind === 'coop' ? ' The OpFor is rolled a Priority Level higher for the two of you.' : '');
+      }
+      el('hot-intro').textContent = (step === 2 && kind !== 'hotseat' && kind !== 'coop' ? h.sides[0].name + intro[1] : intro[step - 1])
         .replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL());
       el('btn-start').textContent = kind === 'net' ? 'Back to the table'
         : step < 3 && h.edit ? 'Back to the battlefield'

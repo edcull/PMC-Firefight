@@ -97,6 +97,10 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   txt = await body(p);
   check('player 2 can choose a different kind of force', /Player 2 — Awaken a swarm/.test(txt) &&
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.B.faction === 'bugs'));
+  // the choice is kept across a reload before they finish (HC-13)
+  await p.reload(); await p.waitForTimeout(900);
+  await click(p, '#btn-campaign');
+  check('a reload keeps player 2\'s choice of force', /Player 2 — Awaken a swarm/.test(await body(p)));
   check('...and is offered that force\'s own units', await p.evaluate(() => !!document.querySelector('#camp-body button[data-add="btiny"]') &&
     !document.querySelector('#camp-body button[data-add="recruits"]')));
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Hive'; });

@@ -232,6 +232,7 @@
   var ICON_LOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>';
 
   function save() {
+    if (camp && camp.mode === 'hotseat') camp.savedContract = contract && !camp.pending ? contractOut(contract) : null;
     // the storage panel only knows how a write went once it has gone, so redraw then
     Store.save(camp).then(function () {
       if (view === 'hub' && el('camp') && !el('camp').hidden) render();
@@ -482,10 +483,35 @@
       get camp() { return camp; }, get docSide() { return docSide; }, get docSwap() { return docSwap; },
       get drawState() { return drawState; }, get intelIdx() { return intelIdx; },
       get swapOut() { return swapOut; }, get upState() { return upState; },
-      get view() { return view; }, set view(v) { view = v; }, render: function () { render(); }
+      get view() { return view; }, set view(v) { view = v; }, render: function () { render(); },
+      get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; }, stripeOf: stripeOf
     }));
   }
-  function onFinish(report) { return (KIT_AFTER || kitAfter()).onFinish(report); }
+  // the battle fought: its contract is done with (a kept one included)
+  function onFinish(report) { contract = null; if (camp) camp.savedContract = null; return (KIT_AFTER || kitAfter()).onFinish(report); }
+  /* A hotseat contract is kept with the campaign while it is being drawn up (hotseat
+     review HC-6): a reload finds it as it was — the terms, the roles, both players'
+     picks — and going back to the hub and in again does not roll it afresh. The
+     picks are kept as rids and found in the rosters again on loading. */
+  // written whenever it has changed, while it is on screen
+  var keptContract = null;
+  function keepContract() {
+    if (!camp || camp.mode !== 'hotseat' || !contract || camp.pending) return;
+    var now = JSON.stringify(contractOut(contract));
+    if (now !== keptContract) { keptContract = now; save(); }
+  }
+  function contractOut(k) {
+    return JSON.parse(JSON.stringify(k, function (key, v) {
+      return key === 'picks' ? (v || []).map(function (e) { return e && e.rid; }) : v;
+    }));
+  }
+  function contractIn(o) {
+    if (!o || !camp) return null;
+    var back = function (rids, co) { return (rids || []).map(function (r) { return C.byRid(co, r); }).filter(Boolean); };
+    o.picks = back(o.picks, camp.companies[o.side === 'B' ? 'B' : 'A']);
+    if (o.first) o.first.picks = back(o.first.picks, camp.companies.A);
+    return o;
+  }
   function postView() { return (KIT_AFTER || kitAfter()).postView(); }
   function aftermathView() { return (KIT_AFTER || kitAfter()).aftermathView(); }
   function honourView() { return (KIT_AFTER || kitAfter()).honourView(); }
@@ -522,7 +548,7 @@
     if (camp && camp.fronts && !camp.post) (KIT_AFTER || kitAfter()).nextFront();   // the other forces' battles, still being fought
     if (view === 'found') h = foundView();
     else if (view === 'offers') h = offersView();
-    else if (view === 'contract') h = passOwed() ? passCard() : contractView();
+    else if (view === 'contract') { h = passOwed() ? passCard() : contractView(); keepContract(); }
     else if (view === 'aftermath') h = aftermathView();
     else if (view === 'post') h = postView();
     else if (view === 'honour') h = honourView();
@@ -720,10 +746,10 @@
     if (t.hasAttribute('data-forego') && contract && contract.fore && !contract.fore.done) {
       var ff = contract.fore, fWho = ff.order[ff.ignored.length], wasScen = contract.scenario;
       if (!C.foreIgnore(contract, fWho, +t.getAttribute('data-forego'), camp.mode !== 'hotseat')) return;
-      if (ff.done && contract.roles && (!wasScen || wasScen.id !== contract.scenario.id)) {
+      if (ff.done && (contract.roles || camp.mode === 'hotseat') && (!contract.roles || !wasScen || wasScen.id !== contract.scenario.id)) {
         var SCf = root.PMCScen;
         contract.roles = SCf && SCf.rollRoles ? SCf.rollRoles(contract.scenario.id,
-          { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, ['A']) : contract.roles;
+          { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, camp.mode === 'hotseat' ? ['A', 'B'] : ['A']) : contract.roles;
       }
       save(); render(); return;
     }
@@ -731,8 +757,8 @@
       var was = contract.scenario, wasRoles = contract.roles;
       contract.scenario = contract.alt; contract.alt = was;
       var SCx = root.PMCScen;
-      contract.roles = !wasRoles ? null : contract.altRoles || (SCx && SCx.rollRoles ? SCx.rollRoles(contract.scenario.id,
-        { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, ['A']) : null);
+      contract.roles = !wasRoles && camp.mode !== 'hotseat' ? null : contract.altRoles || (SCx && SCx.rollRoles ? SCx.rollRoles(contract.scenario.id,
+        { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, camp.mode === 'hotseat' ? ['A', 'B'] : ['A']) : null);
       contract.altRoles = wasRoles;
       /* Player 2's own Foresighted Command, after Player 1 has picked their force for
          the other scenario: the screen goes back to Player 1 to look again (HC-10),
@@ -902,7 +928,7 @@
       // an unchosen colour follows the kind of force (a swarm defaults to olive); a chosen one is kept
       draft.name = keepName;
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
-      render(); return;
+      save(); render(); return;                            // kept across a reload (HC-13)
     }
     if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
       var cc0 = hubCo(), other0 = camp.mode === 'hotseat' ? camp.companies[cc0 === camp.companies.A ? 'B' : 'A'] : null;
@@ -923,6 +949,8 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
+      // hotseat: Player 1's aftermath read, the device goes to Player 2 for theirs (HC-4)
+      case 'afternext': case 'afterpass': case 'postpass': (KIT_AFTER || kitAfter()).afterTurn(go, t.getAttribute('data-seat')); render(); return;
       case 'passok': contractSeen = t.getAttribute('data-seat') === 'B' ? 'B' : 'A'; render(); return;
       // hotseat: the hub turns to the other player's force (HC-1)
       case 'hubside': hubSide = t.getAttribute('data-hs') === 'B' ? 'B' : 'A'; colourOpen = false; promoRid = null; openModal = null; render(); return;
@@ -934,7 +962,7 @@
         dfilt[dk][dv] = !dfilt[dk][dv];
         render(); return;
       }
-      case 'dfiltclear': dfilt = { type: {}, tier: {} }; ufilter.A = {}; render(); return;
+      case 'dfiltclear': dfilt = { type: {}, tier: {} }; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
       case 'ufilter': {
         var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');
         var fl = ufilter[fk] || (ufilter[fk] = {});
@@ -988,6 +1016,8 @@
       }
       case 'aspire': camp.companies[docSide].aspiring = true; save(); render(); return;
       case 'roster':
+        // from a hotseat aftermath, the dossier is that of the player who just read it
+        if (view === 'aftermath' && camp.mode === 'hotseat') hubSide = (KIT_AFTER || kitAfter()).afterSide;
         // from the hub, the Dossier button swaps the Tier panel for the dossier and back again
         if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
         else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
@@ -1030,9 +1060,10 @@
         save(); render(); return;
       }
       case 'reborn': {
-        var ro = after && after.sides.A && after.sides.A.rebornOffer, oi = +t.getAttribute('data-i');
+        var rbs = (KIT_AFTER || kitAfter()).afterSide;     // whoever's aftermath is on screen (hotseat: either player)
+        var ro = after && after.sides[rbs] && after.sides[rbs].rebornOffer, oi = +t.getAttribute('data-i');
         if (!ro || !ro[oi]) return;
-        var rr = C.rebirth(camp.companies.A, ro[oi]);
+        var rr = C.rebirth(camp.companies[rbs], ro[oi]);
         if (!rr.ok) { note('Enhanced Genetic Memory', rr.why); return; }
         save(); render(); return;
       }
@@ -1132,7 +1163,7 @@
 
   function doExport() {
     var blob = JSON.stringify(C.forSave(camp), null, 1);
-    var name = 'pmc-campaign-' + (camp.companies.A.name || 'company').replace(/\W+/g, '-').toLowerCase() + '.json';
+    var name = 'pmc-campaign-' + ((camp.companies.A.name || 'company') + (camp.mode === 'hotseat' && camp.companies.B ? '-v-' + (camp.companies.B.name || '') : '')).replace(/\W+/g, '-').toLowerCase() + '.json';
     (async function () {
       try {
         if (root.claude && root.claude.use) {
@@ -1241,6 +1272,7 @@
       var kept = root.PMCNet && root.PMCNet.savedBattle && root.PMCNet.savedBattle();
       if (camp && camp.pending && !(kept && kept.cfg && kept.cfg.campaign)) camp.pending = null;
       if (camp && camp.companies && C.evenWorld(camp)) save();   // a campaign from before the forces paired off
+      if (camp && camp.mode === 'hotseat' && camp.savedContract && !camp.pending) contract = contractIn(camp.savedContract);
       ensureColours();
       if (needsSecond()) beginSecond();                // the second player had not founded yet
       render();
@@ -1257,6 +1289,7 @@
     get: function () { return camp; },
     set: function (c) { camp = c; save(); render(); },
     contract: function () { return contract; },           // the test harness's view of the contract on screen
+    dropContract: function () { contract = null; if (camp) camp.savedContract = null; },   // and a fresh one next time
     // the test harness's way to fill a contract's list (as the rival picks its own)
     autopick: function () {
       if (!contract || !camp) return false;

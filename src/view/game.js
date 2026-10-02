@@ -232,6 +232,8 @@
       render();
     });
     transport.on('over', function () { render(); });
+    // the battle could not be written to this device's storage (HB-12)
+    transport.on('unsaved', function (m) { notice(m.text); });
     transport.on('finished', function (m) {
       if (window.PMC_ONFINISH) {
         try { window.PMC_ONFINISH(m.report); } catch (e) {

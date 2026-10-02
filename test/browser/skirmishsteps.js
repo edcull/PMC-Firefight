@@ -48,6 +48,8 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
   await p.evaluate(() => document.querySelector('[data-hotside="1"]').click()); await p.waitForTimeout(200);
   h = await hot();
   check('player 2\'s card opens their force', h.step === 2 && /^Player 2 — muster your force$/.test(await title()));
+  const intro2 = await p.evaluate(() => document.getElementById('hot-intro').textContent);
+  check('...saying it is theirs, at the battlefield\'s Tier, and to go back there (HB-10)', /^Player 2’s force for this battle, at Battle Tier/.test(intro2) && /back to the battlefield/.test(intro2), intro2);
   check('...not in player 1\'s colour', await p.evaluate((c) => { const s = document.querySelector(`#colourpick [data-colour="${c}"]`); return s.disabled && !s.classList.contains('on'); }, h.sides[0].colour));
   await setVal('sel-faction', 'bugs');
   await roll(); await name('The Hive');

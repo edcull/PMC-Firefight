@@ -504,6 +504,9 @@
       if (st.solo && st.solo.coop && st.phase === 'battle') return st.activeSide === 'A' && st.activeOwner ? 'P' + st.activeOwner : null;
       if (!B.seats || B.seats.length < 2) return null;
       if (B.replaying && B.replaying()) return undefined;          // what just happened is still being shown
+      // the End phase put to both players at once is one card for the two: nobody to hand to (HB-8)
+      var ea = st.endAsk;
+      if (ea && [ea.side].concat(ea.rest || []).length > 1 && [ea.side].concat(ea.rest || []).every(function (x) { return B.seats.indexOf(x) >= 0; })) return null;
       var sd = B.mySide ? B.mySide() : null;
       // only a person is handed the device: an AI side (a demo's both) never is
       if (sd && isAI(sd)) return null;
@@ -598,7 +601,7 @@
       el('hdr-init').textContent = B.state.initiative ? 'Initiative ' + B.state.initiative : '—';
       var act = el('hdr-active');
       if (B.state.over) {
-        act.textContent = B.state.over.winner ? 'Victory: ' + B.state.over.winner : 'Draw';
+        act.textContent = B.state.over.winner ? 'Victory: ' + plainName(B.state.over.winner) : 'Draw';
         act.className = 'pill pill-' + (B.state.over.winner || 'none');
       } else if (B.state.tacticAsk) {
         var tk = B.state.tacticAsk.order[B.state.tacticAsk.step];
@@ -654,9 +657,12 @@
           act.className = 'pill pill-' + (B.state.solo.coop ? (B.state.activeOwner === 2 ? 'C' : 'P1') : 'A');
         }
       } else if (B.state.endAsk && !B.replaying() && !B.cardsPending()) {
-        var ew = turnWords(B.state.endAsk.side);
-        act.textContent = 'End phase: ' + (ew === 'Your turn' ? 'your call' : plainName(B.state.endAsk.side));
-        act.className = 'pill pill-' + B.state.endAsk.side;
+        var ew = turnWords(B.state.endAsk.side), eb = B.state.endAsk;
+        if (B.seats && B.seats.length > 1 && (eb.rest || []).length && B.seats.indexOf(eb.rest[0]) >= 0) { act.textContent = 'End phase: both players'; act.className = 'pill'; }
+        else {
+          act.textContent = 'End phase: ' + (ew === 'Your turn' ? 'your call' : plainName(B.state.endAsk.side));
+          act.className = 'pill pill-' + B.state.endAsk.side;
+        }
       } else {
         act.textContent = turnWords(B.state.activeSide);
         act.className = 'pill pill-' + B.state.activeSide;

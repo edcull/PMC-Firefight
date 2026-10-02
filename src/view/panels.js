@@ -692,7 +692,45 @@
     /* The End phase: a side may send units within a move of a table edge off
        the table (they count as fled), carry on to the Rally phase, or surrender
        the battle, which asks twice. */
+    /* At one screen with both players asked (hotseat review HB-8), one card for the
+       two: Carry on answers for both, and each player has their own Surrender,
+       which asks twice. The engine still takes the answers a side at a time. */
+    function endBoth() {
+      var a = B.state.endAsk;
+      if (!a || !B.seats || B.seats.length < 2) return null;
+      var asked = [a.side].concat(a.rest || []);
+      return asked.length > 1 && asked.every(function (s) { return B.seats.indexOf(s) >= 0; }) ? asked : null;
+    }
+    function endBothCard(asked) {
+      var n = B.state.turn + 1;
+      return '<div class="card endcard"><h2>End phase</h2>' +
+        '<p class="sub">Nobody has won yet. Carry on to turn ' + n + ', or either player may surrender: the other wins the battle.</p>' +
+        '<div class="acts"><button class="act primary" data-act="enddone"><span>Carry on</span><small>Both players, to turn ' + n + '</small></button>' +
+        asked.map(function (sd) {
+          var sure = ui.endSure === sd + B.state.turn;
+          return '<button class="act' + (sure ? ' danger' : '') + '" data-act="surrender" data-side="' + sd + '"><span>' +
+            (sure ? 'Tap again: ' + esc(sideName(sd)) + ' surrenders' : esc(sideName(sd)) + ' surrenders') + '</span>' +
+            '<small>' + (sure ? 'The battle goes to ' + esc(sideName(sd === 'A' ? 'B' : 'A')) : 'Give up the battle') + '</small></button>';
+        }).join('') + '</div></div>';
+    }
+    // the shared card's answers, sent a side at a time as the engine asks them
+    function endBothAnswer(what, side) {
+      var guard = 0;
+      if (what === 'surrender') {
+        if (ui.endSure !== side + B.state.turn) { ui.endSure = side + B.state.turn; render(); return; }
+        ui.endSure = null;
+        // the players before this one carry on; then this one surrenders (twice: the engine asks to be sure)
+        while (B.state.endAsk && B.state.endAsk.side !== side && guard++ < 3) send({ k: 'enddone' });
+        if (B.state.endAsk && B.state.endAsk.side === side) { send({ k: 'surrender' }); if (B.state.endAsk) send({ k: 'surrender' }); }
+        return;
+      }
+      ui.endSure = null;
+      var turn = B.state.turn;
+      while (B.state.endAsk && B.state.turn === turn && guard++ < 3) send({ k: 'enddone' });
+    }
     function endCard() {
+      var both = endBoth();
+      if (both) return endBothCard(both);
       var a = B.state.endAsk, mine = !B.seats || B.seats.indexOf(a.side) >= 0;
       if (!mine) {
         return '<div class="card"><h2>End phase</h2><p class="sub">' + esc(sideName(a.side)) +
@@ -1373,6 +1411,7 @@
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'deployready') { send({ k: 'deployready' }); return; }
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if ((a === 'enddone' || a === 'surrender') && endBoth()) { endBothAnswer(a, b.getAttribute('data-side')); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'waveadd') { send({ k: 'waveadd', key: b.getAttribute('data-key') }); return; }
           else if (a === 'waveundo' || a === 'waveauto' || a === 'wavedone') { send({ k: a }); return; }

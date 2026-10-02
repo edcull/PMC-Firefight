@@ -200,7 +200,13 @@
     if (!this.book || !this.engine) return;
     if (this.engine.over()) { this.book = null; forgetBattle(); return; }
     this.book.fp = fingerprint(this.engine.state());
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.book)); } catch (e) { }
+    /* A save that fails (storage full, or blocked in a private window) is said once
+       (hotseat review HB-12): a refresh would lose the battle, and the players should know. */
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.book)); this.unsaved = false; }
+    catch (e) {
+      if (!this.unsaved) this.emit('unsaved', { text: 'This battle could not be saved on this device (its storage is full or blocked): a refresh now would lose it.' });
+      this.unsaved = true;
+    }
   };
   // thrown away from the menu, or given up: not offered again
   Local.prototype.forget = function () { this.book = null; forgetBattle(); };
@@ -355,6 +361,11 @@
       this.flush([]);
       return false;
     }
+    /* Picking a unit sets the selection afresh and rolls nothing, so of a run of
+       picks only the last that took needs keeping (HB-12): the save does not grow
+       with every tap on the table. */
+    var bi = this.book && this.book.intents, n = bi ? bi.length : 0;
+    if (res && res.ok && it && it.k === 'select' && n > 1 && bi[n - 2][1] && bi[n - 2][1].k === 'select') bi.splice(n - 2, 1);
     this.keep();
     if (!res || !res.ok) {
       this.emit('refused', { intent: it, why: (res && res.why) || 'not allowed' });

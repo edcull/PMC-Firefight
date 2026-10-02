@@ -83,7 +83,9 @@
          file: out to a file, back in from one, or given up. */
       var last = E.camp.log.length ? E.camp.log[E.camp.log.length - 1] : null;
       var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">\u2190 Back</button>';
-      var result = function (l) { return l.winner === 'A' ? 'won' : l.winner === 'B' ? 'lost' : 'drawn'; };
+      // won or lost from where the hub's player stands (hotseat: either of them, HC-13)
+      var result = function (l) { return !l.winner ? 'drawn' : l.winner === (hs || 'A') ? 'won' : 'lost'; };
+      var vsOf = function (l) { return E.camp.mode === 'hotseat' ? (hs === 'B' ? A : B).name : l.against; };
       h += cmodal('manage', 'The campaign', '<div class="cmodal-scroll manage-list">' +
         '<button type="button" class="archline" data-go="fmodal" data-kind="rivals">' + ICON_FORCES + '<span>' +
         (E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world') + '<small>' +
@@ -109,7 +111,7 @@
         var battleRow = function (l, i) {
           var inner = '<b>' + l.turn + '</b>' +
             '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
-            (l.against ? '<small>vs ' + esc(l.against) + '</small>' : '') + '</span>' +
+            (vsOf(l) ? '<small>vs ' + esc(vsOf(l)) + '</small>' : '') + '</span>' +
             '<em>' + result(l) + '</em>';
           return l.after ? '<button type="button" class="crow crow-go" data-go="pastbattle" data-i="' + i + '">' + inner + '</button>'
             : '<div class="crow">' + inner + '</div>';
@@ -215,7 +217,7 @@
       });
       var on = function (kind) { return Object.keys(E.dfilt[kind]).filter(function (k) { return E.dfilt[kind][k]; }); };
       // the company's Honours and Trauma figures narrow it too: said here, and undone here
-      var uf = E.ufilter.A || {}, W = { honour: C.experienceStats(co).word, trauma: C.traumaStats(co).word };
+      var uf = E.ufilter[E.hubSide] || {}, W = { honour: C.experienceStats(co).word, trauma: C.traumaStats(co).word };
       var picked = on('type').concat(on('tier').map(function (t) { return 'Tier ' + ROMAN[t]; }))
         .concat(['honour', 'trauma'].filter(function (k) { return uf[k]; }).map(function (k) { return W[k]; }));
       var h = '<div class="dsortline">' +
@@ -233,7 +235,7 @@
         '<h4>Type</h4>' + Object.keys(types).sort().map(function (g) { return chip('type', g, g || 'Other'); }).join('') +
         '<h4>Tier</h4>' + Object.keys(tiers).sort().map(function (t) { return chip('tier', t, 'Tier ' + ROMAN[t]); }).join('') +
         '<h4>Has</h4>' + ['honour', 'trauma'].map(function (k) {
-          return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="A" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
+          return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="' + E.hubSide + '" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
         }).join('') +
         '</div>', picked.length ? '<button type="button" class="lnk" data-go="dfiltclear">Clear</button>' : '');
       return h;
