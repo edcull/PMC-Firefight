@@ -113,7 +113,7 @@ test/
   perf/board.js      the drawing performance harness
   where.js           shared paths and helpers for the tests
 
-docs/                the v0.1 review, and this file
+docs/                this file, and the hotseat review and plan
 build/               what the build and the tests write (not kept in git)
 ```
 
