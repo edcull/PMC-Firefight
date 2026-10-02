@@ -7,6 +7,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const NAME = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,39}$/;
 
@@ -58,17 +59,46 @@ class Campaigns {
     catch (e) { return null; }
   }
 
-  put(name, camp) {
-    if (!this.valid(name)) throw new Error('that is not a usable campaign name');
-    if (!camp || !camp.companies) throw new Error('that is not a campaign');
-    fs.writeFileSync(this.file(name), JSON.stringify(camp));
-    return { ok: true, turn: camp.turn || 0 };
+  /* Who may change a campaign (multiplayer plan MP-3, until there are accounts):
+     whoever first saved it here is given a key, and every later save or delete
+     must present it. Kept hashed beside the campaign. A campaign saved before
+     there were keys is claimed by the next browser to save it. */
+  keyFile(name) { return path.join(this.dir, encodeURIComponent(name) + '.key'); }
+  hash(key) { return crypto.createHash('sha256').update(String(key)).digest('hex'); }
+  mayWrite(name, key) {
+    let want;
+    try { want = fs.readFileSync(this.keyFile(name), 'utf8').trim(); } catch (e) { return true; }   // nobody holds it yet
+    const got = this.hash(key || '');
+    return want.length === got.length && crypto.timingSafeEqual(Buffer.from(want), Buffer.from(got));
+  }
+  // the key for a campaign nobody holds yet, given to whoever saves it now; null if it is held
+  claim(name) {
+    if (fs.existsSync(this.keyFile(name))) return null;
+    const key = crypto.randomBytes(24).toString('hex');
+    fs.writeFileSync(this.keyFile(name), this.hash(key));
+    return key;
   }
 
-  remove(name) {
+  /* Written to a file beside it and renamed over it, so a save cut short leaves
+     the last good copy rather than half of a new one. */
+  put(name, camp, key) {
+    if (!this.valid(name)) throw new Error('that is not a usable campaign name');
+    if (!camp || !camp.companies) throw new Error('that is not a campaign');
+    if (key !== undefined && !this.mayWrite(name, key)) { const e = new Error('that campaign is someone else\'s to change'); e.code = 403; throw e; }
+    const tmp = this.file(name) + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(camp));
+    fs.renameSync(tmp, this.file(name));
+    const out = { ok: true, turn: camp.turn || 0 };
+    if (key !== undefined) { const got = this.claim(name); if (got) out.key = got; }
+    return out;
+  }
+
+  remove(name, key) {
     if (!this.valid(name)) return false;
-    try { fs.unlinkSync(this.file(name)); return true; }
-    catch (e) { return false; }
+    if (key !== undefined && !this.mayWrite(name, key)) return null;
+    try { fs.unlinkSync(this.file(name)); } catch (e) { return false; }
+    try { fs.unlinkSync(this.keyFile(name)); } catch (e) { }
+    return true;
   }
 
   /* A battle fought under this campaign. The aftermath itself is the campaign

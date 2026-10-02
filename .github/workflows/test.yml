@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # the packages in the lock file (the server's database among them), then the lint and the build's minifier
+      - run: npm ci
       - run: npm install --no-save eslint@9 terser@5
       - run: npm test
       - run: npm run build

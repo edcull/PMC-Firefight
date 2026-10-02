@@ -14,8 +14,14 @@
   var P = root.PMCProto, NET = root.PMCNet;
   var net = null;
   var host = null;              // the overlay
-  var view = 'lobby';           // 'lobby' | 'room'
+  var view = 'lobby';           // 'lobby' | 'room' | 'signin'
+  /* Who this browser is signed in as on the server (multiplayer plan, phase 1):
+     undefined while it is being asked, null when nobody is, else { id, name, guest }. */
+  var account;
+  var signMode = 'signin';      // the sign-in screen's tab: 'signin' | 'register' | 'guest'
+  var busy = false;             // a sign-in on its way to the server
   var games = [];
+  var mine = [];                // this player's own games (phase 2): under way, to go back to, and how the rest went
   var room = null;
   var me = { id: null, name: '' };
   var chat = { lobby: [], room: [] };
@@ -53,6 +59,7 @@
       if (box.id === 'lobby-say') { say('lobby', box); e.preventDefault(); }
       if (box.id === 'room-say') { say('room', box); e.preventDefault(); }
       if (box.id === 'join-code') { join(box.value); e.preventDefault(); }
+      if (box.id === 'sign-name' || box.id === 'sign-pass') { act('signgo'); e.preventDefault(); }
     });
     return host;
   }
@@ -74,8 +81,14 @@
         '#lobby > .camp-top{position:relative;width:min(760px,100%);border:1px solid var(--line);border-radius:8px 8px 0 0;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
         '#lobby.overlay > .sheet{position:relative;flex:0 1 auto;width:min(760px,100%);padding:18px 22px 22px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
       '}',
-      '#lobby input[type=text]{flex:1;min-width:0;min-height:34px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:6px 9px;font-family:var(--body);font-size:13px}',
-      '#lobby input[type=text]:focus{outline:none;border-color:var(--alpha)}',
+      '.lob-sign{display:flex;flex-direction:column;gap:10px;max-width:420px}',
+      '.lob-tabs{display:flex;gap:6px;flex-wrap:wrap}',
+      '.lob-tabs .lnk.on{border-color:var(--alpha);color:var(--alpha)}',
+      '.lob-sign input{width:100%}',
+      '.lob-me{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-dim);margin:0 0 10px}',
+      '.lob-me b{color:var(--ink)}',
+      '#lobby input[type=text],#lobby input[type=password]{flex:1;min-width:0;min-height:34px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:6px 9px;font-family:var(--body);font-size:13px}',
+      '#lobby input[type=text]:focus,#lobby input[type=password]:focus{outline:none;border-color:var(--alpha)}',
       '.lob-row{display:flex;gap:6px;align-items:stretch}',
       '.lob-row .lnk{flex:none;white-space:nowrap}',
       '.lob-list{display:flex;flex-direction:column;gap:8px;margin:10px 0 16px}',
@@ -140,8 +153,9 @@
   function draw() {
     if (!host || host.hidden) return;
     var inRoom = !!(view === 'room' && room);
-    el('lobby-body').innerHTML = inRoom ? roomHTML() : lobbyHTML();
-    if (el('lobby-title')) el('lobby-title').textContent = inRoom ? room.name : 'Multiplayer';
+    var signing = view === 'signin';
+    el('lobby-body').innerHTML = signing ? signHTML() : inRoom ? roomHTML() : lobbyHTML();
+    if (el('lobby-title')) el('lobby-title').textContent = signing ? 'Sign in' : inRoom ? room.name : 'Multiplayer';
     var cd = el('lobby-code');
     if (cd) { cd.hidden = !inRoom; cd.textContent = inRoom ? room.id : ''; cd.title = 'Read this out to whoever you are playing'; }
     var sh = host.querySelector('.lobby-sheet');
@@ -150,12 +164,67 @@
     if (box && document.activeElement !== box) { /* leave the caret where it was */ }
   }
 
+  // who this browser is playing as, and the way to sign out
   function whoHTML() {
-    return '<div class="field"><label for="lob-name">Your name</label><div class="lob-row">' +
-      '<input id="lob-name" type="text" maxlength="' + P.LIMITS.name + '" value="' + esc(me.name) + '" ' +
-      'placeholder="Your name" autocomplete="off">' +
-      '<button class="lnk" data-lob="rename">Set</button>' +
+    if (!account) return '';
+    return '<p class="lob-me">' + (account.guest ? 'Playing as a guest:' : 'Signed in as') + ' <b>' + esc(account.name) + '</b>' +
+      '<button class="lnk" data-lob="signout">Sign out</button></p>';
+  }
+
+  /* Signing in: an account (a name and a password), a new one, or a guest's name
+     for a one-off battle (a campaign will want an account). */
+  function signHTML() {
+    var tab = function (m, t) { return '<button class="lnk' + (signMode === m ? ' on' : '') + '" data-lob="signmode" data-mode="' + m + '">' + t + '</button>'; };
+    var reg = signMode === 'register', guest = signMode === 'guest';
+    return '<div class="lob-scroll"><div class="lob-sign">' +
+      '<p class="lede">' + (guest ? 'Play a one-off battle without an account. Campaigns need one.'
+        : reg ? 'Pick a name and a password. That is all: no email.' : 'Sign in to play other people over the network.') + '</p>' +
+      '<div class="lob-tabs">' + tab('signin', 'Sign in') + tab('register', 'New account') + tab('guest', 'Play as a guest') + '</div>' +
+      '<p class="lob-bad">' + esc(fault) + '</p>' +
+      '<div class="field"><label for="sign-name">' + (guest ? 'Your name for this battle' : 'Name') + '</label>' +
+      '<input id="sign-name" type="text" maxlength="24" autocomplete="username" value="' + esc(me.name || '') + '"></div>' +
+      (guest ? '' : '<div class="field"><label for="sign-pass">Password' + (reg ? ' (at least 8 characters)' : '') + '</label>' +
+        '<input id="sign-pass" type="password" maxlength="200" autocomplete="' + (reg ? 'new-password' : 'current-password') + '"></div>') +
+      '<div class="lob-foot"><button class="start" data-lob="signgo"' + (busy ? ' disabled' : '') + '>' +
+        (busy ? 'One moment\u2026' : guest ? 'Play as a guest' : reg ? 'Make the account' : 'Sign in') + '</button></div>' +
       '</div></div>';
+  }
+  // ask the server who this browser is, then on to the lobby (or the sign-in)
+  function whoAmI(then) {
+    if (!root.fetch) { account = null; then(); return; }
+    // only the server's answer settles it: a server that cannot be reached (restarting) leaves it as it was
+    root.fetch('api/me', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { return r.status === 401 ? { who: null } : r.ok ? r.json() : { who: account }; })
+      .then(function (j) { account = j.who || null; then(); })
+      .catch(function () { if (account === undefined) fault = 'The server could not be reached.'; then(); });
+  }
+  function signIn() {
+    var name = ((el('sign-name') || {}).value || '').trim(), pass = (el('sign-pass') || {}).value || '';
+    var path = signMode === 'register' ? 'api/register' : signMode === 'guest' ? 'api/guest' : 'api/login';
+    busy = true; fault = ''; draw();
+    root.fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: name, password: pass }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (got) {
+        busy = false;
+        if (!got.ok) {
+          var why = (got.j && got.j.error) || 'that did not work';
+          fault = why.charAt(0).toUpperCase() + why.slice(1) + '.';
+          me.name = name; draw(); return;
+        }
+        account = got.j.who; me.name = account.name;
+        view = 'lobby';
+        connect();
+        draw();
+      })
+      .catch(function () { busy = false; fault = 'The server could not be reached.'; draw(); });
+  }
+  function signOut() {
+    keepRoom('');
+    if (net) { net.disconnect(); net = null; }
+    room = null; games = []; chat = { lobby: [], room: [] };
+    root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { });
+    account = null; view = 'signin'; signMode = 'signin';
+    draw();
   }
 
   function lobbyHTML() {
@@ -173,9 +242,23 @@
         '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
         '<button class="lnk" data-lob="join">Join</button>' +
         '</div></div>' +
+        mineHTML() +
         '<div class="lob-list">' + list + '</div>') +
       '</div>' +
       chatHTML('lobby');
+  }
+
+  /* The player's own games: a battle still being fought, to go back to (from any
+     device, signed in as them), and the last few results. */
+  function mineHTML() {
+    if (!mine.length) return '';
+    var live = mine.filter(function (g) { return g.status === 'battle'; }), done = mine.filter(function (g) { return g.status !== 'battle'; }).slice(0, 5);
+    var row = function (g) {
+      return '<div class="lob-game"><div><b>' + esc(g.name) + '</b>' + (g.against ? ' <span class="f">against ' + esc(g.against) + '</span>' : '') + '</div>' +
+        '<div class="seats">' + (g.result ? esc(g.result.charAt(0).toUpperCase() + g.result.slice(1)) : 'Under way') + '</div>' +
+        (g.status === 'battle' ? '<button class="lnk lob-go" data-lob="resume" data-id="' + esc(g.code) + '">Go back to it</button>' : '') + '</div>';
+    };
+    return '<div class="field"><label>Your games</label><div class="lob-list">' + live.concat(done).map(row).join('') + '</div></div>';
   }
 
   /* Start a game asks two things: what kind of game — a skirmish, co-op (not
@@ -340,13 +423,9 @@
   function act(what, b) {
     fault = '';
     switch (what) {
-      case 'rename': {
-        var v = (el('lob-name') || {}).value || '';
-        me.name = v.trim().slice(0, P.LIMITS.name) || 'Commander';
-        net.rename(me.name);
-        draw();
-        return;
-      }
+      case 'signmode': signMode = b.getAttribute('data-mode'); draw(); return;
+      case 'signgo': if (!busy) signIn(); return;
+      case 'signout': signOut(); return;
       case 'create': {
         // the first press opens the form; Create the game starts it
         if (!b.getAttribute('data-go')) { creating = true; draw(); return; }
@@ -365,6 +444,7 @@
       }
       case 'uncreate': creating = false; draw(); return;
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
+      case 'resume': return join(b.getAttribute('data-id'));
       case 'sit': net.send('game.seat', { seat: b.getAttribute('data-seat') }); return;
       case 'leave': keepRoom(''); net.send('game.leave'); view = 'lobby'; draw(); return;
       case 'leave-lobby':
@@ -462,12 +542,21 @@
       status = 'not connected';
       fault = m && m.why ? m.why : '';
       draw();
+      // a session that has lapsed (or was signed out elsewhere) is not let back on: sign in again
+      whoAmI(function () {
+        if (account !== null || !net) return;
+        net.disconnect(); net = null;
+        fault = 'Signed out \u2014 sign in again to carry on.';
+        view = 'signin';
+        draw();
+      });
     });
     net.on('welcome', function (m) {
       me.id = m.you.id; me.name = m.you.name;
       games = m.games || [];
       chat.lobby = m.chat || [];
-      status = 'connected as ' + me.name;
+      status = 'connected';         // who as is said on the line under it
+      net.send('games.mine');
       loadCampaigns();
       draw();
       /* A seat still held for this browser comes back by itself with the hello.
@@ -484,6 +573,7 @@
       if (back) setTimeout(function () { if (!room && lastRoom() === back) net.send('game.join', { id: back }); }, 400);
     });
     net.on('lobby', function (m) { games = m.games || []; draw(); });
+    net.on('mine', function (m) { mine = m.games || []; draw(); });
     net.on('lobby.chat', function (m) {
       chat.lobby.push(m);
       if (chat.lobby.length > P.LIMITS.chatLog) chat.lobby.shift();
@@ -513,7 +603,7 @@
       close();
       if (root.PMC_JOIN_BATTLE) root.PMC_JOIN_BATTLE(net, m.seat, m.cfg);
     });
-    net.on('over', function () { keepRoom(''); /* the board shows the result; the room reopens by itself */ });
+    net.on('over', function () { keepRoom(''); if (net) net.send('games.mine'); /* the board shows the result; the room reopens by itself */ });
     /* The other player dropping out, coming back or walking away, said on the
        board while the battle is on (the room's chat is not on screen then). */
     net.on('game.presence', function (m) {
@@ -523,7 +613,8 @@
       else if (m.kind === 'back') say2(who + ' is back.', 'good');
       else if (m.kind === 'left') {
         keepRoom('');
-        say2(who + ' has left the battle. It cannot go on without them.', 'bad', 7000);
+        say2(who + ' has left the battle' + (m.forfeit ? ' \u2014 you win by forfeit.' : '. It cannot go on without them.'), m.forfeit ? 'good' : 'bad', 7000);
+        if (net) net.send('games.mine');
         /* The battle on the screen is over, and so is the game: this player
            leaves its room too (it would only hold them in a game with nobody
            to play), and is put back in the list of games to start another. */
@@ -562,8 +653,14 @@
     available: function () { return NET.online(); },
     open: function () {
       ensure();
-      connect();
-      open(room ? 'room' : 'lobby');
+      // signed in: on to the lobby; not: the sign-in first (the socket wants a session)
+      if (account) { connect(); open(room ? 'room' : 'lobby'); return; }
+      open(view === 'room' ? 'lobby' : view);
+      whoAmI(function () {
+        if (account) { me.name = account.name; connect(); view = room ? 'room' : 'lobby'; }
+        else view = 'signin';
+        draw();
+      });
     },
     close: close,
     net: function () { return net; },

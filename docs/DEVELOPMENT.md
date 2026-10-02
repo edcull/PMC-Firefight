@@ -228,6 +228,8 @@ honourplay.js      Adrenaline Rush and Last Stand, for the player and the AI; th
                    phase waits for the player's answer; rally cards name same-named units
 seatnow.js         in a hotseat game, the side being asked is the one that answers
 battlesave.js      the battle kept in the browser: a run of picks kept as one, a failed save said once
+auth.js            accounts and sessions on a database in memory: hashing, renewal, guests, limits
+serverrestart.js   a battle kept through a server restart, put away and brought back, a forfeit
 solitairetest.js   solitaire and co-op against the OpFor
 opfor.js           the OpFor brings an answer to the commandos' machines
 perf.js            how fast the rules run, held to a ceiling
@@ -348,6 +350,7 @@ hotseatcontract.js a hotseat contract kept across the hub and a reload, roles se
 hotseatloop.js     a hotseat campaign turn: both contracts, the battle, each player's questions and aftermath
 hotseathub.js      a hotseat hub: each player's own dossier, and the campaign's end
 coopdeploy.js      a co-op game's deployment: a commando at a time, the order rolled, the split shared
+campaccount.js     a campaign kept by a signed-in player's account, across two browsers, a stale save refused
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract

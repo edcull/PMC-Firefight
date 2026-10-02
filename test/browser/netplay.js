@@ -4,7 +4,7 @@
    and abandoning from the menu ends the battle for both. */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
-const { ROOT, SHOTS } = require('../where.js');
+const { ROOT, SHOTS , signInLobby, tmpData } = require('../where.js');
 const PORT = 9300 + Math.floor(Math.random() * 400);
 
 let pass = 0, fail = 0;
@@ -15,7 +15,7 @@ function ok(name, cond, note) {
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 (async () => {
-  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: String(PORT) }), stdio: 'ignore' });
+  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { DATA_DIR: tmpData(), CAMPAIGNS_DIR: tmpData(), PORT: String(PORT) }), stdio: 'ignore' });
   let up = false;
   for (let i = 0; i < 40 && !up; i++) {
     await wait(150);
@@ -25,13 +25,14 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const errs = [];
   const ctx1 = await b.newContext({ viewport: { width: 1340, height: 900 } });
   let ctx2 = await b.newContext({ viewport: { width: 1340, height: 900 } });
-  async function page(ctx) {
+  // into the lobby through the sign-in screen: an account, or a guest's name
+  async function page(ctx, name, mode) {
     const p = await ctx.newPage();
     p.on('pageerror', e => errs.push(e.message));
     await p.goto('http://localhost:' + PORT + '/');
     await p.waitForTimeout(700);
+    await signInLobby(p, name, mode);
     await p.evaluate(() => {
-      window.PMCLobby.open();
       window.__room = null;
       window.PMCLobby.net().on('game', m => { window.__room = m.room; });
     });
@@ -39,8 +40,10 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     return p;
   }
   const force = { faction: 'pmc', tactic: '', keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'], colour: 'ochre', name: '' };
-  const p1 = await page(ctx1);
-  let p2 = await page(ctx2);
+  const p1 = await page(ctx1, 'Iron Wolf', 'register');
+  let p2 = await page(ctx2, 'Red Dawn', 'guest');
+  const signedIn = await Promise.all([p1, p2].map((p) => p.evaluate(() => document.querySelector('#lobby .lob-me') && document.querySelector('#lobby .lob-me').textContent)));
+  ok('one signs up, the other plays as a guest; each lobby says which', /Signed in as Iron Wolf/.test(signedIn[0]) && /guest: Red Dawn/.test(signedIn[1]), signedIn.join(' | '));
   // the list of games on a phone: the talk keeps the foot; starting a game puts Cancel beside Create and the list away
   await p2.setViewportSize({ width: 390, height: 700 });
   await p2.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
@@ -224,14 +227,15 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
   // the second player's browser goes away, then comes back
   const toasts = (p) => p.evaluate(() => [...document.querySelectorAll('#toasts .toast')].map(t => t.textContent));
+  // what this browser keeps of itself: its storage and its session's cookie
+  const kept2 = await ctx2.storageState();
   await ctx2.close();
   await wait(1200);
   const dropped = await toasts(p1);
   ok('the other player dropping out is said on the board', dropped.some(t => /lost connection/.test(t)), dropped.join(' | ') || 'no toast');
-  ctx2 = await b.newContext({ viewport: { width: 1340, height: 900 } });
-  // the same browser, as far as the server knows: the player id is kept in storage
-  const id2 = await p1.evaluate(() => window.__room && window.__room.seats.B && window.__room.seats.B.id);
-  await ctx2.addInitScript((id) => { try { localStorage.setItem('pmc-player-id', id); } catch (e) { } }, id2);
+  // the same browser, as far as the server knows: its session's cookie kept
+  ctx2 = await b.newContext({ viewport: { width: 1340, height: 900 }, storageState: kept2 });
+  ok('the session is an HttpOnly cookie, out of reach of the page\'s scripts', kept2.cookies.some((c) => c.name === 'pmc_session' && c.httpOnly));
   p2 = await ctx2.newPage();
   p2.on('pageerror', e => errs.push(e.message));
   await p2.goto('http://localhost:' + PORT + '/');
@@ -255,7 +259,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('abandoned, the battle is gone from this screen', !gone1.live && !gone1.resume, JSON.stringify(gone1));
   const left = await toasts(p2);
   const gone2 = await p2.evaluate(() => window.PMC_BATTLE_LIVE());
-  ok('the other player is told it is over', left.some(t => /has left the battle/.test(t)), left.join(' | ') || 'no toast');
+  ok('the other player is told it is over, and that they win by forfeit', left.some(t => /has left the battle — you win by forfeit/.test(t)), left.join(' | ') || 'no toast');
   ok('...and their board lets it go', !gone2);
   // not held in the old game's room, with nobody to play: back to the list of games
   await wait(3000);

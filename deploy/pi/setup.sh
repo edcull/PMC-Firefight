@@ -33,9 +33,10 @@ MAJOR="$("$NODE" -p 'process.versions.node.split(".")[0]')"
 if [ "$MAJOR" -lt 20 ]; then echo "Node $MAJOR is too old; 20 or later, please." >&2; exit 1; fi
 
 apt-get update -qq
-apt-get install -y rsync curl >/dev/null
+# build tools in case the database package has no ready-made build for this Pi and Node
+apt-get install -y rsync curl build-essential python3 >/dev/null
 
-# the code (replaced by every deploy) and the saved campaigns (never touched by one)
+# the code (replaced by every deploy) and the saved campaigns and database (never touched by one)
 mkdir -p "$BASE/app" "$DATA/campaigns"
 chown -R "$RUN_AS:" "$BASE" "$DATA"
 
@@ -58,6 +59,7 @@ ExecStart=$NODE $BASE/app/server.js
 Environment=PORT=$PORT
 Environment=HOST=$HOST
 Environment=CAMPAIGNS_DIR=$DATA/campaigns
+Environment=DATA_DIR=$DATA
 Restart=on-failure
 RestartSec=2
 # Kept on a short leash: it can write only its own data folder (the campaigns,

@@ -6,21 +6,59 @@
 node server.js                 # then open http://localhost:8787
 PORT=9000 node server.js       # somewhere else
 HOST=0.0.0.0 node server.js    # so the rest of the house can join in
+DATA_DIR=/var/lib/pmc node server.js           # the database (accounts) kept outside the code
+CAMPAIGNS_DIR=/var/lib/pmc node server.js      # the campaigns kept outside the code
+ALLOWED_ORIGINS=https://example.org node server.js   # pages elsewhere allowed to open the socket
 ```
 
 To keep one running on a Raspberry Pi behind nginx (at `https://<domain>/pmc/`),
 deployed to by GitHub on every push to `main` (or any branch, by hand), see
 [deploy/pi/README.md](deploy/pi/README.md).
 
-No dependencies. One port serves three things:
+One dependency, `better-sqlite3`, for the database (`npm ci --omit=dev`). One port serves:
 
 | | |
 |---|---|
 | `GET /` | the game — `index.html` and the scripts beside it |
 | `GET/PUT/DELETE /campaign[/name]`, `GET /campaigns` | campaigns, kept on the server |
-| `ws:// /ws` | the lobby, and every battle in progress |
+| `POST /api/register`, `/api/login`, `/api/guest`, `/api/logout`, `/api/password`; `GET /api/me` | accounts, and a guest's name for a battle |
+| `GET/POST /api/campaigns`, `GET/PUT/DELETE /api/campaigns/<id>`, `POST /api/campaigns/import` | a signed-in player's own campaigns, each save over the version it was read at |
+| `ws:// /ws` | the lobby, and every battle in progress (signed in, or as a guest) |
 
 The server's own source, the saved campaigns and anything hidden are not served.
+
+### What it guards against
+
+- **A bad request does not take it down.** A malformed URL is refused; anything
+  thrown and not caught is logged and the server carries on; SIGTERM and SIGINT
+  close it cleanly.
+- **Who a player is comes from their session.** Accounts are a name and a
+  password (scrypt, salted); a session is a random token in an `HttpOnly`,
+  `SameSite=Lax` cookie (`Secure` behind TLS), kept only as a hash, 30 days and
+  renewed as it is used. The socket is opened only with a session (an account's,
+  or a guest's for a one-off battle): its identity is the session's, never what
+  the connection says. Rooms show only a public id. Wrong passwords are limited
+  per name and per address. Accounts are looked after with `server/admin.js`.
+- **Campaign writes need the campaign's key.** The first `PUT` of a campaign is
+  answered with a key (`{ ok, key }`); every later `PUT` or `DELETE` must send it
+  in an `x-campaign-key` header, or is refused (403). The key is kept hashed
+  beside the campaign. Another site's page cannot read it, so it cannot write.
+- **The socket is for this server's own pages.** An upgrade whose `Origin` is not
+  the host it was asked for (or the one a proxy names in `X-Forwarded-Host`, or
+  one listed in `ALLOWED_ORIGINS`) is refused.
+- **One connection cannot flood it.** At most 40 messages a second, 8 chat lines
+  in 10 seconds and 12 rooms made or joined a minute; over that, the message is
+  dropped and the sender told, and a connection that keeps on is closed. A
+  refused intent sends the whole table back at most once a second.
+- **Rooms do not pile up.** A finished battle puts its room back in setup for a
+  rematch; a battle that cannot be laid out goes back to setup with the reason;
+  a room nobody is connected to is closed after 10 minutes.
+- **Battles survive a restart.** Every battle is kept in the database as it is
+  played (its config, its own seeded dice, every intent); a restart plays each
+  one in progress back to where it was and holds the seats for the players. A
+  battle nobody has been at for half an hour is put away and comes back when a
+  player goes back to it ("Your games" in the lobby). Leaving a battle is a
+  forfeit.
 
 ## The split
 
@@ -82,7 +120,12 @@ message names are in `protocol.js`, which both halves load so neither can drift.
 ```
 index.html           the game
 viewer.html          the unit viewer, a bench for looking at one at a time
-server.js            the entry point: static files, campaigns, the upgrade to ws
+server.js            the entry point: the HTTP server, the socket, shutting down
+server/app.js        what it answers over HTTP: the app, the accounts, the campaign routes, /health
+server/db.js         the database (better-sqlite3): its migrations and every query
+server/auth.js       accounts, sessions and guests
+server/admin.js      the accounts from the command line: users, reset a password, back up
+server/games.js      the battles kept in the database: begun, each intent, the end, a player's own
 
 src/rules/           the rulebook: profiles, scenarios, campaigns, terrain
 src/engine/          the game, and the words it answers in

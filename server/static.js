@@ -32,7 +32,7 @@ const TYPES = {
    source, the saved campaigns and anything hidden are not part of the app and
    are not handed out — the campaigns have a route of their own, which says
    what a client may see of them. */
-const CLOSED = [/^server[\\/]/, /^campaigns[\\/]/, /^node_modules[\\/]/, /(^|[\\/])\./];
+const CLOSED = [/^server[\\/]/, /^campaigns[\\/]/, /^data[\\/]/, /^node_modules[\\/]/, /(^|[\\/])\./];
 
 function create(rootDir, opts) {
   opts = opts || {};
@@ -43,7 +43,9 @@ function create(rootDir, opts) {
   const maxAge = opts.maxAge === undefined ? 0 : opts.maxAge;
 
   function resolve(urlPath) {
-    let rel = decodeURIComponent(urlPath.split('?')[0].split('#')[0]);
+    let rel;
+    // a malformed percent-escape is a bad request, not a reason for the server to fall over (MP-1)
+    try { rel = decodeURIComponent(urlPath.split('?')[0].split('#')[0]); } catch (e) { return null; }
     if (rel === '/' || rel === '') rel = '/index.html';
     // strip leading slashes, then resolve and check we are still inside the root
     const full = path.resolve(root, '.' + path.posix.normalize(rel));

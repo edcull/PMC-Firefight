@@ -376,7 +376,7 @@
         stat('Damage', u.damage) + '</div>';
       if ((u.cargo || []).length) {
         h += '<div class="chips">' + u.cargo.map(function (c) {
-          return '<span class="chip">aboard: ' + c.name + '</span>';
+          return '<span class="chip">aboard: ' + esc(c.name) + '</span>';
         }).join('') + '</div>';
       }
       h += honourChips(u);                                // a campaign machine's honours, traumas and upgrades

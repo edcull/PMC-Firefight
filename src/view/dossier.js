@@ -33,6 +33,10 @@
   var KEY = 'pmc-campaign';
   var SRV = 'pmc-campaign-server';
   var db = null, dbReady = false, storeNote = '';   // not `note`: that is the in-page message helper below
+  /* Signed in on the server this page came from (multiplayer plan, decision 7): the
+     account keeps the campaign too. Who is signed in, the campaign's id there and
+     the version it was last read or saved at, and a newer copy found on saving. */
+  var acct = null, acctVersion = 0, acctChain = Promise.resolve(), acctConflict = null;
 
   function raw(get, value) {
     try {
@@ -74,16 +78,97 @@
         return fetch(BACKENDS.server.url(), { headers: { 'accept': 'application/json' } })
           .then(function (r) { return r.ok ? r.json() : null; });
       },
+      /* The server gives the first browser to save a campaign a key, and wants it
+         back with every later save or delete (it stops another site's page from
+         overwriting the campaign). Kept per server. */
+      key: function (v) {
+        var k = 'pmc-campaign-key:' + BACKENDS.server.url();
+        try { if (v === undefined) return localStorage.getItem(k) || ''; if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { }
+        return '';
+      },
       save: function (c) {
         return fetch(BACKENDS.server.url(), {
-          method: 'PUT', headers: { 'content-type': 'application/json' },
+          method: 'PUT', headers: { 'content-type': 'application/json', 'x-campaign-key': BACKENDS.server.key() },
           body: JSON.stringify(c)
-        }).then(function (r) { if (!r.ok) throw new Error(r.status); return true; });
+        }).then(function (r) { if (!r.ok) throw new Error(r.status === 403 ? 'the server says this campaign is someone else\u2019s' : r.status); return r.json(); })
+          .then(function (got) { if (got && got.key) BACKENDS.server.key(got.key); return true; });
       },
-      clear: function () { return fetch(BACKENDS.server.url(), { method: 'DELETE' }); }
+      clear: function () {
+        return fetch(BACKENDS.server.url(), { method: 'DELETE', headers: { 'x-campaign-key': BACKENDS.server.key() } })
+          .then(function (r) { if (r.ok) BACKENDS.server.key(null); return r.ok; });
+      }
     }
   };
-  var ORDER = ['local', 'db', 'server'];
+  // the account's copy of the campaign: which one, kept per account in this browser
+  function acctSid(v) {
+    if (!acct) return null;
+    var k = 'pmc-campaign-sid:' + acct.id;
+    try {
+      if (v === undefined) return localStorage.getItem(k) || null;
+      if (v) localStorage.setItem(k, String(v)); else localStorage.removeItem(k);
+    } catch (e) { }
+    return null;
+  }
+  function acctFetch(path, opts) {
+    opts = opts || {};
+    opts.credentials = 'same-origin';
+    if (opts.body) opts.headers = { 'content-type': 'application/json' };
+    return fetch(path, opts).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, code: r.status, j: j }; }, function () { return { ok: r.ok, code: r.status, j: {} }; }); });
+  }
+  BACKENDS.account = {
+    id: 'account', name: 'your account',
+    ready: function () { return !!acct; },
+    load: function () {
+      var get = function (id) {
+        return acctFetch('api/campaigns/' + id).then(function (r) {
+          if (!r.ok) { if (r.code === 404) acctSid(null); return null; }
+          acctVersion = r.j.version; acctSid(r.j.id);
+          return r.j.state;
+        });
+      };
+      var sid = acctSid();
+      if (sid) return get(sid);
+      // none chosen in this browser yet: the account's latest
+      return acctFetch('api/campaigns').then(function (r) {
+        var last = r.ok && (r.j.campaigns || []).filter(function (c) { return c.kind !== 'online'; })[0];
+        return last ? get(last.id) : null;
+      });
+    },
+    /* One save at a time, each over the version the last one left, so a burst of
+       them never trips over itself. One made from an older copy than the server's
+       is refused: the newer one is held, and the hub asks which to keep. */
+    save: function (c) {
+      acctChain = acctChain.catch(function () { }).then(function () {
+        if (acctConflict) throw new Error('a newer copy is on the server');
+        var sid = acctSid();
+        if (!sid) {
+          return acctFetch('api/campaigns', { method: 'POST', body: JSON.stringify({ state: c }) }).then(function (r) {
+            if (!r.ok) throw new Error(r.j.error || r.code);
+            acctSid(r.j.id); acctVersion = r.j.version;
+            return true;
+          });
+        }
+        return acctFetch('api/campaigns/' + sid, { method: 'PUT', body: JSON.stringify({ state: c, version: acctVersion }) }).then(function (r) {
+          if (r.code === 409) {
+            acctConflict = { version: r.j.version, state: r.j.state };
+            storeNote = 'This campaign was saved on another device since this one last had it.';
+            throw new Error('a newer copy is on the server');
+          }
+          if (r.code === 404) { acctSid(null); throw new Error('gone from the server'); }
+          if (!r.ok) throw new Error(r.j.error || r.code);
+          acctVersion = r.j.version;
+          return true;
+        });
+      });
+      return acctChain;
+    },
+    clear: function () {
+      var sid = acctSid();
+      acctSid(null); acctVersion = 0; acctConflict = null;
+      return sid ? acctFetch('api/campaigns/' + sid, { method: 'DELETE' }).then(function () { return true; }) : Promise.resolve(true);
+    }
+  };
+  var ORDER = ['local', 'db', 'server', 'account'];
   var health = {};                 // what each backend did last time it was asked
 
   function each(fn) {
@@ -105,6 +190,22 @@
       try {
         if (root.claude && root.claude.use) db = await root.claude.use('db');
       } catch (e) { db = null; }
+      // signed in on the server this page came from: the account keeps the campaign as well (not a guest's)
+      try {
+        if (root.location && /^https?:$/.test(root.location.protocol) && root.fetch) {
+          var me = await acctFetch('api/me', { cache: 'no-store' });
+          acct = me.ok && me.j.who && !me.j.who.guest ? me.j.who : null;
+        }
+      } catch (e) { acct = null; }
+    },
+    // a newer copy found on the server on saving: { state }, until the player says which to keep
+    conflict: function () { return acctConflict; },
+    // keep the server's newer copy (returned, for the dossier to take up), or this one (saved over it)
+    resolve: function (useServer) {
+      var cf = acctConflict;
+      if (!cf) return null;
+      acctConflict = null; acctVersion = cf.version; storeNote = '';
+      return useServer ? C.rehydrate(cf.state) : null;
     },
     async load() {
       await Store.init();
@@ -1091,6 +1192,9 @@
         drawState.won = won; save(); render(); return;
       }
       case 'hub': view = 'hub'; render(); return;
+      // the account's copy was saved on another device since: take that one up, or save this one over it
+      case 'storeuse': { var newer = Store.resolve(true); if (newer) { camp = newer; contract = null; } render(); return; }
+      case 'storekeep': Store.resolve(false); save(); render(); return;
       /* Back from founding the first force: the campaign it was for goes (nothing
          in it yet), and the choice of what to run comes back as it was picked. */
       case 'foundback':

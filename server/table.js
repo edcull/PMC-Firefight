@@ -18,6 +18,19 @@ const { R, SC, C, Engine } = require('./rules.js');
    turn is a handful; a rally phase across thirty units with a Psychic Wave in
    it is a few hundred. Well past that and something has gone wrong. */
 const MAX_EVENTS = 4000;
+/* A battle's own dice (multiplayer plan, phase 2): seeded, so the same intents
+   played again from the same seed give the same battle. mulberry32, as the
+   browser's own saved battles use (net.js). */
+function dice(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 /* The names a force carries until its player gives it one: nothing at all, the
    muster screen's own fallback, or the seat name it was given for the other
    seat before its player moved. */
@@ -36,6 +49,11 @@ class Table {
     this.cfg = null;
     this.stopped = false;
     this.campaign = this.opts.campaign || null;    // the store, when a campaign is attached
+    this.store = this.opts.store || null;          // the database, when battles are kept (phase 2)
+    this.gameId = null;                            // this battle's row in it
+    this.n = 0;                                    // intents played, so each is written in its place
+    this.rng = null;                               // this battle's dice
+    this.quiet = false;                            // replaying a kept battle: nothing is sent, nothing written
 
     const table = this;
     this.engine = Engine.create({
@@ -71,7 +89,13 @@ class Table {
   }
 
   rec(ev) {
-    if (this.events.length < MAX_EVENTS) this.events.push(ev);
+    if (!this.quiet && this.events.length < MAX_EVENTS) this.events.push(ev);
+  }
+  // the engine's work, done with this battle's own dice
+  rolling(fn) {
+    const real = Math.random;
+    if (this.rng) Math.random = this.rng;
+    try { return fn(); } finally { Math.random = real; }
   }
   pieceIndex(piece) {
     const st = this.engine.state();
@@ -175,9 +199,33 @@ class Table {
   begin() {
     this.cfg = this.buildConfig();
     this.events = [];
-    this.engine.start(this.cfg);
+    const seed = (Math.random() * 4294967296) >>> 0;
+    this.rng = dice(seed);
+    // kept before it is begun: a restart in the next moment still finds it
+    if (this.store) this.gameId = this.store.started(this.room, this.cfg, seed);
+    this.rolling(() => this.engine.start(this.cfg));
     this.room.everyone().forEach((p) => this.announce(p));
     this.flush();
+  }
+
+  /* A kept battle brought back (a restart, or a player coming back to one put
+     away): started from its config and seed, and every intent played again in
+     order, out of sight. Nobody is told anything; they are sent the table as it
+     stands when they come back to it. */
+  restore(game, intents) {
+    this.gameId = game.id;
+    this.cfg = game.cfg;
+    this.rng = dice(game.seed);
+    this.quiet = true;
+    try {
+      this.rolling(() => this.engine.start(this.cfg));
+      intents.forEach((r) => {
+        try { this.rolling(() => this.engine.intent(r.seat, r.intent)); } catch (e) { /* refused, or threw: as it did the first time */ }
+        this.n++;
+      });
+    } finally { this.quiet = false; this.events = []; }
+    // it ended while being put back (it was over and not yet marked so): nothing more to do with it
+    if (this.engine.over()) this.stopped = true;
   }
 
   /* What a player is told when the battle starts — or when they come back to it,
@@ -205,11 +253,15 @@ class Table {
     if (this.stopped) return player.fail('the battle has ended');
     if (!player.seat) return player.fail('watchers cannot act');
     this.events = [];
-    let res;
-    try { res = this.engine.intent(player.seat, it); }
-    catch (e) {
-      this.log('intent ' + ((it && it.k) || '?') + ' threw: ' + ((e && e.stack) || e));
-      player.fail('that could not be done: ' + ((e && e.message) || e));
+    let res, threw = null;
+    try { res = this.rolling(() => this.engine.intent(player.seat, it)); }
+    catch (e) { threw = e; }
+    /* Kept whatever came of it, in order, before anyone is told: a refusal may
+       have rolled a die on the way, and played again it must roll it again. */
+    this.keep(player.seat, it);
+    if (threw) {
+      this.log('intent ' + ((it && it.k) || '?') + ' threw: ' + ((threw && threw.stack) || threw));
+      player.fail('that could not be done: ' + ((threw && threw.message) || threw));
       this.resync(player);
       return;
     }
@@ -218,11 +270,20 @@ class Table {
          screen is a moment behind. Say why, and send the table again so they
          catch up. */
       player.send('refused', { intent: it, why: (res && res.why) || 'not allowed' });
-      this.resync(player);
+      // the whole table at most once a second: a stream of refusals is not a stream of tables (MP-8)
+      if (Date.now() - (player.resyncAt || 0) >= 1000) { player.resyncAt = Date.now(); this.resync(player); }
       return;
     }
     this.flush();
     if (this.engine.over() && !this.stopped) this.finish(this.engine.report());
+  }
+
+  // one intent written to the database (phase 2), in its place
+  keep(seat, it) {
+    if (!this.store || this.gameId == null) { this.n++; return; }
+    try { this.store.intent(this.gameId, this.n, seat, it); }
+    catch (e) { this.log('could not keep an intent: ' + ((e && e.message) || e)); }
+    this.n++;
   }
 
   /* Events first, in order, then the table they left behind. */
@@ -245,6 +306,14 @@ class Table {
   finish(report) {
     if (this.stopped) return;
     this.stopped = true;
+    // ended while being played again out of sight: noted, and nobody told (they are told when they come back)
+    if (this.quiet) {
+      if (this.store && this.gameId != null) {
+        const q = this.engine.over() || {};
+        try { this.store.ended(this.gameId, 'over', { winner: q.winner || null, why: q.text || null }); } catch (e) { }
+      }
+      return;
+    }
     this.report = report;
     /* A campaign battle writes its result back before anyone is told, so the
        hub both players open next is already showing the aftermath. */
@@ -252,11 +321,29 @@ class Table {
       try { this.campaign.finish(this.room.settings.campaign, report); }
       catch (e) { this.log('could not record the campaign result: ' + ((e && e.message) || e)); }
     }
+    if (this.store && this.gameId != null) {
+      const ov = this.engine.over() || {};
+      try { this.store.ended(this.gameId, 'over', { winner: ov.winner || null, why: ov.text || null }); }
+      catch (e) { this.log('could not record the result: ' + ((e && e.message) || e)); }
+    }
     this.room.broadcast('over', { report: report, over: this.engine.over() });
     if (this.lobby) this.lobby.finished(this.room);
   }
 
   stop() { this.stopped = true; }
+
+  /* A player walking away from the battle for good: a forfeit (decision 5), the
+     other side the winner. Kept as such; the battle goes no further. */
+  forfeit(seat) {
+    if (this.stopped) return null;
+    this.stopped = true;
+    const winner = seat === 'A' ? 'B' : 'A';
+    if (this.store && this.gameId != null) {
+      try { this.store.ended(this.gameId, 'abandoned', { winner: winner, forfeit: seat }); }
+      catch (e) { this.log('could not record the forfeit: ' + ((e && e.message) || e)); }
+    }
+    return winner;
+  }
 
   log(text) { (this.opts.log || function () { })('[' + this.room.id + '] ' + text); }
 }

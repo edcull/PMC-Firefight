@@ -13,7 +13,9 @@
      node server.js                 then open http://localhost:8787
      PORT=9000 node server.js       somewhere else
      HOST=0.0.0.0 node server.js    so the rest of the house can join in
+     DATA_DIR=/var/lib/pmc          the database (accounts, and later the games) kept outside the code
      CAMPAIGNS_DIR=/var/lib/pmc     the campaigns kept outside the code, so a deploy leaves them be
+     ALLOWED_ORIGINS=https://a.b    pages elsewhere allowed to open the game's socket
 */
 'use strict';
 const http = require('http');
@@ -24,6 +26,10 @@ const statics = require('./server/static.js');
 const { Lobby } = require('./server/lobby.js');
 const { Campaigns } = require('./server/campaigns.js');
 const tables = require('./server/table.js');
+const app = require('./server/app.js');
+const DB = require('./server/db.js');
+const Auth = require('./server/auth.js');
+const Games = require('./server/games.js');
 
 const PORT = process.env.PORT || 8787;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -35,70 +41,50 @@ function log() {
 }
 
 /* ---- the pieces ---- */
+/* The database's folder: DATA_DIR, or beside the campaigns where only those were
+   placed (an install from before there was a database: /var/lib/pmc-firefight on the
+   Pi, where the service may write), or data/ beside this file. */
+const DATA_DIR = process.env.DATA_DIR || (process.env.CAMPAIGNS_DIR ? path.dirname(path.resolve(process.env.CAMPAIGNS_DIR)) : path.join(ROOT, 'data'));
+const db = DB.open(path.join(DATA_DIR, 'pmc.db'));
+const auth = Auth.create({ db: db, log: log });
+// sessions long expired are cleared out now and again
+setInterval(function () { auth.sweep(); }, 6 * 60 * 60 * 1000).unref();
 const campaigns = new Campaigns(process.env.CAMPAIGNS_DIR || path.join(ROOT, 'campaigns'), { log: log });
 const serve = statics.create(ROOT);
+// every battle kept as it is played, and brought back after a restart (multiplayer plan, phase 2)
+const games = Games.create(db);
 const lobby = new Lobby({
   log: log,
-  makeTable: tables.make({ campaign: campaigns, log: log })
+  games: games,
+  makeTable: tables.make({ campaign: campaigns, log: log, store: games })
 });
-
-/* ---- the campaign routes ---- */
-function json(res, code, body) {
-  res.writeHead(code, {
-    'content-type': 'application/json; charset=utf-8',
-    // the game also runs from a file:// page, which arrives as a null origin
-    'access-control-allow-origin': '*',
-    'access-control-allow-methods': 'GET,PUT,DELETE,OPTIONS',
-    'access-control-allow-headers': 'content-type,accept'
-  });
-  res.end(body === undefined ? '' : JSON.stringify(body));
-}
-
-function readBody(req, done) {
-  let body = '';
-  req.on('data', (c) => {
-    body += c;
-    if (body.length > 4e6) req.destroy();     // a dossier is kilobytes, not megabytes
-  });
-  req.on('end', () => done(body));
-}
-
-function campaignRoute(req, res, url) {
-  const m = /^\/campaign(?:\/([^/?#]*))?\/?$/.exec(url);
-  if (!m) return false;
-  const name = m[1] ? decodeURIComponent(m[1]) : 'default';
-
-  if (req.method === 'GET') {
-    const camp = campaigns.get(name);
-    return json(res, camp ? 200 : 404, camp || { error: 'no campaign called ' + name }), true;
-  }
-  if (req.method === 'PUT') {
-    readBody(req, (body) => {
-      try { json(res, 200, campaigns.put(name, JSON.parse(body))); }
-      catch (e) { json(res, 400, { error: String(e.message) }); }
-    });
-    return true;
-  }
-  if (req.method === 'DELETE') {
-    return json(res, 200, { ok: campaigns.remove(name) }), true;
-  }
-  return json(res, 405, { error: 'method not allowed' }), true;
-}
+lobby.restore();
 
 /* ---- the server ---- */
+const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin });
 const server = http.createServer(function (req, res) {
-  const url = (req.url || '/').split('?')[0];
-  if (req.method === 'OPTIONS') return json(res, 204);
-
-  if (url === '/campaigns') return json(res, 200, { campaigns: campaigns.list() });
-  if (campaignRoute(req, res, url)) return;
-  if (url === '/health') return json(res, 200, { ok: true, rooms: lobby.rooms.size, players: lobby.players.size });
-
-  if (serve(req, res)) return;
-  json(res, 404, { error: 'not found' });
+  // one request going wrong is answered and logged; it does not take the server down (MP-1)
+  try { handle(req, res); }
+  catch (e) {
+    log('a request failed: ' + ((e && e.stack) || e));
+    try { if (!res.headersSent) { res.writeHead(500); } res.end(); } catch (e2) { }
+  }
 });
 
-ws.attach(server, '/ws', function (sock) { lobby.connect(sock); });
+/* Sockets only from pages of this server's own (MP-8): the Host it was asked
+   for, or the one a proxy in front says it was asked for, or any named in
+   ALLOWED_ORIGINS (comma-separated, e.g. https://example.org). */
+const ALLOWED = (process.env.ALLOWED_ORIGINS || '').split(',').map((x) => x.trim()).filter(Boolean);
+function allowOrigin(origin, req) {
+  if (ALLOWED.indexOf(origin) >= 0 || ws.sameHost(origin, req)) return true;
+  let host; try { host = new URL(origin).host; } catch (e) { return false; }
+  return String(req.headers['x-forwarded-host'] || '').split(',')[0].trim() === host;
+}
+// a socket is opened only by someone signed in (or playing as a guest): the session behind its cookie
+ws.attach(server, '/ws', function (sock, req, who) { lobby.connect(sock, who); }, {
+  allowOrigin: allowOrigin,
+  authorize: function (req) { return auth.session(Auth.tokenFrom(req)); }
+});
 
 /* A browser that goes away mid-request — a tab closed, a laptop shut, a network
    dropped — turns up here as a socket error. It is one player's connection, not
@@ -120,7 +106,19 @@ server.listen(PORT, HOST, function () {
   log('PMC 2670 on http://' + shown + ':' + PORT);
   log('  the game      http://' + shown + ':' + PORT + '/');
   log('  multiplayer   ws://' + shown + ':' + PORT + '/ws');
-  log('  campaigns     ' + path.join(ROOT, 'campaigns'));
+  log('  campaigns     ' + (process.env.CAMPAIGNS_DIR || path.join(ROOT, 'campaigns')));
+  log('  database      ' + path.join(DATA_DIR, 'pmc.db') + ' (' + db.users().length + ' accounts)');
 });
 
-process.on('SIGINT', function () { log('shutting down'); process.exit(0); });
+/* Anything thrown that nothing caught is logged, and the server carries on: one
+   player's bad message must not end everyone's battle (MP-1). */
+process.on('uncaughtException', function (e) { log('uncaught: ' + ((e && e.stack) || e)); });
+process.on('unhandledRejection', function (e) { log('unhandled: ' + ((e && e.stack) || e)); });
+// stopped (Ctrl-C, or systemd): stop taking connections, then go
+function stop(sig) {
+  log('shutting down (' + sig + ')');
+  server.close(function () { try { db.close(); } catch (e) { } process.exit(0); });
+  setTimeout(function () { process.exit(0); }, 2000).unref();
+}
+process.on('SIGINT', function () { stop('SIGINT'); });
+process.on('SIGTERM', function () { stop('SIGTERM'); });

@@ -58,6 +58,12 @@ jobs:
             ./ "$APP_DIR/"
           echo "$BRANCH @ ${SHA::7}" > "$APP_DIR/deployed.txt"
 
+      # the server's packages (better-sqlite3), as the lock file has them; nothing for tests or the build
+      - name: Install its packages
+        run: |
+          cd "$APP_DIR"
+          npm ci --omit=dev --no-audit --no-fund
+
       - name: Restart the server
         run: sudo -n systemctl restart pmc-firefight
 
