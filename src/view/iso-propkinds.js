@@ -574,9 +574,9 @@
           dish(-a(3.2), MH * 0.42, a(2.2), -a(0.8));
           dish(a(2.8), MH * 0.66, a(1.7), a(0.7));
           rect(g, mx, my - MH - a(6), 1, a(6), '#2a2926');
-          ellipse(g, mx, my - MH - a(6), a(2), a(1.5), 'rgba(255,60,40,.22)');
-          dot(g, mx - 1, my - MH - a(6) - 1, '#ff4a32', 3);
-          dot(g, mx - 1, my - MH * 0.5, '#ff4a32', 2);
+          // the warning lamps, unlit: they flash over the table every frame (drawLive)
+          dot(g, mx - 1, my - MH - a(6) - 1, '#5a2018', 3);
+          dot(g, mx - 1, my - MH * 0.5, '#5a2018', 2);
           break;
         }
         case 'building':
@@ -622,12 +622,22 @@
           } else {
             rect(g, p.x + a(4), p.y - a(9), a(1), a(9), '#5a4c38');
             rect(g, p.x + a(4), p.y - a(9), a(0.5), a(9), '#786748');
-            rect(g, p.x + a(5), p.y - a(9), a(3.4), a(2.2), '#d8a83f');
-            rect(g, p.x + a(5), p.y - a(9), a(3.4), a(0.8), '#f0cc6a');
+            // its tag stirs in the wind: drawn over the table every frame (drawLive)
           }
           break;
         }
         case 'beacon': {
+          if (pr.lz) {
+            /* An Invasion landing zone (p. 53): a smoke canister set down in the
+               middle of it, its green smoke drawn rising every frame (drawLive). */
+            shadowBlob(g, { x: p.x + a(0.6), y: p.y + a(0.3) }, a(2.2), a(1.1));
+            ellipse(g, p.x, p.y, a(2.4), a(1.2), 'rgba(70,120,50,.35)');      // the ground stained green
+            rect(g, p.x - a(0.8), p.y - a(2.2), a(1.6), a(2.2), '#3c4a38');
+            rect(g, p.x - a(0.8), p.y - a(2.2), a(0.6), a(2.2), '#5a6a52');
+            rect(g, p.x - a(0.8), p.y - a(1.4), a(1.6), a(0.5), '#8acb5a');    // its green band
+            ellipse(g, p.x, p.y - a(2.2), a(0.8), a(0.4), '#2a3326');
+            break;
+          }
           /* An objective marker: a steel post on a concrete plinth ringed with
              hazard paint, a cloth pennant from its head and a lamp on top, so it is
              plain from anywhere on the table where the point to hold is. */
@@ -662,32 +672,112 @@
             rect(g, px0, by2 - a(0.9), pw * 0.5, a(0.9), '#f0c060');
           });
           rect(g, px0 - 1, top - a(0.5), pw + 2, a(0.6), '#1a1f25');          // the cap
-          // the pennant: cloth from the head of the post, rippling, its fold shaded
-          var fx = px0 + pw, fy = top + a(0.4), FL = a(6.2), FH = a(3.2), wob = bq() * 6;
-          var upper = [], lower = [];
-          for (var k = 0; k <= 8; k++) {
-            var t = k / 8, wave = Math.sin(t * Math.PI * 1.6 + wob) * a(0.5) * t;
-            var hh = FH * (1 - t * 0.45);
-            upper.push([fx + FL * t, fy + wave]);
-            lower.push([fx + FL * t, fy + hh + wave]);
-          }
-          poly(g, upper.concat(lower.slice().reverse()), '#c9962c');
-          poly(g, upper.concat(lower.map(function (q, i) { return [q[0], q[1] - (q[1] - upper[i][1]) * 0.5]; }).reverse()), '#e8c15a');
-          for (var k2 = 1; k2 < 8; k2 += 2) {
-            var fa = upper[k2], fb = lower[k2];
-            edgeLine(g, [fa[0], fa[1] + 1], [fb[0], fb[1] - 1], 'rgba(120,84,20,.45)', 1);   // the folds
-          }
-          for (var k3 = 0; k3 < 8; k3++) edgeLine(g, upper[k3], upper[k3 + 1], '#f6dd8a', 1);
-          edgeLine(g, [fx, fy], [fx, fy + FH], '#8a6a22', 1);
-          // the lamp on top
-          ellipse(g, px0 + pw / 2, top - a(1.4), a(1.8), a(1.3), 'rgba(255,214,120,.22)');
-          rect(g, px0 + pw / 2 - a(0.45), top - a(1.6), a(0.9), a(1.1), '#ffd878');
-          dot(g, px0 + pw / 2 - a(0.25), top - a(1.5), '#fff4c8', 1);
+          /* the pennant and the lamp's light move, so they are drawn over the
+             table every frame (drawLive); the lamp's housing is baked, unlit */
+          rect(g, px0 + pw / 2 - a(0.45), top - a(1.6), a(0.9), a(1.1), '#7a6438');
           break;
         }
       }
     }
 
-    return { drawKind: drawKind };
+    /* The moving parts of a piece, drawn over the table every frame at the
+       time t (ms): an objective beacon's pennant fluttering and its lamp
+       flashing slowly, and the tag on a search site not yet searched. */
+    function drawLive(g, lift, p, pr, t) {
+      if (pr.kind === 'objective') {
+        // the uplink's warning lamps: a slow beat, on for about a second in three
+        var mc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2), mx = mc.x, my = mc.y - (lift || 0) - pr.height, MH = a(36);
+        var beat = Math.max(0, Math.sin((t / 3000) * Math.PI * 2));
+        if (beat <= 0.02) return;
+        g.save();
+        g.globalAlpha = beat;
+        ellipse(g, mx, my - MH - a(6), a(2.6), a(1.9), 'rgba(255,60,40,.3)');
+        dot(g, mx - 1, my - MH - a(6) - 1, '#ff4a32', 3);
+        ellipse(g, mx, my - MH * 0.5, a(1.4), a(1), 'rgba(255,60,40,.25)');
+        dot(g, mx - 1, my - MH * 0.5, '#ff4a32', 2);
+        g.restore();
+        return;
+      }
+      if (pr.kind === 'beacon' && pr.lz) {
+        /* Green smoke off the canister: puffs born at its mouth, rising, swelling
+           and leaning off downwind as they thin out. Each puff is set by the time
+           alone, so the plume needs nothing kept between frames. */
+        var N = 22, LIFE = 4600, cx = p.x, cy = p.y - a(2.4), off = (pr.index || 0) * 0.29;
+        g.save();
+        for (var i = N - 1; i >= 0; i--) {
+          var age = ((t / LIFE) + i / N + off) % 1;
+          // each puff on a slightly different line, so the plume is ragged
+          var lean = 0.75 + ((i * 37) % 11) / 22;
+          var sx2 = cx + age * age * a(12) * lean + Math.sin(age * 6 + i * 1.7) * a(1.4) * age;
+          var sy2 = cy - age * a(26) - Math.cos(i * 2.3) * a(1.2) * age;
+          var r = a(1.6) + age * a(6.5);
+          var al = (age < 0.08 ? age / 0.08 : 1) * (1 - age * 0.85) * 0.62;
+          // soft-edged: a puff is dense in the middle and fades out to nothing
+          var rg = g.createRadialGradient(sx2, sy2, 0, sx2, sy2, r);
+          var c = i % 3 ? '112,200,88' : '86,166,70';
+          rg.addColorStop(0, 'rgba(' + c + ',' + al.toFixed(3) + ')');
+          rg.addColorStop(0.6, 'rgba(' + c + ',' + (al * 0.55).toFixed(3) + ')');
+          rg.addColorStop(1, 'rgba(' + c + ',0)');
+          g.fillStyle = rg;
+          g.beginPath(); g.ellipse(sx2, sy2, r, r * 0.85, 0, 0, Math.PI * 2); g.fill();
+        }
+        // the hot core at the canister's mouth
+        var core = g.createRadialGradient(cx, cy - a(0.6), 0, cx, cy - a(0.6), a(1.6));
+        core.addColorStop(0, 'rgba(190,245,150,.55)');
+        core.addColorStop(1, 'rgba(190,245,150,0)');
+        g.fillStyle = core;
+        g.beginPath(); g.arc(cx, cy - a(0.6), a(1.6), 0, Math.PI * 2); g.fill();
+        g.restore();
+        return;
+      }
+      if (pr.kind === 'beacon') {
+        var bq = rng(7 + (pr.index || 0) * 31), wob = bq() * 6;
+        var px0 = p.x - a(0.7), pw = a(1.4), top = p.y - a(1.1) - a(14);
+        // the pennant: a ripple running out to the fly, the fly moving most
+        var fx = px0 + pw, fy = top + a(0.4), FL = a(6.2), FH = a(3.2);
+        var ph = t / 850 * Math.PI * 2 + wob, upper = [], lower = [];
+        for (var k = 0; k <= 8; k++) {
+          var f = k / 8, wave = Math.sin(f * Math.PI * 1.8 - ph) * a(0.75) * f;
+          var hh = FH * (1 - f * 0.45) * (1 - 0.08 * Math.cos(f * Math.PI * 1.8 - ph) * f);
+          upper.push([fx + FL * f * (1 - 0.04 * Math.abs(Math.sin(ph * 0.5)) * f), fy + wave]);
+          lower.push([upper[k][0], fy + hh + wave]);
+        }
+        poly(g, upper.concat(lower.slice().reverse()), '#c9962c');
+        poly(g, upper.concat(lower.map(function (q, i) { return [q[0], q[1] - (q[1] - upper[i][1]) * 0.5]; }).reverse()), '#e8c15a');
+        for (var k2 = 1; k2 < 8; k2++) {
+          // a fold turning away from the light is shaded, one turning to it lit
+          var turn = Math.cos(k2 / 8 * Math.PI * 1.8 - ph);
+          if (Math.abs(turn) < 0.45) continue;
+          edgeLine(g, [upper[k2][0], upper[k2][1] + 1], [lower[k2][0], lower[k2][1] - 1], turn < 0 ? 'rgba(120,84,20,.5)' : 'rgba(255,240,190,.35)', 1);
+        }
+        for (var k3 = 0; k3 < 8; k3++) edgeLine(g, upper[k3], upper[k3 + 1], '#f6dd8a', 1);
+        edgeLine(g, [fx, fy], [fx, fy + FH], '#8a6a22', 1);
+        // the lamp: a slow beat, swelling and fading every two and a half seconds
+        var lit = 0.5 + 0.5 * Math.sin((t / 2500 + (pr.index || 0) * 0.37) * Math.PI * 2);
+        var lx = px0 + pw / 2;
+        g.save();
+        g.globalAlpha = lit;
+        ellipse(g, lx, top - a(1.4), a(2.6), a(1.9), 'rgba(255,214,120,.3)');
+        rect(g, lx - a(0.45), top - a(1.6), a(0.9), a(1.1), '#ffd878');
+        dot(g, lx - a(0.25), top - a(1.5), '#fff4c8', 1);
+        g.restore();
+        return;
+      }
+      if (pr.kind === 'searchsite' && !pr.checked) {
+        // the tag on the stake, a small cloth flicking in the wind
+        var sx = p.x + a(5), sy = p.y - a(9), sw = a(3.4), sh = a(2.2), cw = PIXEL;
+        var sp = t / 700 * Math.PI * 2 + (pr.seed || 0);
+        for (var x = 0; x < sw; x += cw) {
+          var ff = (x + cw / 2) / sw, o = Math.round(Math.sin(ff * Math.PI * 1.6 - sp) * a(0.45) * ff);
+          var w2 = Math.min(cw, sw - x);
+          rect(g, sx + x, sy + o, w2, sh, Math.cos(ff * Math.PI * 1.6 - sp) * ff < -0.3 ? '#b88a2e' : '#d8a83f');
+          rect(g, sx + x, sy + o, w2, a(0.8), '#f0cc6a');
+        }
+      }
+    }
+    // the pieces with moving parts
+    function lives(pr) { return pr.kind === 'beacon' || pr.kind === 'objective' || (pr.kind === 'searchsite' && !pr.checked); }
+
+    return { drawKind: drawKind, drawLive: drawLive, lives: lives };
   };
 })(window);

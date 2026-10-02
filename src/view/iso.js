@@ -1018,7 +1018,7 @@
     CONCRETE: CONCRETE, K: K, LEAF: LEAF, PIXEL: PIXEL, PREFAB: PREFAB, ROOF: ROOF, STONE: STONE
   });
   var boulder = ISOPROPS.boulder, box = ISOPROPS.box, buildProps = ISOPROPS.buildProps;
-  var drawProp = ISOPROPS.drawProp, edgeLine = ISOPROPS.edgeLine;
+  var drawProp = ISOPROPS.drawProp, drawPropLive = ISOPROPS.drawPropLive, propLives = ISOPROPS.propLives, edgeLine = ISOPROPS.edgeLine;
 
   /* ---------- iso-ground.js: the ground ----------
      The board it borrows from: getters for what changes as the game runs,
@@ -1062,7 +1062,7 @@
       [sprites, corpses, hullCache, TEX_TILE].forEach(function (c) { for (var k in c) delete c[k]; });
       DIM_CANVAS = null;
     },
-    bakeGround: bakeGround, bakeGroundSliced: bakeGroundSliced, buildProps: buildProps, drawProp: drawProp, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
+    bakeGround: bakeGround, bakeGroundSliced: bakeGroundSliced, buildProps: buildProps, drawProp: drawProp, drawPropLive: drawPropLive, propLives: propLives, drawUnit: drawUnit, muzzles: muzzles, mounts: mounts, mountFor: mountFor,
     flyLift: flyLift, craftCentreUp: craftCentreUp, hullSpec: hullSpec,
     hasPiece: function (art) { return art === 'rebelgun' || !!PIECE3D[art]; },   // a piece left knocked out when its crew is gone
     turnsLikeMachine: function (art) { return !!(PIECE3D[art] || FIELD_GUN[art]); },
