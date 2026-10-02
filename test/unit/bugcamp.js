@@ -99,13 +99,14 @@ ok('Quick Learning: Tier III holds five, not four', C.honourCap(q, co6), 5);
 
 head('Pathways that change the bugs');
 function built(key, docs) {
-  var p = R.profile(key), u = { key: key, side: 'A', move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale, str: p.str, rules: p.rules.slice(), size: p.size, models: p.size };
+  var p = R.profile(key), u = { key: key, side: 'A', move: p.move, fp: p.fp, range: p.range, def: p.def, defPierced: p.defPierced, assault: p.assault, morale: p.morale, str: p.str, rules: p.rules.slice(), size: p.size, models: p.size };
   C.applyEntry(u, C.newEntry(key), docs);
   return u;
 }
 ok('Concentrated Acid: Spitters FP 3 → 4', built('bspitters', ['BC2']).fp, 4);
 ok('Bioplasma Missiles: winged bugs get Anti-tank (limited)', built('bsmallwing', ['BC5']).rules.indexOf('Anti-tank (limited)') >= 0, true);
 ok('Extensive Feeding: the Queen moves 10, Defence 16', built('bqueen', ['BB5']).move + '/' + built('bqueen', ['BB5']).def, '10/16');
+ok('...and the Sandworm\'s Defence against Anti-tank rises with it (review a119ac2 BUG-4)', built('bsandworm', ['BB5']).def + '/' + built('bsandworm', ['BB5']).defPierced, '17/15');
 ok('Enlarged Leg Muscles: Attack forms move 10', built('battack', ['BP2']).move, 10);
 var s3 = swarm('BP1');
 ok('Efficient Spawn Cycle: Attack forms cost 6, not 8', C.recruitCost(s3.co, 'battack'), 6);

@@ -675,7 +675,10 @@
       var ground = p.group === 'Lesser Bugs' || p.group === 'Underground Bugs';
       if (docs.indexOf('BC2') >= 0 && ranged && u.fp != null) u.fp += 1;            // Concentrated Acid
       if (docs.indexOf('BC5') >= 0 && ranged && !R.has(u, 'Anti-tank')) add('Anti-tank (limited)');   // Bioplasma Missiles
-      if (docs.indexOf('BB5') >= 0 && R.isOvergrown(p)) { u.move += 2; u.def += 1; }  // Extensive Feeding
+      if (docs.indexOf('BB5') >= 0 && R.isOvergrown(p)) {                             // Extensive Feeding
+        u.move += 2; u.def += 1;
+        if (u.defPierced != null) u.defPierced += 1;                                 // the Sandworm's 14 against Anti-tank too
+      }
       if (docs.indexOf('BP2') >= 0 && ground) u.move += 1;                            // Enlarged Leg Muscles
     }
     /* The tribe's Advancements that change the unit itself (pp. 141-142). */
