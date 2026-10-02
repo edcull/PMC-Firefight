@@ -350,6 +350,17 @@ ok('...on a 3: any pad or the aircraft', n3 > 10 && got3 === n3, got3 + ' of ' +
   }
   ok('Rite of Knowledge: a 1-2 is rolled again', low > 50 && lowRe === low, lowRe + ' of ' + low);
   ok('...a 3 is kept, the pad still the owner\'s pick', three > 30 && threeRe === 0, threeRe + ' of ' + three + ' re-rolled');
+  // XEN-14: Teleport Turrets only — the manned Teleport craft is neither helped by the Rite nor barred by Backwardness
+  var craft = unit('xtelecraft', { x: 14, y: 10 }), kc = unit('recruits', { x: 15, y: 10, camp: { flags: { knowledge: true } } });
+  var tc = table([craft, pb2, kc]), anyRe = false;
+  for (var j = 0; j < 200; j++) if (R.teleportRoll(tc, kc, craft).reroll != null) anyRe = true;
+  ok('...never through the Teleport craft', !anyRe);
+  var bw = unit('recruits', { x: 15, y: 12, camp: { flags: { backward: true } } });
+  var tb = table([craft, pa2, bw]);
+  bw.x = 11; bw.y = 12;
+  ok('Infamy of Backwardness: a unit beside a Teleport turret cannot use it', R.teleportFrom(tb, pa2).indexOf(bw) < 0);
+  bw.x = 15; bw.y = 12;
+  ok('...but may go through the manned Teleport craft', R.teleportFrom(tb, craft).indexOf(bw) >= 0);
 })();
 
 /* ------------------------------------------------------ Protecting the VIP: +2 to every Damage roll */

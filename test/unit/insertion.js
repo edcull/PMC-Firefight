@@ -118,6 +118,9 @@ console.log('\nMimicry and Underground Advance round the quarter down (review a1
   const t = capFor(5, 'XO2', 'xeno', tribe);
   ok('five of a tribe: one by Underground Advance', t.cap, 1);
   ok('...and an Alpha squad may be the one', t.units.some((u) => u.key === 'xalpha3' && u.mimic));
+  // XEN-9: any unit without Battlefield Insertion, an aircraft too
+  const air = capFor(4, 'XO2', 'xeno', ['xalpha3', 'xbeta3', 'xbeta3', 'xshieldb']);
+  ok('...an aircraft too (XEN-9)', air.units.some((u) => u.key === 'xshieldb' && u.mimic));
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

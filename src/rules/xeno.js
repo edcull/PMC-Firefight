@@ -108,6 +108,8 @@
        unit takes D6 Suppression. */
     function infamyPanic(state, u, log) {
       if (!state || !state.units) return;
+      // what it has been seen to do, so the sweep below does not answer it twice
+      if (!u.alive) u.panicDead = true; else if (status(u) === 'broken') u.panicBroke = true;
       state.units.forEach(function (o) {
         if (o === u || !o.alive || o.side !== u.side || o.aboard || o.reserve || o.x < 0 || !campFlag(o, 'infamyPanic')) return;
         if (unitDist(o, u) > 18) return;
@@ -116,6 +118,25 @@
         if (status(o) === 'broken') o.brokenEver = true;
         if (log) log.push({ t: 'hits', text: 'Infamy of Panic — ' + o.label + ' sees ' + u.label + ' go and takes ' + n + ' SP' + (status(o) !== was ? ' (' + status(o) + ')' : '') + '.' });
       });
+    }
+    /* "When a friendly unit within 18" is Broken or destroyed" (p. 143) — whatever
+       broke or destroyed it: shooting and assaults call infamyPanic as they resolve,
+       and this sweep, run after every step of the battle, catches the rest — a
+       Psychic Bond, a Rite of Unrest, another Infamy's Suppression, an aircraft or
+       turret brought down (the owner's ruling, rules review a119ac2 XEN-6). A unit
+       that rallies out of Broken and breaks again is seen again. */
+    function panicSweep(state, log) {
+      if (!state || !state.units || !state.units.some(function (o) { return o.alive && campFlag(o, 'infamyPanic'); })) return;
+      for (var pass = 0; pass < 12; pass++) {
+        var fired = false;
+        state.units.forEach(function (u) {
+          if (u.alive && status(u) !== 'broken') { u.panicBroke = false; return; }
+          if (u.alive ? u.panicBroke : u.panicDead) return;
+          infamyPanic(state, u, log);
+          fired = true;
+        });
+        if (!fired) return;              // the Suppression it dealt may break someone else: until it settles
+      }
     }
     /* Regain Control (Dominant Species, p. 129): the Crocks stand still and every
        Epsilon squad of their Tier or lower within 12" sheds all its Suppression. */
@@ -153,7 +174,8 @@
         if (!u.alive || u.side !== tp.side || u.aboard || u.reserve || u.x < 0) return false;
         if (u.cls !== 'infantry' || u.disembarked || u.bld || hasOwn(u, 'Riders')) return false;
         if (hasOwn(u, 'Stationary Artillery')) return false;      // a gun goes on a hook, not through a gate
-        if (campFlag(u, 'backward')) return false;              // Infamy of Backwardness
+        // Infamy of Backwardness: "cannot use Teleport Turrets" (p. 143) — the manned Teleport craft it may (rules review a119ac2 XEN-14)
+        if (campFlag(u, 'backward') && hasOwn(tp, 'Turret')) return false;
         if (status(u) !== 'ready') return false;
         return unitDist(u, tp) <= 4;
       });
@@ -168,7 +190,8 @@
       /* Rite of Knowledge (p. 142): a 1-3 "may" be rolled again, and the second stands.
          Taken on a 1-2 (a random pad) and never on a 3, which already lets the owner
          pick the pad — a re-roll could only lose that (rules review a119ac2 XEN-3). */
-      if (r <= 2 && campFlag(u, 'knowledge')) { second = d6(); }
+      // "When using Teleport Turrets" (p. 142): not through the manned Teleport craft (XEN-14)
+      if (r <= 2 && campFlag(u, 'knowledge') && hasOwn(tp, 'Turret')) { second = d6(); }
       var v = second != null ? second : r;
       var pads = teleportPads(state, tp.side);
       var randomPad = pads[Math.floor(Math.random() * pads.length)] || tp;
@@ -221,7 +244,7 @@
       relink: relink,
       isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSeers: tribeSeers,
       tribeSees: tribeSees, dualMode: dualMode, shieldFor: shieldFor, enemyWithin: enemyWithin,
-      disruptedBy: disruptedBy, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic,
+      disruptedBy: disruptedBy, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep,
       regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair,
       teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport
     };

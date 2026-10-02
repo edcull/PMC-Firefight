@@ -323,7 +323,12 @@
       /* A tribe's turrets and a company's rapid insertion platforms are not bought
          (pp. 86, 140): they are put in the force for the battle, as many as the
          composition allows, and are gone again after it. */
-      var fieldable = R.listFor(A.faction || 'pmc').filter(function (p) { return (C.isTurretP(p) || p.noSlot) && p.tier <= E.contract.tier; });
+      /* Above the Battle Tier only at Priority Level 2 and up: "On Priority Level 1, you
+         cannot use Turrets … of Tiers higher than the Battle Tier" (p. 126; rules review
+         a119ac2 XEN-12). The list's own limits decide the rest (checkArmy, below). */
+      var fieldable = R.listFor(A.faction || 'pmc').filter(function (p) {
+        return (C.isTurretP(p) || p.noSlot) && (p.tier <= E.contract.tier || E.contract.pl > 1);
+      });
       if (fieldable.length) {
         h += '<h4>Fielded for this battle</h4>';
         fieldable.forEach(function (p) {

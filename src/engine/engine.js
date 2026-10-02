@@ -169,7 +169,14 @@
       SFX[name] = function () { V.sound(name, Array.prototype.slice.call(arguments)); };
     });
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
-    function render() { syncMen(); returnToPool(); syncMen(); V.changed(); }
+    function render() { panicSweep(); syncMen(); returnToPool(); syncMen(); V.changed(); }
+    // Infamy of Panic (p. 143), for every friend broken or destroyed since the last step (xeno.js)
+    function panicSweep() {
+      if (!state || !state.units || state.phase !== 'battle') return;
+      var pl = [];
+      R.panicSweep(state, pl);
+      pl.forEach(function (l) { logLine(l.t, l.text); });
+    }
     /* The named men caught up with the model counts, after every step: whoever
        the rules just took off the table is picked out as a casualty and marked
        with the turn it happened. Done before a unit goes back to the OpFor pool, so the
@@ -393,8 +400,8 @@
        ruling, rules review a119ac2 BUG-2) — may be held back and come in by
        Battlefield Insertion, on top of the units that have the rule of their own.
        A player chooses which: every unit is offered the rule — Leader Bugs,
-       Overgrown bugs and Alpha squads too — bar an emplaced gun, a turret, and an
-       aircraft under Underground Advance; and no more than the quarter may be held for it (u.mimic,
+       Overgrown bugs, Alpha squads and aircraft too (BUG-2, XEN-9) — bar an emplaced
+       gun and a turret; and no more than the quarter may be held for it (u.mimic,
        state.mimicCap). The AI takes the first quarter. */
     state.mimicCap = {};
     ['A', 'B'].forEach(function (side) {
@@ -404,8 +411,7 @@
       var cap = Math.floor(mine.length / 4);
       if (cap < 1) return;
       var able = mine.filter(function (u) {
-        // Underground Advance stays on the ground (XEN-9): a Carrier bug may still come in by Mimicry
-        return (u.cls !== 'aircraft' || docs.indexOf('BB2') >= 0) && !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Stationary Artillery') && !R.has(u, 'Turret');
+        return !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Stationary Artillery') && !R.has(u, 'Turret');
       });
       if (isAI(side)) { able.slice(0, cap).forEach(function (u) { u.rules.push('Battlefield Insertion'); }); return; }
       state.mimicCap[side] = cap;

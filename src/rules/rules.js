@@ -1421,6 +1421,7 @@
   function bondMorale(state, u) { return (KIT_XENO || kitXeno()).bondMorale(state, u); }
   function psychicBond(state, u, lost, log) { return (KIT_XENO || kitXeno()).psychicBond(state, u, lost, log); }
   function infamyPanic(state, u, log) { return (KIT_XENO || kitXeno()).infamyPanic(state, u, log); }
+  function panicSweep(state, log) { return (KIT_XENO || kitXeno()).panicSweep(state, log); }
   function regainTargets(state, u) { return (KIT_XENO || kitXeno()).regainTargets(state, u); }
   function regainControl(state, u) { return (KIT_XENO || kitXeno()).regainControl(state, u); }
   function selfRepair(state, u) { return (KIT_XENO || kitXeno()).selfRepair(state, u); }
@@ -2121,7 +2122,7 @@
     checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN, WALL_REACH: WALL_REACH, wallCoverAt: wallCoverAt,
     d10: d10, d6: d6, d3: d3, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
-    isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
+    isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,

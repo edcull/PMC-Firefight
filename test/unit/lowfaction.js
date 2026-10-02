@@ -279,5 +279,64 @@ console.log('\nXEN-5 Rite of Unrest works for its own side, so it lapses while i
   ok('...nor Broken', spAfter(u.morale * 2 + 1) === 0, R.status(u));
 })();
 
+console.log('\nXEN-6 Infamy of Panic answers any friend broken or destroyed, however it happened (p. 143)');
+(function () {
+  const e = game(['xbeta3', 'xbeta3', 'xbeta3'], ['regular', 'regular']);
+  let g = 0;
+  while (e.state().phase === 'deploy' && g++ < 200) { const side = e.query.placingSide(); if (!side) break; e.intent(side, { k: 'autodeploy' }); }
+  e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });
+  const st = e.state();
+  const [pan, friend, far] = st.units.filter((x) => x.side === 'A');
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.x = x.side === 'A' ? 40 : 4; x.y = 40; });
+  pan.x = 20; pan.y = 20; friend.x = 26; friend.y = 20; far.x = 46; far.y = 20;
+  pan.camp = { flags: { infamyPanic: true } };
+  pan.sp = 0; friend.sp = 0; far.sp = 0;
+  // one activation spent (Skip), as the battle moves on — every step of it ends in a render
+  const step = () => {
+    st.units.forEach((x) => { x.activated = false; });
+    const sd = st.activeSide, u = st.units.find((x) => x.side === sd && x.alive && R.status(x) !== 'broken');
+    if (!u) return;
+    e.intent(sd, { k: 'select', id: u.id }); e.intent(sd, { k: 'action', id: 'skip' });
+  };
+  // broken by Suppression straight onto it — no shot, no assault
+  friend.sp = friend.morale * 2 + 1;
+  step();
+  const first = pan.sp;
+  ok('a friend within 18" broken by a Psychic Bond or a Rite: the unit takes D6 SP', first >= 1 && first <= 6, first + ' SP');
+  step();
+  ok('...once, not on every step after', pan.sp === first, pan.sp + ' SP');
+  // a friend destroyed out of reach of shooting's own call
+  pan.sp = 0; friend.sp = 0; step();
+  friend.alive = false; step();
+  ok('...and a friend destroyed by anything at all', pan.sp >= 1, pan.sp + ' SP');
+  // out beyond 18": nothing
+  pan.sp = 0; far.sp = far.morale * 2 + 1; step();
+  ok('...but not one 18" or more away', pan.sp === 0, pan.sp + ' SP');
+})();
+
+console.log('\nXEN-10 Detailed Terrain Knowledge moves a piece once, whoever moves it (p. 141)');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['xbeta3', 'xbeta3'], armyB: ['xbeta3', 'xbeta3'], factionA: 'xeno', factionB: 'xeno',
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto',
+    doctrines: { A: ['XO4'], B: ['XO4'] } });
+  const st = e.state();
+  // with the terrain set automatically both sides' moves were made for them; each piece at most once
+  ok('set for both sides, no piece moved twice', st.terrain.filter((r) => r.dtkMoved).length <= 4);
+  // by hand: the first player's turn to move a piece
+  st.placeAsk = { side: 'A', kind: 'move', why: 'terrain', left: 2, total: 2 };
+  let pa = st.placeAsk;
+  // one clear piece, moved by the first player
+  st.terrain.length = 0; st.objectives.length = 0;
+  st.terrain.push({ kind: 'woods', x: 20, y: 20, w: 4, h: 4 }, { kind: 'woods', x: 34, y: 6, w: 4, h: 4 });
+  const sd = pa.side, wood = st.terrain[0];
+  ok('the first move goes', e.intent(sd, { k: 'placeat', x: 22, y: 22 }).ok && e.intent(sd, { k: 'placeat', x: 30, y: 22 }).ok && wood.dtkMoved);
+  // the same piece again, by whoever moves next
+  pa = st.placeAsk;
+  const r2 = pa ? e.intent(pa.side, { k: 'placeat', x: wood.x + 2, y: wood.y + 2 }) : { ok: false, why: 'no second move' };
+  ok('...the same piece cannot be moved again', !r2.ok && /already been moved/.test(r2.why || ''), r2.why);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
