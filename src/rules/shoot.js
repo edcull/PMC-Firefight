@@ -218,7 +218,11 @@
         for (var i = 0; i < t.shotFrom.length && !isMachine(t) && !noX; i++) {
           var p = t.shotFrom[i];
           if (p.basic) continue;
-          // Crossfire: the target sits between this firer and an earlier one
+          /* Crossfire: the target sits between this firer and an earlier one — near the
+             line joining them, and the two further from each other than either is from
+             it (two attacks from one spot, or from the same side, do not catch it) */
+          var span = Math.hypot(p.x - a.x, p.y - a.y);
+          if (span <= Math.max(Math.hypot(t.x - p.x, t.y - p.y), Math.hypot(t.x - a.x, t.y - a.y))) continue;
           if (pointSegDist(t.x, t.y, p.x, p.y, a.x, a.y) < UNIT_R * 1.6) { crossfire = true; break; }
         }
         if (crossfire) { total += 2; parts.push({ label: 'Crossfire', v: 2 }); }

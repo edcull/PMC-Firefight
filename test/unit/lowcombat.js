@@ -258,5 +258,32 @@ console.log('\nBAT-3 The free shot at an arrival respects the weapon\'s limits (
   ok('a rifle team fires its main weapon as before', /fires at/.test(rifle) && !/auxiliary/.test(rifle), rifle.slice(0, 90));
 })();
 
+console.log('\nVEH-2 A catastrophic explosion is an ordinary shooting attack, Firepower Tier + 3 (p. 36)');
+(function () {
+  const hull = unit('lapc', 'B', 20, 20, { str: 5, damage: 0 }), near = unit('regular', 'A', 21.5, 20), far = unit('regular', 'A', 23.5, 20);
+  const st = world([hull, near, far]);
+  const keep = Math.random; let first = true;
+  Math.random = () => (first ? (first = false, 0.99) : keep());      // the 6 that blows it up, then ordinary dice
+  const log = [];
+  try { R.applyDamage(st, hull, 6, log, null); } finally { Math.random = keep; }
+  const text = log.map((l) => (l.text || '') + ' ' + (l.math || '')).join(' | ');
+  ok('it blew up', hull.catastrophic, text.slice(0, 120));
+  ok('...and the blast is not Basic Firepower', /The exploding/.test(text) && !/exploding[^|]*Basic Firepower/.test(text));
+  const m = R.shotMods(st, { label: 'blast', side: 'B', alive: true, models: 1, fp: 3 + hull.tier, range: 4, rules: [], x: 20, y: 20, shotFrom: [], cls: 'infantry' }, near, 'blast', {});
+  ok('...a unit within 2" of the wreck takes it at half range (+2), with no Fire! bonus',
+    m.parts.some((p) => p.label === 'within half range' && p.v === 2) && !m.parts.some((p) => /^Fire!/.test(p.label)) && !m.basic,
+    m.parts.map((p) => p.label + ' ' + p.v).join(', '));
+})();
+
+console.log('\nCrossfire needs the target between the two shooters (p. 31)');
+(function () {
+  const t = unit('regular', 'B', 20, 20), a = unit('regular', 'A', 21.5, 20);
+  const st = world([t, a]);
+  const x = (from) => { t.shotFrom = [{ x: from.x, y: from.y, basic: false }]; return R.shotMods(st, a, t, 'fire', {}).crossfire; };
+  ok('a second attack from the same spot, close by, is no crossfire', !x({ x: 21.5, y: 20 }));
+  ok('...nor one from the same side', !x({ x: 26, y: 20.5 }));
+  ok('an attack from the far side is', x({ x: 12, y: 20 }));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

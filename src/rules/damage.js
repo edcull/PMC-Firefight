@@ -243,13 +243,17 @@
         text: t.label + ' is knocked out — D6 ' + roll + (bonus ? ' +' + bonus + ' overkill' : '') + ': ' + how,
         math: t.damage + ' damage against Structure ' + t.str
       });
-      // only a catastrophic explosion catches the troops around the wreck (p. 36)
+      /* Only a catastrophic explosion catches the troops around the wreck (p. 36):
+         "a shooting attack with Firepower equal to 3 + the destroyed vehicle's Unit
+         Tier" — an ordinary one, not Basic Firepower (that is Vehicle on fire!'s, and
+         only against those aboard). Its reach is the 4", so within 2" it is at half
+         range; there is no Fire! action behind it. */
       if (total <= 5) return;
       var fp = 3 + t.tier;
       state.units.forEach(function (u) {
         if (!u.alive || u === t || isFlying(u) || u.aboard) return;
         if (unitDist(u, t) > 4) return;
-        var blast = shoot(state, { label: 'The exploding ' + t.name, side: t.side === 'A' ? 'B' : 'A', alive: true, models: 1, fp: fp, range: 48, rules: [], x: t.x, y: t.y, shotFrom: [], cls: 'infantry' }, u, 'basic', {});
+        var blast = shoot(state, { label: 'The exploding ' + t.name, side: t.side === 'A' ? 'B' : 'A', alive: true, models: 1, fp: fp, range: 4, rules: [], x: t.x, y: t.y, shotFrom: [], cls: 'infantry' }, u, 'blast', {});
         blast.log.forEach(function (l) { log.push(l); });
       });
     }
