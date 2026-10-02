@@ -112,6 +112,7 @@ test/
   art/               the art snapshots' baselines (baseline.json, terrain.json)
   perf/board.js      the drawing performance harness
   where.js           shared paths and helpers for the tests
+  hotseat.js         a hotseat battle played to the end through the board, as two players
 
 docs/                this file, and the hotseat and multiplayer plans
 build/               what the build and the tests write (not kept in git)
@@ -371,6 +372,7 @@ rebelplay.js       an insurgent group with each Tactic                (slow)
 soloplay.js        every solitaire scenario, solitaire and co-op      (slow)
 scentest.js        all six scenarios played out                       (slow)
 report.js          a long unattended run, checking invariants         (slow)
+hotseatsweep.js    hotseat battles at one screen, every scenario, to the end (slow)
 ```
 
 ### Art snapshots
