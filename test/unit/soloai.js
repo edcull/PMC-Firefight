@@ -248,15 +248,16 @@ console.log('\nEvacuation: the entry points keep their distances (p. 153)');
 
 console.log('\nAmbush!: two even halves either side of the road, 6" apart (p. 156)');
 (function () {
-  function ambush() {
+  // random commandos: some of them garrison the buildings by the road, which must keep the split too
+  function ambush(fixed) {
     const e = Engine.create();
-    e.start({ tier: 3, pl: 1, scenario: 's_ambush', armyA: ['cmd3', 'regular', 'regular', 'rookie', 'rookie'], armyB: ['regular', 'regular'],
+    e.start({ tier: 3, pl: 1, scenario: 's_ambush', armyA: fixed ? ['cmd3', 'regular', 'regular', 'rookie', 'rookie'] : SOLO.rollCommando(3, 1, 'pmc'), armyB: ['regular', 'regular'],
       nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
     return e;
   }
   const H = R.BOARD.h, UR = R.UNIT_R;
   let worst = 0, close = 0;
-  for (let k = 0; k < 20; k++) {
+  for (let k = 0; k < 60; k++) {
     const e = ambush(), st = e.state();
     e.intent('A', { k: 'autodeploy' });
     const a = st.units.filter((u) => u.side === 'A' && u.x >= 0 && !u.aboard);
@@ -266,14 +267,14 @@ console.log('\nAmbush!: two even halves either side of the road, 6" apart (p. 15
   }
   ok('auto-deploy splits the force evenly', worst <= 1, 'worst difference ' + worst);
   ok('...with the halves at least 6" apart', close === 0, close + ' pairs closer');
-  const e = ambush(), st = e.state();
+  const e = ambush(true), st = e.state();
   const a = st.units.filter((u) => u.side === 'A');
   a.forEach((u, i) => { u.x = 6 + i * 4; u.y = H / 2 - 6; });         // everyone on the north side
   ok('all on one side, the battle will not begin', !e.intent('A', { k: 'start' }).ok && st.phase === 'deploy');
   a.forEach((u, i) => { if (i % 2) u.y = H / 2 + 8; });
   const res = e.intent('A', { k: 'start' });
   ok('...split, it does', res.ok || st.phase !== 'deploy', res.why || '');
-  const e2 = ambush(), s2 = e2.state(), u0 = s2.units.find((u) => u.side === 'A'), u1 = s2.units.filter((u) => u.side === 'A')[1];
+  const e2 = ambush(true), s2 = e2.state(), u0 = s2.units.find((u) => u.side === 'A'), u1 = s2.units.filter((u) => u.side === 'A')[1];
   u0.x = 20; u0.y = H / 2 - 4;
   ok('a unit may not stand within 6" of the other half across the road', !s2.scen.deployOK(s2, 'A', 20, H / 2 + 3.5, u1) && s2.scen.deployOK(s2, 'A', 30, H / 2 + 4, u1));
 })();
