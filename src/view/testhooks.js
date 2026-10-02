@@ -142,6 +142,13 @@
       // every hull keeps the way it was offered
       for (var n = 0; n < 12 && B.state && B.state.faceAsk; n++) send({ k: 'vfaceall' });
     };
+    // a rebel force's tactic, asked before the terrain (p. 95): none, for every side asked here
+    window.__noTactics = function () {
+      for (var n = 0; n < 4 && B.state && B.state.tacticAsk; n++) {
+        var ta = B.state.tacticAsk;
+        send(ta.wave ? { k: 'wavedone' } : { k: 'tactic', tactic: null });
+      }
+    };
     window.__deployOK = function (x, y, side) {
       side = side || placingSide();
       return !!side && deployOK(side, x, y);

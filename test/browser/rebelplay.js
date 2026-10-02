@@ -33,6 +33,15 @@ async function run(p, label, cfg, checks) {
     });
   }, cfg);
   await p.waitForTimeout(800);
+  // the tactic is chosen once the roles are known, before the terrain (p. 95): the one this battle is for, a wave called up for it
+  await p.evaluate((c) => {
+    for (let n = 0; n < 6 && window.PMC_STATE().tacticAsk; n++) {
+      const ta = window.PMC_STATE().tacticAsk, sd = ta.order[ta.step];
+      if (ta.wave) window.__sendIntent({ k: 'waveauto' });
+      else window.__sendIntent({ k: 'tactic', tactic: sd === 'A' ? c.tactic : null });
+    }
+  }, cfg);
+  await p.waitForTimeout(400);
   for (let i = 0; i < 12; i++) { await drain(p); await p.waitForTimeout(100); }
   // a player's Last Stand barricades go down by hand: tap across the table until they are all placed
   await p.evaluate(() => {

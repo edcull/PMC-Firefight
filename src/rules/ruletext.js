@@ -129,7 +129,8 @@
       'Designate or Mark an enemy within 24" in sight (12" against Stealth). Designate calls friendly Indirect ' +
       'Fire units to shoot it at once without needing sight; Mark calls units that can see it to fire as though ' +
       'at half range (+2). One unit answers each call, and counts as activated. Standing still, it then calls ' +
-      'again (the same enemy or another) for a second unit; moving first, it calls once.',
+      'again (the same enemy or another) for a second unit; moving first, it calls once. A shot it calls in ' +
+      'ignores the target\'s Stealth.',
     'Minimum Range (X)':
       'Its main weapon cannot fire at targets closer than {X}".',
     'Molecular Reconstruction':
@@ -211,7 +212,7 @@
       '— and cannot then be turned or towed until Normal stance! puts it back.',
     'Stealth':
       '+1 Defence for every full 6" between it and the shooter, unless the shooter is Keen-Eyed. Markerlights ' +
-      'can only pick it out within 12".',
+      'can only pick it out within 12", but a shot they call in ignores Stealth.',
     'Supporting Fire':
       'Support: shoot without the stationary Fire! bonus, then still load or unload troops in the same activation.',
     'Suppressive Fire':

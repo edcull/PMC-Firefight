@@ -50,12 +50,113 @@ console.log('\nL-29 Two rebel forces choose their tactics in turn, the dice-off 
     ok('...and the set-up goes on', !st.tacticAsk && st.tactics[second] === null && (st.units.every((u) => u.tactic === st.tactics[u.side] || R.has(u, 'No Army Rules'))));
   }
   ok('either side may win the dice', firsts.A > 0 && firsts.B > 0, JSON.stringify(firsts));
-  const vsAI = Engine.create({});
-  vsAI.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['rleaders', 'rmilitia'], armyB: ['rleaders', 'rmilitia'], nameA: 'A', nameB: 'B',
-    colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto', tactics: { A: 'wave', B: null } });
-  ok('against the AI nobody is asked', !vsAI.state().tacticAsk);
-  const mixed = game(['rleaders', 'rmilitia'], ['regular', 'regular'], { A: 'wave', B: null });
-  ok('...nor when only one side is rebel', !mixed.state().tacticAsk);
+  const mixed = game(['rleaders', 'rmilitia'], ['regular', 'regular'], { A: null, B: null });
+  ok('one rebel player alone is asked too, with no dice', !!mixed.state().tacticAsk && mixed.state().tacticAsk.order.join() === 'A');
+})();
+
+console.log('\nREB-2 The tactic is chosen once attacker and defender are known, before the terrain (p. 95)');
+(function () {
+  function takeover(mode, armyB) {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'takeover', armyA: ['rleaders', 'rmilitia', 'rmilitia'], armyB: armyB || ['regular', 'regular'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode, planet: 'sparse', terrainSetup: 'auto' });
+    return e;
+  }
+  const e = takeover('hotseat'), st = e.state();
+  ok('the rebel player is asked', !!st.tacticAsk && st.tacticAsk.order.join() === 'A');
+  ok('...with the roles already rolled', !!st.cfg.roles && ['A', 'B'].indexOf(st.cfg.roles.attacker) >= 0, JSON.stringify(st.cfg.roles && st.cfg.roles.attacker));
+  ok('...and no terrain laid', st.phase === 'tactics' && !st.sc.attacker);
+  const n0 = st.units.filter((u) => u.side === 'A').length;
+  ok('Human Wave calls up the wave before going on', e.intent('A', { k: 'tactic', tactic: 'wave' }).ok && !!st.tacticAsk && !!st.tacticAsk.wave);
+  ok('...only infantry of the Battle Tier', !e.intent('A', { k: 'waveadd', key: 'rleaders' }).ok);
+  const inf = R.listFor('rebel').filter((p) => p.cls === 'infantry' && p.tier === 3 && !p.command && !p.noSlot)[0];
+  ok('...one added', e.intent('A', { k: 'waveadd', key: inf.key }).ok && st.units.filter((u) => u.side === 'A').length === n0 + 1);
+  ok('...and taken back', e.intent('A', { k: 'waveundo' }).ok && st.units.filter((u) => u.side === 'A').length === n0);
+  ok('...two, the most at PL 1', e.intent('A', { k: 'waveadd', key: inf.key }).ok && e.intent('A', { k: 'waveadd', key: inf.key }).ok &&
+    !e.intent('A', { k: 'waveadd', key: inf.key }).ok);
+  ok('...then on to the table', e.intent('A', { k: 'wavedone' }).ok && !st.tacticAsk && st.sc.attacker === st.cfg.roles.attacker);
+  const keys = st.cfg.armyA;
+  ok('the list with its wave is legal under Human Wave', R.checkArmy(keys, 3, 1, [], 'wave', 'rebel').ok, R.checkArmy(keys, 3, 1, [], 'wave', 'rebel').faults.join('; '));
+  ok('...and every unit of it fights under the tactic', st.units.filter((u) => u.side === 'A').every((u) => u.tactic === 'wave'));
+  // the AI chooses by its role: Last Stand to hold, Human Wave (and its wave) to take
+  const seen = {};
+  for (let k = 0; k < 10; k++) {
+    const ai = takeover('ai', ['rleaders', 'rmilitia', 'rmilitia']), as = ai.state();
+    const role = as.cfg.roles.attacker === 'B' ? 'attacker' : 'defender';
+    seen[role + ':' + as.tactics.B + ':' + as.units.filter((u) => u.side === 'B' && u.waveExtra).length] = 1;
+  }
+  const keysSeen = Object.keys(seen);
+  ok('the AI defending takes Last Stand; attacking, Human Wave with its wave', keysSeen.every((k) => k === 'defender:laststand:0' || k === 'attacker:wave:2'), keysSeen.join(' '));
+})();
+
+console.log('\nBUG-1 Strong Nervous System is the Bug player\u2019s to call, before anyone flees (p. 124)');
+(function () {
+  function swarm() {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'bugs'), armyB: ['regular', 'regular'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto',
+      doctrines: { A: ['BP3'], B: [] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+    st.units.forEach((u, i) => { u.reserve = false; u.aboard = null; u.sp = 0; u.x = u.side === 'A' ? 10 + (i % 5) * 4 : 40; u.y = 10 + Math.floor(i / 5) * 4 + (u.side === 'B' ? i * 3 : 0); });
+    return { e, st };
+  }
+  const { e, st } = swarm();
+  const bugs = st.units.filter((u) => u.side === 'A' && !R.isMachine(u));
+  const brk = bugs[0], shaken = bugs[1];
+  brk.sp = 2 * R.currentMorale(brk) + 1; shaken.sp = 1;
+  const at = { x: brk.x, y: brk.y };
+  e.query.rallyPhase();
+  ok('a Bug player is asked at the start of the Rally phase', !!st.nervousAsk && st.nervousAsk.side === 'A' && st.nervousAsk.broken === 1);
+  ok('...before the Broken unit flees', brk.x === at.x && brk.y === at.y);
+  ok('...and the other side cannot answer', !e.intent('B', { k: 'nervous' }).ok);
+  ok('steadied, every Suppression point on the swarm is gone', e.intent('A', { k: 'nervous' }).ok && brk.sp === 0 && shaken.sp === 0 && !st.nervousAsk);
+  ok('...so the Broken unit never ran', brk.alive && brk.x === at.x && brk.y === at.y);
+  shaken.sp = 2;
+  st.nervousAsk = null;
+  e.query.rallyPhase();
+  ok('once a battle: the next Rally phase does not ask again', !st.nervousAsk);
+  const two = swarm();
+  const b2 = two.st.units.find((u) => u.side === 'A' && !R.isMachine(u));
+  b2.sp = 1;
+  two.e.query.rallyPhase();
+  ok('kept for later, nothing is cleared', two.e.intent('A', { k: 'nonervous' }).ok && !two.st.nervous.A);
+  b2.sp = 1;
+  two.e.query.rallyPhase();
+  ok('...and it is offered again the next Rally phase', !!two.st.nervousAsk);
+})();
+
+console.log('\nXEN-1 Know Your Foe! holds back every enemy reinforcement, decided at the start of the turn (p. 141)');
+(function () {
+  function invasion() {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'invasion', attacker: 'B', armyA: ['regular', 'regular'], armyB: ['regular', 'regular', 'regular', 'regular'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto',
+      doctrines: { A: ['XO6'], B: [] } });
+    const st = e.state();
+    st.phase = 'battle'; st.turn = 8; st.initiative = 'A';
+    st.objectives = st.objectives.length ? st.objectives : [{ x: 24, y: 24, r: 4, lz: true }];
+    // two of the attacker's units still to come down in the second wave, which is certain by turn 8
+    const atk = st.units.filter((u) => u.side === 'B');
+    atk.forEach((u, i) => { if (i < 2) { u.reserve = false; u.x = 20 + i * 3; u.y = 20; } else { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; } });
+    st.units.filter((u) => u.side === 'A').forEach((u, i) => { u.reserve = false; u.x = 10 + i * 3; u.y = 40; });
+    return { e, st, wave: atk.slice(2) };
+  }
+  const { e, st, wave } = invasion();
+  let finished = false;
+  e.query.reservePhase(() => { finished = true; });
+  ok('asked before anything arrives, with no Battlefield Insertion unit in sight', !!st.kyfAsk && st.kyfAsk.side === 'A' && st.kyfAsk.n === 2 && wave.every((u) => u.reserve));
+  ok('...and the other side cannot answer', !e.intent('B', { k: 'kyf' }).ok);
+  e.intent('A', { k: 'kyf' });
+  ok('used, the second wave does not come down this turn', wave.every((u) => u.reserve && u.x < 0), wave.map((u) => u.reserve ? 'held' : 'down').join(','));
+  ok('...and the turn goes on', finished && !st.kyfAsk);
+  st.turn = 9;
+  e.query.reservePhase(() => {});
+  ok('once a battle: next turn it is not asked, and the wave lands', !st.kyfAsk && wave.every((u) => !u.reserve), wave.map((u) => u.reserve ? 'held' : 'down').join(','));
+  const two = invasion();
+  two.e.query.reservePhase(() => {});
+  two.e.intent('A', { k: 'nokyf' });
+  ok('kept for later, the wave comes down as normal', two.wave.every((u) => !u.reserve) && !two.st.kyf.A);
 })();
 
 console.log('\nL-30 Teleport takes a unit in by the standard embarking rules (pp. 36, 130)');

@@ -19,14 +19,20 @@
     /* Reserve phase (p. 30): from the second turn on, units held back may come in.
        Placing them is not an action, so they can act normally afterwards. */
     function reservePhase(done) {
-      // the scenario's own reinforcements arrive first — the player choosing where
-      scenarioArrivals(function () { afterArrivals(done); });
+      // Know Your Foe! is decided first, then the scenario's own reinforcements arrive — the player choosing where
+      knowYourFoe(function () { scenarioArrivals(function () { afterArrivals(done); }); });
     }
 
-    function afterArrivals(done) {
+    /* Know Your Foe! (p. 141): "Once per battle the Xenotripod player may prevent all
+       enemy reinforcements from arriving in the current turn. The decision must be
+       made in the Beginning Phase after the Initiative roll, and the opponent has to
+       be informed immediately." Asked then, of a player whose enemy has anyone
+       waiting to come on; the AI uses it the first turn it can. Every arrival of
+       that enemy's is held that turn — the scenario's reserves and waves, units held
+       back, Battlefield Insertion — and none of their arrival rolls is spent. */
+    function kyfHeld(side) { var f = other(side); return !!(E.state.kyf && E.state.kyf[f] === E.state.turn); }
+    function knowYourFoe(done) {
       if (E.state.turn < 2 || E.state.solo) { done(); return; }
-      /* Know Your Foe! (p. 141): once a battle, the tribe stops every enemy
-         reinforcement arriving this turn — used the first turn the enemy has any. */
       E.state.kyf = E.state.kyf || {};
       E.state.kyfAsked = E.state.kyfAsked || {};
       function useKyf(side) {
@@ -39,26 +45,31 @@
       ['A', 'B'].forEach(function (side) {
         var foe = other(side);
         if (docsOf(side).indexOf('XO6') < 0 || E.state.kyf[side]) return;
-        if (!inReserve().some(function (u) { return u.side === foe && (!u.wave || u.insert); })) return;
+        if (!inReserve(foe).length) return;
         // the AI uses it the first turn it can; a player is asked, once a turn, whether this is the turn
         if (isAI(side)) { useKyf(side); return; }
         if (E.state.kyfAsked[side] !== E.state.turn && !kyfWait) kyfWait = side;
       });
       if (kyfWait) {
         E.state.kyfAsked[kyfWait] = E.state.turn;
-        E.state.kyfAsk = { side: kyfWait, n: inReserve().filter(function (u) { return u.side === other(kyfWait) && (!u.wave || u.insert); }).length };
+        E.state.kyfAsk = { side: kyfWait, n: inReserve(other(kyfWait)).length };
         ui.kyfThen = function (yes) {
           var sd = E.state.kyfAsk.side;
           E.state.kyfAsk = null; ui.kyfThen = null;
           if (yes) useKyf(sd);
-          afterArrivals(done);
+          knowYourFoe(done);
         };
         setHint(null, 'Know Your Foe! — hold back every enemy reinforcement this turn?');
         revealConsole();
         render();
         return;
       }
-      function held(u) { var f = other(u.side); return E.state.kyf && E.state.kyf[f] === E.state.turn; }
+      done();
+    }
+
+    function afterArrivals(done) {
+      if (E.state.turn < 2 || E.state.solo) { done(); return; }
+      function held(u) { return kyfHeld(u.side); }
       // by Battlefield Insertion: those held for it, and those the scenario's split holds back to come in by it
       var mine = inReserve().filter(function (u) { return (!u.wave || u.insert) && !held(u); });
       var i = 0;
@@ -173,7 +184,7 @@
       if (lzFor) { askLZ(lzFor, function () { scenarioArrivals(after); }); return; }
       if (E.state.sc.pickedTurn !== E.state.turn) { E.state.sc.picked = {}; E.state.sc.pickedTurn = E.state.turn; }
       var pickSide = ['A', 'B'].filter(function (sd) {
-        if (isAI(sd) || E.state.sc.picked[sd] || (E.state.scen.autoArrive && !E.state.scen.pickReserves)) return false;
+        if (isAI(sd) || E.state.sc.picked[sd] || kyfHeld(sd) || (E.state.scen.autoArrive && !E.state.scen.pickReserves)) return false;
         var pk = SC.reservePick(E.state, sd);
         if (!pk) return false;
         if (!pk.pool.length) { E.state.sc.picked[sd] = []; return false; }
@@ -199,6 +210,8 @@
       }
       var bySide = {};
       sides.forEach(function (side) {
+        // held back by the enemy's Know Your Foe!: nobody comes, and nobody rolls
+        if (kyfHeld(side)) { bySide[side] = []; return; }
         var coming = E.state.sc.picked[side] ? E.state.sc.picked[side].slice() : SC.reserves(E.state, side);
         // Evacuation: the pick is only the player's own reserves; the civilians still roll to come out
         if (E.state.sc.picked[side] && E.state.scen.pickReserves) {

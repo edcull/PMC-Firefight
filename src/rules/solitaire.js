@@ -429,19 +429,6 @@
 
   function owners(state) { return (state.solo && state.solo.owners) || [1]; }
 
-  /* Broken player units in the Evacuation flee towards the safe zone; in the
-     other scenarios they fall back away from the nearest enemy. */
-  function awayFromEnemy(state, u) {
-    var near = null, nd = Infinity;
-    state.units.forEach(function (e) {
-      if (!onTable(e) || e.side === u.side) return;
-      var d = dist(e.x, e.y, u.x, u.y);
-      if (d < nd) { nd = d; near = e; }
-    });
-    if (!near) return null;
-    return { x: u.x + (u.x - near.x) * 3, y: u.y + (u.y - near.y) * 3 };
-  }
-
   // the parts every solitaire scenario shares
   function base(o) {
     var s = {
@@ -457,7 +444,10 @@
         return [];
       },
       behaviour: function () { return { mod: 0, why: '' }; },
-      fallTo: function (state, u) { return u.side === 'A' ? awayFromEnemy(state, u) : null; },
+      /* Broken units flee as in any battle (p. 34): away from the closest enemy,
+         and off the table if that is where the flight takes them. The Evacuation
+         and Protecting the VIP say otherwise for their own units. */
+      fallTo: function () { return null; },
       hint: ''
     };
     for (var k in o) s[k] = o[k];
@@ -611,14 +601,20 @@
     mustTarget: function (state, u) {
       return state.units.filter(function (v) { return v.vip && v.alive; })[0] || null;
     },
+    /* "The VIP unit cannot move further than 6" from the evacuation point (even
+       when Broken), and other player's units cannot voluntarily move more than
+       12" away" (p. 151): a Broken unit's flight is not voluntary, so only the
+       VIP is held to its ring then. */
     moveOK: function (state, u, c) {
       if (u.side !== 'A') return true;
+      if (!u.vip && R.status(u) === 'broken') return true;
       var e = state.sc.evac;
       return dist(c.x, c.y, e.x, e.y) <= (u.vip ? 6 : 12);
     },
+    // a Broken VIP flees away from the enemy like anyone else, inside its 6"; the rest flee as normal
     fallTo: function (state, u) {
-      if (u.side !== 'A') return null;
-      return { x: state.sc.evac.x, y: state.sc.evac.y, limit: u.vip ? 6 : 12 };
+      if (u.side !== 'A' || !u.vip) return null;
+      return { x: state.sc.evac.x, y: state.sc.evac.y, limit: 6, away: true };
     },
     /* "If the VIP unit is destroyed, the game automatically ends and the
        player is defeated" (p. 151) — then and there, not at the End phase. */
@@ -807,18 +803,27 @@
         state.terrain.push(b);
         return b;
       });
-      // six entry points, 12" from the safe zone and each other, 6" from the homes
+      /* Six entry points (p. 153): at least 12" from the safe zone and from each
+         other, and 6" from the reinforced buildings' walls. Every test is on the
+         point as it is finally placed, after any move onto a table edge. Should
+         the table leave no room for six, the spacing between the points gives a
+         little at a time, and nothing else. */
       state.sc.entries = [];
-      for (var g = 0; g < 6000 && state.sc.entries.length < 6; g++) {
-        var e = { x: 2 + Math.random() * (W - 4), y: 2 + Math.random() * (H - 4) };
-        if (dist(e.x, e.y, state.sc.safe.x, state.sc.safe.y) < 24) continue;
-        if (state.sc.entries.some(function (q) { return dist(q.x, q.y, e.x, e.y) < 12; })) continue;
-        if (state.sc.homes.some(function (b) { return dist(b.x + 2, b.y + 2, e.x, e.y) < 8; })) continue;
-        // entry points on the edges read as roads in; inland ones as tunnels
-        if (Math.random() < 0.6) { if (Math.random() < 0.5) e.x = e.x < W / 2 ? 1.5 : W - 1.5; else e.y = e.y < H / 2 ? 1.5 : H - 1.5; }
-        if (dist(e.x, e.y, state.sc.safe.x, state.sc.safe.y) < 24) continue;
-        state.sc.entries.push({ x: e.x, y: e.y, id: 'E' + (state.sc.entries.length + 1) });
+      var homes = state.sc.homes, safe = state.sc.safe;
+      function fits(e, sep) {
+        if (dist(e.x, e.y, safe.x, safe.y) < safe.r + 12) return false;
+        if (homes.some(function (b) { return rectGap(b, e.x, e.y) < 6; })) return false;
+        return state.sc.entries.every(function (q) { return dist(q.x, q.y, e.x, e.y) >= sep; });
       }
+      [12, 10, 8, 6].forEach(function (sep) {
+        for (var g = 0; g < 3000 && state.sc.entries.length < 6; g++) {
+          var e = { x: 2 + Math.random() * (W - 4), y: 2 + Math.random() * (H - 4) };
+          // entry points on the edges read as roads in; inland ones as tunnels
+          if (Math.random() < 0.6) { if (Math.random() < 0.5) e.x = e.x < W / 2 ? 1.5 : W - 1.5; else e.y = e.y < H / 2 ? 1.5 : H - 1.5; }
+          if (!fits(e, sep)) continue;
+          state.sc.entries.push({ x: e.x, y: e.y, id: 'E' + (state.sc.entries.length + 1) });
+        }
+      });
     },
     deploy: function (state) {
       toPool(state);
@@ -1044,10 +1049,28 @@
       }
       state.sc.boxes = { A: [{ x: 0, y: H / 2 - 14, w: W, h: 12 }, { x: 0, y: H / 2 + 2, w: W, h: 12 }] };
     },
-    deployOK: function (state, side, x, y) {
+    /* "The player splits his army into two more or less equal forces, which are
+       deployed on each side of the road, within 12" of it and at least 6" from each
+       other" (p. 156): a unit is put down no nearer than 6" to the other half's,
+       the halves may differ by one unit at most (startBlock), and an automatic
+       deployment fills the emptier side first (evenBoxes). In a cooperative game
+       the commando is split as one. */
+    evenBoxes: true,
+    deployOK: function (state, side, x, y, u) {
       if (side !== 'A') return false;
       var d = Math.abs(y - H / 2);
-      return d >= 2 + UR && d <= 14;
+      if (d < 2 + UR || d > 14) return false;
+      var north = y < H / 2;
+      return !state.units.some(function (o) {
+        return o !== u && o.side === 'A' && o.alive && o.x >= 0 && !o.aboard && (o.y < H / 2) !== north &&
+          dist(o.x, o.y, x, y) - 2 * UR < 6;
+      });
+    },
+    startBlock: function (state) {
+      var placed = state.units.filter(function (u) { return u.side === 'A' && u.alive && u.x >= 0 && !u.aboard && !u.reserve; });
+      var n = placed.filter(function (u) { return u.y < H / 2; }).length, s2 = placed.length - n;
+      if (Math.abs(n - s2) <= 1) return null;
+      return 'Split the force more or less equally either side of the road: ' + n + ' to the north, ' + s2 + ' to the south.';
     },
     /* The units settle into their hides: on 1-2 a unit is D6" nearer the road,
        on 5-6 D6" further from it. */

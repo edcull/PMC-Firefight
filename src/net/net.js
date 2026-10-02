@@ -298,11 +298,12 @@
        is the unit's side that makes it, and the side being asked that answers. */
     if (st.standAsk && this.seats.indexOf(st.standAsk.side) >= 0) return st.standAsk.side;
     var k = it && it.k;
-    // two rebel forces' tactics: the side whose turn it is to choose (engine.js tacticDiceOff)
-    if (st.tacticAsk && k === 'tactic') {
+    // the rebels' tactics, and the wave a Human Wave calls up: the side whose turn it is (engine.js tacticStep)
+    if (st.tacticAsk && /^(tactic|waveadd|waveundo|waveauto|wavedone)$/.test(k)) {
       var ts = st.tacticAsk.order[st.tacticAsk.step];
       if (this.seats.indexOf(ts) >= 0) return ts;
     }
+    if (st.nervousAsk && /^(nervous|nonervous)$/.test(k) && this.seats.indexOf(st.nervousAsk.side) >= 0) return st.nervousAsk.side;
     if (st.endAsk && /^(enddone|surrender)$/.test(k) && this.seats.indexOf(st.endAsk.side) >= 0) return st.endAsk.side;
     // a hull just put down is faced by its own side, whoever deployed last
     if (st.faceAsk && /^vface/.test(k) && this.seats.indexOf(st.faceAsk.side) >= 0) return st.faceAsk.side;

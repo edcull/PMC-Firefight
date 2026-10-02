@@ -183,6 +183,102 @@ console.log('\nThe VIP draws the OpFor\u2019s attack, Kill Them All! or not (p. 
   ok('a squad on Kill Them All! that cannot reach the VIP to charge shoots it instead', runs > 0 && fired === runs && charged === 0, fired + ' of ' + runs + ' shot it, ' + charged + ' charged');
 })();
 
+console.log('\nProtecting the VIP: a Broken unit flees from the enemy, not to the evacuation point (p. 151)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_vip', armyA: ['cmd3', 'regular', 'regular'], armyB: ['regular', 'regular'], nameA: 'A', nameB: 'OpFor',
+    colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; x.x = 44; x.y = 44; });
+  const ev = st.sc.evac, a = st.units.filter((x) => x.side === 'A'), b = st.units.filter((x) => x.side === 'B');
+  const vip = a.find((x) => x.vip), sq = a.find((x) => !x.vip);
+  a.filter((x) => x !== vip && x !== sq).forEach((x) => { x.x = 4; x.y = 44; });
+  // the enemy on the far side of the evacuation point from each: fleeing away takes them outwards
+  vip.x = ev.x + 4; vip.y = ev.y; b[0].x = ev.x - 3; b[0].y = ev.y;
+  sq.x = ev.x; sq.y = ev.y + 10; b[1].x = ev.x; b[1].y = ev.y + 4;
+  [vip, sq].forEach((x) => { x.sp = 3 * R.currentMorale(x); });
+  const d0 = R.inches(vip.x, vip.y, b[0].x, b[0].y), s0 = R.inches(sq.x, sq.y, b[1].x, b[1].y);
+  e.query.fleeBroken();
+  ok('the Broken VIP falls back away from the enemy', R.inches(vip.x, vip.y, b[0].x, b[0].y) > d0 + 0.5,
+    R.inches(vip.x, vip.y, b[0].x, b[0].y).toFixed(1) + '" from it, was ' + d0.toFixed(1) + '"');
+  ok('...but stays within 6" of the evacuation point', R.inches(vip.x, vip.y, ev.x, ev.y) <= 6 + 1e-6, R.inches(vip.x, vip.y, ev.x, ev.y).toFixed(1) + '"');
+  ok('another Broken unit flees away from the enemy, past the 12" ring', sq.fled || R.inches(sq.x, sq.y, ev.x, ev.y) > 12,
+    sq.fled ? 'fled' : R.inches(sq.x, sq.y, ev.x, ev.y).toFixed(1) + '" from the point, was 10"');
+  ok('...not back towards the evacuation point', sq.fled || R.inches(sq.x, sq.y, b[1].x, b[1].y) > s0 + 4);
+})();
+
+console.log('\nIn a solitaire battle a Broken unit by the table edge runs off (p. 34)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular', 'regular'], armyB: ['regular'], nameA: 'A', nameB: 'OpFor',
+    colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 2; st.terrain.length = 0;
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; });
+  const [vic, mate] = st.units.filter((x) => x.side === 'A'), foe = st.units.find((x) => x.side === 'B');
+  vic.x = 3; vic.y = 24; foe.x = 16; foe.y = 24; mate.x = 30; mate.y = 44;
+  vic.sp = 3 * R.currentMorale(vic);
+  e.query.fleeBroken();
+  ok('its flight away from the enemy carries it off the table — fled', !vic.alive && vic.fled, 'at ' + vic.x.toFixed(1) + ',' + vic.y.toFixed(1));
+})();
+
+console.log('\nEvacuation: the entry points keep their distances (p. 153)');
+(function () {
+  const gap = (b, x, y) => Math.hypot(Math.max(b.x - x, 0, x - (b.x + b.w)), Math.max(b.y - y, 0, y - (b.y + b.h)));
+  let tables = 0, short = 0, close = 0, home = 0, safe = 0;
+  for (let i = 0; i < 120; i++) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_evac', armyA: ['regular', 'regular'], armyB: ['regular'], nameA: 'A', nameB: 'OpFor',
+      colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const sc = e.state().sc, en = sc.entries;
+    tables++;
+    if (en.length < 6) short++;
+    en.forEach((p, k) => en.slice(k + 1).forEach((q) => { if (Math.hypot(p.x - q.x, p.y - q.y) < 12) close++; }));
+    en.forEach((p) => {
+      if (sc.homes.some((b) => gap(b, p.x, p.y) < 6)) home++;
+      if (Math.hypot(p.x - sc.safe.x, p.y - sc.safe.y) < sc.safe.r + 12) safe++;
+    });
+  }
+  ok('six entry points on every table', short === 0, tables + ' tables, ' + short + ' short');
+  ok('...at least 12" from each other', close === 0, close + ' pairs closer');
+  ok('...6" from every reinforced building\'s walls', home === 0, home + ' too close');
+  ok('...and 12" from the safe zone', safe === 0, safe + ' too close');
+})();
+
+console.log('\nAmbush!: two even halves either side of the road, 6" apart (p. 156)');
+(function () {
+  // random commandos: some of them garrison the buildings by the road, which must keep the split too
+  function ambush(fixed) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_ambush', armyA: fixed ? ['cmd3', 'regular', 'regular', 'rookie', 'rookie'] : SOLO.rollCommando(3, 1, 'pmc'), armyB: ['regular', 'regular'],
+      nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    return e;
+  }
+  const H = R.BOARD.h, UR = R.UNIT_R;
+  let worst = 0, close = 0;
+  for (let k = 0; k < 60; k++) {
+    const e = ambush(), st = e.state();
+    e.intent('A', { k: 'autodeploy' });
+    const a = st.units.filter((u) => u.side === 'A' && u.x >= 0 && !u.aboard);
+    const n = a.filter((u) => u.y < H / 2).length;
+    worst = Math.max(worst, Math.abs(n - (a.length - n)));
+    a.forEach((u) => a.forEach((o) => { if ((u.y < H / 2) !== (o.y < H / 2) && R.inches(u.x, u.y, o.x, o.y) - 2 * UR < 6 - 1e-6) close++; }));
+  }
+  ok('auto-deploy splits the force evenly', worst <= 1, 'worst difference ' + worst);
+  ok('...with the halves at least 6" apart', close === 0, close + ' pairs closer');
+  const e = ambush(true), st = e.state();
+  const a = st.units.filter((u) => u.side === 'A');
+  a.forEach((u, i) => { u.x = 6 + i * 4; u.y = H / 2 - 6; });         // everyone on the north side
+  ok('all on one side, the battle will not begin', !e.intent('A', { k: 'start' }).ok && st.phase === 'deploy');
+  a.forEach((u, i) => { if (i % 2) u.y = H / 2 + 8; });
+  const res = e.intent('A', { k: 'start' });
+  ok('...split, it does', res.ok || st.phase !== 'deploy', res.why || '');
+  const e2 = ambush(true), s2 = e2.state(), u0 = s2.units.find((u) => u.side === 'A'), u1 = s2.units.filter((u) => u.side === 'A')[1];
+  u0.x = 20; u0.y = H / 2 - 4;
+  ok('a unit may not stand within 6" of the other half across the road', !s2.scen.deployOK(s2, 'A', 20, H / 2 + 3.5, u1) && s2.scen.deployOK(s2, 'A', 30, H / 2 + 4, u1));
+})();
+
 console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6 (p. 147)');
 (function () {
   function trial(mod) {

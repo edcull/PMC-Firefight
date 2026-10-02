@@ -36,6 +36,13 @@ function ok(what, cond, detail) {
    offer. That is enough to walk the whole turn structure, which is what is
    being tested — the decisions are the AI's business, and the AI has tests of
    its own in the battles below. */
+// a rebel player is asked a tactic before the table is laid (p. 95): none, here
+function noTactics(e) {
+  for (let g = 0; g < 4 && e.state().tacticAsk; g++) {
+    const ta = e.state().tacticAsk, sd = ta.order[ta.step];
+    if (ta.wave) e.intent(sd, { k: 'wavedone' }); else e.intent(sd, { k: 'tactic', tactic: null });
+  }
+}
 function play(seed, opts) {
   opts = opts || {};
   const events = [];
@@ -60,6 +67,7 @@ function play(seed, opts) {
     mode: opts.mode || 'hotseat',
     planet: opts.planet || 'sparse'
   });
+  noTactics(e);
 
   const seatOf = (side) => side;
   let guard = 0;
@@ -553,6 +561,7 @@ function advanceIsOneAction() {
       armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'rebel'),
       nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'barren'
     });
+    noTactics(e);
     (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })); (e.intent('B', { k: 'autosplit' }), e.intent('B', { k: 'autodeploy' }));
     if (!e.intent(e.query.placingSide() || 'A', { k: 'start' }).ok) e.intent('B', { k: 'start' });
     for (let g = 0; g < 160 && !e.over() && found < 4; g++) {

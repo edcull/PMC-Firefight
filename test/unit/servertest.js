@@ -260,6 +260,16 @@ async function main() {
   ok('both sides are sent the table', !!a.state && !!b.state);
   ok('and the same table', a.state.units.length === b.state.units.length &&
     a.state.terrain.length === b.state.terrain.length);
+  /* the rebel player chooses a tactic, knowing the roles, before the table is laid (p. 95) */
+  if (a.state.phase === 'tactics') {
+    ok('the rebel player is asked a tactic first', !!b.state.tacticAsk && b.state.tacticAsk.order[0] === 'B');
+    a.refusals.length = 0;
+    a.send('intent', { intent: { k: 'tactic', tactic: 'guerillas' } });
+    await a.settle(80);
+    ok('...which the other player cannot answer for them', a.refusals.some((r) => r.intent.k === 'tactic') && !!a.state.tacticAsk);
+    b.send('intent', { intent: { k: 'tactic', tactic: null } });
+    await a.till('the tactic to be taken', (c) => c.state && !c.state.tacticAsk);
+  }
   ok('the table arrives ready to deploy', a.state.phase === 'deploy');
   ok('the terrain was rolled by the server', a.state.terrain.length > 0);
 

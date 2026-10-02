@@ -1141,7 +1141,9 @@
     if (!opts.assault && has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
       // +1 above 6", +2 above 12"...: exactly 6" away is not yet out of the first band
       var st = Math.max(0, Math.ceil(unitDist(attacker, target) / 6) - 1);
-      if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
+      // a shot called in by Markerlights ignores it (pp. 58-59)
+      if (st > 0 && opts.marked) parts.push({ label: 'Stealth — ignored, the target is marked', v: 0 });
+      else if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
     }
     // Shield Generator (p. 130): a dome against fire from outside it
     if (!opts.assault && attacker) {
@@ -1483,7 +1485,7 @@
       applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot,
       clampTo: clampTo, d10: d10, d3: d3, d6: d6, deathOrGlory: deathOrGlory, defenceAgainst: defenceAgainst,
       destroyTerrain: destroyTerrain, destructibleKind: destructibleKind, dmgMod: dmgMod, doctrine: doctrine,
-      drives: drives, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
+      drives: drives, canGarrison: canGarrison, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
       fmtPart: fmtPart, has: has, hasOwn: hasOwn, isDestructible: isDestructible, isFlying: isFlying,
       isMachine: isMachine, isOvergrown: isOvergrown, jumps: jumps, leaveAway: leaveAway, occupant: occupant,
       pathTo: pathTo, pheromoneBonus: pheromoneBonus, reachable: reachable, rectPointDist: rectPointDist,

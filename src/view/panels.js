@@ -442,25 +442,65 @@
     /* Two rebel forces choose their tactics in turn, the dice-off's winner first
        (p. 96): the one choosing sees what the other has already taken. */
     function tacticCard() {
-      var ta = B.state.tacticAsk, side = ta.order[ta.step], other = ta.order[1 - ta.step];
+      var ta = B.state.tacticAsk, side = ta.order[ta.step], other = ta.order.length > 1 ? ta.order[1 - ta.step] : null;
+      var ro = B.state.cfg.roles, role = ro ? (ro.attacker === side ? 'attacker' : 'defender') : null;
       if (!atThisScreen(side)) {
-        return '<div class="card"><h2>Tactics</h2><p class="sub"><b>' + esc(sideName(side)) + '</b> is choosing a tactic' +
-          (ta.step ? ', knowing yours' : ' first') + '.</p></div>';
+        return '<div class="card"><h2>Tactics</h2><p class="sub"><b>' + esc(sideName(side)) + '</b> is ' +
+          (ta.wave ? 'calling up the human wave' : 'choosing a tactic' + (other ? (ta.step ? ', knowing yours' : ' first') : '')) + '.</p></div>';
       }
+      if (ta.wave) return waveCard(side, ta.wave);
       var cur = (B.state.tactics && B.state.tactics[side]) || null;
       var theirs = ta.step ? (ta.chosen[other] || null) : undefined;
+      var why = (role ? 'You are the <b>' + role + '</b>. ' : 'This scenario has no attacker or defender. ') +
+        'Your tactic holds for the whole battle, and is chosen before the terrain goes down (p. 95).';
       var h = '<div class="card"><h2>Tactics \u2014 ' + esc(sideName(side)) + '</h2>' +
-        '<p class="sub">' + (ta.step
+        '<p class="sub">' + why + '</p>' + (other ? '<p class="sub">' + (ta.step
           ? esc(sideName(other)) + ' has chosen: <b>' + esc(theirs ? R.tacticById(theirs).name : 'no tactic') + '</b>. Now yours.'
-          : 'Both forces are Rebels, and you choose your tactic first. ' + esc(sideName(other)) + ' will know it before choosing theirs.') + '</p>' +
+          : 'Both forces are Rebels, and you choose first. ' + esc(sideName(other)) + ' will know it before choosing theirs.') + '</p>' : '') +
         '<div class="acts">';
       [null, 'laststand', 'wave', 'guerillas'].forEach(function (t) {
         var td = t ? R.tacticById(t) : null, can = ta.legal[side].indexOf(t) >= 0;
         h += '<button class="act' + (t === cur ? ' primary' : '') + '" data-act="tactic" data-alt="' + (t || '') + '"' + (can ? '' : ' disabled') + '>' +
-          '<span>' + esc(td ? td.name : 'No tactic') + (t === cur ? ' (as mustered)' : '') + '</span>' +
+          '<span>' + esc(td ? td.name : 'No tactic') + '</span>' +
           '<small>' + esc(can ? (td ? td.text : 'Fight without one') : 'Your list is not legal under it') + '</small></button>';
       });
       return h + '</div></div>';
+    }
+    /* Human Wave Attacks (p. 95): the extra infantry, picked from the Battle Tier's,
+       off the bill — up to two a Priority Level, or fewer. */
+    function waveCard(side, w) {
+      var bt = B.state.cfg.tier;
+      var called = B.state.units.filter(function (u) { return u.side === side && u.waveExtra; });
+      var pool = R.listFor('rebel').filter(function (p) {
+        return p.cls === 'infantry' && p.tier === bt && !p.command && !p.noSlot && !p.turretSet;
+      });
+      var h = '<div class="card"><h2>Human Wave \u2014 call up the wave</h2>' +
+        '<p class="sub">Up to ' + (called.length + w.left) + ' more infantry units of Tier ' + R.ROMAN[bt] +
+        ', off the bill. ' + (w.left ? w.left + ' still to call.' : 'The wave is full.') + '</p>';
+      if (called.length) {
+        h += '<p class="hint small">Called up: ' + called.map(function (u) { return esc(u.name); }).join(', ') + '</p>';
+      }
+      h += '<div class="targets">';
+      pool.forEach(function (p) {
+        h += '<button class="tgt" data-act="waveadd" data-key="' + esc(p.key) + '"' + (w.left ? '' : ' disabled') + '><b>' + esc(p.name) +
+          '</b><span>' + p.size + ' models \u00b7 Move ' + p.move + ' \u00b7 FP ' + p.fp + ' \u00b7 Def ' + p.def + ' \u00b7 Morale ' + p.morale + '</span></button>';
+      });
+      h += '</div><div class="acts">' +
+        (w.left ? '<button class="act" data-act="waveauto"><span>Call them up for me</span><small>Fills the wave at random</small></button>' : '') +
+        (called.length ? '<button class="act" data-act="waveundo"><span>Take the last back</span></button>' : '') +
+        '<button class="act primary" data-act="wavedone"><span>' + (w.left ? 'Go with ' + called.length : 'Done') + '</span><small>On to the terrain</small></button>' +
+        '</div></div>';
+      return h;
+    }
+    // Strong Nervous System (p. 124): once a battle, at the start of a Rally phase
+    function nervousCard() {
+      var na = B.state.nervousAsk;
+      return '<div class="card"><h2>Strong Nervous System</h2>' +
+        '<p class="sub">' + na.n + ' unit' + (na.n === 1 ? '' : 's') + ' of the swarm carry Suppression' +
+        (na.broken ? ', ' + na.broken + ' of them Broken and about to flee' : '') +
+        '. Once a battle, the hive-mind may wipe away every Suppression point on every bug \u2014 before anyone flees.</p>' +
+        '<div class="acts"><button class="act primary" data-act="nervous"><span>Steady the swarm</span><small>Now \u2014 it cannot be used again</small></button>' +
+        '<button class="act" data-act="nonervous"><span>Not this turn</span><small>Keep it for a later Rally phase</small></button></div></div>';
     }
     function setUpWaitCard(ask) {
       var what = ask.why === 'takeover' ? 'digging in around the objective — trenches, walls, wire and a bunker'
@@ -572,10 +612,13 @@
       }
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
+      else if (B.state.nervousAsk && !isAI(B.state.nervousAsk.side)) html = atThisScreen(B.state.nervousAsk.side) ? nervousCard()
+        : '<div class="card"><h2>Rally phase</h2><p class="sub"><b>' + esc(sideName(B.state.nervousAsk.side)) + '</b> is deciding whether the hive-mind steadies the swarm.</p></div>';
       else if (B.state.over) html = overCard();
       else if (ui.terrain.length && ui.selected &&
         (ui.mode === 'breach' || ui.mode === 'demolish')) html = terrainPanel(ui.selected);
       else if (ui.mode === 'enter' && ui.sections.length && ui.selected) html = sectionPanel(ui.selected);
+      else if (ui.mode === 'disembark' && ui.selected && !isAI(ui.selected.side) && offBoard(ui.selected).length > 1) html = dropPanel(ui.selected);
       else if (ui.mode === 'digface' && ui.selected && !isAI(ui.selected.side)) html = digFaceCard(ui.selected);
       else if (ui.preview) html = movePreviewCard();
       else if (ui.targets.length && ui.selected && ['fire', 'aux', 'advance-fire', 'assault', 'designate'].indexOf(ui.mode) >= 0) {
@@ -740,6 +783,20 @@
       c.closePath();
     }
 
+    /* Unloading (p. 36: "one or more" of those aboard): the squads that may get
+       off now, and which goes next — the player's pick, else the first loaded. */
+    function offBoard(u) { return (u.cargo || []).filter(function (c) { return !c.boarded; }); }
+    function dropPanel(u) {
+      var free = offBoard(u);
+      var next = free.filter(function (c) { return c.id === u.dropNext; })[0] || free[0];
+      var h = '<div class="targets"><h4>Which squad gets off?</h4>';
+      free.forEach(function (c) {
+        h += '<button class="tgt' + (c === next ? ' active' : '') + '" data-act="droppick" data-id="' + c.id + '"' +
+          (c === next ? ' aria-pressed="true"' : '') + '><b>' + esc(c.name) + '</b><span>' +
+          (c === next ? 'next off — tap the table where it gets down' : 'tap to put this squad out instead') + '</span></button>';
+      });
+      return h + '<p class="hint small">Cancel keeps the rest aboard.</p></div>';
+    }
     function sectionPanel(u) {
       var h = '<div class="targets"><h4>' + (u.bld ? 'Move into which section?' : 'Go into which building?') + '</h4>';
       ui.sections.forEach(function (q, n) {
@@ -972,7 +1029,9 @@
       var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
       if (deploymentDone() || (placed && splitShort)) {
         h += '<div class="acts deploy-go">';
-        var blocked = !deploymentDone();
+        // the scenario's own condition on how the force stands (Ambush!'s even split)
+        var sblk = B.state.scen && B.state.scen.startBlock ? B.state.scen.startBlock(B.state) : null;
+        var blocked = !deploymentDone() || !!sblk;
         var empties = carriersFor(me).filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
         // online, both players say they are ready: the battle begins once both have
         var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
@@ -984,7 +1043,9 @@
             (blocked ? 'startwhy' : empties.length ? 'startask' : 'start') + '"><span>Begin the battle</span><small>' +
             (sr && sr[foe] ? esc(sideName(foe)) + ' is ready — roll for initiative' : 'Roll for initiative') + '</small></button>';
         }
-        if (blocked && ui.startWhy) {
+        if (blocked && sblk) {
+          h += '<div class="tipbubble" role="status">' + esc(sblk) + '</div>';
+        } else if (blocked && ui.startWhy && mySplit) {
           var need = mySplit.min === mySplit.max ? String(mySplit.min) : mySplit.min + '\u2013' + mySplit.max;
           h += '<div class="tipbubble" role="status">' + (mySplit.kind === 'wave'
             ? 'Choose which units come in the second wave first: ' + need + ' of them (' + mySplit.held + ' so far).'
@@ -1276,9 +1337,12 @@
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'deployready') { send({ k: 'deployready' }); return; }
-          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
+          else if (a === 'waveadd') { send({ k: 'waveadd', key: b.getAttribute('data-key') }); return; }
+          else if (a === 'waveundo' || a === 'waveauto' || a === 'wavedone') { send({ k: a }); return; }
           else if (a === 'tactic') { send({ k: 'tactic', tactic: b.getAttribute('data-alt') || null }); return; }
+          else if (a === 'droppick') { send({ k: 'droppick', id: b.getAttribute('data-id') }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }
           else if (a === 'talt' || a === 'tnext' || a === 'tauto' || a === 'tautoall' || a === 'trotate') terrainAct(a, b.getAttribute('data-alt'));
           else if (a === 'autodeploy') autoDeployMine();

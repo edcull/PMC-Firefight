@@ -46,6 +46,7 @@ async function playOne(p, id) {
       objectives: s.objectives.length,
       attacker: s.sc.attacker || null,
       search: s.sc.search ? s.sc.search.length : 0,
+      found: !!s.sc.found,
       target: s.terrain.filter(t => t.kind === 'objective').length,
       // "trench, wall or barbed wire sections" (p. 55): the defences come in all three kinds
       barricades: s.terrain.filter(t => t.kind === 'barricade' || t.kind === 'trench' || t.kind === 'wire').length,
@@ -61,7 +62,9 @@ async function playOne(p, id) {
   const want = WANT[id];
   ok('the right scenario is running', setup.scen === id, setup.name);
   // an Invasion's zones come after the defender deploys: none yet, or three if the AIs have already begun
-  ok('objectives placed', setup.objectives === want.objectives || (id === 'invasion' && setup.objectives === 3), setup.objectives + ' placed');
+  // (and Find and secure's objective appears once a search turns it up, which a quick demo may already have done)
+  ok('objectives placed', setup.objectives === want.objectives || (id === 'invasion' && setup.objectives === 3) ||
+    (id === 'find' && setup.found && setup.objectives === 1), setup.objectives + ' placed');
   ok('attacker and defender', !!setup.attacker === want.attacker,
     setup.attacker ? setup.attacker + ' attacks' : 'neither side attacks');
   if (id === 'find') ok('three places to search', setup.search === 3, setup.search + ' locations');

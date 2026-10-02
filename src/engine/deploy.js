@@ -185,6 +185,13 @@
     /* Auto-deployment samples the ground the scenario actually gives this side —
        a circle around the objective, a set of edge bands, or a strip — and never
        the default strip, which for a circle defender is entirely illegal ground. */
+    // of a side's deployment boxes, the one with the fewest of its units down so far
+    function emptierBox(side, boxes) {
+      var cnt = boxes.map(function (bx) {
+        return E.state.units.filter(function (o) { return o.side === side && o.alive && o.x >= 0 && !o.aboard && R.inRect(o.x, o.y, bx); }).length;
+      });
+      return boxes[cnt.indexOf(Math.min.apply(null, cnt))];
+    }
     function autoDeploy(side, limit) {
       var circ = E.state.sc && E.state.sc.defCircle && E.state.sc.defender === side
         ? E.state.sc.defCircle : null;
@@ -198,6 +205,11 @@
       waiting.forEach(function (u, i) {
         if (garrisonable(u) && Math.random() < keen) {
           var gsp = garrisonSpots(side, u);
+          // a force split evenly (Ambush!): only a building on the emptier side
+          if (boxes && E.state.scen.evenBoxes) {
+            var gb = emptierBox(side, boxesFor(side, u) || boxes);
+            gsp = gsp.filter(function (g) { return R.inRect(g.piece.x + g.piece.w / 2, g.piece.y + g.piece.h / 2, gb); });
+          }
           if (gsp.length) { var g = gsp[Math.floor(Math.random() * gsp.length)]; R.enterBuilding(E.state, u, g.piece, g.sec); return; }
         }
         for (var attempt = 0; attempt < 400; attempt++) {
@@ -210,7 +222,11 @@
           } else if (boxes) {
             // the side's ground as it stands now: one edge, once the first of it is down
             var now = boxesFor(side, u) || boxes;
-            var pb = pointInBox(now[(i + attempt) % now.length]);
+            var bi = (i + attempt) % now.length;
+            /* a scenario that wants its force split evenly (Ambush!): the box with the
+               fewest down so far, for the first tries */
+            if (E.state.scen.evenBoxes && attempt < 200) bi = now.indexOf(emptierBox(side, now));
+            var pb = pointInBox(now[bi]);
             x = pb.x; y = pb.y;
           } else if (z) {
             y = 3 + ((i * 5.2 + attempt * 0.7) % (H - 6));
@@ -376,7 +392,7 @@
 
     // whichever side still has units in hand, and is not the OpFor
     function placingSide() {
-      if (E.state.tacticAsk) return null;               // the rebels' tactics come first (engine.js tacticDiceOff)
+      if (E.state.tacticAsk) return null;               // the rebels' tactics come first (engine.js tacticStep)
       if (E.state.relocating) return E.state.relocating.side;
       var u = deployNext();
       return u ? u.side : null;

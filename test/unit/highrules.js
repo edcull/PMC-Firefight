@@ -1,4 +1,4 @@
-/* The three High findings of the rules review at 7dd7306 (docs/rules-review-7dd7306.md):
+/* The three High findings of the rules review at 7dd7306:
    a Broken unit by its own edge runs off the table (p. 34); troops are put down
    anywhere within 4" of their hull (p. 36); and a side that wins the initiative
    with nothing it can activate hands the phase to the other (p. 27). */
@@ -66,6 +66,21 @@ console.log('\nA Broken unit by its own edge runs off the table (p. 34)');
     R.inches(vic.x, vic.y, foe.x, foe.y).toFixed(1) + '" from the enemy, was ' + d0.toFixed(1) + '"');
 })();
 
+/* ...but the flight is away from the enemy first: one by a flank edge, the enemy
+   in front, falls back and stays rather than running off sideways (p. 34) */
+[3, 5].forEach((y0) => {
+  const { e, st } = battle(['regular', 'regular'], ['regular']);
+  const [vic, mate] = st.units.filter((u) => u.side === 'A');
+  const foe = st.units.find((u) => u.side === 'B');
+  vic.x = 20; vic.y = y0; vic.sp = 3 * R.currentMorale(vic);
+  foe.x = 30; foe.y = y0; mate.x = 30; mate.y = 40;
+  const d0 = R.inches(vic.x, vic.y, foe.x, foe.y);
+  playOut(e, st);
+  ok('from ' + y0 + '" off a flank edge, the enemy in front, it falls back and stays',
+    vic.alive && !vic.fled && R.inches(vic.x, vic.y, foe.x, foe.y) > d0 + 4,
+    'at ' + vic.x.toFixed(1) + ',' + vic.y.toFixed(1));
+});
+
 console.log('\nTroops are put down anywhere within 4" of their hull (p. 36)');
 (function () {
   const { e, st } = battle(['lapc:hover', 'regular', 'regular'], ['regular']);
@@ -108,6 +123,25 @@ console.log('\nTroops are put down anywhere within 4" of their hull (p. 36)');
   const mv = e.sel().moves;
   ok('...and never within 1" of anyone else', mv.length > 1 && mv.every((c) => R.unitDist(c, foe) >= 1 - 1e-6),
     mv.length + ' spots, the enemy 3" from the hull');
+})();
+
+console.log('\nThe player chooses which squad gets off (p. 36: "one or more" of those aboard)');
+(function () {
+  const { e, st } = battle(['lapc', 'regular', 'veterans'], ['regular']);
+  const apc = st.units.find((u) => u.key === 'lapc');
+  const first = st.units.find((u) => u.key === 'regular' && u.side === 'A'), second = st.units.find((u) => u.key === 'veterans');
+  apc.x = 24; apc.y = 24; apc.facing = 0;
+  first.x = 22; first.y = 27; second.x = 26; second.y = 27;
+  R.embark(st, apc, first); R.embark(st, apc, second); first.boarded = false; second.boarded = false;
+  e.intent('A', { k: 'select', id: apc.id }); e.intent('A', { k: 'action', id: 'disembark' });
+  ok('the second squad aboard may be picked to go first', e.intent('A', { k: 'droppick', id: second.id }).ok);
+  const spot = e.sel().moves.find((c) => R.unitDist(c, apc) > 2);
+  e.intent('A', { k: 'disembark', x: spot.x, y: spot.y });
+  ok('...and it is the one that gets off', !second.aboard && second.x >= 0 && first.aboard === apc.id,
+    'second ' + (second.aboard ? 'aboard' : 'out') + ', first ' + (first.aboard ? 'aboard' : 'out'));
+  const stop = e.intent('A', { k: 'cancel' });
+  ok('...while the first stays aboard when the hull stops unloading', first.aboard === apc.id && stop.ok);
+  ok('a squad not aboard cannot be picked', !e.intent('A', { k: 'droppick', id: st.units.find((u) => u.side === 'B').id }).ok);
 })();
 
 console.log('\nA side with the initiative and nothing to activate hands the phase on (p. 27)');

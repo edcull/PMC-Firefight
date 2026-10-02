@@ -12,18 +12,30 @@
         beginTurn = E.beginTurn, canStand = E.canStand, focusUnit = E.focusUnit, logLine = E.logLine,
         nearestEnemy = E.nearestEnemy, onTable = E.onTable, pushRes = E.pushRes, render = E.render,
         sideName = E.sideName, soloAfterMove = E.soloAfterMove, ui = E.ui, isAI = E.isAI, makeStand = E.makeStand,
-        revealConsole = E.revealConsole;
+        revealConsole = E.revealConsole, setHint = E.setHint;
 
     // The rally phase is walked unit by unit: roll, show the card, wait for Continue.
     /* The start of the Rally phase (p. 34): every Broken unit on the table flees
        Movement + 2" away from the closest enemy, paying for terrain as usual and
-       keeping away from the enemy as long as it can. One that can run off the
-       table does, and is gone — fled. Only then do the rally rolls come.
-       A solitaire game has no "own lines" either way: its scenarios may send a
-       broken unit somewhere instead — to the safe zone in the Evacuation, back
-       towards the evacuation point in Protecting the VIP. */
-    // how far a unit at c has still to go for every model to be past the nearest edge
-    function edgeGap(c) { return Math.min(c.x, W - c.x, c.y, H - c.y) + UR; }
+       keeping away from the enemy as long as it can. One whose flight carries it
+       off the table is gone — fled. Only then do the rally rolls come.
+       A solitaire scenario may say otherwise: in the Evacuation broken units make
+       for the safe zone, and in Protecting the VIP the VIP flees inside its 6"
+       ring round the evacuation point. */
+    /* How far a unit at c has still to go, straight on away from the enemy at f,
+       for every model to be past the edge that way. Fleeing is away from the
+       enemy first (p. 34); the table edge is only where that flight may end. */
+    function outAway(c, f) {
+      var dx = c.x - f.x, dy = c.y - f.y, n = Math.hypot(dx, dy);
+      if (n < 1e-6) return Infinity;
+      dx /= n; dy /= n;
+      var t = Infinity;
+      if (dx > 1e-6) t = Math.min(t, (W - c.x + UR) / dx);
+      if (dx < -1e-6) t = Math.min(t, (c.x + UR) / -dx);
+      if (dy > 1e-6) t = Math.min(t, (H - c.y + UR) / dy);
+      if (dy < -1e-6) t = Math.min(t, (c.y + UR) / -dy);
+      return t;
+    }
     function runOff(u) {
       u.alive = false; u.fled = true; u.brokenEver = true;
       logLine('kill', u.label + ' is broken and runs off the table — fled.');
@@ -38,50 +50,60 @@
         var allow = u.move + 2;
         var to = E.state.solo && E.state.scen.fallTo ? E.state.scen.fallTo(E.state, u) : null;
         var foe = nearestEnemy(u);
-        if (!to && !foe) return;                                   // no one to run from
+        if (!foe && (!to || to.away)) return;                     // no one to run from
         if (to && to.flee === undefined && to.limit == null && R.inches(u.x, u.y, to.x, to.y) < 0.5) return;
         var was = { x: u.x, y: u.y };
         if (u.bld) {
           // out of a building the old way: through the far wall and straight on
-          var away = to ? { x: u.x - (to.x - u.x), y: u.y - (to.y - u.y) } : foe.unit;
+          var away = to && !to.away ? { x: u.x - (to.x - u.x), y: u.y - (to.y - u.y) } : foe.unit;
           if (R.fallBack(E.state, u, away, allow)) {
             animateMove(u, [was, { x: u.x, y: u.y }]);
             // and if what it has left of its flight takes it past the edge, it is gone
-            if (!to && !u.noFlee && allow - R.inches(was.x, was.y, u.x, u.y) >= edgeGap(u)) { runOff(u); return; }
+            if (!to && !u.noFlee && allow - R.inches(was.x, was.y, u.x, u.y) >= outAway(u, foe.unit)) { runOff(u); return; }
             logLine('note', u.label + ' is broken and flees the building.');
           }
           return;
         }
         var foes = E.state.units.filter(function (t) { return t.alive && t.side !== u.side && onTable(t); });
-        function gap(c) {
-          var m = Infinity;
-          foes.forEach(function (t) { m = Math.min(m, R.inches(c.x, c.y, t.x, t.y)); });
-          return m;
+        function closest(c) {
+          var m = Infinity, f = null;
+          foes.forEach(function (t) { var d = R.inches(c.x, c.y, t.x, t.y); if (d < m) { m = d; f = t; } });
+          return { d: m, f: f };
         }
         var spots = R.reachable(E.state, u, allow).filter(function (c) { return canStand(u, c); });
         spots.push({ x: u.x, y: u.y, spent: 0 });
-        /* A spot from which what is left of the flight carries it past the edge is
-           the way out, and better than any spot on the table: a unit by its own edge
-           runs off rather than sliding along it to stay that little further from
-           the enemy (p. 34). Of the ways out, the one furthest from the enemy. */
-        function offFrom(c) { return !to && !u.noFlee && allow - (c.spent || 0) >= edgeGap(c); }
+        /* The flight is straight away from the closest enemy (p. 34). If, along that
+           line (within 30° of it), the unit can reach a spot from which what is left
+           of its flight carries every model past the edge, it runs off and is gone:
+           so one with its back to its own edge leaves, while one by a flank edge, the
+           enemy in front, falls back and stays. Otherwise it goes to the spot it can
+           reach furthest from the enemy. */
+        var ax = foe ? u.x - foe.unit.x : 0, ay = foe ? u.y - foe.unit.y : 0, an = Math.hypot(ax, ay);
+        function offFrom(c) {
+          if (to || u.noFlee || !foe || an < 1e-6) return false;
+          var dx = c.x - u.x, dy = c.y - u.y, dn = Math.hypot(dx, dy);
+          if (dn > 1e-6 && (dx * ax + dy * ay) / (dn * an) < Math.cos(Math.PI / 6)) return false;
+          return allow - (c.spent || 0) >= outAway(c, foe.unit);
+        }
+        if (spots.some(offFrom)) {
+          var out = spots.filter(offFrom).sort(function (p, q) { return (p.spent || 0) - (q.spent || 0); })[0];
+          if (out.x !== u.x || out.y !== u.y) animateMove(u, [{ x: u.x, y: u.y }, { x: out.x, y: out.y }]);
+          runOff(u); return;
+        }
         var best = null, bv = -Infinity;
         spots.forEach(function (c) {
           var v;
           if (to) {
             if (to.limit != null && R.inches(c.x, c.y, to.x, to.y) > to.limit) return;
-            v = -R.inches(c.x, c.y, to.x, to.y);
-          } else v = gap(c) + (offFrom(c) ? 1e6 : 0);
+            // held to a ring (the VIP) but fleeing the enemy inside it, or making for a place (the safe zone)
+            v = to.away ? closest(c).d : -R.inches(c.x, c.y, to.x, to.y);
+          } else v = closest(c).d;
           if (v > bv + 1e-6) { bv = v; best = c; }
         });
-        if (best && best.x === u.x && best.y === u.y && offFrom(best)) { runOff(u); return; }
         if (!best || (best.x === u.x && best.y === u.y)) return;
         var path = R.pathTo(E.state, u, allow, best);
         u.x = best.x; u.y = best.y; ui.vis = null; ui.visKey = '';
         animateMove(u, path && path.length > 1 ? path : [was, { x: best.x, y: best.y }]);
-        /* Off the edge: what it has left of its flight carries it clear of the table
-           (every model past the edge), and it does not come back. */
-        if (offFrom(best)) { runOff(u); return; }
         logLine('note', u.label + ' is broken and flees ' + R.inches(was.x, was.y, u.x, u.y).toFixed(1) + '"' +
           (to && to.flee ? ' towards the safe zone.' : to ? '.' : ' from the enemy.'));
         soloAfterMove(u);
@@ -127,6 +149,63 @@
     function rallyPhase() {
       logLine('phase', 'Rally phase.');
       R.collars(E.state).forEach(function (l) { logLine(l.t, l.text); });
+      E.state.nervousAsked = {};
+      nervousThen();
+    }
+    /* Strong Nervous System (p. 124): "Once per battle in the Rally phase, the Bug
+       player may remove all Suppression points from all their units." Offered at
+       the start of the phase, before the Broken flee: a player is asked whether
+       this is the turn; the AI spends it the first time a real share of its swarm
+       is pinned down — two units or a third of it, whichever is more. */
+    function nervousPinned(side) {
+      return E.state.units.filter(function (u) { return u.side === side && onTable(u) && !R.isMachine(u) && u.sp > 0; });
+    }
+    function nervousReady(side) {
+      var docs = (E.state.doctrines && E.state.doctrines[side]) || [];
+      E.state.nervous = E.state.nervous || {};
+      return docs.indexOf('BP3') >= 0 && !E.state.nervous[side] && nervousPinned(side).length > 0;
+    }
+    function useNervous(side) {
+      E.state.nervous[side] = true;
+      var cleared = nervousPinned(side);
+      cleared.forEach(function (u) { u.sp = 0; });
+      logLine('rally', 'Strong Nervous System — the hive-mind steadies ' + sideName(side) + ': every Suppression point on ' +
+        cleared.length + ' unit' + (cleared.length === 1 ? '' : 's') + ' is gone.');
+      pushRes({ kind: 'Rally', title: 'Strong Nervous System', side: side,
+        note: 'Once a battle, in the Rally phase, the swarm sheds all its Suppression.',
+        outcome: { text: cleared.length + ' unit' + (cleared.length === 1 ? '' : 's') + ' steady at once.', tone: 'good' } });
+    }
+    function nervousThen() {
+      var asked = E.state.nervousAsked = E.state.nervousAsked || {};
+      var sides = ['A', 'B'].filter(function (sd) { return !asked[sd] && nervousReady(sd); });
+      for (var k = 0; k < sides.length; k++) {
+        var sd = sides[k];
+        asked[sd] = true;
+        if (isAI(sd)) {
+          var mine = E.state.units.filter(function (u) { return u.side === sd && onTable(u) && !R.isMachine(u); });
+          var pinned = mine.filter(function (u) { return u.sp > 0 && R.status(u) !== 'ready'; });
+          if (pinned.length >= Math.max(2, Math.ceil(mine.length / 3))) useNervous(sd);
+          continue;
+        }
+        var pl = nervousPinned(sd);
+        E.state.nervousAsk = { side: sd, n: pl.length, broken: pl.filter(function (u) { return R.status(u) === 'broken'; }).length };
+        setHint(null, 'Strong Nervous System — clear every Suppression point on the swarm now?');
+        revealConsole();
+        render();
+        return;
+      }
+      rallyRest();
+    }
+    // a player's answer: spent now, or kept for a later Rally phase
+    function answerNervous(side, yes) {
+      var na = E.state.nervousAsk;
+      if (!na || na.side !== side) return 'nothing to answer';
+      E.state.nervousAsk = null;
+      if (yes) useNervous(side);
+      nervousThen();
+      return null;
+    }
+    function rallyRest() {
       fleeBroken();
       // Psychic Amplifier (a tribe aircraft upgrade, p. 143): friendly infantry within 6" shed a point
       E.state.units.forEach(function (c) {
@@ -134,25 +213,6 @@
         var calm = activeUnits(c.side).filter(function (f) { return f.cls === 'infantry' && f.sp > 0 && R.unitDist(f, c) <= 6; });
         calm.forEach(function (f) { f.sp -= 1; });
         if (calm.length) logLine('rally', 'Psychic Amplifier — ' + c.label + ' steadies ' + calm.map(function (f) { return f.label; }).join(', ') + ': 1 SP each.');
-      });
-      /* Strong Nervous System (p. 124): once a battle, every Suppression point on
-         every bug is wiped away. It is spent the first time a real share of the
-         swarm is pinned down — two units or a third of it, whichever is more. */
-      ['A', 'B'].forEach(function (side) {
-        var docs = (E.state.doctrines && E.state.doctrines[side]) || [];
-        E.state.nervous = E.state.nervous || {};
-        if (docs.indexOf('BP3') < 0 || E.state.nervous[side]) return;
-        var mine = E.state.units.filter(function (u) { return u.side === side && onTable(u) && !R.isMachine(u); });
-        var pinned = mine.filter(function (u) { return u.sp > 0 && R.status(u) !== 'ready'; });
-        if (pinned.length < Math.max(2, Math.ceil(mine.length / 3))) return;
-        E.state.nervous[side] = true;
-        var cleared = mine.filter(function (u) { return u.sp > 0; });
-        cleared.forEach(function (u) { u.sp = 0; });
-        logLine('rally', 'Strong Nervous System — the hive-mind steadies ' + sideName(side) + ': every Suppression point on ' +
-          cleared.length + ' units is gone.');
-        pushRes({ kind: 'Rally', title: 'Strong Nervous System', side: side,
-          note: 'Once a battle, in the Rally phase, the swarm sheds all its Suppression.',
-          outcome: { text: cleared.length + ' units steady at once.', tone: 'good' } });
       });
       // Evacuation: everyone inside the safe zone is rallied without a roll (p. 154)
       if (E.state.scen.rallyFree) {
@@ -348,10 +408,14 @@
     // from a token's edge to an objective's: a marker's point, or an area's own edge
     function objDist(u, o) {
       var a = SC.areaOf(o), d;
+      // held only from inside (a landing zone): how far the token is from touching it
+      if (a && a.strict) return Math.max(0, R.inches(u.x, u.y, o.x, o.y) - a.r - UR);
       if (a && a.rect) d = R.rectPointDist(a.rect, u.x, u.y);
       else d = Math.max(0, R.inches(u.x, u.y, o.x, o.y) - (a && a.r || 0));
       return Math.max(0, d - UR);
     }
+    // how close a unit has to be (objDist) to hold or contest an objective
+    function objReach(o) { var a = SC.areaOf(o); return a && a.strict ? 0 : 4; }
     function scoreObjectives() {
       E.state.objectives.forEach(function (o) {
         o.owner = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
@@ -458,7 +522,7 @@
 
     return {
       rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, regroupCard: regroupCard, regroupFx: regroupFx,
-      objDist: objDist, scoreObjectives: scoreObjectives,
+      objDist: objDist, objReach: objReach, fleeBroken: fleeBroken, answerNervous: answerNervous, scoreObjectives: scoreObjectives,
       finish: finish
     };
   };

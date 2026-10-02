@@ -221,12 +221,14 @@
     function inside(u) {
       if (!area) return false;
       if (area.rect) return R.rectPointDist(area.rect, u.x, u.y) === 0;
-      return dist(u.x, u.y, x, y) <= area.r;
+      // a landing zone (strict) counts any part of the token over the circle
+      return dist(u.x, u.y, x, y) <= area.r + (area.strict ? R.UNIT_R : 0);
     }
     // who counts at all: on the table, on the ground, able to hold it, and not Broken
     var near = state.units.filter(function (u) {
       if (!onTable(u) || R.isFlying(u)) return false;
       if (!R.holdsGround(u)) return false;         // a drop pod holds nothing (p. 79)
+      if (area && area.strict && !inside(u)) return false;   // only from inside the area itself
       return R.status(u) !== 'broken' && gap(u) <= reach;
     });
     var within = near.filter(inside);
@@ -242,7 +244,13 @@
   // the area an objective covers, if it is not a marker: a landing zone's circle, a search site's piece
   function areaOf(o) {
     if (!o) return null;
-    if (o.r) return { r: o.r };
+    /* House rule: a landing zone is held, and contested, only by a unit with some
+       of its token over the 8" circle (strict), not from 4" around it. The book
+       spaces the zones 12" apart, and from 4" outside them one unit between two
+       could hold both, or one defender in the middle keep all three "hot"
+       (p. 53). The circles are 4" apart, wider than a token, so no unit touches
+       two. */
+    if (o.r) return { r: o.r, strict: !!o.lz };
     if (o.rect) return { rect: o.rect };
     if (o.piece) return { rect: o.piece };
     return null;
@@ -608,7 +616,7 @@
         if (side === state.sc.attacker) return false;   // the attacker lands, it never deploys
         return x >= 6 && y >= 6 && x <= W - 6 && y <= H - 6;
       },
-      hint: 'Three landing zones. The attacker has to hold two of the three at the end, or rout the defender; the defender only has to stop them. While the defender holds all three, the second wave cannot land.',
+      hint: 'Three landing zones. The attacker has to hold two of the three at the end, or rout the defender; the defender only has to stop them. A zone is held only by units standing at least partly in its circle. While the defender holds all three, the second wave cannot land.',
       reserves: function (state, side) {
         var atk = state.sc.attacker;
         var pool = state.units.filter(function (u) {
@@ -971,8 +979,9 @@
   /* Invasion's landing zones (p. 53): three 8" circles in open ground, at least
      12" from each other and 8" from every table edge, nominated by the attacker
      after the defender has deployed. Each is a round area, so the whole circle
-     counts: all of it in the open, its edge 8" from the table's and 12" from
-     the other zones' edges. */
+     counts: all of it in the open, and its edge 8" from the table's. The 12"
+     between zones is from centre to centre; that leaves no unit in two zones at
+     once, as a zone is held only by a token over it (the house rule in areaOf). */
   var LZ_R = 4;
   function lzOK(state, p, chosen) {
     var m = 8 + LZ_R;
@@ -1015,7 +1024,7 @@
     return chosen;
   }
   function setLZs(state, pts) {
-    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, r: 4, owner: null }; });   // "a round area 8\" in diameter" (p. 53)
+    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, r: 4, lz: true, owner: null }; });   // "a round area 8\" in diameter" (p. 53)
     state.sc.lzPending = false;
   }
   function zoneFor(state, side) {
