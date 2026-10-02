@@ -146,7 +146,7 @@ async function main() {
   ws.attach(server, '/ws', (sock, req, who) => lobby.connect(sock, who), { authorize: (req) => auth.session(Auth.tokenFrom(req)) });
   // a player signed up, their session's cookie kept to open sockets with
   async function signed(name) {
-    const r = await auth.register(name, 'password ' + name, '127.0.0.1');
+    const r = await auth.register(name, 'password ' + name, '127.0.0.1', name.replace(/\W/g, '').toLowerCase() + '@example.com');
     const c = new Client(name);
     c.cookie = Auth.COOKIE + '=' + r.token;
     return c;
@@ -484,7 +484,7 @@ async function main() {
   ok('a socket without a session is refused, as is one with a made-up session', none === true && forged === true, none + ' ' + forged);
   m.close();
   // the account routes over HTTP: made, signed in, asked who, signed out
-  const reg = await req('POST', '/api/register', json, JSON.stringify({ name: 'Webster', password: 'long enough' }));
+  const reg = await req('POST', '/api/register', json, JSON.stringify({ name: 'Webster', password: 'long enough', email: 'webster@example.com' }));
   const ck = String((reg.headers || {})['set-cookie'] || '');
   ok('registering over HTTP signs in with an HttpOnly, SameSite cookie', reg.code === 200 && /pmc_session=/.test(ck) && /HttpOnly/.test(ck) && /SameSite=Lax/.test(ck), reg.code + ' ' + ck);
   const sess = ck.split(';')[0];
@@ -493,12 +493,12 @@ async function main() {
   const out = await req('POST', '/api/logout', { cookie: sess });
   const after = await req('GET', '/api/me', { cookie: sess });
   ok('...signing out ends the session', out.code === 200 && after.code === 401);
-  const offsite = await req('POST', '/api/login', Object.assign({ origin: 'http://evil.example' }, json), JSON.stringify({ name: 'Webster', password: 'long enough' }));
+  const offsite = await req('POST', '/api/login', Object.assign({ origin: 'http://evil.example' }, json), JSON.stringify({ name: 'Webster', password: 'long enough', email: 'webster@example.com' }));
   ok('a sign-in posted from another site\'s page is refused', offsite.code === 403, offsite.code);
 
   // phase 3a: a signed-in player's campaigns kept on the server, each save over the version it was read at
   const sessOf = async (name) => {
-    const r = await req('POST', '/api/register', json, JSON.stringify({ name: name, password: 'password ' + name }));
+    const r = await req('POST', '/api/register', json, JSON.stringify({ name: name, password: 'password ' + name, email: name.replace(/\W/g, '').toLowerCase() + '@example.com' }));
     return String((r.headers || {})['set-cookie'] || '').split(';')[0];
   };
   const owner = await sessOf('Keeper'), other = await sessOf('Snoop');

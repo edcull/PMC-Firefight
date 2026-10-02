@@ -126,18 +126,62 @@ so any sub-path works. The server pings every 25 seconds, well inside nginx's
 
 ## Accounts
 
-Players sign up for themselves on the Multiplayer screen (a name and a
-password, no email), or play a one-off battle as a guest. There is no email to
-send a forgotten password to, so it is reset on the Pi:
+Players sign up for themselves (the main menu's Sign in, or the Multiplayer
+screen) with a name, an email address and a password, or play a one-off battle
+as a guest. Where the server can send email, a new account waits until the link
+mailed to it is followed; a forgotten password is reset by a link sent to the
+account's address; a name or an address is changed from the account screen.
+
+### Email
+
+The server sends through any SMTP server (your mail provider's, Gmail with an
+app password, Brevo, Mailgun...). Put the settings in `/etc/pmc-firefight/mail.env`
+(read by the service; re-run `setup.sh` once if your service was made before
+this) and restart:
+
+```
+sudo mkdir -p /etc/pmc-firefight
+sudo nano /etc/pmc-firefight/mail.env
+```
+
+with these lines in it:
+
+```
+PUBLIC_URL=https://your.domain/pmc/
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=you@example.com
+SMTP_PASS=the-password-or-app-password
+MAIL_FROM=PMC 2670 <you@example.com>
+```
+
+then:
+
+```
+sudo chmod 600 /etc/pmc-firefight/mail.env
+sudo systemctl restart pmc-firefight
+```
+
+`PUBLIC_URL` is the address players open the game at: the links in the emails
+go there (never to an address taken from a request, which anyone could make
+up). Port 465 means TLS from the start; 587 uses STARTTLS.
+
+Without `PUBLIC_URL` and `SMTP_HOST` nothing is sent: new accounts are active at
+once, and each email (link and all) is written to the log instead
+(`journalctl -u pmc-firefight`). The accounts made before email came in keep
+working; their players can add an address from the account screen.
+
+### On the Pi
 
 ```
 cd /opt/pmc-firefight/app
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js users
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js reset-password "Their Name" "a new password"
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js activate "Their Name"   # their link never arrived
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js backup     # a copy beside it, safe while the server runs
 ```
 
-`create <name> <password> [admin]`, `admin <name> on|off` and `delete <name> [--yes]` (says what goes with the account; `--yes` removes it) are there too.
+`create <name> <password> [admin] [email]`, `admin <name> on|off` and `delete <name> [--yes]` (says what goes with the account; `--yes` removes it) are there too.
 
 ## If it goes wrong
 

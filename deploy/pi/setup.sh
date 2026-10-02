@@ -66,6 +66,8 @@ Environment=PORT=$PORT
 Environment=HOST=$HOST
 Environment=CAMPAIGNS_DIR=$DATA/campaigns
 Environment=DATA_DIR=$DATA
+# the email settings (PUBLIC_URL, SMTP_HOST, ...), kept out of this file: see deploy/pi/README.md
+EnvironmentFile=-/etc/pmc-firefight/mail.env
 Restart=on-failure
 RestartSec=2
 # Kept on a short leash: it can write only its own data folder (the campaigns,

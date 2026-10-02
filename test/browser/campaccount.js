@@ -27,7 +27,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errs.push(e.message));
     await p.goto(URL); await p.waitForTimeout(500);
-    const got = await p.evaluate((s) => fetch('api/' + s.how, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Keeper', password: 'keeper password' }) }).then((r) => r.status), sign);
+    const got = await p.evaluate((s) => fetch('api/' + s.how, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Keeper', password: 'keeper password', email: 'keeper@example.com' }) }).then((r) => r.status), sign);
     await p.reload(); await p.waitForTimeout(900);
     return { p, got };
   }

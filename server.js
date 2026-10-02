@@ -29,6 +29,7 @@ const tables = require('./server/table.js');
 const app = require('./server/app.js');
 const DB = require('./server/db.js');
 const Auth = require('./server/auth.js');
+const Mail = require('./server/mail.js');
 const Games = require('./server/games.js');
 const Online = require('./server/online.js');
 
@@ -47,7 +48,10 @@ function log() {
    Pi, where the service may write), or data/ beside this file. */
 const DATA_DIR = process.env.DATA_DIR || (process.env.CAMPAIGNS_DIR ? path.dirname(path.resolve(process.env.CAMPAIGNS_DIR)) : path.join(ROOT, 'data'));
 const db = DB.open(path.join(DATA_DIR, 'pmc.db'));
-const auth = Auth.create({ db: db, log: log });
+// the email that activates accounts and resets passwords (SMTP_* and PUBLIC_URL; none set, it is only logged)
+const mailer = Mail.create({ log: log });
+if (!mailer.live) log('no mail set up (SMTP_HOST and PUBLIC_URL): new accounts are active at once, and emailed links are written to this log');
+const auth = Auth.create({ db: db, log: log, mailer: mailer });
 // sessions long expired are cleared out now and again
 setInterval(function () { auth.sweep(); }, 6 * 60 * 60 * 1000).unref();
 const campaigns = new Campaigns(process.env.CAMPAIGNS_DIR || path.join(ROOT, 'campaigns'), { log: log });

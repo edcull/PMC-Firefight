@@ -17,6 +17,7 @@
     "terser": "^5.31.0"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1"
+    "better-sqlite3": "^12.11.1",
+    "nodemailer": "^10.0.13"
   }
 }

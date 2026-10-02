@@ -35,8 +35,8 @@ function ok(name, cond, note) {
     notify: (uid, msg) => told.push([uid, msg.t, msg.id, msg.code]),
     startBattle: (o) => lobby.campaignBattle(o)
   });
-  const ash = (await auth.register('Ash', 'password one', '1')).who;
-  const brann = (await auth.register('Brann', 'password two', '1')).who;
+  const ash = (await auth.register('Ash', 'password one', '1', 'ash@example.com')).who;
+  const brann = (await auth.register('Brann', 'password two', '1', 'brann@example.com')).who;
   const made = online.make(ash);
   online.join(brann, made.invite);
   const id = made.id;
