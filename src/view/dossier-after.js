@@ -33,7 +33,11 @@
         if (C.hasDoctrine(E.camp.companies[sd], 'V5')) steps.push({ kind: 'weak', side: sd });
       });
       var askReborn = {}; players.forEach(function (sd) { askReborn[sd] = true; });
-      E.camp.post = { report: report, pre: { dice: {}, plunder: {}, neg: {}, tp: {}, weak: {}, askReborn: askReborn }, steps: steps };
+      /* Every payment die is rolled now, both sides' at once, before anyone re-rolls
+         (p. 85; Tough Negotiators, p. 87: "after both the winner and the loser roll"):
+         a player deciding sees both rolls. A rival makes its own re-rolls now. */
+      var inc = C.rollIncome(report.battleTier, report.pl, E.camp.companies.A, E.camp.companies.B, report.winner, players);
+      E.camp.post = { report: report, pre: { dice: inc.dice, plunder: inc.plunder, neg: inc.neg, tp: {}, weak: {}, askReborn: askReborn }, steps: steps };
       // the aftermath comes up once the battle's result card has been read
       var after = (typeof window !== 'undefined' && window.PMC_AFTER_RESULT) || function (fn) { setTimeout(fn, 900); };
       if (!steps.length) { finishPost(); after(function () { open(E.view); }); return; }
@@ -266,6 +270,19 @@
       }
       return out;
     }
+    /* The other side's payment roll, beside a player's own while they decide on a
+       re-roll: the winner is paid the higher of the two, the loser (and both, in a
+       draw) the lower (p. 85). */
+    function rollsLine(rep, pre, side, co) {
+      var foe = side === 'A' ? 'B' : 'A', fco = E.camp.companies[foe];
+      var tot = function (d) { return (d || []).reduce(function (a, b) { return a + b; }, 0); };
+      var mine = tot(pre.dice[side]), theirs = tot(pre.dice[foe]);
+      if (!pre.dice[foe]) return '';
+      var won = rep.winner === side, pay = won ? Math.max(mine, theirs) : Math.min(mine, theirs);
+      return '<p class="cpstat">' + esc((fco && fco.name) || 'The other side') + ' rolled <b>' + theirs + '</b>. ' +
+        (won ? 'As the winner you are paid the higher roll' : rep.winner === null ? 'In a draw both are paid the lower roll' : 'As the loser you are paid the lower roll') +
+        ': <b>' + pay + ' ' + C.money(co) + '</b> as the dice stand.</p>';
+    }
     // the post-battle decisions, one to a screen
     function postView() {
       var post = E.camp.post, st = post && post.steps[0];
@@ -279,7 +296,7 @@
         h += '<div class="cpan"><div class="cprom-head"><b>Plunderer</b></div>' +
           '<p class="cpstat">' + esc(co.name) + ' won. Its payment roll: ' + d.length + 'D6.</p>' +
           '<p class="dice-row">' + d.map(function (v) { return '<span class="die">' + v + '</span>'; }).join('') +
-          ' <b>= ' + tot + ' ' + C.money(co) + '</b></p>';
+          ' <b>= ' + tot + ' ' + C.money(co) + '</b></p>' + rollsLine(rep, pre, st.side, co);
         if (pl && pl.now) {
           h += '<p class="cpstat">Re-rolled from ' + pl.was.reduce(function (a, b) { return a + b; }, 0) + '. The second roll stands.</p>' +
             '<button class="start" data-go="postnext">Continue</button>';
@@ -295,7 +312,8 @@
         var nd = pre.dice[st.side], ntot = nd.reduce(function (a, b) { return a + b; }, 0), ng = pre.neg[st.side];
         var cap = Math.ceil(nd.length / 2), sel = st.sel || [];
         h += '<div class="cpan"><div class="cprom-head"><b>Tough Negotiators</b></div>' +
-          '<p class="cpstat">' + esc(co.name) + '’s payment roll. Up to ' + cap + ' of the dice may be re-rolled; the second result stands, even if it is worse.</p>';
+          '<p class="cpstat">' + esc(co.name) + '’s payment roll. Up to ' + cap + ' of the dice may be re-rolled; the second result stands, even if it is worse.</p>' +
+          rollsLine(rep, pre, st.side, co);
         if (ng) {
           h += '<p class="dice-row">' + nd.map(function (v, i) {
             var sw = ng.idx.indexOf(i) >= 0;

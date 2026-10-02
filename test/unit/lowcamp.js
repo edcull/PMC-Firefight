@@ -95,5 +95,21 @@ console.log('\nL-43 A rival prices its promotions with its own doctrines (pp. 11
   }
 })();
 
+console.log('\nCMP-1 Every payment die is rolled at once, before anyone re-rolls (pp. 85, 87)');
+(function () {
+  const me = C.newCompany('Mine', { faction: 'pmc' }), rival = C.newCompany('Rival', { faction: 'pmc' });
+  me.doctrines = ['S2']; rival.doctrines = ['S2'];
+  const inc = C.rollIncome(3, 1, me, rival, 'A', ['A']);
+  ok('both sides\' dice are rolled together', inc.dice.A.length === 3 && inc.dice.B.length === 3);
+  ok('...a player\'s own are left for them to decide on', !inc.neg.A);
+  ok('...a rival with Tough Negotiators has made its re-rolls already', !!inc.neg.B && inc.neg.B.swapped.length === 2);
+  const pay = C.payment(3, 1, me, rival, 'A', false, { dice: inc.dice, plunder: inc.plunder, neg: inc.neg });
+  const t = (d) => d.reduce((a, b) => a + b, 0);
+  ok('the payment uses exactly those dice', pay.diceA.join() === inc.dice.A.join() && pay.diceB.join() === inc.dice.B.join() &&
+    pay.A === Math.max(t(inc.dice.A), t(inc.dice.B)) && pay.B === Math.min(t(inc.dice.A), t(inc.dice.B)), pay.A + ' / ' + pay.B);
+  const both = C.rollIncome(3, 1, me, rival, 'B', ['A', 'B']);
+  ok('two players (hotseat): nobody\'s dice are re-rolled for them', !both.neg.A && !both.neg.B);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -1090,6 +1090,7 @@
   function rollPayment(battleTier, pl) { return (KIT_CONTRACT || kitContract()).rollPayment(battleTier, pl); }
   function sum(a) { return (KIT_CONTRACT || kitContract()).sum(a); }
   function negotiate(dice) { return (KIT_CONTRACT || kitContract()).negotiate(dice); }
+  function rollIncome(battleTier, pl, coA, coB, winner, people) { return (KIT_CONTRACT || kitContract()).rollIncome(battleTier, pl, coA, coB, winner, people); }
   function territorial(co, dice, won, lost) { return (KIT_CONTRACT || kitContract()).territorial(co, dice, won, lost); }
   function payment(battleTier, pl, coA, coB, winner, attackDefend, preset) { return (KIT_CONTRACT || kitContract()).payment(battleTier, pl, coA, coB, winner, attackDefend, preset); }
   function expFor(line, ctx) { return (KIT_CONTRACT || kitContract()).expFor(line, ctx); }
@@ -1535,7 +1536,7 @@
 
     maxBattleTier: maxBattleTier, rollBattleTier: rollBattleTier, rollScenario: rollScenario,
     swapAllowance: swapAllowance,
-    rollPayment: rollPayment, negotiate: negotiate, payment: payment,
+    rollPayment: rollPayment, rollIncome: rollIncome, negotiate: negotiate, payment: payment,
     expFor: expFor, tpFor: tpFor, traumaThreshold: traumaThreshold, rollTrauma: rollTrauma,
     salvage: salvage, aftermath: aftermath, developRival: developRival,
     pickForce: pickForce, evenWorld: evenWorld, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs,

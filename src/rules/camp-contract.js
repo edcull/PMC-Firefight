@@ -96,8 +96,29 @@
       });
       return { was: dice.slice(), now: out, total: sum(out), won: !!won };
     }
-    /* `preset`: a player's own roll, already made — and already re-rolled or kept
-       under Plunderer, which they decide on seeing it — as { dice: {A}, plunder: {A} }. */
+    /* All the payment dice of a battle, rolled together as the aftermath opens (p. 85:
+       two rolls, the winner paid the higher and the loser the lower) — before anyone
+       re-rolls, so a player choosing Plunderer or Tough Negotiators sees both rolls.
+       A side with no player at it (a solo campaign's rival) makes its own re-rolls
+       here and now: Plunderer on a roll under the odds after a win, then Tough
+       Negotiators on its lowest half. `people`: the sides a player decides for. */
+    function rollIncome(battleTier, pl, coA, coB, winner, people) {
+      var out = { dice: { A: rollPayment(battleTier, pl), B: rollPayment(battleTier, pl) }, plunder: {}, neg: {} };
+      [['A', coA], ['B', coB]].forEach(function (q) {
+        var sd = q[0], co = q[1];
+        if ((people || []).indexOf(sd) >= 0) return;
+        if (hasDoctrine(co, 'V2') && winner === sd) {
+          var d = out.dice[sd];
+          if (sum(d) >= d.length * 3.5) out.plunder[sd] = { was: d.slice(), kept: true };
+          else { var again = rollPayment(battleTier, pl); out.plunder[sd] = { was: d.slice(), now: again.slice() }; out.dice[sd] = again; }
+        }
+        if (hasDoctrine(co, 'S2')) { var ng = negotiate(out.dice[sd]); out.neg[sd] = ng; out.dice[sd] = ng.dice; }
+      });
+      return out;
+    }
+    /* `preset`: the rolls already made (rollIncome) — and already re-rolled or kept
+       under Plunderer and Tough Negotiators, which a player decides on seeing them —
+       as { dice: {A, B}, plunder: {A, B}, neg: {A, B} }. */
     function payment(battleTier, pl, coA, coB, winner, attackDefend, preset) {
       preset = preset || {};
       var pd = preset.dice || {}, pp = preset.plunder || {}, pn = preset.neg || {};
@@ -325,7 +346,7 @@
     return {
       fieldableTier: fieldableTier, maxBattleTier: maxBattleTier, levelsFor: levelsFor,
       canStandard: canStandard, rollBattleTier: rollBattleTier, rollScenario: rollScenario,
-      swapAllowance: swapAllowance, rollPayment: rollPayment, sum: sum, negotiate: negotiate,
+      swapAllowance: swapAllowance, rollPayment: rollPayment, rollIncome: rollIncome, sum: sum, negotiate: negotiate,
       territorial: territorial, payment: payment, expFor: expFor, tpFor: tpFor,
       traumaThreshold: traumaThreshold, rollTrauma: rollTrauma, salvage: salvage, rollTP: rollTP,
       weakCandidates: weakCandidates, rebirth: rebirth
