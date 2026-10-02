@@ -532,14 +532,17 @@
         if (nc > allowance + 1e-6 || nc >= cost[ns]) continue;
         cost[ns] = nc; came[ns] = st; turnsN[ns] = turnsN[st]; push(nc, ns);
       }
-      // backwards, in a straight line, at half distance
+      /* backwards, in a straight line, at half distance — rounded up, as every
+         division is (pp. 27, 37): a Move 5 hull backs up 3", each inch of it costing
+         what is left of the move over 3 */
       var rev = new Float64Array(N).fill(Infinity);
       var hb = nearestHead((u.facing == null ? 0 : u.facing) + Math.PI);
       var ri = i0, rj = j0, rp = startPaid, rc = c0;
+      var left = allowance - c0, revPer = left > 0 ? left / Math.ceil(left / 2 - 1e-9) : 2;
       for (;;) {
         var rs = stepCost(ri, rj, hb, rp);
         if (!rs) break;
-        rc += 2 * rs.run + rs.pen;
+        rc += revPer * rs.run + rs.pen;
         if (rc > allowance + 1e-6) break;
         ri = rs.i; rj = rs.j; rp = rs.paid;
         rev[idx(ri, rj)] = rc;
@@ -555,7 +558,7 @@
         // what it costs to finish on this point, and how: turns taken, backwards or not
         at: function (ti, tj) {
           var k = idx(ti, tj);
-          if (rev[k] < best[k]) return { spent: rev[k], turns: 0, reverse: true, ground: rev[k] / 2 };
+          if (rev[k] < best[k]) return { spent: rev[k], turns: 0, reverse: true, ground: rev[k] / revPer };
           if (!isFinite(best[k])) return null;
           var t = turnsN[bestState[k]];
           return { spent: best[k], turns: t, reverse: false, ground: best[k] - t * turn };

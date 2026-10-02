@@ -127,5 +127,19 @@ console.log('\nSappers cut barbed wire; nobody shoots it down (p. 43)');
   ok('cut, it is a gap anyone may cross for nothing', wire.kind === 'cutwire' && R.terrainCost(unit('regular', 'A', 0, 0, { wireRoll: 6 }), 'cutwire') === 0);
 })();
 
+console.log('\nVEH-3 Reversing halves the move, rounded up (pp. 27, 37)');
+(function () {
+  // facing east (0), so backing up runs west
+  [[5, 3], [9, 5], [10, 5]].forEach(([allow, want]) => {
+    const v = unit('lapc', 'A', 30, 24, { facing: 0, turn: 99 });          // no turning round: backwards is the only way west
+    const st = world([v]);
+    const back = R.reachable(st, v, allow).filter((c) => c.reverse && Math.abs(c.y - 24) < 0.3 && c.x < 30).reduce((m, c) => Math.max(m, 30 - c.x), 0);
+    ok('a Move ' + allow + ' hull backs up ' + want + '"', Math.abs(back - want) < 0.3, back.toFixed(2) + '"');
+  });
+  // and the propulsion's own share is rounded up too: three-quarters of Move 9 is 7, not 6.75
+  const tr = R.applyPropulsion(Object.assign(JSON.parse(JSON.stringify(R.profile('lapc'))), { move: 9 }), 'tracked');
+  ok('a propulsion leaves a whole Movement', tr.move === 7, 'tracked Move 9 \u2192 ' + tr.move);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -226,8 +226,6 @@
     return rules;
   }
 
-  /* Fold a propulsion into a freshly built machine. Movement is kept exact rather
-     than rounded, since the table is measured in real inches. */
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
      Hacker can reach into it. */
   function applyDrone(u, on) {
