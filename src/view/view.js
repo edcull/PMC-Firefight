@@ -361,6 +361,7 @@
       ruins:     { ch: 'R', col: '#b9b4a6' },
       crater:    { ch: 'C', col: '#c0a880' },
       barricade: { ch: 'L', col: '#d8b870' },
+      trench:    { ch: 'T', col: '#c8a878' },
       building:  { ch: 'B', col: '#c9c3b4' },
       bunker:    { ch: 'F', col: '#8fb8d0' },
       hill:      { ch: 'H', col: '#e0b464' },
@@ -370,6 +371,8 @@
     // the ground the rules count the unit in (half its base or more, see R.kindsUnder), not just what is under its middle
     function terrainMark(u) {
       var kind = R.kindsUnder(B.state, u)[0];
+      // in the open, within reach of a low wall: in its cover, and lined up along it (draw.js lineUp)
+      if (!(R.TERRAIN[kind] && R.TERRAIN[kind].cover) && !R.isMachine(u) && R.wallCoverAt(B.state, u.x, u.y)) kind = 'barricade';
       var m = TERRAIN_MARK[kind];
       if (!m) return null;
       // a hull gets no cover, so only the ground that still costs or helps it shows

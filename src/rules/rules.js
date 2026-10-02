@@ -1101,14 +1101,27 @@
   /* Whether a unit is behind wall r as this attacker sees it — the one test for
      everything that asks: the low wall's cover (p. 42), a Destructive Weapon or
      Sappers bringing a low or high wall down on the men behind it (pp. 57, 59).
-     Its middle within 2" of the wall, and the wall between it and the attacker:
+     Its middle within 1.5" of the wall (WALL_REACH), and the wall between it and the attacker:
      the line crossing it, or slipping past one of its ends by less than half an
      inch (along its length, not its thickness: a wall just behind the target is
      still behind it). Against Indirect Fire, from above, any side will do (p. 58).
      A wall the attacker stands in is nobody's shelter from it. */
+  /* How near a low wall a unit's middle has to be for its cover: "up to 2" from it"
+     (p. 42), taken as 1.5" to the middle of a single 2" token (house rule). */
+  var WALL_REACH = 1.5;
+  // the low wall a unit standing at x, y is in the cover of, if any (the nearest)
+  function wallCoverAt(state, x, y) {
+    var best = null, bd = WALL_REACH + 1e-6;
+    (state.terrain || []).forEach(function (r) {
+      if (r.kind !== 'barricade' || r.poly) return;
+      var d = rectPointDist(r, x, y);
+      if (d <= bd) { bd = d; best = r; }
+    });
+    return best;
+  }
   function behindWall(state, attacker, target, r) {
     if (!attacker || inRect(attacker.x, attacker.y, r)) return false;
-    if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) return false;
+    if (rectPointDist(r, target.x, target.y) > WALL_REACH + 1e-6) return false;
     if (has(attacker, 'Indirect Fire')) return true;
     var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
     return segRect(attacker.x, attacker.y, target.x, target.y, grown);
@@ -2079,7 +2092,7 @@
     undisciplined: undisciplined, freeLosses: freeLosses, deathOrGlory: deathOrGlory,
     dugIn: dugIn, nearestFacing: nearestFacing, shotRange: shotRange, shotMinRange: shotMinRange,
     profile: function (k) { return BY_KEY[k]; },
-    checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN,
+    checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN, WALL_REACH: WALL_REACH, wallCoverAt: wallCoverAt,
     d10: d10, d6: d6, d3: d3, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
