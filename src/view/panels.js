@@ -1104,6 +1104,7 @@
       var rows = sp.units.map(function (x) {
         var note = x.locked ? 'emplaced \u2014 never held back'
           : wave ? (x.held ? 'second wave' : 'first wave')
+          : x.stranded ? 'held back with no tow \u2014 cannot come on'
           : x.held ? (x.insert ? 'held back \u2014 by insertion' : 'held back') : x.inserter ? 'on the table \u2014 can insert' : 'on the table';
         // a passenger goes with its hull: held back with it, or in its wave
         if (x.hull) note += ' \u2014 aboard ' + esc(x.hull);

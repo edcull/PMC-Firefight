@@ -57,11 +57,20 @@
       if (!sp || !sp.want) return 0;
       var pend = {};
       heldSwaps(side).forEach(function (d) { pend[d.outId] = d.key; });
-      var free = sp.ids.filter(function (id) {
+      var rule = E.SC.gunRule(E.state, side);
+      if (rule === 'drop') return 0;                        // guns drop in either wave
+      var guns = 0, tows = 0, free = 0;
+      sp.ids.forEach(function (id) {
         var u = byId(id);
-        if (!u || !u.alive) return false;
-        return pend[id] ? !gun(pend[id]) : !R.has(u, 'Stationary Artillery');
-      }).length;
+        if (!u || !u.alive) return;
+        var p = pend[id] ? R.profile(R.splitPick(pend[id]).key) : u;
+        if (pend[id] ? gun(pend[id]) : R.has(u, 'Stationary Artillery')) { guns++; return; }
+        free++;
+        if (R.canTow(p)) tows++;
+      });
+      /* An Invasion defender may hold a gun back behind a transport vehicle held
+         with it: one for each such hull in the force (SC.gunRule). */
+      if (rule === 'tow') free += Math.min(guns, tows);
       return Math.max(0, sp.want - free);
     }
     // a gun in the split that could be swapped for a unit free to be held
@@ -104,6 +113,16 @@
           if (heldN >= sp.want || u.wave === 2 || R.has(u, 'Stationary Artillery') || u.aboard) return;
           u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; heldN++;
         });
+        // a gun still over the table's share goes behind a held transport vehicle, or stays out
+        us.forEach(function (u) {
+          if (heldN >= sp.want || u.wave === 2 || u.aboard || !R.has(u, 'Stationary Artillery') || !E.SC.freeToHold(E.state, u)) return;
+          var tow = E.SC.gunRule(E.state, sd) === 'tow' && us.filter(function (v) {
+            return v.wave === 2 && R.canTow(v) && !R.towedGuns(v).length && (v.cargo || []).length < v.transport;
+          })[0];
+          if (tow) { tow.cargo = (tow.cargo || []).concat([u]); u.aboard = tow.id; u.reserve = false; }
+          else u.reserve = true;
+          u.wave = 2; u.x = -1; u.y = -1; heldN++;
+        });
       }
       if (made.length) pushRes({ kind: 'Modifying the armies', title: sideName(sd), side: sd,
         note: 'Emplaced guns cannot be held back, and the scenario holds back part of the force (p. 94).',
@@ -116,7 +135,7 @@
       if (!sp || sp.want == null) return;
       var us = sp.ids.map(byId).filter(function (u) { return u && u.alive; });
       var held = us.filter(function (u) { return u.wave === 2 || u.reserve; }).length;
-      var free = us.filter(function (u) { return !R.has(u, 'Stationary Artillery'); }).length;
+      var free = us.filter(function (u) { return E.SC.freeToHold(E.state, u); }).length;
       sp.min = Math.min(sp.want, Math.max(held, Math.min(sp.want, free)));
       sp.max = Math.max(Math.min(sp.wantMax, free), held);
     }
