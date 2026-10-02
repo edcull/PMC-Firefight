@@ -90,12 +90,13 @@ console.log('\nShooting a wall down is shooting (pp. 57-58)');
   ok('...but not at one it cannot: nobody calls a wall in for Indirect Fire', e.query.demolishTargets(mt, false).length === 0);
 })();
 
-console.log('\nThe Riders upgrade is final once chosen (p. 97)');
+console.log('\nThe Riders upgrade is chosen on recruiting, and final (p. 97; review a119ac2 REB-4)');
 (function () {
-  const e = C.newEntry('rfanatics');
-  ok('a newly recruited unit may still choose', C.ridersOpen(e));
-  e.lastBattle = 3; e.history.push('Fought at Hill 4.');
-  ok('...once it has fought, it may not', !C.ridersOpen(e));
+  const co = C.newCompany('Red Dawn', { faction: 'rebel' });
+  co.kUC = 100;
+  const r = C.recruit(co, 'rfanatics', { riders: true });
+  ok('a squad may be recruited as Riders', r.ok && r.entry.riders);
+  ok('...and nothing else changes it: there is no toggle left', C.ridersOpen === undefined);
 })();
 
 console.log('\nA hull may turn where it stands at the end of its move (p. 35)');

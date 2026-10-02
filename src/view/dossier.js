@@ -704,14 +704,14 @@
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
       // recruiting spends the money: say what it costs, and what there is, before it is spent
-      var rk = t.getAttribute('data-recruit'), asDrone = t.hasAttribute('data-asdrone');
+      var rk = t.getAttribute('data-recruit'), asDrone = t.hasAttribute('data-asdrone'), asRiders = t.hasAttribute('data-asriders');
       var rp = profile(rk), rcost = C.recruitCost(co, rk), purse = co.kUC, coinWord = C.money(co);
       ask({
-        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : '') + '?',
+        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : asRiders ? ' (Riders)' : '') + '?',
         text: (rcost ? 'It costs ' + rcost + ' ' + coinWord + '. You have ' + purse + ' ' + coinWord +
           ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.'),
         okLabel: C.words(co).recruit + (rcost ? ' for ' + rcost + ' ' + coinWord : ''),
-        onOk: function () { C.recruit(co, rk, { drone: asDrone }); save(); render(); }
+        onOk: function () { C.recruit(co, rk, { drone: asDrone, riders: asRiders }); save(); render(); }
       });
       return;
     }
@@ -755,12 +755,7 @@
     }
     if (t.hasAttribute('data-rivdos')) { var rv = +t.getAttribute('data-rivdos'); rivalOpen = rivalOpen === rv ? null : rv; render(); return; }
     if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
-    // a unit on the roster takes the Riders upgrade or lays it down, or changes what it rides
-    if (t.hasAttribute('data-eriders')) {
-      var re = findEntry(co, t.getAttribute('data-eriders'));
-      if (re && C.ridersOpen(re)) { re.riders = !re.riders; C.menOf(re, co); save(); render(); }
-      return;
-    }
+    // a mounted unit on the roster changes what it rides
     if (t.hasAttribute('data-emount')) {
       var me = findEntry(co, t.getAttribute('data-emount'));
       me.mount = t.getAttribute('data-m'); save(); render(); return;
