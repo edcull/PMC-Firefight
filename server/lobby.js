@@ -158,6 +158,7 @@ class Lobby {
     this.known = new Map();                     // private id -> { secret, pub }, every browser seen
     this.limits = opts.limits || LIMITS;        // what a connection may send (a test may raise them)
     this.games = opts.games || null;            // the battles kept in the database (games.js), when there is one
+    this.onCampaignBattle = opts.onCampaignBattle || null;   // an online campaign's battle over: (campaign id, report, game id)
     this.log = opts.log || function () { };
     // rooms nobody is connected to are looked for every minute
     if (opts.sweep !== false) {
@@ -214,7 +215,14 @@ class Lobby {
     });
     const table = this.makeTable(room, this);
     table.restore(g, this.games.intents(g.id));
-    if (table.stopped) return null;
+    if (table.stopped) {
+      // it ended just before the restart: an online campaign still has its aftermath to apply (once, by the game's id)
+      if (room.settings && room.settings.onlineCampaign && this.onCampaignBattle && table.engine.report()) {
+        try { this.onCampaignBattle(room.settings.onlineCampaign, table.engine.report(), g.id); }
+        catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); }
+      }
+      return null;
+    }
     room.table = table;
     this.rooms.set(room.id, room);
     return room;
@@ -240,6 +248,27 @@ class Lobby {
     room.push();
     if (room.table) room.table.rejoin(p);
     this.pushLobby();
+  }
+  /* An online campaign's battle, made from its contract (online.js): a private room
+     with both seats held for the two players, who walk into them by its code. */
+  campaignBattle(o) {
+    const room = new Room(o.name, { id: o.seats.A.id, name: o.seats.A.name });
+    while (this.rooms.has(room.id) || (this.games && this.games.byCode(room.id))) room.id = code();
+    room.settings.private = true;
+    room.settings.onlineCampaign = o.campaignId;
+    room.settings.tier = o.cfg.tier; room.settings.pl = o.cfg.pl; room.settings.scenario = o.cfg.scenario;
+    room.phase = P.PHASE.BATTLE;
+    P.SEATS.forEach((sd) => {
+      const s = o.seats[sd], held = new Player(null, this.limits);
+      held.id = s.id; held.pub = s.pub; held.name = s.name; held.seat = sd; held.room = room; held.ready = true;
+      room.seats[sd] = held;
+    });
+    const table = this.makeTable(room, this);
+    room.table = table;
+    this.rooms.set(room.id, room);
+    table.begin(o.cfg);
+    this.log('room ' + room.id + ' opened for an online campaign battle');
+    return room.id;
   }
   // a message to every connection a signed-in player has open (an online campaign changed, say)
   notifyUser(userId, msg) {
@@ -612,7 +641,12 @@ class Lobby {
   /* Called by the table when a battle ends. The room goes back to setup with both
      forces as they were (MP-7): ready up again for a rematch, change the terms or
      the forces first, or leave. */
-  finished(room) {
+  finished(room, report, gameId) {
+    // an online campaign's battle: the campaign is told, to apply its aftermath (once, by the game's id)
+    if (room.settings.onlineCampaign && this.onCampaignBattle && report) {
+      try { this.onCampaignBattle(room.settings.onlineCampaign, report, gameId); }
+      catch (e) { this.log('could not apply the campaign battle ' + gameId + ': ' + ((e && e.stack) || e)); }
+    }
     room.table = null;
     room.phase = P.PHASE.SETUP;
     room.players().forEach((q) => { q.ready = false; });

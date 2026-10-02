@@ -196,8 +196,10 @@ class Table {
     };
   }
 
-  begin() {
-    this.cfg = this.buildConfig();
+  /* `cfg`: a config made elsewhere (an online campaign's contract, online.js);
+     otherwise the room's terms and forces are made into one here. */
+  begin(cfg) {
+    this.cfg = cfg || this.buildConfig();
     this.events = [];
     const seed = (Math.random() * 4294967296) >>> 0;
     this.rng = dice(seed);
@@ -237,7 +239,9 @@ class Table {
         tier: this.cfg.tier, pl: this.cfg.pl, scenario: this.cfg.scenario,
         nameA: this.cfg.nameA, nameB: this.cfg.nameB,
         colourA: this.cfg.colourA, colourB: this.cfg.colourB,
-        campaign: this.room.settings.campaign || null
+        campaign: this.room.settings.campaign || null,
+        // an online campaign's battle: its aftermath is the server's to apply, not the browser's
+        onlineCampaign: this.room.settings.onlineCampaign || null
       }
     });
   }
@@ -323,11 +327,13 @@ class Table {
     }
     if (this.store && this.gameId != null) {
       const ov = this.engine.over() || {};
-      try { this.store.ended(this.gameId, 'over', { winner: ov.winner || null, why: ov.text || null }); }
+      const res = { winner: ov.winner || null, why: ov.text || null };
+      if (this.forfeitBy) res.forfeit = this.forfeitBy;
+      try { this.store.ended(this.gameId, this.forfeitBy ? 'abandoned' : 'over', res); }
       catch (e) { this.log('could not record the result: ' + ((e && e.message) || e)); }
     }
     this.room.broadcast('over', { report: report, over: this.engine.over() });
-    if (this.lobby) this.lobby.finished(this.room);
+    if (this.lobby) this.lobby.finished(this.room, report, this.gameId);
   }
 
   stop() { this.stopped = true; }
@@ -336,8 +342,16 @@ class Table {
      other side the winner. Kept as such; the battle goes no further. */
   forfeit(seat) {
     if (this.stopped) return null;
-    this.stopped = true;
     const winner = seat === 'A' ? 'B' : 'A';
+    /* An online campaign's battle ends the engine's own way, so there is a report
+       for the aftermath to be applied from (decision 5: in a campaign it is). */
+    if (this.room.settings.onlineCampaign && this.engine.concede) {
+      this.forfeitBy = seat;
+      this.rolling(() => this.engine.concede(seat));
+      if (!this.stopped) this.finish(this.engine.report());
+      return winner;
+    }
+    this.stopped = true;
     if (this.store && this.gameId != null) {
       try { this.store.ended(this.gameId, 'abandoned', { winner: winner, forfeit: seat }); }
       catch (e) { this.log('could not record the forfeit: ' + ((e && e.message) || e)); }

@@ -57,11 +57,18 @@ const games = Games.create(db);
 const lobby = new Lobby({
   log: log,
   games: games,
-  makeTable: tables.make({ campaign: campaigns, log: log, store: games })
+  makeTable: tables.make({ campaign: campaigns, log: log, store: games }),
+  // an online campaign's battle over: its aftermath applied by the campaign (once, by the battle's id)
+  onCampaignBattle: function (id, report, gameId) { online.battleOver(id, report, gameId); }
+});
+/* online campaigns: run by the server, the other player told of each change over
+   their socket, and each battle made from a contract fought at a table here */
+const online = Online.create({
+  db: db,
+  notify: function (userId, msg) { lobby.notifyUser(userId, msg); },
+  startBattle: function (o) { return lobby.campaignBattle(o); }
 });
 lobby.restore();
-// online campaigns: run by the server, the other player told of each change over their socket
-const online = Online.create({ db: db, notify: function (userId, msg) { lobby.notifyUser(userId, msg); } });
 
 /* ---- the server ---- */
 const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin, online: online });
