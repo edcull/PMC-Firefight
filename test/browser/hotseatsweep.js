@@ -55,8 +55,9 @@ function ok(name, cond, note) {
     const label = bt.coop ? 'co-op, ' + bt.factionB + ' for Player 2' : bt.scenario + ', ' + bt.factionA + ' v ' + bt.factionB;
     console.log('\n  ' + label + (bt.reloadAt ? ', reloaded part-way' : '') + '  (' + r.secs + 's)');
     ok('played to a result', r.over, r.over ? (r.winner ? 'won by ' + r.winner : 'a draw') + ' on turn ' + r.turns : r.stuck + ' | ' + r.log.slice(-8).join(' | '));
-    // the device is passed only for the secret swaps (a co-op game has none): two cards at most
-    ok(bt.coop ? '...no card between the players' : '...the device passed for the secret swaps only', r.passes <= (bt.coop ? 0 : 2), 'passed ' + r.passes + ' times');
+    // never a card between the players' activations; before the battle only for the secret swaps (a co-op game: once, as its second commando deploys)
+    ok('...no card between the players\' activations', r.battlePasses === 0, r.battlePasses + ' in the battle');
+    ok(bt.coop ? '...one card, for the second commando\'s deployment' : '...the device passed for the secret swaps only', r.passes <= (bt.coop ? 1 : 2), 'passed ' + r.passes + ' times');
     if (!bt.coop) ok('...both players taking activations', r.sides && r.sides.A > 0 && r.sides.B > 0, JSON.stringify(r.sides));
     if (bt.reloadAt) ok('...and picked up again after a reload', r.reloaded);
     ok('...with no page errors', !r.errs.length, r.errs.slice(0, 2).join(' | '));

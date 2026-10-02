@@ -50,7 +50,7 @@ function step() {
   const press = (act) => { const b = $('#context [data-act="' + act + '"]:not([disabled]), [data-act="' + act + '"]:not([disabled])'); if (b) { b.click(); return true; } return false; };
   if (!s) return 'no battle';
   if (s.over) return 'over';
-  const ho = $('#handover'); if (ho && !ho.hidden) { ho.click(); return 'handover'; }
+  const ho = $('#handover'); if (ho && !ho.hidden) { ho.click(); return s.phase === 'battle' ? 'handover in battle' : 'handover'; }
   const om = $('#obj-modal'); if (om && !om.hidden) { const d = $('#obj-done'); if (d) d.click(); return 'briefing'; }
   const rs = $('#resolution'); if (rs && !rs.hidden) { const c = $('#res-continue'); if (c) c.click(); return 'card'; }
   if (W.__busy() || W.__showQueue() > 0) return 'busy';
@@ -107,18 +107,19 @@ function step() {
 async function playToEnd(page, opts) {
   opts = opts || {};
   const limit = opts.steps || 4000, log = [];
-  let acts = 0, passes = 0, reloaded = false, same = 0, last = '';
+  let acts = 0, passes = 0, battlePasses = 0, reloaded = false, same = 0, last = '';
   const sides = { A: 0, B: 0 };
   for (let i = 0; i < limit; i++) {
     const did = await page.evaluate(step);
     if (did !== 'busy' && did !== 'card' && did !== 'ai') { log.push(did); if (log.length > 40) log.shift(); }
     if (did === 'over') break;
-    if (/^stuck/.test(did)) return { over: false, stuck: did, log: log, acts: acts, passes: passes, sides: sides, reloaded: reloaded };
+    if (/^stuck/.test(did)) return { over: false, stuck: did, log: log, acts: acts, passes: passes, battlePasses: battlePasses, sides: sides, reloaded: reloaded };
     if (/^act /.test(did)) { acts++; sides[did.charAt(4)] = (sides[did.charAt(4)] || 0) + 1; }
-    if (did === 'handover') passes++;
+    if (did === 'handover' || did === 'handover in battle') passes++;
+    if (did === 'handover in battle') battlePasses++;
     // the same thing done over and over, with nothing changing: stopped
     same = did === last && did !== 'busy' && did !== 'card' && did !== 'ai' ? same + 1 : 0; last = did;
-    if (same > 30) return { over: false, stuck: 'repeating: ' + did, log: log, acts: acts, passes: passes, sides: sides, reloaded: reloaded };
+    if (same > 30) return { over: false, stuck: 'repeating: ' + did, log: log, acts: acts, passes: passes, battlePasses: battlePasses, sides: sides, reloaded: reloaded };
     if (opts.reloadAt && !reloaded && acts >= opts.reloadAt) {
       reloaded = true;
       await page.reload();
@@ -131,7 +132,7 @@ async function playToEnd(page, opts) {
     await page.waitForTimeout(did === 'busy' || did === 'ai' ? 60 : 30);
   }
   const end = await page.evaluate(() => { const s = window.PMC_STATE(); return s ? { over: !!s.over, winner: s.over ? s.over.winner : undefined, turns: s.turn } : { over: false }; });
-  return Object.assign(end, { acts: acts, passes: passes, sides: sides, reloaded: reloaded, log: log, stuck: end.over ? null : 'ran out of steps' });
+  return Object.assign(end, { acts: acts, passes: passes, battlePasses: battlePasses, sides: sides, reloaded: reloaded, log: log, stuck: end.over ? null : 'ran out of steps' });
 }
 
 module.exports = { startHotseat: startHotseat, startCoop: startCoop, playToEnd: playToEnd, step: step };
