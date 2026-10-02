@@ -47,7 +47,7 @@ function create(opts) {
      CORS — and a write from a page elsewhere is refused by its Origin as well as
      its cookie's SameSite. Bodies are small JSON. */
   function api(req, res, url) {
-    const m = /^\/api\/(me|register|login|guest|logout|password)$/.exec(url);
+    const m = /^\/api\/(me|games|register|login|guest|logout|password)$/.exec(url);
     if (!m) return false;
     const send = (code, body, cookie) => {
       const h = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
@@ -63,6 +63,13 @@ function create(opts) {
       if (req.method !== 'GET') return send(405, { error: 'method not allowed' }), true;
       const me = auth.session(t);
       return send(me ? 200 : 401, { who: shown(me) }), true;
+    }
+    // the player's own battles, the latest first (the account screen's list; the lobby has it over the socket)
+    if (m[1] === 'games') {
+      if (req.method !== 'GET') return send(405, { error: 'method not allowed' }), true;
+      const me = auth.session(t);
+      if (!me) return send(401, { error: 'sign in first' }), true;
+      return send(200, { games: opts.games ? opts.games.mine(me.id) : [] }), true;
     }
     if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
     if (req.headers.origin && !allowOrigin(req.headers.origin, req)) return send(403, { error: 'not from here' }), true;

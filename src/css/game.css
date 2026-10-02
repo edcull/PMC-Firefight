@@ -694,6 +694,23 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 #btn-resume.discarding { border-color: color-mix(in srgb, var(--bad) 70%, transparent); padding-right: 120px; }
 #btn-resume.discarding small { color: var(--bad); }
 .mcard.menu-back { text-align: center; }
+/* the account pane (net/account.js) */
+#menu-account .field { margin-bottom: 4px; }
+#menu-account .tin { width: 100%; }
+.acct-lede { margin: 0 0 4px; font-size: 13px; line-height: 1.45; color: var(--ink-dim); }
+.acct-tabs { display: flex; gap: 6px; }
+.acct-tabs .lnk.on { border-color: var(--alpha); color: var(--alpha); }
+.acct-bad { margin: 0; font-size: 13px; color: var(--warn); }
+.acct-who { margin: 0; font-size: 14px; color: var(--ink-dim); }
+.acct-who b { color: var(--ink); }
+.acct-tag { font-size: 11px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink-dim); }
+.acct-sec h3 { margin: 6px 0 4px; font-family: var(--display); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.acct-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; margin-bottom: 4px; background: color-mix(in srgb, var(--ground) 60%, transparent); }
+.acct-row b { font-size: 13px; color: var(--ink); }
+.acct-row small { display: block; font-size: 12px; color: var(--ink-dim); }
+.acct-row em { font-style: normal; font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+.acct-none { margin: 0; font-size: 12px; color: var(--ink-faint); }
+.acct-out { align-self: center; margin-top: 4px; }
 .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
 .menu-foot a.lnk { text-decoration: none; }
 /* the unit viewer is a link to another page, set as the buttons around it are */

@@ -648,6 +648,17 @@ class Lobby {
       catch (e) { this.log('could not apply the campaign battle ' + gameId + ': ' + ((e && e.stack) || e)); }
     }
     room.table = null;
+    /* An online campaign's battle is fought once: there is no rematch, so the room
+       closes and its players go back to the lobby (the campaign carries on in the
+       dossier). */
+    if (room.settings.onlineCampaign) {
+      room.everyone().forEach((q) => { q.room = null; q.seat = null; q.ready = false; if (q.sock) q.send('game', { room: null }); });
+      room.seats = { A: null, B: null }; room.watchers = [];
+      this.rooms.delete(room.id);
+      this.log('room ' + room.id + ' closed: its online campaign battle is over');
+      this.pushLobby();
+      return;
+    }
     room.phase = P.PHASE.SETUP;
     room.players().forEach((q) => { q.ready = false; });
     room.broadcast('game.chat', { from: null, text: 'The battle is over. Ready up for a rematch, or leave the game.', at: now() });

@@ -45,7 +45,7 @@
     host.hidden = true;
     /* Laid out as the skirmish set-up and the campaign are: a bar across the top
        with the way back and the page's title, and under it the one thing that scrolls. */
-    host.innerHTML = '<div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby">\u2190 Back</button>' +
+    host.innerHTML = '<canvas id="lobby-table" aria-hidden="true"></canvas><div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby">\u2190 Back</button>' +
       '<h1 id="lobby-title">Multiplayer</h1><span class="lob-code" id="lobby-code" hidden></span></div>' +
       '<div class="sheet lobby-sheet"><div id="lobby-body"></div></div>';
     document.body.appendChild(host);
@@ -76,12 +76,16 @@
       '#lobby.overlay{display:flex;flex-direction:column;padding:0;overflow:hidden;background:var(--ground);place-items:stretch}',
       '#lobby > .sheet{flex:1;min-height:0;width:100%;max-width:none;max-height:none;overflow-y:auto;overscroll-behavior:contain;border:0;border-radius:0;background:transparent;padding:18px max(16px,calc((100% - 720px) / 2)) calc(22px + env(safe-area-inset-bottom,0px))}',
       '#lobby > .camp-top .lob-code{margin-left:auto}',
+      // the menu's table rolling behind it on a desktop, as behind the set-up and the campaign
+      '#lobby-table{display:none}',
       '@media (min-width:1001px){' +
         '#lobby.overlay{padding:28px 20px;align-items:center;justify-content:center}' +
+        '#lobby-table{display:block;position:absolute;inset:0;width:100%;height:100%;opacity:.55;pointer-events:none}' +
+        '#lobby.lob-narrow > .camp-top,#lobby.lob-narrow > .sheet{width:min(460px,100%)}' +
         '#lobby > .camp-top{position:relative;width:min(760px,100%);border:1px solid var(--line);border-radius:8px 8px 0 0;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
         '#lobby.overlay > .sheet{position:relative;flex:0 1 auto;width:min(760px,100%);padding:18px 22px 22px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
       '}',
-      '.lob-sign{display:flex;flex-direction:column;gap:10px;max-width:420px}',
+      '.lob-sign{display:flex;flex-direction:column;gap:10px}',
       '.lob-tabs{display:flex;gap:6px;flex-wrap:wrap}',
       '.lob-tabs .lnk.on{border-color:var(--alpha);color:var(--alpha)}',
       '.lob-sign input{width:100%}',
@@ -146,8 +150,9 @@
     view = which || view;
     host.hidden = false;
     draw();
+    if (root.PMC_BACKDROP) root.PMC_BACKDROP();
   }
-  function close() { if (host) host.hidden = true; }
+  function close() { if (host) host.hidden = true; if (root.PMC_BACKDROP) root.PMC_BACKDROP(); }
 
   /* ================= drawing ================= */
   function draw() {
@@ -158,6 +163,7 @@
     if (el('lobby-title')) el('lobby-title').textContent = signing ? 'Sign in' : inRoom ? room.name : 'Multiplayer';
     var cd = el('lobby-code');
     if (cd) { cd.hidden = !inRoom; cd.textContent = inRoom ? room.id : ''; cd.title = 'Read this out to whoever you are playing'; }
+    host.classList.toggle('lob-narrow', signing);      // signing in is a short form: a narrow card
     var sh = host.querySelector('.lobby-sheet');
     if (sh) sh.classList.toggle('lob-sheet-room', !!(view === 'room' && room));
     var box = el('lobby-say') || el('room-say');
@@ -212,6 +218,8 @@
           me.name = name; draw(); return;
         }
         account = got.j.who; me.name = account.name;
+        if (root.PMCAccount) root.PMCAccount.refresh();
+        if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
         view = 'lobby';
         connect();
         draw();
@@ -225,6 +233,8 @@
     root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { });
     account = null; view = 'signin'; signMode = 'signin';
     draw();
+    if (root.PMCAccount) root.PMCAccount.refresh();
+    if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
   }
 
   function lobbyHTML() {
@@ -664,6 +674,13 @@
     },
     close: close,
     net: function () { return net; },
+    /* Signed in or out from the main menu (account.js): a connection made as the
+       player who was signed in before is closed, and the next opening asks again. */
+    accountChanged: function () {
+      if (net) { net.disconnect(); net = null; }
+      room = null; games = []; mine = []; chat = { lobby: [], room: [] };
+      account = undefined; view = 'lobby';
+    },
     // the code of a game this browser was seated at and may go back to
     resumable: function () { return lastRoom(); }
   };

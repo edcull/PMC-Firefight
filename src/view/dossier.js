@@ -198,6 +198,19 @@
         }
       } catch (e) { acct = null; }
     },
+    /* Signed in or out since the page loaded (the main menu's account, or the
+       lobby): who the account is asked again. True if it is someone else now. */
+    async recheck() {
+      var was = acct ? acct.id : null;
+      try {
+        var me = await acctFetch('api/me', { cache: 'no-store' });
+        if (me.code === 401) acct = null;
+        else if (me.ok) acct = me.j.who && !me.j.who.guest ? me.j.who : null;
+      } catch (e) { /* not reached: as it was */ }
+      var now = acct ? acct.id : null;
+      if (now !== was) { acctVersion = 0; acctConflict = null; storeNote = ''; }
+      return now !== was;
+    },
     // a newer copy found on the server on saving: { state }, until the player says which to keep
     conflict: function () { return acctConflict; },
     // keep the server's newer copy (returned, for the dossier to take up), or this one (saved over it)
@@ -1391,6 +1404,18 @@
     open: open, close: close, onFinish: onFinish,
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
     get: function () { return camp; },
+    /* Signed in (or out) from the menu: the account's copy is read as at a load,
+       the further along of it and this browser's taken, and saved to both. */
+    accountChanged: function () {
+      Store.recheck().then(function (changed) {
+        if (!changed || !acct) return;
+        Store.load().then(function (got) {
+          if (got) camp = got;
+          ensureColours();
+          if (camp) save();
+        });
+      });
+    },
     set: function (c) { camp = c; save(); render(); },
     contract: function () { return contract; },           // the test harness's view of the contract on screen
     dropContract: function () { contract = null; if (camp) camp.savedContract = null; },   // and a fresh one next time
