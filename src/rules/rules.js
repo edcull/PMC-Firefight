@@ -1031,7 +1031,10 @@
   }
   // Aggressive: forced to charge the closest enemy — unless an Overmind holds it back
   function aggressiveNow(state, u) {
-    if (!has(u, 'Aggressive') || isMachine(u)) return false;
+    /* an Overgrown bug "may assault as normal" (p. 116), so Aggressive — the
+       Overgrown Adrenaline Glands Flaw — drives it too, if it has an Assault to make
+       (rules review a119ac2 BUG-3); any other machine never charges on its own */
+    if (!has(u, 'Aggressive') || (isMachine(u) && !(isOvergrown(u) && u.assault > 0))) return false;
     return !overmindFor(state, u, false, true);
   }
   /* Endless Tide, in the End phase: an unbroken unit near an unsuppressed

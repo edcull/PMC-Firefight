@@ -92,6 +92,16 @@ head('Aggressive (p. 116)');
 ok('near the Overmind an Aggressive bug is free', R.aggressiveNow(st, sw), false);
 ok('out of reach it must charge', R.aggressiveNow(st, far), true);
 ok('spitters are not Aggressive', R.aggressiveNow(st, mk('bspitters', 'A', 60, 10)), false);
+// Overgrown Adrenaline Glands on an Overgrown bug (review a119ac2 BUG-3): it "may assault as normal", so it charges too
+var beetle = mk('bfirebeetle', 'A', 60, 40); beetle.rules.push('Aggressive');
+st.units.push(beetle);
+ok('an Aggressive Overgrown bug out of the Overmind\'s reach must charge', R.aggressiveNow(st, beetle), true);
+var beetle2 = mk('bfirebeetle', 'A', om.x + 6, om.y); beetle2.rules.push('Aggressive'); beetle2.tier = om.tier;
+st.units.push(beetle2);
+ok('...near the Overmind it is free', R.aggressiveNow(st, beetle2), false);
+var carrier = mk('bcarrier', 'A', 60, 60); carrier.rules.push('Aggressive');
+ok('...a Carrier bug, with no Assault, is never driven to charge', R.aggressiveNow(st, carrier), false);
+st.units.splice(st.units.indexOf(beetle), 1); st.units.splice(st.units.indexOf(beetle2), 1);
 
 head('Animal Behaviour (p. 116)');
 var q = 0, s = 0, sp = 0, N = 6000;
