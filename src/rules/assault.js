@@ -300,7 +300,8 @@
       if (isMachine(def) && (!isMachine(atk) || isOvergrown(atk)) && !has(def, 'Advanced Protection')) {
         total += 4; parts.push({ label: 'assaulting a vehicle', v: 4 });
       }
-      var pheroA = pheromoneBonus(state, atk, def, true);
+      // "when assaulting or shooting" (p. 116): the bug that charged, not one charged (review a119ac2 BUG-5)
+      var pheroA = role === 'attacker' ? pheromoneBonus(state, atk, def, true) : 0;
       if (pheroA) { total += pheroA; parts.push({ label: 'Pheromone Markers', v: pheroA }); }
       // Fierce Attacks: Flying Infantry +4 in the first round (p. 124)
       if (n === 1 && flyInf(atk) && doctrine(state, atk.side, 'BB4')) { total += 4; parts.push({ label: 'Fierce Attacks', v: 4 }); }

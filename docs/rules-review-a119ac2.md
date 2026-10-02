@@ -697,6 +697,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | BUG-2 Mimicry for every unit | **Fixed.** Mimicry is offered to every unit without Battlefield Insertion, Leader Bugs, Overgrown bugs and the Carrier included (not an emplaced gun or a turret). Underground Advance now includes Alpha squads; aircraft wait on XEN-9. Owner's ruling: "up to ¼" rounds down (9 units → 2; fewer than 4 → none). | `engine.js` (Mimicry set-up); test `insertion.js` |
 | BUG-3 Aggressive on an Overgrown bug | **Fixed.** Aggressive (the Overgrown Adrenaline Glands Flaw) now drives an Overgrown bug that has an Assault to make: it must charge the closest enemy unless an Overmind is within 18". A Carrier bug (Assault 0) and other machines are unaffected. | `rules.js` (`aggressiveNow`); test `bugs.js` |
 | BUG-4 Extensive Feeding and pierced Defence | **Fixed.** The +1 Defence applies to the Defence against Anti-tank/Gauss as well (Sandworm 17/15). | `campaign.js` (`applyEntry`); test `bugcamp.js` |
+| BUG-5 Pheromone Markers in an assault | **Fixed (owner's reading).** Only an Animal Behaviour bug that charges gets the bonus to its Assault; a bug being charged does not. Shooting is unchanged. | `assault.js` (`assaultMods`); test `bugs.js` |
 | CMP-6 Strength in Numbers: exactly one Tier below | Keep |
 | REB-3 First Among Equals without Command Unit (X) count as Command Units | Kept (group reading) |
 | REB-5 Hostile takeover may put guns in reserve | Change: guns always deploy |
