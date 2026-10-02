@@ -1637,7 +1637,8 @@
     if (bond && bond.m > m) { m = bond.m; extras.push('Psychic Bond: ' + bond.from.name + '\u2019s Morale ' + bond.m); }
     // Rite of Rage (p. 142): two points go at once with an enemy within 12"
     var rage = 0;
-    if (campFlag(u, 'rage') && enemyWithin(state, u, 12)) { rage = Math.min(2, u.sp); u.sp -= rage; extras.push('Rite of Rage −' + rage + ' SP'); }
+    // Rite of Rage: "in the Rally phase" (p. 142), not on a Pass/Regroup (rules review a119ac2 XEN-4)
+    if (inRally && campFlag(u, 'rage') && enemyWithin(state, u, 12)) { rage = Math.min(2, u.sp); u.sp -= rage; extras.push('Rite of Rage −' + rage + ' SP'); }
     var freedom = freedomDice(state, u);
     var reroll = (inspiringNearby(state, u) && !campFlag(u, 'insubordinate')) || has(u, 'Animal Behaviour');
     var jammed = jammedNearby(state, u), need = jammed ? 5 : 4;

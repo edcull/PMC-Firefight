@@ -667,6 +667,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | Campaign | CMP-2 Surrounded, but Steady adds dice to a Regroup; CMP-3 On Our Terms never offered to Player 2 in hotseat; CMP-4(c) a concession still charges the rout Trauma Point; REB-4 the Riders upgrade can be toggled after recruitment |
 | Space Bugs | BUG-2 Mimicry leaves out Leader and Overgrown bugs; BUG-3 the Aggressive flaw does nothing on an Overgrown bug; BUG-4 Extensive Feeding misses the Sandworm's pierced Defence |
 | Xenotripods | XEN-3 Rite of Knowledge forces a re-roll on a 3; XEN-4 Rite of Rage also fires on a Regroup; XEN-5 Rite of Unrest stops while its unit is Broken; XEN-6 Infamy of Panic misses many triggers; XEN-7 Teleport places the unit itself; XEN-8 Teleport tooltip says the unit must not have acted; XEN-10 Detailed Terrain Knowledge can move one piece twice; XEN-11 a rival's Foresighted Command does nothing; XEN-12 PL2 turret list capped at the Battle Tier; XEN-13 Advanced Control System turns automatically, also after an Advance |
+| XEN-4 Rite of Rage | **Fixed.** Its 2 SP come off in the Rally phase only, not on a Pass/Regroup action. | `rules.js` (`rally`); test `lowcamp.js` |
 | Solitaire | SOL-6 Defensive and Neutral OpFor shoot the easiest target, not the biggest threat; SOL-8 a Suppressed Decapitation leader never fires |
 
 ### Readings (31): the book can fairly be read either way
