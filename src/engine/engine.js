@@ -2019,11 +2019,13 @@
       return yes;
     });
     /* ---- acting ---- */
-    on('move advance markmove wave disembark strafe', null, function (side, it) {
+    on('move advance markmove wave disembark strafe tpspot', null, function (side, it) {
       if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (it.k === 'tpspot' && (ui.mode !== 'teleport-spot' || !ui.teleport)) return no('nothing is coming out of a pad');
       var spot = spotFrom(it);
       if (!spot) return no('that is out of reach');
-      if (it.k === 'markmove') K.doMarkMove(spot);
+      if (it.k === 'tpspot') K.finishTeleport(ui.teleport, ui.teleport.dest, spot);
+      else if (it.k === 'markmove') K.doMarkMove(spot);
       else if (it.k === 'wave') K.doWave(ui.selected, spot);
       else if (it.k === 'disembark') K.doDisembark(spot);
       else if (it.k === 'strafe') K.doStrafe(spot);

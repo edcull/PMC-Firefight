@@ -210,10 +210,14 @@
       }
       return { roll: r, reroll: second, value: v, random: v <= 2, pads: pads, randomPad: randomPad };
     }
-    function teleport(state, u, from, to) {
-      // drop the unit onto clear ground within 4" of the exit pad
+    /* `pos`: where the owner put it down, as a disembark is (p. 36; rules review
+       a119ac2 XEN-7) — within 4" of the exit pad, on ground it can stand on. Without
+       one (the AI), the first clear ground round the pad. */
+    function teleport(state, u, from, to, pos) {
       var best = null;
-      for (var ring = 2.2; ring <= 4 && !best; ring += 0.6) {
+      if (pos && !TERRAIN[terrainAt(state, pos.x, pos.y)].impassable && !unitNear(state, pos.x, pos.y, u, 0.2) &&
+        Math.hypot(pos.x - to.x, pos.y - to.y) <= 4 + 2 * UNIT_R) best = { x: pos.x, y: pos.y };
+      for (var ring = 2.2; ring <= 4 && !best; ring += 0.6) {          // drop it onto clear ground round the pad
         for (var k = 0; k < 16; k++) {
           var ang = k * Math.PI / 8 + (ring * 0.7);
           var x = to.x + Math.cos(ang) * ring, y = to.y + Math.sin(ang) * ring;

@@ -1428,7 +1428,7 @@
   function teleportFrom(state, tp) { return (KIT_XENO || kitXeno()).teleportFrom(state, tp); }
   function teleportPads(state, side) { return (KIT_XENO || kitXeno()).teleportPads(state, side); }
   function teleportRoll(state, u, tp) { return (KIT_XENO || kitXeno()).teleportRoll(state, u, tp); }
-  function teleport(state, u, from, to) { return (KIT_XENO || kitXeno()).teleport(state, u, from, to); }
+  function teleport(state, u, from, to, pos) { return (KIT_XENO || kitXeno()).teleport(state, u, from, to, pos); }
 
   /* ---------- NOT ONE STEP BACKWARDS! (T5, p. 87) ----------
      A Command Unit, or a friend within 12" of one, may shoot at a friendly unit

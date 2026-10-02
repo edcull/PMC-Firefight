@@ -424,6 +424,7 @@
   function doMarkMove(pt) { send({ k: 'markmove', x: pt.x, y: pt.y }); }
   function doWave(u, pt) { send({ k: 'wave', x: pt.x, y: pt.y }); }
   function doDisembark(pt) { send({ k: 'disembark', x: pt.x, y: pt.y }); }
+  function doTeleportSpot(pt) { send({ k: 'tpspot', x: pt.x, y: pt.y }); }
   function doStrafe(pt) { send({ k: 'strafe', x: pt.x, y: pt.y }); }
   function doDemolish(piece) { send({ k: 'piece', i: state.terrain.indexOf(piece) }); }
   function doBreach(piece) { send({ k: 'piece', i: state.terrain.indexOf(piece) }); }
@@ -896,7 +897,7 @@
     arrivalSpots: arrivalSpots, autoDeployMine: autoDeployMine, begin: begin, busy: busy, byId: byId,
     chooseAction: chooseAction, curArea: curArea, deployNext: deployNext, deployOK: deployOK,
     deploymentDone: deploymentDone, doAssault: doAssault, doBreach: doBreach, doDemolish: doDemolish,
-    doDesignate: doDesignate, doDisembark: doDisembark, doEmbark: doEmbark, doHack: doHack,
+    doDesignate: doDesignate, doDisembark: doDisembark, doTeleportSpot: doTeleportSpot, doEmbark: doEmbark, doHack: doHack,
     doMarkMove: doMarkMove, doMove: doMove, doShoot: doShoot, doSteady: doSteady, doStrafe: doStrafe,
     doSupport: doSupport, doWave: doWave, eligible: eligible, forcedCharge: forcedCharge,
     holdInsertion: holdInsertion, insertionLegal: insertionLegal, insertionSpots: insertionSpots,
@@ -952,7 +953,7 @@
     nowMs: nowMs, chooseAction: chooseAction, curArea: curArea,
     deployNext: deployNext, deployOK: deployOK, deployRoster: deployRoster, dispX: dispX, dispY: dispY,
     doAssault: doAssault, doBreach: doBreach, doDemolish: doDemolish, doDesignate: doDesignate,
-    doDisembark: doDisembark, doEmbark: doEmbark, doEnter: doEnter, doExitBld: doExitBld, doLeave: doLeave, doCheckSite: doCheckSite, doHack: doHack,
+    doDisembark: doDisembark, doTeleportSpot: doTeleportSpot, doEmbark: doEmbark, doEnter: doEnter, doExitBld: doExitBld, doLeave: doLeave, doCheckSite: doCheckSite, doHack: doHack,
     doMarkMove: doMarkMove, doMove: doMove, doShoot: doShoot, doSteady: doSteady, doStrafe: doStrafe,
     doSupport: doSupport, doTeleport: doTeleport, doWave: doWave, finishTeleport: finishTeleport,
     garrisonAt: garrisonAt, garrisonable: garrisonable, isAI: isAI, liftOf: liftOf,

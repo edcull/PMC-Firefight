@@ -338,5 +338,36 @@ console.log('\nXEN-10 Detailed Terrain Knowledge moves a piece once, whoever mov
   ok('...the same piece cannot be moved again', !r2.ok && /already been moved/.test(r2.why || ''), r2.why);
 })();
 
+console.log('\nXEN-7 A teleported unit is put down where its owner chooses, within 4" of the pad (p. 130)');
+(function () {
+  const e = game(['xtturret2', 'xbeta3', 'xbeta3'], ['regular']);
+  let g = 0;
+  while (e.state().phase === 'deploy' && g++ < 200) { const side = e.query.placingSide(); if (!side) break; e.intent(side, { k: 'autodeploy' }); }
+  e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });
+  const st = e.state();
+  st.terrain.length = 0;
+  const pads = st.units.filter((u) => u.side === 'A' && R.has(u, 'Teleport')), sq = st.units.find((u) => u.key === 'xbeta3');
+  st.units.forEach((u) => { u.activated = false; u.sp = 0; });
+  pads[0].x = 10; pads[0].y = 10; pads[1].x = 34; pads[1].y = 34; sq.x = 12; sq.y = 10;
+  st.units.filter((u) => u.side === 'B').forEach((u, i) => { u.x = 44; u.y = 4 + i * 3; });
+  st.activeSide = 'A'; st.streak = 1;
+  e.intent('A', { k: 'select', id: pads[0].id });
+  e.intent('A', { k: 'action', id: 'teleport' });
+  e.intent('A', { k: 'target', id: sq.id });
+  const ui = e.sel();
+  // on a 3-6 the owner picks the pad first
+  if (ui.mode === 'teleport-dest') e.intent('A', { k: 'target', id: pads[1].id });
+  ok('the owner is asked where the unit steps out', ui.mode === 'teleport-spot' && ui.moves.length > 0, ui.mode);
+  if (ui.mode !== 'teleport-spot') return;
+  const dest = ui.teleport.dest;
+  // the spot furthest from where the automatic placement would put it: the far side of the pad
+  const pick = ui.moves.slice().sort((a, b) => Math.hypot(b.x - dest.x, b.y - dest.y) - Math.hypot(a.x - dest.x, a.y - dest.y))[0];
+  ok('...on ground within 4" of the pad', ui.moves.every((c) => R.unitDist({ x: c.x, y: c.y }, dest) <= 4 + 1e-6));
+  const r = e.intent('A', { k: 'tpspot', x: pick.x, y: pick.y });
+  ok('...and it is put down there', r.ok && sq.x === pick.x && sq.y === pick.y, r.why || (sq.x + ',' + sq.y + ' vs ' + pick.x + ',' + pick.y));
+  ok('...the pad\'s activation spent', pads[0].activated && ui.mode === 'idle');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
