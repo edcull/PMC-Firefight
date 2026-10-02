@@ -429,7 +429,7 @@
         if (ra && rb) return { winner: null, text: 'Both companies are broken — a bloody draw.' };
         if (rb) return { winner: 'A', text: 'A routs the enemy — half their units are gone.' };
         if (ra) return { winner: 'B', text: 'B routs the enemy — half their units are gone.' };
-        if (state.turn >= 20) return { winner: null, text: 'Twenty turns and neither company breaks — a draw.' };
+        if (state.turn >= 20) return { winner: null, text: 'Twenty turns and neither company breaks — a draw.', timeout: true };
       }
     },
 
@@ -469,7 +469,7 @@
         if (state.turn >= 20) {
           if (held.A.length > held.B.length) return { winner: 'A', text: 'A holds more objectives at the end of turn 20.' };
           if (held.B.length > held.A.length) return { winner: 'B', text: 'B holds more objectives at the end of turn 20.' };
-          return { winner: null, text: 'Time runs out with the objectives split — a draw.' };
+          return { winner: null, text: 'Time runs out with the objectives split — a draw.', timeout: true };
         }
       }
     },
@@ -558,7 +558,7 @@
         if (ra) return { winner: 'B', text: 'B routs the enemy — half their units are gone.' };
         if (rollEnd(state, 12)) {
           if (holder) return { winner: holder, text: 'The search ends with ' + holder + ' holding the prize.' };
-          return { winner: null, text: 'The search ends with nobody holding the prize — a draw.' };
+          return { winner: null, text: 'The search ends with nobody holding the prize — a draw.', timeout: true };
         }
       }
     },
@@ -1070,7 +1070,8 @@
        met: the wiped-out side has lost. */
     var won = ga ? 'B' : 'A', lost = ga ? 'A' : 'B';
     var own = state.scen.check(state);
-    if (own && own.winner === lost) {
+    // (both sides breaking at once is the wiped-out side meeting one too; time running out level is not)
+    if (own && (own.winner === lost || (own.winner == null && own.text && !own.timeout))) {
       return { winner: null, text: lost + ' is destroyed to the last unit, but met a victory condition the same turn — a draw. (' + own.text + ')' };
     }
     return { winner: won, text: lost + ' is destroyed to the last unit — an automatic victory for ' + won + '.' };
