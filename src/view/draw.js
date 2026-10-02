@@ -390,7 +390,7 @@
          breathes, a cloak shimmers — but only one in view (drawBoard notes it) is worth
          redrawing the whole board for; rotors and sweeps read as well at eight frames
          a second as a fire does */
-      if (B.vc.hazeOnView || ((B.vc.animOnView || B.vc.fireOnView || B.vc.flagOnView) && ambientTick % 2 === 0)) drawBoard();
+      if (B.vc.hazeOnView || ((B.vc.animOnView || B.vc.fireOnView || B.vc.flagOnView || B.vc.liveOnView) && ambientTick % 2 === 0)) drawBoard();
     }, 60);
 
     /* ================= heat haze =================
@@ -880,6 +880,15 @@
         if (!onView(bx, by)) return;
         order.push({ depth: bx + by, draw: 'boarding', u: u, x: bx, y: by, k: k, age: age, up: bd.up });
       });
+      // the pieces of scenery that move: an objective's pennant and lamp, a search site's tag
+      var lives = (B.vc.props || []).filter(function (pr) {
+        return ISO.propLives(pr) && onView(pr.x + (pr.w || 0) / 2, pr.y + (pr.h || 0) / 2);
+      });
+      lives.forEach(function (pr) {
+        var lx = pr.x + (pr.w || 0) / 2, ly = pr.y + (pr.h || 0) / 2;
+        order.push({ depth: lx + ly, draw: 'live', pr: pr, x: lx, y: ly });
+      });
+      B.vc.liveOnView = lives.length > 0;
       // the dead and the wrecks stay where they fell
       var now = now0, anyFire = false;
       (B.vc.remains || []).forEach(function (r) {
@@ -909,6 +918,7 @@
             if (it.flag) roofFlag(B.pctx, it.pr, ISO.PALETTE[it.flag] || ISO.PALETTE.A, tNow, (it.pr.x * 7 + it.pr.y * 3) % 1);
             return;
           }
+          if (it.draw === 'live') { ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0); return; }
           if (it.draw === 'body') {
             var bp = ISO.toScreen(it.r.x, it.r.y);
             ISO.drawBody(B.pctx, bp.x + it.r.dx, bp.y + it.r.dy - liftOf(it.r.x, it.r.y), it.r);

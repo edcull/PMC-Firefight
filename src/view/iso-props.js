@@ -316,7 +316,7 @@
       objectives.forEach(function (o, i) {
         // the Demolish target is its own marker: no flag planted in front of its wall
         var onTarget = terrain.some(function (t) { return t.kind === 'objective' && o.x >= t.x - 0.5 && o.x <= t.x + t.w + 0.5 && o.y >= t.y - 0.5 && o.y <= t.y + t.h + 0.5; });
-        if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i });
+        if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz });
       });
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable
@@ -817,6 +817,13 @@
       p.y -= lift || 0;
       KINDS.drawKind(cutaway, g, lift, p, pr);
     }
+    // its moving parts, at the time t (ms): nothing for a piece that has none
+    function drawPropLive(g, pr, lift, t) {
+      if (!KINDS.lives(pr)) return;
+      var p = toScreen(pr.x, pr.y);
+      p.y -= lift || 0;
+      KINDS.drawLive(g, lift, p, pr, t);
+    }
 
 
     // each kind of piece, drawn in iso-propkinds.js
@@ -833,6 +840,8 @@
       box: box,
       buildProps: buildProps,
       drawProp: drawProp,
+      drawPropLive: drawPropLive,
+      propLives: function (pr) { return KINDS.lives(pr); },
       edgeLine: edgeLine
     };
   };
