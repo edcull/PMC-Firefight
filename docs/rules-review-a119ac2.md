@@ -656,9 +656,9 @@ Consistent with owner decisions: one token per unit (multi-figure bases have no 
 
 ## 7. Low findings sorted
 
-SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command Units decision. The other 52 fall into two groups.
+SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command Units decision. The other 53 fall into two groups; CMP-4 is split between them.
 
-### Clear bugs (24): the code does something the book does not allow, with no fair reading for it
+### Clear bugs (23): the code does something the book does not allow, with no fair reading for it
 
 | Area | Findings |
 |---|---|
@@ -669,7 +669,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | Xenotripods | XEN-3 Rite of Knowledge forces a re-roll on a 3; XEN-4 Rite of Rage also fires on a Regroup; XEN-5 Rite of Unrest stops while its unit is Broken; XEN-6 Infamy of Panic misses many triggers; XEN-7 Teleport places the unit itself; XEN-8 Teleport tooltip says the unit must not have acted; XEN-10 Detailed Terrain Knowledge can move one piece twice; XEN-11 a rival's Foresighted Command does nothing; XEN-12 PL2 turret list capped at the Battle Tier; XEN-13 Advanced Control System turns automatically, also after an Advance |
 | Solitaire | SOL-6 Defensive and Neutral OpFor shoot the easiest target, not the biggest threat; SOL-8 a Suppressed Decapitation leader never fires |
 
-### Readings (28): the book can fairly be read either way
+### Readings (31): the book can fairly be read either way
 
 | Finding | Recommendation |
 |---|---|
