@@ -169,7 +169,14 @@
       SFX[name] = function () { V.sound(name, Array.prototype.slice.call(arguments)); };
     });
     /* Nothing is drawn, so nothing is ever mid-animation and nothing waits. */
-    function render() { syncMen(); returnToPool(); syncMen(); V.changed(); }
+    function render() { panicSweep(); syncMen(); returnToPool(); syncMen(); V.changed(); }
+    // Infamy of Panic (p. 143), for every friend broken or destroyed since the last step (xeno.js)
+    function panicSweep() {
+      if (!state || !state.units || state.phase !== 'battle') return;
+      var pl = [];
+      R.panicSweep(state, pl);
+      pl.forEach(function (l) { logLine(l.t, l.text); });
+    }
     /* The named men caught up with the model counts, after every step: whoever
        the rules just took off the table is picked out as a casualty and marked
        with the turn it happened. Done before a unit goes back to the OpFor pool, so the
@@ -389,19 +396,22 @@
       logLine('note', sideName(side) + ' — Complex Teleport Network: a free set of ' + tprof.turretSet + ' Teleport turrets' + ((cfg.pl || 1) > 1 ? ' a Priority Level' : '') + '.');
     });
     /* Mimicry (p. 124), and the tribe's Underground Advance (p. 141): up to a
-       quarter of the force — rounded up, as every division is (p. 27) — may be
-       held back and come in by Battlefield Insertion, on top of the units that
-       have the rule of their own. A player chooses which: every infantry unit is
-       offered the rule, and no more than the quarter may be held for it (u.mimic,
+       quarter of the force — rounded down, never more than a quarter (the owner's
+       ruling, rules review a119ac2 BUG-2) — may be held back and come in by
+       Battlefield Insertion, on top of the units that have the rule of their own.
+       A player chooses which: every unit is offered the rule — Leader Bugs,
+       Overgrown bugs, Alpha squads and aircraft too (BUG-2, XEN-9) — bar an emplaced
+       gun and a turret; and no more than the quarter may be held for it (u.mimic,
        state.mimicCap). The AI takes the first quarter. */
     state.mimicCap = {};
     ['A', 'B'].forEach(function (side) {
       var docs = (state.doctrines && state.doctrines[side]) || [];
       if (docs.indexOf('BB2') < 0 && docs.indexOf('XO2') < 0) return;
       var mine = state.units.filter(function (u) { return u.side === side; });
-      var cap = Math.ceil(mine.length / 4);
+      var cap = Math.floor(mine.length / 4);
+      if (cap < 1) return;
       var able = mine.filter(function (u) {
-        return u.cls === 'infantry' && !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Overmind') && !R.has(u, 'Dominant Species');
+        return !R.has(u, 'Battlefield Insertion') && !R.has(u, 'Stationary Artillery') && !R.has(u, 'Turret');
       });
       if (isAI(side)) { able.slice(0, cap).forEach(function (u) { u.rules.push('Battlefield Insertion'); }); return; }
       state.mimicCap[side] = cap;
@@ -983,7 +993,10 @@
      a unit with a friend in 12" and sight rolls a D6, and on a 1 fires on it. */
   function beginningRites() {
     state.units.forEach(function (u) {
-      if (!K.onTable(u) || !R.campFlag(u, 'unrest') || R.status(u) === 'broken') return;
+      /* a passive skill working for its own side, so — like the bonuses of p. 28 — it
+         lapses while the unit is Suppressed or Broken (the owner's ruling, rules
+         review a119ac2 XEN-5) */
+      if (!K.onTable(u) || !R.campFlag(u, 'unrest') || R.status(u) !== 'ready') return;
       var hit = K.activeUnits().filter(function (e) {
         return e.side !== u.side && e.cls === 'infantry' && !e.drone && !R.campFlag(e, 'shielding') && R.unitDist(u, e) <= 12;
       });
@@ -2006,11 +2019,13 @@
       return yes;
     });
     /* ---- acting ---- */
-    on('move advance markmove wave disembark strafe', null, function (side, it) {
+    on('move advance markmove wave disembark strafe tpspot', null, function (side, it) {
       if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (it.k === 'tpspot' && (ui.mode !== 'teleport-spot' || !ui.teleport)) return no('nothing is coming out of a pad');
       var spot = spotFrom(it);
       if (!spot) return no('that is out of reach');
-      if (it.k === 'markmove') K.doMarkMove(spot);
+      if (it.k === 'tpspot') K.finishTeleport(ui.teleport, ui.teleport.dest, spot);
+      else if (it.k === 'markmove') K.doMarkMove(spot);
       else if (it.k === 'wave') K.doWave(ui.selected, spot);
       else if (it.k === 'disembark') K.doDisembark(spot);
       else if (it.k === 'strafe') K.doStrafe(spot);
@@ -2141,6 +2156,8 @@
         var pu = K.byId(fa.ids[0]);
         if (pu && R.turnCost(pu, fa.pivot.from, R.nearestFacing(it.dir)) > fa.pivot.left + 1e-6) return no('not enough of its move left to turn that far');
       }
+      // Advanced Control System: up to 90° from the way it flew in (XEN-13)
+      if (it.k === 'vface' && fa.swing && Math.abs(R.angleWrap(R.nearestFacing(it.dir) - fa.swing.from)) > Math.PI / 2 + 1e-6) return no('it may turn up to 90\u00b0');
       K.answerFacing(it.k === 'vface' ? it.dir : null);
       return yes;
     });
@@ -2244,6 +2261,9 @@
         // the Rally phase's flight on its own, for the tests
         fleeBroken: function () { K.fleeBroken(); },
         rallyPhase: function () { K.rallyPhase(); },
+        beginningRites: function () { beginningRites(); },
+        // the OpFor's pick of target for a Defensive or Neutral result (SOL-6), for the tests
+        threatTarget: function (u) { return K.threatTarget(u, 'fire'); },
         greetArrival: function (u) { return K.greetArrival(u); },
         reservePhase: function (done) { K.reservePhase(done || function () {}); },
         aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },

@@ -12,7 +12,7 @@
     var autoDeployMine = B.autoDeployMine, begin = B.begin, busy = B.busy, byId = B.byId;
     var chooseAction = B.chooseAction, curArea = B.curArea, deployNext = B.deployNext, deployOK = B.deployOK;
     var deploymentDone = B.deploymentDone, doAssault = B.doAssault, doBreach = B.doBreach;
-    var doDemolish = B.doDemolish, doDesignate = B.doDesignate, doDisembark = B.doDisembark;
+    var doDemolish = B.doDemolish, doDesignate = B.doDesignate, doDisembark = B.doDisembark, doTeleportSpot = B.doTeleportSpot;
     var doEmbark = B.doEmbark, doHack = B.doHack, doMarkMove = B.doMarkMove, doMove = B.doMove;
     var doShoot = B.doShoot, doSteady = B.doSteady, doStrafe = B.doStrafe, doSupport = B.doSupport;
     var doWave = B.doWave, eligible = B.eligible, forcedCharge = B.forcedCharge;
@@ -91,6 +91,7 @@
         var c = ui.moves[ui.moves.length - 1];
         if (ui.mode === 'wave') doWave(ui.selected, c);
         else if (ui.mode === 'disembark') doDisembark(c);
+        else if (ui.mode === 'teleport-spot') doTeleportSpot(c);
         else if (ui.mode === 'strafe') doStrafe(c);
         else if (ui.mode === 'designate') doMarkMove(c);
         else doMove(c);
@@ -271,7 +272,7 @@
     window.__dropHere = function (p) { placeInsertion(p); };
     window.__terrainPicks = function () { return ui.mode + ': ' + ui.terrain.map(function (r) { return r.kind; }).join(', '); };
     window.__terrainList = function () { return ui.terrain.map(function (r) { return { kind: r.kind, x: r.x, y: r.y }; }); };
-    window.__tapMove = function (spot) { if (ui.mode === 'disembark') doDisembark(spot); else previewMove(spot); };
+    window.__tapMove = function (spot) { if (ui.mode === 'disembark') doDisembark(spot); else if (ui.mode === 'teleport-spot') doTeleportSpot(spot); else previewMove(spot); };
     window.__sel = function () { return ui.selected; };
     window.__canvasAt = function (x, y) {
       var c = canvasFromWorld(x, y, liftOf(x, y));

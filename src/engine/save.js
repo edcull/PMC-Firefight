@@ -83,7 +83,8 @@
         // a Lifter slings a ground vehicle — not a gun, which is no vehicle (ruling)
         if (lifter) return u.cls === 'vehicle' && !R.has(u, 'Lifter') && !towingGun(u);
         if (u.cls !== 'infantry') return false;
-        if (R.has(u, 'Stationary Artillery')) return R.canTow(veh) && !towingGun(veh);
+        // an Invasion attacker's guns drop on their own: no hull lands with one behind it (SC.gunRule)
+        if (R.has(u, 'Stationary Artillery')) return R.canTow(veh) && !towingGun(veh) && SC.gunRule(E.state, veh.side) !== 'drop';
         return !(R.has(u, 'Riders') && !(R.mountOf(u) && R.mountOf(u).transport));
       });
     }

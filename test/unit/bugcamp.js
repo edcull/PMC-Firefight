@@ -99,13 +99,14 @@ ok('Quick Learning: Tier III holds five, not four', C.honourCap(q, co6), 5);
 
 head('Pathways that change the bugs');
 function built(key, docs) {
-  var p = R.profile(key), u = { key: key, side: 'A', move: p.move, fp: p.fp, range: p.range, def: p.def, assault: p.assault, morale: p.morale, str: p.str, rules: p.rules.slice(), size: p.size, models: p.size };
+  var p = R.profile(key), u = { key: key, side: 'A', move: p.move, fp: p.fp, range: p.range, def: p.def, defPierced: p.defPierced, assault: p.assault, morale: p.morale, str: p.str, rules: p.rules.slice(), size: p.size, models: p.size };
   C.applyEntry(u, C.newEntry(key), docs);
   return u;
 }
 ok('Concentrated Acid: Spitters FP 3 → 4', built('bspitters', ['BC2']).fp, 4);
 ok('Bioplasma Missiles: winged bugs get Anti-tank (limited)', built('bsmallwing', ['BC5']).rules.indexOf('Anti-tank (limited)') >= 0, true);
 ok('Extensive Feeding: the Queen moves 10, Defence 16', built('bqueen', ['BB5']).move + '/' + built('bqueen', ['BB5']).def, '10/16');
+ok('...and the Sandworm\'s Defence against Anti-tank rises with it (review a119ac2 BUG-4)', built('bsandworm', ['BB5']).def + '/' + built('bsandworm', ['BB5']).defPierced, '17/15');
 ok('Enlarged Leg Muscles: Attack forms move 10', built('battack', ['BP2']).move, 10);
 var s3 = swarm('BP1');
 ok('Efficient Spawn Cycle: Attack forms cost 6, not 8', C.recruitCost(s3.co, 'battack'), 6);
@@ -124,6 +125,14 @@ var sp = mk('bspitters', 'A', 10, 10), tg = mk('regular', 'B', 25, 10);
 st.units = [sp, tg];
 var m = R.shotOdds(st, sp, tg, 'fire', {});
 ok('Effective Toxin Glands: Fire! is worth +2', m.parts.some(function (x) { return /Toxin/.test(x.label) && x.v === 2; }), true);
+// a Flying Bug fires at Basic Firepower, but its Fire! still adds +1 with the glands (review a119ac2 BUG-6)
+var wing = mk('bsmallwing', 'A', 10, 10);
+st.units = [wing, tg];
+var wf = R.shotOdds(st, wing, tg, 'fire', {}), wb = R.shotOdds(st, wing, tg, 'basic', {});
+ok('...a Flying Bug\'s Fire! is worth +1', wf.parts.some(function (x) { return /Toxin/.test(x.label) && x.v === 1; }) && wf.mods === wb.mods + 1, true, wf.mods + ' vs ' + wb.mods);
+st.doctrines.A = [];
+ok('...and nothing without the glands', R.shotOdds(st, wing, tg, 'fire', {}).mods, wb.mods);
+st.doctrines.A = ['BC6'];
 st.doctrines.A = ['BB3'];
 ok('Increased Control: the Overmind reaches 24"', R.overmindReach(st, 'A'), 24);
 st.doctrines.A = ['BP5'];

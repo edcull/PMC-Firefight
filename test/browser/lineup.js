@@ -64,7 +64,12 @@ function ok(name, cond, note) {
     end && end.every((q) => q.x >= 17 - REACH - 1e-6 && q.x <= 18), end && end.map((q) => q.x.toFixed(1)).join(' '));
 
   console.log('\nNot tagged as in the terrain: the men keep their ranks');
-  for (const [x, y, what] of [[14, 21.4, 'beside the wall, not on it'], [18.6, 21.1, 'past the end of the wall']]) {
+  /* In the open within 1.5" of a low wall, a unit is in its cover (TER-2, rules review
+     a119ac2) and lines it; further off, it keeps its ranks. */
+  const near = await at(14, 21.4);
+  ok('in the open 0.4" off the wall: in its cover, and lined along it', !!near && near.every((q) => q.y >= 21 && q.y <= 22.2),
+    near && near.map((q) => q.y.toFixed(1)).join(' '));
+  for (const [x, y, what] of [[14, 23, 'beside the wall, 2" off it'], [20.2, 21.6, 'past the end of the wall, 2" off it']]) {
     const t = await tag(x, y);
     ok(what + ': not tagged', t !== 'barricade', t);
     ok('...and not lined up', (await at(x, y)) === null);
@@ -107,7 +112,7 @@ function ok(name, cond, note) {
     await p.screenshot({ path: shot(name), clip: box });
   }
   await look('lineup-end.png', 17, yEnd);
-  await look('lineup-past.png', 18.6, 21.1);
+  await look('lineup-past.png', 20.2, 21.6);
 
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

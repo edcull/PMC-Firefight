@@ -302,5 +302,77 @@ console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6
   ok('...nor on Kill Them All!', /assault/.test(wild.said) && !wild.marked, wild.said.slice(0, 120));
 })();
 
+console.log('\nSOL-6 Defensive and Neutral OpFor engage the biggest threat (p. 147)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['hmgteam', 'recruits'], armyB: ['regular', 'regular'],
+    nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse',
+    solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.terrain.length = 0; st.objectives.length = 0; if (st.sc) st.sc.targets = [];
+  const hmg = st.units.find((u) => u.key === 'hmgteam'), soft = st.units.find((u) => u.key === 'recruits');
+  const [ob, mate] = st.units.filter((u) => u.side === 'B');
+  st.units.forEach((u) => { u.reserve = false; u.aboard = null; u.alive = true; u.sp = 0; u.bld = null; });
+  // the shooter at 20,24; its friend at 30,24; the Heavy MG 16" off its friend, the recruits shaken and close by
+  ob.x = 20; ob.y = 24; mate.x = 30; mate.y = 24;
+  hmg.x = 30; hmg.y = 8; hmg.models = 3;
+  soft.x = 22; soft.y = 30; soft.models = 2; soft.sp = soft.morale + 1;
+  const best = (() => { const t = e.query.threatTarget(ob); return t && t.t; })();
+  ok('a Defensive or Neutral unit picks the Heavy MG that threatens its friends', best === hmg, best && best.key);
+  // the recruits on a mission objective: now they are the biggest threat
+  st.objectives.push({ x: 22, y: 30 });
+  const best2 = e.query.threatTarget(ob).t;
+  ok('...but an enemy on a mission objective comes first', best2 === soft, best2 && best2.key);
+})();
+
+console.log('\nSOL-8 A Suppressed OpFor unit rolls its behaviour, and takes from the Suppressed options (pp. 34, 147)');
+(function () {
+  const seen = {}; let bad = 0, rolled = 0;
+  for (let k = 0; k < 24; k++) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular', 'regular'], armyB: ['regular', 'regular'],
+      nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse',
+      solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const st = e.state();
+    st.terrain.length = 0; st.objectives.length = 0;
+    const [a1, a2] = st.units.filter((u) => u.side === 'A'), [b1, b2] = st.units.filter((u) => u.side === 'B');
+    st.units.forEach((u) => { u.reserve = false; u.aboard = null; u.alive = true; u.sp = 0; u.bld = null; u.activated = false; });
+    b1.x = 20; b1.y = 24; b2.x = 40; b2.y = 40; a1.x = 26; a1.y = 24; a2.x = k % 2 ? 4 : 30; a2.y = 4;
+    b1.sp = b1.morale + 1;
+    st.activeSide = 'B';
+    const n0 = st.log.length;
+    e.query.aiAct(b1);
+    const lines = st.log.slice(n0).map((l) => l.text || '');
+    const cut = lines.findIndex((t, j) => j > 0 && /behaviour D6|Rally phase/.test(t));
+    const txt = lines.slice(0, cut < 0 ? lines.length : cut).join(' | ');
+    if (/behaviour D6/.test(lines[0])) rolled++;
+    const what = /charges|Assault/.test(txt) ? 'charge' : /\(auxiliary weapons\) fires/.test(txt) ? 'aux' : /fires/.test(txt) ? 'main' :
+      /scrambles|gets into/.test(txt) ? 'cover' : /regroup|rall/i.test(txt) ? 'regroup' : 'other';
+    seen[what] = (seen[what] || 0) + 1;
+    if (what === 'charge' || what === 'main' || what === 'other') bad++;
+  }
+  ok('it rolls its behaviour as it activates', rolled === 24, rolled + ' of 24');
+  ok('...and only fires its Auxiliary weapons, moves to cover or regroups', bad === 0 && (seen.aux || 0) > 0, JSON.stringify(seen));
+})();
+
+(function () {
+  // a Decapitation leader, Suppressed: still shoots, with its Auxiliary weapons
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_decap', armyA: ['regular', 'regular'], armyB: SOLO.rollOpFor(3, 1, 'pmc', false),
+    nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse',
+    solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  const lead = st.units.find((u) => u.side === 'B' && u.soloLeader), foe = st.units.find((u) => u.side === 'A');
+  if (!lead) { ok('a Decapitation leader is on the table', false); return; }
+  st.terrain.length = 0;
+  st.units.forEach((u) => { if (u !== lead && u !== foe) { u.x = u.side === 'A' ? 2 : 46; u.y = 2; } u.reserve = false; u.aboard = null; u.bld = null; });
+  lead.x = 20; lead.y = 24; foe.x = 25; foe.y = 24; foe.alive = true; foe.reserve = false;
+  lead.sp = lead.morale + 1; lead.activated = false; st.activeSide = 'B';
+  const n0 = st.log.length;
+  e.query.aiAct(lead);
+  const txt = st.log.slice(n0, n0 + 4).map((l) => l.text || '').join(' | ');
+  ok('a Suppressed Decapitation leader fires its Auxiliary weapons', /\(auxiliary weapons\) fires/.test(txt), txt.slice(0, 140));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

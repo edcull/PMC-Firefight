@@ -187,6 +187,18 @@ async function pastFronts(p) {
   });
   check('turrets are fielded for the battle, not bought', turret.offered > 0 && turret.heading && turret.took && turret.picked === 1 && turret.sameBooks, JSON.stringify(turret));
   check('...and there is no filling the list for you', turret.noFill);
+  // XEN-12 (review a119ac2): above the Battle Tier only at Priority Level 2
+  const tiers = await p.evaluate(() => {
+    const k = window.PMC_CAMPAIGN.contract(), was = k.pl, P = window.PMC;
+    const above = () => [...document.querySelectorAll('#camp-body [data-field]')].filter(b => P.profile(b.getAttribute('data-field')).tier > k.tier).length;
+    k.pl = 1; window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get());
+    const pl1 = above();
+    k.pl = 2; window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get());
+    const pl2 = above();
+    k.pl = was; window.PMC_CAMPAIGN.set(window.PMC_CAMPAIGN.get());
+    return { pl1, pl2, tier: k.tier };
+  });
+  check('turrets above the Battle Tier: none at Priority Level 1, offered at 2', tiers.pl1 === 0 && (tiers.tier >= 5 || tiers.pl2 > 0), JSON.stringify(tiers));
   await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
   await p.waitForTimeout(200);
   txt = await body(p);

@@ -229,5 +229,37 @@ head('A hundred campaign turns: a player tribe against a rival tribe');
   ok('...a PMC aircraft with Advanced Emergency Systems on a 2+', C.salvage({}, fsc, false).need, 2);
 })();
 
+console.log('\nXEN-11 Foresighted Command, whoever holds it (p. 141)');
+(function () {
+  const tribe = (xo3) => { const c = C.newCompany('T', { faction: 'xeno' }); if (xo3) c.doctrines.push('XO3'); return c; };
+  const none = C.foresight(tribe(false), tribe(false), true);
+  ok('neither holds it: one scenario, nothing to choose', !!none.scenario && !none.alt && !none.fore, true);
+  const mine = C.foresight(tribe(true), tribe(false), true);
+  ok('the player holds it: a second die, theirs to take', !!mine.alt && mine.altBy === 'A', true);
+  const theirs = C.foresight(tribe(false), tribe(true), true);
+  ok('an AI rival holds it: it keeps one of its two dice itself, and says so', !!theirs.scenario && !theirs.alt && /Foresighted Command/.test(theirs.note || ''), true);
+  const p2 = C.foresight(tribe(false), tribe(true), false);
+  ok('a hotseat Player 2 holds it: the second die is theirs to take', !!p2.alt && p2.altBy === 'B', true);
+  // both hold it: three dice, a die each ignored, in a random order
+  let firsts = { A: 0, B: 0 }, settled = 0;
+  for (let k = 0; k < 40; k++) {
+    const r = C.foresight(tribe(true), tribe(true), true);
+    const f = r.fore;
+    if (!f || f.dice.length !== 3) continue;
+    firsts[f.order[0]]++;
+    // the AI has ignored its die already if it went first; now the player's turn
+    if (f.order[0] === 'B' && f.ignored.length !== 1) continue;
+    const left = [0, 1, 2].filter((i) => f.ignored.indexOf(i) < 0);
+    if (!C.foreIgnore(r, 'A', left[0], true)) continue;
+    // if the player went first the AI follows at once; either way two are gone and the third is the scenario
+    const keep = [0, 1, 2].filter((i) => f.ignored.indexOf(i) < 0);
+    if (f.done && f.ignored.length === 2 && keep.length === 1 && r.scenario === f.dice[keep[0]]) settled++;
+  }
+  ok('both hold it: three dice, each side ignores one, and the third is fought', settled, 40);
+  ok('...either side may go first', firsts.A > 5 && firsts.B > 5, true);
+  const r2 = C.foresight(tribe(true), tribe(true), false);
+  ok('...a die may not be ignored out of turn', C.foreIgnore(r2, r2.fore.order[1], 0, false), false);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

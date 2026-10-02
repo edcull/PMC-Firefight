@@ -338,6 +338,30 @@ for (var tq = 0; tq < 300; tq++) {
 }
 ok('Aux teleport on a 2: the random pad or the aircraft, nothing else', n2 > 10 && got2 === n2, got2 + ' of ' + n2);
 ok('...on a 3: any pad or the aircraft', n3 > 10 && got3 === n3, got3 + ' of ' + n3);
+// Rite of Knowledge (review a119ac2 XEN-3): a 1-2 is rolled again, a 3 — already the owner's pick — never
+(function () {
+  var pa2 = unit('xtturret2', { x: 10, y: 10 }), pb2 = unit('xtturret2', { x: 40, y: 10 });
+  var kn = unit('recruits', { x: 12, y: 10, camp: { flags: { knowledge: true } } });
+  var tk = table([pa2, pb2, kn]), low = 0, lowRe = 0, three = 0, threeRe = 0;
+  for (var i = 0; i < 600; i++) {
+    var k = R.teleportRoll(tk, kn, pa2);
+    if (k.roll <= 2) { low++; if (k.reroll != null) lowRe++; }
+    if (k.roll === 3) { three++; if (k.reroll != null) threeRe++; }
+  }
+  ok('Rite of Knowledge: a 1-2 is rolled again', low > 50 && lowRe === low, lowRe + ' of ' + low);
+  ok('...a 3 is kept, the pad still the owner\'s pick', three > 30 && threeRe === 0, threeRe + ' of ' + three + ' re-rolled');
+  // XEN-14: Teleport Turrets only — the manned Teleport craft is neither helped by the Rite nor barred by Backwardness
+  var craft = unit('xtelecraft', { x: 14, y: 10 }), kc = unit('recruits', { x: 15, y: 10, camp: { flags: { knowledge: true } } });
+  var tc = table([craft, pb2, kc]), anyRe = false;
+  for (var j = 0; j < 200; j++) if (R.teleportRoll(tc, kc, craft).reroll != null) anyRe = true;
+  ok('...never through the Teleport craft', !anyRe);
+  var bw = unit('recruits', { x: 15, y: 12, camp: { flags: { backward: true } } });
+  var tb = table([craft, pa2, bw]);
+  bw.x = 11; bw.y = 12;
+  ok('Infamy of Backwardness: a unit beside a Teleport turret cannot use it', R.teleportFrom(tb, pa2).indexOf(bw) < 0);
+  bw.x = 15; bw.y = 12;
+  ok('...but may go through the manned Teleport craft', R.teleportFrom(tb, craft).indexOf(bw) >= 0);
+})();
 
 /* ------------------------------------------------------ Protecting the VIP: +2 to every Damage roll */
 console.log('\nVIP: +2 TO DAMAGE ROLLS');

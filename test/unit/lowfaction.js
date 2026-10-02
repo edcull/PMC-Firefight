@@ -265,5 +265,145 @@ console.log('\nL-36 A Psychic Wave goes out from a building too (p. 116)');
   ok('...and sends it out, staying inside', e.intent('A', { k: 'wave', x: spot.x, y: spot.y }).ok && u.bld === bld && u.activated);
 })();
 
+console.log('\nXEN-5 Rite of Unrest works for its own side, so it lapses while its unit is Suppressed or Broken (p. 28)');
+(function () {
+  const e = game(['xbeta3', 'xbeta3'], ['regular', 'regular']);
+  const st = e.state();
+  const u = st.units.find((x) => x.side === 'A'), foe = st.units.find((x) => x.side === 'B');
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.x = x.side === 'A' ? 40 : 4; x.y = 40; });
+  u.x = 20; u.y = 20; foe.x = 26; foe.y = 20;
+  u.camp = { flags: { unrest: true } };
+  const spAfter = (sp) => { u.sp = sp; foe.sp = 0; e.query.beginningRites(); return foe.sp; };
+  ok('steady, it puts a Suppression point on the enemy within 12"', spAfter(0) === 1);
+  ok('...Suppressed, it does not', spAfter(u.morale + 1) === 0, R.status(u));
+  ok('...nor Broken', spAfter(u.morale * 2 + 1) === 0, R.status(u));
+})();
+
+console.log('\nXEN-6 Infamy of Panic answers any friend broken or destroyed, however it happened (p. 143)');
+(function () {
+  const e = game(['xbeta3', 'xbeta3', 'xbeta3'], ['regular', 'regular']);
+  let g = 0;
+  while (e.state().phase === 'deploy' && g++ < 200) { const side = e.query.placingSide(); if (!side) break; e.intent(side, { k: 'autodeploy' }); }
+  e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });
+  const st = e.state();
+  const [pan, friend, far] = st.units.filter((x) => x.side === 'A');
+  st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.x = x.side === 'A' ? 40 : 4; x.y = 40; });
+  pan.x = 20; pan.y = 20; friend.x = 26; friend.y = 20; far.x = 46; far.y = 20;
+  pan.camp = { flags: { infamyPanic: true } };
+  pan.sp = 0; friend.sp = 0; far.sp = 0;
+  // one activation spent (Skip), as the battle moves on — every step of it ends in a render
+  const step = () => {
+    st.units.forEach((x) => { x.activated = false; });
+    const sd = st.activeSide, u = st.units.find((x) => x.side === sd && x.alive && R.status(x) !== 'broken');
+    if (!u) return;
+    e.intent(sd, { k: 'select', id: u.id }); e.intent(sd, { k: 'action', id: 'skip' });
+  };
+  // broken by Suppression straight onto it — no shot, no assault
+  friend.sp = friend.morale * 2 + 1;
+  step();
+  const first = pan.sp;
+  ok('a friend within 18" broken by a Psychic Bond or a Rite: the unit takes D6 SP', first >= 1 && first <= 6, first + ' SP');
+  step();
+  ok('...once, not on every step after', pan.sp === first, pan.sp + ' SP');
+  // a friend destroyed out of reach of shooting's own call
+  pan.sp = 0; friend.sp = 0; step();
+  friend.alive = false; step();
+  ok('...and a friend destroyed by anything at all', pan.sp >= 1, pan.sp + ' SP');
+  // out beyond 18": nothing
+  pan.sp = 0; far.sp = far.morale * 2 + 1; step();
+  ok('...but not one 18" or more away', pan.sp === 0, pan.sp + ' SP');
+})();
+
+console.log('\nXEN-10 Detailed Terrain Knowledge moves a piece once, whoever moves it (p. 141)');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['xbeta3', 'xbeta3'], armyB: ['xbeta3', 'xbeta3'], factionA: 'xeno', factionB: 'xeno',
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto',
+    doctrines: { A: ['XO4'], B: ['XO4'] } });
+  const st = e.state();
+  // with the terrain set automatically both sides' moves were made for them; each piece at most once
+  ok('set for both sides, no piece moved twice', st.terrain.filter((r) => r.dtkMoved).length <= 4);
+  // by hand: the first player's turn to move a piece
+  st.placeAsk = { side: 'A', kind: 'move', why: 'terrain', left: 2, total: 2 };
+  let pa = st.placeAsk;
+  // one clear piece, moved by the first player
+  st.terrain.length = 0; st.objectives.length = 0;
+  st.terrain.push({ kind: 'woods', x: 20, y: 20, w: 4, h: 4 }, { kind: 'woods', x: 34, y: 6, w: 4, h: 4 });
+  const sd = pa.side, wood = st.terrain[0];
+  ok('the first move goes', e.intent(sd, { k: 'placeat', x: 22, y: 22 }).ok && e.intent(sd, { k: 'placeat', x: 30, y: 22 }).ok && wood.dtkMoved);
+  // the same piece again, by whoever moves next
+  pa = st.placeAsk;
+  const r2 = pa ? e.intent(pa.side, { k: 'placeat', x: wood.x + 2, y: wood.y + 2 }) : { ok: false, why: 'no second move' };
+  ok('...the same piece cannot be moved again', !r2.ok && /already been moved/.test(r2.why || ''), r2.why);
+})();
+
+console.log('\nXEN-7 A teleported unit is put down where its owner chooses, within 4" of the pad (p. 130)');
+(function () {
+  const e = game(['xtturret2', 'xbeta3', 'xbeta3'], ['regular']);
+  let g = 0;
+  while (e.state().phase === 'deploy' && g++ < 200) { const side = e.query.placingSide(); if (!side) break; e.intent(side, { k: 'autodeploy' }); }
+  e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });
+  const st = e.state();
+  st.terrain.length = 0;
+  const pads = st.units.filter((u) => u.side === 'A' && R.has(u, 'Teleport')), sq = st.units.find((u) => u.key === 'xbeta3');
+  st.units.forEach((u) => { u.activated = false; u.sp = 0; });
+  pads[0].x = 10; pads[0].y = 10; pads[1].x = 34; pads[1].y = 34; sq.x = 12; sq.y = 10;
+  st.units.filter((u) => u.side === 'B').forEach((u, i) => { u.x = 44; u.y = 4 + i * 3; });
+  st.activeSide = 'A'; st.streak = 1;
+  e.intent('A', { k: 'select', id: pads[0].id });
+  e.intent('A', { k: 'action', id: 'teleport' });
+  e.intent('A', { k: 'target', id: sq.id });
+  const ui = e.sel();
+  // on a 3-6 the owner picks the pad first
+  if (ui.mode === 'teleport-dest') e.intent('A', { k: 'target', id: pads[1].id });
+  ok('the owner is asked where the unit steps out', ui.mode === 'teleport-spot' && ui.moves.length > 0, ui.mode);
+  if (ui.mode !== 'teleport-spot') return;
+  const dest = ui.teleport.dest;
+  // the spot furthest from where the automatic placement would put it: the far side of the pad
+  const pick = ui.moves.slice().sort((a, b) => Math.hypot(b.x - dest.x, b.y - dest.y) - Math.hypot(a.x - dest.x, a.y - dest.y))[0];
+  ok('...on ground within 4" of the pad', ui.moves.every((c) => R.unitDist({ x: c.x, y: c.y }, dest) <= 4 + 1e-6));
+  const r = e.intent('A', { k: 'tpspot', x: pick.x, y: pick.y });
+  ok('...and it is put down there', r.ok && sq.x === pick.x && sq.y === pick.y, r.why || (sq.x + ',' + sq.y + ' vs ' + pick.x + ',' + pick.y));
+  ok('...the pad\'s activation spent', pads[0].activated && ui.mode === 'idle');
+})();
+
+console.log('\nXEN-13 Advanced Control System: a player turns the aircraft up to 90\u00b0, after a Move action only (p. 143)');
+(function () {
+  const setup = () => {
+    const e = game(['xstrike2', 'xbeta3'], ['regular', 'regular']);
+    let g = 0;
+    while (e.state().phase === 'deploy' && g++ < 200) { const side = e.query.placingSide(); if (!side) break; e.intent(side, { k: 'autodeploy' }); }
+    e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+    for (g = 0; g < 60 && e.state().phase !== 'battle'; g++) e.intent(e.state().activeSide || 'A', { k: 'start' });
+    const st = e.state();
+    while (st.faceAsk) e.intent(st.faceAsk.side, { k: 'vfaceall' });
+    const ac = st.units.find((u) => u.key === 'xstrike2');
+    st.terrain.length = 0;
+    ac.camp = { flags: { advControl: true } }; ac.activated = false; ac.x = 10; ac.y = 24; ac.facing = 0;
+    st.units.filter((u) => u.side === 'B').forEach((u, i) => { u.x = 44; u.y = 6 + i * 4; });
+    st.activeSide = 'A'; st.streak = 1;
+    return { e, st, ac };
+  };
+  const { e, st, ac } = setup();
+  e.intent('A', { k: 'select', id: ac.id });
+  e.intent('A', { k: 'action', id: 'move' });
+  const to = e.sel().moves.filter((c) => Math.abs(c.y - 24) < 1 && c.x > 16).sort((a, b) => b.x - a.x)[0];
+  ok('the aircraft moves', !!to && e.intent('A', { k: 'move', x: to.x, y: to.y }).ok);
+  ok('...and is asked whether to turn', !!st.faceAsk && !!st.faceAsk.swing);
+  ok('...not as far as about face', !e.intent('A', { k: 'vface', dir: Math.PI }).ok);
+  ok('...but 90\u00b0 it may', e.intent('A', { k: 'vface', dir: Math.PI / 2 }).ok && Math.abs(R.angleWrap(ac.facing - Math.PI / 2)) < 0.01 && !st.faceAsk, ac.facing.toFixed(2));
+  // an Advance: no turn after it
+  const s2 = setup();
+  s2.e.intent('A', { k: 'select', id: s2.ac.id });
+  if (s2.e.query.actionState(s2.ac, 'advance').on) {
+    s2.e.intent('A', { k: 'action', id: 'advance' });
+    const t2 = s2.e.sel().moves.filter((c) => c.x > 12).sort((a, b) => b.x - a.x)[0];
+    s2.e.intent('A', { k: 'advance', x: t2.x, y: t2.y });
+    ok('an Advance gives no turn', !s2.st.faceAsk && Math.abs(R.angleWrap(s2.ac.facing)) < Math.PI / 4 + 0.01, s2.ac.facing.toFixed(2));
+  }
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

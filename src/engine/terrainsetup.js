@@ -289,7 +289,7 @@
       var mid = side === 'A' ? { x: W * 0.3, y: H * 0.5 } : { x: W * 0.7, y: H * 0.5 };
       var pieces = E.state.terrain.filter(function (r) {
         var t = R.TERRAIN[r.kind];
-        return t && (t.cover || t.blocks) && !t.impassable && t.destructible !== 'target' && r.w * r.h < 40 && !r.fixed;
+        return t && (t.cover || t.blocks) && !t.impassable && t.destructible !== 'target' && r.w * r.h < 40 && !r.fixed && !r.dtkMoved;
       }).sort(function (a, b) {
         return R.inches(b.x + b.w / 2, b.y + b.h / 2, mid.x, mid.y) - R.inches(a.x + a.w / 2, a.y + a.h / 2, mid.x, mid.y);
       });
@@ -307,6 +307,7 @@
         });
         if (clash) continue;
         R.placePiece(r, nx, ny);                     // the outline goes with it
+        r.dtkMoved = true;
         moved.push(R.TERRAIN[r.kind].name.toLowerCase() + ' ' + step.toFixed(1) + '"');
       }
       if (moved.length) logLine('terrain', sideName(side) + ' — Detailed Terrain Knowledge: moves the ' + moved.join(' and the ') + '.');
@@ -341,7 +342,8 @@
     function movablePieces() {
       return E.state.terrain.filter(function (r) {
         var t = R.TERRAIN[r.kind];
-        return t && t.destructible !== 'target' && !r.fixed && r.kind !== 'objective' && r.kind !== 'searchsite';
+        // a piece moves once, whoever moves it (p. 141; rules review a119ac2 XEN-10)
+        return t && t.destructible !== 'target' && !r.fixed && !r.dtkMoved && r.kind !== 'objective' && r.kind !== 'searchsite';
       });
     }
     function placeAt(x, y) {
@@ -367,7 +369,8 @@
         var pool = movablePieces();
         if (pa.pick == null) {
           var hit = pool.filter(function (q) { return R.inRect(x, y, q); })[0];
-          if (!hit) return 'Tap a piece of terrain to move.';
+          if (!hit) return E.state.terrain.some(function (q) { return q.dtkMoved && R.inRect(x, y, q); })
+            ? 'That piece has already been moved: no piece moves twice.' : 'Tap a piece of terrain to move.';
           pa.pick = E.state.terrain.indexOf(hit);
           setHint(null, 'Now tap where the ' + R.TERRAIN[hit.kind].name.toLowerCase() + ' goes — up to 12" away.');
           render();
@@ -383,6 +386,7 @@
         }) || E.state.objectives.some(function (o) { return o.x > nx - 3 && o.x < nx + q.w + 3 && o.y > ny - 3 && o.y < ny + q.h + 3; });
         if (clash) return 'Too close to other terrain or an objective.';
         R.placePiece(q, nx, ny);
+        q.dtkMoved = true;
         logLine('terrain', sideName(pa.side) + ' — Detailed Terrain Knowledge: moves the ' + R.TERRAIN[q.kind].name.toLowerCase() + ' ' + Math.hypot(x - ocx, y - ocy).toFixed(1) + '".');
         queueBake();
         pa.pick = null;

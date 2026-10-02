@@ -10,7 +10,7 @@
     var chooseAction = B.chooseAction, curArea = B.curArea, deployNext = B.deployNext, deployOK = B.deployOK;
     var deployRoster = B.deployRoster, dispX = B.dispX, dispY = B.dispY, doAssault = B.doAssault;
     var doBreach = B.doBreach, doDemolish = B.doDemolish, doDesignate = B.doDesignate;
-    var doDisembark = B.doDisembark, doEmbark = B.doEmbark, doEnter = B.doEnter, doExitBld = B.doExitBld, doLeave = B.doLeave, doCheckSite = B.doCheckSite;
+    var doDisembark = B.doDisembark, doTeleportSpot = B.doTeleportSpot, doEmbark = B.doEmbark, doEnter = B.doEnter, doExitBld = B.doExitBld, doLeave = B.doLeave, doCheckSite = B.doCheckSite;
     var doHack = B.doHack, doMarkMove = B.doMarkMove, doMove = B.doMove, doShoot = B.doShoot;
     var doSteady = B.doSteady, doStrafe = B.doStrafe, doSupport = B.doSupport, doTeleport = B.doTeleport;
     var doWave = B.doWave, finishTeleport = B.finishTeleport, garrisonAt = B.garrisonAt;
@@ -472,6 +472,12 @@
         var spot = moveSpotUnder(c);
         if (spot) { doDisembark(spot); return; }
         if (!hit) { setHint(null, 'Put them down inside the shaded ground, within 4" of the hull.'); return; }
+      }
+      // a teleported unit stepping out of its pad, put down as off a hull (XEN-7)
+      if (ui.moves.length && ui.mode === 'teleport-spot') {
+        var tsp = moveSpotUnder(c);
+        if (tsp) { doTeleportSpot(tsp); return; }
+        setHint(null, 'Put it down inside the shaded ground, within 4" of the pad.'); return;
       }
       /* A strafing run is aimed, then flown: the first tap sets the end of the
          run and rings what is under it; a second tap on that end makes the run,

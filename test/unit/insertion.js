@@ -80,17 +80,19 @@ console.log('\nIn a scenario with reserves, inserters are held back with the res
 console.log('\nMimicry: the player picks up to a quarter (p. 124)');
 (function () {
   const e2 = Engine.create();
-  // eight bug units: Mimicry lets up to two (a quarter, rounded up) come in by insertion
+  // Mimicry lets up to a quarter, rounded down, come in by insertion (review a119ac2 BUG-2)
   const swarm = R.rollArmy(3, 1, null, 'bugs');
   e2.start({ tier: 3, pl: 1, scenario: 'meeting', mode: 'ai', planet: 'barren', factionA: 'bugs',
     armyA: swarm, armyB: R.rollArmy(3, 1, null, 'pmc'), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
     doctrines: { A: ['BB2'], B: [] } });
   const s2 = e2.state();
   const mine = s2.units.filter((u) => u.side === 'A');
-  const cap = Math.ceil(mine.length / 4);
+  const cap = Math.floor(mine.length / 4);
   const offered = mine.filter((u) => u.mimic);
-  ok('every infantry unit without the rule is offered it', offered.length > cap,
+  ok('every unit without the rule is offered it', offered.length > cap,
     offered.length + ' offered, ' + cap + ' may use it');
+  ok('...the Leader Bugs and Overgrown bugs among them', mine.filter((u) => R.has(u, 'Overmind') || R.has(u, 'Overgrown')).every((u) => u.mimic || R.has(u, 'Battlefield Insertion')),
+    mine.filter((u) => R.has(u, 'Overmind') || R.has(u, 'Overgrown')).map((u) => u.name + (u.mimic ? '+' : '-')).join(', '));
   ok('...no more than a quarter start held for it', offered.filter((u) => u.reserve).length <= cap);
   const held = offered.filter((u) => u.reserve), free = offered.filter((u) => !u.reserve);
   if (held.length === cap && free.length) {
@@ -98,6 +100,27 @@ console.log('\nMimicry: the player picks up to a quarter (p. 124)');
     ok('...but the player may swap which', e2.intent('A', { k: 'insertion', id: held[0].id }).ok &&
       e2.intent('A', { k: 'insertion', id: free[0].id }).ok && free[0].reserve && !held[0].reserve);
   } else ok('the quarter is taken at the start', false, held.length + ' held of ' + cap);
+})();
+
+console.log('\nMimicry and Underground Advance round the quarter down (review a119ac2 BUG-2)');
+(function () {
+  function capFor(n, doc, faction, army) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 'meeting', mode: 'ai', planet: 'barren', factionA: faction,
+      armyA: army.slice(0, n), armyB: ['regular', 'regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
+      doctrines: { A: [doc], B: [] } });
+    return { cap: e.state().mimicCap.A, units: e.state().units.filter((u) => u.side === 'A') };
+  }
+  const bugs = ['bsmall', 'bsmall', 'bsmall', 'bsmall', 'bsmall', 'bsmall', 'bsmall', 'bsmall', 'bwatchers'];
+  ok('nine units: two may come in by Mimicry', capFor(9, 'BB2', 'bugs', bugs).cap, 2);
+  ok('three units: none', capFor(3, 'BB2', 'bugs', bugs).cap === undefined);
+  const tribe = ['xalpha3', 'xbeta3', 'xbeta3', 'xbeta3', 'xbeta3'];
+  const t = capFor(5, 'XO2', 'xeno', tribe);
+  ok('five of a tribe: one by Underground Advance', t.cap, 1);
+  ok('...and an Alpha squad may be the one', t.units.some((u) => u.key === 'xalpha3' && u.mimic));
+  // XEN-9: any unit without Battlefield Insertion, an aircraft too
+  const air = capFor(4, 'XO2', 'xeno', ['xalpha3', 'xbeta3', 'xbeta3', 'xshieldb']);
+  ok('...an aircraft too (XEN-9)', air.units.some((u) => u.key === 'xshieldb' && u.mimic));
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

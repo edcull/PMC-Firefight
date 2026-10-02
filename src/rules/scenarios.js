@@ -92,12 +92,25 @@
      which units go where: 'hold' is on the table or held back, 'wave' the first
      wave or the second. `min`-`max` is how many the rule lets them hold back (or
      put in the second wave); an emplaced gun is never held back (p. 94). */
+  /* Emplaced guns and a scenario's split. "Artillery cannot be hold in reserve and
+     has to be deployed as soon as possible unless they enter the battlefield
+     transported by vehicle" (p. 94). Invasion settles it per side (the owner's
+     ruling, rules review a119ac2 REB-5):
+       'drop' — the attacker: every gun comes down from orbit in either wave, and
+                none on tow (no hull lands with a gun behind it);
+       'tow'  — the defender: a gun sets up at the start, or comes on behind a
+                transport vehicle held back with it; one held back on its own
+                never comes on at all.
+     Elsewhere a gun is never held back. */
+  function gunRule(state, side) { return (state.sc && state.sc.gunRule && state.sc.gunRule[side]) || null; }
+  function isGun(u) { return R.has(u, 'Stationary Artillery'); }
+  function freeToHold(state, u) { return !isGun(u) || !!gunRule(state, u.side); }
   function noteSplit(state, side, kind, units, min, max, rule) {
     /* The split the scenario made is always allowed — an emplaced gun going on
        the table first can leave it a unit short of an exact half — and nobody
        can hold back more than the units that are free to be held. */
-    var held = units.filter(function (u) { return u.wave === 2; }).length;
-    var free = units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); }).length;
+    var held = units.filter(function (u) { return u.wave === 2 || (u.aboard && units.some(function (h) { return h.id === u.aboard && h.wave === 2; })); }).length;
+    var free = units.filter(function (u) { return freeToHold(state, u); }).length;
     // what the scenario asks for, before the guns cut it down (swaps.js holds a list to it)
     var want = min, wantMax = max;
     min = Math.min(min, held);
@@ -105,9 +118,9 @@
     state.sc.split = state.sc.split || {};
     state.sc.split[side] = { kind: kind, ids: units.map(function (u) { return u.id; }), min: min, max: max, rule: rule, want: want, wantMax: wantMax };
   }
-  function halve(units) {
-    var emplaced = units.filter(function (u) { return R.has(u, 'Stationary Artillery'); });
-    var rest = units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); });
+  function halve(units, gunsFree) {
+    var emplaced = gunsFree ? [] : units.filter(function (u) { return R.has(u, 'Stationary Artillery'); });
+    var rest = gunsFree ? units.slice() : units.filter(function (u) { return !R.has(u, 'Stationary Artillery'); });
     var sorted = rest.slice().sort(function (a, b) { return (b.models || 1) - (a.models || 1); });
     var first = emplaced.slice(), second = [];
     sorted.forEach(function (u, i) { (i % 2 ? second : first).push(u); });
@@ -580,22 +593,46 @@
       objectives: function (state) { state.sc.lzPending = true; return []; },
       deploy: function (state) {
         var atk = state.sc.attacker, def = state.sc.attacker === 'A' ? 'B' : 'A';
+        state.sc.gunRule = {};
+        state.sc.gunRule[atk] = 'drop'; state.sc.gunRule[def] = 'tow';
         // the defender puts no more than a third on the table, 6" in from the edges
         var defs = mine(state, def).filter(function (u) { return !u.reserve; });
-        /* an emplaced gun is already dug in, so it is never among those held back;
-           and a turret goes on the table before anything that can walk — held
-           back, it would come on at a table edge it can never move from (with
-           Battlefield Insertion barred here, p. 53). The player may still swap. */
-        function firstDown(u) { return R.has(u, 'Stationary Artillery') ? 2 : R.has(u, 'Turret') ? 1 : 0; }
-        defs.sort(function (a, b) { return firstDown(b) - firstDown(a); });
+        /* The guns set up first; any the third cannot take go on the hook of a
+           transport vehicle held back with them, and only with none left to tow
+           them are they held back on their own — out of the battle (gunRule).
+           A turret goes on the table before anything that can walk: held back, it
+           would come on at a table edge it can never move from (with Battlefield
+           Insertion barred here, p. 53). The player may still swap and rearrange. */
         var keep = Math.max(1, Math.ceil(defs.length / 3));          // divisions round up (p. 17)
-        defs.slice(keep).forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        var guns = defs.filter(isGun), others = defs.filter(function (u) { return !isGun(u); });
+        others.sort(function (a, b) { return (R.has(b, 'Turret') ? 1 : 0) - (R.has(a, 'Turret') ? 1 : 0); });
+        var gunsOn = guns.slice(0, keep), towed = [];
+        guns.slice(keep).forEach(function (g) {
+          var tow = others.filter(function (v) {
+            return R.canTow(v) && !R.towedGuns(v).length && (v.cargo || []).length < v.transport && towed.indexOf(v) < 0;
+          })[0];
+          if (tow) {
+            towed.push(tow);
+            tow.cargo = (tow.cargo || []).concat([g]); g.aboard = tow.id;
+            g.reserve = false; g.wave = 2; g.x = -1; g.y = -1;
+          } else { g.reserve = true; g.wave = 2; g.x = -1; g.y = -1; }
+        });
+        var room = keep - gunsOn.length;
+        others.filter(function (v) { return towed.indexOf(v) < 0; }).forEach(function (u) {
+          if (room > 0) { room--; return; }
+          u.reserve = true; u.wave = 2; u.x = -1; u.y = -1;
+        });
+        towed.forEach(function (v) { v.reserve = true; v.wave = 2; v.x = -1; v.y = -1; });
         // "up to 1/3" (p. 53): the defender may put fewer down, or none at all
         noteSplit(state, def, 'hold', defs, defs.length - keep, defs.length,
           'Up to a third of the force sets up on the table; the rest walks on later, on a 5+ a unit from turn 2.');
         // the attacker comes in two waves; the first lands in the Reserve phase of turn 1
         var atks = mine(state, atk).filter(function (u) { return !u.reserve; });
-        var split = halve(atks);
+        // nothing lands with a gun on the hook: any hitched before is let go, to drop on its own
+        atks.forEach(function (v) {
+          R.towedGuns(v).forEach(function (g) { v.cargo = v.cargo.filter(function (c) { return c !== g; }); g.aboard = null; });
+        });
+        var split = halve(atks, true);
         split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
         split.first.forEach(function (u) { u.reserve = true; u.wave = 1; u.x = -1; u.y = -1; });
         noteSplit(state, atk, 'wave', atks, Math.floor(atks.length / 2), Math.ceil(atks.length / 2),
@@ -645,7 +682,8 @@
           return need <= 1 || reserveDie(state, side, need) ? wave2 : [];
         }
         if (state.turn < 2) return [];
-        return pool.filter(function () { return reserveDie(state, side, 5); });
+        // a gun held back with nothing to tow it never comes on (gunRule)
+        return pool.filter(function (u) { return !isGun(u) && reserveDie(state, side, 5); });
       },
       // landing infantry are shaken by the drop
       onArrive: function (state, u) {
@@ -1127,7 +1165,7 @@
     SCENARIOS: SCENARIOS, ORDER: ORDER,
     begin: begin, deploy: deploy, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
-    holderOf: holderOf, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
+    gunRule: gunRule, freeToHold: freeToHold, holderOf: holderOf, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
     rollRoles: rollRoles, bestDefence: bestDefence,
     searchSpots: searchSpots, checkArea: checkArea,
     boxesFor: function (state, side, u) {

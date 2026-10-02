@@ -371,9 +371,9 @@
         case 'teleport': {
           var tpads = R.teleportPads(E.state, u.side);
           var tpax = R.teleportFrom(E.state, u);
-          if (!tpax.length) return { on: false, hint: 'Teleport: no steady infantry unit within 4" that has still to act.' };
+          if (!tpax.length) return { on: false, hint: 'Teleport: no steady infantry unit within 4" to take in.' };
           return { on: true, hint: 'Teleport: take in an infantry unit within 4". D6 — 1-2 it comes out at a random Teleport unit, 3-6 at the one you pick (' +
-            tpads.length + ' on the table). It may still act this turn.' };
+            tpads.length + ' on the table). A unit that has not acted yet may still act this turn.' };
         }
         case 'rush': {
           if (spent(u, 'adrenaline')) return { on: false, hint: 'Adrenaline Rush: already used this battle.' };

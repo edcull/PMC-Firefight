@@ -548,7 +548,10 @@
         ok: n >= sp.min && n <= sp.max,
         units: units.map(function (u) {
           var hull = u.aboard ? byId(u.aboard) : null;
-          return { id: u.id, name: u.name, held: held(u), locked: R.has(u, 'Stationary Artillery'), aboard: !!u.aboard, hull: hull ? hull.name : null,
+          var gun = R.has(u, 'Stationary Artillery');
+          return { id: u.id, name: u.name, held: held(u), locked: gun && !SC.freeToHold(E.state, u), aboard: !!u.aboard, hull: hull ? hull.name : null,
+            // an Invasion defender's gun held back with no hull to tow it stays out of the battle
+            stranded: gun && !u.aboard && held(u) && SC.gunRule(E.state, side) === 'tow',
             insert: !!u.insert, inserter: sp.kind !== 'wave' && R.has(u, 'Battlefield Insertion') && !SC.noInsertion(E.state) };
         })
       };
@@ -605,7 +608,7 @@
     function toggleHold(side, id) {
       var sp = splitFor(side), u = byId(id);
       if (!sp || !u || sp.units.every(function (x) { return x.id !== id; })) return 'that unit is not part of the split';
-      if (R.has(u, 'Stationary Artillery')) return 'an emplaced gun is never held back';
+      if (R.has(u, 'Stationary Artillery') && !SC.freeToHold(E.state, u)) return 'an emplaced gun is never held back';
       // a passenger goes where its hull goes
       if (u.aboard) { var hv = byId(u.aboard); return 'it rides with ' + (hv ? hv.name : 'its hull') + ' \u2014 take it off first, or hold the hull back'; }
       if (sp.kind === 'wave') { u.wave = u.wave === 2 ? 1 : 2; return null; }

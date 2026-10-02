@@ -187,12 +187,24 @@
       render();
     }
 
-    function finishTeleport(tpc, dest) {
+    function finishTeleport(tpc, dest, pos) {
       if (!tpc || !dest) return;
       var tp = tpc.tp, u = tpc.u, roll = tpc.roll;
+      /* The unit "is immediately disembarked by a Teleport unit" (p. 130): a player
+         puts it down where they like within 4" of the pad, as off any hull (XEN-7). */
+      if (!pos && !isAI(tp.side)) {
+        var spots = R.dropSpots(E.state, dest, u);
+        if (spots.length) {
+          ui.teleport = { tp: tp, u: u, roll: roll, dest: dest };
+          ui.mode = 'teleport-spot'; ui.targets = []; ui.moves = spots;
+          setHint(null, 'Teleport — ' + u.name + ' comes out at ' + dest.name + ': put it down within 4" of the pad.');
+          render();
+          return;
+        }
+      }
       ui.teleport = null; ui.teleportPick = null;
       var from = { x: u.x, y: u.y };
-      var res = R.teleport(E.state, u, tp, dest);
+      var res = R.teleport(E.state, u, tp, dest, pos);
       logLine('note', res.text);
       if (res.ok && SFX && SFX.shimmer) SFX.shimmer();
       if (res.ok) {
@@ -208,7 +220,7 @@
         dice: [{ label: 'D6', value: roll.roll, tone: roll.random && roll.reroll == null ? 'fail' : '' }]
           .concat(roll.reroll != null ? [{ label: 'Knowledge', value: roll.reroll, tone: roll.random ? 'fail' : '' }] : []),
         note: roll.random ? '1-2: the unit comes out at a random Teleport unit.' : '3-6: the unit comes out where its owner chose.',
-        outcome: { text: res.text + (res.ok ? ' It may still act this turn.' : ''), tone: res.ok ? 'good' : 'warn' } });
+        outcome: { text: res.text + (res.ok && !u.activated ? ' It may still act this turn.' : ''), tone: res.ok ? 'good' : 'warn' } });
       render();
       endActivation(tp);
     }

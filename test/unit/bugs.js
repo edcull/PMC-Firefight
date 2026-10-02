@@ -92,6 +92,16 @@ head('Aggressive (p. 116)');
 ok('near the Overmind an Aggressive bug is free', R.aggressiveNow(st, sw), false);
 ok('out of reach it must charge', R.aggressiveNow(st, far), true);
 ok('spitters are not Aggressive', R.aggressiveNow(st, mk('bspitters', 'A', 60, 10)), false);
+// Overgrown Adrenaline Glands on an Overgrown bug (review a119ac2 BUG-3): it "may assault as normal", so it charges too
+var beetle = mk('bfirebeetle', 'A', 60, 40); beetle.rules.push('Aggressive');
+st.units.push(beetle);
+ok('an Aggressive Overgrown bug out of the Overmind\'s reach must charge', R.aggressiveNow(st, beetle), true);
+var beetle2 = mk('bfirebeetle', 'A', om.x + 6, om.y); beetle2.rules.push('Aggressive'); beetle2.tier = om.tier;
+st.units.push(beetle2);
+ok('...near the Overmind it is free', R.aggressiveNow(st, beetle2), false);
+var carrier = mk('bcarrier', 'A', 60, 60); carrier.rules.push('Aggressive');
+ok('...a Carrier bug, with no Assault, is never driven to charge', R.aggressiveNow(st, carrier), false);
+st.units.splice(st.units.indexOf(beetle), 1); st.units.splice(st.units.indexOf(beetle2), 1);
 
 head('Animal Behaviour (p. 116)');
 var q = 0, s = 0, sp = 0, N = 6000;
@@ -119,6 +129,15 @@ ok('one marker near the target: +1', R.pheromoneBonus(ph, shooter, tgt), 1);
 ph.units = [tgt, shooter, m1, m2, m3, m4];
 ok('four markers: capped at +3', R.pheromoneBonus(ph, shooter, tgt), 3);
 ok('a marker unit itself gets nothing (no Animal Behaviour)', R.pheromoneBonus(ph, m1, tgt), 0);
+// "when assaulting or shooting" (review a119ac2 BUG-5): the bug that charges, not the one charged
+function rounds(charger, charged) {
+  var w = world(); w.units = [charger, charged, mk('bsmallpath', 'A', 21, 20)];
+  return R.assault(w, charger, charged, {}).log.filter(function (l) { return l.t === 'round'; });
+}
+var cr = rounds(mk('battack', 'A', 20, 10), mk('regular', 'B', 21.5, 10));
+ok('a charging bug gets the markers\' bonus', cr.some(function (l) { return /attacker/.test(l.text) && /Pheromone Markers/.test(l.math); }), true);
+var dr = rounds(mk('regular', 'B', 21.5, 10), mk('battack', 'A', 20, 10));
+ok('...a bug that is charged does not', dr.some(function (l) { return /Pheromone Markers/.test(l.math); }), false);
 
 head('Endless Tide (p. 116)');
 var et = world();

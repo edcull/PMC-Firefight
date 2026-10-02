@@ -142,6 +142,7 @@
          Kill Them All! (a reading: the book does not place them on the table). */
       var bhV = soloB ? rollBehaviour(u) : null;
       var specialsV = !soloB || ['defensive', 'neutral', 'offensive'].indexOf(bhV) >= 0;
+      if (soloB && (bhV === 'defensive' || bhV === 'neutral')) shot = threatTarget(u, 'fire');   // the biggest threat (SOL-6)
       if (specialsV && R.has(u, 'Molecular Reconstruction') && u.damage && (u.damage >= u.str - 1 || !shot.t)) {
         doSelfRepair(u); return;
       }
@@ -185,7 +186,9 @@
           pushRes({ kind: 'Disembark', title: u.name + ' unloads', side: u.side, list: lines });
           endActivation(); return;
         }
-        return aiRoll(u, obj || nearestEnemy(u), true);
+        /* An OpFor hull told to hold — Reasonably Defensive or Neutral (p. 147) — keeps
+           its troops aboard where it stands, rather than driving them in. */
+        if (!(soloB && (bhV === 'defensive' || bhV === 'neutral'))) return aiRoll(u, obj || nearestEnemy(u), true);
       }
 
       // an empty transport picks up the nearest squad that will fit
@@ -296,7 +299,7 @@
         faceAfter(u, path, best);
         var dist = R.inches(u.x, u.y, best.x, best.y);
         u.x = best.x; u.y = best.y;
-        flightTurn(u);
+        if (!advance) flightTurn(u);                // Advanced Control System: on a Move action only (p. 143)
         logLine('move', u.label + ' drives ' + dist.toFixed(1) + '".');
         crushAlong(u, path);
         animateMove(u, path, true);
@@ -415,6 +418,47 @@
       return best;
     }
 
+    /* Reasonably Defensive and Neutral (p. 147): "The OpFor unit engages the enemy unit
+       which poses the biggest threat. If you're not sure which one it is, choose the
+       target at random or select the mission objective" — where Reasonably Offensive
+       "attacks the enemies where they can do the most damage" (bestTarget, above).
+       The threat an enemy poses is the most it could do to any one of the OpFor's
+       units it can reach — its shooting, and a charge if one is in reach — and an
+       enemy on or by a mission objective counts as the biggest threat of all (the
+       owner's ruling, rules review a119ac2 SOL-6). Only a target this unit can hurt
+       is chosen; the score handed back is still the hits it expects to do. */
+    function objectivePoints() {
+      var pts = (E.state.objectives || []).map(function (o) { return { x: o.x, y: o.y }; });
+      var sc = E.state.sc || {};
+      (sc.targets || []).forEach(function (o) { if (!o.done && !o.destroyed) pts.push({ x: o.x, y: o.y }); });
+      if (sc.found) pts.push({ x: sc.found.x, y: sc.found.y });
+      return pts;
+    }
+    function threatOf(t, side, pts) {
+      var worst = 0;
+      E.state.units.forEach(function (o) {
+        if (!o.alive || o.side !== side || !onTable(o)) return;
+        var e = t.fp != null ? Math.max(0, expectedHits(t, o, 'fire')) : 0;
+        if (t.assault > 0 && R.canAssault(t, o) && R.unitDist(t, o) <= (t.move || 0) + 2) e += 0.15 * t.assault;
+        if (e > worst) worst = e;
+      });
+      var onObj = pts.some(function (p) { return R.inches(t.x, t.y, p.x, p.y) <= 4 + R.UNIT_R; });
+      return worst + (onObj ? 3 : 0);
+    }
+    function threatTarget(u, mode, opts) {
+      var forced = bestTarget(u, mode, opts);
+      if (forced.forced) return forced;                   // the VIP first, always (p. 151)
+      var pts = objectivePoints(), best = { t: null, score: -1, threat: -1 };
+      E.state.units.forEach(function (t) {
+        if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
+        var e = expectedHits(u, t, mode || 'fire', opts);
+        if (e <= 0) return;
+        var th = threatOf(t, u.side, pts);
+        if (th > best.threat + 0.05 || (Math.abs(th - best.threat) <= 0.05 && e > best.score)) best = { t: t, score: e, threat: th };
+      });
+      return best.t ? best : forced;
+    }
+
     function nearestEnemy(u) {
       var best = null, bd = Infinity;
       E.state.units.forEach(function (t) {
@@ -476,9 +520,12 @@
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
       if (E.state.scen.noMove && E.state.scen.noMove(E.state, u)) {
-        var still = R.status(u) === 'ready' ? bestTarget(u, 'fire') : {};
+        /* Reasonably Defensive: the biggest threat (SOL-6); Suppressed, its Auxiliary
+           weapons — the one shot a pinned unit has (p. 34; rules review a119ac2 SOL-8) */
+        var pinned = R.status(u) !== 'ready';
+        var still = threatTarget(u, 'fire', pinned ? { aux: true } : undefined);
         logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
-        if (still.t) { fire(u, still.t, 'fire'); return; }
+        if (still.t) { resolveShot(u, still.t, 'fire', pinned ? { aux: true } : {}); return; }
         if (u.sp) {
           var rr0 = abRally(E.state, u, { regroup: true });
           if (rr0) { logLine('rally', rr0.text); pushRes(E.regroupCard(u, rr0)); E.regroupFx(u, rr0); }
@@ -505,6 +552,11 @@
           return;
         }
       }
+      /* A Suppressed solitaire OpFor unit still rolls its behaviour (p. 147), and takes
+         from what a Suppressed unit may do (p. 34) — a Move into cover or out of sight,
+         a Fire! with its Auxiliary weapons, or Pass/Regroup — the one that answers the
+         roll (the owner's ruling, rules review a119ac2 SOL-8). */
+      if (R.status(u) === 'suppressed' && E.state.solo && u.side === 'B') { pinnedOpFor(u); return; }
       // a pinned squad beside an empty building gets inside it
       if (R.status(u) === 'suppressed' && !alreadySafe(u)) {
         var sin = R.enterTargets(E.state, u);
@@ -601,8 +653,9 @@
         }
       }
 
-      var shot = bestTarget(u, 'fire');
       var behaviour = preB || rollBehaviour(u);
+      // Defensive and Neutral OpFor engage the biggest threat; everyone else the best shot (SOL-6)
+      var shot = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'fire') : bestTarget(u, 'fire');
       /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */
@@ -722,6 +775,52 @@
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
 
+    // the Suppressed unit's Move: into the nearest cover (or a building), nearest the `toward` point if given
+    function scrambleToCover(u, toward) {
+      if (alreadySafe(u)) return false;
+      var sin = R.enterTargets(E.state, u);
+      if (sin.length && !toward) {
+        sin.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
+        logLine('ai', u.label + ' is suppressed and gets into the nearest building.');
+        doEnter(u, sin[0]); return true;
+      }
+      var spots = R.reachable(E.state, u, u.move + 2).filter(function (c) { return R.coverAt(E.state, c.x, c.y, u) > 0 && canStand(u, c); });
+      if (!spots.length) return false;
+      spots.sort(toward ? function (a, b) { return R.inches(a.x, a.y, toward.x, toward.y) - R.inches(b.x, b.y, toward.x, toward.y); }
+        : function (a, b) { return a.cost - b.cost; });
+      var spath = R.pathTo(E.state, u, u.move + 2, spots[0]);
+      u.x = spots[0].x; u.y = spots[0].y;
+      animateMove(u, spath, true);
+      logLine('move', u.label + ' is suppressed and scrambles into ' + R.TERRAIN[R.kindsUnder(E.state, u)[0]].name.toLowerCase() + '.');
+      u.activated = true; endActivation(u);
+      return true;
+    }
+    function regroupNow(u) {
+      var rr = abRally(E.state, u, { regroup: true });
+      logLine('rally', rr ? rr.text : u.label + ' regroups.');
+      if (rr) { pushRes(E.regroupCard(u, rr)); E.regroupFx(u, rr); }
+      u.activated = true; endActivation(u);
+    }
+    function pinnedOpFor(u) {
+      var bh = rollBehaviour(u), AUX = { aux: true };
+      if (bh === 'flee') { if (!scrambleToCover(u)) regroupNow(u); return; }
+      if (bh === 'defensive' || bh === 'neutral') {
+        var th = threatTarget(u, 'fire', AUX);
+        if (th.t) { resolveShot(u, th.t, 'fire', AUX); return; }
+        regroupNow(u); return;
+      }
+      if (bh === 'offensive') {
+        var bt = bestTarget(u, 'fire', AUX);
+        if (bt.t) { resolveShot(u, bt.t, 'fire', AUX); return; }
+        if (!scrambleToCover(u)) regroupNow(u);
+        return;
+      }
+      // Kill Them All!: no charge while pinned — its sidearms at the closest enemy, or cover on the way to it
+      var ne = nearestEnemy(u);
+      if (ne && R.canShoot(E.state, u, ne.unit, 'fire', AUX)) { resolveShot(u, ne.unit, 'fire', AUX); return; }
+      if (!scrambleToCover(u, ne ? ne.unit : null)) regroupNow(u);
+    }
+
     // the solitaire OpFor's Reasonably Neutral infantry (see actInfantry)
     function neutralHold(u, shot) {
       var here = R.coverAt(E.state, u.x, u.y, u), hereScore = shot.t ? shot.score : 0;
@@ -827,7 +926,7 @@
     }
 
     return {
-      aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
+      threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
       nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands, scoreSpot: scoreSpot
     };

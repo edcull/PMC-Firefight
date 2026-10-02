@@ -58,6 +58,49 @@
       var roll = useD3 ? d3() : d6();
       return { roll: roll, id: SCENARIOS[roll - 1], name: SCENARIO_NAMES[SCENARIOS[roll - 1]] };
     }
+    /* Foresighted Command (p. 141): "players roll an additional die and the
+       Xenotripod commander chooses which result to keep and which to ignore. If both
+       players have this advancement, roll three D6 and each player chooses one die to
+       ignore (starting with a random player)" (rules review a119ac2 XEN-11).
+       `bAI`: side B is the AI rival, which makes its own choices at once (at random).
+       Returns the scenario, and what is still the players' to settle:
+         alt, altBy — a second scenario the holder (A or B) may take instead;
+         fore       — both hold it: { dice, order, ignored } until two are ignored. */
+    function foresight(A, B, bAI) {
+      var a = hasDoctrine(A, 'XO3'), b = !!B && hasDoctrine(B, 'XO3');
+      var s1 = rollScenario(false);
+      if (!a && !b) return { scenario: s1 };
+      if (a && !b) return { scenario: s1, alt: rollScenario(false), altBy: 'A' };
+      if (!a && b) {
+        var s2 = rollScenario(false);
+        if (!bAI) return { scenario: s1, alt: s2, altBy: 'B' };
+        var keep = d6() <= 3 ? s1 : s2;
+        return { scenario: keep, note: B.name + '\u2019s Foresighted Command: the dice showed ' + s1.name + ' and ' + s2.name + '; they keep ' + keep.name + '.' };
+      }
+      var fore = { dice: [s1, rollScenario(false), rollScenario(false)], order: d6() <= 3 ? ['A', 'B'] : ['B', 'A'], ignored: [] };
+      return foreStep({ scenario: null, fore: fore }, bAI);
+    }
+    // the AI's turn to ignore a die, if it is its turn; settles the scenario once two are gone
+    function foreStep(r, bAI) {
+      var f = r.fore;
+      while (f && f.ignored.length < 2 && bAI && f.order[f.ignored.length] === 'B') {
+        var left = [0, 1, 2].filter(function (i) { return f.ignored.indexOf(i) < 0; });
+        f.ignored.push(left[Math.floor(Math.random() * left.length)]);
+      }
+      if (f && f.ignored.length >= 2) {
+        r.scenario = f.dice[[0, 1, 2].filter(function (i) { return f.ignored.indexOf(i) < 0; })[0]];
+        f.done = true;
+      }
+      return r;
+    }
+    function foreIgnore(r, side, i, bAI) {
+      var f = r && r.fore;
+      if (!f || f.done || f.order[f.ignored.length] !== side || f.ignored.indexOf(i) >= 0 || i < 0 || i > 2) return false;
+      f.ignored.push(i);
+      foreStep(r, bAI);
+      return true;
+    }
+
     // how many units may be swapped in the "modify the armies" step (p. 46)
     function swapAllowance(co, listLength) {
       return R.swapAllowance(listLength, hasDoctrine(co, 'O6'));
@@ -345,7 +388,7 @@
 
     return {
       fieldableTier: fieldableTier, maxBattleTier: maxBattleTier, levelsFor: levelsFor,
-      canStandard: canStandard, rollBattleTier: rollBattleTier, rollScenario: rollScenario,
+      canStandard: canStandard, rollBattleTier: rollBattleTier, rollScenario: rollScenario, foresight: foresight, foreIgnore: foreIgnore,
       swapAllowance: swapAllowance, rollPayment: rollPayment, rollIncome: rollIncome, sum: sum, negotiate: negotiate,
       territorial: territorial, payment: payment, expFor: expFor, tpFor: tpFor,
       traumaThreshold: traumaThreshold, rollTrauma: rollTrauma, salvage: salvage, rollTP: rollTP,

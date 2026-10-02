@@ -193,7 +193,7 @@
     { id: 'BC5', cat: 'Biochemical', name: 'Bioplasma Missiles',
       text: 'Spore Bugs and Flying Bugs get the Anti-tank (limited) special rule.' },
     { id: 'BC6', cat: 'Biochemical', name: 'Effective Toxin Glands',
-      text: 'Spore Bugs and Flying Bugs get +2 for the Fire! action instead of +1.' },
+      text: 'Spore Bugs and Flying Bugs get an additional +1 Firepower when taking the Fire! action.' },
     { id: 'BB1', cat: 'Behavioural', name: 'Coordinated Hive',
       text: 'The swarm may re-roll its failed dice in the Reserve phase.' },
     { id: 'BB2', cat: 'Behavioural', name: 'Mimicry',
@@ -675,7 +675,10 @@
       var ground = p.group === 'Lesser Bugs' || p.group === 'Underground Bugs';
       if (docs.indexOf('BC2') >= 0 && ranged && u.fp != null) u.fp += 1;            // Concentrated Acid
       if (docs.indexOf('BC5') >= 0 && ranged && !R.has(u, 'Anti-tank')) add('Anti-tank (limited)');   // Bioplasma Missiles
-      if (docs.indexOf('BB5') >= 0 && R.isOvergrown(p)) { u.move += 2; u.def += 1; }  // Extensive Feeding
+      if (docs.indexOf('BB5') >= 0 && R.isOvergrown(p)) {                             // Extensive Feeding
+        u.move += 2; u.def += 1;
+        if (u.defPierced != null) u.defPierced += 1;                                 // the Sandworm's 14 against Anti-tank too
+      }
       if (docs.indexOf('BP2') >= 0 && ground) u.move += 1;                            // Enlarged Leg Muscles
     }
     /* The tribe's Advancements that change the unit itself (pp. 141-142). */
@@ -731,10 +734,6 @@
       free: !!opts.free, restUntil: 0, lastBattle: 0, history: []
     };
   }
-
-  /* The Riders upgrade "has to [be decided] when that unit is recruited. The decision
-     is final; it cannot be changed later" (p. 97): open until the unit first fights. */
-  function ridersOpen(e) { return !!e && !(e.history && e.history.length) && !e.lastBattle; }
 
   /* The soldiers on a dossier entry, by name and rank, filled up to the
      strength the unit takes the field at and ranked by where each stands. The
@@ -1086,6 +1085,8 @@
   function canStandard(coA, coB) { return (KIT_CONTRACT || kitContract()).canStandard(coA, coB); }
   function rollBattleTier(coA, coB, pl) { return (KIT_CONTRACT || kitContract()).rollBattleTier(coA, coB, pl); }
   function rollScenario(useD3) { return (KIT_CONTRACT || kitContract()).rollScenario(useD3); }
+  function foresight(A, B, bAI) { return (KIT_CONTRACT || kitContract()).foresight(A, B, bAI); }
+  function foreIgnore(r, side, i, bAI) { return (KIT_CONTRACT || kitContract()).foreIgnore(r, side, i, bAI); }
   function swapAllowance(co, listLength) { return (KIT_CONTRACT || kitContract()).swapAllowance(co, listLength); }
   function rollPayment(battleTier, pl) { return (KIT_CONTRACT || kitContract()).rollPayment(battleTier, pl); }
   function sum(a) { return (KIT_CONTRACT || kitContract()).sum(a); }
@@ -1377,7 +1378,7 @@
       promoteCompany: promoteCompany, promoteUnit: promoteUnit, promotionCost: promotionCost,
       promotionTargets: promotionTargets, rebuildNeeds: rebuildNeeds, recruit: recruit,
       recruitCost: recruitCost, rollBattleTier: rollBattleTier, rollPayment: rollPayment,
-      rollScenario: rollScenario, root: root, shuffle: shuffle, sum: sum, takeHonour: takeHonour,
+      rollScenario: rollScenario, foresight: foresight, root: root, shuffle: shuffle, sum: sum, takeHonour: takeHonour,
       takeUpgrade: takeUpgrade, words: words
     }));
   }
@@ -1515,7 +1516,7 @@
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,
     COMMAND_BY_TIER: COMMAND_BY_TIER,
 
-    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, ridersOpen: ridersOpen, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, fateWords: fateWords, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
+    newCampaign: newCampaign, newCompany: newCompany, newEntry: newEntry, menOf: menOf, renameSoldier: renameSoldier, strengthOf: strengthOf, lossStats: lossStats, fateWords: fateWords, poolOf: poolOf, experienceStats: experienceStats, traumaStats: traumaStats, winStats: winStats, biomassTally: biomassTally,
     found: found, foundingCheck: foundingCheck, byRid: byRid, fitCommand: fitCommand, rerankMen: rerankMen,
 
     effects: effects, applyEntry: applyEntry, moveBonus: moveBonus,
@@ -1534,7 +1535,7 @@
     promotionProgress: promotionProgress, fieldReport: fieldReport,
     canRecruit: canRecruit, recruit: recruit, canDisband: canDisband, disband: disband,
 
-    maxBattleTier: maxBattleTier, rollBattleTier: rollBattleTier, rollScenario: rollScenario,
+    maxBattleTier: maxBattleTier, rollBattleTier: rollBattleTier, rollScenario: rollScenario, foresight: foresight, foreIgnore: foreIgnore,
     swapAllowance: swapAllowance,
     rollPayment: rollPayment, rollIncome: rollIncome, negotiate: negotiate, payment: payment,
     expFor: expFor, tpFor: tpFor, traumaThreshold: traumaThreshold, rollTrauma: rollTrauma,

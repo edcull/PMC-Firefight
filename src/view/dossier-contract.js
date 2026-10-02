@@ -127,13 +127,14 @@
         if (B.tier < want) caught = C.catchUp(B, want);
       }
       var tier = C.rollBattleTier(A, B);
-      var scen = C.rollScenario(false);        // a D6 across all six, whatever the Tier
-      var alt = C.hasDoctrine(A, 'XO3') ? C.rollScenario(false) : null;
+      // a D6 across all six, whatever the Tier — and Foresighted Command's dice (camp-contract.js)
+      var fs = C.foresight(A, B, !hotseat());
       var levels = C.levelsFor(A, B, tier.tier);
       E.contract = {
         pl: levels.length ? levels[levels.length - 1] : 1,
         levels: levels,
-        tierRoll: tier, tier: tier.tier, scenario: scen, planet: 'random', alt: alt,
+        tierRoll: tier, tier: tier.tier, scenario: fs.scenario || fs.fore.dice[0], planet: 'random',
+        alt: fs.alt || null, altBy: fs.altBy || (fs.alt ? 'A' : null), fore: fs.fore || null, foreNote: fs.note || null,
         picks: [], terms: {}, caught: caught
       };
       E.view = 'contract';
@@ -153,7 +154,8 @@
         pl: lvls.length ? lvls[lvls.length - 1] : 1,
         levels: lvls,
         tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: o.planet || 'random',
-        roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null,
+        roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null,
+        fore: o.fore ? JSON.parse(JSON.stringify(o.fore)) : null, foreNote: o.foreNote || null,
         picks: [], terms: {}, caught: o.caught
       };
       save();
@@ -212,14 +214,37 @@
         if (second) h += '<div class="cpdoc"><span class="mk">' + esc(B.name) + ' has picked its force: Battle Tier ' +
           ROMAN[E.contract.tier] + ', Priority Level ' + E.contract.pl + '. Pick yours.</span></div>';
       }
-      if (second) { /* the terms are settled: the scenario, the Tier and the level */ }
+      /* Foresighted Command (XEN-11): with both holding it, three dice, and each side
+         ignores one in turn before anything else is settled */
+      var fore = E.contract.fore;
+      if (fore && !fore.done) {
+        var who = fore.order[fore.ignored.length], whoCo = E.camp.companies[who];
+        h += '<div class="cpan"><div class="cpstat"><b>Foresighted Command</b> \u2014 both forces hold it: three scenario dice, and each ignores one, ' +
+          esc(E.camp.companies[fore.order[0]].name) + ' first.</div><div class="cpstat">' + esc(whoCo.name) +
+          (hotseat() ? ' (Player ' + (who === 'A' ? 1 : 2) + ')' : '') + ': ignore one.</div>' +
+          fore.dice.map(function (d, i) {
+            return fore.ignored.indexOf(i) >= 0 ? '<span class="mk">' + d.roll + ' ' + esc(d.name) + ' \u2014 ignored</span> '
+              : '<button class="lnk" data-forego="' + i + '">Ignore ' + d.roll + ' \u2014 ' + esc(d.name) + '</button> ';
+          }).join('') + '</div>';
+        return h;                     // nothing else is settled until the scenario is
+      }
+      if (fore && fore.done && !second) {
+        h += '<div class="cpan"><div class="cpstat">Foresighted Command \u2014 the dice showed ' + fore.dice.map(function (d) { return esc(d.name); }).join(', ') +
+          '; with two ignored, it is <b>' + esc(E.contract.scenario.name) + '</b>.</div></div>';
+      }
+      if (E.contract.foreNote && !second) h += '<div class="cpan"><div class="cpstat">' + esc(E.contract.foreNote) + '</div></div>';
+      var altBy = E.contract.altBy || 'A', altMine = altBy === seat();
+      if (second && !(E.contract.alt && altBy === 'B')) { /* the terms are settled: the scenario, the Tier and the level */ }
       else if (E.contract.alt && E.contract.alt.id === E.contract.scenario.id) {
-        h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die agreed: ' +
+        if (!second) h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die agreed: ' +
           esc(E.contract.alt.name) + ' it is.</div></div>';
-      } else if (E.contract.alt) {
+      } else if (E.contract.alt && altMine) {
         h += '<div class="cpan"><div class="cpstat">Foresighted Command — the second scenario die showed ' +
-          E.contract.alt.roll + ', <b>' + esc(E.contract.alt.name) + '</b>. The tribe may keep either.</div>' +
+          E.contract.alt.roll + ', <b>' + esc(E.contract.alt.name) + '</b>. ' + (altBy === 'B' ? 'You' : 'The tribe') + ' may keep either.</div>' +
           '<button class="lnk" data-foresee="1">Fight ' + esc(E.contract.alt.name) + ' instead</button></div>';
+      } else if (E.contract.alt && !second) {
+        h += '<div class="cpan"><div class="cpstat">' + esc(E.camp.companies[altBy].name) + '\u2019s Foresighted Command — a second scenario die showed ' +
+          esc(E.contract.alt.name) + '; Player 2 chooses which to fight once you hand over.</div></div>';
       }
       /* The scenario, the opponent and who attacks were read on the offer: here is
          the force. What is left to decide here stays — The Best Defence is Good
@@ -323,7 +348,12 @@
       /* A tribe's turrets and a company's rapid insertion platforms are not bought
          (pp. 86, 140): they are put in the force for the battle, as many as the
          composition allows, and are gone again after it. */
-      var fieldable = R.listFor(A.faction || 'pmc').filter(function (p) { return (C.isTurretP(p) || p.noSlot) && p.tier <= E.contract.tier; });
+      /* Above the Battle Tier only at Priority Level 2 and up: "On Priority Level 1, you
+         cannot use Turrets … of Tiers higher than the Battle Tier" (p. 126; rules review
+         a119ac2 XEN-12). The list's own limits decide the rest (checkArmy, below). */
+      var fieldable = R.listFor(A.faction || 'pmc').filter(function (p) {
+        return (C.isTurretP(p) || p.noSlot) && (p.tier <= E.contract.tier || E.contract.pl > 1);
+      });
       if (fieldable.length) {
         h += '<h4>Fielded for this battle</h4>';
         fieldable.forEach(function (p) {

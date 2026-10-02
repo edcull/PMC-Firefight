@@ -1031,7 +1031,10 @@
   }
   // Aggressive: forced to charge the closest enemy — unless an Overmind holds it back
   function aggressiveNow(state, u) {
-    if (!has(u, 'Aggressive') || isMachine(u)) return false;
+    /* an Overgrown bug "may assault as normal" (p. 116), so Aggressive — the
+       Overgrown Adrenaline Glands Flaw — drives it too, if it has an Assault to make
+       (rules review a119ac2 BUG-3); any other machine never charges on its own */
+    if (!has(u, 'Aggressive') || (isMachine(u) && !(isOvergrown(u) && u.assault > 0))) return false;
     return !overmindFor(state, u, false, true);
   }
   /* Endless Tide, in the End phase: an unbroken unit near an unsuppressed
@@ -1218,7 +1221,7 @@
       credit: credit, currentMorale: currentMorale, d3: d3, d6: d6, doctrine: doctrine, droneUnit: droneUnit,
       has: has, hasOwn: hasOwn, infamyPanic: infamyPanic, isFlying: isFlying, isMachine: isMachine,
       projects: projects, psychicBond: psychicBond, shoot: shoot, status: status, terrainAt: terrainAt,
-      unitDist: unitDist, unitNear: unitNear, dropSpots: dropSpots, coverAt: coverAt
+      unitDist: unitDist, unitNear: unitNear, dropSpots: dropSpots, coverAt: coverAt, commandUnit: commandUnit
     };
   }
   function kitDamage() {
@@ -1418,22 +1421,31 @@
   function bondMorale(state, u) { return (KIT_XENO || kitXeno()).bondMorale(state, u); }
   function psychicBond(state, u, lost, log) { return (KIT_XENO || kitXeno()).psychicBond(state, u, lost, log); }
   function infamyPanic(state, u, log) { return (KIT_XENO || kitXeno()).infamyPanic(state, u, log); }
+  function panicSweep(state, log) { return (KIT_XENO || kitXeno()).panicSweep(state, log); }
   function regainTargets(state, u) { return (KIT_XENO || kitXeno()).regainTargets(state, u); }
   function regainControl(state, u) { return (KIT_XENO || kitXeno()).regainControl(state, u); }
   function selfRepair(state, u) { return (KIT_XENO || kitXeno()).selfRepair(state, u); }
   function teleportFrom(state, tp) { return (KIT_XENO || kitXeno()).teleportFrom(state, tp); }
   function teleportPads(state, side) { return (KIT_XENO || kitXeno()).teleportPads(state, side); }
   function teleportRoll(state, u, tp) { return (KIT_XENO || kitXeno()).teleportRoll(state, u, tp); }
-  function teleport(state, u, from, to) { return (KIT_XENO || kitXeno()).teleport(state, u, from, to); }
+  function teleport(state, u, from, to, pos) { return (KIT_XENO || kitXeno()).teleport(state, u, from, to, pos); }
 
   /* ---------- NOT ONE STEP BACKWARDS! (T5, p. 87) ----------
      A Command Unit, or a friend within 12" of one, may shoot at a friendly unit
      carrying Suppression. The shot is resolved as normal — a 'Man down!' still
      kills — but every Suppression point the result would have given is taken
      away instead (two 'Get down!' and one 'Man down!' remove 4). */
-  /* A command unit of the army's list — every Field command grade, the 4th
-     too, which has no "Command Unit (X)" activations of its own. */
-  function commandUnit(u) { return !!u && (!!u.command || hasOwn(u, 'Command Unit')); }
+  /* "a Command Unit", wherever a rule says it (the owner's ruling, rules review
+     a119ac2 REB-3): every unit of a list's command group, whether or not it has
+     Command Unit (X) activations of its own — Field command 4th grade to High
+     command, every First Among Equals unit, every Alpha squad and every Leader Bug
+     unit — and anything else carrying the rule. */
+  function commandUnit(u) {
+    if (!u) return false;
+    if (u.command || (u.rules && hasOwn(u, 'Command Unit'))) return true;
+    var p = u.key && BY_KEY[u.key];
+    return !!p && (!!p.command || !!p.alpha || !!p.leaderBug);
+  }
   function steadyShooter(state, a) {
     if (!doctrine(state, a.side, 'T5') || a.fp === null || isMachine(a) || !a.alive || a.x < 0) return false;
     if (status(a) !== 'ready') return false;
@@ -1626,7 +1638,8 @@
     if (bond && bond.m > m) { m = bond.m; extras.push('Psychic Bond: ' + bond.from.name + '\u2019s Morale ' + bond.m); }
     // Rite of Rage (p. 142): two points go at once with an enemy within 12"
     var rage = 0;
-    if (campFlag(u, 'rage') && enemyWithin(state, u, 12)) { rage = Math.min(2, u.sp); u.sp -= rage; extras.push('Rite of Rage −' + rage + ' SP'); }
+    // Rite of Rage: "in the Rally phase" (p. 142), not on a Pass/Regroup (rules review a119ac2 XEN-4)
+    if (inRally && campFlag(u, 'rage') && enemyWithin(state, u, 12)) { rage = Math.min(2, u.sp); u.sp -= rage; extras.push('Rite of Rage −' + rage + ' SP'); }
     var freedom = freedomDice(state, u);
     var reroll = (inspiringNearby(state, u) && !campFlag(u, 'insubordinate')) || has(u, 'Animal Behaviour');
     var jammed = jammedNearby(state, u), need = jammed ? 5 : 4;
@@ -2109,7 +2122,7 @@
     checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN, WALL_REACH: WALL_REACH, wallCoverAt: wallCoverAt,
     d10: d10, d6: d6, d3: d3, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
-    isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
+    isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,

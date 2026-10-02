@@ -224,6 +224,8 @@
           E.state.units.forEach(function (u) {
             if (u.side !== side || !u.alive || !u.reserve || coming.indexOf(u) >= 0) return;
             if (!semperFidelis(u) || u.wave == null || u.wave === 'pool') return;
+            // a gun held back with nothing to tow it never comes on (SC.gunRule)
+            if (R.has(u, 'Stationary Artillery') && SC.gunRule(E.state, side) === 'tow') return;
             u.sfOffer = true;
             coming.push(u);
           });

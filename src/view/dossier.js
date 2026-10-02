@@ -692,6 +692,17 @@
       render(); return;
     }
     if (t.hasAttribute('data-take-offer')) { takeOffer(+t.getAttribute('data-take-offer')); render(); return; }
+    // Foresighted Command with both holding it: the side whose turn it is ignores a die (XEN-11)
+    if (t.hasAttribute('data-forego') && contract && contract.fore && !contract.fore.done) {
+      var ff = contract.fore, fWho = ff.order[ff.ignored.length], wasScen = contract.scenario;
+      if (!C.foreIgnore(contract, fWho, +t.getAttribute('data-forego'), camp.mode !== 'hotseat')) return;
+      if (ff.done && contract.roles && (!wasScen || wasScen.id !== contract.scenario.id)) {
+        var SCf = root.PMCScen;
+        contract.roles = SCf && SCf.rollRoles ? SCf.rollRoles(contract.scenario.id,
+          { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, ['A']) : contract.roles;
+      }
+      save(); render(); return;
+    }
     if (t.hasAttribute('data-foresee') && contract && contract.alt) {
       var was = contract.scenario, wasRoles = contract.roles;
       contract.scenario = contract.alt; contract.alt = was;
@@ -704,14 +715,14 @@
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
       // recruiting spends the money: say what it costs, and what there is, before it is spent
-      var rk = t.getAttribute('data-recruit'), asDrone = t.hasAttribute('data-asdrone');
+      var rk = t.getAttribute('data-recruit'), asDrone = t.hasAttribute('data-asdrone'), asRiders = t.hasAttribute('data-asriders');
       var rp = profile(rk), rcost = C.recruitCost(co, rk), purse = co.kUC, coinWord = C.money(co);
       ask({
-        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : '') + '?',
+        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : asRiders ? ' (Riders)' : '') + '?',
         text: (rcost ? 'It costs ' + rcost + ' ' + coinWord + '. You have ' + purse + ' ' + coinWord +
           ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.'),
         okLabel: C.words(co).recruit + (rcost ? ' for ' + rcost + ' ' + coinWord : ''),
-        onOk: function () { C.recruit(co, rk, { drone: asDrone }); save(); render(); }
+        onOk: function () { C.recruit(co, rk, { drone: asDrone, riders: asRiders }); save(); render(); }
       });
       return;
     }
@@ -755,12 +766,7 @@
     }
     if (t.hasAttribute('data-rivdos')) { var rv = +t.getAttribute('data-rivdos'); rivalOpen = rivalOpen === rv ? null : rv; render(); return; }
     if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
-    // a unit on the roster takes the Riders upgrade or lays it down, or changes what it rides
-    if (t.hasAttribute('data-eriders')) {
-      var re = findEntry(co, t.getAttribute('data-eriders'));
-      if (re && C.ridersOpen(re)) { re.riders = !re.riders; C.menOf(re, co); save(); render(); }
-      return;
-    }
+    // a mounted unit on the roster changes what it rides
     if (t.hasAttribute('data-emount')) {
       var me = findEntry(co, t.getAttribute('data-emount'));
       me.mount = t.getAttribute('data-m'); save(); render(); return;

@@ -170,40 +170,64 @@ console.log('\nA landing zone is held only by a token over its circle (house rul
   ok('...a defender in each one does', owners().every((w) => w === 'B'), owners().join(','));
 })();
 
-console.log('\nA force whose guns cannot fill the scenario\'s held-back half must swap them (p. 94)');
+console.log('\nInvasion and emplaced guns (p. 94; review a119ac2 REB-5): the attacker drops them, the defender tows them in or leaves them out');
 (function () {
-  const guns = ['rleaders', 'rmedart', 'rmedart', 'rmedart', 'rmedart', 'rmedart'];
-  function inv(mode) {
+  function inv(attacker, armyA, armyB, mode) {
     const e = Engine.create({});
-    e.start({ tier: 3, pl: 1, scenario: 'invasion', attacker: 'A', armyA: guns.slice(), armyB: ['regular', 'regular', 'regular', 'regular'],
+    e.start({ tier: 3, pl: 1, scenario: 'invasion', attacker, armyA, armyB,
       nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode, planet: 'sparse', terrainSetup: 'auto', readyUp: true });
     for (let g = 0; g < 4 && e.state().tacticAsk; g++) e.intent(e.state().tacticAsk.order[e.state().tacticAsk.step], { k: 'tactic', tactic: null });
     return e;
   }
-  const e = inv('ai'), st = e.state();
+  const guns = ['rleaders', 'rmedart', 'rmedart', 'rmedart', 'rmedart', 'rmedart'];
+  const four = ['regular', 'regular', 'regular', 'regular'];
+  // the attacker: guns come down in either wave, none on tow, and no swap is forced
+  const ea = inv('A', guns.slice(), four, 'ai'), sa0 = ea.state();
+  const aGuns = sa0.units.filter((u) => u.side === 'A' && u.key === 'rmedart');
+  const hb = ea.intent('A', { k: 'holdback', id: aGuns[0].id });
+  ok('an attacker may put a gun in the second wave', hb.ok && aGuns[0].wave === 2, hb.why || '');
+  const eai = inv('B', four, guns.slice(), 'ai'), aiGuns = eai.state().units.filter((u) => u.side === 'B' && u.key === 'rmedart');
+  ok('...and the AI attacker splits its guns between the waves', aiGuns.some((u) => u.wave === 1) && aiGuns.some((u) => u.wave === 2), aiGuns.map((u) => u.wave).join(''));
+  ok('...with no swap forced on it', !(sa0.swapAvail && sa0.swapAvail.A && sa0.swapAvail.A.forced));
+  const ef = inv('A', ['rleaders', 'rmedart', 'rltv', 'rciv', 'rciv', 'rciv'], four, 'ai'), sf = ef.state();
+  const fg = sf.units.find((u) => u.side === 'A' && u.key === 'rmedart'), ft = sf.units.find((u) => u.side === 'A' && u.key === 'rltv');
+  ok('...a gun may not be hitched to a hull that lands', !ef.intent('A', { k: 'load', hull: ft.id, unit: fg.id }).ok && !fg.aboard);
+  ok('...but hitching one in the battle is still allowed', R.canEmbark(sf, Object.assign({}, ft, { cargo: [], aboard: null, x: 10, y: 10 }), Object.assign({}, fg, { x: 11, y: 10, aboard: null })));
+
+  // the defender with more guns than its third and nothing to tow them: the swap is forced
+  const e = inv('B', guns.slice(), four, 'ai'), st = e.state();
   const sa = st.swapAvail && st.swapAvail.A;
-  ok('the swaps on offer cover the guns the second wave cannot carry', !!sa && sa.total >= 2 && sa.forced >= 2, sa ? sa.total + ' swaps, ' + sa.forced + ' needed' : 'none');
-  ok('...and the player cannot go on before making them', !e.intent('A', { k: 'deployready' }).ok && !e.intent('A', { k: 'autodeploy' }).ok);
-  e.intent('A', { k: 'swapopen' });
-  const g0 = () => st.units.find((u) => u.side === 'A' && u.key === 'rmedart');
+  ok('a defender\'s guns over its third, with no tows, must be swapped', !!sa && sa.forced >= 3, sa ? sa.total + ' swaps, ' + sa.forced + ' needed' : 'none');
+  ok('...and the player cannot go on before making them', !e.intent('A', { k: 'deployready' }).ok);
   const alt = R.listFor('rebel').find((p) => p.tier === 3 && p.cls === 'infantry' && !(p.rules || []).includes('Stationary Artillery') && !p.command);
-  const ldr = st.units.find((u) => u.side === 'A' && u.key === 'rleaders');
-  e.intent('A', { k: 'swappick', id: ldr.id });
-  ok('...nor waste a needed swap on something that is not a gun', sa.left > sa.forced || !e.intent('A', { k: 'swapin', id: alt.key }).ok);
-  // (the swaps are noted in secret until the player goes on, so each is a different gun)
+  e.intent('A', { k: 'swapopen' });
   st.units.filter((u) => u.side === 'A' && u.key === 'rmedart').slice(0, sa.forced).forEach((g) => {
     e.intent('A', { k: 'swappick', id: g.id }); e.intent('A', { k: 'swapin', id: alt.key });
   });
   const res = e.intent('A', { k: 'deployready' });
   ok('with the guns swapped, it goes on', res.ok, res.why || '');
-  // the AI's own force: put it on side B by making B the attacker with the guns
-  const e3 = Engine.create({});
-  e3.start({ tier: 3, pl: 1, scenario: 'invasion', attacker: 'B', armyA: ['regular', 'regular', 'regular', 'regular'], armyB: guns.slice(),
-    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto', readyUp: true });
-  const s3 = e3.state(), sp3 = s3.sc.split.B, bs = s3.units.filter((u) => u.side === 'B');
-  const freeB = bs.filter((u) => !R.has(u, 'Stationary Artillery')).length, wave2 = bs.filter((u) => u.wave === 2).length;
-  ok('the AI swaps its own guns until its second wave can be held back', freeB >= sp3.want, freeB + ' free of ' + bs.length + ', ' + sp3.want + ' wanted');
-  ok('...and holds that wave back', wave2 >= sp3.want, wave2 + ' in the second wave');
+
+  // with transport vehicles in the force, the guns over the third go behind them, and no swap is forced
+  const towArmy = ['rleaders', 'rmedart', 'rmedart', 'rmedart', 'ritv', 'ritv'];
+  const et = inv('B', towArmy.slice(), four, 'ai'), stt = et.state();
+  ok('a defender with a tow for each gun over its third is not made to swap', !(stt.swapAvail && stt.swapAvail.A && stt.swapAvail.A.forced));
+  // the AI's own force sets it up that way: guns on the table first, the rest on the hook of held hulls
+  const eb = inv('A', four, towArmy.slice(), 'ai'), sb = eb.state();
+  const bGuns = sb.units.filter((u) => u.side === 'B' && u.key === 'rmedart');
+  const towedB = bGuns.filter((u) => u.aboard), hullsHeld = sb.units.filter((u) => u.side === 'B' && u.key === 'ritv' && u.reserve && u.wave === 2);
+  ok('the AI defender tows the guns its third cannot take', towedB.length === 1 && towedB.every((g) => hullsHeld.some((h) => h.id === g.aboard)),
+    towedB.length + ' towed, ' + hullsHeld.length + ' hulls held');
+  ok('...and holds none back on its own', !bGuns.some((u) => u.reserve && !u.aboard));
+
+  // a gun held back with nothing to tow it never comes on
+  const ec = inv('A', four, ['rleaders', 'rmedart', 'rmedart', 'rmedart', 'rmedart', 'rmedart'], 'hotseat'), sc = ec.state();
+  const lone = sc.units.find((u) => u.side === 'B' && u.key === 'rmedart');
+  lone.reserve = true; lone.wave = 2; lone.aboard = null; lone.x = -1; lone.y = -1;
+  sc.turn = 9;
+  const keep = Math.random; Math.random = () => 0.99;
+  let coming;
+  try { coming = SC.reserves(sc, 'B'); } finally { Math.random = keep; }
+  ok('a defender\'s gun held back with no tow never comes on', coming.indexOf(lone) < 0, coming.map((u) => u.key).join(','));
 })();
 
 console.log('\nSCN-2 Wiping the enemy out on the last turn wins, even with the objectives level (p. 49)');
