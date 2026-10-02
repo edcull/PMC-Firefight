@@ -1438,7 +1438,9 @@
   /* How many units may be swapped when modifying the armies: no more than a
      quarter (p. 46), half with Tactical Flexibility (O6, p. 87). */
   // "no more than ¼" (p. 47), "up to ½" with Tactical Flexibility (p. 89): rounded up, as every division is (p. 27)
-  function swapAllowance(n, flexible) { return Math.ceil(n * (flexible ? 0.5 : 0.25)); }
+  /* "swapping no more than ¼ of their units" (p. 46), "up to ½" with Tactical
+     Flexibility (p. 89): a ceiling, so rounded down — never more than the share */
+  function swapAllowance(n, flexible) { return Math.floor(n * (flexible ? 0.5 : 0.25) + 1e-9); }
   /* The OpFor's "+2 if there are no enemy units within the active unit's Range"
      (p. 147): a plain distance, whatever stands in the way or wherever the gun
      points. A unit with no Firepower has no Range, so nothing is within it. */

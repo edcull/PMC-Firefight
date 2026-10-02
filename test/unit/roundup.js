@@ -29,11 +29,11 @@ ok('5 men who lose 4: +4', tpOf(5, 1), 4);
 ok('10 men who lose 5: +1', tpOf(10, 5), 1);
 ok('10 men who lose 6: +4', tpOf(10, 4), 4);
 
-console.log('\nSwapping units before the battle: ¼, or ½ with Tactical Flexibility (pp. 47, 89)');
-ok('3 units may swap 1', R.swapAllowance(3, false), 1);
-ok('6 units may swap 2', R.swapAllowance(6, false), 2);
+console.log('\nSwapping units before the battle: no more than ¼, or ½ with Tactical Flexibility (pp. 47, 89) — rounded down');
+ok('3 units may swap none', R.swapAllowance(3, false), 0);
+ok('6 units may swap 1', R.swapAllowance(6, false), 1);
 ok('8 units may swap 2', R.swapAllowance(8, false), 2);
-ok('5 units with Tactical Flexibility may swap 3', R.swapAllowance(5, true), 3);
+ok('5 units with Tactical Flexibility may swap 2', R.swapAllowance(5, true), 2);
 
 console.log('\nRob the Rich, Give to the Poor: 75% of the Influence Points (p. 112)');
 (function () {
