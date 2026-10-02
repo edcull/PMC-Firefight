@@ -95,8 +95,9 @@
        A squad the rules count in a trench or at a low wall (the terrain it is
        tagged with: half its rim or more on it, see R.kindsUnder) is drawn spread
        along it rather than bunched on its base: in the trench, down its middle;
-       at the wall, tight in behind it, on the side away from the enemy. A squad
-       that is only near one is not in it, and keeps its ranks. Only the men are
+       at the wall, tight in behind it, on the side away from the enemy. A squad in
+       the open with its middle within 1.5" of a low wall is in its cover, and lines
+       it too, on its own side; one further off keeps its ranks. Only the men are
        drawn there — the unit stays where it is, so they keep to the stretch its
        base is against. */
     var LINE_IN = { trench: 1, barricade: 1 };
@@ -108,15 +109,23 @@
       if (n < 2) return null;
       // the terrain the rules count it in, and nothing else: the men only answer to that
       var kind = R.kindsUnder(B.state, null, x, y)[0];
-      if (!LINE_IN[kind]) return intoArea(u, x, y, n, kind);
-      // the piece of that kind most of the token is on
-      var best = null, most = 0, fp = R.footprint(x, y);
-      B.state.terrain.forEach(function (r) {
-        if (r.kind !== kind || r.poly) return;
-        var c = fp.filter(function (q) { return R.inRect(q.x, q.y, r); }).length;
-        if (c > most) { most = c; best = r; }
-      });
-      if (!best) return null;
+      var best = null;
+      if (LINE_IN[kind]) {
+        // the piece of that kind most of the token is on
+        var most = 0, fp = R.footprint(x, y);
+        B.state.terrain.forEach(function (r) {
+          if (r.kind !== kind || r.poly) return;
+          var c = fp.filter(function (q) { return R.inRect(q.x, q.y, r); }).length;
+          if (c > most) { most = c; best = r; }
+        });
+      } else if (!(R.TERRAIN[kind] && R.TERRAIN[kind].cover)) {
+        /* In the open with its middle within 1.5" of a low wall, the unit is in that
+           wall's cover from fire across it (p. 42; rules.js behindWall): its men
+           line the wall, on the side its middle is. (In a wood or ruins, that
+           cover counts first, and the men stand in it.) */
+        best = R.wallCoverAt(B.state, x, y);
+      }
+      if (!best) return intoArea(u, x, y, n, kind);
       var alongX = best.w >= best.h;
       var lo = alongX ? best.x : best.y, len = alongX ? best.w : best.h;
       var thick = alongX ? best.h : best.w, mid = (alongX ? best.y : best.x) + thick / 2;
@@ -130,6 +139,8 @@
       // a man every 0.6" or so, at least 0.3" apart, the squad no wider than about three inches
       var perRow = Math.min(n, Math.floor(Math.min(avail, 3.2) / 0.3) + 1);
       var rows = Math.min(3, Math.ceil(n / perRow));
+      // at a wall: up to four men in a single line, five or more two deep, the back rank staggered
+      if (best.kind !== 'trench') rows = Math.max(rows, n > 4 ? 2 : 1);
       perRow = Math.ceil(n / rows);
       // the ranks behind stand half a step along, so the whole block is that much wider
       var steps = perRow - 1 + (rows > 1 ? 0.5 : 0);
@@ -1738,8 +1749,12 @@
         }
       });
 
-      // measuring tape
-      if (u && ui.hover) {
+      /* measuring tape: only from a unit the player is acting with — their own, on
+         their turn, not one picked out to look at (an enemy's, or out of turn), and
+         not one that has already acted */
+      var taping = u && ui.hover && !ui.inspect && B.mySide && B.mySide() === u.side &&
+        !(B.state.phase === 'battle' && u.activated);
+      if (taping) {
         var a2 = hud(dispX(u), dispY(u), liftOf(dispX(u), dispY(u)));
         var b2 = hud(ui.hover.x, ui.hover.y, 0);
         var dist = Math.max(0, R.inches(u.x, u.y, ui.hover.x, ui.hover.y) - UR);

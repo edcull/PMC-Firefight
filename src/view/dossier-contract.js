@@ -134,7 +134,7 @@
         pl: levels.length ? levels[levels.length - 1] : 1,
         levels: levels,
         tierRoll: tier, tier: tier.tier, scenario: scen, planet: 'random', alt: alt,
-        picks: [], adjusted: false, caught: caught
+        picks: [], terms: {}, caught: caught
       };
       E.view = 'contract';
     }
@@ -154,7 +154,7 @@
         levels: lvls,
         tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: o.planet || 'random',
         roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null,
-        picks: [], adjusted: false, caught: o.caught
+        picks: [], terms: {}, caught: o.caught
       };
       save();
       E.view = 'contract';
@@ -245,10 +245,29 @@
           ROMAN[E.contract.caught.to] + ' since you last met.</span></div>';
       }
 
-      if (!second && C.hasDoctrine(A, 'S4') && !E.contract.adjusted) {
-        h += '<div class="cpdoc"><b>On Our Terms…</b> lets you shift the Battle Tier by one. ' +
-          '<button class="lnk" data-tier="-1"' + (E.contract.tier <= 1 ? ' disabled' : '') + '>Down to ' + ROMAN[Math.max(1, E.contract.tier - 1)] + '</button> ' +
-          '<button class="lnk" data-tier="1"' + (E.contract.tier >= E.contract.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, E.contract.tier + 1)] + '</button></div>';
+      /* On Our Terms… (p. 87): a player whose company holds it may shift the Battle
+         Tier by one — up only as far as both companies can field (the roll's cap).
+         When only Player 2 holds it, a shift sends the screen back to Player 1, whose
+         force was picked for the old Tier. When both hold it, each says which way:
+         both down, it goes down; both up, it goes up; otherwise it stays
+         (dossier.js, data-tier). */
+      var terms = E.contract.terms || {};
+      if (terms.note && !second) h += '<div class="cpdoc"><span class="mk">' + esc(terms.note) + '</span></div>';
+      if (terms.noteB && second) h += '<div class="cpdoc"><span class="mk">' + esc(terms.noteB) + '</span></div>';
+      if (C.hasDoctrine(A, 'S4') && !E.contract.standard && !terms.done && !(second && terms.B)) {
+        var both = C.hasDoctrine(B, 'S4'), vote = !second && both ? (terms.A || 0) : null;
+        var btn = function (d, label, off) {
+          return '<button class="lnk' + (vote === d ? ' on' : '') + '" data-tier="' + d + '"' + (off ? ' disabled' : '') + '>' + label + '</button>';
+        };
+        h += '<div class="cpdoc"><b>On Our Terms…</b> ' +
+          (both ? (second ? esc(B.name) + ' holds it too: say which way. If you both chose the same, the Tier moves (and ' +
+                    esc(B.name) + ' picks its force again); if not, it stays at ' + ROMAN[E.contract.tier] + '. '
+                  : 'Both companies hold it: say which way. The Tier moves only if Player 2 chooses the same. ')
+                : 'lets you shift the Battle Tier by one' + (second ? ' — ' + esc(B.name) + ' will then pick its force again for the new Tier' : '') + '. ') +
+          btn(-1, 'Down to ' + ROMAN[Math.max(1, E.contract.tier - 1)], E.contract.tier <= 1) + ' ' +
+          (vote !== null ? btn(0, 'Keep ' + ROMAN[E.contract.tier]) + ' ' : '') +
+          btn(1, 'Up to ' + ROMAN[Math.min(5, E.contract.tier + 1)], E.contract.tier >= E.contract.tierRoll.cap) +
+          (E.contract.tier >= E.contract.tierRoll.cap && E.contract.tier < 5 ? ' <span class="mk">(not both forces can field a higher Tier)</span>' : '') + '</div>';
       }
 
       /* The standard contract (p. 84): Tier III, Priority Level 2, the Tier not

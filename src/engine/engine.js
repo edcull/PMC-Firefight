@@ -1684,6 +1684,7 @@
       return yes;
     });
     on('deploy', null, function (side, it) {
+      var swb = K.swapBlock(side); if (swb) { setHint(null, swb); render(); return no(swb); }
       K.readyToDeploy(side);                // putting a unit down is getting on with the deployment
       if (modifying()) return no('the other side is still modifying its army');
       if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();   // placing a unit keeps the list
@@ -1755,6 +1756,7 @@
     });
     on('autodeploy', null, function (side, it) {
       if (state.phase !== 'deploy') return no('not deploying');
+      var swb = K.swapBlock(side); if (swb) { setHint(null, swb); render(); return no(swb); }
       K.readyToDeploy(side);
       if (modifying()) return no('the other side is still modifying its army');
       // deploying straight away means keeping the list as it is
@@ -1825,6 +1827,7 @@
     });
     on('deployready', null, function (side, it) {
       if (state.phase !== 'deploy' || !state.deployReady || state.deployReady[side] !== false) return no('nothing to continue from');
+      var swb = K.swapBlock(side); if (swb) { setHint(null, swb); render(); return no(swb); }
       K.readyToDeploy(side);
       return yes;
     });
@@ -1839,7 +1842,7 @@
       var sa2 = state.swapAsk;
       if (!sa2 || sa2.side !== side) return no('nothing to swap');
       if (it.who && it.who !== side) return no('that was the other player\u2019s list');
-      if (it.k === 'swapdone') { K.swapsDone(); return yes; }
+      if (it.k === 'swapdone') { var swd = K.swapBlock(side); if (swd) { setHint(null, swd); render(); return no(swd); } K.swapsDone(); return yes; }
       if (it.k === 'swappick') { sa2.pick = it.id || null; render(); return yes; }
       if (it.k === 'swapundo') {
         var un = K.undoSwap(side, it.id);
@@ -1886,6 +1889,7 @@
       if (state.minePick) return no('the mined piece has not been chosen');
       if (state.tacticAsk) return no('the tactics are still being chosen');
       if (state.placeAsk) return no('there are pieces still to place');
+      var swst = K.swapBlock('A') || K.swapBlock('B'); if (swst) { setHint(null, swst); render(); return no(swst); }
       settleFacing();
       if (modifying()) return no('the armies are still being modified');
       if (state.swapAsk) K.swapsDone();
@@ -2240,6 +2244,7 @@
         // the Rally phase's flight on its own, for the tests
         fleeBroken: function () { K.fleeBroken(); },
         rallyPhase: function () { K.rallyPhase(); },
+        greetArrival: function (u) { return K.greetArrival(u); },
         reservePhase: function (done) { K.reservePhase(done || function () {}); },
         aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },
         specialsFor: function (u) { return specialsFor(u); },

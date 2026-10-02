@@ -823,10 +823,37 @@
       render(); return;
     }
     if (t.hasAttribute('data-tier')) {
-      contract.tier = Math.max(1, Math.min(contract.tierRoll.cap, contract.tier + (+t.getAttribute('data-tier'))));
-      contract.levels = C.levelsFor(camp.companies.A, camp.companies.B, contract.tier);
-      if (contract.levels.indexOf(contract.pl) < 0) contract.pl = contract.levels[0] || 1;
-      contract.adjusted = true; contract.picks = []; render(); return;
+      /* On Our Terms… (dossier-contract.js): who holds it decides what a click means */
+      var dir = +t.getAttribute('data-tier'), byB = contract.side === 'B', was = contract.tier;
+      var terms = contract.terms || (contract.terms = {});
+      var mine = camp.companies[byB ? 'B' : 'A'], theirs = camp.companies[byB ? 'A' : 'B'];
+      var both = C.hasDoctrine(mine, 'S4') && C.hasDoctrine(theirs, 'S4');
+      var shift = function (d) {
+        contract.tier = Math.max(1, Math.min(contract.tierRoll.cap, contract.tier + d));
+        contract.levels = C.levelsFor(camp.companies.A, camp.companies.B, contract.tier);
+        if (contract.levels.indexOf(contract.pl) < 0) contract.pl = contract.levels[0] || 1;
+        contract.picks = [];
+      };
+      if (both && !byB) { terms.A = dir; save(); render(); return; }    /* a vote, settled on Player 2's */
+      if (both) {
+        terms.B = dir; terms.done = true;
+        if (dir && dir === (terms.A || 0)) shift(dir);
+        else terms.noteB = 'You chose ' + (dir < 0 ? 'down' : 'up') + ', ' + camp.companies.A.name + ' chose ' +
+          (terms.A ? (terms.A < 0 ? 'down' : 'up') : 'to keep it') + ': the Battle Tier stays at ' + R.ROMAN[was] + '.';
+      } else {
+        shift(dir);
+        if (byB) terms.B = dir; else terms.done = true;
+      }
+      /* Player 2 has changed the terms Player 1 picked a force on: back to Player 1,
+         to pick again for the new Tier and hand over once more */
+      if (byB && contract.first && contract.tier !== was) {
+        terms.done = true;
+        terms.note = camp.companies.B.name + (both ? ' agreed: ' : ' used On Our Terms\u2026: ') + 'the Battle Tier is now ' +
+          R.ROMAN[contract.tier] + ' (was ' + R.ROMAN[was] + '). Pick your force again, then hand over.';
+        contract.side = 'A'; contract.tactic = contract.first.tactic; contract.drugs = [];
+        delete contract.first;
+      }
+      save(); render(); return;
     }
     if (t.hasAttribute('data-bfaction')) {
       keepFoundName();
@@ -962,7 +989,7 @@
         if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;
         contract.standard = true; contract.tier = 3; contract.pl = 2; contract.levels = [2];
         contract.tierRoll = { roll: 3, cap: 3, tier: 3, standing: 3, thin: false };
-        contract.adjusted = true; contract.picks = [];
+        contract.terms = { done: true }; contract.picks = [];
         render(); return;
       case 'fight':
         if (t.getAttribute('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return; }
@@ -1174,6 +1201,7 @@
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
     get: function () { return camp; },
     set: function (c) { camp = c; save(); render(); },
+    contract: function () { return contract; },           // the test harness's view of the contract on screen
     // the test harness's way to fill a contract's list (as the rival picks its own)
     autopick: function () {
       if (!contract || !camp) return false;

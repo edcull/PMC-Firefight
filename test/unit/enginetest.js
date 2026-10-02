@@ -710,7 +710,7 @@ console.log('  vs the OpFor AI');
     nameA: 'A', nameB: 'B', mode: 'ai', planet: 'sparse', doctrines: { A: ['O6'], B: [] } });
   const st = e.state(), n = st.units.filter(u => u.side === 'A' && u.pickIdx != null).length;
   ok('the player may modify the list before deploying', e.intent('A', { k: 'swapopen' }).ok && !!e.state().swapAsk);
-  ok('...up to half the list with Tactical Flexibility', e.state().swapAsk.total === Math.ceil(n / 2), e.state().swapAsk.total + ' of ' + n);
+  ok('...up to half the list with Tactical Flexibility', e.state().swapAsk.total === Math.floor(n / 2), e.state().swapAsk.total + ' of ' + n);
   // not one riding in a transport: a unit already aboard stays as it is
   const u = st.units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry' && !x.aboard && !(x.cargo && x.cargo.length));
   const alt = R.listFor('pmc').find(p => p.tier === u.tier && p.key !== u.key && !p.command && p.cls === 'infantry');
@@ -726,7 +726,7 @@ console.log('  vs the OpFor AI');
   e2.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
     nameA: 'A', nameB: 'B', mode: 'ai', planet: 'sparse' });
   const n2 = e2.state().units.filter(u => u.side === 'A' && u.pickIdx != null).length;
-  ok('a quarter without it', !e2.state().swapAvail.A || e2.state().swapAvail.A.total === Math.ceil(n2 / 4));   // a quarter, rounded up (p. 27)
+  ok('a quarter without it', Math.floor(n2 / 4) === 0 ? !e2.state().swapAvail.A : e2.state().swapAvail.A.total === Math.floor(n2 / 4));   // no more than a quarter, rounded down (p. 46)
 })();
 
 /* A hotseat's round of swaps: each player in turn, in secret, before anyone deploys. */

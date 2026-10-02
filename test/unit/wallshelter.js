@@ -29,7 +29,8 @@ function lowWall() { return { kind: 'barricade', x: 20, y: 14, w: 0.6, h: 6 }; }
 function highWall() { return { kind: 'wall', x: 20, y: 14, w: 0.6, h: 6 }; }
 
 head('A unit just back from a low wall: the cover and the wall it shelters behind agree');
-[1.0, 1.5, 2.0].forEach(function (back) {
+// cover reaches 1.5" to the unit's middle (R.WALL_REACH, a house rule)
+[0.5, 1.0, 1.5].forEach(function (back) {
   var shooter = unit('atteam', 'A', 8, 17), target = unit('regular', 'B', 20.6 + back, 17);
   var st = world([shooter, target], [lowWall()]);
   var cover = R.coverFor(st, shooter, target).v, shelter = R.shelterOf(st, shooter, target);
@@ -37,9 +38,9 @@ head('A unit just back from a low wall: the cover and the wall it shelters behin
   ok('...and the same wall is its shelter for a Destructive Weapon', !!shelter && shelter.kind, 'barricade');
 });
 (function () {
-  var shooter = unit('atteam', 'A', 8, 17), target = unit('regular', 'B', 23.2, 17);
+  var shooter = unit('atteam', 'A', 8, 17), target = unit('regular', 'B', 22.4, 17);
   var st = world([shooter, target], [lowWall()]);
-  ok('2.6" back: no cover', R.coverFor(st, shooter, target).v, 0);
+  ok('1.8" back: no cover', R.coverFor(st, shooter, target).v, 0);
   ok('...and no shelter', R.shelterOf(st, shooter, target), null);
 })();
 (function () {

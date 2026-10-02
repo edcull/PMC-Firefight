@@ -223,7 +223,7 @@
           break;
         }
         case 'sandbag': {
-          /* A run of a low sandbag wall: three courses of bags laid end to end
+          /* A run of a low sandbag wall: two courses of bags laid end to end
              along the wall's own line, each course set half a bag over the one
              below, so run after run joins into one wall. */
           var sr = rng(pr.seed || ((pr.tone * 9999) | 0));
@@ -237,7 +237,7 @@
             scr(pr.x + ux * s1 + vx * (HW + 0.25), pr.y + uy * s1 + vy * (HW + 0.25), 0),
             scr(pr.x + ux * s1 + vx * HW, pr.y + uy * s1 + vy * HW, 0),
             scr(pr.x + ux * s0 + vx * HW, pr.y + uy * s0 + vy * HW, 0)], 'rgba(16,12,8,.35)');
-          for (var course = 0; course < (pr.courses || 3); course++) {
+          for (var course = 0; course < (pr.courses || 2); course++) {
             var off = course % 2 ? bl / 2 : 0;
             var bags = [];
             for (var bi = -1; bi <= nb; bi++) {
@@ -369,15 +369,61 @@
           break;
         }
         case 'wreckstone': {
-          var wr3 = rng(pr.seed);
-          var wc = STONE[1 + Math.round(pr.tone * 2)];
-          shadowBlob(g, { x: p.x, y: p.y + a(0.5) }, a(2.4), a(1.2));
-          rect(g, p.x - a(1.8), p.y - a(2.2), a(3.6), a(2.4), wc);
-          rect(g, p.x - a(1.8), p.y - a(2.2), a(3.6), a(0.8), STONE[4]);
-          rect(g, p.x - a(0.6) + wr3() * a(1.4), p.y - a(3.4), a(1.6), a(1.4), STONE[2]);
-          for (var dq = 0; dq < 4; dq++) {
-            dot(g, p.x + (wr3() - 0.5) * a(5), p.y + (wr3() - 0.2) * a(1.6),
-              wr3() > 0.5 ? CHAR[0] : STONE[0], 1);
+          /* A broken block of stone or concrete: two or three chunks, each with a
+             lit top, a shaded flank and a darker one, cracked across, with grit
+             scattered round them. */
+          var wr3 = rng(pr.seed), sb = 1 + Math.round(pr.tone * 2);
+          shadowBlob(g, { x: p.x, y: p.y + a(0.6) }, a(2.8), a(1.3));
+          var nck = 2 + (wr3() * 2 | 0), cks = [];
+          for (var ck = 0; ck < nck; ck++) cks.push({ x: p.x + (wr3() - 0.5) * a(3.4), y: p.y + (wr3() - 0.5) * a(1.4), w: a(0.8 + wr3() * 1.1), h: a(0.5 + wr3() * 1.1) });
+          cks.sort(function (m, n) { return m.y - n.y; });
+          cks.forEach(function (c) {
+            var d = c.w * 0.5, j = function () { return (wr3() - 0.5) * c.w * 0.25; };
+            var T = [[c.x - c.w + j(), c.y - c.h + j() * 0.5], [c.x + j(), c.y - c.h - d * 0.5 + j() * 0.5], [c.x + c.w + j(), c.y - c.h + j() * 0.5], [c.x + j(), c.y - c.h + d * 0.5]];
+            poly(g, [T[0], T[3], [T[3][0], c.y + d * 0.5], [T[0][0], c.y]], STONE[sb]);                 // the face to the light's side
+            poly(g, [T[3], T[2], [T[2][0], c.y], [T[3][0], c.y + d * 0.5]], STONE[Math.max(0, sb - 1)]); // the face in shade
+            poly(g, T, STONE[Math.min(5, sb + 2)]);                                                     // the broken top
+            edgeLine(g, T[0], T[1], STONE[Math.min(5, sb + 3)], 1);                                      // its lit edge
+            edgeLine(g, lerp2(T[0], T[2], 0.3 + wr3() * 0.2), lerp2(T[1], T[3], 0.4 + wr3() * 0.3), STONE[Math.max(0, sb - 1)], 1);   // a crack
+            for (var pk = 0; pk < 3; pk++) dot(g, c.x + (wr3() - 0.5) * c.w, c.y - c.h * wr3(), wr3() > 0.5 ? STONE[0] : STONE[Math.min(5, sb + 1)], 1);
+          });
+          for (var dq = 0; dq < 9; dq++) {
+            dot(g, p.x + (wr3() - 0.5) * a(5.5), p.y + (wr3() - 0.3) * a(2), wr3() > 0.6 ? CHAR[0] : STONE[1 + (wr3() * 3 | 0)], 1);
+          }
+          break;
+        }
+        case 'wreckbag': {
+          /* A low wall brought down: its bags burst and slumped, the sand spilled
+             out across the ground in a fan, the hessian torn open. */
+          var wb = rng(pr.seed);
+          ellipse(g, p.x + (wb() - 0.5) * a(1), p.y + a(0.4), a(3.2), a(1.3), 'rgba(150,122,74,.5)');
+          for (var sg = 0; sg < 26; sg++) {
+            var ga = wb() * Math.PI * 2, gd = Math.sqrt(wb());
+            dot(g, p.x + Math.cos(ga) * gd * a(3.2), p.y + a(0.4) + Math.sin(ga) * gd * a(1.3), wb() > 0.5 ? BAG[1] : BAG[3], 1);
+          }
+          var nbag = 1 + (wb() * 2 | 0);
+          for (var bg2 = 0; bg2 < nbag; bg2++) {
+            var bx = p.x + (wb() - 0.5) * a(2.6), by = p.y + (wb() - 0.5) * a(1), ang2 = (wb() - 0.5) * 1.2;
+            var L3 = a(1.1 + wb() * 0.5), W3 = a(0.55), H3 = a(0.45 + wb() * 0.3);
+            var ca = Math.cos(ang2), sa2 = Math.sin(ang2);
+            var bagAt = function (k, up) {
+              var pts = [];
+              for (var q2 = 0; q2 < 14; q2++) {
+                var th2 = q2 / 14 * Math.PI * 2, cc2 = Math.cos(th2), ss2 = Math.sin(th2);
+                var tx2 = (cc2 < 0 ? -1 : 1) * Math.pow(Math.abs(cc2), 0.45) * L3 * k, ty2 = (ss2 < 0 ? -1 : 1) * Math.pow(Math.abs(ss2), 0.45) * W3 * k;
+                pts.push([bx + tx2 * ca - ty2 * sa2, by + (tx2 * sa2 + ty2 * ca) * 0.55 - up]);
+              }
+              return pts;
+            };
+            poly(g, bagAt(1, 0), '#3e331d');                                   // its foot, in shade
+            poly(g, bagAt(0.98, H3 * 0.5), BAG[0]);                            // the slumped flank
+            poly(g, bagAt(0.9, H3), BAG[Math.min(3, 1 + (wb() * 2 | 0))]);     // the top
+            poly(g, bagAt(0.5, H3 + 1).map(function (q3) { return [q3[0] - 1, q3[1] - 1]; }), BAG[3]);
+            // the tear: a dark gash with sand at its lip
+            var te = [bx + ca * L3 * 0.55, by + sa2 * L3 * 0.3 - H3];
+            poly(g, [[te[0] - a(0.5), te[1]], [te[0], te[1] - a(0.25)], [te[0] + a(0.45), te[1] + a(0.1)], [te[0], te[1] + a(0.3)]], '#241c10');
+            dot(g, te[0] + a(0.5), te[1] + a(0.3), BAG[3], 2);
+            for (var wv2 = 0; wv2 < 4; wv2++) dot(g, bx + (wb() - 0.5) * L3, by + (wb() - 0.5) * W3 * 0.5 - H3, 'rgba(60,46,24,.55)', 1);
           }
           break;
         }
@@ -582,12 +628,61 @@
           break;
         }
         case 'beacon': {
-          shadowBlob(g, { x: p.x + a(1), y: p.y }, a(4), a(2));
-          poly(g, [[p.x - a(5), p.y], [p.x, p.y + a(2.5)], [p.x + a(5), p.y], [p.x, p.y - a(2.5)]], '#2a2f36');
-          poly(g, [[p.x - a(3.6), p.y - a(1)], [p.x, p.y + a(1)], [p.x + a(3.6), p.y - a(1)], [p.x, p.y - a(3)]], '#3b424c');
-          rect(g, p.x - a(1), p.y - a(11), a(2), a(10), '#20262d');
-          rect(g, p.x - a(1), p.y - a(11), a(1), a(10), '#39424d');
-          rect(g, p.x - a(1.5), p.y - a(13), a(3), a(2), '#e8c15a');
+          /* An objective marker: a steel post on a concrete plinth ringed with
+             hazard paint, a cloth pennant from its head and a lamp on top, so it is
+             plain from anywhere on the table where the point to hold is. */
+          var bq = rng(7 + (pr.index || 0) * 31);
+          shadowBlob(g, { x: p.x + a(1), y: p.y + a(0.4) }, a(4.6), a(2.2));
+          // the plinth: a low slab with a bevelled top
+          var D0 = [[p.x - a(4.4), p.y], [p.x, p.y + a(2.2)], [p.x + a(4.4), p.y], [p.x, p.y - a(2.2)]];
+          var lift3 = a(1.1), D1 = D0.map(function (q) { return [q[0], q[1] - lift3]; });
+          poly(g, [D0[0], D0[1], D1[1], D1[0]], '#2a2f36');
+          poly(g, [D0[1], D0[2], D1[2], D1[1]], '#1d2127');
+          poly(g, D1, '#4a525d');
+          poly(g, D1.map(function (q) { return [p.x + (q[0] - p.x) * 0.78, p.y - lift3 + (q[1] - p.y + lift3) * 0.78]; }), '#59626e');
+          // hazard paint round the rim of the slab
+          [[D1[0], D1[1]], [D1[1], D1[2]]].forEach(function (F) {
+            var n = 7;
+            for (var i = 0; i < n; i++) {
+              var q0 = lerp2(F[0], F[1], i / n), q1 = lerp2(F[0], F[1], (i + 1) / n);
+              poly(g, [q0, q1, [q1[0], q1[1] + a(0.6)], [q0[0], q0[1] + a(0.6)]], i % 2 ? '#1b1a17' : '#d9a441');
+            }
+          });
+          edgeLine(g, D1[3], D1[0], '#7b8592', 1);
+          edgeLine(g, D1[3], D1[2], '#6a7380', 1);
+          // the post: square steel, lit down its left face, with two painted bands
+          var px0 = p.x - a(0.7), pw = a(1.4), top = p.y - lift3 - a(14), bot = p.y - lift3;
+          rect(g, px0, top, pw, bot - top, '#2c343e');
+          rect(g, px0, top, pw * 0.5, bot - top, '#4a5664');
+          rect(g, px0, top, 1, bot - top, '#7e8b9a');
+          rect(g, px0 + pw - 1, top, 1, bot - top, '#1a1f25');
+          [0.18, 0.52].forEach(function (f) {
+            var by2 = bot - (bot - top) * f;
+            rect(g, px0, by2 - a(0.9), pw, a(0.9), '#d9a441');
+            rect(g, px0, by2 - a(0.9), pw * 0.5, a(0.9), '#f0c060');
+          });
+          rect(g, px0 - 1, top - a(0.5), pw + 2, a(0.6), '#1a1f25');          // the cap
+          // the pennant: cloth from the head of the post, rippling, its fold shaded
+          var fx = px0 + pw, fy = top + a(0.4), FL = a(6.2), FH = a(3.2), wob = bq() * 6;
+          var upper = [], lower = [];
+          for (var k = 0; k <= 8; k++) {
+            var t = k / 8, wave = Math.sin(t * Math.PI * 1.6 + wob) * a(0.5) * t;
+            var hh = FH * (1 - t * 0.45);
+            upper.push([fx + FL * t, fy + wave]);
+            lower.push([fx + FL * t, fy + hh + wave]);
+          }
+          poly(g, upper.concat(lower.slice().reverse()), '#c9962c');
+          poly(g, upper.concat(lower.map(function (q, i) { return [q[0], q[1] - (q[1] - upper[i][1]) * 0.5]; }).reverse()), '#e8c15a');
+          for (var k2 = 1; k2 < 8; k2 += 2) {
+            var fa = upper[k2], fb = lower[k2];
+            edgeLine(g, [fa[0], fa[1] + 1], [fb[0], fb[1] - 1], 'rgba(120,84,20,.45)', 1);   // the folds
+          }
+          for (var k3 = 0; k3 < 8; k3++) edgeLine(g, upper[k3], upper[k3 + 1], '#f6dd8a', 1);
+          edgeLine(g, [fx, fy], [fx, fy + FH], '#8a6a22', 1);
+          // the lamp on top
+          ellipse(g, px0 + pw / 2, top - a(1.4), a(1.8), a(1.3), 'rgba(255,214,120,.22)');
+          rect(g, px0 + pw / 2 - a(0.45), top - a(1.6), a(0.9), a(1.1), '#ffd878');
+          dot(g, px0 + pw / 2 - a(0.25), top - a(1.5), '#fff4c8', 1);
           break;
         }
       }

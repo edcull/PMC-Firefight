@@ -226,8 +226,6 @@
     return rules;
   }
 
-  /* Fold a propulsion into a freshly built machine. Movement is kept exact rather
-     than rounded, since the table is measured in real inches. */
   /* Drone Control (p. 37): no crew to lose, so one more Structure point — but a
      Hacker can reach into it. */
   function applyDrone(u, on) {
@@ -261,8 +259,8 @@
      Operational doctrines (pp. 87-88) change what a legal list looks like:
        O1 Air Superiority     — one aircraft more than normally allowed
        O2 Non-conventional Army — the minimum of the Battle Tier is halved
-       O5 Strength in Numbers — one extra unit a Tier below the Battle Tier per
-                                Priority Level, free and off the points
+       O5 Strength in Numbers — one extra unit of a Tier lower than the Battle
+                                Tier per Priority Level, free and off the points
      The fourth, O4 Reinforced Light Support, changes the unit rather than the
      list, so it is applied when the unit is built. */
   function checkArmy(picks, battleTier, pl, docs, tactic, faction) {
@@ -290,7 +288,7 @@
     if (bugs) comp = COMPOSITION_BUGS[battleTier];
     // Rebel Tactics (p. 95) only bear on a Rebel list
     if (!rebel) tactic = null;
-    var budget = comp.points * pl, freeTier = battleTier - 1, freeUsed = 0, waveFree = 0;
+    var budget = comp.points * pl, freeUsed = 0, waveFree = 0, o5 = [0, 0, 0, 0, 0, 0];
     /* Human Wave Attacks: two extra infantry units of the Battle Tier per Priority
        Level, over and above the points. They come off the bill the way Strength in
        Numbers does, but they are the Battle Tier's own units rather than a Tier below. */
@@ -304,11 +302,21 @@
       spent -= waveFree * battleTier;
       freeUsed += waveFree;
     }
-    if (doc('O5') && freeTier >= 1) {
-      // the free units come off the bill, up to one per Priority Level
-      var o5 = Math.min(pl, counts[freeTier]);
-      freeUsed += o5;
-      spent -= o5 * freeTier;
+    if (doc('O5')) {
+      /* "one more unit of Tier lower to the Battle Tier per Priority Level" (p. 87),
+         read as any Tier lower than it. The free units are counted where they serve
+         the list best: first any Tier over its ceiling (the extra unit is over it),
+         then the highest Tiers, which take the most off the bill. */
+      var slots = pl, ceil = function (t) { var h = comp.limits[t - 1][1]; return h === 99 ? 99 : h * pl; };
+      for (var ft = battleTier - 1; ft >= 1 && slots; ft--) {
+        var over = Math.min(slots, Math.max(0, counts[ft] - ceil(ft)));
+        o5[ft] += over; slots -= over;
+      }
+      for (ft = battleTier - 1; ft >= 1 && slots; ft--) {
+        var more = Math.min(slots, counts[ft] - o5[ft]);
+        o5[ft] += more; slots -= more;
+      }
+      for (ft = 1; ft < battleTier; ft++) { freeUsed += o5[ft]; spent -= o5[ft] * ft; }
     }
     if (spent > budget) faults.push('Over budget: ' + spent + ' of ' + budget + ' composition points.');
     // "You cannot field more Drone units than other units" (p. 40)
@@ -317,7 +325,7 @@
     for (var t = 1; t <= 5; t++) {
       var lim = comp.limits[t - 1], lo = lim[0] * pl, hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (doc('O2') && t === battleTier) lo = Math.ceil(lo / 2);
-      if (doc('O5') && t === freeTier && hi !== 99) hi += pl;
+      if (hi !== 99) hi += o5[t];
       // Human Wave Attacks: the extra units are "additional" — over the Tier's limit as well as the points (p. 95)
       if (tactic === 'wave' && t === battleTier && hi !== 99) hi += waveFree;
       if (counts[t] < lo) faults.push('Needs at least ' + lo + ' Tier ' + ROMAN[t] + ' units (has ' + counts[t] + ').');
@@ -754,6 +762,7 @@
   function lineClear(state, a, b) { return (KIT_SPACE || kitSpace()).lineClear(state, a, b); }
   function groundLevel(state, x, y) { return (KIT_SPACE || kitSpace()).groundLevel(state, x, y); }
   function levelOf(state, u) { return (KIT_SPACE || kitSpace()).levelOf(state, u); }
+  function heightUnder(state, u) { return (KIT_SPACE || kitSpace()).heightUnder(state, u); }
   function tooHighToHover(state, x, y) { return (KIT_SPACE || kitSpace()).tooHighToHover(state, x, y); }
   function onHill(state, p) { return (KIT_SPACE || kitSpace()).onHill(state, p); }
   function unitNear(state, x, y, ignore, pad) { return (KIT_SPACE || kitSpace()).unitNear(state, x, y, ignore, pad); }
@@ -1103,14 +1112,27 @@
   /* Whether a unit is behind wall r as this attacker sees it — the one test for
      everything that asks: the low wall's cover (p. 42), a Destructive Weapon or
      Sappers bringing a low or high wall down on the men behind it (pp. 57, 59).
-     Its middle within 2" of the wall, and the wall between it and the attacker:
+     Its middle within 1.5" of the wall (WALL_REACH), and the wall between it and the attacker:
      the line crossing it, or slipping past one of its ends by less than half an
      inch (along its length, not its thickness: a wall just behind the target is
      still behind it). Against Indirect Fire, from above, any side will do (p. 58).
      A wall the attacker stands in is nobody's shelter from it. */
+  /* How near a low wall a unit's middle has to be for its cover: "up to 2" from it"
+     (p. 42), taken as 1.5" to the middle of a single 2" token (house rule). */
+  var WALL_REACH = 1.5;
+  // the low wall a unit standing at x, y is in the cover of, if any (the nearest)
+  function wallCoverAt(state, x, y) {
+    var best = null, bd = WALL_REACH + 1e-6;
+    (state.terrain || []).forEach(function (r) {
+      if (r.kind !== 'barricade' || r.poly) return;
+      var d = rectPointDist(r, x, y);
+      if (d <= bd) { bd = d; best = r; }
+    });
+    return best;
+  }
   function behindWall(state, attacker, target, r) {
     if (!attacker || inRect(attacker.x, attacker.y, r)) return false;
-    if (rectPointDist(r, target.x, target.y) > 2 + 1e-6) return false;
+    if (rectPointDist(r, target.x, target.y) > WALL_REACH + 1e-6) return false;
     if (has(attacker, 'Indirect Fire')) return true;
     var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
     return segRect(attacker.x, attacker.y, target.x, target.y, grown);
@@ -1332,7 +1354,7 @@
   function shelterOf(state, attacker, target) { return (KIT_DESTRUCT || kitDestruct()).shelterOf(state, attacker, target); }
   function canDemolish(u, r) { return (KIT_DESTRUCT || kitDestruct()).canDemolish(u, r); }
   function canCharge(u, r) { return (KIT_DESTRUCT || kitDestruct()).canCharge(u, r); }
-  function destroyTerrain(state, r, log, by) { return (KIT_DESTRUCT || kitDestruct()).destroyTerrain(state, r, log, by); }
+  function destroyTerrain(state, r, log, by, sec) { return (KIT_DESTRUCT || kitDestruct()).destroyTerrain(state, r, log, by, sec); }
   function nearestClear(state, u, r) { return (KIT_DESTRUCT || kitDestruct()).nearestClear(state, u, r); }
   function shootTerrain(state, a, r) { return (KIT_DESTRUCT || kitDestruct()).shootTerrain(state, a, r); }
   function detonate(state, a, r) { return (KIT_DESTRUCT || kitDestruct()).detonate(state, a, r); }
@@ -1349,7 +1371,7 @@
       canDemolish: canDemolish, centreDist: centreDist, d10: d10, defenceAgainst: defenceAgainst,
       destroyTerrain: destroyTerrain, dmgMod: dmgMod, doctrine: doctrine, dualMode: dualMode, flyInf: flyInf,
       fmtPart: fmtPart, has: has, hasLoS: hasLoS, hasOwn: hasOwn, inFireArc: inFireArc, isFlying: isFlying,
-      isMachine: isMachine, kindsUnder: kindsUnder, levelOf: levelOf, lineClear: lineClear, mountOf: mountOf,
+      isMachine: isMachine, kindsUnder: kindsUnder, levelOf: levelOf, heightUnder: heightUnder, lineClear: lineClear, mountOf: mountOf,
       pheromoneBonus: pheromoneBonus, pointSegDist: pointSegDist, propOf: propOf,
       resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief, ruleValue: ruleValue,
       sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
@@ -1426,7 +1448,9 @@
   /* How many units may be swapped when modifying the armies: no more than a
      quarter (p. 46), half with Tactical Flexibility (O6, p. 87). */
   // "no more than ¼" (p. 47), "up to ½" with Tactical Flexibility (p. 89): rounded up, as every division is (p. 27)
-  function swapAllowance(n, flexible) { return Math.ceil(n * (flexible ? 0.5 : 0.25)); }
+  /* "swapping no more than ¼ of their units" (p. 46), "up to ½" with Tactical
+     Flexibility (p. 89): a ceiling, so rounded down — never more than the share */
+  function swapAllowance(n, flexible) { return Math.floor(n * (flexible ? 0.5 : 0.25) + 1e-9); }
   /* The OpFor's "+2 if there are no enemy units within the active unit's Range"
      (p. 147): a plain distance, whatever stands in the way or wherever the gun
      points. A unit with no Firepower has no Range, so nothing is within it. */
@@ -1612,7 +1636,8 @@
     if (campFlag(u, 'brokenMinded')) { m = Math.ceil(m / 2); extras.push('Broken-minded: half the dice'); }
     if (campFlag(u, 'ironDiscipline')) { m += 2; extras.push('Iron Discipline +2 dice'); }
     if (freedom) { m += freedom; extras.push('"…but they\'ll never take our freedom!" +' + freedom + ' dice'); }
-    if (campFlag(u, 'surrounded')) {
+    // Surrounded, but Steady (p. 89): "when making a rally attempt in the Rally phase" — not a Regroup's
+    if (inRally && campFlag(u, 'surrounded')) {
       var near = 0;
       for (var q = 0; q < state.units.length; q++) {
         var o = state.units[q];
@@ -2081,12 +2106,12 @@
     undisciplined: undisciplined, freeLosses: freeLosses, deathOrGlory: deathOrGlory,
     dugIn: dugIn, nearestFacing: nearestFacing, shotRange: shotRange, shotMinRange: shotMinRange,
     profile: function (k) { return BY_KEY[k]; },
-    checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN,
+    checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN, WALL_REACH: WALL_REACH, wallCoverAt: wallCoverAt,
     d10: d10, d6: d6, d3: d3, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
-    groundLevel: groundLevel, levelOf: levelOf,
+    groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
     canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding, exitSpots: exitSpots,

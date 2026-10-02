@@ -233,7 +233,7 @@
     function terrainBits(tk, inside) {
       var t = R.TERRAIN[tk], bits = [];
       if (inside) bits.push('+2 Defence, and no Crossfire inside');
-      if (t.cover && !inside) bits.push('+' + t.cover + ' Defence ' + (tk === 'barricade' ? 'within 2" behind it' : 'in it'));
+      if (t.cover && !inside) bits.push('+' + t.cover + ' Defence ' + (tk === 'barricade' ? 'within 1.5" behind it' : 'in it'));
       if (t.fp && t.hill) bits.push('+' + t.fp + ' Firepower shooting down');
       if (t.hill) bits.push('blocks sight across it');
       if (t.wire) bits.push('an extra D6" to cross');

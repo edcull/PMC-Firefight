@@ -218,11 +218,11 @@
       terrain.forEach(function (r, ri) {
         var rr2 = rng(seed + ri * 419 + 77);
         if (r.kind === 'razed') {
-          // a flattened wall: broken blocks along the line it held
-          var hz = r.w > r.h, ln = hz ? r.w : r.h;
-          for (var q = 0.2; q < ln - 0.1; q += 0.5) {
+          // a flattened wall along the line it held: burst sandbags where it was a low wall, broken blocks otherwise
+          var hz = r.w > r.h, ln = hz ? r.w : r.h, bags = r.was === 'barricade';
+          for (var q = 0.2; q < ln - 0.1; q += bags ? 0.75 : 0.5) {
             props.push({
-              kind: 'wreckstone',
+              kind: bags ? 'wreckbag' : 'wreckstone',
               x: hz ? r.x + q : r.x + r.w / 2 + (rr2() - 0.5) * 0.5,
               y: hz ? r.y + r.h / 2 + (rr2() - 0.5) * 0.5 : r.y + q,
               tone: rr2(), seed: (rr2() * 9999) | 0

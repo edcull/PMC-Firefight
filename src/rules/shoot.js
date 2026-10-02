@@ -13,7 +13,7 @@
         defenceAgainst = E.defenceAgainst, destroyTerrain = E.destroyTerrain, dmgMod = E.dmgMod,
         doctrine = E.doctrine, dualMode = E.dualMode, flyInf = E.flyInf, fmtPart = E.fmtPart, has = E.has,
         hasLoS = E.hasLoS, hasOwn = E.hasOwn, inFireArc = E.inFireArc, isFlying = E.isFlying,
-        isMachine = E.isMachine, kindsUnder = E.kindsUnder, levelOf = E.levelOf, lineClear = E.lineClear,
+        isMachine = E.isMachine, kindsUnder = E.kindsUnder, levelOf = E.levelOf, heightUnder = E.heightUnder, lineClear = E.lineClear,
         mountOf = E.mountOf, pheromoneBonus = E.pheromoneBonus, pointSegDist = E.pointSegDist,
         propOf = E.propOf, resolveDamage = E.resolveDamage, resolveShootingHits = E.resolveShootingHits, shotRelief = E.shotRelief,
         ruleValue = E.ruleValue, sectionHigh = E.sectionHigh, sectionRect = E.sectionRect,
@@ -42,11 +42,12 @@
       return best;
     }
     function dugIn(u) { return !!(u && u.dugIn && hasOwn(u, 'Stationary Artillery')); }
-    // is the shooter out in front of the dug-in gun, where its sandbags lie between them?
+    /* is the shooter out in front of the dug-in gun, where its sandbags lie between
+       them? Its 90° front arc — the same arc it fires over (inFireArc) */
     function sandbagged(gun, shooter) {
       var f = gun.facing == null ? (gun.side === 'B' ? Math.PI : 0) : gun.facing;
       var d = angleWrap(Math.atan2(shooter.y - gun.y, shooter.x - gun.x) - f);
-      return Math.abs(d) <= Math.PI / 3;
+      return Math.abs(d) <= Math.PI / 4 + 1e-9;
     }
     function shotRange(a) { return dugIn(a) ? Math.min(a.range, 24) : a.range; }
     function shotMinRange(a) { return dugIn(a) ? 6 : ruleValue(a, 'Minimum Range'); }
@@ -202,7 +203,8 @@
         /* Height: +2 for firing down on a target standing lower — from a hill on
            to the level ground, and from the crown of a stepped hill on to its
            lower slope as well. Once, however many steps down it is. */
-        var la = levelOf(state, a), lt = levelOf(state, t);
+        // (the target's ground: one in a wood or building on the same hill is not below it)
+        var la = levelOf(state, a), lt = heightUnder(state, t);
         if (la > lt) {
           total += 2;
           parts.push({ label: la === 2 && lt === 1 ? 'firing down from the crown of the hill' : 'firing from a hill', v: 2 });
@@ -218,7 +220,11 @@
         for (var i = 0; i < t.shotFrom.length && !isMachine(t) && !noX; i++) {
           var p = t.shotFrom[i];
           if (p.basic) continue;
-          // Crossfire: the target sits between this firer and an earlier one
+          /* Crossfire: the target sits between this firer and an earlier one — near the
+             line joining them, and the two further from each other than either is from
+             it (two attacks from one spot, or from the same side, do not catch it) */
+          var span = Math.hypot(p.x - a.x, p.y - a.y);
+          if (span <= Math.max(Math.hypot(t.x - p.x, t.y - p.y), Math.hypot(t.x - a.x, t.y - a.y))) continue;
           if (pointSegDist(t.x, t.y, p.x, p.y, a.x, a.y) < UNIT_R * 1.6) { crossfire = true; break; }
         }
         if (crossfire) { total += 2; parts.push({ label: 'Crossfire', v: 2 }); }
@@ -322,7 +328,7 @@
           ' [' + dres.parts.map(function (p) { return p.label + ' ' + p.v; }).join(', ') + '] → ' +
           hits + ' hit' + (hits === 1 ? '' : 's')
       });
-      var wreck = breach ? destroyTerrain(state, breach, log, a) : null;
+      var wreck = breach ? destroyTerrain(state, breach, log, a, t.bld === breach ? (t.sec || 0) : null) : null;
 
       if (hits > 0 && isMachine(t)) {
         var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));

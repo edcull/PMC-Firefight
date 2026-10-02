@@ -170,5 +170,55 @@ console.log('\nA landing zone is held only by a token over its circle (house rul
   ok('...a defender in each one does', owners().every((w) => w === 'B'), owners().join(','));
 })();
 
+console.log('\nA force whose guns cannot fill the scenario\'s held-back half must swap them (p. 94)');
+(function () {
+  const guns = ['rleaders', 'rmedart', 'rmedart', 'rmedart', 'rmedart', 'rmedart'];
+  function inv(mode) {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'invasion', attacker: 'A', armyA: guns.slice(), armyB: ['regular', 'regular', 'regular', 'regular'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode, planet: 'sparse', terrainSetup: 'auto', readyUp: true });
+    for (let g = 0; g < 4 && e.state().tacticAsk; g++) e.intent(e.state().tacticAsk.order[e.state().tacticAsk.step], { k: 'tactic', tactic: null });
+    return e;
+  }
+  const e = inv('ai'), st = e.state();
+  const sa = st.swapAvail && st.swapAvail.A;
+  ok('the swaps on offer cover the guns the second wave cannot carry', !!sa && sa.total >= 2 && sa.forced >= 2, sa ? sa.total + ' swaps, ' + sa.forced + ' needed' : 'none');
+  ok('...and the player cannot go on before making them', !e.intent('A', { k: 'deployready' }).ok && !e.intent('A', { k: 'autodeploy' }).ok);
+  e.intent('A', { k: 'swapopen' });
+  const g0 = () => st.units.find((u) => u.side === 'A' && u.key === 'rmedart');
+  const alt = R.listFor('rebel').find((p) => p.tier === 3 && p.cls === 'infantry' && !(p.rules || []).includes('Stationary Artillery') && !p.command);
+  const ldr = st.units.find((u) => u.side === 'A' && u.key === 'rleaders');
+  e.intent('A', { k: 'swappick', id: ldr.id });
+  ok('...nor waste a needed swap on something that is not a gun', sa.left > sa.forced || !e.intent('A', { k: 'swapin', id: alt.key }).ok);
+  // (the swaps are noted in secret until the player goes on, so each is a different gun)
+  st.units.filter((u) => u.side === 'A' && u.key === 'rmedart').slice(0, sa.forced).forEach((g) => {
+    e.intent('A', { k: 'swappick', id: g.id }); e.intent('A', { k: 'swapin', id: alt.key });
+  });
+  const res = e.intent('A', { k: 'deployready' });
+  ok('with the guns swapped, it goes on', res.ok, res.why || '');
+  // the AI's own force: put it on side B by making B the attacker with the guns
+  const e3 = Engine.create({});
+  e3.start({ tier: 3, pl: 1, scenario: 'invasion', attacker: 'B', armyA: ['regular', 'regular', 'regular', 'regular'], armyB: guns.slice(),
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto', readyUp: true });
+  const s3 = e3.state(), sp3 = s3.sc.split.B, bs = s3.units.filter((u) => u.side === 'B');
+  const freeB = bs.filter((u) => !R.has(u, 'Stationary Artillery')).length, wave2 = bs.filter((u) => u.wave === 2).length;
+  ok('the AI swaps its own guns until its second wave can be held back', freeB >= sp3.want, freeB + ' free of ' + bs.length + ', ' + sp3.want + ' wanted');
+  ok('...and holds that wave back', wave2 >= sp3.want, wave2 + ' in the second wave');
+})();
+
+console.log('\nSCN-2 Wiping the enemy out on the last turn wins, even with the objectives level (p. 49)');
+(function () {
+  const e = game('secure', ['regular', 'regular'], ['regular', 'regular']);
+  toBattle(e);
+  const st = e.state();
+  st.turn = 20;
+  st.units.forEach((u) => { u.x = 2 + (u.side === 'A' ? 0 : 40); u.y = 2; });     // nobody near any objective: level
+  const level = SC.check(st);
+  ok('with both forces standing and the objectives level, turn 20 is a draw', level && level.winner == null && !!level.text, level && level.text);
+  st.units.filter((u) => u.side === 'B').forEach((u) => { u.alive = false; });
+  const r = SC.check(st);
+  ok('...but with B wiped out in that End phase, A wins', r && r.winner === 'A', r && r.text);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

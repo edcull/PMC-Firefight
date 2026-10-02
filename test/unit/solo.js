@@ -49,6 +49,18 @@ ok('...and one off the per-Tier ceiling',
 ok('...exactly one per Priority Level', R.checkArmy(over, 3, 1, ['O5']).free, 1);
 ok('...two at Priority Level 2', R.checkArmy(over, 3, 2, ['O5']).free, 2);
 ok('a company without the doctrine gets nothing free', plain.free, 0);
+// CMP-6 (the rules review at a119ac2): "of Tier lower to the Battle Tier" is any Tier lower
+var low = ['cmd2', 'regular', 'regular', 'regular', 'veterans', 'veterans', 'recruits'];
+var lowP = R.checkArmy(low, 3, 1), lowS = R.checkArmy(low, 3, 1, ['O5']);
+ok('...a Tier I unit at Battle Tier III comes free when no Tier II is fielded', lowP.spent - lowS.spent, 1,
+  lowP.spent + ' points become ' + lowS.spent);
+var both = low.concat(['rookie']);
+ok('...with a Tier II there as well, the free one is the Tier II', R.checkArmy(both, 3, 1).spent - R.checkArmy(both, 3, 1, ['O5']).spent, 2);
+var crowd = ['cmd2', 'regular', 'regular', 'regular', 'veterans', 'rookie', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits'];
+var cap1 = R.COMPOSITION[3].limits[0][1];
+ok('...and a Tier I over its ceiling takes the free place before a Tier II', cap1 === 4 ?
+  (R.checkArmy(crowd, 3, 1).faults.some(function (f) { return /Tier I units/.test(f); }) &&
+   !R.checkArmy(crowd, 3, 1, ['O5']).faults.some(function (f) { return /Tier I units/.test(f); })) : 'cap ' + cap1, true);
 
 /* ------------------------------------------------------------- the archetypes */
 head('Founding a rival');

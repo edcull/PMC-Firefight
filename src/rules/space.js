@@ -618,6 +618,18 @@
         return terrainAt(state, p.x, p.y) === 'hill';
       }).map(function (p) { return groundLevel(state, p.x, p.y); }));
     }
+    /* How high the ground a unit stands on is, for whether it is below a shooter on
+       a hill (p. 42): its level on the hill — or, in a wood or a building standing on
+       one (which takes it off the hill's rules, the chest rule), still the hill's
+       height there. A squad on the hill is not firing down on one in a wood on the
+       same hill. */
+    function heightUnder(state, u) {
+      var lv = levelOf(state, u);
+      if (lv || !u || u.x < 0) return lv;
+      var k = u.bld ? u.bld.kind : kindsUnder(state, u)[0];
+      if (k === 'hill' || k === 'open') return lv;
+      return groundLevel(state, u.x, u.y);
+    }
     // the upper step of a stepped hill, as a piece of its own for sight lines
     function upperStep(r) {
       var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -657,7 +669,7 @@
       centreDist: centreDist, unitDist: unitDist, rectPointDist: rectPointDist, enterable: enterable,
       sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
       canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding,
-      exitSpots: exitSpots, exitBuilding: exitBuilding, leaveAway: leaveAway, inches: inches, inRect: inRect,
+      exitSpots: exitSpots, exitBuilding: exitBuilding, leaveAway: leaveAway, inches: inches, inRect: inRect, heightUnder: heightUnder,
       inPoly: inPoly, pieceDepth: pieceDepth, placePiece: placePiece, turnPoint: turnPoint,
       turnPiece: turnPiece, shapePiece: shapePiece, terrainAt: terrainAt, terrainOf: terrainOf,
       footprint: footprint, kindsUnder: kindsUnder, coverAt: coverAt, segRect: segRect,

@@ -222,5 +222,115 @@ console.log('\nTER-1 Only a unit that may garrison occupies the building it wins
   });
 })();
 
+console.log('\nBAT-2 Defensive fire falls back on the Auxiliary weapons (pp. 30, 57, 59)');
+(function () {
+  [['mortarteam', 'inside its Minimum Range'], ['sam', 'Specialisation (air) against infantry']].forEach(([key, why]) => {
+    let shots = 0;
+    for (let i = 0; i < 20; i++) {
+      const def = unit(key, 'B', 20, 20), atk = unit('regular', 'A', 26, 20);
+      const st = world([def, atk]);
+      const r = R.assault(st, atk, def, {});
+      if (r.log.some((l) => /fires|Auxiliary|defensive/i.test(l.text || '') && (l.text || '').indexOf(def.label) >= 0)) shots++;
+    }
+    ok('a charged ' + def0(key) + ' fires its Auxiliary weapons (' + why + ')', shots === 20, shots + ' of 20 charges drew fire');
+  });
+  function def0(k) { return R.profile(k).name; }
+})();
+
+console.log('\nBAT-3 The free shot at an arrival respects the weapon\'s limits (pp. 30, 57, 59)');
+(function () {
+  function arrival(gun, at) {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['regular', 'regular'], armyB: [gun, 'regular'], nameA: 'A', nameB: 'B',
+      colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto' });
+    const st = e.state(); st.terrain.length = 0; st.phase = 'battle';
+    st.units.forEach((u) => { u.reserve = false; u.x = 44; u.y = 44; u.sp = 0; });
+    const g0 = st.units.find((u) => u.side === 'B' && u.key === gun), arr = st.units.find((u) => u.side === 'A');
+    st.units.find((u) => u.side === 'B' && u !== g0).x = 2;
+    g0.x = 20; g0.y = 20; arr.x = 20 + at; arr.y = 20;
+    const g = e.query.greetArrival(arr);
+    return g ? g.res.log.map((l) => l.text).join(' | ') : '';
+  }
+  const mor = arrival('mortarteam', 6), sam = arrival('sam', 6);
+  ok('a mortar team inside its Minimum Range greets an arrival with its Auxiliary weapons', /auxiliary weapons\) fires/.test(mor), mor.slice(0, 90));
+  ok('...and so does a SAM team at a ground unit', /auxiliary weapons\) fires/.test(sam), sam.slice(0, 90));
+  const rifle = arrival('regular', 6);
+  ok('a rifle team fires its main weapon as before', /fires at/.test(rifle) && !/auxiliary/.test(rifle), rifle.slice(0, 90));
+})();
+
+console.log('\nVEH-2 A catastrophic explosion is an ordinary shooting attack, Firepower Tier + 3 (p. 36)');
+(function () {
+  const hull = unit('lapc', 'B', 20, 20, { str: 5, damage: 0 }), near = unit('regular', 'A', 21.5, 20), far = unit('regular', 'A', 23.5, 20);
+  const st = world([hull, near, far]);
+  const keep = Math.random; let first = true;
+  Math.random = () => (first ? (first = false, 0.99) : keep());      // the 6 that blows it up, then ordinary dice
+  const log = [];
+  try { R.applyDamage(st, hull, 6, log, null); } finally { Math.random = keep; }
+  const text = log.map((l) => (l.text || '') + ' ' + (l.math || '')).join(' | ');
+  ok('it blew up', hull.catastrophic, text.slice(0, 120));
+  ok('...and the blast is not Basic Firepower', /The exploding/.test(text) && !/exploding[^|]*Basic Firepower/.test(text));
+  const m = R.shotMods(st, { label: 'blast', side: 'B', alive: true, models: 1, fp: 3 + hull.tier, range: 4, rules: [], x: 20, y: 20, shotFrom: [], cls: 'infantry' }, near, 'blast', {});
+  ok('...a unit within 2" of the wreck takes it at half range (+2), with no Fire! bonus',
+    m.parts.some((p) => p.label === 'within half range' && p.v === 2) && !m.parts.some((p) => /^Fire!/.test(p.label)) && !m.basic,
+    m.parts.map((p) => p.label + ' ' + p.v).join(', '));
+})();
+
+console.log('\nCrossfire needs the target between the two shooters (p. 31)');
+(function () {
+  const t = unit('regular', 'B', 20, 20), a = unit('regular', 'A', 21.5, 20);
+  const st = world([t, a]);
+  const x = (from) => { t.shotFrom = [{ x: from.x, y: from.y, basic: false }]; return R.shotMods(st, a, t, 'fire', {}).crossfire; };
+  ok('a second attack from the same spot, close by, is no crossfire', !x({ x: 21.5, y: 20 }));
+  ok('...nor one from the same side', !x({ x: 26, y: 20.5 }));
+  ok('an attack from the far side is', x({ x: 12, y: 20 }));
+})();
+
+console.log('\nTER-4 A unit in a wood or building on the same hill is not below the shooter (p. 42)');
+(function () {
+  const hill = { kind: 'hill', x: 10, y: 10, w: 12, h: 12 };
+  const woods = { kind: 'woods', x: 17, y: 12, w: 4, h: 6 };
+  const shooter = unit('regular', 'A', 13, 16);
+  const hillFP = (t, terrain) => R.shotMods(world([shooter, t], terrain), shooter, t, 'fire', {}).parts.some((p) => /hill/.test(p.label));
+  ok('in a wood on the same hill: no +2 from the hill', !hillFP(unit('regular', 'B', 19, 15), [hill, woods]));
+  const bld = { kind: 'building', x: 17, y: 12, w: 4, h: 4 };
+  ok('...nor in a building on it', !hillFP(unit('regular', 'B', 19, 14, { bld, sec: 0 }), [hill, bld]));
+  ok('on the level ground below, the +2 stands', hillFP(unit('regular', 'B', 30, 16), [hill]));
+  ok('...and in a wood down there too', hillFP(unit('regular', 'B', 30, 16), [hill, { kind: 'woods', x: 28, y: 13, w: 4, h: 6 }]));
+})();
+
+console.log('\nTER-6 Bringing down one section of a building burns that section only (p. 41)');
+(function () {
+  const bld = { kind: 'building', x: 10, y: 10, w: 8, h: 4, parts: [{ x: 10, y: 10, w: 4, h: 4 }, { x: 14, y: 10, w: 4, h: 4 }] };
+  const west = unit('regular', 'B', 12, 12, { bld, sec: 0 }), east = unit('regular', 'B', 16, 12, { bld, sec: 1 });
+  const st = world([west, east], [bld]);
+  const res = R.destroyTerrain(st, bld, [], null, 0);
+  ok('the west wing goes up in flames', res && res.kind === 'burning' && st.terrain.some((r) => r.kind === 'burning' && r.x === 10 && r.w === 4));
+  ok('...the building keeps its east wing', bld.kind === 'building' && bld.parts.length === 1 && bld.parts[0].x === 14);
+  ok('...its garrison scrambles out', west.bld === null && res.evicted.indexOf(west) >= 0);
+  ok('...and the east wing\'s stays put, in what is now the only section', east.bld === bld && east.sec === 0);
+  const whole = { kind: 'building', x: 30, y: 10, w: 8, h: 4, parts: [{ x: 30, y: 10, w: 4, h: 4 }, { x: 34, y: 10, w: 4, h: 4 }] };
+  R.destroyTerrain(world([], [whole]), whole, [], null);
+  ok('with no section named (a charge on the building), all of it burns', whole.kind === 'burning');
+})();
+
+console.log('\nSPR-4 Cover blown in: +1 to every hit roll that round, the defenders\' too (p. 59)');
+(function () {
+  let seen = 0, plus = 0, later = 0, laterPlus = 0;
+  for (let i = 0; i < 600 && seen < 20; i++) {
+    const a = unit('engineers', 'A', 24.5, 20), t = unit('veterans', 'B', 27.5, 20);
+    const st = world([a, t], [{ kind: 'barricade', x: 26, y: 12, w: 0.5, h: 16 }]);
+    const L = R.assault(st, a, t, {}).log;
+    if (!L.some((l) => /blow the cover in/.test(l.text || ''))) continue;
+    L.forEach((l, k) => {
+      const next = L[k + 1];
+      if (!/^Round \d — .*\(defender\)/.test(l.text || '') || !next || next.t !== 'hits') return;
+      if (/^Round 1 /.test(l.text)) { seen++; if (/\+1 →/.test(next.text)) plus++; }
+      else { later++; if (/\+1 →/.test(next.text)) laterPlus++; }
+    });
+  }
+  ok('the defenders\' answer in the breach round gets the +1', seen > 0 && plus === seen, plus + ' of ' + seen);
+  ok('...and not in the rounds after', laterPlus === 0, laterPlus + ' of ' + later);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
