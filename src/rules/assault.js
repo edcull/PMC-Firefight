@@ -214,7 +214,7 @@
          assaulted unit answers, and again, until one of them breaks or six rounds
          are done. A unit that is already Broken does not fight back at all — but
          the attacker's three rounds are still all resolved against it. */
-      var ended = false;
+      var ended = false, breachIn = -1;
       var cowed = status(t) === 'broken';
       if (cowed) log.push({ t: 'note', text: t.label + ' is broken and does not fight back.' });
       for (var r = 0; r < 3 && !ended; r++) {
@@ -222,7 +222,9 @@
           var pair = order[o];
           if (cowed && pair.atk === t) continue;
           if (!pair.atk.alive || !pair.def.alive) { ended = true; break; }
-          var rd = assaultRound(state, pair.atk, pair.def, pair.atk === a ? 'attacker' : 'defender', r + 1, opts);
+          var rd = assaultRound(state, pair.atk, pair.def, pair.atk === a ? 'attacker' : 'defender', r + 1,
+            breachIn === r ? Object.assign({}, opts, { breachPlus: true }) : opts);
+          if (rd.breached) breachIn = r;
           if (rd.wreck) wrecked = rd.wreck;
           rd.log.forEach(function (l) { log.push(l); });
           if (!pair.def.alive) { ended = true; break; }
@@ -332,6 +334,9 @@
       var parts = [{ label: 'D10', v: roll }].concat(am.parts), total = roll + am.total;
       var sapping = am.sapping;
       var breached = sapping && (roll === 9 || total >= 15);
+      /* the cover blown in: "players add +1 to all rolls when resolving hits in that
+         round of Assault" (p. 59) — the Sappers', and the defenders' answer too */
+      var plusHit = breached || (opts && opts.breachPlus) ? 1 : 0;
       var wreck = null;
       if (breached) {
         var piece = shelterOf(state, atk, def);
@@ -353,7 +358,7 @@
       });
       if (hits > 0 && isMachine(def)) {
         // a machine in close combat: 1 bounces, 2-3 a point, 4-6 D3
-        var out = { damage: 0, rolls: [] }, vm = dmgMod(state, atk, def);
+        var out = { damage: 0, rolls: [] }, vm = dmgMod(state, atk, def) + plusHit;
         for (var h = 0; h < hits; h++) {
           var r0 = d6(), r = Math.min(6, r0 + vm), tag;
           if (r === 1) tag = 'Bounced off the armour!';
@@ -364,7 +369,7 @@
         log.push({ t: 'hits', text: out.rolls.join(' · ') });
         applyDamage(state, def, out.damage, log, atk);
       } else if (hits > 0) {
-        var res = resolveAssaultHits(def, hits, (breached ? 1 : 0) + dmgMod(state, atk, def), atk);
+        var res = resolveAssaultHits(def, hits, plusHit + dmgMod(state, atk, def), atk);
         log.push({ t: 'hits', text: res.rolls.join(' · ') +
           (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
         var fell = def.models;
@@ -389,7 +394,7 @@
           !isMachine(def) && !has(def, 'Drone unit');
         if (human) atk.assaultKillsHuman = (atk.assaultKillsHuman || 0) + 1;
       }
-      return { log: log, wreck: wreck };
+      return { log: log, wreck: wreck, breached: !!breached };
     }
 
     function clampBoard(p) {

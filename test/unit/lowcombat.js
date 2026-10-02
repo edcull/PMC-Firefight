@@ -313,5 +313,24 @@ console.log('\nTER-6 Bringing down one section of a building burns that section 
   ok('with no section named (a charge on the building), all of it burns', whole.kind === 'burning');
 })();
 
+console.log('\nSPR-4 Cover blown in: +1 to every hit roll that round, the defenders\' too (p. 59)');
+(function () {
+  let seen = 0, plus = 0, later = 0, laterPlus = 0;
+  for (let i = 0; i < 600 && seen < 20; i++) {
+    const a = unit('engineers', 'A', 24.5, 20), t = unit('veterans', 'B', 27.5, 20);
+    const st = world([a, t], [{ kind: 'barricade', x: 26, y: 12, w: 0.5, h: 16 }]);
+    const L = R.assault(st, a, t, {}).log;
+    if (!L.some((l) => /blow the cover in/.test(l.text || ''))) continue;
+    L.forEach((l, k) => {
+      const next = L[k + 1];
+      if (!/^Round \d — .*\(defender\)/.test(l.text || '') || !next || next.t !== 'hits') return;
+      if (/^Round 1 /.test(l.text)) { seen++; if (/\+1 →/.test(next.text)) plus++; }
+      else { later++; if (/\+1 →/.test(next.text)) laterPlus++; }
+    });
+  }
+  ok('the defenders\' answer in the breach round gets the +1', seen > 0 && plus === seen, plus + ' of ' + seen);
+  ok('...and not in the rounds after', laterPlus === 0, laterPlus + ' of ' + later);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
