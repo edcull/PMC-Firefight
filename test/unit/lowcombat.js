@@ -218,7 +218,7 @@ console.log('\nTER-1 Only a unit that may garrison occupies the building it wins
       }
     }
     if (key === 'regular') ok('infantry that win move in', wins > 0 && inside === wins, inside + ' of ' + wins);
-    else ok((key === 'bqueen' ? 'a Queen that wins clears' : 'Riders that win clear') + ' it but stays outside, and it stands empty', wins > 0 && inside === 0 && empty === wins, wins + ' wins, ' + inside + ' inside');
+    else ok(key === 'bqueen' ? 'a Queen that wins clears it but stays outside, and it stands empty' : 'Riders that win clear it but stay outside, and it stands empty', wins > 0 && inside === 0 && empty === wins, wins + ' wins, ' + inside + ' inside');
   });
 })();
 
