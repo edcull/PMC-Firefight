@@ -218,7 +218,7 @@
       }
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
-      var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
+      var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>' + u.code + '</span>' +
         '<div class="sh-text"><h2>' + esc(u.name) + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
@@ -341,7 +341,7 @@
     function drawMachineStats(u, box) {
       var left = Math.max(0, u.str - u.damage);
       var pr = R.propOf(u);
-      var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.side) + '>' + u.code + '</span>' +
+      var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>' + u.code + '</span>' +
         '<div class="sh-text"><h2>' + esc(u.name) + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
         '</div>';
       /* its health as the board draws it (ISO.strSegments): a segment a point of
@@ -958,6 +958,9 @@
        shifted, until he calls the deployment finished. */
     function deployList(side) {
       var roster = deployRoster(side);
+      // a co-op game: the commando being put down, until both are (then every unit, to shift)
+      var cow = B.state.solo && B.state.solo.coop && B.Q && B.Q.deployOwner ? B.Q.deployOwner() : null;
+      if (cow) roster = roster.filter(function (u) { return (u.owner || 1) === cow; });
       if (!roster.length) return '';
       var next = deployNext();
       var rows = roster.map(function (u) {

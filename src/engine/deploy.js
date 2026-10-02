@@ -203,8 +203,10 @@
         ? E.state.sc.defCircle : null;
       var boxes = circ ? null : boxesFor(side);
       var z = (circ || boxes) ? null : zoneFor(side);
+      // a co-op game: only the commando of the player setting up
+      var own = deployOwner();
       var waiting = E.state.units.filter(function (u) {
-        return u.side === side && u.x < 0 && !u.reserve && !u.aboard;
+        return u.side === side && u.x < 0 && !u.reserve && !u.aboard && (!own || (u.owner || 1) === own);
       });
       if (limit != null) waiting = waiting.slice(0, limit);
       var keen = E.state.sc && E.state.sc.defender === side ? 0.85 : 0.5;
@@ -427,13 +429,25 @@
       });
     }
 
+    /* A co-op game's two commandos are one side, set up a player at a time: the one
+       rolled to go first puts down every unit of theirs, then the other. The player
+       setting up, or null once everything is down (anything may then be shifted) or
+       outside co-op. */
+    function deployOwner() {
+      if (!(E.state.solo && E.state.solo.coop)) return null;
+      var first = E.state.solo.deployFirst || 1;
+      var hand = deployRoster().filter(function (u) { return u.x < 0; }).map(function (u) { return u.owner || 1; });
+      if (!hand.length) return null;
+      return hand.indexOf(first) >= 0 ? first : hand[0];
+    }
     function deployNext() {
+      var own = deployOwner();
       if (ui.deployPick) {
         var p = byId(ui.deployPick);
-        if (p && p.alive && !isAI(p.side) && !p.reserve && !p.aboard) return p;
+        if (p && p.alive && !isAI(p.side) && !p.reserve && !p.aboard && (!own || p.x >= 0 || (p.owner || 1) === own)) return p;
         ui.deployPick = null;
       }
-      var hand = deployRoster().filter(function (u) { return u.x < 0; });
+      var hand = deployRoster().filter(function (u) { return u.x < 0 && (!own || (u.owner || 1) === own); });
       var order = sideOrder();
       for (var i = 0; i < order.length; i++) {
         var first = hand.filter(function (u) { return u.side === order[i]; })[0];
@@ -720,7 +734,7 @@
       inReserve: inReserve, markReserves: markReserves, insertionLegal: insertionLegal,
       scatterInsertion: scatterInsertion, greetArrival: greetArrival, autoDeploy: autoDeploy,
       garrisonAt: garrisonAt, garrisonable: garrisonable, garrisonSpots: garrisonSpots,
-      zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext, entering: entering,
+      zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext, deployOwner: deployOwner, entering: entering,
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,

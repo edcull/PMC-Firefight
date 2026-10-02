@@ -930,11 +930,13 @@
           : 'What ' + hotWho(2).replace(/^The/, 'the') + '’s troops are painted in — anything but ' + hotWho(1).replace(/^Your/, 'your') + '’s colour.';
       if (step === 3) {
         // each force is a button: tap it to go back and change it
+        // two forces side by side, so the battlefield step fits a phone without scrolling
+        el('hot-sum').classList.toggle('two', h.sides.length === 2);
         el('hot-sum').innerHTML = h.sides.map(function (sd, i) {
           var c = ISO.COLOURS[sd.colour] || {};
           return '<button type="button" class="hot-side" data-hotside="' + i + '"><b style="color:' + (c.light || 'inherit') + '">' + escHtml(sd.name) + '</b>' +
             '<em>change</em>' +
-            '<small>' + hotWho(i + 1) + ' · ' + (FORCE_KIND[sd.faction] || sd.faction) + ' · ' +
+            '<small>' + (sd.name === hotWho(i + 1) ? '' : hotWho(i + 1) + ' · ') + (FORCE_KIND[sd.faction] || sd.faction) + ' · ' +
             (sd.keys.length ? sd.keys.length + ' units' : 'no units yet \u2014 tap to muster it') +
             (sd.tactic ? ' · ' + escHtml(R.tacticById(sd.tactic).name) : '') + '</small></button>';
         }).join('');
