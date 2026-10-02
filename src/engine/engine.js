@@ -2262,6 +2262,8 @@
         fleeBroken: function () { K.fleeBroken(); },
         rallyPhase: function () { K.rallyPhase(); },
         beginningRites: function () { beginningRites(); },
+        // the OpFor's pick of target for a Defensive or Neutral result (SOL-6), for the tests
+        threatTarget: function (u) { return K.threatTarget(u, 'fire'); },
         greetArrival: function (u) { return K.greetArrival(u); },
         reservePhase: function (done) { K.reservePhase(done || function () {}); },
         aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },

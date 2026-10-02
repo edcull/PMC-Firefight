@@ -302,5 +302,28 @@ console.log('\nAn OpFor unit rolls first, and takes its special actions on a 1-6
   ok('...nor on Kill Them All!', /assault/.test(wild.said) && !wild.marked, wild.said.slice(0, 120));
 })();
 
+console.log('\nSOL-6 Defensive and Neutral OpFor engage the biggest threat (p. 147)');
+(function () {
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['hmgteam', 'recruits'], armyB: ['regular', 'regular'],
+    nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse',
+    solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+  const st = e.state();
+  st.terrain.length = 0; st.objectives.length = 0; if (st.sc) st.sc.targets = [];
+  const hmg = st.units.find((u) => u.key === 'hmgteam'), soft = st.units.find((u) => u.key === 'recruits');
+  const [ob, mate] = st.units.filter((u) => u.side === 'B');
+  st.units.forEach((u) => { u.reserve = false; u.aboard = null; u.alive = true; u.sp = 0; u.bld = null; });
+  // the shooter at 20,24; its friend at 30,24; the Heavy MG 16" off its friend, the recruits shaken and close by
+  ob.x = 20; ob.y = 24; mate.x = 30; mate.y = 24;
+  hmg.x = 30; hmg.y = 8; hmg.models = 3;
+  soft.x = 22; soft.y = 30; soft.models = 2; soft.sp = soft.morale + 1;
+  const best = (() => { const t = e.query.threatTarget(ob); return t && t.t; })();
+  ok('a Defensive or Neutral unit picks the Heavy MG that threatens its friends', best === hmg, best && best.key);
+  // the recruits on a mission objective: now they are the biggest threat
+  st.objectives.push({ x: 22, y: 30 });
+  const best2 = e.query.threatTarget(ob).t;
+  ok('...but an enemy on a mission objective comes first', best2 === soft, best2 && best2.key);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

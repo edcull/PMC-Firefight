@@ -142,6 +142,7 @@
          Kill Them All! (a reading: the book does not place them on the table). */
       var bhV = soloB ? rollBehaviour(u) : null;
       var specialsV = !soloB || ['defensive', 'neutral', 'offensive'].indexOf(bhV) >= 0;
+      if (soloB && (bhV === 'defensive' || bhV === 'neutral')) shot = threatTarget(u, 'fire');   // the biggest threat (SOL-6)
       if (specialsV && R.has(u, 'Molecular Reconstruction') && u.damage && (u.damage >= u.str - 1 || !shot.t)) {
         doSelfRepair(u); return;
       }
@@ -417,6 +418,47 @@
       return best;
     }
 
+    /* Reasonably Defensive and Neutral (p. 147): "The OpFor unit engages the enemy unit
+       which poses the biggest threat. If you're not sure which one it is, choose the
+       target at random or select the mission objective" — where Reasonably Offensive
+       "attacks the enemies where they can do the most damage" (bestTarget, above).
+       The threat an enemy poses is the most it could do to any one of the OpFor's
+       units it can reach — its shooting, and a charge if one is in reach — and an
+       enemy on or by a mission objective counts as the biggest threat of all (the
+       owner's ruling, rules review a119ac2 SOL-6). Only a target this unit can hurt
+       is chosen; the score handed back is still the hits it expects to do. */
+    function objectivePoints() {
+      var pts = (E.state.objectives || []).map(function (o) { return { x: o.x, y: o.y }; });
+      var sc = E.state.sc || {};
+      (sc.targets || []).forEach(function (o) { if (!o.done && !o.destroyed) pts.push({ x: o.x, y: o.y }); });
+      if (sc.found) pts.push({ x: sc.found.x, y: sc.found.y });
+      return pts;
+    }
+    function threatOf(t, side, pts) {
+      var worst = 0;
+      E.state.units.forEach(function (o) {
+        if (!o.alive || o.side !== side || !onTable(o)) return;
+        var e = t.fp != null ? Math.max(0, expectedHits(t, o, 'fire')) : 0;
+        if (t.assault > 0 && R.canAssault(t, o) && R.unitDist(t, o) <= (t.move || 0) + 2) e += 0.15 * t.assault;
+        if (e > worst) worst = e;
+      });
+      var onObj = pts.some(function (p) { return R.inches(t.x, t.y, p.x, p.y) <= 4 + R.UNIT_R; });
+      return worst + (onObj ? 3 : 0);
+    }
+    function threatTarget(u, mode, opts) {
+      var forced = bestTarget(u, mode, opts);
+      if (forced.forced) return forced;                   // the VIP first, always (p. 151)
+      var pts = objectivePoints(), best = { t: null, score: -1, threat: -1 };
+      E.state.units.forEach(function (t) {
+        if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
+        var e = expectedHits(u, t, mode || 'fire', opts);
+        if (e <= 0) return;
+        var th = threatOf(t, u.side, pts);
+        if (th > best.threat + 0.05 || (Math.abs(th - best.threat) <= 0.05 && e > best.score)) best = { t: t, score: e, threat: th };
+      });
+      return best.t ? best : forced;
+    }
+
     function nearestEnemy(u) {
       var best = null, bd = Infinity;
       E.state.units.forEach(function (t) {
@@ -603,8 +645,9 @@
         }
       }
 
-      var shot = bestTarget(u, 'fire');
       var behaviour = preB || rollBehaviour(u);
+      // Defensive and Neutral OpFor engage the biggest threat; everyone else the best shot (SOL-6)
+      var shot = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'fire') : bestTarget(u, 'fire');
       /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */
@@ -829,7 +872,7 @@
     }
 
     return {
-      aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
+      threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
       nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands, scoreSpot: scoreSpot
     };
