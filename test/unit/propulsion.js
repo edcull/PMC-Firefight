@@ -52,6 +52,14 @@ R.PROP_ORDER.forEach(function (pr) {
     '· lava ' + (R.terrainBars(v, 'lava') ? 'blocked' : 'CROSSED — WRONG'));
 });
 
+// shallow water (p. 39; rules review a119ac2 APX-1): 2" for a vehicle, nothing for a hovercraft, whose every turn costs 1" more
+var hw = R.terrainCost(mk('lcv', 'hover', 'B', 20, 20), 'water'), ww = R.terrainCost(mk('lcv', 'wheeled', 'B', 20, 20), 'water');
+console.log('  shallow water: wheeled ' + ww + '", hover ' + hw + '"' + (ww === 2 && hw === 0 ? '' : '  <-- EXPECTED 2" and 0"'));
+if (ww !== 2 || hw !== 0) bad++;
+var hv = mk('lcv', 'hover', 'B', 20, 20), wv = mk('lcv', 'wheeled', 'B', 20, 20);
+console.log('  a 90\u00b0 turn: wheeled ' + R.turnCost(wv, 0, Math.PI / 2) + '", hover ' + R.turnCost(hv, 0, Math.PI / 2) + '"');
+if (R.turnCost(hv, 0, Math.PI / 2) !== R.turnCost(wv, 0, Math.PI / 2) + 1) bad++;
+
 /* arcs: the walker's armoured flanks deny the +1 side shot, but not the rear +2 */
 console.log('--- shot from the flank and the rear ---');
 ['wheeled', 'walker'].forEach(function (pr) {
