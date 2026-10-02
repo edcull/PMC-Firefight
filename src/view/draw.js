@@ -1749,8 +1749,12 @@
         }
       });
 
-      // measuring tape
-      if (u && ui.hover) {
+      /* measuring tape: only from a unit the player is acting with — their own, on
+         their turn, not one picked out to look at (an enemy's, or out of turn), and
+         not one that has already acted */
+      var taping = u && ui.hover && !ui.inspect && B.mySide && B.mySide() === u.side &&
+        !(B.state.phase === 'battle' && u.activated);
+      if (taping) {
         var a2 = hud(dispX(u), dispY(u), liftOf(dispX(u), dispY(u)));
         var b2 = hud(ui.hover.x, ui.hover.y, 0);
         var dist = Math.max(0, R.inches(u.x, u.y, ui.hover.x, ui.hover.y) - UR);
