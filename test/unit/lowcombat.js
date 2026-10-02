@@ -237,5 +237,26 @@ console.log('\nBAT-2 Defensive fire falls back on the Auxiliary weapons (pp. 30,
   function def0(k) { return R.profile(k).name; }
 })();
 
+console.log('\nBAT-3 The free shot at an arrival respects the weapon\'s limits (pp. 30, 57, 59)');
+(function () {
+  function arrival(gun, at) {
+    const e = Engine.create({});
+    e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['regular', 'regular'], armyB: [gun, 'regular'], nameA: 'A', nameB: 'B',
+      colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto' });
+    const st = e.state(); st.terrain.length = 0; st.phase = 'battle';
+    st.units.forEach((u) => { u.reserve = false; u.x = 44; u.y = 44; u.sp = 0; });
+    const g0 = st.units.find((u) => u.side === 'B' && u.key === gun), arr = st.units.find((u) => u.side === 'A');
+    st.units.find((u) => u.side === 'B' && u !== g0).x = 2;
+    g0.x = 20; g0.y = 20; arr.x = 20 + at; arr.y = 20;
+    const g = e.query.greetArrival(arr);
+    return g ? g.res.log.map((l) => l.text).join(' | ') : '';
+  }
+  const mor = arrival('mortarteam', 6), sam = arrival('sam', 6);
+  ok('a mortar team inside its Minimum Range greets an arrival with its Auxiliary weapons', /auxiliary weapons\) fires/.test(mor), mor.slice(0, 90));
+  ok('...and so does a SAM team at a ground unit', /auxiliary weapons\) fires/.test(sam), sam.slice(0, 90));
+  const rifle = arrival('regular', 6);
+  ok('a rifle team fires its main weapon as before', /fires at/.test(rifle) && !/auxiliary/.test(rifle), rifle.slice(0, 90));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

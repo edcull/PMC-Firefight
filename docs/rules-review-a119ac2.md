@@ -710,3 +710,4 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | Finding | Outcome | Where |
 |---|---|---|
 | BAT-2 No Auxiliary defensive fire | **Fixed.** Where the main weapon cannot bear (inside its Minimum Range, or a Specialisation the charger is not), the defender fires its Auxiliary weapons instead. Aircraft carry none. | `assault.js` (`assault`); test `lowcombat.js` |
+| BAT-3 The arrival shot ignores weapon limits | **Fixed.** The closest ready enemy within 12" and in sight fires its main weapon only if that may fire (Minimum Range, Specialisation, Cumbersome Weapon); otherwise its Auxiliary weapons; a unit that can fire neither does not take the shot. | `deploy.js` (`greetArrival`); test `lowcombat.js` |

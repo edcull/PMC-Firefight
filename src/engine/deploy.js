@@ -167,16 +167,22 @@
     /* Arriving within 12" of the enemy invites a free shot from the closest
        unsuppressed enemy that can see them (p. 30). It is not an activation. */
     function greetArrival(u) {
-      var best = null, bd = Infinity;
+      var best = null, bd = Infinity, bestAux = false;
       activeUnits(other(u.side)).forEach(function (e) {
         if (R.status(e) !== 'ready' || e.fp === null) return;
         var d = R.unitDist(e, u);
-        if (d > 12 || d > e.range) return;
+        if (d > 12) return;
         if (!R.hasLoS(E.state, e, u)) return;
-        if (d < bd) { bd = d; best = e; }
+        /* its main weapon if that may fire — not inside its Minimum Range, nor at a
+           target its Specialisation does not take — or else its Auxiliary weapons,
+           which aircraft do not carry (pp. 30, 32, 57, 59) */
+        var main = R.canShoot(E.state, e, u, 'basic', {});
+        var aux = !main && !R.isFlying(e) && R.canShoot(E.state, e, u, 'basic', { aux: true });
+        if (!main && !aux) return;
+        if (d < bd) { bd = d; best = e; bestAux = aux; }
       });
       if (!best) return null;
-      var res = abShoot(E.state, best, u, 'basic', {});
+      var res = abShoot(E.state, best, u, 'basic', bestAux ? { aux: true } : {});
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       logLine('note', best.label + ' was waiting for them — ' + u.label + ' came down inside 12".');
       return { shooter: best, res: res };
