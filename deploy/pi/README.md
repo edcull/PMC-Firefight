@@ -17,7 +17,9 @@ is opened on the router.
 ## What it needs
 
 - Raspberry Pi OS **64-bit** (Bookworm or later). `uname -m` says `aarch64`.
-- Node.js 20 or later (`node -v`). If it is missing or older:
+- Node.js 22 or later (`node -v`): the database package has ready-made builds
+  for it on a Pi, but none for Node 20, and building it on a Pi 3 can bring the Pi
+  down. If it is missing or older:
 
   ```
   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -

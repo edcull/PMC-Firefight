@@ -58,11 +58,27 @@ jobs:
             ./ "$APP_DIR/"
           echo "$BRANCH @ ${SHA::7}" > "$APP_DIR/deployed.txt"
 
-      # the server's packages (better-sqlite3), as the lock file has them; nothing for tests or the build
+      # the server's packages (better-sqlite3), as the lock file has them; nothing for
+      # tests or the build. Installed again only when the lock file or Node has changed
+      # (or the last install did not finish), so a deploy does not redo it each time.
+      # Node 22 or later: better-sqlite3 has ready-made builds for it on a Pi, none for
+      # Node 20, and building it on the Pi itself can bring the Pi down.
       - name: Install its packages
         run: |
           cd "$APP_DIR"
-          npm ci --omit=dev --no-audit --no-fund
+          MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+          if [ "$MAJOR" -lt 22 ]; then
+            echo "::error::Node $(node -v) on the Pi: 22 or later is needed (deploy/pi/README.md)"
+            exit 1
+          fi
+          WANT="$(sha256sum package-lock.json | cut -c1-64) $(node -v)"
+          HAVE="$(cat node_modules/.pmc-installed 2>/dev/null || true)"
+          if [ "$WANT" = "$HAVE" ] && [ -f node_modules/better-sqlite3/build/Release/better_sqlite3.node ]; then
+            echo "Packages unchanged; kept as they are."
+          else
+            npm ci --omit=dev --no-audit --no-fund
+            echo "$WANT" > node_modules/.pmc-installed
+          fi
 
       - name: Restart the server
         run: sudo -n systemctl restart pmc-firefight

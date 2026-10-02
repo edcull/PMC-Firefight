@@ -25,12 +25,18 @@ fi
 
 NODE="$(command -v node || true)"
 if [ -z "$NODE" ]; then
-  echo "Node.js is not installed. Node 20 or later:" >&2
+  echo "Node.js is not installed. Node 22 or later:" >&2
   echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs" >&2
   exit 1
 fi
 MAJOR="$("$NODE" -p 'process.versions.node.split(".")[0]')"
-if [ "$MAJOR" -lt 20 ]; then echo "Node $MAJOR is too old; 20 or later, please." >&2; exit 1; fi
+# 22 or later: the database package (better-sqlite3) has ready-made builds for it
+# on a Pi; for Node 20 it has none, and building it on the Pi can bring the Pi down
+if [ "$MAJOR" -lt 22 ]; then
+  echo "Node $MAJOR is too old; 22 or later, please:" >&2
+  echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs" >&2
+  exit 1
+fi
 
 apt-get update -qq
 # build tools in case the database package has no ready-made build for this Pi and Node
