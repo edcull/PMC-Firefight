@@ -241,6 +241,11 @@ class Lobby {
     if (room.table) room.table.rejoin(p);
     this.pushLobby();
   }
+  // a message to every connection a signed-in player has open (an online campaign changed, say)
+  notifyUser(userId, msg) {
+    const text = JSON.stringify(msg);
+    this.players.forEach((p) => { if (p.who && p.who.userId === userId && p.sock && p.sock.open) p.sock.send(text); });
+  }
   // a player's own games, the latest first: the ones under way to go back to, and how the rest went
   mine(p) {
     p.send('mine', { games: this.games ? this.games.mine(p.id) : [] });

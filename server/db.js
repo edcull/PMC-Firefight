@@ -73,7 +73,19 @@ const MIGRATIONS = [
      created INTEGER NOT NULL,
      updated INTEGER NOT NULL
    );
-   CREATE INDEX campaigns_owner ON campaigns(owner, updated);`
+   CREATE INDEX campaigns_owner ON campaigns(owner, updated);`,
+  /* 4: online campaigns (phase 3b): the two players in each, and the code that
+     brings the second one in. */
+  `CREATE TABLE campaign_members (
+     campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     side        TEXT NOT NULL,
+     joined      INTEGER NOT NULL,
+     PRIMARY KEY (campaign_id, side)
+   );
+   CREATE UNIQUE INDEX members_user ON campaign_members(campaign_id, user_id);
+   ALTER TABLE campaigns ADD COLUMN invite TEXT;
+   CREATE UNIQUE INDEX campaigns_invite ON campaigns(invite);`
 ];
 
 function open(file) {
@@ -127,7 +139,14 @@ function wrap(db) {
     campaign: db.prepare('SELECT * FROM campaigns WHERE id = ?'),
     campaignsOf: db.prepare('SELECT id, kind, name, turn, version, created, updated FROM campaigns WHERE owner = ? ORDER BY updated DESC'),
     saveCampaign: db.prepare('UPDATE campaigns SET state = ?, name = ?, turn = ?, kind = ?, version = version + 1, updated = ? WHERE id = ? AND owner = ? AND version = ?'),
-    dropCampaign: db.prepare('DELETE FROM campaigns WHERE id = ? AND owner = ?')
+    dropCampaign: db.prepare('DELETE FROM campaigns WHERE id = ? AND owner = ?'),
+    setInvite: db.prepare('UPDATE campaigns SET invite = ? WHERE id = ?'),
+    byInvite: db.prepare('SELECT * FROM campaigns WHERE invite = ?'),
+    addMember: db.prepare('INSERT INTO campaign_members (campaign_id, user_id, side, joined) VALUES (?, ?, ?, ?)'),
+    members: db.prepare('SELECT m.side, m.user_id, u.name, u.pub FROM campaign_members m JOIN users u ON u.id = m.user_id WHERE m.campaign_id = ? ORDER BY m.side'),
+    onlineOf: db.prepare("SELECT c.id, c.name, c.turn, c.version, c.updated, m.side FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.kind = 'online' ORDER BY c.updated DESC"),
+    // an online campaign is saved by whichever of its players sent the command: not only its owner
+    saveOnline: db.prepare("UPDATE campaigns SET state = ?, name = ?, turn = ?, version = version + 1, updated = ? WHERE id = ? AND kind = 'online' AND version = ?")
   };
   const addIntent = db.transaction((gameId, seq, seat, it, at) => {
     q.addIntent.run(gameId, seq, seat, JSON.stringify(it), at);
@@ -175,6 +194,14 @@ function wrap(db) {
     // saved only over the version it was read at: false if someone has saved it since (or it is not theirs)
     saveCampaign: (c) => q.saveCampaign.run(JSON.stringify(c.state), c.name, c.turn || 0, c.kind, c.at, c.id, c.owner, c.version).changes > 0,
     dropCampaign: (id, owner) => q.dropCampaign.run(id, owner).changes > 0,
+    // ---- online campaigns (phase 3b) ----
+    setInvite: (id, code) => q.setInvite.run(code, id),
+    byInvite: (code) => { const c = q.byInvite.get(code); return c && Object.assign({}, c, { state: JSON.parse(c.state) }); },
+    addMember: (id, userId, side, at) => q.addMember.run(id, userId, side, at),
+    members: (id) => q.members.all(id),
+    onlineOf: (userId) => q.onlineOf.all(userId),
+    saveOnline: (c) => q.saveOnline.run(JSON.stringify(c.state), c.name, c.turn || 0, c.at, c.id, c.version).changes > 0,
+    transaction: (fn) => db.transaction(fn)(),
     // a copy of the whole database, consistent, while it is in use (the nightly backup)
     backup: (to) => db.backup(to),
     close: () => db.close()

@@ -30,6 +30,7 @@ const app = require('./server/app.js');
 const DB = require('./server/db.js');
 const Auth = require('./server/auth.js');
 const Games = require('./server/games.js');
+const Online = require('./server/online.js');
 
 const PORT = process.env.PORT || 8787;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -59,9 +60,11 @@ const lobby = new Lobby({
   makeTable: tables.make({ campaign: campaigns, log: log, store: games })
 });
 lobby.restore();
+// online campaigns: run by the server, the other player told of each change over their socket
+const online = Online.create({ db: db, notify: function (userId, msg) { lobby.notifyUser(userId, msg); } });
 
 /* ---- the server ---- */
-const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin });
+const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin, online: online });
 const server = http.createServer(function (req, res) {
   // one request going wrong is answered and logged; it does not take the server down (MP-1)
   try { handle(req, res); }
