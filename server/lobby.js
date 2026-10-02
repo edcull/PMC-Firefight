@@ -5,9 +5,35 @@
    to the table layer, which owns the battle from there. Everything below is
    bookkeeping and broadcasting. */
 'use strict';
+const crypto = require('crypto');
 const P = require('../src/engine/protocol.js');
 // how long a seat is kept in setup for someone who dropped out (a refresh, a phone gone to sleep)
 const HOLD_SETUP_MS = 3 * 60 * 1000;
+/* Rooms nobody is connected to are put away (MP-7): a battle both players have
+   left the browser on is kept a good while (until there is a database to keep it
+   in, multiplayer plan phase 2), anything else not long. */
+const IDLE_BATTLE_MS = 6 * 60 * 60 * 1000;
+const IDLE_ROOM_MS = 10 * 60 * 1000;
+/* What one connection may send (MP-8): a bucket of messages that refills, a
+   tighter one for chat and one for making and joining rooms. Over it, the
+   message is dropped and the sender told (once a second at most); a connection
+   that keeps on is closed. */
+const LIMITS = {
+  all: { per: 1000, n: 40 },        // 40 a second, which no player's hands come near
+  chat: { per: 10000, n: 8 },       // 8 lines in 10 seconds
+  rooms: { per: 60000, n: 12 }      // 12 rooms made or joined a minute
+};
+const ROOM_MSGS = { 'game.create': 1, 'game.join': 1 };
+const CHAT_MSGS = { 'lobby.chat': 1, 'game.chat': 1 };
+function bucket(lim) { return { lim: lim, left: lim.n, at: Date.now() }; }
+function take(b) {
+  const t = Date.now();
+  b.left = Math.min(b.lim.n, b.left + (t - b.at) * b.lim.n / b.lim.per);
+  b.at = t;
+  if (b.left < 1) return false;
+  b.left -= 1;
+  return true;
+}
 
 function now() { return Date.now(); }
 
@@ -19,16 +45,39 @@ function code() {
   return s;
 }
 
+/* Who a browser is (until there are accounts, multiplayer plan phase 1). The
+   server gives each new browser a private id and a secret to go with it, and a
+   browser coming back must present both: an id alone, which anyone in a room
+   could once read off the room, takes nobody's seat any more. What other players
+   see is a separate public id, which can be shown to anyone. */
+function token(n) { return crypto.randomBytes(n).toString('hex'); }
+function same(a, b) {
+  const x = Buffer.from(String(a || '')), y = Buffer.from(String(b || ''));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+const KEEP_IDS = 5000;          // browsers remembered between visits; the oldest forgotten first
+
 class Player {
-  constructor(sock) {
+  constructor(sock, limits) {
     this.sock = sock;
-    this.id = null;              // the browser's own, so a refresh keeps the seat
+    this.id = null;              // private, issued by the server: a refresh brings it back with its secret
+    this.pub = null;             // public: what the room shows of this player
     this.name = 'Commander';
     this.room = null;
     this.seat = null;            // 'A', 'B' or null for a watcher
     this.ready = false;
     this.force = null;
     this.at = now();
+    const L = limits || LIMITS;
+    this.buckets = { all: bucket(L.all), chat: bucket(L.chat), rooms: bucket(L.rooms) };
+    this.slowSaid = 0; this.over = 0;
+  }
+  // whether this message may go through, by the limits above
+  allowed(t) {
+    const b = this.buckets;
+    const ok = take(b.all) && (!CHAT_MSGS[t] || take(b.chat)) && (!ROOM_MSGS[t] || take(b.rooms));
+    this.over = ok ? Math.max(0, this.over - 1) : this.over + 1;
+    return ok;
   }
   send(t, body) {
     if (!this.sock || !this.sock.open) return;
@@ -50,7 +99,9 @@ class Room {
     this.chat = [];
     this.table = null;           // the live battle, once it starts
     this.at = now();
+    this.idleSince = null;       // when the last connected person in it went
   }
+  anyoneHere() { return this.everyone().some((p) => p.sock && p.sock.open); }
 
   everyone() {
     const out = [];
@@ -73,15 +124,16 @@ class Room {
       const p = this.seats[s];
       if (!p) return null;
       return {
-        seat: s, id: p.id, name: p.name, ready: p.ready, force: p.force,
+        seat: s, id: p.pub, name: p.name, ready: p.ready, force: p.force,
         host: p.id === this.hostId, away: !p.sock
       };
     };
+    const host = this.everyone().filter((p) => p.id === this.hostId)[0];
     return {
-      id: this.id, name: this.name, phase: this.phase, hostId: this.hostId,
+      id: this.id, name: this.name, phase: this.phase, hostId: host ? host.pub : null,
       settings: this.settings,
       seats: { A: seat('A'), B: seat('B') },
-      watchers: this.watchers.map((w) => ({ id: w.id, name: w.name })),
+      watchers: this.watchers.map((w) => ({ id: w.pub, name: w.name })),
       canStart: this.bothReady(),
       chat: this.chat.slice(-40)
     };
@@ -101,18 +153,47 @@ class Lobby {
     this.rooms = new Map();
     this.chat = [];
     this.makeTable = opts.makeTable || null;   // (room, lobby) => Table, injected
+    this.known = new Map();                     // private id -> { secret, pub }, every browser seen
+    this.limits = opts.limits || LIMITS;        // what a connection may send (a test may raise them)
     this.log = opts.log || function () { };
+    // rooms nobody is connected to are looked for every minute
+    if (opts.sweep !== false) {
+      this.sweeper = setInterval(() => this.sweep(), 60000);
+      if (this.sweeper.unref) this.sweeper.unref();
+    }
+  }
+
+  /* Rooms nobody has been connected to for a while are closed (MP-7): a battle
+     after IDLE_BATTLE_MS, anything else after IDLE_ROOM_MS. `at` is for the tests. */
+  sweep(at) {
+    const t = at || now();
+    this.rooms.forEach((room) => {
+      if (room.anyoneHere()) { room.idleSince = null; return; }
+      if (room.idleSince == null) { room.idleSince = t; return; }
+      const limit = room.phase === P.PHASE.BATTLE ? IDLE_BATTLE_MS : IDLE_ROOM_MS;
+      if (t - room.idleSince < limit) return;
+      if (room.table) room.table.stop();
+      this.rooms.delete(room.id);
+      this.log('room ' + room.id + ' closed: nobody has been in it for ' + Math.round((t - room.idleSince) / 60000) + ' minutes');
+    });
+    this.pushLobby();
   }
 
   /* ---- connections ---- */
   connect(sock) {
-    const p = new Player(sock);
+    const p = new Player(sock, this.limits);
     this.players.add(p);
     sock.on('message', (text) => {
       let msg;
       try { msg = JSON.parse(text); }
       catch (e) { p.fail('unreadable message'); return; }
       if (!msg || typeof msg.t !== 'string') { p.fail('unreadable message'); return; }
+      if (!p.allowed(msg.t)) {
+        if (Date.now() - p.slowSaid > 1000) { p.slowSaid = Date.now(); p.fail('slow down — that was too much at once'); }
+        // a connection that will not slow down is let go
+        if (p.over > 200) { this.log('closing a connection that would not slow down'); try { sock.close(1008, 'too many messages'); } catch (e) { } }
+        return;
+      }
       try { this.handle(p, msg); }
       catch (e) {
         this.log('handler error on ' + msg.t + ': ' + ((e && e.stack) || e));
@@ -133,7 +214,7 @@ class Lobby {
     if (room.phase === P.PHASE.BATTLE && p.seat) {
       p.sock = null;
       room.broadcast('game.chat', { from: null, text: p.name + ' has dropped out — the seat is being held.', at: now() });
-      room.broadcast('game.presence', { kind: 'dropped', id: p.id, name: p.name, seat: p.seat });
+      room.broadcast('game.presence', { kind: 'dropped', id: p.pub, name: p.name, seat: p.seat });
       room.push();
       this.pushLobby();
       return;
@@ -178,7 +259,23 @@ class Lobby {
   }
 
   hello(p, msg) {
-    p.id = P.clampText(msg.playerId, 64) || ('anon-' + Math.random().toString(36).slice(2, 10));
+    // once a connection has said who it is, that stands: a second hello only changes the name
+    if (p.id) {
+      p.name = P.clampText(msg.name, P.LIMITS.name) || p.name;
+      p.send('welcome', { you: { id: p.pub, name: p.name }, games: this.list(), chat: this.chat.slice(-40) });
+      if (p.room) p.room.push();
+      return;
+    }
+    const want = P.clampText(msg.playerId, 64), rec = want && this.known.get(want);
+    let key = null;
+    if (rec && same(rec.secret, msg.secret)) { p.id = want; p.pub = rec.pub; }
+    else {
+      // new here (or the secret is wrong): a new id, and the secret that goes with it
+      p.id = 'p' + token(12); p.pub = 'u' + token(6);
+      key = { id: p.id, secret: token(24) };
+      this.known.set(p.id, { secret: key.secret, pub: p.pub });
+      if (this.known.size > KEEP_IDS) this.known.delete(this.known.keys().next().value);
+    }
     p.name = P.clampText(msg.name, P.LIMITS.name) || 'Commander';
     /* A reconnect: the same browser coming back to a seat still being held for
        it. Find that room and put them back in it. */
@@ -193,13 +290,14 @@ class Lobby {
       });
     });
     p.send('welcome', {
-      you: { id: p.id, name: p.name },
+      you: { id: p.pub, name: p.name },
+      key: key,                  // only to a browser just given one: kept, and presented next time
       games: this.list(),
       chat: this.chat.slice(-40)
     });
     if (!rejoined) return;
     rejoined.broadcast('game.chat', { from: null, text: p.name + ' is back.', at: now() });
-    if (rejoined.phase === P.PHASE.BATTLE) rejoined.broadcast('game.presence', { kind: 'back', id: p.id, name: p.name, seat: p.seat });
+    if (rejoined.phase === P.PHASE.BATTLE) rejoined.broadcast('game.presence', { kind: 'back', id: p.pub, name: p.name, seat: p.seat });
     rejoined.push();
     if (rejoined.table) rejoined.table.rejoin(p);
     this.pushLobby();
@@ -295,7 +393,7 @@ class Lobby {
         if (room.table) { room.table.stop(); room.table = null; }
         room.phase = P.PHASE.SETUP;
         // said to the board as well as the chat: the battle on the screen is over
-        room.broadcast('game.presence', { kind: 'left', id: p.id, name: p.name, seat: seat });
+        room.broadcast('game.presence', { kind: 'left', id: p.pub, name: p.name, seat: seat });
       }
       room.players().forEach((q) => { q.ready = false; });
       room.broadcast('game.chat', { from: null, text: p.name + ' has left.', at: now() });
@@ -308,7 +406,7 @@ class Lobby {
   kick(p, msg) {
     const room = p.room;
     if (!room || !room.isHost(p)) return p.fail('only the host can do that');
-    const who = room.everyone().filter((q) => q.id === msg.playerId)[0];
+    const who = room.everyone().filter((q) => q.pub === msg.playerId)[0];
     if (!who || who === p) return;
     who.fail('the host has removed you from the game');
     this.leave(who);
@@ -380,7 +478,18 @@ class Lobby {
     room.phase = P.PHASE.BATTLE;
     room.push();
     this.pushLobby();
-    table.begin();
+    // a battle that cannot be laid out goes back to setup, rather than leaving the room stuck in it (MP-7)
+    try { table.begin(); }
+    catch (e) {
+      this.log('could not begin ' + room.id + ': ' + ((e && e.stack) || e));
+      try { table.stop(); } catch (e2) { }
+      room.table = null;
+      room.phase = P.PHASE.SETUP;
+      room.players().forEach((q) => { q.ready = false; });
+      room.broadcast('error', { text: 'the battle could not be set up: ' + ((e && e.message) || e) });
+      room.push();
+      this.pushLobby();
+    }
   }
 
   gameChat(p, msg) {
@@ -409,13 +518,17 @@ class Lobby {
     if (room.table) room.table.resync(p);
   }
 
-  /* Called by the table when a battle ends, so the room can be used again. */
+  /* Called by the table when a battle ends. The room goes back to setup with both
+     forces as they were (MP-7): ready up again for a rematch, change the terms or
+     the forces first, or leave. */
   finished(room) {
-    room.phase = P.PHASE.OVER;
+    room.table = null;
+    room.phase = P.PHASE.SETUP;
     room.players().forEach((q) => { q.ready = false; });
+    room.broadcast('game.chat', { from: null, text: 'The battle is over. Ready up for a rematch, or leave the game.', at: now() });
     room.push();
     this.pushLobby();
   }
 }
 
-module.exports = { Lobby: Lobby, Room: Room, Player: Player };
+module.exports = { Lobby: Lobby, Room: Room, Player: Player, LIMITS: LIMITS };

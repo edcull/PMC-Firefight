@@ -11,7 +11,8 @@ const os = require('os');
 const { ROOT } = require('../where.js');
 const ws = require('../../server/ws.js');
 const statics = require('../../server/static.js');
-const { Lobby } = require('../../server/lobby.js');
+const { Lobby, Player, LIMITS } = require('../../server/lobby.js');
+const app = require('../../server/app.js');
 const { Campaigns } = require('../../server/campaigns.js');
 const tables = require('../../server/table.js');
 const { R, Engine } = require('../../server/rules.js');
@@ -30,7 +31,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 class Client {
   constructor(name) {
     this.name = name;
-    this.id = 'test-' + name.toLowerCase().replace(/\W/g, '');
+    this.key = null;             // the id and secret the server issues at the first hello
     this.inbox = [];
     this.room = null;
     this.seat = null;
@@ -43,7 +44,7 @@ class Client {
     this.gameChat = [];
     this.games = [];
   }
-  open(url) {
+  open(url, opts) {
     return new Promise((resolve, reject) => {
       ws.connect(url, (err, sock) => {
         if (err) return reject(err);
@@ -51,10 +52,10 @@ class Client {
         sock.on('message', (text) => {
           const m = JSON.parse(text);
           this.inbox.push(m);
-          if (m.t === 'welcome') { this.me = m.you; this.games = m.games; }
+          if (m.t === 'welcome') { this.me = m.you; this.games = m.games; if (m.key) this.key = m.key; }
           if (m.t === 'lobby') this.games = m.games;
           if (m.t === 'lobby.chat') this.lobbyChat.push(m);
-          if (m.t === 'game') { this.room = m.room; this.seat = seatOf(m.room, this.id); }
+          if (m.t === 'game') { this.room = m.room; this.seat = seatOf(m.room, this.me && this.me.id); }
           if (m.t === 'game.chat') this.gameChat.push(m);
           if (m.t === 'started') { this.seat = m.seat; this.cfg = m.cfg; }
           if (m.t === 'turn') { this.state = m.state; this.turns = (this.turns || 0) + 1; this.events = this.events.concat(m.events || []); }
@@ -63,11 +64,11 @@ class Client {
           if (m.t === 'error') this.errors.push(m);
         });
         resolve(this);
-      });
+      }, opts);
     });
   }
   send(t, body) { this.sock.send(JSON.stringify(Object.assign({ t: t }, body || {}))); }
-  hello() { this.send('hello', { playerId: this.id, name: this.name }); }
+  hello(extra) { this.send('hello', Object.assign({ playerId: this.key && this.key.id, secret: this.key && this.key.secret, name: this.name }, extra || {})); }
   /* Wait for the next message of this type. A message that arrived while we
      were waiting on something else still counts — the cursor is per type, so
      each wait takes the next one rather than the same one twice. */
@@ -131,11 +132,10 @@ async function main() {
   // a campaign store of its own, out of the way of any real one
   const campaigns = new Campaigns(path.join(os.tmpdir(), 'pmc-test-campaigns'), { log: () => { } });
   const serve = statics.create(ROOT);
-  const lobby = new Lobby({ log: () => { }, makeTable: tables.make({ campaign: campaigns, log: () => { } }) });
-  const server = http.createServer((req, res) => {
-    if (serve(req, res)) return;
-    res.writeHead(404); res.end('{}');
-  });
+  // the battle below is played by a script as fast as the server answers: far past what a player's hands send
+  const quick = { all: { per: 1000, n: 100000 }, chat: LIMITS.chat, rooms: LIMITS.rooms };
+  const lobby = new Lobby({ log: () => { }, limits: quick, sweep: false, makeTable: tables.make({ campaign: campaigns, log: () => { } }) });
+  const server = http.createServer(app.create({ campaigns: campaigns, lobby: lobby, serve: serve }));
   ws.attach(server, '/ws', (sock) => lobby.connect(sock));
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const port = server.address().port;
@@ -325,12 +325,12 @@ async function main() {
 
   /* ---- reconnecting mid-battle ---- */
   const c = await new Client('Brann').open(URL);
-  c.id = b.id;                       // the same browser, coming back
+  c.key = b.key;                     // the same browser, coming back with what the server gave it
   b.close();
   await wait(120);
   c.hello();
   const back = await c.until('game');
-  ok('a dropped player walks back into their seat', seatOf(back.room, c.id) === 'B');
+  ok('a dropped player walks back into their seat', seatOf(back.room, c.me.id) === 'B');
   const again = await c.until('started');
   ok('...told the battle is on again, so the board can be put back up', again.seat === 'B' && !!again.cfg && !!again.cfg.nameA, JSON.stringify(again));
   const resync = await c.until('turn');
@@ -405,7 +405,7 @@ async function main() {
     if (!moved) { ok('every activation moves the battle on', false, u.name + ' on turn ' + st.turn); break; }
   }
 
-  ok('the battle reached a result', !!a.over, 'after ' + guard + ' activations');
+  ok('the battle reached a result', !!a.over, 'after ' + guard + ' activations; errors ' + JSON.stringify(a.errors.concat(both.B.errors).slice(-3)) + ' refusals ' + JSON.stringify(a.refusals.concat(both.B.refusals).slice(-3).map(r => r.why)));
   ok('both sides were told', !!both.B.over);
   if (a.over) {
     ok('a report came with it', Array.isArray(a.over.report.units) && a.over.report.units.length > 0);
@@ -416,6 +416,93 @@ async function main() {
   ok('the log came down the wire', a.events.filter((e) => e.e === 'log').length > 10);
   ok('the dice came down the wire', a.events.some((e) => e.e === 'card' && e.card.dice));
 
+
+  /* ---- hardening: the multiplayer plan's phase 0 ---- */
+  console.log('server — hardening');
+  const req = (method, p, headers, body) => new Promise((r) => {
+    const q = http.request({ host: '127.0.0.1', port: port, path: p, method: method, headers: headers || {} }, (res) => {
+      let t = ''; res.on('data', (c) => t += c); res.on('end', () => r({ code: res.statusCode, body: t }));
+    });
+    q.on('error', (e) => r({ code: 0, body: e.message }));
+    if (body) q.write(body);
+    q.end();
+  });
+  // MP-1: a malformed percent-escape is refused, and the server is still there afterwards
+  const bad1 = await req('GET', '/%E0%A4%A'), bad2 = await req('GET', '/campaign/%zz');
+  const alive = await req('GET', '/health');
+  ok('a malformed URL is refused, and the server carries on', bad1.code >= 400 && bad2.code === 400 && alive.code === 200, bad1.code + ' ' + bad2.code + ' ' + alive.code);
+
+  // MP-3: a campaign's first save is given a key; later writes without it are refused
+  const nm = 'keytest' + Date.now().toString(36), body = JSON.stringify({ companies: { A: { name: 'Keyholders' } }, turn: 1 });
+  const json = { 'content-type': 'application/json' };
+  const first = await req('PUT', '/campaign/' + nm, json, body);
+  const key = first.code === 200 && JSON.parse(first.body).key;
+  ok('the first save of a campaign is given its key', !!key, first.code + ' ' + first.body);
+  const stranger = await req('PUT', '/campaign/' + nm, Object.assign({ 'x-campaign-key': 'not-it' }, json), body);
+  const anon = await req('PUT', '/campaign/' + nm, json, body);
+  ok('...a save without it is refused', stranger.code === 403 && anon.code === 403, stranger.code + ' ' + anon.code);
+  const holder = await req('PUT', '/campaign/' + nm, Object.assign({ 'x-campaign-key': key }, json), body);
+  ok('...and one with it goes through', holder.code === 200, holder.code);
+  const del1 = await req('DELETE', '/campaign/' + nm, { 'x-campaign-key': 'not-it' });
+  const del2 = await req('DELETE', '/campaign/' + nm, { 'x-campaign-key': key });
+  ok('...as does deleting it: refused without the key, done with it', del1.code === 403 && del2.code === 200, del1.code + ' ' + del2.code);
+
+  // MP-7: the room goes back to setup when the battle is over, and can be played again
+  await a.till('the room to reopen', (x) => x.room && x.room.phase === 'setup');
+  ok('a finished battle puts the room back in setup, both forces kept', !!a.room.seats.A.force && !!a.room.seats.B.force);
+  a.send('game.ready', { ready: true }); both.B.send('game.ready', { ready: true });
+  await a.till('both ready again', (x) => x.room && x.room.canStart);
+  a.send('game.start');
+  const rematch = await a.until('started');
+  ok('...and the same two can play a rematch in it', !!rematch && !!rematch.cfg);
+
+  // MP-2: what the room shows is a public id, never the private one or its secret
+  const shown = JSON.stringify(a.room);
+  ok('a room never shows anyone\'s private id', shown.indexOf(a.key.id) < 0 && shown.indexOf(both.B.key.id) < 0 && shown.indexOf(a.key.secret) < 0);
+  const m = await new Client('Mallory').open(URL);
+  m.key = { id: a.room.seats.A.id, secret: '' };          // the public id, read off the room
+  m.hello();
+  await m.until('welcome');
+  ok('a hello with someone else\'s public id is a new player', m.me.id !== a.me.id && !!m.key && m.key.id !== a.key.id);
+  const m2 = await new Client('Mallory').open(URL);
+  m2.key = { id: a.key.id, secret: 'guessed' };           // the private id, without its secret
+  m2.hello();
+  await m2.until('welcome');
+  ok('...and so is one with a private id but the wrong secret', m2.me.id !== a.me.id);
+  m.hello({ playerId: a.key.id, secret: a.key.secret });   // a second hello on the same connection
+  await m.until('welcome');
+  ok('a connection cannot become someone else by saying hello again', m.me.id !== a.me.id);
+  m.close(); m2.close();
+
+  // MP-8: a page on another site may not open a socket here
+  let refused = null;
+  try { const o = await new Client('Elsewhere').open(URL, { origin: 'http://evil.example' }); o.close(); refused = false; }
+  catch (e) { refused = true; }
+  const home = await new Client('Here').open(URL, { origin: 'http://127.0.0.1:' + port });
+  ok('a socket from another site is refused; one from this one is not', refused === true && !!home.sock);
+  home.close();
+  // MP-8: a flood of chat, at the real limits, is cut short and the sender told
+  const flood = new Player(null);
+  let let_ = 0;
+  for (let i = 0; i < 30; i++) if (flood.allowed('lobby.chat')) let_++;
+  ok('a flood of chat is cut short at the limit', let_ === LIMITS.chat.n, let_ + ' let through');
+  let msgs = 0;
+  for (let i = 0; i < 200; i++) if (flood.allowed('ping')) msgs++;
+  ok('...as is a flood of anything', msgs <= LIMITS.all.n, msgs + ' let through');
+
+  // MP-7: a room nobody is connected to is put away after a while
+  const idle = await new Client('Idle').open(URL);
+  idle.hello(); await idle.until('welcome');
+  idle.send('game.create', { name: 'Nobody home', settings: {}, force: force('pmc', 3, 1, 'ochre', 'Idle') });
+  await idle.till('a room', (x) => !!x.room);
+  const idleId = idle.room.id;
+  idle.close();
+  await wait(80);
+  const t0 = Date.now();
+  lobby.sweep(t0);
+  ok('a room just left is kept for now', lobby.rooms.has(idleId));
+  lobby.sweep(t0 + 11 * 60 * 1000);
+  ok('...and closed once nobody has been in it for ten minutes', !lobby.rooms.has(idleId));
 
   /* ---- tidy up ---- */
   a.close(); both.B.close();

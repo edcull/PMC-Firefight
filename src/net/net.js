@@ -14,20 +14,28 @@
 
   var P = root.PMCProto;
 
-  /* Who this browser is. The id outlives the tab so a refresh mid-battle walks
-     back into the same seat; the name is whatever the player last called
-     themselves. */
+  /* Who this browser is. A game server gives it a private id and a secret the
+     first time it says hello; both outlive the tab, so a refresh mid-battle walks
+     back into the same seat. (A battle in this tab only needs an id to call
+     itself by.) The name is whatever the player last called themselves. */
   function identity() {
-    var id = null, name = null;
+    var id = null, name = null, secret = null;
     try {
       id = localStorage.getItem('pmc-player-id');
+      secret = localStorage.getItem('pmc-player-secret');
       name = localStorage.getItem('pmc-player-name');
     } catch (e) { }
     if (!id) {
       id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       try { localStorage.setItem('pmc-player-id', id); } catch (e) { }
     }
-    return { id: id, name: name || '' };
+    return { id: id, secret: secret || '', name: name || '' };
+  }
+  // the id and secret a server has just issued, kept for next time
+  function keepKey(me, key) {
+    if (!key || !key.id || !key.secret) return;
+    me.id = key.id; me.secret = key.secret;
+    try { localStorage.setItem('pmc-player-id', key.id); localStorage.setItem('pmc-player-secret', key.secret); } catch (e) { }
   }
   function remember(name) {
     try { localStorage.setItem('pmc-player-name', name); } catch (e) { }
@@ -91,7 +99,7 @@
       net.live = true;
       net.tries = 0;
       net.emit('up', {});
-      s.send(JSON.stringify({ t: 'hello', playerId: net.me.id, name: net.me.name || 'Commander' }));
+      s.send(JSON.stringify({ t: 'hello', playerId: net.me.id, secret: net.me.secret, name: net.me.name || 'Commander' }));
       var q = net.queue; net.queue = [];
       q.forEach(function (m) { s.send(m); });
     };
@@ -99,6 +107,7 @@
       var msg;
       try { msg = JSON.parse(ev.data); } catch (e) { return; }
       if (!msg || !msg.t) return;
+      if (msg.t === 'welcome') keepKey(net.me, msg.key);
       net.emit(msg.t, msg);
     };
     s.onclose = function () {
@@ -131,7 +140,7 @@
 
   Remote.prototype.rename = function (name) {
     this.me.name = name; remember(name);
-    this.send('hello', { playerId: this.me.id, name: name });
+    this.send('hello', { playerId: this.me.id, secret: this.me.secret, name: name });
   };
 
   /* ================= the engine, in this tab ================= */

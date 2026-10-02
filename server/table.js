@@ -218,7 +218,8 @@ class Table {
          screen is a moment behind. Say why, and send the table again so they
          catch up. */
       player.send('refused', { intent: it, why: (res && res.why) || 'not allowed' });
-      this.resync(player);
+      // the whole table at most once a second: a stream of refusals is not a stream of tables (MP-8)
+      if (Date.now() - (player.resyncAt || 0) >= 1000) { player.resyncAt = Date.now(); this.resync(player); }
       return;
     }
     this.flush();

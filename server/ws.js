@@ -180,6 +180,13 @@ class Socket extends EventEmitter {
 /* Take over the upgrade on `path` and hand each accepted socket to `onOpen`.
    A heartbeat runs underneath: a client that misses two pings is dropped, which
    is how a closed laptop lid gets noticed. */
+// whether a browser's Origin is the host the request came to
+function sameHost(origin, req) {
+  let host;
+  try { host = new URL(origin).host; } catch (e) { return false; }
+  return !!host && host === String(req.headers.host || '');
+}
+
 function attach(server, path, onOpen, opts) {
   opts = opts || {};
   const sockets = new Set();
@@ -188,6 +195,14 @@ function attach(server, path, onOpen, opts) {
     const url = (req.url || '').split('?')[0];
     if (url.replace(/\/$/, '') !== path.replace(/\/$/, '')) {
       sock.destroy();
+      return;
+    }
+    /* A page on another site may not open a socket here with this browser's
+       standing (MP-8): the origin has to be this server's own, unless it is let
+       in by name. A client with no Origin (not a browser) is let through. */
+    const origin = req.headers.origin;
+    if (origin && !(opts.allowOrigin ? opts.allowOrigin(origin, req) : sameHost(origin, req))) {
+      sock.end('HTTP/1.1 403 Forbidden\r\n\r\n');
       return;
     }
     const key = req.headers['sec-websocket-key'];
@@ -224,7 +239,8 @@ function attach(server, path, onOpen, opts) {
 /* The other end of the same wire. Node has no WebSocket client of its own that
    this code can lean on without a dependency, and the test suite needs one to
    play a whole game against the server the way a browser would. */
-function connect(url, done) {
+function connect(url, done, opts) {
+  opts = opts || {};
   const net = require('net');
   const u = new URL(url);
   const key = crypto.randomBytes(16).toString('base64');
@@ -242,7 +258,8 @@ function connect(url, done) {
       'Upgrade: websocket\r\n' +
       'Connection: Upgrade\r\n' +
       'Sec-WebSocket-Key: ' + key + '\r\n' +
-      'Sec-WebSocket-Version: 13\r\n\r\n');
+      'Sec-WebSocket-Version: 13\r\n' +
+      (opts.origin ? 'Origin: ' + opts.origin + '\r\n' : '') + '\r\n');
   });
 
   function onHead(chunk) {
@@ -265,4 +282,5 @@ function connect(url, done) {
   raw.on('error', function (e) { if (!sock) done(e); });
 }
 
-module.exports = { attach: attach, connect: connect, Socket: Socket, frame: frame };
+module.exports = {
+  sameHost: sameHost, attach: attach, connect: connect, Socket: Socket, frame: frame };

@@ -125,3 +125,14 @@ Phases 0–2 can run alongside the hotseat work; phase 3 waits for the hotseat c
 5. **Abandoning a battle:** a forfeit (the other side wins, and in a campaign the aftermath is applied), or no result?
 6. **Campaign pace:** between battles each player acts whenever they like (asynchronous), with only the battle itself needing both online — or both online for the whole turn?
 7. **The other campaign stores** (the browser's own copy and the artifact database): keep them for solo and hotseat, and use the server only for online campaigns?
+
+## 6. Progress
+
+| Item | Outcome | Where |
+|---|---|---|
+| MP-1 | **Fixed.** A malformed percent-escape is refused (400, or 403 for a file); a request that throws is answered 500 and logged; anything uncaught is logged and the server carries on; SIGTERM/SIGINT close it cleanly. | `server/app.js`, `server/static.js`, `server.js` |
+| MP-2 (interim) | **Fixed.** The server issues a private id and a secret at the first `hello`; a returning browser presents both (compared in constant time). Rooms, presence messages and kicks use a separate public id. A second `hello` on a connection changes only the name. | `server/lobby.js`, `src/net/net.js` |
+| MP-3 (interim) | **Fixed, differently.** Rather than removing CORS (the game opened from files still saves to a server), a campaign's first save is given a key, kept hashed beside it, and every later save or delete must send it (`x-campaign-key`), so another site's page cannot write. Writes are atomic (a temporary file renamed over). The board's names were already escaped (HB-13); one more, a unit's name on its "aboard" chip, now is. | `server/campaigns.js`, `server/app.js`, `src/view/dossier.js`, `src/view/panels.js` |
+| MP-7 | **Fixed.** A finished battle puts the room back in setup with both forces kept, for a rematch; a battle that cannot be laid out goes back to setup with the reason; a room nobody is connected to is closed after 10 minutes (a battle after 6 hours, until phase 2 stores battles). | `server/lobby.js` |
+| MP-8 | **Fixed.** The socket's `Origin` must be this server's own (its Host, a proxy's `X-Forwarded-Host`, or `ALLOWED_ORIGINS`); per-connection limits (40 messages a second, 8 chat lines in 10 seconds, 12 rooms a minute) drop and report the excess and close a connection that keeps on; a refused intent resends the whole table at most once a second. | `server/ws.js`, `server/lobby.js`, `server/table.js`, `server.js` |
+| Phase 0 tests | `servertest.js`: a bad URL, campaign keys, a rematch, private ids never shown, spoofed hellos, a foreign origin, chat and message floods, an idle room closed. `netplay.js` brings a browser back with its own id and secret. | `test/unit/servertest.js`, `test/browser/netplay.js` |

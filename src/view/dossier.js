@@ -74,13 +74,25 @@
         return fetch(BACKENDS.server.url(), { headers: { 'accept': 'application/json' } })
           .then(function (r) { return r.ok ? r.json() : null; });
       },
+      /* The server gives the first browser to save a campaign a key, and wants it
+         back with every later save or delete (it stops another site's page from
+         overwriting the campaign). Kept per server. */
+      key: function (v) {
+        var k = 'pmc-campaign-key:' + BACKENDS.server.url();
+        try { if (v === undefined) return localStorage.getItem(k) || ''; if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { }
+        return '';
+      },
       save: function (c) {
         return fetch(BACKENDS.server.url(), {
-          method: 'PUT', headers: { 'content-type': 'application/json' },
+          method: 'PUT', headers: { 'content-type': 'application/json', 'x-campaign-key': BACKENDS.server.key() },
           body: JSON.stringify(c)
-        }).then(function (r) { if (!r.ok) throw new Error(r.status); return true; });
+        }).then(function (r) { if (!r.ok) throw new Error(r.status === 403 ? 'the server says this campaign is someone else\u2019s' : r.status); return r.json(); })
+          .then(function (got) { if (got && got.key) BACKENDS.server.key(got.key); return true; });
       },
-      clear: function () { return fetch(BACKENDS.server.url(), { method: 'DELETE' }); }
+      clear: function () {
+        return fetch(BACKENDS.server.url(), { method: 'DELETE', headers: { 'x-campaign-key': BACKENDS.server.key() } })
+          .then(function (r) { if (r.ok) BACKENDS.server.key(null); return r.ok; });
+      }
     }
   };
   var ORDER = ['local', 'db', 'server'];

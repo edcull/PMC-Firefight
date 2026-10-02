@@ -224,14 +224,18 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
   // the second player's browser goes away, then comes back
   const toasts = (p) => p.evaluate(() => [...document.querySelectorAll('#toasts .toast')].map(t => t.textContent));
+  // what this browser keeps of itself: the id and secret the server gave it
+  const key2 = await p2.evaluate(() => ({ id: localStorage.getItem('pmc-player-id'), secret: localStorage.getItem('pmc-player-secret') }));
   await ctx2.close();
   await wait(1200);
   const dropped = await toasts(p1);
   ok('the other player dropping out is said on the board', dropped.some(t => /lost connection/.test(t)), dropped.join(' | ') || 'no toast');
   ctx2 = await b.newContext({ viewport: { width: 1340, height: 900 } });
-  // the same browser, as far as the server knows: the player id is kept in storage
-  const id2 = await p1.evaluate(() => window.__room && window.__room.seats.B && window.__room.seats.B.id);
-  await ctx2.addInitScript((id) => { try { localStorage.setItem('pmc-player-id', id); } catch (e) { } }, id2);
+  // the same browser, as far as the server knows: its id and secret kept in storage
+  await ctx2.addInitScript((k) => { try { localStorage.setItem('pmc-player-id', k.id); localStorage.setItem('pmc-player-secret', k.secret); } catch (e) { } }, key2);
+  // ...where another, with only the id the room shows, gets nowhere (multiplayer plan MP-2)
+  const pubB = await p1.evaluate(() => window.__room && window.__room.seats.B && window.__room.seats.B.id);
+  ok('the id a room shows is not the one kept in the browser', !!pubB && pubB !== key2.id && !!key2.secret, pubB + ' / ' + key2.id);
   p2 = await ctx2.newPage();
   p2.on('pageerror', e => errs.push(e.message));
   await p2.goto('http://localhost:' + PORT + '/');
