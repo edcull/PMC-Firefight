@@ -140,7 +140,7 @@
       /* Defensive fire "is resolved immediately or as soon as the charging unit
          enters the range and LoS" (p. 33): so it is looked for all along the way
          in, and a charge that is stopped stops where it was shot. */
-      var fireAt = null;
+      var fireAt = null, fireAux = false;
       if (t.alive && status(t) === 'ready' && t.fp !== null) {
         var route = (opts.path || [{ x: a.x, y: a.y }]).slice();
         var x0 = a.x, y0 = a.y, walk = [];
@@ -158,15 +158,19 @@
             walk.push({ x: t.x - (t.x - end.x) / cd * r0, y: t.y - (t.y - end.y) / cd * r0 });
           }
         }
+        /* With its main weapon, or — where that cannot bear (inside its Minimum
+           Range, or a Specialisation the charger is not) — its Auxiliary weapons,
+           which "can still be used against all targets" (pp. 57, 59). */
         for (var wp = 0; wp < walk.length && !fireAt; wp++) {
           if (!a.bld) { a.x = walk[wp].x; a.y = walk[wp].y; }
           if (unitDist(a, t) <= t.range && canShoot(state, t, a, 'defensive', {})) fireAt = walk[wp];
+          else if (!isFlying(t) && canShoot(state, t, a, 'defensive', { aux: true })) { fireAt = walk[wp]; fireAux = true; }   // aircraft carry none (p. 32)
         }
         a.x = x0; a.y = y0;
       }
       if (fireAt) {
         if (!a.bld) { a.x = fireAt.x; a.y = fireAt.y; }
-        var df = shoot(state, t, a, 'defensive', {});
+        var df = shoot(state, t, a, 'defensive', fireAux ? { aux: true } : {});
         df.log.forEach(function (l) { log.push(l); });
         if (!a.alive) return { log: log, ok: false, wreck: wrecked };
         var after = status(a);

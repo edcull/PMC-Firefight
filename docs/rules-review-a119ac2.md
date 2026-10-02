@@ -704,3 +704,9 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | SOL-5 Sabotage: 3 objectives at PL1 | Owner to say |
 | SOL-7 Decapitation: rolled Command Units become extra leaders | Change: only the scenario's leaders |
 | APX-1 hovercraft cross shallow water free | Keep |
+
+## 8. Low findings: progress
+
+| Finding | Outcome | Where |
+|---|---|---|
+| BAT-2 No Auxiliary defensive fire | **Fixed.** Where the main weapon cannot bear (inside its Minimum Range, or a Specialisation the charger is not), the defender fires its Auxiliary weapons instead. Aircraft carry none. | `assault.js` (`assault`); test `lowcombat.js` |

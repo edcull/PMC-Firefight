@@ -222,5 +222,20 @@ console.log('\nTER-1 Only a unit that may garrison occupies the building it wins
   });
 })();
 
+console.log('\nBAT-2 Defensive fire falls back on the Auxiliary weapons (pp. 30, 57, 59)');
+(function () {
+  [['mortarteam', 'inside its Minimum Range'], ['sam', 'Specialisation (air) against infantry']].forEach(([key, why]) => {
+    let shots = 0;
+    for (let i = 0; i < 20; i++) {
+      const def = unit(key, 'B', 20, 20), atk = unit('regular', 'A', 26, 20);
+      const st = world([def, atk]);
+      const r = R.assault(st, atk, def, {});
+      if (r.log.some((l) => /fires|Auxiliary|defensive/i.test(l.text || '') && (l.text || '').indexOf(def.label) >= 0)) shots++;
+    }
+    ok('a charged ' + def0(key) + ' fires its Auxiliary weapons (' + why + ')', shots === 20, shots + ' of 20 charges drew fire');
+  });
+  function def0(k) { return R.profile(k).name; }
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
