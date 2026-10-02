@@ -350,6 +350,7 @@ hotseatcontract.js a hotseat contract kept across the hub and a reload, roles se
 hotseatloop.js     a hotseat campaign turn: both contracts, the battle, each player's questions and aftermath
 hotseathub.js      a hotseat hub: each player's own dossier, and the campaign's end
 coopdeploy.js      a co-op game's deployment: a commando at a time, the order rolled, the split shared
+campaccount.js     a campaign kept by a signed-in player's account, across two browsers, a stale save refused
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract

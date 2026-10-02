@@ -97,6 +97,7 @@ function create(opts) {
 
   return {
     COOKIE: COOKIE,
+    db: db,                                      // for the routes that keep a signed-in player's things (app.js)
 
     async register(name, pass, ip) {
       if (!allow('register', ip)) return no('too many accounts made from here lately — try again later', 429);

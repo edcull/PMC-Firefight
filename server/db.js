@@ -58,7 +58,22 @@ const MIGRATIONS = [
      intent  TEXT NOT NULL,
      at      INTEGER NOT NULL,
      PRIMARY KEY (game_id, seq)
-   );`
+   );`,
+  /* 3: a signed-in player's campaigns, kept whole (decision 7), with the version
+     they were last saved at: a save made from an older copy is refused, so two
+     devices never quietly overwrite each other (phase 3a). */
+  `CREATE TABLE campaigns (
+     id      INTEGER PRIMARY KEY,
+     owner   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     kind    TEXT NOT NULL,           -- solo | hotseat (online: phase 3b)
+     name    TEXT NOT NULL,
+     turn    INTEGER NOT NULL DEFAULT 0,
+     state   TEXT NOT NULL,           -- the campaign (JSON)
+     version INTEGER NOT NULL DEFAULT 1,
+     created INTEGER NOT NULL,
+     updated INTEGER NOT NULL
+   );
+   CREATE INDEX campaigns_owner ON campaigns(owner, updated);`
 ];
 
 function open(file) {
@@ -107,7 +122,12 @@ function wrap(db) {
     touch: db.prepare('UPDATE games SET updated = ? WHERE id = ?'),
     intents: db.prepare('SELECT seat, intent FROM game_intents WHERE game_id = ? ORDER BY seq'),
     endGame: db.prepare('UPDATE games SET status = ?, result = ?, updated = ? WHERE id = ? AND status = \'battle\''),
-    mine: db.prepare('SELECT id, code, name, status, seats, seat_a, seat_b, result, created, updated FROM games WHERE seat_a = ? OR seat_b = ? ORDER BY updated DESC LIMIT ?')
+    mine: db.prepare('SELECT id, code, name, status, seats, seat_a, seat_b, result, created, updated FROM games WHERE seat_a = ? OR seat_b = ? ORDER BY updated DESC LIMIT ?'),
+    addCampaign: db.prepare('INSERT INTO campaigns (owner, kind, name, turn, state, version, created, updated) VALUES (?, ?, ?, ?, ?, 1, ?, ?)'),
+    campaign: db.prepare('SELECT * FROM campaigns WHERE id = ?'),
+    campaignsOf: db.prepare('SELECT id, kind, name, turn, version, created, updated FROM campaigns WHERE owner = ? ORDER BY updated DESC'),
+    saveCampaign: db.prepare('UPDATE campaigns SET state = ?, name = ?, turn = ?, kind = ?, version = version + 1, updated = ? WHERE id = ? AND owner = ? AND version = ?'),
+    dropCampaign: db.prepare('DELETE FROM campaigns WHERE id = ? AND owner = ?')
   };
   const addIntent = db.transaction((gameId, seq, seat, it, at) => {
     q.addIntent.run(gameId, seq, seat, JSON.stringify(it), at);
@@ -148,6 +168,13 @@ function wrap(db) {
     endGame: (id, status, result, at) => q.endGame.run(status, JSON.stringify(result), at, id).changes > 0,
     // a player's games, the latest first (the cfg left out: it is large, and not wanted for a list)
     mine: (who, n) => q.mine.all(who, who, n || 20).map((g) => Object.assign({}, g, { seats: JSON.parse(g.seats), result: g.result ? JSON.parse(g.result) : null })),
+    // ---- campaigns (phase 3a) ----
+    addCampaign: (c) => q.addCampaign.run(c.owner, c.kind, c.name, c.turn || 0, JSON.stringify(c.state), c.at, c.at).lastInsertRowid,
+    campaign: (id) => { const c = q.campaign.get(id); return c && Object.assign({}, c, { state: JSON.parse(c.state) }); },
+    campaignsOf: (owner) => q.campaignsOf.all(owner),
+    // saved only over the version it was read at: false if someone has saved it since (or it is not theirs)
+    saveCampaign: (c) => q.saveCampaign.run(JSON.stringify(c.state), c.name, c.turn || 0, c.kind, c.at, c.id, c.owner, c.version).changes > 0,
+    dropCampaign: (id, owner) => q.dropCampaign.run(id, owner).changes > 0,
     // a copy of the whole database, consistent, while it is in use (the nightly backup)
     backup: (to) => db.backup(to),
     close: () => db.close()

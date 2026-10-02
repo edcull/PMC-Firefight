@@ -496,6 +496,38 @@ async function main() {
   const offsite = await req('POST', '/api/login', Object.assign({ origin: 'http://evil.example' }, json), JSON.stringify({ name: 'Webster', password: 'long enough' }));
   ok('a sign-in posted from another site\'s page is refused', offsite.code === 403, offsite.code);
 
+  // phase 3a: a signed-in player's campaigns kept on the server, each save over the version it was read at
+  const sessOf = async (name) => {
+    const r = await req('POST', '/api/register', json, JSON.stringify({ name: name, password: 'password ' + name }));
+    return String((r.headers || {})['set-cookie'] || '').split(';')[0];
+  };
+  const owner = await sessOf('Keeper'), other = await sessOf('Snoop');
+  const withC = (c) => Object.assign({ cookie: c }, json);
+  const camp1 = { mode: 'solo', turn: 2, companies: { A: { name: 'Iron Wolves', roster: [] } }, log: [] };
+  const made = await req('POST', '/api/campaigns', withC(owner), JSON.stringify({ state: camp1 }));
+  const cid = made.code === 200 && JSON.parse(made.body).id;
+  const listed = await req('GET', '/api/campaigns', { cookie: owner });
+  ok('a signed-in player\'s campaign is kept on the server, and listed as theirs', !!cid && JSON.parse(listed.body).campaigns.some((c) => c.id === cid && c.name === 'Iron Wolves' && c.turn === 2), made.code + ' ' + listed.body);
+  const v2 = await req('PUT', '/api/campaigns/' + cid, withC(owner), JSON.stringify({ state: Object.assign({}, camp1, { turn: 3 }), version: 1 }));
+  const stale = await req('PUT', '/api/campaigns/' + cid, withC(owner), JSON.stringify({ state: Object.assign({}, camp1, { turn: 4 }), version: 1 }));
+  const st409 = stale.code === 409 && JSON.parse(stale.body);
+  ok('...saved over the version it was read at; a save from an older copy is refused, the newer one handed back',
+    v2.code === 200 && JSON.parse(v2.body).version === 2 && !!st409 && st409.version === 2 && st409.state.turn === 3, v2.code + ' ' + stale.code);
+  const peek = await req('GET', '/api/campaigns/' + cid, { cookie: other });
+  const anonList = await req('GET', '/api/campaigns', {});
+  const g = await req('POST', '/api/guest', json, JSON.stringify({ name: 'Passer By' }));
+  const guestCamp = await req('POST', '/api/campaigns', withC(String(g.headers['set-cookie']).split(';')[0]), JSON.stringify({ state: camp1 }));
+  ok('...nobody else\'s to read; nobody signed out, nor a guest, keeps one', peek.code === 404 && anonList.code === 401 && guestCamp.code === 401, peek.code + ' ' + anonList.code + ' ' + guestCamp.code);
+  // an old campaign file, taken into the account by whoever holds its key
+  const legacyName = 'old' + Date.now().toString(36);
+  const legacy = await req('PUT', '/campaign/' + legacyName, json, JSON.stringify(camp1));
+  const lkey = JSON.parse(legacy.body).key;
+  const badImport = await req('POST', '/api/campaigns/import', withC(owner), JSON.stringify({ name: legacyName, key: 'not-it' }));
+  const goodImport = await req('POST', '/api/campaigns/import', withC(owner), JSON.stringify({ name: legacyName, key: lkey }));
+  ok('an old campaign file is taken into an account with its key, and not without', badImport.code === 403 && goodImport.code === 200, badImport.code + ' ' + goodImport.code);
+  const gone = await req('DELETE', '/api/campaigns/' + cid, { cookie: owner });
+  ok('...and a campaign deleted is gone', gone.code === 200 && (await req('GET', '/api/campaigns/' + cid, { cookie: owner })).code === 404);
+
   // MP-8: a page on another site may not open a socket here
   let refused = null;
   try { const o = await new Client('Elsewhere').open(URL, { origin: 'http://evil.example' }); o.close(); refused = false; }

@@ -22,6 +22,7 @@ One dependency, `better-sqlite3`, for the database (`npm ci --omit=dev`). One po
 | `GET /` | the game — `index.html` and the scripts beside it |
 | `GET/PUT/DELETE /campaign[/name]`, `GET /campaigns` | campaigns, kept on the server |
 | `POST /api/register`, `/api/login`, `/api/guest`, `/api/logout`, `/api/password`; `GET /api/me` | accounts, and a guest's name for a battle |
+| `GET/POST /api/campaigns`, `GET/PUT/DELETE /api/campaigns/<id>`, `POST /api/campaigns/import` | a signed-in player's own campaigns, each save over the version it was read at |
 | `ws:// /ws` | the lobby, and every battle in progress (signed in, or as a guest) |
 
 The server's own source, the saved campaigns and anything hidden are not served.

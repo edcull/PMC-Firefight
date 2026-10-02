@@ -55,7 +55,10 @@
       }
       var A = E.camp.companies.A, B = E.camp.companies.B;
       var rivals = E.camp.mode === 'hotseat' ? [] : (E.camp.rivals || [B]), n = rivals.length;
-      if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) + '</p>';
+      if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) +
+        // saved on another device since: which copy to go on with (decision 7)
+        (Store.conflict && Store.conflict() ? ' <button type="button" class="lnk" data-go="storeuse">Use that copy</button> <button type="button" class="lnk" data-go="storekeep">Keep this one</button>' : '') +
+        '</p>';
       // in hotseat, the player whose force the hub shows and works on (HC-1)
       var hs = E.hubSide, cur = E.camp.companies[hs] || A;
       /* A force that can no longer field an army, and cannot recruit back to one, ends

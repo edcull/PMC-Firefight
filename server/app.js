@@ -111,10 +111,81 @@ function create(opts) {
     return json(res, 405, { error: 'method not allowed' }), true;
   }
 
+  /* A signed-in player's own campaigns (phase 3a, decision 7), kept whole, each
+     with a version: a save carries the version it was read at, and one made from
+     an older copy is refused (409) with the newer one, so two devices never
+     quietly overwrite each other. Accounts only: a guest has nowhere to keep one. */
+  const CAMP_KINDS = ['solo', 'hotseat'];
+  function campaignsApi(req, res, url) {
+    const m = /^\/api\/campaigns(?:\/(\d+|import))?$/.exec(url);
+    if (!m) return false;
+    const send = (code, body) => {
+      res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(body));
+    };
+    const me = auth && auth.session(Auth.tokenFrom(req));
+    if (!me || me.guest) return send(401, { error: 'sign in to keep campaigns on the server' }), true;
+    if (req.method !== 'GET' && req.headers.origin && !allowOrigin(req.headers.origin, req)) return send(403, { error: 'not from here' }), true;
+    const db = auth.db, id = m[1] && m[1] !== 'import' ? +m[1] : null, at = Date.now();
+    // a campaign as it is saved keeps the second force among the rivals (campaign.js forSave)
+    const nameOf = (st) => {
+      const B = (st.companies && st.companies.B) || (st.rivals || [])[st.facing || 0];
+      return String((st.companies && st.companies.A && st.companies.A.name) || 'Campaign').slice(0, 60) +
+        (st.mode === 'hotseat' && B && B.name ? ' v ' + String(B.name).slice(0, 60) : '');
+    };
+    const kindOf = (st) => CAMP_KINDS.indexOf(st.mode) >= 0 ? st.mode : 'solo';
+    if (!id && m[1] !== 'import') {
+      if (req.method === 'GET') return send(200, { campaigns: db.campaignsOf(me.userId) }), true;
+      if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
+      readBody(req, (body) => {
+        let st;
+        try { st = JSON.parse(body).state; } catch (e) { return send(400, { error: 'that is not JSON' }); }
+        if (!st || !st.companies) return send(400, { error: 'that is not a campaign' });
+        if (db.campaignsOf(me.userId).length >= 50) return send(400, { error: 'that is as many campaigns as one account keeps — delete one first' });
+        const nid = db.addCampaign({ owner: me.userId, kind: kindOf(st), name: nameOf(st), turn: st.turn, state: st, at: at });
+        send(200, { id: nid, version: 1 });
+      });
+      return true;
+    }
+    /* An old campaign file (kept as JSON before there were accounts) taken into
+       this account by whoever holds its key. */
+    if (m[1] === 'import') {
+      if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
+      readBody(req, (body) => {
+        let b;
+        try { b = JSON.parse(body); } catch (e) { return send(400, { error: 'that is not JSON' }); }
+        const st = campaigns.get(String(b.name || ''));
+        if (!st) return send(404, { error: 'no campaign called ' + b.name });
+        if (!campaigns.mayWrite(b.name, String(b.key || ''))) return send(403, { error: 'that campaign is someone else\u2019s' });
+        const nid = db.addCampaign({ owner: me.userId, kind: kindOf(st), name: nameOf(st), turn: st.turn, state: st, at: at });
+        send(200, { id: nid, version: 1 });
+      });
+      return true;
+    }
+    const row = db.campaign(id);
+    if (!row || row.owner !== me.userId) return send(404, { error: 'no such campaign of yours' }), true;
+    if (req.method === 'GET') return send(200, { id: row.id, kind: row.kind, version: row.version, state: row.state }), true;
+    if (req.method === 'DELETE') return send(200, { ok: db.dropCampaign(id, me.userId) }), true;
+    if (req.method !== 'PUT') return send(405, { error: 'method not allowed' }), true;
+    readBody(req, (body) => {
+      if (body === null) return send(413, { error: 'too large' });
+      let b;
+      try { b = JSON.parse(body); } catch (e) { return send(400, { error: 'that is not JSON' }); }
+      if (!b.state || !b.state.companies) return send(400, { error: 'that is not a campaign' });
+      const okd = db.saveCampaign({ id: id, owner: me.userId, version: +b.version, state: b.state, name: nameOf(b.state), turn: b.state.turn, kind: kindOf(b.state), at: at });
+      if (okd) return send(200, { version: +b.version + 1 });
+      // saved from an older copy: refused, and the newer one handed back
+      const now = db.campaign(id);
+      send(409, { error: 'this campaign was saved somewhere else since', version: now.version, state: now.state });
+    });
+    return true;
+  }
+
   return function handle(req, res) {
     const url = (req.url || '/').split('?')[0];
     if (req.method === 'OPTIONS') return json(res, 204);
     if (api(req, res, url)) return;
+    if (campaignsApi(req, res, url)) return;
     if (url === '/campaigns') return json(res, 200, { campaigns: campaigns.list() });
     if (campaignRoute(req, res, url)) return;
     if (url === '/health') return json(res, 200, { ok: true, rooms: lobby.rooms.size, players: lobby.players.size });
