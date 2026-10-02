@@ -341,16 +341,18 @@
       }
       if (B.state.phase === 'deploy') {
         var pending = deployNext();
-        if (!pending) return;
         // before continuing to the deployment, the table is looked over, not placed on
         var rdy = B.state.deployReady;
-        if (rdy && (rdy[pending.side] === false || Object.keys(rdy).some(function (s) { return rdy[s] === false; }))) return;
+        if (rdy && Object.keys(rdy).some(function (s) { return rdy[s] === false; })) return;
         /* Tapping a model already on the table picks that one up instead — the
-           natural way to shuffle a line before the first turn. */
-        var under = deployRoster(pending.side).filter(function (u) {
-          return u.x >= 0 && u.id !== pending.id && R.inches(u.x, u.y, p.x, p.y) < 1.1;
+           natural way to shuffle a line before the first turn, and with everything
+           down, the way to move one again. */
+        var pside = pending ? pending.side : (B.placingSide ? B.placingSide() : null);
+        var under = deployRoster(pside || undefined).filter(function (u) {
+          return u.x >= 0 && (!pending || u.id !== pending.id) && (!B.seats || B.seats.indexOf(u.side) >= 0) && R.inches(u.x, u.y, p.x, p.y) < 1.1;
         })[0];
         if (under) { pickToDeploy(under.id); return; }
+        if (!pending) return;
         /* A building in the deployment zone may be garrisoned from the start: a
            tap on one puts the unit inside, if it is empty and the unit can go in. */
         var gs = garrisonAt(p.x, p.y);

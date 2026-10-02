@@ -958,6 +958,9 @@
        shifted, until he calls the deployment finished. */
     function deployList(side) {
       var roster = deployRoster(side);
+      // a co-op game: the commando being put down, until both are (then every unit, to shift)
+      var cow = B.state.solo && B.state.solo.coop && B.Q && B.Q.deployOwner ? B.Q.deployOwner() : null;
+      if (cow) roster = roster.filter(function (u) { return (u.owner || 1) === cow; });
       if (!roster.length) return '';
       var next = deployNext();
       var rows = roster.map(function (u) {

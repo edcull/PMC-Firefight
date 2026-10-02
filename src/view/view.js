@@ -504,6 +504,11 @@
     function handoverKey() {
       var st = B.state;
       if (!st || st.over || window.PMC_HANDOVER_OFF) return null;
+      // a co-op game sets up a commando at a time: the second to deploy is handed the device when their turn comes
+      if (st.solo && st.solo.coop) {
+        var ow = st.phase === 'deploy' && B.Q && B.Q.deployOwner ? B.Q.deployOwner() : null;
+        return ow && ow !== (st.solo.deployFirst || 1) ? 'P' + ow : null;
+      }
       if (!B.seats || B.seats.length < 2) return null;
       if (B.replaying && B.replaying()) return undefined;          // what just happened is still being shown
       var sd = st.phase === 'deploy' && st.swapStage && st.swapAsk ? st.swapAsk.side
@@ -527,8 +532,9 @@
           ev.preventDefault(); box.click();
         });
       }
-      var st = B.state, name = plainName(k);
-      var CO = (ISO && ISO.COLOURS) || {}, c = CO[k === 'A' ? st.cfg.colourA : st.cfg.colourB];
+      var st = B.state, owner = k.charAt(0) === 'P' ? +k.slice(1) : 0;
+      var name = owner ? soloOwnerName(owner) : plainName(k);
+      var CO = (ISO && ISO.COLOURS) || {}, c = CO[owner ? (owner === 2 ? st.cfg.colourC : st.cfg.colourA) : k === 'A' ? st.cfg.colourA : st.cfg.colourB];
       box.setAttribute('data-who', k);
       if (box.style && box.style.setProperty) {
         box.style.setProperty('--ho-dark', c ? c.dark : '#222');
@@ -619,6 +625,11 @@
         var su = (B.state.placeAsk || B.state.minePick).side;
         act.textContent = 'Setting up: ' + (su === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB);
         act.className = 'pill pill-' + su;
+      } else if (B.state.phase === 'deploy' && B.state.solo && B.state.solo.coop && B.Q && B.Q.deployOwner && B.Q.deployOwner()) {
+        // a co-op game: which player's commando is being put down, in that player's colours
+        var cow = B.Q.deployOwner();
+        act.textContent = 'Deploying: ' + soloOwnerName(cow);
+        act.className = 'pill pill-' + (cow === 2 ? 'C' : 'P1');
       } else if (B.state.phase === 'deploy') {
         // in a hotseat the header says whose turn it is to place a unit
         var dn = B.state.cfg.mode === 'hotseat' ? deployNext() : null;
@@ -670,7 +681,8 @@
       /* Whose go it is, on the header itself: a bar of that side's colour along
          its foot (the phone shows the pill too, whatever the kind of game). */
       if (hdrEl) {
-        var going = B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
+        var cdw = B.state.phase === 'deploy' && B.state.solo && B.state.solo.coop && B.Q && B.Q.deployOwner ? B.Q.deployOwner() : null;
+        var going = cdw ? (cdw === 2 ? 'C' : 'P1') : B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
           ? (B.state.activeOwner === 2 ? 'C' : 'P1') : B.state.activeSide) : null;
         ['A', 'B', 'C', 'P1'].forEach(function (k) { hdrEl.classList.toggle('turn-' + k, going === k); });
         var goer = B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : B.state.activeSide;

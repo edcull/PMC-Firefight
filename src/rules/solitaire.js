@@ -1066,10 +1066,13 @@
       });
     },
     startBlock: function (state) {
-      var placed = state.units.filter(function (u) { return u.side === 'A' && u.alive && u.x >= 0 && !u.aboard && !u.reserve; });
-      var n = placed.filter(function (u) { return u.y < H / 2; }).length, s2 = placed.length - n;
+      var mine = state.units.filter(function (u) { return u.side === 'A' && u.alive && !u.aboard && !u.reserve; });
+      // said once everything is down: until then the other half may still be to come (a co-op's second commando)
+      if (mine.some(function (u) { return u.x < 0; })) return null;
+      var n = mine.filter(function (u) { return u.y < H / 2; }).length, s2 = mine.length - n;
       if (Math.abs(n - s2) <= 1) return null;
-      return 'Split the force more or less equally either side of the road: ' + n + ' to the north, ' + s2 + ' to the south.';
+      return (state.solo && state.solo.coop ? 'Between the two commandos, split' : 'Split') +
+        ' the force more or less equally either side of the road: ' + n + ' to the north, ' + s2 + ' to the south.';
     },
     /* The units settle into their hides: on 1-2 a unit is D6" nearer the road,
        on 5-6 D6" further from it. */

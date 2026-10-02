@@ -335,7 +335,9 @@
       solo: cfg.solo ? {
         coop: !!cfg.solo.coop, owners: cfg.solo.coop ? [1, 2] : [1],
         faction: cfg.solo.faction || 'pmc', opFaction: cfg.solo.opFaction || 'pmc',
-        names: cfg.solo.names || ['Player 1', 'Player 2']
+        names: cfg.solo.names || ['Player 1', 'Player 2'],
+        // which commando is set up first: rolled (a co-op game's two deploy one after the other)
+        deployFirst: cfg.solo.coop && Math.random() < 0.5 ? 2 : 1
       } : null
     };
     state.cfg.aiSides = cfg.mode === 'demo' ? ['A', 'B'] : cfg.mode === 'ai' ? ['B'] : [];
@@ -626,6 +628,11 @@
      the deployment, and the opening cards. */
   function afterTerrain(built) {
     var cfg = state.cfg, scenId = cfg.scenario;
+    // a co-op game: which commando sets up first, as rolled
+    if (state.solo && state.solo.coop) {
+      var df = state.solo.deployFirst || 1;
+      logLine('note', state.solo.names[df - 1] + ' sets up first (rolled), then ' + state.solo.names[2 - df] + '.');
+    }
     /* Terrorist (p. 112): a destructible piece other than the mission objective
        is quietly mined before deployment. Only the side that walked that Path
        knows which one — and only its leaders can set it off. */
@@ -1692,9 +1699,16 @@
       return yes;
     });
     /* ---- deployment ---- */
-    on('deploypick', 'deploy', function (side, it) {
+    on('deploypick', null, function (side, it) {
+      if (state.phase !== 'deploy') return no('not deploying');
       var p = unitOf(it.id, side);
       if (!p) return no('no such unit');
+      /* On a side's turn to place: any unit of its own. With everyone down, before the
+         battle begins: one of its own already on the table, picked up to shift it. */
+      if (!mayDeploy(side) && !(K.placingSide() === null && p.x >= 0 && mayArrange(side))) return no('not your turn to place');
+      // co-op: the other player's units wait until this one has set up
+      var own = K.deployOwner();
+      if (own && p.x < 0 && (p.owner || 1) !== own) return no('the other commando sets up next');
       K.pickToDeploy(p.id);
       return yes;
     });
@@ -2210,6 +2224,8 @@
     function deployAt(side, it) {
       var pending = it.id ? K.byId(it.id) : K.deployNext();
       if (!pending || pending.side !== side) return no('no such unit');
+      var downOwn = K.deployOwner();
+      if (downOwn && pending.x < 0 && (pending.owner || 1) !== downOwn) return no('the other commando sets up next');
       /* A unit the scenario holds back is brought on through the split; one held
          for Battlefield Insertion, set down on the table, deploys like the rest
          (p. 56: it "can" come in that way, not must). */
@@ -2274,6 +2290,7 @@
         eligible: function (s) { return eligible(s); },
         deployOK: function (s, x, y, u) { return K.deployOK(s, x, y, u); },
         deployNext: K.deployNext,
+        deployOwner: K.deployOwner,
         deployRoster: K.deployRoster,
         deploymentDone: K.deploymentDone,
         splitFor: K.splitFor, insertionFor: K.insertionFor,

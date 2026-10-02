@@ -975,7 +975,7 @@
     doSupport: doSupport, doTeleport: doTeleport, doWave: doWave, finishTeleport: finishTeleport,
     garrisonAt: garrisonAt, garrisonable: garrisonable, isAI: isAI, liftOf: liftOf,
     lookAtDeployment: lookAtDeployment, moveBonus: moveBonus, nearestDeploySpot: nearestDeploySpot,
-    onTable: onTable, pickToDeploy: pickToDeploy, placeInsertion: placeInsertion, relocTap: relocTap,
+    onTable: onTable, pickToDeploy: pickToDeploy, placeInsertion: placeInsertion, placingSide: placingSide, relocTap: relocTap,
     select: select, send: send, terrainAct: terrainAct, terrainTap: terrainTap, watchUnit: watchUnit,
     ISO: ISO, R: R, SFX: SFX, UR: UR, cam: cam, el: el, ui: ui
   });
