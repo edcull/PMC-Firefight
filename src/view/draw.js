@@ -144,6 +144,8 @@
       // a man every 0.6" or so, at least 0.3" apart, the squad no wider than about three inches
       var perRow = Math.min(n, Math.floor(Math.min(avail, 3.2) / 0.3) + 1);
       var rows = Math.min(3, Math.ceil(n / perRow));
+      // at a wall: up to four men in a single line, five or more two deep, the back rank staggered
+      if (best.kind !== 'trench') rows = Math.max(rows, n > 4 ? 2 : 1);
       perRow = Math.ceil(n / rows);
       // the ranks behind stand half a step along, so the whole block is that much wider
       var steps = perRow - 1 + (rows > 1 ? 0.5 : 0);
