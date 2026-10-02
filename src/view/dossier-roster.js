@@ -21,7 +21,7 @@
         var named = false;
         co.roster.forEach(function (e) { if (C.menOf(e, co)) named = true; });
         if (named) save();
-        var fk = co === E.camp.companies.A ? 'A' : 'B', shown = co.roster.filter(function (e) { return E.unitPasses(e, fk); });
+        var fk = co === E.camp.companies.B && E.camp.mode === 'hotseat' ? 'B' : co === E.camp.companies.A ? 'A' : 'B', shown = co.roster.filter(function (e) { return E.unitPasses(e, fk); });
         h += '<div class="dlist">';
         if (!shown.length) h += '<p class="cpstat">No unit has any yet.</p>';
         // your own force: as the sort and filter line above the list says
@@ -310,7 +310,7 @@
       // the list is what may be recruited, up to two Tiers above the force's own; the money is on the panel's head
       var h = '<div class="cat tall">';
       var groups = {}, order = [];
-      ourList().forEach(function (p) {
+      ourList(co).forEach(function (p) {
         if (p.tier > top) return;
         if (C.isTurretP(p) || p.noSlot) return;      // fielded with a contract's force, never recruited
         if (!groups[p.group]) { groups[p.group] = []; order.push(p.group); }

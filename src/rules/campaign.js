@@ -1125,6 +1125,29 @@
   function aftermath(campaign, report, opts) { return (KIT_AFTERMATH || kitAftermath()).aftermath(campaign, report, opts); }
   function salvageRolls(campaign, report, side, preset) { return (KIT_AFTERMATH || kitAftermath()).salvageRolls(campaign, report, side, preset); }
   function rebuildNeeds(co) { return (KIT_AFTERMATH || kitAftermath()).rebuildNeeds(co); }
+  /* A force finished: it cannot field a legal army even at Tier I, and cannot recruit
+     its way back to one with what it has — the cheapest units it may recruit are tried,
+     on a copy, until the army is legal or the money runs out. The campaign ends (the
+     owner's ruling, hotseat review HC-14). */
+  function cannotFight(co) {
+    if (!co || !co.roster) return false;
+    if (canFieldArmy(co, 1, 1)) return false;
+    var trial = JSON.parse(JSON.stringify(co));
+    var list = R.listFor(trial.faction || 'pmc').filter(function (p) { return !isTurretP(p) && !p.noSlot; });
+    for (var n = 0; n < 24; n++) {
+      var can = list.filter(function (p) { return canRecruit(trial, p.key).ok; })
+        .sort(function (a, b) { return (recruitCost(trial, a.key) - recruitCost(trial, b.key)) || (a.tier - b.tier); });
+      if (!can.length) return true;
+      // whichever recruit makes the army legal at once; else the cheapest Tier I unit, and try again
+      var fix = can.filter(function (p) {
+        var t2 = JSON.parse(JSON.stringify(trial)); recruit(t2, p.key); return canFieldArmy(t2, 1, 1);
+      })[0];
+      if (fix) return false;
+      var step = can.filter(function (p) { return p.tier === 1; })[0] || can[0];
+      if (!recruit(trial, step.key).ok) return true;
+    }
+    return !canFieldArmy(trial, 1, 1);
+  }
   function battleElsewhere(campaign, x, y, played) { return (KIT_AFTERMATH || kitAftermath()).battleElsewhere(campaign, x, y, played); }
   function elsewherePairs(campaign, coB) { return (KIT_AFTERMATH || kitAftermath()).elsewherePairs(campaign, coB); }
 
@@ -1475,7 +1498,10 @@
      number of them: the players' own, and the others. A world with one over
      gets one more rival — a new force arriving — founded the usual way. */
   function evenWorld(campaign) {
-    var players = campaign.mode === 'hotseat' ? 2 : 1;
+    /* A hotseat world is the two players and nobody else: Player 2's company is kept
+       in `rivals` (the alias the save uses), but it is no rival (hotseat review HC-3) */
+    if (campaign.mode === 'hotseat') return null;
+    var players = 1;
     campaign.rivals = campaign.rivals || [];
     if ((players + campaign.rivals.length) % 2 === 0) return null;
     var used = campaign.rivals.map(function (r) { return r.name; });
@@ -1533,7 +1559,7 @@
     canFieldArmy: canFieldArmy, canPromoteCompany: canPromoteCompany, promoteCompany: promoteCompany,
     canAspire: canAspire, effectiveTier: effectiveTier, rebuildNeeds: rebuildNeeds,
     promotionProgress: promotionProgress, fieldReport: fieldReport,
-    canRecruit: canRecruit, recruit: recruit, canDisband: canDisband, disband: disband,
+    canRecruit: canRecruit, recruit: recruit, canDisband: canDisband, disband: disband, cannotFight: cannotFight,
 
     maxBattleTier: maxBattleTier, rollBattleTier: rollBattleTier, rollScenario: rollScenario, foresight: foresight, foreIgnore: foreIgnore,
     swapAllowance: swapAllowance,

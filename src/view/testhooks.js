@@ -139,9 +139,14 @@
       if (pa && pa.kind === 'fort') send({ k: 'placeauto' });
       // each side at this screen sorts its own reserves (where nobody is placing, it has to say which side)
       if (B.seats.length > 1) B.seats.forEach(function (s) { send({ k: 'autosplit', side: s }); }); else send({ k: 'autosplit' });
-      autoDeployMine();
-      // every hull keeps the way it was offered
-      for (var n = 0; n < 12 && B.state && B.state.faceAsk; n++) send({ k: 'vfaceall' });
+      // each side in its turn to place (the button places only the side whose turn it is), every hull keeping the way it was offered
+      for (var r = 0; r < 4; r++) {
+        autoDeployMine();
+        for (var n = 0; n < 12 && B.state && B.state.faceAsk; n++) send({ k: 'vfaceall' });
+        if (!B.state || B.state.phase !== 'deploy') break;
+        // nobody left to place: the sides that enter in turn 1 are named, each at this screen
+        if (!placingSide()) { autoDeployMine(); for (var m = 0; m < 12 && B.state && B.state.faceAsk; m++) send({ k: 'vfaceall' }); break; }
+      }
     };
     // a rebel force's tactic, asked before the terrain (p. 95): none, for every side asked here
     window.__noTactics = function () {

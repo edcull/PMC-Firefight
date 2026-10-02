@@ -189,6 +189,9 @@
       var s = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
       return seats.indexOf(s) >= 0 ? s : null;
     }
+    // a question put to one side, whoever's turn it is: that side answers it (HB-1, HB-2)
+    var ask = ui.reservePick || state.kyfAsk || state.martyrAsk || state.nervousAsk || state.standAsk || state.endAsk || state.faceAsk;
+    if (ask && ask.side) return seats.indexOf(ask.side) >= 0 ? ask.side : null;
     var want = state.tacticAsk ? state.tacticAsk.order[state.tacticAsk.step]
       : state.phase === 'deploy' ? Q.placingSide()
       : state.phase === 'terrain' ? Q.terrainSide() : state.activeSide;
@@ -440,7 +443,14 @@
   /* Each side at this screen, in its turn to place; where both companies enter in
      turn 1 there is nothing to place now, so each is named, and its units will be
      brought on for it then. */
-  function autoDeployMine() { seats.forEach(function (s) { autoDeploy(s); }); }
+  /* Only the side whose turn it is to place (hotseat review HB-3): at one screen,
+     one player's tap must not set up the other's army. With nobody placing (both
+     companies come on in turn 1), each seat here is named, as before. */
+  function autoDeployMine() {
+    var ps = state && state.phase === 'deploy' ? Q.placingSide() : null;
+    if (ps && seats.indexOf(ps) >= 0) { autoDeploy(ps); return; }
+    seats.forEach(function (s) { autoDeploy(s); });
+  }
   /* Deployment done and the battle begun: what comes first is read, not
      tapped — the initiative roll and the first activations — so on a phone the
      Results tab comes to the front — unless the first thing is a question for

@@ -409,6 +409,7 @@
     }
     // the forces that sat this battle out, two by two (and the odd one out alone), as indices into the rivals
     function elsewherePairs(campaign, coB) {
+      if (campaign.mode === 'hotseat') return [];          // the two players are the whole world (HC-3)
       var idle = shuffle((campaign.rivals || []).map(function (co, i) { return i; })
         .filter(function (i) { return campaign.rivals[i] !== coB && i !== campaign.facing; }));
       var pairs = [];

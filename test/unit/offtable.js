@@ -18,10 +18,16 @@ C.found(solo.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection
 C.foundRivals(solo); C.evenWorld(solo); C.faceRival(solo, 0);
 ok('solo: the player and the rivals make an even number', (1 + solo.rivals.length) % 2 === 0, solo.rivals.length + ' rivals');
 ok('...and asking again adds nobody', C.evenWorld(solo) === null);
+// a hotseat world is the two players and nobody else (hotseat review HC-3)
 const hs = C.newCampaign({ mode: 'hotseat' });
-C.foundRivals(hs); C.evenWorld(hs);
-ok('hotseat: two players and an even number of rivals', hs.rivals.length % 2 === 0, hs.rivals.length + ' rivals');
-ok('...every rival its own name', new Set(hs.rivals.map(r => r.name)).size === hs.rivals.length);
+hs.companies.B = C.newCompany('Player 2', { faction: 'rebel' }); hs.rivals = [hs.companies.B]; hs.facing = 0;
+ok('hotseat: no AI force is added to the two players', C.evenWorld(hs) === null && hs.rivals.length === 1, hs.rivals.length + '');
+ok('...and nobody fights elsewhere', C.elsewherePairs(hs, hs.companies.B).length === 0);
+// a save from before, which picked up a phantom AI force on a reload: it is dropped, Player 2 kept
+const old = JSON.parse(JSON.stringify(C.forSave(hs)));
+old.rivals.push(C.newCompany('Rival 2', { faction: 'pmc' }));
+const back = C.rehydrate(old);
+ok('...a saved hotseat campaign with a phantom force loses it on loading', back.rivals.length === 1 && back.companies.B.name === 'Player 2', back.rivals.map(r => r.name).join(','));
 
 console.log('\nPairing off');
 const pairs = C.elsewherePairs(solo, solo.companies.B);

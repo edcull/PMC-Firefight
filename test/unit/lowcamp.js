@@ -133,5 +133,16 @@ console.log('\nXEN-4 Rite of Rage sheds its 2 SP in the Rally phase only (p. 142
   ok('...a Regroup does not', !/Rite of Rage/.test(extra({ regroup: true })), extra({ regroup: true }));
 })();
 
+console.log('\nHC-14 A force that cannot field an army, and cannot recruit back to one, is finished');
+(function () {
+  const co = C.newCompany('X', { faction: 'pmc' });
+  C.found(co, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+  ok('a fresh company can fight', !C.cannotFight(co));
+  co.roster = co.roster.slice(0, 2); co.kUC = 0;
+  ok('...gutted and penniless, it can still recruit back (Penal troops cost nothing)', !C.canFieldArmy(co, 1, 1) && !C.cannotFight(co));
+  const none = C.newCompany('Y', { faction: 'nobody' }); none.roster = []; none.kUC = 0;
+  ok('...with nothing it may recruit, it is finished', C.cannotFight(none));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
