@@ -385,7 +385,8 @@
     /* Whose aftermath is on screen: Player 1's, then in a hotseat campaign Player 2's,
        each after the device is passed (the same card as the contract's). */
     var me = 'A', afterSide = 'A', afterSeen = null, postSeen = null;
-    function hot() { return !!E.camp && E.camp.mode === 'hotseat'; }
+    // two players at one screen (an online campaign is two players, each at their own)
+    function hot() { return !!E.camp && E.camp.mode === 'hotseat' && !E.online; }
     function them(sd) { return sd === 'B' ? 'A' : 'B'; }
     function pastBalance(l) {
       var b = l.balances ? l.balances[me] : me === 'A' ? l.balance : null;

@@ -825,6 +825,8 @@
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
     ui.preview = null; ui.hover = null; ui.insertion = null; ui.reservePick = null; ui.digHover = null;
     document.body.removeAttribute('data-battle');
+    // nothing of the battle left open over whatever comes next (the briefing, a card)
+    ['obj-modal', 'resolution'].forEach(function (id) { var o = el(id); if (o) o.hidden = true; });
   }
 
   /* A phone that puts the tab in the background may throw away every canvas

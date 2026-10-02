@@ -36,6 +36,17 @@
       E.draft = { side: 'B', keys: [], doctrine: null, name: '', colour: B.faction === 'bugs' && A.colour !== 'olive' ? 'olive' : freeColour([A.colour]) };
       E.view = 'found';
     }
+    /* Online: the player's own force, on their own side, founded on their own
+       device (dossier-online.js) — whichever side the campaign gave them. */
+    function beginOwn(side, faction) {
+      var other = E.camp.companies[side === 'A' ? 'B' : 'A'];
+      var co = C.newCompany('', { faction: faction || 'pmc' });
+      E.camp.companies[side] = co;
+      if (side === 'B') { E.camp.rivals = [co]; E.camp.facing = 0; }
+      var taken = other && other.roster && other.roster.length ? [other.colour] : [];
+      E.draft = { side: side, keys: [], doctrine: null, name: '', colour: co.faction === 'bugs' && taken.indexOf('olive') < 0 ? 'olive' : taken.length ? freeColour(taken) : startingColour(co.faction) };
+      E.view = 'found';
+    }
     var FACTION_CHOICES = [['pmc', 'A private military company'], ['rebel', 'An insurgent revolt'],
       ['bugs', 'A Space Bug swarm'], ['xeno', 'A Xenotripod tribe']];
     // the colour the player last painted a force in, or the house ochre
@@ -105,7 +116,15 @@
       function say(pmc, rebel, bugs, xeno) { return xen ? (xeno || bugs) : bug ? bugs : reb ? rebel : pmc; }
       var h = '<h2>' + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
         say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory') + '</h2>';
-      if (hot && side === 'B') {
+      if (E.online) {
+        // online: each player picks their own kind of force, whichever side they are
+        var oth = E.camp.companies[side === 'A' ? 'B' : 'A'];
+        h += '<p class="lede">' + (oth && oth.roster && oth.roster.length ? esc(oth.name) + ' has signed. Now yours.' : 'Your force in this campaign \u2014 the other player founds theirs on their own device.') + '</p>' +
+          '<div class="field"><label>What you are running</label><div class="docpick facpick">' +
+          FACTION_CHOICES.map(function (f) {
+            return '<button class="doc' + (co.faction === f[0] ? ' on' : '') + '" data-bfaction="' + f[0] + '"><b>' + esc(f[1]) + '</b></button>';
+          }).join('') + '</div></div>';
+      } else if (hot && side === 'B') {
         /* The second player picks their own kind of force: the first player's
            choice on the hub only ever named the first force. */
         h += '<p class="lede">' + esc(E.camp.companies.A.name) + ' has signed. Now the other force on this world \u2014 yours.</p>' +
@@ -227,7 +246,7 @@
         say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
       // the second player cannot step back out: the campaign needs their force
       // back to choosing what to run: the force is not founded yet, so there is nothing to keep
-      if (!(hot && side === 'B')) h += '<p class="camp-foot"><button class="lnk" data-go="foundback">Back</button></p>';
+      if (!(hot && side === 'B') || E.online) h += '<p class="camp-foot"><button class="lnk" data-go="foundback">Back</button></p>';
       return h;
     }
 
@@ -288,7 +307,7 @@
     }
 
     return {
-      beginFounding: beginFounding, needsSecond: needsSecond, beginSecond: beginSecond,
+      beginFounding: beginFounding, needsSecond: needsSecond, beginSecond: beginSecond, beginOwn: beginOwn,
       startingColour: startingColour, colourFlash: colourFlash, colourOf: colourOf, freeColour: freeColour,
       squares: squares, colourName: colourName, cmodal: cmodal, coin: coin, foundView: foundView,
       ourList: ourList, statLine: statLine

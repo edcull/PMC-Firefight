@@ -266,7 +266,10 @@
         '<button class="lnk" data-lob="join">Join</button>' +
         '</div></div>' +
         mineHTML() +
-        '<div class="lob-list">' + list + '</div>') +
+        '<div class="lob-list">' + list + '</div>' +
+        // a campaign against another player, each on their own device (dossier-online.js); an account's, not a guest's
+        (account && !account.guest ? '<div class="field"><label>Campaigns</label><button class="lnk lob-go" data-lob="campaigns">Online campaigns</button>' +
+          '<span class="lob-hint"> \u2014 a campaign against another player, each of you on your own device</span></div>' : '')) +
       '</div>' +
       chatHTML('lobby');
   }
@@ -455,6 +458,7 @@
     switch (what) {
       case 'signmode': signMode = b.getAttribute('data-mode'); draw(); return;
       case 'signgo': if (!busy) signIn(); return;
+      case 'campaigns': close(); if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.enter) root.PMC_CAMPAIGN.enter('online'); return;
       case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;
       case 'signout': userMenu(false); signOut(); return;
       // the main menu's account pane: what the server keeps for the player
@@ -636,7 +640,11 @@
       close();
       if (root.PMC_JOIN_BATTLE) root.PMC_JOIN_BATTLE(net, m.seat, m.cfg);
     });
-    net.on('over', function () { keepRoom(''); if (net) net.send('games.mine'); /* the board shows the result; the room reopens by itself */ });
+    net.on('over', function () {
+      keepRoom(''); if (net) net.send('games.mine'); /* the board shows the result; the room reopens by itself */
+      // an online campaign's battle: the campaign takes it from here (dossier-online.js)
+      if (campBattle) { var h = campBattle; campBattle = null; campOver = true; h.over(); }
+    });
     /* The other player dropping out, coming back or walking away, said on the
        board while the battle is on (the room's chat is not on screen then). */
     net.on('game.presence', function (m) {
@@ -644,6 +652,13 @@
       var who = m.name || 'Your opponent';
       if (m.kind === 'dropped') say2(who + ' has lost connection. Their seat is being held for them.', 'warn');
       else if (m.kind === 'back') say2(who + ' is back.', 'good');
+      else if (m.kind === 'left' && (campBattle || campOver)) {
+        // an online campaign's battle: no lobby to go back to; the campaign comes up
+        keepRoom('');
+        say2(who + ' has left the battle \u2014 you win by forfeit.', 'good', 7000);
+        var hc = campBattle; campBattle = null; campOver = false;
+        if (hc) { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); hc.gone(); }
+      }
       else if (m.kind === 'left') {
         keepRoom('');
         say2(who + ' has left the battle' + (m.forfeit ? ' \u2014 you win by forfeit.' : '. It cannot go on without them.'), m.forfeit ? 'good' : 'bad', 7000);
@@ -672,6 +687,9 @@
 
   function say2(text, kind, ms) { if (root.PMC_TOAST) root.PMC_TOAST(text, kind, ms); }
 
+  /* An online campaign's battle walked into (dossier-online.js): what to do when it
+     is over, or walked away from, instead of coming back to the lobby. */
+  var campBattle = null, campOver = false;
   root.PMCLobby = {
     /* Walk away from the battle under way: the seat is given up, which ends it
        for the other player too, and this browser forgets it was ever in it. */
@@ -679,6 +697,20 @@
       keepRoom('');
       if (net) net.send('game.leave');
       if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE();
+      var hc = campBattle; campBattle = null; campOver = false;
+      if (hc) hc.gone();
+    },
+    /* Into an online campaign's battle by its code: the seat is held for this
+       player, so joining it seats them (lobby.js join). `hooks`: { over, gone }. */
+    joinBattle: function (code, hooks) {
+      ensure();
+      campBattle = hooks || null; campOver = false;
+      var go = function () { connect(); net.send('game.join', { id: code }); };
+      if (account) { go(); return; }
+      whoAmI(function () {
+        if (account) { me.name = account.name; go(); }
+        else { campBattle = null; open('signin'); }
+      });
     },
     /* Is there a server to play against at all? A page opened from a file, or
        the published single file, has none — and the button that opens this is
