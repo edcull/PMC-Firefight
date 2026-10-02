@@ -42,8 +42,8 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const force = { faction: 'pmc', tactic: '', keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'], colour: 'ochre', name: '' };
   const p1 = await page(ctx1, 'Iron Wolf', 'register');
   let p2 = await page(ctx2, 'Red Dawn', 'guest');
-  const signedIn = await Promise.all([p1, p2].map((p) => p.evaluate(() => document.querySelector('#lobby .lob-me') && document.querySelector('#lobby .lob-me').textContent)));
-  ok('one signs up, the other plays as a guest; each lobby says which', /Signed in as Iron Wolf/.test(signedIn[0]) && /guest: Red Dawn/.test(signedIn[1]), signedIn.join(' | '));
+  const signedIn = await Promise.all([p1, p2].map((p) => p.evaluate(() => { const u = document.getElementById('lobby-user'); return u && !u.hidden ? u.textContent : ''; })));
+  ok('one signs up, the other plays as a guest; each lobby says which, on the right of its bar', /^Iron Wolf$/.test(signedIn[0]) && /Red Dawn \(guest\)/.test(signedIn[1]), signedIn.join(' | '));
   // the list of games on a phone: the talk keeps the foot; starting a game puts Cancel beside Create and the list away
   await p2.setViewportSize({ width: 390, height: 700 });
   await p2.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
