@@ -787,5 +787,34 @@ ok('three, 12" apart and 8" in from the edges, every time', (function () {
   return bad || (Object.keys(seen).length > 150 ? 'ok' : 'only ' + Object.keys(seen).length + ' layouts in 200');
 })(), 'ok');
 
+
+/* CMP-4 (the rules review at a119ac2): "+1 TP if the army was routed in battle or
+   completely destroyed" (p. 86) is the rout the scenario counts, so the check names
+   the side it routed — and only a scenario with that objective ever does. */
+head('Who the check counts as routed, for the Trauma Point (p. 86)');
+function routedOf(st) { var r = S.check(st); return r && r.routed ? r.routed.join(',') : 'none'; }
+ok('Meeting engagement: the routed side', routedOf(board('meeting', { liveB: 2 })), 'B');
+ok('...both broken at once: both', routedOf(board('meeting', { liveA: 2, liveB: 2 })), 'A,B');
+ok('Secure and control has no rout clause: half lost is no rout', routedOf(board('secure', { liveB: 2 })), 'none');
+ok('...but wiped out is', routedOf(board('secure', { liveB: 0 })), 'B');
+ok('Find and secure: the holder of the objective is not routed', routedOf(board('find', {
+  liveA: 2, after: function (st) { st.sc.found = { x: 2.5, y: 2 }; st.sc.hold = { A: 0, B: 0 }; }
+})), 'none');
+ok('...the side without it is', routedOf(board('find', {
+  liveB: 2, after: function (st) { st.sc.found = { x: 2.5, y: 2 }; st.sc.hold = { A: 0, B: 0 }; }
+})), 'B');
+ok('...and once the holder loses it, it is too', routedOf(board('find', {
+  liveA: 2, after: function (st) { st.sc.found = { x: 30, y: 30 }; st.sc.hold = { A: 0, B: 0 }; }
+})), 'A');
+['A', 'B'].forEach(function (atk) {
+  var def = atk === 'A' ? 'B' : 'A', lose = {};
+  lose['live' + atk] = 2;
+  ok('Invasion (' + atk + ' attacking): an attacker that has lost half is not routed', routedOf(board('invasion', Object.assign({ attacker: atk }, lose))), 'none');
+  lose = {}; lose['live' + def] = 2;
+  ok('...the defender is', routedOf(board('invasion', Object.assign({ attacker: atk }, lose))), def);
+});
+ok('Demolish has no rout clause', routedOf(board('demolish', { liveA: 2 })), 'none');
+ok('Hostile takeover has none either', routedOf(board('takeover', { liveA: 2 })), 'none');
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

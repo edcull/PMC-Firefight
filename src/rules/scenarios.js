@@ -426,9 +426,9 @@
       hint: 'No objectives: the only way to win is to break the other company.',
       check: function (state) {
         var ra = routed(state, 'A'), rb = routed(state, 'B');
-        if (ra && rb) return { winner: null, text: 'Both companies are broken — a bloody draw.' };
-        if (rb) return { winner: 'A', text: 'A routs the enemy — half their units are gone.' };
-        if (ra) return { winner: 'B', text: 'B routs the enemy — half their units are gone.' };
+        if (ra && rb) return { winner: null, text: 'Both companies are broken — a bloody draw.', routed: ['A', 'B'] };
+        if (rb) return { winner: 'A', text: 'A routs the enemy — half their units are gone.', routed: ['B'] };
+        if (ra) return { winner: 'B', text: 'B routs the enemy — half their units are gone.', routed: ['A'] };
         if (state.turn >= 20) return { winner: null, text: 'Twenty turns and neither company breaks — a draw.', timeout: true };
       }
     },
@@ -553,9 +553,9 @@
         // the company holding the objective cannot be routed while it holds it
         var ra = routed(state, 'A') && holder !== 'A';
         var rb = routed(state, 'B') && holder !== 'B';
-        if (ra && rb) return { winner: null, text: 'Both companies are broken — a bloody draw.' };
-        if (rb) return { winner: 'A', text: 'A routs the enemy — half their units are gone.' };
-        if (ra) return { winner: 'B', text: 'B routs the enemy — half their units are gone.' };
+        if (ra && rb) return { winner: null, text: 'Both companies are broken — a bloody draw.', routed: ['A', 'B'] };
+        if (rb) return { winner: 'A', text: 'A routs the enemy — half their units are gone.', routed: ['B'] };
+        if (ra) return { winner: 'B', text: 'B routs the enemy — half their units are gone.', routed: ['A'] };
         if (rollEnd(state, 12)) {
           if (holder) return { winner: holder, text: 'The search ends with ' + holder + ' holding the prize.' };
           return { winner: null, text: 'The search ends with nobody holding the prize — a draw.', timeout: true };
@@ -664,7 +664,7 @@
         /* "Alternatively, the attacker may rout the defender's forces" (p. 53) — the
            clause is the attacker's alone. Breaking the landing does not win the
            battle for the defender; holding the ground at the end does. */
-        if (routed(state, def)) return { winner: atk, text: atk + ' routs the defenders off their own ground.' };
+        if (routed(state, def)) return { winner: atk, text: atk + ' routs the defenders off their own ground.', routed: [def] };
         if (rollEnd(state, 12)) {
           if (mineZ >= 2) return { winner: atk, text: atk + ' holds ' + mineZ + ' of the three landing zones — the beachhead is secure.' };
           return { winner: def, text: def + ' still holds the ground — the landing has failed.' };
@@ -1060,7 +1060,7 @@
      same End phase is a draw (p. 49), which each scenario's check already handles. */
   function check(state) {
     var ga = annihilated(state, 'A'), gb = annihilated(state, 'B');
-    if (ga && gb) return { winner: null, text: 'Neither company has anything left on the table — a draw.' };
+    if (ga && gb) return { winner: null, text: 'Neither company has anything left on the table — a draw.', routed: ['A', 'B'] };
     if (!ga && !gb) return state.scen.check(state);
     /* Wiping out the enemy is an automatic victory (p. 49) — but "when a scenario has
        several different victory conditions and each player meets at least one of them
@@ -1072,9 +1072,9 @@
     var own = state.scen.check(state);
     // (both sides breaking at once is the wiped-out side meeting one too; time running out level is not)
     if (own && (own.winner === lost || (own.winner == null && own.text && !own.timeout))) {
-      return { winner: null, text: lost + ' is destroyed to the last unit, but met a victory condition the same turn — a draw. (' + own.text + ')' };
+      return { winner: null, text: lost + ' is destroyed to the last unit, but met a victory condition the same turn — a draw. (' + own.text + ')', routed: [lost] };
     }
-    return { winner: won, text: lost + ' is destroyed to the last unit — an automatic victory for ' + won + '.' };
+    return { winner: won, text: lost + ' is destroyed to the last unit — an automatic victory for ' + won + '.', routed: [lost] };
   }
   function noInsertion(state) { return !!state.scen.noInsertion; }
 

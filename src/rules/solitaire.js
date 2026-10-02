@@ -509,8 +509,8 @@
       return out;
     },
     check: function (state) {
-      if (SC.routed(state, 'A')) return { winner: 'B', text: 'The commando is routed — the resistance holds.' };
-      if (SC.routed(state, 'B')) return { winner: 'A', text: 'The OpFor is routed — resistance crushed.' };
+      if (SC.routed(state, 'A')) return { winner: 'B', text: 'The commando is routed — the resistance holds.', routed: ['A'] };
+      if (SC.routed(state, 'B')) return { winner: 'A', text: 'The OpFor is routed — resistance crushed.', routed: ['B'] };
       return null;
     }
   }, landing));
@@ -743,7 +743,7 @@
     },
     check: function (state) {
       var leaders = state.units.filter(function (u) { return u.soloLeader; });
-      if (SC.routed(state, 'A')) return { winner: 'B', text: 'The commando is routed before it can reach the leaders.' };
+      if (SC.routed(state, 'A')) return { winner: 'B', text: 'The commando is routed before it can reach the leaders.', routed: ['A'] };
       if (leaders.length && leaders.every(function (u) { return !u.alive; })) return { winner: 'A', text: 'Every enemy leader is dead — the OpFor is headless.' };
       if (state.turn >= 12) return { winner: 'B', text: 'Twelve turns gone and a leader still lives — the mission has failed.' };
       return null;
@@ -996,7 +996,7 @@
       return (state.sc.targets || []).filter(function (t) { return !t.destroyed && dist(u.x, u.y, t.x, t.y) <= UR + 1 + 1; });
     },
     check: function (state) {
-      if (SC.routed(state, 'A')) return { winner: 'B', text: 'The commando is routed before the job is done.' };
+      if (SC.routed(state, 'A')) return { winner: 'B', text: 'The commando is routed before the job is done.', routed: ['A'] };
       if ((state.sc.targets || []).every(function (t) { return t.destroyed; })) return { winner: 'A', text: 'Every objective is destroyed — sabotage complete.' };
       return null;
     }

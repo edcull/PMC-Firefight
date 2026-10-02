@@ -390,9 +390,13 @@
       }
 
       scoreObjectives();
-      E.state.routed.A = SC.routed(E.state, 'A');
-      E.state.routed.B = SC.routed(E.state, 'B');
-      var res = SC.check(E.state);
+      /* "+1 TP if the army was routed in battle or completely destroyed" (p. 86) is
+         the rout the scenario counts — the objective of p. 49 where it has one, or a
+         side wiped out — so only a check that ended the battle on it marks a side.
+         A battle conceded never gets here with one marked (surrender, above). */
+      var res = SC.check(E.state), rs = (res && res.routed) || [];
+      E.state.routed.A = rs.indexOf('A') >= 0;
+      E.state.routed.B = rs.indexOf('B') >= 0;
       if (res) {
         // the scenario names the sides A and B; give them the companies' own names
         var text = res.text.replace(/\bA\b/g, sideName('A')).replace(/\bB\b/g, sideName('B'));
