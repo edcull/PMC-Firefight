@@ -347,7 +347,10 @@ class Table {
        for the aftermath to be applied from (decision 5: in a campaign it is). */
     if (this.room.settings.onlineCampaign && this.engine.concede) {
       this.forfeitBy = seat;
+      this.events = [];
       this.rolling(() => this.engine.concede(seat));
+      // the result card, to the side left at the table, before the campaign takes over
+      this.flush();
       if (!this.stopped) this.finish(this.engine.report());
       return winner;
     }

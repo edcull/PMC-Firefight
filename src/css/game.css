@@ -1343,6 +1343,12 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dtp i { display: block; height: 100%; background: var(--bad); }
 .dtpn { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
 .dnote { font-size: 11px; color: var(--ink-faint); }
+/* online campaigns (dossier-online.js): the code for the open seat, joining with one */
+.ocode { font: 600 22px/1.2 var(--mono); letter-spacing: .22em; padding: 8px 12px; margin-top: 6px; text-align: center;
+  border: 1px dashed var(--line); border-radius: 6px; color: var(--alpha); user-select: all; }
+.ojoin { display: flex; gap: 8px; }
+.ojoin .tin { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .12em; }
+.onote { margin-bottom: 10px; }
 /* the new campaign's opposing forces: one choice of army each */
 .rivarmies select + select { margin-top: 6px; }
 .field .dnote { margin: 5px 0 0; }

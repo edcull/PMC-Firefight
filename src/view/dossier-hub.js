@@ -72,6 +72,8 @@
         '</p>';
       // in hotseat, the player whose force the hub shows and works on (HC-1)
       var hs = E.hubSide, cur = E.camp.companies[hs] || A;
+      // online: who is waiting on whom, the code for the open seat, the battle when it is made
+      if (E.online) h += E.onlineNote();
       /* A force that can no longer field an army, and cannot recruit back to one, ends
          the campaign (HC-14): said here, and the contract is closed. */
       var done = E.camp.over;
@@ -111,8 +113,9 @@
         '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(cur) + '<span>' + esc(C.words(cur).memorial) + '<small>' +
         esc(C.words(cur).memorialSub) + '</small></span></button>' +
         '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
-        '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
-        '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>' +
+        (E.online ? '<button type="button" class="archline" data-go="olist">' + ICON_FORCES + '<span>Online campaigns<small>Your others, a new one, or one to join</small></span></button>'
+          : '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
+        '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>') +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
       h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>', back);
@@ -159,7 +162,7 @@
     function hubBar() {
       var co = E.camp.companies[E.hubSide] || E.camp.companies.A;
       // hotseat: which player's force this is, and the way to the other's
-      var seat = E.camp.mode !== 'hotseat' ? '' : '<span class="segs hubseat">' + ['A', 'B'].map(function (sd) {
+      var seat = E.camp.mode !== 'hotseat' || E.online ? '' : '<span class="segs hubseat">' + ['A', 'B'].map(function (sd) {
         return '<button class="lnk' + (sd === E.hubSide ? ' on' : '') + '" data-go="hubside" data-hs="' + sd + '">Player ' + (sd === 'A' ? 1 : 2) + '</button>';
       }).join('') + '</span>';
       var go = E.camp.over ? '<button class="start hubgo" disabled title="The campaign is over">Contract</button>'

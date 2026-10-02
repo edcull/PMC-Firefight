@@ -265,6 +265,10 @@
 
   /* ================= view state ================= */
   var camp = null;              // the loaded campaign, or null
+  /* An online campaign open (dossier-online.js): its id, which side is this
+     player's, the version last read, its players. Null otherwise. While one is
+     open, nothing is saved here: every change goes to the server as a command. */
+  var online = null;
   var view = 'hub';
   var draft = null;             // the company being founded
   var contract = null;          // the battle being set up
@@ -348,6 +352,7 @@
   var ICON_LOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>';
 
   function save() {
+    if (online) return;                 // the server keeps an online campaign (dossier-online.js)
     if (camp && camp.mode === 'hotseat') camp.savedContract = contract && !camp.pending ? contractOut(contract) : null;
     // the storage panel only knows how a write went once it has gone, so redraw then
     Store.save(camp).then(function () {
@@ -525,7 +530,8 @@
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
-      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get rosterTab() { return rosterTab; }
+      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get rosterTab() { return rosterTab; },
+      get online() { return online; }, onlineNote: function () { return online ? (KIT_ONLINE || kitOnline()).hubNote() : ''; }
     }));
   }
   function hubView() { return (KIT_HUB || kitHub()).hubView(); }
@@ -541,9 +547,10 @@
       armyPill: armyPill, armyRules: armyRules,
       get camp() { return camp; }, set camp(v) { camp = v; }, get colourOpen() { return colourOpen; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get openModal() { return openModal; },
-      get view() { return view; }, set view(v) { view = v; }
+      get view() { return view; }, set view(v) { view = v; }, get online() { return online; }
     }));
   }
+  function beginOwn(side, faction) { return (KIT_FOUND || kitFound()).beginOwn(side, faction); }
   function beginFounding(name, mode, faction) { return (KIT_FOUND || kitFound()).beginFounding(name, mode, faction); }
   function needsSecond() { return (KIT_FOUND || kitFound()).needsSecond(); }
   function beginSecond(faction) { return (KIT_FOUND || kitFound()).beginSecond(faction); }
@@ -601,7 +608,27 @@
       get drawState() { return drawState; }, get intelIdx() { return intelIdx; },
       get swapOut() { return swapOut; }, get upState() { return upState; },
       get view() { return view; }, set view(v) { view = v; }, render: function () { render(); },
-      get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; }, stripeOf: stripeOf
+      get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; }, stripeOf: stripeOf,
+      get online() { return online; }
+    }));
+  }
+  /* ---- online campaigns: in view/dossier-online.js ---- */
+  var KIT_ONLINE = null;
+  function kitOnline() {
+    return KIT_ONLINE || (KIT_ONLINE = root.PMCDossierOnline({
+      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root,
+      get camp() { return camp; }, set camp(v) { camp = v; }, get view() { return view; }, set view(v) { view = v; },
+      get draft() { return draft; }, set draft(v) { draft = v; }, get online() { return online; }, set online(v) { online = v; },
+      set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
+      get swapOut() { return swapOut; },
+      render: function () { render(); }, open: open, toMenu: toMenu, keepFoundName: keepFoundName, beginOwn: beginOwn,
+      postView: function () { return postView(); }, showPast: function (i) { (KIT_AFTER || kitAfter()).showPast(i); },
+      hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
+      asking: function () { return !!asking; },
+      closeModal: function () { openModal = null; promoRid = null; },
+      toDossier: function () { view = 'hub'; hubPane = 'dossier'; rosterTab = 'units'; },
+      clearSwap: function () { swapOut = null; docSwap = false; },
+      closeColours: function () { colourOpen = false; }
     }));
   }
   // the battle fought: its contract is done with (a kept one included)
@@ -659,11 +686,15 @@
     if (!body) return;
     var h = '';
     if (view !== 'hub') hubPane = 'tier';                    // back at the hub, it opens on the company
-    if (view !== 'found' && needsSecond()) beginSecond();   // nothing goes on until both forces exist
+    if (view !== 'found' && !online && needsSecond()) beginSecond();   // nothing goes on until both forces exist
+    if (online) (KIT_ONLINE || kitOnline()).steer();          // online: the player's own force first, then what is owed
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view !== 'aftermath' && KIT_AFTER) KIT_AFTER.showPast(null);   // a past battle's report is only open while it is shown
     if (camp && camp.fronts && !camp.post) (KIT_AFTER || kitAfter()).nextFront();   // the other forces' battles, still being fought
-    if (view === 'found') h = foundView();
+    if (view === 'olist') h = kitOnline().listView();
+    else if (view === 'ocontract' && online) h = kitOnline().contractView();
+    else if (view === 'post' && online) h = kitOnline().postView();
+    else if (view === 'found') h = foundView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') { h = passOwed() ? passCard() : contractView(); keepContract(); }
     else if (view === 'aftermath') h = aftermathView();
@@ -808,6 +839,8 @@
     if (view === 'found') keepFoundName();
     var co = hubCo();
     var go = t.getAttribute('data-go');
+    // an online campaign: whatever would change it is sent to the server (dossier-online.js)
+    if ((online || view === 'olist') && kitOnline().click(t, go)) return;
 
     if (t.hasAttribute('data-add')) {
       draft.keys.push(t.getAttribute('data-add')); render(); return;
@@ -1348,6 +1381,7 @@
       else if (ev.key === 'Escape') { ev.preventDefault(); closeAsk(); }
     });
     host.addEventListener('change', function (ev) {
+      if (online && kitOnline().change(ev.target)) return;
       if (ev.target.id === 'camp-file') onFile(ev);
       // the army picked: its pill (and the rules behind it) follows
       else if (ev.target.id === 'camp-faction') { wantFaction = ev.target.value; render(); }
@@ -1366,6 +1400,9 @@
        campaign at a time, so with one under way either card opens it; with none,
        the new-campaign form starts on the way of playing that card named. */
     function enter(mode) {
+      // the campaigns played online, each player on their own device (dossier-online.js)
+      if (mode === 'online') { var su = el('setup'); if (su) su.hidden = true; kitOnline().enterList(); return; }
+      if (online) kitOnline().leave();                // back to this browser's own campaign
       if (mode === 'solo' || mode === 'hotseat') wantMode = mode;
       var setup = el('setup');
       if (setup) setup.hidden = true;                 // the muster sheet would sit on top
@@ -1404,12 +1441,12 @@
   root.PMC_CAMPAIGN = {
     open: open, close: close, onFinish: onFinish,
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
-    get: function () { return camp; },
+    get: function () { return online && KIT_ONLINE ? KIT_ONLINE.local() : camp; },
     /* Signed in (or out) from the menu: the account's copy is read as at a load,
        the further along of it and this browser's taken, and saved to both. */
     accountChanged: function () {
       Store.recheck().then(function (changed) {
-        if (!changed || !acct) return;
+        if (!changed || !acct || online) return;
         Store.load().then(function (got) {
           if (got) camp = got;
           ensureColours();
@@ -1426,7 +1463,9 @@
       contract.picks = autoPick(pickCo(), contract.tier, contract.pl, contract.tactic || null);
       render(); return true;
     },
-    store: Store
+    store: Store,
+    // the tests' view of an online campaign open here: which, the campaign as read, and the screen
+    online: function () { return online ? { info: online, camp: camp, view: view } : null; }
   };
   root.PMC_ONFINISH = onFinish;
 
