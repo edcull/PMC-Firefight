@@ -702,6 +702,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | BUG-7 PL1 Tier cap and Overgrown bugs | **Kept (owner's ruling).** Overgrown bugs follow the vehicle rules on the table, but they are not vehicles for the army list: the swarm's own Overgrown limits apply, not the general vehicle/aircraft caps. | — |
 | BUG-8 Fire beetle as Overgrown | **Kept (book misprint).** The Fire beetle is an Overgrown Bug like the other Tier V Structure bugs. | — |
 | BUG-9 Overgrown bugs in the campaign | **Kept (owner's ruling).** Genetic Flaws count as Battle Traumas (p. 124), so they come from Trauma Points: Overgrown bugs are on the infantry side of the campaign throughout — EXP, TPs, Adaptations and Flaws, and lost when destroyed — with no salvage roll and no vehicle Upgrades. | — |
+| XEN-3 Rite of Knowledge | **Fixed.** The re-roll is taken on a 1-2 (a random pad) and never on a 3, which already gives the owner the pick of pads. | `xeno.js` (`teleportRoll`); test `battlerules.js` |
 | CMP-6 Strength in Numbers: exactly one Tier below | Keep |
 | REB-3 First Among Equals without Command Unit (X) count as Command Units | Kept (group reading) |
 | REB-5 Hostile takeover may put guns in reserve | Change: guns always deploy |

@@ -165,8 +165,10 @@
     }
     function teleportRoll(state, u, tp) {
       var r = d6(), second = null;
-      // Rite of Knowledge (p. 142): a 1-3 may be rolled again, and the second stands
-      if (r <= 3 && campFlag(u, 'knowledge')) { second = d6(); }
+      /* Rite of Knowledge (p. 142): a 1-3 "may" be rolled again, and the second stands.
+         Taken on a 1-2 (a random pad) and never on a 3, which already lets the owner
+         pick the pad — a re-roll could only lose that (rules review a119ac2 XEN-3). */
+      if (r <= 2 && campFlag(u, 'knowledge')) { second = d6(); }
       var v = second != null ? second : r;
       var pads = teleportPads(state, tp.side);
       var randomPad = pads[Math.floor(Math.random() * pads.length)] || tp;
