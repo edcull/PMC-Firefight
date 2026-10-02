@@ -733,3 +733,4 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | SPR-4 Sappers' breach +1 only to the Sappers | **Changed.** When Sappers blow the cover in, "players add +1 to all rolls when resolving hits in that round": the defenders' answer that round gets the +1 too. | `assault.js` (`assault`, `assaultRound`); test `lowcombat.js` |
 | PMC-1 Medical drone counts as a Drone unit | **No change (owner's decision).** The missing "Drone unit" note is treated as a misprint in the book. | `data.js` |
 | PMC-2 Inspiring Presence in a Command Vehicle uses the vehicle's Tier | **No change (owner's decision).** The vehicle carrying the rule is "the unit with Inspiring Presence". | `rules.js` (`inspiringNearby`) |
+| CMP-2 Surrounded, but Steady helps a Regroup | **Fixed.** Its extra dice are rolled only in the Rally phase, not on a Pass/Regroup action's rally. | `rules.js` (`rally`); test `lowcamp.js` |

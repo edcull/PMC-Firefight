@@ -1626,7 +1626,8 @@
     if (campFlag(u, 'brokenMinded')) { m = Math.ceil(m / 2); extras.push('Broken-minded: half the dice'); }
     if (campFlag(u, 'ironDiscipline')) { m += 2; extras.push('Iron Discipline +2 dice'); }
     if (freedom) { m += freedom; extras.push('"…but they\'ll never take our freedom!" +' + freedom + ' dice'); }
-    if (campFlag(u, 'surrounded')) {
+    // Surrounded, but Steady (p. 89): "when making a rally attempt in the Rally phase" — not a Regroup's
+    if (inRally && campFlag(u, 'surrounded')) {
       var near = 0;
       for (var q = 0; q < state.units.length; q++) {
         var o = state.units[q];

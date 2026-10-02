@@ -111,5 +111,16 @@ console.log('\nCMP-1 Every payment die is rolled at once, before anyone re-rolls
   ok('two players (hotseat): nobody\'s dice are re-rolled for them', !both.neg.A && !both.neg.B);
 })();
 
+console.log('\nCMP-2 Surrounded, but Steady counts in the Rally phase only (p. 89)');
+(function () {
+  const mk = (key, side, x, y) => Object.assign(JSON.parse(JSON.stringify(R.profile(key))), { id: side + key, side, x, y, alive: true, models: R.profile(key).size, sp: 2, shotFrom: [], cargo: [], rules: R.profile(key).rules.slice() });
+  const u = mk('regular', 'A', 20, 20), foe = mk('regular', 'B', 30, 20);
+  u.camp = { flags: { surrounded: true } };
+  const st = { units: [u, foe], terrain: [], objectives: [], log: [] };
+  const extra = (opts) => (R.rally(st, Object.assign({}, u, { sp: 2 }), opts).extras || []).join(' ');
+  ok('a rally in the Rally phase rolls a die more for the enemy within 18"', /Surrounded, but Steady \+1/.test(extra({})), extra({}));
+  ok('...a Regroup does not', !/Surrounded/.test(extra({ regroup: true })), extra({ regroup: true }));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
