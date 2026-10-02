@@ -180,8 +180,14 @@
       /* The auxiliary weapon (p. 32) fires "without ANY special rules" — its own
          or the unit's — but the ordinary modifiers of a shot still apply to it:
          standing still, half range, height, Crossfire, and the target's cover. */
+      /* Effective Toxin Glands (p. 124) on a Flying Bug, which always fires at Basic
+         Firepower (p. 116): a Fire! action still adds +1 (the owner's ruling, rules
+         review a119ac2 BUG-6). The Spore Bugs take the +2 below. */
+      if (basic && mode === 'fire' && !aux && a.faction === 'bugs' && a.group === 'Flying Bugs' && doctrine(state, a.side, 'BC6')) {
+        total += 1; parts.push({ label: 'Fire! — Effective Toxin Glands', v: 1 });
+      }
       if (!basic) {
-        // Effective Toxin Glands: Spore and Flying Bugs get +2 for Fire! (p. 124)
+        // Effective Toxin Glands: Spore Bugs get +2 for Fire! (p. 124)
         var toxin = !aux && bugRanged(a) && doctrine(state, a.side, 'BC6');
         // ...and so does a Xenotripod unit with the Rite of Perfection (p. 142)
         var perfect = !aux && campFlag(a, 'perfection');

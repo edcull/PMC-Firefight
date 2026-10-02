@@ -698,6 +698,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | BUG-3 Aggressive on an Overgrown bug | **Fixed.** Aggressive (the Overgrown Adrenaline Glands Flaw) now drives an Overgrown bug that has an Assault to make: it must charge the closest enemy unless an Overmind is within 18". A Carrier bug (Assault 0) and other machines are unaffected. | `rules.js` (`aggressiveNow`); test `bugs.js` |
 | BUG-4 Extensive Feeding and pierced Defence | **Fixed.** The +1 Defence applies to the Defence against Anti-tank/Gauss as well (Sandworm 17/15). | `campaign.js` (`applyEntry`); test `bugcamp.js` |
 | BUG-5 Pheromone Markers in an assault | **Fixed (owner's reading).** Only an Animal Behaviour bug that charges gets the bonus to its Assault; a bug being charged does not. Shooting is unchanged. | `assault.js` (`assaultMods`); test `bugs.js` |
+| BUG-6 Effective Toxin Glands | **Changed (owner's ruling).** Reworded: "Spore Bugs and Flying Bugs get an additional +1 Firepower when taking the Fire! action." Spore Bugs: Fire! is worth +2 instead of +1. Flying Bugs still fire at Basic Firepower, but a Fire! action adds +1. | `shoot.js` (`shotMods`), `campaign.js` text; test `bugcamp.js` |
 | CMP-6 Strength in Numbers: exactly one Tier below | Keep |
 | REB-3 First Among Equals without Command Unit (X) count as Command Units | Kept (group reading) |
 | REB-5 Hostile takeover may put guns in reserve | Change: guns always deploy |

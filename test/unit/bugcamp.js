@@ -125,6 +125,14 @@ var sp = mk('bspitters', 'A', 10, 10), tg = mk('regular', 'B', 25, 10);
 st.units = [sp, tg];
 var m = R.shotOdds(st, sp, tg, 'fire', {});
 ok('Effective Toxin Glands: Fire! is worth +2', m.parts.some(function (x) { return /Toxin/.test(x.label) && x.v === 2; }), true);
+// a Flying Bug fires at Basic Firepower, but its Fire! still adds +1 with the glands (review a119ac2 BUG-6)
+var wing = mk('bsmallwing', 'A', 10, 10);
+st.units = [wing, tg];
+var wf = R.shotOdds(st, wing, tg, 'fire', {}), wb = R.shotOdds(st, wing, tg, 'basic', {});
+ok('...a Flying Bug\'s Fire! is worth +1', wf.parts.some(function (x) { return /Toxin/.test(x.label) && x.v === 1; }) && wf.mods === wb.mods + 1, true, wf.mods + ' vs ' + wb.mods);
+st.doctrines.A = [];
+ok('...and nothing without the glands', R.shotOdds(st, wing, tg, 'fire', {}).mods, wb.mods);
+st.doctrines.A = ['BC6'];
 st.doctrines.A = ['BB3'];
 ok('Increased Control: the Overmind reaches 24"', R.overmindReach(st, 'A'), 24);
 st.doctrines.A = ['BP5'];

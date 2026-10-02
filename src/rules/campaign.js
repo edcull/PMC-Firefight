@@ -193,7 +193,7 @@
     { id: 'BC5', cat: 'Biochemical', name: 'Bioplasma Missiles',
       text: 'Spore Bugs and Flying Bugs get the Anti-tank (limited) special rule.' },
     { id: 'BC6', cat: 'Biochemical', name: 'Effective Toxin Glands',
-      text: 'Spore Bugs and Flying Bugs get +2 for the Fire! action instead of +1.' },
+      text: 'Spore Bugs and Flying Bugs get an additional +1 Firepower when taking the Fire! action.' },
     { id: 'BB1', cat: 'Behavioural', name: 'Coordinated Hive',
       text: 'The swarm may re-roll its failed dice in the Reserve phase.' },
     { id: 'BB2', cat: 'Behavioural', name: 'Mimicry',
