@@ -263,7 +263,7 @@
         var b = propBox(p);
         var cv = document.createElement('canvas');
         cv.width = Math.max(1, b.w); cv.height = Math.max(1, b.h);
-        var og = cv.getContext('2d');
+        var og = cv.getContext('2d', { willReadFrequently: true });   // read back once, for its outline
         og.translate(-b.x, -b.y);
         ISO.drawProp(og, p, liftOf(p.x, p.y));
         /* the plate's pixels, inside the building's outline — taken whole, so
