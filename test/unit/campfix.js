@@ -62,7 +62,8 @@ console.log('\nSABOTAGE OBJECTIVES (p. 155)');
 require('../../src/rules/scenarios.js');
 require('../../src/rules/solitaire.js');
 var SAB = global.PMCSolo.SCENARIOS.s_sabotage;
-[[1, 3], [2, 5], [3, 7]].forEach(function (c) {
+// 3 + 2 a Priority Level, as written (review a119ac2 SOL-5)
+[[1, 5], [2, 7], [3, 9]].forEach(function (c) {
   var st = { cfg: { pl: c[0] }, sc: {}, terrain: [], units: [], objectives: [] };
   SAB.objectives(st);
   var gap = Infinity;

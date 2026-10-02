@@ -185,7 +185,9 @@
           pushRes({ kind: 'Disembark', title: u.name + ' unloads', side: u.side, list: lines });
           endActivation(); return;
         }
-        return aiRoll(u, obj || nearestEnemy(u), true);
+        /* An OpFor hull told to hold — Reasonably Defensive or Neutral (p. 147) — keeps
+           its troops aboard where it stands, rather than driving them in. */
+        if (!(soloB && (bhV === 'defensive' || bhV === 'neutral'))) return aiRoll(u, obj || nearestEnemy(u), true);
       }
 
       // an empty transport picks up the nearest squad that will fit

@@ -676,6 +676,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | XEN-12 Turrets above the Battle Tier | **Fixed.** The campaign's "Fielded for this battle" list offers higher-Tier turrets at Priority Level 2 and up; the list's own limits decide the rest. | `dossier-contract.js`; test `xenoflow.js` |
 | XEN-14 Rite of Knowledge, Infamy of Backwardness | **Changed (owner's ruling).** Both apply to the Teleport Turrets only, as written: the Teleport craft is manned, so a Backward unit may use it and the Rite gives no re-roll through it. | `xeno.js`; test `battlerules.js` |
 | XEN-15 Turrets' drone Structure | **Kept (owner's ruling).** Turrets are always Drone Controlled; the +1 Structure is taken as already in their profiles. | — |
+| SOL-5 Sabotage objectives | **Changed (owner's ruling, as written).** 3 objectives plus 2 per Priority Level: 5 solo, 7 at Priority Level 2. Also fixed on the way: an OpFor transport carrying troops drove them towards an objective whatever its behaviour roll; a Defensive or Neutral one now holds. | `solitaire.js`, `ai.js`; tests `campfix.js`, `soloai.js` |
 | Solitaire | SOL-6 Defensive and Neutral OpFor shoot the easiest target, not the biggest threat; SOL-8 a Suppressed Decapitation leader never fires |
 
 ### Readings (31): the book can fairly be read either way
