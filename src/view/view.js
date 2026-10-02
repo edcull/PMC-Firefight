@@ -189,6 +189,10 @@
     function showFollow() {
       var b = el('follow-toggle');
       if (!b) return;
+      /* Two players at one screen (a hotseat skirmish or campaign battle): both sides
+         are this screen's own, so there is no other side's move to follow. */
+      var cfg = B.state && B.state.cfg;
+      b.hidden = !!(cfg && B.seats && B.seats.length > 1 && !(cfg.aiSides || []).length);
       var on = followOn();
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -690,6 +694,7 @@
       }
       turnBanner();
       briefOnce();
+      showFollow();                     // hidden at a two-player screen
       if (B.state.solo && B.state.phase !== 'deploy' && B.state.phase !== 'terrain') {
         el('hdr-phase').textContent = 'Turn ' + B.state.turn + ' · ' + (B.state.activeSide === 'B' ? 'OpFor phase' : 'Action phase');
         el('hdr-init').textContent = B.state.scen.name;

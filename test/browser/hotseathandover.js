@@ -116,6 +116,7 @@ const { ROOT } = require('../where.js');
     await p.waitForTimeout(500);
   }
   check('in the battle, no card between the players\' activations', cards === 0 && sides.length >= 2, cards + ' cards; ' + sides.join(' → '));
+  check('no Follow button at a two-player screen', await p.evaluate(() => document.getElementById('follow-toggle').hidden));
   check('...the top bar says whose turn it is instead', seen.length >= 2 && seen.every(t => /Iron Wolves|Red Dawn/.test(t)), seen.join(' → '));
 
   console.log('\nA reload');
