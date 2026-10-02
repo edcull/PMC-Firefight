@@ -335,7 +335,7 @@
       var wreck = null;
       if (breached) {
         var piece = shelterOf(state, atk, def);
-        if (piece && isDestructible(piece)) wreck = destroyTerrain(state, piece, log, atk);
+        if (piece && isDestructible(piece)) wreck = destroyTerrain(state, piece, log, atk, def.bld === piece ? (def.sec || 0) : null);
       }
       var dres = defenceAgainst(state, atk, def, { assault: true });
       var hits;

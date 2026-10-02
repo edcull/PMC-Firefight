@@ -298,5 +298,20 @@ console.log('\nTER-4 A unit in a wood or building on the same hill is not below 
   ok('...and in a wood down there too', hillFP(unit('regular', 'B', 30, 16), [hill, { kind: 'woods', x: 28, y: 13, w: 4, h: 6 }]));
 })();
 
+console.log('\nTER-6 Bringing down one section of a building burns that section only (p. 41)');
+(function () {
+  const bld = { kind: 'building', x: 10, y: 10, w: 8, h: 4, parts: [{ x: 10, y: 10, w: 4, h: 4 }, { x: 14, y: 10, w: 4, h: 4 }] };
+  const west = unit('regular', 'B', 12, 12, { bld, sec: 0 }), east = unit('regular', 'B', 16, 12, { bld, sec: 1 });
+  const st = world([west, east], [bld]);
+  const res = R.destroyTerrain(st, bld, [], null, 0);
+  ok('the west wing goes up in flames', res && res.kind === 'burning' && st.terrain.some((r) => r.kind === 'burning' && r.x === 10 && r.w === 4));
+  ok('...the building keeps its east wing', bld.kind === 'building' && bld.parts.length === 1 && bld.parts[0].x === 14);
+  ok('...its garrison scrambles out', west.bld === null && res.evicted.indexOf(west) >= 0);
+  ok('...and the east wing\'s stays put, in what is now the only section', east.bld === bld && east.sec === 0);
+  const whole = { kind: 'building', x: 30, y: 10, w: 8, h: 4, parts: [{ x: 30, y: 10, w: 4, h: 4 }, { x: 34, y: 10, w: 4, h: 4 }] };
+  R.destroyTerrain(world([], [whole]), whole, [], null);
+  ok('with no section named (a charge on the building), all of it burns', whole.kind === 'burning');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

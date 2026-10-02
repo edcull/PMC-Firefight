@@ -1344,7 +1344,7 @@
   function shelterOf(state, attacker, target) { return (KIT_DESTRUCT || kitDestruct()).shelterOf(state, attacker, target); }
   function canDemolish(u, r) { return (KIT_DESTRUCT || kitDestruct()).canDemolish(u, r); }
   function canCharge(u, r) { return (KIT_DESTRUCT || kitDestruct()).canCharge(u, r); }
-  function destroyTerrain(state, r, log, by) { return (KIT_DESTRUCT || kitDestruct()).destroyTerrain(state, r, log, by); }
+  function destroyTerrain(state, r, log, by, sec) { return (KIT_DESTRUCT || kitDestruct()).destroyTerrain(state, r, log, by, sec); }
   function nearestClear(state, u, r) { return (KIT_DESTRUCT || kitDestruct()).nearestClear(state, u, r); }
   function shootTerrain(state, a, r) { return (KIT_DESTRUCT || kitDestruct()).shootTerrain(state, a, r); }
   function detonate(state, a, r) { return (KIT_DESTRUCT || kitDestruct()).detonate(state, a, r); }

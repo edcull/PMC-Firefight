@@ -81,9 +81,13 @@
       return destructibleKind(r) === 'target';
     }
 
-    function destroyTerrain(state, r, log, by) {
+    /* `sec`: the section of a building of several, when it is a garrison in that
+       one section that brought it down (fire, or Sappers' breach) — that section
+       burns and the rest stands: each section is a building of its own (p. 41). */
+    function destroyTerrain(state, r, log, by, sec) {
       var kind = destructibleKind(r);
       if (!kind) return null;
+      if (kind === 'building' && sec != null && r.parts && r.parts.length > 1 && r.parts[sec]) return burnSection(state, r, sec, log, by);
       var was = TERRAIN[r.kind].name;
       r.kind = kind === 'building' ? 'burning' : kind === 'wire' ? 'cutwire' : 'razed';
       r.wrecked = true;
@@ -105,6 +109,27 @@
           out.evicted.push(u);
           log.push({ t: 'note', text: u.label + ' scrambles clear of the burning building.' });
         }
+      }
+      return out;
+    }
+    function burnSection(state, r, sec, log, by) {
+      var q = r.parts[sec], was = TERRAIN[r.kind].name;
+      var fire = { kind: 'burning', x: q.x, y: q.y, w: q.w, h: q.h, wrecked: true };
+      r.parts.splice(sec, 1);
+      state.terrain.push(fire);
+      var out = { piece: fire, was: was, kind: 'burning', evicted: [], section: true };
+      log.push({ t: 'kill', text: (by ? by.label + ' brings down ' : 'Down comes ') + 'one wing of the ' + was.toLowerCase() + ' — it goes up in flames.' });
+      for (var i = 0; i < state.units.length; i++) {
+        var u = state.units[i];
+        if (!u.alive || u.aboard || u.bld !== r) continue;
+        var us = u.sec || 0;
+        if (us > sec) { u.sec = us - 1; continue; }        // the wings after it close up their numbers
+        if (us < sec) continue;
+        u.bld = null; u.sec = null;
+        var p = nearestClear(state, u, fire);
+        u.x = p.x; u.y = p.y;
+        out.evicted.push(u);
+        log.push({ t: 'note', text: u.label + ' scrambles clear of the burning wing.' });
       }
       return out;
     }

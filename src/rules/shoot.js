@@ -327,7 +327,7 @@
           ' [' + dres.parts.map(function (p) { return p.label + ' ' + p.v; }).join(', ') + '] → ' +
           hits + ' hit' + (hits === 1 ? '' : 's')
       });
-      var wreck = breach ? destroyTerrain(state, breach, log, a) : null;
+      var wreck = breach ? destroyTerrain(state, breach, log, a, t.bld === breach ? (t.sec || 0) : null) : null;
 
       if (hits > 0 && isMachine(t)) {
         var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
