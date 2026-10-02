@@ -362,6 +362,7 @@
       crater:    { ch: 'C', col: '#c0a880' },
       barricade: { ch: 'L', col: '#d8b870' },
       trench:    { ch: 'T', col: '#c8a878' },
+      dugin:     { ch: 'D', col: '#d8b870' },
       building:  { ch: 'B', col: '#c9c3b4' },
       bunker:    { ch: 'F', col: '#8fb8d0' },
       hill:      { ch: 'H', col: '#e0b464' },
@@ -372,7 +373,11 @@
     function terrainMark(u) {
       var kind = R.kindsUnder(B.state, u)[0];
       // in the open, within reach of a low wall: in its cover, and lined up along it (draw.js lineUp)
-      if (!(R.TERRAIN[kind] && R.TERRAIN[kind].cover) && !R.isMachine(u) && R.wallCoverAt(B.state, u.x, u.y)) kind = 'barricade';
+      if (!(R.TERRAIN[kind] && R.TERRAIN[kind].cover) && !R.isMachine(u)) {
+        // a gun dug in behind its own sandbags (p. 94: +2 from its front arc)
+        if (R.dugIn(u)) kind = 'dugin';
+        else if (R.wallCoverAt(B.state, u.x, u.y)) kind = 'barricade';
+      }
       var m = TERRAIN_MARK[kind];
       if (!m) return null;
       // a hull gets no cover, so only the ground that still costs or helps it shows
