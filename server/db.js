@@ -116,6 +116,9 @@ function wrap(db) {
     addUser: db.prepare('INSERT INTO users (name, pass, pub, admin, created, seen) VALUES (?, ?, ?, ?, ?, ?)'),
     setPass: db.prepare('UPDATE users SET pass = ? WHERE id = ?'),
     setAdmin: db.prepare('UPDATE users SET admin = ? WHERE id = ?'),
+    dropUser: db.prepare('DELETE FROM users WHERE id = ?'),
+    ownedCount: db.prepare('SELECT COUNT(*) AS n FROM campaigns WHERE owner = ?'),
+    memberOfCount: db.prepare('SELECT COUNT(*) AS n FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.owner != ?'),
     seen: db.prepare('UPDATE users SET seen = ? WHERE id = ?'),
     users: db.prepare('SELECT id, name, admin, created, seen FROM users ORDER BY name'),
     countUsers: db.prepare('SELECT COUNT(*) n FROM users'),
@@ -163,6 +166,12 @@ function wrap(db) {
     addUser: (u) => q.addUser.run(u.name, u.pass, u.pub, u.admin ? 1 : 0, u.created, u.created).lastInsertRowid,
     setPass: (id, pass) => q.setPass.run(pass, id),
     setAdmin: (id, on) => q.setAdmin.run(on ? 1 : 0, id),
+    /* An account removed: its sessions, the campaigns it keeps (an online one it made
+       goes for both players) and its seat in others go with it; its battles stay in
+       the other players' lists, under the name it had. */
+    dropUser: (id) => q.dropUser.run(id).changes > 0,
+    // what removing an account takes with it: campaigns it keeps, online ones it only plays in
+    userHolds: (id) => ({ owned: q.ownedCount.get(id).n, member: q.memberOfCount.get(id, id).n }),
     seen: (id, at) => q.seen.run(at, id),
     users: () => q.users.all(),
     countUsers: () => q.countUsers.get().n,

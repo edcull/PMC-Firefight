@@ -80,6 +80,18 @@ function ok(name, cond, note) {
   for (let i = 0; i < 12; i++) if ((await fresh.register('Bot ' + i, 'password ' + i, '10.0.2.1')).ok) made++;
   ok('ten new accounts an hour from one address', made === 10, made + ' made');
 
+  console.log('\nAn account removed');
+  const gone = await fresh.register('Leaver', 'password gone', '10.0.3.1'), stay = await fresh.register('Stayer', 'password stay', '10.0.3.2');
+  const fdb = fresh.db, at = Date.now();
+  const mineId = fdb.addCampaign({ owner: gone.who.userId, kind: 'solo', name: 'Theirs', turn: 0, state: {}, at: at });
+  const otherId = fdb.addCampaign({ owner: stay.who.userId, kind: 'online', name: 'Shared', turn: 0, state: {}, at: at });
+  fdb.addMember(otherId, stay.who.userId, 'A', at); fdb.addMember(otherId, gone.who.userId, 'B', at);
+  const holds = fdb.userHolds(gone.who.userId);
+  ok('what it takes with it is told first: its own campaigns, its seats in others', holds.owned === 1 && holds.member === 1, JSON.stringify(holds));
+  ok('removed', fdb.dropUser(gone.who.userId) && !fdb.userByName('Leaver'));
+  ok('...its sessions with it', !fresh.session(gone.token));
+  ok('...and its own campaigns, and its seat in another\'s; that one stays for its maker', !fdb.campaign(mineId) && !!fdb.campaign(otherId) && fdb.members(otherId).length === 1);
+
   console.log('\nThe cookie');
   const req = { headers: { 'x-forwarded-proto': 'https' }, socket: {} };
   const c = Auth.cookie('tok', req);

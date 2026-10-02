@@ -6,6 +6,7 @@
      node server/admin.js create <name> <password> [admin]
      node server/admin.js reset-password <name> <new password>
      node server/admin.js admin <name> on|off
+     node server/admin.js delete <name> [--yes]   says what goes with it; --yes removes it
      node server/admin.js backup [file]      a consistent copy, safe while the server runs
 
    DATA_DIR says where the database is, as for the server (default: data/ beside server.js). */
@@ -47,13 +48,24 @@ async function main(argv) {
       say(u.name + (b !== 'off' ? ' is now an admin.' : ' is no longer an admin.'));
       return 0;
     }
+    if (cmd === 'delete') {
+      const u = db.userByName(a);
+      if (!u) { say('No account called ' + a + '.'); return 1; }
+      const h = db.userHolds(u.id);
+      const what = u.name + ': ' + h.owned + ' campaign' + (h.owned === 1 ? '' : 's') + ' of theirs (an online one goes for both players), and their seat in ' +
+        h.member + ' online campaign' + (h.member === 1 ? '' : 's') + ' someone else made.';
+      if (b !== '--yes') { say('This would remove ' + what + '\nRun it again with --yes to remove the account (a backup first is wise).'); return 1; }
+      db.dropUser(u.id);
+      say('Removed ' + what);
+      return 0;
+    }
     if (cmd === 'backup') {
       const to = a || path.join(DATA, 'backup-' + new Date().toISOString().slice(0, 10) + '.db');
       await db.backup(to);
       say('Backed up to ' + to);
       return 0;
     }
-    say('Usage: node server/admin.js users | create <name> <password> [admin] | reset-password <name> <password> | admin <name> on|off | backup [file]');
+    say('Usage: node server/admin.js users | create <name> <password> [admin] | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file]');
     return cmd ? 1 : 0;
   } finally { db.close(); }
 }

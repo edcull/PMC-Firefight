@@ -137,7 +137,7 @@ sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js reset-password "
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js backup     # a copy beside it, safe while the server runs
 ```
 
-`create <name> <password> [admin]` and `admin <name> on|off` are there too.
+`create <name> <password> [admin]`, `admin <name> on|off` and `delete <name> [--yes]` (says what goes with the account; `--yes` removes it) are there too.
 
 ## If it goes wrong
 
