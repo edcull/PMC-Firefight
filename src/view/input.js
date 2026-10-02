@@ -304,7 +304,13 @@
     }
 
     function onBoardTap(e) {
-      if (!B.state || B.state.over || ui.resOpen) return;
+      if (!B.state || B.state.over) return;
+      /* A result card still open holds the table until it is read — unless the
+         screen is asking for a tap on the table itself (a landing zone, a drop, a
+         piece to put down): on a phone the card sits in the Results tab, out of
+         sight of the question, and the tap would go nowhere. */
+      var askTap = ui.insertion || B.state.relocating || B.state.placeAsk || B.state.minePick || B.faceAsked();
+      if (ui.resOpen && !askTap) return;
       hideTerrainTip();
       var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
 

@@ -104,6 +104,46 @@ function ok(name, cond, note) {
   ok('with everything down, a tap on a unit picks it up', moved.picked, JSON.stringify(moved));
   ok('...and a tap elsewhere puts it down there', !!moved.to && Math.hypot(moved.now.x - moved.from.x, moved.now.y - moved.from.y) > 1, JSON.stringify(moved));
 
+  /* Crushing the Resistance on a phone: each player taps their landing zone while
+     turn 1's result card is still unread in the Results tab, out of sight. The tap
+     used to be swallowed by the unread card, and the game went no further. */
+  // a context of its own: the first battle, kept in this browser, is not picked up again
+  const ph = await (await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })).newPage();
+  ph.on('pageerror', (e) => errs.push(e.message));
+  await ph.goto('file://' + path.join(ROOT, 'index.html'));
+  await ph.waitForTimeout(700);
+  await startCoop(ph, { scenario: 's_crush', factionB: 'rebel' });
+  const { step } = require('../hotseat.js');
+  const zones = [];
+  for (let i = 0; i < 300 && zones.length < 2; i++) {
+    const asked = await ph.evaluate(() => { const i = window.__insertionState && window.__insertionState(); return !!(i && i.kind === 'lz'); });
+    if (asked) {
+      const r = await ph.evaluate(() => {
+        const sp = window.__insertionSpotsNow(), s = sp[Math.floor(sp.length / 2)], open = !!window.__resOpen();
+        window.__boardTapAt(s.x, s.y);
+        return { open, lz: Object.keys(window.PMC_STATE().sc.lz || {}).length };
+      });
+      if (r.lz > zones.length) zones.push(r.open); else { zones.push('ignored'); break; }
+      await ph.waitForTimeout(600);
+      continue;
+    }
+    // everything else answered as the helper does, except the result cards: those are left unread
+    const d = await ph.evaluate(() => { const ins = window.__insertionState && window.__insertionState(); return ins ? 'wait' : null; }) || await ph.evaluate(step);
+    if (d === 'over') break;
+    await ph.waitForTimeout(60);
+  }
+  ok('a landing zone tapped is taken, even with a result card unread', zones.length === 2 && zones.indexOf('ignored') < 0, JSON.stringify(zones));
+  const landed = await ph.evaluate(async () => {
+    for (let i = 0; i < 60; i++) {
+      const s = window.PMC_STATE();
+      if (s.units.filter(u => u.side === 'A' && u.x >= 0).length) return s.units.filter(u => u.side === 'A' && u.x >= 0).length;
+      const r = document.getElementById('resolution'); if (r && !r.hidden) document.getElementById('res-continue').click();
+      await new Promise(res => setTimeout(res, 200));
+    }
+    return 0;
+  });
+  ok('...and both commandos come down', landed > 0, landed + ' units on the table');
+
   ok('no page errors', !errs.length, errs.slice(0, 2).join(' | '));
   console.log('\n  ' + pass + ' checks passed, ' + fail + ' failed.');
   await b.close();
