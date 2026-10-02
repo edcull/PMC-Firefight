@@ -45,8 +45,14 @@
     host.hidden = true;
     /* Laid out as the skirmish set-up and the campaign are: a bar across the top
        with the way back and the page's title, and under it the one thing that scrolls. */
-    host.innerHTML = '<div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby">\u2190 Back</button>' +
-      '<h1 id="lobby-title">Multiplayer</h1><span class="lob-code" id="lobby-code" hidden></span></div>' +
+    host.innerHTML = '<canvas id="lobby-table" aria-hidden="true"></canvas><div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby">\u2190 Back</button>' +
+      '<h1 id="lobby-title">Multiplayer</h1><div class="lob-right"><span class="lob-code" id="lobby-code" hidden></span>' +
+      // who is playing, on the right of the bar: a tap opens Your account and Sign out
+      '<span class="lob-user-wrap"><button type="button" class="lob-user" id="lobby-user" data-lob="usermenu" hidden aria-haspopup="true">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>' +
+      '<span id="lobby-user-name"></span></button>' +
+      '<span class="lob-usermenu" id="lobby-usermenu" hidden><button type="button" class="lnk" data-lob="account">Your account</button>' +
+      '<button type="button" class="lnk" data-lob="signout">Sign out</button></span></span></div></div>' +
       '<div class="sheet lobby-sheet"><div id="lobby-body"></div></div>';
     document.body.appendChild(host);
     style();
@@ -75,13 +81,23 @@
          a card over the ground on a desktop, a bar with the way back across its top */
       '#lobby.overlay{display:flex;flex-direction:column;padding:0;overflow:hidden;background:var(--ground);place-items:stretch}',
       '#lobby > .sheet{flex:1;min-height:0;width:100%;max-width:none;max-height:none;overflow-y:auto;overscroll-behavior:contain;border:0;border-radius:0;background:transparent;padding:18px max(16px,calc((100% - 720px) / 2)) calc(22px + env(safe-area-inset-bottom,0px))}',
-      '#lobby > .camp-top .lob-code{margin-left:auto}',
+      '#lobby > .camp-top .lob-right{margin-left:auto;display:flex;align-items:center;gap:10px}',
+      '.lob-user-wrap{position:relative}',
+      '.lob-user{display:flex;align-items:center;gap:6px;background:none;border:1px solid transparent;border-radius:5px;padding:4px 8px;color:var(--ink);font:600 13px var(--body);cursor:pointer}',
+      '.lob-user:hover,.lob-user[aria-expanded="true"]{border-color:var(--line)}',
+      '.lob-user svg{width:18px;height:18px;color:var(--ink-dim)}',
+      '.lob-usermenu{position:absolute;right:0;top:calc(100% + 4px);z-index:5;display:flex;flex-direction:column;gap:4px;padding:6px;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:6px}',
+      '.lob-usermenu[hidden]{display:none}',
+      // the menu's table rolling behind it on a desktop, as behind the set-up and the campaign
+      '#lobby-table{display:none}',
       '@media (min-width:1001px){' +
         '#lobby.overlay{padding:28px 20px;align-items:center;justify-content:center}' +
+        '#lobby-table{display:block;position:absolute;inset:0;width:100%;height:100%;opacity:.55;pointer-events:none}' +
+        '#lobby.lob-narrow > .camp-top,#lobby.lob-narrow > .sheet{width:min(460px,100%)}' +
         '#lobby > .camp-top{position:relative;width:min(760px,100%);border:1px solid var(--line);border-radius:8px 8px 0 0;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
         '#lobby.overlay > .sheet{position:relative;flex:0 1 auto;width:min(760px,100%);padding:18px 22px 22px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
       '}',
-      '.lob-sign{display:flex;flex-direction:column;gap:10px;max-width:420px}',
+      '.lob-sign{display:flex;flex-direction:column;gap:10px}',
       '.lob-tabs{display:flex;gap:6px;flex-wrap:wrap}',
       '.lob-tabs .lnk.on{border-color:var(--alpha);color:var(--alpha)}',
       '.lob-sign input{width:100%}',
@@ -146,8 +162,9 @@
     view = which || view;
     host.hidden = false;
     draw();
+    if (root.PMC_BACKDROP) root.PMC_BACKDROP();
   }
-  function close() { if (host) host.hidden = true; }
+  function close() { if (host) host.hidden = true; if (root.PMC_BACKDROP) root.PMC_BACKDROP(); }
 
   /* ================= drawing ================= */
   function draw() {
@@ -156,20 +173,22 @@
     var signing = view === 'signin';
     el('lobby-body').innerHTML = signing ? signHTML() : inRoom ? roomHTML() : lobbyHTML();
     if (el('lobby-title')) el('lobby-title').textContent = signing ? 'Sign in' : inRoom ? room.name : 'Multiplayer';
+    var us = el('lobby-user');
+    if (us) {
+      us.hidden = !account || signing;
+      el('lobby-user-name').textContent = account ? account.name + (account.guest ? ' (guest)' : '') : '';
+      us.title = account ? (account.guest ? 'Playing as a guest' : 'Signed in as ' + account.name) : '';
+      if (us.hidden) userMenu(false);
+    }
     var cd = el('lobby-code');
     if (cd) { cd.hidden = !inRoom; cd.textContent = inRoom ? room.id : ''; cd.title = 'Read this out to whoever you are playing'; }
+    host.classList.toggle('lob-narrow', signing);      // signing in is a short form: a narrow card
     var sh = host.querySelector('.lobby-sheet');
     if (sh) sh.classList.toggle('lob-sheet-room', !!(view === 'room' && room));
     var box = el('lobby-say') || el('room-say');
     if (box && document.activeElement !== box) { /* leave the caret where it was */ }
   }
 
-  // who this browser is playing as, and the way to sign out
-  function whoHTML() {
-    if (!account) return '';
-    return '<p class="lob-me">' + (account.guest ? 'Playing as a guest:' : 'Signed in as') + ' <b>' + esc(account.name) + '</b>' +
-      '<button class="lnk" data-lob="signout">Sign out</button></p>';
-  }
 
   /* Signing in: an account (a name and a password), a new one, or a guest's name
      for a one-off battle (a campaign will want an account). */
@@ -212,6 +231,8 @@
           me.name = name; draw(); return;
         }
         account = got.j.who; me.name = account.name;
+        if (root.PMCAccount) root.PMCAccount.refresh();
+        if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
         view = 'lobby';
         connect();
         draw();
@@ -225,6 +246,8 @@
     root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { });
     account = null; view = 'signin'; signMode = 'signin';
     draw();
+    if (root.PMCAccount) root.PMCAccount.refresh();
+    if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
   }
 
   function lobbyHTML() {
@@ -233,7 +256,7 @@
     return '<div class="lob-scroll"><p class="lede">Play somebody else over the network. Start a game and read its code out, or join one with the code you were given. ' +
       '<span class="lob-status">' + esc(status) + '</span></p>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
-      whoHTML() +
+
       // while a game is being started, the list of games to join stays out of the way
       (creating ? kindsHTML() :
         '<div class="field"><label for="join-code">Games</label>' +
@@ -413,8 +436,15 @@
   }
 
   /* ================= what the screen does ================= */
+  function userMenu(on) {
+    var m = el('lobby-usermenu'), u = el('lobby-user');
+    if (!m) return;
+    m.hidden = !on;
+    if (u) u.setAttribute('aria-expanded', String(!!on));
+  }
   function onClick(e) {
     var b = e.target.closest ? e.target.closest('[data-lob]') : null;
+    if (!b || b.getAttribute('data-lob') !== 'usermenu') { if (el('lobby-usermenu') && !el('lobby-usermenu').hidden && !(b && /^(signout|account)$/.test(b.getAttribute('data-lob')))) userMenu(false); }
     if (b) { act(b.getAttribute('data-lob'), b); return; }
     var t = e.target.closest ? e.target.closest('[data-term]') : null;
     if (t) return;                    // handled on change, below
@@ -425,7 +455,10 @@
     switch (what) {
       case 'signmode': signMode = b.getAttribute('data-mode'); draw(); return;
       case 'signgo': if (!busy) signIn(); return;
-      case 'signout': signOut(); return;
+      case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;
+      case 'signout': userMenu(false); signOut(); return;
+      // the main menu's account pane: what the server keeps for the player
+      case 'account': userMenu(false); close(); if (root.PMCMenu) { root.PMCMenu.open(); root.PMCMenu.show('account'); } return;
       case 'create': {
         // the first press opens the form; Create the game starts it
         if (!b.getAttribute('data-go')) { creating = true; draw(); return; }
@@ -664,6 +697,13 @@
     },
     close: close,
     net: function () { return net; },
+    /* Signed in or out from the main menu (account.js): a connection made as the
+       player who was signed in before is closed, and the next opening asks again. */
+    accountChanged: function () {
+      if (net) { net.disconnect(); net = null; }
+      room = null; games = []; mine = []; chat = { lobby: [], room: [] };
+      account = undefined; view = 'lobby';
+    },
     // the code of a game this browser was seated at and may go back to
     resumable: function () { return lastRoom(); }
   };

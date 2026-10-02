@@ -71,7 +71,7 @@ const online = Online.create({
 lobby.restore();
 
 /* ---- the server ---- */
-const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin, online: online });
+const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin, online: online, games: games });
 const server = http.createServer(function (req, res) {
   // one request going wrong is answered and logged; it does not take the server down (MP-1)
   try { handle(req, res); }

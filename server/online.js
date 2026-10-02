@@ -94,6 +94,27 @@ function finishPost(camp) {
   camp.pending = null;
 }
 
+/* The next question, made ready to be asked: No Place for the Weak! wants the
+   battle's Trauma Points (and the salvage dice before them) rolled — here, so the
+   dice are the server's — and is passed over when nobody qualifies (as the
+   dossier's postView does). Every question answered: the aftermath. */
+function prepPost(camp) {
+  const post = camp.post;
+  while (post && post.steps.length) {
+    const st = post.steps[0];
+    if (st.kind !== 'weak') break;
+    const pre = post.pre;
+    if (!pre.tp[st.side]) {
+      pre.salvage = pre.salvage || {};
+      pre.salvage[st.side] = C.salvageRolls(camp, post.report, st.side, pre.salvage[st.side]);
+      pre.tp[st.side] = C.rollTP(camp, post.report, st.side);
+    }
+    if (C.weakCandidates(camp, st.side, pre.tp[st.side]).length) break;
+    post.steps.shift();
+  }
+  if (post && !post.steps.length) finishPost(camp);
+}
+
 function create(opts) {
   const db = opts.db, notify = opts.notify || function () { };
   // makes the battle (lobby.campaignBattle): its room's code
@@ -155,12 +176,15 @@ function create(opts) {
     }
     if (cmd === 'postWeak') {
       if (st.kind !== 'weak') return no('not now');
-      pre.weak[side] = a.choice ? String(a.choice).slice(0, 40) : false;
+      const cand = C.weakCandidates(camp, side, pre.tp[side] || {}).map((e) => e.rid);
+      if (a.choice && cand.indexOf(String(a.choice)) < 0) return no('that unit is not one of those to choose from');
+      pre.weak[side] = a.choice ? String(a.choice) : false;
       post.steps.shift();
     } else if (cmd === 'postNext') {
+      if (st.kind === 'weak') return no('say who is executed, or spare them');
       post.steps.shift();
     } else return no('no such command');
-    if (!post.steps.length) finishPost(camp);
+    prepPost(camp);
     return { ok: true };
   }
 
@@ -276,7 +300,7 @@ function create(opts) {
         const steps = postSteps(camp, report), askReborn = { A: true, B: true };
         const inc = C.rollIncome(report.battleTier, report.pl, camp.companies.A, camp.companies.B, report.winner, ['A', 'B']);
         camp.post = { report: report, pre: { dice: inc.dice, plunder: inc.plunder, neg: inc.neg, tp: {}, weak: {}, askReborn: askReborn }, steps: steps };
-        if (!steps.length) finishPost(camp);
+        prepPost(camp);
         camp.online.contract = null;
         camp.online.battle = null;
         if (gameId != null) camp.online.applied = camp.online.applied.concat([gameId]).slice(-50);

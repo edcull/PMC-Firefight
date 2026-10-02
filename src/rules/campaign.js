@@ -477,12 +477,12 @@
       moneyLong: 'Resource Points', cmd: 'Leader Bug', recruit: 'Spawn', recruited: 'spawned',
       honour: 'Adaptation', honours: 'Adaptations', trauma: 'Genetic Flaw', traumas: 'Genetic Flaws', unitWord: 'bug unit',
       memorial: 'Biomass', memorialSub: 'The biomass spent over the campaign' };
-    if (f === 'rebel') return { tier: 'Revolt', force: 'revolt', Force: 'Revolt', side: 'Insurgents', money: 'IP',
+    if (f === 'rebel') return { tier: 'Revolt', force: 'revolt', Force: 'Revolt', side: 'Rebels', money: 'IP',
       moneyLong: 'Influence Points', cmd: 'First Among Equals', recruit: 'Recruit', recruited: 'recruited',
       honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit',
       memorial: 'Field hospital', memorialSub: 'Everyone killed or wounded, battle by battle',
       kia: 'killed', wia: 'wounded', kiaLong: 'Killed in action', wiaLong: 'Wounded, out for the campaign', kiaTag: 'KIA', wiaTag: 'WIA' };
-    return { tier: 'Company', force: 'company', Force: 'Company', side: 'Mercenaries', money: 'kUC',
+    return { tier: 'Company', force: 'company', Force: 'Company', side: 'PMC', money: 'kUC',
       moneyLong: 'thousand Universal Credits', cmd: 'field command', recruit: 'Recruit', recruited: 'recruited',
       honour: 'Battle Honour', honours: 'Battle Honours', trauma: 'Battle Trauma', traumas: 'Battle Traumas', unitWord: 'unit',
       memorial: 'Field hospital', memorialSub: 'Everyone killed or wounded, battle by battle',

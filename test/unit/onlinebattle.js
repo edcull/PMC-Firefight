@@ -115,7 +115,8 @@ function ok(name, cond, note) {
   ok('every question answered: the aftermath is applied', !s.post && !s.pending && s.online.after && s.online.after.winner === 'A', JSON.stringify(s.online.after && s.online.after.winner));
   ok('...each force paid', s.companies.A.kUC > kUC0.A && s.companies.B.kUC >= kUC0.B, JSON.stringify([kUC0, s.companies.A.kUC, s.companies.B.kUC]));
   ok('...the turn moved on, and the dossiers free again', s.turn === after0.turn + 1 && online.command(ash, id, 'colour', { colour: 'olive' }).ok, s.turn + ' / ' + after0.turn);
-  ok('the room is back to setup, no table', !room.table);
+  ok('the room is closed: an online campaign battle has no rematch', !room.table && !lobby.rooms.has(go.battle));
+  ok('the battle\'s aftermath is kept on the campaign\'s log, to be read again', !!(s.log.length && s.log[s.log.length - 1].after && s.log[s.log.length - 1].after.winner === 'A'));
   ok('a new contract may be drawn up', online.command(ash, id, 'contractBegin', {}).ok);
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

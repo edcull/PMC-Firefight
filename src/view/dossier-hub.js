@@ -15,7 +15,7 @@
         root = E.root, spendActs = E.spendActs, squares = E.squares, tip = E.tip;
     /* ================= the hub ================= */
     function hubView() {
-      var h = '<h2>Campaign' + (E.camp ? ' — turn ' + E.camp.turn : '') + '</h2>';
+      var h = '<h2>' + (E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
       if (!E.camp) {
         h += '<p class="lede">A never-ending series of battles between two forces that grow, ' +
           'scar over and occasionally fall apart. ' +
@@ -31,20 +31,31 @@
           opt('bugs', 'A Space Bug swarm \u2014 paid in Resource Points, built around Evolutionary Pathways', E.wantFaction) +
           opt('xeno', 'A Xenotripod tribe \u2014 paid in Territorial Points, built around Tribe Advancements', E.wantFaction) +
           '</select><div class="carch newarch">' + armyPill(pa, 'armynew') + '</div></div>';
-        h += '<div class="field"><label for="camp-mode">How you will play</label><select id="camp-mode">' +
-          opt('solo', 'Solo \u2014 against a rival force that grows battle by battle', E.wantMode) +
-          opt('hotseat', 'Hotseat \u2014 two dossiers, two players, one screen', E.wantMode) +
-          '</select></div>';
-        /* Solo: the forces on the world are always rolled, and each grows into its
-           own character from the doctrines it draws. Hotseat: there are no rolled
-           rivals, only the second player's force, so this asks what kind that is. */
-        h += '<div class="field" id="camp-bwrap"' + (E.wantMode === 'hotseat' ? '' : ' hidden') + '><label for="camp-bfaction">What Player 2 is running</label>' +
-          '<select id="camp-bfaction">' +
-          opt('pmc', 'A private military company', E.wantB) +
-          opt('rebel', 'An insurgent revolt', E.wantB) +
-          opt('bugs', 'A Space Bug swarm', E.wantB) +
-          opt('xeno', 'A Xenotripod tribe', E.wantB) +
-          '</select><div class="carch newarch">' + armyPill(pb, 'armynewb') + '</div></div>';
+        /* The way of playing is the menu card it was opened from (Single player or
+           Hotseat). Solo: how many forces share the world, and what each runs
+           (rolled, unless picked). Hotseat: there are no rolled rivals, only the
+           second player's force, so this asks what kind that is. */
+        var ARMIES = [['pmc', 'A private military company'], ['rebel', 'An insurgent revolt'], ['bugs', 'A Space Bug swarm'], ['xeno', 'A Xenotripod tribe']];
+        if (E.wantMode === 'hotseat') {
+          h += '<div class="field" id="camp-bwrap"><label for="camp-bfaction">What Player 2 is running</label>' +
+            '<select id="camp-bfaction">' + ARMIES.map(function (a) { return opt(a[0], a[1], E.wantB); }).join('') +
+            '</select><div class="carch newarch">' + armyPill(pb, 'armynewb') + '</div></div>';
+        } else {
+          var nr = E.wantRivals, ra = E.wantRivalArmies;
+          h += '<div class="field"><label for="camp-rivals">Opposing forces</label>' +
+            '<select id="camp-rivals">' + [1, 3, 5, 7].map(function (n) {
+              return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + n + (n === 1 ? ' force' : ' forces') + (n === 3 ? ' (the usual)' : '') + '</option>';
+            }).join('') + '</select>' +
+            '<p class="dnote">An odd number: with yours, the forces on the world pair off for each round of battles.</p></div>';
+          h += '<div class="field rivarmies"><label>Their armies</label>';
+          for (var ri = 0; ri < nr; ri++) {
+            h += '<select class="rivarmy" data-i="' + ri + '" aria-label="Opposing force ' + (ri + 1) + '">' +
+              opt('', 'Force ' + (ri + 1) + ' \u2014 rolled at random', ra[ri] || '') +
+              ARMIES.map(function (a) { return opt(a[0], 'Force ' + (ri + 1) + ' \u2014 ' + a[1].replace(/^An? /, '').replace(/^./, function (c) { return c.toUpperCase(); }), ra[ri] || ''); }).join('') +
+              '</select>';
+          }
+          h += '</div>';
+        }
         h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
         h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));
         h += '<button class="start" data-go="newcamp">Raise the force</button>';

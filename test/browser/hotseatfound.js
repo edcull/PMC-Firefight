@@ -60,10 +60,9 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   await p.waitForTimeout(900);
 
   console.log('\nPlayer 1');
-  await click(p, '#btn-campaign');
-  await p.evaluate(() => {
-    const m = document.getElementById('camp-mode'); m.value = 'hotseat'; m.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  // the Hotseat menu's campaign card: no choice of how to play, it is hotseat
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter('hotseat'));
+  await p.waitForTimeout(300);
   check('...it asks what player 2 is running instead', await p.evaluate(() => !document.getElementById('camp-bwrap').hidden &&
     [...document.getElementById('camp-bfaction').options].map(o => o.value).join() === 'pmc,rebel,bugs,xeno'));
   await p.evaluate(() => { document.getElementById('camp-bfaction').value = 'xeno'; });

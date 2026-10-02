@@ -24,9 +24,9 @@
   function el(id) { return document.getElementById(id); }
 
   /* ================= navigation ================= */
-  var PANES = ['main', 'single', 'hotseat'];
+  var PANES = ['main', 'single', 'hotseat', 'account'];
   // where Back (and Escape) goes from each list
-  var UP = { single: 'main', hotseat: 'main' };
+  var UP = { single: 'main', hotseat: 'main', account: 'main' };
   var at = 'main';
 
   function show(pane) {
@@ -36,6 +36,8 @@
     // the foot: the demo under the main menu only
     var d = el('btn-menu-demo');
     if (d) d.hidden = pane !== 'main';
+    // the account: drawn as it is opened (net/account.js)
+    if (pane === 'account' && root.PMCAccount) root.PMCAccount.shown();
   }
 
   function open(pane) {
@@ -58,6 +60,7 @@
 
   /* What the cards say depends on what there is to go back to. */
   function paint() {
+    if (root.PMCAccount) root.PMCAccount.label();
     var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE();
     el('btn-resume').hidden = !live;
     /* No battle on, but a campaign under way: the first card goes back into it

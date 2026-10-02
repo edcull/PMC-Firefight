@@ -84,7 +84,7 @@ async function pastFronts(p) {
   // the revolt is named on the founding screen now, beside its colours
   await p.evaluate(() => { document.getElementById('found-name').value = 'The Free Colonies'; });
   let txt = await body(p);
-  check('the founding screen speaks for a revolt', await p.evaluate(() => /Insurgents/.test(document.querySelector('#camp-body .found-units .muster-head .armypill').textContent)));
+  check('the founding screen speaks for a revolt', await p.evaluate(() => /Rebels/.test(document.querySelector('#camp-body .found-units .muster-head .armypill').textContent)));
   check('...and asks what the revolt calls itself',
     await p.evaluate(() => !!document.getElementById('found-name')));
   check('...and for the colours it fights in',
