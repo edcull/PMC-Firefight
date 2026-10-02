@@ -247,8 +247,13 @@
       if (held && a.alive && status(a) !== 'broken' && (!t.alive || t.bld !== held.piece) &&
         enterable(held.piece) && !occupant(state, held.piece, held.sec)) {
         if (!t.alive && t.bld) { t.bld = null; t.sec = null; }
-        enterBuilding(state, a, held.piece, held.sec);
-        log.push({ t: 'note', text: a.label + ' takes the building.' });
+        /* only a unit that may garrison moves in: a Rider unit "cannot occupy a
+           building" (p. 94), and an Overgrown bug goes by the vehicle rules — they
+           clear it, and it stands empty */
+        if (E.canGarrison(a)) {
+          enterBuilding(state, a, held.piece, held.sec);
+          log.push({ t: 'note', text: a.label + ' takes the building.' });
+        } else log.push({ t: 'note', text: a.label + ' clears the building, but cannot occupy it: it stands empty.' });
       }
       a.frenzyOwed = 0; t.frenzyOwed = 0;
       // Rite of Calmness (p. 142): the unit that won the assault sheds all its Suppression

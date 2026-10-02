@@ -1485,7 +1485,7 @@
       applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot,
       clampTo: clampTo, d10: d10, d3: d3, d6: d6, deathOrGlory: deathOrGlory, defenceAgainst: defenceAgainst,
       destroyTerrain: destroyTerrain, destructibleKind: destructibleKind, dmgMod: dmgMod, doctrine: doctrine,
-      drives: drives, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
+      drives: drives, canGarrison: canGarrison, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
       fmtPart: fmtPart, has: has, hasOwn: hasOwn, isDestructible: isDestructible, isFlying: isFlying,
       isMachine: isMachine, isOvergrown: isOvergrown, jumps: jumps, leaveAway: leaveAway, occupant: occupant,
       pathTo: pathTo, pheromoneBonus: pheromoneBonus, reachable: reachable, rectPointDist: rectPointDist,

@@ -201,5 +201,26 @@ console.log('\nA shot called in by Markerlights ignores Stealth (pp. 58-59)');
   ok('a mark by the other side does nothing for this shooter', def(rif).value === plain.value);
 })();
 
+console.log('\nTER-1 Only a unit that may garrison occupies the building it wins (pp. 41, 94)');
+(function () {
+  ['rridergang', 'bqueen', 'regular'].forEach((key) => {
+    let wins = 0, inside = 0, empty = 0;
+    for (let i = 0; i < 60; i++) {
+      const piece = { kind: 'building', x: 20, y: 20, w: 4, h: 4 };
+      const def = unit('regular', 'B', 22, 22, { bld: piece, sec: 0, sp: 5 });
+      const atk = unit(key, 'A', 25.5, 22, { assault: 8 });
+      const st = world([def, atk], [piece]);
+      R.assault(st, atk, def, {});
+      if (!def.alive || def.bld !== piece) {
+        wins++;
+        if (atk.bld === piece) inside++;
+        if (!st.units.some((u) => u.alive && u.bld === piece)) empty++;
+      }
+    }
+    if (key === 'regular') ok('infantry that win move in', wins > 0 && inside === wins, inside + ' of ' + wins);
+    else ok((key === 'bqueen' ? 'a Queen that wins clears' : 'Riders that win clear') + ' it but stays outside, and it stands empty', wins > 0 && inside === 0 && empty === wins, wins + ' wins, ' + inside + ' inside');
+  });
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
