@@ -259,8 +259,8 @@
      Operational doctrines (pp. 87-88) change what a legal list looks like:
        O1 Air Superiority     — one aircraft more than normally allowed
        O2 Non-conventional Army — the minimum of the Battle Tier is halved
-       O5 Strength in Numbers — one extra unit a Tier below the Battle Tier per
-                                Priority Level, free and off the points
+       O5 Strength in Numbers — one extra unit of a Tier lower than the Battle
+                                Tier per Priority Level, free and off the points
      The fourth, O4 Reinforced Light Support, changes the unit rather than the
      list, so it is applied when the unit is built. */
   function checkArmy(picks, battleTier, pl, docs, tactic, faction) {
@@ -288,7 +288,7 @@
     if (bugs) comp = COMPOSITION_BUGS[battleTier];
     // Rebel Tactics (p. 95) only bear on a Rebel list
     if (!rebel) tactic = null;
-    var budget = comp.points * pl, freeTier = battleTier - 1, freeUsed = 0, waveFree = 0;
+    var budget = comp.points * pl, freeUsed = 0, waveFree = 0, o5 = [0, 0, 0, 0, 0, 0];
     /* Human Wave Attacks: two extra infantry units of the Battle Tier per Priority
        Level, over and above the points. They come off the bill the way Strength in
        Numbers does, but they are the Battle Tier's own units rather than a Tier below. */
@@ -302,11 +302,21 @@
       spent -= waveFree * battleTier;
       freeUsed += waveFree;
     }
-    if (doc('O5') && freeTier >= 1) {
-      // the free units come off the bill, up to one per Priority Level
-      var o5 = Math.min(pl, counts[freeTier]);
-      freeUsed += o5;
-      spent -= o5 * freeTier;
+    if (doc('O5')) {
+      /* "one more unit of Tier lower to the Battle Tier per Priority Level" (p. 87),
+         read as any Tier lower than it. The free units are counted where they serve
+         the list best: first any Tier over its ceiling (the extra unit is over it),
+         then the highest Tiers, which take the most off the bill. */
+      var slots = pl, ceil = function (t) { var h = comp.limits[t - 1][1]; return h === 99 ? 99 : h * pl; };
+      for (var ft = battleTier - 1; ft >= 1 && slots; ft--) {
+        var over = Math.min(slots, Math.max(0, counts[ft] - ceil(ft)));
+        o5[ft] += over; slots -= over;
+      }
+      for (ft = battleTier - 1; ft >= 1 && slots; ft--) {
+        var more = Math.min(slots, counts[ft] - o5[ft]);
+        o5[ft] += more; slots -= more;
+      }
+      for (ft = 1; ft < battleTier; ft++) { freeUsed += o5[ft]; spent -= o5[ft] * ft; }
     }
     if (spent > budget) faults.push('Over budget: ' + spent + ' of ' + budget + ' composition points.');
     // "You cannot field more Drone units than other units" (p. 40)
@@ -315,7 +325,7 @@
     for (var t = 1; t <= 5; t++) {
       var lim = comp.limits[t - 1], lo = lim[0] * pl, hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (doc('O2') && t === battleTier) lo = Math.ceil(lo / 2);
-      if (doc('O5') && t === freeTier && hi !== 99) hi += pl;
+      if (hi !== 99) hi += o5[t];
       // Human Wave Attacks: the extra units are "additional" — over the Tier's limit as well as the points (p. 95)
       if (tactic === 'wave' && t === battleTier && hi !== 99) hi += waveFree;
       if (counts[t] < lo) faults.push('Needs at least ' + lo + ' Tier ' + ROMAN[t] + ' units (has ' + counts[t] + ').');

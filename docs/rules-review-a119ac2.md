@@ -690,6 +690,7 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | PMC-2 Inspiring Presence in a Command Vehicle uses the vehicle's Tier | Change: the commander's Tier |
 | CMP-4(a,b) rout Trauma Point from the plain half-the-units test | Change: the scenario's own rout |
 | CMP-5 Courage Under Fire: 1 SP off each later attack | Keep |
+| CMP-6 Strength in Numbers | **Changed.** Owner's ruling: the free unit may be of any Tier lower than the Battle Tier. Free places go first to a lower Tier over its ceiling, then to the highest Tiers (the most points off). | `rules.js` (`checkArmy`), `campaign.js` text; test `solo.js` |
 | CMP-6 Strength in Numbers: exactly one Tier below | Keep |
 | REB-3 First Among Equals without Command Unit (X) count as Command Units | Owner to say (Command Units decision) |
 | REB-5 Hostile takeover may put guns in reserve | Change: guns always deploy |
@@ -737,3 +738,4 @@ SOL-4 is fixed (with SOL-3). SPR-3 and PMC-3 are settled by the owner's Command 
 | CMP-3 On Our Terms… in hotseat | **Fixed.** Offered to each hotseat player whose company holds it; raising is capped at what both can field. When both hold it, each picks a direction: both down, it goes down; both up, it goes up; otherwise it stays. A change Player 2 makes sends the screen back to Player 1 to pick again. | `dossier-contract.js`, `dossier.js` (`data-tier`); test `hotseatterms.js` |
 | CMP-4 The rout Trauma Point | **Fixed.** Routing the enemy is a scenario objective (p. 49), so the +1 TP follows the scenario: the check names the side it routed (Meeting engagement; Find and secure, never the holder of the objective; Invasion, the defender only) or a side wiped out in any scenario. Secure and control, Demolish and Hostile takeover charge it only for a wipe-out. A conceded battle never marks a side. | `scenarios.js` (`check` returns `routed`), `solitaire.js`, `endphase.js`; test `scenrules.js` |
 | CMP-5 Courage Under Fire | **Kept.** Owner's ruling: 1 SP off each later attack in the turn, as Brave reads, not off each hit result. | — |
+| CMP-6 Strength in Numbers | **Changed.** Owner's ruling: the free unit may be of any Tier lower than the Battle Tier. Free places go first to a lower Tier over its ceiling, then to the highest Tiers (the most points off). | `rules.js` (`checkArmy`), `campaign.js` text; test `solo.js` |
