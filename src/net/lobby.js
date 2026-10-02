@@ -21,6 +21,7 @@
   var signMode = 'signin';      // the sign-in screen's tab: 'signin' | 'register' | 'guest'
   var busy = false;             // a sign-in on its way to the server
   var games = [];
+  var mine = [];                // this player's own games (phase 2): under way, to go back to, and how the rest went
   var room = null;
   var me = { id: null, name: '' };
   var chat = { lobby: [], room: [] };
@@ -241,9 +242,23 @@
         '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
         '<button class="lnk" data-lob="join">Join</button>' +
         '</div></div>' +
+        mineHTML() +
         '<div class="lob-list">' + list + '</div>') +
       '</div>' +
       chatHTML('lobby');
+  }
+
+  /* The player's own games: a battle still being fought, to go back to (from any
+     device, signed in as them), and the last few results. */
+  function mineHTML() {
+    if (!mine.length) return '';
+    var live = mine.filter(function (g) { return g.status === 'battle'; }), done = mine.filter(function (g) { return g.status !== 'battle'; }).slice(0, 5);
+    var row = function (g) {
+      return '<div class="lob-game"><div><b>' + esc(g.name) + '</b>' + (g.against ? ' <span class="f">against ' + esc(g.against) + '</span>' : '') + '</div>' +
+        '<div class="seats">' + (g.result ? esc(g.result.charAt(0).toUpperCase() + g.result.slice(1)) : 'Under way') + '</div>' +
+        (g.status === 'battle' ? '<button class="lnk lob-go" data-lob="resume" data-id="' + esc(g.code) + '">Go back to it</button>' : '') + '</div>';
+    };
+    return '<div class="field"><label>Your games</label><div class="lob-list">' + live.concat(done).map(row).join('') + '</div></div>';
   }
 
   /* Start a game asks two things: what kind of game — a skirmish, co-op (not
@@ -429,6 +444,7 @@
       }
       case 'uncreate': creating = false; draw(); return;
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
+      case 'resume': return join(b.getAttribute('data-id'));
       case 'sit': net.send('game.seat', { seat: b.getAttribute('data-seat') }); return;
       case 'leave': keepRoom(''); net.send('game.leave'); view = 'lobby'; draw(); return;
       case 'leave-lobby':
@@ -540,6 +556,7 @@
       games = m.games || [];
       chat.lobby = m.chat || [];
       status = 'connected';         // who as is said on the line under it
+      net.send('games.mine');
       loadCampaigns();
       draw();
       /* A seat still held for this browser comes back by itself with the hello.
@@ -556,6 +573,7 @@
       if (back) setTimeout(function () { if (!room && lastRoom() === back) net.send('game.join', { id: back }); }, 400);
     });
     net.on('lobby', function (m) { games = m.games || []; draw(); });
+    net.on('mine', function (m) { mine = m.games || []; draw(); });
     net.on('lobby.chat', function (m) {
       chat.lobby.push(m);
       if (chat.lobby.length > P.LIMITS.chatLog) chat.lobby.shift();
@@ -585,7 +603,7 @@
       close();
       if (root.PMC_JOIN_BATTLE) root.PMC_JOIN_BATTLE(net, m.seat, m.cfg);
     });
-    net.on('over', function () { keepRoom(''); /* the board shows the result; the room reopens by itself */ });
+    net.on('over', function () { keepRoom(''); if (net) net.send('games.mine'); /* the board shows the result; the room reopens by itself */ });
     /* The other player dropping out, coming back or walking away, said on the
        board while the battle is on (the room's chat is not on screen then). */
     net.on('game.presence', function (m) {
@@ -595,7 +613,8 @@
       else if (m.kind === 'back') say2(who + ' is back.', 'good');
       else if (m.kind === 'left') {
         keepRoom('');
-        say2(who + ' has left the battle. It cannot go on without them.', 'bad', 7000);
+        say2(who + ' has left the battle' + (m.forfeit ? ' \u2014 you win by forfeit.' : '. It cannot go on without them.'), m.forfeit ? 'good' : 'bad', 7000);
+        if (net) net.send('games.mine');
         /* The battle on the screen is over, and so is the game: this player
            leaves its room too (it would only hold them in a game with nobody
            to play), and is put back in the list of games to start another. */

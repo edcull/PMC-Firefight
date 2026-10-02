@@ -29,6 +29,7 @@ const tables = require('./server/table.js');
 const app = require('./server/app.js');
 const DB = require('./server/db.js');
 const Auth = require('./server/auth.js');
+const Games = require('./server/games.js');
 
 const PORT = process.env.PORT || 8787;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -50,10 +51,14 @@ const auth = Auth.create({ db: db, log: log });
 setInterval(function () { auth.sweep(); }, 6 * 60 * 60 * 1000).unref();
 const campaigns = new Campaigns(process.env.CAMPAIGNS_DIR || path.join(ROOT, 'campaigns'), { log: log });
 const serve = statics.create(ROOT);
+// every battle kept as it is played, and brought back after a restart (multiplayer plan, phase 2)
+const games = Games.create(db);
 const lobby = new Lobby({
   log: log,
-  makeTable: tables.make({ campaign: campaigns, log: log })
+  games: games,
+  makeTable: tables.make({ campaign: campaigns, log: log, store: games })
 });
+lobby.restore();
 
 /* ---- the server ---- */
 const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin });

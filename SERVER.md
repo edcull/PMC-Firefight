@@ -51,8 +51,13 @@ The server's own source, the saved campaigns and anything hidden are not served.
   refused intent sends the whole table back at most once a second.
 - **Rooms do not pile up.** A finished battle puts its room back in setup for a
   rematch; a battle that cannot be laid out goes back to setup with the reason;
-  a room nobody is connected to is closed after 10 minutes (a battle, after 6
-  hours: until battles are stored, multiplayer plan phase 2).
+  a room nobody is connected to is closed after 10 minutes.
+- **Battles survive a restart.** Every battle is kept in the database as it is
+  played (its config, its own seeded dice, every intent); a restart plays each
+  one in progress back to where it was and holds the seats for the players. A
+  battle nobody has been at for half an hour is put away and comes back when a
+  player goes back to it ("Your games" in the lobby). Leaving a battle is a
+  forfeit.
 
 ## The split
 
@@ -119,6 +124,7 @@ server/app.js        what it answers over HTTP: the app, the accounts, the campa
 server/db.js         the database (better-sqlite3): its migrations and every query
 server/auth.js       accounts, sessions and guests
 server/admin.js      the accounts from the command line: users, reset a password, back up
+server/games.js      the battles kept in the database: begun, each intent, the end, a player's own
 
 src/rules/           the rulebook: profiles, scenarios, campaigns, terrain
 src/engine/          the game, and the words it answers in

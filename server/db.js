@@ -29,7 +29,36 @@ const MIGRATIONS = [
      expires INTEGER NOT NULL,
      used    INTEGER NOT NULL
    );
-   CREATE INDEX sessions_user ON sessions(user_id);`
+   CREATE INDEX sessions_user ON sessions(user_id);`,
+  /* 2: battles, kept as they are played (phase 2). A battle is its config, the
+     seed its dice were rolled from, and every intent in order: played through
+     again, the same dice give the same battle (net.js keeps one the same way). */
+  `CREATE TABLE games (
+     id       INTEGER PRIMARY KEY,
+     code     TEXT NOT NULL,
+     name     TEXT NOT NULL,
+     status   TEXT NOT NULL,          -- battle | over | abandoned
+     settings TEXT NOT NULL,          -- the room's terms (JSON)
+     seats    TEXT NOT NULL,          -- { A: { id, pub, name, force }, B: ... } (JSON)
+     seat_a   TEXT,                   -- who sits where, by their identity (u<user> or g<guest>)
+     seat_b   TEXT,
+     cfg      TEXT NOT NULL,          -- what the engine was started with (JSON)
+     seed     INTEGER NOT NULL,
+     result   TEXT,                   -- { winner, forfeit?, over } once it is over (JSON)
+     created  INTEGER NOT NULL,
+     updated  INTEGER NOT NULL
+   );
+   CREATE INDEX games_a ON games(seat_a, updated);
+   CREATE INDEX games_b ON games(seat_b, updated);
+   CREATE INDEX games_status ON games(status);
+   CREATE TABLE game_intents (
+     game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+     seq     INTEGER NOT NULL,
+     seat    TEXT NOT NULL,
+     intent  TEXT NOT NULL,
+     at      INTEGER NOT NULL,
+     PRIMARY KEY (game_id, seq)
+   );`
 ];
 
 function open(file) {
@@ -69,8 +98,25 @@ function wrap(db) {
     dropSession: db.prepare('DELETE FROM sessions WHERE token = ?'),
     dropSessionsOf: db.prepare('DELETE FROM sessions WHERE user_id = ? AND token != ?'),
     dropAllSessionsOf: db.prepare('DELETE FROM sessions WHERE user_id = ?'),
-    dropExpired: db.prepare('DELETE FROM sessions WHERE expires < ?')
+    dropExpired: db.prepare('DELETE FROM sessions WHERE expires < ?'),
+    addGame: db.prepare('INSERT INTO games (code, name, status, settings, seats, seat_a, seat_b, cfg, seed, created, updated) VALUES (?, ?, \'battle\', ?, ?, ?, ?, ?, ?, ?, ?)'),
+    game: db.prepare('SELECT * FROM games WHERE id = ?'),
+    gameByCode: db.prepare('SELECT * FROM games WHERE code = ? AND status = \'battle\' ORDER BY id DESC'),
+    liveGames: db.prepare('SELECT * FROM games WHERE status = \'battle\' ORDER BY id'),
+    addIntent: db.prepare('INSERT INTO game_intents (game_id, seq, seat, intent, at) VALUES (?, ?, ?, ?, ?)'),
+    touch: db.prepare('UPDATE games SET updated = ? WHERE id = ?'),
+    intents: db.prepare('SELECT seat, intent FROM game_intents WHERE game_id = ? ORDER BY seq'),
+    endGame: db.prepare('UPDATE games SET status = ?, result = ?, updated = ? WHERE id = ? AND status = \'battle\''),
+    mine: db.prepare('SELECT id, code, name, status, seats, seat_a, seat_b, result, created, updated FROM games WHERE seat_a = ? OR seat_b = ? ORDER BY updated DESC LIMIT ?')
   };
+  const addIntent = db.transaction((gameId, seq, seat, it, at) => {
+    q.addIntent.run(gameId, seq, seat, JSON.stringify(it), at);
+    q.touch.run(at, gameId);
+  });
+  const parse = (g) => g && Object.assign({}, g, {
+    settings: JSON.parse(g.settings), seats: JSON.parse(g.seats), cfg: g.cfg ? JSON.parse(g.cfg) : null,
+    result: g.result ? JSON.parse(g.result) : null
+  });
   return {
     raw: db,
     userByName: (name) => q.userByName.get(name),
@@ -89,6 +135,19 @@ function wrap(db) {
     dropOtherSessions: (userId, keep) => q.dropSessionsOf.run(userId, keep || ''),
     dropAllSessions: (userId) => q.dropAllSessionsOf.run(userId),
     dropExpired: (at) => q.dropExpired.run(at).changes,
+    // ---- battles (phase 2) ----
+    addGame: (g) => q.addGame.run(g.code, g.name, JSON.stringify(g.settings), JSON.stringify(g.seats), g.seatA, g.seatB,
+      JSON.stringify(g.cfg), g.seed, g.at, g.at).lastInsertRowid,
+    game: (id) => parse(q.game.get(id)),
+    gameByCode: (code) => parse(q.gameByCode.get(code)),
+    liveGames: () => q.liveGames.all().map(parse),
+    // one intent, in order, written before anyone is told what came of it
+    addIntent: (gameId, seq, seat, it, at) => addIntent(gameId, seq, seat, it, at),
+    intents: (gameId) => q.intents.all(gameId).map((r) => ({ seat: r.seat, intent: JSON.parse(r.intent) })),
+    // over (or abandoned): only once — a battle already finished is left as it was
+    endGame: (id, status, result, at) => q.endGame.run(status, JSON.stringify(result), at, id).changes > 0,
+    // a player's games, the latest first (the cfg left out: it is large, and not wanted for a list)
+    mine: (who, n) => q.mine.all(who, who, n || 20).map((g) => Object.assign({}, g, { seats: JSON.parse(g.seats), result: g.result ? JSON.parse(g.result) : null })),
     // a copy of the whole database, consistent, while it is in use (the nightly backup)
     backup: (to) => db.backup(to),
     close: () => db.close()

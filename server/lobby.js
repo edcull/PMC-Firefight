@@ -13,6 +13,8 @@ const HOLD_SETUP_MS = 3 * 60 * 1000;
    left the browser on is kept a good while (until there is a database to keep it
    in, multiplayer plan phase 2), anything else not long. */
 const IDLE_BATTLE_MS = 6 * 60 * 60 * 1000;
+// a kept battle nobody is at is put away sooner: it is in the database, and comes back when someone does
+const IDLE_KEPT_MS = 30 * 60 * 1000;
 const IDLE_ROOM_MS = 10 * 60 * 1000;
 /* What one connection may send (MP-8): a bucket of messages that refills, a
    tighter one for chat and one for making and joining rooms. Over it, the
@@ -155,6 +157,7 @@ class Lobby {
     this.makeTable = opts.makeTable || null;   // (room, lobby) => Table, injected
     this.known = new Map();                     // private id -> { secret, pub }, every browser seen
     this.limits = opts.limits || LIMITS;        // what a connection may send (a test may raise them)
+    this.games = opts.games || null;            // the battles kept in the database (games.js), when there is one
     this.log = opts.log || function () { };
     // rooms nobody is connected to are looked for every minute
     if (opts.sweep !== false) {
@@ -170,13 +173,77 @@ class Lobby {
     this.rooms.forEach((room) => {
       if (room.anyoneHere()) { room.idleSince = null; return; }
       if (room.idleSince == null) { room.idleSince = t; return; }
-      const limit = room.phase === P.PHASE.BATTLE ? IDLE_BATTLE_MS : IDLE_ROOM_MS;
+      const kept = room.phase === P.PHASE.BATTLE && room.table && room.table.gameId != null;
+      const limit = kept ? IDLE_KEPT_MS : room.phase === P.PHASE.BATTLE ? IDLE_BATTLE_MS : IDLE_ROOM_MS;
       if (t - room.idleSince < limit) return;
       if (room.table) room.table.stop();
       this.rooms.delete(room.id);
-      this.log('room ' + room.id + ' closed: nobody has been in it for ' + Math.round((t - room.idleSince) / 60000) + ' minutes');
+      this.log('room ' + room.id + (kept ? ' put away (kept, to come back to)' : ' closed') + ': nobody has been in it for ' + Math.round((t - room.idleSince) / 60000) + ' minutes');
     });
     this.pushLobby();
+  }
+
+  /* ---- battles kept in the database (phase 2) ---- */
+  /* After a restart, every battle still being fought is brought back, its seats
+     held for the players, who walk back into them when they reconnect. */
+  restore() {
+    if (!this.games) return 0;
+    let n = 0;
+    this.games.live().forEach((g) => { try { if (this.revive(g)) n++; } catch (e) { this.log('could not bring back battle ' + g.code + ': ' + ((e && e.stack) || e)); } });
+    if (n) this.log('brought back ' + n + ' battle' + (n === 1 ? '' : 's') + ' in progress');
+    return n;
+  }
+  // one kept battle, as a room in memory again, played back to where it was; null if it turns out to be over
+  revive(g) {
+    const have = this.rooms.get(g.code);
+    if (have && have.table && have.table.gameId === g.id) return have;
+    const seats = g.seats || {};
+    const host = seats.A || seats.B || { id: null, name: 'Commander' };
+    const room = new Room(g.name, { id: host.id, name: host.name });
+    // the same code it had, unless another room has it now
+    room.id = have ? code() : g.code;
+    room.settings = g.settings;
+    room.phase = P.PHASE.BATTLE;
+    P.SEATS.forEach((sd) => {
+      const s = seats[sd];
+      if (!s) return;
+      const held = new Player(null, this.limits);
+      held.id = s.id; held.pub = s.pub; held.name = s.name; held.force = s.force;
+      held.seat = sd; held.room = room; held.ready = true;
+      room.seats[sd] = held;
+    });
+    const table = this.makeTable(room, this);
+    table.restore(g, this.games.intents(g.id));
+    if (table.stopped) return null;
+    room.table = table;
+    this.rooms.set(room.id, room);
+    return room;
+  }
+  /* Put this connection back in a seat being held for it (a refresh, a dropped
+     connection, a restart): the room it is in now, or null. */
+  rejoinHeld(p) {
+    let rejoined = null;
+    this.rooms.forEach((room) => {
+      P.SEATS.forEach((s) => {
+        const held = room.seats[s];
+        if (!held || held.sock || held.id !== p.id) return;
+        room.seats[s] = p;
+        p.room = room; p.seat = s; p.ready = held.ready; p.force = held.force;
+        rejoined = room;
+      });
+    });
+    return rejoined;
+  }
+  welcomeBack(p, room) {
+    room.broadcast('game.chat', { from: null, text: p.name + ' is back.', at: now() });
+    if (room.phase === P.PHASE.BATTLE) room.broadcast('game.presence', { kind: 'back', id: p.pub, name: p.name, seat: p.seat });
+    room.push();
+    if (room.table) room.table.rejoin(p);
+    this.pushLobby();
+  }
+  // a player's own games, the latest first: the ones under way to go back to, and how the rest went
+  mine(p) {
+    p.send('mine', { games: this.games ? this.games.mine(p.id) : [] });
   }
 
   /* ---- connections ---- */
@@ -257,6 +324,7 @@ class Lobby {
       case 'game.chat': return this.gameChat(p, msg);
       case 'intent': return this.intent(p, msg);
       case 'resync': return this.resync(p);
+      case 'games.mine': return this.mine(p);
       default: return p.fail('unknown message: ' + msg.t);
     }
   }
@@ -289,28 +357,14 @@ class Lobby {
   greet(p, key) {
     /* A reconnect: the same browser coming back to a seat still being held for
        it. Find that room and put them back in it. */
-    let rejoined = null;
-    this.rooms.forEach((room) => {
-      P.SEATS.forEach((s) => {
-        const held = room.seats[s];
-        if (!held || held.sock || held.id !== p.id) return;
-        room.seats[s] = p;
-        p.room = room; p.seat = s; p.ready = held.ready; p.force = held.force;
-        rejoined = room;
-      });
-    });
+    const rejoined = this.rejoinHeld(p);
     p.send('welcome', {
       you: { id: p.pub, name: p.name, guest: !!(p.who && p.who.guest) },
       key: key,                  // only to a browser just given one: kept, and presented next time
       games: this.list(),
       chat: this.chat.slice(-40)
     });
-    if (!rejoined) return;
-    rejoined.broadcast('game.chat', { from: null, text: p.name + ' is back.', at: now() });
-    if (rejoined.phase === P.PHASE.BATTLE) rejoined.broadcast('game.presence', { kind: 'back', id: p.pub, name: p.name, seat: p.seat });
-    rejoined.push();
-    if (rejoined.table) rejoined.table.rejoin(p);
-    this.pushLobby();
+    if (rejoined) this.welcomeBack(p, rejoined);
   }
 
   /* ---- the lobby proper ---- */
@@ -341,6 +395,8 @@ class Lobby {
     if (this.rooms.size >= P.LIMITS.rooms) return p.fail('the server is full of games — try again shortly');
     if (p.room) this.leave(p);
     const room = new Room(P.clampText(msg.name, P.LIMITS.name), p);
+    // a code nobody else has: not a room's in memory, nor a kept battle's waiting to be come back to
+    while (this.rooms.has(room.id) || (this.games && this.games.byCode(room.id))) room.id = code();
     P.cleanSettings(msg.settings, room.settings);
     room.seats.A = p;
     p.room = room; p.seat = 'A'; p.ready = false;
@@ -352,8 +408,26 @@ class Lobby {
   }
 
   join(p, msg) {
-    const room = this.rooms.get(P.clampText(msg.id, 16).toUpperCase());
+    const want = P.clampText(msg.id, 16).toUpperCase();
+    let room = this.rooms.get(want);
+    /* A battle put away (nobody at it for a while) comes back for one of its
+       players: played back to where it was, and their seat given back. */
+    if (!room && this.games) {
+      const g = this.games.byCode(want);
+      if (g && (g.seat_a === p.id || g.seat_b === p.id)) {
+        try { room = this.revive(g); } catch (e) { this.log('could not bring back ' + want + ': ' + ((e && e.stack) || e)); }
+        if (room) {
+          if (p.room && p.room !== room) this.leave(p);
+          if (this.rejoinHeld(p) === room) { this.welcomeBack(p, room); return; }
+        }
+      }
+    }
     if (!room) return p.fail('no game with that code');
+    // one of its players, coming back to the seat held for them
+    if (p.room !== room && P.SEATS.some((sd) => room.seats[sd] && !room.seats[sd].sock && room.seats[sd].id === p.id)) {
+      if (p.room) this.leave(p);
+      if (this.rejoinHeld(p) === room) { this.welcomeBack(p, room); return; }
+    }
     if (p.room === room) return room.push();
     if (p.room) this.leave(p);
     const seat = room.phase === P.PHASE.SETUP ? room.freeSeat() : null;
@@ -400,10 +474,12 @@ class Lobby {
          party to take the seat over, and the room goes back to setup so the
          rest can arrange another one. */
       if (room.phase === P.PHASE.BATTLE && seat) {
+        // a forfeit (decision 5): the side still at the table wins, and it is kept so
+        const winner = room.table ? room.table.forfeit(seat) : null;
         if (room.table) { room.table.stop(); room.table = null; }
         room.phase = P.PHASE.SETUP;
         // said to the board as well as the chat: the battle on the screen is over
-        room.broadcast('game.presence', { kind: 'left', id: p.pub, name: p.name, seat: seat });
+        room.broadcast('game.presence', { kind: 'left', id: p.pub, name: p.name, seat: seat, forfeit: !!winner, winner: winner });
       }
       room.players().forEach((q) => { q.ready = false; });
       room.broadcast('game.chat', { from: null, text: p.name + ' has left.', at: now() });

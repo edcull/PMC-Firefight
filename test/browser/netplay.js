@@ -259,7 +259,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('abandoned, the battle is gone from this screen', !gone1.live && !gone1.resume, JSON.stringify(gone1));
   const left = await toasts(p2);
   const gone2 = await p2.evaluate(() => window.PMC_BATTLE_LIVE());
-  ok('the other player is told it is over', left.some(t => /has left the battle/.test(t)), left.join(' | ') || 'no toast');
+  ok('the other player is told it is over, and that they win by forfeit', left.some(t => /has left the battle — you win by forfeit/.test(t)), left.join(' | ') || 'no toast');
   ok('...and their board lets it go', !gone2);
   // not held in the old game's room, with nobody to play: back to the list of games
   await wait(3000);
