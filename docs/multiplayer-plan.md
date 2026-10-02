@@ -101,7 +101,14 @@ Phases 0–2 can run alongside the hotseat work; phase 3 waits for the hotseat c
 - Seeded server dice per game; game rows and the intent log; rebuild on restart; "My games"; resume from another device; forfeits.
 - Tests: start a battle, play some turns, restart the server, both players reconnect and the battle continues to the same result as an unbroken one; abandon records a forfeit.
 
-### Phase 3 — online campaigns
+### Phase 3 — campaigns on the server, then online campaigns
+
+Split in three:
+- **3a — campaigns in the database (decision 7).** A `campaigns` table (owner, kind solo / hotseat / online, the campaign, a version). A signed-in player's campaigns are saved there, whole, with the version they were read at: a stale save is refused and the newer one handed back (409), so two devices never quietly overwrite each other. The browser's copy stays as a cache, and is all there is for someone not signed in. The old JSON files can be imported by their key's holder (or the admin tool); their routes become read-only.
+- **3b — the online loop**, as below: two members, a company each, commands checked by the server, the contract, the picks, the battle from the contract, the aftermath applied once, each player's questions.
+- **3c — the dossier online**, and the tests across two browsers.
+
+The original outline:
 - Tables for campaigns, members, companies, contracts and reports; the command API on the socket (`camp.*` messages) using the campaign rules; versioned company writes.
 - The dossier gains an online mode: the campaign list (mine), invite and join, each player's own dossier, the contract questions and force pick on each device, the battle from the contract, each player's aftermath.
 - Import of an existing campaign; the old `/campaign` JSON routes retired (or read-only for import).
@@ -118,7 +125,7 @@ Phases 0–2 can run alongside the hotseat work; phase 3 waits for the hotseat c
 
 ## 5. Decisions for the owner
 
-**Settled:** 1 — `better-sqlite3`. 2 — guests may play one-off battles; campaigns need an account. 3 — registration open to anyone who can reach the server. 5 — abandoning is a forfeit. Still open: 4, 6, 7.
+**Settled (all):** 1 — `better-sqlite3`. 2 — guests may play one-off battles; campaigns need an account. 3 — registration open to anyone who can reach the server. 4 — each side's secrets hidden online. 5 — abandoning is a forfeit. 6 — campaigns asynchronous between battles. 7 — the server keeps every campaign of a signed-in player, solo and hotseat too (the browser's copy stays as a cache and for anyone not signed in).
 
 1. **Database:** SQLite through the built-in `node:sqlite` (no dependency; Node 22.5+, still marked experimental), or `better-sqlite3` (one dependency, stable), or a server database such as PostgreSQL (more to run on a Pi)?
 2. **Accounts:** must everyone register, or may one-off battles be played as a guest?
