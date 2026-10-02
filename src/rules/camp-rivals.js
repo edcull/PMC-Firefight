@@ -17,7 +17,7 @@
         promoteCompany = E.promoteCompany, promoteUnit = E.promoteUnit, promotionCost = E.promotionCost,
         promotionTargets = E.promotionTargets, rebuildNeeds = E.rebuildNeeds, recruit = E.recruit,
         recruitCost = E.recruitCost, rollBattleTier = E.rollBattleTier, rollPayment = E.rollPayment,
-        rollScenario = E.rollScenario, root = E.root, shuffle = E.shuffle, sum = E.sum,
+        rollScenario = E.rollScenario, foresight = E.foresight, root = E.root, shuffle = E.shuffle, sum = E.sum,
         takeHonour = E.takeHonour, takeUpgrade = E.takeUpgrade, words = E.words;
 
     function faceRival(campaign, i) {
@@ -133,13 +133,14 @@
       var PLANETS = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
       campaign.offers = deal.map(function (idx) {
         var co = rivals[idx];
-        var scen = rollScenario(false);
+        // Foresighted Command (p. 141): the rival's and the player's (camp-contract.js)
+        var fs = foresight(A, co, true);
+        var scen = fs.scenario || fs.fore.dice[0];
         var tier = rollBattleTier(A, co);
         var docs = { A: A.doctrines || [], B: co.doctrines || [] };
-        // Foresighted Command (p. 141): a second scenario die, and the tribe keeps either
-        var alt = hasDoctrine(A, 'XO3') ? rollScenario(false) : null;
+        var alt = fs.alt || null;
         return {
-          alt: alt,
+          alt: alt, fore: fs.fore || null, foreNote: fs.note || null,
           planet: pick(PLANETS),
           altRoles: alt && SC ? SC.rollRoles(alt.id, docs, null, ['A']) : null,
           rival: idx,

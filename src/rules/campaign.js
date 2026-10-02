@@ -1085,6 +1085,8 @@
   function canStandard(coA, coB) { return (KIT_CONTRACT || kitContract()).canStandard(coA, coB); }
   function rollBattleTier(coA, coB, pl) { return (KIT_CONTRACT || kitContract()).rollBattleTier(coA, coB, pl); }
   function rollScenario(useD3) { return (KIT_CONTRACT || kitContract()).rollScenario(useD3); }
+  function foresight(A, B, bAI) { return (KIT_CONTRACT || kitContract()).foresight(A, B, bAI); }
+  function foreIgnore(r, side, i, bAI) { return (KIT_CONTRACT || kitContract()).foreIgnore(r, side, i, bAI); }
   function swapAllowance(co, listLength) { return (KIT_CONTRACT || kitContract()).swapAllowance(co, listLength); }
   function rollPayment(battleTier, pl) { return (KIT_CONTRACT || kitContract()).rollPayment(battleTier, pl); }
   function sum(a) { return (KIT_CONTRACT || kitContract()).sum(a); }
@@ -1376,7 +1378,7 @@
       promoteCompany: promoteCompany, promoteUnit: promoteUnit, promotionCost: promotionCost,
       promotionTargets: promotionTargets, rebuildNeeds: rebuildNeeds, recruit: recruit,
       recruitCost: recruitCost, rollBattleTier: rollBattleTier, rollPayment: rollPayment,
-      rollScenario: rollScenario, root: root, shuffle: shuffle, sum: sum, takeHonour: takeHonour,
+      rollScenario: rollScenario, foresight: foresight, root: root, shuffle: shuffle, sum: sum, takeHonour: takeHonour,
       takeUpgrade: takeUpgrade, words: words
     }));
   }
@@ -1533,7 +1535,7 @@
     promotionProgress: promotionProgress, fieldReport: fieldReport,
     canRecruit: canRecruit, recruit: recruit, canDisband: canDisband, disband: disband,
 
-    maxBattleTier: maxBattleTier, rollBattleTier: rollBattleTier, rollScenario: rollScenario,
+    maxBattleTier: maxBattleTier, rollBattleTier: rollBattleTier, rollScenario: rollScenario, foresight: foresight, foreIgnore: foreIgnore,
     swapAllowance: swapAllowance,
     rollPayment: rollPayment, rollIncome: rollIncome, negotiate: negotiate, payment: payment,
     expFor: expFor, tpFor: tpFor, traumaThreshold: traumaThreshold, rollTrauma: rollTrauma,

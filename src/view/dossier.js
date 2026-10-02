@@ -692,6 +692,17 @@
       render(); return;
     }
     if (t.hasAttribute('data-take-offer')) { takeOffer(+t.getAttribute('data-take-offer')); render(); return; }
+    // Foresighted Command with both holding it: the side whose turn it is ignores a die (XEN-11)
+    if (t.hasAttribute('data-forego') && contract && contract.fore && !contract.fore.done) {
+      var ff = contract.fore, fWho = ff.order[ff.ignored.length], wasScen = contract.scenario;
+      if (!C.foreIgnore(contract, fWho, +t.getAttribute('data-forego'), camp.mode !== 'hotseat')) return;
+      if (ff.done && contract.roles && (!wasScen || wasScen.id !== contract.scenario.id)) {
+        var SCf = root.PMCScen;
+        contract.roles = SCf && SCf.rollRoles ? SCf.rollRoles(contract.scenario.id,
+          { A: camp.companies.A.doctrines || [], B: camp.companies.B.doctrines || [] }, null, ['A']) : contract.roles;
+      }
+      save(); render(); return;
+    }
     if (t.hasAttribute('data-foresee') && contract && contract.alt) {
       var was = contract.scenario, wasRoles = contract.roles;
       contract.scenario = contract.alt; contract.alt = was;
