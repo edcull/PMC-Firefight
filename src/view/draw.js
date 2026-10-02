@@ -693,7 +693,7 @@
         mg.drawImage(xrUnit, 0, 0);
         mg.globalAlpha = 1;
         mg.globalCompositeOperation = 'source-in';
-        mg.fillStyle = sideInk(u.side);
+        mg.fillStyle = sideInk(u.paint || u.side);
         mg.fillRect(0, 0, W2, H2);
         // only where a building in front of it is drawn
         ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, xrUnit.width, xrUnit.height);
@@ -1029,7 +1029,7 @@
         var from = ISO.toScreen(pv.unit.x, pv.unit.y), to = ISO.toScreen(gx, gy);
         B.pctx.save();
         B.pctx.globalAlpha = 0.55;
-        B.pctx.strokeStyle = sideInk(pv.unit.side);
+        B.pctx.strokeStyle = sideInk(pv.unit.paint || pv.unit.side);
         B.pctx.lineWidth = Math.max(1, ISO.PIXEL);
         B.pctx.setLineDash([Math.max(2, ISO.PIXEL * 2), Math.max(2, ISO.PIXEL * 2)]);
         B.pctx.beginPath();
@@ -1786,7 +1786,7 @@
         B.ctx.fillStyle = 'rgba(8,11,16,.72)';
         B.ctx.fillRect(p.x - w / 2, p.y - 10, w, 13);
         if (toGo) readyMark(p.x - w / 2 + 7, p.y - 3.5);
-        B.ctx.fillStyle = sideInk(u2.side);
+        B.ctx.fillStyle = sideInk(u2.paint || u2.side);  // a co-op's second commando in its own colours
         var tx = p.x - w / 2 + 4 + (toGo ? 10 : 0) + tw / 2;
         B.ctx.fillText(u2.code, tx, p.y);
         var ix = tx + tw / 2 + 6.5;
