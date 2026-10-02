@@ -121,10 +121,10 @@ Each phase ends with its tests green (`npm test`, the browser set) and is merged
 - A sweep: every scenario × a spread of faction pairings, played to the end, with a resume part-way; co-op hotseat to the end.
 - Add the hotseat tests to the quick and slow sets in `scripts/test.js`.
 
-## 6. Decisions for the owner
+## 6. Decisions (owner, settled)
 
-1. **Handover screen:** a full-screen "Pass to <name>" card at each change of player where something is secret, or at every change of player (each activation)?
-2. **How secret is hotseat?** Muster lists, swaps, the contract picks, the mine: hidden from the other player (with handover), or open (simpler; one device, trust)?
-3. **Campaign end:** what happens when a force can no longer field a legal army — the campaign ends, or a rebuild grant?
-4. **End-phase surrender:** one card for both players, or keep asking each in turn?
-5. **Order of work:** phases 1 and 2 first (the blockers), then 3–6 as listed?
+1. **Handover:** a pass-the-device card at every change of player, for clarity; to be reviewed if it proves too much.
+2. **Secrecy:** the company rosters and the forces picked are open to both players (so HB-10 and HC-9 are not problems). Swaps are hidden and revealed together. Anything else secret is checked case by case as the work goes.
+3. **Campaign end:** when a force can no longer field a legal army (and cannot recruit back to one), the campaign ends.
+4. **End-phase surrender:** one card for both players.
+5. **Order:** phases 1 and 2 first.
