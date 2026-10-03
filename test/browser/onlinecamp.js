@@ -100,9 +100,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobstart"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
     ok('...forces, public and Start on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
     ok('...four slots: the host, one open, two AI forces', (await slotCount(p1)) === 4 && /Open — waiting for a player/.test(t1) && (t1.match(/AI force/g) || []).length >= 2);
-    await choose(p1, '#olob-n', '3');
-    for (let i = 0; i < 30 && (await slotCount(p1)) !== 3; i++) await wait(150);
-    ok('the host makes it three forces', (await slotCount(p1)) === 3);
+    await choose(p1, '#olob-n', '6');
+    for (let i = 0; i < 30 && (await slotCount(p1)) !== 6; i++) await wait(150);
+    ok('the forces: 2, 4, 6, 8 or 10', (await p1.evaluate(() => [...document.querySelectorAll('#olob-n option')].map((o) => o.value).join())) === '2,4,6,8,10' && (await slotCount(p1)) === 6);
+    await choose(p1, '#olob-n', '4');
+    for (let i = 0; i < 30 && (await slotCount(p1)) !== 4; i++) await wait(150);
+    ok('...and back to four', (await slotCount(p1)) === 4);
     // a slot made an AI force with its checkbox, and open again
     const tick = (on) => p1.evaluate((v) => { const c = document.querySelector('#camp-body [data-olob-ai="1"]'); c.checked = v; c.dispatchEvent(new Event('change', { bubbles: true })); }, on);
     await tick(true);
@@ -132,7 +135,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p2.evaluate(() => window.PMCLobby.open());
     let row = '';
     for (let i = 0; i < 30 && !row; i++) { await wait(200); row = await p2.evaluate(() => { const b = document.querySelector('#lobby .lob-list [data-lob="join"]'); return b ? b.closest('.lob-game').innerText : ''; }); }
-    ok('the public campaign is listed in Multiplayer, its open slots said', /Ash Online.s campaign/.test(row) && /3 forces/.test(row) && /1 slot open/.test(row), row);
+    ok('the public campaign is listed in Multiplayer, its open slots said', /Ash Online.s campaign/.test(row) && /4 forces/.test(row) && /1 slot open/.test(row), row);
     await p2.evaluate(() => document.querySelector('#lobby .lob-list [data-lob="join"]').click());
     let s2 = await till(p2, 'Brann in the lobby', (s) => s.view === 'olobby' && s.slot === 1);
     ok('joined from the list: Brann takes the open slot', s2.slot === 1 && /Brann Online/.test(await text(p2)));
@@ -158,7 +161,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     s2 = await till(p2, 'Brann’s hub', (s) => s.view === 'hub' && s.A === 'Red Dawn');
     ok('founded: each on their own hub, their own force', s1.A === 'Iron Wolves' && s2.A === 'Red Dawn');
     const rivals = await p1.evaluate(() => window.PMC_CAMPAIGN.online().camp.rivals.map((r) => (r.human ? 'H:' : 'AI:') + r.name));
-    ok('the other forces on the world: the AI force, and Brann’s', rivals.length === 2 && rivals.some((r) => /^AI:/.test(r)) && rivals.indexOf('H:Red Dawn') >= 0, rivals.join(', '));
+    ok('the other forces on the world: the AI forces, and Brann’s', rivals.length === 3 && rivals.some((r) => /^AI:/.test(r)) && rivals.indexOf('H:Red Dawn') >= 0, rivals.join(', '));
 
     console.log('\nAgainst an AI force');
     await press(p1, '[data-go="offers"]');
@@ -211,7 +214,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p1.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
     let orow = '';
     for (let i = 0; i < 30 && !orow; i++) { await wait(150); orow = await p1.evaluate(() => { const r = document.querySelector('#cont-list [data-cont^="o:"]'); return r ? r.textContent : ''; }); }
-    ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /3 forces/.test(orow), orow);
+    ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /4 forces/.test(orow), orow);
   } catch (e) {
     fail++; console.log('  ✗ ' + e.message);
   }

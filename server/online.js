@@ -1,4 +1,4 @@
-/* Online campaigns: a world of two to eight forces, each run by a player on their
+/* Online campaigns: a world of two to ten forces, each run by a player on their
    own device or by the server, fighting whenever they each have the time. The
    server keeps the world and owns its rules: a player sends a command, the server
    runs it with the campaign's own functions (the ones the dossier uses at one
@@ -28,7 +28,7 @@ const { C, R, SC } = require('./rules.js');
 const P = require('../src/engine/protocol.js');
 const Cmds = require('./campcmds.js');
 
-const MIN_SLOTS = 2, MAX_SLOTS = 8;
+const MIN_SLOTS = 2, MAX_SLOTS = 10;          // an even number of forces: 2, 4, 6, 8 or 10
 const FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
 const PLANETS = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
 const text = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, n);
@@ -371,10 +371,10 @@ function create(opts) {
 
   /* ================= the commands ================= */
   const LOBBY = {
-    // the host: how many slots (two to eight); only open and AI slots go
+    // the host: how many slots (2, 4, 6, 8 or 10); only open and AI slots go
     lobbySlots(W, i, a) {
       if (i !== 0) return no('the host sets the slots');
-      const n = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, +a.n || 0));
+      const n = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, 2 * Math.round((+a.n || 0) / 2)));
       while (W.slots.length > n) {
         const last = W.slots[W.slots.length - 1];
         if (last.kind === 'human') return no('a player has that slot: they leave it first');
