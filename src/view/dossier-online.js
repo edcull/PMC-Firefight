@@ -209,9 +209,10 @@
     function afterBattle(read) {
       if (!fighting) return false;
       fighting = null;
-      var back = function () { refresh(function () { E.open(E.view); }); };
-      if (read && root.PMC_AFTER_RESULT) root.PMC_AFTER_RESULT(back);
-      else setTimeout(back, read ? 900 : 2500);
+      // the board put away as the campaign comes back: it is not a battle to go back to from Continue
+      var back = function () { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); refresh(function () { E.open(E.view); }); };
+      if (!read || !root.PMC_AFTER_RESULT) { setTimeout(back, read ? 900 : 2500); return true; }
+      root.PMC_AFTER_RESULT(back);
       return true;
     }
 

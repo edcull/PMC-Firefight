@@ -265,9 +265,7 @@
     var guest = !account || account.guest;
     var kinds = [opt('skirmish', 'Skirmish'),
       opt('ocamp', guest ? 'Campaign \u2014 sign in with an account to start one' : 'Campaign \u2014 a new one against another player, each on your own device', guest),
-      opt('coop', 'Cooperative \u2014 the two of you against the OpFor')]
-      // a battle for a campaign file kept on this server (the older way: one screen keeps the campaign)
-      .concat(campaigns.map(function (c) { return opt('camp:' + c.name, 'Battle for the campaign ' + c.name + ', turn ' + c.turn); }));
+      opt('coop', 'Cooperative \u2014 the two of you against the OpFor')];
     return '<div class="lob-new">' +
       '<div class="field"><label for="lob-kind">Game</label><select id="lob-kind">' + kinds.join('') + '</select></div>' +
       publicBox('lob-private', !newPrivate, '') +
@@ -432,10 +430,6 @@
           return '<option value="' + esc(v) + '"' + (String(v) === String(value) ? ' selected' : '') + '>' + esc(t) + '</option>';
         }).join('') + '</select></div>';
     }
-    var camps = [{ v: '', t: 'No campaign — a one-off battle' }]
-      .concat(campaigns.map(function (c) {
-        return { v: c.name, t: c.name + ' — turn ' + c.turn };
-      }));
     // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
     if (s.kind === 'coop') {
       var SOLO = root.PMCSolo;
@@ -475,7 +469,6 @@
         { v: 'auto', t: optionText('sel-terrain', 'auto', 'Generate the table') },
         { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
       ], s.terrain || 'auto') +
-      sel('term-campaign', 'Campaign', camps, s.campaign || '') +
       publicBox('term-private', !s.private, ' data-term="private"' + d) +
       '</div>';
   }

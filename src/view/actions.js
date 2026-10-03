@@ -198,7 +198,14 @@
     /* A campaign's aftermath waits for the battle's result to be read: the
        winner, and what won it, on its own card before the screen changes. */
     function resultKey() { var s = B.state; return s && s.over ? s.seed + '|' + s.turn + '|' + s.over.text : null; }
-    window.PMC_AFTER_RESULT = function (fn) {
+    window.PMC_AFTER_RESULT = function (fn, tries) {
+      /* Told it is over (by the server) while this screen is still playing out the
+         last moves: wait for the board to get there, so the result card is shown. */
+      tries = tries || 0;
+      if (B.state && !B.state.over && tries < 80 && ((B.replaying && B.replaying()) || (B.cardsPending && B.cardsPending()))) {
+        setTimeout(function () { window.PMC_AFTER_RESULT(fn, tries + 1); }, 250);
+        return;
+      }
       // (with nobody at the table to read it, as when both sides are the AI's, it does not wait)
       if (!resultKey() || ui.resultRead === resultKey() || B.state.cfg.aiSides.length === 2) fn();
       else ui.afterResult = fn;

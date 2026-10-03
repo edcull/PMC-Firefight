@@ -140,6 +140,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   s1 = await till(p1, 'Player 1’s question after the battle', (s) => s.view === 'post' && s.post && s.post.steps[0] && s.post.steps[0].side === 'A', 20000);
   const t1 = await text(p1);
   ok('the other walks away: the campaign comes back up with Tough Negotiators for Player 1', /Tough Negotiators/i.test(t1), t1.slice(0, 200));
+  ok('...and the battle is put away, not left to go back to from Continue', await p1.evaluate(() => !(window.PMC_BATTLE_LIVE && window.PMC_BATTLE_LIVE()) && !(window.PMC_STATE && window.PMC_STATE())));
   s2 = await till(p2, 'Player 2 waiting', (s) => s.view === 'post', 20000);
   ok('...and Player 2 waits on it', /question to answer first/.test(await text(p2)));
   await press(p1, '[data-negdie="0"]');
