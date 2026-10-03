@@ -311,6 +311,7 @@
     if (on !== chatShown) {
       chatShown = on;
       box.hidden = !on;
+      chatDrawn = -1;                 // drawn afresh, in the battle's own colours
       if (on) document.body.setAttribute('data-online', '1'); else document.body.removeAttribute('data-online');
       var tab = document.querySelector('#mtabs .mtab-chat');
       if (tab) tab.hidden = !on;
@@ -325,7 +326,9 @@
     chatDrawn = lines.length + (room ? room.id : '');
     var lb = el('bchat-lines');
     lb.innerHTML = lines.length ? lines.map(function (l) {
-      var c = l.seat ? seatColour(l.seat) : '';
+      // on the battlefield, each side's own colours as the board paints them
+      var pal = l.seat && root.PMCIso && root.PMCIso.PALETTE && root.PMCIso.PALETTE[l.seat];
+      var c = pal ? pal.ink : l.seat ? seatColour(l.seat) : '';
       return l.from ? '<p><b' + (c ? ' style="color:' + c + '"' : '') + '>' + esc(l.from) + '</b> ' + esc(l.text) + '</p>' : '<p class="note">' + esc(l.text) + '</p>';
     }).join('') : '<p class="note">Nothing said yet.</p>';
     lb.scrollTop = lb.scrollHeight;
