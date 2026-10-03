@@ -146,7 +146,18 @@ npm run test:slow             # the browser tests that play whole battles or cam
 npm run test:all              # everything
 node scripts/test.js camp     # any test whose name contains "camp"
 node scripts/test.js -j 2 -v  # two at a time, printing every test's output
+node scripts/test.js --speed 1 quick   # the browser tests at the real pace
 ```
+
+To keep a run short (on four cores: the quick set about 7½ minutes, everything
+about 10), the runner:
+
+- runs a browser test a core, but only half the cores' worth of the slow ones at once;
+- runs the browser tests' board clock three times over (`test/fast.js`, preloaded:
+  it sets `PMC_TIME_SCALE` on every page they open), except the few that time the
+  drawing itself (`REAL_TIME` in `scripts/test.js`), and any that set their own;
+- gives a quick browser test three minutes, and runs one that hangs once more
+  (said at the end, with how the second run went).
 
 Every test's output is kept in `build/test-logs/<name>.log`, and a failing test's
 is printed after the summary. Each file prints a `✓` or `✗` per check and a tally,

@@ -98,14 +98,25 @@ function start(t) {
   // unit tests roll seeded dice (test/seed.js); browser tests seed their pages themselves (where.js seedDice)
   const args = t.browser ? ['-r', path.join(ROOT, 'test', 'fast.js'), t.file] : ['-r', path.join(ROOT, 'test', 'seed.js'), t.file];
   const child = spawn(process.execPath, args, { cwd: ROOT, env: Object.assign({}, env, { PMC_TEST_SPEED: t.browser && REAL_TIME.indexOf(t.name) < 0 ? String(SPEED) : '1' }) });
-  const limit = (t.slow ? 20 : t.browser ? 6 : 5) * 60 * 1000;
-  const timer = setTimeout(() => { out.push('\n[timed out after ' + limit / 60000 + ' min]\n'); child.kill('SIGKILL'); }, limit);
+  const limit = (t.slow ? 20 : t.browser ? 3 : 5) * 60 * 1000;
+  let hung = false;
+  const timer = setTimeout(() => { hung = true; out.push('\n[timed out after ' + limit / 60000 + ' min]\n'); child.kill('SIGKILL'); }, limit);
   child.stdout.on('data', (d) => { out.push(d); if (verbose) process.stdout.write(d); });
   child.stderr.on('data', (d) => { out.push(d); if (verbose) process.stderr.write(d); });
   child.on('close', (code) => {
     clearTimeout(timer);
     const secs = (Date.now() - began) / 1000, text = Buffer.concat(out.map((b) => Buffer.isBuffer(b) ? b : Buffer.from(b))).toString();
     fs.writeFileSync(path.join(LOGS, t.name + '.log'), text);
+    /* A browser test that hung (a page that stopped answering under the load of the
+       others) is run once more, by itself in the queue; said in the summary. */
+    if (hung && t.browser && !t.retried) {
+      t.retried = true;
+      console.log('  … ' + t.file.padEnd(34) + ' hung after ' + secs.toFixed(0) + 's: run again');
+      running--; if (t.browser) runningBrowser--; if (t.slow) runningSlow--;
+      tests.push(t);
+      pump();
+      return;
+    }
     results.push({ t: t, ok: code === 0, secs: secs, text: text });
     console.log((code === 0 ? '  ✓ ' : '  ✗ ') + t.file.padEnd(34) + secs.toFixed(1).padStart(7) + 's');
     running--; if (t.browser) runningBrowser--; if (t.slow) runningSlow--;
@@ -131,6 +142,8 @@ function finish() {
     console.log('\n──── ' + r.t.file + ' ────');
     console.log(r.text.split('\n').slice(-40).join('\n'));
   });
+  const again = results.filter((r) => r.t.retried);
+  if (again.length) console.log('\nHung once and run again: ' + again.map((r) => r.t.name + (r.ok ? ' (passed)' : ' (failed)')).join(', '));
   const slowQuick = results.filter((r) => r.t.browser && !r.t.slow && r.secs > SLOW_AFTER);
   if (slowQuick.length) console.log('\nTaking long for the quick set (move to SLOW in scripts/test.js?): ' + slowQuick.map((r) => r.t.name + ' ' + r.secs.toFixed(0) + 's').join(', '));
   console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed, in ' +
