@@ -417,6 +417,14 @@ function create(opts) {
       return { ok: true };
     },
     lobbyReady(W, i, a) { W.slots[i].ready = a.ready !== false; return { ok: true }; },
+    // the host: listed in Multiplayer for anyone to join, or found by its code only
+    lobbyListed(W, i, a, ctx) {
+      if (i !== 0) return no('the host decides whether it is listed');
+      if (!ctx || !ctx.row) return no('not now');
+      db.setListed(ctx.row.id, !!a.on);
+      ctx.row.listed = a.on ? 1 : 0;
+      return { ok: true, relist: true };
+    },
     lobbyChat(W, i, a) {
       const t = text(a.text, 300);
       if (!t) return no('say something');
@@ -779,7 +787,7 @@ function create(opts) {
   function runCmd(W, i, cmd, a, ctx) {
     if (W.phase === 'lobby') {
       if (!Object.prototype.hasOwnProperty.call(LOBBY, cmd)) return no('the campaign has not started yet');
-      return LOBBY[cmd](W, i, a || {});
+      return LOBBY[cmd](W, i, a || {}, ctx);
     }
     if (W.phase === 'over') return no('the campaign is over');
     if (cmd === 'lobbyChat') return LOBBY.lobbyChat(W, i, a || {});
@@ -991,7 +999,7 @@ function create(opts) {
         W.id = row.id;
         const i = slotOf(W, me.userId);
         if (i < 0) { out = no('no such campaign of yours', 404); return; }
-        const r = runCmd(W, i, String(cmd || ''), args || {}, { id: row.id });
+        const r = runCmd(W, i, String(cmd || ''), args || {}, { id: row.id, row: row });
         if (!r.ok) { out = Object.assign({ code: 400 }, r); return; }
         delete W.id;
         if (!save(row, W)) { out = no('the campaign changed meanwhile — try again', 409); return; }
@@ -1007,7 +1015,7 @@ function create(opts) {
           const row = db.campaign(id);
           if (row && row.listed) { db.setListed(id, false); opened(); }
         }
-        if (cmd === 'lobbySlot' || cmd === 'lobbySlots') opened();
+        if (cmd === 'lobbySlot' || cmd === 'lobbySlots' || out.relist) opened();
         if ((W.fronts || []).length) runFronts(id);
         tellWhoseMove(id, before, me.userId);
       }

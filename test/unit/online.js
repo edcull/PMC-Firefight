@@ -54,7 +54,9 @@ function ok(name, cond, note) {
   ok('made: in its lobby, the maker the host in the first slot, with a code', made.ok && v.phase === 'lobby' && v.host && v.slots[0].you && /^[A-Z2-9]{8}$/.test(made.invite));
   ok('...four slots to begin with: the host, one open, two AI forces', v.slots.map((s) => s.kind).join() === 'human,open,ai,ai', v.slots.map((s) => s.kind).join());
   ok('a public one is listed for anyone to join, with its open slots', online.listed().some((c) => c.invite === made.invite && c.open === 1 && c.slots === 4));
-  ok('only the host sets the slots', !cmd(brann, 'lobbySlots', { n: 6 }).ok);
+  ok('the host makes it private: off the list', cmd(ash, 'lobbyListed', { on: false }).ok && !online.listed().some((c) => c.invite === made.invite) && !view(ash).listed);
+  ok('...and public again', cmd(ash, 'lobbyListed', { on: true }).ok && online.listed().some((c) => c.invite === made.invite) && view(ash).listed);
+  ok('only the host sets the slots', !cmd(brann, 'lobbySlots', { n: 6 }).ok && !cmd(brann, 'lobbyListed', { on: false }).ok);
   ok('the host makes it six', cmd(ash, 'lobbySlots', { n: 6 }).ok && view(ash).slots.length === 6);
   ok('...the new ones open', view(ash).slots.slice(4).every((s) => s.kind === 'open'));
   const j1 = online.join(brann, made.invite);

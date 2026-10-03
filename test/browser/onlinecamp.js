@@ -94,7 +94,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p1.evaluate(() => { const s = document.getElementById('lob-kind'); s.value = 'ocamp'; s.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
     let s1 = await till(p1, 'the lobby', (s) => s.view === 'olobby');
     let t1 = await text(p1);
-    ok('Start a game → Campaign opens the campaign’s lobby, with its code', /lobby/i.test(t1) && /Give the others this code/.test(t1), t1.slice(0, 160));
+    const code = await p1.evaluate(() => { const c = document.querySelector('#camp-title .olob-code'); return c ? c.textContent : ''; });
+    ok('Start a game → Campaign opens the campaign’s lobby, its code in the title bar', /^[A-Z2-9]{8}$/.test(code) && !/Give the others this code/.test(t1), code);
+    const lay = await p1.evaluate(() => { const bar = document.querySelector('#camp-body .olob-bar'); const b = document.getElementById('camp-body').getBoundingClientRect(), c = document.querySelector('#camp-body .olob-chat').getBoundingClientRect(), l = document.querySelector('#camp-body .olob-lines');
+      return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobstart"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
+    ok('...forces, public and Start on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
     ok('...four slots: the host, one open, two AI forces', (await slotCount(p1)) === 4 && /Open — waiting for a player/.test(t1) && (t1.match(/AI force/g) || []).length >= 2);
     await choose(p1, '#olob-n', '3');
     for (let i = 0; i < 30 && (await slotCount(p1)) !== 3; i++) await wait(150);
@@ -102,6 +106,17 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await choose(p1, '[data-olob-army="2"]', 'bugs');
     await p1.waitForTimeout(600);
     ok('...and picks the AI force’s army', await p1.evaluate(() => document.querySelector('#camp-body [data-olob-army="2"]').value === 'bugs'));
+    // the AI force's colour, from the colour grid: the colours the other slots wear are greyed out
+    await press(p1, '[data-olob-pick="2"]');
+    await p1.waitForTimeout(200);
+    const grid = await p1.evaluate(() => ({ n: document.querySelectorAll('#camp-body .olob-pop [data-olob-col]').length, ochre: (document.querySelector('#camp-body .olob-pop [data-olob-col="ochre"]') || {}).disabled }));
+    ok('the colour chip opens the colours, those another slot wears greyed out', grid.n > 10 && grid.ochre === true, JSON.stringify(grid));
+    await press(p1, '.olob-pop [data-olob-col="lime"]');
+    let limed = false;
+    for (let i = 0; i < 20 && !limed; i++) { await wait(200); limed = await p1.evaluate(() => /Lime/i.test((document.querySelector('#camp-body [data-olob-pick="2"]') || {}).title || '')); }
+    ok('...and a pick colours it', limed);
+    await p1.evaluate(() => { const c = document.getElementById('olob-pub'); if (c && !c.checked) { c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await p1.waitForTimeout(500);
 
     // the other player finds it in the Multiplayer list
     await p2.evaluate(() => window.PMCLobby.open());

@@ -809,7 +809,7 @@
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
-    body.classList.toggle('fit', view === 'found' || view === 'contract' || view === 'honour');
+    body.classList.toggle('fit', view === 'found' || view === 'contract' || view === 'honour' || view === 'olobby');
     body.classList.toggle('hubfit', view === 'hub' && !!camp);
     var dl = body.querySelector('.cdos-body'), dlTop = dl ? dl.scrollTop : 0;
     body.innerHTML = h;

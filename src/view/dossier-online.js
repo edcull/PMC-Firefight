@@ -273,24 +273,22 @@
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, k = CO[c];
       return '<span class="olob-sw"' + (k ? ' style="background:' + k.dark + ';border-color:' + k.light + '"' : '') + '></span>';
     }
+    var colourFor = null;                           // the lobby slot whose colours are open, if any
     function lobbyView() {
       var L = lobby || {}, host = !!L.host, me = L.slot;
-      var COLS = (root.PMCNet && root.PMCNet.COLOURS) || (root.PMCProtocol && root.PMCProtocol.COLOURS) ||
-        ['ochre', 'steel', 'olive', 'crimson', 'slate', 'plum', 'sand', 'rust', 'jade', 'midnight', 'charcoal', 'hazard', 'rose', 'forest', 'maroon', 'khaki', 'mud', 'lime', 'teal', 'cobalt', 'sky', 'violet', 'magenta', 'arctic'];
-      var h = '<h2>' + esc(L.name || 'Campaign') + '</h2>';
-      h += '<p class="lede">The campaign’s lobby. Each slot is a force on the world: a player (open until somebody joins), or an AI force the server runs. ' +
-        (host ? 'Set the slots, then start it once everyone is ready.' : 'The host sets the slots and starts it once everyone is ready.') + '</p>';
-      if (L.invite) h += '<div class="cpan onote"><div class="cpstat">Give the others this code — they type it into Join on the Multiplayer screen' + (L.listed ? ' (it is also listed there for anyone to join)' : '') + ':</div><div class="ocode">' + esc(L.invite) + '</div></div>';
-      if (host) {
-        h += '<div class="field"><label for="olob-n">Forces on the world</label><select id="olob-n">' +
-          [2, 3, 4, 5, 6, 7, 8].map(function (n) { return '<option value="' + n + '"' + (n === (L.slots || []).length ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div>';
-      }
+      var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO);
+      // the code that brings the others in, in the title bar
+      var h = '<h2>' + esc(L.name || 'Campaign') + (L.invite ? ' <span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : '') + '</h2>';
       h += '<div class="olob-slots">' + (L.slots || []).map(function (s, i) {
         var mine = i === me, canSlot = host && s.kind !== 'human', canColour = mine || (host && s.kind !== 'human'), canArmy = mine || (host && s.kind === 'ai');
         var who = s.kind === 'human' ? esc(s.name) + (s.host ? ' <i class="acct-tag">host</i>' : '') + (mine ? ' <i class="acct-tag">you</i>' : '')
-          : s.kind === 'ai' ? 'AI force' : '<em>Open — waiting for a player</em>';
-        var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' + swatch(s.colour) + '<span class="olob-who"><b>' + who + '</b>' +
-          (s.kind === 'human' ? '<small>' + (s.ready || s.host ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
+          : s.kind === 'ai' ? 'AI force' : '<em>Open \u2014 waiting for a player</em>';
+        // its colour: a chip like the founding screen's, opening the colours (those other slots wear greyed out)
+        var c = CO[s.colour];
+        var chip = '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
+        var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' +
+          (canColour ? '<button type="button" class="olob-colour" data-olob-pick="' + i + '" aria-expanded="' + (colourFor === i) + '" title="' + esc(c ? c.name : 'Colour') + '">' + chip + '</button>' : '<span class="olob-colour still">' + chip + '</span>') +
+          '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready || s.host ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
         if (canSlot) {
           row += '<select data-olob-kind="' + i + '"><option value="open"' + (s.kind === 'open' ? ' selected' : '') + '>Open for a player</option>' +
             '<option value="ai"' + (s.kind === 'ai' ? ' selected' : '') + '>AI force</option></select>';
@@ -301,27 +299,44 @@
             return '<option value="' + f + '"' + (f === s.faction ? ' selected' : '') + '>' + esc(FACTION_NAMES[f]) + '</option>';
           }).join('') + '</select>' : '<span class="olob-army">' + esc(FACTION_NAMES[s.faction] || '') + '</span>';
         }
-        row += canColour ? '<select data-olob-colour="' + i + '">' + COLS.map(function (c) {
-          var taken = (L.slots || []).some(function (x, j) { return j !== i && x.colour === c; });
-          return '<option value="' + c + '"' + (c === s.colour ? ' selected' : '') + (taken ? ' disabled' : '') + '>' + cap(c) + '</option>';
-        }).join('') + '</select>' : '';
-        return row + '</div>';
+        row += '</div>';
+        if (canColour && colourFor === i) {
+          row += '<div class="found-pop olob-pop"><label>' + esc(c ? c.name : 'Colour') + '</label><div class="csw">' + KEYS.map(function (k) {
+            var q = CO[k], taken = (L.slots || []).some(function (x, j) { return j !== i && x.colour === k; });
+            return '<button type="button"' + (k === s.colour ? ' class="on"' : '') + ' data-olob-col="' + k + '" data-olob-for="' + i + '" title="' + esc(q.name) + (taken ? ' \u2014 another force wears it' : '') + '"' + (taken ? ' disabled' : '') + '>' +
+              '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
+          }).join('') + '</div></div>';
+        }
+        return row;
       }).join('') + '</div>';
-      var mineSlot = (L.slots || [])[me] || {};
-      h += '<div class="olob-go">';
+      /* One row: how many forces, whether it is listed for anyone to join, and the
+         host's Start or a player's Ready. */
+      var mineSlot = (L.slots || [])[me] || {}, n = (L.slots || []).length;
+      h += '<div class="olob-bar">';
+      h += host ? '<label class="olob-n">Forces <select id="olob-n">' + [2, 3, 4, 5, 6, 7, 8].map(function (k) {
+        return '<option value="' + k + '"' + (k === n ? ' selected' : '') + '>' + k + '</option>';
+      }).join('') + '</select></label>' : '<span class="olob-n">' + n + ' forces</span>';
+      h += host ? '<label class="olob-pub"><input type="checkbox" id="olob-pub"' + (L.listed ? ' checked' : '') + '> Public</label>'
+        : '<span class="olob-pub">' + (L.listed ? 'Public' : 'Private') + '</span>';
       if (host) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
-      else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' + (mineSlot.ready ? 'Ready — waiting for the host' : 'I am ready') + '</button>';
+      else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' + (mineSlot.ready ? 'Ready \u2014 waiting for the host' : 'I am ready') + '</button>';
       h += '</div>';
       h += chatHTML();
       h += '<p class="camp-foot"><button class="lnk" data-go="olobleave">' + (host ? 'Close the campaign' : 'Leave the campaign') + '</button> ' +
-        '<button class="lnk" data-go="olist">← Online campaigns</button></p>';
+        '<button class="lnk" data-go="olist">\u2190 Online campaigns</button></p>';
+      // the chat shows its latest line
+      setTimeout(function () { var l = document.querySelector('#camp-body .olob-lines'); if (l) l.scrollTop = l.scrollHeight; }, 0);
       return h;
     }
     function chatHTML() {
-      var lines = ((lobby && lobby.chat) || []).slice(-30);
-      return '<div class="field olob-chat"><label for="olob-say">Chat</label><div class="olob-lines">' +
-        (lines.length ? lines.map(function (c) { return '<div><b>' + esc(c.from || '') + '</b> ' + esc(c.text) + '</div>'; }).join('') : '<em>Nothing said yet.</em>') +
-        '</div><div class="ojoin"><input class="tin" id="olob-say" maxlength="300" placeholder="Say something…" autocomplete="off"><button class="lnk" data-go="olobsay">Send</button></div></div>';
+      var lines = ((lobby && lobby.chat) || []).slice(-60);
+      return '<div class="olob-chat"><div class="olob-lines">' +
+        (lines.length ? lines.map(function (c) {
+          // each name in the colour its player's slot wears now
+          var sl = lobby && lobby.slots && lobby.slots[c.slot], CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, col = sl && CO[sl.colour];
+          return '<div><b' + (col ? ' style="color:' + col.light + '"' : '') + '>' + esc(c.from || '') + '</b> ' + esc(c.text) + '</div>';
+        }).join('') : '<em>Nothing said yet.</em>') +
+        '</div><div class="ojoin"><input class="tin" id="olob-say" maxlength="300" placeholder="Say something\u2026" autocomplete="off"><button class="lnk" data-go="olobsay">Send</button></div></div>';
     }
 
     /* ================= the hub, online ================= */
@@ -567,7 +582,16 @@
       if (go === 'menu') { leaveCampaign(); E.toMenu(); return true; }
       if (!E.online || !camp) return false;
 
-      // the lobby
+      // the lobby: a slot's colours opened, one picked, or closed by a tap elsewhere
+      if (attr('data-olob-pick') !== null && t.hasAttribute('data-olob-pick')) {
+        var pi = +attr('data-olob-pick'); colourFor = colourFor === pi ? null : pi; E.render(); return true;
+      }
+      if (t.hasAttribute('data-olob-col')) {
+        var forSlot = +attr('data-olob-for'); colourFor = null;
+        cmd('lobbyColour', { i: forSlot, colour: attr('data-olob-col') });
+        return true;
+      }
+      if (colourFor !== null && E.view === 'olobby') { colourFor = null; E.render(); }
       if (go === 'olobready') { var ms = (lobby.slots || [])[lobby.slot] || {}; cmd('lobbyReady', { ready: !ms.ready }); return true; }
       if (go === 'olobstart') { cmd('lobbyStart', {}); return true; }
       if (go === 'olobsay') {
@@ -765,6 +789,7 @@
       if (!E.online) return false;
       if (target.id === 'oc-pl') { var ctx = activeContract(); if (ctx) send(ctx, 'contractLevel', { pl: +target.value }); return true; }
       if (target.id === 'olob-n') { cmd('lobbySlots', { n: +target.value }); return true; }
+      if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
       if (target.hasAttribute('data-olob-kind')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-kind'), kind: target.value }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }
       if (target.hasAttribute('data-olob-colour')) { cmd('lobbyColour', { i: +target.getAttribute('data-olob-colour'), colour: target.value }); return true; }
