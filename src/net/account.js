@@ -49,13 +49,22 @@
       label(); if (then) then();
     }, function () { label(); if (then) then(); });
   }
-  // the foot's button: the name signed in as, or the way to sign in
+  /* The main menu's foot button, and the user chip at the right of the other
+     screens' top bars (set-up, campaign): the name signed in as, or the way to
+     sign in. */
+  var USER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
   function label() {
     var b = el('btn-menu-account');
-    if (!b) return;
-    b.hidden = !online();
-    b.textContent = who ? who.name : 'Sign in';
-    b.title = who ? 'Your account' : 'Sign in, or make an account';
+    if (b) {
+      b.hidden = !online();
+      b.textContent = who ? who.name : 'Sign in';
+      b.title = who ? 'Your account' : 'Sign in, or make an account';
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.user-chip'), function (c) {
+      c.hidden = !online();
+      c.innerHTML = USER_ICON + '<span>' + esc(who ? who.name : 'Sign in') + '</span>';
+      c.title = who ? 'Your account' : 'Sign in, or make an account';
+    });
   }
   // what the server keeps for the player: their campaigns, their online campaigns, their battles
   function load() {
@@ -125,25 +134,21 @@
     if (!reg) h += '<button type="button" class="lnk acct-forgot" data-acct="mode" data-mode="forgot">Forgot password?</button>';
     return h + back;
   }
-  // the foot: who is signed in, and the way out, on one line
-  function signOutRow() {
-    return '<div class="acct-foot"><span>' + (who.guest ? 'Playing as a guest:' : 'Signed in as') + ' <b>' + esc(who.name) + '</b></span>' +
-      '<button type="button" class="lnk" data-acct="out">Sign out</button></div>';
-  }
   function signedInHTML() {
     var h = msgs();                 // the screen's title is the top bar's
     if (who.guest) {
       return h + '<p class="acct-who">Playing as a guest: <b>' + esc(who.name) + '</b></p>' +
         '<p class="acct-lede">A guest has nothing kept on the server: campaigns need an account.</p>' +
-        signOutRow();
+        '<button type="button" class="lnk acct-signout" data-acct="out">Sign out</button>';
     }
     // who they are: the name and the address, each changed here
     if (edit === 'name') {
       h += '<div class="acct-edit">' + field('acct-newname', 'New name', 'text', 'username', 24, who.name) +
         '<div class="acct-editrow"><button type="button" class="lnk" data-acct="cancel">Cancel</button>' + goButton('rename', 'Change the name') + '</div></div>';
     } else {
+      // Sign out, in line with the name
       h += '<div class="acct-line"><span>Name</span><b>' + esc(who.name) + '</b>' + editBtn('name', 'Change your name') +
-        (who.admin ? '<span class="acct-tag">admin</span>' : '') + '</div>';
+        (who.admin ? '<span class="acct-tag">admin</span>' : '') + '<button type="button" class="lnk acct-signout" data-acct="out">Sign out</button></div>';
     }
     if (edit === 'email') {
       h += '<div class="acct-edit">' + field('acct-newemail', 'New email address', 'email', 'email', 254, who.email || '') +
@@ -184,7 +189,7 @@
         '<div class="acct-row"><span><b>' + esc(local.companies.A.name + (B && B.name ? ' v ' + B.name : '')) + '</b><small>' +
         (local.mode === 'hotseat' ? 'Hotseat' : 'Single player') + ' campaign · turn ' + local.turn + '</small></span></div></div>';
     }
-    return h + '</div>' + signOutRow();
+    return h + '</div>';
   }
   /* ================= the screen ================= */
   var host = null;
@@ -198,11 +203,15 @@
       '<div class="camp-top"><button type="button" class="camp-back" data-acct="back">\u2190 Back</button><h1>User Account</h1></div>' +
       '<div class="sheet acct-sheet"><div id="acct-body"></div></div>';
     document.body.appendChild(host);
+    // home, as the other screens' way back to the main menu is drawn
+    if (root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(host.querySelector('.camp-back'), true);
     wireHost();
     return host;
   }
+  var returnTo = null;           // the screen it was opened over, gone back to after
   function openScreen() {
     ensure();
+    if (host.hidden) returnTo = ['setup', 'camp', 'lobby'].filter(function (id) { var o = el(id); return o && !o.hidden; })[0] || null;
     if (root.PMCMenu) root.PMCMenu.close();
     ['setup', 'camp', 'lobby'].forEach(function (id) { var o = el(id); if (o) o.hidden = true; });
     host.hidden = false;
@@ -213,8 +222,12 @@
   }
   function closeScreen() {
     if (host) host.hidden = true;
+    var back = returnTo; returnTo = null;
+    // back where it was opened from (the set-up, the campaign, the lobby), or the main menu
+    if (back === 'lobby' && root.PMCLobby) root.PMCLobby.open();
+    else if (back && el(back)) { el(back).hidden = false; if (back === 'camp' && root.PMC_CAMPAIGN) root.PMC_CAMPAIGN.open(); }
+    else if (root.PMCMenu) root.PMCMenu.open();
     if (root.PMC_BACKDROP) root.PMC_BACKDROP();
-    if (root.PMCMenu) root.PMCMenu.open();
   }
   function draw() {
     var body = el('acct-body');
@@ -340,6 +353,10 @@
     // the main menu's foot opens it
     var b = el('btn-menu-account');
     if (b) b.addEventListener('click', function () { openScreen(); });
+    // ...and the user chip on the other screens' top bars
+    document.addEventListener('click', function (ev) {
+      if (ev.target.closest && ev.target.closest('.user-chip')) openScreen();
+    });
     refresh();
     fromLink();
   }

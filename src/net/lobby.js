@@ -56,6 +56,8 @@
       '<button type="button" class="lnk" data-lob="signout">Sign out</button></span></span></div></div>' +
       '<div class="sheet lobby-sheet"><div id="lobby-body"></div></div>';
     document.body.appendChild(host);
+    // its way back is to the main menu: the home icon, as on the other screens
+    if (root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(host.querySelector('.camp-back'), true);
     style();
     host.addEventListener('click', onClick);
     // terms are sent as they are changed; the selects are redrawn often, so the overlay listens
