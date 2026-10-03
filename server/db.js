@@ -189,8 +189,9 @@ function wrap(db) {
     setInvite: db.prepare('UPDATE campaigns SET invite = ? WHERE id = ?'),
     byInvite: db.prepare('SELECT * FROM campaigns WHERE invite = ?'),
     setListed: db.prepare('UPDATE campaigns SET listed = ? WHERE id = ?'),
-    listedOpen: db.prepare("SELECT c.id, c.invite, c.name, c.updated, u.name AS owner FROM campaigns c JOIN users u ON u.id = c.owner WHERE c.kind = 'online' AND c.listed = 1 AND c.invite IS NOT NULL AND (SELECT COUNT(*) FROM campaign_members m WHERE m.campaign_id = c.id) < 2 ORDER BY c.updated DESC LIMIT ?"),
+    listedOpen: db.prepare("SELECT c.id, c.invite, c.name, c.updated, c.state, u.name AS owner FROM campaigns c JOIN users u ON u.id = c.owner WHERE c.kind = 'online' AND c.listed = 1 AND c.invite IS NOT NULL ORDER BY c.updated DESC LIMIT ?"),
     addMember: db.prepare('INSERT INTO campaign_members (campaign_id, user_id, side, joined) VALUES (?, ?, ?, ?)'),
+    dropMember: db.prepare('DELETE FROM campaign_members WHERE campaign_id = ? AND user_id = ?'),
     members: db.prepare('SELECT m.side, m.user_id, u.name, u.pub FROM campaign_members m JOIN users u ON u.id = m.user_id WHERE m.campaign_id = ? ORDER BY m.side'),
     onlineOf: db.prepare("SELECT c.id, c.name, c.turn, c.version, c.updated, c.state, m.side, (SELECT COUNT(*) FROM campaign_members x WHERE x.campaign_id = c.id) AS players FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.kind = 'online' ORDER BY c.updated DESC"),
     // an online campaign is saved by whichever of its players sent the command: not only its owner
@@ -279,6 +280,7 @@ function wrap(db) {
     listedOpen: (n) => q.listedOpen.all(n || 20),
     byInvite: (code) => { const c = q.byInvite.get(code); return c && Object.assign({}, c, { state: JSON.parse(c.state) }); },
     addMember: (id, userId, side, at) => q.addMember.run(id, userId, side, at),
+    dropMember: (id, userId) => q.dropMember.run(id, userId).changes > 0,
     members: (id) => q.members.all(id),
     onlineOf: (userId) => q.onlineOf.all(userId),
     saveOnline: (c) => q.saveOnline.run(JSON.stringify(c.state), c.name, c.turn || 0, c.at, c.id, c.version).changes > 0,

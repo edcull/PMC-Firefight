@@ -215,7 +215,7 @@ function create(opts) {
   /* Online campaigns (phase 3b): made, joined with a code, read by their two
      players, and changed only by commands the server runs (online.js). */
   function onlineApi(req, res, url) {
-    const m = /^\/api\/online(?:\/(join|\d+)(?:\/(cmd))?)?$/.exec(url);
+    const m = /^\/api\/online(?:\/(join|\d+)(?:\/(cmd|leave))?)?$/.exec(url);
     if (!m) return false;
     const send = (code, body) => {
       res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -251,6 +251,8 @@ function create(opts) {
       return answer(online.view(me, id)), true;
     }
     if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
+    // leaving a campaign still in its lobby (the host leaving closes it)
+    if (m[2] === 'leave') return answer(online.leave(me, id)), true;
     readBody(req, (body) => {
       if (body === null) return send(413, { error: 'too large' });
       let b = {};

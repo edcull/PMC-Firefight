@@ -15,7 +15,7 @@
      node server/admin.js delete-game <code> [--yes]        a battle gone (one still open on the server: restart it after)
      node server/admin.js prune-games <days> [--yes]        finished and abandoned battles older than that, gone
      node server/admin.js campaigns [n]      the campaigns kept: id, kind, name, turn, owner (and an online one's players)
-     node server/admin.js delete-campaign <id> [--yes]      a campaign gone (an online one for both its players)
+     node server/admin.js delete-campaign <id> [--yes]      a campaign gone (an online one for all its players)
 
    DATA_DIR says where the database is, as for the server (default: data/ beside server.js). */
 'use strict';
@@ -69,7 +69,7 @@ async function main(argv) {
       const u = db.userByName(a);
       if (!u) { say('No account called ' + a + '.'); return 1; }
       const h = db.userHolds(u.id);
-      const what = u.name + ': ' + h.owned + ' campaign' + (h.owned === 1 ? '' : 's') + ' of theirs (an online one goes for both players), and their seat in ' +
+      const what = u.name + ': ' + h.owned + ' campaign' + (h.owned === 1 ? '' : 's') + ' of theirs (an online one goes for all its players), and their seat in ' +
         h.member + ' online campaign' + (h.member === 1 ? '' : 's') + ' someone else made.';
       if (b !== '--yes') { say('This would remove ' + what + '\nRun it again with --yes to remove the account (a backup first is wise).'); return 1; }
       db.dropUser(u.id);
@@ -139,7 +139,7 @@ async function main(argv) {
       const all = db.allCampaigns(+a || 30);
       if (!all.length) { say('No campaigns kept.'); return 0; }
       all.forEach((c) => {
-        const who = c.kind === 'online' ? db.members(c.id).map((m) => m.name + ' (' + m.side + ')').join(' & ') + (c.invite ? ', code ' + c.invite + ' open' : '') : 'owner ' + (c.owner || '?');
+        const who = c.kind === 'online' ? db.members(c.id).map((m) => m.name + ' (slot ' + (+m.side + 1) + ')').join(', ') + (c.invite && ((db.campaign(c.id) || {}).state || {}).phase === 'lobby' ? ', code ' + c.invite + ' open' : '') : 'owner ' + (c.owner || '?');
         say(String(c.id).padStart(4) + '  ' + day(c.updated) + '  ' + c.kind.padEnd(8) + ' turn ' + String(c.turn || 0).padEnd(3) + ' ' + c.name + '  — ' + who);
       });
       return 0;
@@ -148,7 +148,7 @@ async function main(argv) {
       const c = db.campaign(+a);
       if (!c) { say('No campaign with the id ' + a + ' (see: campaigns).'); return 1; }
       const what = c.name + ' (' + c.kind + ', turn ' + (c.turn || 0) + ')';
-      if (b !== '--yes') { say('This would remove ' + what + (c.kind === 'online' ? ', for both its players' : '') + '.\nRun it again with --yes to remove it.'); return 1; }
+      if (b !== '--yes') { say('This would remove ' + what + (c.kind === 'online' ? ', for all its players' : '') + '.\nRun it again with --yes to remove it.'); return 1; }
       db.dropAnyCampaign(c.id);
       say('Removed ' + what + '.');
       return 0;

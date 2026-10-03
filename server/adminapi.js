@@ -117,7 +117,7 @@ function create(opts) {
           if (!c) return no('no such campaign');
           return guarded(me, b.password, 'campaign ' + c.id + ' (' + c.name + ')', () => {
             db.dropAnyCampaign(c.id);
-            return { text: c.name + ' removed' + (c.kind === 'online' ? ', for both its players.' : '.') };
+            return { text: c.name + ' removed' + (c.kind === 'online' ? ', for all its players.' : '.') };
           });
         }
         case 'delete-user': {

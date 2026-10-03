@@ -224,7 +224,7 @@ class Lobby {
     if (table.stopped) {
       // it ended just before the restart: an online campaign still has its aftermath to apply (once, by the game's id)
       if (room.settings && room.settings.onlineCampaign && this.onCampaignBattle && table.engine.report()) {
-        try { this.onCampaignBattle(room.settings.onlineCampaign, table.engine.report(), g.id); }
+        try { this.onCampaignBattle(room.settings.onlineCampaign, table.engine.report(), g.id, room.settings.onlineRef || null); }
         catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); }
       }
       return null;
@@ -262,10 +262,14 @@ class Lobby {
     while (this.rooms.has(room.id) || (this.games && this.games.byCode(room.id))) room.id = code();
     room.settings.private = true;
     room.settings.onlineCampaign = o.campaignId;
+    room.settings.onlineRef = o.ref || null;          // which of the campaign's battles it is
     room.settings.tier = o.cfg.tier; room.settings.pl = o.cfg.pl; room.settings.scenario = o.cfg.scenario;
     room.phase = P.PHASE.BATTLE;
+    // a seat with nobody in it is the AI's side (cfg.mode 'ai'): nobody sits there
     P.SEATS.forEach((sd) => {
-      const s = o.seats[sd], held = new Player(null, this.limits);
+      const s = o.seats[sd];
+      if (!s) return;
+      const held = new Player(null, this.limits);
       held.id = s.id; held.pub = s.pub; held.name = s.name; held.seat = sd; held.room = room; held.ready = true;
       room.seats[sd] = held;
     });
@@ -414,7 +418,7 @@ class Lobby {
     this.rooms.forEach((r) => { if (!r.settings.private) out.push(P.summarise(r)); });
     // and the online campaigns listed for anyone to join, their second seat open
     if (this.listedCampaigns) {
-      try { this.listedCampaigns().forEach((c) => out.push({ online: true, id: c.invite, name: c.owner + '’s campaign', host: c.owner, at: c.at })); } catch (e) { }
+      try { this.listedCampaigns().forEach((c) => out.push({ online: true, id: c.invite, name: c.owner + '’s campaign', host: c.owner, at: c.at, slots: c.slots || 2, open: c.open || 1 })); } catch (e) { }
     }
     out.sort((a, b) => b.at - a.at);
     return out;
@@ -678,7 +682,7 @@ class Lobby {
   finished(room, report, gameId) {
     // an online campaign's battle: the campaign is told, to apply its aftermath (once, by the game's id)
     if (room.settings.onlineCampaign && this.onCampaignBattle && report) {
-      try { this.onCampaignBattle(room.settings.onlineCampaign, report, gameId); }
+      try { this.onCampaignBattle(room.settings.onlineCampaign, report, gameId, room.settings.onlineRef || null); }
       catch (e) { this.log('could not apply the campaign battle ' + gameId + ': ' + ((e && e.stack) || e)); }
     }
     room.table = null;

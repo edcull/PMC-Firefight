@@ -67,7 +67,7 @@ const lobby = new Lobby({
   games: games,
   makeTable: tables.make({ campaign: campaigns, log: log, store: games }),
   // an online campaign's battle over: its aftermath applied by the campaign (once, by the battle's id)
-  onCampaignBattle: function (id, report, gameId) { online.battleOver(id, report, gameId); },
+  onCampaignBattle: function (id, report, gameId, ref) { online.battleOver(id, report, gameId, ref); },
   // the online campaigns listed for anyone to join, shown with the games
   listedCampaigns: function () { return online.listed(); }
 });
