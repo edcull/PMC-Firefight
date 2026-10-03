@@ -184,12 +184,12 @@
       }), 'None yet.');
     }
     // what this browser keeps of its own, whoever is signed in
-    var local = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get && root.PMC_CAMPAIGN.get();
-    if (local && local.companies && local.companies.A) {
-      var B = local.mode === 'hotseat' && local.companies.B;
-      h += '<div class="acct-sec"><h3>In this browser</h3>' +
-        '<div class="acct-row"><span><b>' + esc(local.companies.A.name + (B && B.name ? ' v ' + B.name : '')) + '</b><small>' +
-        (local.mode === 'hotseat' ? 'Hotseat' : 'Single player') + ' campaign · turn ' + local.turn + '</small></span></div></div>';
+    var locals = (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.list && root.PMC_CAMPAIGN.list()) || [];
+    if (locals.length) {
+      h += '<div class="acct-sec"><h3>In this browser</h3>' + locals.map(function (c) {
+        return '<div class="acct-row"><span><b>' + esc(c.name) + '</b><small>' +
+          (c.mode === 'hotseat' ? 'Hotseat' : 'Single player') + ' campaign · turn ' + (c.turn || 0) + '</small></span></div>';
+      }).join('') + '</div>';
     }
     return h + '</div>';
   }

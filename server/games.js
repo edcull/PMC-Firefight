@@ -34,6 +34,8 @@ function create(db, opts) {
           code: g.code, name: g.name, status: g.status, seat: me, against: them.name || null,
           result: g.status === 'battle' ? null : !r.winner ? 'drawn' : r.winner === me ? (r.forfeit ? 'won by forfeit' : 'won')
             : (r.forfeit ? 'lost by forfeit' : 'lost'),
+          // a battle of an online campaign: gone back to through the campaign
+          campaign: (g.settings && g.settings.onlineCampaign) || null,
           at: g.updated
         };
       });

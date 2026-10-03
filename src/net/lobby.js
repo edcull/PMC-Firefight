@@ -762,6 +762,18 @@
       account = undefined; view = 'lobby';
     },
     // the code of a game this browser was seated at and may go back to
-    resumable: function () { return lastRoom(); }
+    resumable: function () { return lastRoom(); },
+    /* Back to a battle of the player's still being fought online, by its code (the
+       main menu's Continue list): their seat is held for them, so joining it seats them. */
+    rejoin: function (code) {
+      ensure();
+      campBattle = null; campOver = false;
+      var go = function () { keepRoom(code); connect(); net.send('game.join', { id: code }); };
+      if (account) { go(); return; }
+      whoAmI(function () {
+        if (account) { me.name = account.name; go(); }
+        else open('signin');
+      });
+    }
   };
 })(typeof window !== 'undefined' ? window : global);

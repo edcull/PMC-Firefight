@@ -675,7 +675,16 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   border-color: color-mix(in srgb, var(--alpha) 60%, transparent);
   background: color-mix(in srgb, var(--alpha) 12%, transparent); outline: none;
 }
-#btn-resume, #btn-camp-resume { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+/* games under way (menu.js): a list of them, scrolled when it is long */
+.cont-list { display: flex; flex-direction: column; gap: 6px; max-height: min(52vh, 420px); overflow-y: auto; padding-right: 2px; }
+.cont-row { position: relative; display: flex; }
+.cont-row .mcard { flex: 1; padding-right: 52px; min-width: 0; }
+.cont-row .mcard b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cont-row .cont-kind { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--alpha); margin-bottom: 2px; }
+.cont-row .mcard.live { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+.cont-row .resume-x.confirm { min-width: 76px; }
+.cont-none { color: var(--ink-dim); font-size: 13px; margin: 4px 2px 8px; }
+#btn-resume, #btn-continue { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
 /* throwing the battle away: a small x in the corner of Back to the battle,
    which turns into a red Discard? once, and asks the card to say so */
 .resume-wrap { position: relative; display: flex; flex-direction: column; }

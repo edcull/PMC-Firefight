@@ -127,8 +127,8 @@
     if (n) { n.textContent = text; n.hidden = false; }
     if (state) setHint(null, text);
   }
-  function resumeSaved() {
-    var book = window.PMCNet && window.PMCNet.savedBattle && window.PMCNet.savedBattle();
+  function resumeSaved(id) {
+    var book = window.PMCNet && window.PMCNet.savedBattle && window.PMCNet.savedBattle(id);
     if (!book) return false;
     var cfg = book.cfg;
     seats = book.seats && book.seats.length ? book.seats : ['A'];
@@ -145,7 +145,7 @@
     if (!ok) {
       // a save made by an older build (or one that no longer plays out the same) cannot be picked up again
       notice('The battle in progress could not be resumed — the game has changed since it was saved — so it has been put away.', err);
-      window.PMCNet.forgetBattle();
+      window.PMCNet.forgetBattle(book.id);
       net = null; mirror = null; Q = null; state = null;
       return false;
     }
@@ -236,7 +236,7 @@
     transport.on('unsaved', function (m) { notice(m.text); });
     transport.on('finished', function (m) {
       if (window.PMC_ONFINISH) {
-        try { window.PMC_ONFINISH(m.report); } catch (e) {
+        try { window.PMC_ONFINISH(m.report, state && state.cfg); } catch (e) {
           notice('The campaign could not record this battle (' + (e && e.message || e) + '). Its dossier has not been updated.', e);
         }
       }
@@ -793,6 +793,23 @@
   window.PMC_BATTLE_LIVE = function () {
     return !!(state && state.phase && !state.over);
   };
+  // the battle on the table now, if it is one kept in this browser: its id there
+  window.PMC_BATTLE_ID = function () {
+    return state && !state.over && net && window.PMCNet && net instanceof window.PMCNet.Local && net.book ? net.book.id : null;
+  };
+  /* One of the battles kept in this browser, from the main menu's Continue list:
+     played back up and gone to. The one on the table now is already kept, and
+     stays in the list. Not while a battle on a game server is on: that is seen
+     through (or abandoned) first. */
+  window.PMC_RESUME_BATTLE = function (id) {
+    if (window.PMC_BATTLE_ID() === id) { if (window.PMCMenu) window.PMCMenu.close(); return true; }
+    if (window.PMC_BATTLE_LIVE() && !(net instanceof window.PMCNet.Local)) return false;
+    if (state) { try { net.disconnect(); } catch (e) { } clearBoard(); }
+    if (!resumeSaved(id)) { if (window.PMCMenu) window.PMCMenu.open(); return false; }
+    ['setup', 'camp', 'lobby', 'account'].forEach(function (k) { var o = el(k); if (o) o.hidden = true; });
+    if (window.PMCMenu) window.PMCMenu.close();
+    return true;
+  };
   /* A skirmish running in this browser can be thrown away from the menu. Not a
      campaign's battle (the campaign is waiting on its result), and not one on
      a game server (the other player is still in it). */
@@ -805,6 +822,13 @@
      keeping it to be resumed (menu.js asks as the menu opens). */
   window.PMC_DROP_DEMO = function () {
     if (!state || !state.cfg || state.cfg.mode !== 'demo' || !net || !window.PMCNet || !(net instanceof window.PMCNet.Local)) return false;
+    try { net.forget(); net.disconnect(); } catch (e) { }
+    clearBoard();
+    return true;
+  };
+  // a campaign's battle on the table, put away with its campaign from the Continue list
+  window.PMC_DISCARD_CAMPAIGN_BATTLE = function () {
+    if (!state || !state.cfg || !state.cfg.campaign || !net || !window.PMCNet || !(net instanceof window.PMCNet.Local)) return false;
     try { net.forget(); net.disconnect(); } catch (e) { }
     clearBoard();
     return true;

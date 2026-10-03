@@ -24,9 +24,9 @@
   function el(id) { return document.getElementById(id); }
 
   /* ================= navigation ================= */
-  var PANES = ['main', 'single', 'hotseat'];
+  var PANES = ['main', 'single', 'hotseat', 'continue'];
   // where Back (and Escape) goes from each list
-  var UP = { single: 'main', hotseat: 'main' };
+  var UP = { single: 'main', hotseat: 'main', continue: 'main' };
   var at = 'main';
 
   function show(pane) {
@@ -36,6 +36,7 @@
     // the foot: the demo under the main menu only
     var d = el('btn-menu-demo');
     if (d) d.hidden = pane !== 'main';
+    if (pane === 'continue') { drawList(); fetchRemote(true); }
   }
 
   function open(pane) {
@@ -63,17 +64,10 @@
     if (root.PMCAccount) root.PMCAccount.label();
     var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE();
     el('btn-resume').hidden = !live;
-    /* No battle on, but a campaign under way: the first card goes back into it
-       (the battle's own card does, while one of its battles is being fought). */
-    var cr = el('btn-camp-resume'), cg = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get();
-    var going = !!(cg && cg.companies && cg.companies.A);
-    if (cr) {
-      cr.hidden = live || !going;
-      if (going) {
-        cr.setAttribute('data-camp', cg.mode === 'hotseat' ? 'hotseat' : 'solo');
-        el('menu-camp-resume-sub').textContent = campName(cg) + ' \u00b7 campaign turn ' + cg.turn;
-      }
-    }
+    // games under way: the Continue card, and the list behind it if it is open
+    contCard();
+    if (at === 'continue') drawList();
+    fetchRemote(false);
     /* a skirmish in this browser can be thrown away, and a battle over the
        network abandoned; asked twice, since neither can be had back */
     var dis = el('btn-discard');
@@ -85,44 +79,144 @@
     if (ms && !live && root.PMCLobby && root.PMCLobby.resumable && !root.PMCLobby.resumable() && /^Resume/.test(ms.textContent)) {
       ms.textContent = 'Play somebody else over the network';
     }
-    var camp = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get();
-    /* There is one campaign at a time: the card for the way it is played says
-       Continue, and the other says which one either card will open. */
-    var on = camp && camp.companies && camp.companies.A;
-    var hot = on && camp.mode === 'hotseat';
-    campSub('menu-camp-sub', on, !hot, 'Raise a force and see it through a war', camp);
-    campSub('menu-camphot-sub', on, hot, 'Two dossiers, two players, one screen', camp);
-  }
-  // a hotseat campaign is both players': named by both forces (HC-13)
-  function campName(camp) {
-    var B = camp.mode === 'hotseat' && camp.companies.B;
-    return camp.companies.A.name + (B && B.name ? ' v ' + B.name : '');
-  }
-  function campSub(id, on, mine, fresh, camp) {
-    var sub = el(id);
-    if (!sub) return;
-    sub.textContent = !on ? fresh
-      : mine ? 'Continue: ' + campName(camp) + ', campaign turn ' + camp.turn
-      : 'A ' + (camp.mode === 'hotseat' ? 'hotseat' : 'single-player') + ' campaign is under way: ' +
-        campName(camp) + ', turn ' + camp.turn;
   }
 
-  /* A new skirmish while a battle is still on would take the place of the one kept
-     in this browser (hotseat review HB-12). A campaign's battle, or one on a game
-     server, is not given up that way: it is said, and nothing starts. A skirmish
-     of this browser's own may be, on a second tap. */
-  var freshAsked = null;
-  function freshOk(b) {
-    var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE(), n = el('menu-note');
-    if (!live) return true;
-    if (!discardable()) {
-      if (n) { n.textContent = 'A battle is still being fought' + (abandonable() ? ' online' : ' for the campaign') +
-        '. Go back to it from the first card and see it through' + (abandonable() ? ', or abandon it there,' : '') + ' before starting another.'; n.hidden = false; }
-      return false;
+  /* ================= games under way =================
+     Every game there is to go back to: the battles and campaigns kept in this
+     browser, and — signed in on a server — the account's campaigns not kept
+     here, its online campaigns and its battles online still being fought. One
+     tapped is picked up; one of this browser's can be put away (asked twice). */
+  var remote = { battles: [], online: [], account: [] }, remoteAt = 0, remoteBusy = false;
+  function fetchRemote(now) {
+    if (remoteBusy || !root.fetch || !root.PMCLobby || !root.PMCLobby.available || !root.PMCLobby.available()) return;
+    if (!now && Date.now() - remoteAt < 15000) return;
+    remoteBusy = true; remoteAt = Date.now();
+    var get = function (u) {
+      return root.fetch(u, { credentials: 'same-origin', cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+    };
+    var acct = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountList ? Promise.resolve(root.PMC_CAMPAIGN.accountList()).catch(function () { return []; }) : Promise.resolve([]);
+    Promise.all([get('api/games'), get('api/online'), acct]).then(function (rs) {
+      remoteBusy = false;
+      remote = {
+        // an online campaign's battle is gone back to through the campaign
+        battles: (rs[0].games || []).filter(function (g) { return g.status === 'battle' && !g.campaign; }),
+        online: rs[1].campaigns || [],
+        account: rs[2] || []
+      };
+      contCard();
+      if (at === 'continue' && isOpen()) drawList();
+    }, function () { remoteBusy = false; });
+  }
+  var KINDS = { ai: 'Skirmish', solo: 'Solitaire', hotseat: 'Hotseat skirmish', coop: 'Co-op', demo: 'Demo' };
+  function ago(t) {
+    if (!t) return '';
+    var s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 90) return 'just now';
+    if (s < 5400) return Math.round(s / 60) + ' min ago';
+    if (s < 129600) return Math.round(s / 3600) + ' h ago';
+    return new Date(t).toLocaleDateString();
+  }
+  function scenName(id) { var C = root.PMCCamp; return (C && C.SCENARIO_NAMES && C.SCENARIO_NAMES[id]) || ''; }
+  function games() {
+    var out = [], liveId = root.PMC_BATTLE_ID && root.PMC_BATTLE_ID();
+    var battles = (root.PMCNet && root.PMCNet.savedBattles && root.PMCNet.savedBattles()) || [];
+    // a campaign's own battle is gone back to through its campaign
+    battles.filter(function (b) { return !b.campaign; }).forEach(function (b) {
+      out.push({ key: 'b:' + b.id, kind: KINDS[b.mode] || 'Skirmish', live: b.id === liveId,
+        name: (b.nameA || 'Your force') + (b.nameB ? ' v ' + b.nameB : ''),
+        sub: [b.id === liveId ? 'On the table now' : '', scenName(b.scenario), b.turn ? 'turn ' + b.turn : 'setting up', ago(b.at)].filter(Boolean).join(' \u00b7 '),
+        at: b.at || 0, del: true });
+    });
+    var camps = (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.list && root.PMC_CAMPAIGN.list()) || [];
+    camps.forEach(function (c) {
+      var fought = battles.some(function (b) { return b.campaign && b.campLid === c.lid; });
+      out.push({ key: 'c:' + c.lid, kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name,
+        sub: [c.over ? 'over' : 'campaign turn ' + (c.turn || 0), fought ? 'a battle under way' : '', ago(c.at)].filter(Boolean).join(' \u00b7 '),
+        at: c.at || 0, del: true });
+    });
+    remote.account.forEach(function (c) {
+      out.push({ key: 'a:' + c.sid, kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + ' \u00b7 your account', name: c.name,
+        sub: ['campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
+    });
+    remote.online.forEach(function (c) {
+      out.push({ key: 'o:' + c.id, kind: 'Online campaign', name: c.name,
+        sub: ['Player ' + (c.side === 'B' ? 2 : 1), 'campaign turn ' + (c.turn || 0), ago(c.updated)].join(' \u00b7 '), at: c.updated || 0 });
+    });
+    remote.battles.forEach(function (g) {
+      out.push({ key: 'g:' + g.code, kind: 'Online skirmish', name: g.name,
+        sub: [g.against ? 'against ' + g.against : '', ago(g.at)].filter(Boolean).join(' \u00b7 '), at: g.at || 0 });
+    });
+    return out.sort(function (a, b) { return (b.live ? 1 : 0) - (a.live ? 1 : 0) || b.at - a.at; });
+  }
+  function contCard() {
+    var c = el('btn-continue');
+    if (!c) return;
+    var all = games();
+    c.hidden = !all.length;
+    var sub = el('menu-continue-sub');
+    if (sub) sub.textContent = all.length === 1 ? all[0].kind + ': ' + all[0].name : all.length + ' games under way';
+  }
+  var delAsked = null;
+  function drawList() {
+    var box = el('cont-list');
+    if (!box) return;
+    var all = games(), esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+    box.innerHTML = all.length ? all.map(function (g) {
+      var asked = delAsked === g.key;
+      return '<div class="cont-row"><button class="mcard' + (g.live ? ' live' : '') + '" data-cont="' + esc(g.key) + '">' +
+        '<span class="cont-kind">' + esc(g.kind) + '</span><b>' + esc(g.name) + '</b><small>' + esc(asked ? 'Tap Delete? to put it away — it cannot be had back' : g.sub) + '</small></button>' +
+        (g.del ? '<button class="resume-x' + (asked ? ' confirm' : '') + '" data-contdel="' + esc(g.key) + '" aria-label="Put this away" title="Put this away">' + (asked ? 'Delete?' : '\u2715') + '</button>' : '') +
+        '</div>';
+    }).join('') : '<p class="cont-none">Nothing under way.</p>';
+  }
+  function pick(key) {
+    var kind = key.slice(0, 1), id = key.slice(2), n = el('menu-note');
+    if (n) n.hidden = true;
+    if (kind === 'b') {
+      if (root.PMC_RESUME_BATTLE && root.PMC_RESUME_BATTLE(id)) return;
+      if (n) {
+        n.textContent = abandonable() ? 'A battle is still being fought online. See it through, or abandon it, before picking up another.'
+          : 'That battle could not be picked up again.';
+        n.hidden = false;
+      }
+      paint();
+      return;
     }
-    if (freshAsked === b) { freshAsked = null; if (n) n.hidden = true; return true; }
-    freshAsked = b;
-    if (n) { n.textContent = 'A battle is still on. Tap again to start a new one — the one in progress will be lost.'; n.hidden = false; }
+    if (kind === 'c') { if (root.PMC_CAMPAIGN) root.PMC_CAMPAIGN.resume(id); return; }
+    if (kind === 'a') { if (root.PMC_CAMPAIGN) root.PMC_CAMPAIGN.adopt(id); return; }
+    if (kind === 'o') { if (root.PMC_CAMPAIGN) { close(); root.PMC_CAMPAIGN.openOnline(+id); } return; }
+    if (kind === 'g') {
+      if (!freshOk()) return;
+      close();
+      if (root.PMCLobby && root.PMCLobby.rejoin) root.PMCLobby.rejoin(id);
+    }
+  }
+  function drop(key) {
+    var kind = key.slice(0, 1), id = key.slice(2);
+    if (kind === 'b') {
+      if (root.PMC_BATTLE_ID && root.PMC_BATTLE_ID() === id && root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
+      if (root.PMCNet && root.PMCNet.forgetBattle) root.PMCNet.forgetBattle(id);
+    } else if (kind === 'c') {
+      // its battle goes with it
+      ((root.PMCNet && root.PMCNet.savedBattles && root.PMCNet.savedBattles()) || []).forEach(function (b) {
+        if (b.campaign && b.campLid === id) {
+          if (root.PMC_BATTLE_ID && root.PMC_BATTLE_ID() === b.id && root.PMC_DISCARD_CAMPAIGN_BATTLE) root.PMC_DISCARD_CAMPAIGN_BATTLE();
+          root.PMCNet.forgetBattle(b.id);
+        }
+      });
+      if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.drop) root.PMC_CAMPAIGN.drop(id);
+    }
+    paint();
+  }
+
+  /* A new game while a battle is still on: the one on the table is kept in this
+     browser, and waits in the Continue list. One on a game server is not left that
+     way: it is said, and nothing starts. */
+  function freshOk() {
+    var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE(), n = el('menu-note');
+    if (!live || !abandonable()) return true;
+    if (n) { n.textContent = 'A battle is still being fought online. Go back to it from the first card and see it through, or abandon it there, before starting another.'; n.hidden = false; }
     return false;
   }
   function discardable() { return !!(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE()); }
@@ -145,14 +239,22 @@
       if (!b) return;
       if (root.SFX && root.SFX.click) { try { root.SFX.click(); } catch (e) { } }
       var go = b.getAttribute('data-menu');
-      if (go) { show(go); return; }
+      if (go) { delAsked = null; show(go); return; }
+      var ck = b.getAttribute('data-cont');
+      if (ck) { delAsked = null; pick(ck); return; }
+      var cd = b.getAttribute('data-contdel');
+      if (cd) {
+        if (delAsked !== cd) { delAsked = cd; drawList(); return; }
+        delAsked = null; drop(cd); return;
+      }
+      if (at === 'continue' && delAsked) { delAsked = null; drawList(); }
       var kind = b.getAttribute('data-skirmish');
-      if (!kind) freshAsked = null;
-      if (kind && !freshOk(b)) return;
+      if (kind && !freshOk()) return;
       if (kind) { close(); if (root.PMC_SKIRMISH) root.PMC_SKIRMISH(kind); return; }
-      // the campaign, solo or hotseat: the dossier takes it from here (dossier.js)
+      /* a new campaign, solo or hotseat: the dossier takes it from here (dossier.js);
+         the ones under way are in the Continue list */
       var cm = b.getAttribute('data-camp');
-      if (cm) { if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.enter) root.PMC_CAMPAIGN.enter(cm); else close(); return; }
+      if (cm) { if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.fresh) root.PMC_CAMPAIGN.fresh(cm); else close(); return; }
       if (b.id !== 'btn-discard') unconfirm();
       switch (b.id) {
         // a game over the network: the lobby, which asks what kind when one is started (lobby.js)
@@ -402,7 +504,9 @@
       on: function () { return running ? cv : null; } };
   })();
 
-  root.PMCMenu = { open: open, close: close, isOpen: isOpen, show: show, paint: paint, table: Table };
+  root.PMCMenu = { open: open, close: close, isOpen: isOpen, show: show, paint: paint, table: Table,
+    // the tests' view of the Continue list
+    games: games, refresh: function () { fetchRemote(true); } };
 
   function boot() {
     wire();

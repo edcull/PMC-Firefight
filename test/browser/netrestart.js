@@ -95,6 +95,12 @@ function stopped(srv) { return new Promise((r) => { srv.on('exit', r); srv.kill(
   for (let i = 0; i < 30 && !both; i++) { await wait(200); both = (await p1.evaluate(() => window.PMC_STATE().phase)) === 'battle' && (await p2.evaluate(() => window.PMC_STATE().phase)) === 'battle'; }
   ok('the battle goes on from there: Player 2 ready too, and it begins on both screens', both);
 
+  // the battle is in the main menu's Continue list, as one online
+  await p2.evaluate(() => window.PMCMenu.refresh());
+  let listed = false;
+  for (let i = 0; i < 20 && !listed; i++) { await wait(150); listed = await p2.evaluate((c) => window.PMCMenu.games().some((g) => g.key === 'g:' + c && g.kind === 'Online skirmish'), code); }
+  ok('the battle is in the Continue list as an online skirmish', listed);
+
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   await b.close();
   srv.kill();

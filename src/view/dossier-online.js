@@ -599,7 +599,9 @@
       enterList: enterList, listView: listView, contractView: contractView, postView: postView, hubNote: hubNote,
       click: click, change: change, steer: function () { if (E.online && E.camp) steer(false); },
       afterBattle: afterBattle, fighting: function () { return fighting; },
-      leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; }
+      leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; },
+      // one opened straight from the main menu's Continue list
+      openOne: function (id) { leaveCampaign(); return openCampaign(id); }
     };
   };
 })(window);

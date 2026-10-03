@@ -166,7 +166,7 @@ function wrap(db) {
     touch: db.prepare('UPDATE games SET updated = ? WHERE id = ?'),
     intents: db.prepare('SELECT seat, intent FROM game_intents WHERE game_id = ? ORDER BY seq'),
     endGame: db.prepare('UPDATE games SET status = ?, result = ?, updated = ? WHERE id = ? AND status = \'battle\''),
-    mine: db.prepare('SELECT id, code, name, status, seats, seat_a, seat_b, result, created, updated FROM games WHERE seat_a = ? OR seat_b = ? ORDER BY updated DESC LIMIT ?'),
+    mine: db.prepare('SELECT id, code, name, status, settings, seats, seat_a, seat_b, result, created, updated FROM games WHERE seat_a = ? OR seat_b = ? ORDER BY updated DESC LIMIT ?'),
     addCampaign: db.prepare('INSERT INTO campaigns (owner, kind, name, turn, state, version, created, updated) VALUES (?, ?, ?, ?, ?, 1, ?, ?)'),
     campaign: db.prepare('SELECT * FROM campaigns WHERE id = ?'),
     campaignsOf: db.prepare('SELECT id, kind, name, turn, version, created, updated FROM campaigns WHERE owner = ? ORDER BY updated DESC'),
@@ -242,7 +242,7 @@ function wrap(db) {
     // over (or abandoned): only once — a battle already finished is left as it was
     endGame: (id, status, result, at) => q.endGame.run(status, JSON.stringify(result), at, id).changes > 0,
     // a player's games, the latest first (the cfg left out: it is large, and not wanted for a list)
-    mine: (who, n) => q.mine.all(who, who, n || 20).map((g) => Object.assign({}, g, { seats: JSON.parse(g.seats), result: g.result ? JSON.parse(g.result) : null })),
+    mine: (who, n) => q.mine.all(who, who, n || 20).map((g) => Object.assign({}, g, { seats: JSON.parse(g.seats), settings: g.settings ? JSON.parse(g.settings) : {}, result: g.result ? JSON.parse(g.result) : null })),
     // ---- campaigns (phase 3a) ----
     addCampaign: (c) => q.addCampaign.run(c.owner, c.kind, c.name, c.turn || 0, JSON.stringify(c.state), c.at, c.at).lastInsertRowid,
     campaign: (id) => { const c = q.campaign.get(id); return c && Object.assign({}, c, { state: JSON.parse(c.state) }); },

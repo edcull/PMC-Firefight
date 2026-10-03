@@ -522,6 +522,8 @@
           doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
           tactics: { A: A.faction === 'rebel' ? tacticA : null, B: theirTactic },
           campaign: true,
+          // which of this browser's campaigns it is for: the result goes to that one
+          campLid: root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.lid ? root.PMC_CAMPAIGN.lid() : null,
           mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
           // two players at one screen swap from their benches in turn, unseen, as a hotseat skirmish does (HC-8)
           secretSwaps: E.camp.mode === 'hotseat',

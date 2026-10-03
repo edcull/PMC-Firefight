@@ -143,6 +143,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await p1.waitForTimeout(300);
   ok('leaving it, the browser’s own campaign (none) is back', await p1.evaluate(() => !window.PMC_CAMPAIGN.online()));
 
+  console.log('\nThe Continue list');
+  await p1.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
+  let orow = '';
+  for (let i = 0; i < 30 && !orow; i++) { await wait(150); orow = await p1.evaluate(() => { const r = document.querySelector('#cont-list [data-cont^="o:"]'); return r ? r.textContent : ''; }); }
+  ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /Player 1/.test(orow), orow);
+  await p1.evaluate(() => document.querySelector('#cont-list [data-cont^="o:"]').click());
+  const back1 = await till(p1, 'the campaign opened from the list', (s) => s.view === 'hub' || s.view === 'aftermath');
+  ok('...and picking it opens it', back1.side === 'A' && back1.turn === 1, JSON.stringify(back1).slice(0, 120));
+
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   await b.close();
   srv.kill();

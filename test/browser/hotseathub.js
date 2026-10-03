@@ -73,7 +73,7 @@ const { ROOT } = require('../where.js');
   check('drawing up contracts never brings Player 2 "up to strength"', !caught && nowB.tier === tierB && nowB.n === after.b && nowB.kUC === after.bk, JSON.stringify(nowB));
   await p.reload();
   await p.waitForTimeout(900);
-  await click('#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   const world = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return { rivals: (c.rivals || []).map(r => r.name), B: c.companies.B.name }; });
   check('a reload adds no phantom AI force', world.rivals.length === 1 && world.B === 'The Red Dawn', JSON.stringify(world));
 

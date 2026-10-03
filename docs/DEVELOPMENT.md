@@ -307,7 +307,8 @@ demoentry.js       an AI-against-AI turn 1: units appear as their walk-ons play
 tribesight.js      the eye button: out of sight darkened (a tribe's 12", a unit's 36")
 turnshow.js        whose go it is, at a glance
 discard.js         throwing a skirmish away from the main menu
-resume.js          a battle outlives a refresh
+resume.js          a battle outlives a refresh; a second begun beside it, both kept and picked from Continue
+continuelist.js    several campaigns at once, the main menu's Continue list, a result sent to its own campaign
 netplay.js         two browsers at a real game server: both press Begin, whose turn, the camera following the opponent, a drop, abandoning
 subpath.js         the server behind a reverse proxy on a sub-path (/pmc/), as nginx serves it
 modaltop.js        a question asked from a side column (Empty transports) is in front of the board
