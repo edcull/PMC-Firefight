@@ -121,6 +121,8 @@
     // the part of the table on screen, in table pixels: { sx, sy, sw, sh }
     window.__viewRect = function () { return viewRect(); };
     window.__seats = function () { return B.seats.slice(); };
+    // the dead lying on the table, by the unit they fell from
+    window.__bodies = function () { var o = {}; (B.vc.remains || []).forEach(function (r) { if (r.kind === 'body' && !r.piece) o[r.of || '?'] = (o[r.of || '?'] || 0) + 1; }); return o; };
     window.__mySide = function () { return mySide(); };
     window.__placingSide = function () { return placingSide(); };
 

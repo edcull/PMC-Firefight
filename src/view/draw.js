@@ -367,7 +367,18 @@
             }
           }
         }
-        u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0 };
+        /* Killed aboard — with the aircraft shot down, or in the wreck that blew up
+           round them — the squad's dead lie where the machine came down. */
+        if (seen && !seen.here && seen.aboard && !u.alive && !u.fled && seen.models > 0 && !R.isMachine(u)) {
+          var car = B.state.units.filter(function (m) { return m.id === seen.aboard; })[0];
+          var cs0 = car && car.x >= 0 ? { x: dispX(car), y: dispY(car) } : null;
+          for (var nn = seen.models; cs0 && nn > 0; nn--) {
+            var cq = ISO.casualtySpot(u, nn, rem.length * 7 + nn);
+            rem.push({ kind: 'body', of: u.id, x: cs0.x, y: cs0.y, dx: cq.dx * 1.4, dy: cq.dy * 1.4, side: u.side, paint: u.paint || null,
+              art: u.art, mi: cq.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
+          }
+        }
+        u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
         // a unit the engine has sent back to the OpFor pool is off the table now
         if (u.wave === 'pool' && u.x < 0) u0._seen = { here: false, x: -1, y: -1, models: u.models };
       });
