@@ -646,6 +646,30 @@ class Lobby {
   /* Called by the table when a battle ends. The room goes back to setup with both
      forces as they were (MP-7): ready up again for a rematch, change the terms or
      the forces first, or leave. */
+  /* An admin closing a battle that has stuck (adminapi.js): its players told and
+     put back in the lobby, the battle kept as abandoned with no winner. True if
+     there was one, open here or kept as still under way. */
+  adminClose(code) {
+    const room = this.rooms.get(code);
+    let found = false;
+    if (room && room.phase === P.PHASE.BATTLE) {
+      found = true;
+      const t = room.table;
+      if (t && t.store && t.gameId != null) { try { t.store.ended(t.gameId, 'abandoned', { winner: null, closed: 'admin' }); } catch (e) { } }
+      if (t) t.stop();
+      room.broadcast('game.presence', { kind: 'left', id: null, name: 'An admin', seat: null, forfeit: false, winner: null });
+      room.everyone().forEach((p) => { p.room = null; p.seat = null; p.ready = false; p.send('game', { room: null }); });
+      this.rooms.delete(code);
+      this.pushLobby();
+    }
+    // kept as under way, but not open here (put away): ended as well
+    if (this.games) {
+      const g = this.games.byCode(code);
+      if (g) { found = true; try { this.games.ended(g.id, 'abandoned', { winner: null, closed: 'admin' }); } catch (e) { } }
+    }
+    return found;
+  }
+
   finished(room, report, gameId) {
     // an online campaign's battle: the campaign is told, to apply its aftermath (once, by the game's id)
     if (room.settings.onlineCampaign && this.onCampaignBattle && report) {

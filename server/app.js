@@ -256,10 +256,30 @@ function create(opts) {
     return true;
   }
 
+  /* An admin's tools (adminapi.js): GET overview, POST the rest; who is asking is
+     the session, and adminapi.js checks the account is an admin's every time. */
+  function adminApi(req, res, url) {
+    const m = /^\/api\/admin\/([a-z-]+)$/.exec(url);
+    if (!m) return false;
+    const send = (code, body) => json(res, code, body);
+    if (!opts.admin || !auth) return send(503, { error: 'this server has no admin tools' }), true;
+    if (req.method !== 'GET' && req.headers.origin && !allowOrigin(req.headers.origin, req)) return send(403, { error: 'not from here' }), true;
+    const me = auth.session(Auth.tokenFrom(req));
+    const go = (b) => opts.admin.handle(me, m[1], b).then((r) => {
+      if (!r.ok) return send(r.code || 400, { error: r.why });
+      send(200, r);
+    }, () => send(500, { error: 'the server could not do that' }));
+    if (req.method === 'GET') { if (m[1] !== 'overview') return send(405, { error: 'method not allowed' }), true; go({}); return true; }
+    if (m[1] === 'overview') return send(405, { error: 'method not allowed' }), true;
+    readBody(req, (body) => { let b = {}; try { b = body ? JSON.parse(body) : {}; } catch (e) { return send(400, { error: 'that is not JSON' }); } go(b); });
+    return true;
+  }
+
   return function handle(req, res) {
     const url = (req.url || '/').split('?')[0];
     if (req.method === 'OPTIONS') return json(res, 204);
     if (api(req, res, url)) return;
+    if (adminApi(req, res, url)) return;
     if (campaignsApi(req, res, url)) return;
     if (onlineApi(req, res, url)) return;
     if (url === '/campaigns') return json(res, 200, { campaigns: campaigns.list() });

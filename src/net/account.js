@@ -21,6 +21,9 @@
   var mailOn = false;            // whether this server sends mail (and so new accounts wait for their link)
   var mode = 'signin';           // signed out: 'signin', 'register', 'forgot', 'sent' (a message), 'reset' (a new password)
   var edit = null;               // signed in: 'name' or 'email' being changed
+  /* An admin's tools (server/adminapi.js), opened from their account: what the
+     server holds, as last fetched, and the removal waiting on their password. */
+  var adminOpen = false, adminData = null, adminAsk = null;
   var fault = '', notice = '', busy = false;
   var linkToken = null;          // a reset link's token, while its new password is being chosen
   var lastName = '';             // the name last tried (to send an activation link again)
@@ -125,7 +128,62 @@
     if (!reg && mailOn) h += '<button type="button" class="lnk acct-forgot" data-acct="mode" data-mode="forgot">Forgot password?</button>';
     return h + back;
   }
+  function when(t) { if (!t) return '-'; var d = new Date(t); return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toTimeString().slice(0, 5); }
+  function adminHTML() {
+    var h = msgs() + '<div class="acct-line"><span>Admin</span><b>Server tools</b><button type="button" class="lnk acct-signout" data-acct="admin-close">Done</button></div>';
+    if (!adminData) return h + '<p class="acct-lede">Looking at the server\u2026</p>';
+    var d = adminData, st = d.stats || {}, he = d.health || {};
+    var btn = function (act, key, label, danger) { return '<button type="button" class="lnk' + (danger ? ' acct-danger' : '') + '" data-acct="adm" data-act="' + act + '" data-key="' + esc(key) + '">' + label + '</button>'; };
+    var asking = function (act, key) { return adminAsk && adminAsk.act === act && String(adminAsk.key) === String(key); };
+    // a removal: the admin's own password again (a backup is taken first)
+    var confirm = function () {
+      return '<div class="acct-edit">' + field('acct-admpass', 'Your password, to remove ' + esc(adminAsk.label) + ' (a backup is taken first)', 'password', 'current-password', 200) +
+        '<div class="acct-editrow"><button type="button" class="lnk" data-acct="adm-cancel">Cancel</button>' + goButton('adm-confirm', 'Remove it') + '</div></div>';
+    };
+    h += '<div class="acct-data">';
+    h += '<div class="acct-sec"><h3>Server</h3><div class="acct-row"><span><b>' + [(st.users || 0) + ' account' + (st.users === 1 ? '' : 's')].concat(Object.keys(st.games || {}).map(function (k) { return st.games[k] + ' ' + (k === 'battle' ? 'under way' : k); })).join(', ') + '</b>' +
+      '<small>Up ' + Math.round((he.up || 0) / 3600) + ' h \u00b7 email ' + (he.mail ? 'on' : 'off') + ' \u00b7 last backup ' + (he.backup ? when(Date.parse(he.backup)) : 'none') + '</small></span>' +
+      '<em>' + btn('backup', '', 'Back up now') + ' ' + btn('prune', '30', 'Clear finished battles over 30 days') + '</em></div></div>';
+    h += '<div class="acct-sec"><h3>Accounts</h3>' + (d.users || []).map(function (u) {
+      var row = '<div class="acct-row"><span><b>' + esc(u.name) + (u.admin ? ' <i class="acct-tag">admin</i>' : '') + '</b><small>' +
+        esc(u.email || 'no email') + (u.email && !u.emailOk ? ' (unconfirmed)' : '') + (u.active ? '' : ' \u00b7 not activated') + ' \u00b7 last seen ' + when(u.seen) + '</small></span><em>' +
+        (u.active ? '' : btn('activate', u.name, 'Activate') + ' ' + (u.email ? btn('resend', u.name, 'Resend link') + ' ' : '')) +
+        (u.email && u.active ? btn('reset-link', u.name, 'Send reset link') + ' ' : '') +
+        (u.admin || u.name === who.name ? '' : btn('delete-user', u.name, 'Remove', true)) + '</em></div>';
+      return row + (asking('delete-user', u.name) ? confirm() : '');
+    }).join('') + '</div>';
+    h += '<div class="acct-sec"><h3>Battles</h3>' + ((d.games || []).length ? d.games.map(function (g) {
+      var how = g.status === 'battle' ? 'under way' + (g.open ? ', open' : '') : g.winner ? 'won by ' + g.winner + (g.forfeit ? ' (forfeit)' : '') : g.status;
+      var row = '<div class="acct-row"><span><b>' + esc(g.code) + ' \u00b7 ' + esc(g.players.map(function (n) { return n || '(empty)'; }).join(' v ')) + '</b><small>' +
+        esc(g.kind) + ' \u00b7 ' + esc(how) + ' \u00b7 ' + g.moves + ' moves \u00b7 ' + when(g.updated) + '</small></span><em>' +
+        (g.status === 'battle' ? btn('close-game', g.code, 'Close') + ' ' : '') + btn('delete-game', g.code, 'Remove', true) + '</em></div>';
+      return row + (asking('delete-game', g.code) ? confirm() : '');
+    }).join('') : '<p class="acct-none">None.</p>') + '</div>';
+    h += '<div class="acct-sec"><h3>Campaigns</h3>' + ((d.campaigns || []).length ? d.campaigns.map(function (c) {
+      var who2 = c.players ? c.players.map(function (m) { return m.name + ' (' + m.side + ')'; }).join(' & ') + (c.invite ? ' \u00b7 code ' + c.invite + ' open' : '') : 'owner ' + (c.owner || '?');
+      var row = '<div class="acct-row"><span><b>' + esc(c.name) + '</b><small>' + esc(c.kind) + ' \u00b7 turn ' + c.turn + ' \u00b7 ' + esc(who2) + ' \u00b7 ' + when(c.updated) + '</small></span><em>' +
+        btn('delete-campaign', c.id, 'Remove', true) + '</em></div>';
+      return row + (asking('delete-campaign', c.id) ? confirm() : '');
+    }).join('') : '<p class="acct-none">None.</p>') + '</div>';
+    return h + '</div>';
+  }
+  function adminLoad() {
+    get('api/admin/overview').then(function (r) {
+      if (!r.ok) { fault = cap((r.j && r.j.error) || 'the server said no'); adminOpen = false; draw(); return; }
+      adminData = r.j; draw();
+    }, function () { fault = 'The server could not be reached.'; draw(); });
+  }
+  // an admin action: a removal asks for the password first; the rest go at once
+  function adminDo(act, key, password) {
+    var body = { name: key, code: key, id: key, days: key, password: password };
+    send('api/admin/' + act, body, function (j) {
+      if (!j) return;
+      adminAsk = null; notice = j.text || 'Done.';
+      adminLoad();
+    });
+  }
   function signedInHTML() {
+    if (adminOpen && who && who.admin) return adminHTML();
     var h = msgs();                 // the screen's title is the top bar's
     if (who.guest) {
       return h + '<p class="acct-who">Playing as a guest: <b>' + esc(who.name) + '</b></p>' +
@@ -155,6 +213,8 @@
       h += '<div class="acct-line"><span>Emails</span><label class="acct-check"><input type="checkbox" data-acct="notify"' + (who.notify ? ' checked' : '') +
         (who.email ? '' : ' disabled') + '> When an online campaign is waiting on me' + (who.email ? '' : ' (add an address first)') + '</label></div>';
     }
+    // an admin's tools: the server, the accounts, the battles and the campaigns
+    if (who.admin) h += '<div class="acct-line"><span>Admin</span><button type="button" class="lnk" data-acct="admin-open">Server tools</button></div>';
     // the password: changed here with the current one, or (forgotten) a reset link sent to the address
     if (edit === 'pass') {
       h += '<div class="acct-edit">' + field('acct-oldpass', 'Current password', 'password', 'current-password', 200) +
@@ -199,7 +259,7 @@
   }
   function closeScreen() {
     if (host) host.hidden = true;
-    purpose = null;
+    purpose = null; adminOpen = false; adminAsk = null;
     if (mode === 'guest') mode = 'signin';
     var back = returnTo; returnTo = null;
     // back where it was opened from (the set-up, the campaign, the lobby), or the main menu
@@ -296,7 +356,7 @@
   }
   function signOut() {
     root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { })
-      .then(function () { who = null; edit = null; notice = ''; fault = ''; changed(); draw(); });
+      .then(function () { who = null; edit = null; adminOpen = false; adminData = null; adminAsk = null; notice = ''; fault = ''; changed(); draw(); });
   }
 
   /* A link from one of the emails, opened: the token in the address, acted on in
@@ -365,6 +425,16 @@
           edit = null; notice = 'Your password is changed. Every other device was signed out.';
         });
       }
+      else if (a === 'admin-open') { adminOpen = true; adminData = null; adminAsk = null; fault = ''; notice = ''; draw(); adminLoad(); }
+      else if (a === 'admin-close') { adminOpen = false; adminAsk = null; fault = ''; notice = ''; draw(); }
+      else if (a === 'adm') {
+        var act = b.getAttribute('data-act'), key = b.getAttribute('data-key');
+        fault = ''; notice = '';
+        if (/^delete-/.test(act)) { adminAsk = { act: act, key: key, label: act === 'delete-user' ? key + '\u2019s account' : act === 'delete-game' ? 'battle ' + key : 'this campaign' }; draw(); var pf = el('acct-admpass'); if (pf) pf.focus(); return; }
+        adminDo(act, key);
+      }
+      else if (a === 'adm-cancel') { adminAsk = null; fault = ''; draw(); }
+      else if (a === 'adm-confirm') { if (adminAsk) adminDo(adminAsk.act, adminAsk.key, (el('acct-admpass') || {}).value || ''); }
       else if (a === 'notify') {
         var on = !!b.checked;
         send('api/notify', { on: on }, function (j) { if (j) { who.notify = on; notice = on ? 'You will be emailed when an online campaign is waiting on you.' : 'No more emails about your campaigns.'; } else b.checked = !on; });
