@@ -357,7 +357,7 @@
             var left = u.alive ? (u.models || 0) : u.fled ? seen.models : 0;
             for (var n = seen.models; n > left; n--) {
               var cs = ISO.casualtySpot(u, n, rem.length * 7 + n);
-              rem.push({ kind: 'body', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
+              rem.push({ kind: 'body', of: u.id, x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
                 art: u.art, mi: cs.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
               // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
               if (n === 1 && left === 0 && ISO.hasPiece && ISO.hasPiece(u.art)) {
@@ -630,6 +630,13 @@
         else if (turn > 0.3) box(1 + x, y0 + 2, cw, fh - 4, 'rgba(255,255,255,.16)');
         box(1 + x, y0 + fh - 2, cw, 2, pal.dark);
       }
+    }
+    // the palette of the side holding an objective (its first unit's colours), or null
+    function holderPalette(o) {
+      if (!o || !o.owner) return null;
+      var paint = o.owner;
+      for (var i = 0; i < B.state.units.length; i++) { var u = B.state.units[i]; if (u.side === o.owner && u.paint) { paint = u.paint; break; } }
+      return ISO.PALETTE[paint] || ISO.PALETTE[o.owner] || null;
     }
     // the sides holding each wing of a building on view: { wing, sides }
     function heldWings(blockers) {
@@ -988,7 +995,12 @@
             if (it.flag) roofFlag(B.pctx, it.pr, ISO.PALETTE[it.flag] || ISO.PALETTE.A, tNow, (it.pr.x * 7 + it.pr.y * 3) % 1);
             return;
           }
-          if (it.draw === 'live') { ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0); return; }
+          if (it.draw === 'live') {
+            // an objective's pennant flies in the colours of the side holding it, and none while nobody does
+            if (it.pr.kind === 'beacon' && !it.pr.lz) it.pr.holder = holderPalette(B.state.objectives[it.pr.index]);
+            ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0);
+            return;
+          }
           if (it.draw === 'body') {
             var bp = ISO.toScreen(it.r.x, it.r.y);
             ISO.drawBody(B.pctx, bp.x + it.r.dx, bp.y + it.r.dy - liftOf(it.r.x, it.r.y), it.r);
