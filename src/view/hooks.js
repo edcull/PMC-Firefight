@@ -51,6 +51,8 @@
       if (window.PMCMenu) window.PMCMenu.close();
       if (cfg && cfg.colourA) ISO.setSideColour('A', cfg.colourA);
       if (cfg && cfg.colourB) ISO.setSideColour('B', cfg.colourB);
+      // a cooperative game's second player wears a colour of their own
+      if (cfg && cfg.colourC) ISO.setSideColour('C', cfg.colourC);
       // the same connection comes back here on every rejoin: its handlers go on once
       if (!transport.__board) { wireNet(transport); transport.__board = true; }
       joinBattle(transport, seat);
@@ -62,10 +64,12 @@
       hotEnd();
       el('setup').hidden = false;
       B.muster.forLobby = { terms: terms, done: done, room: room || '', seat: seat || null };
-      setSoloMode(false);
+      // a cooperative game's force is a commando: the solitaire list, at Priority Level 1
+      var coop = !!(terms && terms.kind === 'coop');
+      setSoloMode(coop);
       if (terms) {
         if (el('sel-tier')) el('sel-tier').value = terms.tier;
-        if (el('sel-pl')) el('sel-pl').value = terms.pl;
+        if (el('sel-pl')) el('sel-pl').value = coop ? 1 : terms.pl;
       }
       hotBegin('net');
       // the force already sent to the room, to change rather than start again

@@ -2205,10 +2205,13 @@
     function intent(seat, it) {
       if (!state) return no('no battle');
       if (!it || typeof it.k !== 'string') return no('unreadable intent');
-      var side = K.sideOfSeat(seat);
+      // a cooperative game over the network: both seats play side A, each their own units
+      var coopNet = !!(state.cfg && state.cfg.netCoop && state.solo && state.solo.coop);
+      var side = coopNet ? 'A' : K.sideOfSeat(seat);
       if (state.over && it.k !== 'chat') return no('the battle is over');
       var h = Object.prototype.hasOwnProperty.call(INTENTS, it.k) ? INTENTS[it.k] : null;
       if (!h) return no('unknown intent: ' + it.k);
+      if (coopNet) { var cw = coopWhy(seat === 'B' ? 2 : 1, it); if (cw) return no(cw); }
       var why = h.guard && h.guard(side, it);
       if (why) return no(why);
       var res = h.run(side, it);
@@ -2218,6 +2221,17 @@
         render();
       }
       return res;
+    }
+
+    /* What one of two cooperating players may not do: touch the other's units, or
+       act while it is the other's go in the battle. A question put to the side is
+       answered by whichever of them gets to it. */
+    var COOP_ANYTIME = { kyf: 1, nokyf: 1, nervous: 1, nonervous: 1, martyr: 1, nomartyr: 1, stand: 1, nostand: 1, laststand: 1, enddone: 1, surrender: 1, step: 1, cancel: 1 };
+    function coopWhy(owner, it) {
+      var u = it.id ? K.byId(it.id) : null;
+      if (u && u.side === 'A' && (u.owner || 1) !== owner) return 'That is your partner\u2019s unit.';
+      if (state.phase === 'battle' && state.activeSide === 'A' && state.activeOwner && state.activeOwner !== owner && !COOP_ANYTIME[it.k]) return 'It is your partner\u2019s go.';
+      return null;
     }
 
     function insertionSide() {

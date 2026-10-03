@@ -180,6 +180,11 @@
      is so the board can grey a button out rather than offer a refusal. */
   function mySide() {
     if (!state || watching) return null;
+    /* A cooperative game over the network: both seats play side A, each their own
+       commando, so in the battle it is this screen's go only when its player's is. */
+    var seats = coopNet() ? ['A'] : window.__realSeats();
+    if (coopNet() && state.phase === 'battle' && state.activeSide === 'A' && state.activeOwner && state.activeOwner !== myOwner() &&
+      !(state.kyfAsk || state.martyrAsk || state.nervousAsk || state.standAsk || state.endAsk)) return null;
     /* In the battle, nothing is this screen's to do while what has already
        happened is still being drawn: the rules may have moved on to its turn,
        but a tap now would be resolved before the other side's move is shown.
@@ -203,6 +208,10 @@
     return seats.indexOf(want) >= 0 ? want : null;
   }
   function myTurn() { return !!mySide(); }
+  function coopNet() { return !!(state && state.cfg && state.cfg.netCoop); }
+  // which of a cooperative game's two players this screen is: its seat's
+  function myOwner() { return window.__realSeats()[0] === 'B' ? 2 : 1; }
+  window.__realSeats = function () { return seats; };
 
   function send(intent) {
     if (!net) return false;

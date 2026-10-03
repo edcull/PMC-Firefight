@@ -235,6 +235,7 @@ auth.js            accounts and sessions on a database in memory: hashing, renew
 serverrestart.js   a battle kept through a server restart, put away and brought back, a forfeit
 online.js          online campaigns: made, joined, founded, each player's commands on their own force
 onlinebattle.js    an online campaign's contract, hidden picks, its battle, a forfeit, the aftermath applied once
+coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
 yourmove.js        whose move an online campaign waits on, and the email (if asked for) when it comes to be yours
 backups.js         the database copied once a day, the last few kept, a failure logged
 hidden.js          each seat's and a watcher's view of a battle and a room: the other side's swaps, mine, bench and list kept from them
@@ -363,6 +364,7 @@ campaccount.js     a campaign kept by a signed-in player's account, across two b
 netrestart.js      an online battle across a server restart: both back at the same table, and it goes on
 accountmail.js     an account by email: activation link, sent again, a new name, a forgotten password reset, a new address
 onlinecamp.js      an online campaign between two browsers: started, joined by code, founded, a contract, the battle, a forfeit, the questions and the aftermath
+coopnet.js         a cooperative game between two browsers: started from Start a game, both commandos on one side, each screen its own go
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract

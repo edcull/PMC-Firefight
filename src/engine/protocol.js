@@ -86,13 +86,18 @@
       terrain: 'auto',       // the table generated, or laid by hand ('manual')
       campaign: null,        // a campaign id on the server, or null for a one-off
       contract: null,        // when a campaign is attached: which job is being fought
-      private: false         // left out of the game list: joined by its code only
+      private: false,        // left out of the game list: joined by its code only
+      kind: 'skirmish',      // or 'coop': both players' commandos against the OpFor
+      soloScen: 'roll',      // a cooperative game's scenario: one of the solitaire ones, or rolled
+      opFaction: 'pmc'       // ...and the army the OpFor is raised from
     };
   }
 
   /* Only the fields a host is allowed to set, each forced back into range. An
      unknown key is dropped rather than refused: an older client should still be
      able to change the tier. */
+  // the solitaire scenarios a cooperative game is fought under (solitaire.js ORDER), or rolled
+  var SOLO_SCENARIOS = ['roll', 's_crush', 's_vip', 's_decap', 's_evac', 's_sabotage', 's_ambush'];
   function cleanSettings(patch, onto) {
     var s = onto || defaultSettings();
     if (!patch || typeof patch !== 'object') return s;
@@ -104,6 +109,9 @@
     if ('campaign' in patch) s.campaign = patch.campaign ? clampText(patch.campaign, LIMITS.name) : null;
     if ('contract' in patch) s.contract = patch.contract == null ? null : clampText(String(patch.contract), 64);
     if ('private' in patch) s.private = patch.private === true || patch.private === 'true';
+    if ('kind' in patch) s.kind = oneOf(patch.kind, ['skirmish', 'coop'], s.kind || 'skirmish');
+    if ('soloScen' in patch) s.soloScen = oneOf(patch.soloScen, SOLO_SCENARIOS, s.soloScen || 'roll');
+    if ('opFaction' in patch) s.opFaction = oneOf(patch.opFaction, FACTIONS, s.opFaction || 'pmc');
     return s;
   }
 
