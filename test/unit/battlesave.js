@@ -58,5 +58,17 @@ full = true;
 l.intent({ k: 'nosuchthing' });
 ok('once it has saved again, a new failure is said again', said.length, 2);
 
+console.log('\nA demo is never kept');
+full = false;
+store['pmc-live-battle'] = JSON.stringify({ v: 1, cfg: { mode: 'demo' }, seats: ['A', 'B'], seed: 1, intents: [] });
+ok('a demo found kept (an older build\'s) is not offered back after a refresh', global.PMCNet.savedBattle(), null);
+ok('...and is thrown away', store['pmc-live-battle'], undefined);
+store['pmc-live-battle'] = JSON.stringify({ v: 1, cfg: { mode: 'ai' }, seats: ['A'], seed: 1, intents: [] });
+ok('a skirmish against the AI still is', !!global.PMCNet.savedBattle(), true);
+var d = new Local(); d.seats = ['A', 'B']; d.engine = e; d.book = { v: 1, cfg: { mode: 'demo' }, seats: ['A', 'B'], seed: 1, intents: [] };
+delete store['pmc-live-battle'];
+d.keep();
+ok('a demo being watched is never written', store['pmc-live-battle'], undefined);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

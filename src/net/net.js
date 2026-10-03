@@ -190,9 +190,12 @@
     for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
     return (h >>> 0).toString(36) + '.' + s.length;
   }
+  // a demo is only ever watched: never kept, and never offered back after a refresh
+  function isDemo(cfg) { return !!cfg && (cfg.mode === 'demo' || (cfg.aiSides && cfg.aiSides.length === 2)); }
   function savedBattle() {
     try {
       var got = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (got && isDemo(got.cfg)) { forgetBattle(); return null; }    // one kept by an older build: thrown away
       return got && got.v === SAVE_V && got.cfg && got.intents ? got : null;
     } catch (e) { return null; }
   }
@@ -206,7 +209,7 @@
     try { return fn.call(this); } finally { Math.random = real; }
   };
   Local.prototype.keep = function () {
-    if (!this.book || !this.engine) return;
+    if (!this.book || !this.engine || isDemo(this.book.cfg)) return;
     if (this.engine.over()) { this.book = null; forgetBattle(); return; }
     this.book.fp = fingerprint(this.engine.state());
     /* A save that fails (storage full, or blocked in a private window) is said once
@@ -240,7 +243,7 @@
     var seed = (Math.random() * 4294967296) >>> 0;
     this.rng = dice(seed);
     // a demo is only watched: there is nothing to come back to
-    this.book = cfg.mode === 'demo' ? null : { v: SAVE_V, cfg: clone(cfg), seats: this.seats.slice(), seed: seed, intents: [], at: Date.now() };
+    this.book = isDemo(cfg) ? null : { v: SAVE_V, cfg: clone(cfg), seats: this.seats.slice(), seed: seed, intents: [], at: Date.now() };
     if (!this.book) forgetBattle();
     this.engine = root.PMCEngine.create(recorder(this));
     /* The board is handed the engine before the battle is laid out, because
