@@ -128,8 +128,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('joined from the list: Brann takes the open slot', s2.slot === 1 && /Brann Online/.test(await text(p2)));
     await choose(p2, '[data-olob-army="1"]', 'rebel');
     await p2.waitForTimeout(500);
-    await p2.evaluate(() => { document.getElementById('olob-say').value = 'ready when you are'; });
-    await press(p2, '[data-go="olobsay"]');
+    // Enter sends the line
+    await p2.fill('#olob-say', 'ready when you are');
+    await p2.press('#olob-say', 'Enter');
     await p2.waitForTimeout(500);
     await press(p2, '[data-go="olobready"]');
     let chatSeen = false;
