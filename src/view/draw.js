@@ -650,7 +650,7 @@
        outline in its side's colour, with a faint wash of the same inside,
        drawn only where the building covers it — what can be seen of it is left
        as it is. */
-    var xrUnit = null, xrMask = null;
+    var xrUnit = null, xrMask = null, xrBar = null;
     function seeThrough(order, blockers) {
       var g = B.pctx;
       var tr = blockers.length && g.getTransform && g.getTransform();
@@ -670,8 +670,8 @@
         var bx = p.x - K * 11, by = p.y - lift - K * 15, bw = K * 22, bh = K * 18;
         var W2 = Math.ceil(bw * sc), H2 = Math.ceil(bh * sc);
         if (W2 < 2 || H2 < 2) return;
-        if (!xrUnit) { xrUnit = document.createElement('canvas'); xrMask = document.createElement('canvas'); }
-        [xrUnit, xrMask].forEach(function (c) { if (c.width < W2 || c.height < H2) { c.width = Math.max(c.width, W2); c.height = Math.max(c.height, H2); } });
+        if (!xrUnit) { xrUnit = document.createElement('canvas'); xrMask = document.createElement('canvas'); xrBar = document.createElement('canvas'); }
+        [xrUnit, xrMask, xrBar].forEach(function (c) { if (c.width < W2 || c.height < H2) { c.width = Math.max(c.width, W2); c.height = Math.max(c.height, H2); } });
         var ug = xrUnit.getContext('2d'), mg = xrMask.getContext('2d');
         ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, xrUnit.width, xrUnit.height);
         mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, xrMask.width, xrMask.height);
@@ -682,6 +682,30 @@
         ug.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
         ug.imageSmoothingEnabled = g.imageSmoothingEnabled;
         ISO.drawUnit(ug, u, o);
+        /* Its markers (the Suppression bar, the flee mark) are shown whole over the
+           building, not as an outline: what the unit drew, less what it draws
+           without them. */
+        var bg = xrBar.getContext('2d'), marks = !!(o.morale && u.sp > 0) || !!u.marked;
+        if (marks) {
+          bg.setTransform(1, 0, 0, 1, 0, 0); bg.clearRect(0, 0, xrBar.width, xrBar.height);
+          bg.globalCompositeOperation = 'source-over';
+          bg.drawImage(xrUnit, 0, 0);
+          var bare = {}; for (var kk in o) bare[kk] = o[kk];
+          bare.morale = null; bare.noMarks = true;
+          mg.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
+          mg.imageSmoothingEnabled = g.imageSmoothingEnabled;
+          ISO.drawUnit(mg, Object.assign({}, u, { marked: false }), bare);
+          mg.setTransform(1, 0, 0, 1, 0, 0);
+          bg.globalCompositeOperation = 'destination-out';
+          bg.drawImage(xrMask, 0, 0);
+          bg.globalCompositeOperation = 'source-over';
+          mg.clearRect(0, 0, xrMask.width, xrMask.height);
+          // and the outline is of the figures alone
+          ug.save(); ug.setTransform(1, 0, 0, 1, 0, 0);
+          ug.globalCompositeOperation = 'destination-out';
+          ug.drawImage(xrBar, 0, 0);
+          ug.restore();
+        }
         // the outline: the figures spread a pixel each way, less the figures themselves
         var d = Math.max(1, Math.round(sc * 0.75));
         mg.drawImage(xrUnit, -d, 0); mg.drawImage(xrUnit, d, 0); mg.drawImage(xrUnit, 0, -d); mg.drawImage(xrUnit, 0, d);
@@ -708,6 +732,8 @@
         g.save();
         g.globalAlpha = 0.85;
         g.drawImage(xrMask, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
+        g.globalAlpha = 1;
+        if (marks) g.drawImage(xrBar, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
         g.restore();
       });
     }
