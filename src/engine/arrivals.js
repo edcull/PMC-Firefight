@@ -166,6 +166,8 @@
         ui.insertion = { unit: null, by: atk, owner: null, spots: spots, kind: 'ilz', chosen: chosen.slice(), n: chosen.length + 1,
           done: function (p) {
             chosen.push(p);
+            // on the table at once, on every screen, as the zone it will be (the beacon and its ring)
+            E.state.objectives = chosen.map(function (q) { return { x: q.x, y: q.y, r: 4, lz: true, owner: null }; });
             logLine('note', sideName(atk) + ' nominates landing zone ' + chosen.length + '.');
             if (chosen.length >= 3) { SC.setLZs(E.state, chosen); done(); } else ask();
           } };

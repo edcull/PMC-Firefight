@@ -703,6 +703,12 @@
       // (a side entering in turn 1 has nothing to place now)
       return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve || entering(u.side); });
     }
+    // one side's part done: its split legal and its units down (online, each player says they are ready on their own)
+    function sideDone(side) {
+      var f = splitFor(side);
+      if (f && !f.ok) return false;
+      return E.state.units.every(function (u) { return u.side !== side || u.x >= 0 || u.aboard || u.reserve || entering(side); });
+    }
 
     /* Rapid Relocation and Fortify and Strike! are turn 1's, after its Reserve
        phase (engine.js afterEntry), not the deployment's. */
@@ -737,7 +743,7 @@
       zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext, deployOwner: deployOwner, entering: entering,
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
-      toggleHold: toggleHold, deploymentDone: deploymentDone, startBattle: startBattle,
+      toggleHold: toggleHold, deploymentDone: deploymentDone, sideDone: sideDone, startBattle: startBattle,
       clearSplits: clearSplits, autoSplit: autoSplit, faces: faces, faceDefault: faceDefault,
       askFacing: askFacing, answerFacing: answerFacing, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion
     };

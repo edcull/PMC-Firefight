@@ -421,6 +421,11 @@
 
     // a side played at this screen (a hotseat's both; online, this player's own)
     function atThisScreen(side) { return !B.seats || B.seats.indexOf(side) >= 0; }
+    /* Online (a side at another screen), a player's part of the deployment is their
+       own force set out and split; elsewhere, everyone's is. */
+    function myPartDone(side) {
+      return B.seats && B.Q.sideDone ? B.Q.sideDone(side) : deploymentDone();
+    }
     // the deployment is the other player's, at another screen: theirs to set out, this one's to watch
     function othersDeploying() {
       if (!B.state || B.state.phase !== 'deploy' || B.state.relocating || B.state.deployReady) return false;
@@ -580,7 +585,7 @@
           (auto[sd] ? 'Each unit is placed along your edge as its turn comes' : 'Or place each one yourself, in turn 1') + '</small></button></div>';
       });
       if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (mine.indexOf(B.state.swapAsk.side) >= 0 || B.state.swapStage)) h += swapCard();
-      var mySplit = mine.map(splitFor).filter(function (f) { return f && !f.ok; })[0], blocked = !deploymentDone();
+      var mySplit = mine.map(splitFor).filter(function (f) { return f && !f.ok; })[0], blocked = !mine.every(myPartDone);
       var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
       h += '<div class="acts deploy-go">';
       if (sr && sr[me]) {
@@ -1063,7 +1068,7 @@
       /* The scenario's split (which units go on the table and which wait, or
          which wave each comes in) and who starts the battle aboard a hull are
          set in a modal, opened from a button, whenever there is either. */
-      var splits = ['A', 'B'].filter(function (sd) { return (sd === me || !deployRoster(sd).length) && splitFor(sd); });
+      var splits = ['A', 'B'].filter(function (sd) { return (sd === me || !deployRoster(sd).length) && atThisScreen(sd) && splitFor(sd); });
       var hulls = carriersFor(me).filter(function (u) { return !isAI(u.side); });
       var extra = splits.map(splitCard).join('') + loadingCard(me);
       if (extra) {
@@ -1094,13 +1099,14 @@
          chosen, it is there but greyed, and pressing it says why. Hulls going
          in with nobody aboard are asked about first. */
       // (in a hotseat, whichever player's split is still short)
-      var mySplit = ['A', 'B'].map(splitFor).filter(function (f) { return f && !f.ok; })[0] || splitFor(me), splitShort = !!mySplit && !mySplit.ok;
-      var placed = B.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve; });
-      if (deploymentDone() || (placed && splitShort)) {
+      var mySplit = ['A', 'B'].filter(atThisScreen).map(splitFor).filter(function (f) { return f && !f.ok; })[0] || splitFor(me), splitShort = !!mySplit && !mySplit.ok;
+      var placed = B.state.units.every(function (u) { return !atThisScreen(u.side) || u.x >= 0 || u.aboard || u.reserve; });
+      var partDone = here.length ? here.every(myPartDone) : deploymentDone();
+      if (partDone || (placed && splitShort)) {
         h += '<div class="acts deploy-go">';
         // the scenario's own condition on how the force stands (Ambush!'s even split)
         var sblk = B.state.scen && B.state.scen.startBlock ? B.state.scen.startBlock(B.state) : null;
-        var blocked = !deploymentDone() || !!sblk;
+        var blocked = !partDone || !!sblk;
         // empty hulls of every side at this screen, not only the one shown
         var empties = (bothHere ? here : [me]).reduce(function (all, sd) { return all.concat(carriersFor(sd)); }, [])
           .filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });

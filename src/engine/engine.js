@@ -1931,7 +1931,8 @@
       settleFacing();
       if (modifying()) return no('the armies are still being modified');
       if (state.swapAsk) K.swapsDone();
-      if (!K.deploymentDone()) return no('there are still units to place');
+      // online, each player answers for their own force: ready once theirs is set out and split, whatever the other's state
+      if (bothConfirm() ? !K.sideDone(side) : !K.deploymentDone()) return no('there are still units to place');
       // a scenario's own condition on how the force stands (Ambush!'s even split)
       var sblk = state.scen.startBlock && state.scen.startBlock(state);
       if (sblk) { setHint(null, sblk); render(); return no(sblk); }
@@ -1940,7 +1941,7 @@
       if (bothConfirm()) {
         state.startReady = state.startReady || { A: false, B: false };
         state.startReady[side] = true;
-        if (!(state.startReady.A && state.startReady.B)) {
+        if (!(state.startReady.A && state.startReady.B) || !K.deploymentDone()) {
           logLine('note', sideName(side) + ' is ready to begin the battle.');
           render();
           return yes;
@@ -2321,7 +2322,7 @@
         deployNext: K.deployNext,
         deployOwner: K.deployOwner,
         deployRoster: K.deployRoster,
-        deploymentDone: K.deploymentDone,
+        deploymentDone: K.deploymentDone, sideDone: K.sideDone,
         splitFor: K.splitFor, insertionFor: K.insertionFor,
         placingSide: K.placingSide,
         zoneFor: K.zoneFor,
