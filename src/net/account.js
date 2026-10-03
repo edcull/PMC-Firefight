@@ -25,7 +25,6 @@
   var linkToken = null;          // a reset link's token, while its new password is being chosen
   var lastName = '';             // the name last tried (to send an activation link again)
   var inactive = false;          // that name's account is waiting for its activation link
-  var data = null;               // what the server keeps for the player, once fetched
   function el(id) { return document.getElementById(id); }
   function esc(t) { return root.PMC.esc(t); }
   // a page served over http, and a game server behind it that has answered
@@ -66,24 +65,6 @@
       c.title = !online() ? 'Online accounts unavailable'
         : who ? 'Your account' : 'Sign in, or make an account';
     });
-  }
-  // what the server keeps for the player: their campaigns, their online campaigns, their battles
-  function load() {
-    data = null;
-    Promise.all([get('api/campaigns'), get('api/online'), get('api/games')]).then(function (rs) {
-      data = {
-        campaigns: rs[0].ok ? (rs[0].j.campaigns || []).filter(function (c) { return c.kind !== 'online'; }) : [],
-        online: rs[1].ok ? rs[1].j.campaigns || [] : [],
-        games: rs[2].ok ? rs[2].j.games || [] : []
-      };
-      draw();
-    }, function () { data = { campaigns: [], online: [], games: [], failed: true }; draw(); });
-  }
-
-  function when(t) {
-    if (!t) return '';
-    var d = new Date(t);
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   }
   function msgs() {
     return (fault ? '<p class="acct-bad" role="alert">' + esc(fault) + '</p>' : '') +
@@ -169,37 +150,16 @@
         (who.emailOk ? '' : '<span class="acct-tag">unconfirmed</span>')
         : '<em>none' + (mailOn ? ' — add one, so a forgotten password can be reset' : '') + '</em>' + editBtn('email', 'Add an email address')) + '</div>';
     }
-    // what is kept, in a box of its own that scrolls when there is more than fits
-    h += '<div class="acct-data">';
-    if (!data) {
-      h += '<p class="acct-lede">Looking up what is kept for you…</p>';
+    // the password: changed here with the current one, or (forgotten) a reset link sent to the address
+    if (edit === 'pass') {
+      h += '<div class="acct-edit">' + field('acct-oldpass', 'Current password', 'password', 'current-password', 200) +
+        field('acct-newpass', 'New password (at least 8 characters)', 'password', 'new-password', 200) +
+        '<div class="acct-editrow"><button type="button" class="lnk" data-acct="cancel">Cancel</button>' + goButton('pass', 'Change the password') + '</div>' +
+        (mailOn && who.email ? '<button type="button" class="lnk acct-forgot" data-acct="sendreset">Forgotten it? Email me a reset link</button>' : '') + '</div>';
     } else {
-      var row = function (main, sub, end) {
-        return '<div class="acct-row"><span><b>' + esc(main) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' + (end ? '<em>' + esc(end) + '</em>' : '') + '</div>';
-      };
-      var section = function (title, rows, none) {
-        return '<div class="acct-sec"><h3>' + title + '</h3>' + (rows.length ? rows.join('') : '<p class="acct-none">' + none + '</p>') + '</div>';
-      };
-      h += '<p class="acct-lede">Kept on this server for your account' + (data.failed ? ' (it could not be reached just now)' : '') + ':</p>';
-      h += section('Campaigns', data.campaigns.map(function (c) {
-        return row(c.name, (c.kind === 'hotseat' ? 'Hotseat' : 'Single player') + ' · turn ' + c.turn, when(c.updated));
-      }), 'None yet. A campaign you play while signed in is kept here as well as in this browser.');
-      h += section('Online campaigns', data.online.map(function (c) {
-        return row(c.name, 'You are Player ' + (c.side === 'B' ? 2 : 1) + ' · turn ' + c.turn, when(c.updated));
-      }), 'None yet. Start one from Multiplayer.');
-      h += section('Battles', data.games.slice(0, 20).map(function (g) {
-        return row(g.name, g.against ? 'against ' + g.against : '', g.result || 'under way');
-      }), 'None yet.');
+      h += '<div class="acct-line"><span>Password</span><b>\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</b>' + editBtn('pass', 'Change your password') + '</div>';
     }
-    // what this browser keeps of its own, whoever is signed in
-    var locals = (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.list && root.PMC_CAMPAIGN.list()) || [];
-    if (locals.length) {
-      h += '<div class="acct-sec"><h3>In this browser</h3>' + locals.map(function (c) {
-        return '<div class="acct-row"><span><b>' + esc(c.name) + '</b><small>' +
-          (c.mode === 'hotseat' ? 'Hotseat' : 'Single player') + ' campaign · turn ' + (c.turn || 0) + '</small></span></div>';
-      }).join('') + '</div>';
-    }
-    return h + '</div>';
+    return h;
   }
   /* ================= the screen ================= */
   var host = null;
@@ -230,7 +190,7 @@
     draw();
     if (root.PMC_BACKDROP) root.PMC_BACKDROP();
     if (mode === 'reset') return;
-    refresh(function () { if (who && !who.guest) load(); draw(); var n = el('acct-name'); if (n && !who && !n.value) n.focus(); });
+    refresh(function () { draw(); var n = el('acct-name'); if (n && !who && !n.value) n.focus(); });
   }
   function closeScreen() {
     if (host) host.hidden = true;
@@ -254,6 +214,8 @@
     label();
     if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
     if (root.PMCLobby && root.PMCLobby.accountChanged) root.PMCLobby.accountChanged();
+    // the Continue list: the server's games are the account's, so asked for afresh
+    if (root.PMCMenu && root.PMCMenu.refresh) root.PMCMenu.refresh();
   }
   // a request from a form: busy while it is out, and its refusal said
   function send(path, body, done) {
@@ -270,8 +232,7 @@
     changed();
     // signed in on the way somewhere: on to it
     var then = purpose && purpose.then;
-    if (then) { purpose = null; returnTo = null; host.hidden = true; notice = ''; then(); return; }
-    load();
+    if (then) { purpose = null; returnTo = null; host.hidden = true; notice = ''; then(); }
   }
   function go() {
     var reg = mode === 'register', name = val('acct-name'), pass = (el('acct-pass') || {}).value || '';
@@ -330,7 +291,7 @@
   }
   function signOut() {
     root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { })
-      .then(function () { who = null; data = null; edit = null; notice = ''; fault = ''; changed(); draw(); });
+      .then(function () { who = null; edit = null; notice = ''; fault = ''; changed(); draw(); });
   }
 
   /* A link from one of the emails, opened: the token in the address, acted on in
@@ -346,7 +307,7 @@
     if (kind === 'reset') { linkToken = t; mode = 'reset'; who = null; setTimeout(show, 0); return; }
     post('api/' + kind, { token: t }).then(function (r) {
       if (!r.ok) { fault = cap((r.j && r.j.error) || 'that link did not work'); }
-      else if (kind === 'activate') { notice = 'Your account is active, and you are signed in.'; who = r.j.who; changed(); load(); }
+      else if (kind === 'activate') { notice = 'Your account is active, and you are signed in.'; who = r.j.who; changed(); }
       else { notice = 'Your email address is now ' + r.j.email + '.'; refresh(draw); }
       show(); draw();
     }, function () { fault = 'The server could not be reached.'; show(); draw(); });
@@ -381,8 +342,17 @@
           signedIn(j);
         });
       }
-      else if (a === 'edit') { edit = b.getAttribute('data-what'); fault = ''; notice = ''; draw(); var f = el(edit === 'name' ? 'acct-newname' : 'acct-newemail'); if (f) f.focus(); }
+      else if (a === 'edit') { edit = b.getAttribute('data-what'); fault = ''; notice = ''; draw(); var f = el(edit === 'name' ? 'acct-newname' : edit === 'pass' ? 'acct-oldpass' : 'acct-newemail'); if (f) f.focus(); }
       else if (a === 'cancel') { edit = null; fault = ''; draw(); }
+      else if (a === 'pass') {
+        send('api/password', { old: (el('acct-oldpass') || {}).value || '', password: (el('acct-newpass') || {}).value || '' }, function (j) {
+          if (!j) return;
+          edit = null; notice = 'Your password is changed. Every other device was signed out.';
+        });
+      }
+      else if (a === 'sendreset') {
+        send('api/forgot', { email: who.email }, function (j) { if (j) { edit = null; notice = 'A link to choose a new password has been sent to ' + who.email + '. It works for an hour.'; } });
+      }
       else if (a === 'rename') {
         send('api/rename', { name: val('acct-newname') }, function (j) {
           if (!j) return;

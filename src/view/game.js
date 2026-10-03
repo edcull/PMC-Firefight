@@ -118,7 +118,7 @@
 
   /* A battle this browser was in the middle of when the page went away —
      refreshed, or the phone threw the tab out — is played back up to where it
-     was, behind the menu, which then offers to go back to it. */
+     was when it is picked from the main menu's Continue list. */
   /* Something went wrong that the player should hear about: said on the menu,
      and in the hint line if a battle is showing, and written to the console. */
   function notice(text, err) {
@@ -746,7 +746,7 @@
         if (state) render();
       }, 120);
     });
-    resumeSaved();
+    // a battle under way when the page went away is not opened by itself: the main menu comes up, and Continue has it
   }
 
   window.PMC_STATE = function () { return state; };

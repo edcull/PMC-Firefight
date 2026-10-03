@@ -297,7 +297,7 @@ app.drain(4);
   ok('the menu is there', !!W.PMCMenu && typeof W.PMC_SKIRMISH === 'function');
   W.PMCMenu.open();
   ok('the menu opens', W.PMCMenu.isOpen() && byId('setup').hidden === true);
-  ok('with no battle on, there is no battle to go back to', byId('btn-resume').hidden === true);
+  ok('with no battle on, there is no battle to go back to', byId('btn-continue').hidden === true);
   W.PMCMenu.show('single');
   ok('Single player opens its own list', byId('menu-single').hidden === false && byId('menu-main').hidden === true);
   /* This DOM has no selectors, so which card sits in which list is read off the page itself. */

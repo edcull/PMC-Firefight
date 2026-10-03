@@ -681,15 +681,12 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cont-row .mcard { flex: 1; padding-right: 52px; min-width: 0; }
 .cont-row .mcard b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cont-row .cont-kind { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--alpha); margin-bottom: 2px; }
-.cont-row .mcard.live { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
 .cont-row .resume-x.confirm { min-width: 76px; }
+.cont-row .cont-where { display: inline-flex; vertical-align: -2px; margin-right: 5px; color: var(--ink-dim); }
+.cont-row .cont-where svg { width: 13px; height: 13px; }
 .cont-none { color: var(--ink-dim); font-size: 13px; margin: 4px 2px 8px; }
-#btn-resume, #btn-continue { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
-/* throwing the battle away: a small x in the corner of Back to the battle,
-   which turns into a red Discard? once, and asks the card to say so */
-.resume-wrap { position: relative; display: flex; flex-direction: column; }
-.resume-wrap:has(#btn-resume[hidden]) { display: none; }
-.resume-wrap #btn-resume { padding-right: 52px; }
+#btn-continue { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+/* the x on a row of the Continue list: a red Delete? (or Abandon?) once, asked twice */
 .resume-x {
   position: absolute; top: 8px; right: 8px; min-width: 32px; height: 32px; padding: 0 9px; border-radius: 16px;
   border: 1px solid var(--line); background: color-mix(in srgb, var(--ground) 80%, transparent); color: var(--ink-dim);
@@ -700,8 +697,7 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   color: #fff; background: var(--bad); border-color: var(--bad);
   font: 700 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
 }
-#btn-resume.discarding { border-color: color-mix(in srgb, var(--bad) 70%, transparent); padding-right: 120px; }
-#btn-resume.discarding small { color: var(--bad); }
+.cont-row .mcard.live { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
 .mcard.menu-back { text-align: center; }
 /* the account pane (net/account.js) */
 /* who is signed in, at the right of a screen's top bar (net/account.js) */

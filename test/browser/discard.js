@@ -1,6 +1,6 @@
-/* A skirmish can be thrown away from the main menu: "Discard this battle",
-   asked twice. It is not offered for a campaign's battle. After it the menu
-   has no battle to go back to, and a new one starts cleanly. */
+/* A skirmish can be thrown away from the main menu's Continue list: the x on
+   the battle on the table, asked twice. It is not offered for a campaign's
+   battle. After it there is no battle to go back to, and a new one starts cleanly. */
 const { chromium } = require('playwright');
 const path = require('path');
 const { ROOT } = require('../where.js');
@@ -10,15 +10,13 @@ function ok(name, cond, note) {
   cond ? pass++ : fail++;
   console.log('    ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
 }
-const menu = (p) => p.evaluate(() => ({
-  open: !document.getElementById('menu').hidden,
-  resume: !document.getElementById('btn-resume').hidden,
-  discard: !document.getElementById('btn-discard').hidden,
-  confirm: document.getElementById('btn-discard').classList.contains('confirm'),
-  sub: document.getElementById('menu-resume-sub').textContent,
-  x: document.getElementById('btn-discard').textContent,
-  live: !!window.PMC_BATTLE_LIVE()
-}));
+const X = '#cont-list [data-contdel="live"]';
+const menu = (p) => p.evaluate((X) => {
+  if (!document.getElementById('menu').hidden && document.getElementById('menu-continue').hidden && !document.getElementById('btn-continue').hidden) window.PMCMenu.show('continue');
+  const row = document.querySelector('#cont-list [data-cont="live"]'), x = document.querySelector(X);
+  return { open: !document.getElementById('menu').hidden, resume: !!row, discard: !!x, confirm: !!x && x.classList.contains('confirm'),
+    sub: row ? row.querySelector('small').textContent : '', x: x ? x.textContent : '', live: !!window.PMC_BATTLE_LIVE() };
+}, X);
 async function skirmish(p, extra) {
   await p.evaluate((x) => {
     window.PMC_NEWGAME(Object.assign({ tier: 3, pl: 1, mode: 'ai', planet: 'sparse', scenario: 'meeting', nameA: 'A', nameB: 'B',
@@ -40,12 +38,12 @@ async function skirmish(p, extra) {
   await p.evaluate(() => window.PMCMenu.open());
   await p.waitForTimeout(200);
   let m = await menu(p);
-  ok('the menu offers the battle back, with an x on it to discard it', m.open && m.resume && m.discard && m.live && m.x === '\u2715', m.x);
-  await p.evaluate(() => document.getElementById('btn-discard').click());
+  ok('Continue lists the battle on the table, with an x on it to discard it', m.open && m.resume && m.discard && m.live && m.x === '\u2715', m.x);
+  await p.evaluate((X) => document.querySelector(X).click(), X);
   await p.waitForTimeout(150);
   m = await menu(p);
-  ok('the first tap on the x only asks to be sure', m.confirm && m.live && /undone/i.test(m.sub) && /discard/i.test(m.x), m.x + ' / ' + m.sub);
-  await p.evaluate(() => document.getElementById('btn-discard').click());
+  ok('the first tap on the x only asks to be sure', m.confirm && m.live && /cannot be had back/i.test(m.sub) && /delete/i.test(m.x), m.x + ' / ' + m.sub);
+  await p.evaluate((X) => document.querySelector(X).click(), X);
   await p.waitForTimeout(250);
   m = await menu(p);
   ok('the second throws it away: no battle, nothing to go back to', !m.live && !m.resume && !m.discard && m.open);

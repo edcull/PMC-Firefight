@@ -71,17 +71,17 @@ async function play(p, n) {
   const logBefore = await p.evaluate(() => document.querySelectorAll('#log > *').length);
   await p.reload();
   await p.waitForTimeout(900);
-  const menu = await p.evaluate(() => ({ open: !document.getElementById('menu').hidden,
-    resume: !document.getElementById('btn-resume').hidden, sub: document.getElementById('menu-resume-sub').textContent }));
-  ok('the menu offers the battle back', menu.open && menu.resume, JSON.stringify(menu));
+  const menu = await p.evaluate(() => { window.PMCMenu.show('continue'); const r = document.querySelector('#cont-list [data-cont^="b:"]');
+    return { open: !document.getElementById('menu').hidden, live: !!window.PMC_BATTLE_LIVE(), resume: !!r, sub: r ? r.textContent : '' }; });
+  ok('a refresh opens on the main menu, not the battle; Continue offers it back', menu.open && !menu.live && menu.resume, JSON.stringify(menu));
+  await p.click('#cont-list [data-cont^="b:"]');
+  await p.waitForTimeout(600);
   const after = await table(p);
   ok('...the same table, every unit where it was', !!before && before === after,
     before === after ? '' : (before || '').slice(0, 200) + ' ≠ ' + (after || '').slice(0, 200));
   const logAfter = await p.evaluate(() => document.querySelectorAll('#log > *').length);
   ok('...with the log written up to where it was', logAfter > 0, logBefore + ' → ' + logAfter);
-  await p.click('#btn-resume');
-  await p.waitForTimeout(400);
-  ok('Resume shows the table', await p.evaluate(() => document.getElementById('menu').hidden && document.body.getAttribute('data-battle') === 'ai'));
+  ok('picking it shows the table', await p.evaluate(() => document.getElementById('menu').hidden && document.body.getAttribute('data-battle') === 'ai'));
   await play(p, 2);
   const logLater = await p.evaluate(() => document.querySelectorAll('#log > *').length);
   ok('...and it plays on', logLater > logAfter, logAfter + ' → ' + logLater);
@@ -103,7 +103,7 @@ async function play(p, n) {
   await p.evaluate(() => { window.PMCMenu.open(); document.getElementById('btn-continue').click(); });
   await p.waitForTimeout(200);
   const rows = await p.evaluate(() => [...document.querySelectorAll('#cont-list [data-cont]')].map((x) => x.getAttribute('data-cont') + ' ' + x.textContent));
-  ok('Continue lists the two, the one on the table first', rows.length === 2 && /On the table now/.test(rows[0]) && rows[1].indexOf('b:' + firstId) === 0, JSON.stringify(rows));
+  ok('Continue lists the two, the one on the table first', rows.length === 2 && rows[0].indexOf('live') === 0 && /On the table now/.test(rows[0]) && rows[1].indexOf('b:' + firstId) === 0, JSON.stringify(rows));
   await p.evaluate((id) => document.querySelector('#cont-list [data-cont="b:' + id + '"]').click(), firstId);
   await p.waitForTimeout(900);
   ok('picking the first goes back to it, every unit where it was', (await table(p)) === tFirst && await p.evaluate(() => document.getElementById('menu').hidden));
@@ -118,11 +118,12 @@ async function play(p, n) {
 
   console.log('\n  Thrown away');
   await p.evaluate(() => window.PMCMenu.open());
-  await p.click('#btn-discard'); await p.click('#btn-discard');
+  await p.evaluate(() => window.PMCMenu.show('continue'));
+  await p.click('#cont-list [data-contdel="live"]'); await p.click('#cont-list [data-contdel="live"]');
   await p.reload();
   await p.waitForTimeout(700);
   ok('a discarded battle is not offered after a refresh', await p.evaluate(() =>
-    document.getElementById('btn-resume').hidden && !window.PMC_BATTLE_LIVE()));
+    document.getElementById('btn-continue').hidden && !window.PMC_BATTLE_LIVE()));
 
   console.log('\n  A campaign battle, refreshed');
   // a company founded through the interface, as campflow does it, and a contract taken

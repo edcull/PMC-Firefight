@@ -94,6 +94,18 @@ async function latest(to, kind) {
   t = await till((x) => /now Morgan Vale/.test(x), 'renamed');
   ok('one nobody has is taken, and the menu says so', (await p.textContent('.menu-chip')) === 'Morgan Vale');
 
+  console.log('\nA new password');
+  await click('[data-acct="edit"][data-what="pass"]');
+  await fill('acct-oldpass', 'not it'); await fill('acct-newpass', 'changed password');
+  await click('[data-acct="pass"]');
+  t = await till((x) => /not your current password/i.test(x), 'refused');
+  ok('changing it wants the current password', /not your current password/i.test(t));
+  await fill('acct-oldpass', 'first password'); await fill('acct-newpass', 'changed password');
+  await click('[data-acct="pass"]');
+  t = await till((x) => /password is changed/i.test(x), 'changed');
+  ok('...and with it, the password is changed', /password is changed/i.test(t));
+  ok('the account screen no longer lists the saved games', await p.evaluate(() => !document.querySelector('#acct-body .acct-data')));
+
   console.log('\nA forgotten password');
   await click('[data-acct="out"]');
   await wait(400);

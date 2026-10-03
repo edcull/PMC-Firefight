@@ -98,8 +98,8 @@ function stopped(srv) { return new Promise((r) => { srv.on('exit', r); srv.kill(
   // the battle is in the main menu's Continue list, as one online
   await p2.evaluate(() => window.PMCMenu.refresh());
   let listed = false;
-  for (let i = 0; i < 20 && !listed; i++) { await wait(150); listed = await p2.evaluate((c) => window.PMCMenu.games().some((g) => g.key === 'g:' + c && g.kind === 'Online skirmish'), code); }
-  ok('the battle is in the Continue list as an online skirmish', listed);
+  for (let i = 0; i < 20 && !listed; i++) { await wait(150); listed = await p2.evaluate((c) => window.PMCMenu.games().some((g) => g.key === 'live' && g.kind === 'Online battle' && g.where === 'server'), code); }
+  ok('the battle is first in the Continue list, as the one on the table, kept on the server', listed);
 
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   await b.close();
