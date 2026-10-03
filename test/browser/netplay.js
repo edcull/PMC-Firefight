@@ -157,6 +157,24 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   }));
   const s1 = await look(p1), s2 = await look(p2);
   ok('the battle is on for both', s1.active && s2.active, JSON.stringify([s1.active, s2.active]));
+  // the table talk, under the actions on a desktop
+  await p1.evaluate(() => { document.getElementById('bchat-say').value = 'good luck'; document.getElementById('bchat-send').click(); });
+  await p2.waitForTimeout(500);
+  const bc = await p2.evaluate(() => ({ shown: !document.getElementById('battle-chat').hidden, said: document.getElementById('bchat-lines').textContent,
+    under: document.getElementById('bar').getBoundingClientRect().bottom <= document.getElementById('battle-chat').getBoundingClientRect().top + 1 }));
+  ok('an online battle has the table talk under the actions, and what is said there arrives', bc.shown && bc.under && /good luck/.test(bc.said), JSON.stringify(bc));
+  // on a phone, a Chat tab of its own, counting what was said while it was shut
+  await p2.setViewportSize({ width: 400, height: 820 });
+  await p2.evaluate(() => window.PMC_SET_MTAB('act'));
+  await p1.evaluate(() => { document.getElementById('bchat-say').value = 'your move'; document.getElementById('bchat-send').click(); });
+  await p2.waitForTimeout(500);
+  const tab = await p2.evaluate(() => { const t = document.querySelector('#mtabs .mtab-chat'); return { shown: !!t && getComputedStyle(t).display !== 'none', n: document.getElementById('mtab-chat-n').textContent }; });
+  ok('...on a phone, a Chat tab with a count of what was said while it was shut', tab.shown && tab.n === '1', JSON.stringify(tab));
+  await p2.click('#mtabs .mtab-chat'); await p2.waitForTimeout(200);
+  const opened = await p2.evaluate(() => ({ n: document.getElementById('mtab-chat-n').textContent, vis: getComputedStyle(document.getElementById('battle-chat')).display !== 'none' }));
+  ok('...opened, the talk shows and the count goes', opened.vis && !opened.n, JSON.stringify(opened));
+  await p2.evaluate(() => window.PMC_SET_MTAB('act'));
+  await p2.setViewportSize({ width: 1340, height: 900 });
   const mine = s1.active === s1.seat ? s1 : s2, theirs = mine === s1 ? s2 : s1;
   ok('the screen whose go it is says so', mine.pill === 'Your turn', mine.pill);
   ok('...and the other says whose it is, by name', /Player [12] Force’s turn/.test(theirs.pill), theirs.pill);

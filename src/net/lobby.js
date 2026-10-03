@@ -295,6 +295,62 @@
     var col = root.PMCIso && root.PMCIso.COLOURS && root.PMCIso.COLOURS[f.colour];
     return col ? col.light : 'var(--side-' + (seat === 'B' ? 'B' : 'A') + ')';
   }
+  /* ---- the table talk on the battlefield ----
+     An online battle has its room's chat under the action buttons (and on a phone,
+     a Chat tab of its own that counts what was said while it was shut). */
+  var chatUnread = 0, chatShown = false, chatDrawn = -1;
+  function battleChatOn() { return !!(root.PMC_BATTLE_ABANDONABLE && root.PMC_BATTLE_ABANDONABLE() && room); }
+  function chatTabOpen() {
+    var con = document.querySelector('.console');
+    return root.innerWidth > 1000 || !!(con && con.getAttribute('data-mtab') === 'chat');
+  }
+  function battleChat() {
+    var box = el('battle-chat');
+    if (!box) return;
+    var on = battleChatOn();
+    if (on !== chatShown) {
+      chatShown = on;
+      box.hidden = !on;
+      if (on) document.body.setAttribute('data-online', '1'); else document.body.removeAttribute('data-online');
+      var tab = document.querySelector('#mtabs .mtab-chat');
+      if (tab) tab.hidden = !on;
+      if (!on) { chatUnread = 0; chatDrawn = -1; var con = document.querySelector('.console'); if (con && con.getAttribute('data-mtab') === 'chat' && root.PMC_SET_MTAB) root.PMC_SET_MTAB('act'); }
+    }
+    if (chatTabOpen()) chatUnread = 0;
+    var n = el('mtab-chat-n');
+    if (n) n.textContent = chatUnread ? (chatUnread > 9 ? '9+' : chatUnread) : '';
+    if (!on) return;
+    var lines = chat.room || [];
+    if (chatDrawn === lines.length + (room ? room.id : '')) return;
+    chatDrawn = lines.length + (room ? room.id : '');
+    var lb = el('bchat-lines');
+    lb.innerHTML = lines.length ? lines.map(function (l) {
+      var c = l.seat ? seatColour(l.seat) : '';
+      return l.from ? '<p><b' + (c ? ' style="color:' + c + '"' : '') + '>' + esc(l.from) + '</b> ' + esc(l.text) + '</p>' : '<p class="note">' + esc(l.text) + '</p>';
+    }).join('') : '<p class="note">Nothing said yet.</p>';
+    lb.scrollTop = lb.scrollHeight;
+  }
+  function battleSay() {
+    var box = el('bchat-say');
+    if (!box || !net) return;
+    var text = (box.value || '').trim();
+    if (!text) return;
+    net.send('game.chat', { text: text });
+    box.value = '';
+  }
+  function wireBattleChat() {
+    var send = el('bchat-send'), box = el('bchat-say'), tabs = el('mtabs');
+    if (send) send.addEventListener('click', battleSay);
+    if (box) box.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); battleSay(); } e.stopPropagation(); });
+    // the Chat tab opened: what was said is read
+    if (tabs) tabs.addEventListener('click', function () { setTimeout(battleChat, 0); });
+    // a battle begun, ended or left: shown or put away
+    setInterval(battleChat, 1500);
+  }
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireBattleChat); else wireBattleChat();
+  }
+
   function chatHTML(where) {
     var lines = chat[where] || [];
     var id = where === 'lobby' ? 'lobby-say' : 'room-say';
@@ -603,7 +659,10 @@
     net.on('game.chat', function (m) {
       chat.room.push(m);
       if (chat.room.length > P.LIMITS.chatLog) chat.room.shift();
+      // said while the battle is on, and the phone's Chat tab not open: counted on the tab
+      if (m.from && m.from !== me.name && battleChatOn() && !chatTabOpen()) chatUnread++;
       draw();
+      battleChat();
     });
     net.on('error', function (m) {
       fault = m.text || '';
@@ -613,6 +672,7 @@
     net.on('started', function (m) {
       close();
       if (root.PMC_JOIN_BATTLE) root.PMC_JOIN_BATTLE(net, m.seat, m.cfg);
+      battleChat();
     });
     net.on('over', function () {
       keepRoom(''); if (net) net.send('games.mine'); /* the board shows the result; the room reopens by itself */

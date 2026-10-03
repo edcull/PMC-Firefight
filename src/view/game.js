@@ -1049,6 +1049,8 @@
   var ICONS = ACTIONS.ICONS, SPECIAL_SLOTS = ACTIONS.SPECIAL_SLOTS, STANDARD = ACTIONS.STANDARD;
   var closeRes = ACTIONS.closeRes, feedHosts = ACTIONS.feedHosts, pushRes = ACTIONS.pushRes;
   var setMTab = ACTIONS.setMTab;
+  // the phone's tabs, for the table talk's (lobby.js) to put back when the battle ends
+  window.PMC_SET_MTAB = function (w) { setMTab(w); };
 
   /* ---------- draw.js: the table drawn ----------
      The board it borrows from: getters for what changes as the game runs,

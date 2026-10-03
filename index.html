@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=ffe352e016">
+<link rel="stylesheet" href="src/css/game.css?v=0a6f0e88b3">
 
 <div class="wrap">
   <header>
@@ -56,12 +56,18 @@
 
       <div class="console">
         <div class="bar" id="bar"></div>
+        <!-- an online battle: the table talk, under the actions (a tab of its own on a phone) -->
+        <div class="mpane mpane-chat bchat" id="battle-chat" hidden>
+          <div class="bchat-lines" id="bchat-lines"></div>
+          <div class="bchat-row"><input id="bchat-say" type="text" maxlength="200" placeholder="Say something…" autocomplete="off"><button class="lnk" id="bchat-send">Send</button></div>
+        </div>
         <!-- phone only: the three things worth a thumb, under the action row -->
         <div class="mtabs" id="mtabs">
           <button class="mtab on" data-mtab="act">Actions</button>
           <button class="mtab" data-mtab="res">Results <span class="mtab-n" id="mtab-n"></span></button>
           <button class="mtab" data-mtab="unit">Unit</button>
           <button class="mtab" data-mtab="force">Forces</button>
+          <button class="mtab mtab-chat" data-mtab="chat" hidden>Chat <span class="mtab-n" id="mtab-chat-n"></span></button>
         </div>
         <div class="hintbar idle" id="hintbar">Select one of your units on the table.</div>
         <div class="mpane mpane-act" id="context"></div>
@@ -151,7 +157,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.2.0.2610031148</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610031150</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -561,7 +567,7 @@
 <script src="src/engine/offtable.js?v=ef8edae603"></script>
 <script src="src/net/net.js?v=c3fd6af800"></script>
 <script src="src/net/account.js?v=f27fb40b1d"></script>
-<script src="src/net/lobby.js?v=99900437fa"></script>
+<script src="src/net/lobby.js?v=665cee8f74"></script>
 <script src="src/view/replay.js?v=9bc59170a7"></script>
 <script src="src/view/hooks.js?v=7ad383bd12"></script>
 <script src="src/view/testhooks.js?v=9968efc1fe"></script>
@@ -574,7 +580,7 @@
 <script src="src/view/view.js?v=73abea196b"></script>
 <script src="src/view/panels.js?v=786d572c2b"></script>
 <script src="src/view/muster.js?v=416d9b2fa6"></script>
-<script src="src/view/game.js?v=0fc76e140e"></script>
+<script src="src/view/game.js?v=2e99f056fa"></script>
 <script src="src/view/dossier-hub.js?v=771e52ffb5"></script>
 <script src="src/view/dossier-found.js?v=382b00dba1"></script>
 <script src="src/view/dossier-roster.js?v=252a0f7a67"></script>
