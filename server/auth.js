@@ -251,7 +251,16 @@ function create(opts) {
     // the account's own details, for its own screen (api/me)
     details(me) {
       const user = me && !me.guest ? db.userById(me.userId) : null;
-      return user ? { email: user.email || null, emailOk: !!user.email_ok } : null;
+      return user ? { email: user.email || null, emailOk: !!user.email_ok, notify: !!user.notify } : null;
+    },
+    // an email when an online campaign is waiting on them: on or off (an address wanted)
+    setNotify(t, on) {
+      const me = this.session(t);
+      if (!me || me.guest) return no('sign in first', 401);
+      const user = db.userById(me.userId);
+      if (on && !(user && user.email)) return no('add an email address first');
+      db.setNotify(me.userId, !!on);
+      return { ok: true, who: me };
     },
     mailLive: !!mailer.live,
 

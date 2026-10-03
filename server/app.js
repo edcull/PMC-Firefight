@@ -47,7 +47,7 @@ function create(opts) {
      CORS — and a write from a page elsewhere is refused by its Origin as well as
      its cookie's SameSite. Bodies are small JSON. */
   function api(req, res, url) {
-    const m = /^\/api\/(me|games|register|login|guest|logout|password|activate|resend|forgot|reset|rename|email|confirm-email)$/.exec(url);
+    const m = /^\/api\/(me|games|register|login|guest|logout|password|activate|resend|forgot|reset|rename|email|confirm-email|notify)$/.exec(url);
     if (!m) return false;
     const send = (code, body, cookie) => {
       const h = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
@@ -95,6 +95,7 @@ function create(opts) {
         else if (m[1] === 'forgot') r = await auth.forgot(b.email, ip);
         else if (m[1] === 'reset') r = await auth.resetWith(b.token, b.password);
         else if (m[1] === 'rename') r = auth.rename(t, b.name);
+        else if (m[1] === 'notify') r = auth.setNotify(t, !!b.on);
         else if (m[1] === 'email') {
           r = await auth.changeEmail(t, b.email, b.password, ip);
           if (r.ok) return send(200, { ok: true, email: r.email, pending: r.pending });

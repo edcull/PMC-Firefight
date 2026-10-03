@@ -146,7 +146,19 @@ npm run test:slow             # the browser tests that play whole battles or cam
 npm run test:all              # everything
 node scripts/test.js camp     # any test whose name contains "camp"
 node scripts/test.js -j 2 -v  # two at a time, printing every test's output
+node scripts/test.js --speed 1 quick   # the browser tests at the real pace
 ```
+
+To keep a run short (on four cores: the quick set about 7½ minutes, everything
+about 10), the runner:
+
+- runs a browser test a core, but only half the cores' worth of the slow ones at once;
+- runs the browser tests' board clock three times over (`test/fast.js`, preloaded:
+  it sets `PMC_TIME_SCALE` on every page they open), except the few that time the
+  drawing itself (`REAL_TIME` in `scripts/test.js`), and any that set their own;
+- gives a quick browser test three minutes, and runs one that hangs or fails once
+  more, at the back of the queue (said at the end, with how the second run went;
+  a real fault fails both times).
 
 Every test's output is kept in `build/test-logs/<name>.log`, and a failing test's
 is printed after the summary. Each file prints a `✓` or `✗` per check and a tally,
@@ -235,6 +247,8 @@ auth.js            accounts and sessions on a database in memory: hashing, renew
 serverrestart.js   a battle kept through a server restart, put away and brought back, a forfeit
 online.js          online campaigns: made, joined, founded, each player's commands on their own force
 onlinebattle.js    an online campaign's contract, hidden picks, its battle, a forfeit, the aftermath applied once
+coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
+yourmove.js        whose move an online campaign waits on, and the email (if asked for) when it comes to be yours
 backups.js         the database copied once a day, the last few kept, a failure logged
 hidden.js          each seat's and a watcher's view of a battle and a room: the other side's swaps, mine, bench and list kept from them
 solitairetest.js   solitaire and co-op against the OpFor
@@ -362,6 +376,7 @@ campaccount.js     a campaign kept by a signed-in player's account, across two b
 netrestart.js      an online battle across a server restart: both back at the same table, and it goes on
 accountmail.js     an account by email: activation link, sent again, a new name, a forgotten password reset, a new address
 onlinecamp.js      an online campaign between two browsers: started, joined by code, founded, a contract, the battle, a forfeit, the questions and the aftermath
+coopplay.js        a cooperative game between two browsers: started from Start a game, both commandos on one side, each screen its own go
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract

@@ -151,8 +151,8 @@
         sub: ['campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
     });
     remote.online.forEach(function (c) {
-      out.push({ key: 'o:' + c.id, where: 'server', kind: 'Online campaign', name: c.name,
-        sub: ['Player ' + (c.side === 'B' ? 2 : 1), 'campaign turn ' + (c.turn || 0), ago(c.updated)].join(' \u00b7 '), at: c.updated || 0 });
+      out.push({ key: 'o:' + c.id, where: 'server', kind: 'Online campaign', name: c.name, mine: c.waiting === 'you',
+        sub: [c.waiting === 'you' ? 'Your move' : c.waiting === 'them' ? 'their move' : '', 'Player ' + (c.side === 'B' ? 2 : 1), 'campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
     });
     remote.battles.forEach(function (g) {
       if (g.code === liveCode) return;          // the one on the table: first, above
@@ -173,8 +173,11 @@
     var all = games();
     c.hidden = !all.length;
     var sub = el('menu-continue-sub');
-    if (sub) sub.textContent = all.length === 1 ? all[0].kind + ': ' + all[0].name
-      : (all[0] && all[0].live ? 'On the table: ' + all[0].name + ' \u00b7 ' : '') + all.length + ' games under way';
+    var mine = all.filter(function (g) { return g.mine; }).length;
+    if (sub) sub.textContent = (all.length === 1 ? all[0].kind + ': ' + all[0].name
+      : (all[0] && all[0].live ? 'On the table: ' + all[0].name + ' \u00b7 ' : '') + all.length + ' games under way') +
+      (mine ? ' \u00b7 ' + (mine === 1 ? 'one waiting on you' : mine + ' waiting on you') : '');
+    c.classList.toggle('yourmove-card', !!mine);
   }
   /* Where a game is kept: this browser only (a screen), the server only (a cloud),
      or both (a cloud with a tick: this browser's, saved to the account as well). */
@@ -194,7 +197,7 @@
       var asked = delAsked === g.key;
       var word = g.abandon ? 'Abandon?' : 'Delete?';
       return '<div class="cont-row"><button class="mcard' + (g.live ? ' live' : '') + '" data-cont="' + esc(g.key) + '">' +
-        '<span class="cont-kind">' + WHERE[g.where || 'local'] + esc(g.kind) + '</span><b>' + esc(g.name) + '</b><small>' +
+        '<span class="cont-kind">' + WHERE[g.where || 'local'] + esc(g.kind) + (g.mine ? ' <i class="yourmove">Your move</i>' : '') + '</span><b>' + esc(g.name) + '</b><small>' +
         esc(!asked ? g.sub : g.abandon ? 'Tap Abandon? to walk away — the battle ends for your opponent too' : 'Tap Delete? to put it away — it cannot be had back') + '</small></button>' +
         (g.del ? '<button class="resume-x' + (asked ? ' confirm' : '') + '" data-contdel="' + esc(g.key) + '" aria-label="' + (g.abandon ? 'Abandon this battle' : 'Put this away') + '" title="' + (g.abandon ? 'Abandon this battle' : 'Put this away') + '">' + (asked ? word : '\u2715') + '</button>' : '') +
         '</div>';

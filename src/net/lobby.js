@@ -130,6 +130,7 @@
       '.lobby-sheet .lob-chat{flex:none;margin-top:10px}',
       '@media (max-width:1000px){.lobby-sheet .lob-lines{height:calc(3 * 1.45em + 26px);min-height:0}}',
       '.lob-bad{color:var(--warn);font-size:13px;margin:0}',
+      '.lob-note{grid-column:1/-1;color:var(--ink-dim);font-size:12px;margin:0}',
       '.lob-good{color:var(--good);font-size:13px;margin:0;line-height:1.45}',
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:var(--good)}',
@@ -231,7 +232,7 @@
         '<div class="field"><label for="join-code">Games</label>' +
         '<div class="lob-row">' +
         '<button class="lnk lob-go" data-lob="create">Start a game</button>' +
-        '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
+        '<input id="join-code" type="text" placeholder="Join a game or campaign with its code\u2026" maxlength="8" autocomplete="off">' +
         '<button class="lnk" data-lob="join">Join</button>' +
         '</div></div>' +
         mineHTML() +
@@ -263,10 +264,13 @@
     var opt = function (v, t, off) {
       return '<option value="' + esc(v) + '"' + (v === newKind ? ' selected' : '') + (off ? ' disabled' : '') + '>' + esc(t) + '</option>';
     };
-    var kinds = [opt('skirmish', 'Skirmish'), opt('coop', 'Cooperative \u2014 not available over the network yet', true)]
-      .concat(campaigns.length
-        ? campaigns.map(function (c) { return opt('camp:' + c.name, 'Campaign \u2014 ' + c.name + ', turn ' + c.turn); })
-        : [opt('camp:', 'Campaign \u2014 none kept on this server yet', true)]);
+    // a campaign is kept by an account: a guest is told so
+    var guest = !account || account.guest;
+    var kinds = [opt('skirmish', 'Skirmish'),
+      opt('ocamp', guest ? 'Campaign \u2014 sign in with an account to start one' : 'Campaign \u2014 a new one against another player, each on your own device', guest),
+      opt('coop', 'Cooperative \u2014 the two of you against the OpFor')]
+      // a battle for a campaign file kept on this server (the older way: one screen keeps the campaign)
+      .concat(campaigns.map(function (c) { return opt('camp:' + c.name, 'Battle for the campaign ' + c.name + ', turn ' + c.turn); }));
     return '<div class="lob-new">' +
       '<div class="field"><label for="lob-kind">Game</label><select id="lob-kind">' + kinds.join('') + '</select></div>' +
       publicBox('lob-private', !newPrivate, '') +
@@ -279,7 +283,7 @@
     return '<div class="lob-game">' +
       '<div><b>' + esc(g.name) + '</b> <span class="lob-code">' + esc(g.id) + '</span><br>' +
       '<span class="f small">Tier ' + esc(root.PMC.ROMAN[g.settings.tier] || g.settings.tier) + ' · PL ' + esc(g.settings.pl) + ' — ' +
-      esc(g.settings.scenario) + (g.campaign ? ' — campaign “' + esc(g.campaign) + '”' : '') + '</span></div>' +
+      esc(g.settings.kind === 'coop' ? 'Cooperative, against the OpFor' : g.settings.scenario) + (g.campaign ? ' — campaign “' + esc(g.campaign) + '”' : '') + '</span></div>' +
       '<div class="seats">' + seated.map(function (p) {
         return esc(p.name) + (p.ready ? ' ✓' : '');
       }).join(' vs ') + (seated.length < 2 ? ' — a seat free' : '') +
@@ -311,6 +315,7 @@
     if (on !== chatShown) {
       chatShown = on;
       box.hidden = !on;
+      chatDrawn = -1;                 // drawn afresh, in the battle's own colours
       if (on) document.body.setAttribute('data-online', '1'); else document.body.removeAttribute('data-online');
       var tab = document.querySelector('#mtabs .mtab-chat');
       if (tab) tab.hidden = !on;
@@ -325,7 +330,9 @@
     chatDrawn = lines.length + (room ? room.id : '');
     var lb = el('bchat-lines');
     lb.innerHTML = lines.length ? lines.map(function (l) {
-      var c = l.seat ? seatColour(l.seat) : '';
+      // on the battlefield, each side's own colours as the board paints them
+      var pal = l.seat && root.PMCIso && root.PMCIso.PALETTE && root.PMCIso.PALETTE[l.seat];
+      var c = pal ? pal.ink : l.seat ? seatColour(l.seat) : '';
       return l.from ? '<p><b' + (c ? ' style="color:' + c + '"' : '') + '>' + esc(l.from) + '</b> ' + esc(l.text) + '</p>' : '<p class="note">' + esc(l.text) + '</p>';
     }).join('') : '<p class="note">Nothing said yet.</p>';
     lb.scrollTop = lb.scrollHeight;
@@ -424,6 +431,30 @@
       .concat(campaigns.map(function (c) {
         return { v: c.name, t: c.name + ' — turn ' + c.turn };
       }));
+    // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
+    if (s.kind === 'coop') {
+      var SOLO = root.PMCSolo;
+      return '<div class="lob-terms">' +
+        sel('term-tier', 'Battle Tier', P.TIERS.map(function (t) {
+          return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
+        }), s.tier) +
+        sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Roll for it') }].concat((SOLO ? SOLO.ORDER : []).map(function (x) {
+          return { v: x, t: optionText('sel-solo-scen', x, (SOLO && SOLO.SCENARIOS[x] && SOLO.SCENARIOS[x].name) || x) };
+        })), s.soloScen || 'roll') +
+        sel('term-opFaction', 'The OpFor', ['rebel', 'pmc', 'bugs', 'xeno'].map(function (x) {
+          return { v: x, t: optionText('sel-solo-op', x, x) };
+        }), s.opFaction || 'rebel') +
+        sel('term-planet', 'World', P.PLANET_CHOICES.map(function (x) {
+          return { v: x, t: optionText('sel-planet', x, x) };
+        }), s.planet) +
+        sel('term-terrain', 'Terrain set-up', [
+          { v: 'auto', t: optionText('sel-terrain', 'auto', 'Generate the table') },
+          { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
+        ], s.terrain || 'auto') +
+        publicBox('term-private', !s.private, ' data-term="private"' + d) +
+        '<p class="lob-note">Cooperative: each of you musters a commando; the OpFor is the machine\u2019s. You take turns, an activation each.</p>' +
+        '</div>';
+    }
     return '<div class="lob-terms">' +
       sel('term-tier', 'Battle Tier', P.TIERS.map(function (t) {
         return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
@@ -499,9 +530,18 @@
         // the first press opens the form; Create the game starts it
         if (!b.getAttribute('data-go')) { creating = true; draw(); return; }
         var terms = { tier: 3, pl: 1, planet: 'random', scenario: 'roll', private: newPrivate };
+        // an online campaign: made on the server, and founded in the campaign screens (dossier-online.js)
+        if (newKind === 'ocamp') {
+          creating = false; close();
+          if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.newOnline) root.PMC_CAMPAIGN.newOnline();
+          return;
+        }
         if (newKind.indexOf('camp:') === 0) {
           if (!newKind.slice(5)) { fault = 'There is no campaign on this server to fight under.'; draw(); return; }
           terms.campaign = newKind.slice(5);
+        } else if (newKind === 'coop') {
+          // both players' commandos against the OpFor, under a solitaire scenario
+          terms.kind = 'coop'; terms.soloScen = 'roll'; terms.opFaction = 'rebel';
         } else if (newKind !== 'skirmish') { fault = 'That kind of game cannot be played over the network yet.'; draw(); return; }
         creating = false;
         net.send('game.create', {
@@ -547,7 +587,20 @@
   function join(code) {
     code = String(code || '').trim().toUpperCase();
     if (!code) { fault = 'Type the code the host read out.'; draw(); return; }
+    // a battle's code is five letters; an online campaign's invite, eight: the second seat in it
+    if (code.length === 8) { joinCampaign(code); return; }
     net.send('game.join', { id: code });
+  }
+  function joinCampaign(code) {
+    if (!account || account.guest) { fault = 'That is a campaign\u2019s code: sign in with an account to join it.'; draw(); return; }
+    root.fetch('api/online/join', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: code }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (got) {
+        if (!got.ok) { var why = got.j.error || got.j.why || 'that code did not work'; fault = why.charAt(0).toUpperCase() + why.slice(1) + '.'; draw(); return; }
+        close();
+        if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.openOnline) root.PMC_CAMPAIGN.openOnline(got.j.id);
+      })
+      .catch(function () { fault = 'The server could not be reached.'; draw(); });
   }
 
   function say(where, box) {
@@ -695,7 +748,9 @@
       }
       else if (m.kind === 'left') {
         keepRoom('');
-        say2(who + ' has left the battle' + (m.forfeit ? ' \u2014 you win by forfeit.' : '. It cannot go on without them.'), m.forfeit ? 'good' : 'bad', 7000);
+        // a cooperative game: the partner gone, the two of them lose it together
+        var coopGone = !!(root.PMC_STATE && root.PMC_STATE() && root.PMC_STATE().cfg && root.PMC_STATE().cfg.netCoop);
+        say2(who + ' has left the battle' + (coopGone ? ' \u2014 without them, the OpFor has it.' : m.forfeit ? ' \u2014 you win by forfeit.' : '. It cannot go on without them.'), coopGone ? 'bad' : m.forfeit ? 'good' : 'bad', 7000);
         if (net) net.send('games.mine');
         /* The battle on the screen is over, and so is the game: this player
            leaves its room too (it would only hold them in a game with nobody

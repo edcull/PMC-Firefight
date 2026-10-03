@@ -44,6 +44,8 @@
       var p = E.online && (E.online.players || []).filter(function (x) { return x.side === theirs(); })[0];
       return founded(theirCo()) ? theirCo().name : p ? p.name : 'the other player';
     }
+    // whose move an online campaign is waiting on, as its list says it (server/online.js waitingOn)
+    var WAIT = { you: 'waiting on you', them: 'waiting on the other player', either: 'ready for the next contract', over: 'over' };
     function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
 
     /* ================= in and out ================= */
@@ -76,6 +78,13 @@
         take(r.j, true);
         startPoll();
         E.open(E.view);
+      });
+    }
+    // a new one started on the server, and opened on founding Player 1's force
+    function startNew() {
+      return api('api/online', { method: 'POST' }).then(function (r) {
+        if (!r.ok) { E.note('Not started', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
+        openCampaign(r.j.id);
       });
     }
     function leaveCampaign() {
@@ -219,7 +228,8 @@
       if (list.length) {
         h += '<div class="field"><label>Yours</label><div class="clog">' + list.map(function (c) {
           return '<button type="button" class="crow crow-go" data-ocamp="' + c.id + '"><b>' + c.turn + '</b><span>' + esc(c.name) +
-            '<small>You are Player ' + (c.side === 'B' ? 2 : 1) + '</small></span><em>Open</em></button>';
+            '<small>You are Player ' + (c.side === 'B' ? 2 : 1) + ' \u00b7 ' + WAIT[c.waiting || 'over'] + '</small></span>' +
+            (c.waiting === 'you' ? '<em class="yourmove">Your move</em>' : '<em>Open</em>') + '</button>';
         }).join('') + '</div></div>';
       }
       h += '<div class="field"><label>A new one</label><button class="start" data-go="onew">Start an online campaign</button>' +
@@ -407,13 +417,7 @@
       var attr = function (a) { return t.getAttribute(a); };
       // the list
       if (attr('data-ocamp')) { openCampaign(+attr('data-ocamp')); return true; }
-      if (go === 'onew') {
-        api('api/online', { method: 'POST' }).then(function (r) {
-          if (!r.ok) { E.note('Not started', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
-          openCampaign(r.j.id);
-        });
-        return true;
-      }
+      if (go === 'onew') { startNew(); return true; }
       if (go === 'ojoin') {
         var code = ((document.getElementById('ojoin-code') || {}).value || '').trim();
         if (!code) { E.note('Which campaign?', 'Type the code the other player gave you.'); return true; }
@@ -601,7 +605,9 @@
       afterBattle: afterBattle, fighting: function () { return fighting; },
       leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; },
       // one opened straight from the main menu's Continue list
-      openOne: function (id) { leaveCampaign(); return openCampaign(id); }
+      openOne: function (id) { leaveCampaign(); return openCampaign(id); },
+      // one started from the lobby's Start a game
+      startNew: function () { leaveCampaign(); return startNew(); }
     };
   };
 })(window);

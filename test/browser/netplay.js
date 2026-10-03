@@ -161,8 +161,11 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   await p1.evaluate(() => { document.getElementById('bchat-say').value = 'good luck'; document.getElementById('bchat-send').click(); });
   await p2.waitForTimeout(500);
   const bc = await p2.evaluate(() => ({ shown: !document.getElementById('battle-chat').hidden, said: document.getElementById('bchat-lines').textContent,
+    inks: (() => { const b = [...document.querySelectorAll('#bchat-lines b')].pop(), probe = document.createElement('i'); probe.style.color = window.PMCIso.PALETTE.A.ink; document.body.appendChild(probe);
+      const want = getComputedStyle(probe).color; probe.remove(); return b ? getComputedStyle(b).color === want : false; })(),
     under: document.getElementById('bar').getBoundingClientRect().bottom <= document.getElementById('battle-chat').getBoundingClientRect().top + 1 }));
   ok('an online battle has the table talk under the actions, and what is said there arrives', bc.shown && bc.under && /good luck/.test(bc.said), JSON.stringify(bc));
+  ok('...each name in its side\u2019s colours on the board', bc.inks, JSON.stringify(bc));
   // on a phone, a Chat tab of its own, counting what was said while it was shut
   await p2.setViewportSize({ width: 400, height: 820 });
   await p2.evaluate(() => window.PMC_SET_MTAB('act'));

@@ -115,8 +115,66 @@ function prepPost(camp) {
   if (post && !post.steps.length) finishPost(camp);
 }
 
+/* Who an online campaign is waiting on, as one of its players sees it: 'you' (a
+   force to found, a question to answer, a contract pick to make, a battle to
+   fight), 'them' (the same of the other player), 'either' (a turn begun: either
+   may draw up the next contract), or null (it is over). `players`: how many have
+   joined. */
+function waitingOn(camp, side, players) {
+  const other = side === 'A' ? 'B' : 'A';
+  const founded = (co) => !!(co && co.roster && co.roster.length);
+  if (!camp || camp.over) return null;
+  if (!founded(camp.companies && camp.companies[side])) return 'you';
+  if ((players || 0) < 2 || !founded(camp.companies[other] || (camp.rivals || [])[camp.facing || 0])) return 'them';
+  const step = camp.post && camp.post.steps && camp.post.steps[0];
+  if (step) return step.side === side ? 'you' : 'them';
+  const on = camp.online || {};
+  if (on.battle) return 'you';
+  const k = on.contract;
+  if (k) {
+    if (k.fore && !k.fore.done) return 'you';
+    if (!(k.ready && k.ready[side])) return 'you';
+    return 'them';
+  }
+  return 'either';
+}
+
 function create(opts) {
-  const db = opts.db, notify = opts.notify || function () { };
+  const db = opts.db, notify = opts.notify || function () { }, mailer = opts.mailer || null;
+  /* "Your move" by email (an account's choice, off unless turned on): sent when a
+     campaign comes to be waiting on a player who did not make the change, at most
+     once in ten minutes for each player and campaign. */
+  const mailedAt = {};
+  function waitsNow(id) {
+    try {
+      const row = db.campaign(id);
+      if (!row || row.kind !== 'online') return {};
+      const members = db.members(id), camp = load(row), out = {};
+      members.forEach((m) => { out[m.user_id] = { side: m.side, waiting: waitingOn(camp, m.side, members.length), name: nameOf(camp) }; });
+      return out;
+    } catch (e) { return {}; }
+  }
+  function tellWhoseMove(id, before, actor) {
+    if (!mailer) return;
+    const after = waitsNow(id);
+    Object.keys(after).forEach((uid) => {
+      const a = after[uid], b = before[uid];
+      if (+uid === actor || a.waiting !== 'you' || (b && b.waiting === 'you')) return;
+      const user = db.userById(+uid);
+      if (!user || !user.notify || !user.email) return;
+      const key = uid + ':' + id, t = now();
+      if (mailedAt[key] && t - mailedAt[key] < 10 * 60 * 1000) return;
+      mailedAt[key] = t;
+      const link = mailer.link ? mailer.link('campaign', id) : '';
+      mailer.send({
+        to: user.email,
+        subject: 'Your move in ' + (a.name || 'your PMC 2670 campaign'),
+        text: 'Hello ' + user.name + ',\n\nYour online campaign, ' + (a.name || 'in PMC 2670') + ', is waiting on you.' +
+          (link ? '\n\nGo back to it:\n' + link : '') +
+          '\n\nYou asked for these emails on your account screen; you can turn them off there.\n\nPMC 2670 \u2014 Firefight'
+      });
+    });
+  }
   // makes the battle (lobby.campaignBattle): its room's code
   const startBattle = opts.startBattle || null;
   const now = opts.now || Date.now;
@@ -238,7 +296,12 @@ function create(opts) {
     // the player's online campaigns, the latest first
     list(me) {
       if (!me || me.guest) return [];
-      return db.onlineOf(me.userId);
+      // each with whose move it is (the state itself stays on the server)
+      return db.onlineOf(me.userId).map((r) => {
+        let waiting = null;
+        try { waiting = waitingOn(C.rehydrate(JSON.parse(r.state)), r.side, r.players); } catch (e) { waiting = null; }
+        return { id: r.id, name: r.name, turn: r.turn, version: r.version, updated: r.updated, side: r.side, players: r.players, waiting: waiting };
+      });
     },
 
     /* The campaign as one of its players sees it: their side, both players' names,
@@ -253,6 +316,7 @@ function create(opts) {
         ok: true, id: row.id, version: row.version, side: side,
         players: members.map((m) => ({ side: m.side, name: m.name, id: m.pub })),
         invite: members.length < 2 ? row.invite : null,
+        waiting: waitingOn(load(row), side, members.length),
         state: shown(row.state, side)
       };
     },
@@ -263,6 +327,7 @@ function create(opts) {
     command(me, id, cmd, args) {
       if (!me || me.guest) return no('sign in to play a campaign online', 401);
       let out = null;
+      const before = mailer ? waitsNow(id) : {};
       db.transaction(() => {
         const row = db.campaign(id);
         const side = row && row.kind === 'online' && sideOf(id, me.userId);
@@ -288,6 +353,7 @@ function create(opts) {
           if (m.user_id !== me.userId) notify(m.user_id, { t: 'camp.changed', id: id });
           if (out.battle) notify(m.user_id, { t: 'camp.battle', id: id, code: out.battle });
         });
+        tellWhoseMove(id, before, me.userId);
       }
       return out;
     },
@@ -296,6 +362,7 @@ function create(opts) {
        battle's id, the post-battle questions put to their players, and both told. */
     battleOver(id, report, gameId) {
       let done = false;
+      const before = mailer ? waitsNow(id) : {};
       db.transaction(() => {
         const row = db.campaign(id);
         if (!row || row.kind !== 'online') return;
@@ -313,10 +380,10 @@ function create(opts) {
         if (gameId != null) camp.online.applied = camp.online.applied.concat([gameId]).slice(-50);
         done = db.saveOnline({ id: id, version: row.version, state: C.forSave(camp), name: nameOf(camp), turn: camp.turn, at: now() });
       });
-      if (done) db.members(id).forEach((m) => notify(m.user_id, { t: 'camp.changed', id: id }));
+      if (done) { db.members(id).forEach((m) => notify(m.user_id, { t: 'camp.changed', id: id })); tellWhoseMove(id, before, null); }
       return done;
     }
   };
 }
 
-module.exports = { create: create };
+module.exports = { create: create, waitingOn: waitingOn };

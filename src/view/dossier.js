@@ -1607,6 +1607,7 @@
     resume: function (lid) { return enterResume ? enterResume(lid) : null; },
     adopt: function (sid) { return enterResume ? enterResume(null, sid) : null; },
     openOnline: function (id) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().openOne(id); },
+    newOnline: function () { var su = el('setup'); if (su) su.hidden = true; return kitOnline().startNew(); },
     lid: function () { return Store.lid(); },
     list: function () { return Store.list(); },
     accountList: function () { return Store.accountList(); },

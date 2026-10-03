@@ -13,7 +13,8 @@
 'use strict';
 const P = require('../src/engine/protocol.js');
 const Hidden = require('./hidden.js');
-const { R, SC, C, Engine } = require('./rules.js');
+const Rules = require('./rules.js');
+const { R, SC, C, Engine } = Rules;
 
 /* How many events one intent may produce before we stop collecting. A quiet
    turn is a handful; a rally phase across thirty units with a Psychic Wave in
@@ -173,6 +174,7 @@ class Table {
       };
     };
 
+    if (s.kind === 'coop' && !camp) return this.coopConfig(A, B, s);
     const fa = forceOf(A, 'A'), fb = forceOf(B, 'B');
     // two companies in the same paint is unreadable; the second one moves
     const colourB = fb.colour !== fa.colour ? fb.colour
@@ -194,6 +196,44 @@ class Table {
       readyUp: true,
       planet: s.planet === 'random' ? null : s.planet,
       terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto'
+    };
+  }
+
+  /* Cooperative (pp. 146-156): the two players' commandos take the field as one
+     side against an OpFor run by the behaviour table — each player's units their
+     own (seat A Player 1, seat B Player 2), the turns alternating between them. A
+     commando that is not legal at these terms is rolled afresh, as a skirmish's is. */
+  coopConfig(A, B, s) {
+    const SOLO = Rules.SOLO, tier = s.tier || 3;
+    const commando = (p, side) => {
+      const f = p.force || P.defaultForce(side);
+      let keys = (f.keys || []).slice();
+      if (!SOLO.checkCommando(keys, tier, 1, f.faction).ok) keys = SOLO.rollCommando(tier, 1, f.faction);
+      return { keys: keys, faction: f.faction, colour: f.colour,
+        name: placeholderName(f.name) ? (side === 'A' ? 'Player 1 Force' : 'Player 2 Force') : f.name };
+    };
+    const a = commando(A, 'A'), b = commando(B, 'B');
+    const armyA = [], ownersA = [];
+    [a, b].forEach((c, i) => c.keys.forEach((k) => { armyA.push(k); ownersA.push(i + 1); }));
+    // what the OpFor must be able to answer: the players' hulls, and their aircraft
+    const machines = { ground: false, air: false };
+    armyA.forEach((k) => { const p = R.profile(R.splitPick(k).key); if (!p || p.cls === 'infantry') return; if (p.cls === 'aircraft') machines.air = true; else machines.ground = true; });
+    const pl = 2;                                        // each commando is Priority Level 1; together, 2 (p. 147)
+    let scen = s.soloScen || 'roll';
+    if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
+    const opFaction = s.opFaction || 'pmc';
+    const colourC = b.colour !== a.colour ? b.colour : P.COLOURS.filter((c) => c !== a.colour)[R.d6() % (P.COLOURS.length - 1)];
+    return {
+      tier: tier, pl: pl, scenario: scen,
+      armyA: armyA, armyB: SOLO.rollOpFor(tier, pl, opFaction, machines), ownersA: ownersA,
+      nameA: a.name + ' & ' + b.name, nameB: 'OpFor',
+      colourA: a.colour, colourC: colourC, colourB: null,
+      tactics: { A: null, B: null },
+      // the OpFor is the machine's (side B); both seats play side A, each their own units
+      mode: 'ai', netCoop: true,
+      planet: s.planet === 'random' ? null : s.planet,
+      terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto',
+      solo: { coop: true, faction: a.faction || 'pmc', opFaction: opFaction, names: [a.name, b.name] }
     };
   }
 
@@ -235,11 +275,16 @@ class Table {
      or walk in to watch it half-way through: which seat is theirs, and what the
      board needs to paint the two sides. */
   announce(p) {
+    // the colours as the battle settled them (the OpFor's is picked by the engine)
+    let st = null;
+    try { st = this.engine.state && this.engine.state(); } catch (e) { st = null; }
+    const sc = (st && st.cfg) || this.cfg;
     p.send('started', {
       seat: p.seat, cfg: {
         tier: this.cfg.tier, pl: this.cfg.pl, scenario: this.cfg.scenario,
         nameA: this.cfg.nameA, nameB: this.cfg.nameB,
-        colourA: this.cfg.colourA, colourB: this.cfg.colourB,
+        colourA: sc.colourA, colourB: sc.colourB, colourC: sc.colourC || null,
+        netCoop: !!this.cfg.netCoop,
         campaign: this.room.settings.campaign || null,
         // an online campaign's battle: its aftermath is the server's to apply, not the browser's
         onlineCampaign: this.room.settings.onlineCampaign || null
@@ -300,7 +345,7 @@ class Table {
     this.events = [];
     const forSeat = (seat) => {
       const k = seat || '-';
-      if (!made[k]) made[k] = JSON.stringify({ t: 'turn', seq: seq, events: events, state: Hidden.battleFor(snap, seat) });
+      if (!made[k]) made[k] = JSON.stringify({ t: 'turn', seq: seq, events: events, state: Hidden.battleFor(snap, this.sideOf(seat)) });
       return made[k];
     };
     this.room.everyone().forEach((p) => { if (p.sock && p.sock.open) p.sock.send(forSeat(p.seat || null)); });
@@ -308,7 +353,7 @@ class Table {
 
   /* One player, brought fully up to date: no events, just where things stand. */
   resync(player) {
-    player.send('turn', { seq: this.seq, events: [], state: Hidden.battleFor(this.engine.snapshot(), player.seat || null) });
+    player.send('turn', { seq: this.seq, events: [], state: Hidden.battleFor(this.engine.snapshot(), this.sideOf(player.seat || null)) });
   }
 
   finish(report) {
@@ -342,10 +387,15 @@ class Table {
 
   stop() { this.stopped = true; }
 
+  // the side a seat plays: its own, but in a cooperative game both seats play side A
+  sideOf(seat) { return seat && this.cfg && this.cfg.netCoop ? 'A' : seat; }
+
   /* A player walking away from the battle for good: a forfeit (decision 5), the
      other side the winner. Kept as such; the battle goes no further. */
   forfeit(seat) {
     if (this.stopped) return null;
+    // in a cooperative game the players are one side: one walking away gives it to the OpFor
+    if (this.cfg && this.cfg.netCoop) seat = 'A';
     const winner = seat === 'A' ? 'B' : 'A';
     /* An online campaign's battle ends the engine's own way, so there is a report
        for the aftermath to be applied from (decision 5: in a campaign it is). */

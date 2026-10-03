@@ -60,7 +60,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await p1.evaluate(() => window.PMC_CAMPAIGN.enter('online'));
   for (let i = 0; i < 30 && !/Start an online campaign/i.test(await text(p1)); i++) await wait(100);
   ok('the online campaigns screen opens for a signed-in player', /Start an online campaign/i.test(await text(p1)));
-  await press(p1, '[data-go="onew"]');
+  // started from Multiplayer's Start a game, the campaign picked from its list
+  await p1.evaluate(() => { window.PMCLobby.open(); });
+  await p1.waitForTimeout(800);
+  await p1.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
+  await p1.waitForTimeout(200);
+  const offered = await p1.evaluate(() => { const o = document.querySelector('#lob-kind option[value="ocamp"]'); return o && !o.disabled ? o.textContent : ''; });
+  ok('Start a game offers a new online campaign', /Campaign/.test(offered), offered);
+  await p1.evaluate(() => { const s = document.getElementById('lob-kind'); s.value = 'ocamp'; s.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
   let s1 = await till(p1, 'the founding screen', (s) => s.view === 'found');
   ok('a new one opens on founding Player 1’s force, with a code for Player 2', s1.side === 'A' && /^[A-Z2-9]{8}$/.test(s1.invite || ''), JSON.stringify(s1).slice(0, 120));
   await found(p1, 'Iron Wolves', ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
@@ -69,10 +76,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('founded on the server; the hub shows the code for the open seat', code === s1.invite, code);
   ok('nothing of it is saved as this browser’s own campaign', await p1.evaluate(() => !window.PMC_CAMPAIGN.get()));
 
-  await p2.evaluate(() => window.PMC_CAMPAIGN.enter('online'));
-  await p2.waitForTimeout(600);
-  await p2.evaluate((c) => { document.getElementById('ojoin-code').value = c.toLowerCase(); }, code);
-  await press(p2, '[data-go="ojoin"]');
+  // the second player types the code into Multiplayer's Join box, as a battle's
+  await p2.evaluate(() => window.PMCLobby.open());
+  await p2.waitForTimeout(800);
+  await p2.evaluate((c) => { document.getElementById('join-code').value = c.toLowerCase(); document.querySelector('#lobby [data-lob="join"]').click(); }, code);
   let s2 = await till(p2, 'Player 2 founding', (s) => s.view === 'found' && s.side === 'B');
   ok('the second player joins with the code, as Player 2, and founds their own', s2.side === 'B' && /Iron Wolves has signed/.test(await text(p2)));
   await found(p2, 'Red Dawn', ['rciv', 'rciv', 'rciv', 'rdesconscript', 'rridergang', 'rmilitia', 'rlmg', 'rtechnical'], 'H1', 'rebel');
@@ -97,6 +104,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('Player 1 picks a force and is ready', /You are ready/.test(await text(p1)));
   s2 = await till(p2, 'Player 2 to see the contract', (s) => s.k && s.k.ready.A);
   ok('Player 2 sees that Player 1 is ready, but not their force', s2.k.picks.A && s2.k.picks.A.hidden === true && !s2.k.picks.A.rids, JSON.stringify(s2.k.picks.A));
+  const waits = async (p) => p.evaluate(() => fetch('api/online').then((r) => r.json()).then((j) => j.campaigns[0].waiting));
+  ok('...and the campaign is waiting on Player 2 (their move), not on Player 1', (await waits(p2)) === 'you' && (await waits(p1)) === 'them');
+  await p2.evaluate(() => { window.PMCMenu.refresh(); });
+  let cont = '';
+  for (let i = 0; i < 20 && !/Your move/.test(cont); i++) { await wait(150); cont = await p2.evaluate(() => window.PMCMenu.games().filter((g) => g.key.indexOf('o:') === 0).map((g) => g.sub).join()); }
+  ok('...Player 2\u2019s Continue list says so', /Your move/.test(cont), cont);
   await press(p2, '[data-go="contract"]');
   await p2.waitForTimeout(200);
   await press(p2, '[data-go="ocauto"]');

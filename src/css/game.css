@@ -684,6 +684,11 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cont-row .resume-x.confirm { min-width: 76px; }
 .cont-row .cont-where { display: inline-flex; vertical-align: -2px; margin-right: 5px; color: var(--ink-dim); }
 .cont-row .cont-where svg { width: 13px; height: 13px; }
+/* an online campaign waiting on this player */
+.yourmove { font-style: normal; color: #14110a; background: var(--alpha); border-radius: 3px; padding: 1px 5px; font-family: var(--display); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.cont-kind .yourmove { margin-left: 4px; }
+.crow em.yourmove { color: #14110a; }
+#btn-continue.yourmove-card { border-color: color-mix(in srgb, var(--alpha) 70%, transparent); }
 .cont-none { color: var(--ink-dim); font-size: 13px; margin: 4px 2px 8px; }
 #btn-continue { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
 /* the x on a row of the Continue list: a red Delete? (or Abandon?) once, asked twice */
@@ -752,10 +757,12 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .acct-good { margin: 0; font-size: 13px; line-height: 1.45; color: var(--good); }
 .acct-forgot, .acct-resend { align-self: flex-start; }
 .acct-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--ink-dim); }
-.acct-line > span:first-child { width: 44px; flex: none; font-family: var(--display); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.acct-line > span:first-child { width: 76px; flex: none; font-family: var(--display); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .acct-line b { color: var(--ink); word-break: break-all; }
 .acct-line em { font-style: normal; color: var(--ink-faint); }
 .acct-line { align-items: center; }
+.acct-check { display: flex; align-items: center; gap: 6px; color: var(--ink); cursor: pointer; }
+.acct-check input { accent-color: var(--alpha); }
 .acct-edit { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
 .acct-editrow { display: flex; gap: 8px; align-items: center; }
 .acct-editrow .start { flex: 1; }

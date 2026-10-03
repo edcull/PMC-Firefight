@@ -102,7 +102,10 @@ const MIGRATIONS = [
      email   TEXT,
      expires INTEGER NOT NULL
    );
-   CREATE INDEX mail_tokens_user ON mail_tokens(user_id, kind);`
+   CREATE INDEX mail_tokens_user ON mail_tokens(user_id, kind);`,
+  /* 6: whether the player wants an email when an online campaign is waiting on them
+     (off unless they turn it on, on their account screen). */
+  `ALTER TABLE users ADD COLUMN notify INTEGER NOT NULL DEFAULT 0;`
 ];
 
 function open(file) {
@@ -135,6 +138,7 @@ function wrap(db) {
     setName: db.prepare('UPDATE users SET name = ? WHERE id = ?'),
     setEmail: db.prepare('UPDATE users SET email = ?, email_ok = ? WHERE id = ?'),
     setActive: db.prepare('UPDATE users SET active = 1, email_ok = 1 WHERE id = ?'),
+    setNotify: db.prepare('UPDATE users SET notify = ? WHERE id = ?'),
     addMailToken: db.prepare('INSERT INTO mail_tokens (token, user_id, kind, email, expires) VALUES (?, ?, ?, ?, ?)'),
     mailToken: db.prepare('SELECT * FROM mail_tokens WHERE token = ?'),
     dropMailTokens: db.prepare('DELETE FROM mail_tokens WHERE user_id = ? AND kind = ?'),
@@ -176,7 +180,7 @@ function wrap(db) {
     byInvite: db.prepare('SELECT * FROM campaigns WHERE invite = ?'),
     addMember: db.prepare('INSERT INTO campaign_members (campaign_id, user_id, side, joined) VALUES (?, ?, ?, ?)'),
     members: db.prepare('SELECT m.side, m.user_id, u.name, u.pub FROM campaign_members m JOIN users u ON u.id = m.user_id WHERE m.campaign_id = ? ORDER BY m.side'),
-    onlineOf: db.prepare("SELECT c.id, c.name, c.turn, c.version, c.updated, m.side FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.kind = 'online' ORDER BY c.updated DESC"),
+    onlineOf: db.prepare("SELECT c.id, c.name, c.turn, c.version, c.updated, c.state, m.side, (SELECT COUNT(*) FROM campaign_members x WHERE x.campaign_id = c.id) AS players FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.kind = 'online' ORDER BY c.updated DESC"),
     // an online campaign is saved by whichever of its players sent the command: not only its owner
     saveOnline: db.prepare("UPDATE campaigns SET state = ?, name = ?, turn = ?, version = version + 1, updated = ? WHERE id = ? AND kind = 'online' AND version = ?")
   };
@@ -196,6 +200,7 @@ function wrap(db) {
     userByEmail: (email) => q.userByEmail.get(String(email || '')),
     setName: (id, name) => q.setName.run(name, id).changes > 0,
     setEmail: (id, email, ok) => q.setEmail.run(email || null, ok ? 1 : 0, id).changes > 0,
+    setNotify: (id, on) => q.setNotify.run(on ? 1 : 0, id).changes > 0,
     activate: (id) => q.setActive.run(id).changes > 0,
     // a link sent by email: its hash, whose it is, what for, and until when
     addMailToken: (t) => q.addMailToken.run(t.token, t.userId, t.kind, t.email || null, t.expires),
