@@ -420,6 +420,7 @@
           '<span class="ctier">' + esc(p.player) + ' · ' + C.words(p).tier + ' Tier ' + ROMAN[p.tier || 1] + '</span></div>' +
           (founded(p) ? E.statRow(p, true) : '<div class="cpstat">Not founded yet.</div>') +
           (asked ? '<div class="cpstat">' + (asked.mine ? 'You have challenged them.' : 'They have challenged you — answer it on the campaign’s page.') + '</div>'
+            : p.busy ? '<button class="start" disabled title="Fighting someone else just now">Fighting someone else just now</button>'
             : founded(p) && founded(myCo()) ? '<button class="start" data-ochallenge="' + p.slot + '">Challenge them</button>' : '') +
           '</div>';
       });

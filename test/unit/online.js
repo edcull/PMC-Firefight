@@ -223,6 +223,10 @@ function ok(name, cond, note) {
     const g = cmd(cole, 'aiReady');
     return g.ok && lobby.rooms.has(g.battle) && lobby.rooms.has(dgo.battle);
   })());
+  ok('...the others see Cole as busy, and a challenge to Cole is refused meanwhile', (() => {
+    const cs = view(cole).slot, c = camp(ash).rivals.filter((r) => r.human && r.slot === cs)[0];
+    return c && c.busy === true && /fighting someone else/.test(cmd(ash, 'duelAsk', { to: cs }).why);
+  })());
   const kA = camp(ash).companies.A.kUC, kB = camp(brann).companies.A.kUC, tA = camp(ash).turn, tB = camp(brann).turn;
   droom.table.forfeit('A');
   s = camp(ash);

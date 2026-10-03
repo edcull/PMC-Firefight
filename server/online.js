@@ -346,7 +346,7 @@ function create(opts) {
     const p = W.players[i] || {};
     const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : p.post ? p.post.vs : null);
     // the other players' forces after the AI ones, marked, for the hub to show as it shows a rival
-    const others = humanSlots(W).filter((j) => j !== i).map((j) => Object.assign({}, W.forces[j], { human: true, slot: j, player: W.slots[j].name, out: !!W.slots[j].out }));
+    const others = humanSlots(W).filter((j) => j !== i).map((j) => Object.assign({}, W.forces[j], { human: true, slot: j, player: W.slots[j].name, out: !!W.slots[j].out, busy: busy(W, j) }));
     const camp = Object.assign({}, v, { rivals: v.rivals.concat(others), post: p.post || null, pending: p.pending || null });
     camp.online = {
       slot: i,
@@ -610,6 +610,7 @@ function create(opts) {
       if (j === i || !playing(W, j)) return no('no such player');
       if (!founded(W.forces[i]) || !founded(W.forces[j])) return no('both forces must be founded first');
       if ((W.duels || []).some((d) => (d.a === i && d.b === j) || (d.a === j && d.b === i))) return no('there is a challenge between you already');
+      if (busy(W, j)) return no(W.slots[j].name + ' is fighting someone else just now');
       W.duels.push({ id: W.nextDuel++, a: i, b: j, phase: 'asked', at: now(), contract: null });
       return { ok: true };
     },
