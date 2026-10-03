@@ -110,7 +110,7 @@ async function pickAndFire(p, key, ms) {
   ok('the unit\'s army is a pill under its name', army.name === 'Xenotripods', army.name);
   ok('...a tap opens the army\'s own rules', army.rules);
   ok('an aircraft with Firepower shows the Strafing Run among its rules', army.strafe);
-  // Fire! rolls a real shot at the target picked in the list, and the target shows what it left
+  // Fire! works out the average shot at the target picked in the list, and the target shows what it leaves
   const shot = await p.evaluate(async () => {
     window.__viewer.pick('hmgteam');
     await new Promise(r => setTimeout(r, 60));
@@ -125,13 +125,18 @@ async function pickAndFire(p, key, ms) {
       after = line();
       if (/[1-9]\d* hits?/.test(after)) break;
     }
+    // and again: the same unit at the same target shows the same result every time
+    document.querySelector('[data-do="fire"]').click();
+    await new Promise(r => setTimeout(r, 1100));
+    const again = line();
     const sel = document.getElementById('vtarget');
     sel.value = 'lcv'; sel.dispatchEvent(new Event('change', { bubbles: true }));
     await new Promise(r => setTimeout(r, 60));
-    return { fresh, after, picked: line(), options: sel.querySelectorAll('option').length };
+    return { fresh, after, again, picked: line(), options: sel.querySelectorAll('option').length };
   });
   ok('the Target list offers every unit', shot.options > 100, shot.options + ' units');
-  ok('Fire! rolls a real shot at the target and says what it did', /hits? —|No hits —/.test(shot.after) && shot.after !== shot.fresh, shot.after);
+  ok('Fire! works out the average shot at the target and says what it does', /^Average [\d.]+ hits? \u2192 [\d.]+ casualt(y|ies) · [\d.]+ SP — |No hits —/.test(shot.after) && shot.after !== shot.fresh, shot.after);
+  ok('...the same every time it fires at the same target', shot.again === shot.after, shot.again);
   // a mortar must not shoot that close (Minimum Range 12"): it is rolled where it could shoot, and says so
   const mortarLine = await p.evaluate(async () => {
     window.__viewer.pick('mortarbattery');

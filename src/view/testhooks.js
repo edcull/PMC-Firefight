@@ -273,6 +273,8 @@
       if (!ui.sight) return null;
       return { eyes: ui.sight.eyes.length, seen: ui.sight.seen.length, reach: ui.sight.eyes.map(function (o) { return R.sightRange(o); }) };
     };
+    // a unit picked to look at only, kept on this screen (as a pick out of turn is)
+    window.__inspect = function (u) { if (!u) return false; ui.inspect = true; ui.watch = u.id; ui.selected = u; ui.mode = 'idle'; ui.targets = []; ui.moves = []; return true; };
     window.__uiMode = function () { return { mode: ui.mode, sections: (ui.sections || []).length, sel: ui.selected ? ui.selected.id : null, moves: ui.moves.length }; };
     window.__resOpen = function () { return ui.resOpen ? (ui.currentRes ? ui.currentRes.kind + ':' + ui.currentRes.title : 'open') + ' q' + resQueue.length : false; };
     window.__insertionLegal = function (p) { return insertionLegal(p) && !R.unitNear(B.state, p.x, p.y, ui.insertion ? ui.insertion.unit : null, 1); };

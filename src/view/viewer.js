@@ -199,20 +199,33 @@
         return { hits: 0, t: t, missed: true };
       }
     }
-    /* The attack is not rolled: its D10 reads its average (4.5, taken as 5), so
-       the same unit at the same target always shows the same result. What the hits
-       then do (the casualty rolls) is rolled as in a battle. */
-    var res, real = Math.random, first = true;
-    Math.random = function () { if (first) { first = false; return 0.5; } return real(); };
-    try {
-      res = R.shoot(st, a, t, 'fire', {});
-      // penal troops broken by it: the collars go off (Expendable, p. 57)
-      R.collars(st);
-    } catch (e) { return null; }
-    finally { Math.random = real; }
-    var hits = res.hits || 0;
+    /* Nothing is rolled: what the shot does on average is worked out (R.expectedShot)
+       — the hits off every face of the D10, what each hit does off the hit table with
+       the special rules on it — so the same unit at the same target always shows the
+       same result: hits, casualties, Suppression, Damage. */
+    var ex;
+    try { ex = R.expectedShot(st, a, t, 'fire', {}); } catch (e) { return null; }
+    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage };
+    var avg = function (k) { return sum[k]; };
+    var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
+    // the target as the average shot leaves it
+    var mach = R.isMachine(t);
+    if (mach) {
+      t.damage = Math.round(avg('dmg'));
+      if (t.damage >= t.str) t.alive = false;
+    } else {
+      t.models = Math.max(0, t.before - Math.round(avg('lost')));
+      if (t.models <= 0) t.alive = false;
+    }
+    t.sp = t.alive === false ? 0 : Math.round(avg('sp'));
+    // penal troops the average shot breaks: the collars go off (Expendable, p. 57)
+    if (t.alive !== false && !mach) { var st2 = { units: [t] }; R.collars(st2); }
+    var hits = Math.round(avg('hits'));
     t.x = TO.x;                                    // back on its spot on the stage
-    view.lastShot = (hits ? hits + (hits === 1 ? ' hit' : ' hits') : 'No hits') + at;
+    view.lastShot = avg('hits') < 0.05 ? 'No hits' + at
+      : 'Average ' + one(avg('hits')) + ' hit' + (one(avg('hits')) === '1' ? '' : 's') + at + ' \u2192 ' +
+        (mach ? one(avg('dmg')) + ' Damage' : one(avg('lost')) + ' casualt' + (one(avg('lost')) === '1' ? 'y' : 'ies')) +
+        (mach ? '' : ' \u00b7 ' + one(avg('sp')) + ' SP');
     return { hits: hits, t: t };
   }
   function targetLine() {

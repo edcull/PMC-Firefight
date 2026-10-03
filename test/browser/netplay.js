@@ -262,6 +262,19 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     if (live.mine && live.move) break;
   }
   ok('a unit picked out of turn can act as soon as the go passes over', !!looked && live.mine && live.sel === looked && live.move, JSON.stringify({ looked, live }));
+  // another of their own, only being looked at on this screen, then an action pressed: it is that unit that acts, shown here
+  const lookOther = await pTheirs.evaluate((was) => {
+    const me = window.__seats()[0], st = window.PMC_STATE();
+    const u = st.units.find(x => x.side === me && x.alive && x.x >= 0 && !x.activated && x.id !== was);
+    if (!u || !window.__inspect(u)) return null;
+    const b = document.querySelector('#bar [data-action="move"]'); if (!b || b.disabled) return 'no-button'; b.click();
+    return u.id;
+  }, looked);
+  let acted = null;
+  for (let k = 0; k < 20 && lookOther; k++) { await wait(150); acted = await pTheirs.evaluate(() => window.__uiMode()); if (acted.mode === 'move') break; }
+  ok('a unit only looked at, then given an action, is the one that acts — on this screen', !lookOther || (acted && acted.sel === lookOther && acted.mode === 'move'), JSON.stringify({ lookOther, acted }));
+  if (lookOther) await pTheirs.evaluate(() => { const b = document.querySelector('#bar [data-action="move"]'); if (b) b.click(); });     // (put away again)
+  await wait(400);
   await wait(2500);
 
   // the second player's browser goes away, then comes back

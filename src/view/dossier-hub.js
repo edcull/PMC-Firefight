@@ -140,7 +140,8 @@
       // the fallen, opened from the campaign's window (Back returns to it)
       h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>', back);
       h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world',
-        '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? companyPanel(hs === 'B' ? A : B, hs === 'B' ? 'A' : 'B')
+        // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
+        '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
       // every battle fought, the latest first
       if (last) {
