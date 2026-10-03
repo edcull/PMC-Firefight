@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=d51fdba1b0">
+<link rel="stylesheet" href="src/css/game.css?v=8ba0da0b84">
 
 <div class="wrap">
   <header>
@@ -141,15 +141,16 @@
       <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign<small id="menu-camphot-sub">Two dossiers, two players, one screen</small><span class="mcard-warn">Not fully tested</span></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
-    <!-- the small things: the sound, the account, and the demo on the main menu only -->
+    <!-- the small things: the sound, the demo on the main menu only, and the account -->
     <p class="menu-foot">
       <button class="lnk" id="btn-menu-sound">Sound on</button>
-      <button class="lnk" id="btn-menu-account" hidden>Sign in</button>
       <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
+      <!-- who is signed in, or the way to sign in (net/account.js), at the row's right end -->
+      <button type="button" class="user-chip menu-chip" hidden></button>
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2610030058</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2610030101</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -558,7 +559,7 @@
 <script src="src/engine/engine.js?v=78f6126065"></script>
 <script src="src/engine/offtable.js?v=ef8edae603"></script>
 <script src="src/net/net.js?v=b704f7022b"></script>
-<script src="src/net/account.js?v=7fbbddb439"></script>
+<script src="src/net/account.js?v=8a43641dd7"></script>
 <script src="src/net/lobby.js?v=ac99e00fec"></script>
 <script src="src/view/replay.js?v=9bc59170a7"></script>
 <script src="src/view/hooks.js?v=7ad383bd12"></script>

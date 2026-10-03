@@ -701,6 +701,9 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .user-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-chip:hover, .user-chip:focus-visible { border-color: var(--line); outline: none; }
 .user-chip svg { width: 18px; height: 18px; color: var(--ink-dim); flex: none; }
+/* on the main menu, at the right end of the foot's row (the card has no top bar) */
+.menu-foot:has(.menu-chip:not([hidden])) { justify-content: flex-start; }
+.menu-foot .menu-chip { max-width: 50%; }
 /* the account screen: the same page as the lobby — full screen on a phone, a card over the table on a desktop */
 #account.overlay { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--ground); place-items: stretch; }
 #account > .sheet { flex: 1; min-height: 0; width: 100%; max-width: none; max-height: none; overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 0; background: transparent;

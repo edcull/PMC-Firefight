@@ -77,7 +77,7 @@ async function latest(to, kind) {
   const act2 = await latest('morgan@example.com', 'activate');
   await p.goto(act2); await wait(1500);
   t = await till((x) => /active/i.test(x), 'activated');
-  ok('the link opens the game: the account is active, and signed in', /signed in/i.test(t) && (await p.textContent('#btn-menu-account')) === 'Morgan', t.slice(0, 80));
+  ok('the link opens the game: the account is active, and signed in', /signed in/i.test(t) && (await p.textContent('.menu-chip')) === 'Morgan', t.slice(0, 80));
   ok('...and the address is clean of the link', !/activate=/.test(p.url()));
 
   console.log('\nA new name');
@@ -91,7 +91,7 @@ async function latest(to, kind) {
   await fill('acct-newname', 'Morgan Vale');
   await click('[data-acct="rename"]');
   t = await till((x) => /now Morgan Vale/.test(x), 'renamed');
-  ok('one nobody has is taken, and the menu says so', (await p.textContent('#btn-menu-account')) === 'Morgan Vale');
+  ok('one nobody has is taken, and the menu says so', (await p.textContent('.menu-chip')) === 'Morgan Vale');
 
   console.log('\nA forgotten password');
   await click('[data-acct="out"]');
@@ -107,7 +107,7 @@ async function latest(to, kind) {
   await fill('acct-pass', 'second password');
   await click('[data-acct="reset"]');
   t = await till((x) => /password is changed/i.test(x), 'reset');
-  ok('the link opens a form for the new password; set, and signed in', (await p.textContent('#btn-menu-account')) === 'Morgan Vale');
+  ok('the link opens a form for the new password; set, and signed in', (await p.textContent('.menu-chip')) === 'Morgan Vale');
   const tryLogin = (pw) => p.evaluate((pw) => fetch('api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Morgan Vale', password: pw }) }).then((r) => r.status), pw);
   ok('the new password works, the old one does not', (await tryLogin('second password')) === 200 && (await tryLogin('first password')) === 401);
   ok('...and the link works once', await p.evaluate((u) => fetch('api/reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: decodeURIComponent(u.split('reset=')[1]), password: 'third password' }) }).then((r) => r.status), reset) === 400);

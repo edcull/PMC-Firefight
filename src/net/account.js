@@ -49,17 +49,11 @@
       label(); if (then) then();
     }, function () { label(); if (then) then(); });
   }
-  /* The main menu's foot button, and the user chip at the right of the other
+  /* The user chip, at the top right of the main menu's card and of the other
      screens' top bars (set-up, campaign): the name signed in as, or the way to
      sign in. */
   var USER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
   function label() {
-    var b = el('btn-menu-account');
-    if (b) {
-      b.hidden = !online();
-      b.textContent = who ? who.name : 'Sign in';
-      b.title = who ? 'Your account' : 'Sign in, or make an account';
-    }
     Array.prototype.forEach.call(document.querySelectorAll('.user-chip'), function (c) {
       c.hidden = !online();
       c.innerHTML = USER_ICON + '<span>' + esc(who ? who.name : 'Sign in') + '</span>';
@@ -350,10 +344,7 @@
     pane.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && ev.target.tagName !== 'INPUT') closeScreen(); });
   }
   function wire() {
-    // the main menu's foot opens it
-    var b = el('btn-menu-account');
-    if (b) b.addEventListener('click', function () { openScreen(); });
-    // ...and the user chip on the other screens' top bars
+    // the user chip, on the main menu's card and the other screens' top bars, opens it
     document.addEventListener('click', function (ev) {
       if (ev.target.closest && ev.target.closest('.user-chip')) openScreen();
     });
