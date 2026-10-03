@@ -35,6 +35,9 @@
     /* ---------- action bar ---------- */
     function drawBar() {
       var u = ui.selected, bar = el('bar');
+      // a unit played from another screen (the other player online) or by the AI: nothing here for this screen to do with it
+      if (u && (isAI(u.side) || !atThisScreen(u.side))) { bar.innerHTML = ''; bar.classList.add('bar-none'); setHint(null); return; }
+      bar.classList.remove('bar-none');
       var specials = specialsFor(u);
       var html = '';
 
@@ -157,6 +160,8 @@
         box.innerHTML = 'Psychic Wave: tap where <b>' + esc(u.name) + '</b> moves to — or the unit itself to stay — and every enemy within 12" of it takes D6−1 SP.';
       } else if (isAI(u.side)) {
         box.innerHTML = '';                              // the OpFor's own: nothing to say about it here
+      } else if (!atThisScreen(u.side)) {
+        box.innerHTML = '<b>' + esc(u.name) + '</b> — ' + esc(sideName(u.side)) + '\u2019s' + (u.activated ? ', already acted this turn.' : '.');
       } else {
         box.innerHTML = '<b>' + esc(u.name) + '</b> — ' + (u.activated ? 'already acted this turn.' :
           u.side === B.state.activeSide ? 'choose an action.' : 'waiting for its activation.');
