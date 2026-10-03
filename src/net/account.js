@@ -12,8 +12,9 @@
    ?confirm-email= and the link's token: read here as the page loads, and acted
    on in this pane.
 
-   Only offered when the page came from a game server (net.js online()): a page
-   opened from a file has no accounts to sign in to. */
+   Only live once the game server answers (its /health, as the Multiplayer card
+   waits for): a page opened from a file, or the static copy on GitHub Pages, has
+   no accounts to sign in to, so the chip is shown greyed out and saying why. */
 (function (root) {
   'use strict';
   var who;                       // undefined until asked; null signed out; { name, guest, admin, email, emailOk } signed in
@@ -27,7 +28,9 @@
   var data = null;               // what the server keeps for the player, once fetched
   function el(id) { return document.getElementById(id); }
   function esc(t) { return root.PMC.esc(t); }
-  function online() { return !!(root.PMCNet && root.PMCNet.online && root.PMCNet.online()); }
+  // a page served over http, and a game server behind it that has answered
+  var serverUp = false;
+  function online() { return serverUp && !!(root.PMCNet && root.PMCNet.online && root.PMCNet.online()); }
   function val(id) { return ((el(id) || {}).value || '').trim(); }
   function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1) + (/[.!?]$/.test(s) ? '' : '.'); }
   function get(path) {
@@ -55,9 +58,12 @@
   var USER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
   function label() {
     Array.prototype.forEach.call(document.querySelectorAll('.user-chip'), function (c) {
-      c.hidden = !online();
+      // no server: shown, but greyed out and not to be pressed, as the Multiplayer card is
+      c.hidden = false;
+      c.disabled = !online();
       c.innerHTML = USER_ICON + '<span>' + esc(who ? who.name : 'Sign in') + '</span>';
-      c.title = who ? 'Your account' : 'Sign in, or make an account';
+      c.title = !online() ? 'Needs the game server \u2014 run node server.js and open the page from it'
+        : who ? 'Your account' : 'Sign in, or make an account';
     });
   }
   // what the server keeps for the player: their campaigns, their online campaigns, their battles
@@ -388,8 +394,19 @@
       else openScreen();
     });
     document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closePop(); });
-    refresh();
-    fromLink();
+    label();
+    // the server's own /health, relative to the page (it may sit on a sub-path): answered, accounts are live
+    if (root.fetch && root.PMCNet && root.PMCNet.online && root.PMCNet.online()) {
+      root.fetch('health', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (h) {
+          if (!(h && h.ok === true && h.rooms != null)) return;
+          serverUp = true;
+          refresh();
+          fromLink();
+        })
+        .catch(function () { });
+    }
   }
 
   root.PMCAccount = {

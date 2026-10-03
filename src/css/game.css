@@ -699,7 +699,9 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .user-chip { margin-left: auto; display: flex; align-items: center; gap: 6px; background: none; border: 1px solid transparent; border-radius: 5px;
   padding: 4px 8px; color: var(--ink); font: 600 13px var(--body); cursor: pointer; flex: none; max-width: 45%; }
 .user-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.user-chip:hover, .user-chip:focus-visible { border-color: var(--line); outline: none; }
+.user-chip:not(:disabled):hover, .user-chip:focus-visible { border-color: var(--line); outline: none; }
+/* no game server: shown, so it is known to exist, but greyed out (as the Multiplayer card) */
+.user-chip:disabled { opacity: var(--off-opacity); cursor: not-allowed; filter: grayscale(.6); }
 .user-chip svg { width: 18px; height: 18px; color: var(--ink-dim); flex: none; }
 /* the user chip's menu: Your account, Sign out (net/account.js) */
 .user-pop { position: fixed; z-index: 90; display: flex; flex-direction: column; gap: 4px; padding: 6px; min-width: 150px;
