@@ -544,7 +544,8 @@
     /* A campaign's contract has settled the tactic already — two players' rebels too:
        each chose on the contract, the second with the first's choice in front of them
        (hotseat review HC-11), so the battle does not ask again. */
-    if (cfg.campaign) people = [];
+    // (an online campaign's battle asks its players at the table, as a skirmish does: cfg.askTactics)
+    if (cfg.campaign && !cfg.askTactics) people = [];
     if (!people.length) return false;
     var first = people[0];
     if (people.length > 1) {
@@ -1725,7 +1726,7 @@
       var swb = K.swapBlock(side); if (swb) { setHint(null, swb); render(); return no(swb); }
       K.readyToDeploy(side);                // putting a unit down is getting on with the deployment
       if (modifying()) return no('the other side is still modifying its army');
-      if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();   // placing a unit keeps the list
+      if (K.askFor(side)) K.swapsDone(side);   // placing a unit keeps the list
       if (!mayDeploy(side)) return no('not your turn to place');
       settleFacing();
       return deployAt(side, it);
@@ -1798,7 +1799,7 @@
       K.readyToDeploy(side);
       if (modifying()) return no('the other side is still modifying its army');
       // deploying straight away means keeping the list as it is
-      if (state.swapAsk && state.swapAsk.side === side) K.swapsDone();
+      if (K.askFor(side)) K.swapsDone(side);
       /* Where both companies enter in turn 1 there is nothing to place now: Auto-deploy
          means "bring my units on for me" when their turn to enter comes. */
       if (K.entering(side)) {
@@ -1871,16 +1872,15 @@
     });
     on('swapopen', null, function (side, it) {
       if (!K.canSwapNow(side)) return no('the list can no longer be changed');
-      state.swapAsk = state.swapAvail[side];
-      state.swapAsk.pick = null;
+      K.openSwaps(side);                        // this side's own list: the other player's, open at their screen, stays open
       render();
       return yes;
     });
     on('swappick swapin swapdone swapundo', null, function (side, it) {
-      var sa2 = state.swapAsk;
-      if (!sa2 || sa2.side !== side) return no('nothing to swap');
+      var sa2 = K.askFor(side);
+      if (!sa2) return no('nothing to swap');
       if (it.who && it.who !== side) return no('that was the other player\u2019s list');
-      if (it.k === 'swapdone') { var swd = K.swapBlock(side); if (swd) { setHint(null, swd); render(); return no(swd); } K.swapsDone(); return yes; }
+      if (it.k === 'swapdone') { var swd = K.swapBlock(side); if (swd) { setHint(null, swd); render(); return no(swd); } K.swapsDone(side); return yes; }
       if (it.k === 'swappick') { sa2.pick = it.id || null; render(); return yes; }
       if (it.k === 'swapundo') {
         var un = K.undoSwap(side, it.id);
@@ -1930,7 +1930,7 @@
       var swst = K.swapBlock('A') || K.swapBlock('B'); if (swst) { setHint(null, swst); render(); return no(swst); }
       settleFacing();
       if (modifying()) return no('the armies are still being modified');
-      if (state.swapAsk) K.swapsDone();
+      ['A', 'B'].forEach(function (sd) { if (K.askFor(sd)) K.swapsDone(sd); });
       // online, each player answers for their own force: ready once theirs is set out and split, whatever the other's state
       if (bothConfirm() ? !K.sideDone(side) : !K.deploymentDone()) return no('there are still units to place');
       // a scenario's own condition on how the force stands (Ambush!'s even split)

@@ -102,6 +102,7 @@
     function askingHere() {
       var s = B.state || {};
       if (ui.insertion || ui.reservePick || ui.preview) return true;
+      if (B.swapAskHere && B.swapAskHere()) return true;
       return ['faceAsk', 'cmdOffer', 'standAsk', 'endAsk', 'martyrAsk', 'kyfAsk', 'nervousAsk', 'placeAsk', 'minePick', 'swapAsk'].some(function (k) {
         var a = s[k];
         if (k === 'endAsk' && (show.queue.length || show.waiting || ui.resOpen || resQueue.length)) return false;   // not asked until the replay and the rally's cards are done

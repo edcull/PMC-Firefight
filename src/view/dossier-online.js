@@ -21,7 +21,6 @@
   'use strict';
   root.PMCDossierOnline = function (E) {
     var C = E.C, R = E.R, ROMAN = E.ROMAN, esc = E.esc;
-    var list = null, listFault = '', signedIn;     // the list screen: the player's campaigns, and who they are
     var busy = false;                               // a command on its way: the next waits
     var poll = null;                                // the campaign asked for again now and then, for the others' changes
     var pick = null, pickFor = null;                // the player's force for a contract, as picked so far here, and for which
@@ -46,26 +45,14 @@
     // the other players' forces, as the hub shows them among the rivals
     function players() { return (E.camp.rivals || []).filter(function (r) { return r.human; }); }
     function forceOfSlot(i) { return (E.camp.rivals || []).filter(function (r) { return r.human && r.slot === i; })[0] || null; }
-    var WAIT = { you: 'waiting on you', them: 'waiting on another player', either: 'free to take a contract', lobby: 'in its lobby', over: 'over' };
 
     /* ================= in and out ================= */
-    function enterList() {
+    /* Out of the campaign, back to the Multiplayer screen (where a new one is
+       started or one joined; the main menu's Continue opens one again). */
+    function toMulti() {
       leaveCampaign();
-      E.view = 'olist';
-      E.open('olist');
-      loadList();
-    }
-    function loadList() {
-      list = null; listFault = '';
-      api('api/me').then(function (r) {
-        signedIn = r.ok && r.j.who && !r.j.who.guest ? r.j.who : null;
-        if (!signedIn) { list = []; E.render(); return null; }
-        return api('api/online').then(function (l) {
-          list = l.ok ? l.j.campaigns || [] : [];
-          if (!l.ok) listFault = cap(l.j.error || 'the server could not be reached') + '.';
-          E.render();
-        });
-      }, function () { list = []; listFault = 'The server could not be reached.'; E.render(); });
+      E.hide();
+      if (root.PMCLobby && root.PMCLobby.available()) root.PMCLobby.open(); else E.toMenu();
     }
     // an online campaign opened: the browser's own campaign is put aside (and never saved over)
     function openCampaign(id) {
@@ -124,9 +111,12 @@
       if (!founded(camp.companies.A)) {
         if (E.view !== 'found' || !E.draft) {
           // the army and colour picked in the lobby are where the founding starts
-          var slotColour = camp.companies.A.colour;
-          E.beginOwn('A', camp.companies.A.faction || 'pmc');
+          var slotColour = camp.companies.A.colour, fac = camp.companies.A.faction || 'pmc';
+          E.beginOwn('A', fac);
           if (slotColour) E.draft.colour = slotColour;
+          // a name to start from: the player's own, and what they run
+          var me = lobby && lobby.slots && lobby.slots[lobby.slot];
+          if (me && me.name && !E.draft.name) E.draft.name = me.name + '\u2019s ' + ({ pmc: 'Company', rebel: 'Revolt', bugs: 'Swarm', xeno: 'Tribe' }[fac] || 'Company');
         }
         return;
       }
@@ -165,7 +155,7 @@
           if (!E.online || E.online.id !== o.id || busy) return;
           if (!r.ok) {
             // closed by its host while it was in its lobby
-            if (r.code === 404 && o.phase === 'lobby') { leaveCampaign(); E.note('The campaign is closed', 'Its host closed it before it started.'); enterList(); }
+            if (r.code === 404 && o.phase === 'lobby') { leaveCampaign(); E.note('The campaign is closed', 'Its host closed it before it started.', toMulti); }
             return;
           }
           if (r.j.version === o.version) return;
@@ -241,33 +231,6 @@
       return true;
     }
 
-    /* ================= the list ================= */
-    function listView() {
-      var h = '<h2>Online campaigns</h2>';
-      h += '<p class="lede">A world of two to eight forces — players, each on their own device, and AI forces the server runs. ' +
-        'Each player runs their own force whenever they have the time; the server keeps the campaign and rolls every die.</p>';
-      if (list === null) return h + '<p class="dnote">Looking…</p>' + foot();
-      if (!signedIn) {
-        return h + '<div class="cpan"><div class="cpstat">An online campaign is kept by your account. Sign in (or make an account) first.</div>' +
-          '<button class="start" data-go="osignin">Sign in</button></div>' + foot();
-      }
-      if (listFault) h += '<p class="dnote hubnote">' + esc(listFault) + '</p>';
-      if (list.length) {
-        h += '<div class="field"><label>Yours</label><div class="clog">' + list.map(function (c) {
-          return '<button type="button" class="crow crow-go" data-ocamp="' + c.id + '"><b>' + c.turn + '</b><span>' + esc(c.name) +
-            '<small>' + c.forces + ' forces, ' + c.players + ' player' + (c.players === 1 ? '' : 's') + ' · ' + WAIT[c.waiting || 'over'] + '</small></span>' +
-            (c.waiting === 'you' ? '<em class="yourmove">Your move</em>' : '<em>Open</em>') + '</button>';
-        }).join('') + '</div></div>';
-      }
-      h += '<div class="field"><label>A new one</label><button class="start" data-go="onew">Start an online campaign</button>' +
-        '<p class="dnote">It opens on its lobby: set the slots, then give the others its code.</p></div>';
-      h += '<div class="field"><label for="ojoin-code">Join one</label><div class="ojoin">' +
-        '<input class="tin" id="ojoin-code" maxlength="8" placeholder="The code you were given" autocomplete="off">' +
-        '<button class="lnk" data-go="ojoin">Join</button></div></div>';
-      return h + foot();
-    }
-    function foot() { return '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button></p>'; }
-
     /* ================= the lobby ================= */
     function swatch(c) {
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, k = CO[c];
@@ -278,7 +241,8 @@
       var L = lobby || {}, host = !!L.host, me = L.slot;
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO);
       // the code that brings the others in, in the title bar
-      var h = '<h2>' + esc(L.name || 'Campaign') + (L.invite ? ' <span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : '') + '</h2>';
+      var h = '<h2>' + esc(L.name || 'Campaign') +
+        (host ? ' <button type="button" class="olob-rename" data-go="olobname" title="Rename the campaign" aria-label="Rename the campaign">\u270e</button>' : '') + (L.invite ? ' <span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : '') + '</h2>';
       h += '<div class="olob-slots">' + (L.slots || []).map(function (s, i) {
         var mine = i === me, canSlot = host && s.kind !== 'human', canColour = mine || (host && s.kind !== 'human'), canArmy = mine || (host && s.kind === 'ai');
         var who = s.kind === 'human' ? esc(s.name) + (s.host ? ' <i class="acct-tag">host</i>' : '') + (mine ? ' <i class="acct-tag">you</i>' : '')
@@ -288,7 +252,7 @@
         var chip = '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
         var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' +
           (canColour ? '<button type="button" class="olob-colour" data-olob-pick="' + i + '" aria-expanded="' + (colourFor === i) + '" title="' + esc(c ? c.name : 'Colour') + '">' + chip + '</button>' : '<span class="olob-colour still">' + chip + '</span>') +
-          '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready || s.host ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
+          '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
         // the host: an AI force in this slot, or open for a player
         if (canSlot) row += '<label class="olob-ai"><input type="checkbox" data-olob-ai="' + i + '"' + (s.kind === 'ai' ? ' checked' : '') + '> AI</label>';
         if (s.kind !== 'open') {
@@ -306,8 +270,11 @@
       if (cs) {
         var cc = CO[cs.colour];
         h += '<div class="found-pop olob-pop" data-olob-popfor="' + colourFor + '"><label>Colours \u2014 ' + esc(cc ? cc.name : '') + '</label><div class="csw">' + KEYS.map(function (k) {
-          var q = CO[k], taken = (L.slots || []).some(function (x, j) { return j !== colourFor && x.colour === k; });
-          return '<button type="button"' + (k === cs.colour ? ' class="on"' : '') + ' data-olob-col="' + k + '" data-olob-for="' + colourFor + '" title="' + esc(q.name) + (taken ? ' \u2014 another force wears it' : '') + '"' + (taken ? ' disabled' : '') + '>' +
+          // greyed out only where another player wears it; an AI force's is taken from it (it gets another)
+          var q = CO[k], holder = (L.slots || []).filter(function (x, j) { return j !== colourFor && x.colour === k; })[0];
+          var taken = !!holder && holder.kind === 'human', ai = !!holder && !taken;
+          return '<button type="button" class="' + (k === cs.colour ? 'on' : '') + (ai ? ' olob-aicol' : '') + '" data-olob-col="' + k + '" data-olob-for="' + colourFor + '" title="' + esc(q.name) +
+            (taken ? ' \u2014 another player wears it' : ai ? ' \u2014 an AI force wears it, and will take another' : '') + '"' + (taken ? ' disabled' : '') + '>' +
             '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
         }).join('') + '</div></div>';
       }
@@ -315,17 +282,20 @@
          host's Start or a player's Ready. */
       var mineSlot = (L.slots || [])[me] || {}, n = (L.slots || []).length;
       h += '<div class="olob-bar">';
-      h += host ? '<label class="olob-n">Forces <select id="olob-n">' + [2, 3, 4, 5, 6, 7, 8].map(function (k) {
+      h += host ? '<label class="olob-n">Forces <select id="olob-n">' + [2, 4, 6, 8, 10].map(function (k) {
         return '<option value="' + k + '"' + (k === n ? ' selected' : '') + '>' + k + '</option>';
       }).join('') + '</select></label>' : '<span class="olob-n">' + n + ' forces</span>';
       h += host ? '<label class="olob-pub"><input type="checkbox" id="olob-pub"' + (L.listed ? ' checked' : '') + '> Public</label>'
         : '<span class="olob-pub">' + (L.listed ? 'Public' : 'Private') + '</span>';
-      if (host) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
-      else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' + (mineSlot.ready ? 'Ready \u2014 waiting for the host' : 'I am ready') + '</button>';
+      // everyone says they are ready, the host too; then the host has Start
+      var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
+      if (host && allReady) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
+      else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' +
+        (!mineSlot.ready ? 'I am ready' : host ? 'Ready \u2014 waiting for the players' : 'Ready \u2014 waiting for the host') + '</button>';
       h += '</div>';
       h += chatHTML();
-      h += '<p class="camp-foot"><button class="lnk" data-go="olobleave">' + (host ? 'Close the campaign' : 'Leave the campaign') + '</button> ' +
-        '<button class="lnk" data-go="olist">\u2190 Online campaigns</button></p>';
+      // its way back (in the top bar) leaves the lobby, or closes it for the host
+      h += '<p class="camp-foot"><button class="lnk" data-go="omulti">\u2190 Multiplayer</button></p>';
       // the chat shows its latest line; the colours sit by their chip, and follow it as the list scrolls
       setTimeout(function () {
         var l = document.querySelector('#camp-body .olob-lines'); if (l) l.scrollTop = l.scrollHeight;
@@ -411,6 +381,7 @@
           '<span class="ctier">' + esc(p.player) + ' · ' + C.words(p).tier + ' Tier ' + ROMAN[p.tier || 1] + '</span></div>' +
           (founded(p) ? E.statRow(p, true) : '<div class="cpstat">Not founded yet.</div>') +
           (asked ? '<div class="cpstat">' + (asked.mine ? 'You have challenged them.' : 'They have challenged you — answer it on the campaign’s page.') + '</div>'
+            : p.busy ? '<button class="start" disabled title="Fighting someone else just now">Fighting someone else just now</button>'
             : founded(p) && founded(myCo()) ? '<button class="start" data-ochallenge="' + p.slot + '">Challenge them</button>' : '') +
           '</div>';
       });
@@ -500,12 +471,19 @@
           '<button class="lnk" data-octerms="0">Keep ' + ROMAN[k.tier] + '</button> ' +
           '<button class="lnk" data-octerms="1"' + (k.tier >= k.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, k.tier + 1)] + '</button></div>';
       }
-      var lv = k.levels || [1], setsPl = ctx.ai || me === 'A';
+      /* The Priority Level: the levels both forces can field. Against a player, each
+         says which they want and it changes only when both want the same. */
+      var lv = k.levels || [1], wants = k.plWant || {}, mineWant = ctx.ai ? null : wants[me], theirWant = ctx.ai ? null : wants[them];
+      var shownPl = mineWant || k.pl, plNote = '';
+      if (lv.length < 2) plNote = 'Only Priority Level ' + (lv[0] || 1) + ' is on offer: ' + (lv[0] === 2 ? '' : 'both forces must be able to field a full army for 2.');
+      else if (!ctx.ai && theirWant && theirWant !== k.pl) plNote = esc(ctx.foeName) + ' wants Priority Level ' + theirWant + ' \u2014 choose it too to change it.';
+      else if (!ctx.ai && mineWant && mineWant !== k.pl) plNote = 'You want Priority Level ' + mineWant + ' \u2014 waiting for ' + esc(ctx.foeName) + ' to agree. It stays at ' + k.pl + ' until then.';
+      else if (!ctx.ai) plNote = 'Both of you choose; it changes only when you agree.';
       h += '<div class="field"><div><label for="oc-pl">Priority Level</label>' +
-        '<select id="oc-pl"' + (setsPl && lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
+        '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
-          return '<option value="' + n + '"' + (k.pl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
-        }).join('') + '</select>' + (setsPl ? '' : '<p class="dnote">The challenger sets the Priority Level.</p>') + '</div></div>';
+          return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
+        }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';
 
       var pk = pickNow(k, me), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });
       var chk = R.checkArmy(keys, k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction);
@@ -537,12 +515,7 @@
         });
       }
       h += '</div></div>';
-      if (co.faction === 'rebel') {
-        h += '<div class="cpan orders"><div class="cprom-head"><b>Tactic</b></div><div class="orow"><span class="segs">' +
-          [{ id: '', name: 'No tactic' }].concat(R.TACTICS).map(function (t) {
-            return '<button class="lnk' + ((pk.tactic || '') === t.id ? ' on' : '') + '" data-octactic="' + t.id + '"' + (t.text ? ' ' + E.tip(t.name, t.text) : '') + '>' + esc(t.name) + '</button>';
-          }).join('') + '</span></div></div>';
-      }
+      // (a rebel's tactic is chosen at the table, when the battle begins)
       if (C.hasDoctrine(co, 'V4')) {
         var able = units.filter(function (e) { var p = E.profile(e.key); return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command; });
         var n = Math.ceil(able.length / 3);
@@ -570,7 +543,7 @@
         return '<h2>After the battle</h2><p class="lede">' + esc(d ? d.foeName : 'The other player') + ' has a question to answer first (' +
           (st.kind === 'plunder' ? 'Plunderer' : st.kind === 'negotiate' ? 'Tough Negotiators' : 'No Place for the Weak!') + '). ' +
           'The aftermath follows once every question is answered.</p>' +
-          '<p class="camp-foot"><button class="lnk" data-go="olist">← Online campaigns</button></p>';
+          '<p class="camp-foot"><button class="lnk" data-go="omulti">← Multiplayer</button></p>';
       }
       return E.postView();
     }
@@ -581,20 +554,6 @@
     function click(t, go) {
       var camp = E.camp;
       var attr = function (a) { return t.getAttribute(a); };
-      // the list
-      if (attr('data-ocamp')) { openCampaign(+attr('data-ocamp')); return true; }
-      if (go === 'onew') { startNew(); return true; }
-      if (go === 'ojoin') {
-        var code = ((document.getElementById('ojoin-code') || {}).value || '').trim();
-        if (!code) { E.note('Which campaign?', 'Type the code you were given.'); return true; }
-        api('api/online/join', { method: 'POST', body: JSON.stringify({ code: code }) }).then(function (r) {
-          if (!r.ok) { E.note('Not joined', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
-          openCampaign(r.j.id);
-        });
-        return true;
-      }
-      if (go === 'osignin') { E.hide(); if (root.PMCAccount) root.PMCAccount.signIn({ then: function () { enterList(); } }); return true; }
-      if (go === 'olist') { enterList(); return true; }
       if (go === 'menu') { leaveCampaign(); E.toMenu(); return true; }
       if (!E.online || !camp) return false;
 
@@ -615,7 +574,13 @@
         if (said) cmd('lobbyChat', { text: said });
         return true;
       }
-      if (go === 'olobleave') {
+      if (go === 'olobname' && lobby && lobby.host) {
+        E.ask({ kind: 'text', title: 'Rename the campaign', value: lobby.name || '', max: 40, okLabel: 'Rename',
+          onOk: function (v) { if (v) cmd('lobbyName', { name: v }); } });
+        return true;
+      }
+      if (go === 'omulti' && E.view !== 'olobby') { toMulti(); return true; }
+      if (go === 'omulti') {
         var host = !!(lobby && lobby.host);
         E.ask({ kind: 'confirm', title: host ? 'Close the campaign?' : 'Leave the campaign?', danger: host,
           text: host ? 'It is gone, for everyone in its lobby.' : 'Your slot opens again for somebody else.',
@@ -624,7 +589,7 @@
             var o = E.online;
             api('api/online/' + o.id + '/leave', { method: 'POST' }).then(function (r) {
               if (!r.ok) { E.note('Not done', cap(r.j.error || 'the server said no') + '.'); return; }
-              enterList();
+              toMulti();
             });
           } });
         return true;
@@ -649,7 +614,7 @@
           function () { E.draft = null; E.view = 'hub'; });
         return true;
       }
-      if (go === 'foundback') { enterList(); return true; }
+      if (go === 'foundback') { toMulti(); return true; }
 
       // the force's own changes
       var co = camp.companies.A;
@@ -813,7 +778,7 @@
     }
 
     return {
-      enterList: enterList, listView: listView, lobbyView: lobbyView, offersView: offersView, contractView: contractView, postView: postView, hubNote: hubNote,
+      enterList: toMulti, lobbyView: lobbyView, offersView: offersView, contractView: contractView, postView: postView, hubNote: hubNote,
       click: click, change: change, steer: function () { if (E.online && E.camp) steer(false); },
       afterBattle: afterBattle, fighting: function () { return fighting; },
       leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; },

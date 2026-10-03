@@ -179,6 +179,22 @@
          and said, only once every player has gone on to the deployment. */
       E.state.swapHold = any;
     }
+    /* The swaps a side has open: the hotseat's secret round (swapAsk, one player at
+       a time), or the list a player has opened at their own screen (swapOpen, each
+       side its own — two players at two screens may both have theirs open). */
+    function askFor(side) {
+      var sa = E.state.swapAsk;
+      if (sa && sa.side === side) return sa;
+      var o = E.state.swapOpen;
+      return o && o[side] && E.state.swapAvail && E.state.swapAvail[side] ? E.state.swapAvail[side] : null;
+    }
+    function openSwaps(side) {
+      E.state.swapOpen = E.state.swapOpen || {};
+      E.state.swapOpen[side] = true;
+      E.state.swapAvail[side].pick = null;
+      // the one ask a screen shows, when nobody else's is open (one player at a screen, as before)
+      if (!E.state.swapAsk) E.state.swapAsk = E.state.swapAvail[side];
+    }
     // swaps noted but not yet made: a hotseat's secret round, or until every player is ready
     function holding() { return !!(E.state.swapStage || E.state.swapHold); }
     // the sides still choosing whether to modify their armies, before anyone deploys
@@ -191,7 +207,7 @@
       var r = E.state.deployReady;
       if (!r || r[side] !== false) return;
       r[side] = true;
-      if (E.state.swapAsk && E.state.swapAsk.side === side) swapsDone();
+      if (askFor(side)) swapsDone(side);
       if (!stillChoosing().length) {
         E.state.deployReady = null;
         if (E.state.swapHold) { E.state.swapHold = false; revealSwaps(['A', 'B'], 'Swapped in secret for units of the same Tier before deployment (p. 46).'); }
@@ -232,7 +248,7 @@
       return R.checkArmy(keys, cfg.tier, cfg.pl, docsOf(side), E.state.tactics && E.state.tactics[side], null);
     }
     function doSwap(side, outId, inId) {
-      var sa = E.state.swapAsk;
+      var sa = askFor(side);
       var old = byId(outId);
       if (!sa || sa.side !== side || sa.left < 1) return 'No swaps left.';
       if (!old || old.side !== side) return 'Not one of yours.';
@@ -260,13 +276,13 @@
       }
       applySwap(side, old, opt, sa);
       sa.left--; sa.pick = null;
-      if (sa.left < 1) { swapsDone(); return null; }
+      if (sa.left < 1) { swapsDone(side); return null; }
       render();
       return null;
     }
     // a swap noted but not yet made, taken back: the unit stays, and the swap is free again
     function undoSwap(side, outId) {
-      var sa = E.state.swapAsk;
+      var sa = askFor(side);
       if (!sa || sa.side !== side || !holding()) return 'That swap has already been made.';
       var i = -1;
       sa.done.forEach(function (d, k) { if (d.held && d.outId === outId) i = k; });
@@ -302,9 +318,16 @@
       logLine('note', sideName(side) + ' swaps ' + old.name + ' for ' + nu.name + '.');
       refreshSplit(side);
     }
-    function swapsDone() {
-      var sa = E.state.swapAsk;
-      E.state.swapAsk = null;
+    // `side`: whose list closes (none: the secret round's, or whichever is open)
+    function swapsDone(side) {
+      var sa = side ? askFor(side) : E.state.swapAsk;
+      if (!side || (E.state.swapAsk && E.state.swapAsk.side === side)) E.state.swapAsk = null;
+      if (side && E.state.swapOpen) {
+        E.state.swapOpen[side] = false;
+        // the other player's, still open at their screen, is the ask now
+        var oth = side === 'A' ? 'B' : 'A';
+        if (!E.state.swapAsk && !E.state.swapStage && E.state.swapOpen[oth] && E.state.swapAvail && E.state.swapAvail[oth]) E.state.swapAsk = E.state.swapAvail[oth];
+      }
       var stg = E.state.swapStage;
       if (stg) {
         // the next player's turn to modify theirs, or, with both done, every swap made at once
@@ -333,7 +356,7 @@
 
     return {
       swapOptions: swapOptions, beginSwaps: beginSwaps, canSwapNow: canSwapNow, doSwap: doSwap, undoSwap: undoSwap,
-      swapsDone: swapsDone, stillChoosing: stillChoosing, readyToDeploy: readyToDeploy,
+      swapsDone: swapsDone, stillChoosing: stillChoosing, readyToDeploy: readyToDeploy, askFor: askFor, openSwaps: openSwaps,
       swapBlock: swapBlock, splitShort: splitShort
     };
   };

@@ -819,7 +819,7 @@ a.mcard { text-decoration: none; line-height: normal; }
 }
 /* the top bar is the way back: the footer's own Back and Main menu are not needed twice */
 #camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"], #camp-body .camp-foot [data-go="roster"],
-#camp-body .camp-foot [data-go="pastback"], #camp-body .camp-foot [data-go="foundback"] { display: none; }
+#camp-body .camp-foot [data-go="pastback"], #camp-body .camp-foot [data-go="foundback"], #camp-body .camp-foot [data-go="omulti"] { display: none; }
 /* who a solo campaign is up against: one line, and a list behind it */
 .archline {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
@@ -1101,6 +1101,7 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 }
 .chip-btn span { display: block; height: 100%; min-height: 28px; border-radius: 3px; }
 .chip-btn:hover, .chip-btn:focus-visible, .chip-btn[aria-expanded="true"] { border-color: var(--ink); }
+.chip-btn.still, .chip-btn.still:hover { cursor: default; border-color: var(--line); display: inline-block; }
 #setup[data-hot] #colour-hint { display: none; }
 #setup[data-kind="ai"] #btn-quick-clear { display: grid; }
 /* a demo force's own buttons: roll it again, or load and save it from a modal */
@@ -1416,6 +1417,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
    at the foot, three lines at the least, taking whatever room is left */
 .olob-code { font: 600 13px/1 var(--mono); letter-spacing: .18em; padding: 4px 8px; margin-left: 10px; border: 1px solid var(--alpha);
   border-radius: 5px; color: var(--alpha); vertical-align: middle; user-select: all; }
+.olob-rename { background: none; border: 0; padding: 0 4px; margin-left: 4px; color: var(--ink-dim); font-size: 15px; cursor: pointer; vertical-align: middle; }
+.olob-rename:hover { color: var(--alpha); }
 .olob-slots { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 #camp-body.fit > .olob-slots { flex: 0 1 auto; min-height: 58px; }
 .olob-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); flex: none; }
@@ -1426,6 +1429,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-chip { display: block; width: 100%; height: 100%; border-radius: 3px; }
 .found-pop.olob-pop { position: fixed; right: auto; z-index: 80; }
 .olob-pop .csw button:disabled { opacity: .25; cursor: not-allowed; }
+.olob-pop .csw button.olob-aicol { opacity: .6; }
 .olob-who { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
 .olob-who small { color: var(--ink-faint); font-size: 11px; }
 .olob-slot select, .olob-n select { flex: 0 1 auto; min-width: 0; max-width: 100%; background: var(--panel-3, var(--panel-2)); color: var(--ink);

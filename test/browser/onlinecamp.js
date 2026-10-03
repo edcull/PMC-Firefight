@@ -96,13 +96,23 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     let t1 = await text(p1);
     const code = await p1.evaluate(() => { const c = document.querySelector('#camp-title .olob-code'); return c ? c.textContent : ''; });
     ok('Start a game → Campaign opens the campaign’s lobby, its code in the title bar', /^[A-Z2-9]{8}$/.test(code) && !/Give the others this code/.test(t1), code);
+    ok('...its Back in the title bar, to the Multiplayer screen (no list of online campaigns any more)', await p1.evaluate(() => { const b = document.getElementById('camp-back'); return !b.hidden && b.getAttribute('data-go') === 'omulti' && !document.querySelector('#camp-body [data-go="olist"]'); }));
+    await p1.evaluate(() => document.querySelector('#camp-title [data-go="olobname"]').click());
+    await p1.waitForTimeout(150);
+    await p1.evaluate(() => { document.getElementById('ask-input').value = 'The Long War'; document.querySelector('#camp-ask [data-ask="ok"]').click(); });
+    let named = false;
+    for (let i = 0; i < 20 && !named; i++) { await wait(200); named = await p1.evaluate(() => /The Long War/.test(document.getElementById('camp-title').textContent)); }
+    ok('the host renames the campaign from the title bar', named);
     const lay = await p1.evaluate(() => { const bar = document.querySelector('#camp-body .olob-bar'); const b = document.getElementById('camp-body').getBoundingClientRect(), c = document.querySelector('#camp-body .olob-chat').getBoundingClientRect(), l = document.querySelector('#camp-body .olob-lines');
-      return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobstart"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
-    ok('...forces, public and Start on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
+      return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobready"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
+    ok('...forces, public and the host\u2019s Ready on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
     ok('...four slots: the host, one open, two AI forces', (await slotCount(p1)) === 4 && /Open — waiting for a player/.test(t1) && (t1.match(/AI force/g) || []).length >= 2);
-    await choose(p1, '#olob-n', '3');
-    for (let i = 0; i < 30 && (await slotCount(p1)) !== 3; i++) await wait(150);
-    ok('the host makes it three forces', (await slotCount(p1)) === 3);
+    await choose(p1, '#olob-n', '6');
+    for (let i = 0; i < 30 && (await slotCount(p1)) !== 6; i++) await wait(150);
+    ok('the forces: 2, 4, 6, 8 or 10', (await p1.evaluate(() => [...document.querySelectorAll('#olob-n option')].map((o) => o.value).join())) === '2,4,6,8,10' && (await slotCount(p1)) === 6);
+    await choose(p1, '#olob-n', '4');
+    for (let i = 0; i < 30 && (await slotCount(p1)) !== 4; i++) await wait(150);
+    ok('...and back to four', (await slotCount(p1)) === 4);
     // a slot made an AI force with its checkbox, and open again
     const tick = (on) => p1.evaluate((v) => { const c = document.querySelector('#camp-body [data-olob-ai="1"]'); c.checked = v; c.dispatchEvent(new Event('change', { bubbles: true })); }, on);
     await tick(true);
@@ -120,11 +130,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await press(p1, '[data-olob-pick="2"]');
     await p1.waitForTimeout(200);
     const grid = await p1.evaluate(() => ({ n: document.querySelectorAll('#camp-body .olob-pop [data-olob-col]').length, ochre: (document.querySelector('#camp-body .olob-pop [data-olob-col="ochre"]') || {}).disabled }));
-    ok('the colour chip opens the colours, those another slot wears greyed out', grid.n > 10 && grid.ochre === true, JSON.stringify(grid));
+    ok('the colour chip opens the colours, those another player wears greyed out', grid.n > 10 && grid.ochre === true, JSON.stringify(grid));
     await press(p1, '.olob-pop [data-olob-col="lime"]');
     let limed = false;
     for (let i = 0; i < 20 && !limed; i++) { await wait(200); limed = await p1.evaluate(() => /Lime/i.test((document.querySelector('#camp-body [data-olob-pick="2"]') || {}).title || '')); }
     ok('...and a pick colours it', limed);
+    // the host's own colours: the AI force's lime may be taken (it gets another), Brann's not yet joined slot no bar
+    await press(p1, '[data-olob-pick="0"]');
+    await p1.waitForTimeout(200);
+    const lime = await p1.evaluate(() => { const b = document.querySelector('#camp-body .olob-pop [data-olob-col="lime"]'); return b ? { off: b.disabled, ai: b.classList.contains('olob-aicol') } : null; });
+    ok('...a colour an AI force wears is still there to take, marked', lime && !lime.off && lime.ai, JSON.stringify(lime));
+    await p1.evaluate(() => document.getElementById('camp-title').click());
+    await p1.waitForTimeout(200);
     await p1.evaluate(() => { const c = document.getElementById('olob-pub'); if (c && !c.checked) { c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); } });
     await p1.waitForTimeout(500);
 
@@ -132,7 +149,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p2.evaluate(() => window.PMCLobby.open());
     let row = '';
     for (let i = 0; i < 30 && !row; i++) { await wait(200); row = await p2.evaluate(() => { const b = document.querySelector('#lobby .lob-list [data-lob="join"]'); return b ? b.closest('.lob-game').innerText : ''; }); }
-    ok('the public campaign is listed in Multiplayer, its open slots said', /Ash Online.s campaign/.test(row) && /3 forces/.test(row) && /1 slot open/.test(row), row);
+    ok('the public campaign is listed in Multiplayer, its open slots said', /Ash Online.s campaign/.test(row) && /4 forces/.test(row) && /1 slot open/.test(row), row);
     await p2.evaluate(() => document.querySelector('#lobby .lob-list [data-lob="join"]').click());
     let s2 = await till(p2, 'Brann in the lobby', (s) => s.view === 'olobby' && s.slot === 1);
     ok('joined from the list: Brann takes the open slot', s2.slot === 1 && /Brann Online/.test(await text(p2)));
@@ -146,10 +163,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     let chatSeen = false;
     for (let i = 0; i < 40 && !chatSeen; i++) { await wait(250); const tx = await text(p1); chatSeen = /ready when you are/.test(tx) && /Brann Online[\s\S]*?Ready/.test(tx); }
     ok('the host sees Brann, their message and that they are ready', chatSeen);
+    // the host says they are ready too; with everyone ready, the host's button becomes Start
+    ok('the host has Ready, not Start, until they are ready', !(await p1.evaluate(() => !!document.querySelector('#camp-body [data-go="olobstart"]'))));
+    await press(p1, '[data-go="olobready"]');
+    let startable = false;
+    for (let i = 0; i < 30 && !startable; i++) { await wait(200); startable = await p1.evaluate(() => !!document.querySelector('#camp-body [data-go="olobstart"]')); }
+    ok('...and Start once everyone is', startable);
     await press(p1, '[data-go="olobstart"]');
     s1 = await till(p1, 'the founding screen', (s) => s.phase === 'run' && s.view === 'found');
     s2 = await till(p2, 'Brann’s founding screen', (s) => s.phase === 'run' && s.view === 'found');
     ok('the host starts it: each player founds their own force', s1.view === 'found' && s2.view === 'found');
+    const fsheet = await p2.evaluate(() => ({ name: document.getElementById('found-name').value, factions: document.querySelectorAll('#camp-body [data-bfaction]').length, chip: !!document.querySelector('#camp-body button[data-go="fcolour"]'), lede: /has signed/.test(document.getElementById('camp-body').innerText) }));
+    ok('...the army and colours as picked in the lobby, the name to start from theirs', fsheet.name === 'Brann Online’s Revolt' && !fsheet.factions && !fsheet.chip && !fsheet.lede, JSON.stringify(fsheet));
 
     console.log('\nThe world');
     await found(p1, 'Iron Wolves', ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
@@ -158,7 +183,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     s2 = await till(p2, 'Brann’s hub', (s) => s.view === 'hub' && s.A === 'Red Dawn');
     ok('founded: each on their own hub, their own force', s1.A === 'Iron Wolves' && s2.A === 'Red Dawn');
     const rivals = await p1.evaluate(() => window.PMC_CAMPAIGN.online().camp.rivals.map((r) => (r.human ? 'H:' : 'AI:') + r.name));
-    ok('the other forces on the world: the AI force, and Brann’s', rivals.length === 2 && rivals.some((r) => /^AI:/.test(r)) && rivals.indexOf('H:Red Dawn') >= 0, rivals.join(', '));
+    ok('the other forces on the world: the AI forces, and Brann’s', rivals.length === 3 && rivals.some((r) => /^AI:/.test(r)) && rivals.indexOf('H:Red Dawn') >= 0, rivals.join(', '));
 
     console.log('\nAgainst an AI force');
     await press(p1, '[data-go="offers"]');
@@ -211,7 +236,22 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p1.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
     let orow = '';
     for (let i = 0; i < 30 && !orow; i++) { await wait(150); orow = await p1.evaluate(() => { const r = document.querySelector('#cont-list [data-cont^="o:"]'); return r ? r.textContent : ''; }); }
-    ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /3 forces/.test(orow), orow);
+    ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /4 forces/.test(orow), orow);
+
+    console.log('\nBack out of a lobby');
+    await p2.evaluate(() => { if (window.PMCMenu) window.PMCMenu.close(); window.PMCLobby.open(); });
+    await p2.waitForTimeout(800);
+    await p2.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
+    await p2.waitForTimeout(200);
+    await p2.evaluate(() => { const s = document.getElementById('lob-kind'); s.value = 'ocamp'; s.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
+    await till(p2, 'Brann’s new lobby', (s) => s.view === 'olobby');
+    await p2.evaluate(() => document.getElementById('camp-back').click());
+    await p2.waitForTimeout(150);
+    const asked = await p2.evaluate(() => (document.querySelector('#camp-askbox h3') || {}).textContent || '');
+    await p2.evaluate(() => document.querySelector('#camp-ask [data-ask="ok"]').click());
+    let back = false;
+    for (let i = 0; i < 30 && !back; i++) { await wait(200); back = await p2.evaluate(() => document.getElementById('camp').hidden && !document.getElementById('lobby').hidden); }
+    ok('the title bar’s Back asks the host first, closes the campaign, and goes back to Multiplayer', /Close the campaign/.test(asked) && back, asked);
   } catch (e) {
     fail++; console.log('  ✗ ' + e.message);
   }

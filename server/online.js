@@ -1,4 +1,4 @@
-/* Online campaigns: a world of two to eight forces, each run by a player on their
+/* Online campaigns: a world of two to ten forces, each run by a player on their
    own device or by the server, fighting whenever they each have the time. The
    server keeps the world and owns its rules: a player sends a command, the server
    runs it with the campaign's own functions (the ones the dossier uses at one
@@ -28,7 +28,7 @@ const { C, R, SC } = require('./rules.js');
 const P = require('../src/engine/protocol.js');
 const Cmds = require('./campcmds.js');
 
-const MIN_SLOTS = 2, MAX_SLOTS = 8;
+const MIN_SLOTS = 2, MAX_SLOTS = 10;          // an even number of forces: 2, 4, 6, 8 or 10
 const FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
 const PLANETS = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
 const text = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, n);
@@ -156,7 +156,8 @@ function aiBattleConfig(W, i, k) {
       nameA: A.name, nameB: B.name, colourA: colourOf(A), colourB: colourOf(B) || (colourOf(A) === 'steel' ? 'ochre' : 'steel'),
       dossier: { A: pA, B: pB }, bench: { A: benchOf(A, pA), B: [] },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
-      tactics: { A: A.faction === 'rebel' ? k.picks.A.tactic || null : null, B: tacticB },
+      // the player's tactic is chosen at the table (askTactics); the AI's is settled here
+      tactics: { A: null, B: tacticB }, askTactics: true,
       campaign: true, mode: 'ai',
       planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto'
     }
@@ -175,7 +176,8 @@ function duelBattleConfig(W, d) {
       nameA: A.name, nameB: B.name, colourA: colourOf(A), colourB: colourOf(B) || (colourOf(A) === 'steel' ? 'ochre' : 'steel'),
       dossier: { A: pA, B: pB }, bench: { A: benchOf(A, pA), B: benchOf(B, pB) },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
-      tactics: { A: A.faction === 'rebel' ? k.picks.A.tactic || null : null, B: B.faction === 'rebel' ? k.picks.B.tactic || null : null },
+      // each player's tactic is chosen at the table, as in a skirmish
+      tactics: { A: null, B: null }, askTactics: true,
       campaign: true, mode: 'hotseat', readyUp: true,
       planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto'
     }
@@ -344,7 +346,7 @@ function create(opts) {
     const p = W.players[i] || {};
     const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : p.post ? p.post.vs : null);
     // the other players' forces after the AI ones, marked, for the hub to show as it shows a rival
-    const others = humanSlots(W).filter((j) => j !== i).map((j) => Object.assign({}, W.forces[j], { human: true, slot: j, player: W.slots[j].name, out: !!W.slots[j].out }));
+    const others = humanSlots(W).filter((j) => j !== i).map((j) => Object.assign({}, W.forces[j], { human: true, slot: j, player: W.slots[j].name, out: !!W.slots[j].out, busy: busy(W, j) }));
     const camp = Object.assign({}, v, { rivals: v.rivals.concat(others), post: p.post || null, pending: p.pending || null });
     camp.online = {
       slot: i,
@@ -371,10 +373,10 @@ function create(opts) {
 
   /* ================= the commands ================= */
   const LOBBY = {
-    // the host: how many slots (two to eight); only open and AI slots go
+    // the host: how many slots (2, 4, 6, 8 or 10); only open and AI slots go
     lobbySlots(W, i, a) {
       if (i !== 0) return no('the host sets the slots');
-      const n = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, +a.n || 0));
+      const n = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, 2 * Math.round((+a.n || 0) / 2)));
       while (W.slots.length > n) {
         const last = W.slots[W.slots.length - 1];
         if (last.kind === 'human') return no('a player has that slot: they leave it first');
@@ -412,8 +414,14 @@ function create(opts) {
       if (!(+a.i === i || (i === 0 && s.kind !== 'human'))) return no('not your slot');
       const c = text(a.colour, 20);
       if (P.COLOURS.indexOf(c) < 0) return no('no such colour');
-      if (W.slots.some((x, j) => j !== +a.i && x.colour === c)) return no('another force wears that colour');
+      // a player's colour is theirs; one an AI force (or an open slot) wears is given up, for a new one at random
+      const holder = W.slots.findIndex((x, j) => j !== +a.i && x.colour === c);
+      if (holder >= 0 && W.slots[holder].kind === 'human') return no('another player wears that colour');
       s.colour = c;
+      if (holder >= 0) {
+        const free = P.COLOURS.filter((k) => !W.slots.some((x) => x.colour === k));
+        W.slots[holder].colour = free.length ? pickOne(free) : null;
+      }
       return { ok: true };
     },
     lobbyReady(W, i, a) { W.slots[i].ready = a.ready !== false; return { ok: true }; },
@@ -423,6 +431,14 @@ function create(opts) {
       if (!ctx || !ctx.row) return no('not now');
       db.setListed(ctx.row.id, !!a.on);
       ctx.row.listed = a.on ? 1 : 0;
+      return { ok: true, relist: true };
+    },
+    // the host: the campaign's name, as the lobby list and every player's campaigns show it
+    lobbyName(W, i, a) {
+      if (i !== 0) return no('the host names the campaign');
+      const t = text(a.name, 40);
+      if (!t) return no('give it a name');
+      W.name = t;
       return { ok: true, relist: true };
     },
     lobbyChat(W, i, a) {
@@ -436,7 +452,7 @@ function create(opts) {
       if (i !== 0) return no('the host starts the campaign');
       if (W.slots.some((s) => s.kind === 'open')) return no('every slot needs a player or an AI force — or fewer slots');
       if (W.slots.length < MIN_SLOTS) return no('a campaign needs at least two forces');
-      const waiting = W.slots.filter((s, j) => j !== 0 && s.kind === 'human' && !s.ready);
+      const waiting = W.slots.filter((s) => s.kind === 'human' && !s.ready);
       if (waiting.length) return no(waiting.map((s) => s.name).join(', ') + (waiting.length === 1 ? ' is' : ' are') + ' not ready yet');
       begin(W);
       return { ok: true, started: true };
@@ -473,13 +489,14 @@ function create(opts) {
   const FORCE = ['found', 'recruit', 'disband', 'rename', 'renameSoldier', 'promote', 'honour', 'upgrade', 'mount', 'takeDoctrine', 'swapDoctrine', 'promoteCompany', 'aspire', 'colour'];
   function forceCmd(W, i, cmd, a) {
     const co = W.forces[i];
+    // the army and the colours are the ones picked in the lobby
+    if (cmd === 'found') { a.faction = co.faction; a.colour = co.colour; }
     if (cmd === 'found' || cmd === 'colour') {
       const name = cmd === 'found' ? text(a.name, 40).toLowerCase() : null;
       const others = W.forces.filter((x, j) => j !== i && x);
       if (name && others.some((x) => founded(x) && (x.name || '').toLowerCase() === name)) return no('another force on this world is called that');
       if (a.colour && others.some((x) => x.colour === a.colour)) return no('another force on this world wears that colour');
     }
-    if (cmd === 'found' && !a.colour) a.colour = co.colour;
     const d = duelOf(W, i), p = W.players[i];
     let camp, side;
     if (d) { camp = pairOf(W, d); side = d.a === i ? 'A' : 'B'; }
@@ -601,6 +618,7 @@ function create(opts) {
       if (j === i || !playing(W, j)) return no('no such player');
       if (!founded(W.forces[i]) || !founded(W.forces[j])) return no('both forces must be founded first');
       if ((W.duels || []).some((d) => (d.a === i && d.b === j) || (d.a === j && d.b === i))) return no('there is a challenge between you already');
+      if (busy(W, j)) return no(W.slots[j].name + ' is fighting someone else just now');
       W.duels.push({ id: W.nextDuel++, a: i, b: j, phase: 'asked', at: now(), contract: null });
       return { ok: true };
     },

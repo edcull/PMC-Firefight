@@ -116,14 +116,9 @@
       function say(pmc, rebel, bugs, xeno) { return xen ? (xeno || bugs) : bug ? bugs : reb ? rebel : pmc; }
       var h = '<h2>' + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
         say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory') + '</h2>';
+      // online, the army and the colours were picked in the campaign's lobby: nothing to choose here
       if (E.online) {
-        // online: each player picks their own kind of force, whichever side they are
-        var oth = E.camp.companies[side === 'A' ? 'B' : 'A'];
-        h += '<p class="lede">' + (oth && oth.roster && oth.roster.length ? esc(oth.name) + ' has signed. Now yours.' : 'Your force in this campaign \u2014 the other player founds theirs on their own device.') + '</p>' +
-          '<div class="field"><label>What you are running</label><div class="docpick facpick">' +
-          FACTION_CHOICES.map(function (f) {
-            return '<button class="doc' + (co.faction === f[0] ? ' on' : '') + '" data-bfaction="' + f[0] + '"><b>' + esc(f[1]) + '</b></button>';
-          }).join('') + '</div></div>';
+        h += '';
       } else if (hot && side === 'B') {
         /* The second player picks their own kind of force: the first player's
            choice on the hub only ever named the first force. */
@@ -142,14 +137,14 @@
         '<div class="field"><label for="found-name" class="sr-only">' +
         say('Company name', 'What the revolt calls itself', 'What the swarm is known as', 'What the tribe is known as') + '</label>' +
         // the colour picked, a chip left of the name: tap it for the colours
-        '<div class="name-row"><button type="button" class="chip-btn" data-go="fcolour" aria-expanded="' + E.colourOpen + '"' +
+        '<div class="name-row"><' + (E.online ? 'span class="chip-btn still"' : 'button type="button" class="chip-btn" data-go="fcolour" aria-expanded="' + E.colourOpen + '"') +
         ' title="' + esc('Colours: ' + colourName(E.draft.colour)) + '"><span' + (cc ? ' style="background:linear-gradient(135deg,' +
-        cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)"' : '') + '></span></button>' +
+        cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)"' : '') + '></span></' + (E.online ? 'span' : 'button') + '>' +
         '<input class="tin" id="found-name" maxlength="28" autocomplete="off"' +
         ' placeholder="' + say('e.g. Task Force Ironhold', 'e.g. The Free Colonies', 'e.g. The Hive', 'e.g. The Ghadon Third') + '"' +
         ' value="' + esc(E.draft.name || '') + '"></div></div>' +
         // the colours a square each, as the unit viewer has them, dropped down under the chip
-        (E.colourOpen ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
+        (E.colourOpen && !E.online ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
           ' \u2014 ' + esc(colourName(E.draft.colour)) + '</label>' + squares(E.draft.colour) + '</div>' : '') +
         '</div>';
       // the kind of force leads the list: its pill, which opens the army's rules

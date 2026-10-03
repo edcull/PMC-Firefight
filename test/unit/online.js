@@ -58,6 +58,7 @@ function ok(name, cond, note) {
   ok('...and public again', cmd(ash, 'lobbyListed', { on: true }).ok && online.listed().some((c) => c.invite === made.invite) && view(ash).listed);
   ok('only the host sets the slots', !cmd(brann, 'lobbySlots', { n: 6 }).ok && !cmd(brann, 'lobbyListed', { on: false }).ok);
   ok('the host makes it six', cmd(ash, 'lobbySlots', { n: 6 }).ok && view(ash).slots.length === 6);
+  ok('...always an even number, up to ten', cmd(ash, 'lobbySlots', { n: 11 }).ok && view(ash).slots.length === 10 && cmd(ash, 'lobbySlots', { n: 6 }).ok && view(ash).slots.length === 6);
   ok('...the new ones open', view(ash).slots.slice(4).every((s) => s.kind === 'open'));
   const j1 = online.join(brann, made.invite);
   ok('a player joins with the code: the first open slot', j1.ok && j1.slot === 1 && view(brann).slots[1].you && view(brann).slots[1].name === 'Brann');
@@ -69,8 +70,11 @@ function ok(name, cond, note) {
   ok('a player picks their own army', cmd(brann, 'lobbyFaction', { i: 1, faction: 'rebel' }).ok && view(ash).slots[1].faction === 'rebel');
   ok('...but not another’s', !cmd(brann, 'lobbyFaction', { i: 2, faction: 'xeno' }).ok);
   ok('a colour for each slot: a player their own', cmd(brann, 'lobbyColour', { i: 1, colour: 'cobalt' }).ok && view(ash).slots[1].colour === 'cobalt');
-  ok('...never one another slot wears', /wears that colour/.test(cmd(ash, 'lobbyColour', { i: 0, colour: 'cobalt' }).why));
+  ok('...never one another player wears', /another player wears that colour/.test(cmd(ash, 'lobbyColour', { i: 0, colour: 'cobalt' }).why));
   ok('the host colours an AI force', cmd(ash, 'lobbyColour', { i: 2, colour: 'lime' }).ok);
+  ok('a player takes the colour an AI force wears: the AI force takes another at random', cmd(brann, 'lobbyColour', { i: 1, colour: 'lime' }).ok &&
+    view(ash).slots[1].colour === 'lime' && view(ash).slots[2].colour && view(ash).slots[2].colour !== 'lime');
+  cmd(brann, 'lobbyColour', { i: 1, colour: 'cobalt' }); cmd(ash, 'lobbyColour', { i: 2, colour: 'lime' });
   ok('the chat', cmd(brann, 'lobbyChat', { text: 'hello all' }).ok && view(ash).chat.some((c) => c.from === 'Brann' && c.text === 'hello all'));
   online.join(cole, made.invite);
   ok('a third takes the next open slot', view(cole).slot === 5);
@@ -81,7 +85,11 @@ function ok(name, cond, note) {
   cmd(brann, 'lobbyReady', {}); cmd(cole, 'lobbyReady', {});
   ok('a change to the slots asks the players to say they are ready again', cmd(ash, 'lobbySlots', { n: 6 }).ok && !view(ash).slots[1].ready);
   cmd(brann, 'lobbyReady', {}); cmd(cole, 'lobbyReady', {});
+  ok('only the host renames it', !cmd(brann, 'lobbyName', { name: 'Mine now' }).ok && cmd(ash, 'lobbyName', { name: 'The Long War' }).ok &&
+    view(brann).name === 'The Long War' && online.list(brann).some((c) => c.name === 'The Long War'));
   ok('only the host starts it', !cmd(brann, 'lobbyStart').ok);
+  ok('...and not before saying they are ready too', /Ash is not ready/.test(cmd(ash, 'lobbyStart').why));
+  cmd(ash, 'lobbyReady', {});
   const st = cmd(ash, 'lobbyStart');
   v = view(ash);
   ok('everyone ready: the host starts it', st.ok && v.phase === 'run', JSON.stringify(st).slice(0, 120));
@@ -185,6 +193,18 @@ function ok(name, cond, note) {
     cmd(who, 'duel', { cmd: 'contractForego', args: { i: left[0] } });
     dk = camp(ash).online.duel.contract;
   }
+  // the Priority Level: the highest both can field to begin with; it changes only when both want the same
+  ok('the Priority Level starts at the highest both forces can field', dk.pl === Math.max.apply(null, dk.levels), JSON.stringify(dk.levels) + ' ' + dk.pl);
+  if (dk.levels.length > 1) {
+    const other = dk.levels.filter((n) => n !== dk.pl)[0];
+    cmd(brann, 'duel', { cmd: 'contractLevel', args: { pl: other } });
+    ok('...one player asking for another does not change it', camp(ash).online.duel.contract.pl === dk.pl && camp(ash).online.duel.contract.plWant.B === other);
+    cmd(ash, 'duel', { cmd: 'contractLevel', args: { pl: other } });
+    ok('...both asking for it does', camp(ash).online.duel.contract.pl === other);
+    cmd(ash, 'duel', { cmd: 'contractLevel', args: { pl: dk.pl } }); cmd(brann, 'duel', { cmd: 'contractLevel', args: { pl: dk.pl } });
+    dk = camp(ash).online.duel.contract;
+  }
+  ok('...a level neither can field is not on offer', !cmd(ash, 'duel', { cmd: 'contractLevel', args: { pl: 3 } }).ok);
   const dA = legal(camp(ash).companies.A, dk), dB = legal(camp(brann).companies.A, dk);
   ok('Ash picks', cmd(ash, 'duel', { cmd: 'contractPick', args: { rids: dA } }).ok);
   ok('...unseen by Brann until both are ready', camp(brann).online.duel.contract.picks.A.hidden === true);
@@ -195,6 +215,7 @@ function ok(name, cond, note) {
   ok('both ready: the battle is made, both told where it is', dgo.ok && dgo.battle && told.slice(n1).filter((t) => t[1] === 'camp.battle' && t[3] === dgo.battle).length === 2, JSON.stringify(dgo).slice(0, 100));
   const droom = lobby.rooms.get(dgo.battle);
   ok('...both seats held for the two players', droom && droom.seats.A.id === 'u' + ash.userId && droom.seats.B.id === 'u' + brann.userId && droom.table.cfg.mode === 'hotseat');
+  ok('...the rebel\u2019s tactic asked at the table, not on the contract', droom.table.cfg.askTactics && droom.table.cfg.tactics.B === null && !!droom.table.engine.state().tacticAsk, JSON.stringify(droom.table.engine.state().tacticAsk && droom.table.engine.state().tacticAsk.order));
   ok('Cole fights an AI force meanwhile: battles side by side', (() => {
     const co = camp(cole), at = co.offers.findIndex((o) => co.online.busyAi.indexOf(o.rival) < 0);
     if (at < 0 || !cmd(cole, 'aiTake', { i: at }).ok) return false;
@@ -203,6 +224,10 @@ function ok(name, cond, note) {
     cmd(cole, 'aiPick', { rids: legal(camp(cole).companies.A, kc) });
     const g = cmd(cole, 'aiReady');
     return g.ok && lobby.rooms.has(g.battle) && lobby.rooms.has(dgo.battle);
+  })());
+  ok('...the others see Cole as busy, and a challenge to Cole is refused meanwhile', (() => {
+    const cs = view(cole).slot, c = camp(ash).rivals.filter((r) => r.human && r.slot === cs)[0];
+    return c && c.busy === true && /fighting someone else/.test(cmd(ash, 'duelAsk', { to: cs }).why);
   })());
   const kA = camp(ash).companies.A.kUC, kB = camp(brann).companies.A.kUC, tA = camp(ash).turn, tB = camp(brann).turn;
   droom.table.forfeit('A');

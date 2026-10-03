@@ -584,7 +584,8 @@
           (auto[sd] ? 'Brought on for you' : 'Bring my units on for me') + (mine.length > 1 ? ' \u2014 ' + esc(sideName(sd)) : '') + '</span><small>' +
           (auto[sd] ? 'Each unit is placed along your edge as its turn comes' : 'Or place each one yourself, in turn 1') + '</small></button></div>';
       });
-      if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (mine.indexOf(B.state.swapAsk.side) >= 0 || B.state.swapStage)) h += swapCard();
+      var sah = B.swapAskHere();
+      if (sah && (mine.indexOf(sah.side) >= 0 || B.state.swapStage)) h += swapCard();
       var mySplit = mine.map(splitFor).filter(function (f) { return f && !f.ok; })[0], blocked = !mine.every(myPartDone);
       var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
       h += '<div class="acts deploy-go">';
@@ -672,7 +673,7 @@
       var sw = ctxBox.querySelector('.cmodal[data-swapbox]');
       var swScroll = mh.querySelector('.cmodal-scroll'), swTop = swScroll ? swScroll.scrollTop : 0;
       // the next player's list opens at the top, not where the last one was scrolled to
-      var swWho = B.state.swapAsk ? B.state.swapAsk.side : '';
+      var swAsk = B.swapAskHere(), swWho = swAsk ? swAsk.side : '';
       if (mh.dataset.swapWho !== swWho) { swTop = 0; mh.dataset.swapWho = swWho; }
       mh.innerHTML = '';
       if (sw) {
@@ -1024,7 +1025,8 @@
       var sv = B.state.swapAvail[mine] || { left: 0 };
       var h = '<div class="card"><h2 class="ready-help">Before deploying</h2><p class="sub ready-help">Look over the table and the other force. You may swap up to ' + (sv.total || sv.left) +
         ' unit' + ((sv.total || sv.left) === 1 ? '' : 's') + ' for others of the same Tier before your first unit goes down.</p>';
-      if (B.state.swapAsk && B.state.swapAsk.side === mine) h += swapCard();
+      var sah1 = B.swapAskHere();
+      if (sah1 && sah1.side === mine) h += swapCard();
       else if (B.Q.canSwapNow(mine)) {
         var made = (sv.done || []).filter(function (d) { return d.held; }).length;
         h += '<div class="acts"><button class="act" data-act="swapopen"><span>Modify your army</span><small>' +
@@ -1088,7 +1090,8 @@
         // no hull to fill and no split to set: the button is there, greyed out, so it is known to exist
         h += '<div class="acts"><button class="act" disabled title="Nothing in this force can carry troops"><span>Transports</span><small>No transports in this force</small></button></div>';
       }
-      if (B.state.swapAsk && !isAI(B.state.swapAsk.side) && (B.state.swapAsk.side === me || B.state.swapStage)) h += swapCard();
+      var sah2 = B.swapAskHere();
+      if (sah2 && (sah2.side === me || B.state.swapStage)) h += swapCard();
       // auto-deploy scrolls with the order of battle; only the way on, once there is one, keeps the foot
       // an Invasion attacker has nothing to put down: it lands in turn 1, so there is nothing to auto-deploy
       var landsLater = B.state.scen.id === 'invasion' && B.state.sc && B.state.sc.attacker === me;
@@ -1253,7 +1256,7 @@
     }
     function reservePickCard() {
       var rp = ui.reservePick;
-      var mine = !isAI(rp.side);
+      var mine = !isAI(rp.side) && atThisScreen(rp.side);
       var n = rp.chosen.length, ok = n >= rp.min && n <= rp.max;
       var rows = rp.ids.map(function (id) {
         var u = byId(id), on = rp.chosen.indexOf(id) >= 0;

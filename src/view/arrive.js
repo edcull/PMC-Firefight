@@ -176,7 +176,7 @@
     /* Modifying the armies (p. 46): before deployment, with the enemy's list on
        the other panel, a player swaps some units for others of the same Tier. */
     function swapCard() {
-      var sa = B.state.swapAsk, foeSide = sa.side === 'A' ? 'B' : 'A';
+      var sa = B.swapAskHere(), foeSide = sa.side === 'A' ? 'B' : 'A';
       var mine = B.state.units.filter(function (u) { return u.side === sa.side && u.pickIdx != null; });
       var theirs = B.state.units.filter(function (u) { return u.side === foeSide; });
       // a hotseat's secret round: whose turn it is, and what they have down to swap so far
