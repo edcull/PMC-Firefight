@@ -553,12 +553,7 @@
         });
       }
       h += '</div></div>';
-      if (co.faction === 'rebel') {
-        h += '<div class="cpan orders"><div class="cprom-head"><b>Tactic</b></div><div class="orow"><span class="segs">' +
-          [{ id: '', name: 'No tactic' }].concat(R.TACTICS).map(function (t) {
-            return '<button class="lnk' + ((pk.tactic || '') === t.id ? ' on' : '') + '" data-octactic="' + t.id + '"' + (t.text ? ' ' + E.tip(t.name, t.text) : '') + '>' + esc(t.name) + '</button>';
-          }).join('') + '</span></div></div>';
-      }
+      // (a rebel's tactic is chosen at the table, when the battle begins)
       if (C.hasDoctrine(co, 'V4')) {
         var able = units.filter(function (e) { var p = E.profile(e.key); return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command; });
         var n = Math.ceil(able.length / 3);

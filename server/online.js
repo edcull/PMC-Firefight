@@ -156,7 +156,8 @@ function aiBattleConfig(W, i, k) {
       nameA: A.name, nameB: B.name, colourA: colourOf(A), colourB: colourOf(B) || (colourOf(A) === 'steel' ? 'ochre' : 'steel'),
       dossier: { A: pA, B: pB }, bench: { A: benchOf(A, pA), B: [] },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
-      tactics: { A: A.faction === 'rebel' ? k.picks.A.tactic || null : null, B: tacticB },
+      // the player's tactic is chosen at the table (askTactics); the AI's is settled here
+      tactics: { A: null, B: tacticB }, askTactics: true,
       campaign: true, mode: 'ai',
       planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto'
     }
@@ -175,7 +176,8 @@ function duelBattleConfig(W, d) {
       nameA: A.name, nameB: B.name, colourA: colourOf(A), colourB: colourOf(B) || (colourOf(A) === 'steel' ? 'ochre' : 'steel'),
       dossier: { A: pA, B: pB }, bench: { A: benchOf(A, pA), B: benchOf(B, pB) },
       doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
-      tactics: { A: A.faction === 'rebel' ? k.picks.A.tactic || null : null, B: B.faction === 'rebel' ? k.picks.B.tactic || null : null },
+      // each player's tactic is chosen at the table, as in a skirmish
+      tactics: { A: null, B: null }, askTactics: true,
       campaign: true, mode: 'hotseat', readyUp: true,
       planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto'
     }

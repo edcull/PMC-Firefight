@@ -213,6 +213,7 @@ function ok(name, cond, note) {
   ok('both ready: the battle is made, both told where it is', dgo.ok && dgo.battle && told.slice(n1).filter((t) => t[1] === 'camp.battle' && t[3] === dgo.battle).length === 2, JSON.stringify(dgo).slice(0, 100));
   const droom = lobby.rooms.get(dgo.battle);
   ok('...both seats held for the two players', droom && droom.seats.A.id === 'u' + ash.userId && droom.seats.B.id === 'u' + brann.userId && droom.table.cfg.mode === 'hotseat');
+  ok('...the rebel\u2019s tactic asked at the table, not on the contract', droom.table.cfg.askTactics && droom.table.cfg.tactics.B === null && !!droom.table.engine.state().tacticAsk, JSON.stringify(droom.table.engine.state().tacticAsk && droom.table.engine.state().tacticAsk.order));
   ok('Cole fights an AI force meanwhile: battles side by side', (() => {
     const co = camp(cole), at = co.offers.findIndex((o) => co.online.busyAi.indexOf(o.rival) < 0);
     if (at < 0 || !cmd(cole, 'aiTake', { i: at }).ok) return false;

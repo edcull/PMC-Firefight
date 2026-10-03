@@ -544,7 +544,8 @@
     /* A campaign's contract has settled the tactic already — two players' rebels too:
        each chose on the contract, the second with the first's choice in front of them
        (hotseat review HC-11), so the battle does not ask again. */
-    if (cfg.campaign) people = [];
+    // (an online campaign's battle asks its players at the table, as a skirmish does: cfg.askTactics)
+    if (cfg.campaign && !cfg.askTactics) people = [];
     if (!people.length) return false;
     var first = people[0];
     if (people.length > 1) {
