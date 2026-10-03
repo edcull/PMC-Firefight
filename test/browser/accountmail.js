@@ -66,7 +66,8 @@ async function latest(to, kind) {
   const act = await latest('morgan@example.com', 'activate');
   ok('...and the mail is there, its link to this game', act.indexOf(URL + '?activate=') === 0, act.slice(0, 60));
   await click('[data-acct="mode"][data-mode="signin"]');
-  await fill('acct-name', 'Morgan'); await fill('acct-pass', 'first password');
+  ok('with mail going out, signing in asks for the email address', await p.evaluate(() => document.querySelector('label[for="acct-name"]').textContent === 'Email address'));
+  await fill('acct-name', 'morgan@example.com'); await fill('acct-pass', 'first password');
   await click('[data-acct="go"]');
   t = await till((x) => /not activated/i.test(x), 'refused');
   ok('signing in first is refused, and says why', /not activated/i.test(t));

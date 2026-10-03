@@ -111,6 +111,9 @@ function ok(name, cond, note) {
   ok('following the link activates the account and signs it in', on.ok && !!on.token && on.who.name === 'Dara');
   ok('...once', !ma.activate(act).ok);
   ok('then signing in works', (await ma.login('Dara', 'password dara', '10.1.0.1')).ok);
+  const byMail = await ma.login('DARA@example.com', 'password dara', '10.1.0.1');
+  ok('...with the email address too (whatever its case)', byMail.ok && byMail.who.name === 'Dara');
+  ok('...and a wrong password for it says so', /email address and password do not match/.test((await ma.login('dara@example.com', 'wrong one', '10.1.0.6')).why || ''));
   const n0 = sent.length;
   ok('Forgot password: the same answer for an address with no account, and nothing sent', (await ma.forgot('nobody@example.com', '10.1.0.3')).ok && sent.length === n0);
   await ma.forgot('Dara@Example.com', '10.1.0.3');

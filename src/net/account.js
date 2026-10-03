@@ -135,7 +135,8 @@
         : purpose && purpose.lede ? purpose.lede : 'Sign in to keep your campaigns on the server, follow them to another device, and play other people.') + '</p>' +
       tabs + msgs() +
       (inactive && !reg ? '<button type="button" class="lnk acct-resend" data-acct="resend">Send the activation link again</button>' : '') +
-      field('acct-name', 'Name', 'text', 'username', 24, lastName) +
+      // where the server sends mail, an account signs in with its email address (its name still works)
+      (!reg && mailOn ? field('acct-name', 'Email address', 'text', 'username', 254, lastName) : field('acct-name', 'Name', 'text', 'username', 24, lastName)) +
       // the address only where this server sends mail (the link to activate it, a reset)
       (reg && mailOn ? field('acct-email', 'Email address', 'email', 'email', 254) : '') +
       field('acct-pass', 'Password' + (reg ? ' (at least 8 characters)' : ''), 'password', reg ? 'new-password' : 'current-password', 200) +
@@ -275,7 +276,7 @@
   function go() {
     var reg = mode === 'register', name = val('acct-name'), pass = (el('acct-pass') || {}).value || '';
     lastName = name;
-    if (!name) { fault = 'Give your name.'; draw(); return; }
+    if (!name) { fault = !reg && mailOn ? 'Give your email address.' : 'Give your name.'; draw(); return; }
     if (reg) {
       var email = val('acct-email');
       if (!email && mailOn) { fault = 'Give your email address.'; draw(); return; }
