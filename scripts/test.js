@@ -34,7 +34,7 @@ const SLOW_AFTER = 90;          // seconds before a quick test is called out as 
    the animations they wait through are quicker — except the ones that time the
    drawing itself, which run at the real pace. `--speed 1` runs them all as a player sees it. */
 let SPEED = 3;
-const REAL_TIME = [];
+const REAL_TIME = ['bundle', 'collars', 'demoentry', 'artsnap', 'fireart', 'mobile', 'netplay', 'spfill', 'stepoff', 'viewertest'];
 
 const args = process.argv.slice(2);
 let jobs = 0, verbose = false;

@@ -182,7 +182,7 @@
     if (!state || watching) return null;
     /* A cooperative game over the network: both seats play side A, each their own
        commando, so in the battle it is this screen's go only when its player's is. */
-    var seats = coopNet() ? ['A'] : window.__realSeats();
+    var sides = coopNet() ? ['A'] : seats;
     if (coopNet() && state.phase === 'battle' && state.activeSide === 'A' && state.activeOwner && state.activeOwner !== myOwner() &&
       !(state.kyfAsk || state.martyrAsk || state.nervousAsk || state.standAsk || state.endAsk)) return null;
     /* In the battle, nothing is this screen's to do while what has already
@@ -192,11 +192,11 @@
     if (state.phase === 'battle' && replaying()) return null;
     if (ui.insertion) {
       var s = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
-      return seats.indexOf(s) >= 0 ? s : null;
+      return sides.indexOf(s) >= 0 ? s : null;
     }
     // a question put to one side, whoever's turn it is: that side answers it (HB-1, HB-2)
     var ask = ui.reservePick || state.kyfAsk || state.martyrAsk || state.nervousAsk || state.standAsk || state.endAsk || state.faceAsk;
-    if (ask && ask.side) return seats.indexOf(ask.side) >= 0 ? ask.side : null;
+    if (ask && ask.side) return sides.indexOf(ask.side) >= 0 ? ask.side : null;
     // before the battle, as the transport decides who answers (net.js seatNow): the secret swaps, relocating, pieces placed, the mine
     var want = state.tacticAsk ? state.tacticAsk.order[state.tacticAsk.step]
       : state.phase === 'deploy' && state.swapAsk ? state.swapAsk.side
@@ -205,13 +205,12 @@
       : state.phase === 'deploy' && state.minePick ? state.minePick.side
       : state.phase === 'deploy' ? Q.placingSide()
       : state.phase === 'terrain' ? Q.terrainSide() : state.activeSide;
-    return seats.indexOf(want) >= 0 ? want : null;
+    return sides.indexOf(want) >= 0 ? want : null;
   }
   function myTurn() { return !!mySide(); }
   function coopNet() { return !!(state && state.cfg && state.cfg.netCoop); }
   // which of a cooperative game's two players this screen is: its seat's
-  function myOwner() { return window.__realSeats()[0] === 'B' ? 2 : 1; }
-  window.__realSeats = function () { return seats; };
+  function myOwner() { return seats[0] === 'B' ? 2 : 1; }
 
   function send(intent) {
     if (!net) return false;
