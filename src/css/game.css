@@ -761,6 +761,8 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .acct-line b { color: var(--ink); word-break: break-all; }
 .acct-line em { font-style: normal; color: var(--ink-faint); }
 .acct-line { align-items: center; }
+.acct-check { display: flex; align-items: center; gap: 6px; color: var(--ink); cursor: pointer; }
+.acct-check input { accent-color: var(--alpha); }
 .acct-edit { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
 .acct-editrow { display: flex; gap: 8px; align-items: center; }
 .acct-editrow .start { flex: 1; }

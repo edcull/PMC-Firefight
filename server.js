@@ -73,6 +73,8 @@ const lobby = new Lobby({
 const online = Online.create({
   db: db,
   notify: function (userId, msg) { lobby.notifyUser(userId, msg); },
+  // and, if they asked for it, an email when a campaign comes to be waiting on them
+  mailer: mailer,
   startBattle: function (o) { return lobby.campaignBattle(o); }
 });
 lobby.restore();

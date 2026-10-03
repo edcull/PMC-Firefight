@@ -104,6 +104,9 @@ async function latest(to, kind) {
   await click('[data-acct="pass"]');
   t = await till((x) => /password is changed/i.test(x), 'changed');
   ok('...and with it, the password is changed', /password is changed/i.test(t));
+  await click('[data-acct="notify"]');
+  await till((x) => /emailed when an online campaign/i.test(x), 'notify on');
+  ok('the emails about online campaigns turned on from the account screen', await p.evaluate(() => fetch('api/me').then((r) => r.json()).then((j) => j.who.notify === true)));
   ok('the account screen no longer lists the saved games', await p.evaluate(() => !document.querySelector('#acct-body .acct-data')));
 
   console.log('\nA forgotten password');

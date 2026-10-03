@@ -150,6 +150,11 @@
         (who.emailOk ? '' : '<span class="acct-tag">unconfirmed</span>')
         : '<em>none' + (mailOn ? ' — add one, so a forgotten password can be reset' : '') + '</em>' + editBtn('email', 'Add an email address')) + '</div>';
     }
+    // where this server sends mail: an email when an online campaign is waiting on them, if they want one
+    if (mailOn) {
+      h += '<div class="acct-line"><span>Emails</span><label class="acct-check"><input type="checkbox" data-acct="notify"' + (who.notify ? ' checked' : '') +
+        (who.email ? '' : ' disabled') + '> When an online campaign is waiting on me' + (who.email ? '' : ' (add an address first)') + '</label></div>';
+    }
     // the password: changed here with the current one, or (forgotten) a reset link sent to the address
     if (edit === 'pass') {
       h += '<div class="acct-edit">' + field('acct-oldpass', 'Current password', 'password', 'current-password', 200) +
@@ -299,10 +304,20 @@
   function fromLink() {
     var q;
     try { q = new root.URLSearchParams(root.location.search); } catch (e) { return; }
-    var kind = ['activate', 'reset', 'confirm-email'].filter(function (k) { return q.get(k); })[0];
+    var kind = ['activate', 'reset', 'confirm-email', 'campaign'].filter(function (k) { return q.get(k); })[0];
     if (!kind) return;
     var t = q.get(kind);
     try { q.delete(kind); var rest = q.toString(); root.history.replaceState(null, '', root.location.pathname + (rest ? '?' + rest : '') + root.location.hash); } catch (e) { }
+    /* "Your move" (the email): straight into that online campaign once signed in,
+       or the sign-in first and then into it. */
+    if (kind === 'campaign') {
+      var go = function () { if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.openOnline) root.PMC_CAMPAIGN.openOnline(+t); };
+      refresh(function () {
+        if (who && !who.guest) { setTimeout(go, 300); return; }
+        purpose = { then: go, lede: 'Sign in to go back to your campaign.' }; mode = 'signin'; openScreen();
+      });
+      return;
+    }
     var show = function () { openScreen(); };
     if (kind === 'reset') { linkToken = t; mode = 'reset'; who = null; setTimeout(show, 0); return; }
     post('api/' + kind, { token: t }).then(function (r) {
@@ -349,6 +364,10 @@
           if (!j) return;
           edit = null; notice = 'Your password is changed. Every other device was signed out.';
         });
+      }
+      else if (a === 'notify') {
+        var on = !!b.checked;
+        send('api/notify', { on: on }, function (j) { if (j) { who.notify = on; notice = on ? 'You will be emailed when an online campaign is waiting on you.' : 'No more emails about your campaigns.'; } else b.checked = !on; });
       }
       else if (a === 'sendreset') {
         send('api/forgot', { email: who.email }, function (j) { if (j) { edit = null; notice = 'A link to choose a new password has been sent to ' + who.email + '. It works for an hour.'; } });

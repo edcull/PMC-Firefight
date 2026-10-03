@@ -235,6 +235,7 @@ auth.js            accounts and sessions on a database in memory: hashing, renew
 serverrestart.js   a battle kept through a server restart, put away and brought back, a forfeit
 online.js          online campaigns: made, joined, founded, each player's commands on their own force
 onlinebattle.js    an online campaign's contract, hidden picks, its battle, a forfeit, the aftermath applied once
+yourmove.js        whose move an online campaign waits on, and the email (if asked for) when it comes to be yours
 backups.js         the database copied once a day, the last few kept, a failure logged
 hidden.js          each seat's and a watcher's view of a battle and a room: the other side's swaps, mine, bench and list kept from them
 solitairetest.js   solitaire and co-op against the OpFor

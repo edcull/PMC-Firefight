@@ -131,7 +131,8 @@ screen) with a name, an email address and a password, or play a one-off battle
 as a guest. Where the server can send email, a new account waits until the link
 mailed to it is followed; a forgotten password is reset by a link sent to the
 account's address; a name or an address is changed from the account screen. With email on, an account signs in with its
-email address (its name works too).
+email address (its name works too). A player can also ask, on their account screen, for an email
+when an online campaign is waiting on them (off unless they turn it on).
 
 ### Email
 
