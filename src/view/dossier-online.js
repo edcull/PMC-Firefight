@@ -509,12 +509,19 @@
           '<button class="lnk" data-octerms="0">Keep ' + ROMAN[k.tier] + '</button> ' +
           '<button class="lnk" data-octerms="1"' + (k.tier >= k.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, k.tier + 1)] + '</button></div>';
       }
-      var lv = k.levels || [1], setsPl = ctx.ai || me === 'A';
+      /* The Priority Level: the levels both forces can field. Against a player, each
+         says which they want and it changes only when both want the same. */
+      var lv = k.levels || [1], wants = k.plWant || {}, mineWant = ctx.ai ? null : wants[me], theirWant = ctx.ai ? null : wants[them];
+      var shownPl = mineWant || k.pl, plNote = '';
+      if (lv.length < 2) plNote = 'Only Priority Level ' + (lv[0] || 1) + ' is on offer: ' + (lv[0] === 2 ? '' : 'both forces must be able to field a full army for 2.');
+      else if (!ctx.ai && theirWant && theirWant !== k.pl) plNote = esc(ctx.foeName) + ' wants Priority Level ' + theirWant + ' \u2014 choose it too to change it.';
+      else if (!ctx.ai && mineWant && mineWant !== k.pl) plNote = 'You want Priority Level ' + mineWant + ' \u2014 waiting for ' + esc(ctx.foeName) + ' to agree. It stays at ' + k.pl + ' until then.';
+      else if (!ctx.ai) plNote = 'Both of you choose; it changes only when you agree.';
       h += '<div class="field"><div><label for="oc-pl">Priority Level</label>' +
-        '<select id="oc-pl"' + (setsPl && lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
+        '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
-          return '<option value="' + n + '"' + (k.pl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
-        }).join('') + '</select>' + (setsPl ? '' : '<p class="dnote">The challenger sets the Priority Level.</p>') + '</div></div>';
+          return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
+        }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';
 
       var pk = pickNow(k, me), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });
       var chk = R.checkArmy(keys, k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction);

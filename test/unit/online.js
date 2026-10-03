@@ -191,6 +191,18 @@ function ok(name, cond, note) {
     cmd(who, 'duel', { cmd: 'contractForego', args: { i: left[0] } });
     dk = camp(ash).online.duel.contract;
   }
+  // the Priority Level: the highest both can field to begin with; it changes only when both want the same
+  ok('the Priority Level starts at the highest both forces can field', dk.pl === Math.max.apply(null, dk.levels), JSON.stringify(dk.levels) + ' ' + dk.pl);
+  if (dk.levels.length > 1) {
+    const other = dk.levels.filter((n) => n !== dk.pl)[0];
+    cmd(brann, 'duel', { cmd: 'contractLevel', args: { pl: other } });
+    ok('...one player asking for another does not change it', camp(ash).online.duel.contract.pl === dk.pl && camp(ash).online.duel.contract.plWant.B === other);
+    cmd(ash, 'duel', { cmd: 'contractLevel', args: { pl: other } });
+    ok('...both asking for it does', camp(ash).online.duel.contract.pl === other);
+    cmd(ash, 'duel', { cmd: 'contractLevel', args: { pl: dk.pl } }); cmd(brann, 'duel', { cmd: 'contractLevel', args: { pl: dk.pl } });
+    dk = camp(ash).online.duel.contract;
+  }
+  ok('...a level neither can field is not on offer', !cmd(ash, 'duel', { cmd: 'contractLevel', args: { pl: 3 } }).ok);
   const dA = legal(camp(ash).companies.A, dk), dB = legal(camp(brann).companies.A, dk);
   ok('Ash picks', cmd(ash, 'duel', { cmd: 'contractPick', args: { rids: dA } }).ok);
   ok('...unseen by Brann until both are ready', camp(brann).online.duel.contract.picks.A.hidden === true);

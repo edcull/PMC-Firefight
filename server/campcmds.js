@@ -225,16 +225,26 @@ Object.assign(COMMANDS, {
     unready(k);
     return { ok: true, roll: k.roles.bestDefence.roll, swapped: k.roles.bestDefence.swapped };
   },
-  // the Priority Level and the world: Player 1's to set, as at one screen
+  /* The Priority Level: it starts at the highest both forces can field, and each
+     player says which they want; it changes only when both want the same. The
+     world is Player 1's to set. */
   contractLevel(camp, side, a) {
     const k = contractOf(camp);
     if (!k) return no('there is no contract');
-    if (side !== 'A') return no('Player 1 sets the Priority Level and the world');
     if (a.pl != null) {
       if (k.levels.indexOf(+a.pl) < 0) return no('not a Priority Level on offer');
-      if (+a.pl !== k.pl) { k.pl = +a.pl; k.picks = { A: null, B: null }; unready(k); }
+      const want = +a.pl;
+      k.plWant = k.plWant || { A: null, B: null };
+      if (want === k.pl) k.plWant[side] = null;                  // happy with it as it is
+      else if (k.plWant[other(side)] === want) {                  // both want this one: it changes
+        k.pl = want; k.plWant = { A: null, B: null };
+        k.picks = { A: null, B: null }; unready(k);
+      } else k.plWant[side] = want;                               // asked for, until the other agrees
     }
-    if (a.planet != null) k.planet = text(a.planet, 20) || 'random';
+    if (a.planet != null) {
+      if (side !== 'A') return no('Player 1 sets the world');
+      k.planet = text(a.planet, 20) || 'random';
+    }
     return { ok: true };
   },
   /* A player's force for the battle: from their own roster (none resting), any
