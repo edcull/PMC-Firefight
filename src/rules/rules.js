@@ -1394,6 +1394,7 @@
   function markCall(state, a, t, opts) { return (KIT_SHOOT || kitShoot()).markCall(state, a, t, opts); }
   function shotMods(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotMods(state, a, t, mode, opts); }
   function shotOdds(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotOdds(state, a, t, mode, opts); }
+  function expectedShot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).expectedShot(state, a, t, mode, opts); }
   function shoot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shoot(state, a, t, mode, opts); }
   /* ---- the Xenotripods: in rules/xeno.js ---- */
   var KIT_XENO = null;
@@ -2068,6 +2069,7 @@
     markCall = KIT_SHOOT.markCall;
     shotMods = KIT_SHOOT.shotMods;
     shotOdds = KIT_SHOOT.shotOdds;
+    expectedShot = KIT_SHOOT.expectedShot;
     shoot = KIT_SHOOT.shoot;
     isXeno = KIT_XENO.isXeno;
     xenoSenses = KIT_XENO.xenoSenses;
@@ -2150,7 +2152,7 @@
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
     applyDrone: applyDrone, canBeDrone: canBeDrone, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
-    shotMods: shotMods, shotOdds: shotOdds, assaultOdds: assaultOdds,
+    shotMods: shotMods, shotOdds: shotOdds, expectedShot: expectedShot, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
     defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,

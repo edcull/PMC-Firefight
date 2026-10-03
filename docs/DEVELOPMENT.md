@@ -249,6 +249,7 @@ online.js          online campaigns: made, joined, founded, each player's comman
 onlinebattle.js    an online campaign's contract, hidden picks, its battle, a forfeit, the aftermath applied once
 coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
 yourmove.js        whose move an online campaign waits on, and the email (if asked for) when it comes to be yours
+expectedshot.js    the average shot worked out (the unit viewer's Fire!): hits off the D10, each hit off the hit table, Damage on machines
 admingames.js      the console's battles and campaigns: listed, shown, removed (asked first), old ones cleared
 adminapi.js        an admin's tools in the game: admins only, a player helped, a battle closed, old ones cleared,
                    a removal only with the admin's password and a backup first, every change logged, rate-limited

@@ -271,6 +271,60 @@
       };
     }
 
+    /* The average of something the dice decide, worked out rather than rolled: `fn`
+       is run once for every way its dice can fall (each D6, or D3, read face by
+       face), each weighted by its chance, and the numbers it returns averaged. */
+    function everyFall(fn) {
+      var acc = {}, todo = [[]], real = Math.random;
+      try {
+        while (todo.length) {
+          var path = todo.pop(), i = 0;
+          Math.random = function () {
+            if (i >= path.length) {
+              for (var k = 5; k >= 1; k--) todo.push(path.slice(0, i).concat([k]));
+              path.push(0);
+            }
+            return (path[i++] + 0.5) / 6;
+          };
+          var got = fn(), w = Math.pow(6, -i);
+          Object.keys(got).forEach(function (key) { acc[key] = (acc[key] || 0) + w * got[key]; });
+        }
+      } finally { Math.random = real; }
+      return acc;
+    }
+    /* What a shot does on average, calculated: the hits off all ten faces of the
+       D10 (as shotOdds), times what one hit does on average off the hit table
+       (the battle's own, with every special rule on it), plus what the attack
+       itself adds (Suppressive Fire, a horse shying, Brave). Nothing is changed. */
+    function expectedShot(state, a, t, mode, opts) {
+      var m = shotMods(state, a, t, mode, opts);
+      var hitsAt = function (r) {
+        return r === 0 ? 0 : r === 9 ? Math.max(1, r + m.total - m.def.value) : Math.max(0, r + m.total - m.def.value);
+      };
+      var out = { avgHits: 0, chance: 0, casualties: 0, sp: 0, damage: 0 }, r;
+      for (r = 0; r <= 9; r++) { out.avgHits += hitsAt(r) / 10; if (hitsAt(r) > 0) out.chance += 0.1; }
+      var u = JSON.parse(JSON.stringify(t));        // the hit table is read, never written
+      if (isMachine(t)) {
+        var dm = dmgMod(state, a, t);
+        out.damage = out.avgHits * everyFall(function () { return { d: resolveDamage(u, 1, m.pierce, dm).damage }; }).d;
+        return out;
+      }
+      var mod = 0, loose = undisciplined(t);
+      if (status(t) === 'broken') mod += loose ? 2 : 1;
+      if (m.crossfire) mod += loose ? 2 : 1;
+      mod += dmgMod(state, a, t);
+      var one = everyFall(function () { var res = resolveShootingHits(state, u, 1, mod, a, true); return { c: res.casualties, s: res.sp }; });
+      var steady = campFlag(t, 'nerves') || campFlag(t, 'shielding'), mt = mountOf(t);
+      var extra = (has(a, 'Suppressive Fire') && !m.aux && !steady ? 2 : 0) + (mt && mt.shotSP && !steady ? mt.shotSP : 0);
+      var relief = (campFlag(t, 'brave') ? 1 : 0) + ((t.shotFrom || []).length && doctrine(state, t.side, 'T2') ? 1 : 0);
+      for (r = 0; r <= 9; r++) {
+        var h = hitsAt(r);
+        out.casualties += Math.min(t.models, h * one.c) / 10;
+        out.sp += (h > 0 ? Math.max(0, h * one.s + extra - relief) : (mt && mt.shotSP && !steady ? mt.shotSP : 0)) / 10;
+      }
+      return out;
+    }
+
     function shoot(state, a, t, mode, opts) {
       opts = opts || {};
       /* A squad or a gun on its trails turns onto what it fires at. Only a
@@ -418,7 +472,7 @@
       relink: relink,
       nearestFacing: nearestFacing, dugIn: dugIn, sandbagged: sandbagged, shotRange: shotRange,
       shotMinRange: shotMinRange, canShoot: canShoot, markCall: markCall, shotMods: shotMods,
-      shotOdds: shotOdds, shoot: shoot
+      shotOdds: shotOdds, expectedShot: expectedShot, shoot: shoot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCShoot;
