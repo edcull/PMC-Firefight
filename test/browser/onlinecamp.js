@@ -166,6 +166,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     s1 = await till(p1, 'the founding screen', (s) => s.phase === 'run' && s.view === 'found');
     s2 = await till(p2, 'Brann’s founding screen', (s) => s.phase === 'run' && s.view === 'found');
     ok('the host starts it: each player founds their own force', s1.view === 'found' && s2.view === 'found');
+    const fsheet = await p2.evaluate(() => ({ name: document.getElementById('found-name').value, factions: document.querySelectorAll('#camp-body [data-bfaction]').length, chip: !!document.querySelector('#camp-body button[data-go="fcolour"]'), lede: /has signed/.test(document.getElementById('camp-body').innerText) }));
+    ok('...the army and colours as picked in the lobby, the name to start from theirs', fsheet.name === 'Brann Online’s Revolt' && !fsheet.factions && !fsheet.chip && !fsheet.lede, JSON.stringify(fsheet));
 
     console.log('\nThe world');
     await found(p1, 'Iron Wolves', ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');

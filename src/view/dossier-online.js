@@ -124,9 +124,12 @@
       if (!founded(camp.companies.A)) {
         if (E.view !== 'found' || !E.draft) {
           // the army and colour picked in the lobby are where the founding starts
-          var slotColour = camp.companies.A.colour;
-          E.beginOwn('A', camp.companies.A.faction || 'pmc');
+          var slotColour = camp.companies.A.colour, fac = camp.companies.A.faction || 'pmc';
+          E.beginOwn('A', fac);
           if (slotColour) E.draft.colour = slotColour;
+          // a name to start from: the player's own, and what they run
+          var me = lobby && lobby.slots && lobby.slots[lobby.slot];
+          if (me && me.name && !E.draft.name) E.draft.name = me.name + '\u2019s ' + ({ pmc: 'Company', rebel: 'Revolt', bugs: 'Swarm', xeno: 'Tribe' }[fac] || 'Company');
         }
         return;
       }

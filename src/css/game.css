@@ -1101,6 +1101,7 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 }
 .chip-btn span { display: block; height: 100%; min-height: 28px; border-radius: 3px; }
 .chip-btn:hover, .chip-btn:focus-visible, .chip-btn[aria-expanded="true"] { border-color: var(--ink); }
+.chip-btn.still, .chip-btn.still:hover { cursor: default; border-color: var(--line); display: inline-block; }
 #setup[data-hot] #colour-hint { display: none; }
 #setup[data-kind="ai"] #btn-quick-clear { display: grid; }
 /* a demo force's own buttons: roll it again, or load and save it from a modal */

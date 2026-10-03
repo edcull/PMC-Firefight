@@ -479,13 +479,14 @@ function create(opts) {
   const FORCE = ['found', 'recruit', 'disband', 'rename', 'renameSoldier', 'promote', 'honour', 'upgrade', 'mount', 'takeDoctrine', 'swapDoctrine', 'promoteCompany', 'aspire', 'colour'];
   function forceCmd(W, i, cmd, a) {
     const co = W.forces[i];
+    // the army and the colours are the ones picked in the lobby
+    if (cmd === 'found') { a.faction = co.faction; a.colour = co.colour; }
     if (cmd === 'found' || cmd === 'colour') {
       const name = cmd === 'found' ? text(a.name, 40).toLowerCase() : null;
       const others = W.forces.filter((x, j) => j !== i && x);
       if (name && others.some((x) => founded(x) && (x.name || '').toLowerCase() === name)) return no('another force on this world is called that');
       if (a.colour && others.some((x) => x.colour === a.colour)) return no('another force on this world wears that colour');
     }
-    if (cmd === 'found' && !a.colour) a.colour = co.colour;
     const d = duelOf(W, i), p = W.players[i];
     let camp, side;
     if (d) { camp = pairOf(W, d); side = d.a === i ? 'A' : 'B'; }
