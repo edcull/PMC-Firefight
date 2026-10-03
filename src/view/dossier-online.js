@@ -289,10 +289,8 @@
         var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' +
           (canColour ? '<button type="button" class="olob-colour" data-olob-pick="' + i + '" aria-expanded="' + (colourFor === i) + '" title="' + esc(c ? c.name : 'Colour') + '">' + chip + '</button>' : '<span class="olob-colour still">' + chip + '</span>') +
           '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready || s.host ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
-        if (canSlot) {
-          row += '<select data-olob-kind="' + i + '"><option value="open"' + (s.kind === 'open' ? ' selected' : '') + '>Open for a player</option>' +
-            '<option value="ai"' + (s.kind === 'ai' ? ' selected' : '') + '>AI force</option></select>';
-        }
+        // the host: an AI force in this slot, or open for a player
+        if (canSlot) row += '<label class="olob-ai"><input type="checkbox" data-olob-ai="' + i + '"' + (s.kind === 'ai' ? ' checked' : '') + '> AI</label>';
         if (s.kind !== 'open') {
           var facs = s.kind === 'ai' ? ['random', 'pmc', 'rebel', 'bugs', 'xeno'] : ['pmc', 'rebel', 'bugs', 'xeno'];
           row += canArmy ? '<select data-olob-army="' + i + '">' + facs.map(function (f) {
@@ -300,15 +298,19 @@
           }).join('') + '</select>' : '<span class="olob-army">' + esc(FACTION_NAMES[s.faction] || '') + '</span>';
         }
         row += '</div>';
-        if (canColour && colourFor === i) {
-          row += '<div class="found-pop olob-pop"><label>' + esc(c ? c.name : 'Colour') + '</label><div class="csw">' + KEYS.map(function (k) {
-            var q = CO[k], taken = (L.slots || []).some(function (x, j) { return j !== i && x.colour === k; });
-            return '<button type="button"' + (k === s.colour ? ' class="on"' : '') + ' data-olob-col="' + k + '" data-olob-for="' + i + '" title="' + esc(q.name) + (taken ? ' \u2014 another force wears it' : '') + '"' + (taken ? ' disabled' : '') + '>' +
-              '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
-          }).join('') + '</div></div>';
-        }
         return row;
       }).join('') + '</div>';
+      /* Its colours, popped up beside the chip as the founding screen's are: drawn
+         outside the scrolling list (so it is not cut off), and put by the chip once drawn. */
+      var cs = colourFor != null && (L.slots || [])[colourFor];
+      if (cs) {
+        var cc = CO[cs.colour];
+        h += '<div class="found-pop olob-pop" data-olob-popfor="' + colourFor + '"><label>Colours \u2014 ' + esc(cc ? cc.name : '') + '</label><div class="csw">' + KEYS.map(function (k) {
+          var q = CO[k], taken = (L.slots || []).some(function (x, j) { return j !== colourFor && x.colour === k; });
+          return '<button type="button"' + (k === cs.colour ? ' class="on"' : '') + ' data-olob-col="' + k + '" data-olob-for="' + colourFor + '" title="' + esc(q.name) + (taken ? ' \u2014 another force wears it' : '') + '"' + (taken ? ' disabled' : '') + '>' +
+            '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
+        }).join('') + '</div></div>';
+      }
       /* One row: how many forces, whether it is listed for anyone to join, and the
          host's Start or a player's Ready. */
       var mineSlot = (L.slots || [])[me] || {}, n = (L.slots || []).length;
@@ -324,9 +326,23 @@
       h += chatHTML();
       h += '<p class="camp-foot"><button class="lnk" data-go="olobleave">' + (host ? 'Close the campaign' : 'Leave the campaign') + '</button> ' +
         '<button class="lnk" data-go="olist">\u2190 Online campaigns</button></p>';
-      // the chat shows its latest line
-      setTimeout(function () { var l = document.querySelector('#camp-body .olob-lines'); if (l) l.scrollTop = l.scrollHeight; }, 0);
+      // the chat shows its latest line; the colours sit by their chip, and follow it as the list scrolls
+      setTimeout(function () {
+        var l = document.querySelector('#camp-body .olob-lines'); if (l) l.scrollTop = l.scrollHeight;
+        placePop();
+        var sl = document.querySelector('#camp-body .olob-slots'); if (sl) sl.onscroll = placePop;
+      }, 0);
       return h;
+    }
+    function placePop() {
+      var pop = document.querySelector('#camp-body .olob-pop'); if (!pop) return;
+      var chip = document.querySelector('#camp-body [data-olob-pick="' + pop.getAttribute('data-olob-popfor') + '"]');
+      var body = document.getElementById('camp-body');
+      if (!chip || !body) return;
+      var r = chip.getBoundingClientRect(), b = body.getBoundingClientRect(), w = Math.min(380, b.width - 16);
+      pop.style.width = w + 'px';
+      pop.style.left = Math.max(b.left + 8, Math.min(r.left, b.right - w - 8)) + 'px';
+      pop.style.top = (r.bottom + 6) + 'px';
     }
     function chatHTML() {
       var lines = ((lobby && lobby.chat) || []).slice(-60);
@@ -790,7 +806,7 @@
       if (target.id === 'oc-pl') { var ctx = activeContract(); if (ctx) send(ctx, 'contractLevel', { pl: +target.value }); return true; }
       if (target.id === 'olob-n') { cmd('lobbySlots', { n: +target.value }); return true; }
       if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
-      if (target.hasAttribute('data-olob-kind')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-kind'), kind: target.value }); return true; }
+      if (target.hasAttribute('data-olob-ai')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-ai'), kind: target.checked ? 'ai' : 'open' }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }
       if (target.hasAttribute('data-olob-colour')) { cmd('lobbyColour', { i: +target.getAttribute('data-olob-colour'), colour: target.value }); return true; }
       return false;

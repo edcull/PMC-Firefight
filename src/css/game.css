@@ -1424,11 +1424,14 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-colour.still { cursor: default; display: inline-block; }
 .olob-colour[aria-expanded="true"] { border-color: var(--alpha); }
 .olob-chip { display: block; width: 100%; height: 100%; border-radius: 3px; }
-.olob-pop { flex: none; margin: -2px 0 2px; }
+.found-pop.olob-pop { position: fixed; right: auto; z-index: 80; }
 .olob-pop .csw button:disabled { opacity: .25; cursor: not-allowed; }
 .olob-who { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
 .olob-who small { color: var(--ink-faint); font-size: 11px; }
-.olob-slot select { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.olob-slot select, .olob-n select { flex: 0 1 auto; min-width: 0; max-width: 100%; background: var(--panel-3, var(--panel-2)); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px; font-family: var(--body); font-size: 12px; }
+.olob-slot select option, .olob-n select option { background: var(--panel); color: var(--ink); }
+.olob-ai { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; cursor: pointer; }
 .olob-army { color: var(--ink-faint); font-size: 12px; }
 .olob-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: wrap; }
 .olob-bar .start { flex: 1 1 200px; margin: 0; }

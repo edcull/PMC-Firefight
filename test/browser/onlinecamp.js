@@ -103,6 +103,16 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await choose(p1, '#olob-n', '3');
     for (let i = 0; i < 30 && (await slotCount(p1)) !== 3; i++) await wait(150);
     ok('the host makes it three forces', (await slotCount(p1)) === 3);
+    // a slot made an AI force with its checkbox, and open again
+    const tick = (on) => p1.evaluate((v) => { const c = document.querySelector('#camp-body [data-olob-ai="1"]'); c.checked = v; c.dispatchEvent(new Event('change', { bubbles: true })); }, on);
+    await tick(true);
+    let aied = false;
+    for (let i = 0; i < 20 && !aied; i++) { await wait(200); aied = await p1.evaluate(() => !!document.querySelector('#camp-body [data-olob-army="1"]') && !/Open \u2014 waiting/.test(document.querySelectorAll('#camp-body .olob-slot')[1].innerText)); }
+    ok('the host ticks AI: the slot is an AI force, with its army to pick', aied);
+    await tick(false);
+    let opened = false;
+    for (let i = 0; i < 20 && !opened; i++) { await wait(200); opened = await p1.evaluate(() => /Open \u2014 waiting/.test(document.querySelectorAll('#camp-body .olob-slot')[1].innerText)); }
+    ok('...and unticks it: open for a player again', opened);
     await choose(p1, '[data-olob-army="2"]', 'bugs');
     await p1.waitForTimeout(600);
     ok('...and picks the AI force’s army', await p1.evaluate(() => document.querySelector('#camp-body [data-olob-army="2"]').value === 'bugs'));
@@ -128,8 +138,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('joined from the list: Brann takes the open slot', s2.slot === 1 && /Brann Online/.test(await text(p2)));
     await choose(p2, '[data-olob-army="1"]', 'rebel');
     await p2.waitForTimeout(500);
-    await p2.evaluate(() => { document.getElementById('olob-say').value = 'ready when you are'; });
-    await press(p2, '[data-go="olobsay"]');
+    // Enter sends the line
+    await p2.fill('#olob-say', 'ready when you are');
+    await p2.press('#olob-say', 'Enter');
     await p2.waitForTimeout(500);
     await press(p2, '[data-go="olobready"]');
     let chatSeen = false;

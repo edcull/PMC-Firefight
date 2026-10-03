@@ -1488,6 +1488,13 @@
       sign.setAttribute('data-tip-title', ok ? 'Ready' : 'Still needed');
     });
     host.addEventListener('keydown', function (ev) {
+      // an online campaign's lobby chat: Enter sends the line
+      if (ev.key === 'Enter' && ev.target && ev.target.id === 'olob-say' && !asking) {
+        ev.preventDefault();
+        var send = el('camp-body').querySelector('[data-go="olobsay"]');
+        if (send) send.click();
+        return;
+      }
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }
       if (!asking) return;
       if (ev.key === 'Enter') { ev.preventDefault(); answerAsk(); }
