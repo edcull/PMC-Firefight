@@ -478,7 +478,7 @@
       case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;
       case 'signout': userMenu(false); signOut(); return;
       // the main menu's account pane: what the server keeps for the player
-      case 'account': userMenu(false); close(); if (root.PMCMenu) { root.PMCMenu.open(); root.PMCMenu.show('account'); } return;
+      case 'account': userMenu(false); close(); if (root.PMCAccount) root.PMCAccount.show(); return;
       case 'create': {
         // the first press opens the form; Create the game starts it
         if (!b.getAttribute('data-go')) { creating = true; draw(); return; }

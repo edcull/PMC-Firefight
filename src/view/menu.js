@@ -24,9 +24,9 @@
   function el(id) { return document.getElementById(id); }
 
   /* ================= navigation ================= */
-  var PANES = ['main', 'single', 'hotseat', 'account'];
+  var PANES = ['main', 'single', 'hotseat'];
   // where Back (and Escape) goes from each list
-  var UP = { single: 'main', hotseat: 'main', account: 'main' };
+  var UP = { single: 'main', hotseat: 'main' };
   var at = 'main';
 
   function show(pane) {
@@ -36,14 +36,12 @@
     // the foot: the demo under the main menu only
     var d = el('btn-menu-demo');
     if (d) d.hidden = pane !== 'main';
-    // the account: drawn as it is opened (net/account.js)
-    if (pane === 'account' && root.PMCAccount) root.PMCAccount.shown();
   }
 
   function open(pane) {
     var m = el('menu');
     if (!m) return;
-    ['setup', 'camp', 'lobby'].forEach(function (id) { var o = el(id); if (o) o.hidden = true; });
+    ['setup', 'camp', 'lobby', 'account'].forEach(function (id) { var o = el(id); if (o) o.hidden = true; });
     m.hidden = false;
     show(pane || 'main');
     paint();

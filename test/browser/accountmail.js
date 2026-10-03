@@ -43,15 +43,15 @@ async function latest(to, kind) {
   const p = await (await b.newContext({ viewport: { width: 1200, height: 900 } })).newPage();
   const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
-  const pane = () => p.evaluate(() => document.getElementById('menu-account').innerText);
-  const click = (sel) => p.evaluate((s) => document.querySelector('#menu-account ' + s).click(), sel);
+  const pane = () => p.evaluate(() => document.getElementById('acct-body').innerText);
+  const click = (sel) => p.evaluate((s) => document.querySelector('#account ' + s).click(), sel);
   const fill = (id, v) => p.fill('#' + id, v);
   async function till(pred, what) {
     for (let i = 0; i < 60; i++) { const t = await pane(); if (pred(t)) return t; await wait(100); }
     throw new Error('waited for ' + what + ': ' + (await pane()).slice(0, 300));
   }
   async function accountPane() {
-    await p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('account'); });
+    await p.evaluate(() => window.PMCAccount.show());
     await wait(300);
   }
 

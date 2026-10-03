@@ -272,12 +272,12 @@
     var T = window.PMCMenu && window.PMCMenu.table;
     if (!T || !T.on) return;
     var wide = window.innerWidth > 1000, want = null;
-    [['setup', 'setup-table'], ['camp', 'camp-table'], ['lobby', 'lobby-table']].forEach(function (pr) {
+    [['setup', 'setup-table'], ['camp', 'camp-table'], ['lobby', 'lobby-table'], ['account', 'account-table']].forEach(function (pr) {
       var sp = el(pr[0]), cv = el(pr[1]);
       if (sp && cv && !sp.hidden && wide && !want) want = cv;
     });
     if (want) { if (T.on() !== want) T.start(want); }
-    else if (T.on() === el('setup-table') || T.on() === el('camp-table') || (el('lobby-table') && T.on() === el('lobby-table'))) T.stop();
+    else if (T.on() === el('setup-table') || T.on() === el('camp-table') || (el('lobby-table') && T.on() === el('lobby-table')) || (el('account-table') && T.on() === el('account-table'))) T.stop();
   }
   // the lobby is made when it is first opened, and says itself when it comes and goes
   window.PMC_BACKDROP = setupBackdrop;
@@ -290,7 +290,7 @@
     window.addEventListener('resize', function () {
       setupBackdrop();
       var on = window.PMCMenu && window.PMCMenu.table.on();
-      if (on && (on === el('setup-table') || on === el('camp-table') || on === el('lobby-table'))) window.PMCMenu.table.fit();
+      if (on && (on === el('setup-table') || on === el('camp-table') || on === el('lobby-table') || on === el('account-table'))) window.PMCMenu.table.fit();
     });
   })();
   function menuUp() {
