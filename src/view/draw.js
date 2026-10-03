@@ -462,7 +462,8 @@
           var an = i / 14 * Math.PI * 2, rr = q.rad * (0.8 + 0.2 * Math.sin(an * 3 + q.x));
           foot.push([q.x + Math.cos(an) * rr, q.y + Math.sin(an) * rr * 0.8]);
         }
-        return { foot: foot, rise: K * 1.2, amp: 1.3, k: 0.75 };
+        // swaying up to 2 plate pixels each way at its strongest (amp × k)
+        return { foot: foot, rise: K * 1.2, amp: 2.67, k: 0.75 };
       });
       B.vc.sandHaze = { key: key, list: list };
       return list;
