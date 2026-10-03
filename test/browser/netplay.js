@@ -175,6 +175,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('...on a phone, a Chat tab with a count of what was said while it was shut', tab.shown && tab.n === '1', JSON.stringify(tab));
   await p2.click('#mtabs .mtab-chat'); await p2.waitForTimeout(200);
   const opened = await p2.evaluate(() => ({ n: document.getElementById('mtab-chat-n').textContent, vis: getComputedStyle(document.getElementById('battle-chat')).display !== 'none' }));
+  ok('...the chat sits under the tabs, as the other panes do', await p2.evaluate(() => document.getElementById('battle-chat').getBoundingClientRect().top >= document.getElementById('mtabs').getBoundingClientRect().bottom - 1));
   ok('...opened, the talk shows and the count goes', opened.vis && !opened.n, JSON.stringify(opened));
   await p2.evaluate(() => window.PMC_SET_MTAB('act'));
   await p2.setViewportSize({ width: 1340, height: 900 });
@@ -202,11 +203,19 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   });
   await wait(2200);
   const camFocus = await pTheirs.evaluate(() => window.__cam());
+  // the other player's unit, looked at: no action buttons for it on this screen
+  const foeBar = await pTheirs.evaluate(() => {
+    const me = window.__seats()[0], u = window.PMC_STATE().units.find(x => x.side !== me && x.alive && x.x >= 0);
+    if (!u || !window.__select(u)) return null;
+    return document.querySelectorAll('#bar [data-action]').length;
+  });
+  ok('the other player’s unit, selected, shows no action buttons', foeBar === 0, String(foeBar));
   // meanwhile the waiting player picks one of their own units to look at, out of turn
   const looked = await pTheirs.evaluate(() => {
     const me = window.__seats()[0], u = window.PMC_STATE().units.find(x => x.side === me && x.alive && x.x >= 0);
     return u && window.__select(u) ? u.id : null;
   });
+  ok('...while one of their own does', await pTheirs.evaluate(() => document.querySelectorAll('#bar [data-action]').length > 0));
   // ...and the move is what has to be followed: the camera rides along to where the unit ends up
   const moved = await pMine.evaluate(async (id) => {
     const u = window.PMC_STATE().units.find(x => x.id === id);
