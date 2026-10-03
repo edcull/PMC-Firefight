@@ -96,6 +96,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     let t1 = await text(p1);
     const code = await p1.evaluate(() => { const c = document.querySelector('#camp-title .olob-code'); return c ? c.textContent : ''; });
     ok('Start a game → Campaign opens the campaign’s lobby, its code in the title bar', /^[A-Z2-9]{8}$/.test(code) && !/Give the others this code/.test(t1), code);
+    ok('...its Back in the title bar, to the Multiplayer screen (no list of online campaigns any more)', await p1.evaluate(() => { const b = document.getElementById('camp-back'); return !b.hidden && b.getAttribute('data-go') === 'omulti' && !document.querySelector('#camp-body [data-go="olist"]'); }));
+    await p1.evaluate(() => document.querySelector('#camp-title [data-go="olobname"]').click());
+    await p1.waitForTimeout(150);
+    await p1.evaluate(() => { document.getElementById('ask-input').value = 'The Long War'; document.querySelector('#camp-ask [data-ask="ok"]').click(); });
+    let named = false;
+    for (let i = 0; i < 20 && !named; i++) { await wait(200); named = await p1.evaluate(() => /The Long War/.test(document.getElementById('camp-title').textContent)); }
+    ok('the host renames the campaign from the title bar', named);
     const lay = await p1.evaluate(() => { const bar = document.querySelector('#camp-body .olob-bar'); const b = document.getElementById('camp-body').getBoundingClientRect(), c = document.querySelector('#camp-body .olob-chat').getBoundingClientRect(), l = document.querySelector('#camp-body .olob-lines');
       return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobready"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
     ok('...forces, public and the host\u2019s Ready on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
@@ -230,6 +237,21 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     let orow = '';
     for (let i = 0; i < 30 && !orow; i++) { await wait(150); orow = await p1.evaluate(() => { const r = document.querySelector('#cont-list [data-cont^="o:"]'); return r ? r.textContent : ''; }); }
     ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /4 forces/.test(orow), orow);
+
+    console.log('\nBack out of a lobby');
+    await p2.evaluate(() => { if (window.PMCMenu) window.PMCMenu.close(); window.PMCLobby.open(); });
+    await p2.waitForTimeout(800);
+    await p2.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
+    await p2.waitForTimeout(200);
+    await p2.evaluate(() => { const s = document.getElementById('lob-kind'); s.value = 'ocamp'; s.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
+    await till(p2, 'Brann’s new lobby', (s) => s.view === 'olobby');
+    await p2.evaluate(() => document.getElementById('camp-back').click());
+    await p2.waitForTimeout(150);
+    const asked = await p2.evaluate(() => (document.querySelector('#camp-askbox h3') || {}).textContent || '');
+    await p2.evaluate(() => document.querySelector('#camp-ask [data-ask="ok"]').click());
+    let back = false;
+    for (let i = 0; i < 30 && !back; i++) { await wait(200); back = await p2.evaluate(() => document.getElementById('camp').hidden && !document.getElementById('lobby').hidden); }
+    ok('the title bar’s Back asks the host first, closes the campaign, and goes back to Multiplayer', /Close the campaign/.test(asked) && back, asked);
   } catch (e) {
     fail++; console.log('  ✗ ' + e.message);
   }

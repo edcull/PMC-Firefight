@@ -784,7 +784,6 @@
     if (camp && camp.post && view !== 'post') view = 'post';  // a post-battle choice is still owed
     if (view !== 'aftermath' && KIT_AFTER) KIT_AFTER.showPast(null);   // a past battle's report is only open while it is shown
     if (camp && camp.fronts && !camp.post) (KIT_AFTER || kitAfter()).nextFront();   // the other forces' battles, still being fought
-    if (view === 'olist') h = kitOnline().listView();
     else if (view === 'olobby' && online) h = kitOnline().lobbyView();
     else if (view === 'offers' && online) h = kitOnline().offersView();
     else if (view === 'ocontract' && online) h = kitOnline().contractView();
@@ -828,7 +827,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"], .camp-foot [data-go="omulti"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -935,7 +934,7 @@
     var co = hubCo();
     var go = t.getAttribute('data-go');
     // an online campaign: whatever would change it is sent to the server (dossier-online.js)
-    if ((online || view === 'olist') && kitOnline().click(t, go)) return;
+    if (online && kitOnline().click(t, go)) return;
 
     if (t.hasAttribute('data-add')) {
       draft.keys.push(t.getAttribute('data-add')); render(); return;

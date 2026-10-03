@@ -433,6 +433,14 @@ function create(opts) {
       ctx.row.listed = a.on ? 1 : 0;
       return { ok: true, relist: true };
     },
+    // the host: the campaign's name, as the lobby list and every player's campaigns show it
+    lobbyName(W, i, a) {
+      if (i !== 0) return no('the host names the campaign');
+      const t = text(a.name, 40);
+      if (!t) return no('give it a name');
+      W.name = t;
+      return { ok: true, relist: true };
+    },
     lobbyChat(W, i, a) {
       const t = text(a.text, 300);
       if (!t) return no('say something');

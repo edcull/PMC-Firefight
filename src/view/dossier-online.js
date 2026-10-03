@@ -21,7 +21,6 @@
   'use strict';
   root.PMCDossierOnline = function (E) {
     var C = E.C, R = E.R, ROMAN = E.ROMAN, esc = E.esc;
-    var list = null, listFault = '', signedIn;     // the list screen: the player's campaigns, and who they are
     var busy = false;                               // a command on its way: the next waits
     var poll = null;                                // the campaign asked for again now and then, for the others' changes
     var pick = null, pickFor = null;                // the player's force for a contract, as picked so far here, and for which
@@ -46,26 +45,14 @@
     // the other players' forces, as the hub shows them among the rivals
     function players() { return (E.camp.rivals || []).filter(function (r) { return r.human; }); }
     function forceOfSlot(i) { return (E.camp.rivals || []).filter(function (r) { return r.human && r.slot === i; })[0] || null; }
-    var WAIT = { you: 'waiting on you', them: 'waiting on another player', either: 'free to take a contract', lobby: 'in its lobby', over: 'over' };
 
     /* ================= in and out ================= */
-    function enterList() {
+    /* Out of the campaign, back to the Multiplayer screen (where a new one is
+       started or one joined; the main menu's Continue opens one again). */
+    function toMulti() {
       leaveCampaign();
-      E.view = 'olist';
-      E.open('olist');
-      loadList();
-    }
-    function loadList() {
-      list = null; listFault = '';
-      api('api/me').then(function (r) {
-        signedIn = r.ok && r.j.who && !r.j.who.guest ? r.j.who : null;
-        if (!signedIn) { list = []; E.render(); return null; }
-        return api('api/online').then(function (l) {
-          list = l.ok ? l.j.campaigns || [] : [];
-          if (!l.ok) listFault = cap(l.j.error || 'the server could not be reached') + '.';
-          E.render();
-        });
-      }, function () { list = []; listFault = 'The server could not be reached.'; E.render(); });
+      E.hide();
+      if (root.PMCLobby && root.PMCLobby.available()) root.PMCLobby.open(); else E.toMenu();
     }
     // an online campaign opened: the browser's own campaign is put aside (and never saved over)
     function openCampaign(id) {
@@ -168,7 +155,7 @@
           if (!E.online || E.online.id !== o.id || busy) return;
           if (!r.ok) {
             // closed by its host while it was in its lobby
-            if (r.code === 404 && o.phase === 'lobby') { leaveCampaign(); E.note('The campaign is closed', 'Its host closed it before it started.'); enterList(); }
+            if (r.code === 404 && o.phase === 'lobby') { leaveCampaign(); E.note('The campaign is closed', 'Its host closed it before it started.', toMulti); }
             return;
           }
           if (r.j.version === o.version) return;
@@ -244,33 +231,6 @@
       return true;
     }
 
-    /* ================= the list ================= */
-    function listView() {
-      var h = '<h2>Online campaigns</h2>';
-      h += '<p class="lede">A world of two to eight forces — players, each on their own device, and AI forces the server runs. ' +
-        'Each player runs their own force whenever they have the time; the server keeps the campaign and rolls every die.</p>';
-      if (list === null) return h + '<p class="dnote">Looking…</p>' + foot();
-      if (!signedIn) {
-        return h + '<div class="cpan"><div class="cpstat">An online campaign is kept by your account. Sign in (or make an account) first.</div>' +
-          '<button class="start" data-go="osignin">Sign in</button></div>' + foot();
-      }
-      if (listFault) h += '<p class="dnote hubnote">' + esc(listFault) + '</p>';
-      if (list.length) {
-        h += '<div class="field"><label>Yours</label><div class="clog">' + list.map(function (c) {
-          return '<button type="button" class="crow crow-go" data-ocamp="' + c.id + '"><b>' + c.turn + '</b><span>' + esc(c.name) +
-            '<small>' + c.forces + ' forces, ' + c.players + ' player' + (c.players === 1 ? '' : 's') + ' · ' + WAIT[c.waiting || 'over'] + '</small></span>' +
-            (c.waiting === 'you' ? '<em class="yourmove">Your move</em>' : '<em>Open</em>') + '</button>';
-        }).join('') + '</div></div>';
-      }
-      h += '<div class="field"><label>A new one</label><button class="start" data-go="onew">Start an online campaign</button>' +
-        '<p class="dnote">It opens on its lobby: set the slots, then give the others its code.</p></div>';
-      h += '<div class="field"><label for="ojoin-code">Join one</label><div class="ojoin">' +
-        '<input class="tin" id="ojoin-code" maxlength="8" placeholder="The code you were given" autocomplete="off">' +
-        '<button class="lnk" data-go="ojoin">Join</button></div></div>';
-      return h + foot();
-    }
-    function foot() { return '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button></p>'; }
-
     /* ================= the lobby ================= */
     function swatch(c) {
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, k = CO[c];
@@ -281,7 +241,8 @@
       var L = lobby || {}, host = !!L.host, me = L.slot;
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO);
       // the code that brings the others in, in the title bar
-      var h = '<h2>' + esc(L.name || 'Campaign') + (L.invite ? ' <span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : '') + '</h2>';
+      var h = '<h2>' + esc(L.name || 'Campaign') +
+        (host ? ' <button type="button" class="olob-rename" data-go="olobname" title="Rename the campaign" aria-label="Rename the campaign">\u270e</button>' : '') + (L.invite ? ' <span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : '') + '</h2>';
       h += '<div class="olob-slots">' + (L.slots || []).map(function (s, i) {
         var mine = i === me, canSlot = host && s.kind !== 'human', canColour = mine || (host && s.kind !== 'human'), canArmy = mine || (host && s.kind === 'ai');
         var who = s.kind === 'human' ? esc(s.name) + (s.host ? ' <i class="acct-tag">host</i>' : '') + (mine ? ' <i class="acct-tag">you</i>' : '')
@@ -333,8 +294,8 @@
         (!mineSlot.ready ? 'I am ready' : host ? 'Ready \u2014 waiting for the players' : 'Ready \u2014 waiting for the host') + '</button>';
       h += '</div>';
       h += chatHTML();
-      h += '<p class="camp-foot"><button class="lnk" data-go="olobleave">' + (host ? 'Close the campaign' : 'Leave the campaign') + '</button> ' +
-        '<button class="lnk" data-go="olist">\u2190 Online campaigns</button></p>';
+      // its way back (in the top bar) leaves the lobby, or closes it for the host
+      h += '<p class="camp-foot"><button class="lnk" data-go="omulti">\u2190 Multiplayer</button></p>';
       // the chat shows its latest line; the colours sit by their chip, and follow it as the list scrolls
       setTimeout(function () {
         var l = document.querySelector('#camp-body .olob-lines'); if (l) l.scrollTop = l.scrollHeight;
@@ -582,7 +543,7 @@
         return '<h2>After the battle</h2><p class="lede">' + esc(d ? d.foeName : 'The other player') + ' has a question to answer first (' +
           (st.kind === 'plunder' ? 'Plunderer' : st.kind === 'negotiate' ? 'Tough Negotiators' : 'No Place for the Weak!') + '). ' +
           'The aftermath follows once every question is answered.</p>' +
-          '<p class="camp-foot"><button class="lnk" data-go="olist">← Online campaigns</button></p>';
+          '<p class="camp-foot"><button class="lnk" data-go="omulti">← Multiplayer</button></p>';
       }
       return E.postView();
     }
@@ -593,20 +554,6 @@
     function click(t, go) {
       var camp = E.camp;
       var attr = function (a) { return t.getAttribute(a); };
-      // the list
-      if (attr('data-ocamp')) { openCampaign(+attr('data-ocamp')); return true; }
-      if (go === 'onew') { startNew(); return true; }
-      if (go === 'ojoin') {
-        var code = ((document.getElementById('ojoin-code') || {}).value || '').trim();
-        if (!code) { E.note('Which campaign?', 'Type the code you were given.'); return true; }
-        api('api/online/join', { method: 'POST', body: JSON.stringify({ code: code }) }).then(function (r) {
-          if (!r.ok) { E.note('Not joined', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
-          openCampaign(r.j.id);
-        });
-        return true;
-      }
-      if (go === 'osignin') { E.hide(); if (root.PMCAccount) root.PMCAccount.signIn({ then: function () { enterList(); } }); return true; }
-      if (go === 'olist') { enterList(); return true; }
       if (go === 'menu') { leaveCampaign(); E.toMenu(); return true; }
       if (!E.online || !camp) return false;
 
@@ -627,7 +574,13 @@
         if (said) cmd('lobbyChat', { text: said });
         return true;
       }
-      if (go === 'olobleave') {
+      if (go === 'olobname' && lobby && lobby.host) {
+        E.ask({ kind: 'text', title: 'Rename the campaign', value: lobby.name || '', max: 40, okLabel: 'Rename',
+          onOk: function (v) { if (v) cmd('lobbyName', { name: v }); } });
+        return true;
+      }
+      if (go === 'omulti' && E.view !== 'olobby') { toMulti(); return true; }
+      if (go === 'omulti') {
         var host = !!(lobby && lobby.host);
         E.ask({ kind: 'confirm', title: host ? 'Close the campaign?' : 'Leave the campaign?', danger: host,
           text: host ? 'It is gone, for everyone in its lobby.' : 'Your slot opens again for somebody else.',
@@ -636,7 +589,7 @@
             var o = E.online;
             api('api/online/' + o.id + '/leave', { method: 'POST' }).then(function (r) {
               if (!r.ok) { E.note('Not done', cap(r.j.error || 'the server said no') + '.'); return; }
-              enterList();
+              toMulti();
             });
           } });
         return true;
@@ -661,7 +614,7 @@
           function () { E.draft = null; E.view = 'hub'; });
         return true;
       }
-      if (go === 'foundback') { enterList(); return true; }
+      if (go === 'foundback') { toMulti(); return true; }
 
       // the force's own changes
       var co = camp.companies.A;
@@ -825,7 +778,7 @@
     }
 
     return {
-      enterList: enterList, listView: listView, lobbyView: lobbyView, offersView: offersView, contractView: contractView, postView: postView, hubNote: hubNote,
+      enterList: toMulti, lobbyView: lobbyView, offersView: offersView, contractView: contractView, postView: postView, hubNote: hubNote,
       click: click, change: change, steer: function () { if (E.online && E.camp) steer(false); },
       afterBattle: afterBattle, fighting: function () { return fighting; },
       leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; },

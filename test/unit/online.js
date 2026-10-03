@@ -85,6 +85,8 @@ function ok(name, cond, note) {
   cmd(brann, 'lobbyReady', {}); cmd(cole, 'lobbyReady', {});
   ok('a change to the slots asks the players to say they are ready again', cmd(ash, 'lobbySlots', { n: 6 }).ok && !view(ash).slots[1].ready);
   cmd(brann, 'lobbyReady', {}); cmd(cole, 'lobbyReady', {});
+  ok('only the host renames it', !cmd(brann, 'lobbyName', { name: 'Mine now' }).ok && cmd(ash, 'lobbyName', { name: 'The Long War' }).ok &&
+    view(brann).name === 'The Long War' && online.list(brann).some((c) => c.name === 'The Long War'));
   ok('only the host starts it', !cmd(brann, 'lobbyStart').ok);
   ok('...and not before saying they are ready too', /Ash is not ready/.test(cmd(ash, 'lobbyStart').why));
   cmd(ash, 'lobbyReady', {});
