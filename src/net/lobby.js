@@ -222,7 +222,13 @@
     if (!root.fetch) { account = null; then(); return; }
     // only the server's answer settles it: a server that cannot be reached (restarting) leaves it as it was
     root.fetch('api/me', { credentials: 'same-origin', cache: 'no-store' })
-      .then(function (r) { return r.status === 401 || r.ok ? r.json().then(function (j) { if (j.mail !== undefined) mailOn = !!j.mail; return r.ok ? j : { who: null }; }, function () { return { who: r.ok ? account : null }; }) : { who: account }; })
+      .then(function (r) {
+        if (!(r.status === 401 || r.ok)) return { who: account };
+        // what it says of this server (whether it sends mail), and who this is
+        var took = function (j) { if (j && j.mail !== undefined) mailOn = !!j.mail; return r.ok ? j : { who: null }; };
+        var jr = r.json();
+        return jr && typeof jr.then === 'function' ? jr.then(took, function () { return { who: r.ok ? account : null }; }) : took(jr);
+      })
       .then(function (j) { account = j.who || null; then(); })
       .catch(function () { if (account === undefined) fault = 'The server could not be reached.'; then(); });
   }
