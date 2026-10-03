@@ -175,6 +175,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('...on a phone, a Chat tab with a count of what was said while it was shut', tab.shown && tab.n === '1', JSON.stringify(tab));
   await p2.click('#mtabs .mtab-chat'); await p2.waitForTimeout(200);
   const opened = await p2.evaluate(() => ({ n: document.getElementById('mtab-chat-n').textContent, vis: getComputedStyle(document.getElementById('battle-chat')).display !== 'none' }));
+  ok('...the chat sits under the tabs, as the other panes do', await p2.evaluate(() => document.getElementById('battle-chat').getBoundingClientRect().top >= document.getElementById('mtabs').getBoundingClientRect().bottom - 1));
   ok('...opened, the talk shows and the count goes', opened.vis && !opened.n, JSON.stringify(opened));
   await p2.evaluate(() => window.PMC_SET_MTAB('act'));
   await p2.setViewportSize({ width: 1340, height: 900 });

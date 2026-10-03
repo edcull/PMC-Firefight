@@ -1800,6 +1800,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   body[data-online] .mtab-chat { display: block; }
   .console > .mpane-chat { display: none !important; }
   body[data-online] .console[data-mtab="chat"] > .mpane-chat { display: flex !important; flex-direction: column; padding: 0 6px 8px; }
+  /* under the tabs, like the other panes (on a desktop it sits under the actions) */
+  .console > .mpane-chat { order: 1; }
   .console[data-mtab="chat"] .bchat-lines { flex: 1; height: auto; min-height: 0; }
   .console > #resfeed-m, .console > #panel-m { padding: 0 8px; }
   .mpane-unit { padding: 0 2px 8px; }
