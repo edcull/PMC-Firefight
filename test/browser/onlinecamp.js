@@ -104,6 +104,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('Player 1 picks a force and is ready', /You are ready/.test(await text(p1)));
   s2 = await till(p2, 'Player 2 to see the contract', (s) => s.k && s.k.ready.A);
   ok('Player 2 sees that Player 1 is ready, but not their force', s2.k.picks.A && s2.k.picks.A.hidden === true && !s2.k.picks.A.rids, JSON.stringify(s2.k.picks.A));
+  const waits = async (p) => p.evaluate(() => fetch('api/online').then((r) => r.json()).then((j) => j.campaigns[0].waiting));
+  ok('...and the campaign is waiting on Player 2 (their move), not on Player 1', (await waits(p2)) === 'you' && (await waits(p1)) === 'them');
+  await p2.evaluate(() => { window.PMCMenu.refresh(); });
+  let cont = '';
+  for (let i = 0; i < 20 && !/Your move/.test(cont); i++) { await wait(150); cont = await p2.evaluate(() => window.PMCMenu.games().filter((g) => g.key.indexOf('o:') === 0).map((g) => g.sub).join()); }
+  ok('...Player 2\u2019s Continue list says so', /Your move/.test(cont), cont);
   await press(p2, '[data-go="contract"]');
   await p2.waitForTimeout(200);
   await press(p2, '[data-go="ocauto"]');

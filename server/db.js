@@ -176,7 +176,7 @@ function wrap(db) {
     byInvite: db.prepare('SELECT * FROM campaigns WHERE invite = ?'),
     addMember: db.prepare('INSERT INTO campaign_members (campaign_id, user_id, side, joined) VALUES (?, ?, ?, ?)'),
     members: db.prepare('SELECT m.side, m.user_id, u.name, u.pub FROM campaign_members m JOIN users u ON u.id = m.user_id WHERE m.campaign_id = ? ORDER BY m.side'),
-    onlineOf: db.prepare("SELECT c.id, c.name, c.turn, c.version, c.updated, m.side FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.kind = 'online' ORDER BY c.updated DESC"),
+    onlineOf: db.prepare("SELECT c.id, c.name, c.turn, c.version, c.updated, c.state, m.side, (SELECT COUNT(*) FROM campaign_members x WHERE x.campaign_id = c.id) AS players FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.kind = 'online' ORDER BY c.updated DESC"),
     // an online campaign is saved by whichever of its players sent the command: not only its owner
     saveOnline: db.prepare("UPDATE campaigns SET state = ?, name = ?, turn = ?, version = version + 1, updated = ? WHERE id = ? AND kind = 'online' AND version = ?")
   };

@@ -44,6 +44,8 @@
       var p = E.online && (E.online.players || []).filter(function (x) { return x.side === theirs(); })[0];
       return founded(theirCo()) ? theirCo().name : p ? p.name : 'the other player';
     }
+    // whose move an online campaign is waiting on, as its list says it (server/online.js waitingOn)
+    var WAIT = { you: 'waiting on you', them: 'waiting on the other player', either: 'ready for the next contract', over: 'over' };
     function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
 
     /* ================= in and out ================= */
@@ -226,7 +228,8 @@
       if (list.length) {
         h += '<div class="field"><label>Yours</label><div class="clog">' + list.map(function (c) {
           return '<button type="button" class="crow crow-go" data-ocamp="' + c.id + '"><b>' + c.turn + '</b><span>' + esc(c.name) +
-            '<small>You are Player ' + (c.side === 'B' ? 2 : 1) + '</small></span><em>Open</em></button>';
+            '<small>You are Player ' + (c.side === 'B' ? 2 : 1) + ' \u00b7 ' + WAIT[c.waiting || 'over'] + '</small></span>' +
+            (c.waiting === 'you' ? '<em class="yourmove">Your move</em>' : '<em>Open</em>') + '</button>';
         }).join('') + '</div></div>';
       }
       h += '<div class="field"><label>A new one</label><button class="start" data-go="onew">Start an online campaign</button>' +

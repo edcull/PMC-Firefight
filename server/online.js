@@ -115,6 +115,30 @@ function prepPost(camp) {
   if (post && !post.steps.length) finishPost(camp);
 }
 
+/* Who an online campaign is waiting on, as one of its players sees it: 'you' (a
+   force to found, a question to answer, a contract pick to make, a battle to
+   fight), 'them' (the same of the other player), 'either' (a turn begun: either
+   may draw up the next contract), or null (it is over). `players`: how many have
+   joined. */
+function waitingOn(camp, side, players) {
+  const other = side === 'A' ? 'B' : 'A';
+  const founded = (co) => !!(co && co.roster && co.roster.length);
+  if (!camp || camp.over) return null;
+  if (!founded(camp.companies && camp.companies[side])) return 'you';
+  if ((players || 0) < 2 || !founded(camp.companies[other] || (camp.rivals || [])[camp.facing || 0])) return 'them';
+  const step = camp.post && camp.post.steps && camp.post.steps[0];
+  if (step) return step.side === side ? 'you' : 'them';
+  const on = camp.online || {};
+  if (on.battle) return 'you';
+  const k = on.contract;
+  if (k) {
+    if (k.fore && !k.fore.done) return 'you';
+    if (!(k.ready && k.ready[side])) return 'you';
+    return 'them';
+  }
+  return 'either';
+}
+
 function create(opts) {
   const db = opts.db, notify = opts.notify || function () { };
   // makes the battle (lobby.campaignBattle): its room's code
@@ -238,7 +262,12 @@ function create(opts) {
     // the player's online campaigns, the latest first
     list(me) {
       if (!me || me.guest) return [];
-      return db.onlineOf(me.userId);
+      // each with whose move it is (the state itself stays on the server)
+      return db.onlineOf(me.userId).map((r) => {
+        let waiting = null;
+        try { waiting = waitingOn(C.rehydrate(JSON.parse(r.state)), r.side, r.players); } catch (e) { waiting = null; }
+        return { id: r.id, name: r.name, turn: r.turn, version: r.version, updated: r.updated, side: r.side, players: r.players, waiting: waiting };
+      });
     },
 
     /* The campaign as one of its players sees it: their side, both players' names,
@@ -253,6 +282,7 @@ function create(opts) {
         ok: true, id: row.id, version: row.version, side: side,
         players: members.map((m) => ({ side: m.side, name: m.name, id: m.pub })),
         invite: members.length < 2 ? row.invite : null,
+        waiting: waitingOn(load(row), side, members.length),
         state: shown(row.state, side)
       };
     },
@@ -319,4 +349,4 @@ function create(opts) {
   };
 }
 
-module.exports = { create: create };
+module.exports = { create: create, waitingOn: waitingOn };
