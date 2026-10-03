@@ -184,6 +184,21 @@ sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js backup     # a c
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js stats      # accounts, battles, campaigns, backups
 ```
 
+The battles and campaigns:
+
+```
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js games            # the latest 30 battles (games 100 for more)
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js game P5HKM       # one battle in full
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js delete-game P5HKM --yes
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js prune-games 30 --yes   # finished/abandoned ones over 30 days old
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js campaigns        # id, kind, name, turn, owner or players
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js delete-campaign 12 --yes
+```
+
+Without `--yes`, each removal only says what it would remove. A battle still
+under way, removed, stays open on the running server until it is restarted
+(`sudo systemctl restart pmc-firefight`).
+
 ### Backups
 
 The server copies the database once a day by itself, into

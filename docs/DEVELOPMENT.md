@@ -249,6 +249,7 @@ online.js          online campaigns: made, joined, founded, each player's comman
 onlinebattle.js    an online campaign's contract, hidden picks, its battle, a forfeit, the aftermath applied once
 coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
 yourmove.js        whose move an online campaign waits on, and the email (if asked for) when it comes to be yours
+admingames.js      the console's battles and campaigns: listed, shown, removed (asked first), old ones cleared
 backups.js         the database copied once a day, the last few kept, a failure logged
 hidden.js          each seat's and a watcher's view of a battle and a room: the other side's swaps, mine, bench and list kept from them
 solitairetest.js   solitaire and co-op against the OpFor
