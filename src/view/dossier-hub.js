@@ -200,7 +200,8 @@
         manage + go + '</div>';
     }
     function companyPanel(co, side, bar) {
-      var h = '<div class="cpan cpan-' + side + '"' + stripe(co) + '>';
+      // the force being managed (the one with the bar) fills the screen, whichever side it is
+      var h = '<div class="cpan cpan-' + side + (bar ? ' cpan-own' : '') + '"' + stripe(co) + '>';
       h += '<div class="cphead">' + tierBadge(co, !!bar) + '<b>' + esc(co.name) + '</b>' +
         (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
         '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
