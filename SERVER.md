@@ -6,7 +6,9 @@
 node server.js                 # then open http://localhost:8787
 PORT=9000 node server.js       # somewhere else
 HOST=0.0.0.0 node server.js    # so the rest of the house can join in
-DATA_DIR=/var/lib/pmc node server.js           # the database (accounts) kept outside the code
+DATA_DIR=/var/lib/pmc node server.js           # the database (accounts, battles, campaigns) kept outside the code
+BACKUP_DIR=... BACKUP_KEEP=7 node server.js    # the database's daily copies (backups/ beside it); BACKUPS=off for none
+PUBLIC_URL=... SMTP_HOST=... node server.js    # email: account activation, password resets (deploy/pi/README.md)
 CAMPAIGNS_DIR=/var/lib/pmc node server.js      # the campaigns kept outside the code
 ALLOWED_ORIGINS=https://example.org node server.js   # pages elsewhere allowed to open the socket
 ```
@@ -15,7 +17,7 @@ To keep one running on a Raspberry Pi behind nginx (at `https://<domain>/pmc/`),
 deployed to by GitHub on every push to `main` (or any branch, by hand), see
 [deploy/pi/README.md](deploy/pi/README.md).
 
-One dependency, `better-sqlite3`, for the database (`npm ci --omit=dev`). One port serves:
+Two packages, `better-sqlite3` for the database and `nodemailer` for email (`npm ci --omit=dev`). One port serves:
 
 | | |
 |---|---|
@@ -25,6 +27,7 @@ One dependency, `better-sqlite3`, for the database (`npm ci --omit=dev`). One po
 | `POST /api/activate`, `/api/resend`, `/api/forgot`, `/api/reset`, `/api/rename`, `/api/email`, `/api/confirm-email` | the emailed links (activation, a password reset, a new address), and a new name |
 | `GET/POST /api/campaigns`, `GET/PUT/DELETE /api/campaigns/<id>`, `POST /api/campaigns/import` | a signed-in player's own campaigns, each save over the version it was read at |
 | `ws:// /ws` | the lobby, and every battle in progress (signed in, or as a guest) |
+| `GET /health` | up or not: rooms, players, seconds up, the last backup, whether mail goes out |
 
 The server's own source, the saved campaigns and anything hidden are not served.
 
@@ -134,7 +137,10 @@ server.js            the entry point: the HTTP server, the socket, shutting down
 server/app.js        what it answers over HTTP: the app, the accounts, the campaign routes, /health
 server/db.js         the database (better-sqlite3): its migrations and every query
 server/auth.js       accounts, sessions and guests
-server/admin.js      the accounts from the command line: users, reset a password, back up
+server/admin.js      the accounts from the command line: users, stats, reset a password, activate, back up
+server/backups.js    the database copied once a day, the last week kept
+server/mail.js       the email (nodemailer, or a folder for trying it out)
+server/hidden.js     what each seat (and a watcher) may see of a battle and a room
 server/games.js      the battles kept in the database: begun, each intent, the end, a player's own
 
 src/rules/           the rulebook: profiles, scenarios, campaigns, terrain

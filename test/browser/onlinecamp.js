@@ -133,7 +133,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   s1 = await till(p1, 'Player 1’s aftermath', (s) => s.view === 'aftermath' && !s.post);
   ok('every question answered: Player 1 reads the aftermath, a win', s1.after && s1.after.winner === 'A' && s1.turn === 1, JSON.stringify(s1.after && s1.after.winner) + ' turn ' + s1.turn);
   s2 = await till(p2, 'Player 2’s aftermath', (s) => s.view === 'aftermath', 20000);
-  ok('...and Player 2 reads theirs', s2.turn === 1);
+  ok('...and Player 2 reads theirs: their own force\u2019s page', s2.turn === 1 && /Red Dawn/.test(await p2.evaluate(() => document.getElementById('camp-title').textContent)), await p2.evaluate(() => document.getElementById('camp-title').textContent));
   await press(p2, '[data-go="pastback"]');
   await p2.waitForTimeout(300);
   ok('back on the hub, the next turn', (await state(p2)).view === 'hub');

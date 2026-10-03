@@ -516,7 +516,23 @@
       if (go === 'contract' || go === 'offers') { E.view = 'ocontract'; E.render(); return true; }
       if (go === 'obattle') { var bb = camp.online && camp.online.battle; if (bb) goBattle(bb.code); return true; }
       // nothing of the campaign's file is this browser's to change
-      if (/^(wipe|import|campend|storeuse|storekeep|standard|hubside)$/.test(go || '')) return true;
+      if (/^(wipe|import|storeuse|storekeep|standard|hubside)$/.test(go || '')) return true;
+      // a force that can no longer fight ends the campaign; or a player gives it up
+      if (go === 'campend') { cmd('campEnd', { side: attr('data-side') }); return true; }
+      if (go === 'oconcede') {
+        E.closeModal();
+        E.ask({ kind: 'confirm', title: 'Give the campaign up?', danger: true,
+          text: 'It ends here, for both of you: ' + theirName() + ' has the world. There is no undoing it.',
+          okLabel: 'Give it up', onOk: function () { cmd('concede', {}); } });
+        return true;
+      }
+      // Enhanced Genetic Memory: a lost unit recruited again, its D6 rolled on the server
+      if (go === 'reborn') {
+        cmd('postReborn', { i: +attr('data-i') }, function (j) {
+          if (j && j.roll) E.note('Enhanced Genetic Memory', 'D6 ' + j.roll + ' \u2014 ' + (j.remembered ? 'it remembers everything it had.' : 'the memory did not carry.'));
+        });
+        return true;
+      }
 
       // the contract
       var k = camp.online && camp.online.contract;

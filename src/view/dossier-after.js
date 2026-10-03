@@ -387,6 +387,8 @@
     var me = 'A', afterSide = 'A', afterSeen = null, postSeen = null;
     // two players at one screen (an online campaign is two players, each at their own)
     function hot() { return !!E.camp && E.camp.mode === 'hotseat' && !E.online; }
+    // two players' forces, at one screen or online: whose page it is matters
+    function two() { return !!E.camp && E.camp.mode === 'hotseat'; }
     function them(sd) { return sd === 'B' ? 'A' : 'B'; }
     function pastBalance(l) {
       var b = l.balances ? l.balances[me] : me === 'A' ? l.balance : null;
@@ -414,10 +416,11 @@
       try { return afterPage(past); } finally { E.after = now; }
     }
     function afterPage(pastLine) {
-      me = hot() ? (pastLine ? E.hubSide : afterSide) : 'A';
+      // online, the page is always this player's own; at one screen, whoever's turn it is
+      me = two() ? (pastLine || E.online ? E.hubSide : afterSide) : 'A';
       if (!pastLine && hot() && afterSide !== afterSeen && !root.PMC_HANDOVER_OFF) return passCard(afterSide, 'afterpass', 'Aftermath');
       var co = E.camp.companies[me];
-      var h = '<h2>Aftermath' + (pastLine ? ' \u2014 turn ' + pastLine.turn : '') + (hot() ? ' \u2014 ' + esc(co.name) : '') + '</h2>';
+      var h = '<h2>Aftermath' + (pastLine ? ' \u2014 turn ' + pastLine.turn : '') + (two() ? ' \u2014 ' + esc(co.name) : '') + '</h2>';
       /* The day at a glance, drawn as the other forces' battles are: who it was
          against and where, then each side — the winner first — with what it
          lost, was paid and took away in experience and trauma, and what an AI
@@ -448,7 +451,9 @@
           return esc(d.name) + ' (rolled ' + d.roll + ') lost ' + d.lost + ' EXP';
         }).join('; ') + '.</div></div>';
       }
-      if (rec.rebornOffer && rec.rebornOffer.length && !pastLine) {
+      // (online, the latest battle's offer stands on its page as read from the log: the server keeps it)
+      var offerOpen = !pastLine || (E.online && pastLine === E.camp.log[E.camp.log.length - 1]);
+      if (rec.rebornOffer && rec.rebornOffer.length && offerOpen) {
         h += '<div class="cpan"><div class="cprom-head"><b>Enhanced Genetic Memory</b></div>' +
           '<p class="cpstat">A lost infantry unit can be recruited again, now or never: on a D6 of 2-6 the new one remembers everything the old one had before this battle.</p>' +
           rec.rebornOffer.map(function (r, i) {

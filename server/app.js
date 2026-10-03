@@ -263,7 +263,7 @@ function create(opts) {
     if (onlineApi(req, res, url)) return;
     if (url === '/campaigns') return json(res, 200, { campaigns: campaigns.list() });
     if (campaignRoute(req, res, url)) return;
-    if (url === '/health') return json(res, 200, { ok: true, rooms: lobby.rooms.size, players: lobby.players.size });
+    if (url === '/health') return json(res, 200, Object.assign({ ok: true, rooms: lobby.rooms.size, players: lobby.players.size }, opts.health ? opts.health() : {}));
     if (serve(req, res)) return;
     json(res, 404, { error: 'not found' });
   };
